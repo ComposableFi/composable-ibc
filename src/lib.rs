@@ -61,11 +61,11 @@ impl<Crypto: HostFunctions> BeefyLightClient<Crypto> {
     /// using the latest mmr leaf to rotate its view of the next authorities.
     pub fn ingest_mmr_root_with_proof(
         &mut self,
-        mut client_state: ClientState,
+        mut trusted_client_state: ClientState,
         mmr_update: MmrUpdateProof,
     ) -> Result<ClientState, BeefyClientError> {
-        let current_authority_set = &client_state.current_authorities;
-        let next_authority_set = &client_state.next_authorities;
+        let current_authority_set = &trusted_client_state.current_authorities;
+        let next_authority_set = &trusted_client_state.next_authorities;
         let signatures_len = mmr_update.signed_commitment.signatures.len();
         let validator_set_id = mmr_update.signed_commitment.commitment.validator_set_id;
 
@@ -166,7 +166,7 @@ impl<Crypto: HostFunctions> BeefyLightClient<Crypto> {
             _ => return Err(BeefyClientError::InvalidMmrUpdate),
         }
 
-        let latest_beefy_height = client_state.latest_beefy_height;
+        let latest_beefy_height = trusted_client_state.latest_beefy_height;
 
         if mmr_update.signed_commitment.commitment.block_number <= latest_beefy_height {
             #[cfg(test)]
@@ -189,19 +189,19 @@ impl<Crypto: HostFunctions> BeefyLightClient<Crypto> {
         )
         .map_err(|_| BeefyClientError::InvalidMmrProof)?;
 
-        client_state.latest_beefy_height = mmr_update.signed_commitment.commitment.block_number;
-        client_state.mmr_root_hash = mmr_root_hash.into();
+        trusted_client_state.latest_beefy_height = mmr_update.signed_commitment.commitment.block_number;
+        trusted_client_state.mmr_root_hash = mmr_root_hash.into();
 
         if authorities_changed {
-            client_state.current_authorities = next_authority_set.clone();
-            client_state.next_authorities = mmr_update.latest_mmr_leaf.beefy_next_authority_set;
+            trusted_client_state.current_authorities = next_authority_set.clone();
+            trusted_client_state.next_authorities = mmr_update.latest_mmr_leaf.beefy_next_authority_set;
         }
-        Ok(client_state)
+        Ok(trusted_client_state)
     }
 
     pub fn verify_parachain_headers(
         &self,
-        client_state: ClientState,
+        trusted_client_state: ClientState,
         parachain_update: ParachainsUpdateProof,
     ) -> Result<(), BeefyClientError> {
         let mut mmr_leaves = Vec::new();
@@ -238,11 +238,11 @@ impl<Crypto: HostFunctions> BeefyLightClient<Crypto> {
         debug!(
             "Verifying leaves proof {:?}, root hash {:?}",
             parachain_update.mmr_proof.clone(),
-            client_state.mmr_root_hash
+            trusted_client_state.mmr_root_hash
         );
 
         pallet_mmr::verify_leaves_proof::<sp_runtime::traits::Keccak256, _>(
-            client_state.mmr_root_hash.into(),
+            trusted_client_state.mmr_root_hash.into(),
             mmr_leaves,
             parachain_update.mmr_proof,
         )
