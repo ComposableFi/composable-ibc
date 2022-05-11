@@ -1,5 +1,8 @@
 use crate::primitives::{ParachainHeader, PartialMmrLeaf, SignedCommitment};
-use crate::{runtime, BeefyLightClient, HostFunctions, KeccakHasher, MmrUpdateProof, ParachainsUpdateProof, SignatureWithAuthorityIndex, ClientState};
+use crate::{
+    runtime, BeefyLightClient, ClientState, HostFunctions, KeccakHasher, MmrUpdateProof,
+    ParachainsUpdateProof, SignatureWithAuthorityIndex,
+};
 use crate::{BeefyClientError, H256};
 use beefy_primitives::known_payload_ids::MMR_ROOT_ID;
 use beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
@@ -33,7 +36,6 @@ impl HostFunctions for Crypto {
     }
 }
 
-
 fn get_initial_client_state() -> ClientState {
     ClientState {
         latest_beefy_height: 0,
@@ -42,15 +44,15 @@ fn get_initial_client_state() -> ClientState {
             id: 0,
             len: 5,
             root: H256::from(hex!(
-                        "baa93c7834125ee3120bac6e3342bd3f28611110ad21ab6075367abdffefeb09"
-                    )),
+                "baa93c7834125ee3120bac6e3342bd3f28611110ad21ab6075367abdffefeb09"
+            )),
         },
         next_authorities: BeefyNextAuthoritySet {
             id: 1,
             len: 5,
             root: H256::from(hex!(
-                        "baa93c7834125ee3120bac6e3342bd3f28611110ad21ab6075367abdffefeb09"
-                    )),
+                "baa93c7834125ee3120bac6e3342bd3f28611110ad21ab6075367abdffefeb09"
+            )),
         },
     }
 }
@@ -180,7 +182,9 @@ async fn test_ingest_mmr_with_proof() {
 
         let mmr_update = get_mmr_update(&client, signed_commitment.clone()).await;
 
-         client_state = beef_light_client.ingest_mmr_root_with_proof(client_state.clone(), mmr_update.clone()).unwrap();
+        client_state = beef_light_client
+            .ingest_mmr_root_with_proof(client_state.clone(), mmr_update.clone())
+            .unwrap();
 
         let mmr_root_hash = signed_commitment
             .commitment
@@ -472,7 +476,9 @@ async fn verify_parachain_headers() {
         };
 
         let mmr_update = get_mmr_update(&client, signed_commitment).await;
-        client_state = beef_light_client.ingest_mmr_root_with_proof(client_state, mmr_update).unwrap();
+        client_state = beef_light_client
+            .ingest_mmr_root_with_proof(client_state, mmr_update)
+            .unwrap();
 
         // TODO: fix `InvalidMmrProof` error,
         // see https://github.com/ComposableFi/beefy-client/runs/5988511296?check_suite_focus=true for details

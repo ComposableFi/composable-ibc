@@ -189,12 +189,14 @@ impl<Crypto: HostFunctions> BeefyLightClient<Crypto> {
         )
         .map_err(|_| BeefyClientError::InvalidMmrProof)?;
 
-        trusted_client_state.latest_beefy_height = mmr_update.signed_commitment.commitment.block_number;
+        trusted_client_state.latest_beefy_height =
+            mmr_update.signed_commitment.commitment.block_number;
         trusted_client_state.mmr_root_hash = mmr_root_hash.into();
 
         if authorities_changed {
             trusted_client_state.current_authorities = next_authority_set.clone();
-            trusted_client_state.next_authorities = mmr_update.latest_mmr_leaf.beefy_next_authority_set;
+            trusted_client_state.next_authorities =
+                mmr_update.latest_mmr_leaf.beefy_next_authority_set;
         }
         Ok(trusted_client_state)
     }
