@@ -40,14 +40,12 @@ use sp_runtime::traits::Convert;
 
 use sp_std::prelude::*;
 
-#[cfg(not(feature = "std"))]
-use sp_std::vec;
-
-pub struct BeefyLightClient<Crypto: HostFunctions> {
+#[derive(Default)]
+pub struct BeefyLightClient<Crypto: HostFunctions + Default> {
     _phantom: PhantomData<Crypto>,
 }
 
-impl<Crypto: HostFunctions> BeefyLightClient<Crypto> {
+impl<Crypto: HostFunctions + Default> BeefyLightClient<Crypto> {
     /// Create a new instance of the light client
     pub fn new() -> Self {
         Self {
@@ -119,17 +117,16 @@ impl<Crypto: HostFunctions> BeefyLightClient<Crypto> {
                     &signature,
                     &commitment_hash,
                 )
-                .map(|public_key_bytes| {
+                .and_then(|public_key_bytes| {
                     beefy_primitives::crypto::AuthorityId::from_slice(&public_key_bytes).ok()
                 })
-                .flatten()
                 .map(|pub_key| {
                     authority_indices.push(index as usize);
                     <Crypto as HostFunctions>::keccak_256(
                         &beefy_mmr::BeefyEcdsaToEthereum::convert(pub_key),
                     )
                 })
-                .ok_or_else(|| BeefyClientError::InvalidSignature)
+                .ok_or(BeefyClientError::InvalidSignature)
             })
             .collect::<Result<Vec<_>, BeefyClientError>>()?;
 
@@ -183,7 +180,7 @@ impl<Crypto: HostFunctions> BeefyLightClient<Crypto> {
         #[cfg(test)]
         debug!("Verifying leaf proof {:?}", mmr_update.mmr_proof.clone());
         pallet_mmr::verify_leaf_proof::<sp_runtime::traits::Keccak256, _>(
-            mmr_root_hash.into(),
+            mmr_root_hash,
             node,
             mmr_update.mmr_proof,
         )
@@ -191,7 +188,7 @@ impl<Crypto: HostFunctions> BeefyLightClient<Crypto> {
 
         trusted_client_state.latest_beefy_height =
             mmr_update.signed_commitment.commitment.block_number;
-        trusted_client_state.mmr_root_hash = mmr_root_hash.into();
+        trusted_client_state.mmr_root_hash = mmr_root_hash;
 
         if authorities_changed {
             trusted_client_state.current_authorities = next_authority_set.clone();
@@ -217,8 +214,8 @@ impl<Crypto: HostFunctions> BeefyLightClient<Crypto> {
             let leaf_hash = <Crypto as HostFunctions>::keccak_256(&leaf_bytes);
             let root = proof
                 .root(
-                    &vec![parachain_header.heads_leaf_index as usize],
-                    &vec![leaf_hash],
+                    &[parachain_header.heads_leaf_index as usize],
+                    &[leaf_hash],
                     parachain_header.heads_total_count as usize,
                 )
                 .map_err(|_| BeefyClientError::InvalidMerkleProof)?;
@@ -244,7 +241,7 @@ impl<Crypto: HostFunctions> BeefyLightClient<Crypto> {
         );
 
         pallet_mmr::verify_leaves_proof::<sp_runtime::traits::Keccak256, _>(
-            trusted_client_state.mmr_root_hash.into(),
+            trusted_client_state.mmr_root_hash,
             mmr_leaves,
             parachain_update.mmr_proof,
         )
