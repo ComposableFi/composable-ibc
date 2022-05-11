@@ -20,6 +20,7 @@ use subxt::sp_core::keccak_256;
 
 pub const PARA_ID: u32 = 2000;
 
+#[derive(Default)]
 pub struct Crypto;
 impl HostFunctions for Crypto {
     fn keccak_256(input: &[u8]) -> [u8; 32] {
