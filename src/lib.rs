@@ -31,7 +31,7 @@ use crate::primitives::{
     BeefyNextAuthoritySet, KeccakHasher, MmrUpdateProof, ParachainsUpdateProof,
     SignatureWithAuthorityIndex, HASH_LENGTH,
 };
-use crate::traits::{AuthoritySet, HostFunctions, MmrState, StorageRead, StorageWrite};
+use crate::traits::{ClientState, HostFunctions};
 use beefy_primitives::known_payload_ids::MMR_ROOT_ID;
 use beefy_primitives::mmr::MmrLeaf;
 use codec::Encode;
@@ -43,23 +43,16 @@ use sp_std::prelude::*;
 #[cfg(not(feature = "std"))]
 use sp_std::vec;
 
-pub struct BeefyLightClient<Store: StorageRead + StorageWrite, Crypto: HostFunctions> {
-    store: Store,
+pub struct BeefyLightClient<Crypto: HostFunctions> {
     _phantom: PhantomData<Crypto>,
 }
 
-impl<Store: StorageRead + StorageWrite, Crypto: HostFunctions> BeefyLightClient<Store, Crypto> {
+impl<Crypto: HostFunctions> BeefyLightClient<Crypto> {
     /// Create a new instance of the light client
-    pub fn new(store: Store) -> Self {
+    pub fn new() -> Self {
         Self {
-            store,
             _phantom: PhantomData::default(),
         }
-    }
-
-    /// Return a reference to the underlying store
-    pub fn store_ref(&self) -> &Store {
-        &self.store
     }
 
     /// This should verify the signed commitment signatures, and reconstruct the
@@ -68,11 +61,11 @@ impl<Store: StorageRead + StorageWrite, Crypto: HostFunctions> BeefyLightClient<
     /// using the latest mmr leaf to rotate its view of the next authorities.
     pub fn ingest_mmr_root_with_proof(
         &mut self,
+        mut client_state: ClientState,
         mmr_update: MmrUpdateProof,
-    ) -> Result<(), BeefyClientError> {
-        let authority_set = self.store.authority_set()?;
-        let current_authority_set = &authority_set.current_authorities;
-        let next_authority_set = &authority_set.next_authorities;
+    ) -> Result<ClientState, BeefyClientError> {
+        let current_authority_set = &client_state.current_authorities;
+        let next_authority_set = &client_state.next_authorities;
         let signatures_len = mmr_update.signed_commitment.signatures.len();
         let validator_set_id = mmr_update.signed_commitment.commitment.validator_set_id;
 
@@ -173,7 +166,7 @@ impl<Store: StorageRead + StorageWrite, Crypto: HostFunctions> BeefyLightClient<
             _ => return Err(BeefyClientError::InvalidMmrUpdate),
         }
 
-        let latest_beefy_height = self.store.mmr_state()?.latest_beefy_height;
+        let latest_beefy_height = client_state.latest_beefy_height;
 
         if mmr_update.signed_commitment.commitment.block_number <= latest_beefy_height {
             #[cfg(test)]
@@ -196,22 +189,19 @@ impl<Store: StorageRead + StorageWrite, Crypto: HostFunctions> BeefyLightClient<
         )
         .map_err(|_| BeefyClientError::InvalidMmrProof)?;
 
-        self.store.set_mmr_state(MmrState {
-            latest_beefy_height: mmr_update.signed_commitment.commitment.block_number,
-            mmr_root_hash: mmr_root_hash.into(),
-        })?;
+        client_state.latest_beefy_height = mmr_update.signed_commitment.commitment.block_number;
+        client_state.mmr_root_hash = mmr_root_hash.into();
 
         if authorities_changed {
-            self.store.set_authority_set(AuthoritySet {
-                current_authorities: next_authority_set.clone(),
-                next_authorities: mmr_update.latest_mmr_leaf.beefy_next_authority_set,
-            })?;
+            client_state.current_authorities = next_authority_set.clone();
+            client_state.next_authorities = mmr_update.latest_mmr_leaf.beefy_next_authority_set;
         }
-        Ok(())
+        Ok(client_state)
     }
 
     pub fn verify_parachain_headers(
         &self,
+        client_state: ClientState,
         parachain_update: ParachainsUpdateProof,
     ) -> Result<(), BeefyClientError> {
         let mut mmr_leaves = Vec::new();
@@ -244,20 +234,15 @@ impl<Store: StorageRead + StorageWrite, Crypto: HostFunctions> BeefyLightClient<
             mmr_leaves.push(node);
         }
 
-        let mmr_state = self
-            .store
-            .mmr_state()
-            .map_err(|_| BeefyClientError::StorageReadError)?;
-
         #[cfg(test)]
         debug!(
             "Verifying leaves proof {:?}, root hash {:?}",
             parachain_update.mmr_proof.clone(),
-            mmr_state.mmr_root_hash
+            client_state.mmr_root_hash
         );
 
         pallet_mmr::verify_leaves_proof::<sp_runtime::traits::Keccak256, _>(
-            mmr_state.mmr_root_hash.into(),
+            client_state.mmr_root_hash.into(),
             mmr_leaves,
             parachain_update.mmr_proof,
         )

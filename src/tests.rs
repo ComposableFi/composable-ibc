@@ -1,14 +1,10 @@
 use crate::primitives::{ParachainHeader, PartialMmrLeaf, SignedCommitment};
-use crate::{
-    runtime, BeefyLightClient, HostFunctions, KeccakHasher, MmrUpdateProof, ParachainsUpdateProof,
-    SignatureWithAuthorityIndex,
-};
-use crate::{AuthoritySet, BeefyClientError, MmrState, StorageRead, StorageWrite, H256};
+use crate::{runtime, BeefyLightClient, HostFunctions, KeccakHasher, MmrUpdateProof, ParachainsUpdateProof, SignatureWithAuthorityIndex, ClientState};
+use crate::{BeefyClientError, H256};
 use beefy_primitives::known_payload_ids::MMR_ROOT_ID;
 use beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
 use beefy_primitives::Payload;
 use codec::{Decode, Encode};
-use frame_support::assert_ok;
 use hex_literal::hex;
 use pallet_mmr_primitives::Proof;
 use sp_core::bytes::to_hex;
@@ -20,10 +16,6 @@ use subxt::rpc::{rpc_params, JsonValue, Subscription, SubscriptionClientT};
 use subxt::sp_core::keccak_256;
 
 pub const PARA_ID: u32 = 2000;
-pub struct StorageMock {
-    mmr_state: MmrState,
-    authority_set: AuthoritySet,
-}
 
 pub struct Crypto;
 impl HostFunctions for Crypto {
@@ -41,52 +33,25 @@ impl HostFunctions for Crypto {
     }
 }
 
-impl StorageMock {
-    fn new() -> Self {
-        Self {
-            mmr_state: MmrState {
-                latest_beefy_height: 0,
-                mmr_root_hash: Default::default(),
-            },
-            authority_set: AuthoritySet {
-                current_authorities: BeefyNextAuthoritySet {
-                    id: 0,
-                    len: 5,
-                    root: H256::from(hex!(
+
+fn get_initial_client_state() -> ClientState {
+    ClientState {
+        latest_beefy_height: 0,
+        mmr_root_hash: Default::default(),
+        current_authorities: BeefyNextAuthoritySet {
+            id: 0,
+            len: 5,
+            root: H256::from(hex!(
                         "baa93c7834125ee3120bac6e3342bd3f28611110ad21ab6075367abdffefeb09"
                     )),
-                },
-                next_authorities: BeefyNextAuthoritySet {
-                    id: 1,
-                    len: 5,
-                    root: H256::from(hex!(
+        },
+        next_authorities: BeefyNextAuthoritySet {
+            id: 1,
+            len: 5,
+            root: H256::from(hex!(
                         "baa93c7834125ee3120bac6e3342bd3f28611110ad21ab6075367abdffefeb09"
                     )),
-                },
-            },
-        }
-    }
-}
-
-impl StorageRead for StorageMock {
-    fn mmr_state(&self) -> Result<MmrState, BeefyClientError> {
-        Ok(self.mmr_state.clone())
-    }
-
-    fn authority_set(&self) -> Result<AuthoritySet, BeefyClientError> {
-        Ok(self.authority_set.clone())
-    }
-}
-
-impl StorageWrite for StorageMock {
-    fn set_mmr_state(&mut self, mmr_state: MmrState) -> Result<(), BeefyClientError> {
-        self.mmr_state = mmr_state;
-        Ok(())
-    }
-
-    fn set_authority_set(&mut self, set: AuthoritySet) -> Result<(), BeefyClientError> {
-        self.authority_set = set;
-        Ok(())
+        },
     }
 }
 
@@ -177,8 +142,7 @@ async fn get_mmr_update(
 
 #[tokio::test]
 async fn test_ingest_mmr_with_proof() {
-    let store = StorageMock::new();
-    let mut beef_light_client = BeefyLightClient::<_, Crypto>::new(store);
+    let mut beef_light_client = BeefyLightClient::<Crypto>::new();
     let url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
     let client = subxt::ClientBuilder::new()
         .set_url(url)
@@ -197,6 +161,7 @@ async fn test_ingest_mmr_with_proof() {
         .await
         .unwrap();
     let mut count = 0;
+    let mut client_state = get_initial_client_state();
     while let Some(Ok(commitment)) = subscription.next().await {
         if count == 100 {
             break;
@@ -215,13 +180,7 @@ async fn test_ingest_mmr_with_proof() {
 
         let mmr_update = get_mmr_update(&client, signed_commitment.clone()).await;
 
-        assert_eq!(
-            beef_light_client.ingest_mmr_root_with_proof(mmr_update.clone()),
-            Ok(())
-        );
-
-        let mmr_state = beef_light_client.store_ref().mmr_state().unwrap();
-        let authority_set = beef_light_client.store_ref().authority_set().unwrap();
+         client_state = beef_light_client.ingest_mmr_root_with_proof(client_state.clone(), mmr_update.clone()).unwrap();
 
         let mmr_root_hash = signed_commitment
             .commitment
@@ -229,22 +188,22 @@ async fn test_ingest_mmr_with_proof() {
             .get_raw(&MMR_ROOT_ID)
             .unwrap();
 
-        assert_eq!(mmr_state.mmr_root_hash.as_bytes(), &mmr_root_hash[..]);
+        assert_eq!(client_state.mmr_root_hash.as_bytes(), &mmr_root_hash[..]);
 
         assert_eq!(
-            mmr_state.latest_beefy_height,
+            client_state.latest_beefy_height,
             signed_commitment.commitment.block_number
         );
 
         assert_eq!(
-            authority_set.next_authorities,
+            client_state.next_authorities,
             mmr_update.latest_mmr_leaf.beefy_next_authority_set
         );
 
         println!(
             "\nSuccessfully ingested mmr for block number: {}\nmmr_root_hash: {}\n",
-            mmr_state.latest_beefy_height,
-            to_hex(&mmr_state.mmr_root_hash[..], false)
+            client_state.latest_beefy_height,
+            to_hex(&client_state.mmr_root_hash[..], false)
         );
         count += 1;
     }
@@ -252,8 +211,7 @@ async fn test_ingest_mmr_with_proof() {
 
 #[test]
 fn should_fail_with_incomplete_signature_threshold() {
-    let store = StorageMock::new();
-    let mut beef_light_client = BeefyLightClient::<_, Crypto>::new(store);
+    let mut beef_light_client = BeefyLightClient::<Crypto>::new();
     let mmr_update = MmrUpdateProof {
         signed_commitment: SignedCommitment {
             commitment: beefy_primitives::Commitment {
@@ -288,15 +246,14 @@ fn should_fail_with_incomplete_signature_threshold() {
     };
 
     assert_eq!(
-        beef_light_client.ingest_mmr_root_with_proof(mmr_update),
+        beef_light_client.ingest_mmr_root_with_proof(get_initial_client_state(), mmr_update),
         Err(BeefyClientError::IncompleteSignatureThreshold)
     );
 }
 
 #[test]
 fn should_fail_with_invalid_validator_set_id() {
-    let store = StorageMock::new();
-    let mut beef_light_client = BeefyLightClient::<_, Crypto>::new(store);
+    let mut beef_light_client = BeefyLightClient::<Crypto>::new();
 
     let mmr_update = MmrUpdateProof {
         signed_commitment: SignedCommitment {
@@ -332,15 +289,14 @@ fn should_fail_with_invalid_validator_set_id() {
     };
 
     assert_eq!(
-        beef_light_client.ingest_mmr_root_with_proof(mmr_update),
+        beef_light_client.ingest_mmr_root_with_proof(get_initial_client_state(), mmr_update),
         Err(BeefyClientError::InvalidMmrUpdate)
     );
 }
 
 #[tokio::test]
 async fn verify_parachain_headers() {
-    let store = StorageMock::new();
-    let mut beef_light_client = BeefyLightClient::<_, Crypto>::new(store);
+    let mut beef_light_client = BeefyLightClient::<Crypto>::new();
     let url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
     let client = subxt::ClientBuilder::new()
         .set_url(url)
@@ -363,6 +319,7 @@ async fn verify_parachain_headers() {
         .await
         .unwrap();
     let mut count = 0;
+    let mut client_state = get_initial_client_state();
     while let Some(Ok(commitment)) = subscription.next().await {
         if count == 100 {
             break;
@@ -400,9 +357,8 @@ async fn verify_parachain_headers() {
             para_header_keys.push(subxt::sp_core::storage::StorageKey(full_key));
         }
 
-        let mmr_state = beef_light_client.store_ref().mmr_state().unwrap();
         let previous_finalized_block_number: subxt::BlockNumber =
-            (mmr_state.latest_beefy_height + 1).into();
+            (client_state.latest_beefy_height + 1).into();
         let previous_finalized_hash = client
             .rpc()
             .block_hash(Some(previous_finalized_block_number))
@@ -516,18 +472,16 @@ async fn verify_parachain_headers() {
         };
 
         let mmr_update = get_mmr_update(&client, signed_commitment).await;
-        assert_ok!(beef_light_client.ingest_mmr_root_with_proof(mmr_update));
+        client_state = beef_light_client.ingest_mmr_root_with_proof(client_state, mmr_update).unwrap();
 
         // TODO: fix `InvalidMmrProof` error,
         // see https://github.com/ComposableFi/beefy-client/runs/5988511296?check_suite_focus=true for details
-        // assert_ok!(beef_light_client.verify_parachain_headers(parachain_update_proof));
-
-        let mmr_state = beef_light_client.store_ref().mmr_state().unwrap();
+        // assert_ok!(beef_light_client.verify_parachain_headers(client_state.clone(), parachain_update_proof));
 
         println!(
             "\nSuccessfully verified parachain headers for block number: {}\nmmr_root_hash: {}\n",
-            mmr_state.latest_beefy_height,
-            to_hex(&mmr_state.mmr_root_hash[..], false)
+            client_state.latest_beefy_height,
+            to_hex(&client_state.mmr_root_hash[..], false)
         );
 
         count += 1;
