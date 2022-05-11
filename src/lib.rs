@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #![cfg_attr(not(feature = "std"), no_std)]
+#![warn(missing_docs)]
 
 use core::marker::PhantomData;
 #[cfg(test)]
@@ -45,7 +46,7 @@ pub struct BeefyLightClient<Crypto: HostFunctions + Default> {
     _phantom: PhantomData<Crypto>,
 }
 
-impl<Crypto: HostFunctions + Default> BeefyLightClient<Crypto> {
+impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
     /// Create a new instance of the light client
     pub fn new() -> Self {
         Self {
@@ -133,7 +134,7 @@ impl<Crypto: HostFunctions + Default> BeefyLightClient<Crypto> {
         let mut authorities_changed = false;
 
         let authorities_merkle_proof =
-            rs_merkle::MerkleProof::<KeccakHasher>::new(mmr_update.authority_proof);
+            rs_merkle::MerkleProof::<KeccakHasher<Crypto>>::new(mmr_update.authority_proof);
 
         // Verify mmr_update.authority_proof against store root hash
         match validator_set_id {
@@ -179,6 +180,7 @@ impl<Crypto: HostFunctions + Default> BeefyLightClient<Crypto> {
 
         #[cfg(test)]
         debug!("Verifying leaf proof {:?}", mmr_update.mmr_proof.clone());
+        // todo: outsource hashing here to HostFunctions
         pallet_mmr::verify_leaf_proof::<sp_runtime::traits::Keccak256, _>(
             mmr_root_hash,
             node,
@@ -210,7 +212,7 @@ impl<Crypto: HostFunctions + Default> BeefyLightClient<Crypto> {
             let leaf_bytes = pair.encode();
 
             let proof =
-                rs_merkle::MerkleProof::<KeccakHasher>::new(parachain_header.parachain_heads_proof);
+                rs_merkle::MerkleProof::<KeccakHasher<Crypto>>::new(parachain_header.parachain_heads_proof);
             let leaf_hash = <Crypto as HostFunctions>::keccak_256(&leaf_bytes);
             let root = proof
                 .root(
@@ -240,6 +242,7 @@ impl<Crypto: HostFunctions + Default> BeefyLightClient<Crypto> {
             trusted_client_state.mmr_root_hash
         );
 
+        // todo: outsource hashing to HostFunctions
         pallet_mmr::verify_leaves_proof::<sp_runtime::traits::Keccak256, _>(
             trusted_client_state.mmr_root_hash,
             mmr_leaves,

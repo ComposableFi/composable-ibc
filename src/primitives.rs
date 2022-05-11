@@ -1,9 +1,11 @@
+use std::marker::PhantomData;
 use beefy_primitives::mmr::MmrLeafVersion;
 pub use beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
 use codec::{Decode, Encode};
 use sp_core::H256;
 use sp_core_hashing::keccak_256;
 use sp_std::prelude::*;
+use crate::HostFunctions;
 
 pub const HASH_LENGTH: usize = 32;
 pub type TSignature = [u8; 65];
@@ -62,12 +64,12 @@ pub struct ParachainsUpdateProof {
 }
 
 #[derive(Clone)]
-pub struct KeccakHasher;
+pub struct KeccakHasher<T: HostFunctions + Clone>(PhantomData<T>);
 
-impl rs_merkle::Hasher for KeccakHasher {
+impl<T: HostFunctions + Clone> rs_merkle::Hasher for KeccakHasher<T> {
     type Hash = [u8; 32];
 
     fn hash(data: &[u8]) -> [u8; 32] {
-        keccak_256(data)
+        T::keccak_256(data)
     }
 }

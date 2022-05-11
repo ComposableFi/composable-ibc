@@ -11,6 +11,7 @@ pub struct ClientState {
     pub next_authorities: BeefyNextAuthoritySet<H256>,
 }
 
+
 pub trait HostFunctions {
     fn keccak_256(input: &[u8]) -> [u8; 32];
     fn secp256k1_ecdsa_recover_compressed(
