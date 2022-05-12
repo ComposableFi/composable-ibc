@@ -16,6 +16,8 @@ pub struct ClientState {
     pub current_authorities: BeefyNextAuthoritySet<H256>,
     /// Authorities for the next session
     pub next_authorities: BeefyNextAuthoritySet<H256>,
+    /// Beefy activation block
+    pub beefy_activation_block: u32,
 }
 
 /// Host functions required by the light client for signature verification

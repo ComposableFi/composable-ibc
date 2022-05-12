@@ -65,6 +65,7 @@ fn get_initial_client_state() -> ClientState {
                 "baa93c7834125ee3120bac6e3342bd3f28611110ad21ab6075367abdffefeb09"
             )),
         },
+        beefy_activation_block: 0,
     }
 }
 
@@ -154,7 +155,7 @@ async fn get_mmr_update(
 }
 
 #[tokio::test]
-async fn test_ingest_mmr_with_proof() {
+async fn test_verify_mmr_with_proof() {
     let mut beef_light_client = BeefyLightClient::new(Crypto::default());
     let url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
     let client = subxt::ClientBuilder::new()
@@ -194,7 +195,7 @@ async fn test_ingest_mmr_with_proof() {
         let mmr_update = get_mmr_update(&client, signed_commitment.clone()).await;
 
         client_state = beef_light_client
-            .ingest_mmr_root_with_proof(client_state.clone(), mmr_update.clone())
+            .verify_mmr_root_with_proof(client_state.clone(), mmr_update.clone())
             .unwrap();
 
         let mmr_root_hash = signed_commitment
@@ -216,7 +217,7 @@ async fn test_ingest_mmr_with_proof() {
         );
 
         println!(
-            "\nSuccessfully ingested mmr for block number: {}\nmmr_root_hash: {}\n",
+            "\nSuccessfully verifyed mmr for block number: {}\nmmr_root_hash: {}\n",
             client_state.latest_beefy_height,
             to_hex(&client_state.mmr_root_hash[..], false)
         );
@@ -261,7 +262,7 @@ fn should_fail_with_incomplete_signature_threshold() {
     };
 
     assert_eq!(
-        beef_light_client.ingest_mmr_root_with_proof(get_initial_client_state(), mmr_update),
+        beef_light_client.verify_mmr_root_with_proof(get_initial_client_state(), mmr_update),
         Err(BeefyClientError::IncompleteSignatureThreshold)
     );
 }
@@ -304,7 +305,7 @@ fn should_fail_with_invalid_validator_set_id() {
     };
 
     assert_eq!(
-        beef_light_client.ingest_mmr_root_with_proof(get_initial_client_state(), mmr_update),
+        beef_light_client.verify_mmr_root_with_proof(get_initial_client_state(), mmr_update),
         Err(BeefyClientError::InvalidMmrUpdate)
     );
 }
@@ -488,7 +489,7 @@ async fn verify_parachain_headers() {
 
         let mmr_update = get_mmr_update(&client, signed_commitment).await;
         client_state = beef_light_client
-            .ingest_mmr_root_with_proof(client_state, mmr_update)
+            .verify_mmr_root_with_proof(client_state, mmr_update)
             .unwrap();
 
         // TODO: fix `InvalidMmrProof` error,

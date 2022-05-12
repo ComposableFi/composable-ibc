@@ -17,8 +17,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
 
-#[cfg(test)]
-use std::println as debug;
+use core::marker::PhantomData;
+use pallet_mmr::mmr::utils::NodesUtils;
 
 pub mod error;
 pub mod primitives;
@@ -30,8 +30,8 @@ pub mod traits;
 
 use crate::error::BeefyClientError;
 use crate::primitives::{
-    BeefyNextAuthoritySet, Hash, MmrUpdateProof, ParachainsUpdateProof,
-    SignatureWithAuthorityIndex, HASH_LENGTH,
+    BeefyNextAuthoritySet, MmrUpdateProof, ParachainsUpdateProof, SignatureWithAuthorityIndex,
+    HASH_LENGTH,
 };
 use crate::traits::{ClientState, HostFunctions};
 use beefy_primitives::known_payload_ids::MMR_ROOT_ID;
@@ -48,9 +48,7 @@ pub struct BeefyLightClient<Crypto: HostFunctions + Default> {
     crypto: Crypto,
 }
 
-impl<Crypto: HostFunctions + rs_merkle::Hasher<Hash = Hash> + Default + Clone>
-    BeefyLightClient<Crypto>
-{
+impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
     /// Create a new instance of the light client
     pub fn new(crypto: Crypto) -> Self {
         Self { crypto }
@@ -60,7 +58,7 @@ impl<Crypto: HostFunctions + rs_merkle::Hasher<Hash = Hash> + Default + Clone>
     /// authority merkle root, confirming known authorities signed the [`crate::primitives::Commitment`]
     /// then using the mmr proofs, verify the latest mmr leaf,
     /// using the latest mmr leaf to rotate its view of the next authorities.
-    pub fn ingest_mmr_root_with_proof(
+    pub fn verify_mmr_root_with_proof(
         &mut self,
         mut trusted_client_state: ClientState,
         mmr_update: MmrUpdateProof,
@@ -101,15 +99,11 @@ impl<Crypto: HostFunctions + rs_merkle::Hasher<Hash = Hash> + Default + Clone>
         };
 
         let mmr_root_hash = H256::from_slice(&*mmr_root_vec);
-        #[cfg(test)]
-        debug!("Extracted mmr root hash: {:?}", mmr_root_hash);
 
         // Beefy validators sign the keccak_256 hash of the scale encoded commitment
         let encoded_commitment = mmr_update.signed_commitment.commitment.encode();
         let commitment_hash = self.crypto.keccak_256(&*encoded_commitment);
 
-        #[cfg(test)]
-        debug!("Recovering authority keys from signatures");
         let mut authority_indices = Vec::new();
         let authority_leaves = mmr_update
             .signed_commitment
@@ -133,8 +127,7 @@ impl<Crypto: HostFunctions + rs_merkle::Hasher<Hash = Hash> + Default + Clone>
         let mut authorities_changed = false;
 
         let authorities_merkle_proof =
-            rs_merkle::MerkleProof::<Crypto>::new(mmr_update.authority_proof);
-
+            rs_merkle::MerkleProof::<MerkleHasher<Crypto>>::new(mmr_update.authority_proof);
         // Verify mmr_update.authority_proof against store root hash
         match validator_set_id {
             id if id == current_authority_set.id => {
@@ -166,19 +159,12 @@ impl<Crypto: HostFunctions + rs_merkle::Hasher<Hash = Hash> + Default + Clone>
         let latest_beefy_height = trusted_client_state.latest_beefy_height;
 
         if mmr_update.signed_commitment.commitment.block_number <= latest_beefy_height {
-            #[cfg(test)]
-            debug!(
-                "Invalid update, block_number {:?} <= latest_beefy_height {:?}",
-                mmr_update.signed_commitment.commitment.block_number, latest_beefy_height
-            );
             return Err(BeefyClientError::InvalidMmrUpdate);
         }
 
         // Move on to verify mmr_proof
         let node = pallet_mmr_primitives::DataOrHash::Data(mmr_update.latest_mmr_leaf.clone());
 
-        #[cfg(test)]
-        debug!("Verifying leaf proof {:?}", mmr_update.mmr_proof.clone());
         // todo: outsource hashing here to HostFunctions
         pallet_mmr::verify_leaf_proof::<sp_runtime::traits::Keccak256, _>(
             mmr_root_hash,
@@ -212,8 +198,9 @@ impl<Crypto: HostFunctions + rs_merkle::Hasher<Hash = Hash> + Default + Clone>
             let pair = (parachain_header.para_id, parachain_header.parachain_header);
             let leaf_bytes = pair.encode();
 
-            let proof =
-                rs_merkle::MerkleProof::<Crypto>::new(parachain_header.parachain_heads_proof);
+            let proof = rs_merkle::MerkleProof::<MerkleHasher<Crypto>>::new(
+                parachain_header.parachain_heads_proof,
+            );
             let leaf_hash = self.crypto.keccak_256(&leaf_bytes);
             let root = proof
                 .root(
@@ -232,28 +219,62 @@ impl<Crypto: HostFunctions + rs_merkle::Hasher<Hash = Hash> + Default + Clone>
                 parachain_heads: root.into(),
             };
 
-            let node = pallet_mmr_primitives::DataOrHash::Data(mmr_leaf);
-            mmr_leaves.push(node);
+            let node = mmr_leaf.using_encoded(|leaf| self.crypto.keccak_256(leaf));
+            let leaf_index = get_leaf_index_for_block_number(
+                trusted_client_state.beefy_activation_block,
+                parachain_header.partial_mmr_leaf.parent_number_and_hash.0 + 1,
+            );
+            mmr_leaves.push((leaf_index as u64, H256::from_slice(&node)));
         }
 
-        #[cfg(test)]
-        debug!(
-            "Verifying leaves proof {:?}, root hash {:?}",
-            parachain_update.mmr_proof.clone(),
-            trusted_client_state.mmr_root_hash
+        let mmr_size = NodesUtils::new(parachain_update.mmr_proof.leaf_count).size();
+        let proof = mmr_lib::MerkleProof::<_, MerkleHasher<Crypto>>::new(
+            mmr_size,
+            parachain_update.mmr_proof.items,
         );
 
-        // todo: outsource hashing to HostFunctions
-        pallet_mmr::verify_leaves_proof::<sp_runtime::traits::Keccak256, _>(
-            trusted_client_state.mmr_root_hash,
-            mmr_leaves,
-            parachain_update.mmr_proof,
-        )
-        .map_err(|_| BeefyClientError::InvalidMmrProof)?;
+        let root = proof.calculate_root(mmr_leaves)?;
+        if root != trusted_client_state.mmr_root_hash {
+            return Err(BeefyClientError::InvalidMmrProof);
+        }
         Ok(())
     }
 }
 
+/// Calculate the leafIndex for this block number
+fn get_leaf_index_for_block_number(activation_block: u32, block_number: u32) -> u32 {
+    // calculate the leafIndex for this leaf.
+    if activation_block == 0 {
+        // in this case the leaf index is the same as the block number - 1 (leaf index starts at 0)
+        block_number - 1
+    } else {
+        // in this case the leaf index is activation block - current block number.
+        activation_block - (block_number + 1)
+    }
+}
+
+#[derive(Clone)]
+/// Merkle Hasher for mmr library
+struct MerkleHasher<T: HostFunctions>(PhantomData<T>);
+
+impl<T: HostFunctions + Default> mmr_lib::Merge for MerkleHasher<T> {
+    type Item = H256;
+
+    fn merge(left: &Self::Item, right: &Self::Item) -> Self::Item {
+        let mut concat = left.as_bytes().to_vec();
+        concat.extend_from_slice(right.as_bytes());
+        T::default().keccak_256(&*concat).into()
+    }
+}
+
+impl<T: HostFunctions + Default + Clone> rs_merkle::Hasher for MerkleHasher<T> {
+    type Hash = [u8; 32];
+    fn hash(data: &[u8]) -> Self::Hash {
+        T::default().keccak_256(data)
+    }
+}
+
+/// Validate signatures against threshold
 fn validate_sigs_against_threshold(set: &BeefyNextAuthoritySet<H256>, sigs_len: usize) -> bool {
     let threshold = ((2 * set.len) / 3) + 1;
     sigs_len >= threshold as usize
