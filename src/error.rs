@@ -1,5 +1,8 @@
+//! Light client error definition
+
 use sp_std::prelude::*;
 #[derive(sp_std::fmt::Debug, PartialEq, Eq)]
+/// Error definition for the light client
 pub enum BeefyClientError {
     /// Failed to read a value from storage
     StorageReadError,

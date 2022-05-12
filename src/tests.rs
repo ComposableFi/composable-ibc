@@ -1,7 +1,7 @@
 use crate::primitives::{ParachainHeader, PartialMmrLeaf, SignedCommitment};
 use crate::{
-    runtime, BeefyLightClient, ClientState, HostFunctions, KeccakHasher, MmrUpdateProof,
-    ParachainsUpdateProof, SignatureWithAuthorityIndex,
+    runtime, BeefyLightClient, ClientState, HostFunctions, MmrUpdateProof, ParachainsUpdateProof,
+    SignatureWithAuthorityIndex,
 };
 use crate::{BeefyClientError, H256};
 use beefy_primitives::known_payload_ids::MMR_ROOT_ID;
@@ -20,14 +20,24 @@ use subxt::sp_core::keccak_256;
 
 pub const PARA_ID: u32 = 2000;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Crypto;
+
+impl rs_merkle::Hasher for Crypto {
+    type Hash = [u8; 32];
+
+    fn hash(data: &[u8]) -> [u8; 32] {
+        keccak_256(data)
+    }
+}
+
 impl HostFunctions for Crypto {
-    fn keccak_256(input: &[u8]) -> [u8; 32] {
+    fn keccak_256(&self, input: &[u8]) -> [u8; 32] {
         keccak_256(input)
     }
 
     fn secp256k1_ecdsa_recover_compressed(
+        &self,
         signature: &[u8; 65],
         value: &[u8; 32],
     ) -> Option<Vec<u8>> {
@@ -128,7 +138,7 @@ async fn get_mmr_update(
         .map(|x| x.index as usize)
         .collect::<Vec<_>>();
 
-    let tree = rs_merkle::MerkleTree::<KeccakHasher>::from_leaves(&authority_address_hashes);
+    let tree = rs_merkle::MerkleTree::<Crypto>::from_leaves(&authority_address_hashes);
 
     let authority_proof = tree.proof(&signature_indices);
 
@@ -145,7 +155,7 @@ async fn get_mmr_update(
 
 #[tokio::test]
 async fn test_ingest_mmr_with_proof() {
-    let mut beef_light_client = BeefyLightClient::<Crypto>::new();
+    let mut beef_light_client = BeefyLightClient::new(Crypto::default());
     let url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
     let client = subxt::ClientBuilder::new()
         .set_url(url)
@@ -216,7 +226,7 @@ async fn test_ingest_mmr_with_proof() {
 
 #[test]
 fn should_fail_with_incomplete_signature_threshold() {
-    let mut beef_light_client = BeefyLightClient::<Crypto>::new();
+    let mut beef_light_client = BeefyLightClient::new(Crypto::default());
     let mmr_update = MmrUpdateProof {
         signed_commitment: SignedCommitment {
             commitment: beefy_primitives::Commitment {
@@ -258,7 +268,7 @@ fn should_fail_with_incomplete_signature_threshold() {
 
 #[test]
 fn should_fail_with_invalid_validator_set_id() {
-    let mut beef_light_client = BeefyLightClient::<Crypto>::new();
+    let mut beef_light_client = BeefyLightClient::new(Crypto::default());
 
     let mmr_update = MmrUpdateProof {
         signed_commitment: SignedCommitment {
@@ -301,7 +311,7 @@ fn should_fail_with_invalid_validator_set_id() {
 
 #[tokio::test]
 async fn verify_parachain_headers() {
-    let mut beef_light_client = BeefyLightClient::<Crypto>::new();
+    let mut beef_light_client = BeefyLightClient::new(Crypto::default());
     let url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
     let client = subxt::ClientBuilder::new()
         .set_url(url)
@@ -440,7 +450,7 @@ async fn verify_parachain_headers() {
                 }
             }
 
-            let tree = rs_merkle::MerkleTree::<KeccakHasher>::from_leaves(&parachain_leaves);
+            let tree = rs_merkle::MerkleTree::<Crypto>::from_leaves(&parachain_leaves);
 
             let proof = if let Some(index) = index {
                 tree.proof(&[index])

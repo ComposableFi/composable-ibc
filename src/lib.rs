@@ -12,10 +12,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+//! Beefy Light Client Implementation
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
 
-use core::marker::PhantomData;
 #[cfg(test)]
 use std::println as debug;
 
@@ -29,7 +30,7 @@ pub mod traits;
 
 use crate::error::BeefyClientError;
 use crate::primitives::{
-    BeefyNextAuthoritySet, KeccakHasher, MmrUpdateProof, ParachainsUpdateProof,
+    BeefyNextAuthoritySet, Hash, MmrUpdateProof, ParachainsUpdateProof,
     SignatureWithAuthorityIndex, HASH_LENGTH,
 };
 use crate::traits::{ClientState, HostFunctions};
@@ -41,17 +42,18 @@ use sp_runtime::traits::Convert;
 
 use sp_std::prelude::*;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
+/// Beefy light client
 pub struct BeefyLightClient<Crypto: HostFunctions + Default> {
-    _phantom: PhantomData<Crypto>,
+    crypto: Crypto,
 }
 
-impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
+impl<Crypto: HostFunctions + rs_merkle::Hasher<Hash = Hash> + Default + Clone>
+    BeefyLightClient<Crypto>
+{
     /// Create a new instance of the light client
-    pub fn new() -> Self {
-        Self {
-            _phantom: PhantomData::default(),
-        }
+    pub fn new(crypto: Crypto) -> Self {
+        Self { crypto }
     }
 
     /// This should verify the signed commitment signatures, and reconstruct the
@@ -104,7 +106,7 @@ impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
 
         // Beefy validators sign the keccak_256 hash of the scale encoded commitment
         let encoded_commitment = mmr_update.signed_commitment.commitment.encode();
-        let commitment_hash = <Crypto as HostFunctions>::keccak_256(&*encoded_commitment);
+        let commitment_hash = self.crypto.keccak_256(&*encoded_commitment);
 
         #[cfg(test)]
         debug!("Recovering authority keys from signatures");
@@ -114,27 +116,24 @@ impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
             .signatures
             .into_iter()
             .map(|SignatureWithAuthorityIndex { index, signature }| {
-                <Crypto as HostFunctions>::secp256k1_ecdsa_recover_compressed(
-                    &signature,
-                    &commitment_hash,
-                )
-                .and_then(|public_key_bytes| {
-                    beefy_primitives::crypto::AuthorityId::from_slice(&public_key_bytes).ok()
-                })
-                .map(|pub_key| {
-                    authority_indices.push(index as usize);
-                    <Crypto as HostFunctions>::keccak_256(
-                        &beefy_mmr::BeefyEcdsaToEthereum::convert(pub_key),
-                    )
-                })
-                .ok_or(BeefyClientError::InvalidSignature)
+                self.crypto
+                    .secp256k1_ecdsa_recover_compressed(&signature, &commitment_hash)
+                    .and_then(|public_key_bytes| {
+                        beefy_primitives::crypto::AuthorityId::from_slice(&public_key_bytes).ok()
+                    })
+                    .map(|pub_key| {
+                        authority_indices.push(index as usize);
+                        self.crypto
+                            .keccak_256(&beefy_mmr::BeefyEcdsaToEthereum::convert(pub_key))
+                    })
+                    .ok_or(BeefyClientError::InvalidSignature)
             })
             .collect::<Result<Vec<_>, BeefyClientError>>()?;
 
         let mut authorities_changed = false;
 
         let authorities_merkle_proof =
-            rs_merkle::MerkleProof::<KeccakHasher<Crypto>>::new(mmr_update.authority_proof);
+            rs_merkle::MerkleProof::<Crypto>::new(mmr_update.authority_proof);
 
         // Verify mmr_update.authority_proof against store root hash
         match validator_set_id {
@@ -200,6 +199,8 @@ impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
         Ok(trusted_client_state)
     }
 
+    /// Takes the updated client state and parachains headers update proof
+    /// and verifies inclusion in mmr
     pub fn verify_parachain_headers(
         &self,
         trusted_client_state: ClientState,
@@ -212,8 +213,8 @@ impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
             let leaf_bytes = pair.encode();
 
             let proof =
-                rs_merkle::MerkleProof::<KeccakHasher<Crypto>>::new(parachain_header.parachain_heads_proof);
-            let leaf_hash = <Crypto as HostFunctions>::keccak_256(&leaf_bytes);
+                rs_merkle::MerkleProof::<Crypto>::new(parachain_header.parachain_heads_proof);
+            let leaf_hash = self.crypto.keccak_256(&leaf_bytes);
             let root = proof
                 .root(
                     &[parachain_header.heads_leaf_index as usize],
