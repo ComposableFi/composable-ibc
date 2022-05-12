@@ -37,7 +37,7 @@ pub struct MmrUpdateProof {
     /// Signed commitment
     pub signed_commitment: SignedCommitment,
     /// Latest leaf added to mmr
-    pub latest_mmr_leaf: MmrLeaf<u32, H256, H256>,
+    pub latest_mmr_leaf: MmrLeaf<u32, H256, H256, H256>,
     /// Proof for the latest mmr leaf
     pub mmr_proof: pallet_mmr_primitives::Proof<H256>,
     /// Proof for authorities in current session

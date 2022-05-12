@@ -18,7 +18,6 @@
 #![deny(missing_docs)]
 
 use core::marker::PhantomData;
-use pallet_mmr::mmr::utils::NodesUtils;
 
 pub mod error;
 pub mod primitives;
@@ -41,6 +40,7 @@ use sp_core::{ByteArray, H256};
 use sp_runtime::traits::Convert;
 
 use sp_std::prelude::*;
+use sp_std::vec;
 
 #[derive(Default, Clone)]
 /// Beefy light client
@@ -163,15 +163,22 @@ impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
         }
 
         // Move on to verify mmr_proof
-        let node = pallet_mmr_primitives::DataOrHash::Data(mmr_update.latest_mmr_leaf.clone());
+        let node = mmr_update
+            .latest_mmr_leaf
+            .using_encoded(|leaf| self.crypto.keccak_256(leaf));
 
-        // todo: outsource hashing here to HostFunctions
-        pallet_mmr::verify_leaf_proof::<sp_runtime::traits::Keccak256, _>(
-            mmr_root_hash,
-            node,
-            mmr_update.mmr_proof,
-        )
-        .map_err(|_| BeefyClientError::InvalidMmrProof)?;
+        let mmr_size = NodesUtils::new(mmr_update.mmr_proof.leaf_count).size();
+        let proof = mmr_lib::MerkleProof::<_, MerkleHasher<Crypto>>::new(
+            mmr_size,
+            mmr_update.mmr_proof.items,
+        );
+
+        let leaf_pos = mmr_lib::leaf_index_to_pos(mmr_update.mmr_proof.leaf_index);
+
+        let root = proof.calculate_root(vec![(leaf_pos, node.into())])?;
+        if root != mmr_root_hash {
+            return Err(BeefyClientError::InvalidMmrProof);
+        }
 
         trusted_client_state.latest_beefy_height =
             mmr_update.signed_commitment.commitment.block_number;
@@ -216,7 +223,7 @@ impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
                 beefy_next_authority_set: parachain_header
                     .partial_mmr_leaf
                     .beefy_next_authority_set,
-                parachain_heads: root.into(),
+                leaf_extra: H256::from_slice(&root),
             };
 
             let node = mmr_leaf.using_encoded(|leaf| self.crypto.keccak_256(leaf));
@@ -224,7 +231,9 @@ impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
                 trusted_client_state.beefy_activation_block,
                 parachain_header.partial_mmr_leaf.parent_number_and_hash.0 + 1,
             );
-            mmr_leaves.push((leaf_index as u64, H256::from_slice(&node)));
+
+            let leaf_pos = mmr_lib::leaf_index_to_pos(leaf_index as u64);
+            mmr_leaves.push((leaf_pos, H256::from_slice(&node)));
         }
 
         let mmr_size = NodesUtils::new(parachain_update.mmr_proof.leaf_count).size();
@@ -241,9 +250,9 @@ impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
     }
 }
 
-/// Calculate the leafIndex for this block number
+/// Calculate the u64 for this block number
 fn get_leaf_index_for_block_number(activation_block: u32, block_number: u32) -> u32 {
-    // calculate the leafIndex for this leaf.
+    // calculate the u64 for this leaf.
     if activation_block == 0 {
         // in this case the leaf index is the same as the block number - 1 (leaf index starts at 0)
         block_number - 1
@@ -278,4 +287,40 @@ impl<T: HostFunctions + Default + Clone> rs_merkle::Hasher for MerkleHasher<T> {
 fn validate_sigs_against_threshold(set: &BeefyNextAuthoritySet<H256>, sigs_len: usize) -> bool {
     let threshold = ((2 * set.len) / 3) + 1;
     sigs_len >= threshold as usize
+}
+
+/// MMR nodes & size -related utilities.
+struct NodesUtils {
+    no_of_leaves: u64,
+}
+
+impl NodesUtils {
+    /// Create new instance of MMR nodes utilities for given number of leaves.
+    pub fn new(no_of_leaves: u64) -> Self {
+        Self { no_of_leaves }
+    }
+
+    /// Calculate number of peaks in the MMR.
+    pub fn number_of_peaks(&self) -> u64 {
+        self.number_of_leaves().count_ones() as u64
+    }
+
+    /// Return the number of leaves in the MMR.
+    pub fn number_of_leaves(&self) -> u64 {
+        self.no_of_leaves
+    }
+
+    /// Calculate the total size of MMR (number of nodes).
+    pub fn size(&self) -> u64 {
+        2 * self.no_of_leaves - self.number_of_peaks()
+    }
+
+    /// Calculate maximal depth of the MMR.
+    pub fn _depth(&self) -> u32 {
+        if self.no_of_leaves == 0 {
+            return 0;
+        }
+
+        64 - self.no_of_leaves.next_power_of_two().leading_zeros()
+    }
 }

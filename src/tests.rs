@@ -8,6 +8,7 @@ use beefy_primitives::known_payload_ids::MMR_ROOT_ID;
 use beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
 use beefy_primitives::Payload;
 use codec::{Decode, Encode};
+use frame_support::assert_ok;
 use hex_literal::hex;
 use pallet_mmr_primitives::Proof;
 use sp_core::bytes::to_hex;
@@ -76,7 +77,7 @@ async fn get_mmr_update(
     let api =
         client.clone().to_runtime_api::<runtime::api::RuntimeApi<
             subxt::DefaultConfig,
-            subxt::DefaultExtra<subxt::DefaultConfig>,
+            subxt::PolkadotExtrinsicParams<_>,
         >>();
     let subxt_block_number: subxt::BlockNumber = signed_commitment.commitment.block_number.into();
     let block_hash = client
@@ -98,7 +99,8 @@ async fn get_mmr_update(
         .unwrap();
 
     let opaque_leaf: Vec<u8> = codec::Decode::decode(&mut &*leaf_proof.leaf.0).unwrap();
-    let latest_leaf: MmrLeaf<u32, H256, H256> = codec::Decode::decode(&mut &*opaque_leaf).unwrap();
+    let latest_leaf: MmrLeaf<u32, H256, H256, H256> =
+        codec::Decode::decode(&mut &*opaque_leaf).unwrap();
     let mmr_proof: pallet_mmr_primitives::Proof<H256> =
         codec::Decode::decode(&mut &*leaf_proof.proof.0).unwrap();
 
@@ -251,7 +253,7 @@ fn should_fail_with_incomplete_signature_threshold() {
                 len: 0,
                 root: Default::default(),
             },
-            parachain_heads: Default::default(),
+            leaf_extra: Default::default(),
         },
         mmr_proof: Proof {
             leaf_index: 0,
@@ -294,7 +296,7 @@ fn should_fail_with_invalid_validator_set_id() {
                 len: 0,
                 root: Default::default(),
             },
-            parachain_heads: Default::default(),
+            leaf_extra: Default::default(),
         },
         mmr_proof: Proof {
             leaf_index: 0,
@@ -322,7 +324,7 @@ async fn verify_parachain_headers() {
     let api =
         client.clone().to_runtime_api::<runtime::api::RuntimeApi<
             subxt::DefaultConfig,
-            subxt::DefaultExtra<subxt::DefaultConfig>,
+            subxt::PolkadotExtrinsicParams<_>,
         >>();
     let mut subscription: Subscription<String> = client
         .rpc()
@@ -426,17 +428,16 @@ async fn verify_parachain_headers() {
             .unwrap();
 
         let mut mmr_leaves_test = vec![];
-        let leaves: Vec<(Vec<u8>, pallet_mmr_primitives::LeafIndex)> =
-            Decode::decode(&mut &*batch_proof.leaves.to_vec()).unwrap();
+        let leaves: Vec<Vec<u8>> = Decode::decode(&mut &*batch_proof.leaves.to_vec()).unwrap();
 
         let mut parachain_headers = vec![];
-        for (leaf_bytes, leaf_index) in leaves {
-            let leaf: MmrLeaf<u32, H256, H256> = Decode::decode(&mut &*leaf_bytes).unwrap();
+        for leaf_bytes in leaves {
+            let leaf: MmrLeaf<u32, H256, H256, H256> = Decode::decode(&mut &*leaf_bytes).unwrap();
             mmr_leaves_test.push(pallet_mmr_primitives::DataOrHash::Data::<
                 sp_runtime::traits::Keccak256,
                 _,
             >(leaf.clone()));
-            let leaf_block_number = leaf_index + 1;
+            let leaf_block_number = (leaf.parent_number_and_hash.0 + 1) as u64;
             let para_headers = finalized_blocks.get(&leaf_block_number).unwrap();
 
             let mut index = None;
@@ -482,7 +483,7 @@ async fn verify_parachain_headers() {
 
         let batch_proof: pallet_mmr_primitives::BatchProof<H256> =
             Decode::decode(&mut batch_proof.proof.0.as_slice()).unwrap();
-        let _parachain_update_proof = ParachainsUpdateProof {
+        let parachain_update_proof = ParachainsUpdateProof {
             parachain_headers,
             mmr_proof: batch_proof,
         };
@@ -494,7 +495,8 @@ async fn verify_parachain_headers() {
 
         // TODO: fix `InvalidMmrProof` error,
         // see https://github.com/ComposableFi/beefy-client/runs/5988511296?check_suite_focus=true for details
-        // assert_ok!(beef_light_client.verify_parachain_headers(client_state.clone(), parachain_update_proof));
+        assert_ok!(beef_light_client
+            .verify_parachain_headers(client_state.clone(), parachain_update_proof));
 
         println!(
             "\nSuccessfully verified parachain headers for block number: {}\nmmr_root_hash: {}\n",
