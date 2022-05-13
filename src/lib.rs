@@ -264,7 +264,7 @@ fn get_leaf_index_for_block_number(activation_block: u32, block_number: u32) -> 
 
 #[derive(Clone)]
 /// Merkle Hasher for mmr library
-struct MerkleHasher<T: HostFunctions>(PhantomData<T>);
+pub(crate) struct MerkleHasher<T: HostFunctions>(PhantomData<T>);
 
 impl<T: HostFunctions + Default> mmr_lib::Merge for MerkleHasher<T> {
     type Item = H256;

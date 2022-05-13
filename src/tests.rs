@@ -1,7 +1,7 @@
 use crate::primitives::{ParachainHeader, PartialMmrLeaf, SignedCommitment};
 use crate::{
-    runtime, BeefyLightClient, ClientState, HostFunctions, MmrUpdateProof, ParachainsUpdateProof,
-    SignatureWithAuthorityIndex,
+    runtime, BeefyLightClient, ClientState, HostFunctions, MerkleHasher, MmrUpdateProof,
+    ParachainsUpdateProof, SignatureWithAuthorityIndex,
 };
 use crate::{BeefyClientError, H256};
 use beefy_primitives::known_payload_ids::MMR_ROOT_ID;
@@ -23,14 +23,6 @@ pub const PARA_ID: u32 = 2000;
 
 #[derive(Default, Clone)]
 pub struct Crypto;
-
-impl rs_merkle::Hasher for Crypto {
-    type Hash = [u8; 32];
-
-    fn hash(data: &[u8]) -> [u8; 32] {
-        keccak_256(data)
-    }
-}
 
 impl HostFunctions for Crypto {
     fn keccak_256(&self, input: &[u8]) -> [u8; 32] {
@@ -141,7 +133,8 @@ async fn get_mmr_update(
         .map(|x| x.index as usize)
         .collect::<Vec<_>>();
 
-    let tree = rs_merkle::MerkleTree::<Crypto>::from_leaves(&authority_address_hashes);
+    let tree =
+        rs_merkle::MerkleTree::<MerkleHasher<Crypto>>::from_leaves(&authority_address_hashes);
 
     let authority_proof = tree.proof(&signature_indices);
 
@@ -452,7 +445,8 @@ async fn verify_parachain_headers() {
                 }
             }
 
-            let tree = rs_merkle::MerkleTree::<Crypto>::from_leaves(&parachain_leaves);
+            let tree =
+                rs_merkle::MerkleTree::<MerkleHasher<Crypto>>::from_leaves(&parachain_leaves);
 
             let proof = if let Some(index) = index {
                 tree.proof(&[index])
