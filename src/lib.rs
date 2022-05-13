@@ -250,9 +250,9 @@ impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
     }
 }
 
-/// Calculate the u64 for this block number
+/// Calculate the leaf index for this block number
 fn get_leaf_index_for_block_number(activation_block: u32, block_number: u32) -> u32 {
-    // calculate the u64 for this leaf.
+    // calculate the leaf index for this leaf.
     if activation_block == 0 {
         // in this case the leaf index is the same as the block number - 1 (leaf index starts at 0)
         block_number - 1
