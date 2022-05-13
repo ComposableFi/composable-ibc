@@ -42,16 +42,14 @@ use sp_runtime::traits::Convert;
 use sp_std::prelude::*;
 use sp_std::vec;
 
-#[derive(Default, Clone)]
 /// Beefy light client
-pub struct BeefyLightClient<Crypto: HostFunctions + Default> {
-    crypto: Crypto,
-}
+#[derive(Clone)]
+pub struct BeefyLightClient<Crypto: HostFunctions + Clone>(PhantomData<Crypto>);
 
-impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
+impl<Crypto: HostFunctions + Clone> BeefyLightClient<Crypto> {
     /// Create a new instance of the light client
-    pub fn new(crypto: Crypto) -> Self {
-        Self { crypto }
+    pub fn new() -> Self {
+        Self(PhantomData::default())
     }
 
     /// This should verify the signed commitment signatures, and reconstruct the
@@ -102,7 +100,7 @@ impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
 
         // Beefy validators sign the keccak_256 hash of the scale encoded commitment
         let encoded_commitment = mmr_update.signed_commitment.commitment.encode();
-        let commitment_hash = self.crypto.keccak_256(&*encoded_commitment);
+        let commitment_hash = Crypto::keccak_256(&*encoded_commitment);
 
         let mut authority_indices = Vec::new();
         let authority_leaves = mmr_update
@@ -110,15 +108,13 @@ impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
             .signatures
             .into_iter()
             .map(|SignatureWithAuthorityIndex { index, signature }| {
-                self.crypto
-                    .secp256k1_ecdsa_recover_compressed(&signature, &commitment_hash)
+                Crypto::secp256k1_ecdsa_recover_compressed(&signature, &commitment_hash)
                     .and_then(|public_key_bytes| {
                         beefy_primitives::crypto::AuthorityId::from_slice(&public_key_bytes).ok()
                     })
                     .map(|pub_key| {
                         authority_indices.push(index as usize);
-                        self.crypto
-                            .keccak_256(&beefy_mmr::BeefyEcdsaToEthereum::convert(pub_key))
+                        Crypto::keccak_256(&beefy_mmr::BeefyEcdsaToEthereum::convert(pub_key))
                     })
                     .ok_or(BeefyClientError::InvalidSignature)
             })
@@ -165,7 +161,7 @@ impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
         // Move on to verify mmr_proof
         let node = mmr_update
             .latest_mmr_leaf
-            .using_encoded(|leaf| self.crypto.keccak_256(leaf));
+            .using_encoded(|leaf| Crypto::keccak_256(leaf));
 
         let mmr_size = NodesUtils::new(mmr_update.mmr_proof.leaf_count).size();
         let proof = mmr_lib::MerkleProof::<_, MerkleHasher<Crypto>>::new(
@@ -208,7 +204,7 @@ impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
             let proof = rs_merkle::MerkleProof::<MerkleHasher<Crypto>>::new(
                 parachain_header.parachain_heads_proof,
             );
-            let leaf_hash = self.crypto.keccak_256(&leaf_bytes);
+            let leaf_hash = Crypto::keccak_256(&leaf_bytes);
             let root = proof
                 .root(
                     &[parachain_header.heads_leaf_index as usize],
@@ -226,7 +222,7 @@ impl<Crypto: HostFunctions + Default + Clone> BeefyLightClient<Crypto> {
                 leaf_extra: H256::from_slice(&root),
             };
 
-            let node = mmr_leaf.using_encoded(|leaf| self.crypto.keccak_256(leaf));
+            let node = mmr_leaf.using_encoded(|leaf| Crypto::keccak_256(leaf));
             let leaf_index = get_leaf_index_for_block_number(
                 trusted_client_state.beefy_activation_block,
                 parachain_header.partial_mmr_leaf.parent_number_and_hash.0 + 1,
@@ -262,24 +258,24 @@ fn get_leaf_index_for_block_number(activation_block: u32, block_number: u32) -> 
     }
 }
 
-#[derive(Clone)]
 /// Merkle Hasher for mmr library
+#[derive(Clone)]
 pub(crate) struct MerkleHasher<T: HostFunctions>(PhantomData<T>);
 
-impl<T: HostFunctions + Default> mmr_lib::Merge for MerkleHasher<T> {
+impl<T: HostFunctions + Clone> mmr_lib::Merge for MerkleHasher<T> {
     type Item = H256;
 
     fn merge(left: &Self::Item, right: &Self::Item) -> Self::Item {
         let mut concat = left.as_bytes().to_vec();
         concat.extend_from_slice(right.as_bytes());
-        T::default().keccak_256(&*concat).into()
+        T::keccak_256(&*concat).into()
     }
 }
 
-impl<T: HostFunctions + Default + Clone> rs_merkle::Hasher for MerkleHasher<T> {
+impl<T: HostFunctions + Clone> rs_merkle::Hasher for MerkleHasher<T> {
     type Hash = [u8; 32];
     fn hash(data: &[u8]) -> Self::Hash {
-        T::default().keccak_256(data)
+        T::keccak_256(data)
     }
 }
 

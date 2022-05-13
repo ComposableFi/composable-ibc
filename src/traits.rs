@@ -23,10 +23,9 @@ pub struct ClientState {
 /// Host functions required by the light client for signature verification
 pub trait HostFunctions {
     /// Keccak 256 hash function
-    fn keccak_256(&self, input: &[u8]) -> [u8; 32];
+    fn keccak_256(input: &[u8]) -> [u8; 32];
     /// Compressed Ecdsa public key recovery from a signature
     fn secp256k1_ecdsa_recover_compressed(
-        &self,
         signature: &[u8; 65],
         value: &[u8; 32],
     ) -> Option<Vec<u8>>;
