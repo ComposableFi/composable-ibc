@@ -233,9 +233,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<FillBlock>()?
                         == [
-                            228u8, 117u8, 251u8, 95u8, 47u8, 56u8, 32u8, 177u8, 191u8, 72u8, 75u8,
-                            23u8, 193u8, 175u8, 227u8, 218u8, 127u8, 94u8, 114u8, 110u8, 215u8,
-                            61u8, 162u8, 102u8, 73u8, 89u8, 218u8, 148u8, 59u8, 73u8, 59u8, 149u8,
+                            19u8, 117u8, 154u8, 157u8, 101u8, 132u8, 50u8, 77u8, 245u8, 5u8, 230u8,
+                            232u8, 2u8, 69u8, 26u8, 239u8, 159u8, 26u8, 226u8, 121u8, 106u8, 82u8,
+                            67u8, 53u8, 138u8, 184u8, 39u8, 83u8, 220u8, 251u8, 206u8, 16u8,
                         ]
                     {
                         let call = FillBlock { ratio };
@@ -470,11 +470,6 @@ pub mod api {
                     }
                 }
                 #[doc = "Make some on-chain remark and emit event."]
-                #[doc = ""]
-                #[doc = "# <weight>"]
-                #[doc = "- `O(b)` where b is the length of the remark."]
-                #[doc = "- 1 event."]
-                #[doc = "# </weight>"]
                 pub fn remark_with_event(
                     &self,
                     remark: ::std::vec::Vec<::core::primitive::u8>,
@@ -858,10 +853,10 @@ pub mod api {
                 {
                     if self.client.metadata().storage_hash::<BlockHash>()?
                         == [
-                            24u8, 99u8, 146u8, 142u8, 205u8, 166u8, 4u8, 32u8, 218u8, 213u8, 24u8,
-                            236u8, 45u8, 116u8, 145u8, 204u8, 27u8, 141u8, 169u8, 249u8, 111u8,
-                            141u8, 37u8, 136u8, 45u8, 73u8, 167u8, 217u8, 118u8, 206u8, 246u8,
-                            120u8,
+                            111u8, 201u8, 1u8, 177u8, 247u8, 64u8, 190u8, 182u8, 232u8, 51u8,
+                            217u8, 13u8, 155u8, 248u8, 105u8, 99u8, 205u8, 215u8, 155u8, 66u8,
+                            132u8, 103u8, 79u8, 100u8, 63u8, 118u8, 106u8, 195u8, 134u8, 237u8,
+                            236u8, 148u8,
                         ]
                     {
                         let entry = BlockHash(_0);
@@ -883,10 +878,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<BlockHash>()?
                         == [
-                            24u8, 99u8, 146u8, 142u8, 205u8, 166u8, 4u8, 32u8, 218u8, 213u8, 24u8,
-                            236u8, 45u8, 116u8, 145u8, 204u8, 27u8, 141u8, 169u8, 249u8, 111u8,
-                            141u8, 37u8, 136u8, 45u8, 73u8, 167u8, 217u8, 118u8, 206u8, 246u8,
-                            120u8,
+                            111u8, 201u8, 1u8, 177u8, 247u8, 64u8, 190u8, 182u8, 232u8, 51u8,
+                            217u8, 13u8, 155u8, 248u8, 105u8, 99u8, 205u8, 215u8, 155u8, 66u8,
+                            132u8, 103u8, 79u8, 100u8, 63u8, 118u8, 106u8, 195u8, 134u8, 237u8,
+                            236u8, 148u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -970,10 +965,9 @@ pub mod api {
                 {
                     if self.client.metadata().storage_hash::<ParentHash>()?
                         == [
-                            194u8, 221u8, 147u8, 22u8, 68u8, 141u8, 32u8, 6u8, 202u8, 39u8, 164u8,
-                            184u8, 69u8, 126u8, 190u8, 101u8, 215u8, 27u8, 127u8, 157u8, 200u8,
-                            69u8, 170u8, 139u8, 232u8, 27u8, 254u8, 181u8, 183u8, 105u8, 111u8,
-                            177u8,
+                            181u8, 119u8, 0u8, 41u8, 126u8, 107u8, 154u8, 144u8, 248u8, 193u8,
+                            101u8, 89u8, 243u8, 242u8, 70u8, 202u8, 1u8, 65u8, 77u8, 38u8, 35u8,
+                            175u8, 192u8, 103u8, 250u8, 36u8, 51u8, 175u8, 71u8, 74u8, 117u8, 93u8,
                         ]
                     {
                         let entry = ParentHash;
@@ -1012,8 +1006,11 @@ pub mod api {
                 }
                 #[doc = " Events deposited for the current block."]
                 #[doc = ""]
-                #[doc = " NOTE: This storage item is explicitly unbounded since it is never intended to be read"]
-                #[doc = " from within the runtime."]
+                #[doc = " NOTE: The item is unbound and should therefore never be read on chain."]
+                #[doc = " It could otherwise inflate the PoV size of a block."]
+                #[doc = ""]
+                #[doc = " Events have a large in-memory size. Box the events to not go out-of-memory"]
+                #[doc = " just in case someone still reads them from within the runtime."]
                 pub async fn events(
                     &self,
                     block_hash: ::core::option::Option<T::Hash>,
@@ -1028,10 +1025,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Events>()?
                         == [
-                            124u8, 139u8, 36u8, 188u8, 243u8, 13u8, 16u8, 88u8, 222u8, 82u8, 81u8,
-                            90u8, 125u8, 133u8, 151u8, 94u8, 152u8, 234u8, 241u8, 19u8, 68u8,
-                            237u8, 113u8, 74u8, 28u8, 14u8, 104u8, 142u8, 235u8, 170u8, 38u8,
-                            246u8,
+                            170u8, 108u8, 138u8, 175u8, 31u8, 58u8, 48u8, 44u8, 240u8, 15u8, 234u8,
+                            219u8, 45u8, 212u8, 124u8, 19u8, 128u8, 188u8, 18u8, 149u8, 64u8,
+                            237u8, 155u8, 101u8, 87u8, 89u8, 70u8, 180u8, 60u8, 201u8, 90u8, 25u8,
                         ]
                     {
                         let entry = Events;
@@ -1086,9 +1082,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<EventTopics>()?
                         == [
-                            231u8, 73u8, 172u8, 223u8, 210u8, 145u8, 151u8, 102u8, 73u8, 23u8,
-                            140u8, 55u8, 97u8, 40u8, 219u8, 239u8, 229u8, 177u8, 72u8, 41u8, 93u8,
-                            178u8, 7u8, 209u8, 57u8, 86u8, 153u8, 252u8, 86u8, 152u8, 245u8, 179u8,
+                            144u8, 227u8, 63u8, 224u8, 232u8, 119u8, 45u8, 240u8, 123u8, 241u8,
+                            77u8, 214u8, 215u8, 164u8, 35u8, 64u8, 51u8, 235u8, 122u8, 146u8,
+                            182u8, 88u8, 109u8, 61u8, 43u8, 105u8, 84u8, 230u8, 166u8, 187u8,
+                            239u8, 95u8,
                         ]
                     {
                         let entry = EventTopics(_0);
@@ -1119,9 +1116,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<EventTopics>()?
                         == [
-                            231u8, 73u8, 172u8, 223u8, 210u8, 145u8, 151u8, 102u8, 73u8, 23u8,
-                            140u8, 55u8, 97u8, 40u8, 219u8, 239u8, 229u8, 177u8, 72u8, 41u8, 93u8,
-                            178u8, 7u8, 209u8, 57u8, 86u8, 153u8, 252u8, 86u8, 152u8, 245u8, 179u8,
+                            144u8, 227u8, 63u8, 224u8, 232u8, 119u8, 45u8, 240u8, 123u8, 241u8,
+                            77u8, 214u8, 215u8, 164u8, 35u8, 64u8, 51u8, 235u8, 122u8, 146u8,
+                            182u8, 88u8, 109u8, 61u8, 43u8, 105u8, 84u8, 230u8, 166u8, 187u8,
+                            239u8, 95u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -1251,10 +1249,9 @@ pub mod api {
                         .metadata()
                         .constant_hash("System", "BlockWeights")?
                         == [
-                            73u8, 115u8, 199u8, 200u8, 197u8, 43u8, 15u8, 67u8, 131u8, 18u8, 45u8,
-                            22u8, 66u8, 198u8, 170u8, 35u8, 207u8, 104u8, 114u8, 204u8, 77u8,
-                            216u8, 32u8, 174u8, 192u8, 172u8, 39u8, 101u8, 56u8, 183u8, 207u8,
-                            139u8,
+                            215u8, 15u8, 243u8, 205u8, 15u8, 204u8, 67u8, 181u8, 5u8, 25u8, 77u8,
+                            32u8, 15u8, 69u8, 250u8, 90u8, 118u8, 42u8, 116u8, 3u8, 231u8, 203u8,
+                            152u8, 28u8, 230u8, 136u8, 184u8, 234u8, 38u8, 25u8, 58u8, 181u8,
                         ]
                     {
                         let pallet = self.client.metadata().pallet("System")?;
@@ -1346,10 +1343,10 @@ pub mod api {
                 > {
                     if self.client.metadata().constant_hash("System", "Version")?
                         == [
-                            241u8, 253u8, 94u8, 119u8, 29u8, 139u8, 142u8, 112u8, 147u8, 21u8,
-                            252u8, 97u8, 30u8, 213u8, 5u8, 124u8, 169u8, 17u8, 49u8, 35u8, 213u8,
-                            53u8, 59u8, 92u8, 208u8, 131u8, 55u8, 180u8, 166u8, 191u8, 205u8,
-                            182u8,
+                            204u8, 182u8, 166u8, 232u8, 201u8, 27u8, 210u8, 58u8, 156u8, 104u8,
+                            233u8, 214u8, 202u8, 35u8, 247u8, 203u8, 119u8, 118u8, 106u8, 249u8,
+                            73u8, 145u8, 104u8, 122u8, 34u8, 30u8, 41u8, 131u8, 209u8, 223u8,
+                            165u8, 89u8,
                         ]
                     {
                         let pallet = self.client.metadata().pallet("System")?;
@@ -1481,10 +1478,10 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<ReportEquivocation>()?
                         == [
-                            123u8, 212u8, 216u8, 77u8, 79u8, 132u8, 201u8, 155u8, 166u8, 230u8,
-                            50u8, 89u8, 98u8, 68u8, 56u8, 213u8, 206u8, 245u8, 91u8, 104u8, 89u8,
-                            189u8, 57u8, 38u8, 127u8, 22u8, 47u8, 206u8, 142u8, 202u8, 106u8,
-                            154u8,
+                            232u8, 217u8, 226u8, 60u8, 92u8, 214u8, 213u8, 240u8, 11u8, 38u8,
+                            145u8, 190u8, 54u8, 204u8, 114u8, 237u8, 217u8, 125u8, 134u8, 160u8,
+                            46u8, 159u8, 183u8, 227u8, 28u8, 35u8, 223u8, 54u8, 160u8, 75u8, 26u8,
+                            236u8,
                         ]
                     {
                         let call = ReportEquivocation {
@@ -1530,10 +1527,9 @@ pub mod api {
                         .metadata()
                         .call_hash::<ReportEquivocationUnsigned>()?
                         == [
-                            32u8, 163u8, 168u8, 251u8, 251u8, 9u8, 1u8, 195u8, 173u8, 32u8, 235u8,
-                            125u8, 141u8, 201u8, 130u8, 207u8, 239u8, 76u8, 150u8, 99u8, 74u8,
-                            193u8, 60u8, 165u8, 93u8, 49u8, 95u8, 224u8, 217u8, 243u8, 117u8,
-                            173u8,
+                            2u8, 244u8, 199u8, 230u8, 31u8, 46u8, 172u8, 21u8, 66u8, 34u8, 136u8,
+                            7u8, 58u8, 92u8, 103u8, 61u8, 1u8, 149u8, 243u8, 88u8, 247u8, 209u8,
+                            37u8, 52u8, 54u8, 100u8, 84u8, 59u8, 77u8, 176u8, 246u8, 246u8,
                         ]
                     {
                         let call = ReportEquivocationUnsigned {
@@ -1687,7 +1683,8 @@ pub mod api {
             impl ::subxt::StorageEntry for Initialized {
                 const PALLET: &'static str = "Babe";
                 const STORAGE: &'static str = "Initialized";
-                type Value = ::core::option::Option<[::core::primitive::u8; 32usize]>;
+                type Value =
+                    ::core::option::Option<runtime_types::sp_consensus_babe::digests::PreDigest>;
                 fn key(&self) -> ::subxt::StorageEntryKey {
                     ::subxt::StorageEntryKey::Plain
                 }
@@ -1779,9 +1776,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Authorities>()?
                         == [
-                            39u8, 102u8, 251u8, 125u8, 230u8, 247u8, 174u8, 255u8, 2u8, 81u8, 86u8,
-                            69u8, 182u8, 92u8, 191u8, 163u8, 66u8, 181u8, 247u8, 9u8, 57u8, 154u8,
-                            239u8, 34u8, 25u8, 139u8, 119u8, 4u8, 131u8, 124u8, 135u8, 240u8,
+                            7u8, 239u8, 126u8, 115u8, 17u8, 7u8, 136u8, 192u8, 194u8, 197u8, 14u8,
+                            87u8, 34u8, 22u8, 170u8, 159u8, 63u8, 35u8, 206u8, 74u8, 18u8, 243u8,
+                            242u8, 250u8, 226u8, 214u8, 230u8, 55u8, 169u8, 195u8, 97u8, 88u8,
                         ]
                     {
                         let entry = Authorities;
@@ -1938,10 +1935,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<NextAuthorities>()?
                         == [
-                            211u8, 175u8, 218u8, 0u8, 212u8, 114u8, 210u8, 137u8, 146u8, 135u8,
-                            78u8, 133u8, 85u8, 253u8, 140u8, 242u8, 101u8, 155u8, 159u8, 8u8,
-                            217u8, 176u8, 234u8, 143u8, 212u8, 103u8, 198u8, 94u8, 121u8, 111u8,
-                            56u8, 89u8,
+                            243u8, 38u8, 95u8, 14u8, 35u8, 130u8, 244u8, 182u8, 82u8, 19u8, 22u8,
+                            151u8, 193u8, 183u8, 153u8, 206u8, 24u8, 13u8, 166u8, 75u8, 242u8,
+                            217u8, 247u8, 87u8, 47u8, 58u8, 87u8, 109u8, 83u8, 208u8, 222u8, 241u8,
                         ]
                     {
                         let entry = NextAuthorities;
@@ -2037,16 +2033,17 @@ pub mod api {
                     block_hash: ::core::option::Option<T::Hash>,
                 ) -> ::core::result::Result<
                     ::core::option::Option<
-                        ::core::option::Option<[::core::primitive::u8; 32usize]>,
+                        ::core::option::Option<
+                            runtime_types::sp_consensus_babe::digests::PreDigest,
+                        >,
                     >,
                     ::subxt::BasicError,
                 > {
                     if self.client.metadata().storage_hash::<Initialized>()?
                         == [
-                            48u8, 206u8, 111u8, 118u8, 149u8, 175u8, 148u8, 53u8, 233u8, 82u8,
-                            220u8, 57u8, 22u8, 164u8, 116u8, 228u8, 134u8, 237u8, 129u8, 195u8,
-                            60u8, 169u8, 1u8, 164u8, 74u8, 177u8, 145u8, 112u8, 66u8, 198u8, 53u8,
-                            157u8,
+                            174u8, 23u8, 254u8, 52u8, 114u8, 235u8, 65u8, 46u8, 39u8, 97u8, 238u8,
+                            243u8, 237u8, 138u8, 142u8, 85u8, 114u8, 69u8, 58u8, 172u8, 7u8, 238u8,
+                            110u8, 153u8, 22u8, 122u8, 117u8, 149u8, 113u8, 221u8, 127u8, 225u8,
                         ]
                     {
                         let entry = Initialized;
@@ -2058,7 +2055,7 @@ pub mod api {
                 #[doc = " This field should always be populated during block processing unless"]
                 #[doc = " secondary plain slots are enabled (which don't contain a VRF output)."]
                 #[doc = ""]
-                #[doc = " It is set in `on_initialize`, before it will contain the value from the last block."]
+                #[doc = " It is set in `on_finalize`, before it will contain the value from the last block."]
                 pub async fn author_vrf_randomness(
                     &self,
                     block_hash: ::core::option::Option<T::Hash>,
@@ -3464,8 +3461,29 @@ pub mod api {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
                     }
                 }
-                #[doc = " The balance of an account."]
+                #[doc = " The Balances pallet example of storing the balance of an account."]
                 #[doc = ""]
+                #[doc = " # Example"]
+                #[doc = ""]
+                #[doc = " ```nocompile"]
+                #[doc = "  impl pallet_balances::Config for Runtime {"]
+                #[doc = "    type AccountStore = StorageMapShim<Self::Account<Runtime>, frame_system::Provider<Runtime>, AccountId, Self::AccountData<Balance>>"]
+                #[doc = "  }"]
+                #[doc = " ```"]
+                #[doc = ""]
+                #[doc = " You can also store the balance of an account in the `System` pallet."]
+                #[doc = ""]
+                #[doc = " # Example"]
+                #[doc = ""]
+                #[doc = " ```nocompile"]
+                #[doc = "  impl pallet_balances::Config for Runtime {"]
+                #[doc = "   type AccountStore = System"]
+                #[doc = "  }"]
+                #[doc = " ```"]
+                #[doc = ""]
+                #[doc = " But this comes with tradeoffs, storing account balances in the system pallet stores"]
+                #[doc = " `frame_system` data alongside the account data contrary to storing account balances in the"]
+                #[doc = " `Balances` pallet, which uses a `StorageMap` to store balances data only."]
                 #[doc = " NOTE: This is only used in the case that this pallet is used to store balances."]
                 pub async fn account(
                     &self,
@@ -3492,8 +3510,29 @@ pub mod api {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
                     }
                 }
-                #[doc = " The balance of an account."]
+                #[doc = " The Balances pallet example of storing the balance of an account."]
                 #[doc = ""]
+                #[doc = " # Example"]
+                #[doc = ""]
+                #[doc = " ```nocompile"]
+                #[doc = "  impl pallet_balances::Config for Runtime {"]
+                #[doc = "    type AccountStore = StorageMapShim<Self::Account<Runtime>, frame_system::Provider<Runtime>, AccountId, Self::AccountData<Balance>>"]
+                #[doc = "  }"]
+                #[doc = " ```"]
+                #[doc = ""]
+                #[doc = " You can also store the balance of an account in the `System` pallet."]
+                #[doc = ""]
+                #[doc = " # Example"]
+                #[doc = ""]
+                #[doc = " ```nocompile"]
+                #[doc = "  impl pallet_balances::Config for Runtime {"]
+                #[doc = "   type AccountStore = System"]
+                #[doc = "  }"]
+                #[doc = " ```"]
+                #[doc = ""]
+                #[doc = " But this comes with tradeoffs, storing account balances in the system pallet stores"]
+                #[doc = " `frame_system` data alongside the account data contrary to storing account balances in the"]
+                #[doc = " `Balances` pallet, which uses a `StorageMap` to store balances data only."]
                 #[doc = " NOTE: This is only used in the case that this pallet is used to store balances."]
                 pub async fn account_iter(
                     &self,
@@ -3761,9 +3800,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<NextFeeMultiplier>()?
                         == [
-                            232u8, 48u8, 68u8, 202u8, 209u8, 29u8, 249u8, 71u8, 0u8, 84u8, 229u8,
-                            250u8, 176u8, 203u8, 27u8, 26u8, 34u8, 55u8, 83u8, 183u8, 224u8, 40u8,
-                            62u8, 127u8, 131u8, 88u8, 128u8, 9u8, 56u8, 178u8, 31u8, 183u8,
+                            88u8, 50u8, 72u8, 23u8, 241u8, 137u8, 135u8, 135u8, 33u8, 57u8, 241u8,
+                            247u8, 212u8, 19u8, 116u8, 144u8, 60u8, 2u8, 6u8, 191u8, 190u8, 96u8,
+                            133u8, 199u8, 29u8, 132u8, 49u8, 121u8, 73u8, 116u8, 104u8, 141u8,
                         ]
                     {
                         let entry = NextFeeMultiplier;
@@ -3808,30 +3847,6 @@ pub mod api {
             impl<'a, T: ::subxt::Config> ConstantsApi<'a, T> {
                 pub fn new(client: &'a ::subxt::Client<T>) -> Self {
                     Self { client }
-                }
-                #[doc = " The fee to be paid for making a transaction; the per-byte portion."]
-                pub fn transaction_byte_fee(
-                    &self,
-                ) -> ::core::result::Result<::core::primitive::u128, ::subxt::BasicError>
-                {
-                    if self
-                        .client
-                        .metadata()
-                        .constant_hash("TransactionPayment", "TransactionByteFee")?
-                        == [
-                            99u8, 170u8, 207u8, 74u8, 96u8, 183u8, 179u8, 158u8, 91u8, 165u8,
-                            123u8, 234u8, 166u8, 19u8, 35u8, 233u8, 162u8, 24u8, 169u8, 125u8,
-                            12u8, 19u8, 23u8, 150u8, 190u8, 165u8, 108u8, 232u8, 112u8, 162u8,
-                            86u8, 46u8,
-                        ]
-                    {
-                        let pallet = self.client.metadata().pallet("TransactionPayment")?;
-                        let constant = pallet.constant("TransactionByteFee")?;
-                        let value = ::subxt::codec::Decode::decode(&mut &constant.value[..])?;
-                        Ok(value)
-                    } else {
-                        Err(::subxt::MetadataError::IncompatibleMetadata.into())
-                    }
                 }
                 #[doc = " A fee mulitplier for `Operational` extrinsics to compute \"virtual tip\" to boost their"]
                 #[doc = " `priority`"]
@@ -3893,13 +3908,43 @@ pub mod api {
                         .metadata()
                         .constant_hash("TransactionPayment", "WeightToFee")?
                         == [
-                            94u8, 195u8, 21u8, 213u8, 32u8, 73u8, 63u8, 43u8, 230u8, 138u8, 50u8,
-                            209u8, 183u8, 14u8, 19u8, 203u8, 57u8, 23u8, 85u8, 154u8, 98u8, 226u8,
-                            172u8, 151u8, 232u8, 237u8, 119u8, 169u8, 43u8, 131u8, 83u8, 27u8,
+                            45u8, 79u8, 182u8, 151u8, 56u8, 94u8, 151u8, 17u8, 186u8, 52u8, 33u8,
+                            209u8, 168u8, 84u8, 55u8, 203u8, 54u8, 162u8, 132u8, 64u8, 111u8,
+                            141u8, 19u8, 218u8, 142u8, 4u8, 246u8, 166u8, 126u8, 79u8, 11u8, 132u8,
                         ]
                     {
                         let pallet = self.client.metadata().pallet("TransactionPayment")?;
                         let constant = pallet.constant("WeightToFee")?;
+                        let value = ::subxt::codec::Decode::decode(&mut &constant.value[..])?;
+                        Ok(value)
+                    } else {
+                        Err(::subxt::MetadataError::IncompatibleMetadata.into())
+                    }
+                }
+                #[doc = " The polynomial that is applied in order to derive fee from length."]
+                pub fn length_to_fee(
+                    &self,
+                ) -> ::core::result::Result<
+                    ::std::vec::Vec<
+                        runtime_types::frame_support::weights::WeightToFeeCoefficient<
+                            ::core::primitive::u128,
+                        >,
+                    >,
+                    ::subxt::BasicError,
+                > {
+                    if self
+                        .client
+                        .metadata()
+                        .constant_hash("TransactionPayment", "LengthToFee")?
+                        == [
+                            247u8, 235u8, 15u8, 82u8, 189u8, 42u8, 103u8, 179u8, 146u8, 133u8,
+                            145u8, 191u8, 59u8, 45u8, 132u8, 195u8, 181u8, 238u8, 176u8, 137u8,
+                            82u8, 126u8, 92u8, 175u8, 9u8, 189u8, 137u8, 94u8, 165u8, 150u8, 25u8,
+                            81u8,
+                        ]
+                    {
+                        let pallet = self.client.metadata().pallet("TransactionPayment")?;
+                        let constant = pallet.constant("LengthToFee")?;
                         let value = ::subxt::codec::Decode::decode(&mut &constant.value[..])?;
                         Ok(value)
                     } else {
@@ -3966,9 +4011,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<SetUncles>()?
                         == [
-                            5u8, 56u8, 71u8, 152u8, 103u8, 232u8, 101u8, 171u8, 200u8, 2u8, 177u8,
-                            102u8, 0u8, 93u8, 210u8, 90u8, 56u8, 151u8, 5u8, 235u8, 227u8, 197u8,
-                            189u8, 248u8, 2u8, 71u8, 49u8, 220u8, 212u8, 253u8, 235u8, 67u8,
+                            77u8, 73u8, 220u8, 106u8, 126u8, 48u8, 20u8, 254u8, 87u8, 185u8, 110u8,
+                            253u8, 250u8, 10u8, 89u8, 77u8, 72u8, 90u8, 244u8, 27u8, 125u8, 43u8,
+                            58u8, 217u8, 112u8, 98u8, 233u8, 35u8, 194u8, 214u8, 183u8, 36u8,
                         ]
                     {
                         let call = SetUncles { new_uncles };
@@ -4037,9 +4082,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Uncles>()?
                         == [
-                            71u8, 135u8, 85u8, 172u8, 221u8, 165u8, 212u8, 2u8, 208u8, 50u8, 9u8,
-                            92u8, 251u8, 25u8, 194u8, 123u8, 210u8, 4u8, 148u8, 30u8, 20u8, 146u8,
-                            21u8, 210u8, 138u8, 128u8, 144u8, 152u8, 97u8, 57u8, 205u8, 231u8,
+                            234u8, 33u8, 171u8, 180u8, 154u8, 148u8, 191u8, 3u8, 191u8, 250u8,
+                            235u8, 39u8, 70u8, 41u8, 146u8, 155u8, 118u8, 154u8, 122u8, 27u8,
+                            126u8, 251u8, 2u8, 157u8, 187u8, 222u8, 120u8, 240u8, 21u8, 45u8,
+                            222u8, 13u8,
                         ]
                     {
                         let entry = Uncles;
@@ -4220,9 +4266,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Reports>()?
                         == [
-                            159u8, 183u8, 120u8, 137u8, 114u8, 85u8, 18u8, 113u8, 131u8, 156u8,
-                            32u8, 32u8, 26u8, 47u8, 28u8, 116u8, 237u8, 136u8, 51u8, 176u8, 94u8,
-                            48u8, 112u8, 87u8, 162u8, 90u8, 25u8, 168u8, 182u8, 198u8, 79u8, 33u8,
+                            232u8, 29u8, 235u8, 182u8, 72u8, 179u8, 168u8, 231u8, 177u8, 122u8,
+                            225u8, 193u8, 172u8, 163u8, 228u8, 219u8, 59u8, 210u8, 1u8, 11u8,
+                            181u8, 218u8, 26u8, 187u8, 176u8, 101u8, 212u8, 178u8, 70u8, 229u8,
+                            85u8, 205u8,
                         ]
                     {
                         let entry = Reports(_0);
@@ -4239,9 +4286,10 @@ pub mod api {
                 {
                     if self.client.metadata().storage_hash::<Reports>()?
                         == [
-                            159u8, 183u8, 120u8, 137u8, 114u8, 85u8, 18u8, 113u8, 131u8, 156u8,
-                            32u8, 32u8, 26u8, 47u8, 28u8, 116u8, 237u8, 136u8, 51u8, 176u8, 94u8,
-                            48u8, 112u8, 87u8, 162u8, 90u8, 25u8, 168u8, 182u8, 198u8, 79u8, 33u8,
+                            232u8, 29u8, 235u8, 182u8, 72u8, 179u8, 168u8, 231u8, 177u8, 122u8,
+                            225u8, 193u8, 172u8, 163u8, 228u8, 219u8, 59u8, 210u8, 1u8, 11u8,
+                            181u8, 218u8, 26u8, 187u8, 176u8, 101u8, 212u8, 178u8, 70u8, 229u8,
+                            85u8, 205u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -4264,9 +4312,10 @@ pub mod api {
                         .metadata()
                         .storage_hash::<ConcurrentReportsIndex>()?
                         == [
-                            110u8, 42u8, 178u8, 19u8, 180u8, 109u8, 26u8, 134u8, 74u8, 223u8, 19u8,
-                            172u8, 149u8, 194u8, 228u8, 11u8, 205u8, 189u8, 157u8, 52u8, 179u8,
-                            177u8, 19u8, 65u8, 35u8, 176u8, 62u8, 98u8, 108u8, 236u8, 242u8, 240u8,
+                            110u8, 182u8, 108u8, 15u8, 22u8, 226u8, 241u8, 98u8, 191u8, 37u8,
+                            135u8, 119u8, 88u8, 238u8, 202u8, 216u8, 221u8, 165u8, 144u8, 236u8,
+                            113u8, 49u8, 55u8, 18u8, 238u8, 238u8, 128u8, 210u8, 161u8, 134u8,
+                            130u8, 195u8,
                         ]
                     {
                         let entry = ConcurrentReportsIndex(_0, _1);
@@ -4291,9 +4340,10 @@ pub mod api {
                         .metadata()
                         .storage_hash::<ConcurrentReportsIndex>()?
                         == [
-                            110u8, 42u8, 178u8, 19u8, 180u8, 109u8, 26u8, 134u8, 74u8, 223u8, 19u8,
-                            172u8, 149u8, 194u8, 228u8, 11u8, 205u8, 189u8, 157u8, 52u8, 179u8,
-                            177u8, 19u8, 65u8, 35u8, 176u8, 62u8, 98u8, 108u8, 236u8, 242u8, 240u8,
+                            110u8, 182u8, 108u8, 15u8, 22u8, 226u8, 241u8, 98u8, 191u8, 37u8,
+                            135u8, 119u8, 88u8, 238u8, 202u8, 216u8, 221u8, 165u8, 144u8, 236u8,
+                            113u8, 49u8, 55u8, 18u8, 238u8, 238u8, 128u8, 210u8, 161u8, 134u8,
+                            130u8, 195u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -4414,9 +4464,9 @@ pub mod api {
                         .metadata()
                         .storage_hash::<HistoricalSessions>()?
                         == [
-                            92u8, 215u8, 143u8, 120u8, 255u8, 80u8, 7u8, 111u8, 104u8, 47u8, 157u8,
-                            42u8, 5u8, 82u8, 106u8, 157u8, 63u8, 23u8, 166u8, 241u8, 1u8, 170u8,
-                            112u8, 240u8, 7u8, 118u8, 13u8, 17u8, 24u8, 13u8, 148u8, 18u8,
+                            221u8, 75u8, 4u8, 83u8, 130u8, 251u8, 43u8, 26u8, 173u8, 40u8, 222u8,
+                            39u8, 228u8, 129u8, 201u8, 246u8, 81u8, 147u8, 64u8, 150u8, 147u8,
+                            165u8, 5u8, 44u8, 153u8, 125u8, 128u8, 222u8, 79u8, 16u8, 252u8, 93u8,
                         ]
                     {
                         let entry = HistoricalSessions(_0);
@@ -4438,9 +4488,9 @@ pub mod api {
                         .metadata()
                         .storage_hash::<HistoricalSessions>()?
                         == [
-                            92u8, 215u8, 143u8, 120u8, 255u8, 80u8, 7u8, 111u8, 104u8, 47u8, 157u8,
-                            42u8, 5u8, 82u8, 106u8, 157u8, 63u8, 23u8, 166u8, 241u8, 1u8, 170u8,
-                            112u8, 240u8, 7u8, 118u8, 13u8, 17u8, 24u8, 13u8, 148u8, 18u8,
+                            221u8, 75u8, 4u8, 83u8, 130u8, 251u8, 43u8, 26u8, 173u8, 40u8, 222u8,
+                            39u8, 228u8, 129u8, 201u8, 246u8, 81u8, 147u8, 64u8, 150u8, 147u8,
+                            165u8, 5u8, 44u8, 153u8, 125u8, 128u8, 222u8, 79u8, 16u8, 252u8, 93u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -4540,9 +4590,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<SetKeys>()?
                         == [
-                            40u8, 220u8, 95u8, 79u8, 180u8, 125u8, 190u8, 230u8, 35u8, 93u8, 108u8,
-                            88u8, 113u8, 139u8, 41u8, 15u8, 215u8, 70u8, 15u8, 127u8, 121u8, 200u8,
-                            139u8, 107u8, 122u8, 84u8, 154u8, 133u8, 44u8, 222u8, 11u8, 142u8,
+                            11u8, 191u8, 79u8, 20u8, 252u8, 226u8, 99u8, 96u8, 217u8, 230u8, 232u8,
+                            139u8, 135u8, 196u8, 199u8, 148u8, 127u8, 60u8, 118u8, 169u8, 252u8,
+                            78u8, 184u8, 44u8, 240u8, 62u8, 134u8, 192u8, 96u8, 31u8, 207u8, 125u8,
                         ]
                     {
                         let call = SetKeys { keys, proof };
@@ -4783,9 +4833,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<QueuedKeys>()?
                         == [
-                            97u8, 113u8, 158u8, 57u8, 33u8, 45u8, 78u8, 218u8, 17u8, 183u8, 74u8,
-                            1u8, 18u8, 49u8, 129u8, 214u8, 4u8, 199u8, 7u8, 118u8, 62u8, 42u8,
-                            244u8, 42u8, 211u8, 233u8, 131u8, 208u8, 100u8, 53u8, 14u8, 88u8,
+                            72u8, 58u8, 252u8, 252u8, 133u8, 178u8, 214u8, 96u8, 221u8, 140u8,
+                            221u8, 249u8, 229u8, 136u8, 231u8, 167u8, 96u8, 223u8, 182u8, 175u8,
+                            235u8, 246u8, 80u8, 99u8, 246u8, 37u8, 141u8, 88u8, 213u8, 189u8,
+                            165u8, 181u8,
                         ]
                     {
                         let entry = QueuedKeys;
@@ -4840,9 +4891,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<NextKeys>()?
                         == [
-                            67u8, 147u8, 127u8, 129u8, 36u8, 48u8, 79u8, 194u8, 164u8, 59u8, 94u8,
-                            197u8, 236u8, 139u8, 67u8, 232u8, 69u8, 36u8, 86u8, 82u8, 167u8, 124u8,
-                            58u8, 171u8, 160u8, 111u8, 130u8, 28u8, 240u8, 53u8, 45u8, 147u8,
+                            186u8, 156u8, 115u8, 10u8, 142u8, 35u8, 26u8, 253u8, 76u8, 189u8,
+                            201u8, 63u8, 248u8, 4u8, 63u8, 54u8, 149u8, 171u8, 41u8, 24u8, 230u8,
+                            63u8, 152u8, 177u8, 134u8, 22u8, 84u8, 199u8, 198u8, 154u8, 137u8,
+                            38u8,
                         ]
                     {
                         let entry = NextKeys(_0);
@@ -4861,9 +4913,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<NextKeys>()?
                         == [
-                            67u8, 147u8, 127u8, 129u8, 36u8, 48u8, 79u8, 194u8, 164u8, 59u8, 94u8,
-                            197u8, 236u8, 139u8, 67u8, 232u8, 69u8, 36u8, 86u8, 82u8, 167u8, 124u8,
-                            58u8, 171u8, 160u8, 111u8, 130u8, 28u8, 240u8, 53u8, 45u8, 147u8,
+                            186u8, 156u8, 115u8, 10u8, 142u8, 35u8, 26u8, 253u8, 76u8, 189u8,
+                            201u8, 63u8, 248u8, 4u8, 63u8, 54u8, 149u8, 171u8, 41u8, 24u8, 230u8,
+                            63u8, 152u8, 177u8, 134u8, 22u8, 84u8, 199u8, 198u8, 154u8, 137u8,
+                            38u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -5002,10 +5055,10 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<ReportEquivocation>()?
                         == [
-                            230u8, 252u8, 24u8, 207u8, 164u8, 127u8, 177u8, 30u8, 113u8, 175u8,
-                            207u8, 252u8, 230u8, 225u8, 181u8, 190u8, 236u8, 110u8, 145u8, 168u8,
-                            200u8, 134u8, 88u8, 234u8, 231u8, 45u8, 149u8, 169u8, 155u8, 114u8,
-                            62u8, 65u8,
+                            64u8, 99u8, 188u8, 190u8, 206u8, 120u8, 44u8, 136u8, 56u8, 142u8,
+                            221u8, 12u8, 124u8, 245u8, 168u8, 204u8, 39u8, 141u8, 189u8, 189u8,
+                            218u8, 162u8, 202u8, 220u8, 101u8, 136u8, 66u8, 195u8, 136u8, 4u8,
+                            66u8, 152u8,
                         ]
                     {
                         let call = ReportEquivocation {
@@ -5049,10 +5102,9 @@ pub mod api {
                         .metadata()
                         .call_hash::<ReportEquivocationUnsigned>()?
                         == [
-                            141u8, 235u8, 27u8, 135u8, 124u8, 124u8, 234u8, 51u8, 100u8, 105u8,
-                            188u8, 248u8, 133u8, 10u8, 84u8, 14u8, 40u8, 235u8, 14u8, 107u8, 63u8,
-                            148u8, 107u8, 172u8, 136u8, 159u8, 86u8, 23u8, 145u8, 221u8, 93u8,
-                            206u8,
+                            235u8, 164u8, 157u8, 180u8, 230u8, 16u8, 125u8, 74u8, 171u8, 208u8,
+                            158u8, 179u8, 175u8, 87u8, 111u8, 32u8, 33u8, 72u8, 74u8, 113u8, 113u8,
+                            113u8, 65u8, 234u8, 184u8, 224u8, 206u8, 126u8, 254u8, 49u8, 6u8, 44u8,
                         ]
                     {
                         let call = ReportEquivocationUnsigned {
@@ -5237,9 +5289,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<PendingChange>()?
                         == [
-                            128u8, 176u8, 209u8, 41u8, 231u8, 111u8, 205u8, 198u8, 154u8, 44u8,
-                            228u8, 231u8, 44u8, 110u8, 74u8, 9u8, 31u8, 86u8, 128u8, 244u8, 112u8,
-                            21u8, 120u8, 176u8, 50u8, 213u8, 122u8, 46u8, 85u8, 255u8, 40u8, 173u8,
+                            83u8, 71u8, 180u8, 126u8, 51u8, 111u8, 238u8, 160u8, 5u8, 100u8, 152u8,
+                            23u8, 138u8, 228u8, 46u8, 67u8, 145u8, 183u8, 100u8, 97u8, 153u8,
+                            140u8, 244u8, 179u8, 157u8, 150u8, 75u8, 236u8, 73u8, 209u8, 106u8,
+                            147u8,
                         ]
                     {
                         let entry = PendingChange;
@@ -5459,10 +5512,10 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<Heartbeat>()?
                         == [
-                            246u8, 83u8, 28u8, 233u8, 69u8, 55u8, 28u8, 178u8, 82u8, 159u8, 56u8,
-                            241u8, 111u8, 78u8, 194u8, 15u8, 14u8, 250u8, 172u8, 148u8, 208u8,
-                            52u8, 33u8, 106u8, 159u8, 210u8, 196u8, 79u8, 138u8, 194u8, 150u8,
-                            201u8,
+                            92u8, 180u8, 156u8, 19u8, 58u8, 158u8, 191u8, 159u8, 72u8, 119u8,
+                            227u8, 229u8, 8u8, 139u8, 185u8, 101u8, 114u8, 161u8, 206u8, 77u8,
+                            110u8, 41u8, 12u8, 154u8, 147u8, 12u8, 227u8, 46u8, 61u8, 114u8, 166u8,
+                            2u8,
                         ]
                     {
                         let call = Heartbeat {
@@ -5612,9 +5665,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Keys>()?
                         == [
-                            105u8, 250u8, 99u8, 106u8, 9u8, 29u8, 73u8, 176u8, 158u8, 247u8, 28u8,
-                            171u8, 95u8, 1u8, 109u8, 11u8, 231u8, 52u8, 54u8, 102u8, 142u8, 105u8,
-                            209u8, 31u8, 132u8, 60u8, 89u8, 181u8, 89u8, 193u8, 241u8, 130u8,
+                            88u8, 127u8, 143u8, 47u8, 75u8, 103u8, 131u8, 82u8, 76u8, 17u8, 255u8,
+                            108u8, 83u8, 251u8, 44u8, 225u8, 190u8, 66u8, 26u8, 168u8, 61u8, 87u8,
+                            92u8, 209u8, 147u8, 10u8, 204u8, 48u8, 214u8, 28u8, 60u8, 222u8,
                         ]
                     {
                         let entry = Keys;
@@ -5820,9 +5873,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Keys>()?
                         == [
-                            105u8, 250u8, 99u8, 106u8, 9u8, 29u8, 73u8, 176u8, 158u8, 247u8, 28u8,
-                            171u8, 95u8, 1u8, 109u8, 11u8, 231u8, 52u8, 54u8, 102u8, 142u8, 105u8,
-                            209u8, 31u8, 132u8, 60u8, 89u8, 181u8, 89u8, 193u8, 241u8, 130u8,
+                            88u8, 127u8, 143u8, 47u8, 75u8, 103u8, 131u8, 82u8, 76u8, 17u8, 255u8,
+                            108u8, 83u8, 251u8, 44u8, 225u8, 190u8, 66u8, 26u8, 168u8, 61u8, 87u8,
+                            92u8, 209u8, 147u8, 10u8, 204u8, 48u8, 214u8, 28u8, 60u8, 222u8,
                         ]
                     {
                         let entry = Keys;
@@ -5846,10 +5899,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<NextKeys>()?
                         == [
-                            186u8, 98u8, 143u8, 207u8, 128u8, 186u8, 177u8, 65u8, 61u8, 236u8,
-                            48u8, 192u8, 150u8, 251u8, 247u8, 193u8, 146u8, 246u8, 27u8, 88u8,
-                            223u8, 96u8, 46u8, 255u8, 241u8, 36u8, 69u8, 117u8, 220u8, 63u8, 176u8,
-                            120u8,
+                            139u8, 231u8, 99u8, 138u8, 194u8, 192u8, 123u8, 163u8, 239u8, 10u8,
+                            211u8, 7u8, 154u8, 1u8, 182u8, 43u8, 203u8, 128u8, 55u8, 150u8, 108u8,
+                            94u8, 163u8, 49u8, 230u8, 18u8, 208u8, 240u8, 83u8, 226u8, 125u8, 36u8,
                         ]
                     {
                         let entry = NextKeys;
@@ -7852,18 +7904,6 @@ pub mod api {
                     ::subxt::StorageEntryKey::Plain
                 }
             }
-            pub struct PendingConfig<'a>(pub &'a ::core::primitive::u32);
-            impl ::subxt::StorageEntry for PendingConfig<'_> {
-                const PALLET: &'static str = "Configuration";
-                const STORAGE: &'static str = "PendingConfig";
-                type Value = runtime_types :: polkadot_runtime_parachains :: configuration :: migration :: v1 :: HostConfiguration < :: core :: primitive :: u32 > ;
-                fn key(&self) -> ::subxt::StorageEntryKey {
-                    ::subxt::StorageEntryKey::Map(vec![::subxt::StorageMapKey::new(
-                        &self.0,
-                        ::subxt::StorageHasher::Twox64Concat,
-                    )])
-                }
-            }
             pub struct PendingConfigs;
             impl ::subxt::StorageEntry for PendingConfigs {
                 const PALLET: &'static str = "Configuration";
@@ -7916,46 +7956,6 @@ pub mod api {
                             .storage()
                             .fetch_or_default(&entry, block_hash)
                             .await
-                    } else {
-                        Err(::subxt::MetadataError::IncompatibleMetadata.into())
-                    }
-                }
-                #[doc = " Pending configuration (if any) for the next session."]
-                #[doc = ""]
-                #[doc = " DEPRECATED: This is no longer used, and will be removed in the future."]                pub async fn pending_config (& self , _0 : & :: core :: primitive :: u32 , block_hash : :: core :: option :: Option < T :: Hash > ,) -> :: core :: result :: Result < :: core :: option :: Option < runtime_types :: polkadot_runtime_parachains :: configuration :: migration :: v1 :: HostConfiguration < :: core :: primitive :: u32 > > , :: subxt :: BasicError >{
-                    if self.client.metadata().storage_hash::<PendingConfig>()?
-                        == [
-                            152u8, 192u8, 135u8, 74u8, 174u8, 47u8, 192u8, 95u8, 147u8, 137u8,
-                            41u8, 219u8, 149u8, 198u8, 186u8, 16u8, 158u8, 160u8, 51u8, 31u8,
-                            187u8, 244u8, 112u8, 238u8, 194u8, 85u8, 198u8, 73u8, 148u8, 62u8,
-                            74u8, 6u8,
-                        ]
-                    {
-                        let entry = PendingConfig(_0);
-                        self.client.storage().fetch(&entry, block_hash).await
-                    } else {
-                        Err(::subxt::MetadataError::IncompatibleMetadata.into())
-                    }
-                }
-                #[doc = " Pending configuration (if any) for the next session."]
-                #[doc = ""]
-                #[doc = " DEPRECATED: This is no longer used, and will be removed in the future."]
-                pub async fn pending_config_iter(
-                    &self,
-                    block_hash: ::core::option::Option<T::Hash>,
-                ) -> ::core::result::Result<
-                    ::subxt::KeyIter<'a, T, PendingConfig<'a>>,
-                    ::subxt::BasicError,
-                > {
-                    if self.client.metadata().storage_hash::<PendingConfig>()?
-                        == [
-                            152u8, 192u8, 135u8, 74u8, 174u8, 47u8, 192u8, 95u8, 147u8, 137u8,
-                            41u8, 219u8, 149u8, 198u8, 186u8, 16u8, 158u8, 160u8, 51u8, 31u8,
-                            187u8, 244u8, 112u8, 238u8, 194u8, 85u8, 198u8, 73u8, 148u8, 62u8,
-                            74u8, 6u8,
-                        ]
-                    {
-                        self.client.storage().iter(block_hash).await
                     } else {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
                     }
@@ -8053,7 +8053,7 @@ pub mod api {
                 const PALLET: &'static str = "ParasShared";
                 const STORAGE: &'static str = "ActiveValidatorIndices";
                 type Value =
-                    ::std::vec::Vec<runtime_types::polkadot_primitives::v0::ValidatorIndex>;
+                    ::std::vec::Vec<runtime_types::polkadot_primitives::v2::ValidatorIndex>;
                 fn key(&self) -> ::subxt::StorageEntryKey {
                     ::subxt::StorageEntryKey::Plain
                 }
@@ -8063,7 +8063,7 @@ pub mod api {
                 const PALLET: &'static str = "ParasShared";
                 const STORAGE: &'static str = "ActiveValidatorKeys";
                 type Value =
-                    ::std::vec::Vec<runtime_types::polkadot_primitives::v0::validator_app::Public>;
+                    ::std::vec::Vec<runtime_types::polkadot_primitives::v2::validator_app::Public>;
                 fn key(&self) -> ::subxt::StorageEntryKey {
                     ::subxt::StorageEntryKey::Plain
                 }
@@ -8106,7 +8106,7 @@ pub mod api {
                     &self,
                     block_hash: ::core::option::Option<T::Hash>,
                 ) -> ::core::result::Result<
-                    ::std::vec::Vec<runtime_types::polkadot_primitives::v0::ValidatorIndex>,
+                    ::std::vec::Vec<runtime_types::polkadot_primitives::v2::ValidatorIndex>,
                     ::subxt::BasicError,
                 > {
                     if self
@@ -8134,7 +8134,7 @@ pub mod api {
                     &self,
                     block_hash: ::core::option::Option<T::Hash>,
                 ) -> ::core::result::Result<
-                    ::std::vec::Vec<runtime_types::polkadot_primitives::v0::validator_app::Public>,
+                    ::std::vec::Vec<runtime_types::polkadot_primitives::v2::validator_app::Public>,
                     ::subxt::BasicError,
                 > {
                     if self
@@ -8142,10 +8142,9 @@ pub mod api {
                         .metadata()
                         .storage_hash::<ActiveValidatorKeys>()?
                         == [
-                            130u8, 19u8, 46u8, 117u8, 211u8, 113u8, 90u8, 42u8, 173u8, 87u8, 209u8,
-                            185u8, 102u8, 142u8, 161u8, 60u8, 118u8, 246u8, 161u8, 183u8, 103u8,
-                            255u8, 75u8, 180u8, 250u8, 35u8, 235u8, 102u8, 216u8, 196u8, 190u8,
-                            129u8,
+                            231u8, 46u8, 32u8, 152u8, 56u8, 71u8, 153u8, 56u8, 241u8, 29u8, 64u8,
+                            70u8, 19u8, 31u8, 220u8, 139u8, 58u8, 212u8, 221u8, 140u8, 87u8, 140u8,
+                            218u8, 50u8, 204u8, 221u8, 214u8, 168u8, 135u8, 118u8, 94u8, 21u8,
                         ]
                     {
                         let entry = ActiveValidatorKeys;
@@ -8190,10 +8189,10 @@ pub mod api {
             #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
             #[doc = "A candidate was backed. `[candidate, head_data]`"]
             pub struct CandidateBacked(
-                pub runtime_types::polkadot_primitives::v1::CandidateReceipt<::subxt::sp_core::H256>,
+                pub runtime_types::polkadot_primitives::v2::CandidateReceipt<::subxt::sp_core::H256>,
                 pub runtime_types::polkadot_parachain::primitives::HeadData,
-                pub runtime_types::polkadot_primitives::v1::CoreIndex,
-                pub runtime_types::polkadot_primitives::v1::GroupIndex,
+                pub runtime_types::polkadot_primitives::v2::CoreIndex,
+                pub runtime_types::polkadot_primitives::v2::GroupIndex,
             );
             impl ::subxt::Event for CandidateBacked {
                 const PALLET: &'static str = "ParaInclusion";
@@ -8202,10 +8201,10 @@ pub mod api {
             #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
             #[doc = "A candidate was included. `[candidate, head_data]`"]
             pub struct CandidateIncluded(
-                pub runtime_types::polkadot_primitives::v1::CandidateReceipt<::subxt::sp_core::H256>,
+                pub runtime_types::polkadot_primitives::v2::CandidateReceipt<::subxt::sp_core::H256>,
                 pub runtime_types::polkadot_parachain::primitives::HeadData,
-                pub runtime_types::polkadot_primitives::v1::CoreIndex,
-                pub runtime_types::polkadot_primitives::v1::GroupIndex,
+                pub runtime_types::polkadot_primitives::v2::CoreIndex,
+                pub runtime_types::polkadot_primitives::v2::GroupIndex,
             );
             impl ::subxt::Event for CandidateIncluded {
                 const PALLET: &'static str = "ParaInclusion";
@@ -8214,9 +8213,9 @@ pub mod api {
             #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
             #[doc = "A candidate timed out. `[candidate, head_data]`"]
             pub struct CandidateTimedOut(
-                pub runtime_types::polkadot_primitives::v1::CandidateReceipt<::subxt::sp_core::H256>,
+                pub runtime_types::polkadot_primitives::v2::CandidateReceipt<::subxt::sp_core::H256>,
                 pub runtime_types::polkadot_parachain::primitives::HeadData,
-                pub runtime_types::polkadot_primitives::v1::CoreIndex,
+                pub runtime_types::polkadot_primitives::v2::CoreIndex,
             );
             impl ::subxt::Event for CandidateTimedOut {
                 const PALLET: &'static str = "ParaInclusion";
@@ -8226,7 +8225,7 @@ pub mod api {
         pub mod storage {
             use super::runtime_types;
             pub struct AvailabilityBitfields<'a>(
-                pub &'a runtime_types::polkadot_primitives::v0::ValidatorIndex,
+                pub &'a runtime_types::polkadot_primitives::v2::ValidatorIndex,
             );
             impl ::subxt::StorageEntry for AvailabilityBitfields<'_> {
                 const PALLET: &'static str = "ParaInclusion";
@@ -8259,7 +8258,7 @@ pub mod api {
             impl ::subxt::StorageEntry for PendingAvailabilityCommitments<'_> {
                 const PALLET: &'static str = "ParaInclusion";
                 const STORAGE: &'static str = "PendingAvailabilityCommitments";
-                type Value = runtime_types::polkadot_primitives::v1::CandidateCommitments<
+                type Value = runtime_types::polkadot_primitives::v2::CandidateCommitments<
                     ::core::primitive::u32,
                 >;
                 fn key(&self) -> ::subxt::StorageEntryKey {
@@ -8276,15 +8275,15 @@ pub mod api {
                 pub fn new(client: &'a ::subxt::Client<T>) -> Self {
                     Self { client }
                 }
-                #[doc = " The latest bitfield for each validator, referred to by their index in the validator set."]                pub async fn availability_bitfields (& self , _0 : & runtime_types :: polkadot_primitives :: v0 :: ValidatorIndex , block_hash : :: core :: option :: Option < T :: Hash > ,) -> :: core :: result :: Result < :: core :: option :: Option < runtime_types :: polkadot_runtime_parachains :: inclusion :: AvailabilityBitfieldRecord < :: core :: primitive :: u32 > > , :: subxt :: BasicError >{
+                #[doc = " The latest bitfield for each validator, referred to by their index in the validator set."]                pub async fn availability_bitfields (& self , _0 : & runtime_types :: polkadot_primitives :: v2 :: ValidatorIndex , block_hash : :: core :: option :: Option < T :: Hash > ,) -> :: core :: result :: Result < :: core :: option :: Option < runtime_types :: polkadot_runtime_parachains :: inclusion :: AvailabilityBitfieldRecord < :: core :: primitive :: u32 > > , :: subxt :: BasicError >{
                     if self
                         .client
                         .metadata()
                         .storage_hash::<AvailabilityBitfields>()?
                         == [
-                            87u8, 42u8, 113u8, 45u8, 93u8, 254u8, 176u8, 89u8, 100u8, 247u8, 108u8,
-                            160u8, 213u8, 252u8, 184u8, 47u8, 251u8, 60u8, 170u8, 30u8, 95u8, 26u8,
-                            227u8, 102u8, 133u8, 32u8, 234u8, 49u8, 111u8, 116u8, 93u8, 72u8,
+                            223u8, 74u8, 17u8, 152u8, 136u8, 20u8, 241u8, 47u8, 169u8, 34u8, 128u8,
+                            78u8, 121u8, 47u8, 165u8, 35u8, 222u8, 15u8, 236u8, 90u8, 215u8, 160u8,
+                            10u8, 18u8, 152u8, 69u8, 38u8, 97u8, 122u8, 247u8, 241u8, 255u8,
                         ]
                     {
                         let entry = AvailabilityBitfields(_0);
@@ -8306,9 +8305,9 @@ pub mod api {
                         .metadata()
                         .storage_hash::<AvailabilityBitfields>()?
                         == [
-                            87u8, 42u8, 113u8, 45u8, 93u8, 254u8, 176u8, 89u8, 100u8, 247u8, 108u8,
-                            160u8, 213u8, 252u8, 184u8, 47u8, 251u8, 60u8, 170u8, 30u8, 95u8, 26u8,
-                            227u8, 102u8, 133u8, 32u8, 234u8, 49u8, 111u8, 116u8, 93u8, 72u8,
+                            223u8, 74u8, 17u8, 152u8, 136u8, 20u8, 241u8, 47u8, 169u8, 34u8, 128u8,
+                            78u8, 121u8, 47u8, 165u8, 35u8, 222u8, 15u8, 236u8, 90u8, 215u8, 160u8,
+                            10u8, 18u8, 152u8, 69u8, 38u8, 97u8, 122u8, 247u8, 241u8, 255u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -8322,10 +8321,9 @@ pub mod api {
                         .metadata()
                         .storage_hash::<PendingAvailability>()?
                         == [
-                            149u8, 246u8, 98u8, 204u8, 45u8, 201u8, 255u8, 43u8, 221u8, 155u8,
-                            145u8, 147u8, 246u8, 162u8, 46u8, 137u8, 3u8, 194u8, 142u8, 249u8,
-                            55u8, 71u8, 57u8, 234u8, 105u8, 190u8, 173u8, 172u8, 134u8, 20u8,
-                            124u8, 47u8,
+                            87u8, 140u8, 64u8, 234u8, 110u8, 229u8, 7u8, 83u8, 100u8, 45u8, 125u8,
+                            76u8, 72u8, 179u8, 132u8, 190u8, 38u8, 22u8, 112u8, 85u8, 241u8, 82u8,
+                            208u8, 133u8, 187u8, 130u8, 6u8, 121u8, 100u8, 43u8, 106u8, 121u8,
                         ]
                     {
                         let entry = PendingAvailability(_0);
@@ -8347,10 +8345,9 @@ pub mod api {
                         .metadata()
                         .storage_hash::<PendingAvailability>()?
                         == [
-                            149u8, 246u8, 98u8, 204u8, 45u8, 201u8, 255u8, 43u8, 221u8, 155u8,
-                            145u8, 147u8, 246u8, 162u8, 46u8, 137u8, 3u8, 194u8, 142u8, 249u8,
-                            55u8, 71u8, 57u8, 234u8, 105u8, 190u8, 173u8, 172u8, 134u8, 20u8,
-                            124u8, 47u8,
+                            87u8, 140u8, 64u8, 234u8, 110u8, 229u8, 7u8, 83u8, 100u8, 45u8, 125u8,
+                            76u8, 72u8, 179u8, 132u8, 190u8, 38u8, 22u8, 112u8, 85u8, 241u8, 82u8,
+                            208u8, 133u8, 187u8, 130u8, 6u8, 121u8, 100u8, 43u8, 106u8, 121u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -8365,7 +8362,7 @@ pub mod api {
                     block_hash: ::core::option::Option<T::Hash>,
                 ) -> ::core::result::Result<
                     ::core::option::Option<
-                        runtime_types::polkadot_primitives::v1::CandidateCommitments<
+                        runtime_types::polkadot_primitives::v2::CandidateCommitments<
                             ::core::primitive::u32,
                         >,
                     >,
@@ -8424,7 +8421,7 @@ pub mod api {
             type DispatchError = runtime_types::sp_runtime::DispatchError;
             #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
             pub struct Enter {
-                pub data: runtime_types::polkadot_primitives::v1::InherentData<
+                pub data: runtime_types::polkadot_primitives::v2::InherentData<
                     runtime_types::sp_runtime::generic::header::Header<
                         ::core::primitive::u32,
                         runtime_types::sp_runtime::traits::BlakeTwo256,
@@ -8453,7 +8450,7 @@ pub mod api {
                 #[doc = "Enter the paras inherent. This will process bitfields and backed candidates."]
                 pub fn enter(
                     &self,
-                    data: runtime_types::polkadot_primitives::v1::InherentData<
+                    data: runtime_types::polkadot_primitives::v2::InherentData<
                         runtime_types::sp_runtime::generic::header::Header<
                             ::core::primitive::u32,
                             runtime_types::sp_runtime::traits::BlakeTwo256,
@@ -8465,9 +8462,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<Enter>()?
                         == [
-                            199u8, 110u8, 30u8, 126u8, 25u8, 46u8, 123u8, 233u8, 253u8, 77u8, 35u8,
-                            63u8, 89u8, 157u8, 128u8, 68u8, 127u8, 13u8, 112u8, 42u8, 106u8, 59u8,
-                            232u8, 39u8, 155u8, 130u8, 80u8, 216u8, 227u8, 91u8, 33u8, 81u8,
+                            15u8, 12u8, 250u8, 143u8, 7u8, 146u8, 79u8, 126u8, 205u8, 10u8, 135u8,
+                            108u8, 193u8, 195u8, 225u8, 117u8, 58u8, 45u8, 16u8, 229u8, 6u8, 122u8,
+                            92u8, 75u8, 174u8, 150u8, 109u8, 176u8, 54u8, 199u8, 236u8, 38u8,
                         ]
                     {
                         let call = Enter { data };
@@ -8493,7 +8490,7 @@ pub mod api {
             impl ::subxt::StorageEntry for OnChainVotes {
                 const PALLET: &'static str = "ParaInherent";
                 const STORAGE: &'static str = "OnChainVotes";
-                type Value = runtime_types::polkadot_primitives::v1::ScrapedOnChainVotes<
+                type Value = runtime_types::polkadot_primitives::v2::ScrapedOnChainVotes<
                     ::subxt::sp_core::H256,
                 >;
                 fn key(&self) -> ::subxt::StorageEntryKey {
@@ -8537,7 +8534,7 @@ pub mod api {
                     block_hash: ::core::option::Option<T::Hash>,
                 ) -> ::core::result::Result<
                     ::core::option::Option<
-                        runtime_types::polkadot_primitives::v1::ScrapedOnChainVotes<
+                        runtime_types::polkadot_primitives::v2::ScrapedOnChainVotes<
                             ::subxt::sp_core::H256,
                         >,
                     >,
@@ -8545,9 +8542,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<OnChainVotes>()?
                         == [
-                            163u8, 22u8, 172u8, 81u8, 10u8, 19u8, 149u8, 111u8, 22u8, 92u8, 203u8,
-                            33u8, 225u8, 124u8, 69u8, 70u8, 66u8, 188u8, 33u8, 24u8, 132u8, 234u8,
-                            106u8, 51u8, 248u8, 57u8, 169u8, 115u8, 164u8, 253u8, 112u8, 235u8,
+                            245u8, 37u8, 52u8, 78u8, 128u8, 131u8, 93u8, 38u8, 210u8, 78u8, 218u8,
+                            171u8, 131u8, 175u8, 215u8, 91u8, 122u8, 134u8, 127u8, 79u8, 7u8,
+                            165u8, 122u8, 184u8, 122u8, 168u8, 218u8, 207u8, 15u8, 23u8, 162u8,
+                            4u8,
                         ]
                     {
                         let entry = OnChainVotes;
@@ -8569,7 +8567,7 @@ pub mod api {
                 const PALLET: &'static str = "ParaScheduler";
                 const STORAGE: &'static str = "ValidatorGroups";
                 type Value = ::std::vec::Vec<
-                    ::std::vec::Vec<runtime_types::polkadot_primitives::v0::ValidatorIndex>,
+                    ::std::vec::Vec<runtime_types::polkadot_primitives::v2::ValidatorIndex>,
                 >;
                 fn key(&self) -> ::subxt::StorageEntryKey {
                     ::subxt::StorageEntryKey::Plain
@@ -8590,7 +8588,7 @@ pub mod api {
                 const PALLET: &'static str = "ParaScheduler";
                 const STORAGE: &'static str = "AvailabilityCores";
                 type Value = ::std::vec::Vec<
-                    ::core::option::Option<runtime_types::polkadot_primitives::v1::CoreOccupied>,
+                    ::core::option::Option<runtime_types::polkadot_primitives::v2::CoreOccupied>,
                 >;
                 fn key(&self) -> ::subxt::StorageEntryKey {
                     ::subxt::StorageEntryKey::Plain
@@ -8643,7 +8641,7 @@ pub mod api {
                     block_hash: ::core::option::Option<T::Hash>,
                 ) -> ::core::result::Result<
                     ::std::vec::Vec<
-                        ::std::vec::Vec<runtime_types::polkadot_primitives::v0::ValidatorIndex>,
+                        ::std::vec::Vec<runtime_types::polkadot_primitives::v2::ValidatorIndex>,
                     >,
                     ::subxt::BasicError,
                 > {
@@ -8677,9 +8675,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<ParathreadQueue>()?
                         == [
-                            55u8, 142u8, 211u8, 227u8, 167u8, 35u8, 168u8, 23u8, 227u8, 185u8, 5u8,
-                            154u8, 147u8, 237u8, 137u8, 133u8, 81u8, 121u8, 70u8, 159u8, 206u8,
-                            56u8, 20u8, 17u8, 79u8, 19u8, 238u8, 114u8, 60u8, 96u8, 1u8, 20u8,
+                            72u8, 99u8, 70u8, 216u8, 91u8, 118u8, 160u8, 100u8, 20u8, 192u8, 78u8,
+                            214u8, 165u8, 200u8, 223u8, 166u8, 50u8, 214u8, 41u8, 241u8, 84u8,
+                            68u8, 21u8, 86u8, 130u8, 13u8, 124u8, 128u8, 104u8, 194u8, 23u8, 223u8,
                         ]
                     {
                         let entry = ParathreadQueue;
@@ -8705,17 +8703,16 @@ pub mod api {
                 ) -> ::core::result::Result<
                     ::std::vec::Vec<
                         ::core::option::Option<
-                            runtime_types::polkadot_primitives::v1::CoreOccupied,
+                            runtime_types::polkadot_primitives::v2::CoreOccupied,
                         >,
                     >,
                     ::subxt::BasicError,
                 > {
                     if self.client.metadata().storage_hash::<AvailabilityCores>()?
                         == [
-                            170u8, 116u8, 249u8, 112u8, 156u8, 147u8, 94u8, 44u8, 114u8, 10u8,
-                            32u8, 91u8, 229u8, 56u8, 60u8, 222u8, 212u8, 176u8, 107u8, 159u8,
-                            143u8, 217u8, 200u8, 158u8, 86u8, 88u8, 220u8, 204u8, 162u8, 148u8,
-                            207u8, 150u8,
+                            190u8, 79u8, 55u8, 188u8, 40u8, 219u8, 187u8, 11u8, 142u8, 67u8, 86u8,
+                            242u8, 107u8, 26u8, 63u8, 138u8, 169u8, 24u8, 36u8, 112u8, 61u8, 206u8,
+                            32u8, 168u8, 167u8, 236u8, 133u8, 90u8, 16u8, 130u8, 121u8, 113u8,
                         ]
                     {
                         let entry = AvailabilityCores;
@@ -8802,9 +8799,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Scheduled>()?
                         == [
-                            29u8, 43u8, 158u8, 142u8, 50u8, 67u8, 4u8, 30u8, 158u8, 99u8, 47u8,
-                            13u8, 151u8, 141u8, 163u8, 63u8, 140u8, 179u8, 247u8, 106u8, 53u8,
-                            66u8, 90u8, 107u8, 95u8, 174u8, 63u8, 123u8, 176u8, 68u8, 90u8, 232u8,
+                            167u8, 69u8, 107u8, 76u8, 233u8, 106u8, 232u8, 95u8, 167u8, 73u8, 93u8,
+                            110u8, 43u8, 94u8, 27u8, 207u8, 152u8, 184u8, 43u8, 245u8, 200u8,
+                            141u8, 65u8, 32u8, 201u8, 80u8, 73u8, 155u8, 26u8, 82u8, 121u8, 194u8,
                         ]
                     {
                         let entry = Scheduled;
@@ -8891,7 +8888,7 @@ pub mod api {
             #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
             pub struct IncludePvfCheckStatement {
                 pub stmt: runtime_types::polkadot_primitives::v2::PvfCheckStatement,
-                pub signature: runtime_types::polkadot_primitives::v0::validator_app::Signature,
+                pub signature: runtime_types::polkadot_primitives::v2::validator_app::Signature,
             }
             impl ::subxt::Call for IncludePvfCheckStatement {
                 const PALLET: &'static str = "Paras";
@@ -9136,9 +9133,9 @@ pub mod api {
                         .metadata()
                         .call_hash::<PokeUnusedValidationCode>()?
                         == [
-                            159u8, 142u8, 14u8, 7u8, 29u8, 74u8, 213u8, 165u8, 206u8, 45u8, 135u8,
-                            121u8, 0u8, 146u8, 217u8, 59u8, 189u8, 120u8, 169u8, 227u8, 225u8,
-                            135u8, 15u8, 45u8, 197u8, 201u8, 29u8, 128u8, 49u8, 165u8, 106u8, 80u8,
+                            128u8, 49u8, 50u8, 239u8, 119u8, 116u8, 110u8, 52u8, 85u8, 66u8, 127u8,
+                            118u8, 206u8, 191u8, 206u8, 84u8, 255u8, 88u8, 179u8, 43u8, 163u8,
+                            185u8, 237u8, 191u8, 34u8, 135u8, 44u8, 231u8, 199u8, 5u8, 183u8, 5u8,
                         ]
                     {
                         let call = PokeUnusedValidationCode {
@@ -9154,7 +9151,7 @@ pub mod api {
                 pub fn include_pvf_check_statement(
                     &self,
                     stmt: runtime_types::polkadot_primitives::v2::PvfCheckStatement,
-                    signature: runtime_types::polkadot_primitives::v0::validator_app::Signature,
+                    signature: runtime_types::polkadot_primitives::v2::validator_app::Signature,
                 ) -> Result<
                     ::subxt::SubmittableExtrinsic<
                         'a,
@@ -9171,9 +9168,9 @@ pub mod api {
                         .metadata()
                         .call_hash::<IncludePvfCheckStatement>()?
                         == [
-                            74u8, 18u8, 73u8, 148u8, 190u8, 197u8, 53u8, 113u8, 172u8, 82u8, 102u8,
-                            145u8, 3u8, 35u8, 182u8, 47u8, 68u8, 82u8, 247u8, 236u8, 53u8, 251u8,
-                            246u8, 239u8, 180u8, 204u8, 162u8, 178u8, 124u8, 38u8, 138u8, 240u8,
+                            138u8, 112u8, 12u8, 226u8, 95u8, 253u8, 48u8, 219u8, 9u8, 35u8, 99u8,
+                            122u8, 35u8, 194u8, 79u8, 103u8, 52u8, 242u8, 39u8, 110u8, 166u8,
+                            212u8, 80u8, 105u8, 3u8, 242u8, 59u8, 13u8, 161u8, 32u8, 224u8, 25u8,
                         ]
                     {
                         let call = IncludePvfCheckStatement { stmt, signature };
@@ -9237,7 +9234,7 @@ pub mod api {
                 const EVENT: &'static str = "PvfCheckStarted";
             }
             #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
-            #[doc = "The given validation code was rejected by the PVF pre-checking vote."]
+            #[doc = "The given validation code was accepted by the PVF pre-checking vote."]
             #[doc = "`code_hash` `para_id`"]
             pub struct PvfCheckAccepted(
                 pub runtime_types::polkadot_parachain::primitives::ValidationCodeHash,
@@ -9248,7 +9245,7 @@ pub mod api {
                 const EVENT: &'static str = "PvfCheckAccepted";
             }
             #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
-            #[doc = "The given validation code was accepted by the PVF pre-checking vote."]
+            #[doc = "The given validation code was rejected by the PVF pre-checking vote."]
             #[doc = "`code_hash` `para_id`"]
             pub struct PvfCheckRejected(
                 pub runtime_types::polkadot_parachain::primitives::ValidationCodeHash,
@@ -9413,7 +9410,7 @@ pub mod api {
             impl ::subxt::StorageEntry for UpgradeGoAheadSignal<'_> {
                 const PALLET: &'static str = "Paras";
                 const STORAGE: &'static str = "UpgradeGoAheadSignal";
-                type Value = runtime_types::polkadot_primitives::v1::UpgradeGoAhead;
+                type Value = runtime_types::polkadot_primitives::v2::UpgradeGoAhead;
                 fn key(&self) -> ::subxt::StorageEntryKey {
                     ::subxt::StorageEntryKey::Map(vec![::subxt::StorageMapKey::new(
                         &self.0,
@@ -9427,7 +9424,7 @@ pub mod api {
             impl ::subxt::StorageEntry for UpgradeRestrictionSignal<'_> {
                 const PALLET: &'static str = "Paras";
                 const STORAGE: &'static str = "UpgradeRestrictionSignal";
-                type Value = runtime_types::polkadot_primitives::v1::UpgradeRestriction;
+                type Value = runtime_types::polkadot_primitives::v2::UpgradeRestriction;
                 fn key(&self) -> ::subxt::StorageEntryKey {
                     ::subxt::StorageEntryKey::Map(vec![::subxt::StorageMapKey::new(
                         &self.0,
@@ -9538,9 +9535,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<PvfActiveVoteMap>()?
                         == [
-                            33u8, 176u8, 145u8, 104u8, 188u8, 43u8, 9u8, 1u8, 228u8, 246u8, 44u8,
-                            11u8, 22u8, 76u8, 106u8, 40u8, 91u8, 148u8, 2u8, 128u8, 134u8, 18u8,
-                            142u8, 240u8, 51u8, 143u8, 169u8, 153u8, 171u8, 70u8, 152u8, 82u8,
+                            245u8, 158u8, 140u8, 115u8, 132u8, 96u8, 139u8, 158u8, 209u8, 44u8,
+                            247u8, 149u8, 226u8, 150u8, 181u8, 35u8, 22u8, 89u8, 106u8, 100u8,
+                            88u8, 72u8, 43u8, 31u8, 91u8, 210u8, 130u8, 38u8, 171u8, 192u8, 173u8,
+                            15u8,
                         ]
                     {
                         let entry = PvfActiveVoteMap(_0);
@@ -9562,9 +9560,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<PvfActiveVoteMap>()?
                         == [
-                            33u8, 176u8, 145u8, 104u8, 188u8, 43u8, 9u8, 1u8, 228u8, 246u8, 44u8,
-                            11u8, 22u8, 76u8, 106u8, 40u8, 91u8, 148u8, 2u8, 128u8, 134u8, 18u8,
-                            142u8, 240u8, 51u8, 143u8, 169u8, 153u8, 171u8, 70u8, 152u8, 82u8,
+                            245u8, 158u8, 140u8, 115u8, 132u8, 96u8, 139u8, 158u8, 209u8, 44u8,
+                            247u8, 149u8, 226u8, 150u8, 181u8, 35u8, 22u8, 89u8, 106u8, 100u8,
+                            88u8, 72u8, 43u8, 31u8, 91u8, 210u8, 130u8, 38u8, 171u8, 192u8, 173u8,
+                            15u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -9584,10 +9583,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<PvfActiveVoteList>()?
                         == [
-                            30u8, 117u8, 174u8, 227u8, 251u8, 95u8, 176u8, 153u8, 151u8, 188u8,
-                            89u8, 252u8, 168u8, 203u8, 174u8, 241u8, 209u8, 45u8, 96u8, 77u8,
-                            117u8, 159u8, 33u8, 1u8, 55u8, 111u8, 50u8, 189u8, 246u8, 209u8, 42u8,
-                            155u8,
+                            154u8, 101u8, 96u8, 29u8, 134u8, 220u8, 111u8, 135u8, 207u8, 255u8,
+                            121u8, 52u8, 188u8, 108u8, 101u8, 7u8, 138u8, 255u8, 13u8, 58u8, 211u8,
+                            131u8, 66u8, 126u8, 53u8, 207u8, 119u8, 13u8, 39u8, 177u8, 89u8, 33u8,
                         ]
                     {
                         let entry = PvfActiveVoteList;
@@ -9600,6 +9598,8 @@ pub mod api {
                     }
                 }
                 #[doc = " All parachains. Ordered ascending by `ParaId`. Parathreads are not included."]
+                #[doc = ""]
+                #[doc = " Consider using the [`ParachainsCache`] type of modifying."]
                 pub async fn parachains(
                     &self,
                     block_hash: ::core::option::Option<T::Hash>,
@@ -9727,10 +9727,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<CurrentCodeHash>()?
                         == [
-                            146u8, 139u8, 159u8, 78u8, 13u8, 151u8, 18u8, 117u8, 15u8, 107u8,
-                            251u8, 200u8, 100u8, 200u8, 170u8, 50u8, 250u8, 189u8, 162u8, 128u8,
-                            253u8, 51u8, 192u8, 174u8, 190u8, 48u8, 96u8, 214u8, 33u8, 117u8, 82u8,
-                            247u8,
+                            22u8, 155u8, 81u8, 176u8, 112u8, 20u8, 205u8, 107u8, 87u8, 40u8, 219u8,
+                            0u8, 112u8, 111u8, 97u8, 196u8, 161u8, 111u8, 207u8, 247u8, 91u8, 47u8,
+                            163u8, 209u8, 188u8, 144u8, 37u8, 102u8, 240u8, 21u8, 33u8, 77u8,
                         ]
                     {
                         let entry = CurrentCodeHash(_0);
@@ -9751,10 +9750,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<CurrentCodeHash>()?
                         == [
-                            146u8, 139u8, 159u8, 78u8, 13u8, 151u8, 18u8, 117u8, 15u8, 107u8,
-                            251u8, 200u8, 100u8, 200u8, 170u8, 50u8, 250u8, 189u8, 162u8, 128u8,
-                            253u8, 51u8, 192u8, 174u8, 190u8, 48u8, 96u8, 214u8, 33u8, 117u8, 82u8,
-                            247u8,
+                            22u8, 155u8, 81u8, 176u8, 112u8, 20u8, 205u8, 107u8, 87u8, 40u8, 219u8,
+                            0u8, 112u8, 111u8, 97u8, 196u8, 161u8, 111u8, 207u8, 247u8, 91u8, 47u8,
+                            163u8, 209u8, 188u8, 144u8, 37u8, 102u8, 240u8, 21u8, 33u8, 77u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -9779,10 +9777,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<PastCodeHash>()?
                         == [
-                            158u8, 40u8, 107u8, 17u8, 201u8, 114u8, 104u8, 4u8, 50u8, 4u8, 245u8,
-                            186u8, 104u8, 25u8, 142u8, 118u8, 196u8, 165u8, 252u8, 88u8, 251u8,
-                            92u8, 41u8, 51u8, 222u8, 217u8, 213u8, 18u8, 114u8, 245u8, 247u8,
-                            188u8,
+                            26u8, 56u8, 165u8, 239u8, 180u8, 241u8, 183u8, 26u8, 106u8, 71u8,
+                            213u8, 114u8, 124u8, 190u8, 69u8, 128u8, 159u8, 119u8, 145u8, 47u8,
+                            93u8, 64u8, 74u8, 76u8, 220u8, 121u8, 144u8, 162u8, 163u8, 149u8,
+                            132u8, 6u8,
                         ]
                     {
                         let entry = PastCodeHash(_0, _1);
@@ -9804,10 +9802,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<PastCodeHash>()?
                         == [
-                            158u8, 40u8, 107u8, 17u8, 201u8, 114u8, 104u8, 4u8, 50u8, 4u8, 245u8,
-                            186u8, 104u8, 25u8, 142u8, 118u8, 196u8, 165u8, 252u8, 88u8, 251u8,
-                            92u8, 41u8, 51u8, 222u8, 217u8, 213u8, 18u8, 114u8, 245u8, 247u8,
-                            188u8,
+                            26u8, 56u8, 165u8, 239u8, 180u8, 241u8, 183u8, 26u8, 106u8, 71u8,
+                            213u8, 114u8, 124u8, 190u8, 69u8, 128u8, 159u8, 119u8, 145u8, 47u8,
+                            93u8, 64u8, 74u8, 76u8, 220u8, 121u8, 144u8, 162u8, 163u8, 149u8,
+                            132u8, 6u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -9965,9 +9963,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<FutureCodeHash>()?
                         == [
-                            221u8, 2u8, 237u8, 170u8, 64u8, 60u8, 98u8, 146u8, 135u8, 69u8, 6u8,
-                            38u8, 2u8, 239u8, 22u8, 94u8, 180u8, 163u8, 76u8, 137u8, 143u8, 124u8,
-                            5u8, 210u8, 129u8, 207u8, 78u8, 192u8, 144u8, 39u8, 206u8, 195u8,
+                            89u8, 18u8, 35u8, 84u8, 61u8, 191u8, 189u8, 140u8, 223u8, 6u8, 38u8,
+                            238u8, 22u8, 72u8, 221u8, 168u8, 239u8, 113u8, 33u8, 254u8, 41u8, 96u8,
+                            102u8, 173u8, 131u8, 111u8, 11u8, 112u8, 65u8, 71u8, 189u8, 121u8,
                         ]
                     {
                         let entry = FutureCodeHash(_0);
@@ -9988,9 +9986,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<FutureCodeHash>()?
                         == [
-                            221u8, 2u8, 237u8, 170u8, 64u8, 60u8, 98u8, 146u8, 135u8, 69u8, 6u8,
-                            38u8, 2u8, 239u8, 22u8, 94u8, 180u8, 163u8, 76u8, 137u8, 143u8, 124u8,
-                            5u8, 210u8, 129u8, 207u8, 78u8, 192u8, 144u8, 39u8, 206u8, 195u8,
+                            89u8, 18u8, 35u8, 84u8, 61u8, 191u8, 189u8, 140u8, 223u8, 6u8, 38u8,
+                            238u8, 22u8, 72u8, 221u8, 168u8, 239u8, 113u8, 33u8, 254u8, 41u8, 96u8,
+                            102u8, 173u8, 131u8, 111u8, 11u8, 112u8, 65u8, 71u8, 189u8, 121u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -10012,7 +10010,7 @@ pub mod api {
                     _0: &runtime_types::polkadot_parachain::primitives::Id,
                     block_hash: ::core::option::Option<T::Hash>,
                 ) -> ::core::result::Result<
-                    ::core::option::Option<runtime_types::polkadot_primitives::v1::UpgradeGoAhead>,
+                    ::core::option::Option<runtime_types::polkadot_primitives::v2::UpgradeGoAhead>,
                     ::subxt::BasicError,
                 > {
                     if self
@@ -10079,7 +10077,7 @@ pub mod api {
                     block_hash: ::core::option::Option<T::Hash>,
                 ) -> ::core::result::Result<
                     ::core::option::Option<
-                        runtime_types::polkadot_primitives::v1::UpgradeRestriction,
+                        runtime_types::polkadot_primitives::v2::UpgradeRestriction,
                     >,
                     ::subxt::BasicError,
                 > {
@@ -10304,10 +10302,10 @@ pub mod api {
                 {
                     if self.client.metadata().storage_hash::<CodeByHashRefs>()?
                         == [
-                            194u8, 100u8, 213u8, 115u8, 143u8, 181u8, 255u8, 227u8, 232u8, 163u8,
-                            209u8, 99u8, 2u8, 138u8, 118u8, 169u8, 210u8, 202u8, 190u8, 194u8,
-                            221u8, 145u8, 171u8, 78u8, 212u8, 17u8, 245u8, 107u8, 99u8, 5u8, 54u8,
-                            118u8,
+                            70u8, 116u8, 27u8, 141u8, 242u8, 54u8, 32u8, 253u8, 176u8, 224u8,
+                            241u8, 171u8, 22u8, 45u8, 189u8, 95u8, 137u8, 24u8, 211u8, 181u8,
+                            123u8, 141u8, 200u8, 49u8, 214u8, 177u8, 176u8, 219u8, 178u8, 101u8,
+                            69u8, 204u8,
                         ]
                     {
                         let entry = CodeByHashRefs(_0);
@@ -10329,10 +10327,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<CodeByHashRefs>()?
                         == [
-                            194u8, 100u8, 213u8, 115u8, 143u8, 181u8, 255u8, 227u8, 232u8, 163u8,
-                            209u8, 99u8, 2u8, 138u8, 118u8, 169u8, 210u8, 202u8, 190u8, 194u8,
-                            221u8, 145u8, 171u8, 78u8, 212u8, 17u8, 245u8, 107u8, 99u8, 5u8, 54u8,
-                            118u8,
+                            70u8, 116u8, 27u8, 141u8, 242u8, 54u8, 32u8, 253u8, 176u8, 224u8,
+                            241u8, 171u8, 22u8, 45u8, 189u8, 95u8, 137u8, 24u8, 211u8, 181u8,
+                            123u8, 141u8, 200u8, 49u8, 214u8, 177u8, 176u8, 219u8, 178u8, 101u8,
+                            69u8, 204u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -10356,9 +10354,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<CodeByHash>()?
                         == [
-                            41u8, 242u8, 100u8, 156u8, 32u8, 20u8, 72u8, 228u8, 143u8, 3u8, 169u8,
-                            169u8, 27u8, 111u8, 119u8, 135u8, 155u8, 17u8, 222u8, 146u8, 43u8,
-                            243u8, 2u8, 32u8, 102u8, 143u8, 143u8, 55u8, 191u8, 129u8, 128u8, 35u8,
+                            173u8, 226u8, 170u8, 98u8, 93u8, 151u8, 151u8, 250u8, 215u8, 64u8,
+                            137u8, 97u8, 15u8, 200u8, 188u8, 113u8, 192u8, 195u8, 179u8, 229u8,
+                            141u8, 239u8, 97u8, 95u8, 100u8, 47u8, 202u8, 135u8, 110u8, 225u8,
+                            243u8, 153u8,
                         ]
                     {
                         let entry = CodeByHash(_0);
@@ -10380,9 +10379,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<CodeByHash>()?
                         == [
-                            41u8, 242u8, 100u8, 156u8, 32u8, 20u8, 72u8, 228u8, 143u8, 3u8, 169u8,
-                            169u8, 27u8, 111u8, 119u8, 135u8, 155u8, 17u8, 222u8, 146u8, 43u8,
-                            243u8, 2u8, 32u8, 102u8, 143u8, 143u8, 55u8, 191u8, 129u8, 128u8, 35u8,
+                            173u8, 226u8, 170u8, 98u8, 93u8, 151u8, 151u8, 250u8, 215u8, 64u8,
+                            137u8, 97u8, 15u8, 200u8, 188u8, 113u8, 192u8, 195u8, 179u8, 229u8,
+                            141u8, 239u8, 97u8, 95u8, 100u8, 47u8, 202u8, 135u8, 110u8, 225u8,
+                            243u8, 153u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -10562,9 +10562,10 @@ pub mod api {
                         .metadata()
                         .storage_hash::<BufferedSessionChanges>()?
                         == [
-                            79u8, 184u8, 104u8, 7u8, 11u8, 216u8, 205u8, 95u8, 155u8, 51u8, 17u8,
-                            160u8, 239u8, 14u8, 38u8, 99u8, 206u8, 87u8, 87u8, 67u8, 207u8, 142u8,
-                            1u8, 159u8, 54u8, 36u8, 194u8, 77u8, 86u8, 124u8, 164u8, 251u8,
+                            78u8, 99u8, 243u8, 162u8, 81u8, 154u8, 54u8, 67u8, 201u8, 223u8, 231u8,
+                            45u8, 78u8, 146u8, 170u8, 176u8, 55u8, 109u8, 35u8, 214u8, 246u8,
+                            112u8, 26u8, 150u8, 216u8, 140u8, 67u8, 125u8, 112u8, 43u8, 40u8,
+                            156u8,
                         ]
                     {
                         let entry = BufferedSessionChanges;
@@ -10719,10 +10720,10 @@ pub mod api {
                         .metadata()
                         .storage_hash::<DownwardMessageQueueHeads>()?
                         == [
-                            88u8, 45u8, 62u8, 250u8, 186u8, 97u8, 121u8, 56u8, 136u8, 216u8, 73u8,
-                            65u8, 253u8, 81u8, 94u8, 162u8, 132u8, 217u8, 78u8, 126u8, 179u8,
-                            188u8, 167u8, 220u8, 184u8, 217u8, 138u8, 244u8, 98u8, 158u8, 25u8,
-                            118u8,
+                            47u8, 135u8, 173u8, 197u8, 128u8, 135u8, 195u8, 174u8, 186u8, 62u8,
+                            136u8, 160u8, 75u8, 221u8, 166u8, 13u8, 82u8, 131u8, 124u8, 197u8,
+                            88u8, 86u8, 205u8, 48u8, 170u8, 230u8, 71u8, 238u8, 146u8, 189u8, 3u8,
+                            154u8,
                         ]
                     {
                         let entry = DownwardMessageQueueHeads(_0);
@@ -10753,10 +10754,10 @@ pub mod api {
                         .metadata()
                         .storage_hash::<DownwardMessageQueueHeads>()?
                         == [
-                            88u8, 45u8, 62u8, 250u8, 186u8, 97u8, 121u8, 56u8, 136u8, 216u8, 73u8,
-                            65u8, 253u8, 81u8, 94u8, 162u8, 132u8, 217u8, 78u8, 126u8, 179u8,
-                            188u8, 167u8, 220u8, 184u8, 217u8, 138u8, 244u8, 98u8, 158u8, 25u8,
-                            118u8,
+                            47u8, 135u8, 173u8, 197u8, 128u8, 135u8, 195u8, 174u8, 186u8, 62u8,
+                            136u8, 160u8, 75u8, 221u8, 166u8, 13u8, 82u8, 131u8, 124u8, 197u8,
+                            88u8, 86u8, 205u8, 48u8, 170u8, 230u8, 71u8, 238u8, 146u8, 189u8, 3u8,
+                            154u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -11306,19 +11307,35 @@ pub mod api {
             #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
             pub struct ForceCleanHrmp {
                 pub para: runtime_types::polkadot_parachain::primitives::Id,
+                pub inbound: ::core::primitive::u32,
+                pub outbound: ::core::primitive::u32,
             }
             impl ::subxt::Call for ForceCleanHrmp {
                 const PALLET: &'static str = "Hrmp";
                 const FUNCTION: &'static str = "force_clean_hrmp";
             }
-            #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
-            pub struct ForceProcessHrmpOpen;
+            #[derive(
+                :: subxt :: codec :: CompactAs,
+                :: subxt :: codec :: Decode,
+                :: subxt :: codec :: Encode,
+                Debug,
+            )]
+            pub struct ForceProcessHrmpOpen {
+                pub channels: ::core::primitive::u32,
+            }
             impl ::subxt::Call for ForceProcessHrmpOpen {
                 const PALLET: &'static str = "Hrmp";
                 const FUNCTION: &'static str = "force_process_hrmp_open";
             }
-            #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
-            pub struct ForceProcessHrmpClose;
+            #[derive(
+                :: subxt :: codec :: CompactAs,
+                :: subxt :: codec :: Decode,
+                :: subxt :: codec :: Encode,
+                Debug,
+            )]
+            pub struct ForceProcessHrmpClose {
+                pub channels: ::core::primitive::u32,
+            }
             impl ::subxt::Call for ForceProcessHrmpClose {
                 const PALLET: &'static str = "Hrmp";
                 const FUNCTION: &'static str = "force_process_hrmp_close";
@@ -11326,6 +11343,7 @@ pub mod api {
             #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
             pub struct HrmpCancelOpenRequest {
                 pub channel_id: runtime_types::polkadot_parachain::primitives::HrmpChannelId,
+                pub open_requests: ::core::primitive::u32,
             }
             impl ::subxt::Call for HrmpCancelOpenRequest {
                 const PALLET: &'static str = "Hrmp";
@@ -11459,9 +11477,13 @@ pub mod api {
                 #[doc = "you to trigger the cleanup immediately for a specific parachain."]
                 #[doc = ""]
                 #[doc = "Origin must be Root."]
+                #[doc = ""]
+                #[doc = "Number of inbound and outbound channels for `para` must be provided as witness data of weighing."]
                 pub fn force_clean_hrmp(
                     &self,
                     para: runtime_types::polkadot_parachain::primitives::Id,
+                    inbound: ::core::primitive::u32,
+                    outbound: ::core::primitive::u32,
                 ) -> Result<
                     ::subxt::SubmittableExtrinsic<
                         'a,
@@ -11475,12 +11497,17 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<ForceCleanHrmp>()?
                         == [
-                            214u8, 90u8, 225u8, 210u8, 5u8, 31u8, 7u8, 179u8, 85u8, 89u8, 239u8,
-                            54u8, 26u8, 36u8, 34u8, 224u8, 8u8, 42u8, 109u8, 207u8, 178u8, 186u8,
-                            220u8, 225u8, 136u8, 88u8, 231u8, 73u8, 1u8, 195u8, 23u8, 130u8,
+                            182u8, 231u8, 99u8, 129u8, 130u8, 109u8, 97u8, 108u8, 37u8, 107u8,
+                            203u8, 70u8, 133u8, 106u8, 226u8, 77u8, 110u8, 189u8, 227u8, 26u8,
+                            129u8, 189u8, 234u8, 215u8, 112u8, 22u8, 127u8, 185u8, 152u8, 157u8,
+                            14u8, 66u8,
                         ]
                     {
-                        let call = ForceCleanHrmp { para };
+                        let call = ForceCleanHrmp {
+                            para,
+                            inbound,
+                            outbound,
+                        };
                         Ok(::subxt::SubmittableExtrinsic::new(self.client, call))
                     } else {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
@@ -11490,8 +11517,11 @@ pub mod api {
                 #[doc = ""]
                 #[doc = "If there are pending HRMP open channel requests, you can use this"]
                 #[doc = "function process all of those requests immediately."]
+                #[doc = ""]
+                #[doc = "Total number of opening channels must be provided as witness data of weighing."]
                 pub fn force_process_hrmp_open(
                     &self,
+                    channels: ::core::primitive::u32,
                 ) -> Result<
                     ::subxt::SubmittableExtrinsic<
                         'a,
@@ -11505,13 +11535,12 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<ForceProcessHrmpOpen>()?
                         == [
-                            167u8, 147u8, 210u8, 241u8, 86u8, 241u8, 127u8, 169u8, 232u8, 253u8,
-                            132u8, 189u8, 160u8, 215u8, 252u8, 156u8, 138u8, 71u8, 196u8, 193u8,
-                            221u8, 55u8, 194u8, 109u8, 251u8, 79u8, 37u8, 94u8, 93u8, 141u8, 68u8,
-                            22u8,
+                            162u8, 53u8, 194u8, 175u8, 117u8, 32u8, 217u8, 177u8, 9u8, 255u8, 88u8,
+                            40u8, 8u8, 174u8, 8u8, 11u8, 26u8, 82u8, 213u8, 40u8, 20u8, 89u8,
+                            227u8, 209u8, 95u8, 162u8, 221u8, 97u8, 230u8, 98u8, 110u8, 85u8,
                         ]
                     {
-                        let call = ForceProcessHrmpOpen {};
+                        let call = ForceProcessHrmpOpen { channels };
                         Ok(::subxt::SubmittableExtrinsic::new(self.client, call))
                     } else {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
@@ -11521,8 +11550,11 @@ pub mod api {
                 #[doc = ""]
                 #[doc = "If there are pending HRMP close channel requests, you can use this"]
                 #[doc = "function process all of those requests immediately."]
+                #[doc = ""]
+                #[doc = "Total number of closing channels must be provided as witness data of weighing."]
                 pub fn force_process_hrmp_close(
                     &self,
+                    channels: ::core::primitive::u32,
                 ) -> Result<
                     ::subxt::SubmittableExtrinsic<
                         'a,
@@ -11539,25 +11571,30 @@ pub mod api {
                         .metadata()
                         .call_hash::<ForceProcessHrmpClose>()?
                         == [
-                            154u8, 141u8, 84u8, 49u8, 38u8, 41u8, 255u8, 152u8, 135u8, 41u8, 232u8,
-                            177u8, 75u8, 0u8, 189u8, 159u8, 75u8, 147u8, 186u8, 11u8, 68u8, 132u8,
-                            56u8, 96u8, 37u8, 115u8, 58u8, 37u8, 228u8, 2u8, 117u8, 202u8,
+                            128u8, 141u8, 191u8, 255u8, 204u8, 137u8, 27u8, 170u8, 180u8, 166u8,
+                            93u8, 144u8, 70u8, 56u8, 132u8, 100u8, 5u8, 114u8, 252u8, 163u8, 164u8,
+                            246u8, 234u8, 152u8, 193u8, 79u8, 89u8, 137u8, 46u8, 171u8, 32u8,
+                            119u8,
                         ]
                     {
-                        let call = ForceProcessHrmpClose {};
+                        let call = ForceProcessHrmpClose { channels };
                         Ok(::subxt::SubmittableExtrinsic::new(self.client, call))
                     } else {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
                     }
                 }
-                #[doc = "This cancels a pending open channel request. It can be canceled be either of the sender"]
+                #[doc = "This cancels a pending open channel request. It can be canceled by either of the sender"]
                 #[doc = "or the recipient for that request. The origin must be either of those."]
                 #[doc = ""]
                 #[doc = "The cancellation happens immediately. It is not possible to cancel the request if it is"]
                 #[doc = "already accepted."]
+                #[doc = ""]
+                #[doc = "Total number of open requests (i.e. `HrmpOpenChannelRequestsList`) must be provided as"]
+                #[doc = "witness data."]
                 pub fn hrmp_cancel_open_request(
                     &self,
                     channel_id: runtime_types::polkadot_parachain::primitives::HrmpChannelId,
+                    open_requests: ::core::primitive::u32,
                 ) -> Result<
                     ::subxt::SubmittableExtrinsic<
                         'a,
@@ -11574,13 +11611,15 @@ pub mod api {
                         .metadata()
                         .call_hash::<HrmpCancelOpenRequest>()?
                         == [
-                            151u8, 34u8, 65u8, 20u8, 128u8, 50u8, 208u8, 137u8, 144u8, 208u8, 62u8,
-                            251u8, 116u8, 9u8, 117u8, 7u8, 111u8, 226u8, 246u8, 133u8, 110u8,
-                            191u8, 135u8, 1u8, 209u8, 93u8, 209u8, 124u8, 131u8, 196u8, 235u8,
-                            50u8,
+                            8u8, 83u8, 32u8, 187u8, 220u8, 1u8, 212u8, 226u8, 72u8, 61u8, 110u8,
+                            211u8, 238u8, 119u8, 95u8, 48u8, 150u8, 51u8, 177u8, 182u8, 209u8,
+                            174u8, 245u8, 25u8, 194u8, 199u8, 212u8, 131u8, 77u8, 72u8, 9u8, 120u8,
                         ]
                     {
-                        let call = HrmpCancelOpenRequest { channel_id };
+                        let call = HrmpCancelOpenRequest {
+                            channel_id,
+                            open_requests,
+                        };
                         Ok(::subxt::SubmittableExtrinsic::new(self.client, call))
                     } else {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
@@ -11901,8 +11940,8 @@ pub mod api {
                     }
                 }
                 #[doc = " This mapping tracks how many open channel requests are initiated by a given sender para."]
-                #[doc = " Invariant: `HrmpOpenChannelRequests` should contain the same number of items that has `(X, _)`"]
-                #[doc = " as the number of `HrmpOpenChannelRequestCount` for `X`."]
+                #[doc = " Invariant: `HrmpOpenChannelRequests` should contain the same number of items that has"]
+                #[doc = " `(X, _)` as the number of `HrmpOpenChannelRequestCount` for `X`."]
                 pub async fn hrmp_open_channel_request_count(
                     &self,
                     _0: &runtime_types::polkadot_parachain::primitives::Id,
@@ -11929,8 +11968,8 @@ pub mod api {
                     }
                 }
                 #[doc = " This mapping tracks how many open channel requests are initiated by a given sender para."]
-                #[doc = " Invariant: `HrmpOpenChannelRequests` should contain the same number of items that has `(X, _)`"]
-                #[doc = " as the number of `HrmpOpenChannelRequestCount` for `X`."]
+                #[doc = " Invariant: `HrmpOpenChannelRequests` should contain the same number of items that has"]
+                #[doc = " `(X, _)` as the number of `HrmpOpenChannelRequestCount` for `X`."]
                 pub async fn hrmp_open_channel_request_count_iter(
                     &self,
                     block_hash: ::core::option::Option<T::Hash>,
@@ -12008,8 +12047,8 @@ pub mod api {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
                     }
                 }
-                #[doc = " A set of pending HRMP close channel requests that are going to be closed during the session change."]
-                #[doc = " Used for checking if a given channel is registered for closure."]
+                #[doc = " A set of pending HRMP close channel requests that are going to be closed during the session"]
+                #[doc = " change. Used for checking if a given channel is registered for closure."]
                 #[doc = ""]
                 #[doc = " The set is accompanied by a list for iteration."]
                 #[doc = ""]
@@ -12038,8 +12077,8 @@ pub mod api {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
                     }
                 }
-                #[doc = " A set of pending HRMP close channel requests that are going to be closed during the session change."]
-                #[doc = " Used for checking if a given channel is registered for closure."]
+                #[doc = " A set of pending HRMP close channel requests that are going to be closed during the session"]
+                #[doc = " change. Used for checking if a given channel is registered for closure."]
                 #[doc = ""]
                 #[doc = " The set is accompanied by a list for iteration."]
                 #[doc = ""]
@@ -12158,9 +12197,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<HrmpChannels>()?
                         == [
-                            241u8, 160u8, 242u8, 167u8, 251u8, 8u8, 131u8, 194u8, 179u8, 216u8,
-                            231u8, 125u8, 58u8, 118u8, 61u8, 113u8, 46u8, 47u8, 6u8, 71u8, 46u8,
-                            113u8, 192u8, 1u8, 199u8, 207u8, 179u8, 253u8, 144u8, 146u8, 19u8, 1u8,
+                            146u8, 253u8, 102u8, 91u8, 69u8, 206u8, 61u8, 201u8, 63u8, 22u8, 119u8,
+                            249u8, 119u8, 232u8, 154u8, 132u8, 123u8, 244u8, 12u8, 61u8, 95u8,
+                            138u8, 104u8, 112u8, 157u8, 31u8, 39u8, 126u8, 184u8, 15u8, 33u8,
+                            171u8,
                         ]
                     {
                         let entry = HrmpChannels(_0);
@@ -12181,9 +12221,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<HrmpChannels>()?
                         == [
-                            241u8, 160u8, 242u8, 167u8, 251u8, 8u8, 131u8, 194u8, 179u8, 216u8,
-                            231u8, 125u8, 58u8, 118u8, 61u8, 113u8, 46u8, 47u8, 6u8, 71u8, 46u8,
-                            113u8, 192u8, 1u8, 199u8, 207u8, 179u8, 253u8, 144u8, 146u8, 19u8, 1u8,
+                            146u8, 253u8, 102u8, 91u8, 69u8, 206u8, 61u8, 201u8, 63u8, 22u8, 119u8,
+                            249u8, 119u8, 232u8, 154u8, 132u8, 123u8, 244u8, 12u8, 61u8, 95u8,
+                            138u8, 104u8, 112u8, 157u8, 31u8, 39u8, 126u8, 184u8, 15u8, 33u8,
+                            171u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -12191,17 +12232,17 @@ pub mod api {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
                     }
                 }
-                #[doc = " Ingress/egress indexes allow to find all the senders and receivers given the opposite"]
-                #[doc = " side. I.e."]
+                #[doc = " Ingress/egress indexes allow to find all the senders and receivers given the opposite side."]
+                #[doc = " I.e."]
                 #[doc = ""]
                 #[doc = " (a) ingress index allows to find all the senders for a given recipient."]
                 #[doc = " (b) egress index allows to find all the recipients for a given sender."]
                 #[doc = ""]
                 #[doc = " Invariants:"]
-                #[doc = " - for each ingress index entry for `P` each item `I` in the index should present in `HrmpChannels`"]
-                #[doc = "   as `(I, P)`."]
-                #[doc = " - for each egress index entry for `P` each item `E` in the index should present in `HrmpChannels`"]
-                #[doc = "   as `(P, E)`."]
+                #[doc = " - for each ingress index entry for `P` each item `I` in the index should present in"]
+                #[doc = "   `HrmpChannels` as `(I, P)`."]
+                #[doc = " - for each egress index entry for `P` each item `E` in the index should present in"]
+                #[doc = "   `HrmpChannels` as `(P, E)`."]
                 #[doc = " - there should be no other dangling channels in `HrmpChannels`."]
                 #[doc = " - the vectors are sorted."]
                 pub async fn hrmp_ingress_channels_index(
@@ -12232,17 +12273,17 @@ pub mod api {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
                     }
                 }
-                #[doc = " Ingress/egress indexes allow to find all the senders and receivers given the opposite"]
-                #[doc = " side. I.e."]
+                #[doc = " Ingress/egress indexes allow to find all the senders and receivers given the opposite side."]
+                #[doc = " I.e."]
                 #[doc = ""]
                 #[doc = " (a) ingress index allows to find all the senders for a given recipient."]
                 #[doc = " (b) egress index allows to find all the recipients for a given sender."]
                 #[doc = ""]
                 #[doc = " Invariants:"]
-                #[doc = " - for each ingress index entry for `P` each item `I` in the index should present in `HrmpChannels`"]
-                #[doc = "   as `(I, P)`."]
-                #[doc = " - for each egress index entry for `P` each item `E` in the index should present in `HrmpChannels`"]
-                #[doc = "   as `(P, E)`."]
+                #[doc = " - for each ingress index entry for `P` each item `I` in the index should present in"]
+                #[doc = "   `HrmpChannels` as `(I, P)`."]
+                #[doc = " - for each egress index entry for `P` each item `E` in the index should present in"]
+                #[doc = "   `HrmpChannels` as `(P, E)`."]
                 #[doc = " - there should be no other dangling channels in `HrmpChannels`."]
                 #[doc = " - the vectors are sorted."]
                 pub async fn hrmp_ingress_channels_index_iter(
@@ -12376,13 +12417,12 @@ pub mod api {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
                     }
                 }
-                #[doc = " Maintains a mapping that can be used to answer the question:"]
-                #[doc = " What paras sent a message at the given block number for a given receiver."]
-                #[doc = " Invariants:"]
+                #[doc = " Maintains a mapping that can be used to answer the question: What paras sent a message at"]
+                #[doc = " the given block number for a given receiver. Invariants:"]
                 #[doc = " - The inner `Vec<ParaId>` is never empty."]
                 #[doc = " - The inner `Vec<ParaId>` cannot store two same `ParaId`."]
-                #[doc = " - The outer vector is sorted ascending by block number and cannot store two items with the same"]
-                #[doc = "   block number."]
+                #[doc = " - The outer vector is sorted ascending by block number and cannot store two items with the"]
+                #[doc = "   same block number."]
                 pub async fn hrmp_channel_digests(
                     &self,
                     _0: &runtime_types::polkadot_parachain::primitives::Id,
@@ -12414,13 +12454,12 @@ pub mod api {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
                     }
                 }
-                #[doc = " Maintains a mapping that can be used to answer the question:"]
-                #[doc = " What paras sent a message at the given block number for a given receiver."]
-                #[doc = " Invariants:"]
+                #[doc = " Maintains a mapping that can be used to answer the question: What paras sent a message at"]
+                #[doc = " the given block number for a given receiver. Invariants:"]
                 #[doc = " - The inner `Vec<ParaId>` is never empty."]
                 #[doc = " - The inner `Vec<ParaId>` cannot store two same `ParaId`."]
-                #[doc = " - The outer vector is sorted ascending by block number and cannot store two items with the same"]
-                #[doc = "   block number."]
+                #[doc = " - The outer vector is sorted ascending by block number and cannot store two items with the"]
+                #[doc = "   same block number."]
                 pub async fn hrmp_channel_digests_iter(
                     &self,
                     block_hash: ::core::option::Option<T::Hash>,
@@ -12457,7 +12496,7 @@ pub mod api {
                 const PALLET: &'static str = "ParaSessionInfo";
                 const STORAGE: &'static str = "AssignmentKeysUnsafe";
                 type Value =
-                    ::std::vec::Vec<runtime_types::polkadot_primitives::v1::assignment_app::Public>;
+                    ::std::vec::Vec<runtime_types::polkadot_primitives::v2::assignment_app::Public>;
                 fn key(&self) -> ::subxt::StorageEntryKey {
                     ::subxt::StorageEntryKey::Plain
                 }
@@ -12497,7 +12536,7 @@ pub mod api {
                     &self,
                     block_hash: ::core::option::Option<T::Hash>,
                 ) -> ::core::result::Result<
-                    ::std::vec::Vec<runtime_types::polkadot_primitives::v1::assignment_app::Public>,
+                    ::std::vec::Vec<runtime_types::polkadot_primitives::v2::assignment_app::Public>,
                     ::subxt::BasicError,
                 > {
                     if self
@@ -12505,10 +12544,10 @@ pub mod api {
                         .metadata()
                         .storage_hash::<AssignmentKeysUnsafe>()?
                         == [
-                            243u8, 5u8, 37u8, 167u8, 29u8, 59u8, 87u8, 66u8, 53u8, 91u8, 181u8,
-                            9u8, 144u8, 248u8, 225u8, 121u8, 130u8, 111u8, 140u8, 35u8, 79u8,
-                            187u8, 159u8, 22u8, 192u8, 166u8, 144u8, 161u8, 239u8, 98u8, 255u8,
-                            108u8,
+                            150u8, 56u8, 43u8, 74u8, 246u8, 13u8, 148u8, 80u8, 105u8, 17u8, 36u8,
+                            246u8, 229u8, 105u8, 156u8, 206u8, 206u8, 77u8, 240u8, 24u8, 127u8,
+                            200u8, 14u8, 144u8, 246u8, 88u8, 173u8, 111u8, 176u8, 208u8, 31u8,
+                            248u8,
                         ]
                     {
                         let entry = AssignmentKeysUnsafe;
@@ -12559,10 +12598,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Sessions>()?
                         == [
-                            130u8, 240u8, 118u8, 198u8, 143u8, 62u8, 10u8, 139u8, 105u8, 228u8,
-                            111u8, 154u8, 131u8, 224u8, 39u8, 11u8, 15u8, 188u8, 92u8, 49u8, 177u8,
-                            103u8, 185u8, 118u8, 14u8, 141u8, 173u8, 223u8, 59u8, 138u8, 26u8,
-                            112u8,
+                            163u8, 206u8, 134u8, 169u8, 87u8, 219u8, 254u8, 50u8, 16u8, 32u8,
+                            247u8, 205u8, 100u8, 140u8, 177u8, 89u8, 128u8, 178u8, 126u8, 175u8,
+                            198u8, 39u8, 251u8, 145u8, 92u8, 90u8, 10u8, 27u8, 62u8, 95u8, 128u8,
+                            168u8,
                         ]
                     {
                         let entry = Sessions(_0);
@@ -12583,10 +12622,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Sessions>()?
                         == [
-                            130u8, 240u8, 118u8, 198u8, 143u8, 62u8, 10u8, 139u8, 105u8, 228u8,
-                            111u8, 154u8, 131u8, 224u8, 39u8, 11u8, 15u8, 188u8, 92u8, 49u8, 177u8,
-                            103u8, 185u8, 118u8, 14u8, 141u8, 173u8, 223u8, 59u8, 138u8, 26u8,
-                            112u8,
+                            163u8, 206u8, 134u8, 169u8, 87u8, 219u8, 254u8, 50u8, 16u8, 32u8,
+                            247u8, 205u8, 100u8, 140u8, 177u8, 89u8, 128u8, 178u8, 126u8, 175u8,
+                            198u8, 39u8, 251u8, 145u8, 92u8, 90u8, 10u8, 27u8, 62u8, 95u8, 128u8,
+                            168u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -12721,7 +12760,7 @@ pub mod api {
                 const PALLET: &'static str = "ParasDisputes";
                 const STORAGE: &'static str = "Disputes";
                 type Value =
-                    runtime_types::polkadot_primitives::v1::DisputeState<::core::primitive::u32>;
+                    runtime_types::polkadot_primitives::v2::DisputeState<::core::primitive::u32>;
                 fn key(&self) -> ::subxt::StorageEntryKey {
                     ::subxt::StorageEntryKey::Map(vec![
                         ::subxt::StorageMapKey::new(&self.0, ::subxt::StorageHasher::Twox64Concat),
@@ -12808,7 +12847,7 @@ pub mod api {
                     block_hash: ::core::option::Option<T::Hash>,
                 ) -> ::core::result::Result<
                     ::core::option::Option<
-                        runtime_types::polkadot_primitives::v1::DisputeState<
+                        runtime_types::polkadot_primitives::v2::DisputeState<
                             ::core::primitive::u32,
                         >,
                     >,
@@ -12816,9 +12855,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Disputes>()?
                         == [
-                            161u8, 158u8, 198u8, 78u8, 83u8, 210u8, 144u8, 119u8, 92u8, 26u8,
-                            238u8, 56u8, 97u8, 10u8, 138u8, 157u8, 248u8, 202u8, 67u8, 21u8, 45u8,
-                            121u8, 22u8, 22u8, 115u8, 71u8, 4u8, 163u8, 204u8, 190u8, 57u8, 105u8,
+                            157u8, 84u8, 172u8, 11u8, 64u8, 109u8, 34u8, 117u8, 91u8, 57u8, 117u8,
+                            163u8, 65u8, 172u8, 97u8, 39u8, 27u8, 10u8, 125u8, 194u8, 12u8, 252u8,
+                            180u8, 223u8, 118u8, 150u8, 160u8, 143u8, 217u8, 178u8, 28u8, 93u8,
                         ]
                     {
                         let entry = Disputes(_0, _1);
@@ -12837,9 +12876,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Disputes>()?
                         == [
-                            161u8, 158u8, 198u8, 78u8, 83u8, 210u8, 144u8, 119u8, 92u8, 26u8,
-                            238u8, 56u8, 97u8, 10u8, 138u8, 157u8, 248u8, 202u8, 67u8, 21u8, 45u8,
-                            121u8, 22u8, 22u8, 115u8, 71u8, 4u8, 163u8, 204u8, 190u8, 57u8, 105u8,
+                            157u8, 84u8, 172u8, 11u8, 64u8, 109u8, 34u8, 117u8, 91u8, 57u8, 117u8,
+                            163u8, 65u8, 172u8, 97u8, 39u8, 27u8, 10u8, 125u8, 194u8, 12u8, 252u8,
+                            180u8, 223u8, 118u8, 150u8, 160u8, 143u8, 217u8, 178u8, 28u8, 93u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -12860,9 +12899,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Included>()?
                         == [
-                            32u8, 107u8, 8u8, 112u8, 201u8, 81u8, 66u8, 223u8, 120u8, 51u8, 166u8,
-                            240u8, 229u8, 141u8, 231u8, 132u8, 114u8, 36u8, 213u8, 48u8, 249u8,
-                            153u8, 143u8, 157u8, 93u8, 204u8, 207u8, 144u8, 52u8, 36u8, 46u8, 12u8,
+                            152u8, 13u8, 87u8, 4u8, 129u8, 181u8, 136u8, 38u8, 235u8, 70u8, 0u8,
+                            166u8, 190u8, 30u8, 247u8, 188u8, 192u8, 114u8, 13u8, 125u8, 254u8,
+                            120u8, 57u8, 91u8, 28u8, 160u8, 194u8, 242u8, 116u8, 146u8, 217u8,
+                            91u8,
                         ]
                     {
                         let entry = Included(_0, _1);
@@ -12882,9 +12922,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Included>()?
                         == [
-                            32u8, 107u8, 8u8, 112u8, 201u8, 81u8, 66u8, 223u8, 120u8, 51u8, 166u8,
-                            240u8, 229u8, 141u8, 231u8, 132u8, 114u8, 36u8, 213u8, 48u8, 249u8,
-                            153u8, 143u8, 157u8, 93u8, 204u8, 207u8, 144u8, 52u8, 36u8, 46u8, 12u8,
+                            152u8, 13u8, 87u8, 4u8, 129u8, 181u8, 136u8, 38u8, 235u8, 70u8, 0u8,
+                            166u8, 190u8, 30u8, 247u8, 188u8, 192u8, 114u8, 13u8, 125u8, 254u8,
+                            120u8, 57u8, 91u8, 28u8, 160u8, 194u8, 242u8, 116u8, 146u8, 217u8,
+                            91u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -14649,10 +14690,10 @@ pub mod api {
                     ::subxt::StorageEntryKey::Plain
                 }
             }
-            pub struct NextTrieIndex;
-            impl ::subxt::StorageEntry for NextTrieIndex {
+            pub struct NextFundIndex;
+            impl ::subxt::StorageEntry for NextFundIndex {
                 const PALLET: &'static str = "Crowdloan";
-                const STORAGE: &'static str = "NextTrieIndex";
+                const STORAGE: &'static str = "NextFundIndex";
                 type Value = ::core::primitive::u32;
                 fn key(&self) -> ::subxt::StorageEntryKey {
                     ::subxt::StorageEntryKey::Plain
@@ -14683,10 +14724,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Funds>()?
                         == [
-                            179u8, 52u8, 146u8, 131u8, 127u8, 37u8, 242u8, 97u8, 182u8, 11u8,
-                            131u8, 26u8, 112u8, 203u8, 96u8, 215u8, 101u8, 48u8, 204u8, 36u8, 33u8,
-                            241u8, 16u8, 164u8, 42u8, 202u8, 214u8, 184u8, 15u8, 135u8, 188u8,
-                            82u8,
+                            13u8, 211u8, 240u8, 138u8, 231u8, 78u8, 123u8, 252u8, 210u8, 27u8,
+                            202u8, 82u8, 157u8, 118u8, 209u8, 218u8, 160u8, 183u8, 225u8, 77u8,
+                            230u8, 131u8, 180u8, 238u8, 83u8, 202u8, 29u8, 106u8, 114u8, 223u8,
+                            250u8, 3u8,
                         ]
                     {
                         let entry = Funds(_0);
@@ -14703,10 +14744,10 @@ pub mod api {
                 {
                     if self.client.metadata().storage_hash::<Funds>()?
                         == [
-                            179u8, 52u8, 146u8, 131u8, 127u8, 37u8, 242u8, 97u8, 182u8, 11u8,
-                            131u8, 26u8, 112u8, 203u8, 96u8, 215u8, 101u8, 48u8, 204u8, 36u8, 33u8,
-                            241u8, 16u8, 164u8, 42u8, 202u8, 214u8, 184u8, 15u8, 135u8, 188u8,
-                            82u8,
+                            13u8, 211u8, 240u8, 138u8, 231u8, 78u8, 123u8, 252u8, 210u8, 27u8,
+                            202u8, 82u8, 157u8, 118u8, 209u8, 218u8, 160u8, 183u8, 225u8, 77u8,
+                            230u8, 131u8, 180u8, 238u8, 83u8, 202u8, 29u8, 106u8, 114u8, 223u8,
+                            250u8, 3u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -14762,21 +14803,20 @@ pub mod api {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
                     }
                 }
-                #[doc = " Tracker for the next available trie index"]
-                pub async fn next_trie_index(
+                #[doc = " Tracker for the next available fund index"]
+                pub async fn next_fund_index(
                     &self,
                     block_hash: ::core::option::Option<T::Hash>,
                 ) -> ::core::result::Result<::core::primitive::u32, ::subxt::BasicError>
                 {
-                    if self.client.metadata().storage_hash::<NextTrieIndex>()?
+                    if self.client.metadata().storage_hash::<NextFundIndex>()?
                         == [
-                            190u8, 134u8, 230u8, 53u8, 248u8, 29u8, 221u8, 84u8, 196u8, 143u8,
-                            86u8, 10u8, 206u8, 63u8, 185u8, 222u8, 23u8, 143u8, 183u8, 216u8,
-                            175u8, 229u8, 97u8, 138u8, 48u8, 210u8, 98u8, 70u8, 158u8, 254u8,
-                            157u8, 163u8,
+                            1u8, 215u8, 164u8, 194u8, 231u8, 34u8, 207u8, 19u8, 149u8, 187u8, 3u8,
+                            176u8, 194u8, 240u8, 180u8, 169u8, 214u8, 194u8, 202u8, 240u8, 209u8,
+                            6u8, 244u8, 46u8, 54u8, 142u8, 61u8, 220u8, 240u8, 96u8, 10u8, 168u8,
                         ]
                     {
-                        let entry = NextTrieIndex;
+                        let entry = NextFundIndex;
                         self.client
                             .storage()
                             .fetch_or_default(&entry, block_hash)
@@ -16114,9 +16154,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<Sudo>()?
                         == [
-                            19u8, 104u8, 154u8, 61u8, 138u8, 32u8, 246u8, 27u8, 233u8, 39u8, 187u8,
-                            180u8, 101u8, 234u8, 189u8, 192u8, 74u8, 114u8, 127u8, 33u8, 82u8,
-                            78u8, 94u8, 147u8, 85u8, 71u8, 161u8, 162u8, 158u8, 213u8, 8u8, 96u8,
+                            144u8, 36u8, 5u8, 240u8, 96u8, 128u8, 55u8, 40u8, 57u8, 205u8, 184u8,
+                            6u8, 181u8, 43u8, 165u8, 1u8, 148u8, 140u8, 80u8, 207u8, 210u8, 224u8,
+                            232u8, 252u8, 193u8, 43u8, 36u8, 203u8, 108u8, 150u8, 184u8, 199u8,
                         ]
                     {
                         let call = Sudo {
@@ -16154,9 +16194,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<SudoUncheckedWeight>()?
                         == [
-                            111u8, 32u8, 138u8, 94u8, 18u8, 118u8, 242u8, 237u8, 111u8, 62u8,
-                            130u8, 49u8, 55u8, 52u8, 131u8, 194u8, 71u8, 32u8, 94u8, 145u8, 164u8,
-                            79u8, 141u8, 134u8, 17u8, 92u8, 42u8, 133u8, 70u8, 109u8, 177u8, 74u8,
+                            55u8, 233u8, 183u8, 246u8, 146u8, 48u8, 56u8, 202u8, 43u8, 90u8, 189u8,
+                            171u8, 47u8, 55u8, 7u8, 163u8, 136u8, 155u8, 23u8, 78u8, 58u8, 24u8,
+                            189u8, 2u8, 204u8, 15u8, 115u8, 222u8, 76u8, 94u8, 244u8, 43u8,
                         ]
                     {
                         let call = SudoUncheckedWeight {
@@ -16225,9 +16265,10 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<SudoAs>()?
                         == [
-                            81u8, 173u8, 142u8, 151u8, 4u8, 84u8, 241u8, 205u8, 72u8, 97u8, 88u8,
-                            233u8, 233u8, 43u8, 172u8, 209u8, 98u8, 129u8, 146u8, 20u8, 82u8,
-                            129u8, 37u8, 31u8, 0u8, 88u8, 19u8, 66u8, 87u8, 193u8, 151u8, 135u8,
+                            119u8, 211u8, 130u8, 52u8, 139u8, 44u8, 67u8, 44u8, 219u8, 122u8,
+                            101u8, 134u8, 13u8, 199u8, 98u8, 27u8, 145u8, 98u8, 213u8, 5u8, 225u8,
+                            94u8, 177u8, 56u8, 117u8, 242u8, 206u8, 119u8, 76u8, 207u8, 210u8,
+                            19u8,
                         ]
                     {
                         let call = SudoAs {
@@ -16344,6 +16385,18 @@ pub mod api {
             impl ::subxt::StorageEntry for Nodes<'_> {
                 const PALLET: &'static str = "Mmr";
                 const STORAGE: &'static str = "Nodes";
+                type Value = ::std::vec::Vec<::core::primitive::u8>;
+                fn key(&self) -> ::subxt::StorageEntryKey {
+                    ::subxt::StorageEntryKey::Map(vec![::subxt::StorageMapKey::new(
+                        &self.0,
+                        ::subxt::StorageHasher::Identity,
+                    )])
+                }
+            }
+            pub struct Peaks<'a>(pub &'a ::core::primitive::u64);
+            impl ::subxt::StorageEntry for Peaks<'_> {
+                const PALLET: &'static str = "Mmr";
+                const STORAGE: &'static str = "Peaks";
                 type Value = ::subxt::sp_core::H256;
                 fn key(&self) -> ::subxt::StorageEntryKey {
                     ::subxt::StorageEntryKey::Map(vec![::subxt::StorageMapKey::new(
@@ -16367,9 +16420,10 @@ pub mod api {
                 {
                     if self.client.metadata().storage_hash::<RootHash>()?
                         == [
-                            156u8, 176u8, 7u8, 77u8, 96u8, 23u8, 240u8, 140u8, 74u8, 33u8, 12u8,
-                            124u8, 160u8, 228u8, 78u8, 8u8, 139u8, 164u8, 109u8, 52u8, 168u8,
-                            234u8, 221u8, 194u8, 100u8, 2u8, 250u8, 5u8, 188u8, 203u8, 13u8, 117u8,
+                            235u8, 26u8, 148u8, 114u8, 90u8, 241u8, 74u8, 26u8, 120u8, 199u8,
+                            205u8, 157u8, 22u8, 104u8, 182u8, 167u8, 93u8, 254u8, 95u8, 143u8,
+                            67u8, 0u8, 183u8, 46u8, 118u8, 61u8, 55u8, 31u8, 76u8, 232u8, 23u8,
+                            153u8,
                         ]
                     {
                         let entry = RootHash;
@@ -16404,11 +16458,51 @@ pub mod api {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
                     }
                 }
+                #[doc = " All known nodes & leaves in the MMR, just until offchain db is fork aware"]
+                pub async fn nodes(
+                    &self,
+                    _0: &::core::primitive::u64,
+                    block_hash: ::core::option::Option<T::Hash>,
+                ) -> ::core::result::Result<
+                    ::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
+                    ::subxt::BasicError,
+                > {
+                    if self.client.metadata().storage_hash::<Nodes>()?
+                        == [
+                            113u8, 225u8, 71u8, 185u8, 124u8, 250u8, 5u8, 111u8, 46u8, 137u8, 40u8,
+                            37u8, 190u8, 232u8, 247u8, 194u8, 199u8, 28u8, 48u8, 224u8, 131u8, 6u8,
+                            213u8, 79u8, 238u8, 33u8, 199u8, 124u8, 238u8, 237u8, 247u8, 226u8,
+                        ]
+                    {
+                        let entry = Nodes(_0);
+                        self.client.storage().fetch(&entry, block_hash).await
+                    } else {
+                        Err(::subxt::MetadataError::IncompatibleMetadata.into())
+                    }
+                }
+                #[doc = " All known nodes & leaves in the MMR, just until offchain db is fork aware"]
+                pub async fn nodes_iter(
+                    &self,
+                    block_hash: ::core::option::Option<T::Hash>,
+                ) -> ::core::result::Result<::subxt::KeyIter<'a, T, Nodes<'a>>, ::subxt::BasicError>
+                {
+                    if self.client.metadata().storage_hash::<Nodes>()?
+                        == [
+                            113u8, 225u8, 71u8, 185u8, 124u8, 250u8, 5u8, 111u8, 46u8, 137u8, 40u8,
+                            37u8, 190u8, 232u8, 247u8, 194u8, 199u8, 28u8, 48u8, 224u8, 131u8, 6u8,
+                            213u8, 79u8, 238u8, 33u8, 199u8, 124u8, 238u8, 237u8, 247u8, 226u8,
+                        ]
+                    {
+                        self.client.storage().iter(block_hash).await
+                    } else {
+                        Err(::subxt::MetadataError::IncompatibleMetadata.into())
+                    }
+                }
                 #[doc = " Hashes of the nodes in the MMR."]
                 #[doc = ""]
                 #[doc = " Note this collection only contains MMR peaks, the inner nodes (and leaves)"]
                 #[doc = " are pruned and only stored in the Offchain DB."]
-                pub async fn nodes(
+                pub async fn peaks(
                     &self,
                     _0: &::core::primitive::u64,
                     block_hash: ::core::option::Option<T::Hash>,
@@ -16416,15 +16510,15 @@ pub mod api {
                     ::core::option::Option<::subxt::sp_core::H256>,
                     ::subxt::BasicError,
                 > {
-                    if self.client.metadata().storage_hash::<Nodes>()?
+                    if self.client.metadata().storage_hash::<Peaks>()?
                         == [
-                            150u8, 135u8, 92u8, 131u8, 236u8, 239u8, 244u8, 0u8, 254u8, 50u8,
-                            117u8, 224u8, 131u8, 70u8, 100u8, 212u8, 191u8, 58u8, 146u8, 207u8,
-                            94u8, 72u8, 187u8, 139u8, 80u8, 136u8, 215u8, 68u8, 131u8, 249u8,
-                            190u8, 247u8,
+                            12u8, 106u8, 223u8, 202u8, 71u8, 155u8, 228u8, 220u8, 197u8, 143u8,
+                            133u8, 165u8, 62u8, 172u8, 183u8, 222u8, 58u8, 225u8, 24u8, 57u8,
+                            144u8, 206u8, 66u8, 204u8, 16u8, 31u8, 139u8, 19u8, 175u8, 235u8,
+                            204u8, 135u8,
                         ]
                     {
-                        let entry = Nodes(_0);
+                        let entry = Peaks(_0);
                         self.client.storage().fetch(&entry, block_hash).await
                     } else {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
@@ -16434,17 +16528,17 @@ pub mod api {
                 #[doc = ""]
                 #[doc = " Note this collection only contains MMR peaks, the inner nodes (and leaves)"]
                 #[doc = " are pruned and only stored in the Offchain DB."]
-                pub async fn nodes_iter(
+                pub async fn peaks_iter(
                     &self,
                     block_hash: ::core::option::Option<T::Hash>,
-                ) -> ::core::result::Result<::subxt::KeyIter<'a, T, Nodes<'a>>, ::subxt::BasicError>
+                ) -> ::core::result::Result<::subxt::KeyIter<'a, T, Peaks<'a>>, ::subxt::BasicError>
                 {
-                    if self.client.metadata().storage_hash::<Nodes>()?
+                    if self.client.metadata().storage_hash::<Peaks>()?
                         == [
-                            150u8, 135u8, 92u8, 131u8, 236u8, 239u8, 244u8, 0u8, 254u8, 50u8,
-                            117u8, 224u8, 131u8, 70u8, 100u8, 212u8, 191u8, 58u8, 146u8, 207u8,
-                            94u8, 72u8, 187u8, 139u8, 80u8, 136u8, 215u8, 68u8, 131u8, 249u8,
-                            190u8, 247u8,
+                            12u8, 106u8, 223u8, 202u8, 71u8, 155u8, 228u8, 220u8, 197u8, 143u8,
+                            133u8, 165u8, 62u8, 172u8, 183u8, 222u8, 58u8, 225u8, 24u8, 57u8,
+                            144u8, 206u8, 66u8, 204u8, 16u8, 31u8, 139u8, 19u8, 175u8, 235u8,
+                            204u8, 135u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -16525,10 +16619,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Authorities>()?
                         == [
-                            45u8, 197u8, 244u8, 25u8, 113u8, 204u8, 231u8, 240u8, 124u8, 4u8,
-                            153u8, 160u8, 92u8, 242u8, 251u8, 64u8, 146u8, 82u8, 161u8, 154u8,
-                            238u8, 220u8, 206u8, 186u8, 244u8, 49u8, 238u8, 244u8, 122u8, 26u8,
-                            159u8, 168u8,
+                            140u8, 118u8, 62u8, 97u8, 16u8, 215u8, 8u8, 84u8, 193u8, 102u8, 249u8,
+                            181u8, 228u8, 155u8, 194u8, 255u8, 209u8, 200u8, 186u8, 7u8, 246u8,
+                            149u8, 147u8, 224u8, 171u8, 218u8, 168u8, 130u8, 186u8, 119u8, 72u8,
+                            194u8,
                         ]
                     {
                         let entry = Authorities;
@@ -16572,10 +16666,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<NextAuthorities>()?
                         == [
-                            217u8, 12u8, 213u8, 100u8, 67u8, 73u8, 155u8, 134u8, 236u8, 210u8,
-                            129u8, 96u8, 191u8, 83u8, 200u8, 17u8, 181u8, 124u8, 201u8, 155u8,
-                            14u8, 246u8, 203u8, 23u8, 57u8, 221u8, 95u8, 174u8, 128u8, 9u8, 32u8,
-                            1u8,
+                            120u8, 191u8, 31u8, 28u8, 34u8, 82u8, 116u8, 34u8, 81u8, 176u8, 225u8,
+                            117u8, 7u8, 58u8, 241u8, 174u8, 246u8, 230u8, 210u8, 6u8, 22u8, 191u8,
+                            150u8, 77u8, 102u8, 54u8, 25u8, 216u8, 64u8, 100u8, 247u8, 107u8,
                         ]
                     {
                         let entry = NextAuthorities;
@@ -16630,9 +16723,10 @@ pub mod api {
                         .metadata()
                         .storage_hash::<BeefyNextAuthorities>()?
                         == [
-                            176u8, 52u8, 163u8, 20u8, 65u8, 149u8, 67u8, 119u8, 40u8, 134u8, 178u8,
-                            89u8, 67u8, 6u8, 201u8, 226u8, 207u8, 218u8, 138u8, 14u8, 201u8, 41u8,
-                            40u8, 110u8, 227u8, 200u8, 56u8, 164u8, 187u8, 168u8, 116u8, 127u8,
+                            219u8, 54u8, 44u8, 30u8, 213u8, 71u8, 67u8, 245u8, 172u8, 191u8, 183u8,
+                            146u8, 165u8, 202u8, 44u8, 121u8, 201u8, 252u8, 68u8, 93u8, 43u8,
+                            127u8, 189u8, 113u8, 196u8, 125u8, 184u8, 170u8, 9u8, 54u8, 69u8,
+                            104u8,
                         ]
                     {
                         let entry = BeefyNextAuthorities;
@@ -16950,10 +17044,10 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<SubmitFinalityProof>()?
                         == [
-                            31u8, 50u8, 238u8, 103u8, 232u8, 246u8, 137u8, 168u8, 123u8, 2u8,
-                            101u8, 25u8, 65u8, 221u8, 119u8, 45u8, 253u8, 107u8, 252u8, 151u8,
-                            64u8, 89u8, 110u8, 60u8, 207u8, 64u8, 49u8, 185u8, 161u8, 222u8, 182u8,
-                            95u8,
+                            212u8, 195u8, 142u8, 103u8, 130u8, 159u8, 71u8, 78u8, 81u8, 123u8,
+                            94u8, 3u8, 65u8, 153u8, 235u8, 38u8, 255u8, 11u8, 222u8, 100u8, 33u8,
+                            143u8, 234u8, 92u8, 109u8, 127u8, 255u8, 229u8, 177u8, 12u8, 172u8,
+                            216u8,
                         ]
                     {
                         let call = SubmitFinalityProof {
@@ -16995,9 +17089,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<Initialize>()?
                         == [
-                            242u8, 22u8, 193u8, 202u8, 78u8, 206u8, 45u8, 63u8, 47u8, 215u8, 57u8,
-                            63u8, 178u8, 235u8, 108u8, 255u8, 169u8, 88u8, 219u8, 0u8, 239u8,
-                            214u8, 251u8, 230u8, 27u8, 231u8, 67u8, 71u8, 61u8, 4u8, 124u8, 157u8,
+                            105u8, 67u8, 3u8, 233u8, 154u8, 49u8, 90u8, 36u8, 94u8, 157u8, 174u8,
+                            62u8, 171u8, 150u8, 148u8, 83u8, 191u8, 184u8, 94u8, 43u8, 25u8, 46u8,
+                            108u8, 139u8, 69u8, 188u8, 186u8, 190u8, 242u8, 243u8, 234u8, 61u8,
                         ]
                     {
                         let call = Initialize { init_data };
@@ -17203,10 +17297,10 @@ pub mod api {
                 {
                     if self.client.metadata().storage_hash::<InitialHash>()?
                         == [
-                            132u8, 52u8, 69u8, 160u8, 110u8, 180u8, 123u8, 180u8, 42u8, 166u8,
-                            212u8, 77u8, 56u8, 248u8, 24u8, 188u8, 232u8, 178u8, 81u8, 114u8,
-                            203u8, 57u8, 225u8, 145u8, 59u8, 192u8, 166u8, 78u8, 85u8, 104u8,
-                            211u8, 98u8,
+                            243u8, 158u8, 214u8, 159u8, 84u8, 82u8, 193u8, 34u8, 24u8, 64u8, 21u8,
+                            172u8, 142u8, 116u8, 224u8, 19u8, 62u8, 232u8, 99u8, 201u8, 32u8,
+                            211u8, 139u8, 125u8, 41u8, 255u8, 107u8, 84u8, 165u8, 75u8, 201u8,
+                            142u8,
                         ]
                     {
                         let entry = InitialHash;
@@ -17226,10 +17320,9 @@ pub mod api {
                 {
                     if self.client.metadata().storage_hash::<BestFinalized>()?
                         == [
-                            236u8, 116u8, 207u8, 248u8, 32u8, 122u8, 40u8, 116u8, 42u8, 71u8,
-                            188u8, 243u8, 139u8, 97u8, 120u8, 181u8, 228u8, 109u8, 53u8, 145u8,
-                            142u8, 63u8, 106u8, 133u8, 201u8, 253u8, 46u8, 171u8, 99u8, 21u8, 12u8,
-                            186u8,
+                            155u8, 222u8, 92u8, 199u8, 26u8, 156u8, 146u8, 226u8, 24u8, 161u8,
+                            125u8, 18u8, 61u8, 237u8, 128u8, 26u8, 50u8, 55u8, 7u8, 42u8, 101u8,
+                            213u8, 0u8, 105u8, 219u8, 194u8, 227u8, 177u8, 147u8, 54u8, 22u8, 86u8,
                         ]
                     {
                         let entry = BestFinalized;
@@ -17252,10 +17345,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<ImportedHashes>()?
                         == [
-                            54u8, 8u8, 20u8, 100u8, 220u8, 128u8, 147u8, 237u8, 119u8, 242u8,
-                            164u8, 140u8, 4u8, 77u8, 23u8, 71u8, 148u8, 75u8, 236u8, 176u8, 87u8,
-                            223u8, 160u8, 188u8, 128u8, 213u8, 3u8, 218u8, 147u8, 39u8, 240u8,
-                            175u8,
+                            65u8, 162u8, 135u8, 91u8, 230u8, 102u8, 41u8, 123u8, 69u8, 20u8, 101u8,
+                            109u8, 178u8, 193u8, 239u8, 232u8, 66u8, 17u8, 222u8, 11u8, 188u8,
+                            53u8, 202u8, 80u8, 146u8, 234u8, 206u8, 192u8, 99u8, 4u8, 234u8, 67u8,
                         ]
                     {
                         let entry = ImportedHashes(_0);
@@ -17274,10 +17366,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<ImportedHashes>()?
                         == [
-                            54u8, 8u8, 20u8, 100u8, 220u8, 128u8, 147u8, 237u8, 119u8, 242u8,
-                            164u8, 140u8, 4u8, 77u8, 23u8, 71u8, 148u8, 75u8, 236u8, 176u8, 87u8,
-                            223u8, 160u8, 188u8, 128u8, 213u8, 3u8, 218u8, 147u8, 39u8, 240u8,
-                            175u8,
+                            65u8, 162u8, 135u8, 91u8, 230u8, 102u8, 41u8, 123u8, 69u8, 20u8, 101u8,
+                            109u8, 178u8, 193u8, 239u8, 232u8, 66u8, 17u8, 222u8, 11u8, 188u8,
+                            53u8, 202u8, 80u8, 146u8, 234u8, 206u8, 192u8, 99u8, 4u8, 234u8, 67u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -17327,10 +17418,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<ImportedHeaders>()?
                         == [
-                            222u8, 252u8, 160u8, 15u8, 104u8, 250u8, 14u8, 24u8, 170u8, 217u8,
-                            43u8, 181u8, 191u8, 4u8, 36u8, 189u8, 147u8, 94u8, 126u8, 141u8, 163u8,
-                            97u8, 128u8, 137u8, 252u8, 242u8, 146u8, 108u8, 40u8, 218u8, 137u8,
-                            36u8,
+                            169u8, 86u8, 51u8, 48u8, 82u8, 28u8, 180u8, 142u8, 152u8, 63u8, 234u8,
+                            84u8, 9u8, 136u8, 220u8, 18u8, 69u8, 4u8, 76u8, 54u8, 72u8, 139u8,
+                            234u8, 101u8, 238u8, 205u8, 95u8, 118u8, 216u8, 249u8, 147u8, 200u8,
                         ]
                     {
                         let entry = ImportedHeaders(_0);
@@ -17349,10 +17439,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<ImportedHeaders>()?
                         == [
-                            222u8, 252u8, 160u8, 15u8, 104u8, 250u8, 14u8, 24u8, 170u8, 217u8,
-                            43u8, 181u8, 191u8, 4u8, 36u8, 189u8, 147u8, 94u8, 126u8, 141u8, 163u8,
-                            97u8, 128u8, 137u8, 252u8, 242u8, 146u8, 108u8, 40u8, 218u8, 137u8,
-                            36u8,
+                            169u8, 86u8, 51u8, 48u8, 82u8, 28u8, 180u8, 142u8, 152u8, 63u8, 234u8,
+                            84u8, 9u8, 136u8, 220u8, 18u8, 69u8, 4u8, 76u8, 54u8, 72u8, 139u8,
+                            234u8, 101u8, 238u8, 205u8, 95u8, 118u8, 216u8, 249u8, 147u8, 200u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -17373,10 +17462,10 @@ pub mod api {
                         .metadata()
                         .storage_hash::<CurrentAuthoritySet>()?
                         == [
-                            170u8, 59u8, 85u8, 12u8, 194u8, 126u8, 250u8, 180u8, 104u8, 36u8,
-                            128u8, 146u8, 189u8, 201u8, 233u8, 229u8, 234u8, 193u8, 87u8, 249u8,
-                            216u8, 197u8, 183u8, 93u8, 84u8, 101u8, 243u8, 122u8, 157u8, 243u8,
-                            211u8, 3u8,
+                            228u8, 156u8, 183u8, 185u8, 99u8, 81u8, 121u8, 110u8, 92u8, 105u8,
+                            111u8, 248u8, 123u8, 1u8, 94u8, 144u8, 248u8, 215u8, 100u8, 91u8,
+                            181u8, 1u8, 12u8, 203u8, 66u8, 9u8, 183u8, 173u8, 57u8, 239u8, 143u8,
+                            158u8,
                         ]
                     {
                         let entry = CurrentAuthoritySet;
@@ -17606,10 +17695,10 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<SubmitFinalityProof>()?
                         == [
-                            31u8, 50u8, 238u8, 103u8, 232u8, 246u8, 137u8, 168u8, 123u8, 2u8,
-                            101u8, 25u8, 65u8, 221u8, 119u8, 45u8, 253u8, 107u8, 252u8, 151u8,
-                            64u8, 89u8, 110u8, 60u8, 207u8, 64u8, 49u8, 185u8, 161u8, 222u8, 182u8,
-                            95u8,
+                            212u8, 195u8, 142u8, 103u8, 130u8, 159u8, 71u8, 78u8, 81u8, 123u8,
+                            94u8, 3u8, 65u8, 153u8, 235u8, 38u8, 255u8, 11u8, 222u8, 100u8, 33u8,
+                            143u8, 234u8, 92u8, 109u8, 127u8, 255u8, 229u8, 177u8, 12u8, 172u8,
+                            216u8,
                         ]
                     {
                         let call = SubmitFinalityProof {
@@ -17651,9 +17740,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<Initialize>()?
                         == [
-                            242u8, 22u8, 193u8, 202u8, 78u8, 206u8, 45u8, 63u8, 47u8, 215u8, 57u8,
-                            63u8, 178u8, 235u8, 108u8, 255u8, 169u8, 88u8, 219u8, 0u8, 239u8,
-                            214u8, 251u8, 230u8, 27u8, 231u8, 67u8, 71u8, 61u8, 4u8, 124u8, 157u8,
+                            105u8, 67u8, 3u8, 233u8, 154u8, 49u8, 90u8, 36u8, 94u8, 157u8, 174u8,
+                            62u8, 171u8, 150u8, 148u8, 83u8, 191u8, 184u8, 94u8, 43u8, 25u8, 46u8,
+                            108u8, 139u8, 69u8, 188u8, 186u8, 190u8, 242u8, 243u8, 234u8, 61u8,
                         ]
                     {
                         let call = Initialize { init_data };
@@ -17859,10 +17948,10 @@ pub mod api {
                 {
                     if self.client.metadata().storage_hash::<InitialHash>()?
                         == [
-                            132u8, 52u8, 69u8, 160u8, 110u8, 180u8, 123u8, 180u8, 42u8, 166u8,
-                            212u8, 77u8, 56u8, 248u8, 24u8, 188u8, 232u8, 178u8, 81u8, 114u8,
-                            203u8, 57u8, 225u8, 145u8, 59u8, 192u8, 166u8, 78u8, 85u8, 104u8,
-                            211u8, 98u8,
+                            243u8, 158u8, 214u8, 159u8, 84u8, 82u8, 193u8, 34u8, 24u8, 64u8, 21u8,
+                            172u8, 142u8, 116u8, 224u8, 19u8, 62u8, 232u8, 99u8, 201u8, 32u8,
+                            211u8, 139u8, 125u8, 41u8, 255u8, 107u8, 84u8, 165u8, 75u8, 201u8,
+                            142u8,
                         ]
                     {
                         let entry = InitialHash;
@@ -17882,10 +17971,9 @@ pub mod api {
                 {
                     if self.client.metadata().storage_hash::<BestFinalized>()?
                         == [
-                            236u8, 116u8, 207u8, 248u8, 32u8, 122u8, 40u8, 116u8, 42u8, 71u8,
-                            188u8, 243u8, 139u8, 97u8, 120u8, 181u8, 228u8, 109u8, 53u8, 145u8,
-                            142u8, 63u8, 106u8, 133u8, 201u8, 253u8, 46u8, 171u8, 99u8, 21u8, 12u8,
-                            186u8,
+                            155u8, 222u8, 92u8, 199u8, 26u8, 156u8, 146u8, 226u8, 24u8, 161u8,
+                            125u8, 18u8, 61u8, 237u8, 128u8, 26u8, 50u8, 55u8, 7u8, 42u8, 101u8,
+                            213u8, 0u8, 105u8, 219u8, 194u8, 227u8, 177u8, 147u8, 54u8, 22u8, 86u8,
                         ]
                     {
                         let entry = BestFinalized;
@@ -17908,10 +17996,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<ImportedHashes>()?
                         == [
-                            54u8, 8u8, 20u8, 100u8, 220u8, 128u8, 147u8, 237u8, 119u8, 242u8,
-                            164u8, 140u8, 4u8, 77u8, 23u8, 71u8, 148u8, 75u8, 236u8, 176u8, 87u8,
-                            223u8, 160u8, 188u8, 128u8, 213u8, 3u8, 218u8, 147u8, 39u8, 240u8,
-                            175u8,
+                            65u8, 162u8, 135u8, 91u8, 230u8, 102u8, 41u8, 123u8, 69u8, 20u8, 101u8,
+                            109u8, 178u8, 193u8, 239u8, 232u8, 66u8, 17u8, 222u8, 11u8, 188u8,
+                            53u8, 202u8, 80u8, 146u8, 234u8, 206u8, 192u8, 99u8, 4u8, 234u8, 67u8,
                         ]
                     {
                         let entry = ImportedHashes(_0);
@@ -17930,10 +18017,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<ImportedHashes>()?
                         == [
-                            54u8, 8u8, 20u8, 100u8, 220u8, 128u8, 147u8, 237u8, 119u8, 242u8,
-                            164u8, 140u8, 4u8, 77u8, 23u8, 71u8, 148u8, 75u8, 236u8, 176u8, 87u8,
-                            223u8, 160u8, 188u8, 128u8, 213u8, 3u8, 218u8, 147u8, 39u8, 240u8,
-                            175u8,
+                            65u8, 162u8, 135u8, 91u8, 230u8, 102u8, 41u8, 123u8, 69u8, 20u8, 101u8,
+                            109u8, 178u8, 193u8, 239u8, 232u8, 66u8, 17u8, 222u8, 11u8, 188u8,
+                            53u8, 202u8, 80u8, 146u8, 234u8, 206u8, 192u8, 99u8, 4u8, 234u8, 67u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -17983,10 +18069,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<ImportedHeaders>()?
                         == [
-                            222u8, 252u8, 160u8, 15u8, 104u8, 250u8, 14u8, 24u8, 170u8, 217u8,
-                            43u8, 181u8, 191u8, 4u8, 36u8, 189u8, 147u8, 94u8, 126u8, 141u8, 163u8,
-                            97u8, 128u8, 137u8, 252u8, 242u8, 146u8, 108u8, 40u8, 218u8, 137u8,
-                            36u8,
+                            169u8, 86u8, 51u8, 48u8, 82u8, 28u8, 180u8, 142u8, 152u8, 63u8, 234u8,
+                            84u8, 9u8, 136u8, 220u8, 18u8, 69u8, 4u8, 76u8, 54u8, 72u8, 139u8,
+                            234u8, 101u8, 238u8, 205u8, 95u8, 118u8, 216u8, 249u8, 147u8, 200u8,
                         ]
                     {
                         let entry = ImportedHeaders(_0);
@@ -18005,10 +18090,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<ImportedHeaders>()?
                         == [
-                            222u8, 252u8, 160u8, 15u8, 104u8, 250u8, 14u8, 24u8, 170u8, 217u8,
-                            43u8, 181u8, 191u8, 4u8, 36u8, 189u8, 147u8, 94u8, 126u8, 141u8, 163u8,
-                            97u8, 128u8, 137u8, 252u8, 242u8, 146u8, 108u8, 40u8, 218u8, 137u8,
-                            36u8,
+                            169u8, 86u8, 51u8, 48u8, 82u8, 28u8, 180u8, 142u8, 152u8, 63u8, 234u8,
+                            84u8, 9u8, 136u8, 220u8, 18u8, 69u8, 4u8, 76u8, 54u8, 72u8, 139u8,
+                            234u8, 101u8, 238u8, 205u8, 95u8, 118u8, 216u8, 249u8, 147u8, 200u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -18029,10 +18113,10 @@ pub mod api {
                         .metadata()
                         .storage_hash::<CurrentAuthoritySet>()?
                         == [
-                            170u8, 59u8, 85u8, 12u8, 194u8, 126u8, 250u8, 180u8, 104u8, 36u8,
-                            128u8, 146u8, 189u8, 201u8, 233u8, 229u8, 234u8, 193u8, 87u8, 249u8,
-                            216u8, 197u8, 183u8, 93u8, 84u8, 101u8, 243u8, 122u8, 157u8, 243u8,
-                            211u8, 3u8,
+                            228u8, 156u8, 183u8, 185u8, 99u8, 81u8, 121u8, 110u8, 92u8, 105u8,
+                            111u8, 248u8, 123u8, 1u8, 94u8, 144u8, 248u8, 215u8, 100u8, 91u8,
+                            181u8, 1u8, 12u8, 203u8, 66u8, 9u8, 183u8, 173u8, 57u8, 239u8, 143u8,
+                            158u8,
                         ]
                     {
                         let entry = CurrentAuthoritySet;
@@ -18443,10 +18527,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<ReceiveMessagesProof>()?
                         == [
-                            182u8, 116u8, 206u8, 75u8, 107u8, 233u8, 83u8, 54u8, 162u8, 233u8,
-                            28u8, 139u8, 89u8, 167u8, 7u8, 37u8, 215u8, 4u8, 67u8, 86u8, 142u8,
-                            205u8, 64u8, 76u8, 155u8, 167u8, 87u8, 237u8, 187u8, 188u8, 179u8,
-                            115u8,
+                            73u8, 29u8, 15u8, 165u8, 110u8, 25u8, 158u8, 252u8, 156u8, 95u8, 235u8,
+                            130u8, 89u8, 18u8, 160u8, 103u8, 122u8, 6u8, 208u8, 159u8, 245u8, 36u8,
+                            219u8, 99u8, 72u8, 244u8, 213u8, 172u8, 199u8, 85u8, 109u8, 105u8,
                         ]
                     {
                         let call = ReceiveMessagesProof {
@@ -18481,9 +18564,9 @@ pub mod api {
                         .metadata()
                         .call_hash::<ReceiveMessagesDeliveryProof>()?
                         == [
-                            103u8, 219u8, 120u8, 201u8, 118u8, 176u8, 17u8, 121u8, 188u8, 88u8,
-                            72u8, 251u8, 42u8, 143u8, 197u8, 198u8, 220u8, 152u8, 71u8, 9u8, 92u8,
-                            14u8, 75u8, 33u8, 169u8, 249u8, 149u8, 66u8, 154u8, 94u8, 63u8, 142u8,
+                            53u8, 89u8, 207u8, 87u8, 143u8, 218u8, 160u8, 197u8, 228u8, 186u8,
+                            167u8, 99u8, 14u8, 227u8, 255u8, 92u8, 61u8, 116u8, 193u8, 22u8, 0u8,
+                            1u8, 140u8, 18u8, 6u8, 188u8, 97u8, 3u8, 194u8, 209u8, 152u8, 60u8,
                         ]
                     {
                         let call = ReceiveMessagesDeliveryProof {
@@ -19105,10 +19188,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<ReceiveMessagesProof>()?
                         == [
-                            182u8, 116u8, 206u8, 75u8, 107u8, 233u8, 83u8, 54u8, 162u8, 233u8,
-                            28u8, 139u8, 89u8, 167u8, 7u8, 37u8, 215u8, 4u8, 67u8, 86u8, 142u8,
-                            205u8, 64u8, 76u8, 155u8, 167u8, 87u8, 237u8, 187u8, 188u8, 179u8,
-                            115u8,
+                            73u8, 29u8, 15u8, 165u8, 110u8, 25u8, 158u8, 252u8, 156u8, 95u8, 235u8,
+                            130u8, 89u8, 18u8, 160u8, 103u8, 122u8, 6u8, 208u8, 159u8, 245u8, 36u8,
+                            219u8, 99u8, 72u8, 244u8, 213u8, 172u8, 199u8, 85u8, 109u8, 105u8,
                         ]
                     {
                         let call = ReceiveMessagesProof {
@@ -19143,9 +19225,9 @@ pub mod api {
                         .metadata()
                         .call_hash::<ReceiveMessagesDeliveryProof>()?
                         == [
-                            103u8, 219u8, 120u8, 201u8, 118u8, 176u8, 17u8, 121u8, 188u8, 88u8,
-                            72u8, 251u8, 42u8, 143u8, 197u8, 198u8, 220u8, 152u8, 71u8, 9u8, 92u8,
-                            14u8, 75u8, 33u8, 169u8, 249u8, 149u8, 66u8, 154u8, 94u8, 63u8, 142u8,
+                            53u8, 89u8, 207u8, 87u8, 143u8, 218u8, 160u8, 197u8, 228u8, 186u8,
+                            167u8, 99u8, 14u8, 227u8, 255u8, 92u8, 61u8, 116u8, 193u8, 22u8, 0u8,
+                            1u8, 140u8, 18u8, 6u8, 188u8, 97u8, 3u8, 194u8, 209u8, 152u8, 60u8,
                         ]
                     {
                         let call = ReceiveMessagesDeliveryProof {
@@ -19877,10 +19959,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<Execute>()?
                         == [
-                            239u8, 242u8, 15u8, 195u8, 227u8, 237u8, 170u8, 41u8, 82u8, 205u8,
-                            69u8, 185u8, 44u8, 191u8, 243u8, 142u8, 228u8, 76u8, 172u8, 65u8,
-                            106u8, 60u8, 73u8, 169u8, 106u8, 247u8, 15u8, 117u8, 119u8, 183u8,
-                            205u8, 161u8,
+                            33u8, 13u8, 40u8, 147u8, 30u8, 13u8, 55u8, 70u8, 225u8, 38u8, 185u8,
+                            112u8, 158u8, 76u8, 117u8, 198u8, 3u8, 89u8, 222u8, 72u8, 228u8, 107u8,
+                            216u8, 92u8, 33u8, 166u8, 225u8, 63u8, 204u8, 83u8, 73u8, 33u8,
                         ]
                     {
                         let call = Execute {
@@ -19937,9 +20018,10 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<Propose>()?
                         == [
-                            202u8, 116u8, 183u8, 81u8, 134u8, 47u8, 38u8, 31u8, 52u8, 218u8, 182u8,
-                            21u8, 237u8, 76u8, 96u8, 43u8, 0u8, 236u8, 204u8, 96u8, 58u8, 60u8,
-                            114u8, 176u8, 104u8, 13u8, 97u8, 49u8, 237u8, 93u8, 30u8, 59u8,
+                            244u8, 118u8, 5u8, 210u8, 146u8, 37u8, 198u8, 107u8, 132u8, 59u8,
+                            227u8, 142u8, 200u8, 130u8, 76u8, 147u8, 11u8, 196u8, 239u8, 145u8,
+                            198u8, 196u8, 209u8, 184u8, 113u8, 116u8, 8u8, 88u8, 190u8, 230u8,
+                            242u8, 130u8,
                         ]
                     {
                         let call = Propose {
@@ -19978,10 +20060,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<Vote>()?
                         == [
-                            184u8, 236u8, 80u8, 133u8, 26u8, 207u8, 3u8, 2u8, 120u8, 27u8, 38u8,
-                            135u8, 195u8, 86u8, 169u8, 229u8, 125u8, 253u8, 220u8, 120u8, 231u8,
-                            181u8, 101u8, 84u8, 151u8, 161u8, 39u8, 154u8, 183u8, 142u8, 165u8,
-                            161u8,
+                            129u8, 129u8, 2u8, 51u8, 247u8, 109u8, 5u8, 198u8, 38u8, 192u8, 159u8,
+                            167u8, 176u8, 0u8, 181u8, 84u8, 92u8, 93u8, 179u8, 86u8, 108u8, 155u8,
+                            119u8, 3u8, 159u8, 12u8, 206u8, 121u8, 154u8, 226u8, 199u8, 146u8,
                         ]
                     {
                         let call = Vote {
@@ -20038,9 +20119,10 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<Close>()?
                         == [
-                            242u8, 208u8, 108u8, 202u8, 24u8, 139u8, 8u8, 150u8, 108u8, 217u8,
-                            30u8, 209u8, 178u8, 1u8, 80u8, 25u8, 154u8, 146u8, 173u8, 172u8, 227u8,
-                            4u8, 140u8, 228u8, 58u8, 221u8, 189u8, 135u8, 203u8, 69u8, 105u8, 47u8,
+                            86u8, 13u8, 193u8, 66u8, 78u8, 210u8, 72u8, 79u8, 119u8, 244u8, 113u8,
+                            242u8, 84u8, 176u8, 73u8, 199u8, 151u8, 137u8, 180u8, 239u8, 27u8,
+                            114u8, 191u8, 180u8, 134u8, 165u8, 208u8, 80u8, 244u8, 166u8, 226u8,
+                            85u8,
                         ]
                     {
                         let call = Close {
@@ -20084,10 +20166,10 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<DisapproveProposal>()?
                         == [
-                            199u8, 113u8, 221u8, 167u8, 60u8, 241u8, 77u8, 166u8, 205u8, 191u8,
-                            183u8, 121u8, 191u8, 206u8, 230u8, 212u8, 215u8, 219u8, 30u8, 51u8,
-                            123u8, 18u8, 17u8, 218u8, 77u8, 227u8, 197u8, 95u8, 232u8, 59u8, 169u8,
-                            133u8,
+                            128u8, 85u8, 134u8, 138u8, 161u8, 42u8, 150u8, 65u8, 131u8, 61u8,
+                            184u8, 59u8, 167u8, 24u8, 200u8, 51u8, 223u8, 101u8, 4u8, 252u8, 159u8,
+                            239u8, 79u8, 195u8, 255u8, 40u8, 251u8, 239u8, 95u8, 121u8, 123u8,
+                            47u8,
                         ]
                     {
                         let call = DisapproveProposal { proposal_hash };
@@ -20264,10 +20346,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Proposals>()?
                         == [
-                            174u8, 75u8, 108u8, 245u8, 86u8, 50u8, 107u8, 212u8, 244u8, 113u8,
-                            232u8, 168u8, 194u8, 33u8, 247u8, 97u8, 54u8, 115u8, 236u8, 189u8,
-                            59u8, 2u8, 252u8, 84u8, 199u8, 127u8, 197u8, 72u8, 23u8, 1u8, 118u8,
-                            95u8,
+                            23u8, 209u8, 111u8, 241u8, 83u8, 72u8, 60u8, 51u8, 29u8, 14u8, 223u8,
+                            213u8, 120u8, 186u8, 243u8, 201u8, 205u8, 183u8, 127u8, 94u8, 190u8,
+                            180u8, 189u8, 131u8, 87u8, 197u8, 97u8, 231u8, 243u8, 232u8, 15u8,
+                            61u8,
                         ]
                     {
                         let entry = Proposals;
@@ -20290,9 +20372,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<ProposalOf>()?
                         == [
-                            3u8, 230u8, 174u8, 20u8, 161u8, 87u8, 116u8, 217u8, 226u8, 154u8, 41u8,
-                            246u8, 124u8, 246u8, 116u8, 81u8, 236u8, 129u8, 21u8, 35u8, 158u8,
-                            44u8, 10u8, 210u8, 63u8, 207u8, 7u8, 109u8, 81u8, 160u8, 239u8, 21u8,
+                            223u8, 62u8, 117u8, 37u8, 17u8, 61u8, 152u8, 232u8, 38u8, 182u8, 199u8,
+                            60u8, 43u8, 134u8, 252u8, 41u8, 71u8, 148u8, 114u8, 61u8, 236u8, 0u8,
+                            230u8, 40u8, 242u8, 136u8, 123u8, 40u8, 184u8, 160u8, 128u8, 191u8,
                         ]
                     {
                         let entry = ProposalOf(_0);
@@ -20311,9 +20393,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<ProposalOf>()?
                         == [
-                            3u8, 230u8, 174u8, 20u8, 161u8, 87u8, 116u8, 217u8, 226u8, 154u8, 41u8,
-                            246u8, 124u8, 246u8, 116u8, 81u8, 236u8, 129u8, 21u8, 35u8, 158u8,
-                            44u8, 10u8, 210u8, 63u8, 207u8, 7u8, 109u8, 81u8, 160u8, 239u8, 21u8,
+                            223u8, 62u8, 117u8, 37u8, 17u8, 61u8, 152u8, 232u8, 38u8, 182u8, 199u8,
+                            60u8, 43u8, 134u8, 252u8, 41u8, 71u8, 148u8, 114u8, 61u8, 236u8, 0u8,
+                            230u8, 40u8, 242u8, 136u8, 123u8, 40u8, 184u8, 160u8, 128u8, 191u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -20337,9 +20419,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Voting>()?
                         == [
-                            145u8, 223u8, 203u8, 2u8, 137u8, 33u8, 22u8, 239u8, 175u8, 149u8,
-                            254u8, 185u8, 0u8, 139u8, 71u8, 134u8, 109u8, 95u8, 45u8, 75u8, 33u8,
-                            228u8, 127u8, 67u8, 53u8, 119u8, 188u8, 198u8, 11u8, 92u8, 4u8, 177u8,
+                            230u8, 117u8, 88u8, 61u8, 179u8, 199u8, 172u8, 121u8, 157u8, 115u8,
+                            63u8, 88u8, 182u8, 7u8, 191u8, 41u8, 187u8, 5u8, 31u8, 240u8, 202u8,
+                            14u8, 21u8, 175u8, 39u8, 72u8, 113u8, 220u8, 251u8, 127u8, 30u8, 93u8,
                         ]
                     {
                         let entry = Voting(_0);
@@ -20356,9 +20438,9 @@ pub mod api {
                 {
                     if self.client.metadata().storage_hash::<Voting>()?
                         == [
-                            145u8, 223u8, 203u8, 2u8, 137u8, 33u8, 22u8, 239u8, 175u8, 149u8,
-                            254u8, 185u8, 0u8, 139u8, 71u8, 134u8, 109u8, 95u8, 45u8, 75u8, 33u8,
-                            228u8, 127u8, 67u8, 53u8, 119u8, 188u8, 198u8, 11u8, 92u8, 4u8, 177u8,
+                            230u8, 117u8, 88u8, 61u8, 179u8, 199u8, 172u8, 121u8, 157u8, 115u8,
+                            63u8, 88u8, 182u8, 7u8, 191u8, 41u8, 187u8, 5u8, 31u8, 240u8, 202u8,
+                            14u8, 21u8, 175u8, 39u8, 72u8, 113u8, 220u8, 251u8, 127u8, 30u8, 93u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -20898,6 +20980,14 @@ pub mod api {
                 const PALLET: &'static str = "Utility";
                 const FUNCTION: &'static str = "dispatch_as";
             }
+            #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
+            pub struct ForceBatch {
+                pub calls: ::std::vec::Vec<runtime_types::rococo_runtime::Call>,
+            }
+            impl ::subxt::Call for ForceBatch {
+                const PALLET: &'static str = "Utility";
+                const FUNCTION: &'static str = "force_batch";
+            }
             pub struct TransactionApi<'a, T: ::subxt::Config, X> {
                 client: &'a ::subxt::Client<T>,
                 marker: ::core::marker::PhantomData<X>,
@@ -20941,9 +21031,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<Batch>()?
                         == [
-                            140u8, 83u8, 106u8, 92u8, 102u8, 119u8, 10u8, 23u8, 69u8, 33u8, 207u8,
-                            105u8, 155u8, 156u8, 90u8, 115u8, 148u8, 14u8, 207u8, 83u8, 34u8, 61u8,
-                            149u8, 225u8, 4u8, 254u8, 73u8, 114u8, 75u8, 38u8, 40u8, 233u8,
+                            2u8, 176u8, 87u8, 184u8, 5u8, 237u8, 30u8, 222u8, 1u8, 60u8, 39u8,
+                            236u8, 29u8, 56u8, 243u8, 90u8, 119u8, 108u8, 67u8, 9u8, 160u8, 182u8,
+                            92u8, 68u8, 168u8, 9u8, 39u8, 31u8, 247u8, 37u8, 77u8, 224u8,
                         ]
                     {
                         let call = Batch { calls };
@@ -20982,9 +21072,10 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<AsDerivative>()?
                         == [
-                            248u8, 229u8, 160u8, 245u8, 189u8, 177u8, 39u8, 109u8, 179u8, 40u8,
-                            13u8, 109u8, 108u8, 141u8, 204u8, 10u8, 191u8, 46u8, 155u8, 16u8, 15u8,
-                            50u8, 100u8, 94u8, 10u8, 137u8, 138u8, 35u8, 94u8, 255u8, 252u8, 132u8,
+                            173u8, 238u8, 47u8, 118u8, 29u8, 201u8, 126u8, 189u8, 172u8, 159u8,
+                            37u8, 155u8, 153u8, 191u8, 86u8, 144u8, 64u8, 156u8, 120u8, 244u8,
+                            10u8, 154u8, 26u8, 89u8, 119u8, 181u8, 205u8, 214u8, 149u8, 177u8,
+                            248u8, 55u8,
                         ]
                     {
                         let call = AsDerivative {
@@ -21026,9 +21117,10 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<BatchAll>()?
                         == [
-                            211u8, 194u8, 170u8, 197u8, 111u8, 43u8, 55u8, 71u8, 18u8, 100u8, 48u8,
-                            70u8, 233u8, 27u8, 200u8, 45u8, 51u8, 202u8, 89u8, 192u8, 68u8, 179u8,
-                            150u8, 174u8, 223u8, 234u8, 102u8, 18u8, 219u8, 112u8, 157u8, 25u8,
+                            179u8, 43u8, 224u8, 93u8, 67u8, 8u8, 84u8, 182u8, 54u8, 175u8, 46u8,
+                            126u8, 254u8, 67u8, 18u8, 191u8, 78u8, 231u8, 167u8, 128u8, 211u8,
+                            99u8, 40u8, 84u8, 232u8, 221u8, 133u8, 128u8, 198u8, 248u8, 94u8,
+                            140u8,
                         ]
                     {
                         let call = BatchAll { calls };
@@ -21064,15 +21156,56 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<DispatchAs>()?
                         == [
-                            238u8, 54u8, 239u8, 218u8, 42u8, 133u8, 67u8, 202u8, 19u8, 84u8, 156u8,
-                            188u8, 18u8, 62u8, 207u8, 255u8, 29u8, 92u8, 0u8, 140u8, 39u8, 70u8,
-                            152u8, 192u8, 238u8, 172u8, 152u8, 107u8, 23u8, 13u8, 170u8, 185u8,
+                            170u8, 154u8, 110u8, 35u8, 217u8, 69u8, 175u8, 79u8, 131u8, 41u8, 15u8,
+                            111u8, 156u8, 146u8, 242u8, 249u8, 217u8, 57u8, 167u8, 97u8, 93u8,
+                            169u8, 50u8, 214u8, 72u8, 111u8, 226u8, 23u8, 177u8, 186u8, 13u8, 38u8,
                         ]
                     {
                         let call = DispatchAs {
                             as_origin: ::std::boxed::Box::new(as_origin),
                             call: ::std::boxed::Box::new(call),
                         };
+                        Ok(::subxt::SubmittableExtrinsic::new(self.client, call))
+                    } else {
+                        Err(::subxt::MetadataError::IncompatibleMetadata.into())
+                    }
+                }
+                #[doc = "Send a batch of dispatch calls."]
+                #[doc = "Unlike `batch`, it allows errors and won't interrupt."]
+                #[doc = ""]
+                #[doc = "May be called from any origin."]
+                #[doc = ""]
+                #[doc = "- `calls`: The calls to be dispatched from the same origin. The number of call must not"]
+                #[doc = "  exceed the constant: `batched_calls_limit` (available in constant metadata)."]
+                #[doc = ""]
+                #[doc = "If origin is root then call are dispatch without checking origin filter. (This includes"]
+                #[doc = "bypassing `frame_system::Config::BaseCallFilter`)."]
+                #[doc = ""]
+                #[doc = "# <weight>"]
+                #[doc = "- Complexity: O(C) where C is the number of calls to be batched."]
+                #[doc = "# </weight>"]
+                pub fn force_batch(
+                    &self,
+                    calls: ::std::vec::Vec<runtime_types::rococo_runtime::Call>,
+                ) -> Result<
+                    ::subxt::SubmittableExtrinsic<
+                        'a,
+                        T,
+                        X,
+                        ForceBatch,
+                        DispatchError,
+                        root_mod::Event,
+                    >,
+                    ::subxt::BasicError,
+                > {
+                    if self.client.metadata().call_hash::<ForceBatch>()?
+                        == [
+                            236u8, 124u8, 176u8, 111u8, 53u8, 194u8, 175u8, 226u8, 3u8, 221u8,
+                            56u8, 196u8, 137u8, 21u8, 196u8, 127u8, 166u8, 15u8, 227u8, 72u8, 22u8,
+                            42u8, 212u8, 0u8, 14u8, 179u8, 65u8, 190u8, 134u8, 235u8, 93u8, 203u8,
+                        ]
+                    {
+                        let call = ForceBatch { calls };
                         Ok(::subxt::SubmittableExtrinsic::new(self.client, call))
                     } else {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
@@ -21102,11 +21235,27 @@ pub mod api {
                 const EVENT: &'static str = "BatchCompleted";
             }
             #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
+            #[doc = "Batch of dispatches completed but has errors."]
+            pub struct BatchCompletedWithErrors;
+            impl ::subxt::Event for BatchCompletedWithErrors {
+                const PALLET: &'static str = "Utility";
+                const EVENT: &'static str = "BatchCompletedWithErrors";
+            }
+            #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
             #[doc = "A single item within a Batch of dispatches has completed with no error."]
             pub struct ItemCompleted;
             impl ::subxt::Event for ItemCompleted {
                 const PALLET: &'static str = "Utility";
                 const EVENT: &'static str = "ItemCompleted";
+            }
+            #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
+            #[doc = "A single item within a Batch of dispatches has completed with error."]
+            pub struct ItemFailed {
+                pub error: runtime_types::sp_runtime::DispatchError,
+            }
+            impl ::subxt::Event for ItemFailed {
+                const PALLET: &'static str = "Utility";
+                const EVENT: &'static str = "ItemFailed";
             }
             #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
             #[doc = "A call was dispatched."]
@@ -21303,9 +21452,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<Proxy>()?
                         == [
-                            78u8, 188u8, 92u8, 154u8, 218u8, 60u8, 140u8, 117u8, 98u8, 224u8,
-                            125u8, 177u8, 90u8, 20u8, 178u8, 233u8, 45u8, 207u8, 46u8, 56u8, 141u8,
-                            218u8, 10u8, 249u8, 90u8, 177u8, 197u8, 182u8, 86u8, 57u8, 249u8, 46u8,
+                            69u8, 48u8, 246u8, 104u8, 222u8, 230u8, 12u8, 24u8, 206u8, 11u8, 36u8,
+                            34u8, 34u8, 181u8, 165u8, 141u8, 26u8, 66u8, 25u8, 203u8, 105u8, 119u8,
+                            130u8, 207u8, 155u8, 248u8, 122u8, 232u8, 48u8, 3u8, 151u8, 136u8,
                         ]
                     {
                         let call = Proxy {
@@ -21595,9 +21744,10 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<Announce>()?
                         == [
-                            102u8, 8u8, 136u8, 179u8, 13u8, 47u8, 158u8, 24u8, 93u8, 196u8, 52u8,
-                            22u8, 118u8, 98u8, 17u8, 8u8, 12u8, 51u8, 181u8, 75u8, 215u8, 133u8,
-                            201u8, 180u8, 231u8, 122u8, 198u8, 190u8, 188u8, 127u8, 228u8, 218u8,
+                            202u8, 10u8, 107u8, 1u8, 212u8, 97u8, 111u8, 209u8, 102u8, 157u8,
+                            109u8, 231u8, 123u8, 131u8, 173u8, 69u8, 79u8, 143u8, 148u8, 23u8,
+                            123u8, 22u8, 83u8, 52u8, 86u8, 220u8, 200u8, 11u8, 60u8, 169u8, 71u8,
+                            183u8,
                         ]
                     {
                         let call = Announce { real, call_hash };
@@ -21639,10 +21789,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<RemoveAnnouncement>()?
                         == [
-                            209u8, 156u8, 215u8, 188u8, 225u8, 230u8, 171u8, 228u8, 241u8, 105u8,
-                            43u8, 183u8, 234u8, 18u8, 170u8, 239u8, 232u8, 188u8, 37u8, 84u8,
-                            156u8, 50u8, 241u8, 170u8, 9u8, 148u8, 185u8, 172u8, 204u8, 63u8,
-                            187u8, 253u8,
+                            8u8, 157u8, 190u8, 96u8, 209u8, 28u8, 73u8, 31u8, 19u8, 221u8, 252u8,
+                            200u8, 180u8, 69u8, 83u8, 239u8, 162u8, 135u8, 102u8, 157u8, 149u8,
+                            107u8, 192u8, 41u8, 196u8, 83u8, 133u8, 107u8, 82u8, 215u8, 50u8, 8u8,
                         ]
                     {
                         let call = RemoveAnnouncement { real, call_hash };
@@ -21684,9 +21833,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<RejectAnnouncement>()?
                         == [
-                            26u8, 67u8, 197u8, 169u8, 243u8, 11u8, 94u8, 153u8, 50u8, 22u8, 176u8,
-                            103u8, 88u8, 2u8, 13u8, 10u8, 96u8, 7u8, 121u8, 148u8, 13u8, 96u8,
-                            20u8, 67u8, 76u8, 51u8, 81u8, 54u8, 244u8, 44u8, 94u8, 52u8,
+                            218u8, 26u8, 11u8, 238u8, 82u8, 240u8, 191u8, 46u8, 107u8, 197u8, 58u8,
+                            160u8, 162u8, 152u8, 12u8, 188u8, 194u8, 185u8, 27u8, 75u8, 192u8,
+                            236u8, 32u8, 36u8, 131u8, 179u8, 99u8, 33u8, 14u8, 37u8, 163u8, 105u8,
                         ]
                     {
                         let call = RejectAnnouncement {
@@ -21736,10 +21885,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<ProxyAnnounced>()?
                         == [
-                            183u8, 202u8, 49u8, 169u8, 20u8, 185u8, 54u8, 57u8, 247u8, 96u8, 199u8,
-                            13u8, 145u8, 214u8, 204u8, 147u8, 221u8, 1u8, 153u8, 164u8, 109u8,
-                            230u8, 67u8, 217u8, 241u8, 49u8, 151u8, 244u8, 211u8, 3u8, 133u8,
-                            180u8,
+                            160u8, 150u8, 210u8, 154u8, 192u8, 19u8, 14u8, 155u8, 87u8, 97u8,
+                            248u8, 73u8, 94u8, 38u8, 68u8, 57u8, 216u8, 217u8, 104u8, 26u8, 96u8,
+                            108u8, 205u8, 25u8, 38u8, 148u8, 4u8, 185u8, 157u8, 183u8, 130u8, 18u8,
                         ]
                     {
                         let call = ProxyAnnounced {
@@ -21802,6 +21950,18 @@ pub mod api {
             impl ::subxt::Event for ProxyAdded {
                 const PALLET: &'static str = "Proxy";
                 const EVENT: &'static str = "ProxyAdded";
+            }
+            #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
+            #[doc = "A proxy was removed."]
+            pub struct ProxyRemoved {
+                pub delegator: ::subxt::sp_core::crypto::AccountId32,
+                pub delegatee: ::subxt::sp_core::crypto::AccountId32,
+                pub proxy_type: runtime_types::rococo_runtime::ProxyType,
+                pub delay: ::core::primitive::u32,
+            }
+            impl ::subxt::Event for ProxyRemoved {
+                const PALLET: &'static str = "Proxy";
+                const EVENT: &'static str = "ProxyRemoved";
             }
         }
         pub mod storage {
@@ -21929,10 +22089,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Announcements>()?
                         == [
-                            247u8, 243u8, 109u8, 142u8, 99u8, 156u8, 61u8, 101u8, 200u8, 211u8,
-                            158u8, 60u8, 159u8, 232u8, 147u8, 125u8, 139u8, 150u8, 4u8, 129u8,
-                            189u8, 117u8, 74u8, 32u8, 85u8, 39u8, 46u8, 47u8, 164u8, 130u8, 254u8,
-                            43u8,
+                            87u8, 74u8, 65u8, 120u8, 190u8, 234u8, 159u8, 168u8, 155u8, 253u8,
+                            183u8, 229u8, 28u8, 118u8, 20u8, 120u8, 27u8, 10u8, 203u8, 236u8,
+                            174u8, 40u8, 89u8, 216u8, 217u8, 81u8, 135u8, 67u8, 245u8, 226u8, 10u8,
+                            17u8,
                         ]
                     {
                         let entry = Announcements(_0);
@@ -21954,10 +22114,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Announcements>()?
                         == [
-                            247u8, 243u8, 109u8, 142u8, 99u8, 156u8, 61u8, 101u8, 200u8, 211u8,
-                            158u8, 60u8, 159u8, 232u8, 147u8, 125u8, 139u8, 150u8, 4u8, 129u8,
-                            189u8, 117u8, 74u8, 32u8, 85u8, 39u8, 46u8, 47u8, 164u8, 130u8, 254u8,
-                            43u8,
+                            87u8, 74u8, 65u8, 120u8, 190u8, 234u8, 159u8, 168u8, 155u8, 253u8,
+                            183u8, 229u8, 28u8, 118u8, 20u8, 120u8, 27u8, 10u8, 203u8, 236u8,
+                            174u8, 40u8, 89u8, 216u8, 217u8, 81u8, 135u8, 67u8, 245u8, 226u8, 10u8,
+                            17u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -22235,9 +22395,10 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<AsMultiThreshold1>()?
                         == [
-                            113u8, 112u8, 99u8, 32u8, 111u8, 27u8, 197u8, 203u8, 96u8, 12u8, 5u8,
-                            174u8, 75u8, 34u8, 90u8, 99u8, 142u8, 228u8, 85u8, 133u8, 195u8, 126u8,
-                            230u8, 57u8, 134u8, 204u8, 115u8, 196u8, 104u8, 30u8, 90u8, 232u8,
+                            225u8, 196u8, 125u8, 147u8, 112u8, 168u8, 93u8, 153u8, 195u8, 61u8,
+                            54u8, 153u8, 75u8, 201u8, 168u8, 160u8, 21u8, 17u8, 159u8, 129u8,
+                            165u8, 19u8, 98u8, 32u8, 173u8, 187u8, 232u8, 181u8, 77u8, 173u8,
+                            139u8, 219u8,
                         ]
                     {
                         let call = AsMultiThreshold1 {
@@ -22317,9 +22478,9 @@ pub mod api {
                 > {
                     if self.client.metadata().call_hash::<AsMulti>()?
                         == [
-                            25u8, 169u8, 86u8, 208u8, 99u8, 204u8, 96u8, 145u8, 18u8, 78u8, 145u8,
-                            187u8, 165u8, 135u8, 210u8, 26u8, 125u8, 203u8, 14u8, 97u8, 170u8,
-                            36u8, 231u8, 1u8, 76u8, 12u8, 72u8, 85u8, 78u8, 73u8, 117u8, 146u8,
+                            50u8, 22u8, 66u8, 21u8, 62u8, 119u8, 198u8, 238u8, 36u8, 241u8, 8u8,
+                            249u8, 178u8, 13u8, 114u8, 221u8, 72u8, 137u8, 168u8, 42u8, 31u8, 25u8,
+                            197u8, 9u8, 45u8, 88u8, 248u8, 42u8, 136u8, 230u8, 64u8, 12u8,
                         ]
                     {
                         let call = AsMulti {
@@ -22636,10 +22797,10 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<Calls>()?
                         == [
-                            238u8, 182u8, 167u8, 206u8, 191u8, 120u8, 225u8, 3u8, 242u8, 45u8,
-                            36u8, 85u8, 125u8, 183u8, 118u8, 212u8, 200u8, 158u8, 62u8, 63u8,
-                            145u8, 3u8, 40u8, 13u8, 191u8, 90u8, 1u8, 236u8, 17u8, 93u8, 109u8,
-                            168u8,
+                            45u8, 131u8, 59u8, 143u8, 103u8, 14u8, 145u8, 237u8, 41u8, 118u8,
+                            121u8, 206u8, 38u8, 247u8, 229u8, 187u8, 15u8, 228u8, 206u8, 250u8,
+                            198u8, 10u8, 157u8, 207u8, 83u8, 74u8, 34u8, 165u8, 205u8, 44u8, 129u8,
+                            179u8,
                         ]
                     {
                         let entry = Calls(_0);
@@ -22655,10 +22816,10 @@ pub mod api {
                 {
                     if self.client.metadata().storage_hash::<Calls>()?
                         == [
-                            238u8, 182u8, 167u8, 206u8, 191u8, 120u8, 225u8, 3u8, 242u8, 45u8,
-                            36u8, 85u8, 125u8, 183u8, 118u8, 212u8, 200u8, 158u8, 62u8, 63u8,
-                            145u8, 3u8, 40u8, 13u8, 191u8, 90u8, 1u8, 236u8, 17u8, 93u8, 109u8,
-                            168u8,
+                            45u8, 131u8, 59u8, 143u8, 103u8, 14u8, 145u8, 237u8, 41u8, 118u8,
+                            121u8, 206u8, 38u8, 247u8, 229u8, 187u8, 15u8, 228u8, 206u8, 250u8,
+                            198u8, 10u8, 157u8, 207u8, 83u8, 74u8, 34u8, 165u8, 205u8, 44u8, 129u8,
+                            179u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -22904,9 +23065,9 @@ pub mod api {
                 }
                 #[doc = "Teleport some assets from the local chain to some destination chain."]
                 #[doc = ""]
-                #[doc = "Fee payment on the destination side is made from the first asset listed in the `assets` vector and"]
-                #[doc = "fee-weight is calculated locally and thus remote weights are assumed to be equal to"]
-                #[doc = "local weights."]
+                #[doc = "Fee payment on the destination side is made from the asset in the `assets` vector of"]
+                #[doc = "index `fee_asset_item`. The weight limit for fees is not provided and thus is unlimited,"]
+                #[doc = "with all fees taken as needed from the asset."]
                 #[doc = ""]
                 #[doc = "- `origin`: Must be capable of withdrawing the `assets` and executing XCM."]
                 #[doc = "- `dest`: Destination context for the assets. Will typically be `X2(Parent, Parachain(..))` to send"]
@@ -22953,12 +23114,12 @@ pub mod api {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
                     }
                 }
-                #[doc = "Transfer some assets from the local chain to the sovereign account of a destination chain and forward"]
-                #[doc = "a notification XCM."]
+                #[doc = "Transfer some assets from the local chain to the sovereign account of a destination"]
+                #[doc = "chain and forward a notification XCM."]
                 #[doc = ""]
-                #[doc = "Fee payment on the destination side is made from the first asset listed in the `assets` vector and"]
-                #[doc = "fee-weight is calculated locally and thus remote weights are assumed to be equal to"]
-                #[doc = "local weights."]
+                #[doc = "Fee payment on the destination side is made from the asset in the `assets` vector of"]
+                #[doc = "index `fee_asset_item`. The weight limit for fees is not provided and thus is unlimited,"]
+                #[doc = "with all fees taken as needed from the asset."]
                 #[doc = ""]
                 #[doc = "- `origin`: Must be capable of withdrawing the `assets` and executing XCM."]
                 #[doc = "- `dest`: Destination context for the assets. Will typically be `X2(Parent, Parachain(..))` to send"]
@@ -23196,10 +23357,13 @@ pub mod api {
                         Err(::subxt::MetadataError::IncompatibleMetadata.into())
                     }
                 }
-                #[doc = "Transfer some assets from the local chain to the sovereign account of a destination chain and forward"]
-                #[doc = "a notification XCM."]
+                #[doc = "Transfer some assets from the local chain to the sovereign account of a destination"]
+                #[doc = "chain and forward a notification XCM."]
                 #[doc = ""]
-                #[doc = "Fee payment on the destination side is made from the first asset listed in the `assets` vector."]
+                #[doc = "Fee payment on the destination side is made from the asset in the `assets` vector of"]
+                #[doc = "index `fee_asset_item`, up to enough to pay for `weight_limit` of weight. If more weight"]
+                #[doc = "is needed than `weight_limit`, then the operation will fail and the assets send may be"]
+                #[doc = "at risk."]
                 #[doc = ""]
                 #[doc = "- `origin`: Must be capable of withdrawing the `assets` and executing XCM."]
                 #[doc = "- `dest`: Destination context for the assets. Will typically be `X2(Parent, Parachain(..))` to send"]
@@ -23254,7 +23418,10 @@ pub mod api {
                 }
                 #[doc = "Teleport some assets from the local chain to some destination chain."]
                 #[doc = ""]
-                #[doc = "Fee payment on the destination side is made from the first asset listed in the `assets` vector."]
+                #[doc = "Fee payment on the destination side is made from the asset in the `assets` vector of"]
+                #[doc = "index `fee_asset_item`, up to enough to pay for `weight_limit` of weight. If more weight"]
+                #[doc = "is needed than `weight_limit`, then the operation will fail and the assets send may be"]
+                #[doc = "at risk."]
                 #[doc = ""]
                 #[doc = "- `origin`: Must be capable of withdrawing the `assets` and executing XCM."]
                 #[doc = "- `dest`: Destination context for the assets. Will typically be `X2(Parent, Parachain(..))` to send"]
@@ -23741,9 +23908,9 @@ pub mod api {
                 {
                     if self.client.metadata().storage_hash::<AssetTraps>()?
                         == [
-                            46u8, 170u8, 126u8, 101u8, 101u8, 243u8, 31u8, 53u8, 166u8, 45u8, 90u8,
-                            63u8, 2u8, 87u8, 36u8, 221u8, 101u8, 190u8, 51u8, 103u8, 66u8, 193u8,
-                            76u8, 224u8, 74u8, 160u8, 120u8, 212u8, 45u8, 230u8, 57u8, 122u8,
+                            89u8, 0u8, 237u8, 90u8, 95u8, 21u8, 165u8, 163u8, 148u8, 203u8, 155u8,
+                            222u8, 180u8, 219u8, 220u8, 114u8, 179u8, 228u8, 1u8, 220u8, 169u8,
+                            43u8, 38u8, 12u8, 88u8, 159u8, 181u8, 206u8, 221u8, 197u8, 35u8, 150u8,
                         ]
                     {
                         let entry = AssetTraps(_0);
@@ -23768,9 +23935,9 @@ pub mod api {
                 > {
                     if self.client.metadata().storage_hash::<AssetTraps>()?
                         == [
-                            46u8, 170u8, 126u8, 101u8, 101u8, 243u8, 31u8, 53u8, 166u8, 45u8, 90u8,
-                            63u8, 2u8, 87u8, 36u8, 221u8, 101u8, 190u8, 51u8, 103u8, 66u8, 193u8,
-                            76u8, 224u8, 74u8, 160u8, 120u8, 212u8, 45u8, 230u8, 57u8, 122u8,
+                            89u8, 0u8, 237u8, 90u8, 95u8, 21u8, 165u8, 163u8, 148u8, 203u8, 155u8,
+                            222u8, 180u8, 219u8, 220u8, 114u8, 179u8, 228u8, 1u8, 220u8, 169u8,
+                            43u8, 38u8, 12u8, 88u8, 159u8, 181u8, 206u8, 221u8, 197u8, 35u8, 150u8,
                         ]
                     {
                         self.client.storage().iter(block_hash).await
@@ -24216,6 +24383,18 @@ pub mod api {
         }
         pub mod frame_support {
             use super::runtime_types;
+            pub mod dispatch {
+                use super::runtime_types;
+                #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
+                pub enum RawOrigin<_0> {
+                    #[codec(index = 0)]
+                    Root,
+                    #[codec(index = 1)]
+                    Signed(_0),
+                    #[codec(index = 2)]
+                    None,
+                }
+            }
             pub mod storage {
                 use super::runtime_types;
                 pub mod bounded_vec {
@@ -24444,11 +24623,6 @@ pub mod api {
                     },
                     #[codec(index = 8)]
                     #[doc = "Make some on-chain remark and emit event."]
-                    #[doc = ""]
-                    #[doc = "# <weight>"]
-                    #[doc = "- `O(b)` where b is the length of the remark."]
-                    #[doc = "- 1 event."]
-                    #[doc = "# </weight>"]
                     remark_with_event {
                         remark: ::std::vec::Vec<::core::primitive::u8>,
                     },
@@ -24540,15 +24714,6 @@ pub mod api {
                 Finalization,
                 #[codec(index = 2)]
                 Initialization,
-            }
-            #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
-            pub enum RawOrigin<_0> {
-                #[codec(index = 0)]
-                Root,
-                #[codec(index = 1)]
-                Signed(_0),
-                #[codec(index = 2)]
-                None,
             }
         }
         pub mod pallet_authorship {
@@ -24665,6 +24830,9 @@ pub mod api {
                     #[codec(index = 2)]
                     #[doc = "A given equivocation report is valid but already previously reported."]
                     DuplicateOffenceReport,
+                    #[codec(index = 3)]
+                    #[doc = "Submitted configuration is invalid."]
+                    InvalidConfiguration,
                 }
             }
         }
@@ -26470,6 +26638,14 @@ pub mod api {
                         proxy_type: runtime_types::rococo_runtime::ProxyType,
                         delay: ::core::primitive::u32,
                     },
+                    #[codec(index = 4)]
+                    #[doc = "A proxy was removed."]
+                    ProxyRemoved {
+                        delegator: ::subxt::sp_core::crypto::AccountId32,
+                        delegatee: ::subxt::sp_core::crypto::AccountId32,
+                        proxy_type: runtime_types::rococo_runtime::ProxyType,
+                        delay: ::core::primitive::u32,
+                    },
                 }
             }
             #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
@@ -26780,6 +26956,24 @@ pub mod api {
                         as_origin: ::std::boxed::Box<runtime_types::rococo_runtime::OriginCaller>,
                         call: ::std::boxed::Box<runtime_types::rococo_runtime::Call>,
                     },
+                    #[codec(index = 4)]
+                    #[doc = "Send a batch of dispatch calls."]
+                    #[doc = "Unlike `batch`, it allows errors and won't interrupt."]
+                    #[doc = ""]
+                    #[doc = "May be called from any origin."]
+                    #[doc = ""]
+                    #[doc = "- `calls`: The calls to be dispatched from the same origin. The number of call must not"]
+                    #[doc = "  exceed the constant: `batched_calls_limit` (available in constant metadata)."]
+                    #[doc = ""]
+                    #[doc = "If origin is root then call are dispatch without checking origin filter. (This includes"]
+                    #[doc = "bypassing `frame_system::Config::BaseCallFilter`)."]
+                    #[doc = ""]
+                    #[doc = "# <weight>"]
+                    #[doc = "- Complexity: O(C) where C is the number of calls to be batched."]
+                    #[doc = "# </weight>"]
+                    force_batch {
+                        calls: ::std::vec::Vec<runtime_types::rococo_runtime::Call>,
+                    },
                 }
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub enum Error {
@@ -26800,9 +26994,17 @@ pub mod api {
                     #[doc = "Batch of dispatches completed fully with no error."]
                     BatchCompleted,
                     #[codec(index = 2)]
+                    #[doc = "Batch of dispatches completed but has errors."]
+                    BatchCompletedWithErrors,
+                    #[codec(index = 3)]
                     #[doc = "A single item within a Batch of dispatches has completed with no error."]
                     ItemCompleted,
-                    #[codec(index = 3)]
+                    #[codec(index = 4)]
+                    #[doc = "A single item within a Batch of dispatches has completed with error."]
+                    ItemFailed {
+                        error: runtime_types::sp_runtime::DispatchError,
+                    },
+                    #[codec(index = 5)]
                     #[doc = "A call was dispatched."]
                     DispatchedAs {
                         result:
@@ -26825,9 +27027,9 @@ pub mod api {
                     #[codec(index = 1)]
                     #[doc = "Teleport some assets from the local chain to some destination chain."]
                     #[doc = ""]
-                    #[doc = "Fee payment on the destination side is made from the first asset listed in the `assets` vector and"]
-                    #[doc = "fee-weight is calculated locally and thus remote weights are assumed to be equal to"]
-                    #[doc = "local weights."]
+                    #[doc = "Fee payment on the destination side is made from the asset in the `assets` vector of"]
+                    #[doc = "index `fee_asset_item`. The weight limit for fees is not provided and thus is unlimited,"]
+                    #[doc = "with all fees taken as needed from the asset."]
                     #[doc = ""]
                     #[doc = "- `origin`: Must be capable of withdrawing the `assets` and executing XCM."]
                     #[doc = "- `dest`: Destination context for the assets. Will typically be `X2(Parent, Parachain(..))` to send"]
@@ -26845,12 +27047,12 @@ pub mod api {
                         fee_asset_item: ::core::primitive::u32,
                     },
                     #[codec(index = 2)]
-                    #[doc = "Transfer some assets from the local chain to the sovereign account of a destination chain and forward"]
-                    #[doc = "a notification XCM."]
+                    #[doc = "Transfer some assets from the local chain to the sovereign account of a destination"]
+                    #[doc = "chain and forward a notification XCM."]
                     #[doc = ""]
-                    #[doc = "Fee payment on the destination side is made from the first asset listed in the `assets` vector and"]
-                    #[doc = "fee-weight is calculated locally and thus remote weights are assumed to be equal to"]
-                    #[doc = "local weights."]
+                    #[doc = "Fee payment on the destination side is made from the asset in the `assets` vector of"]
+                    #[doc = "index `fee_asset_item`. The weight limit for fees is not provided and thus is unlimited,"]
+                    #[doc = "with all fees taken as needed from the asset."]
                     #[doc = ""]
                     #[doc = "- `origin`: Must be capable of withdrawing the `assets` and executing XCM."]
                     #[doc = "- `dest`: Destination context for the assets. Will typically be `X2(Parent, Parachain(..))` to send"]
@@ -26923,10 +27125,13 @@ pub mod api {
                         location: ::std::boxed::Box<runtime_types::xcm::VersionedMultiLocation>,
                     },
                     #[codec(index = 8)]
-                    #[doc = "Transfer some assets from the local chain to the sovereign account of a destination chain and forward"]
-                    #[doc = "a notification XCM."]
+                    #[doc = "Transfer some assets from the local chain to the sovereign account of a destination"]
+                    #[doc = "chain and forward a notification XCM."]
                     #[doc = ""]
-                    #[doc = "Fee payment on the destination side is made from the first asset listed in the `assets` vector."]
+                    #[doc = "Fee payment on the destination side is made from the asset in the `assets` vector of"]
+                    #[doc = "index `fee_asset_item`, up to enough to pay for `weight_limit` of weight. If more weight"]
+                    #[doc = "is needed than `weight_limit`, then the operation will fail and the assets send may be"]
+                    #[doc = "at risk."]
                     #[doc = ""]
                     #[doc = "- `origin`: Must be capable of withdrawing the `assets` and executing XCM."]
                     #[doc = "- `dest`: Destination context for the assets. Will typically be `X2(Parent, Parachain(..))` to send"]
@@ -26948,7 +27153,10 @@ pub mod api {
                     #[codec(index = 9)]
                     #[doc = "Teleport some assets from the local chain to some destination chain."]
                     #[doc = ""]
-                    #[doc = "Fee payment on the destination side is made from the first asset listed in the `assets` vector."]
+                    #[doc = "Fee payment on the destination side is made from the asset in the `assets` vector of"]
+                    #[doc = "index `fee_asset_item`, up to enough to pay for `weight_limit` of weight. If more weight"]
+                    #[doc = "is needed than `weight_limit`, then the operation will fail and the assets send may be"]
+                    #[doc = "at risk."]
                     #[doc = ""]
                     #[doc = "- `origin`: Must be capable of withdrawing the `assets` and executing XCM."]
                     #[doc = "- `dest`: Destination context for the assets. Will typically be `X2(Parent, Parachain(..))` to send"]
@@ -27255,8 +27463,13 @@ pub mod api {
         }
         pub mod polkadot_primitives {
             use super::runtime_types;
-            pub mod v0 {
+            pub mod v2 {
                 use super::runtime_types;
+                pub mod assignment_app {
+                    use super::runtime_types;
+                    #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
+                    pub struct Public(pub runtime_types::sp_core::sr25519::Public);
+                }
                 pub mod collator_app {
                     use super::runtime_types;
                     #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
@@ -27264,46 +27477,24 @@ pub mod api {
                     #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                     pub struct Signature(pub runtime_types::sp_core::sr25519::Signature);
                 }
+                pub mod signed {
+                    use super::runtime_types;
+                    #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
+                    pub struct UncheckedSigned<_0, _1> {
+                        pub payload: _0,
+                        pub validator_index: runtime_types::polkadot_primitives::v2::ValidatorIndex,
+                        pub signature:
+                            runtime_types::polkadot_primitives::v2::validator_app::Signature,
+                        #[codec(skip)]
+                        pub __subxt_unused_type_params: ::core::marker::PhantomData<_1>,
+                    }
+                }
                 pub mod validator_app {
                     use super::runtime_types;
                     #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                     pub struct Public(pub runtime_types::sp_core::sr25519::Public);
                     #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                     pub struct Signature(pub runtime_types::sp_core::sr25519::Signature);
-                }
-                #[derive(
-                    :: subxt :: codec :: CompactAs,
-                    :: subxt :: codec :: Decode,
-                    :: subxt :: codec :: Encode,
-                    Debug,
-                )]
-                pub struct ValidatorIndex(pub ::core::primitive::u32);
-                #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
-                pub enum ValidityAttestation {
-                    #[codec(index = 1)]
-                    Implicit(runtime_types::polkadot_primitives::v0::validator_app::Signature),
-                    #[codec(index = 2)]
-                    Explicit(runtime_types::polkadot_primitives::v0::validator_app::Signature),
-                }
-            }
-            pub mod v1 {
-                use super::runtime_types;
-                pub mod assignment_app {
-                    use super::runtime_types;
-                    #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
-                    pub struct Public(pub runtime_types::sp_core::sr25519::Public);
-                }
-                pub mod signed {
-                    use super::runtime_types;
-                    #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
-                    pub struct UncheckedSigned<_0, _1> {
-                        pub payload: _0,
-                        pub validator_index: runtime_types::polkadot_primitives::v0::ValidatorIndex,
-                        pub signature:
-                            runtime_types::polkadot_primitives::v0::validator_app::Signature,
-                        #[codec(skip)]
-                        pub __subxt_unused_type_params: ::core::marker::PhantomData<_1>,
-                    }
                 }
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub struct AvailabilityBitfield(
@@ -27315,9 +27506,9 @@ pub mod api {
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub struct BackedCandidate<_0> {
                     pub candidate:
-                        runtime_types::polkadot_primitives::v1::CommittedCandidateReceipt<_0>,
+                        runtime_types::polkadot_primitives::v2::CommittedCandidateReceipt<_0>,
                     pub validity_votes: ::std::vec::Vec<
-                        runtime_types::polkadot_primitives::v0::ValidityAttestation,
+                        runtime_types::polkadot_primitives::v2::ValidityAttestation,
                     >,
                     pub validator_indices: ::subxt::bitvec::vec::BitVec<
                         ::core::primitive::u8,
@@ -27343,24 +27534,24 @@ pub mod api {
                 pub struct CandidateDescriptor<_0> {
                     pub para_id: runtime_types::polkadot_parachain::primitives::Id,
                     pub relay_parent: _0,
-                    pub collator: runtime_types::polkadot_primitives::v0::collator_app::Public,
+                    pub collator: runtime_types::polkadot_primitives::v2::collator_app::Public,
                     pub persisted_validation_data_hash: _0,
                     pub pov_hash: _0,
                     pub erasure_root: _0,
-                    pub signature: runtime_types::polkadot_primitives::v0::collator_app::Signature,
+                    pub signature: runtime_types::polkadot_primitives::v2::collator_app::Signature,
                     pub para_head: _0,
                     pub validation_code_hash:
                         runtime_types::polkadot_parachain::primitives::ValidationCodeHash,
                 }
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub struct CandidateReceipt<_0> {
-                    pub descriptor: runtime_types::polkadot_primitives::v1::CandidateDescriptor<_0>,
+                    pub descriptor: runtime_types::polkadot_primitives::v2::CandidateDescriptor<_0>,
                     pub commitments_hash: _0,
                 }
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub struct CommittedCandidateReceipt<_0> {
-                    pub descriptor: runtime_types::polkadot_primitives::v1::CandidateDescriptor<_0>,
-                    pub commitments: runtime_types::polkadot_primitives::v1::CandidateCommitments<
+                    pub descriptor: runtime_types::polkadot_primitives::v2::CandidateDescriptor<_0>,
+                    pub commitments: runtime_types::polkadot_primitives::v2::CandidateCommitments<
                         ::core::primitive::u32,
                     >,
                 }
@@ -27374,7 +27565,7 @@ pub mod api {
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub enum CoreOccupied {
                     #[codec(index = 0)]
-                    Parathread(runtime_types::polkadot_primitives::v1::ParathreadEntry),
+                    Parathread(runtime_types::polkadot_primitives::v2::ParathreadEntry),
                     #[codec(index = 1)]
                     Parachain,
                 }
@@ -27394,18 +27585,18 @@ pub mod api {
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub enum DisputeStatement {
                     #[codec(index = 0)]
-                    Valid(runtime_types::polkadot_primitives::v1::ValidDisputeStatementKind),
+                    Valid(runtime_types::polkadot_primitives::v2::ValidDisputeStatementKind),
                     #[codec(index = 1)]
-                    Invalid(runtime_types::polkadot_primitives::v1::InvalidDisputeStatementKind),
+                    Invalid(runtime_types::polkadot_primitives::v2::InvalidDisputeStatementKind),
                 }
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub struct DisputeStatementSet {
                     pub candidate_hash: runtime_types::polkadot_core_primitives::CandidateHash,
                     pub session: ::core::primitive::u32,
                     pub statements: ::std::vec::Vec<(
-                        runtime_types::polkadot_primitives::v1::DisputeStatement,
-                        runtime_types::polkadot_primitives::v0::ValidatorIndex,
-                        runtime_types::polkadot_primitives::v0::validator_app::Signature,
+                        runtime_types::polkadot_primitives::v2::DisputeStatement,
+                        runtime_types::polkadot_primitives::v2::ValidatorIndex,
+                        runtime_types::polkadot_primitives::v2::validator_app::Signature,
                     )>,
                 }
                 #[derive(
@@ -27418,18 +27609,18 @@ pub mod api {
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub struct InherentData<_0> {
                     pub bitfields: ::std::vec::Vec<
-                        runtime_types::polkadot_primitives::v1::signed::UncheckedSigned<
-                            runtime_types::polkadot_primitives::v1::AvailabilityBitfield,
-                            runtime_types::polkadot_primitives::v1::AvailabilityBitfield,
+                        runtime_types::polkadot_primitives::v2::signed::UncheckedSigned<
+                            runtime_types::polkadot_primitives::v2::AvailabilityBitfield,
+                            runtime_types::polkadot_primitives::v2::AvailabilityBitfield,
                         >,
                     >,
                     pub backed_candidates: ::std::vec::Vec<
-                        runtime_types::polkadot_primitives::v1::BackedCandidate<
+                        runtime_types::polkadot_primitives::v2::BackedCandidate<
                             ::subxt::sp_core::H256,
                         >,
                     >,
                     pub disputes: ::std::vec::Vec<
-                        runtime_types::polkadot_primitives::v1::DisputeStatementSet,
+                        runtime_types::polkadot_primitives::v2::DisputeStatementSet,
                     >,
                     pub parent_header: _0,
                 }
@@ -27441,26 +27632,57 @@ pub mod api {
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub struct ParathreadClaim(
                     pub runtime_types::polkadot_parachain::primitives::Id,
-                    pub runtime_types::polkadot_primitives::v0::collator_app::Public,
+                    pub runtime_types::polkadot_primitives::v2::collator_app::Public,
                 );
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub struct ParathreadEntry {
-                    pub claim: runtime_types::polkadot_primitives::v1::ParathreadClaim,
+                    pub claim: runtime_types::polkadot_primitives::v2::ParathreadClaim,
                     pub retries: ::core::primitive::u32,
+                }
+                #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
+                pub struct PvfCheckStatement {
+                    pub accept: ::core::primitive::bool,
+                    pub subject: runtime_types::polkadot_parachain::primitives::ValidationCodeHash,
+                    pub session_index: ::core::primitive::u32,
+                    pub validator_index: runtime_types::polkadot_primitives::v2::ValidatorIndex,
                 }
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub struct ScrapedOnChainVotes<_0> {
                     pub session: ::core::primitive::u32,
                     pub backing_validators_per_candidate: ::std::vec::Vec<(
-                        runtime_types::polkadot_primitives::v1::CandidateReceipt<_0>,
+                        runtime_types::polkadot_primitives::v2::CandidateReceipt<_0>,
                         ::std::vec::Vec<(
-                            runtime_types::polkadot_primitives::v0::ValidatorIndex,
-                            runtime_types::polkadot_primitives::v0::ValidityAttestation,
+                            runtime_types::polkadot_primitives::v2::ValidatorIndex,
+                            runtime_types::polkadot_primitives::v2::ValidityAttestation,
                         )>,
                     )>,
                     pub disputes: ::std::vec::Vec<
-                        runtime_types::polkadot_primitives::v1::DisputeStatementSet,
+                        runtime_types::polkadot_primitives::v2::DisputeStatementSet,
                     >,
+                }
+                #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
+                pub struct SessionInfo {
+                    pub active_validator_indices:
+                        ::std::vec::Vec<runtime_types::polkadot_primitives::v2::ValidatorIndex>,
+                    pub random_seed: [::core::primitive::u8; 32usize],
+                    pub dispute_period: ::core::primitive::u32,
+                    pub validators: ::std::vec::Vec<
+                        runtime_types::polkadot_primitives::v2::validator_app::Public,
+                    >,
+                    pub discovery_keys:
+                        ::std::vec::Vec<runtime_types::sp_authority_discovery::app::Public>,
+                    pub assignment_keys: ::std::vec::Vec<
+                        runtime_types::polkadot_primitives::v2::assignment_app::Public,
+                    >,
+                    pub validator_groups: ::std::vec::Vec<
+                        ::std::vec::Vec<runtime_types::polkadot_primitives::v2::ValidatorIndex>,
+                    >,
+                    pub n_cores: ::core::primitive::u32,
+                    pub zeroth_delay_tranche_width: ::core::primitive::u32,
+                    pub relay_vrf_modulo_samples: ::core::primitive::u32,
+                    pub n_delay_tranches: ::core::primitive::u32,
+                    pub no_show_slots: ::core::primitive::u32,
+                    pub needed_approvals: ::core::primitive::u32,
                 }
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub enum UpgradeGoAhead {
@@ -27485,39 +27707,19 @@ pub mod api {
                     #[codec(index = 3)]
                     ApprovalChecking,
                 }
-            }
-            pub mod v2 {
-                use super::runtime_types;
+                #[derive(
+                    :: subxt :: codec :: CompactAs,
+                    :: subxt :: codec :: Decode,
+                    :: subxt :: codec :: Encode,
+                    Debug,
+                )]
+                pub struct ValidatorIndex(pub ::core::primitive::u32);
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
-                pub struct PvfCheckStatement {
-                    pub accept: ::core::primitive::bool,
-                    pub subject: runtime_types::polkadot_parachain::primitives::ValidationCodeHash,
-                    pub session_index: ::core::primitive::u32,
-                    pub validator_index: runtime_types::polkadot_primitives::v0::ValidatorIndex,
-                }
-                #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
-                pub struct SessionInfo {
-                    pub active_validator_indices:
-                        ::std::vec::Vec<runtime_types::polkadot_primitives::v0::ValidatorIndex>,
-                    pub random_seed: [::core::primitive::u8; 32usize],
-                    pub dispute_period: ::core::primitive::u32,
-                    pub validators: ::std::vec::Vec<
-                        runtime_types::polkadot_primitives::v0::validator_app::Public,
-                    >,
-                    pub discovery_keys:
-                        ::std::vec::Vec<runtime_types::sp_authority_discovery::app::Public>,
-                    pub assignment_keys: ::std::vec::Vec<
-                        runtime_types::polkadot_primitives::v1::assignment_app::Public,
-                    >,
-                    pub validator_groups: ::std::vec::Vec<
-                        ::std::vec::Vec<runtime_types::polkadot_primitives::v0::ValidatorIndex>,
-                    >,
-                    pub n_cores: ::core::primitive::u32,
-                    pub zeroth_delay_tranche_width: ::core::primitive::u32,
-                    pub relay_vrf_modulo_samples: ::core::primitive::u32,
-                    pub n_delay_tranches: ::core::primitive::u32,
-                    pub no_show_slots: ::core::primitive::u32,
-                    pub needed_approvals: ::core::primitive::u32,
+                pub enum ValidityAttestation {
+                    #[codec(index = 1)]
+                    Implicit(runtime_types::polkadot_primitives::v2::validator_app::Signature),
+                    #[codec(index = 2)]
+                    Explicit(runtime_types::polkadot_primitives::v2::validator_app::Signature),
                 }
             }
         }
@@ -27967,7 +28169,7 @@ pub mod api {
                         runtime_types::polkadot_runtime_common::crowdloan::LastContribution<_2>,
                     pub first_period: _2,
                     pub last_period: _2,
-                    pub trie_index: _2,
+                    pub fund_index: _2,
                     #[codec(skip)]
                     pub __subxt_unused_type_params: ::core::marker::PhantomData<_3>,
                 }
@@ -28112,6 +28314,10 @@ pub mod api {
                         #[codec(index = 12)]
                         #[doc = "Registering parachain with empty code is not allowed."]
                         EmptyCode,
+                        #[codec(index = 13)]
+                        #[doc = "Cannot perform a parachain slot / lifecycle swap. Check that the state of both paras are"]
+                        #[doc = "correct for the swap to work."]
+                        CannotSwap,
                     }
                     #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                     pub enum Event {
@@ -28287,57 +28493,6 @@ pub mod api {
             use super::runtime_types;
             pub mod configuration {
                 use super::runtime_types;
-                pub mod migration {
-                    use super::runtime_types;
-                    pub mod v1 {
-                        use super::runtime_types;
-                        #[derive(
-                            :: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug,
-                        )]
-                        pub struct HostConfiguration<_0> {
-                            pub max_code_size: _0,
-                            pub max_head_data_size: _0,
-                            pub max_upward_queue_count: _0,
-                            pub max_upward_queue_size: _0,
-                            pub max_upward_message_size: _0,
-                            pub max_upward_message_num_per_candidate: _0,
-                            pub hrmp_max_message_num_per_candidate: _0,
-                            pub validation_upgrade_frequency: _0,
-                            pub validation_upgrade_delay: _0,
-                            pub max_pov_size: _0,
-                            pub max_downward_message_size: _0,
-                            pub ump_service_total_weight: ::core::primitive::u64,
-                            pub hrmp_max_parachain_outbound_channels: _0,
-                            pub hrmp_max_parathread_outbound_channels: _0,
-                            pub hrmp_sender_deposit: ::core::primitive::u128,
-                            pub hrmp_recipient_deposit: ::core::primitive::u128,
-                            pub hrmp_channel_max_capacity: _0,
-                            pub hrmp_channel_max_total_size: _0,
-                            pub hrmp_max_parachain_inbound_channels: _0,
-                            pub hrmp_max_parathread_inbound_channels: _0,
-                            pub hrmp_channel_max_message_size: _0,
-                            pub code_retention_period: _0,
-                            pub parathread_cores: _0,
-                            pub parathread_retries: _0,
-                            pub group_rotation_frequency: _0,
-                            pub chain_availability_period: _0,
-                            pub thread_availability_period: _0,
-                            pub scheduling_lookahead: _0,
-                            pub max_validators_per_core: ::core::option::Option<_0>,
-                            pub max_validators: ::core::option::Option<_0>,
-                            pub dispute_period: _0,
-                            pub dispute_post_conclusion_acceptance_period: _0,
-                            pub dispute_max_spam_slots: _0,
-                            pub dispute_conclusion_by_time_out_period: _0,
-                            pub no_show_slots: _0,
-                            pub n_delay_tranches: _0,
-                            pub zeroth_delay_tranche_width: _0,
-                            pub needed_approvals: _0,
-                            pub relay_vrf_modulo_samples: _0,
-                            pub ump_max_individual_weight: ::core::primitive::u64,
-                        }
-                    }
-                }
                 pub mod pallet {
                     use super::runtime_types;
                     #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
@@ -28671,30 +28826,42 @@ pub mod api {
                         #[doc = "you to trigger the cleanup immediately for a specific parachain."]
                         #[doc = ""]
                         #[doc = "Origin must be Root."]
+                        #[doc = ""]
+                        #[doc = "Number of inbound and outbound channels for `para` must be provided as witness data of weighing."]
                         force_clean_hrmp {
                             para: runtime_types::polkadot_parachain::primitives::Id,
+                            inbound: ::core::primitive::u32,
+                            outbound: ::core::primitive::u32,
                         },
                         #[codec(index = 4)]
                         #[doc = "Force process HRMP open channel requests."]
                         #[doc = ""]
                         #[doc = "If there are pending HRMP open channel requests, you can use this"]
                         #[doc = "function process all of those requests immediately."]
-                        force_process_hrmp_open,
+                        #[doc = ""]
+                        #[doc = "Total number of opening channels must be provided as witness data of weighing."]
+                        force_process_hrmp_open { channels: ::core::primitive::u32 },
                         #[codec(index = 5)]
                         #[doc = "Force process HRMP close channel requests."]
                         #[doc = ""]
                         #[doc = "If there are pending HRMP close channel requests, you can use this"]
                         #[doc = "function process all of those requests immediately."]
-                        force_process_hrmp_close,
+                        #[doc = ""]
+                        #[doc = "Total number of closing channels must be provided as witness data of weighing."]
+                        force_process_hrmp_close { channels: ::core::primitive::u32 },
                         #[codec(index = 6)]
-                        #[doc = "This cancels a pending open channel request. It can be canceled be either of the sender"]
+                        #[doc = "This cancels a pending open channel request. It can be canceled by either of the sender"]
                         #[doc = "or the recipient for that request. The origin must be either of those."]
                         #[doc = ""]
                         #[doc = "The cancellation happens immediately. It is not possible to cancel the request if it is"]
                         #[doc = "already accepted."]
+                        #[doc = ""]
+                        #[doc = "Total number of open requests (i.e. `HrmpOpenChannelRequestsList`) must be provided as"]
+                        #[doc = "witness data."]
                         hrmp_cancel_open_request {
                             channel_id:
                                 runtime_types::polkadot_parachain::primitives::HrmpChannelId,
+                            open_requests: ::core::primitive::u32,
                         },
                     }
                     #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
@@ -28753,6 +28920,9 @@ pub mod api {
                         #[codec(index = 17)]
                         #[doc = "Cannot cancel an HRMP open channel request because it is already confirmed."]
                         OpenHrmpChannelAlreadyConfirmed,
+                        #[codec(index = 18)]
+                        #[doc = "The provided witness data is wrong."]
+                        WrongWitness,
                     }
                     #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                     pub enum Event {
@@ -28911,44 +29081,44 @@ pub mod api {
                         #[codec(index = 0)]
                         #[doc = "A candidate was backed. `[candidate, head_data]`"]
                         CandidateBacked(
-                            runtime_types::polkadot_primitives::v1::CandidateReceipt<
+                            runtime_types::polkadot_primitives::v2::CandidateReceipt<
                                 ::subxt::sp_core::H256,
                             >,
                             runtime_types::polkadot_parachain::primitives::HeadData,
-                            runtime_types::polkadot_primitives::v1::CoreIndex,
-                            runtime_types::polkadot_primitives::v1::GroupIndex,
+                            runtime_types::polkadot_primitives::v2::CoreIndex,
+                            runtime_types::polkadot_primitives::v2::GroupIndex,
                         ),
                         #[codec(index = 1)]
                         #[doc = "A candidate was included. `[candidate, head_data]`"]
                         CandidateIncluded(
-                            runtime_types::polkadot_primitives::v1::CandidateReceipt<
+                            runtime_types::polkadot_primitives::v2::CandidateReceipt<
                                 ::subxt::sp_core::H256,
                             >,
                             runtime_types::polkadot_parachain::primitives::HeadData,
-                            runtime_types::polkadot_primitives::v1::CoreIndex,
-                            runtime_types::polkadot_primitives::v1::GroupIndex,
+                            runtime_types::polkadot_primitives::v2::CoreIndex,
+                            runtime_types::polkadot_primitives::v2::GroupIndex,
                         ),
                         #[codec(index = 2)]
                         #[doc = "A candidate timed out. `[candidate, head_data]`"]
                         CandidateTimedOut(
-                            runtime_types::polkadot_primitives::v1::CandidateReceipt<
+                            runtime_types::polkadot_primitives::v2::CandidateReceipt<
                                 ::subxt::sp_core::H256,
                             >,
                             runtime_types::polkadot_parachain::primitives::HeadData,
-                            runtime_types::polkadot_primitives::v1::CoreIndex,
+                            runtime_types::polkadot_primitives::v2::CoreIndex,
                         ),
                     }
                 }
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub struct AvailabilityBitfieldRecord<_0> {
-                    pub bitfield: runtime_types::polkadot_primitives::v1::AvailabilityBitfield,
+                    pub bitfield: runtime_types::polkadot_primitives::v2::AvailabilityBitfield,
                     pub submitted_at: _0,
                 }
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub struct CandidatePendingAvailability<_0, _1> {
-                    pub core: runtime_types::polkadot_primitives::v1::CoreIndex,
+                    pub core: runtime_types::polkadot_primitives::v2::CoreIndex,
                     pub hash: runtime_types::polkadot_core_primitives::CandidateHash,
-                    pub descriptor: runtime_types::polkadot_primitives::v1::CandidateDescriptor<_0>,
+                    pub descriptor: runtime_types::polkadot_primitives::v2::CandidateDescriptor<_0>,
                     pub availability_votes: ::subxt::bitvec::vec::BitVec<
                         ::core::primitive::u8,
                         ::subxt::bitvec::order::Lsb0,
@@ -28959,7 +29129,7 @@ pub mod api {
                     >,
                     pub relay_parent_number: _1,
                     pub backed_in_number: _1,
-                    pub backing_group: runtime_types::polkadot_primitives::v1::GroupIndex,
+                    pub backing_group: runtime_types::polkadot_primitives::v2::GroupIndex,
                 }
             }
             pub mod initializer {
@@ -28978,10 +29148,10 @@ pub mod api {
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub struct BufferedSessionChange {
                     pub validators: ::std::vec::Vec<
-                        runtime_types::polkadot_primitives::v0::validator_app::Public,
+                        runtime_types::polkadot_primitives::v2::validator_app::Public,
                     >,
                     pub queued: ::std::vec::Vec<
-                        runtime_types::polkadot_primitives::v0::validator_app::Public,
+                        runtime_types::polkadot_primitives::v2::validator_app::Public,
                     >,
                     pub session_index: ::core::primitive::u32,
                 }
@@ -29069,7 +29239,7 @@ pub mod api {
                         include_pvf_check_statement {
                             stmt: runtime_types::polkadot_primitives::v2::PvfCheckStatement,
                             signature:
-                                runtime_types::polkadot_primitives::v0::validator_app::Signature,
+                                runtime_types::polkadot_primitives::v2::validator_app::Signature,
                         },
                     }
                     #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
@@ -29140,14 +29310,14 @@ pub mod api {
                             runtime_types::polkadot_parachain::primitives::Id,
                         ),
                         #[codec(index = 6)]
-                        #[doc = "The given validation code was rejected by the PVF pre-checking vote."]
+                        #[doc = "The given validation code was accepted by the PVF pre-checking vote."]
                         #[doc = "`code_hash` `para_id`"]
                         PvfCheckAccepted(
                             runtime_types::polkadot_parachain::primitives::ValidationCodeHash,
                             runtime_types::polkadot_parachain::primitives::Id,
                         ),
                         #[codec(index = 7)]
-                        #[doc = "The given validation code was accepted by the PVF pre-checking vote."]
+                        #[doc = "The given validation code was rejected by the PVF pre-checking vote."]
                         #[doc = "`code_hash` `para_id`"]
                         PvfCheckRejected(
                             runtime_types::polkadot_parachain::primitives::ValidationCodeHash,
@@ -29227,7 +29397,7 @@ pub mod api {
                         #[codec(index = 0)]
                         #[doc = "Enter the paras inherent. This will process bitfields and backed candidates."]
                         enter {
-                            data: runtime_types::polkadot_primitives::v1::InherentData<
+                            data: runtime_types::polkadot_primitives::v2::InherentData<
                                 runtime_types::sp_runtime::generic::header::Header<
                                     ::core::primitive::u32,
                                     runtime_types::sp_runtime::traits::BlakeTwo256,
@@ -29267,16 +29437,16 @@ pub mod api {
                     Parachain,
                     #[codec(index = 1)]
                     Parathread(
-                        runtime_types::polkadot_primitives::v0::collator_app::Public,
+                        runtime_types::polkadot_primitives::v2::collator_app::Public,
                         ::core::primitive::u32,
                     ),
                 }
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub struct CoreAssignment {
-                    pub core: runtime_types::polkadot_primitives::v1::CoreIndex,
+                    pub core: runtime_types::polkadot_primitives::v2::CoreIndex,
                     pub para_id: runtime_types::polkadot_parachain::primitives::Id,
                     pub kind: runtime_types::polkadot_runtime_parachains::scheduler::AssignmentKind,
-                    pub group_idx: runtime_types::polkadot_primitives::v1::GroupIndex,
+                    pub group_idx: runtime_types::polkadot_primitives::v2::GroupIndex,
                 }
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub struct ParathreadClaimQueue {
@@ -29287,7 +29457,7 @@ pub mod api {
                 }
                 #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
                 pub struct QueuedParathread {
-                    pub claim: runtime_types::polkadot_primitives::v1::ParathreadEntry,
+                    pub claim: runtime_types::polkadot_primitives::v2::ParathreadEntry,
                     pub core_offset: ::core::primitive::u32,
                 }
             }
@@ -29583,7 +29753,9 @@ pub mod api {
             pub enum OriginCaller {
                 #[codec(index = 0)]
                 system(
-                    runtime_types::frame_system::RawOrigin<::subxt::sp_core::crypto::AccountId32>,
+                    runtime_types::frame_support::dispatch::RawOrigin<
+                        ::subxt::sp_core::crypto::AccountId32,
+                    >,
                 ),
                 #[codec(index = 13)]
                 ParachainsOrigin(
@@ -29616,8 +29788,8 @@ pub mod api {
                 pub grandpa: runtime_types::sp_finality_grandpa::app::Public,
                 pub babe: runtime_types::sp_consensus_babe::app::Public,
                 pub im_online: runtime_types::pallet_im_online::sr25519::app_sr25519::Public,
-                pub para_validator: runtime_types::polkadot_primitives::v0::validator_app::Public,
-                pub para_assignment: runtime_types::polkadot_primitives::v1::assignment_app::Public,
+                pub para_validator: runtime_types::polkadot_primitives::v2::validator_app::Public,
+                pub para_assignment: runtime_types::polkadot_primitives::v2::assignment_app::Public,
                 pub authority_discovery: runtime_types::sp_authority_discovery::app::Public,
                 pub beefy: runtime_types::beefy_primitives::crypto::Public,
             }
@@ -29669,6 +29841,36 @@ pub mod api {
                         c: (::core::primitive::u64, ::core::primitive::u64),
                         allowed_slots: runtime_types::sp_consensus_babe::AllowedSlots,
                     },
+                }
+                #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
+                pub enum PreDigest {
+                    #[codec(index = 1)]
+                    Primary(runtime_types::sp_consensus_babe::digests::PrimaryPreDigest),
+                    #[codec(index = 2)]
+                    SecondaryPlain(
+                        runtime_types::sp_consensus_babe::digests::SecondaryPlainPreDigest,
+                    ),
+                    #[codec(index = 3)]
+                    SecondaryVRF(runtime_types::sp_consensus_babe::digests::SecondaryVRFPreDigest),
+                }
+                #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
+                pub struct PrimaryPreDigest {
+                    pub authority_index: ::core::primitive::u32,
+                    pub slot: runtime_types::sp_consensus_slots::Slot,
+                    pub vrf_output: [::core::primitive::u8; 32usize],
+                    pub vrf_proof: [::core::primitive::u8; 64usize],
+                }
+                #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
+                pub struct SecondaryPlainPreDigest {
+                    pub authority_index: ::core::primitive::u32,
+                    pub slot: runtime_types::sp_consensus_slots::Slot,
+                }
+                #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
+                pub struct SecondaryVRFPreDigest {
+                    pub authority_index: ::core::primitive::u32,
+                    pub slot: runtime_types::sp_consensus_slots::Slot,
+                    pub vrf_output: [::core::primitive::u8; 32usize],
+                    pub vrf_proof: [::core::primitive::u8; 64usize],
                 }
             }
             #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
@@ -30397,10 +30599,7 @@ pub mod api {
                 #[codec(index = 2)]
                 BadOrigin,
                 #[codec(index = 3)]
-                Module {
-                    index: ::core::primitive::u8,
-                    error: ::core::primitive::u8,
-                },
+                Module(runtime_types::sp_runtime::ModuleError),
                 #[codec(index = 4)]
                 ConsumerRemaining,
                 #[codec(index = 5)]
@@ -30411,6 +30610,13 @@ pub mod api {
                 Token(runtime_types::sp_runtime::TokenError),
                 #[codec(index = 8)]
                 Arithmetic(runtime_types::sp_runtime::ArithmeticError),
+                #[codec(index = 9)]
+                Transactional(runtime_types::sp_runtime::TransactionalError),
+            }
+            #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
+            pub struct ModuleError {
+                pub index: ::core::primitive::u8,
+                pub error: [::core::primitive::u8; 4usize],
             }
             #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
             pub enum MultiSignature {
@@ -30446,6 +30652,13 @@ pub mod api {
                 Frozen,
                 #[codec(index = 6)]
                 Unsupported,
+            }
+            #[derive(:: subxt :: codec :: Decode, :: subxt :: codec :: Encode, Debug)]
+            pub enum TransactionalError {
+                #[codec(index = 0)]
+                LimitReached,
+                #[codec(index = 1)]
+                NoLayer,
             }
         }
         pub mod sp_session {
@@ -31445,10 +31658,10 @@ pub mod api {
     pub type DispatchError = runtime_types::sp_runtime::DispatchError;
     impl ::subxt::HasModuleError for runtime_types::sp_runtime::DispatchError {
         fn module_error_data(&self) -> Option<::subxt::ModuleErrorData> {
-            if let &Self::Module { index, error } = self {
+            if let Self::Module(module_error) = self {
                 Some(::subxt::ModuleErrorData {
-                    pallet_index: index,
-                    error: [error, 0, 0, 0],
+                    pallet_index: module_error.index,
+                    error: module_error.error,
                 })
             } else {
                 None
@@ -31479,9 +31692,9 @@ pub mod api {
         pub fn validate_metadata(&'a self) -> Result<(), ::subxt::MetadataError> {
             if self.client.metadata().metadata_hash(&PALLETS)
                 != [
-                    1u8, 156u8, 181u8, 58u8, 109u8, 157u8, 9u8, 166u8, 154u8, 252u8, 153u8, 237u8,
-                    27u8, 17u8, 245u8, 186u8, 155u8, 143u8, 157u8, 231u8, 191u8, 201u8, 22u8, 45u8,
-                    22u8, 153u8, 250u8, 78u8, 247u8, 236u8, 250u8, 209u8,
+                    171u8, 151u8, 238u8, 248u8, 146u8, 176u8, 17u8, 187u8, 196u8, 188u8, 233u8,
+                    111u8, 45u8, 124u8, 52u8, 50u8, 33u8, 206u8, 239u8, 173u8, 23u8, 8u8, 56u8,
+                    68u8, 21u8, 49u8, 188u8, 236u8, 27u8, 193u8, 246u8, 223u8,
                 ]
             {
                 Err(::subxt::MetadataError::IncompatibleMetadata)

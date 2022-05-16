@@ -158,6 +158,12 @@ async fn test_verify_mmr_with_proof() {
         .await
         .unwrap();
 
+    let api =
+        client.clone().to_runtime_api::<runtime::api::RuntimeApi<
+            subxt::DefaultConfig,
+            subxt::PolkadotExtrinsicParams<_>,
+        >>();
+
     let mut subscription: Subscription<String> = client
         .rpc()
         .client
@@ -170,6 +176,19 @@ async fn test_verify_mmr_with_proof() {
         .unwrap();
     let mut count = 0;
     let mut client_state = get_initial_client_state();
+    // Before watching for commitments, we need to check that out initial validator set id is correct
+    let next_val_set = api
+        .storage()
+        .mmr_leaf()
+        .beefy_next_authorities(None)
+        .await
+        .unwrap();
+    if next_val_set.id != client_state.next_authorities.id {
+        // Update the Id
+        // Note that the authorities are not changing, only the id is changing in this development scenario
+        client_state.next_authorities.id = next_val_set.id;
+        client_state.current_authorities.id = next_val_set.id - 1;
+    }
     while let Some(Ok(commitment)) = subscription.next().await {
         if count == 100 {
             break;
@@ -330,6 +349,19 @@ async fn verify_parachain_headers() {
         .unwrap();
     let mut count = 0;
     let mut client_state = get_initial_client_state();
+    // Before watching for commitments, we need to check that out initial validator set id is correct
+    let next_val_set = api
+        .storage()
+        .mmr_leaf()
+        .beefy_next_authorities(None)
+        .await
+        .unwrap();
+    if next_val_set.id != client_state.next_authorities.id {
+        // Update the Id
+        // Note that the authorities are not changing, only the id is changing in this development scenario
+        client_state.next_authorities.id = next_val_set.id;
+        client_state.current_authorities.id = next_val_set.id - 1;
+    }
     while let Some(Ok(commitment)) = subscription.next().await {
         if count == 100 {
             break;
@@ -419,16 +451,11 @@ async fn verify_parachain_headers() {
             .await
             .unwrap();
 
-        let mut mmr_leaves_test = vec![];
         let leaves: Vec<Vec<u8>> = Decode::decode(&mut &*batch_proof.leaves.to_vec()).unwrap();
 
         let mut parachain_headers = vec![];
         for leaf_bytes in leaves {
             let leaf: MmrLeaf<u32, H256, H256, H256> = Decode::decode(&mut &*leaf_bytes).unwrap();
-            mmr_leaves_test.push(pallet_mmr_primitives::DataOrHash::Data::<
-                sp_runtime::traits::Keccak256,
-                _,
-            >(leaf.clone()));
             let leaf_block_number = (leaf.parent_number_and_hash.0 + 1) as u64;
             let para_headers = finalized_blocks.get(&leaf_block_number).unwrap();
 
@@ -482,6 +509,7 @@ async fn verify_parachain_headers() {
         };
 
         let mmr_update = get_mmr_update(&client, signed_commitment).await;
+
         client_state = beef_light_client
             .verify_mmr_root_with_proof(client_state, mmr_update)
             .unwrap();
