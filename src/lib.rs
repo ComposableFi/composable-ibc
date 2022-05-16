@@ -260,7 +260,7 @@ fn get_leaf_index_for_block_number(activation_block: u32, block_number: u32) -> 
 
 /// Merkle Hasher for mmr library
 #[derive(Clone)]
-pub(crate) struct MerkleHasher<T: HostFunctions>(PhantomData<T>);
+pub struct MerkleHasher<T: HostFunctions>(PhantomData<T>);
 
 impl<T: HostFunctions + Clone> mmr_lib::Merge for MerkleHasher<T> {
     type Item = H256;
@@ -286,7 +286,7 @@ fn validate_sigs_against_threshold(set: &BeefyNextAuthoritySet<H256>, sigs_len: 
 }
 
 /// MMR nodes & size -related utilities.
-struct NodesUtils {
+pub struct NodesUtils {
     no_of_leaves: u64,
 }
 
