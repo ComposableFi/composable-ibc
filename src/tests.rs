@@ -514,8 +514,6 @@ async fn verify_parachain_headers() {
             .verify_mmr_root_with_proof(client_state, mmr_update)
             .unwrap();
 
-        // TODO: fix `InvalidMmrProof` error,
-        // see https://github.com/ComposableFi/beefy-client/runs/5988511296?check_suite_focus=true for details
         assert_ok!(beef_light_client
             .verify_parachain_headers(client_state.clone(), parachain_update_proof));
 
