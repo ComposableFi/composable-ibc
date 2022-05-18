@@ -36,7 +36,8 @@ use crate::traits::{ClientState, HostFunctions};
 use beefy_primitives::known_payload_ids::MMR_ROOT_ID;
 use beefy_primitives::mmr::MmrLeaf;
 use codec::Encode;
-use sp_core::{ByteArray, H256};
+use sp_core::crypto::ByteArray;
+use sp_core::H256;
 use sp_runtime::traits::Convert;
 
 use sp_std::prelude::*;
