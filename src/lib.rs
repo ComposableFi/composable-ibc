@@ -22,7 +22,9 @@ use core::marker::PhantomData;
 pub mod error;
 pub mod primitives;
 #[cfg(test)]
-mod runtime;
+pub mod runtime;
+#[cfg(test)]
+pub mod test_utils;
 #[cfg(test)]
 mod tests;
 pub mod traits;
