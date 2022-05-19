@@ -21,6 +21,15 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 rs_merkle = { version = "1.2.0", default-features = false }
 mmr-lib= { package = "ckb-merkle-mountain-range", version = "0.3.2", default-features = false }
 derive_more = { version = "0.99", default-features = false, features = ["from"]  }
+# Mock deps
+subxt = { version = "0.21.0", optional = true }
+tokio = { version = "1.17.0", features = ["full"], optional = true }
+hex-literal = { version = "0.3.4", optional = true }
+serde_json = { version = "1.0.74", optional = true }
+pallet-mmr-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22", optional = true }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22", optional = true}
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22", optional = true }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22", optional = true }
 
 [dev-dependencies]
 subxt = "0.21.0"
@@ -30,6 +39,7 @@ serde_json = "1.0.74"
 pallet-mmr-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22" }
 
 [features]
 default = ["std"]
@@ -47,3 +57,4 @@ std = [
     "rs_merkle/std",
     "mmr-lib/std"
 ]
+mocks = ["std", "subxt", "hex-literal", "serde_json", "pallet-mmr-rpc", "frame-support", "sp-io", "sp-trie"]

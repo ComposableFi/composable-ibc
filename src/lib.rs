@@ -15,15 +15,15 @@
 
 //! Beefy Light Client Implementation
 #![cfg_attr(not(feature = "std"), no_std)]
-#![deny(missing_docs)]
+#![cfg_attr(not(feature = "mocks"), deny(missing_docs))]
 
 use core::marker::PhantomData;
 
 pub mod error;
 pub mod primitives;
-#[cfg(test)]
+#[cfg(any(test, feature = "mocks"))]
 pub mod runtime;
-#[cfg(test)]
+#[cfg(any(test, feature = "mocks"))]
 pub mod test_utils;
 #[cfg(test)]
 mod tests;

@@ -1,4 +1,4 @@
-#[allow(dead_code, unused_imports, non_camel_case_types)]
+#[allow(dead_code, unused_imports, non_camel_case_types, unused_qualifications)]
 pub mod api {
     use super::api as root_mod;
     pub static PALLETS: [&str; 49usize] = [

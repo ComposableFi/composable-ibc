@@ -1,19 +1,39 @@
 use crate::primitives::{ParachainHeader, PartialMmrLeaf, SignedCommitment};
-use crate::tests::Crypto;
-use crate::traits::ClientState;
+use crate::traits::{ClientState, HostFunctions};
 use crate::{runtime, MerkleHasher, MmrUpdateProof, SignatureWithAuthorityIndex};
 use beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
 use codec::{Decode, Encode};
 use hex_literal::hex;
 use pallet_mmr_primitives::BatchProof;
 use sp_core::H256;
-use sp_runtime::traits::Convert;
+use sp_io::crypto;
+use sp_runtime::generic::Header;
+use sp_runtime::traits::{BlakeTwo256, Convert};
+use sp_trie::{generate_trie_proof, TrieDBMut, TrieMut};
 use std::collections::BTreeMap;
 use subxt::rpc::rpc_params;
 use subxt::rpc::ClientT;
 use subxt::sp_core::keccak_256;
 
 pub const PARA_ID: u32 = 2000;
+
+#[derive(Clone)]
+pub struct Crypto;
+
+impl HostFunctions for Crypto {
+    fn keccak_256(input: &[u8]) -> [u8; 32] {
+        keccak_256(input)
+    }
+
+    fn secp256k1_ecdsa_recover_compressed(
+        signature: &[u8; 65],
+        value: &[u8; 32],
+    ) -> Option<Vec<u8>> {
+        crypto::secp256k1_ecdsa_recover_compressed(signature, value)
+            .ok()
+            .map(|val| val.to_vec())
+    }
+}
 
 pub async fn get_initial_client_state(
     api: Option<
@@ -45,9 +65,10 @@ pub async fn get_initial_client_state(
         };
     }
     // Get initial validator set
-    // In development mode validators are the same for all sessions
+    // In development mode validators are the same for all sessions only validator set_id changes
+    let api = api.unwrap();
+    let validator_set_id = api.storage().beefy().validator_set_id(None).await.unwrap();
     let next_val_set = api
-        .unwrap()
         .storage()
         .mmr_leaf()
         .beefy_next_authorities(None)
@@ -57,12 +78,12 @@ pub async fn get_initial_client_state(
         latest_beefy_height: 0,
         mmr_root_hash: Default::default(),
         current_authorities: BeefyNextAuthoritySet {
-            id: next_val_set.id - 1,
+            id: validator_set_id,
             len: next_val_set.len,
             root: next_val_set.root,
         },
         next_authorities: BeefyNextAuthoritySet {
-            id: next_val_set.id,
+            id: validator_set_id + 1,
             len: next_val_set.len,
             root: next_val_set.root,
         },
@@ -159,6 +180,7 @@ pub async fn get_mmr_update(
 
 pub async fn get_parachain_headers(
     client: &subxt::Client<subxt::DefaultConfig>,
+    para_client: &subxt::Client<subxt::DefaultConfig>,
     commitment_block_number: u32,
     latest_beefy_height: u32,
 ) -> (Vec<ParachainHeader>, BatchProof<H256>) {
@@ -271,8 +293,59 @@ pub async fn get_parachain_headers(
             vec![]
         };
 
+        let para_head = para_headers.get(&PARA_ID).unwrap().clone();
+        let decoded_para_head = Header::<u32, BlakeTwo256>::decode(&mut &*para_head).unwrap();
+
+        let block_number = decoded_para_head.number;
+        let subxt_block_number: subxt::BlockNumber = block_number.into();
+        let block_hash = para_client
+            .rpc()
+            .block_hash(Some(subxt_block_number))
+            .await
+            .unwrap();
+
+        let block = para_client.rpc().block(block_hash).await.unwrap().unwrap();
+        let extrinsics = block
+            .block
+            .extrinsics
+            .into_iter()
+            .map(|e| e.encode())
+            .collect::<Vec<_>>();
+
+        let (timestamp_extrinsic, extrinsic_proof) = {
+            if extrinsics.is_empty() {
+                (vec![], vec![])
+            } else {
+                let timestamp_ext = extrinsics[0].clone();
+
+                let mut db = sp_trie::MemoryDB::<BlakeTwo256>::default();
+
+                let root = {
+                    let mut root = Default::default();
+                    let mut trie =
+                        <TrieDBMut<sp_trie::LayoutV0<BlakeTwo256>>>::new(&mut db, &mut root);
+
+                    for (i, ext) in extrinsics.into_iter().enumerate() {
+                        let key = codec::Compact(i as u32).encode();
+                        trie.insert(&key, &ext).unwrap();
+                    }
+                    *trie.root()
+                };
+
+                let key = codec::Compact::<u32>(0u32).encode();
+                let extrinsic_proof =
+                    generate_trie_proof::<sp_trie::LayoutV0<BlakeTwo256>, _, _, _>(
+                        &db,
+                        root,
+                        vec![&key],
+                    )
+                    .unwrap();
+                (timestamp_ext, extrinsic_proof)
+            }
+        };
+
         let header = ParachainHeader {
-            parachain_header: para_headers.get(&PARA_ID).unwrap().clone(),
+            parachain_header: para_head,
             partial_mmr_leaf: PartialMmrLeaf {
                 version: leaf.version,
                 parent_number_and_hash: leaf.parent_number_and_hash,
@@ -282,7 +355,8 @@ pub async fn get_parachain_headers(
             parachain_heads_proof: proof,
             heads_leaf_index: index.unwrap() as u32,
             heads_total_count: parachain_leaves.len() as u32,
-            extrinsic_proof: vec![],
+            extrinsic_proof,
+            timestamp_extrinsic,
         };
 
         parachain_headers.push(header);

@@ -1,9 +1,9 @@
 use crate::primitives::SignedCommitment;
+use crate::test_utils::Crypto;
 use crate::test_utils::{get_initial_client_state, get_mmr_update, get_parachain_headers};
 use crate::BeefyClientError;
 use crate::{
-    runtime, BeefyLightClient, HostFunctions, MmrUpdateProof, ParachainsUpdateProof,
-    SignatureWithAuthorityIndex,
+    runtime, BeefyLightClient, MmrUpdateProof, ParachainsUpdateProof, SignatureWithAuthorityIndex,
 };
 use beefy_primitives::known_payload_ids::MMR_ROOT_ID;
 use beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
@@ -11,27 +11,7 @@ use beefy_primitives::Payload;
 use frame_support::assert_ok;
 use pallet_mmr_primitives::Proof;
 use sp_core::bytes::to_hex;
-use sp_io::crypto;
 use subxt::rpc::{rpc_params, JsonValue, Subscription, SubscriptionClientT};
-use subxt::sp_core::keccak_256;
-
-#[derive(Clone)]
-pub struct Crypto;
-
-impl HostFunctions for Crypto {
-    fn keccak_256(input: &[u8]) -> [u8; 32] {
-        keccak_256(input)
-    }
-
-    fn secp256k1_ecdsa_recover_compressed(
-        signature: &[u8; 65],
-        value: &[u8; 32],
-    ) -> Option<Vec<u8>> {
-        crypto::secp256k1_ecdsa_recover_compressed(signature, value)
-            .ok()
-            .map(|val| val.to_vec())
-    }
-}
 
 #[tokio::test]
 async fn test_verify_mmr_with_proof() {
@@ -49,6 +29,8 @@ async fn test_verify_mmr_with_proof() {
             subxt::PolkadotExtrinsicParams<_>,
         >>();
 
+    let mut count = 0;
+    let mut client_state = get_initial_client_state(Some(&api)).await;
     let mut subscription: Subscription<String> = client
         .rpc()
         .client
@@ -59,8 +41,6 @@ async fn test_verify_mmr_with_proof() {
         )
         .await
         .unwrap();
-    let mut count = 0;
-    let mut client_state = get_initial_client_state(Some(&api)).await;
 
     while let Some(Ok(commitment)) = subscription.next().await {
         if count == 100 {
@@ -72,6 +52,19 @@ async fn test_verify_mmr_with_proof() {
             u32,
             beefy_primitives::crypto::Signature,
         > = codec::Decode::decode(&mut &*recv_commitment).unwrap();
+
+        match signed_commitment.commitment.validator_set_id {
+            id if id < client_state.current_authorities.id => {
+                // If validator set id of signed commitment is less than current validator set id we have
+                // Then commitment is outdated and we skip it.
+                println!(
+                    "Skipping outdated commitment \n Received signed commitmment with validator_set_id: {:?}\n Current authority set id: {:?}\n Next authority set id: {:?}\n",
+                    signed_commitment.commitment.validator_set_id, client_state.current_authorities.id, client_state.next_authorities.id
+                );
+                continue;
+            }
+            _ => {}
+        }
 
         println!(
             "Received signed commitmment for: {:?}",
@@ -207,11 +200,19 @@ async fn verify_parachain_headers() {
         .build::<subxt::DefaultConfig>()
         .await
         .unwrap();
+    let para_url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9988".to_string());
+    let para_client = subxt::ClientBuilder::new()
+        .set_url(para_url)
+        .build::<subxt::DefaultConfig>()
+        .await
+        .unwrap();
     let api =
         client.clone().to_runtime_api::<runtime::api::RuntimeApi<
             subxt::DefaultConfig,
             subxt::PolkadotExtrinsicParams<_>,
         >>();
+    let mut count = 0;
+    let mut client_state = get_initial_client_state(Some(&api)).await;
     let mut subscription: Subscription<String> = client
         .rpc()
         .client
@@ -222,8 +223,6 @@ async fn verify_parachain_headers() {
         )
         .await
         .unwrap();
-    let mut count = 0;
-    let mut client_state = get_initial_client_state(Some(&api)).await;
 
     while let Some(Ok(commitment)) = subscription.next().await {
         if count == 100 {
@@ -236,6 +235,19 @@ async fn verify_parachain_headers() {
             beefy_primitives::crypto::Signature,
         > = codec::Decode::decode(&mut &*recv_commitment).unwrap();
 
+        match signed_commitment.commitment.validator_set_id {
+            id if id < client_state.current_authorities.id => {
+                // If validator set id of signed commitment is less than current validator set id we have
+                // Then commitment is outdated and we skip it.
+                println!(
+                    "Skipping outdated commitment \n Received signed commitmment with validator_set_id: {:?}\n Current authority set id: {:?}\n Next authority set id: {:?}\n",
+                    signed_commitment.commitment.validator_set_id, client_state.current_authorities.id, client_state.next_authorities.id
+                );
+                continue;
+            }
+            _ => {}
+        }
+
         println!(
             "Received signed commitmment for: {:?}",
             signed_commitment.commitment.block_number
@@ -243,8 +255,13 @@ async fn verify_parachain_headers() {
 
         let block_number = signed_commitment.commitment.block_number;
 
-        let (parachain_headers, batch_proof) =
-            get_parachain_headers(&client, block_number, client_state.latest_beefy_height).await;
+        let (parachain_headers, batch_proof) = get_parachain_headers(
+            &client,
+            &para_client,
+            block_number,
+            client_state.latest_beefy_height,
+        )
+        .await;
         let parachain_update_proof = ParachainsUpdateProof {
             parachain_headers,
             mmr_proof: batch_proof,
