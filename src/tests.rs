@@ -67,8 +67,8 @@ async fn test_verify_mmr_with_proof() {
         }
 
         println!(
-            "Received signed commitmment for: {:?}",
-            signed_commitment.commitment.block_number
+            "Received commitmment #{count} for: \n{:?}",
+            signed_commitment.commitment
         );
 
         let mmr_update = get_mmr_update(&client, signed_commitment.clone()).await;
