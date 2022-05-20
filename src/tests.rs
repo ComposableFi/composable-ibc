@@ -211,7 +211,7 @@ async fn verify_parachain_headers() {
             subxt::DefaultConfig,
             subxt::PolkadotExtrinsicParams<_>,
         >>();
-    let mut count = 0;
+    let mut count = 1;
     let mut client_state = get_initial_client_state(Some(&api)).await;
     let mut subscription: Subscription<String> = client
         .rpc()
@@ -249,8 +249,8 @@ async fn verify_parachain_headers() {
         }
 
         println!(
-            "Received signed commitmment for: {:?}",
-            signed_commitment.commitment.block_number
+            "Received commitmment #{count}: \n{:?}",
+            signed_commitment.commitment
         );
 
         let block_number = signed_commitment.commitment.block_number;
@@ -277,9 +277,8 @@ async fn verify_parachain_headers() {
             .verify_parachain_headers(client_state.clone(), parachain_update_proof));
 
         println!(
-            "\nSuccessfully verified parachain headers for block number: {}\nmmr_root_hash: {}\n",
+            "\nSuccessfully verified parachain headers for block number: {}\n",
             client_state.latest_beefy_height,
-            to_hex(&client_state.mmr_root_hash[..], false)
         );
 
         count += 1;
