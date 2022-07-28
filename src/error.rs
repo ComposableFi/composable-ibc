@@ -1,5 +1,6 @@
 //! Light client error definition
 
+use alloc::string::String;
 use sp_std::prelude::*;
 #[derive(sp_std::fmt::Debug, PartialEq, Eq, derive_more::From)]
 /// Error definition for the light client
@@ -11,7 +12,8 @@ pub enum BeefyClientError {
     /// Error decoding some value
     DecodingError,
     /// Invalid Mmr Update
-    InvalidMmrUpdate,
+    #[from(ignore)]
+    InvalidMmrUpdate(String),
     /// Incomplete Signature threshold
     IncompleteSignatureThreshold,
     /// Error recovering public key from signature
