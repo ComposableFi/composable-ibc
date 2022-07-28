@@ -187,7 +187,11 @@ async fn should_fail_with_invalid_validator_set_id() {
     assert_eq!(
         beef_light_client
             .verify_mmr_root_with_proof(get_initial_client_state(None).await, mmr_update),
-        Err(BeefyClientError::InvalidMmrUpdate)
+        Err(BeefyClientError::AuthoritySetMismatch {
+            current_set_id: 0,
+            next_set_id: 1,
+            commitment_set_id: 3
+        })
     );
 }
 

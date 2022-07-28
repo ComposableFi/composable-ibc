@@ -43,8 +43,6 @@ use sp_core::crypto::ByteArray;
 use sp_core::H256;
 use sp_runtime::traits::Convert;
 
-use alloc::format;
-use alloc::string::ToString;
 use sp_std::prelude::*;
 use sp_std::vec;
 
@@ -81,7 +79,11 @@ impl<Crypto: HostFunctions + Clone> BeefyLightClient<Crypto> {
 
         if current_authority_set.id != validator_set_id && next_authority_set.id != validator_set_id
         {
-            return Err(BeefyClientError::InvalidMmrUpdate(format!("Received invalid validator set id {}: current_validator_set_id: {}, next_authority_set_id : {}", validator_set_id,  current_authority_set.id, next_authority_set.id)));
+            return Err(BeefyClientError::AuthoritySetMismatch {
+                current_set_id: current_authority_set.id,
+                next_set_id: next_authority_set.id,
+                commitment_set_id: validator_set_id,
+            });
         }
 
         // Extract root hash from signed commitment and validate it
@@ -95,12 +97,13 @@ impl<Crypto: HostFunctions + Clone> BeefyLightClient<Crypto> {
                 if root.len() == HASH_LENGTH {
                     root
                 } else {
-                    return Err(BeefyClientError::InvalidRootHash);
+                    return Err(BeefyClientError::InvalidRootHash {
+                        root_hash: root.clone(),
+                        len: root.len() as u64,
+                    });
                 }
             } else {
-                return Err(BeefyClientError::InvalidMmrUpdate(
-                    "Mmr root hash not found in commitment".to_string(),
-                ));
+                return Err(BeefyClientError::MmrRootHashNotFound);
             }
         };
 
@@ -157,17 +160,23 @@ impl<Crypto: HostFunctions + Clone> BeefyLightClient<Crypto> {
                 }
                 authorities_changed = true;
             }
-            _ => return Err(BeefyClientError::InvalidMmrUpdate(format!("Received invalid validator set id {}: current_validator_set_id: {}, next_authority_set_id : {}", validator_set_id,  current_authority_set.id, next_authority_set.id))),
+            _ => {
+                return Err(BeefyClientError::AuthoritySetMismatch {
+                    current_set_id: current_authority_set.id,
+                    next_set_id: next_authority_set.id,
+                    commitment_set_id: validator_set_id,
+                })
+            }
         }
 
         let latest_beefy_height = trusted_client_state.latest_beefy_height;
 
         let commitment_block_number = mmr_update.signed_commitment.commitment.block_number;
         if commitment_block_number <= latest_beefy_height {
-            return Err(BeefyClientError::InvalidMmrUpdate(format!(
-                "Commitment block number {} is greater than latest beefy height {}",
-                commitment_block_number, latest_beefy_height
-            )));
+            return Err(BeefyClientError::OutdatedCommitment {
+                latest_beefy_height,
+                commitment_block_number,
+            });
         }
 
         // Move on to verify mmr_proof
