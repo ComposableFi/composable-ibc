@@ -15,16 +15,14 @@
 
 //! Beefy Light Client Implementation
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(not(feature = "mocks"), deny(missing_docs))]
+#![cfg_attr(not(feature = "prover"), deny(missing_docs))]
 
 use core::marker::PhantomData;
 
 pub mod error;
 pub mod primitives;
-#[cfg(any(test, feature = "mocks"))]
-pub mod runtime;
-#[cfg(any(test, feature = "mocks"))]
-pub mod test_utils;
+#[cfg(any(test, feature = "prover"))]
+pub mod queries;
 #[cfg(test)]
 mod tests;
 pub mod traits;
@@ -38,9 +36,9 @@ use crate::traits::{ClientState, HostFunctions};
 use beefy_primitives::known_payload_ids::MMR_ROOT_ID;
 use beefy_primitives::mmr::MmrLeaf;
 use codec::Encode;
-use sp_core::crypto::ByteArray;
+use frame_support::sp_runtime::app_crypto::ByteArray;
+use frame_support::sp_runtime::traits::Convert;
 use sp_core::H256;
-use sp_runtime::traits::Convert;
 
 use sp_std::prelude::*;
 use sp_std::vec;
@@ -267,7 +265,7 @@ impl<Crypto: HostFunctions + Clone> BeefyLightClient<Crypto> {
 }
 
 /// Calculate the leaf index for this block number
-fn get_leaf_index_for_block_number(activation_block: u32, block_number: u32) -> u32 {
+pub fn get_leaf_index_for_block_number(activation_block: u32, block_number: u32) -> u32 {
     // calculate the leaf index for this leaf.
     if activation_block == 0 {
         // in this case the leaf index is the same as the block number - 1 (leaf index starts at 0)
