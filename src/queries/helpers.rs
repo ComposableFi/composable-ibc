@@ -1,7 +1,6 @@
-use beefy_primitives::mmr::MmrLeaf;
 use codec::{Decode, Encode};
 use frame_support::sp_runtime::traits::Convert;
-use sp_core::{keccak_256, H256};
+use sp_core::keccak_256;
 use sp_runtime::traits::BlakeTwo256;
 use sp_trie::{generate_trie_proof, TrieDBMut, TrieMut};
 use std::collections::BTreeMap;
@@ -22,8 +21,7 @@ pub struct AuthorityProofWithSignatures {
     pub signatures: Vec<SignatureWithAuthorityIndex>,
 }
 
-pub struct LeafWithParaHeadsProof {
-    pub leaf: MmrLeaf<u32, H256, H256, H256>,
+pub struct ParaHeadsProof {
     pub parachain_heads_proof: Vec<[u8; 32]>,
     pub para_head: Vec<u8>,
     pub heads_leaf_index: u32,
@@ -80,28 +78,18 @@ pub async fn fetch_timestamp_extrinsic_with_proof<T: Config>(
     Ok(TimeStampExtWithProof { ext, proof })
 }
 
+pub type ParaId = u32;
+pub type HeadData = Vec<u8>;
 /// Calculate the proof for the parachain heads added to this leaf
-pub fn calculate_parachain_heads_proof(
-    leaf: Vec<u8>,
-    raw_finalized_para_heads: &BTreeMap<u64, BTreeMap<u32, Vec<u8>>>,
+pub fn prove_parachain_headers(
+    // Map of para ids to to finalized head data
+    finalized_para_heads: &BTreeMap<ParaId, HeadData>,
     para_id: u32,
-) -> Result<LeafWithParaHeadsProof, BeefyClientError> {
-    let leaf: MmrLeaf<u32, H256, H256, H256> = Decode::decode(&mut &*leaf)?;
-    let parent_block: u32 = leaf.parent_number_and_hash.0.into();
-    let leaf_block_number = (parent_block + 1) as u64;
-    let para_headers = raw_finalized_para_heads
-        .get(&leaf_block_number)
-        .ok_or_else(|| {
-            BeefyClientError::Custom(format!(
-                "[get_parachain_headers] Para Headers not found for relay chain block {}",
-                leaf_block_number
-            ))
-        })?;
-
+) -> Result<ParaHeadsProof, BeefyClientError> {
     let mut index = None;
     let mut parachain_leaves = vec![];
     // Values are already sorted by key which is the para_id
-    for (idx, (key, header)) in para_headers.iter().enumerate() {
+    for (idx, (key, header)) in finalized_para_heads.iter().enumerate() {
         let pair = (*key, header.clone());
         let leaf_hash = keccak_256(pair.encode().as_slice());
         parachain_leaves.push(leaf_hash);
@@ -122,7 +110,7 @@ pub fn calculate_parachain_heads_proof(
         vec![]
     };
 
-    let para_head = para_headers
+    let para_head = finalized_para_heads
         .get(&para_id)
         .ok_or_else(|| {
             BeefyClientError::Custom(format!(
@@ -131,8 +119,7 @@ pub fn calculate_parachain_heads_proof(
             ))
         })?
         .clone();
-    Ok(LeafWithParaHeadsProof {
-        leaf,
+    Ok(ParaHeadsProof {
         parachain_heads_proof: proof,
         para_head,
         heads_leaf_index: index.ok_or_else(|| {
@@ -143,7 +130,7 @@ pub fn calculate_parachain_heads_proof(
 }
 
 /// Get the proof for authority set that signed this commitment
-pub fn get_authority_proof(
+pub fn prove_authority_set(
     signed_commitment: &beefy_primitives::SignedCommitment<
         u32,
         beefy_primitives::crypto::Signature,

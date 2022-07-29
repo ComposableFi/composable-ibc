@@ -19,7 +19,7 @@ pub struct FinalizedParaHeads {
 }
 
 /// Get the raw parachain heads finalized in the provided block
-pub async fn get_raw_finalized_parachain_heads<T: Config>(
+pub async fn fetch_finalized_parachain_heads<T: Config>(
     client: &Client<T>,
     commitment_block_number: u32,
     latest_beefy_height: u32,
@@ -108,7 +108,7 @@ where
 }
 
 /// Get beefy justification for latest finalized beefy block
-pub async fn get_beefy_justifications<T: Config>(
+pub async fn fetch_beefy_justification<T: Config>(
     client: &Client<T>,
 ) -> Result<
     (
@@ -147,7 +147,7 @@ pub async fn get_beefy_justifications<T: Config>(
 }
 
 /// Query a batch leaf proof
-pub async fn get_mmr_batch_proof<T: Config>(
+pub async fn fetch_mmr_batch_proof<T: Config>(
     client: &Client<T>,
     leaf_indices: Vec<u32>,
     block_hash: Option<T::Hash>,
@@ -164,7 +164,7 @@ pub async fn get_mmr_batch_proof<T: Config>(
 }
 
 /// Query a single leaf proof
-pub async fn get_mmr_leaf_proof<T: Config>(
+pub async fn fetch_mmr_leaf_proof<T: Config>(
     client: &Client<T>,
     leaf_index: u64,
     block_hash: Option<T::Hash>,

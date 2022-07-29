@@ -1,10 +1,10 @@
 use crate::error::BeefyClientError;
 use crate::primitives::{ParachainHeader, PartialMmrLeaf, SignedCommitment};
 use crate::queries::helpers::{
-    calculate_parachain_heads_proof, fetch_timestamp_extrinsic_with_proof,
-    hash_authority_addresses, LeafWithParaHeadsProof, TimeStampExtWithProof,
+    fetch_timestamp_extrinsic_with_proof, hash_authority_addresses, prove_parachain_headers,
+    ParaHeadsProof, TimeStampExtWithProof,
 };
-use crate::queries::relay_chain_queries::{get_beefy_justifications, get_mmr_batch_proof};
+use crate::queries::relay_chain_queries::{fetch_beefy_justification, fetch_mmr_batch_proof};
 use crate::traits::{ClientState, HostFunctions};
 use crate::{get_leaf_index_for_block_number, queries::runtime, MerkleHasher, MmrUpdateProof};
 use beefy_primitives::known_payload_ids::MMR_ROOT_ID;
@@ -18,9 +18,9 @@ use sp_runtime::{generic::Header, traits::BlakeTwo256};
 use subxt::sp_core::keccak_256;
 use subxt::{Client, Config};
 
-use super::helpers::{get_authority_proof, AuthorityProofWithSignatures};
+use super::helpers::{prove_authority_set, AuthorityProofWithSignatures};
 use super::relay_chain_queries::{
-    get_mmr_leaf_proof, get_raw_finalized_parachain_heads, FinalizedParaHeads,
+    fetch_finalized_parachain_heads, fetch_mmr_leaf_proof, FinalizedParaHeads,
 };
 
 #[derive(Clone)]
@@ -112,7 +112,7 @@ where
         let FinalizedParaHeads {
             leaf_indices,
             raw_finalized_heads: finalized_blocks,
-        } = get_raw_finalized_parachain_heads(
+        } = fetch_finalized_parachain_heads(
             &self.relay_client,
             commitment_block_number,
             latest_beefy_height,
@@ -128,19 +128,28 @@ where
             .block_hash(Some(subxt_block_number))
             .await?;
 
-        let batch_proof = get_mmr_batch_proof(&self.relay_client, leaf_indices, block_hash).await?;
+        let batch_proof =
+            fetch_mmr_batch_proof(&self.relay_client, leaf_indices, block_hash).await?;
 
         let leaves: Vec<Vec<u8>> = Decode::decode(&mut &*batch_proof.leaves.to_vec())?;
 
         let mut parachain_headers = vec![];
         for leaf_bytes in leaves {
-            let LeafWithParaHeadsProof {
+            let leaf: MmrLeaf<u32, H256, H256, H256> = Decode::decode(&mut &*leaf_bytes)?;
+            let parent_block: u32 = leaf.parent_number_and_hash.0.into();
+            let leaf_block_number = (parent_block + 1) as u64;
+            let para_headers = finalized_blocks.get(&leaf_block_number).ok_or_else(|| {
+                BeefyClientError::Custom(format!(
+                    "[get_parachain_headers] Para Headers not found for relay chain block {}",
+                    leaf_block_number
+                ))
+            })?;
+            let ParaHeadsProof {
                 parachain_heads_proof,
                 para_head,
-                leaf,
                 heads_leaf_index,
                 heads_total_count,
-            } = calculate_parachain_heads_proof(leaf_bytes, &finalized_blocks, self.para_id)?;
+            } = prove_parachain_headers(&para_headers, self.para_id)?;
 
             let decoded_para_head = Header::<u32, BlakeTwo256>::decode(&mut &*para_head)?;
             let block_number = decoded_para_head.number;
@@ -204,7 +213,7 @@ where
         let block_number = signed_commitment.commitment.block_number;
         let leaf_index = get_leaf_index_for_block_number(self.beefy_activation_block, block_number);
         let leaf_proof =
-            get_mmr_leaf_proof(&self.relay_client, leaf_index.into(), block_hash).await?;
+            fetch_mmr_leaf_proof(&self.relay_client, leaf_index.into(), block_hash).await?;
 
         let opaque_leaf: Vec<u8> = codec::Decode::decode(&mut &*leaf_proof.leaf.0)?;
         let latest_leaf: MmrLeaf<u32, H256, H256, H256> =
@@ -222,7 +231,7 @@ where
         let AuthorityProofWithSignatures {
             authority_proof,
             signatures,
-        } = get_authority_proof(&signed_commitment, authority_address_hashes)?;
+        } = prove_authority_set(&signed_commitment, authority_address_hashes)?;
 
         Ok(MmrUpdateProof {
             signed_commitment: SignedCommitment {
@@ -246,7 +255,7 @@ where
             .to_runtime_api::<runtime::api::RuntimeApi<T, subxt::PolkadotExtrinsicParams<_>>>();
 
         let (signed_commitment, latest_beefy_finalized) =
-            get_beefy_justifications(&self.relay_client).await?;
+            fetch_beefy_justification(&self.relay_client).await?;
 
         println!("Constructing a beefy header");
         // Encoding and decoding to fix dependency version conflicts
