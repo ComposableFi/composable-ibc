@@ -300,7 +300,6 @@ async fn verify_parachain_headers() {
             .await
             .unwrap();
 
-        println!("parachain heads len: {}", parachain_headers.len());
         let parachain_update_proof = ParachainsUpdateProof {
             parachain_headers,
             mmr_proof: batch_proof,
