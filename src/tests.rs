@@ -294,11 +294,6 @@ async fn verify_parachain_headers() {
             signed_commitment.commitment
         );
 
-        println!(
-            "MMR Root: {:?}",
-            hex::encode(signed_commitment.commitment.payload.get_raw(b"mh").unwrap())
-        );
-
         let block_number = signed_commitment.commitment.block_number;
 
         let (parachain_headers, batch_proof) = parachain_client

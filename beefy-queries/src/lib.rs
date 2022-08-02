@@ -148,7 +148,6 @@ where
             .block_hash(Some(subxt_block_number))
             .await?;
 
-        println!("{{\"id\":29,\"jsonrpc\":\"2.0\",\"method\":\"mmr_generateBatchProof\",\"params\":[{:?}, \"{:?}\"]}}", leaf_indices, block_hash.clone().unwrap());
 
         let batch_proof =
             fetch_mmr_batch_proof(&self.relay_client, leaf_indices, block_hash).await?;
@@ -172,23 +171,6 @@ where
                 heads_leaf_index,
                 heads_total_count,
             } = prove_parachain_headers(&para_headers, self.para_id)?;
-
-            let proof =
-                rs_merkle::MerkleProof::<MerkleHasher<Crypto>>::new(parachain_heads_proof.clone());
-            let leaf_hash = keccak_256(&(self.para_id, para_head.clone()).encode());
-            let heads_root = proof
-                .root(
-                    &[heads_leaf_index as usize],
-                    &[leaf_hash],
-                    heads_total_count as usize,
-                )
-                .unwrap();
-
-            println!(
-                "reconstructed heads root: {}, leaf.extra_data: {}",
-                hex::encode(&heads_root),
-                hex::encode(leaf.leaf_extra)
-            );
 
             let decoded_para_head = Header::<u32, BlakeTwo256>::decode(&mut &*para_head)?;
             let block_number = decoded_para_head.number;
