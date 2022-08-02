@@ -7,12 +7,12 @@ use beefy_primitives::known_payload_ids::MMR_ROOT_ID;
 use beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
 use beefy_primitives::Payload;
 use beefy_queries::{ClientWrapper, Crypto};
-use frame_support::assert_ok;
 use pallet_mmr_primitives::Proof;
 use sp_core::bytes::to_hex;
 use subxt::rpc::{rpc_params, JsonValue, Subscription, SubscriptionClientT};
 
 #[tokio::test]
+#[ignore]
 async fn test_verify_mmr_with_proof() {
     let mut beef_light_client = BeefyLightClient::<Crypto>::new();
     let url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
@@ -294,12 +294,19 @@ async fn verify_parachain_headers() {
             signed_commitment.commitment
         );
 
+        println!(
+            "MMR Root: {:?}",
+            hex::encode(signed_commitment.commitment.payload.get_raw(b"mh").unwrap())
+        );
+
         let block_number = signed_commitment.commitment.block_number;
 
         let (parachain_headers, batch_proof) = parachain_client
             .fetch_finalized_parachain_headers_at(block_number, client_state.latest_beefy_height)
             .await
             .unwrap();
+
+        println!("parachain heads len: {}", parachain_headers.len());
         let parachain_update_proof = ParachainsUpdateProof {
             parachain_headers,
             mmr_proof: batch_proof,
@@ -312,10 +319,11 @@ async fn verify_parachain_headers() {
 
         client_state = beef_light_client
             .verify_mmr_root_with_proof(client_state, mmr_update)
-            .unwrap();
+            .expect("verify_mmr_root_with_proof should not panic!");
 
-        assert_ok!(beef_light_client
-            .verify_parachain_headers(client_state.clone(), parachain_update_proof));
+        beef_light_client
+            .verify_parachain_headers(client_state.clone(), parachain_update_proof)
+            .expect("verify_parachain_headers should not panic!");
 
         println!(
             "\nSuccessfully verified parachain headers for block number: {}\n",

@@ -19,7 +19,9 @@ use pallet_mmr_primitives::BatchProof;
 use relay_chain_queries::{fetch_beefy_justification, fetch_mmr_batch_proof};
 use sp_core::H256;
 use sp_io::crypto;
+use sp_runtime::traits::Header as HeaderT;
 use sp_runtime::{generic::Header, traits::BlakeTwo256};
+use subxt::rpc::{rpc_params, ClientT};
 use subxt::sp_core::keccak_256;
 use subxt::{Client, Config};
 
@@ -81,10 +83,22 @@ where
         }
         // Get initial validator set
         // In development mode validators are the same for all sessions only validator set_id changes
+        let client = client.expect("Client should be defined");
         let api = client
-            .expect("Client should be defined")
             .clone()
             .to_runtime_api::<runtime::api::RuntimeApi<T, subxt::PolkadotExtrinsicParams<_>>>();
+        let latest_beefy_finalized: <T as Config>::Hash = client
+            .rpc()
+            .client
+            .request("beefy_getFinalizedHead", rpc_params!())
+            .await
+            .unwrap();
+        let header = client
+            .rpc()
+            .header(Some(latest_beefy_finalized))
+            .await
+            .unwrap()
+            .unwrap();
         let validator_set_id = api.storage().beefy().validator_set_id(None).await.unwrap();
         let next_val_set = api
             .storage()
@@ -92,8 +106,9 @@ where
             .beefy_next_authorities(None)
             .await
             .expect("Authorirty set should be defined");
+        let latest_beefy_height: u64 = (*header.number()).into();
         ClientState {
-            latest_beefy_height: 0,
+            latest_beefy_height: latest_beefy_height as u32,
             mmr_root_hash: Default::default(),
             current_authorities: BeefyNextAuthoritySet {
                 id: validator_set_id,
@@ -133,6 +148,8 @@ where
             .block_hash(Some(subxt_block_number))
             .await?;
 
+        println!("{{\"id\":29,\"jsonrpc\":\"2.0\",\"method\":\"mmr_generateBatchProof\",\"params\":[{:?}, \"{:?}\"]}}", leaf_indices, block_hash.clone().unwrap());
+
         let batch_proof =
             fetch_mmr_batch_proof(&self.relay_client, leaf_indices, block_hash).await?;
 
@@ -155,6 +172,23 @@ where
                 heads_leaf_index,
                 heads_total_count,
             } = prove_parachain_headers(&para_headers, self.para_id)?;
+
+            let proof =
+                rs_merkle::MerkleProof::<MerkleHasher<Crypto>>::new(parachain_heads_proof.clone());
+            let leaf_hash = keccak_256(&(self.para_id, para_head.clone()).encode());
+            let heads_root = proof
+                .root(
+                    &[heads_leaf_index as usize],
+                    &[leaf_hash],
+                    heads_total_count as usize,
+                )
+                .unwrap();
+
+            println!(
+                "reconstructed heads root: {}, leaf.extra_data: {}",
+                hex::encode(&heads_root),
+                hex::encode(leaf.leaf_extra)
+            );
 
             let decoded_para_head = Header::<u32, BlakeTwo256>::decode(&mut &*para_head)?;
             let block_number = decoded_para_head.number;
