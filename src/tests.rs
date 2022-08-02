@@ -12,7 +12,6 @@ use sp_core::bytes::to_hex;
 use subxt::rpc::{rpc_params, JsonValue, Subscription, SubscriptionClientT};
 
 #[tokio::test]
-#[ignore]
 async fn test_verify_mmr_with_proof() {
     let mut beef_light_client = BeefyLightClient::<Crypto>::new();
     let url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
