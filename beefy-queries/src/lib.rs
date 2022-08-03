@@ -21,6 +21,7 @@ use sp_core::H256;
 use sp_io::crypto;
 use sp_runtime::traits::Header as HeaderT;
 use sp_runtime::{generic::Header, traits::BlakeTwo256};
+use sp_trie::LayoutV0;
 use subxt::rpc::{rpc_params, ClientT};
 use subxt::sp_core::keccak_256;
 use subxt::{Client, Config};
@@ -45,6 +46,20 @@ impl HostFunctions for Crypto {
         crypto::secp256k1_ecdsa_recover_compressed(signature, value)
             .ok()
             .map(|val| val.to_vec())
+    }
+
+    fn verify_timestamp_extrinsic(
+        root: H256,
+        proof: &[Vec<u8>],
+        key: &[u8],
+        value: &[u8],
+    ) -> Result<(), beefy_client_primitives::error::BeefyClientError> {
+        sp_trie::verify_trie_proof::<LayoutV0<BlakeTwo256>, _, _, _>(
+            &root,
+            proof,
+            &vec![(key, Some(value))],
+        )
+        .map_err(|e| From::from(e.to_string()))
     }
 }
 
@@ -171,7 +186,8 @@ where
                 heads_total_count,
             } = prove_parachain_headers(&para_headers, self.para_id)?;
 
-            let decoded_para_head = Header::<u32, BlakeTwo256>::decode(&mut &*para_head)?;
+            let decoded_para_head =
+                Header::<u32, BlakeTwo256>::decode(&mut para_head.clone().as_slice())?;
             let block_number = decoded_para_head.number;
             let subxt_block_number: subxt::BlockNumber = block_number.into();
             let block_hash = self
@@ -185,6 +201,10 @@ where
                 proof: extrinsic_proof,
             } = fetch_timestamp_extrinsic_with_proof(&self.para_client, block_hash).await?;
 
+            println!(
+                "Extrinsic Root from decodec parachain header {:?} {:?}",
+                decoded_para_head.number, decoded_para_head.extrinsics_root
+            );
             let header = ParachainHeader {
                 parachain_header: para_head,
                 partial_mmr_leaf: PartialMmrLeaf {

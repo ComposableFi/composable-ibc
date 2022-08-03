@@ -4,7 +4,7 @@ use beefy_client_primitives::{MerkleHasher, SignatureWithAuthorityIndex};
 use codec::{Decode, Encode};
 use frame_support::sp_runtime::traits::Convert;
 use sp_core::keccak_256;
-use sp_runtime::traits::BlakeTwo256;
+use sp_runtime::traits::{BlakeTwo256, Header};
 use sp_trie::{generate_trie_proof, TrieDBMut, TrieMut};
 use std::collections::BTreeMap;
 use subxt::{Client, Config};
@@ -69,6 +69,13 @@ pub async fn fetch_timestamp_extrinsic_with_proof<T: Config>(
                 root,
                 vec![&key],
             )?;
+
+            println!(
+                "({:?}) Calculated Ext Root {:?}, Header root {:?}",
+                block.block.header.number(),
+                root,
+                block.block.header.extrinsics_root()
+            );
             (timestamp_ext, extrinsic_proof)
         }
     };

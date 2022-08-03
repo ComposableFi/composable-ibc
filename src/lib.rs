@@ -17,24 +17,25 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use core::marker::PhantomData;
-
-pub mod error;
 #[cfg(test)]
 mod tests;
 
-use crate::error::BeefyClientError;
-use beefy_client_primitives::{get_leaf_index_for_block_number, MerkleHasher, NodesUtils};
+use beefy_client_primitives::{
+    error::BeefyClientError, get_leaf_index_for_block_number, MerkleHasher, NodesUtils,
+};
 use beefy_client_primitives::{
     BeefyNextAuthoritySet, ClientState, HostFunctions, MmrUpdateProof, ParachainsUpdateProof,
     SignatureWithAuthorityIndex, HASH_LENGTH,
 };
 use beefy_primitives::known_payload_ids::MMR_ROOT_ID;
 use beefy_primitives::mmr::MmrLeaf;
-use codec::Encode;
+use codec::{Decode, Encode};
 use frame_support::sp_runtime::app_crypto::ByteArray;
 use frame_support::sp_runtime::traits::Convert;
 use sp_core::H256;
 
+use sp_runtime::generic::Header;
+use sp_runtime::traits::BlakeTwo256;
 use sp_std::prelude::*;
 use sp_std::vec;
 
@@ -215,6 +216,25 @@ impl<Crypto: HostFunctions + Clone> BeefyLightClient<Crypto> {
         let mut mmr_leaves = Vec::new();
 
         for parachain_header in parachain_update.parachain_headers {
+            let decoded_para_header =
+                Header::<u32, BlakeTwo256>::decode(&mut &*parachain_header.parachain_header)?;
+            // Verify timestamp extrinsic
+            // just to be safe skip genesis block if it's included, it has no timestamp
+            if decoded_para_header.number != 0 {
+                let proof = &*parachain_header.extrinsic_proof;
+                let ext = &*parachain_header.timestamp_extrinsic;
+                // Timestamp extrinsic should be the first inherent and hence the first extrinsic
+                // https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
+                let key = codec::Compact(0u32).encode();
+                let extrinsic_root = decoded_para_header.extrinsics_root;
+                <Crypto as HostFunctions>::verify_timestamp_extrinsic(
+                    extrinsic_root,
+                    proof,
+                    &key,
+                    ext,
+                )?;
+            }
+
             let pair = (parachain_header.para_id, parachain_header.parachain_header);
             let leaf_bytes = pair.encode();
 
