@@ -253,6 +253,11 @@ async fn verify_parachain_headers() {
         .await
         .unwrap();
 
+    println!("Waiting for parachain to start producing blocks");
+    let block_sub = para_client.rpc().subscribe_blocks().await.unwrap();
+    block_sub.take(2).collect::<Vec<_>>().await;
+    println!("Parachain has started producing blocks");
+
     let parachain_client = ClientWrapper {
         relay_client: client,
         para_client,

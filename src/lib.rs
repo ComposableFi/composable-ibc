@@ -16,6 +16,8 @@
 //! Beefy Light Client Implementation
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
 use core::marker::PhantomData;
 #[cfg(test)]
 mod tests;
@@ -34,6 +36,7 @@ use frame_support::sp_runtime::app_crypto::ByteArray;
 use frame_support::sp_runtime::traits::Convert;
 use sp_core::H256;
 
+use alloc::string::ToString;
 use sp_runtime::generic::Header;
 use sp_runtime::traits::BlakeTwo256;
 use sp_std::prelude::*;
@@ -211,29 +214,37 @@ impl<Crypto: HostFunctions + Clone> BeefyLightClient<Crypto> {
     pub fn verify_parachain_headers(
         &self,
         trusted_client_state: ClientState,
-        parachain_update: ParachainsUpdateProof,
+        ParachainsUpdateProof {
+            mmr_proof,
+            parachain_headers,
+        }: ParachainsUpdateProof,
     ) -> Result<(), BeefyClientError> {
         let mut mmr_leaves = Vec::new();
 
-        for parachain_header in parachain_update.parachain_headers {
+        for parachain_header in parachain_headers {
             let decoded_para_header =
                 Header::<u32, BlakeTwo256>::decode(&mut &*parachain_header.parachain_header)?;
+
             // Verify timestamp extrinsic
             // just to be safe skip genesis block if it's included, it has no timestamp
-            if decoded_para_header.number != 0 {
-                let proof = &*parachain_header.extrinsic_proof;
-                let ext = &*parachain_header.timestamp_extrinsic;
-                // Timestamp extrinsic should be the first inherent and hence the first extrinsic
-                // https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
-                let key = codec::Compact(0u32).encode();
-                let extrinsic_root = decoded_para_header.extrinsics_root;
-                <Crypto as HostFunctions>::verify_timestamp_extrinsic(
-                    extrinsic_root,
-                    proof,
-                    &key,
-                    ext,
-                )?;
+            if decoded_para_header.number == 0 {
+                Err(BeefyClientError::Custom(
+                    "Genesis block found, it should not be included".to_string(),
+                ))?
             }
+            // println!("\n[On-Chain]: Parachain header {:?}\n", decoded_para_header);
+            let proof = &*parachain_header.extrinsic_proof;
+            let ext = &*parachain_header.timestamp_extrinsic;
+            // Timestamp extrinsic should be the first inherent and hence the first extrinsic
+            // https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
+            let key = codec::Compact(0u32).encode();
+            let extrinsic_root = decoded_para_header.extrinsics_root;
+            <Crypto as HostFunctions>::verify_timestamp_extrinsic(
+                extrinsic_root,
+                proof,
+                &key,
+                ext,
+            )?;
 
             let pair = (parachain_header.para_id, parachain_header.parachain_header);
             let leaf_bytes = pair.encode();
@@ -269,11 +280,8 @@ impl<Crypto: HostFunctions + Clone> BeefyLightClient<Crypto> {
             mmr_leaves.push((leaf_pos, H256::from_slice(&node)));
         }
 
-        let mmr_size = NodesUtils::new(parachain_update.mmr_proof.leaf_count).size();
-        let proof = mmr_lib::MerkleProof::<_, MerkleHasher<Crypto>>::new(
-            mmr_size,
-            parachain_update.mmr_proof.items,
-        );
+        let mmr_size = NodesUtils::new(mmr_proof.leaf_count).size();
+        let proof = mmr_lib::MerkleProof::<_, MerkleHasher<Crypto>>::new(mmr_size, mmr_proof.items);
 
         let root = proof.calculate_root(mmr_leaves)?;
         if root != trusted_client_state.mmr_root_hash {
