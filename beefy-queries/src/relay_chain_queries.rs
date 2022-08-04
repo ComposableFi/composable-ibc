@@ -74,14 +74,14 @@ where
         let mut heads = BTreeMap::new();
 
         for para_id in para_ids.iter() {
-            let key = parachain_header_storage_key(para_id.0);
-            let raw_header_bytes: Vec<u8> =
-                match client.storage().fetch_raw(key, Some(header.hash())).await? {
-                    Some(data) => Decode::decode(&mut &data.0[..])?,
-                    None => continue,
-                };
-
-            heads.insert(para_id.0, raw_header_bytes);
+            if let Some(head) = api
+                .storage()
+                .paras()
+                .heads(para_id, Some(header.hash()))
+                .await?
+            {
+                heads.insert(para_id.0, head.0);
+            }
         }
 
         let para_header: sp_runtime::generic::Header<u32, BlakeTwo256> =
