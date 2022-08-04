@@ -151,7 +151,6 @@ pub async fn fetch_mmr_batch_proof<T: Config>(
     leaf_indices: Vec<u32>,
     block_hash: Option<T::Hash>,
 ) -> Result<LeafBatchProof<H256>, Error> {
-    // println!("[Batch Proof] Leaf Indices: {leaf_indices:?} at Block hash {block_hash:?}");
     let proof: LeafBatchProof<H256> = client
         .rpc()
         .client
@@ -169,7 +168,6 @@ pub async fn fetch_mmr_leaf_proof<T: Config>(
     leaf_index: u64,
     block_hash: Option<T::Hash>,
 ) -> Result<LeafProof<H256>, Error> {
-    // println!("[Leaf Proof] Leaf Index: {leaf_index:?}, at Block hash {block_hash:?}");
     let proof: LeafProof<H256> = client
         .rpc()
         .client

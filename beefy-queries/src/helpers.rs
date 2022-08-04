@@ -44,12 +44,6 @@ pub async fn fetch_timestamp_extrinsic_with_proof<T: Config>(
         .map(|e| e.encode())
         .collect::<Vec<_>>();
 
-    println!(
-        "\n[Off-Chain]: From Parachain #{:?} {:?}\n",
-        block.block.header.number(),
-        hex::encode(&block.block.header.encode())
-    );
-
     let (ext, proof) = {
         if extrinsics.is_empty() {
             return Err(From::from("Block has no extrinsics".to_string()));
@@ -68,8 +62,6 @@ pub async fn fetch_timestamp_extrinsic_with_proof<T: Config>(
             }
             *trie.root()
         };
-
-        println!("Calculated Root: {:?}", root);
 
         let key = codec::Compact::<u32>(0u32).encode();
         let extrinsic_proof =

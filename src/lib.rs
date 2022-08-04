@@ -232,7 +232,6 @@ impl<Crypto: HostFunctions + Clone> BeefyLightClient<Crypto> {
                     "Genesis block found, it should not be included".to_string(),
                 ))?
             }
-            // println!("\n[On-Chain]: Parachain header {:?}\n", decoded_para_header);
             let proof = &*parachain_header.extrinsic_proof;
             let ext = &*parachain_header.timestamp_extrinsic;
             // Timestamp extrinsic should be the first inherent and hence the first extrinsic

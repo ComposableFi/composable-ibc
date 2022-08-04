@@ -292,7 +292,6 @@ where
         let (signed_commitment, latest_beefy_finalized) =
             fetch_beefy_justification(&self.relay_client).await?;
 
-        println!("Constructing a beefy header");
         // Encoding and decoding to fix dependency version conflicts
         let next_authority_set = api
             .storage()

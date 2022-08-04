@@ -234,7 +234,7 @@ async fn verify_parachain_headers() {
         .build::<subxt::DefaultConfig>()
         .await
         .unwrap();
-    let para_url = std::env::var("PARA_NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9988".to_string());
+    let para_url = std::env::var("PARA_NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9188".to_string());
     let para_client = subxt::ClientBuilder::new()
         .set_url(para_url)
         .build::<subxt::DefaultConfig>()
