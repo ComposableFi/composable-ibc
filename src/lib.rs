@@ -213,20 +213,18 @@ where
         let decoded_para_header =
             Header::<u32, BlakeTwo256>::decode(&mut &*parachain_header.parachain_header)?;
 
-        // Verify timestamp extrinsic
         // just to be safe skip genesis block if it's included, it has no timestamp
         if decoded_para_header.number == 0 {
             Err(BeefyClientError::Custom(
                 "Genesis block found, it should not be included".to_string(),
             ))?
         }
+
+        // Verify timestamp extrinsic
         let proof = &*parachain_header.extrinsic_proof;
         let ext = &*parachain_header.timestamp_extrinsic;
-        // Timestamp extrinsic should be the first inherent and hence the first extrinsic
-        // https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
-        let key = codec::Compact(0u32).encode();
         let extrinsic_root = decoded_para_header.extrinsics_root;
-        <H as HostFunctions>::verify_timestamp_extrinsic(extrinsic_root, proof, &key, ext)?;
+        <H as HostFunctions>::verify_timestamp_extrinsic(extrinsic_root, proof, ext)?;
 
         let pair = (parachain_header.para_id, parachain_header.parachain_header);
         let leaf_bytes = pair.encode();
