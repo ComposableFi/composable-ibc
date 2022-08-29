@@ -247,6 +247,8 @@ where
             leaf_extra: H256::from_slice(&root),
         };
 
+        dbg!(&mmr_leaf);
+
         let node = mmr_leaf.using_encoded(|leaf| H::keccak_256(leaf));
         let leaf_index = get_leaf_index_for_block_number(
             trusted_client_state.beefy_activation_block,

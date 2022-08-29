@@ -61,6 +61,7 @@ where
         .await?;
     let mut finalized_blocks = BTreeMap::new();
     let mut leaf_indices = vec![];
+
     for changes in change_set {
         let header = client
             .rpc()
@@ -74,14 +75,14 @@ where
             })?;
 
         let mut heads = BTreeMap::new();
-        for para_id in para_ids.iter() {
+        for id in para_ids.iter() {
             if let Some(head) = api
                 .storage()
                 .paras()
-                .heads(para_id, Some(header.hash()))
+                .heads(id, Some(header.hash()))
                 .await?
             {
-                heads.insert(para_id.0, head.0);
+                heads.insert(id.0, head.0);
             }
         }
 
@@ -92,6 +93,7 @@ where
         if number == Zero::zero() || !header_numbers.contains(&number) {
             continue;
         }
+        dbg!(&number);
 
         let block_number = u32::from(number);
         finalized_blocks.insert(block_number as u64, heads);
