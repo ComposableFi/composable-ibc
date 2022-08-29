@@ -88,14 +88,13 @@ where
 
         let para_header: T::Header = Decode::decode(&mut &heads[&para_id][..])
             .map_err(|_| Error::Custom(format!("Failed to decode header for {para_id}")))?;
-        let number = *para_header.number();
+        let para_block_number = *para_header.number();
         // skip genesis header or any unknown headers
-        if number == Zero::zero() || !header_numbers.contains(&number) {
+        if para_block_number == Zero::zero() || !header_numbers.contains(&para_block_number) {
             continue;
         }
-        dbg!(&number);
 
-        let block_number = u32::from(number);
+        let block_number = u32::from(*header.number());
         finalized_blocks.insert(block_number as u64, heads);
         leaf_indices.push(get_leaf_index_for_block_number(
             beefy_activation_block,

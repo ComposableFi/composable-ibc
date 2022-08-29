@@ -251,12 +251,9 @@ where
 
         let leaves: Vec<Vec<u8>> = Decode::decode(&mut &*batch_proof.leaves.to_vec())?;
 
-        dbg!(&header_numbers);
-
         let mut parachain_headers = vec![];
         for leaf_bytes in leaves {
             let leaf: MmrLeaf<u32, H256, H256, H256> = Decode::decode(&mut &*leaf_bytes)?;
-            dbg!(&leaf);
             let parent_block: u32 = leaf.parent_number_and_hash.0.into();
             let leaf_block_number = (parent_block + 1) as u64;
             let para_headers = finalized_blocks.get(&leaf_block_number).ok_or_else(|| {

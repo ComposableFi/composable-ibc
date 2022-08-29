@@ -98,8 +98,6 @@ pub fn prove_parachain_headers(
 
     let tree = rs_merkle::MerkleTree::<MerkleHasher<Crypto>>::from_leaves(&parachain_leaves);
 
-    dbg!(hex::encode(&tree.root().unwrap()));
-
     let proof = tree
         .proof(&[heads_leaf_index as usize])
         .proof_hashes()
