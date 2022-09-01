@@ -18,20 +18,23 @@ hex = "0.4.3"
 tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
 
 [dependencies]
-finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-features = false }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
+anyhow = { version = "1.0.63", default-features = false }
+
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
-anyhow = { version = "1.0.63", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
+
+finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-features = false }
 
 [dev-dependencies]
 subxt = { git = "https://github.com/paritytech/subxt", rev = "c55b7ba3e34118f61dc51499a0b38262c513aec4" }
 futures = "0.3.24"
 hex = "0.4.3"
 serde = "1.0.144"
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.27" }
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
 finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
@@ -47,4 +50,6 @@ std = [
     "anyhow/std",
     "sp-state-machine/std",
     "sp-trie/std",
+    "sp-core/std",
+    "frame-support/std",
 ]

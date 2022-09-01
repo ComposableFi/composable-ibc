@@ -2,14 +2,12 @@ use crate::justification::{AncestryChain, FinalityProof, GrandpaJustification};
 use anyhow::anyhow;
 use codec::{Decode, Encode};
 use finality_grandpa::Chain;
-use futures::StreamExt;
 use sp_core::storage::StorageKey;
 use sp_finality_grandpa::AuthorityList;
-use sp_runtime::traits::{BlakeTwo256, Block, Header};
+use sp_runtime::traits::{Block, Header, NumberFor};
 use sp_state_machine::StorageProof;
 use sp_trie::LayoutV0;
 use std::collections::HashMap;
-use std::hash::Hash;
 
 pub mod justification;
 
@@ -40,13 +38,14 @@ pub struct ParachainHeaderProofs {
 }
 
 /// Verify a new grandpa justification, given the old state.
-pub fn verify_grandpa_finality_proof<B, H>(a
-    mut client_state: ClientState<B::Header>,
+pub fn verify_grandpa_finality_proof<B, H>(
+    mut client_state: ClientState<B::Hash>,
     proof: FinalityProof<B::Header>,
-) -> Result<ClientState<B::Header>, anyhow::Error>
+) -> Result<ClientState<B::Hash>, anyhow::Error>
 where
     B: Block,  // relay chain block type
     H: Header, // parachain header
+    NumberFor<B>: finality_grandpa::BlockNumberOps,
 {
     let mut parachain_headers: HashMap<B::Hash, ParachainHeaderProofs> = Default::default();
 
@@ -57,12 +56,12 @@ where
         .ok_or_else(|| anyhow!("Target header not found!"))?;
 
     // 2. next check that there exists a route from client.latest_relay_hash to target.
-    let finalized = headers.ancestry(&client_state.latest_relay_hash, &proof.block)?;
+    let finalized = headers.ancestry(client_state.latest_relay_hash, proof.block)?;
 
     // 3. todo: check for authority set change
 
     // 4. verify justification.
-    let mut justification = GrandpaJustification::<B>::decode(&mut &proof.justification[..])?;
+    let justification = GrandpaJustification::<B>::decode(&mut &proof.justification[..])?;
     justification.verify(
         client_state.current_set_id,
         &client_state.current_authorities,
@@ -81,11 +80,12 @@ where
             } = proofs;
             let proof = StorageProof::new(state_proof);
             let key = parachain_header_storage_key(client_state.para_id);
-            let header = sp_state_machine::read_proof_check(
-                relay_chain_header.state_root(),
+            let header = sp_state_machine::read_proof_check::<<B::Header as Header>::Hashing, _>(
+                relay_chain_header.state_root().clone(),
                 proof,
                 &[key.as_ref()],
-            )?
+            )
+            .map_err(|err| anyhow!("error verifying parachain header state proof: {err}"))?
             .remove(key.as_ref())
             .flatten()
             .ok_or_else(|| anyhow!("Invalid proof, parachain header not found"))?;
@@ -93,11 +93,11 @@ where
             // Timestamp extrinsic should be the first inherent and hence the first extrinsic
             let key = codec::Compact(0u32).encode();
             // verify timestamp extrinsic proof
-            sp_trie::verify_trie_proof::<LayoutV0<BlakeTwo256>, _, _, _>(
+            sp_trie::verify_trie_proof::<LayoutV0<H::Hashing>, _, _, _>(
                 parachain_header.state_root(),
                 &extrinsic_proof,
                 &vec![(key, Some(&extrinsic[..]))],
-            )
+            )?;
         }
     }
 
