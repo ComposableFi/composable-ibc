@@ -295,7 +295,7 @@ mod tests {
             .set_url(url)
             .build::<DefaultConfig>()
             .await
-            .unwrap();
+            .expect("Failed to initialize subxt");
 
         let api = client
             .clone()
@@ -305,20 +305,20 @@ mod tests {
             .rpc()
             .subscribe_finalized_blocks()
             .await
-            .unwrap()
+            .expect("Failed to subscribe finalized blocks")
             .chunks(3);
 
         while let Some(headers) = subscription.next().await {
-            let headers = headers.into_iter().collect::<Result<Vec<_>, _>>().unwrap();
-            let header = headers.last().unwrap();
-            let current_set_id = api
+            let headers = headers.into_iter().collect::<Result<Vec<_>, _>>().expect("");
+            let header = headers.last().expect("");
+            let mut current_set_id = api
                 .storage()
                 .grandpa()
                 .current_set_id(Some(header.hash()))
                 .await
-                .unwrap();
+                .expect("Failed to fetch current set id");
 
-            let header = Header::decode(&mut &header.encode()[..]).unwrap();
+            let header = Header::decode(&mut &header.encode()[..]).expect("Failed to decode header");
             println!("========= New Header =========");
             println!(
                 "Got header: Hash({}), Number({})",
@@ -326,8 +326,30 @@ mod tests {
                 header.number
             );
 
-            let scheduled_authority_set = find_scheduled_change::<Block>(&header);
-            println!("scheduled_authority_set: {scheduled_authority_set:#?}");
+            let authorities = match find_scheduled_change::<Block>(&header) {
+                Some(scheduled_authority_set) => {
+                    current_set_id += 1;
+                    println!(
+                        "Found scheduled authority set wit delay: {} blocks",
+                        scheduled_authority_set.delay
+                    );
+                    scheduled_authority_set.next_authorities
+                }
+                None => {
+                    let authorities = client
+                        .rpc()
+                        .client
+                        .request::<String>(
+                            "state_call",
+                            rpc_params!("GrandpaApi_grandpa_authorities", "0x"),
+                        )
+                        .await
+                        .expect("Failed to fetch authorities");
+
+                    let authorities = hex::decode(&authorities[2..]).expect("Failed to hex decode authorities");
+                    AuthorityList::decode(&mut &authorities[..]).expect("Failed to scale decode authorities")
+                }
+            };
             let forced_authority_set = find_forced_change::<Block>(&header);
             println!("forced_authority_set: {forced_authority_set:#?}");
 
@@ -336,13 +358,13 @@ mod tests {
                 header.number,
             )
             .await
-            .unwrap()
-            .unwrap()
+            .expect("Failed to fetch finality proof")
+            .expect("Failed to fetch finality proof")
             .0
              .0;
 
             println!("justification size: {}kb", size_of_val(&*encoded) / 1000);
-            let finality_proof = FinalityProof::<Header>::decode(&mut &encoded[..]).unwrap();
+            let finality_proof = FinalityProof::<Header>::decode(&mut &encoded[..]).expect("Failed to decode finality proof");
             let unknown_headers = finality_proof
                 .unknown_headers
                 .iter()
@@ -351,20 +373,8 @@ mod tests {
             println!("unknown_headers: {unknown_headers:#?}",);
 
             let mut justification =
-                Justification::decode(&mut &finality_proof.justification[..]).unwrap();
+                Justification::decode(&mut &finality_proof.justification[..]).expect("Failed to decode justification");
 
-            let authorities = client
-                .rpc()
-                .client
-                .request::<String>(
-                    "state_call",
-                    rpc_params!("GrandpaApi_grandpa_authorities", "0x"),
-                )
-                .await
-                .unwrap();
-
-            let authorities = hex::decode(&authorities[2..]).unwrap();
-            let authorities = AuthorityList::decode(&mut &authorities[..]).unwrap();
             justification
                 .verify(current_set_id, &authorities)
                 .expect("Failed to verify proof");
