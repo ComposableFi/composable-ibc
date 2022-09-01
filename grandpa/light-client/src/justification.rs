@@ -43,9 +43,9 @@ pub struct FinalityProof<Header: HeaderT> {
 /// nodes, and are used by syncing nodes to prove authority set handoffs.
 #[derive(Clone, Encode, Decode, PartialEq, Eq, Debug)]
 pub struct GrandpaJustification<Block: BlockT> {
-    pub(crate) round: u64,
-    pub(crate) commit: Commit<Block>,
-    pub(crate) votes_ancestries: Vec<Block::Header>,
+    pub round: u64,
+    pub commit: Commit<Block>,
+    pub votes_ancestries: Vec<Block::Header>,
 }
 
 impl<Block: BlockT> GrandpaJustification<Block> {
@@ -309,8 +309,8 @@ mod tests {
             .chunks(3);
 
         while let Some(headers) = subscription.next().await {
-            let headers = headers.into_iter().collect::<Result<Vec<_>, _>>().expect("");
-            let header = headers.last().expect("");
+            let headers = headers.into_iter().collect::<Result<Vec<_>, _>>().expect("Error fetching headers");
+            let header = headers.last().expect("Error fetching headers");
             let mut current_set_id = api
                 .storage()
                 .grandpa()
@@ -330,7 +330,7 @@ mod tests {
                 Some(scheduled_authority_set) => {
                     current_set_id += 1;
                     println!(
-                        "Found scheduled authority set wit delay: {} blocks",
+                        "Found scheduled authority set with delay: {} blocks",
                         scheduled_authority_set.delay
                     );
                     scheduled_authority_set.next_authorities
@@ -361,7 +361,7 @@ mod tests {
             .expect("Failed to fetch finality proof")
             .expect("Failed to fetch finality proof")
             .0
-             .0;
+            .0;
 
             println!("justification size: {}kb", size_of_val(&*encoded) / 1000);
             let finality_proof = FinalityProof::<Header>::decode(&mut &encoded[..]).expect("Failed to decode finality proof");
