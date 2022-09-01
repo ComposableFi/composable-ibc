@@ -17,20 +17,30 @@ pub mod justification;
 mod kusama;
 
 pub struct ClientState<H> {
+    // Current authority set
     current_authorities: AuthorityList,
+    // Id of the current authority set.
     current_set_id: u64,
-    latest_hash: H,
+    // latest finalized hash on the relay chain.
+    latest_relay_hash: H,
+    // para_id of associated parachain
     para_id: u32,
+    // latest height of the parachain.
+    latest_para_height: u32,
 }
 
-struct ParachainHeaderProofs {
+/// Holds relavant parachain proofs for both header and timestamp extrinsic.
+pub struct ParachainHeaderProofs {
+    /// State proofs that prove a parachain header exists at a given relay chain height
     state_proof: Vec<Vec<u8>>,
+    /// Timestamp extrinsic for ibc
     extrinsic: Vec<u8>,
+    /// Timestamp extrinsic proof for previously proven parachain header.
     extrinsic_proof: Vec<Vec<u8>>,
 }
 
 /// Verify a new grandpa justification, given the old state.
-pub fn verify_grandpa_finality_proof<B, H>(
+pub fn verify_grandpa_finality_proof<B, H>(a
     mut client_state: ClientState<B::Header>,
     proof: FinalityProof<B::Header>,
 ) -> Result<ClientState<B::Header>, anyhow::Error>
@@ -46,8 +56,8 @@ where
         .header(&proof.block)
         .ok_or_else(|| anyhow!("Target header not found!"))?;
 
-    // 2. next check that there exists a route from client.latest_hash to target.
-    let finalized = headers.ancestry(&client_state.latest_hash, &proof.block)?;
+    // 2. next check that there exists a route from client.latest_relay_hash to target.
+    let finalized = headers.ancestry(&client_state.latest_relay_hash, &proof.block)?;
 
     // 3. todo: check for authority set change
 
@@ -81,9 +91,8 @@ where
             .ok_or_else(|| anyhow!("Invalid proof, parachain header not found"))?;
             let parachain_header = H::decode(&mut &header[..])?;
             // Timestamp extrinsic should be the first inherent and hence the first extrinsic
-            // https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
             let key = codec::Compact(0u32).encode();
-            // verify timestamp extrinsic
+            // verify timestamp extrinsic proof
             sp_trie::verify_trie_proof::<LayoutV0<BlakeTwo256>, _, _, _>(
                 parachain_header.state_root(),
                 &extrinsic_proof,
@@ -93,11 +102,12 @@ where
     }
 
     // 6. set new client state, optionally rotating authorities
-    client_state.latest_hash = target.hash();
+    client_state.latest_relay_hash = target.hash();
 
     Ok(client_state)
 }
 
+/// This returns the storage key for a parachain header on the relay chain.
 pub fn parachain_header_storage_key(para_id: u32) -> StorageKey {
     let mut storage_key = frame_support::storage::storage_prefix(b"Paras", b"Heads").to_vec();
     let encoded_para_id = para_id.encode();
