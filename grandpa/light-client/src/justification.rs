@@ -305,12 +305,9 @@ mod tests {
             .rpc()
             .subscribe_finalized_blocks()
             .await
-            .expect("Failed to subscribe finalized blocks")
-            .chunks(3);
+            .expect("Failed to subscribe finalized blocks");
 
-        while let Some(headers) = subscription.next().await {
-            let headers = headers.into_iter().collect::<Result<Vec<_>, _>>().expect("Error fetching headers");
-            let header = headers.last().expect("Error fetching headers");
+        while let Some(Ok(header)) = subscription.next().await {
             let mut current_set_id = api
                 .storage()
                 .grandpa()
@@ -350,8 +347,9 @@ mod tests {
                     AuthorityList::decode(&mut &authorities[..]).expect("Failed to scale decode authorities")
                 }
             };
-            let forced_authority_set = find_forced_change::<Block>(&header);
-            println!("forced_authority_set: {forced_authority_set:#?}");
+            if let Some((delay, forced_authority_set)) = find_forced_change::<Block>(&header) {
+                println!("Found forced authority set: block import delay: {}", delay);
+            }
 
             let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
                 &*client.rpc().client,
