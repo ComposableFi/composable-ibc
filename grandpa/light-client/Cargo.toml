@@ -20,7 +20,9 @@ tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
 [dependencies]
 finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
+sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 anyhow = { version = "1.0.63", default-features = false }
 
@@ -42,5 +44,7 @@ std = [
     "sp-runtime/std",
     "sp-finality-grandpa/std",
     "codec/std",
-    "anyhow/std"
+    "anyhow/std",
+    "sp-state-machine/std",
+    "sp-trie/std",
 ]

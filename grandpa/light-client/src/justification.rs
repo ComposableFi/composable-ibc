@@ -181,12 +181,12 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 /// A utility trait implementing `finality_grandpa::Chain` using a given set of headers.
 /// This is useful when validating commits, using the given set of headers to
 /// verify a valid ancestry route to the target commit block.
-struct AncestryChain<Block: BlockT> {
+pub struct AncestryChain<Block: BlockT> {
     ancestry: HashMap<Block::Hash, Block::Header>,
 }
 
 impl<Block: BlockT> AncestryChain<Block> {
-    fn new(ancestry: &[Block::Header]) -> AncestryChain<Block> {
+    pub fn new(ancestry: &[Block::Header]) -> AncestryChain<Block> {
         let ancestry: HashMap<_, _> = ancestry
             .iter()
             .cloned()
@@ -194,6 +194,10 @@ impl<Block: BlockT> AncestryChain<Block> {
             .collect();
 
         AncestryChain { ancestry }
+    }
+
+    pub fn header(&self, hash: &Block::Hash) -> Option<&Block::Header> {
+        self.ancestry.get(hash)
     }
 }
 
@@ -281,7 +285,7 @@ mod tests {
     use subxt::rpc::{rpc_params, ClientT};
     use subxt::DefaultConfig;
 
-    type Justification = GrandpaJustification<Block>;
+    pub type Justification = GrandpaJustification<Block>;
 
     /// An encoded justification proving that the given header has been finalized
     #[derive(Clone, Serialize, Deserialize)]
@@ -315,7 +319,8 @@ mod tests {
                 .await
                 .expect("Failed to fetch current set id");
 
-            let header = Header::decode(&mut &header.encode()[..]).expect("Failed to decode header");
+            let header =
+                Header::decode(&mut &header.encode()[..]).expect("Failed to decode header");
             println!("========= New Header =========");
             println!(
                 "Got header: Hash({}), Number({})",
@@ -343,12 +348,18 @@ mod tests {
                         .await
                         .expect("Failed to fetch authorities");
 
-                    let authorities = hex::decode(&authorities[2..]).expect("Failed to hex decode authorities");
-                    AuthorityList::decode(&mut &authorities[..]).expect("Failed to scale decode authorities")
+                    let authorities =
+                        hex::decode(&authorities[2..]).expect("Failed to hex decode authorities");
+                    AuthorityList::decode(&mut &authorities[..])
+                        .expect("Failed to scale decode authorities")
                 }
             };
             if let Some((delay, forced_authority_set)) = find_forced_change::<Block>(&header) {
-                println!("Found forced authority set: block import delay: {}", delay);
+                println!("Found forced authority set: block import delay: {delay} blocks");
+                println!(
+                    "forced_authority_set.delay: {} blocks",
+                    forced_authority_set.delay
+                );
             }
 
             let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
@@ -359,10 +370,11 @@ mod tests {
             .expect("Failed to fetch finality proof")
             .expect("Failed to fetch finality proof")
             .0
-            .0;
+             .0;
 
             println!("justification size: {}kb", size_of_val(&*encoded) / 1000);
-            let finality_proof = FinalityProof::<Header>::decode(&mut &encoded[..]).expect("Failed to decode finality proof");
+            let finality_proof = FinalityProof::<Header>::decode(&mut &encoded[..])
+                .expect("Failed to decode finality proof");
             let unknown_headers = finality_proof
                 .unknown_headers
                 .iter()
@@ -370,8 +382,8 @@ mod tests {
                 .collect::<Vec<_>>();
             println!("unknown_headers: {unknown_headers:#?}",);
 
-            let mut justification =
-                Justification::decode(&mut &finality_proof.justification[..]).expect("Failed to decode justification");
+            let mut justification = Justification::decode(&mut &finality_proof.justification[..])
+                .expect("Failed to decode justification");
 
             justification
                 .verify(current_set_id, &authorities)
