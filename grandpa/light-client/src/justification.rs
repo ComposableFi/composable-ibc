@@ -1,6 +1,6 @@
+use anyhow::{anyhow, Error};
 use codec::{Decode, Encode};
 use finality_grandpa::voter_set::VoterSet;
-use sp_blockchain::Error;
 use sp_finality_grandpa::{
     AuthorityId, AuthoritySignature, AuthorityWeight, ConsensusLog, ScheduledChange,
     GRANDPA_ENGINE_ID,
@@ -61,15 +61,14 @@ impl<Block: BlockT> GrandpaJustification<Block> {
         NumberFor<Block>: finality_grandpa::BlockNumberOps,
     {
         let justification = GrandpaJustification::<Block>::decode(&mut &*encoded)
-            .map_err(|_| Error::JustificationDecode)?;
+            .map_err(|_| anyhow!("Error decoding justification"))?;
 
         if (
             justification.commit.target_hash,
             justification.commit.target_number,
         ) != finalized_target
         {
-            let msg = "invalid commit target in grandpa justification".to_string();
-            Err(Error::BadJustification(msg))
+            Err(anyhow!("invalid commit target in grandpa justification"))?
         } else {
             justification
                 .verify_with_voter_set(set_id, voters)
@@ -82,8 +81,8 @@ impl<Block: BlockT> GrandpaJustification<Block> {
     where
         NumberFor<Block>: finality_grandpa::BlockNumberOps,
     {
-        let voters = VoterSet::new(authorities.iter().cloned())
-            .ok_or(Error::Consensus(sp_consensus::Error::InvalidAuthoritiesSet))?;
+        let voters =
+            VoterSet::new(authorities.iter().cloned()).ok_or(anyhow!("Invalid AuthoritiesSet"))?;
 
         self.verify_with_voter_set(set_id, &voters)
     }
@@ -103,10 +102,7 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 
         match finality_grandpa::validate_commit(&self.commit, voters, &ancestry_chain) {
             Ok(ref result) if result.is_valid() => {}
-            _ => {
-                let msg = "invalid commit in grandpa justification".to_string();
-                return Err(Error::BadJustification(msg));
-            }
+            _ => Err(anyhow!("invalid commit in grandpa justification"))?,
         }
 
         // we pick the precommit for the lowest block as the base that
@@ -137,9 +133,9 @@ impl<Block: BlockT> GrandpaJustification<Block> {
                 set_id,
                 &mut buf,
             ) {
-                return Err(Error::BadJustification(
-                    "invalid signature for precommit in grandpa justification".to_string(),
-                ));
+                Err(anyhow!(
+                    "invalid signature for precommit in grandpa justification"
+                ))?
             }
 
             if base_hash == signed.precommit.target_hash {
@@ -155,11 +151,9 @@ impl<Block: BlockT> GrandpaJustification<Block> {
                         visited_hashes.insert(hash);
                     }
                 }
-                _ => {
-                    return Err(Error::BadJustification(
-                        "invalid precommit ancestry proof in grandpa justification".to_string(),
-                    ))
-                }
+                _ => Err(anyhow!(
+                    "invalid precommit ancestry proof in grandpa justification",
+                ))?,
             }
         }
 
@@ -170,10 +164,9 @@ impl<Block: BlockT> GrandpaJustification<Block> {
             .collect();
 
         if visited_hashes != ancestry_hashes {
-            return Err(Error::BadJustification(
-                "invalid precommit ancestries in grandpa justification with unused headers"
-                    .to_string(),
-            ));
+            Err(anyhow!(
+                "invalid precommit ancestries in grandpa justification with unused headers",
+            ))?
         }
 
         Ok(())
@@ -273,18 +266,20 @@ pub fn find_forced_change<B: BlockT>(
 
 #[cfg(test)]
 mod tests {
-    use crate::justification::{find_forced_change, find_scheduled_change, FinalityProof, GrandpaJustification, AuthorityList};
+    use crate::justification::{
+        find_forced_change, find_scheduled_change, AuthorityList, FinalityProof,
+        GrandpaJustification,
+    };
+    use crate::kusama;
     use codec::{Decode, Encode};
     use finality_grandpa_rpc::GrandpaApiClient;
+    use futures::StreamExt;
     use polkadot_core_primitives::{Block, Header};
     use serde::{Deserialize, Serialize};
-    use futures::StreamExt;
     use sp_core::H256;
-    // use sp_runtime::traits::Header as _;
     use std::mem::size_of_val;
+    use subxt::rpc::{rpc_params, ClientT};
     use subxt::DefaultConfig;
-    use subxt::rpc::{ClientT, rpc_params};
-    use crate::kusama;
 
     type Justification = GrandpaJustification<Block>;
 
@@ -298,7 +293,7 @@ mod tests {
             .unwrap_or("wss://kusama-rpc.polkadot.io:443".to_string());
         let client = subxt::ClientBuilder::new()
             .set_url(url)
-            .build::<subxt::DefaultConfig>()
+            .build::<DefaultConfig>()
             .await
             .unwrap();
 
@@ -306,12 +301,22 @@ mod tests {
             .clone()
             .to_runtime_api::<kusama::api::RuntimeApi<DefaultConfig, subxt::PolkadotExtrinsicParams<_>>>();
 
-        let mut subscription = client.rpc().subscribe_finalized_blocks().await.unwrap().chunks(3);
+        let mut subscription = client
+            .rpc()
+            .subscribe_finalized_blocks()
+            .await
+            .unwrap()
+            .chunks(3);
 
         while let Some(headers) = subscription.next().await {
             let headers = headers.into_iter().collect::<Result<Vec<_>, _>>().unwrap();
             let header = headers.last().unwrap();
-            let current_set_id = api.storage().grandpa().current_set_id(Some(header.hash())).await.unwrap();
+            let current_set_id = api
+                .storage()
+                .grandpa()
+                .current_set_id(Some(header.hash()))
+                .await
+                .unwrap();
 
             let header = Header::decode(&mut &header.encode()[..]).unwrap();
             println!("========= New Header =========");
@@ -334,7 +339,7 @@ mod tests {
             .unwrap()
             .unwrap()
             .0
-            .0;
+             .0;
 
             println!("justification size: {}kb", size_of_val(&*encoded) / 1000);
             let finality_proof = FinalityProof::<Header>::decode(&mut &encoded[..]).unwrap();
@@ -351,13 +356,18 @@ mod tests {
             let authorities = client
                 .rpc()
                 .client
-                .request::<String>("state_call", rpc_params!("GrandpaApi_grandpa_authorities", "0x"))
+                .request::<String>(
+                    "state_call",
+                    rpc_params!("GrandpaApi_grandpa_authorities", "0x"),
+                )
                 .await
                 .unwrap();
 
             let authorities = hex::decode(&authorities[2..]).unwrap();
             let authorities = AuthorityList::decode(&mut &authorities[..]).unwrap();
-            justification.verify(current_set_id, &authorities).expect("Failed to verify proof");
+            justification
+                .verify(current_set_id, &authorities)
+                .expect("Failed to verify proof");
 
             let pre_commits = justification
                 .commit
