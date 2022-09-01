@@ -10,7 +10,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 [workspace]
 members = [
     "prover",
-    "primitives"
+    "primitives",
+    "grandpa/light-client",
 ]
 
 [build-dependencies]

@@ -76,12 +76,7 @@ where
 
         let mut heads = BTreeMap::new();
         for id in para_ids.iter() {
-            if let Some(head) = api
-                .storage()
-                .paras()
-                .heads(id, Some(header.hash()))
-                .await?
-            {
+            if let Some(head) = api.storage().paras().heads(id, Some(header.hash())).await? {
                 heads.insert(id.0, head.0);
             }
         }

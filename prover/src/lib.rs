@@ -19,8 +19,8 @@ use pallet_mmr_primitives::BatchProof;
 use relay_chain_queries::{fetch_beefy_justification, fetch_mmr_batch_proof};
 use sp_core::H256;
 use sp_io::crypto;
-use sp_runtime::traits::Header as HeaderT;
 use sp_runtime::traits::BlakeTwo256;
+use sp_runtime::traits::Header as HeaderT;
 use sp_trie::LayoutV0;
 use subxt::rpc::{rpc_params, ClientT};
 use subxt::sp_core::keccak_256;
@@ -273,7 +273,11 @@ where
             let TimeStampExtWithProof {
                 ext: timestamp_extrinsic,
                 proof: extrinsic_proof,
-            } = fetch_timestamp_extrinsic_with_proof(&self.para_client, Some(decoded_para_head.hash())).await?;
+            } = fetch_timestamp_extrinsic_with_proof(
+                &self.para_client,
+                Some(decoded_para_head.hash()),
+            )
+            .await?;
 
             let header = ParachainHeader {
                 parachain_header: para_head,

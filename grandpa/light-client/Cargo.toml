@@ -1,0 +1,36 @@
+[package]
+name = "grandpa-light-client"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+subxt-codegen = { git = "https://github.com/paritytech/subxt", rev = "ec23283d75e4b3b894294e351fd7ffa2b4431201" }
+
+jsonrpsee = { version = "0.15.0", features = ["async-client", "client-ws-transport", "http-client"] }
+frame-metadata = { version = "15.0.0", features = ["v14", "std"] }
+syn = "1.0.98"
+codec = { package = "parity-scale-codec", version = "3.0.0" }
+color-eyre = "0.6.2"
+hex = "0.4.3"
+tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
+
+
+[dependencies]
+finality-grandpa = { version = "0.16.0", features = ["derive-codec"] }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
+sp-consensus = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
+sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
+codec = { package = "parity-scale-codec", version = "3.0.0" }
+subxt = { git = "https://github.com/paritytech/subxt", rev = "c55b7ba3e34118f61dc51499a0b38262c513aec4" }
+futures = "0.3.24"
+
+[dev-dependencies]
+hex = "0.4.3"
+serde = "1.0.144"
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
+polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.27" }
+tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
+finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
+
+hex-literal = "0.3.4"
