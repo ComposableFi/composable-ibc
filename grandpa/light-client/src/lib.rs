@@ -14,17 +14,16 @@ pub mod justification;
 #[cfg(test)]
 mod kusama;
 
+/// Previous light client state.
 pub struct ClientState<H> {
     // Current authority set
-    current_authorities: AuthorityList,
+    pub current_authorities: AuthorityList,
     // Id of the current authority set.
-    current_set_id: u64,
+    pub current_set_id: u64,
     // latest finalized hash on the relay chain.
-    latest_relay_hash: H,
+    pub latest_relay_hash: H,
     // para_id of associated parachain
-    para_id: u32,
-    // latest height of the parachain.
-    latest_para_height: u32,
+    pub para_id: u32,
 }
 
 /// Holds relavant parachain proofs for both header and timestamp extrinsic.
@@ -37,31 +36,45 @@ pub struct ParachainHeaderProofs {
     extrinsic_proof: Vec<Vec<u8>>,
 }
 
+/// Parachain headers with a Grandpa finality proof.
+pub struct ParachainHeadersWithFinalityProof<B: Block> {
+    /// The grandpa finality proof: contains relay chain headers from the
+    /// last known finalized grandpa block.
+    pub finality_proof: FinalityProof<B::Header>,
+    /// Contains a map of relay chain header hashes to parachain headers
+    /// finalzed at the relay chain height. We check for this parachain header finalization
+    /// via state proofs. Also contains extrinsic proof for timestamp.
+    pub parachain_headers: HashMap<B::Hash, ParachainHeaderProofs>,
+}
+
 /// Verify a new grandpa justification, given the old state.
-pub fn verify_grandpa_finality_proof<B, H>(
+pub fn verify_parachain_headers_with_grandpa_finality_proof<B, H>(
     mut client_state: ClientState<B::Hash>,
-    proof: FinalityProof<B::Header>,
+    proof: ParachainHeadersWithFinalityProof<B>,
 ) -> Result<ClientState<B::Hash>, anyhow::Error>
 where
     B: Block,  // relay chain block type
-    H: Header, // parachain header
+    H: Header, // parachain header type
     NumberFor<B>: finality_grandpa::BlockNumberOps,
 {
-    let mut parachain_headers: HashMap<B::Hash, ParachainHeaderProofs> = Default::default();
+    let ParachainHeadersWithFinalityProof {
+        finality_proof,
+        mut parachain_headers,
+    } = proof;
 
     // 1. first check that target is in proof.unknown_headers.
-    let headers = AncestryChain::<B>::new(&proof.unknown_headers);
+    let headers = AncestryChain::<B>::new(&finality_proof.unknown_headers);
     let target = headers
-        .header(&proof.block)
+        .header(&finality_proof.block)
         .ok_or_else(|| anyhow!("Target header not found!"))?;
 
     // 2. next check that there exists a route from client.latest_relay_hash to target.
-    let finalized = headers.ancestry(client_state.latest_relay_hash, proof.block)?;
+    let finalized = headers.ancestry(client_state.latest_relay_hash, finality_proof.block)?;
 
     // 3. todo: check for authority set change
 
     // 4. verify justification.
-    let justification = GrandpaJustification::<B>::decode(&mut &proof.justification[..])?;
+    let justification = GrandpaJustification::<B>::decode(&mut &finality_proof.justification[..])?;
     justification.verify(
         client_state.current_set_id,
         &client_state.current_authorities,
