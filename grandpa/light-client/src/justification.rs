@@ -102,7 +102,7 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 
         match finality_grandpa::validate_commit(&self.commit, voters, &ancestry_chain) {
             Ok(ref result) if result.is_valid() => {}
-            _ => Err(anyhow!("invalid commit in grandpa justification"))?,
+            err => Err(anyhow!("invalid commit in grandpa justification: {err:?}"))?,
         }
 
         // we pick the precommit for the lowest block as the base that
@@ -151,8 +151,8 @@ impl<Block: BlockT> GrandpaJustification<Block> {
                         visited_hashes.insert(hash);
                     }
                 }
-                _ => Err(anyhow!(
-                    "invalid precommit ancestry proof in grandpa justification",
+                Err(err) => Err(anyhow!(
+                    "invalid precommit ancestry proof in grandpa justification: {err:?}",
                 ))?,
             }
         }
@@ -311,56 +311,40 @@ mod tests {
             .await
             .expect("Failed to subscribe finalized blocks");
 
-        while let Some(Ok(header)) = subscription.next().await {
-            let mut current_set_id = api
-                .storage()
-                .grandpa()
-                .current_set_id(Some(header.hash()))
-                .await
-                .expect("Failed to fetch current set id");
+        let mut current_set_id = api
+            .storage()
+            .grandpa()
+            .current_set_id(None)
+            .await
+            .expect("Failed to fetch current set id");
 
+        let mut authorities = {
+            let bytes = client
+                .rpc()
+                .client
+                .request::<String>(
+                    "state_call",
+                    rpc_params!("GrandpaApi_grandpa_authorities", "0x", format!("{:?}", header.hash())),
+                )
+                .await
+                .map(|res| hex::decode(&res[2..]))
+                .expect("Failed to fetch authorities")
+                .expect("Failed to hex decode authorities");
+
+            AuthorityList::decode(&mut &bytes[..])
+                .expect("Failed to scale decode authorities")
+        };
+
+        while let Some(Ok(header)) = subscription.next().await {
             let header =
                 Header::decode(&mut &header.encode()[..]).expect("Failed to decode header");
             println!("========= New Header =========");
             println!(
-                "Got header: Hash({}), Number({})",
+                "Got header: Hash({:?}), Number({})",
                 header.hash(),
                 header.number
             );
-
-            let authorities = match find_scheduled_change::<Block>(&header) {
-                Some(scheduled_authority_set) => {
-                    current_set_id += 1;
-                    println!(
-                        "Found scheduled authority set with delay: {} blocks",
-                        scheduled_authority_set.delay
-                    );
-                    scheduled_authority_set.next_authorities
-                }
-                None => {
-                    let authorities = client
-                        .rpc()
-                        .client
-                        .request::<String>(
-                            "state_call",
-                            rpc_params!("GrandpaApi_grandpa_authorities", "0x"),
-                        )
-                        .await
-                        .expect("Failed to fetch authorities");
-
-                    let authorities =
-                        hex::decode(&authorities[2..]).expect("Failed to hex decode authorities");
-                    AuthorityList::decode(&mut &authorities[..])
-                        .expect("Failed to scale decode authorities")
-                }
-            };
-            if let Some((delay, forced_authority_set)) = find_forced_change::<Block>(&header) {
-                println!("Found forced authority set: block import delay: {delay} blocks");
-                println!(
-                    "forced_authority_set.delay: {} blocks",
-                    forced_authority_set.delay
-                );
-            }
+            println!("current_set_id: {current_set_id}");
 
             let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
                 &*client.rpc().client,
@@ -370,7 +354,7 @@ mod tests {
             .expect("Failed to fetch finality proof")
             .expect("Failed to fetch finality proof")
             .0
-             .0;
+            .0;
 
             println!("justification size: {}kb", size_of_val(&*encoded) / 1000);
             let finality_proof = FinalityProof::<Header>::decode(&mut &encoded[..])
@@ -394,9 +378,25 @@ mod tests {
                 .precommits
                 .drain(..)
                 .collect::<Vec<_>>();
+
             println!("{justification:#?}");
             println!("Signatures: {:#?}", pre_commits.len());
 
+            if let Some(scheduled_authority_set) = find_scheduled_change::<Block>(&header) {
+                println!(
+                    "Found scheduled authority set with delay: {} blocks",
+                    scheduled_authority_set.delay
+                );
+                current_set_id += 1;
+                authorities = scheduled_authority_set.next_authorities;
+            }
+            if let Some((delay, forced_authority_set)) = find_forced_change::<Block>(&header) {
+                println!("Found forced authority set: block import delay: {delay} blocks");
+                println!(
+                    "forced_authority_set.delay: {} blocks",
+                    forced_authority_set.delay
+                );
+            }
             println!("========= Successfully verified grandpa justification =========");
         }
     }

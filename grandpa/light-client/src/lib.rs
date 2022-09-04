@@ -1,4 +1,4 @@
-use crate::justification::{AncestryChain, FinalityProof, GrandpaJustification};
+use crate::justification::{AncestryChain, FinalityProof, find_scheduled_change, GrandpaJustification};
 use anyhow::anyhow;
 use codec::{Decode, Encode};
 use finality_grandpa::Chain;
@@ -71,16 +71,14 @@ where
     // 2. next check that there exists a route from client.latest_relay_hash to target.
     let finalized = headers.ancestry(client_state.latest_relay_hash, finality_proof.block)?;
 
-    // 3. todo: check for authority set change
-
-    // 4. verify justification.
+    // 3. verify justification.
     let justification = GrandpaJustification::<B>::decode(&mut &finality_proof.justification[..])?;
     justification.verify(
         client_state.current_set_id,
         &client_state.current_authorities,
     )?;
 
-    // 5. verify state proofs of parachain headers in finalized relay chain headers.
+    // 4. verify state proofs of parachain headers in finalized relay chain headers.
     for hash in finalized {
         let relay_chain_header = headers
             .header(&hash)
@@ -114,8 +112,12 @@ where
         }
     }
 
-    // 6. set new client state, optionally rotating authorities
+    // 5. set new client state, optionally rotating authorities
     client_state.latest_relay_hash = target.hash();
+    if let Some(scheduled_change) = find_scheduled_change::<B>(&target) {
+        client_state.current_set_id += 1;
+        client_state.current_authorities = scheduled_change.next_authorities;
+    }
 
     Ok(client_state)
 }
