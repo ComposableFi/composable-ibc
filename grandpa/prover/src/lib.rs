@@ -13,7 +13,6 @@ use sp_runtime::traits::{Block, Zero};
 use std::collections::BTreeMap;
 use subxt::{sp_runtime::traits::Header as _, Client, Config};
 
-pub mod error;
 mod runtime;
 
 pub struct GrandpaProver<T: Config> {
@@ -95,8 +94,7 @@ impl<T: Config> GrandpaProver<T> {
 		)
 		.await?
 		.ok_or_else(|| anyhow!("No justification found for block: {:?}", header.hash()))?
-		.0
-		 .0;
+		.0;
 		let mut finality_proof = FinalityProof::<B::Header>::decode(&mut &encoded[..])?;
 		let unknown_headers = {
 			let mut unknown_headers = vec![B::Header::from(header.clone())];

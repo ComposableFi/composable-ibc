@@ -4,13 +4,13 @@ extern crate alloc;
 
 use crate::justification::{find_scheduled_change, AncestryChain, GrandpaJustification};
 use anyhow::anyhow;
-use codec::{Decode, Encode};
+use codec::Decode;
 use finality_grandpa::Chain;
 use primitives::{
 	error, parachain_header_storage_key, ClientState, HostFunctions, ParachainHeaderProofs,
 	ParachainHeadersWithFinalityProof,
 };
-use sp_core::{storage::StorageKey, H256};
+use sp_core::H256;
 use sp_runtime::traits::{Block, Header, NumberFor};
 use sp_trie::StorageProof;
 
