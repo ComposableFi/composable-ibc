@@ -21,7 +21,6 @@ tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 anyhow = { version = "1.0.64", default-features = false }
 finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-features = false }
-derive_more = { version = "0.99.17", default-features = false, features = ["display"] }
 
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
@@ -31,6 +30,8 @@ sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch 
 sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
+
+primitives = { package = "grandpa-light-client-primitives", path = "../primitives", default-features = false }
 
 [dev-dependencies]
 subxt = { git = "https://github.com/paritytech/subxt", rev = "c55b7ba3e34118f61dc51499a0b38262c513aec4" }
@@ -56,4 +57,5 @@ std = [
     "sp-state-machine/std",
     "sp-core/std",
     "sp-io/std",
+    "primitives/std",
 ]

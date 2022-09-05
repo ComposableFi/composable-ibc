@@ -2,81 +2,21 @@
 
 extern crate alloc;
 
-use crate::justification::{
-	find_scheduled_change, AncestryChain, FinalityProof, GrandpaJustification,
-};
-use alloc::collections::BTreeMap;
+use crate::justification::{find_scheduled_change, AncestryChain, GrandpaJustification};
 use anyhow::anyhow;
 use codec::{Decode, Encode};
 use finality_grandpa::Chain;
-use sp_core::{ed25519, storage::StorageKey, H256};
-use sp_finality_grandpa::AuthorityList;
+use primitives::{
+	error, ClientState, HostFunctions, ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
+};
+use sp_core::{storage::StorageKey, H256};
 use sp_runtime::traits::{Block, Header, NumberFor};
-use sp_std::prelude::*;
 use sp_trie::StorageProof;
 
-pub mod error;
 pub mod justification;
 
 #[cfg(test)]
 mod kusama;
-
-/// Previous light client state.
-pub struct ClientState<H> {
-	// Current authority set
-	pub current_authorities: AuthorityList,
-	// Id of the current authority set.
-	pub current_set_id: u64,
-	// latest finalized hash on the relay chain.
-	pub latest_relay_hash: H,
-	// para_id of associated parachain
-	pub para_id: u32,
-}
-
-/// Holds relavant parachain proofs for both header and timestamp extrinsic.
-pub struct ParachainHeaderProofs {
-	/// State proofs that prove a parachain header exists at a given relay chain height
-	state_proof: Vec<Vec<u8>>,
-	/// Timestamp extrinsic for ibc
-	extrinsic: Vec<u8>,
-	/// Timestamp extrinsic proof for previously proven parachain header.
-	extrinsic_proof: Vec<Vec<u8>>,
-}
-
-/// Parachain headers with a Grandpa finality proof.
-pub struct ParachainHeadersWithFinalityProof<B: Block> {
-	/// The grandpa finality proof: contains relay chain headers from the
-	/// last known finalized grandpa block.
-	pub finality_proof: FinalityProof<B::Header>,
-	/// Contains a map of relay chain header hashes to parachain headers
-	/// finalzed at the relay chain height. We check for this parachain header finalization
-	/// via state proofs. Also contains extrinsic proof for timestamp.
-	pub parachain_headers: BTreeMap<B::Hash, ParachainHeaderProofs>,
-}
-
-/// Functions that this light client needs that should delegated to
-/// a native implementation.
-pub trait HostFunctions {
-	/// Verify an ed25519 signature
-	fn ed25519_verify(sig: &ed25519::Signature, msg: &[u8], pub_key: &ed25519::Public) -> bool;
-
-	/// see [`sp_state_machine::read_proof_check`]
-	fn read_proof_check<I>(
-		root: &[u8; 32],
-		proof: StorageProof,
-		keys: I,
-	) -> Result<BTreeMap<Vec<u8>, Option<Vec<u8>>>, error::Error>
-	where
-		I: IntoIterator,
-		I::Item: AsRef<[u8]>;
-
-	/// parity trie_db proof verification using BlakeTwo256 Hasher
-	fn verify_timestamp_extrinsic(
-		root: &[u8; 32],
-		proof: &[Vec<u8>],
-		value: &[u8],
-	) -> Result<(), error::Error>;
-}
 
 type HashFor<B> = <B as Block>::Hash;
 

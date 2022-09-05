@@ -1,38 +1,16 @@
-use crate::{error, HostFunctions};
 use alloc::collections::{BTreeMap, BTreeSet};
 use anyhow::anyhow;
 use codec::{Decode, Encode};
 use finality_grandpa::voter_set::VoterSet;
+use primitives::{error, Commit, HostFunctions};
 use sp_finality_grandpa::{
-	AuthorityId, AuthorityList, AuthoritySignature, ConsensusLog, ScheduledChange,
-	GRANDPA_ENGINE_ID,
+	AuthorityId, AuthorityList, ConsensusLog, ScheduledChange, GRANDPA_ENGINE_ID,
 };
 use sp_runtime::{
 	generic::OpaqueDigestItemId,
 	traits::{Block as BlockT, Header as HeaderT, NumberFor},
 };
 use sp_std::prelude::*;
-
-/// A commit message for this chain's block type.
-pub type Commit<Block> = finality_grandpa::Commit<
-	<Block as BlockT>::Hash,
-	NumberFor<Block>,
-	AuthoritySignature,
-	AuthorityId,
->;
-
-/// Finality for block B is proved by providing:
-/// 1) the justification for the descendant block F;
-/// 2) headers sub-chain (B; F] if B != F;
-#[derive(Debug, PartialEq, Encode, Decode, Clone)]
-pub struct FinalityProof<Header: HeaderT> {
-	/// The hash of block F for which justification is provided.
-	pub block: Header::Hash,
-	/// Justification of the block F.
-	pub justification: Vec<u8>,
-	/// The set of headers in the range (B; F] that we believe are unknown to the caller. Ordered.
-	pub unknown_headers: Vec<Header>,
-}
 
 /// A GRANDPA justification for block finality, it includes a commit message and
 /// an ancestry proof including all headers routing all precommit target blocks

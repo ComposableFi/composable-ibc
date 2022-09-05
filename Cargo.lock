@@ -1670,11 +1670,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "color-eyre",
- "derive_more",
  "finality-grandpa",
  "frame-metadata",
  "frame-support",
  "futures",
+ "grandpa-light-client-primitives",
  "hex",
  "hex-literal",
  "jsonrpsee 0.15.1",
@@ -1699,8 +1699,15 @@ dependencies = [
 name = "grandpa-light-client-primitives"
 version = "0.1.0"
 dependencies = [
- "beefy-primitives",
+ "anyhow",
+ "derive_more",
+ "finality-grandpa",
+ "parity-scale-codec",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+ "sp-finality-grandpa",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+ "sp-trie 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
 ]
 
 [[package]]

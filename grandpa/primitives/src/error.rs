@@ -1,4 +1,4 @@
-use derive_more::{From, Display};
+use derive_more::{Display, From};
 
 #[derive(From, Display)]
 pub enum Error {
