@@ -1,5 +1,6 @@
+use crate::{error, HostFunctions};
 use alloc::collections::{BTreeMap, BTreeSet};
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
 use codec::{Decode, Encode};
 use finality_grandpa::voter_set::VoterSet;
 use sp_finality_grandpa::{
@@ -10,6 +11,7 @@ use sp_runtime::{
 	generic::OpaqueDigestItemId,
 	traits::{Block as BlockT, Header as HeaderT, NumberFor},
 };
+use sp_std::prelude::*;
 
 /// A commit message for this chain's block type.
 pub type Commit<Block> = finality_grandpa::Commit<
@@ -40,7 +42,7 @@ pub struct FinalityProof<Header: HeaderT> {
 ///
 /// This is meant to be stored in the db and passed around the network to other
 /// nodes, and are used by syncing nodes to prove authority set handoffs.
-#[derive(Clone, Encode, Decode, PartialEq, Eq, Debug)]
+#[derive(Clone, Encode, Decode, PartialEq, Eq)]
 pub struct GrandpaJustification<Block: BlockT> {
 	pub round: u64,
 	pub commit: Commit<Block>,
@@ -48,47 +50,26 @@ pub struct GrandpaJustification<Block: BlockT> {
 }
 
 impl<Block: BlockT> GrandpaJustification<Block> {
-	/// Decode a GRANDPA justification and validate the commit and the votes'
-	/// ancestry proofs finalize the given block.
-	pub fn decode_and_verify_finalizes(
-		encoded: &[u8],
-		finalized_target: (Block::Hash, NumberFor<Block>),
-		set_id: u64,
-		voters: &VoterSet<AuthorityId>,
-	) -> Result<GrandpaJustification<Block>, Error>
-	where
-		NumberFor<Block>: finality_grandpa::BlockNumberOps,
-	{
-		let justification = GrandpaJustification::<Block>::decode(&mut &*encoded)
-			.map_err(|_| anyhow!("Error decoding justification"))?;
-
-		if (justification.commit.target_hash, justification.commit.target_number) !=
-			finalized_target
-		{
-			Err(anyhow!("invalid commit target in grandpa justification"))?
-		} else {
-			justification.verify_with_voter_set(set_id, voters).map(|_| justification)
-		}
-	}
-
 	/// Validate the commit and the votes' ancestry proofs.
-	pub fn verify(&self, set_id: u64, authorities: &AuthorityList) -> Result<(), Error>
+	pub fn verify<H>(&self, set_id: u64, authorities: &AuthorityList) -> Result<(), error::Error>
 	where
+		H: HostFunctions,
 		NumberFor<Block>: finality_grandpa::BlockNumberOps,
 	{
 		let voters =
 			VoterSet::new(authorities.iter().cloned()).ok_or(anyhow!("Invalid AuthoritiesSet"))?;
 
-		self.verify_with_voter_set(set_id, &voters)
+		self.verify_with_voter_set::<H>(set_id, &voters)
 	}
 
 	/// Validate the commit and the votes' ancestry proofs.
-	pub(crate) fn verify_with_voter_set(
+	pub(crate) fn verify_with_voter_set<H>(
 		&self,
 		set_id: u64,
 		voters: &VoterSet<AuthorityId>,
-	) -> Result<(), Error>
+	) -> Result<(), error::Error>
 	where
+		H: HostFunctions,
 		NumberFor<Block>: finality_grandpa::BlockNumberOps,
 	{
 		use finality_grandpa::Chain;
@@ -97,7 +78,10 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 
 		match finality_grandpa::validate_commit(&self.commit, voters, &ancestry_chain) {
 			Ok(ref result) if result.is_valid() => {},
-			err => Err(anyhow!("invalid commit in grandpa justification: {err:?}"))?,
+			err => {
+				let result = err?;
+				Err(anyhow!("invalid commit in grandpa justification: {result:?}"))?
+			},
 		}
 
 		// we pick the precommit for the lowest block as the base that
@@ -120,14 +104,11 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 		let mut buf = Vec::new();
 		let mut visited_hashes = BTreeSet::new();
 		for signed in self.commit.precommits.iter() {
-			if !sp_finality_grandpa::check_message_signature_with_buffer(
-				&finality_grandpa::Message::Precommit(signed.precommit.clone()),
-				&signed.id,
-				&signed.signature,
-				self.round,
-				set_id,
-				&mut buf,
-			) {
+			let message = finality_grandpa::Message::Precommit(signed.precommit.clone());
+			// clear the buffer
+			buf.clear();
+			(message, self.round, set_id).encode_to(&mut buf);
+			if !H::ed25519_verify(signed.signature.as_ref(), &buf, signed.id.as_ref()) {
 				Err(anyhow!("invalid signature for precommit in grandpa justification"))?
 			}
 
@@ -135,18 +116,12 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 				continue
 			}
 
-			match ancestry_chain.ancestry(base_hash, signed.precommit.target_hash) {
-				Ok(route) => {
-					// ancestry starts from parent hash but the precommit target hash has been
-					// visited
-					visited_hashes.insert(signed.precommit.target_hash);
-					for hash in route {
-						visited_hashes.insert(hash);
-					}
-				},
-				Err(err) => Err(anyhow!(
-					"invalid precommit ancestry proof in grandpa justification: {err:?}",
-				))?,
+			let route = ancestry_chain.ancestry(base_hash, signed.precommit.target_hash)?;
+			// ancestry starts from parent hash but the precommit target hash has been
+			// visited
+			visited_hashes.insert(signed.precommit.target_hash);
+			for hash in route {
+				visited_hashes.insert(hash);
 			}
 		}
 

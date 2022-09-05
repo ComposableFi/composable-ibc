@@ -9,13 +9,13 @@ use alloc::collections::BTreeMap;
 use anyhow::anyhow;
 use codec::{Decode, Encode};
 use finality_grandpa::Chain;
-use sp_core::storage::StorageKey;
+use sp_core::{ed25519, storage::StorageKey, H256};
 use sp_finality_grandpa::AuthorityList;
 use sp_runtime::traits::{Block, Header, NumberFor};
-use sp_state_machine::StorageProof;
-use sp_trie::LayoutV0;
 use sp_std::prelude::*;
+use sp_trie::StorageProof;
 
+pub mod error;
 pub mod justification;
 
 #[cfg(test)]
@@ -54,14 +54,40 @@ pub struct ParachainHeadersWithFinalityProof<B: Block> {
 	pub parachain_headers: BTreeMap<B::Hash, ParachainHeaderProofs>,
 }
 
+/// Functions that this light client needs that should delegated to
+/// a native implementation.
+pub trait HostFunctions {
+	/// Verify an ed25519 signature
+	fn ed25519_verify(sig: &ed25519::Signature, msg: &[u8], pub_key: &ed25519::Public) -> bool;
+
+	/// see [`sp_state_machine::read_proof_check`]
+	fn read_proof_check<I>(
+		root: &[u8; 32],
+		proof: StorageProof,
+		keys: I,
+	) -> Result<BTreeMap<Vec<u8>, Option<Vec<u8>>>, error::Error>
+	where
+		I: IntoIterator,
+		I::Item: AsRef<[u8]>;
+
+	/// parity trie_db proof verification using BlakeTwo256 Hasher
+	fn verify_timestamp_extrinsic(
+		root: &[u8; 32],
+		proof: &[Vec<u8>],
+		value: &[u8],
+	) -> Result<(), error::Error>;
+}
+
+type HashFor<B> = <B as Block>::Hash;
+
 /// Verify a new grandpa justification, given the old state.
 pub fn verify_parachain_headers_with_grandpa_finality_proof<B, H>(
-	mut client_state: ClientState<B::Hash>,
+	mut client_state: ClientState<HashFor<B>>,
 	proof: ParachainHeadersWithFinalityProof<B>,
-) -> Result<ClientState<B::Hash>, anyhow::Error>
+) -> Result<ClientState<HashFor<B>>, error::Error>
 where
-	B: Block,  // relay chain block type
-	H: Header, // parachain header type
+	B: Block<Hash = H256>,
+	H: HostFunctions,
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
 {
 	let ParachainHeadersWithFinalityProof { finality_proof, mut parachain_headers } = proof;
@@ -77,7 +103,7 @@ where
 
 	// 3. verify justification.
 	let justification = GrandpaJustification::<B>::decode(&mut &finality_proof.justification[..])?;
-	justification.verify(client_state.current_set_id, &client_state.current_authorities)?;
+	justification.verify::<H>(client_state.current_set_id, &client_state.current_authorities)?;
 
 	// 4. verify state proofs of parachain headers in finalized relay chain headers.
 	for hash in finalized {
@@ -87,8 +113,8 @@ where
 			let ParachainHeaderProofs { extrinsic_proof, extrinsic, state_proof } = proofs;
 			let proof = StorageProof::new(state_proof);
 			let key = parachain_header_storage_key(client_state.para_id);
-			let header = sp_state_machine::read_proof_check::<<B::Header as Header>::Hashing, _>(
-				relay_chain_header.state_root().clone(),
+			let header = H::read_proof_check(
+				relay_chain_header.state_root().as_fixed_bytes(),
 				proof,
 				&[key.as_ref()],
 			)
@@ -96,14 +122,12 @@ where
 			.remove(key.as_ref())
 			.flatten()
 			.ok_or_else(|| anyhow!("Invalid proof, parachain header not found"))?;
-			let parachain_header = H::decode(&mut &header[..])?;
-			// Timestamp extrinsic should be the first inherent and hence the first extrinsic
-			let key = codec::Compact(0u32).encode();
+			let parachain_header = B::Header::decode(&mut &header[..])?;
 			// verify timestamp extrinsic proof
-			sp_trie::verify_trie_proof::<LayoutV0<H::Hashing>, _, _, _>(
-				parachain_header.state_root(),
+			H::verify_timestamp_extrinsic(
+				parachain_header.state_root().as_fixed_bytes(),
 				&extrinsic_proof,
-				&vec![(key, Some(&extrinsic[..]))],
+				&extrinsic[..],
 			)?;
 		}
 	}
@@ -122,7 +146,7 @@ where
 pub fn parachain_header_storage_key(para_id: u32) -> StorageKey {
 	let mut storage_key = frame_support::storage::storage_prefix(b"Paras", b"Heads").to_vec();
 	let encoded_para_id = para_id.encode();
-	storage_key.extend_from_slice(sp_core::hashing::twox_64(&encoded_para_id).as_slice());
+	storage_key.extend_from_slice(sp_io::hashing::twox_64(&encoded_para_id).as_slice());
 	storage_key.extend_from_slice(&encoded_para_id);
 	StorageKey(storage_key)
 }

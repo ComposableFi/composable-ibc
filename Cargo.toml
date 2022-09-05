@@ -1,7 +1,9 @@
 [workspace]
+resolver = "2"
 members = [
     "beefy/prover",
     "beefy/primitives",
     "beefy/light-client",
     "grandpa/light-client",
+    "grandpa/primitives",
 ]
