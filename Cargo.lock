@@ -404,7 +404,7 @@ dependencies = [
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
- "subxt 0.21.0",
+ "subxt",
  "tokio",
 ]
 
@@ -457,8 +457,8 @@ dependencies = [
  "sp-runtime 6.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
- "subxt 0.21.0",
- "subxt-codegen 0.21.0",
+ "subxt",
+ "subxt-codegen",
  "syn",
  "tokio",
 ]
@@ -1669,15 +1669,12 @@ name = "grandpa-light-client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "color-eyre",
  "finality-grandpa",
- "frame-metadata",
  "frame-support",
  "futures",
  "grandpa-light-client-primitives",
  "hex",
  "hex-literal",
- "jsonrpsee 0.15.1",
  "parity-scale-codec",
  "polkadot-core-primitives",
  "sc-finality-grandpa-rpc",
@@ -1689,9 +1686,7 @@ dependencies = [
  "sp-state-machine 0.12.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
- "subxt 0.22.0",
- "subxt-codegen 0.21.0",
- "syn",
+ "subxt",
  "tokio",
 ]
 
@@ -1702,12 +1697,39 @@ dependencies = [
  "anyhow",
  "derive_more",
  "finality-grandpa",
+ "frame-support",
  "parity-scale-codec",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-finality-grandpa",
+ "sp-io 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+ "sp-storage 6.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-trie 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+]
+
+[[package]]
+name = "grandpa-prover"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "beefy-prover",
+ "color-eyre",
+ "derive_more",
+ "frame-metadata",
+ "grandpa-light-client-primitives",
+ "hex",
+ "jsonrpsee 0.15.1",
+ "jsonrpsee-core 0.14.0",
+ "parity-scale-codec",
+ "sc-finality-grandpa-rpc",
+ "serde",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+ "subxt",
+ "subxt-codegen",
+ "syn",
+ "tokio",
 ]
 
 [[package]]
@@ -2100,16 +2122,6 @@ dependencies = [
 
 [[package]]
 name = "jsonrpsee"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1f2ab5a60e558e74ea93bcf5164ebc47939a7fff8938fa9b5233bbc63e16061"
-dependencies = [
- "jsonrpsee-client-transport 0.13.1",
- "jsonrpsee-core 0.13.1",
-]
-
-[[package]]
-name = "jsonrpsee"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11e017217fcd18da0a25296d3693153dd19c8a6aadab330b3595285d075385d1"
@@ -2133,27 +2145,6 @@ dependencies = [
  "jsonrpsee-core 0.15.1",
  "jsonrpsee-http-client",
  "jsonrpsee-types 0.15.1",
-]
-
-[[package]]
-name = "jsonrpsee-client-transport"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26d682f4a55081a2be3e639280c640523070e4aeb8ee2fd8dd9168fdae57a9db"
-dependencies = [
- "futures-util",
- "http",
- "jsonrpsee-core 0.13.1",
- "jsonrpsee-types 0.13.1",
- "pin-project",
- "rustls-native-certs",
- "soketto",
- "thiserror",
- "tokio",
- "tokio-rustls",
- "tokio-util",
- "tracing",
- "webpki-roots",
 ]
 
 [[package]]
@@ -2196,28 +2187,6 @@ dependencies = [
  "tokio-util",
  "tracing",
  "webpki-roots",
-]
-
-[[package]]
-name = "jsonrpsee-core"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e27462b21279edf9a6a91f46ffbe125e9cdc58b901d2e08bf59b31a47d7d0ab"
-dependencies = [
- "anyhow",
- "async-lock",
- "async-trait",
- "beef",
- "futures-channel",
- "futures-timer",
- "futures-util",
- "jsonrpsee-types 0.13.1",
- "rustc-hash",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -2321,20 +2290,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "jsonrpsee-types"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fd11763134104122ddeb0f97e4bbe393058017dfb077db63fbf44b4dd0dd86e"
-dependencies = [
- "anyhow",
- "beef",
- "serde",
- "serde_json",
- "thiserror",
- "tracing",
 ]
 
 [[package]]
@@ -6227,30 +6182,6 @@ checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
 name = "subxt"
-version = "0.21.0"
-source = "git+https://github.com/paritytech/subxt?rev=ec23283d75e4b3b894294e351fd7ffa2b4431201#ec23283d75e4b3b894294e351fd7ffa2b4431201"
-dependencies = [
- "bitvec",
- "derivative",
- "frame-metadata",
- "futures",
- "hex",
- "jsonrpsee 0.13.1",
- "parity-scale-codec",
- "parking_lot 0.12.1",
- "scale-info",
- "serde",
- "serde_json",
- "sp-core 6.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-runtime 6.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "subxt-macro 0.21.0",
- "subxt-metadata 0.21.0",
- "thiserror",
- "tracing",
-]
-
-[[package]]
-name = "subxt"
 version = "0.22.0"
 source = "git+https://github.com/paritytech/subxt?rev=c55b7ba3e34118f61dc51499a0b38262c513aec4#c55b7ba3e34118f61dc51499a0b38262c513aec4"
 dependencies = [
@@ -6268,31 +6199,14 @@ dependencies = [
  "serde_json",
  "sp-core 6.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 6.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "subxt-macro 0.22.0",
- "subxt-metadata 0.22.0",
+ "subxt-macro",
+ "subxt-metadata",
  "thiserror",
  "tracing",
 ]
 
 [[package]]
 name = "subxt-codegen"
-version = "0.21.0"
-source = "git+https://github.com/paritytech/subxt?rev=ec23283d75e4b3b894294e351fd7ffa2b4431201#ec23283d75e4b3b894294e351fd7ffa2b4431201"
-dependencies = [
- "darling",
- "frame-metadata",
- "heck",
- "parity-scale-codec",
- "proc-macro-error",
- "proc-macro2",
- "quote",
- "scale-info",
- "subxt-metadata 0.21.0",
- "syn",
-]
-
-[[package]]
-name = "subxt-codegen"
 version = "0.22.0"
 source = "git+https://github.com/paritytech/subxt?rev=c55b7ba3e34118f61dc51499a0b38262c513aec4#c55b7ba3e34118f61dc51499a0b38262c513aec4"
 dependencies = [
@@ -6304,18 +6218,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "scale-info",
- "subxt-metadata 0.22.0",
- "syn",
-]
-
-[[package]]
-name = "subxt-macro"
-version = "0.21.0"
-source = "git+https://github.com/paritytech/subxt?rev=ec23283d75e4b3b894294e351fd7ffa2b4431201#ec23283d75e4b3b894294e351fd7ffa2b4431201"
-dependencies = [
- "darling",
- "proc-macro-error",
- "subxt-codegen 0.21.0",
+ "subxt-metadata",
  "syn",
 ]
 
@@ -6326,19 +6229,8 @@ source = "git+https://github.com/paritytech/subxt?rev=c55b7ba3e34118f61dc51499a0
 dependencies = [
  "darling",
  "proc-macro-error",
- "subxt-codegen 0.22.0",
+ "subxt-codegen",
  "syn",
-]
-
-[[package]]
-name = "subxt-metadata"
-version = "0.21.0"
-source = "git+https://github.com/paritytech/subxt?rev=ec23283d75e4b3b894294e351fd7ffa2b4431201#ec23283d75e4b3b894294e351fd7ffa2b4431201"
-dependencies = [
- "frame-metadata",
- "parity-scale-codec",
- "scale-info",
- "sp-core 6.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

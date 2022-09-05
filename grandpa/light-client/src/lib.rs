@@ -7,7 +7,8 @@ use anyhow::anyhow;
 use codec::{Decode, Encode};
 use finality_grandpa::Chain;
 use primitives::{
-	error, ClientState, HostFunctions, ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
+	error, parachain_header_storage_key, ClientState, HostFunctions, ParachainHeaderProofs,
+	ParachainHeadersWithFinalityProof,
 };
 use sp_core::{storage::StorageKey, H256};
 use sp_runtime::traits::{Block, Header, NumberFor};
@@ -15,16 +16,11 @@ use sp_trie::StorageProof;
 
 pub mod justification;
 
-#[cfg(test)]
-mod kusama;
-
-type HashFor<B> = <B as Block>::Hash;
-
 /// Verify a new grandpa justification, given the old state.
 pub fn verify_parachain_headers_with_grandpa_finality_proof<B, H>(
-	mut client_state: ClientState<HashFor<B>>,
+	mut client_state: ClientState<<B as Block>::Hash>,
 	proof: ParachainHeadersWithFinalityProof<B>,
-) -> Result<ClientState<HashFor<B>>, error::Error>
+) -> Result<ClientState<<B as Block>::Hash>, error::Error>
 where
 	B: Block<Hash = H256>,
 	H: HostFunctions,
@@ -80,13 +76,4 @@ where
 	}
 
 	Ok(client_state)
-}
-
-/// This returns the storage key for a parachain header on the relay chain.
-pub fn parachain_header_storage_key(para_id: u32) -> StorageKey {
-	let mut storage_key = frame_support::storage::storage_prefix(b"Paras", b"Heads").to_vec();
-	let encoded_para_id = para_id.encode();
-	storage_key.extend_from_slice(sp_io::hashing::twox_64(&encoded_para_id).as_slice());
-	storage_key.extend_from_slice(&encoded_para_id);
-	StorageKey(storage_key)
 }

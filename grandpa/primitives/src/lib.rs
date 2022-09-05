@@ -7,6 +7,7 @@ use sp_core::{ed25519, sp_std};
 use sp_finality_grandpa::{AuthorityId, AuthorityList, AuthoritySignature};
 use sp_runtime::traits::{Block, Header, NumberFor};
 use sp_std::prelude::*;
+use sp_storage::StorageKey;
 use sp_trie::StorageProof;
 
 pub mod error;
@@ -83,4 +84,13 @@ pub trait HostFunctions {
 		proof: &[Vec<u8>],
 		value: &[u8],
 	) -> Result<(), error::Error>;
+}
+
+/// This returns the storage key for a parachain header on the relay chain.
+pub fn parachain_header_storage_key(para_id: u32) -> StorageKey {
+	let mut storage_key = frame_support::storage::storage_prefix(b"Paras", b"Heads").to_vec();
+	let encoded_para_id = para_id.encode();
+	storage_key.extend_from_slice(sp_io::hashing::twox_64(&encoded_para_id).as_slice());
+	storage_key.extend_from_slice(&encoded_para_id);
+	StorageKey(storage_key)
 }

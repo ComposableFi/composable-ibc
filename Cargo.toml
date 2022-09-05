@@ -6,4 +6,5 @@ members = [
     "beefy/light-client",
     "grandpa/light-client",
     "grandpa/primitives",
+    "grandpa/prover",
 ]

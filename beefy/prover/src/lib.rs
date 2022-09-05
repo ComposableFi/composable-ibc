@@ -214,12 +214,12 @@ where
 		&self,
 		commitment_block_number: u32,
 		latest_beefy_height: u32,
-		headers: Vec<T::BlockNumber>,
+		header_numbers: Vec<T::BlockNumber>,
 	) -> Result<(Vec<ParachainHeader>, BatchProof<H256>), Error>
 	where
 		T::BlockNumber: Ord + sp_runtime::traits::Zero,
 	{
-		let header_numbers = headers.into_iter().collect();
+		let header_numbers = header_numbers.into_iter().collect();
 		let FinalizedParaHeads { leaf_indices, raw_finalized_heads: finalized_blocks } =
 			fetch_finalized_parachain_heads(
 				&self.relay_client,

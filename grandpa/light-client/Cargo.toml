@@ -7,16 +7,6 @@ authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <david.salami@g
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
-[build-dependencies]
-subxt-codegen = { git = "https://github.com/paritytech/subxt", rev = "ec23283d75e4b3b894294e351fd7ffa2b4431201" }
-jsonrpsee = { version = "0.15.0", features = ["async-client", "client-ws-transport", "http-client"] }
-frame-metadata = { version = "15.0.0", features = ["v14", "std"] }
-syn = "1.0.98"
-codec = { package = "parity-scale-codec", version = "3.0.0" }
-color-eyre = "0.6.2"
-hex = "0.4.3"
-tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
-
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 anyhow = { version = "1.0.64", default-features = false }
