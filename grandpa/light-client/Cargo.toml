@@ -32,6 +32,7 @@ polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", bra
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
 finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 hex-literal = "0.3.4"
+grandpa-prover = { path = "../prover" }
 
 [features]
 default = ["std"]

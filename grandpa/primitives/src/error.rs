@@ -1,6 +1,7 @@
 use derive_more::{Display, From};
 
 #[derive(From, Display)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub enum Error {
 	/// Anyhow error
 	Anyhow(anyhow::Error),

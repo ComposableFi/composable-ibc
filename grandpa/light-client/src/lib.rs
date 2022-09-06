@@ -15,6 +15,8 @@ use sp_runtime::traits::{Block, Header, NumberFor};
 use sp_trie::StorageProof;
 
 pub mod justification;
+#[cfg(test)]
+mod tests;
 
 /// Verify a new grandpa justification, given the old state.
 pub fn verify_parachain_headers_with_grandpa_finality_proof<B, H>(
@@ -58,10 +60,11 @@ where
 			.remove(key.as_ref())
 			.flatten()
 			.ok_or_else(|| anyhow!("Invalid proof, parachain header not found"))?;
+			let header = Vec::<u8>::decode(&mut &header[..])?;
 			let parachain_header = B::Header::decode(&mut &header[..])?;
 			// verify timestamp extrinsic proof
 			H::verify_timestamp_extrinsic(
-				parachain_header.state_root().as_fixed_bytes(),
+				parachain_header.extrinsics_root().as_fixed_bytes(),
 				&extrinsic_proof,
 				&extrinsic[..],
 			)?;

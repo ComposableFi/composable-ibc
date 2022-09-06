@@ -1,7 +1,7 @@
 use crate::runtime::api::runtime_types::polkadot_parachain::primitives::Id;
 use anyhow::anyhow;
 use beefy_prover::helpers::{fetch_timestamp_extrinsic_with_proof, TimeStampExtWithProof};
-use codec::Decode;
+use codec::{Decode, Encode};
 use finality_grandpa_rpc::GrandpaApiClient;
 use primitives::{
 	parachain_header_storage_key, FinalityProof, ParachainHeaderProofs,
@@ -13,7 +13,8 @@ use sp_runtime::traits::{Block, Zero};
 use std::collections::BTreeMap;
 use subxt::{sp_runtime::traits::Header as _, Client, Config};
 
-mod runtime;
+pub mod host_functions;
+pub mod runtime;
 
 pub struct GrandpaProver<T: Config> {
 	pub relay_client: Client<T>,
@@ -77,7 +78,6 @@ impl<T: Config> GrandpaProver<T> {
 	where
 		B: Block,
 		B::Hash: From<T::Hash>,
-		B::Header: From<T::Header>,
 		T::BlockNumber: Ord + Zero,
 		u32: From<T::BlockNumber>,
 	{
@@ -97,7 +97,7 @@ impl<T: Config> GrandpaProver<T> {
 		.0;
 		let mut finality_proof = FinalityProof::<B::Header>::decode(&mut &encoded[..])?;
 		let unknown_headers = {
-			let mut unknown_headers = vec![B::Header::from(header.clone())];
+			let mut unknown_headers = vec![B::Header::decode(&mut &header.encode()[..])?];
 			let mut current = *header.parent_hash();
 			loop {
 				if current == previous_finalized_hash {
@@ -110,7 +110,7 @@ impl<T: Config> GrandpaProver<T> {
 					.await?
 					.ok_or_else(|| anyhow!("Header with hash: {current:?} not found!"))?;
 				current = *header.parent_hash();
-				unknown_headers.push(B::Header::from(header));
+				unknown_headers.push(B::Header::decode(&mut &header.encode()[..])?);
 			}
 			unknown_headers
 		};

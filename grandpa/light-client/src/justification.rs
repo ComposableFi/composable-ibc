@@ -6,10 +6,7 @@ use primitives::{error, Commit, HostFunctions};
 use sp_finality_grandpa::{
 	AuthorityId, AuthorityList, ConsensusLog, ScheduledChange, GRANDPA_ENGINE_ID,
 };
-use sp_runtime::{
-	generic::OpaqueDigestItemId,
-	traits::{Block as BlockT, Header as HeaderT, NumberFor},
-};
+use sp_runtime::{generic::OpaqueDigestItemId, traits::{Block as BlockT, Header as HeaderT, NumberFor}};
 use sp_std::prelude::*;
 
 /// A GRANDPA justification for block finality, it includes a commit message and
@@ -20,7 +17,7 @@ use sp_std::prelude::*;
 ///
 /// This is meant to be stored in the db and passed around the network to other
 /// nodes, and are used by syncing nodes to prove authority set handoffs.
-#[derive(Clone, Encode, Decode, PartialEq, Eq)]
+#[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
 pub struct GrandpaJustification<Block: BlockT> {
 	pub round: u64,
 	pub commit: Commit<Block>,
@@ -202,132 +199,4 @@ pub fn find_forced_change<B: BlockT>(
 	// find the first consensus digest with the right ID which converts to
 	// the right kind of consensus log.
 	header.digest().convert_first(|l| l.try_to(id).and_then(filter_log))
-}
-
-#[cfg(test)]
-mod tests {
-	use crate::{
-		justification::{
-			find_forced_change, find_scheduled_change, AuthorityList, FinalityProof,
-			GrandpaJustification,
-		},
-		kusama,
-	};
-	use codec::{Decode, Encode};
-	use finality_grandpa_rpc::GrandpaApiClient;
-	use futures::StreamExt;
-	use polkadot_core_primitives::{Block, Header};
-	use serde::{Deserialize, Serialize};
-	use sp_core::H256;
-	use std::mem::size_of_val;
-	use subxt::{
-		rpc::{rpc_params, ClientT},
-		DefaultConfig,
-	};
-
-	pub type Justification = GrandpaJustification<Block>;
-
-	/// An encoded justification proving that the given header has been finalized
-	#[derive(Clone, Serialize, Deserialize)]
-	pub struct JustificationNotification(sp_core::Bytes);
-
-	#[tokio::test]
-	async fn follow_grandpa_justifications() {
-		let url = std::env::var("NODE_ENDPOINT")
-			.unwrap_or("wss://kusama-rpc.polkadot.io:443".to_string());
-		let client = subxt::ClientBuilder::new()
-			.set_url(url)
-			.build::<DefaultConfig>()
-			.await
-			.expect("Failed to initialize subxt");
-
-		let api = client
-			.clone()
-			.to_runtime_api::<kusama::api::RuntimeApi<DefaultConfig, subxt::PolkadotExtrinsicParams<_>>>(
-			);
-
-		let mut subscription = client
-			.rpc()
-			.subscribe_finalized_blocks()
-			.await
-			.expect("Failed to subscribe finalized blocks");
-
-		let mut current_set_id = api
-			.storage()
-			.grandpa()
-			.current_set_id(None)
-			.await
-			.expect("Failed to fetch current set id");
-
-		let mut authorities = {
-			let bytes = client
-				.rpc()
-				.client
-				.request::<String>(
-					"state_call",
-					rpc_params!(
-						"GrandpaApi_grandpa_authorities",
-						"0x",
-						format!("{:?}", header.hash())
-					),
-				)
-				.await
-				.map(|res| hex::decode(&res[2..]))
-				.expect("Failed to fetch authorities")
-				.expect("Failed to hex decode authorities");
-
-			AuthorityList::decode(&mut &bytes[..]).expect("Failed to scale decode authorities")
-		};
-
-		while let Some(Ok(header)) = subscription.next().await {
-			let header =
-				Header::decode(&mut &header.encode()[..]).expect("Failed to decode header");
-			println!("========= New Header =========");
-			println!("Got header: Hash({:?}), Number({})", header.hash(), header.number);
-			println!("current_set_id: {current_set_id}");
-
-			let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
-				&*client.rpc().client,
-				header.number,
-			)
-			.await
-			.expect("Failed to fetch finality proof")
-			.expect("Failed to fetch finality proof")
-			.0
-			 .0;
-
-			println!("justification size: {}kb", size_of_val(&*encoded) / 1000);
-			let finality_proof = FinalityProof::<Header>::decode(&mut &encoded[..])
-				.expect("Failed to decode finality proof");
-			let unknown_headers =
-				finality_proof.unknown_headers.iter().map(|h| h.number).collect::<Vec<_>>();
-			println!("unknown_headers: {unknown_headers:#?}",);
-
-			let mut justification = Justification::decode(&mut &finality_proof.justification[..])
-				.expect("Failed to decode justification");
-
-			justification
-				.verify(current_set_id, &authorities)
-				.expect("Failed to verify proof");
-
-			let pre_commits = justification.commit.precommits.drain(..).collect::<Vec<_>>();
-
-			println!("{justification:#?}");
-			println!("Signatures: {:#?}", pre_commits.len());
-
-			if let Some(scheduled_authority_set) = find_scheduled_change::<Block>(&header) {
-				println!(
-					"Found scheduled authority set with delay: {} blocks",
-					scheduled_authority_set.delay
-				);
-				current_set_id += 1;
-				authorities = scheduled_authority_set.next_authorities;
-			}
-			if let Some((delay, forced_authority_set)) = find_forced_change::<Block>(&header) {
-				println!("Found forced authority set: block import delay: {delay} blocks");
-				println!("forced_authority_set.delay: {} blocks", forced_authority_set.delay);
-			}
-			println!("========= Successfully verified grandpa justification =========");
-		}
-	}
 }
