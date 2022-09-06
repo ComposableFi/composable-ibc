@@ -40,10 +40,18 @@ async fn follow_grandpa_justifications() {
 		.expect("Failed to initialize subxt");
 	let api = relay_client.clone().to_runtime_api::<RelayChainApi<_>>();
 
-	println!("Waiting for parachain to start producing blocks");
-	let block_sub = para_client.rpc().subscribe_blocks().await.unwrap();
-	block_sub.take(2).collect::<Vec<_>>().await;
-	println!("Parachain has started producing blocks");
+	println!("Waiting for grandpa proofs to become available");
+	relay_client
+		.rpc()
+		.subscribe_blocks()
+		.await
+		.unwrap()
+		.filter_map(|result| futures::future::ready(result.ok()))
+		.skip_while(|h| futures::future::ready(*h.number() < 201))
+		.take(1)
+		.collect::<Vec<_>>()
+		.await;
+	println!("Grandpa proofs are now available");
 
 	let mut subscription =
 		GrandpaApiClient::<JustificationNotification, H256, u32>::subscribe_justifications(

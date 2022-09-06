@@ -6,7 +6,10 @@ use primitives::{error, Commit, HostFunctions};
 use sp_finality_grandpa::{
 	AuthorityId, AuthorityList, ConsensusLog, ScheduledChange, GRANDPA_ENGINE_ID,
 };
-use sp_runtime::{generic::OpaqueDigestItemId, traits::{Block as BlockT, Header as HeaderT, NumberFor}};
+use sp_runtime::{
+	generic::OpaqueDigestItemId,
+	traits::{Block as BlockT, Header as HeaderT, NumberFor},
+};
 use sp_std::prelude::*;
 
 /// A GRANDPA justification for block finality, it includes a commit message and
