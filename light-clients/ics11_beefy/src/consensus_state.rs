@@ -28,18 +28,10 @@ impl ConsensusState {
 
 		let timestamp = decode_timestamp_extrinsic(&header)?;
 		let duration = core::time::Duration::from_millis(timestamp);
-		let timestamp = Timestamp::from_nanoseconds(duration.as_nanos().saturated_into::<u64>())
-			.map_err(|e| {
-				Error::invalid_header(format!(
-					"Failed to decode timestamp extrinsic, got {}",
-					e.to_string()
-				))
-			})?
+		let timestamp = Timestamp::from_nanoseconds(duration.as_nanos().saturated_into::<u64>())?
 			.into_tm_time()
 			.ok_or_else(|| {
-				Error::invalid_header(
-					"Error decoding Timestamp, timestamp cannot be zero".to_string(),
-				)
+				Error::Custom("Error decoding Timestamp, timestamp cannot be zero".to_string())
 			})?;
 
 		Ok(Self { root: root.into(), timestamp })
@@ -70,11 +62,11 @@ impl TryFrom<RawConsensusState> for ConsensusState {
 	fn try_from(raw: RawConsensusState) -> Result<Self, Self::Error> {
 		let ibc_proto::google::protobuf::Timestamp { seconds, nanos } = raw
 			.timestamp
-			.ok_or_else(|| Error::invalid_raw_consensus_state("missing timestamp".into()))?;
+			.ok_or_else(|| Error::Custom(format!("Invalid consensus state: missing timestamp")))?;
 		let proto_timestamp = tpb::Timestamp { seconds, nanos };
-		let timestamp = proto_timestamp
-			.try_into()
-			.map_err(|e| Error::invalid_raw_consensus_state(format!("invalid timestamp: {}", e)))?;
+		let timestamp = proto_timestamp.try_into().map_err(|e| {
+			Error::Custom(format!("Invalid consensus state: invalid timestamp {e}"))
+		})?;
 
 		Ok(Self { root: raw.root.into(), timestamp })
 	}

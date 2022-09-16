@@ -2,6 +2,7 @@
 name = "grandpa-light-client-primitives"
 version = "0.1.0"
 edition = "2021"
+authors = ["Seun Lanlege <seunlanlege@gmail.com>"]
 
 [dependencies]
 anyhow = { version = "1.0.64", default-features = false }

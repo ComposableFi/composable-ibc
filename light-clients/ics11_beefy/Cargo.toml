@@ -2,6 +2,7 @@
 name = "ics11-beefy"
 version = "0.1.0"
 edition = "2021"
+authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <david.salami@gmail.com>"]
 
 [package.metadata.docs.rs]
 all-features = true
@@ -9,6 +10,23 @@ all-features = true
 [features]
 default = ["std"]
 std = [
+    "ibc/std",
+    "ibc-proto/std",
+    "beefy-client/std",
+    "beefy-client-primitives/std",
+    "pallet-mmr-primitives/std",
+    "beefy-primitives/std",
+    "sp-runtime/std",
+    "sp-core/std",
+    "sp-core/std",
+    "sp-std/std",
+    "sp-trie/std",
+    "sp-io/std",
+    "codec/std",
+    "prost/std",
+    "serde/std",
+    "bytes/std",
+    "tendermint/std",
 ]
 
 
@@ -33,7 +51,6 @@ sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0
 # crates.io
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 prost = { version = "0.10", default-features = false }
-prost-types = { version = "0.10", default-features = false }
 serde = { version = "1.0", default-features = false }
 bytes = { version = "1.1.0", default-features = false }
 derive_more = { version = "0.99.17", features = ["from"] }

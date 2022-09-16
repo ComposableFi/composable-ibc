@@ -66,14 +66,14 @@ impl<H: Clone> ClientState<H> {
 		next_authority_set: BeefyNextAuthoritySet<H256>,
 	) -> Result<ClientState<H>, Error> {
 		if beefy_activation_block > latest_beefy_height {
-			return Err(Error::validation(
+			return Err(Error::Custom(
 				"ClientState beefy activation block cannot be greater than latest_beefy_height"
 					.to_string(),
 			))
 		}
 
 		if authority_set.id >= next_authority_set.id {
-			return Err(Error::validation(
+			return Err(Error::Custom(
 				"ClientState next authority set id must be greater than current authority set id"
 					.to_string(),
 			))
@@ -120,7 +120,7 @@ impl<H: Clone> ClientState<H> {
 							.commitment
 							.payload
 							.get_raw(&MMR_ROOT_ID)
-							.ok_or_else(Error::invalid_raw_header)?,
+							.ok_or_else(|| Error::Custom("Invalid header".into()))?,
 					),
 					mmr_update.signed_commitment.commitment.block_number,
 					mmr_update.latest_mmr_leaf.beefy_next_authority_set,
@@ -146,15 +146,15 @@ impl<H: Clone> ClientState<H> {
 		delay_period_time: Duration,
 		delay_period_blocks: u64,
 	) -> Result<(), Error> {
-		let earliest_time =
-			(processed_time + delay_period_time).map_err(Error::timestamp_overflow)?;
+		let earliest_time = (processed_time + delay_period_time)
+			.map_err(|_| Error::Custom("Timestamp overflowed!".into()))?;
 		if !(current_time == earliest_time || current_time.after(&earliest_time)) {
-			return Err(Error::not_enough_time_elapsed(current_time, earliest_time))
+			return Err(Error::Custom(format!("Not enough time elapsed current time: {current_time}, earliest time: {earliest_time}")))
 		}
 
 		let earliest_height = processed_height.add(delay_period_blocks);
 		if current_height < earliest_height {
-			return Err(Error::not_enough_blocks_elapsed(current_height, earliest_height))
+			return Err(Error::Custom(format!("Not enough blocks elapsed, current height: {current_height}, earliest height: {earliest_height}")))
 		}
 
 		Ok(())
@@ -162,7 +162,7 @@ impl<H: Clone> ClientState<H> {
 
 	pub fn with_frozen_height(self, h: Height) -> Result<Self, Error> {
 		if h == Height::zero() {
-			return Err(Error::validation(
+			return Err(Error::Custom(
 				"ClientState frozen height must be greater than zero".to_string(),
 			))
 		}
@@ -173,12 +173,14 @@ impl<H: Clone> ClientState<H> {
 	pub fn verify_height(&self, height: Height) -> Result<(), Error> {
 		let latest_para_height = Height::new(self.para_id.into(), self.latest_para_height.into());
 		if latest_para_height < height {
-			return Err(Error::insufficient_height(latest_para_height, height))
+			return Err(Error::Custom(format!(
+				"Insufficient height, known height: {latest_para_height}, given height: {height}"
+			)))
 		}
 
 		match self.frozen_height {
 			Some(frozen_height) if frozen_height <= height =>
-				Err(Error::client_frozen(frozen_height, height)),
+				Err(Error::Custom(format!("Client has been frozen at height {frozen_height}"))),
 			_ => Ok(()),
 		}
 	}
@@ -298,7 +300,7 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 					root: H256::decode(&mut &*set.authority_root).ok()?,
 				})
 			})
-			.ok_or_else(Error::missing_beefy_authority_set)?;
+			.ok_or_else(|| Error::Custom(format!("Current authority set is missing")))?;
 
 		let next_authority_set = raw
 			.next_authority_set
@@ -309,9 +311,9 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 					root: H256::decode(&mut &*set.authority_root).ok()?,
 				})
 			})
-			.ok_or_else(Error::missing_beefy_authority_set)?;
+			.ok_or_else(|| Error::Custom(format!("Next authority set is missing")))?;
 
-		let mmr_root_hash = H256::decode(&mut &*raw.mmr_root_hash).map_err(Error::scale_decode)?;
+		let mmr_root_hash = H256::decode(&mut &*raw.mmr_root_hash)?;
 		let relay_chain = RelayChain::from_i32(raw.relay_chain)?;
 		let chain_id = ChainId::new(relay_chain.to_string(), raw.para_id.into());
 
@@ -394,7 +396,7 @@ impl RelayChain {
 			0 => Ok(Self::Polkadot),
 			1 => Ok(Self::Kusama),
 			2 => Ok(Self::Rococo),
-			id => Err(Error::unknown_relay_chain(id.to_string())),
+			id => Err(Error::Custom(format!("Unknown relay chain {id}"))),
 		}
 	}
 
@@ -426,7 +428,7 @@ impl FromStr for RelayChain {
 			"polkadot" => Ok(Self::Polkadot),
 			"kusama" => Ok(Self::Kusama),
 			"rococo" => Ok(Self::Rococo),
-			_ => Err(Error::unknown_relay_chain(s.to_string())),
+			_ => Err(Error::Custom(format!("Unknown relay chain {s}"))),
 		}
 	}
 }

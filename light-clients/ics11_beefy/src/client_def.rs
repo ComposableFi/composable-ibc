@@ -8,8 +8,7 @@ use sp_core::H256;
 use tendermint_proto::Protobuf;
 
 use crate::{
-	client_state::ClientState, consensus_state::ConsensusState, error::Error as BeefyError,
-	header::BeefyHeader,
+	client_state::ClientState, consensus_state::ConsensusState, error::Error, header::BeefyHeader,
 };
 use ibc::{
 	core::{
@@ -17,7 +16,7 @@ use ibc::{
 			client_consensus::ConsensusState as _,
 			client_def::{ClientDef, ConsensusUpdateResult},
 			client_state::ClientState as _,
-			error::Error,
+			error::Error as Ics02Error,
 		},
 		ics03_connection::connection::ConnectionEnd,
 		ics04_channel::{
@@ -47,7 +46,11 @@ pub struct BeefyClient<T>(PhantomData<T>);
 pub trait HostFunctions {
 	/// This function should verify membership and non-membership in a trie proof using
 	/// [`sp_state_machine::read_child_proof_check`]
-	fn verify_child_trie_proof<I>(root: &[u8; 32], proof: &[Vec<u8>], items: I) -> Result<(), Error>
+	fn verify_child_trie_proof<I>(
+		root: &[u8; 32],
+		proof: &[Vec<u8>],
+		items: I,
+	) -> Result<(), Error>
 	where
 		I: IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>;
 
@@ -81,7 +84,7 @@ where
 		_client_id: ClientId,
 		client_state: Self::ClientState,
 		header: Self::Header,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02Error> {
 		let light_client_state = LightClientState {
 			latest_beefy_height: client_state.latest_beefy_height,
 			mmr_root_hash: client_state.mmr_root_hash,
@@ -93,7 +96,7 @@ where
 		// or else return existing light client state
 		let light_client_state = if let Some(mmr_update) = header.mmr_update_proof {
 			beefy_client::verify_mmr_root_with_proof::<H>(light_client_state, mmr_update)
-				.map_err(|e| BeefyError::invalid_mmr_update(format!("{:?}", e)))?
+				.map_err(Error::from)?
 		} else {
 			light_client_state
 		};
@@ -132,17 +135,15 @@ where
 					items: headers_with_proof
 						.mmr_proofs
 						.into_iter()
-						.map(|item| {
-							H256::decode(&mut &*item)
-								.map_err(|e| BeefyError::invalid_mmr_update(format!("{:?}", e)))
-						})
-						.collect::<Result<Vec<_>, _>>()?,
+						.map(|item| H256::decode(&mut &*item))
+						.collect::<Result<Vec<_>, _>>()
+						.map_err(Error::from)?,
 				},
 			};
 
 			// Perform the parachain header verification
 			beefy_client::verify_parachain_headers::<H>(light_client_state, parachain_update_proof)
-				.map_err(|e| BeefyError::invalid_mmr_update(format!("{:?}", e)))?
+				.map_err(Error::from)?
 		}
 
 		Ok(())
@@ -154,10 +155,10 @@ where
 		client_id: ClientId,
 		client_state: Self::ClientState,
 		header: Self::Header,
-	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error> {
+	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
 		let mut parachain_cs_states = vec![];
 		// Extract the new client state from the verified header
-		let mut client_state = client_state.from_header(header.clone())?;
+		let mut client_state = client_state.from_header(header.clone()).map_err(Error::from)?;
 		let mut latest_para_height = client_state.latest_para_height;
 
 		if let Some(parachain_headers) = header.headers_with_proof {
@@ -177,12 +178,10 @@ where
 				}
 				parachain_cs_states.push((
 					height,
-					Ctx::AnyConsensusState::wrap(&ConsensusState::from_header(header)?)
-						.ok_or_else(|| {
-							Error::unknown_consensus_state_type(
-								"Ctx::AnyConsensusState".to_string(),
-							)
-						})?,
+					Ctx::AnyConsensusState::wrap(
+						&ConsensusState::from_header(header).map_err(Error::from)?,
+					)
+					.ok_or_else(|| Error::Custom("Ctx::AnyConsensusState".to_string()))?,
 				))
 			}
 		}
@@ -196,7 +195,8 @@ where
 		&self,
 		client_state: Self::ClientState,
 		header: Self::Header,
-	) -> Result<Self::ClientState, Error> {
+	) -> Result<Self::ClientState, Ics02Error> {
+		// todo: this is wrong
 		let latest_para_height = header
 			.headers_with_proof
 			.map(|headers| {
@@ -209,9 +209,8 @@ where
 				client_state.para_id.into(),
 				client_state.latest_para_height.into(),
 			));
-		client_state
-			.with_frozen_height(frozen_height)
-			.map_err(|e| BeefyError::implementation_specific(e.to_string()).into())
+		let client_state = client_state.with_frozen_height(frozen_height)?;
+		Ok(client_state)
 	}
 
 	fn check_for_misbehaviour<Ctx: ReaderContext>(
@@ -220,7 +219,7 @@ where
 		_client_id: ClientId,
 		_client_state: Self::ClientState,
 		_header: Self::Header,
-	) -> Result<bool, Error> {
+	) -> Result<bool, Ics02Error> {
 		Ok(false)
 	}
 
@@ -230,9 +229,9 @@ where
 		_consensus_state: &Self::ConsensusState,
 		_proof_upgrade_client: Vec<u8>,
 		_proof_upgrade_consensus_state: Vec<u8>,
-	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error> {
+	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
 		// TODO:
-		Err(BeefyError::implementation_specific("Not implemented".to_string()).into())
+		Err(Error::Custom("Not implemented".to_string()).into())
 	}
 
 	fn verify_client_consensus_state<Ctx: ReaderContext>(
@@ -246,7 +245,7 @@ where
 		client_id: &ClientId,
 		consensus_height: Height,
 		expected_consensus_state: &Ctx::AnyConsensusState,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ClientConsensusStatePath {
 			client_id: client_id.clone(),
@@ -254,7 +253,8 @@ where
 			height: consensus_height.revision_height,
 		};
 		let value = expected_consensus_state.encode_to_vec();
-		verify_membership::<H, _>(prefix, proof, root, path, value)
+		verify_membership::<H, _>(prefix, proof, root, path, value)?;
+		Ok(())
 	}
 
 	// Consensus state will be verified in the verification functions  before these are called
@@ -269,11 +269,12 @@ where
 		root: &CommitmentRoot,
 		connection_id: &ConnectionId,
 		expected_connection_end: &ConnectionEnd,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ConnectionsPath(connection_id.clone());
 		let value = expected_connection_end.encode_vec();
-		verify_membership::<H, _>(prefix, proof, root, path, value)
+		verify_membership::<H, _>(prefix, proof, root, path, value)?;
+		Ok(())
 	}
 
 	fn verify_channel_state<Ctx: ReaderContext>(
@@ -288,11 +289,12 @@ where
 		port_id: &PortId,
 		channel_id: &ChannelId,
 		expected_channel_end: &ChannelEnd,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ChannelEndsPath(port_id.clone(), *channel_id);
 		let value = expected_channel_end.encode_vec();
-		verify_membership::<H, _>(prefix, proof, root, path, value)
+		verify_membership::<H, _>(prefix, proof, root, path, value)?;
+		Ok(())
 	}
 
 	fn verify_client_full_state<Ctx: ReaderContext>(
@@ -305,11 +307,12 @@ where
 		root: &CommitmentRoot,
 		client_id: &ClientId,
 		expected_client_state: &Ctx::AnyClientState,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ClientStatePath(client_id.clone());
 		let value = expected_client_state.encode_to_vec();
-		verify_membership::<H, _>(prefix, proof, root, path, value)
+		verify_membership::<H, _>(prefix, proof, root, path, value)?;
+		Ok(())
 	}
 
 	fn verify_packet_data<Ctx: ReaderContext>(
@@ -325,9 +328,9 @@ where
 		channel_id: &ChannelId,
 		sequence: Sequence,
 		commitment: PacketCommitment,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
-		verify_delay_passed::<H>(ctx, height, connection_end)?;
+		verify_delay_passed::<H, _>(ctx, height, connection_end)?;
 
 		let commitment_path =
 			CommitmentsPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
@@ -338,7 +341,8 @@ where
 			root,
 			commitment_path,
 			commitment.into_vec(),
-		)
+		)?;
+		Ok(())
 	}
 
 	fn verify_packet_acknowledgement<Ctx: ReaderContext>(
@@ -354,9 +358,9 @@ where
 		channel_id: &ChannelId,
 		sequence: Sequence,
 		ack: AcknowledgementCommitment,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
-		verify_delay_passed::<H>(ctx, height, connection_end)?;
+		verify_delay_passed::<H, _>(ctx, height, connection_end)?;
 
 		let ack_path = AcksPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
 		verify_membership::<H, _>(
@@ -365,7 +369,8 @@ where
 			root,
 			ack_path,
 			ack.into_vec(),
-		)
+		)?;
+		Ok(())
 	}
 
 	fn verify_next_sequence_recv<Ctx: ReaderContext>(
@@ -380,9 +385,9 @@ where
 		port_id: &PortId,
 		channel_id: &ChannelId,
 		sequence: Sequence,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
-		verify_delay_passed::<H>(ctx, height, connection_end)?;
+		verify_delay_passed::<H, _>(ctx, height, connection_end)?;
 
 		let seq_bytes = codec::Encode::encode(&u64::from(sequence));
 
@@ -393,7 +398,8 @@ where
 			root,
 			seq_path,
 			seq_bytes,
-		)
+		)?;
+		Ok(())
 	}
 
 	fn verify_packet_receipt_absence<Ctx: ReaderContext>(
@@ -408,9 +414,9 @@ where
 		port_id: &PortId,
 		channel_id: &ChannelId,
 		sequence: Sequence,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
-		verify_delay_passed::<H>(ctx, height, connection_end)?;
+		verify_delay_passed::<H, _>(ctx, height, connection_end)?;
 
 		let receipt_path =
 			ReceiptsPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
@@ -419,7 +425,8 @@ where
 			proof,
 			root,
 			receipt_path,
-		)
+		)?;
+		Ok(())
 	}
 }
 
@@ -435,17 +442,19 @@ where
 	T: HostFunctions,
 {
 	if root.as_bytes().len() != 32 {
-		return Err(BeefyError::invalid_commitment_root().into())
+		return Err(Error::Custom(format!(
+			"invalid commitment root length: {}",
+			root.as_bytes().len()
+		)))
 	}
 	let path: Path = path.into();
 	let path = path.to_string();
 	let mut key = prefix.as_bytes().to_vec();
 	key.extend(path.as_bytes());
 	let trie_proof: Vec<u8> = proof.clone().into();
-	let trie_proof: Vec<Vec<u8>> =
-		codec::Decode::decode(&mut &*trie_proof).map_err(|e| BeefyError::scale_decode(e))?;
+	let trie_proof: Vec<Vec<u8>> = codec::Decode::decode(&mut &*trie_proof)?;
 	let root = H256::from_slice(root.as_bytes());
-	T::verify_child_trie_proof(root.as_fixed_bytes(), &trie_proof, vec![key, Some(value)])
+	T::verify_child_trie_proof(root.as_fixed_bytes(), &trie_proof, vec![(key, Some(value))])
 }
 
 fn verify_non_membership<T, P>(
@@ -459,37 +468,36 @@ where
 	T: HostFunctions,
 {
 	if root.as_bytes().len() != 32 {
-		return Err(BeefyError::invalid_commitment_root().into())
+		return Err(Error::Custom(format!(
+			"invalid commitment root length: {}",
+			root.as_bytes().len()
+		)))
 	}
 	let path: Path = path.into();
 	let path = path.to_string();
 	let mut key = prefix.as_bytes().to_vec();
 	key.extend(path.as_bytes());
 	let trie_proof: Vec<u8> = proof.clone().into();
-	let trie_proof: Vec<Vec<u8>> =
-		codec::Decode::decode(&mut &*trie_proof).map_err(|e| BeefyError::scale_decode(e))?;
+	let trie_proof: Vec<Vec<u8>> = codec::Decode::decode(&mut &*trie_proof)?;
 	let root = H256::from_slice(root.as_bytes());
-	T::verify_child_trie_proof(root.as_fixed_bytes(), &trie_proof, vec![key, None])
+	T::verify_child_trie_proof(root.as_fixed_bytes(), &trie_proof, vec![(key, None)])
 }
 
-fn verify_delay_passed<H>(
-	ctx: &Ctx,
+fn verify_delay_passed<H, C>(
+	ctx: &C,
 	height: Height,
 	connection_end: &ConnectionEnd,
 ) -> Result<(), Error>
-	where
-		H: Clone,
+where
+	H: Clone,
+	C: ReaderContext,
 {
 	let current_timestamp = ctx.host_timestamp();
 	let current_height = ctx.host_height();
 
 	let client_id = connection_end.client_id();
-	let processed_time = ctx
-		.client_update_time(client_id, height)
-		.map_err(|_| BeefyError::processed_time_not_found(client_id.clone(), height))?;
-	let processed_height = ctx
-		.client_update_height(client_id, height)
-		.map_err(|_| BeefyError::processed_height_not_found(client_id.clone(), height))?;
+	let processed_time = ctx.client_update_time(client_id, height).map_err(Error::from)?;
+	let processed_height = ctx.client_update_height(client_id, height).map_err(Error::from)?;
 
 	let delay_period_time = connection_end.delay_period();
 	let delay_period_height = ctx.block_delay(delay_period_time);
@@ -502,5 +510,4 @@ fn verify_delay_passed<H>(
 		delay_period_time,
 		delay_period_height,
 	)
-	.map_err(|e| e.into())
 }

@@ -3,11 +3,16 @@ use codec::alloc::string::String;
 use sp_core::H256;
 use sp_std::prelude::*;
 
-#[derive(sp_std::fmt::Debug, derive_more::From)]
+#[derive(sp_std::fmt::Debug, derive_more::From, derive_more::Display)]
 /// Error definition for the light client
 pub enum BeefyClientError {
 	/// Outdated commitment
 	#[from(ignore)]
+	#[display(
+		fmt = "OutdatedCommitment: latest_beefy_height {}, commitment_block_number {}",
+		latest_beefy_height,
+		commitment_block_number
+	)]
 	OutdatedCommitment {
 		/// Latest beefy height stored
 		latest_beefy_height: u32,
@@ -18,6 +23,12 @@ pub enum BeefyClientError {
 	MmrRootHashNotFound,
 	/// Invalid Authority set id received
 	#[from(ignore)]
+	#[display(
+		fmt = "AuthoritySetMismatch: current_set_id {}, next_set_id {}, commitment_set_id {}",
+		current_set_id,
+		next_set_id,
+		commitment_set_id
+	)]
 	AuthoritySetMismatch {
 		/// Current authority set id
 		current_set_id: u64,
@@ -32,6 +43,7 @@ pub enum BeefyClientError {
 	InvalidSignature,
 	/// Some invalid merkle root hash
 	#[from(ignore)]
+	#[display(fmt = "InvalidRootHash with len: {}", len)]
 	InvalidRootHash {
 		/// Root hash
 		root_hash: Vec<u8>,
@@ -39,6 +51,12 @@ pub enum BeefyClientError {
 		len: u64,
 	},
 	/// Some invalid mmr proof
+	#[display(
+		fmt = "InvalidMmrProof, expected: {}, found: {}, during: {}",
+		expected,
+		found,
+		location
+	)]
 	InvalidMmrProof { expected: H256, found: H256, location: &'static str },
 	/// Invalid authority proof
 	InvalidAuthorityProof,
