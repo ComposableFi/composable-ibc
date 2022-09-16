@@ -1,5 +1,5 @@
 use super::types::CryptoHash;
-use crate::ics11_beefy::client_state::ClientState;
+use crate::client_state::ClientState;
 use flex_error::define_error;
 use ibc::core::ics02_client::error::Error as Ics02Error;
 

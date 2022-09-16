@@ -3,7 +3,7 @@ use crate::any::consensus_state::AnyConsensusState;
 use crate::any::header::AnyHeader;
 use crate::ics07_tendermint::client_def::TendermintClient;
 #[cfg(any(test, feature = "ics11_beefy"))]
-use crate::ics11_beefy::client_def::BeefyClient;
+use crate::client_def::BeefyClient;
 #[cfg(any(test, feature = "ics11_beefy"))]
 use crate::ics13_near::client_def::NearClient;
 use crate::AnyHostFunctionsTrait;

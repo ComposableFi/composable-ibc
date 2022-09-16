@@ -1,4 +1,8 @@
-//! ICS 13: Beefy Client implements a client verification algorithm for parachains in the dotsama ecosystem.
+//! ICS 13: Beefy Client implements a client verification algorithm for parachains in the dotsama
+//! ecosystem.
+#![cfg_attr(not(feature = "std"), no_std)]
+
+extern crate alloc;
 
 pub mod client_def;
 pub mod client_state;

@@ -1,7 +1,7 @@
 use crate::any::client_def::AnyClient;
 use crate::ics07_tendermint::client_state;
 #[cfg(any(test, feature = "ics11_beefy"))]
-use crate::ics11_beefy::client_state as beefy_client_state;
+use crate::client_state as beefy_client_state;
 #[cfg(any(test, feature = "ics11_beefy"))]
 use crate::ics13_near::client_state as near_client_state;
 use crate::AnyHostFunctionsTrait;
