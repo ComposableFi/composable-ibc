@@ -14,7 +14,7 @@ use tendermint_proto::Protobuf;
 use crate::consensus_state as beefy_consensus_state;
 
 #[cfg(any(test, feature = "ics11_beefy"))]
-use crate::ics13_near::consensus_state as near_consensus_state;
+use ics13_near::consensus_state as near_consensus_state;
 
 #[cfg(any(test, feature = "mocks"))]
 use ibc::mock::client_state::MockConsensusState;

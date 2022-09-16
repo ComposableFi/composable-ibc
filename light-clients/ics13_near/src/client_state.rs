@@ -1,5 +1,5 @@
 use super::types::{CryptoHash, LightClientBlockView, ValidatorStakeView};
-use crate::ics13_near::client_def::{HostFunctionsTrait, NearClient};
+use crate::client_def::{HostFunctionsTrait, NearClient};
 use ibc::core::ics02_client::client_state::ClientType;
 use ibc::core::{ics02_client::client_state::ClientState, ics24_host::identifier::ChainId};
 use ibc::prelude::*;
@@ -51,8 +51,7 @@ impl<H: HostFunctionsTrait> ClientState for NearClientState<H> {
     }
 
     fn client_type(&self) -> ClientType {
-        todo!("implement client type for NEAR")
-        // ClientType::Near
+        Self::client_type()
     }
 
     fn client_def(&self) -> Self::ClientDef {
@@ -88,6 +87,12 @@ impl<H: HostFunctionsTrait> ClientState for NearClientState<H> {
 
     fn encode_to_vec(&self) -> Vec<u8> {
         todo!("implement encoding")
+    }
+}
+
+impl<H> NearClientState<H> {
+    pub fn client_type() -> ClientType {
+        "13-near"
     }
 }
 

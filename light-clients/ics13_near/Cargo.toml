@@ -1,5 +1,5 @@
 [package]
-name = "clients"
+name = "ics13-near"
 version = "0.1.0"
 edition = "2021"
 
@@ -34,10 +34,11 @@ mocks = ["clock", "std", "sha3", "ripemd", "ics11_beefy", "ibc/mocks"]
 ics11_beefy = ["sp-io", "sp-core", "sp-std", "beefy-primitives", "sp-runtime", "sp-trie", "pallet-mmr-primitives", "beefy-client", "beefy-client-primitives" ]
 
 [dependencies]
-ibc = { path = "../modules" }
 # Proto definitions for all IBC-related interfaces, e.g., connections or channels.
 borsh = { version = "0.9.3", default-features = false }
-ibc-proto = { version = "0.18.0", path = "../proto", default-features = false }
+ibc = { git = "https://github.com/ComposableFi/ibc-rs", rev = "af5bb83fc4ba3585a04489ac3dde1f7ed79e2c65", default-features = false }
+ibc-proto = { git = "https://github.com/ComposableFi/ibc-rs", rev = "af5bb83fc4ba3585a04489ac3dde1f7ed79e2c65", default-features = false }
+ibc-derive = { git = "https://github.com/ComposableFi/ibc-rs", rev = "af5bb83fc4ba3585a04489ac3dde1f7ed79e2c65", default-features = false }
 ics23 = { git = "https://github.com/composablefi/ics23", rev = "b500a5c6068eb53c83c4c6c13bd9d8c25e0bf927", default-features = false }
 time = { version = "0.3", default-features = false }
 serde_derive = { version = "1.0.104", default-features = false }
@@ -66,9 +67,7 @@ sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false, optional = true }
 sha3 = { version = "0.10.1", optional = true }
 ripemd = { version = "0.1.1", optional = true }
-
 primitive-types = { version = "0.11.1", default-features = false, features = ["serde_no_std"] }
-derive = { path = "../derive", package = "ibc-derive" }
 
 [dependencies.tendermint]
 git = "https://github.com/composableFi/tendermint-rs"
@@ -112,9 +111,4 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
-ibc = { path = "../modules", features = ['mocks'] }
-
-[[test]]
-name = "mbt"
-path = "tests/mbt.rs"
-required-features = ["mocks"]
+ibc = { git = "https://github.com/ComposableFi/ibc-rs", rev = "af5bb83fc4ba3585a04489ac3dde1f7ed79e2c65", features = ['mocks'] }

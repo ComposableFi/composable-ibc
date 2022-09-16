@@ -23,7 +23,8 @@ std = [
     "sp-trie/std",
     "sp-io/std",
     "sp-std/std",
-    "ibc/std"
+    "ibc/std",
+    "ics13-near/std"
 ]
 clock = ["tendermint/clock", "time/std", "ibc/clock"]
 
@@ -35,6 +36,7 @@ ics11_beefy = ["sp-io", "sp-core", "sp-std", "beefy-primitives", "sp-runtime", "
 
 [dependencies]
 ibc = { path = "../modules" }
+ics13-near = { path = "../light-clients/ics13_near", default-features = false }
 # Proto definitions for all IBC-related interfaces, e.g., connections or channels.
 borsh = { version = "0.9.3", default-features = false }
 ibc-proto = { version = "0.18.0", path = "../proto", default-features = false }

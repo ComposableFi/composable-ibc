@@ -4,7 +4,7 @@ use borsh::maybestd::{io::Write, string::String};
 use borsh::{BorshDeserialize, BorshSerialize};
 use sp_core::ed25519::{Public as Ed25519Public, Signature as Ed25519Signature};
 
-use crate::ics13_near::client_def::HostFunctions;
+use crate::client_def::HostFunctions;
 use ibc::Height;
 
 #[derive(Debug)]

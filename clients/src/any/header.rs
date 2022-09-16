@@ -7,7 +7,7 @@ use crate::ics07_tendermint::header::Header as TendermintHeader;
 #[cfg(any(test, feature = "ics11_beefy"))]
 use crate::header::BeefyHeader;
 #[cfg(any(test, feature = "ics11_beefy"))]
-use crate::ics13_near::header::NearHeader;
+use ics13_near::header::NearHeader;
 use ibc::core::ics02_client::error::Error;
 use ibc::core::ics02_client::header::Header;
 #[cfg(any(test, feature = "mocks"))]
