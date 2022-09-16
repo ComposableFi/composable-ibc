@@ -14,8 +14,8 @@ std = [
 
 [dependencies]
 # ibc deps
-ibc = { git = "https://github.com/ComposableFi/ibc-rs", rev = "af5bb83fc4ba3585a04489ac3dde1f7ed79e2c65", default-features = false }
-ibc-proto = { git = "https://github.com/ComposableFi/ibc-rs", rev = "af5bb83fc4ba3585a04489ac3dde1f7ed79e2c65", default-features = false }
+ibc = { git = "https://github.com/ComposableFi/ibc-rs", rev = "a3b905f1429734bd3e1fc65ddb9d91aa40ee8250", default-features = false }
+ibc-proto = { git = "https://github.com/ComposableFi/ibc-rs", rev = "a3b905f1429734bd3e1fc65ddb9d91aa40ee8250", default-features = false }
 
 # beefy deps
 beefy-client = { package = "beefy-light-client", path = "../../algorithms/beefy",  default-features = false }
