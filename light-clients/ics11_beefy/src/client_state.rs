@@ -375,6 +375,8 @@ impl Display for RelayChain {
 // Unbonding period for relay chains in days
 const POLKADOT_UNBONDING_PERIOD: u64 = 28;
 const KUSAMA_UNBONDING_PERIOD: u64 = 7;
+// number of seconds in a day
+const DAY: u64 = 24 * 60 * 60;
 
 impl RelayChain {
 	/// Yields the Order as a string
@@ -398,14 +400,8 @@ impl RelayChain {
 
 	pub fn unbonding_period(&self) -> Duration {
 		match self {
-			Self::Polkadot => {
-				let secs = POLKADOT_UNBONDING_PERIOD * 24 * 60 * 60;
-				Duration::from_secs(secs)
-			},
-			Self::Kusama | Self::Rococo => {
-				let secs = KUSAMA_UNBONDING_PERIOD * 24 * 60 * 60;
-				Duration::from_secs(secs)
-			},
+			Self::Polkadot => Duration::from_secs(POLKADOT_UNBONDING_PERIOD * DAY),
+			Self::Kusama | Self::Rococo => Duration::from_secs(KUSAMA_UNBONDING_PERIOD * DAY),
 		}
 	}
 

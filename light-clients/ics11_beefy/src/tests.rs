@@ -1,8 +1,8 @@
 use crate::{
-	client_state::{ClientState as BeefyClientState, ClientState},
+	client_state::ClientState as BeefyClientState,
 	consensus_state::ConsensusState,
 	header::{BeefyHeader, ParachainHeader as BeefyParachainHeader, ParachainHeadersWithProof},
-	mock::HostFunctionsManager,
+	mock::{HostFunctionsManager, MockClientTypes},
 };
 use beefy_client_primitives::{NodesUtils, PartialMmrLeaf};
 use beefy_prover::{
@@ -13,6 +13,7 @@ use codec::{Decode, Encode};
 use ibc::{
 	core::{
 		ics02_client::{
+			client_state::ClientState,
 			context::{ClientKeeper, ClientReader},
 			handler::{dispatch, ClientResult::Update},
 			msgs::{
@@ -34,7 +35,7 @@ async fn test_continuous_update_of_beefy_client() {
 
 	let chain_start_height = Height::new(1, 11);
 
-	let mut ctx = MockContext::new(
+	let mut ctx = MockContext::<MockClientTypes>::new(
 		ChainId::new("mockgaiaA".to_string(), 1),
 		HostType::Beefy,
 		5,
@@ -63,7 +64,6 @@ async fn test_continuous_update_of_beefy_client() {
 		para_id: 2001,
 	};
 
-	let mut count = 0;
 	let (client_state, consensus_state) = loop {
 		let beefy_state = client_wrapper.construct_beefy_client_state(0).await.unwrap();
 
@@ -161,11 +161,9 @@ async fn test_continuous_update_of_beefy_client() {
 		)
 		.await
 		.unwrap();
+	let mut subscription = subscription.enumerate().take(100);
 
 	while let Some(Ok(commitment)) = subscription.next().await {
-		if count == 100 {
-			break
-		}
 		let recv_commitment: sp_core::Bytes =
 			serde_json::from_value(JsonValue::String(commitment)).unwrap();
 		let signed_commitment: beefy_primitives::SignedCommitment<
@@ -270,6 +268,5 @@ async fn test_continuous_update_of_beefy_client() {
 			Err(e) => panic!("Unexpected error {:?}", e),
 		}
 		println!("Updated client successfully");
-		count += 1;
 	}
 }
