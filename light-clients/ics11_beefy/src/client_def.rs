@@ -42,8 +42,10 @@ use ibc::{
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct BeefyClient<T>(PhantomData<T>);
 
-/// Host functions that allow the light client verify trie proofs.
-pub trait HostFunctions {
+/// Host functions that allow the light client verify cryptographic proofs in native.
+pub trait HostFunctions:
+	beefy_client_primitives::HostFunctions + Clone + Send + Sync + Eq + Debug + Default
+{
 	/// This function should verify membership and non-membership in a trie proof using
 	/// [`sp_state_machine::read_child_proof_check`]
 	fn verify_child_trie_proof<I>(
@@ -53,26 +55,11 @@ pub trait HostFunctions {
 	) -> Result<(), Error>
 	where
 		I: IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>;
-
-	/// This function should verify membership of the timestamp extrinsic proof using
-	/// [`sp_trie::verify_trie_proof`]
-	fn verify_timestamp_extrinsic_proof(
-		root: &[u8; 32],
-		proof: &[Vec<u8>],
-		value: &[u8],
-	) -> Result<(), Error>;
 }
 
 impl<H> ClientDef for BeefyClient<H>
 where
-	H: HostFunctions
-		+ beefy_client_primitives::HostFunctions
-		+ Clone
-		+ Send
-		+ Sync
-		+ Eq
-		+ Debug
-		+ Default,
+	H: HostFunctions,
 {
 	type Header = BeefyHeader;
 	type ClientState = ClientState<H>;

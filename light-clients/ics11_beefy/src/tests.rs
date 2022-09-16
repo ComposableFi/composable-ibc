@@ -1,19 +1,36 @@
 use crate::{
-	client_state::ClientState as BeefyClientState,
+	client_state::{ClientState as BeefyClientState, ClientState},
 	consensus_state::ConsensusState,
-	header::{BeefyHeader, ParachainHeader as BeefyParachainHeader},
+	header::{BeefyHeader, ParachainHeader as BeefyParachainHeader, ParachainHeadersWithProof},
+	mock::HostFunctionsManager,
 };
 use beefy_client_primitives::{NodesUtils, PartialMmrLeaf};
-use beefy_queries::{
+use beefy_prover::{
 	helpers::{fetch_timestamp_extrinsic_with_proof, TimeStampExtWithProof},
 	runtime, ClientWrapper,
 };
 use codec::{Decode, Encode};
+use ibc::{
+	core::{
+		ics02_client::{
+			context::{ClientKeeper, ClientReader},
+			handler::{dispatch, ClientResult::Update},
+			msgs::{
+				create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient, ClientMsg,
+			},
+		},
+		ics24_host::identifier::{ChainId, ClientId},
+	},
+	handler::HandlerOutput,
+	mock::{client_state::AnyClientState, context::MockContext, header::AnyHeader},
+	test_utils::get_dummy_account_id,
+	Height,
+};
 use subxt::rpc::{rpc_params, JsonValue, Subscription, SubscriptionClientT};
 
 #[tokio::test]
 async fn test_continuous_update_of_beefy_client() {
-	let client_id = ClientId::new(ClientState::<()>::client_type(), 0).unwrap();
+	let client_id = ClientId::new(ClientState::<HostFunctionsManager>::client_type(), 0).unwrap();
 
 	let chain_start_height = Height::new(1, 11);
 
@@ -91,6 +108,7 @@ async fn test_continuous_update_of_beefy_client() {
 			para_id: client_wrapper.para_id,
 			authority: beefy_state.current_authorities,
 			next_authority_set: beefy_state.next_authorities,
+			..Default::default()
 		};
 		// we can't use the genesis block to construct the initial state.
 		if block_number == 0 {
@@ -154,10 +172,11 @@ async fn test_continuous_update_of_beefy_client() {
 			u32,
 			beefy_primitives::crypto::Signature,
 		> = codec::Decode::decode(&mut &*recv_commitment).unwrap();
-		let client_state: BeefyClientState = match ctx.client_state(&client_id).unwrap() {
-			AnyClientState::Beefy(client_state) => client_state,
-			_ => panic!("unexpected client state"),
-		};
+		let client_state: BeefyClientState<HostFunctionsManager> =
+			match ctx.client_state(&client_id).unwrap() {
+				AnyClientState::Beefy(client_state) => client_state,
+				_ => panic!("unexpected client state"),
+			};
 		match signed_commitment.commitment.validator_set_id {
 			id if id < client_state.authority.id => {
 				// If validator set id of signed commitment is less than current validator set id we

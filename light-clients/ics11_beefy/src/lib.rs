@@ -1,6 +1,6 @@
-//! ICS 13: Beefy Client implements a client verification algorithm for parachains in the dotsama
-//! ecosystem.
 #![cfg_attr(not(feature = "std"), no_std)]
+
+//! ICS-11: Beefy client protocol implementation
 
 extern crate alloc;
 

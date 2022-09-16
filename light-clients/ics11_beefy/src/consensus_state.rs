@@ -10,6 +10,9 @@ use ibc_proto::ibc::lightclients::beefy::v1::ConsensusState as RawConsensusState
 use crate::{error::Error, header::ParachainHeader};
 use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp};
 
+/// Protobuf type url for Beefy Consensus State
+pub const BEEFY_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.beefy.v1.ConsensusState";
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct ConsensusState {
 	pub timestamp: Time,
@@ -26,7 +29,7 @@ impl ConsensusState {
 		use sp_runtime::SaturatedConversion;
 		let root = header.parachain_header.state_root.0.to_vec();
 
-		let timestamp = decode_timestamp_extrinsic(&header)?;
+		let timestamp = decode_timestamp_extrinsic(&header.timestamp_extrinsic)?;
 		let duration = core::time::Duration::from_millis(timestamp);
 		let timestamp = Timestamp::from_nanoseconds(duration.as_nanos().saturated_into::<u64>())?
 			.into_tm_time()

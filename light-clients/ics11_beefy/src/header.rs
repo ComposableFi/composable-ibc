@@ -1,4 +1,3 @@
-use prost::Message as _;
 use tendermint_proto::Protobuf;
 
 use crate::error::Error;
@@ -12,7 +11,6 @@ use beefy_primitives::{
 	mmr::{MmrLeaf, MmrLeafVersion},
 	Commitment, Payload,
 };
-use bytes::Buf;
 use codec::{Compact, Decode, Encode};
 use ibc::Height;
 use ibc_proto::ibc::lightclients::beefy::v1::{
@@ -27,6 +25,9 @@ use sp_runtime::{
 	generic::Header as SubstrateHeader,
 	traits::{BlakeTwo256, SaturatedConversion},
 };
+
+/// Protobuf type url for Beefy header
+pub const BEEFY_HEADER_TYPE_URL: &str = "/ibc.lightclients.beefy.v1.Header";
 
 /// Beefy consensus header
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -107,8 +108,8 @@ impl TryFrom<RawBeefyHeader> for BeefyHeader {
 								Default::default()
 							};
 						Ok(ParachainHeader {
-							parachain_header: decode_parachain_header(
-								raw_para_header.parachain_header,
+							parachain_header: SubstrateHeader::decode(
+								&mut &raw_para_header.parachain_header[..],
 							)?,
 							partial_mmr_leaf: PartialMmrLeaf {
 								version: {
@@ -393,25 +394,13 @@ impl From<BeefyHeader> for RawBeefyHeader {
 
 impl Protobuf<RawBeefyHeader> for BeefyHeader {}
 
-pub fn decode_parachain_header(
-	raw_header: Vec<u8>,
-) -> Result<SubstrateHeader<u32, BlakeTwo256>, Error> {
-	let header = SubstrateHeader::decode(&mut &*raw_header)?;
-	Ok(header)
-}
-
-pub fn decode_header<B: Buf>(buf: B) -> Result<BeefyHeader, Error> {
-	RawBeefyHeader::decode(buf)?.try_into()
-}
-
 /// Attempt to extract the timestamp extrinsic from the parachain header
-pub fn decode_timestamp_extrinsic(header: &ParachainHeader) -> Result<u64, Error> {
-	let ext = &*header.timestamp_extrinsic;
+pub fn decode_timestamp_extrinsic(ext: &Vec<u8>) -> Result<u64, Error> {
 	// Timestamp extrinsic should be the first inherent and hence the first extrinsic
 	// https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
 	// Decoding from the [2..] because the timestamp inmherent has two extra bytes before the call
 	// that represents the call length and the extrinsic version.
 	let (_, _, timestamp): (u8, u8, Compact<u64>) = codec::Decode::decode(&mut &ext[2..])
-		.map_err(|_| Error::Custom(format!("Failed to decode extrinsic")))?;
+		.map_err(|err| Error::Custom(format!("Failed to decode extrinsic: {err}")))?;
 	Ok(timestamp.into())
 }

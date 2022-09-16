@@ -1,59 +1,80 @@
 use crate::{
-	client_def::BeefyClient,
-	client_state::{ClientState as BeefyClientState, UpgradeOptions as BeefyUpgradeOptions},
-	consensus_state::ConsensusState as BeefyConsensusState,
-	header::BeefyHeader,
+	client_def::{BeefyClient, HostFunctions},
+	client_state::{
+		ClientState as BeefyClientState, UpgradeOptions as BeefyUpgradeOptions,
+		BEEFY_CLIENT_STATE_TYPE_URL,
+	},
+	consensus_state::{ConsensusState as BeefyConsensusState, BEEFY_CONSENSUS_STATE_TYPE_URL},
+	error::Error,
+	header::{BeefyHeader, BEEFY_HEADER_TYPE_URL},
 };
-
-use crate::any::mock::context::Crypto;
-use core::{convert::Infallible, time::Duration};
+use beefy_client_primitives::error::BeefyClientError;
 use ibc::{
-	core::{
-		ics02_client::{
-			client_consensus::ConsensusState,
-			client_def::{ClientDef, ConsensusUpdateResult},
-			client_state::{ClientState, ClientType},
-			error::Error,
-			header::Header,
-			height::Height,
-			misbehaviour::Misbehaviour,
-		},
-		ics03_connection::connection::ConnectionEnd,
-		ics04_channel::{
-			channel::ChannelEnd,
-			commitment::{AcknowledgementCommitment, PacketCommitment},
-			packet::Sequence,
-		},
-		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
-		ics24_host::identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
-		ics26_routing::context::ReaderContext,
+	core::ics02_client::{
+		client_consensus::ConsensusState, client_def::ClientDef, client_state::ClientState,
+		header::Header, misbehaviour::Misbehaviour,
 	},
 	downcast,
 	mock::{
 		client_def::MockClient,
 		client_state::{MockClientState, MockConsensusState},
+		context::ClientTypes,
 		header::MockHeader,
 		misbehaviour::MockMisbehaviour,
 	},
 	prelude::*,
-	timestamp::Timestamp,
 };
-use ibc_proto::google::protobuf::Any;
-use tendermint_proto::Protobuf;
+use ibc_derive::{ClientDef, ClientState, ConsensusState, Header, Misbehaviour, Protobuf};
+use serde::{Deserialize, Serialize};
+use sp_core::{storage::ChildInfo, H256};
+use sp_trie::StorageProof;
 
 pub const MOCK_CLIENT_STATE_TYPE_URL: &str = "/ibc.mock.ClientState";
 pub const MOCK_HEADER_TYPE_URL: &str = "/ibc.mock.Header";
 pub const MOCK_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.mock.Misbehavior";
 pub const MOCK_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.mock.ConsensusState";
 
-pub const BEEFY_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.beefy.v1.ClientState";
-pub const BEEFY_HEADER_TYPE_URL: &str = "/ibc.lightclients.beefy.v1.Header";
-pub const BEEFY_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.beefy.v1.ConsensusState";
+#[derive(Clone, Default, Debug, Eq)]
+pub struct HostFunctionsManager;
+
+impl beefy_client_primitives::HostFunctions for HostFunctionsManager {
+	fn keccak_256(input: &[u8]) -> [u8; 32] {
+		beefy_prover::Crypto::keccak_256(input)
+	}
+
+	fn secp256k1_ecdsa_recover_compressed(
+		signature: &[u8; 65],
+		value: &[u8; 32],
+	) -> Option<Vec<u8>> {
+		beefy_prover::Crypto::secp256k1_ecdsa_recover_compressed(signature, value)
+	}
+
+	fn verify_timestamp_extrinsic(
+		root: H256,
+		proof: &[Vec<u8>],
+		value: &[u8],
+	) -> Result<(), BeefyClientError> {
+		beefy_prover::Crypto::verify_timestamp_extrinsic(root, proof, value)
+	}
+}
+
+impl HostFunctions for HostFunctionsManager {
+	fn verify_child_trie_proof<I>(root: &[u8; 32], proof: &[Vec<u8>], items: I) -> Result<(), Error>
+	where
+		I: IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
+	{
+		let proof = StorageProof::new(proof);
+		let child_info = ChildInfo::new_default(b"ibc/");
+		sp_state_machine::read_child_proof_check(root.into(), proof, &child_info, items)
+			.map_err(|err| Error::Custom(format!("Failed to verify child trie proof: {err:?}")))?;
+		Ok(())
+	}
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, ClientDef)]
 pub enum AnyClient {
 	Mock(MockClient),
-	Beefy(BeefyClient<Crypto>),
+	Beefy(BeefyClient<HostFunctionsManager>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -70,7 +91,7 @@ pub enum AnyClientState {
 	Mock(MockClientState),
 	#[serde(skip)]
 	#[ibc(proto_url = "BEEFY_CLIENT_STATE_TYPE_URL")]
-	Beefy(BeefyClientState<Crypto>),
+	Beefy(BeefyClientState<HostFunctionsManager>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Header, Protobuf)]
@@ -97,4 +118,17 @@ pub enum AnyConsensusState {
 	Beefy(BeefyConsensusState),
 	#[ibc(proto_url = "MOCK_CONSENSUS_STATE_TYPE_URL")]
 	Mock(MockConsensusState),
+}
+
+#[derive(Debug, Eq, PartialEq, Clone, Default)]
+pub struct MockClientTypes;
+
+impl ClientTypes for MockClientTypes {
+	type AnyHeader = AnyHeader;
+	type AnyClientState = AnyClientState;
+	type AnyConsensusState = AnyConsensusState;
+	type AnyMisbehaviour = AnyMisbehaviour;
+	type HostFunctions = HostFunctionsManager;
+	type ClientDef = AnyClient;
+	type HostBlock = ();
 }

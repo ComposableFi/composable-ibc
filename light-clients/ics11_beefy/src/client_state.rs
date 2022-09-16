@@ -25,7 +25,10 @@ use ibc::{
 	Height,
 };
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+/// Protobuf type url for Beefy ClientState
+pub const BEEFY_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.beefy.v1.ClientState";
+
+#[derive(PartialEq, Eq, Clone, Debug, Default)]
 pub struct ClientState<H> {
 	/// The chain id
 	pub chain_id: ChainId,
@@ -228,14 +231,7 @@ impl<H> ClientState<H> {
 
 impl<H> ibc::core::ics02_client::client_state::ClientState for ClientState<H>
 where
-	H: HostFunctions
-		+ beefy_client_primitives::HostFunctions
-		+ Clone
-		+ Send
-		+ Sync
-		+ Eq
-		+ Debug
-		+ Default,
+	H: HostFunctions,
 {
 	type UpgradeOptions = UpgradeOptions;
 	type ClientDef = BeefyClient<H>;
