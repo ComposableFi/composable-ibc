@@ -21,7 +21,7 @@ sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 
-primitives = { package = "grandpa-light-client-primitives", path = "../primitives", default-features = false }
+primitives = { package = "grandpa-light-client-primitives", path = "primitives", default-features = false }
 
 [dev-dependencies]
 subxt = { git = "https://github.com/paritytech/subxt", rev = "c55b7ba3e34118f61dc51499a0b38262c513aec4" }
@@ -32,7 +32,7 @@ polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", bra
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
 finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 hex-literal = "0.3.4"
-grandpa-prover = { path = "../prover" }
+grandpa-prover = { path = "prover" }
 
 [features]
 default = ["std"]

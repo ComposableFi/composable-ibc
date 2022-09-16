@@ -26,7 +26,13 @@ pub struct GrandpaProver<T: Config> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct JustificationNotification(sp_core::Bytes);
 
-impl<T: Config> GrandpaProver<T> {
+impl<T> GrandpaProver<T>
+where
+	T: Config,
+	T::BlockNumber: Ord + Zero,
+	u32: From<T::BlockNumber>,
+{
+	/// Returns the finalized parachain headers in between the given relay chain hashes.
 	pub async fn query_finalized_parachain_headers_between(
 		&self,
 		latest_finalized_hash: T::Hash,
@@ -69,6 +75,8 @@ impl<T: Config> GrandpaProver<T> {
 		Ok(headers)
 	}
 
+	/// Returns the finality proof for the given parachain header numbers in between the given relay
+	/// chain hashes.
 	pub async fn query_finalized_parachain_headers_with_proof<B>(
 		&self,
 		latest_finalized_hash: T::Hash,
@@ -78,8 +86,6 @@ impl<T: Config> GrandpaProver<T> {
 	where
 		B: Block,
 		B::Hash: From<T::Hash>,
-		T::BlockNumber: Ord + Zero,
-		u32: From<T::BlockNumber>,
 	{
 		let header = self
 			.relay_client
@@ -96,7 +102,7 @@ impl<T: Config> GrandpaProver<T> {
 		.ok_or_else(|| anyhow!("No justification found for block: {:?}", header.hash()))?
 		.0;
 		let mut finality_proof = FinalityProof::<B::Header>::decode(&mut &encoded[..])?;
-		let unknown_headers = {
+		finality_proof.unknown_headers = {
 			let mut unknown_headers = vec![B::Header::decode(&mut &header.encode()[..])?];
 			let mut current = *header.parent_hash();
 			loop {
@@ -115,11 +121,6 @@ impl<T: Config> GrandpaProver<T> {
 			unknown_headers
 		};
 
-		finality_proof.unknown_headers = unknown_headers;
-		let api = self
-			.relay_client
-			.clone()
-			.to_runtime_api::<runtime::api::RuntimeApi<T, subxt::PolkadotExtrinsicParams<_>>>();
 		// we are interested only in the blocks where our parachain header changes.
 		let keys = vec![parachain_header_storage_key(self.para_id)];
 		let change_set = self
@@ -127,13 +128,20 @@ impl<T: Config> GrandpaProver<T> {
 			.storage()
 			.query_storage(keys.clone(), previous_finalized_hash, Some(latest_finalized_hash))
 			.await?;
+
+		let api = self
+			.relay_client
+			.clone()
+			.to_runtime_api::<runtime::api::RuntimeApi<T, subxt::PolkadotExtrinsicParams<_>>>();
 		let mut parachain_headers = BTreeMap::<B::Hash, ParachainHeaderProofs>::default();
 
 		for changes in change_set {
-			let header =
-				self.relay_client.rpc().header(Some(changes.block)).await?.ok_or_else(|| {
-					anyhow!("[get_parachain_headers] block not found {:?}", changes.block)
-				})?;
+			let header = self
+				.relay_client
+				.rpc()
+				.header(Some(changes.block))
+				.await?
+				.ok_or_else(|| anyhow!("block not found {:?}", changes.block))?;
 
 			let parachain_header_bytes = api
 				.storage()
