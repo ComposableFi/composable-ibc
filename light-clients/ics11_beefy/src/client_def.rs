@@ -45,26 +45,15 @@ pub struct BeefyClient<T>(PhantomData<T>);
 
 /// Host functions that allow the light client verify trie proofs.
 pub trait HostFunctions {
-	/// This function should verify membership in a trie proof using sp_state_machine's
-	/// read_child_proof_check
-	fn verify_membership_trie_proof(
-		root: &[u8; 32],
-		proof: &[Vec<u8>],
-		key: &[u8],
-		value: &[u8],
-	) -> Result<(), Error>;
+	/// This function should verify membership and non-membership in a trie proof using
+	/// [`sp_state_machine::read_child_proof_check`]
+	fn verify_child_trie_proof<I>(root: &[u8; 32], proof: &[Vec<u8>], items: I) -> Result<(), Error>
+	where
+		I: IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>;
 
-	/// This function should verify non membership in a trie proof using sp_state_machine's
-	/// read_child_proof_check
-	fn verify_non_membership_trie_proof(
-		root: &[u8; 32],
-		proof: &[Vec<u8>],
-		key: &[u8],
-	) -> Result<(), Error>;
-
-	/// This function should verify membership in a trie proof using parity's sp-trie package
-	/// with a BlakeTwo256 Hasher
-	fn verify_timestamp_extrinsic(
+	/// This function should verify membership of the timestamp extrinsic proof using
+	/// [`sp_trie::verify_trie_proof`]
+	fn verify_timestamp_extrinsic_proof(
 		root: &[u8; 32],
 		proof: &[Vec<u8>],
 		value: &[u8],
@@ -338,7 +327,7 @@ where
 		commitment: PacketCommitment,
 	) -> Result<(), Error> {
 		client_state.verify_height(height)?;
-		verify_delay_passed::<Ctx>(ctx, height, connection_end)?;
+		verify_delay_passed::<H>(ctx, height, connection_end)?;
 
 		let commitment_path =
 			CommitmentsPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
@@ -367,7 +356,7 @@ where
 		ack: AcknowledgementCommitment,
 	) -> Result<(), Error> {
 		client_state.verify_height(height)?;
-		verify_delay_passed(ctx, height, connection_end)?;
+		verify_delay_passed::<H>(ctx, height, connection_end)?;
 
 		let ack_path = AcksPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
 		verify_membership::<H, _>(
@@ -393,7 +382,7 @@ where
 		sequence: Sequence,
 	) -> Result<(), Error> {
 		client_state.verify_height(height)?;
-		verify_delay_passed(ctx, height, connection_end)?;
+		verify_delay_passed::<H>(ctx, height, connection_end)?;
 
 		let seq_bytes = codec::Encode::encode(&u64::from(sequence));
 
@@ -421,7 +410,7 @@ where
 		sequence: Sequence,
 	) -> Result<(), Error> {
 		client_state.verify_height(height)?;
-		verify_delay_passed(ctx, height, connection_end)?;
+		verify_delay_passed::<H>(ctx, height, connection_end)?;
 
 		let receipt_path =
 			ReceiptsPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
@@ -456,7 +445,7 @@ where
 	let trie_proof: Vec<Vec<u8>> =
 		codec::Decode::decode(&mut &*trie_proof).map_err(|e| BeefyError::scale_decode(e))?;
 	let root = H256::from_slice(root.as_bytes());
-	T::verify_membership_trie_proof(root.as_fixed_bytes(), &trie_proof, &key, &value)
+	T::verify_child_trie_proof(root.as_fixed_bytes(), &trie_proof, vec![key, Some(value)])
 }
 
 fn verify_non_membership<T, P>(
@@ -480,14 +469,17 @@ where
 	let trie_proof: Vec<Vec<u8>> =
 		codec::Decode::decode(&mut &*trie_proof).map_err(|e| BeefyError::scale_decode(e))?;
 	let root = H256::from_slice(root.as_bytes());
-	T::verify_non_membership_trie_proof(root.as_fixed_bytes(), &trie_proof, &key)
+	T::verify_child_trie_proof(root.as_fixed_bytes(), &trie_proof, vec![key, None])
 }
 
-fn verify_delay_passed<Ctx: ReaderContext>(
+fn verify_delay_passed<H>(
 	ctx: &Ctx,
 	height: Height,
 	connection_end: &ConnectionEnd,
-) -> Result<(), Error> {
+) -> Result<(), Error>
+	where
+		H: Clone,
+{
 	let current_timestamp = ctx.host_timestamp();
 	let current_height = ctx.host_height();
 
