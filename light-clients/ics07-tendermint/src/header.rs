@@ -2,7 +2,7 @@ use core::cmp::Ordering;
 
 use bytes::Buf;
 use prost::Message;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use tendermint::{block::signed_header::SignedHeader, validator::Set as ValidatorSet};
 use tendermint_proto::Protobuf;
 

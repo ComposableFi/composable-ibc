@@ -2348,9 +2348,7 @@ dependencies = [
 name = "ics07-tendermint"
 version = "0.1.0"
 dependencies = [
- "borsh",
  "bytes",
- "derive_more",
  "env_logger",
  "flex-error",
  "ibc",
@@ -2358,13 +2356,9 @@ dependencies = [
  "ibc-proto",
  "ics23",
  "modelator",
- "num-traits",
- "primitive-types",
  "prost",
  "prost-types",
- "safe-regex",
  "serde",
- "serde_derive",
  "serde_json",
  "sha2 0.10.6",
  "subtle-encoding",
@@ -2375,9 +2369,7 @@ dependencies = [
  "tendermint-testgen",
  "test-log",
  "time 0.3.14",
- "tracing",
  "tracing-subscriber 0.3.15",
- "uint",
 ]
 
 [[package]]
