@@ -5,7 +5,7 @@ use serde::Serialize;
 use tendermint::time::Time;
 use tendermint_proto::{google::protobuf as tpb, Protobuf};
 
-use ibc_proto::ibc::lightclients::beefy::v1::ConsensusState as RawConsensusState;
+use crate::proto::ConsensusState as RawConsensusState;
 
 use crate::{error::Error, header::ParachainHeader};
 use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp};
@@ -63,7 +63,7 @@ impl TryFrom<RawConsensusState> for ConsensusState {
 	type Error = Error;
 
 	fn try_from(raw: RawConsensusState) -> Result<Self, Self::Error> {
-		let ibc_proto::google::protobuf::Timestamp { seconds, nanos } = raw
+		let prost_types::Timestamp { seconds, nanos } = raw
 			.timestamp
 			.ok_or_else(|| Error::Custom(format!("Invalid consensus state: missing timestamp")))?;
 		let proto_timestamp = tpb::Timestamp { seconds, nanos };
@@ -78,7 +78,7 @@ impl TryFrom<RawConsensusState> for ConsensusState {
 impl From<ConsensusState> for RawConsensusState {
 	fn from(value: ConsensusState) -> Self {
 		let tpb::Timestamp { seconds, nanos } = value.timestamp.into();
-		let timestamp = ibc_proto::google::protobuf::Timestamp { seconds, nanos };
+		let timestamp = prost_types::Timestamp { seconds, nanos };
 
 		RawConsensusState { timestamp: Some(timestamp), root: value.root.into_vec() }
 	}

@@ -10,6 +10,7 @@ pub mod consensus_state;
 pub mod error;
 pub mod header;
 pub mod misbehaviour;
+mod proto;
 
 #[cfg(any(test, feature = "mocks"))]
 mod mock;

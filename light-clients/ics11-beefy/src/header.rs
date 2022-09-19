@@ -1,6 +1,14 @@
 use tendermint_proto::Protobuf;
 
-use crate::error::Error;
+use crate::{
+	error::Error,
+	proto::{
+		BeefyAuthoritySet as RawBeefyAuthoritySet, BeefyMmrLeaf as RawBeefyMmrLeaf,
+		BeefyMmrLeafPartial as RawBeefyMmrLeafPartial, ClientStateUpdateProof as RawMmrUpdateProof,
+		Commitment as RawCommitment, CommitmentSignature, ConsensusStateUpdateProof,
+		Header as RawBeefyHeader, PayloadItem, SignedCommitment as RawSignedCommitment,
+	},
+};
 use alloc::{format, vec, vec::Vec};
 use beefy_client_primitives::{
 	BeefyNextAuthoritySet, Hash, MmrUpdateProof, PartialMmrLeaf, SignatureWithAuthorityIndex,
@@ -13,12 +21,6 @@ use beefy_primitives::{
 };
 use codec::{Compact, Decode, Encode};
 use ibc::Height;
-use ibc_proto::ibc::lightclients::beefy::v1::{
-	BeefyAuthoritySet as RawBeefyAuthoritySet, BeefyMmrLeaf as RawBeefyMmrLeaf,
-	BeefyMmrLeafPartial as RawBeefyMmrLeafPartial, ClientStateUpdateProof as RawMmrUpdateProof,
-	Commitment as RawCommitment, CommitmentSignature, ConsensusStateUpdateProof,
-	Header as RawBeefyHeader, PayloadItem, SignedCommitment as RawSignedCommitment,
-};
 use pallet_mmr_primitives::Proof;
 use primitive_types::H256;
 use sp_runtime::{
@@ -284,7 +286,7 @@ impl From<BeefyHeader> for RawBeefyHeader {
 				let parachain_headers = headers
 					.headers
 					.into_iter()
-					.map(|para_header| ibc_proto::ibc::lightclients::beefy::v1::ParachainHeader {
+					.map(|para_header| crate::proto::ParachainHeader {
 						parachain_header: para_header.parachain_header.encode(),
 						mmr_leaf_partial: Some(RawBeefyMmrLeafPartial {
 							version: {

@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package ibc.lightclients.grandpa.v1;
 
+import "google/protobuf/timestamp.proto";
+
 enum RelayChain {
   POLKADOT = 0;
   KUSAMA = 1;
@@ -37,4 +39,14 @@ message ClientState {
 
   /// latest parachain height
   repeated Authority current_authorities = 7;
+}
+
+// ConsensusState defines the consensus state from Tendermint.
+message ConsensusState {
+  // timestamp that corresponds to the block height in which the ConsensusState
+  // was stored.
+  google.protobuf.Timestamp timestamp = 1;
+
+  // packet commitment root
+  bytes root = 2;
 }

@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use sp_runtime::SaturatedConversion;
 use tendermint_proto::Protobuf;
 
-use ibc_proto::ibc::lightclients::beefy::v1::{BeefyAuthoritySet, ClientState as RawClientState};
+use crate::proto::{BeefyAuthoritySet, ClientState as RawClientState};
 
 use crate::{error::Error, header::BeefyHeader};
 

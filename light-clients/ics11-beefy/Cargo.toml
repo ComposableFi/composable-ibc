@@ -24,11 +24,15 @@ std = [
     "anyhow/std",
     "codec/std",
     "prost/std",
+    "prost-types/std",
     "serde/std",
     "bytes/std",
     "tendermint/std",
 ]
 
+[build-dependencies]
+protobuf-src = "1.1.0"
+prost-build = "0.11.1"
 
 [dependencies]
 # ibc deps
@@ -51,6 +55,7 @@ sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 anyhow = { version = "1.0.65", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 prost = { version = "0.10", default-features = false }
+prost-types = { version = "0.10", default-features = false }
 serde = { version = "1.0", default-features = false }
 bytes = { version = "1.1.0", default-features = false }
 derive_more = { version = "0.99.17", default-features = false, features = ["from"] }
