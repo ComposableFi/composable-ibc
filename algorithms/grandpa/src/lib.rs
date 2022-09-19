@@ -3,6 +3,7 @@
 extern crate alloc;
 
 use crate::justification::{find_scheduled_change, AncestryChain, GrandpaJustification};
+use alloc::vec::Vec;
 use anyhow::anyhow;
 use codec::Decode;
 use finality_grandpa::Chain;

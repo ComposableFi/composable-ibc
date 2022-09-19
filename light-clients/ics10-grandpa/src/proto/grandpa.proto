@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package ibc.lightclients.grandpa.v1;
+
+enum RelayChain {
+  POLKADOT = 0;
+  KUSAMA = 1;
+  ROCOCO = 2;
+}
+
+message Authority {
+  // ed25519 public key of the authority
+  bytes public_key = 1;
+  // authority weight
+  uint64 weight = 2;
+}
+
+// ClientState for the grandpa client
+message ClientState {
+  // Latest mmr root hash
+  bytes latest_relay_hash = 1;
+
+  // block number for the latest mmr_root_hash
+  uint32 current_set_id = 2;
+
+  // Block height when the client was frozen due to a misbehaviour
+  uint64 frozen_height = 3;
+
+  /// Known relay chains
+  RelayChain relay_chain = 4;
+
+  /// ParaId of associated parachain
+  uint32 para_id = 5;
+
+  /// latest parachain height
+  uint32 latest_para_height = 6;
+
+  /// latest parachain height
+  repeated Authority current_authorities = 7;
+}

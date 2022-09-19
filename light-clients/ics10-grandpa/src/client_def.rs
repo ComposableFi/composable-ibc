@@ -1,9 +1,11 @@
+use crate::error::Error;
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 use ibc::{
 	core::{
 		ics02_client::{
 			client_def::{ClientDef, ConsensusUpdateResult},
-			error::Error,
+			error::Error as Ics02Error,
 		},
 		ics03_connection::connection::ConnectionEnd,
 		ics04_channel::{
@@ -24,6 +26,8 @@ use ibc::{
 	Height,
 };
 use light_client_common::{verify_membership, verify_non_membership};
+use prost::Message;
+use tendermint_proto::Protobuf;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct GrandpaClient<T>(PhantomData<T>);
@@ -42,7 +46,7 @@ where
 		_client_id: ClientId,
 		_client_state: Self::ClientState,
 		_header: Self::Header,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02Error> {
 		todo!()
 	}
 
@@ -52,7 +56,7 @@ where
 		_client_id: ClientId,
 		_client_state: Self::ClientState,
 		_header: Self::Header,
-	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error> {
+	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
 		todo!()
 	}
 
@@ -60,7 +64,7 @@ where
 		&self,
 		_client_state: Self::ClientState,
 		_header: Self::Header,
-	) -> Result<Self::ClientState, Error> {
+	) -> Result<Self::ClientState, Ics02Error> {
 		todo!()
 	}
 
@@ -70,7 +74,7 @@ where
 		_client_id: ClientId,
 		_client_state: Self::ClientState,
 		_header: Self::Header,
-	) -> Result<bool, Error> {
+	) -> Result<bool, Ics02Error> {
 		todo!()
 	}
 
@@ -80,7 +84,7 @@ where
 		_consensus_state: &Self::ConsensusState,
 		_proof_upgrade_client: Vec<u8>,
 		_proof_upgrade_consensus_state: Vec<u8>,
-	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error> {
+	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
 		todo!()
 	}
 
@@ -94,8 +98,8 @@ where
 		root: &CommitmentRoot,
 		client_id: &ClientId,
 		consensus_height: Height,
-		expected_consensus_state: &ibc::core::ics02_client::context::AnyConsensusState,
-	) -> Result<(), Error> {
+		expected_consensus_state: &Self::ConsensusState,
+	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ClientConsensusStatePath {
 			client_id: client_id.clone(),
@@ -109,8 +113,8 @@ where
 
 	fn verify_connection_state<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: &ClientId,
+		_ctx: &Ctx,
+		_client_id: &ClientId,
 		client_state: &Self::ClientState,
 		height: Height,
 		prefix: &CommitmentPrefix,
@@ -118,7 +122,7 @@ where
 		root: &CommitmentRoot,
 		connection_id: &ConnectionId,
 		expected_connection_end: &ConnectionEnd,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ConnectionsPath(connection_id.clone());
 		let value = expected_connection_end.encode_vec();
@@ -138,7 +142,7 @@ where
 		port_id: &PortId,
 		channel_id: &ChannelId,
 		expected_channel_end: &ChannelEnd,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ChannelEndsPath(port_id.clone(), *channel_id);
 		let value = expected_channel_end.encode_vec();
@@ -155,8 +159,8 @@ where
 		proof: &CommitmentProofBytes,
 		root: &CommitmentRoot,
 		client_id: &ClientId,
-		expected_client_state: &ibc::core::ics02_client::context::AnyClientState,
-	) -> Result<(), Error> {
+		expected_client_state: &Self::ClientState,
+	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ClientStatePath(client_id.clone());
 		let value = expected_client_state.encode_to_vec();
@@ -177,7 +181,7 @@ where
 		channel_id: &ChannelId,
 		sequence: Sequence,
 		commitment: PacketCommitment,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		verify_delay_passed::<H, _>(ctx, height, connection_end)?;
 
@@ -208,7 +212,7 @@ where
 		channel_id: &ChannelId,
 		sequence: Sequence,
 		ack: AcknowledgementCommitment,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		verify_delay_passed::<H, _>(ctx, height, connection_end)?;
 
@@ -236,7 +240,7 @@ where
 		port_id: &PortId,
 		channel_id: &ChannelId,
 		sequence: Sequence,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		verify_delay_passed::<H, _>(ctx, height, connection_end)?;
 
@@ -266,7 +270,7 @@ where
 		port_id: &PortId,
 		channel_id: &ChannelId,
 		sequence: Sequence,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		verify_delay_passed::<H, _>(ctx, height, connection_end)?;
 

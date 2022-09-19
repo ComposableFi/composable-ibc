@@ -20,7 +20,8 @@ use sp_std::prelude::*;
 ///
 /// This is meant to be stored in the db and passed around the network to other
 /// nodes, and are used by syncing nodes to prove authority set handoffs.
-#[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
+#[cfg_attr(any(feature = "std", test), derive(Debug))]
+#[derive(Clone, Encode, Decode, PartialEq, Eq)]
 pub struct GrandpaJustification<Block: BlockT> {
 	pub round: u64,
 	pub commit: Commit<Block>,

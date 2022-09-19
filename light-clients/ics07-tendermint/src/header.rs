@@ -166,8 +166,8 @@ pub mod test_util {
 	//   `trusted_validator_set` = `validator_set`
 	pub fn get_dummy_ics07_header() -> Header {
 		// Build a SignedHeader from a JSON file.
-		let shdr = serde_json::from_str::<SignedHeader>(include_str!("mock/signed_header.json"))
-			.unwrap();
+		let shdr =
+			serde_json::from_str::<SignedHeader>(include_str!("mock/signed_header.json")).unwrap();
 
 		// Build a set of validators.
 		// Below are test values inspired form `test_validator_set()` in tendermint-rs.
