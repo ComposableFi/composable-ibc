@@ -19,6 +19,10 @@ std = [
     "anyhow/std",
     "primitive-types/std",
     "serde/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "sp-trie/std",
+    "sp-finality-grandpa/std",
 ]
 
 [build-dependencies]
@@ -45,7 +49,15 @@ primitive-types = { version = "0.11.1", default-features = false }
 serde = { version = "1.0.144", default-features = false, features = ["derive"] }
 
 # substrate deps
-sp-core = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
+sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
+
+[dependencies.tendermint]
+git = "https://github.com/composableFi/tendermint-rs"
+rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
+default-features = false
 
 [dependencies.tendermint-proto]
 git = "https://github.com/composableFi/tendermint-rs"

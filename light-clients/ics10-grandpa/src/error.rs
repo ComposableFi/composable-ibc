@@ -9,7 +9,8 @@ use ibc::{
 };
 use prost::DecodeError;
 
-#[derive(Debug, derive_more::From, derive_more::Display)]
+#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(derive_more::From, derive_more::Display)]
 pub enum Error {
 	Codec(codec::Error),
 	TimeStamp(TimestampOverflowError),
@@ -18,6 +19,7 @@ pub enum Error {
 	Ics02(ics02_client::error::Error),
 	Ics04(ics04_channel::error::Error),
 	ProtoBuf(DecodeError),
+	GrandpaPrimitives(grandpa_client_primitives::error::Error),
 	Anyhow(anyhow::Error),
 	Custom(String),
 }

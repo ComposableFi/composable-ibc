@@ -3,23 +3,25 @@ use crate::{
 	error::Error,
 	proto::{Authority as RawAuthority, ClientState as RawClientState},
 };
-use alloc::{string::ToString, vec::Vec};
+use alloc::{format, string::ToString, vec::Vec};
 use anyhow::anyhow;
 use core::{marker::PhantomData, time::Duration};
 use ibc::{
 	core::{ics02_client::client_state::ClientType, ics24_host::identifier::ChainId},
+	timestamp::Timestamp,
 	Height,
 };
 use light_client_common::RelayChain;
 use primitive_types::H256;
 use serde::{Deserialize, Serialize};
 use sp_core::ed25519::Public;
+use sp_finality_grandpa::AuthorityList;
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA ClientState
 pub const GRANDPA_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.ClientState";
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq)]
 pub struct Authority {
 	/// ed25519 public key of the authority
 	pub public_key: Public,
@@ -27,7 +29,7 @@ pub struct Authority {
 	pub weight: u64,
 }
 
-#[derive(PartialEq, Clone, Debug, Default)]
+#[derive(PartialEq, Clone, Debug, Default, Eq)]
 pub struct ClientState<H> {
 	/// Relay chain
 	pub relay_chain: RelayChain,
@@ -39,9 +41,10 @@ pub struct ClientState<H> {
 	pub latest_para_height: u32,
 	/// ParaId of associated parachain
 	pub para_id: u32,
-	pub current_set_id: u32,
+	/// Id of the current authority set.
+	pub current_set_id: u64,
 	/// authorities for the current round
-	pub current_authorities: Vec<Authority>,
+	pub current_authorities: AuthorityList,
 	/// phantom type.
 	_phantom: PhantomData<H>,
 }
@@ -51,6 +54,47 @@ impl<H: Clone> Protobuf<RawClientState> for ClientState<H> {}
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UpgradeOptions {
 	latest_relay_hash: H256,
+}
+
+impl<H: Clone> ClientState<H> {
+	/// Verify the time and height delays
+	pub fn verify_delay_passed(
+		current_time: Timestamp,
+		current_height: Height,
+		processed_time: Timestamp,
+		processed_height: Height,
+		delay_period_time: Duration,
+		delay_period_blocks: u64,
+	) -> Result<(), Error> {
+		let earliest_time = (processed_time + delay_period_time)
+			.map_err(|_| Error::Custom("Timestamp overflowed!".into()))?;
+		if !(current_time == earliest_time || current_time.after(&earliest_time)) {
+			return Err(Error::Custom(format!("Not enough time elapsed current time: {current_time}, earliest time: {earliest_time}")))
+		}
+
+		let earliest_height = processed_height.add(delay_period_blocks);
+		if current_height < earliest_height {
+			return Err(Error::Custom(format!("Not enough blocks elapsed, current height: {current_height}, earliest height: {earliest_height}")))
+		}
+
+		Ok(())
+	}
+
+	/// Verify that the client is at a sufficient height and unfrozen at the given height
+	pub fn verify_height(&self, height: Height) -> Result<(), Error> {
+		let latest_para_height = Height::new(self.para_id.into(), self.latest_para_height.into());
+		if latest_para_height < height {
+			return Err(Error::Custom(format!(
+				"Insufficient height, known height: {latest_para_height}, given height: {height}"
+			)))
+		}
+
+		match self.frozen_height {
+			Some(frozen_height) if frozen_height <= height =>
+				Err(Error::Custom(format!("Client has been frozen at height {frozen_height}"))),
+			_ => Ok(()),
+		}
+	}
 }
 
 impl<H> ClientState<H> {
@@ -152,11 +196,9 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 			.current_authorities
 			.into_iter()
 			.map(|set| {
-				Ok(Authority {
-					public_key: Public::try_from(&*set.public_key)
-						.map_err(|_| anyhow!("Invalid ed25519 public key"))?,
-					weight: set.weight,
-				})
+				let id = Public::try_from(&*set.public_key)
+					.map_err(|_| anyhow!("Invalid ed25519 public key"))?;
+				Ok((id.into(), set.weight))
 			})
 			.collect::<Result<_, Error>>()?;
 
@@ -193,9 +235,10 @@ impl<H> From<ClientState<H>> for RawClientState {
 			current_authorities: client_state
 				.current_authorities
 				.into_iter()
-				.map(|authority| RawAuthority {
-					public_key: <Public as AsRef<[u8]>>::as_ref(&authority.public_key).to_vec(),
-					weight: authority.weight,
+				.map(|(id, weight)| RawAuthority {
+					public_key: <sp_finality_grandpa::AuthorityId as AsRef<[u8]>>::as_ref(&id)
+						.to_vec(),
+					weight,
 				})
 				.collect(),
 		}

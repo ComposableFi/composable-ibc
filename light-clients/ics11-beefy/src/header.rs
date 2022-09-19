@@ -395,14 +395,3 @@ impl From<BeefyHeader> for RawBeefyHeader {
 }
 
 impl Protobuf<RawBeefyHeader> for BeefyHeader {}
-
-/// Attempt to extract the timestamp extrinsic from the parachain header
-pub fn decode_timestamp_extrinsic(ext: &Vec<u8>) -> Result<u64, Error> {
-	// Timestamp extrinsic should be the first inherent and hence the first extrinsic
-	// https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
-	// Decoding from the [2..] because the timestamp inmherent has two extra bytes before the call
-	// that represents the call length and the extrinsic version.
-	let (_, _, timestamp): (u8, u8, Compact<u64>) = codec::Decode::decode(&mut &ext[2..])
-		.map_err(|err| Error::Custom(format!("Failed to decode extrinsic: {err}")))?;
-	Ok(timestamp.into())
-}

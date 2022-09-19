@@ -23,7 +23,7 @@ message ClientState {
   bytes latest_relay_hash = 1;
 
   // block number for the latest mmr_root_hash
-  uint32 current_set_id = 2;
+  uint64 current_set_id = 2;
 
   // Block height when the client was frozen due to a misbehaviour
   uint64 frozen_height = 3;

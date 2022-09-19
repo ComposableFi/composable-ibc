@@ -42,6 +42,7 @@ pub struct ClientState<H> {
 }
 
 /// Holds relavant parachain proofs for both header and timestamp extrinsic.
+#[derive(Clone, Debug)]
 pub struct ParachainHeaderProofs {
 	/// State proofs that prove a parachain header exists at a given relay chain height
 	pub state_proof: Vec<Vec<u8>>,

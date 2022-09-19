@@ -1,6 +1,14 @@
-use crate::{client_state::ClientState, consensus_state::ConsensusState, error::Error};
+use crate::{
+	client_state::ClientState, consensus_state::ConsensusState, error::Error, header::Header,
+};
+use ibc::core::ics02_client::{
+	client_consensus::ConsensusState as _, client_state::ClientState as _,
+};
+
+use crate::header::RelayChainHeader;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
+use grandpa_client_primitives::ParachainHeadersWithFinalityProof;
 use ibc::{
 	core::{
 		ics02_client::{
@@ -26,16 +34,19 @@ use ibc::{
 	Height,
 };
 use light_client_common::{verify_membership, verify_non_membership};
+use sp_runtime::{generic, OpaqueExtrinsic};
 use tendermint_proto::Protobuf;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct GrandpaClient<T>(PhantomData<T>);
 
+type Block = generic::Block<RelayChainHeader, OpaqueExtrinsic>;
+
 impl<H> ClientDef for GrandpaClient<H>
 where
 	H: light_client_common::HostFunctions + grandpa_client_primitives::HostFunctions,
 {
-	type Header = ();
+	type Header = Header;
 	type ClientState = ClientState<H>;
 	type ConsensusState = ConsensusState;
 
@@ -43,10 +54,26 @@ where
 		&self,
 		_ctx: &Ctx,
 		_client_id: ClientId,
-		_client_state: Self::ClientState,
-		_header: Self::Header,
+		client_state: Self::ClientState,
+		header: Self::Header,
 	) -> Result<(), Ics02Error> {
-		todo!()
+		let headers_with_finality_proof = ParachainHeadersWithFinalityProof {
+			finality_proof: header.finality_proof,
+			parachain_headers: header.parachain_headers,
+		};
+		let client_state = grandpa_client_primitives::ClientState {
+			current_authorities: client_state.current_authorities,
+			current_set_id: client_state.current_set_id,
+			latest_relay_hash: client_state.latest_relay_hash,
+			para_id: client_state.para_id,
+		};
+		grandpa_client::verify_parachain_headers_with_grandpa_finality_proof::<Block, H>(
+			client_state,
+			headers_with_finality_proof,
+		)
+		.map_err(Error::GrandpaPrimitives)?;
+
+		Ok(())
 	}
 
 	fn update_state<Ctx: ReaderContext>(
@@ -97,7 +124,7 @@ where
 		root: &CommitmentRoot,
 		client_id: &ClientId,
 		consensus_height: Height,
-		expected_consensus_state: &Self::ConsensusState,
+		expected_consensus_state: &Ctx::AnyConsensusState,
 	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ClientConsensusStatePath {
@@ -158,7 +185,7 @@ where
 		proof: &CommitmentProofBytes,
 		root: &CommitmentRoot,
 		client_id: &ClientId,
-		expected_client_state: &Self::ClientState,
+		expected_client_state: &Ctx::AnyClientState,
 	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ClientStatePath(client_id.clone());
@@ -284,4 +311,33 @@ where
 		.map_err(Error::Anyhow)?;
 		Ok(())
 	}
+}
+
+fn verify_delay_passed<H, C>(
+	ctx: &C,
+	height: Height,
+	connection_end: &ConnectionEnd,
+) -> Result<(), Error>
+where
+	H: Clone,
+	C: ReaderContext,
+{
+	let current_timestamp = ctx.host_timestamp();
+	let current_height = ctx.host_height();
+
+	let client_id = connection_end.client_id();
+	let processed_time = ctx.client_update_time(client_id, height).map_err(Error::from)?;
+	let processed_height = ctx.client_update_height(client_id, height).map_err(Error::from)?;
+
+	let delay_period_time = connection_end.delay_period();
+	let delay_period_height = ctx.block_delay(delay_period_time);
+
+	ClientState::<()>::verify_delay_passed(
+		current_timestamp,
+		current_height,
+		processed_time,
+		processed_height,
+		delay_period_time,
+		delay_period_height,
+	)
 }
