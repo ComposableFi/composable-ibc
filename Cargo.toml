@@ -1,13 +1,13 @@
 [workspace]
 resolver = "2"
 members = [
-#    "algorithms/beefy",
-#    "algorithms/beefy/prover",
-#    "algorithms/beefy/primitives",
-#    "algorithms/grandpa",
-#    "algorithms/grandpa/prover",
-#    "algorithms/grandpa/primitives",
+    "algorithms/beefy",
+    "algorithms/beefy/prover",
+    "algorithms/beefy/primitives",
+    "algorithms/grandpa",
+    "algorithms/grandpa/prover",
+    "algorithms/grandpa/primitives",
     "light-clients/ics07-tendermint",
-#    "light-clients/ics11-beefy",
+    "light-clients/ics11-beefy",
     "light-clients/ics13-near",
 ]
