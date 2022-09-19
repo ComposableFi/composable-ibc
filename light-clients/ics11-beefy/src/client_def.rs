@@ -4,7 +4,7 @@ use beefy_client_primitives::{
 use codec::{Decode, Encode};
 use core::{fmt::Debug, marker::PhantomData};
 use pallet_mmr_primitives::BatchProof;
-use sp_core::H256;
+use primitive_types::H256;
 use tendermint_proto::Protobuf;
 
 use crate::{
@@ -31,35 +31,20 @@ use ibc::{
 				AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath,
 				CommitmentsPath, ConnectionsPath, ReceiptsPath, SeqRecvsPath,
 			},
-			Path,
 		},
 		ics26_routing::context::ReaderContext,
 	},
 	prelude::*,
 	Height,
 };
+use light_client_common::{verify_membership, verify_non_membership};
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct BeefyClient<T>(PhantomData<T>);
 
-/// Host functions that allow the light client verify cryptographic proofs in native.
-pub trait HostFunctions:
-	beefy_client_primitives::HostFunctions + Clone + Send + Sync + Eq + Debug + Default
-{
-	/// This function should verify membership and non-membership in a trie proof using
-	/// [`sp_state_machine::read_child_proof_check`]
-	fn verify_child_trie_proof<I>(
-		root: &[u8; 32],
-		proof: &[Vec<u8>],
-		items: I,
-	) -> Result<(), Error>
-	where
-		I: IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>;
-}
-
 impl<H> ClientDef for BeefyClient<H>
 where
-	H: HostFunctions,
+	H: light_client_common::HostFunctions + beefy_client_primitives::HostFunctions,
 {
 	type Header = BeefyHeader;
 	type ClientState = ClientState<H>;
@@ -240,7 +225,7 @@ where
 			height: consensus_height.revision_height,
 		};
 		let value = expected_consensus_state.encode_to_vec();
-		verify_membership::<H, _>(prefix, proof, root, path, value)?;
+		verify_membership::<H, _>(prefix, proof, root, path, value).map_err(Error::Anyhow)?;
 		Ok(())
 	}
 
@@ -260,7 +245,7 @@ where
 		client_state.verify_height(height)?;
 		let path = ConnectionsPath(connection_id.clone());
 		let value = expected_connection_end.encode_vec();
-		verify_membership::<H, _>(prefix, proof, root, path, value)?;
+		verify_membership::<H, _>(prefix, proof, root, path, value).map_err(Error::Anyhow)?;
 		Ok(())
 	}
 
@@ -280,7 +265,7 @@ where
 		client_state.verify_height(height)?;
 		let path = ChannelEndsPath(port_id.clone(), *channel_id);
 		let value = expected_channel_end.encode_vec();
-		verify_membership::<H, _>(prefix, proof, root, path, value)?;
+		verify_membership::<H, _>(prefix, proof, root, path, value).map_err(Error::Anyhow)?;
 		Ok(())
 	}
 
@@ -298,7 +283,7 @@ where
 		client_state.verify_height(height)?;
 		let path = ClientStatePath(client_id.clone());
 		let value = expected_client_state.encode_to_vec();
-		verify_membership::<H, _>(prefix, proof, root, path, value)?;
+		verify_membership::<H, _>(prefix, proof, root, path, value).map_err(Error::Anyhow)?;
 		Ok(())
 	}
 
@@ -328,7 +313,8 @@ where
 			root,
 			commitment_path,
 			commitment.into_vec(),
-		)?;
+		)
+		.map_err(Error::Anyhow)?;
 		Ok(())
 	}
 
@@ -356,7 +342,8 @@ where
 			root,
 			ack_path,
 			ack.into_vec(),
-		)?;
+		)
+		.map_err(Error::Anyhow)?;
 		Ok(())
 	}
 
@@ -385,7 +372,8 @@ where
 			root,
 			seq_path,
 			seq_bytes,
-		)?;
+		)
+		.map_err(Error::Anyhow)?;
 		Ok(())
 	}
 
@@ -412,62 +400,10 @@ where
 			proof,
 			root,
 			receipt_path,
-		)?;
+		)
+		.map_err(Error::Anyhow)?;
 		Ok(())
 	}
-}
-
-fn verify_membership<T, P>(
-	prefix: &CommitmentPrefix,
-	proof: &CommitmentProofBytes,
-	root: &CommitmentRoot,
-	path: P,
-	value: Vec<u8>,
-) -> Result<(), Error>
-where
-	P: Into<Path>,
-	T: HostFunctions,
-{
-	if root.as_bytes().len() != 32 {
-		return Err(Error::Custom(format!(
-			"invalid commitment root length: {}",
-			root.as_bytes().len()
-		)))
-	}
-	let path: Path = path.into();
-	let path = path.to_string();
-	let mut key = prefix.as_bytes().to_vec();
-	key.extend(path.as_bytes());
-	let trie_proof: Vec<u8> = proof.clone().into();
-	let trie_proof: Vec<Vec<u8>> = codec::Decode::decode(&mut &*trie_proof)?;
-	let root = H256::from_slice(root.as_bytes());
-	T::verify_child_trie_proof(root.as_fixed_bytes(), &trie_proof, vec![(key, Some(value))])
-}
-
-fn verify_non_membership<T, P>(
-	prefix: &CommitmentPrefix,
-	proof: &CommitmentProofBytes,
-	root: &CommitmentRoot,
-	path: P,
-) -> Result<(), Error>
-where
-	P: Into<Path>,
-	T: HostFunctions,
-{
-	if root.as_bytes().len() != 32 {
-		return Err(Error::Custom(format!(
-			"invalid commitment root length: {}",
-			root.as_bytes().len()
-		)))
-	}
-	let path: Path = path.into();
-	let path = path.to_string();
-	let mut key = prefix.as_bytes().to_vec();
-	key.extend(path.as_bytes());
-	let trie_proof: Vec<u8> = proof.clone().into();
-	let trie_proof: Vec<Vec<u8>> = codec::Decode::decode(&mut &*trie_proof)?;
-	let root = H256::from_slice(root.as_bytes());
-	T::verify_child_trie_proof(root.as_fixed_bytes(), &trie_proof, vec![(key, None)])
 }
 
 fn verify_delay_passed<H, C>(

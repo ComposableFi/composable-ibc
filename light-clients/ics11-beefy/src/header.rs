@@ -20,7 +20,7 @@ use ibc_proto::ibc::lightclients::beefy::v1::{
 	Header as RawBeefyHeader, PayloadItem, SignedCommitment as RawSignedCommitment,
 };
 use pallet_mmr_primitives::Proof;
-use sp_core::H256;
+use primitive_types::H256;
 use sp_runtime::{
 	generic::Header as SubstrateHeader,
 	traits::{BlakeTwo256, SaturatedConversion},

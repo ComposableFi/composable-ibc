@@ -9,8 +9,8 @@ use core::{
 	time::Duration,
 };
 use ibc::prelude::*;
+use primitive_types::H256;
 use serde::{Deserialize, Serialize};
-use sp_core::H256;
 use sp_runtime::SaturatedConversion;
 use tendermint_proto::Protobuf;
 
@@ -18,7 +18,7 @@ use ibc_proto::ibc::lightclients::beefy::v1::{BeefyAuthoritySet, ClientState as 
 
 use crate::{error::Error, header::BeefyHeader};
 
-use crate::client_def::{BeefyClient, HostFunctions};
+use crate::client_def::BeefyClient;
 use ibc::{
 	core::{ics02_client::client_state::ClientType, ics24_host::identifier::ChainId},
 	timestamp::Timestamp,
@@ -231,7 +231,7 @@ impl<H> ClientState<H> {
 
 impl<H> ibc::core::ics02_client::client_state::ClientState for ClientState<H>
 where
-	H: HostFunctions,
+	H: light_client_common::HostFunctions + beefy_client_primitives::HostFunctions,
 {
 	type UpgradeOptions = UpgradeOptions;
 	type ClientDef = BeefyClient<H>;

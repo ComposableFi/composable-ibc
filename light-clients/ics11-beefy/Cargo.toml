@@ -15,14 +15,13 @@ std = [
     "ibc-proto/std",
     "beefy-client/std",
     "beefy-client-primitives/std",
+    "light-client-common/std",
     "pallet-mmr-primitives/std",
     "beefy-primitives/std",
     "sp-runtime/std",
-    "sp-core/std",
-    "sp-core/std",
-    "sp-std/std",
+    "sp-storage/std",
     "sp-trie/std",
-    "sp-io/std",
+    "anyhow/std",
     "codec/std",
     "prost/std",
     "serde/std",
@@ -39,22 +38,23 @@ ibc-proto = { git = "https://github.com/ComposableFi/ibc-rs", rev = "a3b905f1429
 # beefy deps
 beefy-client = { package = "beefy-light-client", path = "../../algorithms/beefy",  default-features = false }
 beefy-client-primitives = { package = "primitives", path = "../../algorithms/beefy/primitives", default-features = false }
+light-client-common = { path = "../common", default-features = false }
 
 # substrate deps
 pallet-mmr-primitives = { package = "sp-mmr-primitives", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 beefy-primitives = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false}
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
+sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 
 # crates.io
+anyhow = { version = "1.0.65", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 prost = { version = "0.10", default-features = false }
 serde = { version = "1.0", default-features = false }
 bytes = { version = "1.1.0", default-features = false }
-derive_more = { version = "0.99.17", features = ["from"] }
+derive_more = { version = "0.99.17", default-features = false, features = ["from"] }
+primitive-types = { version = "0.11.1", default-features = false }
 
 [dependencies.tendermint]
 git = "https://github.com/composableFi/tendermint-rs"

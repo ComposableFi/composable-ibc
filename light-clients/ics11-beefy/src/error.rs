@@ -18,6 +18,7 @@ pub enum Error {
 	Ics02(ics02_client::error::Error),
 	Ics04(ics04_channel::error::Error),
 	ProtoBuf(DecodeError),
+	Anyhow(anyhow::Error),
 	Custom(String),
 }
 

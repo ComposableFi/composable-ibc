@@ -1440,9 +1440,9 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b2cf0344971ee6c64c31be0d530793fba457d322dfec2810c453d0ef228f9c3"
+checksum = "c90bf5f19754d10198ccb95b70664fc925bd1fc090a0fd9a6ebc54acc8cd6272"
 dependencies = [
  "atty",
  "humantime",
@@ -2373,9 +2373,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "ics10-grandpa"
+version = "0.1.0"
+dependencies = [
+ "grandpa-light-client",
+ "grandpa-light-client-primitives",
+ "ibc",
+ "ibc-proto",
+ "light-client-common",
+]
+
+[[package]]
 name = "ics11-beefy"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "beefy-light-client",
  "beefy-primitives",
  "beefy-prover",
@@ -2385,16 +2397,16 @@ dependencies = [
  "ibc",
  "ibc-derive",
  "ibc-proto",
+ "light-client-common",
  "parity-scale-codec",
+ "primitive-types",
  "primitives",
  "prost",
  "serde",
- "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
- "sp-io 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-mmr-primitives",
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-state-machine 0.12.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
- "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+ "sp-storage 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "subxt",
  "tendermint",
@@ -3491,6 +3503,16 @@ dependencies = [
  "cc",
  "pkg-config",
  "vcpkg",
+]
+
+[[package]]
+name = "light-client-common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ibc",
+ "parity-scale-codec",
+ "primitive-types",
 ]
 
 [[package]]
@@ -7249,9 +7271,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.99"
+version = "1.0.100"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58dbef6ec655055e20b86b15a8cc6d439cca19b667537ac6a1369572d151ab13"
+checksum = "52205623b1b0f064a4e71182c3b18ae902267282930c6d5462c91b859668426e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7612,9 +7634,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-stream"
-version = "0.1.9"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df54d54117d6fdc4e4fea40fe1e4e566b3505700e148a6827e59b34b0d2600d9"
+checksum = "f6edf2d6bc038a43d31353570e27270603f4648d18f5ed10c0e179abe43255af"
 dependencies = [
  "futures-core",
  "pin-project-lite 0.2.9",
@@ -7871,9 +7893,9 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "digest 0.10.5",
- "rand 0.7.3",
+ "rand 0.8.5",
  "static_assertions",
 ]
 

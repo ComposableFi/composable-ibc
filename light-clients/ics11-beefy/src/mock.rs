@@ -25,8 +25,9 @@ use ibc::{
 	prelude::*,
 };
 use ibc_derive::{ClientDef, ClientState, ConsensusState, Header, Misbehaviour, Protobuf};
+use primitive_types::H256;
 use serde::{Deserialize, Serialize};
-use sp_core::{storage::ChildInfo, H256};
+use sp_storage::ChildInfo;
 use sp_trie::StorageProof;
 
 pub const MOCK_CLIENT_STATE_TYPE_URL: &str = "/ibc.mock.ClientState";
