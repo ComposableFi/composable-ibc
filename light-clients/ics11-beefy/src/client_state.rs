@@ -26,8 +26,8 @@ use ibc::{
 };
 use light_client_common::RelayChain;
 
-/// Protobuf type url for GRANDPA ClientState
-pub const GRANDPA_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.ClientState";
+/// Protobuf type url for Beefy ClientState
+pub const BEEFY_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.beefy.v1.ClientState";
 
 #[derive(PartialEq, Clone, Debug, Default)]
 pub struct ClientState<H> {

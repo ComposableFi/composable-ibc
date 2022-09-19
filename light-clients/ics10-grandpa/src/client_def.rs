@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::{client_state::ClientState, consensus_state::ConsensusState, error::Error};
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use ibc::{
@@ -26,9 +26,7 @@ use ibc::{
 	Height,
 };
 use light_client_common::{verify_membership, verify_non_membership};
-use prost::Message;
 use tendermint_proto::Protobuf;
-use crate::client_state::ClientState;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct GrandpaClient<T>(PhantomData<T>);
@@ -39,7 +37,7 @@ where
 {
 	type Header = ();
 	type ClientState = ClientState<H>;
-	type ConsensusState = ();
+	type ConsensusState = ConsensusState;
 
 	fn verify_header<Ctx: ReaderContext>(
 		&self,

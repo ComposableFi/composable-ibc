@@ -41,12 +41,44 @@ message ClientState {
   repeated Authority current_authorities = 7;
 }
 
+message ParachainHeaderWithRelayHash {
+  bytes relay_hash = 1;
+  ParachainHeaderProofs parachain_header = 2;
+}
+
+// Grandpa finality proof
+message FinalityProof {
+  // The hash of block F for which justification is provided.
+  bytes block = 1;
+  // Justification of the block F.
+  bytes justification = 2;
+  // The set of headers in the range (B; F] that we believe are unknown to the caller. Ordered.
+  repeated bytes unknown_headers = 3;
+}
+
+// Holds relavant parachain proofs for both header and timestamp extrinsic.
+message ParachainHeaderProofs {
+  // State proofs that prove a parachain header exists at a given relay chain height
+  repeated bytes state_proof = 1;
+  // Timestamp extrinsic for ibc
+  bytes extrinsic = 2;
+  // Timestamp extrinsic proof for previously proven parachain header.
+  repeated bytes extrinsic_proof = 3;
+}
+
 // ConsensusState defines the consensus state from Tendermint.
 message ConsensusState {
   // timestamp that corresponds to the block height in which the ConsensusState
   // was stored.
   google.protobuf.Timestamp timestamp = 1;
-
   // packet commitment root
   bytes root = 2;
+}
+
+// GRANDPA finality proof and parachain headers
+message Header {
+  // GRANDPA finality proof
+  FinalityProof finality_proof = 1;
+  // new parachain headers finalized by the GRANDPA finality proof
+  repeated ParachainHeaderWithRelayHash parachain_headers = 2;
 }

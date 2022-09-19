@@ -1,4 +1,5 @@
 use crate::{
+	client_def::GrandpaClient,
 	error::Error,
 	proto::{Authority as RawAuthority, ClientState as RawClientState},
 };
@@ -14,10 +15,9 @@ use primitive_types::H256;
 use serde::{Deserialize, Serialize};
 use sp_core::ed25519::Public;
 use tendermint_proto::Protobuf;
-use crate::client_def::GrandpaClient;
 
-/// Protobuf type url for Beefy ClientState
-pub const BEEFY_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.beefy.v1.ClientState";
+/// Protobuf type url for GRANDPA ClientState
+pub const GRANDPA_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.ClientState";
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Authority {
