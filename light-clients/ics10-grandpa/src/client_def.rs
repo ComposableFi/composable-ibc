@@ -28,6 +28,7 @@ use ibc::{
 use light_client_common::{verify_membership, verify_non_membership};
 use prost::Message;
 use tendermint_proto::Protobuf;
+use crate::client_state::ClientState;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct GrandpaClient<T>(PhantomData<T>);
@@ -37,7 +38,7 @@ where
 	H: light_client_common::HostFunctions + grandpa_client_primitives::HostFunctions,
 {
 	type Header = ();
-	type ClientState = ();
+	type ClientState = ClientState<H>;
 	type ConsensusState = ();
 
 	fn verify_header<Ctx: ReaderContext>(

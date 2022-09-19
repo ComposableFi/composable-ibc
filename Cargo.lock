@@ -2395,10 +2395,13 @@ dependencies = [
  "ibc-proto",
  "light-client-common",
  "parity-scale-codec",
+ "primitive-types",
  "prost 0.10.4",
  "prost-build 0.11.1",
  "prost-types 0.10.1",
  "protobuf-src",
+ "serde",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "tendermint-proto",
 ]
 
@@ -3537,6 +3540,7 @@ dependencies = [
  "ibc",
  "parity-scale-codec",
  "primitive-types",
+ "serde",
 ]
 
 [[package]]

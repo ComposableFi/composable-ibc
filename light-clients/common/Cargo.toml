@@ -11,6 +11,7 @@ std = [
     "codec/std",
     "primitive-types/std",
     "ibc/std",
+    "serde/std",
 ]
 
 [dependencies]
@@ -18,5 +19,7 @@ std = [
 anyhow = { version = "1.0.65", default-features = false }
 codec = { version = "3.2.1", package = "parity-scale-codec", default-features = false }
 primitive-types = { version = "0.11.1", default-features = false }
+serde = { version = "1.0.144", default-features = false, features = ["derive"] }
+
 # ibc
 ibc = { git = "https://github.com/ComposableFi/ibc-rs", rev = "d4b034e6768a3553a7d0ca9e2e3d532e3cea5f29", default-features = false }

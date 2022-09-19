@@ -28,16 +28,16 @@ message ClientState {
   // Block height when the client was frozen due to a misbehaviour
   uint64 frozen_height = 3;
 
-  /// Known relay chains
+  // Known relay chains
   RelayChain relay_chain = 4;
 
-  /// ParaId of associated parachain
+  // ParaId of associated parachain
   uint32 para_id = 5;
 
-  /// latest parachain height
+  // latest parachain height
   uint32 latest_para_height = 6;
 
-  /// latest parachain height
+  // latest parachain height
   repeated Authority current_authorities = 7;
 }
 

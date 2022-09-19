@@ -17,6 +17,8 @@ std = [
     "prost-types/std",
     "codec/std",
     "anyhow/std",
+    "primitive-types/std",
+    "serde/std",
 ]
 
 [build-dependencies]
@@ -39,6 +41,11 @@ prost-types = { version = "0.10", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 anyhow = { version = "1.0.65", default-features = false }
 derive_more = { version = "0.99.17", default-features = false, features = ["from"] }
+primitive-types = { version = "0.11.1", default-features = false }
+serde = { version = "1.0.144", default-features = false, features = ["derive"] }
+
+# substrate deps
+sp-core = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 
 [dependencies.tendermint-proto]
 git = "https://github.com/composableFi/tendermint-rs"

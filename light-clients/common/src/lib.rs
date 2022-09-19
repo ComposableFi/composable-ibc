@@ -6,12 +6,18 @@ extern crate alloc;
 
 use alloc::{string::ToString, vec, vec::Vec};
 use anyhow::anyhow;
-use core::fmt::Debug;
+use core::{
+	fmt,
+	fmt::{Debug, Display, Formatter},
+	str::FromStr,
+	time::Duration,
+};
 use ibc::core::{
 	ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
 	ics24_host::Path,
 };
 use primitive_types::H256;
+use serde::{Deserialize, Serialize};
 
 /// Host functions that allow the light client verify cryptographic proofs in native.
 pub trait HostFunctions: Clone + Send + Sync + Eq + Debug + Default {
@@ -73,4 +79,76 @@ where
 		codec::Decode::decode(&mut &*proof.as_bytes()).map_err(anyhow::Error::msg)?;
 	let root = H256::from_slice(root.as_bytes());
 	T::verify_child_trie_proof(root.as_fixed_bytes(), &trie_proof, vec![(key, None)])
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub enum RelayChain {
+	Polkadot = 0,
+	Kusama = 1,
+	Rococo = 2,
+}
+
+impl Default for RelayChain {
+	fn default() -> Self {
+		RelayChain::Rococo
+	}
+}
+
+impl Display for RelayChain {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", self.as_str())
+	}
+}
+
+// Unbonding period for relay chains in days
+const POLKADOT_UNBONDING_PERIOD: u64 = 28;
+const KUSAMA_UNBONDING_PERIOD: u64 = 7;
+// number of seconds in a day
+const DAY: u64 = 24 * 60 * 60;
+
+impl RelayChain {
+	/// Yields the Order as a string
+	pub fn as_str(&self) -> &'static str {
+		match self {
+			Self::Polkadot => "Polkadot",
+			Self::Kusama => "Kusama",
+			Self::Rococo => "Rococo",
+		}
+	}
+
+	// Parses the Order out from a i32.
+	pub fn from_i32(nr: i32) -> Result<Self, anyhow::Error> {
+		match nr {
+			0 => Ok(Self::Polkadot),
+			1 => Ok(Self::Kusama),
+			2 => Ok(Self::Rococo),
+			id => Err(anyhow!("Unknown relay chain {id}")),
+		}
+	}
+
+	pub fn unbonding_period(&self) -> Duration {
+		match self {
+			Self::Polkadot => Duration::from_secs(POLKADOT_UNBONDING_PERIOD * DAY),
+			Self::Kusama | Self::Rococo => Duration::from_secs(KUSAMA_UNBONDING_PERIOD * DAY),
+		}
+	}
+
+	pub fn trusting_period(&self) -> Duration {
+		let unbonding_period = self.unbonding_period();
+		// Trusting period is 1/3 of unbonding period
+		unbonding_period.checked_div(3).unwrap()
+	}
+}
+
+impl FromStr for RelayChain {
+	type Err = anyhow::Error;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s.to_lowercase().trim_start_matches("order_") {
+			"polkadot" => Ok(Self::Polkadot),
+			"kusama" => Ok(Self::Kusama),
+			"rococo" => Ok(Self::Rococo),
+			_ => Err(anyhow!("Unknown relay chain {s}")),
+		}
+	}
 }

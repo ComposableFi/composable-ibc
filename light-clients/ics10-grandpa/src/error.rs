@@ -1,4 +1,8 @@
-use alloc::string::{String, ToString};
+use crate::client_state::ClientState;
+use alloc::{
+	borrow::ToOwned,
+	string::{String, ToString},
+};
 use ibc::{
 	core::{ics02_client, ics04_channel, ics24_host::error::ValidationError},
 	timestamp::{ParseTimestampError, TimestampOverflowError},

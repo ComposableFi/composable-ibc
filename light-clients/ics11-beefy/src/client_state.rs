@@ -24,11 +24,12 @@ use ibc::{
 	timestamp::Timestamp,
 	Height,
 };
+use light_client_common::RelayChain;
 
-/// Protobuf type url for Beefy ClientState
-pub const BEEFY_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.beefy.v1.ClientState";
+/// Protobuf type url for GRANDPA ClientState
+pub const GRANDPA_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.ClientState";
 
-#[derive(PartialEq, Eq, Clone, Debug, Default)]
+#[derive(PartialEq, Clone, Debug, Default)]
 pub struct ClientState<H> {
 	/// The chain id
 	pub chain_id: ChainId,
@@ -349,78 +350,6 @@ impl<H> From<ClientState<H>> for RawClientState {
 			relay_chain: client_state.relay_chain as i32,
 			para_id: client_state.para_id,
 			latest_para_height: client_state.latest_para_height,
-		}
-	}
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub enum RelayChain {
-	Polkadot = 0,
-	Kusama = 1,
-	Rococo = 2,
-}
-
-impl Default for RelayChain {
-	fn default() -> Self {
-		RelayChain::Rococo
-	}
-}
-
-impl Display for RelayChain {
-	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-		write!(f, "{}", self.as_str())
-	}
-}
-
-// Unbonding period for relay chains in days
-const POLKADOT_UNBONDING_PERIOD: u64 = 28;
-const KUSAMA_UNBONDING_PERIOD: u64 = 7;
-// number of seconds in a day
-const DAY: u64 = 24 * 60 * 60;
-
-impl RelayChain {
-	/// Yields the Order as a string
-	pub fn as_str(&self) -> &'static str {
-		match self {
-			Self::Polkadot => "Polkadot",
-			Self::Kusama => "Kusama",
-			Self::Rococo => "Rococo",
-		}
-	}
-
-	// Parses the Order out from a i32.
-	pub fn from_i32(nr: i32) -> Result<Self, Error> {
-		match nr {
-			0 => Ok(Self::Polkadot),
-			1 => Ok(Self::Kusama),
-			2 => Ok(Self::Rococo),
-			id => Err(Error::Custom(format!("Unknown relay chain {id}"))),
-		}
-	}
-
-	pub fn unbonding_period(&self) -> Duration {
-		match self {
-			Self::Polkadot => Duration::from_secs(POLKADOT_UNBONDING_PERIOD * DAY),
-			Self::Kusama | Self::Rococo => Duration::from_secs(KUSAMA_UNBONDING_PERIOD * DAY),
-		}
-	}
-
-	pub fn trusting_period(&self) -> Duration {
-		let unbonding_period = self.unbonding_period();
-		// Trusting period is 1/3 of unbonding period
-		unbonding_period.checked_div(3).unwrap()
-	}
-}
-
-impl FromStr for RelayChain {
-	type Err = Error;
-
-	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		match s.to_lowercase().trim_start_matches("order_") {
-			"polkadot" => Ok(Self::Polkadot),
-			"kusama" => Ok(Self::Kusama),
-			"rococo" => Ok(Self::Rococo),
-			_ => Err(Error::Custom(format!("Unknown relay chain {s}"))),
 		}
 	}
 }
