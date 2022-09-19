@@ -80,4 +80,6 @@ subxt = { git = "https://github.com/paritytech/subxt", rev = "c55b7ba3e34118f61d
 tokio = { version = "1.21.1", features = ["macros"] }
 sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
+json = { package = "serde_json", version = "1.0.85" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }

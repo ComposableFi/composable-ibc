@@ -2425,6 +2425,8 @@ dependencies = [
  "prost-types 0.10.1",
  "protobuf-src",
  "serde",
+ "serde_json",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-mmr-primitives",
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-state-machine 0.12.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",

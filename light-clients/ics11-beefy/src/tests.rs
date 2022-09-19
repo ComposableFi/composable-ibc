@@ -165,7 +165,7 @@ async fn test_continuous_update_of_beefy_client() {
 
 	while let Some(Ok(commitment)) = subscription.next().await {
 		let recv_commitment: sp_core::Bytes =
-			serde_json::from_value(JsonValue::String(commitment)).unwrap();
+			json::from_value(JsonValue::String(commitment)).unwrap();
 		let signed_commitment: beefy_primitives::SignedCommitment<
 			u32,
 			beefy_primitives::crypto::Signature,

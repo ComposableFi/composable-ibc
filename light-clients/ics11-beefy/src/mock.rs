@@ -1,5 +1,5 @@
 use crate::{
-	client_def::{BeefyClient, HostFunctions},
+	client_def::BeefyClient,
 	client_state::{
 		ClientState as BeefyClientState, UpgradeOptions as BeefyUpgradeOptions,
 		BEEFY_CLIENT_STATE_TYPE_URL,
@@ -59,7 +59,7 @@ impl beefy_client_primitives::HostFunctions for HostFunctionsManager {
 	}
 }
 
-impl HostFunctions for HostFunctionsManager {
+impl light_client_common::HostFunctions for HostFunctionsManager {
 	fn verify_child_trie_proof<I>(root: &[u8; 32], proof: &[Vec<u8>], items: I) -> Result<(), Error>
 	where
 		I: IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
