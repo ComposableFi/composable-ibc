@@ -105,7 +105,7 @@ impl<H: HostFunctionsTrait> ClientDef for NearClient<H> {
 	///    - The current epoch
 	///    - The current validator set
 	///
-	/// ```rust,no_run
+	/// ```rust,ignore
 	/// pub struct NearLightClientState {
 	///     head: LightClientBlockView,
 	///     current_validators: Vec<ValidatorStakeView>,

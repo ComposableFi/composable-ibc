@@ -2,7 +2,7 @@
 
 use tendermint_testgen::{light_block::TmLightBlock, Generator, LightBlock as TestgenLightBlock};
 
-use crate::ics07_tendermint::{
+use crate::{
 	consensus_state::ConsensusState as TMConsensusState,
 	header::Header as TMHeader,
 	mock::{AnyConsensusState, AnyHeader},

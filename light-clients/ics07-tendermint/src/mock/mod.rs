@@ -1,16 +1,17 @@
 pub mod context;
 pub mod host;
 
-use crate::ics07_tendermint::{
+use crate::{
 	client_def::TendermintClient,
 	client_state::{
 		ClientState as TendermintClientState, UpgradeOptions as TendermintUpgradeOptions,
 	},
 	consensus_state::ConsensusState as TendermintConsensusState,
 	header::Header as TendermintHeader,
+	HostFunctionsProvider,
 };
 
-use crate::{any::mock::context::Crypto, ics07_tendermint::mock::host::MockHostBlock};
+use crate::mock::host::MockHostBlock;
 use core::{convert::Infallible, time::Duration};
 use ibc::{
 	core::{
@@ -45,6 +46,7 @@ use ibc::{
 	timestamp::Timestamp,
 };
 use ibc_proto::google::protobuf::Any;
+use tendermint_light_client_verifier::host_functions::HostFunctionsProvider as TendermintHostFunctionsProvider;
 use tendermint_proto::Protobuf;
 
 pub const MOCK_CLIENT_STATE_TYPE_URL: &str = "/ibc.mock.ClientState";
@@ -129,3 +131,44 @@ impl ClientTypes for MockClientTypes {
 	type ClientDef = AnyClient;
 	type HostBlock = MockHostBlock;
 }
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Crypto;
+
+impl ics23::HostFunctionsProvider for Crypto {
+	fn sha2_256(_message: &[u8]) -> [u8; 32] {
+		unimplemented!()
+	}
+
+	fn sha2_512(_message: &[u8]) -> [u8; 64] {
+		unimplemented!()
+	}
+
+	fn sha2_512_truncated(_message: &[u8]) -> [u8; 32] {
+		unimplemented!()
+	}
+
+	fn sha3_512(_message: &[u8]) -> [u8; 64] {
+		unimplemented!()
+	}
+
+	fn ripemd160(_message: &[u8]) -> [u8; 20] {
+		unimplemented!()
+	}
+}
+
+impl TendermintHostFunctionsProvider for Crypto {
+	fn sha2_256(_preimage: &[u8]) -> [u8; 32] {
+		unimplemented!()
+	}
+
+	fn ed25519_verify(_sig: &[u8], _msg: &[u8], _pub_key: &[u8]) -> bool {
+		unimplemented!()
+	}
+
+	fn secp256k1_verify(_sig: &[u8], _message: &[u8], _public: &[u8]) -> bool {
+		unimplemented!()
+	}
+}
+
+impl HostFunctionsProvider for Crypto {}
