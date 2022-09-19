@@ -2293,7 +2293,7 @@ dependencies = [
 [[package]]
 name = "ibc"
 version = "0.15.0"
-source = "git+https://github.com/ComposableFi/ibc-rs?rev=a3b905f1429734bd3e1fc65ddb9d91aa40ee8250#a3b905f1429734bd3e1fc65ddb9d91aa40ee8250"
+source = "git+https://github.com/ComposableFi/ibc-rs?rev=d4b034e6768a3553a7d0ca9e2e3d532e3cea5f29#d4b034e6768a3553a7d0ca9e2e3d532e3cea5f29"
 dependencies = [
  "borsh",
  "derive_more",
@@ -2323,7 +2323,7 @@ dependencies = [
 [[package]]
 name = "ibc-derive"
 version = "0.1.0"
-source = "git+https://github.com/ComposableFi/ibc-rs?rev=a3b905f1429734bd3e1fc65ddb9d91aa40ee8250#a3b905f1429734bd3e1fc65ddb9d91aa40ee8250"
+source = "git+https://github.com/ComposableFi/ibc-rs?rev=d4b034e6768a3553a7d0ca9e2e3d532e3cea5f29#d4b034e6768a3553a7d0ca9e2e3d532e3cea5f29"
 dependencies = [
  "convert_case 0.6.0",
  "proc-macro2",
@@ -2334,7 +2334,7 @@ dependencies = [
 [[package]]
 name = "ibc-proto"
 version = "0.18.0"
-source = "git+https://github.com/ComposableFi/ibc-rs?rev=a3b905f1429734bd3e1fc65ddb9d91aa40ee8250#a3b905f1429734bd3e1fc65ddb9d91aa40ee8250"
+source = "git+https://github.com/ComposableFi/ibc-rs?rev=d4b034e6768a3553a7d0ca9e2e3d532e3cea5f29#d4b034e6768a3553a7d0ca9e2e3d532e3cea5f29"
 dependencies = [
  "base64",
  "bytes",
@@ -2355,6 +2355,7 @@ dependencies = [
  "ibc-derive",
  "ibc-proto",
  "ics23",
+ "log",
  "modelator",
  "prost",
  "prost-types",
@@ -2369,6 +2370,7 @@ dependencies = [
  "tendermint-testgen",
  "test-log",
  "time 0.3.14",
+ "tracing",
  "tracing-subscriber 0.3.15",
 ]
 

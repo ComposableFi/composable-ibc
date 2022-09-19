@@ -3,6 +3,12 @@
 //! ICS 07: Tendermint Client implements a client verification algorithm for blockchains which use
 //! the Tendermint consensus algorithm.
 
+#[macro_use]
+#[cfg(any(test, feature = "mocks"))]
+extern crate serde;
+#[cfg(any(test, feature = "mocks"))]
+#[macro_use]
+extern crate ibc_derive;
 extern crate alloc;
 
 use core::fmt::Debug;
@@ -34,12 +40,12 @@ pub trait HostFunctionsProvider:
 
 #[cfg(test)]
 mod tests {
-	use crate::ics07_tendermint::client_state::{
+	use crate::client_state::{
 		test_util::get_dummy_tendermint_client_state, ClientState as TendermintClientState,
 		ClientState,
 	};
 
-	use crate::ics07_tendermint::{
+	use crate::{
 		header::test_util::{get_dummy_ics07_header, get_dummy_tendermint_header},
 		mock::{AnyClientState, AnyConsensusState, AnyHeader, MockClientTypes},
 	};

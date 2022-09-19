@@ -145,7 +145,7 @@ pub mod test_util {
 	use ibc::Height;
 
 	pub fn get_dummy_tendermint_header() -> tendermint::block::Header {
-		serde_json::from_str::<SignedHeader>(include_str!("../mock/signed_header.json"))
+		serde_json::from_str::<SignedHeader>(include_str!("mock/signed_header.json"))
 			.unwrap()
 			.header
 	}
@@ -166,7 +166,7 @@ pub mod test_util {
 	//   `trusted_validator_set` = `validator_set`
 	pub fn get_dummy_ics07_header() -> Header {
 		// Build a SignedHeader from a JSON file.
-		let shdr = serde_json::from_str::<SignedHeader>(include_str!("../mock/signed_header.json"))
+		let shdr = serde_json::from_str::<SignedHeader>(include_str!("mock/signed_header.json"))
 			.unwrap();
 
 		// Build a set of validators.

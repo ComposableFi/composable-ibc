@@ -1,8 +1,7 @@
-use crate::ics07_tendermint::{
+use crate::{
 	client_state::{test_util::get_dummy_tendermint_client_state, ClientState},
 	mock::{host::MockHostBlock, AnyConsensusState, MockClientTypes},
 };
-use frame_support::log::debug;
 use ibc::{
 	core::{ics02_client::client_state::ClientType, ics24_host::identifier::ClientId},
 	mock::{
@@ -13,6 +12,7 @@ use ibc::{
 	timestamp::Timestamp,
 	Height,
 };
+use log::debug;
 use std::ops::Sub;
 
 /// Similar to `with_client`, this function associates a client record to this context, but
@@ -99,8 +99,9 @@ pub fn with_client_parametrized_history(
 
 	let prev_consensus_state = match client_type {
 		// If it's a mock client, create the corresponding mock states.
-		client_type if client_type == MockClientState::client_type() =>
-			MockConsensusState::new(MockHeader::new(prev_cs_height)).into(),
+		client_type if client_type == MockClientState::client_type() => {
+			MockConsensusState::new(MockHeader::new(prev_cs_height)).into()
+		},
 		client_type if client_type == ClientState::<()>::client_type() => {
 			let light_block = MockHostBlock::generate_tm_block(
 				ctx.host_chain_id.clone(),
