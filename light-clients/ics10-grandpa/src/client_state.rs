@@ -24,7 +24,7 @@ pub const GRANDPA_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.Cl
 pub struct ClientState<H> {
 	/// Relay chain
 	pub relay_chain: RelayChain,
-	/// Latest mmr root hash
+	/// Latest relay chain block hash
 	pub latest_relay_hash: H256,
 	/// Block height when the client was frozen due to a misbehaviour
 	pub frozen_height: Option<Height>,
