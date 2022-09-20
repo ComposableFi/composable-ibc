@@ -1,20 +1,25 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
+extern crate core;
 
 use alloc::collections::BTreeMap;
 use codec::{Decode, Encode};
+use core::fmt::Debug;
 use sp_core::{ed25519, sp_std};
 use sp_finality_grandpa::{AuthorityId, AuthorityList, AuthoritySignature};
-use sp_runtime::traits::{Block, Header, NumberFor};
+use sp_runtime::traits::Header;
 use sp_std::prelude::*;
 use sp_storage::StorageKey;
-use sp_trie::StorageProof;
 
 pub mod error;
 
 /// A commit message for this chain's block type.
-pub type Commit<B> =
-	finality_grandpa::Commit<<B as Block>::Hash, NumberFor<B>, AuthoritySignature, AuthorityId>;
+pub type Commit<H> = finality_grandpa::Commit<
+	<H as Header>::Hash,
+	<H as Header>::Number,
+	AuthoritySignature,
+	AuthorityId,
+>;
 
 /// Finality for block B is proved by providing:
 /// 1) the justification for the descendant block F;
@@ -53,38 +58,20 @@ pub struct ParachainHeaderProofs {
 }
 
 /// Parachain headers with a Grandpa finality proof.
-pub struct ParachainHeadersWithFinalityProof<B: Block> {
+pub struct ParachainHeadersWithFinalityProof<H: Header> {
 	/// The grandpa finality proof: contains relay chain headers from the
 	/// last known finalized grandpa block.
-	pub finality_proof: FinalityProof<B::Header>,
+	pub finality_proof: FinalityProof<H>,
 	/// Contains a map of relay chain header hashes to parachain headers
 	/// finalzed at the relay chain height. We check for this parachain header finalization
 	/// via state proofs. Also contains extrinsic proof for timestamp.
-	pub parachain_headers: BTreeMap<B::Hash, ParachainHeaderProofs>,
+	pub parachain_headers: BTreeMap<H::Hash, ParachainHeaderProofs>,
 }
 
-/// Functions that this light client needs that should delegated to
-/// a native implementation.
-pub trait HostFunctions {
+/// Host functions that allow the light client perform cryptographic operations in native.
+pub trait HostFunctions: light_client_common::HostFunctions {
 	/// Verify an ed25519 signature
 	fn ed25519_verify(sig: &ed25519::Signature, msg: &[u8], pub_key: &ed25519::Public) -> bool;
-
-	/// see [`sp_state_machine::read_proof_check`]
-	fn read_proof_check<I>(
-		root: &[u8; 32],
-		proof: StorageProof,
-		keys: I,
-	) -> Result<BTreeMap<Vec<u8>, Option<Vec<u8>>>, error::Error>
-	where
-		I: IntoIterator,
-		I::Item: AsRef<[u8]>;
-
-	/// parity trie_db proof verification using BlakeTwo256 Hasher
-	fn verify_timestamp_extrinsic(
-		root: &[u8; 32],
-		proof: &[Vec<u8>],
-		value: &[u8],
-	) -> Result<(), error::Error>;
 }
 
 /// This returns the storage key for a parachain header on the relay chain.

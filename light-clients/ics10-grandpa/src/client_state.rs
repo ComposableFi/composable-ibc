@@ -8,7 +8,6 @@ use anyhow::anyhow;
 use core::{marker::PhantomData, time::Duration};
 use ibc::{
 	core::{ics02_client::client_state::ClientType, ics24_host::identifier::ChainId},
-	timestamp::Timestamp,
 	Height,
 };
 use light_client_common::RelayChain;
@@ -20,14 +19,6 @@ use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA ClientState
 pub const GRANDPA_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.ClientState";
-
-#[derive(Clone, PartialEq, Debug, Eq)]
-pub struct Authority {
-	/// ed25519 public key of the authority
-	pub public_key: Public,
-	/// authority weight
-	pub weight: u64,
-}
 
 #[derive(PartialEq, Clone, Debug, Default, Eq)]
 pub struct ClientState<H> {
@@ -57,29 +48,6 @@ pub struct UpgradeOptions {
 }
 
 impl<H: Clone> ClientState<H> {
-	/// Verify the time and height delays
-	pub fn verify_delay_passed(
-		current_time: Timestamp,
-		current_height: Height,
-		processed_time: Timestamp,
-		processed_height: Height,
-		delay_period_time: Duration,
-		delay_period_blocks: u64,
-	) -> Result<(), Error> {
-		let earliest_time = (processed_time + delay_period_time)
-			.map_err(|_| Error::Custom("Timestamp overflowed!".into()))?;
-		if !(current_time == earliest_time || current_time.after(&earliest_time)) {
-			return Err(Error::Custom(format!("Not enough time elapsed current time: {current_time}, earliest time: {earliest_time}")))
-		}
-
-		let earliest_height = processed_height.add(delay_period_blocks);
-		if current_height < earliest_height {
-			return Err(Error::Custom(format!("Not enough blocks elapsed, current height: {current_height}, earliest height: {earliest_height}")))
-		}
-
-		Ok(())
-	}
-
 	/// Verify that the client is at a sufficient height and unfrozen at the given height
 	pub fn verify_height(&self, height: Height) -> Result<(), Error> {
 		let latest_para_height = Height::new(self.para_id.into(), self.latest_para_height.into());

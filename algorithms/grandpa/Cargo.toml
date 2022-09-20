@@ -11,6 +11,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 anyhow = { version = "1.0.64", default-features = false }
 finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-features = false }
+hash-db = { version = "0.15.2", default-features = false }
+primitive-types = { version = "0.11.1", default-features = false }
 
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
@@ -18,10 +20,10 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 
 primitives = { package = "grandpa-light-client-primitives", path = "primitives", default-features = false }
+light-client-common = { path = "../../light-clients/common", default-features = false }
 
 [dev-dependencies]
 subxt = { git = "https://github.com/paritytech/subxt", rev = "c55b7ba3e34118f61dc51499a0b38262c513aec4" }
@@ -33,6 +35,7 @@ tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
 finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 hex-literal = "0.3.4"
 grandpa-prover = { path = "prover" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 
 [features]
 default = ["std"]
@@ -40,13 +43,15 @@ std = [
     "codec/std",
     "anyhow/std",
     "finality-grandpa/std",
+    "hash-db/std",
+    "primitive-types/std",
     "frame-support/std",
     "sp-runtime/std",
     "sp-std/std",
     "sp-trie/std",
     "sp-finality-grandpa/std",
     "sp-state-machine/std",
-    "sp-core/std",
     "sp-io/std",
     "primitives/std",
+    "light-client-common/std",
 ]

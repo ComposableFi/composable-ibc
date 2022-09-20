@@ -1,13 +1,6 @@
 use beefy_primitives::{known_payload_ids::MMR_ROOT_ID, mmr::BeefyNextAuthoritySet};
 use codec::{Decode, Encode};
-use core::{
-	convert::TryFrom,
-	fmt,
-	fmt::{Debug, Display, Formatter},
-	marker::PhantomData,
-	str::FromStr,
-	time::Duration,
-};
+use core::{convert::TryFrom, fmt::Debug, marker::PhantomData, time::Duration};
 use ibc::prelude::*;
 use primitive_types::H256;
 use serde::{Deserialize, Serialize};
@@ -29,7 +22,7 @@ use light_client_common::RelayChain;
 /// Protobuf type url for Beefy ClientState
 pub const BEEFY_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.beefy.v1.ClientState";
 
-#[derive(PartialEq, Clone, Debug, Default)]
+#[derive(PartialEq, Clone, Debug, Default, Eq)]
 pub struct ClientState<H> {
 	/// The chain id
 	pub chain_id: ChainId,

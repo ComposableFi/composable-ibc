@@ -6,8 +6,9 @@ use ibc::core::ics02_client::{
 };
 
 use crate::header::RelayChainHeader;
-use alloc::vec::Vec;
+use alloc::{format, vec, vec::Vec};
 use core::marker::PhantomData;
+use grandpa_client::justification::AncestryChain;
 use grandpa_client_primitives::ParachainHeadersWithFinalityProof;
 use ibc::{
 	core::{
@@ -33,14 +34,11 @@ use ibc::{
 	},
 	Height,
 };
-use light_client_common::{verify_membership, verify_non_membership};
-use sp_runtime::{generic, OpaqueExtrinsic};
+use light_client_common::{verify_delay_passed, verify_membership, verify_non_membership};
 use tendermint_proto::Protobuf;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct GrandpaClient<T>(PhantomData<T>);
-
-type Block = generic::Block<RelayChainHeader, OpaqueExtrinsic>;
 
 impl<H> ClientDef for GrandpaClient<H>
 where
@@ -67,7 +65,7 @@ where
 			latest_relay_hash: client_state.latest_relay_hash,
 			para_id: client_state.para_id,
 		};
-		grandpa_client::verify_parachain_headers_with_grandpa_finality_proof::<Block, H>(
+		grandpa_client::verify_parachain_headers_with_grandpa_finality_proof::<RelayChainHeader, H>(
 			client_state,
 			headers_with_finality_proof,
 		)
@@ -80,10 +78,28 @@ where
 		&self,
 		_ctx: &Ctx,
 		_client_id: ClientId,
-		_client_state: Self::ClientState,
-		_header: Self::Header,
+		client_state: Self::ClientState,
+		header: Self::Header,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
-		todo!()
+		let ancestry =
+			AncestryChain::<RelayChainHeader>::new(&header.finality_proof.unknown_headers);
+		let mut consensus_states = vec![];
+
+		for (relay_hash, parachain_header_proof) in header.parachain_headers {
+			let header = ancestry.header(&relay_hash).ok_or_else(|| {
+				Error::Custom(format!("No relay chain header found for hash: {relay_hash:?}"))
+			})?;
+			let (height, consensus_state) = ConsensusState::from_header::<H>(
+				parachain_header_proof,
+				client_state.para_id,
+				header.state_root.clone(),
+			)?;
+			let wrapped = Ctx::AnyConsensusState::wrap(&consensus_state)
+				.expect("AnyConsenusState is type checked; qed");
+			consensus_states.push((height, wrapped));
+		}
+
+		Ok((client_state, ConsensusUpdateResult::Batch(consensus_states)))
 	}
 
 	fn update_state_on_misbehaviour(
@@ -133,7 +149,8 @@ where
 			height: consensus_height.revision_height,
 		};
 		let value = expected_consensus_state.encode_to_vec();
-		verify_membership::<H, _>(prefix, proof, root, path, value).map_err(Error::Anyhow)?;
+		verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
+			.map_err(Error::Anyhow)?;
 		Ok(())
 	}
 
@@ -152,7 +169,8 @@ where
 		client_state.verify_height(height)?;
 		let path = ConnectionsPath(connection_id.clone());
 		let value = expected_connection_end.encode_vec();
-		verify_membership::<H, _>(prefix, proof, root, path, value).map_err(Error::Anyhow)?;
+		verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
+			.map_err(Error::Anyhow)?;
 		Ok(())
 	}
 
@@ -172,7 +190,8 @@ where
 		client_state.verify_height(height)?;
 		let path = ChannelEndsPath(port_id.clone(), *channel_id);
 		let value = expected_channel_end.encode_vec();
-		verify_membership::<H, _>(prefix, proof, root, path, value).map_err(Error::Anyhow)?;
+		verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
+			.map_err(Error::Anyhow)?;
 		Ok(())
 	}
 
@@ -190,7 +209,8 @@ where
 		client_state.verify_height(height)?;
 		let path = ClientStatePath(client_id.clone());
 		let value = expected_client_state.encode_to_vec();
-		verify_membership::<H, _>(prefix, proof, root, path, value).map_err(Error::Anyhow)?;
+		verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
+			.map_err(Error::Anyhow)?;
 		Ok(())
 	}
 
@@ -209,12 +229,12 @@ where
 		commitment: PacketCommitment,
 	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
-		verify_delay_passed::<H, _>(ctx, height, connection_end)?;
+		verify_delay_passed::<H, _>(ctx, height, connection_end).map_err(Error::Anyhow)?;
 
 		let commitment_path =
 			CommitmentsPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
 
-		verify_membership::<H, _>(
+		verify_membership::<H::BlakeTwo256, _>(
 			connection_end.counterparty().prefix(),
 			proof,
 			root,
@@ -240,10 +260,10 @@ where
 		ack: AcknowledgementCommitment,
 	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
-		verify_delay_passed::<H, _>(ctx, height, connection_end)?;
+		verify_delay_passed::<H, _>(ctx, height, connection_end).map_err(Error::Anyhow)?;
 
 		let ack_path = AcksPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
-		verify_membership::<H, _>(
+		verify_membership::<H::BlakeTwo256, _>(
 			connection_end.counterparty().prefix(),
 			proof,
 			root,
@@ -268,12 +288,12 @@ where
 		sequence: Sequence,
 	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
-		verify_delay_passed::<H, _>(ctx, height, connection_end)?;
+		verify_delay_passed::<H, _>(ctx, height, connection_end).map_err(Error::Anyhow)?;
 
 		let seq_bytes = codec::Encode::encode(&u64::from(sequence));
 
 		let seq_path = SeqRecvsPath(port_id.clone(), *channel_id);
-		verify_membership::<H, _>(
+		verify_membership::<H::BlakeTwo256, _>(
 			connection_end.counterparty().prefix(),
 			proof,
 			root,
@@ -298,11 +318,11 @@ where
 		sequence: Sequence,
 	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
-		verify_delay_passed::<H, _>(ctx, height, connection_end)?;
+		verify_delay_passed::<H, _>(ctx, height, connection_end).map_err(Error::Anyhow)?;
 
 		let receipt_path =
 			ReceiptsPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
-		verify_non_membership::<H, _>(
+		verify_non_membership::<H::BlakeTwo256, _>(
 			connection_end.counterparty().prefix(),
 			proof,
 			root,
@@ -311,33 +331,4 @@ where
 		.map_err(Error::Anyhow)?;
 		Ok(())
 	}
-}
-
-fn verify_delay_passed<H, C>(
-	ctx: &C,
-	height: Height,
-	connection_end: &ConnectionEnd,
-) -> Result<(), Error>
-where
-	H: Clone,
-	C: ReaderContext,
-{
-	let current_timestamp = ctx.host_timestamp();
-	let current_height = ctx.host_height();
-
-	let client_id = connection_end.client_id();
-	let processed_time = ctx.client_update_time(client_id, height).map_err(Error::from)?;
-	let processed_height = ctx.client_update_height(client_id, height).map_err(Error::from)?;
-
-	let delay_period_time = connection_end.delay_period();
-	let delay_period_height = ctx.block_delay(delay_period_time);
-
-	ClientState::<()>::verify_delay_passed(
-		current_timestamp,
-		current_height,
-		processed_time,
-		processed_height,
-		delay_period_time,
-		delay_period_height,
-	)
 }

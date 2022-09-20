@@ -3,6 +3,7 @@
 //! Common utilities for light clients.
 
 extern crate alloc;
+extern crate core;
 
 use alloc::{string::ToString, vec, vec::Vec};
 use anyhow::anyhow;
@@ -13,28 +14,30 @@ use core::{
 	str::FromStr,
 	time::Duration,
 };
-use ibc::core::{
-	ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
-	ics24_host::Path,
+use ibc::{
+	core::{
+		ics03_connection::connection::ConnectionEnd,
+		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
+		ics24_host::Path,
+		ics26_routing::context::ReaderContext,
+	},
+	Height,
 };
 use primitive_types::H256;
 use serde::{Deserialize, Serialize};
+use sp_storage::ChildInfo;
+use sp_trie::StorageProof;
 
-/// Host functions that allow the light client verify cryptographic proofs in native.
+pub mod trie;
+
+/// Host functions that allow the light client perform cryptographic operations in native.
 pub trait HostFunctions: Clone + Send + Sync + Eq + Debug + Default {
-	/// This function should verify membership and non-membership in a trie proof using
-	/// [`sp_state_machine::read_child_proof_check`]
-	fn verify_child_trie_proof<I>(
-		root: &[u8; 32],
-		proof: &[Vec<u8>],
-		items: I,
-	) -> Result<(), anyhow::Error>
-	where
-		I: IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>;
+	/// Blake2-256 hashing implementation
+	type BlakeTwo256: hash_db::Hasher<Out = H256> + Debug + 'static;
 }
 
 /// Membership proof verification via child trie host function
-pub fn verify_membership<T, P>(
+pub fn verify_membership<H, P>(
 	prefix: &CommitmentPrefix,
 	proof: &CommitmentProofBytes,
 	root: &CommitmentRoot,
@@ -43,7 +46,7 @@ pub fn verify_membership<T, P>(
 ) -> Result<(), anyhow::Error>
 where
 	P: Into<Path>,
-	T: HostFunctions,
+	H: hash_db::Hasher<Out = H256> + Debug + 'static,
 {
 	if root.as_bytes().len() != 32 {
 		return Err(anyhow!("invalid commitment root length: {}", root.as_bytes().len()))
@@ -54,12 +57,16 @@ where
 	key.extend(path.as_bytes());
 	let trie_proof: Vec<Vec<u8>> =
 		codec::Decode::decode(&mut &*proof.as_bytes()).map_err(anyhow::Error::msg)?;
+	let proof = StorageProof::new(trie_proof);
 	let root = H256::from_slice(root.as_bytes());
-	T::verify_child_trie_proof(root.as_fixed_bytes(), &trie_proof, vec![(key, Some(value))])
+	let child_info = ChildInfo::new_default(prefix.as_bytes());
+	trie::read_child_proof_check::<H, _>(root.into(), proof, child_info, vec![(key, Some(value))])
+		.map_err(anyhow::Error::msg)?;
+	Ok(())
 }
 
 /// Non-membership proof verification via child trie host function
-pub fn verify_non_membership<T, P>(
+pub fn verify_non_membership<H, P>(
 	prefix: &CommitmentPrefix,
 	proof: &CommitmentProofBytes,
 	root: &CommitmentRoot,
@@ -67,7 +74,7 @@ pub fn verify_non_membership<T, P>(
 ) -> Result<(), anyhow::Error>
 where
 	P: Into<Path>,
-	T: HostFunctions,
+	H: hash_db::Hasher<Out = H256> + Debug + 'static,
 {
 	if root.as_bytes().len() != 32 {
 		return Err(anyhow!("invalid commitment root length: {}", root.as_bytes().len()))
@@ -78,8 +85,12 @@ where
 	key.extend(path.as_bytes());
 	let trie_proof: Vec<Vec<u8>> =
 		codec::Decode::decode(&mut &*proof.as_bytes()).map_err(anyhow::Error::msg)?;
+	let proof = StorageProof::new(trie_proof);
 	let root = H256::from_slice(root.as_bytes());
-	T::verify_child_trie_proof(root.as_fixed_bytes(), &trie_proof, vec![(key, None)])
+	let child_info = ChildInfo::new_default(prefix.as_bytes());
+	trie::read_child_proof_check::<H, _>(root, proof, child_info, vec![(key, None)])
+		.map_err(anyhow::Error::msg)?;
+	Ok(())
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -163,4 +174,41 @@ pub fn decode_timestamp_extrinsic(ext: &Vec<u8>) -> Result<u64, anyhow::Error> {
 	let (_, _, timestamp): (u8, u8, Compact<u64>) = codec::Decode::decode(&mut &ext[2..])
 		.map_err(|err| anyhow!("Failed to decode extrinsic: {err}"))?;
 	Ok(timestamp.into())
+}
+
+/// This will verify that the connection delay has elapsed for a given [`ibc::Height`]
+pub fn verify_delay_passed<H, C>(
+	ctx: &C,
+	height: Height,
+	connection_end: &ConnectionEnd,
+) -> Result<(), anyhow::Error>
+where
+	H: Clone,
+	C: ReaderContext,
+{
+	let current_time = ctx.host_timestamp();
+	let current_height = ctx.host_height();
+
+	let client_id = connection_end.client_id();
+	let processed_time = ctx.client_update_time(client_id, height).map_err(anyhow::Error::msg)?;
+	let processed_height =
+		ctx.client_update_height(client_id, height).map_err(anyhow::Error::msg)?;
+
+	let delay_period_time = connection_end.delay_period();
+	let delay_period_blocks = ctx.block_delay(delay_period_time);
+
+	let earliest_time =
+		(processed_time + delay_period_time).map_err(|_| anyhow!("Timestamp overflowed!"))?;
+	if !(current_time == earliest_time || current_time.after(&earliest_time)) {
+		return Err(anyhow!(
+			"Not enough time elapsed current time: {current_time}, earliest time: {earliest_time}"
+		))
+	}
+
+	let earliest_height = processed_height.add(delay_period_blocks);
+	if current_height < earliest_height {
+		return Err(anyhow!("Not enough blocks elapsed, current height: {current_height}, earliest height: {earliest_height}"))
+	}
+
+	Ok(())
 }

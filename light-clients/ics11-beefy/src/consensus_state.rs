@@ -9,6 +9,7 @@ use crate::proto::ConsensusState as RawConsensusState;
 
 use crate::{error::Error, header::ParachainHeader};
 use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp};
+use light_client_common::decode_timestamp_extrinsic;
 
 /// Protobuf type url for Beefy Consensus State
 pub const BEEFY_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.beefy.v1.ConsensusState";
@@ -25,7 +26,6 @@ impl ConsensusState {
 	}
 
 	pub fn from_header(header: ParachainHeader) -> Result<Self, Error> {
-		use crate::header::decode_timestamp_extrinsic;
 		use sp_runtime::SaturatedConversion;
 		let root = header.parachain_header.state_root.0.to_vec();
 

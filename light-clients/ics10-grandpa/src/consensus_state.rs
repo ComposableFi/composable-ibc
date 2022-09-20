@@ -10,8 +10,8 @@ use crate::proto::ConsensusState as RawConsensusState;
 
 use crate::error::Error;
 use grandpa_client_primitives::{parachain_header_storage_key, ParachainHeaderProofs};
-use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp};
-use light_client_common::decode_timestamp_extrinsic;
+use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp, Height};
+use light_client_common::{decode_timestamp_extrinsic, trie};
 use primitive_types::H256;
 use sp_runtime::{generic, traits::BlakeTwo256, SaturatedConversion};
 use sp_trie::StorageProof;
@@ -34,17 +34,18 @@ impl ConsensusState {
 		parachain_header_proof: ParachainHeaderProofs,
 		para_id: u32,
 		relay_state_root: H256,
-	) -> Result<Self, Error>
+	) -> Result<(Height, Self), Error>
 	where
 		H: grandpa_client_primitives::HostFunctions,
 	{
 		let key = parachain_header_storage_key(para_id);
 		let proof = StorageProof::new(parachain_header_proof.state_proof);
-		let parachain_header_bytes = H::read_proof_check(
-			relay_state_root.as_fixed_bytes(),
+		let parachain_header_bytes = trie::read_proof_check::<H::BlakeTwo256, _>(
+			&relay_state_root,
 			proof,
 			vec![parachain_header_storage_key(para_id)],
-		)?
+		)
+		.map_err(anyhow::Error::msg)?
 		.remove(key.as_ref())
 		.flatten()
 		.ok_or_else(|| anyhow!("Invalid state proof for parachain header"))?;
@@ -59,7 +60,10 @@ impl ConsensusState {
 			.into_tm_time()
 			.ok_or_else(|| anyhow!("Error decoding Timestamp, timestamp cannot be zero"))?;
 
-		Ok(Self { root: root.into(), timestamp })
+		Ok((
+			Height::new(para_id as u64, parachain_header.number as u64),
+			Self { root: root.into(), timestamp },
+		))
 	}
 }
 

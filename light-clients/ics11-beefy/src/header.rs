@@ -19,7 +19,7 @@ use beefy_primitives::{
 	mmr::{MmrLeaf, MmrLeafVersion},
 	Commitment, Payload,
 };
-use codec::{Compact, Decode, Encode};
+use codec::{Decode, Encode};
 use ibc::Height;
 use pallet_mmr_primitives::Proof;
 use primitive_types::H256;

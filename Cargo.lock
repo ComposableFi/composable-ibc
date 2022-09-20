@@ -1924,10 +1924,13 @@ dependencies = [
  "futures",
  "grandpa-light-client-primitives",
  "grandpa-prover",
+ "hash-db",
  "hex",
  "hex-literal",
+ "light-client-common",
  "parity-scale-codec",
  "polkadot-core-primitives",
+ "primitive-types",
  "sc-finality-grandpa-rpc",
  "serde",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
@@ -1949,6 +1952,8 @@ dependencies = [
  "derive_more",
  "finality-grandpa",
  "frame-support",
+ "hash-db",
+ "light-client-common",
  "parity-scale-codec",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-finality-grandpa",
@@ -3541,10 +3546,14 @@ name = "light-client-common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "derive_more",
+ "hash-db",
  "ibc",
  "parity-scale-codec",
  "primitive-types",
  "serde",
+ "sp-storage 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+ "sp-trie 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
 ]
 
 [[package]]

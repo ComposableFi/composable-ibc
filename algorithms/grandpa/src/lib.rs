@@ -3,36 +3,39 @@
 extern crate alloc;
 
 use crate::justification::{find_scheduled_change, AncestryChain, GrandpaJustification};
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use anyhow::anyhow;
-use codec::Decode;
+use codec::{Decode, Encode};
 use finality_grandpa::Chain;
+use hash_db::Hasher;
+use light_client_common::trie;
+use primitive_types::H256;
 use primitives::{
 	error, parachain_header_storage_key, ClientState, HostFunctions, ParachainHeaderProofs,
 	ParachainHeadersWithFinalityProof,
 };
-use sp_core::H256;
-use sp_runtime::traits::{Block, Header, NumberFor};
-use sp_trie::StorageProof;
+use sp_runtime::traits::Header;
+use sp_trie::{LayoutV0, StorageProof};
 
 pub mod justification;
 #[cfg(test)]
 mod tests;
 
 /// Verify a new grandpa justification, given the old state.
-pub fn verify_parachain_headers_with_grandpa_finality_proof<B, H>(
-	mut client_state: ClientState<<B as Block>::Hash>,
-	proof: ParachainHeadersWithFinalityProof<B>,
-) -> Result<ClientState<<B as Block>::Hash>, error::Error>
+pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
+	mut client_state: ClientState<H::Hash>,
+	proof: ParachainHeadersWithFinalityProof<H>,
+) -> Result<ClientState<H::Hash>, error::Error>
 where
-	B: Block<Hash = H256>,
-	H: HostFunctions,
-	NumberFor<B>: finality_grandpa::BlockNumberOps,
+	H: Header<Hash = H256>,
+	H::Number: finality_grandpa::BlockNumberOps,
+	Host: HostFunctions,
+	Host::BlakeTwo256: Hasher<Out = H256>,
 {
 	let ParachainHeadersWithFinalityProof { finality_proof, mut parachain_headers } = proof;
 
 	// 1. first check that target is in proof.unknown_headers.
-	let headers = AncestryChain::<B>::new(&finality_proof.unknown_headers);
+	let headers = AncestryChain::<H>::new(&finality_proof.unknown_headers);
 	let target = headers
 		.header(&finality_proof.block)
 		.ok_or_else(|| anyhow!("Target header not found!"))?;
@@ -41,8 +44,8 @@ where
 	let finalized = headers.ancestry(client_state.latest_relay_hash, finality_proof.block)?;
 
 	// 3. verify justification.
-	let justification = GrandpaJustification::<B>::decode(&mut &finality_proof.justification[..])?;
-	justification.verify::<H>(client_state.current_set_id, &client_state.current_authorities)?;
+	let justification = GrandpaJustification::<H>::decode(&mut &finality_proof.justification[..])?;
+	justification.verify::<Host>(client_state.current_set_id, &client_state.current_authorities)?;
 
 	// 4. verify state proofs of parachain headers in finalized relay chain headers.
 	for hash in finalized {
@@ -52,8 +55,8 @@ where
 			let ParachainHeaderProofs { extrinsic_proof, extrinsic, state_proof } = proofs;
 			let proof = StorageProof::new(state_proof);
 			let key = parachain_header_storage_key(client_state.para_id);
-			let header = H::read_proof_check(
-				relay_chain_header.state_root().as_fixed_bytes(),
+			let header = trie::read_proof_check::<Host::BlakeTwo256, _>(
+				relay_chain_header.state_root(),
 				proof,
 				&[key.as_ref()],
 			)
@@ -62,19 +65,22 @@ where
 			.flatten()
 			.ok_or_else(|| anyhow!("Invalid proof, parachain header not found"))?;
 			let header = Vec::<u8>::decode(&mut &header[..])?;
-			let parachain_header = B::Header::decode(&mut &header[..])?;
-			// verify timestamp extrinsic proof
-			H::verify_timestamp_extrinsic(
-				parachain_header.extrinsics_root().as_fixed_bytes(),
+			let parachain_header = H::decode(&mut &header[..])?;
+			// Timestamp extrinsic should be the first inherent and hence the first extrinsic
+			// https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
+			let key = codec::Compact(0u32).encode();
+			sp_trie::verify_trie_proof::<LayoutV0<Host::BlakeTwo256>, _, _, _>(
+				parachain_header.extrinsics_root(),
 				&extrinsic_proof,
-				&extrinsic[..],
-			)?;
+				&vec![(key, Some(&extrinsic[..]))],
+			)
+			.map_err(|_| anyhow!("Invalid extrinsic proof"))?;
 		}
 	}
 
 	// 5. set new client state, optionally rotating authorities
 	client_state.latest_relay_hash = target.hash();
-	if let Some(scheduled_change) = find_scheduled_change::<B>(&target) {
+	if let Some(scheduled_change) = find_scheduled_change::<H>(&target) {
 		client_state.current_set_id += 1;
 		client_state.current_authorities = scheduled_change.next_authorities;
 	}

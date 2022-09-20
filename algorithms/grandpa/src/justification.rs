@@ -6,10 +6,7 @@ use primitives::{error, Commit, HostFunctions};
 use sp_finality_grandpa::{
 	AuthorityId, AuthorityList, ConsensusLog, ScheduledChange, GRANDPA_ENGINE_ID,
 };
-use sp_runtime::{
-	generic::OpaqueDigestItemId,
-	traits::{Block as BlockT, Header as HeaderT, NumberFor},
-};
+use sp_runtime::{generic::OpaqueDigestItemId, traits::Header as HeaderT};
 use sp_std::prelude::*;
 
 /// A GRANDPA justification for block finality, it includes a commit message and
@@ -22,38 +19,40 @@ use sp_std::prelude::*;
 /// nodes, and are used by syncing nodes to prove authority set handoffs.
 #[cfg_attr(any(feature = "std", test), derive(Debug))]
 #[derive(Clone, Encode, Decode, PartialEq, Eq)]
-pub struct GrandpaJustification<Block: BlockT> {
+pub struct GrandpaJustification<H: HeaderT> {
 	pub round: u64,
-	pub commit: Commit<Block>,
-	pub votes_ancestries: Vec<Block::Header>,
+	pub commit: Commit<H>,
+	pub votes_ancestries: Vec<H>,
 }
 
-impl<Block: BlockT> GrandpaJustification<Block> {
+impl<H> GrandpaJustification<H>
+where
+	H: HeaderT,
+	H::Number: finality_grandpa::BlockNumberOps,
+{
 	/// Validate the commit and the votes' ancestry proofs.
-	pub fn verify<H>(&self, set_id: u64, authorities: &AuthorityList) -> Result<(), error::Error>
+	pub fn verify<Host>(&self, set_id: u64, authorities: &AuthorityList) -> Result<(), error::Error>
 	where
-		H: HostFunctions,
-		NumberFor<Block>: finality_grandpa::BlockNumberOps,
+		Host: HostFunctions,
 	{
 		let voters =
 			VoterSet::new(authorities.iter().cloned()).ok_or(anyhow!("Invalid AuthoritiesSet"))?;
 
-		self.verify_with_voter_set::<H>(set_id, &voters)
+		self.verify_with_voter_set::<Host>(set_id, &voters)
 	}
 
 	/// Validate the commit and the votes' ancestry proofs.
-	pub(crate) fn verify_with_voter_set<H>(
+	pub(crate) fn verify_with_voter_set<Host>(
 		&self,
 		set_id: u64,
 		voters: &VoterSet<AuthorityId>,
 	) -> Result<(), error::Error>
 	where
-		H: HostFunctions,
-		NumberFor<Block>: finality_grandpa::BlockNumberOps,
+		Host: HostFunctions,
 	{
 		use finality_grandpa::Chain;
 
-		let ancestry_chain = AncestryChain::<Block>::new(&self.votes_ancestries);
+		let ancestry_chain = AncestryChain::<H>::new(&self.votes_ancestries);
 
 		match finality_grandpa::validate_commit(&self.commit, voters, &ancestry_chain) {
 			Ok(ref result) if result.is_valid() => {},
@@ -87,7 +86,7 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 			// clear the buffer
 			buf.clear();
 			(message, self.round, set_id).encode_to(&mut buf);
-			if !H::ed25519_verify(signed.signature.as_ref(), &buf, signed.id.as_ref()) {
+			if !Host::ed25519_verify(signed.signature.as_ref(), &buf, signed.id.as_ref()) {
 				Err(anyhow!("invalid signature for precommit in grandpa justification"))?
 			}
 
@@ -105,7 +104,7 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 		}
 
 		let ancestry_hashes: BTreeSet<_> =
-			self.votes_ancestries.iter().map(|h: &Block::Header| h.hash()).collect();
+			self.votes_ancestries.iter().map(|h: &H| h.hash()).collect();
 
 		if visited_hashes != ancestry_hashes {
 			Err(anyhow!(
@@ -117,7 +116,7 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 	}
 
 	/// The target block number and hash that this justifications proves finality for.
-	pub fn target(&self) -> (NumberFor<Block>, Block::Hash) {
+	pub fn target(&self) -> (H::Number, H::Hash) {
 		(self.commit.target_number, self.commit.target_hash)
 	}
 }
@@ -125,32 +124,31 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 /// A utility trait implementing `finality_grandpa::Chain` using a given set of headers.
 /// This is useful when validating commits, using the given set of headers to
 /// verify a valid ancestry route to the target commit block.
-pub struct AncestryChain<Block: BlockT> {
-	ancestry: BTreeMap<Block::Hash, Block::Header>,
+pub struct AncestryChain<H: HeaderT> {
+	ancestry: BTreeMap<H::Hash, H>,
 }
 
-impl<Block: BlockT> AncestryChain<Block> {
-	pub fn new(ancestry: &[Block::Header]) -> AncestryChain<Block> {
-		let ancestry: BTreeMap<_, _> =
-			ancestry.iter().cloned().map(|h: Block::Header| (h.hash(), h)).collect();
+impl<H: HeaderT> AncestryChain<H> {
+	pub fn new(ancestry: &[H]) -> AncestryChain<H> {
+		let ancestry: BTreeMap<_, _> = ancestry.iter().cloned().map(|h: H| (h.hash(), h)).collect();
 
 		AncestryChain { ancestry }
 	}
 
-	pub fn header(&self, hash: &Block::Hash) -> Option<&Block::Header> {
+	pub fn header(&self, hash: &H::Hash) -> Option<&H> {
 		self.ancestry.get(hash)
 	}
 }
 
-impl<Block: BlockT> finality_grandpa::Chain<Block::Hash, NumberFor<Block>> for AncestryChain<Block>
+impl<H: HeaderT> finality_grandpa::Chain<H::Hash, H::Number> for AncestryChain<H>
 where
-	NumberFor<Block>: finality_grandpa::BlockNumberOps,
+	H::Number: finality_grandpa::BlockNumberOps,
 {
 	fn ancestry(
 		&self,
-		base: Block::Hash,
-		block: Block::Hash,
-	) -> Result<Vec<Block::Hash>, finality_grandpa::Error> {
+		base: H::Hash,
+		block: H::Hash,
+	) -> Result<Vec<H::Hash>, finality_grandpa::Error> {
 		let mut route = Vec::new();
 		let mut current_hash = block;
 		loop {
@@ -173,12 +171,10 @@ where
 
 /// Checks the given header for a consensus digest signalling a **standard** scheduled change and
 /// extracts it.
-pub fn find_scheduled_change<B: BlockT>(
-	header: &B::Header,
-) -> Option<ScheduledChange<NumberFor<B>>> {
+pub fn find_scheduled_change<H: HeaderT>(header: &H) -> Option<ScheduledChange<H::Number>> {
 	let id = OpaqueDigestItemId::Consensus(&GRANDPA_ENGINE_ID);
 
-	let filter_log = |log: ConsensusLog<NumberFor<B>>| match log {
+	let filter_log = |log: ConsensusLog<H::Number>| match log {
 		ConsensusLog::ScheduledChange(change) => Some(change),
 		_ => None,
 	};
@@ -190,12 +186,12 @@ pub fn find_scheduled_change<B: BlockT>(
 
 /// Checks the given header for a consensus digest signalling a **forced** scheduled change and
 /// extracts it.
-pub fn find_forced_change<B: BlockT>(
-	header: &B::Header,
-) -> Option<(NumberFor<B>, ScheduledChange<NumberFor<B>>)> {
+pub fn find_forced_change<H: HeaderT>(
+	header: &H,
+) -> Option<(H::Number, ScheduledChange<H::Number>)> {
 	let id = OpaqueDigestItemId::Consensus(&GRANDPA_ENGINE_ID);
 
-	let filter_log = |log: ConsensusLog<NumberFor<B>>| match log {
+	let filter_log = |log: ConsensusLog<H::Number>| match log {
 		ConsensusLog::ForcedChange(delay, change) => Some((delay, change)),
 		_ => None,
 	};
