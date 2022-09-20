@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 use super::{
 	client_state::NearClientState,
 	consensus_state::ConsensusState,

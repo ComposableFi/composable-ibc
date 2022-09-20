@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 use ibc::{core::ics02_client::header::Header, Height};
 use tendermint_proto::Protobuf;
 

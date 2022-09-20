@@ -16,7 +16,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
 
-
 use alloc::collections::BTreeMap;
 use codec::{Decode, Encode};
 use core::fmt::Debug;

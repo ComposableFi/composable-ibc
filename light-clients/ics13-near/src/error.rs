@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 use super::types::CryptoHash;
 use crate::client_state::NearClientState;
 use flex_error::define_error;

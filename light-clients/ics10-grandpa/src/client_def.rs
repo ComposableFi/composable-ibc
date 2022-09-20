@@ -119,10 +119,12 @@ where
 
 	fn update_state_on_misbehaviour(
 		&self,
-		_client_state: Self::ClientState,
+		mut client_state: Self::ClientState,
 		_header: Self::Header,
 	) -> Result<Self::ClientState, Ics02Error> {
-		todo!()
+		client_state.frozen_height =
+			Some(Height::new(client_state.para_id as u64, client_state.latest_para_height as u64));
+		Ok(client_state)
 	}
 
 	fn check_for_misbehaviour<Ctx: ReaderContext>(
@@ -132,7 +134,7 @@ where
 		_client_state: Self::ClientState,
 		_header: Self::Header,
 	) -> Result<bool, Ics02Error> {
-		todo!()
+		Ok(false)
 	}
 
 	fn verify_upgrade_and_update_state<Ctx: ReaderContext>(
@@ -142,7 +144,8 @@ where
 		_proof_upgrade_client: Vec<u8>,
 		_proof_upgrade_consensus_state: Vec<u8>,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
-		todo!()
+		// TODO:
+		Err(Error::Custom("Not implemented".to_string()).into())
 	}
 
 	fn verify_client_consensus_state<Ctx: ReaderContext>(

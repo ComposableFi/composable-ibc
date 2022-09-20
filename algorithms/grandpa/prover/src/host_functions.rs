@@ -13,10 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt::Debug;
 use primitives::HostFunctions;
 use sp_core::ed25519::{Public, Signature};
 use sp_runtime::{app_crypto::RuntimePublic, traits::BlakeTwo256};
+use std::fmt::Debug;
 
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct HostFunctionsProvider;

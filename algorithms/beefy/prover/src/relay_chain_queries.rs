@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 use super::runtime;
 use crate::error::Error;
 use beefy_client_primitives::get_leaf_index_for_block_number;

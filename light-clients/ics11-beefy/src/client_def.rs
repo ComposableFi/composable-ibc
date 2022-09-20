@@ -180,23 +180,11 @@ where
 
 	fn update_state_on_misbehaviour(
 		&self,
-		client_state: Self::ClientState,
-		header: Self::Header,
+		mut client_state: Self::ClientState,
+		_header: Self::Header,
 	) -> Result<Self::ClientState, Ics02Error> {
-		// todo: this is wrong
-		let latest_para_height = header
-			.headers_with_proof
-			.map(|headers| {
-				headers.headers.into_iter().map(|header| header.parachain_header.number).max()
-			})
-			.flatten();
-		let frozen_height = latest_para_height
-			.map(|height| Height::new(client_state.para_id.into(), height.into()))
-			.unwrap_or(Height::new(
-				client_state.para_id.into(),
-				client_state.latest_para_height.into(),
-			));
-		let client_state = client_state.with_frozen_height(frozen_height)?;
+		client_state.frozen_height =
+			Some(Height::new(client_state.para_id as u64, client_state.latest_para_height as u64));
 		Ok(client_state)
 	}
 

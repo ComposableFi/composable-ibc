@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 use super::types::{CryptoHash, LightClientBlockView, ValidatorStakeView};
 use crate::client_def::{HostFunctionsTrait, NearClient};
 use ibc::{
