@@ -31,6 +31,8 @@ beefy-primitives = { git = "https://github.com/paritytech/substrate", branch = "
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 rs_merkle = "1.2.0"
 derive_more = { version = "0.99.17", features = ["from"]  }
+light-client-common = { path = "../../../light-clients/common" }
+
 # Optional deps
 subxt = { git = "https://github.com/paritytech/subxt", rev = "c55b7ba3e34118f61dc51499a0b38262c513aec4" }
 hex-literal = { version = "0.3.4" }

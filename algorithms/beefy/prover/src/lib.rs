@@ -40,7 +40,6 @@ use relay_chain_queries::{fetch_beefy_justification, fetch_mmr_batch_proof};
 use sp_core::H256;
 use sp_io::crypto;
 use sp_runtime::traits::{BlakeTwo256, Header as HeaderT};
-use sp_trie::LayoutV0;
 use subxt::{
 	rpc::{rpc_params, ClientT},
 	sp_core::keccak_256,
@@ -56,10 +55,12 @@ use relay_chain_queries::{
 	fetch_finalized_parachain_heads, fetch_mmr_leaf_proof, FinalizedParaHeads,
 };
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct Crypto;
 
-
+impl light_client_common::HostFunctions for Crypto {
+	type BlakeTwo256 = BlakeTwo256;
+}
 
 impl HostFunctions for Crypto {
 	fn keccak_256(input: &[u8]) -> [u8; 32] {

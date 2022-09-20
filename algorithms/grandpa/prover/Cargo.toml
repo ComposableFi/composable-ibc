@@ -29,3 +29,4 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 primitives = { package = "grandpa-light-client-primitives", path = "../primitives" }
+light-client-common = { path = "../../../light-clients/common" }

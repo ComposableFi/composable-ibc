@@ -24,7 +24,7 @@ use primitives::{
 };
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
-use sp_runtime::traits::{Block, Zero};
+use sp_runtime::traits::{Header, Zero};
 use std::collections::BTreeMap;
 use subxt::{sp_runtime::traits::Header as _, Client, Config};
 
@@ -92,15 +92,15 @@ where
 
 	/// Returns the finality proof for the given parachain header numbers in between the given relay
 	/// chain hashes.
-	pub async fn query_finalized_parachain_headers_with_proof<B>(
+	pub async fn query_finalized_parachain_headers_with_proof<H>(
 		&self,
 		latest_finalized_hash: T::Hash,
 		previous_finalized_hash: T::Hash,
 		header_numbers: Vec<T::BlockNumber>,
-	) -> Result<ParachainHeadersWithFinalityProof<B>, anyhow::Error>
+	) -> Result<ParachainHeadersWithFinalityProof<H>, anyhow::Error>
 	where
-		B: Block,
-		B::Hash: From<T::Hash>,
+		H: Header,
+		H::Hash: From<T::Hash>,
 	{
 		let header = self
 			.relay_client
@@ -116,9 +116,9 @@ where
 		.await?
 		.ok_or_else(|| anyhow!("No justification found for block: {:?}", header.hash()))?
 		.0;
-		let mut finality_proof = FinalityProof::<B::Header>::decode(&mut &encoded[..])?;
+		let mut finality_proof = FinalityProof::<H>::decode(&mut &encoded[..])?;
 		finality_proof.unknown_headers = {
-			let mut unknown_headers = vec![B::Header::decode(&mut &header.encode()[..])?];
+			let mut unknown_headers = vec![H::decode(&mut &header.encode()[..])?];
 			let mut current = *header.parent_hash();
 			loop {
 				if current == previous_finalized_hash {
@@ -131,7 +131,7 @@ where
 					.await?
 					.ok_or_else(|| anyhow!("Header with hash: {current:?} not found!"))?;
 				current = *header.parent_hash();
-				unknown_headers.push(B::Header::decode(&mut &header.encode()[..])?);
+				unknown_headers.push(H::decode(&mut &header.encode()[..])?);
 			}
 			unknown_headers
 		};
@@ -148,7 +148,7 @@ where
 			.relay_client
 			.clone()
 			.to_runtime_api::<runtime::api::RuntimeApi<T, subxt::PolkadotExtrinsicParams<_>>>();
-		let mut parachain_headers = BTreeMap::<B::Hash, ParachainHeaderProofs>::default();
+		let mut parachain_headers = BTreeMap::<H::Hash, ParachainHeaderProofs>::default();
 
 		for changes in change_set {
 			let header = self
