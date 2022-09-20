@@ -31,9 +31,10 @@ use codec::{Decode, Encode};
 use frame_support::sp_runtime::{app_crypto::ByteArray, traits::Convert};
 use sp_core::H256;
 
-use alloc::string::ToString;
+use alloc::{format, string::ToString};
 use sp_runtime::{generic::Header, traits::BlakeTwo256};
 use sp_std::{prelude::*, vec};
+use sp_trie::LayoutV0;
 
 /// This should verify the signed commitment signatures, and reconstruct the
 /// authority merkle root, confirming known authorities signed the [`crate::primitives::Commitment`]
@@ -204,10 +205,15 @@ where
 		}
 
 		// Verify timestamp extrinsic
-		let proof = &*parachain_header.extrinsic_proof;
-		let ext = &*parachain_header.timestamp_extrinsic;
-		let extrinsic_root = decoded_para_header.extrinsics_root;
-		<H as HostFunctions>::verify_timestamp_extrinsic(extrinsic_root, proof, ext)?;
+		// Timestamp extrinsic should be the first inherent and hence the first extrinsic
+		// https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
+		let timestamp_ext_key = codec::Compact(0u32).encode();
+		sp_trie::verify_trie_proof::<LayoutV0<H::BlakeTwo256>, _, _, _>(
+			&decoded_para_header.extrinsics_root,
+			&&*parachain_header.extrinsic_proof,
+			&vec![(timestamp_ext_key, Some(&*parachain_header.timestamp_extrinsic))],
+		)
+		.map_err(|_| BeefyClientError::Custom(format!("Invalid extrinsic proof")))?;
 
 		let pair = (parachain_header.para_id, parachain_header.parachain_header);
 		let leaf_bytes = pair.encode();

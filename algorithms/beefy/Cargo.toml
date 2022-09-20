@@ -8,6 +8,13 @@ authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <david.salami@g
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+# crates.io
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+rs_merkle = { version = "1.2.0", default-features = false }
+mmr-lib= { package = "ckb-merkle-mountain-range", version = "0.3.2", default-features = false }
+derive_more = { version = "0.99.17", default-features = false, features = ["from"]  }
+
+# substrate
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-core = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
@@ -17,11 +24,11 @@ beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech
 pallet-mmr = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 pallet-mmr-primitives = { package = "sp-mmr-primitives", default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 beefy-primitives = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-rs_merkle = { version = "1.2.0", default-features = false }
-mmr-lib= { package = "ckb-merkle-mountain-range", version = "0.3.2", default-features = false }
-derive_more = { version = "0.99.17", default-features = false, features = ["from"]  }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
+
+# local
 beefy-client-primitives = { package = "primitives", path = "primitives", default-features = false }
+light-client-common = { path = "../../light-clients/common", default-features = false }
 
 [dev-dependencies]
 tokio = { version = "1.17.0", features = ["full"] }
@@ -53,4 +60,6 @@ std = [
     "mmr-lib/std",
     "frame-support/std",
     "beefy-client-primitives/std",
+    "sp-trie/std",
+    "light-client-common/std",
 ]

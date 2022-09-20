@@ -1,3 +1,18 @@
+// Copyright (C) 2022 ComposableFi.
+// SPDX-License-Identifier: Apache-2.0
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! Primitive types used in the library
 
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -7,7 +22,6 @@ use beefy_primitives::mmr::MmrLeafVersion;
 pub use beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
-use error::BeefyClientError;
 use sp_core::H256;
 use sp_std::prelude::*;
 
@@ -26,8 +40,8 @@ pub struct ClientState {
 	pub beefy_activation_block: u32,
 }
 
-/// Host functions required by the light client for signature verification
-pub trait HostFunctions {
+/// Host functions that allow the light client perform cryptographic operations in native.
+pub trait HostFunctions: light_client_common::HostFunctions {
 	/// Keccak 256 hash function
 	fn keccak_256(input: &[u8]) -> [u8; 32];
 
@@ -36,13 +50,6 @@ pub trait HostFunctions {
 		signature: &[u8; 65],
 		value: &[u8; 32],
 	) -> Option<Vec<u8>>;
-
-	/// parity trie_db proof verification using BlakeTwo256 Hasher
-	fn verify_timestamp_extrinsic(
-		root: H256,
-		proof: &[Vec<u8>],
-		value: &[u8],
-	) -> Result<(), BeefyClientError>;
 }
 
 /// Hash length definition for hashing algorithms used

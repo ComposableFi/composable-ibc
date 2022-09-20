@@ -1,3 +1,20 @@
+// Copyright (C) 2022 ComposableFi.
+// SPDX-License-Identifier: Apache-2.0
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! BEEFY prover utilities
+
 pub mod error;
 pub mod helpers;
 pub mod relay_chain_queries;
@@ -42,6 +59,8 @@ use relay_chain_queries::{
 #[derive(Clone)]
 pub struct Crypto;
 
+
+
 impl HostFunctions for Crypto {
 	fn keccak_256(input: &[u8]) -> [u8; 32] {
 		keccak_256(input)
@@ -54,22 +73,6 @@ impl HostFunctions for Crypto {
 		crypto::secp256k1_ecdsa_recover_compressed(signature, value)
 			.ok()
 			.map(|val| val.to_vec())
-	}
-
-	fn verify_timestamp_extrinsic(
-		root: H256,
-		proof: &[Vec<u8>],
-		value: &[u8],
-	) -> Result<(), beefy_client_primitives::error::BeefyClientError> {
-		// Timestamp extrinsic should be the first inherent and hence the first extrinsic
-		// https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
-		let key = codec::Compact(0u32).encode();
-		sp_trie::verify_trie_proof::<LayoutV0<BlakeTwo256>, _, _, _>(
-			&root,
-			proof,
-			&vec![(key, Some(value))],
-		)
-		.map_err(|e| From::from(e.to_string()))
 	}
 }
 
