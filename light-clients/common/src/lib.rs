@@ -28,7 +28,7 @@ use serde::{Deserialize, Serialize};
 use sp_storage::ChildInfo;
 use sp_trie::StorageProof;
 
-pub mod trie;
+pub mod state_machine;
 
 /// Host functions that allow the light client perform cryptographic operations in native.
 pub trait HostFunctions: Clone + Send + Sync + Eq + Debug + Default {
@@ -60,7 +60,7 @@ where
 	let proof = StorageProof::new(trie_proof);
 	let root = H256::from_slice(root.as_bytes());
 	let child_info = ChildInfo::new_default(prefix.as_bytes());
-	trie::read_child_proof_check::<H, _>(root.into(), proof, child_info, vec![(key, Some(value))])
+	state_machine::read_child_proof_check::<H, _>(root.into(), proof, child_info, vec![(key, Some(value))])
 		.map_err(anyhow::Error::msg)?;
 	Ok(())
 }
@@ -88,7 +88,7 @@ where
 	let proof = StorageProof::new(trie_proof);
 	let root = H256::from_slice(root.as_bytes());
 	let child_info = ChildInfo::new_default(prefix.as_bytes());
-	trie::read_child_proof_check::<H, _>(root, proof, child_info, vec![(key, None)])
+	state_machine::read_child_proof_check::<H, _>(root, proof, child_info, vec![(key, None)])
 		.map_err(anyhow::Error::msg)?;
 	Ok(())
 }

@@ -11,7 +11,7 @@ use crate::proto::ConsensusState as RawConsensusState;
 use crate::error::Error;
 use grandpa_client_primitives::{parachain_header_storage_key, ParachainHeaderProofs};
 use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp, Height};
-use light_client_common::{decode_timestamp_extrinsic, trie};
+use light_client_common::{decode_timestamp_extrinsic, state_machine};
 use primitive_types::H256;
 use sp_runtime::{generic, traits::BlakeTwo256, SaturatedConversion};
 use sp_trie::StorageProof;
@@ -40,7 +40,7 @@ impl ConsensusState {
 	{
 		let key = parachain_header_storage_key(para_id);
 		let proof = StorageProof::new(parachain_header_proof.state_proof);
-		let parachain_header_bytes = trie::read_proof_check::<H::BlakeTwo256, _>(
+		let parachain_header_bytes = state_machine::read_proof_check::<H::BlakeTwo256, _>(
 			&relay_state_root,
 			proof,
 			vec![parachain_header_storage_key(para_id)],

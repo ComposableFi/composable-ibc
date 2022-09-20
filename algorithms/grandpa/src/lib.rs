@@ -8,7 +8,7 @@ use anyhow::anyhow;
 use codec::{Decode, Encode};
 use finality_grandpa::Chain;
 use hash_db::Hasher;
-use light_client_common::trie;
+use light_client_common::state_machine;
 use primitive_types::H256;
 use primitives::{
 	error, parachain_header_storage_key, ClientState, HostFunctions, ParachainHeaderProofs,
@@ -55,7 +55,7 @@ where
 			let ParachainHeaderProofs { extrinsic_proof, extrinsic, state_proof } = proofs;
 			let proof = StorageProof::new(state_proof);
 			let key = parachain_header_storage_key(client_state.para_id);
-			let header = trie::read_proof_check::<Host::BlakeTwo256, _>(
+			let header = state_machine::read_proof_check::<Host::BlakeTwo256, _>(
 				relay_chain_header.state_root(),
 				proof,
 				&[key.as_ref()],
