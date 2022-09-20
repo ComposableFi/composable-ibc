@@ -19,10 +19,10 @@ message Authority {
 
 // ClientState for the grandpa client
 message ClientState {
-  // Latest mmr root hash
+  // Latest relay chain block hash
   bytes latest_relay_hash = 1;
 
-  // block number for the latest mmr_root_hash
+  // current grandpa authority set id
   uint64 current_set_id = 2;
 
   // Block height when the client was frozen due to a misbehaviour
@@ -37,7 +37,7 @@ message ClientState {
   // latest parachain height
   uint32 latest_para_height = 6;
 
-  // latest parachain height
+  // Current grandpa authorities
   repeated Authority current_authorities = 7;
 }
 
