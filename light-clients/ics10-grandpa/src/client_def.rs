@@ -87,7 +87,7 @@ where
 				>(client_state, headers_with_finality_proof)
 				.map_err(Error::GrandpaPrimitives)?;
 			},
-			ClientMessage::Misbehavior(()) => unimplemented!(),
+			ClientMessage::Misbehaviour(()) => unimplemented!(),
 		}
 
 		Ok(())
@@ -146,7 +146,7 @@ where
 	) -> Result<bool, Ics02Error> {
 		// todo: we should also check that this update doesn't include competing consensus states
 		// for heights we already processed.
-		Ok(matches!(client_message, ClientMessage::Misbehavior(_)))
+		Ok(matches!(client_message, ClientMessage::Misbehaviour(_)))
 	}
 
 	fn verify_upgrade_and_update_state<Ctx: ReaderContext>(

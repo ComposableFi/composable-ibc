@@ -15,13 +15,13 @@
 
 use crate::{
 	client_def::BeefyClient,
+	client_message::{BeefyHeader, BEEFY_HEADER_TYPE_URL},
 	client_state::{
 		ClientState as BeefyClientState, UpgradeOptions as BeefyUpgradeOptions,
 		BEEFY_CLIENT_STATE_TYPE_URL,
 	},
 	consensus_state::{ConsensusState as BeefyConsensusState, BEEFY_CONSENSUS_STATE_TYPE_URL},
 	error::Error,
-	header::{BeefyHeader, BEEFY_HEADER_TYPE_URL},
 };
 use beefy_client_primitives::error::BeefyClientError;
 use ibc::{
@@ -42,6 +42,7 @@ use ibc::{
 use ibc_derive::{ClientDef, ClientState, ConsensusState, Header, Misbehaviour, Protobuf};
 use primitive_types::H256;
 use serde::{Deserialize, Serialize};
+use sp_runtime::traits::BlakeTwo256;
 use sp_storage::ChildInfo;
 use sp_trie::StorageProof;
 
@@ -64,27 +65,10 @@ impl beefy_client_primitives::HostFunctions for HostFunctionsManager {
 	) -> Option<Vec<u8>> {
 		beefy_prover::Crypto::secp256k1_ecdsa_recover_compressed(signature, value)
 	}
-
-	fn verify_timestamp_extrinsic(
-		root: H256,
-		proof: &[Vec<u8>],
-		value: &[u8],
-	) -> Result<(), BeefyClientError> {
-		beefy_prover::Crypto::verify_timestamp_extrinsic(root, proof, value)
-	}
 }
 
 impl light_client_common::HostFunctions for HostFunctionsManager {
-	fn verify_child_trie_proof<I>(root: &[u8; 32], proof: &[Vec<u8>], items: I) -> Result<(), Error>
-	where
-		I: IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
-	{
-		let proof = StorageProof::new(proof);
-		let child_info = ChildInfo::new_default(b"ibc/");
-		sp_state_machine::read_child_proof_check(root.into(), proof, &child_info, items)
-			.map_err(|err| Error::Custom(format!("Failed to verify child trie proof: {err:?}")))?;
-		Ok(())
-	}
+	type BlakeTwo256 = BlakeTwo256;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, ClientDef)]
@@ -140,10 +124,9 @@ pub enum AnyConsensusState {
 pub struct MockClientTypes;
 
 impl ClientTypes for MockClientTypes {
-	type AnyHeader = AnyHeader;
+	type AnyClientMessage = ();
 	type AnyClientState = AnyClientState;
 	type AnyConsensusState = AnyConsensusState;
-	type AnyMisbehaviour = AnyMisbehaviour;
 	type HostFunctions = HostFunctionsManager;
 	type ClientDef = AnyClient;
 	type HostBlock = ();

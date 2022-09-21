@@ -213,8 +213,7 @@ message BeefyMmrLeaf {
   bytes parachain_heads = 5;
 }
 
-
-// GRANDPA misbehaviour type
+// BEEFY misbehaviour type
 message Misbehaviour {
   // todo:
 }
@@ -222,6 +221,7 @@ message Misbehaviour {
 // ClientMessage for ics11-BEEFY
 message ClientMessage {
   oneof message {
+    // Header variant for updating the client
     Header header = 1;
     Misbehaviour misbehaviour = 2;
   }

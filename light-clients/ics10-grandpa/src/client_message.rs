@@ -30,7 +30,7 @@ use sp_runtime::traits::BlakeTwo256;
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA header
-pub const GRANDPA_HEADER_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.ClientMessage";
+pub const GRANDPA_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.ClientMessage";
 
 /// Relay chain substrate header type
 pub type RelayChainHeader = sp_runtime::generic::Header<u32, BlakeTwo256>;
@@ -47,13 +47,13 @@ pub struct Header {
 	pub parachain_headers: BTreeMap<H256, ParachainHeaderProofs>,
 }
 
-/// The ClientMessage
+/// [`ClientMessage`] for ICS10-GRANDPA
 #[derive(Clone, Debug)]
 pub enum ClientMessage {
 	/// This is the variant for header updates
 	Header(Header),
 	//// This is for submitting misbehaviors. todo:
-	Misbehavior(()),
+	Misbehaviour(()),
 }
 
 impl ibc::core::ics02_client::client_message::ClientMessage for ClientMessage {
@@ -126,7 +126,7 @@ impl TryFrom<RawClientMessage> for ClientMessage {
 				})
 			},
 			client_message::Message::Misbehaviour(_raw_misbehaviour) =>
-				ClientMessage::Misbehavior(()),
+				ClientMessage::Misbehaviour(()),
 		};
 
 		Ok(message)
@@ -167,7 +167,7 @@ impl From<ClientMessage> for RawClientMessage {
 					})),
 				}
 			},
-			ClientMessage::Misbehavior(()) => RawClientMessage {
+			ClientMessage::Misbehaviour(()) => RawClientMessage {
 				message: Some(client_message::Message::Misbehaviour(RawMisbehaviour {})),
 			},
 		}

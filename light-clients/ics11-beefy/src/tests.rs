@@ -14,9 +14,11 @@
 // limitations under the License.
 
 use crate::{
+	client_message::{
+		BeefyHeader, ParachainHeader as BeefyParachainHeader, ParachainHeadersWithProof,
+	},
 	client_state::ClientState as BeefyClientState,
 	consensus_state::ConsensusState,
-	header::{BeefyHeader, ParachainHeader as BeefyParachainHeader, ParachainHeadersWithProof},
 	mock::{HostFunctionsManager, MockClientTypes},
 };
 use beefy_client_primitives::{NodesUtils, PartialMmrLeaf};

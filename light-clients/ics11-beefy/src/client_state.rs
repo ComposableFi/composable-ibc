@@ -24,7 +24,7 @@ use tendermint_proto::Protobuf;
 
 use crate::proto::{BeefyAuthoritySet, ClientState as RawClientState};
 
-use crate::{error::Error, header::BeefyHeader};
+use crate::{client_message::BeefyHeader, error::Error};
 
 use crate::client_def::BeefyClient;
 use ibc::{
