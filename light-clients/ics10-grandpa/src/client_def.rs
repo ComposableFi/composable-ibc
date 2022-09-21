@@ -21,7 +21,7 @@ use ibc::core::ics02_client::{
 use crate::client_message::{ClientMessage, RelayChainHeader};
 use alloc::{format, string::ToString, vec, vec::Vec};
 use core::marker::PhantomData;
-use grandpa_client::justification::AncestryChain;
+use grandpa_client::justification::{find_scheduled_change, AncestryChain};
 use grandpa_client_primitives::ParachainHeadersWithFinalityProof;
 use ibc::{
 	core::{
@@ -97,7 +97,7 @@ where
 		&self,
 		_ctx: &Ctx,
 		_client_id: ClientId,
-		client_state: Self::ClientState,
+		mut client_state: Self::ClientState,
 		client_message: Self::ClientMessage,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
 		let header = match client_message {
@@ -122,6 +122,16 @@ where
 			let wrapped = Ctx::AnyConsensusState::wrap(&consensus_state)
 				.expect("AnyConsenusState is type checked; qed");
 			consensus_states.push((height, wrapped));
+		}
+
+		client_state.latest_relay_hash = header.finality_proof.block;
+
+		let target = ancestry
+			.header(&header.finality_proof.block)
+			.expect("target header has already been checked in verify_client_message; qed");
+		if let Some(scheduled_change) = find_scheduled_change(target) {
+			client_state.current_set_id += 1;
+			client_state.current_authorities = scheduled_change.next_authorities;
 		}
 
 		Ok((client_state, ConsensusUpdateResult::Batch(consensus_states)))

@@ -25,3 +25,9 @@ pub mod client_state;
 pub mod consensus_state;
 pub mod error;
 pub mod proto;
+
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;

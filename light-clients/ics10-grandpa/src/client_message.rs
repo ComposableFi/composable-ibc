@@ -47,7 +47,7 @@ pub struct Header {
 	pub parachain_headers: BTreeMap<H256, ParachainHeaderProofs>,
 }
 
-/// [`ClientMessage`] for ICS10-GRANDPA
+/// [`ClientMessage`] for Ics10-GRANDPA
 #[derive(Clone, Debug)]
 pub enum ClientMessage {
 	/// This is the variant for header updates

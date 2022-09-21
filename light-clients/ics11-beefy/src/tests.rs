@@ -15,21 +15,23 @@
 
 use crate::{
 	client_message::{
-		BeefyHeader, ParachainHeader as BeefyParachainHeader, ParachainHeadersWithProof,
+		BeefyHeader, ClientMessage, ParachainHeader as BeefyParachainHeader,
+		ParachainHeadersWithProof,
 	},
-	client_state::ClientState as BeefyClientState,
+	client_state::{ClientState as BeefyClientState, ClientState},
 	consensus_state::ConsensusState,
-	mock::{HostFunctionsManager, MockClientTypes},
+	mock::{
+		AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager, MockClientTypes,
+	},
 };
-use futures::stream::StreamExt;
 use beefy_client_primitives::{NodesUtils, PartialMmrLeaf};
 use beefy_prover::{
 	helpers::{fetch_timestamp_extrinsic_with_proof, TimeStampExtWithProof},
 	runtime, ClientWrapper,
 };
 use codec::{Decode, Encode};
+use futures::stream::StreamExt;
 use ibc::{
-	events::IbcEvent,
 	core::{
 		ics02_client::{
 			client_state::ClientState as _,
@@ -41,16 +43,14 @@ use ibc::{
 		},
 		ics24_host::identifier::{ChainId, ClientId},
 	},
+	events::IbcEvent,
 	handler::HandlerOutput,
-	mock::{ context::MockContext},
+	mock::{context::MockContext, host::MockHostType},
 	test_utils::get_dummy_account_id,
 	Height,
 };
-use ibc::mock::host::MockHostType;
+use std::time::Duration;
 use subxt::rpc::{rpc_params, JsonValue, Subscription, SubscriptionClientT};
-use crate::client_message::ClientMessage;
-use crate::client_state::ClientState;
-use crate::mock::{AnyClientMessage, AnyClientState, AnyConsensusState};
 
 #[tokio::test]
 async fn test_continuous_update_of_beefy_client() {
@@ -64,6 +64,7 @@ async fn test_continuous_update_of_beefy_client() {
 		5,
 		chain_start_height,
 	);
+	ctx.block_time = Duration::from_secs(600);
 
 	let signer = get_dummy_account_id();
 
@@ -269,10 +270,8 @@ async fn test_continuous_update_of_beefy_client() {
 			signer: signer.clone(),
 		};
 
-		// advance the chain by 5 blocks with an expected block time of 3s
-		for _ in 0..5 {
-			ctx.advance_host_chain_height();
-		}
+		// advance the chain
+		ctx.advance_host_chain_height();
 		let res = dispatch(&ctx, ClientMsg::UpdateClient(msg.clone()));
 
 		match res {
@@ -293,12 +292,13 @@ async fn test_continuous_update_of_beefy_client() {
 							upd_res.client_state,
 							ctx.latest_client_states(&client_id).clone()
 						);
+						// todo: assert the specific heights for new consensus states
 						println!(
 							"======== Successfully verified parachain headers for block number: {} ========",
 							upd_res.client_state.latest_height(),
 						);
 					},
-					_ => panic!("update handler result has incorrect type"),
+					_ => unreachable!("update handler result has incorrect type"),
 				}
 			},
 			Err(e) => panic!("Unexpected error {:?}", e),
