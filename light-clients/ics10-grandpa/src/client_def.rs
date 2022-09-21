@@ -13,15 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{
-	client_state::ClientState, consensus_state::ConsensusState, error::Error, header::Header,
-};
+use crate::{client_state::ClientState, consensus_state::ConsensusState, error::Error};
 use ibc::core::ics02_client::{
 	client_consensus::ConsensusState as _, client_state::ClientState as _,
 };
 
-use crate::header::RelayChainHeader;
-use alloc::{format, vec, vec::Vec};
+use crate::client_message::{ClientMessage, RelayChainHeader};
+use alloc::{format, string::ToString, vec, vec::Vec};
 use core::marker::PhantomData;
 use grandpa_client::justification::AncestryChain;
 use grandpa_client_primitives::ParachainHeadersWithFinalityProof;
@@ -59,32 +57,38 @@ impl<H> ClientDef for GrandpaClient<H>
 where
 	H: grandpa_client_primitives::HostFunctions,
 {
-	type Header = Header;
+	type ClientMessage = ClientMessage;
 	type ClientState = ClientState<H>;
 	type ConsensusState = ConsensusState;
 
-	fn verify_header<Ctx: ReaderContext>(
+	fn verify_client_message<Ctx: ReaderContext>(
 		&self,
 		_ctx: &Ctx,
 		_client_id: ClientId,
 		client_state: Self::ClientState,
-		header: Self::Header,
+		client_message: Self::ClientMessage,
 	) -> Result<(), Ics02Error> {
-		let headers_with_finality_proof = ParachainHeadersWithFinalityProof {
-			finality_proof: header.finality_proof,
-			parachain_headers: header.parachain_headers,
-		};
-		let client_state = grandpa_client_primitives::ClientState {
-			current_authorities: client_state.current_authorities,
-			current_set_id: client_state.current_set_id,
-			latest_relay_hash: client_state.latest_relay_hash,
-			para_id: client_state.para_id,
-		};
-		grandpa_client::verify_parachain_headers_with_grandpa_finality_proof::<RelayChainHeader, H>(
-			client_state,
-			headers_with_finality_proof,
-		)
-		.map_err(Error::GrandpaPrimitives)?;
+		match client_message {
+			ClientMessage::Header(header) => {
+				let headers_with_finality_proof = ParachainHeadersWithFinalityProof {
+					finality_proof: header.finality_proof,
+					parachain_headers: header.parachain_headers,
+				};
+				let client_state = grandpa_client_primitives::ClientState {
+					current_authorities: client_state.current_authorities,
+					current_set_id: client_state.current_set_id,
+					latest_relay_hash: client_state.latest_relay_hash,
+					para_id: client_state.para_id,
+				};
+
+				grandpa_client::verify_parachain_headers_with_grandpa_finality_proof::<
+					RelayChainHeader,
+					H,
+				>(client_state, headers_with_finality_proof)
+				.map_err(Error::GrandpaPrimitives)?;
+			},
+			ClientMessage::Misbehavior(()) => unimplemented!(),
+		}
 
 		Ok(())
 	}
@@ -94,8 +98,14 @@ where
 		_ctx: &Ctx,
 		_client_id: ClientId,
 		client_state: Self::ClientState,
-		header: Self::Header,
+		client_message: Self::ClientMessage,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
+		let header = match client_message {
+			ClientMessage::Header(header) => header,
+			_ => unreachable!(
+				"02-client will check for misbehaviour before calling update_state; qed"
+			),
+		};
 		let ancestry =
 			AncestryChain::<RelayChainHeader>::new(&header.finality_proof.unknown_headers);
 		let mut consensus_states = vec![];
@@ -120,7 +130,7 @@ where
 	fn update_state_on_misbehaviour(
 		&self,
 		mut client_state: Self::ClientState,
-		_header: Self::Header,
+		_client_message: Self::ClientMessage,
 	) -> Result<Self::ClientState, Ics02Error> {
 		client_state.frozen_height =
 			Some(Height::new(client_state.para_id as u64, client_state.latest_para_height as u64));
@@ -132,9 +142,11 @@ where
 		_ctx: &Ctx,
 		_client_id: ClientId,
 		_client_state: Self::ClientState,
-		_header: Self::Header,
+		client_message: Self::ClientMessage,
 	) -> Result<bool, Ics02Error> {
-		Ok(false)
+		// todo: we should also check that this update doesn't include competing consensus states
+		// for heights we already processed.
+		Ok(matches!(client_message, ClientMessage::Misbehavior(_)))
 	}
 
 	fn verify_upgrade_and_update_state<Ctx: ReaderContext>(

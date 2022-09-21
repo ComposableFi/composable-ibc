@@ -105,9 +105,6 @@ name = "anyhow"
 version = "1.0.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "98161a4e3e2184da77bb14f02184cdd111e83bbbcc9979dfee3c44b9a85f5602"
-dependencies = [
- "backtrace",
-]
 
 [[package]]
 name = "approx"
@@ -2313,7 +2310,7 @@ dependencies = [
 [[package]]
 name = "ibc"
 version = "0.15.0"
-source = "git+https://github.com/ComposableFi/ibc-rs?rev=d4b034e6768a3553a7d0ca9e2e3d532e3cea5f29#d4b034e6768a3553a7d0ca9e2e3d532e3cea5f29"
+source = "git+https://github.com/ComposableFi/ibc-rs?rev=54c22b531165cb2a237f90192bdc5707ea5c35e1#54c22b531165cb2a237f90192bdc5707ea5c35e1"
 dependencies = [
  "borsh",
  "derive_more",
@@ -2343,9 +2340,10 @@ dependencies = [
 [[package]]
 name = "ibc-derive"
 version = "0.1.0"
-source = "git+https://github.com/ComposableFi/ibc-rs?rev=d4b034e6768a3553a7d0ca9e2e3d532e3cea5f29#d4b034e6768a3553a7d0ca9e2e3d532e3cea5f29"
+source = "git+https://github.com/ComposableFi/ibc-rs?rev=54c22b531165cb2a237f90192bdc5707ea5c35e1#54c22b531165cb2a237f90192bdc5707ea5c35e1"
 dependencies = [
  "convert_case 0.6.0",
+ "proc-macro-crate 1.2.1",
  "proc-macro2",
  "quote",
  "syn",
@@ -2354,7 +2352,7 @@ dependencies = [
 [[package]]
 name = "ibc-proto"
 version = "0.18.0"
-source = "git+https://github.com/ComposableFi/ibc-rs?rev=d4b034e6768a3553a7d0ca9e2e3d532e3cea5f29#d4b034e6768a3553a7d0ca9e2e3d532e3cea5f29"
+source = "git+https://github.com/ComposableFi/ibc-rs?rev=54c22b531165cb2a237f90192bdc5707ea5c35e1#54c22b531165cb2a237f90192bdc5707ea5c35e1"
 dependencies = [
  "base64",
  "bytes",

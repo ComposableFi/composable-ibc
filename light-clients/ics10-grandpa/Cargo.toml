@@ -31,8 +31,8 @@ prost-build = "0.11.1"
 
 [dependencies]
 # ibc deps
-ibc = { git = "https://github.com/ComposableFi/ibc-rs", rev = "d4b034e6768a3553a7d0ca9e2e3d532e3cea5f29", default-features = false }
-ibc-proto = { git = "https://github.com/ComposableFi/ibc-rs", rev = "d4b034e6768a3553a7d0ca9e2e3d532e3cea5f29", default-features = false }
+ibc = { git = "https://github.com/ComposableFi/ibc-rs", rev = "54c22b531165cb2a237f90192bdc5707ea5c35e1", default-features = false }
+ibc-proto = { git = "https://github.com/ComposableFi/ibc-rs", rev = "54c22b531165cb2a237f90192bdc5707ea5c35e1", default-features = false }
 
 # local deps
 grandpa-client = { package = "grandpa-light-client", path = "../../algorithms/grandpa",  default-features = false }
