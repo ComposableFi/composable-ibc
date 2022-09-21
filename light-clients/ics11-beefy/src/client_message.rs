@@ -45,7 +45,7 @@ use sp_runtime::{
 };
 
 /// Protobuf type url for Beefy header
-pub const BEEFY_HEADER_TYPE_URL: &str = "/ibc.lightclients.beefy.v1.Header";
+pub const BEEFY_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.lightclients.beefy.v1.ClientMessage";
 
 /// Beefy consensus header
 #[derive(Clone, PartialEq, Eq, Debug)]

@@ -60,7 +60,8 @@ pub struct ClientState<H> {
 	pub authority: BeefyNextAuthoritySet<H256>,
 	/// authorities for the next round
 	pub next_authority_set: BeefyNextAuthoritySet<H256>,
-	_phantom: PhantomData<H>,
+	/// Phantom type
+	pub _phantom: PhantomData<H>,
 }
 
 impl<H: Clone> Protobuf<RawClientState> for ClientState<H> {}
@@ -362,7 +363,7 @@ impl<H> From<ClientState<H>> for RawClientState {
 	}
 }
 
-#[cfg(any(test, feature = "mocks"))]
+#[cfg(test)]
 pub mod test_util {
 	use super::*;
 	use crate::mock::AnyClientState;

@@ -99,7 +99,7 @@ impl From<ConsensusState> for RawConsensusState {
 	}
 }
 
-#[cfg(any(test, feature = "mocks"))]
+#[cfg(test)]
 pub mod test_util {
 	use super::*;
 	use crate::mock::AnyConsensusState;

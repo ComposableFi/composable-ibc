@@ -2429,6 +2429,7 @@ dependencies = [
  "bytes",
  "derive_more",
  "frame-support",
+ "futures",
  "ibc",
  "ibc-derive",
  "ibc-proto",
