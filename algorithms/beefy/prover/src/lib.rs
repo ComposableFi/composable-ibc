@@ -108,7 +108,7 @@ where
 					)),
 				},
 				beefy_activation_block: 0,
-			}
+			};
 		}
 		// Get initial validator set
 		// In development mode validators are the same for all sessions only validator set_id
@@ -307,7 +307,7 @@ where
 			signed_commitment.commitment.block_number.into();
 		let block_hash = self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?;
 
-		let current_authorities = api.storage().beefy().authorities(block_hash).await?.0;
+		let current_authorities = api.storage().beefy().authorities(block_hash).await?;
 
 		// Current LeafIndex
 		let block_number = signed_commitment.commitment.block_number;
@@ -368,8 +368,7 @@ where
 			.beefy()
 			.authorities(Some(latest_beefy_finalized))
 			.await
-			.expect("Should retrieve authority set")
-			.0;
+			.expect("Should retrieve authority set");
 
 		let authority_address_hashes = hash_authority_addresses(
 			current_authorities.into_iter().map(|x| x.encode()).collect(),
