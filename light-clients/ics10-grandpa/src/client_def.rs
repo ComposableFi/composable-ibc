@@ -101,7 +101,10 @@ where
 					.equivocations
 					.into_iter()
 					.map(|equivocation| {
-						check_equivocation_proof::<H, _, _>(client_state.current_set_id, equivocation)
+						check_equivocation_proof::<H, _, _>(
+							client_state.current_set_id,
+							equivocation,
+						)
 					})
 					.collect::<Result<(), _>>()
 					.map_err(Error::Anyhow)?;

@@ -28,7 +28,7 @@ use grandpa_client_primitives::{FinalityProof, ParachainHeaderProofs};
 use primitive_types::H256;
 use sp_finality_grandpa::Equivocation;
 use sp_runtime::traits::BlakeTwo256;
-use std::collections::{HashMap};
+use std::collections::HashMap;
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA header
@@ -138,7 +138,8 @@ impl TryFrom<RawClientMessage> for ClientMessage {
 				})
 			},
 			client_message::Message::Misbehaviour(raw_misbehaviour) => {
-				let equivocations: Vec<Equivocation<H256, u32>> = Decode::decode(&mut &raw_misbehaviour.equivocations[..])?;
+				let equivocations: Vec<Equivocation<H256, u32>> =
+					Decode::decode(&mut &raw_misbehaviour.equivocations[..])?;
 
 				// so we need to de-duplicate equivocations by authority
 				let mut map = HashMap::new();
