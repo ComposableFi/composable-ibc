@@ -143,7 +143,7 @@ impl<H> ClientState<H> {
 	}
 
 	pub fn client_type() -> ClientType {
-		"07-tendermint"
+		"07-tendermint".to_owned()
 	}
 
 	pub fn frozen_height(&self) -> Option<Height> {
