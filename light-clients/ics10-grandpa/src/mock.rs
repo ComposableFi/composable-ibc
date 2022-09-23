@@ -20,6 +20,7 @@ use crate::{
 	client_state::{ClientState, UpgradeOptions, GRANDPA_CLIENT_STATE_TYPE_URL},
 	consensus_state::{ConsensusState, GRANDPA_CONSENSUS_STATE_TYPE_URL},
 };
+use ibc::core::ics02_client::context::ClientTypes;
 use ibc::{
 	core::{
 		ics02_client,
@@ -28,7 +29,7 @@ use ibc::{
 	mock::{
 		client_def::MockClient,
 		client_state::{MockClientState, MockConsensusState},
-		context::ClientTypes,
+		context::HostBlockType,
 		header::MockClientMessage,
 		host::MockHostBlock,
 	},
@@ -98,8 +99,9 @@ impl TryFrom<Any> for AnyClientMessage {
 
 	fn try_from(value: Any) -> Result<Self, Self::Error> {
 		match value.type_url.as_str() {
-			MOCK_CLIENT_MESSAGE_TYPE_URL =>
-				Ok(Self::Mock(panic!("MockClientMessage doesn't implement Protobuf"))),
+			MOCK_CLIENT_MESSAGE_TYPE_URL => {
+				Ok(Self::Mock(panic!("MockClientMessage doesn't implement Protobuf")))
+			},
 			GRANDPA_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Grandpa(
 				ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
@@ -140,6 +142,9 @@ impl ClientTypes for MockClientTypes {
 	type AnyClientState = AnyClientState;
 	type AnyConsensusState = AnyConsensusState;
 	type ClientDef = AnyClient;
+}
+
+impl HostBlockType for MockClientTypes {
 	type HostBlock = MockHostBlock;
 }
 
