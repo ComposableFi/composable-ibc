@@ -83,14 +83,14 @@ impl<H: Clone> ClientState<H> {
 			return Err(Error::Custom(
 				"ClientState beefy activation block cannot be greater than latest_beefy_height"
 					.to_string(),
-			));
+			))
 		}
 
 		if authority_set.id >= next_authority_set.id {
 			return Err(Error::Custom(
 				"ClientState next authority set id must be greater than current authority set id"
 					.to_string(),
-			));
+			))
 		}
 		let chain_id = ChainId::new(relay_chain.to_string(), para_id.into());
 
@@ -111,7 +111,7 @@ impl<H: Clone> ClientState<H> {
 
 	pub fn to_leaf_index(&self, block_number: u32) -> u32 {
 		if self.beefy_activation_block == 0 {
-			return block_number.saturating_sub(1);
+			return block_number.saturating_sub(1)
 		}
 		self.beefy_activation_block.saturating_sub(block_number + 1)
 	}
@@ -122,8 +122,8 @@ impl<H: Clone> ClientState<H> {
 		let mut authority_changed = false;
 		let (mmr_root_hash, latest_beefy_height, next_authority_set) =
 			if let Some(mmr_update) = header.mmr_update_proof {
-				if mmr_update.signed_commitment.commitment.validator_set_id
-					== self.next_authority_set.id
+				if mmr_update.signed_commitment.commitment.validator_set_id ==
+					self.next_authority_set.id
 				{
 					authority_changed = true;
 				}
@@ -178,7 +178,7 @@ impl<H: Clone> ClientState<H> {
 		if h == Height::zero() {
 			return Err(Error::Custom(
 				"ClientState frozen height must be greater than zero".to_string(),
-			));
+			))
 		}
 		Ok(Self { frozen_height: Some(h), ..self })
 	}
@@ -189,13 +189,12 @@ impl<H: Clone> ClientState<H> {
 		if latest_para_height < height {
 			return Err(Error::Custom(format!(
 				"Insufficient height, known height: {latest_para_height}, given height: {height}"
-			)));
+			)))
 		}
 
 		match self.frozen_height {
-			Some(frozen_height) if frozen_height <= height => {
-				Err(Error::Custom(format!("Client has been frozen at height {frozen_height}")))
-			},
+			Some(frozen_height) if frozen_height <= height =>
+				Err(Error::Custom(format!("Client has been frozen at height {frozen_height}"))),
 			_ => Ok(()),
 		}
 	}

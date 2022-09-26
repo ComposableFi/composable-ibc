@@ -69,13 +69,12 @@ impl<H: Clone> ClientState<H> {
 		if latest_para_height < height {
 			return Err(Error::Custom(format!(
 				"Insufficient height, known height: {latest_para_height}, given height: {height}"
-			)));
+			)))
 		}
 
 		match self.frozen_height {
-			Some(frozen_height) if frozen_height <= height => {
-				Err(Error::Custom(format!("Client has been frozen at height {frozen_height}")))
-			},
+			Some(frozen_height) if frozen_height <= height =>
+				Err(Error::Custom(format!("Client has been frozen at height {frozen_height}"))),
 			_ => Ok(()),
 		}
 	}

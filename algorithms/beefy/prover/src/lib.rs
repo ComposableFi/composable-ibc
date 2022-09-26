@@ -108,7 +108,7 @@ where
 					)),
 				},
 				beefy_activation_block: 0,
-			};
+			}
 		}
 		// Get initial validator set
 		// In development mode validators are the same for all sessions only validator set_id

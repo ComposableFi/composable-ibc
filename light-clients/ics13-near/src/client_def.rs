@@ -149,7 +149,8 @@ impl<H: HostFunctionsTrait> ClientDef for NearClient<H> {
 	{
 		match client_message {
 			NearClientMessage::Header(header) => {
-				// your light client, shouldn't do storage anymore, it should just do verification here.
+				// your light client, shouldn't do storage anymore, it should just do verification
+				// here.
 				validate_light_block::<H>(&header, client_state)
 			},
 		}
@@ -360,21 +361,21 @@ where
 
 	// (1)
 	if new_block_view.inner_lite.height <= current_block_view.inner_lite.height {
-		return Err(NearError::height_too_old().into());
+		return Err(NearError::height_too_old().into())
 	}
 
 	// (2)
 	if ![current_block_view.inner_lite.epoch_id, current_block_view.inner_lite.next_epoch_id]
 		.contains(&new_block_view.inner_lite.epoch_id)
 	{
-		return Err(NearError::invalid_epoch(new_block_view.inner_lite.epoch_id).into());
+		return Err(NearError::invalid_epoch(new_block_view.inner_lite.epoch_id).into())
 	}
 
 	// (3)
-	if new_block_view.inner_lite.epoch_id == current_block_view.inner_lite.next_epoch_id
-		&& new_block_view.next_bps.is_none()
+	if new_block_view.inner_lite.epoch_id == current_block_view.inner_lite.next_epoch_id &&
+		new_block_view.next_bps.is_none()
 	{
-		return Err(NearError::unavailable_block_producers().into());
+		return Err(NearError::unavailable_block_producers().into())
 	}
 
 	//  (4) and (5)
@@ -393,7 +394,7 @@ where
 		total_stake += bp_stake;
 
 		if maybe_signature.is_none() {
-			continue;
+			continue
 		}
 
 		approved_stake += bp_stake;
@@ -402,13 +403,13 @@ where
 		let data = H::sha256_digest(&approval_message);
 		let signature = maybe_signature.as_ref().unwrap();
 		if H::ed25519_verify(signature.get_inner(), &data, validator_public_key.get_inner()) {
-			return Err(NearError::invalid_signature().into());
+			return Err(NearError::invalid_signature().into())
 		}
 	}
 
 	let threshold = total_stake * 2 / 3;
 	if approved_stake <= threshold {
-		return Err(NearError::insufficient_staked_amount().into());
+		return Err(NearError::insufficient_staked_amount().into())
 	}
 
 	// # (6)
@@ -419,10 +420,10 @@ where
 			.unwrap()
 			.try_to_vec()
 			.map_err(|_| Error::from(NearError::serialization_error()))?;
-		if H::sha256_digest(new_block_view_next_bps_serialized.as_ref()).as_slice()
-			!= new_block_view.inner_lite.next_bp_hash.as_ref()
+		if H::sha256_digest(new_block_view_next_bps_serialized.as_ref()).as_slice() !=
+			new_block_view.inner_lite.next_bp_hash.as_ref()
 		{
-			return Err(NearError::serialization_error().into());
+			return Err(NearError::serialization_error().into())
 		}
 	}
 	Ok(())
