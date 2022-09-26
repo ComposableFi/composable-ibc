@@ -368,8 +368,8 @@ where
 			.beefy()
 			.authorities(Some(latest_beefy_finalized))
 			.await
-			.0
-			.expect("Should retrieve authority set");
+			.expect("Should retrieve authority set")
+			.0;
 
 		let authority_address_hashes = hash_authority_addresses(
 			current_authorities.into_iter().map(|x| x.encode()).collect(),
