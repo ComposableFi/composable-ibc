@@ -8,6 +8,7 @@ members = [
     "algorithms/grandpa/prover",
     "algorithms/grandpa/primitives",
     "light-clients/common",
+    "light-clients/grandpa-cw",
     "light-clients/ics07-tendermint",
     "light-clients/ics10-grandpa",
     "light-clients/ics11-beefy",
