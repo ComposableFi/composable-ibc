@@ -26,23 +26,17 @@ use beefy_prover::{ClientWrapper, Crypto};
 use futures::stream::StreamExt;
 use pallet_mmr_primitives::Proof;
 use sp_core::bytes::to_hex;
-use subxt::{
-	rpc::{rpc_params, JsonValue, Subscription, SubscriptionClientT},
-	sp_runtime::traits::Header,
-};
+use subxt::{PolkadotConfig, rpc::{rpc_params, Subscription}};
+
 
 #[tokio::test]
 async fn test_verify_mmr_with_proof() {
 	let url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
-	let client = subxt::ClientBuilder::new()
-		.set_url(url)
-		.build::<subxt::DefaultConfig>()
+	let client = subxt::client::OnlineClient::<PolkadotConfig>::from_url(url)
 		.await
 		.unwrap();
 	let para_url = std::env::var("PARA_NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9988".to_string());
-	let para_client = subxt::ClientBuilder::new()
-		.set_url(para_url)
-		.build::<subxt::DefaultConfig>()
+	let para_client = subxt::client::OnlineClient::<PolkadotConfig>::from_url(para_url)
 		.await
 		.unwrap();
 
@@ -222,7 +216,6 @@ async fn verify_parachain_headers() {
 	let mut client_state = ClientWrapper::get_initial_client_state(Some(&client)).await;
 	let subscription: Subscription<String> = client
 		.rpc()
-		.client
 		.subscribe(
 			"beefy_subscribeJustifications",
 			rpc_params![],

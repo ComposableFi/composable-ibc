@@ -22,7 +22,7 @@ use jsonrpsee::{
 	rpc_params,
 };
 use std::{env, fs, path::Path};
-use subxt_codegen::{DerivesRegistry, CratePath};
+use subxt_codegen::{CratePath, DerivesRegistry};
 
 // We need this build script to rebuild the runtime metadata from a live node
 // Since we have exported functions that depends on the having the latest relay chain metadata

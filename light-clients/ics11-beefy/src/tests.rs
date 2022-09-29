@@ -141,7 +141,7 @@ async fn test_continuous_update_of_beefy_client() {
 		};
 		// we can't use the genesis block to construct the initial state.
 		if block_number == 0 {
-			continue;
+			continue
 		}
 		let subxt_block_number: subxt::rpc::BlockNumber = block_number.into();
 		let block_hash = client_wrapper
@@ -171,7 +171,7 @@ async fn test_continuous_update_of_beefy_client() {
 
 		let consensus_state = ConsensusState::from_header(parachain_header).unwrap();
 
-		break (AnyClientState::Beefy(client_state), AnyConsensusState::Beefy(consensus_state));
+		break (AnyClientState::Beefy(client_state), AnyConsensusState::Beefy(consensus_state))
 	};
 
 	let create_client =
@@ -212,7 +212,7 @@ async fn test_continuous_update_of_beefy_client() {
                     "Skipping outdated commitment \n Received signed commitmment with validator_set_id: {:?}\n Current authority set id: {:?}\n Next authority set id: {:?}\n",
                     signed_commitment.commitment.validator_set_id, client_state.authority.id, client_state.next_authority_set.id
                 );
-				continue;
+				continue
 			},
 			_ => {},
 		}

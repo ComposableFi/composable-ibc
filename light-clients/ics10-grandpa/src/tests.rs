@@ -161,7 +161,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		.expect("Failed to decode parachain header");
 		// we can't use the genesis block to construct the initial state.
 		if decoded_para_head.number == 0 {
-			continue;
+			continue
 		}
 		let client_state = ClientState {
 			relay_chain: Default::default(),
@@ -209,7 +209,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		)
 		.unwrap();
 
-		break (AnyClientState::Grandpa(client_state), AnyConsensusState::Grandpa(consensus_state));
+		break (AnyClientState::Grandpa(client_state), AnyConsensusState::Grandpa(consensus_state))
 	};
 
 	let create_client =

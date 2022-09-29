@@ -21,7 +21,7 @@ use sp_core::keccak_256;
 use sp_runtime::traits::BlakeTwo256;
 use sp_trie::{generate_trie_proof, TrieDBMut, TrieMut};
 use std::collections::BTreeMap;
-use subxt::{OnlineClient, Config};
+use subxt::{Config, OnlineClient};
 
 pub struct TimeStampExtWithProof {
 	pub ext: Vec<u8>,

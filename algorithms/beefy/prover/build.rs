@@ -22,7 +22,7 @@ use jsonrpsee::{
 	rpc_params,
 };
 use std::{env, fs, path::Path};
-use subxt_codegen::{DerivesRegistry, CratePath};
+use subxt_codegen::{CratePath, DerivesRegistry};
 
 // We need this build script to rebuild the runtime metadata from a live node
 // Since we have exported functions that depends on the having the latest relay chain metadata
@@ -67,9 +67,11 @@ fn codegen<I: Input>(encoded: &mut I) -> color_eyre::Result<String> {
 async fn main() -> color_eyre::Result<()> {
 	let metadata = fetch_metadata_ws().await?;
 	let code = codegen(&mut &metadata[..])?;
+	let syntax_tree = syn::parse_file(&code).unwrap();
+	let formatted = prettyplease::unparse(&syntax_tree);
 	let out_dir = env::var_os("OUT_DIR").unwrap();
 	let dest_path = Path::new(&out_dir).join("subxt_codegen.rs");
-	fs::write(&dest_path, &code)?;
+	fs::write(&dest_path, &formatted)?;
 
 	Ok(())
 }

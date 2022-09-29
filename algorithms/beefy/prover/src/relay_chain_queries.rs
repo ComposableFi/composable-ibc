@@ -21,13 +21,10 @@ use beefy_client_primitives::get_leaf_index_for_block_number;
 use beefy_primitives::{SignedCommitment, VersionedFinalityProof};
 use codec::{Decode, Encode};
 use pallet_mmr_rpc::{LeafBatchProof, LeafProof};
-use sp_core::{storage::StorageKey, H256};
+use sp_core::{hexdisplay::AsBytesRef, storage::StorageKey, H256};
 use sp_runtime::traits::{Header, Zero};
 use std::collections::{BTreeMap, BTreeSet};
-use subxt::{
-	rpc::{rpc_params, ClientT},
-	Config, OnlineClient,
-};
+use subxt::{rpc::rpc_params, Config, OnlineClient};
 
 pub struct FinalizedParaHeads {
 	pub leaf_indices: Vec<u32>,
@@ -50,20 +47,16 @@ where
 	let subxt_block_number: subxt::rpc::BlockNumber = commitment_block_number.into();
 	let block_hash = client.rpc().block_hash(Some(subxt_block_number)).await?;
 
-	let api = client
-		.clone()
-		.to_runtime_api::<runtime::api::RuntimeApi<T, subxt::PolkadotExtrinsicParams<_>>>();
-
 	let mut para_ids = vec![];
-	let key  = runtime::storage()
-	for id in client.storage().paras().parachains(block_hash.clone()).await? {
-		match api
-			.storage()
-			.paras()
-			.para_lifecycles(&id, block_hash.clone())
-			.await?
-			.expect("ParaId is known")
-		{
+	let key = runtime::api::storage().paras().parachains();
+	let ids = client
+		.storage()
+		.fetch(&key, block_hash)
+		.await?
+		.ok_or_else(|| Error::Custom(format!("No ParaIds on relay chain?")))?;
+	for id in ids {
+		let key = runtime::api::storage().paras().para_lifecycles(&id);
+		match client.storage().fetch(&key, block_hash).await?.expect("ParaId is known") {
 			// only care about active parachains.
 			ParaLifecycle::Parachain => para_ids.push(id),
 			_ => {},
@@ -81,10 +74,10 @@ where
 		})?;
 
 	let change_set = client
-		.storage()
+		.rpc()
 		.query_storage(
 			// we are interested only in the blocks where our parachain header changes.
-			vec![parachain_header_storage_key(para_id)],
+			vec![parachain_header_storage_key(para_id).as_bytes_ref()],
 			previous_finalized_hash,
 			block_hash,
 		)
@@ -99,7 +92,8 @@ where
 
 		let mut heads = BTreeMap::new();
 		for id in para_ids.iter() {
-			if let Some(head) = api.storage().paras().heads(id, Some(header.hash())).await? {
+			let key = runtime::api::storage().paras().heads(id);
+			if let Some(head) = client.storage().fetch(&key, Some(header.hash())).await? {
 				heads.insert(id.0, head.0);
 			}
 		}
@@ -109,7 +103,7 @@ where
 		let para_block_number = *para_header.number();
 		// skip genesis header or any unknown headers
 		if para_block_number == Zero::zero() || !header_numbers.contains(&para_block_number) {
-			continue;
+			continue
 		}
 
 		let block_number = u32::from(*header.number());
@@ -125,7 +119,7 @@ pub async fn fetch_beefy_justification<T: Config>(
 	client: &OnlineClient<T>,
 ) -> Result<(SignedCommitment<u32, beefy_primitives::crypto::Signature>, T::Hash), Error> {
 	let latest_beefy_finalized: <T as Config>::Hash =
-		client.rpc().client.request("beefy_getFinalizedHead", rpc_params!()).await?;
+		client.rpc().request("beefy_getFinalizedHead", rpc_params!()).await?;
 	let block = client
 		.rpc()
 		.block(Some(latest_beefy_finalized))
@@ -156,7 +150,6 @@ pub async fn fetch_mmr_batch_proof<T: Config>(
 ) -> Result<LeafBatchProof<H256>, Error> {
 	let proof: LeafBatchProof<H256> = client
 		.rpc()
-		.client
 		.request("mmr_generateBatchProof", rpc_params!(leaf_indices, block_hash))
 		.await?;
 	Ok(proof)
@@ -170,7 +163,6 @@ pub async fn fetch_mmr_leaf_proof<T: Config>(
 ) -> Result<LeafProof<H256>, Error> {
 	let proof: LeafProof<H256> = client
 		.rpc()
-		.client
 		.request("mmr_generateProof", rpc_params!(leaf_index, block_hash))
 		.await?;
 

@@ -11,7 +11,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 subxt-codegen = { git = "https://github.com/paritytech/subxt", rev = "f115ff975c0c2fb48b6e86a139d29645493499a8" }
 jsonrpsee = { version = "0.15.0", features = ["async-client", "client-ws-transport", "http-client"] }
 frame-metadata = { version = "15.0.0", features = ["v14", "std"] }
-syn = "1.0.98"
+prettyplease = "0.1"
+syn = { version = "1", default-features = false, features = ["full", "parsing"] }
 codec = { package = "parity-scale-codec", version = "3.0.0" }
 color-eyre = "0.6.2"
 hex = "0.4.3"
