@@ -117,7 +117,6 @@ async fn test_continuous_update_of_grandpa_client() {
 		let current_authorities = {
 			let bytes = relay_client
 				.rpc()
-				.client
 				.request::<String>(
 					"state_call",
 					rpc_params!("GrandpaApi_grandpa_authorities", "0x"),

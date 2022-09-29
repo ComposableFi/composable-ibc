@@ -1927,6 +1927,7 @@ dependencies = [
  "hash-db",
  "hex",
  "hex-literal",
+ "jsonrpsee-core 0.14.0",
  "light-client-common",
  "parity-scale-codec",
  "polkadot-core-primitives",
@@ -1972,6 +1973,7 @@ dependencies = [
  "beefy-prover",
  "color-eyre",
  "derive_more",
+ "downcast-rs",
  "frame-metadata",
  "grandpa-light-client-primitives",
  "hex",
@@ -2762,9 +2764,11 @@ checksum = "16efcd4477de857d4a2195a45769b2fe9ebb54f3ef5a4221d3b014a4fe33ec0b"
 dependencies = [
  "anyhow",
  "arrayvec 0.7.2",
+ "async-lock",
  "async-trait",
  "beef",
  "futures-channel",
+ "futures-timer",
  "futures-util",
  "globset",
  "hyper",
@@ -7335,7 +7339,7 @@ checksum = "734676eb262c623cec13c3155096e08d1f8f29adce39ba17948b18dad1e54142"
 [[package]]
 name = "subxt"
 version = "0.24.0"
-source = "git+https://github.com/paritytech/subxt?rev=f115ff975c0c2fb48b6e86a139d29645493499a8#f115ff975c0c2fb48b6e86a139d29645493499a8"
+source = "git+https://github.com/composableFi/subxt?rev=37df0ee525252fa9a3e7730629ce0de4da9e68fd#37df0ee525252fa9a3e7730629ce0de4da9e68fd"
 dependencies = [
  "bitvec",
  "derivative",
@@ -7361,7 +7365,7 @@ dependencies = [
 [[package]]
 name = "subxt-codegen"
 version = "0.24.0"
-source = "git+https://github.com/paritytech/subxt?rev=f115ff975c0c2fb48b6e86a139d29645493499a8#f115ff975c0c2fb48b6e86a139d29645493499a8"
+source = "git+https://github.com/composableFi/subxt?rev=37df0ee525252fa9a3e7730629ce0de4da9e68fd#37df0ee525252fa9a3e7730629ce0de4da9e68fd"
 dependencies = [
  "darling",
  "frame-metadata",
@@ -7378,7 +7382,7 @@ dependencies = [
 [[package]]
 name = "subxt-macro"
 version = "0.24.0"
-source = "git+https://github.com/paritytech/subxt?rev=f115ff975c0c2fb48b6e86a139d29645493499a8#f115ff975c0c2fb48b6e86a139d29645493499a8"
+source = "git+https://github.com/composableFi/subxt?rev=37df0ee525252fa9a3e7730629ce0de4da9e68fd#37df0ee525252fa9a3e7730629ce0de4da9e68fd"
 dependencies = [
  "darling",
  "proc-macro-error",
@@ -7389,7 +7393,7 @@ dependencies = [
 [[package]]
 name = "subxt-metadata"
 version = "0.24.0"
-source = "git+https://github.com/paritytech/subxt?rev=f115ff975c0c2fb48b6e86a139d29645493499a8#f115ff975c0c2fb48b6e86a139d29645493499a8"
+source = "git+https://github.com/composableFi/subxt?rev=37df0ee525252fa9a3e7730629ce0de4da9e68fd#37df0ee525252fa9a3e7730629ce0de4da9e68fd"
 dependencies = [
  "frame-metadata",
  "parity-scale-codec",

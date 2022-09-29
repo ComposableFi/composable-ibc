@@ -5,8 +5,8 @@ edition = "2021"
 authors = ["Seun Lanlege <seunlanlege@gmail.com>"]
 
 [build-dependencies]
-subxt-codegen = { git = "https://github.com/paritytech/subxt", rev = "f115ff975c0c2fb48b6e86a139d29645493499a8" }
-jsonrpsee = { version = "0.15.0", features = ["async-client", "client-ws-transport", "http-client"] }
+subxt-codegen = { git = "https://github.com/composableFi/subxt", rev = "37df0ee525252fa9a3e7730629ce0de4da9e68fd" }
+jsonrpsee = { version = "0.15.1", features = ["async-client", "client-ws-transport", "http-client"] }
 frame-metadata = { version = "15.0.0", features = ["v14", "std"] }
 syn = "1.0.98"
 codec = { package = "parity-scale-codec", version = "3.0.0" }
@@ -17,10 +17,11 @@ tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
 [dependencies]
 anyhow = "1.0.64"
 serde = "1.0.144"
-subxt = { git = "https://github.com/paritytech/subxt", rev = "f115ff975c0c2fb48b6e86a139d29645493499a8" }
+subxt = { git = "https://github.com/composableFi/subxt", rev = "37df0ee525252fa9a3e7730629ce0de4da9e68fd" }
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 derive_more = "0.99.17"
-jsonrpsee-core = "0.14.0"
+jsonrpsee-core = { version = "0.14.0", features = ["async-client"] }
+downcast-rs = "1.2.0"
 
 beefy-prover = { path = "../../beefy/prover" }
 finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
