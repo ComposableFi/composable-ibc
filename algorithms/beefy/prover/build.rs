@@ -22,7 +22,7 @@ use jsonrpsee::{
 	rpc_params,
 };
 use std::{env, fs, path::Path};
-use subxt_codegen::DerivesRegistry;
+use subxt_codegen::{DerivesRegistry, CratePath};
 
 // We need this build script to rebuild the runtime metadata from a live node
 // Since we have exported functions that depends on the having the latest relay chain metadata
@@ -49,16 +49,17 @@ fn codegen<I: Input>(encoded: &mut I) -> color_eyre::Result<String> {
 	let item_mod = syn::parse_quote!(
 		pub mod api {}
 	);
+	let crate_path = CratePath::default();
 
 	// add any derives you want here:
 	let p = Vec::<String>::new()
 		.iter()
 		.map(|raw| syn::parse_str(raw))
 		.collect::<Result<Vec<_>, _>>()?;
-	let mut derives = DerivesRegistry::default();
+	let mut derives = DerivesRegistry::new(&crate_path);
 	derives.extend_for_all(p.into_iter());
 
-	let runtime_api = generator.generate_runtime(item_mod, derives);
+	let runtime_api = generator.generate_runtime(item_mod, derives, crate_path);
 	Ok(format!("{}", runtime_api))
 }
 

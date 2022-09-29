@@ -8,7 +8,7 @@ authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <david.salami@g
 targets = ["x86_64-unknown-linux-gnu"]
 
 [build-dependencies]
-subxt-codegen = { git = "https://github.com/paritytech/subxt", rev = "c55b7ba3e34118f61dc51499a0b38262c513aec4" }
+subxt-codegen = { git = "https://github.com/paritytech/subxt", rev = "f115ff975c0c2fb48b6e86a139d29645493499a8" }
 jsonrpsee = { version = "0.15.0", features = ["async-client", "client-ws-transport", "http-client"] }
 frame-metadata = { version = "15.0.0", features = ["v14", "std"] }
 syn = "1.0.98"
@@ -34,7 +34,7 @@ derive_more = { version = "0.99.17", features = ["from"]  }
 light-client-common = { path = "../../../light-clients/common" }
 
 # Optional deps
-subxt = { git = "https://github.com/paritytech/subxt", rev = "c55b7ba3e34118f61dc51499a0b38262c513aec4" }
+subxt = { git = "https://github.com/paritytech/subxt", rev = "f115ff975c0c2fb48b6e86a139d29645493499a8" }
 hex-literal = { version = "0.3.4" }
 serde_json = { version = "1.0.74" }
 pallet-mmr-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }

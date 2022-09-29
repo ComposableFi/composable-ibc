@@ -21,7 +21,7 @@ use sp_core::keccak_256;
 use sp_runtime::traits::BlakeTwo256;
 use sp_trie::{generate_trie_proof, TrieDBMut, TrieMut};
 use std::collections::BTreeMap;
-use subxt::{Client, Config};
+use subxt::{OnlineClient, Config};
 
 pub struct TimeStampExtWithProof {
 	pub ext: Vec<u8>,
@@ -42,7 +42,7 @@ pub struct ParaHeadsProof {
 
 /// Fetch timestamp extrinsic and it's proof
 pub async fn fetch_timestamp_extrinsic_with_proof<T: Config>(
-	client: &Client<T>,
+	client: &OnlineClient<T>,
 	block_hash: Option<T::Hash>,
 ) -> Result<TimeStampExtWithProof, Error> {
 	let block = client.rpc().block(block_hash).await?.ok_or_else(|| {

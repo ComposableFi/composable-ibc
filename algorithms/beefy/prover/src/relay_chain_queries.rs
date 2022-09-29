@@ -26,7 +26,7 @@ use sp_runtime::traits::{Header, Zero};
 use std::collections::{BTreeMap, BTreeSet};
 use subxt::{
 	rpc::{rpc_params, ClientT},
-	Client, Config,
+	Config, OnlineClient,
 };
 
 pub struct FinalizedParaHeads {
@@ -36,7 +36,7 @@ pub struct FinalizedParaHeads {
 
 /// Get the raw parachain heads finalized in the provided block
 pub async fn fetch_finalized_parachain_heads<T: Config>(
-	client: &Client<T>,
+	client: &OnlineClient<T>,
 	commitment_block_number: u32,
 	latest_beefy_height: u32,
 	para_id: u32,
@@ -47,7 +47,7 @@ where
 	u32: From<<T as subxt::Config>::BlockNumber>,
 	T::BlockNumber: Ord + Zero,
 {
-	let subxt_block_number: subxt::BlockNumber = commitment_block_number.into();
+	let subxt_block_number: subxt::rpc::BlockNumber = commitment_block_number.into();
 	let block_hash = client.rpc().block_hash(Some(subxt_block_number)).await?;
 
 	let api = client
@@ -55,7 +55,8 @@ where
 		.to_runtime_api::<runtime::api::RuntimeApi<T, subxt::PolkadotExtrinsicParams<_>>>();
 
 	let mut para_ids = vec![];
-	for id in api.storage().paras().parachains(block_hash.clone()).await? {
+	let key  = runtime::storage()
+	for id in client.storage().paras().parachains(block_hash.clone()).await? {
 		match api
 			.storage()
 			.paras()
@@ -68,7 +69,7 @@ where
 			_ => {},
 		}
 	}
-	let previous_finalized_block_number: subxt::BlockNumber = (latest_beefy_height + 1).into();
+	let previous_finalized_block_number: subxt::rpc::BlockNumber = (latest_beefy_height + 1).into();
 	let previous_finalized_hash = client
 		.rpc()
 		.block_hash(Some(previous_finalized_block_number))
@@ -108,7 +109,7 @@ where
 		let para_block_number = *para_header.number();
 		// skip genesis header or any unknown headers
 		if para_block_number == Zero::zero() || !header_numbers.contains(&para_block_number) {
-			continue
+			continue;
 		}
 
 		let block_number = u32::from(*header.number());
@@ -121,7 +122,7 @@ where
 
 /// Get beefy justification for latest finalized beefy block
 pub async fn fetch_beefy_justification<T: Config>(
-	client: &Client<T>,
+	client: &OnlineClient<T>,
 ) -> Result<(SignedCommitment<u32, beefy_primitives::crypto::Signature>, T::Hash), Error> {
 	let latest_beefy_finalized: <T as Config>::Hash =
 		client.rpc().client.request("beefy_getFinalizedHead", rpc_params!()).await?;
@@ -149,7 +150,7 @@ pub async fn fetch_beefy_justification<T: Config>(
 
 /// Query a batch leaf proof
 pub async fn fetch_mmr_batch_proof<T: Config>(
-	client: &Client<T>,
+	client: &OnlineClient<T>,
 	leaf_indices: Vec<u32>,
 	block_hash: Option<T::Hash>,
 ) -> Result<LeafBatchProof<H256>, Error> {
@@ -163,7 +164,7 @@ pub async fn fetch_mmr_batch_proof<T: Config>(
 
 /// Query a single leaf proof
 pub async fn fetch_mmr_leaf_proof<T: Config>(
-	client: &Client<T>,
+	client: &OnlineClient<T>,
 	leaf_index: u64,
 	block_hash: Option<T::Hash>,
 ) -> Result<LeafProof<H256>, Error> {

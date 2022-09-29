@@ -37,12 +37,11 @@ use helpers::{
 use hex_literal::hex;
 use pallet_mmr_primitives::BatchProof;
 use relay_chain_queries::{fetch_beefy_justification, fetch_mmr_batch_proof};
-use sp_core::H256;
+use sp_core::{keccak_256, H256};
 use sp_io::crypto;
 use sp_runtime::traits::{BlakeTwo256, Header as HeaderT};
 use subxt::{
 	rpc::{rpc_params, ClientT},
-	sp_core::keccak_256,
 	Client, Config,
 };
 
@@ -108,7 +107,7 @@ where
 					)),
 				},
 				beefy_activation_block: 0,
-			}
+			};
 		}
 		// Get initial validator set
 		// In development mode validators are the same for all sessions only validator set_id
@@ -160,9 +159,10 @@ where
 		u32: From<T::BlockNumber>,
 		T::BlockNumber: From<u32>,
 	{
-		let subxt_block_number: subxt::BlockNumber = commitment_block_number.into();
+		let subxt_block_number: subxt::rpc::BlockNumber = commitment_block_number.into();
 		let block_hash = self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?;
-		let previous_finalized_block_number: subxt::BlockNumber = (latest_beefy_height + 1).into();
+		let previous_finalized_block_number: subxt::rpc::BlockNumber =
+			(latest_beefy_height + 1).into();
 		let previous_finalized_hash = self
 			.relay_client
 			.rpc()
@@ -235,7 +235,7 @@ where
 			)
 			.await?;
 
-		let subxt_block_number: subxt::BlockNumber = commitment_block_number.into();
+		let subxt_block_number: subxt::rpc::BlockNumber = commitment_block_number.into();
 		let block_hash = self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?;
 
 		let batch_proof =
@@ -303,7 +303,7 @@ where
 			.relay_client
 			.clone()
 			.to_runtime_api::<runtime::api::RuntimeApi<T, subxt::PolkadotExtrinsicParams<_>>>();
-		let subxt_block_number: subxt::BlockNumber =
+		let subxt_block_number: subxt::rpc::BlockNumber =
 			signed_commitment.commitment.block_number.into();
 		let block_hash = self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?;
 
