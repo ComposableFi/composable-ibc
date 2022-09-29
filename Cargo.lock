@@ -1981,6 +1981,7 @@ dependencies = [
  "jsonrpsee 0.15.1",
  "light-client-common",
  "parity-scale-codec",
+ "prettyplease",
  "sc-finality-grandpa-rpc",
  "serde",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",

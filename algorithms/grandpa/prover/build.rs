@@ -67,9 +67,11 @@ fn codegen<I: Input>(encoded: &mut I) -> color_eyre::Result<String> {
 async fn main() -> color_eyre::Result<()> {
 	let metadata = fetch_metadata_ws().await?;
 	let code = codegen(&mut &metadata[..])?;
+	let syntax_tree = syn::parse_file(&code).unwrap();
+	let formatted = prettyplease::unparse(&syntax_tree);
 	let out_dir = env::var_os("OUT_DIR").unwrap();
 	let dest_path = Path::new(&out_dir).join("runtime.rs");
-	fs::write(&dest_path, &code)?;
+	fs::write(&dest_path, &formatted)?;
 
 	Ok(())
 }

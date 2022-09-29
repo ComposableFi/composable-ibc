@@ -8,7 +8,8 @@ authors = ["Seun Lanlege <seunlanlege@gmail.com>"]
 subxt-codegen = { git = "https://github.com/composableFi/subxt", rev = "37df0ee525252fa9a3e7730629ce0de4da9e68fd" }
 jsonrpsee = { version = "0.15.1", features = ["async-client", "client-ws-transport", "http-client"] }
 frame-metadata = { version = "15.0.0", features = ["v14", "std"] }
-syn = "1.0.98"
+prettyplease = "0.1"
+syn = { version = "1", default-features = false, features = ["full", "parsing"] }
 codec = { package = "parity-scale-codec", version = "3.0.0" }
 color-eyre = "0.6.2"
 hex = "0.4.3"
