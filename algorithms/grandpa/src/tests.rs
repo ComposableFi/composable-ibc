@@ -19,14 +19,17 @@ use crate::{
 use codec::Decode;
 use finality_grandpa_rpc::GrandpaApiClient;
 use futures::StreamExt;
-use grandpa_prover::{host_functions::HostFunctionsProvider, runtime, GrandpaProver};
+use grandpa_prover::{
+	beefy_prover::helpers::unsafe_cast_to_jsonrpsee_client, host_functions::HostFunctionsProvider,
+	runtime, GrandpaProver,
+};
 use jsonrpsee_core::client::Client;
 use polkadot_core_primitives::Header;
 use primitives::ClientState;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
 use sp_finality_grandpa::AuthorityList;
-use std::{mem::size_of_val, ops::Deref, sync::Arc};
+use std::{mem::size_of_val, sync::Arc};
 use subxt::{ext::sp_runtime::traits::Header as _, rpc::rpc_params, PolkadotConfig};
 
 pub type Justification = GrandpaJustification<Header>;
@@ -37,11 +40,16 @@ pub struct JustificationNotification(sp_core::Bytes);
 
 #[tokio::test]
 async fn follow_grandpa_justifications() {
-	let url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
-	let relay_client = subxt::client::OnlineClient::<PolkadotConfig>::from_url(url).await.unwrap();
-	let para_url = std::env::var("PARA_NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9188".to_string());
-	let para_client =
-		subxt::client::OnlineClient::<PolkadotConfig>::from_url(para_url).await.unwrap();
+	let relay_client = {
+		let url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
+		subxt::client::OnlineClient::<PolkadotConfig>::from_url(url).await.unwrap()
+	};
+
+	let para_client = {
+		let para_url =
+			std::env::var("PARA_NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9188".to_string());
+		subxt::client::OnlineClient::<PolkadotConfig>::from_url(para_url).await.unwrap()
+	};
 
 	println!("Waiting for grandpa proofs to become available");
 	relay_client
@@ -55,10 +63,7 @@ async fn follow_grandpa_justifications() {
 		.collect::<Vec<_>>()
 		.await;
 	println!("Grandpa proofs are now available");
-	let client: Arc<Client> = unsafe {
-		let ptr = Arc::into_raw(relay_client.rpc().deref().0.clone()).cast::<Client>();
-		Arc::from_raw(ptr)
-	};
+	let client: Arc<Client> = unsafe { unsafe_cast_to_jsonrpsee_client(&relay_client) };
 	let subscription =
 		GrandpaApiClient::<JustificationNotification, H256, u32>::subscribe_justifications(
 			&*client,

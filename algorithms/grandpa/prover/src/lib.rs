@@ -15,10 +15,12 @@
 
 use crate::runtime::api::runtime_types::polkadot_parachain::primitives::Id;
 use anyhow::anyhow;
-use beefy_prover::helpers::{fetch_timestamp_extrinsic_with_proof, TimeStampExtWithProof};
+pub use beefy_prover;
+use beefy_prover::helpers::{
+	fetch_timestamp_extrinsic_with_proof, unsafe_cast_to_jsonrpsee_client, TimeStampExtWithProof,
+};
 use codec::{Decode, Encode};
 use finality_grandpa_rpc::GrandpaApiClient;
-use jsonrpsee_core::client::Client;
 use primitives::{
 	parachain_header_storage_key, FinalityProof, ParachainHeaderProofs,
 	ParachainHeadersWithFinalityProof,
@@ -26,7 +28,7 @@ use primitives::{
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
 use sp_runtime::traits::{Header, Zero};
-use std::{collections::BTreeMap, ops::Deref, sync::Arc};
+use std::collections::BTreeMap;
 use subxt::{
 	ext::{
 		sp_core::hexdisplay::AsBytesRef,
@@ -116,10 +118,7 @@ where
 			.await?
 			.ok_or_else(|| anyhow!("Header not found!"))?;
 
-		let client: Arc<Client> = unsafe {
-			let ptr = Arc::into_raw(self.relay_client.rpc().deref().0.clone()).cast::<Client>();
-			Arc::from_raw(ptr)
-		};
+		let client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.relay_client) };
 		let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 			&*client,
 			u32::from(*header.number()),

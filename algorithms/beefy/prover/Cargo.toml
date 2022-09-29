@@ -33,6 +33,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive
 rs_merkle = "1.2.0"
 derive_more = { version = "0.99.17", features = ["from"]  }
 light-client-common = { path = "../../../light-clients/common" }
+jsonrpsee-core = { version = "0.14.0", features = ["async-client"] }
 
 # Optional deps
 subxt = { git = "https://github.com/composableFi/subxt", rev = "37df0ee525252fa9a3e7730629ce0de4da9e68fd" }

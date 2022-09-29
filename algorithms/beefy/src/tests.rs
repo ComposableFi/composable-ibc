@@ -36,7 +36,7 @@ use subxt::{
 async fn test_verify_mmr_with_proof() {
 	let url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
 	let client = subxt::client::OnlineClient::<PolkadotConfig>::from_url(url).await.unwrap();
-	let para_url = std::env::var("PARA_NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9988".to_string());
+	let para_url = std::env::var("PARA_NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9188".to_string());
 	let para_client =
 		subxt::client::OnlineClient::<PolkadotConfig>::from_url(para_url).await.unwrap();
 
@@ -55,7 +55,7 @@ async fn test_verify_mmr_with_proof() {
 		relay_client: client,
 		para_client,
 		beefy_activation_block: 0,
-		para_id: 2001,
+		para_id: 2000,
 	};
 
 	let mut subscription_stream = subscription.enumerate().take(100);
@@ -201,7 +201,7 @@ async fn should_fail_with_invalid_validator_set_id() {
 async fn verify_parachain_headers() {
 	let url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
 	let client = subxt::client::OnlineClient::<PolkadotConfig>::from_url(url).await.unwrap();
-	let para_url = std::env::var("PARA_NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9988".to_string());
+	let para_url = std::env::var("PARA_NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9188".to_string());
 	let para_client =
 		subxt::client::OnlineClient::<PolkadotConfig>::from_url(para_url).await.unwrap();
 
