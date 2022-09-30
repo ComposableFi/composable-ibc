@@ -83,7 +83,7 @@ pub struct ParachainHeadersWithFinalityProof<H: Header> {
 }
 
 /// Host functions that allow the light client perform cryptographic operations in native.
-pub trait HostFunctions: light_client_common::HostFunctions {
+pub trait HostFunctions: light_client_common::HostFunctions + 'static {
 	/// Verify an ed25519 signature
 	fn ed25519_verify(sig: &ed25519::Signature, msg: &[u8], pub_key: &ed25519::Public) -> bool;
 }

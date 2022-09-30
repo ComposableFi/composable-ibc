@@ -2325,7 +2325,7 @@ dependencies = [
 [[package]]
 name = "ibc"
 version = "0.15.0"
-source = "git+https://github.com/ComposableFi/ibc-rs?rev=9a959faabb8f2869e88327ea65a49f5697dcadf6#9a959faabb8f2869e88327ea65a49f5697dcadf6"
+source = "git+https://github.com/ComposableFi/ibc-rs?rev=c599cbcbf2c7a413a21a181f65dcf374f5ad75be#c599cbcbf2c7a413a21a181f65dcf374f5ad75be"
 dependencies = [
  "borsh",
  "derive_more",
@@ -2355,7 +2355,7 @@ dependencies = [
 [[package]]
 name = "ibc-derive"
 version = "0.1.0"
-source = "git+https://github.com/ComposableFi/ibc-rs?rev=9a959faabb8f2869e88327ea65a49f5697dcadf6#9a959faabb8f2869e88327ea65a49f5697dcadf6"
+source = "git+https://github.com/ComposableFi/ibc-rs?rev=c599cbcbf2c7a413a21a181f65dcf374f5ad75be#c599cbcbf2c7a413a21a181f65dcf374f5ad75be"
 dependencies = [
  "convert_case 0.6.0",
  "proc-macro-crate 1.2.1",
@@ -2367,7 +2367,7 @@ dependencies = [
 [[package]]
 name = "ibc-proto"
 version = "0.18.0"
-source = "git+https://github.com/ComposableFi/ibc-rs?rev=9a959faabb8f2869e88327ea65a49f5697dcadf6#9a959faabb8f2869e88327ea65a49f5697dcadf6"
+source = "git+https://github.com/ComposableFi/ibc-rs?rev=c599cbcbf2c7a413a21a181f65dcf374f5ad75be#c599cbcbf2c7a413a21a181f65dcf374f5ad75be"
 dependencies = [
  "base64",
  "bytes",
@@ -2420,6 +2420,7 @@ dependencies = [
  "grandpa-light-client-primitives",
  "grandpa-prover",
  "hex",
+ "hex-literal",
  "ibc",
  "ibc-derive",
  "ibc-proto",

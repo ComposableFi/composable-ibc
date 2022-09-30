@@ -162,6 +162,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		let client_state = ClientState {
 			relay_chain: Default::default(),
 			latest_relay_hash,
+			latest_relay_height: latest_relay_header.number,
 			frozen_height: None,
 			latest_para_height: decoded_para_head.number,
 			para_id: grandpa_prover.para_id,
