@@ -161,7 +161,7 @@ where
 			.expect("target header has already been checked in verify_client_message; qed");
 
 		// can't try to rewind relay chain
-		if target.number < client_state.latest_relay_height {
+		if target.number <= client_state.latest_relay_height {
 			Err(Ics02Error::implementation_specific(format!(
 				"Light client can only be updated to new relay chain height."
 			)))?
@@ -179,7 +179,7 @@ where
 
 		if let Some((min_height, max_height)) = heights.first().zip(heights.last()) {
 			// can't try to rewind parachain.
-			if *min_height < client_state.latest_para_height {
+			if *min_height <= client_state.latest_para_height {
 				Err(Ics02Error::implementation_specific(format!(
 					"Light client can only be updated to new parachain height."
 				)))?
