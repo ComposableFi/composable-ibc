@@ -167,6 +167,8 @@ async fn test_continuous_update_of_grandpa_client() {
 		)
 		.unwrap();
 
+		dbg!(&client_state.latest_para_height);
+
 		break (AnyClientState::Grandpa(client_state), AnyConsensusState::Grandpa(consensus_state))
 	};
 
@@ -209,7 +211,13 @@ async fn test_continuous_update_of_grandpa_client() {
 			Some(headers) => headers,
 			None => continue,
 		};
-		let header_numbers = headers.iter().map(|h| h.number).collect();
+		let header_numbers = headers
+			.iter()
+			.map(|h| h.number)
+			.filter(|num| *num != client_state.latest_para_height)
+			.collect();
+
+		dbg!(&header_numbers);
 
 		let maybe_proof = prover
 			.query_finalized_parachain_headers_with_proof(

@@ -198,11 +198,11 @@ where
 		let previous_finalized_hash = self
 			.relay_client
 			.rpc()
-			.block_hash(Some(
-				(previous_finalized_height).into(),
-			))
+			.block_hash(Some((previous_finalized_height).into()))
 			.await?
-			.ok_or_else(|| anyhow!("Failed to fetch block has for height {previous_finalized_height}"))?;
+			.ok_or_else(|| {
+				anyhow!("Failed to fetch block has for height {previous_finalized_height}")
+			})?;
 		let latest_finalized_header = self
 			.relay_client
 			.rpc()
@@ -218,7 +218,9 @@ where
 			u32::from(*latest_finalized_header.number()),
 		)
 		.await?
-		.ok_or_else(|| anyhow!("No justification found for block: {:?}", latest_finalized_header.hash()))?
+		.ok_or_else(|| {
+			anyhow!("No justification found for block: {:?}", latest_finalized_header.hash())
+		})?
 		.0;
 		let mut finality_proof = FinalityProof::<H>::decode(&mut &encoded[..])?;
 		finality_proof.unknown_headers = {
@@ -243,9 +245,7 @@ where
 		let start = self
 			.relay_client
 			.rpc()
-			.block_hash(Some(
-				(previous_finalized_height + 1).into(),
-			))
+			.block_hash(Some((previous_finalized_height + 1).into()))
 			.await?
 			.ok_or_else(|| anyhow!("Failed to fetch previous finalized hash + 1"))?;
 		let change_set = self
