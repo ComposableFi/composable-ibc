@@ -7389,7 +7389,7 @@ checksum = "734676eb262c623cec13c3155096e08d1f8f29adce39ba17948b18dad1e54142"
 [[package]]
 name = "subxt"
 version = "0.24.0"
-source = "git+https://github.com/composableFi/subxt?rev=f688101ebf3bc5ab8e2f9dc4a57a769bd4963e32#f688101ebf3bc5ab8e2f9dc4a57a769bd4963e32"
+source = "git+https://github.com/paritytech/subxt?rev=81175b2dd9a2391f71c37d4612644ee65825e2f1#81175b2dd9a2391f71c37d4612644ee65825e2f1"
 dependencies = [
  "bitvec",
  "derivative",
@@ -7415,7 +7415,7 @@ dependencies = [
 [[package]]
 name = "subxt-codegen"
 version = "0.24.0"
-source = "git+https://github.com/composableFi/subxt?rev=f688101ebf3bc5ab8e2f9dc4a57a769bd4963e32#f688101ebf3bc5ab8e2f9dc4a57a769bd4963e32"
+source = "git+https://github.com/paritytech/subxt?rev=81175b2dd9a2391f71c37d4612644ee65825e2f1#81175b2dd9a2391f71c37d4612644ee65825e2f1"
 dependencies = [
  "darling",
  "frame-metadata",
@@ -7432,7 +7432,7 @@ dependencies = [
 [[package]]
 name = "subxt-macro"
 version = "0.24.0"
-source = "git+https://github.com/composableFi/subxt?rev=f688101ebf3bc5ab8e2f9dc4a57a769bd4963e32#f688101ebf3bc5ab8e2f9dc4a57a769bd4963e32"
+source = "git+https://github.com/paritytech/subxt?rev=81175b2dd9a2391f71c37d4612644ee65825e2f1#81175b2dd9a2391f71c37d4612644ee65825e2f1"
 dependencies = [
  "darling",
  "proc-macro-error",
@@ -7443,7 +7443,7 @@ dependencies = [
 [[package]]
 name = "subxt-metadata"
 version = "0.24.0"
-source = "git+https://github.com/composableFi/subxt?rev=f688101ebf3bc5ab8e2f9dc4a57a769bd4963e32#f688101ebf3bc5ab8e2f9dc4a57a769bd4963e32"
+source = "git+https://github.com/paritytech/subxt?rev=81175b2dd9a2391f71c37d4612644ee65825e2f1#81175b2dd9a2391f71c37d4612644ee65825e2f1"
 dependencies = [
  "frame-metadata",
  "parity-scale-codec",
