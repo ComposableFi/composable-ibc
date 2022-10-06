@@ -8,8 +8,11 @@ use tendermint_proto::Protobuf;
 
 use ibc_proto::ibc::core::client::v1::{MsgCreateClient as RawMsgCreateClient, MsgCreateClient};
 
-use crate::core::ics02_client::context::ClientTypes;
-use crate::{core::ics02_client::error::Error, signer::Signer, tx_msg::Msg};
+use crate::{
+	core::ics02_client::{context::ClientTypes, error::Error},
+	signer::Signer,
+	tx_msg::Msg,
+};
 
 pub const TYPE_URL: &str = "/ibc.core.client.v1.MsgCreateClient";
 

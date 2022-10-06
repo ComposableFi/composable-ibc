@@ -4,20 +4,17 @@ use alloc::collections::btree_map::BTreeMap as HashMap;
 
 use core::{convert::Infallible, fmt::Debug, time::Duration};
 
-use ibc_proto::google::protobuf::Any;
-use ibc_proto::ibc::core::client::v1::ConsensusStateWithHeight;
+use ibc_proto::{google::protobuf::Any, ibc::core::client::v1::ConsensusStateWithHeight};
 use serde::{Deserialize, Serialize};
 use tendermint_proto::Protobuf;
 
-use crate::core::ics02_client::context::ClientTypes;
-use crate::core::ics02_client::error::Error as Ics02Error;
-use crate::mock::header::MockClientMessage;
 use crate::{
 	core::{
 		ics02_client::{
 			client_consensus::ConsensusState,
 			client_state::{ClientState, ClientType},
-			error::Error,
+			context::ClientTypes,
+			error::{Error as Ics02Error, Error},
 		},
 		ics23_commitment::commitment::CommitmentRoot,
 		ics24_host::identifier::ChainId,
@@ -26,7 +23,7 @@ use crate::{
 	mock::{
 		client_def::{AnyClient, MockClient},
 		context::HostBlockType,
-		header::MockHeader,
+		header::{MockClientMessage, MockHeader},
 	},
 	timestamp::Timestamp,
 	Height,

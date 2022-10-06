@@ -18,15 +18,14 @@
 use proc_macro2::Span;
 use proc_macro_crate::{crate_name, FoundCrate};
 use quote::quote;
-use syn::parse::Error;
-use syn::{Ident, Path, TypePath};
+use syn::{parse::Error, Ident, Path, TypePath};
 
 /// Generate the crate access for the crate using 2018 syntax.
 ///
 /// for `ibc` output will for example be `ibc_rs`.
 pub fn generate_crate_access_2018(def_crate: &str) -> Result<Path, Error> {
 	if std::env::var("CARGO_PKG_NAME").unwrap() == def_crate {
-		return Ok(Ident::new(&"crate", Span::call_site()).into());
+		return Ok(Ident::new(&"crate", Span::call_site()).into())
 	}
 	match crate_name(def_crate) {
 		Ok(FoundCrate::Itself) => {

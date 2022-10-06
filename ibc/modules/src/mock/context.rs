@@ -15,14 +15,13 @@ use ibc_proto::google::protobuf::Any;
 use sha2::Digest;
 use tracing::debug;
 
-use crate::core::ics02_client::context::ClientTypes;
 #[cfg(test)]
 use crate::core::ics02_client::events::Attributes;
 use crate::{
 	core::{
 		ics02_client::{
 			client_state::{ClientState, ClientType},
-			context::{ClientKeeper, ClientReader},
+			context::{ClientKeeper, ClientReader, ClientTypes},
 			error::Error as Ics02Error,
 		},
 		ics03_connection::{
@@ -351,7 +350,7 @@ where
 	pub fn validate(&self) -> Result<(), String> {
 		// Check that the number of entries is not higher than window size.
 		if self.history.len() > self.max_history_size {
-			return Err("too many entries".to_string());
+			return Err("too many entries".to_string())
 		}
 
 		// Check the content of the history.
@@ -360,7 +359,7 @@ where
 			let lh = &self.history[self.history.len() - 1];
 			// Check latest is properly updated with highest header height.
 			if lh.height() != self.latest_height() {
-				return Err("latest height is not updated".to_string());
+				return Err("latest height is not updated".to_string())
 			}
 		}
 
@@ -369,7 +368,7 @@ where
 			let ph = &self.history[i - 1];
 			let h = &self.history[i];
 			if ph.height().increment() != h.height() {
-				return Err("headers in history not sequential".to_string());
+				return Err("headers in history not sequential".to_string())
 			}
 		}
 		Ok(())
@@ -972,7 +971,7 @@ where
 		for h in heights {
 			if h > height {
 				// unwrap should never happen, as the consensus state for h must exist
-				return Ok(Some(client_record.consensus_states.get(&h).unwrap().clone()));
+				return Ok(Some(client_record.consensus_states.get(&h).unwrap().clone()))
 			}
 		}
 		Ok(None)
@@ -998,7 +997,7 @@ where
 		for h in heights {
 			if h < height {
 				// unwrap should never happen, as the consensus state for h must exist
-				return Ok(Some(client_record.consensus_states.get(&h).unwrap().clone()));
+				return Ok(Some(client_record.consensus_states.get(&h).unwrap().clone()))
 			}
 		}
 		Ok(None)
@@ -1374,9 +1373,8 @@ mod tests {
 		results
 			.into_iter()
 			.filter_map(|(mid, result)| match result {
-				OnRecvPacketAck::Nil(write_fn) | OnRecvPacketAck::Successful(_, write_fn) => {
-					Some((mid, write_fn))
-				},
+				OnRecvPacketAck::Nil(write_fn) | OnRecvPacketAck::Successful(_, write_fn) =>
+					Some((mid, write_fn)),
 				_ => None,
 			})
 			.for_each(|(mid, write_fn)| {

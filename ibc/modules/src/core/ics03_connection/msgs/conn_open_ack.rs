@@ -8,9 +8,9 @@ use ibc_proto::{
 };
 use tendermint_proto::Protobuf;
 
-use crate::core::ics02_client::context::ClientTypes;
 use crate::{
 	core::{
+		ics02_client::context::ClientTypes,
 		ics03_connection::{error::Error, version::Version},
 		ics23_commitment::commitment::CommitmentProofBytes,
 		ics24_host::identifier::ConnectionId,

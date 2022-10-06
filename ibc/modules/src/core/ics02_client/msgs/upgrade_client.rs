@@ -9,9 +9,11 @@ use tendermint_proto::Protobuf;
 
 use ibc_proto::ibc::core::client::v1::{MsgUpgradeClient as RawMsgUpgradeClient, MsgUpgradeClient};
 
-use crate::core::ics02_client::context::ClientTypes;
 use crate::{
-	core::{ics02_client::error::Error, ics24_host::identifier::ClientId},
+	core::{
+		ics02_client::{context::ClientTypes, error::Error},
+		ics24_host::identifier::ClientId,
+	},
 	signer::Signer,
 	tx_msg::Msg,
 };

@@ -1,13 +1,13 @@
 //! Protocol logic specific to processing ICS2 messages of type `MsgUpdateAnyClient`.
 use core::fmt::Debug;
 
-use crate::core::ics02_client::context::ClientTypes;
 use crate::{
 	core::{
 		ics02_client::{
 			client_consensus::ConsensusState,
 			client_def::{ClientDef, ConsensusUpdateResult},
 			client_state::ClientState,
+			context::ClientTypes,
 			error::Error,
 			events::Attributes,
 			handler::ClientResult,
@@ -54,7 +54,7 @@ where
 	let client_def = client_state.client_def();
 
 	if client_state.is_frozen() {
-		return Err(Error::client_frozen(client_id));
+		return Err(Error::client_frozen(client_id))
 	}
 
 	// Read consensus state from the host chain store.
@@ -71,7 +71,7 @@ where
 	})?;
 
 	if client_state.expired(duration) {
-		return Err(Error::header_not_within_trust_period(latest_consensus_state.timestamp(), now));
+		return Err(Error::header_not_within_trust_period(latest_consensus_state.timestamp(), now))
 	}
 
 	client_def
@@ -109,7 +109,7 @@ where
 			processed_height: ctx.host_height(),
 		});
 		output.emit(IbcEvent::ClientMisbehaviour(event_attributes.into()));
-		return Ok(output.with_result(result));
+		return Ok(output.with_result(result))
 	}
 	// Use client_state to validate the new header against the latest consensus_state.
 	// This function will return the new client_state (its latest_height changed) and a
@@ -136,7 +136,6 @@ mod tests {
 	use core::str::FromStr;
 	use test_log::test;
 
-	use crate::mock::header::AnyClientMessage;
 	use crate::{
 		core::{
 			ics02_client::{
@@ -152,7 +151,7 @@ mod tests {
 		mock::{
 			client_state::{AnyClientState, MockClientState},
 			context::{MockClientTypes, MockContext},
-			header::MockHeader,
+			header::{AnyClientMessage, MockHeader},
 		},
 		prelude::*,
 		test_utils::get_dummy_account_id,

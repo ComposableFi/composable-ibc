@@ -1,7 +1,9 @@
-use crate::core::ics02_client::context::ClientTypes;
 use crate::{
 	core::{
-		ics02_client::{context::ClientKeeper, handler::dispatch as ics2_msg_dispatcher},
+		ics02_client::{
+			context::{ClientKeeper, ClientTypes},
+			handler::dispatch as ics2_msg_dispatcher,
+		},
 		ics03_connection::handler::dispatch as ics3_msg_dispatcher,
 		ics04_channel::{
 			handler::{
@@ -120,7 +122,7 @@ where
 				ics4_packet_msg_dispatcher::<_>(ctx, &msg).map_err(Error::ics04_channel)?;
 
 			if matches!(packet_result, PacketResult::Recv(RecvPacketResult::NoOp)) {
-				return Ok(handler_builder.with_result(()));
+				return Ok(handler_builder.with_result(()))
 			}
 
 			let mut module_output = ModuleOutputBuilder::new();
@@ -185,7 +187,6 @@ mod tests {
 		mock::client_state::{AnyClientState, AnyConsensusState},
 	};
 
-	use crate::mock::header::MockClientMessage;
 	use crate::{
 		core::{
 			ics24_host::identifier::ConnectionId,
@@ -200,7 +201,7 @@ mod tests {
 		mock::{
 			client_state::{MockClientState, MockConsensusState},
 			context::{MockClientTypes, MockContext, MockRouterBuilder},
-			header::MockHeader,
+			header::{MockClientMessage, MockHeader},
 		},
 		test_utils::{get_dummy_account_id, DummyTransferModule},
 		timestamp::Timestamp,

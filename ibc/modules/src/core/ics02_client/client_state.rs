@@ -3,12 +3,12 @@ use crate::{
 	prelude::*,
 	Height,
 };
+use alloc::string::String;
 use core::{
 	fmt::Debug,
 	marker::{Send, Sync},
 	time::Duration,
 };
-use alloc::string::String;
 
 pub trait ClientState: Clone + Debug + Send + Sync {
 	/// Client-specific options for upgrading the client

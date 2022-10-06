@@ -5,12 +5,11 @@ use core::fmt::Debug;
 
 use crate::core::ics02_client::client_state::{ClientState, ClientType};
 
-use crate::core::ics02_client::context::ClientTypes;
 use crate::{
 	core::{
 		ics02_client::{
-			error::Error, events::Attributes, handler::ClientResult, height::Height,
-			msgs::create_client::MsgCreateAnyClient,
+			context::ClientTypes, error::Error, events::Attributes, handler::ClientResult,
+			height::Height, msgs::create_client::MsgCreateAnyClient,
 		},
 		ics24_host::identifier::ClientId,
 	},

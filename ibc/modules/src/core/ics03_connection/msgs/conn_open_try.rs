@@ -11,9 +11,9 @@ use tendermint_proto::Protobuf;
 use crate::core::ics02_client;
 use ibc_proto::ibc::core::connection::v1::MsgConnectionOpenTry as RawMsgConnectionOpenTry;
 
-use crate::core::ics02_client::context::ClientTypes;
 use crate::{
 	core::{
+		ics02_client::context::ClientTypes,
 		ics03_connection::{connection::Counterparty, error::Error, version::Version},
 		ics23_commitment::commitment::CommitmentProofBytes,
 		ics24_host::identifier::ClientId,
@@ -114,7 +114,7 @@ where
 			.collect::<Result<Vec<_>, _>>()?;
 
 		if counterparty_versions.is_empty() {
-			return Err(Error::empty_versions());
+			return Err(Error::empty_versions())
 		}
 
 		Ok(Self {
@@ -175,9 +175,9 @@ where
 
 #[cfg(test)]
 pub mod test_util {
-	use crate::core::ics02_client::context::ClientTypes;
 	use crate::{
 		core::{
+			ics02_client::context::ClientTypes,
 			ics03_connection::{
 				msgs::{
 					conn_open_try::MsgConnectionOpenTry, test_util::get_dummy_raw_counterparty,

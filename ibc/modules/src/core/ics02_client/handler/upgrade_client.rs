@@ -1,11 +1,11 @@
 //! Protocol logic specific to processing ICS2 messages of type `MsgUpgradeAnyClient`.
 
-use crate::core::ics02_client::context::ClientTypes;
 use crate::{
 	core::{
 		ics02_client::{
 			client_def::{ClientDef, ConsensusUpdateResult},
 			client_state::ClientState,
+			context::ClientTypes,
 			error::Error,
 			events::Attributes,
 			handler::ClientResult,
@@ -43,7 +43,7 @@ where
 	let client_state = ctx.client_state(&client_id)?;
 
 	if client_state.is_frozen() {
-		return Err(Error::client_frozen(client_id));
+		return Err(Error::client_frozen(client_id))
 	}
 
 	let upgrade_client_state = msg.client_state.clone();
@@ -52,7 +52,7 @@ where
 		return Err(Error::low_upgrade_height(
 			client_state.latest_height(),
 			upgrade_client_state.latest_height(),
-		));
+		))
 	}
 
 	let client_type = ctx.client_type(&client_id)?;

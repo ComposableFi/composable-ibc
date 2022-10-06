@@ -4,11 +4,13 @@ use tendermint_proto::Protobuf;
 
 use ibc_proto::ibc::mock::Header as RawMockHeader;
 
-use crate::mock::host::{HostBlock, MockHostBlock};
-use crate::mock::misbehaviour::{MockMisbehaviour, MOCK_MISBEHAVIOUR_TYPE_URL};
 use crate::{
 	core::ics02_client::{client_message::ClientMessage, error::Error},
-	mock::client_state::{AnyConsensusState, MockConsensusState},
+	mock::{
+		client_state::{AnyConsensusState, MockConsensusState},
+		host::{HostBlock, MockHostBlock},
+		misbehaviour::{MockMisbehaviour, MOCK_MISBEHAVIOUR_TYPE_URL},
+	},
 	timestamp::Timestamp,
 	Height,
 };
@@ -84,9 +86,8 @@ impl TryFrom<Any> for AnyClientMessage {
 impl From<AnyClientMessage> for Any {
 	fn from(client_msg: AnyClientMessage) -> Self {
 		match client_msg {
-			AnyClientMessage::Mock(MockClientMessage::Header(header)) => {
-				Any { type_url: MOCK_HEADER_TYPE_URL.to_string(), value: header.encode_vec() }
-			},
+			AnyClientMessage::Mock(MockClientMessage::Header(header)) =>
+				Any { type_url: MOCK_HEADER_TYPE_URL.to_string(), value: header.encode_vec() },
 			AnyClientMessage::Mock(MockClientMessage::Misbehaviour(misbehaviour)) => Any {
 				type_url: MOCK_MISBEHAVIOUR_TYPE_URL.to_string(),
 				value: misbehaviour.encode_vec(),

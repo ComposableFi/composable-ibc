@@ -1,9 +1,8 @@
 //! This module implements the processing logic for ICS2 (client abstractions and functions) msgs.
 
-use crate::core::ics02_client::context::ClientTypes;
 use crate::{
 	core::{
-		ics02_client::{error::Error, msgs::ClientMsg},
+		ics02_client::{context::ClientTypes, error::Error, msgs::ClientMsg},
 		ics26_routing::context::ReaderContext,
 	},
 	handler::HandlerOutput,

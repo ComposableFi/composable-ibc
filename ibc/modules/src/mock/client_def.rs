@@ -3,7 +3,6 @@ use crate::core::ics02_client::{
 	client_def::{ClientDef, ConsensusUpdateResult},
 };
 
-use crate::mock::header::MockClientMessage;
 use crate::{
 	core::{
 		ics02_client::error::Error,
@@ -26,7 +25,7 @@ use crate::{
 	},
 	mock::{
 		client_state::{AnyClientState, AnyConsensusState, MockClientState, MockConsensusState},
-		header::AnyClientMessage,
+		header::{AnyClientMessage, MockClientMessage},
 	},
 	prelude::*,
 	Height,
@@ -63,7 +62,7 @@ impl ClientDef for MockClient {
 			return Err(Error::low_header_height(
 				client_message.height(),
 				client_state.latest_height(),
-			));
+			))
 		}
 
 		let header = client_message.header();
@@ -222,7 +221,9 @@ impl ClientDef for MockClient {
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error> {
 		Ok((
 			*upgrade_client_state,
-			ConsensusUpdateResult::Single(Ctx::AnyConsensusState::wrap(upgrade_consensus_state).unwrap()),
+			ConsensusUpdateResult::Single(
+				Ctx::AnyConsensusState::wrap(upgrade_consensus_state).unwrap(),
+			),
 		))
 	}
 
