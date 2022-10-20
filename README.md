@@ -1,4 +1,5 @@
-Note: `centauri` moved to the [composable](https://github.com/ComposableFi/composable) mono repo.
+> **Note**
+> `centauri` moved to the [composable](https://github.com/ComposableFi/composable) mono repo.
 #  composable-bridge-common
 
 A set of crates that power composable's trustless bridge infrastructure.
