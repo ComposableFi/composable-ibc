@@ -1,42 +1,23 @@
-# Run Composable's parachain only
+# Overview
 
-Need to do to run 4 relay chain nodes and 1 Composable's collator:
+This is a guide on how to run things locally or in an isolated environment with your own machine.
 
-1. build a Composable collator
+After starting local nodes wait up to 2 minutes until all will be wired.
 
-	```bash
-	old_pwd=$(pwd)
-	git clone -b main https://github.com/ComposableFi/composable
-	cd composable
-	cargo build --release
-	target/release/composable --version
-	cd "$old_pwd"
-    ```
+## Run Composable's parachain only
 
-2. build a Polkadot relay chain
-
-	```bash
-	old_pwd=$(pwd)
-	git clone -b mmr-polkadot-v0.9.22 https://github.com/composableFi/polkadot
-	cd polkadot
-	cargo build --release
-	./target/release/polkadot --version
-	cd "$old_pwd"
-    ```
-
-3. build this project
-
-	```bash
-	yarn
-	```
-
-4. run all
-
-	```bash
-	yarn composable
-	```
+```bash
+nix run ../../#devnet-up
+```
 
 URLs:
 * [the 1st Relay Chain node](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/explorer)
 * [the 1st Composable collator](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9988#/explorer)
 
+## Run Composable's and Acala's parachains
+
+```bash
+nix run ../../#devnet-kusama-picasso-karura
+```
+
+* [the 1st Acala collator](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9998#/explorer)

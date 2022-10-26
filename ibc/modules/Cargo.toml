@@ -5,8 +5,8 @@ edition      = "2021"
 license      = "Apache-2.0"
 readme       = "README.md"
 keywords     = ["blockchain", "consensus", "cosmos", "ibc", "tendermint"]
-repository   = "https://github.com/informalsystems/ibc-rs"
-authors      = ["Informal Systems <hello@informal.systems>"]
+repository   = "https://github.com/composableFi/composable"
+authors      = ["Informal Systems <hello@informal.systems>", "Seun Lanlege <seun@composable.finance>", "David Salami <david@composable.finance>"]
 description  = """
     Implementation of the Inter-Blockchain Communication Protocol (IBC).
     This crate comprises the main data structures and on-chain logic.

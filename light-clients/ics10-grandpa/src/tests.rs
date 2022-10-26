@@ -27,9 +27,10 @@ use beefy_prover::helpers::{
 use codec::Decode;
 use finality_grandpa_rpc::GrandpaApiClient;
 use futures::stream::StreamExt;
-use grandpa_client::justification::GrandpaJustification;
-use grandpa_client_primitives::{parachain_header_storage_key, ParachainHeaderProofs};
-use grandpa_prover::{runtime, GrandpaProver, JustificationNotification};
+use grandpa_client_primitives::{
+	justification::GrandpaJustification, parachain_header_storage_key, ParachainHeaderProofs,
+};
+use grandpa_prover::{polkadot, GrandpaProver, JustificationNotification};
 use ibc::{
 	core::{
 		ics02_client::{
@@ -56,10 +57,13 @@ pub type Justification = GrandpaJustification<RelayChainHeader>;
 
 #[tokio::test]
 async fn test_continuous_update_of_grandpa_client() {
+	env_logger::builder()
+		.filter_module("grandpa", log::LevelFilter::Trace)
+		.format_module_path(false)
+		.init();
+
 	let client_id = ClientId::new(&ClientState::<HostFunctionsManager>::client_type(), 0).unwrap();
-
 	let chain_start_height = Height::new(1, 11);
-
 	let mut ctx = MockContext::<MockClientTypes>::new(
 		ChainId::new("mockgaiaA".to_string(), 1),
 		MockHostType::Mock,
@@ -86,7 +90,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		.await
 		.unwrap()
 		.filter_map(|result| futures::future::ready(result.ok()))
-		.skip_while(|h| futures::future::ready(h.number < 210))
+		.skip_while(|h| futures::future::ready(h.number < 90))
 		.take(1)
 		.collect::<Vec<_>>()
 		.await;
@@ -104,8 +108,8 @@ async fn test_continuous_update_of_grandpa_client() {
 			.expect("Failed to fetch finalized header");
 
 		let head_data = {
-			let key = runtime::api::storage().paras().heads(
-				&runtime::api::runtime_types::polkadot_parachain::primitives::Id(prover.para_id),
+			let key = polkadot::api::storage().paras().heads(
+				&polkadot::api::runtime_types::polkadot_parachain::primitives::Id(prover.para_id),
 			);
 			prover
 				.relay_client
@@ -167,8 +171,6 @@ async fn test_continuous_update_of_grandpa_client() {
 		)
 		.unwrap();
 
-		dbg!(&client_state.latest_para_height);
-
 		break (AnyClientState::Grandpa(client_state), AnyConsensusState::Grandpa(consensus_state))
 	};
 
@@ -200,37 +202,34 @@ async fn test_continuous_update_of_grandpa_client() {
 		let justification = Justification::decode(&mut &justification_bytes[..])
 			.expect("Failed to decode justification");
 
-		let headers = prover
-			.query_finalized_parachain_headers_between(
-				justification.commit.target_number,
-				client_state.latest_relay_height,
-			)
+		if justification.commit.target_number <= client_state.latest_relay_height {
+			println!(
+				"skipping outdated commit: {}, with latest relay height: {}",
+				justification.commit.target_number, client_state.latest_relay_height
+			);
+			continue
+		}
+
+		let finalized_para_header = prover
+			.query_latest_finalized_parachain_header(justification.commit.target_number)
 			.await
 			.expect("Failed to fetch finalized parachain headers");
-		let headers = match headers {
-			Some(headers) => headers,
-			None => continue,
-		};
-		let header_numbers = headers
-			.iter()
-			.map(|h| h.number)
-			.filter(|num| *num != client_state.latest_para_height)
-			.collect();
+		// notice the inclusive range
+		let header_numbers = ((client_state.latest_para_height + 1)..=finalized_para_header.number)
+			.collect::<Vec<_>>();
 
-		dbg!(&header_numbers);
+		if header_numbers.len() == 0 {
+			continue
+		}
 
-		let maybe_proof = prover
+		let proof = prover
 			.query_finalized_parachain_headers_with_proof(
+				&(client_state.clone().into()),
 				justification.commit.target_number,
-				client_state.latest_relay_height,
-				header_numbers,
+				header_numbers.clone(),
 			)
 			.await
 			.expect("Failed to fetch finalized parachain headers with proof");
-		let proof = match maybe_proof {
-			Some(proof) => proof,
-			None => continue,
-		};
 		println!("========= New Justification =========");
 		println!("justification size: {}kb", size_of_val(&*justification_bytes) / 1000);
 		println!("current_set_id: {}", client_state.current_set_id);
@@ -241,7 +240,7 @@ async fn test_continuous_update_of_grandpa_client() {
 
 		let header = Header {
 			finality_proof: proof.finality_proof,
-			parachain_headers: proof.parachain_headers,
+			parachain_headers: proof.parachain_headers.clone(),
 		};
 		let msg = MsgUpdateAnyClient {
 			client_id: client_id.clone(),
@@ -271,9 +270,17 @@ async fn test_continuous_update_of_grandpa_client() {
 							upd_res.client_state,
 							ctx.latest_client_states(&client_id).clone()
 						);
-						// todo: assert the specific heights for new consensus states
+						for height in header_numbers {
+							let cs = ctx
+								.consensus_state(
+									&client_id,
+									Height::new(prover.para_id as u64, height as u64),
+								)
+								.ok();
+							dbg!((height, cs.is_some()));
+						}
 						println!(
-							"======== Successfully updaated parachain client to height: {} ========",
+							"======== Successfully updated parachain client to height: {} ========",
 							upd_res.client_state.latest_height(),
 						);
 					},
