@@ -13,7 +13,6 @@ use crate::{
 	routing::Context,
 };
 use codec::{Decode, Encode};
-use frame_support::traits::Currency;
 use ibc::{
 	applications::transfer::{relay::send_transfer::send_transfer, PrefixedCoin},
 	core::{
@@ -55,6 +54,7 @@ use ibc_primitives::{
 use scale_info::prelude::{collections::BTreeMap, string::ToString};
 use sp_runtime::traits::IdentifyAccount;
 use tendermint_proto::Protobuf;
+use frame_support::traits::Currency;
 
 impl<T: Config> Pallet<T>
 where
@@ -467,7 +467,7 @@ where
 		let ibc_acc =
 			T::AccountIdConversion::try_from(signer).map_err(|_| Error::<T>::DecodingError)?;
 		let account_id = ibc_acc.into_account();
-		let balance = format!("{:?}", T::Currency::free_balance(&account_id));
+		let balance = format!("{:?}", T::NativeCurrency::free_balance(&account_id));
 		Ok(balance.parse().unwrap_or_default())
 	}
 

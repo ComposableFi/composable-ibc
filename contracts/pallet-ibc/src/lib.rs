@@ -169,7 +169,7 @@ pub mod pallet {
 		dispatch::DispatchResult,
 		pallet_prelude::*,
 		traits::{
-			fungibles::{Inspect, Mutate, Transfer},
+			fungibles::{Inspect, Mutate, Transfer, InspectMetadata},
 			tokens::{AssetId, Balance},
 			Currency, ReservableCurrency, UnixTime,
 		},
@@ -211,14 +211,11 @@ pub mod pallet {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// Currency type of the runtime
-		type Currency: Currency<Self::AccountId>;
-		type ReservableCurrency: ReservableCurrency<Self::AccountId>;
+		type NativeCurrency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 		type Balance: Balance;
 		type AssetId: AssetId;
 		/// Convert ibc denom to asset id and vice versa
 		type IdentifyAssetId: DenomToAssetId<Self>;
-		/// Create a new fungible asset
-		type Create: CreateAsset<Self>;
 		/// Prefix for events stored in the Off-chain DB via Indexing API, child trie and connection
 		const PALLET_PREFIX: &'static [u8];
 		/// Light client protocol this chain is operating
@@ -230,7 +227,8 @@ pub mod pallet {
 		/// MultiCurrency System
 		type MultiCurrency: Transfer<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
 			+ Mutate<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
-			+ Inspect<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>;
+			+ Inspect<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
+            + InspectMetadata<Self::AccountId> + Create<Self::AccountId>;
 		/// Expected block time in milliseconds
 		#[pallet::constant]
 		type ExpectedBlockTime: Get<u64>;
@@ -370,6 +368,11 @@ pub mod pallet {
 	/// Active Escrow addresses
 	pub type EscrowAddresses<T: Config> = StorageValue<_, BTreeSet<T::AccountId>, ValueQuery>;
 
+    #[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// Token Asset Admin
+	pub type AssetAdmin<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -382,7 +385,7 @@ pub mod pallet {
 			from: <T as frame_system::Config>::AccountId,
 			to: Vec<u8>,
 			ibc_denom: Vec<u8>,
-			local_asset_id: Option<T::AssetId>,
+			local_asset_id: T::AssetId,
 			amount: T::Balance,
 		},
 		/// A channel has been opened
@@ -394,7 +397,7 @@ pub mod pallet {
 			from: Vec<u8>,
 			to: Vec<u8>,
 			ibc_denom: Vec<u8>,
-			local_asset_id: Option<T::AssetId>,
+			local_asset_id: T::AssetId,
 			amount: T::Balance,
 		},
 		/// Ibc tokens have been received and minted
@@ -402,7 +405,7 @@ pub mod pallet {
 			from: Vec<u8>,
 			to: Vec<u8>,
 			ibc_denom: Vec<u8>,
-			local_asset_id: Option<T::AssetId>,
+			local_asset_id: T::AssetId,
 			amount: T::Balance,
 		},
 		/// Ibc transfer failed, received an acknowledgement error, tokens have been refunded
@@ -410,7 +413,7 @@ pub mod pallet {
 			from: Vec<u8>,
 			to: Vec<u8>,
 			ibc_denom: Vec<u8>,
-			local_asset_id: Option<T::AssetId>,
+			local_asset_id: T::AssetId,
 			amount: T::Balance,
 		},
 		/// On recv packet was not processed successfully processes
@@ -511,7 +514,7 @@ pub mod pallet {
 		AccountId32: From<T::AccountId>,
 		u32: From<<T as frame_system::Config>::BlockNumber>,
 		T::Balance: From<u128>,
-		<T::ReservableCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
+        <T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>
 	{
 		#[pallet::weight(crate::weight::deliver::< T > (messages))]
 		#[frame_support::transactional]
@@ -544,7 +547,7 @@ pub mod pallet {
 				.collect::<Result<Vec<ibc_proto::google::protobuf::Any>, Error<T>>>()?;
 			let reserve_amt = T::SpamProtectionDeposit::get().saturating_mul(reserve_count.into());
 			if reserve_amt >= T::SpamProtectionDeposit::get() {
-				<T::ReservableCurrency as ReservableCurrency<T::AccountId>>::reserve(
+				<T::NativeCurrency as ReservableCurrency<T::AccountId>>::reserve(
 					&sender,
 					reserve_amt.into(),
 				)?;
@@ -754,25 +757,19 @@ pub mod pallet {
 }
 
 pub trait DenomToAssetId<T: Config> {
-	/// Get the equivalent registered asset id for ibc denom
-	/// Should return None if the denom has no asset id registered
-	fn to_asset_id(denom: &String) -> Option<T::AssetId>;
-	/// Return full denom for given asset id
-	fn to_denom(id: T::AssetId) -> Option<String>;
-	/// Returns a tuple
-	/// The first item of the tuple is a vector of all ibc denoms with an upper bound of limit on
-	/// the length of the vector. The second item is the total count of ibc assets on chain.
-	/// The third item is the next asset id after the last item in the list.
-	/// Only one of start_key or offset should be used
-	/// start_key takes precedence over offset
-	fn ibc_assets(
-		start_key: Option<T::AssetId>,
-		offset: Option<u32>,
-		limit: u64,
-	) -> (Vec<Vec<u8>>, u64, Option<T::AssetId>);
-}
-
-pub trait CreateAsset<T: Config>: Create<T::AccountId> {
-	/// This should generate a unique fungible asset from the ibc denom
-	fn create_asset(denom: &String) -> Result<T::AssetId, Error<T>>;
+    /// Get the asset id for this ibc denom
+    fn to_asset_id(denom: &String) -> T::AssetId;
+    /// Return full denom for given asset id
+    fn to_denom(id: T::AssetId) -> Option<String>;
+    /// Returns a tuple
+    /// The first item of the tuple is a vector of all ibc denoms with an upper bound of limit on the length of the vector.
+    /// The second item is the total count of ibc assets on chain.
+    /// The third item is the next asset id after the last item in the list.
+    /// Only one of start_key or offset should be used
+    /// start_key takes precedence over offset
+    fn ibc_assets(
+        start_key: Option<T::AssetId>,
+        offset: Option<u32>,
+        limit: u64,
+    ) -> (Vec<Vec<u8>>, u64, Option<T::AssetId>);
 }

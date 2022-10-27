@@ -46,7 +46,7 @@ impl<T: Config> Default for IbcRouter<T> {
 /// this means routes need to be statically defined
 pub trait ModuleRouter {
 	/// Returns a mutable reference to a `Module` registered against the specified `ModuleId`
-	fn get_route_mut(module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module>;
+	fn get_route_mut(module_id: &impl Borrow<ModuleId>) -> Option<&'static mut dyn Module>;
 	/// Returns true if the `Router` has a `Module` registered against the specified `ModuleId`
 	fn has_route(module_id: &impl Borrow<ModuleId>) -> bool;
 	/// Should return the module_id associated with a given port_id
