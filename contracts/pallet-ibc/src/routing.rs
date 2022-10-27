@@ -42,6 +42,7 @@ impl<T: Config> Default for IbcRouter<T> {
     }
 }
 
+// todo: expose to end users
 impl<T: Config + Send + Sync> Router for IbcRouter<T>
 where
     u32: From<<T as frame_system::Config>::BlockNumber>,

@@ -12,6 +12,7 @@ use ibc::{
 	},
 };
 
+// todo: expose to end users
 impl<T: Config + Sync + Send> PortReader for Context<T> {
 	fn lookup_module_by_port(&self, port_id: &PortId) -> Result<ModuleId, ICS05Error> {
 		match port_id.as_str() {
