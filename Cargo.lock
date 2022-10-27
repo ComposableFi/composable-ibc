@@ -6294,6 +6294,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
 
 [[package]]
+name = "pallet-assets"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27#5bfdbab8ba28523ef10e365627fed64ef2b77cbf"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+]
+
+[[package]]
 name = "pallet-aura"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27#5bfdbab8ba28523ef10e365627fed64ef2b77cbf"
@@ -6646,6 +6659,7 @@ dependencies = [
  "log",
  "orml-tokens",
  "orml-traits",
+ "pallet-assets",
  "pallet-balances",
  "pallet-ibc-ping",
  "pallet-timestamp",
@@ -13392,7 +13406,7 @@ checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
  "cfg-if 1.0.0",
  "digest 0.10.5",
- "rand 0.4.6",
+ "rand 0.8.5",
  "static_assertions",
 ]
 

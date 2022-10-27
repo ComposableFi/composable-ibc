@@ -206,6 +206,7 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// Currency type of the runtime
 		type Currency: Currency<Self::AccountId>;
+		// todo: consolidate all these into one param
 		/// Prefix for events stored in the Off-chain DB via Indexing API.
 		const INDEXING_PREFIX: &'static [u8];
 		/// Prefix for ibc connection, should be valid utf8 string bytes
@@ -216,17 +217,10 @@ pub mod pallet {
 		const CHILD_TRIE_KEY: &'static [u8];
 		/// Light client protocol this chain is operating
 		const LIGHT_CLIENT_PROTOCOL: LightClientProtocol;
-		/// A type for creating local asset Ids
-		type CurrencyFactory: CurrencyFactory<
-			AssetId = <Self as DeFiComposableConfig>::MayBeAssetId,
-			Balance = <Self as DeFiComposableConfig>::Balance,
-		>;
 		/// Account Id Conversion from SS58 string or hex string
 		type AccountIdConversion: TryFrom<Signer>
 			+ IdentifyAccount<AccountId = Self::AccountId>
 			+ Clone;
-		/// A type that allows us map ibc assets to local assets
-		type AssetRegistry: RemoteAssetRegistryMutate + RemoteAssetRegistryInspect;
 		/// MultiCurrency System
 		type MultiCurrency: Transfer<
 				Self::AccountId,
@@ -250,8 +244,10 @@ pub mod pallet {
 		type RelayChain: Get<light_client_common::RelayChain>;
 		/// benchmarking weight info
 		type WeightInfo: WeightInfo;
-		/// Origin allowed to create light clients and initiate connections
+		/// Origin allowed to unfreeze light clients
 		type AdminOrigin: EnsureOrigin<Self::Origin>;
+		/// Origin allowed to freeze light clients
+		type SentryOrigin: EnsureOrigin<Self::Origin>;
 	}
 
 	#[pallet::pallet]
@@ -712,5 +708,7 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		// todo: implement sentry extrinsic for freezing light clients.
 	}
 }

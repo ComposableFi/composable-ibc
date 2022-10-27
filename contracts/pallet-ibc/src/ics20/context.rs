@@ -5,7 +5,7 @@ use composable_traits::{
 	defi::DeFiComposableConfig,
 	xcm::assets::{RemoteAssetRegistryInspect, RemoteAssetRegistryMutate, XcmAssetLocation},
 };
-use frame_support::traits::fungibles::{Mutate, Transfer};
+use frame_support::traits::fungibles::{Inspect, InspectMetadata, Mutate, Transfer};
 use ibc::{
 	applications::transfer::{
 		context::{BankKeeper, Ics20Context, Ics20Keeper, Ics20Reader},
@@ -35,7 +35,7 @@ where
 		})
 	}
 
-	fn get_port(&self) -> Result<ibc::core::ics24_host::identifier::PortId, Ics20Error> {
+	fn get_port(&self) -> Result<PortId, Ics20Error> {
 		PortId::from_str(PORT_ID_STR)
 			.map_err(|e| Ics20Error::invalid_port_id(PORT_ID_STR.to_string(), e))
 	}
@@ -113,6 +113,8 @@ where
 	) -> Result<(), Ics20Error> {
 		let amount: <T as DeFiComposableConfig>::Balance = amt.amount.as_u256().low_u128().into();
 		let denom = amt.denom.to_string();
+		// todo: add a config trait for converting ibc denoms to T::AssetId
+		// let is_known_asset = <T::MultiCurrency as InspectMetadata<T::AccountId>>::name(&denom).is_empty();
 		let foreign_asset_id = ibc_denom_to_foreign_asset_id(&denom);
 		// Before minting we need to check if the asset has been registered if not we register the
 		// asset before proceeding to mint
@@ -121,6 +123,7 @@ where
 		{
 			asset_id
 		} else {
+			// todo: use fungibles::Create
 			let local_asset_id = T::CurrencyFactory::create(
 				RangeId::IBC_ASSETS,
 				<T as DeFiComposableConfig>::Balance::zero(),
