@@ -49,7 +49,6 @@ where
                     e
                 ))
             })?;
-            // todo: &'static str was a bad idea
             Ok(data)
         } else {
             log::trace!(target: "pallet_ibc", "in client : [client_type] >> read client_type is None");
