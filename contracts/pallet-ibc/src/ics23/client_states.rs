@@ -12,28 +12,28 @@ pub struct ClientStates<T>(PhantomData<T>);
 impl<T: Config> ClientStates<T> {
 	pub fn get(client_id: &ClientId) -> Option<Vec<u8>> {
 		let client_state_path = format!("{}", ClientStatePath(client_id.clone()));
-		let client_state_key = apply_prefix(T::CONNECTION_PREFIX, vec![client_state_path]);
-		child::get(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &client_state_key)
+		let client_state_key = apply_prefix(T::PALLET_PREFIX, vec![client_state_path]);
+		child::get(&ChildInfo::new_default(T::PALLET_PREFIX), &client_state_key)
 	}
 
 	pub fn insert(client_id: &ClientId, client_state: Vec<u8>) {
 		let client_state_path = format!("{}", ClientStatePath(client_id.clone()));
-		let client_state_key = apply_prefix(T::CONNECTION_PREFIX, vec![client_state_path]);
-		child::put(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &client_state_key, &client_state);
+		let client_state_key = apply_prefix(T::PALLET_PREFIX, vec![client_state_path]);
+		child::put(&ChildInfo::new_default(T::PALLET_PREFIX), &client_state_key, &client_state);
 	}
 
 	pub fn _contains_key(client_id: &ClientId) -> bool {
 		let client_state_path = format!("{}", ClientStatePath(client_id.clone()));
-		let client_state_key = apply_prefix(T::CONNECTION_PREFIX, vec![client_state_path]);
-		child::exists(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &client_state_key)
+		let client_state_key = apply_prefix(T::PALLET_PREFIX, vec![client_state_path]);
+		child::exists(&ChildInfo::new_default(T::PALLET_PREFIX), &client_state_key)
 	}
 
 	// WARNING: too expensive to be called from an on-chain context, only here for rpc layer.
 	// client_id => client_state
 	pub fn iter() -> impl Iterator<Item = (ClientId, Vec<u8>)> {
 		let prefix_path = "clients/".to_string();
-		let key = apply_prefix(T::CONNECTION_PREFIX, vec![prefix_path.clone()]);
-		ChildTriePrefixIterator::with_prefix(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &key)
+		let key = apply_prefix(T::PALLET_PREFIX, vec![prefix_path.clone()]);
+		ChildTriePrefixIterator::with_prefix(&ChildInfo::new_default(T::PALLET_PREFIX), &key)
 			.filter_map(move |(remaining_key, value)| {
 				let path = format!("{prefix_path}{}", String::from_utf8(remaining_key).ok()?);
 				if let Path::ClientState(ClientStatePath(client_id)) = Path::from_str(&path).ok()? {

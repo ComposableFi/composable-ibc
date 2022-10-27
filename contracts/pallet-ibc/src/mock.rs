@@ -214,8 +214,8 @@ impl pallet_ibc::Config for Test {
 	type TimeProvider = Timestamp;
 	type Event = Event;
 	const INDEXING_PREFIX: &'static [u8] = b"ibc/";
-	const CONNECTION_PREFIX: &'static [u8] = b"ibc/";
-	const CHILD_TRIE_KEY: &'static [u8] = b"ibc/";
+	const PALLET_PREFIX: &'static [u8] = b"ibc/";
+	const PALLET_PREFIX: &'static [u8] = b"ibc/";
 	const LIGHT_CLIENT_PROTOCOL: crate::LightClientProtocol = crate::LightClientProtocol::Beefy;
 	type Currency = Balances;
 	type ExpectedBlockTime = ExpectedBlockTime;

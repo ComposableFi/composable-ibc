@@ -23,37 +23,37 @@ impl<T: Config> Acknowledgements<T> {
 	) {
 		let ack_path = AcksPath { port_id, channel_id, sequence };
 		let ack_path = format!("{}", ack_path);
-		let ack_key = apply_prefix(T::CONNECTION_PREFIX, vec![ack_path]);
-		child::put(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &ack_key, &ack.into_vec())
+		let ack_key = apply_prefix(T::PALLET_PREFIX, vec![ack_path]);
+		child::put(&ChildInfo::new_default(T::PALLET_PREFIX), &ack_key, &ack.into_vec())
 	}
 
 	pub fn get((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) -> Option<Vec<u8>> {
 		let ack_path = AcksPath { port_id, channel_id, sequence };
 		let ack_path = format!("{}", ack_path);
-		let ack_key = apply_prefix(T::CONNECTION_PREFIX, vec![ack_path]);
-		child::get(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &ack_key)
+		let ack_key = apply_prefix(T::PALLET_PREFIX, vec![ack_path]);
+		child::get(&ChildInfo::new_default(T::PALLET_PREFIX), &ack_key)
 	}
 
 	pub fn remove((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) {
 		let ack_path = AcksPath { port_id, channel_id, sequence };
 		let ack_path = format!("{}", ack_path);
-		let ack_key = apply_prefix(T::CONNECTION_PREFIX, vec![ack_path]);
-		child::kill(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &ack_key)
+		let ack_key = apply_prefix(T::PALLET_PREFIX, vec![ack_path]);
+		child::kill(&ChildInfo::new_default(T::PALLET_PREFIX), &ack_key)
 	}
 
 	pub fn contains_key((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) -> bool {
 		let ack_path = AcksPath { port_id, channel_id, sequence };
 		let ack_path = format!("{}", ack_path);
-		let ack_key = apply_prefix(T::CONNECTION_PREFIX, vec![ack_path]);
-		child::exists(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &ack_key)
+		let ack_key = apply_prefix(T::PALLET_PREFIX, vec![ack_path]);
+		child::exists(&ChildInfo::new_default(T::PALLET_PREFIX), &ack_key)
 	}
 
 	// WARNING: too expensive to be called from an on-chain context, only here for rpc layer.
 	pub fn iter() -> impl Iterator<Item = ((PortId, ChannelId, Sequence), Vec<u8>)> {
 		let prefix = "acks/ports/".to_string();
-		let prefix_key = apply_prefix(T::CONNECTION_PREFIX, vec![prefix.clone()]);
+		let prefix_key = apply_prefix(T::PALLET_PREFIX, vec![prefix.clone()]);
 		ChildTriePrefixIterator::with_prefix(
-			&ChildInfo::new_default(T::CHILD_TRIE_KEY),
+			&ChildInfo::new_default(T::PALLET_PREFIX),
 			&prefix_key,
 		)
 		.filter_map(move |(remaining_key, value)| {

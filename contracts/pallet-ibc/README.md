@@ -26,9 +26,7 @@ impl pallet_ibc::Config for Runtime {
 	type TimeProvider = Timestamp;
 	type Event = Event;
 	type Currency = Balances;
-	const INDEXING_PREFIX: &'static [u8] = b"ibc/";
-	const CONNECTION_PREFIX: &'static [u8] = b"ibc/";
-	const CHILD_TRIE_KEY: &'static [u8] = b"ibc/";
+	const PALLET_PREFIX: &'static [u8] = b"ibc/";
 	const LIGHT_CLIENT_PROTOCOL: pallet_ibc::LightClientProtocol = pallet_ibc::LightClientProtocol::Grandpa; // Finality protocol this chain will be using
 	type ExpectedBlockTime = ExpectedBlockTime; // Expected block time in milliseconds
 	type MultiCurrency = Assets; // Add a module that implements the Transfer, Mutate and Inspect traits defined in frame_support::traits::fungibles
@@ -566,7 +564,7 @@ impl ibc_runtime_api::IbcRuntimeApi<Block> for Runtime {
     }
 
     fn child_trie_key() -> Vec<u8> {
-        <Runtime as pallet_ibc::Config>::CHILD_TRIE_KEY.to_vec()
+        <Runtime as pallet_ibc::Config>::PALLET_PREFIX.to_vec()
     }
 
     fn query_send_packet_info(channel_id: Vec<u8>, port_id: Vec<u8>, seqs: Vec<u64>) -> Option<Vec<ibc_primitives::PacketInfo>> {

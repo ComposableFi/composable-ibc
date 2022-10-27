@@ -22,28 +22,28 @@ impl<T: Config> PacketReceipt<T> {
 	) {
 		let receipt_path = ReceiptsPath { port_id, channel_id, sequence };
 		let receipt_path = format!("{}", receipt_path);
-		let receipt_key = apply_prefix(T::CONNECTION_PREFIX, vec![receipt_path]);
-		child::put(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &receipt_key, &receipt)
+		let receipt_key = apply_prefix(T::PALLET_PREFIX, vec![receipt_path]);
+		child::put(&ChildInfo::new_default(T::PALLET_PREFIX), &receipt_key, &receipt)
 	}
 
 	pub fn get((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) -> Option<Vec<u8>> {
 		let receipt_path = ReceiptsPath { port_id, channel_id, sequence };
 		let receipt_path = format!("{}", receipt_path);
-		let receipt_key = apply_prefix(T::CONNECTION_PREFIX, vec![receipt_path]);
-		child::get(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &receipt_key)
+		let receipt_key = apply_prefix(T::PALLET_PREFIX, vec![receipt_path]);
+		child::get(&ChildInfo::new_default(T::PALLET_PREFIX), &receipt_key)
 	}
 
 	// pub fn remove((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) {
 	// 	let receipt_path = ReceiptsPath { port_id, channel_id, sequence };
 	// 	let receipt_path = format!("{}", receipt_path);
-	// 	let receipt_key = apply_prefix_and_encode(T::CONNECTION_PREFIX, vec![receipt_path]);
-	// 	child::kill(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &receipt_key)
+	// 	let receipt_key = apply_prefix_and_encode(T::PALLET_PREFIX, vec![receipt_path]);
+	// 	child::kill(&ChildInfo::new_default(T::PALLET_PREFIX), &receipt_key)
 	// }
 
 	pub fn contains_key((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) -> bool {
 		let receipt_path = ReceiptsPath { port_id, channel_id, sequence };
 		let receipt_path = format!("{}", receipt_path);
-		let receipt_key = apply_prefix(T::CONNECTION_PREFIX, vec![receipt_path]);
-		child::exists(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &receipt_key)
+		let receipt_key = apply_prefix(T::PALLET_PREFIX, vec![receipt_path]);
+		child::exists(&ChildInfo::new_default(T::PALLET_PREFIX), &receipt_key)
 	}
 }

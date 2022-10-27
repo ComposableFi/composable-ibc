@@ -21,8 +21,8 @@ impl<T: Config> ConsensusStates<T> {
 			height: height.revision_height,
 		};
 		let path = format!("{}", consensus_path);
-		let key = apply_prefix(T::CONNECTION_PREFIX, vec![path]);
-		child::get(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &key)
+		let key = apply_prefix(T::PALLET_PREFIX, vec![path]);
+		child::get(&ChildInfo::new_default(T::PALLET_PREFIX), &key)
 	}
 
 	pub fn insert(client_id: ClientId, height: Height, consensus_state: Vec<u8>) {
@@ -32,15 +32,15 @@ impl<T: Config> ConsensusStates<T> {
 			height: height.revision_height,
 		};
 		let path = format!("{}", consensus_path);
-		let key = apply_prefix(T::CONNECTION_PREFIX, vec![path]);
-		child::put(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &key, &consensus_state)
+		let key = apply_prefix(T::PALLET_PREFIX, vec![path]);
+		child::put(&ChildInfo::new_default(T::PALLET_PREFIX), &key, &consensus_state)
 	}
 
 	// WARNING: too expensive to be called from an on-chain context, only here for rpc layer.
 	pub fn iter_key_prefix(client_id: &ClientId) -> impl Iterator<Item = (Height, Vec<u8>)> {
 		let prefix_path = format!("clients/{}/consensusStates/", client_id);
-		let key = apply_prefix(T::CONNECTION_PREFIX, vec![prefix_path]);
-		ChildTriePrefixIterator::with_prefix(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &key)
+		let key = apply_prefix(T::PALLET_PREFIX, vec![prefix_path]);
+		ChildTriePrefixIterator::with_prefix(&ChildInfo::new_default(T::PALLET_PREFIX), &key)
 			.filter_map(|(key, value)| {
 				let height = Height::from_str(&String::from_utf8(key).ok()?).ok()?;
 				Some((height, value))

@@ -67,7 +67,7 @@ fn setup_client_and_consensus_state(port_id: PortId) {
 
 	let connection_id = ConnectionId::new(0);
 	let commitment_prefix: CommitmentPrefix =
-		<Test as Config>::CONNECTION_PREFIX.to_vec().try_into().unwrap();
+		<Test as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 	let delay_period = core::time::Duration::from_nanos(0);
 	let connection_counterparty =
 		Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
@@ -112,7 +112,7 @@ fn initialize_connection() {
 		.encode_vec();
 
 		let commitment_prefix: CommitmentPrefix =
-			<Test as Config>::CONNECTION_PREFIX.to_vec().try_into().unwrap();
+			<Test as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 
 		let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
 

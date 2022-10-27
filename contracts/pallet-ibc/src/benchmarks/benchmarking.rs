@@ -194,7 +194,7 @@ benchmarks! {
 		// Successful processing of a connection open confirm message requires a compatible connection end with state INIT or TRYOPEN
 		// to exist on the local chain
 		let connection_id = ConnectionId::new(0);
-		let commitment_prefix: CommitmentPrefix = <T as Config>::CONNECTION_PREFIX.to_vec().try_into().unwrap();
+		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::Init, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
@@ -234,7 +234,7 @@ benchmarks! {
 		// Successful processing of a connection open confirm message requires a compatible connection end with state TryOpen
 		// to exist on the local chain
 		let connection_id = ConnectionId::new(0);
-		let commitment_prefix: CommitmentPrefix = <T as Config>::CONNECTION_PREFIX.to_vec().try_into().unwrap();
+		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::TryOpen, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
@@ -273,7 +273,7 @@ benchmarks! {
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
 
 		let connection_id = ConnectionId::new(0);
-		let commitment_prefix: CommitmentPrefix = <T as Config>::CONNECTION_PREFIX.to_vec().try_into().unwrap();
+		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::Open, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
@@ -318,7 +318,7 @@ benchmarks! {
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
 
 		let connection_id = ConnectionId::new(0);
-		let commitment_prefix: CommitmentPrefix = <T as Config>::CONNECTION_PREFIX.to_vec().try_into().unwrap();
+		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::Open, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
@@ -365,7 +365,7 @@ benchmarks! {
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
 
 		let connection_id = ConnectionId::new(0);
-		let commitment_prefix: CommitmentPrefix = <T as Config>::CONNECTION_PREFIX.to_vec().try_into().unwrap();
+		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::Open, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
@@ -427,7 +427,7 @@ benchmarks! {
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
 
 		let connection_id = ConnectionId::new(0);
-		let commitment_prefix: CommitmentPrefix = <T as Config>::CONNECTION_PREFIX.to_vec().try_into().unwrap();
+		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::Open, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
@@ -482,7 +482,7 @@ benchmarks! {
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
 
 		let connection_id = ConnectionId::new(0);
-		let commitment_prefix: CommitmentPrefix = <T as Config>::CONNECTION_PREFIX.to_vec().try_into().unwrap();
+		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::Open, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
@@ -536,7 +536,7 @@ benchmarks! {
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
 
 		let connection_id = ConnectionId::new(0);
-		let commitment_prefix: CommitmentPrefix = <T as Config>::CONNECTION_PREFIX.to_vec().try_into().unwrap();
+		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::Open, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
@@ -595,7 +595,7 @@ benchmarks! {
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
 
 		let connection_id = ConnectionId::new(0);
-		let commitment_prefix: CommitmentPrefix = <T as Config>::CONNECTION_PREFIX.to_vec().try_into().unwrap();
+		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(0);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::Open, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
@@ -657,7 +657,7 @@ benchmarks! {
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
 
 		let connection_id = ConnectionId::new(0);
-		let commitment_prefix: CommitmentPrefix = <T as Config>::CONNECTION_PREFIX.to_vec().try_into().unwrap();
+		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(0);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::Open, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
@@ -717,7 +717,7 @@ benchmarks! {
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
 
 		let connection_id = ConnectionId::new(0);
-		let commitment_prefix: CommitmentPrefix = <T as Config>::CONNECTION_PREFIX.to_vec().try_into().unwrap();
+		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(0);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::Open, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
@@ -776,7 +776,7 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-		let commitment_prefix: CommitmentPrefix = <T as Config>::CONNECTION_PREFIX.to_vec().try_into().unwrap();
+		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let value = conn_open_init_mod::MsgConnectionOpenInit {
 			client_id: client_id.clone(),
 			counterparty: Counterparty::new(

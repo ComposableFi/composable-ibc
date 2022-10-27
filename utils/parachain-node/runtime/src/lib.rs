@@ -464,8 +464,8 @@ impl pallet_ibc::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	const INDEXING_PREFIX: &'static [u8] = b"ibc/";
-	const CONNECTION_PREFIX: &'static [u8] = b"ibc/";
-	const CHILD_TRIE_KEY: &'static [u8] = b"ibc/";
+	const PALLET_PREFIX: &'static [u8] = b"ibc/";
+	const PALLET_PREFIX: &'static [u8] = b"ibc/";
 	const LIGHT_CLIENT_PROTOCOL: pallet_ibc::LightClientProtocol =
 		pallet_ibc::LightClientProtocol::Grandpa;
 	type ExpectedBlockTime = ExpectedBlockTime;
@@ -644,7 +644,7 @@ impl_runtime_apis! {
 		}
 
 		fn child_trie_key() -> Vec<u8> {
-			<Runtime as pallet_ibc::Config>::CHILD_TRIE_KEY.to_vec()
+			<Runtime as pallet_ibc::Config>::PALLET_PREFIX.to_vec()
 		}
 
 		fn query_balance_with_address(addr: Vec<u8>) -> Option<u128> {

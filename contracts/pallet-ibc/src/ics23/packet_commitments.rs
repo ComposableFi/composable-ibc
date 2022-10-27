@@ -23,9 +23,9 @@ impl<T: Config> PacketCommitment<T> {
 	) {
 		let commitment_path = CommitmentsPath { port_id, channel_id, sequence };
 		let commitment_path = format!("{}", commitment_path);
-		let commitment_key = apply_prefix(T::CONNECTION_PREFIX, vec![commitment_path]);
+		let commitment_key = apply_prefix(T::PALLET_PREFIX, vec![commitment_path]);
 		child::put(
-			&ChildInfo::new_default(T::CHILD_TRIE_KEY),
+			&ChildInfo::new_default(T::PALLET_PREFIX),
 			&commitment_key,
 			&commitment.into_vec(),
 		)
@@ -34,30 +34,30 @@ impl<T: Config> PacketCommitment<T> {
 	pub fn get((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) -> Option<Vec<u8>> {
 		let commitment_path = CommitmentsPath { port_id, channel_id, sequence };
 		let commitment_path = format!("{}", commitment_path);
-		let commitment_key = apply_prefix(T::CONNECTION_PREFIX, vec![commitment_path]);
-		child::get(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &commitment_key)
+		let commitment_key = apply_prefix(T::PALLET_PREFIX, vec![commitment_path]);
+		child::get(&ChildInfo::new_default(T::PALLET_PREFIX), &commitment_key)
 	}
 
 	pub fn remove((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) {
 		let commitment_path = CommitmentsPath { port_id, channel_id, sequence };
 		let commitment_path = format!("{}", commitment_path);
-		let commitment_key = apply_prefix(T::CONNECTION_PREFIX, vec![commitment_path]);
-		child::kill(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &commitment_key)
+		let commitment_key = apply_prefix(T::PALLET_PREFIX, vec![commitment_path]);
+		child::kill(&ChildInfo::new_default(T::PALLET_PREFIX), &commitment_key)
 	}
 
 	pub fn contains_key((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) -> bool {
 		let commitment_path = CommitmentsPath { port_id, channel_id, sequence };
 		let commitment_path = format!("{}", commitment_path);
-		let commitment_key = apply_prefix(T::CONNECTION_PREFIX, vec![commitment_path]);
-		child::exists(&ChildInfo::new_default(T::CHILD_TRIE_KEY), &commitment_key)
+		let commitment_key = apply_prefix(T::PALLET_PREFIX, vec![commitment_path]);
+		child::exists(&ChildInfo::new_default(T::PALLET_PREFIX), &commitment_key)
 	}
 
 	// WARNING: too expensive to be called from an on-chain context, only here for rpc layer.
 	pub fn iter() -> impl Iterator<Item = ((PortId, ChannelId, Sequence), Vec<u8>)> {
 		let prefix = "commitments/ports/".to_string();
-		let prefix_key = apply_prefix(T::CONNECTION_PREFIX, vec![prefix.clone()]);
+		let prefix_key = apply_prefix(T::PALLET_PREFIX, vec![prefix.clone()]);
 		ChildTriePrefixIterator::with_prefix(
-			&ChildInfo::new_default(T::CHILD_TRIE_KEY),
+			&ChildInfo::new_default(T::PALLET_PREFIX),
 			&prefix_key,
 		)
 		.filter_map(move |(remaining_key, value)| {
