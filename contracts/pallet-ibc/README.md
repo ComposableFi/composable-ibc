@@ -40,6 +40,18 @@ impl pallet_ibc::Config for Runtime {
 	type RelayChain = RelayChainId;
 	type AdminOrigin = EnsureRoot<AccountId>;
 }
+
+construct_runtime!(
+	pub enum Runtime where
+		Block = Block,
+		NodeBlock = opaque::Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+{
+        // This is the module index hyperspace has been preconfigured to use,
+        // if you want to use a different index or custom signed extrinsics
+        // you'll have to assemble your own instance of hyperspace.
+        Ibc: pallet_ibc = 9944,
+}
 ```
 
 ### Terminology
