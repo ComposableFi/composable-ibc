@@ -169,6 +169,7 @@ pub mod pallet {
     use core::time::Duration;
 
     use frame_support::traits::tokens::{AssetId, Balance};
+    use frame_support::traits::ReservableCurrency;
     use frame_support::{
         dispatch::DispatchResult,
         pallet_prelude::*,
@@ -194,6 +195,7 @@ pub mod pallet {
         runtime_interface::{self, SS58CodecError},
         IbcHandler, PacketInfo,
     };
+    use sp_runtime::traits::Saturating;
     use sp_runtime::{traits::IdentifyAccount, AccountId32};
     use sp_std::collections::btree_set::BTreeSet;
 
@@ -207,6 +209,7 @@ pub mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// Currency type of the runtime
         type Currency: Currency<Self::AccountId>;
+        type ReservableCurrency: ReservableCurrency<Self::AccountId>;
         type Balance: Balance;
         type AssetId: AssetId;
         /// Convert ibc denom to asset id and vice versa
@@ -238,6 +241,9 @@ pub mod pallet {
         type AdminOrigin: EnsureOrigin<Self::Origin>;
         /// Origin allowed to freeze light clients
         type SentryOrigin: EnsureOrigin<Self::Origin>;
+        /// Amount to be reserved for client and connection creation
+        #[pallet::constant]
+        type SpamProtectionDeposit: Get<Self::Balance>;
     }
 
     #[pallet::pallet]
@@ -422,6 +428,8 @@ pub mod pallet {
         },
         /// On recv packet was not processed successfully processes
         OnRecvPacketError { msg: Vec<u8> },
+        /// Client upgrade data has been set
+        ClientUpgradeSet,
     }
 
     /// Errors inform users that something went wrong.
@@ -512,25 +520,45 @@ pub mod pallet {
         AccountId32: From<T::AccountId>,
         u32: From<<T as frame_system::Config>::BlockNumber>,
         T::Balance: From<u128>,
+        <T::ReservableCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>
     {
         #[pallet::weight(crate::weight::deliver::< T > (messages))]
         #[frame_support::transactional]
         pub fn deliver(origin: OriginFor<T>, messages: Vec<Any>) -> DispatchResult {
-            let _sender = ensure_signed(origin)?;
+            use ibc::core::ics02_client::msgs::create_client::TYPE_URL as CREATE_CLIENT_TYPE_URL;
+            use ibc::core::ics03_connection::msgs::{
+                conn_open_init::TYPE_URL as CONN_OPEN_INIT_TYPE_URL,
+                conn_open_try::TYPE_URL as CONN_OPEN_TRY_TYPE_URL,
+            };
+            let sender = ensure_signed(origin)?;
 
-            // todo: reserve a fixed deposit for every client and connection created
+            // reserve a fixed deposit for every client and connection created
             // so people don't spam our chain with useless clients.
             let mut ctx = routing::Context::<T>::new();
+            let mut reserve_count = 0u128;
             let messages = messages
                 .into_iter()
                 .filter_map(|message| {
                     let type_url = String::from_utf8(message.type_url.clone()).ok()?;
+                    if matches!(
+                        type_url.as_str(),
+                        CREATE_CLIENT_TYPE_URL | CONN_OPEN_INIT_TYPE_URL | CONN_OPEN_TRY_TYPE_URL
+                    ) {
+                        reserve_count += 1;
+                    }
                     Some(Ok(ibc_proto::google::protobuf::Any {
                         type_url,
                         value: message.value,
                     }))
                 })
                 .collect::<Result<Vec<ibc_proto::google::protobuf::Any>, Error<T>>>()?;
+            let reserve_amt = T::SpamProtectionDeposit::get().saturating_mul(reserve_count.into());
+            if reserve_amt >= T::SpamProtectionDeposit::get() {
+                <T::ReservableCurrency as ReservableCurrency<T::AccountId>>::reserve(
+                    &sender,
+                    reserve_amt.into(),
+                )?;
+            }
             Self::execute_ibc_messages(&mut ctx, messages);
 
             Ok(())
@@ -680,7 +708,7 @@ pub mod pallet {
             sp_io::storage::set(CLIENT_STATE_UPGRADE_PATH, &params.client_state);
             sp_io::storage::set(CONSENSUS_STATE_UPGRADE_PATH, &params.consensus_state);
 
-            // todo: emit ibc.Event
+            Self::deposit_event(Event::<T>::ClientUpgradeSet.into());
 
             Ok(())
         }
