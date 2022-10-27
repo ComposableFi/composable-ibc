@@ -5,6 +5,9 @@ use frame_support::{
 	parameter_types,
 	traits::{ConstU64, Everything},
 };
+use frame_support::dispatch::DispatchResult;
+use frame_support::traits::fungibles::Inspect;
+use frame_support::traits::tokens::{DepositConsequence, WithdrawConsequence};
 use frame_system as system;
 use ibc_primitives::IbcAccount;
 use light_client_common::RelayChain;
@@ -16,18 +19,16 @@ use sp_core::{
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
-	DispatchError, MultiSignature,
+	MultiSignature,
 };
 use system::EnsureRoot;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 type Header = generic::Header<u32, BlakeTwo256>;
-use composable_traits::currency::{CurrencyFactory as CurrencyFactoryTrait, RangeId};
-use primitives::currency::{CurrencyId, ValidateCurrencyId};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 
-pub type AssetId = CurrencyId;
+pub type AssetId = u128;
 pub type Amount = i128;
 pub type Balance = u128;
 type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
@@ -60,11 +61,8 @@ frame_support::construct_runtime!(
 		Timestamp: pallet_timestamp,
 		ParachainInfo: parachain_info,
 		Ping: pallet_ibc_ping,
-		GovernanceRegistry: governance_registry,
-		AssetsRegistry: assets_registry,
-		CurrencyFactory: currency_factory,
 		Tokens: orml_tokens,
-		Assets: assets,
+		Assets: pallet_assets,
 		Ibc: pallet_ibc,
 	}
 );
@@ -110,50 +108,28 @@ impl pallet_ibc_ping::Config for Test {
 	type IbcHandler = Ibc;
 }
 
-impl composable_traits::defi::DeFiComposableConfig for Test {
-	type MayBeAssetId = AssetId;
-	type Balance = Balance;
-}
-
 parameter_types! {
-	pub const NativeAssetId: AssetId = CurrencyId::PICA;
+	pub const NativeAssetId: u128 = 1;
 }
 
-pub struct CurrencyIdGenerator;
-
-impl CurrencyFactoryTrait for CurrencyIdGenerator {
-	type AssetId = AssetId;
-	type Balance = Balance;
-
-	fn create(_: RangeId, _: Self::Balance) -> Result<Self::AssetId, sp_runtime::DispatchError> {
-		Ok(1.into())
-	}
-
-	fn protocol_asset_id_to_unique_asset_id(
-		_protocol_asset_id: u32,
-		_range_id: RangeId,
-	) -> Result<Self::AssetId, DispatchError> {
-		Ok(1.into())
-	}
-
-	fn unique_asset_id_to_protocol_asset_id(_unique_asset_id: Self::AssetId) -> u32 {
-		1
-	}
-}
 
 pub type Balances = orml_tokens::CurrencyAdapter<Test, NativeAssetId>;
 
-impl assets::Config for Test {
+impl pallet_assets::Config for Test {
 	type AssetId = AssetId;
 	type Balance = Balance;
-	type NativeAssetId = NativeAssetId;
-	type GenerateCurrencyId = CurrencyIdGenerator;
-	type NativeCurrency = Balances;
-	type MultiCurrency = Tokens;
-	type GovernanceRegistry = GovernanceRegistry;
-	type CurrencyValidator = ValidateCurrencyId;
 	type WeightInfo = ();
-	type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+	type Event = Event;
+	type Currency = Balances;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type AssetDeposit = ();
+	type AssetAccountDeposit = ();
+	type MetadataDepositBase = ();
+	type MetadataDepositPerByte = ();
+	type ApprovalDeposit = ();
+	type StringLimit = ();
+	type Freezer = ();
+	type Extra = ();
 }
 
 parameter_types! {
@@ -185,48 +161,24 @@ impl orml_tokens::Config for Test {
 	type OnNewTokenAccount = ();
 }
 
-impl governance_registry::Config for Test {
-	type AssetId = AssetId;
-	type WeightInfo = ();
-	type Event = Event;
-}
-
-impl currency_factory::Config for Test {
-	type Event = Event;
-	type AssetId = AssetId;
-	type AddOrigin = EnsureRoot<AccountId>;
-	type WeightInfo = ();
-	type Balance = Balance;
-}
-
-impl assets_registry::Config for Test {
-	type Event = Event;
-	type LocalAssetId = AssetId;
-	type CurrencyFactory = CurrencyFactory;
-	type ForeignAssetId = composable_traits::xcm::assets::XcmAssetLocation;
-	type UpdateAssetRegistryOrigin = EnsureRoot<AccountId>;
-	type ParachainOrGovernanceOrigin = EnsureRoot<AccountId>;
-	type Balance = Balance;
-	type WeightInfo = ();
-}
-
 impl pallet_ibc::Config for Test {
 	type TimeProvider = Timestamp;
 	type Event = Event;
-	const INDEXING_PREFIX: &'static [u8] = b"ibc/";
-	const PALLET_PREFIX: &'static [u8] = b"ibc/";
 	const PALLET_PREFIX: &'static [u8] = b"ibc/";
 	const LIGHT_CLIENT_PROTOCOL: crate::LightClientProtocol = crate::LightClientProtocol::Beefy;
 	type Currency = Balances;
 	type ExpectedBlockTime = ExpectedBlockTime;
 	type MultiCurrency = Assets;
-	type CurrencyFactory = CurrencyFactory;
-	type AccountIdConversion = IbcAccount;
-	type AssetRegistry = AssetsRegistry;
+	type AccountIdConversion = IbcAccount<AccountId>;
 	type WeightInfo = ();
 	type AdminOrigin = frame_system::EnsureRoot<AccountId>;
 	type ParaId = ParachainId;
 	type RelayChain = RelayChainId;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type IdentifyAssetId = ();
+	type Create = AssetCreator<Self>;
+	type SentryOrigin = EnsureRoot<AccountId>;
 }
 
 impl pallet_timestamp::Config for Test {
@@ -248,4 +200,61 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
 	register_offchain_ext(&mut ext);
 	ext
+}
+
+impl<T:Config> DenomToAssetId<T> for ()
+	where T::AssetId: From<u128>
+{
+	fn to_asset_id(denom: &String) -> Option<T::AssetId> {
+		Some(2u128.into())
+	}
+
+	fn to_denom(id: T::AssetId) -> Option<String> {
+		None
+	}
+}
+
+pub struct AssetCreator<T: Config>(PhantomData<T>);
+
+impl<T: Config> Inspect<T::AccountId> for AssetCreator<T> {
+	type AssetId = T::AssetId;
+	type Balance = T::Balance;
+
+	fn total_issuance(asset: Self::AssetId) -> Self::Balance {
+		todo!()
+	}
+
+	fn minimum_balance(asset: Self::AssetId) -> Self::Balance {
+		todo!()
+	}
+
+	fn balance(asset: Self::AssetId, who: &T::AccountId) -> Self::Balance {
+		todo!()
+	}
+
+	fn reducible_balance(asset: Self::AssetId, who: &T::AccountId, keep_alive: bool) -> Self::Balance {
+		todo!()
+	}
+
+	fn can_deposit(asset: Self::AssetId, who: &T::AccountId, amount: Self::Balance, mint: bool) -> DepositConsequence {
+		todo!()
+	}
+
+	fn can_withdraw(asset: Self::AssetId, who: &T::AccountId, amount: Self::Balance) -> WithdrawConsequence<Self::Balance> {
+		todo!()
+	}
+}
+
+impl<T: Config> Create<T::AccountId> for AssetCreator<T> {
+	fn create(_id: Self::AssetId, _admin: T::AccountId, _is_sufficient: bool, _min_balance: Self::Balance) -> DispatchResult {
+		Ok(())
+	}
+}
+
+impl<T: Config> CreateAsset<T> for AssetCreator<T>
+where T::AssetId: From<u128>
+{
+	fn create_asset(_denom: &String) -> Result<T::AssetId, Error<T>> {
+		Ok(2u128.into())
+	}
 }

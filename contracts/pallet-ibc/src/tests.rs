@@ -40,7 +40,6 @@ use ibc::{
 };
 use ibc_primitives::{get_channel_escrow_address, IbcHandler};
 use pallet_ibc_ping::SendPingParams;
-use primitives::currency::CurrencyId;
 use sp_core::Pair;
 use sp_runtime::{traits::IdentifyAccount, AccountId32};
 use std::str::FromStr;
@@ -169,7 +168,8 @@ fn should_send_ping_packet() {
 	// 	assert_eq!(offchain_packet.len(), 1);
 	// })
 }
-
+const PICA: u128 = 1;
+const MILLIS: u128 = 1000000;
 #[test]
 fn send_transfer() {
 	let mut ext = new_test_ext();
@@ -180,10 +180,10 @@ fn send_transfer() {
 		let ss58_address = String::from_utf8(raw_user).unwrap();
 		setup_client_and_consensus_state(PortId::transfer());
 
-		let balance = 100000 * CurrencyId::milli::<u128>();
+		let balance = 100000 * MILLIS;
 		<<Test as Config>::MultiCurrency as Mutate<
 			<Test as frame_system::Config>::AccountId,
-		>>::mint_into(CurrencyId::PICA, &AccountId32::new([0; 32]), balance)
+		>>::mint_into(PICA, &AccountId32::new([0; 32]), balance)
 		.unwrap();
 
 		Ibc::set_params(Origin::root(), PalletParams { send_enabled: true, receive_enabled: true })
@@ -198,7 +198,7 @@ fn send_transfer() {
 				source_channel: 0,
 				timeout,
 			},
-			CurrencyId::PICA,
+			PICA,
 			balance,
 		)
 		.unwrap();
@@ -219,7 +219,7 @@ fn on_deliver_ics20_recv_packet() {
 		setup_client_and_consensus_state(PortId::transfer());
 
 		let channel_id = ChannelId::new(0);
-		let balance = 100000 * CurrencyId::milli::<u128>();
+		let balance = 100000 * MILLIS;
 
 		// We are simulating a transfer back to the source chain
 
@@ -235,14 +235,14 @@ fn on_deliver_ics20_recv_packet() {
 		// Endow escrow address with tokens
 		<<Test as Config>::MultiCurrency as Mutate<
 			<Test as frame_system::Config>::AccountId,
-		>>::mint_into(CurrencyId::PICA, &channel_escrow_address, balance)
+		>>::mint_into(PICA, &channel_escrow_address, balance)
 		.unwrap();
 
 		Ibc::set_params(Origin::root(), PalletParams { send_enabled: true, receive_enabled: true })
 			.unwrap();
 
 		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
-		let amt = 1000 * CurrencyId::milli::<u128>();
+		let amt = 1000 * MILLIS;
 		println!("Transferred Amount {}", amt);
 		let coin = Coin {
 			denom: prefixed_denom,
@@ -284,12 +284,12 @@ fn on_deliver_ics20_recv_packet() {
 
 		let msg = Any { type_url: msg.type_url().as_bytes().to_vec(), value: msg.encode_vec() };
 
-		let account_data = Tokens::accounts(AccountId32::new(pair.public().0), CurrencyId::PICA);
+		let account_data = Tokens::accounts(AccountId32::new(pair.public().0), PICA);
 		// Assert account balance before transfer
 		assert_eq!(account_data.free, 0);
 		Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
 
-		let account_data = Tokens::accounts(AccountId32::new(pair.public().0), CurrencyId::PICA);
+		let account_data = Tokens::accounts(AccountId32::new(pair.public().0), PICA);
 		assert_eq!(account_data.free, amt)
 	})
 }
