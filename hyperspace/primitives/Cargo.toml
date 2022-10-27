@@ -21,8 +21,8 @@ subxt = { git = "https://github.com/paritytech/subxt", rev = "51179a8b72472d0b43
 # ibc
 ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto" }
-pallet-ibc = { path = "../../../parachain/frame/ibc" }
-ibc-rpc = { path = "../../../parachain/frame/ibc/rpc" }
+pallet-ibc = { path = "../../contracts/pallet-ibc" }
+ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 
 [features]
 testing = []

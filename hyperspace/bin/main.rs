@@ -64,15 +64,16 @@ impl Cmd {
 		let any_chain_a = config.chain_a.into_client().await?;
 		let any_chain_b = config.chain_b.into_client().await?;
 
-		let registry =
-			Registry::new_custom(None, None).expect("this can only fail if the prefix is empty");
-		let addr = config.core.prometheus_endpoint.parse().unwrap();
-		let metrics_a = Metrics::register(any_chain_a.name(), &registry)?;
-		let metrics_b = Metrics::register(any_chain_b.name(), &registry)?;
-		let mut metrics_handler_a = MetricsHandler::new(registry.clone(), metrics_a);
-		let mut metrics_handler_b = MetricsHandler::new(registry.clone(), metrics_b);
-		metrics_handler_a.link_with_counterparty(&mut metrics_handler_b);
-		tokio::spawn(init_prometheus(addr, registry.clone()));
+		if let Some(addr) = config.core.prometheus_endpoint.map(String::parse) {
+			let registry =
+				Registry::new_custom(None, None).expect("this can only fail if the prefix is empty");
+			let metrics_a = Metrics::register(any_chain_a.name(), &registry)?;
+			let metrics_b = Metrics::register(any_chain_b.name(), &registry)?;
+			let mut metrics_handler_a = MetricsHandler::new(registry.clone(), metrics_a);
+			let mut metrics_handler_b = MetricsHandler::new(registry.clone(), metrics_b);
+			metrics_handler_a.link_with_counterparty(&mut metrics_handler_b);
+			tokio::spawn(init_prometheus(addr, registry.clone()));
+		}
 
 		hyperspace::relay(
 			any_chain_a,

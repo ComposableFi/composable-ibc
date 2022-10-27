@@ -35,12 +35,12 @@ prometheus = { version = "0.13.0", default-features = false }
 ibc = { path = "../ibc/modules", features = [] }
 ibc-proto = { path = "../ibc/proto" }
 tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8" }
-ibc-rpc = { path = "../../parachain/frame/ibc/rpc" }
+ibc-rpc = { path = "../contracts/pallet-ibc/rpc" }
 
 ics11-beefy = { path = "../light-clients/ics11-beefy" }
 ics13-near = { path = "../light-clients/ics13-near" }
 light-client-common = { path = "../light-clients/common" }
-pallet-ibc = { path = "../../parachain/frame/ibc" }
+pallet-ibc = { path = "../contracts/pallet-ibc" }
 ics10-grandpa = { path = "../light-clients/ics10-grandpa" }
 
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
@@ -62,8 +62,8 @@ state-machine = { package = "sp-state-machine", git = "https://github.com/parity
 sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 
 # composable
-#comosable-primitives = { package = "primitives",  path = "../../parachain/frame/ibc" }
-#common = { path = "../../parachain/frame/ibc" }
+#comosable-primitives = { package = "primitives",  path = "../contracts/pallet-ibc" }
+#common = { path = "../contracts/pallet-ibc" }
 
 [features]
 parachain = ["dep:parachain", "subxt"]

@@ -78,7 +78,7 @@ pub enum AnyConfig {
 
 #[derive(Deserialize)]
 pub struct CoreConfig {
-	pub prometheus_endpoint: String,
+	pub prometheus_endpoint: Option<String>,
 }
 
 #[derive(Clone)]

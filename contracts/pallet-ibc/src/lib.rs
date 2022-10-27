@@ -161,11 +161,6 @@ pub use weight::WeightInfo;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use composable_traits::{
-		currency::CurrencyFactory,
-		defi::DeFiComposableConfig,
-		xcm::assets::{RemoteAssetRegistryInspect, RemoteAssetRegistryMutate, XcmAssetLocation},
-	};
 
 	use core::time::Duration;
 
@@ -204,8 +199,6 @@ pub mod pallet {
 		frame_system::Config
 		+ pallet_ibc_ping::Config
 		+ parachain_info::Config
-		+ DeFiComposableConfig
-		+ assets::Config
 		+ core::fmt::Debug
 	{
 		type TimeProvider: UnixTime;

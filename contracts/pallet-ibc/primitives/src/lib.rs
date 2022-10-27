@@ -489,6 +489,7 @@ pub fn get_channel_escrow_address(
 	hex_string.parse::<Signer>().map_err(Ics20Error::signer)
 }
 
+// todo: why do we need this?
 #[derive(Clone)]
 pub struct IbcAccount(AccountId);
 

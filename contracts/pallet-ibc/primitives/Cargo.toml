@@ -25,11 +25,9 @@ sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 xcm = { default-features = false, git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.27" }
 
-composable-traits = { default-features = false, path = "../../composable-traits" }
-common = {default-features = false, path = "../../../runtime/common"}
 
 [dependencies.ibc]
-path = "../../../../centauri/ibc/modules"
+path = "../../../ibc/modules"
 default-features = false
 
 [dependencies.codec]
@@ -55,10 +53,8 @@ std = [
   "sha3/std",
   "ripemd/std",
   "frame-support/std",
-  "composable-traits/std",
   "xcm/std",
   "hex/std",
-  "common/std"
 ]
 mocks = []
 runtime-benchmarks = []

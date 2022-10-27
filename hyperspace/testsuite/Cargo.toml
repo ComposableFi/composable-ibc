@@ -2,7 +2,10 @@
 name = "hyperspace-testsuite"
 version = "0.1.0"
 edition = "2021"
-authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <david.salami@gmail.com>"]
+authors = [
+    "Seun Lanlege <seunlanlege@gmail.com>",
+    "David Salami <david.salami@gmail.com>",
+]
 
 [dependencies]
 tokio = { version = "1.19.2", features = ["macros", "sync", "time"] }
@@ -16,7 +19,7 @@ tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev 
 
 hyperspace = { path = "../", features = ["testing"] }
 hyperspace-primitives = { path = "../primitives", features = ["testing"] }
-pallet-ibc = { path = "../../../parachain/frame/ibc" }
+pallet-ibc = { path = "../../contracts/pallet-ibc" }
 
 [dev-dependencies]
 parachain = { path = "../parachain", package = "hyperspace-parachain", features = ["testing"] }
