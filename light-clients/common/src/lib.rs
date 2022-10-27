@@ -228,7 +228,7 @@ where
 
 	let earliest_height = processed_height.add(delay_period_blocks);
 	if current_height < earliest_height {
-		return Err(anyhow!("Not enough blocks elapsed, current height: {current_height}, earliest height: {earliest_height}"))
+		return Err(anyhow!("Not enough blocks elapsed, current height: {current_height}, earliest height: {earliest_height}"));
 	}
 
 	Ok(())

@@ -28,8 +28,9 @@ impl From<RoutingError> for IbcError {
 				IbcError::Ics02Client { message: format!("{:?}", e).as_bytes().to_vec() },
 			ErrorDetail::Ics04Channel(e) =>
 				IbcError::Ics04Channel { message: format!("{:?}", e).as_bytes().to_vec() },
-			ErrorDetail::Ics20FungibleTokenTransfer(e) =>
-				IbcError::Ics20FungibleTokenTransfer { message: format!("{:?}", e).as_bytes().to_vec() },
+			ErrorDetail::Ics20FungibleTokenTransfer(e) => IbcError::Ics20FungibleTokenTransfer {
+				message: format!("{:?}", e).as_bytes().to_vec(),
+			},
 			ErrorDetail::UnknownMessageTypeUrl(e) =>
 				IbcError::UnknownMessageTypeUrl { message: format!("{:?}", e).as_bytes().to_vec() },
 			ErrorDetail::MalformedMessageBytes(e) =>

@@ -9,8 +9,7 @@ use std::{path::PathBuf, str::FromStr, time::Duration};
 mod chain;
 
 use chain::Config;
-use ibc::core::ics04_channel::channel::Order;
-use ibc::core::ics24_host::identifier::PortId;
+use ibc::core::{ics04_channel::channel::Order, ics24_host::identifier::PortId};
 use primitives::{
 	utils::{create_channel, create_clients, create_connection},
 	IbcProvider,
@@ -65,8 +64,8 @@ impl Cmd {
 		let any_chain_b = config.chain_b.into_client().await?;
 
 		if let Some(addr) = config.core.prometheus_endpoint.map(String::parse) {
-			let registry =
-				Registry::new_custom(None, None).expect("this can only fail if the prefix is empty");
+			let registry = Registry::new_custom(None, None)
+				.expect("this can only fail if the prefix is empty");
 			let metrics_a = Metrics::register(any_chain_a.name(), &registry)?;
 			let metrics_b = Metrics::register(any_chain_b.name(), &registry)?;
 			let mut metrics_handler_a = MetricsHandler::new(registry.clone(), metrics_a);

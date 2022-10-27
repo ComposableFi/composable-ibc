@@ -56,18 +56,15 @@ impl<T: Config> PacketCommitment<T> {
 	pub fn iter() -> impl Iterator<Item = ((PortId, ChannelId, Sequence), Vec<u8>)> {
 		let prefix = "commitments/ports/".to_string();
 		let prefix_key = apply_prefix(T::PALLET_PREFIX, vec![prefix.clone()]);
-		ChildTriePrefixIterator::with_prefix(
-			&ChildInfo::new_default(T::PALLET_PREFIX),
-			&prefix_key,
-		)
-		.filter_map(move |(remaining_key, value)| {
-			let path = format!("{prefix}{}", String::from_utf8(remaining_key).ok()?);
-			if let Path::Commitments(CommitmentsPath { port_id, channel_id, sequence }) =
-				Path::from_str(&path).ok()?
-			{
-				return Some(((port_id, channel_id, sequence), value))
-			}
-			None
-		})
+		ChildTriePrefixIterator::with_prefix(&ChildInfo::new_default(T::PALLET_PREFIX), &prefix_key)
+			.filter_map(move |(remaining_key, value)| {
+				let path = format!("{prefix}{}", String::from_utf8(remaining_key).ok()?);
+				if let Path::Commitments(CommitmentsPath { port_id, channel_id, sequence }) =
+					Path::from_str(&path).ok()?
+				{
+					return Some(((port_id, channel_id, sequence), value))
+				}
+				None
+			})
 	}
 }
