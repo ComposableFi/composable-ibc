@@ -135,7 +135,7 @@ parameter_types! {
     pub const MaxLocks: u32 = 256;
     pub static ParachainId: ParaId = ParaId::from(2087);
     pub static RelayChainId: RelayChain = RelayChain::Rococo;
-    pub const SpamProtectionDeposit: u128 = 100;
+    pub const SpamProtectionDeposit: u128 = 0;
 }
 
 parameter_type_with_key! {

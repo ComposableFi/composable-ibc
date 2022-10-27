@@ -181,6 +181,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     pub use ibc::signer::Signer;
 
+    use ibc::core::ics02_client::context::{ClientKeeper, ClientReader};
     use ibc::{
         applications::transfer::{
             is_sender_chain_source, msgs::transfer::MsgTransfer, Amount, PrefixedCoin,
@@ -191,10 +192,11 @@ pub mod pallet {
         Height,
     };
     use ibc_primitives::{
-        get_channel_escrow_address,
+        client_id_from_bytes, get_channel_escrow_address,
         runtime_interface::{self, SS58CodecError},
         IbcHandler, PacketInfo,
     };
+    use light_clients::AnyClientState;
     use sp_runtime::traits::Saturating;
     use sp_runtime::{traits::IdentifyAccount, AccountId32};
     use sp_std::collections::btree_set::BTreeSet;
@@ -356,18 +358,6 @@ pub mod pallet {
     pub type Params<T: Config> = StorageValue<_, PalletParams, ValueQuery>;
 
     #[pallet::storage]
-    /// Map of asset id to ibc denom pairs (T::AssetId, Vec<u8>)
-    /// ibc denoms represented as utf8 string bytes
-    pub type IbcAssetIds<T: Config> =
-        CountedStorageMap<_, Twox64Concat, T::AssetId, Vec<u8>, OptionQuery>;
-
-    #[pallet::storage]
-    /// Map of asset id to ibc denom pairs (Vec<u8>, T::AssetId)
-    /// ibc denoms represented as utf8 string bytes
-    pub type IbcDenoms<T: Config> =
-        CountedStorageMap<_, Twox64Concat, Vec<u8>, T::AssetId, OptionQuery>;
-
-    #[pallet::storage]
     #[allow(clippy::disallowed_types)]
     /// ChannelIds open from this module
     pub type ChannelIds<T: Config> = StorageValue<_, Vec<Vec<u8>>, ValueQuery>;
@@ -428,8 +418,14 @@ pub mod pallet {
         },
         /// On recv packet was not processed successfully processes
         OnRecvPacketError { msg: Vec<u8> },
-        /// Client upgrade data has been set
+        /// Client upgrade path has been set
         ClientUpgradeSet,
+        /// Client has been frozen
+        ClientFrozen {
+            client_id: Vec<u8>,
+            height: u64,
+            revision_number: u64,
+        },
     }
 
     /// Errors inform users that something went wrong.
@@ -495,6 +491,8 @@ pub mod pallet {
         WriteAckError,
         /// Client update time and height not found
         ClientUpdateNotFound,
+        /// Error Freezing client
+        ClientFreezeFailed,
     }
 
     #[pallet::hooks]
@@ -520,7 +518,7 @@ pub mod pallet {
         AccountId32: From<T::AccountId>,
         u32: From<<T as frame_system::Config>::BlockNumber>,
         T::Balance: From<u128>,
-        <T::ReservableCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>
+        <T::ReservableCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
     {
         #[pallet::weight(crate::weight::deliver::< T > (messages))]
         #[frame_support::transactional]
@@ -573,8 +571,6 @@ pub mod pallet {
             amount: T::Balance,
         ) -> DispatchResult {
             let origin = ensure_signed(origin)?;
-            // Check if it's a local asset id, native asset or an ibc asset id
-            // If native or local asset, get the string representation of the asset
             let denom =
                 T::IdentifyAssetId::to_denom(asset_id).ok_or_else(|| Error::<T>::InvalidAssetId)?;
 
@@ -713,7 +709,65 @@ pub mod pallet {
             Ok(())
         }
 
-        // todo: implement sentry extrinsic for freezing light clients.
+        /// Freeze a client at a specific height
+        #[pallet::weight(0)]
+        pub fn freeze_client(
+            origin: OriginFor<T>,
+            client_id: Vec<u8>,
+            height: u64,
+        ) -> DispatchResult {
+            use ibc::core::ics02_client::client_state::ClientState;
+            <T as Config>::SentryOrigin::ensure_origin(origin)?;
+            let client_id =
+                client_id_from_bytes(client_id).map_err(|_| Error::<T>::DecodingError)?;
+            let mut ctx = routing::Context::<T>::default();
+            let client_state = ctx
+                .client_state(&client_id)
+                .map_err(|_| Error::<T>::ClientStateNotFound)?;
+            let frozen_state = match client_state {
+                AnyClientState::Grandpa(grandpa) => {
+                    let latest_height = grandpa.latest_height();
+                    AnyClientState::wrap(
+                        &grandpa
+                            .with_frozen_height(Height::new(latest_height.revision_number, height))
+                            .map_err(|_| Error::<T>::ClientFreezeFailed)?,
+                    )
+                }
+                AnyClientState::Beefy(beefy) => {
+                    let latest_height = beefy.latest_height();
+                    AnyClientState::wrap(
+                        &beefy
+                            .with_frozen_height(Height::new(latest_height.revision_number, height))
+                            .map_err(|_| Error::<T>::ClientFreezeFailed)?,
+                    )
+                }
+                AnyClientState::Tendermint(tm) => {
+                    let latest_height = tm.latest_height();
+                    AnyClientState::wrap(
+                        &tm.with_frozen_height(Height::new(latest_height.revision_number, height))
+                            .map_err(|_| Error::<T>::ClientFreezeFailed)?,
+                    )
+                }
+                #[cfg(test)]
+                AnyClientState::Mock(mut ms) => {
+                    ms.frozen_height =
+                        Some(Height::new(ms.latest_height().revision_number, height));
+                    AnyClientState::wrap(&ms)
+                }
+            }
+            .ok_or_else(|| Error::<T>::ClientFreezeFailed)?;
+            let revision_number = frozen_state.latest_height().revision_number;
+            ctx.store_client_state(client_id.clone(), frozen_state)
+                .map_err(|_| Error::<T>::ClientFreezeFailed)?;
+
+            Self::deposit_event(Event::<T>::ClientFrozen {
+                client_id: client_id.as_bytes().to_vec(),
+                height,
+                revision_number,
+            });
+
+            Ok(())
+        }
     }
 }
 
@@ -723,6 +777,17 @@ pub trait DenomToAssetId<T: Config> {
     fn to_asset_id(denom: &String) -> Option<T::AssetId>;
     /// Return full denom for given asset id
     fn to_denom(id: T::AssetId) -> Option<String>;
+    /// Returns a tuple
+    /// The first item of the tuple is a vector of all ibc denoms with an upper bound of limit on the length of the vector.
+    /// The second item is the total count of ibc assets on chain.
+    /// The third item is the next asset id after the last item in the list.
+    /// Only one of start_key or offset should be used
+    /// start_key takes precedence over offset
+    fn ibc_assets(
+        start_key: Option<T::AssetId>,
+        offset: Option<u32>,
+        limit: u64,
+    ) -> (Vec<Vec<u8>>, u64, Option<T::AssetId>);
 }
 
 pub trait CreateAsset<T: Config>: Create<T::AccountId> {

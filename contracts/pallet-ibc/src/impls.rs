@@ -706,11 +706,6 @@ impl<T: Config> Pallet<T> {
         Params::<T>::get().receive_enabled
     }
 
-    pub fn register_asset_id(asset_id: T::AssetId, denom: Vec<u8>) {
-        IbcAssetIds::<T>::insert(asset_id, denom.clone());
-        IbcDenoms::<T>::insert(denom, asset_id);
-    }
-
     pub fn remove_channel_escrow_address(
         port_id: &PortId,
         channel_id: ChannelId,
@@ -745,38 +740,24 @@ impl<T: Config> Pallet<T> {
     pub fn get_denom_trace(
         asset_id: T::AssetId,
     ) -> Option<ibc_primitives::QueryDenomTraceResponse> {
-        IbcAssetIds::<T>::get(asset_id)
-            .map(|denom| ibc_primitives::QueryDenomTraceResponse { denom })
+        T::IdentifyAssetId::to_denom(asset_id).map(|denom| {
+            ibc_primitives::QueryDenomTraceResponse {
+                denom: denom.as_bytes().to_vec(),
+            }
+        })
     }
 
     pub fn get_denom_traces(
         key: Option<T::AssetId>,
         offset: Option<u32>,
-        mut limit: u64,
+        limit: u64,
         count_total: bool,
     ) -> ibc_primitives::QueryDenomTracesResponse {
-        let mut iterator = if let Some(asset_id) = key {
-            let raw_key = asset_id.encode();
-            IbcAssetIds::<T>::iter_from(raw_key).skip(0)
-        } else if let Some(offset) = offset {
-            IbcAssetIds::<T>::iter().skip(offset as usize)
-        } else {
-            IbcAssetIds::<T>::iter().skip(0)
-        };
-
-        let mut denoms = vec![];
-        for (_, denom) in iterator.by_ref() {
-            denoms.push(denom);
-            limit -= 1;
-            if limit == 0 {
-                break;
-            }
-        }
-
+        let (denoms, count, next_key) = T::IdentifyAssetId::ibc_assets(key, offset, limit);
         ibc_primitives::QueryDenomTracesResponse {
             denoms,
-            total: count_total.then(|| IbcAssetIds::<T>::count() as u64),
-            next_key: iterator.next().map(|(key, _)| key.encode()),
+            total: count_total.then(|| count),
+            next_key: next_key.map(|key| key.encode()),
         }
     }
 }
