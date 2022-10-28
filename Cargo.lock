@@ -7334,6 +7334,7 @@ dependencies = [
  "pallet-balances",
  "pallet-collator-selection",
  "pallet-ibc",
+ "pallet-ibc-ping",
  "pallet-session",
  "pallet-sudo",
  "pallet-timestamp",

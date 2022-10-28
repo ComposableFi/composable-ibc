@@ -25,6 +25,7 @@ smallvec = "1.9.0"
 # Local
 ibc = { path = "../../../ibc/modules", default-features = false }
 pallet-ibc = { path = "../../../contracts/pallet-ibc", default-features = false }
+pallet-ibc-ping = { path = "../../../contracts/pallet-ibc/ping", default-features = false }
 ibc-primitives = { path = "../../../contracts/pallet-ibc/primitives", default-features = false }
 ibc-runtime-api = { path = "../../../contracts/pallet-ibc/runtime-api", default-features = false }
 
@@ -112,6 +113,7 @@ std = [
 	"pallet-sudo/std",
 	"ibc/std",
 	"pallet-ibc/std",
+	"pallet-ibc-ping/std",
 	"ibc-primitives/std",
 	"ibc-runtime-api/std",
 	"orml-traits/std",
