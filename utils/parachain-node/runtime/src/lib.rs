@@ -8,13 +8,13 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 extern crate alloc;
 
-use alloc::{format, string::String};
+use alloc::{format, string::{String, ToString}};
 
 mod weights;
 pub mod xcm_config;
 
 use codec::Decode;
-use core::borrow::Borrow;
+use core::{borrow::Borrow, str::FromStr};
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use ibc::core::{
 	ics24_host::identifier::PortId,
@@ -50,7 +50,7 @@ use frame_system::{
 	EnsureRoot,
 };
 use orml_traits::parameter_type_with_key;
-use pallet_ibc::{DenomToAssetId};
+use pallet_ibc::DenomToAssetId;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
@@ -494,6 +494,11 @@ impl orml_tokens::Config for Runtime {
 	type OnNewTokenAccount = ();
 }
 
+impl pallet_ibc_ping::Config for Runtime {
+	type Event = Event;
+	type IbcHandler = Ibc;
+}
+
 parameter_types! {
 	pub const ExpectedBlockTime: u64 = MILLISECS_PER_BLOCK as u64;
 	pub const RelayChainId: RelayChain = RelayChain::Rococo;
@@ -502,19 +507,27 @@ parameter_types! {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Default)]
-pub struct Router;
+pub struct Router {
+	pallet_ibc_ping: pallet_ibc_ping::IbcModule<Runtime>,
+}
 
 impl ModuleRouter for Router {
-	fn get_route_mut(&mut self, _module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module> {
-		None
+	fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module> {
+		match module_id.borrow().to_string().as_str() {
+			pallet_ibc_ping::MODULE_ID => Some(&mut self.pallet_ibc_ping),
+			_ => None,
+		}
 	}
 
-	fn has_route(_module_id: &impl Borrow<ModuleId>) -> bool {
-		false
+	fn has_route(module_id: &impl Borrow<ModuleId>) -> bool {
+		matches!(module_id.borrow().to_string().as_str(), pallet_ibc_ping::MODULE_ID)
 	}
 
-	fn lookup_module_by_port(_port_id: &PortId) -> Option<ModuleId> {
-		None
+	fn lookup_module_by_port(port_id: &PortId) -> Option<ModuleId> {
+		match port_id.as_str() {
+			pallet_ibc_ping::PORT_ID => ModuleId::from_str(pallet_ibc_ping::MODULE_ID).ok(),
+			_ => None,
+		}
 	}
 }
 
@@ -598,7 +611,8 @@ construct_runtime!(
 		DmpQueue: cumulus_pallet_dmp_queue = 33,
 
 		Tokens: orml_tokens = 34,
-		// Pallet-ibc, should be the last module in your index
+		IbcPing: pallet_ibc_ping = 35,
+		// Pallet-ibc, should be the last module in your runtime
 		Ibc: pallet_ibc = 255,
 	}
 );
