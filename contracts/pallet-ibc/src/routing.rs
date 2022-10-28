@@ -59,7 +59,7 @@ where
 	fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module> {
 		// check if the user has defined any custom routes
 		if let Some(module) = self.sub_router.get_route_mut(module_id) {
-			return Some(module);
+			return Some(module)
 		}
 
 		match module_id.borrow().to_string().as_str() {
@@ -71,7 +71,7 @@ where
 	fn has_route(&self, module_id: &impl Borrow<ModuleId>) -> bool {
 		// check if the user has defined any custom routes
 		if T::Router::has_route(module_id) {
-			return true;
+			return true
 		}
 
 		matches!(module_id.borrow().to_string().as_str(), IBC_TRANSFER_MODULE_ID,)

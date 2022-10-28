@@ -8,7 +8,7 @@ use crate::{
 use core::time::Duration;
 use frame_support::{
 	assert_ok,
-	traits::{fungibles::{Inspect, Mutate}},
+	traits::fungibles::{Inspect, Mutate},
 };
 use ibc::{
 	applications::transfer::{packet::PacketData, Coin, PrefixedDenom, VERSION},

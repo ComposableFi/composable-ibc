@@ -1,11 +1,12 @@
 use crate::{self as pallet_ibc, routing::ModuleRouter};
 use cumulus_primitives_core::ParaId;
-use frame_support::traits::fungibles::metadata::Mutate;
-use frame_support::traits::fungibles::{Create, InspectMetadata};
 use frame_support::{
 	pallet_prelude::ConstU32,
 	parameter_types,
-	traits::{ConstU64, Everything},
+	traits::{
+		fungibles::{metadata::Mutate, Create, InspectMetadata},
+		ConstU64, Everything,
+	},
 };
 use frame_system as system;
 use ibc_primitives::IbcAccount;
@@ -271,10 +272,9 @@ impl ModuleRouter for Router {
 		port_id: &ibc::core::ics24_host::identifier::PortId,
 	) -> Option<ibc::core::ics26_routing::context::ModuleId> {
 		match port_id.as_str() {
-			pallet_ibc_ping::PORT_ID => {
+			pallet_ibc_ping::PORT_ID =>
 				ibc::core::ics26_routing::context::ModuleId::from_str(pallet_ibc_ping::MODULE_ID)
-					.ok()
-			},
+					.ok(),
 			_ => None,
 		}
 	}

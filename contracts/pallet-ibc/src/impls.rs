@@ -763,8 +763,8 @@ where
 				),
 			},
 		)?;
-		let timestamp = (consensus_state.timestamp()
-			+ Duration::from_nanos(data.timeout_timestamp_offset))
+		let timestamp = (consensus_state.timestamp() +
+			Duration::from_nanos(data.timeout_timestamp_offset))
 		.map_err(|_| IbcHandlerError::TimestampOrHeightError {
 			msg: Some("Failed to convert timeout timestamp".to_string()),
 		})?;

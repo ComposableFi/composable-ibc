@@ -2,7 +2,7 @@ use super::super::*;
 use crate::routing::Context;
 use frame_support::traits::{
 	fungibles::{Mutate, Transfer},
-	Currency, Get
+	Currency, Get,
 };
 use ibc::{
 	applications::transfer::{
@@ -50,7 +50,7 @@ impl<T: Config + Send + Sync> Ics20Keeper for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	<T as Config>::Balance: From<u128>,
-	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>
+	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 {
 	type AccountId = T::AccountIdConversion;
 }
@@ -59,7 +59,7 @@ impl<T: Config + Send + Sync> Ics20Context for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	<T as Config>::Balance: From<u128>,
-	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>
+	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 {
 	type AccountId = T::AccountIdConversion;
 }
@@ -69,7 +69,7 @@ where
 	T: Config + Send + Sync,
 	T::Balance: From<u128>,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>
+	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 {
 	type AccountId = T::AccountIdConversion;
 
