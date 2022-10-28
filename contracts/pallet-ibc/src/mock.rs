@@ -68,7 +68,7 @@ parameter_types! {
 	pub const BlockHashCount: u32 = 250;
 	pub const SS58Prefix: u8 = 49;
 	pub const ExpectedBlockTime: u64 = 1000;
-	pub const ExistentialDeposit: u64 = 10000;
+	pub const ExistentialDeposit: u128 = 10000;
 }
 
 impl system::Config for Test {
@@ -177,6 +177,7 @@ impl Config for Test {
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type SentryOrigin = EnsureRoot<AccountId>;
 	type SpamProtectionDeposit = SpamProtectionDeposit;
+	type ExistentialDeposit = ExistentialDeposit;
 }
 
 impl pallet_timestamp::Config for Test {

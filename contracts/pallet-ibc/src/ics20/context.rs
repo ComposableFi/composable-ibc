@@ -10,7 +10,7 @@ use ibc::{
 	core::ics24_host::identifier::{ChannelId, PortId},
 };
 use ibc_primitives::get_channel_escrow_address;
-use sp_runtime::traits::{IdentifyAccount, Zero};
+use sp_runtime::traits::{Get, IdentifyAccount, Zero};
 
 impl<T: Config + Send + Sync> Ics20Reader for Context<T>
 where
@@ -102,9 +102,9 @@ where
 		// asset before proceeding to mint
 		let asset_id = T::IbcDenomToAssetIdConversion::to_asset_id(&denom);
 
-		let metadata = <T::Fungibles as InspectMetadata<T::AccountId>>::name(&asset_id);
+		let decimals = <T::Fungibles as InspectMetadata<T::AccountId>>::decimals(&asset_id);
 
-		if metadata.is_empty() {
+		if decimals.is_zero() {
 			let asset_admin = AssetAdmin::<T>::get().ok_or_else(|| {
 				Ics20Error::implementation_specific("Cannot find aset admin account".to_string())
 			})?;
@@ -112,7 +112,7 @@ where
 				asset_id,
 				asset_admin,
 				true,
-				T::Balance::zero(),
+				T::ExistentialDeposit::get(),
 			)
 			.map_err(|_| {
 				Ics20Error::implementation_specific("Failed to create asset".to_string())
