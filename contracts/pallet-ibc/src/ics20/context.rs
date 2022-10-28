@@ -1,6 +1,6 @@
 use super::super::*;
 use crate::routing::Context;
-use frame_support::traits::fungibles::{InspectMetadata, Mutate, Transfer};
+use frame_support::traits::fungibles::{Mutate, Transfer};
 use ibc::{
 	applications::transfer::{
 		context::{BankKeeper, Ics20Context, Ics20Keeper, Ics20Reader},
@@ -10,7 +10,7 @@ use ibc::{
 	core::ics24_host::identifier::{ChannelId, PortId},
 };
 use ibc_primitives::get_channel_escrow_address;
-use sp_runtime::traits::{Get, IdentifyAccount, Zero};
+use sp_runtime::traits::IdentifyAccount;
 
 impl<T: Config + Send + Sync> Ics20Reader for Context<T>
 where
@@ -76,7 +76,8 @@ where
 		let amount: T::Balance = amt.amount.as_u256().low_u128().into();
 		let denom = amt.denom.to_string();
 		// Token should be registered already if sending an ibc asset
-		let asset_id = T::IbcDenomToAssetIdConversion::to_asset_id(&denom);
+		let (asset_id, ..) = T::IbcDenomToAssetIdConversion::to_asset_id(&denom)
+			.map_err(|_| Ics20Error::invalid_token())?;
 		<<T as Config>::Fungibles as Transfer<T::AccountId>>::transfer(
 			asset_id.into(),
 			&from.clone().into_account(),
@@ -98,25 +99,15 @@ where
 	) -> Result<(), Ics20Error> {
 		let amount: T::Balance = amt.amount.as_u256().low_u128().into();
 		let denom = amt.denom.to_string();
-		// Before minting we need to check if the asset has been registered if not we register the
-		// asset before proceeding to mint
-		let asset_id = T::IbcDenomToAssetIdConversion::to_asset_id(&denom);
-
-		let decimals = <T::Fungibles as InspectMetadata<T::AccountId>>::decimals(&asset_id);
-
-		if decimals.is_zero() {
-			let asset_admin = AssetAdmin::<T>::get().ok_or_else(|| {
-				Ics20Error::implementation_specific("Cannot find aset admin account".to_string())
+		// Find existing asset or create a new one
+		let (asset_id, asset) =
+			T::IbcDenomToAssetIdConversion::to_asset_id(&denom).map_err(|_| {
+				Ics20Error::implementation_specific("Failed to create or find asset".to_string())
 			})?;
-			<T::Fungibles as Create<T::AccountId>>::create(
-				asset_id,
-				asset_admin,
-				true,
-				T::ExistentialDeposit::get(),
-			)
-			.map_err(|_| {
-				Ics20Error::implementation_specific("Failed to create asset".to_string())
-			})?;
+
+		// Validate asset metadata
+		if !asset.is_valid() {
+			return Err(Ics20Error::invalid_token());
 		}
 
 		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
@@ -139,7 +130,8 @@ where
 		let amount: T::Balance = amt.amount.as_u256().low_u128().into();
 		let denom = amt.denom.to_string();
 		// Token should be registered already if burning a voucher
-		let asset_id = T::IbcDenomToAssetIdConversion::to_asset_id(&denom);
+		let (asset_id, ..) = T::IbcDenomToAssetIdConversion::to_asset_id(&denom)
+			.map_err(|_| Ics20Error::invalid_token())?;
 		<<T as Config>::Fungibles as Mutate<T::AccountId>>::burn_from(
 			asset_id.into(),
 			&account.clone().into_account(),

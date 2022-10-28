@@ -31,7 +31,6 @@ extern crate alloc;
 
 use codec::{Decode, Encode};
 use cumulus_primitives_core::ParaId;
-use frame_support::traits::fungibles::Create;
 use frame_system::ensure_signed;
 pub use pallet::*;
 use scale_info::{
@@ -170,7 +169,7 @@ pub mod pallet {
 		dispatch::DispatchResult,
 		pallet_prelude::*,
 		traits::{
-			fungibles::{Inspect, InspectMetadata, Mutate, Transfer},
+			fungibles::{Inspect, Mutate, Transfer},
 			tokens::{AssetId, Balance},
 			Currency, ReservableCurrency, UnixTime,
 		},
@@ -230,9 +229,7 @@ pub mod pallet {
 		/// MultiCurrency System
 		type Fungibles: Transfer<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
 			+ Mutate<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
-			+ Inspect<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
-			+ InspectMetadata<Self::AccountId>
-			+ Create<Self::AccountId>;
+			+ Inspect<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>;
 		/// Expected block time in milliseconds
 		#[pallet::constant]
 		type ExpectedBlockTime: Get<u64>;
@@ -251,10 +248,6 @@ pub mod pallet {
 		/// Amount to be reserved for client and connection creation
 		#[pallet::constant]
 		type SpamProtectionDeposit: Get<Self::Balance>;
-		/// Minimum amount for token
-		/// Should be Non zero
-		#[pallet::constant]
-		type ExistentialDeposit: Get<Self::Balance>;
 	}
 
 	#[pallet::pallet]
@@ -376,11 +369,6 @@ pub mod pallet {
 	/// Active Escrow addresses
 	pub type EscrowAddresses<T: Config> = StorageValue<_, BTreeSet<T::AccountId>, ValueQuery>;
 
-	#[pallet::storage]
-	#[allow(clippy::disallowed_types)]
-	/// Token Asset Admin
-	pub type AssetAdmin<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
-
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -393,7 +381,7 @@ pub mod pallet {
 			from: <T as frame_system::Config>::AccountId,
 			to: Vec<u8>,
 			ibc_denom: Vec<u8>,
-			local_asset_id: T::AssetId,
+			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
 		},
 		/// A channel has been opened
@@ -405,7 +393,7 @@ pub mod pallet {
 			from: Vec<u8>,
 			to: Vec<u8>,
 			ibc_denom: Vec<u8>,
-			local_asset_id: T::AssetId,
+			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
 		},
 		/// Ibc tokens have been received and minted
@@ -413,7 +401,7 @@ pub mod pallet {
 			from: Vec<u8>,
 			to: Vec<u8>,
 			ibc_denom: Vec<u8>,
-			local_asset_id: T::AssetId,
+			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
 		},
 		/// Ibc transfer failed, received an acknowledgement error, tokens have been refunded
@@ -421,7 +409,7 @@ pub mod pallet {
 			from: Vec<u8>,
 			to: Vec<u8>,
 			ibc_denom: Vec<u8>,
-			local_asset_id: T::AssetId,
+			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
 		},
 		/// On recv packet was not processed successfully processes
@@ -594,8 +582,9 @@ pub mod pallet {
 						})
 						.map_err(|_| Error::<T>::Utf8Error)?
 				},
-				MultiAddress::Raw(bytes) =>
-					String::from_utf8(bytes).map_err(|_| Error::<T>::Utf8Error)?,
+				MultiAddress::Raw(bytes) => {
+					String::from_utf8(bytes).map_err(|_| Error::<T>::Utf8Error)?
+				},
 			};
 			let denom = PrefixedDenom::from_str(&denom).map_err(|_| Error::<T>::InvalidIbcDenom)?;
 			let ibc_amount = Amount::from_str(&format!("{:?}", amount))
@@ -644,8 +633,7 @@ pub mod pallet {
 
 			if is_sender_chain_source(msg.source_port.clone(), msg.source_channel, &msg.token.denom)
 			{
-				// Store escrow address, so we can use this to identify accounts to keep alive when
-				// making transfers in callbacks Escrow addresses do not need to be kept alive
+				// Store escrow address
 				let escrow_address =
 					get_channel_escrow_address(&msg.source_port, msg.source_channel)
 						.map_err(|_| Error::<T>::ChannelEscrowAddress)?;
@@ -673,7 +661,9 @@ pub mod pallet {
 				amount,
 				local_asset_id: T::IbcDenomToAssetIdConversion::to_asset_id(
 					&coin.denom.to_string(),
-				),
+				)
+				.ok()
+				.map(|(asset_id, ..)| asset_id),
 				ibc_denom: coin.denom.to_string().as_bytes().to_vec(),
 			});
 			Ok(())
@@ -687,17 +677,6 @@ pub mod pallet {
 				send_enabled: params.send_enabled,
 				receive_enabled: params.receive_enabled,
 			});
-			Ok(())
-		}
-
-		#[pallet::weight(0)]
-		pub fn set_asset_admin(
-			origin: OriginFor<T>,
-			admin_account: T::AccountId,
-		) -> DispatchResult {
-			<T as Config>::AdminOrigin::ensure_origin(origin)?;
-			AssetAdmin::<T>::put(admin_account.clone());
-			Self::deposit_event(Event::<T>::AssetAdminUpdated { admin_account });
 			Ok(())
 		}
 
@@ -777,32 +756,30 @@ pub mod pallet {
 			Ok(())
 		}
 	}
+}
 
-	#[pallet::genesis_config]
-	pub struct GenesisConfig<T: Config> {
-		pub asset_admin: Option<T::AccountId>,
-	}
+#[derive(Clone, Encode, Decode, Eq, PartialEq, Default, RuntimeDebug, TypeInfo)]
+pub struct AssetMetadata {
+	/// The user friendly name of this asset.
+	pub name: Vec<u8>,
+	/// The ticker symbol for this asset
+	pub symbol: Vec<u8>,
+	/// The number of decimals this asset uses to represent one unit.
+	pub decimals: u8,
+}
 
-	#[cfg(feature = "std")]
-	impl<T: Config> Default for GenesisConfig<T> {
-		fn default() -> Self {
-			Self { asset_admin: None }
-		}
-	}
-
-	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
-		fn build(&self) {
-			if let Some(admin) = self.asset_admin.as_ref() {
-				AssetAdmin::<T>::put(admin.clone())
-			}
-		}
+impl AssetMetadata {
+	pub fn is_valid(&self) -> bool {
+		use sp_runtime::traits::Zero;
+		!self.name.is_empty() && !self.symbol.is_empty() && !self.decimals.is_zero()
 	}
 }
 
 pub trait DenomToAssetId<T: Config> {
 	/// Get the asset id for this ibc denom
-	fn to_asset_id(denom: &String) -> T::AssetId;
+	/// Should create the asset if does not exist
+	/// Asset metadata should be unchangeable
+	fn to_asset_id(denom: &String) -> Result<(T::AssetId, AssetMetadata), Error<T>>;
 	/// Return full denom for given asset id
 	fn to_denom(id: T::AssetId) -> Option<String>;
 	/// Returns a tuple
