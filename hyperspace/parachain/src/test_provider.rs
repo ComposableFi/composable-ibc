@@ -2,7 +2,6 @@ use crate::{
 	parachain::api, signer::ExtrinsicSigner, utils::unsafe_cast_to_jsonrpsee_client, Error,
 	ParachainClient,
 };
-use common::AccountId;
 use finality_grandpa::BlockNumberOps;
 use futures::{Stream, StreamExt};
 use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
@@ -76,7 +75,7 @@ where
 
 	pub async fn transfer_tokens(
 		&self,
-		params: TransferParams<AccountId>,
+		params: TransferParams<AccountId32>,
 		asset_id: u128,
 		amount: u128,
 	) -> Result<(), Error> {

@@ -562,7 +562,7 @@ impl Chain for AnyChain {
 
 #[cfg(any(test, feature = "testing"))]
 #[async_trait]
-impl<T: subxt::Config + Clone> primitives::TestProvider for AnyChain {
+impl primitives::TestProvider for AnyChain {
 	async fn send_transfer(&self, params: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain.send_transfer(params).await.map_err(Into::into),
