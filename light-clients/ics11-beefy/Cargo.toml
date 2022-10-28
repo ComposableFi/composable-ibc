@@ -8,7 +8,10 @@ authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <david.salami@g
 all-features = true
 
 [features]
-default = ["std"]
+default = ["std", "build-metadata-from-ws"]
+build-metadata-from-ws = [
+    "beefy-prover/build-metadata-from-ws",
+]
 std = [
     "ibc/std",
     "ibc-proto/std",

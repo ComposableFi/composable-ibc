@@ -22,6 +22,7 @@ hyperspace-primitives = { path = "../primitives", features = ["testing"] }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 
 [dev-dependencies]
+hyperspace = { path = "../", features = ["testing", "build-metadata-from-ws"] }
 parachain = { path = "../parachain", package = "hyperspace-parachain", features = ["testing"] }
 # substrate
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", features = ["full_crypto"] }
