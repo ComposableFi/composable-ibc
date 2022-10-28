@@ -102,9 +102,9 @@ where
 		// asset before proceeding to mint
 		let asset_id = T::IbcDenomToAssetIdConversion::to_asset_id(&denom);
 
-		let metadata = <T::Fungibles as InspectMetadata<T::AccountId>>::name(&asset_id);
+		let decimals = <T::Fungibles as InspectMetadata<T::AccountId>>::decimals(&asset_id);
 
-		if metadata.is_empty() {
+		if decimals.is_zero() {
 			let asset_admin = AssetAdmin::<T>::get().ok_or_else(|| {
 				Ics20Error::implementation_specific("Cannot find aset admin account".to_string())
 			})?;
