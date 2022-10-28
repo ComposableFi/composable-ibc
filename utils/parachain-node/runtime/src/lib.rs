@@ -9,6 +9,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 extern crate alloc;
 
 use alloc::string::{String, ToString};
+use asset_registry::{AssetMetadata, DefaultAssetMetadata};
 
 mod weights;
 pub mod xcm_config;
@@ -29,6 +30,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchError, MultiSignature,
 };
+use orml_traits::asset_registry::AssetProcessor;
 
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -37,7 +39,7 @@ use sp_version::RuntimeVersion;
 
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::{fungibles::InspectMetadata, Everything},
+	traits::{fungibles::InspectMetadata, Everything, AsEnsureOriginWithArg},
 	weights::{
 		constants::WEIGHT_PER_SECOND, ConstantMultiplier, DispatchClass, Weight,
 		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
@@ -471,6 +473,16 @@ impl pallet_ibc_ping::Config for Runtime {
 	type IbcHandler = Ibc;
 }
 
+impl asset_registry::Config for Runtime {
+	type Event = Event;
+	type AssetId = AssetId;
+	type AssetProcessor = asset_registry::SequentialId<Self>;
+	type AuthorityOrigin = AsEnsureOriginWithArg<EnsureRoot<AccountId>>;
+	type Balance = Balance;
+	type CustomMetadata = ();
+	type WeightInfo = ();
+}
+
 parameter_types! {
 	pub const ExpectedBlockTime: u64 = MILLISECS_PER_BLOCK as u64;
 	pub const RelayChainId: RelayChain = RelayChain::Rococo;
@@ -513,17 +525,31 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 
 		let name = denom.as_bytes().to_vec();
 		if let Some(id) = IbcDenoms::<Runtime>::get(&name) {
-			return Ok(id)
+			return Ok(id);
 		}
-		let asset_id = 30; // todo: figure this one out.
+
 		let pallet_id = PalletId(*b"pall-ibc").into_account_truncating();
-		IbcDenoms::<Runtime>::insert(name.clone(), asset_id);
+		
 		let symbol = denom
 			.split("/")
 			.last()
 			.ok_or_else(|| DispatchError::Other("denom missing a name"))?
 			.as_bytes()
 			.to_vec();
+		// generate new asset id
+		// Metadata is not useful to this call so we can use default values
+		let (asset_id, ..) = <asset_registry::SequentialId<Runtime> as AssetProcessor<AssetId, DefaultAssetMetadata<Runtime>>>::pre_register(
+				None, 
+				AssetMetadata { 
+					decimals: Default::default(), 
+					name: Default::default(), symbol: Default::default(), 
+					existential_deposit: Default::default(), 
+					location: None, 
+					additional: () 
+				}
+			)
+			.map_err(|_| DispatchError::Other("Failed to generate asset id"))?;
+		IbcDenoms::<Runtime>::insert(name.clone(), asset_id);
 		<pallet_assets::Pallet<Runtime> as Mutate<AccountId>>::set(
 			asset_id, &pallet_id, name, symbol, 12,
 		)?;
@@ -626,6 +652,7 @@ construct_runtime!(
 		Sudo: pallet_sudo = 35,
 		IbcPing: pallet_ibc_ping = 36,
 		Assets: pallet_assets = 37,
+		AssetRegistry: asset_registry = 38,
 		// pallet-ibc, should be the last module in your runtime
 		Ibc: pallet_ibc = 255,
 	}

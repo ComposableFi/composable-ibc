@@ -597,8 +597,9 @@ pub mod pallet {
 						})
 						.map_err(|_| Error::<T>::Utf8Error)?
 				},
-				MultiAddress::Raw(bytes) =>
-					String::from_utf8(bytes).map_err(|_| Error::<T>::Utf8Error)?,
+				MultiAddress::Raw(bytes) => {
+					String::from_utf8(bytes).map_err(|_| Error::<T>::Utf8Error)?
+				},
 			};
 			let denom = PrefixedDenom::from_str(&denom).map_err(|_| Error::<T>::InvalidIbcDenom)?;
 			let ibc_amount = Amount::from_str(&format!("{:?}", amount))

@@ -80,6 +80,9 @@ cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus", br
 pallet-collator-selection = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.27", default-features = false }
 parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.27", default-features = false }
 
+asset-registry = { package = "orml-asset-registry", git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "377213f750755cc48e80a3131eaae63b5eda8362" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "377213f750755cc48e80a3131eaae63b5eda8362" }
+
 [features]
 default = [
 	"std",
@@ -135,6 +138,8 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",
+	"asset-registry/std",
+	"orml-traits/std"
 ]
 
 runtime-benchmarks = [
