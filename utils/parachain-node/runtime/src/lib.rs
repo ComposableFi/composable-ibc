@@ -464,6 +464,7 @@ parameter_types! {
 	pub const SpamProtectionDeposit: Balance = 1_000_000_000_000;
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Default)]
 pub struct Router;
 
 impl ModuleRouter for Router {
@@ -483,24 +484,23 @@ impl ModuleRouter for Router {
 impl pallet_ibc::Config for Runtime {
 	type TimeProvider = Timestamp;
 	type Event = Event;
-	type Currency = Balances;
-	const PALLET_PREFIX: &'static [u8] = b"ibc/";
-	const LIGHT_CLIENT_PROTOCOL: pallet_ibc::LightClientProtocol =
-		pallet_ibc::LightClientProtocol::Grandpa;
-	type ExpectedBlockTime = ExpectedBlockTime;
-	type Fungibles = Assets;
-	type AccountIdConversion = ibc_primitives::IbcAccount<AccountId>;
-	type ParaId = parachain_info::Pallet<Runtime>;
-	type RelayChain = RelayChainId;
-	type AdminOrigin = EnsureRoot<AccountId>;
-	type SentryOrigin = EnsureRoot<AccountId>;
-	type SpamProtectionDeposit = SpamProtectionDeposit;
+	type NativeCurrency = Balances;
 	type Balance = Balance;
 	type AssetId = ();
 	type IbcDenomToAssetIdConversion = ();
-	type Create = ();
+	const PALLET_PREFIX: &'static [u8] = b"ibc/";
+	const LIGHT_CLIENT_PROTOCOL: pallet_ibc::LightClientProtocol =
+		pallet_ibc::LightClientProtocol::Grandpa;
+	type AccountIdConversion = ibc_primitives::IbcAccount<AccountId>;
+	type Fungibles = Assets;
+	type ExpectedBlockTime = ExpectedBlockTime;
 	type Router = Router;
+	type ParaId = parachain_info::Pallet<Runtime>;
+	type RelayChain = RelayChainId;
 	type WeightInfo = ();
+	type AdminOrigin = EnsureRoot<AccountId>;
+	type SentryOrigin = EnsureRoot<AccountId>;
+	type SpamProtectionDeposit = SpamProtectionDeposit;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

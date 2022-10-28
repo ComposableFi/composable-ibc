@@ -1,14 +1,9 @@
-use crate::{self as pallet_ibc};
+use crate::{self as pallet_ibc, routing::ModuleRouter};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
-	dispatch::DispatchResult,
 	pallet_prelude::ConstU32,
 	parameter_types,
-	traits::{
-		fungibles::Inspect,
-		tokens::{DepositConsequence, WithdrawConsequence},
-		ConstU64, Everything,
-	},
+	traits::{ConstU64, Everything},
 };
 use frame_system as system;
 use ibc_primitives::IbcAccount;
@@ -33,7 +28,7 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 pub type AssetId = u128;
 pub type Amount = i128;
 pub type Balance = u128;
-type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
+pub type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
 use super::*;
 use crate::light_clients::{AnyClientMessage, AnyConsensusState};
 use ibc::mock::{client_state::MockConsensusState, header::MockClientMessage, host::MockHostBlock};
@@ -163,25 +158,24 @@ impl orml_tokens::Config for Test {
 	type OnNewTokenAccount = ();
 }
 
-impl pallet_ibc::Config for Test {
+impl Config for Test {
 	type TimeProvider = Timestamp;
 	type Event = Event;
-	const PALLET_PREFIX: &'static [u8] = b"ibc/";
-	const LIGHT_CLIENT_PROTOCOL: crate::LightClientProtocol = crate::LightClientProtocol::Beefy;
-	type Currency = Balances;
-	type ExpectedBlockTime = ExpectedBlockTime;
-	type Fungibles = Assets;
-	type AccountIdConversion = IbcAccount<AccountId>;
-	type WeightInfo = ();
-	type AdminOrigin = frame_system::EnsureRoot<AccountId>;
-	type ParaId = ParachainId;
-	type RelayChain = RelayChainId;
+	type NativeCurrency = Balances;
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type IbcDenomToAssetIdConversion = ();
-	type Create = AssetCreator<Self>;
+	const PALLET_PREFIX: &'static [u8] = b"ibc/";
+	const LIGHT_CLIENT_PROTOCOL: crate::LightClientProtocol = LightClientProtocol::Beefy;
+	type AccountIdConversion = IbcAccount<AccountId>;
+	type Fungibles = Assets;
+	type ExpectedBlockTime = ExpectedBlockTime;
+	type Router = Router;
+	type ParaId = ParachainId;
+	type RelayChain = RelayChainId;
+	type WeightInfo = ();
+	type AdminOrigin = EnsureRoot<AccountId>;
 	type SentryOrigin = EnsureRoot<AccountId>;
-	type ReservableCurrency = Balances;
 	type SpamProtectionDeposit = SpamProtectionDeposit;
 }
 
@@ -210,75 +204,43 @@ impl<T: Config> DenomToAssetId<T> for ()
 where
 	T::AssetId: From<u128>,
 {
-	fn to_asset_id(denom: &String) -> Option<T::AssetId> {
-		Some(2u128.into())
+	fn to_asset_id(_denom: &String) -> T::AssetId {
+		1u128.into()
 	}
 
-	fn to_denom(id: T::AssetId) -> Option<String> {
+	fn to_denom(_id: T::AssetId) -> Option<String> {
+		Some("PICA".to_string())
+	}
+
+	fn ibc_assets(
+		_start_key: Option<T::AssetId>,
+		_offset: Option<u32>,
+		_limit: u64,
+	) -> (Vec<Vec<u8>>, u64, Option<T::AssetId>) {
+		(vec![], 0, None)
+	}
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Default)]
+pub struct Router;
+
+impl ModuleRouter for Router {
+	fn get_route_mut(
+		&mut self,
+		_module_id: &impl core::borrow::Borrow<ibc::core::ics26_routing::context::ModuleId>,
+	) -> Option<&'static mut dyn ibc::core::ics26_routing::context::Module> {
 		None
 	}
-}
 
-pub struct AssetCreator<T: Config>(PhantomData<T>);
-
-impl<T: Config> Inspect<T::AccountId> for AssetCreator<T> {
-	type AssetId = T::AssetId;
-	type Balance = T::Balance;
-
-	fn total_issuance(asset: Self::AssetId) -> Self::Balance {
-		todo!()
+	fn has_route(
+		_module_id: &impl core::borrow::Borrow<ibc::core::ics26_routing::context::ModuleId>,
+	) -> bool {
+		false
 	}
 
-	fn minimum_balance(asset: Self::AssetId) -> Self::Balance {
-		todo!()
-	}
-
-	fn balance(asset: Self::AssetId, who: &T::AccountId) -> Self::Balance {
-		todo!()
-	}
-
-	fn reducible_balance(
-		asset: Self::AssetId,
-		who: &T::AccountId,
-		keep_alive: bool,
-	) -> Self::Balance {
-		todo!()
-	}
-
-	fn can_deposit(
-		asset: Self::AssetId,
-		who: &T::AccountId,
-		amount: Self::Balance,
-		mint: bool,
-	) -> DepositConsequence {
-		todo!()
-	}
-
-	fn can_withdraw(
-		asset: Self::AssetId,
-		who: &T::AccountId,
-		amount: Self::Balance,
-	) -> WithdrawConsequence<Self::Balance> {
-		todo!()
-	}
-}
-
-impl<T: Config> Create<T::AccountId> for AssetCreator<T> {
-	fn create(
-		_id: Self::AssetId,
-		_admin: T::AccountId,
-		_is_sufficient: bool,
-		_min_balance: Self::Balance,
-	) -> DispatchResult {
-		Ok(())
-	}
-}
-
-impl<T: Config> CreateAsset<T> for AssetCreator<T>
-where
-	T::AssetId: From<u128>,
-{
-	fn create_asset(_denom: &String) -> Result<T::AssetId, Error<T>> {
-		Ok(2u128.into())
+	fn lookup_module_by_port(
+		_port_id: &ibc::core::ics24_host::identifier::PortId,
+	) -> Option<ibc::core::ics26_routing::context::ModuleId> {
+		None
 	}
 }

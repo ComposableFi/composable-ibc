@@ -5,7 +5,10 @@ use crate::{
 	Any, Config, MultiAddress, Pallet, PalletParams, Timeout, TransferParams, MODULE_ID,
 };
 use core::time::Duration;
-use frame_support::{assert_ok, traits::fungibles::Mutate};
+use frame_support::{
+	assert_ok,
+	traits::fungibles::{Create, Inspect, Mutate},
+};
 use ibc::{
 	applications::transfer::{packet::PacketData, Coin, PrefixedDenom, VERSION},
 	core::{
@@ -179,7 +182,13 @@ fn send_transfer() {
 			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0).unwrap();
 		let ss58_address = String::from_utf8(raw_user).unwrap();
 		setup_client_and_consensus_state(PortId::transfer());
-
+		<<Test as Config>::Fungibles as Create<AccountId>>::create(
+			PICA,
+			AccountId32::new([0; 32]),
+			true,
+			1000u128.into(),
+		)
+		.unwrap();
 		let balance = 100000 * MILLIS;
 		<<Test as Config>::Fungibles as Mutate<
 			<Test as frame_system::Config>::AccountId,
@@ -226,6 +235,13 @@ fn on_deliver_ics20_recv_packet() {
 		let denom = "transfer/channel-1/PICA";
 		let channel_escrow_address =
 			get_channel_escrow_address(&PortId::transfer(), channel_id).unwrap();
+		<<Test as Config>::Fungibles as Create<AccountId>>::create(
+			PICA,
+			AccountId32::new([0; 32]),
+			true,
+			1000u128.into(),
+		)
+		.unwrap();
 		let channel_escrow_address =
 			<Test as Config>::AccountIdConversion::try_from(channel_escrow_address)
 				.map_err(|_| ())
@@ -289,8 +305,9 @@ fn on_deliver_ics20_recv_packet() {
 		assert_eq!(account_data.free, 0);
 		Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
 
-		let account_data = Tokens::accounts(AccountId32::new(pair.public().0), PICA);
-		assert_eq!(account_data.free, amt)
+		let balance =
+			<Assets as Inspect<AccountId>>::balance(PICA, &AccountId32::new(pair.public().0));
+		assert_eq!(balance, amt.into())
 	})
 }
 

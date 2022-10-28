@@ -467,7 +467,7 @@ where
 		let ibc_acc =
 			T::AccountIdConversion::try_from(signer).map_err(|_| Error::<T>::DecodingError)?;
 		let account_id = ibc_acc.into_account();
-		let balance = format!("{:?}", T::Currency::free_balance(&account_id));
+		let balance = format!("{:?}", T::NativeCurrency::free_balance(&account_id));
 		Ok(balance.parse().unwrap_or_default())
 	}
 
