@@ -17,4 +17,8 @@
 
 #![allow(missing_docs)]
 
+#[cfg(feature = "build-metadata-from-ws")]
 include!(concat!(env!("OUT_DIR"), "/parachain.rs"));
+
+#[cfg(not(feature = "build-metadata-from-ws"))]
+pub use subxt_generated::parachain::*;

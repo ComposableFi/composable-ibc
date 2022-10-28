@@ -26,6 +26,11 @@ smallvec = "1.9.0"
 pallet-ibc = { path = "../../../contracts/pallet-ibc", default-features = false }
 ibc-primitives = { path = "../../../contracts/pallet-ibc/primitives", default-features = false }
 
+# 3rd party frame
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "377213f750755cc48e80a3131eaae63b5eda8362" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "377213f750755cc48e80a3131eaae63b5eda8362" }
+
+
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.27" }
 frame-executive = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.27" }
@@ -104,6 +109,8 @@ std = [
 	"pallet-session/std",
 	"pallet-sudo/std",
 	"pallet-ibc/std",
+	"orml-traits/std",
+	"orml-tokens/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",

@@ -54,7 +54,7 @@ where
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 {
-	use ibc_rpc::{IbcRpcHandler, IbcApiServer};
+	use ibc_rpc::{IbcApiServer, IbcRpcHandler};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 	use substrate_frame_rpc_system::{System, SystemApiServer};
 

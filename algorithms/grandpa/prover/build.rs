@@ -14,8 +14,10 @@
 // limitations under the License.
 
 #[tokio::main]
-async fn main() -> color_eyre::Result<()> {
-	subxt_codegen::build_script("ws://127.0.0.1:9944", "polkadot").await?;
-	subxt_codegen::build_script("ws://127.0.0.1:9188", "parachain").await?;
+async fn main() -> anyhow::Result<()> {
+	if cfg!(feature = "build-metadata-from-ws") {
+		subxt_codegen::build_script("ws://127.0.0.1:9944", "polkadot").await?;
+		subxt_codegen::build_script("ws://127.0.0.1:9188", "parachain").await?;
+	}
 	Ok(())
 }

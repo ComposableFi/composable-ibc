@@ -4,6 +4,8 @@
 use futures::StreamExt;
 use primitives::Chain;
 
+pub mod chain;
+pub mod command;
 pub mod events;
 pub mod logging;
 mod macros;

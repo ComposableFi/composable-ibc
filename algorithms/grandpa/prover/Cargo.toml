@@ -5,9 +5,9 @@ edition = "2021"
 authors = ["Seun Lanlege <seunlanlege@gmail.com>"]
 
 [build-dependencies]
-color-eyre = "0.6.2"
+anyhow = "1.0.66"
 tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
-subxt-codegen = { path = "../../../utils/subxt-codegen" }
+subxt-codegen = { package = "codegen", path = "../../../utils/subxt/codegen" }
 
 [dependencies]
 hex = "0.4.3"
@@ -31,3 +31,7 @@ sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch 
 beefy-prover = { path = "../../beefy/prover" }
 primitives = { package = "grandpa-light-client-primitives", path = "../primitives" }
 light-client-common = { path = "../../../light-clients/common" }
+subxt-generated = { path = "../../../utils/subxt/generated" }
+
+[features]
+build-metadata-from-ws = []

@@ -47,7 +47,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sc-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-subxt = { git = "https://github.com/paritytech/subxt", rev = "51179a8b72472d0b43c91cda75a1ddc3fddb9555", optional = true }
+subxt = { git = "https://github.com/paritytech/subxt", rev = "51179a8b72472d0b43c91cda75a1ddc3fddb9555" }
 
 [dev-dependencies]
 derive_more = "0.99.17"
@@ -66,7 +66,7 @@ sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkad
 #common = { path = "../contracts/pallet-ibc" }
 
 [features]
-parachain = ["dep:parachain", "subxt"]
+parachain = ["dep:parachain"]
 #near = ["dep:near"]
 #cosmos = ["dep:cosmos"]
 testing = [ "primitives/testing", "parachain/testing" ]

@@ -654,9 +654,10 @@ dependencies = [
 name = "beefy-prover"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "beefy-light-client-primitives",
  "beefy-primitives",
- "color-eyre",
+ "codegen",
  "derive_more",
  "frame-support",
  "hex",
@@ -677,7 +678,7 @@ dependencies = [
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie",
  "subxt",
- "subxt-codegen 0.1.0",
+ "subxt-generated",
  "tokio",
 ]
 
@@ -1211,6 +1212,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "codegen"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "frame-metadata",
+ "hex",
+ "jsonrpsee 0.14.0",
+ "parity-scale-codec",
+ "subxt-codegen",
+ "syn",
+ "tokio",
+]
+
+[[package]]
 name = "codespan-reporting"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1218,33 +1234,6 @@ checksum = "3538270d33cc669650c4b093848450d380def10c331d38c768e34cac80576e6e"
 dependencies = [
  "termcolor",
  "unicode-width",
-]
-
-[[package]]
-name = "color-eyre"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a667583cca8c4f8436db8de46ea8233c42a7d9ae424a82d338f2e4675229204"
-dependencies = [
- "backtrace",
- "color-spantrace",
- "eyre",
- "indenter",
- "once_cell",
- "owo-colors",
- "tracing-error",
-]
-
-[[package]]
-name = "color-spantrace"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ba75b3d9449ecdccb27ecbc479fdc0b87fa2dd43d2f8298f9bf0e59aacc8dce"
-dependencies = [
- "once_cell",
- "owo-colors",
- "tracing-core",
- "tracing-error",
 ]
 
 [[package]]
@@ -3319,7 +3308,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "beefy-prover",
- "color-eyre",
+ "codegen",
  "derive_more",
  "downcast-rs",
  "finality-grandpa",
@@ -3337,7 +3326,7 @@ dependencies = [
  "sp-state-machine",
  "sp-trie",
  "subxt",
- "subxt-codegen 0.1.0",
+ "subxt-generated",
  "tokio",
 ]
 
@@ -3735,7 +3724,7 @@ dependencies = [
  "beefy-primitives",
  "beefy-prover",
  "clap",
- "color-eyre",
+ "codegen",
  "derive_more",
  "env_logger",
  "finality-grandpa",
@@ -3783,7 +3772,7 @@ dependencies = [
  "sp-trie",
  "ss58-registry",
  "subxt",
- "subxt-codegen 0.1.0",
+ "subxt-generated",
  "tendermint-proto",
  "thiserror",
  "tokio",
@@ -6288,12 +6277,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "owo-colors"
-version = "3.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
-
-[[package]]
 name = "pallet-assets"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27#5bfdbab8ba28523ef10e365627fed64ef2b77cbf"
@@ -7342,6 +7325,8 @@ dependencies = [
  "hex-literal",
  "ibc-primitives",
  "log",
+ "orml-tokens",
+ "orml-traits",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -12523,19 +12508,6 @@ dependencies = [
 
 [[package]]
 name = "subxt-codegen"
-version = "0.1.0"
-dependencies = [
- "color-eyre",
- "frame-metadata",
- "hex",
- "jsonrpsee 0.14.0",
- "parity-scale-codec",
- "subxt-codegen 0.24.0",
- "syn",
-]
-
-[[package]]
-name = "subxt-codegen"
 version = "0.24.0"
 source = "git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555#51179a8b72472d0b43c91cda75a1ddc3fddb9555"
 dependencies = [
@@ -12552,13 +12524,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "subxt-generated"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "subxt",
+]
+
+[[package]]
 name = "subxt-macro"
 version = "0.24.0"
 source = "git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555#51179a8b72472d0b43c91cda75a1ddc3fddb9555"
 dependencies = [
  "darling",
  "proc-macro-error",
- "subxt-codegen 0.24.0",
+ "subxt-codegen",
  "syn",
 ]
 
@@ -13172,16 +13152,6 @@ checksum = "24eb03ba0eab1fd845050058ce5e616558e8f8d8fca633e6b163fe25c797213a"
 dependencies = [
  "once_cell",
  "valuable",
-]
-
-[[package]]
-name = "tracing-error"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d686ec1c0f384b1277f097b2f279a2ecc11afe8c133c1aabf036a27cb4cd206e"
-dependencies = [
- "tracing",
- "tracing-subscriber 0.3.16",
 ]
 
 [[package]]

@@ -44,6 +44,7 @@ use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
 };
+use orml_traits::parameter_type_with_key;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
@@ -459,6 +460,33 @@ impl pallet_collator_selection::Config for Runtime {
 }
 
 parameter_types! {
+	pub const MaxLocks: u32 = 256;
+}
+
+parameter_type_with_key! {
+	pub ExistentialDeposits: |_a: AssetId| -> Balance {
+		0
+	};
+}
+
+type ReserveIdentifier = [u8; 8];
+impl orml_tokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = i128;
+	type CurrencyId = AssetId;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = ();
+	type MaxLocks = MaxLocks;
+	type ReserveIdentifier = ReserveIdentifier;
+	type MaxReserves = frame_support::traits::ConstU32<2>;
+	type DustRemovalWhitelist = Everything;
+	type OnKilledTokenAccount = ();
+	type OnNewTokenAccount = ();
+}
+
+parameter_types! {
 	pub const ExpectedBlockTime: u64 = MILLISECS_PER_BLOCK as u64;
 	pub const RelayChainId: RelayChain = RelayChain::Rococo;
 	pub const SpamProtectionDeposit: Balance = 1_000_000_000_000;
@@ -492,7 +520,7 @@ impl pallet_ibc::Config for Runtime {
 	const LIGHT_CLIENT_PROTOCOL: pallet_ibc::LightClientProtocol =
 		pallet_ibc::LightClientProtocol::Grandpa;
 	type AccountIdConversion = ibc_primitives::IbcAccount<AccountId>;
-	type Fungibles = Assets;
+	type Fungibles = Tokens;
 	type ExpectedBlockTime = ExpectedBlockTime;
 	type Router = Router;
 	type ParaId = parachain_info::Pallet<Runtime>;
@@ -533,6 +561,7 @@ construct_runtime!(
 		CumulusXcm: cumulus_pallet_xcm = 32,
 		DmpQueue: cumulus_pallet_dmp_queue = 33,
 
+		Tokens: orml_tokens = 34,
 		// Pallet-ibc, should be the last module in your index
 		Ibc: pallet_ibc = 255,
 	}
