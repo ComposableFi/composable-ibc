@@ -34,24 +34,30 @@ use ibc::{
 	core::ics02_client::client_state::ClientType,
 	timestamp::Timestamp,
 };
-use ibc_proto::ibc::core::{channel::v1::QueryChannelsResponse, client::v1::IdentifiedClientState};
+use ibc_proto::{
+	google::protobuf::Any,
+	ibc::core::{channel::v1::QueryChannelsResponse, client::v1::IdentifiedClientState},
+};
 use ibc_rpc::{IbcApiClient, PacketInfo};
-use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
+use primitives::{Chain, IbcProvider, KeyProvider, TransactionId, UpdateType};
 use sp_core::H256;
 
 use crate::finality_protocol::FinalityEvent;
 use beefy_prover::helpers::fetch_timestamp_extrinsic_with_proof;
 use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
 use ics11_beefy::client_state::ClientState as BeefyClientState;
-use pallet_ibc::{light_clients::HostFunctionsManager, HostConsensusProof};
+use pallet_ibc::{
+	events::IbcEvent as RawIbcEvent, light_clients::HostFunctionsManager, HostConsensusProof,
+};
 
 use crate::utils::MetadataIbcEventWrapper;
 use finality_grandpa::BlockNumberOps;
-use futures::Stream;
-use ibc_proto::{google::protobuf::Any, ibc::core::connection::v1::IdentifiedConnection};
+use futures::{Stream, StreamExt};
+use ibc_proto::ibc::core::connection::v1::IdentifiedConnection;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use sp_runtime::traits::One;
 use std::{collections::BTreeMap, pin::Pin, str::FromStr, time::Duration};
+use subxt::events::Phase;
 
 #[async_trait::async_trait]
 impl<T: Config + Send + Sync> IbcProvider for ParachainClient<T>
@@ -90,10 +96,9 @@ where
 			.await
 	}
 
-	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>> {
-		use futures::{stream, StreamExt};
-		use pallet_ibc::events::IbcEvent as RawIbcEvent;
-
+	async fn ibc_events(
+		&self,
+	) -> Pin<Box<dyn Stream<Item = (TransactionId, Vec<Option<IbcEvent>>)> + Send + 'static>> {
 		let stream = self
 			.para_client
 			.events()
@@ -109,29 +114,38 @@ where
 						return futures::future::ready(None)
 					},
 				};
+				let tx_index = match events.phase {
+					Phase::ApplyExtrinsic(index) => index,
+					phase => {
+						log::error!("Received IbcEvent with unexpected phase: {phase:?}");
+						return futures::future::ready(None)
+					},
+				};
 				let result = events
 					.event
 					.events
 					.into_iter()
-					.filter_map(|ev| {
-						Some(
-							IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(ev)))
-								.map_err(|e| subxt::Error::Other(e.to_string())),
-						)
+					.map(|ev| {
+						ev.ok()
+							.map(|ev| {
+								IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(ev)))
+									.map_err(|e| subxt::Error::Other(e.to_string()))
+							})
+							.transpose()
 					})
-					.collect::<Result<Vec<_>, _>>();
-
+					.collect::<Result<Vec<Option<_>>, _>>();
+				let tx_id = TransactionId { block_hash: H256::from(events.block_hash).0, tx_index };
 				let events = match result {
-					Ok(ev) => ev,
+					Ok(ev) => (tx_id, ev),
 					Err(err) => {
 						log::error!("Failed to decode event: {err:?}");
 						return futures::future::ready(None)
 					},
 				};
-				futures::future::ready(Some(stream::iter(events)))
-			})
-			.flatten();
-		Box::pin(stream)
+				futures::future::ready(Some(events))
+			});
+
+		Box::pin(Box::new(stream))
 	}
 
 	async fn query_client_consensus(

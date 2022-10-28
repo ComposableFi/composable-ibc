@@ -775,9 +775,10 @@ pub mod api {
 						"Events",
 						vec![],
 						[
-							216u8, 254u8, 60u8, 28u8, 160u8, 191u8, 11u8, 16u8, 232u8, 156u8,
-							202u8, 206u8, 197u8, 142u8, 37u8, 127u8, 172u8, 7u8, 60u8, 66u8, 253u8,
-							76u8, 74u8, 214u8, 126u8, 29u8, 135u8, 223u8, 102u8, 54u8, 202u8, 4u8,
+							110u8, 70u8, 98u8, 45u8, 193u8, 102u8, 173u8, 190u8, 98u8, 97u8, 55u8,
+							169u8, 35u8, 188u8, 67u8, 145u8, 251u8, 251u8, 109u8, 226u8, 90u8,
+							152u8, 226u8, 86u8, 39u8, 24u8, 161u8, 114u8, 211u8, 112u8, 178u8,
+							200u8,
 						],
 					)
 				}
@@ -24686,22 +24687,16 @@ pub mod api {
 			)]
 			#[doc = "Events emitted by the ibc subsystem"]
 			pub struct Events {
-				pub events: ::std::vec::Vec<runtime_types::pallet_ibc::events::IbcEvent>,
+				pub events: ::std::vec::Vec<
+					::core::result::Result<
+						runtime_types::pallet_ibc::events::IbcEvent,
+						runtime_types::pallet_ibc::errors::IbcError,
+					>,
+				>,
 			}
 			impl ::subxt::events::StaticEvent for Events {
 				const PALLET: &'static str = "Ibc";
 				const EVENT: &'static str = "Events";
-			}
-			#[derive(
-				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
-			)]
-			#[doc = "Errors emitted by the ibc subsystem"]
-			pub struct Errors {
-				pub errors: ::std::vec::Vec<runtime_types::pallet_ibc::errors::IbcError>,
-			}
-			impl ::subxt::events::StaticEvent for Errors {
-				const PALLET: &'static str = "Ibc";
-				const EVENT: &'static str = "Errors";
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -31056,11 +31051,15 @@ pub mod api {
 				pub enum Event {
 					#[codec(index = 0)]
 					#[doc = "Events emitted by the ibc subsystem"]
-					Events { events: ::std::vec::Vec<runtime_types::pallet_ibc::events::IbcEvent> },
+					Events {
+						events: ::std::vec::Vec<
+							::core::result::Result<
+								runtime_types::pallet_ibc::events::IbcEvent,
+								runtime_types::pallet_ibc::errors::IbcError,
+							>,
+						>,
+					},
 					#[codec(index = 1)]
-					#[doc = "Errors emitted by the ibc subsystem"]
-					Errors { errors: ::std::vec::Vec<runtime_types::pallet_ibc::errors::IbcError> },
-					#[codec(index = 2)]
 					#[doc = "An Ibc token transfer has been started"]
 					TokenTransferInitiated {
 						from: ::subxt::ext::sp_core::crypto::AccountId32,
@@ -31070,19 +31069,19 @@ pub mod api {
 							::core::option::Option<runtime_types::primitives::currency::CurrencyId>,
 						amount: ::core::primitive::u128,
 					},
-					#[codec(index = 3)]
+					#[codec(index = 2)]
 					#[doc = "A channel has been opened"]
 					ChannelOpened {
 						channel_id: ::std::vec::Vec<::core::primitive::u8>,
 						port_id: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec(index = 4)]
+					#[codec(index = 3)]
 					#[doc = "Pallet params updated"]
 					ParamsUpdated {
 						send_enabled: ::core::primitive::bool,
 						receive_enabled: ::core::primitive::bool,
 					},
-					#[codec(index = 5)]
+					#[codec(index = 4)]
 					#[doc = "An outgoing Ibc token transfer has been completed and burnt"]
 					TokenTransferCompleted {
 						from: ::std::vec::Vec<::core::primitive::u8>,
@@ -31092,7 +31091,7 @@ pub mod api {
 							::core::option::Option<runtime_types::primitives::currency::CurrencyId>,
 						amount: ::core::primitive::u128,
 					},
-					#[codec(index = 6)]
+					#[codec(index = 5)]
 					#[doc = "Ibc tokens have been received and minted"]
 					TokenReceived {
 						from: ::std::vec::Vec<::core::primitive::u8>,
@@ -31102,7 +31101,7 @@ pub mod api {
 							::core::option::Option<runtime_types::primitives::currency::CurrencyId>,
 						amount: ::core::primitive::u128,
 					},
-					#[codec(index = 7)]
+					#[codec(index = 6)]
 					#[doc = "Ibc transfer failed, received an acknowledgement error, tokens have been refunded"]
 					TokenTransferFailed {
 						from: ::std::vec::Vec<::core::primitive::u8>,
@@ -31112,7 +31111,7 @@ pub mod api {
 							::core::option::Option<runtime_types::primitives::currency::CurrencyId>,
 						amount: ::core::primitive::u128,
 					},
-					#[codec(index = 8)]
+					#[codec(index = 7)]
 					#[doc = "On recv packet was not processed successfully processes"]
 					OnRecvPacketError { msg: ::std::vec::Vec<::core::primitive::u8> },
 				}
@@ -37961,9 +37960,9 @@ pub mod api {
 		let runtime_metadata_hash = client.metadata().metadata_hash(&PALLETS);
 		if runtime_metadata_hash !=
 			[
-				169u8, 124u8, 33u8, 20u8, 217u8, 242u8, 55u8, 181u8, 68u8, 255u8, 48u8, 132u8,
-				37u8, 233u8, 126u8, 244u8, 150u8, 132u8, 153u8, 68u8, 56u8, 93u8, 208u8, 184u8,
-				237u8, 108u8, 53u8, 20u8, 242u8, 42u8, 152u8, 2u8,
+				38u8, 42u8, 46u8, 208u8, 132u8, 188u8, 182u8, 98u8, 22u8, 240u8, 30u8, 165u8,
+				137u8, 79u8, 38u8, 217u8, 155u8, 123u8, 68u8, 93u8, 130u8, 211u8, 239u8, 242u8,
+				166u8, 177u8, 162u8, 26u8, 83u8, 4u8, 105u8, 64u8,
 			] {
 			Err(::subxt::error::MetadataError::IncompatibleMetadata)
 		} else {

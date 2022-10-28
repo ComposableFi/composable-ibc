@@ -84,7 +84,12 @@ pub async fn create_connection(
 	let future = chain_b
 		.ibc_events()
 		.await
-		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmConnection(_))))
+		.filter_map(|(_, evs)| {
+			future::ready(
+				evs.into_iter()
+					.find(|ev| matches!(ev, Some(IbcEvent::OpenConfirmConnection(_)))),
+			)
+		})
 		.take(1)
 		.collect::<Vec<_>>();
 
@@ -96,7 +101,7 @@ pub async fn create_connection(
 	.await;
 
 	let (connection_id_b, connection_id_a) = match events.pop() {
-		Some(IbcEvent::OpenConfirmConnection(conn)) => (
+		Some(Some(IbcEvent::OpenConfirmConnection(conn))) => (
 			conn.connection_id().unwrap().clone(),
 			conn.attributes().counterparty_connection_id.as_ref().unwrap().clone(),
 		),
@@ -135,7 +140,11 @@ pub async fn create_channel(
 	let future = chain_b
 		.ibc_events()
 		.await
-		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmChannel(_))))
+		.filter_map(|(_, evs)| {
+			future::ready(
+				evs.into_iter().find(|ev| matches!(ev, Some(IbcEvent::OpenConfirmChannel(_)))),
+			)
+		})
 		.take(1)
 		.collect::<Vec<_>>();
 
@@ -147,7 +156,7 @@ pub async fn create_channel(
 	.await;
 
 	let (channel_id_a, channel_id_b) = match events.pop() {
-		Some(IbcEvent::OpenConfirmChannel(chan)) =>
+		Some(Some(IbcEvent::OpenConfirmChannel(chan))) =>
 			(chan.counterparty_channel_id.unwrap(), chan.channel_id().unwrap().clone()),
 		got => panic!("Last event should be OpenConfirmChannel: {got:?}"),
 	};

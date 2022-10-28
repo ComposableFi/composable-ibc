@@ -29,6 +29,7 @@ use ibc_proto::{
 		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
 	},
 };
+use pallet_ibc::light_clients::AnyClientMessage;
 #[cfg(feature = "testing")]
 use pallet_ibc::Timeout;
 use serde::Deserialize;
@@ -36,7 +37,9 @@ use thiserror::Error;
 
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use parachain::ParachainClient;
-use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
+use primitives::{
+	error::Error, Chain, IbcProvider, KeyProvider, MisbehaviourHandler, TransactionId, UpdateType,
+};
 use sp_core::H256;
 use std::{pin::Pin, time::Duration};
 use subxt::tx::SubstrateExtrinsicParams;
@@ -125,7 +128,9 @@ impl IbcProvider for AnyChain {
 		}
 	}
 
-	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>> {
+	async fn ibc_events(
+		&self,
+	) -> Pin<Box<dyn Stream<Item = (TransactionId, Vec<Option<IbcEvent>>)> + Send + 'static>> {
 		match self {
 			Self::Parachain(chain) => chain.ibc_events().await,
 			_ => unreachable!(),
@@ -505,6 +510,22 @@ impl IbcProvider for AnyChain {
 	}
 }
 
+#[async_trait]
+impl MisbehaviourHandler for AnyChain {
+	async fn check_for_misbehaviour<C: Chain>(
+		&self,
+		counterparty: &C,
+		client_message: AnyClientMessage,
+	) -> Result<(), anyhow::Error> {
+		match self {
+			#[cfg(feature = "parachain")]
+			AnyChain::Parachain(parachain) =>
+				parachain.check_for_misbehaviour(counterparty, client_message).await,
+			_ => unreachable!(),
+		}
+	}
+}
+
 impl KeyProvider for AnyChain {
 	fn account_id(&self) -> Signer {
 		match self {
@@ -555,6 +576,22 @@ impl Chain for AnyChain {
 	) -> Result<(sp_core::H256, Option<sp_core::H256>), Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain.submit(messages).await.map_err(Into::into),
+			_ => unreachable!(),
+		}
+	}
+
+	async fn query_client_message(
+		&self,
+		host_block_hash: [u8; 32],
+		transaction_index: usize,
+		event_index: usize,
+	) -> Result<AnyClientMessage, Error> {
+		match self {
+			#[cfg(feature = "parachain")]
+			Self::Parachain(chain) => chain
+				.query_client_message(host_block_hash, transaction_index, event_index)
+				.await
+				.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}

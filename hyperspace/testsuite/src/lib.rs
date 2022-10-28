@@ -25,6 +25,7 @@ use std::{str::FromStr, time::Duration};
 use tendermint_proto::Protobuf;
 use tokio::task::JoinHandle;
 
+pub mod misbehaviour;
 pub mod ordered_channels;
 mod utils;
 
@@ -195,7 +196,12 @@ where
 	let future = chain
 		.ibc_events()
 		.await
-		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::AcknowledgePacket(_))))
+		.filter_map(|(_, evs)| {
+			future::ready(
+				evs.into_iter()
+					.find(|ev| matches!(ev, Some(IbcEvent::OpenConfirmConnection(_)))),
+			)
+		})
 		.take(1)
 		.collect::<Vec<_>>();
 	timeout_future(future, wait_time, format!("Didn't see AcknowledgePacket on {}", chain.name()))
@@ -362,7 +368,11 @@ async fn send_channel_close_init_and_assert_channel_close_confirm<A, B>(
 	let future = chain_b
 		.ibc_events()
 		.await
-		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::CloseConfirmChannel(_))))
+		.filter_map(|(_, evs)| {
+			future::ready(
+				evs.into_iter().find(|ev| matches!(ev, Some(IbcEvent::OpenConfirmChannel(_)))),
+			)
+		})
 		.take(1)
 		.collect::<Vec<_>>();
 	timeout_future(

@@ -44,7 +44,7 @@ use ibc_proto::ibc::core::{
 	channel::v1::QueryChannelsResponse, connection::v1::IdentifiedConnection,
 };
 use ibc_rpc::PacketInfo;
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
+use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 
 pub mod error;
 pub mod mock;
@@ -77,6 +77,11 @@ pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: String) -> Vec<u8> {
 	commitment_prefix
 }
 
+pub struct TransactionId {
+	pub block_hash: [u8; 32],
+	pub tx_index: u32,
+}
+
 /// Provides an interface for accessing new events and Ibc data on the chain which must be
 /// relayed to the counterparty chain.
 #[async_trait::async_trait]
@@ -99,7 +104,9 @@ pub trait IbcProvider {
 		T: Chain;
 
 	/// Return a stream that yields when new [`IbcEvents`] are parsed from a finality notification
-	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>>;
+	async fn ibc_events(
+		&self,
+	) -> Pin<Box<dyn Stream<Item = (TransactionId, Vec<Option<IbcEvent>>)> + Send + 'static>>;
 
 	/// Query client consensus state with proof
 	/// return the consensus height for the client along with the response
@@ -340,10 +347,21 @@ pub trait KeyProvider {
 	fn account_id(&self) -> Signer;
 }
 
+/// Provides an interface for managing IBC misbehaviour.
+#[async_trait::async_trait]
+pub trait MisbehaviourHandler {
+	/// Check the client message for misbehaviour and submit it to the chain if any.
+	async fn check_for_misbehaviour<C: Chain>(
+		&self,
+		counterparty: &C,
+		client_message: AnyClientMessage,
+	) -> Result<(), anyhow::Error>;
+}
+
 /// Provides an interface for the chain to the relayer core for submitting IbcEvents as well as
 /// finality notifications
 #[async_trait::async_trait]
-pub trait Chain: IbcProvider + KeyProvider + Send + Sync {
+pub trait Chain: IbcProvider + MisbehaviourHandler + KeyProvider + Send + Sync {
 	/// Name of this chain, used in logs.
 	fn name(&self) -> &str;
 
@@ -366,6 +384,18 @@ pub trait Chain: IbcProvider + KeyProvider + Send + Sync {
 		&self,
 		messages: Vec<Any>,
 	) -> Result<(sp_core::H256, Option<sp_core::H256>), Self::Error>;
+
+	/// Returns an [`AnyClientMessage`] that triggered an [`IbcEvent`] at index `event_index`
+	/// on this chain.
+	///
+	/// Parameters `host_block_hash` and `transaction_index` identify the transaction that triggered
+	/// the event.
+	async fn query_client_message(
+		&self,
+		host_block_hash: [u8; 32],
+		transaction_index: usize,
+		event_index: usize,
+	) -> Result<AnyClientMessage, Error>;
 }
 
 /// Returns undelivered packet sequences that have been sent out from

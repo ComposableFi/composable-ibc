@@ -272,7 +272,7 @@ where
 			.map_err(|e| Ics04Error::implementation_specific(e.to_string()))?;
 
 		match ack {
-			Ics20Acknowledgement::Success(_) => {
+			Ics20Acknowledgement::Success(_) =>
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
 					from: packet_data.sender.to_string().as_bytes().to_vec(),
 					to: packet_data.receiver.to_string().as_bytes().to_vec(),
@@ -282,9 +282,8 @@ where
 					)
 					.ok(),
 					amount: packet_data.token.amount.as_u256().as_u128().into(),
-				})
-			},
-			Ics20Acknowledgement::Error(_) => {
+				}),
+			Ics20Acknowledgement::Error(_) =>
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferFailed {
 					from: packet_data.sender.to_string().as_bytes().to_vec(),
 					to: packet_data.receiver.to_string().as_bytes().to_vec(),
@@ -294,8 +293,7 @@ where
 					)
 					.ok(),
 					amount: packet_data.token.amount.as_u256().as_u128().into(),
-				})
-			},
+				}),
 		}
 
 		Ok(())

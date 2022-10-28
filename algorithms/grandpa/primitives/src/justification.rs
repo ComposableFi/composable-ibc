@@ -17,6 +17,7 @@ use crate::{error, Commit, HostFunctions};
 use alloc::collections::{BTreeMap, BTreeSet};
 use anyhow::anyhow;
 use codec::{Decode, Encode};
+use core::fmt::Debug;
 use finality_grandpa::voter_set::VoterSet;
 use sp_finality_grandpa::{
 	AuthorityId, AuthorityList, AuthoritySignature, ConsensusLog, Equivocation, RoundNumber,
@@ -76,7 +77,9 @@ where
 		match finality_grandpa::validate_commit(&self.commit, voters, &ancestry_chain) {
 			Ok(ref result) if result.is_valid() => {},
 			err => {
-				let result = err.map_err(|_| anyhow!("Invalid ancestry!"))?;
+				let result = err.map_err(|_| {
+					anyhow!("[verify_with_voter_set] Invalid ancestry while validating commit!")
+				})?;
 				Err(anyhow!("invalid commit in grandpa justification: {result:?}"))?
 			},
 		}
@@ -101,6 +104,7 @@ where
 		let mut visited_hashes = BTreeSet::new();
 		for signed in self.commit.precommits.iter() {
 			let message = finality_grandpa::Message::Precommit(signed.precommit.clone());
+
 			check_message_signature::<Host, _, _>(
 				&message,
 				&signed.id,
@@ -184,7 +188,6 @@ where
 				_ => return Err(finality_grandpa::Error::NotDescendent),
 			};
 		}
-
 		Ok(route)
 	}
 }

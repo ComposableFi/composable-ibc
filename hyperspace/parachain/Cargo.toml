@@ -54,6 +54,7 @@ frame-system = { git = "https://github.com/paritytech/substrate", branch = "polk
 transaction-payment-rpc = { package = "pallet-transaction-payment-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 transaction-payment-runtime-api = { package = "pallet-transaction-payment-rpc-runtime-api", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
+sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 
 # composable
 ibc = { path = "../../ibc/modules", features = [] }

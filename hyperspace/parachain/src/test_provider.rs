@@ -47,6 +47,7 @@ where
 		From<FinalityProof<T::Header>>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as Config>::Hash, ParachainHeaderProofs>>,
+	T::BlockNumber: Ord + sp_runtime::traits::Zero,
 {
 	pub fn set_client_id(&mut self, client_id: ClientId) {
 		self.client_id = Some(client_id)

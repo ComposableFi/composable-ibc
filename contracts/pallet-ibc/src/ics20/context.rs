@@ -100,10 +100,9 @@ where
 		let amount: T::Balance = amt.amount.as_u256().low_u128().into();
 		let denom = amt.denom.to_string();
 		// Find existing asset or create a new one
-		let asset_id =
-			T::IbcDenomToAssetIdConversion::to_asset_id(&denom).map_err(|_| {
-				Ics20Error::implementation_specific("Failed to create or find asset".to_string())
-			})?;
+		let asset_id = T::IbcDenomToAssetIdConversion::to_asset_id(&denom).map_err(|_| {
+			Ics20Error::implementation_specific("Failed to create or find asset".to_string())
+		})?;
 
 		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
 			asset_id.into(),

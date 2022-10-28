@@ -35,6 +35,7 @@ members = [
     "hyperspace/parachain",
     "hyperspace/cosmos",
     "hyperspace/testsuite",
+    "hyperspace/metrics",
 
     # utilities
     "utils/subxt/codegen",

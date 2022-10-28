@@ -1,17 +1,12 @@
 use futures::StreamExt;
 use hyperspace::logging;
 use hyperspace_primitives::{mock::LocalClientTypes, IbcProvider, KeyProvider};
-use hyperspace_testsuite::{
-	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
-	ibc_messaging_packet_timeout_on_channel_close,
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
-	ibc_messaging_with_connection_delay,
-};
 use ibc::{core::ics02_client::msgs::create_client::MsgCreateAnyClient, tx_msg::Msg};
 use parachain::{finality_protocol::FinalityProtocol, ParachainClient, ParachainClientConfig};
 use subxt::tx::SubstrateExtrinsicParams;
 
 use hyperspace_primitives::utils::create_clients;
+use hyperspace_testsuite::misbehaviour::ibc_messaging_submit_misbehaviour;
 use tendermint_proto::Protobuf;
 
 #[derive(Debug, Clone)]
@@ -138,13 +133,17 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 	// Run tests sequentially
 
 	// no timeouts + connection delay
-	ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b).await;
+	// ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b).await;
+	//
+	// // timeouts + connection delay
+	// ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
+	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(&mut chain_a, &mut
+	// chain_b).await;
+	//
+	// // channel closing semantics
+	// ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b).await;
+	// ibc_channel_close(&mut chain_a, &mut chain_b).await;
 
-	// timeouts + connection delay
-	ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
-
-	// channel closing semantics
-	ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b).await;
-	ibc_channel_close(&mut chain_a, &mut chain_b).await;
+	// misbehaviour
+	ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
 }

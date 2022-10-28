@@ -5,8 +5,8 @@ use std::{collections::BTreeMap, str::FromStr, sync::Arc, time::Duration};
 pub mod chain;
 pub mod error;
 pub mod key_provider;
-pub(crate) mod parachain;
-pub(crate) mod polkadot;
+pub mod parachain;
+pub mod polkadot;
 pub mod provider;
 pub mod signer;
 pub mod utils;
@@ -406,10 +406,13 @@ where
 					tx_params.tip(AssetTip::new(count * tip)).into(),
 				)
 				.await;
-			if res.is_ok() {
-				break res.unwrap()
+			match res {
+				Ok(progress) => break progress,
+				Err(e) => {
+					log::warn!("Failed to submit extrinsic: {:?}. Retrying...", e);
+					count += 1;
+				},
 			}
-			count += 1;
 		};
 
 		let tx_in_block = progress.wait_for_in_block().await?;
