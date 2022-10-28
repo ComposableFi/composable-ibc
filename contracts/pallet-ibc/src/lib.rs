@@ -28,7 +28,6 @@
 //! Pallet IBC
 //! Implements the ibc protocol for substrate runtimes.
 extern crate alloc;
-extern crate core;
 
 use codec::{Decode, Encode};
 use core::fmt::Debug;
@@ -547,6 +546,7 @@ pub mod pallet {
 				})
 				.collect::<Result<Vec<ibc_proto::google::protobuf::Any>, Error<T>>>()?;
 			let reserve_amt = T::SpamProtectionDeposit::get().saturating_mul(reserve_count.into());
+
 			if reserve_amt >= T::SpamProtectionDeposit::get() {
 				<T::NativeCurrency as ReservableCurrency<T::AccountId>>::reserve(
 					&sender,

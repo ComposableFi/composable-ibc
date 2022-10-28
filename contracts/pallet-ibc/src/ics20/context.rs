@@ -1,6 +1,9 @@
 use super::super::*;
 use crate::routing::Context;
-use frame_support::traits::fungibles::{Mutate, Transfer};
+use frame_support::traits::{
+	fungibles::{Mutate, Transfer},
+	Currency, Get
+};
 use ibc::{
 	applications::transfer::{
 		context::{BankKeeper, Ics20Context, Ics20Keeper, Ics20Reader},
@@ -47,6 +50,7 @@ impl<T: Config + Send + Sync> Ics20Keeper for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	<T as Config>::Balance: From<u128>,
+	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>
 {
 	type AccountId = T::AccountIdConversion;
 }
@@ -55,6 +59,7 @@ impl<T: Config + Send + Sync> Ics20Context for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	<T as Config>::Balance: From<u128>,
+	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>
 {
 	type AccountId = T::AccountIdConversion;
 }
@@ -64,6 +69,7 @@ where
 	T: Config + Send + Sync,
 	T::Balance: From<u128>,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>
 {
 	type AccountId = T::AccountIdConversion;
 
@@ -78,17 +84,31 @@ where
 		// Token should be registered already if sending an ibc asset
 		let asset_id = T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
 			.map_err(|_| Ics20Error::invalid_token())?;
-		<<T as Config>::Fungibles as Transfer<T::AccountId>>::transfer(
-			asset_id.into(),
-			&from.clone().into_account(),
-			&to.clone().into_account(),
-			amount,
-			false,
-		)
-		.map_err(|e| {
-			log::trace!(target: "pallet_ibc", "Failed to transfer ibc tokens: {:?}", e);
-			Ics20Error::invalid_token()
-		})?;
+		if asset_id == T::NativeAssetId::get() {
+			<T::NativeCurrency as Currency<T::AccountId>>::transfer(
+				&from.clone().into_account(),
+				&to.clone().into_account(),
+				amount.into(),
+				frame_support::traits::ExistenceRequirement::AllowDeath,
+			)
+			.map_err(|e| {
+				log::trace!(target: "pallet_ibc", "Failed to transfer ibc tokens: {:?}", e);
+				Ics20Error::invalid_token()
+			})?;
+		} else {
+			<<T as Config>::Fungibles as Transfer<T::AccountId>>::transfer(
+				asset_id.into(),
+				&from.clone().into_account(),
+				&to.clone().into_account(),
+				amount,
+				false,
+			)
+			.map_err(|e| {
+				log::trace!(target: "pallet_ibc", "Failed to transfer ibc tokens: {:?}", e);
+				Ics20Error::invalid_token()
+			})?;
+		}
+
 		Ok(())
 	}
 

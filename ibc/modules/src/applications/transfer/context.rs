@@ -131,20 +131,20 @@ fn validate_transfer_channel_params(
 	version: &Version,
 ) -> Result<(), Ics20Error> {
 	if channel_id.sequence() > (u32::MAX as u64) {
-		return Err(Ics20Error::chan_seq_exceeds_limit(channel_id.sequence()))
+		return Err(Ics20Error::chan_seq_exceeds_limit(channel_id.sequence()));
 	}
 
 	if order != Order::Unordered {
-		return Err(Ics20Error::channel_not_unordered(order))
+		return Err(Ics20Error::channel_not_unordered(order));
 	}
 
 	let bound_port = ctx.get_port()?;
 	if port_id != &bound_port {
-		return Err(Ics20Error::invalid_port(port_id.clone(), bound_port))
+		return Err(Ics20Error::invalid_port(port_id.clone(), bound_port));
 	}
 
 	if version != &Version::ics20() {
-		return Err(Ics20Error::invalid_version(version.clone()))
+		return Err(Ics20Error::invalid_version(version.clone()));
 	}
 
 	Ok(())
@@ -215,7 +215,7 @@ pub fn on_chan_close_init(
 	_port_id: &PortId,
 	_channel_id: &ChannelId,
 ) -> Result<(), Ics20Error> {
-	Err(Ics20Error::cant_close_channel())
+	Ok(())
 }
 
 pub fn on_chan_close_confirm(
@@ -235,10 +235,11 @@ pub fn on_recv_packet<Ctx: 'static + Ics20Context>(
 ) -> OnRecvPacketAck {
 	let data = match serde_json::from_slice::<PacketData>(&packet.data) {
 		Ok(data) => data,
-		Err(_) =>
+		Err(_) => {
 			return OnRecvPacketAck::Failed(Box::new(Acknowledgement::Error(
 				Ics20Error::packet_data_deserialization().to_string(),
-			))),
+			)))
+		},
 	};
 
 	let ack = match process_recv_packet(ctx, output, packet, data.clone()) {
