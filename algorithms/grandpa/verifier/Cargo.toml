@@ -40,7 +40,8 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 jsonrpsee-ws-client = "0.14.0"
 
 [features]
-default = ["std"]
+default = ["std", "build-metadata-from-ws"]
+build-metadata-from-ws = ["grandpa-prover/build-metadata-from-ws"]
 std = [
     "codec/std",
     "anyhow/std",
