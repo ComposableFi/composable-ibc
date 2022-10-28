@@ -305,9 +305,11 @@ where
 		let transaction_pool = transaction_pool.clone();
 
 		Box::new(move |deny_unsafe, _| {
+			let chain_props = parachain_config.chain_spec.properties();
 			let deps = crate::rpc::FullDeps {
 				client: client.clone(),
 				pool: transaction_pool.clone(),
+				chain_props,
 				deny_unsafe,
 			};
 

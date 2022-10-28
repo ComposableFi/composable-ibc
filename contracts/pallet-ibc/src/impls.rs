@@ -493,6 +493,7 @@ where
 		Ok(())
 	}
 
+	#[allow(dead_code)]
 	pub(crate) fn packet_cleanup() -> Result<(), Error<T>> {
 		for (port_id_bytes, channel_id_bytes, _) in Channels::<T>::iter() {
 			let channel_id = channel_id_from_bytes(channel_id_bytes.clone())
@@ -650,7 +651,7 @@ impl<T: Config> Pallet<T> {
 	pub fn get_denom_trace(
 		asset_id: T::AssetId,
 	) -> Option<ibc_primitives::QueryDenomTraceResponse> {
-		T::IdentifyAssetId::to_denom(asset_id).map(|denom| {
+		T::IbcDenomToAssetIdConversion::to_denom(asset_id).map(|denom| {
 			ibc_primitives::QueryDenomTraceResponse { denom: denom.as_bytes().to_vec() }
 		})
 	}
@@ -661,7 +662,8 @@ impl<T: Config> Pallet<T> {
 		limit: u64,
 		count_total: bool,
 	) -> ibc_primitives::QueryDenomTracesResponse {
-		let (denoms, count, next_key) = T::IdentifyAssetId::ibc_assets(key, offset, limit);
+		let (denoms, count, next_key) =
+			T::IbcDenomToAssetIdConversion::ibc_assets(key, offset, limit);
 		ibc_primitives::QueryDenomTracesResponse {
 			denoms,
 			total: count_total.then(|| count),

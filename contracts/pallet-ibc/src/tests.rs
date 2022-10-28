@@ -181,7 +181,7 @@ fn send_transfer() {
 		setup_client_and_consensus_state(PortId::transfer());
 
 		let balance = 100000 * MILLIS;
-		<<Test as Config>::MultiCurrency as Mutate<
+		<<Test as Config>::Fungibles as Mutate<
 			<Test as frame_system::Config>::AccountId,
 		>>::mint_into(PICA, &AccountId32::new([0; 32]), balance)
 		.unwrap();
@@ -233,7 +233,7 @@ fn on_deliver_ics20_recv_packet() {
 		let channel_escrow_address = channel_escrow_address.into_account();
 
 		// Endow escrow address with tokens
-		<<Test as Config>::MultiCurrency as Mutate<
+		<<Test as Config>::Fungibles as Mutate<
 			<Test as frame_system::Config>::AccountId,
 		>>::mint_into(PICA, &channel_escrow_address, balance)
 		.unwrap();

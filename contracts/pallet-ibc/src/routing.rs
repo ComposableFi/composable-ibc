@@ -1,5 +1,5 @@
 use super::*;
-use core::borrow::Borrow;
+use core::{borrow::Borrow, fmt::Debug};
 use ibc::{
 	applications::transfer::MODULE_ID_STR as IBC_TRANSFER_MODULE_ID,
 	core::{
@@ -31,6 +31,7 @@ impl<T: Config + Send + Sync> Context<T> {
 pub struct IbcRouter<T: Config> {
 	pallet_ibc_ping: pallet_ibc_ping::IbcModule<T>,
 	ibc_transfer: ics20::IbcModule<T>,
+	sub_router: T::Router,
 }
 
 impl<T: Config> Default for IbcRouter<T> {
@@ -38,15 +39,15 @@ impl<T: Config> Default for IbcRouter<T> {
 		Self {
 			pallet_ibc_ping: pallet_ibc_ping::IbcModule::<T>::default(),
 			ibc_transfer: ics20::IbcModule::<T>::default(),
+			sub_router: Default::default(),
 		}
 	}
 }
 
-/// Module routing abstraction for down substrate runtimes. Notice the lack of &self in the methods,
-/// this means routes need to be statically defined
-pub trait ModuleRouter {
+/// Module routing abstraction for downstream substrate runtimes.
+pub trait ModuleRouter: Default + Clone + Eq + PartialEq + Debug {
 	/// Returns a mutable reference to a `Module` registered against the specified `ModuleId`
-	fn get_route_mut(module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module>;
+	fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module>;
 	/// Returns true if the `Router` has a `Module` registered against the specified `ModuleId`
 	fn has_route(module_id: &impl Borrow<ModuleId>) -> bool;
 	/// Should return the module_id associated with a given port_id
@@ -60,7 +61,7 @@ where
 {
 	fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module> {
 		// check if the user has defined any custom routes
-		if let Some(module) = T::Router::get_route_mut(module_id) {
+		if let Some(module) = self.sub_router.get_route_mut(module_id) {
 			return Some(module)
 		}
 

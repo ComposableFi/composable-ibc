@@ -5,12 +5,15 @@
 
 #![warn(missing_docs)]
 
+use sc_chain_spec::Properties;
 use std::sync::Arc;
 
 use parachain_template_runtime::{opaque::Block, AccountId, Balance, Index as Nonce};
 
-use sc_client_api::AuxStore;
-pub use sc_rpc::{DenyUnsafe, SubscriptionTaskExecutor};
+use ibc_rpc::IbcRpcHandler;
+use ibc_runtime_api::IbcRuntimeApi;
+use sc_client_api::{AuxStore, BlockBackend, ProofProvider};
+pub use sc_rpc::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
@@ -25,6 +28,8 @@ pub struct FullDeps<C, P> {
 	pub client: Arc<C>,
 	/// Transaction pool instance.
 	pub pool: Arc<P>,
+	/// Chain properties
+	pub chain_props: Properties,
 	/// Whether to deny unsafe calls
 	pub deny_unsafe: DenyUnsafe,
 }
@@ -38,21 +43,26 @@ where
 		+ HeaderBackend<Block>
 		+ AuxStore
 		+ HeaderMetadata<Block, Error = BlockChainError>
+		+ ProofProvider<Block>
+		+ BlockBackend<Block>
 		+ Send
 		+ Sync
 		+ 'static,
+	C::Api: IbcRuntimeApi<Block>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 {
+	use ibc_rpc::IbcRpcHandler;
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 	use substrate_frame_rpc_system::{System, SystemApiServer};
 
 	let mut module = RpcExtension::new(());
-	let FullDeps { client, pool, deny_unsafe } = deps;
+	let FullDeps { client, pool, deny_unsafe, chain_props } = deps;
 
 	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
 	module.merge(TransactionPayment::new(client).into_rpc())?;
+	module.merge(IbcRpcHandler::new(client.clone(), chain_props))?;
 	Ok(module)
 }

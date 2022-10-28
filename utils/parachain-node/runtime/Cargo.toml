@@ -24,6 +24,7 @@ smallvec = "1.9.0"
 
 # Local
 pallet-ibc = { path = "../../../contracts/pallet-ibc", default-features = false }
+ibc-primitives = { path = "../../../contracts/pallet-ibc/primitives", default-features = false }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.27" }

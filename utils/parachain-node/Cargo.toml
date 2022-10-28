@@ -20,6 +20,9 @@ jsonrpsee = { version = "0.14.0", features = ["server"] }
 
 # Local
 parachain-runtime = { path = "runtime" }
+ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
+ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
+ibc-runtime-api = { path = "../../contracts/pallet-ibc/runtime-api" }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }

@@ -56,6 +56,7 @@ pub mod light_clients;
 mod port;
 pub mod routing;
 pub use client::HostConsensusProof;
+pub use light_client_common;
 
 pub const MODULE_ID: &str = "pallet_ibc";
 
@@ -211,12 +212,13 @@ pub mod pallet {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// Currency type of the runtime
-		type Currency: Currency<Self::AccountId>;
-		type ReservableCurrency: ReservableCurrency<Self::AccountId>;
+		type Currency: ReservableCurrency<Self::AccountId>;
+		/// Balance type
 		type Balance: Balance;
+		/// AssetId type
 		type AssetId: AssetId;
 		/// Convert ibc denom to asset id and vice versa
-		type IdentifyAssetId: DenomToAssetId<Self>;
+		type IbcDenomToAssetIdConversion: DenomToAssetId<Self>;
 		/// Create a new fungible asset
 		type Create: CreateAsset<Self>;
 		/// Prefix for events stored in the Off-chain DB via Indexing API, child trie and connection
@@ -228,7 +230,7 @@ pub mod pallet {
 			+ IdentifyAccount<AccountId = Self::AccountId>
 			+ Clone;
 		/// MultiCurrency System
-		type MultiCurrency: Transfer<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
+		type Fungibles: Transfer<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
 			+ Mutate<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
 			+ Inspect<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>;
 		/// Expected block time in milliseconds
@@ -511,7 +513,7 @@ pub mod pallet {
 		AccountId32: From<T::AccountId>,
 		u32: From<<T as frame_system::Config>::BlockNumber>,
 		T::Balance: From<u128>,
-		<T::ReservableCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
+		<T::Currency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 	{
 		#[pallet::weight(crate::weight::deliver::< T > (messages))]
 		#[frame_support::transactional]
@@ -544,7 +546,7 @@ pub mod pallet {
 				.collect::<Result<Vec<ibc_proto::google::protobuf::Any>, Error<T>>>()?;
 			let reserve_amt = T::SpamProtectionDeposit::get().saturating_mul(reserve_count.into());
 			if reserve_amt >= T::SpamProtectionDeposit::get() {
-				<T::ReservableCurrency as ReservableCurrency<T::AccountId>>::reserve(
+				<T::Currency as ReservableCurrency<T::AccountId>>::reserve(
 					&sender,
 					reserve_amt.into(),
 				)?;
@@ -563,8 +565,8 @@ pub mod pallet {
 			amount: T::Balance,
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
-			let denom =
-				T::IdentifyAssetId::to_denom(asset_id).ok_or_else(|| Error::<T>::InvalidAssetId)?;
+			let denom = T::IbcDenomToAssetIdConversion::to_denom(asset_id)
+				.ok_or_else(|| Error::<T>::InvalidAssetId)?;
 
 			let account_id_32: AccountId32 = origin.clone().into();
 			let from = runtime_interface::account_id_to_ss58(account_id_32.into())
@@ -658,7 +660,9 @@ pub mod pallet {
 				from: origin,
 				to: to.as_bytes().to_vec(),
 				amount,
-				local_asset_id: T::IdentifyAssetId::to_asset_id(&coin.denom.to_string()),
+				local_asset_id: T::IbcDenomToAssetIdConversion::to_asset_id(
+					&coin.denom.to_string(),
+				),
 				ibc_denom: coin.denom.to_string().as_bytes().to_vec(),
 			});
 			Ok(())

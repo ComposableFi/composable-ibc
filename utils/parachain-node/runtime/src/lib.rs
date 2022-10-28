@@ -10,6 +10,11 @@ mod weights;
 pub mod xcm_config;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use ibc::core::{
+	ics24_host::identifier::PortId,
+	ics26_routing::context::{Module, ModuleId},
+};
+use pallet_ibc::light_client_common::RelayChain;
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -19,6 +24,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, MultiSignature,
 };
+use std::borrow::Borrow;
 
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -51,11 +57,9 @@ use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 // XCM Imports
+use pallet_ibc::routing::ModuleRouter;
 use xcm::latest::prelude::BodyId;
 use xcm_executor::XcmExecutor;
-
-/// Import the template pallet.
-pub use pallet_template;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -457,26 +461,46 @@ impl pallet_collator_selection::Config for Runtime {
 parameter_types! {
 	pub const ExpectedBlockTime: u64 = MILLISECS_PER_BLOCK as u64;
 	pub const RelayChainId: RelayChain = RelayChain::Rococo;
+	pub const SpamProtectionDeposit: Balance = 1_000_000_000_000;
+}
+
+pub struct Router;
+
+impl ModuleRouter for Router {
+	fn get_route_mut(&mut self, _module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module> {
+		None
+	}
+
+	fn has_route(_module_id: &impl Borrow<ModuleId>) -> bool {
+		false
+	}
+
+	fn lookup_module_by_port(_port_id: &PortId) -> Option<ModuleId> {
+		None
+	}
 }
 
 impl pallet_ibc::Config for Runtime {
 	type TimeProvider = Timestamp;
 	type Event = Event;
 	type Currency = Balances;
-	const INDEXING_PREFIX: &'static [u8] = b"ibc/";
-	const PALLET_PREFIX: &'static [u8] = b"ibc/";
 	const PALLET_PREFIX: &'static [u8] = b"ibc/";
 	const LIGHT_CLIENT_PROTOCOL: pallet_ibc::LightClientProtocol =
 		pallet_ibc::LightClientProtocol::Grandpa;
 	type ExpectedBlockTime = ExpectedBlockTime;
-	type MultiCurrency = Assets;
-	type AccountIdConversion = ibc_primitives::IbcAccount;
-	type AssetRegistry = AssetsRegistry;
-	type CurrencyFactory = CurrencyFactory;
-	type WeightInfo = crate::weights::pallet_ibc::WeightInfo<Self>;
+	type Fungibles = Assets;
+	type AccountIdConversion = ibc_primitives::IbcAccount<AccountId>;
 	type ParaId = parachain_info::Pallet<Runtime>;
 	type RelayChain = RelayChainId;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type SentryOrigin = EnsureRoot<AccountId>;
+	type SpamProtectionDeposit = SpamProtectionDeposit;
+	type Balance = Balance;
+	type AssetId = ();
+	type IbcDenomToAssetIdConversion = ();
+	type Create = ();
+	type Router = Router;
+	type WeightInfo = ();
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -509,8 +533,8 @@ construct_runtime!(
 		CumulusXcm: cumulus_pallet_xcm = 32,
 		DmpQueue: cumulus_pallet_dmp_queue = 33,
 
-		// Pallet-ibc, we use a predefined module index.
-		Ibc: pallet_ibc = 9944,
+		// Pallet-ibc, should be the last module in your index
+		Ibc: pallet_ibc = 255,
 	}
 );
 

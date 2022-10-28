@@ -75,9 +75,9 @@ where
 		let amount: T::Balance = amt.amount.as_u256().low_u128().into();
 		let denom = amt.denom.to_string();
 		// Token should be registered already if sending an ibc asset
-		let asset_id =
-			T::IdentifyAssetId::to_asset_id(&denom).ok_or_else(|| Ics20Error::invalid_token())?;
-		<<T as Config>::MultiCurrency as Transfer<T::AccountId>>::transfer(
+		let asset_id = T::IbcDenomToAssetIdConversion::to_asset_id(&denom)
+			.ok_or_else(|| Ics20Error::invalid_token())?;
+		<<T as Config>::Fungibles as Transfer<T::AccountId>>::transfer(
 			asset_id.into(),
 			&from.clone().into_account(),
 			&to.clone().into_account(),
@@ -100,7 +100,7 @@ where
 		let denom = amt.denom.to_string();
 		// Before minting we need to check if the asset has been registered if not we register the
 		// asset before proceeding to mint
-		let asset_id = if let Some(asset_id) = T::IdentifyAssetId::to_asset_id(&denom) {
+		let asset_id = if let Some(asset_id) = T::IbcDenomToAssetIdConversion::to_asset_id(&denom) {
 			asset_id
 		} else {
 			T::Create::create_asset(&denom).map_err(|_| {
@@ -108,7 +108,7 @@ where
 			})?
 		};
 
-		<<T as Config>::MultiCurrency as Mutate<T::AccountId>>::mint_into(
+		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
 			asset_id.into(),
 			&account.clone().into_account(),
 			amount,
@@ -128,9 +128,9 @@ where
 		let amount: T::Balance = amt.amount.as_u256().low_u128().into();
 		let denom = amt.denom.to_string();
 		// Token should be registered already if burning a voucher
-		let asset_id =
-			T::IdentifyAssetId::to_asset_id(&denom).ok_or_else(|| Ics20Error::invalid_token())?;
-		<<T as Config>::MultiCurrency as Mutate<T::AccountId>>::burn_from(
+		let asset_id = T::IbcDenomToAssetIdConversion::to_asset_id(&denom)
+			.ok_or_else(|| Ics20Error::invalid_token())?;
+		<<T as Config>::Fungibles as Mutate<T::AccountId>>::burn_from(
 			asset_id.into(),
 			&account.clone().into_account(),
 			amount,

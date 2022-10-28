@@ -849,7 +849,7 @@ benchmarks! {
 			None,
 			None,
 		).unwrap();
-		<<T as Config>::MultiCurrency as Mutate<T::AccountId>>::mint_into(
+		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
 			asset_id.into(),
 			&caller,
 			balance.into(),
@@ -873,7 +873,7 @@ benchmarks! {
 
 	}:_(RawOrigin::Signed(caller.clone()), transfer_params, asset_id.into(), amt.into())
 	verify {
-		assert_eq!(<<T as Config>::MultiCurrency as Inspect<T::AccountId>>::balance(
+		assert_eq!(<<T as Config>::Fungibles as Inspect<T::AccountId>>::balance(
 			asset_id.into(),
 			&caller
 		), (balance - amt).into());
@@ -995,7 +995,7 @@ benchmarks! {
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
 		let channel_escrow_address: T::AccountId = channel_escrow_address.into_account();
 
-		<<T as Config>::MultiCurrency as Mutate<T::AccountId>>::mint_into(
+		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
 			CurrencyId::PICA.into(),
 			&channel_escrow_address,
 			balance.into(),
@@ -1050,7 +1050,7 @@ benchmarks! {
 
 	 }
 	verify {
-		assert_eq!(<<T as Config>::MultiCurrency as Inspect<T::AccountId>>::balance(
+		assert_eq!(<<T as Config>::Fungibles as Inspect<T::AccountId>>::balance(
 			CurrencyId::PICA.into(),
 			&caller
 		), amt.into());
@@ -1079,7 +1079,7 @@ benchmarks! {
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
 		let channel_escrow_address: T::AccountId = channel_escrow_address.into_account();
 
-		<<T as Config>::MultiCurrency as Mutate<T::AccountId>>::mint_into(
+		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
 			CurrencyId::PICA.into(),
 			&channel_escrow_address,
 			balance.into(),
@@ -1127,7 +1127,7 @@ benchmarks! {
 	   handler.on_acknowledgement_packet(&mut output, &packet, &ack, &signer).unwrap();
 	}
 	verify {
-		assert_eq!(<<T as Config>::MultiCurrency as Inspect<T::AccountId>>::balance(
+		assert_eq!(<<T as Config>::Fungibles as Inspect<T::AccountId>>::balance(
 			CurrencyId::PICA.into(),
 			&caller
 		), amt.into());
@@ -1156,7 +1156,7 @@ benchmarks! {
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
 		let channel_escrow_address: T::AccountId = channel_escrow_address.into_account();
 
-		<<T as Config>::MultiCurrency as Mutate<T::AccountId>>::mint_into(
+		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
 			CurrencyId::PICA.into(),
 			&channel_escrow_address,
 			balance.into(),
@@ -1203,7 +1203,7 @@ benchmarks! {
 		handler.on_timeout_packet(&mut output, &packet, &signer).unwrap();
 	}
 	verify {
-		assert_eq!(<<T as Config>::MultiCurrency as Inspect<T::AccountId>>::balance(
+		assert_eq!(<<T as Config>::Fungibles as Inspect<T::AccountId>>::balance(
 			CurrencyId::PICA.into(),
 			&caller
 		), amt.into());

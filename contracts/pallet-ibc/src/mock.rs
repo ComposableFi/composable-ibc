@@ -170,7 +170,7 @@ impl pallet_ibc::Config for Test {
 	const LIGHT_CLIENT_PROTOCOL: crate::LightClientProtocol = crate::LightClientProtocol::Beefy;
 	type Currency = Balances;
 	type ExpectedBlockTime = ExpectedBlockTime;
-	type MultiCurrency = Assets;
+	type Fungibles = Assets;
 	type AccountIdConversion = IbcAccount<AccountId>;
 	type WeightInfo = ();
 	type AdminOrigin = frame_system::EnsureRoot<AccountId>;
@@ -178,7 +178,7 @@ impl pallet_ibc::Config for Test {
 	type RelayChain = RelayChainId;
 	type Balance = Balance;
 	type AssetId = AssetId;
-	type IdentifyAssetId = ();
+	type IbcDenomToAssetIdConversion = ();
 	type Create = AssetCreator<Self>;
 	type SentryOrigin = EnsureRoot<AccountId>;
 	type ReservableCurrency = Balances;
