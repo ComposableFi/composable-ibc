@@ -9,7 +9,7 @@ use jsonrpsee::{
 use std::{env, fs, path::Path};
 use subxt_codegen::{CratePath, DerivesRegistry};
 
-pub async fn fetch_metadata_ws(url: &'static str) -> anyhow::Result<Vec<u8>> {
+pub async fn fetch_metadata_ws(url: &str) -> anyhow::Result<Vec<u8>> {
 	let (sender, receiver) = WsTransportClientBuilder::default()
 		.build(url.parse::<Uri>().unwrap())
 		.await
