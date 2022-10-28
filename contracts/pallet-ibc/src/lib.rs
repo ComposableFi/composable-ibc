@@ -251,6 +251,10 @@ pub mod pallet {
 		/// Amount to be reserved for client and connection creation
 		#[pallet::constant]
 		type SpamProtectionDeposit: Get<Self::Balance>;
+		/// Minimum amount for token
+		/// Should be Non zero
+		#[pallet::constant]
+		type ExistentialDeposit: Get<Self::Balance>;
 	}
 
 	#[pallet::pallet]
@@ -426,6 +430,10 @@ pub mod pallet {
 		ClientUpgradeSet,
 		/// Client has been frozen
 		ClientFrozen { client_id: Vec<u8>, height: u64, revision_number: u64 },
+		/// Asset Admin Account Updated
+		AssetAdminUpdated {
+			admin_account: T::AccountId
+		}
 	}
 
 	/// Errors inform users that something went wrong.
@@ -684,6 +692,16 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::weight(0)]
+		pub fn set_asset_admin(origin: OriginFor<T>, admin_account: T::AccountId) -> DispatchResult {
+			<T as Config>::AdminOrigin::ensure_origin(origin)?;
+			AssetAdmin::<T>::put(admin_account.clone());
+			Self::deposit_event(Event::<T>::AssetAdminUpdated {
+				admin_account
+			});
+			Ok(())
+		}
+
 		/// We write the consensus & client state under these predefined paths so that
 		/// we can produce state proofs of the values to connected chains
 		/// in order to execute client upgrades.
@@ -758,6 +776,27 @@ pub mod pallet {
 			});
 
 			Ok(())
+		}
+	}
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub asset_admin: Option<T::AccountId>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { asset_admin: None }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			if let Some(admin) = self.asset_admin.as_ref() {
+				AssetAdmin::<T>::put(admin.clone())
+			}
 		}
 	}
 }
