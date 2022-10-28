@@ -204,12 +204,8 @@ impl<T: Config> DenomToAssetId<T> for ()
 where
 	T::AssetId: From<u128>,
 {
-	fn to_asset_id(_denom: &String) -> Result<(T::AssetId, AssetMetadata), crate::Error<T>> {
-		Ok((1u128.into(), AssetMetadata {
-			name: vec![0;32],
-			symbol: vec![0;32],
-			decimals: 8
-		}))
+	fn to_asset_id(_denom: &String) -> Result<T::AssetId, crate::Error<T>> {
+		Ok(1u128.into())
 	}
 
 	fn to_denom(_id: T::AssetId) -> Option<String> {
