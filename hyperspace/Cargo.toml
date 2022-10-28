@@ -66,6 +66,9 @@ sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkad
 #common = { path = "../contracts/pallet-ibc" }
 
 [features]
+build-metadata-from-ws = [
+    "parachain/build-metadata-from-ws",
+]
 #near = ["dep:near"]
 #cosmos = ["dep:cosmos"]
 testing = [ "primitives/testing", "parachain/testing" ]
