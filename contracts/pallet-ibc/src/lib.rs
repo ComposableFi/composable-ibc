@@ -662,8 +662,7 @@ pub mod pallet {
 				local_asset_id: T::IbcDenomToAssetIdConversion::to_asset_id(
 					&coin.denom.to_string(),
 				)
-				.ok()
-				.map(|(asset_id, ..)| asset_id),
+				.ok(),
 				ibc_denom: coin.denom.to_string().as_bytes().to_vec(),
 			});
 			Ok(())
@@ -758,28 +757,12 @@ pub mod pallet {
 	}
 }
 
-#[derive(Clone, Encode, Decode, Eq, PartialEq, Default, RuntimeDebug, TypeInfo)]
-pub struct AssetMetadata {
-	/// The user friendly name of this asset.
-	pub name: Vec<u8>,
-	/// The ticker symbol for this asset
-	pub symbol: Vec<u8>,
-	/// The number of decimals this asset uses to represent one unit.
-	pub decimals: u8,
-}
-
-impl AssetMetadata {
-	pub fn is_valid(&self) -> bool {
-		use sp_runtime::traits::Zero;
-		!self.name.is_empty() && !self.symbol.is_empty() && !self.decimals.is_zero()
-	}
-}
-
 pub trait DenomToAssetId<T: Config> {
-	/// Get the asset id for this ibc denom
-	/// Should create the asset if does not exist
-	/// Asset metadata should be unchangeable
-	fn to_asset_id(denom: &String) -> Result<(T::AssetId, AssetMetadata), Error<T>>;
+	/// Get the equivalent asset id for this ibc denom
+	/// **Note**
+	/// This function should create and register an asset with a valid metadata
+	/// if an asset does not exist for this denom
+	fn to_asset_id(denom: &String) -> Result<T::AssetId, Error<T>>;
 	/// Return full denom for given asset id
 	fn to_denom(id: T::AssetId) -> Option<String>;
 	/// Returns a tuple
