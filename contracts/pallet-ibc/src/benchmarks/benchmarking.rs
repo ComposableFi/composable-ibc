@@ -9,19 +9,16 @@ use crate::{
 	light_clients::{AnyClientState, AnyConsensusState},
 	Any, Config,
 };
-use composable_traits::{
-	currency::{CurrencyFactory, RangeId},
-	defi::DeFiComposableConfig,
-	xcm::assets::{RemoteAssetRegistryInspect, RemoteAssetRegistryMutate, XcmAssetLocation},
-};
+
 use core::str::FromStr;
-use frame_benchmarking::{benchmarks, whitelisted_caller, Zero};
+use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::traits::fungibles::{Inspect, Mutate};
 use frame_system::RawOrigin;
 use ibc_primitives::IbcHandler;
 use sp_runtime::traits::IdentifyAccount;
 
 use crate::routing::Context;
+use frame_support::traits::Currency;
 use ibc::{
 	applications::transfer::{
 		acknowledgement::ACK_ERR_STR, packet::PacketData, Amount, Coin, PrefixedDenom, VERSION,
@@ -73,8 +70,7 @@ use ibc::{
 	signer::Signer,
 	timestamp::Timestamp,
 };
-use ibc_primitives::{get_channel_escrow_address, ibc_denom_to_foreign_asset_id};
-use primitives::currency::CurrencyId;
+use ibc_primitives::get_channel_escrow_address;
 use scale_info::prelude::string::ToString;
 use sp_core::crypto::AccountId32;
 use sp_std::vec;
@@ -85,28 +81,17 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
 }
 
 const TIMESTAMP: u64 = 1650894363;
+const MILLIS: u128 = 1_000_000;
 
 benchmarks! {
 	where_clause {
 		where u32: From<<T as frame_system::Config>::BlockNumber>,
 				<T as frame_system::Config>::BlockNumber: From<u32>,
 				T: Send + Sync + pallet_timestamp::Config<Moment = u64> + parachain_info::Config + Config,
-		CurrencyId: From<<T as DeFiComposableConfig>::MayBeAssetId>,
 		AccountId32: From<T::AccountId>,
-		<T as DeFiComposableConfig>::MayBeAssetId: From<CurrencyId>,
-		<T as DeFiComposableConfig>::MayBeAssetId:
-			From<<T::AssetRegistry as RemoteAssetRegistryMutate>::AssetId>,
-		<T as DeFiComposableConfig>::MayBeAssetId:
-			From<<T::AssetRegistry as RemoteAssetRegistryInspect>::AssetId>,
-		<T::AssetRegistry as RemoteAssetRegistryInspect>::AssetId:
-			From<<T as DeFiComposableConfig>::MayBeAssetId>,
-		<T::AssetRegistry as RemoteAssetRegistryMutate>::AssetId:
-			From<<T as DeFiComposableConfig>::MayBeAssetId>,
-		<T::AssetRegistry as RemoteAssetRegistryInspect>::AssetNativeLocation:
-			From<XcmAssetLocation>,
-		<T::AssetRegistry as RemoteAssetRegistryMutate>::AssetNativeLocation:
-			From<XcmAssetLocation>,
-		<T as DeFiComposableConfig>::MayBeAssetId: From<<T as assets::Config>::AssetId>,
+		T::Balance: From<u128>,
+		T::AssetId: From<u128>,
+		<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>
 	}
 
 	// Run these benchmarks via
@@ -835,22 +820,12 @@ benchmarks! {
 			Version::new(VERSION.to_string()),
 		);
 
-		let balance = 100000 * CurrencyId::milli::<u128>();
+		let balance = 100000 * MILLIS;
 		let channel_id = Pallet::<T>::open_channel(port_id.clone(), channel_end).unwrap();
-		let denom = "transfer/channel-15/uatom";
-		let foreign_asset_id = ibc_denom_to_foreign_asset_id(denom);
-		let asset_id = <T as Config>::CurrencyFactory::create(
-			RangeId::IBC_ASSETS,
-			<T as DeFiComposableConfig>::Balance::zero(),
-		).unwrap();
-		<T as Config>::AssetRegistry::set_reserve_location(
-			asset_id.into(),
-			foreign_asset_id.into(),
-			None,
-			None,
-		).unwrap();
+		let denom = "transfer/channel-15/uatom".to_string();
+		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
 		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
-			asset_id.into(),
+			asset_id,
 			&caller,
 			balance.into(),
 		).unwrap();
@@ -863,13 +838,12 @@ benchmarks! {
 			timeout,
 		};
 
-		Pallet::<T>::register_asset_id(asset_id.into(), denom.as_bytes().to_vec());
 		<Params<T>>::put(PalletParams {
 			send_enabled: true,
 			receive_enabled: true
 		});
 
-		let amt = 1000 * CurrencyId::milli::<u128>();
+		let amt = 1000 * MILLIS;
 
 	}:_(RawOrigin::Signed(caller.clone()), transfer_params, asset_id.into(), amt.into())
 	verify {
@@ -988,15 +962,15 @@ benchmarks! {
 		);
 
 
-		let balance = 100000 * CurrencyId::milli::<u128>();
+		let balance = 100000 * MILLIS;
 		let channel_id = Pallet::<T>::open_channel(port_id.clone(), channel_end).unwrap();
-		let denom = "transfer/channel-1/PICA";
+		let denom = "transfer/channel-1/PICA".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
 		let channel_escrow_address: T::AccountId = channel_escrow_address.into_account();
-
+		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
 		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
-			CurrencyId::PICA.into(),
+			asset_id,
 			&channel_escrow_address,
 			balance.into(),
 		).unwrap();
@@ -1011,8 +985,8 @@ benchmarks! {
 		let raw_user: &[u8] = raw_user.as_ref();
 		let mut hex_string = hex::encode_upper(raw_user.to_vec());
 		hex_string.insert_str(0, "0x");
-		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
-		let amt = 1000 * CurrencyId::milli::<u128>();
+		let prefixed_denom = PrefixedDenom::from_str(&denom).unwrap();
+		let amt = 1000 * MILLIS;
 		let coin = Coin {
 			denom: prefixed_denom,
 			amount: Amount::from_str(&format!("{:?}", amt)).unwrap()
@@ -1051,7 +1025,7 @@ benchmarks! {
 	 }
 	verify {
 		assert_eq!(<<T as Config>::Fungibles as Inspect<T::AccountId>>::balance(
-			CurrencyId::PICA.into(),
+			asset_id,
 			&caller
 		), amt.into());
 	}
@@ -1072,15 +1046,15 @@ benchmarks! {
 		);
 
 
-		let balance = 100000 * CurrencyId::milli::<u128>();
+		let balance = 100000 * MILLIS;
 		let channel_id = Pallet::<T>::open_channel(port_id.clone(), channel_end).unwrap();
-		let denom = "PICA";
+		let denom = "PICA".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
 		let channel_escrow_address: T::AccountId = channel_escrow_address.into_account();
-
+		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
 		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
-			CurrencyId::PICA.into(),
+			asset_id,
 			&channel_escrow_address,
 			balance.into(),
 		).unwrap();
@@ -1095,8 +1069,8 @@ benchmarks! {
 		let raw_user: &[u8] = raw_user.as_ref();
 		let mut hex_string = hex::encode_upper(raw_user.to_vec());
 		hex_string.insert_str(0, "0x");
-		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
-		let amt = 1000 * CurrencyId::milli::<u128>();
+		let prefixed_denom = PrefixedDenom::from_str(&denom).unwrap();
+		let amt = 1000 * MILLIS;
 		let coin = Coin {
 			denom: prefixed_denom,
 			amount: Amount::from_str(&format!("{:?}", amt)).unwrap()
@@ -1128,7 +1102,7 @@ benchmarks! {
 	}
 	verify {
 		assert_eq!(<<T as Config>::Fungibles as Inspect<T::AccountId>>::balance(
-			CurrencyId::PICA.into(),
+			asset_id,
 			&caller
 		), amt.into());
 	}
@@ -1149,15 +1123,15 @@ benchmarks! {
 		);
 
 
-		let balance = 100000 * CurrencyId::milli::<u128>();
+		let balance = 100000 * MILLIS;
 		let channel_id = Pallet::<T>::open_channel(port_id.clone(), channel_end).unwrap();
-		let denom = "PICA";
+		let denom = "PICA".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
 		let channel_escrow_address: T::AccountId = channel_escrow_address.into_account();
-
+		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
 		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
-			CurrencyId::PICA.into(),
+			asset_id,
 			&channel_escrow_address,
 			balance.into(),
 		).unwrap();
@@ -1172,8 +1146,8 @@ benchmarks! {
 		let raw_user: &[u8] = raw_user.as_ref();
 		let mut hex_string = hex::encode_upper(raw_user.to_vec());
 		hex_string.insert_str(0, "0x");
-		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
-		let amt = 1000 * CurrencyId::milli::<u128>();
+		let prefixed_denom = PrefixedDenom::from_str(&denom).unwrap();
+		let amt = 1000 * MILLIS;
 		let coin = Coin {
 			denom: prefixed_denom,
 			amount: Amount::from_str(&format!("{:?}", amt)).unwrap()
@@ -1204,7 +1178,7 @@ benchmarks! {
 	}
 	verify {
 		assert_eq!(<<T as Config>::Fungibles as Inspect<T::AccountId>>::balance(
-			CurrencyId::PICA.into(),
+			asset_id,
 			&caller
 		), amt.into());
 	}

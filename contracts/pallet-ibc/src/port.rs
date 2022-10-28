@@ -16,12 +16,10 @@ impl<T: Config + Sync + Send> PortReader for Context<T> {
 	fn lookup_module_by_port(&self, port_id: &PortId) -> Result<ModuleId, ICS05Error> {
 		// check if the user has defined any custom modules
 		if let Some(module_id) = T::Router::lookup_module_by_port(port_id) {
-			return Ok(module_id)
+			return Ok(module_id);
 		}
 
 		match port_id.as_str() {
-			pallet_ibc_ping::PORT_ID => Ok(ModuleId::from_str(pallet_ibc_ping::MODULE_ID)
-				.map_err(|_| ICS05Error::module_not_found(port_id.clone()))?),
 			TRANSFER_PORT_ID => Ok(ModuleId::from_str(TRANSFER_MODULE_ID)
 				.map_err(|_| ICS05Error::module_not_found(port_id.clone()))?),
 			_ => Err(ICS05Error::module_not_found(port_id.clone())),

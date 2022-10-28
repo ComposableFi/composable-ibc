@@ -1,5 +1,7 @@
 use crate::{self as pallet_ibc, routing::ModuleRouter};
 use cumulus_primitives_core::ParaId;
+use frame_support::traits::fungibles::metadata::Mutate;
+use frame_support::traits::fungibles::{Create, InspectMetadata};
 use frame_support::{
 	pallet_prelude::ConstU32,
 	parameter_types,
@@ -57,9 +59,9 @@ frame_support::construct_runtime!(
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Timestamp: pallet_timestamp,
 		ParachainInfo: parachain_info,
-		Ping: pallet_ibc_ping,
 		Tokens: orml_tokens,
 		Assets: pallet_assets,
+		IbcPing: pallet_ibc_ping,
 		Ibc: pallet_ibc,
 	}
 );
@@ -102,11 +104,13 @@ impl parachain_info::Config for Test {}
 
 impl pallet_ibc_ping::Config for Test {
 	type Event = Event;
+
 	type IbcHandler = Ibc;
 }
 
 parameter_types! {
 	pub const NativeAssetId: u128 = 1;
+	pub const StringLimit: u32 = 32;
 }
 
 pub type Balances = orml_tokens::CurrencyAdapter<Test, NativeAssetId>;
@@ -123,7 +127,7 @@ impl pallet_assets::Config for Test {
 	type MetadataDepositBase = ();
 	type MetadataDepositPerByte = ();
 	type ApprovalDeposit = ();
-	type StringLimit = ();
+	type StringLimit = StringLimit;
 	type Freezer = ();
 	type Extra = ();
 }
@@ -164,6 +168,7 @@ impl Config for Test {
 	type NativeCurrency = Balances;
 	type Balance = Balance;
 	type AssetId = AssetId;
+	type NativeAssetId = NativeAssetId;
 	type IbcDenomToAssetIdConversion = ();
 	const PALLET_PREFIX: &'static [u8] = b"ibc/";
 	const LIGHT_CLIENT_PROTOCOL: crate::LightClientProtocol = LightClientProtocol::Beefy;
@@ -204,8 +209,27 @@ impl<T: Config> DenomToAssetId<T> for ()
 where
 	T::AssetId: From<u128>,
 {
-	fn from_denom_to_asset_id(_denom: &String) -> Result<T::AssetId, crate::Error<T>> {
-		Ok(1u128.into())
+	type Error = ();
+	fn from_denom_to_asset_id(_denom: &String) -> Result<T::AssetId, Self::Error> {
+		if <<Test as Config>::Fungibles as InspectMetadata<AccountId>>::decimals(&2u128) == 0 {
+			<<Test as Config>::Fungibles as Create<AccountId>>::create(
+				2u128.into(),
+				AccountId::new([0; 32]),
+				true,
+				1000u128.into(),
+			)
+			.unwrap();
+
+			<<Test as Config>::Fungibles as Mutate<AccountId>>::set(
+				2u128.into(),
+				&AccountId::new([0; 32]),
+				vec![0; 32],
+				vec![0; 32],
+				8,
+			)
+			.unwrap();
+		};
+		Ok(2u128.into())
 	}
 
 	fn from_asset_id_to_denom(_id: T::AssetId) -> Option<String> {
@@ -222,25 +246,36 @@ where
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Default)]
-pub struct Router;
+pub struct Router {
+	ibc_ping: pallet_ibc_ping::IbcModule<Test>,
+}
 
 impl ModuleRouter for Router {
 	fn get_route_mut(
 		&mut self,
-		_module_id: &impl core::borrow::Borrow<ibc::core::ics26_routing::context::ModuleId>,
-	) -> Option<&'static mut dyn ibc::core::ics26_routing::context::Module> {
-		None
+		module_id: &impl core::borrow::Borrow<ibc::core::ics26_routing::context::ModuleId>,
+	) -> Option<&mut dyn ibc::core::ics26_routing::context::Module> {
+		match module_id.borrow().to_string().as_str() {
+			pallet_ibc_ping::MODULE_ID => Some(&mut self.ibc_ping),
+			&_ => None,
+		}
 	}
 
 	fn has_route(
-		_module_id: &impl core::borrow::Borrow<ibc::core::ics26_routing::context::ModuleId>,
+		module_id: &impl core::borrow::Borrow<ibc::core::ics26_routing::context::ModuleId>,
 	) -> bool {
-		false
+		matches!(module_id.borrow().to_string().as_str(), pallet_ibc_ping::MODULE_ID,)
 	}
 
 	fn lookup_module_by_port(
-		_port_id: &ibc::core::ics24_host::identifier::PortId,
+		port_id: &ibc::core::ics24_host::identifier::PortId,
 	) -> Option<ibc::core::ics26_routing::context::ModuleId> {
-		None
+		match port_id.as_str() {
+			pallet_ibc_ping::PORT_ID => {
+				ibc::core::ics26_routing::context::ModuleId::from_str(pallet_ibc_ping::MODULE_ID)
+					.ok()
+			},
+			_ => None,
+		}
 	}
 }
