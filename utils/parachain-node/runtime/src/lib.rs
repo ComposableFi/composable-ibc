@@ -6,9 +6,15 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+extern crate alloc;
+
+use alloc::{format, string::String};
+
 mod weights;
 pub mod xcm_config;
 
+use codec::Decode;
+use core::borrow::Borrow;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use ibc::core::{
 	ics24_host::identifier::PortId,
@@ -16,7 +22,7 @@ use ibc::core::{
 };
 use pallet_ibc::light_client_common::RelayChain;
 use smallvec::smallvec;
-use sp_api::impl_runtime_apis;
+use sp_api::{impl_runtime_apis, Encode};
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
@@ -24,7 +30,6 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, MultiSignature,
 };
-use std::borrow::Borrow;
 
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -45,6 +50,7 @@ use frame_system::{
 	EnsureRoot,
 };
 use orml_traits::parameter_type_with_key;
+use pallet_ibc::{DenomToAssetId};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
@@ -64,6 +70,12 @@ use xcm_executor::XcmExecutor;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
+
+#[derive(Decode, Encode, Clone, Copy, Eq, PartialEq, Debug, scale_info::TypeInfo)]
+pub enum AssetId {
+	Native,
+	Ibc(u128), // ibc denom mapped to integer
+}
 
 /// Some way of identifying an account on the chain. We intentionally make it equivalent
 /// to the public key of our transaction signing scheme.
@@ -459,10 +471,6 @@ impl pallet_collator_selection::Config for Runtime {
 	type WeightInfo = ();
 }
 
-parameter_types! {
-	pub const MaxLocks: u32 = 256;
-}
-
 parameter_type_with_key! {
 	pub ExistentialDeposits: |_a: AssetId| -> Balance {
 		0
@@ -490,6 +498,7 @@ parameter_types! {
 	pub const ExpectedBlockTime: u64 = MILLISECS_PER_BLOCK as u64;
 	pub const RelayChainId: RelayChain = RelayChain::Rococo;
 	pub const SpamProtectionDeposit: Balance = 1_000_000_000_000;
+	pub const NativeAssetId: AssetId = AssetId::Native;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Default)]
@@ -509,13 +518,40 @@ impl ModuleRouter for Router {
 	}
 }
 
+struct IbcDenomToAssetIdConversion;
+
+impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
+	type Error = String;
+
+	fn from_denom_to_asset_id(denom: &String) -> Result<AssetId, Self::Error> {
+		let name = denom.split("/").last().ok_or_else(|| format!("denom missing a name"))?;
+		// create asset metadata
+		// resolve assetId
+		// orml_tokens::Pallet<Runtime>::
+		todo!()
+	}
+
+	fn from_asset_id_to_denom(id: AssetId) -> Option<String> {
+		todo!()
+	}
+
+	fn ibc_assets(
+		start_key: Option<AssetId>,
+		offset: Option<u32>,
+		limit: u64,
+	) -> (Vec<Vec<u8>>, u64, Option<AssetId>) {
+		todo!()
+	}
+}
+
 impl pallet_ibc::Config for Runtime {
 	type TimeProvider = Timestamp;
 	type Event = Event;
 	type NativeCurrency = Balances;
 	type Balance = Balance;
-	type AssetId = ();
-	type IbcDenomToAssetIdConversion = ();
+	type AssetId = AssetId;
+	type NativeAssetId = NativeAssetId;
+	type IbcDenomToAssetIdConversion = IbcDenomToAssetIdConversion;
 	const PALLET_PREFIX: &'static [u8] = b"ibc/";
 	const LIGHT_CLIENT_PROTOCOL: pallet_ibc::LightClientProtocol =
 		pallet_ibc::LightClientProtocol::Grandpa;

@@ -651,7 +651,7 @@ impl<T: Config> Pallet<T> {
 	pub fn get_denom_trace(
 		asset_id: T::AssetId,
 	) -> Option<ibc_primitives::QueryDenomTraceResponse> {
-		T::IbcDenomToAssetIdConversion::to_denom(asset_id).map(|denom| {
+		T::IbcDenomToAssetIdConversion::from_asset_id_to_denom(asset_id).map(|denom| {
 			ibc_primitives::QueryDenomTraceResponse { denom: denom.as_bytes().to_vec() }
 		})
 	}

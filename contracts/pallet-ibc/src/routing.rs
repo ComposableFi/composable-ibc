@@ -29,18 +29,13 @@ impl<T: Config + Send + Sync> Context<T> {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct IbcRouter<T: Config> {
-	pallet_ibc_ping: pallet_ibc_ping::IbcModule<T>,
 	ibc_transfer: ics20::IbcModule<T>,
 	sub_router: T::Router,
 }
 
 impl<T: Config> Default for IbcRouter<T> {
 	fn default() -> Self {
-		Self {
-			pallet_ibc_ping: pallet_ibc_ping::IbcModule::<T>::default(),
-			ibc_transfer: ics20::IbcModule::<T>::default(),
-			sub_router: Default::default(),
-		}
+		Self { ibc_transfer: ics20::IbcModule::<T>::default(), sub_router: Default::default() }
 	}
 }
 
@@ -66,7 +61,6 @@ where
 		}
 
 		match module_id.borrow().to_string().as_str() {
-			pallet_ibc_ping::MODULE_ID => Some(&mut self.pallet_ibc_ping),
 			IBC_TRANSFER_MODULE_ID => Some(&mut self.ibc_transfer),
 			&_ => None,
 		}
@@ -78,10 +72,7 @@ where
 			return true
 		}
 
-		matches!(
-			module_id.borrow().to_string().as_str(),
-			pallet_ibc_ping::MODULE_ID | IBC_TRANSFER_MODULE_ID
-		)
+		matches!(module_id.borrow().to_string().as_str(), pallet_ibc_ping::MODULE_ID)
 	}
 }
 

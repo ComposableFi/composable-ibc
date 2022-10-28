@@ -204,11 +204,11 @@ impl<T: Config> DenomToAssetId<T> for ()
 where
 	T::AssetId: From<u128>,
 {
-	fn to_asset_id(_denom: &String) -> Result<T::AssetId, crate::Error<T>> {
+	fn from_denom_to_asset_id(_denom: &String) -> Result<T::AssetId, crate::Error<T>> {
 		Ok(1u128.into())
 	}
 
-	fn to_denom(_id: T::AssetId) -> Option<String> {
+	fn from_asset_id_to_denom(_id: T::AssetId) -> Option<String> {
 		Some("PICA".to_string())
 	}
 

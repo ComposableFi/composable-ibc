@@ -28,8 +28,10 @@
 //! Pallet IBC
 //! Implements the ibc protocol for substrate runtimes.
 extern crate alloc;
+extern crate core;
 
 use codec::{Decode, Encode};
+use core::fmt::Debug;
 use cumulus_primitives_core::ParaId;
 use frame_system::ensure_signed;
 pub use pallet::*;
@@ -204,9 +206,7 @@ pub mod pallet {
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
-	pub trait Config:
-		frame_system::Config + pallet_ibc_ping::Config + parachain_info::Config + core::fmt::Debug
-	{
+	pub trait Config: frame_system::Config + parachain_info::Config + core::fmt::Debug {
 		type TimeProvider: UnixTime;
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -216,6 +216,9 @@ pub mod pallet {
 		type Balance: Balance;
 		/// AssetId type
 		type AssetId: AssetId;
+		/// The native asset id, this will use the `NativeCurrency` for all operations.
+		#[pallet::constant]
+		type NativeAssetId: Get<Self::AssetId>;
 		/// Convert ibc denom to asset id and vice versa
 		type IbcDenomToAssetIdConversion: DenomToAssetId<Self>;
 		/// Prefix for events stored in the Off-chain DB via Indexing API, child trie and connection
@@ -226,7 +229,7 @@ pub mod pallet {
 		type AccountIdConversion: TryFrom<Signer>
 			+ IdentifyAccount<AccountId = Self::AccountId>
 			+ Clone;
-		/// MultiCurrency System
+		/// Set of traits needed to handle fungible assets
 		type Fungibles: Transfer<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
 			+ Mutate<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
 			+ Inspect<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>;
@@ -564,7 +567,7 @@ pub mod pallet {
 			amount: T::Balance,
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
-			let denom = T::IbcDenomToAssetIdConversion::to_denom(asset_id)
+			let denom = T::IbcDenomToAssetIdConversion::from_asset_id_to_denom(asset_id)
 				.ok_or_else(|| Error::<T>::InvalidAssetId)?;
 
 			let account_id_32: AccountId32 = origin.clone().into();
@@ -582,9 +585,8 @@ pub mod pallet {
 						})
 						.map_err(|_| Error::<T>::Utf8Error)?
 				},
-				MultiAddress::Raw(bytes) => {
-					String::from_utf8(bytes).map_err(|_| Error::<T>::Utf8Error)?
-				},
+				MultiAddress::Raw(bytes) =>
+					String::from_utf8(bytes).map_err(|_| Error::<T>::Utf8Error)?,
 			};
 			let denom = PrefixedDenom::from_str(&denom).map_err(|_| Error::<T>::InvalidIbcDenom)?;
 			let ibc_amount = Amount::from_str(&format!("{:?}", amount))
@@ -659,7 +661,7 @@ pub mod pallet {
 				from: origin,
 				to: to.as_bytes().to_vec(),
 				amount,
-				local_asset_id: T::IbcDenomToAssetIdConversion::to_asset_id(
+				local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
 					&coin.denom.to_string(),
 				)
 				.ok(),
@@ -758,13 +760,14 @@ pub mod pallet {
 }
 
 pub trait DenomToAssetId<T: Config> {
+	type Error: Debug;
 	/// Get the equivalent asset id for this ibc denom
 	/// **Note**
 	/// This function should create and register an asset with a valid metadata
 	/// if an asset does not exist for this denom
-	fn to_asset_id(denom: &String) -> Result<T::AssetId, Error<T>>;
+	fn from_denom_to_asset_id(denom: &String) -> Result<T::AssetId, Self::Error>;
 	/// Return full denom for given asset id
-	fn to_denom(id: T::AssetId) -> Option<String>;
+	fn from_asset_id_to_denom(id: T::AssetId) -> Option<String>;
 	/// Returns a tuple
 	/// The first item of the tuple is a vector of all ibc denoms with an upper bound of limit on
 	/// the length of the vector. The second item is the total count of ibc assets on chain.

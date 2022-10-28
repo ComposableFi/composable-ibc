@@ -23,12 +23,14 @@ serde = { version = "1.0.140", optional = true, features = ["derive"] }
 smallvec = "1.9.0"
 
 # Local
+ibc = { path = "../../../ibc/modules", default-features = false }
 pallet-ibc = { path = "../../../contracts/pallet-ibc", default-features = false }
 ibc-primitives = { path = "../../../contracts/pallet-ibc/primitives", default-features = false }
+ibc-runtime-api = { path = "../../../contracts/pallet-ibc/runtime-api", default-features = false }
 
 # 3rd party frame
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "377213f750755cc48e80a3131eaae63b5eda8362" }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "377213f750755cc48e80a3131eaae63b5eda8362" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "377213f750755cc48e80a3131eaae63b5eda8362" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "377213f750755cc48e80a3131eaae63b5eda8362" }
 
 
 # Substrate
@@ -108,7 +110,10 @@ std = [
 	"pallet-collator-selection/std",
 	"pallet-session/std",
 	"pallet-sudo/std",
+	"ibc/std",
 	"pallet-ibc/std",
+	"ibc-primitives/std",
+	"ibc-runtime-api/std",
 	"orml-traits/std",
 	"orml-tokens/std",
 	"pallet-timestamp/std",
