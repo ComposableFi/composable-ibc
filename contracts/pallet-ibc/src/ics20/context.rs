@@ -67,6 +67,30 @@ where
 {
 	type AccountId = T::AccountIdConversion;
 
+	fn send_coins(
+		&mut self,
+		from: &Self::AccountId,
+		to: &Self::AccountId,
+		amt: &ibc::applications::transfer::PrefixedCoin,
+	) -> Result<(), Ics20Error> {
+		let amount: T::Balance = amt.amount.as_u256().low_u128().into();
+		let denom = amt.denom.to_string();
+		// Token should be registered already if sending an ibc asset
+		let asset_id = T::IbcDenomToAssetIdConversion::to_asset_id(&denom);
+		<<T as Config>::Fungibles as Transfer<T::AccountId>>::transfer(
+			asset_id.into(),
+			&from.clone().into_account(),
+			&to.clone().into_account(),
+			amount,
+			false,
+		)
+		.map_err(|e| {
+			log::trace!(target: "pallet_ibc", "Failed to transfer ibc tokens: {:?}", e);
+			Ics20Error::invalid_token()
+		})?;
+		Ok(())
+	}
+
 	fn mint_coins(
 		&mut self,
 		account: &Self::AccountId,
@@ -124,30 +148,6 @@ where
 		.map_err(|e| {
 			log::trace!(target: "pallet_ibc", "Failed to burn tokens: {:?}", e);
 			Ics20Error::implementation_specific("Failed to burn tokens".to_string())
-		})?;
-		Ok(())
-	}
-
-	fn send_coins(
-		&mut self,
-		from: &Self::AccountId,
-		to: &Self::AccountId,
-		amt: &ibc::applications::transfer::PrefixedCoin,
-	) -> Result<(), Ics20Error> {
-		let amount: T::Balance = amt.amount.as_u256().low_u128().into();
-		let denom = amt.denom.to_string();
-		// Token should be registered already if sending an ibc asset
-		let asset_id = T::IbcDenomToAssetIdConversion::to_asset_id(&denom);
-		<<T as Config>::Fungibles as Transfer<T::AccountId>>::transfer(
-			asset_id.into(),
-			&from.clone().into_account(),
-			&to.clone().into_account(),
-			amount,
-			false,
-		)
-		.map_err(|e| {
-			log::trace!(target: "pallet_ibc", "Failed to transfer ibc tokens: {:?}", e);
-			Ics20Error::invalid_token()
 		})?;
 		Ok(())
 	}
