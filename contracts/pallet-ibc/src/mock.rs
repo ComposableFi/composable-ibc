@@ -1,5 +1,7 @@
 use crate::{self as pallet_ibc, routing::ModuleRouter};
 use cumulus_primitives_core::ParaId;
+use frame_support::traits::fungibles::metadata::Mutate;
+use frame_support::traits::fungibles::{Create, InspectMetadata};
 use frame_support::{
 	pallet_prelude::ConstU32,
 	parameter_types,
@@ -107,6 +109,7 @@ impl pallet_ibc_ping::Config for Test {
 
 parameter_types! {
 	pub const NativeAssetId: u128 = 1;
+	pub const StringLimit: u32 = 32;
 }
 
 pub type Balances = orml_tokens::CurrencyAdapter<Test, NativeAssetId>;
@@ -123,7 +126,7 @@ impl pallet_assets::Config for Test {
 	type MetadataDepositBase = ();
 	type MetadataDepositPerByte = ();
 	type ApprovalDeposit = ();
-	type StringLimit = ();
+	type StringLimit = StringLimit;
 	type Freezer = ();
 	type Extra = ();
 }
@@ -205,6 +208,24 @@ where
 	T::AssetId: From<u128>,
 {
 	fn to_asset_id(_denom: &String) -> Result<T::AssetId, crate::Error<T>> {
+		if <<Test as Config>::Fungibles as InspectMetadata<AccountId>>::decimals(&1u128) == 0 {
+			<<Test as Config>::Fungibles as Create<AccountId>>::create(
+				1u128.into(),
+				AccountId::new([0; 32]),
+				true,
+				1000u128.into(),
+			)
+			.unwrap();
+
+			<<Test as Config>::Fungibles as Mutate<AccountId>>::set(
+				1u128.into(),
+				&AccountId::new([0; 32]),
+				vec![0; 32],
+				vec![0; 32],
+				8,
+			)
+			.unwrap();
+		};
 		Ok(1u128.into())
 	}
 

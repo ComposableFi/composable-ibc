@@ -2,12 +2,13 @@ use crate::{
 	light_clients::{AnyClientState, AnyConsensusState},
 	mock::*,
 	routing::Context,
-	Any, Config, MultiAddress, Pallet, PalletParams, Timeout, TransferParams, MODULE_ID,
+	Any, Config, DenomToAssetId, MultiAddress, Pallet, PalletParams, Timeout, TransferParams,
+	MODULE_ID,
 };
 use core::time::Duration;
 use frame_support::{
 	assert_ok,
-	traits::fungibles::{Create, Inspect, Mutate},
+	traits::fungibles::{Inspect, Mutate},
 };
 use ibc::{
 	applications::transfer::{packet::PacketData, Coin, PrefixedDenom, VERSION},
@@ -182,17 +183,15 @@ fn send_transfer() {
 			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0).unwrap();
 		let ss58_address = String::from_utf8(raw_user).unwrap();
 		setup_client_and_consensus_state(PortId::transfer());
-		<<Test as Config>::Fungibles as Create<AccountId>>::create(
-			PICA,
-			AccountId32::new([0; 32]),
-			true,
-			1000u128.into(),
-		)
-		.unwrap();
 		let balance = 100000 * MILLIS;
+		let asset_id =
+			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::to_asset_id(
+				&"PICA".to_string(),
+			)
+			.unwrap();
 		<<Test as Config>::Fungibles as Mutate<
 			<Test as frame_system::Config>::AccountId,
-		>>::mint_into(PICA, &AccountId32::new([0; 32]), balance)
+		>>::mint_into(asset_id, &AccountId32::new([0; 32]), balance)
 		.unwrap();
 
 		Ibc::set_params(Origin::root(), PalletParams { send_enabled: true, receive_enabled: true })
@@ -224,7 +223,11 @@ fn on_deliver_ics20_recv_packet() {
 			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0).unwrap();
 		let ss58_address = String::from_utf8(ss58_address_bytes).unwrap();
 		frame_system::Pallet::<Test>::set_block_number(1u32);
-
+		let asset_id =
+			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::to_asset_id(
+				&"PICA".to_string(),
+			)
+			.unwrap();
 		setup_client_and_consensus_state(PortId::transfer());
 
 		let channel_id = ChannelId::new(0);
@@ -235,13 +238,6 @@ fn on_deliver_ics20_recv_packet() {
 		let denom = "transfer/channel-1/PICA";
 		let channel_escrow_address =
 			get_channel_escrow_address(&PortId::transfer(), channel_id).unwrap();
-		<<Test as Config>::Fungibles as Create<AccountId>>::create(
-			PICA,
-			AccountId32::new([0; 32]),
-			true,
-			1000u128.into(),
-		)
-		.unwrap();
 		let channel_escrow_address =
 			<Test as Config>::AccountIdConversion::try_from(channel_escrow_address)
 				.map_err(|_| ())
@@ -251,7 +247,7 @@ fn on_deliver_ics20_recv_packet() {
 		// Endow escrow address with tokens
 		<<Test as Config>::Fungibles as Mutate<
 			<Test as frame_system::Config>::AccountId,
-		>>::mint_into(PICA, &channel_escrow_address, balance)
+		>>::mint_into(asset_id, &channel_escrow_address, balance)
 		.unwrap();
 
 		Ibc::set_params(Origin::root(), PalletParams { send_enabled: true, receive_enabled: true })
