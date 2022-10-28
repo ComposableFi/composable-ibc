@@ -2,6 +2,7 @@ use codec::Decode;
 use std::{collections::BTreeMap, fmt::Display, pin::Pin};
 
 use beefy_gadget_rpc::BeefyApiClient;
+use finality_grandpa::BlockNumberOps;
 use futures::{Stream, StreamExt};
 use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
 use ibc_proto::google::protobuf::Any;
@@ -22,17 +23,19 @@ use primitives::{Chain, IbcProvider};
 use super::{error::Error, signer::ExtrinsicSigner, ParachainClient};
 use crate::{
 	parachain::{api, api::runtime_types::pallet_ibc::Any as RawAny},
-	LightClientProtocol,
+	FinalityProtocol,
 };
 use finality_grandpa_rpc::GrandpaApiClient;
 
-type GrandpaJustification =
-	grandpa_light_client::justification::GrandpaJustification<polkadot_core_primitives::Header>;
+type GrandpaJustification = grandpa_light_client_primitives::justification::GrandpaJustification<
+	polkadot_core_primitives::Header,
+>;
+
 type BeefyJustification =
 	beefy_primitives::SignedCommitment<u32, beefy_primitives::crypto::Signature>;
 
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
 /// An encoded justification proving that the given header has been finalized
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct JustificationNotification(sp_core::Bytes);
 
 #[async_trait::async_trait]
@@ -44,8 +47,8 @@ where
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	T::Signature: From<MultiSignature>,
-	T::BlockNumber: From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
-	T::Hash: From<sp_core::H256>,
+	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
 		From<FinalityProof<T::Header>>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
@@ -96,14 +99,16 @@ where
 	async fn finality_notifications(
 		&self,
 	) -> Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>> {
-		match self.light_client_protocol {
-			LightClientProtocol::Grandpa => {
+		match self.finality_protocol {
+			FinalityProtocol::Grandpa => {
 				let subscription =
 					GrandpaApiClient::<JustificationNotification, sp_core::H256, u32>::subscribe_justifications(
 						&*self.relay_ws_client,
 					)
 						.await
-						.expect("Failed to subscribe to grandpa justifications");
+						.expect("Failed to subscribe to grandpa justifications")
+						.chunks(6)
+						.map(|mut notifs| notifs.remove(notifs.len() - 1)); // skip every 4 finality notifications
 
 				let stream = subscription.filter_map(|justification_notif| {
 					let encoded_justification = match justification_notif {
@@ -128,7 +133,7 @@ where
 
 				Box::pin(Box::new(stream))
 			},
-			LightClientProtocol::Beefy => {
+			FinalityProtocol::Beefy => {
 				let subscription =
 					BeefyApiClient::<JustificationNotification, sp_core::H256>::subscribe_justifications(
 						&*self.relay_ws_client,
@@ -161,15 +166,18 @@ where
 		}
 	}
 
-	async fn submit(&self, messages: Vec<Any>) -> Result<(), Error> {
+	async fn submit(
+		&self,
+		messages: Vec<Any>,
+	) -> Result<(sp_core::H256, Option<sp_core::H256>), Error> {
 		let messages = messages
 			.into_iter()
 			.map(|msg| RawAny { type_url: msg.type_url.as_bytes().to_vec(), value: msg.value })
 			.collect::<Vec<_>>();
 
 		let call = api::tx().ibc().deliver(messages);
-		self.submit_call(call).await?;
+		let (ext_hash, block_hash) = self.submit_call(call).await?;
 
-		Ok(())
+		Ok((ext_hash.into(), Some(block_hash.into())))
 	}
 }

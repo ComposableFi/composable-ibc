@@ -10,9 +10,10 @@ path = "./bin/main.rs"
 
 [dependencies]
 primitives = { path = "primitives", package = "hyperspace-primitives" }
-parachain = { path = "parachain", package = "hyperspace-parachain", optional = true }
+parachain = { path = "parachain", package = "hyperspace-parachain" }
 cosmos = { path = "cosmos", package = "hyperspace-cosmos", optional = true }
 #near = { path = "near", package = "hyperspace-near", optional = true }
+metrics = { path = "metrics" }
 
 # crates.io
 anyhow = "1.0.65"
@@ -28,24 +29,25 @@ toml = "0.5.9"
 serde = "1.0.144"
 thiserror = "1.0.31"
 derive_more = { version = "0.99.17", features = ["from"] }
+prometheus = { version = "0.13.0", default-features = false }
 
 # ibc
-ibc = { git = "https://github.com/composableFi/ibc-rs", rev = "c599cbcbf2c7a413a21a181f65dcf374f5ad75be", features = [] }
-ibc-proto = { git = "https://github.com/composableFi/ibc-rs", rev = "c599cbcbf2c7a413a21a181f65dcf374f5ad75be" }
+ibc = { path = "../ibc/modules", features = [] }
+ibc-proto = { path = "../ibc/proto" }
 tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8" }
-ibc-rpc = { git = "https://github.com/ComposableFi/composable", rev = "e360d73d5632f84fb53ad4a20d7a49f0de05947e" }
+ibc-rpc = { path = "../contracts/pallet-ibc/rpc" }
 
-ics11-beefy = { git = "https://github.com/ComposableFi/centauri", rev = "55c92796310416ac81addb5850e44a166be8c4c1" }
-ics13-near = { git = "https://github.com/ComposableFi/centauri", rev = "55c92796310416ac81addb5850e44a166be8c4c1" }
-light-client-common = { git = "https://github.com/ComposableFi/centauri", rev = "55c92796310416ac81addb5850e44a166be8c4c1" }
-pallet-ibc = { git = "https://github.com/ComposableFi/composable", rev = "e360d73d5632f84fb53ad4a20d7a49f0de05947e" }
-ics10-grandpa = { git = "https://github.com/ComposableFi/centauri", rev = "55c92796310416ac81addb5850e44a166be8c4c1" }
+ics11-beefy = { path = "../light-clients/ics11-beefy" }
+ics13-near = { path = "../light-clients/ics13-near" }
+light-client-common = { path = "../light-clients/common" }
+pallet-ibc = { path = "../contracts/pallet-ibc" }
+ics10-grandpa = { path = "../light-clients/ics10-grandpa" }
 
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sc-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-subxt = { git = "https://github.com/paritytech/subxt", rev = "81175b2dd9a2391f71c37d4612644ee65825e2f1", optional = true }
+subxt = { git = "https://github.com/paritytech/subxt", rev = "51179a8b72472d0b43c91cda75a1ddc3fddb9555" }
 
 [dev-dependencies]
 derive_more = "0.99.17"
@@ -53,18 +55,20 @@ prost = "0.10"
 parachain = { path = "parachain", package = "hyperspace-parachain", features = ["testing"] }
 
 # substrate
-subxt = { git = "https://github.com/paritytech/subxt", rev = "81175b2dd9a2391f71c37d4612644ee65825e2f1" }
+subxt = { git = "https://github.com/paritytech/subxt", rev = "51179a8b72472d0b43c91cda75a1ddc3fddb9555" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 
 # composable
-#comosable-primitives = { package = "primitives",  git = "https://github.com/ComposableFi/composable", rev = "e360d73d5632f84fb53ad4a20d7a49f0de05947e" }
-#common = { git = "https://github.com/ComposableFi/composable", rev = "e360d73d5632f84fb53ad4a20d7a49f0de05947e" }
+#comosable-primitives = { package = "primitives",  path = "../contracts/pallet-ibc" }
+#common = { path = "../contracts/pallet-ibc" }
 
 [features]
-parachain = ["dep:parachain", "subxt"]
+build-metadata-from-ws = [
+    "parachain/build-metadata-from-ws",
+]
 #near = ["dep:near"]
 #cosmos = ["dep:cosmos"]
-testing = []
+testing = [ "primitives/testing", "parachain/testing" ]

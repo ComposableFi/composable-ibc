@@ -140,5 +140,10 @@ define_error! {
 		UnknownMsgType
 			{ msg_type: String }
 			| e | { format_args!("unknown msg type: {0}", e.msg_type) },
+
+		ImplementationSpecific
+			{ reason: String }
+			| e | { format_args!("implementation specific error: {}", e.reason) },
+
 	}
 }

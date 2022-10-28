@@ -1,17 +1,24 @@
 [workspace]
 resolver = "2"
 members = [
-    # ibc implementation
+    # core ibc implementation
     "ibc/derive",
     "ibc/modules",
     "ibc/proto",
     "ibc/proto-compiler",
 
+    # ibc contracts for different blockchain runtimes
+    "contracts/pallet-ibc/ping",
+    "contracts/pallet-ibc/primitives",
+    "contracts/pallet-ibc/rpc",
+    "contracts/pallet-ibc/runtime-api",
+    "contracts/pallet-ibc",
+
     # algorithms
-    "algorithms/beefy",
+    "algorithms/beefy/verifier",
     "algorithms/beefy/prover",
     "algorithms/beefy/primitives",
-    "algorithms/grandpa",
+    "algorithms/grandpa/verifier",
     "algorithms/grandpa/prover",
     "algorithms/grandpa/primitives",
 
@@ -28,6 +35,12 @@ members = [
     "hyperspace/parachain",
     "hyperspace/cosmos",
     "hyperspace/testsuite",
+
+    # utilities
+    "utils/subxt/codegen",
+    "utils/subxt/generated",
+#    "utils/parachain-node",
+#    "utils/parachain-node/runtime",
 ]
 
 

@@ -1,3 +1,5 @@
+#![allow(clippy::all)]
+
 use std::{pin::Pin, str::FromStr, time::Duration};
 
 use futures::Stream;
@@ -13,6 +15,7 @@ use ibc_proto::{
 		connection::v1::QueryConnectionResponse,
 	},
 };
+use subxt::ext::sp_core;
 
 use crate::error::Error;
 #[cfg(feature = "testing")]
@@ -37,12 +40,15 @@ use ibc::{
 	timestamp::Timestamp,
 	Height,
 };
-use ibc_proto::ibc::core::channel::v1::QueryChannelsResponse;
+use ibc_proto::ibc::core::{
+	channel::v1::QueryChannelsResponse, connection::v1::IdentifiedConnection,
+};
 use ibc_rpc::PacketInfo;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 
 pub mod error;
 pub mod mock;
+pub mod utils;
 
 pub enum UpdateMessage {
 	Single(Any),
@@ -88,9 +94,12 @@ pub trait IbcProvider {
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &T,
-	) -> Result<(UpdateMessage, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
 		T: Chain;
+
+	/// Return a stream that yields when new [`IbcEvents`] are parsed from a finality notification
+	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>>;
 
 	/// Query client consensus state with proof
 	/// return the consensus height for the client along with the response
@@ -259,6 +268,9 @@ pub trait IbcProvider {
 	/// Return the host chain's light client id on counterparty chain
 	fn client_id(&self) -> ClientId;
 
+	/// Return the connection id on this chain
+	fn connection_id(&self) -> ConnectionId;
+
 	/// Returns the client type of this chain.
 	fn client_type(&self) -> ClientType;
 
@@ -271,6 +283,13 @@ pub trait IbcProvider {
 	/// Should return a list of all clients on the chain
 	async fn query_channels(&self) -> Result<Vec<(ChannelId, PortId)>, Self::Error>;
 
+	/// Query all connection states for associated client
+	async fn query_connection_using_client(
+		&self,
+		height: u32,
+		client_id: String,
+	) -> Result<Vec<IdentifiedConnection>, Self::Error>;
+
 	/// Returns a boolean value that determines if the light client should receive a mandatory
 	/// update
 	fn is_update_required(
@@ -278,6 +297,18 @@ pub trait IbcProvider {
 		latest_height: u64,
 		latest_client_height_on_counterparty: u64,
 	) -> bool;
+
+	/// This should return a subjectively chosen client and consensus state for this chain.
+	async fn initialize_client_state(
+		&self,
+	) -> Result<(AnyClientState, AnyConsensusState), Self::Error>;
+
+	/// Should find client id that was created in this transaction
+	async fn query_client_id_from_tx_hash(
+		&self,
+		tx_hash: sp_core::H256,
+		block_hash: Option<sp_core::H256>,
+	) -> Result<ClientId, Self::Error>;
 }
 
 /// Provides an interface that allows us run the hyperspace-testsuite
@@ -295,11 +326,11 @@ pub trait TestProvider: Chain + Clone + 'static {
 		timeout: pallet_ibc::Timeout,
 	) -> Result<(), Self::Error>;
 
-	/// Return a stream that yields when new [`IbcEvents`] are parsed from a finality notification
-	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + Sync>>;
-
 	/// Returns a stream that yields chain Block number and hash
 	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>>;
+
+	/// Set the channel whitelist for the relayer task.
+	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>);
 }
 
 /// Provides an interface for managing key management for signing.
@@ -329,7 +360,12 @@ pub trait Chain: IbcProvider + KeyProvider + Send + Sync {
 
 	/// This should be used to submit new messages [`Vec<Any>`] from a counterparty chain to this
 	/// chain.
-	async fn submit(&self, messages: Vec<Any>) -> Result<(), Self::Error>;
+	/// Should return a tuple of transaction hash and optionally block hash where the transaction
+	/// was executed
+	async fn submit(
+		&self,
+		messages: Vec<Any>,
+	) -> Result<(sp_core::H256, Option<sp_core::H256>), Self::Error>;
 }
 
 /// Returns undelivered packet sequences that have been sent out from
@@ -504,7 +540,7 @@ pub async fn find_suitable_proof_height_for_client(
 	None
 }
 
-pub async fn find_maximum_height_for_timeout_proofs(
+pub async fn query_maximum_height_for_timeout_proofs(
 	source: &impl Chain,
 	sink: &impl Chain,
 ) -> Option<u64> {

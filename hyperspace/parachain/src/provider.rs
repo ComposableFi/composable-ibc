@@ -28,7 +28,7 @@ use subxt::{
 
 use super::{error::Error, ParachainClient};
 
-use crate::{parachain, GrandpaClientState, LightClientProtocol};
+use crate::{parachain, FinalityProtocol, GrandpaClientState};
 use ibc::{
 	applications::transfer::{Amount, PrefixedCoin, PrefixedDenom},
 	core::ics02_client::client_state::ClientType,
@@ -36,17 +36,22 @@ use ibc::{
 };
 use ibc_proto::ibc::core::{channel::v1::QueryChannelsResponse, client::v1::IdentifiedClientState};
 use ibc_rpc::{IbcApiClient, PacketInfo};
-use primitives::{Chain, IbcProvider, KeyProvider, UpdateMessage, UpdateType};
+use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
 use sp_core::H256;
 
-use crate::light_client_protocol::FinalityEvent;
+use crate::finality_protocol::FinalityEvent;
 use beefy_prover::helpers::fetch_timestamp_extrinsic_with_proof;
 use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
 use ics11_beefy::client_state::ClientState as BeefyClientState;
 use pallet_ibc::{light_clients::HostFunctionsManager, HostConsensusProof};
 
+use crate::utils::MetadataIbcEventWrapper;
+use finality_grandpa::BlockNumberOps;
+use futures::Stream;
+use ibc_proto::{google::protobuf::Any, ibc::core::connection::v1::IdentifiedConnection};
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use sp_runtime::traits::One;
-use std::{collections::BTreeMap, str::FromStr, time::Duration};
+use std::{collections::BTreeMap, pin::Pin, str::FromStr, time::Duration};
 
 #[async_trait::async_trait]
 impl<T: Config + Send + Sync> IbcProvider for ParachainClient<T>
@@ -58,8 +63,8 @@ where
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	T::Signature: From<MultiSignature>,
-	T::BlockNumber: From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
-	T::Hash: From<sp_core::H256>,
+	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	sp_core::H256: From<T::Hash>,
 	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
 		From<FinalityProof<T::Header>>,
@@ -75,14 +80,58 @@ where
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &C,
-	) -> Result<(UpdateMessage, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
 		C: Chain,
 	{
-		self.light_client_protocol
+		self.finality_protocol
 			.clone()
 			.query_latest_ibc_events(self, finality_event, counterparty)
 			.await
+	}
+
+	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>> {
+		use futures::{stream, StreamExt};
+		use pallet_ibc::events::IbcEvent as RawIbcEvent;
+
+		let stream = self
+			.para_client
+			.events()
+			.subscribe()
+			.await
+			.expect("Failed to subscribe to events")
+			.filter_events::<(parachain::api::ibc::events::Events,)>()
+			.filter_map(|result| {
+				let events = match result {
+					Ok(ev) => ev,
+					Err(err) => {
+						log::error!("Error in IbcEvent stream: {err:?}");
+						return futures::future::ready(None)
+					},
+				};
+				let result = events
+					.event
+					.events
+					.into_iter()
+					.filter_map(|ev| {
+						Some(
+							IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(ev)))
+								.map_err(|e| subxt::Error::Other(e.to_string())),
+						)
+					})
+					.collect::<Result<Vec<_>, _>>();
+
+				let events = match result {
+					Ok(ev) => ev,
+					Err(err) => {
+						log::error!("Failed to decode event: {err:?}");
+						return futures::future::ready(None)
+					},
+				};
+				futures::future::ready(Some(stream::iter(events)))
+			})
+			.flatten();
+		Box::pin(stream)
 	}
 
 	async fn query_client_consensus(
@@ -463,11 +512,14 @@ where
 		self.client_id()
 	}
 
+	fn connection_id(&self) -> ConnectionId {
+		self.connection_id.as_ref().expect("Connection id should be defined").clone()
+	}
+
 	fn client_type(&self) -> ClientType {
-		match self.light_client_protocol {
-			LightClientProtocol::Grandpa =>
-				GrandpaClientState::<HostFunctionsManager>::client_type(),
-			LightClientProtocol::Beefy => BeefyClientState::<HostFunctionsManager>::client_type(),
+		match self.finality_protocol {
+			FinalityProtocol::Grandpa => GrandpaClientState::<HostFunctionsManager>::client_type(),
+			FinalityProtocol::Beefy => BeefyClientState::<HostFunctionsManager>::client_type(),
 		}
 	}
 
@@ -518,6 +570,22 @@ where
 			.collect::<Result<Vec<_>, _>>()
 	}
 
+	async fn query_connection_using_client(
+		&self,
+		height: u32,
+		client_id: String,
+	) -> Result<Vec<IdentifiedConnection>, Self::Error> {
+		let response = IbcApiClient::<u32, H256>::query_connection_using_client(
+			&*self.para_ws_client,
+			height,
+			client_id,
+		)
+		.await
+		.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
+
+		Ok(response)
+	}
+
 	fn is_update_required(
 		&self,
 		latest_height: u64,
@@ -525,5 +593,39 @@ where
 	) -> bool {
 		let refresh_period: u64 = if cfg!(feature = "testing") { 15 } else { 50 };
 		latest_height - latest_client_height_on_counterparty >= refresh_period
+	}
+
+	async fn initialize_client_state(
+		&self,
+	) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
+		match self.finality_protocol {
+			FinalityProtocol::Grandpa => {
+				let res = self.construct_grandpa_client_state().await?;
+				Ok(res)
+			},
+			FinalityProtocol::Beefy => {
+				let res = self.construct_beefy_client_state().await?;
+				Ok(res)
+			},
+		}
+	}
+
+	async fn query_client_id_from_tx_hash(
+		&self,
+		tx_hash: H256,
+		block_hash: Option<H256>,
+	) -> Result<ClientId, Self::Error> {
+		// Query newly created client Id
+		let identified_client_state = IbcApiClient::<u32, H256>::query_newly_created_client(
+			&*self.para_ws_client,
+			block_hash.expect("Block hash should be available"),
+			tx_hash,
+		)
+		.await
+		.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
+
+		let client_id = ClientId::from_str(&identified_client_state.client_id)
+			.expect("Should have a valid client id");
+		Ok(client_id)
 	}
 }

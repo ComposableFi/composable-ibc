@@ -5,14 +5,14 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "composable": "polkadot-launch composable.json"
+    "composable": "rm -rf /tmp/polkadot-launch && polkadot-launch composable.json --verbose",
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@types/node": "^17.0.18",
-    "polkadot-launch": "^1.9.0",
-    "typescript": "^4.5.5"
+    "@types/node": "^17.0.42",
+    "polkadot-launch": "https://github.com/blasrodri/polkadot-launch#7f1279b85d9783fee765ad27c5cfa50307cbec0a",
+    "typescript": "^4.7.3"
   }
 }
