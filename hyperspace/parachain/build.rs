@@ -19,5 +19,6 @@ async fn main() -> anyhow::Result<()> {
 		subxt_codegen::build_script("ws://127.0.0.1:9944", "polkadot").await?;
 		subxt_codegen::build_script("ws://127.0.0.1:9188", "parachain").await?;
 	}
+	println!("cargo:rerun-if-changed=Cargo.lock");
 	Ok(())
 }

@@ -4359,7 +4359,7 @@ checksum = "11e017217fcd18da0a25296d3693153dd19c8a6aadab330b3595285d075385d1"
 dependencies = [
  "jsonrpsee-client-transport 0.14.0",
  "jsonrpsee-core 0.14.0",
- "jsonrpsee-http-client",
+ "jsonrpsee-http-client 0.14.0",
  "jsonrpsee-http-server",
  "jsonrpsee-proc-macros",
  "jsonrpsee-types 0.14.0",
@@ -4376,6 +4376,7 @@ checksum = "8bd0d559d5e679b1ab2f869b486a11182923863b1b3ee8b421763cdd707b783a"
 dependencies = [
  "jsonrpsee-client-transport 0.15.1",
  "jsonrpsee-core 0.15.1",
+ "jsonrpsee-http-client 0.15.1",
  "jsonrpsee-types 0.15.1",
  "jsonrpsee-ws-client 0.15.1",
 ]
@@ -4465,6 +4466,7 @@ dependencies = [
  "futures-channel",
  "futures-timer",
  "futures-util",
+ "hyper",
  "jsonrpsee-types 0.15.1",
  "rustc-hash",
  "serde",
@@ -4492,6 +4494,26 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "jsonrpsee-http-client"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52f7c0e2333ab2115c302eeb4f137c8a4af5ab609762df68bbda8f06496677c9"
+dependencies = [
+ "async-trait",
+ "hyper",
+ "hyper-rustls 0.23.0",
+ "jsonrpsee-core 0.15.1",
+ "jsonrpsee-types 0.15.1",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-futures",
 ]
 
 [[package]]
@@ -12485,7 +12507,7 @@ checksum = "734676eb262c623cec13c3155096e08d1f8f29adce39ba17948b18dad1e54142"
 [[package]]
 name = "subxt"
 version = "0.24.0"
-source = "git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555#51179a8b72472d0b43c91cda75a1ddc3fddb9555"
+source = "git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2#1736f618d940a69ab212a686984c3be25b08d1c2"
 dependencies = [
  "bitvec",
  "derivative",
@@ -12511,11 +12533,13 @@ dependencies = [
 [[package]]
 name = "subxt-codegen"
 version = "0.24.0"
-source = "git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555#51179a8b72472d0b43c91cda75a1ddc3fddb9555"
+source = "git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2#1736f618d940a69ab212a686984c3be25b08d1c2"
 dependencies = [
  "darling",
  "frame-metadata",
  "heck",
+ "hex",
+ "jsonrpsee 0.15.1",
  "parity-scale-codec",
  "proc-macro-error",
  "proc-macro2",
@@ -12523,6 +12547,7 @@ dependencies = [
  "scale-info",
  "subxt-metadata",
  "syn",
+ "tokio",
 ]
 
 [[package]]
@@ -12536,7 +12561,7 @@ dependencies = [
 [[package]]
 name = "subxt-macro"
 version = "0.24.0"
-source = "git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555#51179a8b72472d0b43c91cda75a1ddc3fddb9555"
+source = "git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2#1736f618d940a69ab212a686984c3be25b08d1c2"
 dependencies = [
  "darling",
  "proc-macro-error",
@@ -12547,7 +12572,7 @@ dependencies = [
 [[package]]
 name = "subxt-metadata"
 version = "0.24.0"
-source = "git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555#51179a8b72472d0b43c91cda75a1ddc3fddb9555"
+source = "git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2#1736f618d940a69ab212a686984c3be25b08d1c2"
 dependencies = [
  "frame-metadata",
  "parity-scale-codec",
