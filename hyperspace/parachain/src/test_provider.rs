@@ -97,11 +97,7 @@ where
 			},
 		};
 		// Submit extrinsic to parachain node
-		let call = api::tx().ibc().transfer(
-			params,
-			api::runtime_types::primitives::currency::CurrencyId(asset_id),
-			amount.into(),
-		);
+		let call = api::tx().ibc().transfer(params, asset_id, amount.into());
 
 		self.submit_call(call).await?;
 
@@ -110,7 +106,7 @@ where
 
 	pub async fn submit_sudo_call(
 		&self,
-		call: api::runtime_types::dali_runtime::Call,
+		call: api::runtime_types::parachain_runtime::Call,
 	) -> Result<(), Error> {
 		let signer = ExtrinsicSigner::<T, Self>::new(
 			self.key_store.clone(),
@@ -145,7 +141,7 @@ where
 	) -> Result<(), Error> {
 		let params = api::runtime_types::pallet_ibc::PalletParams { receive_enabled, send_enabled };
 
-		let call = api::runtime_types::dali_runtime::Call::Ibc(
+		let call = api::runtime_types::parachain_runtime::Call::Ibc(
 			api::runtime_types::pallet_ibc::pallet::Call::set_params { params },
 		);
 

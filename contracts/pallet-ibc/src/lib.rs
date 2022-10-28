@@ -28,7 +28,6 @@
 //! Pallet IBC
 //! Implements the ibc protocol for substrate runtimes.
 extern crate alloc;
-extern crate core;
 
 use codec::{Decode, Encode};
 use core::fmt::Debug;
@@ -361,6 +360,18 @@ pub mod pallet {
 	#[allow(clippy::disallowed_types)]
 	/// Pallet Params used to disable sending or receipt of ibc tokens
 	pub type Params<T: Config> = StorageValue<_, PalletParams, ValueQuery>;
+
+	#[pallet::storage]
+	/// Map of asset id to ibc denom pairs (T::AssetId, Vec<u8>)
+	/// ibc denoms represented as utf8 string bytes
+	pub type IbcAssetIds<T: Config> =
+		CountedStorageMap<_, Twox64Concat, T::AssetId, Vec<u8>, OptionQuery>;
+
+	#[pallet::storage]
+	/// Map of asset id to ibc denom pairs (Vec<u8>, T::AssetId)
+	/// ibc denoms represented as utf8 string bytes
+	pub type IbcDenoms<T: Config> =
+		CountedStorageMap<_, Twox64Concat, Vec<u8>, T::AssetId, OptionQuery>;
 
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]

@@ -5,7 +5,7 @@ use cumulus_client_cli::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use log::info;
-use parachain_template_runtime::{Block, RuntimeApi};
+use parachain_runtime::{Block, RuntimeApi};
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
 	NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
@@ -25,7 +25,15 @@ use crate::{
 
 fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 	Ok(match id {
-		"dev" => Box::new(chain_spec::development_config()),
+		id if id.contains("dev") => {
+			let para_id = id
+				.split("-")
+				.last()
+				.expect("correct ChainId format is \"dev-{para-id}\". eg \"dev/2000\"")
+				.parse()
+				.unwrap();
+			Box::new(chain_spec::development_config(para_id))
+		},
 		"template-rococo" => Box::new(chain_spec::local_testnet_config()),
 		"" | "local" => Box::new(chain_spec::local_testnet_config()),
 		path => Box::new(chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?),
@@ -68,7 +76,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		&parachain_template_runtime::VERSION
+		&parachain_runtime::VERSION
 	}
 }
 

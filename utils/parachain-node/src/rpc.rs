@@ -8,9 +8,8 @@
 use sc_chain_spec::Properties;
 use std::sync::Arc;
 
-use parachain_template_runtime::{opaque::Block, AccountId, Balance, Index as Nonce};
+use parachain_runtime::{opaque::Block, AccountId, Balance, Index as Nonce};
 
-use ibc_rpc::{IbcApiServer, IbcRpcHandler};
 use ibc_runtime_api::IbcRuntimeApi;
 use sc_client_api::{AuxStore, BlockBackend, ProofProvider};
 pub use sc_rpc::DenyUnsafe;

@@ -23,7 +23,7 @@ pallet-ibc = { path = "../../contracts/pallet-ibc" }
 
 [dev-dependencies]
 hyperspace = { path = "../", features = ["testing", "build-metadata-from-ws"] }
-parachain = { path = "../parachain", package = "hyperspace-parachain", features = ["testing"] }
+parachain = { path = "../parachain", package = "hyperspace-parachain", features = ["testing", "build-metadata-from-ws"] }
 # substrate
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", features = ["full_crypto"] }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }

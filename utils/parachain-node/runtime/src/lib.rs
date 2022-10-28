@@ -8,12 +8,11 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 extern crate alloc;
 
-use alloc::{format, string::{String, ToString}};
+use alloc::string::{String, ToString};
 
 mod weights;
 pub mod xcm_config;
 
-use codec::Decode;
 use core::{borrow::Borrow, str::FromStr};
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use ibc::core::{
@@ -22,13 +21,13 @@ use ibc::core::{
 };
 use pallet_ibc::light_client_common::RelayChain;
 use smallvec::smallvec;
-use sp_api::{impl_runtime_apis, Encode};
+use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify},
+	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Get, IdentifyAccount, Verify},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, MultiSignature,
+	ApplyExtrinsicResult, DispatchError, MultiSignature,
 };
 
 use sp_std::prelude::*;
@@ -38,7 +37,7 @@ use sp_version::RuntimeVersion;
 
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::Everything,
+	traits::{fungibles::InspectMetadata, Everything},
 	weights::{
 		constants::WEIGHT_PER_SECOND, ConstantMultiplier, DispatchClass, Weight,
 		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
@@ -49,8 +48,7 @@ use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
 };
-use orml_traits::parameter_type_with_key;
-use pallet_ibc::DenomToAssetId;
+use pallet_ibc::{DenomToAssetId, IbcDenoms};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
@@ -60,6 +58,7 @@ pub use sp_runtime::BuildStorage;
 
 // Polkadot imports
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
+use sp_runtime::traits::AccountIdConversion;
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
@@ -71,11 +70,7 @@ use xcm_executor::XcmExecutor;
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
 
-#[derive(Decode, Encode, Clone, Copy, Eq, PartialEq, Debug, scale_info::TypeInfo)]
-pub enum AssetId {
-	Native,
-	Ibc(u128), // ibc denom mapped to integer
-}
+pub type AssetId = u128;
 
 /// Some way of identifying an account on the chain. We intentionally make it equivalent
 /// to the public key of our transaction signing scheme.
@@ -373,10 +368,10 @@ parameter_types! {
 impl pallet_transaction_payment::Config for Runtime {
 	type Event = Event;
 	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
+	type OperationalFeeMultiplier = OperationalFeeMultiplier;
 	type WeightToFee = WeightToFee;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
-	type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
 
 parameter_types! {
@@ -471,29 +466,6 @@ impl pallet_collator_selection::Config for Runtime {
 	type WeightInfo = ();
 }
 
-parameter_type_with_key! {
-	pub ExistentialDeposits: |_a: AssetId| -> Balance {
-		0
-	};
-}
-
-type ReserveIdentifier = [u8; 8];
-impl orml_tokens::Config for Runtime {
-	type Event = Event;
-	type Balance = Balance;
-	type Amount = i128;
-	type CurrencyId = AssetId;
-	type WeightInfo = ();
-	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = ();
-	type MaxLocks = MaxLocks;
-	type ReserveIdentifier = ReserveIdentifier;
-	type MaxReserves = frame_support::traits::ConstU32<2>;
-	type DustRemovalWhitelist = Everything;
-	type OnKilledTokenAccount = ();
-	type OnNewTokenAccount = ();
-}
-
 impl pallet_ibc_ping::Config for Runtime {
 	type Event = Event;
 	type IbcHandler = Ibc;
@@ -503,7 +475,7 @@ parameter_types! {
 	pub const ExpectedBlockTime: u64 = MILLISECS_PER_BLOCK as u64;
 	pub const RelayChainId: RelayChain = RelayChain::Rococo;
 	pub const SpamProtectionDeposit: Balance = 1_000_000_000_000;
-	pub const NativeAssetId: AssetId = AssetId::Native;
+	pub const NativeAssetId: AssetId = 1;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Default)]
@@ -531,30 +503,73 @@ impl ModuleRouter for Router {
 	}
 }
 
-struct IbcDenomToAssetIdConversion;
+pub struct IbcDenomToAssetIdConversion;
 
 impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
-	type Error = String;
+	type Error = DispatchError;
 
 	fn from_denom_to_asset_id(denom: &String) -> Result<AssetId, Self::Error> {
-		let name = denom.split("/").last().ok_or_else(|| format!("denom missing a name"))?;
-		// create asset metadata
-		// resolve assetId
-		// orml_tokens::Pallet<Runtime>::
-		todo!()
+		use frame_support::traits::fungibles::{metadata::Mutate, Create};
+
+		let name = denom
+			.as_bytes()
+			.to_vec();
+		if let Some(id) = IbcDenoms::<Runtime>::get(&name) {
+			return Ok(id)
+		}
+		let asset_id = 30; // todo: figure this one out.
+		let pallet_id = PalletId(*b"pall-ibc").into_account_truncating();
+		IbcDenoms::<Runtime>::insert(name.clone(), asset_id);
+		let symbol = denom
+			.split("/")
+			.last()
+			.ok_or_else(|| DispatchError::Other("denom missing a name"))?
+			.as_bytes()
+			.to_vec();
+		<pallet_assets::Pallet<Runtime> as Mutate<AccountId>>::set(
+			asset_id, &pallet_id, name, symbol, 12,
+		)?;
+		<pallet_assets::Pallet<Runtime> as Create<AccountId>>::create(
+			asset_id, pallet_id, true, 0,
+		)?;
+
+		Ok(asset_id)
 	}
 
 	fn from_asset_id_to_denom(id: AssetId) -> Option<String> {
-		todo!()
+		let name = <pallet_assets::Pallet<Runtime> as InspectMetadata<AccountId>>::name(&id);
+		String::from_utf8(name).ok()
 	}
 
 	fn ibc_assets(
-		start_key: Option<AssetId>,
-		offset: Option<u32>,
-		limit: u64,
+		_start_key: Option<AssetId>,
+		_offset: Option<u32>,
+		_limit: u64,
 	) -> (Vec<Vec<u8>>, u64, Option<AssetId>) {
 		todo!()
 	}
+}
+
+impl pallet_assets::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type Currency = Balances;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type AssetDeposit = ();
+	type AssetAccountDeposit = ();
+	type MetadataDepositBase = ();
+	type MetadataDepositPerByte = ();
+	type ApprovalDeposit = ();
+	type StringLimit = ();
+	type Freezer = ();
+	type Extra = ();
+	type WeightInfo = ();
+}
+
+impl pallet_sudo::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
 }
 
 impl pallet_ibc::Config for Runtime {
@@ -569,7 +584,7 @@ impl pallet_ibc::Config for Runtime {
 	const LIGHT_CLIENT_PROTOCOL: pallet_ibc::LightClientProtocol =
 		pallet_ibc::LightClientProtocol::Grandpa;
 	type AccountIdConversion = ibc_primitives::IbcAccount<AccountId>;
-	type Fungibles = Tokens;
+	type Fungibles = Assets;
 	type ExpectedBlockTime = ExpectedBlockTime;
 	type Router = Router;
 	type ParaId = parachain_info::Pallet<Runtime>;
@@ -610,9 +625,10 @@ construct_runtime!(
 		CumulusXcm: cumulus_pallet_xcm = 32,
 		DmpQueue: cumulus_pallet_dmp_queue = 33,
 
-		Tokens: orml_tokens = 34,
-		IbcPing: pallet_ibc_ping = 35,
-		// Pallet-ibc, should be the last module in your runtime
+		Sudo: pallet_sudo = 35,
+		IbcPing: pallet_ibc_ping = 36,
+		Assets: pallet_assets = 37,
+		// pallet-ibc, should be the last module in your runtime
 		Ibc: pallet_ibc = 255,
 	}
 );
