@@ -11,8 +11,12 @@ use frame_system::limits::BlockWeights;
 use pallet_ibc::events::IbcEvent as RawIbcEvent;
 use sp_core::H256;
 
-impl From<MetadataIbcEvent> for RawIbcEvent {
-	fn from(event: MetadataIbcEvent) -> Self {
+/// Allows to implement traits for the subxt generated code
+pub struct MetadataIbcEventWrapper(pub MetadataIbcEvent);
+
+impl From<MetadataIbcEventWrapper> for RawIbcEvent {
+	fn from(event: MetadataIbcEventWrapper) -> Self {
+		let event = event.0;
 		match event {
 			MetadataIbcEvent::NewBlock { revision_height, revision_number } =>
 				RawIbcEvent::NewBlock { revision_height, revision_number },

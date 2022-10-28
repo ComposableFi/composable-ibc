@@ -39,6 +39,24 @@ use parachain::ParachainClient;
 use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
 use sp_core::H256;
 use std::{pin::Pin, time::Duration};
+use subxt::tx::SubstrateExtrinsicParams;
+
+// TODO: expose extrinsic param builder
+#[derive(Debug, Clone)]
+pub enum DefaultConfig {}
+
+impl subxt::Config for DefaultConfig {
+	type Index = u32;
+	type BlockNumber = u32;
+	type Hash = sp_core::H256;
+	type Hashing = sp_runtime::traits::BlakeTwo256;
+	type AccountId = sp_runtime::AccountId32;
+	type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
+	type Header = sp_runtime::generic::Header<Self::BlockNumber, sp_runtime::traits::BlakeTwo256>;
+	type Signature = sp_runtime::MultiSignature;
+	type Extrinsic = sp_runtime::OpaqueExtrinsic;
+	type ExtrinsicParams = SubstrateExtrinsicParams<Self>;
+}
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -59,8 +77,8 @@ pub struct CoreConfig {
 }
 
 #[derive(Clone)]
-pub enum AnyChain<T: subxt::Config> {
-	Parachain(ParachainClient<T>),
+pub enum AnyChain {
+	Parachain(ParachainClient<DefaultConfig>),
 }
 
 #[derive(From)]
@@ -83,7 +101,7 @@ impl From<String> for AnyError {
 }
 
 #[async_trait]
-impl<C: subxt::Config> IbcProvider for AnyChain<C> {
+impl IbcProvider for AnyChain {
 	type FinalityEvent = AnyFinalityEvent;
 	type Error = AnyError;
 
@@ -487,7 +505,7 @@ impl<C: subxt::Config> IbcProvider for AnyChain<C> {
 	}
 }
 
-impl<T: subxt::Config> KeyProvider for AnyChain<T> {
+impl KeyProvider for AnyChain {
 	fn account_id(&self) -> Signer {
 		match self {
 			AnyChain::Parachain(parachain) => parachain.account_id(),
@@ -497,7 +515,7 @@ impl<T: subxt::Config> KeyProvider for AnyChain<T> {
 }
 
 #[async_trait]
-impl<T: subxt::Config> Chain for AnyChain<T> {
+impl Chain for AnyChain {
 	fn name(&self) -> &str {
 		match self {
 			Self::Parachain(chain) => chain.name(),
@@ -544,7 +562,7 @@ impl<T: subxt::Config> Chain for AnyChain<T> {
 
 #[cfg(any(test, feature = "testing"))]
 #[async_trait]
-impl<T: subxt::Config + Clone> primitives::TestProvider for AnyChain<T> {
+impl<T: subxt::Config + Clone> primitives::TestProvider for AnyChain {
 	async fn send_transfer(&self, params: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain.send_transfer(params).await.map_err(Into::into),
@@ -576,7 +594,7 @@ impl<T: subxt::Config + Clone> primitives::TestProvider for AnyChain<T> {
 }
 
 impl AnyConfig {
-	pub async fn into_client<T: subxt::Config>(self) -> anyhow::Result<AnyChain<T>> {
+	pub async fn into_client(self) -> anyhow::Result<AnyChain> {
 		Ok(match self {
 			AnyConfig::Parachain(config) =>
 				AnyChain::Parachain(ParachainClient::new(config).await?),

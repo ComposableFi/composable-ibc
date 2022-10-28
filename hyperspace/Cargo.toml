@@ -10,7 +10,7 @@ path = "./bin/main.rs"
 
 [dependencies]
 primitives = { path = "primitives", package = "hyperspace-primitives" }
-parachain = { path = "parachain", package = "hyperspace-parachain", optional = true }
+parachain = { path = "parachain", package = "hyperspace-parachain" }
 cosmos = { path = "cosmos", package = "hyperspace-cosmos", optional = true }
 #near = { path = "near", package = "hyperspace-near", optional = true }
 metrics = { path = "metrics" }
@@ -66,7 +66,6 @@ sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkad
 #common = { path = "../contracts/pallet-ibc" }
 
 [features]
-parachain = ["dep:parachain"]
 #near = ["dep:near"]
 #cosmos = ["dep:cosmos"]
 testing = [ "primitives/testing", "parachain/testing" ]

@@ -45,6 +45,7 @@ use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
 use ics11_beefy::client_state::ClientState as BeefyClientState;
 use pallet_ibc::{light_clients::HostFunctionsManager, HostConsensusProof};
 
+use crate::utils::MetadataIbcEventWrapper;
 use finality_grandpa::BlockNumberOps;
 use futures::Stream;
 use ibc_proto::{google::protobuf::Any, ibc::core::connection::v1::IdentifiedConnection};
@@ -114,7 +115,7 @@ where
 					.into_iter()
 					.filter_map(|ev| {
 						Some(
-							IbcEvent::try_from(RawIbcEvent::from(ev))
+							IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(ev)))
 								.map_err(|e| subxt::Error::Other(e.to_string())),
 						)
 					})

@@ -431,9 +431,7 @@ pub mod pallet {
 		/// Client has been frozen
 		ClientFrozen { client_id: Vec<u8>, height: u64, revision_number: u64 },
 		/// Asset Admin Account Updated
-		AssetAdminUpdated {
-			admin_account: T::AccountId
-		}
+		AssetAdminUpdated { admin_account: T::AccountId },
 	}
 
 	/// Errors inform users that something went wrong.
@@ -693,12 +691,13 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(0)]
-		pub fn set_asset_admin(origin: OriginFor<T>, admin_account: T::AccountId) -> DispatchResult {
+		pub fn set_asset_admin(
+			origin: OriginFor<T>,
+			admin_account: T::AccountId,
+		) -> DispatchResult {
 			<T as Config>::AdminOrigin::ensure_origin(origin)?;
 			AssetAdmin::<T>::put(admin_account.clone());
-			Self::deposit_event(Event::<T>::AssetAdminUpdated {
-				admin_account
-			});
+			Self::deposit_event(Event::<T>::AssetAdminUpdated { admin_account });
 			Ok(())
 		}
 

@@ -53,12 +53,12 @@ pub struct Cmd {
 
 impl Cmd {
 	/// Run the command
-	pub async fn run<T: subxt::Config>(&self) -> Result<()> {
+	pub async fn run(&self) -> Result<()> {
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
 		let config: Config = toml::from_str(&file_content)?;
-		let any_chain_a = config.chain_a.into_client::<T>().await?;
-		let any_chain_b = config.chain_b.into_client::<T>().await?;
+		let any_chain_a = config.chain_a.into_client().await?;
+		let any_chain_b = config.chain_b.into_client().await?;
 
 		let registry =
 			Registry::new_custom(None, None).expect("this can only fail if the prefix is empty");
@@ -68,19 +68,19 @@ impl Cmd {
 		let mut metrics_handler_b = MetricsHandler::new(registry.clone(), metrics_b);
 		metrics_handler_a.link_with_counterparty(&mut metrics_handler_b);
 
-		if let Some(addr) = config.core.prometheus_endpoint.map(String::parse) {
+		if let Some(addr) = config.core.prometheus_endpoint.map(|s| s.parse().ok()).flatten() {
 			tokio::spawn(init_prometheus(addr, registry.clone()));
 		}
 
 		relay(any_chain_a, any_chain_b, Some(metrics_handler_a), Some(metrics_handler_b)).await
 	}
 
-	pub async fn create_clients<T: subxt::Config>(&self) -> Result<()> {
+	pub async fn create_clients(&self) -> Result<()> {
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
 		let config: Config = toml::from_str(&file_content)?;
-		let any_chain_a = config.chain_a.into_client::<T>().await?;
-		let any_chain_b = config.chain_b.into_client::<T>().await?;
+		let any_chain_a = config.chain_a.into_client().await?;
+		let any_chain_b = config.chain_b.into_client().await?;
 
 		let (client_id_a_on_b, client_id_b_on_a) =
 			create_clients(&any_chain_a, &any_chain_b).await?;
@@ -99,7 +99,7 @@ impl Cmd {
 		Ok(())
 	}
 
-	pub async fn create_connection<T: subxt::Config>(&self) -> Result<()> {
+	pub async fn create_connection(&self) -> Result<()> {
 		let delay = self
 			.delay_period
 			.expect("delay_period should be provided when creating a connection");
@@ -107,8 +107,8 @@ impl Cmd {
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
 		let config: Config = toml::from_str(&file_content)?;
-		let any_chain_a = config.chain_a.into_client::<T>().await?;
-		let any_chain_b = config.chain_b.into_client::<T>().await?;
+		let any_chain_a = config.chain_a.into_client().await?;
+		let any_chain_b = config.chain_b.into_client().await?;
 
 		let any_chain_a_clone = any_chain_a.clone();
 		let any_chain_b_clone = any_chain_b.clone();
@@ -124,7 +124,7 @@ impl Cmd {
 		Ok(())
 	}
 
-	pub async fn create_channel<T: subxt::Config>(&self) -> Result<()> {
+	pub async fn create_channel(&self) -> Result<()> {
 		let port_id = PortId::from_str(
 			self.port_id
 				.as_ref()
@@ -141,8 +141,8 @@ impl Cmd {
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
 		let config: Config = toml::from_str(&file_content)?;
-		let any_chain_a = config.chain_a.into_client::<T>().await?;
-		let any_chain_b = config.chain_b.into_client::<T>().await?;
+		let any_chain_a = config.chain_a.into_client().await?;
+		let any_chain_b = config.chain_b.into_client().await?;
 
 		let any_chain_a_clone = any_chain_a.clone();
 		let any_chain_b_clone = any_chain_b.clone();

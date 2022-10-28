@@ -162,18 +162,9 @@ pub struct ParachainClientConfig {
 	pub key_type: String,
 }
 
-impl<T: subxt::Config + Send + Sync> ParachainClient<T>
+impl<T> ParachainClient<T>
 where
-	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	Self: KeyProvider,
-	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
-	MultiSigner: From<MultiSigner>,
-	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	T::Signature: From<MultiSignature>,
-	H256: From<T::Hash>,
-	T::BlockNumber: From<u32> + Ord + sp_runtime::traits::Zero + One,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, AssetTip>>,
+	T: Config,
 {
 	/// Initializes a [`ParachainClient`] given a [`ParachainConfig`]
 	pub async fn new(config: ParachainClientConfig) -> Result<Self, Error> {
@@ -252,7 +243,21 @@ where
 			finality_protocol: config.finality_protocol,
 		})
 	}
+}
 
+impl<T: subxt::Config + Send + Sync> ParachainClient<T>
+where
+	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
+	Self: KeyProvider,
+	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	MultiSigner: From<MultiSigner>,
+	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
+	T::Signature: From<MultiSignature>,
+	H256: From<T::Hash>,
+	T::BlockNumber: From<u32> + Ord + sp_runtime::traits::Zero + One,
+	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+		From<BaseExtrinsicParamsBuilder<T, AssetTip>>,
+{
 	/// Returns a grandpa proving client.
 	pub fn grandpa_prover(&self) -> GrandpaProver<T> {
 		let relay_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.relay_ws_client) };

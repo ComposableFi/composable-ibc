@@ -38,7 +38,10 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 ss58-registry = "1.28.0"
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 
+# subxt
 subxt = { git = "https://github.com/paritytech/subxt", rev = "51179a8b72472d0b43c91cda75a1ddc3fddb9555" }
+subxt-generated = { path = "../../utils/subxt/generated" }
+
 beefy-primitives = {  git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 pallet-mmr = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
