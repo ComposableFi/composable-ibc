@@ -24,9 +24,7 @@ jobs:
         rustup show
 
     - name: Check Workspace
-      run: |
-      cargo check --workspace --locked
+      run: cargo check --workspace --locked
 
     - name: Check no_std
-      run: |
-      ./scripts/no_std_checks.sh
+      run: ./scripts/no_std_checks.sh

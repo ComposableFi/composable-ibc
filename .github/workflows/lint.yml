@@ -22,9 +22,7 @@ jobs:
         rustup show
 
     - name: Cargo fmt
-      run: |
-      cargo +nightly fmt --all -- --check
+      run: cargo +nightly fmt --all -- --check
 
     - name: Cargo udeps
-      run: |
-      cargo +nightly udeps --locked --all
+      run: cargo +nightly udeps --locked --all
