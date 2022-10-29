@@ -544,31 +544,25 @@ impl ModuleRouter for Router {
 
 pub struct IbcDenomToAssetIdConversion;
 
-impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
-	type Error = DispatchError;
-
-	fn from_denom_to_asset_id(denom: &String) -> Result<AssetId, Self::Error> {
-		use frame_support::traits::fungibles::{metadata::Mutate, Create};
-        log::info!(target: "runtime", "Got denom: {denom}");
-
-        if denom == "UNIT" {
-            return Ok(1)
-        }
-
-		let name = denom.as_bytes().to_vec();
-		if let Some(id) = IbcDenoms::<Runtime>::get(&name) {
-			return Ok(id)
-		}
-
-		let pallet_id: AccountId = PalletId(*b"pall-ibc").into_account_truncating();
-
-		let symbol = denom
-			.split("/")
-			.last()
-			.ok_or_else(|| DispatchError::Other("denom missing a name"))?
-			.as_bytes()
-			.to_vec();
-		// generate new asset id
+// generate new asset id
+fn generate_asset_id() -> Result<AssetId, DispatchError> {
+	let (asset_id, ..) = <asset_registry::SequentialId<Runtime> as AssetProcessor<
+		AssetId,
+		DefaultAssetMetadata<Runtime>,
+	>>::pre_register(
+		None,
+		// Metadata is not useful to this call so we can use default values
+		AssetMetadata {
+			decimals: Default::default(),
+			name: Default::default(),
+			symbol: Default::default(),
+			existential_deposit: Default::default(),
+			location: None,
+			additional: (),
+		},
+	)
+	.map_err(|_| DispatchError::Other("Failed to generate asset id"))?;
+	let asset_id = if asset_id == 1 {
 		let (asset_id, ..) = <asset_registry::SequentialId<Runtime> as AssetProcessor<
 			AssetId,
 			DefaultAssetMetadata<Runtime>,
@@ -585,6 +579,40 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 			},
 		)
 		.map_err(|_| DispatchError::Other("Failed to generate asset id"))?;
+		asset_id
+	} else {
+		asset_id
+	};
+
+	Ok(asset_id)
+}
+
+impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
+	type Error = DispatchError;
+
+	fn from_denom_to_asset_id(denom: &String) -> Result<AssetId, Self::Error> {
+		use frame_support::traits::fungibles::{metadata::Mutate, Create};
+		log::info!(target: "runtime", "Got denom: {denom}");
+
+		if denom == "UNIT" {
+			return Ok(1)
+		}
+
+		let name = denom.as_bytes().to_vec();
+		if let Some(id) = IbcDenoms::<Runtime>::get(&name) {
+			return Ok(id)
+		}
+
+		let pallet_id: AccountId = PalletId(*b"pall-ibc").into_account_truncating();
+
+		let symbol = denom
+			.split("/")
+			.last()
+			.ok_or_else(|| DispatchError::Other("denom missing a name"))?
+			.as_bytes()
+			.to_vec();
+        let asset_id = generate_asset_id()?;
+        
 		IbcDenoms::<Runtime>::insert(name.clone(), asset_id);
 		IbcAssetIds::<Runtime>::insert(asset_id, name.clone());
 

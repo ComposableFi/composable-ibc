@@ -109,10 +109,9 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 	let mut chain_a = ParachainClient::<DefaultConfig>::new(config_a).await.unwrap();
 	let mut chain_b = ParachainClient::<DefaultConfig>::new(config_b).await.unwrap();
 
-
 	// Wait until for parachains to start producing blocks
 	log::info!(target: "hyperspace", "Waiting for  block production from parachains");
-    let session_length = chain_a.grandpa_prover().session_length().await.unwrap();
+	let session_length = chain_a.grandpa_prover().session_length().await.unwrap();
 	let _ = chain_a
 		.relay_client
 		.rpc()

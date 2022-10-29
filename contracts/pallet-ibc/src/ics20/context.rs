@@ -122,7 +122,9 @@ where
 		// Find existing asset or create a new one
 		let asset_id =
 			T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).map_err(|err| {
-                Ics20Error::implementation_specific(format!("Failed to create or find asset: {err:?}"))
+				Ics20Error::implementation_specific(format!(
+					"Failed to create or find asset: {err:?}"
+				))
 			})?;
 
 		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(

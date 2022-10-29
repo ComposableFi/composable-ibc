@@ -533,9 +533,7 @@ pub mod pallet {
 		pub fn deliver(origin: OriginFor<T>, messages: Vec<Any>) -> DispatchResult {
 			use ibc::core::{
 				ics02_client::msgs::create_client::TYPE_URL as CREATE_CLIENT_TYPE_URL,
-				ics03_connection::msgs::{
-					conn_open_init::TYPE_URL as CONN_OPEN_INIT_TYPE_URL,
-				},
+				ics03_connection::msgs::conn_open_init::TYPE_URL as CONN_OPEN_INIT_TYPE_URL,
 			};
 			let sender = ensure_signed(origin)?;
 
@@ -547,10 +545,8 @@ pub mod pallet {
 				.into_iter()
 				.filter_map(|message| {
 					let type_url = String::from_utf8(message.type_url.clone()).ok()?;
-					if matches!(
-						type_url.as_str(),
-						CREATE_CLIENT_TYPE_URL | CONN_OPEN_INIT_TYPE_URL
-					) {
+					if matches!(type_url.as_str(), CREATE_CLIENT_TYPE_URL | CONN_OPEN_INIT_TYPE_URL)
+					{
 						reserve_count += 1;
 					}
 					Some(Ok(ibc_proto::google::protobuf::Any { type_url, value: message.value }))
