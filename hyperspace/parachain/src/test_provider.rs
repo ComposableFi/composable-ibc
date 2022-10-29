@@ -1,5 +1,5 @@
 use crate::{
-	extrinsic, parachain::api, signer::ExtrinsicSigner, utils::unsafe_cast_to_jsonrpsee_client,
+	config, parachain::api, signer::ExtrinsicSigner, utils::unsafe_cast_to_jsonrpsee_client,
 	Error, ParachainClient,
 };
 use finality_grandpa::BlockNumberOps;
@@ -27,7 +27,7 @@ use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip};
 // Temp fix
 type AssetId = u128;
 
-impl<T: extrinsic::Config + Send + Sync> ParachainClient<T>
+impl<T: config::Config + Send + Sync> ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	Self: KeyProvider,
@@ -58,13 +58,14 @@ where
 		let (ext_hash, block_hash) = self.submit_call(call).await?;
 
 		// Query newly created client Id
-		let identified_client_state = IbcApiClient::<u32, H256, AssetId>::query_newly_created_client(
-			&*self.para_ws_client,
-			block_hash.into(),
-			ext_hash.into(),
-		)
-		.await
-		.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
+		let identified_client_state =
+			IbcApiClient::<u32, H256, AssetId>::query_newly_created_client(
+				&*self.para_ws_client,
+				block_hash.into(),
+				ext_hash.into(),
+			)
+			.await
+			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
 
 		let client_id = ClientId::from_str(&identified_client_state.client_id)
 			.expect("Should have a valid client id");
@@ -150,7 +151,7 @@ where
 #[async_trait::async_trait]
 impl<T> TestProvider for ParachainClient<T>
 where
-	T: extrinsic::Config + Send + Sync + Clone,
+	T: config::Config + Send + Sync + Clone,
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	u32: From<<T as subxt::Config>::BlockNumber>,
 	Self: KeyProvider,

@@ -6,13 +6,13 @@ use sp_runtime::{
 };
 use subxt::tx::Signer;
 
-use crate::extrinsic;
+use crate::config;
 use codec::Decode;
 use primitives::KeyProvider;
 
 /// A [`Signer`] implementation.
 #[derive(Clone)]
-pub struct ExtrinsicSigner<T: extrinsic::Config, Provider: KeyProvider> {
+pub struct ExtrinsicSigner<T: config::Config, Provider: KeyProvider> {
 	account_id: T::AccountId,
 	nonce: Option<T::Index>,
 	signer: MultiSigner,
@@ -23,7 +23,7 @@ pub struct ExtrinsicSigner<T: extrinsic::Config, Provider: KeyProvider> {
 
 impl<T, P> ExtrinsicSigner<T, P>
 where
-	T: extrinsic::Config,
+	T: config::Config,
 	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	P: KeyProvider,
 	MultiSigner: From<MultiSigner>,
@@ -48,7 +48,7 @@ where
 
 impl<T, P> Signer<T> for ExtrinsicSigner<T, P>
 where
-	T: extrinsic::Config,
+	T: config::Config,
 	T::AccountId: Into<T::Address> + Clone + 'static,
 	P: KeyProvider + 'static,
 	T::Signature: From<MultiSignature>,

@@ -1,6 +1,6 @@
 //! Light client protocols for parachains.
 
-use crate::{error::Error, extrinsic, ParachainClient};
+use crate::{error::Error, config, ParachainClient};
 use anyhow::anyhow;
 use beefy_light_client_primitives::{ClientState as BeefyPrimitivesClientState, NodesUtils};
 use codec::{Decode, Encode};
@@ -65,7 +65,7 @@ impl FinalityProtocol {
 		counterparty: &C,
 	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
-		T: extrinsic::Config + Send + Sync,
+		T: config::Config + Send + Sync,
 		C: Chain,
 		u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 		u32: From<<T as subxt::Config>::BlockNumber>,
@@ -104,7 +104,7 @@ pub async fn query_latest_ibc_events_with_beefy<T, C>(
 	counterparty: &C,
 ) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
 where
-	T: extrinsic::Config + Send + Sync,
+	T: config::Config + Send + Sync,
 	C: Chain,
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
 		+ From<<T as subxt::Config>::BlockNumber>,
@@ -222,9 +222,11 @@ where
 	};
 
 	// block_number => events
-	let events: HashMap<String, Vec<IbcEvent>> =
-		IbcApiClient::<u32, H256, AssetId>::query_events(&*source.para_ws_client, finalized_block_numbers)
-			.await?;
+	let events: HashMap<String, Vec<IbcEvent>> = IbcApiClient::<u32, H256, AssetId>::query_events(
+		&*source.para_ws_client,
+		finalized_block_numbers,
+	)
+	.await?;
 
 	// header number is serialized to string
 	let mut headers_with_events = events
@@ -299,7 +301,7 @@ pub async fn query_latest_ibc_events_with_grandpa<T, C>(
 	counterparty: &C,
 ) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
 where
-	T: extrinsic::Config + Send + Sync,
+	T: config::Config + Send + Sync,
 	C: Chain,
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
 		+ From<<T as subxt::Config>::BlockNumber>,
@@ -391,9 +393,11 @@ where
 	);
 
 	// block_number => events
-	let events: HashMap<String, Vec<IbcEvent>> =
-		IbcApiClient::<u32, H256, AssetId>::query_events(&*source.para_ws_client, finalized_block_numbers)
-			.await?;
+	let events: HashMap<String, Vec<IbcEvent>> = IbcApiClient::<u32, H256, AssetId>::query_events(
+		&*source.para_ws_client,
+		finalized_block_numbers,
+	)
+	.await?;
 
 	// header number is serialized to string
 	let mut headers_with_events = events

@@ -181,6 +181,8 @@ fn testnet_genesis(
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
 ) -> parachain_runtime::GenesisConfig {
+	let root = get_account_id_from_seed::<sr25519::Public>("Alice");
+
 	parachain_runtime::GenesisConfig {
 		system: parachain_runtime::SystemConfig {
 			code: parachain_runtime::WASM_BINARY
@@ -198,8 +200,8 @@ fn testnet_genesis(
 		},
 		transaction_payment: parachain_runtime::TransactionPaymentConfig {},
 		assets: parachain_runtime::AssetsConfig {
-			assets: vec![],
-			metadata: vec![],
+			assets: vec![(1, root.clone(), true, 1)],
+			metadata: vec![(1, b"UNIT".to_vec(), b"UNIT".to_vec(), 12)],
 			accounts: vec![],
 		},
 		session: parachain_runtime::SessionConfig {
@@ -222,9 +224,7 @@ fn testnet_genesis(
 		polkadot_xcm: parachain_runtime::PolkadotXcmConfig {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
 		},
-		sudo: parachain_runtime::SudoConfig {
-			key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
-		},
-		asset_registry: Default::default()
+		sudo: parachain_runtime::SudoConfig { key: Some(root) },
+		asset_registry: Default::default(),
 	}
 }

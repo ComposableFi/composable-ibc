@@ -14,12 +14,14 @@ use asset_registry::{AssetMetadata, DefaultAssetMetadata};
 mod weights;
 pub mod xcm_config;
 
+use codec::Encode;
 use core::{borrow::Borrow, str::FromStr};
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use ibc::core::{
 	ics24_host::identifier::PortId,
 	ics26_routing::context::{Module, ModuleId},
 };
+use orml_traits::asset_registry::AssetProcessor;
 use pallet_ibc::light_client_common::RelayChain;
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
@@ -30,8 +32,6 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchError, MultiSignature,
 };
-use orml_traits::asset_registry::AssetProcessor;
-use codec::Encode;
 
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -40,7 +40,7 @@ use sp_version::RuntimeVersion;
 
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::{fungibles::InspectMetadata, Everything, AsEnsureOriginWithArg},
+	traits::{fungibles::InspectMetadata, AsEnsureOriginWithArg, Everything},
 	weights::{
 		constants::WEIGHT_PER_SECOND, ConstantMultiplier, DispatchClass, Weight,
 		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
@@ -51,7 +51,7 @@ use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
 };
-use pallet_ibc::{DenomToAssetId, IbcDenoms, IbcAssetIds};
+use pallet_ibc::{DenomToAssetId, IbcAssetIds, IbcDenoms};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
@@ -485,6 +485,32 @@ impl asset_registry::Config for Runtime {
 }
 
 parameter_types! {
+	pub const StringLimit: u32 = 15;
+}
+
+impl pallet_assets::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type Currency = Balances;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type AssetDeposit = ();
+	type AssetAccountDeposit = ();
+	type MetadataDepositBase = ();
+	type MetadataDepositPerByte = ();
+	type ApprovalDeposit = ();
+	type StringLimit = StringLimit;
+	type Freezer = ();
+	type Extra = ();
+	type WeightInfo = ();
+}
+
+impl pallet_sudo::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+}
+
+parameter_types! {
 	pub const ExpectedBlockTime: u64 = MILLISECS_PER_BLOCK as u64;
 	pub const RelayChainId: RelayChain = RelayChain::Rococo;
 	pub const SpamProtectionDeposit: Balance = 1_000_000_000_000;
@@ -526,11 +552,11 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 
 		let name = denom.as_bytes().to_vec();
 		if let Some(id) = IbcDenoms::<Runtime>::get(&name) {
-			return Ok(id);
+			return Ok(id)
 		}
 
-		let pallet_id = PalletId(*b"pall-ibc").into_account_truncating();
-		
+		let pallet_id: AccountId = PalletId(*b"pall-ibc").into_account_truncating();
+
 		let symbol = denom
 			.split("/")
 			.last()
@@ -538,25 +564,33 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 			.as_bytes()
 			.to_vec();
 		// generate new asset id
-		// Metadata is not useful to this call so we can use default values
-		let (asset_id, ..) = <asset_registry::SequentialId<Runtime> as AssetProcessor<AssetId, DefaultAssetMetadata<Runtime>>>::pre_register(
-				None, 
-				AssetMetadata { 
-					decimals: Default::default(), 
-					name: Default::default(), symbol: Default::default(), 
-					existential_deposit: Default::default(), 
-					location: None, 
-					additional: () 
-				}
-			)
-			.map_err(|_| DispatchError::Other("Failed to generate asset id"))?;
+		let (asset_id, ..) = <asset_registry::SequentialId<Runtime> as AssetProcessor<
+			AssetId,
+			DefaultAssetMetadata<Runtime>,
+		>>::pre_register(
+			None,
+			// Metadata is not useful to this call so we can use default values
+			AssetMetadata {
+				decimals: Default::default(),
+				name: Default::default(),
+				symbol: Default::default(),
+				existential_deposit: Default::default(),
+				location: None,
+				additional: (),
+			},
+		)
+		.map_err(|_| DispatchError::Other("Failed to generate asset id"))?;
 		IbcDenoms::<Runtime>::insert(name.clone(), asset_id);
 		IbcAssetIds::<Runtime>::insert(asset_id, name.clone());
+
+		<pallet_assets::Pallet<Runtime> as Create<AccountId>>::create(
+			asset_id,
+			pallet_id.clone(),
+			true,
+			0,
+		)?;
 		<pallet_assets::Pallet<Runtime> as Mutate<AccountId>>::set(
 			asset_id, &pallet_id, name, symbol, 12,
-		)?;
-		<pallet_assets::Pallet<Runtime> as Create<AccountId>>::create(
-			asset_id, pallet_id, true, 0,
 		)?;
 
 		Ok(asset_id)
@@ -573,7 +607,6 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 		mut limit: u64,
 	) -> (Vec<Vec<u8>>, u64, Option<AssetId>) {
 		let mut iterator = if let Some(asset_id) = start_key {
-			
 			let raw_key = asset_id.encode();
 			IbcAssetIds::<Runtime>::iter_from(raw_key).skip(0)
 		} else if let Some(offset) = offset {
@@ -593,28 +626,6 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 
 		(denoms, IbcAssetIds::<Runtime>::count() as u64, iterator.next().map(|(id, ..)| id))
 	}
-}
-
-impl pallet_assets::Config for Runtime {
-	type Event = Event;
-	type Balance = Balance;
-	type AssetId = AssetId;
-	type Currency = Balances;
-	type ForceOrigin = EnsureRoot<AccountId>;
-	type AssetDeposit = ();
-	type AssetAccountDeposit = ();
-	type MetadataDepositBase = ();
-	type MetadataDepositPerByte = ();
-	type ApprovalDeposit = ();
-	type StringLimit = ();
-	type Freezer = ();
-	type Extra = ();
-	type WeightInfo = ();
-}
-
-impl pallet_sudo::Config for Runtime {
-	type Event = Event;
-	type Call = Call;
 }
 
 impl pallet_ibc::Config for Runtime {

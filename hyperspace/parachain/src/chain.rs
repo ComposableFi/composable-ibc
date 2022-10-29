@@ -19,9 +19,9 @@ use primitives::{Chain, IbcProvider};
 
 use super::{error::Error, signer::ExtrinsicSigner, ParachainClient};
 use crate::{
-	extrinsic,
-	parachain::{api, api::runtime_types::pallet_ibc::Any as RawAny},
-	FinalityProtocol,
+    config,
+    parachain::{api, api::runtime_types::pallet_ibc::Any as RawAny},
+    FinalityProtocol,
 };
 use finality_grandpa_rpc::GrandpaApiClient;
 use subxt::tx::{PlainTip, PolkadotExtrinsicParamsBuilder};
@@ -38,7 +38,7 @@ type BeefyJustification =
 struct JustificationNotification(sp_core::Bytes);
 
 #[async_trait::async_trait]
-impl<T: extrinsic::Config + Send + Sync> Chain for ParachainClient<T>
+impl<T: config::Config + Send + Sync> Chain for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	u32: From<<T as subxt::Config>::BlockNumber>,

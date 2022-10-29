@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use futures::StreamExt;
 use hyperspace_core::logging;
 use hyperspace_parachain::{
-	extrinsic, extrinsic::CustomExtrinsicParams, finality_protocol::FinalityProtocol,
+	config, config::CustomExtrinsicParams, finality_protocol::FinalityProtocol,
 	ParachainClient, ParachainClientConfig,
 };
 use hyperspace_primitives::{utils::create_clients, IbcProvider};
@@ -47,7 +47,7 @@ impl Default for Args {
 pub enum DefaultConfig {}
 
 #[async_trait]
-impl extrinsic::Config for DefaultConfig {
+impl config::Config for DefaultConfig {
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,
 	) -> Result<CustomExtrinsicParams<Self>, Error> {

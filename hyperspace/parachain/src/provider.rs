@@ -1,60 +1,58 @@
+use super::{error::Error, ParachainClient};
+use crate::{
+	config, finality_protocol::FinalityEvent, parachain, utils::MetadataIbcEventWrapper,
+	FinalityProtocol, GrandpaClientState,
+};
+use beefy_prover::helpers::fetch_timestamp_extrinsic_with_proof;
 use codec::Encode;
+use finality_grandpa::BlockNumberOps;
+use futures::Stream;
+use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
 use ibc::{
+	applications::transfer::{Amount, PrefixedCoin, PrefixedDenom},
 	core::{
+		ics02_client::client_state::ClientType,
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
 	events::IbcEvent,
+	timestamp::Timestamp,
 	Height,
 };
-use std::fmt::Display;
-
-use ibc_proto::ibc::core::{
-	channel::v1::{
-		QueryChannelResponse, QueryNextSequenceReceiveResponse, QueryPacketAcknowledgementResponse,
-		QueryPacketCommitmentResponse, QueryPacketReceiptResponse,
+use ibc_proto::{
+	google::protobuf::Any,
+	ibc::core::{
+		channel::v1::{
+			QueryChannelResponse, QueryChannelsResponse, QueryNextSequenceReceiveResponse,
+			QueryPacketAcknowledgementResponse, QueryPacketCommitmentResponse,
+			QueryPacketReceiptResponse,
+		},
+		client::v1::{
+			IdentifiedClientState, QueryClientStateResponse, QueryConsensusStateResponse,
+		},
+		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
 	},
-	client::v1::{QueryClientStateResponse, QueryConsensusStateResponse},
-	connection::v1::QueryConnectionResponse,
 };
-use sp_runtime::{
-	traits::{Header as HeaderT, IdentifyAccount, Verify},
-	MultiSignature, MultiSigner,
-};
-use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams};
-
-use super::{error::Error, ParachainClient};
-
-use crate::{extrinsic, parachain, FinalityProtocol, GrandpaClientState};
-use ibc::{
-	applications::transfer::{Amount, PrefixedCoin, PrefixedDenom},
-	core::ics02_client::client_state::ClientType,
-	timestamp::Timestamp,
-};
-use ibc_proto::ibc::core::{channel::v1::QueryChannelsResponse, client::v1::IdentifiedClientState};
 use ibc_rpc::{IbcApiClient, PacketInfo};
+use ics11_beefy::client_state::ClientState as BeefyClientState;
+use pallet_ibc::{
+	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
+	HostConsensusProof,
+};
 use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
 use sp_core::H256;
-
-use crate::finality_protocol::FinalityEvent;
-use beefy_prover::helpers::fetch_timestamp_extrinsic_with_proof;
-use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
-use ics11_beefy::client_state::ClientState as BeefyClientState;
-use pallet_ibc::{light_clients::HostFunctionsManager, HostConsensusProof};
-
-use crate::utils::MetadataIbcEventWrapper;
-use finality_grandpa::BlockNumberOps;
-use futures::Stream;
-use ibc_proto::{google::protobuf::Any, ibc::core::connection::v1::IdentifiedConnection};
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
-use sp_runtime::traits::One;
-use std::{collections::BTreeMap, pin::Pin, str::FromStr, time::Duration};
-use subxt::tx::PlainTip;
+use sp_runtime::{
+	traits::{Header as HeaderT, IdentifyAccount, One, Verify},
+	MultiSignature, MultiSigner,
+};
+use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr, time::Duration};
+use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip};
 
 // Temp fix
 type AssetId = u128;
+
 #[async_trait::async_trait]
-impl<T: extrinsic::Config + Send + Sync> IbcProvider for ParachainClient<T>
+impl<T: config::Config + Send + Sync> IbcProvider for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	u32: From<<T as subxt::Config>::BlockNumber>,
@@ -498,8 +496,9 @@ where
 			.await?
 			.expect("Account data should exist");
 
+		// todo: how should we handle assets?
 		Ok(vec![PrefixedCoin {
-			denom: PrefixedDenom::from_str("PICA")?,
+			denom: PrefixedDenom::from_str("UNIT")?,
 			amount: Amount::from_str(&format!("{}", balance.data.free))?,
 		}])
 	}
@@ -616,13 +615,14 @@ where
 		block_hash: Option<H256>,
 	) -> Result<ClientId, Self::Error> {
 		// Query newly created client Id
-		let identified_client_state = IbcApiClient::<u32, H256, AssetId>::query_newly_created_client(
-			&*self.para_ws_client,
-			block_hash.expect("Block hash should be available"),
-			tx_hash,
-		)
-		.await
-		.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
+		let identified_client_state =
+			IbcApiClient::<u32, H256, AssetId>::query_newly_created_client(
+				&*self.para_ws_client,
+				block_hash.expect("Block hash should be available"),
+				tx_hash,
+			)
+			.await
+			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
 
 		let client_id = ClientId::from_str(&identified_client_state.client_id)
 			.expect("Should have a valid client id");

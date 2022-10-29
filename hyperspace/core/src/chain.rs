@@ -35,7 +35,7 @@ use serde::Deserialize;
 use thiserror::Error;
 
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
-use parachain::{extrinsic, ParachainClient};
+use parachain::{config, ParachainClient};
 use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
 use sp_core::H256;
 use sp_runtime::generic::Era;
@@ -50,7 +50,7 @@ use subxt::{
 pub enum DefaultConfig {}
 
 #[async_trait]
-impl extrinsic::Config for DefaultConfig {
+impl config::Config for DefaultConfig {
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,
 	) -> Result<

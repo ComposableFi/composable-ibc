@@ -4,7 +4,7 @@ use std::{collections::BTreeMap, str::FromStr, sync::Arc, time::Duration};
 
 pub mod chain;
 pub mod error;
-pub mod extrinsic;
+pub mod config;
 pub mod key_provider;
 pub(crate) mod parachain;
 pub(crate) mod polkadot;
@@ -62,7 +62,7 @@ use subxt::tx::TxPayload;
 /// client state  as new finality proofs are observed.
 /// 2. Submiting new IBC messages to this parachain.
 #[derive(Clone)]
-pub struct ParachainClient<T: extrinsic::Config> {
+pub struct ParachainClient<T: config::Config> {
 	/// Chain name
 	pub name: String,
 	/// Relay chain rpc client
@@ -161,7 +161,7 @@ pub struct ParachainClientConfig {
 
 impl<T> ParachainClient<T>
 where
-	T: extrinsic::Config,
+	T: config::Config,
 {
 	/// Initializes a [`ParachainClient`] given a [`ParachainConfig`]
 	pub async fn new(config: ParachainClientConfig) -> Result<Self, Error> {
@@ -242,7 +242,7 @@ where
 	}
 }
 
-impl<T: extrinsic::Config + Send + Sync> ParachainClient<T>
+impl<T: config::Config + Send + Sync> ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	Self: KeyProvider,
@@ -409,7 +409,7 @@ where
 	}
 }
 
-impl<T: extrinsic::Config + Send + Sync> ParachainClient<T>
+impl<T: config::Config + Send + Sync> ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	Self: KeyProvider,
