@@ -2,6 +2,7 @@
 name = "hyperspace-primitives"
 version = "0.1.0"
 edition = "2021"
+description = "Shared primtives for hyperspace based crates"
 authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <david.salami@gmail.com>"]
 
 [dependencies]

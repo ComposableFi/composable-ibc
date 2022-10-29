@@ -1,5 +1,10 @@
+use async_trait::async_trait;
 use futures::StreamExt;
-use hyperspace::logging;
+use hyperspace_core::logging;
+use hyperspace_parachain::{
+	extrinsic, extrinsic::CustomExtrinsicParams, finality_protocol::FinalityProtocol,
+	ParachainClient, ParachainClientConfig,
+};
 use hyperspace_primitives::{utils::create_clients, IbcProvider};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
@@ -7,8 +12,11 @@ use hyperspace_testsuite::{
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay,
 };
-use parachain::{finality_protocol::FinalityProtocol, ParachainClient, ParachainClientConfig};
-use subxt::tx::SubstrateExtrinsicParams;
+use sp_runtime::generic::Era;
+use subxt::{
+	tx::{PolkadotExtrinsicParams, PolkadotExtrinsicParamsBuilder},
+	Error, OnlineClient,
+};
 
 #[derive(Debug, Clone)]
 pub struct Args {
@@ -38,6 +46,17 @@ impl Default for Args {
 #[derive(Debug, Clone)]
 pub enum DefaultConfig {}
 
+#[async_trait]
+impl extrinsic::Config for DefaultConfig {
+	async fn custom_extrinsic_params(
+		client: &OnlineClient<Self>,
+	) -> Result<CustomExtrinsicParams<Self>, Error> {
+		let params =
+			PolkadotExtrinsicParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
+		Ok(params.into())
+	}
+}
+
 impl subxt::Config for DefaultConfig {
 	type Index = u32;
 	type BlockNumber = u32;
@@ -48,7 +67,7 @@ impl subxt::Config for DefaultConfig {
 	type Header = sp_runtime::generic::Header<Self::BlockNumber, sp_runtime::traits::BlakeTwo256>;
 	type Signature = sp_runtime::MultiSignature;
 	type Extrinsic = sp_runtime::OpaqueExtrinsic;
-	type ExtrinsicParams = SubstrateExtrinsicParams<Self>;
+	type ExtrinsicParams = PolkadotExtrinsicParams<Self>;
 }
 
 async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<DefaultConfig>) {

@@ -31,6 +31,7 @@ members = [
 
     # hyperspace
     "hyperspace",
+    "hyperspace/core",
     "hyperspace/primitives",
     "hyperspace/parachain",
     "hyperspace/cosmos",

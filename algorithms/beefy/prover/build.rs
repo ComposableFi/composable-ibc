@@ -18,6 +18,5 @@ async fn main() -> anyhow::Result<()> {
 	if cfg!(feature = "build-metadata-from-ws") {
 		subxt_codegen::build_script("ws://127.0.0.1:9944", "runtime").await?;
 	}
-	println!("cargo:rerun-if-changed=Cargo.lock");
 	Ok(())
 }

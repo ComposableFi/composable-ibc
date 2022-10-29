@@ -226,9 +226,9 @@ dependencies = [
 
 [[package]]
 name = "async-global-executor"
-version = "2.3.0"
+version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0da5b41ee986eed3f524c380e6d64965aea573882a8907682ad100f7859305ca"
+checksum = "f1b6f5d7df27bd294849f8eec66ecfc63d11814df7a4f5d74168a2394467b776"
 dependencies = [
  "async-channel",
  "async-executor",
@@ -3667,6 +3667,16 @@ name = "hyperspace"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "clap",
+ "hyperspace-core",
+ "tokio",
+]
+
+[[package]]
+name = "hyperspace-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
  "async-trait",
  "clap",
  "derive_more",
@@ -3675,6 +3685,7 @@ dependencies = [
  "futures",
  "hex",
  "hyperspace-cosmos",
+ "hyperspace-metrics",
  "hyperspace-parachain",
  "hyperspace-primitives",
  "ibc",
@@ -3685,7 +3696,6 @@ dependencies = [
  "ics13-near",
  "light-client-common",
  "log",
- "metrics",
  "pallet-ibc",
  "parity-scale-codec",
  "prometheus",
@@ -3710,6 +3720,22 @@ name = "hyperspace-cosmos"
 version = "0.1.0"
 dependencies = [
  "hyperspace-primitives",
+]
+
+[[package]]
+name = "hyperspace-metrics"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "futures-util",
+ "hyper",
+ "ibc",
+ "ibc-proto",
+ "log",
+ "prometheus",
+ "tendermint-proto",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]
@@ -3802,8 +3828,10 @@ dependencies = [
 name = "hyperspace-testsuite"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "async-trait",
  "futures",
- "hyperspace",
+ "hyperspace-core",
  "hyperspace-parachain",
  "hyperspace-primitives",
  "ibc",
@@ -5698,22 +5726,6 @@ dependencies = [
  "keccak",
  "rand_core 0.5.1",
  "zeroize",
-]
-
-[[package]]
-name = "metrics"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "futures-util",
- "hyper",
- "ibc",
- "ibc-proto",
- "log",
- "prometheus",
- "tendermint-proto",
- "thiserror",
- "tokio",
 ]
 
 [[package]]

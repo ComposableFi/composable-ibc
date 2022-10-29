@@ -182,8 +182,8 @@ impl_opaque_keys! {
 
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("template-parachain"),
-	impl_name: create_runtime_str!("template-parachain"),
+	spec_name: create_runtime_str!("centuari"),
+	impl_name: create_runtime_str!("centuari"),
 	authoring_version: 1,
 	spec_version: 1,
 	impl_version: 0,
@@ -602,8 +602,8 @@ construct_runtime!(
 	{
 		// System support stuff.
 		System: frame_system = 0,
-		ParachainSystem: cumulus_pallet_parachain_system = 1,
-		Timestamp: pallet_timestamp = 2,
+		Timestamp: pallet_timestamp = 1,
+		ParachainSystem: cumulus_pallet_parachain_system = 2,
 		ParachainInfo: parachain_info = 3,
 
 		// Monetary stuff.

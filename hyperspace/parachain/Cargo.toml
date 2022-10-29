@@ -2,6 +2,7 @@
 name = "hyperspace-parachain"
 version = "0.1.0"
 edition = "2021"
+description = "Hyperspace relayer interface for Parachains"
 authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <david.salami@gmail.com>"]
 
 [build-dependencies]

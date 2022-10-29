@@ -3,8 +3,8 @@ pub mod api {
 	use super::api as root_mod;
 	pub static PALLETS: [&str; 19usize] = [
 		"System",
-		"ParachainSystem",
 		"Timestamp",
+		"ParachainSystem",
 		"ParachainInfo",
 		"Balances",
 		"TransactionPayment",
@@ -26,7 +26,7 @@ pub mod api {
 	pub enum Event {
 		#[codec(index = 0)]
 		System(system::Event),
-		#[codec(index = 1)]
+		#[codec(index = 2)]
 		ParachainSystem(parachain_system::Event),
 		#[codec(index = 10)]
 		Balances(balances::Event),
@@ -975,6 +975,127 @@ pub mod api {
 			}
 		}
 	}
+	pub mod timestamp {
+		use super::{root_mod, runtime_types};
+		#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
+		pub mod calls {
+			use super::{root_mod, runtime_types};
+			type DispatchError = runtime_types::sp_runtime::DispatchError;
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			pub struct Set {
+				#[codec(compact)]
+				pub now: ::core::primitive::u64,
+			}
+			pub struct TransactionApi;
+			impl TransactionApi {
+				#[doc = "Set the current time."]
+				#[doc = ""]
+				#[doc = "This call should be invoked exactly once per block. It will panic at the finalization"]
+				#[doc = "phase, if this call hasn't been invoked by that time."]
+				#[doc = ""]
+				#[doc = "The timestamp should be greater than the previous one by the amount specified by"]
+				#[doc = "`MinimumPeriod`."]
+				#[doc = ""]
+				#[doc = "The dispatch origin for this call must be `Inherent`."]
+				#[doc = ""]
+				#[doc = "# <weight>"]
+				#[doc = "- `O(1)` (Note that implementations of `OnTimestampSet` must also be `O(1)`)"]
+				#[doc = "- 1 storage read and 1 storage mutation (codec `O(1)`). (because of `DidUpdate::take` in"]
+				#[doc = "  `on_finalize`)"]
+				#[doc = "- 1 event handler `on_timestamp_set`. Must be `O(1)`."]
+				#[doc = "# </weight>"]
+				pub fn set(
+					&self,
+					now: ::core::primitive::u64,
+				) -> ::subxt::tx::StaticTxPayload<Set> {
+					::subxt::tx::StaticTxPayload::new(
+						"Timestamp",
+						"set",
+						Set { now },
+						[
+							6u8, 97u8, 172u8, 236u8, 118u8, 238u8, 228u8, 114u8, 15u8, 115u8,
+							102u8, 85u8, 66u8, 151u8, 16u8, 33u8, 187u8, 17u8, 166u8, 88u8, 127u8,
+							214u8, 182u8, 51u8, 168u8, 88u8, 43u8, 101u8, 185u8, 8u8, 1u8, 28u8,
+						],
+					)
+				}
+			}
+		}
+		pub mod storage {
+			use super::runtime_types;
+			pub struct StorageApi;
+			impl StorageApi {
+				#[doc = " Current time for the current block."]
+				pub fn now(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::u64>,
+					::subxt::storage::address::Yes,
+					::subxt::storage::address::Yes,
+					(),
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Timestamp",
+						"Now",
+						vec![],
+						[
+							148u8, 53u8, 50u8, 54u8, 13u8, 161u8, 57u8, 150u8, 16u8, 83u8, 144u8,
+							221u8, 59u8, 75u8, 158u8, 130u8, 39u8, 123u8, 106u8, 134u8, 202u8,
+							185u8, 83u8, 85u8, 60u8, 41u8, 120u8, 96u8, 210u8, 34u8, 2u8, 250u8,
+						],
+					)
+				}
+				#[doc = " Did the timestamp get updated in this block?"]
+				pub fn did_update(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::bool>,
+					::subxt::storage::address::Yes,
+					::subxt::storage::address::Yes,
+					(),
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Timestamp",
+						"DidUpdate",
+						vec![],
+						[
+							70u8, 13u8, 92u8, 186u8, 80u8, 151u8, 167u8, 90u8, 158u8, 232u8, 175u8,
+							13u8, 103u8, 135u8, 2u8, 78u8, 16u8, 6u8, 39u8, 158u8, 167u8, 85u8,
+							27u8, 47u8, 122u8, 73u8, 127u8, 26u8, 35u8, 168u8, 72u8, 204u8,
+						],
+					)
+				}
+			}
+		}
+		pub mod constants {
+			use super::runtime_types;
+			pub struct ConstantsApi;
+			impl ConstantsApi {
+				#[doc = " The minimum period between blocks. Beware that this is different to the *expected*"]
+				#[doc = " period that the block production apparatus provides. Your chosen consensus system will"]
+				#[doc = " generally work with this to determine a sensible block time. e.g. For Aura, it will be"]
+				#[doc = " double this period on default settings."]
+				pub fn minimum_period(
+					&self,
+				) -> ::subxt::constants::StaticConstantAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::u64>,
+				> {
+					::subxt::constants::StaticConstantAddress::new(
+						"Timestamp",
+						"MinimumPeriod",
+						[
+							128u8, 214u8, 205u8, 242u8, 181u8, 142u8, 124u8, 231u8, 190u8, 146u8,
+							59u8, 226u8, 157u8, 101u8, 103u8, 117u8, 249u8, 65u8, 18u8, 191u8,
+							103u8, 119u8, 53u8, 85u8, 81u8, 96u8, 220u8, 42u8, 184u8, 239u8, 42u8,
+							246u8,
+						],
+					)
+				}
+			}
+		}
+	}
 	pub mod parachain_system {
 		use super::{root_mod, runtime_types};
 		#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
@@ -1661,127 +1782,6 @@ pub mod api {
 							189u8, 150u8, 234u8, 128u8, 111u8, 27u8, 173u8, 92u8, 109u8, 4u8, 98u8,
 							103u8, 158u8, 19u8, 16u8, 5u8, 107u8, 135u8, 126u8, 170u8, 62u8, 64u8,
 							149u8, 80u8, 33u8, 17u8, 83u8, 22u8, 176u8, 118u8, 26u8, 223u8,
-						],
-					)
-				}
-			}
-		}
-	}
-	pub mod timestamp {
-		use super::{root_mod, runtime_types};
-		#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
-		pub mod calls {
-			use super::{root_mod, runtime_types};
-			type DispatchError = runtime_types::sp_runtime::DispatchError;
-			#[derive(
-				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
-			)]
-			pub struct Set {
-				#[codec(compact)]
-				pub now: ::core::primitive::u64,
-			}
-			pub struct TransactionApi;
-			impl TransactionApi {
-				#[doc = "Set the current time."]
-				#[doc = ""]
-				#[doc = "This call should be invoked exactly once per block. It will panic at the finalization"]
-				#[doc = "phase, if this call hasn't been invoked by that time."]
-				#[doc = ""]
-				#[doc = "The timestamp should be greater than the previous one by the amount specified by"]
-				#[doc = "`MinimumPeriod`."]
-				#[doc = ""]
-				#[doc = "The dispatch origin for this call must be `Inherent`."]
-				#[doc = ""]
-				#[doc = "# <weight>"]
-				#[doc = "- `O(1)` (Note that implementations of `OnTimestampSet` must also be `O(1)`)"]
-				#[doc = "- 1 storage read and 1 storage mutation (codec `O(1)`). (because of `DidUpdate::take` in"]
-				#[doc = "  `on_finalize`)"]
-				#[doc = "- 1 event handler `on_timestamp_set`. Must be `O(1)`."]
-				#[doc = "# </weight>"]
-				pub fn set(
-					&self,
-					now: ::core::primitive::u64,
-				) -> ::subxt::tx::StaticTxPayload<Set> {
-					::subxt::tx::StaticTxPayload::new(
-						"Timestamp",
-						"set",
-						Set { now },
-						[
-							6u8, 97u8, 172u8, 236u8, 118u8, 238u8, 228u8, 114u8, 15u8, 115u8,
-							102u8, 85u8, 66u8, 151u8, 16u8, 33u8, 187u8, 17u8, 166u8, 88u8, 127u8,
-							214u8, 182u8, 51u8, 168u8, 88u8, 43u8, 101u8, 185u8, 8u8, 1u8, 28u8,
-						],
-					)
-				}
-			}
-		}
-		pub mod storage {
-			use super::runtime_types;
-			pub struct StorageApi;
-			impl StorageApi {
-				#[doc = " Current time for the current block."]
-				pub fn now(
-					&self,
-				) -> ::subxt::storage::address::StaticStorageAddress<
-					::subxt::metadata::DecodeStaticType<::core::primitive::u64>,
-					::subxt::storage::address::Yes,
-					::subxt::storage::address::Yes,
-					(),
-				> {
-					::subxt::storage::address::StaticStorageAddress::new(
-						"Timestamp",
-						"Now",
-						vec![],
-						[
-							148u8, 53u8, 50u8, 54u8, 13u8, 161u8, 57u8, 150u8, 16u8, 83u8, 144u8,
-							221u8, 59u8, 75u8, 158u8, 130u8, 39u8, 123u8, 106u8, 134u8, 202u8,
-							185u8, 83u8, 85u8, 60u8, 41u8, 120u8, 96u8, 210u8, 34u8, 2u8, 250u8,
-						],
-					)
-				}
-				#[doc = " Did the timestamp get updated in this block?"]
-				pub fn did_update(
-					&self,
-				) -> ::subxt::storage::address::StaticStorageAddress<
-					::subxt::metadata::DecodeStaticType<::core::primitive::bool>,
-					::subxt::storage::address::Yes,
-					::subxt::storage::address::Yes,
-					(),
-				> {
-					::subxt::storage::address::StaticStorageAddress::new(
-						"Timestamp",
-						"DidUpdate",
-						vec![],
-						[
-							70u8, 13u8, 92u8, 186u8, 80u8, 151u8, 167u8, 90u8, 158u8, 232u8, 175u8,
-							13u8, 103u8, 135u8, 2u8, 78u8, 16u8, 6u8, 39u8, 158u8, 167u8, 85u8,
-							27u8, 47u8, 122u8, 73u8, 127u8, 26u8, 35u8, 168u8, 72u8, 204u8,
-						],
-					)
-				}
-			}
-		}
-		pub mod constants {
-			use super::runtime_types;
-			pub struct ConstantsApi;
-			impl ConstantsApi {
-				#[doc = " The minimum period between blocks. Beware that this is different to the *expected*"]
-				#[doc = " period that the block production apparatus provides. Your chosen consensus system will"]
-				#[doc = " generally work with this to determine a sensible block time. e.g. For Aura, it will be"]
-				#[doc = " double this period on default settings."]
-				pub fn minimum_period(
-					&self,
-				) -> ::subxt::constants::StaticConstantAddress<
-					::subxt::metadata::DecodeStaticType<::core::primitive::u64>,
-				> {
-					::subxt::constants::StaticConstantAddress::new(
-						"Timestamp",
-						"MinimumPeriod",
-						[
-							128u8, 214u8, 205u8, 242u8, 181u8, 142u8, 124u8, 231u8, 190u8, 146u8,
-							59u8, 226u8, 157u8, 101u8, 103u8, 117u8, 249u8, 65u8, 18u8, 191u8,
-							103u8, 119u8, 53u8, 85u8, 81u8, 96u8, 220u8, 42u8, 184u8, 239u8, 42u8,
-							246u8,
 						],
 					)
 				}
@@ -5644,9 +5644,9 @@ pub mod api {
 						"sudo",
 						Sudo { call: ::std::boxed::Box::new(call) },
 						[
-							176u8, 175u8, 190u8, 53u8, 8u8, 60u8, 106u8, 74u8, 215u8, 29u8, 224u8,
-							116u8, 144u8, 11u8, 61u8, 96u8, 166u8, 174u8, 96u8, 61u8, 169u8, 20u8,
-							57u8, 253u8, 156u8, 136u8, 117u8, 162u8, 232u8, 144u8, 9u8, 30u8,
+							109u8, 120u8, 250u8, 76u8, 245u8, 62u8, 174u8, 36u8, 229u8, 209u8,
+							125u8, 132u8, 106u8, 33u8, 1u8, 30u8, 45u8, 100u8, 109u8, 216u8, 236u8,
+							233u8, 1u8, 249u8, 245u8, 213u8, 71u8, 202u8, 55u8, 81u8, 184u8, 132u8,
 						],
 					)
 				}
@@ -5670,9 +5670,9 @@ pub mod api {
 						"sudo_unchecked_weight",
 						SudoUncheckedWeight { call: ::std::boxed::Box::new(call), weight },
 						[
-							187u8, 179u8, 35u8, 222u8, 251u8, 15u8, 149u8, 6u8, 153u8, 139u8, 78u8,
-							168u8, 126u8, 237u8, 37u8, 204u8, 185u8, 175u8, 117u8, 8u8, 104u8,
-							254u8, 207u8, 104u8, 0u8, 168u8, 170u8, 5u8, 67u8, 4u8, 157u8, 96u8,
+							253u8, 128u8, 203u8, 2u8, 98u8, 227u8, 101u8, 180u8, 49u8, 73u8, 158u8,
+							80u8, 154u8, 209u8, 20u8, 212u8, 196u8, 119u8, 85u8, 56u8, 61u8, 181u8,
+							250u8, 36u8, 65u8, 218u8, 233u8, 64u8, 169u8, 240u8, 235u8, 243u8,
 						],
 					)
 				}
@@ -5728,10 +5728,9 @@ pub mod api {
 						"sudo_as",
 						SudoAs { who, call: ::std::boxed::Box::new(call) },
 						[
-							180u8, 79u8, 39u8, 123u8, 101u8, 15u8, 235u8, 199u8, 179u8, 176u8,
-							146u8, 220u8, 210u8, 222u8, 147u8, 56u8, 111u8, 195u8, 146u8, 100u8,
-							206u8, 35u8, 217u8, 172u8, 93u8, 175u8, 218u8, 83u8, 145u8, 194u8,
-							150u8, 4u8,
+							170u8, 54u8, 251u8, 95u8, 62u8, 178u8, 168u8, 105u8, 192u8, 172u8,
+							72u8, 3u8, 225u8, 165u8, 151u8, 227u8, 193u8, 91u8, 1u8, 215u8, 98u8,
+							22u8, 112u8, 68u8, 212u8, 204u8, 141u8, 208u8, 10u8, 60u8, 165u8, 72u8,
 						],
 					)
 				}
@@ -12046,9 +12045,9 @@ pub mod api {
 				#[codec(index = 0)]
 				System(runtime_types::frame_system::pallet::Call),
 				#[codec(index = 1)]
-				ParachainSystem(runtime_types::cumulus_pallet_parachain_system::pallet::Call),
-				#[codec(index = 2)]
 				Timestamp(runtime_types::pallet_timestamp::pallet::Call),
+				#[codec(index = 2)]
+				ParachainSystem(runtime_types::cumulus_pallet_parachain_system::pallet::Call),
 				#[codec(index = 3)]
 				ParachainInfo(runtime_types::parachain_info::pallet::Call),
 				#[codec(index = 10)]
@@ -12082,7 +12081,7 @@ pub mod api {
 			pub enum Event {
 				#[codec(index = 0)]
 				System(runtime_types::frame_system::pallet::Event),
-				#[codec(index = 1)]
+				#[codec(index = 2)]
 				ParachainSystem(runtime_types::cumulus_pallet_parachain_system::pallet::Event),
 				#[codec(index = 10)]
 				Balances(runtime_types::pallet_balances::pallet::Event),
@@ -14186,11 +14185,11 @@ pub mod api {
 		pub fn system(&self) -> system::storage::StorageApi {
 			system::storage::StorageApi
 		}
-		pub fn parachain_system(&self) -> parachain_system::storage::StorageApi {
-			parachain_system::storage::StorageApi
-		}
 		pub fn timestamp(&self) -> timestamp::storage::StorageApi {
 			timestamp::storage::StorageApi
+		}
+		pub fn parachain_system(&self) -> parachain_system::storage::StorageApi {
+			parachain_system::storage::StorageApi
 		}
 		pub fn parachain_info(&self) -> parachain_info::storage::StorageApi {
 			parachain_info::storage::StorageApi
@@ -14240,11 +14239,11 @@ pub mod api {
 		pub fn system(&self) -> system::calls::TransactionApi {
 			system::calls::TransactionApi
 		}
-		pub fn parachain_system(&self) -> parachain_system::calls::TransactionApi {
-			parachain_system::calls::TransactionApi
-		}
 		pub fn timestamp(&self) -> timestamp::calls::TransactionApi {
 			timestamp::calls::TransactionApi
+		}
+		pub fn parachain_system(&self) -> parachain_system::calls::TransactionApi {
+			parachain_system::calls::TransactionApi
 		}
 		pub fn parachain_info(&self) -> parachain_info::calls::TransactionApi {
 			parachain_info::calls::TransactionApi
@@ -14293,9 +14292,9 @@ pub mod api {
 		let runtime_metadata_hash = client.metadata().metadata_hash(&PALLETS);
 		if runtime_metadata_hash !=
 			[
-				218u8, 241u8, 20u8, 131u8, 25u8, 247u8, 95u8, 69u8, 65u8, 238u8, 232u8, 31u8,
-				209u8, 92u8, 47u8, 198u8, 185u8, 157u8, 5u8, 222u8, 224u8, 249u8, 181u8, 231u8,
-				175u8, 156u8, 50u8, 174u8, 252u8, 15u8, 96u8, 53u8,
+				174u8, 233u8, 214u8, 85u8, 77u8, 223u8, 229u8, 15u8, 191u8, 226u8, 185u8, 124u8,
+				182u8, 240u8, 132u8, 210u8, 77u8, 32u8, 113u8, 235u8, 24u8, 222u8, 177u8, 54u8,
+				128u8, 185u8, 170u8, 252u8, 186u8, 107u8, 56u8, 237u8,
 			] {
 			Err(::subxt::error::MetadataError::IncompatibleMetadata)
 		} else {

@@ -21,14 +21,11 @@ use sp_runtime::{
 	traits::{Header as HeaderT, IdentifyAccount, Verify},
 	MultiSignature, MultiSigner,
 };
-use subxt::{
-	tx::{AssetTip, BaseExtrinsicParamsBuilder, ExtrinsicParams},
-	Config,
-};
+use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams};
 
 use super::{error::Error, ParachainClient};
 
-use crate::{parachain, FinalityProtocol, GrandpaClientState};
+use crate::{extrinsic, parachain, FinalityProtocol, GrandpaClientState};
 use ibc::{
 	applications::transfer::{Amount, PrefixedCoin, PrefixedDenom},
 	core::ics02_client::client_state::ClientType,
@@ -52,12 +49,13 @@ use ibc_proto::{google::protobuf::Any, ibc::core::connection::v1::IdentifiedConn
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use sp_runtime::traits::One;
 use std::{collections::BTreeMap, pin::Pin, str::FromStr, time::Duration};
+use subxt::tx::PlainTip;
 
 #[async_trait::async_trait]
-impl<T: Config + Send + Sync> IbcProvider for ParachainClient<T>
+impl<T: extrinsic::Config + Send + Sync> IbcProvider for ParachainClient<T>
 where
-	u32: From<<<T as Config>::Header as HeaderT>::Number>,
-	u32: From<<T as Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
+	u32: From<<T as subxt::Config>::BlockNumber>,
 	Self: KeyProvider,
 	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
@@ -71,7 +69,7 @@ where
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, AssetTip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
 {
 	type FinalityEvent = FinalityEvent;
 	type Error = Error;
