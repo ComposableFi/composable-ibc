@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use futures::StreamExt;
 use hyperspace_core::logging;
 use hyperspace_parachain::{
-	config, config::CustomExtrinsicParams, finality_protocol::FinalityProtocol,
-	ParachainClient, ParachainClientConfig,
+	config, config::CustomExtrinsicParams, finality_protocol::FinalityProtocol, ParachainClient,
+	ParachainClientConfig,
 };
 use hyperspace_primitives::{utils::create_clients, IbcProvider};
 use hyperspace_testsuite::{
@@ -109,8 +109,10 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 	let mut chain_a = ParachainClient::<DefaultConfig>::new(config_a).await.unwrap();
 	let mut chain_b = ParachainClient::<DefaultConfig>::new(config_b).await.unwrap();
 
+
 	// Wait until for parachains to start producing blocks
 	log::info!(target: "hyperspace", "Waiting for  block production from parachains");
+    let session_length = chain_a.grandpa_prover().session_length().await.unwrap();
 	let _ = chain_a
 		.relay_client
 		.rpc()
@@ -118,7 +120,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 		.await
 		.unwrap()
 		.filter_map(|result| futures::future::ready(result.ok()))
-		.skip_while(|h| futures::future::ready(h.number < 90))
+		.skip_while(|h| futures::future::ready(h.number < (session_length * 2) + 10))
 		.take(1)
 		.collect::<Vec<_>>()
 		.await;

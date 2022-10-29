@@ -1,0 +1,32 @@
+name: Cargo Check
+
+on:
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  checker:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    concurrency:
+      group: lint-${{ github.ref }}
+      cancel-in-progress: true
+    container:
+      image: paritytech/ci-linux:production
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Rustup show
+      run: |
+        rustup show
+
+    - name: Check Workspace
+      run: |
+      cargo check --workspace --locked
+
+    - name: Check no_std
+      run: |
+      ./scripts/no_std_checks.sh

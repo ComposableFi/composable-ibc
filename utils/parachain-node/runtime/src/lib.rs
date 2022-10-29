@@ -549,6 +549,11 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 
 	fn from_denom_to_asset_id(denom: &String) -> Result<AssetId, Self::Error> {
 		use frame_support::traits::fungibles::{metadata::Mutate, Create};
+        log::info!(target: "runtime", "Got denom: {denom}");
+
+        if denom == "UNIT" {
+            return Ok(1)
+        }
 
 		let name = denom.as_bytes().to_vec();
 		if let Some(id) = IbcDenoms::<Runtime>::get(&name) {

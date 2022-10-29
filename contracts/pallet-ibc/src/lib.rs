@@ -535,7 +535,6 @@ pub mod pallet {
 				ics02_client::msgs::create_client::TYPE_URL as CREATE_CLIENT_TYPE_URL,
 				ics03_connection::msgs::{
 					conn_open_init::TYPE_URL as CONN_OPEN_INIT_TYPE_URL,
-					conn_open_try::TYPE_URL as CONN_OPEN_TRY_TYPE_URL,
 				},
 			};
 			let sender = ensure_signed(origin)?;
@@ -550,7 +549,7 @@ pub mod pallet {
 					let type_url = String::from_utf8(message.type_url.clone()).ok()?;
 					if matches!(
 						type_url.as_str(),
-						CREATE_CLIENT_TYPE_URL | CONN_OPEN_INIT_TYPE_URL | CONN_OPEN_TRY_TYPE_URL
+						CREATE_CLIENT_TYPE_URL | CONN_OPEN_INIT_TYPE_URL
 					) {
 						reserve_count += 1;
 					}

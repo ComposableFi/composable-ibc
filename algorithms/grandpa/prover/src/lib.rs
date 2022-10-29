@@ -353,4 +353,11 @@ where
 			.ok_or_else(|| anyhow!("Failed to fetch epoch information"))?;
 		Ok(current_epoch_start + (current_epoch_start - previous_epoch_start))
 	}
+
+	/// Returns the session length in blocks
+	pub async fn session_length(&self) -> Result<u32, anyhow::Error> {
+		let metadata = self.relay_client.rpc().metadata().await?;
+		let metadata = metadata.pallet("Babe")?.constant("EpochDuration")?;
+		Ok(Decode::decode(&mut &metadata.value[..])?)
+	}
 }

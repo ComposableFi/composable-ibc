@@ -1,6 +1,6 @@
 use crate::{
-	config, parachain::api, signer::ExtrinsicSigner, utils::unsafe_cast_to_jsonrpsee_client,
-	Error, ParachainClient,
+	config, parachain::api, signer::ExtrinsicSigner, utils::unsafe_cast_to_jsonrpsee_client, Error,
+	ParachainClient,
 };
 use finality_grandpa::BlockNumberOps;
 use futures::{Stream, StreamExt};
