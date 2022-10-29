@@ -8,7 +8,7 @@
 use sc_chain_spec::Properties;
 use std::sync::Arc;
 
-use parachain_runtime::{opaque::Block, AccountId, Balance, Index as Nonce};
+use parachain_runtime::{opaque::Block, AccountId, AssetId, Balance, Index as Nonce};
 
 use ibc_runtime_api::IbcRuntimeApi;
 use sc_client_api::{AuxStore, BlockBackend, ProofProvider};
@@ -47,7 +47,7 @@ where
 		+ Send
 		+ Sync
 		+ 'static,
-	C::Api: IbcRuntimeApi<Block>,
+	C::Api: IbcRuntimeApi<Block, AssetId>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
 	C::Api: BlockBuilder<Block>,

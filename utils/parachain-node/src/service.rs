@@ -8,7 +8,7 @@ use jsonrpsee::RpcModule;
 
 use cumulus_client_cli::CollatorOptions;
 // Local Runtime Types
-use parachain_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce, RuntimeApi};
+use parachain_runtime::{opaque::Block, AccountId, AssetId, Balance, Hash, Index as Nonce, RuntimeApi};
 
 // Cumulus Imports
 use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
@@ -210,7 +210,7 @@ where
 		+ 'static,
 	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 		+ sp_api::Metadata<Block>
-		+ ibc_runtime_api::IbcRuntimeApi<Block>
+		+ ibc_runtime_api::IbcRuntimeApi<Block, AssetId>
 		+ sp_session::SessionKeys<Block>
 		+ sp_api::ApiExt<
 			Block,

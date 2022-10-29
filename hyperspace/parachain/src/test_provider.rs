@@ -27,6 +27,8 @@ use subxt::{
 	tx::{AssetTip, BaseExtrinsicParamsBuilder, ExtrinsicParams, SubstrateExtrinsicParamsBuilder},
 	Config,
 };
+// Temp fix
+type AssetId = u128;
 
 impl<T: Config + Send + Sync> ParachainClient<T>
 where
@@ -60,7 +62,7 @@ where
 		let (ext_hash, block_hash) = self.submit_call(call).await?;
 
 		// Query newly created client Id
-		let identified_client_state = IbcApiClient::<u32, H256>::query_newly_created_client(
+		let identified_client_state = IbcApiClient::<u32, H256, AssetId>::query_newly_created_client(
 			&*self.para_ws_client,
 			block_hash.into(),
 			ext_hash.into(),
