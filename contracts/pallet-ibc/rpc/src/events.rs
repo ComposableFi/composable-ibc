@@ -7,15 +7,16 @@ use sp_api::{ApiRef, BlockId, BlockT, ProvideRuntimeApi};
 
 /// Filter out none relayer events and modify
 /// Fetch actual packet and acknowledgements from off chain storage and modify packets
-pub fn filter_map_pallet_event<C, Block>(
+pub fn filter_map_pallet_event<C, Block, AssetId>(
 	at: &BlockId<Block>,
 	api: &ApiRef<<C as ProvideRuntimeApi<Block>>::Api>,
 	ev: IbcEvent,
 ) -> Option<RawIbcEvent>
 where
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-	C::Api: IbcRuntimeApi<Block>,
+	C::Api: IbcRuntimeApi<Block, AssetId>,
 	Block: BlockT,
+	AssetId: codec::Codec,
 {
 	let mut event: RawIbcEvent = ev.try_into().ok()?;
 	match &mut event {
@@ -127,10 +128,10 @@ where
 			ev.packet = packet;
 			Some(event)
 		},
-		RawIbcEvent::NewBlock(_) |
-		RawIbcEvent::AppModule(_) |
-		RawIbcEvent::Empty(_) |
-		RawIbcEvent::ChainError(_) => None,
+		RawIbcEvent::NewBlock(_)
+		| RawIbcEvent::AppModule(_)
+		| RawIbcEvent::Empty(_)
+		| RawIbcEvent::ChainError(_) => None,
 		_ => Some(event),
 	}
 }
