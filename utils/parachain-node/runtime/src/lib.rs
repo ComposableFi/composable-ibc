@@ -9,6 +9,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 extern crate alloc;
 
 use alloc::string::{String, ToString};
+use asset_registry::{AssetMetadata, DefaultAssetMetadata};
 
 mod weights;
 pub mod xcm_config;
@@ -29,6 +30,8 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchError, MultiSignature,
 };
+use orml_traits::asset_registry::AssetProcessor;
+use codec::Encode;
 
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -37,7 +40,7 @@ use sp_version::RuntimeVersion;
 
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::{fungibles::InspectMetadata, Everything},
+	traits::{fungibles::InspectMetadata, Everything, AsEnsureOriginWithArg},
 	weights::{
 		constants::WEIGHT_PER_SECOND, ConstantMultiplier, DispatchClass, Weight,
 		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
@@ -48,7 +51,7 @@ use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
 };
-use pallet_ibc::{DenomToAssetId, IbcDenoms};
+use pallet_ibc::{DenomToAssetId, IbcDenoms, IbcAssetIds};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
@@ -471,6 +474,16 @@ impl pallet_ibc_ping::Config for Runtime {
 	type IbcHandler = Ibc;
 }
 
+impl asset_registry::Config for Runtime {
+	type Event = Event;
+	type AssetId = AssetId;
+	type AssetProcessor = asset_registry::SequentialId<Self>;
+	type AuthorityOrigin = AsEnsureOriginWithArg<EnsureRoot<AccountId>>;
+	type Balance = Balance;
+	type CustomMetadata = ();
+	type WeightInfo = ();
+}
+
 parameter_types! {
 	pub const ExpectedBlockTime: u64 = MILLISECS_PER_BLOCK as u64;
 	pub const RelayChainId: RelayChain = RelayChain::Rococo;
@@ -513,17 +526,32 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 
 		let name = denom.as_bytes().to_vec();
 		if let Some(id) = IbcDenoms::<Runtime>::get(&name) {
-			return Ok(id)
+			return Ok(id);
 		}
-		let asset_id = 30; // todo: figure this one out.
+
 		let pallet_id = PalletId(*b"pall-ibc").into_account_truncating();
-		IbcDenoms::<Runtime>::insert(name.clone(), asset_id);
+		
 		let symbol = denom
 			.split("/")
 			.last()
 			.ok_or_else(|| DispatchError::Other("denom missing a name"))?
 			.as_bytes()
 			.to_vec();
+		// generate new asset id
+		// Metadata is not useful to this call so we can use default values
+		let (asset_id, ..) = <asset_registry::SequentialId<Runtime> as AssetProcessor<AssetId, DefaultAssetMetadata<Runtime>>>::pre_register(
+				None, 
+				AssetMetadata { 
+					decimals: Default::default(), 
+					name: Default::default(), symbol: Default::default(), 
+					existential_deposit: Default::default(), 
+					location: None, 
+					additional: () 
+				}
+			)
+			.map_err(|_| DispatchError::Other("Failed to generate asset id"))?;
+		IbcDenoms::<Runtime>::insert(name.clone(), asset_id);
+		IbcAssetIds::<Runtime>::insert(asset_id, name.clone());
 		<pallet_assets::Pallet<Runtime> as Mutate<AccountId>>::set(
 			asset_id, &pallet_id, name, symbol, 12,
 		)?;
@@ -540,11 +568,30 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 	}
 
 	fn ibc_assets(
-		_start_key: Option<AssetId>,
-		_offset: Option<u32>,
-		_limit: u64,
+		start_key: Option<AssetId>,
+		offset: Option<u32>,
+		mut limit: u64,
 	) -> (Vec<Vec<u8>>, u64, Option<AssetId>) {
-		todo!()
+		let mut iterator = if let Some(asset_id) = start_key {
+			
+			let raw_key = asset_id.encode();
+			IbcAssetIds::<Runtime>::iter_from(raw_key).skip(0)
+		} else if let Some(offset) = offset {
+			IbcAssetIds::<Runtime>::iter().skip(offset as usize)
+		} else {
+			IbcAssetIds::<Runtime>::iter().skip(0)
+		};
+
+		let mut denoms = vec![];
+		for (_, denom) in iterator.by_ref() {
+			denoms.push(denom);
+			limit -= 1;
+			if limit == 0 {
+				break
+			}
+		}
+
+		(denoms, IbcAssetIds::<Runtime>::count() as u64, iterator.next().map(|(id, ..)| id))
 	}
 }
 
@@ -626,6 +673,7 @@ construct_runtime!(
 		Sudo: pallet_sudo = 35,
 		IbcPing: pallet_ibc_ping = 36,
 		Assets: pallet_assets = 37,
+		AssetRegistry: asset_registry = 38,
 		// pallet-ibc, should be the last module in your runtime
 		Ibc: pallet_ibc = 255,
 	}
@@ -755,7 +803,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl ibc_runtime_api::IbcRuntimeApi<Block> for Runtime {
+	impl ibc_runtime_api::IbcRuntimeApi<Block, AssetId> for Runtime {
 		fn para_id() -> u32 {
 			<Runtime as cumulus_pallet_parachain_system::Config>::SelfParaId::get().into()
 		}
@@ -856,11 +904,11 @@ impl_runtime_apis! {
 			Ibc::packet_receipt(channel_id, port_id, seq).ok()
 		}
 
-		fn denom_trace(asset_id: u128) -> Option<ibc_primitives::QueryDenomTraceResponse> {
+		fn denom_trace(asset_id: AssetId) -> Option<ibc_primitives::QueryDenomTraceResponse> {
 			Ibc::get_denom_trace(asset_id)
 		}
 
-		fn denom_traces(key: Option<u128>, offset: Option<u32>, limit: u64, count_total: bool) -> ibc_primitives::QueryDenomTracesResponse {
+		fn denom_traces(key: Option<AssetId>, offset: Option<u32>, limit: u64, count_total: bool) -> ibc_primitives::QueryDenomTracesResponse {
 			Ibc::get_denom_traces(key, offset, limit, count_total)
 		}
 

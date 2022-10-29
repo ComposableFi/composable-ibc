@@ -225,5 +225,6 @@ fn testnet_genesis(
 		sudo: parachain_runtime::SudoConfig {
 			key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
 		},
+		asset_registry: Default::default()
 	}
 }

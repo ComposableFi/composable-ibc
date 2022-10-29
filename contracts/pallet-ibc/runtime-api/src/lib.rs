@@ -7,7 +7,7 @@ use sp_std::vec::Vec;
 
 sp_api::decl_runtime_apis! {
 	/// IBC Runtime Apis
-	pub trait IbcRuntimeApi {
+	pub trait IbcRuntimeApi<AssetId: codec::Codec> {
 		/// Get Ibc child trie prefix
 		fn child_trie_key() -> Vec<u8>;
 		/// Get parachain id
@@ -72,10 +72,10 @@ sp_api::decl_runtime_apis! {
 
 		fn packet_receipt(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Option<QueryPacketReceiptResponse>;
 
-		fn denom_trace(asset_id: u128) -> Option<QueryDenomTraceResponse>;
+		fn denom_trace(asset_id: AssetId) -> Option<QueryDenomTraceResponse>;
 
 		/// Key is the asset id from which to start looking up results
-		fn denom_traces(key: Option<u128>, offset: Option<u32>, limit: u64, count_total: bool) -> QueryDenomTracesResponse;
+		fn denom_traces(key: Option<AssetId>, offset: Option<u32>, limit: u64, count_total: bool) -> QueryDenomTracesResponse;
 
 		fn block_events(extrinsic_index: Option<u32>) -> Vec<pallet_ibc::events::IbcEvent>;
 	}
