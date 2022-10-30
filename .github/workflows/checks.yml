@@ -28,8 +28,11 @@ jobs:
       with:
         version: '3.x'
 
-    - name: Check Workspace
+    - name: check workspace
       run: cargo check --workspace --locked
 
-    - name: Check no_std
+    - name: check no_std
       run: ./scripts/no_std_checks.sh
+
+    - name: pallet-ibc check benchmarks
+      run: cargo test -p pallet-ibc --features=runtime-benchmarks
