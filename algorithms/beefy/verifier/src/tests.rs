@@ -33,6 +33,7 @@ use subxt::{
 };
 
 #[tokio::test]
+#[ignore]
 async fn test_verify_mmr_with_proof() {
 	let url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
 	let client = subxt::client::OnlineClient::<PolkadotConfig>::from_url(url).await.unwrap();
@@ -194,6 +195,7 @@ async fn should_fail_with_invalid_validator_set_id() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn verify_parachain_headers() {
 	let url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
 	let client = subxt::client::OnlineClient::<PolkadotConfig>::from_url(url).await.unwrap();

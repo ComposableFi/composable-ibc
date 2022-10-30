@@ -141,7 +141,6 @@ fn initialize_connection() {
 	})
 }
 
-const PICA: u128 = 1;
 const MILLIS: u128 = 1000000;
 #[test]
 fn send_transfer() {

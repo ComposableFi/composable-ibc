@@ -3286,6 +3286,7 @@ dependencies = [
  "hex-literal",
  "jsonrpsee-ws-client 0.14.0",
  "light-client-common",
+ "log",
  "parity-scale-codec",
  "polkadot-core-primitives",
  "primitive-types",
@@ -3693,14 +3694,12 @@ dependencies = [
  "ibc-rpc",
  "ics10-grandpa",
  "ics11-beefy",
- "ics13-near",
  "light-client-common",
  "log",
  "pallet-ibc",
  "parity-scale-codec",
  "prometheus",
  "prost 0.10.4",
- "sc-keystore",
  "serde",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-keyring",
@@ -3718,9 +3717,6 @@ dependencies = [
 [[package]]
 name = "hyperspace-cosmos"
 version = "0.1.0"
-dependencies = [
- "hyperspace-primitives",
-]
 
 [[package]]
 name = "hyperspace-metrics"
@@ -3775,7 +3771,6 @@ dependencies = [
  "log",
  "pallet-beefy-mmr",
  "pallet-ibc",
- "pallet-ibc-ping",
  "pallet-mmr",
  "pallet-mmr-rpc",
  "pallet-transaction-payment-rpc",
@@ -3876,7 +3871,6 @@ dependencies = [
 name = "ibc"
 version = "0.15.0"
 dependencies = [
- "borsh",
  "derive_more",
  "env_logger",
  "flex-error",
@@ -3888,7 +3882,6 @@ dependencies = [
  "parity-scale-codec",
  "primitive-types",
  "prost 0.10.4",
- "prost-types 0.10.1",
  "safe-regex",
  "serde",
  "serde_derive",
@@ -3900,7 +3893,6 @@ dependencies = [
  "subtle-encoding",
  "tendermint",
  "tendermint-proto",
- "tendermint-rpc",
  "test-log",
  "time 0.3.16",
  "tokio",
@@ -3940,7 +3932,6 @@ dependencies = [
  "sp-runtime-interface 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie",
- "xcm",
 ]
 
 [[package]]
@@ -3950,7 +3941,6 @@ dependencies = [
  "base64",
  "bytes",
  "prost 0.10.4",
- "prost-types 0.10.1",
  "schemars",
  "serde",
  "tendermint-proto",
@@ -3965,7 +3955,6 @@ dependencies = [
  "git2",
  "prost-build 0.10.4",
  "tempdir",
- "tonic",
  "tonic-build",
  "walkdir",
 ]
@@ -4021,7 +4010,6 @@ dependencies = [
  "log",
  "modelator",
  "prost 0.10.4",
- "prost-types 0.10.1",
  "serde",
  "serde_json",
  "sha2 0.10.6",
@@ -4052,7 +4040,6 @@ dependencies = [
  "grandpa-light-client-verifier",
  "grandpa-prover",
  "hex",
- "hex-literal",
  "ibc",
  "ibc-derive",
  "ibc-proto",
@@ -4131,7 +4118,6 @@ dependencies = [
  "num-traits",
  "parity-scale-codec",
  "prost 0.10.4",
- "prost-types 0.10.1",
  "ripemd",
  "safe-regex",
  "serde",
@@ -6718,7 +6704,6 @@ dependencies = [
  "tendermint",
  "tendermint-light-client-verifier",
  "tendermint-proto",
- "xcm",
 ]
 
 [[package]]

@@ -23,7 +23,6 @@ sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
-xcm = { default-features = false, git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.27" }
 
 
 [dependencies.ibc]
@@ -53,7 +52,6 @@ std = [
   "sha3/std",
   "ripemd/std",
   "frame-support/std",
-  "xcm/std",
   "hex/std",
 ]
 mocks = []

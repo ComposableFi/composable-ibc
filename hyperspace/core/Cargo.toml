@@ -35,13 +35,12 @@ tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev 
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 
 ics11-beefy = { path = "../../light-clients/ics11-beefy" }
-ics13-near = { path = "../../light-clients/ics13-near" }
+#ics13-near = { path = "../../light-clients/ics13-near" }
 light-client-common = { path = "../../light-clients/common" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
 
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-sc-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }

@@ -57,6 +57,7 @@ use subxt::{
 };
 
 #[tokio::test]
+#[ignore]
 async fn test_continuous_update_of_beefy_client() {
 	let client_id = ClientId::new(&ClientState::<HostFunctionsManager>::client_type(), 0).unwrap();
 

@@ -44,7 +44,6 @@ grandpa-client-primitives = { package = "grandpa-light-client-primitives", path 
 light-client-common = { path = "../common", default-features = false }
 
 # crates.io
-hex-literal = { version = "0.3.4", default-features = false }
 prost = { version = "0.10", default-features = false }
 prost-types = { version = "0.10", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }

@@ -3,7 +3,7 @@
 use async_trait::async_trait;
 use derive_more::From;
 use futures::Stream;
-#[cfg(feature = "testing")]
+#[cfg(any(test, feature = "testing"))]
 use ibc::applications::transfer::msgs::transfer::MsgTransfer;
 use ibc::{
 	applications::transfer::PrefixedCoin,
@@ -29,7 +29,7 @@ use ibc_proto::{
 		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
 	},
 };
-#[cfg(feature = "testing")]
+#[cfg(any(test, feature = "testing"))]
 use pallet_ibc::Timeout;
 use serde::Deserialize;
 use thiserror::Error;

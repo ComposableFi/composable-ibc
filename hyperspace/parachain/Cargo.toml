@@ -63,7 +63,6 @@ tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev 
 light-client-common = { path = "../../light-clients/common" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
-ping = { package = "pallet-ibc-ping",  path = "../../contracts/pallet-ibc/ping" }
 ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
 
 # Beefy
