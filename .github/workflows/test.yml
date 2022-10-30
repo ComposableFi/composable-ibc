@@ -30,7 +30,7 @@ jobs:
 
       - name: Run all unit tests
         run: |
-          SKIP_WASM_BUILD=1 cargo +nightly nextest run --workspace
+          SKIP_WASM_BUILD=1 cargo +nightly nextest run --workspace \
           --exclude ibc-derive \
           --exclude ics10-grandpa \
           --exclude ics11-beefy \
