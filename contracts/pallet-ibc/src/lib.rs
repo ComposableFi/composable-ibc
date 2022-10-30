@@ -214,7 +214,7 @@ pub mod pallet {
 		/// Runtime balance type
 		type Balance: Balance;
 		/// AssetId type
-		type AssetId: AssetId;
+		type AssetId: AssetId + MaybeSerializeDeserialize;
 		/// The native asset id, this will use the `NativeCurrency` for all operations.
 		#[pallet::constant]
 		type NativeAssetId: Get<Self::AssetId>;
@@ -382,6 +382,33 @@ pub mod pallet {
 	#[allow(clippy::disallowed_types)]
 	/// Active Escrow addresses
 	pub type EscrowAddresses<T: Config> = StorageValue<_, BTreeSet<T::AccountId>, ValueQuery>;
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		/// This should contain the native currency's asset_id and denom.
+		pub asset_ids: Vec<(T::AssetId, Vec<u8>)>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { asset_ids: Default::default() }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			assert!(
+				!self.asset_ids.is_empty(),
+				"You must configure the native currency's asset_id and denom!"
+			);
+			for (asset_id, denom) in &self.asset_ids {
+				IbcDenoms::<T>::insert(denom.clone(), asset_id);
+				IbcAssetIds::<T>::insert(asset_id, denom);
+			}
+		}
+	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
@@ -768,13 +795,16 @@ pub mod pallet {
 
 pub trait DenomToAssetId<T: Config> {
 	type Error: Debug;
+
 	/// Get the equivalent asset id for this ibc denom
 	/// **Note**
 	/// This function should create and register an asset with a valid metadata
 	/// if an asset does not exist for this denom
 	fn from_denom_to_asset_id(denom: &String) -> Result<T::AssetId, Self::Error>;
+
 	/// Return full denom for given asset id
 	fn from_asset_id_to_denom(id: T::AssetId) -> Option<String>;
+
 	/// Returns a tuple
 	/// The first item of the tuple is a vector of all ibc denoms with an upper bound of limit on
 	/// the length of the vector. The second item is the total count of ibc assets on chain.

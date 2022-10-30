@@ -226,5 +226,6 @@ fn testnet_genesis(
 		},
 		sudo: parachain_runtime::SudoConfig { key: Some(root) },
 		asset_registry: Default::default(),
+		ibc: parachain_runtime::IbcConfig { asset_ids: vec![(1, b"UNIT".to_vec())] },
 	}
 }
