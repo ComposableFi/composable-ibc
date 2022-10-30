@@ -485,7 +485,7 @@ impl asset_registry::Config for Runtime {
 }
 
 parameter_types! {
-	pub const StringLimit: u32 = 15;
+	pub const StringLimit: u32 = 150;
 }
 
 impl pallet_assets::Config for Runtime {
@@ -598,8 +598,8 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 			return Ok(1)
 		}
 
-		let name = denom.as_bytes().to_vec();
-		if let Some(id) = IbcDenoms::<Runtime>::get(&name) {
+		let full_denom = denom.as_bytes().to_vec();
+		if let Some(id) = IbcDenoms::<Runtime>::get(&full_denom) {
 			return Ok(id)
 		}
 
@@ -611,19 +611,24 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 			.ok_or_else(|| DispatchError::Other("denom missing a name"))?
 			.as_bytes()
 			.to_vec();
-        let asset_id = generate_asset_id()?;
-        
-		IbcDenoms::<Runtime>::insert(name.clone(), asset_id);
-		IbcAssetIds::<Runtime>::insert(asset_id, name.clone());
+		let asset_id = generate_asset_id()?;
+
+		IbcDenoms::<Runtime>::insert(full_denom.clone(), asset_id);
+		IbcAssetIds::<Runtime>::insert(asset_id, full_denom.clone());
 
 		<pallet_assets::Pallet<Runtime> as Create<AccountId>>::create(
 			asset_id,
 			pallet_id.clone(),
 			true,
-			0,
+			1,
 		)?;
-		<pallet_assets::Pallet<Runtime> as Mutate<AccountId>>::set(
-			asset_id, &pallet_id, name, symbol, 12,
+
+        <pallet_assets::Pallet<Runtime> as Mutate<AccountId>>::set(
+			asset_id,
+			&pallet_id,
+            full_denom,
+			symbol,
+			12,
 		)?;
 
 		Ok(asset_id)
