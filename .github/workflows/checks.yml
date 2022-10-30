@@ -23,6 +23,11 @@ jobs:
       run: |
         rustup show
 
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v1
+      with:
+        version: '3.21.7'
+
     - name: Check Workspace
       run: cargo check --workspace --locked
 

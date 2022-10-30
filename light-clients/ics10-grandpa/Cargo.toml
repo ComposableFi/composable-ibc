@@ -32,7 +32,6 @@ std = [
 
 [build-dependencies]
 prost-build = "0.11.1"
-protobuf-src = "1.1.0"
 
 [dependencies]
 # ibc deps
