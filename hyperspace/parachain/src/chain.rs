@@ -29,7 +29,6 @@ use primitives::{Chain, IbcProvider, MisbehaviourHandler};
 use super::{error::Error, signer::ExtrinsicSigner, ParachainClient};
 use crate::{
 	parachain::{api, api::runtime_types::pallet_ibc::Any as RawAny, UncheckedExtrinsic},
-	utils::unsafe_cast_to_jsonrpsee_client,
 	FinalityProtocol,
 };
 use finality_grandpa_rpc::GrandpaApiClient;
@@ -44,7 +43,6 @@ use ics10_grandpa::client_message::{ClientMessage, Misbehaviour, RelayChainHeade
 use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::mock::LocalClientTypes;
 use sp_core::H256;
-use sp_runtime::traits::Saturating;
 use tokio::time::sleep;
 
 type GrandpaJustification = grandpa_light_client_primitives::justification::GrandpaJustification<

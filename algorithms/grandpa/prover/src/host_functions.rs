@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use ics10_grandpa::client_message::RelayChainHeader;
 use primitives::HostFunctions;
 use sp_core::ed25519::{Public, Signature};
 use sp_runtime::{
@@ -31,7 +30,7 @@ impl light_client_common::HostFunctions for HostFunctionsProvider {
 }
 
 impl HostFunctions for HostFunctionsProvider {
-	type Header = RelayChainHeader;
+	type Header = sp_runtime::generic::Header<u32, BlakeTwo256>;
 
 	fn ed25519_verify(sig: &Signature, msg: &[u8], pubkey: &Public) -> bool {
 		pubkey.verify(&msg, sig)

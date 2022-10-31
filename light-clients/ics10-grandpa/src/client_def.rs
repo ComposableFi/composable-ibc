@@ -20,7 +20,6 @@ use ibc::core::ics02_client::{
 
 use crate::client_message::{ClientMessage, RelayChainHeader};
 use alloc::{format, string::ToString, vec, vec::Vec};
-use anyhow::anyhow;
 use codec::Decode;
 use core::marker::PhantomData;
 use finality_grandpa::Chain;
