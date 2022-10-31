@@ -9,7 +9,7 @@ version = "0.0.1"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [package.metadata.cargo-udeps.ignore]
-normal = ["frame-benchmarking"]
+normal = ["frame-benchmarking", "pallet-ibc-ping"]
 
 [dependencies]
 # crates.io
@@ -48,6 +48,7 @@ hex = { version = "0.4.3", default-features = false, optional = true }
 hex-literal = { version = "0.3.4", default-features = false, optional = true }
 prost = { version = "0.10", default-features = false, optional = true }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, optional = true }
+pallet-ibc-ping = { path = "ping", default-features = false, optional = true }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, optional = true }
 simple-iavl = { git = "https://github.com/ComposableFi/simple-avl", rev = "452a1126bfb8a861354b413755ac3c8fda3da4ec", default-features = false, optional = true }
 
@@ -86,7 +87,6 @@ sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkad
 tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8" }
 balances = { package = "pallet-balances", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 pallet-assets = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-pallet-ibc-ping = { path = "ping", default-features = false }
 
 [dev-dependencies.ibc]
 path = "../../ibc/modules"
@@ -124,6 +124,7 @@ std = [
 
 runtime-benchmarks = [
   "frame-benchmarking",
+  "pallet-ibc-ping",
   "frame-system/runtime-benchmarks",
   "frame-support/runtime-benchmarks",
   "tendermint",
