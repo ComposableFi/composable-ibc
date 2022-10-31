@@ -324,7 +324,11 @@ where
 				let trusted_finality_proof =
 					FinalityProof::<RelayChainHeader>::decode(&mut &encoded[..])?;
 
-				if header.finality_proof.block != trusted_finality_proof.block {
+				let justification =
+					GrandpaJustification::decode(&mut &*header.finality_proof.justification)?;
+				let trusted_justification =
+					GrandpaJustification::decode(&mut &*trusted_finality_proof.justification)?;
+				if justification.commit.target_hash != trusted_justification.commit.target_hash {
 					log::warn!(
 						"Found misbehaviour on client {}: {:?} != {:?}",
 						self.client_id
