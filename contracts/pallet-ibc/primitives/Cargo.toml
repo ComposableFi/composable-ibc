@@ -2,6 +2,7 @@
 edition = "2021"
 name = "ibc-primitives"
 version = "0.1.0"
+authors = ["David Salami <david.salami@gmail.com>"]
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
