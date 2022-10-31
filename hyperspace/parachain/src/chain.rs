@@ -294,7 +294,7 @@ where
 				let finalized_block_number =
 					*self.relay_client.rpc().block(None).await?.unwrap().block.header.number();
 				// We require a proof for the block number that may not exist on the relay chain.
-				// So, if it's greater than the latest block block the relay chain, we use the
+				// So, if it's greater than the latest block on the relay chain, we use the
 				// latter.
 				let encoded =
 					GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
