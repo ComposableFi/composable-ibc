@@ -1,0 +1,39 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  linters:
+    name: Tests
+    concurrency:
+      group: tests-${{ github.ref }}
+      cancel-in-progress: true
+    container:
+      image: paritytech/ci-linux:production
+    runs-on: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          version: '3.x'
+
+      - name: Rustup show
+        run: rustup show
+
+      - name: Install latest nextest release
+        uses: taiki-e/install-action@nextest
+
+      - name: Run all unit tests
+        run: |
+          SKIP_WASM_BUILD=1 cargo +nightly nextest run --workspace \
+          --exclude ibc-derive \
+          --exclude ics10-grandpa \
+          --exclude ics11-beefy \
+          --exclude hyperspace-testsuite \
+          --exclude grandpa-light-client-verifier \
+          --exclude beefy-light-client \

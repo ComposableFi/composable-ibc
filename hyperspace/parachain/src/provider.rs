@@ -1,69 +1,61 @@
+use super::{error::Error, ParachainClient};
+use crate::{
+	config, finality_protocol::FinalityEvent, parachain, utils::MetadataIbcEventWrapper,
+	FinalityProtocol, GrandpaClientState,
+};
+use beefy_prover::helpers::fetch_timestamp_extrinsic_with_proof;
 use codec::Encode;
+use finality_grandpa::BlockNumberOps;
+use futures::Stream;
+use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
 use ibc::{
+	applications::transfer::{Amount, PrefixedCoin, PrefixedDenom},
 	core::{
+		ics02_client::client_state::ClientType,
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
 	events::IbcEvent,
-	Height,
-};
-use std::fmt::Display;
-
-use ibc_proto::ibc::core::{
-	channel::v1::{
-		QueryChannelResponse, QueryNextSequenceReceiveResponse, QueryPacketAcknowledgementResponse,
-		QueryPacketCommitmentResponse, QueryPacketReceiptResponse,
-	},
-	client::v1::{QueryClientStateResponse, QueryConsensusStateResponse},
-	connection::v1::QueryConnectionResponse,
-};
-use sp_runtime::{
-	traits::{Header as HeaderT, IdentifyAccount, Verify},
-	MultiSignature, MultiSigner,
-};
-use subxt::{
-	tx::{AssetTip, BaseExtrinsicParamsBuilder, ExtrinsicParams},
-	Config,
-};
-
-use super::{error::Error, ParachainClient};
-
-use crate::{parachain, FinalityProtocol, GrandpaClientState};
-use ibc::{
-	applications::transfer::{Amount, PrefixedCoin, PrefixedDenom},
-	core::ics02_client::client_state::ClientType,
 	timestamp::Timestamp,
+	Height,
 };
 use ibc_proto::{
 	google::protobuf::Any,
-	ibc::core::{channel::v1::QueryChannelsResponse, client::v1::IdentifiedClientState},
+	ibc::core::{
+		channel::v1::{
+			QueryChannelResponse, QueryChannelsResponse, QueryNextSequenceReceiveResponse,
+			QueryPacketAcknowledgementResponse, QueryPacketCommitmentResponse,
+			QueryPacketReceiptResponse,
+		},
+		client::v1::{
+			IdentifiedClientState, QueryClientStateResponse, QueryConsensusStateResponse,
+		},
+		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
+	},
 };
 use ibc_rpc::{IbcApiClient, PacketInfo};
-use primitives::{Chain, IbcProvider, KeyProvider, TransactionId, UpdateType};
-use sp_core::H256;
-
-use crate::finality_protocol::FinalityEvent;
-use beefy_prover::helpers::fetch_timestamp_extrinsic_with_proof;
-use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
 use ics11_beefy::client_state::ClientState as BeefyClientState;
 use pallet_ibc::{
-	events::IbcEvent as RawIbcEvent, light_clients::HostFunctionsManager, HostConsensusProof,
+	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
+	HostConsensusProof,
 };
+use primitives::{Chain, IbcProvider, KeyProvider, TransactionId, UpdateType};
+use sp_core::H256;
+use sp_runtime::{
+	traits::{Header as HeaderT, IdentifyAccount, One, Verify},
+	MultiSignature, MultiSigner,
+};
+use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr, time::Duration};
+use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip};
 
-use crate::utils::MetadataIbcEventWrapper;
-use finality_grandpa::BlockNumberOps;
-use futures::{Stream, StreamExt};
-use ibc_proto::ibc::core::connection::v1::IdentifiedConnection;
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
-use sp_runtime::traits::One;
-use std::{collections::BTreeMap, pin::Pin, str::FromStr, time::Duration};
-use subxt::events::Phase;
+// Temp fix
+type AssetId = u128;
 
 #[async_trait::async_trait]
-impl<T: Config + Send + Sync> IbcProvider for ParachainClient<T>
+impl<T: config::Config + Send + Sync> IbcProvider for ParachainClient<T>
 where
-	u32: From<<<T as Config>::Header as HeaderT>::Number>,
-	u32: From<<T as Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
+	u32: From<<T as subxt::Config>::BlockNumber>,
 	Self: KeyProvider,
 	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
@@ -77,7 +69,7 @@ where
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, AssetTip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
 {
 	type FinalityEvent = FinalityEvent;
 	type Error = Error;
@@ -154,7 +146,7 @@ where
 		client_id: ClientId,
 		consensus_height: Height,
 	) -> Result<QueryConsensusStateResponse, Self::Error> {
-		let res = IbcApiClient::<u32, H256>::query_client_consensus_state(
+		let res = IbcApiClient::<u32, H256, AssetId>::query_client_consensus_state(
 			&*self.para_ws_client,
 			Some(at.revision_height as u32),
 			client_id.to_string(),
@@ -172,7 +164,7 @@ where
 		at: Height,
 		client_id: ClientId,
 	) -> Result<QueryClientStateResponse, Self::Error> {
-		let response = IbcApiClient::<u32, H256>::query_client_state(
+		let response = IbcApiClient::<u32, H256, AssetId>::query_client_state(
 			&*self.para_ws_client,
 			at.revision_height as u32,
 			client_id.to_string(),
@@ -187,7 +179,7 @@ where
 		at: Height,
 		connection_id: ConnectionId,
 	) -> Result<QueryConnectionResponse, Self::Error> {
-		let response = IbcApiClient::<u32, H256>::query_connection(
+		let response = IbcApiClient::<u32, H256, AssetId>::query_connection(
 			&*self.para_ws_client,
 			at.revision_height as u32,
 			connection_id.to_string(),
@@ -203,7 +195,7 @@ where
 		channel_id: ChannelId,
 		port_id: PortId,
 	) -> Result<QueryChannelResponse, Self::Error> {
-		let response = IbcApiClient::<u32, H256>::query_channel(
+		let response = IbcApiClient::<u32, H256, AssetId>::query_channel(
 			&*self.para_ws_client,
 			at.revision_height as u32,
 			channel_id.to_string(),
@@ -215,7 +207,7 @@ where
 	}
 
 	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
-		let proof = IbcApiClient::<u32, H256>::query_proof(
+		let proof = IbcApiClient::<u32, H256, AssetId>::query_proof(
 			&*self.para_ws_client,
 			at.revision_height as u32,
 			keys,
@@ -233,7 +225,7 @@ where
 		channel_id: &ChannelId,
 		seq: u64,
 	) -> Result<QueryPacketCommitmentResponse, Self::Error> {
-		let res = IbcApiClient::<u32, H256>::query_packet_commitment(
+		let res = IbcApiClient::<u32, H256, AssetId>::query_packet_commitment(
 			&*self.para_ws_client,
 			at.revision_height as u32,
 			channel_id.to_string(),
@@ -252,7 +244,7 @@ where
 		channel_id: &ChannelId,
 		seq: u64,
 	) -> Result<QueryPacketAcknowledgementResponse, Self::Error> {
-		let res = IbcApiClient::<u32, H256>::query_packet_acknowledgement(
+		let res = IbcApiClient::<u32, H256, AssetId>::query_packet_acknowledgement(
 			&*self.para_ws_client,
 			at.revision_height as u32,
 			channel_id.to_string(),
@@ -270,7 +262,7 @@ where
 		port_id: &PortId,
 		channel_id: &ChannelId,
 	) -> Result<QueryNextSequenceReceiveResponse, Self::Error> {
-		let res = IbcApiClient::<u32, H256>::query_next_seq_recv(
+		let res = IbcApiClient::<u32, H256, AssetId>::query_next_seq_recv(
 			&*self.para_ws_client,
 			at.revision_height as u32,
 			channel_id.to_string(),
@@ -288,7 +280,7 @@ where
 		channel_id: &ChannelId,
 		seq: u64,
 	) -> Result<QueryPacketReceiptResponse, Self::Error> {
-		let res = IbcApiClient::<u32, H256>::query_packet_receipt(
+		let res = IbcApiClient::<u32, H256, AssetId>::query_packet_receipt(
 			&*self.para_ws_client,
 			at.revision_height as u32,
 			channel_id.to_string(),
@@ -330,7 +322,7 @@ where
 		channel_id: ChannelId,
 		port_id: PortId,
 	) -> Result<Vec<u64>, Self::Error> {
-		let res = IbcApiClient::<u32, H256>::query_packet_commitments(
+		let res = IbcApiClient::<u32, H256, AssetId>::query_packet_commitments(
 			&*self.para_ws_client,
 			at.revision_height as u32,
 			channel_id.to_string(),
@@ -347,7 +339,7 @@ where
 		channel_id: ChannelId,
 		port_id: PortId,
 	) -> Result<Vec<u64>, Self::Error> {
-		let res = IbcApiClient::<u32, H256>::query_packet_acknowledgements(
+		let res = IbcApiClient::<u32, H256, AssetId>::query_packet_acknowledgements(
 			&*self.para_ws_client,
 			at.revision_height as u32,
 			channel_id.to_string(),
@@ -369,7 +361,7 @@ where
 		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error> {
-		let res = IbcApiClient::<u32, H256>::query_unreceived_packets(
+		let res = IbcApiClient::<u32, H256, AssetId>::query_unreceived_packets(
 			&*self.para_ws_client,
 			at.revision_height as u32,
 			channel_id.to_string(),
@@ -388,7 +380,7 @@ where
 		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error> {
-		let res = IbcApiClient::<u32, H256>::query_unreceived_acknowledgements(
+		let res = IbcApiClient::<u32, H256, AssetId>::query_unreceived_acknowledgements(
 			&*self.para_ws_client,
 			at.revision_height as u32,
 			channel_id.to_string(),
@@ -409,7 +401,7 @@ where
 		at: Height,
 		connection_id: &ConnectionId,
 	) -> Result<QueryChannelsResponse, Self::Error> {
-		let response = IbcApiClient::<u32, H256>::query_connection_channels(
+		let response = IbcApiClient::<u32, H256, AssetId>::query_connection_channels(
 			&*self.para_ws_client,
 			at.revision_height as u32,
 			connection_id.to_string(),
@@ -425,7 +417,7 @@ where
 		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Self::Error> {
-		let response = IbcApiClient::<u32, H256>::query_send_packets(
+		let response = IbcApiClient::<u32, H256, AssetId>::query_send_packets(
 			&*self.para_ws_client,
 			channel_id.to_string(),
 			port_id.to_string(),
@@ -442,7 +434,7 @@ where
 		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Self::Error> {
-		let response = IbcApiClient::<u32, H256>::query_recv_packets(
+		let response = IbcApiClient::<u32, H256, AssetId>::query_recv_packets(
 			&*self.para_ws_client,
 			channel_id.to_string(),
 			port_id.to_string(),
@@ -463,7 +455,7 @@ where
 		client_id: ClientId,
 		client_height: Height,
 	) -> Result<(Height, Timestamp), Self::Error> {
-		let response = IbcApiClient::<u32, H256>::query_client_update_time_and_height(
+		let response = IbcApiClient::<u32, H256, AssetId>::query_client_update_time_and_height(
 			&*self.para_ws_client,
 			client_id.to_string(),
 			client_height.revision_number,
@@ -512,8 +504,9 @@ where
 			.await?
 			.expect("Account data should exist");
 
+		// todo: how should we handle assets?
 		Ok(vec![PrefixedCoin {
-			denom: PrefixedDenom::from_str("PICA")?,
+			denom: PrefixedDenom::from_str("UNIT")?,
 			amount: Amount::from_str(&format!("{}", balance.data.free))?,
 		}])
 	}
@@ -554,7 +547,7 @@ where
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
 		let response: Vec<IdentifiedClientState> =
-			IbcApiClient::<u32, H256>::query_clients(&*self.para_ws_client)
+			IbcApiClient::<u32, H256, AssetId>::query_clients(&*self.para_ws_client)
 				.await
 				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
 		response
@@ -567,7 +560,7 @@ where
 	}
 
 	async fn query_channels(&self) -> Result<Vec<(ChannelId, PortId)>, Self::Error> {
-		let response = IbcApiClient::<u32, H256>::query_channels(&*self.para_ws_client)
+		let response = IbcApiClient::<u32, H256, AssetId>::query_channels(&*self.para_ws_client)
 			.await
 			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
 		response
@@ -589,7 +582,7 @@ where
 		height: u32,
 		client_id: String,
 	) -> Result<Vec<IdentifiedConnection>, Self::Error> {
-		let response = IbcApiClient::<u32, H256>::query_connection_using_client(
+		let response = IbcApiClient::<u32, H256, AssetId>::query_connection_using_client(
 			&*self.para_ws_client,
 			height,
 			client_id,
@@ -630,13 +623,14 @@ where
 		block_hash: Option<H256>,
 	) -> Result<ClientId, Self::Error> {
 		// Query newly created client Id
-		let identified_client_state = IbcApiClient::<u32, H256>::query_newly_created_client(
-			&*self.para_ws_client,
-			block_hash.expect("Block hash should be available"),
-			tx_hash,
-		)
-		.await
-		.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
+		let identified_client_state =
+			IbcApiClient::<u32, H256, AssetId>::query_newly_created_client(
+				&*self.para_ws_client,
+				block_hash.expect("Block hash should be available"),
+				tx_hash,
+			)
+			.await
+			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
 
 		let client_id = ClientId::from_str(&identified_client_state.client_id)
 			.expect("Should have a valid client id");

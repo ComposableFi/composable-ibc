@@ -48,32 +48,32 @@ impl<T: Config> ConsensusStates<T> {
 	}
 }
 
-#[cfg(test)]
-mod tests {
-	use super::ConsensusStates;
-	use crate::mock::*;
-	use ibc::core::{ics02_client::height::Height, ics24_host::identifier::ClientId};
-	use sp_io::TestExternalities;
+// #[cfg(test)]
+// mod tests {
+// 	use super::ConsensusStates;
+// 	use crate::mock::*;
+// 	use ibc::core::{ics02_client::height::Height, ics24_host::identifier::ClientId};
+// 	use sp_io::TestExternalities;
 
-	#[test]
-	fn test_child_trie_prefix_iterator() {
-		TestExternalities::default().execute_with(|| {
-			let client_id = ClientId::new("11-beefy", 1).unwrap();
+// 	#[test]
+// 	fn test_child_trie_prefix_iterator() {
+// 		TestExternalities::default().execute_with(|| {
+// 			let client_id = ClientId::new("11-beefy", 1).unwrap();
 
-			for height in 0..100u64 {
-				let height = Height { revision_height: height, revision_number: 2000 };
-				ConsensusStates::<Test>::insert(client_id.clone(), height, [255u8; 32].to_vec());
-			}
+// 			for height in 0..100u64 {
+// 				let height = Height { revision_height: height, revision_number: 2000 };
+// 				ConsensusStates::<Test>::insert(client_id.clone(), height, [255u8; 32].to_vec());
+// 			}
 
-			let item = ConsensusStates::<Test>::get(
-				client_id.clone(),
-				Height { revision_height: 99, revision_number: 2000 },
-			);
-			println!("item: {:#?}", item);
+// 			let item = ConsensusStates::<Test>::get(
+// 				client_id.clone(),
+// 				Height { revision_height: 99, revision_number: 2000 },
+// 			);
+// 			println!("item: {:#?}", item);
 
-			let keys = ConsensusStates::<Test>::iter_key_prefix(&client_id).collect::<Vec<_>>();
+// 			let keys = ConsensusStates::<Test>::iter_key_prefix(&client_id).collect::<Vec<_>>();
 
-			println!("iter_key_prefix: {:#?}", keys)
-		});
-	}
-}
+// 			println!("iter_key_prefix: {:#?}", keys)
+// 		});
+// 	}
+// }

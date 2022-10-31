@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::{config, Error};
 use beefy_light_client_primitives::{ClientState, MmrUpdateProof};
 use std::sync::Arc;
 
@@ -362,7 +362,7 @@ pub fn get_updated_client_state(
 }
 
 /// Fetch the maximum allowed extrinsic weight from a substrate node with the given client.
-pub async fn fetch_max_extrinsic_weight<T: subxt::Config>(
+pub async fn fetch_max_extrinsic_weight<T: config::Config>(
 	client: &subxt::OnlineClient<T>,
 ) -> Result<u64, Error> {
 	let metadata = client.rpc().metadata().await?;

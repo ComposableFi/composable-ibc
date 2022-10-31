@@ -25,9 +25,7 @@ pub async fn relay<A, B>(
 ) -> Result<(), anyhow::Error>
 where
 	A: Chain,
-	A::Error: From<B::Error>,
 	B: Chain,
-	B::Error: From<A::Error>,
 {
 	let (mut chain_a_finality, mut chain_b_finality) =
 		(chain_a.finality_notifications().await, chain_b.finality_notifications().await);

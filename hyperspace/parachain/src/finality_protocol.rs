@@ -1,6 +1,6 @@
 //! Light client protocols for parachains.
 
-use crate::{error::Error, ParachainClient};
+use crate::{config, error::Error, ParachainClient};
 use anyhow::anyhow;
 use beefy_light_client_primitives::{ClientState as BeefyPrimitivesClientState, NodesUtils};
 use codec::{Decode, Encode};
@@ -35,11 +35,10 @@ use std::{
 	collections::{BTreeMap, BTreeSet, HashMap},
 	fmt::Display,
 };
-use subxt::{
-	tx::{AssetTip, BaseExtrinsicParamsBuilder, ExtrinsicParams},
-	Config,
-};
+use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip};
 use tendermint_proto::Protobuf;
+// Temp fix
+type AssetId = u128;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum FinalityProtocol {
@@ -66,16 +65,16 @@ impl FinalityProtocol {
 		counterparty: &C,
 	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
-		T: Config + Send + Sync,
+		T: config::Config + Send + Sync,
 		C: Chain,
-		u32: From<<<T as Config>::Header as HeaderT>::Number>,
-		u32: From<<T as Config>::BlockNumber>,
+		u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
+		u32: From<<T as subxt::Config>::BlockNumber>,
 		ParachainClient<T>: Chain,
 		ParachainClient<T>: KeyProvider,
 		<T::Signature as Verify>::Signer:
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
-		<T as Config>::Address: From<<T as Config>::AccountId>,
+		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 		T::Signature: From<MultiSignature>,
 		T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 		T::Hash: From<sp_core::H256> + From<[u8; 32]>,
@@ -83,9 +82,9 @@ impl FinalityProtocol {
 		FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
 			From<FinalityProof<T::Header>>,
 		BTreeMap<H256, ParachainHeaderProofs>:
-			From<BTreeMap<<T as Config>::Hash, ParachainHeaderProofs>>,
+			From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 		<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-			From<BaseExtrinsicParamsBuilder<T, AssetTip>> + Send + Sync,
+			From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
 	{
 		match self {
 			FinalityProtocol::Grandpa =>
@@ -105,16 +104,17 @@ pub async fn query_latest_ibc_events_with_beefy<T, C>(
 	counterparty: &C,
 ) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
 where
-	T: Config + Send + Sync,
+	T: config::Config + Send + Sync,
 	C: Chain,
-	u32: From<<<T as Config>::Header as HeaderT>::Number> + From<<T as Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
+		+ From<<T as subxt::Config>::BlockNumber>,
 	ParachainClient<T>: Chain + KeyProvider,
 	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
-	<T as Config>::Address: From<<T as Config>::AccountId>,
+	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	T::Signature: From<MultiSignature>,
 	T::BlockNumber: From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, AssetTip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
 	T::Hash: From<sp_core::H256>,
 	sp_core::H256: From<T::Hash>,
 {
@@ -222,9 +222,11 @@ where
 	};
 
 	// block_number => events
-	let events: HashMap<String, Vec<IbcEvent>> =
-		IbcApiClient::<u32, H256>::query_events(&*source.para_ws_client, finalized_block_numbers)
-			.await?;
+	let events: HashMap<String, Vec<IbcEvent>> = IbcApiClient::<u32, H256, AssetId>::query_events(
+		&*source.para_ws_client,
+		finalized_block_numbers,
+	)
+	.await?;
 
 	// header number is serialized to string
 	let mut headers_with_events = events
@@ -299,12 +301,13 @@ pub async fn query_latest_ibc_events_with_grandpa<T, C>(
 	counterparty: &C,
 ) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
 where
-	T: Config + Send + Sync,
+	T: config::Config + Send + Sync,
 	C: Chain,
-	u32: From<<<T as Config>::Header as HeaderT>::Number> + From<<T as Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
+		+ From<<T as subxt::Config>::BlockNumber>,
 	ParachainClient<T>: Chain + KeyProvider,
 	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
-	<T as Config>::Address: From<<T as Config>::AccountId>,
+	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	T::Signature: From<MultiSignature>,
 	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
@@ -312,9 +315,9 @@ where
 	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
 		From<FinalityProof<T::Header>>,
 	BTreeMap<H256, ParachainHeaderProofs>:
-		From<BTreeMap<<T as Config>::Hash, ParachainHeaderProofs>>,
+		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, AssetTip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
 {
 	let justification = match finality_event {
 		FinalityEvent::Grandpa(justification) => justification,
@@ -390,9 +393,11 @@ where
 	);
 
 	// block_number => events
-	let events: HashMap<String, Vec<IbcEvent>> =
-		IbcApiClient::<u32, H256>::query_events(&*source.para_ws_client, finalized_block_numbers)
-			.await?;
+	let events: HashMap<String, Vec<IbcEvent>> = IbcApiClient::<u32, H256, AssetId>::query_events(
+		&*source.para_ws_client,
+		finalized_block_numbers,
+	)
+	.await?;
 
 	// header number is serialized to string
 	let mut headers_with_events = events

@@ -1,0 +1,38 @@
+name: Lint
+
+on:
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  linters:
+    name: Linters
+    concurrency:
+      group: check-${{ github.ref }}
+      cancel-in-progress: true
+    container:
+      image: paritytech/ci-linux:production
+    runs-on: [ubuntu-latest]
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v1
+      with:
+        version: '3.x'
+
+    - name: Rustup show
+      run: rustup show
+
+    - name: Cargo fmt
+      run: cargo +nightly fmt --all -- --check
+
+    - uses: actions-rs/cargo@v1
+      name: "Udeps Installation"
+      with:
+        command: install
+        args: cargo-udeps --locked
+
+    - name: Cargo udeps
+      run: SKIP_WASM_BUILD=1 cargo +nightly udeps --locked --all

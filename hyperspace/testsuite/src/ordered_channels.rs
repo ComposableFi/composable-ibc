@@ -1,6 +1,6 @@
 use crate::{assert_timeout_packet, timeout_future, StreamExt};
 use futures::future;
-use hyperspace::send_packet_relay::set_relay_status;
+use hyperspace_core::send_packet_relay::set_relay_status;
 use hyperspace_primitives::TestProvider;
 use ibc::{
 	core::{
@@ -43,7 +43,9 @@ where
 	let client_b_clone = chain_b.clone();
 	// Start relayer loop
 	let handle = tokio::task::spawn(async move {
-		hyperspace::relay(client_a_clone, client_b_clone, None, None).await.unwrap()
+		hyperspace_core::relay(client_a_clone, client_b_clone, None, None)
+			.await
+			.unwrap()
 	});
 	// check if an open transfer channel exists
 	let ping_port = PortId::from_str("ping").unwrap();
