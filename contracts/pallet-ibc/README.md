@@ -1,10 +1,10 @@
 ### Pallet IBC
 
-Pallet IBC is a thin wrapper around [`ibc-rs`](/code/centauri/ibc) that satisfies the runtime requirements for communicating over the IBC protocol from a substrate runtime.
+Pallet IBC is a thin wrapper around [`ibc-rs`](/ibc) that satisfies the runtime requirements for communicating over the IBC protocol from a substrate runtime.
 
-- [`Config`](/code/parachain/frame/ibc/src/lib.rs#L204)
-- [`Call`](/code/parachain/frame/ibc/src/lib.rs#L533)
-- [`Pallet`](/code/parachain/frame/ibc/src/lib.rs#L268)
+- [`Config`](/contracts/pallet-ibc/src/lib.rs#L204)
+- [`Call`](/contracts/pallet-ibc/src/lib.rs#L533)
+- [`Pallet`](/contracts/pallet-ibc/src/lib.rs#L268)
 
 ### Dispatchable functions
 
@@ -87,16 +87,15 @@ In this iteration of the pallet, packets and acknowledgements are stored on chai
 ### ICS20 implementation
 
 The IBC protocol defines an inter-chain token transfer standard that specifies how token transfers should be executed across connected chains.  
-ICS20 is an ibc application which can be implemented as a standalone pallet nevertheless, it is implemented as a sub-module of the ibc pallet [`here`](/code/parachain/frame/ibc/src/ics20).  
-The core ics20 logic is already implemented in [`ibc-rs`](/code/centauri/ibc/modules/src/applications/transfer), all that's required to integrate this is to implement the callback handlers for ics20 
-and implement the [`Ics20Context`](/code/centauri/ibc/modules/src/applications/transfer/context.rs#l118) trait.
+ICS20 is an ibc application which can be implemented as a standalone pallet nevertheless, it is implemented as a sub-module of the ibc pallet [`here`](/contracts/pallet-ibc/src/ics20).  
+The core ics20 logic is already implemented in [`ibc-rs`](/ibc/modules/src/applications/transfer), all that's required to integrate this is to implement the callback handlers for ics20 
+and implement the [`Ics20Context`](/ibc/modules/src/applications/transfer/context.rs#l118) trait.
 
-This `Ics20Context` implementation is dependent on [`assets`](/code/parachain/frame/assets) and [`asset-registry`](/code/parachain/frame/assets-registry) pallets for token registration, minting, transfers and burning of tokens,
-these can be easily swapped out for any other modules that satisfy the requirements.
+This `Ics20Context` implementation is dependent on an implementation of `frame_support::traits::fungibles::{Inspect, Mutate, Transfer}` for token registration, minting, transfers and burning of tokens
 
 ### Rpc Interface
 
-The [`Rpc interface`](/code/parachain/frame/ibc/rpc/src/lib.rs) is designed to allow querying the state of the ibc store with membership or non-membership proofs for the result.
+The [`Rpc interface`](/contracts/pallet-ibc/rpc/src/lib.rs) is designed to allow querying the state of the ibc store with membership or non-membership proofs for the result.
 
 - `query_send_packets` - Returns send packets for the provided sequences
 - `query_recv_packets` - Returns receive packets for the provided sequences
@@ -130,8 +129,8 @@ The [`Rpc interface`](/code/parachain/frame/ibc/rpc/src/lib.rs) is designed to a
 #### Runtime API
 
 A set of runtime apis are specified to enable the rpc interface, these are defined here and should be implemented for the runtime for the rpc interface to work correctly.  
-The runtime interface is defined [`here`](/code/parachain/frame/ibc/runtime-api/src/lib.rs).  
-Identical methods are implemented for the pallet to be called in the runtime interface implementation [`here`](/code/parachain/frame/ibc/src/impls.rs#L112)
+The runtime interface is defined [`here`](/contracts/pallet-ibc/runtime-api/src/lib.rs).  
+Identical methods are implemented for the pallet to be called in the runtime interface implementation [`here`](/contracts/pallet-ibc/src/impls.rs#L112)
 
 ```rust
 

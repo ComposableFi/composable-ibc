@@ -24,7 +24,7 @@ The approach we take to implement this is to make use of the [`child trie API`](
 
 **ICS23 Implementation**
 
-For the [`ics23`](/code/parachain/frame/ibc/src/ics23) implementation,
+For the [`ics23`](/contracts/pallet-ibc/src/ics23) implementation,
 each member of the provable store is defined as a sub-module.  
 A couple methods are implemented for each struct representing a provable store element, each method has a strongly typed interface.
 These methods are `insert`, `get` and `remove` in some contexts.  

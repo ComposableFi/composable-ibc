@@ -25,12 +25,12 @@ The standard format for a sample json serialized ics20 data is as shown below
         "receiver": "5F3sa2TJAWMqDhXG6jhV4N8ko9SxwGy8TpaNS1repo5EYjQX"
     }
 ```
-The rust equivalent of the ics20 packet data is defined by [`PacketData`](/code/centauri/ibc/modules/src/applications/transfer/packet.rs#L11)
+The rust equivalent of the ics20 packet data is defined by [`PacketData`](/ibc/modules/src/applications/transfer/packet.rs#L11)
 
 ### Acknowledgement
 
 Ics20 requires an acknowledgement packet to be sent and defines an acknowledgement success type.  
-A successful acknowledgement is defined by the string [`AQ==`](/code/centauri/ibc/modules/src/applications/transfer/acknowledgement.rs#L10), any other acknowledgement value is interpreted as an error.
+A successful acknowledgement is defined by the string [`AQ==`](/ibc/modules/src/applications/transfer/acknowledgement.rs#L10), any other acknowledgement value is interpreted as an error.
 
 ### ICS20 Context
 
@@ -51,9 +51,9 @@ Correct execution of the Ics20 protocol hinges on the correct implementation of 
 ### ICS20 Callbacks
 
 Ics20 callbacks contain the logic to handle different stages of the packet flow from send to acknowledgement.
-The module callback logic for ICS20 is fully implemented [`here`](/code/centauri/ibc/modules/src/applications/transfer/context.rs#L162).  
+The module callback logic for ICS20 is fully implemented [`here`](/ibc/modules/src/applications/transfer/context.rs#L162).  
 
-To initialize an ics20 transfer, the [`send_transfer`](/code/centauri/ibc/modules/src/applications/transfer/relay/send_transfer.rs) method should be called. 
+To initialize an ics20 transfer, the [`send_transfer`](/ibc/modules/src/applications/transfer/relay/send_transfer.rs) method should be called. 
 However, the caller should take care to revert all changes made by this call in case of a failed execution.
 
 **Implementing ICS20 as an on-chain module**
@@ -126,7 +126,7 @@ impl BankKeeper for Context {
 #[derive(Default, Debug)]
 pub struct Ics20CallbackHandler;
 
-// Implement the Module trait and call the callback functions defined in /code/centauri/ibc/modules/src/applications/transfer/context.rs#L162 appropriately
+// Implement the Module trait and call the callback functions defined in /ibc/modules/src/applications/transfer/context.rs#L162 appropriately
 impl Module for Ics20CallbackHandler {
     fn on_chan_open_init(
         &mut self,

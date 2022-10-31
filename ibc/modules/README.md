@@ -46,19 +46,19 @@ block headers, verifying correctness of the headers and extracting information t
 A light client in this protocol is required to have a Client definition,  Client state, Consensus state, and Client message.
 
 To define a light client, the following traits need to be implemented for distinct structs
-- [`ClientDef`](/code/centauri/ibc/modules/src/core/ics02_client/client_def.rs)
+- [`ClientDef`](/ibc/modules/src/core/ics02_client/client_def.rs)
   - This trait defines all the methods for header and state verification, it also specifies methods for checking and handling misbehaviours
-- [`ClientState`](/code/centauri/ibc/modules/src/core/ics02_client/client_state.rs)
+- [`ClientState`](/ibc/modules/src/core/ics02_client/client_state.rs)
   - This trait defines all the methods for dealing with the client state for a light client
-- [`ConsensusState`](/code/centauri/ibc/modules/src/core/ics02_client/client_consensus.rs)
+- [`ConsensusState`](/ibc/modules/src/core/ics02_client/client_consensus.rs)
   - This trait defined methods for interacting with the Consensus state
-- [`ClientMessage`](/code/centauri/ibc/modules/src/core/ics02_client/client_message.rs)
+- [`ClientMessage`](/ibc/modules/src/core/ics02_client/client_message.rs)
   - This trait defines methods for downcasting to the type contained in the client message enum variants
 
 **The Client Context**
 
-The client context is defined by the [`ClientReader`](/code/centauri/ibc/modules/src/core/ics02_client/context.rs#L24), [`ClientKeeper`](/code/centauri/ibc/modules/src/core/ics02_client/context.rs#L106)
-and [`ClientTypes`](/code/centauri/ibc/modules/src/core/ics02_client/context.rs#L92) traits.  
+The client context is defined by the [`ClientReader`](/ibc/modules/src/core/ics02_client/context.rs#L24), [`ClientKeeper`](/ibc/modules/src/core/ics02_client/context.rs#L106)
+and [`ClientTypes`](/ibc/modules/src/core/ics02_client/context.rs#L92) traits.  
 These traits control access to the client state, consensus state and other client specific requirements.
 
 **Handlers**
@@ -135,7 +135,7 @@ The events emitted by the channel handlers
 
 ### ICS26 Routing
 
-The routing module defines the entry point into the framework through the [`deliver`](/code/centauri/ibc/modules/src/core/ics26_routing/handler.rs#L40) function.
+The routing module defines the entry point into the framework through the [`deliver`](/ibc/modules/src/core/ics26_routing/handler.rs#L40) function.
 
 **Routing Context**
 The `Router` trait defines methods that determine how packets are routed to their destination modules in the host
@@ -149,13 +149,13 @@ The callbacks are the means through which the router is able to deliver packets 
 **Message Handling**
 `deliver` acts as the topmost message handler, it accepts an IBC message of type protobuf `Any` alongside a mutable  
 reference to the Context.  
-The message is decoded and dispatched to the appropriate message handler using a [`dispatch`](/code/centauri/ibc/modules/src/core/ics26_routing/handler.rs#L70) function.  
+The message is decoded and dispatched to the appropriate message handler using a [`dispatch`](/ibc/modules/src/core/ics26_routing/handler.rs#L70) function.  
 Message handlers take a read only context alongside the message as parameters,  
 the message handler is expected to return a result type depending on the message category being handled.  
-Client message handlers return a [`ClientResult`](/code/centauri/ibc/modules/src/core/ics02_client/handler.rs#l17).  
-Connection message handlers return a [`ConnectionResult`](/code/centauri/ibc/modules/src/core/ics03_connection/handler.rs#32).  
-Channel message handlers return a [`ChannelResult`](/code/centauri/ibc/modules/src/core/ics04_channel/handler.rs#L46).  
-Packet message handlers return a [`PacketResult`](/code/centauri/ibc/modules/src/core/ics04_channel/packet.rs#L35).  
+Client message handlers return a [`ClientResult`](/ibc/modules/src/core/ics02_client/handler.rs#l17).  
+Connection message handlers return a [`ConnectionResult`](/ibc/modules/src/core/ics03_connection/handler.rs#32).  
+Channel message handlers return a [`ChannelResult`](/ibc/modules/src/core/ics04_channel/handler.rs#L46).  
+Packet message handlers return a [`PacketResult`](/ibc/modules/src/core/ics04_channel/packet.rs#L35).  
 
 The dispatcher takes the result returned from the handler and writes the state changes  
 contained within it to storage using its mutable access to the Context.
@@ -177,7 +177,7 @@ and channel id along with the token's base denomination into the IBC denominatio
 This denomination format makes it possible for the token to be traced back to its source even when it has hopped through multiple chains.  
 
 This module defines the ICS20 protocol, with a couple traits `ICS20Reader`, `ICS20Keeper` and `BankKeeper` trait.  
-These traits define the methods that are required to comply with ICS20, The module callbacks for ICS20 are also defined [`here`](/code/centauri/ibc/modules/src/applications/transfer/context.rs).
+These traits define the methods that are required to comply with ICS20, The module callbacks for ICS20 are also defined [`here`](/ibc/modules/src/applications/transfer/context.rs).
 
 
 ## Divergence from the Interchain Standards (ICS)

@@ -8,7 +8,7 @@ this is because different light clients have different header and proof verifica
 Also, all pallets plugged into ibc are required to benchmark their callbacks and
 provide a handler that implements the `CallbackWeight` trait which specifies methods that return the weight of each callback method.
 
-The benchmarking infrastructure for the [`deliver`](/code/parachain/frame/ibc/src/weight.rs#L178) extrinsic defines a weight router that collects a batch of ibc messages, and calculates the total weight of processing the message batch,
+The benchmarking infrastructure for the [`deliver`](/contracts/pallet-ibc/src/weight.rs#L178) extrinsic defines a weight router that collects a batch of ibc messages, and calculates the total weight of processing the message batch,
 based on the light client needed for proof verification and the specific module callback for handling each message.
 
 #### Writing benchmarks for a light client

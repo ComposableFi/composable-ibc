@@ -6,17 +6,16 @@ This means that each ibc application must statically define a unique module id a
 
 **Plugging a new pallet to ibc**
 
-- Implement the [`Module`](/code/centauri/ibc/modules/src/core/ics26_routing/context.rs#L95) trait for a struct defined in the pallet.
-- Implement the [`CallbackWeight`](/code/parachain/frame/ibc/primitives/src/lib.rs#L387) trait for a struct defined in the pallet.
+- Implement the [`Module`](/ibc/modules/src/core/ics26_routing/context.rs#L95) trait for a struct defined in the pallet.
+- Implement the [`CallbackWeight`](/contracts/pallet-ibc/primitives/src/lib.rs#L387) trait for a struct defined in the pallet.
 - Define a unique port id and module id as static strings.
-- Add the Module handler to the [`ibc router`](/code/parachain/frame/ibc/src/routing.rs#L33).
-- Add the callback weight handler to the [`weight router`](/code/parachain/frame/ibc/src/weight.rs#L150).
+- Add the Module handler to the [`ibc router`](/contracts/pallet-ibc/src/routing.rs#L33).
+- Add the callback weight handler to the [`weight router`](/contracts/pallet-ibc/src/weight.rs#L150).
 - Add the module id to the `lookup_module_by_port` implementation.
 
 **Custom Router**   
 
-Pallet ibc provides a means to use a custom router defined as a Runtime Config parameter. This sub-router implements the `ModuleRouter` trait and  
-provides a way to add IBC support for new modules without modifying the static router in the pallet.
+Pallet ibc provides a means to use a custom router defined as a Runtime Config parameter. This sub-router implements the [`ModuleRouter`](/contracts/pallet-ibc/src/routing#L44) trait and provides a way to add IBC support for new modules without modifying the static router in the pallet.
 
 **Ibc Handler**
 
