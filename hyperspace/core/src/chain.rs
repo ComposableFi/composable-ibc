@@ -37,9 +37,7 @@ use thiserror::Error;
 
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use parachain::{config, ParachainClient};
-use primitives::{
-	error::Error, Chain, IbcProvider, KeyProvider, MisbehaviourHandler, TransactionId, UpdateType,
-};
+use primitives::{Chain, IbcProvider, KeyProvider, MisbehaviourHandler, TransactionId, UpdateType};
 use sp_core::H256;
 use sp_runtime::generic::Era;
 use std::{pin::Pin, time::Duration};
@@ -536,7 +534,6 @@ impl MisbehaviourHandler for AnyChain {
 		client_message: AnyClientMessage,
 	) -> Result<(), anyhow::Error> {
 		match self {
-			#[cfg(feature = "parachain")]
 			AnyChain::Parachain(parachain) =>
 				parachain.check_for_misbehaviour(counterparty, client_message).await,
 			_ => unreachable!(),
@@ -603,9 +600,8 @@ impl Chain for AnyChain {
 		host_block_hash: [u8; 32],
 		transaction_index: usize,
 		event_index: usize,
-	) -> Result<AnyClientMessage, Error> {
+	) -> Result<AnyClientMessage, Self::Error> {
 		match self {
-			#[cfg(feature = "parachain")]
 			Self::Parachain(chain) => chain
 				.query_client_message(host_block_hash, transaction_index, event_index)
 				.await

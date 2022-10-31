@@ -44,7 +44,7 @@ hex = "0.4.3"
 [dev-dependencies]
 subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }
 hyperspace-core = { path = "../core", features = ["testing", "build-metadata-from-ws"] }
-hyperspace-parachain = { path = "../parachain", features = ["testing", "build-metadata-from-ws"] }
+#hyperspace-parachain = { path = "../parachain", features = ["testing", "build-metadata-from-ws"] }
 
 # We need this so the tests run sequentially
 [[test]]

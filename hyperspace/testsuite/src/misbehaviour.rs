@@ -44,7 +44,7 @@ where
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
-		hyperspace::fish(client_a_clone, client_b_clone).await.unwrap()
+		hyperspace_core::fish(client_a_clone, client_b_clone).await.unwrap()
 	});
 	info!("Waiting for the next block...");
 

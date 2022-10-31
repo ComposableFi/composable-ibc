@@ -30,7 +30,6 @@ use crate::{
 	FinalityProtocol,
 };
 use finality_grandpa_rpc::GrandpaApiClient;
-use subxt::tx::{PlainTip, PolkadotExtrinsicParamsBuilder};
 use ibc::{
 	core::{
 		ics02_client::msgs::{update_client::MsgUpdateAnyClient, ClientMsg},
@@ -42,6 +41,7 @@ use ics10_grandpa::client_message::{ClientMessage, Misbehaviour, RelayChainHeade
 use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::mock::LocalClientTypes;
 use sp_core::H256;
+use subxt::tx::{PlainTip, PolkadotExtrinsicParamsBuilder};
 use tokio::time::sleep;
 
 type GrandpaJustification = grandpa_light_client_primitives::justification::GrandpaJustification<
@@ -203,9 +203,9 @@ where
 		host_block_hash: [u8; 32],
 		transaction_index: usize,
 		event_index: usize,
-	) -> Result<AnyClientMessage, primitives::error::Error> {
+	) -> Result<AnyClientMessage, Error> {
 		use api::runtime_types::{
-			dali_runtime::Call as RuntimeCall, pallet_ibc::pallet::Call as IbcCall,
+			pallet_ibc::pallet::Call as IbcCall, parachain_runtime::Call as RuntimeCall,
 		};
 
 		let hash = H256(host_block_hash);
@@ -223,9 +223,7 @@ where
 				},
 				None => {
 					if now.elapsed() > Duration::from_secs(20) {
-						return Err(primitives::error::Error::from(
-							"Timeout while waiting for block".to_owned(),
-						))
+						return Err(Error::from("Timeout while waiting for block".to_owned()))
 					}
 					sleep(Duration::from_millis(100)).await;
 				},
@@ -235,20 +233,17 @@ where
 			block.block.extrinsics.get(transaction_index).expect("Extrinsic not found");
 
 		let unchecked_extrinsic = UncheckedExtrinsic::<T>::decode(&mut &*extrinsic_opaque.encode())
-			.map_err(|e| {
-				primitives::error::Error::from(format!("Extrinsic decode error: {}", e))
-			})?;
+			.map_err(|e| Error::from(format!("Extrinsic decode error: {}", e)))?;
 
 		match unchecked_extrinsic.function {
 			RuntimeCall::Ibc(IbcCall::deliver { messages }) => {
 				let message = messages.get(event_index).ok_or_else(|| {
-					primitives::error::Error::from(format!(
-						"Message index {} out of bounds",
-						event_index
-					))
+					Error::from(format!("Message index {} out of bounds", event_index))
 				})?;
 				let envelope = Ics26Envelope::<LocalClientTypes>::try_from(Any {
-					type_url: String::from_utf8(message.type_url.clone())?,
+					type_url: String::from_utf8(message.type_url.clone()).map_err(|_| {
+						Error::from("failed to create String from utf-8".to_string())
+					})?,
 					value: message.value.clone(),
 				});
 				match envelope {
@@ -259,15 +254,15 @@ where
 			},
 			_ => (),
 		}
-		Err(primitives::error::Error::Custom("No ICS02 update message found".into()))
+		Err(Error::Custom("No ICS02 update message found".into()))
 	}
 }
 
 #[async_trait::async_trait]
-impl<T: Config + Send + Sync> MisbehaviourHandler for ParachainClient<T>
+impl<T: config::Config + Send + Sync> MisbehaviourHandler for ParachainClient<T>
 where
-	u32: From<<<T as Config>::Header as HeaderT>::Number>,
-	u32: From<<T as Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
+	u32: From<<T as subxt::Config>::BlockNumber>,
 	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
@@ -280,7 +275,7 @@ where
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	sp_core::H256: From<T::Hash>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, AssetTip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
 {
 	async fn check_for_misbehaviour<C: Chain>(
 		&self,

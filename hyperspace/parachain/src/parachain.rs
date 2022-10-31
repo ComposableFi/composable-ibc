@@ -23,7 +23,9 @@ include!(concat!(env!("OUT_DIR"), "/parachain.rs"));
 #[cfg(not(feature = "build-metadata-from-ws"))]
 pub use subxt_generated::parachain::*;
 
-use api::runtime_types::{dali_runtime::Call, frame_system::extensions::check_nonce::CheckNonce};
+use api::runtime_types::{
+	frame_system::extensions::check_nonce::CheckNonce, parachain_runtime::Call,
+};
 use codec::{Compact, Decode, Encode, Input};
 use sp_runtime::generic::Era;
 use subxt::Config;

@@ -46,7 +46,10 @@ use sp_runtime::{
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr, time::Duration};
-use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip};
+use subxt::{
+	events::Phase,
+	tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip},
+};
 
 // Temp fix
 type AssetId = u128;
@@ -91,6 +94,9 @@ where
 	async fn ibc_events(
 		&self,
 	) -> Pin<Box<dyn Stream<Item = (TransactionId, Vec<Option<IbcEvent>>)> + Send + 'static>> {
+		use futures::StreamExt;
+		use pallet_ibc::events::IbcEvent as RawIbcEvent;
+
 		let stream = self
 			.para_client
 			.events()

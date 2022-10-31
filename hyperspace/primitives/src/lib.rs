@@ -395,7 +395,7 @@ pub trait Chain: IbcProvider + MisbehaviourHandler + KeyProvider + Send + Sync {
 		host_block_hash: [u8; 32],
 		transaction_index: usize,
 		event_index: usize,
-	) -> Result<AnyClientMessage, Error>;
+	) -> Result<AnyClientMessage, Self::Error>;
 }
 
 /// Returns undelivered packet sequences that have been sent out from
