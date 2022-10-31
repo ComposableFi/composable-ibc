@@ -52,6 +52,7 @@ pub struct Cmd {
 }
 
 impl Cmd {
+	// todo: IntoClient, since clients are generic, users must configure clients themselves.
 	/// Run the command
 	pub async fn run(&self) -> Result<()> {
 		let path: PathBuf = self.config.parse()?;

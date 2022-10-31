@@ -2,6 +2,7 @@
 name = "hyperspace-testsuite"
 version = "0.1.0"
 edition = "2021"
+description = "Integration testsuite for hyperspace-core and its interfaces"
 authors = [
     "Seun Lanlege <seunlanlege@gmail.com>",
     "David Salami <david.salami@gmail.com>",
@@ -10,6 +11,8 @@ authors = [
 [dependencies]
 tokio = { version = "1.19.2", features = ["macros", "sync", "time"] }
 log = "0.4.17"
+anyhow = "1.0.66"
+async-trait = "0.1.58"
 futures = "0.3.24"
 json = { version = "1.0.85", package = "serde_json" }
 
@@ -17,19 +20,19 @@ ibc = { path = "../../ibc/modules" }
 ibc-proto = { path = "../../ibc/proto" }
 tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8" }
 
-hyperspace = { path = "../", features = ["testing"] }
+hyperspace-core = { path = "../core", features = ["testing"] }
 hyperspace-primitives = { path = "../primitives", features = ["testing"] }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 
 [dev-dependencies]
-hyperspace = { path = "../", features = ["testing", "build-metadata-from-ws"] }
-parachain = { path = "../parachain", package = "hyperspace-parachain", features = ["testing"] }
+hyperspace-core = { path = "../core", features = ["testing", "build-metadata-from-ws"] }
+hyperspace-parachain = { path = "../parachain", features = ["testing", "build-metadata-from-ws"] }
 # substrate
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", features = ["full_crypto"] }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-subxt = { git = "https://github.com/paritytech/subxt", rev = "51179a8b72472d0b43c91cda75a1ddc3fddb9555" }
+subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }
 
 # We need this so the tests run sequentially
 [[test]]

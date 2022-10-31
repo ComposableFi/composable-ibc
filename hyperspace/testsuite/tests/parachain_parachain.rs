@@ -1,18 +1,22 @@
+use async_trait::async_trait;
 use futures::StreamExt;
-use hyperspace::logging;
-use hyperspace_primitives::{mock::LocalClientTypes, IbcProvider, KeyProvider};
+use hyperspace_core::logging;
+use hyperspace_parachain::{
+	config, config::CustomExtrinsicParams, finality_protocol::FinalityProtocol, ParachainClient,
+	ParachainClientConfig,
+};
+use hyperspace_primitives::{utils::create_clients, IbcProvider};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
 	ibc_messaging_packet_timeout_on_channel_close,
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay,
 };
-use ibc::{core::ics02_client::msgs::create_client::MsgCreateAnyClient, tx_msg::Msg};
-use parachain::{finality_protocol::FinalityProtocol, ParachainClient, ParachainClientConfig};
-use subxt::tx::SubstrateExtrinsicParams;
-
-use hyperspace_primitives::utils::create_clients;
-use tendermint_proto::Protobuf;
+use sp_runtime::generic::Era;
+use subxt::{
+	tx::{PolkadotExtrinsicParams, PolkadotExtrinsicParamsBuilder},
+	Error, OnlineClient,
+};
 
 #[derive(Debug, Clone)]
 pub struct Args {
@@ -42,6 +46,17 @@ impl Default for Args {
 #[derive(Debug, Clone)]
 pub enum DefaultConfig {}
 
+#[async_trait]
+impl config::Config for DefaultConfig {
+	async fn custom_extrinsic_params(
+		client: &OnlineClient<Self>,
+	) -> Result<CustomExtrinsicParams<Self>, Error> {
+		let params =
+			PolkadotExtrinsicParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
+		Ok(params.into())
+	}
+}
+
 impl subxt::Config for DefaultConfig {
 	type Index = u32;
 	type BlockNumber = u32;
@@ -52,7 +67,7 @@ impl subxt::Config for DefaultConfig {
 	type Header = sp_runtime::generic::Header<Self::BlockNumber, sp_runtime::traits::BlakeTwo256>;
 	type Signature = sp_runtime::MultiSignature;
 	type Extrinsic = sp_runtime::OpaqueExtrinsic;
-	type ExtrinsicParams = SubstrateExtrinsicParams<Self>;
+	type ExtrinsicParams = PolkadotExtrinsicParams<Self>;
 }
 
 async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<DefaultConfig>) {
@@ -96,6 +111,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 
 	// Wait until for parachains to start producing blocks
 	log::info!(target: "hyperspace", "Waiting for  block production from parachains");
+	let session_length = chain_a.grandpa_prover().session_length().await.unwrap();
 	let _ = chain_a
 		.relay_client
 		.rpc()
@@ -103,7 +119,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 		.await
 		.unwrap()
 		.filter_map(|result| futures::future::ready(result.ok()))
-		.skip_while(|h| futures::future::ready(h.number < 90))
+		.skip_while(|h| futures::future::ready(h.number < (session_length * 2) + 10))
 		.take(1)
 		.collect::<Vec<_>>()
 		.await;

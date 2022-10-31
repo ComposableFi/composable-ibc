@@ -301,10 +301,7 @@ where
 mod tests {
 	use super::*;
 	use finality_grandpa::Chain;
-	use sp_runtime::{
-		generic::Header,
-		traits::{BlakeTwo256, Header as _},
-	};
+	use sp_runtime::{generic::Header, traits::BlakeTwo256};
 
 	#[test]
 	fn test_ancestry_route() {

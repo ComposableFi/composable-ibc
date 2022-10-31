@@ -2,6 +2,7 @@
 name = "hyperspace-primitives"
 version = "0.1.0"
 edition = "2021"
+description = "Shared primtives for hyperspace based crates"
 authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <david.salami@gmail.com>"]
 
 [dependencies]
@@ -16,7 +17,7 @@ thiserror = "1.0.31"
 log = "0.4.17"
 
 # substrate
-subxt = { git = "https://github.com/paritytech/subxt", rev = "51179a8b72472d0b43c91cda75a1ddc3fddb9555" }
+subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }
 
 # ibc
 ibc = { path = "../../ibc/modules", features = [] }

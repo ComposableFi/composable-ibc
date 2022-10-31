@@ -1,12 +1,9 @@
 [package]
-authors = ["Composable developers"]
+name = "ibc-rpc"
 description = "RPC apis for substrate ibc"
 edition = "2021"
-license = "Apache-2.0"
-name = "ibc-rpc"
-publish = false
-repository = "https://github.com/composablefi/substrate-ibc/"
 version = "0.1.0"
+authors = ["David Salami <david.salami@gmail.com>"]
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

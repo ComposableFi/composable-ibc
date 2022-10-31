@@ -61,6 +61,7 @@ where
 	T: Send + Sync,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	T::Balance: From<u128>,
+	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 {
 	pub fn execute_ibc_messages(
 		ctx: &mut Context<T>,
@@ -82,7 +83,6 @@ where
 
 		log::trace!(target: "pallet_ibc", "logs: {:#?}", logs);
 		log::trace!(target: "pallet_ibc", "errors: {:#?}", errors);
-
 		// todo: consolidate into one.
 		if !events.is_empty() {
 			Self::deposit_event(events.into())
@@ -651,7 +651,7 @@ impl<T: Config> Pallet<T> {
 	pub fn get_denom_trace(
 		asset_id: T::AssetId,
 	) -> Option<ibc_primitives::QueryDenomTraceResponse> {
-		T::IbcDenomToAssetIdConversion::to_denom(asset_id).map(|denom| {
+		T::IbcDenomToAssetIdConversion::from_asset_id_to_denom(asset_id).map(|denom| {
 			ibc_primitives::QueryDenomTraceResponse { denom: denom.as_bytes().to_vec() }
 		})
 	}
@@ -676,6 +676,7 @@ impl<T: Config + Send + Sync> IbcHandler for Pallet<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	T::Balance: From<u128>,
+	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 {
 	fn latest_height_and_timestamp(
 		port_id: &PortId,

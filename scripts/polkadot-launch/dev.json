@@ -61,14 +61,14 @@
   },
   "parachains": [
     {
-      "bin": "../../code/target/release/composable",
-      "chain": "dali-2001",
+      "bin": "../../target/release/parachain-node",
+      "chain": "dev-2001",
       "nodes": [
         {
           "wsPort": 9988,
           "port": 31200,
           "basePath": "/tmp/polkadot-launch/parachains/alice",
-          "flags": ["--alice", "--rpc-cors=all", "--execution=wasm", "--wasmtime-instantiation-strategy=recreate-instance-copy-on-write", "--log=ibc_transfer=trace,pallet_ibc=trace,grandpa-verifier=trace"]
+          "flags": ["--alice", "--rpc-cors=all", "--execution=wasm", "--wasmtime-instantiation-strategy=recreate-instance-copy-on-write", "--log=ibc_transfer=trace,pallet_ibc=trace,grandpa-verifier=trace,runtime=trace"]
         },
         {
           "wsPort": 9989,
@@ -85,14 +85,14 @@
       ]
     },
     {
-      "bin": "../../code/target/release/composable",
-      "chain": "dali-2000",
+      "bin": "../../target/release/parachain-node",
+      "chain": "dev-2000",
       "nodes": [
         {
           "wsPort": 9188,
           "port": 33200,
           "basePath": "/tmp/polkadot-launch/parachains/dali-2-alice",
-          "flags": ["--alice", "--rpc-cors=all", "--execution=wasm", "--wasmtime-instantiation-strategy=recreate-instance-copy-on-write", "--log=ibc_transfer=trace,pallet_ibc=trace,grandpa-verifier=trace"]
+          "flags": ["--alice", "--rpc-cors=all", "--execution=wasm", "--wasmtime-instantiation-strategy=recreate-instance-copy-on-write", "--log=ibc_transfer=trace,pallet_ibc=trace,grandpa-verifier=trace,runtime=trace"]
         },
         {
           "wsPort": 9189,

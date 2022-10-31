@@ -152,8 +152,6 @@ pub struct WeightRouter<T: Config>(PhantomData<T>);
 impl<T: Config> WeightRouter<T> {
 	pub fn get_weight(port_id: &str) -> Option<Box<dyn CallbackWeight>> {
 		match port_id {
-			pallet_ibc_ping::PORT_ID =>
-				Some(Box::new(pallet_ibc_ping::WeightHandler::<T>::default())),
 			ibc::applications::transfer::PORT_ID_STR =>
 				Some(Box::new(ics20::WeightHandler::<T>::default())),
 			_ => None,

@@ -26,11 +26,12 @@ primitives = { package = "grandpa-light-client-primitives", path = "../primitive
 light-client-common = { path = "../../../light-clients/common", default-features = false }
 
 [dev-dependencies]
-subxt = { git = "https://github.com/paritytech/subxt", rev = "51179a8b72472d0b43c91cda75a1ddc3fddb9555" }
+subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }
 futures = "0.3.24"
 hex = "0.4.3"
 serde = "1.0.144"
 env_logger = "0.9.0"
+log = "0.4.17"
 polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.27" }
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
 finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }

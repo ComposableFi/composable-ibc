@@ -8,8 +8,8 @@ use jsonrpsee::RpcModule;
 
 use cumulus_client_cli::CollatorOptions;
 // Local Runtime Types
-use parachain_template_runtime::{
-	opaque::Block, AccountId, Balance, Hash, Index as Nonce, RuntimeApi,
+use parachain_runtime::{
+	opaque::Block, AccountId, AssetId, Balance, Hash, Index as Nonce, RuntimeApi,
 };
 
 // Cumulus Imports
@@ -44,11 +44,11 @@ impl sc_executor::NativeExecutionDispatch for TemplateRuntimeExecutor {
 	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
 	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		parachain_template_runtime::api::dispatch(method, data)
+		parachain_runtime::api::dispatch(method, data)
 	}
 
 	fn native_version() -> sc_executor::NativeVersion {
-		parachain_template_runtime::native_version()
+		parachain_runtime::native_version()
 	}
 }
 
@@ -212,6 +212,7 @@ where
 		+ 'static,
 	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 		+ sp_api::Metadata<Block>
+		+ ibc_runtime_api::IbcRuntimeApi<Block, AssetId>
 		+ sp_session::SessionKeys<Block>
 		+ sp_api::ApiExt<
 			Block,
@@ -303,13 +304,13 @@ where
 	let rpc_builder = {
 		let client = client.clone();
 		let transaction_pool = transaction_pool.clone();
+		let chain_props = parachain_config.chain_spec.properties();
 
 		Box::new(move |deny_unsafe, _| {
-			let chain_props = parachain_config.chain_spec.properties();
 			let deps = crate::rpc::FullDeps {
 				client: client.clone(),
 				pool: transaction_pool.clone(),
-				chain_props,
+				chain_props: chain_props.clone(),
 				deny_unsafe,
 			};
 

@@ -1,6 +1,9 @@
 use super::super::*;
 use crate::routing::Context;
-use frame_support::traits::fungibles::{Mutate, Transfer};
+use frame_support::traits::{
+	fungibles::{Mutate, Transfer},
+	Currency, Get,
+};
 use ibc::{
 	applications::transfer::{
 		context::{BankKeeper, Ics20Context, Ics20Keeper, Ics20Reader},
@@ -47,6 +50,7 @@ impl<T: Config + Send + Sync> Ics20Keeper for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	<T as Config>::Balance: From<u128>,
+	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 {
 	type AccountId = T::AccountIdConversion;
 }
@@ -55,6 +59,7 @@ impl<T: Config + Send + Sync> Ics20Context for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	<T as Config>::Balance: From<u128>,
+	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 {
 	type AccountId = T::AccountIdConversion;
 }
@@ -64,6 +69,7 @@ where
 	T: Config + Send + Sync,
 	T::Balance: From<u128>,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 {
 	type AccountId = T::AccountIdConversion;
 
@@ -76,19 +82,33 @@ where
 		let amount: T::Balance = amt.amount.as_u256().low_u128().into();
 		let denom = amt.denom.to_string();
 		// Token should be registered already if sending an ibc asset
-		let asset_id = T::IbcDenomToAssetIdConversion::to_asset_id(&denom)
+		let asset_id = T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
 			.map_err(|_| Ics20Error::invalid_token())?;
-		<<T as Config>::Fungibles as Transfer<T::AccountId>>::transfer(
-			asset_id.into(),
-			&from.clone().into_account(),
-			&to.clone().into_account(),
-			amount,
-			false,
-		)
-		.map_err(|e| {
-			log::trace!(target: "pallet_ibc", "Failed to transfer ibc tokens: {:?}", e);
-			Ics20Error::invalid_token()
-		})?;
+		if asset_id == T::NativeAssetId::get() {
+			<T::NativeCurrency as Currency<T::AccountId>>::transfer(
+				&from.clone().into_account(),
+				&to.clone().into_account(),
+				amount.into(),
+				frame_support::traits::ExistenceRequirement::AllowDeath,
+			)
+			.map_err(|e| {
+				log::trace!(target: "pallet_ibc", "Failed to transfer ibc tokens: {:?}", e);
+				Ics20Error::invalid_token()
+			})?;
+		} else {
+			<<T as Config>::Fungibles as Transfer<T::AccountId>>::transfer(
+				asset_id.into(),
+				&from.clone().into_account(),
+				&to.clone().into_account(),
+				amount,
+				false,
+			)
+			.map_err(|e| {
+				log::trace!(target: "pallet_ibc", "Failed to transfer ibc tokens: {:?}", e);
+				Ics20Error::invalid_token()
+			})?;
+		}
+
 		Ok(())
 	}
 
@@ -101,8 +121,10 @@ where
 		let denom = amt.denom.to_string();
 		// Find existing asset or create a new one
 		let asset_id =
-			T::IbcDenomToAssetIdConversion::to_asset_id(&denom).map_err(|_| {
-				Ics20Error::implementation_specific("Failed to create or find asset".to_string())
+			T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).map_err(|err| {
+				Ics20Error::implementation_specific(format!(
+					"Failed to create or find asset: {err:?}"
+				))
 			})?;
 
 		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
@@ -125,7 +147,7 @@ where
 		let amount: T::Balance = amt.amount.as_u256().low_u128().into();
 		let denom = amt.denom.to_string();
 		// Token should be registered already if burning a voucher
-		let asset_id = T::IbcDenomToAssetIdConversion::to_asset_id(&denom)
+		let asset_id = T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
 			.map_err(|_| Ics20Error::invalid_token())?;
 		<<T as Config>::Fungibles as Mutate<T::AccountId>>::burn_from(
 			asset_id.into(),

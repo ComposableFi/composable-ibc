@@ -11,10 +11,7 @@ use sp_runtime::{
 	traits::{Header as HeaderT, IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
-use subxt::{
-	tx::{AssetTip, BaseExtrinsicParamsBuilder, ExtrinsicParams, SubstrateExtrinsicParamsBuilder},
-	Config,
-};
+use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams};
 use transaction_payment_rpc::TransactionPaymentApiClient;
 use transaction_payment_runtime_api::RuntimeDispatchInfo;
 
@@ -22,10 +19,12 @@ use primitives::{Chain, IbcProvider};
 
 use super::{error::Error, signer::ExtrinsicSigner, ParachainClient};
 use crate::{
+	config,
 	parachain::{api, api::runtime_types::pallet_ibc::Any as RawAny},
 	FinalityProtocol,
 };
 use finality_grandpa_rpc::GrandpaApiClient;
+use subxt::tx::{PlainTip, PolkadotExtrinsicParamsBuilder};
 
 type GrandpaJustification = grandpa_light_client_primitives::justification::GrandpaJustification<
 	polkadot_core_primitives::Header,
@@ -39,10 +38,10 @@ type BeefyJustification =
 struct JustificationNotification(sp_core::Bytes);
 
 #[async_trait::async_trait]
-impl<T: Config + Send + Sync> Chain for ParachainClient<T>
+impl<T: config::Config + Send + Sync> Chain for ParachainClient<T>
 where
-	u32: From<<<T as Config>::Header as HeaderT>::Number>,
-	u32: From<<T as Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
+	u32: From<<T as subxt::Config>::BlockNumber>,
 	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
@@ -55,7 +54,7 @@ where
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	sp_core::H256: From<T::Hash>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, AssetTip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
 {
 	fn name(&self) -> &str {
 		&*self.name
@@ -79,8 +78,8 @@ where
 				.map(|msg| RawAny { type_url: msg.type_url.as_bytes().to_vec(), value: msg.value })
 				.collect::<Vec<_>>();
 
-			let tx_params = SubstrateExtrinsicParamsBuilder::new()
-				.tip(AssetTip::new(100_000))
+			let tx_params = PolkadotExtrinsicParamsBuilder::new()
+				.tip(PlainTip::new(100_000))
 				.era(Era::Immortal, self.para_client.genesis_hash());
 			let call = api::tx().ibc().deliver(messages);
 			self.para_client.tx().create_signed(&call, &signer, tx_params.into()).await?

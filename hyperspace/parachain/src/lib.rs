@@ -3,6 +3,7 @@
 use std::{collections::BTreeMap, str::FromStr, sync::Arc, time::Duration};
 
 pub mod chain;
+pub mod config;
 pub mod error;
 pub mod key_provider;
 pub(crate) mod parachain;
@@ -30,11 +31,7 @@ use sp_runtime::{
 	KeyTypeId, MultiSignature,
 };
 use ss58_registry::Ss58AddressFormat;
-use subxt::{
-	ext::sp_runtime::{generic::Era, traits::Header as HeaderT, MultiSigner},
-	tx::{AssetTip, BaseExtrinsicParamsBuilder, ExtrinsicParams},
-	Config,
-};
+use subxt::ext::sp_runtime::{traits::Header as HeaderT, MultiSigner};
 
 use crate::{
 	parachain::api,
@@ -57,7 +54,7 @@ use jsonrpsee_ws_client::WsClientBuilder;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use sp_keystore::testing::KeyStore;
 use sp_runtime::traits::One;
-use subxt::tx::{SubstrateExtrinsicParamsBuilder, TxPayload};
+use subxt::tx::TxPayload;
 
 /// Implements the [`crate::Chain`] trait for parachains.
 /// This is responsible for:
@@ -65,7 +62,7 @@ use subxt::tx::{SubstrateExtrinsicParamsBuilder, TxPayload};
 /// client state  as new finality proofs are observed.
 /// 2. Submiting new IBC messages to this parachain.
 #[derive(Clone)]
-pub struct ParachainClient<T: subxt::Config> {
+pub struct ParachainClient<T: config::Config> {
 	/// Chain name
 	pub name: String,
 	/// Relay chain rpc client
@@ -164,7 +161,7 @@ pub struct ParachainClientConfig {
 
 impl<T> ParachainClient<T>
 where
-	T: Config,
+	T: config::Config,
 {
 	/// Initializes a [`ParachainClient`] given a [`ParachainConfig`]
 	pub async fn new(config: ParachainClientConfig) -> Result<Self, Error> {
@@ -245,7 +242,7 @@ where
 	}
 }
 
-impl<T: subxt::Config + Send + Sync> ParachainClient<T>
+impl<T: config::Config + Send + Sync> ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	Self: KeyProvider,
@@ -255,8 +252,6 @@ where
 	T::Signature: From<MultiSignature>,
 	H256: From<T::Hash>,
 	T::BlockNumber: From<u32> + Ord + sp_runtime::traits::Zero + One,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, AssetTip>>,
 {
 	/// Returns a grandpa proving client.
 	pub fn grandpa_prover(&self) -> GrandpaProver<T> {
@@ -384,8 +379,6 @@ where
 			self.public_key.clone(),
 		);
 
-		// Submit extrinsic to parachain node
-		let tip = 100_000u128;
 		// Try extrinsic submission five times in case of failures
 		let mut count = 0;
 		let progress = loop {
@@ -393,18 +386,12 @@ where
 				Err(Error::Custom("Failed to submit extrinsic after 5 tries".to_string()))?
 			}
 
-			let tx_params = <SubstrateExtrinsicParamsBuilder<T>>::new()
-				// todo: tx should be mortal
-				.era(Era::Immortal, self.para_client.genesis_hash());
+			let other_params = T::custom_extrinsic_params(&self.para_client).await?;
 
 			let res = self
 				.para_client
 				.tx()
-				.sign_and_submit_then_watch(
-					&call,
-					&signer,
-					tx_params.tip(AssetTip::new(count * tip)).into(),
-				)
+				.sign_and_submit_then_watch(&call, &signer, other_params)
 				.await;
 			if res.is_ok() {
 				break res.unwrap()
@@ -422,17 +409,15 @@ where
 	}
 }
 
-impl<T: Config + Send + Sync> ParachainClient<T>
+impl<T: config::Config + Send + Sync> ParachainClient<T>
 where
-	u32: From<<<T as Config>::Header as HeaderT>::Number>,
+	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	Self: KeyProvider,
 	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
-	<T as Config>::Address: From<<T as Config>::AccountId>,
+	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	T::Signature: From<MultiSignature>,
 	H256: From<T::Hash>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, AssetTip>>,
 	T::BlockNumber: Ord + sp_runtime::traits::Zero + One,
 	T::Header: HeaderT,
 	<T::Header as HeaderT>::Hash: From<T::Hash>,
@@ -440,7 +425,7 @@ where
 	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
 		From<FinalityProof<T::Header>>,
 	BTreeMap<H256, ParachainHeaderProofs>:
-		From<BTreeMap<<T as Config>::Hash, ParachainHeaderProofs>>,
+		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 {
 	/// Construct a beefy client state to be submitted to the counterparty chain
 	pub async fn construct_beefy_client_state(
@@ -451,8 +436,8 @@ where
 		<T::Signature as Verify>::Signer:
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
-		<T as Config>::Address: From<<T as Config>::AccountId>,
-		u32: From<<T as Config>::BlockNumber>,
+		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
+		u32: From<<T as subxt::Config>::BlockNumber>,
 	{
 		use ibc::core::ics24_host::identifier::ChainId;
 		let beefy_activation_block =
@@ -537,8 +522,8 @@ where
 		<T::Signature as Verify>::Signer:
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
-		<T as Config>::Address: From<<T as Config>::AccountId>,
-		u32: From<<T as Config>::BlockNumber>,
+		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
+		u32: From<<T as subxt::Config>::BlockNumber>,
 	{
 		let relay_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.relay_ws_client) };
 		let para_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.para_ws_client) };

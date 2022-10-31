@@ -30,6 +30,7 @@
 extern crate alloc;
 
 use codec::{Decode, Encode};
+use core::fmt::Debug;
 use cumulus_primitives_core::ParaId;
 use frame_system::ensure_signed;
 pub use pallet::*;
@@ -204,9 +205,7 @@ pub mod pallet {
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
-	pub trait Config:
-		frame_system::Config + pallet_ibc_ping::Config + parachain_info::Config + core::fmt::Debug
-	{
+	pub trait Config: frame_system::Config + parachain_info::Config + core::fmt::Debug {
 		type TimeProvider: UnixTime;
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -215,7 +214,10 @@ pub mod pallet {
 		/// Runtime balance type
 		type Balance: Balance;
 		/// AssetId type
-		type AssetId: AssetId;
+		type AssetId: AssetId + MaybeSerializeDeserialize;
+		/// The native asset id, this will use the `NativeCurrency` for all operations.
+		#[pallet::constant]
+		type NativeAssetId: Get<Self::AssetId>;
 		/// Convert ibc denom to asset id and vice versa
 		type IbcDenomToAssetIdConversion: DenomToAssetId<Self>;
 		/// Prefix for events stored in the Off-chain DB via Indexing API, child trie and connection
@@ -226,7 +228,7 @@ pub mod pallet {
 		type AccountIdConversion: TryFrom<Signer>
 			+ IdentifyAccount<AccountId = Self::AccountId>
 			+ Clone;
-		/// MultiCurrency System
+		/// Set of traits needed to handle fungible assets
 		type Fungibles: Transfer<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
 			+ Mutate<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
 			+ Inspect<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>;
@@ -360,6 +362,18 @@ pub mod pallet {
 	pub type Params<T: Config> = StorageValue<_, PalletParams, ValueQuery>;
 
 	#[pallet::storage]
+	/// Map of asset id to ibc denom pairs (T::AssetId, Vec<u8>)
+	/// ibc denoms represented as utf8 string bytes
+	pub type IbcAssetIds<T: Config> =
+		CountedStorageMap<_, Twox64Concat, T::AssetId, Vec<u8>, OptionQuery>;
+
+	#[pallet::storage]
+	/// Map of asset id to ibc denom pairs (Vec<u8>, T::AssetId)
+	/// ibc denoms represented as utf8 string bytes
+	pub type IbcDenoms<T: Config> =
+		CountedStorageMap<_, Twox64Concat, Vec<u8>, T::AssetId, OptionQuery>;
+
+	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
 	/// ChannelIds open from this module
 	pub type ChannelIds<T: Config> = StorageValue<_, Vec<Vec<u8>>, ValueQuery>;
@@ -368,6 +382,33 @@ pub mod pallet {
 	#[allow(clippy::disallowed_types)]
 	/// Active Escrow addresses
 	pub type EscrowAddresses<T: Config> = StorageValue<_, BTreeSet<T::AccountId>, ValueQuery>;
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		/// This should contain the native currency's asset_id and denom.
+		pub asset_ids: Vec<(T::AssetId, Vec<u8>)>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { asset_ids: Default::default() }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			assert!(
+				!self.asset_ids.is_empty(),
+				"You must configure the native currency's asset_id and denom!"
+			);
+			for (asset_id, denom) in &self.asset_ids {
+				IbcDenoms::<T>::insert(denom.clone(), asset_id);
+				IbcAssetIds::<T>::insert(asset_id, denom);
+			}
+		}
+	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
@@ -519,10 +560,7 @@ pub mod pallet {
 		pub fn deliver(origin: OriginFor<T>, messages: Vec<Any>) -> DispatchResult {
 			use ibc::core::{
 				ics02_client::msgs::create_client::TYPE_URL as CREATE_CLIENT_TYPE_URL,
-				ics03_connection::msgs::{
-					conn_open_init::TYPE_URL as CONN_OPEN_INIT_TYPE_URL,
-					conn_open_try::TYPE_URL as CONN_OPEN_TRY_TYPE_URL,
-				},
+				ics03_connection::msgs::conn_open_init::TYPE_URL as CONN_OPEN_INIT_TYPE_URL,
 			};
 			let sender = ensure_signed(origin)?;
 
@@ -534,16 +572,15 @@ pub mod pallet {
 				.into_iter()
 				.filter_map(|message| {
 					let type_url = String::from_utf8(message.type_url.clone()).ok()?;
-					if matches!(
-						type_url.as_str(),
-						CREATE_CLIENT_TYPE_URL | CONN_OPEN_INIT_TYPE_URL | CONN_OPEN_TRY_TYPE_URL
-					) {
+					if matches!(type_url.as_str(), CREATE_CLIENT_TYPE_URL | CONN_OPEN_INIT_TYPE_URL)
+					{
 						reserve_count += 1;
 					}
 					Some(Ok(ibc_proto::google::protobuf::Any { type_url, value: message.value }))
 				})
 				.collect::<Result<Vec<ibc_proto::google::protobuf::Any>, Error<T>>>()?;
 			let reserve_amt = T::SpamProtectionDeposit::get().saturating_mul(reserve_count.into());
+
 			if reserve_amt >= T::SpamProtectionDeposit::get() {
 				<T::NativeCurrency as ReservableCurrency<T::AccountId>>::reserve(
 					&sender,
@@ -564,7 +601,7 @@ pub mod pallet {
 			amount: T::Balance,
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
-			let denom = T::IbcDenomToAssetIdConversion::to_denom(asset_id)
+			let denom = T::IbcDenomToAssetIdConversion::from_asset_id_to_denom(asset_id)
 				.ok_or_else(|| Error::<T>::InvalidAssetId)?;
 
 			let account_id_32: AccountId32 = origin.clone().into();
@@ -582,9 +619,8 @@ pub mod pallet {
 						})
 						.map_err(|_| Error::<T>::Utf8Error)?
 				},
-				MultiAddress::Raw(bytes) => {
-					String::from_utf8(bytes).map_err(|_| Error::<T>::Utf8Error)?
-				},
+				MultiAddress::Raw(bytes) =>
+					String::from_utf8(bytes).map_err(|_| Error::<T>::Utf8Error)?,
 			};
 			let denom = PrefixedDenom::from_str(&denom).map_err(|_| Error::<T>::InvalidIbcDenom)?;
 			let ibc_amount = Amount::from_str(&format!("{:?}", amount))
@@ -659,7 +695,7 @@ pub mod pallet {
 				from: origin,
 				to: to.as_bytes().to_vec(),
 				amount,
-				local_asset_id: T::IbcDenomToAssetIdConversion::to_asset_id(
+				local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
 					&coin.denom.to_string(),
 				)
 				.ok(),
@@ -758,13 +794,17 @@ pub mod pallet {
 }
 
 pub trait DenomToAssetId<T: Config> {
+	type Error: Debug;
+
 	/// Get the equivalent asset id for this ibc denom
 	/// **Note**
 	/// This function should create and register an asset with a valid metadata
 	/// if an asset does not exist for this denom
-	fn to_asset_id(denom: &String) -> Result<T::AssetId, Error<T>>;
+	fn from_denom_to_asset_id(denom: &String) -> Result<T::AssetId, Self::Error>;
+
 	/// Return full denom for given asset id
-	fn to_denom(id: T::AssetId) -> Option<String>;
+	fn from_asset_id_to_denom(id: T::AssetId) -> Option<String>;
+
 	/// Returns a tuple
 	/// The first item of the tuple is a vector of all ibc denoms with an upper bound of limit on
 	/// the length of the vector. The second item is the total count of ibc assets on chain.

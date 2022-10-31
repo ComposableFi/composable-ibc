@@ -215,7 +215,7 @@ pub fn on_chan_close_init(
 	_port_id: &PortId,
 	_channel_id: &ChannelId,
 ) -> Result<(), Ics20Error> {
-	Err(Ics20Error::cant_close_channel())
+	Ok(())
 }
 
 pub fn on_chan_close_confirm(

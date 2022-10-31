@@ -1,5 +1,5 @@
 use crate::{
-	parachain::api, signer::ExtrinsicSigner, utils::unsafe_cast_to_jsonrpsee_client, Error,
+	config, parachain::api, signer::ExtrinsicSigner, utils::unsafe_cast_to_jsonrpsee_client, Error,
 	ParachainClient,
 };
 use finality_grandpa::BlockNumberOps;
@@ -18,27 +18,25 @@ use sp_core::{
 	H256,
 };
 use sp_runtime::{
-	generic::Era,
 	traits::{Header as HeaderT, IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr};
-use subxt::{
-	tx::{AssetTip, BaseExtrinsicParamsBuilder, ExtrinsicParams, SubstrateExtrinsicParamsBuilder},
-	Config,
-};
+use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip};
 
-impl<T: Config + Send + Sync> ParachainClient<T>
+// Temp fix
+type AssetId = u128;
+
+impl<T: config::Config + Send + Sync> ParachainClient<T>
 where
-	u32: From<<<T as Config>::Header as HeaderT>::Number>,
+	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	Self: KeyProvider,
 	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
-	<T as Config>::Address: From<<T as Config>::AccountId>,
+	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	T::Signature: From<MultiSignature>,
 	H256: From<T::Hash>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, AssetTip>>,
+
 	T::BlockNumber: Ord + sp_runtime::traits::Zero + One,
 	T::Header: HeaderT,
 	<T::Header as HeaderT>::Hash: From<T::Hash>,
@@ -46,7 +44,7 @@ where
 	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
 		From<FinalityProof<T::Header>>,
 	BTreeMap<H256, ParachainHeaderProofs>:
-		From<BTreeMap<<T as Config>::Hash, ParachainHeaderProofs>>,
+		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 {
 	pub fn set_client_id(&mut self, client_id: ClientId) {
 		self.client_id = Some(client_id)
@@ -60,13 +58,14 @@ where
 		let (ext_hash, block_hash) = self.submit_call(call).await?;
 
 		// Query newly created client Id
-		let identified_client_state = IbcApiClient::<u32, H256>::query_newly_created_client(
-			&*self.para_ws_client,
-			block_hash.into(),
-			ext_hash.into(),
-		)
-		.await
-		.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
+		let identified_client_state =
+			IbcApiClient::<u32, H256, AssetId>::query_newly_created_client(
+				&*self.para_ws_client,
+				block_hash.into(),
+				ext_hash.into(),
+			)
+			.await
+			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
 
 		let client_id = ClientId::from_str(&identified_client_state.client_id)
 			.expect("Should have a valid client id");
@@ -97,11 +96,7 @@ where
 			},
 		};
 		// Submit extrinsic to parachain node
-		let call = api::tx().ibc().transfer(
-			params,
-			api::runtime_types::primitives::currency::CurrencyId(asset_id),
-			amount.into(),
-		);
+		let call = api::tx().ibc().transfer(params, asset_id, amount.into());
 
 		self.submit_call(call).await?;
 
@@ -110,7 +105,7 @@ where
 
 	pub async fn submit_sudo_call(
 		&self,
-		call: api::runtime_types::dali_runtime::Call,
+		call: api::runtime_types::parachain_runtime::Call,
 	) -> Result<(), Error> {
 		let signer = ExtrinsicSigner::<T, Self>::new(
 			self.key_store.clone(),
@@ -121,14 +116,12 @@ where
 		let ext = api::tx().sudo().sudo(call);
 		// Submit extrinsic to parachain node
 
-		let tx_params = SubstrateExtrinsicParamsBuilder::new()
-			.tip(AssetTip::new(100_000))
-			.era(Era::Immortal, self.para_client.genesis_hash());
+		let other_params = T::custom_extrinsic_params(&self.para_client).await?;
 
 		let _progress = self
 			.para_client
 			.tx()
-			.sign_and_submit_then_watch(&ext, &signer, tx_params.into())
+			.sign_and_submit_then_watch(&ext, &signer, other_params)
 			.await?
 			.wait_for_in_block()
 			.await?
@@ -145,7 +138,7 @@ where
 	) -> Result<(), Error> {
 		let params = api::runtime_types::pallet_ibc::PalletParams { receive_enabled, send_enabled };
 
-		let call = api::runtime_types::dali_runtime::Call::Ibc(
+		let call = api::runtime_types::parachain_runtime::Call::Ibc(
 			api::runtime_types::pallet_ibc::pallet::Call::set_params { params },
 		);
 
@@ -158,12 +151,12 @@ where
 #[async_trait::async_trait]
 impl<T> TestProvider for ParachainClient<T>
 where
-	T: Config + Send + Sync + Clone,
-	u32: From<<<T as Config>::Header as HeaderT>::Number>,
-	u32: From<<T as Config>::BlockNumber>,
+	T: config::Config + Send + Sync + Clone,
+	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
+	u32: From<<T as subxt::Config>::BlockNumber>,
 	Self: KeyProvider,
 	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
-	<T as Config>::Address: From<<T as Config>::AccountId>,
+	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	T::Signature: From<MultiSignature>,
 	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
@@ -171,9 +164,9 @@ where
 	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
 		From<FinalityProof<T::Header>>,
 	BTreeMap<H256, ParachainHeaderProofs>:
-		From<BTreeMap<<T as Config>::Hash, ParachainHeaderProofs>>,
+		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, AssetTip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
 {
 	async fn send_transfer(&self, transfer: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
 		let account_id = AccountId32::from_ss58check(transfer.receiver.as_ref()).unwrap();

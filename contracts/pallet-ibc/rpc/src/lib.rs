@@ -148,9 +148,10 @@ pub struct PacketInfo {
 
 /// IBC RPC methods.
 #[rpc(client, server)]
-pub trait IbcApi<BlockNumber, Hash>
+pub trait IbcApi<BlockNumber, Hash, AssetId>
 where
 	Hash: PartialEq + Eq + std::hash::Hash,
+	AssetId: codec::Codec,
 {
 	/// Query packet data
 	#[method(name = "ibc_querySendPackets")]
@@ -386,10 +387,8 @@ where
 	/// Query the denom trace for an ibc denom from the asset Id
 	// In ibc-go this method accepts a string which is the hash of the ibc denom
 	// that is because ibc denoms are stored as hashes in ibc-go, but in our implementation here
-	// ibc denoms are mapped to a local currency id which  is a u128 under the hood,
-	// hence, why we require a u128 in this method
 	#[method(name = "ibc_queryDenomTrace")]
-	fn query_denom_trace(&self, asset_id: u128) -> Result<QueryDenomTraceResponse>;
+	fn query_denom_trace(&self, asset_id: AssetId) -> Result<QueryDenomTraceResponse>;
 
 	/// Query the denom traces for ibc denoms
 	/// key is the asset id from which to start paginating results
@@ -399,7 +398,7 @@ where
 	#[method(name = "ibc_queryDenomTraces")]
 	fn query_denom_traces(
 		&self,
-		key: Option<u128>,
+		key: Option<AssetId>,
 		offset: Option<u32>,
 		limit: Option<u64>,
 		count_total: bool,
@@ -446,7 +445,8 @@ impl<C, B> IbcRpcHandler<C, B> {
 	}
 }
 
-impl<C, Block> IbcApiServer<<<Block as BlockT>::Header as HeaderT>::Number, Block::Hash>
+impl<C, Block, AssetId>
+	IbcApiServer<<<Block as BlockT>::Header as HeaderT>::Number, Block::Hash, AssetId>
 	for IbcRpcHandler<C, Block>
 where
 	Block: BlockT,
@@ -457,7 +457,8 @@ where
 		+ HeaderBackend<Block>
 		+ ProofProvider<Block>
 		+ BlockBackend<Block>,
-	C::Api: IbcRuntimeApi<Block>,
+	C::Api: IbcRuntimeApi<Block, AssetId>,
+	AssetId: codec::Codec,
 {
 	fn query_send_packets(
 		&self,
@@ -1408,7 +1409,7 @@ where
 		})
 	}
 
-	fn query_denom_trace(&self, asset_id: u128) -> Result<QueryDenomTraceResponse> {
+	fn query_denom_trace(&self, asset_id: AssetId) -> Result<QueryDenomTraceResponse> {
 		let api = self.client.runtime_api();
 		let block_hash = self.client.info().best_hash;
 
@@ -1443,7 +1444,7 @@ where
 
 	fn query_denom_traces(
 		&self,
-		key: Option<u128>,
+		key: Option<AssetId>,
 		offset: Option<u32>,
 		limit: Option<u64>,
 		count_total: bool,
@@ -1565,7 +1566,7 @@ where
 			})?;
 			let temp = temp
 				.into_iter()
-				.filter_map(|event| filter_map_pallet_event::<C, Block>(&at, &api, event))
+				.filter_map(|event| filter_map_pallet_event::<C, Block, AssetId>(&at, &api, event))
 				.collect();
 			events.insert(block_number_or_hash.to_string(), temp);
 		}

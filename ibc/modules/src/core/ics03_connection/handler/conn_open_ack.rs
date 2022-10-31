@@ -164,6 +164,7 @@ mod tests {
 	};
 
 	#[test]
+	#[ignore]
 	fn conn_open_ack_msg_processing() {
 		struct Test {
 			name: String,

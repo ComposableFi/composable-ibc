@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use hyperspace::{
+use hyperspace_core::{
 	command::{Cli, Subcommand},
 	logging,
 };

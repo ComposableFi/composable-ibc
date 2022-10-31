@@ -11,6 +11,9 @@ edition = "2021"
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
+[package.metadata.cargo-udeps.ignore]
+normal = ["cumulus-pallet-session-benchmarking"]
+
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 
@@ -23,13 +26,11 @@ serde = { version = "1.0.140", optional = true, features = ["derive"] }
 smallvec = "1.9.0"
 
 # Local
+ibc = { path = "../../../ibc/modules", default-features = false }
 pallet-ibc = { path = "../../../contracts/pallet-ibc", default-features = false }
+pallet-ibc-ping = { path = "../../../contracts/pallet-ibc/ping", default-features = false }
 ibc-primitives = { path = "../../../contracts/pallet-ibc/primitives", default-features = false }
-
-# 3rd party frame
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "377213f750755cc48e80a3131eaae63b5eda8362" }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "377213f750755cc48e80a3131eaae63b5eda8362" }
-
+ibc-runtime-api = { path = "../../../contracts/pallet-ibc/runtime-api", default-features = false }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.27" }
@@ -40,6 +41,7 @@ frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", d
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.27" }
 frame-try-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.27" }
 pallet-aura = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.27" }
+pallet-assets = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.27" }
 pallet-authorship = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.27" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.27" }
 pallet-session = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.27" }
@@ -81,6 +83,9 @@ cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus", br
 pallet-collator-selection = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.27", default-features = false }
 parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.27", default-features = false }
 
+asset-registry = { package = "orml-asset-registry", git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "377213f750755cc48e80a3131eaae63b5eda8362" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "377213f750755cc48e80a3131eaae63b5eda8362" }
+
 [features]
 default = [
 	"std",
@@ -103,14 +108,17 @@ std = [
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
 	"pallet-aura/std",
+	"pallet-assets/std",
 	"pallet-authorship/std",
 	"pallet-balances/std",
 	"pallet-collator-selection/std",
 	"pallet-session/std",
 	"pallet-sudo/std",
+	"ibc/std",
 	"pallet-ibc/std",
-	"orml-traits/std",
-	"orml-tokens/std",
+	"pallet-ibc-ping/std",
+	"ibc-primitives/std",
+	"ibc-runtime-api/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
@@ -133,6 +141,8 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",
+	"asset-registry/std",
+	"orml-traits/std"
 ]
 
 runtime-benchmarks = [

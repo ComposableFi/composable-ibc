@@ -31,6 +31,7 @@ members = [
 
     # hyperspace
     "hyperspace",
+    "hyperspace/core",
     "hyperspace/primitives",
     "hyperspace/parachain",
     "hyperspace/cosmos",
@@ -39,8 +40,8 @@ members = [
     # utilities
     "utils/subxt/codegen",
     "utils/subxt/generated",
-#    "utils/parachain-node",
-#    "utils/parachain-node/runtime",
+    "utils/parachain-node",
+    "utils/parachain-node/runtime",
 ]
 
 

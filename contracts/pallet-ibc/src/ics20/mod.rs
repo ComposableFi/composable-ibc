@@ -6,7 +6,7 @@ use alloc::{
 	string::{String, ToString},
 };
 use core::fmt::Formatter;
-use frame_support::weights::Weight;
+use frame_support::{traits::Currency, weights::Weight};
 use ibc::{
 	applications::transfer::{
 		acknowledgement::{Acknowledgement as Ics20Acknowledgement, ACK_ERR_STR, ACK_SUCCESS_B64},
@@ -58,6 +58,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	T::Balance: From<u128>,
+	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 {
 	fn on_chan_open_init(
 		&mut self,
@@ -224,7 +225,8 @@ where
 					from: packet_data.sender.to_string().as_bytes().to_vec(),
 					to: packet_data.receiver.to_string().as_bytes().to_vec(),
 					ibc_denom: denom.as_bytes().to_vec(),
-					local_asset_id: T::IbcDenomToAssetIdConversion::to_asset_id(&denom).ok(),
+					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
+						.ok(),
 					amount: packet_data.token.amount.as_u256().as_u128().into(),
 				});
 				let packet = packet.clone();
@@ -272,30 +274,28 @@ where
 			.map_err(|e| Ics04Error::implementation_specific(e.to_string()))?;
 
 		match ack {
-			Ics20Acknowledgement::Success(_) => {
+			Ics20Acknowledgement::Success(_) =>
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
 					from: packet_data.sender.to_string().as_bytes().to_vec(),
 					to: packet_data.receiver.to_string().as_bytes().to_vec(),
 					ibc_denom: packet_data.token.denom.to_string().as_bytes().to_vec(),
-					local_asset_id: T::IbcDenomToAssetIdConversion::to_asset_id(
+					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
 						&packet_data.token.denom.to_string(),
 					)
 					.ok(),
 					amount: packet_data.token.amount.as_u256().as_u128().into(),
-				})
-			},
-			Ics20Acknowledgement::Error(_) => {
+				}),
+			Ics20Acknowledgement::Error(_) =>
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferFailed {
 					from: packet_data.sender.to_string().as_bytes().to_vec(),
 					to: packet_data.receiver.to_string().as_bytes().to_vec(),
 					ibc_denom: packet_data.token.denom.to_string().as_bytes().to_vec(),
-					local_asset_id: T::IbcDenomToAssetIdConversion::to_asset_id(
+					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
 						&packet_data.token.denom.to_string(),
 					)
 					.ok(),
 					amount: packet_data.token.amount.as_u256().as_u128().into(),
-				})
-			},
+				}),
 		}
 
 		Ok(())

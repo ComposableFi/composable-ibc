@@ -8,9 +8,8 @@
 use sc_chain_spec::Properties;
 use std::sync::Arc;
 
-use parachain_template_runtime::{opaque::Block, AccountId, Balance, Index as Nonce};
+use parachain_runtime::{opaque::Block, AccountId, AssetId, Balance, Index as Nonce};
 
-use ibc_rpc::{IbcApiServer, IbcRpcHandler};
 use ibc_runtime_api::IbcRuntimeApi;
 use sc_client_api::{AuxStore, BlockBackend, ProofProvider};
 pub use sc_rpc::DenyUnsafe;
@@ -48,7 +47,7 @@ where
 		+ Send
 		+ Sync
 		+ 'static,
-	C::Api: IbcRuntimeApi<Block>,
+	C::Api: IbcRuntimeApi<Block, AssetId>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
 	C::Api: BlockBuilder<Block>,
@@ -64,5 +63,6 @@ where
 	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
 	module.merge(IbcRpcHandler::new(client.clone(), chain_props).into_rpc())?;
+
 	Ok(module)
 }

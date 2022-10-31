@@ -1,5 +1,6 @@
 use super::*;
 use core::{borrow::Borrow, fmt::Debug};
+use frame_support::traits::Currency;
 use ibc::{
 	applications::transfer::MODULE_ID_STR as IBC_TRANSFER_MODULE_ID,
 	core::{
@@ -29,18 +30,13 @@ impl<T: Config + Send + Sync> Context<T> {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct IbcRouter<T: Config> {
-	pallet_ibc_ping: pallet_ibc_ping::IbcModule<T>,
 	ibc_transfer: ics20::IbcModule<T>,
 	sub_router: T::Router,
 }
 
 impl<T: Config> Default for IbcRouter<T> {
 	fn default() -> Self {
-		Self {
-			pallet_ibc_ping: pallet_ibc_ping::IbcModule::<T>::default(),
-			ibc_transfer: ics20::IbcModule::<T>::default(),
-			sub_router: Default::default(),
-		}
+		Self { ibc_transfer: ics20::IbcModule::<T>::default(), sub_router: Default::default() }
 	}
 }
 
@@ -58,6 +54,7 @@ impl<T: Config + Send + Sync> Router for IbcRouter<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	T::Balance: From<u128>,
+	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 {
 	fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module> {
 		// check if the user has defined any custom routes
@@ -66,7 +63,6 @@ where
 		}
 
 		match module_id.borrow().to_string().as_str() {
-			pallet_ibc_ping::MODULE_ID => Some(&mut self.pallet_ibc_ping),
 			IBC_TRANSFER_MODULE_ID => Some(&mut self.ibc_transfer),
 			&_ => None,
 		}
@@ -78,10 +74,7 @@ where
 			return true
 		}
 
-		matches!(
-			module_id.borrow().to_string().as_str(),
-			pallet_ibc_ping::MODULE_ID | IBC_TRANSFER_MODULE_ID
-		)
+		matches!(module_id.borrow().to_string().as_str(), IBC_TRANSFER_MODULE_ID,)
 	}
 }
 
@@ -89,6 +82,7 @@ impl<T: Config + Send + Sync> Ics26Context for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	T::Balance: From<u128>,
+	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 {
 	type Router = IbcRouter<T>;
 
@@ -105,5 +99,6 @@ impl<T: Config + Send + Sync> ReaderContext for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	T::Balance: From<u128>,
+	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 {
 }

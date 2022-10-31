@@ -1,9 +1,9 @@
-#![allow(unused_variables, unreachable_patterns, unreachable_code)]
+#![allow(unreachable_patterns)]
 
 use async_trait::async_trait;
 use derive_more::From;
 use futures::Stream;
-#[cfg(feature = "testing")]
+#[cfg(any(test, feature = "testing"))]
 use ibc::applications::transfer::msgs::transfer::MsgTransfer;
 use ibc::{
 	applications::transfer::PrefixedCoin,
@@ -29,21 +29,39 @@ use ibc_proto::{
 		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
 	},
 };
-#[cfg(feature = "testing")]
+#[cfg(any(test, feature = "testing"))]
 use pallet_ibc::Timeout;
 use serde::Deserialize;
 use thiserror::Error;
 
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
-use parachain::ParachainClient;
+use parachain::{config, ParachainClient};
 use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
 use sp_core::H256;
+use sp_runtime::generic::Era;
 use std::{pin::Pin, time::Duration};
-use subxt::tx::SubstrateExtrinsicParams;
+use subxt::{
+	tx::{ExtrinsicParams, PolkadotExtrinsicParams, PolkadotExtrinsicParamsBuilder},
+	Error, OnlineClient,
+};
 
 // TODO: expose extrinsic param builder
 #[derive(Debug, Clone)]
 pub enum DefaultConfig {}
+
+#[async_trait]
+impl config::Config for DefaultConfig {
+	async fn custom_extrinsic_params(
+		client: &OnlineClient<Self>,
+	) -> Result<
+		<Self::ExtrinsicParams as ExtrinsicParams<Self::Index, Self::Hash>>::OtherParams,
+		Error,
+	> {
+		let params =
+			PolkadotExtrinsicParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
+		Ok(params.into())
+	}
+}
 
 impl subxt::Config for DefaultConfig {
 	type Index = u32;
@@ -55,7 +73,7 @@ impl subxt::Config for DefaultConfig {
 	type Header = sp_runtime::generic::Header<Self::BlockNumber, sp_runtime::traits::BlakeTwo256>;
 	type Signature = sp_runtime::MultiSignature;
 	type Extrinsic = sp_runtime::OpaqueExtrinsic;
-	type ExtrinsicParams = SubstrateExtrinsicParams<Self>;
+	type ExtrinsicParams = PolkadotExtrinsicParams<Self>;
 }
 
 #[derive(Deserialize)]
