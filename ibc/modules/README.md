@@ -6,43 +6,41 @@ Implementation of the Inter-Blockchain Communication Protocol ([IBC]) in rust.
 
 ## Project Structure
 
-**Core** contains the traits and handlers that enable the ibc protocol.  
-**Applications** contains sub protocols that are built off the core ibc.  
-**Mock** contains implementations of the core ibc protocol for testing purposes.  
+**Core** contains the traits and handlers that enable the IBC protocol.  
+**Applications** contains sub protocols that are built off the core IBC.  
+**Mock** contains implementations of the core IBC protocol for testing purposes.  
 
 ## Architecture
 
-The design of this crate is geared towards making it as performant as possible and reducing runtime overhead to the bear minimum.  
-The latter is a major focus because it is expected that this crate will be executed inside blockchain runtimes, which are extremely resource constrained environments  
-and anything that could possibly reduce code execution time needs to be prioritized. 
-To achieve these noble goals, this crate is designed to prioritize static dispatch over dynamic dispatch, while the former is less flexible from a development perspective, it helps could potentially help meet performance 
-requirements for blockchain runtimes. We also provide a couple procedural macros in the [`ibc-derive`](/code/centauri/ibc/derive) crate,  
-that abstracts away a lot of boilerplate code for the end user.
-
-The framework is mostly defined as a set of traits that need to be implemented to make use of the message handling capabilities.
+This framework is mostly defined as a set of traits that need to be implemented to make use of the message handling functions provided
 
 ## Terminology
 
 A couple definitions to help understand the architecture of this framework
-- **Reader** - A `Reader` is a trait that defines methods that provide read access to the underlying storage of the host.
-- **Keeper** - A `Keeper` trait is one that defines methods that provide write access to the underlying storage of the host.
-- **Context** - The context is a type that implements all the Reader, Keeper and Routing traits that govern access to the storage of the host and module callbacks.
-- **Handler** - A handler is a function that handles processing of an ibc message type and returns a result.
-- **Event** - A struct which when emitted signifies successful processing of a message.
-- **Router** - A type that channels packets to the correct module for handling.
+- **Reader** - When `Reader` is appended to a trait's name, it signifies that the trait defines methods that provide read  
+  access to the underlying storage of t e host.
+- **Keeper** - When `Keeper` is appended to a trait's name it signifies that the trait defines methods that provide write  
+  access to the underlying storage of the host.
+- **Context** - The context is a type that implements all the Reader, Keeper and Routing traits that provide access to the  
+  storage of the host and handle to the module callbacks.
+- **Handler** - A handler is a function that handles processing of an IBC message type and returns a result.
+- **Event** - A struct which when emitted signifies successful processing of a message, in case of failures errors are emitted.
+- **Router** - A type that routes packets to the correct module for handling.
 
 ## ICS02 Client Definitions
 
-The client module hosts the trait definitions, messages and handlers for light client implementation.
+The client module contains the trait definitions for light client implementation and Client context, it also contains  
+the client messages and their handlers.
 
 ### On chain Light clients
 
-The Ibc protocol is designed to work on top of light clients, light clients are the foundation on which the protocol is built.  
-A light client in simple terms allows a resource constrained environment to follow the consensus of a blockchain,  
+The IBC protocol is designed to work on top of light clients.  
+A light client in simple terms allows a resource constrained environment to keep track of the consensus protocol of a blockchain,  
 it is able to verify statements concerning the state of the blockchain using information extracted from a block header.  
-For this to be a possibility, the blockchain whose light client is being constructed  is required to have a finality protocol  
-(a finality protocol is a means by which a blockchain expresses that state transitions within a block are safe and have a very low probability of been reverted),   
-the light client needs to be continuously updated with a stream of finalized block headers, verifying correctness of the headers and extracting information that can be used to verify state proofs.
+For this to be a possibility, the blockchain whose light client is being constructed is required to have a finality protocol,   
+A finality protocol is a means by which a blockchain expresses that state transitions within a block are safe and have  
+a very low probability of been reverted, the light client needs to be continuously updated with a stream of finalized  
+block headers, verifying correctness of the headers and extracting information that can be used to verify state proofs.
 
 ### Defining a light client
 A light client in this protocol is required to have a Client definition,  Client state, Consensus state, and Client message.
@@ -68,7 +66,7 @@ The client handlers process the different client message types
 - Update Client - Handles `MsgUpdateClient`
 - Create Client - Handles `MsgCreateClient`
 - Upgrade Client - Handles `MsgUpgradeClient`
-- Misbehaviours - Handles `MsgSubmitMisbehaviour`
+- Misbehaviour - Handles `MsgSubmitMisbehaviour`
 
 **Events**
 The events emitted by the client handlers are
@@ -137,19 +135,19 @@ The events emitted by the channel handlers
 
 ### ICS26 Routing
 
-The routing module defines the entry point into the framework through the [`deliver`](/code/centauri/ibc/modules/src/core/ics26_routing/handler.rs#L40) function .
+The routing module defines the entry point into the framework through the [`deliver`](/code/centauri/ibc/modules/src/core/ics26_routing/handler.rs#L40) function.
 
 **Routing Context**
 The `Router` trait defines methods that determine how packets are routed to their destination modules in the host
 **ICS26 Context**
 This trait defines how the router is accessed by the Context object
 **Module Callbacks**
-Ibc applications are sub protocols built on top of the core ibc protocol,  
-ibc applications are required to implement the `Module` trait, so they can execute callbacks for processed messages.  
+IBC applications are sub protocols built on top of the core IBC protocol,  
+IBC applications are required to implement the `Module` trait, so they can execute callbacks for processed messages.  
 The callbacks are the means through which the router is able to deliver packets to the right module.
 
 **Message Handling**
-`deliver` acts as the topmost message handler, it accepts an ibc message of type protobuf `Any` alongside a mutable  
+`deliver` acts as the topmost message handler, it accepts an IBC message of type protobuf `Any` alongside a mutable  
 reference to the Context.  
 The message is decoded and dispatched to the appropriate message handler using a [`dispatch`](/code/centauri/ibc/modules/src/core/ics26_routing/handler.rs#L70) function.  
 Message handlers take a read only context alongside the message as parameters,  
@@ -160,25 +158,25 @@ Channel message handlers return a [`ChannelResult`](/code/centauri/ibc/modules/s
 Packet message handlers return a [`PacketResult`](/code/centauri/ibc/modules/src/core/ics04_channel/packet.rs#L35).  
 
 The dispatcher takes the result returned from the handler and writes the state changes  
-contained within to storage using its mutable access to the Context.
+contained within it to storage using its mutable access to the Context.
 
 ### Applications
 
-Ibc applications are sub protocols built on top of ibc core.
+IBC applications are sub protocols built on top of IBC core.
 These applications essentially define how packet data is serialized, deserialized and handled.
 
 #### ICS020 Fungible Token transfer
 
-ICS20 is the protocol that defines a correct way of transferring fungible tokens across chains via ibc.  
+ICS20 is the protocol that defines a correct way of transferring fungible tokens across chains via IBC.  
 It specifies the data serialization and deserialization standard, the token denomination standard  
 and all the logic required to maintain correctness across multiple chains.
 
 **Denominations**
 Tokens transferred across chains are given a denomination that combines the port  
-and channel id along with the token's base denomination into the ibc denomination for that token.  
+and channel id along with the token's base denomination into the IBC denomination for that token.  
 This denomination format makes it possible for the token to be traced back to its source even when it has hopped through multiple chains.  
 
-This module defines the ICS20 protocol, with a couple traits `ICS20Reader`, `ICS20Keeper` and `BankKeepr` trait.  
+This module defines the ICS20 protocol, with a couple traits `ICS20Reader`, `ICS20Keeper` and `BankKeeper` trait.  
 These traits define the methods that are required to comply with ICS20, The module callbacks for ICS20 are also defined [`here`](/code/centauri/ibc/modules/src/applications/transfer/context.rs).
 
 

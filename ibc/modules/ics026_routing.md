@@ -10,7 +10,7 @@ As per previous context traits, the `Ics26Context` trait should be implemented f
 
 It is recommended that the router use statically defined port and module Ids.  
 
-**Implementing the router**
+**A snippet showing an example of how the router would be implemented**
 ```rust
     pub struct Context {
         router: IbcRouter,

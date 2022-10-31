@@ -9,14 +9,14 @@ mint tokens with arbitrary denominations.
 
 Denominations, also called denoms for short are a way to represent a unique cross chain token, to allow tracking of a token's flow across multiple chains.   
 denoms are created by appending the destination channel and port to the base token denomination. Say a token with a base denomination of `Mars`  
-is transferred from chain A on channelA, port transfer to channelB on chain B, port transfer, the token denomination  
+is transferred from chain A on `channelA`, port `transfer` to `channelB` on chain B, port `transfer`, the token denomination  
 on receipt at chain b becomes `channelB/transfer/Mars`.  
 
 ### Packet Data
 
 Ics20 has a standard format for packet data, ics20 data must be serialized to json before sending.  
 The standard format for a sample json serialized ics20 data is as shown below  
-`sender` and `receiver` strings should be any format that can be deserialized by the destination chain
+`receiver` should be any format that can be deserialized into an AccountID by the destination chain
 ```json
     {
         "denom": "channelB/transfer/Mars",
@@ -58,7 +58,7 @@ However, the caller should take care to revert all changes made by this call in 
 
 **Implementing ICS20 as an on-chain module**
 ```rust
-// Context should have been defined at this point
+// Context should have been defined prior to this
 
 impl Ics20Reader for Context {
     type AccountId = AccountId;

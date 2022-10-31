@@ -6,8 +6,7 @@ Channels are built on top of open connections.
 ### Channel Context
 
 The channel context encapsulates all the storage requirements for channels in the context object.    
-implement the [`ChannelReader`](/code/centauri/ibc/modules/src/core/ics04_channel/context.rs#L26) and  
-[`ChannelKeeper`](/code/centauri/ibc/modules/src/core/ics04_channel/context.rs#L107) for the context object
+implement the [`ChannelReader`](/code/centauri/ibc/modules/src/core/ics04_channel/context.rs#L26) and [`ChannelKeeper`](/code/centauri/ibc/modules/src/core/ics04_channel/context.rs#L107) for the context object
 
 ```text
     impl ChannelReader for Context { ... }
@@ -22,7 +21,7 @@ There are four messages that describe the channel open handshake process and two
 **MsgChannelOpenInit**
 
 This message is submitted to start the channel handshake process, there's nothing to prove at this point, so it requires no proof.  
-This message contains the channel_end port_id and signer.
+This message contains the proposed channel_end, port_id and signer.
 
 ```rust
     pub struct MsgChannelOpenInit {
@@ -38,8 +37,7 @@ The `OpenInitChannel` event is emitted on successful processing of the event.
 **MsgChannelOpenTry**
 
 This message is submitted to a chain after `MsgChannelOpenInit` has been executed on its counterparty, this message  
-requires a proof that indicates that the channel was  
-initialized on the counterparty and committed to it's state trie.
+requires a proof that indicates that the channel was initialized on the counterparty and committed to it's state trie.
 
 ```rust
     pub struct MsgChannelOpenTry {
@@ -57,8 +55,7 @@ The `OpenTryChannel` event is emitted on successful processing of the event.
 **MsgChannelOpenAck**
 
 This message is submitted to a chain after `MsgChannelOpenTry` has been executed on its counterparty, this message  
-requires a proof that indicates that the channel was  
-initialized with a state of `TryOpen` on the counterparty and committed to it's state trie
+requires a proof that indicates that the channel was initialized with a state of `TryOpen` on the counterparty and committed to it's state trie
 
 ```rust
     pub struct MsgChannelOpenAck {
@@ -125,8 +122,8 @@ The channel becomes closed if this message is processed successfully.
 ### Packets
 
 Packets are means through which protocols built on top of core ibc exchange data, ibc application protocols determine  
-how this data is serialized and deserialized. 
-This packet data remains opaque to the core ibc protocol which facilitates its transmission across connections through channels.
+how this data is serialized and deserialized.  
+The packet data remains opaque to the core ibc protocol which facilitates its transmission across connections through channels.
 
 **SendPacket**
 

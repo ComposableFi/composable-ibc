@@ -6,15 +6,15 @@ ICS02 defines the light client specification for the protocol.
 
 To define a light client, there are a few things that must be available  
 - Proto file specifying client state, consensus state, header, misbehaviour and client message
-- Compile the proto files to rust
-- Define the rust equivalents of the structures in the compiled proto files
-- Define conversions between equivalent structs in compiled proto and manually defined
-- Implement `Protobuf` trait for these structs
+- Compile the proto files to rust, we would call these compiled types `Raw` types
+- Define the rust equivalents of these Raw types in a manner that they can be easily operated on.
+- Define conversions between the Raw types and their equivalents
+- Implement `Protobuf` trait for these manually defined types
 - Implement the `ClientState`, `ConsensusState` and `ClientMessage` for the appropriate structs
 - Implement `ClientDef`
 
 
-**Sample Proto file**
+**Sample Proto file for an arbitrary light client**
 ```proto
     syntax = "proto3";  
 
@@ -23,55 +23,40 @@ To define a light client, there are a few things that must be available
     import "google/protobuf/timestamp.proto";
 
     message Authority {
-        // ed25519 public key of the authority
         bytes public_key = 1;
-        // authority weight
         uint64 weight = 2;
     }
 
     // ClientState
     message ClientState {
-        // Latest chain height
         uint32 latest_height = 1;
 
-        // current authority set id
         uint64 current_set_id = 2;
 
-        // Block height when the client was frozen due to a misbehaviour
         optional uint64 frozen_height = 3;
 
-        // Light Client Protocol Revision number
         uint32 revision_number = 4;
 
-        // Current authorities
         repeated Authority current_authorities = 5;
     }
 
 
     // ConsensusState.
     message ConsensusState {
-        // timestamp that corresponds to the block height in which the ConsensusState
-        // was stored.
         google.protobuf.Timestamp timestamp = 1;
-        // packet commitment root
         bytes root = 2;
     }
 
     //  misbehaviour type
     message Misbehaviour {
-        // The set_id of the equivocations
         uint64 set_id = 1;
-        // SCALE-encoded array of equivocations, ideally each belonging to a distinct authority.
         bytes equivocations = 2;
     }
     
     //  Light client header
     message Header {
-        // Consensus proof
         bytes validity_proof = 1;
-        // Signatures of authorities
         repeated bytes signatures = 2;
-        // Encoded signed header
         bytes signed_header = 3;
     }
 
@@ -89,6 +74,7 @@ To define a light client, there are a few things that must be available
 - Define conversions between these structs and the compiled proto equivalents
 
 ```rust
+    // Sample of equivalents rust structs representing the proto definitions
     pub struct Authority {
         pub public_key: Ed25519Public,
         pub weight: u64
@@ -133,6 +119,7 @@ To define a light client, there are a few things that must be available
     
     impl ClientMessageT for ClientMessage { ... }
     
+    // Implementing conversions between Raw types and manually defined types
     impl TryFrom<RawClientState> for ClientState { ... }
     
     impl TryFrom<RawConsensusState> for ConsensusState { ... }
@@ -149,7 +136,7 @@ To define a light client, there are a few things that must be available
     
     impl From<ClientMessage> for RawClientMessage { ... }
     
-    // Implement protobuf for the structs 
+    // Implement protobuf for the manually defined structs 
     
     impl Protobuf<RawClientState> for ClientState {}
 
@@ -165,7 +152,7 @@ To define a light client, there are a few things that must be available
 ```rust
     pub struct TestLightClient;
     
-    impl ClientDef for LightClient {
+    impl ClientDef for TestLightClient {
         type ClientState = ClientState;
         type ConsensusState = ConsensusState;
         type ClientMessage = ClientMessage;
@@ -176,7 +163,7 @@ To define a light client, there are a few things that must be available
 
 ### Client Context
 
-The client context is a trait encapsulates all the methods that allow access client and consensus state in the handlers.
+The client context traits encapsulate all the methods that allow access to client and consensus state in the handlers.
 To satisfy the client context, the Context object must implement the traits in the example code below
 ```text
     impl ClientReader for Context { ... }
@@ -185,9 +172,9 @@ To satisfy the client context, the Context object must implement the traits in t
 ```
 
 ### Messages and Events
-When client messages are successfully handled, events are emitted
+When client messages are successfully handled, the following events are emitted
 - `CreateClient` -  A `MsgCreateClient` was handled without any errors and a light client has been created.
-- `UpdateClient` - A `MsgUpdateClient` was handled without any errors and the new Client and Consensus states have been extracted and stored 
+- `UpdateClient` - A `MsgUpdateClient` was handled without any errors and the new Client and Consensus states have been extracted and stored. 
 - `UpgradeClient` - A `MsgUpgradeClient` has been handled without any errors, the  client upgrade proof has been verified correctly and the Client and Consensus states have been updated
 - `ClientMisbehaviour` -  A `MsgSubmitMisbehaviour` has been processed and the client has been frozen.
 
@@ -253,46 +240,7 @@ pub enum AnyClientMessage {
 	Tendermint(ics07_tendermint::client_message::ClientMessage),
 }
 
-impl Protobuf<Any> for AnyClientMessage {}
-
-impl TryFrom<Any> for AnyClientMessage {
-	type Error = ics02_client::error::Error;
-
-	fn try_from(value: Any) -> Result<Self, Self::Error> {
-		match value.type_url.as_str() {
-			GRANDPA_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Grandpa(
-				ics10_grandpa::client_message::ClientMessage::decode_vec(&value.value)
-					.map_err(ics02_client::error::Error::decode_raw_header)?,
-			)),
-			BEEFY_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Beefy(
-				ics11_beefy::client_message::ClientMessage::decode_vec(&value.value)
-					.map_err(ics02_client::error::Error::decode_raw_header)?,
-			)),
-			TENDERMINT_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Tendermint(
-				ics07_tendermint::client_message::ClientMessage::decode_vec(&value.value)
-					.map_err(ics02_client::error::Error::decode_raw_header)?,
-			)),
-			_ => Err(ics02_client::error::Error::unknown_consensus_state_type(value.type_url)),
-		}
-	}
-}
-
-impl From<AnyClientMessage> for Any {
-	fn from(client_msg: AnyClientMessage) -> Self {
-		match client_msg {
-			AnyClientMessage::Grandpa(msg) => Any {
-				type_url: GRANDPA_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec(),
-			},
-			AnyClientMessage::Beefy(msg) =>
-				Any { type_url: BEEFY_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() },
-			AnyClientMessage::Tendermint(msg) => Any {
-				type_url: TENDERMINT_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec(),
-			}
-		}
-	}
-}
+// Next step is to implement Protobuf for AnyClientMessage
 
 // Then we can go ahead and use them like this
 
@@ -302,7 +250,6 @@ impl<T: Config> ClientTypes for Context<T> {
     type AnyConsensusState = AnyConsensusState;
     type ClientDef = AnyClient;
 }
-
 ```
 
 ### Host Consensus state verification
@@ -311,12 +258,15 @@ It is a requirement of the ibc protocol for the host machine to verify its own c
 This becomes an issue when the host machine cannot access its own consensus state.  
 For consensus verification to be possible in such host machine, a couple apis must be available
 - The host must provide access to a mapping of block numbers to block hash for at least the 256 most recent blocks.
-- The Consensus Proof should be encoded such that apart from the proof, it contains the block header that was used to generate the consensus state being verified, alongside the timestamp with a proof.
+- The Consensus Proof should be encoded such that apart from the proof, it contains the block header that was used to  
+  generate the consensus state being verified, alongside the timestamp with a proof.
 
 With these criteria met it becomes trivial for the host machine to verify its own consensus state.  
-The way that is done involves, getting the hash of the header decoded from the proof and verifying that the host has such a blockhash stored in its map of block numbers to block hashes.  
+This involves getting the hash of the header decoded from the proof and verifying that the host has such  
+a blockhash stored in its map of block numbers to block hashes.  
 Also the timestamp provided  with its proof should be verified with information present in the block header.  
-After both checks are done, the host can freely reconstruct the Consensus state from the block header and return it as the result of the function call.  
+After both checks are done, the host can freely reconstruct the Consensus state from the block header and return it as  
+the result of the function call.  
 The following pseudocode describes how this could be achieved
 
 ```rust
@@ -338,7 +288,7 @@ The following pseudocode describes how this could be achieved
 			    ))
 		    })?;
 		    let header_hash = some_host_function_to_get_block_hash(block_number); 
-		    // we don't even have the hash for this height (anymore?)
+		    // we don't have the hash for this height (anymore?)
 		    if header_hash == Default::default() {
 			    Err(ICS02Error::implementation_specific(format!(
 				    "[host_consensus_state]: Unknown height {}",

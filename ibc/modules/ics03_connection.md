@@ -42,8 +42,8 @@ The `OpenInitConnection` event is emitted on successful processing of the event.
 This message is submitted to a chain after `MsgConnectionOpenInit` has been executed on its counterparty, this message  
 requires a connection proof that indicates that the connection was  
 initialized on the counterparty and committed to it's state trie, it also requires a consensus proof so the host chain  
-can verify that the counterparty has a valid consensus state   
-for its light client committed to the counterparty state trie at the time of the handshake.
+can verify that the counterparty has a valid consensus state for its light client committed to the counterparty state trie  
+at the time of the handshake.
 
 ```rust
     pub struct MsgConnectionOpenTry<C: ClientTypes + Clone + Debug + PartialEq + Eq> {
@@ -66,8 +66,8 @@ The `OpenTryConnection` event is emitted on successful processing of the event.
 This message is submitted to a chain after `MsgConnectionOpenTry` has been executed on its counterparty, this message  
 requires a connection proof that indicates that the connection was  
 initialized with a state of `TryOpen` on the counterparty and committed to it's state trie, it also requires a consensus  
-proof so the host chain can verify that the counterparty has a valid consensus state   
-for its light client committed to the counterparty state trie at the time of the handshake.
+proof so the host chain can verify that the counterparty has a valid consensus state for its light client committed to the  
+counterparty state trie at the time of the handshake.
 
 ```rust
     pub struct MsgConnectionOpenAck<C: ClientTypes> {
