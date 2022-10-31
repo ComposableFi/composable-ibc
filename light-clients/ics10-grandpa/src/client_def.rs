@@ -20,6 +20,7 @@ use ibc::core::ics02_client::{
 
 use crate::client_message::{ClientMessage, RelayChainHeader};
 use alloc::{format, string::ToString, vec, vec::Vec};
+use anyhow::anyhow;
 use codec::Decode;
 use core::marker::PhantomData;
 use finality_grandpa::Chain;
@@ -103,50 +104,49 @@ where
 					)
 				}
 
-				let first_header = first_proof.unknown_headers.first().ok_or_else(|| {
-					Error::Custom("No headers in first finality proof".to_string())
-				})?;
-				let second_header = second_proof.unknown_headers.first().ok_or_else(|| {
-					Error::Custom("No headers in second finality proof".to_string())
-				})?;
-
-				let first_last_hash = first_proof
+				let first_headers = AncestryChain::<H>::new(&first_proof.unknown_headers);
+				let first_target = first_proof
 					.unknown_headers
-					.last()
-					.expect("first finality proof has at least one header; qed")
-					.hash();
-				let second_last_hash = second_proof
-					.unknown_headers
-					.last()
-					.expect("second finality proof has at least one header; qed")
-					.hash();
+					.iter()
+					.max_by_key(|h| *h.number())
+					.ok_or_else(|| anyhow!("Unknown headers can't be empty!"))?;
 
-				if first_last_hash != first_proof.block || second_last_hash != second_proof.block {
+				let second_headers = AncestryChain::<H>::new(&second_proof.unknown_headers);
+				let second_target = second_proof
+					.unknown_headers
+					.iter()
+					.max_by_key(|h| *h.number())
+					.ok_or_else(|| anyhow!("Unknown headers can't be empty!"))?;
+
+				if first_target.hash() != first_proof.block ||
+					second_target.hash() != second_proof.block
+				{
 					return Err(Error::Custom(
 						"Misbehaviour proofs are not for the same chain".into(),
 					)
 					.into())
 				}
 
-				let check_canonicity = |chain: &[RelayChainHeader]| {
-					if chain.len() < 2 {
-						return Ok(())
-					}
-					let mut base = chain[0].hash();
-					for header in &chain[1..] {
-						if header.parent_hash != base {
-							return Err(Error::Custom("Chain is not canonical".to_string()))
-						}
-						base = header.hash();
-					}
-					Ok(())
-				};
+				let first_base = first_proof
+					.unknown_headers
+					.iter()
+					.min_by_key(|h| *h.number())
+					.ok_or_else(|| anyhow!("Unknown headers can't be empty!"))?;
+				first_headers
+					.ancestry(first_base, first_target.hash())
+					.map_err(|_| anyhow!("Invalid ancestry!"))?;
 
-				check_canonicity(&first_proof.unknown_headers)?;
-				check_canonicity(&second_proof.unknown_headers)?;
+				let second_base = second_proof
+					.unknown_headers
+					.iter()
+					.min_by_key(|h| *h.number())
+					.ok_or_else(|| anyhow!("Unknown headers can't be empty!"))?;
+				second_headers
+					.ancestry(second_base, second_target.hash())
+					.map_err(|_| anyhow!("Invalid ancestry!"))?;
 
-				let first_parent = first_header.parent_hash;
-				let second_parent = second_header.parent_hash;
+				let first_parent = first_base.parent_hash;
+				let second_parent = second_base.parent_hash;
 
 				// TODO: should we handle genesis block here somehow?
 				let exists_first = H::contains_relay_header_hash(first_parent);
@@ -212,22 +212,18 @@ where
 			AncestryChain::<RelayChainHeader>::new(&header.finality_proof.unknown_headers);
 		let mut consensus_states = vec![];
 
-		let from = header
-			.finality_proof
-			.unknown_headers
-			.iter()
-			.min_by_key(|h| *h.number())
-			.ok_or_else(|| Error::Custom(format!("Unknown headers can't be empty!")))?;
+		let from = client_state.latest_relay_hash;
 
-		let mut finalized = ancestry
-			.ancestry(from.hash(), header.finality_proof.block)
-			.map_err(|_| Error::Custom(format!("Invalid ancestry!")))?;
-		finalized.sort();
+		let finalized = ancestry
+			.ancestry(from, header.finality_proof.block)
+			.map_err(|_| Error::Custom(format!("[update_state] Invalid ancestry!")))?;
+		let mut finalized_sorted = finalized.clone();
+		finalized_sorted.sort();
 
 		for (relay_hash, parachain_header_proof) in header.parachain_headers {
 			// we really shouldn't set consensus states for parachain headers not in the finalized
 			// chain.
-			if finalized.binary_search(&relay_hash).is_err() {
+			if finalized_sorted.binary_search(&relay_hash).is_err() {
 				continue
 			}
 
@@ -283,6 +279,8 @@ where
 			client_state.current_set_id += 1;
 			client_state.current_authorities = scheduled_change.next_authorities;
 		}
+
+		H::insert_relay_header_hashes(&finalized);
 
 		Ok((client_state, ConsensusUpdateResult::Batch(consensus_states)))
 	}

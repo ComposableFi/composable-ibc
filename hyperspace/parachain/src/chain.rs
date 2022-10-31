@@ -297,6 +297,7 @@ where
 				let encoded =
 					GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 						&*self.relay_ws_client,
+						// self.relay_ws_client.latest_finalized_block(),
 						base_block_number,
 					)
 					.await?
