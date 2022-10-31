@@ -49,7 +49,7 @@ pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
 	proof: ParachainHeadersWithFinalityProof<H>,
 ) -> Result<ClientState<H::Hash>, error::Error>
 where
-	H: Header<Hash = H256>,
+	H: Header<Hash = H256, Number = u32>,
 	H::Number: finality_grandpa::BlockNumberOps + Into<u32>,
 	Host: HostFunctions,
 	Host::BlakeTwo256: Hasher<Out = H256>,

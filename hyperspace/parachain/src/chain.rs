@@ -29,6 +29,7 @@ use primitives::{Chain, IbcProvider, MisbehaviourHandler};
 use super::{error::Error, signer::ExtrinsicSigner, ParachainClient};
 use crate::{
 	parachain::{api, api::runtime_types::pallet_ibc::Any as RawAny, UncheckedExtrinsic},
+	utils::unsafe_cast_to_jsonrpsee_client,
 	FinalityProtocol,
 };
 use finality_grandpa_rpc::GrandpaApiClient;
@@ -43,6 +44,7 @@ use ics10_grandpa::client_message::{ClientMessage, Misbehaviour, RelayChainHeade
 use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::mock::LocalClientTypes;
 use sp_core::H256;
+use sp_runtime::traits::Saturating;
 use tokio::time::sleep;
 
 type GrandpaJustification = grandpa_light_client_primitives::justification::GrandpaJustification<
@@ -290,15 +292,24 @@ where
 	) -> Result<(), anyhow::Error> {
 		match client_message {
 			AnyClientMessage::Grandpa(ClientMessage::Header(header)) => {
-				// todo: verify block num. This block number may not exist on relaychain
-				// (see `verify_parachain_headers_with_grandpa_finality_proof` implementation)
-				let base_block_number =
-					header.finality_proof.unknown_headers[0].number.saturating_sub(1);
+				let target_block_number = header
+					.finality_proof
+					.unknown_headers
+					.iter()
+					.max_by_key(|h| h.number)
+					.expect("unknown_headers always contain at least one header; qed")
+					.number;
+				let finalized_block_number =
+					*self.relay_client.rpc().block(None).await?.unwrap().block.header.number();
+				// We require a proof for the block number that may not exist on the relay chain.
+				// So, if it's greater than the latest block block the relay chain, we use the
+				// latter.
 				let encoded =
 					GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 						&*self.relay_ws_client,
-						// self.relay_ws_client.latest_finalized_block(),
-						base_block_number,
+						target_block_number
+							.min(u32::from(finalized_block_number))
+							.saturating_sub(1),
 					)
 					.await?
 					.ok_or_else(|| {

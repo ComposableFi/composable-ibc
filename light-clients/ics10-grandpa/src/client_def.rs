@@ -104,19 +104,19 @@ where
 					)
 				}
 
-				let first_headers = AncestryChain::<H>::new(&first_proof.unknown_headers);
-				let first_target = first_proof
-					.unknown_headers
-					.iter()
-					.max_by_key(|h| *h.number())
-					.ok_or_else(|| anyhow!("Unknown headers can't be empty!"))?;
+				let first_headers =
+					AncestryChain::<RelayChainHeader>::new(&first_proof.unknown_headers);
+				let first_target =
+					first_proof.unknown_headers.iter().max_by_key(|h| *h.number()).ok_or_else(
+						|| Error::Custom("Unknown headers can't be empty!".to_string()),
+					)?;
 
-				let second_headers = AncestryChain::<H>::new(&second_proof.unknown_headers);
-				let second_target = second_proof
-					.unknown_headers
-					.iter()
-					.max_by_key(|h| *h.number())
-					.ok_or_else(|| anyhow!("Unknown headers can't be empty!"))?;
+				let second_headers =
+					AncestryChain::<RelayChainHeader>::new(&second_proof.unknown_headers);
+				let second_target =
+					second_proof.unknown_headers.iter().max_by_key(|h| *h.number()).ok_or_else(
+						|| Error::Custom("Unknown headers can't be empty!".to_string()),
+					)?;
 
 				if first_target.hash() != first_proof.block ||
 					second_target.hash() != second_proof.block
@@ -127,23 +127,21 @@ where
 					.into())
 				}
 
-				let first_base = first_proof
-					.unknown_headers
-					.iter()
-					.min_by_key(|h| *h.number())
-					.ok_or_else(|| anyhow!("Unknown headers can't be empty!"))?;
+				let first_base =
+					first_proof.unknown_headers.iter().min_by_key(|h| *h.number()).ok_or_else(
+						|| Error::Custom("Unknown headers can't be empty!".to_string()),
+					)?;
 				first_headers
-					.ancestry(first_base, first_target.hash())
-					.map_err(|_| anyhow!("Invalid ancestry!"))?;
+					.ancestry(first_base.hash(), first_target.hash())
+					.map_err(|_| Error::Custom("Invalid ancestry!".to_string()))?;
 
-				let second_base = second_proof
-					.unknown_headers
-					.iter()
-					.min_by_key(|h| *h.number())
-					.ok_or_else(|| anyhow!("Unknown headers can't be empty!"))?;
+				let second_base =
+					second_proof.unknown_headers.iter().min_by_key(|h| *h.number()).ok_or_else(
+						|| Error::Custom("Unknown headers can't be empty!".to_string()),
+					)?;
 				second_headers
-					.ancestry(second_base, second_target.hash())
-					.map_err(|_| anyhow!("Invalid ancestry!"))?;
+					.ancestry(second_base.hash(), second_target.hash())
+					.map_err(|_| Error::Custom("Invalid ancestry!".to_string()))?;
 
 				let first_parent = first_base.parent_hash;
 				let second_parent = second_base.parent_hash;
