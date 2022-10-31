@@ -84,8 +84,8 @@ impl tendermint_light_client_verifier::host_functions::HostFunctionsProvider
 
 impl ics07_tendermint::HostFunctionsProvider for HostFunctionsManager {}
 
-pub struct GrandpaHederHashesStorageInstance;
-impl StorageInstance for GrandpaHederHashesStorageInstance {
+pub struct GrandpaHeaderHashesStorageInstance;
+impl StorageInstance for GrandpaHeaderHashesStorageInstance {
 	fn pallet_prefix() -> &'static str {
 		"ibc.lightclients.grandpa"
 	}
@@ -93,7 +93,7 @@ impl StorageInstance for GrandpaHederHashesStorageInstance {
 	const STORAGE_PREFIX: &'static str = "HeaderHashes";
 }
 pub type GrandpaHeaderHashesStorage = StorageValue<
-	GrandpaHederHashesStorageInstance,
+	GrandpaHeaderHashesStorageInstance,
 	BoundedVec<H256, ConstU32<GRANDPA_BLOCK_HASHES_CACHE_SIZE>>,
 	ValueQuery,
 >;
