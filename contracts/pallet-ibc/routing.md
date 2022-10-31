@@ -13,6 +13,11 @@ This means that each ibc application must statically define a unique module id a
 - Add the callback weight handler to the [`weight router`](/code/parachain/frame/ibc/src/weight.rs#L150).
 - Add the module id to the `lookup_module_by_port` implementation.
 
+**Custom Router**   
+
+Pallet ibc provides a means to use a custom router defined as a Runtime Config parameter. This sub-router implements the `ModuleRouter` trait and  
+provides a way to add IBC support for new modules without modifying the static router in the pallet.
+
 **Ibc Handler**
 
 This pallet provides a public interface behind the [`IbcHandler`] trait, that allows modules to access the protocol.  
