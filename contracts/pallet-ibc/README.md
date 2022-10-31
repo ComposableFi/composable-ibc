@@ -2,9 +2,9 @@
 
 Pallet IBC is a thin wrapper around [`ibc-rs`](/ibc) that satisfies the runtime requirements for communicating over the IBC protocol from a substrate runtime.
 
-- [`Config`](/contracts/pallet-ibc/src/lib.rs#L204)
-- [`Call`](/contracts/pallet-ibc/src/lib.rs#L533)
-- [`Pallet`](/contracts/pallet-ibc/src/lib.rs#L268)
+- [`Config`](/contracts/pallet-ibc/src/lib.rs#L207)
+- [`Call`](/contracts/pallet-ibc/src/lib.rs#L549)
+- [`Pallet`](/contracts/pallet-ibc/src/lib.rs#L258)
 
 ### Dispatchable functions
 
