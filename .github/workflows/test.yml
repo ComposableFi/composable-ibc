@@ -4,6 +4,10 @@ on:
   pull_request:
     branches:
       - '*'
+  push:
+    branches:
+      - master
+
 
 jobs:
   linters:
@@ -28,12 +32,26 @@ jobs:
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
 
+      - name: Run local parachain cluster
+        run: |
+          ./scripts/build-parachain-node-docker.sh
+          docker-compose -f scripts/parachain-launch up -d --build
+
+      - name: Check that subxt-generated is up to date
+        run: |
+          ./scripts/generate-subxt.sh
+          git status --porcelain
+
       - name: Run all unit tests
         run: |
-          SKIP_WASM_BUILD=1 cargo +nightly nextest run --workspace \
-          --exclude ibc-derive \
-          --exclude ics10-grandpa \
-          --exclude ics11-beefy \
-          --exclude hyperspace-testsuite \
-          --exclude grandpa-light-client-verifier \
-          --exclude beefy-light-client \
+          SKIP_WASM_BUILD=1 cargo +nightly nextest run --locked --release --workspace \
+          --exclude ibc-derive \ # doesn't play nice with nextest for some reason
+          --exclude hyperspace-testsuite \ # we'll use vanilla cargo so we can run tests sequentially
+
+      - name: Run hyperspace integration tests
+        run: |
+          cargo +nightly test -p hyperspace-testsuite --locked --release
+
+      - name: Termintate local parachain cluster
+        run: |
+          docker-compose -f scripts/parachain-launch down -v
