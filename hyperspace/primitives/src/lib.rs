@@ -347,7 +347,7 @@ pub trait Chain: IbcProvider + KeyProvider + Send + Sync {
 	/// Name of this chain, used in logs.
 	fn name(&self) -> &str;
 
-	/// Should return a nuerical value for the max weight of transactions allowed in a block.
+	/// Should return a numerical value for the max weight of transactions allowed in a block.
 	fn block_max_weight(&self) -> u64;
 
 	/// Should return an estimate of the weight of a batch of messages.
