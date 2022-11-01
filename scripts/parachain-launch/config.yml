@@ -11,7 +11,6 @@ relaychain:
     RUST_LOG: parachain::candidate-backing=trace
   flags: # additional CLI flags for all relaychain nodes
     - --rpc-methods=unsafe
-    - --rpc-cors=all
     - --beefy
     - --enable-offchain-indexing=true
   nodes: # nodes config

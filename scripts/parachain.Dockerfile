@@ -15,7 +15,7 @@ COPY . .
 
 RUN cargo build --release -p parachain-node
 
-FROM ubuntu:20.04
+FROM docker.io/library/ubuntu:20.04
 WORKDIR /node
 
 # Copy the node binary.
