@@ -59,13 +59,13 @@ parachains:
   # Config for second parachain
   - image: parachain-node:latest
     chain: # this could be a string like `dev` or a config object
-      id: 2001 # override parachain id
       base: dev-2001 # the chain to use
       collators: # override collators
         - alice # this imply //Alice
         - bob
         - charlie
       sudo: alice # override sudo key to //Alice
+    id: 2001 # override parachain id
     parachain: true # this is parachain, not parathread
     flags: # CLI flags for this parachain nodes
       - --rpc-methods=unsafe
