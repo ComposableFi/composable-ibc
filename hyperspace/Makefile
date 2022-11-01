@@ -26,7 +26,6 @@ tests-hyperspace:
 	make --ignore-errors stop-setup-hyperspace
 	sleep 3
 	make run-setup-hyperspace
-	sleep 60 # QUESTION: is there a better way to wait for the POLKADOT SUCCESS LAUNCH? 
-	# I tried with docker logs -f ... | grep -xq '...' but did not work
+	./scripts/wait_for_polkadot_launch_container.sh
 	cargo t -p $(module-hyperspace) --all-features
 	docker stop composable_centauri
