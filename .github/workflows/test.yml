@@ -15,12 +15,25 @@ jobs:
       group: tests-${{ github.ref }}
       cancel-in-progress: true
     container:
-      image: paritytech/ci-linux:production
+      image: ubuntu:jammy
     runs-on:
       - self-hosted
       - sre
     steps:
       - uses: actions/checkout@v2
+
+      - name: Setup deps
+        run: |
+          apt update -y
+          apt install -y curl
+
+          curl -L "https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-$(uname -s)-$(uname -m)" -o ./docker-compose
+          chmod +x ./docker-compose
+
+          # Get Rust
+          curl https://sh.rustup.rs -sSf | bash -s -- -y
+
+          echo 'source $HOME/.cargo/env' >> $HOME/.bashrc
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
