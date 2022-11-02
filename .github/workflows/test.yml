@@ -7,7 +7,6 @@ on:
   push:
     branches:
       - master
-      - seun/integration-test # TODO: rm
 
 jobs:
   linters:
@@ -32,10 +31,15 @@ jobs:
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
 
+      - name: Install docker-compose
+        run: |
+          curl -L "https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-$(uname -s)-$(uname -m)" -o ./docker-compose
+          chmod +x ./docker-compose
+
       - name: Run local parachain cluster
         run: |
           # DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest
-          docker-compose -f scripts/parachain-launch/docker-compose.yml up -d --build
+          ./docker-compose -f scripts/parachain-launch/docker-compose.yml up -d --build
           ./scripts/wait_for_polkadot_launch.sh
 
       - name: Check that subxt-generated is up to date
@@ -55,4 +59,4 @@ jobs:
 
       - name: Termintate local parachain cluster
         run: |
-          docker-compose -f scripts/parachain-launch/docker-compose.yml down -v
+          ./docker-compose -f scripts/parachain-launch/docker-compose.yml down -v
