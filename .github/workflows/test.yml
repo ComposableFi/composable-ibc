@@ -15,7 +15,7 @@ jobs:
       group: tests-${{ github.ref }}
       cancel-in-progress: true
     container:
-      image: ubuntu:jammy
+      image: paritytech/ci-linux:production
     runs-on:
       - self-hosted
       - sre
