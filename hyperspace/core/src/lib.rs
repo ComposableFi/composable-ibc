@@ -53,54 +53,30 @@ where
 	B: Chain,
 	B::Error: From<A::Error>,
 {
-	// TODO: use block subscription to retrieve events and extrinsics simultaneously
-	let (mut chain_a_client_updates, mut chain_b_client_updates) =
-		(chain_a.ibc_events().await, chain_b.ibc_events().await);
-
-	let filter_events = |events: Vec<Option<IbcEvent>>, counterparty_client_id: ClientId| {
-		events.into_iter().enumerate().filter(move |(_, event)| match event {
-			Some(IbcEvent::UpdateClient(client_update)) =>
-				*client_update.client_id() == counterparty_client_id,
+	// we only care about events where the counterparty light client is updated.
+	let (mut chain_a_client_updates, mut chain_b_client_updates) = (
+		chain_a.ibc_events().await.filter(|ev| match ev {
+			IbcEvent::UpdateClient(update) => chain_b.client_id() == update.client_id(),
 			_ => false,
-		})
-	};
+		}),
+		chain_b.ibc_events().await.filter(|ev| match ev {
+			IbcEvent::UpdateClient(update) => chain_a.client_id() == update.client_id(),
+			_ => false,
+		}),
+	);
 
 	// loop forever
 	loop {
 		tokio::select! {
 			// new finality event from chain A
-			result = chain_a_client_updates.next() => {
-				let (transaction_id, events) = match result {
-					// stream closed
-					None => break,
-					Some(val) => val,
-				};
-
-				for (i, _event) in filter_events(events, chain_b.client_id()) {
-					let message = chain_a.query_client_message(
-						transaction_id.block_hash,
-						transaction_id.tx_index as usize,
-						i,
-					).await?;
-					chain_b.check_for_misbehaviour(&chain_a, message).await?;
-				}
+			update = chain_a_client_updates.next() => {
+				let message = chain_a.query_client_message(update).await?;
+				chain_b.check_for_misbehaviour(&chain_a, message).await?;
 			}
 			// new finality event from chain B
-			result = chain_b_client_updates.next() => {
-				let (transaction_id, events) = match result {
-					// stream closed
-					None => break,
-					Some(val) => val,
-				};
-
-				for (i, _event) in filter_events(events, chain_a.client_id()) {
-					let message = chain_b.query_client_message(
-						transaction_id.block_hash,
-						transaction_id.tx_index as usize,
-						i,
-					).await?;
-					chain_a.check_for_misbehaviour(&chain_a, message).await?;
-				}
+			update = chain_b_client_updates.next() => {
+				let message = chain_b.query_client_message(update).await?;
+				chain_a.check_for_misbehaviour(&chain_b, message).await?;
 			}
 		}
 	}

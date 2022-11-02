@@ -32,7 +32,10 @@ use crate::{
 use finality_grandpa_rpc::GrandpaApiClient;
 use ibc::{
 	core::{
-		ics02_client::msgs::{update_client::MsgUpdateAnyClient, ClientMsg},
+		ics02_client::{
+			events::UpdateClient,
+			msgs::{update_client::MsgUpdateAnyClient, ClientMsg},
+		},
 		ics26_routing::msgs::Ics26Envelope,
 	},
 	tx_msg::Msg,
@@ -198,63 +201,19 @@ where
 		Ok((ext_hash.into(), Some(block_hash.into())))
 	}
 
-	async fn query_client_message(
-		&self,
-		host_block_hash: [u8; 32],
-		transaction_index: usize,
-		event_index: usize,
-	) -> Result<AnyClientMessage, Error> {
+	async fn query_client_message(&self, update: UpdateClient) -> Result<AnyClientMessage, Error> {
 		use api::runtime_types::{
 			pallet_ibc::pallet::Call as IbcCall, parachain_runtime::Call as RuntimeCall,
 		};
 
-		let hash = H256(host_block_hash);
-		log::debug!("Querying extrinsic data at {:?} {}", hash, transaction_index);
+		let host_height = update.height();
+		let light_client_height = update.consensus_height();
 
-		let now = Instant::now();
-		// There is no way to query a specific extrinsic on substrate directly, so block
-		// query used instead.
-		let block = loop {
-			let maybe_block = self.para_client.rpc().block(Some(hash.into())).await?;
-			match maybe_block {
-				Some(block) => {
-					log::info!("block query took {}", now.elapsed().as_millis());
-					break block
-				},
-				None => {
-					if now.elapsed() > Duration::from_secs(20) {
-						return Err(Error::from("Timeout while waiting for block".to_owned()))
-					}
-					sleep(Duration::from_millis(100)).await;
-				},
-			}
-		};
-		let extrinsic_opaque =
-			block.block.extrinsics.get(transaction_index).expect("Extrinsic not found");
-
-		let unchecked_extrinsic = UncheckedExtrinsic::<T>::decode(&mut &*extrinsic_opaque.encode())
-			.map_err(|e| Error::from(format!("Extrinsic decode error: {}", e)))?;
-
-		match unchecked_extrinsic.function {
-			RuntimeCall::Ibc(IbcCall::deliver { messages }) => {
-				let message = messages.get(event_index).ok_or_else(|| {
-					Error::from(format!("Message index {} out of bounds", event_index))
-				})?;
-				let envelope = Ics26Envelope::<LocalClientTypes>::try_from(Any {
-					type_url: String::from_utf8(message.type_url.clone()).map_err(|_| {
-						Error::from("failed to create String from utf-8".to_string())
-					})?,
-					value: message.value.clone(),
-				});
-				match envelope {
-					Ok(Ics26Envelope::Ics2Msg(ClientMsg::UpdateClient(update_msg))) =>
-						return Ok(update_msg.client_message),
-					_ => (),
-				}
-			},
-			_ => (),
-		}
-		Err(Error::Custom("No ICS02 update message found".into()))
+		// todo:
+		// first query block events at host_height.
+		// next find the event that matches update
+		// get extrinsic that emitted event.
+		// profit.
 	}
 }
 

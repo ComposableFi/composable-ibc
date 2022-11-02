@@ -91,10 +91,8 @@ where
 			.await
 	}
 
-	async fn ibc_events(
-		&self,
-	) -> Pin<Box<dyn Stream<Item = (TransactionId, Vec<Option<IbcEvent>>)> + Send + 'static>> {
-		use futures::StreamExt;
+	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>> {
+		use futures::{stream, StreamExt};
 		use pallet_ibc::events::IbcEvent as RawIbcEvent;
 
 		let stream = self
@@ -112,40 +110,30 @@ where
 						return futures::future::ready(None)
 					},
 				};
-				let tx_index = match events.phase {
-					Phase::ApplyExtrinsic(index) => index,
-					phase => {
-						log::error!("Received IbcEvent with unexpected phase: {phase:?}");
-						return futures::future::ready(None)
-					},
-				};
 				let result = events
 					.event
 					.events
 					.into_iter()
-					.map(|ev| {
-						ev.ok()
-							.map(|ev| {
-								IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(ev)))
-									.map_err(|e| subxt::Error::Other(e.to_string()))
-							})
-							.transpose()
+					.filter_map(|ev| {
+						Some(
+							IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(ev)))
+								.map_err(|e| subxt::Error::Other(e.to_string())),
+						)
 					})
-					.collect::<Result<Vec<Option<_>>, _>>();
-				let tx_id = TransactionId { block_hash: H256::from(events.block_hash).0, tx_index };
+					.collect::<Result<Vec<_>, _>>();
+
 				let events = match result {
-					Ok(ev) => (tx_id, ev),
+					Ok(ev) => ev,
 					Err(err) => {
 						log::error!("Failed to decode event: {err:?}");
 						return futures::future::ready(None)
 					},
 				};
-				futures::future::ready(Some(events))
-			});
-
-		Box::pin(Box::new(stream))
+				futures::future::ready(Some(stream::iter(events)))
+			})
+			.flatten();
+		Box::pin(stream)
 	}
-
 	async fn query_client_consensus(
 		&self,
 		at: Height,

@@ -26,6 +26,7 @@ use ibc::{
 		ics02_client::{
 			client_consensus::ConsensusState as ConsensusStateT,
 			client_state::{ClientState as ClientStateT, ClientType},
+			events::UpdateClient,
 		},
 		ics04_channel::{
 			channel::{ChannelEnd, Order},
@@ -104,9 +105,7 @@ pub trait IbcProvider {
 		T: Chain;
 
 	/// Return a stream that yields when new [`IbcEvents`] are parsed from a finality notification
-	async fn ibc_events(
-		&self,
-	) -> Pin<Box<dyn Stream<Item = (TransactionId, Vec<Option<IbcEvent>>)> + Send + 'static>>;
+	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>>;
 
 	/// Query client consensus state with proof
 	/// return the consensus height for the client along with the response
@@ -385,16 +384,10 @@ pub trait Chain: IbcProvider + MisbehaviourHandler + KeyProvider + Send + Sync {
 		messages: Vec<Any>,
 	) -> Result<(sp_core::H256, Option<sp_core::H256>), Self::Error>;
 
-	/// Returns an [`AnyClientMessage`] that triggered an [`IbcEvent`] at index `event_index`
-	/// on this chain.
-	///
-	/// Parameters `host_block_hash` and `transaction_index` identify the transaction that triggered
-	/// the event.
+	/// Returns an [`AnyClientMessage`] for an [`UpdateClient`] event
 	async fn query_client_message(
 		&self,
-		host_block_hash: [u8; 32],
-		transaction_index: usize,
-		event_index: usize,
+		update: UpdateClient,
 	) -> Result<AnyClientMessage, Self::Error>;
 }
 
