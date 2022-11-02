@@ -21,7 +21,6 @@ use sp_state_machine::{prove_read_on_trie_backend, TrieBackend};
 use sp_trie::{generate_trie_proof, LayoutV0, MemoryDB, TrieDBMut, TrieMut};
 use std::{
 	collections::BTreeMap,
-	convert::identity,
 	time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tendermint_proto::Protobuf;
@@ -200,12 +199,10 @@ where
 	let client_a_clone = chain_a.clone();
 	let misbehavour_event_handle = tokio::task::spawn(async move {
 		let mut events = client_a_clone.ibc_events().await;
-		while let Some((_, events)) = events.next().await {
-			for event in events.into_iter().filter_map(identity) {
-				match event {
-					IbcEvent::ClientMisbehaviour { .. } => return,
-					_ => (),
-				}
+		while let Some(event) = events.next().await {
+			match event {
+				IbcEvent::ClientMisbehaviour { .. } => return,
+				_ => (),
 			}
 		}
 	});

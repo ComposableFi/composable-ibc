@@ -78,11 +78,6 @@ pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: String) -> Vec<u8> {
 	commitment_prefix
 }
 
-pub struct TransactionId {
-	pub block_hash: [u8; 32],
-	pub tx_index: u32,
-}
-
 /// Provides an interface for accessing new events and Ibc data on the chain which must be
 /// relayed to the counterparty chain.
 #[async_trait::async_trait]
@@ -105,7 +100,7 @@ pub trait IbcProvider {
 		T: Chain;
 
 	/// Return a stream that yields when new [`IbcEvents`] are parsed from a finality notification
-	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>>;
+	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>>;
 
 	/// Query client consensus state with proof
 	/// return the consensus height for the client along with the response

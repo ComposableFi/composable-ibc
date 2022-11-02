@@ -40,17 +40,14 @@ use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
 	HostConsensusProof,
 };
-use primitives::{Chain, IbcProvider, KeyProvider, TransactionId, UpdateType};
+use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
 use sp_core::H256;
 use sp_runtime::{
 	traits::{Header as HeaderT, IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr, time::Duration};
-use subxt::{
-	events::Phase,
-	tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip},
-};
+use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip};
 
 // Temp fix
 type AssetId = u128;
@@ -93,7 +90,7 @@ where
 			.await
 	}
 
-	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>> {
+	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
 		use futures::{stream, StreamExt};
 		use pallet_ibc::events::IbcEvent as RawIbcEvent;
 
@@ -118,8 +115,10 @@ where
 					.into_iter()
 					.filter_map(|ev| {
 						Some(
-							IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(ev)))
-								.map_err(|e| subxt::Error::Other(e.to_string())),
+							IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(
+								ev.ok()?,
+							)))
+							.map_err(|e| subxt::Error::Other(e.to_string())),
 						)
 					})
 					.collect::<Result<Vec<_>, _>>();

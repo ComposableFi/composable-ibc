@@ -35,9 +35,10 @@ use pallet_ibc::Timeout;
 use serde::Deserialize;
 use thiserror::Error;
 
+use ibc::core::ics02_client::events::UpdateClient;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use parachain::{config, ParachainClient};
-use primitives::{Chain, IbcProvider, KeyProvider, MisbehaviourHandler, TransactionId, UpdateType};
+use primitives::{Chain, IbcProvider, KeyProvider, MisbehaviourHandler, UpdateType};
 use sp_core::H256;
 use sp_runtime::generic::Era;
 use std::{pin::Pin, time::Duration};
@@ -144,9 +145,7 @@ impl IbcProvider for AnyChain {
 		}
 	}
 
-	async fn ibc_events(
-		&self,
-	) -> Pin<Box<dyn Stream<Item = (TransactionId, Vec<Option<IbcEvent>>)> + Send + 'static>> {
+	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
 		match self {
 			Self::Parachain(chain) => chain.ibc_events().await,
 			_ => unreachable!(),
@@ -597,15 +596,10 @@ impl Chain for AnyChain {
 
 	async fn query_client_message(
 		&self,
-		host_block_hash: [u8; 32],
-		transaction_index: usize,
-		event_index: usize,
+		update: UpdateClient,
 	) -> Result<AnyClientMessage, Self::Error> {
 		match self {
-			Self::Parachain(chain) => chain
-				.query_client_message(host_block_hash, transaction_index, event_index)
-				.await
-				.map_err(Into::into),
+			Self::Parachain(chain) => chain.query_client_message(update).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}

@@ -87,12 +87,7 @@ where
 		let future = chain_b
 			.ibc_events()
 			.await
-			.filter_map(|(_, evs)| {
-				future::ready(
-					evs.into_iter()
-						.find(|ev| matches!(ev, Some(IbcEvent::OpenConfirmConnection(_)))),
-				)
-			})
+			.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmConnection(_))))
 			.take(1)
 			.collect::<Vec<_>>();
 
@@ -104,8 +99,7 @@ where
 		.await;
 
 		let connection_id = match events.pop() {
-			Some(Some(IbcEvent::OpenConfirmConnection(conn))) =>
-				conn.connection_id().unwrap().clone(),
+			Some(IbcEvent::OpenConfirmConnection(conn)) => conn.connection_id().unwrap().clone(),
 			got => panic!("Last event should be OpenConfirmConnection: {got:?}"),
 		};
 
@@ -135,11 +129,7 @@ where
 	let future = chain_b
 		.ibc_events()
 		.await
-		.filter_map(|(_, evs)| {
-			future::ready(
-				evs.into_iter().find(|ev| matches!(ev, Some(IbcEvent::OpenConfirmChannel(_)))),
-			)
-		})
+		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmChannel(_))))
 		.take(1)
 		.collect::<Vec<_>>();
 
@@ -151,7 +141,7 @@ where
 	.await;
 
 	let (channel_id, chain_b_channel_id) = match events.pop() {
-		Some(Some(IbcEvent::OpenConfirmChannel(chan))) =>
+		Some(IbcEvent::OpenConfirmChannel(chan)) =>
 			(chan.counterparty_channel_id.unwrap(), chan.channel_id().unwrap().clone()),
 		got => panic!("Last event should be OpenConfirmConnection: {got:?}"),
 	};
@@ -188,11 +178,7 @@ pub async fn send_ordered_packets_and_assert_acknowledgement<A, B>(
 	let future = chain_b
 		.ibc_events()
 		.await
-		.filter_map(|(_, evs)| {
-			future::ready(
-				evs.into_iter().find(|ev| matches!(ev, Some(IbcEvent::AcknowledgePacket(_)))),
-			)
-		})
+		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::AcknowledgePacket(_))))
 		.take(2)
 		.collect::<Vec<_>>();
 	timeout_future(

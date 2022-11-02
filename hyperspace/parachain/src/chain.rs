@@ -1,11 +1,6 @@
 use anyhow::anyhow;
 use codec::{Decode, Encode};
-use std::{
-	collections::BTreeMap,
-	fmt::Display,
-	pin::Pin,
-	time::{Duration, Instant},
-};
+use std::{collections::BTreeMap, fmt::Display, pin::Pin, time::Duration};
 
 use beefy_gadget_rpc::BeefyApiClient;
 use finality_grandpa::BlockNumberOps;
@@ -26,7 +21,12 @@ use primitives::{Chain, IbcProvider, MisbehaviourHandler};
 use super::{error::Error, signer::ExtrinsicSigner, ParachainClient};
 use crate::{
 	config,
-	parachain::{api, api::runtime_types::pallet_ibc::Any as RawAny, UncheckedExtrinsic},
+	parachain::{
+		api,
+		api::runtime_types::{frame_system::Phase, pallet_ibc::Any as RawAny},
+		UncheckedExtrinsic,
+	},
+	utils::MetadataIbcEventWrapper,
 	FinalityProtocol,
 };
 use finality_grandpa_rpc::GrandpaApiClient;
@@ -38,12 +38,13 @@ use ibc::{
 		},
 		ics26_routing::msgs::Ics26Envelope,
 	},
+	events::IbcEvent,
 	tx_msg::Msg,
 };
 use ics10_grandpa::client_message::{ClientMessage, Misbehaviour, RelayChainHeader};
 use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::mock::LocalClientTypes;
-use sp_core::H256;
+use sp_core::{twox_128, H256};
 use subxt::tx::{PlainTip, PolkadotExtrinsicParamsBuilder};
 use tokio::time::sleep;
 
@@ -204,17 +205,108 @@ where
 
 	async fn query_client_message(&self, update: UpdateClient) -> Result<AnyClientMessage, Error> {
 		use api::runtime_types::{
-			pallet_ibc::pallet::Call as IbcCall, parachain_runtime::Call as RuntimeCall,
+			frame_system::EventRecord,
+			pallet_ibc::pallet::{Call as IbcCall, Event as PalletEvent},
+			parachain_runtime::{Call as RuntimeCall, Event},
 		};
+		use pallet_ibc::events::IbcEvent as RawIbcEvent;
 
 		let host_height = update.height();
-		let light_client_height = update.consensus_height();
 
-		// todo:
-		// first query block events at host_height.
-		// next find the event that matches update
-		// get extrinsic that emitted event.
-		// profit.
+		let now = std::time::Instant::now();
+		let block_hash = loop {
+			let maybe_hash = self
+				.para_client
+				.rpc()
+				.block_hash(Some(host_height.revision_height.into()))
+				.await?;
+			match maybe_hash {
+				Some(hash) => break hash,
+				None => {
+					if now.elapsed() > Duration::from_secs(20) {
+						return Err(Error::from("Timeout while waiting for block".to_owned()))
+					}
+					sleep(Duration::from_millis(100)).await;
+				},
+			}
+		};
+
+		let mut storage_key = twox_128(b"System").to_vec();
+		storage_key.extend(twox_128(b"Events").to_vec());
+
+		let event_bytes = self
+			.para_client
+			.rpc()
+			.storage(&*storage_key, Some(block_hash))
+			.await?
+			.map(|e| e.0)
+			.ok_or_else(|| Error::from("No events found".to_owned()))?;
+		let events: Vec<EventRecord<Event, H256>> = Decode::decode(&mut &*event_bytes)
+			.map_err(|e| Error::from(format!("Failed to decode events: {:?}", e)))?;
+		let (transaction_index, event_index) = events
+			.into_iter()
+			.find_map(|pallet_event| {
+				let tx_index = match pallet_event.phase {
+					Phase::ApplyExtrinsic(i) => i as usize,
+					other => {
+						log::error!("Unexpected event phase: {:?}", other);
+						return None
+					},
+				};
+				if let Event::Ibc(PalletEvent::Events { events }) = pallet_event.event {
+					events.into_iter().enumerate().find_map(|(i, event)| match event {
+						Ok(ibc_event) => {
+							let ibc_event = IbcEvent::try_from(RawIbcEvent::from(
+								MetadataIbcEventWrapper(ibc_event),
+							))
+							.ok()?;
+							match ibc_event {
+								IbcEvent::UpdateClient(ev_update) if ev_update == update =>
+									Some((tx_index, i)),
+								_ => None,
+							}
+						},
+						_ => None,
+					})
+				} else {
+					None
+				}
+			})
+			.ok_or_else(|| Error::from("No update client event found".to_owned()))?;
+
+		let block = self
+			.para_client
+			.rpc()
+			.block(Some(block_hash.into()))
+			.await?
+			.ok_or_else(|| Error::from(format!("Block not found for hash {:?}", block_hash)))?;
+
+		let extrinsic_opaque =
+			block.block.extrinsics.get(transaction_index).expect("Extrinsic not found");
+		let unchecked_extrinsic = UncheckedExtrinsic::<T>::decode(&mut &*extrinsic_opaque.encode())
+			.map_err(|e| Error::from(format!("Extrinsic decode error: {}", e)))?;
+
+		match unchecked_extrinsic.function {
+			RuntimeCall::Ibc(IbcCall::deliver { messages }) => {
+				let message = messages.get(event_index).ok_or_else(|| {
+					Error::from(format!("Message index {} out of bounds", event_index))
+				})?;
+				let envelope = Ics26Envelope::<LocalClientTypes>::try_from(Any {
+					type_url: String::from_utf8(message.type_url.clone()).map_err(|_| {
+						Error::from("failed to create String from utf-8".to_string())
+					})?,
+					value: message.value.clone(),
+				});
+				match envelope {
+					Ok(Ics26Envelope::Ics2Msg(ClientMsg::UpdateClient(update_msg))) =>
+						return Ok(update_msg.client_message),
+					_ => (),
+				}
+			},
+			_ => (),
+		}
+
+		Err(Error::from("No client message found".to_owned()))
 	}
 }
 
