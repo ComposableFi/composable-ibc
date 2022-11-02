@@ -15,7 +15,7 @@ COPY . .
 
 RUN cargo build --release -p parachain-node
 
-FROM docker.io/library/ubuntu:20.04
+FROM phusion/baseimage:focal-1.2.0
 WORKDIR /node
 
 # Copy the node binary.
