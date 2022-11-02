@@ -254,7 +254,7 @@ impl<T: Config> ClientTypes for Context<T> {
 
 ### Host Consensus state verification
 
-It is a requirement of the ibc protocol for the host machine to verify its own consensus state during the connection handshake.  
+It is a requirement of theIBCprotocol for the host machine to verify its own consensus state during the connection handshake.  
 This becomes an issue when the host machine cannot access its own consensus state.  
 For consensus verification to be possible in such host machine, a couple apis must be available
 - The host must provide access to a mapping of block numbers to block hash for at least the 256 most recent blocks.

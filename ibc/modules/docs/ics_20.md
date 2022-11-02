@@ -1,6 +1,6 @@
 ## ICS20 - Fungible Token Transfer
 
-Ics20 is an ibc application protocol that facilitates cross chain fungible token transfer.  
+Ics20 is an IBC application protocol that facilitates cross chain fungible token transfer.  
 Ics20 requires that the host chain has a means to dynamically issue new tokens.  
 Ics20 tokens are created on demand based on channel and port combinations, so the host chains must provide a means to  
 mint tokens with arbitrary denominations.

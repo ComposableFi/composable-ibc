@@ -11,7 +11,7 @@ It provides methods for:
 - Registering a Send packet `IbcHandler::send_packet`
 - Writing Acknowledgements `IbcHandler::write_acknowledgemnent`
 
-**Defining an example ibc compliant pallet**
+**Defining an exampleIBCcompliant pallet**
 ```rust
 use ibc_primitives::IbcHandler as IbcHandlerT;
 const PORT_ID: &'static str = "example";
@@ -268,7 +268,7 @@ impl<T: Config> CallbackWeight for WeightHandler<T> {
 ```
 
 ### Custom Routes
-Pallet IBC provides a means to use a custom router defined as a Runtime Config parameter. This sub-router implements the  
+Pallet IBC provides a means to use a custom router defined as a Runtime Config parameter. This router implements the  
 [`ModuleRouter`](/contracts/pallet-ibc/src/routing#L44) trait and provides a way to add IBC support for new modules or overwrite  
 existing routes.
 
@@ -283,7 +283,7 @@ pub struct Router {
 
 // 3. Implement ModuleRouter trait.
 impl ModuleRouter for Router {
-    //4. Add support for all custom routes within these function implementations
+    // 4. Add support for all custom routes within these function implementations
     fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module> {
         match module_id.borrow().to_string().as_str() {
             pallet_example::MODULE_ID => Some(&mut self.pallet_example),

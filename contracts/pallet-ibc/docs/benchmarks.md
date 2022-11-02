@@ -2,13 +2,13 @@
 
 For `transfer`, `set_params` and `upgrade_client` extrinsics we have pretty familiar substrate benchmarks, but for the `deliver` extrinsic
 we implement a non-trivial benchmark for different light clients.  
-To effectively benchmark the `deliver` extrinsic, we need to individually benchmark the processing of each ibc message type using all available light clients,
+To effectively benchmark the `deliver` extrinsic, we need to individually benchmark the processing of eachIBCmessage type using all available light clients,
 this is because different light clients have different header and proof verification algorithms that would execute in the runtime with distinct speeds.
 
-Also, all pallets plugged into ibc are required to benchmark their callbacks and
+Also, all pallets plugged intoIBCare required to benchmark their callbacks and
 provide a handler that implements the `CallbackWeight` trait which specifies methods that return the weight of each callback method.
 
-The benchmarking infrastructure for the [`deliver`](/weight.rs#L178) extrinsic defines a weight router that collects a batch of ibc messages, and calculates the total weight of processing the message batch,
+The benchmarking infrastructure for the [`deliver`](/contracts/pallet-ibc/src/weight.rs#L178) extrinsic defines a weight router that collects a batch ofIBCmessages, and calculates the total weight of processing the message batch,
 based on the light client needed for proof verification and the specific module callback for handling each message.
 
 #### Writing benchmarks for a light client
@@ -59,7 +59,7 @@ The essence of this kind of benchmark is to get an estimate of how much it would
     - In case of tendermint client the mock state tree will be an AVL tree, for Grandpa client the mock state tree will be a patricia merke trie etc.
 - Extract the root for this tree
 - Store a consensus state for the light client created above with this extracted root as the commitment root
-- Construct the ibc message with a proof extracted from the mock state tree
+- Construct theIBCmessage with a proof extracted from the mock state tree
 - Assert that the message was processed successfully  
   Pseudocode demonstrating this process
   The following sample is meant to benchmark the channel open ack message type
@@ -83,7 +83,7 @@ The essence of this kind of benchmark is to get an estimate of how much it would
         ctx.store_channel((port_id, channel_id), channel_end);
         
         // Generate a mock state tree of the counterparty chain
-        // Insert a channel end that is in TRYOPEN state using the ibc key path for channels
+        // Insert a channel end that is in TRYOPEN state using theIBCkey path for channels
         // Extract the root and proof for the channel
         // Update the light client consensus state so it can have the required state root required to process
         // the proof that will be submitted

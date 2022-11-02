@@ -11,7 +11,7 @@ Pallet IBC is a thin wrapper around [`ibc-rs`](/ibc) that satisfies the runtime 
 
 ### Dispatchable functions
 
-- `deliver` - Receives a batch of ibc transactions and executes them in the same order as they were sent.
+- `deliver` - Receives a batch ofIBCtransactions and executes them in the same order as they were sent.
 - `transfer` - This initiates an ics20 token transfer from the caller to an account on a connected chain via the ICS20 protocol
 - `set_params` - Sets parameters that determine whether token transfer or receipt is allowed in ICS20
 - `upgrade_client` - Sets the new consensus state and client state for client upgrades to be executed on connected chains
@@ -19,7 +19,7 @@ Pallet IBC is a thin wrapper around [`ibc-rs`](/ibc) that satisfies the runtime 
 
 ### Adding Ibc to a substrate runtime
 
-Implementing the ibc config trait for a substrate runtime
+Implementing theIBCconfig trait for a substrate runtime
 ```rust
 type AssetId = u128;
 
@@ -90,7 +90,7 @@ In this iteration of the pallet, packets and acknowledgements are stored on chai
 ### ICS20 implementation
 
 The IBC protocol defines an inter-chain token transfer standard that specifies how token transfers should be executed across connected chains.  
-ICS20 is an ibc application which can be implemented as a standalone pallet nevertheless, it is implemented as a sub-module of the ibc pallet [`here`](/contracts/pallet-ibc/src/ics20).  
+ICS20 is anIBCapplication which can be implemented as a standalone pallet nevertheless, it is implemented as a submodule of theIBCpallet [`here`](/contracts/pallet-ibc/src/ics20).  
 The core ics20 logic is already implemented in [`ibc-rs`](/ibc/modules/src/applications/transfer), all that's required to integrate this is to implement the callback handlers for ics20 
 and implement the [`Ics20Context`](/ibc/modules/src/applications/transfer/context.rs#l118) trait.
 
@@ -98,7 +98,7 @@ This `Ics20Context` implementation is dependent on an implementation of `frame_s
 
 ### Rpc Interface
 
-The [`Rpc interface`](/contracts/pallet-ibc/rpc/src/lib.rs) is designed to allow querying the state of the ibc store with membership or non-membership proofs for the result.
+The [`Rpc interface`](/contracts/pallet-ibc/rpc/src/lib.rs) is designed to allow querying the state of theIBCstore with membership or non-membership proofs for the result.
 
 - `query_send_packets` - Returns send packets for the provided sequences
 - `query_recv_packets` - Returns receive packets for the provided sequences
@@ -125,9 +125,9 @@ The [`Rpc interface`](/contracts/pallet-ibc/rpc/src/lib.rs) is designed to allow
 - `query_packet_commitment` - Returns a packet commitment with a proof
 - `query_packet_acknowledgement` - Returns a packet acknowledgement commitment with a proof
 - `query_packet_receipt` - Returns a packet receipt with either a membership or a non-membership proof.
-- `query_denom_trace` - Query the ibc denom trace for the provided local asset id
-- `query_denom_traces` - Query all ibc denom traces that exist on chain
-- `query_events` - Returns all ibc events from a block.
+- `query_denom_trace` - Query theIBCdenom trace for the provided local asset id
+- `query_denom_traces` - Query allIBCdenom traces that exist on chain
+- `query_events` - Returns allIBCevents from a block.
 
 #### Runtime API
 
@@ -154,7 +154,7 @@ impl ibc_runtime_api::IbcRuntimeApi<Block> for Runtime {
         Ibc::consensus_state(client_id, revision_number, revision_height, latest_cs).ok()
     }
 
-    // Implement remaining methods using the ibc identical functions in the pallet implementation
+    // Implement remaining methods using theIBCidentical functions in the pallet implementation
   
 
     fn block_events(extrinsic_index: Option<u32>) -> Vec<pallet_ibc::events::IbcEvent> {

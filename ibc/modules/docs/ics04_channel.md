@@ -121,9 +121,9 @@ The channel becomes closed if this message is processed successfully.
 
 ### Packets
 
-Packets are means through which protocols built on top of core ibc exchange data, ibc application protocols determine  
+Packets are means through which protocols built on top of core IBC exchange data, IBC application protocols determine  
 how this data is serialized and deserialized.  
-The packet data remains opaque to the core ibc protocol which facilitates its transmission across connections through channels.
+The packet data remains opaque to the core IBC protocol which facilitates its transmission across connections through channels.
 
 **SendPacket**
 
@@ -210,7 +210,7 @@ A `TimeoutOnClose` event is emitted after a successful execution.
 
 PortIds and ModuleIds are unique strings used to identify modules, the former is only used locally within the framework,  
 while the latter is part of the ICS specification.  
-For this implementation of ibc, the port requirements are defined by the [`PortReader`](/core/ics05_port/context.rs#L10)  
+The port requirements are defined by the [`PortReader`](/core/ics05_port/context.rs#L10)  
 trait to be implemented on the `Context` object and provide a way for ports to map to ModuleIds.
 
 Ports and ModuleIds should be statically defined.  

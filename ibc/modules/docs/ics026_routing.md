@@ -1,6 +1,6 @@
 ## ICS_026 Routing
 
-The ICS routing specification enables ibc application protocols to receive packets after the core ibc protocol has verified  
+The ICS routing specification enablesIBCapplication protocols to receive packets after the coreIBCprotocol has verified  
 the validity of the packet.
 
 The [`Ics26Context`](/core/ics26_routing/context.rs#L32) trait encapsulates the requirements for the router.  
@@ -58,7 +58,7 @@ It is recommended that the router use statically defined port and module Ids.
 
 ### Message Handling
 
-Handling ibc messages is as simple as calling the [`deliver`](/core/ics26_routing/handler.rs#L40) function with the context and message.  
+Handling IBC messages is as simple as calling the [`deliver`](/core/ics26_routing/handler.rs#L40) function with the context and message.  
 The internal dispatch mechanism will decode the protobuf message and route it to the correct message handler for processing.  
 ```rust
     deliver(&mut ctx, message)?;
@@ -67,5 +67,5 @@ The internal dispatch mechanism will decode the protobuf message and route it to
 **Ics26Envelope**
 
 The [`Ics26Envelope`](/core/ics26_routing/msgs.rs#L33) enum implements the `TryFrom<Any>`  
-and it is what helps us convert the protobuf `Any` into a concrete ibc message.  
+and it is what helps us convert the protobuf `Any` into a concrete IBC message.  
 Ibc messages have a unique `type_url`, which is a string that helps us identify what concrete message type to decode the raw protobuf bytes into.
