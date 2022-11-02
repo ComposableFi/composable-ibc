@@ -35,8 +35,10 @@ use primitives::{
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
 use sp_runtime::traits::{Header, Zero};
-use std::{collections::BTreeMap, sync::Arc};
-use std::collections::BTreeSet;
+use std::{
+	collections::{BTreeMap, BTreeSet},
+	sync::Arc,
+};
 use subxt::{
 	ext::{sp_core::hexdisplay::AsBytesRef, sp_runtime::traits::One},
 	Config, OnlineClient,
@@ -117,7 +119,7 @@ where
 
 		// Ensure there are no duplicates in authority list
 		let mut set = BTreeSet::new();
-		for (id,..) in &current_authorities {
+		for (id, ..) in &current_authorities {
 			if !set.insert(id) {
 				Err(anyhow!("Duplicate entries found in current authority set"))?
 			}
@@ -247,9 +249,12 @@ where
 
 		let mut unknown_headers = vec![];
 		for height in previous_finalized_height..=latest_finalized_height {
-			let hash = self.relay_client.rpc().block_hash(Some(height.into())).await?.ok_or_else(
-				|| anyhow!("Failed to fetch block has for height {height}"),
-			)?;
+			let hash = self
+				.relay_client
+				.rpc()
+				.block_hash(Some(height.into()))
+				.await?
+				.ok_or_else(|| anyhow!("Failed to fetch block has for height {height}"))?;
 
 			let header = self
 				.relay_client
