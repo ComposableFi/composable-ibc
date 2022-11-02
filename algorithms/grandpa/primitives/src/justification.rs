@@ -55,7 +55,7 @@ where
 		Host: HostFunctions,
 	{
 		// It's safe to assume that the authority list will not contain duplicates,
-		// since this list it's gotten from a verified relaychain header.
+		// since this list is extracted from a verified relaychain header.
 		let voters =
 			VoterSet::new(authorities.iter().cloned()).ok_or(anyhow!("Invalid AuthoritiesSet"))?;
 
