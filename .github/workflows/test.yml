@@ -35,7 +35,7 @@ jobs:
         run: |
 #          DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest
           docker-compose -f scripts/parachain-launch/docker-compose.yml up -d --build
-          sleep 240
+          ./scripts/wait_for_polkadot_launch.sh
 
       - name: Check that subxt-generated is up to date
         run: |
