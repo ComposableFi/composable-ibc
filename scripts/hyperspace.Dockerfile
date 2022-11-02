@@ -1,12 +1,6 @@
-FROM rust:buster as builder
-WORKDIR /app
+FROM paritytech/ci-linux:production as build
 
-RUN rustup default nightly-2022-08-05 && \
-	rustup target add wasm32-unknown-unknown --toolchain nightly-2022-08-05
-
-RUN apt-get update && \
-	apt-get dist-upgrade -y -o Dpkg::Options::="--force-confold" && \
-	apt-get install -y cmake pkg-config libssl-dev git clang libclang-dev
+WORKDIR /code
 
 COPY . .
 
@@ -29,7 +23,6 @@ RUN rm -rf /usr/lib/python* && \
 	rm -rf /usr/sbin /usr/share/man
 
 USER centauri
-EXPOSE 30333 9933 9944
 
 RUN mkdir /centauri/data
 
