@@ -1,5 +1,9 @@
 module-hyperspace=hyperspace
 composable_centauri_image="composablefi/composable-centauri:latest"
+hyperspace_image="composablefi/hyperspace:latest"
+
+.PHONY: run-setup-hyperspace stop-setup-hyperspace build-release-hyperspace tests-hyperspace
+.PHONY: build-docker-image-hyperspace publish-docker-image-hyperspace
 
 run-setup-hyperspace:
 	docker run --platform linux/amd64 \
@@ -20,7 +24,10 @@ build-release-hyperspace:
 	cargo b -p $(module-hyperspace) --release
 
 build-docker-image-hyperspace:
-	docker build -f hyperspace/Dockerfile -t hyperspace .
+	docker build -f hyperspace/Dockerfile -t "${hyperspace_image}" .
+
+publish-docker-image-hyperspace:
+	docker push "${hyperspace_image}"
 
 tests-hyperspace: 
 	make --ignore-errors stop-setup-hyperspace
