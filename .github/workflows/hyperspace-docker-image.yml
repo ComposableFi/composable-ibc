@@ -9,11 +9,7 @@ on:
 
 jobs:
   build-and-publish:
-    runs-on: 
-      - self-hosted
-      - linux
-      - x64
-      - sre
+    runs-on: ubuntu-latest
     concurrency:
       group: hyperspace-docker-image-${{ github.ref }}
       cancel-in-progress: true
