@@ -94,7 +94,7 @@ ICS20 is anIBCapplication which can be implemented as a standalone pallet nevert
 The core ics20 logic is already implemented in [`ibc-rs`](/ibc/modules/src/applications/transfer), all that's required to integrate this is to implement the callback handlers for ics20 
 and implement the [`Ics20Context`](/ibc/modules/src/applications/transfer/context.rs#l118) trait.
 
-This `Ics20Context` implementation is dependent on an implementation of `frame_support::traits::fungibles::{Inspect, Mutate, Transfer}` for token registration, minting, transfers and burning.
+`Ics20Context` is dependent on an implementation of `frame_support::traits::fungibles::{Inspect, Mutate, Transfer}` for token registration, minting, transfers and burning.
 
 ### Rpc Interface
 
