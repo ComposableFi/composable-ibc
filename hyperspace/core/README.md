@@ -1,4 +1,4 @@
-# Hyperspace relayer
+# Hyperspace Relayer
 
 ## Architecture
 The relayer architecture is based on two major design choices
@@ -51,4 +51,31 @@ Using the relayer just requires having a `Chain` implementation for the chains t
 ```
 **Note** Correct functioning of the relayer is dependent on correct implementation of the trait methods, read documentation for each of the trait  
 methods for details.
+
+## Gas Metering
+
+The relayer has a gas metering logic to prevent submitting a batch of IBC messages whose execution cost would exceed block gas limits.
+The gas metering is performed by [`flush_message_batch`](/hyperspace/core/src/queue.rs#L6), the way this is achieved is by estimating the weight of the  
+message batch and comparing it with the maximum block gas limit, if the estimate exceeds the former then the ibc messages  
+are split into smaller chunks that fit within the gas limit and these chunks are then submitted as individual transactions.  
+
+
+## CLI Interface
+
+The CLI interface can be used to start the relayer from a config file and also performing the IBC setup on both chains.
+
+- [`relay`](/hyperspace/core/src/command.rs#L24) 
+  This command accepts a path to a config file and spawns the relayer.
+  The config file must have all the parameters necessary for the chain clients to work correctly.
+- [`create-clients`](/hyperspace/core/src/command.rs#L26)
+  This command takes a path to a config file and attempts to create a light clients of each chain on its counterparty.
+- [`create-connection`](/hyperspace/core/src/command.rs#L28)
+  This command takes a path to a config file and delay period in seconds and attempts to complete the connection  
+  handshake between both chains.
+  The config file must have a valid client id
+- [`create-channel`](/hyperspace/core/src/command.rs#L30)
+  This command takes a path to a config file, a port id and a version, it attempts to complete the channel handshake  
+  between both chains.
+  The config file must have a valid client and connection id.
     
+  
