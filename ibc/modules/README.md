@@ -4,6 +4,12 @@
 
 Implementation of the Inter-Blockchain Communication Protocol ([IBC]) in rust.
 
+- [`ICS02 - Light Clients`](/ibc/modules/docs/ics02_client.md)
+- [`ICS03 -  Connections`](/ibc/modules/docs/ics03_connection.md)
+- [`ICS04 - Channels`](/ibc/modules/docs/ics04_channel.md)
+- [`ICS20 - Fungible Token Transfer`](/ibc/modules/docs/ics_20.md)
+- [`ICS026 - Routing`](/ibc/modules/docs/ics026_routing.md)
+
 ## Project Structure
 
 **Core** contains the traits and handlers that enable the IBC protocol.  
@@ -27,7 +33,7 @@ A couple definitions to help understand the architecture of this framework
 - **Event** - A struct which when emitted signifies successful processing of a message, in case of failures errors are emitted.
 - **Router** - A type that routes packets to the correct module for handling.
 
-## ICS02 Client Definitions
+## ICS02 Client Definition
 
 The client module contains the trait definitions for light client implementation and Client context, it also contains  
 the client messages and their handlers.

@@ -1,23 +1,9 @@
 ## Routing (ICS26) and callback handlers
 
 The IBC protocol requires the existence of a router that routes packets to the correct module for processing based on the destination port.  
-The implementation of the router in this pallet statically matches over module id strings and returns the correct handler for such module.  
-This means that each ibc application must statically define a unique module id and port id to be used in the module router.
+Each IBC application must define a unique module id and port id to be used in the module router.
 
-**Plugging a new pallet to ibc**
-
-- Implement the [`Module`](/ibc/modules/src/core/ics26_routing/context.rs#L95) trait for a struct defined in the pallet.
-- Implement the [`CallbackWeight`](/contracts/pallet-ibc/primitives/src/lib.rs#L387) trait for a struct defined in the pallet.
-- Define a unique port id and module id as static strings.
-- Add the Module handler to the [`ibc router`](/contracts/pallet-ibc/src/routing.rs#L33).
-- Add the callback weight handler to the [`weight router`](/contracts/pallet-ibc/src/weight.rs#L150).
-- Add the module id to the `lookup_module_by_port` implementation.
-
-**Custom Router**   
-
-Pallet ibc provides a means to use a custom router defined as a Runtime Config parameter. This sub-router implements the [`ModuleRouter`](/contracts/pallet-ibc/src/routing#L44) trait and provides a way to add IBC support for new modules without modifying the static router in the pallet.
-
-**Ibc Handler**
+### Ibc Handler
 
 This pallet provides a public interface behind the [`IbcHandler`] trait, that allows modules to access the protocol.  
 It provides methods for:
@@ -46,7 +32,7 @@ impl<T: Config> Pallet<T> {
             port_id: port_id_from_bytes(PORT_ID.as_bytes().to_vec()).expect("Valid port id expected"),
             channel_id: params .channel_id,
         };
-        T::IbcHandler::send_packet(send_packet)
+        T::IbcHandler::send_packet(send_packet)?;
         Ok(())
    }
 }
@@ -276,13 +262,50 @@ impl<T: Config> CallbackWeight for WeightHandler<T> {
 
 ```
 
-Then add a snippet like this to the `look_up_module_by_port` implementation
-```rust
-pallet_example::PORT_ID => Ok(ModuleId::from_str(pallet_example::MODULE_ID)
-				.map_err(|_| ICS05Error::module_not_found(port_id.clone()))?),
-```
+### Custom Routes
+Pallet IBC provides a means to use a custom router defined as a Runtime Config parameter. This sub-router implements the  
+[`ModuleRouter`](/contracts/pallet-ibc/src/routing#L44) trait and provides a way to add IBC support for new modules or overwrite  
+existing routes.
 
-Add a snippet like this to the `get_route_mut` method in the router implementation and modify the `has_route` method as required
+The following code snippet shows how a custom router would be configured
 ```rust
-pallet_example::MODULE_ID => Some(&mut self.pallet_example)
+// 1. Define a struct to hold the module callback handlers
+#[derive(Clone, Debug, Eq, PartialEq, Default)]
+pub struct Router {
+    // 2. Callback Handlers like this should implement `ibc::core::ics26_routing::context::Module` trait
+	pallet_example: pallet_example::IbcModule<Runtime>,
+}
+
+// 3. Implement ModuleRouter trait.
+impl ModuleRouter for Router {
+    //4. Add support for all custom routes within these function implementations
+	fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module> {
+		match module_id.borrow().to_string().as_str() {
+            pallet_example::MODULE_ID => Some(&mut self.pallet_example),
+			_ => None,
+		}
+	}
+
+	fn has_route(module_id: &impl Borrow<ModuleId>) -> bool {
+		matches!(module_id.borrow().to_string().as_str(), pallet_example::MODULE_ID)
+	}
+
+	fn lookup_module_by_port(port_id: &PortId) -> Option<ModuleId> {
+		match port_id.as_str() {
+            pallet_example::PORT_ID => ModuleId::from_str(pallet_example::MODULE_ID).ok(),
+			_ => None,
+		}
+	}
+}
+
+impl pallet_example::Config for Runtime {
+    type IbcHandler = Ibc;
+    type WeightInfo = ();
+}
+
+impl pallet_ibc::Config for Runtime {
+    ...
+    type Router = Router;
+    
+}
 ```

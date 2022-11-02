@@ -178,7 +178,7 @@ When client messages are successfully handled, the following events are emitted
 - `UpgradeClient` - A `MsgUpgradeClient` has been handled without any errors, the  client upgrade proof has been verified correctly and the Client and Consensus states have been updated
 - `ClientMisbehaviour` -  A `MsgSubmitMisbehaviour` has been processed and the client has been frozen.
 
-The client events are defined [`here`](/ibc/modules/src/core/ics02_client/events.rs)
+The client events are defined [`here`](/core/ics02_client/events.rs)
 
 ### Upgrading a Client
 

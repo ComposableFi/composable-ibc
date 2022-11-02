@@ -6,8 +6,8 @@ specific chains, which translates to one connection per light client.
 ### Connection Context
 
 The connection context encapsulates all the storage requirements for connections in the context object.    
-implement the [`ConnectionReader`](/ibc/modules/src/core/ics03_connection/context.rs#L21)  
-and [`ConnectionKeeper`](/ibc/modules/src/core/ics03_connection/context.rs#L51) for the context object
+implement the [`ConnectionReader`](/core/ics03_connection/context.rs#L21)  
+and [`ConnectionKeeper`](/core/ics03_connection/context.rs#L51) for the context object
 
 ```rust
     impl ConnectionReader for Context { ... }
@@ -33,7 +33,7 @@ This message contains the connection parameters such as delay period, client_id,
 	    pub signer: Signer,
     }
 ```
-This message is processed by the [`conn_open_init`](/ibc/modules/src/core/ics03_connection/handler/conn_open_init.rs) handler.  
+This message is processed by the [`conn_open_init`](/core/ics03_connection/handler/conn_open_init.rs) handler.  
 The `OpenInitConnection` event is emitted on successful processing of the event.
 
 
@@ -57,7 +57,7 @@ at the time of the handshake.
         pub signer: Signer,
     }
 ```
-This message is processed by the [`conn_open_try`](/ibc/modules/src/core/ics03_connection/handler/conn_open_try.rs) handler.  
+This message is processed by the [`conn_open_try`](/core/ics03_connection/handler/conn_open_try.rs) handler.  
 The `OpenTryConnection` event is emitted on successful processing of the event.
 
 
@@ -80,7 +80,7 @@ counterparty state trie at the time of the handshake.
         pub signer: Signer,
     }
 ```
-This message is processed by the [`conn_open_ack`](/ibc/modules/src/core/ics03_connection/handler/conn_open_init.rs) handler.  
+This message is processed by the [`conn_open_ack`](/core/ics03_connection/handler/conn_open_init.rs) handler.  
 The `OpenAckConnection` event is emitted on successful processing of the event.  
 The connection becomes open if this message is processed successfully.
 
@@ -97,7 +97,7 @@ it does not require a consensus proof.
         pub signer: Signer,
     }
 ```
-This message is processed by the [`conn_open_confirm`](/ibc/modules/src/core/ics03_connection/handler/conn_open_init.rs) handler.  
+This message is processed by the [`conn_open_confirm`](/core/ics03_connection/handler/conn_open_init.rs) handler.  
 The `OpenConfirmConnection` event is emitted on successful processing of the event.  
 The connection becomes open if this message is processed successfully.
 

@@ -1,10 +1,13 @@
-### Pallet IBC
+## Pallet IBC
 
 Pallet IBC is a thin wrapper around [`ibc-rs`](/ibc) that satisfies the runtime requirements for communicating over the IBC protocol from a substrate runtime.
 
 - [`Config`](/contracts/pallet-ibc/src/lib.rs#L207)
 - [`Call`](/contracts/pallet-ibc/src/lib.rs#L549)
 - [`Pallet`](/contracts/pallet-ibc/src/lib.rs#L258)
+- [`ICS23`](/contracts/pallet-ibc/docs/ics23.md)
+- [`Routing`](/contracts/pallet-ibc/docs/routing.md)
+- [`Benchmarking`](/contracts/pallet-ibc/docs/benchmarks.md)
 
 ### Dispatchable functions
 
@@ -91,7 +94,7 @@ ICS20 is an ibc application which can be implemented as a standalone pallet neve
 The core ics20 logic is already implemented in [`ibc-rs`](/ibc/modules/src/applications/transfer), all that's required to integrate this is to implement the callback handlers for ics20 
 and implement the [`Ics20Context`](/ibc/modules/src/applications/transfer/context.rs#l118) trait.
 
-This `Ics20Context` implementation is dependent on an implementation of `frame_support::traits::fungibles::{Inspect, Mutate, Transfer}` for token registration, minting, transfers and burning of tokens
+This `Ics20Context` implementation is dependent on an implementation of `frame_support::traits::fungibles::{Inspect, Mutate, Transfer}` for token registration, minting, transfers and burning.
 
 ### Rpc Interface
 

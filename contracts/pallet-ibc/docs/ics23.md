@@ -19,12 +19,10 @@ The approach we take to implement this is to make use of the [`child trie API`](
 - The child trie API is a lower level storage API that allows us to insert values into our runtime storage using
   the custom key paths provided by the IBC protocol.
 - it to allows the light client on the counterparty chain use the global state root of the host chain to verify state proofs.
-- Optimizes this pallet by removing the need to have an expensive computation that would have been incurred if we had to
-  generate a commitment root for the ibc state in this pallet's on_finalize hook
 
 **ICS23 Implementation**
 
-For the [`ics23`](/contracts/pallet-ibc/src/ics23) implementation,
+For the [`ics23`](/ics23) implementation,
 each member of the provable store is defined as a sub-module.  
 A couple methods are implemented for each struct representing a provable store element, each method has a strongly typed interface.
 These methods are `insert`, `get` and `remove` in some contexts.  

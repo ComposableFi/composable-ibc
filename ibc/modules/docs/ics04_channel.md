@@ -6,7 +6,7 @@ Channels are built on top of open connections.
 ### Channel Context
 
 The channel context encapsulates all the storage requirements for channels in the context object.    
-implement the [`ChannelReader`](/ibc/modules/src/core/ics04_channel/context.rs#L26) and [`ChannelKeeper`](/ibc/modules/src/core/ics04_channel/context.rs#L107) for the context object
+implement the [`ChannelReader`](/core/ics04_channel/context.rs#L26) and [`ChannelKeeper`](/core/ics04_channel/context.rs#L107) for the context object
 
 ```text
     impl ChannelReader for Context { ... }
@@ -30,7 +30,7 @@ This message contains the proposed channel_end, port_id and signer.
         pub signer: Signer,
     }
 ```
-This message is processed by the [`chan_open_init`](/ibc/modules/src/core/ics04_channel/handler/chan_open_init.rs) handler.  
+This message is processed by the [`chan_open_init`](/core/ics04_channel/handler/chan_open_init.rs) handler.  
 The `OpenInitChannel` event is emitted on successful processing of the event.
 
 
@@ -48,7 +48,7 @@ requires a proof that indicates that the channel was initialized on the counterp
         pub signer: Signer,
     }
 ```
-This message is processed by the [`chan_open_try`](/ibc/modules/src/core/ics04_channel/handler/chan_open_try.rs) handler.  
+This message is processed by the [`chan_open_try`](/core/ics04_channel/handler/chan_open_try.rs) handler.  
 The `OpenTryChannel` event is emitted on successful processing of the event.
 
 
@@ -67,7 +67,7 @@ requires a proof that indicates that the channel was initialized with a state of
         pub signer: Signer,
     }
 ```
-This message is processed by the [`chan_open_ack`](/ibc/modules/src/core/ics04_channel/handler/chan_open_ack.rs) handler.  
+This message is processed by the [`chan_open_ack`](/core/ics04_channel/handler/chan_open_ack.rs) handler.  
 The `OpenAckChannel` event is emitted on successful processing of the event.  
 The channel becomes open if this message is processed successfully.
 
@@ -84,7 +84,7 @@ requires a proof that indicates that the channel is `Open` on the counterparty.
         pub signer: Signer,
     }
 ```
-This message is processed by the [`chan_open_confirm`](/ibc/modules/src/core/ics04_channel/handler/chan_open_confirm.rs) handler.  
+This message is processed by the [`chan_open_confirm`](/core/ics04_channel/handler/chan_open_confirm.rs) handler.  
 The `OpenConfirmChannel` event is emitted on successful processing of the event.  
 The channel becomes open if this message is processed successfully.
 
@@ -99,7 +99,7 @@ This message is submitted to start the channel close process, there's nothing to
         pub signer: Signer,
     }
 ```
-This message is processed by the [`chan_close_init`](/ibc/modules/src/core/ics04_channel/handler/chan_close_init.rs) handler.  
+This message is processed by the [`chan_close_init`](/core/ics04_channel/handler/chan_close_init.rs) handler.  
 The `CloseInitChannel` event is emitted on successful processing of the event.
 
 **MsgChannelOpenConfirm**
@@ -115,7 +115,7 @@ requires a proof that indicates that the channel state is `Close` on the counter
         pub signer: Signer,
     }
 ```
-This message is processed by the [`chan_close_confirm`](/ibc/modules/src/core/ics04_channel/handler/chan_close_confirm.rs) handler.  
+This message is processed by the [`chan_close_confirm`](/core/ics04_channel/handler/chan_close_confirm.rs) handler.  
 The `CloseConfirmChannel` event is emitted on successful processing of the event.  
 The channel becomes closed if this message is processed successfully.
 
@@ -129,13 +129,13 @@ The packet data remains opaque to the core ibc protocol which facilitates its tr
 
 This is not like other messages, it just involves creating a packet and depositing the packet commitment in the state  
 and emitting the `SendPacketEvent`.
-To handle packet creation call the [`send_packet`](/ibc/modules/src/core/ics04_channel/handler/send_packet.rs) method.
+To handle packet creation call the [`send_packet`](/core/ics04_channel/handler/send_packet.rs) method.
 
 **MsgReceivePacket**
 
 This message is submitted to process a `SendPacket` from the counterparty chain, it is accompanied by a commitment  
 membership proof, that proves the packet was committed to the counterparty state.  
-This packet is handled by the function defined here [`here`](/ibc/modules/src/core/ics04_channel/handler/recv_packet.rs#L41).  
+This packet is handled by the function defined here [`here`](/core/ics04_channel/handler/recv_packet.rs#L41).  
 
 ```rust
     pub struct MsgRecvPacket {
@@ -153,7 +153,7 @@ A `ReceivePacket` event is emitted after a successful execution.
 
 This message is submitted to process a packet acknowledgement from the counterparty, it is accompanied by a commitment  
 membership proof, that proves the acknowledgement was committed to the counterparty state.  
-This packet is handled by the function defined here [`here`](/ibc/modules/src/core/ics04_channel/handler/acknowledgement.rs#L29).  
+This packet is handled by the function defined here [`here`](/core/ics04_channel/handler/acknowledgement.rs#L29).  
 
 ```rust
     pub struct MsgAcknowledgement {
@@ -184,7 +184,7 @@ received on the counterparty.
 ```
 
 This message serves as a way to ensure packets are not left hanging unattended for long periods of time.
-This packet is handled by the function defined here [`here`](/ibc/modules/src/core/ics04_channel/handler/timeout.rs#L29)    
+This packet is handled by the function defined here [`here`](/core/ics04_channel/handler/timeout.rs#L29)    
 After verifying the validity of this packet, the top level dispatch function calls the `on_timeout_packet` module callback through the router using the source port id defined in the packet.  
 A `Timeout` event is emitted after a successful execution.
 
@@ -202,7 +202,7 @@ received on the counterparty and that the channel has been closed.
     }
 ```
 
-This packet is handled by the function defined here [`here`](/ibc/modules/src/core/ics04_channel/handler/timeout_on_close.rs#L29)    
+This packet is handled by the function defined here [`here`](/core/ics04_channel/handler/timeout_on_close.rs#L29)    
 After verifying the validity of this packet, the top level dispatch function calls the `on_timeout_packet` module callback through the router using the source port id defined in the packet.  
 A `TimeoutOnClose` event is emitted after a successful execution.
 
@@ -210,7 +210,7 @@ A `TimeoutOnClose` event is emitted after a successful execution.
 
 PortIds and ModuleIds are unique strings used to identify modules, the former is only used locally within the framework,  
 while the latter is part of the ICS specification.  
-For this implementation of ibc, the port requirements are defined by the [`PortReader`](/ibc/modules/src/core/ics05_port/context.rs#L10)  
+For this implementation of ibc, the port requirements are defined by the [`PortReader`](/core/ics05_port/context.rs#L10)  
 trait to be implemented on the `Context` object and provide a way for ports to map to ModuleIds.
 
 Ports and ModuleIds should be statically defined.  
