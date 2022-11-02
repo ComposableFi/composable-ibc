@@ -4,8 +4,8 @@
 The relayer architecture is based on two major design choices
 
 **Statelessness**
-The relayer is designed to be stateless and does not perform any form of caching. The relayer therefore relies heavily,  
-on the nodes it's connected to for sourcing data, this design choice eliminates a whole class of bugs that could come  
+The relayer is designed to be stateless and does not perform any form of caching. The relayer therefore relies heavily on  
+the nodes it's connected to for sourcing data, this design choice eliminates the chances of bugs that could come  
 from cache invalidation problems.
 
 **Event Driven**
@@ -20,8 +20,8 @@ The relayer loops awaits finality events from the finality subscription of the c
 Whenever a finality event is received, the latest ibc events are queried using `query_latest_ibc_events`.  
 These events are then parsed into appropriate messages using the `parse_events` function.  
 
-The `parse_events` function also calls `query_ready_and_timed_out_packets` which produces all packet messages that can   
-be submitted at the time after the connection delay has been factored.
+The `parse_events` function internally calls `query_ready_and_timed_out_packets` which queries a chain and  
+produces all packet messages that have passed the connection delay check.
 
 
 ## Using the relayer
@@ -49,6 +49,6 @@ Using the relayer just requires having a `Chain` implementation for the chains t
         Ok(())
     }
 ```
-**Note** The relayer depends on correct implementation of the trait methods, check the documentation for each of the trait  
+**Note** Correct functioning of the relayer is dependent on correct implementation of the trait methods, read documentation for each of the trait  
 methods for details.
-##    
+    
