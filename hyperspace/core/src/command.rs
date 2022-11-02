@@ -23,12 +23,12 @@ pub struct Cli {
 pub enum Subcommand {
 	#[clap(name = "relay", about = "Start relaying messages between two chains")]
 	Relay(Cmd),
-	#[clap(name = "fish", about = "Start relaying messages between two chains")]
-	Fish(Cmd),
 	#[clap(
-		name = "create-clients",
+		name = "fish",
 		about = "Start the relayer in fishing mode (catching malicious transactions)"
 	)]
+	Fish(Cmd),
+	#[clap(name = "create-clients", about = "Creates light clients on both chains")]
 	CreateClients(Cmd),
 	#[clap(name = "create-connection", about = "Creates a connection between both chains")]
 	CreateConnection(Cmd),
