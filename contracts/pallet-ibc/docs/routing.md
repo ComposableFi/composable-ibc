@@ -175,7 +175,12 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
         let success = "success".as_bytes().to_vec();
         let data = String::from_utf8(packet.data.clone()).ok();
         let packet = packet.clone();
-        OnRecvPacketAck::Successfu	       Box::new(PalletExampleAcknowledgement(success.clone())	           Box::new(move |_|		           T::IbcHandler::write_acknowledgement(&packet, succes			       .map_err(|e| format!("{:?}", e	           }),
+        OnRecvPacketAck::Successful(
+            Box::new(PalletExampleAcknowledgement(success.clone())),
+            Box::new(move |_| {
+                T::IbcHandler::write_acknowledgement(&packet, success)
+                    .map_err(|e| format!("{:?}", e))
+            }),
         )
     }
 
