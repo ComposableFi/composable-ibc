@@ -174,7 +174,6 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
         // Do some custom logic and write acknowledgement
         let success = "success".as_bytes().to_vec();
         let data = String::from_utf8(packet.data.clone()).ok();
-        let packet = packet.clone();
         OnRecvPacketAck::Successful(
             Box::new(PalletExampleAcknowledgement(success.clone())),
             Box::new(move |_| {
