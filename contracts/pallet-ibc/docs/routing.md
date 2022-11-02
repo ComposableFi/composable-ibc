@@ -278,29 +278,29 @@ The following code snippet shows how a custom router would be configured
 #[derive(Clone, Debug, Eq, PartialEq, Default)]
 pub struct Router {
     // 2. Callback Handlers like this should implement `ibc::core::ics26_routing::context::Module` trait
-	pallet_example: pallet_example::IbcModule<Runtime>,
+    pallet_example: pallet_example::IbcModule<Runtime>,
 }
 
 // 3. Implement ModuleRouter trait.
 impl ModuleRouter for Router {
     //4. Add support for all custom routes within these function implementations
-	fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module> {
-		match module_id.borrow().to_string().as_str() {
+    fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module> {
+        match module_id.borrow().to_string().as_str() {
             pallet_example::MODULE_ID => Some(&mut self.pallet_example),
-			_ => None,
-		}
-	}
+            _ => None,
+        }
+    }
 
-	fn has_route(module_id: &impl Borrow<ModuleId>) -> bool {
-		matches!(module_id.borrow().to_string().as_str(), pallet_example::MODULE_ID)
-	}
+    fn has_route(module_id: &impl Borrow<ModuleId>) -> bool {
+        matches!(module_id.borrow().to_string().as_str(), pallet_example::MODULE_ID)
+    }
 
-	fn lookup_module_by_port(port_id: &PortId) -> Option<ModuleId> {
-		match port_id.as_str() {
+    fn lookup_module_by_port(port_id: &PortId) -> Option<ModuleId> {
+        match port_id.as_str() {
             pallet_example::PORT_ID => ModuleId::from_str(pallet_example::MODULE_ID).ok(),
-			_ => None,
-		}
-	}
+            _ => None,
+        }
+    }
 }
 
 impl pallet_example::Config for Runtime {
