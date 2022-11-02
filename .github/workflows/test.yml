@@ -21,7 +21,7 @@ jobs:
       - sre
     steps:
       - uses: actions/checkout@v2
-
+      - shell: bash
       - name: Setup deps
         run: |
           apt update -y
