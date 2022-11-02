@@ -34,6 +34,7 @@ use ibc_proto::{
 	},
 };
 use ibc_rpc::{IbcApiClient, PacketInfo};
+use ics10_grandpa::client_message::RelayChainHeader;
 use ics11_beefy::client_state::ClientState as BeefyClientState;
 use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
@@ -73,6 +74,7 @@ where
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
+	RelayChainHeader: From<T::Header>,
 {
 	type FinalityEvent = FinalityEvent;
 	type Error = Error;

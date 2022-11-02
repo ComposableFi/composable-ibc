@@ -145,14 +145,17 @@ where
 				let first_parent = first_base.parent_hash;
 				let second_parent = second_base.parent_hash;
 
-				// TODO: should we handle genesis block here somehow?
-				let exists_first = H::contains_relay_header_hash(first_parent);
-				let exists_second = H::contains_relay_header_hash(second_parent);
+				if first_parent != second_parent {
+					return Err(Error::Custom(
+						"Misbehaviour proofs are not for the same ancestor".into(),
+					)
+					.into())
+				}
 
-				if !exists_first || !exists_second {
+				// TODO: should we handle genesis block here somehow?
+				if !H::contains_relay_header_hash(first_parent) {
 					Err(Error::Custom(
-						"Could not find known headers for first or second finality proof"
-							.to_string(),
+						"Could not find the known header for first finality proof".to_string(),
 					))?
 				}
 

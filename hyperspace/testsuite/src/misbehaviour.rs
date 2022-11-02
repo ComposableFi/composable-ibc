@@ -197,11 +197,6 @@ where
 	let msg =
 		MsgUpdateAnyClient::<LocalClientTypes>::new(msg.client_id, client_message, msg.signer);
 
-	chain_a
-		.submit(vec![Any { value: msg.encode_vec(), type_url: msg.type_url() }])
-		.await
-		.expect("failed to submit message");
-
 	let client_a_clone = chain_a.clone();
 	let misbehavour_event_handle = tokio::task::spawn(async move {
 		let mut events = client_a_clone.ibc_events().await;
@@ -214,6 +209,11 @@ where
 			}
 		}
 	});
+
+	chain_a
+		.submit(vec![Any { value: msg.encode_vec(), type_url: msg.type_url() }])
+		.await
+		.expect("failed to submit message");
 
 	timeout(Duration::from_secs(30), misbehavour_event_handle)
 		.await

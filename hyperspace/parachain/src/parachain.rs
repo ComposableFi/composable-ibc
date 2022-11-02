@@ -26,18 +26,12 @@ pub use subxt_generated::parachain::*;
 use api::runtime_types::{
 	frame_system::extensions::check_nonce::CheckNonce, parachain_runtime::Call,
 };
-use codec::{Compact, Decode, Encode, Input};
+use codec::{Compact, Decode, Input};
 use sp_runtime::generic::Era;
 use subxt::Config;
 
-#[derive(Encode, Decode, Clone, Eq, PartialEq)]
-pub struct ChargeAssetTxPayment {
-	#[codec(compact)]
-	tip: u128,
-	asset_id: Option<u128>,
-}
-
-pub type SignedExtra = (Era, CheckNonce, ChargeAssetTxPayment);
+pub type Balance = u128;
+pub type SignedExtra = (Era, CheckNonce, Compact<Balance>);
 
 pub struct UncheckedExtrinsic<T: Config> {
 	pub signature: Option<(<T as Config>::Address, sp_runtime::MultiSignature, SignedExtra)>,

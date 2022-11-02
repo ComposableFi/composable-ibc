@@ -10,6 +10,7 @@ use ibc::{
 	core::ics24_host::identifier::{ChannelId, ClientId, PortId},
 };
 use ibc_rpc::IbcApiClient;
+use ics10_grandpa::client_message::RelayChainHeader;
 use jsonrpsee::core::client::SubscriptionClientT;
 use pallet_ibc::{MultiAddress, Timeout, TransferParams};
 use primitives::{KeyProvider, TestProvider};
@@ -168,6 +169,7 @@ where
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
+	RelayChainHeader: From<T::Header>,
 {
 	async fn send_transfer(&self, transfer: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
 		let account_id = AccountId32::from_ss58check(transfer.receiver.as_ref()).unwrap();

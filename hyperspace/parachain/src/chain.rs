@@ -73,6 +73,7 @@ where
 	sp_core::H256: From<T::Hash>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
+	RelayChainHeader: From<T::Header>,
 {
 	fn name(&self) -> &str {
 		&*self.name
@@ -217,10 +218,7 @@ where
 		let block = loop {
 			let maybe_block = self.para_client.rpc().block(Some(hash.into())).await?;
 			match maybe_block {
-				Some(block) => {
-					log::info!("block query took {}", now.elapsed().as_millis());
-					break block
-				},
+				Some(block) => break block,
 				None => {
 					if now.elapsed() > Duration::from_secs(20) {
 						return Err(Error::from("Timeout while waiting for block".to_owned()))
@@ -229,6 +227,7 @@ where
 				},
 			}
 		};
+
 		let extrinsic_opaque =
 			block.block.extrinsics.get(transaction_index).expect("Extrinsic not found");
 
@@ -276,6 +275,7 @@ where
 	sp_core::H256: From<T::Hash>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
+	RelayChainHeader: From<T::Header>,
 {
 	async fn check_for_misbehaviour<C: Chain>(
 		&self,
@@ -284,24 +284,28 @@ where
 	) -> Result<(), anyhow::Error> {
 		match client_message {
 			AnyClientMessage::Grandpa(ClientMessage::Header(header)) => {
-				let target_block_number = header
+				let base_header = header
 					.finality_proof
 					.unknown_headers
 					.iter()
-					.max_by_key(|h| h.number)
-					.expect("unknown_headers always contain at least one header; qed")
-					.number;
-				let finalized_block_number =
-					*self.relay_client.rpc().block(None).await?.unwrap().block.header.number();
-				// We require a proof for the block number that may not exist on the relay chain.
-				// So, if it's greater than the latest block on the relay chain, we use the
-				// latter.
+					.min_by_key(|h| h.number)
+					.expect("unknown_headers always contain at least one header; qed");
+
+				let common_ancestor_header = self
+					.relay_client
+					.rpc()
+					.header(Some(base_header.parent_hash.into()))
+					.await?
+					.ok_or_else(|| {
+						anyhow!("No header found for hash: {:?}", base_header.parent_hash)
+					})?;
+
+				let common_ancestor_block_number =
+					u32::from(*common_ancestor_header.number() + 0u32.into());
 				let encoded =
 					GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 						&*self.relay_ws_client,
-						target_block_number
-							.min(u32::from(finalized_block_number))
-							.saturating_sub(1),
+						common_ancestor_block_number,
 					)
 					.await?
 					.ok_or_else(|| {
@@ -312,14 +316,36 @@ where
 					})?
 					.0;
 
-				// TODO: sometimes `unknown_blocks` don't contain any blocks. Investigate why
-				let trusted_finality_proof =
+				let mut trusted_finality_proof =
 					FinalityProof::<RelayChainHeader>::decode(&mut &encoded[..])?;
+				let trusted_justification =
+					GrandpaJustification::decode(&mut &*trusted_finality_proof.justification)?;
+				trusted_finality_proof.unknown_headers.clear();
+				let to_block = trusted_justification.commit.target_number;
+				let from_block = (common_ancestor_block_number + 1).min(to_block);
+				for i in from_block..=to_block {
+					let unknown_header_hash =
+						self.relay_client.rpc().block_hash(Some(i.into())).await?.ok_or_else(
+							|| {
+								anyhow!(
+									"No block hash found for block number: {:?}",
+									common_ancestor_block_number
+								)
+							},
+						)?;
+					let unknown_header = self
+						.relay_client
+						.rpc()
+						.header(Some(unknown_header_hash))
+						.await?
+						.ok_or_else(|| {
+							anyhow!("No header found for hash: {:?}", unknown_header_hash)
+						})?;
+					trusted_finality_proof.unknown_headers.push(unknown_header.into());
+				}
 
 				let justification =
 					GrandpaJustification::decode(&mut &*header.finality_proof.justification)?;
-				let trusted_justification =
-					GrandpaJustification::decode(&mut &*trusted_finality_proof.justification)?;
 				if justification.commit.target_hash != trusted_justification.commit.target_hash {
 					log::warn!(
 						"Found misbehaviour on client {}: {:?} != {:?}",
