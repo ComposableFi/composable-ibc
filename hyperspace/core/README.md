@@ -26,7 +26,7 @@ produces all packet messages that have passed the connection delay check.
 
 ## Using the relayer
 
-Using the relayer just requires having a `Chain` implementation for the chains that messages would be relayed between
+Using the relayer requires having a [`Chain`](/hyperspace/primitives/src/lib.rs#L346) implementation for the chains in question.
 
 ```rust
     // Naive example of how to use the relayer
@@ -49,15 +49,17 @@ Using the relayer just requires having a `Chain` implementation for the chains t
         Ok(())
     }
 ```
-**Note** Correct functioning of the relayer is dependent on correct implementation of the trait methods, read documentation for each of the trait  
-methods for details.
+**Note** Correct functioning of the relayer is dependent on correct implementation of the trait methods, read documentation  
+for each of the trait methods for details.
 
-## Gas Metering
+## Gas Awareness
 
-The relayer has a gas metering logic to prevent submitting a batch of IBC messages whose execution cost would exceed block gas limits.
-The gas metering is performed by [`flush_message_batch`](/hyperspace/core/src/queue.rs#L6), the way this is achieved is by estimating the weight of the  
-message batch and comparing it with the maximum block gas limit, if the estimate exceeds the former then the ibc messages  
-are split into smaller chunks that fit within the gas limit and these chunks are then submitted as individual transactions.  
+The relayer employs a gas aware logic to submit IBC messages. Messages whose execution cost would exceed block gas limits  
+are split into chunks.  
+The gas limit tuning is performed by [`flush_message_batch`](/hyperspace/core/src/queue.rs#L6), it achieves this by by estimating the weight of the message batch  
+using [`estimate_weight`](/hyperspace/primitives/src/lib.rs#L354) and comparing it with the maximum block gas limit provided by [`block_max_weight`](/hyperspace/primitives/src/lib.rs#L351),  
+if the estimate exceeds the latter then the ibc messages are split into smaller chunks that fit within the gas limit and  
+these chunks are then submitted as individual transactions.  
 
 
 ## CLI Interface
