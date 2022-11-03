@@ -37,8 +37,6 @@ use std::{
 };
 use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip};
 use tendermint_proto::Protobuf;
-// Temp fix
-type AssetId = u128;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum FinalityProtocol {
@@ -222,11 +220,12 @@ where
 	};
 
 	// block_number => events
-	let events: HashMap<String, Vec<IbcEvent>> = IbcApiClient::<u32, H256, AssetId>::query_events(
-		&*source.para_ws_client,
-		finalized_block_numbers,
-	)
-	.await?;
+	let events: HashMap<String, Vec<IbcEvent>> =
+		IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_events(
+			&*source.para_ws_client,
+			finalized_block_numbers,
+		)
+		.await?;
 
 	// header number is serialized to string
 	let mut headers_with_events = events
@@ -393,11 +392,12 @@ where
 	);
 
 	// block_number => events
-	let events: HashMap<String, Vec<IbcEvent>> = IbcApiClient::<u32, H256, AssetId>::query_events(
-		&*source.para_ws_client,
-		finalized_block_numbers,
-	)
-	.await?;
+	let events: HashMap<String, Vec<IbcEvent>> =
+		IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_events(
+			&*source.para_ws_client,
+			finalized_block_numbers,
+		)
+		.await?;
 
 	// header number is serialized to string
 	let mut headers_with_events = events
