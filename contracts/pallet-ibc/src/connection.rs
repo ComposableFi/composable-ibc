@@ -1,5 +1,5 @@
-use core::time::Duration;
 use super::*;
+use core::time::Duration;
 
 use crate::{ics23::connections::Connections, routing::Context};
 use frame_support::traits::Get;

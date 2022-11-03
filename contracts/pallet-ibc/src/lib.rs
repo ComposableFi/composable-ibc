@@ -237,8 +237,9 @@ pub mod pallet {
 		type ExpectedBlockTime: Get<u64>;
 		/// Port and Module resolution
 		type Router: ModuleRouter;
-		/// Minimum connection delay period in seconds for ibc connections that can be created or accepted.
-		/// Ensure that this is non-zero in production as it's a critical vulnerability.
+		/// Minimum connection delay period in seconds for ibc connections that can be created or
+		/// accepted. Ensure that this is non-zero in production as it's a critical vulnerability.
+		#[pallet::constant]
 		type MinimumConnectionDelay: Get<u64>;
 		/// ParaId of the runtime
 		type ParaId: Get<ParaId>;
@@ -562,8 +563,7 @@ pub mod pallet {
 		#[frame_support::transactional]
 		pub fn deliver(origin: OriginFor<T>, messages: Vec<Any>) -> DispatchResult {
 			use ibc::core::{
-				ics02_client::msgs::create_client::TYPE_URL as CREATE_CLIENT_TYPE_URL,
-				ics03_connection::msgs::{conn_open_init, conn_open_try},
+				ics02_client::msgs::create_client, ics03_connection::msgs::conn_open_init,
 			};
 			let sender = ensure_signed(origin)?;
 
@@ -577,16 +577,11 @@ pub mod pallet {
 					let type_url = String::from_utf8(message.type_url.clone()).ok()?;
 					if matches!(
 						type_url.as_str(),
-						CREATE_CLIENT_TYPE_URL | conn_open_init::TYPE_URL
+						create_client::TYPE_URL | conn_open_init::TYPE_URL
 					) {
 						reserve_count += 1;
 					}
 
-					// if matches!(
-					// 	type_url.as_str(),
-					// 	conn_open_init::TYPE_URL,
-					// 	conn_open_try::TYPE_URL
-					// )
 					Some(Ok(ibc_proto::google::protobuf::Any { type_url, value: message.value }))
 				})
 				.collect::<Result<Vec<ibc_proto::google::protobuf::Any>, Error<T>>>()?;
