@@ -32,7 +32,7 @@ cumulus-primitives-core  = { default-features = false, git = "https://github.com
 ibc-proto = { path = "../../ibc/proto", default-features = false }
 tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", optional = true, default-features = false }
 tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", default-features = false }
-ics23 = { git = "https://github.com/composablefi/ics23", rev = "b500a5c6068eb53c83c4c6c13bd9d8c25e0bf927", default-features = false }
+ics23 = { git = "https://github.com/confio/ics23", rev = "284072e82deaf3d2bde95dadf3fc98c7059e0eaa", default-features = false }
 grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../algorithms/grandpa/primitives", default-features = false }
 beefy-client-primitives = { package = "beefy-light-client-primitives", path = "../../algorithms/beefy/primitives", default-features = false }
 light-client-common = { path = "../../light-clients/common", default-features = false }

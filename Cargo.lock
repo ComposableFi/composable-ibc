@@ -3876,7 +3876,7 @@ dependencies = [
  "flex-error",
  "ibc-derive",
  "ibc-proto",
- "ics23",
+ "ics23 0.8.0-alpha (git+https://github.com/confio/ics23?rev=284072e82deaf3d2bde95dadf3fc98c7059e0eaa)",
  "modelator",
  "num-traits",
  "parity-scale-codec",
@@ -4006,7 +4006,7 @@ dependencies = [
  "ibc",
  "ibc-derive",
  "ibc-proto",
- "ics23",
+ "ics23 0.8.0-alpha (git+https://github.com/confio/ics23?rev=284072e82deaf3d2bde95dadf3fc98c7059e0eaa)",
  "log",
  "modelator",
  "prost 0.10.4",
@@ -4113,7 +4113,7 @@ dependencies = [
  "ibc",
  "ibc-derive",
  "ibc-proto",
- "ics23",
+ "ics23 0.8.0-alpha (git+https://github.com/confio/ics23?rev=284072e82deaf3d2bde95dadf3fc98c7059e0eaa)",
  "modelator",
  "num-traits",
  "parity-scale-codec",
@@ -4137,6 +4137,20 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.16",
  "uint",
+]
+
+[[package]]
+name = "ics23"
+version = "0.8.0-alpha"
+source = "git+https://github.com/confio/ics23?rev=284072e82deaf3d2bde95dadf3fc98c7059e0eaa#284072e82deaf3d2bde95dadf3fc98c7059e0eaa"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "hex",
+ "prost 0.10.4",
+ "ripemd160",
+ "sha2 0.9.9",
+ "sha3 0.9.1",
 ]
 
 [[package]]
@@ -6678,7 +6692,7 @@ dependencies = [
  "ics07-tendermint",
  "ics10-grandpa",
  "ics11-beefy",
- "ics23",
+ "ics23 0.8.0-alpha (git+https://github.com/confio/ics23?rev=284072e82deaf3d2bde95dadf3fc98c7059e0eaa)",
  "light-client-common",
  "log",
  "orml-tokens",
@@ -11347,7 +11361,7 @@ version = "0.1.0"
 source = "git+https://github.com/ComposableFi/simple-avl?rev=452a1126bfb8a861354b413755ac3c8fda3da4ec#452a1126bfb8a861354b413755ac3c8fda3da4ec"
 dependencies = [
  "bytes",
- "ics23",
+ "ics23 0.8.0-alpha (git+https://github.com/composablefi/ics23?rev=b500a5c6068eb53c83c4c6c13bd9d8c25e0bf927)",
  "sha2 0.10.6",
  "tendermint",
 ]

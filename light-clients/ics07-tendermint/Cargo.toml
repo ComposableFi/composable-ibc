@@ -14,7 +14,7 @@ std = []
 ibc = { path = "../../ibc/modules", default-features = false }
 ibc-proto = { path = "../../ibc/proto", default-features = false }
 
-ics23 = { git = "https://github.com/composablefi/ics23", rev = "b500a5c6068eb53c83c4c6c13bd9d8c25e0bf927", default-features = false }
+ics23 = { git = "https://github.com/confio/ics23", rev = "284072e82deaf3d2bde95dadf3fc98c7059e0eaa", default-features = false }
 time = { version = "0.3", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 serde_json = { version = "1", default-features = false }
