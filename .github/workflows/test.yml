@@ -16,6 +16,7 @@ jobs:
       cancel-in-progress: true
     container:
       image: ubuntu:jammy
+      privileged: true
     runs-on:
       - self-hosted
       - sre
