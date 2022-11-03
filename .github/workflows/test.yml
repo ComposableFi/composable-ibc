@@ -27,7 +27,15 @@ jobs:
       - name: Setup deps
         run: |
           apt update -y
-          apt install -y curl gcc g++
+          apt install -y \
+            curl \
+            gcc \
+            g++ \
+            build-essential \
+            clang \
+            libclang-dev \
+            pkg-config \
+            libssl-dev
 
           # Get Rust
           curl https://sh.rustup.rs -sSf | bash -s -- -y
