@@ -35,6 +35,9 @@ jobs:
           # echo '. "$HOME/.cargo/env"' >> $HOME/.bashrc
           # . $HOME/.bashrc
 
+          # debug
+          docker --version
+
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Rustup show
@@ -48,8 +51,8 @@ jobs:
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
 
-      - name: Install Docker
-        uses: docker-practice/actions-setup-docker@master
+      # - name: Install Docker
+        # uses: docker-practice/actions-setup-docker@master
 
       - name: Install docker-compose
         run: |
