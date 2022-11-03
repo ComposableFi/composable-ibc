@@ -34,7 +34,7 @@ jobs:
         password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}  
 
     - name: Build Docker image
-      run: make build-docker-image-hyperspace
+      run: make -f hyperspace/Makefile build-docker-image-hyperspace
 
     - name:  Docker push
-      run: make publish-docker-image-hyperspace
+      run: make -f hyperspace/Makefile publish-docker-image-hyperspace

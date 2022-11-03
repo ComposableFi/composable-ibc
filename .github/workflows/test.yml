@@ -8,6 +8,9 @@ on:
     branches:
       - master
 
+env:
+  PATH: "$HOME/.cargo/bin:$PATH"
+
 jobs:
   linters:
     name: Tests
@@ -32,8 +35,8 @@ jobs:
           # Get Rust
           curl https://sh.rustup.rs -sSf | bash -s -- -y
 
-          echo '. "$HOME/.cargo/env"' >> $HOME/.bashrc
-          . $HOME/.bashrc
+          # echo '. "$HOME/.cargo/env"' >> $HOME/.bashrc
+          # . $HOME/.bashrc
 
       - name: Rustup show
         run: $HOME/.cargo/bin/rustup show
