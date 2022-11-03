@@ -70,15 +70,14 @@ jobs:
             docker-compose-plugin
 
           docker --version
-          docker-compose --version
 
       # - name: Install Docker
         # uses: docker-practice/actions-setup-docker@master
 
-      # - name: Install docker-compose
-      #   run: |
-      #     curl -L "https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-$(uname -s)-$(uname -m)" -o ./docker-compose
-      #     chmod +x ./docker-compose
+      - name: Install docker-compose
+        run: |
+          curl -L "https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-$(uname -s)-$(uname -m)" -o ./docker-compose
+          chmod +x ./docker-compose
 
       - name: Run local parachain cluster
         run: |
