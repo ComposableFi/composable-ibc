@@ -30,6 +30,7 @@ jobs:
           apt install -y \
             curl \
             netcat \
+            iproute2 \
             gcc \
             g++ \
             build-essential \
@@ -85,9 +86,11 @@ jobs:
       - name: Run local parachain cluster
         run: |
           # DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest
-          ./docker-compose -f scripts/parachain-launch/docker-compose.yml up --build
-          ./scripts/wait_for_tcp_port_opening.sh 9944
-          ./scripts/wait_for_tcp_port_opening.sh 9188
+          ./docker-compose -f scripts/parachain-launch/docker-compose.yml up --detach --build
+          # ./scripts/wait_for_tcp_port_opening.sh 9944
+          # ./scripts/wait_for_tcp_port_opening.sh 9188
+          sleep 60
+          ss -nltp
 
       - name: Check that subxt-generated is up to date
         run: |
