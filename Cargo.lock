@@ -3785,7 +3785,6 @@ dependencies = [
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-finality-grandpa",
  "sp-io",
- "sp-keyring",
  "sp-keystore",
  "sp-mmr-primitives",
  "sp-runtime",
