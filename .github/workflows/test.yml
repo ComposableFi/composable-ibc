@@ -8,9 +8,6 @@ on:
     branches:
       - master
 
-env:
-  PATH: "$HOME/.cargo/bin:$PATH"
-
 jobs:
   linters:
     name: Tests
@@ -37,6 +34,8 @@ jobs:
 
           # echo '. "$HOME/.cargo/env"' >> $HOME/.bashrc
           # . $HOME/.bashrc
+
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Rustup show
         run: $HOME/.cargo/bin/rustup show
