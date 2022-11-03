@@ -36,7 +36,7 @@ jobs:
           # . $HOME/.bashrc
 
           # debug
-          docker --version
+          snap --version
 
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 

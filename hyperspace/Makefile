@@ -24,7 +24,7 @@ build-release-hyperspace:
 	cargo b -p $(module-hyperspace) --release
 
 build-docker-image-hyperspace:
-	docker build -f hyperspace/Dockerfile -t "${hyperspace_image}" .
+	docker build -f scripts/hyperspace.Dockerfile -t "${hyperspace_image}" .
 
 publish-docker-image-hyperspace:
 	docker push "${hyperspace_image}"
