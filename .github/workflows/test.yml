@@ -32,7 +32,11 @@ jobs:
           # Get Rust
           curl https://sh.rustup.rs -sSf | bash -s -- -y
 
-          echo 'source $HOME/.cargo/env' >> $HOME/.bashrc
+          # debug
+          echo "home: $HOME" # tmp
+          cat "$HOME/.cargo/env"
+
+          echo 'source "$HOME/.cargo/env"' >> $HOME/.bashrc
           source $HOME/.bashrc
 
       - name: Rustup show
