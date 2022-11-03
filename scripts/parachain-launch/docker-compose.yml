@@ -1,6 +1,7 @@
 version: "3.7"
 services:
   relaychain-alice:
+    network_mode: host
     ports:
       - 9944:9944
       - 9933:9933
@@ -30,6 +31,7 @@ services:
         soft: 65536
         hard: 65536
   relaychain-bob:
+    network_mode: host
     ports:
       - 9945:9944
       - 9934:9933
@@ -55,6 +57,7 @@ services:
       RUST_LOG: parachain::candidate-backing=trace
     ulimits: *a1
   relaychain-charlie:
+    network_mode: host
     ports:
       - 9946:9944
       - 9935:9933
@@ -80,6 +83,7 @@ services:
       RUST_LOG: parachain::candidate-backing=trace
     ulimits: *a1
   relaychain-dave:
+    network_mode: host
     ports:
       - 9947:9944
       - 9936:9933
@@ -105,6 +109,7 @@ services:
       RUST_LOG: parachain::candidate-backing=trace
     ulimits: *a1
   relaychain-eve:
+    network_mode: host
     ports:
       - 9948:9944
       - 9937:9933
@@ -130,6 +135,7 @@ services:
       RUST_LOG: parachain::candidate-backing=trace
     ulimits: *a1
   relaychain-ferdie:
+    network_mode: host
     ports:
       - 9949:9944
       - 9938:9933
@@ -155,6 +161,7 @@ services:
       RUST_LOG: parachain::candidate-backing=trace
     ulimits: *a1
   parachain-2000-0:
+    network_mode: host
     ports:
       - 9188:9944
       - 9939:9933
@@ -187,6 +194,7 @@ services:
     environment: {}
     ulimits: *a1
   parachain-2000-1:
+    network_mode: host
     ports:
       - 9951:9944
       - 9940:9933
@@ -219,6 +227,7 @@ services:
     environment: {}
     ulimits: *a1
   parachain-2000-2:
+    network_mode: host
     ports:
       - 9952:9944
       - 9941:9933
@@ -251,6 +260,7 @@ services:
     environment: {}
     ulimits: *a1
   parachain-2001-0:
+    network_mode: host
     ports:
       - 9988:9944
       - 9942:9933
@@ -282,6 +292,7 @@ services:
     environment: {}
     ulimits: *a1
   parachain-2001-1:
+    network_mode: host
     ports:
       - 9954:9944
       - 9943:9933
@@ -314,6 +325,7 @@ services:
     environment: {}
     ulimits: *a1
   parachain-2001-2:
+    network_mode: host
     ports:
       - 9955:9944
       - 9144:9933
