@@ -91,6 +91,9 @@ jobs:
           # ./scripts/wait_for_tcp_port_opening.sh 9944
           # ./scripts/wait_for_tcp_port_opening.sh 9188
           sleep 60
+          echo "# ip a"
+          ip a
+          echo "# ss -nltp"
           ss -nltp
 
       - name: Check that subxt-generated is up to date
