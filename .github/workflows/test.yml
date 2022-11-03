@@ -87,6 +87,7 @@ jobs:
         run: |
           # DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml up --detach --build
+          ./docker-compose -f scripts/parachain-launch/docker-compose.yml ps
           # ./scripts/wait_for_tcp_port_opening.sh 9944
           # ./scripts/wait_for_tcp_port_opening.sh 9188
           sleep 60
