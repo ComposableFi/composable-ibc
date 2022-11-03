@@ -50,7 +50,7 @@ jobs:
 
       - name: Install Docker
         run: |
-          apt-get install \
+          apt-get install -y \
             ca-certificates \
             gnupg \
             lsb-release
