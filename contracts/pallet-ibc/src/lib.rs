@@ -441,6 +441,7 @@ pub mod pallet {
 			ibc_denom: Vec<u8>,
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
+			is_sender_source: bool,
 		},
 		/// A channel has been opened
 		ChannelOpened { channel_id: Vec<u8>, port_id: Vec<u8> },
@@ -453,6 +454,7 @@ pub mod pallet {
 			ibc_denom: Vec<u8>,
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
+			is_sender_source: bool,
 		},
 		/// Ibc tokens have been received and minted
 		TokenReceived {
@@ -461,6 +463,7 @@ pub mod pallet {
 			ibc_denom: Vec<u8>,
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
+			is_receiver_source: bool,
 		},
 		/// Ibc transfer failed, received an acknowledgement error, tokens have been refunded
 		TokenTransferFailed {
@@ -469,6 +472,7 @@ pub mod pallet {
 			ibc_denom: Vec<u8>,
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
+			is_sender_source: bool,
 		},
 		/// On recv packet was not processed successfully processes
 		OnRecvPacketError { msg: Vec<u8> },
@@ -683,7 +687,12 @@ pub mod pallet {
 				timeout_timestamp,
 			};
 
-			if is_sender_chain_source(msg.source_port.clone(), msg.source_channel, &msg.token.denom)
+			let is_sender_source = is_sender_chain_source(
+				msg.source_port.clone(),
+				msg.source_channel,
+				&msg.token.denom,
+			);
+			if is_sender_source {
 			{
 				// Store escrow address
 				let escrow_address =
@@ -716,6 +725,7 @@ pub mod pallet {
 				)
 				.ok(),
 				ibc_denom: coin.denom.to_string().as_bytes().to_vec(),
+				is_sender_source,
 			});
 			Ok(())
 		}

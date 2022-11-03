@@ -29,7 +29,7 @@ use ibc::{
 			on_chan_open_init, on_chan_open_try,
 		},
 		error::Error as Ics20Error,
-		is_receiver_chain_source,
+		is_receiver_chain_source, is_sender_chain_source,
 		packet::PacketData,
 		relay::{
 			on_ack_packet::process_ack_packet, on_recv_packet::process_recv_packet,
@@ -233,6 +233,10 @@ where
 			},
 			Ok(packet_data) => {
 				let denom = full_ibc_denom(packet, packet_data.token.clone());
+				let token = PrefixedCoin {
+					denom: prefixed_denom.clone(),
+					amount: packet_data.token.amount,
+				};
 				Pallet::<T>::deposit_event(Event::<T>::TokenReceived {
 					from: packet_data.sender.to_string().as_bytes().to_vec(),
 					to: packet_data.receiver.to_string().as_bytes().to_vec(),
@@ -240,6 +244,11 @@ where
 					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
 						.ok(),
 					amount: packet_data.token.amount.as_u256().as_u128().into(),
+					is_receiver_source: is_receiver_chain_source(
+						packet.source_port.clone(),
+						packet.source_channel.clone(),
+						&prefixed_denom,
+					),
 				});
 				let packet = packet.clone();
 				OnRecvPacketAck::Successful(
@@ -285,8 +294,12 @@ where
 		process_ack_packet(&mut ctx, packet, &packet_data, &ack)
 			.map_err(|e| Ics04Error::implementation_specific(e.to_string()))?;
 
+		let denom = full_ibc_denom(packet, packet_data.token.clone());
+
+		let prefixed_denom = PrefixedDenom::from_str(&denom).expect("Should not fail");
+
 		match ack {
-			Ics20Acknowledgement::Success(_) =>
+			Ics20Acknowledgement::Success(_) => {
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
 					from: packet_data.sender.to_string().as_bytes().to_vec(),
 					to: packet_data.receiver.to_string().as_bytes().to_vec(),
@@ -296,8 +309,14 @@ where
 					)
 					.ok(),
 					amount: packet_data.token.amount.as_u256().as_u128().into(),
-				}),
-			Ics20Acknowledgement::Error(_) =>
+					is_sender_source: is_sender_chain_source(
+						packet.source_port.clone(),
+						packet.source_channel.clone(),
+						&prefixed_denom,
+					),
+				})
+			},
+			Ics20Acknowledgement::Error(_) => {
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferFailed {
 					from: packet_data.sender.to_string().as_bytes().to_vec(),
 					to: packet_data.receiver.to_string().as_bytes().to_vec(),
@@ -307,7 +326,13 @@ where
 					)
 					.ok(),
 					amount: packet_data.token.amount.as_u256().as_u128().into(),
-				}),
+					is_sender_source: is_sender_chain_source(
+						packet.source_port.clone(),
+						packet.source_channel.clone(),
+						&prefixed_denom,
+					),
+				})
+			},
 		}
 
 		Ok(())
