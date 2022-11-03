@@ -21,13 +21,13 @@ jobs:
       - sre
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
       - name: Setup deps
         run: |
           apt update -y
           apt install -y curl
-
-          curl -L "https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-$(uname -s)-$(uname -m)" -o ./docker-compose
-          chmod +x ./docker-compose
 
           # Get Rust
           curl https://sh.rustup.rs -sSf | bash -s -- -y
@@ -35,13 +35,13 @@ jobs:
           echo 'source $HOME/.cargo/env' >> $HOME/.bashrc
           source $HOME/.bashrc
 
+      - name: Rustup show
+        run: $HOME/.cargo/bin/rustup show
+
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
         with:
           version: '3.x'
-
-      - name: Rustup show
-        run: $HOME/.cargo/bin/rustup show
 
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
@@ -66,8 +66,8 @@ jobs:
       - name: Run all unit tests
         run: |
           SKIP_WASM_BUILD=1 $HOME/.cargo/bin/cargo +nightly nextest run --locked --release --workspace \
-            --exclude ibc-derive \ # doesn't play nice with nextest for some reason \
-            --exclude hyperspace-testsuite \ # we'll use vanilla cargo so we can run tests sequentially
+            --exclude ibc-derive \                # doesn't play nice with nextest for some reason
+            --exclude hyperspace-testsuite \      # we'll use vanilla cargo so we can run tests sequentially
 
       - name: Run hyperspace integration tests
         run: |
