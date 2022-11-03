@@ -46,13 +46,15 @@ jobs:
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
 
+      - name: Install Docker
+        uses: docker-practice/actions-setup-docker@master
+
       - name: Install docker-compose
         run: |
           curl -L "https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-$(uname -s)-$(uname -m)" -o ./docker-compose
           chmod +x ./docker-compose
 
       - name: Run local parachain cluster
-        uses: docker-practice/actions-setup-docker@master
         run: |
           # DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml up -d --build
