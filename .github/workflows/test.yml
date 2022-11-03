@@ -22,6 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup deps
+        shell: bash
         run: |
           apt update -y
           apt install -y curl
@@ -33,6 +34,7 @@ jobs:
           curl https://sh.rustup.rs -sSf | bash -s -- -y
 
           echo 'source $HOME/.cargo/env' >> $HOME/.bashrc
+          source $HOME/.bashrc
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
