@@ -54,6 +54,8 @@ where
 	where
 		Host: HostFunctions,
 	{
+		// It's safe to assume that the authority list will not contain duplicates,
+		// since this list is extracted from a verified relaychain header.
 		let voters =
 			VoterSet::new(authorities.iter().cloned()).ok_or(anyhow!("Invalid AuthoritiesSet"))?;
 
@@ -74,7 +76,14 @@ where
 		let ancestry_chain = AncestryChain::<H>::new(&self.votes_ancestries);
 
 		match finality_grandpa::validate_commit(&self.commit, voters, &ancestry_chain) {
-			Ok(ref result) if result.is_valid() => {},
+			Ok(ref result) if result.is_valid() => {
+				if result.num_duplicated_precommits() > 0 ||
+					result.num_invalid_voters() > 0 ||
+					result.num_equivocations() > 0
+				{
+					Err(anyhow!("Invalid commit, found one of `duplicate precommits`, `invalid voters`, or `equivocations` {result:?}"))?
+				}
+			},
 			err => {
 				let result = err.map_err(|_| anyhow!("Invalid ancestry!"))?;
 				Err(anyhow!("invalid commit in grandpa justification: {result:?}"))?
