@@ -22,7 +22,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup deps
-        shell: bash
         run: |
           apt update -y
           apt install -y curl
