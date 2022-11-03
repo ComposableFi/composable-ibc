@@ -40,9 +40,6 @@ jobs:
           # Get Rust
           curl https://sh.rustup.rs -sSf | bash -s -- -y
 
-          # echo '. "$HOME/.cargo/env"' >> $HOME/.bashrc
-          # . $HOME/.bashrc
-
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Rustup show
@@ -79,9 +76,6 @@ jobs:
 
           docker --version
 
-      # - name: Install Docker
-        # uses: docker-practice/actions-setup-docker@master
-
       - name: Install docker-compose
         run: |
           curl -L "https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-$(uname -s)-$(uname -m)" -o ./docker-compose
@@ -91,7 +85,8 @@ jobs:
         run: |
           # DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml up -d --build
-          ./scripts/wait_for_polkadot_launch.sh
+          ./scripts/wait_for_tcp_port_opening.sh 9944
+          ./scripts/wait_for_tcp_port_opening.sh 9188
 
       - name: Check that subxt-generated is up to date
         run: |
