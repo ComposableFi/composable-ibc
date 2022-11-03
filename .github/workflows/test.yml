@@ -29,6 +29,7 @@ jobs:
           apt update -y
           apt install -y \
             curl \
+            nc \
             gcc \
             g++ \
             build-essential \
