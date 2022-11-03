@@ -27,7 +27,7 @@ jobs:
       - name: Setup deps
         run: |
           apt update -y
-          apt install -y curl
+          apt install -y curl snap
 
           # Get Rust
           curl https://sh.rustup.rs -sSf | bash -s -- -y
