@@ -23,6 +23,14 @@ pub(crate) fn process<Ctx: ReaderContext>(
 ) -> HandlerResult<ConnectionResult, Error> {
 	let mut output = HandlerOutput::builder();
 
+	if msg.delay_period < Ctx::MINIMUM_DELAY_PERIOD {
+		Err(Error::implementation_specific(format!(
+			"Connection delay is too low. Got: {:?}, minimum delay: {:?}",
+			msg.delay_period,
+			Ctx::MINIMUM_DELAY_PERIOD
+		)))?
+	}
+
 	// An IBC client running on the local (host) chain should exist.
 	ctx.client_state(&msg.client_id).map_err(Error::ics02_client)?;
 
