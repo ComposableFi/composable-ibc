@@ -320,7 +320,27 @@ where
 	}
 
 	async fn query_channels(&self) -> Result<Vec<(ChannelId, PortId)>, Self::Error> {
-		todo!()
+		let request = tonic::Request::new(QueryChannelsRequest { pagination: None }.into());
+		let mut grpc_client =
+			ibc_proto::ibc::core::channel::v1::query_client::QueryClient::connect(
+				self.grpc_url.clone().to_string(),
+			)
+			.await
+			.map_err(|e| Error::from(format!("{:?}", e)))?;
+		let response = grpc_client
+			.channels(request)
+			.await
+			.map_err(|e| Error::from(format!("{:?}", e)))?
+			.into_inner()
+			.channels
+			.into_iter()
+			.filter_map(|c| {
+				let id = ChannelId::from_str(&c.channel_id).ok()?;
+				let port_id = PortId::from_str(&c.port_id).ok()?;
+				Some((id, port_id))
+			})
+			.collect::<Vec<_>>();
+		Ok(response)
 	}
 
 	async fn query_connection_using_client(

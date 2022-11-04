@@ -74,6 +74,8 @@ async fn setup_clients<H: Clone + Send + Sync + 'static>() -> (CosmosClient<H>, 
 	log::info!(target: "hyperspace", "Latest height on chain_a: {:?}", height);
 	let time = chain_a.query_timestamp_at(2000).await.unwrap();
 	log::info!(target: "hyperspace", "Timestamp at height 2000 on chain_a: {:?}", time);
+	let channels = chain_a.query_channels().await.unwrap();
+	log::info!(target: "hyperspace", "Channels on chain_a: {:?}", channels);
 	
 	{
 		// Get initial tendermint state
