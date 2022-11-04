@@ -57,12 +57,12 @@ Using the testsuite is straight forward and the following pseudocode describes t
             return (Box::new(chain_a), Box::new(chain_b))
         }
     
-    // 4. If clients do not exist create them
-    let (client_a, client_b) = create_clients(&chain_a, &chain_b).await.unwrap();
-    chain_a.set_client_id(client_a);
-    chain_b.set_client_id(client_b);
-    (Box::new(chain_a), Box::new(chain_b))
-}
+        // 4. If clients do not exist create them
+        let (client_a, client_b) = create_clients(&chain_a, &chain_b).await.unwrap();
+        chain_a.set_client_id(client_a);
+        chain_b.set_client_id(client_b);
+        (Box::new(chain_a), Box::new(chain_b))
+    }
 
     #[tokio::test]
     async fn full_integration_test() {
