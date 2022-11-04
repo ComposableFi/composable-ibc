@@ -182,7 +182,11 @@ where
 		Ok(())
 	}
 
-	async fn send_ping(&self, channel_id: ChannelId, timeout: Timeout) -> Result<(), Self::Error> {
+	async fn send_ordered_packet(
+		&self,
+		channel_id: ChannelId,
+		timeout: Timeout,
+	) -> Result<(), Self::Error> {
 		let (timeout_height, timestamp) = match timeout {
 			Timeout::Offset { timestamp, height } => (height.unwrap(), timestamp.unwrap()),
 			_ => panic!("Only offset timeouts allowed"),

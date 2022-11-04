@@ -319,8 +319,8 @@ pub trait TestProvider: Chain + Clone + 'static {
 	/// Initiate an ibc transfer on chain.
 	async fn send_transfer(&self, params: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error>;
 
-	/// Initiate a ping on chain
-	async fn send_ping(
+	/// Send an ordered packet
+	async fn send_ordered_packet(
 		&self,
 		channel_id: ChannelId,
 		timeout: pallet_ibc::Timeout,
