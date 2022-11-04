@@ -15,18 +15,22 @@ anyhow = "1.0.66"
 async-trait = "0.1.58"
 futures = "0.3.24"
 json = { version = "1.0.85", package = "serde_json" }
+tonic = { version = "0.7.2", features = ["tls", "tls-roots"] }
 
 ibc = { path = "../../ibc/modules" }
 ibc-proto = { path = "../../ibc/proto" }
 tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8" }
+tendermint-rpc   = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", features = ["http-client", "websocket-client"] }
 
 hyperspace-core = { path = "../core", features = ["testing"] }
 hyperspace-primitives = { path = "../primitives", features = ["testing"] }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 
 [dev-dependencies]
-hyperspace-core = { path = "../core", features = ["testing", "build-metadata-from-ws"] }
-hyperspace-parachain = { path = "../parachain", features = ["testing", "build-metadata-from-ws"] }
+# hyperspace-core = { path = "../core", features = ["testing", "build-metadata-from-ws"] }
+# hyperspace-parachain = { path = "../parachain", features = ["testing", "build-metadata-from-ws"] }
+# hyperspace-cosmos = { path = "../cosmos", package = "hyperspace-cosmos", features = ["testing"] }
+
 # substrate
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", features = ["full_crypto"] }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
@@ -37,3 +41,8 @@ subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab2
 # We need this so the tests run sequentially
 [[test]]
 name = "parachain_parachain"
+feature = ["dep:hyperspace-parachain"]
+
+[[test]]
+name = "cosmos_cosmos"
+feature = ["hyperspace-cosmos"]

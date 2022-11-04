@@ -3694,6 +3694,7 @@ dependencies = [
  "ibc",
  "ibc-proto",
  "ibc-rpc",
+ "ics07-tendermint",
  "ics10-grandpa",
  "ics11-beefy",
  "light-client-common",
@@ -3719,6 +3720,29 @@ dependencies = [
 [[package]]
 name = "hyperspace-cosmos"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "env_logger",
+ "futures",
+ "hyperspace-primitives",
+ "ibc",
+ "ibc-proto",
+ "ibc-rpc",
+ "ics07-tendermint",
+ "jsonrpsee 0.15.1",
+ "jsonrpsee-ws-client 0.14.0",
+ "log",
+ "pallet-ibc",
+ "parity-scale-codec",
+ "serde",
+ "ss58-registry",
+ "tendermint",
+ "tendermint-proto",
+ "tendermint-rpc",
+ "thiserror",
+ "tonic",
+]
 
 [[package]]
 name = "hyperspace-metrics"
@@ -3830,7 +3854,6 @@ dependencies = [
  "async-trait",
  "futures",
  "hyperspace-core",
- "hyperspace-parachain",
  "hyperspace-primitives",
  "ibc",
  "ibc-proto",
@@ -3843,7 +3866,9 @@ dependencies = [
  "sp-runtime",
  "subxt",
  "tendermint-proto",
+ "tendermint-rpc",
  "tokio",
+ "tonic",
 ]
 
 [[package]]
@@ -13095,7 +13120,10 @@ dependencies = [
  "pin-project",
  "prost 0.10.4",
  "prost-derive 0.10.1",
+ "rustls-native-certs 0.6.2",
+ "rustls-pemfile",
  "tokio",
+ "tokio-rustls 0.23.4",
  "tokio-stream",
  "tokio-util",
  "tower",

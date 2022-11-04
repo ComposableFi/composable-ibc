@@ -7,7 +7,7 @@ authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <david.salami@g
 
 [dependencies]
 primitives = { path = "../primitives", package = "hyperspace-primitives" }
-parachain = { path = "../parachain", package = "hyperspace-parachain" }
+parachain = { path = "../parachain", package = "hyperspace-parachain", optional = true }
 cosmos = { path = "../cosmos", package = "hyperspace-cosmos", optional = true }
 #near = { path = "near", package = "hyperspace-near", optional = true }
 metrics = { path = "../metrics", package = "hyperspace-metrics" }
@@ -31,14 +31,15 @@ prometheus = { version = "0.13.0", default-features = false }
 # ibc
 ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto" }
-tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
+tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8" }
 
-ics11-beefy = { path = "../../light-clients/ics11-beefy" }
-#ics13-near = { path = "../../light-clients/ics13-near" }
 light-client-common = { path = "../../light-clients/common" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
-ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
+ics07-tendermint = { path = "../../light-clients/ics07-tendermint", optional = true }
+ics10-grandpa = { path = "../../light-clients/ics10-grandpa", optional = true }
+ics11-beefy = { path = "../../light-clients/ics11-beefy", optional = true }
+# ics13-near = { path = "../light-clients/ics13-near" }
 
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
@@ -49,6 +50,7 @@ subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab2
 derive_more = "0.99.17"
 prost = "0.10"
 parachain = { path = "../parachain", package = "hyperspace-parachain", features = ["testing"] }
+cosmos = { path = "../cosmos", package = "hyperspace-cosmos", features = ["testing"] }
 
 # substrate
 subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }
@@ -65,6 +67,7 @@ sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkad
 build-metadata-from-ws = [
     "parachain/build-metadata-from-ws",
 ]
+parachain = ["dep:parachain", "ics10-grandpa", "ics11-beefy"]
+cosmos = ["dep:cosmos", "ics07-tendermint"]
 #near = ["dep:near"]
-#cosmos = ["dep:cosmos"]
 testing = [ "primitives/testing", "parachain/testing" ]

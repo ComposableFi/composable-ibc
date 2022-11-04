@@ -2,7 +2,41 @@
 name = "hyperspace-cosmos"
 version = "0.1.0"
 edition = "2021"
-authors = ["Composable Developers"]
+authors = ["Farhad Shabani <farhad.shabani@gmail.com>"]
 
 [dependencies]
-#primitives = { path = "../primitives", package = "hyperspace-primitives" }
+anyhow = "1.0.65"
+async-trait = "0.1.53"
+codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+log = "0.4.17"
+env_logger = "0.9.0"
+futures = "0.3.21"
+primitives = { path = "../primitives", package = "hyperspace-primitives" }
+jsonrpsee = "0.15.1"
+jsonrpsee-ws-client = "0.14.0"
+serde = {version="1.0.137", features = ["derive"]}
+ss58-registry = "1.28.0"
+thiserror = "1.0.31"
+tonic = { version = "0.7.2", features = ["tls", "tls-roots"] }
+
+# ibc
+ibc = { path = "../../ibc/modules", features = [] }
+ibc-proto = { path = "../../ibc/proto" }
+ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
+pallet-ibc = { path = "../../contracts/pallet-ibc" }
+# light-client-common = { path = "../../light-clients/common" }
+
+
+# Tendermint
+tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", default-features = false }
+tendermint-rpc   = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", features = ["http-client", "websocket-client"] }
+tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8" }
+ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
+# tendermint-light-client = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", default-features = false, features = ["rpc-client", "secp256k1", "unstable"] }
+# tendermint-light-client-verifier = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", default-features = false }
+# tendermint-prover = { path = "../../algorithms/tendermint/prover" }
+# tendermint-verifier = { path = "../../algorithms/tendermint/verifier" }
+# tendermint-primitives = {  path = "../../algorithms/tendermint/primitives" }
+
+[features]
+testing = ["primitives/testing"]
