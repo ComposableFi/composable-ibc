@@ -21,7 +21,9 @@ impl<T: Config + Sync + Send> ConnectionReader for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 {
-	const MINIMUM_DELAY_PERIOD: Duration = Duration::from_secs(T::MinimumConnectionDelay::get());
+	fn minimum_delay_period(&self) -> Duration {
+		Duration::from_secs(T::MinimumConnectionDelay::get())
+	}
 
 	fn connection_end(&self, conn_id: &ConnectionId) -> Result<ConnectionEnd, ICS03Error> {
 		log::trace!(target: "pallet_ibc", "in connection : [connection_end] >> connection_id = {:?}", conn_id);

@@ -22,7 +22,7 @@ use core::time::Duration;
 pub trait ConnectionReader {
 	/// Minimum connection delay period for ibc connections that can be created or accepted.
 	/// Ensure that this is non-zero in production as it's a critical vulnerability.
-	const MINIMUM_DELAY_PERIOD: Duration;
+	fn minimum_delay_period(&self) -> Duration;
 
 	/// Returns the ConnectionEnd for the given identifier `conn_id`.
 	fn connection_end(&self, conn_id: &ConnectionId) -> Result<ConnectionEnd, Error>;

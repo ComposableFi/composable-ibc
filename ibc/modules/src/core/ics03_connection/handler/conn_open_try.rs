@@ -29,7 +29,7 @@ pub(crate) fn process<Ctx: ReaderContext>(
 ) -> HandlerResult<ConnectionResult, Error> {
 	let mut output = HandlerOutput::builder();
 
-	if msg.delay_period < Ctx::MINIMUM_DELAY_PERIOD {
+	if msg.delay_period < ctx.minimum_delay_period() {
 		Err(Error::implementation_specific(format!(
 			"Connection delay is too low. Got: {:?}, minimum delay: {:?}",
 			msg.delay_period,

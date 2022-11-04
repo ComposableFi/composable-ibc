@@ -402,7 +402,9 @@ impl<C: HostBlockType> Ics20Reader for DummyTransferModule<C> {
 }
 
 impl<C: HostBlockType> ConnectionReader for DummyTransferModule<C> {
-	const MINIMUM_DELAY_PERIOD: Duration = Duration::from_secs(0);
+	fn minimum_delay_period(&self) -> Duration {
+		Duration::from_secs(0)
+	}
 
 	fn connection_end(&self, cid: &ConnectionId) -> Result<ConnectionEnd, Ics03Error> {
 		match self.ibc_store.lock().unwrap().connections.get(cid) {
