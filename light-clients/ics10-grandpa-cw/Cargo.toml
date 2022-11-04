@@ -1,7 +1,7 @@
 [package]
 name = "ics10-grandpa-cw"
 version = "0.1.0"
-authors = ["Blas Rodriguez Irizar <rodrigblas@gmail.com>"]
+authors = ["Composable Developers"]
 edition = "2021"
 
 exclude = [
