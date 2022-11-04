@@ -121,7 +121,7 @@ jobs:
           curl -L "https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-$(uname -s)-$(uname -m)" -o ./docker-compose
           chmod +x ./docker-compose
 
-        name: Store Network gateway IP
+      - name: Store Network gateway IP
         run: echo "GATEWAY_IP=$(ip r l | grep default | awk '{print $3}')" >> $GITHUB_ENV # GATEWAY_IP equals host ip where we run docker container,
                                                                                           # this ip has access to Docker port mapping.
 
