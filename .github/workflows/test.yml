@@ -108,7 +108,7 @@ jobs:
       - name: Check that subxt-generated is up to date
         run: |
           ./scripts/generate-subxt.sh
-          git status --porcelain
+          # git status --porcelain
 
       - name: Run all unit tests
         run: |
