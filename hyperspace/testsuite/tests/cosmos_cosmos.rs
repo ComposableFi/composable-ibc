@@ -64,11 +64,63 @@ async fn setup_clients<H: Clone + Send + Sync + 'static>() -> (CosmosClient<H>, 
 	let clients_on_b = chain_b.query_clients().await.unwrap();
 	log::info!(target: "hyperspace", "Clients on chain_b: {:?}", clients_on_b);
 
-	if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
-		chain_a.set_client_id(clients_on_b[0].clone());
-		chain_b.set_client_id(clients_on_b[0].clone());
-		return (chain_a, chain_b);
-	}
+	// if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
+	// 	chain_a.set_client_id(clients_on_b[0].clone());
+	// 	chain_b.set_client_id(clients_on_b[0].clone());
+	// 	return (chain_a, chain_b);
+	// }
+
+	let height = chain_a.latest_height_and_timestamp().await.unwrap();
+	log::info!(target: "hyperspace", "Latest height on chain_a: {:?}", height);
+	let time = chain_a.query_timestamp_at(2000).await.unwrap();
+	log::info!(target: "hyperspace", "Timestamp at height 2000 on chain_a: {:?}", time);
+	
+	{
+		// Get initial tendermint state
+		// let (client_state, consensus_state) =
+		// 	chain_b.construct_tendermint_client_state().await.unwrap();
+
+		// 	// Create client message is the same for both chains
+		// 	let msg_create_client = MsgCreateAnyClient::<LocalClientTypes> {
+		// 		client_state: client_state.clone(),
+		// 		consensus_state,
+		// 		signer: chain_a.account_id(),
+		// 	};
+
+		// 	let msg = pallet_ibc::Any {
+		// 		type_url: msg_create_client.type_url().as_bytes().to_vec(),
+		// 		value: msg_create_client.encode_vec(),
+		// 	};
+		// 	let client_id_b_on_a = chain_a
+		// 		.submit_create_client_msg(msg.clone())
+		// 		.await
+		// 		.expect("Client was not created successfully");
+		// 	chain_b.set_client_id(client_id_b_on_a.clone());
+	};
+
+	{
+		// 	// Get initial tendermint state
+		// let (client_state, consensus_state) =
+		// 	chain_a.construct_tendermint_client_state().await.unwrap();
+
+		// 	// Create client message is the same for both chains
+		// 	let msg_create_client = MsgCreateAnyClient::<LocalClientTypes> {
+		// 		client_state: client_state.clone(),
+		// 		consensus_state,
+		// 		signer: chain_a.account_id(),
+		// 	};
+
+		// 	let msg = pallet_ibc::Any {
+		// 		type_url: msg_create_client.type_url().as_bytes().to_vec(),
+		// 		value: msg_create_client.encode_vec(),
+		// 	};
+		// 	let client_id_a_on_b = chain_b
+		// 		.submit_create_client_msg(msg)
+		// 		.await
+		// 		.expect("Client was not created successfully");
+		// 	chain_a.set_client_id(client_id_a_on_b.clone());
+	};
+
 	(chain_a, chain_b)
 }
 
