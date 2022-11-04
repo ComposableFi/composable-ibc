@@ -42,6 +42,7 @@ jobs:
 
           # Get Rust
           curl https://sh.rustup.rs -sSf | bash -s -- -y
+          $HOME/.cargo/bin/rustup toolchain install nightly
 
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
@@ -93,16 +94,16 @@ jobs:
         run: |
           # DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml up --detach --build
-          ./docker-compose -f scripts/parachain-launch/docker-compose.yml ps
+          # ./docker-compose -f scripts/parachain-launch/docker-compose.yml ps
           ./scripts/wait_for_tcp_port_opening.sh $GATEWAY_IP 9944
           ./scripts/wait_for_tcp_port_opening.sh $GATEWAY_IP 9188
           # sleep 60
-          echo "# ip -o a"
-          ip -o a
-          echo "# ip r l"
-          ip r l
-          echo "# ss -nltp"
-          ss -nltp
+          # echo "# ip -o a"
+          # ip -o a
+          # echo "# ip r l"
+          # ip r l
+          # echo "# ss -nltp"
+          # ss -nltp
 
       - name: Check that subxt-generated is up to date
         run: |
