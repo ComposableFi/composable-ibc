@@ -19,14 +19,14 @@ use ics10_grandpa::{
 	consensus_state::ConsensusState,
 };
 
-impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientTypes for Context<'a, H> {
+impl<'a, H: HostFunctions> ClientTypes for Context<'a, H> {
 	type AnyClientMessage = ClientMessage;
 	type AnyClientState = ClientState<H>;
 	type AnyConsensusState = ConsensusState;
 	type ClientDef = GrandpaClient<H>;
 }
 
-impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'a, H> {
+impl<'a, H: HostFunctions> ClientReader for Context<'a, H> {
 	fn client_type(&self, _client_id: &ClientId) -> Result<ClientType, Error> {
 		todo!()
 	}
@@ -84,7 +84,7 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'
 	}
 }
 
-impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientKeeper for Context<'a, H> {
+impl<'a, H: HostFunctions> ClientKeeper for Context<'a, H> {
 	fn store_client_type(
 		&mut self,
 		_client_id: ClientId,

@@ -14,7 +14,7 @@ use ibc::{
 };
 use ics10_grandpa::client_message::RelayChainHeader;
 
-impl<'a, H: HostFunctions<Header = RelayChainHeader>> ConnectionReader for Context<'a, H> {
+impl<'a, H: HostFunctions> ConnectionReader for Context<'a, H> {
 	fn connection_end(&self, _conn_id: &ConnectionId) -> Result<ConnectionEnd, Error> {
 		todo!()
 	}
@@ -32,7 +32,7 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ConnectionReader for Conte
 	}
 }
 
-impl<'a, H: HostFunctions<Header = RelayChainHeader>> ConnectionKeeper for Context<'a, H> {
+impl<'a, H: HostFunctions> ConnectionKeeper for Context<'a, H> {
 	fn store_connection(
 		&mut self,
 		_connection_id: ConnectionId,

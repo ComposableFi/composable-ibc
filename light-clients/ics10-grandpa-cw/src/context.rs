@@ -37,4 +37,4 @@ impl<'a, H> Context<'a, H> {
 	}
 }
 
-impl<'a, H: HostFunctions<Header = RelayChainHeader>> ReaderContext for Context<'a, H> {}
+impl<'a, H: HostFunctions> ReaderContext for Context<'a, H> {}

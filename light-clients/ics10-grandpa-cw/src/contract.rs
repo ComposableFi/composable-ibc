@@ -31,21 +31,11 @@ impl light_client_common::HostFunctions for HostFunctions {
 }
 
 impl grandpa_light_client_primitives::HostFunctions for HostFunctions {
-	type Header = RelayChainHeader;
-
 	fn ed25519_verify(
 		_sig: &sp_core::ed25519::Signature,
 		_msg: &[u8],
 		_pub_key: &sp_core::ed25519::Public,
 	) -> bool {
-		todo!()
-	}
-
-	fn insert_relay_header_hashes(_headers: &[<Self::Header as Header>::Hash]) {
-		todo!()
-	}
-
-	fn contains_relay_header_hash(_hash: <Self::Header as Header>::Hash) -> bool {
 		todo!()
 	}
 }

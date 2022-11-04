@@ -17,7 +17,7 @@ use ibc::{
 use ics10_grandpa::client_message::RelayChainHeader;
 use std::time::Duration;
 
-impl<'a, H: HostFunctions<Header = RelayChainHeader>> ChannelReader for Context<'a, H> {
+impl<'a, H: HostFunctions> ChannelReader for Context<'a, H> {
 	fn channel_end(&self, _port_channel_id: &(PortId, ChannelId)) -> Result<ChannelEnd, Error> {
 		todo!()
 	}
@@ -69,11 +69,19 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ChannelReader for Context<
 		todo!()
 	}
 
-	fn client_update_time(&self, _client_id: &ClientId, _height: Height) -> Result<Timestamp, Error> {
+	fn client_update_time(
+		&self,
+		_client_id: &ClientId,
+		_height: Height,
+	) -> Result<Timestamp, Error> {
 		todo!()
 	}
 
-	fn client_update_height(&self, _client_id: &ClientId, _height: Height) -> Result<Height, Error> {
+	fn client_update_height(
+		&self,
+		_client_id: &ClientId,
+		_height: Height,
+	) -> Result<Height, Error> {
 		todo!()
 	}
 
@@ -86,7 +94,7 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ChannelReader for Context<
 	}
 }
 
-impl<'a, H: HostFunctions<Header = RelayChainHeader>> ChannelKeeper for Context<'a, H> {
+impl<'a, H: HostFunctions> ChannelKeeper for Context<'a, H> {
 	fn store_packet_commitment(
 		&mut self,
 		_key: (PortId, ChannelId, Sequence),
