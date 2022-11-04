@@ -265,7 +265,31 @@ where
 	}
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
-		todo!()
+		let request = tonic::Request::new(QueryClientStatesRequest { pagination: None }.into());
+		let grpc_client = ibc_proto::ibc::core::client::v1::query_client::QueryClient::connect(
+			self.grpc_url.clone().to_string(),
+		)
+		.await
+		.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		let response = grpc_client
+			.clone()
+			.client_states(request)
+			.await
+			.map_err(|e| {
+				Error::from(format!("Failed to query client states from grpc client: {:?}", e))
+			})?
+			.into_inner();
+
+		// Deserialize into domain type
+		let mut clients: Vec<ClientId> = response
+			.client_states
+			.into_iter()
+			.filter_map(|cs| {
+				let id = ClientId::from_str(&cs.client_id).ok()?;
+				Some(id)
+			})
+			.collect();
+		Ok(clients)
 	}
 
 	async fn query_channels(&self) -> Result<Vec<(ChannelId, PortId)>, Self::Error> {
