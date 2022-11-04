@@ -33,8 +33,7 @@ pub(crate) fn process<Ctx: ReaderContext>(
 	if msg.delay_period < minimum_delay_period {
 		Err(Error::implementation_specific(format!(
 			"Connection delay is too low. Got: {:?}, minimum delay: {:?}",
-			msg.delay_period,
-			minimum_delay_period
+			msg.delay_period, minimum_delay_period
 		)))?
 	}
 
