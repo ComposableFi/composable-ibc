@@ -664,6 +664,7 @@ dependencies = [
  "hex-literal",
  "jsonrpsee-core 0.14.0",
  "light-client-common",
+ "once_cell",
  "pallet-beefy-mmr",
  "pallet-mmr",
  "pallet-mmr-rpc",
