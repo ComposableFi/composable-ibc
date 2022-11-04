@@ -6,8 +6,12 @@ use std::{fs, path::PathBuf};
 pub struct Cli {
 	#[clap(long)]
 	pub path: PathBuf,
+	#[clap(long, default_value = "127.0.0.1")]
+	pub relay_host: String,
 	#[clap(long, default_value = "9944")]
 	pub relay_port: String,
+	#[clap(long, default_value = "127.0.0.1")]
+	pub para_host: String,
 	#[clap(long, default_value = "9188")]
 	pub para_port: String,
 }
@@ -17,8 +21,8 @@ async fn main() -> Result<(), anyhow::Error> {
 	let cli = Cli::parse();
 
 	let runtimes = [
-		(format!("ws://127.0.0.1:{}", cli.relay_port), "rococo"),
-		(format!("ws://127.0.0.1:{}", cli.para_port), "parachain"),
+		(format!("ws://{}:{}", cli.relay_host, cli.relay_port), "rococo"),
+		(format!("ws://{}:{}", cli.relay_host, cli.para_port), "parachain"),
 	];
 
 	for (url, runtime) in runtimes {

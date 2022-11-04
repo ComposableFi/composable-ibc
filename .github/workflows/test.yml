@@ -16,43 +16,43 @@ jobs:
       cancel-in-progress: true
     container:
       image: ubuntu:jammy
-      ports:
-        - 9944
-        - 9933
-        - 30333
-        - 9945
-        - 9934
-        - 30334
-        - 9946
-        - 9935
-        - 30335
-        - 9947
-        - 9936
-        - 30336
-        - 9948
-        - 9937
-        - 30337
-        - 9949
-        - 9938
-        - 30338
-        - 9188
-        - 9939
-        - 30339
-        - 9951
-        - 9940
-        - 30340
-        - 9952
-        - 9941
-        - 30341
-        - 9988
-        - 9942
-        - 30342
-        - 9954
-        - 9943
-        - 30343
-        - 9955
-        - 9144
-        - 30344
+      # ports:
+      #   - 9944
+      #   - 9933
+      #   - 30333
+      #   - 9945
+      #   - 9934
+      #   - 30334
+      #   - 9946
+      #   - 9935
+      #   - 30335
+      #   - 9947
+      #   - 9936
+      #   - 30336
+      #   - 9948
+      #   - 9937
+      #   - 30337
+      #   - 9949
+      #   - 9938
+      #   - 30338
+      #   - 9188
+      #   - 9939
+      #   - 30339
+      #   - 9951
+      #   - 9940
+      #   - 30340
+      #   - 9952
+      #   - 9941
+      #   - 30341
+      #   - 9988
+      #   - 9942
+      #   - 30342
+      #   - 9954
+      #   - 9943
+      #   - 30343
+      #   - 9955
+      #   - 9144
+      #   - 30344
       options: --privileged
     runs-on:
       - self-hosted
@@ -121,16 +121,22 @@ jobs:
           curl -L "https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-$(uname -s)-$(uname -m)" -o ./docker-compose
           chmod +x ./docker-compose
 
+        name: Store Network gateway IP
+        run: echo "GATEWAY_IP=$(ip r l | grep default | awk '{print $3}')" >> $GITHUB_ENV # GATEWAY_IP equals host ip where we run docker container,
+                                                                                          # this ip has access to Docker port mapping.
+
       - name: Run local parachain cluster
         run: |
           # DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml up --detach --build
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml ps
-          # ./scripts/wait_for_tcp_port_opening.sh 9944
-          # ./scripts/wait_for_tcp_port_opening.sh 9188
-          sleep 60
-          echo "# ip a"
-          ip a
+          ./scripts/wait_for_tcp_port_opening.sh $GATEWAY_IP 9944
+          ./scripts/wait_for_tcp_port_opening.sh $GATEWAY_IP 9188
+          # sleep 60
+          echo "# ip -o a"
+          ip -o a
+          echo "# ip r l"
+          ip r l
           echo "# ss -nltp"
           ss -nltp
 

@@ -1,11 +1,12 @@
 #!/bin/bash
 
-PORT=$1 
+HOST=$1
+PORT=$2
 
-echo "Waiting $PORT/tcp opening..."
+echo "Trying to connect to ${HOST}:${PORT}..."
 
-while ! nc -z localhost $PORT; do   
+while ! nc -z $HOST $PORT; do
   sleep 0.5
 done
 
-echo "$PORT/tcp is open."
+echo "${HOST}:${PORT} is ready for requests."
