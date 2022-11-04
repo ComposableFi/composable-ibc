@@ -11,7 +11,10 @@ use error::Error;
 use ibc::{
 	core::{
 		ics02_client::{height::Height, trust_threshold::TrustThreshold},
-		ics23_commitment::{commitment::CommitmentPrefix, specs::ProofSpecs},
+		ics23_commitment::{
+			commitment::{CommitmentPrefix, CommitmentRoot},
+			specs::ProofSpecs,
+		},
 		ics24_host::{
 			identifier::{ChainId, ClientId, ConnectionId},
 			path::ClientConsensusStatePath,
@@ -33,14 +36,16 @@ use ibc_proto::{
 use ics07_tendermint::{
 	client_state::ClientState as TmClientState, consensus_state::ConsensusState as TmConsensusState,
 };
+use key_provider::KeyEntry;
 use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
 	MultiAddress, Timeout, TransferParams,
 };
 use primitives::{IbcProvider, KeyProvider};
 use serde::Deserialize;
-use std::str::FromStr;
+use std::{str::FromStr, time::Duration};
 use tendermint::block::Height as TmHeight;
+use tendermint::time::Time;
 use tendermint_rpc::{abci::Path as TendermintABCIPath, Client, HttpClient, Url, WebSocketClient};
 // Implements the [`crate::Chain`] trait for cosmos.
 /// This is responsible for:
@@ -58,13 +63,13 @@ pub struct CosmosClient<H> {
 	/// Websocket chain ws client
 	pub ws_client: WebSocketClient,
 	/// Chain Id
-	pub chain_id: String,
+	pub chain_id: ChainId,
 	/// Light client id on counterparty chain
 	pub client_id: Option<ClientId>,
 	/// Connection Id
 	pub connection_id: Option<ConnectionId>,
 	/// Name of the key to use for signing
-	pub key_name: String,
+	pub keybase: KeyEntry,
 	/// Account prefix
 	pub account_prefix: String,
 	/// Reference to commitment
@@ -96,9 +101,8 @@ pub struct CosmosClientConfig {
 	pub store_prefix: String,
 	/// Name of the key that signs transactions
 	pub key_name: String,
-
 	/*
-	Here is a list of dropped configuration parameters from Hermes Config.toml 
+	Here is a list of dropped configuration parameters from Hermes Config.toml
 	that could be set to default values or removed for the MVP phase:
 
 	ub key_store_type: Store,					//TODO: Could be set to any of SyncCryptoStorePtr or KeyStore or KeyEntry types, but not sure yet
@@ -107,8 +111,8 @@ pub struct CosmosClientConfig {
 	pub max_gas: Option<u64>,                   //TODO: DEFAULT_MAX_GAS: u64 = 400_000
 	pub gas_multiplier: Option<GasMultiplier>,  //TODO: Could be set to `1.1` by default
 	pub fee_granter: Option<String>,            //TODO: DEFAULT_FEE_GRANTER: &str = ""
-	pub max_msg_num: MaxMsgNum,                 //TODO: Default is 30, Could be set usize = 1 for test 
-	pub max_tx_size: MaxTxSize,					//TODO: Default is usize = 180000, pub memo_prefix: Memo				  
+	pub max_msg_num: MaxMsgNum,                 //TODO: Default is 30, Could be set usize = 1 for test
+	pub max_tx_size: MaxTxSize,					//TODO: Default is usize = 180000, pub memo_prefix: Memo
 												//TODO: Could be set to const MAX_LEN: usize = 50;
 	pub proof_specs: Option<ProofSpecs>,        //TODO: Could be set to None
 	pub sequential_batch_tx: bool,			    //TODO: sequential_send_batched_messages_and_wait_commit() or send_batched_messages_and_wait_commit() ?
@@ -133,17 +137,18 @@ where
 			.await
 			.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))?;
 
+		let chain_id = ChainId::from(config.chain_id);
 		let client_id = Some(
 			ClientId::new(config.client_id.unwrap().as_str(), 0)
 				.map_err(|e| Error::from(format!("Invalid client id {}", e)))?,
 		);
-
+		let keybase = KeyEntry::new(&config.key_name, &chain_id)?;
 		let commitment_prefix = CommitmentPrefix::try_from(config.store_prefix.as_bytes().to_vec())
 			.map_err(|e| Error::from(format!("Invalid store prefix {}", e)))?;
 
 		Ok(Self {
 			name: config.name,
-			chain_id: config.chain_id,
+			chain_id,
 			rpc_client,
 			grpc_url: config.grpc_url,
 			ws_client,
@@ -151,7 +156,7 @@ where
 			connection_id: None,
 			account_prefix: config.account_prefix,
 			commitment_prefix,
-			key_name: config.key_name,
+			keybase,
 			finality_protocol: finality_protocol::FinalityProtocol::Tendermint,
 			_phantom: std::marker::PhantomData,
 		})

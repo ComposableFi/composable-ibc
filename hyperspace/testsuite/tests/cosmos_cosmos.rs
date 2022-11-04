@@ -31,7 +31,7 @@ async fn setup_clients<H: Clone + Send + Sync + 'static>() -> (CosmosClient<H>, 
 		connection_id: None,
 		account_prefix: "cosmos".to_string(),
 		store_prefix: "ibc".to_string(),
-		key_name: "testkey".to_string(),
+		key_name: "wallet".to_string(),
 	};
 
 	let config_b = CosmosClientConfig {
@@ -44,7 +44,7 @@ async fn setup_clients<H: Clone + Send + Sync + 'static>() -> (CosmosClient<H>, 
 		connection_id: None,
 		account_prefix: "cosmos".to_string(),
 		store_prefix: "ibc".to_string(),
-		key_name: "testkey".to_string(),
+		key_name: "wallet".to_string(),
 	};
 
 	let mut chain_a = CosmosClient::<H>::new(config_a).await.unwrap();
@@ -76,7 +76,7 @@ async fn setup_clients<H: Clone + Send + Sync + 'static>() -> (CosmosClient<H>, 
 	log::info!(target: "hyperspace", "Timestamp at height 2000 on chain_a: {:?}", time);
 	let channels = chain_a.query_channels().await.unwrap();
 	log::info!(target: "hyperspace", "Channels on chain_a: {:?}", channels);
-	
+
 	{
 		// Get initial tendermint state
 		// let (client_state, consensus_state) =

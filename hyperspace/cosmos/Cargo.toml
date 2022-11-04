@@ -7,7 +7,10 @@ authors = ["Farhad Shabani <farhad.shabani@gmail.com>"]
 [dependencies]
 anyhow = "1.0.65"
 async-trait = "0.1.53"
+bech32 = "0.9.1"
+bitcoin = { version = "0.29.1", features = ["serde"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+dirs-next = "2.0.0"
 log = "0.4.17"
 env_logger = "0.9.0"
 futures = "0.3.21"
@@ -15,6 +18,7 @@ primitives = { path = "../primitives", package = "hyperspace-primitives" }
 jsonrpsee = "0.15.1"
 jsonrpsee-ws-client = "0.14.0"
 serde = {version="1.0.137", features = ["derive"]}
+serde_json = { version = "1" }
 ss58-registry = "1.28.0"
 thiserror = "1.0.31"
 tonic = { version = "0.7.2", features = ["tls", "tls-roots"] }
