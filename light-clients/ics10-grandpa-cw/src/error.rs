@@ -12,6 +12,7 @@ pub enum ContractError {
 	// Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
 	#[error("Storage error")]
 	StorageError,
+	// TODO: use `ics10-grandpa`'s error type here
 	#[error("Grandpa error: {0}")]
 	Grandpa(String),
 	#[error("Protobuf error: {0}")]
