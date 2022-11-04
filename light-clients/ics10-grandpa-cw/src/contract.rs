@@ -1,12 +1,11 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
-use ibc::core::{ics02_client::client_def::ClientDef};
+use ibc::core::ics02_client::client_def::ClientDef;
 use ics10_grandpa::{client_def::GrandpaClient, client_message::RelayChainHeader};
 use light_client_common::{verify_membership, verify_non_membership};
 use sp_runtime::traits::{BlakeTwo256, Header};
 use std::{cell::RefCell, rc::Rc};
-// use cw2::set_contract_version;
 
 use crate::{
 	context::Context,
