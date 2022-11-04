@@ -38,5 +38,9 @@ ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
 # tendermint-verifier = { path = "../../algorithms/tendermint/verifier" }
 # tendermint-primitives = {  path = "../../algorithms/tendermint/primitives" }
 
+# Substrate
+subxt = { git = "https://github.com/paritytech/subxt", rev = "51179a8b72472d0b43c91cda75a1ddc3fddb9555" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", features = ["full_crypto"] }
+
 [features]
 testing = ["primitives/testing"]

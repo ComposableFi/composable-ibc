@@ -29,7 +29,7 @@ pallet-ibc = { path = "../../contracts/pallet-ibc" }
 [dev-dependencies]
 # hyperspace-core = { path = "../core", features = ["testing", "build-metadata-from-ws"] }
 # hyperspace-parachain = { path = "../parachain", features = ["testing", "build-metadata-from-ws"] }
-# hyperspace-cosmos = { path = "../cosmos", package = "hyperspace-cosmos", features = ["testing"] }
+hyperspace-cosmos = { path = "../cosmos", package = "hyperspace-cosmos", features = ["testing"] }
 
 # substrate
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", features = ["full_crypto"] }

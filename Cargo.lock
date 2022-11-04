@@ -608,7 +608,7 @@ dependencies = [
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "tokio",
 ]
 
@@ -678,7 +678,7 @@ dependencies = [
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "subxt-generated",
  "tokio",
 ]
@@ -1222,7 +1222,7 @@ dependencies = [
  "hex",
  "jsonrpsee 0.14.0",
  "parity-scale-codec",
- "subxt-codegen",
+ "subxt-codegen 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "syn",
  "tokio",
 ]
@@ -3300,7 +3300,7 @@ dependencies = [
  "sp-state-machine",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "tokio",
 ]
 
@@ -3328,7 +3328,7 @@ dependencies = [
  "sp-runtime",
  "sp-state-machine",
  "sp-trie",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "subxt-generated",
  "tokio",
 ]
@@ -3710,7 +3710,7 @@ dependencies = [
  "sp-runtime",
  "sp-state-machine",
  "sp-trie",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "tendermint-proto",
  "thiserror",
  "tokio",
@@ -3736,7 +3736,9 @@ dependencies = [
  "pallet-ibc",
  "parity-scale-codec",
  "serde",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "ss58-registry",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555)",
  "tendermint",
  "tendermint-proto",
  "tendermint-rpc",
@@ -3819,7 +3821,7 @@ dependencies = [
  "sp-state-machine",
  "sp-trie",
  "ss58-registry",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "subxt-generated",
  "tendermint-proto",
  "thiserror",
@@ -3841,7 +3843,7 @@ dependencies = [
  "log",
  "pallet-ibc",
  "parity-scale-codec",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "thiserror",
  "tokio",
 ]
@@ -3854,6 +3856,7 @@ dependencies = [
  "async-trait",
  "futures",
  "hyperspace-core",
+ "hyperspace-cosmos",
  "hyperspace-primitives",
  "ibc",
  "ibc-proto",
@@ -3864,7 +3867,7 @@ dependencies = [
  "sp-keyring",
  "sp-keystore",
  "sp-runtime",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "tendermint-proto",
  "tendermint-rpc",
  "tokio",
@@ -4087,7 +4090,7 @@ dependencies = [
  "sp-runtime",
  "sp-state-machine",
  "sp-trie",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "tendermint",
  "tendermint-proto",
  "tokio",
@@ -4123,7 +4126,7 @@ dependencies = [
  "sp-state-machine",
  "sp-storage 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "tendermint",
  "tendermint-proto",
  "tokio",
@@ -12571,8 +12574,34 @@ dependencies = [
  "serde_json",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-runtime",
- "subxt-macro",
- "subxt-metadata",
+ "subxt-macro 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
+ "subxt-metadata 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "subxt"
+version = "0.24.0"
+source = "git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555#51179a8b72472d0b43c91cda75a1ddc3fddb9555"
+dependencies = [
+ "bitvec",
+ "derivative",
+ "frame-metadata",
+ "futures",
+ "hex",
+ "jsonrpsee 0.15.1",
+ "parity-scale-codec",
+ "parking_lot 0.12.1",
+ "scale-decode",
+ "scale-info",
+ "scale-value",
+ "serde",
+ "serde_json",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+ "sp-runtime",
+ "subxt-macro 0.24.0 (git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555)",
+ "subxt-metadata 0.24.0 (git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555)",
  "thiserror",
  "tracing",
 ]
@@ -12592,9 +12621,26 @@ dependencies = [
  "proc-macro2",
  "quote",
  "scale-info",
- "subxt-metadata",
+ "subxt-metadata 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "syn",
  "tokio",
+]
+
+[[package]]
+name = "subxt-codegen"
+version = "0.24.0"
+source = "git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555#51179a8b72472d0b43c91cda75a1ddc3fddb9555"
+dependencies = [
+ "darling",
+ "frame-metadata",
+ "heck",
+ "parity-scale-codec",
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "scale-info",
+ "subxt-metadata 0.24.0 (git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555)",
+ "syn",
 ]
 
 [[package]]
@@ -12602,7 +12648,7 @@ name = "subxt-generated"
 version = "0.1.0"
 dependencies = [
  "parity-scale-codec",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
 ]
 
 [[package]]
@@ -12612,7 +12658,18 @@ source = "git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a68698
 dependencies = [
  "darling",
  "proc-macro-error",
- "subxt-codegen",
+ "subxt-codegen 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
+ "syn",
+]
+
+[[package]]
+name = "subxt-macro"
+version = "0.24.0"
+source = "git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555#51179a8b72472d0b43c91cda75a1ddc3fddb9555"
+dependencies = [
+ "darling",
+ "proc-macro-error",
+ "subxt-codegen 0.24.0 (git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555)",
  "syn",
 ]
 
@@ -12620,6 +12677,17 @@ dependencies = [
 name = "subxt-metadata"
 version = "0.24.0"
 source = "git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2#1736f618d940a69ab212a686984c3be25b08d1c2"
+dependencies = [
+ "frame-metadata",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+]
+
+[[package]]
+name = "subxt-metadata"
+version = "0.24.0"
+source = "git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555#51179a8b72472d0b43c91cda75a1ddc3fddb9555"
 dependencies = [
  "frame-metadata",
  "parity-scale-codec",
