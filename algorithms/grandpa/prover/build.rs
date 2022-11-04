@@ -16,12 +16,12 @@
 use once_cell::sync::Lazy;
 
 static RELAY_HOST: Lazy<String> = Lazy::new(|| {
-	let ip = std::env::var("RELAY_IP").unwrap_or_else(|_| "127.0.0.1".to_string());
+	let ip = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
 	format!("ws://{}:9944", ip)
 });
 
 static PARA_HOST: Lazy<String> = Lazy::new(|| {
-	let ip = std::env::var("PARA_IP").unwrap_or_else(|_| "127.0.0.1".to_string());
+	let ip = std::env::var("PARA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
 	format!("ws://{}:9188", ip)
 });
 

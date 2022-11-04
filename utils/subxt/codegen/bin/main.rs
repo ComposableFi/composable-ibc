@@ -6,11 +6,11 @@ use std::{fs, path::PathBuf};
 pub struct Cli {
 	#[clap(long)]
 	pub path: PathBuf,
-	#[clap(long, default_value = "127.0.0.1")]
+	#[clap(long, env = "RELAY_HOST", default_value = "127.0.0.1")]
 	pub relay_host: String,
 	#[clap(long, default_value = "9944")]
 	pub relay_port: String,
-	#[clap(long, default_value = "127.0.0.1")]
+	#[clap(long, env = "PARA_HOST", default_value = "127.0.0.1")]
 	pub para_host: String,
 	#[clap(long, default_value = "9188")]
 	pub para_port: String,
