@@ -3771,6 +3771,7 @@ dependencies = [
  "jsonrpsee-ws-client 0.14.0",
  "light-client-common",
  "log",
+ "once_cell",
  "pallet-beefy-mmr",
  "pallet-ibc",
  "pallet-mmr",
