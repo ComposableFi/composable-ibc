@@ -3,12 +3,12 @@
 ## Architecture
 The relayer architecture is based on two major design choices
 
-**Statelessness**
+**Statelessness**  
 The relayer is designed to be stateless and does not perform any form of caching. The relayer therefore relies heavily on  
 the nodes it's connected to for sourcing data, this design choice eliminates the chances of bugs that could come  
 from cache invalidation problems.
 
-**Event Driven**
+**Event Driven**  
 The relayer follows an event driven model, in that it remains idle if no finality events are received from either chain.
 
 ## Relayer Loop

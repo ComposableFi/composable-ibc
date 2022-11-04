@@ -50,7 +50,7 @@ prost = { version = "0.10", default-features = false, optional = true }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, optional = true }
 pallet-ibc-ping = { path = "ping", default-features = false, optional = true }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, optional = true }
-simple-iavl = { git = "https://github.com/ComposableFi/simple-avl", rev = "452a1126bfb8a861354b413755ac3c8fda3da4ec", default-features = false, optional = true }
+simple-iavl = { git = "https://github.com/ComposableFi/simple-avl", rev = "5a51728588e5b0fb3cb391df739e3ce4b3fc91dc", default-features = false, optional = true }
 
 [dependencies.ibc]
 path = "../../ibc/modules"
@@ -80,7 +80,7 @@ orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 prost = { version = "0.10" }
 serde = { version = "1.0" }
-simple-iavl = { git = "https://github.com/ComposableFi/simple-avl", rev = "452a1126bfb8a861354b413755ac3c8fda3da4ec" }
+simple-iavl = { git = "https://github.com/ComposableFi/simple-avl", rev = "5a51728588e5b0fb3cb391df739e3ce4b3fc91dc" }
 sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8" }
 balances = { package = "pallet-balances", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
