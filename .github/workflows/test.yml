@@ -112,13 +112,16 @@ jobs:
 
       - name: Run all unit tests
         run: |
-          SKIP_WASM_BUILD=1 $HOME/.cargo/bin/cargo +nightly nextest run --locked --release --workspace \
+          SKIP_WASM_BUILD=1 RELAY_IP=$GATEWAY_IP PARA_IP=$GATEWAY_IP cargo +nightly nextest run \
+            --locked \
+            --release \
+            --workspace \
             --exclude ibc-derive \                # doesn't play nice with nextest for some reason
-            --exclude hyperspace-testsuite \      # we'll use vanilla cargo so we can run tests sequentially
+            --exclude hyperspace-testsuite        # we'll use vanilla cargo so we can run tests sequentially
 
       - name: Run hyperspace integration tests
         run: |
-          $HOME/.cargo/bin/cargo +nightly test -p hyperspace-testsuite --locked --release
+          cargo +nightly test -p hyperspace-testsuite --locked --release
 
       - name: Termintate local parachain cluster
         run: |
