@@ -30,7 +30,7 @@ use ibc::{
 };
 use ibc_derive::{ClientDef, ClientMessage, ClientState, ConsensusState};
 use ibc_proto::google::protobuf::Any;
-use tendermint_light_client_verifier::host_functions::HostFunctionsProvider as TendermintHostFunctionsProvider;
+use tendermint_light_client_verifier::host_functions::CryptoProvider as TmCryptoProvider;
 use tendermint_proto::Protobuf;
 
 pub const MOCK_CLIENT_STATE_TYPE_URL: &str = "/ibc.mock.ClientState";
@@ -162,12 +162,12 @@ impl ics23::HostFunctionsProvider for Crypto {
 	}
 }
 
-impl TendermintHostFunctionsProvider for Crypto {
+impl TmCryptoProvider for Crypto {
 	fn sha2_256(_preimage: &[u8]) -> [u8; 32] {
 		unimplemented!()
 	}
 
-	fn ed25519_verify(_sig: &[u8], _msg: &[u8], _pub_key: &[u8]) -> bool {
+	fn ed25519_verify(_sig: &[u8], _msg: &[u8], _pub_key: &[u8]) ->  bool {
 		unimplemented!()
 	}
 

@@ -32,15 +32,15 @@ pallet-ibc = { path = "../../contracts/pallet-ibc" }
 
 
 # Tendermint
-tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", default-features = false }
-tendermint-rpc   = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", features = ["http-client", "websocket-client"] }
-tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8" }
+tendermint = { git = "https://github.com/farhad-shabani/tendermint-rs", rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426", default-features = false }
+tendermint-rpc   = { git = "https://github.com/farhad-shabani/tendermint-rs", rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426", features = ["http-client", "websocket-client"] }
+tendermint-proto = { git = "https://github.com/farhad-shabani/tendermint-rs", rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426" }
 ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
-# tendermint-light-client = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", default-features = false, features = ["rpc-client", "secp256k1", "unstable"] }
-# tendermint-light-client-verifier = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", default-features = false }
-# tendermint-prover = { path = "../../algorithms/tendermint/prover" }
-# tendermint-verifier = { path = "../../algorithms/tendermint/verifier" }
-# tendermint-primitives = {  path = "../../algorithms/tendermint/primitives" }
+tendermint-light-client = { git = "https://github.com/farhad-shabani/tendermint-rs", rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426", default-features = false, features = ["rpc-client", "secp256k1", "unstable"] }
+tendermint-light-client-verifier = { git = "https://github.com/farhad-shabani/tendermint-rs", rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426", default-features = false }
+tendermint-prover = { path = "../../algorithms/tendermint/prover" }
+tendermint-verifier = { path = "../../algorithms/tendermint/verifier" }
+tendermint-primitives = {  path = "../../algorithms/tendermint/primitives" }
 
 # Substrate
 subxt = { git = "https://github.com/paritytech/subxt", rev = "51179a8b72472d0b43c91cda75a1ddc3fddb9555" }

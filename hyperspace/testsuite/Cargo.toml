@@ -19,8 +19,8 @@ tonic = { version = "0.7.2", features = ["tls", "tls-roots"] }
 
 ibc = { path = "../../ibc/modules" }
 ibc-proto = { path = "../../ibc/proto" }
-tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8" }
-tendermint-rpc   = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", features = ["http-client", "websocket-client"] }
+tendermint-proto = { git = "https://github.com/farhad-shabani/tendermint-rs", rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426" }
+tendermint-rpc   = { git = "https://github.com/farhad-shabani/tendermint-rs", rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426", features = ["http-client", "websocket-client"] }
 
 hyperspace-core = { path = "../core", features = ["testing"] }
 hyperspace-primitives = { path = "../primitives", features = ["testing"] }

@@ -75,7 +75,7 @@ where
 							header.height().revision_number,
 						)
 						.to_string(),
-					))
+					));
 				}
 
 				// Check if a consensus state is already installed; if so skip
@@ -92,7 +92,7 @@ where
 						if cs == header_consensus_state {
 							// Header is already installed and matches the incoming
 							// header (already verified)
-							return Ok(())
+							return Ok(());
 						}
 						Some(cs)
 					},
@@ -139,14 +139,16 @@ where
 
 				match verdict {
 					Verdict::Success => {},
-					Verdict::NotEnoughTrust(voting_power_tally) =>
+					Verdict::NotEnoughTrust(voting_power_tally) => {
 						return Err(Error::not_enough_trusted_vals_signed(format!(
 							"voting power tally: {}",
 							voting_power_tally
 						))
-						.into()),
-					Verdict::Invalid(detail) =>
-						return Err(Error::verification_error(detail).into()),
+						.into())
+					},
+					Verdict::Invalid(detail) => {
+						return Err(Error::verification_error(detail).into())
+					},
 				}
 			},
 			ClientMessage::Misbehaviour(misbehaviour) => {
@@ -228,7 +230,7 @@ where
 							if header_consensus_state == cs {
 								// Header is already installed and matches the incoming
 								// header (already verified)
-								return Ok(false)
+								return Ok(false);
 							}
 							Some(cs)
 						},
@@ -240,7 +242,7 @@ where
 				// client and return the installed consensus state.
 				if let Some(cs) = existing_consensus_state {
 					if cs != header_consensus_state {
-						return Ok(true)
+						return Ok(true);
 					}
 				}
 
@@ -261,14 +263,14 @@ where
 					if let Some(next_cs) = maybe_next_cs {
 						// New (untrusted) header timestamp cannot occur after next
 						// consensus state's height
-						if Timestamp::from(header.signed_header.header().time).nanoseconds() >
-							next_cs.timestamp().nanoseconds()
+						if Timestamp::from(header.signed_header.header().time).nanoseconds()
+							> next_cs.timestamp().nanoseconds()
 						{
 							return Err(Error::header_timestamp_too_high(
 								header.signed_header.header().time.to_string(),
 								next_cs.timestamp().to_string(),
 							)
-							.into())
+							.into());
 						}
 					}
 				}
@@ -293,7 +295,7 @@ where
 								header.signed_header.header().time.to_string(),
 								prev_cs.timestamp.to_string(),
 							)
-							.into())
+							.into());
 						}
 					}
 				}

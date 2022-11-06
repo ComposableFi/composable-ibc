@@ -32,7 +32,7 @@ prometheus = { version = "0.13.0", default-features = false }
 ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
-tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8" }
+tendermint-proto = { git = "https://github.com/farhad-shabani/tendermint-rs", rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426" }
 
 light-client-common = { path = "../../light-clients/common" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }

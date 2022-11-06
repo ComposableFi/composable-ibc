@@ -13,7 +13,6 @@ std = []
 [dependencies]
 ibc = { path = "../../ibc/modules", default-features = false }
 ibc-proto = { path = "../../ibc/proto", default-features = false }
-
 ics23 = { git = "https://github.com/composablefi/ics23", rev = "b500a5c6068eb53c83c4c6c13bd9d8c25e0bf927", default-features = false }
 time = { version = "0.3", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
@@ -24,18 +23,18 @@ subtle-encoding = { version = "0.5", default-features = false }
 flex-error = { version = "0.4.4", default-features = false }
 
 [dependencies.tendermint]
-git = "https://github.com/composableFi/tendermint-rs"
-rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
+git = "https://github.com/farhad-shabani/tendermint-rs"
+rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426"
 default-features = false
 
 [dependencies.tendermint-proto]
-git = "https://github.com/composableFi/tendermint-rs"
-rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
+git = "https://github.com/farhad-shabani/tendermint-rs"
+rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426"
 default-features = false
 
 [dependencies.tendermint-light-client-verifier]
-git = "https://github.com/composableFi/tendermint-rs"
-rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
+git = "https://github.com/farhad-shabani/tendermint-rs"
+rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426"
 default-features = false
 
 [dev-dependencies]
@@ -46,7 +45,7 @@ tracing-subscriber = { version = "0.3.11", features = ["fmt", "env-filter", "jso
 test-log = { version = "0.2.10", features = ["trace"] }
 modelator = "0.4.2"
 sha2 = { version = "0.10.2" }
-tendermint-rpc = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", features = ["http-client", "websocket-client"] }
-tendermint-testgen = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8" } # Needed for generating (synthetic) light blocks.
+tendermint-rpc = { git = "https://github.com/farhad-shabani/tendermint-rs", rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426", features = ["http-client", "websocket-client"] }
+tendermint-testgen = { git = "https://github.com/farhad-shabani/tendermint-rs", rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426" } # Needed for generating (synthetic) light blocks.
 log = "0.4.17"
 tracing = "0.1.36"

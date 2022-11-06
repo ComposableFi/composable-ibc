@@ -288,6 +288,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-recursion"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7d78656ba01f1b93024b7c3a0467f1608e4be67d725749fdcd7d2c7678fd7a2"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "async-std"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1295,6 +1306,17 @@ name = "constant_time_eq"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
+
+[[package]]
+name = "contracts"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1d1429e3bd78171c65aa010eabcdf8f863ba3254728dbfb0ad4b1545beac15c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "convert_case"
@@ -2723,6 +2745,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "flume"
+version = "0.10.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1657b4441c3403d9f7b3409e47575237dac27b1b5726df654a6ecbf92f0f7577"
+dependencies = [
+ "futures-core",
+ "futures-sink",
+ "pin-project",
+ "spin 0.9.4",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3748,7 +3782,7 @@ dependencies = [
  "sp-state-machine",
  "sp-trie",
  "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
  "thiserror",
  "tokio",
  "toml",
@@ -3780,9 +3814,14 @@ dependencies = [
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "ss58-registry",
  "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555)",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
+ "tendermint-light-client",
+ "tendermint-light-client-verifier",
+ "tendermint-primitives",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
+ "tendermint-prover",
  "tendermint-rpc",
+ "tendermint-verifier",
  "thiserror",
  "tonic",
 ]
@@ -3798,7 +3837,7 @@ dependencies = [
  "ibc-proto",
  "log",
  "prometheus",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8)",
  "thiserror",
  "tokio",
 ]
@@ -3864,7 +3903,7 @@ dependencies = [
  "ss58-registry",
  "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "subxt-generated",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -3909,7 +3948,7 @@ dependencies = [
  "sp-keystore",
  "sp-runtime",
  "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
  "tendermint-rpc",
  "tokio",
  "tonic",
@@ -3963,8 +4002,8 @@ dependencies = [
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.24)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.24)",
  "subtle-encoding",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
  "test-log",
  "time 0.3.16",
  "tokio",
@@ -4015,7 +4054,7 @@ dependencies = [
  "prost 0.10.4",
  "schemars",
  "serde",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
  "tonic",
 ]
 
@@ -4054,7 +4093,7 @@ dependencies = [
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-runtime",
  "sp-trie",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
 ]
 
 [[package]]
@@ -4086,9 +4125,9 @@ dependencies = [
  "serde_json",
  "sha2 0.10.6",
  "subtle-encoding",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
  "tendermint-light-client-verifier",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
  "tendermint-rpc",
  "tendermint-testgen",
  "test-log",
@@ -4132,8 +4171,8 @@ dependencies = [
  "sp-state-machine",
  "sp-trie",
  "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
  "tokio",
 ]
 
@@ -4168,8 +4207,8 @@ dependencies = [
  "sp-storage 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie",
  "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
  "tokio",
 ]
 
@@ -4199,8 +4238,8 @@ dependencies = [
  "sha3 0.10.6",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.24)",
  "subtle-encoding",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
  "tendermint-rpc",
  "tendermint-testgen",
  "test-log",
@@ -4711,6 +4750,7 @@ dependencies = [
  "ecdsa",
  "elliptic-curve",
  "sec1",
+ "sha2 0.9.9",
 ]
 
 [[package]]
@@ -6773,9 +6813,9 @@ dependencies = [
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
  "tendermint-light-client-verifier",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
 ]
 
 [[package]]
@@ -9575,7 +9615,7 @@ dependencies = [
  "cc",
  "libc",
  "once_cell",
- "spin",
+ "spin 0.5.2",
  "untrusted",
  "web-sys",
  "winapi",
@@ -11423,7 +11463,7 @@ dependencies = [
  "bytes",
  "ics23",
  "sha2 0.10.6",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8)",
 ]
 
 [[package]]
@@ -12391,6 +12431,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
+name = "spin"
+version = "0.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f6002a767bff9e83f8eeecf883ecb8011875a21ae8da43bffb817a57e78cc09"
+dependencies = [
+ "lock_api",
+]
+
+[[package]]
 name = "ss58-registry"
 version = "1.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12847,7 +12896,37 @@ dependencies = [
  "signature",
  "subtle",
  "subtle-encoding",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8)",
+ "time 0.3.16",
+ "zeroize",
+]
+
+[[package]]
+name = "tendermint"
+version = "0.24.0-pre.2"
+source = "git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426#ab7db0fa89e1634ad9855bc567ba02d9e8916426"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "ed25519",
+ "ed25519-consensus",
+ "flex-error",
+ "futures",
+ "k256",
+ "num-traits",
+ "once_cell",
+ "prost 0.10.4",
+ "prost-types 0.10.1",
+ "ripemd",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "serde_repr",
+ "sha2 0.10.6",
+ "signature",
+ "subtle",
+ "subtle-encoding",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
  "time 0.3.16",
  "zeroize",
 ]
@@ -12855,26 +12934,69 @@ dependencies = [
 [[package]]
 name = "tendermint-config"
 version = "0.24.0-pre.2"
-source = "git+https://github.com/composableFi/tendermint-rs?rev=5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8#5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
+source = "git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426#ab7db0fa89e1634ad9855bc567ba02d9e8916426"
 dependencies = [
  "flex-error",
  "serde",
  "serde_json",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
  "toml",
  "url",
 ]
 
 [[package]]
+name = "tendermint-light-client"
+version = "0.24.0-pre.2"
+source = "git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426#ab7db0fa89e1634ad9855bc567ba02d9e8916426"
+dependencies = [
+ "async-recursion",
+ "async-trait",
+ "contracts",
+ "derive_more",
+ "flex-error",
+ "flume",
+ "futures",
+ "futures-timer",
+ "serde",
+ "serde_derive",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+ "static_assertions",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
+ "tendermint-light-client-verifier",
+ "tendermint-rpc",
+ "time 0.3.16",
+ "tokio",
+]
+
+[[package]]
 name = "tendermint-light-client-verifier"
 version = "0.24.0-pre.2"
-source = "git+https://github.com/composableFi/tendermint-rs?rev=5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8#5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
+source = "git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426#ab7db0fa89e1634ad9855bc567ba02d9e8916426"
 dependencies = [
  "derive_more",
  "flex-error",
  "serde",
- "tendermint",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
  "time 0.3.16",
+]
+
+[[package]]
+name = "tendermint-primitives"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "derive_more",
+ "ibc",
+ "ibc-proto",
+ "ics07-tendermint",
+ "pallet-ibc",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
+ "tendermint-light-client",
+ "tendermint-light-client-verifier",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
+ "tendermint-rpc",
 ]
 
 [[package]]
@@ -12895,9 +13017,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "tendermint-proto"
+version = "0.24.0-pre.2"
+source = "git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426#ab7db0fa89e1634ad9855bc567ba02d9e8916426"
+dependencies = [
+ "bytes",
+ "flex-error",
+ "num-derive",
+ "num-traits",
+ "prost 0.10.4",
+ "prost-types 0.10.1",
+ "serde",
+ "serde_bytes",
+ "subtle-encoding",
+ "time 0.3.16",
+]
+
+[[package]]
+name = "tendermint-prover"
+version = "0.1.0"
+dependencies = [
+ "ibc",
+ "ibc-proto",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
+ "tendermint-light-client",
+ "tendermint-light-client-verifier",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
+ "tendermint-rpc",
+]
+
+[[package]]
 name = "tendermint-rpc"
 version = "0.24.0-pre.2"
-source = "git+https://github.com/composableFi/tendermint-rs?rev=5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8#5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
+source = "git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426#ab7db0fa89e1634ad9855bc567ba02d9e8916426"
 dependencies = [
  "async-trait",
  "async-tungstenite",
@@ -12916,9 +13068,9 @@ dependencies = [
  "serde_json",
  "subtle",
  "subtle-encoding",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
  "tendermint-config",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
  "thiserror",
  "time 0.3.16",
  "tokio",
@@ -12931,7 +13083,7 @@ dependencies = [
 [[package]]
 name = "tendermint-testgen"
 version = "0.24.0-pre.2"
-source = "git+https://github.com/composableFi/tendermint-rs?rev=5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8#5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
+source = "git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426#ab7db0fa89e1634ad9855bc567ba02d9e8916426"
 dependencies = [
  "ed25519-consensus",
  "gumdrop",
@@ -12939,8 +13091,25 @@ dependencies = [
  "serde_json",
  "simple-error",
  "tempfile",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
  "time 0.3.16",
+]
+
+[[package]]
+name = "tendermint-verifier"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "ibc",
+ "ibc-proto",
+ "ics07-tendermint",
+ "pallet-ibc",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
+ "tendermint-light-client",
+ "tendermint-light-client-verifier",
+ "tendermint-primitives",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/farhad-shabani/tendermint-rs?rev=ab7db0fa89e1634ad9855bc567ba02d9e8916426)",
+ "tendermint-rpc",
 ]
 
 [[package]]

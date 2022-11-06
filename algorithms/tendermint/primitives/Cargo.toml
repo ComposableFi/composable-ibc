@@ -13,12 +13,12 @@ derive_more = { version = "0.99.17", default-features = false, features = ["disp
 # ibc
 ibc = { path = "../../../ibc/modules", features = [] }
 ibc-proto = { path = "../../../ibc/proto" }
-pallet-ibc = { path = "../../../../parachain/frame/ibc" }
+pallet-ibc = { path = "../../../contracts/pallet-ibc" }
 
 # Tendermint
-tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", default-features = false }
-tendermint-rpc   = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", features = ["http-client", "websocket-client"] }
-tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8" }
-tendermint-light-client = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", default-features = false, features = ["rpc-client", "secp256k1", "unstable"] }
-tendermint-light-client-verifier = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", default-features = false }
+tendermint = { git = "https://github.com/farhad-shabani/tendermint-rs", rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426", default-features = false }
+tendermint-rpc   = { git = "https://github.com/farhad-shabani/tendermint-rs", rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426", features = ["http-client", "websocket-client"] }
+tendermint-proto = { git = "https://github.com/farhad-shabani/tendermint-rs", rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426" }
+tendermint-light-client = { git = "https://github.com/farhad-shabani/tendermint-rs", rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426", default-features = false, features = ["rpc-client", "secp256k1", "unstable"] }
+tendermint-light-client-verifier = { git = "https://github.com/farhad-shabani/tendermint-rs", rev= "ab7db0fa89e1634ad9855bc567ba02d9e8916426", default-features = false }
 ics07-tendermint = { path = "../../../light-clients/ics07-tendermint" }

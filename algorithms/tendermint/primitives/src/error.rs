@@ -13,10 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use derive_more::{Display, From};
-use thiserror::Error;
+use derive_more::Display;
 
-#[derive(From, Debug, Display)]
+#[derive(Debug, Display)]
 pub enum Error {
 	Custom(String),
 }

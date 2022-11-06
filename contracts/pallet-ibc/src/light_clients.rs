@@ -49,7 +49,7 @@ impl ics23::HostFunctionsProvider for HostFunctionsManager {
 	}
 }
 
-impl tendermint_light_client_verifier::host_functions::HostFunctionsProvider
+impl tendermint_light_client_verifier::host_functions::CryptoProvider
 	for HostFunctionsManager
 {
 	fn sha2_256(message: &[u8]) -> [u8; 32] {
