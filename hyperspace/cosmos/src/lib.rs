@@ -7,6 +7,7 @@ pub mod key_provider;
 pub mod provider;
 #[cfg(any(test, feature = "testing"))]
 pub mod test_provider;
+use core::convert::TryFrom;
 use error::Error;
 use ibc::{
 	core::{
@@ -24,7 +25,10 @@ use ibc::{
 	protobuf::Protobuf,
 };
 use ibc_proto::{
-	cosmos::base::query::v1beta1::PageRequest,
+	cosmos::{
+		auth::v1beta1::{query_client::QueryClient, BaseAccount, QueryAccountRequest},
+		base::query::v1beta1::PageRequest,
+	},
 	google::protobuf::Any,
 	ibc::core::{
 		client::v1::{
@@ -42,8 +46,9 @@ use pallet_ibc::{
 	MultiAddress, Timeout, TransferParams,
 };
 use primitives::{IbcProvider, KeyProvider};
+use prost::Message;
 use serde::Deserialize;
-use std::{str::FromStr, time::Duration};
+use std::{str::FromStr, sync::Arc, time::Duration};
 use tendermint::block::Height as TmHeight;
 use tendermint::time::Time;
 use tendermint_rpc::{abci::Path as TendermintABCIPath, Client, HttpClient, Url, WebSocketClient};
@@ -187,29 +192,12 @@ where
 		Self: KeyProvider + IbcProvider,
 		H: Clone + Send + Sync + 'static,
 	{
-		{
-			let latest_height_timestamp = self.latest_height_and_timestamp().await.unwrap();
-			let client_state = TmClientState::<HostFunctionsManager>::new(
-				self.chain_id.clone(),
-				TrustThreshold::default(),
-				Duration::new(64000, 0),
-				Duration::new(128000, 0),
-				Duration::new(3, 0),
-				latest_height_timestamp.0,
-				ProofSpecs::default(),
-				vec!["".to_string()],
-			)
-			.map_err(|e| Error::from(format!("Invalid client state {}", e)))?;
-			let light_block = self
-				.light_client
-				.verify::<HostFunctionsManager>(latest_height_timestamp.0, latest_height_timestamp.0, &client_state)
-				.await.map_err(|e| Error::from(format!("Invalid light block {}", e)))?;
-			let consensus_state = TmConsensusState::from(light_block.signed_header.header);
-			Ok((
-				AnyClientState::Tendermint(client_state),
-				AnyConsensusState::Tendermint(consensus_state),
+		self.initialize_client_state().await.map_err(|e| {
+			Error::from(format!(
+				"Failed to initialize client state for chain {} with error {:?}",
+				self.name, e
 			))
-		}
+		})
 	}
 
 	pub async fn submit_create_client_msg(&self, msg: String) -> Result<ClientId, Error> {
@@ -220,7 +208,29 @@ where
 		Ok(())
 	}
 
-	pub async fn submit_sudo_call(&self) -> Result<(), Error> {
+	pub async fn submit_call(&self) -> Result<(), Error> {
 		Ok(())
+	}
+
+	/// Uses the GRPC client to retrieve the account sequence
+	pub async fn query_account(&self) -> Result<BaseAccount, Error> {
+		let mut client = QueryClient::connect(self.grpc_url.clone().to_string())
+			.await
+			.map_err(|e| Error::from(format!("GRPC client error: {:?}", e)))?;
+
+		let request =
+			tonic::Request::new(QueryAccountRequest { address: self.keybase.account.to_string() });
+
+		let response = client.account(request).await;
+
+		// Querying for an account might fail, i.e. if the account doesn't actually exist
+		let resp_account =
+			match response.map_err(|e| Error::from(format!("{:?}", e)))?.into_inner().account {
+				Some(account) => account,
+				None => return Err(Error::from(format!("Account not found"))),
+			};
+
+		Ok(BaseAccount::decode(resp_account.value.as_slice())
+			.map_err(|e| Error::from(format!("Failed to decode account {}", e)))?)
 	}
 }

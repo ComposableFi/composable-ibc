@@ -15,8 +15,6 @@ use ibc_proto::{
 		connection::v1::QueryConnectionResponse,
 	},
 };
-use subxt::ext::sp_core;
-
 use crate::error::Error;
 #[cfg(feature = "testing")]
 use ibc::applications::transfer::msgs::transfer::MsgTransfer;
@@ -83,6 +81,8 @@ pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: String) -> Vec<u8> {
 pub trait IbcProvider {
 	/// Finality event type, passed on to [`Chain::query_latest_ibc_events`]
 	type FinalityEvent;
+
+	type Hash;
 
 	/// Error type, just needs to implement standard error trait.
 	type Error: std::error::Error + From<String> + Send + Sync + 'static;
@@ -306,8 +306,8 @@ pub trait IbcProvider {
 	/// Should find client id that was created in this transaction
 	async fn query_client_id_from_tx_hash(
 		&self,
-		tx_hash: sp_core::H256,
-		block_hash: Option<sp_core::H256>,
+		tx_hash: Self::Hash,
+		block_hash: Option<Self::Hash>,
 	) -> Result<ClientId, Self::Error>;
 }
 
@@ -365,7 +365,7 @@ pub trait Chain: IbcProvider + KeyProvider + Send + Sync {
 	async fn submit(
 		&self,
 		messages: Vec<Any>,
-	) -> Result<(sp_core::H256, Option<sp_core::H256>), Self::Error>;
+	) -> Result<(Self::Hash, Option<Self::Hash>), Self::Error>;
 }
 
 /// Returns undelivered packet sequences that have been sent out from

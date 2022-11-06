@@ -25,6 +25,7 @@ use crate::{
 };
 use finality_grandpa_rpc::GrandpaApiClient;
 use subxt::tx::{PlainTip, PolkadotExtrinsicParamsBuilder};
+use subxt::ext::sp_core;
 
 type GrandpaJustification = grandpa_light_client_primitives::justification::GrandpaJustification<
 	polkadot_core_primitives::Header,
@@ -164,11 +165,10 @@ where
 			},
 		}
 	}
-
 	async fn submit(
 		&self,
 		messages: Vec<Any>,
-	) -> Result<(sp_core::H256, Option<sp_core::H256>), Error> {
+	) -> Result<(Self::Hash, Option<Self::Hash>), Error> {
 		let messages = messages
 			.into_iter()
 			.map(|msg| RawAny { type_url: msg.type_url.as_bytes().to_vec(), value: msg.value })

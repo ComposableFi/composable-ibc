@@ -72,6 +72,7 @@ where
 		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
 {
 	type FinalityEvent = FinalityEvent;
+	type Hash = subxt::ext::sp_core::H256;
 	type Error = Error;
 
 	async fn query_latest_ibc_events<C>(

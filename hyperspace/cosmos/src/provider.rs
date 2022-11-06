@@ -10,8 +10,8 @@ use futures::{Stream, TryFutureExt};
 use ibc::{
 	applications::transfer::PrefixedCoin,
 	core::{
-		ics02_client::client_state::ClientType,
-		ics23_commitment::commitment::CommitmentPrefix,
+		ics02_client::{client_state::ClientType, trust_threshold::TrustThreshold},
+		ics23_commitment::{commitment::CommitmentPrefix, specs::ProofSpecs},
 		ics24_host::identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 	},
 	events::IbcEvent,
@@ -33,11 +33,12 @@ use ibc_proto::{
 		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
 	},
 };
+
 use ibc_rpc::PacketInfo;
 use ics07_tendermint::{
 	client_state::ClientState as TmClientState, consensus_state::ConsensusState as TmConsensusState,
 };
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use primitives::{Chain, IbcProvider, UpdateType};
 use sp_core::H256;
 use std::pin::Pin;
@@ -51,6 +52,7 @@ where
 	H: Clone + Send + Sync + 'static,
 {
 	type FinalityEvent = FinalityEvent;
+	type Hash = tendermint_rpc::abci::transaction::Hash;
 	type Error = Error;
 
 	async fn query_latest_ibc_events<C>(
@@ -362,13 +364,38 @@ where
 	async fn initialize_client_state(
 		&self,
 	) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
-		todo!()
+		let latest_height_timestamp = self.latest_height_and_timestamp().await.unwrap();
+		let client_state = TmClientState::<HostFunctionsManager>::new(
+			self.chain_id.clone(),
+			TrustThreshold::default(),
+			Duration::new(64000, 0),
+			Duration::new(128000, 0),
+			Duration::new(3, 0),
+			latest_height_timestamp.0,
+			ProofSpecs::default(),
+			vec!["".to_string()],
+		)
+		.map_err(|e| Error::from(format!("Invalid client state {}", e)))?;
+		let light_block = self
+			.light_client
+			.verify::<HostFunctionsManager>(
+				latest_height_timestamp.0,
+				latest_height_timestamp.0,
+				&client_state,
+			)
+			.await
+			.map_err(|e| Error::from(format!("Invalid light block {}", e)))?;
+		let consensus_state = TmConsensusState::from(light_block.signed_header.header);
+		Ok((
+			AnyClientState::Tendermint(client_state),
+			AnyConsensusState::Tendermint(consensus_state),
+		))
 	}
 
 	async fn query_client_id_from_tx_hash(
 		&self,
-		tx_hash: H256,
-		block_hash: Option<H256>,
+		tx_hash: Self::Hash,
+		block_hash: Option<Self::Hash>,
 	) -> Result<ClientId, Self::Error> {
 		todo!()
 	}

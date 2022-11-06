@@ -121,6 +121,7 @@ impl From<String> for AnyError {
 #[async_trait]
 impl IbcProvider for AnyChain {
 	type FinalityEvent = AnyFinalityEvent;
+	type Hash = H256;
 	type Error = AnyError;
 
 	async fn query_latest_ibc_events<T>(
@@ -510,8 +511,8 @@ impl IbcProvider for AnyChain {
 
 	async fn query_client_id_from_tx_hash(
 		&self,
-		tx_hash: H256,
-		block_hash: Option<H256>,
+		tx_hash: Self::Hash,
+		block_hash: Option<Self::Hash>,
 	) -> Result<ClientId, Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain
