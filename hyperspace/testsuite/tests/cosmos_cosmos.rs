@@ -79,9 +79,9 @@ async fn setup_clients<H: Clone + Send + Sync + 'static>() -> (CosmosClient<H>, 
 
 	{
 		// Get initial tendermint state
-		// let (client_state, consensus_state) =
-		// 	chain_b.construct_tendermint_client_state().await.unwrap();
-
+		let (client_state, consensus_state) =
+			chain_b.construct_tendermint_client_state().await.unwrap();
+			
 		// 	// Create client message is the same for both chains
 		// 	let msg_create_client = MsgCreateAnyClient::<LocalClientTypes> {
 		// 		client_state: client_state.clone(),
@@ -101,9 +101,9 @@ async fn setup_clients<H: Clone + Send + Sync + 'static>() -> (CosmosClient<H>, 
 	};
 
 	{
-		// 	// Get initial tendermint state
-		// let (client_state, consensus_state) =
-		// 	chain_a.construct_tendermint_client_state().await.unwrap();
+			// Get initial tendermint state
+		let (client_state, consensus_state) =
+			chain_a.construct_tendermint_client_state().await.unwrap();
 
 		// 	// Create client message is the same for both chains
 		// 	let msg_create_client = MsgCreateAnyClient::<LocalClientTypes> {

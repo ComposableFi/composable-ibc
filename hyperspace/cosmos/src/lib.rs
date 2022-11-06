@@ -47,6 +47,7 @@ use std::{str::FromStr, time::Duration};
 use tendermint::block::Height as TmHeight;
 use tendermint::time::Time;
 use tendermint_rpc::{abci::Path as TendermintABCIPath, Client, HttpClient, Url, WebSocketClient};
+use tendermint_verifier::LightClient;
 // Implements the [`crate::Chain`] trait for cosmos.
 /// This is responsible for:
 /// 1. Tracking a cosmos light client on a counter-party chain, advancing this light
@@ -68,6 +69,8 @@ pub struct CosmosClient<H> {
 	pub client_id: Option<ClientId>,
 	/// Connection Id
 	pub connection_id: Option<ConnectionId>,
+	/// Light client to track the counterparty chain
+	pub light_client: LightClient,
 	/// Name of the key to use for signing
 	pub keybase: KeyEntry,
 	/// Account prefix
@@ -136,12 +139,17 @@ where
 		let (ws_client, _ws_driver) = WebSocketClient::new(config.websocket_url.clone())
 			.await
 			.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))?;
-
 		let chain_id = ChainId::from(config.chain_id);
 		let client_id = Some(
 			ClientId::new(config.client_id.unwrap().as_str(), 0)
 				.map_err(|e| Error::from(format!("Invalid client id {}", e)))?,
 		);
+		let light_client = LightClient::init_light_client(config.rpc_url).await.map_err(|e| {
+			Error::from(format!(
+				"Failed to initialize light client for chain {} with error {:?}",
+				config.name, e
+			))
+		})?;
 		let keybase = KeyEntry::new(&config.key_name, &chain_id)?;
 		let commitment_prefix = CommitmentPrefix::try_from(config.store_prefix.as_bytes().to_vec())
 			.map_err(|e| Error::from(format!("Invalid store prefix {}", e)))?;
@@ -154,6 +162,7 @@ where
 			ws_client,
 			client_id,
 			connection_id: None,
+			light_client,
 			account_prefix: config.account_prefix,
 			commitment_prefix,
 			keybase,
@@ -178,7 +187,29 @@ where
 		Self: KeyProvider + IbcProvider,
 		H: Clone + Send + Sync + 'static,
 	{
-		todo!()
+		{
+			let latest_height_timestamp = self.latest_height_and_timestamp().await.unwrap();
+			let client_state = TmClientState::<HostFunctionsManager>::new(
+				self.chain_id.clone(),
+				TrustThreshold::default(),
+				Duration::new(64000, 0),
+				Duration::new(128000, 0),
+				Duration::new(3, 0),
+				latest_height_timestamp.0,
+				ProofSpecs::default(),
+				vec!["".to_string()],
+			)
+			.map_err(|e| Error::from(format!("Invalid client state {}", e)))?;
+			let light_block = self
+				.light_client
+				.verify::<HostFunctionsManager>(latest_height_timestamp.0, latest_height_timestamp.0, &client_state)
+				.await.map_err(|e| Error::from(format!("Invalid light block {}", e)))?;
+			let consensus_state = TmConsensusState::from(light_block.signed_header.header);
+			Ok((
+				AnyClientState::Tendermint(client_state),
+				AnyConsensusState::Tendermint(consensus_state),
+			))
+		}
 	}
 
 	pub async fn submit_create_client_msg(&self, msg: String) -> Result<ClientId, Error> {
