@@ -44,9 +44,9 @@ pub const VERSION: &str = "ping-1";
 )]
 pub struct SendPingParams {
 	pub data: Vec<u8>,
-	/// Timeout height offset relative to the client latest height
+	/// Timeout height offset relative to client's latest height
 	pub timeout_height_offset: u64,
-	/// Time out timestamp offset relative to client's latest height
+	/// Timeout timestamp offset relative to client's latest timestamp
 	pub timeout_timestamp_offset: u64,
 	// Channel counter, for example counter for channel-0 is 0
 	pub channel_id: u64,
@@ -71,7 +71,7 @@ pub mod pallet {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// ibc subsystem
+		/// IBC subsystem
 		type IbcHandler: ibc_primitives::IbcHandler;
 	}
 
@@ -123,8 +123,7 @@ impl<T: Config> Pallet<T> {
 			data: b"ping".to_vec(),
 			timeout_height_offset: params.timeout_height_offset,
 			timeout_timestamp_offset: params.timeout_timestamp_offset,
-			port_id: port_id_from_bytes(PORT_ID.as_bytes().to_vec())
-				.expect("Valid port id expected"),
+			port_id: PortId::from_str(PORT_ID).expect("PORT_ID is static and valid; qed"),
 			channel_id,
 		};
 		T::IbcHandler::send_packet(send_packet)
@@ -182,6 +181,11 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 		version: &Version,
 		counterparty_version: &Version,
 	) -> Result<Version, Ics04Error> {
+		assert_eq!(
+			&PortId::from_str(PORT_ID).expect("PORT_ID is static and valid; qed"),
+			port_id,
+			"routing is correct; qed"
+		);
 		if counterparty_version.to_string() != *VERSION || version.to_string() != *VERSION {
 			return Err(Ics04Error::no_common_version())
 		}
@@ -190,8 +194,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 			return Err(Ics04Error::unknown_order_type(order.to_string()))
 		}
 
-		let ping_port = PortId::from_str(PORT_ID).expect("PORT_ID is static and valid; qed");
-		if counterparty.port_id() != &ping_port || port_id != &ping_port {
+		if counterparty.port_id() != port_id {
 			return Err(Ics04Error::implementation_specific(format!(
 				"Invalid counterparty port {:?}",
 				counterparty.port_id()
@@ -243,7 +246,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 		port_id: &PortId,
 		channel_id: &ChannelId,
 	) -> Result<(), Ics04Error> {
-		log::info!("Channel close confirmed\n ChannelId: {:?}, PortId: {:?}", channel_id, port_id);
+		log::info!("Channel close confirmed ChannelId: {:?}, PortId: {:?}", channel_id, port_id);
 		Ok(())
 	}
 
