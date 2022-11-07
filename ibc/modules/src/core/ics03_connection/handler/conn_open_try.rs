@@ -29,6 +29,14 @@ pub(crate) fn process<Ctx: ReaderContext>(
 ) -> HandlerResult<ConnectionResult, Error> {
 	let mut output = HandlerOutput::builder();
 
+	let minimum_delay_period = ctx.minimum_delay_period();
+	if msg.delay_period < minimum_delay_period {
+		Err(Error::implementation_specific(format!(
+			"Connection delay is too low. Got: {:?}, minimum delay: {:?}",
+			msg.delay_period, minimum_delay_period
+		)))?
+	}
+
 	// Check that consensus height if provided (for client proof) in message is not too advanced nor
 	// too old.
 	if msg.proofs.consensus_proof().is_some() {

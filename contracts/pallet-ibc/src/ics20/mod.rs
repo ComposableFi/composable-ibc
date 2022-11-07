@@ -6,7 +6,7 @@ use alloc::{
 	string::{String, ToString},
 };
 use core::fmt::Formatter;
-use frame_support::{traits::Currency, weights::Weight};
+use frame_support::weights::Weight;
 use ibc::{
 	applications::transfer::{
 		acknowledgement::{Acknowledgement as Ics20Acknowledgement, ACK_ERR_STR, ACK_SUCCESS_B64},
@@ -57,8 +57,6 @@ impl<T: Config> Default for IbcModule<T> {
 impl<T: Config + Send + Sync> Module for IbcModule<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	T::Balance: From<u128>,
-	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 {
 	fn on_chan_open_init(
 		&mut self,

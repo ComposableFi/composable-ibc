@@ -18,7 +18,6 @@ use ibc_primitives::IbcHandler;
 use sp_runtime::traits::IdentifyAccount;
 
 use crate::routing::Context;
-use frame_support::traits::Currency;
 use ibc::{
 	applications::transfer::{
 		acknowledgement::ACK_ERR_STR, packet::PacketData, Amount, Coin, PrefixedDenom, VERSION,
@@ -89,9 +88,7 @@ benchmarks! {
 				<T as frame_system::Config>::BlockNumber: From<u32>,
 				T: Send + Sync + pallet_timestamp::Config<Moment = u64> + parachain_info::Config + Config,
 		AccountId32: From<T::AccountId>,
-		T::Balance: From<u128>,
 		T::AssetId: From<u128>,
-		<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>
 	}
 
 	// Run these benchmarks via
@@ -770,7 +767,7 @@ benchmarks! {
 				commitment_prefix.clone(),
 			),
 			version: Some(ConnVersion::default()),
-			delay_period: core::time::Duration::from_nanos(1000),
+			delay_period: core::time::Duration::from_secs(1000),
 			signer: Signer::from_str(MODULE_ID).unwrap(),
 		};
 

@@ -1,6 +1,5 @@
 use super::*;
 use core::{borrow::Borrow, fmt::Debug};
-use frame_support::traits::Currency;
 use ibc::{
 	applications::transfer::MODULE_ID_STR as IBC_TRANSFER_MODULE_ID,
 	core::{
@@ -53,8 +52,6 @@ pub trait ModuleRouter: Default + Clone + Eq + PartialEq + Debug {
 impl<T: Config + Send + Sync> Router for IbcRouter<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	T::Balance: From<u128>,
-	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 {
 	fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module> {
 		// check if the user has defined any custom routes
@@ -81,8 +78,6 @@ where
 impl<T: Config + Send + Sync> Ics26Context for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	T::Balance: From<u128>,
-	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 {
 	type Router = IbcRouter<T>;
 
@@ -95,10 +90,7 @@ where
 	}
 }
 
-impl<T: Config + Send + Sync> ReaderContext for Context<T>
-where
-	u32: From<<T as frame_system::Config>::BlockNumber>,
-	T::Balance: From<u128>,
-	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
+impl<T: Config + Send + Sync> ReaderContext for Context<T> where
+	u32: From<<T as frame_system::Config>::BlockNumber>
 {
 }

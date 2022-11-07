@@ -27,7 +27,8 @@ parameter_types! {
     pub const ExpectedBlockTime: u64 = 12000;
     pub const SpamProtectionDeposit: Balances = 10000;  
     pub const RelayChainId: light_client_commomn::RelayChain = light_client_commomn::RelayChain::Rococo;
-    pub const NativeAssetId: AssetId = 1;
+    pub const NativeAssetId: AssetId = 1
+    pub const MinimumConnectionDelay: u64 = 300; // 5 minutes
 }
 
 impl pallet_ibc::Config for Runtime {
@@ -43,7 +44,8 @@ impl pallet_ibc::Config for Runtime {
     type AccountIdConversion = ibc_primitives::IbcAccount;
     type IbcDenomToAssetIdConversion = AssetIdProcessor; // Add a module that implements DenomToAssetId
     type WeightInfo = crate::weights::pallet_ibc::WeightInfo<Self>;
-    type Router = Router; // A type that implements ModuleRouter trait
+    type Router = Router; // A type that implements ModuleRouter trait 
+    type MinimumConnectionDelay: MinimumConnectionDelay;
     type ParaId = parachain_info::Pallet<Runtime>;
     type RelayChain = RelayChainId;
     type AdminOrigin = EnsureRoot<AccountId>;

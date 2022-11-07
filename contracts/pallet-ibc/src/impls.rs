@@ -60,8 +60,6 @@ impl<T: Config> Pallet<T>
 where
 	T: Send + Sync,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	T::Balance: From<u128>,
-	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 {
 	pub fn execute_ibc_messages(
 		ctx: &mut Context<T>,
@@ -97,7 +95,6 @@ impl<T: Config> Pallet<T>
 where
 	T: Send + Sync,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	T::Balance: From<u128>,
 {
 	// IBC Runtime Api helper methods
 	/// Get a channel state
@@ -675,8 +672,6 @@ impl<T: Config> Pallet<T> {
 impl<T: Config + Send + Sync> IbcHandler for Pallet<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	T::Balance: From<u128>,
-	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 {
 	fn latest_height_and_timestamp(
 		port_id: &PortId,

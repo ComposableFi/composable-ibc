@@ -172,7 +172,7 @@ pub mod pallet {
 		traits::{
 			fungibles::{Inspect, Mutate, Transfer},
 			tokens::{AssetId, Balance},
-			Currency, ReservableCurrency, UnixTime,
+			ReservableCurrency, UnixTime,
 		},
 	};
 	use frame_system::pallet_prelude::*;
@@ -210,9 +210,9 @@ pub mod pallet {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// Currency type of the runtime
-		type NativeCurrency: ReservableCurrency<Self::AccountId>;
+		type NativeCurrency: ReservableCurrency<Self::AccountId, Balance = Self::Balance>;
 		/// Runtime balance type
-		type Balance: Balance;
+		type Balance: Balance + From<u128>;
 		/// AssetId type
 		type AssetId: AssetId + MaybeSerializeDeserialize;
 		/// The native asset id, this will use the `NativeCurrency` for all operations.
@@ -237,6 +237,10 @@ pub mod pallet {
 		type ExpectedBlockTime: Get<u64>;
 		/// Port and Module resolution
 		type Router: ModuleRouter;
+		/// Minimum connection delay period in seconds for ibc connections that can be created or
+		/// accepted. Ensure that this is non-zero in production as it's a critical vulnerability.
+		#[pallet::constant]
+		type MinimumConnectionDelay: Get<u64>;
 		/// ParaId of the runtime
 		type ParaId: Get<ParaId>;
 		/// Relay chain this runtime is attached to
@@ -534,7 +538,6 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
 	where
 		u32: From<<T as frame_system::Config>::BlockNumber>,
-		T::Balance: From<u128>,
 		T: Send + Sync,
 	{
 		fn offchain_worker(_n: BlockNumberFor<T>) {
@@ -552,15 +555,12 @@ pub mod pallet {
 		T: Send + Sync,
 		AccountId32: From<T::AccountId>,
 		u32: From<<T as frame_system::Config>::BlockNumber>,
-		T::Balance: From<u128>,
-		<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 	{
 		#[pallet::weight(crate::weight::deliver::< T > (messages))]
 		#[frame_support::transactional]
 		pub fn deliver(origin: OriginFor<T>, messages: Vec<Any>) -> DispatchResult {
 			use ibc::core::{
-				ics02_client::msgs::create_client::TYPE_URL as CREATE_CLIENT_TYPE_URL,
-				ics03_connection::msgs::conn_open_init::TYPE_URL as CONN_OPEN_INIT_TYPE_URL,
+				ics02_client::msgs::create_client, ics03_connection::msgs::conn_open_init,
 			};
 			let sender = ensure_signed(origin)?;
 
@@ -572,10 +572,13 @@ pub mod pallet {
 				.into_iter()
 				.filter_map(|message| {
 					let type_url = String::from_utf8(message.type_url.clone()).ok()?;
-					if matches!(type_url.as_str(), CREATE_CLIENT_TYPE_URL | CONN_OPEN_INIT_TYPE_URL)
-					{
+					if matches!(
+						type_url.as_str(),
+						create_client::TYPE_URL | conn_open_init::TYPE_URL
+					) {
 						reserve_count += 1;
 					}
+
 					Some(Ok(ibc_proto::google::protobuf::Any { type_url, value: message.value }))
 				})
 				.collect::<Result<Vec<ibc_proto::google::protobuf::Any>, Error<T>>>()?;
