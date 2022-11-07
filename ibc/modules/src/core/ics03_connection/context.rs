@@ -20,7 +20,7 @@ use core::time::Duration;
 
 /// A context supplying all the necessary read-only dependencies for processing any `ConnectionMsg`.
 pub trait ConnectionReader {
-	/// Minimum connection delay period for ibc connections that can be created or accepted.
+	/// Minimum connection delay period for IBC connections that can be created or accepted.
 	/// Ensure that this is non-zero in production as it's a critical vulnerability.
 	fn minimum_delay_period(&self) -> Duration;
 

@@ -28,7 +28,7 @@ parameter_types! {
     pub const SpamProtectionDeposit: Balances = 10000;  
     pub const RelayChainId: light_client_commomn::RelayChain = light_client_commomn::RelayChain::Rococo;
     pub const NativeAssetId: AssetId = 1
-    pub const MinimumConnectionDelay: u64 = 600; // 5 minutes
+    pub const MinimumConnectionDelay: u64 = 300; // 5 minutes
 }
 
 impl pallet_ibc::Config for Runtime {
