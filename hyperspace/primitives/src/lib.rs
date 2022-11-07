@@ -82,7 +82,7 @@ pub trait IbcProvider {
 	/// Finality event type, passed on to [`Chain::query_latest_ibc_events`]
 	type FinalityEvent;
 
-	type Hash;
+	type Hash: core::fmt::Debug;
 
 	/// Error type, just needs to implement standard error trait.
 	type Error: std::error::Error + From<String> + Send + Sync + 'static;

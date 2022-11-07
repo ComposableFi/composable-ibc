@@ -55,10 +55,10 @@ where
 
 		// Create and Encode TxBody
 		let body = TxBody {
-			messages: messages.to_vec(),
-			memo: "".to_string(), //TODO: Check if this is correct
+			messages: messages.to_vec(), 						
+			memo: "".to_string(), 								//TODO: Check if this is correct
 			timeout_height: 0_u64,
-			extension_options: Vec::<Any>::new(), //TODO: Check if this is correct
+			extension_options: Vec::<Any>::new(), 				//TODO: Check if this is correct
 			non_critical_extension_options: Vec::<Any>::new(),
 		};
 		let mut body_bytes = Vec::new();

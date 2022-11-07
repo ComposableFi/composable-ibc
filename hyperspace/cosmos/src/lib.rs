@@ -5,6 +5,7 @@ pub mod error;
 pub mod finality_protocol;
 pub mod key_provider;
 pub mod provider;
+pub mod utils;
 #[cfg(any(test, feature = "testing"))]
 pub mod test_provider;
 use core::convert::TryFrom;

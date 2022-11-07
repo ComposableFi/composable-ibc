@@ -3,7 +3,9 @@ use std::{marker::PhantomData, str::FromStr};
 use futures::StreamExt;
 use hyperspace_core::logging;
 use hyperspace_cosmos::{CosmosClient, CosmosClientConfig};
-use hyperspace_primitives::{mock::LocalClientTypes, IbcProvider, KeyProvider};
+use hyperspace_primitives::{
+	mock::LocalClientTypes, utils::create_clients, IbcProvider, KeyProvider,
+};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
 	ibc_messaging_packet_timeout_on_channel_close,
@@ -77,52 +79,9 @@ async fn setup_clients<H: Clone + Send + Sync + 'static>() -> (CosmosClient<H>, 
 	let channels = chain_a.query_channels().await.unwrap();
 	log::info!(target: "hyperspace", "Channels on chain_a: {:?}", channels);
 
-	{
-		// Get initial tendermint state
-		let (client_state, consensus_state) =
-			chain_b.construct_tendermint_client_state().await.unwrap();
-
-		// Create client message is the same for both chains
-		let msg_create_client = MsgCreateAnyClient::<LocalClientTypes> {
-			client_state: client_state.clone(),
-			consensus_state,
-			signer: chain_a.account_id(),
-		};
-
-		// let msg = pallet_ibc::Any {
-		// 	type_url: msg_create_client.type_url().as_bytes().to_vec(),
-		// 	value: msg_create_client.encode_vec(),
-		// };
-		// let client_id_b_on_a = chain_a
-		// 	.submit_create_client_msg(msg.clone())
-		// 	.await
-		// 	.expect("Client was not created successfully");
-		// chain_b.set_client_id(client_id_b_on_a.clone());
-	};
-
-	{
-		// Get initial tendermint state
-		let (client_state, consensus_state) =
-			chain_a.construct_tendermint_client_state().await.unwrap();
-
-		// Create client message is the same for both chains
-		let msg_create_client = MsgCreateAnyClient::<LocalClientTypes> {
-			client_state: client_state.clone(),
-			consensus_state,
-			signer: chain_a.account_id(),
-		};
-
-		// let msg = pallet_ibc::Any {
-		// 	type_url: msg_create_client.type_url().as_bytes().to_vec(),
-		// 	value: msg_create_client.encode_vec(),
-		// };
-
-		// let client_id_a_on_b = chain_b
-		// 	.submit_create_client_msg(msg)
-		// 	.await
-		// 	.expect("Client was not created successfully");
-		// chain_a.set_client_id(client_id_a_on_b.clone());
-	};
+	let (client_a, client_b) = create_clients(&chain_a, &chain_b).await.unwrap();
+	chain_a.set_client_id(client_a);
+	chain_b.set_client_id(client_b);
 
 	(chain_a, chain_b)
 }

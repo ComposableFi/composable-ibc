@@ -10,7 +10,10 @@ use futures::{Stream, TryFutureExt};
 use ibc::{
 	applications::transfer::PrefixedCoin,
 	core::{
-		ics02_client::{client_state::ClientType, trust_threshold::TrustThreshold},
+		ics02_client::{
+			client_state::ClientType, events as client_events, height::Height as ICSHeight,
+			trust_threshold::TrustThreshold,
+		},
 		ics23_commitment::{commitment::CommitmentPrefix, specs::ProofSpecs},
 		ics24_host::identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 	},
@@ -18,6 +21,8 @@ use ibc::{
 	timestamp::Timestamp,
 	Height,
 };
+
+use crate::utils::client_extract_attributes_from_tx;
 use ibc_proto::{
 	google::protobuf::Any,
 	ibc::core::{
@@ -33,7 +38,6 @@ use ibc_proto::{
 		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
 	},
 };
-
 use ibc_rpc::PacketInfo;
 use ics07_tendermint::{
 	client_state::ClientState as TmClientState, consensus_state::ConsensusState as TmConsensusState,
@@ -43,7 +47,9 @@ use primitives::{Chain, IbcProvider, UpdateType};
 use sp_core::H256;
 use std::pin::Pin;
 use tendermint::block::Height as TmHeight;
-use tendermint_rpc::Client;
+use tendermint_rpc::endpoint::tx::Response;
+use tendermint_rpc::query::Query;
+use tendermint_rpc::{Client, Order};
 use tonic::transport::Channel;
 
 #[async_trait::async_trait]
@@ -395,8 +401,66 @@ where
 	async fn query_client_id_from_tx_hash(
 		&self,
 		tx_hash: Self::Hash,
-		block_hash: Option<Self::Hash>,
+		_block_hash: Option<Self::Hash>,
 	) -> Result<ClientId, Self::Error> {
-		todo!()
+		const WAIT_BACKOFF: Duration = Duration::from_millis(300);
+		const TIME_OUT: Duration = Duration::from_millis(30000);
+		let start_time = std::time::Instant::now();
+
+		let response: Response = loop {
+			let response = self
+				.rpc_client
+				.tx_search(
+					Query::eq("tx.hash", tx_hash.to_string()),
+					false,
+					1,
+					1, // get only the first Tx matching the query
+					Order::Ascending,
+				)
+				.await
+				.map_err(|e| Error::from(format!("Failed to query tx hash: {}", e)))?;
+			match response.txs.into_iter().next() {
+				None => {
+					let elapsed = start_time.elapsed();
+					if &elapsed > &TIME_OUT {
+						return Err(Error::from(format!(
+							"Timeout waiting for tx {:?} to be included in a block",
+							tx_hash
+						)));
+					} else {
+						std::thread::sleep(WAIT_BACKOFF);
+					}
+				},
+				Some(resp) => break resp,
+			}
+		};
+
+		// let height =
+		// 	ICSHeight::new(self.chain_id.version(), u64::from(response.clone().height));
+		let deliver_tx_result = response.tx_result;
+		if deliver_tx_result.code.is_err() {
+			Err(Error::from(format!(
+				"Transaction failed with code {:?} and log {:?}",
+				deliver_tx_result.code, deliver_tx_result.log
+			)))
+		} else {
+			let result = deliver_tx_result
+				.events
+				.iter()
+				.flat_map(|event| {
+					client_extract_attributes_from_tx(&event)
+						.map(client_events::CreateClient)
+						.into_iter()
+				})
+				.collect::<Vec<_>>();
+			if result.clone().len() != 1 {
+				Err(Error::from(format!(
+					"Expected exactly one CreateClient event, found {}",
+					result.len()
+				)))
+			} else {
+				Ok(result[0].client_id().clone())
+			}
+		}
 	}
 }
