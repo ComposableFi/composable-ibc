@@ -770,7 +770,7 @@ benchmarks! {
 				commitment_prefix.clone(),
 			),
 			version: Some(ConnVersion::default()),
-			delay_period: core::time::Duration::from_nanos(1000),
+			delay_period: core::time::Duration::from_secs(1000),
 			signer: Signer::from_str(MODULE_ID).unwrap(),
 		};
 

@@ -181,7 +181,7 @@ where
 		Some(ConnectionId::new(1)),
 		commitment_prefix.clone(),
 	);
-	let delay_period = core::time::Duration::from_nanos(1000);
+	let delay_period = core::time::Duration::from_secs(1000);
 	let chain_b_connection_counterparty =
 		Counterparty::new(client_id.clone(), None, commitment_prefix);
 	let mut avl_tree = create_avl();

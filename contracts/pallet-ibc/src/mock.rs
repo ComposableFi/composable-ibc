@@ -112,7 +112,7 @@ impl pallet_ibc_ping::Config for Test {
 parameter_types! {
 	pub const NativeAssetId: u128 = 1;
 	pub const StringLimit: u32 = 32;
-	pub const MinimumConnectionDelay: u64 = 0;
+	pub const MinimumConnectionDelay: u64 = 1;
 }
 
 pub type Balances = orml_tokens::CurrencyAdapter<Test, NativeAssetId>;
