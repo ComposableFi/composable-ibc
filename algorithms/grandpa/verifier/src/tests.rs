@@ -50,6 +50,7 @@ async fn follow_grandpa_justifications() {
 		.unwrap();
 
 	println!("Waiting for grandpa proofs to become available");
+	let session_length = prover.session_length().await.unwrap();
 	prover
 		.relay_client
 		.rpc()
@@ -57,7 +58,7 @@ async fn follow_grandpa_justifications() {
 		.await
 		.unwrap()
 		.filter_map(|result| futures::future::ready(result.ok()))
-		.skip_while(|h| futures::future::ready(h.number < 90))
+		.skip_while(|h| futures::future::ready(h.number < (session_length * 2) + 10))
 		.take(1)
 		.collect::<Vec<_>>()
 		.await;
