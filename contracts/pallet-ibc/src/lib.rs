@@ -172,7 +172,7 @@ pub mod pallet {
 		traits::{
 			fungibles::{Inspect, Mutate, Transfer},
 			tokens::{AssetId, Balance},
-			Currency, ReservableCurrency, UnixTime,
+			ReservableCurrency, UnixTime,
 		},
 	};
 	use frame_system::pallet_prelude::*;
@@ -210,9 +210,9 @@ pub mod pallet {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// Currency type of the runtime
-		type NativeCurrency: ReservableCurrency<Self::AccountId>;
+		type NativeCurrency: ReservableCurrency<Self::AccountId, Balance = Self::Balance>;
 		/// Runtime balance type
-		type Balance: Balance;
+		type Balance: Balance + From<u128>;
 		/// AssetId type
 		type AssetId: AssetId + MaybeSerializeDeserialize;
 		/// The native asset id, this will use the `NativeCurrency` for all operations.
@@ -538,7 +538,6 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
 	where
 		u32: From<<T as frame_system::Config>::BlockNumber>,
-		T::Balance: From<u128>,
 		T: Send + Sync,
 	{
 		fn offchain_worker(_n: BlockNumberFor<T>) {
@@ -556,8 +555,6 @@ pub mod pallet {
 		T: Send + Sync,
 		AccountId32: From<T::AccountId>,
 		u32: From<<T as frame_system::Config>::BlockNumber>,
-		T::Balance: From<u128>,
-		<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
 	{
 		#[pallet::weight(crate::weight::deliver::< T > (messages))]
 		#[frame_support::transactional]
