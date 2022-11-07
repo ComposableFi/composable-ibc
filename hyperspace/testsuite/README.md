@@ -16,23 +16,23 @@ If an open connection and channel exist, those are used instead.
 There are a couple integration tests that can be used directly.  
 
 The following tests are for unordered channels, specifically ICS20:  
-- [`ibc_messaging_packet_height_timeout_with_connection_delay`](/hyperspace/testsuite/src/lib.rs#L444)
+- [`ibc_messaging_packet_height_timeout_with_connection_delay`](/hyperspace/testsuite/src/lib.rs#L444)  
   Spawns a test that checks if the packet timeout height rules are obeyed on both chains with connection delay enabled.  
-- [`ibc_messaging_packet_timestamp_timeout_with_connection_delay`](/hyperspace/testsuite/src/lib.rs#L473)
+- [`ibc_messaging_packet_timestamp_timeout_with_connection_delay`](/hyperspace/testsuite/src/lib.rs#L473)  
   Spawns a test that checks if the packet timeout timestamp rules are obeyed on both chains with connection delay  
   enabled.
-- [`ibc_messaging_with_connection_delay`](/hyperspace/testsuite/src/lib.rs#L503)
+- [`ibc_messaging_with_connection_delay`](/hyperspace/testsuite/src/lib.rs#L503)  
   This spawns a test that checks if the packets are delivered and acknowledged on both chains with connection delay enabled.  
-- [`ibc_channel_close`](/hyperspace/testsuite/src/lib.rs#L530)
+- [`ibc_channel_close`](/hyperspace/testsuite/src/lib.rs#L530)  
   This spawns a test that checks if channel closing rules are obeyed on both chains.
-- [`ibc_messaging_packet_timeout_on_channel_close`](/hyperspace/testsuite/src/lib.rs#L557)
+- [`ibc_messaging_packet_timeout_on_channel_close`](/hyperspace/testsuite/src/lib.rs#L557)  
   This spawns a test that checks if packet timeout rules are obeyed when a channel is closed.
 
 The following tests are for ordered channels:
 
-- [`ibc_messaging_ordered_packet_with_connection_delay`](/hyperspace/testsuite/src/ordered_channels.rs#L213)
+- [`ibc_messaging_ordered_packet_with_connection_delay`](/hyperspace/testsuite/src/ordered_channels.rs#L213)  
   Spawns a test that checks for ordered delivery of packets on the receiving chain.
-- [`send_a_packet_on_ordered_channel_and_assert_timeout`](/hyperspace/testsuite/src/ordered_channels.rs#L250)
+- [`send_a_packet_on_ordered_channel_and_assert_timeout`](/hyperspace/testsuite/src/ordered_channels.rs#L250)  
   Spawns a test that tests if the rules for packet timeout is obeyed on ordered channels on the connected chains.
 
 ### Using the test suite
@@ -89,3 +89,12 @@ Using the testsuite is straight forward and the following pseudocode describes t
     }
 
 ```
+
+## Running parachain tests
+
+To run the integration tests between two parachain nodes:
+1. Place the polkadot repo adjacent to the `centauri` repo.  
+2. Build the polkadot node in release mode.  
+3. Build the parachain node by running `cargo build -p parachain-node --release`.  
+4. Start up the parachain nodes by navigating to `scripts/polkadot-launch`  and running `yarn dev`.  
+5. Run the tests with `cargo test -p hyperspace-testsuite --test parachain_parachain -- --nocapture`.  

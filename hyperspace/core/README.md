@@ -67,16 +67,16 @@ these chunks are then submitted as individual transactions.
 
 The CLI interface can be used to start the relayer from a config file and also performing the IBC setup on both chains.
 
-- [`relay`](/hyperspace/core/src/command.rs#L24) 
+- [`relay`](/hyperspace/core/src/command.rs#L24)  
   This command accepts a path to a config file and spawns the relayer alongside a prometheus server for monitoring.  
   The config file must have all the parameters necessary for the chain clients to work correctly.
-- [`create-clients`](/hyperspace/core/src/command.rs#L26)
+- [`create-clients`](/hyperspace/core/src/command.rs#L26)  
   This command takes a path to a config file and attempts to create a light clients of each chain on its counterparty.
-- [`create-connection`](/hyperspace/core/src/command.rs#L28)
+- [`create-connection`](/hyperspace/core/src/command.rs#L28)  
   This command takes a path to a config file and delay period in seconds and attempts to complete the connection  
   handshake between both chains.
   The config file must have a valid client id
-- [`create-channel`](/hyperspace/core/src/command.rs#L30)
+- [`create-channel`](/hyperspace/core/src/command.rs#L30)  
   This command takes a path to a config file, a port id and a version, it attempts to complete the channel handshake  
   between both chains.
   The config file must have a valid client and connection id.
