@@ -39,7 +39,7 @@ use crate::{
 
 fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 	Ok(match id {
-		id if id.contains("dev") => {
+		id if id.contains("dev") && !id.contains(".json") => {
 			let para_id = id
 				.split("-")
 				.last()

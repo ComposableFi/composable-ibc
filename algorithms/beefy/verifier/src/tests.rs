@@ -35,11 +35,18 @@ use subxt::{
 #[tokio::test]
 #[ignore]
 async fn test_verify_mmr_with_proof() {
-	let url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
-	let client = subxt::client::OnlineClient::<PolkadotConfig>::from_url(url).await.unwrap();
-	let para_url = std::env::var("PARA_NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9188".to_string());
-	let para_client =
-		subxt::client::OnlineClient::<PolkadotConfig>::from_url(para_url).await.unwrap();
+	let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+	let para = std::env::var("PARA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+
+	let relay_ws_url = format!("ws://{relay}:9944");
+	let para_ws_url = format!("ws://{para}:9188");
+
+	let client = subxt::client::OnlineClient::<PolkadotConfig>::from_url(relay_ws_url)
+		.await
+		.unwrap();
+	let para_client = subxt::client::OnlineClient::<PolkadotConfig>::from_url(para_ws_url)
+		.await
+		.unwrap();
 
 	let mut client_state = Prover::get_initial_client_state(Some(&client)).await;
 	let subscription: Subscription<String> = client
@@ -197,11 +204,18 @@ async fn should_fail_with_invalid_validator_set_id() {
 #[tokio::test]
 #[ignore]
 async fn verify_parachain_headers() {
-	let url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
-	let client = subxt::client::OnlineClient::<PolkadotConfig>::from_url(url).await.unwrap();
-	let para_url = std::env::var("PARA_NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9188".to_string());
-	let para_client =
-		subxt::client::OnlineClient::<PolkadotConfig>::from_url(para_url).await.unwrap();
+	let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+	let para = std::env::var("PARA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+
+	let relay_ws_url = format!("ws://{relay}:9944");
+	let para_ws_url = format!("ws://{para}:9188");
+
+	let client = subxt::client::OnlineClient::<PolkadotConfig>::from_url(relay_ws_url)
+		.await
+		.unwrap();
+	let para_client = subxt::client::OnlineClient::<PolkadotConfig>::from_url(para_ws_url)
+		.await
+		.unwrap();
 
 	let mut client_state = Prover::get_initial_client_state(Some(&client)).await;
 	let subscription: Subscription<String> = client

@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - '*'
+  push:
+    branches:
+      - master
 
 jobs:
   linters:
@@ -12,28 +15,112 @@ jobs:
       group: tests-${{ github.ref }}
       cancel-in-progress: true
     container:
-      image: paritytech/ci-linux:production
-    runs-on: [ubuntu-latest]
+      image: ubuntu:jammy
+      # options: --privileged
+    runs-on:
+      - self-hosted
+      - sre
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Setup deps
+        run: |
+          apt update -y
+          apt install -y \
+            curl \
+            netcat \
+            iproute2 \
+            gcc \
+            g++ \
+            build-essential \
+            clang \
+            libclang-dev \
+            pkg-config \
+            libssl-dev
+
+          # Get Rust
+          curl https://sh.rustup.rs -sSf | bash -s -- -y
+          $HOME/.cargo/bin/rustup toolchain install nightly
+
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Rustup show
+        run: $HOME/.cargo/bin/rustup show
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
         with:
           version: '3.x'
 
-      - name: Rustup show
-        run: rustup show
-
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
 
+      - name: Install Docker
+        run: |
+          apt-get install -y \
+            ca-certificates \
+            gnupg \
+            lsb-release
+
+          mkdir -p /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+          echo \
+            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+            $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+          apt-get update
+          apt-get install -y \
+            docker-ce \
+            docker-ce-cli \
+            containerd.io \
+            docker-compose-plugin
+
+          docker --version
+
+      - name: Install docker-compose
+        run: |
+          curl -L "https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-$(uname -s)-$(uname -m)" -o ./docker-compose
+          chmod +x ./docker-compose
+
+      - name: Store network gateway IP
+        run: |
+          # GATEWAY_IP equals host ip where this docker container was ran, this ip has access to Docker port mapping.
+          GATEWAY_IP=$(ip r l | grep default | awk '{print $3}')
+          echo "GATEWAY_IP=$GATEWAY_IP" >> $GITHUB_ENV
+          echo "RELAY_HOST=$GATEWAY_IP" >> $GITHUB_ENV
+          echo "PARA_HOST=$GATEWAY_IP" >> $GITHUB_ENV
+
+      - name: Run local parachain cluster
+        run: |
+          # DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest
+          ./docker-compose -f scripts/parachain-launch/docker-compose.yml up --detach --build
+          # ./docker-compose -f scripts/parachain-launch/docker-compose.yml ps
+          ./scripts/wait_for_tcp_port_opening.sh $GATEWAY_IP 9944
+          ./scripts/wait_for_tcp_port_opening.sh $GATEWAY_IP 9188
+          # sleep 60
+          # echo "# ip -o a"
+          # ip -o a
+          # echo "# ip r l"
+          # ip r l
+          # echo "# ss -nltp"
+          # ss -nltp
+
+      - name: Check that subxt-generated is up to date
+        run: |
+          ./scripts/generate-subxt.sh
+          # git status --porcelain
+
       - name: Run all unit tests
         run: |
-          SKIP_WASM_BUILD=1 cargo +nightly nextest run --workspace \
-          --exclude ibc-derive \
-          --exclude ics10-grandpa \
-          --exclude ics11-beefy \
-          --exclude hyperspace-testsuite \
-          --exclude grandpa-light-client-verifier \
-          --exclude beefy-light-client \
+          SKIP_WASM_BUILD=1 cargo +nightly nextest run --locked --release --workspace --exclude ibc-derive --exclude hyperspace-testsuite
+
+      - name: Run hyperspace integration tests
+        run: |
+          cargo +nightly test -p hyperspace-testsuite --locked --release
+
+      - name: Termintate local parachain cluster
+        run: |
+          ./docker-compose -f scripts/parachain-launch/docker-compose.yml down -v

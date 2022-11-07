@@ -664,6 +664,7 @@ dependencies = [
  "hex-literal",
  "jsonrpsee-core 0.14.0",
  "light-client-common",
+ "once_cell",
  "pallet-beefy-mmr",
  "pallet-mmr",
  "pallet-mmr-rpc",
@@ -3318,6 +3319,7 @@ dependencies = [
  "jsonrpsee 0.15.1",
  "jsonrpsee-ws-client 0.14.0",
  "light-client-common",
+ "once_cell",
  "parity-scale-codec",
  "sc-finality-grandpa-rpc",
  "serde",
@@ -3769,6 +3771,7 @@ dependencies = [
  "jsonrpsee-ws-client 0.14.0",
  "light-client-common",
  "log",
+ "once_cell",
  "pallet-beefy-mmr",
  "pallet-ibc",
  "pallet-mmr",
@@ -6155,9 +6158,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.15.0"
+version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e82dad04139b71a90c080c8463fe0dc7902db5192d939bd0950f074d014339e1"
+checksum = "86f0b0d4bf799edbc74508c1e8bf170ff5f41238e5f8225603ca7caaae2b7860"
 
 [[package]]
 name = "opaque-debug"
