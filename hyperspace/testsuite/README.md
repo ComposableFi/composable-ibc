@@ -2,9 +2,14 @@
 
 This package provides utilities required for running integration tests with the relayer.
 
+### Test Provider
+
+[`TestProvider`](/hyperspace/primitives/src/lib.rs#318) should be implemented for each client before running the integration tests.
+
 ### Connection and Channel Setup
 
-Every integration test attempts to complete the connection and channel handshake before progressing.   
+Every integration test attempts to complete the connection and channel handshake before progressing.  
+If an open connection and channel exist, those are used instead.
 
 ### Available tests
 
@@ -12,7 +17,7 @@ There are a couple integration tests that can be used directly.
 
 The following tests are for unordered channels, specifically ICS20:  
 - [`ibc_messaging_packet_height_timeout_with_connection_delay`](/hyperspace/testsuite/src/lib.rs#L444)
-  Spawns a test that tests if the packet timeout height rules are obeyed on both chains with connection delay enabled.  
+  Spawns a test that checks if the packet timeout height rules are obeyed on both chains with connection delay enabled.  
 - [`ibc_messaging_packet_timestamp_timeout_with_connection_delay`](/hyperspace/testsuite/src/lib.rs#L473)
   Spawns a test that checks if the packet timeout timestamp rules are obeyed on both chains with connection delay  
   enabled.
@@ -36,11 +41,12 @@ Using the testsuite is straight forward and the following pseudocode describes t
 
 ```rust
 
-    async fn setup_clients() -> (Box<dyn Chain>, Box<dyn Chain>) {
+    // In actual implementation this function should return concrete types instead of trait objects
+    async fn setup_clients() -> (Box<dyn Chain<Error = (), FinalityEvent = ()>>, Box<dyn Chain<Error = (), FinalityEvent = ()>>) {
         log::info!(target: "hyperspace", "=========================== Starting Test ===========================");
         // 1. Initialize chain parameters
 
-        let (chain_a_config, chain_b_config) = initialize_chain_config();
+        let (chain_a_config, chain_b_config) = initialize_chain_configs();
 
         // 2. Create chain handlers from config
         let mut chain_a = chain_a_config.to_client().await.unwrap();
@@ -58,7 +64,7 @@ Using the testsuite is straight forward and the following pseudocode describes t
         }
     
         // 4. If clients do not exist create them
-        let (client_a, client_b) = create_clients(&chain_a, &chain_b).await.unwrap();
+        let (client_a, client_b) = hyperspace_primitives::utils::create_clients(&chain_a, &chain_b).await.unwrap();
         chain_a.set_client_id(client_a);
         chain_b.set_client_id(client_b);
         (Box::new(chain_a), Box::new(chain_b))

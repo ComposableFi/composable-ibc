@@ -319,14 +319,14 @@ pub trait TestProvider: Chain + Clone + 'static {
 	/// Initiate an ibc transfer on chain.
 	async fn send_transfer(&self, params: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error>;
 
-	/// Send an ordered packet
+	/// Send a packet on an ordered channel
 	async fn send_ordered_packet(
 		&self,
 		channel_id: ChannelId,
 		timeout: pallet_ibc::Timeout,
 	) -> Result<(), Self::Error>;
 
-	/// Returns a stream that yields chain Block number and hash
+	/// Returns a stream that yields chain Block number
 	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>>;
 
 	/// Set the channel whitelist for the relayer task.

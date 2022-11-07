@@ -8,7 +8,11 @@ The [`IbcProvider`](/hyperspace/primitives/src/lib.rs#L83) trait defines methods
 
 **Associated Types**
 - `FinalityEvent` - This should represent the type yielded by the chain's block finality stream.
-- `Error` - Errors specific to the Chain implementation.
+- `Error` - Errors specific to the chain implementation.
+
+**Channel Whitelist**
+The relayer only relays packets on channels specified in the [`channel_whitelist`](/hyperspace/primitives/src/lib.rs#L219). When the channel whitelist returns  
+an empty list, packets will not be relayed.
 
 ## Chain 
 
@@ -31,7 +35,13 @@ The [`KeyProvider`](/hyperspace/primitives/src/lib.rs#L346) trait defines a sing
 
 ## TestProvider
 
-The [`TestProvider`](/hyperspace/primitives/src/lib.rs#L346) trait defines methods used by the testsuite for integration tests.
+The [`TestProvider`](/hyperspace/primitives/src/lib.rs#L346) trait defines methods used by the testsuite for integration tests.  
+The trait specifies the following methods:
+
+- `send_transfer` -  This function should submit a transaction that initiates an ics20 token transfer on chain.
+- `send_ordered_packet` - This function should submit a transaction that initiates a packet transfer on an ordered channel.
+- `set_channel_whitelist` - This function should set the channel whitelist on the chain's client.
+- `subscribe_blocks` - This function should return a stream that yields new block numbers.
 
 ## Utility Functions
 
@@ -47,7 +57,7 @@ There are a couple utility functions, some of them essential to the core relayer
   proof.
 - [`query_maximum_height_for_timeout_proofs`](/hyperspace/primitives/src/lib.rs#L543) 
   This function helps find the maximum height for timeout proofs based on the current undelivered packets, this, coupled  
-  with other checks helps in deciding which client updates are mandatory
+  with other checks can be used in deciding which client updates are mandatory
 
 - [`create_clients`](/hyperspace/primitives/src/utils.rs#L30)
   This function takes two chain handles and attempts to creates a light client of each chain on the counterparty.
