@@ -24,9 +24,6 @@ pub(crate) fn process<Ctx: ReaderContext>(
 	let mut output = HandlerOutput::builder();
 
 	let minimum_delay_period = ctx.minimum_delay_period();
-	dbg!(&minimum_delay_period);
-	dbg!(&msg.delay_period);
-	dbg!(msg.delay_period < minimum_delay_period);
 
 	if msg.delay_period < minimum_delay_period {
 		Err(Error::implementation_specific(format!(
