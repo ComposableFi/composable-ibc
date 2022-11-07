@@ -115,12 +115,7 @@ jobs:
 
       - name: Run all unit tests
         run: |
-          SKIP_WASM_BUILD=1 cargo +nightly nextest run \
-            --locked \
-            --release \
-            --workspace \
-            --exclude ibc-derive \                # doesn't play nice with nextest for some reason
-            --exclude hyperspace-testsuite        # we'll use vanilla cargo so we can run tests sequentially
+          SKIP_WASM_BUILD=1 cargo +nightly nextest run --locked --release --workspace --exclude ibc-derive --exclude hyperspace-testsuite
 
       - name: Run hyperspace integration tests
         run: |
