@@ -39,9 +39,11 @@ async fn follow_grandpa_justifications() {
 		.format_module_path(false)
 		.init();
 
-	let relay_ws_url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
-	let para_ws_url =
-		std::env::var("PARA_NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9188".to_string());
+	let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+	let para = std::env::var("PARA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+
+	let relay_ws_url = format!("ws://{relay}:9944");
+	let para_ws_url = format!("ws://{para}:9188");
 
 	let prover = GrandpaProver::<PolkadotConfig>::new(&relay_ws_url, &para_ws_url, 2000)
 		.await
