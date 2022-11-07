@@ -639,8 +639,9 @@ pub mod pallet {
 						})
 						.map_err(|_| Error::<T>::Utf8Error)?
 				},
-				MultiAddress::Raw(bytes) =>
-					String::from_utf8(bytes).map_err(|_| Error::<T>::Utf8Error)?,
+				MultiAddress::Raw(bytes) => {
+					String::from_utf8(bytes).map_err(|_| Error::<T>::Utf8Error)?
+				},
 			};
 			let denom = PrefixedDenom::from_str(&denom).map_err(|_| Error::<T>::InvalidIbcDenom)?;
 			let ibc_amount = Amount::from_str(&format!("{:?}", amount))
@@ -693,7 +694,6 @@ pub mod pallet {
 				&msg.token.denom,
 			);
 			if is_sender_source {
-			{
 				// Store escrow address
 				let escrow_address =
 					get_channel_escrow_address(&msg.source_port, msg.source_channel)
