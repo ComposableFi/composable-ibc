@@ -212,7 +212,7 @@ where
 	let future = chain
 		.ibc_events()
 		.await
-		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmConnection(_))))
+		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::AcknowledgePacket(_))))
 		.take(1)
 		.collect::<Vec<_>>();
 	timeout_future(future, wait_time, format!("Didn't see AcknowledgePacket on {}", chain.name()))
@@ -379,7 +379,7 @@ async fn send_channel_close_init_and_assert_channel_close_confirm<A, B>(
 	let future = chain_b
 		.ibc_events()
 		.await
-		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmChannel(_))))
+		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::CloseConfirmChannel(_))))
 		.take(1)
 		.collect::<Vec<_>>();
 	timeout_future(
