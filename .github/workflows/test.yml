@@ -104,7 +104,8 @@ jobs:
           echo "PARA_HOST=$GATEWAY_IP" >> $GITHUB_ENV
 
       - name: Run local parachain cluster
-        run: |
+        run:
+          ./scripts/build-parachain-node-docker.sh
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml up --detach --build
           ./scripts/wait_for_tcp_port_opening.sh $RELAY_HOST 9944
           ./scripts/wait_for_tcp_port_opening.sh $PARA_HOST 9188
@@ -112,7 +113,8 @@ jobs:
       - name: Check that subxt-generated is up to date
         run: |
           ./scripts/generate-subxt.sh
-           git status --porcelain
+          cargo +nightly fmt -- --emit=files
+          git status --porcelain
 
       - name: Run all unit tests
         run: |
