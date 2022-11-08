@@ -1,3 +1,17 @@
+// Copyright 2022 ComposableFi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use async_trait::async_trait;
 use futures::StreamExt;
 use hyperspace_core::logging;
@@ -31,10 +45,13 @@ pub struct Args {
 
 impl Default for Args {
 	fn default() -> Self {
+		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+		let para = std::env::var("PARA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+
 		Args {
-			chain_a: "ws://127.0.0.1:9988".to_string(),
-			chain_b: "ws://127.0.0.1:9188".to_string(),
-			relay_chain: "ws://127.0.0.1:9944".to_string(),
+			chain_a: format!("ws://{para}:9988"),
+			chain_b: format!("ws://{para}:9188"),
+			relay_chain: format!("ws://{relay}:9944"),
 			para_id_a: 2001,
 			para_id_b: 2000,
 			connection_prefix_a: "ibc/".to_string(),
@@ -76,7 +93,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 
 	// Create client configurations
 	let config_a = ParachainClientConfig {
-		name: format!("127.0.0.1:9988"),
+		name: format!("9988"),
 		para_id: args.para_id_a,
 		parachain_rpc_url: args.chain_a,
 		relay_chain_rpc_url: args.relay_chain.clone(),
@@ -91,7 +108,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 		key_type: "sr25519".to_string(),
 	};
 	let config_b = ParachainClientConfig {
-		name: format!("127.0.0.1:9188"),
+		name: format!("9188"),
 		para_id: args.para_id_b,
 		parachain_rpc_url: args.chain_b,
 		relay_chain_rpc_url: args.relay_chain,

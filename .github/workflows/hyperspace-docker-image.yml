@@ -1,0 +1,40 @@
+name: "Build and publish Hyperspace Docker image"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - seun/integration-test # tmp
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: hyperspace-docker-image-${{ github.ref }}
+      cancel-in-progress: true
+    strategy: 
+      fail-fast: true
+      
+    steps:
+    - name: Clean up
+      continue-on-error: true
+      run: |
+        sudo chown -R $USER:$USER $GITHUB_WORKSPACE
+        docker system prune --force --all --volumes
+
+    - uses: actions/checkout@v2
+      with: 
+        fetch-depth: 0
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v1 
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}  
+
+    - name: Build Docker image
+      run: make -f hyperspace/Makefile build-docker-image-hyperspace
+
+    - name:  Docker push
+      run: make -f hyperspace/Makefile publish-docker-image-hyperspace

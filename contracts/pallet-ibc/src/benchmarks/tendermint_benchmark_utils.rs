@@ -1,3 +1,17 @@
+// Copyright 2022 ComposableFi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use crate::{
 	light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager},
 	routing::Context,
@@ -181,7 +195,7 @@ where
 		Some(ConnectionId::new(1)),
 		commitment_prefix.clone(),
 	);
-	let delay_period = core::time::Duration::from_nanos(1000);
+	let delay_period = core::time::Duration::from_secs(1000);
 	let chain_b_connection_counterparty =
 		Counterparty::new(client_id.clone(), None, commitment_prefix);
 	let mut avl_tree = create_avl();

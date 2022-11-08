@@ -1,3 +1,17 @@
+// Copyright 2022 ComposableFi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! Benchmarking setup for pallet-template
 
 #[allow(unused)]
@@ -18,7 +32,6 @@ use ibc_primitives::IbcHandler;
 use sp_runtime::traits::IdentifyAccount;
 
 use crate::routing::Context;
-use frame_support::traits::Currency;
 use ibc::{
 	applications::transfer::{
 		acknowledgement::ACK_ERR_STR, packet::PacketData, Amount, Coin, PrefixedDenom, VERSION,
@@ -89,9 +102,7 @@ benchmarks! {
 				<T as frame_system::Config>::BlockNumber: From<u32>,
 				T: Send + Sync + pallet_timestamp::Config<Moment = u64> + parachain_info::Config + Config,
 		AccountId32: From<T::AccountId>,
-		T::Balance: From<u128>,
 		T::AssetId: From<u128>,
-		<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>
 	}
 
 	// Run these benchmarks via
@@ -770,7 +781,7 @@ benchmarks! {
 				commitment_prefix.clone(),
 			),
 			version: Some(ConnVersion::default()),
-			delay_period: core::time::Duration::from_nanos(1000),
+			delay_period: core::time::Duration::from_secs(1000),
 			signer: Signer::from_str(MODULE_ID).unwrap(),
 		};
 

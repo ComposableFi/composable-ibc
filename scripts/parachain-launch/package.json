@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "dev": "parachain-launch generate --config=config.yml --yes --output=./"
+  },
+  "dependencies": {
+    "@open-web3/parachain-launch": "^1.2.2"
+  }
+}

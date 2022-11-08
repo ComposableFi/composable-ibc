@@ -7,8 +7,9 @@ authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <david.salami@g
 
 [build-dependencies]
 anyhow = "1.0.65"
-tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
+once_cell = "1.16.0"
 subxt-codegen = { package = "codegen", path = "../../utils/subxt/codegen" }
+tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
 
 [dependencies]
 primitives = { path = "../primitives", package = "hyperspace-primitives" }
