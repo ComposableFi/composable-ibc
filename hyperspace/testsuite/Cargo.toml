@@ -28,7 +28,7 @@ ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
 
 # substrate
 polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.27" }
-grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../../centauri/algorithms/grandpa/primitives", default-features = false }
+grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../algorithms/grandpa/primitives", default-features = false }
 finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-features = false }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
