@@ -1,2 +1,2 @@
-FROM seunlanlege/centauri-parachain:v0.9.27
+FROM parachain-node:latest
 COPY . /app
