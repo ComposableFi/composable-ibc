@@ -39,7 +39,9 @@ jobs:
           #   pkg-config \
           #   libssl-dev
 
-          apt instal -y git
+          apt install -y git
+
+          git --version
 
           git status --porcelain
 
