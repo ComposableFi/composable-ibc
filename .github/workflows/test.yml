@@ -51,6 +51,7 @@ jobs:
 
           git --version
 
+          git config --global --add safe.directory /__w/centauri/centauri
           git status --porcelain
 
           # Get Rust
