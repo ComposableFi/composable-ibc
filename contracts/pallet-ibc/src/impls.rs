@@ -1,4 +1,5 @@
 use core::time::Duration;
+use std::collections::BTreeMap;
 
 use super::*;
 use crate::{
@@ -52,7 +53,7 @@ use ibc_primitives::{
 	QueryPacketAcknowledgementsResponse, QueryPacketCommitmentResponse,
 	QueryPacketCommitmentsResponse, QueryPacketReceiptResponse, SendPacketData,
 };
-use scale_info::prelude::{collections::BTreeMap, string::ToString};
+use scale_info::prelude::string::ToString;
 use sp_runtime::traits::IdentifyAccount;
 use tendermint_proto::Protobuf;
 
@@ -468,81 +469,42 @@ where
 		Ok(balance.parse().unwrap_or_default())
 	}
 
-	pub fn offchain_send_packet_key(channel_id: Vec<u8>, port_id: Vec<u8>) -> Vec<u8> {
-		let pair = (T::PALLET_PREFIX.to_vec(), channel_id, port_id, b"SEND_PACKET");
+	pub fn offchain_send_packet_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
+		let pair = (T::PALLET_PREFIX.to_vec(), b"SEND_PACKET", channel_id, port_id, seq);
 		pair.encode()
 	}
 
-	pub fn offchain_recv_packet_key(channel_id: Vec<u8>, port_id: Vec<u8>) -> Vec<u8> {
-		let pair = (T::PALLET_PREFIX.to_vec(), channel_id, port_id, b"RECV_PACKET");
+	pub fn offchain_recv_packet_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
+		let pair = (T::PALLET_PREFIX.to_vec(), b"RECV_PACKET", channel_id, port_id, seq);
 		pair.encode()
 	}
 
-	fn store_raw_acknowledgement(
+	pub fn offchain_ack_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
+		let pair = (T::PALLET_PREFIX.to_vec(), b"ACK", channel_id, port_id, seq);
+		pair.encode()
+	}
+
+	pub fn store_raw_acknowledgement(
 		key: (PortId, ChannelId, Sequence),
 		ack: Vec<u8>,
 	) -> Result<(), Error<T>> {
 		let channel_id = key.1.to_string().as_bytes().to_vec();
 		let port_id = key.0.as_bytes().to_vec();
 		let seq = u64::from(key.2);
+
+		let key = Pallet::<T>::offchain_ack_key(channel_id, port_id, seq);
 		log::trace!(target: "pallet_ibc", "in channel: [store_raw_acknowledgement] >> writing acknowledgement {:?} {:?}", key, ack);
-		WriteAcknowledgements::<T>::insert((channel_id, port_id), seq, ack);
+		sp_io::offchain_index::set(&key, &ack);
 		Ok(())
 	}
 
 	#[allow(dead_code)]
 	pub(crate) fn packet_cleanup() -> Result<(), Error<T>> {
+		let key = b"pallet_ibc:channels_sequences";
+		let last_seq_cleaned: BTreeMap<(Vec<u8>, Vec<u8>), u64> = sp_io::offchain::local_storage_get(sp_core::offchain::StorageKind::PERSISTENT, key)
+		.and_then(|v| codec::Decode::decode(&mut &*v).ok()).unwrap_or_default();
 		for (port_id_bytes, channel_id_bytes, _) in Channels::<T>::iter() {
-			let channel_id = channel_id_from_bytes(channel_id_bytes.clone())
-				.map_err(|_| Error::<T>::DecodingError)?;
-			let port_id =
-				port_id_from_bytes(port_id_bytes.clone()).map_err(|_| Error::<T>::DecodingError)?;
 
-			let key = Pallet::<T>::offchain_send_packet_key(
-				channel_id_bytes.clone(),
-				port_id_bytes.clone(),
-			);
-			let ack_key = Pallet::<T>::offchain_recv_packet_key(
-				channel_id_bytes.clone(),
-				port_id_bytes.clone(),
-			);
-			// Clean up offchain  send packets
-			if let Some(mut send_packets) =
-				sp_io::offchain::local_storage_get(sp_core::offchain::StorageKind::PERSISTENT, &key)
-					.and_then(|v| BTreeMap::<u64, PacketInfo>::decode(&mut &*v).ok())
-			{
-				let keys: Vec<u64> = send_packets.clone().into_keys().collect();
-				for key in keys {
-					if !PacketCommitment::<T>::contains_key((
-						port_id.clone(),
-						channel_id,
-						key.into(),
-					)) {
-						let _ = send_packets.remove(&key);
-					}
-				}
-				sp_io::offchain_index::set(&key, send_packets.encode().as_slice());
-			}
-
-			// Clean up offchain acknowledgements
-			if let Some(mut recv_packets) = sp_io::offchain::local_storage_get(
-				sp_core::offchain::StorageKind::PERSISTENT,
-				&ack_key,
-			)
-			.and_then(|v| BTreeMap::<u64, PacketInfo>::decode(&mut &*v).ok())
-			{
-				let keys: Vec<u64> = recv_packets.clone().into_keys().collect();
-				for key in keys {
-					if !Acknowledgements::<T>::contains_key((
-						port_id.clone(),
-						channel_id,
-						key.into(),
-					)) {
-						let _ = recv_packets.remove(&key);
-					}
-				}
-				sp_io::offchain_index::set(&key, recv_packets.encode().as_slice());
-			}
 		}
 
 		Ok(())
@@ -553,14 +515,14 @@ where
 		port_id: Vec<u8>,
 		sequences: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Error<T>> {
-		// let key = Pallet::<T>::offchain_key(channel_id, port_id);
-		// let offchain_packets: BTreeMap<u64, PacketInfo> =
-		// 	sp_io::offchain::local_storage_get(sp_core::offchain::StorageKind::PERSISTENT, &key)
-		// 		.and_then(|v| codec::Decode::decode(&mut &*v).ok())
-		// 		.unwrap_or_default();
 		let packets = sequences
 			.into_iter()
-			.filter_map(|seq| SendPackets::<T>::get((channel_id.clone(), port_id.clone()), seq))
+			.filter_map(|seq| {
+				let key =
+					Pallet::<T>::offchain_send_packet_key(channel_id.clone(), port_id.clone(), seq);
+				sp_io::offchain::local_storage_get(sp_core::offchain::StorageKind::PERSISTENT, &key)
+					.and_then(|v| PacketInfo::decode(&mut &*v).ok())
+			})
 			.collect();
 		Ok(packets)
 	}
@@ -573,10 +535,20 @@ where
 		let packets = sequences
 			.into_iter()
 			.filter_map(|seq| {
-				let packet_info =
-					ReceivePackets::<T>::get((channel_id.clone(), port_id.clone()), seq);
-				let ack =
-					WriteAcknowledgements::<T>::get((channel_id.clone(), port_id.clone()), seq);
+				let key =
+					Pallet::<T>::offchain_recv_packet_key(channel_id.clone(), port_id.clone(), seq);
+				let ack_key =
+					Pallet::<T>::offchain_ack_key(channel_id.clone(), port_id.clone(), seq);
+				let packet_info = sp_io::offchain::local_storage_get(
+					sp_core::offchain::StorageKind::PERSISTENT,
+					&key,
+				)
+				.and_then(|v| PacketInfo::decode(&mut &*v).ok());
+				let ack = sp_io::offchain::local_storage_get(
+					sp_core::offchain::StorageKind::PERSISTENT,
+					&ack_key,
+				)
+				.and_then(|v| Vec::decode(&mut &*v).ok());
 				packet_info.map(|mut packet_info| {
 					packet_info.ack = ack;
 					packet_info
