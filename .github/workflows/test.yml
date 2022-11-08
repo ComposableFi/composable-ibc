@@ -27,17 +27,19 @@ jobs:
       - name: Setup deps
         run: |
           apt update -y
-          apt install -y \
-            curl \
-            netcat \
-            iproute2 \
-            gcc \
-            g++ \
-            build-essential \
-            clang \
-            libclang-dev \
-            pkg-config \
-            libssl-dev
+          # apt install -y \
+          #   curl \
+          #   netcat \
+          #   iproute2 \
+          #   gcc \
+          #   g++ \
+          #   build-essential \
+          #   clang \
+          #   libclang-dev \
+          #   pkg-config \
+          #   libssl-dev
+
+          apt instal -y git
 
           git status --porcelain
 
@@ -103,6 +105,7 @@ jobs:
       # - name: Check that subxt-generated is up to date
       #   run: |
       #     ./scripts/generate-subxt.sh
+      #      git status --porcelain
 
       # - name: Run all unit tests
       #   run: |
