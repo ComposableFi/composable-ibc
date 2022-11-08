@@ -242,6 +242,23 @@ fn send_transfer() {
 			balance,
 		)
 		.unwrap();
+	});
+
+	ext.persist_offchain_overlay();
+
+	ext.execute_with(|| {
+		let channel_id = ChannelId::new(0);
+		let port_id = PortId::transfer();
+		let packet_info = Pallet::<Test>::get_send_packet_info(
+			channel_id.to_string().as_bytes().to_vec(),
+			port_id.as_bytes().to_vec(),
+			vec![1],
+		)
+		.unwrap()
+		.get(0)
+		.unwrap()
+		.clone();
+		assert!(!packet_info.data.is_empty())
 	})
 }
 
@@ -364,10 +381,16 @@ fn should_fetch_recv_packet_with_acknowledgement() {
 
 		ctx.store_recv_packet((port_id.clone(), channel_id, packet.sequence), packet.clone())
 			.unwrap();
-
 		let ack = "success".as_bytes().to_vec();
-		Pallet::<Test>::write_acknowledgement(&packet, ack.clone()).unwrap();
+		Pallet::<Test>::write_acknowledgement(&packet, ack).unwrap();
+	});
 
+	ext.persist_offchain_overlay();
+
+	ext.execute_with(|| {
+		let ack = "success".as_bytes().to_vec();
+		let channel_id = ChannelId::new(0);
+		let port_id = PortId::transfer();
 		let packet_info = Pallet::<Test>::get_recv_packet_info(
 			channel_id.to_string().as_bytes().to_vec(),
 			port_id.as_bytes().to_vec(),
@@ -378,5 +401,5 @@ fn should_fetch_recv_packet_with_acknowledgement() {
 		.unwrap()
 		.clone();
 		assert_eq!(packet_info.ack, Some(ack))
-	});
+	})
 }

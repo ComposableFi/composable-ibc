@@ -207,7 +207,7 @@ pub mod pallet {
 	use ibc_primitives::{
 		client_id_from_bytes, get_channel_escrow_address,
 		runtime_interface::{self, SS58CodecError},
-		IbcHandler, PacketInfo,
+		IbcHandler,
 	};
 	use light_clients::AnyClientState;
 	use sp_runtime::{
@@ -512,8 +512,7 @@ pub mod pallet {
 		T: Send + Sync,
 	{
 		fn offchain_worker(_n: BlockNumberFor<T>) {
-			// Enable when offchain indexing is fixed
-			// let _ = Pallet::<T>::packet_cleanup();
+			let _ = Pallet::<T>::packet_cleanup();
 		}
 	}
 

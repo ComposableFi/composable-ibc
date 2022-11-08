@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use alloc::collections::BTreeMap;
 use core::time::Duration;
-use std::collections::BTreeMap;
 
 use super::*;
 use crate::{
@@ -68,7 +68,7 @@ use ibc_primitives::{
 	QueryPacketCommitmentsResponse, QueryPacketReceiptResponse, SendPacketData,
 };
 use scale_info::prelude::string::ToString;
-use sp_runtime::traits::IdentifyAccount;
+use sp_runtime::{offchain::storage::StorageValueRef, traits::IdentifyAccount};
 use tendermint_proto::Protobuf;
 
 impl<T: Config> Pallet<T>
@@ -512,15 +512,120 @@ where
 		Ok(())
 	}
 
-	#[allow(dead_code)]
 	pub(crate) fn packet_cleanup() -> Result<(), Error<T>> {
-		let key = b"pallet_ibc:channels_sequences";
-		let last_seq_cleaned: BTreeMap<(Vec<u8>, Vec<u8>), u64> = sp_io::offchain::local_storage_get(sp_core::offchain::StorageKind::PERSISTENT, key)
-		.and_then(|v| codec::Decode::decode(&mut &*v).ok()).unwrap_or_default();
+		let pending_send_packet_seqs =
+			StorageValueRef::persistent(b"pallet_ibc:pending_send_packet_sequences");
+		let pending_recv_packet_seqs =
+			StorageValueRef::persistent(b"pallet_ibc:pending_recv_packet_sequences");
+		let mut pending_send_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (Vec<u64>, u64)> =
+			pending_send_packet_seqs.get::<_>().ok().flatten().unwrap_or_default();
+		let mut pending_recv_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (Vec<u64>, u64)> =
+			pending_recv_packet_seqs.get::<_>().ok().flatten().unwrap_or_default();
+
 		for (port_id_bytes, channel_id_bytes, _) in Channels::<T>::iter() {
+			let channel_id = channel_id_from_bytes(channel_id_bytes.clone())
+				.map_err(|_| Error::<T>::DecodingError)?;
+			let port_id =
+				port_id_from_bytes(port_id_bytes.clone()).map_err(|_| Error::<T>::DecodingError)?;
 
+			// We first try to remove sequences that were skipped in a previous cycle
+			let (mut send_seq_set, mut last_removed_send) = pending_send_sequences
+				.get(&(port_id_bytes.clone(), channel_id_bytes.clone()))
+				.map(|set| set.clone())
+				.unwrap_or_default();
+			send_seq_set.sort();
+			let count = send_seq_set.len();
+			for i in 0..count {
+				let seq = send_seq_set.get(i).cloned().unwrap_or_default();
+				if !PacketCommitment::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
+					let offchain_key = Pallet::<T>::offchain_send_packet_key(
+						channel_id_bytes.clone(),
+						port_id_bytes.clone(),
+						seq,
+					);
+					sp_io::offchain_index::clear(&offchain_key);
+					send_seq_set.remove(i);
+					last_removed_send = seq
+				}
+			}
+			// Try removing at most 100 sequences per cycle from the last sequence removed
+			let range = (last_removed_send + 1)..(last_removed_send + 1 + 100);
+			for seq in range {
+				if !PacketCommitment::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
+					let offchain_key = Pallet::<T>::offchain_send_packet_key(
+						channel_id_bytes.clone(),
+						port_id_bytes.clone(),
+						seq,
+					);
+					sp_io::offchain_index::clear(&offchain_key);
+					last_removed_send = seq;
+				} else {
+					// Add sequence to pending removal list
+					send_seq_set.push(seq)
+				}
+			}
+
+			pending_send_sequences.insert(
+				(port_id_bytes.clone(), channel_id_bytes.clone()),
+				(send_seq_set, last_removed_send),
+			);
+			pending_send_packet_seqs.set(&pending_send_sequences);
+
+			let (mut recv_seq_set, mut last_removed_ack) = pending_recv_sequences
+				.get(&(port_id_bytes.clone(), channel_id_bytes.clone()))
+				.map(|set| set.clone())
+				.unwrap_or_default();
+
+			let count = recv_seq_set.len();
+			for i in 0..count {
+				let seq = recv_seq_set.get(i).cloned().unwrap_or_default();
+				if !Acknowledgements::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
+					let offchain_key = Pallet::<T>::offchain_recv_packet_key(
+						channel_id_bytes.clone(),
+						port_id_bytes.clone(),
+						seq,
+					);
+					let ack_key = Pallet::<T>::offchain_ack_key(
+						channel_id_bytes.clone(),
+						port_id_bytes.clone(),
+						seq,
+					);
+					sp_io::offchain_index::clear(&offchain_key);
+					sp_io::offchain_index::clear(&ack_key);
+					recv_seq_set.remove(i);
+					last_removed_ack = seq;
+				}
+			}
+			// Try removing at most 100 sequences per cycle from the last sequence removed
+			let range = (last_removed_ack + 1)..(last_removed_ack + 1 + 100);
+			for seq in range {
+				if !Acknowledgements::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
+					let offchain_key = Pallet::<T>::offchain_recv_packet_key(
+						channel_id_bytes.clone(),
+						port_id_bytes.clone(),
+						seq,
+					);
+
+					let ack_key = Pallet::<T>::offchain_ack_key(
+						channel_id_bytes.clone(),
+						port_id_bytes.clone(),
+						seq,
+					);
+					sp_io::offchain_index::clear(&offchain_key);
+					sp_io::offchain_index::clear(&ack_key);
+					last_removed_ack = seq;
+				} else {
+					// Add sequence to pending removal list
+					recv_seq_set.push(seq)
+				}
+			}
+			pending_recv_sequences.insert(
+				(port_id_bytes.clone(), channel_id_bytes.clone()),
+				(recv_seq_set, last_removed_ack),
+			);
+
+			pending_recv_packet_seqs.set(&pending_recv_sequences);
 		}
-
 		Ok(())
 	}
 
@@ -561,8 +666,7 @@ where
 				let ack = sp_io::offchain::local_storage_get(
 					sp_core::offchain::StorageKind::PERSISTENT,
 					&ack_key,
-				)
-				.and_then(|v| Vec::decode(&mut &*v).ok());
+				);
 				packet_info.map(|mut packet_info| {
 					packet_info.ack = ack;
 					packet_info
