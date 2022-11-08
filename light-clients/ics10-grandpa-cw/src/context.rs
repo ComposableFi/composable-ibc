@@ -1,13 +1,11 @@
-use std::{cell::RefCell, fmt, fmt::Debug, marker::PhantomData, rc::Rc};
-
-use cosmwasm_std::{DepsMut, Storage};
-
+use cosmwasm_std::{DepsMut, Env, Storage};
 use grandpa_light_client_primitives::HostFunctions;
 use ibc::core::ics26_routing::context::ReaderContext;
-use ics10_grandpa::client_message::RelayChainHeader;
+use std::{fmt, fmt::Debug, marker::PhantomData};
 
 pub struct Context<'a, H> {
-	pub deps: Rc<RefCell<DepsMut<'a>>>,
+	pub deps: DepsMut<'a>,
+	pub env: Env,
 	_phantom: PhantomData<H>,
 }
 
@@ -32,8 +30,20 @@ impl<'a, H> Clone for Context<'a, H> {
 }
 
 impl<'a, H> Context<'a, H> {
-	pub fn new(deps: Rc<RefCell<DepsMut<'a>>>) -> Self {
-		Self { deps, _phantom: Default::default() }
+	pub fn new(deps: DepsMut<'a>, env: Env) -> Self {
+		Self { deps, _phantom: Default::default(), env }
+	}
+
+	pub fn log(&self, msg: &str) {
+		self.deps.api.debug(msg)
+	}
+
+	pub fn storage(&self) -> &dyn Storage {
+		self.deps.storage
+	}
+
+	pub fn storage_mut(&mut self) -> &mut dyn Storage {
+		self.deps.storage
 	}
 }
 

@@ -1,6 +1,6 @@
 use crate::STORAGE_PREFIX;
 use cosmwasm_std::Storage;
-use cosmwasm_storage::{prefixed, PrefixedStorage};
+use cosmwasm_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use ibc::{core::ics24_host::identifier::ClientId, Height};
 
 /// client_id, height => consensus_state
@@ -36,5 +36,23 @@ impl<'a> ConsensusStates<'a> {
 
 	pub fn insert(&mut self, _client_id: ClientId, _height: Height, _consensus_state: Vec<u8>) {
 		todo!("insert")
+	}
+}
+
+/// client_id, height => consensus_state
+/// trie key path: "clients/{client_id}/consensusStates/{height}"
+pub struct ReadonlyConsensusStates<'a>(ReadonlyPrefixedStorage<'a>);
+
+impl<'a> ReadonlyConsensusStates<'a> {
+	pub fn new(storage: &'a dyn Storage) -> Self {
+		ReadonlyConsensusStates(prefixed_read(storage, STORAGE_PREFIX))
+	}
+
+	pub fn get(&self, client_id: &ClientId, height: Height) -> Option<Vec<u8>> {
+		let (consensus_state_key_1, consensus_state_key_2) =
+			ConsensusStates::consensus_state_key(client_id.clone(), height);
+		let full_key =
+			[consensus_state_key_1.as_slice(), consensus_state_key_2.as_slice()].concat();
+		self.0.get(&full_key)
 	}
 }

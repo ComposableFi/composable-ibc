@@ -49,4 +49,8 @@ impl<'a> ReadonlyChannels<'a> {
 		let channel_path = Channels::key(key.0, key.1);
 		self.0.get(&channel_path)
 	}
+
+	pub fn contains_key(&self, key: (PortId, ChannelId)) -> bool {
+		self.0.get(&Channels::key(key.0, key.1)).is_some()
+	}
 }

@@ -1,6 +1,6 @@
 use crate::STORAGE_PREFIX;
 use cosmwasm_std::Storage;
-use cosmwasm_storage::{prefixed, PrefixedStorage};
+use cosmwasm_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use ibc::{
 	core::{
 		ics03_connection::connection::ConnectionEnd,
@@ -29,5 +29,19 @@ impl<'a> Connections<'a> {
 
 	pub fn insert(&mut self, connection_id: ConnectionId, connection_end: &ConnectionEnd) {
 		self.0.set(&Self::key(connection_id), &connection_end.encode_vec());
+	}
+}
+
+/// connection_id => ConnectionEnd
+/// trie key path: "connections/{}"
+pub struct ReadonlyConnections<'a>(ReadonlyPrefixedStorage<'a>);
+
+impl<'a> ReadonlyConnections<'a> {
+	pub fn new(storage: &'a dyn Storage) -> Self {
+		ReadonlyConnections(prefixed_read(storage, STORAGE_PREFIX))
+	}
+
+	pub fn get(&self, connection_id: &ConnectionId) -> Option<Vec<u8>> {
+		self.0.get(&Connections::key(connection_id.clone()))
 	}
 }

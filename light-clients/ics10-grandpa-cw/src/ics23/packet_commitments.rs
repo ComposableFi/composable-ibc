@@ -1,6 +1,6 @@
 use crate::{Bytes, STORAGE_PREFIX};
 use cosmwasm_std::Storage;
-use cosmwasm_storage::{prefixed, PrefixedStorage};
+use cosmwasm_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use ibc::core::{
 	ics04_channel::{commitment::PacketCommitment as PacketCommitmentType, packet::Sequence},
 	ics24_host::{
@@ -42,5 +42,24 @@ impl<'a> PacketCommitments<'a> {
 
 	pub fn contains_key(&self, key: (PortId, ChannelId, Sequence)) -> bool {
 		self.0.get(&Self::key(key)).is_some()
+	}
+}
+
+/// (port_id, channel_id, sequence) => hash
+/// trie key path: "commitments/ports/{port_id}/channels/{channel_id}/sequences/{sequence}"
+pub struct ReadonlyPacketCommitments<'a>(ReadonlyPrefixedStorage<'a>);
+
+impl<'a> ReadonlyPacketCommitments<'a> {
+	pub fn new(storage: &'a dyn Storage) -> Self {
+		Self(prefixed_read(storage, STORAGE_PREFIX))
+	}
+
+	pub fn get(&self, key: (PortId, ChannelId, Sequence)) -> Option<Bytes> {
+		let commitment_path = PacketCommitments::key(key);
+		self.0.get(&commitment_path)
+	}
+
+	pub fn contains_key(&self, key: (PortId, ChannelId, Sequence)) -> bool {
+		self.get(key).is_some()
 	}
 }

@@ -1,6 +1,6 @@
 use crate::STORAGE_PREFIX;
 use cosmwasm_std::Storage;
-use cosmwasm_storage::{prefixed, PrefixedStorage};
+use cosmwasm_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use ibc::core::{
 	ics04_channel::packet::{Packet, Sequence},
 	ics24_host::identifier::{ChannelId, PortId},
@@ -40,6 +40,25 @@ impl<'a> Packets<'a> {
 	pub fn remove(&mut self, key: (PortId, ChannelId, Sequence)) {
 		let packet_path = Self::key(key);
 		self.0.remove(&packet_path);
+	}
+
+	pub fn contains_key(&self, key: (PortId, ChannelId, Sequence)) -> bool {
+		self.get(key).is_some()
+	}
+}
+
+/// (port_id, channel_id, sequence) => Packet
+pub struct ReadonlyPackets<'a>(ReadonlyPrefixedStorage<'a>);
+
+impl<'a> ReadonlyPackets<'a> {
+	pub fn new(storage: &'a dyn Storage) -> Self {
+		Self(prefixed_read(storage, STORAGE_PREFIX))
+	}
+
+	pub fn get(&self, key: (PortId, ChannelId, Sequence)) -> Option<()> {
+		let _packet_path = Packets::key(key);
+		// self.0.get(&packet_path)
+		todo!("get packet")
 	}
 
 	pub fn contains_key(&self, key: (PortId, ChannelId, Sequence)) -> bool {
