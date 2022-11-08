@@ -1,17 +1,3 @@
-// Copyright 2022 ComposableFi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #[allow(dead_code, unused_imports, non_camel_case_types)]
 pub mod api {
 	use super::api as root_mod;
@@ -8932,6 +8918,24 @@ pub mod api {
 						],
 					)
 				}
+				#[doc = " Minimum connection delay period in seconds for ibc connections that can be created or"]
+				#[doc = " accepted. Ensure that this is non-zero in production as it's a critical vulnerability."]
+				pub fn minimum_connection_delay(
+					&self,
+				) -> ::subxt::constants::StaticConstantAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::u64>,
+				> {
+					::subxt::constants::StaticConstantAddress::new(
+						"Ibc",
+						"MinimumConnectionDelay",
+						[
+							128u8, 214u8, 205u8, 242u8, 181u8, 142u8, 124u8, 231u8, 190u8, 146u8,
+							59u8, 226u8, 157u8, 101u8, 103u8, 117u8, 249u8, 65u8, 18u8, 191u8,
+							103u8, 119u8, 53u8, 85u8, 81u8, 96u8, 220u8, 42u8, 184u8, 239u8, 42u8,
+							246u8,
+						],
+					)
+				}
 				#[doc = " Amount to be reserved for client and connection creation"]
 				pub fn spam_protection_deposit(
 					&self,
@@ -14657,9 +14661,9 @@ pub mod api {
 		let runtime_metadata_hash = client.metadata().metadata_hash(&PALLETS);
 		if runtime_metadata_hash !=
 			[
-				235u8, 16u8, 62u8, 160u8, 98u8, 132u8, 164u8, 220u8, 19u8, 152u8, 152u8, 245u8,
-				76u8, 188u8, 63u8, 148u8, 154u8, 56u8, 230u8, 67u8, 114u8, 51u8, 15u8, 126u8, 91u8,
-				182u8, 91u8, 244u8, 200u8, 236u8, 94u8, 31u8,
+				27u8, 176u8, 197u8, 124u8, 48u8, 183u8, 72u8, 158u8, 153u8, 107u8, 217u8, 211u8,
+				118u8, 219u8, 249u8, 130u8, 191u8, 231u8, 70u8, 49u8, 141u8, 13u8, 80u8, 171u8,
+				207u8, 22u8, 23u8, 64u8, 94u8, 97u8, 121u8, 142u8,
 			] {
 			Err(::subxt::error::MetadataError::IncompatibleMetadata)
 		} else {
