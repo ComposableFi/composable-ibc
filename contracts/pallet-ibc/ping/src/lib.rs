@@ -24,7 +24,7 @@ use ibc::{
 	},
 	signer::Signer,
 };
-use ibc_primitives::{port_id_from_bytes, CallbackWeight, IbcHandler, SendPacketData};
+use ibc_primitives::{CallbackWeight, IbcHandler, SendPacketData};
 use sp_std::{marker::PhantomData, prelude::*};
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -181,11 +181,14 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 		version: &Version,
 		counterparty_version: &Version,
 	) -> Result<Version, Ics04Error> {
-		assert_eq!(
-			&PortId::from_str(PORT_ID).expect("PORT_ID is static and valid; qed"),
-			port_id,
-			"routing is correct; qed"
-		);
+		let static_port_id = &PortId::from_str(PORT_ID).expect("PORT_ID is static and valid; qed");
+		if static_port_id != port_id {
+			return Err(Ics04Error::implementation_specific(format!(
+				"Cannot open unknown port {:?}",
+				port_id
+			)))
+		}
+
 		if counterparty_version.to_string() != *VERSION || version.to_string() != *VERSION {
 			return Err(Ics04Error::no_common_version())
 		}
