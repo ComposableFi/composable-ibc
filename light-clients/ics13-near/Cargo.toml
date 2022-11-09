@@ -51,14 +51,10 @@ sha3 = { version = "0.10.1", optional = true }
 ripemd = { version = "0.1.1", optional = true }
 
 [dependencies.tendermint]
-git = "https://github.com/composableFi/tendermint-rs"
-rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
-default-features = false
+workspace = true
 
 [dependencies.tendermint-proto]
-git = "https://github.com/composableFi/tendermint-rs"
-rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
-default-features = false
+workspace = true
 
 [dev-dependencies]
 ibc = { path = "../../ibc/modules", features = ['mocks'] }
