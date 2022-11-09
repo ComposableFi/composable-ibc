@@ -23,42 +23,86 @@ The `query_ready_and_timed_out_packets` which queries a chain and
 produces all packet messages that have passed the connection delay check.
 It also returns timed out packet messages that have passed the connection delay check.  
 
-### Connection delay
+### Connection delay and Packet Timeout
  
 The relayer needs to submit packets with a proof fetched at a height where the equivalent client consensus state on the  
 counterparty chain has satisfied the connection delay.    
 Since the relayer has no cache of the block heights at which packets events were emitted, it has to go through a more   
 rigorous process to identify when the connection delay has been satisfied for some arbitrary consensus height.  
+The following pseudocode describes how connection delays and packet timeouts are handled:
 
-This is solved via the following steps:
-1. The `PacketInfo` type returned by [`query_send_packets`](/hyperspace/primitives/src/lib.rs#L230) and [`query_recv_packets`](/hyperspace/primitives/src/lib.rs#239) must contain a height field, which for  
-`SendPackets` represents the block height at which the packet was created and for `ReceivePackets`, the block height at  
-which the acknowledgement of the packet was written on chain(for the majority of chains which execute ibc callbacks synchronously, this  
-would be equivalent to the height at which the packet was received on chain).  
-2. The relayer uses the knowledge of the packet creation height to perform an ordered linear search on the counterparty,  
-searching for the first available client consensus height at which a proof for the packet can be fetched.  
-The function responsible for this is [`find_suitable_proof_height_for_client`](/hyperspace/primitives/src/lib.rs#L480).  
-3. It then checks if the consensus height has satisfied the connection delay by fetching the timestamp and height  
-at which this consensus height was registered on chain using [`query_client_update_time_and_height`](/hyperspace/primitives/src/lib.rs#L251), then comparing  
-them to the current height and timestamp. For this, chains are required to provide an rpc interface for querying the height  
-and timestamp at which a client was updated for a given consensus height.
-The function responsible for checking connection delay is [`verify_delay_passed`](/hyperspace/core/src/packets/utils.rs#L127)
+```rust
+    let mut ready_messages = vec![];
+    let mut timeout_messages = vec![];
+    // query undelivered send packet sequences
+    let seqs = query_undelivered_sequences(source_height, sink_height, channel_id, port_id, source, sink);
 
-### Packet Timeouts
+    // The `PacketInfo` type returned by `query_send_packets` must contain a height field, which represents the block height 
+    // at which the packet was created
+    let send_packets: Vec<PacketInfo> = source.query_send_packets(channel_id, port_id, seqs);
+    for packet_info in send_packets {
+        let packet = packet_info_to_packet(&send_packet);
+        // Check if packet has timed out
+        if packet.timed_out(&sink_timestamp, sink_height) {
+            // Find a suitable consensus height for sink chain's light client consensus height on source chain to prove packet timeout
+            let proof_height = if let Some(proof_height) = get_timeout_proof_height(source, sink, packet_info) {
+                proof_height
+            } else {
+               continue
+            };
 
-Send packets are queried on every finality event and checked for timeout, if a timeout is detected, we need to find a  
-suitable height at which we can fetch a proof for the packet timeout from the sink. For this, the sink client state at  
-the packet creation height on the source chain is queried, next, the timestamp of the sink at this client state height  
-is also queried, next the approximate number of blocks that have elapsed on the sink between the time when the packet  
-was created on the source and the time when the packet timed out on the sink is calculated, this calculated number of blocks  
-is then added to the sink height at packet creation to give us a starting height from which to conduct a search for a suitable proof height.  
-When a suitable height is found it goes through the same connection delay checks described above before the timeout packet  
-is submitted.  
+            // Check if connection delay is satisfied for this proof height
+            if !verify_delay_passed(source, sink, packet_info, proof_height) {
+                continue
+            }
+
+            // lets construct the timeout message to be sent to the source
+            let msg = construct_timeout_message(source, sink, packet, proof_height)
+            timeout_messages.push(msg);
+            continue
+        }
+        
+        // If packet has not timed out find a suitable client consensus height on the sink that can be used to prove packet existence
+        let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(source, sink, packet_info) {
+            proof_height
+        } else {
+            continue
+        };
+        // verify that the connection delay is satisfied
+        if !verify_delay_passed(source, sink, packet_info, proof_height) {
+            continue
+        }
+        let msg = construct_msg_recv_packet(source, sink, packet, proof_height);
+        ready_messages.push(msg)   
+    }
+
+    // The same process above is followed for packet acknowledgement
+    let seqs = query_undelivered_acks(source_height, sink_height, channel_id, port_id, source, sink);
+    // The `PacketInfo` type returned by `query_recv_packets` must contain a height field, which for represents the block height at
+    // which the acknowledgement of the packet was written on chain(for the majority of chains which execute ibc callbacks synchronously, this
+    // would be equivalent to the height at which the packet was received on chain).
+    let recv_packets: Vec<PacketInfo> = source.query_recv_packets(channel_id, port_id, seqs);
+    for packet_info in recv_packets { 
+        // If acknowledgement is not defined then skip packet
+        if packet_info.ack.is_none() {
+            continue
+        }
+        let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(source, sink, packet_info) {
+            proof_height
+        } else {
+            continue
+        };
+        // verify that the connection delay is satisfied
+        if !verify_delay_passed(source, sink, packet_info, proof_height) {
+            continue
+        }
+        let msg = construct_msg_ack_packet(source, sink, packet, proof_height);
+        ready_messages.push(msg)
+    }
+```
 
 For timeouts due to channel close, since there's no way to know the exact height at which the channel closed on the sink chain,  
-the timeouts are only processed when the packets eventually timeout.  
-
-The function that performs the search for the proof height is [`get_timeout_proof_height`](/hyperspace/core/src/packets/utils.rs#L30).  
+the timeouts are only processed when the packets eventually timeout.
 
 ## Using the relayer
 
