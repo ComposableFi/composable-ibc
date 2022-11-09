@@ -74,14 +74,21 @@ async fn test_continuous_update_of_beefy_client() {
 	let signer = get_dummy_account_id();
 
 	let relay_client = {
-		let url = std::env::var("NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9944".to_string());
-		subxt::client::OnlineClient::<PolkadotConfig>::from_url(url).await.unwrap()
+		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+		let relay_ws_url = format!("ws://{relay}:9944");
+		subxt::client::OnlineClient::<PolkadotConfig>::from_url(relay_ws_url)
+			.await
+			.unwrap()
 	};
+
 	let para_client = {
-		let para_url =
-			std::env::var("PARA_NODE_ENDPOINT").unwrap_or("ws://127.0.0.1:9188".to_string());
-		subxt::client::OnlineClient::<PolkadotConfig>::from_url(para_url).await.unwrap()
+		let para = std::env::var("PARA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+		let para_ws_url = format!("ws://{para}:9188");
+		subxt::client::OnlineClient::<PolkadotConfig>::from_url(para_ws_url)
+			.await
+			.unwrap()
 	};
+
 	let client_wrapper = Prover {
 		relay_client: relay_client.clone(),
 		para_client: para_client.clone(),

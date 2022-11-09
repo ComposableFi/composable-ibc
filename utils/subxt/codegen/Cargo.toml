@@ -11,7 +11,7 @@ path = "bin/main.rs"
 [dependencies]
 tokio = { version = "1.21.2", features = ["full"] }
 anyhow = "1.0.66"
-clap = { version = "3.2.22", features = ["derive"] }
+clap = { version = "3.2.22", features = ["derive", "env"] }
 
 subxt-codegen = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }
 jsonrpsee = { version = "0.14.0", features = ["async-client", "client-ws-transport", "http-client"] }

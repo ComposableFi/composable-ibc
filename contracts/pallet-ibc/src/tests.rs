@@ -1,3 +1,17 @@
+// Copyright 2022 ComposableFi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use crate::{
 	light_clients::{AnyClientState, AnyConsensusState},
 	mock::*,
@@ -20,7 +34,7 @@ use ibc::{
 		},
 		ics03_connection::{
 			connection::{ConnectionEnd, Counterparty, State as ConnState},
-			context::ConnectionKeeper,
+			context::{ConnectionKeeper, ConnectionReader},
 			msgs::conn_open_init,
 			version::Version as ConnVersion,
 		},
@@ -138,6 +152,57 @@ fn initialize_connection() {
 		};
 
 		assert_ok!(Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]));
+	})
+}
+
+// try to initialize a connection below the MinimumConnectionDelay
+#[test]
+fn initialize_connection_with_low_delay() {
+	new_test_ext().execute_with(|| {
+		let ctx = Context::<Test>::new();
+
+		let mock_client_state =
+			MockClientState::new(MockClientMessage::from(MockHeader::default()));
+		let mock_cs_state = MockConsensusState::new(MockHeader::default());
+		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();
+		let counterparty_client_id = ClientId::new(&mock_client_state.client_type(), 1).unwrap();
+		let msg = MsgCreateAnyClient::<Context<Test>>::new(
+			AnyClientState::Mock(mock_client_state),
+			AnyConsensusState::Mock(mock_cs_state),
+			Signer::from_str(MODULE_ID).unwrap(),
+		)
+		.unwrap()
+		.encode_vec();
+
+		let commitment_prefix: CommitmentPrefix =
+			<Test as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
+
+		let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
+
+		assert_ok!(Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]));
+
+		let value = conn_open_init::MsgConnectionOpenInit {
+			client_id,
+			counterparty: Counterparty::new(
+				counterparty_client_id,
+				Some(ConnectionId::new(1)),
+				commitment_prefix,
+			),
+			version: Some(ConnVersion::default()),
+			delay_period: Duration::from_nanos(900),
+			signer: Signer::from_str(MODULE_ID).unwrap(),
+		};
+
+		let msg = Any {
+			type_url: conn_open_init::TYPE_URL.as_bytes().to_vec(),
+			value: value.encode_vec(),
+		};
+
+		Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
+
+		let result = ConnectionReader::connection_end(&ctx, &ConnectionId::new(0));
+
+		assert!(result.is_err())
 	})
 }
 

@@ -1,3 +1,17 @@
+// Copyright 2022 ComposableFi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! Implementation of a global context mock. Used in testing handlers of all IBC modules.
 use crate::prelude::*;
 
@@ -856,6 +870,10 @@ where
 	C::AnyConsensusState:
 		Eq + TryFrom<Any, Error = Ics02Error> + Into<Any> + From<C::HostBlock> + 'static,
 {
+	fn minimum_delay_period(&self) -> Duration {
+		Duration::from_secs(0)
+	}
+
 	fn connection_end(&self, cid: &ConnectionId) -> Result<ConnectionEnd, Ics03Error> {
 		match self.ibc_store.lock().unwrap().connections.get(cid) {
 			Some(connection_end) => Ok(connection_end.clone()),
