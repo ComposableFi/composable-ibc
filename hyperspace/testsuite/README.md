@@ -15,7 +15,7 @@ If an open connection and channel exist, those are used instead.
 
 There are a couple integration tests that can be used directly.  
 
-The following tests are for unordered channels, specifically ICS20:  
+The following tests are for unordered channels, although we use ICS20. They test the general unordered channel flow:  
 - [`ibc_messaging_packet_height_timeout_with_connection_delay`](/hyperspace/testsuite/src/lib.rs#L444)  
   Spawns a test that checks if the packet timeout height rules are obeyed on both chains with connection delay enabled.  
 - [`ibc_messaging_packet_timestamp_timeout_with_connection_delay`](/hyperspace/testsuite/src/lib.rs#L473)  

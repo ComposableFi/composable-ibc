@@ -3,13 +3,12 @@
 ## Architecture
 The relayer is designed to be:
 
-**1. Statelessness**  
-The relayer is designed to be stateless and does not perform any form of caching. The relayer therefore relies heavily on  
-the nodes it's connected to for sourcing data, this design choice eliminates the chances of bugs that could come  
-from cache invalidation problems.
+### 1. Stateless 
+This means that the relayer does not perform **any form** of data caching. The relayer therefore relies heavily on  
+the nodes it's connected to for sourcing data as needed. This design choice eliminates a class of bugs that could come from cache invalidation.
 
-**2. Event Driven**  
-The relayer follows an event driven model, it remains idle if no finality events are received from either chain.
+### 2. Event Driven
+The relayer follows an event driven model, where it waits idly until it receives a finality notification from any of the chains it's connected to. The finality notification represents new IBC messages and events that have finalized and ready to be sent to the connected counterparty chain.
 
 ## Relayer Loop
 
@@ -18,11 +17,15 @@ alongside optional metric handlers and starts the relayer loop.
 
 The relayer loops awaits finality events from the finality subscription of the chain handlers.  
 Whenever a finality event is received, the latest ibc events are queried using `query_latest_ibc_events`.  
-These events are then parsed into appropriate messages using the `parse_events` function.  
+These events are then parsed into the appropriate outgoing IBC messages, and sent off to the counterparty chain. 
 
-The `parse_events` function internally calls `query_ready_and_timed_out_packets` which queries a chain and  
+### Packet Timeouts
+
+The `query_ready_and_timed_out_packets` which queries a chain and  
 produces all packet messages that have passed the connection delay check.
 It also returns timed out packet messages that have passed the connection delay check.  
+
+// todo: let's talk more about how we handle timeouts
 
 ## Using the relayer
 
@@ -33,20 +36,20 @@ that packets would be relayed between.
     // Naive example of how to use the relayer
     pub struct ChainA { ... }
 
-    impl IbcProvider for ChainA { ... }
-    impl KeyProvider for ChainA { ... }
-    impl Chain for ChainA { ... }
+    impl hyperspace_primitives::IbcProvider for ChainA { ... }
+    impl hyperspace_primitives::KeyProvider for ChainA { ... }
+    impl hyperspace_primitives::Chain for ChainA { ... }
 
     pub struct ChainB { ... }
 
-    impl IbcProvider for ChainB { ... }
-    impl KeyProvider for ChainB { ... }
-    impl Chain for ChainB { ... }
+    impl hyperspace_primitives::IbcProvider for ChainB { ... }
+    impl hyperspace_primitives::KeyProvider for ChainB { ... }
+    impl hyperspace_primitives::Chain for ChainB { ... }
 
     async fn main() -> Result<(), anyhow::Error>{
         let chain_a = ChainA::default();
         let chain_b = ChainB::default();
-        relay(chain_a, chain_b, None, None).await?;
+        hyperspace_core::relay(chain_a, chain_b, None, None).await?;
         Ok(())
     }
 ```
