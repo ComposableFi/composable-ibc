@@ -8924,24 +8924,6 @@ pub mod api {
 						],
 					)
 				}
-				#[doc = " Minimum connection delay period in seconds for ibc connections that can be created or"]
-				#[doc = " accepted. Ensure that this is non-zero in production as it's a critical vulnerability."]
-				pub fn minimum_connection_delay(
-					&self,
-				) -> ::subxt::constants::StaticConstantAddress<
-					::subxt::metadata::DecodeStaticType<::core::primitive::u64>,
-				> {
-					::subxt::constants::StaticConstantAddress::new(
-						"Ibc",
-						"MinimumConnectionDelay",
-						[
-							128u8, 214u8, 205u8, 242u8, 181u8, 142u8, 124u8, 231u8, 190u8, 146u8,
-							59u8, 226u8, 157u8, 101u8, 103u8, 117u8, 249u8, 65u8, 18u8, 191u8,
-							103u8, 119u8, 53u8, 85u8, 81u8, 96u8, 220u8, 42u8, 184u8, 239u8, 42u8,
-							246u8,
-						],
-					)
-				}
 				#[doc = " Amount to be reserved for client and connection creation"]
 				pub fn spam_protection_deposit(
 					&self,
@@ -14663,9 +14645,9 @@ pub mod api {
 		let runtime_metadata_hash = client.metadata().metadata_hash(&PALLETS);
 		if runtime_metadata_hash !=
 			[
-				249u8, 144u8, 66u8, 161u8, 166u8, 246u8, 109u8, 204u8, 46u8, 207u8, 96u8, 64u8,
-				1u8, 103u8, 146u8, 188u8, 190u8, 51u8, 179u8, 16u8, 221u8, 16u8, 96u8, 126u8,
-				180u8, 230u8, 66u8, 96u8, 113u8, 72u8, 162u8, 110u8,
+				107u8, 161u8, 194u8, 212u8, 1u8, 56u8, 233u8, 159u8, 178u8, 82u8, 176u8, 224u8,
+				133u8, 206u8, 100u8, 35u8, 99u8, 180u8, 108u8, 40u8, 75u8, 129u8, 41u8, 193u8,
+				54u8, 107u8, 97u8, 244u8, 12u8, 99u8, 174u8, 50u8,
 			] {
 			Err(::subxt::error::MetadataError::IncompatibleMetadata)
 		} else {

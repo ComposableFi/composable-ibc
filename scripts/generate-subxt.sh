@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+#set -e
 
 cargo build --release -p codegen --bin codegen
 ./target/release/codegen --path ./utils/subxt/generated/src
