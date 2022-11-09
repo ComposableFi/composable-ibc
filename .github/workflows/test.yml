@@ -105,10 +105,10 @@ jobs:
 
       - name: Run local parachain cluster
         run:
-          DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest
-          ./docker-compose -f scripts/parachain-launch/docker-compose.yml up --detach --build
-          ./scripts/wait_for_tcp_port_opening.sh $RELAY_HOST 9944
-          ./scripts/wait_for_tcp_port_opening.sh $PARA_HOST 9188
+          DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest;
+          ./docker-compose -f scripts/parachain-launch/docker-compose.yml up -d --build;
+          ./scripts/wait_for_tcp_port_opening.sh $RELAY_HOST 9944;
+          ./scripts/wait_for_tcp_port_opening.sh $PARA_HOST 9188;
 
       - name: Check that subxt-generated is up to date
         run: |
