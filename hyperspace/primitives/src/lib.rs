@@ -249,7 +249,8 @@ pub trait IbcProvider {
 	) -> Result<Vec<PacketInfo>, Self::Error>;
 
 	/// Query received packets with their acknowledgement
-	/// This represents packets for which the `ReceivePacket` and `WriteAcknowledgement` events were emitted.
+	/// This represents packets for which the `ReceivePacket` and `WriteAcknowledgement` events were
+	/// emitted.
 	async fn query_recv_packets(
 		&self,
 		channel_id: ChannelId,
