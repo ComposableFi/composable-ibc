@@ -43,6 +43,14 @@ The recommended approach is to generate these types from live nodes of both chai
 feature flag `build-metadata-from-ws`, if running the build script is not desired, then the types can be statically generated and written  
 to `utils/subxt/generated/src/parachain.rs` and `utils/subxt/generated/src/rococo.rs` for the parachain and relay chain respectively.  
 
+### AssetId and Subxt Config
+
+The [`IbcApiClient`] is generic over the `AssetId`, to satisfy this constraint, the `AssetId` for a chain is passed as an  
+associated type to the implementor of the [`Config`](/hyperspace/parachain/src/config.rs#L12) trait which has a bound of [`subxt::Config`](https://docs.rs/subxt/0.24.0/subxt/config/trait.Config.html).   
+The `ParachainClient` is generic over a type `T` which implements this `Config` trait, this trait provides a means  
+to use custom extrinsic parameters when submitting transactions since different parachain runtimes can have different signed extras.
+
+
 
 
 

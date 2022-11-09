@@ -226,6 +226,7 @@ pub trait IbcProvider {
 	) -> Result<QueryChannelsResponse, Self::Error>;
 
 	/// Query send packets
+	/// This represents packets that for which the `SendPacket` event was emitted
 	async fn query_send_packets(
 		&self,
 		channel_id: ChannelId,
@@ -233,7 +234,8 @@ pub trait IbcProvider {
 		seqs: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Self::Error>;
 
-	/// Query recieved packets
+	/// Query received packets with their acknowledgement
+	/// This represents packets for which the `ReceivePacket` and `WriteAcknowledgement` events were emitted.
 	async fn query_recv_packets(
 		&self,
 		channel_id: ChannelId,
@@ -473,7 +475,7 @@ pub fn packet_info_to_packet(packet_info: &PacketInfo) -> Packet {
 	}
 }
 
-/// Should return the first client height with a latest_height and consensus state timestamp that
+/// Should return the first client consensus height with a consensus state timestamp that
 /// is equal to or greater than the values provided
 pub async fn find_suitable_proof_height_for_client(
 	chain: &impl Chain,

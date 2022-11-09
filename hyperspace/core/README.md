@@ -17,15 +17,48 @@ alongside optional metric handlers and starts the relayer loop.
 
 The relayer loops awaits finality events from the finality subscription of the chain handlers.  
 Whenever a finality event is received, the latest ibc events are queried using `query_latest_ibc_events`.  
-These events are then parsed into the appropriate outgoing IBC messages, and sent off to the counterparty chain. 
-
-### Packet Timeouts
+These events are then parsed into the appropriate outgoing IBC messages, and sent off to the counterparty chain.
 
 The `query_ready_and_timed_out_packets` which queries a chain and  
 produces all packet messages that have passed the connection delay check.
 It also returns timed out packet messages that have passed the connection delay check.  
 
-// todo: let's talk more about how we handle timeouts
+### Connection delay
+ 
+The relayer needs to submit packets with a proof fetched at a height where the equivalent client consensus state on the  
+counterparty chain has satisfied the connection delay.    
+Since the relayer has no cache of the block heights at which packets events were emitted, it has to go through a more   
+rigorous process to identify when the connection delay has been satisfied for some arbitrary consensus height.  
+
+This is solved by via the following steps:
+1. The `PacketInfo` type returned by [`query_send_packets`](/hyperspace/primitives/src/lib.rs#L230) and [`query_recv_packets`](/hyperspace/primitives/src/lib.rs#239) must contain a height field, which for  
+`SendPackets` represents the block height at which the packet was created and for `ReceivePackets`, the block height at  
+which the acknowledgement of the packet was written on chain(for the majority of chains which execute ibc callbacks synchronously, this  
+would be equivalent to the height at which the packet was received on chain).  
+2. The relayer uses the knowledge of the packet creation height to perform an ordered linear search on the counterparty,  
+searching for the first available client consensus height at which a proof for the packet can be fetched.  
+The function responsible for this is [`find_suitable_proof_height_for_client`](/hyperspace/primitives/src/lib.rs#L480).  
+3. It then checks if the consensus height has satisfied the connection delay by fetching the timestamp and height  
+at which this consensus height was registered on chain using [`query_client_update_time_and_height`](/hyperspace/primitives/src/lib.rs#L251), then comparing  
+them to the current height and timestamp. For this, chains are required to provide an rpc interface for querying the height  
+and time a client was updated for a given consensus height.
+The function responsible for checking connection delay is [`verify_delay_passed`](/hyperspace/core/src/packets/utils.rs#L127)
+
+### Packet Timeouts
+
+Send packets are queried on every finality event and checked for timeout, if a timeout is detected, we need to find a  
+suitable height at which we can fetch a proof for the packet timeout from the sink. For this, the sink client state at  
+the packet creation height on the source chain is fetched, we then fetch the timestamp of the sink  
+at this client state height, we then calculate the approximate number of blocks that have elapsed on the sink between  
+the time when the packet was created on the source and the time when the packet timed out on the sink, and add it to the  
+sink height at packet creation to give us a starting height from which to conduct a search for a suitable proof height.  
+When a suitable height is found it goes through the same connection delay checks described above before the timeout packet  
+is submitted.  
+
+For timeouts due to channel close, since there's no way to know the exact height at which the channel closed on the sink chain,  
+the timeouts are only processed when the packets eventually timeout.  
+
+The function that performs the search for the proof height is [`get_timeout_proof_height`](/hyperspace/core/src/packets/utils.rs#L30).  
 
 ## Using the relayer
 
