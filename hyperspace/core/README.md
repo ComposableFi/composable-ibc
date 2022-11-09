@@ -34,25 +34,25 @@ The following pseudocode describes how connection delays and packet timeouts are
 ```rust
     let mut ready_messages = vec![];
     let mut timeout_messages = vec![];
-    // query undelivered send packet sequences
-    let seqs = query_undelivered_sequences(source_height, sink_height, channel_id, port_id, source, sink);
+    // query undelivered send packet sequences from the source chain
+    let seqs = query_undelivered_send_packet_sequences(source, sink, channel_id, port_i);
 
     // The `PacketInfo` type returned by `query_send_packets` must contain a height field, which represents the block height 
     // at which the packet was created
     let send_packets: Vec<PacketInfo> = source.query_send_packets(channel_id, port_id, seqs);
-    for packet_info in send_packets {
+    for send_packet in send_packets {
         let packet = packet_info_to_packet(&send_packet);
         // Check if packet has timed out
         if packet.timed_out(&sink_timestamp, sink_height) {
             // Find a suitable consensus height for sink chain's light client consensus height on source chain to prove packet timeout
-            let proof_height = if let Some(proof_height) = get_timeout_proof_height(source, sink, packet_info) {
+            let proof_height = if let Some(proof_height) = get_timeout_proof_height(source, sink, send_packet) {
                 proof_height
             } else {
                continue
             };
 
             // Check if connection delay is satisfied for this proof height
-            if !verify_delay_passed(source, sink, packet_info, proof_height) {
+            if !verify_delay_passed(source, sink, send_packet, proof_height) {
                 continue
             }
 
@@ -62,38 +62,39 @@ The following pseudocode describes how connection delays and packet timeouts are
             continue
         }
         
-        // If packet has not timed out find a suitable client consensus height on the sink that can be used to prove packet existence
-        let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(source, sink, packet_info) {
+        // If packet has not timed out find a suitable client consensus height for source chain on the sink that can be used to prove packet existence
+        let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(source, sink, send_packet) {
             proof_height
         } else {
             continue
         };
         // verify that the connection delay is satisfied
-        if !verify_delay_passed(source, sink, packet_info, proof_height) {
+        if !verify_delay_passed(source, sink, send_packet, proof_height) {
             continue
         }
         let msg = construct_msg_recv_packet(source, sink, packet, proof_height);
         ready_messages.push(msg)   
     }
 
-    // The same process above is followed for packet acknowledgement
-    let seqs = query_undelivered_acks(source_height, sink_height, channel_id, port_id, source, sink);
-    // The `PacketInfo` type returned by `query_recv_packets` must contain a height field, which for represents the block height at
-    // which the acknowledgement of the packet was written on chain(for the majority of chains which execute ibc callbacks synchronously, this
+    // Query undelivered acknowledgement sequences from the source chain
+    let seqs = query_undelivered_acknowledgement_sequences(source, sink, channel_id, port_id);
+    // The `PacketInfo` type returned by `query_recv_packets` must contain a height field, which represents the block height at
+    // which the acknowledgement of the packet was written on chain(for the majority of chains which execute IBC callbacks synchronously, this
     // would be equivalent to the height at which the packet was received on chain).
     let recv_packets: Vec<PacketInfo> = source.query_recv_packets(channel_id, port_id, seqs);
-    for packet_info in recv_packets { 
+    for recv_packet in recv_packets { 
         // If acknowledgement is not defined then skip packet
-        if packet_info.ack.is_none() {
+        if recv_packet.ack.is_none() {
             continue
         }
-        let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(source, sink, packet_info) {
+       // Find a suitable client consensus height for source chain on the sink that can be used to prove packet acknowledgement
+        let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(source, sink, recv_packet) {
             proof_height
         } else {
             continue
         };
         // verify that the connection delay is satisfied
-        if !verify_delay_passed(source, sink, packet_info, proof_height) {
+        if !verify_delay_passed(source, sink, recv_packet, proof_height) {
             continue
         }
         let msg = construct_msg_ack_packet(source, sink, packet, proof_height);
