@@ -93,8 +93,5 @@ Using the testsuite is straight forward and the following pseudocode describes t
 ## Running parachain tests
 
 To run the integration tests between two parachain nodes:
-1. Place the polkadot repo adjacent to the `centauri` repo.  
-2. Build the polkadot node in release mode.  
-3. Build the parachain node by running `cargo build -p parachain-node --release`.  
-4. Start up the parachain nodes by navigating to `scripts/polkadot-launch`  and running `yarn dev`.  
-5. Run the tests with `cargo test -p hyperspace-testsuite --test parachain_parachain -- --nocapture`.  
+1. Spawn the parachain and relay chain cluster by running [`docker-compose.yml`](/scripts/parachain-launch/docker-compose.yml`)
+2. Run the tests with `cargo test -p hyperspace-testsuite`.  
