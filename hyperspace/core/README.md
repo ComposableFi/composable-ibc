@@ -30,7 +30,7 @@ counterparty chain has satisfied the connection delay.
 Since the relayer has no cache of the block heights at which packets events were emitted, it has to go through a more   
 rigorous process to identify when the connection delay has been satisfied for some arbitrary consensus height.  
 
-This is solved by via the following steps:
+This is solved via the following steps:
 1. The `PacketInfo` type returned by [`query_send_packets`](/hyperspace/primitives/src/lib.rs#L230) and [`query_recv_packets`](/hyperspace/primitives/src/lib.rs#239) must contain a height field, which for  
 `SendPackets` represents the block height at which the packet was created and for `ReceivePackets`, the block height at  
 which the acknowledgement of the packet was written on chain(for the majority of chains which execute ibc callbacks synchronously, this  
@@ -41,17 +41,17 @@ The function responsible for this is [`find_suitable_proof_height_for_client`](/
 3. It then checks if the consensus height has satisfied the connection delay by fetching the timestamp and height  
 at which this consensus height was registered on chain using [`query_client_update_time_and_height`](/hyperspace/primitives/src/lib.rs#L251), then comparing  
 them to the current height and timestamp. For this, chains are required to provide an rpc interface for querying the height  
-and time a client was updated for a given consensus height.
+and timestamp at which a client was updated for a given consensus height.
 The function responsible for checking connection delay is [`verify_delay_passed`](/hyperspace/core/src/packets/utils.rs#L127)
 
 ### Packet Timeouts
 
 Send packets are queried on every finality event and checked for timeout, if a timeout is detected, we need to find a  
 suitable height at which we can fetch a proof for the packet timeout from the sink. For this, the sink client state at  
-the packet creation height on the source chain is fetched, we then fetch the timestamp of the sink  
-at this client state height, we then calculate the approximate number of blocks that have elapsed on the sink between  
-the time when the packet was created on the source and the time when the packet timed out on the sink, and add it to the  
-sink height at packet creation to give us a starting height from which to conduct a search for a suitable proof height.  
+the packet creation height on the source chain is queried, next, the timestamp of the sink at this client state height  
+is also queried, next the approximate number of blocks that have elapsed on the sink between the time when the packet  
+was created on the source and the time when the packet timed out on the sink is calculated, this calculated number of blocks  
+is then added to the sink height at packet creation to give us a starting height from which to conduct a search for a suitable proof height.  
 When a suitable height is found it goes through the same connection delay checks described above before the timeout packet  
 is submitted.  
 
