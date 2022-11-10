@@ -11,3 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+#![allow(clippy::all)]
+
+pub mod chain;
+pub mod error;
+pub mod finality_protocol;
+pub mod key_provider;
+pub mod provider;

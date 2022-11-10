@@ -19,6 +19,7 @@ json = { version = "1.0.85", package = "serde_json" }
 ibc = { path = "../../ibc/modules" }
 ibc-proto = { path = "../../ibc/proto" }
 tendermint-proto = { workspace = true }
+tendermint-rpc   = { workspace = true }
 
 hyperspace-core = { path = "../core", features = ["testing"] }
 hyperspace-primitives = { path = "../primitives", features = ["testing"] }
@@ -27,6 +28,8 @@ pallet-ibc = { path = "../../contracts/pallet-ibc" }
 [dev-dependencies]
 hyperspace-core = { path = "../core", features = ["testing", "build-metadata-from-ws"] }
 hyperspace-parachain = { path = "../parachain", features = ["testing", "build-metadata-from-ws"] }
+hyperspace-cosmos = { path = "../cosmos", package = "hyperspace-cosmos", features = ["testing"] }
+
 # substrate
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", features = ["full_crypto"] }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
@@ -37,3 +40,8 @@ subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab2
 # We need this so the tests run sequentially
 [[test]]
 name = "parachain_parachain"
+feature = ["hyperspace-parachain"]
+
+[[test]]
+name = "cosmos_cosmos"
+feature = ["hyperspace-cosmos"]

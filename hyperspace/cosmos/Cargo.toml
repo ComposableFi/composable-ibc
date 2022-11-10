@@ -2,7 +2,24 @@
 name = "hyperspace-cosmos"
 version = "0.1.0"
 edition = "2021"
-authors = ["Composable Developers"]
 
 [dependencies]
-#primitives = { path = "../primitives", package = "hyperspace-primitives" }
+
+# ibc
+ibc = { path = "../../ibc/modules", features = [] }
+ibc-proto = { path = "../../ibc/proto" }
+ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
+pallet-ibc = { path = "../../contracts/pallet-ibc" }
+# light-client-common = { path = "../../light-clients/common" }
+
+# Tendermint
+tendermint = { workspace = true }
+tendermint-rpc   = { workspace = true }
+tendermint-proto = { workspace = true }
+tendermint-light-client = { workspace = true }
+tendermint-light-client-verifier = { workspace = true }
+tendermint-verifier = { path = "../../algorithms/tendermint/verifier" }
+ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
+
+[features]
+testing = []

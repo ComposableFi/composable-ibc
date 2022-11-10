@@ -288,6 +288,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-recursion"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7d78656ba01f1b93024b7c3a0467f1608e4be67d725749fdcd7d2c7678fd7a2"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "async-std"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1268,6 +1279,17 @@ name = "constant_time_eq"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
+
+[[package]]
+name = "contracts"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1d1429e3bd78171c65aa010eabcdf8f863ba3254728dbfb0ad4b1545beac15c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "convert_case"
@@ -2686,6 +2708,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "flume"
+version = "0.10.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1657b4441c3403d9f7b3409e47575237dac27b1b5726df654a6ecbf92f0f7577"
+dependencies = [
+ "futures-core",
+ "futures-sink",
+ "pin-project",
+ "spin 0.9.4",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3719,6 +3753,19 @@ dependencies = [
 [[package]]
 name = "hyperspace-cosmos"
 version = "0.1.0"
+dependencies = [
+ "ibc",
+ "ibc-proto",
+ "ibc-rpc",
+ "ics07-tendermint",
+ "pallet-ibc",
+ "tendermint",
+ "tendermint-light-client",
+ "tendermint-light-client-verifier",
+ "tendermint-proto",
+ "tendermint-rpc",
+ "tendermint-verifier",
+]
 
 [[package]]
 name = "hyperspace-metrics"
@@ -3830,6 +3877,7 @@ dependencies = [
  "async-trait",
  "futures",
  "hyperspace-core",
+ "hyperspace-cosmos",
  "hyperspace-parachain",
  "hyperspace-primitives",
  "ibc",
@@ -3843,6 +3891,7 @@ dependencies = [
  "sp-runtime",
  "subxt",
  "tendermint-proto",
+ "tendermint-rpc",
  "tokio",
 ]
 
@@ -4642,6 +4691,7 @@ dependencies = [
  "ecdsa",
  "elliptic-curve",
  "sec1",
+ "sha2 0.9.9",
 ]
 
 [[package]]
@@ -9506,7 +9556,7 @@ dependencies = [
  "cc",
  "libc",
  "once_cell",
- "spin",
+ "spin 0.5.2",
  "untrusted",
  "web-sys",
  "winapi",
@@ -12320,6 +12370,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
+name = "spin"
+version = "0.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f6002a767bff9e83f8eeecf883ecb8011875a21ae8da43bffb817a57e78cc09"
+dependencies = [
+ "lock_api",
+]
+
+[[package]]
 name = "ss58-registry"
 version = "1.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12699,10 +12758,12 @@ dependencies = [
  "ed25519-consensus",
  "flex-error",
  "futures",
+ "k256",
  "num-traits",
  "once_cell",
  "prost 0.10.4",
  "prost-types 0.10.1",
+ "ripemd",
  "serde",
  "serde_bytes",
  "serde_json",
@@ -12727,6 +12788,29 @@ dependencies = [
  "tendermint",
  "toml",
  "url",
+]
+
+[[package]]
+name = "tendermint-light-client"
+version = "0.24.0-pre.2"
+source = "git+https://github.com/composableFi/tendermint-rs?rev=5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8#5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
+dependencies = [
+ "async-recursion",
+ "async-trait",
+ "contracts",
+ "derive_more",
+ "flex-error",
+ "flume",
+ "futures",
+ "futures-timer",
+ "serde",
+ "serde_derive",
+ "static_assertions",
+ "tendermint",
+ "tendermint-light-client-verifier",
+ "tendermint-rpc",
+ "time 0.3.16",
+ "tokio",
 ]
 
 [[package]]
@@ -12805,6 +12889,22 @@ dependencies = [
  "tempfile",
  "tendermint",
  "time 0.3.16",
+]
+
+[[package]]
+name = "tendermint-verifier"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "ibc",
+ "ibc-proto",
+ "ics07-tendermint",
+ "pallet-ibc",
+ "tendermint",
+ "tendermint-light-client",
+ "tendermint-light-client-verifier",
+ "tendermint-proto",
+ "tendermint-rpc",
 ]
 
 [[package]]
@@ -13428,9 +13528,9 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.5",
- "rand 0.8.5",
+ "rand 0.4.6",
  "static_assertions",
 ]
 
