@@ -55,14 +55,10 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 sha2 = { version = "0.10.2", optional = true }
 
 [dependencies.tendermint]
-git = "https://github.com/composableFi/tendermint-rs"
-rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
-default-features = false
+workspace = true
 
 [dependencies.tendermint-proto]
-git = "https://github.com/composableFi/tendermint-rs"
-rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
-default-features = false
+workspace = true
 
 [dev-dependencies]
 env_logger = "0.9.0"
