@@ -65,6 +65,10 @@ use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip};
 // Temp fix
 type AssetId = u128;
 
+pub struct TransactionId<Hash> {
+	pub ext_hash: Hash,
+	pub block_hash: Hash,
+}
 #[async_trait::async_trait]
 impl<T: config::Config + Send + Sync> IbcProvider for ParachainClient<T>
 where
@@ -86,6 +90,7 @@ where
 		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
 {
 	type FinalityEvent = FinalityEvent;
+	type TransactionId = TransactionId<T::Hash>;
 	type Error = Error;
 
 	async fn query_latest_ibc_events<C>(
@@ -625,15 +630,15 @@ where
 
 	async fn query_client_id_from_tx_hash(
 		&self,
-		tx_hash: H256,
-		block_hash: Option<H256>,
+		tx_id: Self::TransactionId,
 	) -> Result<ClientId, Self::Error> {
 		// Query newly created client Id
+		let TransactionId { ext_hash, block_hash } = tx_id;
 		let identified_client_state =
 			IbcApiClient::<u32, H256, AssetId>::query_newly_created_client(
 				&*self.para_ws_client,
-				block_hash.expect("Block hash should be available"),
-				tx_hash,
+				block_hash.into(),
+				ext_hash.into(),
 			)
 			.await
 			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
