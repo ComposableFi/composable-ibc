@@ -22,7 +22,6 @@ use ibc::{
 	Height,
 };
 
-
 use ibc_proto::{
 	google::protobuf::Any,
 	ibc::core::{
@@ -156,7 +155,7 @@ where
 	}
 
 	async fn latest_height_and_timestamp(&self) -> Result<(Height, Timestamp), Self::Error> {
-        todo!()
+		todo!()
 	}
 
 	async fn query_packet_commitments(
@@ -228,7 +227,7 @@ where
 	}
 
 	fn expected_block_time(&self) -> Duration {
-        todo!()
+		todo!()
 	}
 
 	async fn query_client_update_time_and_height(
@@ -259,23 +258,23 @@ where
 	}
 
 	fn client_type(&self) -> ClientType {
-        todo!()
+		todo!()
 	}
 
 	fn connection_id(&self) -> ConnectionId {
-        todo!()
+		todo!()
 	}
 
 	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error> {
-        todo!()
+		todo!()
 	}
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
-        todo!()
+		todo!()
 	}
 
 	async fn query_channels(&self) -> Result<Vec<(ChannelId, PortId)>, Self::Error> {
-        todo!()
+		todo!()
 	}
 
 	async fn query_connection_using_client(
@@ -297,7 +296,7 @@ where
 	async fn initialize_client_state(
 		&self,
 	) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
-        todo!()
+		todo!()
 	}
 
 	async fn query_client_id_from_tx_hash(
@@ -305,6 +304,65 @@ where
 		tx_hash: sp_core::H256,
 		_block_hash: Option<sp_core::H256>,
 	) -> Result<ClientId, Self::Error> {
-        todo!()
+		
+		const WAIT_BACKOFF: Duration = Duration::from_millis(300);
+		const TIME_OUT: Duration = Duration::from_millis(30000);
+		let start_time = std::time::Instant::now();
+
+		let response: Response = loop {
+			let response = self
+				.rpc_client
+				.tx_search(
+					Query::eq("tx.hash", tx_hash.to_string()),
+					false,
+					1,
+					1, // get only the first Tx matching the query
+					Order::Ascending,
+				)
+				.await
+				.map_err(|e| Error::from(format!("Failed to query tx hash: {}", e)))?;
+			match response.txs.into_iter().next() {
+				None => {
+					let elapsed = start_time.elapsed();
+					if &elapsed > &TIME_OUT {
+						return Err(Error::from(format!(
+							"Timeout waiting for tx {:?} to be included in a block",
+							tx_hash
+						)));
+					} else {
+						std::thread::sleep(WAIT_BACKOFF);
+					}
+				},
+				Some(resp) => break resp,
+			}
+		};
+
+		// let height =
+		// 	ICSHeight::new(self.chain_id.version(), u64::from(response.clone().height));
+		let deliver_tx_result = response.tx_result;
+		if deliver_tx_result.code.is_err() {
+			Err(Error::from(format!(
+				"Transaction failed with code {:?} and log {:?}",
+				deliver_tx_result.code, deliver_tx_result.log
+			)))
+		} else {
+			let result = deliver_tx_result
+				.events
+				.iter()
+				.flat_map(|event| {
+					client_extract_attributes_from_tx(&event)
+						.map(client_events::CreateClient)
+						.into_iter()
+				})
+				.collect::<Vec<_>>();
+			if result.clone().len() != 1 {
+				Err(Error::from(format!(
+					"Expected exactly one CreateClient event, found {}",
+					result.len()
+				)))
+			} else {
+				Ok(result[0].client_id().clone())
+			}
+		}
 	}
 }
