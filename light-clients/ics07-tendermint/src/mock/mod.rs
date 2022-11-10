@@ -180,11 +180,11 @@ impl TendermintHostFunctionsProvider for Crypto {
 		unimplemented!()
 	}
 
-	fn ed25519_verify(_sig: &[u8], _msg: &[u8], _pub_key: &[u8]) -> bool {
+	fn ed25519_verify(_sig: &[u8], _msg: &[u8], _pub_key: &[u8]) -> Result<(), ()> {
 		unimplemented!()
 	}
 
-	fn secp256k1_verify(_sig: &[u8], _message: &[u8], _public: &[u8]) -> bool {
+	fn secp256k1_verify(_sig: &[u8], _message: &[u8], _public: &[u8]) -> Result<(), ()> {
 		unimplemented!()
 	}
 }
