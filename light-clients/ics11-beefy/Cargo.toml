@@ -2,7 +2,7 @@
 name = "ics11-beefy"
 version = "0.1.0"
 edition = "2021"
-authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <david.salami@gmail.com>"]
+authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <wizdave97@gmail.com>"]
 
 [package.metadata.docs.rs]
 all-features = true
@@ -55,8 +55,8 @@ sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 # crates.io
 anyhow = { version = "1.0.65", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
-prost = { version = "0.10", default-features = false }
-prost-types = { version = "0.10", default-features = false }
+prost = { version = "0.11", default-features = false }
+prost-types = { version = "0.11", default-features = false }
 serde = { version = "1.0", default-features = false }
 bytes = { version = "1.1.0", default-features = false }
 derive_more = { version = "0.99.17", default-features = false, features = ["from"] }

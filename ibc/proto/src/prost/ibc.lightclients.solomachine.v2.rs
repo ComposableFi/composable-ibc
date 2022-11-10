@@ -1,17 +1,3 @@
-// Copyright 2022 ComposableFi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 /// ClientState defines a solo machine client that tracks the current consensus
 /// state and if the client is frozen.
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -215,4 +201,24 @@ pub enum DataType {
     NextSequenceRecv = 8,
     /// Data type for header verification
     Header = 9,
+}
+impl DataType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            DataType::UninitializedUnspecified => "DATA_TYPE_UNINITIALIZED_UNSPECIFIED",
+            DataType::ClientState => "DATA_TYPE_CLIENT_STATE",
+            DataType::ConsensusState => "DATA_TYPE_CONSENSUS_STATE",
+            DataType::ConnectionState => "DATA_TYPE_CONNECTION_STATE",
+            DataType::ChannelState => "DATA_TYPE_CHANNEL_STATE",
+            DataType::PacketCommitment => "DATA_TYPE_PACKET_COMMITMENT",
+            DataType::PacketAcknowledgement => "DATA_TYPE_PACKET_ACKNOWLEDGEMENT",
+            DataType::PacketReceiptAbsence => "DATA_TYPE_PACKET_RECEIPT_ABSENCE",
+            DataType::NextSequenceRecv => "DATA_TYPE_NEXT_SEQUENCE_RECV",
+            DataType::Header => "DATA_TYPE_HEADER",
+        }
+    }
 }

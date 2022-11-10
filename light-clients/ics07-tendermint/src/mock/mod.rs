@@ -43,7 +43,7 @@ use ibc::{
 };
 use ibc_derive::{ClientDef, ClientMessage, ClientState, ConsensusState};
 use ibc_proto::google::protobuf::Any;
-use tendermint_light_client_verifier::host_functions::HostFunctionsProvider as TendermintHostFunctionsProvider;
+use tendermint_light_client_verifier::host_functions::CryptoProvider as TendermintHostFunctionsProvider;
 use tendermint_proto::Protobuf;
 
 pub const MOCK_CLIENT_STATE_TYPE_URL: &str = "/ibc.mock.ClientState";
