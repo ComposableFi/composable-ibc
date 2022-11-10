@@ -1,13 +1,47 @@
 use hyperspace_core::logging;
+use hyperspace_cosmos::{CosmosClient, CosmosClientConfig};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
 	ibc_messaging_packet_timeout_on_channel_close,
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay,
 };
+use std::str::FromStr;
+use tendermint_rpc::Url;
 
 async fn setup_clients<H: Clone + Send + Sync + 'static>() -> (CosmosClient<H>, CosmosClient<H>) {
 	log::info!(target: "hyperspace", "=========================== Starting Test ===========================");
+
+	// Create client configurations
+	// Parameters have been set up to work with local nodes according to https://hermes.informal.systems/tutorials
+	let config_a = CosmosClientConfig {
+		name: "chain_a".to_string(),
+		chain_id: "ibc-0".to_string(),
+		rpc_url: Url::from_str("http://127.0.0.1:27010").unwrap(),
+		grpc_url: Url::from_str("http://127.0.0.1:27012").unwrap(),
+		websocket_url: Url::from_str("ws://127.0.0.1:27010/websocket").unwrap(),
+		client_id: Some("7-tendermint".to_string()),
+		connection_id: None,
+		account_prefix: "cosmos".to_string(),
+		store_prefix: "ibc".to_string(),
+		key_name: "wallet".to_string(),
+	};
+
+	let config_b = CosmosClientConfig {
+		name: "chain_b".to_string(),
+		chain_id: "ibc-1".to_string(),
+		rpc_url: Url::from_str("http://127.0.0.1:27020").unwrap(),
+		grpc_url: Url::from_str("http://127.0.0.1:27022").unwrap(),
+		websocket_url: Url::from_str("ws://127.0.0.1:27020/websocket").unwrap(),
+		client_id: Some("7-tendermint".to_string()),
+		connection_id: None,
+		account_prefix: "cosmos".to_string(),
+		store_prefix: "ibc".to_string(),
+		key_name: "wallet".to_string(),
+	};
+
+	let mut chain_a = CosmosClient::<H>::new(config_a).await.unwrap();
+	let mut chain_b = CosmosClient::<H>::new(config_b).await.unwrap();
 	todo!()
 }
 

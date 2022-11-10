@@ -1,5 +1,5 @@
 [package]
-name = "tendermint-verifier"
+name = "tendermint-primitives"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,7 +7,8 @@ edition = "2021"
 
 [dependencies]
 # crates.io
-futures-util = "0.3.25"
+anyhow = { version = "1.0.64", default-features = false }
+derive_more = { version = "0.99.17", default-features = false, features = ["display"] }
 
 # ibc
 ibc = { path = "../../../ibc/modules", features = [] }
@@ -21,4 +22,3 @@ tendermint-proto = { workspace = true }
 tendermint-light-client = { workspace = true }
 tendermint-light-client-verifier = { workspace = true }
 ics07-tendermint = { path = "../../../light-clients/ics07-tendermint" }
-tendermint-primitives = { package = "tendermint-primitives", path = "../primitives", default-features = false }

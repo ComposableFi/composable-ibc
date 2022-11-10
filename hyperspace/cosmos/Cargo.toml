@@ -4,6 +4,25 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.65"
+async-trait = "0.1.53"
+bech32 = "0.9.1"
+bitcoin = { version = "0.29.1", features = ["serde"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+dirs-next = "2.0.0"
+log = "0.4.17"
+env_logger = "0.9.0"
+k256 = { version = "0.10.4", features = ["ecdsa-core", "ecdsa", "sha256"]}
+futures = "0.3.21"
+primitives = { path = "../primitives", package = "hyperspace-primitives" }
+prost = { version = "0.10" }
+jsonrpsee = "0.15.1"
+jsonrpsee-ws-client = "0.14.0"
+serde = {version="1.0.137", features = ["derive"]}
+serde_json = { version = "1" }
+ss58-registry = "1.28.0"
+thiserror = "1.0.31"
+tonic = { version = "0.7.2", features = ["tls", "tls-roots"] }
 
 # ibc
 ibc = { path = "../../ibc/modules", features = [] }
@@ -20,6 +39,10 @@ tendermint-light-client = { workspace = true }
 tendermint-light-client-verifier = { workspace = true }
 tendermint-verifier = { path = "../../algorithms/tendermint/verifier" }
 ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
+
+# Substrate
+subxt = { git = "https://github.com/paritytech/subxt", rev = "51179a8b72472d0b43c91cda75a1ddc3fddb9555" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", features = ["full_crypto"] }
 
 [features]
 testing = []

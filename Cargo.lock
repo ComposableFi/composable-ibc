@@ -530,6 +530,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
+name = "base64ct"
+version = "1.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b645a089122eccb6111b4f81cbc1a49f5900ac4666bb93ac027feaecf15607bf"
+
+[[package]]
+name = "bech32"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d86b93f97252c47b41663388e6d155714a9d0c398b99f1005cbc5f978b29f445"
+
+[[package]]
 name = "beef"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -619,7 +631,7 @@ dependencies = [
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "tokio",
 ]
 
@@ -689,7 +701,7 @@ dependencies = [
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "subxt-generated",
  "tokio",
 ]
@@ -726,6 +738,27 @@ dependencies = [
  "regex",
  "rustc-hash",
  "shlex",
+]
+
+[[package]]
+name = "bitcoin"
+version = "0.29.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0694ea59225b0c5f3cb405ff3f670e4828358ed26aec49dc352f730f0cb1a8a3"
+dependencies = [
+ "bech32",
+ "bitcoin_hashes",
+ "secp256k1 0.24.1",
+ "serde",
+]
+
+[[package]]
+name = "bitcoin_hashes"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90064b8dee6815a6470d60bad07bbbaee885c0e12d04177138fa3291a01b7bc4"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -1233,7 +1266,7 @@ dependencies = [
  "hex",
  "jsonrpsee 0.14.0",
  "parity-scale-codec",
- "subxt-codegen",
+ "subxt-codegen 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "syn",
  "tokio",
 ]
@@ -2290,6 +2323,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "dirs-next"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b98cf8ebf19c3d1b223e151f99a4f9f0690dca41414773390fc824184ac833e1"
+dependencies = [
+ "cfg-if 1.0.0",
+ "dirs-sys-next",
+]
+
+[[package]]
 name = "dirs-sys"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3334,7 +3377,7 @@ dependencies = [
  "sp-state-machine",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "tokio",
 ]
 
@@ -3362,7 +3405,7 @@ dependencies = [
  "sp-runtime",
  "sp-state-machine",
  "sp-trie",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "subxt-generated",
  "tokio",
 ]
@@ -3743,7 +3786,7 @@ dependencies = [
  "sp-runtime",
  "sp-state-machine",
  "sp-trie",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "tendermint-proto",
  "thiserror",
  "tokio",
@@ -3754,17 +3797,38 @@ dependencies = [
 name = "hyperspace-cosmos"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "async-trait",
+ "bech32",
+ "bitcoin",
+ "dirs-next",
+ "env_logger",
+ "futures",
+ "hyperspace-primitives",
  "ibc",
  "ibc-proto",
  "ibc-rpc",
  "ics07-tendermint",
+ "jsonrpsee 0.15.1",
+ "jsonrpsee-ws-client 0.14.0",
+ "k256",
+ "log",
  "pallet-ibc",
+ "parity-scale-codec",
+ "prost 0.10.4",
+ "serde",
+ "serde_json",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+ "ss58-registry",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555)",
  "tendermint",
  "tendermint-light-client",
  "tendermint-light-client-verifier",
  "tendermint-proto",
  "tendermint-rpc",
  "tendermint-verifier",
+ "thiserror",
+ "tonic",
 ]
 
 [[package]]
@@ -3842,7 +3906,7 @@ dependencies = [
  "sp-state-machine",
  "sp-trie",
  "ss58-registry",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "subxt-generated",
  "tendermint-proto",
  "thiserror",
@@ -3864,7 +3928,7 @@ dependencies = [
  "log",
  "pallet-ibc",
  "parity-scale-codec",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "thiserror",
  "tokio",
 ]
@@ -3889,7 +3953,7 @@ dependencies = [
  "sp-keyring",
  "sp-keystore",
  "sp-runtime",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "tendermint-proto",
  "tendermint-rpc",
  "tokio",
@@ -4111,7 +4175,7 @@ dependencies = [
  "sp-runtime",
  "sp-state-machine",
  "sp-trie",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "tendermint",
  "tendermint-proto",
  "tokio",
@@ -4147,7 +4211,7 @@ dependencies = [
  "sp-state-machine",
  "sp-storage 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "tendermint",
  "tendermint-proto",
  "tokio",
@@ -7762,6 +7826,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
+name = "pkcs8"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cabda3fb821068a9a4fab19a683eac3af12edf0f34b94a8be53c4972b8149d0"
+dependencies = [
+ "der",
+ "spki",
+ "zeroize",
+]
+
+[[package]]
 name = "pkg-config"
 version = "0.3.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11083,6 +11158,7 @@ checksum = "08da66b8b0965a5555b6bd6639e68ccba85e1e2506f5fbb089e93f8a04e1a2d1"
 dependencies = [
  "der",
  "generic-array 0.14.6",
+ "pkcs8",
  "subtle",
  "zeroize",
 ]
@@ -11102,7 +11178,9 @@ version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff55dc09d460954e9ef2fa8a7ced735a964be9981fd50e870b2b3b0705e14964"
 dependencies = [
+ "bitcoin_hashes",
  "secp256k1-sys 0.6.1",
+ "serde",
 ]
 
 [[package]]
@@ -12379,6 +12457,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "spki"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44d01ac02a6ccf3e07db148d2be087da624fea0221a16152ed01f0496a6b0a27"
+dependencies = [
+ "base64ct",
+ "der",
+]
+
+[[package]]
 name = "ss58-registry"
 version = "1.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12605,8 +12693,34 @@ dependencies = [
  "serde_json",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-runtime",
- "subxt-macro",
- "subxt-metadata",
+ "subxt-macro 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
+ "subxt-metadata 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "subxt"
+version = "0.24.0"
+source = "git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555#51179a8b72472d0b43c91cda75a1ddc3fddb9555"
+dependencies = [
+ "bitvec",
+ "derivative",
+ "frame-metadata",
+ "futures",
+ "hex",
+ "jsonrpsee 0.15.1",
+ "parity-scale-codec",
+ "parking_lot 0.12.1",
+ "scale-decode",
+ "scale-info",
+ "scale-value",
+ "serde",
+ "serde_json",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+ "sp-runtime",
+ "subxt-macro 0.24.0 (git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555)",
+ "subxt-metadata 0.24.0 (git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555)",
  "thiserror",
  "tracing",
 ]
@@ -12626,9 +12740,26 @@ dependencies = [
  "proc-macro2",
  "quote",
  "scale-info",
- "subxt-metadata",
+ "subxt-metadata 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "syn",
  "tokio",
+]
+
+[[package]]
+name = "subxt-codegen"
+version = "0.24.0"
+source = "git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555#51179a8b72472d0b43c91cda75a1ddc3fddb9555"
+dependencies = [
+ "darling",
+ "frame-metadata",
+ "heck",
+ "parity-scale-codec",
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "scale-info",
+ "subxt-metadata 0.24.0 (git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555)",
+ "syn",
 ]
 
 [[package]]
@@ -12636,7 +12767,7 @@ name = "subxt-generated"
 version = "0.1.0"
 dependencies = [
  "parity-scale-codec",
- "subxt",
+ "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
 ]
 
 [[package]]
@@ -12646,7 +12777,18 @@ source = "git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a68698
 dependencies = [
  "darling",
  "proc-macro-error",
- "subxt-codegen",
+ "subxt-codegen 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
+ "syn",
+]
+
+[[package]]
+name = "subxt-macro"
+version = "0.24.0"
+source = "git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555#51179a8b72472d0b43c91cda75a1ddc3fddb9555"
+dependencies = [
+ "darling",
+ "proc-macro-error",
+ "subxt-codegen 0.24.0 (git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555)",
  "syn",
 ]
 
@@ -12654,6 +12796,17 @@ dependencies = [
 name = "subxt-metadata"
 version = "0.24.0"
 source = "git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2#1736f618d940a69ab212a686984c3be25b08d1c2"
+dependencies = [
+ "frame-metadata",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+]
+
+[[package]]
+name = "subxt-metadata"
+version = "0.24.0"
+source = "git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555#51179a8b72472d0b43c91cda75a1ddc3fddb9555"
 dependencies = [
  "frame-metadata",
  "parity-scale-codec",
@@ -12826,6 +12979,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "tendermint-primitives"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "derive_more",
+ "ibc",
+ "ibc-proto",
+ "ics07-tendermint",
+ "pallet-ibc",
+ "tendermint",
+ "tendermint-light-client",
+ "tendermint-light-client-verifier",
+ "tendermint-proto",
+ "tendermint-rpc",
+]
+
+[[package]]
 name = "tendermint-proto"
 version = "0.24.0-pre.2"
 source = "git+https://github.com/composableFi/tendermint-rs?rev=5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8#5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
@@ -12903,6 +13073,7 @@ dependencies = [
  "tendermint",
  "tendermint-light-client",
  "tendermint-light-client-verifier",
+ "tendermint-primitives",
  "tendermint-proto",
  "tendermint-rpc",
 ]
@@ -13195,7 +13366,10 @@ dependencies = [
  "pin-project",
  "prost 0.10.4",
  "prost-derive 0.10.1",
+ "rustls-native-certs 0.6.2",
+ "rustls-pemfile",
  "tokio",
+ "tokio-rustls 0.23.4",
  "tokio-stream",
  "tokio-util",
  "tower",
@@ -13528,9 +13702,9 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "digest 0.10.5",
- "rand 0.4.6",
+ "rand 0.8.5",
  "static_assertions",
 ]
 
