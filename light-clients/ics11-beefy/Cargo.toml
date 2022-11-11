@@ -63,14 +63,10 @@ derive_more = { version = "0.99.17", default-features = false, features = ["from
 primitive-types = { version = "0.11.1", default-features = false }
 
 [dependencies.tendermint]
-git = "https://github.com/composableFi/tendermint-rs"
-rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
-default-features = false
+workspace = true
 
 [dependencies.tendermint-proto]
-git = "https://github.com/composableFi/tendermint-rs"
-rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
-default-features = false
+workspace = true
 
 [dev-dependencies]
 futures = "0.3.24"

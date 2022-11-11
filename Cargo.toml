@@ -65,3 +65,8 @@ sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-tracing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-wasm-interface = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
+
+[workspace.dependencies]
+tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", default-features = false }
+tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", default-features = false }
+tendermint-light-client-verifier = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", default-features = false }
