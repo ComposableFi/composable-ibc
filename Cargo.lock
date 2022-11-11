@@ -3941,7 +3941,6 @@ dependencies = [
  "async-trait",
  "futures",
  "hyperspace-core",
- "hyperspace-cosmos",
  "hyperspace-parachain",
  "hyperspace-primitives",
  "ibc",
