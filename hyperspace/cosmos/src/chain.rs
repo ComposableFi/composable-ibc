@@ -1,7 +1,14 @@
 use super::{error::Error, CosmosClient};
 use crate::finality_protocol::FinalityProtocol;
 use futures::Stream;
-use ibc_proto::google::protobuf::Any;
+use ibc_proto::{
+	cosmos::tx::v1beta1::{
+		mode_info::{Single, Sum},
+		AuthInfo, ModeInfo, SignDoc, SignerInfo, TxBody, TxRaw,
+	},
+	google::protobuf::Any,
+};
+use k256::ecdsa::{signature::Signer as _, Signature, SigningKey};
 use primitives::{Chain, IbcProvider};
 use prost::Message;
 use std::pin::Pin;
@@ -38,7 +45,6 @@ where
 		&self,
 		messages: Vec<Any>,
 	) -> Result<(sp_core::H256, Option<sp_core::H256>), Error> {
-		
 		// Create SignerInfo by encoding the keybase
 		let mut pk_buf = Vec::new();
 		Message::encode(&self.keybase.public_key.to_pub().to_bytes(), &mut pk_buf)
@@ -99,7 +105,6 @@ where
 			.map_err(|e| Error::from(format!("failed to broadcast transaction {:?}", e)))?;
 
 		// Ok((response.hash, None))
-
 
 		// Change return type to a generic one that can be used by non-Substrate chains
 		todo!()
