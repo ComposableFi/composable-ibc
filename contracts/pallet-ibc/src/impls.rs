@@ -559,8 +559,8 @@ where
 					log::trace!(target: "pallet_ibc", "Failed to run packet clean up");
 					Error::<T>::Other
 				})?;
-			let range =
-				(last_removed_send + 1)..(last_removed_send + PACKET_CLEANUP_PER_CYCLE).min(next_seq_send.into());
+			let range = (last_removed_send + 1)..
+				(last_removed_send + PACKET_CLEANUP_PER_CYCLE).min(next_seq_send.into());
 			for seq in range {
 				if !PacketCommitment::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
 					let offchain_key = Pallet::<T>::offchain_send_packet_key(
@@ -618,7 +618,8 @@ where
 					log::trace!(target: "pallet_ibc", "Failed to run packet clean up");
 					Error::<T>::Other
 				})?;
-			let range = (last_removed_ack + 1)..(last_removed_ack + PACKET_CLEANUP_PER_CYCLE).min(next_seq_recv.into());
+			let range = (last_removed_ack + 1)..
+				(last_removed_ack + PACKET_CLEANUP_PER_CYCLE).min(next_seq_recv.into());
 			for seq in range {
 				if !Acknowledgements::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
 					let offchain_key = Pallet::<T>::offchain_recv_packet_key(
