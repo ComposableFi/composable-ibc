@@ -25,7 +25,7 @@ thiserror = "1.0.31"
 tonic = { version = "0.7.2", features = ["tls", "tls-roots"] }
 
 # ibc
-ibc = { path = "../../ibc/modules", features = [] }
+ibc = { path = "../../ibc/modules" }
 ibc-proto = { path = "../../ibc/proto" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }

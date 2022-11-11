@@ -22,3 +22,5 @@ tendermint-light-client = { workspace = true }
 tendermint-light-client-verifier = { workspace = true }
 ics07-tendermint = { path = "../../../light-clients/ics07-tendermint" }
 tendermint-primitives = { package = "tendermint-primitives", path = "../primitives", default-features = false }
+
+features = []
