@@ -74,6 +74,7 @@ use tendermint_proto::Protobuf;
 
 pub const OFFCHAIN_SEND_PACKET_SEQS: &[u8] = b"pallet_ibc:pending_send_packet_sequences";
 pub const OFFCHAIN_RECV_PACKET_SEQS: &[u8] = b"pallet_ibc:pending_recv_packet_sequences";
+const PACKET_CLEANUP_PER_CYCLE: u64 = 1001;
 
 impl<T: Config> Pallet<T>
 where
@@ -550,7 +551,7 @@ where
 					last_removed_send = seq
 				}
 			}
-			// Try removing at most 100 sequences in this cycle starting from the last sequence
+			// Try removing at most 1000 sequences in this cycle starting from the last sequence
 			// removed
 			let next_seq_send = ctx
 				.get_next_sequence_send(&(port_id.clone(), channel_id.clone()))
@@ -559,7 +560,7 @@ where
 					Error::<T>::Other
 				})?;
 			let range =
-				(last_removed_send + 1)..(last_removed_send + 101).min(next_seq_send.into());
+				(last_removed_send + 1)..(last_removed_send + PACKET_CLEANUP_PER_CYCLE).min(next_seq_send.into());
 			for seq in range {
 				if !PacketCommitment::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
 					let offchain_key = Pallet::<T>::offchain_send_packet_key(
@@ -610,14 +611,14 @@ where
 					last_removed_ack = seq;
 				}
 			}
-			// Try removing at most 100 sequences in this cycle from the last sequence removed
+			// Try removing at most 1000 sequences in this cycle from the last sequence removed
 			let next_seq_recv = ctx
 				.get_next_sequence_recv(&(port_id.clone(), channel_id.clone()))
 				.map_err(|_| {
 					log::trace!(target: "pallet_ibc", "Failed to run packet clean up");
 					Error::<T>::Other
 				})?;
-			let range = (last_removed_ack + 1)..(last_removed_ack + 101).min(next_seq_recv.into());
+			let range = (last_removed_ack + 1)..(last_removed_ack + PACKET_CLEANUP_PER_CYCLE).min(next_seq_recv.into());
 			for seq in range {
 				if !Acknowledgements::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
 					let offchain_key = Pallet::<T>::offchain_recv_packet_key(
