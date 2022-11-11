@@ -10,7 +10,7 @@ edition = "2021"
 futures-util = "0.3.25"
 
 # ibc
-ibc = { path = "../../../ibc/modules", features = [] }
+ibc = { path = "../../../ibc/modules" }
 ibc-proto = { path = "../../../ibc/proto" }
 pallet-ibc = { path = "../../../contracts/pallet-ibc" }
 
@@ -22,5 +22,3 @@ tendermint-light-client = { workspace = true }
 tendermint-light-client-verifier = { workspace = true }
 ics07-tendermint = { path = "../../../light-clients/ics07-tendermint" }
 tendermint-primitives = { package = "tendermint-primitives", path = "../primitives", default-features = false }
-
-features = []
