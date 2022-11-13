@@ -7832,6 +7832,7 @@ pub mod api {
 				pub ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
 				pub local_asset_id: ::core::option::Option<::core::primitive::u128>,
 				pub amount: ::core::primitive::u128,
+				pub is_sender_source: bool
 			}
 			impl ::subxt::events::StaticEvent for TokenTransferInitiated {
 				const PALLET: &'static str = "Ibc";
@@ -7871,6 +7872,7 @@ pub mod api {
 				pub ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
 				pub local_asset_id: ::core::option::Option<::core::primitive::u128>,
 				pub amount: ::core::primitive::u128,
+				pub is_sender_source: bool,
 			}
 			impl ::subxt::events::StaticEvent for TokenTransferCompleted {
 				const PALLET: &'static str = "Ibc";
@@ -7886,6 +7888,7 @@ pub mod api {
 				pub ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
 				pub local_asset_id: ::core::option::Option<::core::primitive::u128>,
 				pub amount: ::core::primitive::u128,
+				pub is_receiver_source: bool,
 			}
 			impl ::subxt::events::StaticEvent for TokenReceived {
 				const PALLET: &'static str = "Ibc";
@@ -7901,6 +7904,7 @@ pub mod api {
 				pub ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
 				pub local_asset_id: ::core::option::Option<::core::primitive::u128>,
 				pub amount: ::core::primitive::u128,
+				pub is_sender_source: bool,
 			}
 			impl ::subxt::events::StaticEvent for TokenTransferFailed {
 				const PALLET: &'static str = "Ibc";
@@ -11217,6 +11221,7 @@ pub mod api {
 						ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
 						local_asset_id: ::core::option::Option<::core::primitive::u128>,
 						amount: ::core::primitive::u128,
+						is_sender_source: bool
 					},
 					#[codec(index = 3)]
 					#[doc = "A channel has been opened"]
@@ -11238,6 +11243,7 @@ pub mod api {
 						ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
 						local_asset_id: ::core::option::Option<::core::primitive::u128>,
 						amount: ::core::primitive::u128,
+						is_sender_source: bool,
 					},
 					#[codec(index = 6)]
 					#[doc = "Ibc tokens have been received and minted"]
@@ -11247,6 +11253,7 @@ pub mod api {
 						ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
 						local_asset_id: ::core::option::Option<::core::primitive::u128>,
 						amount: ::core::primitive::u128,
+						is_receiver_source: bool,
 					},
 					#[codec(index = 7)]
 					#[doc = "Ibc transfer failed, received an acknowledgement error, tokens have been refunded"]
@@ -11256,6 +11263,7 @@ pub mod api {
 						ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
 						local_asset_id: ::core::option::Option<::core::primitive::u128>,
 						amount: ::core::primitive::u128,
+						is_sender_source: bool,
 					},
 					#[codec(index = 8)]
 					#[doc = "On recv packet was not processed successfully processes"]

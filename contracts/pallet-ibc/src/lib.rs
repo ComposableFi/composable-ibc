@@ -634,6 +634,10 @@ pub mod pallet {
 				},
 			};
 
+			let test_source_port = source_port.clone();
+			let test_source_channel = source_channel.clone();
+			let test_token = coin.clone();
+
 			let msg = MsgTransfer {
 				source_port,
 				source_channel,
@@ -672,6 +676,17 @@ pub mod pallet {
 				Error::<T>::TransferFailed
 			})?;
 
+			let mut full_denom = String::new();
+
+			let mut one = test_source_port.clone().to_string();
+			let mut two = test_source_channel.to_string();
+			let mut three = test_token.denom.to_string();
+			if !coin.denom.to_string().contains("channel") {
+				full_denom = one.to_owned() + &"/".to_string() + &two + &"/".to_string() + &three;
+			} else {
+				full_denom = coin.denom.to_string();
+			}
+
 			Self::deposit_event(Event::<T>::TokenTransferInitiated {
 				from: origin,
 				to: to.as_bytes().to_vec(),
@@ -680,7 +695,8 @@ pub mod pallet {
 					&coin.denom.to_string(),
 				)
 				.ok(),
-				ibc_denom: coin.denom.to_string().as_bytes().to_vec(),
+				ibc_denom: full_denom.as_bytes().to_vec(),
+				//coin.denom.to_string().as_bytes().to_vec(),
 				is_sender_source,
 			});
 			Ok(())

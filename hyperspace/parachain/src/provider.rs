@@ -512,6 +512,7 @@ where
 
 		// todo: how should we handle assets?
 		Ok(vec![PrefixedCoin {
+			//"transfer/channel-0/UNIT"
 			denom: PrefixedDenom::from_str("UNIT")?,
 			amount: Amount::from_str(&format!("{}", balance.data.free))?,
 		}])
