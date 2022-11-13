@@ -22,6 +22,7 @@ jobs:
     runs-on:
       - self-hosted
       - sre
+    timeout-minutes: 300
     steps:
       - name: Install git
         run: |
