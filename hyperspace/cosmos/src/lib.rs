@@ -29,7 +29,7 @@ use ibc::{
 			specs::ProofSpecs,
 		},
 		ics24_host::{
-			identifier::{ChainId, ClientId, ConnectionId},
+			identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 			path::ClientConsensusStatePath,
 			Path,
 		},
@@ -79,7 +79,7 @@ pub struct CosmosClient<H> {
 	/// Chain grpc address
 	pub grpc_url: Url,
 	/// Websocket chain ws client
-	pub ws_client: WebSocketClient,
+	pub websocket_url: Url,
 	/// Chain Id
 	pub chain_id: ChainId,
 	/// Light client id on counterparty chain
@@ -94,7 +94,9 @@ pub struct CosmosClient<H> {
 	pub account_prefix: String,
 	/// Reference to commitment
 	pub commitment_prefix: CommitmentPrefix,
-	/// Reference to proof specs
+	/// Channels cleared for packet relay
+	pub channel_whitelist: Vec<(ChannelId, PortId)>,
+	/// Finality protocol to use, eg Tenderminet
 	pub finality_protocol: finality_protocol::FinalityProtocol,
 	pub _phantom: std::marker::PhantomData<H>,
 }
@@ -103,14 +105,14 @@ pub struct CosmosClient<H> {
 pub struct CosmosClientConfig {
 	/// Chain name
 	pub name: String,
-	/// Cosmos chain Id
-	pub chain_id: String,
 	/// rpc url for cosmos
 	pub rpc_url: Url,
 	/// grpc url for cosmos
 	pub grpc_url: Url,
 	/// websocket url for cosmos
 	pub websocket_url: Url,
+	/// Cosmos chain Id
+	pub chain_id: String,
 	/// Light client id on counterparty chain
 	pub client_id: Option<String>,
 	/// Connection Id
@@ -153,36 +155,34 @@ where
 	pub async fn new(config: CosmosClientConfig) -> Result<Self, Error> {
 		let rpc_client = HttpClient::new(config.rpc_url.clone())
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
-		let (ws_client, _ws_driver) = WebSocketClient::new(config.websocket_url.clone())
-			.await
-			.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))?;
 		let chain_id = ChainId::from(config.chain_id);
 		let client_id = Some(
 			ClientId::new(config.client_id.unwrap().as_str(), 0)
-				.map_err(|e| Error::from(format!("Invalid client id {}", e)))?,
+				.map_err(|e| Error::from(format!("Invalid client id {:?}", e)))?,
 		);
 		let light_client = LightClient::init_light_client(config.rpc_url).await.map_err(|e| {
 			Error::from(format!(
-				"Failed to initialize light client for chain {} with error {:?}",
+				"Failed to initialize light client for chain {:?} with error {:?}",
 				config.name, e
 			))
 		})?;
 		let keybase = KeyEntry::new(&config.key_name, &chain_id)?;
 		let commitment_prefix = CommitmentPrefix::try_from(config.store_prefix.as_bytes().to_vec())
-			.map_err(|e| Error::from(format!("Invalid store prefix {}", e)))?;
+			.map_err(|e| Error::from(format!("Invalid store prefix {:?}", e)))?;
 
 		Ok(Self {
 			name: config.name,
 			chain_id,
 			rpc_client,
 			grpc_url: config.grpc_url,
-			ws_client,
+			websocket_url: config.websocket_url,
 			client_id,
 			connection_id: None,
 			light_client,
 			account_prefix: config.account_prefix,
 			commitment_prefix,
 			keybase,
+			channel_whitelist: vec![],
 			finality_protocol: finality_protocol::FinalityProtocol::Tendermint,
 			_phantom: std::marker::PhantomData,
 		})
@@ -206,7 +206,7 @@ where
 	{
 		self.initialize_client_state().await.map_err(|e| {
 			Error::from(format!(
-				"Failed to initialize client state for chain {} with error {:?}",
+				"Failed to initialize client state for chain {:?} with error {:?}",
 				self.name, e
 			))
 		})
