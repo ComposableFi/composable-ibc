@@ -184,6 +184,7 @@ services:
       - --chain=/app/rococo-local.json
       - --execution=wasm
       - --name=relaychain-alice
+      - --enable-offchain-indexing=true
     environment: {}
     ulimits: *a1
   parachain-2000-1:
@@ -216,6 +217,7 @@ services:
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
+      - --enable-offchain-indexing=true
     environment: {}
     ulimits: *a1
   parachain-2000-2:
@@ -248,6 +250,7 @@ services:
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
+      - --enable-offchain-indexing=true
     environment: {}
     ulimits: *a1
   parachain-2001-0:
@@ -279,6 +282,7 @@ services:
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
+      - --enable-offchain-indexing=true
     environment: {}
     ulimits: *a1
   parachain-2001-1:
@@ -311,6 +315,7 @@ services:
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
+      - --enable-offchain-indexing=true
     environment: {}
     ulimits: *a1
   parachain-2001-2:
@@ -343,6 +348,7 @@ services:
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
+      - --enable-offchain-indexing=true
     environment: {}
     ulimits: *a1
 volumes:
