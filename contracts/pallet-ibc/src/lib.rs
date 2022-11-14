@@ -69,7 +69,7 @@ pub mod light_clients;
 mod port;
 pub mod routing;
 pub use client::HostConsensusProof;
-use ibc_primitives::Timeout;
+pub use ibc_primitives::Timeout;
 pub use light_client_common;
 
 pub const MODULE_ID: &str = "pallet_ibc";

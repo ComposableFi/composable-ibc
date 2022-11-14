@@ -832,7 +832,7 @@ benchmarks! {
 		);
 
 		let balance = 100000 * MILLIS;
-		Pallet::<T>::handle_ibc_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
+		Pallet::<T>::handle_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
 		let channel_id = ChannelId::new(0);
 		let denom = "transfer/channel-15/uatom".to_string();
 		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
@@ -975,7 +975,7 @@ benchmarks! {
 
 
 		let balance = 100000 * MILLIS;
-		Pallet::<T>::handle_ibc_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
+		Pallet::<T>::handle_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
 		let channel_id = ChannelId::new(0);
 		let denom = "transfer/channel-1/PICA".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
@@ -1060,7 +1060,7 @@ benchmarks! {
 
 
 		let balance = 100000 * MILLIS;
-		Pallet::<T>::handle_ibc_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
+		Pallet::<T>::handle_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
 		let channel_id = ChannelId::new(0);
 		let denom = "PICA".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
@@ -1138,7 +1138,7 @@ benchmarks! {
 
 
 		let balance = 100000 * MILLIS;
-		Pallet::<T>::handle_ibc_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
+		Pallet::<T>::handle_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
 		let channel_id = ChannelId::new(0);
 		let denom = "PICA".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();

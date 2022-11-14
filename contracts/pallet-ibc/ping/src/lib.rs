@@ -133,7 +133,7 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	pub fn send_ping_impl(params: SendPingParams) -> Result<(), ibc_primitives::Error> {
 		let channel_id = ChannelId::new(params.channel_id);
-		T::IbcHandler::handle_ibc_message(HandlerMessage::SendPacket {
+		T::IbcHandler::handle_message(HandlerMessage::SendPacket {
 			data: b"ping".to_vec(),
 			timeout: Timeout::Offset {
 				height: Some(params.timeout_height_offset),

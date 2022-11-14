@@ -803,7 +803,7 @@ where
 		Pallet::<T>::latest_height_and_timestamp(port_id, channel_id)
 	}
 
-	fn handle_ibc_message(msg: HandlerMessage<T::AccountId>) -> Result<(), IbcHandlerError> {
+	fn handle_message(msg: HandlerMessage<T::AccountId>) -> Result<(), IbcHandlerError> {
 		match msg {
 			HandlerMessage::OpenChannel { port_id, channel_end } =>
 				Pallet::<T>::open_channel(port_id, channel_end),

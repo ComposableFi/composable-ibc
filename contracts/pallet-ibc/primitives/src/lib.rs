@@ -377,8 +377,8 @@ pub trait IbcHandler<AccountId> {
 		port_id: &PortId,
 		channel_id: &ChannelId,
 	) -> Result<(Height, Timestamp), Error>;
-	/// Handle ibc handler message
-	fn handle_ibc_message(msg: HandlerMessage<AccountId>) -> Result<(), Error>;
+	/// Handle a message
+	fn handle_message(msg: HandlerMessage<AccountId>) -> Result<(), Error>;
 	fn write_acknowledgement(packet: &Packet, ack: Vec<u8>) -> Result<(), Error>;
 	/// testing related methods
 	#[cfg(feature = "runtime-benchmarks")]
