@@ -5,7 +5,7 @@ edition = "2021"
 description = "Integration testsuite for hyperspace-core and its interfaces"
 authors = [
     "Seun Lanlege <seunlanlege@gmail.com>",
-    "David Salami <david.salami@gmail.com>",
+    "David Salami <wizdave97@gmail.com>",
 ]
 
 [dependencies]

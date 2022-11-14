@@ -36,7 +36,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
 	let runtimes = [
 		(format!("ws://{}:{}", cli.relay_host, cli.relay_port), "rococo"),
-		(format!("ws://{}:{}", cli.relay_host, cli.para_port), "parachain"),
+		(format!("ws://{}:{}", cli.para_host, cli.para_port), "parachain"),
 	];
 
 	for (url, runtime) in runtimes {

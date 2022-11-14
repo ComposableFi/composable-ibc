@@ -65,6 +65,7 @@ pub enum DefaultConfig {}
 
 #[async_trait]
 impl config::Config for DefaultConfig {
+	type AssetId = u128;
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,
 	) -> Result<
@@ -602,10 +603,14 @@ impl primitives::TestProvider for AnyChain {
 		}
 	}
 
-	async fn send_ping(&self, channel_id: ChannelId, timeout: Timeout) -> Result<(), Self::Error> {
+	async fn send_ordered_packet(
+		&self,
+		channel_id: ChannelId,
+		timeout: Timeout,
+	) -> Result<(), Self::Error> {
 		match self {
 			Self::Parachain(chain) =>
-				chain.send_ping(channel_id, timeout).await.map_err(Into::into),
+				chain.send_ordered_packet(channel_id, timeout).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}
