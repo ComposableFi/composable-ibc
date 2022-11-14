@@ -148,11 +148,12 @@ where
 
 				let stream = subscription.filter_map(|justification_notif| {
 					let encoded_justification = match justification_notif {
-						Ok(JustificationNotification(sp_core::Bytes(justification))) =>
-							justification,
+						Ok(JustificationNotification(sp_core::Bytes(justification))) => {
+							justification
+						},
 						Err(err) => {
 							log::error!("Failed to fetch Justification: {}", err);
-							return futures::future::ready(None)
+							return futures::future::ready(None);
 						},
 					};
 
@@ -161,7 +162,7 @@ where
 							Ok(j) => j,
 							Err(err) => {
 								log::error!("Grandpa Justification scale decode error: {}", err);
-								return futures::future::ready(None)
+								return futures::future::ready(None);
 							},
 						};
 					futures::future::ready(Some(Self::FinalityEvent::Grandpa(justification)))
@@ -182,7 +183,7 @@ where
 						Ok(JustificationNotification(sp_core::Bytes(commitment))) => commitment,
 						Err(err) => {
 							log::error!("Failed to fetch Commitment: {}", err);
-							return futures::future::ready(None)
+							return futures::future::ready(None);
 						},
 					};
 
@@ -191,7 +192,7 @@ where
 							Ok(c) => c,
 							Err(err) => {
 								log::error!("SignedCommitment scale decode error: {}", err);
-								return futures::future::ready(None)
+								return futures::future::ready(None);
 							},
 						};
 					futures::future::ready(Some(Self::FinalityEvent::Beefy(signed_commitment)))
@@ -238,7 +239,7 @@ where
 				Some(hash) => break hash,
 				None => {
 					if now.elapsed() > Duration::from_secs(20) {
-						return Err(Error::from("Timeout while waiting for block".to_owned()))
+						return Err(Error::from("Timeout while waiting for block".to_owned()));
 					}
 					sleep(Duration::from_millis(100)).await;
 				},
@@ -264,23 +265,19 @@ where
 					Phase::ApplyExtrinsic(i) => i as usize,
 					other => {
 						log::error!("Unexpected event phase: {:?}", other);
-						return None
+						return None;
 					},
 				};
 				if let Event::Ibc(PalletEvent::Events { events }) = pallet_event.event {
-					events.into_iter().enumerate().find_map(|(i, event)| match event {
-						Ok(ibc_event) => {
-							let ibc_event = IbcEvent::try_from(RawIbcEvent::from(
-								MetadataIbcEventWrapper(ibc_event),
-							))
-							.ok()?;
-							match ibc_event {
-								IbcEvent::UpdateClient(ev_update) if ev_update == update =>
-									Some((tx_index, i)),
-								_ => None,
-							}
-						},
-						_ => None,
+					events.into_iter().enumerate().find_map(|(i, event)| {
+						let ibc_event =
+							IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(event)));
+						match ibc_event {
+							Ok(IbcEvent::UpdateClient(ev_update)) if ev_update == update => {
+								Some((tx_index, i))
+							},
+							_ => None,
+						}
 					})
 				} else {
 					None
@@ -312,8 +309,9 @@ where
 					value: message.value.clone(),
 				});
 				match envelope {
-					Ok(Ics26Envelope::Ics2Msg(ClientMsg::UpdateClient(update_msg))) =>
-						return Ok(update_msg.client_message),
+					Ok(Ics26Envelope::Ics2Msg(ClientMsg::UpdateClient(update_msg))) => {
+						return Ok(update_msg.client_message)
+					},
 					_ => (),
 				}
 			},

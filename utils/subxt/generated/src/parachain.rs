@@ -679,9 +679,9 @@ pub mod api {
 						"Events",
 						vec![],
 						[
-							77u8, 129u8, 17u8, 244u8, 205u8, 54u8, 17u8, 40u8, 192u8, 85u8, 126u8,
-							85u8, 217u8, 75u8, 84u8, 217u8, 167u8, 240u8, 1u8, 100u8, 148u8, 231u8,
-							135u8, 216u8, 27u8, 23u8, 115u8, 70u8, 77u8, 3u8, 206u8, 229u8,
+							231u8, 49u8, 26u8, 80u8, 179u8, 243u8, 60u8, 50u8, 170u8, 155u8, 23u8,
+							223u8, 243u8, 138u8, 36u8, 60u8, 141u8, 61u8, 163u8, 246u8, 38u8, 67u8,
+							116u8, 66u8, 220u8, 51u8, 215u8, 203u8, 255u8, 161u8, 189u8, 181u8,
 						],
 					)
 				}
@@ -8040,16 +8040,22 @@ pub mod api {
 			)]
 			#[doc = "Events emitted by the ibc subsystem"]
 			pub struct Events {
-				pub events: ::std::vec::Vec<
-					::core::result::Result<
-						runtime_types::pallet_ibc::events::IbcEvent,
-						runtime_types::pallet_ibc::errors::IbcError,
-					>,
-				>,
+				pub events: ::std::vec::Vec<runtime_types::pallet_ibc::events::IbcEvent>,
 			}
 			impl ::subxt::events::StaticEvent for Events {
 				const PALLET: &'static str = "Ibc";
 				const EVENT: &'static str = "Events";
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			#[doc = "Errors emitted by the ibc subsystem"]
+			pub struct Errors {
+				pub errors: ::std::vec::Vec<runtime_types::pallet_ibc::errors::IbcError>,
+			}
+			impl ::subxt::events::StaticEvent for Errors {
+				const PALLET: &'static str = "Ibc";
+				const EVENT: &'static str = "Errors";
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -8910,24 +8916,6 @@ pub mod api {
 					::subxt::constants::StaticConstantAddress::new(
 						"Ibc",
 						"ExpectedBlockTime",
-						[
-							128u8, 214u8, 205u8, 242u8, 181u8, 142u8, 124u8, 231u8, 190u8, 146u8,
-							59u8, 226u8, 157u8, 101u8, 103u8, 117u8, 249u8, 65u8, 18u8, 191u8,
-							103u8, 119u8, 53u8, 85u8, 81u8, 96u8, 220u8, 42u8, 184u8, 239u8, 42u8,
-							246u8,
-						],
-					)
-				}
-				#[doc = " Minimum connection delay period in seconds for ibc connections that can be created or"]
-				#[doc = " accepted. Ensure that this is non-zero in production as it's a critical vulnerability."]
-				pub fn minimum_connection_delay(
-					&self,
-				) -> ::subxt::constants::StaticConstantAddress<
-					::subxt::metadata::DecodeStaticType<::core::primitive::u64>,
-				> {
-					::subxt::constants::StaticConstantAddress::new(
-						"Ibc",
-						"MinimumConnectionDelay",
 						[
 							128u8, 214u8, 205u8, 242u8, 181u8, 142u8, 124u8, 231u8, 190u8, 146u8,
 							59u8, 226u8, 157u8, 101u8, 103u8, 117u8, 249u8, 65u8, 18u8, 191u8,
@@ -11546,15 +11534,11 @@ pub mod api {
 				pub enum Event {
 					#[codec(index = 0)]
 					#[doc = "Events emitted by the ibc subsystem"]
-					Events {
-						events: ::std::vec::Vec<
-							::core::result::Result<
-								runtime_types::pallet_ibc::events::IbcEvent,
-								runtime_types::pallet_ibc::errors::IbcError,
-							>,
-						>,
-					},
+					Events { events: ::std::vec::Vec<runtime_types::pallet_ibc::events::IbcEvent> },
 					#[codec(index = 1)]
+					#[doc = "Errors emitted by the ibc subsystem"]
+					Errors { errors: ::std::vec::Vec<runtime_types::pallet_ibc::errors::IbcError> },
+					#[codec(index = 2)]
 					#[doc = "An Ibc token transfer has been started"]
 					TokenTransferInitiated {
 						from: ::subxt::ext::sp_core::crypto::AccountId32,
@@ -11563,19 +11547,19 @@ pub mod api {
 						local_asset_id: ::core::option::Option<::core::primitive::u128>,
 						amount: ::core::primitive::u128,
 					},
-					#[codec(index = 2)]
+					#[codec(index = 3)]
 					#[doc = "A channel has been opened"]
 					ChannelOpened {
 						channel_id: ::std::vec::Vec<::core::primitive::u8>,
 						port_id: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec(index = 3)]
+					#[codec(index = 4)]
 					#[doc = "Pallet params updated"]
 					ParamsUpdated {
 						send_enabled: ::core::primitive::bool,
 						receive_enabled: ::core::primitive::bool,
 					},
-					#[codec(index = 4)]
+					#[codec(index = 5)]
 					#[doc = "An outgoing Ibc token transfer has been completed and burnt"]
 					TokenTransferCompleted {
 						from: ::std::vec::Vec<::core::primitive::u8>,
@@ -11584,7 +11568,7 @@ pub mod api {
 						local_asset_id: ::core::option::Option<::core::primitive::u128>,
 						amount: ::core::primitive::u128,
 					},
-					#[codec(index = 5)]
+					#[codec(index = 6)]
 					#[doc = "Ibc tokens have been received and minted"]
 					TokenReceived {
 						from: ::std::vec::Vec<::core::primitive::u8>,
@@ -11593,7 +11577,7 @@ pub mod api {
 						local_asset_id: ::core::option::Option<::core::primitive::u128>,
 						amount: ::core::primitive::u128,
 					},
-					#[codec(index = 6)]
+					#[codec(index = 7)]
 					#[doc = "Ibc transfer failed, received an acknowledgement error, tokens have been refunded"]
 					TokenTransferFailed {
 						from: ::std::vec::Vec<::core::primitive::u8>,
@@ -11602,20 +11586,20 @@ pub mod api {
 						local_asset_id: ::core::option::Option<::core::primitive::u128>,
 						amount: ::core::primitive::u128,
 					},
-					#[codec(index = 7)]
+					#[codec(index = 8)]
 					#[doc = "On recv packet was not processed successfully processes"]
 					OnRecvPacketError { msg: ::std::vec::Vec<::core::primitive::u8> },
-					#[codec(index = 8)]
+					#[codec(index = 9)]
 					#[doc = "Client upgrade path has been set"]
 					ClientUpgradeSet,
-					#[codec(index = 9)]
+					#[codec(index = 10)]
 					#[doc = "Client has been frozen"]
 					ClientFrozen {
 						client_id: ::std::vec::Vec<::core::primitive::u8>,
 						height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
 					},
-					#[codec(index = 10)]
+					#[codec(index = 11)]
 					#[doc = "Asset Admin Account Updated"]
 					AssetAdminUpdated { admin_account: ::subxt::ext::sp_core::crypto::AccountId32 },
 				}
@@ -14661,9 +14645,9 @@ pub mod api {
 		let runtime_metadata_hash = client.metadata().metadata_hash(&PALLETS);
 		if runtime_metadata_hash !=
 			[
-				27u8, 176u8, 197u8, 124u8, 48u8, 183u8, 72u8, 158u8, 153u8, 107u8, 217u8, 211u8,
-				118u8, 219u8, 249u8, 130u8, 191u8, 231u8, 70u8, 49u8, 141u8, 13u8, 80u8, 171u8,
-				207u8, 22u8, 23u8, 64u8, 94u8, 97u8, 121u8, 142u8,
+				107u8, 161u8, 194u8, 212u8, 1u8, 56u8, 233u8, 159u8, 178u8, 82u8, 176u8, 224u8,
+				133u8, 206u8, 100u8, 35u8, 99u8, 180u8, 108u8, 40u8, 75u8, 129u8, 41u8, 193u8,
+				54u8, 107u8, 97u8, 244u8, 12u8, 99u8, 174u8, 50u8,
 			] {
 			Err(::subxt::error::MetadataError::IncompatibleMetadata)
 		} else {

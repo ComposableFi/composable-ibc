@@ -117,7 +117,7 @@ where
 					Ok(ev) => ev,
 					Err(err) => {
 						log::error!("Error in IbcEvent stream: {err:?}");
-						return futures::future::ready(None)
+						return futures::future::ready(None);
 					},
 				};
 				let result = events
@@ -126,10 +126,8 @@ where
 					.into_iter()
 					.filter_map(|ev| {
 						Some(
-							IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(
-								ev.ok()?,
-							)))
-							.map_err(|e| subxt::Error::Other(e.to_string())),
+							IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(ev)))
+								.map_err(|e| subxt::Error::Other(e.to_string())),
 						)
 					})
 					.collect::<Result<Vec<_>, _>>();
@@ -138,7 +136,7 @@ where
 					Ok(ev) => ev,
 					Err(err) => {
 						log::error!("Failed to decode event: {err:?}");
-						return futures::future::ready(None)
+						return futures::future::ready(None);
 					},
 				};
 				futures::future::ready(Some(stream::iter(events)))
