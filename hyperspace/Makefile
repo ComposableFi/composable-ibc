@@ -26,7 +26,8 @@ build-release-hyperspace:
 	cargo b -p $(module-hyperspace) --release
 
 build-docker-image-hyperspace:
-	docker build -f scripts/hyperspace.Dockerfile -t "${hyperspace_image}" .
+	docker build -f scripts/hyperspace.Dockerfile -t "${composable_centauri_image_with_commit_hash}" .
+	docker tag "${composable_centauri_image_with_commit_hash}" "${composable_centauri_image_latest}"
 
 publish-docker-image-hyperspace:
 	docker push "${composable_centauri_image_with_commit_hash}"
