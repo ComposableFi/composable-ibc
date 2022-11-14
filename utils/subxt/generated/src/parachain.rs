@@ -1,21 +1,7 @@
-// Copyright 2022 ComposableFi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #[allow(dead_code, unused_imports, non_camel_case_types)]
 pub mod api {
 	use super::api as root_mod;
-	pub static PALLETS: [&str; 19usize] = [
+	pub static PALLETS: [&str; 20usize] = [
 		"System",
 		"Timestamp",
 		"ParachainSystem",
@@ -34,6 +20,7 @@ pub mod api {
 		"Sudo",
 		"IbcPing",
 		"Assets",
+		"AssetRegistry",
 		"Ibc",
 	];
 	#[derive(:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug)]
@@ -64,6 +51,8 @@ pub mod api {
 		IbcPing(ibc_ping::Event),
 		#[codec(index = 37)]
 		Assets(assets::Event),
+		#[codec(index = 38)]
+		AssetRegistry(asset_registry::Event),
 		#[codec(index = 255)]
 		Ibc(ibc::Event),
 	}
@@ -690,9 +679,9 @@ pub mod api {
 						"Events",
 						vec![],
 						[
-							108u8, 44u8, 85u8, 243u8, 1u8, 206u8, 160u8, 162u8, 209u8, 50u8, 30u8,
-							154u8, 247u8, 11u8, 195u8, 132u8, 203u8, 13u8, 216u8, 184u8, 9u8,
-							185u8, 89u8, 177u8, 84u8, 73u8, 127u8, 66u8, 52u8, 31u8, 169u8, 123u8,
+							231u8, 49u8, 26u8, 80u8, 179u8, 243u8, 60u8, 50u8, 170u8, 155u8, 23u8,
+							223u8, 243u8, 138u8, 36u8, 60u8, 141u8, 61u8, 163u8, 246u8, 38u8, 67u8,
+							116u8, 66u8, 220u8, 51u8, 215u8, 203u8, 255u8, 161u8, 189u8, 181u8,
 						],
 					)
 				}
@@ -5658,9 +5647,10 @@ pub mod api {
 						"sudo",
 						Sudo { call: ::std::boxed::Box::new(call) },
 						[
-							109u8, 120u8, 250u8, 76u8, 245u8, 62u8, 174u8, 36u8, 229u8, 209u8,
-							125u8, 132u8, 106u8, 33u8, 1u8, 30u8, 45u8, 100u8, 109u8, 216u8, 236u8,
-							233u8, 1u8, 249u8, 245u8, 213u8, 71u8, 202u8, 55u8, 81u8, 184u8, 132u8,
+							157u8, 103u8, 40u8, 106u8, 115u8, 27u8, 148u8, 190u8, 45u8, 135u8,
+							78u8, 112u8, 172u8, 223u8, 115u8, 74u8, 175u8, 106u8, 97u8, 181u8,
+							89u8, 224u8, 62u8, 226u8, 58u8, 89u8, 74u8, 233u8, 110u8, 214u8, 0u8,
+							90u8,
 						],
 					)
 				}
@@ -5684,9 +5674,10 @@ pub mod api {
 						"sudo_unchecked_weight",
 						SudoUncheckedWeight { call: ::std::boxed::Box::new(call), weight },
 						[
-							253u8, 128u8, 203u8, 2u8, 98u8, 227u8, 101u8, 180u8, 49u8, 73u8, 158u8,
-							80u8, 154u8, 209u8, 20u8, 212u8, 196u8, 119u8, 85u8, 56u8, 61u8, 181u8,
-							250u8, 36u8, 65u8, 218u8, 233u8, 64u8, 169u8, 240u8, 235u8, 243u8,
+							123u8, 192u8, 216u8, 46u8, 252u8, 222u8, 182u8, 169u8, 104u8, 214u8,
+							106u8, 44u8, 226u8, 65u8, 212u8, 228u8, 56u8, 162u8, 95u8, 122u8,
+							111u8, 128u8, 207u8, 24u8, 60u8, 51u8, 238u8, 53u8, 45u8, 115u8, 74u8,
+							157u8,
 						],
 					)
 				}
@@ -5742,9 +5733,9 @@ pub mod api {
 						"sudo_as",
 						SudoAs { who, call: ::std::boxed::Box::new(call) },
 						[
-							170u8, 54u8, 251u8, 95u8, 62u8, 178u8, 168u8, 105u8, 192u8, 172u8,
-							72u8, 3u8, 225u8, 165u8, 151u8, 227u8, 193u8, 91u8, 1u8, 215u8, 98u8,
-							22u8, 112u8, 68u8, 212u8, 204u8, 141u8, 208u8, 10u8, 60u8, 165u8, 72u8,
+							144u8, 124u8, 211u8, 169u8, 115u8, 138u8, 144u8, 60u8, 11u8, 81u8,
+							20u8, 248u8, 11u8, 67u8, 139u8, 26u8, 163u8, 42u8, 90u8, 130u8, 100u8,
+							163u8, 76u8, 117u8, 31u8, 82u8, 234u8, 61u8, 99u8, 51u8, 189u8, 221u8,
 						],
 					)
 				}
@@ -7664,6 +7655,250 @@ pub mod api {
 			}
 		}
 	}
+	pub mod asset_registry {
+		use super::{root_mod, runtime_types};
+		#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
+		pub mod calls {
+			use super::{root_mod, runtime_types};
+			type DispatchError = runtime_types::sp_runtime::DispatchError;
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			pub struct RegisterAsset {
+				pub metadata: runtime_types::orml_traits::asset_registry::AssetMetadata<
+					::core::primitive::u128,
+					(),
+				>,
+				pub asset_id: ::core::option::Option<::core::primitive::u128>,
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			pub struct UpdateAsset {
+				pub asset_id: ::core::primitive::u128,
+				pub decimals: ::core::option::Option<::core::primitive::u32>,
+				pub name: ::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
+				pub symbol: ::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
+				pub existential_deposit: ::core::option::Option<::core::primitive::u128>,
+				pub location: ::core::option::Option<
+					::core::option::Option<runtime_types::xcm::VersionedMultiLocation>,
+				>,
+				pub additional: ::core::option::Option<()>,
+			}
+			pub struct TransactionApi;
+			impl TransactionApi {
+				pub fn register_asset(
+					&self,
+					metadata: runtime_types::orml_traits::asset_registry::AssetMetadata<
+						::core::primitive::u128,
+						(),
+					>,
+					asset_id: ::core::option::Option<::core::primitive::u128>,
+				) -> ::subxt::tx::StaticTxPayload<RegisterAsset> {
+					::subxt::tx::StaticTxPayload::new(
+						"AssetRegistry",
+						"register_asset",
+						RegisterAsset { metadata, asset_id },
+						[
+							73u8, 10u8, 1u8, 123u8, 28u8, 1u8, 221u8, 71u8, 183u8, 53u8, 99u8,
+							29u8, 200u8, 45u8, 235u8, 49u8, 176u8, 249u8, 15u8, 146u8, 165u8,
+							117u8, 198u8, 62u8, 148u8, 5u8, 147u8, 236u8, 16u8, 127u8, 122u8, 64u8,
+						],
+					)
+				}
+				pub fn update_asset(
+					&self,
+					asset_id: ::core::primitive::u128,
+					decimals: ::core::option::Option<::core::primitive::u32>,
+					name: ::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
+					symbol: ::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
+					existential_deposit: ::core::option::Option<::core::primitive::u128>,
+					location: ::core::option::Option<
+						::core::option::Option<runtime_types::xcm::VersionedMultiLocation>,
+					>,
+					additional: ::core::option::Option<()>,
+				) -> ::subxt::tx::StaticTxPayload<UpdateAsset> {
+					::subxt::tx::StaticTxPayload::new(
+						"AssetRegistry",
+						"update_asset",
+						UpdateAsset {
+							asset_id,
+							decimals,
+							name,
+							symbol,
+							existential_deposit,
+							location,
+							additional,
+						},
+						[
+							254u8, 253u8, 26u8, 215u8, 167u8, 34u8, 52u8, 15u8, 45u8, 152u8, 52u8,
+							111u8, 123u8, 45u8, 106u8, 103u8, 124u8, 11u8, 236u8, 106u8, 249u8,
+							248u8, 177u8, 42u8, 196u8, 120u8, 30u8, 188u8, 45u8, 73u8, 132u8, 81u8,
+						],
+					)
+				}
+			}
+		}
+		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+		pub type Event = runtime_types::orml_asset_registry::module::Event;
+		pub mod events {
+			use super::runtime_types;
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			pub struct RegisteredAsset {
+				pub asset_id: ::core::primitive::u128,
+				pub metadata: runtime_types::orml_traits::asset_registry::AssetMetadata<
+					::core::primitive::u128,
+					(),
+				>,
+			}
+			impl ::subxt::events::StaticEvent for RegisteredAsset {
+				const PALLET: &'static str = "AssetRegistry";
+				const EVENT: &'static str = "RegisteredAsset";
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			pub struct UpdatedAsset {
+				pub asset_id: ::core::primitive::u128,
+				pub metadata: runtime_types::orml_traits::asset_registry::AssetMetadata<
+					::core::primitive::u128,
+					(),
+				>,
+			}
+			impl ::subxt::events::StaticEvent for UpdatedAsset {
+				const PALLET: &'static str = "AssetRegistry";
+				const EVENT: &'static str = "UpdatedAsset";
+			}
+		}
+		pub mod storage {
+			use super::runtime_types;
+			pub struct StorageApi;
+			impl StorageApi {
+				#[doc = " The metadata of an asset, indexed by asset id."]
+				pub fn metadata(
+					&self,
+					_0: impl ::std::borrow::Borrow<::core::primitive::u128>,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::orml_traits::asset_registry::AssetMetadata<
+							::core::primitive::u128,
+							(),
+						>,
+					>,
+					::subxt::storage::address::Yes,
+					(),
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"AssetRegistry",
+						"Metadata",
+						vec![::subxt::storage::address::StorageMapKey::new(
+							_0.borrow(),
+							::subxt::storage::address::StorageHasher::Twox64Concat,
+						)],
+						[
+							201u8, 109u8, 42u8, 68u8, 153u8, 115u8, 26u8, 61u8, 122u8, 19u8, 241u8,
+							99u8, 106u8, 118u8, 92u8, 246u8, 199u8, 186u8, 7u8, 76u8, 32u8, 195u8,
+							42u8, 131u8, 196u8, 89u8, 64u8, 157u8, 76u8, 82u8, 105u8, 24u8,
+						],
+					)
+				}
+				#[doc = " The metadata of an asset, indexed by asset id."]
+				pub fn metadata_root(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::orml_traits::asset_registry::AssetMetadata<
+							::core::primitive::u128,
+							(),
+						>,
+					>,
+					(),
+					(),
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"AssetRegistry",
+						"Metadata",
+						Vec::new(),
+						[
+							201u8, 109u8, 42u8, 68u8, 153u8, 115u8, 26u8, 61u8, 122u8, 19u8, 241u8,
+							99u8, 106u8, 118u8, 92u8, 246u8, 199u8, 186u8, 7u8, 76u8, 32u8, 195u8,
+							42u8, 131u8, 196u8, 89u8, 64u8, 157u8, 76u8, 82u8, 105u8, 24u8,
+						],
+					)
+				}
+				#[doc = " Maps a multilocation to an asset id - useful when processing xcm"]
+				#[doc = " messages."]
+				pub fn location_to_asset_id(
+					&self,
+					_0: impl ::std::borrow::Borrow<runtime_types::xcm::v1::multilocation::MultiLocation>,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::u128>,
+					::subxt::storage::address::Yes,
+					(),
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"AssetRegistry",
+						"LocationToAssetId",
+						vec![::subxt::storage::address::StorageMapKey::new(
+							_0.borrow(),
+							::subxt::storage::address::StorageHasher::Twox64Concat,
+						)],
+						[
+							163u8, 239u8, 235u8, 35u8, 77u8, 89u8, 26u8, 231u8, 88u8, 136u8, 240u8,
+							194u8, 148u8, 60u8, 186u8, 101u8, 254u8, 3u8, 11u8, 156u8, 71u8, 120u8,
+							50u8, 44u8, 175u8, 96u8, 64u8, 57u8, 203u8, 64u8, 211u8, 106u8,
+						],
+					)
+				}
+				#[doc = " Maps a multilocation to an asset id - useful when processing xcm"]
+				#[doc = " messages."]
+				pub fn location_to_asset_id_root(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::u128>,
+					(),
+					(),
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"AssetRegistry",
+						"LocationToAssetId",
+						Vec::new(),
+						[
+							163u8, 239u8, 235u8, 35u8, 77u8, 89u8, 26u8, 231u8, 88u8, 136u8, 240u8,
+							194u8, 148u8, 60u8, 186u8, 101u8, 254u8, 3u8, 11u8, 156u8, 71u8, 120u8,
+							50u8, 44u8, 175u8, 96u8, 64u8, 57u8, 203u8, 64u8, 211u8, 106u8,
+						],
+					)
+				}
+				#[doc = " The last processed asset id - used when assigning a sequential id."]
+				pub fn last_asset_id(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::u128>,
+					::subxt::storage::address::Yes,
+					::subxt::storage::address::Yes,
+					(),
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"AssetRegistry",
+						"LastAssetId",
+						vec![],
+						[
+							11u8, 29u8, 228u8, 168u8, 123u8, 15u8, 150u8, 10u8, 158u8, 5u8, 103u8,
+							205u8, 152u8, 218u8, 91u8, 82u8, 199u8, 45u8, 162u8, 207u8, 24u8, 55u8,
+							40u8, 228u8, 202u8, 10u8, 132u8, 74u8, 82u8, 25u8, 10u8, 238u8,
+						],
+					)
+				}
+			}
+		}
+	}
 	pub mod ibc {
 		use super::{root_mod, runtime_types};
 		#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
@@ -9517,6 +9752,100 @@ pub mod api {
 				pub timeout_height: (::core::primitive::u64, ::core::primitive::u64),
 				pub timeout_timestamp: ::core::primitive::u64,
 				pub ack: ::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
+			}
+		}
+		pub mod orml_asset_registry {
+			use super::runtime_types;
+			pub mod module {
+				use super::runtime_types;
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
+				pub enum Call {
+					#[codec(index = 0)]
+					register_asset {
+						metadata: runtime_types::orml_traits::asset_registry::AssetMetadata<
+							::core::primitive::u128,
+							(),
+						>,
+						asset_id: ::core::option::Option<::core::primitive::u128>,
+					},
+					#[codec(index = 1)]
+					update_asset {
+						asset_id: ::core::primitive::u128,
+						decimals: ::core::option::Option<::core::primitive::u32>,
+						name: ::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
+						symbol: ::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
+						existential_deposit: ::core::option::Option<::core::primitive::u128>,
+						location: ::core::option::Option<
+							::core::option::Option<runtime_types::xcm::VersionedMultiLocation>,
+						>,
+						additional: ::core::option::Option<()>,
+					},
+				}
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/v3/runtime/events-and-errors)\n\t\t\tof this pallet.\n\t\t\t"]
+				pub enum Error {
+					#[codec(index = 0)]
+					#[doc = "Asset was not found."]
+					AssetNotFound,
+					#[codec(index = 1)]
+					#[doc = "The version of the `VersionedMultiLocation` value used is not able"]
+					#[doc = "to be interpreted."]
+					BadVersion,
+					#[codec(index = 2)]
+					#[doc = "The asset id is invalid."]
+					InvalidAssetId,
+					#[codec(index = 3)]
+					#[doc = "Another asset was already register with this location."]
+					ConflictingLocation,
+					#[codec(index = 4)]
+					#[doc = "Another asset was already register with this asset id."]
+					ConflictingAssetId,
+				}
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+				pub enum Event {
+					#[codec(index = 0)]
+					RegisteredAsset {
+						asset_id: ::core::primitive::u128,
+						metadata: runtime_types::orml_traits::asset_registry::AssetMetadata<
+							::core::primitive::u128,
+							(),
+						>,
+					},
+					#[codec(index = 1)]
+					UpdatedAsset {
+						asset_id: ::core::primitive::u128,
+						metadata: runtime_types::orml_traits::asset_registry::AssetMetadata<
+							::core::primitive::u128,
+							(),
+						>,
+					},
+				}
+			}
+		}
+		pub mod orml_traits {
+			use super::runtime_types;
+			pub mod asset_registry {
+				use super::runtime_types;
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				pub struct AssetMetadata<_0, _1> {
+					pub decimals: ::core::primitive::u32,
+					pub name: ::std::vec::Vec<::core::primitive::u8>,
+					pub symbol: ::std::vec::Vec<::core::primitive::u8>,
+					pub existential_deposit: _0,
+					pub location:
+						::core::option::Option<runtime_types::xcm::VersionedMultiLocation>,
+					pub additional: _1,
+				}
 			}
 		}
 		pub mod pallet_assets {
@@ -12086,6 +12415,8 @@ pub mod api {
 				IbcPing(runtime_types::pallet_ibc_ping::pallet::Call),
 				#[codec(index = 37)]
 				Assets(runtime_types::pallet_assets::pallet::Call),
+				#[codec(index = 38)]
+				AssetRegistry(runtime_types::orml_asset_registry::module::Call),
 				#[codec(index = 255)]
 				Ibc(runtime_types::pallet_ibc::pallet::Call),
 			}
@@ -12119,6 +12450,8 @@ pub mod api {
 				IbcPing(runtime_types::pallet_ibc_ping::pallet::Event),
 				#[codec(index = 37)]
 				Assets(runtime_types::pallet_assets::pallet::Event),
+				#[codec(index = 38)]
+				AssetRegistry(runtime_types::orml_asset_registry::module::Event),
 				#[codec(index = 255)]
 				Ibc(runtime_types::pallet_ibc::pallet::Event),
 			}
@@ -14244,6 +14577,9 @@ pub mod api {
 		pub fn assets(&self) -> assets::storage::StorageApi {
 			assets::storage::StorageApi
 		}
+		pub fn asset_registry(&self) -> asset_registry::storage::StorageApi {
+			asset_registry::storage::StorageApi
+		}
 		pub fn ibc(&self) -> ibc::storage::StorageApi {
 			ibc::storage::StorageApi
 		}
@@ -14295,6 +14631,9 @@ pub mod api {
 		pub fn assets(&self) -> assets::calls::TransactionApi {
 			assets::calls::TransactionApi
 		}
+		pub fn asset_registry(&self) -> asset_registry::calls::TransactionApi {
+			asset_registry::calls::TransactionApi
+		}
 		pub fn ibc(&self) -> ibc::calls::TransactionApi {
 			ibc::calls::TransactionApi
 		}
@@ -14306,9 +14645,9 @@ pub mod api {
 		let runtime_metadata_hash = client.metadata().metadata_hash(&PALLETS);
 		if runtime_metadata_hash !=
 			[
-				174u8, 233u8, 214u8, 85u8, 77u8, 223u8, 229u8, 15u8, 191u8, 226u8, 185u8, 124u8,
-				182u8, 240u8, 132u8, 210u8, 77u8, 32u8, 113u8, 235u8, 24u8, 222u8, 177u8, 54u8,
-				128u8, 185u8, 170u8, 252u8, 186u8, 107u8, 56u8, 237u8,
+				107u8, 161u8, 194u8, 212u8, 1u8, 56u8, 233u8, 159u8, 178u8, 82u8, 176u8, 224u8,
+				133u8, 206u8, 100u8, 35u8, 99u8, 180u8, 108u8, 40u8, 75u8, 129u8, 41u8, 193u8,
+				54u8, 107u8, 97u8, 244u8, 12u8, 99u8, 174u8, 50u8,
 			] {
 			Err(::subxt::error::MetadataError::IncompatibleMetadata)
 		} else {

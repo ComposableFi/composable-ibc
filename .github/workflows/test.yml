@@ -8,6 +8,9 @@ on:
     branches:
       - master
 
+env:
+  DEBIAN_FRONTEND: noninteractive
+
 jobs:
   linters:
     name: Tests
@@ -16,17 +19,25 @@ jobs:
       cancel-in-progress: true
     container:
       image: ubuntu:jammy
-      # options: --privileged
     runs-on:
       - self-hosted
       - sre
+    timeout-minutes: 300
     steps:
+      - name: Install git
+        run: |
+          apt update -y
+          apt install git -y
+          git --version
+
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
 
       - name: Setup deps
         run: |
+          git config --global --add safe.directory /__w/centauri/centauri
+
           apt update -y
           apt install -y \
             curl \
@@ -94,24 +105,15 @@ jobs:
           echo "PARA_HOST=$GATEWAY_IP" >> $GITHUB_ENV
 
       - name: Run local parachain cluster
-        run: |
-          # DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest
-          ./docker-compose -f scripts/parachain-launch/docker-compose.yml up --detach --build
-          # ./docker-compose -f scripts/parachain-launch/docker-compose.yml ps
-          ./scripts/wait_for_tcp_port_opening.sh $GATEWAY_IP 9944
-          ./scripts/wait_for_tcp_port_opening.sh $GATEWAY_IP 9188
-          # sleep 60
-          # echo "# ip -o a"
-          # ip -o a
-          # echo "# ip r l"
-          # ip r l
-          # echo "# ss -nltp"
-          # ss -nltp
+        run:
+          DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest;
+          ./docker-compose -f scripts/parachain-launch/docker-compose.yml up -d --build;
+          ./scripts/wait_for_tcp_port_opening.sh $RELAY_HOST 9944;
+          ./scripts/wait_for_tcp_port_opening.sh $PARA_HOST 9188;
 
       - name: Check that subxt-generated is up to date
         run: |
           ./scripts/generate-subxt.sh
-          # git status --porcelain
 
       - name: Run all unit tests
         run: |

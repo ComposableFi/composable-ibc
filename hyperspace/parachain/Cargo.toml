@@ -3,7 +3,7 @@ name = "hyperspace-parachain"
 version = "0.1.0"
 edition = "2021"
 description = "Hyperspace relayer interface for Parachains"
-authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <david.salami@gmail.com>"]
+authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <wizdave97@gmail.com>"]
 
 [build-dependencies]
 anyhow = "1.0.65"
@@ -86,7 +86,7 @@ derive_more = "0.99.17"
 sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 clap = {version = "3.2.0", features = ["derive"]}
 state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-prost = "0.10"
+prost = "0.11"
 primitives = { path = "../primitives", package = "hyperspace-primitives" }
 subxt-generated = { path = "../../utils/subxt/generated" }
 
