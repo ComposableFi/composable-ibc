@@ -16,7 +16,7 @@
 
 use crate::{
 	client_def::GrandpaClient,
-	client_message::{ClientMessage, GRANDPA_CLIENT_MESSAGE_TYPE_URL},
+	client_message::{ClientMessage, RelayChainHeader, GRANDPA_CLIENT_MESSAGE_TYPE_URL},
 	client_state::{ClientState, UpgradeOptions, GRANDPA_CLIENT_STATE_TYPE_URL},
 	consensus_state::{ConsensusState, GRANDPA_CONSENSUS_STATE_TYPE_URL},
 };
@@ -32,7 +32,7 @@ use ibc::{
 		client_def::MockClient,
 		client_state::{MockClientState, MockConsensusState},
 		context::HostBlockType,
-		header::MockClientMessage,
+		header::{MockClientMessage, MockHeader},
 		host::MockHostBlock,
 	},
 	prelude::*,
@@ -41,7 +41,10 @@ use ibc_derive::{ClientDef, ClientMessage, ClientState, ConsensusState, Protobuf
 use ibc_proto::google::protobuf::Any;
 use serde::{Deserialize, Serialize};
 use sp_core::ed25519;
-use sp_runtime::{app_crypto::RuntimePublic, traits::BlakeTwo256};
+use sp_runtime::{
+	app_crypto::RuntimePublic,
+	traits::{BlakeTwo256, Header},
+};
 use tendermint_proto::Protobuf;
 
 pub const MOCK_CLIENT_STATE_TYPE_URL: &str = "/ibc.mock.ClientState";
@@ -52,8 +55,18 @@ pub const MOCK_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.mock.ConsensusState";
 pub struct HostFunctionsManager;
 
 impl grandpa_client_primitives::HostFunctions for HostFunctionsManager {
+	type Header = RelayChainHeader;
+
 	fn ed25519_verify(sig: &ed25519::Signature, msg: &[u8], pub_key: &ed25519::Public) -> bool {
 		pub_key.verify(&msg, sig)
+	}
+
+	fn insert_relay_header_hashes(headers: &[<Self::Header as Header>::Hash]) {
+		unimplemented!()
+	}
+
+	fn contains_relay_header_hash(hash: <Self::Header as Header>::Hash) -> bool {
+		unimplemented!()
 	}
 }
 
