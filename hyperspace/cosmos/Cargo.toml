@@ -37,7 +37,6 @@ tendermint-rpc   = { workspace = true }
 tendermint-proto = { workspace = true }
 tendermint-light-client = { workspace = true }
 tendermint-light-client-verifier = { workspace = true }
-tendermint-verifier = { path = "../../algorithms/tendermint/verifier" }
 ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
 
 # Substrate

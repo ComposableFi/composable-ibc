@@ -1,1 +1,0 @@
-# Tendermint Light Client

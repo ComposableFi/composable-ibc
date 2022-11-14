@@ -3826,7 +3826,6 @@ dependencies = [
  "tendermint-light-client-verifier",
  "tendermint-proto",
  "tendermint-rpc",
- "tendermint-verifier",
  "thiserror",
  "tonic",
 ]
@@ -12978,23 +12977,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tendermint-primitives"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "derive_more",
- "ibc",
- "ibc-proto",
- "ics07-tendermint",
- "pallet-ibc",
- "tendermint",
- "tendermint-light-client",
- "tendermint-light-client-verifier",
- "tendermint-proto",
- "tendermint-rpc",
-]
-
-[[package]]
 name = "tendermint-proto"
 version = "0.24.0-pre.2"
 source = "git+https://github.com/composableFi/tendermint-rs?rev=5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8#5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
@@ -13058,23 +13040,6 @@ dependencies = [
  "tempfile",
  "tendermint",
  "time 0.3.16",
-]
-
-[[package]]
-name = "tendermint-verifier"
-version = "0.1.0"
-dependencies = [
- "futures-util",
- "ibc",
- "ibc-proto",
- "ics07-tendermint",
- "pallet-ibc",
- "tendermint",
- "tendermint-light-client",
- "tendermint-light-client-verifier",
- "tendermint-primitives",
- "tendermint-proto",
- "tendermint-rpc",
 ]
 
 [[package]]

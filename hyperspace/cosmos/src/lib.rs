@@ -63,7 +63,7 @@ use std::{str::FromStr, sync::Arc, time::Duration};
 use tendermint::block::Height as TmHeight;
 use tendermint::time::Time;
 use tendermint_rpc::{abci::Path as TendermintABCIPath, Client, HttpClient, Url, WebSocketClient};
-use tendermint_verifier::LightClient;
+
 // Implements the [`crate::Chain`] trait for cosmos.
 /// This is responsible for:
 /// 1. Tracking a cosmos light client on a counter-party chain, advancing this light
@@ -85,8 +85,6 @@ pub struct CosmosClient<H> {
 	pub client_id: Option<ClientId>,
 	/// Connection Id
 	pub connection_id: Option<ConnectionId>,
-	/// Light client to track the counterparty chain
-	pub light_client: LightClient,
 	/// Name of the key to use for signing
 	pub keybase: KeyEntry,
 	/// Account prefix
@@ -158,12 +156,6 @@ where
 			ClientId::new(config.client_id.unwrap().as_str(), 0)
 				.map_err(|e| Error::from(format!("Invalid client id {:?}", e)))?,
 		);
-		let light_client = LightClient::init_light_client(config.rpc_url).await.map_err(|e| {
-			Error::from(format!(
-				"Failed to initialize light client for chain {:?} with error {:?}",
-				config.name, e
-			))
-		})?;
 		let keybase = KeyEntry::new(&config.key_name, &chain_id)?;
 		let commitment_prefix = CommitmentPrefix::try_from(config.store_prefix.as_bytes().to_vec())
 			.map_err(|e| Error::from(format!("Invalid store prefix {:?}", e)))?;
@@ -176,7 +168,6 @@ where
 			websocket_url: config.websocket_url,
 			client_id,
 			connection_id: None,
-			light_client,
 			account_prefix: config.account_prefix,
 			commitment_prefix,
 			keybase,
