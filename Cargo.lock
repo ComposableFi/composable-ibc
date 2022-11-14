@@ -4241,13 +4241,13 @@ dependencies = [
 name = "ics10-grandpa-cw"
 version = "0.1.0"
 dependencies = [
- "cosmwasm-crypto",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-multi-test",
  "cw-storage-plus",
  "cw2",
+ "derive_more",
  "grandpa-light-client-primitives",
  "ibc",
  "ibc-derive",
@@ -4259,7 +4259,9 @@ dependencies = [
  "sha2 0.10.6",
  "sha3 0.10.6",
  "sp-core",
+ "sp-io",
  "sp-runtime",
+ "sp-runtime-interface",
  "sp-std",
  "thiserror",
 ]
@@ -14548,6 +14550,11 @@ dependencies = [
 ]
 
 [[patch.unused]]
+name = "wasmi-validation"
+version = "0.4.1"
+source = "git+https://github.com/ComposableFi/wasmi?rev=cd8c0c775a1d197a35ff3d5c7d6cded3d476411b#cd8c0c775a1d197a35ff3d5c7d6cded3d476411b"
+
+[[patch.unused]]
 name = "pallet-asset-tx-payment"
 version = "4.0.0-dev"
 source = "git+https://github.com/vmarkushin/substrate?rev=5fa7b0c735873441bbd25f2e22d27f19fa4c81d5#5fa7b0c735873441bbd25f2e22d27f19fa4c81d5"
@@ -14566,8 +14573,3 @@ source = "git+https://github.com/vmarkushin/substrate?rev=5fa7b0c735873441bbd25f
 name = "sc-consensus-manual-seal"
 version = "0.10.0-dev"
 source = "git+https://github.com/vmarkushin/substrate?rev=5fa7b0c735873441bbd25f2e22d27f19fa4c81d5#5fa7b0c735873441bbd25f2e22d27f19fa4c81d5"
-
-[[patch.unused]]
-name = "wasmi-validation"
-version = "0.4.1"
-source = "git+https://github.com/ComposableFi/wasmi?rev=cd8c0c775a1d197a35ff3d5c7d6cded3d476411b#cd8c0c775a1d197a35ff3d5c7d6cded3d476411b"
