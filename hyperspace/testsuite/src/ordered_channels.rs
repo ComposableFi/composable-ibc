@@ -15,35 +15,29 @@
 use crate::{assert_timeout_packet, timeout_future, StreamExt};
 use futures::future;
 use hyperspace_core::send_packet_relay::set_relay_status;
-use hyperspace_primitives::TestProvider;
+use hyperspace_primitives::{
+	utils::{create_channel, create_connection},
+	TestProvider,
+};
 use ibc::{
 	core::{
-		ics03_connection,
-		ics03_connection::{connection::Counterparty, msgs::conn_open_init::MsgConnectionOpenInit},
-		ics04_channel,
-		ics04_channel::{
-			channel,
-			channel::{ChannelEnd, Order, State},
-			msgs::chan_open_init::MsgChannelOpenInit,
-		},
+		ics04_channel::channel::{ChannelEnd, Order, State},
 		ics24_host::identifier::{ChannelId, ConnectionId, PortId},
 	},
 	events::IbcEvent,
-	tx_msg::Msg,
 };
-use ibc_proto::google::protobuf::Any;
 use pallet_ibc::Timeout;
 use std::{str::FromStr, time::Duration};
-use tendermint_proto::Protobuf;
 use tokio::task::JoinHandle;
 
-/// This will set up a connection and an ordered channel in-between the two chains.
-/// `connection_delay` should be in seconds.
-pub async fn setup_connection_and_ordered_channel<A, B>(
+/// This will set up a connection and an ordered channel in-between the two chains with the provided
+/// port and channel version
+async fn setup_connection_and_channel<A, B>(
 	chain_a: &A,
 	chain_b: &B,
-	connection_delay: u64,
-	connection_id: Option<ConnectionId>,
+	connection_delay: Duration,
+	port_id: PortId,
+	version: String,
 ) -> (JoinHandle<()>, ChannelId, ChannelId, ConnectionId)
 where
 	A: TestProvider,
@@ -61,113 +55,78 @@ where
 			.await
 			.unwrap()
 	});
-	// check if an open transfer channel exists
-	let ping_port = PortId::from_str("ping").unwrap();
-	let channels = chain_a.query_channels().await.unwrap();
-	if !channels.is_empty() {
-		for (channel_id, port_id) in channels {
-			let (latest_height, ..) = chain_a.latest_height_and_timestamp().await.unwrap();
-			if let Ok(channel_response) =
-				chain_a.query_channel_end(latest_height, channel_id, port_id.clone()).await
-			{
-				let channel_end = ChannelEnd::try_from(channel_response.channel.unwrap()).unwrap();
-				if channel_end.state == State::Open && port_id == ping_port {
-					return (
-						handle,
-						channel_id,
-						channel_end.counterparty().channel_id.unwrap().clone(),
-						channel_end.connection_hops[0].clone(),
-					)
-				}
+	// check if an open ping channel exists
+	let (latest_height, ..) = chain_a.latest_height_and_timestamp().await.unwrap();
+	let connections = chain_a
+		.query_connection_using_client(
+			latest_height.revision_height as u32,
+			chain_b.client_id().to_string(),
+		)
+		.await
+		.unwrap();
+
+	for connection in connections {
+		let connection_id = ConnectionId::from_str(&connection.id).unwrap();
+		let connection_end = chain_a
+			.query_connection_end(latest_height, connection_id.clone())
+			.await
+			.unwrap()
+			.connection
+			.unwrap();
+
+		let delay_period = Duration::from_nanos(connection_end.delay_period);
+
+		dbg!(&connection_delay);
+		dbg!(&delay_period);
+
+		if delay_period != connection_delay {
+			continue
+		}
+
+		let channels = chain_a
+			.query_connection_channels(latest_height, &connection_id)
+			.await
+			.unwrap()
+			.channels;
+
+		for channel in channels {
+			let channel_id = ChannelId::from_str(&channel.channel_id).unwrap();
+			let channel_end = chain_a
+				.query_channel_end(latest_height, channel_id, port_id.clone())
+				.await
+				.unwrap()
+				.channel
+				.unwrap();
+			let channel_end = ChannelEnd::try_from(channel_end).unwrap();
+
+			if channel_end.state == State::Open && channel.port_id == port_id.to_string() {
+				return (
+					handle,
+					channel_id,
+					channel_end.counterparty().channel_id.unwrap().clone(),
+					channel_end.connection_hops[0].clone(),
+				)
 			}
 		}
 	}
 
-	let connection_id = if connection_id.is_none() {
-		// Both clients have been updated, we can now start connection handshake
-		let msg = MsgConnectionOpenInit {
-			client_id: chain_a.client_id(),
-			counterparty: Counterparty::new(chain_b.client_id(), None, chain_b.connection_prefix()),
-			version: Some(ics03_connection::version::Version::default()),
-			delay_period: Duration::from_secs(connection_delay),
-			signer: chain_a.account_id(),
-		};
-		let msg = Any { type_url: msg.type_url(), value: msg.encode_vec() };
-		chain_a.submit(vec![msg]).await.expect("Connection creation failed");
+	let (connection_id, ..) = create_connection(chain_a, chain_b, connection_delay).await.unwrap();
 
-		log::info!(target: "hyperspace", "============= Wait till both chains have completed connection handshake =============");
+	log::info!(target: "hyperspace", "============ Connection handshake completed: ConnectionId({connection_id}) ============");
+	log::info!(target: "hyperspace", "=========================== Starting channel handshake ===========================");
 
-		// wait till both chains have completed connection handshake
-		let future = chain_b
-			.ibc_events()
+	let (channel_id_a, channel_id_b) =
+		create_channel(chain_a, chain_b, connection_id.clone(), port_id, version, Order::Ordered)
 			.await
-			.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmConnection(_))))
-			.take(1)
-			.collect::<Vec<_>>();
-
-		let mut events = timeout_future(
-			future,
-			10 * 60,
-			format!("Didn't see OpenConfirmConnection on {}", chain_b.name()),
-		)
-		.await;
-
-		let connection_id = match events.pop() {
-			Some(IbcEvent::OpenConfirmConnection(conn)) => conn.connection_id().unwrap().clone(),
-			got => panic!("Last event should be OpenConfirmConnection: {got:?}"),
-		};
-
-		log::info!(target: "hyperspace", "============ Connection handshake completed: ConnectionId({connection_id}) ============");
-		log::info!(target: "hyperspace", "=========================== Starting channel handshake ===========================");
-		connection_id
-	} else {
-		connection_id.unwrap()
-	};
-
-	let channel = ChannelEnd::new(
-		State::Init,
-		Order::Ordered,
-		channel::Counterparty::new(ping_port.clone(), None),
-		vec![connection_id.clone()],
-		ics04_channel::Version::new("ping-1".to_string()),
-	);
-
-	// open the transfer channel
-	let msg = MsgChannelOpenInit::new(ping_port, channel, chain_a.account_id());
-	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec() };
-
-	chain_a.submit(vec![msg]).await.expect("Connection creation failed");
-
-	// wait till both chains have completed channel handshake
-	log::info!(target: "hyperspace", "============= Wait till both chains have completed channel handshake =============");
-	let future = chain_b
-		.ibc_events()
-		.await
-		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmChannel(_))))
-		.take(1)
-		.collect::<Vec<_>>();
-
-	let mut events = timeout_future(
-		future,
-		10 * 60,
-		format!("Didn't see OpenConfirmChannel on {}", chain_b.name()),
-	)
-	.await;
-
-	let (channel_id, chain_b_channel_id) = match events.pop() {
-		Some(IbcEvent::OpenConfirmChannel(chan)) =>
-			(chan.counterparty_channel_id.unwrap(), chan.channel_id().unwrap().clone()),
-		got => panic!("Last event should be OpenConfirmConnection: {got:?}"),
-	};
-
+			.unwrap();
 	// channel handshake completed
-	log::info!(target: "hyperspace", "============ Channel handshake completed: ChannelId({channel_id}) ============");
+	log::info!(target: "hyperspace", "============ Channel handshake completed: ChannelId({channel_id_a}) ============");
 
-	(handle, channel_id, chain_b_channel_id, connection_id)
+	(handle, channel_id_a, channel_id_b, connection_id)
 }
 
 /// Send a ordered packets and assert acknowledgement
-pub async fn send_ordered_packets_and_assert_acknowledgement<A, B>(
+async fn send_ordered_packet_and_assert_acknowledgement<A, B>(
 	chain_a: &A,
 	chain_b: &B,
 	channel_id: ChannelId,
@@ -180,12 +139,18 @@ pub async fn send_ordered_packets_and_assert_acknowledgement<A, B>(
 	B::Error: From<A::Error>,
 {
 	chain_a
-		.send_ping(channel_id, Timeout::Offset { height: Some(100), timestamp: Some(60 * 60) })
+		.send_ordered_packet(
+			channel_id,
+			Timeout::Offset { height: Some(100), timestamp: Some(60 * 60) },
+		)
 		.await
 		.unwrap();
 
 	chain_a
-		.send_ping(channel_id, Timeout::Offset { height: Some(100), timestamp: Some(60 * 60) })
+		.send_ordered_packet(
+			channel_id,
+			Timeout::Offset { height: Some(100), timestamp: Some(60 * 60) },
+		)
 		.await
 		.unwrap();
 
@@ -204,7 +169,7 @@ pub async fn send_ordered_packets_and_assert_acknowledgement<A, B>(
 }
 
 /// Send a packet on an ordered channel and assert timeout
-pub async fn send_a_packet_on_ordered_channel_and_assert_timeout<A, B>(
+async fn send_ordered_packet_and_assert_timeout<A, B>(
 	chain_a: &A,
 	chain_b: &B,
 	channel_id: ChannelId,
@@ -221,7 +186,10 @@ pub async fn send_a_packet_on_ordered_channel_and_assert_timeout<A, B>(
 
 	let timestamp = 60 * 2;
 	chain_a
-		.send_ping(channel_id, Timeout::Offset { height: Some(200), timestamp: Some(timestamp) })
+		.send_ordered_packet(
+			channel_id,
+			Timeout::Offset { height: Some(200), timestamp: Some(timestamp) },
+		)
 		.await
 		.unwrap();
 	let timeout_timestamp = Duration::from_secs(timestamp).as_nanos() as u64;
@@ -253,4 +221,78 @@ pub async fn send_a_packet_on_ordered_channel_and_assert_timeout<A, B>(
 
 	assert_timeout_packet(chain_a).await;
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for ordered channel");
+}
+
+///
+pub async fn ibc_messaging_ordered_packet_with_connection_delay<A, B>(
+	chain_a: &mut A,
+	chain_b: &mut B,
+	port_id: PortId,
+	version: String,
+) where
+	A: TestProvider,
+	A::FinalityEvent: Send + Sync,
+	A::Error: From<B::Error>,
+	B: TestProvider,
+	B::FinalityEvent: Send + Sync,
+	B::Error: From<A::Error>,
+{
+	let (handle, channel_id, channel_b, _connection_id) = setup_connection_and_channel(
+		chain_a,
+		chain_b,
+		Duration::from_secs(60 * 2),
+		port_id.clone(),
+		version,
+	)
+	.await;
+	handle.abort();
+	// Set channel whitelist and restart relayer loop
+	chain_a.set_channel_whitelist(vec![(channel_id, port_id.clone())]);
+	chain_b.set_channel_whitelist(vec![(channel_b, port_id)]);
+	let client_a_clone = chain_a.clone();
+	let client_b_clone = chain_b.clone();
+	let handle = tokio::task::spawn(async move {
+		hyperspace_core::relay(client_a_clone, client_b_clone, None, None)
+			.await
+			.unwrap()
+	});
+	send_ordered_packet_and_assert_acknowledgement(chain_a, chain_b, channel_id).await;
+	handle.abort()
+}
+
+///
+pub async fn ibc_messaging_ordered_packet_timeout<A, B>(
+	chain_a: &mut A,
+	chain_b: &mut B,
+	port_id: PortId,
+	version: String,
+) where
+	A: TestProvider,
+	A::FinalityEvent: Send + Sync,
+	A::Error: From<B::Error>,
+	B: TestProvider,
+	B::FinalityEvent: Send + Sync,
+	B::Error: From<A::Error>,
+{
+	let (handle, channel_id, channel_b, _connection_id) = setup_connection_and_channel(
+		chain_a,
+		chain_b,
+		Duration::from_secs(60 * 2),
+		port_id.clone(),
+		version,
+	)
+	.await;
+	// Set channel whitelist and restart relayer loop
+	handle.abort();
+	chain_a.set_channel_whitelist(vec![(channel_id, port_id.clone())]);
+	chain_b.set_channel_whitelist(vec![(channel_b, port_id)]);
+	let client_a_clone = chain_a.clone();
+	let client_b_clone = chain_b.clone();
+	let handle = tokio::task::spawn(async move {
+		hyperspace_core::relay(client_a_clone, client_b_clone, None, None)
+			.await
+			.unwrap()
+	});
+	send_ordered_packet_and_assert_timeout(chain_a, chain_b, channel_id).await;
+	handle.abort()
 }

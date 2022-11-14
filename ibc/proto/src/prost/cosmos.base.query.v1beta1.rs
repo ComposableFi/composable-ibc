@@ -1,24 +1,10 @@
-// Copyright 2022 ComposableFi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 /// PageRequest is to be embedded in gRPC request messages for efficient
 /// pagination. Ex:
 ///
-///  message SomeRequest {
-///          Foo some_parameter = 1;
-///          PageRequest pagination = 2;
-///  }
+///   message SomeRequest {
+///           Foo some_parameter = 1;
+///           PageRequest pagination = 2;
+///   }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PageRequest {
@@ -51,10 +37,10 @@ pub struct PageRequest {
 /// PageResponse is to be embedded in gRPC response messages where the
 /// corresponding request message has used PageRequest.
 ///
-///  message SomeResponse {
-///          repeated Bar results = 1;
-///          PageResponse page = 2;
-///  }
+///   message SomeResponse {
+///           repeated Bar results = 1;
+///           PageResponse page = 2;
+///   }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PageResponse {

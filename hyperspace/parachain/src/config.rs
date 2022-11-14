@@ -24,6 +24,8 @@ pub type CustomExtrinsicParams<T> = <<T as subxt::Config>::ExtrinsicParams as Ex
 /// runtimes into the transactions signed by this crate.
 #[async_trait]
 pub trait Config: subxt::Config + Sized {
+	/// Asset Id type used by the parachain runtime
+	type AssetId: codec::Codec + serde::Serialize + Send + Sync + 'static;
 	/// use the subxt client to fetch any neccessary data needed for the extrinsic metadata.
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,
