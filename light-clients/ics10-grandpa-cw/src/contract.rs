@@ -149,4 +149,31 @@ pub fn query(_deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+	use super::*;
+	use cosmwasm_std::{
+		attr, coins,
+		testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
+		CosmosMsg,
+	};
+
+	#[test]
+	fn proper_initialization() {
+		let mut deps = mock_dependencies();
+
+		let msg = InstantiateMsg {};
+		let info = mock_info("creator", &coins(1, "BTC"));
+
+		// we can just call .unwrap() to assert this was a success
+		let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+		assert_eq!(0, res.messages.len());
+
+		// it worked, let's query the state
+		// let res = query_config(deps.as_ref()).unwrap();
+		// assert_eq!(100_000, res.expires);
+		// assert_eq!("creator", res.owner.as_str());
+		// assert_eq!("creator", res.creator.as_str());
+		// assert_eq!(coins(1, "BTC"), res.collateral);
+		// assert_eq!(coins(40, "ETH"), res.counter_offer);
+	}
+}

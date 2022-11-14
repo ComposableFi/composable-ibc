@@ -11,6 +11,7 @@ use ics10_grandpa::{
 	client_message::ClientMessage, client_state::ClientState, consensus_state::ConsensusState,
 };
 
+use ics23::ProofSpec;
 use std::str::FromStr;
 
 use crate::types::Height;
@@ -262,4 +263,12 @@ impl<H: Clone> TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUp
 			proof_upgrade_consensus_state: value.proof_upgrade_consensus_state,
 		})
 	}
+}
+
+pub struct WasmClientState {
+	data: Bytes,
+	code_id: Bytes,
+	latest_height: Height,
+	proof_specs: Vec<ProofSpec>,
+	repository: String,
 }
