@@ -41,7 +41,7 @@ mod query;
 /// Host functions that allow the light client verify cryptographic proofs in native.
 pub trait HostFunctionsProvider:
 	ics23::HostFunctionsProvider
-	+ tendermint_light_client_verifier::host_functions::HostFunctionsProvider
+	+ tendermint_light_client_verifier::host_functions::CryptoProvider
 	+ Debug
 	+ Clone
 	+ Send

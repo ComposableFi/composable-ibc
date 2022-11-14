@@ -1,17 +1,3 @@
-// Copyright 2022 ComposableFi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 /// SignatureDescriptors wraps multiple SignatureDescriptor's.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SignatureDescriptors {
@@ -107,4 +93,19 @@ pub enum SignMode {
     ///
     /// Since: cosmos-sdk 0.45.2
     Eip191 = 191,
+}
+impl SignMode {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            SignMode::Unspecified => "SIGN_MODE_UNSPECIFIED",
+            SignMode::Direct => "SIGN_MODE_DIRECT",
+            SignMode::Textual => "SIGN_MODE_TEXTUAL",
+            SignMode::LegacyAminoJson => "SIGN_MODE_LEGACY_AMINO_JSON",
+            SignMode::Eip191 => "SIGN_MODE_EIP_191",
+        }
+    }
 }

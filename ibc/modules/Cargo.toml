@@ -37,13 +37,13 @@ mocks = ["clock", "std", "sha2"]
 # Proto definitions for all IBC-related interfaces, e.g., connections or channels.
 ibc-proto = { version = "0.18.0", path = "../proto", default-features = false }
 derive = { path = "../derive", package = "ibc-derive" }
-ics23 = { git = "https://github.com/composablefi/ics23", rev = "b500a5c6068eb53c83c4c6c13bd9d8c25e0bf927", default-features = false }
+ics23 = { git = "https://github.com/confio/ics23", rev = "a4daeb4c24ce1be827829c0841446abc690c4f11", default-features = false }
 time = { version = "0.3", default-features = false }
 serde_derive = { version = "1.0.104", default-features = false }
 serde = { version = "1.0", default-features = false }
 serde_json = { version = "1", default-features = false }
 tracing = { version = "0.1.34", default-features = false }
-prost = { version = "0.10", default-features = false }
+prost = { version = "0.11", default-features = false }
 safe-regex = { version = "0.2.5", default-features = false }
 subtle-encoding = { version = "0.5", default-features = false }
 flex-error = { version = "0.4.4", default-features = false }

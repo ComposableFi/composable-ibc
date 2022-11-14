@@ -2,7 +2,7 @@
 name = "pallet-ibc-ping"
 edition = "2021"
 version = "0.0.1"
-authors = ["David Salami <david.salami@gmail.com>"]
+authors = ["David Salami <wizdave97@gmail.com>"]
 
 [dependencies]
 log = { version = "0.4.0", default-features = false }
