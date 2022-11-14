@@ -68,6 +68,7 @@ use ics11_beefy::{
 	consensus_state::ConsensusState as BeefyConsensusState,
 };
 use scale_info::prelude::{format, string::ToString};
+use sp_core::crypto::AccountId32;
 use sp_std::prelude::*;
 use tendermint::{block::signed_header::SignedHeader, validator::Set as ValidatorSet, Hash};
 use tendermint_proto::Protobuf;
@@ -723,6 +724,7 @@ pub fn create_chan_close_confirm() -> (ConsensusState, MsgChannelCloseConfirm) {
 pub fn create_recv_packet<T: Config + Send + Sync>(data: Vec<u8>) -> (ConsensusState, MsgRecvPacket)
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
 	let packet = Packet {
@@ -791,6 +793,7 @@ pub fn create_ack_packet<T: Config + Send + Sync>(
 ) -> (ConsensusState, MsgAcknowledgement)
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
 	let packet = Packet {
@@ -858,6 +861,7 @@ where
 pub fn create_timeout_packet<T: Config + Send + Sync>(data: Vec<u8>) -> (ConsensusState, MsgTimeout)
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
 	let packet = Packet {
