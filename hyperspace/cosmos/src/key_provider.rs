@@ -8,12 +8,8 @@ use bitcoin::{
 use ibc::core::ics24_host::identifier::ChainId;
 use primitives::KeyProvider;
 use serde::{Deserialize, Serialize};
-use std::{path::Path, str::FromStr};
+use std::{path::PathBuf, str::FromStr};
 use tendermint::account::Id as AccountId;
-
-pub const KEYSTORE_DEFAULT_FOLDER: &str = ".hermes/keys/";  //TODO: Should be adjusted to the correct path later
-pub const KEYSTORE_DISK_BACKEND: &str = "keyring-test";
-pub const KEYSTORE_FILE_EXTENSION: &str = "json";
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KeyEntry {
@@ -23,7 +19,7 @@ pub struct KeyEntry {
 	/// Private key
 	pub private_key: ExtendedPrivKey,
 
-	/// Account Bech32 format - TODO allow hrp
+	/// Account Bech32 format
 	pub account: String,
 
 	/// Address
@@ -31,24 +27,25 @@ pub struct KeyEntry {
 }
 
 impl KeyEntry {
-	pub fn new(key_name: &str, chain_id: &ChainId) -> Result<KeyEntry, Error> {
-		let home = dirs_next::home_dir().unwrap();
-		let keys_folder = Path::new(home.as_path())
-			.join(KEYSTORE_DEFAULT_FOLDER)
-			.join(chain_id.as_str())
-			.join(KEYSTORE_DISK_BACKEND);
-		let mut key_file = keys_folder.join(key_name);
-		key_file.set_extension(KEYSTORE_FILE_EXTENSION);
+	pub fn new(
+		public_key: ExtendedPubKey,
+		private_key: ExtendedPrivKey,
+		account: String,
+		address: Vec<u8>,
+	) -> Self {
+		Self { public_key, private_key, account, address }
+	}
 
-		if !key_file.as_path().exists() {
-			return Err(Error::from(format!("Key file {} does not exist", key_file.display())));
+	pub fn from_file(path: PathBuf) -> Result<KeyEntry, Error> {
+		if !path.as_path().exists() {
+			return Err(Error::from(format!("Key file {} does not exist", path.display())));
 		}
 
-		let file = std::fs::File::open(&key_file)
-			.map_err(|e| Error::from(format!("Could not open key file {}", e)))?;
+		let file = std::fs::File::open(&path)
+			.map_err(|e| Error::from(format!("Could not open key file {:?}", e)))?;
 
 		let key_entry = serde_json::from_reader(file)
-			.map_err(|e| Error::from(format!("Could not deserialize key file {}", e)))?;
+			.map_err(|e| Error::from(format!("Could not deserialize key file {:?}", e)))?;
 
 		Ok(key_entry)
 	}

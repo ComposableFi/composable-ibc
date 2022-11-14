@@ -1,12 +1,12 @@
 use hyperspace_core::logging;
-use hyperspace_cosmos::{CosmosClient, CosmosClientConfig};
+use hyperspace_cosmos::{key_provider::KeyEntry, CosmosClient, CosmosClientConfig};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
 	ibc_messaging_packet_timeout_on_channel_close,
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay,
 };
-use std::str::FromStr;
+use std::{path::PathBuf, str::FromStr};
 use tendermint_rpc::Url;
 
 async fn setup_clients<H: Clone + Send + Sync + 'static>() -> (CosmosClient<H>, CosmosClient<H>) {
@@ -24,7 +24,10 @@ async fn setup_clients<H: Clone + Send + Sync + 'static>() -> (CosmosClient<H>, 
 		connection_id: None,
 		account_prefix: "cosmos".to_string(),
 		store_prefix: "ibc".to_string(),
-		key_name: "wallet".to_string(),
+		keybase: KeyEntry::from_file(
+			PathBuf::from_str("keys/ibc-0/keyring-test/wallet.json").unwrap(),
+		)
+		.unwrap(),
 	};
 
 	let config_b = CosmosClientConfig {
@@ -37,7 +40,10 @@ async fn setup_clients<H: Clone + Send + Sync + 'static>() -> (CosmosClient<H>, 
 		connection_id: None,
 		account_prefix: "cosmos".to_string(),
 		store_prefix: "ibc".to_string(),
-		key_name: "wallet".to_string(),
+		keybase: KeyEntry::from_file(
+			PathBuf::from_str("keys/ibc-1/keyring-test/wallet.json").unwrap(),
+		)
+		.unwrap(),
 	};
 
 	let mut chain_a = CosmosClient::<H>::new(config_a).await.unwrap();

@@ -85,7 +85,7 @@ pub struct CosmosClient<H> {
 	pub client_id: Option<ClientId>,
 	/// Connection Id
 	pub connection_id: Option<ConnectionId>,
-	/// Name of the key to use for signing
+	/// The key that signs transactions
 	pub keybase: KeyEntry,
 	/// Account prefix
 	pub account_prefix: String,
@@ -117,8 +117,8 @@ pub struct CosmosClientConfig {
 	pub account_prefix: String,
 	/// Store prefix
 	pub store_prefix: String,
-	/// Name of the key that signs transactions
-	pub key_name: String,
+	/// The key that signs transactions
+	pub keybase: KeyEntry,
 	/*
 	Here is a list of dropped configuration parameters from Hermes Config.toml
 	that could be set to default values or removed for the MVP phase:
@@ -156,7 +156,6 @@ where
 			ClientId::new(config.client_id.unwrap().as_str(), 0)
 				.map_err(|e| Error::from(format!("Invalid client id {:?}", e)))?,
 		);
-		let keybase = KeyEntry::new(&config.key_name, &chain_id)?;
 		let commitment_prefix = CommitmentPrefix::try_from(config.store_prefix.as_bytes().to_vec())
 			.map_err(|e| Error::from(format!("Invalid store prefix {:?}", e)))?;
 
@@ -170,7 +169,7 @@ where
 			connection_id: None,
 			account_prefix: config.account_prefix,
 			commitment_prefix,
-			keybase,
+			keybase: config.keybase,
 			channel_whitelist: vec![],
 			_phantom: std::marker::PhantomData,
 		})
