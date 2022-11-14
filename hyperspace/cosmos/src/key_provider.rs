@@ -38,7 +38,7 @@ impl KeyEntry {
 
 	pub fn from_file(path: PathBuf) -> Result<KeyEntry, Error> {
 		if !path.as_path().exists() {
-			return Err(Error::from(format!("Key file {} does not exist", path.display())));
+			return Err(Error::from(format!("Key file {} does not exist", path.display())))
 		}
 
 		let file = std::fs::File::open(&path)

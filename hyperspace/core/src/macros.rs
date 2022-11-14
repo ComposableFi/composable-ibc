@@ -65,8 +65,9 @@ macro_rules! process_finality_event {
 						);
 						continue
 					},
-					(false, _, true) =>
-						log::info!("Sending mandatory client update message for {}", $source.name()),
+					(false, _, true) => {
+						log::info!("Sending mandatory client update message for {}", $source.name())
+					},
 					_ => log::info!(
 						"Received finalized events from: {} {event_types:#?}",
 						$source.name()

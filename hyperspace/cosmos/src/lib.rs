@@ -60,8 +60,7 @@ use primitives::{IbcProvider, KeyProvider};
 use prost::Message;
 use serde::Deserialize;
 use std::{str::FromStr, sync::Arc, time::Duration};
-use tendermint::block::Height as TmHeight;
-use tendermint::time::Time;
+use tendermint::{block::Height as TmHeight, time::Time};
 use tendermint_rpc::{abci::Path as TendermintABCIPath, Client, HttpClient, Url, WebSocketClient};
 
 // Implements the [`crate::Chain`] trait for cosmos.

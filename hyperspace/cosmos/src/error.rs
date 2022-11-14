@@ -11,7 +11,6 @@ pub enum Error {
 	/// Custom error
 	#[error("{0}")]
 	Custom(String),
-
 }
 
 impl From<String> for Error {

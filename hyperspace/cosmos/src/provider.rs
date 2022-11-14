@@ -46,9 +46,7 @@ use primitives::{Chain, IbcProvider, UpdateType};
 use sp_core::H256;
 use std::pin::Pin;
 use tendermint::block::Height as TmHeight;
-use tendermint_rpc::endpoint::tx::Response;
-use tendermint_rpc::query::Query;
-use tendermint_rpc::{Client, Order};
+use tendermint_rpc::{endpoint::tx::Response, query::Query, Client, Order};
 use tonic::transport::Channel;
 
 #[async_trait::async_trait]
@@ -313,12 +311,11 @@ where
 			.await
 			.map_err(|e| Error::from(format!("Failed to query tx hash: {:?}", e)))?;
 		match response.txs.into_iter().next() {
-			None => {
+			None =>
 				return Err(Error::from(format!(
 					"Failed to find tx hash: {:?}",
 					tx_hash.to_string()
-				)))
-			},
+				))),
 			Some(resp) => resp,
 		};
 
