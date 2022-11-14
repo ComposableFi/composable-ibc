@@ -1,5 +1,4 @@
 use super::{error::Error, CosmosClient};
-use crate::finality_protocol::FinalityProtocol;
 use futures::Stream;
 use ibc_proto::{
 	cosmos::tx::v1beta1::{
