@@ -87,7 +87,12 @@ construct_runtime!(
 
 ### Packet and Acknowledgement Storage
 
-In this iteration of the pallet, packets and acknowledgements are stored on chain, but eventually the goal is to store them offchain using the indexing API
+Packets are stored offchain using the indexing API.  
+**Note**: This pallet requires the **offchain indexing API** to be enabled when running the node.  
+If not enabled the following rpc interfaces will return incomplete data.  
+- `query_send_packets`
+- `query_recv_packets`
+- `query_events`
 
 ### ICS20 implementation
 
