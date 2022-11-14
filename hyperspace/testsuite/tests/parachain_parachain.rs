@@ -65,6 +65,7 @@ pub enum DefaultConfig {}
 
 #[async_trait]
 impl config::Config for DefaultConfig {
+	type AssetId = u128;
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,
 	) -> Result<CustomExtrinsicParams<Self>, Error> {

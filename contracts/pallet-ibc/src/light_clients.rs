@@ -63,26 +63,26 @@ impl ics23::HostFunctionsProvider for HostFunctionsManager {
 	}
 }
 
-impl tendermint_light_client_verifier::host_functions::HostFunctionsProvider
-	for HostFunctionsManager
-{
+impl tendermint_light_client_verifier::host_functions::CryptoProvider for HostFunctionsManager {
 	fn sha2_256(message: &[u8]) -> [u8; 32] {
 		sp_io::hashing::sha2_256(message)
 	}
 
-	fn ed25519_verify(signature: &[u8], msg: &[u8], pubkey: &[u8]) -> bool {
+	fn ed25519_verify(signature: &[u8], msg: &[u8], pubkey: &[u8]) -> Result<(), ()> {
 		if let Some((signature, public_key)) =
 			ed25519::Signature::from_slice(signature).and_then(|sig| {
 				let public = sp_core::ed25519::Public::try_from(pubkey).ok()?;
 				Some((sig, public))
 			}) {
 			sp_io::crypto::ed25519_verify(&signature, msg, &public_key)
+				.then(|| ())
+				.ok_or(())
 		} else {
-			false
+			Err(())
 		}
 	}
 
-	fn secp256k1_verify(_: &[u8], _: &[u8], _: &[u8]) -> bool {
+	fn secp256k1_verify(_: &[u8], _: &[u8], _: &[u8]) -> Result<(), ()> {
 		unimplemented!()
 	}
 }

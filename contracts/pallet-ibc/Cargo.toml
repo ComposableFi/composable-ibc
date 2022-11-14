@@ -3,7 +3,7 @@ edition = "2021"
 homepage = "https://composable.finance"
 name = "pallet-ibc"
 version = "0.0.1"
-authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <david.salami@gmail.com>"]
+authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <wizdave97@gmail.com>"]
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -30,9 +30,10 @@ sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 cumulus-primitives-core  = { default-features = false, git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.27" }
 # ibc
 ibc-proto = { path = "../../ibc/proto", default-features = false }
-tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8", optional = true, default-features = false } # cannot be defined as optional in workspace
+tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", optional = true, default-features = false } # cannot be defined as optional in workspace
 tendermint-proto = { workspace = true }
-ics23 = { git = "https://github.com/composablefi/ics23", rev = "b500a5c6068eb53c83c4c6c13bd9d8c25e0bf927", default-features = false }
+ics23 = { git = "https://github.com/confio/ics23", rev = "a4daeb4c24ce1be827829c0841446abc690c4f11", default-features = false }
+
 grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../algorithms/grandpa/primitives", default-features = false }
 beefy-client-primitives = { package = "beefy-light-client-primitives", path = "../../algorithms/beefy/primitives", default-features = false }
 light-client-common = { path = "../../light-clients/common", default-features = false }
@@ -46,11 +47,11 @@ ibc-primitives = { path = "primitives", default-features = false }
 # optional
 hex = { version = "0.4.3", default-features = false, optional = true }
 hex-literal = { version = "0.3.4", default-features = false, optional = true }
-prost = { version = "0.10", default-features = false, optional = true }
+prost = { version = "0.11", default-features = false, optional = true }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, optional = true }
 pallet-ibc-ping = { path = "ping", default-features = false, optional = true }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, optional = true }
-simple-iavl = { git = "https://github.com/ComposableFi/simple-avl", rev = "452a1126bfb8a861354b413755ac3c8fda3da4ec", default-features = false, optional = true }
+simple-iavl = { path = "simple-iavl", default-features = false, optional = true }
 
 [dependencies.ibc]
 path = "../../ibc/modules"
@@ -68,7 +69,7 @@ default-features = false
 
 [dependencies.tendermint-light-client-verifier]
 git = "https://github.com/composableFi/tendermint-rs"
-rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8"
+rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0"
 default-features = false
 
 [dev-dependencies]
@@ -78,9 +79,9 @@ hex-literal = { version = "0.3.4" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "377213f750755cc48e80a3131eaae63b5eda8362" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "377213f750755cc48e80a3131eaae63b5eda8362" }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-prost = { version = "0.10" }
+prost = { version = "0.11" }
 serde = { version = "1.0" }
-simple-iavl = { git = "https://github.com/ComposableFi/simple-avl", rev = "452a1126bfb8a861354b413755ac3c8fda3da4ec" }
+simple-iavl = { path = "simple-iavl" }
 sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 tendermint = { workspace = true }
 balances = { package = "pallet-balances", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }

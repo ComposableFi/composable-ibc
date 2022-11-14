@@ -38,9 +38,6 @@ use sp_runtime::{
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr};
 use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip};
 
-// Temp fix
-type AssetId = u128;
-
 impl<T: config::Config + Send + Sync> ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
@@ -73,7 +70,7 @@ where
 
 		// Query newly created client Id
 		let identified_client_state =
-			IbcApiClient::<u32, H256, AssetId>::query_newly_created_client(
+			IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_newly_created_client(
 				&*self.para_ws_client,
 				block_hash.into(),
 				ext_hash.into(),
@@ -199,7 +196,11 @@ where
 		Ok(())
 	}
 
-	async fn send_ping(&self, channel_id: ChannelId, timeout: Timeout) -> Result<(), Self::Error> {
+	async fn send_ordered_packet(
+		&self,
+		channel_id: ChannelId,
+		timeout: Timeout,
+	) -> Result<(), Self::Error> {
 		let (timeout_height, timestamp) = match timeout {
 			Timeout::Offset { timestamp, height } => (height.unwrap(), timestamp.unwrap()),
 			_ => panic!("Only offset timeouts allowed"),
