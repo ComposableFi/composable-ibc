@@ -34,10 +34,6 @@ where
 		&self,
 	) -> Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>> {
 		todo!()
-			FinalityProtocol::Tendermint => {
-				todo!()
-			},
-		}
 	}
 
 	async fn submit(
