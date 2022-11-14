@@ -40,7 +40,6 @@ subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab2
 # We need this so the tests run sequentially
 [[test]]
 name = "parachain_parachain"
-feature = ["hyperspace-parachain"]
 
 # [[test]]
 # name = "cosmos_cosmos"
