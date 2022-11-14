@@ -34,7 +34,7 @@ where
 	async fn finality_notifications(
 		&self,
 	) -> Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>> {
-		match self.finality_protocol {
+		todo!()
 			FinalityProtocol::Tendermint => {
 				todo!()
 			},
