@@ -1,5 +1,7 @@
 module-hyperspace=hyperspace
-composable_centauri_image="composablefi/composable-centauri:latest"
+composable_centauri_image="composablefi/composable-centauri"
+composable_centauri_image_latest="composablefi/composable-centauri:latest"
+composable_centauri_image_with_commit_hash = "${composable_centauri_image}:${GITHUB_SHA}"
 hyperspace_image="composablefi/hyperspace:latest"
 
 .PHONY: run-setup-hyperspace stop-setup-hyperspace build-release-hyperspace tests-hyperspace
@@ -27,7 +29,8 @@ build-docker-image-hyperspace:
 	docker build -f scripts/hyperspace.Dockerfile -t "${hyperspace_image}" .
 
 publish-docker-image-hyperspace:
-	docker push "${hyperspace_image}"
+	docker push "${composable_centauri_image_with_commit_hash}"
+	docker push "${composable_centauri_image_latest}"
 
 tests-hyperspace: 
 	make --ignore-errors stop-setup-hyperspace
