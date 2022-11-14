@@ -15,7 +15,6 @@
 
 pub mod chain;
 pub mod error;
-pub mod finality_protocol;
 pub mod key_provider;
 pub mod provider;
 
@@ -97,7 +96,6 @@ pub struct CosmosClient<H> {
 	/// Channels cleared for packet relay
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 	/// Finality protocol to use, eg Tenderminet
-	pub finality_protocol: finality_protocol::FinalityProtocol,
 	pub _phantom: std::marker::PhantomData<H>,
 }
 /// config options for [`ParachainClient`]
@@ -183,7 +181,6 @@ where
 			commitment_prefix,
 			keybase,
 			channel_whitelist: vec![],
-			finality_protocol: finality_protocol::FinalityProtocol::Tendermint,
 			_phantom: std::marker::PhantomData,
 		})
 	}

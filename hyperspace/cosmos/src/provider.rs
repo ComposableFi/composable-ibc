@@ -67,10 +67,7 @@ where
 	where
 		C: Chain,
 	{
-		self.finality_protocol
-			.clone()
-			.query_latest_ibc_events(self, finality_event, counterparty)
-			.await
+		todo!()
 	}
 
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>> {
