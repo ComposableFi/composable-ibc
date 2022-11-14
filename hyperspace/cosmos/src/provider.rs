@@ -301,37 +301,25 @@ where
 		tx_hash: sp_core::H256,
 		_block_hash: Option<sp_core::H256>,
 	) -> Result<ClientId, Self::Error> {
-		
-		const WAIT_BACKOFF: Duration = Duration::from_millis(300);
-		const TIME_OUT: Duration = Duration::from_millis(30000);
-		let start_time = std::time::Instant::now();
-
-		let response: Response = loop {
-			let response = self
-				.rpc_client
-				.tx_search(
-					Query::eq("tx.hash", tx_hash.to_string()),
-					false,
-					1,
-					1, // get only the first Tx matching the query
-					Order::Ascending,
-				)
-				.await
-				.map_err(|e| Error::from(format!("Failed to query tx hash: {}", e)))?;
-			match response.txs.into_iter().next() {
-				None => {
-					let elapsed = start_time.elapsed();
-					if &elapsed > &TIME_OUT {
-						return Err(Error::from(format!(
-							"Timeout waiting for tx {:?} to be included in a block",
-							tx_hash
-						)));
-					} else {
-						std::thread::sleep(WAIT_BACKOFF);
-					}
-				},
-				Some(resp) => break resp,
-			}
+		let response = self
+			.rpc_client
+			.tx_search(
+				Query::eq("tx.hash", tx_hash.to_string()),
+				false,
+				1,
+				1, // get only the first Tx matching the query
+				Order::Ascending,
+			)
+			.await
+			.map_err(|e| Error::from(format!("Failed to query tx hash: {:?}", e)))?;
+		match response.txs.into_iter().next() {
+			None => {
+				return Err(Error::from(format!(
+					"Failed to find tx hash: {:?}",
+					tx_hash.to_string()
+				)))
+			},
+			Some(resp) => resp,
 		};
 
 		// let height =
