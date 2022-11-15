@@ -29,6 +29,9 @@ workspace = true
 [dependencies.tendermint-proto]
 workspace = true
 
+[dependencies.tendermint-rpc]
+workspace = true
+
 [dependencies.tendermint-light-client-verifier]
 workspace = true
 

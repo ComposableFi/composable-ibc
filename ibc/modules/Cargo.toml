@@ -60,6 +60,9 @@ workspace = true
 [dependencies.tendermint-proto]
 workspace = true
 
+[dependencies.tendermint-rpc]
+workspace = true
+
 [dev-dependencies]
 env_logger = "0.9.0"
 tracing-subscriber = { version = "0.3.11", features = ["fmt", "env-filter", "json"]}

@@ -1,5 +1,4 @@
 use super::{error::Error, CosmosClient};
-use crate::finality_protocol::{FinalityEvent, FinalityProtocol};
 use core::{
 	convert::{TryFrom, TryInto},
 	future::Future,
@@ -39,7 +38,8 @@ use ibc_proto::{
 };
 use ibc_rpc::PacketInfo;
 use ics07_tendermint::{
-	client_state::ClientState as TmClientState, consensus_state::ConsensusState as TmConsensusState,
+	client_message::Header, client_state::ClientState as TmClientState,
+	consensus_state::ConsensusState as TmConsensusState, events::try_from_tx,
 };
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use primitives::{Chain, IbcProvider, UpdateType};
@@ -48,6 +48,10 @@ use std::pin::Pin;
 use tendermint::block::Height as TmHeight;
 use tendermint_rpc::{endpoint::tx::Response, query::Query, Client, Order};
 use tonic::transport::Channel;
+
+pub enum FinalityEvent {
+	Tendermint(Header),
+}
 
 #[async_trait::async_trait]
 impl<H> IbcProvider for CosmosClient<H>
@@ -331,11 +335,7 @@ where
 			let result = deliver_tx_result
 				.events
 				.iter()
-				.flat_map(|event| {
-					client_extract_attributes_from_tx(&event)
-						.map(client_events::CreateClient)
-						.into_iter()
-				})
+				.flat_map(|event| try_from_tx(event))
 				.collect::<Vec<_>>();
 			if result.clone().len() != 1 {
 				Err(Error::from(format!(
