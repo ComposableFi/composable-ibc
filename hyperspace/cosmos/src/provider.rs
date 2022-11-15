@@ -302,12 +302,11 @@ where
 			.await
 			.map_err(|e| Error::from(format!("Failed to query tx hash: {:?}", e)))?;
 		let response = match response_vec.txs.into_iter().next() {
-			None => {
+			None =>
 				return Err(Error::from(format!(
 					"Failed to find tx hash: {:?}",
 					tx_id.hash.to_string()
-				)))
-			},
+				))),
 			Some(resp) => resp,
 		};
 

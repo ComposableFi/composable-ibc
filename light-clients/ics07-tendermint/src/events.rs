@@ -11,20 +11,22 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use ibc::core::ics02_client::height::Height;
-use ibc::core::{
-	ics02_client::{
-		error::Error as ClientError,
-		events::{
-			Attributes, ClientMisbehaviour, CreateClient, UpdateClient, UpgradeClient,
-			CLIENT_ID_ATTRIBUTE_KEY, CLIENT_TYPE_ATTRIBUTE_KEY, CONSENSUS_HEIGHT_ATTRIBUTE_KEY,
-			HEIGHT_ATTRIBUTE_KEY,
+use ibc::{
+	core::{
+		ics02_client::{
+			error::Error as ClientError,
+			events::{
+				Attributes, ClientMisbehaviour, CreateClient, UpdateClient, UpgradeClient,
+				CLIENT_ID_ATTRIBUTE_KEY, CLIENT_TYPE_ATTRIBUTE_KEY, CONSENSUS_HEIGHT_ATTRIBUTE_KEY,
+				HEIGHT_ATTRIBUTE_KEY,
+			},
+			height::Height,
 		},
+		ics03_connection::events::{self as ConnectionEvents},
+		ics04_channel::events::{self as ChannelEvents},
 	},
-	ics03_connection::events::{self as ConnectionEvents},
-	ics04_channel::events::{self as ChannelEvents},
+	prelude::*,
 };
-use ibc::prelude::*;
 
 use ibc::events::{IbcEvent, IbcEventType};
 use tendermint_rpc::abci::Event as AbciEvent;
@@ -56,9 +58,8 @@ impl TryFrom<IbcEvent> for AbciEvent {
 			IbcEvent::TimeoutPacket(event) => event.try_into().map_err(Error::channel)?,
 			IbcEvent::TimeoutOnClosePacket(event) => event.try_into().map_err(Error::channel)?,
 			IbcEvent::AppModule(event) => event.try_into()?,
-			IbcEvent::NewBlock(_) | IbcEvent::Empty(_) | IbcEvent::ChainError(_) => {
-				return Err(Error::incorrect_event_type(event.to_string()))
-			},
+			IbcEvent::NewBlock(_) | IbcEvent::Empty(_) | IbcEvent::ChainError(_) =>
+				return Err(Error::incorrect_event_type(event.to_string())),
 		})
 	}
 }
@@ -72,7 +73,7 @@ pub fn try_from_tx(event: &AbciEvent) -> Option<IbcEvent> {
 		Ok(IbcEventType::UpdateClient) => match extract_attributes_from_tx(event) {
 			Ok(attributes) => Some(IbcEvent::UpdateClient(UpdateClient {
 				common: attributes,
-				header: extract_header_from_tx(event)
+				header: extract_header_from_tx(event),
 			})),
 			Err(_) => None,
 		},
@@ -95,24 +96,20 @@ fn extract_attributes_from_tx(event: &AbciEvent) -> Result<Attributes, ClientErr
 		let key = tag.key.as_ref();
 		let value = tag.value.as_ref();
 		match key {
-			HEIGHT_ATTRIBUTE_KEY => {
+			HEIGHT_ATTRIBUTE_KEY =>
 				attr.height = value
 					.parse()
-					.map_err(|e| ClientError::invalid_string_as_height(value.to_string(), e))?
-			},
-			CLIENT_ID_ATTRIBUTE_KEY => {
-				attr.client_id = value.parse().map_err(ClientError::invalid_client_identifier)?
-			},
-			CLIENT_TYPE_ATTRIBUTE_KEY => {
+					.map_err(|e| ClientError::invalid_string_as_height(value.to_string(), e))?,
+			CLIENT_ID_ATTRIBUTE_KEY =>
+				attr.client_id = value.parse().map_err(ClientError::invalid_client_identifier)?,
+			CLIENT_TYPE_ATTRIBUTE_KEY =>
 				attr.client_type = value
 					.parse()
-					.map_err(|_| ClientError::unknown_client_type(value.to_string()))?
-			},
-			CONSENSUS_HEIGHT_ATTRIBUTE_KEY => {
+					.map_err(|_| ClientError::unknown_client_type(value.to_string()))?,
+			CONSENSUS_HEIGHT_ATTRIBUTE_KEY =>
 				attr.consensus_height = value
 					.parse()
-					.map_err(|e| ClientError::invalid_string_as_height(value.to_string(), e))?
-			},
+					.map_err(|e| ClientError::invalid_string_as_height(value.to_string(), e))?,
 			_ => {},
 		}
 	}
@@ -125,7 +122,7 @@ pub fn extract_header_from_tx(event: &AbciEvent) -> Option<Vec<u8>> {
 		let key = tag.key.as_ref();
 		let value = tag.value.as_ref();
 		if key == "header" {
-			return Some(value.as_bytes().to_vec());
+			return Some(value.as_bytes().to_vec())
 		}
 	}
 	None

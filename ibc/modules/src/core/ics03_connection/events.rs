@@ -15,7 +15,7 @@
 //! Types for the IBC events emitted from Tendermint Websocket by the connection module.
 
 use serde_derive::{Deserialize, Serialize};
-use tendermint_rpc::abci::{Event as AbciEvent, tag::Tag};
+use tendermint_rpc::abci::{tag::Tag, Event as AbciEvent};
 
 use crate::{
 	core::{
