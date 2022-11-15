@@ -54,7 +54,7 @@ light-client-common = { path = "../../light-clients/common", default-features = 
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, features = ["disable_panic_handler", "disable_oom"] }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, features = ["disable_panic_handler", "disable_oom", "disable_allocator"] }
 sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, features = [] }
 
 [dev-dependencies]
@@ -66,14 +66,4 @@ backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
 default = ["std"]
-std = [
-  "ibc/std",
-  "ics10-grandpa/std",
-  "grandpa-light-client-primitives/std",
-  "light-client-common/std",
-  "sp-core/std",
-  "sp-runtime/std",
-  "sp-std/std",
-  "sp-io/std",
-  "sp-runtime-interface/std",
-]
+std = []

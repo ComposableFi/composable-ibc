@@ -16,11 +16,65 @@ use std::str::FromStr;
 
 use crate::types::Height;
 
+pub struct WasmClientState {
+	pub data: Bytes,
+	pub code_id: String,
+	pub latest_height: Height,
+	pub proof_specs: Vec<ProofSpec>,
+	pub repository: String,
+}
+
+pub struct WasmConsensusState {
+	pub data: Bytes,
+	pub code_id: String,
+	pub timestamp: u64,
+	pub root: Bytes,
+}
+
 #[cw_serde]
-pub struct InstantiateMsg {}
+pub struct WasmClientStateRef {
+	pub code_id: String,
+}
+
+#[cw_serde]
+pub struct WasmConsensusStateRef {
+	pub code_id: String,
+}
+
+#[cw_serde]
+pub struct ContractResult {
+	pub is_valid: bool,
+	pub error_msg: String,
+}
+
+#[cw_serde]
+pub struct ClientStateCallResponse {
+	pub me: WasmClientStateRef,
+	pub new_consensus_state: WasmConsensusStateRef,
+	pub new_client_state: WasmClientStateRef,
+	pub result: ContractResult,
+}
+
+#[cw_serde]
+pub struct InitializeState {
+	pub me: WasmClientStateRef,
+	pub consensus_state: WasmConsensusStateRef,
+}
+
+#[cw_serde]
+pub struct InstantiateMsg {
+	initialize_state: InitializeState,
+}
+
+#[cw_serde]
+pub struct ClientCreateRequest {
+	client_create_request: WasmConsensusStateRef,
+}
 
 #[cw_serde]
 pub enum ExecuteMsg {
+	InitializeState { me: WasmClientStateRef, consensus_state: WasmConsensusStateRef },
+	ClientCreateRequest { code_id: String },
 	ValidateMsg(ValidateMsg),
 	StatusMsg(StatusMsg),
 	ExportedMetadataMsg(ExportedMetadataMsg),
@@ -263,12 +317,4 @@ impl<H: Clone> TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUp
 			proof_upgrade_consensus_state: value.proof_upgrade_consensus_state,
 		})
 	}
-}
-
-pub struct WasmClientState {
-	data: Bytes,
-	code_id: Bytes,
-	latest_height: Height,
-	proof_specs: Vec<ProofSpec>,
-	repository: String,
 }

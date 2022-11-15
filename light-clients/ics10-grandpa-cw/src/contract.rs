@@ -2,15 +2,17 @@ use crate::{
 	context::Context,
 	error::ContractError,
 	msg::{
-		CheckForMisbehaviourMsg, ExecuteMsg, InstantiateMsg, QueryMsg, UpdateStateMsg,
-		UpdateStateOnMisbehaviourMsg, VerifyClientMessage, VerifyMembershipMsg,
-		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
+		CheckForMisbehaviourMsg, ClientStateCallResponse, ContractResult, ExecuteMsg,
+		InstantiateMsg, QueryMsg, UpdateStateMsg, UpdateStateOnMisbehaviourMsg,
+		VerifyClientMessage, VerifyMembershipMsg, VerifyNonMembershipMsg,
+		VerifyUpgradeAndUpdateStateMsg, WasmClientStateRef, WasmConsensusStateRef,
 	},
 	Bytes,
 };
+use cosmwasm_schema::cw_serde;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw_storage_plus::{Item, Map};
 use ibc::core::ics02_client::client_def::ClientDef;
 use ics10_grandpa::{client_def::GrandpaClient, consensus_state::ConsensusState};
@@ -136,6 +138,20 @@ pub fn execute(
 				)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 		},
+		ExecuteMsg::InitializeState { me, consensus_state } => {
+			let mut response = Response::default();
+			let state_call_response = ClientStateCallResponse {
+				me: WasmClientStateRef { code_id: me.code_id.clone() },
+				new_consensus_state: WasmConsensusStateRef {
+					code_id: consensus_state.code_id.clone(),
+				},
+				new_client_state: WasmClientStateRef { code_id: me.code_id.clone() },
+				result: ContractResult { is_valid: true, error_msg: "".to_string() },
+			};
+			response.data = Some(to_binary(&state_call_response)?);
+			return Ok(response)
+		},
+		ExecuteMsg::ClientCreateRequest { .. } => {},
 	}
 	Ok(Response::default())
 }
@@ -146,6 +162,21 @@ pub fn query(_deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 		QueryMsg::ClientTypeMsg(_) => todo!(),
 		QueryMsg::GetLatestHeightsMsg(_) => todo!(),
 	}
+}
+
+#[no_mangle]
+pub extern "C" fn ext_hashing_blake2_256_version_1(_data: i64) -> i32 {
+	unimplemented!("ext_hashing_blake2_256_version_1")
+}
+
+#[no_mangle]
+pub extern "C" fn ext_hashing_twox_128_version_1(_data: i64) -> i32 {
+	unimplemented!("ext_hashing_twox_128_version_1")
+}
+
+#[no_mangle]
+pub extern "C" fn ext_hashing_twox_64_version_1(_data: i64) -> i32 {
+	unimplemented!("ext_hashing_twox_64_version_1")
 }
 
 #[cfg(test)]
