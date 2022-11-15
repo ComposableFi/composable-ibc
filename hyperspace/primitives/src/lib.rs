@@ -29,7 +29,6 @@ use ibc_proto::{
 		connection::v1::QueryConnectionResponse,
 	},
 };
-use subxt::ext::sp_core;
 
 use crate::error::Error;
 #[cfg(feature = "testing")]
@@ -97,6 +96,9 @@ pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: String) -> Vec<u8> {
 pub trait IbcProvider {
 	/// Finality event type, passed on to [`Chain::query_latest_ibc_events`]
 	type FinalityEvent;
+
+	/// A representation of the transaction id for the chain
+	type TransactionId;
 
 	/// Error type, just needs to implement standard error trait.
 	type Error: std::error::Error + From<String> + Send + Sync + 'static;
@@ -323,8 +325,7 @@ pub trait IbcProvider {
 	/// Should find client id that was created in this transaction
 	async fn query_client_id_from_tx_hash(
 		&self,
-		tx_hash: sp_core::H256,
-		block_hash: Option<sp_core::H256>,
+		tx_id: Self::TransactionId,
 	) -> Result<ClientId, Self::Error>;
 }
 
@@ -377,12 +378,8 @@ pub trait Chain: IbcProvider + KeyProvider + Send + Sync {
 
 	/// This should be used to submit new messages [`Vec<Any>`] from a counterparty chain to this
 	/// chain.
-	/// Should return a tuple of transaction hash and optionally block hash where the transaction
-	/// was executed
-	async fn submit(
-		&self,
-		messages: Vec<Any>,
-	) -> Result<(sp_core::H256, Option<sp_core::H256>), Self::Error>;
+	/// Should return the transaction id
+	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Self::Error>;
 }
 
 /// Returns undelivered packet sequences that have been sent out from

@@ -26,6 +26,7 @@ use ibc::{
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
+	downcast,
 	events::IbcEvent,
 	signer::Signer,
 	timestamp::Timestamp,
@@ -51,7 +52,6 @@ use thiserror::Error;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use parachain::{config, ParachainClient};
 use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
-use sp_core::H256;
 use sp_runtime::generic::Era;
 use std::{pin::Pin, time::Duration};
 use subxt::{
@@ -119,6 +119,11 @@ pub enum AnyFinalityEvent {
 	Parachain(parachain::finality_protocol::FinalityEvent),
 }
 
+#[derive(From)]
+pub enum AnyTransactionId {
+	Parachain(parachain::provider::TransactionId<sp_core::H256>),
+}
+
 #[derive(Error, Debug)]
 pub enum AnyError {
 	#[error("{0}")]
@@ -136,6 +141,7 @@ impl From<String> for AnyError {
 #[async_trait]
 impl IbcProvider for AnyChain {
 	type FinalityEvent = AnyFinalityEvent;
+	type TransactionId = AnyTransactionId;
 	type Error = AnyError;
 
 	async fn query_latest_ibc_events<T>(
@@ -525,12 +531,14 @@ impl IbcProvider for AnyChain {
 
 	async fn query_client_id_from_tx_hash(
 		&self,
-		tx_hash: H256,
-		block_hash: Option<H256>,
+		tx_id: Self::TransactionId,
 	) -> Result<ClientId, Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain
-				.query_client_id_from_tx_hash(tx_hash, block_hash)
+				.query_client_id_from_tx_hash(
+					downcast!(tx_id => AnyTransactionId::Parachain)
+						.expect("Should be parachain transaction id"),
+				)
 				.await
 				.map_err(Into::into),
 			_ => unreachable!(),
@@ -582,12 +590,13 @@ impl Chain for AnyChain {
 		}
 	}
 
-	async fn submit(
-		&self,
-		messages: Vec<Any>,
-	) -> Result<(sp_core::H256, Option<sp_core::H256>), Self::Error> {
+	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Self::Error> {
 		match self {
-			Self::Parachain(chain) => chain.submit(messages).await.map_err(Into::into),
+			Self::Parachain(chain) => chain
+				.submit(messages)
+				.await
+				.map_err(Into::into)
+				.map(|id| AnyTransactionId::Parachain(id)),
 			_ => unreachable!(),
 		}
 	}
