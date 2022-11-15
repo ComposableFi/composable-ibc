@@ -331,13 +331,13 @@ where
 				)))
 			} else {
 				let client_id = match result[0] {
-					IbcEvent::CreateClient(ref ev) => ev.client_id(),
-					IbcEvent::UpdateClient(ref ev) => ev.client_id(),
-					IbcEvent::UpgradeClient(ref ev) => ev.client_id(),
-					IbcEvent::ClientMisbehaviour(ref ev) => ev.client_id(),
+					IbcEvent::CreateClient(ref ev) => ev.client_id().clone(),
+					IbcEvent::UpdateClient(ref ev) => ev.client_id().clone(),
+					IbcEvent::UpgradeClient(ref ev) => ev.client_id().clone(),
+					IbcEvent::ClientMisbehaviour(ref ev) => ev.client_id().clone(),
 					_ => return Err(Error::from(format!("Unexpected event type"))),
 				};
-				Ok(*client_id)
+				Ok(client_id)
 			}
 		}
 	}
