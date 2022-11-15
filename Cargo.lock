@@ -3795,7 +3795,7 @@ dependencies = [
  "sp-state-machine",
  "sp-trie",
  "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "thiserror",
  "tokio",
  "toml",
@@ -3829,11 +3829,11 @@ dependencies = [
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "ss58-registry",
  "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=51179a8b72472d0b43c91cda75a1ddc3fddb9555)",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "tendermint-light-client",
  "tendermint-light-client-verifier",
- "tendermint-proto",
- "tendermint-rpc",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-rpc 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "thiserror",
  "tonic 0.7.2",
 ]
@@ -3849,7 +3849,7 @@ dependencies = [
  "ibc-proto",
  "log",
  "prometheus",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "thiserror",
  "tokio",
 ]
@@ -3915,7 +3915,7 @@ dependencies = [
  "ss58-registry",
  "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
  "subxt-generated",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -3960,8 +3960,8 @@ dependencies = [
  "sp-keystore",
  "sp-runtime",
  "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
- "tendermint-proto",
- "tendermint-rpc",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-rpc 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "tokio",
 ]
 
@@ -4013,8 +4013,8 @@ dependencies = [
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.24)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.24)",
  "subtle-encoding",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "test-log",
  "time 0.3.16",
  "tokio",
@@ -4065,7 +4065,7 @@ dependencies = [
  "prost 0.11.0",
  "schemars",
  "serde",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "tonic 0.8.2",
 ]
 
@@ -4104,7 +4104,7 @@ dependencies = [
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-runtime",
  "sp-trie",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
 ]
 
 [[package]]
@@ -4136,11 +4136,11 @@ dependencies = [
  "serde_json",
  "sha2 0.10.6",
  "subtle-encoding",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "tendermint-light-client-verifier",
- "tendermint-proto",
- "tendermint-rpc",
- "tendermint-testgen",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-rpc 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-testgen 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "test-log",
  "time 0.3.16",
  "tracing",
@@ -4182,8 +4182,8 @@ dependencies = [
  "sp-state-machine",
  "sp-trie",
  "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "tokio",
 ]
 
@@ -4218,8 +4218,8 @@ dependencies = [
  "sp-storage 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie",
  "subxt 0.24.0 (git+https://github.com/paritytech/subxt?rev=1736f618d940a69ab212a686984c3be25b08d1c2)",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "tokio",
 ]
 
@@ -4249,10 +4249,10 @@ dependencies = [
  "sha3",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.24)",
  "subtle-encoding",
- "tendermint",
- "tendermint-proto",
- "tendermint-rpc",
- "tendermint-testgen",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-rpc 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0)",
+ "tendermint-testgen 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0)",
  "test-log",
  "time 0.3.16",
  "tokio",
@@ -6823,9 +6823,9 @@ dependencies = [
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "tendermint-light-client-verifier",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
 ]
 
 [[package]]
@@ -11510,7 +11510,7 @@ dependencies = [
  "proptest",
  "rand 0.8.5",
  "sha2 0.10.6",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
 ]
 
 [[package]]
@@ -12941,6 +12941,34 @@ dependencies = [
  "ed25519-consensus",
  "flex-error",
  "futures",
+ "num-traits",
+ "once_cell",
+ "prost 0.11.0",
+ "prost-types 0.11.1",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "serde_repr",
+ "sha2 0.10.6",
+ "signature",
+ "subtle",
+ "subtle-encoding",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0)",
+ "time 0.3.16",
+ "zeroize",
+]
+
+[[package]]
+name = "tendermint"
+version = "0.24.0-pre.2"
+source = "git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64#97643a9676215bd775eeface5c2379b750bceb64"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "ed25519",
+ "ed25519-consensus",
+ "flex-error",
+ "futures",
  "k256",
  "num-traits",
  "once_cell",
@@ -12955,7 +12983,7 @@ dependencies = [
  "signature",
  "subtle",
  "subtle-encoding",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "time 0.3.16",
  "zeroize",
 ]
@@ -12968,7 +12996,20 @@ dependencies = [
  "flex-error",
  "serde",
  "serde_json",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0)",
+ "toml",
+ "url",
+]
+
+[[package]]
+name = "tendermint-config"
+version = "0.24.0-pre.2"
+source = "git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64#97643a9676215bd775eeface5c2379b750bceb64"
+dependencies = [
+ "flex-error",
+ "serde",
+ "serde_json",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "toml",
  "url",
 ]
@@ -12976,7 +13017,7 @@ dependencies = [
 [[package]]
 name = "tendermint-light-client"
 version = "0.24.0-pre.2"
-source = "git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0#2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0"
+source = "git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64#97643a9676215bd775eeface5c2379b750bceb64"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -12990,9 +13031,9 @@ dependencies = [
  "serde_derive",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "static_assertions",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "tendermint-light-client-verifier",
- "tendermint-rpc",
+ "tendermint-rpc 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "time 0.3.16",
  "tokio",
 ]
@@ -13000,13 +13041,13 @@ dependencies = [
 [[package]]
 name = "tendermint-light-client-verifier"
 version = "0.24.0-pre.2"
-source = "git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0#2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0"
+source = "git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64#97643a9676215bd775eeface5c2379b750bceb64"
 dependencies = [
  "derive_more",
  "flex-error",
  "serde",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "time 0.3.16",
 ]
 
@@ -13014,6 +13055,23 @@ dependencies = [
 name = "tendermint-proto"
 version = "0.24.0-pre.2"
 source = "git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0#2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0"
+dependencies = [
+ "bytes",
+ "flex-error",
+ "num-derive",
+ "num-traits",
+ "prost 0.11.0",
+ "prost-types 0.11.1",
+ "serde",
+ "serde_bytes",
+ "subtle-encoding",
+ "time 0.3.16",
+]
+
+[[package]]
+name = "tendermint-proto"
+version = "0.24.0-pre.2"
+source = "git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64#97643a9676215bd775eeface5c2379b750bceb64"
 dependencies = [
  "bytes",
  "flex-error",
@@ -13049,9 +13107,43 @@ dependencies = [
  "serde_json",
  "subtle",
  "subtle-encoding",
- "tendermint",
- "tendermint-config",
- "tendermint-proto",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0)",
+ "tendermint-config 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0)",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0)",
+ "thiserror",
+ "time 0.3.16",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
+ "walkdir",
+]
+
+[[package]]
+name = "tendermint-rpc"
+version = "0.24.0-pre.2"
+source = "git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64#97643a9676215bd775eeface5c2379b750bceb64"
+dependencies = [
+ "async-trait",
+ "async-tungstenite",
+ "bytes",
+ "flex-error",
+ "futures",
+ "getrandom 0.2.8",
+ "http",
+ "hyper",
+ "hyper-proxy",
+ "hyper-rustls 0.22.1",
+ "peg",
+ "pin-project",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "subtle",
+ "subtle-encoding",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-config 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "thiserror",
  "time 0.3.16",
  "tokio",
@@ -13072,7 +13164,22 @@ dependencies = [
  "serde_json",
  "simple-error",
  "tempfile",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0)",
+ "time 0.3.16",
+]
+
+[[package]]
+name = "tendermint-testgen"
+version = "0.24.0-pre.2"
+source = "git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64#97643a9676215bd775eeface5c2379b750bceb64"
+dependencies = [
+ "ed25519-consensus",
+ "gumdrop",
+ "serde",
+ "serde_json",
+ "simple-error",
+ "tempfile",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "time 0.3.16",
 ]
 
