@@ -41,9 +41,9 @@ use ics07_tendermint::{
 	client_message::Header, client_state::ClientState as TmClientState,
 	consensus_state::ConsensusState as TmConsensusState, events::try_from_tx,
 };
+use jsonrpsee::core::client;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use primitives::{Chain, IbcProvider, UpdateType};
-use sp_core::H256;
 use std::pin::Pin;
 use tendermint::block::Height as TmHeight;
 use tendermint_rpc::{endpoint::tx::Response, query::Query, Client, Order};
@@ -53,12 +53,17 @@ pub enum FinalityEvent {
 	Tendermint(Header),
 }
 
+pub struct TransactionId<Hash> {
+	pub hash: Hash,
+}
+
 #[async_trait::async_trait]
 impl<H> IbcProvider for CosmosClient<H>
 where
 	H: Clone + Send + Sync + 'static,
 {
 	type FinalityEvent = FinalityEvent;
+	type TransactionId = TransactionId<tendermint_rpc::abci::transaction::Hash>;
 	type Error = Error;
 
 	async fn query_latest_ibc_events<C>(
@@ -300,13 +305,12 @@ where
 
 	async fn query_client_id_from_tx_hash(
 		&self,
-		tx_hash: sp_core::H256,
-		_block_hash: Option<sp_core::H256>,
+		tx_id: Self::TransactionId,
 	) -> Result<ClientId, Self::Error> {
-		let response = self
+		let response_vec = self
 			.rpc_client
 			.tx_search(
-				Query::eq("tx.hash", tx_hash.to_string()),
+				Query::eq("tx.hash", tx_id.hash.to_string()),
 				false,
 				1,
 				1, // get only the first Tx matching the query
@@ -314,12 +318,13 @@ where
 			)
 			.await
 			.map_err(|e| Error::from(format!("Failed to query tx hash: {:?}", e)))?;
-		match response.txs.into_iter().next() {
-			None =>
+		let response = match response_vec.txs.into_iter().next() {
+			None => {
 				return Err(Error::from(format!(
 					"Failed to find tx hash: {:?}",
-					tx_hash.to_string()
-				))),
+					tx_id.hash.to_string()
+				)))
+			},
 			Some(resp) => resp,
 		};
 
@@ -343,7 +348,14 @@ where
 					result.len()
 				)))
 			} else {
-				Ok(result[0].client_id().clone())
+				let client_id = match result[0] {
+					IbcEvent::CreateClient(ref ev) => ev.client_id(),
+					IbcEvent::UpdateClient(ref ev) => ev.client_id(),
+					IbcEvent::UpgradeClient(ref ev) => ev.client_id(),
+					IbcEvent::ClientMisbehaviour(ref ev) => ev.client_id(),
+					_ => return Err(Error::from(format!("Unexpected event type"))),
+				};
+				Ok(*client_id)
 			}
 		}
 	}

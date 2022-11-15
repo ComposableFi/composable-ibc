@@ -1,4 +1,5 @@
 use super::{error::Error, CosmosClient};
+use crate::provider::TransactionId;
 use futures::Stream;
 use ibc_proto::{
 	cosmos::tx::v1beta1::{
@@ -36,10 +37,7 @@ where
 		todo!()
 	}
 
-	async fn submit(
-		&self,
-		messages: Vec<Any>,
-	) -> Result<(sp_core::H256, Option<sp_core::H256>), Error> {
+	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
 		// Create SignerInfo by encoding the keybase
 		let mut pk_buf = Vec::new();
 		Message::encode(&self.keybase.public_key.to_pub().to_bytes(), &mut pk_buf)
@@ -99,9 +97,6 @@ where
 			.await
 			.map_err(|e| Error::from(format!("failed to broadcast transaction {:?}", e)))?;
 
-		// Ok((response.hash, None))
-
-		// Change return type to a generic one that can be used by non-Substrate chains
-		todo!()
+		Ok(TransactionId { hash: response.hash })
 	}
 }
