@@ -5,7 +5,6 @@ use bitcoin::{
 	hashes::hex::ToHex,
 	util::bip32::{ExtendedPrivKey, ExtendedPubKey},
 };
-use ibc::core::ics24_host::identifier::ChainId;
 use primitives::KeyProvider;
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, str::FromStr};

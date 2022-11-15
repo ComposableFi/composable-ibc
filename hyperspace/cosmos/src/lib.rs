@@ -20,48 +20,16 @@ pub mod provider;
 
 use core::convert::TryFrom;
 use error::Error;
-use ibc::{
-	core::{
-		ics02_client::{height::Height, trust_threshold::TrustThreshold},
-		ics23_commitment::{
-			commitment::{CommitmentPrefix, CommitmentRoot},
-			specs::ProofSpecs,
-		},
-		ics24_host::{
-			identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
-			path::ClientConsensusStatePath,
-			Path,
-		},
-	},
-	protobuf::Protobuf,
+use ibc::core::{
+	ics23_commitment::commitment::CommitmentPrefix,
+	ics24_host::identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 };
-use ibc_proto::{
-	cosmos::{
-		auth::v1beta1::{query_client::QueryClient, BaseAccount, QueryAccountRequest},
-		base::query::v1beta1::PageRequest,
-	},
-	google::protobuf::Any,
-	ibc::core::{
-		client::v1::{
-			IdentifiedClientState, QueryConsensusStateRequest, QueryConsensusStateResponse,
-		},
-		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
-	},
-};
-use ics07_tendermint::{
-	client_state::ClientState as TmClientState, consensus_state::ConsensusState as TmConsensusState,
-};
+use ibc_proto::cosmos::auth::v1beta1::BaseAccount;
 use key_provider::KeyEntry;
-use pallet_ibc::{
-	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
-	MultiAddress, Timeout, TransferParams,
-};
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use primitives::{IbcProvider, KeyProvider};
-use prost::Message;
 use serde::Deserialize;
-use std::{str::FromStr, sync::Arc, time::Duration};
-use tendermint::{block::Height as TmHeight, time::Time};
-use tendermint_rpc::{abci::Path as TendermintABCIPath, Client, HttpClient, Url, WebSocketClient};
+use tendermint_rpc::{HttpClient, Url};
 
 // Implements the [`crate::Chain`] trait for cosmos.
 /// This is responsible for:

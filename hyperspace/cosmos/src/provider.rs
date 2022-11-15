@@ -1,20 +1,12 @@
 use super::{error::Error, CosmosClient};
-use core::{
-	convert::{TryFrom, TryInto},
-	future::Future,
-	str::FromStr,
-	time::Duration,
-};
-use futures::{Stream, TryFutureExt};
+use core::time::Duration;
+use futures::Stream;
 use ibc::{
 	applications::transfer::PrefixedCoin,
 	core::{
-		ics02_client::{
-			client_state::ClientType, events as client_events, height::Height as ICSHeight,
-			trust_threshold::TrustThreshold,
-		},
-		ics23_commitment::{commitment::CommitmentPrefix, specs::ProofSpecs},
-		ics24_host::identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
+		ics02_client::client_state::ClientType,
+		ics23_commitment::commitment::CommitmentPrefix,
+		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
 	events::IbcEvent,
 	timestamp::Timestamp,
@@ -25,29 +17,20 @@ use ibc_proto::{
 	google::protobuf::Any,
 	ibc::core::{
 		channel::v1::{
-			QueryChannelResponse, QueryChannelsRequest, QueryChannelsResponse,
-			QueryNextSequenceReceiveResponse, QueryPacketAcknowledgementResponse,
-			QueryPacketCommitmentResponse, QueryPacketReceiptResponse,
+			QueryChannelResponse, QueryChannelsResponse, QueryNextSequenceReceiveResponse,
+			QueryPacketAcknowledgementResponse, QueryPacketCommitmentResponse,
+			QueryPacketReceiptResponse,
 		},
-		client::v1::{
-			IdentifiedClientState, QueryClientStateResponse, QueryClientStatesRequest,
-			QueryConsensusStateResponse,
-		},
+		client::v1::{QueryClientStateResponse, QueryConsensusStateResponse},
 		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
 	},
 };
 use ibc_rpc::PacketInfo;
-use ics07_tendermint::{
-	client_message::Header, client_state::ClientState as TmClientState,
-	consensus_state::ConsensusState as TmConsensusState, events::try_from_tx,
-};
-use jsonrpsee::core::client;
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
+use ics07_tendermint::{client_message::Header, events::try_from_tx};
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use primitives::{Chain, IbcProvider, UpdateType};
 use std::pin::Pin;
-use tendermint::block::Height as TmHeight;
-use tendermint_rpc::{endpoint::tx::Response, query::Query, Client, Order};
-use tonic::transport::Channel;
+use tendermint_rpc::{query::Query, Client, Order};
 
 pub enum FinalityEvent {
 	Tendermint(Header),
