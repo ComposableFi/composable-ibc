@@ -5,19 +5,18 @@ Each IBC application must define a unique module id and port id to be used in th
 
 ### Ibc Handler
 
-This pallet provides a public interface behind the [`IbcHandler`] trait, that allows modules to access the protocol.  
+This pallet provides a public interface behind the [`ibc_primtives::IbcHandler`](/contracts/pallet-ibc/primitives/src/lib.rs#L373) trait, that allows modules to access the protocol.  
 It provides methods for:
-- Opening channels `IbcHandler::open_channel`
-- Registering a Send packet `IbcHandler::send_packet`
-- Writing Acknowledgements `IbcHandler::write_acknowledgemnent`
+- Sending packets, opening and closing channels, performing ics20 transfers - `IbcHandler::handle_message`
+- Writing Acknowledgements - `IbcHandler::write_acknowledgemnent`
 
-**Defining an exampleIBCcompliant pallet**
+**Defining an example IBC compliant pallet**
 ```rust
 use ibc_primitives::IbcHandler as IbcHandlerT;
 const PORT_ID: &'static str = "example";
 const MODULE_ID: &'static str = "pallet_example";
 pub trait Config: frame_system::Config {
-    IbcHandler: IbcHandlerT;
+    IbcHandler: IbcHandlerT<<Self as frame_system::Config>::AccountId>;
     WeightInfo: WeightInfo;
 }
 
@@ -26,13 +25,16 @@ impl<T: Config> Pallet<T> {
     #[pallet::weight(0)]
     pub fn initiate_some_ibc_transaction(origin: OriginFor<T>, params: Params) -> DispatchResult {
         ensure_signed(origin)?;
-        let send_packet = SendPacketData {
-            data: params.data,
-            timeout: params.timeout,
-            port_id: port_id_from_bytes(PORT_ID.as_bytes().to_vec()).expect("Valid port id expected"),
-            channel_id: params .channel_id,
-        };
-        T::IbcHandler::send_packet(send_packet)?;
+        T::IbcHandler::handle_message(ibc_primtives::HandlerMessage::SendPacket {
+            data: b"ping".to_vec(),
+            timeout: ibc_primitives::Timeout::Offset {
+                height: Some(params.timeout_height_offset),
+                timestamp: Some(params.timeout_timestamp_offset),
+            },
+            port_id: port_id_from_bytes(PORT_ID.as_bytes().to_vec())
+                .expect("Valid port id expected"),
+            channel_id,
+        })?;
         Ok(())
    }
 }

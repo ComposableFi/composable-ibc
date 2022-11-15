@@ -69,6 +69,7 @@ pub mod light_clients;
 mod port;
 pub mod routing;
 pub use client::HostConsensusProof;
+pub use ibc_primitives::Timeout;
 pub use light_client_common;
 
 pub const MODULE_ID: &str = "pallet_ibc";
@@ -131,28 +132,6 @@ pub struct TransferParams<AccountId> {
 	pub source_channel: u64,
 	/// Timeout for this packet
 	pub timeout: Timeout,
-}
-
-/// Packet timeout, could be an offset, or absolute value.
-#[derive(
-	frame_support::RuntimeDebug, PartialEq, Eq, scale_info::TypeInfo, Encode, Decode, Clone,
-)]
-pub enum Timeout {
-	Offset {
-		/// Timestamp at which this packet should timeout in counterparty in seconds
-		/// relative to the latest time stamp
-		timestamp: Option<u64>,
-		/// Block height at which this packet should timeout on counterparty
-		/// relative to the latest height
-		height: Option<u64>,
-	},
-	/// Absolute value
-	Absolute {
-		/// Timestamp at which this packet should timeout on the counterparty in nanoseconds
-		timestamp: Option<u64>,
-		/// Block height at which this packet should timeout on the counterparty
-		height: Option<u64>,
-	},
 }
 
 pub enum LightClientProtocol {
@@ -514,6 +493,7 @@ pub mod pallet {
 	where
 		u32: From<<T as frame_system::Config>::BlockNumber>,
 		T: Send + Sync,
+		AccountId32: From<T::AccountId>,
 	{
 		fn offchain_worker(_n: BlockNumberFor<T>) {
 			let _ = Pallet::<T>::packet_cleanup();

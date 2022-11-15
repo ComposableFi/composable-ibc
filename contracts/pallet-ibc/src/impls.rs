@@ -30,7 +30,9 @@ use crate::{
 use codec::{Decode, Encode};
 use frame_support::traits::Currency;
 use ibc::{
-	applications::transfer::{relay::send_transfer::send_transfer, PrefixedCoin},
+	applications::transfer::{
+		msgs::transfer::MsgTransfer, relay::send_transfer::send_transfer, PrefixedCoin,
+	},
 	core::{
 		ics02_client::{
 			client_consensus::ConsensusState, client_state::ClientState, context::ClientReader,
@@ -40,7 +42,7 @@ use ibc::{
 			channel::ChannelEnd,
 			context::{ChannelKeeper, ChannelReader},
 			error::Error as Ics04Error,
-			msgs::chan_open_init::{MsgChannelOpenInit, TYPE_URL as CHANNEL_OPEN_INIT_TYPE_URL},
+			msgs::{chan_close_init::MsgChannelCloseInit, chan_open_init::MsgChannelOpenInit},
 			packet::{Packet, Sequence},
 		},
 		ics24_host::{
@@ -55,20 +57,22 @@ use ibc::{
 	handler::HandlerOutputBuilder,
 	signer::Signer,
 	timestamp::Timestamp,
+	tx_msg::Msg,
 	Height,
 };
 use ibc_primitives::{
 	apply_prefix, channel_id_from_bytes, client_id_from_bytes, connection_id_from_bytes,
-	get_channel_escrow_address, port_id_from_bytes, ConnectionHandshake, Error as IbcHandlerError,
-	IbcHandler, IdentifiedChannel, IdentifiedClientState, IdentifiedConnection, PacketInfo,
-	PacketState, QueryChannelResponse, QueryChannelsResponse, QueryClientStateResponse,
+	get_channel_escrow_address, port_id_from_bytes, runtime_interface,
+	runtime_interface::SS58CodecError, ConnectionHandshake, Error as IbcHandlerError,
+	HandlerMessage, IbcHandler, IdentifiedChannel, IdentifiedClientState, IdentifiedConnection,
+	PacketInfo, PacketState, QueryChannelResponse, QueryChannelsResponse, QueryClientStateResponse,
 	QueryConnectionResponse, QueryConnectionsResponse, QueryConsensusStateResponse,
 	QueryNextSequenceReceiveResponse, QueryPacketAcknowledgementResponse,
 	QueryPacketAcknowledgementsResponse, QueryPacketCommitmentResponse,
-	QueryPacketCommitmentsResponse, QueryPacketReceiptResponse, SendPacketData,
+	QueryPacketCommitmentsResponse, QueryPacketReceiptResponse,
 };
 use scale_info::prelude::string::ToString;
-use sp_core::offchain::StorageKind;
+use sp_core::{crypto::AccountId32, offchain::StorageKind};
 use sp_runtime::{offchain::storage::StorageValueRef, traits::IdentifyAccount};
 use tendermint_proto::Protobuf;
 
@@ -80,6 +84,7 @@ impl<T: Config> Pallet<T>
 where
 	T: Send + Sync,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	pub fn execute_ibc_messages(
 		ctx: &mut Context<T>,
@@ -115,6 +120,7 @@ impl<T: Config> Pallet<T>
 where
 	T: Send + Sync,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	// IBC Runtime Api helper methods
 	/// Get a channel state
@@ -785,145 +791,31 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-impl<T: Config + Send + Sync> IbcHandler for Pallet<T>
+impl<T: Config + Send + Sync> IbcHandler<T::AccountId> for Pallet<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	fn latest_height_and_timestamp(
 		port_id: &PortId,
 		channel_id: &ChannelId,
 	) -> Result<(Height, Timestamp), IbcHandlerError> {
-		let ctx = Context::<T>::new();
-		let source_channel_end =
-			ctx.channel_end(&(port_id.clone(), *channel_id)).map_err(|_| {
-				IbcHandlerError::ChannelOrPortError {
-					msg: Some(format!(
-						"Failed to fetch Channel end for channel {} from storage",
-						channel_id
-					)),
-				}
-			})?;
-		let client_id = Self::channel_client_id(&source_channel_end).map_err(|_| {
-			IbcHandlerError::ClientIdError {
-				msg: Some(format!("Could not find client id for {:?}/{:?}", port_id, channel_id)),
-			}
-		})?;
-
-		let client_state =
-			ctx.client_state(&client_id).map_err(|_| IbcHandlerError::ClientStateError {
-				msg: Some(format!("CLient state not found for {:?}", client_id)),
-			})?;
-		let consensus_state = ctx
-			.consensus_state(&client_id, client_state.latest_height())
-			.map_err(|_| IbcHandlerError::Other {
-				msg: Some(format!(
-					"Consensus state not found for {:?} at {:?}",
-					client_id,
-					client_state.latest_height()
-				)),
-			})?;
-		Ok((client_state.latest_height(), consensus_state.timestamp()))
+		Pallet::<T>::latest_height_and_timestamp(port_id, channel_id)
 	}
 
-	fn send_packet(data: SendPacketData) -> Result<(), IbcHandlerError> {
-		let source_channel = data.channel_id;
-		let source_port = data.port_id;
-		let mut ctx = Context::<T>::new();
-		let source_channel_end =
-			ctx.channel_end(&(source_port.clone(), source_channel)).map_err(|_| {
-				IbcHandlerError::ChannelOrPortError {
-					msg: Some(format!(
-						"Failed to fetch Channel end for channel {} from storage",
-						source_channel
-					)),
-				}
-			})?;
-		let client_id = Self::channel_client_id(&source_channel_end).map_err(|_| {
-			IbcHandlerError::ClientIdError {
-				msg: Some(format!(
-					"Could not find client id for {:?}/{:?}",
-					source_port, source_channel
-				)),
-			}
-		})?;
-
-		let client_state =
-			ctx.client_state(&client_id).map_err(|_| IbcHandlerError::ClientStateError {
-				msg: Some(format!("CLient state not found for {:?}", client_id)),
-			})?;
-		let consensus_state = ctx
-			.consensus_state(&client_id, client_state.latest_height())
-			.map_err(|_| IbcHandlerError::Other {
-				msg: Some(format!(
-					"Consensus state not found for {:?} at {:?}",
-					client_id,
-					client_state.latest_height()
-				)),
-			})?;
-		let sequence =
-			ctx.get_next_sequence_send(&(source_port.clone(), source_channel))
-				.map_err(|_| IbcHandlerError::SendPacketError {
-					msg: Some(format!("Failed to get next_sequence_send for {}", source_channel)),
-				})?;
-
-		let destination_port = source_channel_end.counterparty().port_id().clone();
-		let destination_channel = *source_channel_end.counterparty().channel_id().ok_or(
-			IbcHandlerError::ChannelOrPortError {
-				msg: Some(
-					"Failed to find counterparty channel_id in source channel end".to_string(),
-				),
+	fn handle_message(msg: HandlerMessage<T::AccountId>) -> Result<(), IbcHandlerError> {
+		match msg {
+			HandlerMessage::OpenChannel { port_id, channel_end } =>
+				Pallet::<T>::open_channel(port_id, channel_end),
+			HandlerMessage::CloseChannel { channel_id, port_id } =>
+				Pallet::<T>::close_channel(port_id, channel_id),
+			HandlerMessage::Transfer { timeout, to, from, channel_id, coin } => {
+				let msg = Pallet::<T>::to_msg_transfer(coin, from, to, timeout, channel_id)?;
+				Pallet::<T>::send_transfer(msg)
 			},
-		)?;
-		let timestamp = (consensus_state.timestamp() +
-			Duration::from_nanos(data.timeout_timestamp_offset))
-		.map_err(|_| IbcHandlerError::TimestampOrHeightError {
-			msg: Some("Failed to convert timeout timestamp".to_string()),
-		})?;
-		let packet = Packet {
-			sequence,
-			source_port,
-			source_channel,
-			destination_port,
-			destination_channel,
-			data: data.data,
-			timeout_height: client_state.latest_height().add(data.timeout_height_offset),
-			timeout_timestamp: timestamp,
-		};
-
-		let send_packet_result =
-			ibc::core::ics04_channel::handler::send_packet::send_packet(&ctx, packet)
-				.map_err(|e| IbcHandlerError::SendPacketError { msg: Some(e.to_string()) })?;
-		ctx.store_packet_result(send_packet_result.result)
-			.map_err(|e| IbcHandlerError::SendPacketError { msg: Some(e.to_string()) })?;
-		Self::deposit_event(send_packet_result.events.into());
-		Ok(())
-	}
-
-	fn open_channel(
-		port_id: PortId,
-		channel_end: ChannelEnd,
-	) -> Result<ChannelId, IbcHandlerError> {
-		let mut ctx = crate::routing::Context::<T>::new();
-		let channel_counter = ctx
-			.channel_counter()
-			.map_err(|e| IbcHandlerError::ChannelInitError { msg: Some(e.to_string()) })?;
-		let channel_id = ChannelId::new(channel_counter);
-		// Signer does not matter in this case
-		let value = MsgChannelOpenInit {
-			port_id,
-			channel: channel_end,
-			signer: Signer::from_str(MODULE_ID)
-				.map_err(|_| IbcHandlerError::ChannelInitError { msg: None })?,
+			HandlerMessage::SendPacket { data, timeout, port_id, channel_id } =>
+				Pallet::<T>::send_packet(data, timeout, port_id, channel_id),
 		}
-		.encode_vec();
-		let msg = ibc_proto::google::protobuf::Any {
-			type_url: CHANNEL_OPEN_INIT_TYPE_URL.to_string(),
-			value,
-		};
-		let res = ibc::core::ics26_routing::handler::deliver::<_>(&mut ctx, msg)
-			.map_err(|e| IbcHandlerError::ChannelInitError { msg: Some(e.to_string()) })?;
-		Self::deposit_event(res.events.into());
-		Ok(channel_id)
 	}
 
 	fn write_acknowledgement(packet: &Packet, ack: Vec<u8>) -> Result<(), IbcHandlerError> {
@@ -952,18 +844,6 @@ where
 			sequence: packet.sequence.into(),
 		};
 		Self::deposit_event(Event::<T>::Events { events: vec![event] });
-		Ok(())
-	}
-
-	fn send_transfer(
-		msg: ibc::applications::transfer::msgs::transfer::MsgTransfer<PrefixedCoin>,
-	) -> Result<(), IbcHandlerError> {
-		let mut handler_output = HandlerOutputBuilder::default();
-		let mut ctx = Context::<T>::default();
-		send_transfer::<_, _>(&mut ctx, &mut handler_output, msg)
-			.map_err(|e| IbcHandlerError::SendTransferError { msg: Some(e.to_string()) })?;
-		let result = handler_output.with_result(());
-		Self::deposit_event(result.events.into());
 		Ok(())
 	}
 
@@ -1017,6 +897,257 @@ where
 		ctx.store_connection(connection_id.clone(), &connection_end).unwrap();
 		ctx.store_connection_to_client(connection_id, &client_id).unwrap();
 		Ok(())
+	}
+}
+
+impl<T: Config + Send + Sync> Pallet<T>
+where
+	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
+{
+	fn send_packet(
+		data: Vec<u8>,
+		timeout: Timeout,
+		source_port: PortId,
+		source_channel: ChannelId,
+	) -> Result<(), IbcHandlerError> {
+		let mut ctx = Context::<T>::new();
+		let source_channel_end =
+			ctx.channel_end(&(source_port.clone(), source_channel)).map_err(|_| {
+				IbcHandlerError::ChannelOrPortError {
+					msg: Some(format!(
+						"Failed to fetch Channel end for channel {} from storage",
+						source_channel
+					)),
+				}
+			})?;
+
+		let sequence =
+			ctx.get_next_sequence_send(&(source_port.clone(), source_channel))
+				.map_err(|_| IbcHandlerError::SendPacketError {
+					msg: Some(format!("Failed to get next_sequence_send for {}", source_channel)),
+				})?;
+
+		let destination_port = source_channel_end.counterparty().port_id().clone();
+		let destination_channel = *source_channel_end.counterparty().channel_id().ok_or(
+			IbcHandlerError::ChannelOrPortError {
+				msg: Some(
+					"Failed to find counterparty channel_id in source channel end".to_string(),
+				),
+			},
+		)?;
+		let (latest_height, latest_timestamp) =
+			Pallet::<T>::latest_height_and_timestamp(&source_port, &source_channel).map_err(
+				|_| IbcHandlerError::TimestampOrHeightError {
+					msg: Some("Failed to retreive client height and timestamp".to_string()),
+				},
+			)?;
+
+		let (timeout_height, timeout_timestamp) = match timeout {
+			Timeout::Absolute { timestamp, height } => {
+				let timeout_timestamp =
+					Timestamp::from_nanoseconds(timestamp.ok_or_else(|| {
+						IbcHandlerError::TimeoutError {
+							msg: Some("Timeout timestamp is missing".to_string()),
+						}
+					})?)
+					.map_err(|_| IbcHandlerError::TimeoutError {
+						msg: Some("Failed to covert timestamp from nanosecods".to_string()),
+					})?;
+				let timeout_height = Height::new(
+					latest_height.revision_number,
+					height.ok_or_else(|| IbcHandlerError::TimeoutError {
+						msg: Some("Timeout height is missing".to_string()),
+					})?,
+				);
+				(timeout_height, timeout_timestamp)
+			},
+			Timeout::Offset { timestamp, height } => {
+				let timeout_timestamp = (latest_timestamp +
+					Duration::from_nanos(timestamp.ok_or_else(|| {
+						IbcHandlerError::TimeoutError {
+							msg: Some("Timeout timestamp is missing".to_string()),
+						}
+					})?))
+				.map_err(|_| IbcHandlerError::TimeoutError {
+					msg: Some("Failed to covert timestamp from nanosecods".to_string()),
+				})?;
+				let timeout_height =
+					latest_height.add(height.ok_or_else(|| IbcHandlerError::TimeoutError {
+						msg: Some("Timeout height is missing".to_string()),
+					})?);
+				(timeout_height, timeout_timestamp)
+			},
+		};
+		let packet = Packet {
+			sequence,
+			source_port,
+			source_channel,
+			destination_port,
+			destination_channel,
+			data,
+			timeout_height,
+			timeout_timestamp,
+		};
+
+		let send_packet_result =
+			ibc::core::ics04_channel::handler::send_packet::send_packet(&ctx, packet)
+				.map_err(|e| IbcHandlerError::SendPacketError { msg: Some(e.to_string()) })?;
+		ctx.store_packet_result(send_packet_result.result)
+			.map_err(|e| IbcHandlerError::SendPacketError { msg: Some(e.to_string()) })?;
+		Self::deposit_event(send_packet_result.events.into());
+		Ok(())
+	}
+
+	fn open_channel(port_id: PortId, channel_end: ChannelEnd) -> Result<(), IbcHandlerError> {
+		let mut ctx = crate::routing::Context::<T>::new();
+		// Signer does not matter in this case
+		let msg = MsgChannelOpenInit {
+			port_id,
+			channel: channel_end,
+			signer: Signer::from_str(MODULE_ID)
+				.map_err(|_| IbcHandlerError::ChannelInitError { msg: None })?,
+		};
+
+		let msg =
+			ibc_proto::google::protobuf::Any { type_url: msg.type_url(), value: msg.encode_vec() };
+		let res = ibc::core::ics26_routing::handler::deliver::<_>(&mut ctx, msg)
+			.map_err(|e| IbcHandlerError::ChannelInitError { msg: Some(e.to_string()) })?;
+		Self::deposit_event(res.events.into());
+		Ok(())
+	}
+
+	fn to_msg_transfer(
+		coin: PrefixedCoin,
+		from: T::AccountId,
+		to: Signer,
+		timeout: Timeout,
+		channel_id: ChannelId,
+	) -> Result<MsgTransfer<PrefixedCoin>, IbcHandlerError> {
+		let account_id_32: AccountId32 = from.into();
+		let from = runtime_interface::account_id_to_ss58(account_id_32.into())
+			.and_then(|val| String::from_utf8(val).map_err(|_| SS58CodecError::InvalidAccountId))
+			.map_err(|_| IbcHandlerError::SendTransferError {
+				msg: Some("Account Id conversion failed".to_string()),
+			})?;
+		let (latest_height, latest_timestamp) =
+			Pallet::<T>::latest_height_and_timestamp(&PortId::transfer(), &channel_id).map_err(
+				|_| IbcHandlerError::TimestampOrHeightError {
+					msg: Some("Failed to retreive client height and timestamp".to_string()),
+				},
+			)?;
+
+		let (timeout_height, timeout_timestamp) = match timeout {
+			Timeout::Absolute { timestamp, height } => {
+				let timeout_timestamp =
+					Timestamp::from_nanoseconds(timestamp.ok_or_else(|| {
+						IbcHandlerError::TimeoutError {
+							msg: Some("Timeout timestamp is missing".to_string()),
+						}
+					})?)
+					.map_err(|_| IbcHandlerError::TimeoutError {
+						msg: Some("Failed to covert timestamp from nanosecods".to_string()),
+					})?;
+				let timeout_height = Height::new(
+					latest_height.revision_number,
+					height.ok_or_else(|| IbcHandlerError::TimeoutError {
+						msg: Some("Timeout height is missing".to_string()),
+					})?,
+				);
+				(timeout_height, timeout_timestamp)
+			},
+			Timeout::Offset { timestamp, height } => {
+				let timeout_timestamp = (latest_timestamp +
+					Duration::from_nanos(timestamp.ok_or_else(|| {
+						IbcHandlerError::TimeoutError {
+							msg: Some("Timeout timestamp is missing".to_string()),
+						}
+					})?))
+				.map_err(|_| IbcHandlerError::TimeoutError {
+					msg: Some("Failed to covert timestamp from nanosecods".to_string()),
+				})?;
+				let timeout_height =
+					latest_height.add(height.ok_or_else(|| IbcHandlerError::TimeoutError {
+						msg: Some("Timeout height is missing".to_string()),
+					})?);
+				(timeout_height, timeout_timestamp)
+			},
+		};
+		let msg = MsgTransfer {
+			source_port: PortId::transfer(),
+			source_channel: channel_id,
+			token: coin,
+			sender: Signer::from_str(&from).map_err(|_| IbcHandlerError::SendTransferError {
+				msg: Some("Failed to deriver signer from String".to_string()),
+			})?,
+			receiver: to,
+			timeout_height,
+			timeout_timestamp,
+		};
+		Ok(msg)
+	}
+
+	pub fn send_transfer(msg: MsgTransfer<PrefixedCoin>) -> Result<(), IbcHandlerError> {
+		let mut ctx = Context::<T>::default();
+		let mut handler_output = HandlerOutputBuilder::default();
+		send_transfer::<_, _>(&mut ctx, &mut handler_output, msg)
+			.map_err(|e| IbcHandlerError::SendTransferError { msg: Some(e.to_string()) })?;
+		let result = handler_output.with_result(());
+		Self::deposit_event(result.events.into());
+		Ok(())
+	}
+
+	fn close_channel(port_id: PortId, channel_id: ChannelId) -> Result<(), IbcHandlerError> {
+		let mut ctx = crate::routing::Context::<T>::new();
+		// Signer does not matter in this case
+		let msg = MsgChannelCloseInit {
+			port_id,
+			channel_id,
+			signer: Signer::from_str(MODULE_ID)
+				.map_err(|_| IbcHandlerError::ChannelInitError { msg: None })?,
+		};
+		let msg =
+			ibc_proto::google::protobuf::Any { type_url: msg.type_url(), value: msg.encode_vec() };
+		let res = ibc::core::ics26_routing::handler::deliver::<_>(&mut ctx, msg)
+			.map_err(|e| IbcHandlerError::ChannelCloseError { msg: Some(e.to_string()) })?;
+		Self::deposit_event(res.events.into());
+		Ok(())
+	}
+
+	fn latest_height_and_timestamp(
+		port_id: &PortId,
+		channel_id: &ChannelId,
+	) -> Result<(Height, Timestamp), IbcHandlerError> {
+		let ctx = Context::<T>::new();
+		let source_channel_end =
+			ctx.channel_end(&(port_id.clone(), *channel_id)).map_err(|_| {
+				IbcHandlerError::ChannelOrPortError {
+					msg: Some(format!(
+						"Failed to fetch Channel end for channel {} from storage",
+						channel_id
+					)),
+				}
+			})?;
+		let client_id = Self::channel_client_id(&source_channel_end).map_err(|_| {
+			IbcHandlerError::ClientIdError {
+				msg: Some(format!("Could not find client id for {:?}/{:?}", port_id, channel_id)),
+			}
+		})?;
+
+		let client_state =
+			ctx.client_state(&client_id).map_err(|_| IbcHandlerError::ClientStateError {
+				msg: Some(format!("CLient state not found for {:?}", client_id)),
+			})?;
+		let consensus_state = ctx
+			.consensus_state(&client_id, client_state.latest_height())
+			.map_err(|_| IbcHandlerError::Other {
+				msg: Some(format!(
+					"Consensus state not found for {:?} at {:?}",
+					client_id,
+					client_state.latest_height()
+				)),
+			})?;
+		Ok((client_state.latest_height(), consensus_state.timestamp()))
 	}
 }
 
