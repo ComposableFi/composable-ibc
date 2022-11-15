@@ -28,6 +28,8 @@ pub enum ContractError {
 	Path(ibc::core::ics24_host::path::PathError),
 	#[display(fmt = "IBC proof error: {_0}")]
 	Proof(ibc::proofs::ProofError),
+	#[display(fmt = "Proto decode error: {_0}")]
+	ProtoDecode(prost::DecodeError),
 }
 
 impl Error for ContractError {}

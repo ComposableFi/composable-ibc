@@ -1,3 +1,4 @@
+/*
 use crate::{helpers::CwTemplateContract, msg::InstantiateMsg};
 use cosmwasm_std::{Addr, Coin, Empty, Uint128};
 use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
@@ -56,3 +57,5 @@ mod count {
 		app.execute(Addr::unchecked(USER), cosmos_msg).unwrap();
 	}
 }
+
+ */

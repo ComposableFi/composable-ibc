@@ -4241,6 +4241,8 @@ dependencies = [
 name = "ics10-grandpa-cw"
 version = "0.1.0"
 dependencies = [
+ "blake2-rfc",
+ "byteorder",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -4248,12 +4250,19 @@ dependencies = [
  "cw-storage-plus",
  "cw2",
  "derive_more",
+ "digest 0.10.5",
+ "ed25519-dalek",
  "grandpa-light-client-primitives",
+ "hex",
+ "hyperspace-primitives",
  "ibc",
  "ibc-derive",
+ "ibc-proto",
  "ics10-grandpa",
  "ics23",
  "light-client-common",
+ "pallet-ibc",
+ "prost 0.10.4",
  "schemars",
  "serde",
  "sha2 0.10.6",
@@ -4264,6 +4273,7 @@ dependencies = [
  "sp-runtime-interface",
  "sp-std",
  "thiserror",
+ "twox-hash",
 ]
 
 [[package]]

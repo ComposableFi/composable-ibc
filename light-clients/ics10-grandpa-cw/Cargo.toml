@@ -47,6 +47,7 @@ derive_more = "0.99.17"
 
 ibc = { path = "../../ibc/modules", default-features = false }
 ibc-derive = { path = "../../ibc/derive", default-features = false  }
+ibc-proto = { path = "../../ibc/proto", default-features = false, features = ["json-schema"] }
 ics23 = { git = "https://github.com/composablefi/ics23", rev = "b500a5c6068eb53c83c4c6c13bd9d8c25e0bf927", default-features = false }
 ics10-grandpa = { path = "../ics10-grandpa", default-features = false }
 grandpa-light-client-primitives = { path = "../../algorithms/grandpa/primitives", default-features = false  }
@@ -56,14 +57,33 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, features = ["disable_panic_handler", "disable_oom", "disable_allocator"] }
 sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, features = [] }
+prost = { version = "0.10", default-features = false }
+blake2-rfc = { version = "0.2.18", default-features = false }
+ed25519-dalek = { version = "1.0.1", default-features = false, features = ["u32_backend"] }
+twox-hash = { version = "1.6.3", default-features = false, features = ["digest_0_10"] }
+byteorder = { version = "1.3.2", default-features = false }
+digest = { version = "0.10.3", default-features = false }
 
 [dev-dependencies]
 cw-multi-test = "0.15.1"
+hex = "0.4.3"
+hyperspace-primitives = { path = "../../hyperspace/primitives", features = ["testing"] }
+pallet-ibc = { path = "../../contracts/pallet-ibc" }
 
 [features]
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
-default = ["std"]
+default = []
 std = []
+test = [
+  "sp-io/std",
+  "sp-runtime/std",
+  "sp-runtime-interface/std",
+  "sp-core/std",
+  "ics10-grandpa/std",
+  "grandpa-light-client-primitives/std",
+  "light-client-common/std",
+  "std"
+]
