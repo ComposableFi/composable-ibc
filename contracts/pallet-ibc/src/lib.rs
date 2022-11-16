@@ -69,6 +69,7 @@ pub mod light_clients;
 mod port;
 pub mod routing;
 pub use client::HostConsensusProof;
+pub use ibc_primitives::Timeout;
 pub use light_client_common;
 
 pub const MODULE_ID: &str = "pallet_ibc";
@@ -133,28 +134,6 @@ pub struct TransferParams<AccountId> {
 	pub timeout: Timeout,
 }
 
-/// Packet timeout, could be an offset, or absolute value.
-#[derive(
-	frame_support::RuntimeDebug, PartialEq, Eq, scale_info::TypeInfo, Encode, Decode, Clone,
-)]
-pub enum Timeout {
-	Offset {
-		/// Timestamp at which this packet should timeout in counterparty in seconds
-		/// relative to the latest time stamp
-		timestamp: Option<u64>,
-		/// Block height at which this packet should timeout on counterparty
-		/// relative to the latest height
-		height: Option<u64>,
-	},
-	/// Absolute value
-	Absolute {
-		/// Timestamp at which this packet should timeout on the counterparty in nanoseconds
-		timestamp: Option<u64>,
-		/// Block height at which this packet should timeout on the counterparty
-		height: Option<u64>,
-	},
-}
-
 pub enum LightClientProtocol {
 	Beefy,
 	Grandpa,
@@ -207,7 +186,7 @@ pub mod pallet {
 	use ibc_primitives::{
 		client_id_from_bytes, get_channel_escrow_address,
 		runtime_interface::{self, SS58CodecError},
-		IbcHandler, PacketInfo,
+		IbcHandler,
 	};
 	use light_clients::AnyClientState;
 	use sp_runtime::{
@@ -331,48 +310,6 @@ pub mod pallet {
 	pub type ConnectionClient<T: Config> =
 		StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<Vec<u8>>, ValueQuery>;
 
-	// temporary until offchain indexing is fixed
-	#[pallet::storage]
-	#[allow(clippy::disallowed_types)]
-	/// (ChannelId, PortId, Sequence) => Packet
-	pub type SendPackets<T: Config> = StorageDoubleMap<
-		_,
-		Blake2_128Concat,
-		(Vec<u8>, Vec<u8>),
-		Blake2_128Concat,
-		u64,
-		PacketInfo,
-		OptionQuery,
-	>;
-
-	// temporary
-	#[pallet::storage]
-	#[allow(clippy::disallowed_types)]
-	/// (ChannelId, PortId, Sequence) => Packet
-	pub type ReceivePackets<T: Config> = StorageDoubleMap<
-		_,
-		Blake2_128Concat,
-		(Vec<u8>, Vec<u8>),
-		Blake2_128Concat,
-		u64,
-		PacketInfo,
-		OptionQuery,
-	>;
-
-	// temporary
-	#[pallet::storage]
-	#[allow(clippy::disallowed_types)]
-	/// (ChannelId, PortId, Sequence) => Vec<u8>
-	pub type WriteAcknowledgements<T: Config> = StorageDoubleMap<
-		_,
-		Blake2_128Concat,
-		(Vec<u8>, Vec<u8>),
-		Blake2_128Concat,
-		u64,
-		Vec<u8>,
-		OptionQuery,
-	>;
-
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
 	/// Pallet Params used to disable sending or receipt of ibc tokens
@@ -439,6 +376,7 @@ pub mod pallet {
 			ibc_denom: Vec<u8>,
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
+			is_sender_source: bool,
 		},
 		/// A channel has been opened
 		ChannelOpened { channel_id: Vec<u8>, port_id: Vec<u8> },
@@ -451,6 +389,7 @@ pub mod pallet {
 			ibc_denom: Vec<u8>,
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
+			is_sender_source: bool,
 		},
 		/// Ibc tokens have been received and minted
 		TokenReceived {
@@ -459,6 +398,7 @@ pub mod pallet {
 			ibc_denom: Vec<u8>,
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
+			is_receiver_source: bool,
 		},
 		/// Ibc transfer failed, received an acknowledgement error, tokens have been refunded
 		TokenTransferFailed {
@@ -467,6 +407,7 @@ pub mod pallet {
 			ibc_denom: Vec<u8>,
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
+			is_sender_source: bool,
 		},
 		/// On recv packet was not processed successfully processes
 		OnRecvPacketError { msg: Vec<u8> },
@@ -550,10 +491,10 @@ pub mod pallet {
 	where
 		u32: From<<T as frame_system::Config>::BlockNumber>,
 		T: Send + Sync,
+		AccountId32: From<T::AccountId>,
 	{
 		fn offchain_worker(_n: BlockNumberFor<T>) {
-			// Enable when offchain indexing is fixed
-			// let _ = Pallet::<T>::packet_cleanup();
+			let _ = Pallet::<T>::packet_cleanup();
 		}
 	}
 
@@ -680,9 +621,13 @@ pub mod pallet {
 				timeout_height,
 				timeout_timestamp,
 			};
+			let is_sender_source = is_sender_chain_source(
+				msg.source_port.clone(),
+				msg.source_channel,
+				&msg.token.denom,
+			);
 
-			if is_sender_chain_source(msg.source_port.clone(), msg.source_channel, &msg.token.denom)
-			{
+			if is_sender_source {
 				// Store escrow address
 				let escrow_address =
 					get_channel_escrow_address(&msg.source_port, msg.source_channel)
@@ -714,6 +659,7 @@ pub mod pallet {
 				)
 				.ok(),
 				ibc_denom: coin.denom.to_string().as_bytes().to_vec(),
+				is_sender_source,
 			});
 			Ok(())
 		}

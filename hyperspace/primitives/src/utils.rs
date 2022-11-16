@@ -56,8 +56,8 @@ pub async fn create_clients(
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec() };
 
-	let (tx_hash, block_hash) = chain_a.submit(vec![msg]).await?;
-	let client_id_b_on_a = chain_a.query_client_id_from_tx_hash(tx_hash, block_hash).await?;
+	let tx_id = chain_a.submit(vec![msg]).await?;
+	let client_id_b_on_a = chain_a.query_client_id_from_tx_hash(tx_id).await?;
 
 	let msg = MsgCreateAnyClient::<LocalClientTypes> {
 		client_state: client_state_a,
@@ -67,8 +67,8 @@ pub async fn create_clients(
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec() };
 
-	let (tx_hash, block_hash) = chain_b.submit(vec![msg]).await?;
-	let client_id_a_on_b = chain_b.query_client_id_from_tx_hash(tx_hash, block_hash).await?;
+	let tx_id = chain_b.submit(vec![msg]).await?;
+	let client_id_a_on_b = chain_b.query_client_id_from_tx_hash(tx_id).await?;
 
 	Ok((client_id_a_on_b, client_id_b_on_a))
 }

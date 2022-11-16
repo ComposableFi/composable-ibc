@@ -16,7 +16,7 @@
 
 use crate::{
 	client_def::GrandpaClient,
-	client_message::{ClientMessage, RelayChainHeader, GRANDPA_CLIENT_MESSAGE_TYPE_URL},
+	client_message::{ClientMessage, GRANDPA_CLIENT_MESSAGE_TYPE_URL},
 	client_state::{ClientState, UpgradeOptions, GRANDPA_CLIENT_STATE_TYPE_URL},
 	consensus_state::{ConsensusState, GRANDPA_CONSENSUS_STATE_TYPE_URL},
 };
@@ -32,7 +32,7 @@ use ibc::{
 		client_def::MockClient,
 		client_state::{MockClientState, MockConsensusState},
 		context::HostBlockType,
-		header::{MockClientMessage, MockHeader},
+		header::MockClientMessage,
 		host::MockHostBlock,
 	},
 	prelude::*,
@@ -45,6 +45,7 @@ use sp_runtime::{
 	app_crypto::RuntimePublic,
 	traits::{BlakeTwo256, Header},
 };
+use std::{cell::RefCell, collections::BTreeSet};
 use tendermint_proto::Protobuf;
 
 pub const MOCK_CLIENT_STATE_TYPE_URL: &str = "/ibc.mock.ClientState";
@@ -54,19 +55,28 @@ pub const MOCK_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.mock.ConsensusState";
 #[derive(Clone, Default, PartialEq, Debug, Eq)]
 pub struct HostFunctionsManager;
 
+thread_local! {
+	static HEADER_HASHES: RefCell<BTreeSet<sp_core::H256>> = RefCell::new(BTreeSet::new());
+}
+
 impl grandpa_client_primitives::HostFunctions for HostFunctionsManager {
-	type Header = RelayChainHeader;
+	type Header = sp_runtime::generic::Header<u32, BlakeTwo256>;
 
 	fn ed25519_verify(sig: &ed25519::Signature, msg: &[u8], pub_key: &ed25519::Public) -> bool {
 		pub_key.verify(&msg, sig)
 	}
 
 	fn insert_relay_header_hashes(headers: &[<Self::Header as Header>::Hash]) {
-		unimplemented!()
+		HEADER_HASHES.with(|set| {
+			let mut set_mut = set.borrow_mut();
+			for hash in headers {
+				set_mut.insert(hash.clone());
+			}
+		})
 	}
 
 	fn contains_relay_header_hash(hash: <Self::Header as Header>::Hash) -> bool {
-		unimplemented!()
+		HEADER_HASHES.with(|set| set.borrow().contains(&hash))
 	}
 }
 
