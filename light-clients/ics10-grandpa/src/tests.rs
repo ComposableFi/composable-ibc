@@ -84,7 +84,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		.await
 		.unwrap();
 
-	println!("Waiting for grandpa proofs to become available");
+	log::info!(target: "grandpa", "Waiting for grandpa proofs to become available");
 	let session_length = prover.session_length().await.unwrap();
 	prover
 		.relay_client
@@ -97,7 +97,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		.take(1)
 		.collect::<Vec<_>>()
 		.await;
-	println!("Grandpa proofs are now available");
+	log::info!(target: "grandpa","Grandpa proofs are now available");
 
 	let (client_state, consensus_state) = loop {
 		let client_state = prover.initialize_client_state().await.unwrap();
@@ -128,6 +128,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		>::decode(&mut &*head_data.0)
 		.expect("Failed to decode parachain header");
 		// we can't use the genesis block to construct the initial state.
+		log::info!(target: "grandpa", "Latest para header number: {}", decoded_para_head.number);
 		if decoded_para_head.number == 0 {
 			continue
 		}
@@ -206,9 +207,10 @@ async fn test_continuous_update_of_grandpa_client() {
 			.expect("Failed to decode justification");
 
 		if justification.commit.target_number <= client_state.latest_relay_height {
-			println!(
+			log::info!(target: "grandpa",
 				"skipping outdated commit: {}, with latest relay height: {}",
-				justification.commit.target_number, client_state.latest_relay_height
+				justification.commit.target_number,
+				client_state.latest_relay_height
 			);
 			continue
 		}
@@ -233,12 +235,13 @@ async fn test_continuous_update_of_grandpa_client() {
 			)
 			.await
 			.expect("Failed to fetch finalized parachain headers with proof");
-		println!("========= New Justification =========");
-		println!("justification size: {}kb", size_of_val(&*justification_bytes) / 1000);
-		println!("current_set_id: {}", client_state.current_set_id);
-		println!(
+		log::info!(target: "grandpa","========= New Justification =========");
+		log::info!(target: "grandpa","justification size: {}kb", size_of_val(&*justification_bytes) / 1000);
+		log::info!(target: "grandpa","current_set_id: {}", client_state.current_set_id);
+		log::info!(target: "grandpa",
 			"For relay chain header: Hash({:?}), Number({})",
-			justification.commit.target_hash, justification.commit.target_number
+			justification.commit.target_hash,
+			justification.commit.target_number
 		);
 
 		let header = Header {
@@ -282,7 +285,7 @@ async fn test_continuous_update_of_grandpa_client() {
 								.ok();
 							dbg!((height, cs.is_some()));
 						}
-						println!(
+						log::info!(target: "grandpa",
 							"======== Successfully updated parachain client to height: {} ========",
 							upd_res.client_state.latest_height(),
 						);
