@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - main
-      - seun/integration-test # tmp
+      - blas/publish-docker-image-with-sha # tmp
 
 jobs:
   build-and-publish:
