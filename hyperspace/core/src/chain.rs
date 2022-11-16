@@ -54,7 +54,6 @@ use ibc::core::ics02_client::events::UpdateClient;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use parachain::{config, ParachainClient};
 use primitives::{Chain, IbcProvider, KeyProvider, MisbehaviourHandler, UpdateType};
-use sp_core::H256;
 use sp_runtime::generic::Era;
 use std::{pin::Pin, time::Duration};
 use subxt::{
