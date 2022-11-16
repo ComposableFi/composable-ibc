@@ -4,8 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
-      - blas/publish-docker-image-with-sha # tmp
+      - master
 
 jobs:
   build-and-publish:
