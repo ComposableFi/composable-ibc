@@ -266,14 +266,18 @@ where
 					},
 				};
 				if let Event::Ibc(PalletEvent::Events { events }) = pallet_event.event {
-					events.into_iter().enumerate().find_map(|(i, event)| {
-						let ibc_event =
-							IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(event)));
-						match ibc_event {
-							Ok(IbcEvent::UpdateClient(ev_update)) if ev_update == update =>
+					events.into_iter().enumerate().find_map(|(i, event)| match event {
+						Ok(ibc_event) => IbcEvent::try_from(RawIbcEvent::from(
+							MetadataIbcEventWrapper(ibc_event),
+						))
+						.map(|event| match event {
+							IbcEvent::UpdateClient(ev_update) if ev_update == update =>
 								Some((tx_index, i)),
 							_ => None,
-						}
+						})
+						.ok()
+						.flatten(),
+						_ => None,
 					})
 				} else {
 					None

@@ -131,10 +131,11 @@ where
 					.events
 					.into_iter()
 					.filter_map(|ev| {
-						Some(
-							IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(ev)))
-								.map_err(|e| subxt::Error::Other(e.to_string())),
-						)
+						ev.map(|event| {
+							IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(event)))
+								.map_err(|e| subxt::Error::Other(e.to_string()))
+						})
+						.ok()
 					})
 					.collect::<Result<Vec<_>, _>>();
 
