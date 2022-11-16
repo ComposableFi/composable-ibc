@@ -166,7 +166,7 @@ services:
       dockerfile: parachain-2000.Dockerfile
     command:
       - --base-path=/data
-      - --chain=/app/dev-2000-2000.json
+      - --chain=/app/dev.json
       - --ws-external
       - --rpc-external
       - --rpc-cors=all
@@ -199,7 +199,7 @@ services:
       dockerfile: parachain-2000.Dockerfile
     command:
       - --base-path=/data
-      - --chain=/app/dev-2000-2000.json
+      - --chain=/app/dev.json
       - --ws-external
       - --rpc-external
       - --rpc-cors=all
@@ -232,7 +232,7 @@ services:
       dockerfile: parachain-2000.Dockerfile
     command:
       - --base-path=/data
-      - --chain=/app/dev-2000-2000.json
+      - --chain=/app/dev.json
       - --ws-external
       - --rpc-external
       - --rpc-cors=all
@@ -265,7 +265,7 @@ services:
       dockerfile: parachain-2001.Dockerfile
     command:
       - --base-path=/data
-      - --chain=/app/dev-2001-2001.json
+      - --chain=/app/dev.json
       - --ws-external
       - --rpc-external
       - --rpc-cors=all
@@ -297,7 +297,7 @@ services:
       dockerfile: parachain-2001.Dockerfile
     command:
       - --base-path=/data
-      - --chain=/app/dev-2001-2001.json
+      - --chain=/app/dev.json
       - --ws-external
       - --rpc-external
       - --rpc-cors=all
@@ -330,7 +330,7 @@ services:
       dockerfile: parachain-2001.Dockerfile
     command:
       - --base-path=/data
-      - --chain=/app/dev-2001-2001.json
+      - --chain=/app/dev.json
       - --ws-external
       - --rpc-external
       - --rpc-cors=all
