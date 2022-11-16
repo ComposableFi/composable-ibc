@@ -40,6 +40,7 @@ use crate::{
 		api::runtime_types::{frame_system::Phase, pallet_ibc::Any as RawAny},
 		UncheckedExtrinsic,
 	},
+	provider::TransactionId,
 	utils::MetadataIbcEventWrapper,
 	FinalityProtocol,
 };
@@ -148,12 +149,11 @@ where
 
 				let stream = subscription.filter_map(|justification_notif| {
 					let encoded_justification = match justification_notif {
-						Ok(JustificationNotification(sp_core::Bytes(justification))) => {
-							justification
-						},
+						Ok(JustificationNotification(sp_core::Bytes(justification))) =>
+							justification,
 						Err(err) => {
 							log::error!("Failed to fetch Justification: {}", err);
-							return futures::future::ready(None);
+							return futures::future::ready(None)
 						},
 					};
 
@@ -162,7 +162,7 @@ where
 							Ok(j) => j,
 							Err(err) => {
 								log::error!("Grandpa Justification scale decode error: {}", err);
-								return futures::future::ready(None);
+								return futures::future::ready(None)
 							},
 						};
 					futures::future::ready(Some(Self::FinalityEvent::Grandpa(justification)))
@@ -183,7 +183,7 @@ where
 						Ok(JustificationNotification(sp_core::Bytes(commitment))) => commitment,
 						Err(err) => {
 							log::error!("Failed to fetch Commitment: {}", err);
-							return futures::future::ready(None);
+							return futures::future::ready(None)
 						},
 					};
 
@@ -192,7 +192,7 @@ where
 							Ok(c) => c,
 							Err(err) => {
 								log::error!("SignedCommitment scale decode error: {}", err);
-								return futures::future::ready(None);
+								return futures::future::ready(None)
 							},
 						};
 					futures::future::ready(Some(Self::FinalityEvent::Beefy(signed_commitment)))
@@ -203,10 +203,7 @@ where
 		}
 	}
 
-	async fn submit(
-		&self,
-		messages: Vec<Any>,
-	) -> Result<(sp_core::H256, Option<sp_core::H256>), Error> {
+	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
 		let messages = messages
 			.into_iter()
 			.map(|msg| RawAny { type_url: msg.type_url.as_bytes().to_vec(), value: msg.value })
@@ -215,7 +212,7 @@ where
 		let call = api::tx().ibc().deliver(messages);
 		let (ext_hash, block_hash) = self.submit_call(call).await?;
 
-		Ok((ext_hash.into(), Some(block_hash.into())))
+		Ok(TransactionId { ext_hash, block_hash })
 	}
 
 	async fn query_client_message(&self, update: UpdateClient) -> Result<AnyClientMessage, Error> {
@@ -239,7 +236,7 @@ where
 				Some(hash) => break hash,
 				None => {
 					if now.elapsed() > Duration::from_secs(20) {
-						return Err(Error::from("Timeout while waiting for block".to_owned()));
+						return Err(Error::from("Timeout while waiting for block".to_owned()))
 					}
 					sleep(Duration::from_millis(100)).await;
 				},
@@ -265,7 +262,7 @@ where
 					Phase::ApplyExtrinsic(i) => i as usize,
 					other => {
 						log::error!("Unexpected event phase: {:?}", other);
-						return None;
+						return None
 					},
 				};
 				if let Event::Ibc(PalletEvent::Events { events }) = pallet_event.event {
@@ -273,9 +270,8 @@ where
 						let ibc_event =
 							IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(event)));
 						match ibc_event {
-							Ok(IbcEvent::UpdateClient(ev_update)) if ev_update == update => {
-								Some((tx_index, i))
-							},
+							Ok(IbcEvent::UpdateClient(ev_update)) if ev_update == update =>
+								Some((tx_index, i)),
 							_ => None,
 						}
 					})
@@ -309,9 +305,8 @@ where
 					value: message.value.clone(),
 				});
 				match envelope {
-					Ok(Ics26Envelope::Ics2Msg(ClientMsg::UpdateClient(update_msg))) => {
-						return Ok(update_msg.client_message)
-					},
+					Ok(Ics26Envelope::Ics2Msg(ClientMsg::UpdateClient(update_msg))) =>
+						return Ok(update_msg.client_message),
 					_ => (),
 				}
 			},

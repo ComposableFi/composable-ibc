@@ -20,9 +20,7 @@ use alloc::string::{String, ToString};
 use codec::{Decode, Encode};
 use frame_support::{weights::Weight, RuntimeDebug};
 use ibc::{
-	applications::transfer::{
-		error::Error as Ics20Error, msgs::transfer::MsgTransfer, PrefixedCoin, VERSION,
-	},
+	applications::transfer::{error::Error as Ics20Error, PrefixedCoin, VERSION},
 	core::{
 		ics04_channel::{
 			channel::{ChannelEnd, Order},
@@ -41,19 +39,54 @@ use sp_std::{prelude::*, str::FromStr};
 
 pub mod runtime_interface;
 
-pub struct SendPacketData {
-	/// packet data
-	pub data: Vec<u8>,
-	/// Block height relative to the latest height on the counterparty chain when this packet
-	/// should be invalidated.
-	pub timeout_height_offset: u64,
-	/// Timestamp on counterparty chain relative to latest timestamp when this packet should be
-	/// invalidated This value should be in nano seconds
-	pub timeout_timestamp_offset: u64,
-	/// port id as utf8 string bytes
-	pub port_id: PortId,
-	/// channel id as utf8 string bytes
-	pub channel_id: ChannelId,
+/// Packet timeout, could be an offset, or absolute value.
+#[derive(
+	frame_support::RuntimeDebug, PartialEq, Eq, scale_info::TypeInfo, Encode, Decode, Clone,
+)]
+pub enum Timeout {
+	Offset {
+		/// Timestamp at which this packet should timeout in counterparty in seconds
+		/// relative to the latest time stamp
+		timestamp: Option<u64>,
+		/// Block height at which this packet should timeout on counterparty
+		/// relative to the latest height
+		height: Option<u64>,
+	},
+	/// Absolute value
+	Absolute {
+		/// Timestamp at which this packet should timeout on the counterparty in nanoseconds
+		timestamp: Option<u64>,
+		/// Block height at which this packet should timeout on the counterparty
+		height: Option<u64>,
+	},
+}
+
+pub enum HandlerMessage<AccountId> {
+	OpenChannel {
+		port_id: PortId,
+		channel_end: ChannelEnd,
+	},
+	CloseChannel {
+		channel_id: ChannelId,
+		port_id: PortId,
+	},
+	Transfer {
+		channel_id: ChannelId,
+		coin: PrefixedCoin,
+		timeout: Timeout,
+		from: AccountId,
+		to: Signer,
+	},
+	SendPacket {
+		/// packet data
+		data: Vec<u8>,
+		/// Packet timeout
+		timeout: Timeout,
+		/// port id as utf8 string bytes
+		port_id: PortId,
+		/// channel id as utf8 string bytes
+		channel_id: ChannelId,
+	},
 }
 
 #[derive(
@@ -299,6 +332,8 @@ pub enum Error {
 	BindPortError { msg: Option<String> },
 	/// Failed to initialize a new channel
 	ChannelInitError { msg: Option<String> },
+	/// Failed to close a channel
+	ChannelCloseError { msg: Option<String> },
 	/// Failed to decode a value
 	DecodingError { msg: Option<String> },
 	/// Failed to decode commitment prefix
@@ -335,23 +370,16 @@ impl TryFrom<&OpenChannelParams> for Order {
 
 /// Captures the functions modules can use to interact with the ibc pallet
 /// Currently allows modules to register packets and create channels
-pub trait IbcHandler {
+pub trait IbcHandler<AccountId> {
 	/// Get the latest height and latest timestamp for the client paired to the channel and port
 	/// combination
 	fn latest_height_and_timestamp(
 		port_id: &PortId,
 		channel_id: &ChannelId,
 	) -> Result<(Height, Timestamp), Error>;
-	/// Register a packet to be sent
-	fn send_packet(data: SendPacketData) -> Result<(), Error>;
-	/// Allows a module to open a channel
-	fn open_channel(port_id: PortId, channel_end: ChannelEnd) -> Result<ChannelId, Error>;
-	/// Modules use this to write acknowledgements into the ibc store
-	/// To be used in a successful execution of OnRecvPacket callback
+	/// Handle a message
+	fn handle_message(msg: HandlerMessage<AccountId>) -> Result<(), Error>;
 	fn write_acknowledgement(packet: &Packet, ack: Vec<u8>) -> Result<(), Error>;
-	/// Perform an ibc token transfer
-	fn send_transfer(data: MsgTransfer<PrefixedCoin>) -> Result<(), Error>;
-
 	/// testing related methods
 	#[cfg(feature = "runtime-benchmarks")]
 	fn create_client() -> Result<ClientId, Error>;

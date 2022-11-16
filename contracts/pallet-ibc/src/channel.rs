@@ -17,6 +17,7 @@ use core::{str::FromStr, time::Duration};
 use frame_support::traits::Get;
 use ibc_primitives::PacketInfo;
 use scale_info::prelude::string::ToString;
+use sp_core::crypto::AccountId32;
 
 use crate::{
 	ics23::{
@@ -278,6 +279,7 @@ where
 impl<T: Config + Sync + Send> ChannelKeeper for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 	Self: ChannelReader,
 {
 	fn store_packet_commitment(

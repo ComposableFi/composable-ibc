@@ -9,6 +9,7 @@ The [`IbcProvider`](/hyperspace/primitives/src/lib.rs#L83) trait defines methods
 **Associated Types**
 - `FinalityEvent` - This should represent the type yielded by the chain's block finality stream.
 - `Error` - Errors specific to the chain implementation.
+- `TransactionId` - A type that represents the format for transaction ids for the chain.
 
 **Channel Whitelist**
 The relayer only relays packets on channels specified in the [`channel_whitelist`](/hyperspace/primitives/src/lib.rs#L219). When the channel whitelist returns  

@@ -51,6 +51,7 @@ use ibc::{
 	signer::Signer,
 };
 use ibc_primitives::{CallbackWeight, IbcHandler};
+use sp_core::crypto::AccountId32;
 use sp_std::{boxed::Box, marker::PhantomData};
 
 #[derive(Clone, Eq, PartialEq)]
@@ -71,6 +72,7 @@ impl<T: Config> Default for IbcModule<T> {
 impl<T: Config + Send + Sync> Module for IbcModule<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	fn on_chan_open_init(
 		&mut self,
