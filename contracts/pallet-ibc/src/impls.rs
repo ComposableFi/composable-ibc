@@ -1087,7 +1087,7 @@ where
 		Ok(msg)
 	}
 
-	pub fn send_transfer(msg: MsgTransfer<PrefixedCoin>) -> Result<(), IbcHandlerError> {
+	pub(crate) fn send_transfer(msg: MsgTransfer<PrefixedCoin>) -> Result<(), IbcHandlerError> {
 		let mut ctx = Context::<T>::default();
 		let mut handler_output = HandlerOutputBuilder::default();
 		send_transfer::<_, _>(&mut ctx, &mut handler_output, msg)

@@ -6706,6 +6706,7 @@ dependencies = [
  "sha2 0.10.6",
  "simple-iavl",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+ "sp-finality-grandpa",
  "sp-io",
  "sp-keyring",
  "sp-runtime",
