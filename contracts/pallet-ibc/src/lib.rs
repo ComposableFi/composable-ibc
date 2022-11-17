@@ -170,7 +170,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	pub use ibc::signer::Signer;
 
-	use crate::routing::ModuleRouter;
+	use crate::routing::{Context, ModuleRouter};
 	use ibc::{
 		applications::transfer::{
 			is_sender_chain_source, msgs::transfer::MsgTransfer, Amount, PrefixedCoin,
@@ -178,6 +178,7 @@ pub mod pallet {
 		},
 		core::{
 			ics02_client::context::{ClientKeeper, ClientReader},
+			ics04_channel::context::ChannelReader,
 			ics24_host::identifier::{ChannelId, PortId},
 		},
 		timestamp::Timestamp,
@@ -379,6 +380,8 @@ pub mod pallet {
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
 			is_sender_source: bool,
+			source_channel: Vec<u8>,
+			destination_channel: Vec<u8>,
 		},
 		/// A channel has been opened
 		ChannelOpened { channel_id: Vec<u8>, port_id: Vec<u8> },
@@ -392,6 +395,8 @@ pub mod pallet {
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
 			is_sender_source: bool,
+			source_channel: Vec<u8>,
+			destination_channel: Vec<u8>,
 		},
 		/// Ibc tokens have been received and minted
 		TokenReceived {
@@ -401,6 +406,8 @@ pub mod pallet {
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
 			is_receiver_source: bool,
+			source_channel: Vec<u8>,
+			destination_channel: Vec<u8>,
 		},
 		/// Ibc transfer failed, received an acknowledgement error, tokens have been refunded
 		TokenTransferFailed {
@@ -410,6 +417,8 @@ pub mod pallet {
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
 			is_sender_source: bool,
+			source_channel: Vec<u8>,
+			destination_channel: Vec<u8>,
 		},
 		/// On recv packet was not processed successfully processes
 		OnRecvPacketError { msg: Vec<u8> },
@@ -616,7 +625,7 @@ pub mod pallet {
 
 			let msg = MsgTransfer {
 				source_port,
-				source_channel,
+				source_channel: source_channel.clone(),
 				token: coin.clone(),
 				sender: Signer::from_str(&from).map_err(|_| Error::<T>::Utf8Error)?,
 				receiver: Signer::from_str(&to).map_err(|_| Error::<T>::Utf8Error)?,
@@ -651,6 +660,10 @@ pub mod pallet {
 				log::trace!(target: "pallet_ibc", "[transfer]: error: {:?}", e);
 				Error::<T>::TransferFailed
 			})?;
+			let ctx = Context::<T>::default();
+			let channel_end = ctx
+				.channel_end(&(PortId::transfer(), source_channel))
+				.map_err(|_| Error::<T>::ChannelNotFound)?;
 
 			Self::deposit_event(Event::<T>::TokenTransferInitiated {
 				from: origin,
@@ -662,6 +675,14 @@ pub mod pallet {
 				.ok(),
 				ibc_denom: coin.denom.to_string().as_bytes().to_vec(),
 				is_sender_source,
+				source_channel: source_channel.to_string().as_bytes().to_vec(),
+				destination_channel: channel_end
+					.counterparty()
+					.channel_id
+					.ok_or_else(|| Error::<T>::ChannelNotFound)?
+					.to_string()
+					.as_bytes()
+					.to_vec(),
 			});
 			Ok(())
 		}
