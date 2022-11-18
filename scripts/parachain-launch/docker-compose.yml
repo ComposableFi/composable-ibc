@@ -211,7 +211,6 @@ services:
       - --force-authoring
       - --execution=wasm
       - --bob
-      - >-
         --bootnodes=/dns/parachain-2000-0/tcp/30333/p2p/12D3KooWNDsLfXwYCiNSV3LWAwc3rJ7cdjqenzvzsvp1PTtCpbpo
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
@@ -244,7 +243,6 @@ services:
       - --force-authoring
       - --execution=wasm
       - --charlie
-      - >-
         --bootnodes=/dns/parachain-2000-0/tcp/30333/p2p/12D3KooWNDsLfXwYCiNSV3LWAwc3rJ7cdjqenzvzsvp1PTtCpbpo
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
@@ -309,7 +307,6 @@ services:
       - --force-authoring
       - --execution=wasm
       - --bob
-      - >-
         --bootnodes=/dns/parachain-2001-0/tcp/30333/p2p/12D3KooWSMHyxxKbzzJxe44hHwSx7KWZM6Go3SrdhcvGLyc4z4XZ
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
@@ -342,7 +339,6 @@ services:
       - --force-authoring
       - --execution=wasm
       - --charlie
-      - >-
         --bootnodes=/dns/parachain-2001-0/tcp/30333/p2p/12D3KooWSMHyxxKbzzJxe44hHwSx7KWZM6Go3SrdhcvGLyc4z4XZ
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
