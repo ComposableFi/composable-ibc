@@ -53,6 +53,9 @@ pallet-ibc-ping = { path = "ping", default-features = false, optional = true }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, optional = true }
 simple-iavl = { path = "simple-iavl", default-features = false, optional = true }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
+sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
+sp-application-crypto = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
+finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-features = false }
 
 [dependencies.ibc]
 path = "../../ibc/modules"

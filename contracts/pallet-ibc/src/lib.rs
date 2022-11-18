@@ -141,8 +141,6 @@ pub enum LightClientProtocol {
 #[cfg(any(test, feature = "runtime-benchmarks"))]
 pub(crate) mod benchmarks;
 
-pub mod grandpa_benchmark_utils;
-
 #[cfg(test)]
 mod mock;
 
