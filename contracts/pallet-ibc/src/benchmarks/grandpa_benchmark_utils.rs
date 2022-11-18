@@ -14,10 +14,11 @@ use ics10_grandpa::{
 };
 use sp_core::H256;
 use sp_finality_grandpa::{AuthorityId, AuthoritySignature, KEY_TYPE};
-use sp_runtime::traits::BlakeTwo256;
+use sp_runtime::{traits::BlakeTwo256, SaturatedConversion};
 use sp_std::prelude::*;
 use sp_trie::{generate_trie_proof, LayoutV0, MemoryDB, StorageProof, TrieDBMut, TrieMut};
 
+pub const GRANDPA_UPDATE_TIMESTAMP: u64 = 1650894363;
 /// Builds a grandpa client message that that contains the requested number of precommits
 pub fn generate_finality_proof(
 	pre_commits: u32,
@@ -29,10 +30,11 @@ pub fn generate_finality_proof(
 	let round = 1;
 	let set_id = 1;
 
-	// Build timestmap extrinsic with proof
+	// Build timestamp extrinsic with proof
 	let mut para_db = MemoryDB::<BlakeTwo256>::default();
 
-	let mut timestamp_extrinsic = (1u8, 0u8, Compact(1_000_000_000u64)).encode();
+	let mut timestamp_extrinsic =
+		(1u8, 0u8, Compact(GRANDPA_UPDATE_TIMESTAMP.saturating_mul(10000))).encode();
 	timestamp_extrinsic.insert(0, 0);
 	timestamp_extrinsic.insert(0, 0);
 	let key = Compact(0u32).encode();
@@ -125,7 +127,7 @@ pub fn generate_finality_proof(
 			.into_nodes()
 			.into_iter()
 			.collect::<Vec<_>>();
-	// for each relaychain header we construct a corresponding parachainheaderproofs
+	// For each relay chain header we construct a corresponding ParachainHeaderProofs
 	for header in &headers {
 		parachain_headers.insert(
 			header.hash(),
@@ -152,8 +154,12 @@ pub fn generate_finality_proof(
 		_phantom: Default::default(),
 	};
 
+	let time = core::time::Duration::from_millis(GRANDPA_UPDATE_TIMESTAMP.saturating_mul(1000));
 	let consensus_state = ConsensusState {
-		timestamp: Timestamp::from_nanoseconds(1_000_000).unwrap().into_tm_time().unwrap(),
+		timestamp: Timestamp::from_nanoseconds(time.as_nanos().saturated_into::<u64>())
+			.unwrap()
+			.into_tm_time()
+			.unwrap(),
 		root: H256::zero().as_bytes().to_vec().into(),
 	};
 

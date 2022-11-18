@@ -17,7 +17,10 @@
 #[allow(unused)]
 use super::super::*;
 use crate::{
-	benchmarks::{grandpa_benchmark_utils::generate_finality_proof, tendermint_benchmark_utils::*},
+	benchmarks::{
+		grandpa_benchmark_utils::{generate_finality_proof, GRANDPA_UPDATE_TIMESTAMP},
+		tendermint_benchmark_utils::*,
+	},
 	ics20::IbcModule,
 	ics23::client_states::ClientStates,
 	light_clients::{AnyClientState, AnyConsensusState},
@@ -1200,12 +1203,12 @@ benchmarks! {
 
 	// update_grandpa_client
 	update_grandpa_client {
-		let i in 1..1000u32;
+		let i in 1..100u32;
 		let mut ctx = routing::Context::<T>::new();
 		// Set timestamp to the same timestamp used in generating tendermint header, because there
 		// will be a comparison between the local timestamp and the timestamp existing in the header
 		// after factoring in the trusting period for the light client.
-		let now: <T as pallet_timestamp::Config>::Moment = 1_000_000_000u64;
+		let now: <T as pallet_timestamp::Config>::Moment = GRANDPA_UPDATE_TIMESTAMP.saturating_mul(1000);
 		pallet_timestamp::Pallet::<T>::set_timestamp(now);
 		let (mock_client_state, mock_cs_state, client_message) = generate_finality_proof(i);
 		let mock_client_state = AnyClientState::Grandpa(mock_client_state);
@@ -1214,7 +1217,7 @@ benchmarks! {
 		let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
-		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
+		ctx.store_consensus_state(client_id.clone(), Height::new(2000, 1), mock_cs_state).unwrap();
 
 		let msg = MsgUpdateAnyClient::<routing::Context<T>> {
 			client_id: client_id.clone(),
@@ -1228,6 +1231,6 @@ benchmarks! {
 	verify {
 		let client_state = ClientStates::<T>::get(&client_id).unwrap();
 		let client_state = AnyClientState::decode_vec(&*client_state).unwrap();
-		assert_eq!(client_state.latest_height(), Height::new(0, 2));
+		assert_eq!(client_state.latest_height(), Height::new(2000, 2));
 	}
 }
