@@ -86,7 +86,7 @@ where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	AccountId32: From<T::AccountId>,
 {
-	pub fn execute_ibc_messages(
+	pub(crate) fn execute_ibc_messages(
 		ctx: &mut Context<T>,
 		messages: Vec<ibc_proto::google::protobuf::Any>,
 	) {
