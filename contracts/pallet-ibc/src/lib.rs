@@ -67,7 +67,7 @@ pub mod ics20;
 mod ics23;
 pub mod light_clients;
 mod port;
-pub mod routing;
+pub(crate) mod routing;
 pub use client::HostConsensusProof;
 pub use ibc_primitives::Timeout;
 pub use light_client_common;
