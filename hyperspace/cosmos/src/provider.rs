@@ -26,11 +26,13 @@ use ibc_proto::{
 	},
 };
 use ibc_rpc::PacketInfo;
-use ics07_tendermint::{client_message::Header, events::try_from_tx};
+use ics07_tendermint::{client_message::Header, client_state::ClientState, events::try_from_tx};
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use primitives::{Chain, IbcProvider, UpdateType};
 use std::pin::Pin;
 use tendermint_rpc::{query::Query, Client, Order};
+use ibc_proto::ibc::core::client::v1::MsgUpdateClient;
+
 
 pub enum FinalityEvent {
 	Tendermint(Header),
@@ -49,6 +51,9 @@ where
 	type TransactionId = TransactionId<tendermint_rpc::abci::transaction::Hash>;
 	type Error = Error;
 
+	// Things to do
+	// 1. query for ibc header
+	// 2. query ibc events between last updated state on counterparty light client and current finalized block
 	async fn query_latest_ibc_events<C>(
 		&mut self,
 		finality_event: Self::FinalityEvent,
@@ -57,7 +62,50 @@ where
 	where
 		C: Chain,
 	{
-		todo!()
+		let client_id = counterparty.client_id();
+		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
+		let latest_cp_client_state = counterparty.query_client_state(latest_cp_height, client_id).await?;
+		let client_state_response = latest_cp_client_state.client_state
+			.ok_or_else(|err| Error::Custom("counterparty returned empty client state".to_string()))?;
+
+		let client_state = AnyClientState::try_from(client_state_response)
+			.map_err(|err| Error::Custom("failed to decode client state response".to_string()))?;
+
+		let cs = match client_state {
+			AnyClientState::Tendermint(client_state) => client_state,
+			c => Err(Error::Custom(format!("expected Tendermint::ClientState got {:?}", c)))?
+		};
+
+		let latest_cp_client_height = cs.latest_height.revision_height;
+		let latest_height = self.rpc_client.latest_block().await?.block.header.height;
+
+		let mut ibc_events: Vec<IbcEvent> = vec![];
+		for height in latest_cp_client_height+1..latest_height+1 {
+			// todo()! maybe there's a more efficient way to query for blocks in batches?
+			let block_results = self.rpc_client
+				.block_results(height).await
+				.map_err(|e| Error::from(format!("Failed to query block result for height {:?}: {:?}", height, e)))?;
+
+			let tx_results = block_results.txs_results.ok_or_else(|err| Err(Error::Custom("empty transaction results".to_string())))?;
+			for tx in tx_results.iter() {
+				for event in tx.events {
+					ibc_events.push(try_from(event).unwrap());
+				}
+			}
+		}
+
+		let mut header: Header;
+		let update_client_header: Any = {
+			let latest_header = self.rpc_client.latest_block().await?.block.header;
+			// fill up any type with properdata
+			Any
+		};
+		let any = Any{
+			value: vec![],
+			type_url: String::from("some type url"),
+		};
+
+		Ok((update_client_header, ibc_events, UpdateType::Mandatory))
 	}
 
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>> {
