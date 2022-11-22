@@ -100,7 +100,7 @@ impl<'a, H: HostFunctions> ClientReader for Context<'a, H> {
 	}
 
 	fn host_client_type(&self) -> String {
-		unimplemented!()
+		"ics10_grandpa".to_string()
 	}
 
 	fn next_consensus_state(
