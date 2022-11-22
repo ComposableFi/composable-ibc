@@ -74,20 +74,23 @@ pub struct WasmConsensusState {
 pub struct ContractResult {
 	pub is_valid: bool,
 	pub error_msg: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub data: Option<Vec<u8>>,
 }
 
 impl ContractResult {
 	pub fn success() -> Self {
-		Self { is_valid: true, error_msg: "".to_string() }
+		Self { is_valid: true, error_msg: "".to_string(), data: None }
 	}
 
 	pub fn error(msg: String) -> Self {
-		Self { is_valid: false, error_msg: msg }
+		Self { is_valid: false, error_msg: msg, data: None }
 	}
 
-	// pub fn into_binary(self) -> StdResult<Binary> {
-	// 	Ok(to_binary(&self)?)
-	// }
+	pub fn data(mut self, data: Vec<u8>) -> Self {
+		self.data = Some(data);
+		self
+	}
 }
 
 #[cw_serde]
@@ -129,7 +132,7 @@ pub enum ExecuteMsg {
 	VerifyClientMessage(VerifyClientMessageRaw),
 	CheckForMisbehaviourMsg(CheckForMisbehaviourMsgRaw),
 	UpdateStateOnMisbehaviourMsg(UpdateStateOnMisbehaviourMsgRaw),
-	UpdateStateMsg(UpdateStateMsgRaw),
+	UpdateState(UpdateStateMsgRaw),
 	CheckSubstituteAndUpdateStateMsg(CheckSubstituteAndUpdateStateMsg),
 	VerifyUpgradeAndUpdateStateMsg(VerifyUpgradeAndUpdateStateMsgRaw),
 }
@@ -226,15 +229,23 @@ impl TryFrom<VerifyNonMembershipMsgRaw> for VerifyNonMembershipMsg {
 	}
 }
 
-/*
-{"verify_client_message":{
-	"client_message":{"data":"AA==","height":{"revision_number":1,"revision_height":2}},
-	"client_state":{"data":"AA==","code_id":"EyhxYATHme1WYM5IQjGjfTb88rxt1t0UejFAHfAc0C0=","latest_height":{"revision_number":1,"revision_height":2},"proof_specs":[{"leaf_spec":{"hash":1,"prehash_value":1,"length":3,"prefix":"AA=="},"inner_spec":{"child_order":[0,1],"child_size":33,"min_prefix_length":4,"max_prefix_length":12,"hash":1}}],"repository":"test"}}}
- */
+#[cw_serde]
+pub struct WasmMisbehaviour {
+	#[schemars(with = "String")]
+	#[serde(with = "Base64", default)]
+	pub data: Bytes,
+}
+
+#[cw_serde]
+pub enum ClientMessageRaw {
+	Header(WasmHeader),
+	Misbehaviour(WasmMisbehaviour),
+}
+
 #[cw_serde]
 pub struct VerifyClientMessageRaw {
 	pub client_state: WasmClientState,
-	pub client_message: WasmHeader,
+	pub client_message: ClientMessageRaw,
 }
 
 pub struct VerifyClientMessage<H> {
@@ -247,8 +258,12 @@ impl<H: Clone> TryFrom<VerifyClientMessageRaw> for VerifyClientMessage<H> {
 
 	fn try_from(raw: VerifyClientMessageRaw) -> Result<Self, Self::Error> {
 		let client_state = ClientState::decode_vec(&raw.client_state.data).unwrap();
-		let client_message =
-			ClientMessage::Header(Header::decode_vec(&raw.client_message.data).unwrap());
+		let client_message = match raw.client_message {
+			ClientMessageRaw::Header(header) =>
+				ClientMessage::Header(Header::decode_vec(&header.data).unwrap()),
+			ClientMessageRaw::Misbehaviour(_) =>
+				ClientMessage::Misbehaviour(unimplemented!("misbehaviour")),
+		};
 		Ok(Self { client_state, client_message })
 	}
 }
@@ -300,13 +315,11 @@ impl<H: Clone> TryFrom<UpdateStateOnMisbehaviourMsgRaw> for UpdateStateOnMisbeha
 
 #[cw_serde]
 pub struct UpdateStateMsgRaw {
-	pub client_id: String,
-	pub client_state: Bytes,
-	pub client_message: Bytes,
+	pub client_state: WasmClientState,
+	pub client_message: ClientMessageRaw,
 }
 
 pub struct UpdateStateMsg<H> {
-	pub client_id: ClientId,
 	pub client_state: ClientState<H>,
 	pub client_message: ClientMessage,
 }
@@ -315,12 +328,14 @@ impl<H: Clone> TryFrom<UpdateStateMsgRaw> for UpdateStateMsg<H> {
 	type Error = ContractError;
 
 	fn try_from(raw: UpdateStateMsgRaw) -> Result<Self, Self::Error> {
-		let client_id = ClientId::from_str(&raw.client_id)?;
-		let client_state = ClientState::decode_vec(&raw.client_state)?;
-		let client_message = ClientMessage::try_from(ClientMessageProto {
-			message: Some(MessageProto::Header(HeaderProto::decode(&*raw.client_message)?)),
-		})?;
-		Ok(Self { client_id, client_state, client_message })
+		let client_state = ClientState::decode_vec(&raw.client_state.data)?;
+		let client_message = match raw.client_message {
+			ClientMessageRaw::Header(header) =>
+				ClientMessage::Header(Header::decode_vec(&header.data).unwrap()),
+			ClientMessageRaw::Misbehaviour(_) =>
+				ClientMessage::Misbehaviour(unimplemented!("misbehaviour")),
+		};
+		Ok(Self { client_state, client_message })
 	}
 }
 

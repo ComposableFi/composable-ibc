@@ -17,9 +17,16 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw_storage_plus::{Item, Map};
 use digest::Digest;
-use ibc::core::{ics02_client::client_def::ClientDef, ics24_host::identifier::ClientId};
-use ics10_grandpa::{client_def::GrandpaClient, consensus_state::ConsensusState};
+use ibc::core::{
+	ics02_client::client_def::{ClientDef, ConsensusUpdateResult},
+	ics24_host::identifier::ClientId,
+};
+use ics10_grandpa::{
+	client_def::GrandpaClient, consensus_state::ConsensusState,
+	proto::ClientState as RawClientState,
+};
 use light_client_common::{verify_membership, verify_non_membership, LocalHeight};
+use prost::Message;
 use sp_runtime::traits::BlakeTwo256;
 use sp_runtime_interface::{pack_ptr_and_len, unpack_ptr_and_len};
 use std::{collections::BTreeSet, str::FromStr};
@@ -145,12 +152,24 @@ fn process_message(
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
 				.map(|_| to_binary(&ContractResult::success()))
 		},
-		ExecuteMsg::UpdateStateMsg(msg) => {
-			let msg = UpdateStateMsg::try_from(msg)?;
+		ExecuteMsg::UpdateState(msg_raw) => {
+			let mut client_state: WasmClientState = msg_raw.client_state.clone();
+			let msg = UpdateStateMsg::try_from(msg_raw)?;
 			client
 				.update_state(&ctx, client_id, msg.client_state, msg.client_message)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
-				.map(|_| to_binary(&ContractResult::success()))
+				.map(|(cs, cu)| {
+					client_state.latest_height = cs.latest_height().into();
+					client_state.data = RawClientState::from(cs).encode_to_vec();
+					match cu {
+						ConsensusUpdateResult::Single(cs) => {
+							// let wasm_cs = WasmConsensusState::from(cs);
+						},
+						ConsensusUpdateResult::Batch(cs) => {},
+					}
+					to_binary(&client_state)
+						.and_then(|data| to_binary(&ContractResult::success().data(data.0)))
+				})
 		},
 		ExecuteMsg::CheckSubstituteAndUpdateStateMsg(_msg) => {
 			todo!("check substitute and update state")
@@ -175,7 +194,7 @@ fn process_message(
 				me: me.clone(),
 				new_consensus_state: consensus_state.clone(),
 				new_client_state: me.clone(),
-				result: ContractResult { is_valid: true, error_msg: "".to_string() },
+				result: ContractResult::success(),
 			};
 			let response = to_binary(&state_call_response);
 			Ok(response)
