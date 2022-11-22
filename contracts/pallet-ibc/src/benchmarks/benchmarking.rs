@@ -77,7 +77,7 @@ use ibc::{
 		},
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
-		ics26_routing::context::{AsAnyMut, Module, OnRecvPacketAck},
+		ics26_routing::context::{AsAnyMut, Module},
 	},
 	handler::HandlerOutputBuilder,
 	signer::Signer,
@@ -1027,13 +1027,7 @@ benchmarks! {
 		 let signer = Signer::from_str("relayer").unwrap();
 	}:{
 
-		let res = handler.on_recv_packet(&mut output, &packet, &signer);
-		match res {
-			OnRecvPacketAck::Successful(_, write_fn) => {
-				write_fn(handler.as_any_mut()).unwrap()
-			}
-			_ => panic!("Expected successful execution")
-		}
+		handler.on_recv_packet(&mut output, &packet, &signer).unwrap();
 
 	 }
 	verify {
