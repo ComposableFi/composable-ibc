@@ -1,4 +1,5 @@
 use crate::context::Context;
+use core::time::Duration;
 use grandpa_light_client_primitives::HostFunctions;
 use ibc::{
 	core::{
@@ -14,6 +15,10 @@ use ibc::{
 };
 
 impl<'a, H: HostFunctions> ConnectionReader for Context<'a, H> {
+	fn minimum_delay_period(&self) -> Duration {
+		todo!()
+	}
+
 	fn connection_end(&self, _conn_id: &ConnectionId) -> Result<ConnectionEnd, Error> {
 		todo!()
 	}
