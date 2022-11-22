@@ -12,7 +12,6 @@ use ibc::{
 	},
 	Height,
 };
-use ics10_grandpa::client_message::RelayChainHeader;
 
 impl<'a, H: HostFunctions> ConnectionReader for Context<'a, H> {
 	fn connection_end(&self, _conn_id: &ConnectionId) -> Result<ConnectionEnd, Error> {

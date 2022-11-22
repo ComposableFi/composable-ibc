@@ -1,10 +1,9 @@
 use std::{cell::RefCell, fmt, fmt::Debug, marker::PhantomData, rc::Rc};
 
-use cosmwasm_std::{DepsMut, Storage};
+use cosmwasm_std::DepsMut;
 
 use grandpa_light_client_primitives::HostFunctions;
 use ibc::core::ics26_routing::context::ReaderContext;
-use ics10_grandpa::client_message::RelayChainHeader;
 
 pub struct Context<'a, H> {
 	pub deps: Rc<RefCell<DepsMut<'a>>>,

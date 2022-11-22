@@ -2,9 +2,9 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use ibc::core::ics02_client::client_def::ClientDef;
-use ics10_grandpa::{client_def::GrandpaClient, client_message::RelayChainHeader};
+use ics10_grandpa::client_def::GrandpaClient;
 use light_client_common::{verify_membership, verify_non_membership};
-use sp_runtime::traits::{BlakeTwo256, Header};
+use sp_runtime::traits::BlakeTwo256;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{

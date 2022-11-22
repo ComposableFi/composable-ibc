@@ -14,7 +14,6 @@ use ibc::{
 	timestamp::Timestamp,
 	Height,
 };
-use ics10_grandpa::client_message::RelayChainHeader;
 use std::time::Duration;
 
 impl<'a, H: HostFunctions> ChannelReader for Context<'a, H> {

@@ -13,9 +13,7 @@ use ibc::{
 	Height,
 };
 use ics10_grandpa::{
-	client_def::GrandpaClient,
-	client_message::{ClientMessage, RelayChainHeader},
-	client_state::ClientState,
+	client_def::GrandpaClient, client_message::ClientMessage, client_state::ClientState,
 	consensus_state::ConsensusState,
 };
 
