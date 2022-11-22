@@ -57,7 +57,10 @@ use crate::{
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 		ics26_routing::{
-			context::{Ics26Context, Module, ModuleId, ReaderContext, Router, RouterBuilder},
+			context::{
+				Ics26Context, Module, ModuleCallbackContext, ModuleId, ReaderContext, Router,
+				RouterBuilder,
+			},
 			error::Error as Ics26Error,
 			handler::dispatch,
 			msgs::Ics26Envelope,
@@ -579,6 +582,15 @@ impl Router for MockRouter {
 }
 
 impl<C: HostBlockType + Default> ReaderContext for MockContext<C>
+where
+	C::AnyClientMessage: TryFrom<Any, Error = Ics02Error> + Into<Any> + From<C::HostBlock>,
+	C::AnyClientState: Eq + TryFrom<Any, Error = Ics02Error> + Into<Any>,
+	C::AnyConsensusState:
+		Eq + TryFrom<Any, Error = Ics02Error> + Into<Any> + From<C::HostBlock> + 'static,
+{
+}
+
+impl<C: HostBlockType + Default> ModuleCallbackContext for MockContext<C>
 where
 	C::AnyClientMessage: TryFrom<Any, Error = Ics02Error> + Into<Any> + From<C::HostBlock>,
 	C::AnyClientState: Eq + TryFrom<Any, Error = Ics02Error> + Into<Any>,
@@ -1183,8 +1195,8 @@ mod tests {
 			},
 			ics24_host::identifier::{ChainId, ChannelId, ConnectionId, PortId},
 			ics26_routing::context::{
-				Acknowledgement, Module, ModuleId, ModuleOutputBuilder, OnRecvPacketAck, Router,
-				RouterBuilder,
+				Acknowledgement, Module, ModuleCallbackContext, ModuleId, ModuleOutputBuilder,
+				Router, RouterBuilder,
 			},
 		},
 		mock::{
@@ -1306,13 +1318,12 @@ mod tests {
 		impl Acknowledgement for MockAck {}
 
 		#[derive(Debug, Default)]
-		struct FooModule {
-			counter: usize,
-		}
+		struct FooModule;
 
 		impl Module for FooModule {
 			fn on_chan_open_try(
 				&mut self,
+				_ctx: &dyn ModuleCallbackContext,
 				_output: &mut ModuleOutputBuilder,
 				_order: Order,
 				_connection_hops: &[ConnectionId],
@@ -1327,18 +1338,12 @@ mod tests {
 
 			fn on_recv_packet(
 				&self,
+				_ctx: &dyn ModuleCallbackContext,
 				_output: &mut ModuleOutputBuilder,
 				_packet: &Packet,
 				_relayer: &Signer,
-			) -> OnRecvPacketAck {
-				OnRecvPacketAck::Successful(
-					Box::new(MockAck::default()),
-					Box::new(|module| {
-						let module = module.downcast_mut::<FooModule>().unwrap();
-						module.counter += 1;
-						Ok(())
-					}),
-				)
+			) -> Result<(), Error> {
+				Ok(())
 			}
 		}
 
@@ -1348,6 +1353,7 @@ mod tests {
 		impl Module for BarModule {
 			fn on_chan_open_try(
 				&mut self,
+				_ctx: &dyn ModuleCallbackContext,
 				_output: &mut ModuleOutputBuilder,
 				_order: Order,
 				_connection_hops: &[ConnectionId],
@@ -1376,10 +1382,18 @@ mod tests {
 		)
 		.with_router(r);
 
+		let ctx_clone = MockContext::<MockClientTypes>::new(
+			ChainId::new("mockgaia".to_string(), 1),
+			MockHostType::Mock,
+			1,
+			Height::new(1, 1),
+		);
+
 		let mut on_recv_packet_result = |module_id: &'static str| {
 			let module_id = ModuleId::from_str(module_id).unwrap();
 			let m = ctx.router.get_route_mut(&module_id).unwrap();
 			let result = m.on_recv_packet(
+				&ctx_clone,
 				&mut ModuleOutputBuilder::new(),
 				&Packet::default(),
 				&get_dummy_bech32_account().parse().unwrap(),
@@ -1390,14 +1404,9 @@ mod tests {
 		let results = vec![on_recv_packet_result("foomodule"), on_recv_packet_result("barmodule")];
 		results
 			.into_iter()
-			.filter_map(|(mid, result)| match result {
-				OnRecvPacketAck::Nil(write_fn) | OnRecvPacketAck::Successful(_, write_fn) =>
-					Some((mid, write_fn)),
-				_ => None,
-			})
-			.for_each(|(mid, write_fn)| {
-				write_fn(ctx.router.get_route_mut(&mid).unwrap().as_any_mut()).unwrap()
-			});
+			.map(|(.., result)| result)
+			.collect::<Result<Vec<_>, _>>()
+			.unwrap();
 	}
 }
 
