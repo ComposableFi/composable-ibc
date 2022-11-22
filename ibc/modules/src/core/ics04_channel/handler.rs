@@ -24,11 +24,12 @@ use crate::{
 		},
 		ics24_host::identifier::{ChannelId, PortId},
 		ics26_routing::context::{
-			Ics26Context, ModuleId, ModuleOutputBuilder, OnRecvPacketAck, ReaderContext, Router,
+			Ics26Context, ModuleId, ModuleOutputBuilder, ReaderContext, Router,
 		},
 	},
 	handler::{HandlerOutput, HandlerOutputBuilder},
 };
+use alloc::string::ToString;
 use core::fmt::Debug;
 
 pub mod acknowledgement;
@@ -108,10 +109,13 @@ pub fn channel_callback<Ctx>(
 where
 	Ctx: Ics26Context,
 {
+	// Get an immutable context for module callbacks
+	let ctx_clone = ctx.clone();
 	let cb = ctx.router_mut().get_route_mut(module_id).ok_or_else(Error::route_not_found)?;
 
 	match msg {
 		ChannelMsg::ChannelOpenInit(msg) => cb.on_chan_open_init(
+			&ctx_clone,
 			module_output,
 			msg.channel.ordering,
 			&msg.channel.connection_hops,
@@ -122,6 +126,7 @@ where
 		)?,
 		ChannelMsg::ChannelOpenTry(msg) => {
 			let version = cb.on_chan_open_try(
+				&ctx_clone,
 				module_output,
 				msg.channel.ordering,
 				&msg.channel.connection_hops,
@@ -134,17 +139,18 @@ where
 			result.channel_end.version = version;
 		},
 		ChannelMsg::ChannelOpenAck(msg) => cb.on_chan_open_ack(
+			&ctx_clone,
 			module_output,
 			&msg.port_id,
 			&result.channel_id,
 			&msg.counterparty_version,
 		)?,
 		ChannelMsg::ChannelOpenConfirm(msg) =>
-			cb.on_chan_open_confirm(module_output, &msg.port_id, &result.channel_id)?,
+			cb.on_chan_open_confirm(&ctx_clone, module_output, &msg.port_id, &result.channel_id)?,
 		ChannelMsg::ChannelCloseInit(msg) =>
-			cb.on_chan_close_init(module_output, &msg.port_id, &result.channel_id)?,
+			cb.on_chan_close_init(&ctx_clone, module_output, &msg.port_id, &result.channel_id)?,
 		ChannelMsg::ChannelCloseConfirm(msg) =>
-			cb.on_chan_close_confirm(module_output, &msg.port_id, &result.channel_id)?,
+			cb.on_chan_close_confirm(&ctx_clone, module_output, &msg.port_id, &result.channel_id)?,
 	}
 	Ok(result)
 }
@@ -200,28 +206,26 @@ pub fn packet_callback<Ctx>(
 where
 	Ctx: Ics26Context,
 {
+	// Get an immutable context for module callbacks
+	let ctx_clone = ctx.clone();
 	let cb = ctx.router_mut().get_route_mut(module_id).ok_or_else(Error::route_not_found)?;
 
 	match msg {
 		PacketMsg::RecvPacket(msg) => {
-			let result = cb.on_recv_packet(module_output, &msg.packet, &msg.signer);
-			match result {
-				OnRecvPacketAck::Nil(write_fn) | OnRecvPacketAck::Successful(_, write_fn) => {
-					write_fn(cb.as_any_mut()).map_err(Error::app_module)?;
-				},
-				OnRecvPacketAck::Failed(_) => {},
-			}
+			cb.on_recv_packet(&ctx_clone, module_output, &msg.packet, &msg.signer)
+				.map_err(|e| Error::app_module(e.to_string()))?;
 		},
 		PacketMsg::AckPacket(msg) => cb.on_acknowledgement_packet(
+			&ctx_clone,
 			module_output,
 			&msg.packet,
 			&msg.acknowledgement,
 			&msg.signer,
 		)?,
 		PacketMsg::ToPacket(msg) =>
-			cb.on_timeout_packet(module_output, &msg.packet, &msg.signer)?,
+			cb.on_timeout_packet(&ctx_clone, module_output, &msg.packet, &msg.signer)?,
 		PacketMsg::ToClosePacket(msg) =>
-			cb.on_timeout_packet(module_output, &msg.packet, &msg.signer)?,
+			cb.on_timeout_packet(&ctx_clone, module_output, &msg.packet, &msg.signer)?,
 	};
 	Ok(())
 }
