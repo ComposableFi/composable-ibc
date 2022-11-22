@@ -2,7 +2,7 @@
 name = "pallet-ibc-ping"
 edition = "2021"
 version = "0.0.1"
-authors = ["David Salami <david.salami@gmail.com>"]
+authors = ["David Salami <wizdave97@gmail.com>"]
 
 [dependencies]
 log = { version = "0.4.0", default-features = false }
@@ -14,7 +14,7 @@ frame-system = { git = "https://github.com/paritytech/substrate", branch = "polk
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
-ibc = { path = "../../../../centauri/ibc/modules", default-features = false }
+ibc = { path = "../../../ibc/modules", default-features = false }
 
 ibc-primitives = { path = "../primitives", default-features = false }
 

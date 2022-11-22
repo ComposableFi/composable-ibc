@@ -1,4 +1,19 @@
+// Copyright 2022 ComposableFi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use super::*;
+use core::time::Duration;
 
 use crate::{ics23::connections::Connections, routing::Context};
 use frame_support::traits::Get;
@@ -20,6 +35,10 @@ impl<T: Config + Sync + Send> ConnectionReader for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 {
+	fn minimum_delay_period(&self) -> Duration {
+		Duration::from_secs(T::MinimumConnectionDelay::get())
+	}
+
 	fn connection_end(&self, conn_id: &ConnectionId) -> Result<ConnectionEnd, ICS03Error> {
 		log::trace!(target: "pallet_ibc", "in connection : [connection_end] >> connection_id = {:?}", conn_id);
 
@@ -45,13 +64,6 @@ where
 		Height::new(para_id.into(), height)
 	}
 
-	fn connection_counter(&self) -> Result<u64, ICS03Error> {
-		let count = ConnectionCounter::<T>::get();
-		log::trace!(target: "pallet_ibc", "in connection : [connection_counter] >> Connection_counter = {:?}", count);
-
-		Ok(count as u64)
-	}
-
 	#[allow(clippy::disallowed_methods)]
 	fn commitment_prefix(&self) -> CommitmentPrefix {
 		log::trace!(target: "pallet_ibc", "in connection : [commitment_prefix] >> CommitmentPrefix = {:?}", "ibc");
@@ -61,6 +73,13 @@ where
 			.try_into()
 			.map_err(|_| panic!("Connection prefix supplied in pallet runtime config is invalid"))
 			.unwrap()
+	}
+
+	fn connection_counter(&self) -> Result<u64, ICS03Error> {
+		let count = ConnectionCounter::<T>::get();
+		log::trace!(target: "pallet_ibc", "in connection : [connection_counter] >> Connection_counter = {:?}", count);
+
+		Ok(count as u64)
 	}
 }
 

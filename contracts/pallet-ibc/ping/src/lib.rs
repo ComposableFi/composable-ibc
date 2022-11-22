@@ -1,3 +1,17 @@
+// Copyright 2022 ComposableFi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
@@ -24,7 +38,7 @@ use ibc::{
 	},
 	signer::Signer,
 };
-use ibc_primitives::{port_id_from_bytes, CallbackWeight, IbcHandler, SendPacketData};
+use ibc_primitives::{port_id_from_bytes, CallbackWeight, HandlerMessage, IbcHandler, Timeout};
 use sp_std::{marker::PhantomData, prelude::*};
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -72,7 +86,7 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// ibc subsystem
-		type IbcHandler: ibc_primitives::IbcHandler;
+		type IbcHandler: ibc_primitives::IbcHandler<<Self as frame_system::Config>::AccountId>;
 	}
 
 	// Simple declaration of the `Pallet` type. It is placeholder we use to implement traits and
@@ -119,15 +133,16 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	pub fn send_ping_impl(params: SendPingParams) -> Result<(), ibc_primitives::Error> {
 		let channel_id = ChannelId::new(params.channel_id);
-		let send_packet = SendPacketData {
+		T::IbcHandler::handle_message(HandlerMessage::SendPacket {
 			data: b"ping".to_vec(),
-			timeout_height_offset: params.timeout_height_offset,
-			timeout_timestamp_offset: params.timeout_timestamp_offset,
+			timeout: Timeout::Offset {
+				height: Some(params.timeout_height_offset),
+				timestamp: Some(params.timeout_timestamp_offset),
+			},
 			port_id: port_id_from_bytes(PORT_ID.as_bytes().to_vec())
 				.expect("Valid port id expected"),
 			channel_id,
-		};
-		T::IbcHandler::send_packet(send_packet)
+		})
 	}
 }
 

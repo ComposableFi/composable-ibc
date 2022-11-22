@@ -1,4 +1,19 @@
+// Copyright 2022 ComposableFi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use crate::{
+	impls::{OFFCHAIN_RECV_PACKET_SEQS, OFFCHAIN_SEND_PACKET_SEQS},
 	light_clients::{AnyClientState, AnyConsensusState},
 	mock::*,
 	routing::Context,
@@ -20,7 +35,7 @@ use ibc::{
 		},
 		ics03_connection::{
 			connection::{ConnectionEnd, Counterparty, State as ConnState},
-			context::ConnectionKeeper,
+			context::{ConnectionKeeper, ConnectionReader},
 			msgs::conn_open_init,
 			version::Version as ConnVersion,
 		},
@@ -44,8 +59,11 @@ use ibc::{
 };
 use ibc_primitives::{get_channel_escrow_address, IbcHandler};
 use sp_core::Pair;
-use sp_runtime::{traits::IdentifyAccount, AccountId32};
-use std::str::FromStr;
+use sp_runtime::{offchain::storage::StorageValueRef, traits::IdentifyAccount, AccountId32};
+use std::{
+	collections::{BTreeMap, BTreeSet},
+	str::FromStr,
+};
 use tendermint_proto::Protobuf;
 
 fn setup_client_and_consensus_state(port_id: PortId) {
@@ -141,6 +159,57 @@ fn initialize_connection() {
 	})
 }
 
+// try to initialize a connection below the MinimumConnectionDelay
+#[test]
+fn initialize_connection_with_low_delay() {
+	new_test_ext().execute_with(|| {
+		let ctx = Context::<Test>::new();
+
+		let mock_client_state =
+			MockClientState::new(MockClientMessage::from(MockHeader::default()));
+		let mock_cs_state = MockConsensusState::new(MockHeader::default());
+		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();
+		let counterparty_client_id = ClientId::new(&mock_client_state.client_type(), 1).unwrap();
+		let msg = MsgCreateAnyClient::<Context<Test>>::new(
+			AnyClientState::Mock(mock_client_state),
+			AnyConsensusState::Mock(mock_cs_state),
+			Signer::from_str(MODULE_ID).unwrap(),
+		)
+		.unwrap()
+		.encode_vec();
+
+		let commitment_prefix: CommitmentPrefix =
+			<Test as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
+
+		let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
+
+		assert_ok!(Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]));
+
+		let value = conn_open_init::MsgConnectionOpenInit {
+			client_id,
+			counterparty: Counterparty::new(
+				counterparty_client_id,
+				Some(ConnectionId::new(1)),
+				commitment_prefix,
+			),
+			version: Some(ConnVersion::default()),
+			delay_period: Duration::from_nanos(900),
+			signer: Signer::from_str(MODULE_ID).unwrap(),
+		};
+
+		let msg = Any {
+			type_url: conn_open_init::TYPE_URL.as_bytes().to_vec(),
+			value: value.encode_vec(),
+		};
+
+		Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
+
+		let result = ConnectionReader::connection_end(&ctx, &ConnectionId::new(0));
+
+		assert!(result.is_err())
+	})
+}
+
 const MILLIS: u128 = 1000000;
 #[test]
 fn send_transfer() {
@@ -177,6 +246,23 @@ fn send_transfer() {
 			balance,
 		)
 		.unwrap();
+	});
+
+	ext.persist_offchain_overlay();
+
+	ext.execute_with(|| {
+		let channel_id = ChannelId::new(0);
+		let port_id = PortId::transfer();
+		let packet_info = Pallet::<Test>::get_send_packet_info(
+			channel_id.to_string().as_bytes().to_vec(),
+			port_id.as_bytes().to_vec(),
+			vec![1],
+		)
+		.unwrap()
+		.get(0)
+		.unwrap()
+		.clone();
+		assert!(!packet_info.data.is_empty())
 	})
 }
 
@@ -299,10 +385,16 @@ fn should_fetch_recv_packet_with_acknowledgement() {
 
 		ctx.store_recv_packet((port_id.clone(), channel_id, packet.sequence), packet.clone())
 			.unwrap();
-
 		let ack = "success".as_bytes().to_vec();
-		Pallet::<Test>::write_acknowledgement(&packet, ack.clone()).unwrap();
+		Pallet::<Test>::write_acknowledgement(&packet, ack).unwrap();
+	});
 
+	ext.persist_offchain_overlay();
+
+	ext.execute_with(|| {
+		let ack = "success".as_bytes().to_vec();
+		let channel_id = ChannelId::new(0);
+		let port_id = PortId::transfer();
 		let packet_info = Pallet::<Test>::get_recv_packet_info(
 			channel_id.to_string().as_bytes().to_vec(),
 			port_id.as_bytes().to_vec(),
@@ -313,5 +405,164 @@ fn should_fetch_recv_packet_with_acknowledgement() {
 		.unwrap()
 		.clone();
 		assert_eq!(packet_info.ack, Some(ack))
+	})
+}
+
+#[test]
+fn should_cleanup_offchain_packets_correctly() {
+	let mut ext = new_test_ext();
+	let channel_id = ChannelId::new(0);
+	let port_id = PortId::transfer();
+
+	ext.execute_with(|| {
+		// Add some packets offchain
+		let channel_end = ChannelEnd::default();
+		let mut ctx = Context::<Test>::default();
+		ctx.store_channel((port_id.clone(), channel_id.clone()), &channel_end).unwrap();
+		ctx.store_next_sequence_send((port_id.clone(), channel_id.clone()), 11.into())
+			.unwrap();
+		ctx.store_next_sequence_recv((port_id.clone(), channel_id.clone()), 11.into())
+			.unwrap();
+		// Store packets and commitments
+		for i in 1..=10u64 {
+			let packet = Packet {
+				sequence: i.into(),
+				source_port: port_id.clone(),
+				source_channel: channel_id,
+				destination_port: port_id.clone(),
+				destination_channel: channel_id,
+				data: "hello".as_bytes().to_vec(),
+				timeout_height: Default::default(),
+				timeout_timestamp: Default::default(),
+			};
+			ctx.store_send_packet((port_id.clone(), channel_id.clone(), i.into()), packet)
+				.unwrap();
+
+			// Store commitment for even numbers
+			if i % 2 == 0 {
+				ctx.store_packet_commitment(
+					(port_id.clone(), channel_id.clone(), i.into()),
+					"commitment".as_bytes().to_vec().into(),
+				)
+				.unwrap();
+			}
+		}
+
+		// Store packet acknowledgements
+
+		for i in 1..=10u64 {
+			let packet = Packet {
+				sequence: i.into(),
+				source_port: port_id.clone(),
+				source_channel: channel_id,
+				destination_port: port_id.clone(),
+				destination_channel: channel_id,
+				data: "hello".as_bytes().to_vec(),
+				timeout_height: Default::default(),
+				timeout_timestamp: Default::default(),
+			};
+			ctx.store_recv_packet((port_id.clone(), channel_id.clone(), i.into()), packet)
+				.unwrap();
+			// Store ack for odd numbers
+			if i % 2 != 0 {
+				ctx.store_packet_acknowledgement(
+					(port_id.clone(), channel_id.clone(), i.into()),
+					"commitment".as_bytes().to_vec().into(),
+				)
+				.unwrap();
+				Pallet::<Test>::store_raw_acknowledgement(
+					(port_id.clone(), channel_id.clone(), i.into()),
+					"acknowledgement".as_bytes().to_vec(),
+				)
+				.unwrap();
+			}
+		}
+	});
+
+	ext.persist_offchain_overlay();
+
+	ext.execute_with(|| {
+		Pallet::<Test>::packet_cleanup().unwrap();
+	});
+
+	ext.persist_offchain_overlay();
+
+	ext.execute_with(|| {
+		let pending_send_packet_seqs = StorageValueRef::persistent(OFFCHAIN_SEND_PACKET_SEQS);
+		let pending_recv_packet_seqs = StorageValueRef::persistent(OFFCHAIN_RECV_PACKET_SEQS);
+		let pending_send_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
+			pending_send_packet_seqs.get::<_>().ok().flatten().unwrap();
+		let pending_recv_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
+			pending_recv_packet_seqs.get::<_>().ok().flatten().unwrap();
+
+		let channel_id_bytes = channel_id.to_string().as_bytes().to_vec();
+		let port_id_bytes = port_id.as_bytes().to_vec();
+
+		let (send_seq_set, last_removed_send) = pending_send_sequences
+			.get(&(port_id_bytes.clone(), channel_id_bytes.clone()))
+			.map(|set| set.clone())
+			.unwrap();
+
+		let (recv_seq_set, last_removed_ack) = pending_recv_sequences
+			.get(&(port_id_bytes, channel_id_bytes))
+			.map(|set| set.clone())
+			.unwrap();
+
+		assert_eq!(send_seq_set, vec![2, 4, 6, 8, 10].into_iter().collect());
+
+		assert_eq!(recv_seq_set, vec![1, 3, 5, 7, 9].into_iter().collect());
+
+		assert_eq!(last_removed_send, 9);
+		assert_eq!(last_removed_ack, 10);
+		// Now let's prepare to remove pending sequences
+		let mut ctx = Context::<Test>::default();
+		for i in send_seq_set {
+			ctx.delete_packet_commitment((port_id.clone(), channel_id.clone(), i.into()))
+				.unwrap();
+		}
+
+		for i in recv_seq_set {
+			ctx.delete_packet_acknowledgement((port_id.clone(), channel_id.clone(), i.into()))
+				.unwrap();
+		}
+	});
+
+	ext.persist_offchain_overlay();
+
+	ext.execute_with(|| {
+		Pallet::<Test>::packet_cleanup().unwrap();
+	});
+
+	ext.persist_offchain_overlay();
+
+	ext.execute_with(|| {
+		let pending_send_packet_seqs = StorageValueRef::persistent(OFFCHAIN_SEND_PACKET_SEQS);
+		let pending_recv_packet_seqs = StorageValueRef::persistent(OFFCHAIN_RECV_PACKET_SEQS);
+		let pending_send_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
+			pending_send_packet_seqs.get::<_>().ok().flatten().unwrap();
+		let pending_recv_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
+			pending_recv_packet_seqs.get::<_>().ok().flatten().unwrap();
+
+		let channel_id_bytes = channel_id.to_string().as_bytes().to_vec();
+		let port_id_bytes = port_id.as_bytes().to_vec();
+
+		let (send_seq_set, last_removed_send) = pending_send_sequences
+			.get(&(port_id_bytes.clone(), channel_id_bytes.clone()))
+			.map(|set| set.clone())
+			.unwrap();
+
+		let (recv_seq_set, last_removed_ack) = pending_recv_sequences
+			.get(&(port_id_bytes, channel_id_bytes))
+			.map(|set| set.clone())
+			.unwrap();
+
+		println!("{send_seq_set:?}");
+
+		assert!(send_seq_set.is_empty());
+
+		assert!(recv_seq_set.is_empty());
+
+		assert_eq!(last_removed_send, 10);
+		assert_eq!(last_removed_ack, 10);
 	});
 }

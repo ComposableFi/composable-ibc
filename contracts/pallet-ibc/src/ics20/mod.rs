@@ -1,3 +1,17 @@
+// Copyright 2022 ComposableFi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 pub mod context;
 
 use crate::{routing::Context, ChannelIds, Config, DenomToAssetId, Event, Pallet, WeightInfo};
@@ -5,8 +19,8 @@ use alloc::{
 	format,
 	string::{String, ToString},
 };
-use core::fmt::Formatter;
-use frame_support::{traits::Currency, weights::Weight};
+use core::{fmt::Formatter, str::FromStr};
+use frame_support::weights::Weight;
 use ibc::{
 	applications::transfer::{
 		acknowledgement::{Acknowledgement as Ics20Acknowledgement, ACK_ERR_STR, ACK_SUCCESS_B64},
@@ -15,13 +29,13 @@ use ibc::{
 			on_chan_open_init, on_chan_open_try,
 		},
 		error::Error as Ics20Error,
-		is_receiver_chain_source,
+		is_receiver_chain_source, is_sender_chain_source,
 		packet::PacketData,
 		relay::{
 			on_ack_packet::process_ack_packet, on_recv_packet::process_recv_packet,
 			on_timeout_packet::process_timeout_packet,
 		},
-		PrefixedCoin, TracePrefix,
+		PrefixedCoin, PrefixedDenom, TracePrefix,
 	},
 	core::{
 		ics04_channel::{
@@ -37,6 +51,7 @@ use ibc::{
 	signer::Signer,
 };
 use ibc_primitives::{CallbackWeight, IbcHandler};
+use sp_core::crypto::AccountId32;
 use sp_std::{boxed::Box, marker::PhantomData};
 
 #[derive(Clone, Eq, PartialEq)]
@@ -57,8 +72,7 @@ impl<T: Config> Default for IbcModule<T> {
 impl<T: Config + Send + Sync> Module for IbcModule<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	T::Balance: From<u128>,
-	<T::NativeCurrency as Currency<T::AccountId>>::Balance: From<T::Balance>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	fn on_chan_open_init(
 		&mut self,
@@ -221,6 +235,7 @@ where
 			},
 			Ok(packet_data) => {
 				let denom = full_ibc_denom(packet, packet_data.token.clone());
+				let prefixed_denom = PrefixedDenom::from_str(&denom).expect("Should not fail");
 				Pallet::<T>::deposit_event(Event::<T>::TokenReceived {
 					from: packet_data.sender.to_string().as_bytes().to_vec(),
 					to: packet_data.receiver.to_string().as_bytes().to_vec(),
@@ -228,6 +243,11 @@ where
 					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
 						.ok(),
 					amount: packet_data.token.amount.as_u256().as_u128().into(),
+					is_receiver_source: is_receiver_chain_source(
+						packet.source_port.clone(),
+						packet.source_channel.clone(),
+						&prefixed_denom,
+					),
 				});
 				let packet = packet.clone();
 				OnRecvPacketAck::Successful(
@@ -272,7 +292,8 @@ where
 			})?;
 		process_ack_packet(&mut ctx, packet, &packet_data, &ack)
 			.map_err(|e| Ics04Error::implementation_specific(e.to_string()))?;
-
+		let denom = full_ibc_denom(packet, packet_data.token.clone());
+		let prefixed_denom = PrefixedDenom::from_str(&denom).expect("Should not fail");
 		match ack {
 			Ics20Acknowledgement::Success(_) =>
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
@@ -284,6 +305,11 @@ where
 					)
 					.ok(),
 					amount: packet_data.token.amount.as_u256().as_u128().into(),
+					is_sender_source: is_sender_chain_source(
+						packet.source_port.clone(),
+						packet.source_channel.clone(),
+						&prefixed_denom,
+					),
 				}),
 			Ics20Acknowledgement::Error(_) =>
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferFailed {
@@ -295,6 +321,11 @@ where
 					)
 					.ok(),
 					amount: packet_data.token.amount.as_u256().as_u128().into(),
+					is_sender_source: is_sender_chain_source(
+						packet.source_port.clone(),
+						packet.source_channel.clone(),
+						&prefixed_denom,
+					),
 				}),
 		}
 

@@ -13,6 +13,7 @@ members = [
     "contracts/pallet-ibc/rpc",
     "contracts/pallet-ibc/runtime-api",
     "contracts/pallet-ibc",
+    "contracts/pallet-ibc/simple-iavl",
 
     # algorithms
     "algorithms/beefy/verifier",
@@ -232,3 +233,8 @@ substrate-prometheus-endpoint = { git = "https://github.com/vmarkushin/substrate
 substrate-state-trie-migration-rpc = { git = "https://github.com/vmarkushin/substrate", rev = "5fa7b0c735873441bbd25f2e22d27f19fa4c81d5" }
 substrate-wasm-builder = { git = "https://github.com/vmarkushin/substrate", rev = "5fa7b0c735873441bbd25f2e22d27f19fa4c81d5" }
 try-runtime-cli = { git = "https://github.com/vmarkushin/substrate", rev = "5fa7b0c735873441bbd25f2e22d27f19fa4c81d5" }
+
+[workspace.dependencies]
+tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
+tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
+tendermint-light-client-verifier = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }

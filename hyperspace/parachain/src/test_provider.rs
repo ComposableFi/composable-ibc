@@ -1,3 +1,17 @@
+// Copyright 2022 ComposableFi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use crate::{
 	config, parachain::api, signer::ExtrinsicSigner, utils::unsafe_cast_to_jsonrpsee_client, Error,
 	ParachainClient,
@@ -23,9 +37,6 @@ use sp_runtime::{
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr};
 use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip};
-
-// Temp fix
-type AssetId = u128;
 
 impl<T: config::Config + Send + Sync> ParachainClient<T>
 where
@@ -59,7 +70,7 @@ where
 
 		// Query newly created client Id
 		let identified_client_state =
-			IbcApiClient::<u32, H256, AssetId>::query_newly_created_client(
+			IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_newly_created_client(
 				&*self.para_ws_client,
 				block_hash.into(),
 				ext_hash.into(),
@@ -185,7 +196,11 @@ where
 		Ok(())
 	}
 
-	async fn send_ping(&self, channel_id: ChannelId, timeout: Timeout) -> Result<(), Self::Error> {
+	async fn send_ordered_packet(
+		&self,
+		channel_id: ChannelId,
+		timeout: Timeout,
+	) -> Result<(), Self::Error> {
 		let (timeout_height, timestamp) = match timeout {
 			Timeout::Offset { timestamp, height } => (height.unwrap(), timestamp.unwrap()),
 			_ => panic!("Only offset timeouts allowed"),

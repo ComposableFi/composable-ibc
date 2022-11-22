@@ -1,3 +1,17 @@
+// Copyright 2022 ComposableFi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #![allow(unreachable_patterns)]
 
 use async_trait::async_trait;
@@ -12,6 +26,7 @@ use ibc::{
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
+	downcast,
 	events::IbcEvent,
 	signer::Signer,
 	timestamp::Timestamp,
@@ -37,7 +52,6 @@ use thiserror::Error;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use parachain::{config, ParachainClient};
 use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
-use sp_core::H256;
 use sp_runtime::generic::Era;
 use std::{pin::Pin, time::Duration};
 use subxt::{
@@ -51,6 +65,7 @@ pub enum DefaultConfig {}
 
 #[async_trait]
 impl config::Config for DefaultConfig {
+	type AssetId = u128;
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,
 	) -> Result<
@@ -104,6 +119,11 @@ pub enum AnyFinalityEvent {
 	Parachain(parachain::finality_protocol::FinalityEvent),
 }
 
+#[derive(From)]
+pub enum AnyTransactionId {
+	Parachain(parachain::provider::TransactionId<sp_core::H256>),
+}
+
 #[derive(Error, Debug)]
 pub enum AnyError {
 	#[error("{0}")]
@@ -121,6 +141,7 @@ impl From<String> for AnyError {
 #[async_trait]
 impl IbcProvider for AnyChain {
 	type FinalityEvent = AnyFinalityEvent;
+	type TransactionId = AnyTransactionId;
 	type Error = AnyError;
 
 	async fn query_latest_ibc_events<T>(
@@ -510,12 +531,14 @@ impl IbcProvider for AnyChain {
 
 	async fn query_client_id_from_tx_hash(
 		&self,
-		tx_hash: H256,
-		block_hash: Option<H256>,
+		tx_id: Self::TransactionId,
 	) -> Result<ClientId, Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain
-				.query_client_id_from_tx_hash(tx_hash, block_hash)
+				.query_client_id_from_tx_hash(
+					downcast!(tx_id => AnyTransactionId::Parachain)
+						.expect("Should be parachain transaction id"),
+				)
 				.await
 				.map_err(Into::into),
 			_ => unreachable!(),
@@ -567,12 +590,13 @@ impl Chain for AnyChain {
 		}
 	}
 
-	async fn submit(
-		&self,
-		messages: Vec<Any>,
-	) -> Result<(sp_core::H256, Option<sp_core::H256>), Self::Error> {
+	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Self::Error> {
 		match self {
-			Self::Parachain(chain) => chain.submit(messages).await.map_err(Into::into),
+			Self::Parachain(chain) => chain
+				.submit(messages)
+				.await
+				.map_err(Into::into)
+				.map(|id| AnyTransactionId::Parachain(id)),
 			_ => unreachable!(),
 		}
 	}
@@ -588,10 +612,14 @@ impl primitives::TestProvider for AnyChain {
 		}
 	}
 
-	async fn send_ping(&self, channel_id: ChannelId, timeout: Timeout) -> Result<(), Self::Error> {
+	async fn send_ordered_packet(
+		&self,
+		channel_id: ChannelId,
+		timeout: Timeout,
+	) -> Result<(), Self::Error> {
 		match self {
 			Self::Parachain(chain) =>
-				chain.send_ping(channel_id, timeout).await.map_err(Into::into),
+				chain.send_ordered_packet(channel_id, timeout).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}

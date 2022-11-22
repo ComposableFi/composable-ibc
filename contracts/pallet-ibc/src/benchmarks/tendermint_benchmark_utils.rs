@@ -1,3 +1,17 @@
+// Copyright 2022 ComposableFi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use crate::{
 	light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager},
 	routing::Context,
@@ -54,6 +68,7 @@ use ics11_beefy::{
 	consensus_state::ConsensusState as BeefyConsensusState,
 };
 use scale_info::prelude::{format, string::ToString};
+use sp_core::crypto::AccountId32;
 use sp_std::prelude::*;
 use tendermint::{block::signed_header::SignedHeader, validator::Set as ValidatorSet, Hash};
 use tendermint_proto::Protobuf;
@@ -181,7 +196,7 @@ where
 		Some(ConnectionId::new(1)),
 		commitment_prefix.clone(),
 	);
-	let delay_period = core::time::Duration::from_nanos(1000);
+	let delay_period = core::time::Duration::from_secs(1000);
 	let chain_b_connection_counterparty =
 		Counterparty::new(client_id.clone(), None, commitment_prefix);
 	let mut avl_tree = create_avl();
@@ -709,6 +724,7 @@ pub fn create_chan_close_confirm() -> (ConsensusState, MsgChannelCloseConfirm) {
 pub fn create_recv_packet<T: Config + Send + Sync>(data: Vec<u8>) -> (ConsensusState, MsgRecvPacket)
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
 	let packet = Packet {
@@ -777,6 +793,7 @@ pub fn create_ack_packet<T: Config + Send + Sync>(
 ) -> (ConsensusState, MsgAcknowledgement)
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
 	let packet = Packet {
@@ -844,6 +861,7 @@ where
 pub fn create_timeout_packet<T: Config + Send + Sync>(data: Vec<u8>) -> (ConsensusState, MsgTimeout)
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
 	let packet = Packet {
