@@ -27,11 +27,21 @@ use ibc_proto::{
 };
 use ibc_rpc::PacketInfo;
 use ics07_tendermint::{client_message::Header, client_state::ClientState, events::try_from_tx};
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
+use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 use primitives::{Chain, IbcProvider, UpdateType};
 use std::pin::Pin;
+use tendermint::block::Height;
+use tendermint::validator;
+use tendermint_light_client::components::io::{AsyncIo, AtHeight};
+use tendermint_proto::Protobuf;
+use tendermint_proto::types::{SignedHeader, Validator};
 use tendermint_rpc::{query::Query, Client, Order};
+use ibc::core::ics02_client::msgs::update_client::MsgUpdateAnyClient;
+use ibc::tx_msg::Msg;
 use ibc_proto::ibc::core::client::v1::MsgUpdateClient;
+use ics07_tendermint::client_def::TendermintClient;
+use ics07_tendermint::client_message::ClientMessage;
+use primitives::mock::LocalClientTypes;
 
 
 pub enum FinalityEvent {
@@ -40,6 +50,23 @@ pub enum FinalityEvent {
 
 pub struct TransactionId<Hash> {
 	pub hash: Hash,
+}
+
+impl CosmosClient<H>
+where
+	H: Clone + Send + Sync + 'static
+{
+	async fn msg_update_client_header(&mut self, trusted_height: Height) -> Result<Header, anyhow::Error> {
+		let latest_light_block = self.light_provider.fetch_light_block(AtHeight::Highest).await?;
+		let trusted_light_block = self.light_provider.fetch_light_block(AtHeight(trusted_height)).await?;
+
+		Ok(Header{
+			signed_header: latest_light_block.signed_header,
+			validator_set: latest_light_block.validators,
+			trusted_height,
+			trusted_validator_set: trusted_light_block.validators
+		})
+	}
 }
 
 #[async_trait::async_trait]
@@ -66,7 +93,7 @@ where
 		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
 		let latest_cp_client_state = counterparty.query_client_state(latest_cp_height, client_id).await?;
 		let client_state_response = latest_cp_client_state.client_state
-			.ok_or_else(|err| Error::Custom("counterparty returned empty client state".to_string()))?;
+			.ok_or_else(|| Error::Custom("counterparty returned empty client state".to_string()))?;
 
 		let client_state = AnyClientState::try_from(client_state_response)
 			.map_err(|err| Error::Custom("failed to decode client state response".to_string()))?;
@@ -80,31 +107,30 @@ where
 		let latest_height = self.rpc_client.latest_block().await?.block.header.height;
 
 		let mut ibc_events: Vec<IbcEvent> = vec![];
-		for height in latest_cp_client_height+1..latest_height+1 {
+		for height in latest_cp_client_height+1..latest_height.value()+1 {
 			// todo()! maybe there's a more efficient way to query for blocks in batches?
 			let block_results = self.rpc_client
-				.block_results(height).await
+				.block_results(height.into()).await
 				.map_err(|e| Error::from(format!("Failed to query block result for height {:?}: {:?}", height, e)))?;
 
-			let tx_results = block_results.txs_results.ok_or_else(|err| Err(Error::Custom("empty transaction results".to_string())))?;
+			let tx_results = block_results.txs_results.ok_or_else(|| Err(Error::Custom("empty transaction results".to_string())))?;
 			for tx in tx_results.iter() {
 				for event in tx.events {
-					ibc_events.push(try_from(event).unwrap());
+					ibc_events.push(event.into());
 				}
 			}
 		}
 
-		let mut header: Header;
-		let update_client_header: Any = {
-			let latest_header = self.rpc_client.latest_block().await?.block.header;
-			// fill up any type with properdata
-			Any
+		let update_client_header = {
+			let update_header = CosmosClient::msg_update_client_header(self, cs.latest_height).await?;
+			let msg = MsgUpdateAnyClient::<LocalClientTypes> {
+				client_id: self.client_id(),
+				client_message: AnyClientMessage::Tendermint(ClientMessage::Header(update_header)),
+				signer: counterparty.account_id(),
+			};
+			let value = msg.encode_vec();
+			Any { value, type_url: msg.type_url() }
 		};
-		let any = Any{
-			value: vec![],
-			type_url: String::from("some type url"),
-		};
-
 		Ok((update_client_header, ibc_events, UpdateType::Mandatory))
 	}
 

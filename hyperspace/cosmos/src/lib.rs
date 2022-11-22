@@ -30,6 +30,8 @@ use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use primitives::{IbcProvider, KeyProvider};
 use serde::Deserialize;
 use tendermint_rpc::{HttpClient, Url};
+use tendermint_light_client::components::io::RpcIo;
+use std::time::Duration;
 
 // Implements the [`crate::Chain`] trait for cosmos.
 /// This is responsible for:
@@ -40,6 +42,8 @@ use tendermint_rpc::{HttpClient, Url};
 pub struct CosmosClient<H> {
 	/// Chain name
 	pub name: String,
+	/// Chain Light Provider
+	pub light_provider: RpcIo,
 	/// Chain rpc client
 	pub rpc_client: HttpClient,
 	/// Chain grpc address
@@ -68,6 +72,8 @@ pub struct CosmosClient<H> {
 pub struct CosmosClientConfig {
 	/// Chain name
 	pub name: String,
+	/// peer id for fetching light blocks through rpc io
+	pub peer_id: tendermint::node::Id,
 	/// rpc url for cosmos
 	pub rpc_url: Url,
 	/// grpc url for cosmos
@@ -118,6 +124,7 @@ where
 	pub async fn new(config: CosmosClientConfig) -> Result<Self, Error> {
 		let rpc_client = HttpClient::new(config.rpc_url.clone())
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		let light_provider = RpcIo::new(config.peer_id, rpc_client.clone(), None);
 		let chain_id = ChainId::from(config.chain_id);
 		let client_id = Some(
 			ClientId::new(config.client_id.unwrap().as_str(), 0)
@@ -129,6 +136,7 @@ where
 		Ok(Self {
 			name: config.name,
 			chain_id,
+			light_provider,
 			rpc_client,
 			grpc_url: config.grpc_url,
 			websocket_url: config.websocket_url,
