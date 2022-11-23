@@ -65,7 +65,7 @@ cw-multi-test = "0.15.1"
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
-default = ["std"]
+default = []
 std = [
   "ibc/std",
   "ics10-grandpa/std",

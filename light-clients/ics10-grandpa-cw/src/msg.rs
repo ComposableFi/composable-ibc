@@ -10,10 +10,7 @@ use ibc::{
 use ics10_grandpa::{
 	client_message::ClientMessage, client_state::ClientState, consensus_state::ConsensusState,
 };
-
 use std::str::FromStr;
-
-use crate::types::Height;
 
 #[cw_serde]
 pub struct InstantiateMsg {}

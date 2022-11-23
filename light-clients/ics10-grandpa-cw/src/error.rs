@@ -1,11 +1,7 @@
 use cosmwasm_std::StdError;
 use derive_more::{Display, From};
 use ics10_grandpa::error::Error as GrandpaError;
-use std::{
-	error::Error,
-	fmt::{Display, Formatter},
-};
-// use thiserror::Error;
+use std::error::Error;
 
 #[derive(From, Display, Debug)]
 pub enum ContractError {
