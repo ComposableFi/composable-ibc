@@ -30,7 +30,7 @@ use ics07_tendermint::{client_message::Header, client_state::ClientState, events
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 use primitives::{Chain, IbcProvider, UpdateType};
 use std::pin::Pin;
-use tendermint::block::Height;
+use tendermint::block::{Height as BlockHeight};
 use tendermint::validator;
 use tendermint_light_client::components::io::{AsyncIo, AtHeight};
 use tendermint_proto::Protobuf;
@@ -42,6 +42,7 @@ use ibc_proto::ibc::core::client::v1::MsgUpdateClient;
 use ics07_tendermint::client_def::TendermintClient;
 use ics07_tendermint::client_message::ClientMessage;
 use primitives::mock::LocalClientTypes;
+use crate::utils;
 
 
 pub enum FinalityEvent {
@@ -52,13 +53,14 @@ pub struct TransactionId<Hash> {
 	pub hash: Hash,
 }
 
-impl CosmosClient<H>
+impl<H> CosmosClient<H>
 where
 	H: Clone + Send + Sync + 'static
 {
 	async fn msg_update_client_header(&mut self, trusted_height: Height) -> Result<Header, anyhow::Error> {
 		let latest_light_block = self.light_provider.fetch_light_block(AtHeight::Highest).await?;
-		let trusted_light_block = self.light_provider.fetch_light_block(AtHeight(trusted_height)).await?;
+		let height = BlockHeight::try_from(trusted_height.revision_height)?;
+		let trusted_light_block = self.light_provider.fetch_light_block(AtHeight::At(height)).await?;
 
 		Ok(Header{
 			signed_header: latest_light_block.signed_header,
@@ -116,7 +118,8 @@ where
 			let tx_results = block_results.txs_results.ok_or_else(|| Err(Error::Custom("empty transaction results".to_string())))?;
 			for tx in tx_results.iter() {
 				for event in tx.events {
-					ibc_events.push(event.into());
+					let ibc_event = utils::ibc_event_try_from_abci_event(&event)?;
+					ibc_events.push(ibc_event);
 				}
 			}
 		}

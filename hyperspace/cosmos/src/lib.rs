@@ -17,6 +17,7 @@ pub mod chain;
 pub mod error;
 pub mod key_provider;
 pub mod provider;
+pub mod utils;
 
 use core::convert::TryFrom;
 use error::Error;
