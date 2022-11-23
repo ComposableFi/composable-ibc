@@ -1,4 +1,4 @@
-use crate::STORAGE_PREFIX;
+use crate::CONNECTION_PREFIX;
 use cosmwasm_std::Storage;
 use cosmwasm_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use ibc::{core::ics24_host::identifier::ClientId, Height};
@@ -9,7 +9,7 @@ pub struct ConsensusStates<'a>(PrefixedStorage<'a>);
 
 impl<'a> ConsensusStates<'a> {
 	pub fn new(storage: &'a mut dyn Storage) -> Self {
-		ConsensusStates(prefixed(storage, STORAGE_PREFIX))
+		ConsensusStates(prefixed(storage, CONNECTION_PREFIX))
 	}
 
 	pub fn consensus_state_client_key(client_id: ClientId) -> Vec<u8> {
@@ -45,7 +45,7 @@ pub struct ReadonlyConsensusStates<'a>(ReadonlyPrefixedStorage<'a>);
 
 impl<'a> ReadonlyConsensusStates<'a> {
 	pub fn new(storage: &'a dyn Storage) -> Self {
-		ReadonlyConsensusStates(prefixed_read(storage, STORAGE_PREFIX))
+		ReadonlyConsensusStates(prefixed_read(storage, CONNECTION_PREFIX))
 	}
 
 	pub fn get(&self, client_id: &ClientId, height: Height) -> Option<Vec<u8>> {

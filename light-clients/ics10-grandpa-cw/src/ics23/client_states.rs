@@ -1,4 +1,4 @@
-use crate::{STORAGE_PREFIX};
+use crate::CONNECTION_PREFIX;
 use cosmwasm_std::Storage;
 use cosmwasm_storage::{prefixed, PrefixedStorage, ReadonlyPrefixedStorage};
 use ibc::core::ics24_host::{identifier::ClientId, path::ClientStatePath};
@@ -9,7 +9,7 @@ pub struct ClientStates<'a>(PrefixedStorage<'a>);
 
 impl<'a> ClientStates<'a> {
 	pub fn new(storage: &'a mut dyn Storage) -> Self {
-		ClientStates(prefixed(storage, STORAGE_PREFIX))
+		ClientStates(prefixed(storage, CONNECTION_PREFIX))
 	}
 
 	pub fn key(client_id: ClientId) -> Vec<u8> {
@@ -34,7 +34,7 @@ pub struct ReadonlyClientStates<'a>(ReadonlyPrefixedStorage<'a>);
 
 impl<'a> ReadonlyClientStates<'a> {
 	pub fn new(storage: &'a dyn Storage) -> Self {
-		ReadonlyClientStates(ReadonlyPrefixedStorage::new(storage, STORAGE_PREFIX))
+		ReadonlyClientStates(ReadonlyPrefixedStorage::new(storage, CONNECTION_PREFIX))
 	}
 
 	pub fn get(&self, client_id: &ClientId) -> Option<Vec<u8>> {
