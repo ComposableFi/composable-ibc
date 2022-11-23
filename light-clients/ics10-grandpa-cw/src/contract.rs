@@ -11,7 +11,7 @@ use crate::{
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
-use cw_storage_plus::{Item, Map};
+use cw_storage_plus::Map;
 use ibc::core::ics02_client::client_def::ClientDef;
 use ics10_grandpa::{client_def::GrandpaClient, consensus_state::ConsensusState};
 use light_client_common::{verify_membership, verify_non_membership, LocalHeight};
@@ -23,18 +23,6 @@ use std::collections::BTreeSet;
 const CONTRACT_NAME: &str = "crates.io:ics10-grandpa-cw";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 */
-
-pub const CHANNELS_CONNECTION: Map<Bytes, Vec<(Bytes, Bytes)>> = Map::new("channels_connection");
-pub const CLIENT_UPDATE_TIME: Map<(Bytes, Bytes), u64> = Map::new("client_update_time");
-pub const CLIENT_UPDATE_HEIGHT: Map<(Bytes, Bytes), Bytes> = Map::new("client_update_height");
-pub const CHANNEL_COUNTER: Item<u32> = Item::new("channel_counter");
-pub const EXPECTED_BLOCK_TIME: Item<u64> = Item::new("expected_block_time");
-pub const CONNECTION_PREFIX: Item<Vec<u8>> = Item::new("connection_prefix");
-pub const CONNECTION_COUNTER: Item<u32> = Item::new("connection_counter");
-pub const CLIENT_COUNTER: Item<u32> = Item::new("client_counter");
-pub const HOST_CONSENSUS_STATE: Map<u64, ConsensusState> = Map::new("host_consensus_state");
-pub const CONSENSUS_STATES_HEIGHTS: Map<Bytes, BTreeSet<LocalHeight>> =
-	Map::new("consensus_states_heights");
 
 #[derive(Clone, Copy, Debug, PartialEq, Default, Eq)]
 pub struct HostFunctions;

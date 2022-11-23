@@ -1,6 +1,6 @@
 use crate::{
 	context::Context,
-	contract::{CLIENT_COUNTER, CONSENSUS_STATES_HEIGHTS, HOST_CONSENSUS_STATE},
+	contract::CONSENSUS_STATES_HEIGHTS,
 	ics23::{ReadonlyClientStates, ReadonlyClients, ReadonlyConsensusStates},
 	log,
 };
@@ -105,32 +105,18 @@ impl<'a, H: HostFunctions> ClientReader for Context<'a, H> {
 
 	fn next_consensus_state(
 		&self,
-		client_id: &ClientId,
-		height: Height,
+		_client_id: &ClientId,
+		_height: Height,
 	) -> Result<Option<ConsensusState>, Error> {
-		let from_height = LocalHeight::from(height).succ();
-		CONSENSUS_STATES_HEIGHTS
-			.load(self.storage(), client_id.as_bytes().to_owned())
-			.unwrap_or_default()
-			.range(from_height..)
-			.next()
-			.map(|height| self.consensus_state(client_id, Height::from(*height)))
-			.transpose()
+		Err(Error::implementation_specific("next_consensus_state not implemented".to_string()))
 	}
 
 	fn prev_consensus_state(
 		&self,
-		client_id: &ClientId,
-		height: Height,
+		_client_id: &ClientId,
+		_height: Height,
 	) -> Result<Option<ConsensusState>, Error> {
-		CONSENSUS_STATES_HEIGHTS
-			.load(self.storage(), client_id.as_bytes().to_owned())
-			.unwrap_or_default()
-			.range(..LocalHeight::from(height))
-			.rev()
-			.next()
-			.map(|height| self.consensus_state(client_id, Height::from(*height)))
-			.transpose()
+		Err(Error::implementation_specific("prev_consensus_state not implemented".to_string()))
 	}
 
 	fn host_height(&self) -> Height {
@@ -147,23 +133,14 @@ impl<'a, H: HostFunctions> ClientReader for Context<'a, H> {
 
 	fn host_consensus_state(
 		&self,
-		height: Height,
+		_height: Height,
 		_proof: Option<Vec<u8>>,
 	) -> Result<ConsensusState, Error> {
-		let consensus_state =
-			HOST_CONSENSUS_STATE.load(self.storage(), height.revision_height).map_err(|_| {
-				Error::implementation_specific(format!(
-					"[host_consensus_state]: consensus state not found for host at height {}",
-					height
-				))
-			})?;
-		Ok(consensus_state)
+		Err(Error::implementation_specific(format!("[host_consensus_state]: not implemented",)))
 	}
 
 	fn client_counter(&self) -> Result<u64, Error> {
-		let count = CLIENT_COUNTER.load(self.storage()).unwrap_or_default();
-		log!(self, "in client : [client_counter] >> client_counter: {:?}", count);
-		Ok(count as u64)
+		Err(Error::implementation_specific("[client_counter]: not implemented".to_string()))
 	}
 }
 
