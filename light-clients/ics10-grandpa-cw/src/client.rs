@@ -88,7 +88,6 @@ impl<'a, H: HostFunctions> ClientReader for Context<'a, H> {
 		let value = consensus_states
 			.get(client_id, height)
 			.ok_or_else(|| Error::consensus_state_not_found(client_id.clone(), height))?;
-
 		let any_consensus_state =
 			ConsensusState::decode_vec(&*value).map_err(Error::invalid_any_client_state)?;
 		log!(

@@ -1,10 +1,7 @@
 use cosmwasm_std::StdError;
 use derive_more::{Display, From};
 use ics10_grandpa::error::Error as GrandpaError;
-use std::{
-	error::Error,
-	fmt::{Display, Formatter},
-};
+use std::error::Error;
 // use thiserror::Error;
 
 #[derive(From, Display, Debug)]
@@ -30,6 +27,8 @@ pub enum ContractError {
 	Proof(ibc::proofs::ProofError),
 	#[display(fmt = "Proto decode error: {_0}")]
 	ProtoDecode(prost::DecodeError),
+	#[display(fmt = "From UTF8 error: {_0}")]
+	FromUtf8(alloc::string::FromUtf8Error),
 }
 
 impl Error for ContractError {}

@@ -1,11 +1,4 @@
-use crate::{
-	context::Context,
-	contract::{
-		CHANNELS_CONNECTION, CHANNEL_COUNTER, CLIENT_UPDATE_HEIGHT, CLIENT_UPDATE_TIME,
-		EXPECTED_BLOCK_TIME,
-	},
-	log,
-};
+use crate::context::Context;
 use grandpa_light_client_primitives::HostFunctions;
 use ibc::{
 	core::{
@@ -18,12 +11,11 @@ use ibc::{
 		},
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
-	protobuf::Protobuf,
 	timestamp::Timestamp,
 	Height,
 };
 use sha2::{Digest, Sha256};
-use std::{str::FromStr, time::Duration};
+use std::time::Duration;
 
 impl<'a, H: HostFunctions> ChannelReader for Context<'a, H> {
 	fn channel_end(&self, _port_channel_id: &(PortId, ChannelId)) -> Result<ChannelEnd, Error> {
@@ -34,7 +26,7 @@ impl<'a, H: HostFunctions> ChannelReader for Context<'a, H> {
 
 	fn connection_channels(
 		&self,
-		conn_id: &ConnectionId,
+		_conn_id: &ConnectionId,
 	) -> Result<Vec<(PortId, ChannelId)>, Error> {
 		Err(Error::implementation_specific(
 			"'connection_channels' is unavailable from the client".to_string(),
@@ -43,7 +35,7 @@ impl<'a, H: HostFunctions> ChannelReader for Context<'a, H> {
 
 	fn get_next_sequence_send(
 		&self,
-		port_channel_id: &(PortId, ChannelId),
+		_port_channel_id: &(PortId, ChannelId),
 	) -> Result<Sequence, Error> {
 		Err(Error::implementation_specific(
 			"'get_next_sequence_send' is unavailable from the client".to_string(),
@@ -52,7 +44,7 @@ impl<'a, H: HostFunctions> ChannelReader for Context<'a, H> {
 
 	fn get_next_sequence_recv(
 		&self,
-		port_channel_id: &(PortId, ChannelId),
+		_port_channel_id: &(PortId, ChannelId),
 	) -> Result<Sequence, Error> {
 		Err(Error::implementation_specific(
 			"'get_next_sequence_recv' is unavailable from the client".to_string(),
@@ -61,7 +53,7 @@ impl<'a, H: HostFunctions> ChannelReader for Context<'a, H> {
 
 	fn get_next_sequence_ack(
 		&self,
-		port_channel_id: &(PortId, ChannelId),
+		_port_channel_id: &(PortId, ChannelId),
 	) -> Result<Sequence, Error> {
 		Err(Error::implementation_specific(
 			"'get_next_sequence_ack' is unavailable from the client".to_string(),
@@ -70,14 +62,14 @@ impl<'a, H: HostFunctions> ChannelReader for Context<'a, H> {
 
 	fn get_packet_commitment(
 		&self,
-		key: &(PortId, ChannelId, Sequence),
+		_key: &(PortId, ChannelId, Sequence),
 	) -> Result<PacketCommitmentType, Error> {
 		Err(Error::implementation_specific(
 			"'get_packet_commitment' is unavailable from the client".to_string(),
 		))
 	}
 
-	fn get_packet_receipt(&self, key: &(PortId, ChannelId, Sequence)) -> Result<Receipt, Error> {
+	fn get_packet_receipt(&self, _key: &(PortId, ChannelId, Sequence)) -> Result<Receipt, Error> {
 		Err(Error::implementation_specific(
 			"'get_packet_receipt' is unavailable from the client".to_string(),
 		))
@@ -85,7 +77,7 @@ impl<'a, H: HostFunctions> ChannelReader for Context<'a, H> {
 
 	fn get_packet_acknowledgement(
 		&self,
-		key: &(PortId, ChannelId, Sequence),
+		_key: &(PortId, ChannelId, Sequence),
 	) -> Result<AcknowledgementCommitment, Error> {
 		Err(Error::implementation_specific(
 			"'get_packet_acknowledgement' is unavailable from the client".to_string(),
@@ -99,13 +91,21 @@ impl<'a, H: HostFunctions> ChannelReader for Context<'a, H> {
 		hasher.finalize().to_vec()
 	}
 
-	fn client_update_time(&self, client_id: &ClientId, height: Height) -> Result<Timestamp, Error> {
+	fn client_update_time(
+		&self,
+		_client_id: &ClientId,
+		_height: Height,
+	) -> Result<Timestamp, Error> {
 		Err(Error::implementation_specific(
 			"'client_update_time' is unavailable from the client".to_string(),
 		))
 	}
 
-	fn client_update_height(&self, client_id: &ClientId, height: Height) -> Result<Height, Error> {
+	fn client_update_height(
+		&self,
+		_client_id: &ClientId,
+		_height: Height,
+	) -> Result<Height, Error> {
 		Err(Error::implementation_specific(
 			"'client_update_height' is unavailable from the client".to_string(),
 		))

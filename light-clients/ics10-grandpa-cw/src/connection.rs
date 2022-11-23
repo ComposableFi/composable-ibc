@@ -1,8 +1,4 @@
-use crate::{
-	context::Context,
-	contract::{CONNECTION_COUNTER, CONNECTION_PREFIX},
-	log,
-};
+use crate::context::Context;
 use grandpa_light_client_primitives::HostFunctions;
 use ibc::{
 	core::{
@@ -10,7 +6,6 @@ use ibc::{
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::ConnectionId,
 	},
-	protobuf::Protobuf,
 	Height,
 };
 

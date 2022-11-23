@@ -1,29 +1,28 @@
 use crate::{Bytes, ContractError};
+use core::str::FromStr;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{to_binary, Binary, StdResult};
 use ibc::{
 	core::{
-		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
+		ics23_commitment::commitment::CommitmentProofBytes,
 		ics24_host::{identifier::ClientId, Path},
 	},
 	protobuf::Protobuf,
+	Height,
 };
 use ibc_proto::{
-	ibc::core::{client::v1::Height, commitment::v1::MerkleRoot},
+	ibc::core::{
+		client::v1::Height as HeightRaw,
+		commitment::v1::{MerklePath, MerkleRoot},
+	},
 	ics23::ProofSpec,
 };
 use ics10_grandpa::{
 	client_message::{ClientMessage, Header},
 	client_state::ClientState,
 	consensus_state::ConsensusState,
-	proto::{
-		client_message::Message as MessageProto, ClientMessage as ClientMessageProto,
-		Header as HeaderProto,
-	},
 };
 use prost::Message;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::str::FromStr;
+use serde::{Deserializer, Serializer};
 
 struct Base64;
 
@@ -45,7 +44,7 @@ pub struct WasmClientState {
 	#[schemars(with = "String")]
 	#[serde(with = "Base64", default)]
 	pub code_id: Bytes,
-	pub latest_height: Height,
+	pub latest_height: HeightRaw,
 	pub proof_specs: Vec<ProofSpec>,
 	pub repository: String,
 }
@@ -55,7 +54,7 @@ pub struct WasmHeader {
 	#[schemars(with = "String")]
 	#[serde(with = "Base64", default)]
 	pub data: Bytes,
-	pub height: Height,
+	pub height: HeightRaw,
 }
 
 #[cw_serde]
@@ -121,20 +120,20 @@ pub struct ClientCreateRequest {
 pub enum ExecuteMsg {
 	InitializeState(InitializeState),
 	ClientCreateRequest(WasmClientState),
-	ValidateMsg(ValidateMsg),
-	StatusMsg(StatusMsg),
-	ExportedMetadataMsg(ExportedMetadataMsg),
-	ZeroCustomFieldsMsg(ZeroCustomFieldsMsg),
-	GetTimestampAtHeightMsg(GetTimestampAtHeightMsg),
-	InitializeMsg(InitializeMsg),
-	VerifyMembershipMsg(VerifyMembershipMsgRaw),
-	VerifyNonMembershipMsg(VerifyNonMembershipMsgRaw),
+	Validate(ValidateMsg),
+	Status(StatusMsg),
+	ExportedMetadata(ExportedMetadataMsg),
+	ZeroCustomFields(ZeroCustomFieldsMsg),
+	GetTimestampAtHeight(GetTimestampAtHeightMsg),
+	Initialize(InitializeMsg),
+	VerifyMembership(VerifyMembershipMsgRaw),
+	VerifyNonMembership(VerifyNonMembershipMsgRaw),
 	VerifyClientMessage(VerifyClientMessageRaw),
-	CheckForMisbehaviourMsg(CheckForMisbehaviourMsgRaw),
-	UpdateStateOnMisbehaviourMsg(UpdateStateOnMisbehaviourMsgRaw),
+	CheckForMisbehaviour(CheckForMisbehaviourMsgRaw),
+	UpdateStateOnMisbehaviour(UpdateStateOnMisbehaviourMsgRaw),
 	UpdateState(UpdateStateMsgRaw),
-	CheckSubstituteAndUpdateStateMsg(CheckSubstituteAndUpdateStateMsg),
-	VerifyUpgradeAndUpdateStateMsg(VerifyUpgradeAndUpdateStateMsgRaw),
+	CheckSubstituteAndUpdateState(CheckSubstituteAndUpdateStateMsg),
+	VerifyUpgradeAndUpdateState(VerifyUpgradeAndUpdateStateMsgRaw),
 }
 
 #[cw_serde]
@@ -142,7 +141,7 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
 	#[returns(String)]
 	ClientTypeMsg(ClientTypeMsg),
-	#[returns(Height)]
+	#[returns(HeightRaw)]
 	GetLatestHeightsMsg(GetLatestHeightsMsg),
 }
 
@@ -178,54 +177,67 @@ pub struct InitializeMsg {}
 
 #[cw_serde]
 pub struct VerifyMembershipMsgRaw {
-	pub proof: Vec<u8>,
-	pub path: String,
-	pub value: Vec<u8>,
+	#[schemars(with = "String")]
+	#[serde(with = "Base64", default)]
+	pub proof: Bytes,
+	#[schemars(with = "String")]
+	#[serde(with = "Base64", default)]
+	pub path: Bytes,
+	#[schemars(with = "String")]
+	#[serde(with = "Base64", default)]
+	pub value: Bytes,
+	pub height: HeightRaw,
+	pub delay_block_period: u64,
+	pub delay_time_period: u64,
 }
 
 pub struct VerifyMembershipMsg {
-	pub prefix: CommitmentPrefix,
 	pub proof: CommitmentProofBytes,
-	pub root: CommitmentRoot,
 	pub path: Path,
 	pub value: Vec<u8>,
+	pub height: Height,
 }
 
 impl TryFrom<VerifyMembershipMsgRaw> for VerifyMembershipMsg {
 	type Error = ContractError;
 
 	fn try_from(raw: VerifyMembershipMsgRaw) -> Result<Self, Self::Error> {
-		let _proof = CommitmentProofBytes::try_from(raw.proof)?;
-		let _path = Path::from_str(&raw.path)?;
-		let _value = raw.value;
-		let _prefix = todo!("how to get prefix?");
-		let _root = todo!("how to get root?");
-		Ok(Self { prefix: _prefix, proof: _proof, root: _root, path: _path, value: _value })
+		let proof = CommitmentProofBytes::try_from(raw.proof)?;
+		let merkle_path: MerklePath = MerklePath::decode(&*raw.path)?;
+		let path = Path::from_str(&merkle_path.key_path.join("/"))?;
+		let height = Height::from(raw.height);
+		Ok(Self { proof, path, value: raw.value, height })
 	}
 }
 
 #[cw_serde]
 pub struct VerifyNonMembershipMsgRaw {
-	pub proof: Vec<u8>,
-	pub path: String,
+	#[schemars(with = "String")]
+	#[serde(with = "Base64", default)]
+	pub proof: Bytes,
+	#[schemars(with = "String")]
+	#[serde(with = "Base64", default)]
+	pub path: Bytes,
+	pub height: HeightRaw,
+	pub delay_block_period: u64,
+	pub delay_time_period: u64,
 }
 
 pub struct VerifyNonMembershipMsg {
-	pub prefix: CommitmentPrefix,
 	pub proof: CommitmentProofBytes,
-	pub root: CommitmentRoot,
 	pub path: Path,
+	pub height: Height,
 }
 
 impl TryFrom<VerifyNonMembershipMsgRaw> for VerifyNonMembershipMsg {
 	type Error = ContractError;
 
 	fn try_from(raw: VerifyNonMembershipMsgRaw) -> Result<Self, Self::Error> {
-		let _proof = CommitmentProofBytes::try_from(raw.proof)?;
-		let _path = Path::from_str(&raw.path)?;
-		let _prefix = todo!("how to get prefix?");
-		let _root = todo!("how to get root?");
-		Ok(Self { prefix: _prefix, proof: _proof, root: _root, path: _path })
+		let proof = CommitmentProofBytes::try_from(raw.proof)?;
+		let merkle_path: MerklePath = MerklePath::decode(&*raw.path)?;
+		let path = Path::from_str(&merkle_path.key_path.join("/"))?;
+		let height = Height::from(raw.height);
+		Ok(Self { proof, path, height })
 	}
 }
 
@@ -258,13 +270,19 @@ impl<H: Clone> TryFrom<VerifyClientMessageRaw> for VerifyClientMessage<H> {
 
 	fn try_from(raw: VerifyClientMessageRaw) -> Result<Self, Self::Error> {
 		let client_state = ClientState::decode_vec(&raw.client_state.data).unwrap();
-		let client_message = match raw.client_message {
+		let client_message = Self::decode_client_message(raw.client_message);
+		Ok(Self { client_state, client_message })
+	}
+}
+
+impl<H: Clone> VerifyClientMessage<H> {
+	fn decode_client_message(raw: ClientMessageRaw) -> ClientMessage {
+		let client_message = match raw {
 			ClientMessageRaw::Header(header) =>
 				ClientMessage::Header(Header::decode_vec(&header.data).unwrap()),
-			ClientMessageRaw::Misbehaviour(_) =>
-				ClientMessage::Misbehaviour(unimplemented!("misbehaviour")),
+			ClientMessageRaw::Misbehaviour(_) => unimplemented!("misbehaviour"),
 		};
-		Ok(Self { client_state, client_message })
+		client_message
 	}
 }
 
@@ -329,12 +347,7 @@ impl<H: Clone> TryFrom<UpdateStateMsgRaw> for UpdateStateMsg<H> {
 
 	fn try_from(raw: UpdateStateMsgRaw) -> Result<Self, Self::Error> {
 		let client_state = ClientState::decode_vec(&raw.client_state.data)?;
-		let client_message = match raw.client_message {
-			ClientMessageRaw::Header(header) =>
-				ClientMessage::Header(Header::decode_vec(&header.data).unwrap()),
-			ClientMessageRaw::Misbehaviour(_) =>
-				ClientMessage::Misbehaviour(unimplemented!("misbehaviour")),
-		};
+		let client_message = VerifyClientMessage::<H>::decode_client_message(raw.client_message);
 		Ok(Self { client_state, client_message })
 	}
 }

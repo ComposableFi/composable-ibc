@@ -1,3 +1,5 @@
+extern crate alloc;
+
 mod channel;
 mod client;
 mod connection;
