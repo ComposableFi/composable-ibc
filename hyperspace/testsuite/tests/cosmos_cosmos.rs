@@ -80,6 +80,16 @@ async fn setup_clients<H: Clone + Send + Sync + 'static>() -> (CosmosClient<H>, 
 		.collect::<Vec<_>>()
 		.await;
 	log::info!(target: "hyperspace", "Cosmos chains are ready to go!");
+
+	// Check if the clients are already created
+	let clients_on_a = chain_a.query_clients().await.unwrap();
+	let clients_on_b = chain_b.query_clients().await.unwrap();
+
+	if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
+		chain_a.set_client_id(clients_on_b[0].clone());
+		chain_b.set_client_id(clients_on_b[0].clone());
+		return (chain_a, chain_b);
+	}
 	 
 	todo!()
 }
