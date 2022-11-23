@@ -34,7 +34,7 @@ sp-keystore = "0.12.0"
 # ibc
 ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto" }
-tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "5a74e0f8da4d3dab83cc04b5f1363b018cf3d9e8" }
+tendermint-proto = { workspace = true }
 
 # near
 near-crypto = "0.14.0"

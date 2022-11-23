@@ -97,9 +97,7 @@ impl TryFrom<VerifyMembershipMsgRaw> for VerifyMembershipMsg {
 		let _proof = CommitmentProofBytes::try_from(raw.proof)?;
 		let _path = Path::from_str(&raw.path)?;
 		let _value = raw.value;
-		let _prefix = todo!("how to get prefix?");
-		let _root = todo!("how to get root?");
-		Ok(Self { prefix: _prefix, proof: _proof, root: _root, path: _path, value: _value })
+		todo!()
 	}
 }
 
@@ -122,9 +120,7 @@ impl TryFrom<VerifyNonMembershipMsgRaw> for VerifyNonMembershipMsg {
 	fn try_from(raw: VerifyNonMembershipMsgRaw) -> Result<Self, Self::Error> {
 		let _proof = CommitmentProofBytes::try_from(raw.proof)?;
 		let _path = Path::from_str(&raw.path)?;
-		let _prefix = todo!("how to get prefix?");
-		let _root = todo!("how to get root?");
-		Ok(Self { prefix: _prefix, proof: _proof, root: _root, path: _path })
+		todo!();
 	}
 }
 

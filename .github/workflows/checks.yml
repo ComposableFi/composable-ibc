@@ -4,6 +4,10 @@ on:
   pull_request:
     branches:
       - '*'
+  push:
+    branches:
+      - master
+
 
 jobs:
   checker:
@@ -35,4 +39,4 @@ jobs:
       run: ./scripts/no_std_checks.sh
 
     - name: pallet-ibc check benchmarks
-      run: cargo test -p pallet-ibc --features=runtime-benchmarks
+      run: cargo test -p pallet-ibc --release --locked --features=runtime-benchmarks

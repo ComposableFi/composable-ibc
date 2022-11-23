@@ -27,7 +27,8 @@ parameter_types! {
     pub const ExpectedBlockTime: u64 = 12000;
     pub const SpamProtectionDeposit: Balances = 10000;  
     pub const RelayChainId: light_client_commomn::RelayChain = light_client_commomn::RelayChain::Rococo;
-    pub const NativeAssetId: AssetId = 1;
+    pub const NativeAssetId: AssetId = 1
+    pub const MinimumConnectionDelay: u64 = 300; // 5 minutes
 }
 
 impl pallet_ibc::Config for Runtime {
@@ -43,7 +44,8 @@ impl pallet_ibc::Config for Runtime {
     type AccountIdConversion = ibc_primitives::IbcAccount;
     type IbcDenomToAssetIdConversion = AssetIdProcessor; // Add a module that implements DenomToAssetId
     type WeightInfo = crate::weights::pallet_ibc::WeightInfo<Self>;
-    type Router = Router; // A type that implements ModuleRouter trait
+    type Router = Router; // A type that implements ModuleRouter trait 
+    type MinimumConnectionDelay: MinimumConnectionDelay;
     type ParaId = parachain_info::Pallet<Runtime>;
     type RelayChain = RelayChainId;
     type AdminOrigin = EnsureRoot<AccountId>;
@@ -85,7 +87,12 @@ construct_runtime!(
 
 ### Packet and Acknowledgement Storage
 
-In this iteration of the pallet, packets and acknowledgements are stored on chain, but eventually the goal is to store them offchain using the indexing API
+Packets are stored offchain using the indexing API.  
+**Note**: This pallet requires the **offchain indexing API** to be enabled when running the node.  
+If not enabled the following rpc interfaces will return incomplete data.  
+- `query_send_packets`
+- `query_recv_packets`
+- `query_events`
 
 ### ICS20 implementation
 

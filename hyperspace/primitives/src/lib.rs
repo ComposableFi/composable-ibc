@@ -1,3 +1,17 @@
+// Copyright 2022 ComposableFi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #![allow(clippy::all)]
 
 use std::{pin::Pin, str::FromStr, time::Duration};
@@ -15,7 +29,6 @@ use ibc_proto::{
 		connection::v1::QueryConnectionResponse,
 	},
 };
-use subxt::ext::sp_core;
 
 use crate::error::Error;
 #[cfg(feature = "testing")]
@@ -83,6 +96,9 @@ pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: String) -> Vec<u8> {
 pub trait IbcProvider {
 	/// Finality event type, passed on to [`Chain::query_latest_ibc_events`]
 	type FinalityEvent;
+
+	/// A representation of the transaction id for the chain
+	type TransactionId;
 
 	/// Error type, just needs to implement standard error trait.
 	type Error: std::error::Error + From<String> + Send + Sync + 'static;
@@ -226,6 +242,7 @@ pub trait IbcProvider {
 	) -> Result<QueryChannelsResponse, Self::Error>;
 
 	/// Query send packets
+	/// This represents packets that for which the `SendPacket` event was emitted
 	async fn query_send_packets(
 		&self,
 		channel_id: ChannelId,
@@ -233,7 +250,9 @@ pub trait IbcProvider {
 		seqs: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Self::Error>;
 
-	/// Query recieved packets
+	/// Query received packets with their acknowledgement
+	/// This represents packets for which the `ReceivePacket` and `WriteAcknowledgement` events were
+	/// emitted.
 	async fn query_recv_packets(
 		&self,
 		channel_id: ChannelId,
@@ -306,8 +325,7 @@ pub trait IbcProvider {
 	/// Should find client id that was created in this transaction
 	async fn query_client_id_from_tx_hash(
 		&self,
-		tx_hash: sp_core::H256,
-		block_hash: Option<sp_core::H256>,
+		tx_id: Self::TransactionId,
 	) -> Result<ClientId, Self::Error>;
 }
 
@@ -319,14 +337,14 @@ pub trait TestProvider: Chain + Clone + 'static {
 	/// Initiate an ibc transfer on chain.
 	async fn send_transfer(&self, params: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error>;
 
-	/// Initiate a ping on chain
-	async fn send_ping(
+	/// Send a packet on an ordered channel
+	async fn send_ordered_packet(
 		&self,
 		channel_id: ChannelId,
 		timeout: pallet_ibc::Timeout,
 	) -> Result<(), Self::Error>;
 
-	/// Returns a stream that yields chain Block number and hash
+	/// Returns a stream that yields chain Block number
 	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>>;
 
 	/// Set the channel whitelist for the relayer task.
@@ -347,7 +365,7 @@ pub trait Chain: IbcProvider + KeyProvider + Send + Sync {
 	/// Name of this chain, used in logs.
 	fn name(&self) -> &str;
 
-	/// Should return a nuerical value for the max weight of transactions allowed in a block.
+	/// Should return a numerical value for the max weight of transactions allowed in a block.
 	fn block_max_weight(&self) -> u64;
 
 	/// Should return an estimate of the weight of a batch of messages.
@@ -360,12 +378,8 @@ pub trait Chain: IbcProvider + KeyProvider + Send + Sync {
 
 	/// This should be used to submit new messages [`Vec<Any>`] from a counterparty chain to this
 	/// chain.
-	/// Should return a tuple of transaction hash and optionally block hash where the transaction
-	/// was executed
-	async fn submit(
-		&self,
-		messages: Vec<Any>,
-	) -> Result<(sp_core::H256, Option<sp_core::H256>), Self::Error>;
+	/// Should return the transaction id
+	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Self::Error>;
 }
 
 /// Returns undelivered packet sequences that have been sent out from
@@ -473,7 +487,7 @@ pub fn packet_info_to_packet(packet_info: &PacketInfo) -> Packet {
 	}
 }
 
-/// Should return the first client height with a latest_height and consensus state timestamp that
+/// Should return the first client consensus height with a consensus state timestamp that
 /// is equal to or greater than the values provided
 pub async fn find_suitable_proof_height_for_client(
 	chain: &impl Chain,
