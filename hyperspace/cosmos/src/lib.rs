@@ -17,7 +17,6 @@ pub mod chain;
 pub mod error;
 pub mod key_provider;
 pub mod provider;
-
 use core::convert::TryFrom;
 use error::Error;
 use ibc::core::{
@@ -25,11 +24,24 @@ use ibc::core::{
 	ics24_host::identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 };
 use ibc_proto::cosmos::auth::v1beta1::BaseAccount;
+use ics07_tendermint::client_state::ClientState as TmClientState;
 use key_provider::KeyEntry;
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use primitives::{IbcProvider, KeyProvider};
 use serde::Deserialize;
-use tendermint_rpc::{HttpClient, Url};
+use tendermint::trust_threshold::TrustThresholdFraction;
+use tendermint_light_client::{
+	components::{self, io::RpcIo},
+	light_client::LightClient as TmLightClient,
+};
+use tendermint_light_client_verifier::{
+	host_functions::CryptoProvider,
+	operations::{ProdCommitValidator, ProdVotingPowerCalculator},
+	options::Options as TmOptions,
+	predicates::ProdPredicates,
+	types::PeerId,
+	PredicateVerifier, ProdVerifier,
+};
+use tendermint_rpc::{Client, HttpClient, Url};
 
 // Implements the [`crate::Chain`] trait for cosmos.
 /// This is responsible for:
@@ -40,6 +52,8 @@ use tendermint_rpc::{HttpClient, Url};
 pub struct CosmosClient<H> {
 	/// Chain name
 	pub name: String,
+	/// Chain Light Provider
+	pub light_provider: RpcIo,
 	/// Chain rpc client
 	pub rpc_client: HttpClient,
 	/// Chain grpc address
@@ -118,6 +132,12 @@ where
 	pub async fn new(config: CosmosClientConfig) -> Result<Self, Error> {
 		let rpc_client = HttpClient::new(config.rpc_url.clone())
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		let peer_id: PeerId = rpc_client
+			.status()
+			.await
+			.map(|s| s.node_info.id)
+			.map_err(|e| Error::from(e.to_string()))?;
+		let light_provider = RpcIo::new(peer_id, rpc_client.clone(), None);
 		let chain_id = ChainId::from(config.chain_id);
 		let client_id = Some(
 			ClientId::new(config.client_id.unwrap().as_str(), 0)
@@ -128,6 +148,7 @@ where
 
 		Ok(Self {
 			name: config.name,
+			light_provider,
 			chain_id,
 			rpc_client,
 			grpc_url: config.grpc_url,
@@ -151,26 +172,52 @@ where
 	}
 
 	/// Construct a tendermint client state to be submitted to the counterparty chain
-	pub async fn construct_tendermint_client_state(
+	pub async fn construct_tendermint_client_state<HostFunctions: CryptoProvider>(
 		&self,
-	) -> Result<(AnyClientState, AnyConsensusState), Error>
+		client_state: &TmClientState<HostFunctions>,
+	) -> Result<TmLightClient<HostFunctions>, Error>
 	where
 		Self: KeyProvider + IbcProvider,
 		H: Clone + Send + Sync + 'static,
 	{
-		self.initialize_client_state().await.map_err(|e| {
-			Error::from(format!(
-				"Failed to initialize client state for chain {:?} with error {:?}",
-				self.name, e
-			))
-		})
+		let params = TmOptions {
+			trust_threshold: TrustThresholdFraction::new(
+				client_state.trust_level.numerator(),
+				client_state.trust_level.denominator(),
+			)
+			.unwrap(),
+			trusting_period: client_state.trusting_period,
+			clock_drift: client_state.max_clock_drift,
+		};
+		let clock = components::clock::SystemClock;
+		let scheduler = components::scheduler::basic_bisecting_schedule;
+		let verifier: PredicateVerifier<
+			ProdPredicates<HostFunctions>,
+			ProdVotingPowerCalculator<HostFunctions>,
+			ProdCommitValidator<HostFunctions>,
+			HostFunctions,
+		> = ProdVerifier::default();
+		let peer_id: PeerId = self
+			.rpc_client
+			.status()
+			.await
+			.map(|s| s.node_info.id)
+			.map_err(|e| Error::from(e.to_string()))?;
+		Ok(TmLightClient::new(
+			peer_id,
+			params,
+			clock,
+			scheduler,
+			verifier,
+			self.light_provider.clone(),
+		))
 	}
 
-	pub async fn submit_create_client_msg(&self, msg: String) -> Result<ClientId, Error> {
+	pub async fn submit_create_client_msg(&self, _msg: String) -> Result<ClientId, Error> {
 		todo!()
 	}
 
-	pub async fn transfer_tokens(&self, asset_id: u128, amount: u128) -> Result<(), Error> {
+	pub async fn transfer_tokens(&self, _asset_id: u128, _amount: u128) -> Result<(), Error> {
 		todo!()
 	}
 

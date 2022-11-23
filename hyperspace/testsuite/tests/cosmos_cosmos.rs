@@ -1,26 +1,25 @@
+use crate::cosmos::{client::CosmosClient, client::CosmosClientConfig, key_provider::KeyEntry};
+use futures::{future, StreamExt};
 use hyperspace_core::logging;
-use hyperspace_cosmos::{key_provider::KeyEntry, IbcProvider, CosmosClient, CosmosClientConfig};
+use hyperspace_cosmos::{key_provider::KeyEntry, CosmosClient, CosmosClientConfig, IbcProvider};
+use hyperspace_primitives::{utils::create_clients, IbcProvider};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
 	ibc_messaging_packet_timeout_on_channel_close,
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay,
 };
-use std::{path::PathBuf, str::FromStr};
-use tendermint_rpc::Url;
-use crate::cosmos::{client::CosmosClient, client::CosmosClientConfig, key_provider::KeyEntry};
-use futures::{future, StreamExt};
 use ibc::events::IbcEvent;
-use std::{path::PathBuf, str::FromStr};
-use tendermint_rpc::Url;
 use ibc::{
-    applications::transfer::VERSION,
-    core::{
-        ics04_channel::channel::{ChannelEnd, Order, State},
-        ics24_host::identifier::{ChannelId, ConnectionId, PortId},
-    },
+	applications::transfer::VERSION,
+	core::{
+		ics04_channel::channel::{ChannelEnd, Order, State},
+		ics24_host::identifier::{ChannelId, ConnectionId, PortId},
+	},
 };
 use std::time::Duration;
+use std::{path::PathBuf, str::FromStr};
+use tendermint_rpc::Url;
 use tokio::task::JoinHandle;
 
 async fn setup_clients<H: Clone + Send + Sync + 'static>() -> (CosmosClient<H>, CosmosClient<H>) {
@@ -90,8 +89,12 @@ async fn setup_clients<H: Clone + Send + Sync + 'static>() -> (CosmosClient<H>, 
 		chain_b.set_client_id(clients_on_b[0].clone());
 		return (chain_a, chain_b);
 	}
-	 
-	todo!()
+
+	let (client_a, client_b) = create_clients(&chain_a, &chain_b).await.unwrap();
+	chain_a.set_client_id(client_a);
+	chain_b.set_client_id(client_b);
+
+	(chain_a, chain_b)
 }
 
 #[tokio::test]
