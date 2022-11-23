@@ -28,7 +28,6 @@ use ibc::{
 			on_chan_close_confirm, on_chan_close_init, on_chan_open_ack, on_chan_open_confirm,
 			on_chan_open_init, on_chan_open_try,
 		},
-		error::Error as Ics20Error,
 		is_receiver_chain_source, is_sender_chain_source,
 		packet::PacketData,
 		relay::{
@@ -46,13 +45,13 @@ use ibc::{
 			Version,
 		},
 		ics24_host::identifier::{ChannelId, ConnectionId, PortId},
-		ics26_routing::context::{Module, ModuleOutputBuilder, OnRecvPacketAck},
+		ics26_routing::context::{Module, ModuleCallbackContext, ModuleOutputBuilder},
 	},
 	signer::Signer,
 };
 use ibc_primitives::{CallbackWeight, IbcHandler};
 use sp_core::crypto::AccountId32;
-use sp_std::{boxed::Box, marker::PhantomData};
+use sp_std::marker::PhantomData;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct IbcModule<T: Config>(PhantomData<T>);
@@ -76,6 +75,7 @@ where
 {
 	fn on_chan_open_init(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
 		order: Order,
 		connection_hops: &[ConnectionId],
@@ -100,6 +100,7 @@ where
 
 	fn on_chan_open_try(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
 		order: Order,
 		connection_hops: &[ConnectionId],
@@ -126,6 +127,7 @@ where
 
 	fn on_chan_open_ack(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
@@ -142,6 +144,7 @@ where
 
 	fn on_chan_open_confirm(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
@@ -157,6 +160,7 @@ where
 
 	fn on_chan_close_init(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
@@ -179,6 +183,7 @@ where
 
 	fn on_chan_close_confirm(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
@@ -201,22 +206,19 @@ where
 
 	fn on_recv_packet(
 		&self,
+		_ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
 		packet: &Packet,
 		_relayer: &Signer,
-	) -> OnRecvPacketAck {
+	) -> Result<(), Ics04Error> {
 		let mut ctx = Context::<T>::default();
 		let result = serde_json::from_slice(packet.data.as_slice())
 			.map_err(|e| {
 				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
 			})
 			.and_then(|packet_data: PacketData| {
-				process_recv_packet(&ctx, output, packet, packet_data.clone())
-					.and_then(|write_fn| {
-						write_fn(&mut ctx)
-							.map(|_| packet_data)
-							.map_err(Ics20Error::unknown_msg_type)
-					})
+				process_recv_packet(&mut ctx, output, packet, packet_data.clone())
+					.map(|_| packet_data)
 					.map_err(|e| {
 						log::trace!(target: "pallet_ibc", "[on_recv_packet]: {:?}", e);
 						Ics04Error::implementation_specific(e.to_string())
@@ -224,14 +226,13 @@ where
 			});
 		match result {
 			Err(err) => {
-				let packet = packet.clone();
-				OnRecvPacketAck::Nil(Box::new(move |_ctx| {
-					Pallet::<T>::write_acknowledgement(
-						&packet,
-						format!("{}: {:?}", ACK_ERR_STR, err).as_bytes().to_vec(),
-					)
-					.map_err(|e| format!("[on_recv_packet] {:#?}", e))
-				}))
+				Pallet::<T>::write_acknowledgement(
+					&packet,
+					format!("{}: {:?}", ACK_ERR_STR, err).as_bytes().to_vec(),
+				)
+				.map_err(|e| {
+					Ics04Error::implementation_specific(format!("[on_recv_packet] {:#?}", e))
+				})?;
 			},
 			Ok(packet_data) => {
 				let denom = full_ibc_denom(packet, packet_data.token.clone());
@@ -250,22 +251,21 @@ where
 					),
 				});
 				let packet = packet.clone();
-				OnRecvPacketAck::Successful(
-					Box::new(Ics20Acknowledgement::success()),
-					Box::new(move |_ctx| {
-						Pallet::<T>::write_acknowledgement(
-							&packet,
-							Ics20Acknowledgement::success().as_ref().to_vec(),
-						)
-						.map_err(|e| format!("[on_recv_packet] {:#?}", e))
-					}),
+				Pallet::<T>::write_acknowledgement(
+					&packet,
+					Ics20Acknowledgement::success().as_ref().to_vec(),
 				)
+				.map_err(|e| {
+					Ics04Error::implementation_specific(format!("[on_recv_packet] {:#?}", e))
+				})?;
 			},
 		}
+		Ok(())
 	}
 
 	fn on_acknowledgement_packet(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		packet: &Packet,
 		acknowledgement: &Acknowledgement,
@@ -334,6 +334,7 @@ where
 
 	fn on_timeout_packet(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		packet: &Packet,
 		_relayer: &Signer,

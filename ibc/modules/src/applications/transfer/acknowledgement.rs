@@ -39,6 +39,10 @@ impl Acknowledgement {
 	pub fn from_error(err: Error) -> Self {
 		Self::Error(format!("{}: {}", ACK_ERR_STR, err))
 	}
+
+	pub fn is_successful(&self) -> bool {
+		matches!(self, Self::Success(_))
+	}
 }
 
 impl AsRef<[u8]> for Acknowledgement {

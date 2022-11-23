@@ -77,7 +77,7 @@ use ibc::{
 		},
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
-		ics26_routing::context::{AsAnyMut, Module, OnRecvPacketAck},
+		ics26_routing::context::Module,
 	},
 	handler::HandlerOutputBuilder,
 	signer::Signer,
@@ -889,7 +889,8 @@ benchmarks! {
 		let channel_id = ChannelId::new(0);
 		let mut handler = IbcModule::<T>::default();
 	}:{
-		handler.on_chan_open_init(&mut output, order, &connection_hops, &port_id, &channel_id, &counterparty, &version).unwrap();
+		let ctx = routing::Context::<T>::new();
+		handler.on_chan_open_init(&ctx, &mut output, order, &connection_hops, &port_id, &channel_id, &counterparty, &version).unwrap();
 	}
 
 	on_chan_open_try {
@@ -902,7 +903,8 @@ benchmarks! {
 		let channel_id = ChannelId::new(0);
 		let mut handler = IbcModule::<T>::default();
 	}:{
-		handler.on_chan_open_try(&mut output, order, &connection_hops, &port_id, &channel_id, &counterparty, &version, &version).unwrap();
+		let ctx = routing::Context::<T>::new();
+		handler.on_chan_open_try(&ctx, &mut output, order, &connection_hops, &port_id, &channel_id, &counterparty, &version, &version).unwrap();
 	}
 
 	on_chan_open_ack {
@@ -912,7 +914,8 @@ benchmarks! {
 		let channel_id = ChannelId::new(0);
 		let mut handler = IbcModule::<T>::default();
 	}:{
-		handler.on_chan_open_ack(&mut output, &port_id, &channel_id, &version).unwrap();
+		let ctx = routing::Context::<T>::new();
+		handler.on_chan_open_ack(&ctx, &mut output, &port_id, &channel_id, &version).unwrap();
 	}
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 1)
@@ -924,7 +927,8 @@ benchmarks! {
 		let channel_id = ChannelId::new(0);
 		let mut handler = IbcModule::<T>::default();
 	}:{
-		handler.on_chan_open_confirm(&mut output, &port_id, &channel_id).unwrap();
+		let ctx = routing::Context::<T>::new();
+		handler.on_chan_open_confirm(&ctx, &mut output, &port_id, &channel_id).unwrap();
 	}
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 1)
@@ -938,7 +942,8 @@ benchmarks! {
 		ChannelIds::<T>::put(channel_ids);
 		let mut handler = IbcModule::<T>::default();
 	}:{
-		handler.on_chan_close_init(&mut output, &port_id, &channel_id).unwrap();
+		let ctx = routing::Context::<T>::new();
+		handler.on_chan_close_init(&ctx, &mut output, &port_id, &channel_id).unwrap();
 	}
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 0)
@@ -952,7 +957,8 @@ benchmarks! {
 		ChannelIds::<T>::put(channel_ids);
 		let mut handler = IbcModule::<T>::default();
 	}:{
-		handler.on_chan_close_confirm(&mut output, &port_id, &channel_id).unwrap();
+		let ctx = routing::Context::<T>::new();
+		handler.on_chan_close_confirm(&ctx, &mut output, &port_id, &channel_id).unwrap();
 	}
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 0)
@@ -1022,18 +1028,12 @@ benchmarks! {
 			timeout_timestamp: Timestamp::from_nanoseconds(1690894363u64.saturating_mul(1000000000))
 				.unwrap(),
 		 };
-		 let mut handler = IbcModule::<T>::default();
+		 let handler = IbcModule::<T>::default();
 		 let mut output = HandlerOutputBuilder::new();
 		 let signer = Signer::from_str("relayer").unwrap();
 	}:{
-
-		let res = handler.on_recv_packet(&mut output, &packet, &signer);
-		match res {
-			OnRecvPacketAck::Successful(_, write_fn) => {
-				write_fn(handler.as_any_mut()).unwrap()
-			}
-			_ => panic!("Expected successful execution")
-		}
+		let ctx = routing::Context::<T>::new();
+		handler.on_recv_packet(&ctx, &mut output, &packet, &signer).unwrap();
 
 	 }
 	verify {
@@ -1112,7 +1112,8 @@ benchmarks! {
 		 let signer = Signer::from_str("relayer").unwrap();
 		 let ack: Acknowledgement = ACK_ERR_STR.to_string().as_bytes().to_vec().into();
 	}:{
-	   handler.on_acknowledgement_packet(&mut output, &packet, &ack, &signer).unwrap();
+		let ctx = routing::Context::<T>::new();
+	   handler.on_acknowledgement_packet(&ctx, &mut output, &packet, &ack, &signer).unwrap();
 	}
 	verify {
 		assert_eq!(<<T as Config>::Fungibles as Inspect<T::AccountId>>::balance(
@@ -1189,7 +1190,8 @@ benchmarks! {
 		 let mut output = HandlerOutputBuilder::new();
 		 let signer = Signer::from_str("relayer").unwrap();
 	}:{
-		handler.on_timeout_packet(&mut output, &packet, &signer).unwrap();
+		let ctx = routing::Context::<T>::new();
+		handler.on_timeout_packet(&ctx, &mut output, &packet, &signer).unwrap();
 	}
 	verify {
 		assert_eq!(<<T as Config>::Fungibles as Inspect<T::AccountId>>::balance(
