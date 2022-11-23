@@ -1,6 +1,9 @@
 use super::{error::Error, CosmosClient};
 use core::time::Duration;
-use futures::Stream;
+use futures::{
+	stream::{self, select_all},
+	Stream,
+};
 use ibc::{
 	applications::transfer::PrefixedCoin,
 	core::{
@@ -35,14 +38,21 @@ use tendermint::validator;
 use tendermint_light_client::components::io::{AsyncIo, AtHeight};
 use tendermint_proto::Protobuf;
 use tendermint_proto::types::{SignedHeader, Validator};
-use tendermint_rpc::{query::Query, Client, Order};
+use tendermint_rpc::{
+	query::{EventType, Query},
+	event::{Event, EventData},
+	Client, Order, SubscriptionClient, WebSocketClient,
+};
 use ibc::core::ics02_client::msgs::update_client::MsgUpdateAnyClient;
 use ibc::tx_msg::Msg;
 use ibc_proto::ibc::core::client::v1::MsgUpdateClient;
 use ics07_tendermint::client_def::TendermintClient;
 use ics07_tendermint::client_message::ClientMessage;
 use primitives::mock::LocalClientTypes;
-use crate::utils;
+use crate::utils::{
+	client_extract_attributes_from_tx, event_is_type_channel, event_is_type_client,
+	event_is_type_connection, ibc_event_try_from_abci_event,
+};
 
 
 pub enum FinalityEvent {
@@ -118,7 +128,7 @@ where
 			let tx_results = block_results.txs_results.ok_or_else(|| Err(Error::Custom("empty transaction results".to_string())))?;
 			for tx in tx_results.iter() {
 				for event in tx.events {
-					let ibc_event = utils::ibc_event_try_from_abci_event(&event)?;
+					let ibc_event = ibc_event_try_from_abci_event(&event)?;
 					ibc_events.push(ibc_event);
 				}
 			}
@@ -138,7 +148,71 @@ where
 	}
 
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>> {
-		todo!()
+		let (ws_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
+			.await
+			.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))
+			.unwrap();
+		let driver_handle = std::thread::spawn(|| ws_driver.run());
+
+		// ----
+		let query_all = vec![
+			Query::from(EventType::NewBlock),
+			Query::eq("message.module", "ibc_client"),
+			Query::eq("message.module", "ibc_connection"),
+			Query::eq("message.module", "ibc_channel"),
+		];
+
+		let mut subscriptions = vec![];
+		for query in &query_all {
+			let subscription = ws_client
+				.subscribe(query.clone())
+				.await
+				.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)));
+			subscriptions.push(subscription);
+		}
+
+		let all_subscribtions = Box::new(select_all(subscriptions));
+		// Collect IBC events from each RPC event
+		let events = all_subscribtions
+			.map_ok(move |event| {
+				let mut events: Vec<IbcEvent> = vec![];
+				let Event { data, events, query } = event;
+				match data {
+					EventData::NewBlock { block, .. }
+					if query == Query::from(EventType::NewBlock).to_string() =>
+						{
+							events.push(ClientEvents::NewBlock::new(height).into());
+							// events_with_height.append(&mut extract_block_events(height, &events));
+						},
+					EventData::Tx { tx_result } => {
+						for abci_event in &tx_result.result.events {
+							if let Ok(ibc_event) = ibc_event_try_from_abci_event(abci_event) {
+								if query == Query::eq("message.module", "ibc_client").to_string()
+									&& event_is_type_client(&ibc_event)
+								{
+									events.push(ibc_event);
+								} else if query
+									== Query::eq("message.module", "ibc_connection").to_string()
+									&& event_is_type_connection(&ibc_event)
+								{
+									events.push(ibc_event);
+								} else if query
+									== Query::eq("message.module", "ibc_channel").to_string()
+									&& event_is_type_channel(&ibc_event)
+								{
+									events.push(ibc_event);
+								}
+							}
+						}
+					},
+					_ => {},
+				}
+				stream::iter(events).map(Ok)
+			})
+			.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))
+			.try_flatten();
+
+		Pin::new(events)
 	}
 
 	async fn query_client_consensus(
