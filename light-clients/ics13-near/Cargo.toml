@@ -49,12 +49,10 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
 sha3 = { version = "0.10.1", optional = true }
 ripemd = { version = "0.1.1", optional = true }
+tendermint-proto = { workspace = true }
+tendermint = { workspace = true }
 
-[dependencies.tendermint]
-workspace = true
 
-[dependencies.tendermint-proto]
-workspace = true
 
 [dev-dependencies]
 ibc = { path = "../../ibc/modules", features = ['mocks'] }

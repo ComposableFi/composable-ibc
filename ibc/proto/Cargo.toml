@@ -29,9 +29,7 @@ tonic       = { version = "0.8.2", optional = true, default-features = false }
 serde       = { version = "1.0", default-features = false }
 schemars    = { version = "0.8", optional = true }
 base64      = { version = "0.13", default-features = false, features = ["alloc"] }
-
-[dependencies.tendermint-proto]
-workspace = true
+tendermint-proto = { workspace = true }
 
 [features]
 default     = ["std", "client"]

@@ -59,12 +59,8 @@ sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 finality-grandpa = { version = "0.16.0", default-features = false }
 
-[dependencies.tendermint]
-workspace = true
-
-
-[dependencies.tendermint-proto]
-workspace = true
+tendermint-proto = { workspace = true }
+tendermint = { workspace = true }
 
 [dev-dependencies]
 hex = "0.4.3"
