@@ -149,15 +149,13 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 	if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
 		chain_a.set_client_id(clients_on_b[0].clone());
 		chain_b.set_client_id(clients_on_b[0].clone());
-		return (chain_a, chain_b)
+		return (chain_a, chain_b);
 	}
 
 	let (res_1, res_2) = futures::join!(
-		chain_a.set_pallet_params(true, true),
-		chain_b.set_pallet_params(true, true)
+		chain_a.set_pallet_params(true, true)?,
+		chain_b.set_pallet_params(true, true)?
 	);
-	res_1.unwrap();
-	res_2.unwrap();
 
 	let (client_a, client_b) = create_clients(&chain_a, &chain_b).await.unwrap();
 	chain_a.set_client_id(client_a);

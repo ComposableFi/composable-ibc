@@ -26,7 +26,12 @@ async fn main() -> Result<()> {
 
 	match &cli.subcommand {
 		Subcommand::Relay(cmd) => cmd.run().await,
-		Subcommand::CreateClients(cmd) => cmd.create_clients().await,
+		Subcommand::CreateClients(cmd) => {
+			let new_config = cmd.create_clients().await?;
+			let output_dir = cmd.config_output_dir.unwrap();
+			fs::write!(output_dir, toml::to_string(new_config)).unwrap();
+			Ok(())
+		},
 		Subcommand::CreateConnection(cmd) => cmd.create_connection().await,
 		Subcommand::CreateChannel(cmd) => cmd.create_channel().await,
 	}

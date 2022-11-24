@@ -143,7 +143,7 @@ impl FromStr for KeyType {
 }
 
 /// config options for [`ParachainClient`]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ParachainClientConfig {
 	/// Chain name
 	pub name: String,
@@ -408,7 +408,7 @@ where
 				.sign_and_submit_then_watch(&call, &signer, other_params)
 				.await;
 			if res.is_ok() {
-				break res.unwrap()
+				break res.unwrap();
 			}
 			count += 1;
 		};
@@ -504,7 +504,7 @@ where
 			};
 			// we can't use the genesis block to construct the initial state.
 			if block_number == 0 {
-				continue
+				continue;
 			}
 			let subxt_block_number: subxt::rpc::BlockNumber = block_number.into();
 			let block_hash =
@@ -524,7 +524,7 @@ where
 				root: decoded_para_head.state_root.as_bytes().to_vec().into(),
 			});
 
-			return Ok((AnyClientState::Beefy(client_state), consensus_state))
+			return Ok((AnyClientState::Beefy(client_state), consensus_state));
 		}
 	}
 
@@ -575,7 +575,7 @@ where
 			let block_number = decoded_para_head.number;
 			// we can't use the genesis block to construct the initial state.
 			if block_number == 0 {
-				continue
+				continue;
 			}
 
 			let mut client_state = GrandpaClientState::<HostFunctionsManager>::default();
@@ -607,7 +607,7 @@ where
 				root: decoded_para_head.state_root.as_bytes().to_vec().into(),
 			});
 
-			return Ok((AnyClientState::Grandpa(client_state), consensus_state))
+			return Ok((AnyClientState::Grandpa(client_state), consensus_state));
 		}
 	}
 }

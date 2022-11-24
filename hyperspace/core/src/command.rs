@@ -14,11 +14,15 @@
 
 use anyhow::Result;
 use clap::Parser;
+use parachain::{ParachainClient, ParachainClientConfig};
 use primitives::Chain;
 use prometheus::Registry;
 use std::{path::PathBuf, str::FromStr, time::Duration};
 
-use crate::{chain::Config, relay};
+use crate::{
+	chain::{AnyConfig, Config},
+	relay,
+};
 use ibc::core::{ics04_channel::channel::Order, ics24_host::identifier::PortId};
 use metrics::{data::Metrics, handler::MetricsHandler, init_prometheus};
 use primitives::{
@@ -63,6 +67,9 @@ pub struct Cmd {
 	/// Channel version
 	#[clap(long)]
 	version: Option<String>,
+	/// Directory to store the updated configurations
+	#[clap(long)]
+	pub config_output_dir: String,
 }
 
 impl Cmd {
@@ -90,12 +97,13 @@ impl Cmd {
 		relay(any_chain_a, any_chain_b, Some(metrics_handler_a), Some(metrics_handler_b)).await
 	}
 
-	pub async fn create_clients(&self) -> Result<()> {
+	pub async fn create_clients(&self) -> Result<Config> {
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
 		let config: Config = toml::from_str(&file_content)?;
-		let any_chain_a = config.chain_a.into_client().await?;
-		let any_chain_b = config.chain_b.into_client().await?;
+
+		let any_chain_a = config.chain_a.clone().into_client().await?;
+		let any_chain_b = config.chain_b.clone().into_client().await?;
 
 		let (client_id_a_on_b, client_id_b_on_a) =
 			create_clients(&any_chain_a, &any_chain_b).await?;
@@ -111,7 +119,48 @@ impl Cmd {
 			any_chain_b.name(),
 			client_id_a_on_b
 		);
-		Ok(())
+
+		let parachain_client_a = ParachainClient::try_from(any_chain_a).unwrap();
+		let config_parachain_a = ParachainClientConfig::try_from(config.chain_a).unwrap();
+		let new_parachain_config_a = ParachainClientConfig {
+			name: parachain_client_a.name,
+			para_id: parachain_client_a.para_id,
+			parachain_rpc_url: config_parachain_a.parachain_rpc_url,
+			relay_chain_rpc_url: config_parachain_a.relay_chain_rpc_url,
+			client_id: parachain_client_a.client_id,
+			connection_id: parachain_client_a.connection_id,
+			beefy_activation_block: parachain_client_a.beefy_activation_block,
+			commitment_prefix: parachain_client_a.commitment_prefix.into(),
+			private_key: config_parachain_a.private_key,
+			ss58_version: config_parachain_a.ss58_version,
+			channel_whitelist: parachain_client_a.channel_whitelist,
+			finality_protocol: parachain_client_a.finality_protocol,
+			key_type: config_parachain_a.key_type,
+		};
+
+		let parachain_client_b = ParachainClient::try_from(any_chain_b).unwrap();
+		let config_parachain_b = ParachainClientConfig::try_from(config.chain_b).unwrap();
+		let new_parachain_config_b = ParachainClientConfig {
+			name: parachain_client_b.name,
+			para_id: parachain_client_b.para_id,
+			parachain_rpc_url: config_parachain_b.parachain_rpc_url,
+			relay_chain_rpc_url: config_parachain_b.relay_chain_rpc_url,
+			client_id: parachain_client_b.client_id,
+			connection_id: parachain_client_b.connection_id,
+			beefy_activation_block: parachain_client_b.beefy_activation_block,
+			commitment_prefix: parachain_client_b.commitment_prefix.into(),
+			private_key: config_parachain_b.private_key,
+			ss58_version: config_parachain_b.ss58_version,
+			channel_whitelist: parachain_client_b.channel_whitelist,
+			finality_protocol: parachain_client_b.finality_protocol,
+			key_type: config_parachain_b.key_type,
+		};
+		let new_config = Config {
+			chain_a: AnyConfig::Parachain(new_parachain_config_a),
+			chain_b: AnyConfig::Parachain(new_parachain_config_b),
+			core: config.core,
+		};
+		Ok(new_config)
 	}
 
 	pub async fn create_connection(&self) -> Result<()> {
