@@ -203,11 +203,11 @@ fn process_message(
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
 				.map(|_| to_binary(&ContractResult::success()))
 		},
-		ExecuteMsg::InitializeState(InitializeState { me, consensus_state }) => {
+		ExecuteMsg::InitializeState(InitializeState { client_state, consensus_state }) => {
 			let state_call_response = ClientStateCallResponse {
-				me: me.clone(),
 				new_consensus_state: consensus_state.clone(),
-				new_client_state: me.clone(),
+				new_client_state: client_state.clone(),
+				client_state,
 				result: ContractResult::success(),
 			};
 			let response = to_binary(&state_call_response);

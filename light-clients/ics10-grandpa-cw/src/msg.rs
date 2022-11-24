@@ -94,7 +94,7 @@ impl ContractResult {
 
 #[cw_serde]
 pub struct ClientStateCallResponse {
-	pub me: WasmClientState,
+	pub client_state: WasmClientState,
 	pub new_consensus_state: WasmConsensusState,
 	pub new_client_state: WasmClientState,
 	pub result: ContractResult,
@@ -102,13 +102,13 @@ pub struct ClientStateCallResponse {
 
 #[cw_serde]
 pub struct InitializeState {
-	pub me: WasmClientState,
+	pub client_state: WasmClientState,
 	pub consensus_state: WasmConsensusState,
 }
 
 #[cw_serde]
 pub struct InstantiateMsg {
-	initialize_state: InitializeState,
+	// initialize_state: InitializeState,
 }
 
 #[cw_serde]
