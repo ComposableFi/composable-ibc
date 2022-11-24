@@ -249,6 +249,8 @@ where
 						packet.source_channel.clone(),
 						&prefixed_denom,
 					),
+					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
+					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
 				});
 				let packet = packet.clone();
 				Pallet::<T>::write_acknowledgement(
@@ -310,6 +312,8 @@ where
 						packet.source_channel.clone(),
 						&prefixed_denom,
 					),
+					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
+					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
 				}),
 			Ics20Acknowledgement::Error(_) =>
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferFailed {
@@ -326,6 +330,8 @@ where
 						packet.source_channel.clone(),
 						&prefixed_denom,
 					),
+					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
+					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
 				}),
 		}
 
