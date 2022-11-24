@@ -27,7 +27,7 @@ use scale_info::prelude::string::ToString;
 use sp_core::crypto::AccountId32;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Context<T: Config> {
+pub(crate) struct Context<T: Config> {
 	pub _pd: PhantomData<T>,
 	router: IbcRouter<T>,
 }

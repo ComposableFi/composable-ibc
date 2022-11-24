@@ -86,7 +86,7 @@ where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	AccountId32: From<T::AccountId>,
 {
-	pub fn execute_ibc_messages(
+	pub(crate) fn execute_ibc_messages(
 		ctx: &mut Context<T>,
 		messages: Vec<ibc_proto::google::protobuf::Any>,
 	) {
@@ -1087,7 +1087,7 @@ where
 		Ok(msg)
 	}
 
-	pub fn send_transfer(msg: MsgTransfer<PrefixedCoin>) -> Result<(), IbcHandlerError> {
+	pub(crate) fn send_transfer(msg: MsgTransfer<PrefixedCoin>) -> Result<(), IbcHandlerError> {
 		let mut ctx = Context::<T>::default();
 		let mut handler_output = HandlerOutputBuilder::default();
 		send_transfer::<_, _>(&mut ctx, &mut handler_output, msg)

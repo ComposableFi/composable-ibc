@@ -138,7 +138,6 @@ pub enum LightClientProtocol {
 	Beefy,
 	Grandpa,
 }
-
 #[cfg(any(test, feature = "runtime-benchmarks"))]
 pub(crate) mod benchmarks;
 
@@ -150,6 +149,7 @@ mod tests;
 
 mod impls;
 pub mod weight;
+
 pub use weight::WeightInfo;
 
 #[frame_support::pallet]
