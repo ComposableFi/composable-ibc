@@ -87,6 +87,7 @@ impl Default for Attributes {
 /// is infallible, even if it is not represented in the error type.
 /// Once tendermint-rs improves the API of the `Key` and `Value` types,
 /// we will be able to remove the `.parse().unwrap()` calls.
+#[allow(clippy::unwrap_used)]
 impl From<Attributes> for Vec<EventAttribute> {
 	fn from(a: Attributes) -> Self {
 		let height = EventAttribute {

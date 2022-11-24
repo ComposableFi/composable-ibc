@@ -81,9 +81,9 @@ impl Timestamp {
 			// about year 2554, there is no risk of overflowing `Time`
 			// or `OffsetDateTime`.
 			let ts = OffsetDateTime::from_unix_timestamp_nanos(nanoseconds as i128)
-				.unwrap()
+				.map_err(|_| ParseTimestampError::parse_error())?
 				.try_into()
-				.unwrap();
+				.map_err(|_| ParseTimestampError::parse_error())?;
 			Ok(Timestamp { time: Some(ts) })
 		}
 	}
@@ -139,7 +139,7 @@ impl Timestamp {
 			let t: OffsetDateTime = time.into();
 			let s = t.unix_timestamp_nanos();
 			assert!(s >= 0, "time {:?} has negative `.timestamp()`", time);
-			s.try_into().unwrap()
+			s.try_into().expect("Should convert to u64")
 		})
 	}
 
@@ -232,6 +232,8 @@ define_error! {
 		ParseInt
 			[ TraceError<ParseIntError> ]
 			| _ | { "error parsing u64 integer from string"},
+		ParseError
+			| _ | { "Error parsing timestamp"},
 	}
 }
 

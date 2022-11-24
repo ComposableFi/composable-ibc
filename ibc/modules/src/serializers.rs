@@ -14,7 +14,8 @@
 
 use crate::prelude::*;
 use serde::{
-	ser::{Serialize, Serializer},
+	de,
+	ser::{self, Serialize, Serializer},
 	Deserialize, Deserializer,
 };
 use subtle_encoding::{Encoding, Hex};
@@ -24,7 +25,7 @@ where
 	S: Serializer,
 	T: AsRef<[u8]>,
 {
-	let hex = Hex::upper_case().encode_to_string(data).unwrap();
+	let hex = Hex::upper_case().encode_to_string(data).map_err(ser::Error::custom)?;
 	hex.serialize(serializer)
 }
 
@@ -35,7 +36,7 @@ where
 	T: From<Vec<u8>>,
 {
 	let hex = String::deserialize(deserializer)?;
-	let bytes = Hex::upper_case().decode(hex.as_bytes()).unwrap();
+	let bytes = Hex::upper_case().decode(hex.as_bytes()).map_err(de::Error::custom)?;
 	Ok(bytes.into())
 }
 

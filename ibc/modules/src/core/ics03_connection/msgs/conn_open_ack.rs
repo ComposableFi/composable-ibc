@@ -100,8 +100,11 @@ where
 				.map(|height| Height::new(height.revision_number, height.revision_height));
 			if proof_bytes.is_some() && consensus_height.is_some() {
 				Some(
-					ConsensusProof::new(proof_bytes.unwrap(), consensus_height.unwrap())
-						.map_err(Error::invalid_proof)?,
+					ConsensusProof::new(
+						proof_bytes.expect("Contains a value"),
+						consensus_height.expect("Contains a value"),
+					)
+					.map_err(Error::invalid_proof)?,
 				)
 			} else {
 				None

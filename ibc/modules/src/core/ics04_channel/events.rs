@@ -182,7 +182,9 @@ fn extract_packet_and_write_ack_from_tx(
 					value.parse().map_err(|_| Error::invalid_timeout_height())?;
 			},
 			PKT_TIMEOUT_TIMESTAMP_ATTRIBUTE_KEY => {
-				packet.timeout_timestamp = value.parse().unwrap();
+				packet.timeout_timestamp = value.parse().map_err(|_| {
+					Error::implementation_specific("parse timeout_timestamp error".to_string())
+				})?;
 			},
 			PKT_DATA_ATTRIBUTE_KEY => {
 				packet.data = Vec::from(value.as_bytes());
@@ -249,6 +251,7 @@ impl Attributes {
 /// is infallible, even if it is not represented in the error type.
 /// Once tendermint-rs improves the API of the `Key` and `Value` types,
 /// we will be able to remove the `.parse().unwrap()` calls.
+#[allow(clippy::unwrap_used)]
 impl From<Attributes> for Vec<EventAttribute> {
 	fn from(a: Attributes) -> Self {
 		let mut attributes = vec![];
@@ -304,6 +307,7 @@ impl From<Attributes> for Vec<EventAttribute> {
 /// is infallible, even if it is not represented in the error type.
 /// Once tendermint-rs improves the API of the `Key` and `Value` types,
 /// we will be able to remove the `.parse().unwrap()` calls.
+#[allow(clippy::unwrap_used)]
 impl TryFrom<Packet> for Vec<EventAttribute> {
 	type Error = Error;
 	fn try_from(p: Packet) -> Result<Self, Self::Error> {
@@ -914,8 +918,10 @@ impl TryFrom<WriteAcknowledgement> for AbciEvent {
 			String::from_utf8(v.ack).expect("hex-encoded string should always be valid UTF-8");
 		// No actual conversion from string to `EventAttribute::Key` or `EventAttribute::Value`
 		let ack = EventAttribute {
-			key: PKT_ACK_ATTRIBUTE_KEY.parse().unwrap(),
-			value: val.parse().unwrap(),
+			key: PKT_ACK_ATTRIBUTE_KEY.parse().expect("Infallible"),
+			value: val
+				.parse()
+				.map_err(|_| Error::implementation_specific("Event parse error".to_string()))?,
 			index: false,
 		};
 		attributes.push(ack);
