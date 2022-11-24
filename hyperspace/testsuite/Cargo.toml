@@ -18,7 +18,7 @@ json = { version = "1.0.85", package = "serde_json" }
 
 ibc = { path = "../../ibc/modules" }
 ibc-proto = { path = "../../ibc/proto" }
-tendermint-proto = { workspace = true }
+tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
 
 hyperspace-core = { path = "../core", features = ["testing"] }
 hyperspace-primitives = { path = "../primitives", features = ["testing"] }
