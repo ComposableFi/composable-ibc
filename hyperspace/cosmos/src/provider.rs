@@ -31,13 +31,11 @@ use ibc_proto::{
 use ibc_rpc::PacketInfo;
 use ics07_tendermint::{client_message::Header, client_state::ClientState, events::try_from_tx};
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
-use primitives::{Chain, IbcProvider, UpdateType};
+use primitives::{Chain, IbcProvider, UpdateType, mock::LocalClientTypes};
 use std::pin::Pin;
 use tendermint::block::{Height as BlockHeight};
-use tendermint::validator;
 use tendermint_light_client::components::io::{AsyncIo, AtHeight};
 use tendermint_proto::Protobuf;
-use tendermint_proto::types::{SignedHeader, Validator};
 use tendermint_rpc::{
 	query::{EventType, Query},
 	event::{Event, EventData},
@@ -45,15 +43,11 @@ use tendermint_rpc::{
 };
 use ibc::core::ics02_client::msgs::update_client::MsgUpdateAnyClient;
 use ibc::tx_msg::Msg;
-use ibc_proto::ibc::core::client::v1::MsgUpdateClient;
-use ics07_tendermint::client_def::TendermintClient;
 use ics07_tendermint::client_message::ClientMessage;
-use primitives::mock::LocalClientTypes;
 use crate::utils::{
-	client_extract_attributes_from_tx, event_is_type_channel, event_is_type_client,
+	event_is_type_channel, event_is_type_client,
 	event_is_type_connection, ibc_event_try_from_abci_event,
 };
-
 
 pub enum FinalityEvent {
 	Tendermint(Header),
@@ -67,17 +61,22 @@ impl<H> CosmosClient<H>
 where
 	H: Clone + Send + Sync + 'static
 {
-	async fn msg_update_client_header(&mut self, trusted_height: Height) -> Result<Header, anyhow::Error> {
+	async fn msg_update_client_header(&mut self, trusted_height: Height) -> Result<(Header, UpdateType), anyhow::Error> {
 		let latest_light_block = self.light_provider.fetch_light_block(AtHeight::Highest).await?;
 		let height = BlockHeight::try_from(trusted_height.revision_height)?;
 		let trusted_light_block = self.light_provider.fetch_light_block(AtHeight::At(height)).await?;
 
-		Ok(Header{
+		let update_type = match latest_light_block.validators == latest_light_block.next_validators {
+			true => UpdateType::Optional,
+			false => UpdateType::Mandatory
+		};
+
+		Ok((Header{
 			signed_header: latest_light_block.signed_header,
 			validator_set: latest_light_block.validators,
 			trusted_height,
 			trusted_validator_set: trusted_light_block.validators
-		})
+		}, update_type))
 	}
 }
 
@@ -134,17 +133,17 @@ where
 			}
 		}
 
+		let update_header = CosmosClient::msg_update_client_header(self, cs.latest_height).await?;
 		let update_client_header = {
-			let update_header = CosmosClient::msg_update_client_header(self, cs.latest_height).await?;
 			let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 				client_id: self.client_id(),
-				client_message: AnyClientMessage::Tendermint(ClientMessage::Header(update_header)),
+				client_message: AnyClientMessage::Tendermint(ClientMessage::Header(update_header.0)),
 				signer: counterparty.account_id(),
 			};
 			let value = msg.encode_vec();
 			Any { value, type_url: msg.type_url() }
 		};
-		Ok((update_client_header, ibc_events, UpdateType::Mandatory))
+		Ok((update_client_header, ibc_events, update_header.1))
 	}
 
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>> {
