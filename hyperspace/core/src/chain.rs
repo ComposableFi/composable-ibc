@@ -192,9 +192,8 @@ impl IbcProvider for AnyChain {
 		client_id: ClientId,
 	) -> Result<QueryClientStateResponse, Self::Error> {
 		match self {
-			AnyChain::Parachain(chain) => {
-				chain.query_client_state(at, client_id).await.map_err(Into::into)
-			},
+			AnyChain::Parachain(chain) =>
+				chain.query_client_state(at, client_id).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}
@@ -205,9 +204,8 @@ impl IbcProvider for AnyChain {
 		connection_id: ConnectionId,
 	) -> Result<QueryConnectionResponse, Self::Error> {
 		match self {
-			AnyChain::Parachain(chain) => {
-				chain.query_connection_end(at, connection_id).await.map_err(Into::into)
-			},
+			AnyChain::Parachain(chain) =>
+				chain.query_connection_end(at, connection_id).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}
@@ -219,9 +217,8 @@ impl IbcProvider for AnyChain {
 		port_id: PortId,
 	) -> Result<QueryChannelResponse, Self::Error> {
 		match self {
-			AnyChain::Parachain(chain) => {
-				chain.query_channel_end(at, channel_id, port_id).await.map_err(Into::into)
-			},
+			AnyChain::Parachain(chain) =>
+				chain.query_channel_end(at, channel_id, port_id).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}
@@ -298,9 +295,8 @@ impl IbcProvider for AnyChain {
 
 	async fn latest_height_and_timestamp(&self) -> Result<(Height, Timestamp), Self::Error> {
 		match self {
-			AnyChain::Parachain(chain) => {
-				chain.latest_height_and_timestamp().await.map_err(Into::into)
-			},
+			AnyChain::Parachain(chain) =>
+				chain.latest_height_and_timestamp().await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}
@@ -380,9 +376,8 @@ impl IbcProvider for AnyChain {
 		connection_id: &ConnectionId,
 	) -> Result<QueryChannelsResponse, Self::Error> {
 		match self {
-			Self::Parachain(chain) => {
-				chain.query_connection_channels(at, connection_id).await.map_err(Into::into)
-			},
+			Self::Parachain(chain) =>
+				chain.query_connection_channels(at, connection_id).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}
@@ -394,9 +389,8 @@ impl IbcProvider for AnyChain {
 		seqs: Vec<u64>,
 	) -> Result<Vec<ibc_rpc::PacketInfo>, Self::Error> {
 		match self {
-			Self::Parachain(chain) => {
-				chain.query_send_packets(channel_id, port_id, seqs).await.map_err(Into::into)
-			},
+			Self::Parachain(chain) =>
+				chain.query_send_packets(channel_id, port_id, seqs).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}
@@ -408,9 +402,8 @@ impl IbcProvider for AnyChain {
 		seqs: Vec<u64>,
 	) -> Result<Vec<ibc_rpc::PacketInfo>, Self::Error> {
 		match self {
-			Self::Parachain(chain) => {
-				chain.query_recv_packets(channel_id, port_id, seqs).await.map_err(Into::into)
-			},
+			Self::Parachain(chain) =>
+				chain.query_recv_packets(channel_id, port_id, seqs).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}
@@ -441,9 +434,8 @@ impl IbcProvider for AnyChain {
 		height: Height,
 	) -> Result<Option<Vec<u8>>, Self::Error> {
 		match self {
-			AnyChain::Parachain(chain) => {
-				chain.query_host_consensus_state_proof(height).await.map_err(Into::into)
-			},
+			AnyChain::Parachain(chain) =>
+				chain.query_host_consensus_state_proof(height).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}
@@ -485,9 +477,8 @@ impl IbcProvider for AnyChain {
 
 	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error> {
 		match self {
-			Self::Parachain(chain) => {
-				chain.query_timestamp_at(block_number).await.map_err(Into::into)
-			},
+			Self::Parachain(chain) =>
+				chain.query_timestamp_at(block_number).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}
@@ -512,9 +503,8 @@ impl IbcProvider for AnyChain {
 		client_id: String,
 	) -> Result<Vec<IdentifiedConnection>, Self::Error> {
 		match self {
-			Self::Parachain(chain) => {
-				chain.query_connection_using_client(height, client_id).await.map_err(Into::into)
-			},
+			Self::Parachain(chain) =>
+				chain.query_connection_using_client(height, client_id).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}
@@ -525,9 +515,8 @@ impl IbcProvider for AnyChain {
 		latest_client_height_on_counterparty: u64,
 	) -> bool {
 		match self {
-			Self::Parachain(chain) => {
-				chain.is_update_required(latest_height, latest_client_height_on_counterparty)
-			},
+			Self::Parachain(chain) =>
+				chain.is_update_required(latest_height, latest_client_height_on_counterparty),
 			_ => unreachable!(),
 		}
 	}
@@ -629,9 +618,8 @@ impl primitives::TestProvider for AnyChain {
 		timeout: Timeout,
 	) -> Result<(), Self::Error> {
 		match self {
-			Self::Parachain(chain) => {
-				chain.send_ordered_packet(channel_id, timeout).await.map_err(Into::into)
-			},
+			Self::Parachain(chain) =>
+				chain.send_ordered_packet(channel_id, timeout).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}
@@ -654,9 +642,8 @@ impl primitives::TestProvider for AnyChain {
 impl AnyConfig {
 	pub async fn into_client(self) -> anyhow::Result<AnyChain> {
 		Ok(match self {
-			AnyConfig::Parachain(config) => {
-				AnyChain::Parachain(ParachainClient::new(config).await?)
-			},
+			AnyConfig::Parachain(config) =>
+				AnyChain::Parachain(ParachainClient::new(config).await?),
 		})
 	}
 }
