@@ -20,19 +20,19 @@ use crate::{
 	prelude::*,
 };
 use serde_derive::{Deserialize, Serialize};
-use tendermint::abci::EventAttribute;
+use tendermint_rpc::abci::tag::Tag;
 
 /// The content of the `key` field for the attribute containing the height.
-const HEIGHT_ATTRIBUTE_KEY: &str = "height";
+pub const HEIGHT_ATTRIBUTE_KEY: &str = "height";
 
 /// The content of the `key` field for the attribute containing the client identifier.
-const CLIENT_ID_ATTRIBUTE_KEY: &str = "client_id";
+pub const CLIENT_ID_ATTRIBUTE_KEY: &str = "client_id";
 
 /// The content of the `key` field for the attribute containing the client type.
-const CLIENT_TYPE_ATTRIBUTE_KEY: &str = "client_type";
+pub const CLIENT_TYPE_ATTRIBUTE_KEY: &str = "client_type";
 
 /// The content of the `key` field for the attribute containing the height.
-const CONSENSUS_HEIGHT_ATTRIBUTE_KEY: &str = "consensus_height";
+pub const CONSENSUS_HEIGHT_ATTRIBUTE_KEY: &str = "consensus_height";
 
 /// NewBlock event signals the committing & execution of a new block.
 // TODO - find a better place for NewBlock
@@ -87,27 +87,23 @@ impl Default for Attributes {
 /// is infallible, even if it is not represented in the error type.
 /// Once tendermint-rs improves the API of the `Key` and `Value` types,
 /// we will be able to remove the `.parse().unwrap()` calls.
-impl From<Attributes> for Vec<EventAttribute> {
+impl From<Attributes> for Vec<Tag> {
 	fn from(a: Attributes) -> Self {
-		let height = EventAttribute {
+		let height = Tag {
 			key: HEIGHT_ATTRIBUTE_KEY.parse().unwrap(),
 			value: a.height.to_string().parse().unwrap(),
-			index: false,
 		};
-		let client_id = EventAttribute {
+		let client_id = Tag {
 			key: CLIENT_ID_ATTRIBUTE_KEY.parse().unwrap(),
 			value: a.client_id.to_string().parse().unwrap(),
-			index: false,
 		};
-		let client_type = EventAttribute {
+		let client_type = Tag {
 			key: CLIENT_TYPE_ATTRIBUTE_KEY.parse().unwrap(),
-			value: a.client_type.to_owned(),
-			index: false,
+			value: a.client_type.parse().unwrap(),
 		};
-		let consensus_height = EventAttribute {
+		let consensus_height = Tag {
 			key: CONSENSUS_HEIGHT_ATTRIBUTE_KEY.parse().unwrap(),
 			value: a.height.to_string().parse().unwrap(),
-			index: false,
 		};
 		vec![height, client_id, client_type, consensus_height]
 	}

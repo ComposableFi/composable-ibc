@@ -20,7 +20,7 @@ log = "0.4.17"
 subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }
 
 # ibc
-ibc = { path = "../../ibc/modules", features = [] }
+ibc = { path = "../../ibc/modules" }
 ibc-proto = { path = "../../ibc/proto" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }

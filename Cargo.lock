@@ -288,6 +288,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-recursion"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7d78656ba01f1b93024b7c3a0467f1608e4be67d725749fdcd7d2c7678fd7a2"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "async-std"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -519,6 +530,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
+name = "base64ct"
+version = "1.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b645a089122eccb6111b4f81cbc1a49f5900ac4666bb93ac027feaecf15607bf"
+
+[[package]]
+name = "bech32"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d86b93f97252c47b41663388e6d155714a9d0c398b99f1005cbc5f978b29f445"
+
+[[package]]
 name = "beef"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -731,6 +754,27 @@ name = "bit-vec"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "349f9b6a179ed607305526ca489b34ad0a41aed5f7980fa90eb03160b69598fb"
+
+[[package]]
+name = "bitcoin"
+version = "0.29.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0694ea59225b0c5f3cb405ff3f670e4828358ed26aec49dc352f730f0cb1a8a3"
+dependencies = [
+ "bech32",
+ "bitcoin_hashes",
+ "secp256k1 0.24.1",
+ "serde",
+]
+
+[[package]]
+name = "bitcoin_hashes"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90064b8dee6815a6470d60bad07bbbaee885c0e12d04177138fa3291a01b7bc4"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "bitflags"
@@ -1148,7 +1192,7 @@ checksum = "fa2e27ae6ab525c3d369ded447057bca5438d86dc3a68f6faafb8269ba82ebf3"
 dependencies = [
  "glob",
  "libc",
- "libloading 0.7.3",
+ "libloading 0.7.4",
 ]
 
 [[package]]
@@ -1276,6 +1320,17 @@ name = "constant_time_eq"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
+
+[[package]]
+name = "contracts"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1d1429e3bd78171c65aa010eabcdf8f863ba3254728dbfb0ad4b1545beac15c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "convert_case"
@@ -2276,6 +2331,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "dirs-next"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b98cf8ebf19c3d1b223e151f99a4f9f0690dca41414773390fc824184ac833e1"
+dependencies = [
+ "cfg-if 1.0.0",
+ "dirs-sys-next",
+]
+
+[[package]]
 name = "dirs-sys"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2694,6 +2759,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "flume"
+version = "0.10.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1657b4441c3403d9f7b3409e47575237dac27b1b5726df654a6ecbf92f0f7577"
+dependencies = [
+ "futures-core",
+ "futures-sink",
+ "pin-project",
+ "spin 0.9.4",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2962,9 +3039,9 @@ dependencies = [
 
 [[package]]
 name = "fs-err"
-version = "2.8.1"
+version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64db3e262960f0662f43a6366788d5f10f7f244b8f7d7d987f560baf5ded5c50"
+checksum = "0845fa252299212f0389d64ba26f34fa32cfe41588355f21ed507c59a0f64541"
 
 [[package]]
 name = "fs-swap"
@@ -3718,7 +3795,7 @@ dependencies = [
  "sp-state-machine",
  "sp-trie",
  "subxt",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "thiserror",
  "tokio",
  "toml",
@@ -3727,6 +3804,37 @@ dependencies = [
 [[package]]
 name = "hyperspace-cosmos"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bech32",
+ "bitcoin",
+ "dirs-next",
+ "env_logger",
+ "futures",
+ "hyperspace-primitives",
+ "ibc",
+ "ibc-proto",
+ "ibc-rpc",
+ "ics07-tendermint",
+ "jsonrpsee 0.15.1",
+ "jsonrpsee-ws-client 0.14.0",
+ "k256",
+ "log",
+ "pallet-ibc",
+ "parity-scale-codec",
+ "prost 0.11.0",
+ "serde",
+ "serde_json",
+ "ss58-registry",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-light-client",
+ "tendermint-light-client-verifier",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-rpc 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "thiserror",
+ "tonic 0.7.2",
+]
 
 [[package]]
 name = "hyperspace-metrics"
@@ -3739,7 +3847,7 @@ dependencies = [
  "ibc-proto",
  "log",
  "prometheus",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "thiserror",
  "tokio",
 ]
@@ -3805,7 +3913,7 @@ dependencies = [
  "ss58-registry",
  "subxt",
  "subxt-generated",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -3850,7 +3958,8 @@ dependencies = [
  "sp-keystore",
  "sp-runtime",
  "subxt",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-rpc 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "tokio",
 ]
 
@@ -3902,8 +4011,9 @@ dependencies = [
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.24)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.24)",
  "subtle-encoding",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-rpc 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "test-log",
  "time 0.3.16",
  "tokio",
@@ -3954,8 +4064,8 @@ dependencies = [
  "prost 0.11.0",
  "schemars",
  "serde",
- "tendermint-proto",
- "tonic",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tonic 0.8.2",
 ]
 
 [[package]]
@@ -3993,7 +4103,7 @@ dependencies = [
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-runtime",
  "sp-trie",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
 ]
 
 [[package]]
@@ -4025,11 +4135,11 @@ dependencies = [
  "serde_json",
  "sha2 0.10.6",
  "subtle-encoding",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "tendermint-light-client-verifier",
- "tendermint-proto",
- "tendermint-rpc",
- "tendermint-testgen",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-rpc 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-testgen 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "test-log",
  "time 0.3.16",
  "tracing",
@@ -4071,8 +4181,8 @@ dependencies = [
  "sp-state-machine",
  "sp-trie",
  "subxt",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "tokio",
 ]
 
@@ -4107,8 +4217,8 @@ dependencies = [
  "sp-storage 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie",
  "subxt",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "tokio",
 ]
 
@@ -4138,10 +4248,10 @@ dependencies = [
  "sha3",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.24)",
  "subtle-encoding",
- "tendermint",
- "tendermint-proto",
- "tendermint-rpc",
- "tendermint-testgen",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-rpc 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0)",
+ "tendermint-testgen 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0)",
  "test-log",
  "time 0.3.16",
  "tokio",
@@ -4315,9 +4425,9 @@ checksum = "ec58677acfea8a15352d42fc87d11d63596ade9239e0a7c9352914417515dbe6"
 
 [[package]]
 name = "io-lifetimes"
-version = "0.7.4"
+version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6e481ccbe3dea62107216d0d1138bb8ad8e5e5c43009a098bd1990272c497b0"
+checksum = "59ce5ef949d49ee85593fc4d3f3f95ad61657076395cbbce23e2121fc5542074"
 
 [[package]]
 name = "ip_network"
@@ -4649,6 +4759,7 @@ dependencies = [
  "ecdsa",
  "elliptic-curve",
  "sec1",
+ "sha2 0.9.9",
 ]
 
 [[package]]
@@ -4854,9 +4965,9 @@ dependencies = [
 
 [[package]]
 name = "libloading"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "efbc0f03f9a775e9f6aed295c6a1ba2253c5757a9e03d55c6caa46a681abcddd"
+checksum = "b67380fd3b2fbe7527a606e18729d21c6f3951633d0500574c4dc22d2d638b9f"
 dependencies = [
  "cfg-if 1.0.0",
  "winapi",
@@ -6711,9 +6822,9 @@ dependencies = [
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
  "sp-trie",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "tendermint-light-client-verifier",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
 ]
 
 [[package]]
@@ -7628,9 +7739,9 @@ checksum = "478c572c3d73181ff3c2539045f6eb99e5491218eae919370993b890cdbdd98e"
 
 [[package]]
 name = "pest"
-version = "2.4.0"
+version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbc7bc69c062e492337d74d59b120c274fd3d261b6bf6d3207d499b4b379c41a"
+checksum = "a528564cc62c19a7acac4d81e01f39e53e25e17b934878f4c6d25cc2836e62f8"
 dependencies = [
  "thiserror",
  "ucd-trie",
@@ -7638,9 +7749,9 @@ dependencies = [
 
 [[package]]
 name = "pest_derive"
-version = "2.4.0"
+version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60b75706b9642ebcb34dab3bc7750f811609a0eb1dd8b88c2d15bf628c1c65b2"
+checksum = "d5fd9bc6500181952d34bd0b2b0163a54d794227b498be0b7afa7698d0a7b18f"
 dependencies = [
  "pest",
  "pest_generator",
@@ -7648,9 +7759,9 @@ dependencies = [
 
 [[package]]
 name = "pest_generator"
-version = "2.4.0"
+version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4f9272122f5979a6511a749af9db9bfc810393f63119970d7085fed1c4ea0db"
+checksum = "d2610d5ac5156217b4ff8e46ddcef7cdf44b273da2ac5bca2ecbfa86a330e7c4"
 dependencies = [
  "pest",
  "pest_meta",
@@ -7661,9 +7772,9 @@ dependencies = [
 
 [[package]]
 name = "pest_meta"
-version = "2.4.0"
+version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c8717927f9b79515e565a64fe46c38b8cd0427e64c40680b14a7365ab09ac8d"
+checksum = "824749bf7e21dd66b36fbe26b3f45c713879cccd4a009a917ab8e045ca8246fe"
 dependencies = [
  "once_cell",
  "pest",
@@ -7717,6 +7828,17 @@ name = "pin-utils"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
+
+[[package]]
+name = "pkcs8"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cabda3fb821068a9a4fab19a683eac3af12edf0f34b94a8be53c4972b8149d0"
+dependencies = [
+ "der",
+ "spki",
+ "zeroize",
+]
 
 [[package]]
 name = "pkg-config"
@@ -9548,7 +9670,7 @@ dependencies = [
  "cc",
  "libc",
  "once_cell",
- "spin",
+ "spin 0.5.2",
  "untrusted",
  "web-sys",
  "winapi",
@@ -9732,16 +9854,16 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "0.35.12"
+version = "0.35.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "985947f9b6423159c4726323f373be0a21bdb514c5af06a849cb3d2dce2d01e8"
+checksum = "727a1a6d65f786ec22df8a81ca3121107f235970dc1705ed681d3e6e8b9cd5f9"
 dependencies = [
  "bitflags",
  "errno",
- "io-lifetimes 0.7.4",
+ "io-lifetimes 0.7.5",
  "libc",
  "linux-raw-sys 0.0.46",
- "windows-sys 0.36.1",
+ "windows-sys 0.42.0",
 ]
 
 [[package]]
@@ -10336,7 +10458,7 @@ dependencies = [
  "once_cell",
  "parity-scale-codec",
  "parity-wasm 0.42.2",
- "rustix 0.35.12",
+ "rustix 0.35.13",
  "sc-allocator",
  "sc-executor-common",
  "sp-runtime-interface 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
@@ -11076,6 +11198,7 @@ checksum = "08da66b8b0965a5555b6bd6639e68ccba85e1e2506f5fbb089e93f8a04e1a2d1"
 dependencies = [
  "der",
  "generic-array 0.14.6",
+ "pkcs8",
  "subtle",
  "zeroize",
 ]
@@ -11095,7 +11218,9 @@ version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff55dc09d460954e9ef2fa8a7ced735a964be9981fd50e870b2b3b0705e14964"
 dependencies = [
+ "bitcoin_hashes",
  "secp256k1-sys 0.6.1",
+ "serde",
 ]
 
 [[package]]
@@ -11382,9 +11507,9 @@ dependencies = [
  "bytes",
  "ics23",
  "proptest",
- "rand 0.8.5",
+ "rand 0.4.6",
  "sha2 0.10.6",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
 ]
 
 [[package]]
@@ -12352,6 +12477,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
+name = "spin"
+version = "0.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f6002a767bff9e83f8eeecf883ecb8011875a21ae8da43bffb817a57e78cc09"
+dependencies = [
+ "lock_api",
+]
+
+[[package]]
+name = "spki"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44d01ac02a6ccf3e07db148d2be087da624fea0221a16152ed01f0496a6b0a27"
+dependencies = [
+ "base64ct",
+ "der",
+]
+
+[[package]]
 name = "ss58-registry"
 version = "1.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12692,9 +12836,9 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "target-lexicon"
-version = "0.12.4"
+version = "0.12.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c02424087780c9b71cc96799eaeddff35af2bc513278cda5c99fc1f5d026d3c1"
+checksum = "9410d0f6853b1d94f0e519fb95df60f29d2c1eff2d921ffdf01a4c8a3b54f12d"
 
 [[package]]
 name = "tempdir"
@@ -12743,7 +12887,37 @@ dependencies = [
  "signature",
  "subtle",
  "subtle-encoding",
- "tendermint-proto",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0)",
+ "time 0.3.16",
+ "zeroize",
+]
+
+[[package]]
+name = "tendermint"
+version = "0.24.0-pre.2"
+source = "git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64#97643a9676215bd775eeface5c2379b750bceb64"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "ed25519",
+ "ed25519-consensus",
+ "flex-error",
+ "futures",
+ "k256",
+ "num-traits",
+ "once_cell",
+ "prost 0.11.0",
+ "prost-types 0.11.1",
+ "ripemd",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "serde_repr",
+ "sha2 0.10.6",
+ "signature",
+ "subtle",
+ "subtle-encoding",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "time 0.3.16",
  "zeroize",
 ]
@@ -12756,21 +12930,58 @@ dependencies = [
  "flex-error",
  "serde",
  "serde_json",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0)",
  "toml",
  "url",
 ]
 
 [[package]]
+name = "tendermint-config"
+version = "0.24.0-pre.2"
+source = "git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64#97643a9676215bd775eeface5c2379b750bceb64"
+dependencies = [
+ "flex-error",
+ "serde",
+ "serde_json",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "toml",
+ "url",
+]
+
+[[package]]
+name = "tendermint-light-client"
+version = "0.24.0-pre.2"
+source = "git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64#97643a9676215bd775eeface5c2379b750bceb64"
+dependencies = [
+ "async-recursion",
+ "async-trait",
+ "contracts",
+ "derive_more",
+ "flex-error",
+ "flume",
+ "futures",
+ "futures-timer",
+ "serde",
+ "serde_derive",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
+ "static_assertions",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-light-client-verifier",
+ "tendermint-rpc 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "time 0.3.16",
+ "tokio",
+]
+
+[[package]]
 name = "tendermint-light-client-verifier"
 version = "0.24.0-pre.2"
-source = "git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0#2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0"
+source = "git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64#97643a9676215bd775eeface5c2379b750bceb64"
 dependencies = [
  "derive_more",
  "flex-error",
  "serde",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "time 0.3.16",
 ]
 
@@ -12778,6 +12989,23 @@ dependencies = [
 name = "tendermint-proto"
 version = "0.24.0-pre.2"
 source = "git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0#2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0"
+dependencies = [
+ "bytes",
+ "flex-error",
+ "num-derive",
+ "num-traits",
+ "prost 0.11.0",
+ "prost-types 0.11.1",
+ "serde",
+ "serde_bytes",
+ "subtle-encoding",
+ "time 0.3.16",
+]
+
+[[package]]
+name = "tendermint-proto"
+version = "0.24.0-pre.2"
+source = "git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64#97643a9676215bd775eeface5c2379b750bceb64"
 dependencies = [
  "bytes",
  "flex-error",
@@ -12813,9 +13041,43 @@ dependencies = [
  "serde_json",
  "subtle",
  "subtle-encoding",
- "tendermint",
- "tendermint-config",
- "tendermint-proto",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0)",
+ "tendermint-config 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0)",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0)",
+ "thiserror",
+ "time 0.3.16",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
+ "walkdir",
+]
+
+[[package]]
+name = "tendermint-rpc"
+version = "0.24.0-pre.2"
+source = "git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64#97643a9676215bd775eeface5c2379b750bceb64"
+dependencies = [
+ "async-trait",
+ "async-tungstenite",
+ "bytes",
+ "flex-error",
+ "futures",
+ "getrandom 0.2.8",
+ "http",
+ "hyper",
+ "hyper-proxy",
+ "hyper-rustls 0.22.1",
+ "peg",
+ "pin-project",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "subtle",
+ "subtle-encoding",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-config 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
+ "tendermint-proto 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "thiserror",
  "time 0.3.16",
  "tokio",
@@ -12836,7 +13098,22 @@ dependencies = [
  "serde_json",
  "simple-error",
  "tempfile",
- "tendermint",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0)",
+ "time 0.3.16",
+]
+
+[[package]]
+name = "tendermint-testgen"
+version = "0.24.0-pre.2"
+source = "git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64#97643a9676215bd775eeface5c2379b750bceb64"
+dependencies = [
+ "ed25519-consensus",
+ "gumdrop",
+ "serde",
+ "serde_json",
+ "simple-error",
+ "tempfile",
+ "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
  "time 0.3.16",
 ]
 
@@ -13104,6 +13381,41 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d82e1a7758622a465f8cee077614c73484dac5b836c02ff6a40d5d1010324d7"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "tonic"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5be9d60db39854b30b835107500cf0aca0b0d14d6e1c3de124217c23a29c2ddb"
+dependencies = [
+ "async-stream",
+ "async-trait",
+ "axum",
+ "base64",
+ "bytes",
+ "futures-core",
+ "futures-util",
+ "h2",
+ "http",
+ "http-body",
+ "hyper",
+ "hyper-timeout",
+ "percent-encoding",
+ "pin-project",
+ "prost 0.10.4",
+ "prost-derive 0.10.1",
+ "rustls-native-certs 0.6.2",
+ "rustls-pemfile",
+ "tokio",
+ "tokio-rustls 0.23.4",
+ "tokio-stream",
+ "tokio-util",
+ "tower",
+ "tower-layer",
+ "tower-service",
+ "tracing",
+ "tracing-futures",
 ]
 
 [[package]]
@@ -13463,7 +13775,7 @@ checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
  "cfg-if 1.0.0",
  "digest 0.10.5",
- "rand 0.8.5",
+ "rand 0.4.6",
  "static_assertions",
 ]
 

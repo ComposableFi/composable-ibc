@@ -146,10 +146,12 @@ async fn should_fail_with_incomplete_signature_threshold() {
 
 	match res {
 		Err(BeefyClientError::IncompleteSignatureThreshold) => {},
-		Err(err) =>
-			panic!("Expected {:?}  found {:?}", BeefyClientError::IncompleteSignatureThreshold, err),
-		Ok(val) =>
-			panic!("Expected {:?}  found {:?}", BeefyClientError::IncompleteSignatureThreshold, val),
+		Err(err) => {
+			panic!("Expected {:?}  found {:?}", BeefyClientError::IncompleteSignatureThreshold, err)
+		},
+		Ok(val) => {
+			panic!("Expected {:?}  found {:?}", BeefyClientError::IncompleteSignatureThreshold, val)
+		},
 	}
 }
 

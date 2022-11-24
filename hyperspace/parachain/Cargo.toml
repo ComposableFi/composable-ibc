@@ -58,7 +58,7 @@ transaction-payment-runtime-api = { package = "pallet-transaction-payment-rpc-ru
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 
 # composable
-ibc = { path = "../../ibc/modules", features = [] }
+ibc = { path = "../../ibc/modules" }
 ibc-proto = { path = "../../ibc/proto" }
 tendermint-proto = { workspace = true }
 light-client-common = { path = "../../light-clients/common" }
