@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::fs;
+
 use anyhow::Result;
 use clap::Parser;
 use hyperspace_core::{
@@ -28,7 +30,7 @@ async fn main() -> Result<()> {
 		Subcommand::Relay(cmd) => cmd.run().await,
 		Subcommand::CreateClients(cmd) => {
 			let new_config = cmd.create_clients().await?;
-			let output_dir = cmd.config_output_dir.unwrap();
+			let output_dir = cmd.config_output_dir;
 			fs::write!(output_dir, toml::to_string(new_config)).unwrap();
 			Ok(())
 		},
