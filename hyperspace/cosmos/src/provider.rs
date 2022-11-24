@@ -33,7 +33,7 @@ use ics07_tendermint::{client_message::Header, client_state::ClientState, events
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 use primitives::{Chain, IbcProvider, UpdateType, mock::LocalClientTypes};
 use std::pin::Pin;
-use tendermint::block::{Height as BlockHeight};
+use tendermint::block::{Height as BlockHeight, Header as BlockHeader};
 use tendermint_light_client::components::io::{AsyncIo, AtHeight};
 use tendermint_proto::Protobuf;
 use tendermint_rpc::{
@@ -50,7 +50,7 @@ use crate::utils::{
 };
 
 pub enum FinalityEvent {
-	Tendermint(Header),
+	Tendermint(BlockHeader),
 }
 
 pub struct TransactionId<Hash> {
@@ -85,7 +85,7 @@ impl<H> IbcProvider for CosmosClient<H>
 where
 	H: Clone + Send + Sync + 'static,
 {
-	type FinalityEvent = FinalityEvent;
+	type FinalityEvent = TendermintFinalityEvent;
 	type TransactionId = TransactionId<tendermint_rpc::abci::transaction::Hash>;
 	type Error = Error;
 

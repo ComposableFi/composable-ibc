@@ -1,5 +1,5 @@
 use super::{error::Error, CosmosClient};
-use crate::provider::TransactionId;
+use crate::provider::{FinalityEvent, TendermintFinalityEvent, TransactionId};
 use futures::Stream;
 use ibc_proto::{
 	cosmos::tx::v1beta1::{
@@ -12,7 +12,11 @@ use k256::ecdsa::{signature::Signer as _, Signature, SigningKey};
 use primitives::{Chain, IbcProvider};
 use prost::Message;
 use std::pin::Pin;
-use tendermint_rpc::Client;
+use tendermint_rpc::{Client, SubscriptionClient, WebSocketClient};
+use tendermint_rpc::{
+	event::Event, query::{EventType, Query}
+};
+use tendermint_rpc::event::EventData;
 
 #[async_trait::async_trait]
 impl<H> Chain for CosmosClient<H>
@@ -28,13 +32,34 @@ where
 	}
 
 	async fn estimate_weight(&self, messages: Vec<Any>) -> Result<u64, Self::Error> {
-		todo!()
+		Ok(0)
 	}
 
 	async fn finality_notifications(
 		&self,
 	) -> Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>> {
-		todo!()
+		let (ws_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
+			.await
+			.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))
+			.unwrap();
+
+		let subscription = ws_client
+			.subscribe(Query::from(EventType::NewBlock))
+			.await
+			.map_err(|e| Error::from(format!("failed to subscribe to new blocks {:?}", e)))
+			.unwrap();
+
+		let stream = subscription.map(|event| {
+			let Event { data, events, query } = event;
+			let header = match data {
+				EventData::NewBlock {block, ..} =>
+					block.unwrap().header,
+				_ => {}
+			};
+			futures::future::ready(Some(FinalityEvent::Tendermint(header)))
+		});
+
+		Box::pin(Box::new(stream))
 	}
 
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
