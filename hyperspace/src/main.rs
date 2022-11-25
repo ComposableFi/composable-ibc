@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fs;
+use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::Parser;
 use hyperspace_core::{
 	command::{Cli, Subcommand},
@@ -30,11 +30,21 @@ async fn main() -> Result<()> {
 		Subcommand::Relay(cmd) => cmd.run().await,
 		Subcommand::CreateClients(cmd) => {
 			let new_config = cmd.create_clients().await?;
-			let output_dir = cmd.config_output_dir;
-			fs::write!(output_dir, toml::to_string(new_config)).unwrap();
-			Ok(())
+			tokio::fs::write(cmd.config.parse::<PathBuf>()?, toml::to_string(&new_config)?)
+				.await
+				.map_err(|e| anyhow!(e))
 		},
-		Subcommand::CreateConnection(cmd) => cmd.create_connection().await,
-		Subcommand::CreateChannel(cmd) => cmd.create_channel().await,
+		Subcommand::CreateConnection(cmd) => {
+			let new_config = cmd.create_connection().await?;
+			tokio::fs::write(cmd.config.parse::<PathBuf>()?, toml::to_string(&new_config)?)
+				.await
+				.map_err(|e| anyhow!(e))
+		},
+		Subcommand::CreateChannel(cmd) => {
+			let new_config = cmd.create_channel().await?;
+			tokio::fs::write(cmd.config.parse::<PathBuf>()?, toml::to_string(&new_config)?)
+				.await
+				.map_err(|e| anyhow!(e))
+		},
 	}
 }

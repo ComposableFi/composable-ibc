@@ -14,15 +14,11 @@
 
 use anyhow::Result;
 use clap::Parser;
-use parachain::{ParachainClient, ParachainClientConfig};
 use primitives::Chain;
 use prometheus::Registry;
 use std::{path::PathBuf, str::FromStr, time::Duration};
 
-use crate::{
-	chain::{AnyConfig, Config},
-	relay,
-};
+use crate::{chain::Config, relay};
 use ibc::core::{ics04_channel::channel::Order, ics24_host::identifier::PortId};
 use metrics::{data::Metrics, handler::MetricsHandler, init_prometheus};
 use primitives::{
@@ -53,7 +49,7 @@ pub enum Subcommand {
 pub struct Cmd {
 	/// Relayer config path.
 	#[clap(long)]
-	config: String,
+	pub config: String,
 	/// Port id for channel creation
 	#[clap(long)]
 	port_id: Option<String>,
@@ -67,9 +63,6 @@ pub struct Cmd {
 	/// Channel version
 	#[clap(long)]
 	version: Option<String>,
-	/// Directory to store the updated configurations
-	#[clap(long)]
-	pub config_output_dir: String,
 }
 
 impl Cmd {
@@ -100,7 +93,7 @@ impl Cmd {
 	pub async fn create_clients(&self) -> Result<Config> {
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
-		let config: Config = toml::from_str(&file_content)?;
+		let mut config: Config = toml::from_str(&file_content)?;
 
 		let any_chain_a = config.chain_a.clone().into_client().await?;
 		let any_chain_b = config.chain_b.clone().into_client().await?;
@@ -119,60 +112,22 @@ impl Cmd {
 			any_chain_b.name(),
 			client_id_a_on_b
 		);
+		config.chain_a.set_client_id(client_id_b_on_a);
+		config.chain_b.set_client_id(client_id_a_on_b);
 
-		let parachain_client_a = ParachainClient::try_from(any_chain_a).unwrap();
-		let config_parachain_a = ParachainClientConfig::try_from(config.chain_a).unwrap();
-		let new_parachain_config_a = ParachainClientConfig {
-			name: parachain_client_a.name,
-			para_id: parachain_client_a.para_id,
-			parachain_rpc_url: config_parachain_a.parachain_rpc_url,
-			relay_chain_rpc_url: config_parachain_a.relay_chain_rpc_url,
-			client_id: parachain_client_a.client_id,
-			connection_id: parachain_client_a.connection_id,
-			beefy_activation_block: parachain_client_a.beefy_activation_block,
-			commitment_prefix: parachain_client_a.commitment_prefix.into(),
-			private_key: config_parachain_a.private_key,
-			ss58_version: config_parachain_a.ss58_version,
-			channel_whitelist: parachain_client_a.channel_whitelist,
-			finality_protocol: parachain_client_a.finality_protocol,
-			key_type: config_parachain_a.key_type,
-		};
-
-		let parachain_client_b = ParachainClient::try_from(any_chain_b).unwrap();
-		let config_parachain_b = ParachainClientConfig::try_from(config.chain_b).unwrap();
-		let new_parachain_config_b = ParachainClientConfig {
-			name: parachain_client_b.name,
-			para_id: parachain_client_b.para_id,
-			parachain_rpc_url: config_parachain_b.parachain_rpc_url,
-			relay_chain_rpc_url: config_parachain_b.relay_chain_rpc_url,
-			client_id: parachain_client_b.client_id,
-			connection_id: parachain_client_b.connection_id,
-			beefy_activation_block: parachain_client_b.beefy_activation_block,
-			commitment_prefix: parachain_client_b.commitment_prefix.into(),
-			private_key: config_parachain_b.private_key,
-			ss58_version: config_parachain_b.ss58_version,
-			channel_whitelist: parachain_client_b.channel_whitelist,
-			finality_protocol: parachain_client_b.finality_protocol,
-			key_type: config_parachain_b.key_type,
-		};
-		let new_config = Config {
-			chain_a: AnyConfig::Parachain(new_parachain_config_a),
-			chain_b: AnyConfig::Parachain(new_parachain_config_b),
-			core: config.core,
-		};
-		Ok(new_config)
+		Ok(config)
 	}
 
-	pub async fn create_connection(&self) -> Result<()> {
+	pub async fn create_connection(&self) -> Result<Config> {
 		let delay = self
 			.delay_period
 			.expect("delay_period should be provided when creating a connection");
 		let delay = Duration::from_secs(delay.into());
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
-		let config: Config = toml::from_str(&file_content)?;
-		let any_chain_a = config.chain_a.into_client().await?;
-		let any_chain_b = config.chain_b.into_client().await?;
+		let mut config: Config = toml::from_str(&file_content)?;
+		let any_chain_a = config.chain_a.clone().into_client().await?;
+		let any_chain_b = config.chain_b.clone().into_client().await?;
 
 		let any_chain_a_clone = any_chain_a.clone();
 		let any_chain_b_clone = any_chain_b.clone();
@@ -185,10 +140,14 @@ impl Cmd {
 		log::info!("ConnectionId on Chain {}: {}", any_chain_a.name(), connection_id_a);
 		log::info!("ConnectionId on Chain {}: {}", any_chain_b.name(), connection_id_b);
 		handle.abort();
-		Ok(())
+
+		config.chain_a.set_connection_id(connection_id_a);
+		config.chain_b.set_connection_id(connection_id_b);
+
+		Ok(config)
 	}
 
-	pub async fn create_channel(&self) -> Result<()> {
+	pub async fn create_channel(&self) -> Result<Config> {
 		let port_id = PortId::from_str(
 			self.port_id
 				.as_ref()
@@ -204,9 +163,9 @@ impl Cmd {
 		let order = self.order.as_ref().expect("order must be specified when creating a channel, expected one of 'ordered' or 'unordered'").as_str();
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
-		let config: Config = toml::from_str(&file_content)?;
-		let any_chain_a = config.chain_a.into_client().await?;
-		let any_chain_b = config.chain_b.into_client().await?;
+		let mut config: Config = toml::from_str(&file_content)?;
+		let any_chain_a = config.chain_a.clone().into_client().await?;
+		let any_chain_b = config.chain_b.clone().into_client().await?;
 
 		let any_chain_a_clone = any_chain_a.clone();
 		let any_chain_b_clone = any_chain_b.clone();
@@ -219,7 +178,7 @@ impl Cmd {
 			&any_chain_a,
 			&any_chain_b,
 			any_chain_a.connection_id(),
-			port_id,
+			port_id.clone(),
 			version,
 			order,
 		)
@@ -227,6 +186,10 @@ impl Cmd {
 		log::info!("ChannelId on Chain {}: {}", any_chain_a.name(), channel_id_a);
 		log::info!("ChannelId on Chain {}: {}", any_chain_b.name(), channel_id_b);
 		handle.abort();
-		Ok(())
+
+		config.chain_a.set_channel_id(channel_id_a, port_id.clone());
+		config.chain_b.set_channel_id(channel_id_b, port_id);
+
+		Ok(config)
 	}
 }
