@@ -1,6 +1,5 @@
 use crate::{
 	context::Context,
-	contract::CONSENSUS_STATES_HEIGHTS,
 	ics23::{ReadonlyClientStates, ReadonlyClients, ReadonlyConsensusStates},
 	log,
 };
@@ -22,7 +21,6 @@ use ics10_grandpa::{
 	client_def::GrandpaClient, client_message::ClientMessage, client_state::ClientState,
 	consensus_state::ConsensusState,
 };
-use light_client_common::LocalHeight;
 use std::str::FromStr;
 
 impl<'a, H: HostFunctions> ClientTypes for Context<'a, H> {
@@ -100,7 +98,7 @@ impl<'a, H: HostFunctions> ClientReader for Context<'a, H> {
 	}
 
 	fn host_client_type(&self) -> String {
-		"tendermint".to_string()
+		"07-tendermint".to_string()
 	}
 
 	fn next_consensus_state(

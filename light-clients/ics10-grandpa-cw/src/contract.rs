@@ -6,17 +6,14 @@ use crate::{
 		UpdateStateOnMisbehaviourMsg, VerifyClientMessage, VerifyMembershipMsg,
 		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
 	},
-	Bytes,
 };
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
-use cw_storage_plus::Map;
 use ibc::core::ics02_client::client_def::ClientDef;
-use ics10_grandpa::{client_def::GrandpaClient, consensus_state::ConsensusState};
-use light_client_common::{verify_membership, verify_non_membership, LocalHeight};
+use ics10_grandpa::client_def::GrandpaClient;
+use light_client_common::{verify_membership, verify_non_membership};
 use sp_runtime::traits::BlakeTwo256;
-use std::collections::BTreeSet;
 
 /*
 // version info for migration info
