@@ -25,7 +25,6 @@ use alloc::{string::ToString, vec, vec::Vec};
 use anyhow::anyhow;
 use codec::Compact;
 use core::{
-	cmp::Ordering,
 	fmt,
 	fmt::{Debug, Display, Formatter},
 	str::FromStr,
