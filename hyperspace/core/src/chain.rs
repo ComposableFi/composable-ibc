@@ -663,7 +663,7 @@ impl AnyConfig {
 		}
 	}
 
-	pub fn set_channel_id(&mut self, channel_id: ChannelId, port_id: PortId) {
+	pub fn set_channel_whitelist(&mut self, channel_id: ChannelId, port_id: PortId) {
 		match self {
 			Self::Parachain(chain) => {
 				chain.channel_whitelist.push((channel_id, port_id));

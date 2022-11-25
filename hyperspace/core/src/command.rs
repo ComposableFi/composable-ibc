@@ -187,8 +187,8 @@ impl Cmd {
 		log::info!("ChannelId on Chain {}: {}", any_chain_b.name(), channel_id_b);
 		handle.abort();
 
-		config.chain_a.set_channel_id(channel_id_a, port_id.clone());
-		config.chain_b.set_channel_id(channel_id_b, port_id);
+		config.chain_a.set_channel_whitelist(channel_id_a, port_id.clone());
+		config.chain_b.set_channel_whitelist(channel_id_b, port_id);
 
 		Ok(config)
 	}
