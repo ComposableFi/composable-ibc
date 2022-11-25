@@ -17,20 +17,27 @@ pub mod chain;
 pub mod error;
 pub mod key_provider;
 pub mod provider;
-use core::convert::TryFrom;
+use core::{convert::TryFrom, time::Duration};
 use error::Error;
 use ibc::core::{
-	ics23_commitment::commitment::CommitmentPrefix,
+	ics02_client::trust_threshold::TrustThreshold,
+	ics23_commitment::{commitment::CommitmentPrefix, specs::ProofSpecs},
 	ics24_host::identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 };
 use ibc_proto::cosmos::auth::v1beta1::BaseAccount;
-use ics07_tendermint::client_state::ClientState as TmClientState;
+use ics07_tendermint::{
+	client_state::ClientState as TmClientState, consensus_state::ConsensusState as TmConsensusState,
+};
 use key_provider::KeyEntry;
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use primitives::{IbcProvider, KeyProvider};
 use serde::Deserialize;
 use tendermint::trust_threshold::TrustThresholdFraction;
 use tendermint_light_client::{
-	components::{self, io::RpcIo},
+	components::{
+		self,
+		io::{AsyncIo, AtHeight, RpcIo},
+	},
 	light_client::LightClient as TmLightClient,
 };
 use tendermint_light_client_verifier::{
@@ -38,7 +45,7 @@ use tendermint_light_client_verifier::{
 	operations::{ProdCommitValidator, ProdVotingPowerCalculator},
 	options::Options as TmOptions,
 	predicates::ProdPredicates,
-	types::PeerId,
+	types::{Height as TmHeight, PeerId},
 	PredicateVerifier, ProdVerifier,
 };
 use tendermint_rpc::{Client, HttpClient, Url};
@@ -172,7 +179,42 @@ where
 	}
 
 	/// Construct a tendermint client state to be submitted to the counterparty chain
-	pub async fn construct_tendermint_client_state<HostFunctions: CryptoProvider>(
+	pub async fn construct_tendermint_client_state(
+		&self,
+	) -> Result<(AnyClientState, AnyConsensusState), Error> {
+		let latest_height_timestamp = self.latest_height_and_timestamp().await.unwrap();
+		let client_state = TmClientState::<HostFunctionsManager>::new(
+			self.chain_id.clone(),
+			TrustThreshold::default(),
+			Duration::new(64000, 0),  // Set to a default value
+			Duration::new(128000, 0), // Set to a default value
+			Duration::new(5, 0),      // Set to a default value
+			latest_height_timestamp.0,
+			ProofSpecs::default(),
+			vec!["upgrade".to_string(), "upgradedIBCState".to_string()],
+		)
+		.map_err(|e| Error::from(format!("Invalid client state {}", e)))?;
+
+		let target_height = TmHeight::try_from(latest_height_timestamp.0.revision_height)
+			.map_err(|e| Error::from(e.to_string()))?;
+		let trusted_block = self
+			.light_provider
+			.fetch_light_block(AtHeight::At(target_height))
+			.await
+			.map_err(|e| {
+				Error::from(format!("Failed to fetch light block from light provider: {:?}", e))
+			})?;
+
+		let consensus_state = TmConsensusState::from(trusted_block.signed_header.header);
+
+		Ok((
+			AnyClientState::Tendermint(client_state),
+			AnyConsensusState::Tendermint(consensus_state),
+		))
+	}
+
+	/// Construct a tendermint light client to communicate with the full node
+	pub async fn _construct_tendemint_light_client<HostFunctions: CryptoProvider>(
 		&self,
 		client_state: &TmClientState<HostFunctions>,
 	) -> Result<TmLightClient<HostFunctions>, Error>

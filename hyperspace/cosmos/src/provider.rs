@@ -4,15 +4,14 @@ use futures::Stream;
 use ibc::{
 	applications::transfer::PrefixedCoin,
 	core::{
-		ics02_client::{client_state::ClientType, trust_threshold::TrustThreshold},
-		ics23_commitment::{commitment::CommitmentPrefix, specs::ProofSpecs},
+		ics02_client::client_state::ClientType,
+		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
 	events::IbcEvent,
 	timestamp::Timestamp,
 	Height,
 };
-
 use ibc_proto::{
 	google::protobuf::Any,
 	ibc::core::{
@@ -28,21 +27,11 @@ use ibc_proto::{
 	},
 };
 use ibc_rpc::PacketInfo;
-use ics07_tendermint::{
-	client_message::Header, client_state::ClientState as TmClientState,
-	consensus_state::ConsensusState as TmConsensusState, events::try_from_tx,
-};
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
+use ics07_tendermint::{client_message::Header, events::try_from_tx};
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use primitives::{Chain, IbcProvider, UpdateType};
-use std::pin::Pin;
-use std::str::FromStr;
-use tendermint_light_client::{
-	components::{self, io::AsyncIo, io::AtHeight, io::RpcIo},
-	state::State as LightClientState,
-	store::{memory::MemoryStore, LightStore},
-};
-use tendermint_light_client_verifier::types::{Height as TmHeight, Status};
-use tendermint_rpc::{query::Query, Client, HttpClient, Order};
+use std::{pin::Pin, str::FromStr};
+use tendermint_rpc::{query::Query, Client, Order};
 
 pub enum FinalityEvent {
 	Tendermint(Header),
@@ -319,41 +308,7 @@ where
 	async fn initialize_client_state(
 		&self,
 	) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
-		let latest_height_timestamp = self.latest_height_and_timestamp().await.unwrap();
-		let client_state = TmClientState::<HostFunctionsManager>::new(
-			self.chain_id.clone(),
-			TrustThreshold::default(),
-			Duration::new(64000, 0),    // Set to a default value
-			Duration::new(128000, 0),   // Set to a default value
-			Duration::new(5, 0),		// Set to a default value
-			latest_height_timestamp.0,
-			ProofSpecs::default(),
-			vec!["upgrade".to_string(), "upgradedIBCState".to_string()],
-		)
-		.map_err(|e| Error::from(format!("Invalid client state {}", e)))?;
-
-		let target_height = TmHeight::try_from(latest_height_timestamp.0.revision_height)
-			.map_err(|e| Error::from(e.to_string()))?;
-		let client = self
-			.construct_tendermint_client_state::<HostFunctionsManager>(&client_state)
-			.await?;
-		let trusted_block =
-			self.light_provider.fetch_light_block(AtHeight::Highest).await.map_err(|e| {
-				Error::from(format!("Failed to fetch light block from light provider: {:?}", e))
-			})?;
-		let mut store = MemoryStore::new();
-		store.insert(trusted_block, Status::Trusted);
-
-		let light_block = client
-			.verify_to_target(target_height, &mut LightClientState::new(store))
-			.await
-			.map_err(|e| Error::from(e.to_string()))?;
-
-		let consensus_state = TmConsensusState::from(light_block.clone().signed_header.header);
-		Ok((
-			AnyClientState::Tendermint(client_state),
-			AnyConsensusState::Tendermint(consensus_state),
-		))
+		self.construct_tendermint_client_state().await
 	}
 
 	async fn query_client_id_from_tx_hash(
@@ -372,12 +327,11 @@ where
 			.await
 			.map_err(|e| Error::from(format!("Failed to query tx hash: {:?}", e)))?;
 		let response = match response_vec.txs.into_iter().next() {
-			None => {
+			None =>
 				return Err(Error::from(format!(
 					"Failed to find tx hash: {:?}",
 					tx_id.hash.to_string()
-				)))
-			},
+				))),
 			Some(resp) => resp,
 		};
 

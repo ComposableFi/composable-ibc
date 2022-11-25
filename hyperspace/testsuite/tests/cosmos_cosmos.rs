@@ -1,4 +1,7 @@
-use crate::cosmos::{client::CosmosClient, client::CosmosClientConfig, key_provider::KeyEntry};
+use crate::cosmos::{
+	client::{CosmosClient, CosmosClientConfig},
+	key_provider::KeyEntry,
+};
 use futures::{future, StreamExt};
 use hyperspace_core::logging;
 use hyperspace_cosmos::{key_provider::KeyEntry, CosmosClient, CosmosClientConfig, IbcProvider};
@@ -9,16 +12,15 @@ use hyperspace_testsuite::{
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay,
 };
-use ibc::events::IbcEvent;
 use ibc::{
 	applications::transfer::VERSION,
 	core::{
 		ics04_channel::channel::{ChannelEnd, Order, State},
 		ics24_host::identifier::{ChannelId, ConnectionId, PortId},
 	},
+	events::IbcEvent,
 };
-use std::time::Duration;
-use std::{path::PathBuf, str::FromStr};
+use std::{path::PathBuf, str::FromStr, time::Duration};
 use tendermint_rpc::Url;
 use tokio::task::JoinHandle;
 
@@ -87,7 +89,7 @@ async fn setup_clients<H: Clone + Send + Sync + 'static>() -> (CosmosClient<H>, 
 	if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
 		chain_a.set_client_id(clients_on_b[0].clone());
 		chain_b.set_client_id(clients_on_b[0].clone());
-		return (chain_a, chain_b);
+		return (chain_a, chain_b)
 	}
 
 	let (client_a, client_b) = create_clients(&chain_a, &chain_b).await.unwrap();
