@@ -12951,19 +12951,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tendermint-config"
-version = "0.24.0-pre.2"
-source = "git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64#97643a9676215bd775eeface5c2379b750bceb64"
-dependencies = [
- "flex-error",
- "serde",
- "serde_json",
- "tendermint 0.24.0-pre.2 (git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64)",
- "toml",
- "url",
-]
-
-[[package]]
 name = "tendermint-light-client"
 version = "0.24.0-pre.2"
 source = "git+https://github.com/composableFi/tendermint-rs?rev=97643a9676215bd775eeface5c2379b750bceb64#97643a9676215bd775eeface5c2379b750bceb64"
@@ -13396,41 +13383,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d82e1a7758622a465f8cee077614c73484dac5b836c02ff6a40d5d1010324d7"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "tonic"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5be9d60db39854b30b835107500cf0aca0b0d14d6e1c3de124217c23a29c2ddb"
-dependencies = [
- "async-stream",
- "async-trait",
- "axum",
- "base64",
- "bytes",
- "futures-core",
- "futures-util",
- "h2",
- "http",
- "http-body",
- "hyper",
- "hyper-timeout",
- "percent-encoding",
- "pin-project",
- "prost 0.10.4",
- "prost-derive 0.10.1",
- "rustls-native-certs 0.6.2",
- "rustls-pemfile",
- "tokio",
- "tokio-rustls 0.23.4",
- "tokio-stream",
- "tokio-util",
- "tower",
- "tower-layer",
- "tower-service",
- "tracing",
- "tracing-futures",
 ]
 
 [[package]]
