@@ -27,7 +27,7 @@ where
 		todo!()
 	}
 
-	async fn estimate_weight(&self, messages: Vec<Any>) -> Result<u64, Self::Error> {
+	async fn estimate_weight(&self, _messages: Vec<Any>) -> Result<u64, Self::Error> {
 		todo!()
 	}
 

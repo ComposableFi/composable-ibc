@@ -12,7 +12,6 @@ use ibc::{
 	timestamp::Timestamp,
 	Height,
 };
-
 use ibc_proto::{
 	google::protobuf::Any,
 	ibc::core::{
@@ -21,7 +20,9 @@ use ibc_proto::{
 			QueryPacketAcknowledgementResponse, QueryPacketCommitmentResponse,
 			QueryPacketReceiptResponse,
 		},
-		client::v1::{QueryClientStateResponse, QueryConsensusStateResponse},
+		client::v1::{
+			QueryClientStateResponse, QueryClientStatesRequest, QueryConsensusStateResponse,
+		},
 		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
 	},
 };
@@ -29,7 +30,7 @@ use ibc_rpc::PacketInfo;
 use ics07_tendermint::{client_message::Header, events::try_from_tx};
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use primitives::{Chain, IbcProvider, UpdateType};
-use std::pin::Pin;
+use std::{pin::Pin, str::FromStr};
 use tendermint_rpc::{query::Query, Client, Order};
 
 pub enum FinalityEvent {
@@ -257,7 +258,31 @@ where
 	}
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
-		todo!()
+		let request = tonic::Request::new(QueryClientStatesRequest { pagination: None });
+		let grpc_client = ibc_proto::ibc::core::client::v1::query_client::QueryClient::connect(
+			self.grpc_url.clone().to_string(),
+		)
+		.await
+		.map_err(|e| Error::from(format!("failed to connect to grpc client: {:?}", e)))?;
+		let response = grpc_client
+			.clone()
+			.client_states(request)
+			.await
+			.map_err(|e| {
+				Error::from(format!("Failed to query client states from grpc client: {:?}", e))
+			})?
+			.into_inner();
+
+		// Deserialize into domain type
+		let clients: Vec<ClientId> = response
+			.client_states
+			.into_iter()
+			.filter_map(|cs| {
+				let id = ClientId::from_str(&cs.client_id).ok()?;
+				Some(id)
+			})
+			.collect();
+		Ok(clients)
 	}
 
 	async fn query_channels(&self) -> Result<Vec<(ChannelId, PortId)>, Self::Error> {
@@ -283,7 +308,7 @@ where
 	async fn initialize_client_state(
 		&self,
 	) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
-		todo!()
+		self.construct_tendermint_client_state().await
 	}
 
 	async fn query_client_id_from_tx_hash(
