@@ -1,5 +1,5 @@
 use super::{error::Error, CosmosClient};
-use crate::provider::{FinalityEvent, TendermintFinalityEvent, TransactionId};
+use crate::provider::{FinalityEvent, TransactionId};
 use futures::Stream;
 use ibc_proto::{
 	cosmos::tx::v1beta1::{

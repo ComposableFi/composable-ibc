@@ -85,7 +85,7 @@ impl<H> IbcProvider for CosmosClient<H>
 where
 	H: Clone + Send + Sync + 'static,
 {
-	type FinalityEvent = TendermintFinalityEvent;
+	type FinalityEvent = FinalityEvent;
 	type TransactionId = TransactionId<tendermint_rpc::abci::transaction::Hash>;
 	type Error = Error;
 
