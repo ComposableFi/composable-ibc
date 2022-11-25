@@ -213,48 +213,6 @@ where
 		))
 	}
 
-	/// Construct a tendermint light client to communicate with the full node
-	pub async fn _construct_tendemint_light_client<HostFunctions: CryptoProvider>(
-		&self,
-		client_state: &TmClientState<HostFunctions>,
-	) -> Result<TmLightClient<HostFunctions>, Error>
-	where
-		Self: KeyProvider + IbcProvider,
-		H: Clone + Send + Sync + 'static,
-	{
-		let params = TmOptions {
-			trust_threshold: TrustThresholdFraction::new(
-				client_state.trust_level.numerator(),
-				client_state.trust_level.denominator(),
-			)
-			.unwrap(),
-			trusting_period: client_state.trusting_period,
-			clock_drift: client_state.max_clock_drift,
-		};
-		let clock = components::clock::SystemClock;
-		let scheduler = components::scheduler::basic_bisecting_schedule;
-		let verifier: PredicateVerifier<
-			ProdPredicates<HostFunctions>,
-			ProdVotingPowerCalculator<HostFunctions>,
-			ProdCommitValidator<HostFunctions>,
-			HostFunctions,
-		> = ProdVerifier::default();
-		let peer_id: PeerId = self
-			.rpc_client
-			.status()
-			.await
-			.map(|s| s.node_info.id)
-			.map_err(|e| Error::from(e.to_string()))?;
-		Ok(TmLightClient::new(
-			peer_id,
-			params,
-			clock,
-			scheduler,
-			verifier,
-			self.light_provider.clone(),
-		))
-	}
-
 	pub async fn submit_create_client_msg(&self, _msg: String) -> Result<ClientId, Error> {
 		todo!()
 	}
