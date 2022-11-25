@@ -50,7 +50,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
-use parachain::{config, ParachainClient, ParachainClientConfig};
+use parachain::{config, ParachainClient};
 use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
 use sp_runtime::generic::Era;
 use std::{pin::Pin, time::Duration};
@@ -668,24 +668,6 @@ impl AnyConfig {
 			Self::Parachain(chain) => {
 				chain.channel_whitelist.push((channel_id, port_id));
 			},
-		}
-	}
-}
-
-impl TryFrom<AnyChain> for ParachainClient<DefaultConfig> {
-	type Error = ();
-	fn try_from(value: AnyChain) -> Result<Self, Self::Error> {
-		match value {
-			AnyChain::Parachain(chain) => Ok(chain),
-		}
-	}
-}
-
-impl TryFrom<AnyConfig> for ParachainClientConfig {
-	type Error = ();
-	fn try_from(value: AnyConfig) -> Result<Self, Self::Error> {
-		match value {
-			AnyConfig::Parachain(config) => Ok(config),
 		}
 	}
 }
