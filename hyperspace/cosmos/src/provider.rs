@@ -29,21 +29,23 @@ use ibc_proto::{
 	},
 };
 use ibc_rpc::PacketInfo;
-use ics07_tendermint::{client_message::Header, client_state::ClientState, events::try_from_tx};
+use ics07_tendermint::{client_message::Header, client_state::ClientState, events::try_from_tx,
+					   client_message::ClientMessage, merkle::convert_tm_to_ics_merkle_proof
+};
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 use primitives::{Chain, IbcProvider, UpdateType, mock::LocalClientTypes};
 use std::pin::Pin;
 use tendermint::block::{Height as BlockHeight, Header as BlockHeader};
 use tendermint_light_client::components::io::{AsyncIo, AtHeight};
 use tendermint_proto::Protobuf;
-use tendermint_rpc::{
-	query::{EventType, Query},
-	event::{Event, EventData},
-	Client, Order, SubscriptionClient, WebSocketClient,
+use tendermint_rpc::{query::{EventType, Query}, event::{Event, EventData}, Client, Order,
+					 SubscriptionClient, WebSocketClient, abci, abci::Path as TendermintABCIPath
 };
-use ibc::core::ics02_client::msgs::update_client::MsgUpdateAnyClient;
-use ibc::tx_msg::Msg;
-use ics07_tendermint::client_message::ClientMessage;
+use tendermint_rpc::abci::Path;
+use ibc::{
+	core::ics02_client::msgs::update_client::MsgUpdateAnyClient, tx_msg::Msg,
+	keys::STORE_KEY,
+};
 use crate::utils::{
 	event_is_type_channel, event_is_type_client,
 	event_is_type_connection, ibc_event_try_from_abci_event,
@@ -89,9 +91,6 @@ where
 	type TransactionId = TransactionId<tendermint_rpc::abci::transaction::Hash>;
 	type Error = Error;
 
-	// Things to do
-	// 1. query for ibc header
-	// 2. query ibc events between last updated state on counterparty light client and current finalized block
 	async fn query_latest_ibc_events<C>(
 		&mut self,
 		finality_event: Self::FinalityEvent,
@@ -228,7 +227,7 @@ where
 		at: Height,
 		client_id: ClientId,
 	) -> Result<QueryClientStateResponse, Self::Error> {
-		todo!()
+
 	}
 
 	async fn query_connection_end(
@@ -249,7 +248,31 @@ where
 	}
 
 	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
-		todo!()
+		let path = format!("store/{}/key", STORE_KEY).as_str()
+			.parse::<Path>().map_err(|err| Err(Error::Custom(format!("failed to parse path: {}", err))));
+		let height = BlockHeight::try_from(at.revision_height);
+		let query_res =  self.rpc_client.abci_query(
+			path.ok(),
+			&keys[0],
+			height.ok(),
+			true,
+		).await?;
+
+		if !query_res.code.is_ok() {
+			// Fail with response log.
+			// todo()! add response code to error
+			return Err(Error::Custom(format!("failed abci query")));
+		}
+
+		if query_res.proof.is_none() {
+			// Fail due to empty proof
+			return Err(Error::Custom(format!("proof response is empty")));
+		}
+
+		let proof = query_res.proof.map(|p| convert_tm_to_ics_merkle_proof(&p))?.unwrap();
+		let mut proof_encoded = Vec::new();
+		prost::Message::encode(&proof, &mut proof_encoded).unwrap();
+		Ok(proof_encoded)
 	}
 
 	async fn query_packet_commitment(

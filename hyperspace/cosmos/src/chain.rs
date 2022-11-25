@@ -49,6 +49,7 @@ where
 			.map_err(|e| Error::from(format!("failed to subscribe to new blocks {:?}", e)))
 			.unwrap();
 
+		// todo!() use filter_map instead
 		let stream = subscription.map(|event| {
 			let Event { data, events, query } = event;
 			let header = match data {
