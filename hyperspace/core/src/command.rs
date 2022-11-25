@@ -112,8 +112,8 @@ impl Cmd {
 			any_chain_b.name(),
 			client_id_a_on_b
 		);
-		config.chain_a.set_client_id(client_id_b_on_a);
-		config.chain_b.set_client_id(client_id_a_on_b);
+		config.chain_a.set_client_id(client_id_a_on_b);
+		config.chain_b.set_client_id(client_id_b_on_a);
 
 		Ok(config)
 	}
