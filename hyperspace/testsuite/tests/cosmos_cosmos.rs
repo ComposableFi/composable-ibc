@@ -103,6 +103,7 @@ async fn setup_clients<H: Clone + Send + Sync + 'static>() -> (CosmosClient<H>, 
 async fn cosmos_to_cosmos_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
 	let (mut chain_a, mut chain_b) = setup_clients::<()>().await;
+
 	// Run tests sequentially
 
 	// no timeouts + connection delay
