@@ -18,6 +18,8 @@ pub mod error;
 pub mod key_provider;
 pub mod provider;
 pub mod utils;
+mod keys;
+mod path;
 
 use core::convert::TryFrom;
 use error::Error;

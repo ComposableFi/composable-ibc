@@ -10,6 +10,7 @@ use ibc::{
 		ics02_client::client_state::ClientType,
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
+		ics24_host::path::ClientStatePath
 	},
 	events::IbcEvent,
 	timestamp::Timestamp,
@@ -24,7 +25,7 @@ use ibc_proto::{
 			QueryPacketAcknowledgementResponse, QueryPacketCommitmentResponse,
 			QueryPacketReceiptResponse,
 		},
-		client::v1::{QueryClientStateResponse, QueryConsensusStateResponse},
+		client::v1::{QueryClientStateResponse, QueryConsensusStateResponse, Height as IBCHeight},
 		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
 	},
 };
@@ -50,6 +51,8 @@ use crate::utils::{
 	event_is_type_channel, event_is_type_client,
 	event_is_type_connection, ibc_event_try_from_abci_event,
 };
+
+const KeyClientStorePrefix: &str = "clients";
 
 pub enum FinalityEvent {
 	Tendermint(BlockHeader),
@@ -79,6 +82,34 @@ where
 			trusted_height,
 			trusted_validator_set: trusted_light_block.validators
 		}, update_type))
+	}
+
+	async fn query_tendermint_proof(&self, key: Vec<u8>) -> Result<(Vec<u8>, Vec<u8>), Error>{
+		let path = format!("store/{}/key", STORE_KEY).as_str()
+			.parse::<Path>().map_err(|err| Err(Error::Custom(format!("failed to parse path: {}", err))));
+		let height = BlockHeight::try_from(at.revision_height);
+		let query_res =  self.rpc_client.abci_query(
+			path.ok(),
+			&key,
+			height.ok(),
+			true,
+		).await?;
+
+		if !query_res.code.is_ok() {
+			// Fail with response log.
+			// todo()! add response code to error
+			return Err(Error::Custom(format!("failed abci query")));
+		}
+
+		if query_res.proof.is_none() {
+			// Fail due to empty proof
+			return Err(Error::Custom(format!("proof response is empty")));
+		}
+
+		let proof = query_res.proof.map(|p| convert_tm_to_ics_merkle_proof(&p))?.unwrap();
+		let mut proof_encoded = Vec::new();
+		prost::Message::encode(&proof, &mut proof_encoded).unwrap();
+		Ok((query_res.value, proof_encoded))
 	}
 }
 
@@ -227,7 +258,17 @@ where
 		at: Height,
 		client_id: ClientId,
 	) -> Result<QueryClientStateResponse, Self::Error> {
-
+		let (value, proof) = CosmosClient::query_tendermint_proof(self, ClientStatePath(client_id).into()).await?;
+		let client_state = AnyClientState::decode_vec(&value)?;
+		let any_client_state: Any = client_state.into();
+		Ok(QueryClientStateResponse {
+			proof,
+			proof_height: Some(IBCHeight{
+				revision_height: at.revision_height,
+				revision_number: at.revision_number,
+			}),
+			client_state: Some(any_client_state)
+		})
 	}
 
 	async fn query_connection_end(
