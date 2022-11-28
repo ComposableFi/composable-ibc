@@ -22,7 +22,8 @@ serde = {version="1.0.137", features = ["derive"]}
 serde_json = { version = "1" }
 ss58-registry = "1.28.0"
 thiserror = "1.0.31"
-tonic = { version = "0.7.2", features = ["tls", "tls-roots"] }
+tokio = { version = "1.19.2", features = ["macros", "sync", "time"] }
+tonic = { version = "0.8.2", features = ["tls", "tls-roots"] }
 
 # ibc
 ibc = { path = "../../ibc/modules" }

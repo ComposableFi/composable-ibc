@@ -17,24 +17,38 @@ pub mod chain;
 pub mod error;
 pub mod key_provider;
 pub mod provider;
-pub mod utils;
-mod keys;
-mod path;
-
-use core::convert::TryFrom;
+use core::{convert::TryFrom, time::Duration};
 use error::Error;
 use ibc::core::{
-	ics23_commitment::commitment::CommitmentPrefix,
+	ics02_client::trust_threshold::TrustThreshold,
+	ics23_commitment::{commitment::CommitmentPrefix, specs::ProofSpecs},
 	ics24_host::identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 };
 use ibc_proto::cosmos::auth::v1beta1::BaseAccount;
+use ics07_tendermint::{
+	client_state::ClientState as TmClientState, consensus_state::ConsensusState as TmConsensusState,
+};
 use key_provider::KeyEntry;
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use primitives::{IbcProvider, KeyProvider};
 use serde::Deserialize;
-use tendermint_rpc::{HttpClient, Url};
-use tendermint_light_client::components::io::RpcIo;
-use std::time::Duration;
+use tendermint::trust_threshold::TrustThresholdFraction;
+use tendermint_light_client::{
+	components::{
+		self,
+		io::{AsyncIo, AtHeight, RpcIo},
+	},
+	light_client::LightClient as TmLightClient,
+};
+use tendermint_light_client_verifier::{
+	host_functions::CryptoProvider,
+	operations::{ProdCommitValidator, ProdVotingPowerCalculator},
+	options::Options as TmOptions,
+	predicates::ProdPredicates,
+	types::{Height as TmHeight, PeerId},
+	PredicateVerifier, ProdVerifier,
+};
+use tendermint_rpc::{Client, HttpClient, Url};
 
 // Implements the [`crate::Chain`] trait for cosmos.
 /// This is responsible for:
@@ -75,8 +89,6 @@ pub struct CosmosClient<H> {
 pub struct CosmosClientConfig {
 	/// Chain name
 	pub name: String,
-	/// peer id for fetching light blocks through rpc io
-	pub peer_id: tendermint::node::Id,
 	/// rpc url for cosmos
 	pub rpc_url: Url,
 	/// grpc url for cosmos
@@ -127,7 +139,12 @@ where
 	pub async fn new(config: CosmosClientConfig) -> Result<Self, Error> {
 		let rpc_client = HttpClient::new(config.rpc_url.clone())
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
-		let light_provider = RpcIo::new(config.peer_id, rpc_client.clone(), None);
+		let peer_id: PeerId = rpc_client
+			.status()
+			.await
+			.map(|s| s.node_info.id)
+			.map_err(|e| Error::from(e.to_string()))?;
+		let light_provider = RpcIo::new(peer_id, rpc_client.clone(), None);
 		let chain_id = ChainId::from(config.chain_id);
 		let client_id = Some(
 			ClientId::new(config.client_id.unwrap().as_str(), 0)
@@ -138,8 +155,8 @@ where
 
 		Ok(Self {
 			name: config.name,
-			chain_id,
 			light_provider,
+			chain_id,
 			rpc_client,
 			grpc_url: config.grpc_url,
 			websocket_url: config.websocket_url,
@@ -164,24 +181,43 @@ where
 	/// Construct a tendermint client state to be submitted to the counterparty chain
 	pub async fn construct_tendermint_client_state(
 		&self,
-	) -> Result<(AnyClientState, AnyConsensusState), Error>
-	where
-		Self: KeyProvider + IbcProvider,
-		H: Clone + Send + Sync + 'static,
-	{
-		self.initialize_client_state().await.map_err(|e| {
-			Error::from(format!(
-				"Failed to initialize client state for chain {:?} with error {:?}",
-				self.name, e
-			))
-		})
+	) -> Result<(AnyClientState, AnyConsensusState), Error> {
+		let latest_height_timestamp = self.latest_height_and_timestamp().await.unwrap();
+		let client_state = TmClientState::<HostFunctionsManager>::new(
+			self.chain_id.clone(),
+			TrustThreshold::default(),
+			Duration::new(64000, 0),  // Set to a default value
+			Duration::new(128000, 0), // Set to a default value
+			Duration::new(5, 0),      // Set to a default value
+			latest_height_timestamp.0,
+			ProofSpecs::default(),
+			vec!["upgrade".to_string(), "upgradedIBCState".to_string()],
+		)
+		.map_err(|e| Error::from(format!("Invalid client state {}", e)))?;
+
+		let target_height = TmHeight::try_from(latest_height_timestamp.0.revision_height)
+			.map_err(|e| Error::from(e.to_string()))?;
+		let trusted_block = self
+			.light_provider
+			.fetch_light_block(AtHeight::At(target_height))
+			.await
+			.map_err(|e| {
+				Error::from(format!("Failed to fetch light block from light provider: {:?}", e))
+			})?;
+
+		let consensus_state = TmConsensusState::from(trusted_block.signed_header.header);
+
+		Ok((
+			AnyClientState::Tendermint(client_state),
+			AnyConsensusState::Tendermint(consensus_state),
+		))
 	}
 
-	pub async fn submit_create_client_msg(&self, msg: String) -> Result<ClientId, Error> {
+	pub async fn submit_create_client_msg(&self, _msg: String) -> Result<ClientId, Error> {
 		todo!()
 	}
 
-	pub async fn transfer_tokens(&self, asset_id: u128, amount: u128) -> Result<(), Error> {
+	pub async fn transfer_tokens(&self, _asset_id: u128, _amount: u128) -> Result<(), Error> {
 		todo!()
 	}
 

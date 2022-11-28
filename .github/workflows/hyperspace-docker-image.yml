@@ -4,8 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
-      - seun/integration-test # tmp
+      - master
 
 jobs:
   build-and-publish:

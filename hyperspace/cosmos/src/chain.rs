@@ -12,11 +12,10 @@ use k256::ecdsa::{signature::Signer as _, Signature, SigningKey};
 use primitives::{Chain, IbcProvider};
 use prost::Message;
 use std::pin::Pin;
-use tendermint_rpc::{Client, SubscriptionClient, WebSocketClient};
 use tendermint_rpc::{
-	event::Event, query::{EventType, Query}
+	Client, SubscriptionClient, WebSocketClient,
+	event::Event, query::{EventType, Query}, event::EventData
 };
-use tendermint_rpc::event::EventData;
 
 #[async_trait::async_trait]
 impl<H> Chain for CosmosClient<H>
