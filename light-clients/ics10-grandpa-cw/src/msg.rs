@@ -1,4 +1,4 @@
-use crate::{Bytes, ContractError};
+use crate::{types::Height, Bytes, ContractError};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use ibc::{
 	core::{
