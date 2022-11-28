@@ -165,6 +165,7 @@ services:
       context: .
       dockerfile: parachain-2000.Dockerfile
     command:
+      - --no-mdns
       - --base-path=/data
       - --chain=/app/dev.json
       - --ws-external
@@ -178,8 +179,11 @@ services:
       - --force-authoring
       - --execution=wasm
       - --alice
+      - --bootnodes=/dns4/parachain-2000-0/tcp/30343/p2p/12D3KooWNDsLfXwYCiNSV3LWAwc3rJ7cdjqenzvzsvp1PTtCpbpo
+      - --bootnodes=/dns4/parachain-2000-1/tcp/30344/p2p/12D3KooWAsyq4qfdTsuSfyka1qgwYHc9FjxFsfw3W1wrwzTJZnj1
+      - --bootnodes=/dns4/parachain-2000-2/tcp/30345/p2p/12D3KooWSPz4uqbC2ywC671YxdKv5SozfnxCLeoobqYKDEP3zY4E
       - --node-key=7c667a99279cf5a884d6bb86fac6e320ef2d413dc880f01ff0e1ad353d615045
-      - --listen-addr=/ip4/0.0.0.0/tcp/30333
+      - --port=30343
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
@@ -198,6 +202,7 @@ services:
       context: .
       dockerfile: parachain-2000.Dockerfile
     command:
+      - --no-mdns
       - --base-path=/data
       - --chain=/app/dev.json
       - --ws-external
@@ -211,8 +216,11 @@ services:
       - --force-authoring
       - --execution=wasm
       - --bob
-      - --bootnodes=/dns/parachain-2000-0/tcp/30333/p2p/12D3KooWNDsLfXwYCiNSV3LWAwc3rJ7cdjqenzvzsvp1PTtCpbpo
-      - --listen-addr=/ip4/0.0.0.0/tcp/30333
+      - --bootnodes=/dns4/parachain-2000-0/tcp/30343/p2p/12D3KooWNDsLfXwYCiNSV3LWAwc3rJ7cdjqenzvzsvp1PTtCpbpo
+      - --bootnodes=/dns4/parachain-2000-1/tcp/30344/p2p/12D3KooWAsyq4qfdTsuSfyka1qgwYHc9FjxFsfw3W1wrwzTJZnj1
+      - --bootnodes=/dns4/parachain-2000-2/tcp/30345/p2p/12D3KooWSPz4uqbC2ywC671YxdKv5SozfnxCLeoobqYKDEP3zY4E
+      - --node-key=24b3e641a85a3a85391bad7afc808afa526205ab01fd38774d9996a738d6082e
+      - --port=30344
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
@@ -230,6 +238,7 @@ services:
       context: .
       dockerfile: parachain-2000.Dockerfile
     command:
+      - --no-mdns
       - --base-path=/data
       - --chain=/app/dev.json
       - --ws-external
@@ -243,8 +252,11 @@ services:
       - --force-authoring
       - --execution=wasm
       - --charlie
-      - --bootnodes=/dns/parachain-2000-0/tcp/30333/p2p/12D3KooWNDsLfXwYCiNSV3LWAwc3rJ7cdjqenzvzsvp1PTtCpbpo
-      - --listen-addr=/ip4/0.0.0.0/tcp/30333
+      - --bootnodes=/dns4/parachain-2000-0/tcp/30343/p2p/12D3KooWNDsLfXwYCiNSV3LWAwc3rJ7cdjqenzvzsvp1PTtCpbpo
+      - --bootnodes=/dns4/parachain-2000-1/tcp/30344/p2p/12D3KooWAsyq4qfdTsuSfyka1qgwYHc9FjxFsfw3W1wrwzTJZnj1
+      - --bootnodes=/dns4/parachain-2000-2/tcp/30345/p2p/12D3KooWSPz4uqbC2ywC671YxdKv5SozfnxCLeoobqYKDEP3zY4E
+      - --node-key=1fde77550f57996e6c72a83d8a60bd3de50abc517f1b4bc51dcdafe71b22d4ec
+      - --port=30345
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
@@ -262,6 +274,7 @@ services:
       context: .
       dockerfile: parachain-2001.Dockerfile
     command:
+      - --no-mdns
       - --base-path=/data
       - --chain=/app/dev.json
       - --ws-external
@@ -275,8 +288,11 @@ services:
       - --force-authoring
       - --execution=wasm
       - --alice
+      - --bootnodes=/dns4/parachain-2001-0/tcp/30353/p2p/12D3KooWSMHyxxKbzzJxe44hHwSx7KWZM6Go3SrdhcvGLyc4z4XZ
+      - --bootnodes=/dns4/parachain-2001-1/tcp/30354/p2p/12D3KooWBXGvCrjYujzbg9BnkqbiT6uKBTTT3HVAVKwQrgaAvGpV
+      - --bootnodes=/dns4/parachain-2001-2/tcp/30355/p2p/12D3KooWKa7AwxfFtEXVVs6GsxGkp5gKfZ6FMQGuyji5rxNEgwB7
       - --node-key=e5ad8b579451f25035feeccaee89468a7fba53fbce35d27afe5fdbbf412722e9
-      - --listen-addr=/ip4/0.0.0.0/tcp/30333
+      - --port=30353
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
@@ -294,6 +310,7 @@ services:
       context: .
       dockerfile: parachain-2001.Dockerfile
     command:
+      - --no-mdns
       - --base-path=/data
       - --chain=/app/dev.json
       - --ws-external
@@ -307,8 +324,11 @@ services:
       - --force-authoring
       - --execution=wasm
       - --bob
-      - --bootnodes=/dns/parachain-2001-0/tcp/30333/p2p/12D3KooWSMHyxxKbzzJxe44hHwSx7KWZM6Go3SrdhcvGLyc4z4XZ
-      - --listen-addr=/ip4/0.0.0.0/tcp/30333
+      - --bootnodes=/dns4/parachain-2001-0/tcp/30353/p2p/12D3KooWSMHyxxKbzzJxe44hHwSx7KWZM6Go3SrdhcvGLyc4z4XZ
+      - --bootnodes=/dns4/parachain-2001-1/tcp/30354/p2p/12D3KooWBXGvCrjYujzbg9BnkqbiT6uKBTTT3HVAVKwQrgaAvGpV
+      - --bootnodes=/dns4/parachain-2001-2/tcp/30355/p2p/12D3KooWKa7AwxfFtEXVVs6GsxGkp5gKfZ6FMQGuyji5rxNEgwB7
+      - --node-key=83a1c624e290774605243c1517b79e992fd9de1cf43f7bdb5927a4c5b8e04d0c
+      - --port=30354
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
@@ -326,6 +346,7 @@ services:
       context: .
       dockerfile: parachain-2001.Dockerfile
     command:
+      - --no-mdns
       - --base-path=/data
       - --chain=/app/dev.json
       - --ws-external
@@ -339,14 +360,21 @@ services:
       - --force-authoring
       - --execution=wasm
       - --charlie
-      - --bootnodes=/dns/parachain-2001-0/tcp/30333/p2p/12D3KooWSMHyxxKbzzJxe44hHwSx7KWZM6Go3SrdhcvGLyc4z4XZ
-      - --listen-addr=/ip4/0.0.0.0/tcp/30333
+      - --bootnodes=/dns4/parachain-2001-0/tcp/30353/p2p/12D3KooWSMHyxxKbzzJxe44hHwSx7KWZM6Go3SrdhcvGLyc4z4XZ
+      - --bootnodes=/dns4/parachain-2001-1/tcp/30354/p2p/12D3KooWBXGvCrjYujzbg9BnkqbiT6uKBTTT3HVAVKwQrgaAvGpV
+      - --bootnodes=/dns4/parachain-2001-2/tcp/30355/p2p/12D3KooWKa7AwxfFtEXVVs6GsxGkp5gKfZ6FMQGuyji5rxNEgwB7
+      - --node-key=4e658718a1f0f8950b16f31eb143ed238f6e93d51507e5bcfa9376690576b1fd
+      - --port=30355
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
       - --enable-offchain-indexing=true
     environment: {}
     ulimits: *a1
+  # netshoot: # sidecar container for debug purposes
+  #   image: nicolaka/netshoot
+  #   command: |
+  #     sleep 365d
 volumes:
   relaychain-alice: null
   relaychain-bob: null
