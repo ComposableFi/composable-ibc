@@ -1,3 +1,5 @@
 FROM parachain-node:latest
 COPY . /app
-RUN /usr/local/bin/parachain-node build-spec --node-key=e5ad8b579451f25035feeccaee89468a7fba53fbce35d27afe5fdbbf412722e9 > /app/dev.json
+RUN /usr/local/bin/parachain-node build-spec | sed 's/"para_id": 1000,/"para_id": 2001,/' > /app/tmp.json && \
+    /usr/local/bin/parachain-node build-spec --chain /app/tmp.json --raw  --disable-default-bootnode > /app/dev.json && \
+    rm /app/tmp.json
