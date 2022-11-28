@@ -22,6 +22,9 @@ services:
       - --rpc-methods=unsafe
       - --beefy
       - --enable-offchain-indexing=true
+      - --bootnodes=/dns4/relaychain-alice/tcp/30333/p2p/12D3KooWA8wVhcUNKGPN7ARZh1cBjzkwN9rHtxs2pmZrvhxwMvWS
+      - --bootnodes=/dns4/relaychain-bob/tcp/30333/p2p/12D3KooWCtqwjRCVEZz7dC1JGJ2zKc6ANK9BPW2hoW8bjgBnFUie
+      - --node-key=9aa35bb16735251c6ad90ce6e8da05078bd2c90a5254b3be729aff0385a08d2d
     environment:
       RUST_LOG: parachain::candidate-backing=trace
     ulimits:
@@ -51,6 +54,9 @@ services:
       - --rpc-methods=unsafe
       - --beefy
       - --enable-offchain-indexing=true
+      - --bootnodes=/dns4/relaychain-alice/tcp/30333/p2p/12D3KooWA8wVhcUNKGPN7ARZh1cBjzkwN9rHtxs2pmZrvhxwMvWS
+      - --bootnodes=/dns4/relaychain-bob/tcp/30333/p2p/12D3KooWCtqwjRCVEZz7dC1JGJ2zKc6ANK9BPW2hoW8bjgBnFUie
+      - --node-key=e28a5a6043d474b3418b7d108b4ba1feb25e2808f705798fb42de71cdace8b77
     environment:
       RUST_LOG: parachain::candidate-backing=trace
     ulimits: *a1
@@ -76,6 +82,8 @@ services:
       - --rpc-methods=unsafe
       - --beefy
       - --enable-offchain-indexing=true
+      - --bootnodes=/dns4/relaychain-alice/tcp/30333/p2p/12D3KooWA8wVhcUNKGPN7ARZh1cBjzkwN9rHtxs2pmZrvhxwMvWS
+      - --bootnodes=/dns4/relaychain-bob/tcp/30333/p2p/12D3KooWCtqwjRCVEZz7dC1JGJ2zKc6ANK9BPW2hoW8bjgBnFUie
     environment:
       RUST_LOG: parachain::candidate-backing=trace
     ulimits: *a1
@@ -101,6 +109,8 @@ services:
       - --rpc-methods=unsafe
       - --beefy
       - --enable-offchain-indexing=true
+      - --bootnodes=/dns4/relaychain-alice/tcp/30333/p2p/12D3KooWA8wVhcUNKGPN7ARZh1cBjzkwN9rHtxs2pmZrvhxwMvWS
+      - --bootnodes=/dns4/relaychain-bob/tcp/30333/p2p/12D3KooWCtqwjRCVEZz7dC1JGJ2zKc6ANK9BPW2hoW8bjgBnFUie
     environment:
       RUST_LOG: parachain::candidate-backing=trace
     ulimits: *a1
@@ -126,6 +136,8 @@ services:
       - --rpc-methods=unsafe
       - --beefy
       - --enable-offchain-indexing=true
+      - --bootnodes=/dns4/relaychain-alice/tcp/30333/p2p/12D3KooWA8wVhcUNKGPN7ARZh1cBjzkwN9rHtxs2pmZrvhxwMvWS
+      - --bootnodes=/dns4/relaychain-bob/tcp/30333/p2p/12D3KooWCtqwjRCVEZz7dC1JGJ2zKc6ANK9BPW2hoW8bjgBnFUie
     environment:
       RUST_LOG: parachain::candidate-backing=trace
     ulimits: *a1
@@ -151,6 +163,8 @@ services:
       - --rpc-methods=unsafe
       - --beefy
       - --enable-offchain-indexing=true
+      - --bootnodes=/dns4/relaychain-alice/tcp/30333/p2p/12D3KooWA8wVhcUNKGPN7ARZh1cBjzkwN9rHtxs2pmZrvhxwMvWS
+      - --bootnodes=/dns4/relaychain-bob/tcp/30333/p2p/12D3KooWCtqwjRCVEZz7dC1JGJ2zKc6ANK9BPW2hoW8bjgBnFUie
     environment:
       RUST_LOG: parachain::candidate-backing=trace
     ulimits: *a1
@@ -189,6 +203,8 @@ services:
       - --execution=wasm
       - --name=relaychain-alice
       - --enable-offchain-indexing=true
+      - --bootnodes=/dns4/relaychain-alice/tcp/30333/p2p/12D3KooWA8wVhcUNKGPN7ARZh1cBjzkwN9rHtxs2pmZrvhxwMvWS
+      - --bootnodes=/dns4/relaychain-bob/tcp/30333/p2p/12D3KooWCtqwjRCVEZz7dC1JGJ2zKc6ANK9BPW2hoW8bjgBnFUie
     environment: {}
     ulimits: *a1
   parachain-2000-1:
@@ -225,6 +241,8 @@ services:
       - --chain=/app/rococo-local.json
       - --execution=wasm
       - --enable-offchain-indexing=true
+      - --bootnodes=/dns4/relaychain-alice/tcp/30333/p2p/12D3KooWA8wVhcUNKGPN7ARZh1cBjzkwN9rHtxs2pmZrvhxwMvWS
+      - --bootnodes=/dns4/relaychain-bob/tcp/30333/p2p/12D3KooWCtqwjRCVEZz7dC1JGJ2zKc6ANK9BPW2hoW8bjgBnFUie
     environment: {}
     ulimits: *a1
   parachain-2000-2:
@@ -261,6 +279,8 @@ services:
       - --chain=/app/rococo-local.json
       - --execution=wasm
       - --enable-offchain-indexing=true
+      - --bootnodes=/dns4/relaychain-alice/tcp/30333/p2p/12D3KooWA8wVhcUNKGPN7ARZh1cBjzkwN9rHtxs2pmZrvhxwMvWS
+      - --bootnodes=/dns4/relaychain-bob/tcp/30333/p2p/12D3KooWCtqwjRCVEZz7dC1JGJ2zKc6ANK9BPW2hoW8bjgBnFUie
     environment: {}
     ulimits: *a1
   parachain-2001-0:
@@ -297,6 +317,8 @@ services:
       - --chain=/app/rococo-local.json
       - --execution=wasm
       - --enable-offchain-indexing=true
+      - --bootnodes=/dns4/relaychain-alice/tcp/30333/p2p/12D3KooWA8wVhcUNKGPN7ARZh1cBjzkwN9rHtxs2pmZrvhxwMvWS
+      - --bootnodes=/dns4/relaychain-bob/tcp/30333/p2p/12D3KooWCtqwjRCVEZz7dC1JGJ2zKc6ANK9BPW2hoW8bjgBnFUie
     environment: {}
     ulimits: *a1
   parachain-2001-1:
@@ -333,6 +355,8 @@ services:
       - --chain=/app/rococo-local.json
       - --execution=wasm
       - --enable-offchain-indexing=true
+      - --bootnodes=/dns4/relaychain-alice/tcp/30333/p2p/12D3KooWA8wVhcUNKGPN7ARZh1cBjzkwN9rHtxs2pmZrvhxwMvWS
+      - --bootnodes=/dns4/relaychain-bob/tcp/30333/p2p/12D3KooWCtqwjRCVEZz7dC1JGJ2zKc6ANK9BPW2hoW8bjgBnFUie
     environment: {}
     ulimits: *a1
   parachain-2001-2:
@@ -369,6 +393,8 @@ services:
       - --chain=/app/rococo-local.json
       - --execution=wasm
       - --enable-offchain-indexing=true
+      - --bootnodes=/dns4/relaychain-alice/tcp/30333/p2p/12D3KooWA8wVhcUNKGPN7ARZh1cBjzkwN9rHtxs2pmZrvhxwMvWS
+      - --bootnodes=/dns4/relaychain-bob/tcp/30333/p2p/12D3KooWCtqwjRCVEZz7dC1JGJ2zKc6ANK9BPW2hoW8bjgBnFUie
     environment: {}
     ulimits: *a1
   # netshoot: # sidecar container for debug purposes
