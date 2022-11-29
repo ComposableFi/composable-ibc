@@ -37,7 +37,8 @@ use tendermint::block::{Height as BlockHeight, Header as BlockHeader};
 use tendermint_light_client::components::io::{AsyncIo, AtHeight};
 use tendermint_proto::Protobuf;
 use tendermint_rpc::{query::{EventType, Query}, event::{Event, EventData}, Client, Order,
-					 SubscriptionClient, WebSocketClient, abci::Path as TendermintABCIPath
+					 SubscriptionClient, WebSocketClient, abci::Path as TendermintABCIPath,
+					 endpoint::abci_query::AbciQuery, abci::Code
 };
 use ibc::{
 	core::ics02_client::msgs::update_client::MsgUpdateAnyClient, tx_msg::Msg,
@@ -49,6 +50,10 @@ use crate::utils::{
 };
 
 const KeyClientStorePrefix: &str = "clients";
+
+type Proof = Vec<u8>;
+
+type BytesValue = Vec<u8>;
 
 pub enum FinalityEvent {
 	Tendermint(BlockHeader),
@@ -80,7 +85,7 @@ where
 		}, update_type))
 	}
 
-	async fn query_tendermint_proof(&self, key: Vec<u8>, height: Height) -> Result<(Vec<u8>, Vec<u8>), Error>{
+	async fn query_tendermint_proof(&self, key: Vec<u8>, height: Height) -> Result<(BytesValue, Proof), Error>{
 		let path = format!("store/{}/key", STORE_KEY).as_str()
 			.parse::<TendermintABCIPath>().map_err(|err| Error::Custom(format!("failed to parse path: {}", err)));
 		let height = BlockHeight::try_from(height.revision_height);
@@ -101,6 +106,16 @@ where
 			// Fail due to empty proof
 			return Err(Error::Custom(format!("proof response is empty")));
 		}
+
+		match query_res {
+			AbciQuery {
+				code: Code::Err(_), ..
+			} => return Err(Error::Custom(format!("failed abci query"))),
+			AbciQuery {
+				proof: None,..
+			} => return Err(Error::Custom(format!("failed abci query"))),
+			_ => ()
+		};
 
 		let merkle_proof = query_res.proof
 			.map(|p| convert_tm_to_ics_merkle_proof(&p))
