@@ -28,7 +28,14 @@ contract Node is ITrie {
         returns (NodeHandle[] memory nodeHandle, Value memory value)
     {}
 
-    function NibbledBranch() external {}
+    function NibbledBranch()
+        external
+        returns (
+            NibbleSlice slice,
+            NodeHandle[] memory nodeHandle,
+            Value memory value
+        )
+    {}
 
     function Empty() external {}
 }

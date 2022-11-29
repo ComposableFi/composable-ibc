@@ -44,6 +44,6 @@ interface ITrie {
 
     struct NodeHandle {
         NodeHandleType nodeHandleType;
-        bytes32 data;
+        bytes32[] data;
     }
 }
