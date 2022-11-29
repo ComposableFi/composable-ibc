@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
-import "./Trie.sol";
+import "../interfaces/ITrie.sol";
 import "./Codec.sol";
 import "./Node.sol";
 import "./NibbleSlice.sol";
