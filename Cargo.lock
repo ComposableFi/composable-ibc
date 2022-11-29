@@ -4059,7 +4059,7 @@ dependencies = [
  "flex-error",
  "ibc-derive",
  "ibc-proto",
- "ics23 0.8.1",
+ "ics23",
  "modelator",
  "num-traits",
  "parity-scale-codec",
@@ -4189,7 +4189,7 @@ dependencies = [
  "ibc",
  "ibc-derive",
  "ibc-proto",
- "ics23 0.8.1",
+ "ics23",
  "log",
  "modelator",
  "prost 0.11.0",
@@ -4256,14 +4256,11 @@ dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-multi-test",
- "cw-storage-plus",
- "cw2",
  "derive_more",
  "grandpa-light-client-primitives",
  "ibc",
  "ibc-derive",
  "ics10-grandpa",
- "ics23 0.8.0-alpha",
  "light-client-common",
  "schemars",
  "serde",
@@ -4325,7 +4322,7 @@ dependencies = [
  "ibc",
  "ibc-derive",
  "ibc-proto",
- "ics23 0.8.1",
+ "ics23",
  "modelator",
  "num-traits",
  "parity-scale-codec",
@@ -4349,17 +4346,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.16",
  "uint",
-]
-
-[[package]]
-name = "ics23"
-version = "0.8.0-alpha"
-source = "git+https://github.com/composablefi/ics23?rev=b500a5c6068eb53c83c4c6c13bd9d8c25e0bf927#b500a5c6068eb53c83c4c6c13bd9d8c25e0bf927"
-dependencies = [
- "anyhow",
- "bytes",
- "hex",
- "prost 0.10.4",
 ]
 
 [[package]]
@@ -6900,7 +6886,7 @@ dependencies = [
  "ics07-tendermint",
  "ics10-grandpa",
  "ics11-beefy",
- "ics23 0.8.1",
+ "ics23",
  "light-client-common",
  "log",
  "orml-tokens",
@@ -11618,7 +11604,7 @@ name = "simple-iavl"
 version = "0.1.0"
 dependencies = [
  "bytes",
- "ics23 0.8.1",
+ "ics23",
  "proptest",
  "rand 0.8.5",
  "sha2 0.10.6",
