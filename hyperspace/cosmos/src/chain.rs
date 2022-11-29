@@ -48,13 +48,12 @@ where
 			.map_err(|e| Error::from(format!("failed to subscribe to new blocks {:?}", e)))
 			.unwrap();
 
-		// todo!() use filter_map instead
 		let stream = subscription.map(|event| {
 			let Event { data, events, query } = event;
 			let header = match data {
 				EventData::NewBlock {block, ..} =>
 					block.unwrap().header,
-				_ => {}
+				_ => unreachable!(),
 			};
 			futures::future::ready(Some(FinalityEvent::Tendermint(header)))
 		});

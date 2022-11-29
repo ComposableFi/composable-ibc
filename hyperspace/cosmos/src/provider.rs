@@ -1,14 +1,12 @@
 use super::{error::Error, CosmosClient};
 use core::time::Duration;
-use futures::{
-	stream::{self, select_all},
-	Stream,
-};
+use futures::{stream::{self, select_all}, Stream, TryFutureExt};
 use ibc::{
 	applications::transfer::PrefixedCoin,
 	core::{
 		ics02_client::client_state::ClientType,
-		ics23_commitment::commitment::CommitmentPrefix,
+		ics02_client::events::NewBlock,
+		ics23_commitment::commitment:: { CommitmentPrefix, CommitmentProofBytes},
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 		ics24_host::path::ClientStatePath
 	},
@@ -29,7 +27,7 @@ use ibc_proto::{
 	},
 };
 use ibc_rpc::PacketInfo;
-use ics07_tendermint::{client_message::Header, client_state::ClientState, events::try_from_tx,
+use ics07_tendermint::{client_message::Header, events::try_from_tx,
 					   client_message::ClientMessage, merkle::convert_tm_to_ics_merkle_proof
 };
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
@@ -39,9 +37,8 @@ use tendermint::block::{Height as BlockHeight, Header as BlockHeader};
 use tendermint_light_client::components::io::{AsyncIo, AtHeight};
 use tendermint_proto::Protobuf;
 use tendermint_rpc::{query::{EventType, Query}, event::{Event, EventData}, Client, Order,
-					 SubscriptionClient, WebSocketClient, abci, abci::Path as TendermintABCIPath
+					 SubscriptionClient, WebSocketClient, abci::Path as TendermintABCIPath
 };
-use tendermint_rpc::abci::Path;
 use ibc::{
 	core::ics02_client::msgs::update_client::MsgUpdateAnyClient, tx_msg::Msg,
 	keys::STORE_KEY,
@@ -83,13 +80,13 @@ where
 		}, update_type))
 	}
 
-	async fn query_tendermint_proof(&self, key: Vec<u8>) -> Result<(Vec<u8>, Vec<u8>), Error>{
+	async fn query_tendermint_proof(&self, key: Vec<u8>, height: Height) -> Result<(Vec<u8>, Vec<u8>), Error>{
 		let path = format!("store/{}/key", STORE_KEY).as_str()
-			.parse::<Path>().map_err(|err| Err(Error::Custom(format!("failed to parse path: {}", err))));
-		let height = BlockHeight::try_from(at.revision_height);
+			.parse::<TendermintABCIPath>().map_err(|err| Error::Custom(format!("failed to parse path: {}", err)));
+		let height = BlockHeight::try_from(height.revision_height);
 		let query_res =  self.rpc_client.abci_query(
 			path.ok(),
-			&key,
+			key,
 			height.ok(),
 			true,
 		).await?;
@@ -105,10 +102,12 @@ where
 			return Err(Error::Custom(format!("proof response is empty")));
 		}
 
-		let proof = query_res.proof.map(|p| convert_tm_to_ics_merkle_proof(&p))?.unwrap();
-		let mut proof_encoded = Vec::new();
-		prost::Message::encode(&proof, &mut proof_encoded).unwrap();
-		Ok((query_res.value, proof_encoded))
+		let merkle_proof = query_res.proof
+			.map(|p| convert_tm_to_ics_merkle_proof(&p))
+			.ok_or_else(|| Error::Custom("could not convert proof Op to merkle proof".to_string()))?;
+		let proof = CommitmentProofBytes::try_from(merkle_proof)
+			.map_err(|err| Error::Custom(format!("bad client state proof: {}", err)))?;
+		Ok((query_res.value, proof.as_bytes().to_vec()))
 	}
 }
 
@@ -209,7 +208,7 @@ where
 					EventData::NewBlock { block, .. }
 					if query == Query::from(EventType::NewBlock).to_string() =>
 						{
-							events.push(ClientEvents::NewBlock::new(height).into());
+							events.push(NewBlock::new(height).into());
 							// events_with_height.append(&mut extract_block_events(height, &events));
 						},
 					EventData::Tx { tx_result } => {
@@ -289,11 +288,11 @@ where
 
 	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
 		let path = format!("store/{}/key", STORE_KEY).as_str()
-			.parse::<Path>().map_err(|err| Err(Error::Custom(format!("failed to parse path: {}", err))));
+			.parse::<TendermintABCIPath>().map_err(|err| Error::Custom(format!("failed to parse path: {}", err)))?;
 		let height = BlockHeight::try_from(at.revision_height);
 		let query_res =  self.rpc_client.abci_query(
 			path.ok(),
-			&keys[0],
+			&*keys[0],
 			height.ok(),
 			true,
 		).await?;
@@ -309,10 +308,12 @@ where
 			return Err(Error::Custom(format!("proof response is empty")));
 		}
 
-		let proof = query_res.proof.map(|p| convert_tm_to_ics_merkle_proof(&p))?.unwrap();
-		let mut proof_encoded = Vec::new();
-		prost::Message::encode(&proof, &mut proof_encoded).unwrap();
-		Ok(proof_encoded)
+		let merkle_proof = query_res.proof
+			.map(|p| convert_tm_to_ics_merkle_proof(&p))
+			.ok_or_else(|| Error::Custom("could not convert proof Op to merkle proof".to_string()))?;
+		let proof = CommitmentProofBytes::try_from(merkle_proof)
+			.map_err(|err| Error::Custom(format!("bad client state proof: {}", err)))?;
+		Ok(proof.as_bytes().to_vec())
 	}
 
 	async fn query_packet_commitment(
