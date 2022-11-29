@@ -10,8 +10,6 @@ exclude = [
   "hash.txt",
 ]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -26,12 +24,6 @@ panic = 'abort'
 incremental = false
 overflow-checks = true
 
-[features]
-# for more explicit tests, cargo test --features=backtraces
-backtraces = ["cosmwasm-std/backtraces"]
-# use library feature to disable all instantiate/execute/query exports
-library = []
-
 [package.metadata.scripts]
 optimize = """docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
@@ -43,21 +35,45 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 cosmwasm-schema = "1.1.3"
 cosmwasm-std = "1.1.3"
 cosmwasm-storage = "1.1.3"
-cw-storage-plus = "0.15.1"
-cw2 = "0.15.1"
+#cosmwasm-crypto = { version = "1.1.3", default-features = false }
+#cw-storage-plus = "0.15.1"
+#cw2 = "0.15.1"
 schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
+sha2 = "0.10"
+sha3 = "0.10"
+derive_more = "0.99.17"
 
 ibc = { path = "../../ibc/modules", default-features = false }
-ibc-derive = { path = "../../ibc/derive" }
-ics23 = { git = "https://github.com/composablefi/ics23", rev = "b500a5c6068eb53c83c4c6c13bd9d8c25e0bf927", default-features = false }
-ics10-grandpa = { path = "../ics10-grandpa"}
-grandpa-light-client-primitives = { path = "../../algorithms/grandpa/primitives" }
-light-client-common = { path = "../../light-clients/common" }
+ibc-derive = { path = "../../ibc/derive", default-features = false  }
+#ics23 = { git = "https://github.com/composablefi/ics23", rev = "b500a5c6068eb53c83c4c6c13bd9d8c25e0bf927", default-features = false }
+ics10-grandpa = { path = "../ics10-grandpa", default-features = false }
+grandpa-light-client-primitives = { path = "../../algorithms/grandpa/primitives", default-features = false  }
+light-client-common = { path = "../../light-clients/common", default-features = false  }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, features = ["disable_panic_handler", "disable_oom"] }
+sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, features = [] }
 
 [dev-dependencies]
 cw-multi-test = "0.15.1"
+
+[features]
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+# use library feature to disable all instantiate/execute/query exports
+library = []
+default = []
+std = [
+  "ibc/std",
+  "ics10-grandpa/std",
+  "grandpa-light-client-primitives/std",
+  "light-client-common/std",
+  "sp-core/std",
+  "sp-runtime/std",
+  "sp-std/std",
+  "sp-io/std",
+  "sp-runtime-interface/std",
+]

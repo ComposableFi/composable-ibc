@@ -17,7 +17,7 @@ use alloc::{format, vec, vec::Vec};
 use anyhow::anyhow;
 use codec::Decode;
 use core::{convert::Infallible, fmt::Debug};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tendermint::time::Time;
 use tendermint_proto::{google::protobuf as tpb, Protobuf};
 
@@ -34,7 +34,7 @@ use sp_trie::StorageProof;
 /// Protobuf type url for GRANDPA Consensus State
 pub const GRANDPA_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.ConsensusState";
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConsensusState {
 	pub timestamp: Time,
 	pub root: CommitmentRoot,

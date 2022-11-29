@@ -1,12 +1,3 @@
-#[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
-use ibc::core::ics02_client::client_def::ClientDef;
-use ics10_grandpa::client_def::GrandpaClient;
-use light_client_common::{verify_membership, verify_non_membership};
-use sp_runtime::traits::BlakeTwo256;
-use std::{cell::RefCell, rc::Rc};
-
 use crate::{
 	context::Context,
 	error::ContractError,
@@ -16,6 +7,13 @@ use crate::{
 		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
 	},
 };
+#[cfg(not(feature = "library"))]
+use cosmwasm_std::entry_point;
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use ibc::core::ics02_client::client_def::ClientDef;
+use ics10_grandpa::client_def::GrandpaClient;
+use light_client_common::{verify_membership, verify_non_membership};
+use sp_runtime::traits::BlakeTwo256;
 
 /*
 // version info for migration info
@@ -53,13 +51,12 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
 	deps: DepsMut,
-	_env: Env,
+	env: Env,
 	_info: MessageInfo,
 	msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-	let deps = Rc::new(RefCell::new(deps));
 	let client = GrandpaClient::<HostFunctions>::default();
-	let ctx = Context::<HostFunctions>::new(deps);
+	let ctx = Context::<HostFunctions>::new(deps, env);
 	match msg {
 		ExecuteMsg::ValidateMsg(_) => todo!(),
 		ExecuteMsg::StatusMsg(_) => todo!(),
