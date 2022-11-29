@@ -4,6 +4,8 @@ pragma solidity ^0.8.17;
 import "../interfaces/ITrie.sol";
 import "./HashRefDB.sol";
 import "./Codec.sol";
+import "./Node.sol";
+import "./NibbleSlice.sol";
 
 contract Trie is ITrie {
     struct TrieDB {
@@ -29,6 +31,7 @@ contract Trie is ITrie {
         TrieLayout calldata layout
     ) internal returns (bytes32) {
         uint256 keyNibbles = 0;
+        NibbleSlice partialKey = nibbleKey;
         while (true) {
             nibbleKey.mid(keyNibbles);
             nibbleKey.left();
@@ -39,21 +42,61 @@ contract Trie is ITrie {
                 layout.Hash
             );
             for (uint256 nData; nData < nodeData.length; ++nData) {
-                NodeStruct memory decoded = codec.decode(nodeData[nData]);
-                if (decoded.nodeType == Node.Leaf) {
-                    loadValue();
-                } else if (decoded.nodeType == Node.Extension) {
-                    break;
-                } else if (decoded.nodeType == Node.Branch) {
-                    loadValue();
-                } else if (decoded.nodeType == Node.NibbledBranch) {
-                    loadValue();
-                } else if (decoded.nodeType == Node.Empty) {
+                Node decoded = codec.decode(nodeData[nData]);
+                NodeType nodeType = decoded.getNodeType();
+                if (nodeType == NodeType.Leaf) {
+                    (NibbleSlice slice, Value memory value) = decoded.Leaf();
+                    if (slice.getSlice() == partialKey.getSlice()) {
+                        return
+                            loadValue(
+                                value,
+                                nibbleKey.originalDataAsPrefix(),
+                                key,
+                                trie,
+                                query
+                            );
+                    } else continue;
+                } else if (nodeType == NodeType.Extension) {
+                    (NibbleSlice slice, NodeHandle memory item) = decoded
+                        .Extension();
+                    if (partialKey.startWith(slice)) {
+                        partialKey = partialKey.mid(slice.len());
+                        keyNibbles += slice.len();
+                        // TODO: fix return type
+                        return keccak256(abi.encode(item));
+                    } else continue;
+                } else if (nodeType == NodeType.Branch) {
+                    (NodeHandle[] memory children, Value memory value) = decoded
+                        .Branch();
+                    if (partialKey.isEmpty()) {
+                        return
+                            loadValue(
+                                value,
+                                nibbleKey.originalDataAsPrefix(),
+                                key,
+                                trie,
+                                query
+                            );
+                    } else {
+                        NodeHandle memory x = children[partialKey.at(0)];
+                        partialKey = partialKey.mid(1);
+                        ++keyNibbles;
+                        return keccak256(abi.encode(x));
+                    }
+                } else if (nodeType == NodeType.NibbledBranch) {
+                    // loadValue();
+                } else if (nodeType == NodeType.Empty) {
                     break;
                 }
             }
         }
     }
 
-    function loadValue() internal returns (bytes32) {}
+    function loadValue(
+        Value memory value,
+        bytes32 prefix,
+        bytes32 key,
+        TrieDB calldata trie,
+        Query query
+    ) internal returns (bytes32) {}
 }

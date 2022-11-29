@@ -20,19 +20,3 @@ contract HashRefDB is ITrie {
 contract Query is ITrie {
     function decode(Hasher hasher) external returns (bytes32) {}
 }
-
-contract NibbleSlice {
-    bytes32 nibbleKey;
-
-    constructor(bytes32 key) {
-        nibbleKey = key;
-    }
-
-    function newNibbleSlice(bytes32 key) external {}
-
-    function mid(uint256 keyNibbles) external {}
-
-    function left() external {}
-
-    function getPrefix() external returns (bytes32) {}
-}

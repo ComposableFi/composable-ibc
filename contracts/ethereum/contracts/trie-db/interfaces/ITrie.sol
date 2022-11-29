@@ -19,7 +19,7 @@ interface ITrie {
         NodeCodec Codec;
     }
 
-    enum Node {
+    enum NodeType {
         Empty,
         Leaf,
         Extension,
@@ -27,8 +27,23 @@ interface ITrie {
         NibbledBranch
     }
 
-    struct NodeStruct {
-        Node nodeType;
-        bytes32 info;
+    enum ValueType {
+        Inline,
+        Node
+    }
+
+    struct Value {
+        ValueType valueType;
+        bytes32 data;
+    }
+
+    enum NodeHandleType {
+        Hash,
+        Inline
+    }
+
+    struct NodeHandle {
+        NodeHandleType nodeHandleType;
+        bytes32 data;
     }
 }

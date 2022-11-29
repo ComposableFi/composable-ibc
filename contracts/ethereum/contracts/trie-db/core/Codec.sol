@@ -2,6 +2,7 @@
 pragma solidity ^0.8.17;
 
 import "../interfaces/ITrie.sol";
+import "./Node.sol";
 
 contract Codec is ITrie {
     NodeCodec codec;
@@ -10,5 +11,5 @@ contract Codec is ITrie {
         codec = nodeCodec;
     }
 
-    function decode(bytes32 node_data) external returns (NodeStruct memory) {}
+    function decode(bytes32 node_data) external returns (Node) {}
 }
