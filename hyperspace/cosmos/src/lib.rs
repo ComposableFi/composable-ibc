@@ -17,6 +17,8 @@ pub mod chain;
 pub mod error;
 pub mod key_provider;
 pub mod provider;
+mod utils;
+
 use core::{convert::TryFrom, time::Duration};
 use error::Error;
 use ibc::core::{
@@ -32,21 +34,13 @@ use key_provider::KeyEntry;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use primitives::{IbcProvider, KeyProvider};
 use serde::Deserialize;
-use tendermint::trust_threshold::TrustThresholdFraction;
 use tendermint_light_client::{
 	components::{
-		self,
 		io::{AsyncIo, AtHeight, RpcIo},
 	},
-	light_client::LightClient as TmLightClient,
 };
 use tendermint_light_client_verifier::{
-	host_functions::CryptoProvider,
-	operations::{ProdCommitValidator, ProdVotingPowerCalculator},
-	options::Options as TmOptions,
-	predicates::ProdPredicates,
 	types::{Height as TmHeight, PeerId},
-	PredicateVerifier, ProdVerifier,
 };
 use tendermint_rpc::{Client, HttpClient, Url};
 
