@@ -55,4 +55,9 @@ interface ITrie {
         bytes32[] nodeData;
         NodeType nodeType;
     }
+
+    struct Prefix {
+        bytes data;
+        uint8 offset;
+    }
 }

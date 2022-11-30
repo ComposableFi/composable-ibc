@@ -15,25 +15,30 @@ contract LookUp is ITrie {
         TrieLayout layout;
     }
 
+    Codec codec;
+
+    constructor(address codecAddress) {
+        codec = Codec(codecAddress);
+    }
+
     TrieDB _trie;
 
-    constructor(
+    function setTrieInfo(
         HashRefDB db,
         bytes32 root,
         Query query,
         TrieLayout memory layout
-    ) {
+    ) external {
         _trie = TrieDB(db, root, query, layout);
     }
 
-    function lookUpWithoutCache(bytes32 key, NibbleSlice nibbleKey)
+    function lookUpWithoutCache(bytes calldata key, NibbleSlice nibbleKey)
         external
         returns (bool)
     {
-        uint256 keyNibbles = 0;
+        uint8 keyNibbles = 0;
         NibbleSlice partialKey = nibbleKey;
         bytes32 hash = _trie.root;
-        Codec codec = new Codec(_trie.layout.Codec);
 
         NibbleSlice slice;
         Node decoded;
@@ -41,21 +46,26 @@ contract LookUp is ITrie {
 
         while (true) {
             nibbleKey.mid(keyNibbles);
-            nibbleKey.left();
 
             lookUp.nodeData = _trie.db.get(
                 key,
-                nibbleKey.getPrefix(),
+                nibbleKey.left(),
                 _trie.layout.Hash
             );
 
             for (uint256 nData; nData < lookUp.nodeData.length; ++nData) {
-                decoded = codec.decode(lookUp.nodeData[nData]);
+                decoded = codec.decode(
+                    lookUp.nodeData[nData],
+                    _trie.layout.Codec
+                );
                 lookUp.nodeType = decoded.getNodeType();
 
                 if (lookUp.nodeType == NodeType.Leaf) {
                     (slice, lookUp.value) = decoded.Leaf();
-                    if (slice.getSlice() == partialKey.getSlice()) {
+                    if (
+                        keccak256(abi.encode(slice.getSlice())) ==
+                        keccak256(abi.encode(partialKey.getSlice()))
+                    ) {
                         lookUp.nextNode = loadValue(
                             lookUp.value,
                             nibbleKey.originalDataAsPrefix(),
@@ -67,7 +77,7 @@ contract LookUp is ITrie {
                 } else if (lookUp.nodeType == NodeType.Extension) {
                     (slice, lookUp.item) = decoded.Extension();
                     if (partialKey.startWith(slice)) {
-                        partialKey = partialKey.mid(slice.len());
+                        partialKey.mid(slice.len());
                         keyNibbles += slice.len();
                         lookUp.nextNode = lookUp.item;
                     } else continue;
@@ -82,7 +92,7 @@ contract LookUp is ITrie {
                             _trie.query
                         );
                     } else {
-                        partialKey = partialKey.mid(1);
+                        partialKey.mid(1);
                         ++keyNibbles;
                         lookUp.nextNode = lookUp.children[partialKey.at(0)];
                     }
@@ -101,7 +111,7 @@ contract LookUp is ITrie {
                             _trie.query
                         );
                     } else {
-                        partialKey = partialKey.mid(slice.len() + 1);
+                        partialKey.mid(slice.len() + 1);
                         keyNibbles += slice.len() + 1;
                         lookUp.nextNode = lookUp.children[
                             partialKey.at(slice.len())
@@ -122,8 +132,8 @@ contract LookUp is ITrie {
 
     function loadValue(
         Value memory value,
-        bytes32 prefix,
-        bytes32 key,
+        Prefix memory prefix,
+        bytes calldata key,
         HashRefDB db,
         Query query
     ) internal returns (NodeHandle memory) {}

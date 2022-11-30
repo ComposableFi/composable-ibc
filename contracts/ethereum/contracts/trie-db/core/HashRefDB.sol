@@ -5,8 +5,8 @@ import "../interfaces/ITrie.sol";
 
 contract HashRefDB is ITrie {
     function get(
-        bytes32 key,
-        bytes32 prefix,
+        bytes calldata key,
+        Prefix calldata prefix,
         Hasher hasher
     ) external returns (bytes32[] memory) {}
 

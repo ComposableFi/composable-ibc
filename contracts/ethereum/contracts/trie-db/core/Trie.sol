@@ -7,15 +7,23 @@ import "./LookUp.sol";
 import "./NibbleSlice.sol";
 
 contract Trie is ITrie {
+    LookUp lookUp;
+    NibbleSlice nibbleKey;
+
+    constructor(address lookUpAddress, address nibbleKeyAddress) {
+        lookUp = LookUp(lookUpAddress);
+        nibbleKey = NibbleSlice(nibbleKeyAddress);
+    }
+
     function getWith(
         HashRefDB db,
         bytes32 root,
         TrieLayout calldata layout,
-        bytes32 key,
+        bytes calldata key,
         Query query
     ) external {
-        NibbleSlice nibbleKey = new NibbleSlice(key);
-        LookUp lookUp = new LookUp(db, root, query, layout);
+        nibbleKey.setData(key);
+        lookUp.setTrieInfo(db, root, query, layout);
         lookUp.lookUpWithoutCache(key, nibbleKey);
     }
 }
