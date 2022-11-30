@@ -46,4 +46,13 @@ interface ITrie {
         NodeHandleType nodeHandleType;
         bytes32[] data;
     }
+
+    struct LookUpStruct {
+        NodeHandle nextNode;
+        Value value;
+        NodeHandle item;
+        NodeHandle[] children;
+        bytes32[] nodeData;
+        NodeType nodeType;
+    }
 }

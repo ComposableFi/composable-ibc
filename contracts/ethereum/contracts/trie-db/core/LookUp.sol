@@ -11,11 +11,11 @@ contract LookUp is ITrie {
     struct TrieDB {
         HashRefDB db;
         bytes32 root;
+        Query query;
+        TrieLayout layout;
     }
 
     TrieDB _trie;
-    Query _query;
-    TrieLayout _layout;
 
     constructor(
         HashRefDB db,
@@ -23,9 +23,7 @@ contract LookUp is ITrie {
         Query query,
         TrieLayout memory layout
     ) {
-        _trie = TrieDB(db, root);
-        _query = query;
-        _layout = layout;
+        _trie = TrieDB(db, root, query, layout);
     }
 
     function lookUpWithoutCache(bytes32 key, NibbleSlice nibbleKey)
@@ -35,86 +33,88 @@ contract LookUp is ITrie {
         uint256 keyNibbles = 0;
         NibbleSlice partialKey = nibbleKey;
         bytes32 hash = _trie.root;
-        Codec codec = new Codec(_layout.Codec);
+        Codec codec = new Codec(_trie.layout.Codec);
 
-        NodeHandle memory nextNode;
         NibbleSlice slice;
-        Value memory value;
-        NodeHandle memory item;
-        NodeHandle[] memory children;
-        bytes32[] memory nodeData;
         Node decoded;
-        NodeType nodeType;
+        LookUpStruct memory lookUp;
 
         while (true) {
             nibbleKey.mid(keyNibbles);
             nibbleKey.left();
 
-            nodeData = _trie.db.get(key, nibbleKey.getPrefix(), _layout.Hash);
+            lookUp.nodeData = _trie.db.get(
+                key,
+                nibbleKey.getPrefix(),
+                _trie.layout.Hash
+            );
 
-            for (uint256 nData; nData < nodeData.length; ++nData) {
-                decoded = codec.decode(nodeData[nData]);
-                nodeType = decoded.getNodeType();
+            for (uint256 nData; nData < lookUp.nodeData.length; ++nData) {
+                decoded = codec.decode(lookUp.nodeData[nData]);
+                lookUp.nodeType = decoded.getNodeType();
 
-                if (nodeType == NodeType.Leaf) {
-                    (slice, value) = decoded.Leaf();
+                if (lookUp.nodeType == NodeType.Leaf) {
+                    (slice, lookUp.value) = decoded.Leaf();
                     if (slice.getSlice() == partialKey.getSlice()) {
-                        nextNode = loadValue(
-                            value,
+                        lookUp.nextNode = loadValue(
+                            lookUp.value,
                             nibbleKey.originalDataAsPrefix(),
                             key,
                             _trie.db,
-                            _query
+                            _trie.query
                         );
                     } else continue;
-                } else if (nodeType == NodeType.Extension) {
-                    (slice, item) = decoded.Extension();
+                } else if (lookUp.nodeType == NodeType.Extension) {
+                    (slice, lookUp.item) = decoded.Extension();
                     if (partialKey.startWith(slice)) {
                         partialKey = partialKey.mid(slice.len());
                         keyNibbles += slice.len();
-                        nextNode = item;
+                        lookUp.nextNode = lookUp.item;
                     } else continue;
-                } else if (nodeType == NodeType.Branch) {
-                    (children, value) = decoded.Branch();
+                } else if (lookUp.nodeType == NodeType.Branch) {
+                    (lookUp.children, lookUp.value) = decoded.Branch();
                     if (partialKey.isEmpty()) {
-                        nextNode = loadValue(
-                            value,
+                        lookUp.nextNode = loadValue(
+                            lookUp.value,
                             nibbleKey.originalDataAsPrefix(),
                             key,
                             _trie.db,
-                            _query
+                            _trie.query
                         );
                     } else {
                         partialKey = partialKey.mid(1);
                         ++keyNibbles;
-                        nextNode = children[partialKey.at(0)];
+                        lookUp.nextNode = lookUp.children[partialKey.at(0)];
                     }
-                } else if (nodeType == NodeType.NibbledBranch) {
-                    (slice, children, value) = decoded.NibbledBranch();
+                } else if (lookUp.nodeType == NodeType.NibbledBranch) {
+                    (slice, lookUp.children, lookUp.value) = decoded
+                        .NibbledBranch();
                     if (!partialKey.startWith(slice)) {
                         continue;
                     }
                     if (partialKey.len() == slice.len()) {
-                        nextNode = loadValue(
-                            value,
+                        lookUp.nextNode = loadValue(
+                            lookUp.value,
                             nibbleKey.originalDataAsPrefix(),
                             key,
                             _trie.db,
-                            _query
+                            _trie.query
                         );
                     } else {
                         partialKey = partialKey.mid(slice.len() + 1);
                         keyNibbles += slice.len() + 1;
-                        nextNode = children[partialKey.at(slice.len())];
+                        lookUp.nextNode = lookUp.children[
+                            partialKey.at(slice.len())
+                        ];
                     }
-                } else if (nodeType == NodeType.Empty) {
+                } else if (lookUp.nodeType == NodeType.Empty) {
                     continue;
                 }
 
-                if (nextNode.nodeHandleType == NodeHandleType.Hash) {
-                    hash = decodeHash(_layout.Hash);
+                if (lookUp.nextNode.nodeHandleType == NodeHandleType.Hash) {
+                    hash = decodeHash(_trie.layout.Hash);
                     break;
-                } else nodeData = nextNode.data;
+                } else lookUp.nodeData = lookUp.nextNode.data;
             }
         }
         return true;
