@@ -34,7 +34,7 @@ interface ITrie {
 
     struct Value {
         ValueType valueType;
-        bytes32 data;
+        bytes data;
     }
 
     enum NodeHandleType {
@@ -44,7 +44,7 @@ interface ITrie {
 
     struct NodeHandle {
         NodeHandleType nodeHandleType;
-        bytes32[] data;
+        bytes data;
     }
 
     struct LookUpStruct {
@@ -52,8 +52,7 @@ interface ITrie {
         Value value;
         NodeHandle item;
         NodeHandle[] children;
-        bytes32[] nodeData;
-        NodeType nodeType;
+        bytes nodeData;
     }
 
     struct Prefix {

@@ -19,13 +19,23 @@ contract NibbleSlice is ITrie {
     }
 
     function left() external view returns (Prefix memory) {
-        // uint8 split = offset / NIBBLE_PER_BYTE;
+        uint8 split = offset / NIBBLE_PER_BYTE;
         uint8 ix = uint8(offset % NIBBLE_PER_BYTE);
-        // TODO: fix returns
+
+        // Check if the current nibble index is at the start of a byte
         if (ix == 0) {
-            return Prefix(data, 0);
+            return Prefix(data, split);
         } else {
-            return Prefix(data, 0);
+            // Create a new bytes variable with the left side of the original data
+            bytes memory leftData = new bytes(split + 1);
+            // Copy the left side of the original data into the new variable
+            for (uint256 i = 0; i < split; i++) {
+                leftData[i] = data[i];
+            }
+            // Set the last nibble of the new data to the left side of the original data
+            leftData[split] = data[split] >> (NIBBLE_PER_BYTE - ix);
+            // Return the Prefix instance with the new data
+            return Prefix(leftData, split + 1);
         }
     }
 
@@ -34,11 +44,11 @@ contract NibbleSlice is ITrie {
     //     return split & !PADDING_BITMASK;
     // }
 
-    function len() external returns (uint8) {}
+    function len() external view returns (uint8) {}
 
     function getPrefix() external returns (Prefix memory) {}
 
-    function getSlice() external returns (uint8[] memory) {}
+    function getSlice() external returns (NibbleSlice) {}
 
     function originalDataAsPrefix() external returns (Prefix memory) {}
 

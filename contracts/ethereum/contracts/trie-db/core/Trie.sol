@@ -5,14 +5,21 @@ import "../interfaces/ITrie.sol";
 import "./HashRefDB.sol";
 import "./LookUp.sol";
 import "./NibbleSlice.sol";
+import "./Codec.sol";
 
 contract Trie is ITrie {
     LookUp lookUp;
     NibbleSlice nibbleKey;
+    Codec codec;
 
-    constructor(address lookUpAddress, address nibbleKeyAddress) {
+    constructor(
+        address lookUpAddress,
+        address nibbleKeyAddress,
+        address codecAddress
+    ) {
         lookUp = LookUp(lookUpAddress);
         nibbleKey = NibbleSlice(nibbleKeyAddress);
+        codec = Codec(codecAddress);
     }
 
     function getWith(
@@ -23,7 +30,7 @@ contract Trie is ITrie {
         Query query
     ) external {
         nibbleKey.setData(key);
-        lookUp.setTrieInfo(db, root, query, layout);
+        lookUp.setTrieInfo(db, root, query, layout, codec);
         lookUp.lookUpWithoutCache(key, nibbleKey);
     }
 }
