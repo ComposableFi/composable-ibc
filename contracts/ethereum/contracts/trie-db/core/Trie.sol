@@ -8,11 +8,6 @@ import "./NibbleSlice.sol";
 import "./Codec.sol";
 
 contract Trie is ITrie {
-    LookUp lookUp;
-    NibbleSlice nibbleSlice;
-    Codec codec;
-    HashRefDB hashDb;
-
     struct TrieDB {
         HashRefDB db;
         bytes32 root;
@@ -22,26 +17,30 @@ contract Trie is ITrie {
         NibbleSlice nibbleSlice;
     }
 
-    constructor(
-        address lookUpAddress,
-        address nibbleSliceAddress,
-        address codecAddress,
-        address hashDbAddress
-    ) {
-        lookUp = LookUp(lookUpAddress);
-        nibbleSlice = NibbleSlice(nibbleSliceAddress);
-        codec = Codec(codecAddress);
-        hashDb = HashRefDB(hashDbAddress);
+    struct Addresses {
+        address lookUpAddress;
+        address nibbleSliceAddress;
+        address codecAddress;
+        address hashDbAddress;
     }
 
     function getWith(
+        Addresses calldata addresses,
         bytes32 root,
         TrieLayout calldata layout,
         uint8[] calldata key,
         Query query
     ) external {
+        LookUp lookUp = LookUp(addresses.lookUpAddress);
         lookUp.lookUpWithoutCache(
-            TrieDB(hashDb, root, query, layout, codec, nibbleSlice),
+            TrieDB(
+                HashRefDB(addresses.hashDbAddress),
+                root,
+                query,
+                layout,
+                Codec(addresses.codecAddress),
+                NibbleSlice(addresses.nibbleSliceAddress)
+            ),
             key
         );
     }

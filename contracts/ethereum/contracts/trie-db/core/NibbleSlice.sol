@@ -55,6 +55,7 @@ contract NibbleSlice is ITrie {
         pure
         returns (Slice memory)
     {
+        // TODO: check if this makes sense
         return Slice(slice.data, 0);
     }
 
