@@ -122,6 +122,8 @@ jobs:
         run: |
           cd scripts/parachain-register
           mkdir parachain
+          yarn build
+
           container_id=$(docker ps | awk '$2 ~ /parachain-2000-0/ {print $1}')
           docker cp "${container_id}:/app/genesis_state" ./parachain/
           docker cp "${container_id}:/app/genesis_wasm" ./parachain/
