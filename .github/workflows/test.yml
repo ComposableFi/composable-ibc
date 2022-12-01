@@ -64,6 +64,7 @@ jobs:
         run: |
           curl -fsSL https://deb.nodesource.com/setup_18.x | bash - &&\
           apt-get install -y nodejs
+          npm install --global yarn
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
