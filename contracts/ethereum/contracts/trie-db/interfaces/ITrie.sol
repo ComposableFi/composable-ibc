@@ -47,16 +47,17 @@ interface ITrie {
         bytes data;
     }
 
+    struct Slice {
+        bytes data;
+        uint8 offset;
+    }
+
     struct LookUpStruct {
         NodeHandle nextNode;
         Value value;
         NodeHandle item;
         NodeHandle[] children;
         bytes nodeData;
-    }
-
-    struct Prefix {
-        bytes data;
-        uint8 offset;
+        Slice slice;
     }
 }

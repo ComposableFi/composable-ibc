@@ -15,7 +15,7 @@ contract HashRefDB is ITrie {
 
     function get(
         bytes calldata key,
-        Prefix calldata prefix,
+        Slice calldata prefix,
         Hasher hash
     ) external view returns (bytes memory) {}
 }

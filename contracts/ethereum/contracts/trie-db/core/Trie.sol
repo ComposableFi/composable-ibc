@@ -9,16 +9,16 @@ import "./Codec.sol";
 
 contract Trie is ITrie {
     LookUp lookUp;
-    NibbleSlice nibbleKey;
+    NibbleSlice nibbleSlice;
     Codec codec;
 
     constructor(
         address lookUpAddress,
-        address nibbleKeyAddress,
+        address nibbleSliceAddress,
         address codecAddress
     ) {
         lookUp = LookUp(lookUpAddress);
-        nibbleKey = NibbleSlice(nibbleKeyAddress);
+        nibbleSlice = NibbleSlice(nibbleSliceAddress);
         codec = Codec(codecAddress);
     }
 
@@ -29,8 +29,7 @@ contract Trie is ITrie {
         bytes calldata key,
         Query query
     ) external {
-        nibbleKey.setData(key);
-        lookUp.setTrieInfo(db, root, query, layout, codec);
-        lookUp.lookUpWithoutCache(key, nibbleKey);
+        lookUp.setTrieInfo(db, root, query, layout, codec, nibbleSlice);
+        lookUp.lookUpWithoutCache(key);
     }
 }

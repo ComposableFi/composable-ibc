@@ -14,10 +14,8 @@ contract LookUp is ITrie {
         Query query;
         TrieLayout layout;
         Codec codec;
+        NibbleSlice nibbleSlice;
     }
-
-    // TODO: not sure about this
-    uint256 MAX_TRIE_DEPTH = 1000;
 
     // define a trieDB variable to store trie info
     TrieDB _trie;
@@ -28,30 +26,29 @@ contract LookUp is ITrie {
         bytes32 root,
         Query query,
         TrieLayout calldata layout,
-        Codec codec
+        Codec codec,
+        NibbleSlice nibbleSlice
     ) external {
-        _trie = TrieDB(db, root, query, layout, codec);
+        _trie = TrieDB(db, root, query, layout, codec, nibbleSlice);
     }
 
-    function lookUpWithoutCache(bytes calldata key, NibbleSlice nibbleKey)
-        external
-        returns (bool)
-    {
+    function lookUpWithoutCache(bytes calldata key) external returns (bool) {
         // keeps track of the number of nibbles in the key that have been traversed
         uint8 keyNibbles = 0;
         // keeps track of the remaining nibbles in the key to be looked up
-        NibbleSlice partialKey = nibbleKey;
+        Slice memory nibbleKey = Slice(key, 0);
+        Slice memory partialKey = nibbleKey;
 
-        NibbleSlice slice;
         Node decoded;
         LookUpStruct memory lookUp;
 
-        while (keyNibbles < nibbleKey.len()) {
-            nibbleKey.mid(keyNibbles);
+        // TODO: verify if this makes sense
+        while (keyNibbles < _trie.nibbleSlice.len(nibbleKey)) {
+            nibbleKey = _trie.nibbleSlice.mid(nibbleKey, keyNibbles);
             // get the data from the current node
             lookUp.nodeData = _trie.db.get(
                 key,
-                nibbleKey.left(),
+                _trie.nibbleSlice.left(nibbleKey),
                 _trie.layout.Hash
             );
 
@@ -72,13 +69,16 @@ contract LookUp is ITrie {
                 );
 
                 if (decoded.getNodeType() == NodeType.Leaf) {
-                    (slice, lookUp.value) = decoded.Leaf();
+                    (lookUp.slice, lookUp.value) = decoded.Leaf();
                     // check if the slice matches the partial key
-                    if (slice.getSlice() == partialKey.getSlice()) {
+                    if (
+                        keccak256(abi.encode(lookUp.slice)) ==
+                        keccak256(abi.encode(partialKey))
+                    ) {
                         // if the key is found, load the value and return
                         lookUp.nextNode = loadValue(
                             lookUp.value,
-                            nibbleKey.originalDataAsPrefix(),
+                            _trie.nibbleSlice.originalDataAsPrefix(nibbleKey),
                             key
                         );
                         return true;
@@ -87,13 +87,16 @@ contract LookUp is ITrie {
                         break;
                     }
                 } else if (decoded.getNodeType() == NodeType.Extension) {
-                    (slice, lookUp.item) = decoded.Extension();
+                    (lookUp.slice, lookUp.item) = decoded.Extension();
                     // check if the partial key to remove the traversed slice
-                    if (partialKey.startWith(slice)) {
+                    if (_trie.nibbleSlice.startWith(partialKey, lookUp.slice)) {
                         // update the partial key to remove the traversed slice
-                        partialKey.mid(slice.len());
+                        partialKey = _trie.nibbleSlice.mid(
+                            partialKey,
+                            _trie.nibbleSlice.len(lookUp.slice)
+                        );
                         // update the key nibbles counter
-                        keyNibbles += slice.len();
+                        keyNibbles += _trie.nibbleSlice.len(lookUp.slice);
                         // set the next node to the item in the extension node
                         lookUp.nextNode = lookUp.item;
                     } else {
@@ -104,43 +107,55 @@ contract LookUp is ITrie {
                     // get the children and value from the branch node
                     (lookUp.children, lookUp.value) = decoded.Branch();
                     // check if the partial key is empty
-                    if (partialKey.isEmpty()) {
+                    if (_trie.nibbleSlice.isEmpty(partialKey)) {
                         // if the partial key is empty, load the value from the branch node
                         lookUp.nextNode = loadValue(
                             lookUp.value,
-                            nibbleKey.originalDataAsPrefix(),
+                            _trie.nibbleSlice.originalDataAsPrefix(nibbleKey),
                             key
                         );
                     } else {
                         // if the partial key is not empty, update the partial key to remove the first nibble
-                        partialKey.mid(1);
+                        partialKey = _trie.nibbleSlice.mid(partialKey, 1);
                         // increment the key nibbles counter
                         ++keyNibbles;
                         // set the next Node to the child at the first nibble of the partial key
-                        lookUp.nextNode = lookUp.children[partialKey.at(0)];
+                        lookUp.nextNode = lookUp.children[
+                            _trie.nibbleSlice.at(partialKey, 0)
+                        ];
                     }
                 } else if (decoded.getNodeType() == NodeType.NibbledBranch) {
-                    (slice, lookUp.children, lookUp.value) = decoded
+                    (lookUp.slice, lookUp.children, lookUp.value) = decoded
                         .NibbledBranch();
-                    if (!partialKey.startWith(slice)) {
+                    if (
+                        !_trie.nibbleSlice.startWith(partialKey, lookUp.slice)
+                    ) {
                         // if the partial key does not start with the slice, move to the next inline node
                         break;
                     }
-                    if (partialKey.len() == slice.len()) {
+                    if (
+                        _trie.nibbleSlice.len(partialKey) ==
+                        _trie.nibbleSlice.len(lookUp.slice)
+                    ) {
                         // if the partial key has the same length as the slice,
                         // the value in the nibbled branch node is the value of the key
                         lookUp.nextNode = loadValue(
                             lookUp.value,
-                            nibbleKey.originalDataAsPrefix(),
+                            _trie.nibbleSlice.originalDataAsPrefix(nibbleKey),
                             key
                         );
                     } else {
                         // if the partial key is longer than the slice,
                         // the next node is the child node at the index of the first nibble
                         // after the slice in the partial key
-                        partialKey.mid(slice.len());
-                        keyNibbles += slice.len();
-                        lookUp.nextNode = lookUp.children[partialKey.at(0)];
+                        partialKey = _trie.nibbleSlice.mid(
+                            partialKey,
+                            _trie.nibbleSlice.len(lookUp.slice)
+                        );
+                        keyNibbles += _trie.nibbleSlice.len(lookUp.slice);
+                        lookUp.nextNode = lookUp.children[
+                            _trie.nibbleSlice.at(partialKey, 0)
+                        ];
                     }
                 } else if (decoded.getNodeType() == NodeType.Empty) {
                     // if the node type is empty, the key is not in the trie
@@ -161,7 +176,7 @@ contract LookUp is ITrie {
 
     function loadValue(
         Value memory value,
-        Prefix memory prefix,
+        Slice memory prefix,
         bytes calldata key
     ) internal returns (NodeHandle memory) {
         // Check if the valueType is Inline or Node

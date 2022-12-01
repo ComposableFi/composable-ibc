@@ -16,11 +16,11 @@ contract Node is ITrie {
         return nodeType;
     }
 
-    function Leaf() external returns (NibbleSlice slice, Value memory value) {}
+    function Leaf() external returns (Slice memory slice, Value memory value) {}
 
     function Extension()
         external
-        returns (NibbleSlice slice, NodeHandle memory nodeHandle)
+        returns (Slice memory slice, NodeHandle memory nodeHandle)
     {}
 
     function Branch()
@@ -31,7 +31,7 @@ contract Node is ITrie {
     function NibbledBranch()
         external
         returns (
-            NibbleSlice slice,
+            Slice memory slice,
             NodeHandle[] memory nodeHandle,
             Value memory value
         )
