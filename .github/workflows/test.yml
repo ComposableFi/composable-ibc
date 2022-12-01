@@ -60,6 +60,11 @@ jobs:
       - name: Rustup show
         run: $HOME/.cargo/bin/rustup show
 
+      - name: Install Node.js
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_18.x | bash - &&\
+          apt-get install -y nodejs
+
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
         with:
@@ -114,32 +119,35 @@ jobs:
 
       - name: Register parachains
         run: |
+          cd scripts/parachain-register
           mkdir parachain
           container_id=$(docker ps | awk '$2 ~ /parachain-2000-0/ {print $1}')
           docker cp "${container_id}:/app/genesis_state" ./parachain/
           docker cp "${container_id}:/app/genesis_wasm" ./parachain/
           ls -l ./parachain/
-          docker run \
-            --rm \
-            -i \
-            --network parachain-launch_default \
-            -v$(pwd)/parachain:/build/parachain \
-            -eNODE_URL=ws://relaychain-alice:9944 \
-            -ePARA_ID=2100 \
-            andor/parachain-register
+          NODE_URL=ws://127.0.0.1:9944 PARA_ID=2100 yarn start
+          # docker run \
+          #   --rm \
+          #   -i \
+          #   --network parachain-launch_default \
+          #   -v$(pwd)/parachain:/build/parachain \
+          #   -eNODE_URL=ws://relaychain-alice:9944 \
+          #   -ePARA_ID=2100 \
+          #   andor/parachain-register
 
           container_id=$(docker ps | awk '$2 ~ /parachain-2001-0/ {print $1}')
           docker cp "${container_id}:/app/genesis_state" ./parachain/
           docker cp "${container_id}:/app/genesis_wasm" ./parachain/
           ls -l ./parachain/
-          docker run \
-            --rm \
-            -i \
-            --network parachain-launch_default \
-            -v$(pwd)/parachain:/build/parachain \
-            -eNODE_URL=ws://relaychain-alice:9944 \
-            -ePARA_ID=2101 \
-            andor/parachain-register
+          NODE_URL=ws://127.0.0.1:9944 PARA_ID=2101 yarn start
+          # docker run \
+          #   --rm \
+          #   -i \
+          #   --network parachain-launch_default \
+          #   -v$(pwd)/parachain:/build/parachain \
+          #   -eNODE_URL=ws://relaychain-alice:9944 \
+          #   -ePARA_ID=2101 \
+          #   andor/parachain-register
 
       - name: Check that subxt-generated is up to date
         run: |
