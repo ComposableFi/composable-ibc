@@ -49,11 +49,11 @@ impl Default for Args {
 		let para = std::env::var("PARA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
 
 		Args {
-			chain_a: format!("ws://{para}:9988"),
-			chain_b: format!("ws://{para}:9188"),
-			relay_chain: format!("ws://{relay}:9944"),
-			para_id_a: 2001,
-			para_id_b: 2000,
+			chain_a: format!("ws://{}:9988", para),
+			chain_b: format!("ws://{}:9188", para),
+			relay_chain: format!("ws://{}:9944", relay),
+			para_id_a: 2101,
+			para_id_b: 2100,
 			connection_prefix_a: "ibc/".to_string(),
 			connection_prefix_b: "ibc/".to_string(),
 		}
