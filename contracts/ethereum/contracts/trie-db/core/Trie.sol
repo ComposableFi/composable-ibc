@@ -11,25 +11,38 @@ contract Trie is ITrie {
     LookUp lookUp;
     NibbleSlice nibbleSlice;
     Codec codec;
+    HashRefDB hashDb;
+
+    struct TrieDB {
+        HashRefDB db;
+        bytes32 root;
+        Query query;
+        TrieLayout layout;
+        Codec codec;
+        NibbleSlice nibbleSlice;
+    }
 
     constructor(
         address lookUpAddress,
         address nibbleSliceAddress,
-        address codecAddress
+        address codecAddress,
+        address hashDbAddress
     ) {
         lookUp = LookUp(lookUpAddress);
         nibbleSlice = NibbleSlice(nibbleSliceAddress);
         codec = Codec(codecAddress);
+        hashDb = HashRefDB(hashDbAddress);
     }
 
     function getWith(
-        HashRefDB db,
         bytes32 root,
         TrieLayout calldata layout,
         uint8[] calldata key,
         Query query
     ) external {
-        lookUp.setTrieInfo(db, root, query, layout, codec, nibbleSlice);
-        lookUp.lookUpWithoutCache(key);
+        lookUp.lookUpWithoutCache(
+            TrieDB(hashDb, root, query, layout, codec, nibbleSlice),
+            key
+        );
     }
 }

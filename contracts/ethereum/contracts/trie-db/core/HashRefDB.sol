@@ -5,13 +5,7 @@ import "../interfaces/ITrie.sol";
 import "./Codec.sol";
 
 contract HashRefDB is ITrie {
-    Codec codec;
-
     mapping(bytes32 => bytes) private nodes;
-
-    constructor(address codecAddress) {
-        codec = Codec(codecAddress);
-    }
 
     function get(
         uint8[] calldata key,

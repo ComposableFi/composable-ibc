@@ -50,14 +50,13 @@ contract NibbleSlice is ITrie {
         return Slice(slicedArray, s.offset);
     }
 
-    function getPrefix() external returns (Slice memory) {}
-
-    function getSlice() external returns (NibbleSlice) {}
-
     function originalDataAsPrefix(Slice memory slice)
         external
+        pure
         returns (Slice memory)
-    {}
+    {
+        return Slice(slice.data, 0);
+    }
 
     function startWith(Slice memory partialSlice, Slice memory slice)
         external
@@ -66,8 +65,6 @@ contract NibbleSlice is ITrie {
     {
         return commonPrefix(partialSlice, slice) == slice.data.length;
     }
-
-    function isEmpty() external returns (bool) {}
 
     function at(Slice memory s, uint256 i) public pure returns (uint8) {
         // check if the given index is within the bounds of the slice data
@@ -78,10 +75,12 @@ contract NibbleSlice is ITrie {
         uint256 pad = (s.offset + i) % NIBBLE_PER_BYTE;
         // Return the nibble value by applying the padding mask to the byte at index `ix`.
 
-        if (pad == 1) {
-            return s.data[ix] & PADDING_BITMASK;
+        if (pad == 0) {
+            return
+                (s.data[ix] & (PADDING_BITMASK << BIT_PER_NIBBLE)) >>
+                BIT_PER_NIBBLE;
         } else {
-            return s.data[ix] & (PADDING_BITMASK << BIT_PER_NIBBLE);
+            return s.data[ix] & PADDING_BITMASK;
         }
     }
 

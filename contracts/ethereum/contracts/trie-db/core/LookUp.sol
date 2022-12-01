@@ -6,33 +6,14 @@ import "./Codec.sol";
 import "./Node.sol";
 import "./NibbleSlice.sol";
 import "./HashRefDB.sol";
+import "./Trie.sol";
 
 contract LookUp is ITrie {
-    struct TrieDB {
-        HashRefDB db;
-        bytes32 root;
-        Query query;
-        TrieLayout layout;
-        Codec codec;
-        NibbleSlice nibbleSlice;
-    }
-
-    // define a trieDB variable to store trie info
-    TrieDB _trie;
-
-    // define the function to set the trie information
-    function setTrieInfo(
-        HashRefDB db,
-        bytes32 root,
-        Query query,
-        TrieLayout calldata layout,
-        Codec codec,
-        NibbleSlice nibbleSlice
-    ) external {
-        _trie = TrieDB(db, root, query, layout, codec, nibbleSlice);
-    }
-
-    function lookUpWithoutCache(uint8[] calldata key) external returns (bool) {
+    function lookUpWithoutCache(Trie.TrieDB memory trie, uint8[] calldata key)
+        external
+        returns (bool)
+    {
+        Trie.TrieDB memory _trie = trie;
         // keeps track of the number of nibbles in the key that have been traversed
         uint8 keyNibbles = 0;
         // keeps track of the remaining nibbles in the key to be looked up
@@ -79,7 +60,8 @@ contract LookUp is ITrie {
                         lookUp.nextNode = loadValue(
                             lookUp.value,
                             _trie.nibbleSlice.originalDataAsPrefix(nibbleKey),
-                            key
+                            key,
+                            _trie
                         );
                         return true;
                     } else {
@@ -112,7 +94,8 @@ contract LookUp is ITrie {
                         lookUp.nextNode = loadValue(
                             lookUp.value,
                             _trie.nibbleSlice.originalDataAsPrefix(nibbleKey),
-                            key
+                            key,
+                            _trie
                         );
                     } else {
                         // if the partial key is not empty, update the partial key to remove the first nibble
@@ -142,7 +125,8 @@ contract LookUp is ITrie {
                         lookUp.nextNode = loadValue(
                             lookUp.value,
                             _trie.nibbleSlice.originalDataAsPrefix(nibbleKey),
-                            key
+                            key,
+                            _trie
                         );
                     } else {
                         // if the partial key is longer than the slice,
@@ -177,7 +161,8 @@ contract LookUp is ITrie {
     function loadValue(
         Value memory value,
         Slice memory prefix,
-        uint8[] calldata key
+        uint8[] calldata key,
+        Trie.TrieDB memory _trie
     ) internal returns (NodeHandle memory) {
         // Check if the valueType is Inline or Node
         require(
