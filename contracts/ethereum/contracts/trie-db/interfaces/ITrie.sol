@@ -48,7 +48,7 @@ interface ITrie {
     }
 
     struct Slice {
-        bytes data;
+        uint8[] data;
         uint8 offset;
     }
 

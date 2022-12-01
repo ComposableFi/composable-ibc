@@ -32,7 +32,7 @@ contract LookUp is ITrie {
         _trie = TrieDB(db, root, query, layout, codec, nibbleSlice);
     }
 
-    function lookUpWithoutCache(bytes calldata key) external returns (bool) {
+    function lookUpWithoutCache(uint8[] calldata key) external returns (bool) {
         // keeps track of the number of nibbles in the key that have been traversed
         uint8 keyNibbles = 0;
         // keeps track of the remaining nibbles in the key to be looked up
@@ -177,7 +177,7 @@ contract LookUp is ITrie {
     function loadValue(
         Value memory value,
         Slice memory prefix,
-        bytes calldata key
+        uint8[] calldata key
     ) internal returns (NodeHandle memory) {
         // Check if the valueType is Inline or Node
         require(

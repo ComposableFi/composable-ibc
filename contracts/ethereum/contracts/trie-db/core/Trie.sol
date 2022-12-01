@@ -26,7 +26,7 @@ contract Trie is ITrie {
         HashRefDB db,
         bytes32 root,
         TrieLayout calldata layout,
-        bytes calldata key,
+        uint8[] calldata key,
         Query query
     ) external {
         lookUp.setTrieInfo(db, root, query, layout, codec, nibbleSlice);
