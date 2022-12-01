@@ -118,6 +118,7 @@ jobs:
           container_id=$(docker ps | awk '$2 ~ /parachain-2000-0/ {print $1}')
           docker cp "${container_id}:/app/genesis_state" ./parachain/
           docker cp "${container_id}:/app/genesis_wasm" ./parachain/
+          ls ./parachain/
           docker run \
             --rm \
             -i \
@@ -130,6 +131,7 @@ jobs:
           container_id=$(docker ps | awk '$2 ~ /parachain-2001-0/ {print $1}')
           docker cp "${container_id}:/app/genesis_state" ./parachain/
           docker cp "${container_id}:/app/genesis_wasm" ./parachain/
+          ls ./parachain/
           docker run \
             --rm \
             -i \
