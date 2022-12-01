@@ -119,7 +119,7 @@ jobs:
           docker cp "${container_id}:/app/genesis_wasm" ./
           docker run \
             --rm \
-            -ti \
+            -i \
             --network parachain-launch_default \
             -v$(pwd)/genesis_state:/build/parachain/genesis_state \
             -v$(pwd)/genesis_wasm:/build/parachain/genesis_wasm \
@@ -132,7 +132,7 @@ jobs:
           docker cp "${container_id}:/app/genesis_wasm" ./
           docker run \
             --rm \
-            -ti \
+            -i \
             --network parachain-launch_default \
             -v$(pwd)/genesis_state:/build/parachain/genesis_state \
             -v$(pwd)/genesis_wasm:/build/parachain/genesis_wasm \
