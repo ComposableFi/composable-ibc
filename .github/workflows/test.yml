@@ -128,7 +128,7 @@ jobs:
           docker cp "${container_id}:/app/genesis_state" ./parachain/
           docker cp "${container_id}:/app/genesis_wasm" ./parachain/
           ls -l ./parachain/
-          NODE_URL=ws://127.0.0.1:9944 PARA_ID=2100 yarn start
+          NODE_URL="ws://${RELAY_HOST}:9944" PARA_ID=2100 yarn start
           # docker run \
           #   --rm \
           #   -i \
@@ -142,7 +142,7 @@ jobs:
           docker cp "${container_id}:/app/genesis_state" ./parachain/
           docker cp "${container_id}:/app/genesis_wasm" ./parachain/
           ls -l ./parachain/
-          NODE_URL=ws://127.0.0.1:9944 PARA_ID=2101 yarn start
+          NODE_URL="ws://${RELAY_HOST}:9944" PARA_ID=2101 yarn start
           # docker run \
           #   --rm \
           #   -i \
