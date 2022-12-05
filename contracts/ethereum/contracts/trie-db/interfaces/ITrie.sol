@@ -60,4 +60,16 @@ interface ITrie {
         bytes nodeData;
         Slice slice;
     }
+
+    struct NodeChild {
+        bytes key;
+        bool isHash;
+        bytes value;
+    }
+
+    struct NodeStruct {
+        NodeChild[] children;
+        bytes value;
+        NodeType nodeType;
+    }
 }
