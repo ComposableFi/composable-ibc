@@ -65,7 +65,7 @@ pub struct Cmd {
 	version: Option<String>,
 	/// New config path to avoid overriding existing configuration
 	#[clap(long)]
-	new_config: Option<String>,
+	pub new_config: Option<String>,
 }
 
 impl Cmd {
