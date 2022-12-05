@@ -8,7 +8,7 @@ contract HashRefDB is ITrie {
     mapping(bytes32 => bytes) private values;
 
     function get(
-        uint8[] calldata hash,
+        bytes32 hash,
         Slice calldata nibble_key,
         Hasher hasher
     ) public view returns (bytes memory value) {
@@ -38,6 +38,6 @@ contract HashRefDB is ITrie {
 contract Query is ITrie {
     function decode(Hasher hasher, bytes calldata data)
         external
-        returns (NodeHandle memory)
+        returns (bytes memory)
     {}
 }

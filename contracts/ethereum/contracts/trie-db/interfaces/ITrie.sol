@@ -27,23 +27,8 @@ interface ITrie {
         NibbledBranch
     }
 
-    enum ValueType {
-        Inline,
-        Node
-    }
-
     struct Value {
-        ValueType valueType;
-        bytes data;
-    }
-
-    enum NodeHandleType {
-        Hash,
-        Inline
-    }
-
-    struct NodeHandle {
-        NodeHandleType nodeHandleType;
+        bool isInline;
         bytes data;
     }
 
@@ -61,14 +46,14 @@ interface ITrie {
         Slice slice;
     }
 
-    struct NodeChild {
+    struct NodeHandle {
         bytes key;
         bool isHash;
         bytes value;
     }
 
     struct NodeStruct {
-        NodeChild[] children;
+        NodeHandle[] children;
         bytes value;
         NodeType nodeType;
     }

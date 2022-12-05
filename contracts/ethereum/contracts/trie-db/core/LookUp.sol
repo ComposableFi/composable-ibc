@@ -38,6 +38,8 @@ contract LookUp is ITrie {
         // keeps track of the remaining nibbles in the key to be looked up
         Slice memory nibbleKey = Slice(key, 0);
         Slice memory partialKey = nibbleKey;
+        bytes32 hash = root;
+        bytes memory result;
 
         NodeStruct memory decoded;
         LookUpStruct memory lookUp;
@@ -47,14 +49,14 @@ contract LookUp is ITrie {
             nibbleKey = nibbleSlice.mid(nibbleKey, keyNibbles);
             // get the data from the current node
             lookUp.nodeData = db.get(
-                key,
+                hash,
                 nibbleSlice.left(nibbleKey),
                 layout.Hash
             );
 
             // check if the data is not found in the database
             if (lookUp.nodeData.length == 0) {
-                revert("incomplete database");
+                return (false, "");
             }
 
             uint256 nodeDataIdx = 0;
@@ -65,22 +67,27 @@ contract LookUp is ITrie {
                     lookUp.nodeData[nodeDataIdx],
                     layout.Codec
                 );
+                nodeDataIdx++;
 
                 if (node.getNodeType(decoded) == NodeType.Leaf) {
                     (lookUp.slice, lookUp.value) = node.Leaf(decoded);
                     // check if the slice matches the partial key
                     if (
-                        keccak256(abi.encode(lookUp.slice)) ==
-                        keccak256(abi.encode(partialKey))
+                        keccak256(
+                            abi.encode(lookUp.slice.data, lookUp.slice.offset)
+                        ) ==
+                        keccak256(
+                            abi.encode(partialKey.data, partialKey.offset)
+                        )
                     ) {
                         // if the key is found, load the value and return
-                        lookUp.nextNode = loadValue(
+                        result = loadValue(
                             lookUp.value,
                             nibbleSlice.originalDataAsPrefix(nibbleKey),
-                            key,
+                            hash,
                             layout
                         );
-                        return (true, lookUp.nextNode.data);
+                        return (true, result);
                     } else {
                         // if the slice does not match the partial key, move to the next inline node
                         break;
@@ -103,17 +110,16 @@ contract LookUp is ITrie {
                         break;
                     }
                 } else if (node.getNodeType(decoded) == NodeType.Branch) {
-                    // get the children and value from the branch node
                     (lookUp.children, lookUp.value) = node.Branch(decoded);
-                    // check if the partial key is empty
                     if (nibbleSlice.isEmpty(partialKey)) {
                         // if the partial key is empty, load the value from the branch node
-                        lookUp.nextNode = loadValue(
+                        result = loadValue(
                             lookUp.value,
                             nibbleSlice.originalDataAsPrefix(nibbleKey),
-                            key,
+                            hash,
                             layout
                         );
+                        return (true, result);
                     } else {
                         // if the partial key is not empty, update the partial key to remove the first nibble
                         partialKey = nibbleSlice.mid(partialKey, 1);
@@ -138,12 +144,13 @@ contract LookUp is ITrie {
                     ) {
                         // if the partial key has the same length as the slice,
                         // the value in the nibbled branch node is the value of the key
-                        lookUp.nextNode = loadValue(
+                        result = loadValue(
                             lookUp.value,
                             nibbleSlice.originalDataAsPrefix(nibbleKey),
-                            key,
+                            hash,
                             layout
                         );
+                        return (true, result);
                     } else {
                         // if the partial key is longer than the slice,
                         // the next node is the child node at the index of the first nibble
@@ -159,46 +166,47 @@ contract LookUp is ITrie {
                     }
                 } else if (node.getNodeType(decoded) == NodeType.Empty) {
                     // if the node type is empty, the key is not in the trie
-                    revert("key not found");
+                    return (false, "");
                 }
-                // if (lookUp.nextNode.nodeHandleType == NodeHandleType.Hash) {
-                //     hash = decodeHash(_trie.layout.Hash, lookUp.nextNode.data);
-                //     break;
-                // } else lookUp.nodeData = lookUp.nextNode.data;
+                if (lookUp.nextNode.isHash) {
+                    hash = decodeHash(lookUp.nextNode.value);
+                    break;
+                } else lookUp.nodeData = lookUp.nextNode.value;
             }
-            // if (partialKey.isEmpty()) {
-            //     // end of the trie reached
-            //     break;
-            // }
         }
-        revert("key not found");
+        return (false, "");
     }
 
     function loadValue(
         Value memory value,
         Slice memory prefix,
-        uint8[] calldata key,
+        bytes32 hash,
         TrieLayout calldata layout
-    ) internal returns (NodeHandle memory) {
-        // Check if the valueType is Inline or Node
-        require(
-            value.valueType == ValueType.Inline ||
-                value.valueType == ValueType.Node,
-            "Invalid valueType"
-        );
-        if (value.valueType == ValueType.Inline) {
+    ) internal returns (bytes memory) {
+        if (value.isInline) {
             // if the value is inline, decode it and return the result
             return query.decode(layout.Hash, value.data);
         } else {
             // if the value is a node, get the hash value and lookup the value in the db
-            bytes memory v = db.get(key, prefix, layout.Hash);
+            bytes memory v = db.get(hash, prefix, layout.Hash);
             // If a value is found, decode and return the result
             return query.decode(layout.Hash, v);
         }
     }
 
-    function decodeHash(Hasher hasher, bytes memory data)
-        internal
-        returns (bytes32)
-    {}
+    function decodeHash(bytes memory data) public pure returns (bytes32) {
+        if (data.length != 32) {
+            return 0x0;
+        }
+        bytes32 hash = 0x0;
+
+        // copy the data from the input slice to the hash variable
+        for (uint256 i = 0; i < data.length; i++) {
+            assembly {
+                let b := mload(add(data, i))
+                mstore(add(hash, i), b)
+            }
+        }
+        return hash;
+    }
 }
