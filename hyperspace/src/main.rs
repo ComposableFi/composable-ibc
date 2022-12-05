@@ -30,19 +30,22 @@ async fn main() -> Result<()> {
 		Subcommand::Relay(cmd) => cmd.run().await,
 		Subcommand::CreateClients(cmd) => {
 			let new_config = cmd.create_clients().await?;
-			tokio::fs::write(cmd.config.parse::<PathBuf>()?, toml::to_string(&new_config)?)
+			let config = cmd.new_config.unwrap_or_else(cmd.config);
+			tokio::fs::write(config.parse::<PathBuf>()?, toml::to_string(&new_config)?)
 				.await
 				.map_err(|e| anyhow!(e))
 		},
 		Subcommand::CreateConnection(cmd) => {
 			let new_config = cmd.create_connection().await?;
-			tokio::fs::write(cmd.config.parse::<PathBuf>()?, toml::to_string(&new_config)?)
+			let config = cmd.new_config.unwrap_or_else(cmd.config);
+			tokio::fs::write(config.parse::<PathBuf>()?, toml::to_string(&new_config)?)
 				.await
 				.map_err(|e| anyhow!(e))
 		},
 		Subcommand::CreateChannel(cmd) => {
 			let new_config = cmd.create_channel().await?;
-			tokio::fs::write(cmd.config.parse::<PathBuf>()?, toml::to_string(&new_config)?)
+			let config = cmd.new_config.unwrap_or_else(cmd.config);
+			tokio::fs::write(config.parse::<PathBuf>()?, toml::to_string(&new_config)?)
 				.await
 				.map_err(|e| anyhow!(e))
 		},

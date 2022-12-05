@@ -63,6 +63,9 @@ pub struct Cmd {
 	/// Channel version
 	#[clap(long)]
 	version: Option<String>,
+	/// New config path to avoid overriding existing configuration
+	#[clap(long)]
+	new_config: Option<String>,
 }
 
 impl Cmd {
