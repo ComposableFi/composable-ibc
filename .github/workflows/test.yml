@@ -60,12 +60,6 @@ jobs:
       - name: Rustup show
         run: $HOME/.cargo/bin/rustup show
 
-      - name: Install Node.js
-        run: |
-          curl -fsSL https://deb.nodesource.com/setup_18.x | bash - &&\
-          apt-get install -y nodejs
-          npm install --global yarn
-
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
         with:
@@ -116,23 +110,6 @@ jobs:
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml up -d --build;
           ./scripts/wait_for_tcp_port_opening.sh $RELAY_HOST 9944;
           ./scripts/wait_for_tcp_port_opening.sh $PARA_HOST 9188;
-          ./docker-compose -f scripts/parachain-launch/docker-compose.yml logs
-
-      - name: Register parachains
-        run: |
-          cd scripts/parachain-register
-          mkdir parachain
-          yarn build
-
-          container_id=$(docker ps | awk '$2 ~ /parachain-2000-0/ {print $1}')
-          docker cp "${container_id}:/app/genesis_state" ./parachain/
-          docker cp "${container_id}:/app/genesis_wasm" ./parachain/
-          NODE_URL="ws://${RELAY_HOST}:9944" PARA_ID=2100 yarn start
-
-          container_id=$(docker ps | awk '$2 ~ /parachain-2001-0/ {print $1}')
-          docker cp "${container_id}:/app/genesis_state" ./parachain/
-          docker cp "${container_id}:/app/genesis_wasm" ./parachain/
-          NODE_URL="ws://${RELAY_HOST}:9944" PARA_ID=2101 yarn start
 
       - name: Check that subxt-generated is up to date
         run: |
@@ -140,8 +117,7 @@ jobs:
 
       - name: Run all unit tests
         run: |
-          ./docker-compose -f scripts/parachain-launch/docker-compose.yml logs -f &
-          SKIP_WASM_BUILD=1 cargo +nightly test run --locked --release --workspace --exclude ibc-derive --exclude hyperspace-testsuite -- --nocapture
+          SKIP_WASM_BUILD=1 cargo +nightly nextest run --locked --release --workspace --exclude ibc-derive --exclude hyperspace-testsuite
 
       - name: Run hyperspace integration tests
         run: |
