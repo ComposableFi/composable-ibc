@@ -116,6 +116,7 @@ jobs:
       - name: Run local parachain cluster
         run:
           DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest;
+          eval "$(.fnm/fnm env --use-on-cd)"
           yarn --cwd ./scripts/parachain-launch dev;
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml up -d --build;
           ./scripts/wait_for_tcp_port_opening.sh $RELAY_HOST 9944;
