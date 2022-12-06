@@ -49,7 +49,8 @@ jobs:
             clang \
             libclang-dev \
             pkg-config \
-            libssl-dev
+            libssl-dev \
+            unzip
 
           # Get yarn
           curl -fsSL https://fnm.vercel.app/install | bash -s -- --install-dir "./.fnm" --skip-shell
