@@ -557,7 +557,7 @@ where
 			let light_client_state = prover
 				.initialize_client_state()
 				.await
-				.map_err(|_| Error::from("Error constructing client state".to_string()))?;
+				.map_err(|e| Error::from(format!("Error constructing client state: {e}")))?;
 
 			let heads_addr = polkadot::api::storage().paras().heads(
 				&polkadot::api::runtime_types::polkadot_parachain::primitives::Id(self.para_id),
