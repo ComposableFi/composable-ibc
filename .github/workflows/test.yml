@@ -51,6 +51,13 @@ jobs:
             pkg-config \
             libssl-dev
 
+          # Get yarn from
+          curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+          echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+
+          apt update -y
+          apt install -y yarn
+
           # Get Rust
           curl https://sh.rustup.rs -sSf | bash -s -- -y
           $HOME/.cargo/bin/rustup toolchain install nightly
@@ -107,6 +114,8 @@ jobs:
       - name: Run local parachain cluster
         run:
           DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest;
+          yarn --cwd ./scripts/parachain-launch install;
+          yarn --cwd ./scripts/parachain-launch dev;
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml up -d --build;
           ./scripts/wait_for_tcp_port_opening.sh $RELAY_HOST 9944;
           ./scripts/wait_for_tcp_port_opening.sh $PARA_HOST 9188;
