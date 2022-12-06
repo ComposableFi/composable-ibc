@@ -27,11 +27,13 @@ use ibc::{
 	core::ics24_host::identifier::{ChannelId, PortId},
 };
 use ibc_primitives::get_channel_escrow_address;
+use sp_core::crypto::AccountId32;
 use sp_runtime::traits::IdentifyAccount;
 
 impl<T: Config + Send + Sync> Ics20Reader for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	type AccountId = T::AccountIdConversion;
 
@@ -63,6 +65,7 @@ where
 impl<T: Config + Send + Sync> Ics20Keeper for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	type AccountId = T::AccountIdConversion;
 }
@@ -70,6 +73,7 @@ where
 impl<T: Config + Send + Sync> Ics20Context for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	type AccountId = T::AccountIdConversion;
 }
@@ -78,6 +82,7 @@ impl<T> BankKeeper for Context<T>
 where
 	T: Config + Send + Sync,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	type AccountId = T::AccountIdConversion;
 

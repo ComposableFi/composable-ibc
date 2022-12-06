@@ -33,12 +33,13 @@ use ibc::{
 		},
 		ics24_host::identifier::{ChannelId, ConnectionId, PortId},
 		ics26_routing::context::{
-			Acknowledgement as GenericAcknowledgement, Module, ModuleOutputBuilder, OnRecvPacketAck,
+			Acknowledgement as GenericAcknowledgement, Module, ModuleCallbackContext,
+			ModuleOutputBuilder,
 		},
 	},
 	signer::Signer,
 };
-use ibc_primitives::{port_id_from_bytes, CallbackWeight, IbcHandler, SendPacketData};
+use ibc_primitives::{port_id_from_bytes, CallbackWeight, HandlerMessage, IbcHandler, Timeout};
 use sp_std::{marker::PhantomData, prelude::*};
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -86,7 +87,7 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// ibc subsystem
-		type IbcHandler: ibc_primitives::IbcHandler;
+		type IbcHandler: ibc_primitives::IbcHandler<<Self as frame_system::Config>::AccountId>;
 	}
 
 	// Simple declaration of the `Pallet` type. It is placeholder we use to implement traits and
@@ -133,15 +134,16 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	pub fn send_ping_impl(params: SendPingParams) -> Result<(), ibc_primitives::Error> {
 		let channel_id = ChannelId::new(params.channel_id);
-		let send_packet = SendPacketData {
+		T::IbcHandler::handle_message(HandlerMessage::SendPacket {
 			data: b"ping".to_vec(),
-			timeout_height_offset: params.timeout_height_offset,
-			timeout_timestamp_offset: params.timeout_timestamp_offset,
+			timeout: Timeout::Offset {
+				height: Some(params.timeout_height_offset),
+				timestamp: Some(params.timeout_timestamp_offset),
+			},
 			port_id: port_id_from_bytes(PORT_ID.as_bytes().to_vec())
 				.expect("Valid port id expected"),
 			channel_id,
-		};
-		T::IbcHandler::send_packet(send_packet)
+		})
 	}
 }
 
@@ -173,6 +175,7 @@ impl<T: Config> core::fmt::Debug for IbcModule<T> {
 impl<T: Config + Send + Sync> Module for IbcModule<T> {
 	fn on_chan_open_init(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		_order: Order,
 		_connection_hops: &[ConnectionId],
@@ -187,6 +190,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 
 	fn on_chan_open_try(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		order: Order,
 		_connection_hops: &[ConnectionId],
@@ -217,6 +221,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 
 	fn on_chan_open_ack(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
@@ -233,6 +238,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 
 	fn on_chan_open_confirm(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
@@ -243,6 +249,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 
 	fn on_chan_close_init(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
@@ -253,6 +260,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 
 	fn on_chan_close_confirm(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
@@ -263,25 +271,23 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 
 	fn on_recv_packet(
 		&self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		packet: &Packet,
 		_relayer: &Signer,
-	) -> OnRecvPacketAck {
+	) -> Result<(), Ics04Error> {
 		let success = "ping-success".as_bytes().to_vec();
 		let data = String::from_utf8(packet.data.clone()).ok();
 		log::info!("Received Packet Sequence {:?}, Packet Data {:?}", packet.sequence, data);
 		let packet = packet.clone();
-		OnRecvPacketAck::Successful(
-			Box::new(PingAcknowledgement(success.clone())),
-			Box::new(move |_| {
-				T::IbcHandler::write_acknowledgement(&packet, success)
-					.map_err(|e| format!("{:?}", e))
-			}),
-		)
+		T::IbcHandler::write_acknowledgement(&packet, success)
+			.map_err(|e| Ics04Error::implementation_specific(format!("{:?}", e)))?;
+		Ok(())
 	}
 
 	fn on_acknowledgement_packet(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		packet: &Packet,
 		acknowledgement: &Acknowledgement,
@@ -293,6 +299,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 
 	fn on_timeout_packet(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		packet: &Packet,
 		_relayer: &Signer,

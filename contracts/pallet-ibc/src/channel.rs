@@ -17,6 +17,7 @@ use core::{str::FromStr, time::Duration};
 use frame_support::traits::Get;
 use ibc_primitives::PacketInfo;
 use scale_info::prelude::string::ToString;
+use sp_core::crypto::AccountId32;
 
 use crate::{
 	ics23::{
@@ -278,6 +279,7 @@ where
 impl<T: Config + Sync + Send> ChannelKeeper for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 	Self: ChannelReader,
 {
 	fn store_packet_commitment(
@@ -304,19 +306,13 @@ where
 		let port_id = key.0.as_bytes().to_vec();
 		let seq = u64::from(key.2);
 		let channel_end = ChannelReader::channel_end(self, &(key.0, key.1))?;
-		// let key = Pallet::<T>::offchain_key(channel_id, port_id);
-		// let mut offchain_packets: BTreeMap<u64, OffchainPacketType> =
-		// 	sp_io::offchain::local_storage_get(sp_core::offchain::StorageKind::PERSISTENT, &key)
-		// 		.and_then(|v| codec::Decode::decode(&mut &*v).ok())
-		// 		.unwrap_or_default();
+		let key = Pallet::<T>::offchain_send_packet_key(channel_id, port_id, seq);
+
 		let mut packet_info: PacketInfo = packet.into();
-		// Store when packet
 		packet_info.height = Some(host_height::<T>());
 		packet_info.channel_order = channel_end.ordering as u8;
-		// offchain_packets.insert(seq, packet_info);
-		// sp_io::offchain::local_storage_set(sp_core::offchain::StorageKind::PERSISTENT, &key,
-		// offchain_packets.encode().as_slice());
-		<SendPackets<T>>::insert((channel_id, port_id), seq, packet_info);
+
+		sp_io::offchain_index::set(&key, packet_info.encode().as_slice());
 		Ok(())
 	}
 
@@ -325,16 +321,16 @@ where
 		key: (PortId, ChannelId, Sequence),
 		packet: ibc::core::ics04_channel::packet::Packet,
 	) -> Result<(), ICS04Error> {
-		// Packets should be stored off chain eventually
-
+		// Store packet offchain
 		let channel_id = key.1.to_string().as_bytes().to_vec();
 		let port_id = key.0.as_bytes().to_vec();
 		let seq = u64::from(key.2);
 		let channel_end = ChannelReader::channel_end(self, &(key.0, key.1))?;
+		let key = Pallet::<T>::offchain_recv_packet_key(channel_id, port_id, seq);
 		let mut packet_info: PacketInfo = packet.into();
 		packet_info.height = Some(host_height::<T>());
 		packet_info.channel_order = channel_end.ordering as u8;
-		<ReceivePackets<T>>::insert((channel_id, port_id), seq, packet_info);
+		sp_io::offchain_index::set(&key, packet_info.encode().as_slice());
 		Ok(())
 	}
 

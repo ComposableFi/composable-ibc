@@ -68,6 +68,7 @@ use ics11_beefy::{
 	consensus_state::ConsensusState as BeefyConsensusState,
 };
 use scale_info::prelude::{format, string::ToString};
+use sp_core::crypto::AccountId32;
 use sp_std::prelude::*;
 use tendermint::{block::signed_header::SignedHeader, validator::Set as ValidatorSet, Hash};
 use tendermint_proto::Protobuf;
@@ -107,7 +108,7 @@ fn create_tendermint_header() -> ics07_tendermint::client_message::Header {
 	}
 }
 
-pub fn create_mock_state() -> (TendermintClientState<HostFunctionsManager>, ConsensusState) {
+pub(crate) fn create_mock_state() -> (TendermintClientState<HostFunctionsManager>, ConsensusState) {
 	let spec = simple_iavl::avl::get_proof_spec();
 	// The tendermint light client requires two proof specs one for the iavl tree used to
 	// in constructing the ibc commitment root and another for the tendermint state tree
@@ -136,7 +137,7 @@ pub fn create_mock_state() -> (TendermintClientState<HostFunctionsManager>, Cons
 	(mock_client_state, mock_cs_state)
 }
 
-pub fn create_mock_beefy_client_state(
+pub(crate) fn create_mock_beefy_client_state(
 ) -> (BeefyClientState<HostFunctionsManager>, BeefyConsensusState) {
 	let client_state = BeefyClientState {
 		chain_id: Default::default(),
@@ -158,7 +159,7 @@ pub fn create_mock_beefy_client_state(
 	(client_state, cs_state)
 }
 
-pub fn create_client_update<T>() -> MsgUpdateAnyClient<Context<T>>
+pub(crate) fn create_client_update<T>() -> MsgUpdateAnyClient<Context<T>>
 where
 	T: Config + Send + Sync,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
@@ -181,7 +182,7 @@ where
 // This new root is then set as the ibc commitment root in the light client consensus state.
 
 // Creates a MsgConnectionOpenTry from a tendermint chain submitted to a substrate chain
-pub fn create_conn_open_try<T>() -> (ConsensusState, MsgConnectionOpenTry<Context<T>>)
+pub(crate) fn create_conn_open_try<T>() -> (ConsensusState, MsgConnectionOpenTry<Context<T>>)
 where
 	T: Config + Send + Sync,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
@@ -293,7 +294,7 @@ where
 	)
 }
 
-pub fn create_conn_open_ack<T>() -> (ConsensusState, MsgConnectionOpenAck<Context<T>>)
+pub(crate) fn create_conn_open_ack<T>() -> (ConsensusState, MsgConnectionOpenAck<Context<T>>)
 where
 	T: Config + Send + Sync,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
@@ -399,7 +400,7 @@ where
 	)
 }
 
-pub fn create_conn_open_confirm<T: Config>() -> (ConsensusState, MsgConnectionOpenConfirm) {
+pub(crate) fn create_conn_open_confirm<T: Config>() -> (ConsensusState, MsgConnectionOpenConfirm) {
 	let client_id = ClientId::new("07-tendermint", 0).unwrap();
 	let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
 	let commitment_prefix: CommitmentPrefix = "ibc/".as_bytes().to_vec().try_into().unwrap();
@@ -485,7 +486,7 @@ pub fn create_conn_open_confirm<T: Config>() -> (ConsensusState, MsgConnectionOp
 	)
 }
 
-pub fn create_chan_open_try() -> (ConsensusState, MsgChannelOpenTry) {
+pub(crate) fn create_chan_open_try() -> (ConsensusState, MsgChannelOpenTry) {
 	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
 	let counterparty = ChannelCounterParty::new(port_id.clone(), None);
 	let channel_end = ChannelEnd::new(
@@ -547,7 +548,7 @@ pub fn create_chan_open_try() -> (ConsensusState, MsgChannelOpenTry) {
 	)
 }
 
-pub fn create_chan_open_ack() -> (ConsensusState, MsgChannelOpenAck) {
+pub(crate) fn create_chan_open_ack() -> (ConsensusState, MsgChannelOpenAck) {
 	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
 	let counterparty = ChannelCounterParty::new(port_id.clone(), Some(ChannelId::new(0)));
 	let channel_end = ChannelEnd::new(
@@ -603,7 +604,7 @@ pub fn create_chan_open_ack() -> (ConsensusState, MsgChannelOpenAck) {
 	)
 }
 
-pub fn create_chan_open_confirm() -> (ConsensusState, MsgChannelOpenConfirm) {
+pub(crate) fn create_chan_open_confirm() -> (ConsensusState, MsgChannelOpenConfirm) {
 	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
 	let counterparty = ChannelCounterParty::new(port_id.clone(), Some(ChannelId::new(0)));
 	let channel_end = ChannelEnd::new(
@@ -657,7 +658,7 @@ pub fn create_chan_open_confirm() -> (ConsensusState, MsgChannelOpenConfirm) {
 	)
 }
 
-pub fn create_chan_close_init() -> MsgChannelCloseInit {
+pub(crate) fn create_chan_close_init() -> MsgChannelCloseInit {
 	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
 	MsgChannelCloseInit {
 		port_id,
@@ -666,7 +667,7 @@ pub fn create_chan_close_init() -> MsgChannelCloseInit {
 	}
 }
 
-pub fn create_chan_close_confirm() -> (ConsensusState, MsgChannelCloseConfirm) {
+pub(crate) fn create_chan_close_confirm() -> (ConsensusState, MsgChannelCloseConfirm) {
 	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
 	let counterparty = ChannelCounterParty::new(port_id.clone(), Some(ChannelId::new(0)));
 	let channel_end = ChannelEnd::new(
@@ -720,9 +721,12 @@ pub fn create_chan_close_confirm() -> (ConsensusState, MsgChannelCloseConfirm) {
 	)
 }
 
-pub fn create_recv_packet<T: Config + Send + Sync>(data: Vec<u8>) -> (ConsensusState, MsgRecvPacket)
+pub(crate) fn create_recv_packet<T: Config + Send + Sync>(
+	data: Vec<u8>,
+) -> (ConsensusState, MsgRecvPacket)
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
 	let packet = Packet {
@@ -785,12 +789,13 @@ where
 	)
 }
 
-pub fn create_ack_packet<T: Config + Send + Sync>(
+pub(crate) fn create_ack_packet<T: Config + Send + Sync>(
 	data: Vec<u8>,
 	ack: Vec<u8>,
 ) -> (ConsensusState, MsgAcknowledgement)
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
 	let packet = Packet {
@@ -855,9 +860,12 @@ where
 	)
 }
 
-pub fn create_timeout_packet<T: Config + Send + Sync>(data: Vec<u8>) -> (ConsensusState, MsgTimeout)
+pub(crate) fn create_timeout_packet<T: Config + Send + Sync>(
+	data: Vec<u8>,
+) -> (ConsensusState, MsgTimeout)
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
 	let packet = Packet {

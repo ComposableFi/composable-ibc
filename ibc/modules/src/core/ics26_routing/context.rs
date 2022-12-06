@@ -37,13 +37,18 @@ use alloc::borrow::{Borrow, Cow};
 use core::{any::Any, fmt, fmt::Debug, str::FromStr};
 use serde::{Deserialize, Serialize};
 
-/// This trait captures all the functional dependencies of needed in light client implementations
+/// This trait captures all the functional dependencies needed in light client implementations
 pub trait ReaderContext: ClientKeeper + ClientReader + ConnectionReader + ChannelReader {}
+
+/// This trait captures all the dependencies needed for module callbacks to read storage
+pub trait ModuleCallbackContext: ConnectionReader + ChannelReader {}
 
 /// This trait captures all the functional dependencies (i.e., context) which the ICS26 module
 /// requires to be able to dispatch and process IBC messages. In other words, this is the
 /// representation of a chain from the perspective of the IBC module of that chain.
-pub trait Ics26Context: ConnectionKeeper + ChannelKeeper + PortReader + ReaderContext {
+pub trait Ics26Context:
+	Clone + ConnectionKeeper + ChannelKeeper + PortReader + ReaderContext + ModuleCallbackContext
+{
 	type Router: Router;
 
 	fn router(&self) -> &Self::Router;
@@ -90,26 +95,13 @@ impl Borrow<str> for ModuleId {
 /// Types implementing this trait are expected to implement `From<GenericAcknowledgement>`
 pub trait Acknowledgement: AsRef<[u8]> {}
 
-pub type WriteFn = dyn FnOnce(&mut dyn Any) -> Result<(), String>;
-
-pub enum OnRecvPacketAck {
-	Nil(Box<WriteFn>),
-	Successful(Box<dyn Acknowledgement>, Box<WriteFn>),
-	Failed(Box<dyn Acknowledgement>),
-}
-
-impl OnRecvPacketAck {
-	pub fn is_successful(&self) -> bool {
-		matches!(self, OnRecvPacketAck::Successful(_, _))
-	}
-}
-
 pub type ModuleOutputBuilder = HandlerOutputBuilder<(), ModuleEvent>;
 
 pub trait Module: Send + Sync + AsAnyMut {
 	#[allow(clippy::too_many_arguments)]
 	fn on_chan_open_init(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		_order: Order,
 		_connection_hops: &[ConnectionId],
@@ -124,6 +116,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 	#[allow(clippy::too_many_arguments)]
 	fn on_chan_open_try(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		_order: Order,
 		_connection_hops: &[ConnectionId],
@@ -136,6 +129,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 
 	fn on_chan_open_ack(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		_port_id: &PortId,
 		_channel_id: &ChannelId,
@@ -146,6 +140,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 
 	fn on_chan_open_confirm(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		_port_id: &PortId,
 		_channel_id: &ChannelId,
@@ -155,6 +150,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 
 	fn on_chan_close_init(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		_port_id: &PortId,
 		_channel_id: &ChannelId,
@@ -164,6 +160,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 
 	fn on_chan_close_confirm(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		_port_id: &PortId,
 		_channel_id: &ChannelId,
@@ -171,17 +168,20 @@ pub trait Module: Send + Sync + AsAnyMut {
 		Ok(())
 	}
 
+	/// Modules should write acknowledgement to storage in this callback
 	fn on_recv_packet(
 		&self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		_packet: &Packet,
 		_relayer: &Signer,
-	) -> OnRecvPacketAck {
-		OnRecvPacketAck::Nil(Box::new(|_| Ok(())))
+	) -> Result<(), Error> {
+		Ok(())
 	}
 
 	fn on_acknowledgement_packet(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		_packet: &Packet,
 		_acknowledgement: &GenericAcknowledgement,
@@ -192,6 +192,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 
 	fn on_timeout_packet(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		_packet: &Packet,
 		_relayer: &Signer,

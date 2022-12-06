@@ -19,7 +19,7 @@ use alloc::{
 	format,
 	string::{String, ToString},
 };
-use core::fmt::Formatter;
+use core::{fmt::Formatter, str::FromStr};
 use frame_support::weights::Weight;
 use ibc::{
 	applications::transfer::{
@@ -28,14 +28,13 @@ use ibc::{
 			on_chan_close_confirm, on_chan_close_init, on_chan_open_ack, on_chan_open_confirm,
 			on_chan_open_init, on_chan_open_try,
 		},
-		error::Error as Ics20Error,
-		is_receiver_chain_source,
+		is_receiver_chain_source, is_sender_chain_source,
 		packet::PacketData,
 		relay::{
 			on_ack_packet::process_ack_packet, on_recv_packet::process_recv_packet,
 			on_timeout_packet::process_timeout_packet,
 		},
-		PrefixedCoin, TracePrefix,
+		PrefixedCoin, PrefixedDenom, TracePrefix,
 	},
 	core::{
 		ics04_channel::{
@@ -46,12 +45,13 @@ use ibc::{
 			Version,
 		},
 		ics24_host::identifier::{ChannelId, ConnectionId, PortId},
-		ics26_routing::context::{Module, ModuleOutputBuilder, OnRecvPacketAck},
+		ics26_routing::context::{Module, ModuleCallbackContext, ModuleOutputBuilder},
 	},
 	signer::Signer,
 };
 use ibc_primitives::{CallbackWeight, IbcHandler};
-use sp_std::{boxed::Box, marker::PhantomData};
+use sp_core::crypto::AccountId32;
+use sp_std::marker::PhantomData;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct IbcModule<T: Config>(PhantomData<T>);
@@ -71,9 +71,11 @@ impl<T: Config> Default for IbcModule<T> {
 impl<T: Config + Send + Sync> Module for IbcModule<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	fn on_chan_open_init(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
 		order: Order,
 		connection_hops: &[ConnectionId],
@@ -98,6 +100,7 @@ where
 
 	fn on_chan_open_try(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
 		order: Order,
 		connection_hops: &[ConnectionId],
@@ -124,6 +127,7 @@ where
 
 	fn on_chan_open_ack(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
@@ -140,6 +144,7 @@ where
 
 	fn on_chan_open_confirm(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
@@ -155,6 +160,7 @@ where
 
 	fn on_chan_close_init(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
@@ -177,6 +183,7 @@ where
 
 	fn on_chan_close_confirm(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
@@ -199,22 +206,19 @@ where
 
 	fn on_recv_packet(
 		&self,
+		_ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
 		packet: &Packet,
 		_relayer: &Signer,
-	) -> OnRecvPacketAck {
+	) -> Result<(), Ics04Error> {
 		let mut ctx = Context::<T>::default();
 		let result = serde_json::from_slice(packet.data.as_slice())
 			.map_err(|e| {
 				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
 			})
 			.and_then(|packet_data: PacketData| {
-				process_recv_packet(&ctx, output, packet, packet_data.clone())
-					.and_then(|write_fn| {
-						write_fn(&mut ctx)
-							.map(|_| packet_data)
-							.map_err(Ics20Error::unknown_msg_type)
-					})
+				process_recv_packet(&mut ctx, output, packet, packet_data.clone())
+					.map(|_| packet_data)
 					.map_err(|e| {
 						log::trace!(target: "pallet_ibc", "[on_recv_packet]: {:?}", e);
 						Ics04Error::implementation_specific(e.to_string())
@@ -222,17 +226,17 @@ where
 			});
 		match result {
 			Err(err) => {
-				let packet = packet.clone();
-				OnRecvPacketAck::Nil(Box::new(move |_ctx| {
-					Pallet::<T>::write_acknowledgement(
-						&packet,
-						format!("{}: {:?}", ACK_ERR_STR, err).as_bytes().to_vec(),
-					)
-					.map_err(|e| format!("[on_recv_packet] {:#?}", e))
-				}))
+				Pallet::<T>::write_acknowledgement(
+					&packet,
+					format!("{}: {:?}", ACK_ERR_STR, err).as_bytes().to_vec(),
+				)
+				.map_err(|e| {
+					Ics04Error::implementation_specific(format!("[on_recv_packet] {:#?}", e))
+				})?;
 			},
 			Ok(packet_data) => {
 				let denom = full_ibc_denom(packet, packet_data.token.clone());
+				let prefixed_denom = PrefixedDenom::from_str(&denom).expect("Should not fail");
 				Pallet::<T>::deposit_event(Event::<T>::TokenReceived {
 					from: packet_data.sender.to_string().as_bytes().to_vec(),
 					to: packet_data.receiver.to_string().as_bytes().to_vec(),
@@ -240,24 +244,30 @@ where
 					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
 						.ok(),
 					amount: packet_data.token.amount.as_u256().as_u128().into(),
+					is_receiver_source: is_receiver_chain_source(
+						packet.source_port.clone(),
+						packet.source_channel.clone(),
+						&prefixed_denom,
+					),
+					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
+					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
 				});
 				let packet = packet.clone();
-				OnRecvPacketAck::Successful(
-					Box::new(Ics20Acknowledgement::success()),
-					Box::new(move |_ctx| {
-						Pallet::<T>::write_acknowledgement(
-							&packet,
-							Ics20Acknowledgement::success().as_ref().to_vec(),
-						)
-						.map_err(|e| format!("[on_recv_packet] {:#?}", e))
-					}),
+				Pallet::<T>::write_acknowledgement(
+					&packet,
+					Ics20Acknowledgement::success().as_ref().to_vec(),
 				)
+				.map_err(|e| {
+					Ics04Error::implementation_specific(format!("[on_recv_packet] {:#?}", e))
+				})?;
 			},
 		}
+		Ok(())
 	}
 
 	fn on_acknowledgement_packet(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		packet: &Packet,
 		acknowledgement: &Acknowledgement,
@@ -284,7 +294,8 @@ where
 			})?;
 		process_ack_packet(&mut ctx, packet, &packet_data, &ack)
 			.map_err(|e| Ics04Error::implementation_specific(e.to_string()))?;
-
+		let denom = full_ibc_denom(packet, packet_data.token.clone());
+		let prefixed_denom = PrefixedDenom::from_str(&denom).expect("Should not fail");
 		match ack {
 			Ics20Acknowledgement::Success(_) =>
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
@@ -296,6 +307,13 @@ where
 					)
 					.ok(),
 					amount: packet_data.token.amount.as_u256().as_u128().into(),
+					is_sender_source: is_sender_chain_source(
+						packet.source_port.clone(),
+						packet.source_channel.clone(),
+						&prefixed_denom,
+					),
+					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
+					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
 				}),
 			Ics20Acknowledgement::Error(_) =>
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferFailed {
@@ -307,6 +325,13 @@ where
 					)
 					.ok(),
 					amount: packet_data.token.amount.as_u256().as_u128().into(),
+					is_sender_source: is_sender_chain_source(
+						packet.source_port.clone(),
+						packet.source_channel.clone(),
+						&prefixed_denom,
+					),
+					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
+					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
 				}),
 		}
 
@@ -315,6 +340,7 @@ where
 
 	fn on_timeout_packet(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		packet: &Packet,
 		_relayer: &Signer,

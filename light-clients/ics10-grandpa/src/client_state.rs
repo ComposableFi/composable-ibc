@@ -55,7 +55,7 @@ pub struct ClientState<H> {
 	/// authorities for the current round
 	pub current_authorities: AuthorityList,
 	/// phantom type.
-	pub(crate) _phantom: PhantomData<H>,
+	pub _phantom: PhantomData<H>,
 }
 
 impl<H> From<ClientState<H>> for grandpa_client_primitives::ClientState<H256> {

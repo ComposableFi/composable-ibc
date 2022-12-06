@@ -18,13 +18,16 @@ use ibc::{
 	applications::transfer::MODULE_ID_STR as IBC_TRANSFER_MODULE_ID,
 	core::{
 		ics24_host::identifier::PortId,
-		ics26_routing::context::{Ics26Context, Module, ModuleId, ReaderContext, Router},
+		ics26_routing::context::{
+			Ics26Context, Module, ModuleCallbackContext, ModuleId, ReaderContext, Router,
+		},
 	},
 };
 use scale_info::prelude::string::ToString;
+use sp_core::crypto::AccountId32;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Context<T: Config> {
+pub(crate) struct Context<T: Config> {
 	pub _pd: PhantomData<T>,
 	router: IbcRouter<T>,
 }
@@ -66,6 +69,7 @@ pub trait ModuleRouter: Default + Clone + Eq + PartialEq + Debug {
 impl<T: Config + Send + Sync> Router for IbcRouter<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module> {
 		// check if the user has defined any custom routes
@@ -92,6 +96,7 @@ where
 impl<T: Config + Send + Sync> Ics26Context for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 	type Router = IbcRouter<T>;
 
@@ -104,7 +109,16 @@ where
 	}
 }
 
-impl<T: Config + Send + Sync> ReaderContext for Context<T> where
-	u32: From<<T as frame_system::Config>::BlockNumber>
+impl<T: Config + Send + Sync> ReaderContext for Context<T>
+where
+	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
+{
+}
+
+impl<T: Config + Send + Sync> ModuleCallbackContext for Context<T>
+where
+	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<T::AccountId>,
 {
 }

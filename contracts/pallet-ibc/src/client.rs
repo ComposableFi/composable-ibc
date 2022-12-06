@@ -195,10 +195,20 @@ where
 	) -> Result<AnyConsensusState, ICS02Error> {
 		let timestamp = Timestamp::from_nanoseconds(1).unwrap();
 		let timestamp = timestamp.into_tm_time().unwrap();
-		return Ok(AnyConsensusState::Beefy(ics11_beefy::consensus_state::ConsensusState {
-			timestamp,
-			root: vec![].into(),
-		}))
+
+		let consensus_state = match <T as Config>::LIGHT_CLIENT_PROTOCOL {
+			crate::LightClientProtocol::Beefy =>
+				AnyConsensusState::Beefy(ics11_beefy::consensus_state::ConsensusState {
+					timestamp,
+					root: vec![].into(),
+				}),
+			crate::LightClientProtocol::Grandpa =>
+				AnyConsensusState::Grandpa(ics10_grandpa::consensus_state::ConsensusState {
+					timestamp,
+					root: vec![].into(),
+				}),
+		};
+		Ok(consensus_state)
 	}
 
 	#[cfg(not(feature = "runtime-benchmarks"))]

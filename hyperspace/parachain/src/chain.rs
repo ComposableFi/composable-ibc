@@ -40,6 +40,7 @@ use crate::{
 		api::runtime_types::{frame_system::Phase, pallet_ibc::Any as RawAny},
 		UncheckedExtrinsic,
 	},
+	provider::TransactionId,
 	utils::MetadataIbcEventWrapper,
 	FinalityProtocol,
 };
@@ -202,10 +203,7 @@ where
 		}
 	}
 
-	async fn submit(
-		&self,
-		messages: Vec<Any>,
-	) -> Result<(sp_core::H256, Option<sp_core::H256>), Error> {
+	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
 		let messages = messages
 			.into_iter()
 			.map(|msg| RawAny { type_url: msg.type_url.as_bytes().to_vec(), value: msg.value })
@@ -214,7 +212,7 @@ where
 		let call = api::tx().ibc().deliver(messages);
 		let (ext_hash, block_hash) = self.submit_call(call).await?;
 
-		Ok((ext_hash.into(), Some(block_hash.into())))
+		Ok(TransactionId { ext_hash, block_hash })
 	}
 
 	async fn query_client_message(&self, update: UpdateClient) -> Result<AnyClientMessage, Error> {
