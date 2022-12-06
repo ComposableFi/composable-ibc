@@ -58,7 +58,6 @@ jobs:
           eval "$(.fnm/fnm env --use-on-cd)"
           .fnm/fnm use v16
           npm install --global yarn
-          yarn --cwd ./scripts/parachain-launch install 
         
           # Get Rust
           curl https://sh.rustup.rs -sSf | bash -s -- -y
@@ -117,6 +116,7 @@ jobs:
         run:
           DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest;
           eval "$(.fnm/fnm env --use-on-cd)";
+          yarn --cwd ./scripts/parachain-launch install;
           yarn --cwd ./scripts/parachain-launch dev;
           sed -i 's/9944:9933/9144:9933/g' ./scripts/parachain-launch/docker-compose.yml;
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml up -d --build;
