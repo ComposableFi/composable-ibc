@@ -101,9 +101,9 @@ where
 			source_channel: params.source_channel,
 			timeout: match params.timeout {
 				Timeout::Offset { timestamp, height } =>
-					api::runtime_types::pallet_ibc::Timeout::Offset { timestamp, height },
+					api::runtime_types::ibc_primitives::Timeout::Offset { timestamp, height },
 				Timeout::Absolute { timestamp, height } =>
-					api::runtime_types::pallet_ibc::Timeout::Absolute { timestamp, height },
+					api::runtime_types::ibc_primitives::Timeout::Absolute { timestamp, height },
 			},
 		};
 		// Submit extrinsic to parachain node

@@ -92,6 +92,12 @@ impl Borrow<str> for ModuleId {
 	}
 }
 
+impl AsRef<str> for ModuleId {
+	fn as_ref(&self) -> &str {
+		self.0.as_str()
+	}
+}
+
 /// Types implementing this trait are expected to implement `From<GenericAcknowledgement>`
 pub trait Acknowledgement: AsRef<[u8]> {}
 
@@ -229,8 +235,8 @@ impl<M: Any + Module> AsAnyMut for M {
 /// instantiation using the `RouterBuilder`.
 pub trait Router {
 	/// Returns a mutable reference to a `Module` registered against the specified `ModuleId`
-	fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module>;
+	fn get_route_mut(&mut self, module_id: &ModuleId) -> Option<&mut dyn Module>;
 
 	/// Returns true if the `Router` has a `Module` registered against the specified `ModuleId`
-	fn has_route(&self, module_id: &impl Borrow<ModuleId>) -> bool;
+	fn has_route(&self, module_id: &ModuleId) -> bool;
 }

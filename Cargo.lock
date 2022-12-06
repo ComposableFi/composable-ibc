@@ -7310,6 +7310,7 @@ dependencies = [
  "ibc-runtime-api",
  "jsonrpsee 0.14.0",
  "log",
+ "pallet-ibc",
  "pallet-transaction-payment-rpc",
  "parachain-runtime",
  "parity-scale-codec",
