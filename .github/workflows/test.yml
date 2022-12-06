@@ -57,7 +57,7 @@ jobs:
           eval "$(.fnm/fnm env --use-on-cd)"
           .fnm/fnm use v16
           npm install --global yarn
-          yarn --cwd ./scripts/parachain-launch install
+          yarn --cwd ./scripts/parachain-launch install 
         
           # Get Rust
           curl https://sh.rustup.rs -sSf | bash -s -- -y
