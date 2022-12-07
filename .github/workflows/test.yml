@@ -22,7 +22,7 @@ jobs:
       env:
         BUILD_DIR: /home/ghr/_work/_temp
       volumes:
-        /home/ghr/_work/_temp:/home/ghr/_work/_temp
+        - /home/ghr/_work/_temp:/home/ghr/_work/_temp
     runs-on:
       - self-hosted
       - sre
