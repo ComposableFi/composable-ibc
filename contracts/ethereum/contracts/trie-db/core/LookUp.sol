@@ -5,30 +5,28 @@ import "../interfaces/ITrie.sol";
 import "./Codec.sol";
 import "./Node.sol";
 import "./NibbleSlice.sol";
-import "./HashRefDB.sol";
+import "./HashDBRef.sol";
 
 contract LookUp is ITrie {
     NibbleSlice nibbleSlice;
     Codec codec;
-    HashRefDB db;
-    Query query;
+    HashDBRef db;
     Node node;
 
     constructor(
         address nibbleSliceAddress,
         address codecAddress,
         address hashDbAddress,
-        address queryAddress,
         address nodeAddress
     ) {
         nibbleSlice = NibbleSlice(nibbleSliceAddress);
         codec = Codec(codecAddress);
-        db = HashRefDB(hashDbAddress);
-        query = Query(queryAddress);
+        db = HashDBRef(hashDbAddress);
         node = Node(nodeAddress);
     }
 
     function lookUpWithoutCache(
+        DB[] memory KVStore,
         uint8[] calldata key,
         bytes32 root,
         TrieLayout calldata layout
@@ -49,6 +47,7 @@ contract LookUp is ITrie {
             nibbleKey = nibbleSlice.mid(nibbleKey, keyNibbles);
             // get the data from the current node
             lookUp.nodeData = db.get(
+                KVStore,
                 hash,
                 nibbleSlice.left(nibbleKey),
                 layout.Hash
@@ -81,7 +80,8 @@ contract LookUp is ITrie {
                         )
                     ) {
                         // if the key is found, load the value and return
-                        result = loadValue(
+                        result = _loadValue(
+                            KVStore,
                             lookUp.value,
                             nibbleSlice.originalDataAsPrefix(nibbleKey),
                             hash,
@@ -113,7 +113,8 @@ contract LookUp is ITrie {
                     (lookUp.children, lookUp.value) = node.Branch(decoded);
                     if (nibbleSlice.isEmpty(partialKey)) {
                         // if the partial key is empty, load the value from the branch node
-                        result = loadValue(
+                        result = _loadValue(
+                            KVStore,
                             lookUp.value,
                             nibbleSlice.originalDataAsPrefix(nibbleKey),
                             hash,
@@ -144,7 +145,8 @@ contract LookUp is ITrie {
                     ) {
                         // if the partial key has the same length as the slice,
                         // the value in the nibbled branch node is the value of the key
-                        result = loadValue(
+                        result = _loadValue(
+                            KVStore,
                             lookUp.value,
                             nibbleSlice.originalDataAsPrefix(nibbleKey),
                             hash,
@@ -169,7 +171,7 @@ contract LookUp is ITrie {
                     return (false, "");
                 }
                 if (lookUp.nextNode.isHash) {
-                    hash = decodeHash(lookUp.nextNode.value);
+                    hash = _decodeHash(lookUp.nextNode.value);
                     break;
                 } else lookUp.nodeData = lookUp.nextNode.value;
             }
@@ -177,24 +179,37 @@ contract LookUp is ITrie {
         return (false, "");
     }
 
-    function loadValue(
+    function _loadValue(
+        DB[] memory KVStore,
         Value memory value,
         Slice memory prefix,
         bytes32 hash,
         TrieLayout calldata layout
-    ) internal returns (bytes memory) {
+    ) internal view returns (bytes memory) {
         if (value.isInline) {
             // if the value is inline, decode it and return the result
-            return query.decode(layout.Hash, value.data);
+            return _decodeValue(layout.Hash, value.data);
         } else {
-            // if the value is a node, get the hash value and lookup the value in the db
-            bytes memory v = db.get(hash, prefix, layout.Hash);
+            // // if the value is a node, get the hash value and lookup the value in the db
+            // bytes memory v =
             // If a value is found, decode and return the result
-            return query.decode(layout.Hash, v);
+            return
+                _decodeValue(
+                    layout.Hash,
+                    db.get(KVStore, hash, prefix, layout.Hash)
+                );
         }
     }
 
-    function decodeHash(bytes memory data) public pure returns (bytes32) {
+    function _decodeValue(Hasher, bytes memory value)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return value;
+    }
+
+    function _decodeHash(bytes memory data) internal pure returns (bytes32) {
         if (data.length != 32) {
             return 0x0;
         }

@@ -21,10 +21,16 @@ contract Trie is ITrie {
     function getWith(
         bytes32 root,
         TrieLayout calldata layout,
-        uint8[] calldata key // TODO: check if query is needed here
+        uint8[] calldata key,
+        DB[] calldata KVStore
     ) external returns (bytes memory value) {
         bool ok = false;
-        (ok, value) = lookUpContract.lookUpWithoutCache(key, root, layout);
+        (ok, value) = lookUpContract.lookUpWithoutCache(
+            KVStore,
+            key,
+            root,
+            layout
+        );
         require(ok, "key not found in the trie");
         return value;
     }

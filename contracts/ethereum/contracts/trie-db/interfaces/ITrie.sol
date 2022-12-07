@@ -57,4 +57,9 @@ interface ITrie {
         bytes value;
         NodeType nodeType;
     }
+
+    struct DB {
+        bytes key;
+        bytes value;
+    }
 }
