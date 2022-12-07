@@ -14,11 +14,12 @@
 #![allow(clippy::all)]
 
 pub mod chain;
+pub mod encode;
 pub mod error;
 pub mod key_provider;
 pub mod provider;
+pub mod tx;
 mod utils;
-
 use core::{convert::TryFrom, time::Duration};
 use error::Error;
 use ibc::core::{
@@ -26,7 +27,10 @@ use ibc::core::{
 	ics23_commitment::{commitment::CommitmentPrefix, specs::ProofSpecs},
 	ics24_host::identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 };
-use ibc_proto::cosmos::auth::v1beta1::BaseAccount;
+use ibc_proto::{
+	cosmos::{auth::v1beta1::BaseAccount, base::v1beta1::Coin, tx::v1beta1::Fee},
+	google::protobuf::Any,
+};
 use ics07_tendermint::{
 	client_state::ClientState as TmClientState, consensus_state::ConsensusState as TmConsensusState,
 };
@@ -34,15 +38,10 @@ use key_provider::KeyEntry;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use primitives::{IbcProvider, KeyProvider};
 use serde::Deserialize;
-use tendermint_light_client::{
-	components::{
-		io::{AsyncIo, AtHeight, RpcIo},
-	},
-};
-use tendermint_light_client_verifier::{
-	types::{Height as TmHeight, PeerId},
-};
+use tendermint_light_client::components::io::{AsyncIo, AtHeight, RpcIo};
+use tendermint_light_client_verifier::types::{Height as TmHeight, PeerId};
 use tendermint_rpc::{Client, HttpClient, Url};
+use tx::{broadcast_tx, confirm_tx, sign_tx, simulate_tx};
 
 // Implements the [`crate::Chain`] trait for cosmos.
 /// This is responsible for:
@@ -215,12 +214,55 @@ where
 		todo!()
 	}
 
-	pub async fn submit_call(&self) -> Result<(), Error> {
-		todo!()
+	pub async fn submit_call(&self, messages: Vec<Any>) -> Result<(), Error> {
+		let account_info = self.query_account().await?;
+
+		// Sign transaction
+		let (tx, _, tx_bytes) = sign_tx(
+			self.keybase.clone(),
+			self.chain_id.clone(),
+			&account_info,
+			messages,
+			Fee {
+				amount: vec![Coin {
+					denom: "stake".to_string(), //TODO: This could be added to the config
+					amount: "4000".to_string(), //TODO: This could be added to the config
+				}],
+				gas_limit: 400000_u64, //TODO: This could be added to the config
+				payer: "".to_string(),
+				granter: "".to_string(),
+			},
+		)?;
+		// Simulate transaction
+		// TODO: This simulation gives out gas estimate used to calculate the fee. For now, Fee kept
+		// at Max for simplicity and test purposes
+		let _ = simulate_tx(self.grpc_url.clone(), tx, tx_bytes.clone()).await?;
+
+		// Broadcast transaction
+		let hash = broadcast_tx(&self.rpc_client, tx_bytes).await?;
+		log::info!(target: "hyperspace-light", "🤝 Transaction sent with hash: {:?}", hash);
+
+		// wait for confirmation
+		confirm_tx(&self.rpc_client, hash).await
 	}
 
-	/// Uses the GRPC client to retrieve the account sequence
+	/// Uses the GRPC client to retrieve the account information
 	pub async fn query_account(&self) -> Result<BaseAccount, Error> {
-		todo!()
+		let mut client = QueryClient::connect(self.grpc_url.clone().to_string())
+			.await
+			.map_err(|e| Error::from(format!("GRPC client error: {:?}", e)))?;
+
+		let request =
+			tonic::Request::new(QueryAccountRequest { address: self.keybase.account.to_string() });
+		let response = client.account(request).await;
+
+		// Querying for an account might fail, i.e. if the account doesn't actually exist
+		let resp_account =
+			match response.map_err(|e| Error::from(format!("{:?}", e)))?.into_inner().account {
+				Some(account) => account,
+				None => return Err(Error::from(format!("Account not found"))),
+			};
+		Ok(BaseAccount::decode(resp_account.value.as_slice())
+			.map_err(|e| Error::from(format!("Failed to decode account {}", e)))?)
 	}
 }
