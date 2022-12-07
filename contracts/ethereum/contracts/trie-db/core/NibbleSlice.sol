@@ -11,11 +11,11 @@ contract NibbleSlice is ITrie {
     uint8 constant BIT_PER_NIBBLE = 4;
 
     /**
-     * @dev Function to create a new slice with the given data and offset.
+     * @dev Function calculates the new offset for the slice data by adding the given offset to the current offset
      *
      * @param slice The data for the slice.
      * @param start The starting position of the slice.
-     * @return The new slice.
+     * @return The updated slice.
      */
     function mid(Slice memory slice, uint8 start)
         external
