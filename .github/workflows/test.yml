@@ -119,9 +119,11 @@ jobs:
         run: |
           DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest
 
-          mkdir $WORK_DIR/tmp
+          # mkdir $WORK_DIR/tmp
           yarn --cwd ./scripts/parachain-launch install
-          TMPDIR=$WORK_DIR/tmp OUTPUT=$WORK_DIR/scripts/parachain-launch yarn --cwd ./scripts/parachain-launch dev
+          # TMPDIR=$WORK_DIR/tmp OUTPUT=$WORK_DIR/scripts/parachain-launch yarn --cwd ./scripts/parachain-launch dev
+          TMPDIR=$WORK_DIR OUTPUT=$WORK_DIR yarn --cwd ./scripts/parachain-launch dev
+          cp {*.json,*.Dockerfile,*.yml} ./scripts/parachain-launch/
           sed -i 's/9944:9933/9144:9933/g' ./scripts/parachain-launch/docker-compose.yml
 
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml up -d --build
