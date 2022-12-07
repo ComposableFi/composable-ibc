@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use cumulus_primitives_core::ParaId;
+use pallet_ibc::pallet::AssetConfig;
 use parachain_runtime::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
@@ -240,6 +241,8 @@ fn testnet_genesis(
 		},
 		sudo: parachain_runtime::SudoConfig { key: Some(root) },
 		asset_registry: Default::default(),
-		ibc: parachain_runtime::IbcConfig { asset_ids: vec![(1, b"UNIT".to_vec())] },
+		ibc: parachain_runtime::IbcConfig {
+			assets: vec![AssetConfig { id: 1, denom: b"UNIT".to_vec() }],
+		},
 	}
 }

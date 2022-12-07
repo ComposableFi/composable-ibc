@@ -54,6 +54,7 @@ pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "
 simple-iavl = { path = "simple-iavl", default-features = false, optional = true }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, optional = true }
 finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-features = false, optional = true }
+serde = { version = "1.0", optional = true }
 
 [dependencies.ibc]
 path = "../../ibc/modules"
@@ -125,7 +126,8 @@ std = [
   "ics07-tendermint/std",
   "sp-finality-grandpa/std",
   "sp-finality-grandpa/std",
-  "finality-grandpa/std"
+  "finality-grandpa/std",
+  "serde",
 ]
 
 runtime-benchmarks = [

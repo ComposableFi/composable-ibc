@@ -776,17 +776,16 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn get_denom_traces(
-		key: Option<T::AssetId>,
-		offset: Option<u32>,
+		key: Option<Either<T::AssetId, u32>>,
 		limit: u64,
 		count_total: bool,
 	) -> ibc_primitives::QueryDenomTracesResponse {
-		let (denoms, count, next_key) =
-			T::IbcDenomToAssetIdConversion::ibc_assets(key, offset, limit);
+		let IbcAssets { denoms, total_count, next_id } =
+			T::IbcDenomToAssetIdConversion::ibc_assets(key, limit);
 		ibc_primitives::QueryDenomTracesResponse {
 			denoms,
-			total: count_total.then(|| count),
-			next_key: next_key.map(|key| key.encode()),
+			total: count_total.then(|| total_count),
+			next_key: next_id.map(|key| key.encode()),
 		}
 	}
 }
