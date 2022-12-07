@@ -10,6 +10,13 @@ contract NibbleSlice is ITrie {
 
     uint8 constant BIT_PER_NIBBLE = 4;
 
+    /**
+     * @dev Function to create a new slice with the given data and offset.
+     *
+     * @param slice The data for the slice.
+     * @param start The starting position of the slice.
+     * @return The new slice.
+     */
     function mid(Slice memory slice, uint8 start)
         external
         pure
@@ -22,16 +29,33 @@ contract NibbleSlice is ITrie {
         return slice;
     }
 
+    /**
+     * @dev Function to get the length of the slice data.
+     *
+     * @return The length of the slice data in nibbles.
+     */
     function len(Slice memory slice) public pure returns (uint8) {
         // return the length of the slice data in nibbles
         return uint8(slice.data.length * NIBBLE_PER_BYTE - slice.offset);
     }
 
+    /**
+     * @dev Function to check if the given slice is empty.
+     *
+     * @param slice The slice to check.
+     * @return True if the slice is empty, false otherwise.
+     */
     function isEmpty(Slice memory slice) public pure returns (bool) {
         // check if the length of the slice data is 0
         return len(slice) == 0;
     }
 
+    /**
+     * @dev Function to get the left nibble of each bytes from a given slice.
+     *
+     * @param s The slice to check.
+     * @return The slice with the left nibble of each byte.
+     */
     function left(Slice memory s) public pure returns (Slice memory) {
         uint8 split = s.offset / NIBBLE_PER_BYTE;
         uint8 ix = s.offset % NIBBLE_PER_BYTE;
@@ -59,6 +83,13 @@ contract NibbleSlice is ITrie {
         return Slice(slice.data, 0);
     }
 
+    /**
+     * @dev Function to check if the given partial slice starts with the given slice.
+     *
+     * @param partialSlice The partial slice to check.
+     * @param slice The slice to check if it is the prefix of the partial slice.
+     * @return True if the partial slice starts with the given slice, false otherwise.
+     */
     function startWith(Slice memory partialSlice, Slice memory slice)
         external
         pure
@@ -67,6 +98,17 @@ contract NibbleSlice is ITrie {
         return commonPrefix(partialSlice, slice) == slice.data.length;
     }
 
+    /**
+     * @dev function that gets the nibble value at a given index in a given memory slice in a byte array.
+     * It first checks that the given index is within the bounds of the slice data.
+     * It then calculates the index of the byte containing the nibble at the given index,
+     * as well as the nibble's offset within that byte.
+     * Finally, it returns the nibble value by applying a padding mask to the byte at the calculated index..
+     *
+     * @param s The slice to get the nibble value from.
+     * @param i The index of the nibble to get.
+     * @return The nibble value at the given index.
+     */
     function at(Slice memory s, uint256 i) public pure returns (uint8) {
         // check if the given index is within the bounds of the slice data
         require(i < len(s), "Index out of bounds");
@@ -85,17 +127,33 @@ contract NibbleSlice is ITrie {
         }
     }
 
-    // Mask a byte, keeping left nibble.
+    /**
+     * @dev Function to mask the given byte, keeping the left nibble.
+     *
+     * @param b The byte to mask.
+     * @return The masked byte with the left nibble.
+     */
     function padLeft(uint8 b) public pure returns (uint8) {
         return b & ~PADDING_BITMASK;
     }
 
-    // Mask a byte, keeping right byte.
+    /**
+     * @dev Function to mask the given byte, keeping the right nibble.
+     *
+     * @param b The byte to mask.
+     * @return The masked byte with the right nibble.
+     */
     function padRight(uint256 b) public pure returns (uint256) {
         return b & PADDING_BITMASK;
     }
 
-    // Count the biggest common depth between two left aligned packed nibble slice.
+    /**
+     * @dev Function to calculate the biggest common depth between two left aligned packed nibble slices.
+     *
+     * @param v1 The first slice to compare.
+     * @param v2 The second slice to compare.
+     * @return The biggest common depth between the two given slices.
+     */
     function biggestDepth(uint256[] memory v1, uint256[] memory v2)
         public
         pure
@@ -110,11 +168,21 @@ contract NibbleSlice is ITrie {
         return upperBound * NIBBLE_PER_BYTE;
     }
 
+    /**
+     * @dev Function to get the minimum of two numbers.
+     *
+     * @param a The first number.
+     * @param b The second number.
+     * @return The minimum of the two given numbers.
+     */
     function min(uint256 a, uint256 b) public pure returns (uint256) {
         return a < b ? a : b;
     }
 
-    function leftCommon(uint256 a, uint256 b) public pure returns (uint8) {
+    /**
+     * @dev Function to calculate the number of common nibble between two left aligned bytes.
+     */
+    function leftCommon(uint256 a, uint256 b) internal pure returns (uint8) {
         if (a == b) {
             return 2;
         } else if (a & 0xF0 == b & 0xF0) {
@@ -124,6 +192,11 @@ contract NibbleSlice is ITrie {
         }
     }
 
+    /**
+     * @dev This function calculates the longest common prefix of two memory slices in a byte array.
+     * It does this by first checking the alignment of the slices and then either comparing the slices directly or
+     * comparing the nibbles one by one. The function returns the length of the longest common prefix as a uint256 value.
+     */
     function commonPrefix(Slice memory slice1, Slice memory slice2)
         public
         pure

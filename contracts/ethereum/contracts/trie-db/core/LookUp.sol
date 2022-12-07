@@ -25,6 +25,17 @@ contract LookUp is ITrie {
         node = Node(nodeAddress);
     }
 
+    /**
+     * Function to look up a value in a base-16 patricia merkle trie.
+     *
+     * @param KVStore An array of key-value stores where the trie data is stored.
+     * @param key The key to look up.
+     * @param root The root of the trie.
+     * @param layout The trie layout.
+     * @return A tuple consisting of the following elements:
+     *         - bool: A boolean indicating whether the key was found in the trie.
+     *         - bytes memory: The value associated with the key if found, or empty bytes otherwise.
+     */
     function lookUpWithoutCache(
         DB[] memory KVStore,
         uint8[] calldata key,
