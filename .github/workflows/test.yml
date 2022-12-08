@@ -121,12 +121,18 @@ jobs:
         run: |
           DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest
 
-          ls -l $BUILD_DIR
           mkdir $BUILD_DIR/tmp
           yarn --cwd ./scripts/parachain-launch install
           TMPDIR=$BUILD_DIR/tmp OUTPUT=$BUILD_DIR yarn --cwd ./scripts/parachain-launch dev
-          ls -l $BUILD_DIR
-          cp $BUILD_DIR/{*.json,*.Dockerfile,*.yml} ./scripts/parachain-launch/
+          for file in dev-2000-2000.json \
+            dev-2001-2001.json \
+            docker-compose.yml \
+            parachain-2000.Dockerfile \
+            parachain-2001.Dockerfile \
+            relaychain.Dockerfile \
+            rococo-local.json; do
+            cp "$BUILD_DIR/$file" ./scripts/parachain-launch/
+          done
           sed -i 's/9944:9933/9144:9933/g' ./scripts/parachain-launch/docker-compose.yml
 
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml up -d --build
