@@ -16,7 +16,7 @@
 
 use crate::{
 	client_def::GrandpaClient,
-	client_message::{ClientMessage, RelayChainHeader, GRANDPA_CLIENT_MESSAGE_TYPE_URL},
+	client_message::{ClientMessage, GRANDPA_CLIENT_MESSAGE_TYPE_URL},
 	client_state::{ClientState, UpgradeOptions, GRANDPA_CLIENT_STATE_TYPE_URL},
 	consensus_state::{ConsensusState, GRANDPA_CONSENSUS_STATE_TYPE_URL},
 };
@@ -32,7 +32,7 @@ use ibc::{
 		client_def::MockClient,
 		client_state::{MockClientState, MockConsensusState},
 		context::HostBlockType,
-		header::{MockClientMessage, MockHeader},
+		header::MockClientMessage,
 		host::MockHostBlock,
 	},
 	prelude::*,

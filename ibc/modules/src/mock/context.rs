@@ -17,7 +17,6 @@ use crate::prelude::*;
 
 use alloc::{collections::btree_map::BTreeMap, sync::Arc};
 use core::{
-	borrow::Borrow,
 	cmp::min,
 	fmt::{Debug, Formatter},
 	ops::{Add, Sub},
