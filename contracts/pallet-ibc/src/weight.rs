@@ -13,9 +13,10 @@
 // limitations under the License.
 
 use super::*;
-use crate::routing::Context;
+use crate::{light_clients::AnyClientMessage, routing::Context};
 use core::marker::PhantomData;
 use frame_support::pallet_prelude::Weight;
+use grandpa_client_primitives::justification::GrandpaJustification;
 use ibc::core::{
 	ics02_client::msgs::ClientMsg,
 	ics03_connection::{context::ConnectionReader, msgs::ConnectionMsg},
@@ -24,6 +25,7 @@ use ibc::core::{
 	ics26_routing::msgs::Ics26Envelope,
 };
 use ibc_primitives::{client_id_from_bytes, CallbackWeight};
+use ics10_grandpa::client_message::{ClientMessage, RelayChainHeader};
 use scale_info::prelude::string::ToString;
 
 pub trait WeightInfo {
@@ -53,6 +55,7 @@ pub trait WeightInfo {
 	fn on_chan_close_confirm() -> Weight;
 	fn on_acknowledgement_packet() -> Weight;
 	fn on_timeout_packet() -> Weight;
+	fn update_grandpa_client(i: u32) -> Weight;
 }
 
 impl WeightInfo for () {
@@ -159,6 +162,10 @@ impl WeightInfo for () {
 	fn on_timeout_packet() -> Weight {
 		0
 	}
+
+	fn update_grandpa_client(_i: u32) -> Weight {
+		0
+	}
 }
 
 pub struct WeightRouter<T: Config>(PhantomData<T>);
@@ -213,6 +220,22 @@ where
 						match client_type {
 							Some(ty) if ty.contains("tendermint") =>
 								<T as Config>::WeightInfo::update_tendermint_client(),
+							Some(ty) if ty.contains("grandpa") => match msg.client_message {
+								AnyClientMessage::Grandpa(client_message) => match client_message {
+									ClientMessage::Header(header) => {
+										let justification =
+											GrandpaJustification::<RelayChainHeader>::decode(
+												&mut &*header.finality_proof.justification,
+											)
+											.expect("Justification should be valid");
+										<T as Config>::WeightInfo::update_grandpa_client(
+											justification.commit.precommits.len() as u32,
+										)
+									},
+									ClientMessage::Misbehaviour(_) => Weight::default(),
+								},
+								_ => return Weight::MAX,
+							},
 							_ => Weight::default(),
 						}
 					},

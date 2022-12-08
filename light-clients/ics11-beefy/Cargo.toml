@@ -61,12 +61,8 @@ serde = { version = "1.0", default-features = false }
 bytes = { version = "1.1.0", default-features = false }
 derive_more = { version = "0.99.17", default-features = false, features = ["from"] }
 primitive-types = { version = "0.11.1", default-features = false }
-
-[dependencies.tendermint]
-workspace = true
-
-[dependencies.tendermint-proto]
-workspace = true
+tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
+tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
 
 [dev-dependencies]
 futures = "0.3.24"
