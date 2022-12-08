@@ -30,8 +30,8 @@ sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 cumulus-primitives-core  = { default-features = false, git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.27" }
 # ibc
 ibc-proto = { path = "../../ibc/proto", default-features = false }
-tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "97643a9676215bd775eeface5c2379b750bceb64", optional = true, default-features = false } # cannot be defined as optional in workspace
-tendermint-proto = { workspace = true }
+tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", optional = true, default-features = false } # cannot be defined as optional in workspace
+tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
 ics23 = { git = "https://github.com/confio/ics23", rev = "a4daeb4c24ce1be827829c0841446abc690c4f11", default-features = false }
 
 grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../algorithms/grandpa/primitives", default-features = false }
@@ -52,6 +52,9 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch =
 pallet-ibc-ping = { path = "ping", default-features = false, optional = true }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, optional = true }
 simple-iavl = { path = "simple-iavl", default-features = false, optional = true }
+sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, optional = true }
+finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-features = false, optional = true }
+serde = { version = "1.0", optional = true }
 
 [dependencies.ibc]
 path = "../../ibc/modules"
@@ -68,7 +71,9 @@ features = ["derive"]
 default-features = false
 
 [dependencies.tendermint-light-client-verifier]
-workspace = true
+git = "https://github.com/composableFi/tendermint-rs"
+rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0"
+default-features = false
 
 [dev-dependencies]
 chrono = "0.4.19"
@@ -81,10 +86,11 @@ prost = { version = "0.11" }
 serde = { version = "1.0" }
 simple-iavl = { path = "simple-iavl" }
 sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-tendermint = { workspace = true }
+tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
 balances = { package = "pallet-balances", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 pallet-assets = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 pallet-ibc-ping = { path = "ping", default-features = false }
+sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27"}
 
 [dev-dependencies.ibc]
 path = "../../ibc/modules"
@@ -118,6 +124,10 @@ std = [
   "ics10-grandpa/std",
   "ics11-beefy/std",
   "ics07-tendermint/std",
+  "sp-finality-grandpa/std",
+  "sp-finality-grandpa/std",
+  "finality-grandpa/std",
+  "serde",
 ]
 
 runtime-benchmarks = [
@@ -133,6 +143,8 @@ runtime-benchmarks = [
   "simple-iavl",
   "prost",
   "ibc-primitives/runtime-benchmarks",
+  "sp-finality-grandpa",
+  "finality-grandpa"
 ]
 
 try-runtime = ["frame-support/try-runtime"]

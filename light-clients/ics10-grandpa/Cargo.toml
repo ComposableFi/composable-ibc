@@ -59,12 +59,8 @@ sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 finality-grandpa = { version = "0.16.0", default-features = false }
 
-[dependencies.tendermint]
-workspace = true
-
-
-[dependencies.tendermint-proto]
-workspace = true
+tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
+tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
 
 [dev-dependencies]
 hex = "0.4.3"

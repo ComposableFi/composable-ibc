@@ -99,7 +99,7 @@ pub struct ChannelEnd {
 impl Default for ChannelEnd {
 	fn default() -> Self {
 		ChannelEnd {
-			state: State::Uninitialized,
+			state: State::Init,
 			ordering: Default::default(),
 			remote: Counterparty::default(),
 			connection_hops: Vec::new(),
@@ -115,10 +115,6 @@ impl TryFrom<RawChannel> for ChannelEnd {
 
 	fn try_from(value: RawChannel) -> Result<Self, Self::Error> {
 		let chan_state: State = State::from_i32(value.state)?;
-
-		if chan_state == State::Uninitialized {
-			return Ok(ChannelEnd::default())
-		}
 
 		let chan_ordering = Order::from_i32(value.ordering)?;
 
@@ -282,7 +278,6 @@ impl From<Counterparty> for RawCounterparty {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum Order {
-	None = 0,
 	Unordered = 1,
 	Ordered = 2,
 }
@@ -303,7 +298,6 @@ impl Order {
 	/// Yields the Order as a string
 	pub fn as_str(&self) -> &'static str {
 		match self {
-			Self::None => "UNINITIALIZED",
 			Self::Unordered => "ORDER_UNORDERED",
 			Self::Ordered => "ORDER_ORDERED",
 		}
@@ -312,7 +306,6 @@ impl Order {
 	// Parses the Order out from a i32.
 	pub fn from_i32(nr: i32) -> Result<Self, Error> {
 		match nr {
-			0 => Ok(Self::None),
 			1 => Ok(Self::Unordered),
 			2 => Ok(Self::Ordered),
 			_ => Err(Error::unknown_order_type(nr.to_string())),
@@ -325,7 +318,6 @@ impl FromStr for Order {
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		match s.to_lowercase().trim_start_matches("order_") {
-			"uninitialized" => Ok(Self::None),
 			"unordered" => Ok(Self::Unordered),
 			"ordered" => Ok(Self::Ordered),
 			_ => Err(Error::unknown_order_type(s.to_string())),
@@ -335,7 +327,6 @@ impl FromStr for Order {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum State {
-	Uninitialized = 0,
 	Init = 1,
 	TryOpen = 2,
 	Open = 3,
@@ -346,7 +337,6 @@ impl State {
 	/// Yields the state as a string
 	pub fn as_string(&self) -> &'static str {
 		match self {
-			Self::Uninitialized => "UNINITIALIZED",
 			Self::Init => "INIT",
 			Self::TryOpen => "TRYOPEN",
 			Self::Open => "OPEN",
@@ -357,7 +347,6 @@ impl State {
 	// Parses the State out from a i32.
 	pub fn from_i32(s: i32) -> Result<Self, Error> {
 		match s {
-			0 => Ok(Self::Uninitialized),
 			1 => Ok(Self::Init),
 			2 => Ok(Self::TryOpen),
 			3 => Ok(Self::Open),
@@ -537,10 +526,8 @@ mod tests {
 			want_err: bool,
 		}
 		let tests: Vec<Test> = vec![
-			Test { ordering: "UNINITIALIZED", want_res: Order::None, want_err: false },
 			Test { ordering: "UNORDERED", want_res: Order::Unordered, want_err: false },
 			Test { ordering: "ORDERED", want_res: Order::Ordered, want_err: false },
-			Test { ordering: "UNKNOWN_ORDER", want_res: Order::None, want_err: true },
 		]
 		.into_iter()
 		.collect();

@@ -51,7 +51,9 @@ use crate::{
 	Height,
 };
 
-use crate::core::ics02_client::context::ClientTypes;
+use crate::core::{
+	ics02_client::context::ClientTypes, ics26_routing::context::ModuleCallbackContext,
+};
 use tendermint::{block, consensus, evidence, public_key::Algorithm};
 
 // Needed in mocks.
@@ -102,6 +104,7 @@ impl<C: HostBlockType> DummyTransferModule<C> {
 impl<C: HostBlockType + 'static> Module for DummyTransferModule<C> {
 	fn on_chan_open_try(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		_order: Order,
 		_connection_hops: &[ConnectionId],

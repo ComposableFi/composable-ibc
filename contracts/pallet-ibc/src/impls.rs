@@ -86,7 +86,7 @@ where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	AccountId32: From<T::AccountId>,
 {
-	pub fn execute_ibc_messages(
+	pub(crate) fn execute_ibc_messages(
 		ctx: &mut Context<T>,
 		messages: Vec<ibc_proto::google::protobuf::Any>,
 	) {
@@ -776,17 +776,16 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn get_denom_traces(
-		key: Option<T::AssetId>,
-		offset: Option<u32>,
+		key: Option<Either<T::AssetId, u32>>,
 		limit: u64,
 		count_total: bool,
 	) -> ibc_primitives::QueryDenomTracesResponse {
-		let (denoms, count, next_key) =
-			T::IbcDenomToAssetIdConversion::ibc_assets(key, offset, limit);
+		let IbcAssets { denoms, total_count, next_id } =
+			T::IbcDenomToAssetIdConversion::ibc_assets(key, limit);
 		ibc_primitives::QueryDenomTracesResponse {
 			denoms,
-			total: count_total.then(|| count),
-			next_key: next_key.map(|key| key.encode()),
+			total: count_total.then(|| total_count),
+			next_key: next_id.map(|key| key.encode()),
 		}
 	}
 }
@@ -1087,7 +1086,7 @@ where
 		Ok(msg)
 	}
 
-	pub fn send_transfer(msg: MsgTransfer<PrefixedCoin>) -> Result<(), IbcHandlerError> {
+	pub(crate) fn send_transfer(msg: MsgTransfer<PrefixedCoin>) -> Result<(), IbcHandlerError> {
 		let mut ctx = Context::<T>::default();
 		let mut handler_output = HandlerOutputBuilder::default();
 		send_transfer::<_, _>(&mut ctx, &mut handler_output, msg)

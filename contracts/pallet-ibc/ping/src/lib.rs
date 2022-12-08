@@ -33,7 +33,8 @@ use ibc::{
 		},
 		ics24_host::identifier::{ChannelId, ConnectionId, PortId},
 		ics26_routing::context::{
-			Acknowledgement as GenericAcknowledgement, Module, ModuleOutputBuilder, OnRecvPacketAck,
+			Acknowledgement as GenericAcknowledgement, Module, ModuleCallbackContext,
+			ModuleOutputBuilder,
 		},
 	},
 	signer::Signer,
@@ -174,6 +175,7 @@ impl<T: Config> core::fmt::Debug for IbcModule<T> {
 impl<T: Config + Send + Sync> Module for IbcModule<T> {
 	fn on_chan_open_init(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		_order: Order,
 		_connection_hops: &[ConnectionId],
@@ -188,6 +190,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 
 	fn on_chan_open_try(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		order: Order,
 		_connection_hops: &[ConnectionId],
@@ -218,6 +221,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 
 	fn on_chan_open_ack(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
@@ -234,6 +238,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 
 	fn on_chan_open_confirm(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
@@ -244,6 +249,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 
 	fn on_chan_close_init(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
@@ -254,6 +260,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 
 	fn on_chan_close_confirm(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
@@ -264,25 +271,23 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 
 	fn on_recv_packet(
 		&self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		packet: &Packet,
 		_relayer: &Signer,
-	) -> OnRecvPacketAck {
+	) -> Result<(), Ics04Error> {
 		let success = "ping-success".as_bytes().to_vec();
 		let data = String::from_utf8(packet.data.clone()).ok();
 		log::info!("Received Packet Sequence {:?}, Packet Data {:?}", packet.sequence, data);
 		let packet = packet.clone();
-		OnRecvPacketAck::Successful(
-			Box::new(PingAcknowledgement(success.clone())),
-			Box::new(move |_| {
-				T::IbcHandler::write_acknowledgement(&packet, success)
-					.map_err(|e| format!("{:?}", e))
-			}),
-		)
+		T::IbcHandler::write_acknowledgement(&packet, success)
+			.map_err(|e| Ics04Error::implementation_specific(format!("{:?}", e)))?;
+		Ok(())
 	}
 
 	fn on_acknowledgement_packet(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		packet: &Packet,
 		acknowledgement: &Acknowledgement,
@@ -294,6 +299,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 
 	fn on_timeout_packet(
 		&mut self,
+		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
 		packet: &Packet,
 		_relayer: &Signer,
