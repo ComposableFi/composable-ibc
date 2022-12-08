@@ -572,12 +572,12 @@ impl Debug for MockRouter {
 }
 
 impl Router for MockRouter {
-	fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module> {
-		self.0.get_mut(module_id.borrow()).and_then(Arc::get_mut)
+	fn get_route_mut(&mut self, module_id: &ModuleId) -> Option<&mut dyn Module> {
+		self.0.get_mut(module_id.as_ref()).and_then(Arc::get_mut)
 	}
 
-	fn has_route(&self, module_id: &impl Borrow<ModuleId>) -> bool {
-		self.0.get(module_id.borrow()).is_some()
+	fn has_route(&self, module_id: &ModuleId) -> bool {
+		self.0.get(module_id.as_ref()).is_some()
 	}
 }
 

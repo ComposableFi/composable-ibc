@@ -257,11 +257,10 @@ where
 	}
 
 	fn ibc_assets(
-		_start_key: Option<T::AssetId>,
-		_offset: Option<u32>,
+		_start_key: Option<Either<T::AssetId, u32>>,
 		_limit: u64,
-	) -> (Vec<Vec<u8>>, u64, Option<T::AssetId>) {
-		(vec![], 0, None)
+	) -> IbcAssets<T::AssetId> {
+		IbcAssets { denoms: vec![], total_count: 0, next_id: None }
 	}
 }
 
@@ -273,18 +272,16 @@ pub struct Router {
 impl ModuleRouter for Router {
 	fn get_route_mut(
 		&mut self,
-		module_id: &impl core::borrow::Borrow<ibc::core::ics26_routing::context::ModuleId>,
+		module_id: &ibc::core::ics26_routing::context::ModuleId,
 	) -> Option<&mut dyn ibc::core::ics26_routing::context::Module> {
-		match module_id.borrow().to_string().as_str() {
+		match module_id.as_ref() {
 			pallet_ibc_ping::MODULE_ID => Some(&mut self.ibc_ping),
 			&_ => None,
 		}
 	}
 
-	fn has_route(
-		module_id: &impl core::borrow::Borrow<ibc::core::ics26_routing::context::ModuleId>,
-	) -> bool {
-		matches!(module_id.borrow().to_string().as_str(), pallet_ibc_ping::MODULE_ID,)
+	fn has_route(module_id: &ibc::core::ics26_routing::context::ModuleId) -> bool {
+		matches!(module_id.as_ref(), pallet_ibc_ping::MODULE_ID,)
 	}
 
 	fn lookup_module_by_port(

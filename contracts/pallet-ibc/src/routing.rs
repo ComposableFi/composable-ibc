@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use super::*;
-use core::{borrow::Borrow, fmt::Debug};
+use core::fmt::Debug;
 use ibc::{
 	applications::transfer::MODULE_ID_STR as IBC_TRANSFER_MODULE_ID,
 	core::{
@@ -59,9 +59,9 @@ impl<T: Config> Default for IbcRouter<T> {
 /// Module routing abstraction for downstream substrate runtimes.
 pub trait ModuleRouter: Default + Clone + Eq + PartialEq + Debug {
 	/// Returns a mutable reference to a `Module` registered against the specified `ModuleId`
-	fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module>;
+	fn get_route_mut(&mut self, module_id: &ModuleId) -> Option<&mut dyn Module>;
 	/// Returns true if the `Router` has a `Module` registered against the specified `ModuleId`
-	fn has_route(module_id: &impl Borrow<ModuleId>) -> bool;
+	fn has_route(module_id: &ModuleId) -> bool;
 	/// Should return the module_id associated with a given port_id
 	fn lookup_module_by_port(port_id: &PortId) -> Option<ModuleId>;
 }
@@ -71,25 +71,25 @@ where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	AccountId32: From<T::AccountId>,
 {
-	fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module> {
+	fn get_route_mut(&mut self, module_id: &ModuleId) -> Option<&mut dyn Module> {
 		// check if the user has defined any custom routes
 		if let Some(module) = self.sub_router.get_route_mut(module_id) {
 			return Some(module)
 		}
 
-		match module_id.borrow().to_string().as_str() {
+		match module_id.as_ref() {
 			IBC_TRANSFER_MODULE_ID => Some(&mut self.ibc_transfer),
 			&_ => None,
 		}
 	}
 
-	fn has_route(&self, module_id: &impl Borrow<ModuleId>) -> bool {
+	fn has_route(&self, module_id: &ModuleId) -> bool {
 		// check if the user has defined any custom routes
 		if T::Router::has_route(module_id) {
 			return true
 		}
 
-		matches!(module_id.borrow().to_string().as_str(), IBC_TRANSFER_MODULE_ID,)
+		matches!(module_id.to_string().as_str(), IBC_TRANSFER_MODULE_ID,)
 	}
 }
 

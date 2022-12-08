@@ -285,15 +285,15 @@ pub struct Router {
 // 3. Implement ModuleRouter trait.
 impl ModuleRouter for Router {
     // 4. Add support for all custom routes within these function implementations
-    fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module> {
-        match module_id.borrow().to_string().as_str() {
+    fn get_route_mut(&mut self, module_id: &ModuleId) -> Option<&mut dyn Module> {
+        match module_id.as_ref() {
             pallet_example::MODULE_ID => Some(&mut self.pallet_example),
             _ => None,
         }
     }
 
-    fn has_route(module_id: &impl Borrow<ModuleId>) -> bool {
-        matches!(module_id.borrow().to_string().as_str(), pallet_example::MODULE_ID)
+    fn has_route(module_id: &ModuleId) -> bool {
+        matches!(module_id.as_ref(), pallet_example::MODULE_ID)
     }
 
     fn lookup_module_by_port(port_id: &PortId) -> Option<ModuleId> {
