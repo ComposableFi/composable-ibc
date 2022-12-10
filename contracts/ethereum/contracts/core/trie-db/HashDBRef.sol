@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
-import "../interfaces/ITrie.sol";
+import "../../interfaces/ITrie.sol";
 import "./Codec.sol";
-import "../utils/Blake2b.sol";
+import "../../utils/Blake2b.sol";
 
 contract HashDBRef is ITrie {
     using Blake2b for Blake2b.Instance;
