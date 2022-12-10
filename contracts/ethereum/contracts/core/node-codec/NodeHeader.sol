@@ -12,55 +12,57 @@ contract NodeHeader is ICodec {
     uint256 constant ALT_HASHING_LEAF_PREFIX_MASK = FIRST_PREFIX | (0x1 << 5);
     uint256 constant ALT_HASHING_BRANCH_WITH_MASK = FIRST_PREFIX | (0x01 << 4);
 
-    function decode(bytes memory input)
+    function decode(ByteSlice memory input)
         external
+        pure
         returns (NodeHeaderStruct memory)
     {
-        uint8 i = _readByte(input);
-        if (i == EMPTY_TRIE) {
+        uint8 prefix;
+        (prefix, input) = _readByte(input);
+        if (prefix == EMPTY_TRIE) {
             return NodeHeaderStruct(NodeHeaderType.Null, false, 0);
         }
 
-        uint256 mask = (0x11 << 6);
+        uint256 prefixMask = (0x11 << 6);
 
-        if ((i & mask) == LEAF_PREFIX_MASK) {
+        if ((prefix & prefixMask) == LEAF_PREFIX_MASK) {
             return
                 NodeHeaderStruct(
                     NodeHeaderType.Leaf,
                     false,
-                    decodeSize(i, input, 2)
+                    decodeSize(prefix, input, 2)
                 );
-        } else if ((i & mask) == BRANCH_WITH_MASK) {
+        } else if ((prefix & prefixMask) == BRANCH_WITH_MASK) {
             return
                 NodeHeaderStruct(
                     NodeHeaderType.Branch,
                     true,
-                    decodeSize(i, input, 2)
+                    decodeSize(prefix, input, 2)
                 );
-        } else if ((i & mask) == BRANCH_WITHOUT_MASK) {
+        } else if ((prefix & prefixMask) == BRANCH_WITHOUT_MASK) {
             return
                 NodeHeaderStruct(
                     NodeHeaderType.Branch,
                     false,
-                    decodeSize(i, input, 2)
+                    decodeSize(prefix, input, 2)
                 );
         } else {
-            mask = (0x111 << 5);
-            if ((i & mask) == ALT_HASHING_LEAF_PREFIX_MASK) {
+            prefixMask = (0x111 << 5);
+            if ((prefix & prefixMask) == ALT_HASHING_LEAF_PREFIX_MASK) {
                 return
                     NodeHeaderStruct(
                         NodeHeaderType.HashedValueLeaf,
                         false,
-                        decodeSize(i, input, 3)
+                        decodeSize(prefix, input, 3)
                     );
             }
-            mask = (0x1111 << 4);
-            if ((i & mask) == ALT_HASHING_BRANCH_WITH_MASK) {
+            prefixMask = (0x1111 << 4);
+            if ((prefix & prefixMask) == ALT_HASHING_BRANCH_WITH_MASK) {
                 return
                     NodeHeaderStruct(
                         NodeHeaderType.HashedValueBranch,
                         false,
-                        decodeSize(i, input, 4)
+                        decodeSize(prefix, input, 4)
                     );
             }
             // do not allow any special encoding
@@ -69,10 +71,34 @@ contract NodeHeader is ICodec {
     }
 
     function decodeSize(
-        uint256 _first,
-        bytes memory input,
-        uint256 _prefixMask
-    ) internal returns (uint256) {}
+        uint256 first,
+        ByteSlice memory input,
+        uint256 prefixMask
+    ) internal pure returns (uint256 result) {
+        uint256 maxValue = 255 >> prefixMask;
+        result = first & maxValue;
+        if (result < maxValue) {
+            return result;
+        }
+        result -= 1;
+        while (true) {
+            uint256 n;
+            (n, input) = _readByte(input);
+            if (n < 255) {
+                return result + n + 1;
+            }
+            result += 255;
+        }
+    }
 
-    function _readByte(bytes memory input) internal returns (uint8) {}
+    function _readByte(ByteSlice memory input)
+        internal
+        pure
+        returns (uint8, ByteSlice memory)
+    {
+        require(input.offset + 1 <= input.data.length, "out of data");
+        uint8 byteAtOffset = input.data[input.offset];
+        input.offset += 1;
+        return (byteAtOffset, input);
+    }
 }

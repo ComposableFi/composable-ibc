@@ -15,4 +15,9 @@ interface ICodec {
         bool isValue;
         uint256 value;
     }
+
+    struct ByteSlice {
+        uint8[] data;
+        uint8 offset;
+    }
 }
