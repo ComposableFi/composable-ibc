@@ -364,8 +364,7 @@ where
 						anyhow!("No header found for hash: {:?}", base_header.parent_hash)
 					})?;
 
-				let common_ancestor_block_number =
-					u32::from(*common_ancestor_header.number() + 0u32.into());
+				let common_ancestor_block_number = u32::from(*common_ancestor_header.number());
 				let encoded =
 					GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 						&*self.relay_ws_client,
@@ -384,42 +383,49 @@ where
 					FinalityProof::<RelayChainHeader>::decode(&mut &encoded[..])?;
 				let trusted_justification =
 					GrandpaJustification::decode(&mut &*trusted_finality_proof.justification)?;
-				trusted_finality_proof.unknown_headers.clear();
 				let to_block = trusted_justification.commit.target_number;
 				let from_block = (common_ancestor_block_number + 1).min(to_block);
-				for i in from_block..=to_block {
-					let unknown_header_hash =
-						self.relay_client.rpc().block_hash(Some(i.into())).await?.ok_or_else(
-							|| {
-								anyhow!(
-									"No block hash found for block number: {:?}",
-									common_ancestor_block_number
-								)
-							},
-						)?;
-					let unknown_header = self
-						.relay_client
-						.rpc()
-						.header(Some(unknown_header_hash))
-						.await?
-						.ok_or_else(|| {
-							anyhow!("No header found for hash: {:?}", unknown_header_hash)
-						})?;
-					trusted_finality_proof.unknown_headers.push(unknown_header.into());
-				}
 
-				let justification =
-					GrandpaJustification::decode(&mut &*header.finality_proof.justification)?;
-				if justification.commit.target_hash != trusted_justification.commit.target_hash {
+				let trusted_base_header_hash = self
+					.relay_client
+					.rpc()
+					.block_hash(Some(from_block.into()))
+					.await?
+					.ok_or_else(|| anyhow!("No hash found for block: {:?}", from_block))?;
+
+				let base_header_hash = base_header.hash();
+				if base_header_hash != trusted_base_header_hash.into() {
 					log::warn!(
 						"Found misbehaviour on client {}: {:?} != {:?}",
 						self.client_id
 							.as_ref()
 							.map(|x| x.as_str().to_owned())
 							.unwrap_or_else(|| "{unknown}".to_owned()),
-						header.finality_proof.block,
-						trusted_finality_proof.block
+						base_header_hash,
+						trusted_base_header_hash
 					);
+
+					trusted_finality_proof.unknown_headers.clear();
+					for i in from_block..=to_block {
+						let unknown_header_hash =
+							self.relay_client.rpc().block_hash(Some(i.into())).await?.ok_or_else(
+								|| {
+									anyhow!(
+										"No block hash found for block number: {:?}",
+										common_ancestor_block_number
+									)
+								},
+							)?;
+						let unknown_header = self
+							.relay_client
+							.rpc()
+							.header(Some(unknown_header_hash))
+							.await?
+							.ok_or_else(|| {
+								anyhow!("No header found for hash: {:?}", unknown_header_hash)
+							})?;
+						trusted_finality_proof.unknown_headers.push(unknown_header.into());
+					}
 
 					let misbehaviour = ClientMessage::Misbehaviour(Misbehaviour {
 						first_finality_proof: header.finality_proof,

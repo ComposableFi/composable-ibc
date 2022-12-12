@@ -212,7 +212,7 @@ where
 		.await
 		.expect("failed to submit message");
 
-	timeout(Duration::from_secs(30), misbehavour_event_handle)
+	timeout(Duration::from_secs(5 * 60), misbehavour_event_handle)
 		.await
 		.expect("timeout")
 		.expect("failed to receive misbehaviour event");
