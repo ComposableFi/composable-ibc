@@ -515,8 +515,8 @@ where
 		let seq = u64::from(key.2);
 
 		let key = Pallet::<T>::offchain_ack_key(channel_id, port_id, seq);
-		log::trace!(target: "pallet_ibc", "in channel: [store_raw_acknowledgement] >> writing acknowledgement {:?} {:?}", key, ack);
 		sp_io::offchain_index::set(&key, &ack);
+		log::trace!(target: "pallet_ibc", "in channel: [store_raw_acknowledgement] >> writing acknowledgement {:?} {:?}", key, ack);
 		Ok(())
 	}
 
@@ -664,6 +664,7 @@ where
 		sequences: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Error<T>> {
 		let packets = sequences
+			.clone()
 			.into_iter()
 			.filter_map(|seq| {
 				let key =
@@ -672,6 +673,7 @@ where
 					.and_then(|v| PacketInfo::decode(&mut &*v).ok())
 			})
 			.collect();
+		log::trace!(target: "pallet_ibc", "offchain_send_packets: {:?}, {:?}", sequences, packets);
 		Ok(packets)
 	}
 
@@ -681,6 +683,7 @@ where
 		sequences: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Error<T>> {
 		let packets = sequences
+			.clone()
 			.into_iter()
 			.filter_map(|seq| {
 				let key =
@@ -702,6 +705,7 @@ where
 				})
 			})
 			.collect();
+		log::trace!(target: "pallet_ibc", "offchain_recv_packets: {:?}, {:?}", sequences, packets);
 		Ok(packets)
 	}
 
