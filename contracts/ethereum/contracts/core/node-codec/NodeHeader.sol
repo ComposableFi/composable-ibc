@@ -101,6 +101,4 @@ contract NodeHeader is ICodec {
         input.offset += 1;
         return (byteAtOffset, input);
     }
-
-    function containsHashOfValue() external pure {}
 }

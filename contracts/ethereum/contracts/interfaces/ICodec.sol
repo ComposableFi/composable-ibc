@@ -21,7 +21,7 @@ interface ICodec {
     struct NodeHeaderStruct {
         NodeHeaderType headerType;
         bool hasValue;
-        uint256 value;
+        uint8 value;
     }
 
     struct NodePlanStruct {
@@ -30,10 +30,16 @@ interface ICodec {
 
     struct ByteSlice {
         uint8[] data;
-        uint8 offset;
+        uint256 offset;
     }
 
     struct CodecStruct {
         bool padding;
+        uint256 partialRangeStart;
+        uint256 partialRangeEnd;
+        uint8 partialPadding;
+        uint256 bitmapRangeStart;
+        uint256 bitmapRangeEnd;
+        uint8 bitmapValue;
     }
 }

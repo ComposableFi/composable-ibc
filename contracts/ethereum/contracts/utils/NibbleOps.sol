@@ -22,7 +22,12 @@ contract NibbleOps {
      * @param b The byte to mask.
      * @return The masked byte with the right nibble.
      */
-    function padRight(uint256 b) public pure returns (uint256) {
+    function padRight(uint8 b) public pure returns (uint8) {
         return b & PADDING_BITMASK;
+    }
+
+    // Calculate the number of needed padding a array of nibble length `i`.
+    function numberPadding(uint8 b) public pure returns (uint8) {
+        return b % NIBBLE_PER_BYTE;
     }
 }
