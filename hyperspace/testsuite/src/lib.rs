@@ -39,6 +39,7 @@ use std::{str::FromStr, time::Duration};
 use tendermint_proto::Protobuf;
 use tokio::task::JoinHandle;
 
+pub mod misbehaviour;
 pub mod ordered_channels;
 mod utils;
 

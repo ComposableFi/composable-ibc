@@ -90,28 +90,25 @@ where
 		ctx: &mut Context<T>,
 		messages: Vec<ibc_proto::google::protobuf::Any>,
 	) {
-		let (events, logs, errors) = messages.into_iter().fold(
-			(vec![], vec![], vec![]),
-			|(mut events, mut logs, mut errors), msg| {
+		let (events, logs) =
+			messages.into_iter().fold((vec![], vec![]), |(mut events, mut logs), msg| {
 				match ibc::core::ics26_routing::handler::deliver(ctx, msg) {
 					Ok(MsgReceipt { events: temp_events, log: temp_logs }) => {
-						events.extend(temp_events);
+						events.extend(temp_events.into_iter().map(Ok));
 						logs.extend(temp_logs);
 					},
-					Err(e) => errors.push(e),
+					Err(e) => {
+						log::trace!(target: "pallet_ibc", "execution error: {}", e);
+						events.push(Err(e));
+					},
 				}
-				(events, logs, errors)
-			},
-		);
+				(events, logs)
+			});
 
 		log::trace!(target: "pallet_ibc", "logs: {:#?}", logs);
-		log::trace!(target: "pallet_ibc", "errors: {:#?}", errors);
 		// todo: consolidate into one.
 		if !events.is_empty() {
 			Self::deposit_event(events.into())
-		};
-		if !errors.is_empty() {
-			Self::deposit_event(errors.into())
 		};
 	}
 }
@@ -518,8 +515,8 @@ where
 		let seq = u64::from(key.2);
 
 		let key = Pallet::<T>::offchain_ack_key(channel_id, port_id, seq);
-		log::trace!(target: "pallet_ibc", "in channel: [store_raw_acknowledgement] >> writing acknowledgement {:?} {:?}", key, ack);
 		sp_io::offchain_index::set(&key, &ack);
+		log::trace!(target: "pallet_ibc", "in channel: [store_raw_acknowledgement] >> writing acknowledgement {:?} {:?}", key, ack);
 		Ok(())
 	}
 
@@ -667,6 +664,7 @@ where
 		sequences: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Error<T>> {
 		let packets = sequences
+			.clone()
 			.into_iter()
 			.filter_map(|seq| {
 				let key =
@@ -675,6 +673,7 @@ where
 					.and_then(|v| PacketInfo::decode(&mut &*v).ok())
 			})
 			.collect();
+		log::trace!(target: "pallet_ibc", "offchain_send_packets: {:?}, {:?}", sequences, packets);
 		Ok(packets)
 	}
 
@@ -684,6 +683,7 @@ where
 		sequences: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Error<T>> {
 		let packets = sequences
+			.clone()
 			.into_iter()
 			.filter_map(|seq| {
 				let key =
@@ -705,6 +705,7 @@ where
 				})
 			})
 			.collect();
+		log::trace!(target: "pallet_ibc", "offchain_recv_packets: {:?}, {:?}", sequences, packets);
 		Ok(packets)
 	}
 
@@ -842,7 +843,7 @@ where
 			dest_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
 			sequence: packet.sequence.into(),
 		};
-		Self::deposit_event(Event::<T>::Events { events: vec![event] });
+		Self::deposit_event(Event::<T>::Events { events: vec![Ok(event)] });
 		Ok(())
 	}
 

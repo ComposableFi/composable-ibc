@@ -20,8 +20,8 @@ pub mod chain;
 pub mod config;
 pub mod error;
 pub mod key_provider;
-pub(crate) mod parachain;
-pub(crate) mod polkadot;
+pub mod parachain;
+pub mod polkadot;
 pub mod provider;
 pub mod signer;
 pub mod utils;
@@ -407,10 +407,13 @@ where
 				.tx()
 				.sign_and_submit_then_watch(&call, &signer, other_params)
 				.await;
-			if res.is_ok() {
-				break res.unwrap()
+			match res {
+				Ok(progress) => break progress,
+				Err(e) => {
+					log::warn!("Failed to submit extrinsic: {:?}. Retrying...", e);
+					count += 1;
+				},
 			}
-			count += 1;
 		};
 
 		let tx_in_block = progress.wait_for_in_block().await?;
@@ -554,7 +557,7 @@ where
 			let light_client_state = prover
 				.initialize_client_state()
 				.await
-				.map_err(|_| Error::from("Error constructing client state".to_string()))?;
+				.map_err(|e| Error::from(format!("Error constructing client state: {e}")))?;
 
 			let heads_addr = polkadot::api::storage().paras().heads(
 				&polkadot::api::runtime_types::polkadot_parachain::primitives::Id(self.para_id),

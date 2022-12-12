@@ -13,6 +13,10 @@
 // limitations under the License.
 
 use alloc::{borrow::ToOwned, format, string::ToString, vec::Vec};
+use frame_support::{
+	pallet_prelude::{StorageValue, ValueQuery},
+	traits::StorageInstance,
+};
 use ibc::core::{
 	ics02_client,
 	ics02_client::{client_consensus::ConsensusState, client_state::ClientState},
@@ -21,15 +25,20 @@ use ibc_derive::{ClientDef, ClientMessage, ClientState, ConsensusState, Protobuf
 use ibc_primitives::runtime_interface;
 use ibc_proto::google::protobuf::Any;
 use ics10_grandpa::{
-	client_message::GRANDPA_CLIENT_MESSAGE_TYPE_URL, client_state::GRANDPA_CLIENT_STATE_TYPE_URL,
+	client_message::{RelayChainHeader, GRANDPA_CLIENT_MESSAGE_TYPE_URL},
+	client_state::GRANDPA_CLIENT_STATE_TYPE_URL,
 	consensus_state::GRANDPA_CONSENSUS_STATE_TYPE_URL,
 };
 use ics11_beefy::{
 	client_message::BEEFY_CLIENT_MESSAGE_TYPE_URL, client_state::BEEFY_CLIENT_STATE_TYPE_URL,
 	consensus_state::BEEFY_CONSENSUS_STATE_TYPE_URL,
 };
-use sp_core::ed25519;
-use sp_runtime::{app_crypto::RuntimePublic, traits::BlakeTwo256};
+use sp_core::{ed25519, H256};
+use sp_runtime::{
+	app_crypto::RuntimePublic,
+	traits::{BlakeTwo256, ConstU32, Header},
+	BoundedBTreeSet, BoundedVec,
+};
 use tendermint_proto::Protobuf;
 
 pub const TENDERMINT_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.ClientState";
@@ -89,9 +98,75 @@ impl tendermint_light_client_verifier::host_functions::CryptoProvider for HostFu
 
 impl ics07_tendermint::HostFunctionsProvider for HostFunctionsManager {}
 
+pub struct GrandpaHeaderHashesStorageInstance;
+impl StorageInstance for GrandpaHeaderHashesStorageInstance {
+	fn pallet_prefix() -> &'static str {
+		"ibc.lightclients.grandpa"
+	}
+
+	const STORAGE_PREFIX: &'static str = "HeaderHashes";
+}
+pub type GrandpaHeaderHashesStorage = StorageValue<
+	GrandpaHeaderHashesStorageInstance,
+	BoundedVec<H256, ConstU32<GRANDPA_BLOCK_HASHES_CACHE_SIZE>>,
+	ValueQuery,
+>;
+
+pub struct GrandpaHeaderHashesSetStorageInstance;
+impl StorageInstance for GrandpaHeaderHashesSetStorageInstance {
+	fn pallet_prefix() -> &'static str {
+		"ibc.lightclients.grandpa"
+	}
+
+	const STORAGE_PREFIX: &'static str = "HeaderHashesSet";
+}
+pub type GrandpaHeaderHashesSetStorage = StorageValue<
+	GrandpaHeaderHashesSetStorageInstance,
+	BoundedBTreeSet<H256, ConstU32<GRANDPA_BLOCK_HASHES_CACHE_SIZE>>,
+	ValueQuery,
+>;
+
+/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
+const GRANDPA_BLOCK_HASHES_CACHE_SIZE: u32 = 500;
+
 impl grandpa_client_primitives::HostFunctions for HostFunctionsManager {
+	type Header = RelayChainHeader;
+
 	fn ed25519_verify(sig: &ed25519::Signature, msg: &[u8], pub_key: &ed25519::Public) -> bool {
 		pub_key.verify(&msg, sig)
+	}
+
+	fn insert_relay_header_hashes(new_hashes: &[<Self::Header as Header>::Hash]) {
+		if new_hashes.is_empty() {
+			return
+		}
+
+		GrandpaHeaderHashesSetStorage::mutate(|hashes_set| {
+			GrandpaHeaderHashesStorage::mutate(|hashes| {
+				for hash in new_hashes {
+					match hashes.try_push(*hash) {
+						Ok(_) => {},
+						Err(_) => {
+							let old_hash = hashes.remove(0);
+							hashes_set.remove(&old_hash);
+							hashes.try_push(*hash).expect(
+								"we just removed an element, so there is space for this one; qed",
+							);
+						},
+					}
+					match hashes_set.try_insert(*hash) {
+						Ok(_) => {},
+						Err(_) => {
+							log::warn!("duplicated value in GrandpaHeaderHashesStorage or the storage is corrupted");
+						},
+					}
+				}
+			});
+		});
+	}
+
+	fn contains_relay_header_hash(hash: <Self::Header as Header>::Hash) -> bool {
+		GrandpaHeaderHashesSetStorage::get().contains(&hash)
 	}
 }
 

@@ -1529,7 +1529,7 @@ where
 			.clone();
 
 		match event {
-			IbcEvent::CreateClient { client_id, .. } => {
+			Ok(IbcEvent::CreateClient { client_id, .. }) => {
 				let result: ibc_primitives::QueryClientStateResponse = api
 					.client_state(&at, client_id.clone())
 					.ok()
@@ -1567,7 +1567,9 @@ where
 			})?;
 			let temp = temp
 				.into_iter()
-				.filter_map(|event| filter_map_pallet_event::<C, Block, AssetId>(&at, &api, event))
+				.filter_map(|event| {
+					filter_map_pallet_event::<C, Block, AssetId>(&at, &api, event.ok()?)
+				})
 				.collect();
 			events.insert(block_number_or_hash.to_string(), temp);
 		}

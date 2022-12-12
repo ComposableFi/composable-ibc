@@ -2,8 +2,7 @@
 
 set -e
 
-cargo build --release -p codegen --bin codegen
-./target/release/codegen --path ./utils/subxt/generated/src
+cargo run --bin codegen -- --path ./utils/subxt/generated/src
 cargo +nightly fmt -- --emit=files
 if [[ -z $(git status -s) ]]
 then

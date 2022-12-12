@@ -44,14 +44,16 @@ use ibc_proto::{
 		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
 	},
 };
+use pallet_ibc::light_clients::AnyClientMessage;
 #[cfg(any(test, feature = "testing"))]
 use pallet_ibc::Timeout;
 use serde::Deserialize;
 use thiserror::Error;
 
+use ibc::core::ics02_client::events::UpdateClient;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use parachain::{config, ParachainClient};
-use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
+use primitives::{Chain, IbcProvider, KeyProvider, MisbehaviourHandler, UpdateType};
 use sp_runtime::generic::Era;
 use std::{pin::Pin, time::Duration};
 use subxt::{
@@ -164,7 +166,7 @@ impl IbcProvider for AnyChain {
 		}
 	}
 
-	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>> {
+	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
 		match self {
 			Self::Parachain(chain) => chain.ibc_events().await,
 			_ => unreachable!(),
@@ -546,6 +548,21 @@ impl IbcProvider for AnyChain {
 	}
 }
 
+#[async_trait]
+impl MisbehaviourHandler for AnyChain {
+	async fn check_for_misbehaviour<C: Chain>(
+		&self,
+		counterparty: &C,
+		client_message: AnyClientMessage,
+	) -> Result<(), anyhow::Error> {
+		match self {
+			AnyChain::Parachain(parachain) =>
+				parachain.check_for_misbehaviour(counterparty, client_message).await,
+			_ => unreachable!(),
+		}
+	}
+}
+
 impl KeyProvider for AnyChain {
 	fn account_id(&self) -> Signer {
 		match self {
@@ -597,6 +614,16 @@ impl Chain for AnyChain {
 				.await
 				.map_err(Into::into)
 				.map(|id| AnyTransactionId::Parachain(id)),
+			_ => unreachable!(),
+		}
+	}
+
+	async fn query_client_message(
+		&self,
+		update: UpdateClient,
+	) -> Result<AnyClientMessage, Self::Error> {
+		match self {
+			Self::Parachain(chain) => chain.query_client_message(update).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}

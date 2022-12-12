@@ -48,6 +48,7 @@ use ibc_proto::{
 	},
 };
 use ibc_rpc::{IbcApiClient, PacketInfo};
+use ics10_grandpa::client_message::RelayChainHeader;
 use ics11_beefy::client_state::ClientState as BeefyClientState;
 use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
@@ -86,6 +87,7 @@ where
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
+	RelayChainHeader: From<T::Header>,
 {
 	type FinalityEvent = FinalityEvent;
 	type TransactionId = TransactionId<T::Hash>;
@@ -105,7 +107,7 @@ where
 			.await
 	}
 
-	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>> {
+	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
 		use futures::{stream, StreamExt};
 		use pallet_ibc::events::IbcEvent as RawIbcEvent;
 
@@ -130,8 +132,10 @@ where
 					.into_iter()
 					.filter_map(|ev| {
 						Some(
-							IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(ev)))
-								.map_err(|e| subxt::Error::Other(e.to_string())),
+							IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(
+								ev.ok()?,
+							)))
+							.map_err(|e| subxt::Error::Other(e.to_string())),
 						)
 					})
 					.collect::<Result<Vec<_>, _>>();
@@ -148,7 +152,6 @@ where
 			.flatten();
 		Box::pin(stream)
 	}
-
 	async fn query_client_consensus(
 		&self,
 		at: Height,
