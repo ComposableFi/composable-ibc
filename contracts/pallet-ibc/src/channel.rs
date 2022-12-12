@@ -313,6 +313,7 @@ where
 		packet_info.channel_order = channel_end.ordering as u8;
 
 		sp_io::offchain_index::set(&key, packet_info.encode().as_slice());
+		log::trace!(target: "pallet_ibc", "in channel: [store_send_packet] >> writing packet {:?} {:?}", key, packet_info);
 		Ok(())
 	}
 
@@ -331,6 +332,7 @@ where
 		packet_info.height = Some(host_height::<T>());
 		packet_info.channel_order = channel_end.ordering as u8;
 		sp_io::offchain_index::set(&key, packet_info.encode().as_slice());
+		log::trace!(target: "pallet_ibc", "in channel: [store_recv_packet] >> writing packet {:?} {:?}", key, packet_info);
 		Ok(())
 	}
 

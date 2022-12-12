@@ -41,6 +41,7 @@ parachains:
       - --log=ibc_transfer=trace,pallet_ibc=trace,grandpa-verifier=trace,runtime=trace
       - --force-authoring
       - --execution=wasm
+      - --enable-offchain-indexing=true
     relaychainFlags: # CLI flags for the relaychain port
       - --execution=wasm
 #    volumePath: /acala/data # The path to mount volume and base path, default to /data
@@ -71,6 +72,7 @@ parachains:
       - --log=ibc_transfer=trace,pallet_ibc=trace,grandpa-verifier=trace,runtime=trace
       - --force-authoring
       - --execution=wasm
+      - --enable-offchain-indexing=true
     relaychainFlags: # CLI flags for the relaychain port
       - --execution=wasm
     nodes: # nodes config
