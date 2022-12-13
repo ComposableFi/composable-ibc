@@ -24,6 +24,8 @@ define_error! {
 			| _ | { format_args!("proof height cannot be zero") },
 		EmptyProof
 			| _ | { format_args!("proof cannot be empty") },
+		EncodingError
+			| _ | { format_args!("Error encoding proof") },
 	}
 }
 

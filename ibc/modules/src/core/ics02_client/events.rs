@@ -80,33 +80,26 @@ impl Default for Attributes {
 }
 
 /// Convert attributes to Tendermint ABCI tags
-///
-/// # Note
-/// The parsing of `Key`s and `Value`s never fails, because the
-/// `FromStr` instance of `tendermint::abci::tag::{Key, Value}`
-/// is infallible, even if it is not represented in the error type.
-/// Once tendermint-rs improves the API of the `Key` and `Value` types,
-/// we will be able to remove the `.parse().unwrap()` calls.
 impl From<Attributes> for Vec<EventAttribute> {
 	fn from(a: Attributes) -> Self {
 		let height = EventAttribute {
-			key: HEIGHT_ATTRIBUTE_KEY.parse().unwrap(),
-			value: a.height.to_string().parse().unwrap(),
+			key: HEIGHT_ATTRIBUTE_KEY.to_string(),
+			value: a.height.to_string(),
 			index: false,
 		};
 		let client_id = EventAttribute {
-			key: CLIENT_ID_ATTRIBUTE_KEY.parse().unwrap(),
-			value: a.client_id.to_string().parse().unwrap(),
+			key: CLIENT_ID_ATTRIBUTE_KEY.to_string(),
+			value: a.client_id.to_string(),
 			index: false,
 		};
 		let client_type = EventAttribute {
-			key: CLIENT_TYPE_ATTRIBUTE_KEY.parse().unwrap(),
+			key: CLIENT_TYPE_ATTRIBUTE_KEY.to_string(),
 			value: a.client_type.to_owned(),
 			index: false,
 		};
 		let consensus_height = EventAttribute {
-			key: CONSENSUS_HEIGHT_ATTRIBUTE_KEY.parse().unwrap(),
-			value: a.height.to_string().parse().unwrap(),
+			key: CONSENSUS_HEIGHT_ATTRIBUTE_KEY.to_string(),
+			value: a.height.to_string(),
 			index: false,
 		};
 		vec![height, client_id, client_type, consensus_height]

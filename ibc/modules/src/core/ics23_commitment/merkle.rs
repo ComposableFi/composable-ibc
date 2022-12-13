@@ -55,8 +55,8 @@ impl<H> From<RawMerkleProof> for MerkleProof<H> {
 			.into_iter()
 			.map(|p| {
 				let mut encoded = Vec::new();
-				prost::Message::encode(&p, &mut encoded).unwrap();
-				prost::Message::decode(&*encoded).unwrap()
+				prost::Message::encode(&p, &mut encoded).expect("Expects valid proof conversion");
+				prost::Message::decode(&*encoded).expect("Expects valid proof conversion")
 			})
 			.collect();
 		Self { proofs, _phantom: PhantomData }
@@ -71,8 +71,9 @@ impl<H> From<MerkleProof<H>> for RawMerkleProof {
 				.into_iter()
 				.map(|p| {
 					let mut encoded = Vec::new();
-					prost::Message::encode(&p, &mut encoded).unwrap();
-					prost::Message::decode(&*encoded).unwrap()
+					prost::Message::encode(&p, &mut encoded)
+						.expect("Expects valid proof conversion");
+					prost::Message::decode(&*encoded).expect("Expects valid proof conversion")
 				})
 				.collect(),
 		}

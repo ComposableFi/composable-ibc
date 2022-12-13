@@ -118,19 +118,19 @@ impl Display for ChainId {
 
 impl From<ChainId> for tendermint::chain::Id {
 	fn from(id: ChainId) -> Self {
-		tendermint::chain::Id::from_str(id.as_str()).unwrap()
+		tendermint::chain::Id::from_str(id.as_str()).expect("Chain Id is valid")
 	}
 }
 
 impl From<tendermint::chain::Id> for ChainId {
 	fn from(id: tendermint::chain::Id) -> Self {
-		ChainId::from_str(id.as_str()).unwrap()
+		ChainId::from_str(id.as_str()).expect("Chain Id is valid")
 	}
 }
 
 impl Default for ChainId {
 	fn default() -> Self {
-		"defaultChainId".to_string().parse().unwrap()
+		"defaultChainId".to_string().parse().expect("Chain id is valid")
 	}
 }
 
@@ -189,7 +189,7 @@ impl FromStr for ClientId {
 #[cfg(not(test))]
 impl Default for ClientId {
 	fn default() -> Self {
-		Self::new("00-uninitialized", 0).unwrap()
+		Self::new("00-uninitialized", 0).expect("statically defined and valid, qed")
 	}
 }
 
@@ -223,7 +223,7 @@ impl ConnectionId {
 	/// ```
 	pub fn new(counter: u64) -> Self {
 		let id = format!("{}-{}", Self::prefix(), counter);
-		Self::from_str(id.as_str()).unwrap()
+		Self::from_str(id.as_str()).expect("Connection id is valid")
 	}
 
 	/// Returns the static prefix to be used across all connection identifiers.
@@ -320,7 +320,10 @@ impl AsRef<str> for PortId {
 
 impl Default for PortId {
 	fn default() -> Self {
-		"defaultPort".to_string().parse().unwrap()
+		"defaultPort"
+			.to_string()
+			.parse()
+			.expect("port id is statically defined and valid, qed")
 	}
 }
 

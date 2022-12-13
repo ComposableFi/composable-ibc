@@ -30,7 +30,9 @@ pub struct CommitmentRoot {
 
 impl fmt::Debug for CommitmentRoot {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		let hex = Hex::upper_case().encode_to_string(&self.bytes).unwrap();
+		let hex = Hex::upper_case()
+			.encode_to_string(&self.bytes)
+			.map_err(|_| Default::default())?;
 		f.debug_tuple("CommitmentRoot").field(&hex).finish()
 	}
 }
@@ -74,7 +76,9 @@ impl CommitmentProofBytes {
 
 impl fmt::Debug for CommitmentProofBytes {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		let hex = Hex::upper_case().encode_to_string(&self.bytes).unwrap();
+		let hex = Hex::upper_case()
+			.encode_to_string(&self.bytes)
+			.map_err(|_| Default::default())?;
 		f.debug_tuple("CommitmentProof").field(&hex).finish()
 	}
 }
@@ -102,7 +106,7 @@ impl TryFrom<RawMerkleProof> for CommitmentProofBytes {
 
 	fn try_from(proof: RawMerkleProof) -> Result<Self, Self::Error> {
 		let mut buf = Vec::new();
-		prost::Message::encode(&proof, &mut buf).unwrap();
+		prost::Message::encode(&proof, &mut buf).map_err(|_| ProofError::encoding_error())?;
 		buf.try_into()
 	}
 }

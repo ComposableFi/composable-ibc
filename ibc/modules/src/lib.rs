@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO: disable unwraps:
-// https://github.com/informalsystems/ibc-rs/issues/987
-// #![cfg_attr(not(test), deny(clippy::unwrap_used))]
+#![cfg_attr(not(test), deny(clippy::unwrap_used))]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::all)]
 #![deny(
