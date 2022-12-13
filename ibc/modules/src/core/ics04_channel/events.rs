@@ -182,7 +182,9 @@ fn extract_packet_and_write_ack_from_tx(
 					value.parse().map_err(|_| Error::invalid_timeout_height())?;
 			},
 			PKT_TIMEOUT_TIMESTAMP_ATTRIBUTE_KEY => {
-				packet.timeout_timestamp = value.parse().unwrap();
+				packet.timeout_timestamp = value.parse().map_err(|_| {
+					Error::implementation_specific("parse timeout_timestamp error".to_string())
+				})?;
 			},
 			PKT_DATA_ATTRIBUTE_KEY => {
 				packet.data = Vec::from(value.as_bytes());
@@ -242,52 +244,45 @@ impl Attributes {
 }
 
 /// Convert attributes to Tendermint ABCI tags
-///
-/// # Note
-/// The parsing of `Key`s and `Value`s never fails, because the
-/// `FromStr` instance of `tendermint::abci::tag::{Key, Value}`
-/// is infallible, even if it is not represented in the error type.
-/// Once tendermint-rs improves the API of the `Key` and `Value` types,
-/// we will be able to remove the `.parse().unwrap()` calls.
 impl From<Attributes> for Vec<EventAttribute> {
 	fn from(a: Attributes) -> Self {
 		let mut attributes = vec![];
 		let height = EventAttribute {
-			key: HEIGHT_ATTRIBUTE_KEY.parse().unwrap(),
-			value: a.height.to_string().parse().unwrap(),
+			key: HEIGHT_ATTRIBUTE_KEY.to_string(),
+			value: a.height.to_string(),
 			index: false,
 		};
 		attributes.push(height);
 		let port_id = EventAttribute {
-			key: PORT_ID_ATTRIBUTE_KEY.parse().unwrap(),
-			value: a.port_id.to_string().parse().unwrap(),
+			key: PORT_ID_ATTRIBUTE_KEY.to_string(),
+			value: a.port_id.to_string(),
 			index: false,
 		};
 		attributes.push(port_id);
 		if let Some(channel_id) = a.channel_id {
 			let channel_id = EventAttribute {
-				key: CHANNEL_ID_ATTRIBUTE_KEY.parse().unwrap(),
-				value: channel_id.to_string().parse().unwrap(),
+				key: CHANNEL_ID_ATTRIBUTE_KEY.to_string(),
+				value: channel_id.to_string(),
 				index: false,
 			};
 			attributes.push(channel_id);
 		}
 		let connection_id = EventAttribute {
-			key: CONNECTION_ID_ATTRIBUTE_KEY.parse().unwrap(),
-			value: a.connection_id.to_string().parse().unwrap(),
+			key: CONNECTION_ID_ATTRIBUTE_KEY.to_string(),
+			value: a.connection_id.to_string(),
 			index: false,
 		};
 		attributes.push(connection_id);
 		let counterparty_port_id = EventAttribute {
-			key: COUNTERPARTY_PORT_ID_ATTRIBUTE_KEY.parse().unwrap(),
-			value: a.counterparty_port_id.to_string().parse().unwrap(),
+			key: COUNTERPARTY_PORT_ID_ATTRIBUTE_KEY.to_string(),
+			value: a.counterparty_port_id.to_string(),
 			index: false,
 		};
 		attributes.push(counterparty_port_id);
 		if let Some(channel_id) = a.counterparty_channel_id {
 			let channel_id = EventAttribute {
-				key: COUNTERPARTY_CHANNEL_ID_ATTRIBUTE_KEY.parse().unwrap(),
-				value: channel_id.to_string().parse().unwrap(),
+				key: COUNTERPARTY_CHANNEL_ID_ATTRIBUTE_KEY.to_string(),
+				value: channel_id.to_string(),
 				index: false,
 			};
 			attributes.push(channel_id);
@@ -297,70 +292,60 @@ impl From<Attributes> for Vec<EventAttribute> {
 }
 
 /// Convert attributes to Tendermint ABCI tags
-///
-/// # Note
-/// The parsing of `Key`s and `Value`s never fails, because the
-/// `FromStr` instance of `tendermint::abci::tag::{Key, Value}`
-/// is infallible, even if it is not represented in the error type.
-/// Once tendermint-rs improves the API of the `Key` and `Value` types,
-/// we will be able to remove the `.parse().unwrap()` calls.
 impl TryFrom<Packet> for Vec<EventAttribute> {
 	type Error = Error;
 	fn try_from(p: Packet) -> Result<Self, Self::Error> {
 		let mut attributes = vec![];
 		let src_port = EventAttribute {
-			key: PKT_SRC_PORT_ATTRIBUTE_KEY.parse().unwrap(),
-			value: p.source_port.to_string().parse().unwrap(),
+			key: PKT_SRC_PORT_ATTRIBUTE_KEY.to_string(),
+			value: p.source_port.to_string(),
 			index: false,
 		};
 		attributes.push(src_port);
 		let src_channel = EventAttribute {
-			key: PKT_SRC_CHANNEL_ATTRIBUTE_KEY.parse().unwrap(),
-			value: p.source_channel.to_string().parse().unwrap(),
+			key: PKT_SRC_CHANNEL_ATTRIBUTE_KEY.to_string(),
+			value: p.source_channel.to_string(),
 			index: false,
 		};
 		attributes.push(src_channel);
 		let dst_port = EventAttribute {
-			key: PKT_DST_PORT_ATTRIBUTE_KEY.parse().unwrap(),
-			value: p.destination_port.to_string().parse().unwrap(),
+			key: PKT_DST_PORT_ATTRIBUTE_KEY.to_string(),
+			value: p.destination_port.to_string(),
 			index: false,
 		};
 		attributes.push(dst_port);
 		let dst_channel = EventAttribute {
-			key: PKT_DST_CHANNEL_ATTRIBUTE_KEY.parse().unwrap(),
-			value: p.destination_channel.to_string().parse().unwrap(),
+			key: PKT_DST_CHANNEL_ATTRIBUTE_KEY.to_string(),
+			value: p.destination_channel.to_string(),
 			index: false,
 		};
 		attributes.push(dst_channel);
 		let sequence = EventAttribute {
-			key: PKT_SEQ_ATTRIBUTE_KEY.parse().unwrap(),
-			value: p.sequence.to_string().parse().unwrap(),
+			key: PKT_SEQ_ATTRIBUTE_KEY.to_string(),
+			value: p.sequence.to_string(),
 			index: false,
 		};
 		attributes.push(sequence);
 		let timeout_height = EventAttribute {
-			key: PKT_TIMEOUT_HEIGHT_ATTRIBUTE_KEY.parse().unwrap(),
-			value: p.timeout_height.to_string().parse().unwrap(),
+			key: PKT_TIMEOUT_HEIGHT_ATTRIBUTE_KEY.to_string(),
+			value: p.timeout_height.to_string(),
 			index: false,
 		};
 		attributes.push(timeout_height);
 		let timeout_timestamp = EventAttribute {
-			key: PKT_TIMEOUT_TIMESTAMP_ATTRIBUTE_KEY.parse().unwrap(),
-			value: p.timeout_timestamp.nanoseconds().to_string().parse().unwrap(),
+			key: PKT_TIMEOUT_TIMESTAMP_ATTRIBUTE_KEY.to_string(),
+			value: p.timeout_timestamp.nanoseconds().to_string(),
 			index: false,
 		};
 		attributes.push(timeout_timestamp);
-		let val =
-			String::from_utf8(p.data).expect("hex-encoded string should always be valid UTF-8");
-		let packet_data = EventAttribute {
-			key: PKT_DATA_ATTRIBUTE_KEY.parse().unwrap(),
-			value: val.parse().unwrap(),
-			index: false,
-		};
+		let val = String::from_utf8(p.data)
+			.map_err(|_| Error::implementation_specific("Invalid hex string".to_string()))?;
+		let packet_data =
+			EventAttribute { key: PKT_DATA_ATTRIBUTE_KEY.to_string(), value: val, index: false };
 		attributes.push(packet_data);
 		let ack = EventAttribute {
-			key: PKT_ACK_ATTRIBUTE_KEY.parse().unwrap(),
-			value: "".parse().unwrap(),
+			key: PKT_ACK_ATTRIBUTE_KEY.to_string(),
+			value: "".to_string(),
 			index: false,
 		};
 		attributes.push(ack);
@@ -910,14 +895,13 @@ impl TryFrom<WriteAcknowledgement> for AbciEvent {
 
 	fn try_from(v: WriteAcknowledgement) -> Result<Self, Self::Error> {
 		let mut attributes = Vec::<EventAttribute>::try_from(v.packet)?;
-		let val =
-			String::from_utf8(v.ack).expect("hex-encoded string should always be valid UTF-8");
+		let value = String::from_utf8(v.ack).map_err(|_| {
+			Error::implementation_specific(
+				"hex-encoded string should always be valid UTF-8".to_string(),
+			)
+		})?;
 		// No actual conversion from string to `EventAttribute::Key` or `EventAttribute::Value`
-		let ack = EventAttribute {
-			key: PKT_ACK_ATTRIBUTE_KEY.parse().unwrap(),
-			value: val.parse().unwrap(),
-			index: false,
-		};
+		let ack = EventAttribute { key: PKT_ACK_ATTRIBUTE_KEY.to_string(), value, index: false };
 		attributes.push(ack);
 		Ok(AbciEvent { kind: IbcEventType::WriteAck.as_str().to_string(), attributes })
 	}

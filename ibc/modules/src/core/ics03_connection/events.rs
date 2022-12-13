@@ -97,47 +97,40 @@ pub struct Attributes {
 }
 
 /// Convert attributes to Tendermint ABCI tags
-///
-/// # Note
-/// The parsing of `Key`s and `Value`s never fails, because the
-/// `FromStr` instance of `tendermint::abci::tag::{Key, Value}`
-/// is infallible, even if it is not represented in the error type.
-/// Once tendermint-rs improves the API of the `Key` and `Value` types,
-/// we will be able to remove the `.parse().unwrap()` calls.
 impl From<Attributes> for Vec<EventAttribute> {
 	fn from(a: Attributes) -> Self {
 		let mut attributes = vec![];
 		let height = EventAttribute {
-			key: HEIGHT_ATTRIBUTE_KEY.parse().unwrap(),
-			value: a.height.to_string().parse().unwrap(),
+			key: HEIGHT_ATTRIBUTE_KEY.to_string(),
+			value: a.height.to_string(),
 			index: false,
 		};
 		attributes.push(height);
 		if let Some(conn_id) = a.connection_id {
 			let conn_id = EventAttribute {
-				key: CONN_ID_ATTRIBUTE_KEY.parse().unwrap(),
-				value: conn_id.to_string().parse().unwrap(),
+				key: CONN_ID_ATTRIBUTE_KEY.to_string(),
+				value: conn_id.to_string(),
 				index: false,
 			};
 			attributes.push(conn_id);
 		}
 		let client_id = EventAttribute {
-			key: CLIENT_ID_ATTRIBUTE_KEY.parse().unwrap(),
-			value: a.client_id.to_string().parse().unwrap(),
+			key: CLIENT_ID_ATTRIBUTE_KEY.to_string(),
+			value: a.client_id.to_string(),
 			index: false,
 		};
 		attributes.push(client_id);
 		if let Some(conn_id) = a.counterparty_connection_id {
 			let conn_id = EventAttribute {
-				key: COUNTERPARTY_CONN_ID_ATTRIBUTE_KEY.parse().unwrap(),
-				value: conn_id.to_string().parse().unwrap(),
+				key: COUNTERPARTY_CONN_ID_ATTRIBUTE_KEY.to_string(),
+				value: conn_id.to_string(),
 				index: false,
 			};
 			attributes.push(conn_id);
 		}
 		let counterparty_client_id = EventAttribute {
-			key: COUNTERPARTY_CLIENT_ID_ATTRIBUTE_KEY.parse().unwrap(),
-			value: a.counterparty_client_id.to_string().parse().unwrap(),
+			key: COUNTERPARTY_CLIENT_ID_ATTRIBUTE_KEY.to_string(),
+			value: a.counterparty_client_id.to_string(),
 			index: false,
 		};
 		attributes.push(counterparty_client_id);
