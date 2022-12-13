@@ -387,6 +387,17 @@ where
 		let data = consensus_state.encode_to_vec();
 		// todo: pruning
 		ConsensusStates::<T>::insert(client_id, height, data);
+		// We do not need this hack for neither beefy nor grandpa
+		if !client_id.as_str().starts_with("10-grandpa") && !client_id.as_str().starts_with("11-beefy") {
+			let mut stored_heights = ConsensusHeights::<T>::get(client_id.as_bytes().to_vec());
+			if let Err(val) = stored_heights.try_insert((height.revision_number, height.revision_height)) {
+				let first = stored_heights.iter().take(1).collect::<Vec<_>>().pop().expect("Cannot fail as a value always exists");
+				stored_heights.remove(first);
+				stored_heights.try_insert(val).expect("Cannot panic, since bounds cannot be exceeded at this point")
+			}
+			ConsensusHeights::<T>::insert(client_id.as_bytes().to_vec(), stored_heights);
+		}
+
 		Ok(())
 	}
 
