@@ -98,13 +98,11 @@ where
 			let consensus_height = msg
 				.consensus_height
 				.map(|height| Height::new(height.revision_number, height.revision_height));
-			if proof_bytes.is_some() && consensus_height.is_some() {
+
+			if let Some((proof_bytes, consensus_height)) = proof_bytes.zip(consensus_height) {
 				Some(
-					ConsensusProof::new(
-						proof_bytes.expect("Contains a value"),
-						consensus_height.expect("Contains a value"),
-					)
-					.map_err(Error::invalid_proof)?,
+					ConsensusProof::new(proof_bytes, consensus_height)
+						.map_err(Error::invalid_proof)?,
 				)
 			} else {
 				None
