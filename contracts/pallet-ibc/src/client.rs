@@ -118,27 +118,22 @@ where
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<Option<AnyConsensusState>, ICS02Error> {
-		let mut cs_states = ConsensusStates::<T>::iter_key_prefix(client_id)
-			.map(|(height, cs_state)| {
-				let cs = AnyConsensusState::decode_vec(&cs_state).map_err(|e| {
-					ICS02Error::implementation_specific(format!(
-						"[next_consensus_state]: error decoding consensus state from bytes {}",
-						e
-					))
-				})?;
-				Ok((height, cs))
+		let consensus_heights = ConsensusHeights::<T>::get(client_id.as_bytes().to_vec());
+		let cs_state = consensus_heights
+			.into_iter()
+			.filter(|(revision_number, revision_height)| {
+				let next_height = Height::new(*revision_number, *revision_height);
+				next_height > height
 			})
-			.collect::<Result<Vec<_>, ICS02Error>>()?;
+			.take(1)
+			.next()
+			.map(|(revision_number, revision_height)| {
+				let next_height = Height::new(revision_number, revision_height);
+				self.consensus_state(client_id, next_height).ok()
+			})
+			.flatten();
 
-		cs_states.sort_by(|a, b| a.0.cmp(&b.0));
-
-		for cs in cs_states {
-			if cs.0 > height {
-				return Ok(Some(cs.1))
-			}
-		}
-
-		Ok(None)
+		Ok(cs_state)
 	}
 
 	fn prev_consensus_state(
@@ -146,27 +141,22 @@ where
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<Option<AnyConsensusState>, ICS02Error> {
-		let mut cs_states = ConsensusStates::<T>::iter_key_prefix(client_id)
-			.map(|(height, cs_state)| {
-				let cs = AnyConsensusState::decode_vec(&cs_state).map_err(|e| {
-					ICS02Error::implementation_specific(format!(
-						"[next_consensus_state]: error decoding consensus state from bytes {}",
-						e
-					))
-				})?;
-				Ok((height, cs))
+		let consensus_heights = ConsensusHeights::<T>::get(client_id.as_bytes().to_vec());
+		let cs_state = consensus_heights
+			.into_iter()
+			.filter(|(revision_number, revision_height)| {
+				let next_height = Height::new(*revision_number, *revision_height);
+				next_height < height
 			})
-			.collect::<Result<Vec<_>, ICS02Error>>()?;
-
-		cs_states.sort_by(|a, b| b.0.cmp(&a.0));
-
-		for cs in cs_states {
-			if cs.0 < height {
-				return Ok(Some(cs.1))
-			}
-		}
-
-		Ok(None)
+			.rev()
+			.take(1)
+			.next()
+			.map(|(revision_number, revision_height)| {
+				let next_height = Height::new(revision_number, revision_height);
+				self.consensus_state(client_id, next_height).ok()
+			})
+			.flatten();
+		Ok(cs_state)
 	}
 
 	fn host_height(&self) -> Height {
@@ -386,14 +376,25 @@ where
 
 		let data = consensus_state.encode_to_vec();
 		// todo: pruning
-		ConsensusStates::<T>::insert(client_id, height, data);
-		// We do not need this hack for neither beefy nor grandpa
-		if !client_id.as_str().starts_with("10-grandpa") && !client_id.as_str().starts_with("11-beefy") {
+		ConsensusStates::<T>::insert(client_id.clone(), height, data);
+		// We do not need this hack for neither beefy nor grandpa clients
+		if !client_id.as_str().starts_with("10-grandpa") &&
+			!client_id.as_str().starts_with("11-beefy")
+		{
 			let mut stored_heights = ConsensusHeights::<T>::get(client_id.as_bytes().to_vec());
-			if let Err(val) = stored_heights.try_insert((height.revision_number, height.revision_height)) {
-				let first = stored_heights.iter().take(1).collect::<Vec<_>>().pop().expect("Cannot fail as a value always exists");
-				stored_heights.remove(first);
-				stored_heights.try_insert(val).expect("Cannot panic, since bounds cannot be exceeded at this point")
+			if let Err(val) =
+				stored_heights.try_insert((height.revision_number, height.revision_height))
+			{
+				let first = stored_heights
+					.iter()
+					.take(1)
+					.next()
+					.expect("Cannot fail as a value always exists")
+					.clone();
+				stored_heights.remove(&first);
+				stored_heights
+					.try_insert(val)
+					.expect("Cannot panic, since bounds cannot be exceeded at this point");
 			}
 			ConsensusHeights::<T>::insert(client_id.as_bytes().to_vec(), stored_heights);
 		}

@@ -190,7 +190,10 @@ pub mod pallet {
 		IbcHandler,
 	};
 	use light_clients::AnyClientState;
-	use sp_runtime::{traits::{IdentifyAccount, Saturating}, AccountId32, BoundedBTreeSet};
+	use sp_runtime::{
+		traits::{IdentifyAccount, Saturating},
+		AccountId32, BoundedBTreeSet,
+	};
 	#[cfg(feature = "std")]
 	use sp_runtime::{Deserialize, Serialize};
 	use sp_std::collections::btree_set::BTreeSet;
@@ -340,7 +343,14 @@ pub mod pallet {
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
 	/// Consensus heights
-	pub type ConsensusHeights<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, BoundedBTreeSet<(u64, u64), frame_support::traits::ConstU32<256>>, ValueQuery>;
+	/// Stored as a tuple of (revision_number, revision_height)
+	pub type ConsensusHeights<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		Vec<u8>,
+		BoundedBTreeSet<(u64, u64), frame_support::traits::ConstU32<256>>,
+		ValueQuery,
+	>;
 
 	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 	pub struct AssetConfig<AssetId> {
