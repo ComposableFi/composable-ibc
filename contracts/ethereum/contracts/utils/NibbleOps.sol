@@ -5,6 +5,7 @@ contract NibbleOps {
     // Nibble (half a byte).
     uint8 public constant PADDING_BITMASK = 0x0F;
     uint8 public constant NIBBLE_PER_BYTE = 2;
+    uint8 public constant NIBBLE_LENGTH = 16;
 
     /**
      * @dev Function to mask the given byte, keeping the left nibble.
@@ -27,7 +28,7 @@ contract NibbleOps {
     }
 
     // Calculate the number of needed padding a array of nibble length `i`.
-    function numberPadding(uint8 b) public pure returns (uint8) {
+    function numberPadding(uint256 b) public pure returns (uint256) {
         return b % NIBBLE_PER_BYTE;
     }
 }

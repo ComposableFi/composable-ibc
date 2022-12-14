@@ -2,22 +2,23 @@
 pragma solidity ^0.8.17;
 
 import "../../interfaces/ITrie.sol";
+import "../../interfaces/ISpec.sol";
 import "./Codec.sol";
 import "../../utils/Blake2b.sol";
 
-contract HashDBRef is ITrie {
+contract HashDBRef is ITrie, ISpec {
     using Blake2b for Blake2b.Instance;
 
     function get(
         DB[] memory KVStore,
         bytes32 hash,
         Slice calldata nibble_key,
-        Hasher hasher
+        Hasher memory hasher
     ) external view returns (bytes memory value) {
         for (uint256 i = 0; i < KVStore.length; i++) {
             bytes memory storeKey;
             // compute the key for the key-value store
-            if (hasher == Hasher.BLAKE2B) {
+            if (hasher.hasherType == HasherType.BLAKE2B) {
                 Blake2b.Instance memory instance = Blake2b.init(hex"", 64);
                 // Todo: check encoder in parity implementation
                 bytes memory input = combine(hash, nibble_key);

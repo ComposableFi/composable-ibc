@@ -2,12 +2,13 @@
 pragma solidity ^0.8.17;
 
 import "../../interfaces/ITrie.sol";
+import "../../interfaces/ISpec.sol";
 import "./Codec.sol";
 import "./Node.sol";
 import "./NibbleSlice.sol";
 import "./HashDBRef.sol";
 
-contract LookUp is ITrie {
+contract LookUp is ITrie, ISpec {
     NibbleSlice nibbleSlice;
     Codec codec;
     HashDBRef db;
@@ -182,7 +183,7 @@ contract LookUp is ITrie {
                     return (false, "");
                 }
                 if (lookUp.nextNode.isHash) {
-                    hash = _decodeHash(lookUp.nextNode.value);
+                    hash = _decodeHash(lookUp.nextNode.value, layout.Hash);
                     break;
                 } else lookUp.nodeData = lookUp.nextNode.value;
             }
@@ -212,7 +213,7 @@ contract LookUp is ITrie {
         }
     }
 
-    function _decodeValue(Hasher, bytes memory value)
+    function _decodeValue(Hasher memory, bytes memory value)
         internal
         pure
         returns (bytes memory)
@@ -220,8 +221,12 @@ contract LookUp is ITrie {
         return value;
     }
 
-    function _decodeHash(bytes memory data) internal pure returns (bytes32) {
-        if (data.length != 32) {
+    function _decodeHash(bytes memory data, Hasher memory hasher)
+        internal
+        pure
+        returns (bytes32)
+    {
+        if (data.length != hasher.hasherLength) {
             return 0x0;
         }
         bytes32 hash = 0x0;

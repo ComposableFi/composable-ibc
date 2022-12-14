@@ -2,9 +2,10 @@
 pragma solidity ^0.8.17;
 
 import "../../interfaces/ITrie.sol";
+import "../../interfaces/ISpec.sol";
 import "./LookUp.sol";
 
-contract Trie is ITrie {
+contract Trie is ITrie, ISpec {
     address owner;
     LookUp lookUpContract;
 
