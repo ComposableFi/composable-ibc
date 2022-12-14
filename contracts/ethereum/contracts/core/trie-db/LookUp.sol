@@ -3,27 +3,16 @@ pragma solidity ^0.8.17;
 
 import "../../interfaces/ITrie.sol";
 import "../../interfaces/ISpec.sol";
-import "./Codec.sol";
-import "./Node.sol";
 import "./NibbleSlice.sol";
 import "./HashDBRef.sol";
 
 contract LookUp is ITrie, ISpec {
     NibbleSlice nibbleSlice;
-    Codec codec;
     HashDBRef db;
-    Node node;
 
-    constructor(
-        address nibbleSliceAddress,
-        address codecAddress,
-        address hashDbAddress,
-        address nodeAddress
-    ) {
+    constructor(address nibbleSliceAddress, address hashDbAddress) {
         nibbleSlice = NibbleSlice(nibbleSliceAddress);
-        codec = Codec(codecAddress);
         db = HashDBRef(hashDbAddress);
-        node = Node(nodeAddress);
     }
 
     /**
@@ -31,7 +20,7 @@ contract LookUp is ITrie, ISpec {
      *
      * @param KVStore An array of key-value stores where the trie data is stored.
      * @param key The key to look up.
-     * @param root The root of the trie.
+     * @param rootHash The root of the trie.
      * @param layout The trie layout.
      * @return A tuple consisting of the following elements:
      *         - bool: A boolean indicating whether the key was found in the trie.
@@ -40,7 +29,7 @@ contract LookUp is ITrie, ISpec {
     function lookUpWithoutCache(
         DB[] memory KVStore,
         uint8[] calldata key,
-        bytes32 root,
+        bytes32 rootHash,
         TrieLayout calldata layout
     ) external returns (bool, bytes memory) {
         // keeps track of the number of nibbles in the key that have been traversed
@@ -48,44 +37,40 @@ contract LookUp is ITrie, ISpec {
         // keeps track of the remaining nibbles in the key to be looked up
         Slice memory nibbleKey = Slice(key, 0);
         Slice memory partialKey = nibbleKey;
-        bytes32 hash = root;
         bytes memory result;
 
-        NodeStruct memory decoded;
-        LookUpStruct memory lookUp;
+        Node memory decoded;
+        NodeHandle memory nextNode;
+        bytes memory nodeData;
 
         // TODO: verify if this makes sense
         while (keyNibbles < nibbleSlice.len(nibbleKey)) {
             nibbleKey = nibbleSlice.mid(nibbleKey, keyNibbles);
             // get the data from the current node
-            lookUp.nodeData = db.get(
+            nodeData = db.get(
                 KVStore,
-                hash,
+                rootHash,
                 nibbleSlice.left(nibbleKey),
                 layout.Hash
             );
 
             // check if the data is not found in the database
-            if (lookUp.nodeData.length == 0) {
+            if (nodeData.length == 0) {
                 return (false, "");
             }
 
             uint256 nodeDataIdx = 0;
 
-            while (nodeDataIdx < lookUp.nodeData.length) {
+            while (nodeDataIdx < nodeData.length) {
                 // decode the node data from the codec instance
-                decoded = codec.decode(
-                    lookUp.nodeData[nodeDataIdx],
-                    layout.Codec
-                );
+                decoded = decodeUsingCodec(nodeData[nodeDataIdx], layout.Codec);
                 nodeDataIdx++;
 
-                if (node.getNodeType(decoded) == NodeType.Leaf) {
-                    (lookUp.slice, lookUp.value) = node.Leaf(decoded);
+                if (decoded.nodeType == NodeType.Leaf) {
                     // check if the slice matches the partial key
                     if (
                         keccak256(
-                            abi.encode(lookUp.slice.data, lookUp.slice.offset)
+                            abi.encode(decoded.slice.data, decoded.slice.offset)
                         ) ==
                         keccak256(
                             abi.encode(partialKey.data, partialKey.offset)
@@ -94,9 +79,9 @@ contract LookUp is ITrie, ISpec {
                         // if the key is found, load the value and return
                         result = _loadValue(
                             KVStore,
-                            lookUp.value,
+                            decoded.value,
                             nibbleSlice.originalDataAsPrefix(nibbleKey),
-                            hash,
+                            rootHash,
                             layout
                         );
                         return (true, result);
@@ -104,32 +89,30 @@ contract LookUp is ITrie, ISpec {
                         // if the slice does not match the partial key, move to the next inline node
                         break;
                     }
-                } else if (node.getNodeType(decoded) == NodeType.Extension) {
-                    (lookUp.slice, lookUp.item) = node.Extension(decoded);
+                } else if (decoded.nodeType == NodeType.Extension) {
                     // check if the partial key to remove the traversed slice
-                    if (nibbleSlice.startWith(partialKey, lookUp.slice)) {
+                    if (nibbleSlice.startWith(partialKey, decoded.slice)) {
                         // update the partial key to remove the traversed slice
                         partialKey = nibbleSlice.mid(
                             partialKey,
-                            nibbleSlice.len(lookUp.slice)
+                            nibbleSlice.len(decoded.slice)
                         );
                         // update the key nibbles counter
-                        keyNibbles += nibbleSlice.len(lookUp.slice);
+                        keyNibbles += nibbleSlice.len(decoded.slice);
                         // set the next node to the item in the extension node
-                        lookUp.nextNode = lookUp.item;
+                        nextNode = decoded.child;
                     } else {
                         // if the partial key does not start with the slice, move to the next inline node
                         break;
                     }
-                } else if (node.getNodeType(decoded) == NodeType.Branch) {
-                    (lookUp.children, lookUp.value) = node.Branch(decoded);
+                } else if (decoded.nodeType == NodeType.Branch) {
                     if (nibbleSlice.isEmpty(partialKey)) {
                         // if the partial key is empty, load the value from the branch node
                         result = _loadValue(
                             KVStore,
-                            lookUp.value,
+                            decoded.value,
                             nibbleSlice.originalDataAsPrefix(nibbleKey),
-                            hash,
+                            rootHash,
                             layout
                         );
                         return (true, result);
@@ -138,30 +121,26 @@ contract LookUp is ITrie, ISpec {
                         partialKey = nibbleSlice.mid(partialKey, 1);
                         ++keyNibbles;
                         // set the next Node to the child at the first nibble of the partial key
-                        lookUp.nextNode = lookUp.children[
+                        nextNode = decoded.children[
                             nibbleSlice.at(partialKey, 0)
                         ];
                     }
-                } else if (
-                    node.getNodeType(decoded) == NodeType.NibbledBranch
-                ) {
-                    (lookUp.slice, lookUp.children, lookUp.value) = node
-                        .NibbledBranch(decoded);
-                    if (!nibbleSlice.startWith(partialKey, lookUp.slice)) {
+                } else if (decoded.nodeType == NodeType.NibbledBranch) {
+                    if (!nibbleSlice.startWith(partialKey, decoded.slice)) {
                         // if the partial key does not start with the slice, move to the next inline node
                         break;
                     }
                     if (
                         nibbleSlice.len(partialKey) ==
-                        nibbleSlice.len(lookUp.slice)
+                        nibbleSlice.len(decoded.slice)
                     ) {
                         // if the partial key has the same length as the slice,
                         // the value in the nibbled branch node is the value of the key
                         result = _loadValue(
                             KVStore,
-                            lookUp.value,
+                            decoded.value,
                             nibbleSlice.originalDataAsPrefix(nibbleKey),
-                            hash,
+                            rootHash,
                             layout
                         );
                         return (true, result);
@@ -171,21 +150,21 @@ contract LookUp is ITrie, ISpec {
                         // after the slice in the partial key
                         partialKey = nibbleSlice.mid(
                             partialKey,
-                            nibbleSlice.len(lookUp.slice)
+                            nibbleSlice.len(decoded.slice)
                         );
-                        keyNibbles += nibbleSlice.len(lookUp.slice);
-                        lookUp.nextNode = lookUp.children[
+                        keyNibbles += nibbleSlice.len(decoded.slice);
+                        nextNode = decoded.children[
                             nibbleSlice.at(partialKey, 0)
                         ];
                     }
-                } else if (node.getNodeType(decoded) == NodeType.Empty) {
+                } else if (decoded.nodeType == NodeType.Empty) {
                     // if the node type is empty, the key is not in the trie
                     return (false, "");
                 }
-                if (lookUp.nextNode.isHash) {
-                    hash = _decodeHash(lookUp.nextNode.value, layout.Hash);
+                if (nextNode.isHash) {
+                    rootHash = _decodeHash(nextNode.value, layout.Hash);
                     break;
-                } else lookUp.nodeData = lookUp.nextNode.value;
+                } else nodeData = nextNode.value;
             }
         }
         return (false, "");
@@ -240,4 +219,9 @@ contract LookUp is ITrie, ISpec {
         }
         return hash;
     }
+
+    function decodeUsingCodec(bytes32 node_data, NodeCodec codec)
+        internal
+        returns (Node memory)
+    {}
 }

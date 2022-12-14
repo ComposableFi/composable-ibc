@@ -26,6 +26,10 @@ interface ICodec {
 
     struct NodePlanStruct {
         NodePlanType planType;
+        SlicePlan slicePlan;
+        ValuePlan valuePlan;
+        NodeHandlePlan[] children;
+        NodeHandlePlan child;
     }
 
     struct ByteSlice {
@@ -43,6 +47,7 @@ interface ICodec {
         uint8 bitmapValue;
         ValuePlan valuePlan;
         NodeHandlePlan[] children;
+        NodeHandlePlan child;
     }
 
     struct ValuePlan {
@@ -55,5 +60,11 @@ interface ICodec {
         bool isHash;
         uint256 start;
         uint256 end;
+    }
+
+    struct SlicePlan {
+        uint256 dataStart;
+        uint256 dataEnd;
+        uint256 offset;
     }
 }
