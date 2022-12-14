@@ -1,6 +1,7 @@
 use crate::{
 	context::Context,
 	error::ContractError,
+	ics23::{ClientStates, ConsensusStates},
 	msg::{
 		CheckForMisbehaviourMsg, ClientStateCallResponse, ContractResult, ExecuteMsg,
 		InitializeState, InstantiateMsg, QueryMsg, UpdateStateMsg, UpdateStateOnMisbehaviourMsg,
@@ -84,20 +85,22 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-	deps: DepsMut,
+	mut deps: DepsMut,
 	env: Env,
 	_info: MessageInfo,
 	msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
 	let client = GrandpaClient::<HostFunctions>::default();
-	let ctx = Context::<HostFunctions>::new(deps, env);
+	let mut ctx = Context::<HostFunctions>::new(deps, env);
 	let client_id = ClientId::from_str("unnamed_client").unwrap();
-	let result = process_message(msg, client, ctx, client_id);
+	let result = process_message(msg, client, &mut ctx, client_id.clone());
 	let data = match result {
 		Ok(res) => res,
 		Err(ContractError::Grandpa(e)) => to_binary(&ContractResult::error(e))?,
 		Err(e) => return Err(e),
 	};
+	ClientStates::new(ctx.deps.storage).insert(client_id.clone(), vec![42]);
+	assert_eq!(ClientStates::new(ctx.deps.storage).get(&client_id), Some(vec![42]));
 	let mut response = Response::default();
 	response.data = Some(data);
 	Ok(response)
@@ -106,7 +109,7 @@ pub fn execute(
 fn process_message(
 	msg: ExecuteMsg,
 	client: GrandpaClient<HostFunctions>,
-	ctx: Context<HostFunctions>,
+	ctx: &mut Context<HostFunctions>,
 	client_id: ClientId,
 ) -> Result<Binary, ContractError> {
 	let result = match msg {
@@ -148,14 +151,14 @@ fn process_message(
 		ExecuteMsg::VerifyClientMessage(msg) => {
 			let msg = VerifyClientMessage::try_from(msg)?;
 			client
-				.verify_client_message(&ctx, client_id, msg.client_state, msg.client_message)
+				.verify_client_message(ctx, client_id, msg.client_state, msg.client_message)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
 				.map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::CheckForMisbehaviour(msg) => {
 			let msg = CheckForMisbehaviourMsg::try_from(msg)?;
 			client
-				.check_for_misbehaviour(&ctx, client_id, msg.client_state, msg.client_message)
+				.check_for_misbehaviour(ctx, client_id, msg.client_state, msg.client_message)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
 				.map(|_| to_binary(&ContractResult::success()))
 		},
@@ -170,7 +173,7 @@ fn process_message(
 			let mut client_state: WasmClientState = msg_raw.client_state.clone();
 			let msg = UpdateStateMsg::try_from(msg_raw)?;
 			client
-				.update_state(&ctx, client_id, msg.client_state, msg.client_message)
+				.update_state(ctx, client_id, msg.client_state, msg.client_message)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
 				.map(|(cs, cu)| {
 					client_state.latest_height = cs.latest_height().into();
@@ -192,7 +195,7 @@ fn process_message(
 			let msg = VerifyUpgradeAndUpdateStateMsg::try_from(msg)?;
 			client
 				.verify_upgrade_and_update_state(
-					&ctx,
+					ctx,
 					client_id,
 					&msg.old_client_state,
 					&msg.upgrade_client_state,
