@@ -5,12 +5,10 @@ import "../../interfaces/ICodec.sol";
 import "../../interfaces/ISpec.sol";
 import "../../utils/NibbleOps.sol";
 import "./NodeHeader.sol";
-import "./NodePlan.sol";
 import "./ScaleCodec.sol";
 
 contract NodeCodec is ICodec, ISpec {
     NodeHeader nodeHeader;
-    NodePlan nodePlan;
     NibbleOps nibbleOps;
     ScaleCodec scaleCodec;
 
@@ -18,12 +16,10 @@ contract NodeCodec is ICodec, ISpec {
 
     constructor(
         address nodeHeaderAddress,
-        address nodePlanAddress,
         address nibbleOpsAddress,
         address scaleCodecAddress
     ) {
         nodeHeader = NodeHeader(nodeHeaderAddress);
-        nodePlan = NodePlan(nodePlanAddress);
         nibbleOps = NibbleOps(nibbleOpsAddress);
         scaleCodec = ScaleCodec(scaleCodecAddress);
     }
@@ -51,7 +47,14 @@ contract NodeCodec is ICodec, ISpec {
             : true;
 
         if (header.headerType == NodeHeaderType.Null) {
-            return nodePlan.isEmpty();
+            return
+                NodePlanStruct(
+                    NodePlanType.Empty,
+                    SlicePlan(0, 0, 0),
+                    ValuePlan(false, 0, 0),
+                    codecStruct.children,
+                    codecStruct.child
+                );
         } else if (
             header.headerType == NodeHeaderType.HashedValueBranch ||
             header.headerType == NodeHeaderType.Branch
@@ -87,7 +90,10 @@ contract NodeCodec is ICodec, ISpec {
             );
             if (branchHasValue) {
                 if (containsHash) {
-                    (input, rangeStart, rangeEnd) = take(input, 32);
+                    (input, rangeStart, rangeEnd) = take(
+                        input,
+                        hasher.hasherLength
+                    );
                     codecStruct.valuePlan = ValuePlan(
                         false,
                         rangeStart,
@@ -126,6 +132,67 @@ contract NodeCodec is ICodec, ISpec {
                     }
                 }
             }
+            return
+                NodePlanStruct(
+                    NodePlanType.NibbledBranch,
+                    SlicePlan(
+                        codecStruct.partialRangeStart,
+                        codecStruct.partialRangeEnd,
+                        codecStruct.partialPadding
+                    ),
+                    codecStruct.valuePlan,
+                    codecStruct.children,
+                    codecStruct.child
+                );
+        } else if (
+            header.headerType == NodeHeaderType.HashedValueLeaf ||
+            header.headerType == NodeHeaderType.Leaf
+        ) {
+            codecStruct.padding =
+                header.value % nibbleOps.NIBBLE_PER_BYTE() != 0;
+            // check that the padding is valid (if any)
+            if (
+                codecStruct.padding &&
+                nibbleOps.padLeft(data[input.offset]) != 0
+            ) {
+                revert("Bad format");
+            }
+            (
+                input,
+                codecStruct.partialRangeStart,
+                codecStruct.partialRangeEnd
+            ) = take(
+                input,
+                (header.value + (nibbleOps.NIBBLE_PER_BYTE() - 1)) /
+                    nibbleOps.NIBBLE_PER_BYTE()
+            );
+            codecStruct.partialPadding = nibbleOps.numberPadding(header.value);
+            if (containsHash) {
+                (input, rangeStart, rangeEnd) = take(
+                    input,
+                    hasher.hasherLength
+                );
+                codecStruct.valuePlan = ValuePlan(false, rangeStart, rangeEnd);
+            } else {
+                // todo: fix for compact u32
+                decodeCount = scaleCodec.decode(input.data);
+                (input, rangeStart, rangeEnd) = take(input, decodeCount);
+                codecStruct.valuePlan = ValuePlan(true, rangeStart, rangeEnd);
+            }
+            return
+                NodePlanStruct(
+                    NodePlanType.Leaf,
+                    SlicePlan(
+                        codecStruct.partialRangeStart,
+                        codecStruct.partialRangeEnd,
+                        codecStruct.partialPadding
+                    ),
+                    codecStruct.valuePlan,
+                    codecStruct.children,
+                    codecStruct.child
+                );
+        } else {
+            revert("Unknown NodeHeaderType");
         }
     }
 

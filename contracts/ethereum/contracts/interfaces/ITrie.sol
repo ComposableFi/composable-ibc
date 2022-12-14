@@ -20,25 +20,18 @@ interface ITrie {
         uint8 offset;
     }
 
-    struct LookUpStruct {
-        NodeHandle nextNode;
-        Value value;
-        NodeHandle item;
-        NodeHandle[] children;
-        bytes nodeData;
-        Slice slice;
-    }
-
     struct NodeHandle {
         bytes key;
         bool isHash;
         bytes value;
     }
 
-    struct NodeStruct {
-        NodeHandle[] children;
-        bytes value;
+    struct Node {
         NodeType nodeType;
+        Slice slice;
+        Value value;
+        NodeHandle[] children;
+        NodeHandle child;
     }
 
     struct DB {
