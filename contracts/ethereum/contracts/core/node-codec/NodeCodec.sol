@@ -2,12 +2,13 @@
 pragma solidity ^0.8.17;
 
 import "../../interfaces/ICodec.sol";
+import "../../interfaces/ISpec.sol";
 import "../../utils/NibbleOps.sol";
 import "./NodeHeader.sol";
 import "./NodePlan.sol";
 import "./ScaleCodec.sol";
 
-contract NodeCodec is ICodec {
+contract NodeCodec is ICodec, ISpec {
     NodeHeader nodeHeader;
     NodePlan nodePlan;
     NibbleOps nibbleOps;
@@ -27,12 +28,15 @@ contract NodeCodec is ICodec {
         scaleCodec = ScaleCodec(scaleCodecAddress);
     }
 
-    function decodePlan(uint8[] memory data)
+    function decodePlan(uint8[] memory data, Hasher memory hasher)
         external
         returns (NodePlanStruct memory)
     {
         CodecStruct memory codecStruct;
         ByteSlice memory input = ByteSlice(data, 0);
+        uint256 rangeStart;
+        uint256 rangeEnd;
+        uint256 decodeCount;
 
         NodeHeaderStruct memory header = nodeHeader.decode(input);
 
@@ -81,6 +85,47 @@ contract NodeCodec is ICodec {
                 codecStruct.bitmapRangeStart,
                 codecStruct.bitmapRangeEnd
             );
+            if (branchHasValue) {
+                if (containsHash) {
+                    (input, rangeStart, rangeEnd) = take(input, 32);
+                    codecStruct.valuePlan = ValuePlan(
+                        false,
+                        rangeStart,
+                        rangeEnd
+                    );
+                } else {
+                    // todo: fix for compact u32
+                    decodeCount = scaleCodec.decode(input.data);
+                    (input, rangeStart, rangeEnd) = take(input, decodeCount);
+                    codecStruct.valuePlan = ValuePlan(
+                        true,
+                        rangeStart,
+                        rangeEnd
+                    );
+                }
+            } else {
+                codecStruct.valuePlan = ValuePlan(false, 0, 0);
+            }
+            for (uint8 i; i < nibbleOps.NIBBLE_LENGTH(); i++) {
+                if (bitmapValueAt(codecStruct.bitmapValue, i)) {
+                    // todo: fix for compact u32
+                    decodeCount = scaleCodec.decode(input.data);
+                    (input, rangeStart, rangeEnd) = take(input, decodeCount);
+                    if (decodeCount == hasher.hasherLength) {
+                        codecStruct.children[i] = NodeHandlePlan(
+                            true,
+                            rangeStart,
+                            rangeEnd
+                        );
+                    } else {
+                        codecStruct.children[i] = NodeHandlePlan(
+                            false,
+                            rangeStart,
+                            rangeEnd
+                        );
+                    }
+                }
+            }
         }
     }
 
@@ -102,17 +147,26 @@ contract NodeCodec is ICodec {
         return (slice, rangeStart, rangeEnd);
     }
 
+    // Radix 16 trie, bitmap decoding implementation
     function decodeBitmap(
         uint8[] memory data,
         uint256 start,
         uint256 end
     ) public returns (uint8) {
-        uint256[] memory result;
+        uint8[] memory result;
         for (uint256 i = start; i < end; i++) {
             result[i - start] = data[i];
         }
         uint8 value = scaleCodec.decode(result);
         require(value != 0, "Bitmap without a child");
         return value;
+    }
+
+    function bitmapValueAt(uint8 bitmapValue, uint8 i)
+        internal
+        pure
+        returns (bool)
+    {
+        return (bitmapValue & (1 << i)) != 0;
     }
 }

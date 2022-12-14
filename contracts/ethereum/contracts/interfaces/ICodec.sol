@@ -21,7 +21,7 @@ interface ICodec {
     struct NodeHeaderStruct {
         NodeHeaderType headerType;
         bool hasValue;
-        uint8 value;
+        uint256 value;
     }
 
     struct NodePlanStruct {
@@ -37,9 +37,23 @@ interface ICodec {
         bool padding;
         uint256 partialRangeStart;
         uint256 partialRangeEnd;
-        uint8 partialPadding;
+        uint256 partialPadding;
         uint256 bitmapRangeStart;
         uint256 bitmapRangeEnd;
         uint8 bitmapValue;
+        ValuePlan valuePlan;
+        NodeHandlePlan[] children;
+    }
+
+    struct ValuePlan {
+        bool isInline;
+        uint256 start;
+        uint256 end;
+    }
+
+    struct NodeHandlePlan {
+        bool isHash;
+        uint256 start;
+        uint256 end;
     }
 }
