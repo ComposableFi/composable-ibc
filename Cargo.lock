@@ -3903,6 +3903,7 @@ dependencies = [
  "primitive-types",
  "prost 0.11.0",
  "safe-regex",
+ "scale-info",
  "serde",
  "serde_derive",
  "serde_json",

@@ -121,16 +121,9 @@ where
 		let consensus_heights = ConsensusHeights::<T>::get(client_id.as_bytes().to_vec());
 		let cs_state = consensus_heights
 			.into_iter()
-			.filter(|(revision_number, revision_height)| {
-				let next_height = Height::new(*revision_number, *revision_height);
-				next_height > height
-			})
-			.take(1)
+			.filter(|next_height| next_height > &height)
 			.next()
-			.map(|(revision_number, revision_height)| {
-				let next_height = Height::new(revision_number, revision_height);
-				self.consensus_state(client_id, next_height).ok()
-			})
+			.map(|next_height| self.consensus_state(client_id, next_height).ok())
 			.flatten();
 
 		Ok(cs_state)
@@ -144,17 +137,10 @@ where
 		let consensus_heights = ConsensusHeights::<T>::get(client_id.as_bytes().to_vec());
 		let cs_state = consensus_heights
 			.into_iter()
-			.filter(|(revision_number, revision_height)| {
-				let next_height = Height::new(*revision_number, *revision_height);
-				next_height < height
-			})
+			.filter(|prev_height| prev_height < &height)
 			.rev()
-			.take(1)
 			.next()
-			.map(|(revision_number, revision_height)| {
-				let next_height = Height::new(revision_number, revision_height);
-				self.consensus_state(client_id, next_height).ok()
-			})
+			.map(|prev_height| self.consensus_state(client_id, prev_height).ok())
 			.flatten();
 		Ok(cs_state)
 	}
@@ -382,12 +368,9 @@ where
 			!client_id.as_str().starts_with("11-beefy")
 		{
 			let mut stored_heights = ConsensusHeights::<T>::get(client_id.as_bytes().to_vec());
-			if let Err(val) =
-				stored_heights.try_insert((height.revision_number, height.revision_height))
-			{
+			if let Err(val) = stored_heights.try_insert(height) {
 				let first = stored_heights
 					.iter()
-					.take(1)
 					.next()
 					.expect("Cannot fail as a value always exists")
 					.clone();

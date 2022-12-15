@@ -348,7 +348,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		Vec<u8>,
-		BoundedBTreeSet<(u64, u64), frame_support::traits::ConstU32<256>>,
+		BoundedBTreeSet<Height, frame_support::traits::ConstU32<256>>,
 		ValueQuery,
 	>;
 

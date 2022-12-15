@@ -17,19 +17,23 @@ use crate::{
 	light_clients::{AnyClientState, AnyConsensusState},
 	mock::*,
 	routing::Context,
-	Any, Config, DenomToAssetId, MultiAddress, Pallet, PalletParams, Timeout, TransferParams,
-	MODULE_ID,
+	Any, Config, ConsensusHeights, DenomToAssetId, MultiAddress, Pallet, PalletParams, Timeout,
+	TransferParams, MODULE_ID,
 };
 use core::time::Duration;
 use frame_support::{
 	assert_ok,
-	traits::fungibles::{Inspect, Mutate},
+	traits::{
+		fungibles::{Inspect, Mutate},
+		Len,
+	},
 };
 use ibc::{
 	applications::transfer::{packet::PacketData, Coin, PrefixedDenom, VERSION},
 	core::{
 		ics02_client::{
 			client_state::ClientState,
+			context::{ClientKeeper, ClientReader},
 			height::Height,
 			msgs::create_client::{MsgCreateAnyClient, TYPE_URL},
 		},
@@ -565,4 +569,70 @@ fn should_cleanup_offchain_packets_correctly() {
 		assert_eq!(last_removed_send, 10);
 		assert_eq!(last_removed_ack, 10);
 	});
+}
+
+#[test]
+fn test_next_and_previous_consensus_state_for_beefy_and_grandpa_clients() {
+	new_test_ext().execute_with(|| {
+		let client_id_beefy = ClientId::from_str("11-beefy-0").unwrap();
+		let mut ctx = Context::<Test>::default();
+		let mock_cs_state = MockConsensusState::new(MockHeader::default());
+		ctx.store_consensus_state(
+			client_id_beefy.clone(),
+			Height::new(0, 10),
+			AnyConsensusState::Mock(mock_cs_state.clone()),
+		)
+		.unwrap();
+		// Should return None for Beefy and grandpa clients since we do not cache recent consensus
+		// heights for beefy and grandpa
+		assert!(ctx
+			.prev_consensus_state(&client_id_beefy, Height::new(0, 15))
+			.unwrap()
+			.is_none());
+		assert!(ctx.next_consensus_state(&client_id_beefy, Height::new(0, 5)).unwrap().is_none());
+
+		let client_id_grandpa = ClientId::from_str("10-grandpa-0").unwrap();
+		ctx.store_consensus_state(
+			client_id_grandpa.clone(),
+			Height::new(0, 10),
+			AnyConsensusState::Mock(mock_cs_state.clone()),
+		)
+		.unwrap();
+		assert!(ctx
+			.prev_consensus_state(&client_id_grandpa, Height::new(0, 15))
+			.unwrap()
+			.is_none());
+		assert!(ctx
+			.next_consensus_state(&client_id_grandpa, Height::new(0, 5))
+			.unwrap()
+			.is_none());
+	})
+}
+
+#[test]
+fn test_next_and_previous_consensus_state_for_other_client_types() {
+	new_test_ext().execute_with(|| {
+		let client_id = ClientId::from_str("07-tendermint-0").unwrap();
+		let mut ctx = Context::<Test>::default();
+		let mock_cs_state = MockConsensusState::new(MockHeader::default());
+		// lets store 512 consensus states, only the 256 most recent should remain after the loop
+		for i in 1..=512u64 {
+			ctx.store_consensus_state(
+				client_id.clone(),
+				Height::new(0, i),
+				AnyConsensusState::Mock(mock_cs_state.clone()),
+			)
+			.unwrap();
+		}
+
+		let stored_heights = ConsensusHeights::<Test>::get(client_id.as_bytes().to_vec());
+
+		assert_eq!(stored_heights.len(), 256);
+		assert_eq!(stored_heights.iter().rev().next(), Some(&Height::new(0, 512)));
+
+		// Should return None for Beefy and grandpa clients since we do not cache recent consensus
+		// heights for beefy and grandpa
+		assert!(ctx.prev_consensus_state(&client_id, Height::new(0, 300)).unwrap().is_some());
+		assert!(ctx.next_consensus_state(&client_id, Height::new(0, 400)).unwrap().is_some());
+	})
 }
