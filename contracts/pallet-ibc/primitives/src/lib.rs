@@ -360,7 +360,6 @@ impl TryFrom<&OpenChannelParams> for Order {
 
 	fn try_from(value: &OpenChannelParams) -> Result<Self, Self::Error> {
 		match value.order {
-			0 => Ok(Order::None),
 			1 => Ok(Order::Unordered),
 			2 => Ok(Order::Ordered),
 			_ => Err(Error::Other { msg: None }),

@@ -55,7 +55,7 @@ use scale_info::{
 	},
 	TypeInfo,
 };
-use sp_runtime::RuntimeDebug;
+use sp_runtime::{Either, RuntimeDebug};
 use sp_std::{marker::PhantomData, prelude::*, str::FromStr};
 
 mod channel;
@@ -138,7 +138,6 @@ pub enum LightClientProtocol {
 	Beefy,
 	Grandpa,
 }
-
 #[cfg(any(test, feature = "runtime-benchmarks"))]
 pub(crate) mod benchmarks;
 
@@ -150,6 +149,7 @@ mod tests;
 
 mod impls;
 pub mod weight;
+
 pub use weight::WeightInfo;
 
 #[frame_support::pallet]
@@ -170,7 +170,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	pub use ibc::signer::Signer;
 
-	use crate::routing::ModuleRouter;
+	use crate::routing::{Context, ModuleRouter};
 	use ibc::{
 		applications::transfer::{
 			is_sender_chain_source, msgs::transfer::MsgTransfer, Amount, PrefixedCoin,
@@ -178,6 +178,7 @@ pub mod pallet {
 		},
 		core::{
 			ics02_client::context::{ClientKeeper, ClientReader},
+			ics04_channel::context::ChannelReader,
 			ics24_host::identifier::{ChannelId, PortId},
 		},
 		timestamp::Timestamp,
@@ -193,6 +194,8 @@ pub mod pallet {
 		traits::{IdentifyAccount, Saturating},
 		AccountId32,
 	};
+	#[cfg(feature = "std")]
+	use sp_runtime::{Deserialize, Serialize};
 	use sp_std::collections::btree_set::BTreeSet;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
@@ -337,16 +340,22 @@ pub mod pallet {
 	/// Active Escrow addresses
 	pub type EscrowAddresses<T: Config> = StorageValue<_, BTreeSet<T::AccountId>, ValueQuery>;
 
+	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+	pub struct AssetConfig<AssetId> {
+		pub id: AssetId,
+		pub denom: Vec<u8>,
+	}
+
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		/// This should contain the native currency's asset_id and denom.
-		pub asset_ids: Vec<(T::AssetId, Vec<u8>)>,
+		pub assets: Vec<AssetConfig<T::AssetId>>,
 	}
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self { asset_ids: Default::default() }
+			Self { assets: Default::default() }
 		}
 	}
 
@@ -354,12 +363,12 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			assert!(
-				!self.asset_ids.is_empty(),
+				!self.assets.is_empty(),
 				"You must configure the native currency's asset_id and denom!"
 			);
-			for (asset_id, denom) in &self.asset_ids {
-				IbcDenoms::<T>::insert(denom.clone(), asset_id);
-				IbcAssetIds::<T>::insert(asset_id, denom);
+			for AssetConfig { id, denom } in &self.assets {
+				IbcDenoms::<T>::insert(denom.clone(), id);
+				IbcAssetIds::<T>::insert(id, denom);
 			}
 		}
 	}
@@ -379,6 +388,8 @@ pub mod pallet {
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
 			is_sender_source: bool,
+			source_channel: Vec<u8>,
+			destination_channel: Vec<u8>,
 		},
 		/// A channel has been opened
 		ChannelOpened { channel_id: Vec<u8>, port_id: Vec<u8> },
@@ -392,6 +403,8 @@ pub mod pallet {
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
 			is_sender_source: bool,
+			source_channel: Vec<u8>,
+			destination_channel: Vec<u8>,
 		},
 		/// Ibc tokens have been received and minted
 		TokenReceived {
@@ -401,6 +414,8 @@ pub mod pallet {
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
 			is_receiver_source: bool,
+			source_channel: Vec<u8>,
+			destination_channel: Vec<u8>,
 		},
 		/// Ibc transfer failed, received an acknowledgement error, tokens have been refunded
 		TokenTransferFailed {
@@ -410,6 +425,8 @@ pub mod pallet {
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
 			is_sender_source: bool,
+			source_channel: Vec<u8>,
+			destination_channel: Vec<u8>,
 		},
 		/// On recv packet was not processed successfully processes
 		OnRecvPacketError { msg: Vec<u8> },
@@ -616,7 +633,7 @@ pub mod pallet {
 
 			let msg = MsgTransfer {
 				source_port,
-				source_channel,
+				source_channel: source_channel.clone(),
 				token: coin.clone(),
 				sender: Signer::from_str(&from).map_err(|_| Error::<T>::Utf8Error)?,
 				receiver: Signer::from_str(&to).map_err(|_| Error::<T>::Utf8Error)?,
@@ -651,6 +668,10 @@ pub mod pallet {
 				log::trace!(target: "pallet_ibc", "[transfer]: error: {:?}", e);
 				Error::<T>::TransferFailed
 			})?;
+			let ctx = Context::<T>::default();
+			let channel_end = ctx
+				.channel_end(&(PortId::transfer(), source_channel))
+				.map_err(|_| Error::<T>::ChannelNotFound)?;
 
 			Self::deposit_event(Event::<T>::TokenTransferInitiated {
 				from: origin,
@@ -662,6 +683,14 @@ pub mod pallet {
 				.ok(),
 				ibc_denom: coin.denom.to_string().as_bytes().to_vec(),
 				is_sender_source,
+				source_channel: source_channel.to_string().as_bytes().to_vec(),
+				destination_channel: channel_end
+					.counterparty()
+					.channel_id
+					.ok_or_else(|| Error::<T>::ChannelNotFound)?
+					.to_string()
+					.as_bytes()
+					.to_vec(),
 			});
 			Ok(())
 		}
@@ -755,6 +784,16 @@ pub mod pallet {
 	}
 }
 
+/// Result of the `DenomToAssetId::ibc_assets` function.
+pub struct IbcAssets<AssetId> {
+	/// List of IBC denoms.
+	pub denoms: Vec<Vec<u8>>,
+	/// Total number of IBC assets on the chain.
+	pub total_count: u64,
+	/// The next `AssetId` after the last item in the list.
+	pub next_id: Option<AssetId>,
+}
+
 pub trait DenomToAssetId<T: Config> {
 	type Error: Debug;
 
@@ -767,15 +806,7 @@ pub trait DenomToAssetId<T: Config> {
 	/// Return full denom for given asset id
 	fn from_asset_id_to_denom(id: T::AssetId) -> Option<String>;
 
-	/// Returns a tuple
-	/// The first item of the tuple is a vector of all ibc denoms with an upper bound of limit on
-	/// the length of the vector. The second item is the total count of ibc assets on chain.
-	/// The third item is the next asset id after the last item in the list.
-	/// Only one of start_key or offset should be used
-	/// start_key takes precedence over offset
-	fn ibc_assets(
-		start_key: Option<T::AssetId>,
-		offset: Option<u32>,
-		limit: u64,
-	) -> (Vec<Vec<u8>>, u64, Option<T::AssetId>);
+	/// Returns `IbcAssets` containing a list of assets bound by `limit`.
+	/// `start_key` is either an `AssetId` or an offset to start from.
+	fn ibc_assets(start_key: Option<Either<T::AssetId, u32>>, limit: u64) -> IbcAssets<T::AssetId>;
 }

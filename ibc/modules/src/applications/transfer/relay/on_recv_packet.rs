@@ -17,19 +17,16 @@ use crate::{
 		context::Ics20Context, error::Error as Ics20Error, events::DenomTraceEvent,
 		is_receiver_chain_source, packet::PacketData, TracePrefix,
 	},
-	core::{
-		ics04_channel::packet::Packet,
-		ics26_routing::context::{ModuleOutputBuilder, WriteFn},
-	},
+	core::{ics04_channel::packet::Packet, ics26_routing::context::ModuleOutputBuilder},
 	prelude::*,
 };
 
 pub fn process_recv_packet<Ctx: 'static + Ics20Context>(
-	ctx: &Ctx,
+	ctx: &mut Ctx,
 	output: &mut ModuleOutputBuilder,
 	packet: &Packet,
 	data: PacketData,
-) -> Result<Box<WriteFn>, Ics20Error> {
+) -> Result<(), Ics20Error> {
 	if !ctx.is_receive_enabled() {
 		return Err(Ics20Error::receive_disabled())
 	}
@@ -56,11 +53,7 @@ pub fn process_recv_packet<Ctx: 'static + Ics20Context>(
 		let escrow_address =
 			ctx.get_channel_escrow_address(&packet.destination_port, packet.destination_channel)?;
 
-		Ok(Box::new(move |ctx| {
-			let ctx = ctx.downcast_mut::<Ctx>().unwrap();
-			ctx.send_coins(&escrow_address, &receiver_account, &coin)
-				.map_err(|e| e.to_string())
-		}))
+		ctx.send_coins(&escrow_address, &receiver_account, &coin)
 	} else {
 		// sender chain is the source, mint vouchers
 		let prefix = TracePrefix::new(packet.destination_port.clone(), packet.destination_channel);
@@ -76,9 +69,6 @@ pub fn process_recv_packet<Ctx: 'static + Ics20Context>(
 		};
 		output.emit(denom_trace_event.into());
 
-		Ok(Box::new(move |ctx| {
-			let ctx = ctx.downcast_mut::<Ctx>().unwrap();
-			ctx.mint_coins(&receiver_account, &coin).map_err(|e| e.to_string())
-		}))
+		ctx.mint_coins(&receiver_account, &coin)
 	}
 }

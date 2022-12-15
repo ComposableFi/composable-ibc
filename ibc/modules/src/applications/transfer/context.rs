@@ -35,7 +35,7 @@ use crate::{
 			Version,
 		},
 		ics24_host::identifier::{ChannelId, ConnectionId, PortId},
-		ics26_routing::context::{ModuleOutputBuilder, OnRecvPacketAck, ReaderContext},
+		ics26_routing::context::{ModuleOutputBuilder, ReaderContext},
 	},
 	prelude::*,
 	signer::Signer,
@@ -242,22 +242,20 @@ pub fn on_chan_close_confirm(
 }
 
 pub fn on_recv_packet<Ctx: 'static + Ics20Context>(
-	ctx: &Ctx,
+	ctx: &mut Ctx,
 	output: &mut ModuleOutputBuilder,
 	packet: &Packet,
 	_relayer: &Signer,
-) -> OnRecvPacketAck {
+) -> Acknowledgement {
 	let data = match serde_json::from_slice::<PacketData>(&packet.data) {
 		Ok(data) => data,
 		Err(_) =>
-			return OnRecvPacketAck::Failed(Box::new(Acknowledgement::Error(
-				Ics20Error::packet_data_deserialization().to_string(),
-			))),
+			return Acknowledgement::Error(Ics20Error::packet_data_deserialization().to_string()),
 	};
 
 	let ack = match process_recv_packet(ctx, output, packet, data.clone()) {
-		Ok(write_fn) => OnRecvPacketAck::Successful(Box::new(Acknowledgement::success()), write_fn),
-		Err(e) => OnRecvPacketAck::Failed(Box::new(Acknowledgement::from_error(e))),
+		Ok(_) => Acknowledgement::success(),
+		Err(e) => Acknowledgement::from_error(e),
 	};
 
 	let recv_event = RecvEvent {
