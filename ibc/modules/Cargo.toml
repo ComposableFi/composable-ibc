@@ -26,6 +26,7 @@ std = [
     "sp-core/std",
     "sp-std/std",
     "codec/std",
+    "scale-info/std"
 ]
 clock = ["tendermint/clock", "time/std"]
 
@@ -55,6 +56,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 sha2 = { version = "0.10.2", optional = true }
 tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
 tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 
 [dev-dependencies]
 env_logger = "0.9.0"

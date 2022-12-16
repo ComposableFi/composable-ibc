@@ -192,7 +192,7 @@ pub mod pallet {
 	use light_clients::AnyClientState;
 	use sp_runtime::{
 		traits::{IdentifyAccount, Saturating},
-		AccountId32,
+		AccountId32, BoundedBTreeSet,
 	};
 	#[cfg(feature = "std")]
 	use sp_runtime::{Deserialize, Serialize};
@@ -339,6 +339,18 @@ pub mod pallet {
 	#[allow(clippy::disallowed_types)]
 	/// Active Escrow addresses
 	pub type EscrowAddresses<T: Config> = StorageValue<_, BTreeSet<T::AccountId>, ValueQuery>;
+
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// Consensus heights
+	/// Stored as a tuple of (revision_number, revision_height)
+	pub type ConsensusHeights<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		Vec<u8>,
+		BoundedBTreeSet<Height, frame_support::traits::ConstU32<256>>,
+		ValueQuery,
+	>;
 
 	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 	pub struct AssetConfig<AssetId> {

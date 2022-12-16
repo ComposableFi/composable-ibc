@@ -25,7 +25,18 @@ use ibc_proto::ibc::core::client::v1::Height as RawHeight;
 
 use crate::core::ics02_client::error::Error;
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(
+	Copy,
+	Clone,
+	PartialEq,
+	Eq,
+	Hash,
+	Serialize,
+	Deserialize,
+	codec::Encode,
+	codec::Decode,
+	scale_info::TypeInfo,
+)]
 pub struct Height {
 	/// Previously known as "epoch"
 	pub revision_number: u64,
