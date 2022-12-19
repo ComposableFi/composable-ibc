@@ -1,17 +1,29 @@
 use super::{error::Error, CosmosClient};
+use crate::utils::{
+	event_is_type_channel, event_is_type_client, event_is_type_connection,
+	ibc_event_try_from_abci_event,
+};
 use core::time::Duration;
-use futures::{stream::{self, select_all}, Stream, TryFutureExt};
+use futures::{
+	stream::{self, select_all},
+	Stream, TryFutureExt,
+};
 use ibc::{
 	applications::transfer::PrefixedCoin,
 	core::{
-		ics02_client::client_state::ClientType,
-		ics02_client::events::NewBlock,
-		ics23_commitment::commitment:: { CommitmentPrefix, CommitmentProofBytes},
-		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
-		ics24_host::path::ClientStatePath
+		ics02_client::{
+			client_state::ClientType, events::NewBlock, msgs::update_client::MsgUpdateAnyClient,
+		},
+		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
+		ics24_host::{
+			identifier::{ChannelId, ClientId, ConnectionId, PortId},
+			path::ClientStatePath,
+		},
 	},
 	events::IbcEvent,
+	keys::STORE_KEY,
 	timestamp::Timestamp,
+	tx_msg::Msg,
 	Height,
 };
 use ibc_proto::{
@@ -22,31 +34,31 @@ use ibc_proto::{
 			QueryPacketAcknowledgementResponse, QueryPacketCommitmentResponse,
 			QueryPacketReceiptResponse,
 		},
-		client::v1::{QueryClientStateResponse, QueryClientStatesRequest, QueryConsensusStateResponse, Height as IBCHeight},
+		client::v1::{
+			Height as IBCHeight, QueryClientStateResponse, QueryClientStatesRequest,
+			QueryConsensusStateResponse,
+		},
 		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
 	},
 };
 use ibc_rpc::PacketInfo;
-use ics07_tendermint::{client_message::Header, events::try_from_tx,
-					   client_message::ClientMessage, merkle::convert_tm_to_ics_merkle_proof
+use ics07_tendermint::{
+	client_message::{ClientMessage, Header},
+	events::try_from_tx,
+	merkle::convert_tm_to_ics_merkle_proof,
 };
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
-use primitives::{Chain, IbcProvider, UpdateType, mock::LocalClientTypes};
+use primitives::{mock::LocalClientTypes, Chain, IbcProvider, UpdateType};
 use std::{pin::Pin, str::FromStr};
-use tendermint::block::{Height as BlockHeight, Header as BlockHeader};
+use tendermint::block::{Header as BlockHeader, Height as BlockHeight};
 use tendermint_light_client::components::io::{AsyncIo, AtHeight};
 use tendermint_proto::Protobuf;
-use tendermint_rpc::{query::{EventType, Query}, event::{Event, EventData}, Client, Order,
-					 SubscriptionClient, WebSocketClient, abci::Path as TendermintABCIPath,
-					 endpoint::abci_query::AbciQuery, abci::Code
-};
-use ibc::{
-	core::ics02_client::msgs::update_client::MsgUpdateAnyClient, tx_msg::Msg,
-	keys::STORE_KEY,
-};
-use crate::utils::{
-	event_is_type_channel, event_is_type_client,
-	event_is_type_connection, ibc_event_try_from_abci_event,
+use tendermint_rpc::{
+	abci::{Code, Path as TendermintABCIPath},
+	endpoint::abci_query::AbciQuery,
+	event::{Event, EventData},
+	query::{EventType, Query},
+	Client, Order, SubscriptionClient, WebSocketClient,
 };
 
 const KeyClientStorePrefix: &str = "clients";
@@ -65,61 +77,69 @@ pub struct TransactionId<Hash> {
 
 impl<H> CosmosClient<H>
 where
-	H: Clone + Send + Sync + 'static
+	H: Clone + Send + Sync + 'static,
 {
-	async fn msg_update_client_header(&mut self, trusted_height: Height) -> Result<(Header, UpdateType), anyhow::Error> {
+	async fn msg_update_client_header(
+		&mut self,
+		trusted_height: Height,
+	) -> Result<(Header, UpdateType), anyhow::Error> {
 		let latest_light_block = self.light_provider.fetch_light_block(AtHeight::Highest).await?;
 		let height = BlockHeight::try_from(trusted_height.revision_height)?;
-		let trusted_light_block = self.light_provider.fetch_light_block(AtHeight::At(height)).await?;
+		let trusted_light_block =
+			self.light_provider.fetch_light_block(AtHeight::At(height)).await?;
 
-		let update_type = match latest_light_block.validators == latest_light_block.next_validators {
+		let update_type = match latest_light_block.validators == latest_light_block.next_validators
+		{
 			true => UpdateType::Optional,
-			false => UpdateType::Mandatory
+			false => UpdateType::Mandatory,
 		};
 
-		Ok((Header{
-			signed_header: latest_light_block.signed_header,
-			validator_set: latest_light_block.validators,
-			trusted_height,
-			trusted_validator_set: trusted_light_block.validators
-		}, update_type))
+		Ok((
+			Header {
+				signed_header: latest_light_block.signed_header,
+				validator_set: latest_light_block.validators,
+				trusted_height,
+				trusted_validator_set: trusted_light_block.validators,
+			},
+			update_type,
+		))
 	}
 
-	async fn query_tendermint_proof(&self, key: Vec<u8>, height: Height) -> Result<(BytesValue, Proof), Error>{
-		let path = format!("store/{}/key", STORE_KEY).as_str()
-			.parse::<TendermintABCIPath>().map_err(|err| Error::Custom(format!("failed to parse path: {}", err)));
+	async fn query_tendermint_proof(
+		&self,
+		key: Vec<u8>,
+		height: Height,
+	) -> Result<(BytesValue, Proof), Error> {
+		let path = format!("store/{}/key", STORE_KEY)
+			.as_str()
+			.parse::<TendermintABCIPath>()
+			.map_err(|err| Error::Custom(format!("failed to parse path: {}", err)));
 		let height = BlockHeight::try_from(height.revision_height);
-		let query_res =  self.rpc_client.abci_query(
-			path.ok(),
-			key,
-			height.ok(),
-			true,
-		).await?;
+		let query_res = self.rpc_client.abci_query(path.ok(), key, height.ok(), true).await?;
 
 		if !query_res.code.is_ok() {
 			// Fail with response log.
 			// todo()! add response code to error
-			return Err(Error::Custom(format!("failed abci query")));
+			return Err(Error::Custom(format!("failed abci query")))
 		}
 
 		if query_res.proof.is_none() {
 			// Fail due to empty proof
-			return Err(Error::Custom(format!("proof response is empty")));
+			return Err(Error::Custom(format!("proof response is empty")))
 		}
 
 		match query_res {
-			AbciQuery {
-				code: Code::Err(_), ..
-			} => return Err(Error::Custom(format!("failed abci query"))),
-			AbciQuery {
-				proof: None,..
-			} => return Err(Error::Custom(format!("failed abci query"))),
-			_ => ()
+			AbciQuery { code: Code::Err(_), .. } =>
+				return Err(Error::Custom(format!("failed abci query"))),
+			AbciQuery { proof: None, .. } =>
+				return Err(Error::Custom(format!("failed abci query"))),
+			_ => (),
 		};
 
-		let merkle_proof = query_res.proof
-			.map(|p| convert_tm_to_ics_merkle_proof(&p))
-			.ok_or_else(|| Error::Custom("could not convert proof Op to merkle proof".to_string()))?;
+		let merkle_proof =
+			query_res.proof.map(|p| convert_tm_to_ics_merkle_proof(&p)).ok_or_else(|| {
+				Error::Custom("could not convert proof Op to merkle proof".to_string())
+			})?;
 		let proof = CommitmentProofBytes::try_from(merkle_proof)
 			.map_err(|err| Error::Custom(format!("bad client state proof: {}", err)))?;
 		Ok((query_res.value, proof.as_bytes().to_vec()))
@@ -145,8 +165,10 @@ where
 	{
 		let client_id = counterparty.client_id();
 		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
-		let latest_cp_client_state = counterparty.query_client_state(latest_cp_height, client_id).await?;
-		let client_state_response = latest_cp_client_state.client_state
+		let latest_cp_client_state =
+			counterparty.query_client_state(latest_cp_height, client_id).await?;
+		let client_state_response = latest_cp_client_state
+			.client_state
 			.ok_or_else(|| Error::Custom("counterparty returned empty client state".to_string()))?;
 
 		let client_state = AnyClientState::try_from(client_state_response)
@@ -154,20 +176,26 @@ where
 
 		let cs = match client_state {
 			AnyClientState::Tendermint(client_state) => client_state,
-			c => Err(Error::Custom(format!("expected Tendermint::ClientState got {:?}", c)))?
+			c => Err(Error::Custom(format!("expected Tendermint::ClientState got {:?}", c)))?,
 		};
 
 		let latest_cp_client_height = cs.latest_height.revision_height;
 		let latest_height = self.rpc_client.latest_block().await?.block.header.height;
 
 		let mut ibc_events: Vec<IbcEvent> = vec![];
-		for height in latest_cp_client_height+1..latest_height.value()+1 {
+		for height in latest_cp_client_height + 1..latest_height.value() + 1 {
 			// todo()! maybe there's a more efficient way to query for blocks in batches?
-			let block_results = self.rpc_client
-				.block_results(height.into()).await
-				.map_err(|e| Error::from(format!("Failed to query block result for height {:?}: {:?}", height, e)))?;
+			let block_results =
+				self.rpc_client.block_results(height.into()).await.map_err(|e| {
+					Error::from(format!(
+						"Failed to query block result for height {:?}: {:?}",
+						height, e
+					))
+				})?;
 
-			let tx_results = block_results.txs_results.ok_or_else(|| Err(Error::Custom("empty transaction results".to_string())))?;
+			let tx_results = block_results
+				.txs_results
+				.ok_or_else(|| Err(Error::Custom("empty transaction results".to_string())))?;
 			for tx in tx_results.iter() {
 				for event in tx.events {
 					let ibc_event = ibc_event_try_from_abci_event(&event)?;
@@ -180,7 +208,9 @@ where
 		let update_client_header = {
 			let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 				client_id: self.client_id(),
-				client_message: AnyClientMessage::Tendermint(ClientMessage::Header(update_header.0)),
+				client_message: AnyClientMessage::Tendermint(ClientMessage::Header(
+					update_header.0,
+				)),
 				signer: counterparty.account_id(),
 			};
 			let value = msg.encode_vec();
@@ -221,32 +251,31 @@ where
 				let Event { data, events, query } = event;
 				match data {
 					EventData::NewBlock { block, .. }
-					if query == Query::from(EventType::NewBlock).to_string() =>
-						{
-							events.push(NewBlock::new(height).into());
-							// events_with_height.append(&mut extract_block_events(height, &events));
-						},
-					EventData::Tx { tx_result } => {
+						if query == Query::from(EventType::NewBlock).to_string() =>
+					{
+						events.push(NewBlock::new(height).into());
+						// events_with_height.append(&mut extract_block_events(height, &events));
+					},
+					EventData::Tx { tx_result } =>
 						for abci_event in &tx_result.result.events {
 							if let Ok(ibc_event) = ibc_event_try_from_abci_event(abci_event) {
-								if query == Query::eq("message.module", "ibc_client").to_string()
-									&& event_is_type_client(&ibc_event)
+								if query == Query::eq("message.module", "ibc_client").to_string() &&
+									event_is_type_client(&ibc_event)
 								{
 									events.push(ibc_event);
-								} else if query
-									== Query::eq("message.module", "ibc_connection").to_string()
-									&& event_is_type_connection(&ibc_event)
+								} else if query ==
+									Query::eq("message.module", "ibc_connection").to_string() &&
+									event_is_type_connection(&ibc_event)
 								{
 									events.push(ibc_event);
-								} else if query
-									== Query::eq("message.module", "ibc_channel").to_string()
-									&& event_is_type_channel(&ibc_event)
+								} else if query ==
+									Query::eq("message.module", "ibc_channel").to_string() &&
+									event_is_type_channel(&ibc_event)
 								{
 									events.push(ibc_event);
 								}
 							}
-						}
-					},
+						},
 					_ => {},
 				}
 				stream::iter(events).map(Ok)
@@ -271,16 +300,17 @@ where
 		at: Height,
 		client_id: ClientId,
 	) -> Result<QueryClientStateResponse, Self::Error> {
-		let (value, proof) = CosmosClient::query_tendermint_proof(self, ClientStatePath(client_id).into()).await?;
+		let (value, proof) =
+			CosmosClient::query_tendermint_proof(self, ClientStatePath(client_id).into()).await?;
 		let client_state = AnyClientState::decode_vec(&value)?;
 		let any_client_state: Any = client_state.into();
 		Ok(QueryClientStateResponse {
 			proof,
-			proof_height: Some(IBCHeight{
+			proof_height: Some(IBCHeight {
 				revision_height: at.revision_height,
 				revision_number: at.revision_number,
 			}),
-			client_state: Some(any_client_state)
+			client_state: Some(any_client_state),
 		})
 	}
 
@@ -302,30 +332,28 @@ where
 	}
 
 	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
-		let path = format!("store/{}/key", STORE_KEY).as_str()
-			.parse::<TendermintABCIPath>().map_err(|err| Error::Custom(format!("failed to parse path: {}", err)))?;
+		let path = format!("store/{}/key", STORE_KEY)
+			.as_str()
+			.parse::<TendermintABCIPath>()
+			.map_err(|err| Error::Custom(format!("failed to parse path: {}", err)))?;
 		let height = BlockHeight::try_from(at.revision_height);
-		let query_res =  self.rpc_client.abci_query(
-			path.ok(),
-			&*keys[0],
-			height.ok(),
-			true,
-		).await?;
+		let query_res = self.rpc_client.abci_query(path.ok(), &*keys[0], height.ok(), true).await?;
 
 		if !query_res.code.is_ok() {
 			// Fail with response log.
 			// todo()! add response code to error
-			return Err(Error::Custom(format!("failed abci query")));
+			return Err(Error::Custom(format!("failed abci query")))
 		}
 
 		if query_res.proof.is_none() {
 			// Fail due to empty proof
-			return Err(Error::Custom(format!("proof response is empty")));
+			return Err(Error::Custom(format!("proof response is empty")))
 		}
 
-		let merkle_proof = query_res.proof
-			.map(|p| convert_tm_to_ics_merkle_proof(&p))
-			.ok_or_else(|| Error::Custom("could not convert proof Op to merkle proof".to_string()))?;
+		let merkle_proof =
+			query_res.proof.map(|p| convert_tm_to_ics_merkle_proof(&p)).ok_or_else(|| {
+				Error::Custom("could not convert proof Op to merkle proof".to_string())
+			})?;
 		let proof = CommitmentProofBytes::try_from(merkle_proof)
 			.map_err(|err| Error::Custom(format!("bad client state proof: {}", err)))?;
 		Ok(proof.as_bytes().to_vec())

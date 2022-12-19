@@ -2,19 +2,21 @@ use crate::error::Error;
 use core::convert::TryFrom;
 use ibc::events::{Error as IbcEventError, IbcEvent, IbcEventType};
 use std::collections::BTreeMap as HashMap;
-use tendermint_rpc::abci::Event as AbciEvent;
-use tendermint_rpc::{event::Event as RpcEvent, event::EventData as RpcEventData};
+use tendermint_rpc::{
+	abci::Event as AbciEvent,
+	event::{Event as RpcEvent, EventData as RpcEventData},
+};
 
-use ibc::core::ics02_client::{
-	events::{self as ClientEvents, Attributes as ClientAttributes},
-	header::Header,
-};
-use ibc::core::ics03_connection::events::{
-	self as ConnectionEvents, Attributes as ConnectionAttributes,
-};
-use ibc::core::ics04_channel::{
-	events::{self as ChannelEvents, Attributes as ChannelAttributes},
-	packet::Packet,
+use ibc::core::{
+	ics02_client::{
+		events::{self as ClientEvents, Attributes as ClientAttributes},
+		header::Header,
+	},
+	ics03_connection::events::{self as ConnectionEvents, Attributes as ConnectionAttributes},
+	ics04_channel::{
+		events::{self as ChannelEvents, Attributes as ChannelAttributes},
+		packet::Packet,
+	},
 };
 
 fn extract_block_events(block_events: &HashMap<String, Vec<String>>) -> Vec<IbcEvent> {
@@ -303,38 +305,38 @@ pub fn timeout_packet_try_from_abci_event(
 pub fn event_is_type_client(ev: &IbcEvent) -> bool {
 	matches!(
 		ev,
-		IbcEvent::CreateClient(_)
-			| IbcEvent::UpdateClient(_)
-			| IbcEvent::UpgradeClient(_)
-			| IbcEvent::ClientMisbehaviour(_)
+		IbcEvent::CreateClient(_) |
+			IbcEvent::UpdateClient(_) |
+			IbcEvent::UpgradeClient(_) |
+			IbcEvent::ClientMisbehaviour(_)
 	)
 }
 
 pub fn event_is_type_connection(ev: &IbcEvent) -> bool {
 	matches!(
 		ev,
-		IbcEvent::OpenInitConnection(_)
-			| IbcEvent::OpenTryConnection(_)
-			| IbcEvent::OpenAckConnection(_)
-			| IbcEvent::OpenConfirmConnection(_)
+		IbcEvent::OpenInitConnection(_) |
+			IbcEvent::OpenTryConnection(_) |
+			IbcEvent::OpenAckConnection(_) |
+			IbcEvent::OpenConfirmConnection(_)
 	)
 }
 
 pub fn event_is_type_channel(ev: &IbcEvent) -> bool {
 	matches!(
 		ev,
-		IbcEvent::OpenInitChannel(_)
-			| IbcEvent::OpenTryChannel(_)
-			| IbcEvent::OpenAckChannel(_)
-			| IbcEvent::OpenConfirmChannel(_)
-			| IbcEvent::CloseInitChannel(_)
-			| IbcEvent::CloseConfirmChannel(_)
-			| IbcEvent::SendPacket(_)
-			| IbcEvent::ReceivePacket(_)
-			| IbcEvent::WriteAcknowledgement(_)
-			| IbcEvent::AcknowledgePacket(_)
-			| IbcEvent::TimeoutPacket(_)
-			| IbcEvent::TimeoutOnClosePacket(_)
+		IbcEvent::OpenInitChannel(_) |
+			IbcEvent::OpenTryChannel(_) |
+			IbcEvent::OpenAckChannel(_) |
+			IbcEvent::OpenConfirmChannel(_) |
+			IbcEvent::CloseInitChannel(_) |
+			IbcEvent::CloseConfirmChannel(_) |
+			IbcEvent::SendPacket(_) |
+			IbcEvent::ReceivePacket(_) |
+			IbcEvent::WriteAcknowledgement(_) |
+			IbcEvent::AcknowledgePacket(_) |
+			IbcEvent::TimeoutPacket(_) |
+			IbcEvent::TimeoutOnClosePacket(_)
 	)
 }
 
@@ -345,27 +347,24 @@ pub fn client_extract_attributes_from_tx(event: &AbciEvent) -> Result<ClientAttr
 		let key = tag.key.as_ref();
 		let value = tag.value.as_ref();
 		match key {
-			ClientEvents::CLIENT_ID_ATTRIBUTE_KEY => {
+			ClientEvents::CLIENT_ID_ATTRIBUTE_KEY =>
 				attr.client_id = value.parse().map_err(|e| {
 					Error::from(format!("Failed to parse client id from event attribute: {:?}", e))
-				})?
-			},
-			ClientEvents::CLIENT_TYPE_ATTRIBUTE_KEY => {
+				})?,
+			ClientEvents::CLIENT_TYPE_ATTRIBUTE_KEY =>
 				attr.client_type = value.parse().map_err(|e| {
 					Error::from(format!(
 						"Failed to parse client type from event attribute: {:?}",
 						e
 					))
-				})?
-			},
-			ClientEvents::CONSENSUS_HEIGHT_ATTRIBUTE_KEY => {
+				})?,
+			ClientEvents::CONSENSUS_HEIGHT_ATTRIBUTE_KEY =>
 				attr.consensus_height = value.parse().map_err(|e| {
 					Error::from(format!(
 						"Failed to parse consensus height from event attribute: {:?}",
 						e
 					))
-				})?
-			},
+				})?,
 			_ => {},
 		}
 	}
@@ -379,7 +378,7 @@ pub fn extract_header_from_tx(event: &AbciEvent) -> Result<Box<dyn Header>, Erro
 		let value = tag.value.as_ref();
 		if key == "header" {
 			let header_bytes = hex::decode(value).map_err(|e| Error::from(e.to_string()))?;
-			return decode_header(&header_bytes);
+			return decode_header(&header_bytes)
 		}
 	}
 	Err(Error::from("Failed to extract header from event"))
@@ -395,16 +394,14 @@ fn connection_extract_attributes_from_tx(event: &AbciEvent) -> Result<Connection
 			ConnectionEvents::CONN_ID_ATTRIBUTE_KEY => {
 				attr.connection_id = value.parse().ok();
 			},
-			ConnectionEvents::CLIENT_ID_ATTRIBUTE_KEY => {
-				attr.client_id = value.parse().map_err(|e| Error::from(e.to_string()))?
-			},
+			ConnectionEvents::CLIENT_ID_ATTRIBUTE_KEY =>
+				attr.client_id = value.parse().map_err(|e| Error::from(e.to_string()))?,
 			ConnectionEvents::COUNTERPARTY_CONN_ID_ATTRIBUTE_KEY => {
 				attr.counterparty_connection_id = value.parse().ok();
 			},
-			ConnectionEvents::COUNTERPARTY_CLIENT_ID_ATTRIBUTE_KEY => {
+			ConnectionEvents::COUNTERPARTY_CLIENT_ID_ATTRIBUTE_KEY =>
 				attr.counterparty_client_id =
-					value.parse().map_err(|e| Error::from(e.to_string()))?
-			},
+					value.parse().map_err(|e| Error::from(e.to_string()))?,
 			_ => {},
 		}
 	}
@@ -419,18 +416,15 @@ fn channel_extract_attributes_from_tx(event: &AbciEvent) -> Result<ChannelAttrib
 		let key = tag.key.as_ref();
 		let value = tag.value.as_ref();
 		match key {
-			ChannelEvents::PORT_ID_ATTRIBUTE_KEY => {
-				attr.port_id = value.parse().map_err(|e| Error::from(e.to_string()))?
-			},
+			ChannelEvents::PORT_ID_ATTRIBUTE_KEY =>
+				attr.port_id = value.parse().map_err(|e| Error::from(e.to_string()))?,
 			ChannelEvents::CHANNEL_ID_ATTRIBUTE_KEY => {
 				attr.channel_id = value.parse().ok();
 			},
-			ChannelEvents::CONNECTION_ID_ATTRIBUTE_KEY => {
-				attr.connection_id = value.parse().map_err(|e| Error::from(e.to_string()))?
-			},
-			ChannelEvents::COUNTERPARTY_PORT_ID_ATTRIBUTE_KEY => {
-				attr.counterparty_port_id = value.parse().map_err(|e| Error::from(e.to_string()))?
-			},
+			ChannelEvents::CONNECTION_ID_ATTRIBUTE_KEY =>
+				attr.connection_id = value.parse().map_err(|e| Error::from(e.to_string()))?,
+			ChannelEvents::COUNTERPARTY_PORT_ID_ATTRIBUTE_KEY =>
+				attr.counterparty_port_id = value.parse().map_err(|e| Error::from(e.to_string()))?,
 			ChannelEvents::COUNTERPARTY_CHANNEL_ID_ATTRIBUTE_KEY => {
 				attr.counterparty_channel_id = value.parse().ok();
 			},
@@ -448,26 +442,20 @@ fn extract_packet_and_write_ack_from_tx(event: &AbciEvent) -> Result<(Packet, Ve
 		let key = tag.key.as_ref();
 		let value = tag.value.as_ref();
 		match key {
-			ChannelEvents::PKT_SRC_PORT_ATTRIBUTE_KEY => {
-				packet.source_port = value.parse().map_err(|e| Error::from(e.to_string()))?
-			},
-			ChannelEvents::PKT_SRC_CHANNEL_ATTRIBUTE_KEY => {
-				packet.source_channel = value.parse().map_err(|e| Error::from(e.to_string()))?
-			},
-			ChannelEvents::PKT_DST_PORT_ATTRIBUTE_KEY => {
-				packet.destination_port = value.parse().map_err(|e| Error::from(e.to_string()))?
-			},
-			ChannelEvents::PKT_DST_CHANNEL_ATTRIBUTE_KEY => {
+			ChannelEvents::PKT_SRC_PORT_ATTRIBUTE_KEY =>
+				packet.source_port = value.parse().map_err(|e| Error::from(e.to_string()))?,
+			ChannelEvents::PKT_SRC_CHANNEL_ATTRIBUTE_KEY =>
+				packet.source_channel = value.parse().map_err(|e| Error::from(e.to_string()))?,
+			ChannelEvents::PKT_DST_PORT_ATTRIBUTE_KEY =>
+				packet.destination_port = value.parse().map_err(|e| Error::from(e.to_string()))?,
+			ChannelEvents::PKT_DST_CHANNEL_ATTRIBUTE_KEY =>
 				packet.destination_channel =
-					value.parse().map_err(|e| Error::from(e.to_string()))?
-			},
-			ChannelEvents::PKT_SEQ_ATTRIBUTE_KEY => {
+					value.parse().map_err(|e| Error::from(e.to_string()))?,
+			ChannelEvents::PKT_SEQ_ATTRIBUTE_KEY =>
 				packet.sequence =
-					value.parse::<u64>().map_err(|e| Error::from(e.to_string()))?.into()
-			},
-			ChannelEvents::PKT_TIMEOUT_HEIGHT_ATTRIBUTE_KEY => {
-				packet.timeout_height = value.parse().map_err(|e| Error::from(e.to_string()))?
-			},
+					value.parse::<u64>().map_err(|e| Error::from(e.to_string()))?.into(),
+			ChannelEvents::PKT_TIMEOUT_HEIGHT_ATTRIBUTE_KEY =>
+				packet.timeout_height = value.parse().map_err(|e| Error::from(e.to_string()))?,
 			ChannelEvents::PKT_TIMEOUT_TIMESTAMP_ATTRIBUTE_KEY => {
 				packet.timeout_timestamp = value.parse().unwrap();
 			},
