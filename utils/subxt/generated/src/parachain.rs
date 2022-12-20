@@ -8725,6 +8725,62 @@ pub mod api {
 						],
 					)
 				}
+				#[doc = " Consensus heights"]
+				#[doc = " Stored as a tuple of (revision_number, revision_height)"]
+				pub fn consensus_heights(
+					&self,
+					_0: impl ::std::borrow::Borrow<[::core::primitive::u8]>,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::sp_runtime::bounded::bounded_btree_set::BoundedBTreeSet<
+							runtime_types::ibc::core::ics02_client::height::Height,
+						>,
+					>,
+					::subxt::storage::address::Yes,
+					::subxt::storage::address::Yes,
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Ibc",
+						"ConsensusHeights",
+						vec![::subxt::storage::address::StorageMapKey::new(
+							_0.borrow(),
+							::subxt::storage::address::StorageHasher::Blake2_128Concat,
+						)],
+						[
+							238u8, 213u8, 231u8, 8u8, 158u8, 84u8, 100u8, 101u8, 78u8, 142u8,
+							125u8, 133u8, 128u8, 92u8, 138u8, 184u8, 144u8, 221u8, 58u8, 101u8,
+							206u8, 217u8, 140u8, 30u8, 206u8, 26u8, 242u8, 223u8, 113u8, 46u8,
+							227u8, 240u8,
+						],
+					)
+				}
+				#[doc = " Consensus heights"]
+				#[doc = " Stored as a tuple of (revision_number, revision_height)"]
+				pub fn consensus_heights_root(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::sp_runtime::bounded::bounded_btree_set::BoundedBTreeSet<
+							runtime_types::ibc::core::ics02_client::height::Height,
+						>,
+					>,
+					(),
+					::subxt::storage::address::Yes,
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Ibc",
+						"ConsensusHeights",
+						Vec::new(),
+						[
+							238u8, 213u8, 231u8, 8u8, 158u8, 84u8, 100u8, 101u8, 78u8, 142u8,
+							125u8, 133u8, 128u8, 92u8, 138u8, 184u8, 144u8, 221u8, 58u8, 101u8,
+							206u8, 217u8, 140u8, 30u8, 206u8, 26u8, 242u8, 223u8, 113u8, 46u8,
+							227u8, 240u8,
+						],
+					)
+				}
 			}
 		}
 		pub mod constants {
@@ -9591,6 +9647,27 @@ pub mod api {
 				Finalization,
 				#[codec(index = 2)]
 				Initialization,
+			}
+		}
+		pub mod ibc {
+			use super::runtime_types;
+			pub mod core {
+				use super::runtime_types;
+				pub mod ics02_client {
+					use super::runtime_types;
+					pub mod height {
+						use super::runtime_types;
+						#[derive(
+							:: subxt :: ext :: codec :: Decode,
+							:: subxt :: ext :: codec :: Encode,
+							Debug,
+						)]
+						pub struct Height {
+							pub revision_number: ::core::primitive::u64,
+							pub revision_height: ::core::primitive::u64,
+						}
+					}
+				}
 			}
 		}
 		pub mod ibc_primitives {
@@ -12521,6 +12598,15 @@ pub mod api {
 			use super::runtime_types;
 			pub mod bounded {
 				use super::runtime_types;
+				pub mod bounded_btree_set {
+					use super::runtime_types;
+					#[derive(
+						:: subxt :: ext :: codec :: Decode,
+						:: subxt :: ext :: codec :: Encode,
+						Debug,
+					)]
+					pub struct BoundedBTreeSet<_0>(pub ::std::vec::Vec<_0>);
+				}
 				pub mod bounded_vec {
 					use super::runtime_types;
 					#[derive(
@@ -14503,9 +14589,9 @@ pub mod api {
 		let runtime_metadata_hash = client.metadata().metadata_hash(&PALLETS);
 		if runtime_metadata_hash !=
 			[
-				216u8, 18u8, 12u8, 80u8, 52u8, 170u8, 111u8, 204u8, 62u8, 102u8, 79u8, 253u8,
-				222u8, 68u8, 196u8, 140u8, 177u8, 139u8, 34u8, 180u8, 93u8, 159u8, 200u8, 250u8,
-				159u8, 166u8, 117u8, 175u8, 143u8, 111u8, 188u8, 137u8,
+				188u8, 148u8, 214u8, 177u8, 91u8, 198u8, 70u8, 73u8, 250u8, 224u8, 62u8, 252u8,
+				165u8, 46u8, 33u8, 109u8, 248u8, 51u8, 40u8, 88u8, 227u8, 214u8, 43u8, 209u8,
+				211u8, 243u8, 153u8, 161u8, 216u8, 120u8, 76u8, 64u8,
 			] {
 			Err(::subxt::error::MetadataError::IncompatibleMetadata)
 		} else {

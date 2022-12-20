@@ -179,7 +179,7 @@ services:
       - --execution=wasm
       - --enable-offchain-indexing=true
       - --alice
-      - --node-key=7c667a99279cf5a884d6bb86fac6e320ef2d413dc880f01ff0e1ad353d615045
+      - --node-key=d02c041f177a1d58da919567c4ac5b8a4f5e972cda85577d0435ea67bdf48f7a
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
       - --chain=/app/rococo-local.json
@@ -212,7 +212,7 @@ services:
       - --execution=wasm
       - --enable-offchain-indexing=true
       - --bob
-      - --bootnodes=/dns/parachain-2000-0/tcp/30333/p2p/12D3KooWNDsLfXwYCiNSV3LWAwc3rJ7cdjqenzvzsvp1PTtCpbpo
+      - --bootnodes=/dns/parachain-2000-0/tcp/30333/p2p/12D3KooWRdHXrfCTQwiFrAKAw5rBqWQSH9wuz9bmCfdE7LRwmh5B
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
       - --chain=/app/rococo-local.json
@@ -244,7 +244,7 @@ services:
       - --execution=wasm
       - --enable-offchain-indexing=true
       - --charlie
-      - --bootnodes=/dns/parachain-2000-0/tcp/30333/p2p/12D3KooWNDsLfXwYCiNSV3LWAwc3rJ7cdjqenzvzsvp1PTtCpbpo
+      - --bootnodes=/dns/parachain-2000-0/tcp/30333/p2p/12D3KooWRdHXrfCTQwiFrAKAw5rBqWQSH9wuz9bmCfdE7LRwmh5B
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
       - --chain=/app/rococo-local.json
@@ -276,7 +276,7 @@ services:
       - --execution=wasm
       - --enable-offchain-indexing=true
       - --alice
-      - --node-key=e5ad8b579451f25035feeccaee89468a7fba53fbce35d27afe5fdbbf412722e9
+      - --node-key=c3dcaff04f173ed7741a63c45e2d5d4053e7c1a76b13ec6820ad9ac24a849025
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
       - --chain=/app/rococo-local.json
@@ -308,7 +308,7 @@ services:
       - --execution=wasm
       - --enable-offchain-indexing=true
       - --bob
-      - --bootnodes=/dns/parachain-2001-0/tcp/30333/p2p/12D3KooWSMHyxxKbzzJxe44hHwSx7KWZM6Go3SrdhcvGLyc4z4XZ
+      - --bootnodes=/dns/parachain-2001-0/tcp/30333/p2p/12D3KooWAtd7bKYEvYmcVmK8WLWpGgww4asNeHMbSX68sDbdVksh
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
       - --chain=/app/rococo-local.json
@@ -340,7 +340,7 @@ services:
       - --execution=wasm
       - --enable-offchain-indexing=true
       - --charlie
-      - --bootnodes=/dns/parachain-2001-0/tcp/30333/p2p/12D3KooWSMHyxxKbzzJxe44hHwSx7KWZM6Go3SrdhcvGLyc4z4XZ
+      - --bootnodes=/dns/parachain-2001-0/tcp/30333/p2p/12D3KooWAtd7bKYEvYmcVmK8WLWpGgww4asNeHMbSX68sDbdVksh
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
       - --chain=/app/rococo-local.json
