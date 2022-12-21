@@ -24,7 +24,7 @@ contract Trie is ITrie, ISpec {
         TrieLayout calldata layout,
         uint8[] calldata key,
         DB[] calldata KVStore
-    ) external returns (bytes memory value) {
+    ) external returns (uint8[] memory value) {
         bool ok = false;
         (ok, value) = lookUpContract.lookUpWithoutCache(
             KVStore,

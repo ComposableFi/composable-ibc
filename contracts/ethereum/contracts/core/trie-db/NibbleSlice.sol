@@ -63,8 +63,8 @@ contract NibbleSlice is ITrie {
      * @return The slice with the left nibble of each byte.
      */
     function left(Slice memory s) public view returns (Slice memory) {
-        uint8 split = s.offset / nibbleOps.NIBBLE_PER_BYTE();
-        uint8 ix = s.offset % nibbleOps.NIBBLE_PER_BYTE();
+        uint256 split = s.offset / nibbleOps.NIBBLE_PER_BYTE();
+        uint256 ix = s.offset % nibbleOps.NIBBLE_PER_BYTE();
         uint8[] memory slicedArray = s.data;
         if (ix == 0) {
             for (uint8 i; i < split; i++) {

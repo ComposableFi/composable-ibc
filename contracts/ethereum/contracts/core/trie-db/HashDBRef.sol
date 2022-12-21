@@ -13,7 +13,7 @@ contract HashDBRef is ITrie, ISpec {
         bytes32 hash,
         Slice calldata nibble_key,
         Hasher memory hasher
-    ) external view returns (bytes memory value) {
+    ) external view returns (uint8[] memory value) {
         for (uint256 i = 0; i < KVStore.length; i++) {
             bytes memory storeKey;
             // compute the key for the key-value store
@@ -39,7 +39,7 @@ contract HashDBRef is ITrie, ISpec {
             }
         }
         // if the value is not found in any of the key-value stores, return an empty value
-        return "";
+        return value;
     }
 
     function combine(bytes32 hash, Slice calldata nibble_key)
