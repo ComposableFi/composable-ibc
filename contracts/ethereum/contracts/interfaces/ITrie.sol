@@ -12,18 +12,17 @@ interface ITrie {
 
     struct Value {
         bool isInline;
-        bytes data;
+        uint8[] data;
     }
 
     struct Slice {
         uint8[] data;
-        uint8 offset;
+        uint256 offset;
     }
 
     struct NodeHandle {
-        bytes key;
         bool isHash;
-        bytes value;
+        uint8[] data;
     }
 
     struct Node {
@@ -36,6 +35,6 @@ interface ITrie {
 
     struct DB {
         bytes key;
-        bytes value;
+        uint8[] value;
     }
 }

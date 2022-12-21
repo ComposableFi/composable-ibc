@@ -31,17 +31,16 @@ contract LookUp is ITrie, ISpec {
         uint8[] calldata key,
         bytes32 rootHash,
         TrieLayout calldata layout
-    ) external returns (bool, bytes memory) {
+    ) external returns (bool, uint8[] memory result) {
         // keeps track of the number of nibbles in the key that have been traversed
         uint8 keyNibbles = 0;
         // keeps track of the remaining nibbles in the key to be looked up
         Slice memory nibbleKey = Slice(key, 0);
         Slice memory partialKey = nibbleKey;
-        bytes memory result;
 
         Node memory decoded;
         NodeHandle memory nextNode;
-        bytes memory nodeData;
+        uint8[] memory nodeData;
 
         // TODO: verify if this makes sense
         while (keyNibbles < nibbleSlice.len(nibbleKey)) {
@@ -56,7 +55,7 @@ contract LookUp is ITrie, ISpec {
 
             // check if the data is not found in the database
             if (nodeData.length == 0) {
-                return (false, "");
+                return (false, result);
             }
 
             uint256 nodeDataIdx = 0;
@@ -159,15 +158,15 @@ contract LookUp is ITrie, ISpec {
                     }
                 } else if (decoded.nodeType == NodeType.Empty) {
                     // if the node type is empty, the key is not in the trie
-                    return (false, "");
+                    return (false, result);
                 }
                 if (nextNode.isHash) {
-                    rootHash = _decodeHash(nextNode.value, layout.Hash);
+                    rootHash = _decodeHash(nextNode.data, layout.Hash);
                     break;
-                } else nodeData = nextNode.value;
+                } else nodeData = nextNode.data;
             }
         }
-        return (false, "");
+        return (false, result);
     }
 
     function _loadValue(
@@ -176,7 +175,7 @@ contract LookUp is ITrie, ISpec {
         Slice memory prefix,
         bytes32 hash,
         TrieLayout calldata layout
-    ) internal view returns (bytes memory) {
+    ) internal view returns (uint8[] memory) {
         if (value.isInline) {
             // if the value is inline, decode it and return the result
             return _decodeValue(layout.Hash, value.data);
@@ -192,15 +191,15 @@ contract LookUp is ITrie, ISpec {
         }
     }
 
-    function _decodeValue(Hasher memory, bytes memory value)
+    function _decodeValue(Hasher memory, uint8[] memory value)
         internal
         pure
-        returns (bytes memory)
+        returns (uint8[] memory)
     {
         return value;
     }
 
-    function _decodeHash(bytes memory data, Hasher memory hasher)
+    function _decodeHash(uint8[] memory data, Hasher memory hasher)
         internal
         pure
         returns (bytes32)
@@ -220,7 +219,7 @@ contract LookUp is ITrie, ISpec {
         return hash;
     }
 
-    function decodeUsingCodec(bytes32 node_data, NodeCodec codec)
+    function decodeUsingCodec(uint8 node_data, NodeCodec codec)
         internal
         returns (Node memory)
     {}

@@ -10,8 +10,11 @@ contract NodeBuilder is ICodec, ITrie {
     Slice emptySlice;
     Value emptyValue;
 
-    function buildNode(NodePlanStruct memory nodePlan, uint8[] memory data)
+    uint8 constant NIBBLE_LENGTH = 16;
+
+    function buildNode(NodePlanStruct memory nodePlan, uint8[] calldata data)
         external
+        view
         returns (Node memory)
     {
         if (nodePlan.planType == NodePlanType.Empty) {
@@ -41,25 +44,68 @@ contract NodeBuilder is ICodec, ITrie {
                     emptyChildren,
                     buildNodeHandle(nodePlan.child, data)
                 );
-        } else if (nodePlan.planType == NodePlanType.Branch) {} else if (
-            nodePlan.planType == NodePlanType.NibbledBranch
-        ) {} else {
-            revert("Unsupported nodeplantype");
+        } else if (nodePlan.planType == NodePlanType.Branch) {
+            NodeHandle[] memory childSlices;
+            for (uint256 i = 0; i < NIBBLE_LENGTH; i++) {
+                childSlices[i] = buildNodeHandle(nodePlan.children[0], data);
+            }
+            return
+                Node(
+                    NodeType.Branch,
+                    emptySlice,
+                    buildValue(nodePlan.valuePlan, data),
+                    childSlices,
+                    emptyChild
+                );
+        } else if (nodePlan.planType == NodePlanType.NibbledBranch) {
+            NodeHandle[] memory childSlices;
+            for (uint256 i = 0; i < NIBBLE_LENGTH; i++) {
+                childSlices[i] = buildNodeHandle(nodePlan.children[0], data);
+            }
+            return
+                Node(
+                    NodeType.NibbledBranch,
+                    buildSlice(nodePlan.slicePlan, data),
+                    buildValue(nodePlan.valuePlan, data),
+                    childSlices,
+                    emptyChild
+                );
+        } else {
+            revert("Unsupported NodePlanType");
         }
     }
 
-    function buildSlice(SlicePlan memory slicePlan, uint8[] memory data)
+    function buildSlice(SlicePlan memory slicePlan, uint8[] calldata data)
         internal
+        pure
         returns (Slice memory)
-    {}
+    {
+        return
+            Slice(
+                data[slicePlan.dataStart:slicePlan.dataEnd],
+                slicePlan.offset
+            );
+    }
 
-    function buildValue(ValuePlan memory valuePlan, uint8[] memory data)
+    function buildValue(ValuePlan memory valuePlan, uint8[] calldata data)
         internal
+        pure
         returns (Value memory)
-    {}
+    {
+        if (valuePlan.isInline) {
+            return Value(true, data[valuePlan.start:valuePlan.end]);
+        }
+        return Value(false, data[valuePlan.start:valuePlan.end]);
+    }
 
     function buildNodeHandle(
         NodeHandlePlan memory nodeHandlePlan,
-        uint8[] memory data
-    ) internal returns (NodeHandle memory) {}
+        uint8[] calldata data
+    ) internal pure returns (NodeHandle memory) {
+        if (nodeHandlePlan.isHash) {
+            return
+                NodeHandle(true, data[nodeHandlePlan.start:nodeHandlePlan.end]);
+        }
+        return NodeHandle(false, data[nodeHandlePlan.start:nodeHandlePlan.end]);
+    }
 }
