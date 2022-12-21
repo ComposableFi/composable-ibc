@@ -13,4 +13,4 @@
 // limitations under the License.
 
 pub mod parachain;
-pub mod rococo;
+pub mod relaychain;

@@ -12,6 +12,7 @@ path = "bin/main.rs"
 tokio = { version = "1.21.2", features = ["full"] }
 anyhow = "1.0.66"
 clap = { version = "3.2.22", features = ["derive", "env"] }
+serde_json = "1.0.91"
 
 subxt-codegen = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }
 jsonrpsee = { version = "0.14.0", features = ["async-client", "client-ws-transport", "http-client"] }
@@ -19,3 +20,4 @@ frame-metadata = { version = "15.0.0", features = ["v14", "std"] }
 syn = "1.0.98"
 codec = { package = "parity-scale-codec", version = "3.0.0" }
 hex = "0.4.3"
+wasm-testbed = { git = "https://github.com/chevdor/subwasm", tag = "v1.0.0-alpha4" }
