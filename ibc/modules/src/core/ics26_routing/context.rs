@@ -115,6 +115,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 		_channel_id: &ChannelId,
 		_counterparty: &Counterparty,
 		_version: &Version,
+		_relayer: &Signer,
 	) -> Result<(), Error> {
 		Ok(())
 	}
@@ -131,6 +132,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 		_counterparty: &Counterparty,
 		_version: &Version,
 		_counterparty_version: &Version,
+		_relayer: &Signer,
 	) -> Result<Version, Error>;
 
 	fn on_chan_open_ack(
@@ -140,6 +142,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 		_port_id: &PortId,
 		_channel_id: &ChannelId,
 		_counterparty_version: &Version,
+		_relayer: &Signer,
 	) -> Result<(), Error> {
 		Ok(())
 	}
@@ -150,6 +153,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 		_output: &mut ModuleOutputBuilder,
 		_port_id: &PortId,
 		_channel_id: &ChannelId,
+		_relayer: &Signer,
 	) -> Result<(), Error> {
 		Ok(())
 	}
@@ -160,6 +164,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 		_output: &mut ModuleOutputBuilder,
 		_port_id: &PortId,
 		_channel_id: &ChannelId,
+		_relayer: &Signer,
 	) -> Result<(), Error> {
 		Ok(())
 	}
@@ -170,6 +175,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 		_output: &mut ModuleOutputBuilder,
 		_port_id: &PortId,
 		_channel_id: &ChannelId,
+		_relayer: &Signer,
 	) -> Result<(), Error> {
 		Ok(())
 	}
