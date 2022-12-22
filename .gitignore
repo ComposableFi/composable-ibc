@@ -66,6 +66,10 @@ result
 lean-setup/
 
 # hardhat
-artifacts
-cache
-typechain-types
+artifacts/
+cache_hardhat/
+typechain-types/
+
+# foundry
+cache/
+out/
