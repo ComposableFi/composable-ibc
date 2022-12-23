@@ -24,16 +24,25 @@ contract NodeCodec is ICodec, ISpec {
         scaleCodec = ScaleCodec(scaleCodecAddress);
     }
 
+    /**
+     * @dev Decodes a node in a base-16 Merkle Patricia Trie encoded using SCALE codec.
+     * @param data an array of 8-bit unsigned integers representing the encoded node data
+     * @param hasher an instance of the Hasher contract
+     * @return a NodePlanStruct struct containing the decoded node data
+     */
     function decodePlan(uint8[] memory data, Hasher memory hasher)
         external
+        view
         returns (NodePlanStruct memory)
     {
+        // Initialize variables
         CodecStruct memory codecStruct;
         ByteSlice memory input = ByteSlice(data, 0);
         uint256 rangeStart;
         uint256 rangeEnd;
         uint256 decodeCount;
 
+        // Decode the node header
         NodeHeaderStruct memory header = nodeHeader.decode(input);
 
         bool containsHash = header.headerType ==
@@ -59,6 +68,7 @@ contract NodeCodec is ICodec, ISpec {
             header.headerType == NodeHeaderType.HashedValueBranch ||
             header.headerType == NodeHeaderType.Branch
         ) {
+            // Calculate padding for the partial value
             codecStruct.padding =
                 header.value % nibbleOps.NIBBLE_PER_BYTE() != 0;
             // check that the padding is valid (if any)
@@ -68,6 +78,7 @@ contract NodeCodec is ICodec, ISpec {
             ) {
                 revert("Bad format");
             }
+            // Decode the partial value
             (
                 input,
                 codecStruct.partialRangeStart,
@@ -84,7 +95,7 @@ contract NodeCodec is ICodec, ISpec {
                 codecStruct.bitmapRangeEnd
             ) = take(input, BITMAP_LENGTH);
             codecStruct.bitmapValue = decodeBitmap(
-                input.data,
+                input,
                 codecStruct.bitmapRangeStart,
                 codecStruct.bitmapRangeEnd
             );
@@ -100,8 +111,7 @@ contract NodeCodec is ICodec, ISpec {
                         rangeEnd
                     );
                 } else {
-                    // todo: fix for compact u32
-                    decodeCount = scaleCodec.decode(input.data);
+                    decodeCount = scaleCodec.decodeCompactU32(input.data);
                     (input, rangeStart, rangeEnd) = take(input, decodeCount);
                     codecStruct.valuePlan = ValuePlan(
                         true,
@@ -114,8 +124,7 @@ contract NodeCodec is ICodec, ISpec {
             }
             for (uint8 i; i < nibbleOps.NIBBLE_LENGTH(); i++) {
                 if (bitmapValueAt(codecStruct.bitmapValue, i)) {
-                    // todo: fix for compact u32
-                    decodeCount = scaleCodec.decode(input.data);
+                    decodeCount = scaleCodec.decodeCompactU32(input.data);
                     (input, rangeStart, rangeEnd) = take(input, decodeCount);
                     if (decodeCount == hasher.hasherLength) {
                         codecStruct.children[i] = NodeHandlePlan(
@@ -175,7 +184,7 @@ contract NodeCodec is ICodec, ISpec {
                 codecStruct.valuePlan = ValuePlan(false, rangeStart, rangeEnd);
             } else {
                 // todo: fix for compact u32
-                decodeCount = scaleCodec.decode(input.data);
+                decodeCount = scaleCodec.decodeCompactU32(input.data);
                 (input, rangeStart, rangeEnd) = take(input, decodeCount);
                 codecStruct.valuePlan = ValuePlan(true, rangeStart, rangeEnd);
             }
@@ -216,20 +225,20 @@ contract NodeCodec is ICodec, ISpec {
 
     // Radix 16 trie, bitmap decoding implementation
     function decodeBitmap(
-        uint8[] memory data,
+        ByteSlice memory input,
         uint256 start,
         uint256 end
-    ) public returns (uint8) {
+    ) public view returns (uint16) {
         uint8[] memory result;
         for (uint256 i = start; i < end; i++) {
-            result[i - start] = data[i];
+            result[i - start] = input.data[i];
         }
-        uint8 value = scaleCodec.decode(result);
+        uint16 value = scaleCodec.decodeU16(result);
         require(value != 0, "Bitmap without a child");
         return value;
     }
 
-    function bitmapValueAt(uint8 bitmapValue, uint8 i)
+    function bitmapValueAt(uint16 bitmapValue, uint8 i)
         internal
         pure
         returns (bool)

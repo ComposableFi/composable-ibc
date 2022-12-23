@@ -44,7 +44,7 @@ interface ICodec {
         uint256 partialPadding;
         uint256 bitmapRangeStart;
         uint256 bitmapRangeEnd;
-        uint8 bitmapValue;
+        uint16 bitmapValue;
         ValuePlan valuePlan;
         NodeHandlePlan[] children;
         NodeHandlePlan child;
