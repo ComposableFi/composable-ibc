@@ -28,27 +28,54 @@ jsonrpsee = "0.15.1"
 jsonrpsee-ws-client = "0.14.0"
 prost = { version = "0.11" }
 k256 = { version = "0.11.6", features = ["ecdsa-core", "ecdsa", "sha256"] }
+tonic = { version = "0.8", features = ["tls", "tls-roots"] }
+bech32 = "0.9.1"
+bitcoin = { version = "0.29.1", features = ["serde"] }
 
 # composable
 ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto" }
-#tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
+#tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "d1296dfc7c4f32a1440e9d41fd00084b63b9d7ea", default-features = false }
 #light-client-common = { path = "../../light-clients/common" }
-ibc-relayer-types = { git = "https://github.com/informalsystems/hermes.git" }
+#ibc-relayer-types = { git = "https://github.com/informalsystems/hermes.git" }
+ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
+ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
+pallet-ibc = { path = "../../contracts/pallet-ibc" }
 
 # tendermint
-tendermint = { version = "0.27.0", default-features = false, features = [
+tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "d1296dfc7c4f32a1440e9d41fd00084b63b9d7ea", default-features = false, features = [
     "secp256k1",
 ] }
-tendermint-proto = { version = "0.27.0", default-features = false }
-tendermint-rpc = { version = "0.27.0", features = [
+tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "d1296dfc7c4f32a1440e9d41fd00084b63b9d7ea", default-features = false }
+tendermint-rpc = { git = "https://github.com/composableFi/tendermint-rs", rev = "d1296dfc7c4f32a1440e9d41fd00084b63b9d7ea", default-features = false, features = [
     "http-client",
     "websocket-client",
 ] }
-tendermint-light-client = { version = "0.27.0", default-features = false, features = [
+tendermint-light-client = { git = "https://github.com/composableFi/tendermint-rs", rev = "d1296dfc7c4f32a1440e9d41fd00084b63b9d7ea", default-features = false, features = [
     "rpc-client",
     "secp256k1",
     "unstable",
+#    "testing"
 ] }
-tendermint-light-client-verifier = { version = "0.27.0", default-features = false }
+tendermint-light-client-verifier = { git = "https://github.com/composableFi/tendermint-rs", rev = "d1296dfc7c4f32a1440e9d41fd00084b63b9d7ea", default-features = false }
+
+#tendermint = { version = "0.27.0", default-features = false, features = [
+#    "secp256k1",
+#] }
+#tendermint-proto = { version = "0.27.0", default-features = false }
+#tendermint-rpc = { version = "0.27.0", features = [
+#    "http-client",
+#    "websocket-client",
+#] }
+#tendermint-light-client = { version = "0.27.0", default-features = false, features = [
+#    "rpc-client",
+#    "secp256k1",
+#    "unstable",
+#] }
+#tendermint-light-client-verifier = { version = "0.27.0", default-features = false }
 # tendermint-testgen = { version = "0.25.0" }
+
+[features]
+testing = [
+    "primitives/testing"
+]

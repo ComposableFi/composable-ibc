@@ -26,7 +26,8 @@ use crate::{
 			error as client_error, events as ClientEvents, events::NewBlock, height::HeightError,
 		},
 		ics03_connection::{
-			events as ConnectionEvents, events::Attributes as ConnectionAttributes,
+			error as connection_error, events as ConnectionEvents,
+			events::Attributes as ConnectionAttributes,
 		},
 		ics04_channel::{
 			error as channel_error, events as ChannelEvents,
@@ -56,6 +57,10 @@ define_error! {
 		Channel
 			[ channel_error::Error ]
 			| _ | { "channel error" },
+
+		Connection
+			[ connection_error::Error ]
+			| _ | { "connection error" },
 
 		Timestamp
 			[ ParseTimestampError ]

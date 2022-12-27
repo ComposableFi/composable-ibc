@@ -6,15 +6,39 @@ use super::{
 	},
 	utils::incerement_proof_height,
 };
-use crate::{
-	core::packets::types::PacketInfo,
-	primitives::traits::{Chain, IbcProvider, UpdateType},
-};
-use core::time::Duration;
+use crate::{error::Error, HostFunctions};
 use futures::{
 	stream::{self, select_all},
 	Stream, StreamExt,
 };
+use ibc::{
+	applications::transfer::{Amount, PrefixedCoin, PrefixedDenom},
+	// clients::ics07_tendermint::{
+	// 	client_state::{AllowUpdate, ClientState},
+	// 	consensus_state::ConsensusState,
+	// },
+	core::{
+		ics02_client::{events as ClientEvents, trust_threshold::TrustThreshold},
+		ics04_channel::packet::Sequence,
+		ics23_commitment::{commitment::CommitmentPrefix, specs::ProofSpecs},
+		ics24_host::{
+			identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
+			path::{
+				AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath,
+				CommitmentsPath, ConnectionsPath, Path, ReceiptsPath, SeqRecvsPath,
+			},
+		},
+	},
+	events::IbcEvent,
+	timestamp::Timestamp,
+	tx_msg::Msg,
+	Height,
+};
+use ibc::{
+	core::ics02_client::{client_state::ClientType, msgs::update_client::MsgUpdateAnyClient},
+	protobuf::Protobuf,
+};
+use ibc_proto::ibc::core::client::v1::MsgUpdateClient;
 use ibc_proto::{
 	cosmos::bank::v1beta1::QueryBalanceRequest,
 	google::protobuf::Any,
@@ -37,36 +61,13 @@ use ibc_proto::{
 			QueryConnectionsRequest,
 		},
 	},
-	protobuf::Protobuf,
+	// protobuf::Protobuf,
 };
-use ibc_relayer_types::{
-	applications::transfer::{Amount, PrefixedCoin, PrefixedDenom},
-	clients::ics07_tendermint::{
-		client_state::{AllowUpdate, ClientState},
-		consensus_state::ConsensusState,
-	},
-	core::{
-		ics02_client::{
-			client_type::ClientType, events as ClientEvents, msgs::update_client::MsgUpdateClient,
-			trust_threshold::TrustThreshold,
-		},
-		ics04_channel::packet::Sequence,
-		ics23_commitment::{commitment::CommitmentPrefix, specs::ProofSpecs},
-		ics24_host::{
-			identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
-			path::{
-				AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath,
-				CommitmentsPath, ConnectionsPath, Path, ReceiptsPath, SeqRecvsPath,
-			},
-		},
-	},
-	events::IbcEvent,
-	timestamp::Timestamp,
-	tx_msg::Msg,
-	Height,
-};
-use primitives::error::Error;
-use std::{pin::Pin, str::FromStr};
+use ibc_rpc::PacketInfo;
+use ics07_tendermint::{client_state::ClientState, consensus_state::ConsensusState};
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
+use primitives::{Chain, IbcProvider, UpdateType};
+use std::{pin::Pin, str::FromStr, time::Duration};
 use tendermint::{block::Height as TmHeight, Time};
 use tendermint_rpc::{
 	endpoint::tx::Response,
@@ -99,7 +100,7 @@ where
 		&mut self,
 		_finality_event: Self::FinalityEvent,
 		counterparty: &C,
-	) -> Result<(Any, Vec<IbcEventWithHeight>, UpdateType), anyhow::Error>
+	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
 		C: Chain,
 	{
@@ -110,13 +111,13 @@ where
 		let client_state_response = latest_cp_client_state
 			.client_state
 			.ok_or_else(|| Error::Custom("counterparty returned empty client state".to_string()))?;
-		let client_state = ClientState::try_from(client_state_response)
+		let client_state = ClientState::<HostFunctionsManager>::try_from(client_state_response)
 			.map_err(|_| Error::Custom("failed to decode client state response".to_string()))?;
-		let latest_cp_client_height = client_state.latest_height().revision_height();
+		let latest_cp_client_height = client_state.latest_height().revision_height;
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 
-		let mut ibc_events: Vec<IbcEventWithHeight> = vec![];
-		for height in latest_cp_client_height + 1..latest_height.revision_height() + 1 {
+		let mut ibc_events: Vec<IbcEvent> = vec![];
+		for height in latest_cp_client_height + 1..latest_height.revision_height + 1 {
 			let block_results = self
 				.rpc_client
 				.block_results(TmHeight::try_from(height).unwrap())
@@ -136,10 +137,12 @@ where
 					let ibc_event = ibc_event_try_from_abci_event(&event).ok();
 					match ibc_event {
 						Some(ev) => {
-							ibc_events.push(IbcEventWithHeight::new(
+							ibc_events.push(
+								// IbcEventWithHeight::new(
 								ev,
-								Height::new(latest_height.revision_number(), height).unwrap(),
-							));
+								// Height::new(latest_height.revision_number, height).unwrap(),
+								// )
+							);
 						},
 						None => continue,
 					}
@@ -148,14 +151,15 @@ where
 		}
 		let update_header = self.msg_update_client_header(client_state.latest_height).await?;
 		let update_client_header = {
-			let msg = MsgUpdateClient {
+			let msg = MsgUpdateAnyClient {
 				client_id: self.client_id(),
-				header: update_header.0.into(),
+				client_message: update_header.0.into(),
 				signer: counterparty.account_id(),
 			};
-			let value = msg.encode_vec().map_err(|e| {
-				Error::from(format!("Failed to encode MsgUpdateClient {:?}: {:?}", msg, e))
-			})?;
+			let value = msg.encode_vec();
+			// .map_err(|e| {
+			// Error::from(format!("Failed to encode MsgUpdateClient {:?}: {:?}", msg, e))
+			// })?;
 			Any { value, type_url: msg.type_url() }
 		};
 		Ok((update_client_header, ibc_events, update_header.1))
@@ -163,7 +167,7 @@ where
 
 	// Changed result: `Item =` from `IbcEvent` to `IbcEventWithHeight` to include the necessary
 	// height field, as `height` is removed from `Attribute` from ibc-rs v0.22.0
-	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEventWithHeight>>> {
+	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>> {
 		// Create websocket client. Like what `EventMonitor::subscribe()` does in `hermes`
 		let (ws_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
 			.await
@@ -202,9 +206,9 @@ where
 						let height = Height::new(
 							ChainId::chain_version(chain_id.to_string().as_str()),
 							u64::from(block.as_ref().ok_or("tx.height").unwrap().header.height),
-						)
-						.map_err(|e| Error::from(format!("Error {:?}", e)))
-						.unwrap();
+						);
+						// .map_err(|e| Error::from(format!("Error {:?}", e)))
+						// .unwrap();
 						events_with_height.push(IbcEventWithHeight::new(
 							ClientEvents::NewBlock::new(height).into(),
 							height,
@@ -215,11 +219,11 @@ where
 						let height = Height::new(
 							ChainId::chain_version(chain_id.to_string().as_str()),
 							tx_result.height as u64,
-						)
-						.map_err(|_| {
-							Error::from(format!("tx_result.height: invalid header height of 0"))
-						})
-						.unwrap();
+						);
+						// .map_err(|_| {
+						// 	Error::from(format!("tx_result.height: invalid header height of 0"))
+						// })
+						// .unwrap();
 						for abci_event in &tx_result.result.events {
 							if let Ok(ibc_event) = ibc_event_try_from_abci_event(abci_event) {
 								if query == Query::eq("message.module", "ibc_client").to_string() &&
@@ -248,6 +252,7 @@ where
 				stream::iter(events_with_height)
 			})
 			.flatten()
+			.map(|e| e.event)
 			.boxed();
 		events
 	}
@@ -266,8 +271,8 @@ where
 
 		let request = QueryConsensusStateRequest {
 			client_id: client_id.to_string(),
-			revision_number: consensus_height.revision_number(),
-			revision_height: consensus_height.revision_height(),
+			revision_number: consensus_height.revision_number,
+			revision_height: consensus_height.revision_height,
 			latest_height: false,
 		};
 
@@ -278,8 +283,8 @@ where
 			.into_inner();
 		let path_bytes = Path::ClientConsensusState(ClientConsensusStatePath {
 			client_id: client_id.clone(),
-			epoch: consensus_height.revision_number(),
-			height: consensus_height.revision_height(),
+			epoch: consensus_height.revision_number,
+			height: consensus_height.revision_height,
 		})
 		.to_string()
 		.into_bytes();
@@ -566,8 +571,8 @@ where
 		let height = Height::new(
 			ChainId::chain_version(response.node_info.network.as_str()),
 			u64::from(response.sync_info.latest_block_height),
-		)
-		.map_err(|e| Error::from(format!("Error {:?}", e)))?;
+		);
+		// .map_err(|e| Error::from(format!("Error {:?}", e)))?;
 
 		Ok((height, time.into()))
 	}
@@ -798,7 +803,7 @@ where
 		&self,
 		client_id: ClientId,
 		client_height: Height,
-	) -> Result<(Height, Time), Self::Error> {
+	) -> Result<(Height, Timestamp), Self::Error> {
 		todo!()
 	}
 
@@ -848,9 +853,7 @@ where
 	}
 
 	fn client_type(&self) -> ClientType {
-		ClientType::from_str("07-tendermint")
-			.map_err(|e| Error::from(format!("{:?}", e)))
-			.unwrap()
+		ClientState::<()>::client_type()
 	}
 
 	fn connection_id(&self) -> ConnectionId {
@@ -958,10 +961,13 @@ where
 		latest_height: u64,
 		latest_client_height_on_counterparty: u64,
 	) -> bool {
-		todo!()
+		// TODO: Implement is_update_required
+		false
 	}
 
-	async fn initialize_client_state(&self) -> Result<(ClientState, ConsensusState), Self::Error> {
+	async fn initialize_client_state(
+		&self,
+	) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
 		let latest_height_timestamp = self.latest_height_and_timestamp().await.unwrap();
 		let client_state = ClientState::new(
 			self.chain_id.clone(),
@@ -972,12 +978,13 @@ where
 			latest_height_timestamp.0,
 			ProofSpecs::default(),
 			vec!["upgrade".to_string(), "upgradedIBCState".to_string()],
-			AllowUpdate { after_expiry: true, after_misbehaviour: true },
+			// AllowUpdate { after_expiry: true, after_misbehaviour: true },
 		)
 		.map_err(|e| Error::from(format!("Invalid client state {}", e)))?;
 		let light_block = self
 			.light_client
 			.verify(latest_height_timestamp.0, latest_height_timestamp.0, &client_state)
+			.await
 			.map_err(|e| Error::from(format!("Invalid light block {}", e)))?;
 		let consensus_state = ConsensusState::from(light_block.clone().signed_header.header);
 		Ok((client_state, consensus_state))

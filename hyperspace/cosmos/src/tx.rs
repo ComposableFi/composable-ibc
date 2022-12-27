@@ -5,7 +5,10 @@ use super::{
 	},
 	key_provider::KeyEntry,
 };
+use crate::error::Error;
+// use primitives::error::Error;
 use core::time::Duration;
+use ibc::core::ics24_host::identifier::ChainId;
 use ibc_proto::{
 	cosmos::{
 		auth::v1beta1::BaseAccount,
@@ -15,12 +18,11 @@ use ibc_proto::{
 	},
 	google::protobuf::Any,
 };
-use ibc_relayer_types::core::ics24_host::identifier::ChainId;
-use primitives::error::Error;
 use prost::Message;
 use tendermint::Hash;
 use tendermint_rpc::{
-	endpoint::tx::Response as TxResponse, query::Query, Client, HttpClient, Order, Url,
+	abci::Transaction, endpoint::tx::Response as TxResponse, query::Query, Client, HttpClient,
+	Order, Url,
 };
 
 pub fn sign_tx(
@@ -80,7 +82,7 @@ pub async fn simulate_tx(
 
 pub async fn broadcast_tx(rpc_client: &HttpClient, tx_bytes: Vec<u8>) -> Result<Hash, Error> {
 	let response = rpc_client
-		.broadcast_tx_sync(tx_bytes)
+		.broadcast_tx_sync(Transaction::from(tx_bytes))
 		.await
 		.map_err(|e| Error::from(format!("failed to broadcast transaction {:?}", e)))?;
 	Ok(response.hash)
@@ -114,9 +116,7 @@ pub async fn confirm_tx(rpc_client: &HttpClient, tx_hash: Hash) -> Result<Hash, 
 					tokio::time::sleep(WAIT_BACKOFF).await;
 				}
 			},
-			Some(response) => {
-				break response
-			},
+			Some(response) => break response,
 		}
 	};
 

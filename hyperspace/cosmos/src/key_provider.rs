@@ -50,7 +50,7 @@ impl KeyEntry {
 }
 
 impl<H> KeyProvider for CosmosClient<H> {
-	fn account_id(&self) -> ibc_relayer_types::signer::Signer {
+	fn account_id(&self) -> ibc::signer::Signer {
 		let key_entry = self.keybase.clone();
 		let address = key_entry.address.to_hex();
 		let account = AccountId::from_str(address.as_str())

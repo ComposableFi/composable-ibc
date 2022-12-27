@@ -12,13 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use ibc::core::ics02_client::height::Height;
+use ibc_proto::ics23;
+use ics07_tendermint::HostFunctionsProvider;
+use std::fmt::{Debug, Formatter};
+
 pub mod chain;
 pub mod client;
 pub mod encode;
+pub mod error;
 pub mod events;
 pub mod key_provider;
 pub mod light_client;
 pub mod provider;
+#[cfg(feature = "testing")]
 pub mod test_provider;
 pub mod tx;
 pub mod utils;
+
+pub type TimeoutHeight = Option<Height>;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HostFunctions;
+
+// impl HostFunctionsProvider for HostFunctions {
+// 	fn get_current_height(&self) -> Height {
+// 		Height::new(0, 0)
+// 	}
+// }

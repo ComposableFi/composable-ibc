@@ -1,6 +1,8 @@
 //! This section mainly has been ported from `InformalSystems/hermes/relayer/src/light_client`
-use ibc_relayer_types::{clients::ics07_tendermint::client_state::ClientState, Height};
-use primitives::error::Error;
+use crate::{error::Error, HostFunctions};
+use ibc::Height;
+use ics07_tendermint::client_state::ClientState;
+use pallet_ibc::light_clients::HostFunctionsManager;
 use tendermint::trust_threshold::TrustThresholdFraction;
 use tendermint_light_client::{
 	components::{
@@ -49,8 +51,8 @@ impl LightClient {
 
 	pub fn prepare_tendermint_light_client(
 		&self,
-		client_state: &ClientState,
-	) -> Result<TmLightClient, Error> {
+		client_state: &ClientState<HostFunctionsManager>,
+	) -> Result<TmLightClient<HostFunctionsManager>, Error> {
 		let params = TmOptions {
 			trust_threshold: TrustThresholdFraction::new(
 				client_state.trust_threshold.numerator(),
@@ -63,9 +65,9 @@ impl LightClient {
 		let clock = components::clock::SystemClock;
 		let scheduler = components::scheduler::basic_bisecting_schedule;
 		let verifier: PredicateVerifier<
-			ProdPredicates,
-			ProdVotingPowerCalculator,
-			ProdCommitValidator,
+			ProdPredicates<HostFunctionsManager>,
+			ProdVotingPowerCalculator<HostFunctionsManager>,
+			ProdCommitValidator<HostFunctionsManager>,
 			ProdHasher,
 		> = ProdVerifier::default();
 		let hasher = operations::hasher::ProdHasher;
@@ -82,8 +84,8 @@ impl LightClient {
 	}
 
 	pub fn prepare_state(&self, trusted: Height) -> Result<LightClientState, Error> {
-		let trusted_height = TMHeight::try_from(trusted.revision_height())
-			.map_err(|e| Error::from(e.to_string()))?;
+		let trusted_height =
+			TMHeight::try_from(trusted.revision_height).map_err(|e| Error::from(e.to_string()))?;
 
 		use tendermint_light_client::components::io::Io;
 		let trusted_block = self
@@ -97,14 +99,14 @@ impl LightClient {
 	}
 
 	/// Perform forward verification with bisection.
-	pub fn verify(
+	pub async fn verify(
 		&self,
 		trusted: Height,
 		target: Height,
-		client_state: &ClientState,
+		client_state: &ClientState<HostFunctionsManager>,
 	) -> Result<LightBlock, Error> {
 		let target_height =
-			TMHeight::try_from(target.revision_height()).map_err(|e| Error::from(e.to_string()))?;
+			TMHeight::try_from(target.revision_height).map_err(|e| Error::from(e.to_string()))?;
 
 		let client = self.prepare_tendermint_light_client(client_state)?;
 		let mut state = self.prepare_state(trusted)?;
@@ -112,6 +114,7 @@ impl LightClient {
 		// Verify the target header
 		let target = client
 			.verify_to_target(target_height, &mut state)
+			.await
 			.map_err(|e| Error::from(e.to_string()))?;
 		Ok(target)
 	}

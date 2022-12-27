@@ -1,11 +1,11 @@
 use super::{client::CosmosClient, tx::sign_tx};
-use crate::provider::FinalityEvent;
+use crate::{error::Error, provider::FinalityEvent};
 use futures::{Stream, StreamExt};
 use ibc_proto::{
 	cosmos::{base::v1beta1::Coin, tx::v1beta1::Fee},
 	google::protobuf::Any,
 };
-use primitives::{error::Error, Chain, IbcProvider};
+use primitives::{Chain, IbcProvider};
 use prost::Message;
 use std::pin::Pin;
 use tendermint_rpc::{

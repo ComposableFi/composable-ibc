@@ -13,28 +13,28 @@ use ibc_proto::{
 	},
 	google::protobuf::Any,
 };
-use ibc_relayer_types::{
-	clients::ics07_tendermint::{
-		client_state::ClientState, consensus_state::ConsensusState, header::Header,
-	},
-	core::{
-		ics02_client::{client_type::ClientType, height::Height},
-		ics23_commitment::{
-			commitment::{CommitmentPrefix, CommitmentProofBytes},
-			merkle::convert_tm_to_ics_merkle_proof,
-		},
-		ics24_host::{
-			identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
-			IBC_QUERY_PATH,
-		},
+use std::str::FromStr;
+// use ibc_relayer_types::{
+use crate::{error::Error, HostFunctions};
+use ibc::core::{
+	ics02_client::{client_state::ClientType, height::Height},
+	ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
+	ics24_host::{
+		identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
+		IBC_QUERY_PATH,
 	},
 };
-use primitives::{error::Error, IbcProvider, KeyProvider, UpdateType};
+use ics07_tendermint::{
+	client_message::Header, client_state::ClientState, consensus_state::ConsensusState,
+	merkle::convert_tm_to_ics_merkle_proof,
+};
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
+use primitives::{IbcProvider, KeyProvider, UpdateType};
 use prost::Message;
 use serde::Deserialize;
 use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
-use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient, Url};
+use tendermint_rpc::{abci::Path, endpoint::abci_query::AbciQuery, Client, HttpClient, Url};
 
 // Implements the [`crate::Chain`] trait for cosmos.
 /// This is responsible for:
@@ -130,7 +130,7 @@ where
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 		let chain_id = ChainId::from(config.chain_id);
 		let client_id = Some(
-			ClientId::new(ClientType::Tendermint, 0)
+			ClientId::new(&ClientState::<HostFunctions>::client_type(), 0)
 				.map_err(|e| Error::from(format!("Invalid client id {:?}", e)))?,
 		);
 		let light_client = LightClient::init_light_client(config.rpc_url.clone()).await?;
@@ -166,17 +166,28 @@ where
 	/// Construct a tendermint client state to be submitted to the counterparty chain
 	pub async fn construct_tendermint_client_state(
 		&self,
-	) -> Result<(ClientState, ConsensusState), Error>
+	) -> Result<(ClientState<HostFunctionsManager>, ConsensusState), Error>
 	where
 		Self: KeyProvider + IbcProvider,
 		H: Clone + Send + Sync + 'static,
 	{
-		self.initialize_client_state().await.map_err(|e| {
-			Error::from(format!(
-				"Failed to initialize client state for chain {:?} with error {:?}",
-				self.name, e
-			))
-		})
+		let (client_state, consensus_state) =
+			self.initialize_client_state().await.map_err(|e| {
+				Error::from(format!(
+					"Failed to initialize client state for chain {:?} with error {:?}",
+					self.name, e
+				))
+			})?;
+		match (client_state, consensus_state) {
+			(
+				AnyClientState::Tendermint(client_state),
+				AnyConsensusState::Tendermint(consensus_state),
+			) => Ok((client_state, consensus_state)),
+			_ => Err(Error::from(format!(
+				"Failed to initialize client state for chain {:?}",
+				self.name
+			))),
+		}
 	}
 
 	pub async fn submit_create_client_msg(&self, _msg: String) -> Result<ClientId, Error> {
@@ -227,7 +238,7 @@ where
 					self.name, e
 				))
 			})?;
-		let height = TmHeight::try_from(trusted_height.revision_height()).map_err(|e| {
+		let height = TmHeight::try_from(trusted_height.revision_height).map_err(|e| {
 			Error::from(format!(
 				"Failed to convert height for chain {:?} with error {:?}",
 				self.name, e
@@ -289,8 +300,8 @@ where
 		prove: bool,
 	) -> Result<(AbciQuery, Vec<u8>), Error> {
 		// SAFETY: Creating a Path from a constant; this should never fail
-		let path = IBC_QUERY_PATH.into();
-		let height = TmHeight::try_from(height_query.revision_height())
+		let path = Path::from_str(IBC_QUERY_PATH).expect("Path::from_str always returns Ok");
+		let height = TmHeight::try_from(height_query.revision_height)
 			.map_err(|e| Error::from(format!("Invalid height {}", e)))?;
 
 		let height = match height.value() {

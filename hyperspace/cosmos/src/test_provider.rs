@@ -1,7 +1,8 @@
 use super::client::CosmosClient;
 use core::pin::Pin;
 use futures::Stream;
-use ibc_relayer_types::{
+// use ibc::{applications::transfer::msgs::transfer::MsgTransfer, tx_msg::Msg};
+use ibc::{
 	applications::transfer::msgs::transfer::MsgTransfer,
 	core::ics24_host::identifier::{ChannelId, PortId},
 	tx_msg::Msg,

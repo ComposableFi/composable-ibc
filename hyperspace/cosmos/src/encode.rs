@@ -1,4 +1,5 @@
 use super::key_provider::KeyEntry;
+use ibc::core::ics24_host::identifier::ChainId;
 use ibc_proto::{
 	cosmos::tx::v1beta1::{
 		mode_info::{Single, Sum},
@@ -6,9 +7,10 @@ use ibc_proto::{
 	},
 	google::protobuf::Any,
 };
-use ibc_relayer_types::core::ics24_host::identifier::ChainId;
+// use ibc_relayer_types::core::ics24_host::identifier::ChainId;
+use crate::error::Error;
 use k256::ecdsa::{signature::Signer as _, Signature, SigningKey};
-use primitives::error::Error;
+// use primitives::error::Error;
 use prost::Message;
 
 pub fn encode_key_bytes(key: &KeyEntry) -> Result<Vec<u8>, Error> {
@@ -28,7 +30,8 @@ pub fn encode_signer_info(sequence: u64, key_bytes: Vec<u8>) -> Result<SignerInf
 }
 
 pub fn encode_auth_info(signer_info: SignerInfo, fee: Fee) -> Result<(AuthInfo, Vec<u8>), Error> {
-	let auth_info = AuthInfo { signer_infos: vec![signer_info], fee: Some(fee), tip: None };
+	let auth_info =
+		AuthInfo { signer_infos: vec![signer_info], fee: Some(fee) /* tip: None */ };
 	let mut auth_info_bytes = Vec::new();
 	Message::encode(&auth_info, &mut auth_info_bytes).map_err(|e| Error::from(e.to_string()))?;
 
