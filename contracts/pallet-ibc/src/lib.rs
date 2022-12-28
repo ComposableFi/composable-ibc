@@ -597,9 +597,12 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::Utf8Error)?;
 			let to = match params.to {
 				MultiAddress::Id(id) => {
+					// we convert id to hex string instead of ss58 because destination chain could
+					// have a different ss58 prefix from host chain
 					let account_id_32: AccountId32 = id.into();
-					String::from_utf8(account_id_32.to_raw_vec())
-						.map_err(|_| Error::<T>::Utf8Error)?
+					let mut hex_string = hex::encode(account_id_32.to_raw_vec());
+					hex_string.insert_str(0, "0x");
+					hex_string
 				},
 				MultiAddress::Raw(bytes) =>
 					String::from_utf8(bytes).map_err(|_| Error::<T>::Utf8Error)?,
