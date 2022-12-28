@@ -1009,8 +1009,10 @@ where
 				.map_err(|_| IbcHandlerError::ChannelInitError { msg: None })?,
 		};
 
-		let msg =
-			ibc_proto::google::protobuf::Any { type_url: msg.type_url(), value: msg.encode_vec() };
+		let msg = ibc_proto::google::protobuf::Any {
+			type_url: msg.type_url(),
+			value: msg.encode_vec().expect("Failed to encode message"),
+		};
 		let res = ibc::core::ics26_routing::handler::deliver::<_>(&mut ctx, msg)
 			.map_err(|e| IbcHandlerError::ChannelInitError { msg: Some(e.to_string()) })?;
 		Self::deposit_event(res.events.into());
@@ -1106,8 +1108,10 @@ where
 			signer: Signer::from_str(MODULE_ID)
 				.map_err(|_| IbcHandlerError::ChannelInitError { msg: None })?,
 		};
-		let msg =
-			ibc_proto::google::protobuf::Any { type_url: msg.type_url(), value: msg.encode_vec() };
+		let msg = ibc_proto::google::protobuf::Any {
+			type_url: msg.type_url(),
+			value: msg.encode_vec().expect("Failed to encode message"),
+		};
 		let res = ibc::core::ics26_routing::handler::deliver::<_>(&mut ctx, msg)
 			.map_err(|e| IbcHandlerError::ChannelCloseError { msg: Some(e.to_string()) })?;
 		Self::deposit_event(res.events.into());

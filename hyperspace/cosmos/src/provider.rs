@@ -64,9 +64,13 @@ use ibc_proto::{
 	// protobuf::Protobuf,
 };
 use ibc_rpc::PacketInfo;
-use ics07_tendermint::{client_state::ClientState, consensus_state::ConsensusState};
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
-use primitives::{Chain, IbcProvider, UpdateType};
+use ics07_tendermint::{
+	client_message::ClientMessage, client_state::ClientState, consensus_state::ConsensusState,
+};
+use pallet_ibc::light_clients::{
+	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
+};
+use primitives::{mock::LocalClientTypes, Chain, IbcProvider, UpdateType};
 use std::{pin::Pin, str::FromStr, time::Duration};
 use tendermint::{block::Height as TmHeight, Time};
 use tendermint_rpc::{
@@ -76,6 +80,8 @@ use tendermint_rpc::{
 	Client, Error as RpcError, Order, SubscriptionClient, WebSocketClient,
 };
 use tonic::IntoRequest;
+
+pub use tendermint::Hash;
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
@@ -111,8 +117,9 @@ where
 		let client_state_response = latest_cp_client_state
 			.client_state
 			.ok_or_else(|| Error::Custom("counterparty returned empty client state".to_string()))?;
-		let client_state = ClientState::<HostFunctionsManager>::try_from(client_state_response)
-			.map_err(|_| Error::Custom("failed to decode client state response".to_string()))?;
+		let client_state =
+			ClientState::<HostFunctionsManager>::decode_vec(&client_state_response.value)
+				.map_err(|_| Error::Custom("failed to decode client state response".to_string()))?;
 		let latest_cp_client_height = client_state.latest_height().revision_height;
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 
@@ -132,17 +139,14 @@ where
 				Some(tx) => tx,
 				None => continue,
 			};
+
+			let ibc_height = Height::new(latest_height.revision_number, height);
 			for tx in tx_results.iter() {
 				for event in tx.clone().events {
-					let ibc_event = ibc_event_try_from_abci_event(&event).ok();
+					let ibc_event = ibc_event_try_from_abci_event(&event, ibc_height).ok();
 					match ibc_event {
 						Some(ev) => {
-							ibc_events.push(
-								// IbcEventWithHeight::new(
-								ev,
-								// Height::new(latest_height.revision_number, height).unwrap(),
-								// )
-							);
+							ibc_events.push(ev);
 						},
 						None => continue,
 					}
@@ -151,15 +155,16 @@ where
 		}
 		let update_header = self.msg_update_client_header(client_state.latest_height).await?;
 		let update_client_header = {
-			let msg = MsgUpdateAnyClient {
+			let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 				client_id: self.client_id(),
-				client_message: update_header.0.into(),
+				client_message: AnyClientMessage::Tendermint(ClientMessage::Header(
+					update_header.0,
+				)),
 				signer: counterparty.account_id(),
 			};
-			let value = msg.encode_vec();
-			// .map_err(|e| {
-			// Error::from(format!("Failed to encode MsgUpdateClient {:?}: {:?}", msg, e))
-			// })?;
+			let value = msg.encode_vec().map_err(|e| {
+				Error::from(format!("Failed to encode MsgUpdateClient {:?}: {:?}", msg, e))
+			})?;
 			Any { value, type_url: msg.type_url() }
 		};
 		Ok((update_client_header, ibc_events, update_header.1))
@@ -207,8 +212,6 @@ where
 							ChainId::chain_version(chain_id.to_string().as_str()),
 							u64::from(block.as_ref().ok_or("tx.height").unwrap().header.height),
 						);
-						// .map_err(|e| Error::from(format!("Error {:?}", e)))
-						// .unwrap();
 						events_with_height.push(IbcEventWithHeight::new(
 							ClientEvents::NewBlock::new(height).into(),
 							height,
@@ -220,12 +223,9 @@ where
 							ChainId::chain_version(chain_id.to_string().as_str()),
 							tx_result.height as u64,
 						);
-						// .map_err(|_| {
-						// 	Error::from(format!("tx_result.height: invalid header height of 0"))
-						// })
-						// .unwrap();
 						for abci_event in &tx_result.result.events {
-							if let Ok(ibc_event) = ibc_event_try_from_abci_event(abci_event) {
+							if let Ok(ibc_event) = ibc_event_try_from_abci_event(abci_event, height)
+							{
 								if query == Query::eq("message.module", "ibc_client").to_string() &&
 									event_is_type_client(&ibc_event)
 								{
@@ -987,7 +987,10 @@ where
 			.await
 			.map_err(|e| Error::from(format!("Invalid light block {}", e)))?;
 		let consensus_state = ConsensusState::from(light_block.clone().signed_header.header);
-		Ok((client_state, consensus_state))
+		Ok((
+			AnyClientState::Tendermint(client_state),
+			AnyConsensusState::Tendermint(consensus_state),
+		))
 	}
 
 	async fn query_client_id_from_tx_hash(
@@ -1026,6 +1029,10 @@ where
 			}
 		};
 
+		let height = Height::new(
+			ChainId::chain_version(self.chain_id.to_string().as_str()),
+			response.height.value(),
+		);
 		let deliver_tx_result = response.tx_result;
 		if deliver_tx_result.code.is_err() {
 			Err(Error::from(format!(
@@ -1036,7 +1043,7 @@ where
 			let result = deliver_tx_result
 				.events
 				.iter()
-				.flat_map(|e| ibc_event_try_from_abci_event(e).ok().into_iter())
+				.flat_map(|e| ibc_event_try_from_abci_event(e, height).ok().into_iter())
 				.filter(|e| matches!(e, IbcEvent::CreateClient(_)))
 				.collect::<Vec<_>>();
 			if result.clone().len() != 1 {

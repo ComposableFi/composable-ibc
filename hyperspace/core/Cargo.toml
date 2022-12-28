@@ -31,7 +31,7 @@ prometheus = { version = "0.13.0", default-features = false }
 # ibc
 ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto" }
-tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "d1296dfc7c4f32a1440e9d41fd00084b63b9d7ea", default-features = false }
+tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "eac7b5a17f872c3af3b576fe485dc55e0526fa24", default-features = false }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 
 ics11-beefy = { path = "../../light-clients/ics11-beefy" }
@@ -66,5 +66,9 @@ build-metadata-from-ws = [
     "parachain/build-metadata-from-ws",
 ]
 #near = ["dep:near"]
-#cosmos = ["dep:cosmos"]
-testing = [ "primitives/testing", "parachain/testing" ]
+cosmos = ["dep:cosmos"]
+testing = [
+    "primitives/testing",
+    "parachain/testing",
+    "cosmos/testing",
+]

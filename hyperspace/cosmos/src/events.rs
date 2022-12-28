@@ -3,7 +3,10 @@ use core::{
 	convert::TryFrom,
 	fmt::{Display, Error as FmtError, Formatter},
 };
-use ibc::{core::ics02_client::client_message::ClientMessage, protobuf::Protobuf};
+use ibc::{
+	core::ics02_client::{client_message::ClientMessage, height::HeightConversionSubdetail},
+	protobuf::Protobuf,
+};
 use ibc::{
 	// clients::ics07_tendermint::header::decode_header as tm_decode_header,
 	core::{
@@ -97,7 +100,10 @@ pub fn event_is_type_channel(ev: &IbcEvent) -> bool {
 /// in the relayer crate, but can't because neither AbciEvent nor IbcEvent are
 /// defined in this crate. Hence, we are forced to make an ad-hoc function for
 /// it.
-pub fn ibc_event_try_from_abci_event(abci_event: &AbciEvent) -> Result<IbcEvent, IbcEventError> {
+pub fn ibc_event_try_from_abci_event(
+	abci_event: &AbciEvent,
+	height: Height,
+) -> Result<IbcEvent, IbcEventError> {
 	match abci_event.kind.parse() {
 		Ok(IbcEventType::CreateClient) => Ok(IbcEvent::CreateClient(
 			create_client_try_from_abci_event(abci_event).map_err(IbcEventError::client)?,
@@ -147,17 +153,19 @@ pub fn ibc_event_try_from_abci_event(abci_event: &AbciEvent) -> Result<IbcEvent,
 				.map_err(IbcEventError::channel)?,
 		)),
 		Ok(IbcEventType::SendPacket) => Ok(IbcEvent::SendPacket(
-			send_packet_try_from_abci_event(abci_event).map_err(IbcEventError::channel)?,
+			send_packet_try_from_abci_event(abci_event, height).map_err(IbcEventError::channel)?,
 		)),
 		Ok(IbcEventType::WriteAck) => Ok(IbcEvent::WriteAcknowledgement(
-			write_acknowledgement_try_from_abci_event(abci_event)
+			write_acknowledgement_try_from_abci_event(abci_event, height)
 				.map_err(IbcEventError::channel)?,
 		)),
 		Ok(IbcEventType::AckPacket) => Ok(IbcEvent::AcknowledgePacket(
-			acknowledge_packet_try_from_abci_event(abci_event).map_err(IbcEventError::channel)?,
+			acknowledge_packet_try_from_abci_event(abci_event, height)
+				.map_err(IbcEventError::channel)?,
 		)),
 		Ok(IbcEventType::Timeout) => Ok(IbcEvent::TimeoutPacket(
-			timeout_packet_try_from_abci_event(abci_event).map_err(IbcEventError::channel)?,
+			timeout_packet_try_from_abci_event(abci_event, height)
+				.map_err(IbcEventError::channel)?,
 		)),
 		_ => Err(IbcEventError::unsupported_abci_event(abci_event.kind.to_owned())),
 	}
@@ -174,7 +182,9 @@ pub fn update_client_try_from_abci_event(
 ) -> Result<client_events::UpdateClient, ClientError> {
 	client_extract_attributes_from_tx(abci_event).map(|attributes| client_events::UpdateClient {
 		common: attributes,
-		header: extract_header_from_tx(abci_event).ok().map(|h| h.encode_vec()),
+		header: extract_header_from_tx(abci_event)
+			.ok()
+			.map(|h| h.encode_vec().expect("header should encode")),
 	})
 }
 
@@ -276,44 +286,52 @@ pub fn channel_close_confirm_try_from_abci_event(
 
 pub fn send_packet_try_from_abci_event(
 	abci_event: &AbciEvent,
+	height: Height,
 ) -> Result<channel_events::SendPacket, ChannelError> {
 	extract_packet_and_write_ack_from_tx(abci_event)
 		.map(|(packet, write_ack)| {
 			// This event should not have a write ack.
 			debug_assert_eq!(write_ack.len(), 0);
-			channel_events::SendPacket { packet }
+			channel_events::SendPacket { packet, height }
 		})
 		.map_err(|_| ChannelError::abci_conversion_failed(abci_event.kind.to_owned()))
 }
 
 pub fn write_acknowledgement_try_from_abci_event(
 	abci_event: &AbciEvent,
+	height: Height,
 ) -> Result<channel_events::WriteAcknowledgement, ChannelError> {
 	extract_packet_and_write_ack_from_tx(abci_event)
-		.map(|(packet, write_ack)| channel_events::WriteAcknowledgement { packet, ack: write_ack })
+		.map(|(packet, write_ack)| channel_events::WriteAcknowledgement {
+			packet,
+			ack: write_ack,
+			height,
+		})
 		.map_err(|_| ChannelError::abci_conversion_failed(abci_event.kind.to_owned()))
 }
 
 pub fn acknowledge_packet_try_from_abci_event(
 	abci_event: &AbciEvent,
+	height: Height,
 ) -> Result<channel_events::AcknowledgePacket, ChannelError> {
 	extract_packet_and_write_ack_from_tx(abci_event)
 		.map(|(packet, write_ack)| {
 			// This event should not have a write ack.
 			debug_assert_eq!(write_ack.len(), 0);
-			channel_events::AcknowledgePacket { packet }
+			channel_events::AcknowledgePacket { height, packet }
 		})
 		.map_err(|_| ChannelError::abci_conversion_failed(abci_event.kind.to_owned()))
 }
 
 pub fn timeout_packet_try_from_abci_event(
 	abci_event: &AbciEvent,
+	height: Height,
 ) -> Result<channel_events::TimeoutPacket, ChannelError> {
 	extract_packet_and_write_ack_from_tx(abci_event)
 		.map(|(packet, write_ack)| {
 			// This event should not have a write ack.
 			debug_assert_eq!(write_ack.len(), 0);
-			channel_events::TimeoutPacket { packet }
+			channel_events::TimeoutPacket { packet, height }
 		})
 		.map_err(|_| ChannelError::abci_conversion_failed(abci_event.kind.to_owned()))
 }
@@ -441,7 +459,8 @@ fn extract_packet_and_write_ack_from_tx(
 					.map_err(|e| ChannelError::invalid_string_as_sequence(value.to_string(), e))?
 					.into(),
 			channel_events::PKT_TIMEOUT_HEIGHT_ATTRIBUTE_KEY => {
-				packet.timeout_height = parse_timeout_height(value)?;
+				packet.timeout_height =
+					parse_timeout_height(value)?.expect("timeout height is set");
 			},
 			channel_events::PKT_TIMEOUT_TIMESTAMP_ATTRIBUTE_KEY => {
 				packet.timeout_timestamp = value.parse().unwrap();
@@ -467,7 +486,7 @@ pub fn parse_timeout_height(s: &str) -> Result<TimeoutHeight, ChannelError> {
 	match s.parse::<Height>() {
 		Ok(height) => Ok(Some(height)),
 		Err(e) => match e.into_detail() {
-			HeightErrorDetail::ZeroHeight(_) => Ok(None),
+			HeightErrorDetail::HeightConversion(x) if x.height == "0" => Ok(None),
 			_ => Err(ChannelError::invalid_timeout_height()),
 		},
 	}

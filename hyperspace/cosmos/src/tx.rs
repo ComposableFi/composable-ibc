@@ -21,8 +21,7 @@ use ibc_proto::{
 use prost::Message;
 use tendermint::Hash;
 use tendermint_rpc::{
-	abci::Transaction, endpoint::tx::Response as TxResponse, query::Query, Client, HttpClient,
-	Order, Url,
+	endpoint::tx::Response as TxResponse, query::Query, Client, HttpClient, Order, Url,
 };
 
 pub fn sign_tx(
@@ -82,7 +81,7 @@ pub async fn simulate_tx(
 
 pub async fn broadcast_tx(rpc_client: &HttpClient, tx_bytes: Vec<u8>) -> Result<Hash, Error> {
 	let response = rpc_client
-		.broadcast_tx_sync(Transaction::from(tx_bytes))
+		.broadcast_tx_sync(tx_bytes)
 		.await
 		.map_err(|e| Error::from(format!("failed to broadcast transaction {:?}", e)))?;
 	Ok(response.hash)

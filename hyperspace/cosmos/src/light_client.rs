@@ -10,7 +10,6 @@ use tendermint_light_client::{
 		io::{AtHeight, ProdIo},
 	},
 	light_client::LightClient as TmLightClient,
-	operations::ProdHasher,
 	state::State as LightClientState,
 	store::{memory::MemoryStore, LightStore},
 };
@@ -52,11 +51,11 @@ impl LightClient {
 	pub fn prepare_tendermint_light_client(
 		&self,
 		client_state: &ClientState<HostFunctionsManager>,
-	) -> Result<TmLightClient<HostFunctionsManager>, Error> {
+	) -> Result<TmLightClient, Error> {
 		let params = TmOptions {
 			trust_threshold: TrustThresholdFraction::new(
-				client_state.trust_threshold.numerator(),
-				client_state.trust_threshold.denominator(),
+				client_state.trust_level.numerator(),
+				client_state.trust_level.denominator(),
 			)
 			.unwrap(),
 			trusting_period: client_state.trusting_period,
@@ -65,22 +64,12 @@ impl LightClient {
 		let clock = components::clock::SystemClock;
 		let scheduler = components::scheduler::basic_bisecting_schedule;
 		let verifier: PredicateVerifier<
-			ProdPredicates<HostFunctionsManager>,
-			ProdVotingPowerCalculator<HostFunctionsManager>,
-			ProdCommitValidator<HostFunctionsManager>,
-			ProdHasher,
-		> = ProdVerifier::default();
-		let hasher = operations::hasher::ProdHasher;
+			HostFunctionsManager,
+			HostFunctionsManager,
+			HostFunctionsManager,
+		> = PredicateVerifier::default();
 
-		Ok(TmLightClient::new(
-			self.peer_id,
-			params,
-			clock,
-			scheduler,
-			verifier,
-			hasher,
-			self.io.clone(),
-		))
+		Ok(TmLightClient::new(self.peer_id, params, clock, scheduler, verifier, self.io.clone()))
 	}
 
 	pub fn prepare_state(&self, trusted: Height) -> Result<LightClientState, Error> {
@@ -114,7 +103,6 @@ impl LightClient {
 		// Verify the target header
 		let target = client
 			.verify_to_target(target_height, &mut state)
-			.await
 			.map_err(|e| Error::from(e.to_string()))?;
 		Ok(target)
 	}

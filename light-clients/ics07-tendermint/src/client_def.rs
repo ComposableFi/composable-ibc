@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::{convert::TryInto, fmt::Debug, marker::PhantomData};
+use core::{convert::TryInto, fmt::Debug, marker::PhantomData, str::FromStr};
 
 use ibc::core::{
 	ics02_client::{
@@ -45,7 +45,7 @@ use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
 use prost::Message;
 use tendermint_light_client_verifier::{
 	types::{TrustedBlockState, UntrustedBlockState},
-	ProdVerifier, Verdict, Verifier,
+	PredicateVerifier, Verdict, Verifier,
 };
 use tendermint_proto::Protobuf;
 
@@ -121,6 +121,9 @@ where
 					))?;
 
 				let trusted_state = TrustedBlockState {
+					// TODO: make sure it's correct
+					chain_id: &tendermint::chain::Id::from_str(client_state.chain_id.as_str())
+						.unwrap(),
 					header_time: trusted_consensus_state.timestamp().into_tm_time().unwrap(),
 					height: header.trusted_height.revision_height.try_into().map_err(|_| {
 						Ics02Error::client_error(
@@ -143,7 +146,7 @@ where
 
 				let options = client_state.as_light_client_options()?;
 
-				let verifier = ProdVerifier::<H>::default();
+				let verifier = PredicateVerifier::<H, H, H>::default();
 				let verdict = verifier.verify(
 					untrusted_state,
 					trusted_state,
@@ -370,7 +373,7 @@ where
 		client_state.verify_height(height)?;
 
 		let path = ConnectionsPath(connection_id.clone());
-		let value = expected_connection_end.encode_vec();
+		let value = expected_connection_end.encode_vec().expect("encode connection end");
 		verify_membership::<H, _>(client_state, prefix, proof, root, path, value)
 	}
 
@@ -390,7 +393,7 @@ where
 		client_state.verify_height(height)?;
 
 		let path = ChannelEndsPath(port_id.clone(), *channel_id);
-		let value = expected_channel_end.encode_vec();
+		let value = expected_channel_end.encode_vec().expect("encode channel end");
 		verify_membership::<H, _>(client_state, prefix, proof, root, path, value)
 	}
 

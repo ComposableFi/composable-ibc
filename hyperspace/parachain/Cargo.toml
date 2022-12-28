@@ -60,7 +60,7 @@ sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polka
 # composable
 ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto" }
-tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "d1296dfc7c4f32a1440e9d41fd00084b63b9d7ea", default-features = false }
+tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "eac7b5a17f872c3af3b576fe485dc55e0526fa24", default-features = false }
 light-client-common = { path = "../../light-clients/common" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }

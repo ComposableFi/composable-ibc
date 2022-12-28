@@ -94,7 +94,7 @@ impl ibc::core::ics02_client::client_consensus::ConsensusState for ConsensusStat
 	}
 
 	fn encode_to_vec(&self) -> Vec<u8> {
-		self.encode_vec()
+		self.encode_vec().expect("Encoding ConsensusState failed")
 	}
 }
 

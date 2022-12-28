@@ -88,6 +88,10 @@ define_error! {
 		MalformedModuleEvent
 			{ event: ModuleEvent }
 			| e | { format_args!("module event cannot use core event types: {:?}", e.event) },
+
+		UnsupportedAbciEvent
+			{event_type: String}
+			|e| { format_args!("Unable to parse abci event type '{}' into IbcEvent", e.event_type)}
 	}
 }
 

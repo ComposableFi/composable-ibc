@@ -3,7 +3,7 @@ use core::pin::Pin;
 use futures::Stream;
 // use ibc::{applications::transfer::msgs::transfer::MsgTransfer, tx_msg::Msg};
 use ibc::{
-	applications::transfer::msgs::transfer::MsgTransfer,
+	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
 	core::ics24_host::identifier::{ChannelId, PortId},
 	tx_msg::Msg,
 };
@@ -15,7 +15,7 @@ where
 	H: Clone + Send + Sync + 'static,
 {
 	/// Initiate an ibc transfer on chain.
-	async fn send_transfer(&self, msg: MsgTransfer) -> Result<(), Self::Error> {
+	async fn send_transfer(&self, msg: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
 		let hash = self.submit_call(vec![msg.to_any()]).await?;
 		log::info!(target: "hyperspace-light", "🤝 Transfer transaction confirmed with hash: {:?}", hash);
 		Ok(())
@@ -25,7 +25,7 @@ where
 	async fn send_ordered_packet(
 		&self,
 		_channel_id: ChannelId,
-		_timeout: u64,
+		_timeout: pallet_ibc::Timeout,
 	) -> Result<(), Self::Error> {
 		todo!()
 	}

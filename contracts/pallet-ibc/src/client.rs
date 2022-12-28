@@ -405,7 +405,7 @@ where
 		timestamp: Timestamp,
 	) -> Result<(), ICS02Error> {
 		log::trace!(target: "pallet_ibc", "in client: [store_update_time] >> Client Height {:?}, Host Timestamp {:?} ", height, timestamp);
-		let height = height.encode_vec();
+		let height = height.encode_vec().expect("encode height");
 		let timestamp = timestamp.nanoseconds();
 		let client_id = client_id.as_bytes().to_vec();
 		ClientUpdateTime::<T>::insert(client_id, height, timestamp);
@@ -419,8 +419,8 @@ where
 		host_height: Height,
 	) -> Result<(), ICS02Error> {
 		log::trace!(target: "pallet_ibc", "in client: [store_update_height] >> Client Height {:?}, Host Height {:?} ", height, host_height);
-		let height = height.encode_vec();
-		let host_height = host_height.encode_vec();
+		let height = height.encode_vec().expect("encode height");
+		let host_height = host_height.encode_vec().expect("encode height");
 		let client_id = client_id.as_bytes().to_vec();
 		ClientUpdateHeight::<T>::insert(client_id, height, host_height);
 		Ok(())

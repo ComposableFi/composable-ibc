@@ -30,6 +30,16 @@ use ics11_beefy::{
 };
 use sp_core::ed25519;
 use sp_runtime::{app_crypto::RuntimePublic, traits::BlakeTwo256};
+use tendermint::{
+	crypto::Sha256,
+	merkle::{Hash, MerkleHash, HASH_SIZE},
+};
+use tendermint_light_client_verifier::{
+	errors::VerificationError,
+	operations::{CommitValidator, VotingPowerCalculator, VotingPowerTally},
+	predicates::VerificationPredicates,
+	types::{SignedHeader, TrustThreshold, ValidatorSet},
+};
 use tendermint_proto::Protobuf;
 
 pub const TENDERMINT_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.ClientState";
@@ -63,29 +73,69 @@ impl ics23::HostFunctionsProvider for HostFunctionsManager {
 	}
 }
 
-impl tendermint_light_client_verifier::host_functions::CryptoProvider for HostFunctionsManager {
-	fn sha2_256(message: &[u8]) -> [u8; 32] {
-		sp_io::hashing::sha2_256(message)
-	}
+// impl tendermint_light_client_verifier::host_functions::CryptoProvider for HostFunctionsManager {
+// 	fn sha2_256(message: &[u8]) -> [u8; 32] {
+// 		sp_io::hashing::sha2_256(message)
+// 	}
+//
+// 	fn ed25519_verify(signature: &[u8], msg: &[u8], pubkey: &[u8]) -> Result<(), ()> {
+// 		if let Some((signature, public_key)) =
+// 			ed25519::Signature::from_slice(signature).and_then(|sig| {
+// 				let public = sp_core::ed25519::Public::try_from(pubkey).ok()?;
+// 				Some((sig, public))
+// 			}) {
+// 			sp_io::crypto::ed25519_verify(&signature, msg, &public_key)
+// 				.then(|| ())
+// 				.ok_or(())
+// 		} else {
+// 			Err(())
+// 		}
+// 	}
+//
+// 	fn secp256k1_verify(_: &[u8], _: &[u8], _: &[u8]) -> Result<(), ()> {
+// 		unimplemented!()
+// 	}
+// }
 
-	fn ed25519_verify(signature: &[u8], msg: &[u8], pubkey: &[u8]) -> Result<(), ()> {
-		if let Some((signature, public_key)) =
-			ed25519::Signature::from_slice(signature).and_then(|sig| {
-				let public = sp_core::ed25519::Public::try_from(pubkey).ok()?;
-				Some((sig, public))
-			}) {
-			sp_io::crypto::ed25519_verify(&signature, msg, &public_key)
-				.then(|| ())
-				.ok_or(())
-		} else {
-			Err(())
-		}
-	}
+#[derive(Default)]
+pub struct SubstrateSha256;
 
-	fn secp256k1_verify(_: &[u8], _: &[u8], _: &[u8]) -> Result<(), ()> {
-		unimplemented!()
+impl Sha256 for SubstrateSha256 {
+	fn digest(data: impl AsRef<[u8]>) -> [u8; HASH_SIZE] {
+		sp_io::hashing::sha2_256(data.as_ref())
 	}
 }
+
+impl MerkleHash for SubstrateSha256 {
+	fn empty_hash(&mut self) -> Hash {
+		todo!()
+	}
+
+	fn leaf_hash(&mut self, bytes: &[u8]) -> Hash {
+		todo!()
+	}
+
+	fn inner_hash(&mut self, left: Hash, right: Hash) -> Hash {
+		todo!()
+	}
+}
+
+impl VerificationPredicates for HostFunctionsManager {
+	type Sha256 = SubstrateSha256;
+}
+
+impl VotingPowerCalculator for HostFunctionsManager {
+	fn voting_power_in(
+		&self,
+		signed_header: &SignedHeader,
+		validator_set: &ValidatorSet,
+		trust_threshold: TrustThreshold,
+	) -> Result<VotingPowerTally, VerificationError> {
+		todo!()
+	}
+}
+
+impl CommitValidator for HostFunctionsManager {}
 
 impl ics07_tendermint::HostFunctionsProvider for HostFunctionsManager {}
 
@@ -198,13 +248,15 @@ impl From<AnyClientMessage> for Any {
 		match client_msg {
 			AnyClientMessage::Grandpa(msg) => Any {
 				type_url: GRANDPA_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec(),
+				value: msg.encode_vec().expect("encode_vec failed"),
 			},
-			AnyClientMessage::Beefy(msg) =>
-				Any { type_url: BEEFY_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() },
+			AnyClientMessage::Beefy(msg) => Any {
+				type_url: BEEFY_CLIENT_MESSAGE_TYPE_URL.to_string(),
+				value: msg.encode_vec().expect("encode_vec failed"),
+			},
 			AnyClientMessage::Tendermint(msg) => Any {
 				type_url: TENDERMINT_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec(),
+				value: msg.encode_vec().expect("encode_vec failed"),
 			},
 			#[cfg(test)]
 			AnyClientMessage::Mock(_msg) => panic!("MockHeader can't be serialized"),

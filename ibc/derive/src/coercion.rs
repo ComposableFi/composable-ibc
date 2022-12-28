@@ -60,7 +60,7 @@ impl State {
 		let crate_ = &self.crate_ident;
 		quote! {
 			fn encode_to_vec(&self) -> ::alloc::vec::Vec<u8> {
-				#crate_::protobuf::Protobuf::encode_vec(self)
+				#crate_::protobuf::Protobuf::encode_vec(self).expect("failed to encode")
 			}
 		}
 	}

@@ -34,7 +34,7 @@ use prost::Message;
 use serde::Deserialize;
 use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
-use tendermint_rpc::{abci::Path, endpoint::abci_query::AbciQuery, Client, HttpClient, Url};
+use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient, Url};
 
 // Implements the [`crate::Chain`] trait for cosmos.
 /// This is responsible for:
@@ -300,7 +300,7 @@ where
 		prove: bool,
 	) -> Result<(AbciQuery, Vec<u8>), Error> {
 		// SAFETY: Creating a Path from a constant; this should never fail
-		let path = Path::from_str(IBC_QUERY_PATH).expect("Path::from_str always returns Ok");
+		let path = IBC_QUERY_PATH;
 		let height = TmHeight::try_from(height_query.revision_height)
 			.map_err(|e| Error::from(format!("Invalid height {}", e)))?;
 
@@ -310,8 +310,11 @@ where
 		};
 
 		// Use the Tendermint-rs RPC client to do the query.
-		let response =
-			self.rpc_client.abci_query(Some(path), data, height, prove).await.map_err(|e| {
+		let response = self
+			.rpc_client
+			.abci_query(Some(path.to_owned()), data, height, prove)
+			.await
+			.map_err(|e| {
 				Error::from(format!("Failed to query chain {} with error {:?}", self.name, e))
 			})?;
 
@@ -334,7 +337,7 @@ where
 		let merkle_proof = response
 			.clone()
 			.proof
-			.map(|p| convert_tm_to_ics_merkle_proof(&p))
+			.map(|p| convert_tm_to_ics_merkle_proof::<H>(&p))
 			.transpose()
 			.map_err(|_| Error::Custom(format!("bad client state proof")))?;
 		// log::info!("Merkle proof: {:?}", merkle_proof);

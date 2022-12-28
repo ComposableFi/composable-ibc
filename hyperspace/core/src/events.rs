@@ -138,7 +138,7 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 					};
 
-					let value = msg.encode_vec();
+					let value = msg.encode_vec().expect("could not encode message");
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				}
@@ -220,7 +220,7 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 					};
 
-					let value = msg.encode_vec();
+					let value = msg.encode_vec().expect("could not encode message");
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				}
@@ -264,7 +264,7 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 					};
 
-					let value = msg.encode_vec();
+					let value = msg.encode_vec().expect("could not encode message");
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				}
@@ -315,7 +315,7 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 					};
 
-					let value = msg.encode_vec();
+					let value = msg.encode_vec().expect("could not encode message");
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				}
@@ -352,7 +352,7 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 					};
 
-					let value = msg.encode_vec();
+					let value = msg.encode_vec().expect("could not encode message");
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				},
@@ -384,7 +384,7 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 					};
 
-					let value = msg.encode_vec();
+					let value = msg.encode_vec().expect("could not encode message");
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				},
@@ -416,7 +416,7 @@ pub async fn parse_events(
 					signer: sink.account_id(),
 				};
 
-				let value = msg.encode_vec();
+				let value = msg.encode_vec().expect("could not encode message");
 				let msg = Any { value, type_url: msg.type_url() };
 				messages.push(msg)
 			},
@@ -474,7 +474,7 @@ pub async fn parse_events(
 					signer: sink.account_id(),
 				};
 
-				let value = msg.encode_vec();
+				let value = msg.encode_vec().expect("could not encode message");
 				let msg = Any { value, type_url: msg.type_url() };
 				messages.push(msg);
 			},
@@ -527,7 +527,7 @@ pub async fn parse_events(
 					signer: sink.account_id(),
 				};
 
-				let value = msg.encode_vec();
+				let value = msg.encode_vec().expect("could not encode message");
 				let msg = Any { value, type_url: msg.type_url() };
 				messages.push(msg)
 			},

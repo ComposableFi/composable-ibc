@@ -15,6 +15,8 @@
 #![allow(unreachable_patterns)]
 
 use async_trait::async_trait;
+#[cfg(feature = "cosmos")]
+use cosmos::client::{CosmosClient, CosmosClientConfig};
 use derive_more::From;
 use futures::Stream;
 #[cfg(any(test, feature = "testing"))]
@@ -44,20 +46,19 @@ use ibc_proto::{
 		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
 	},
 };
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 #[cfg(any(test, feature = "testing"))]
 use pallet_ibc::Timeout;
-use serde::Deserialize;
-use thiserror::Error;
-
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use parachain::{config, ParachainClient};
 use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
+use serde::Deserialize;
 use sp_runtime::generic::Era;
 use std::{pin::Pin, time::Duration};
 use subxt::{
 	tx::{ExtrinsicParams, PolkadotExtrinsicParams, PolkadotExtrinsicParamsBuilder},
 	Error, OnlineClient,
 };
+use thiserror::Error;
 
 // TODO: expose extrinsic param builder
 #[derive(Debug, Clone)]
@@ -102,6 +103,8 @@ pub struct Config {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AnyConfig {
 	Parachain(parachain::ParachainClientConfig),
+	#[cfg(feature = "cosmos")]
+	Cosmos(CosmosClientConfig),
 }
 
 #[derive(Deserialize)]
@@ -112,22 +115,31 @@ pub struct CoreConfig {
 #[derive(Clone)]
 pub enum AnyChain {
 	Parachain(ParachainClient<DefaultConfig>),
+	#[cfg(feature = "cosmos")]
+	Cosmos(CosmosClient<DefaultConfig>),
 }
 
 #[derive(From)]
 pub enum AnyFinalityEvent {
 	Parachain(parachain::finality_protocol::FinalityEvent),
+	#[cfg(feature = "cosmos")]
+	Cosmos(cosmos::provider::FinalityEvent),
 }
 
 #[derive(From)]
 pub enum AnyTransactionId {
 	Parachain(parachain::provider::TransactionId<sp_core::H256>),
+	#[cfg(feature = "cosmos")]
+	Cosmos(cosmos::provider::TransactionId<cosmos::provider::Hash>),
 }
 
 #[derive(Error, Debug)]
 pub enum AnyError {
 	#[error("{0}")]
 	Parachain(#[from] parachain::error::Error),
+	#[cfg(feature = "cosmos")]
+	#[error("{0}")]
+	Cosmos(#[from] cosmos::error::Error),
 	#[error("{0}")]
 	Other(String),
 }
@@ -154,20 +166,28 @@ impl IbcProvider for AnyChain {
 	{
 		match self {
 			AnyChain::Parachain(chain) => {
-				let finality_event = ibc::downcast!(finality_event => AnyFinalityEvent::Parachain)
+				let finality_event = downcast!(finality_event => AnyFinalityEvent::Parachain)
 					.ok_or_else(|| AnyError::Other("Invalid finality event type".to_owned()))?;
 				let (client_msg, events, update_type) =
 					chain.query_latest_ibc_events(finality_event, counterparty).await?;
 				Ok((client_msg, events, update_type))
 			},
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => {
+				let finality_event = downcast!(finality_event => AnyFinalityEvent::Cosmos)
+					.ok_or_else(|| AnyError::Other("Invalid finality event type".to_owned()))?;
+				let (client_msg, events, update_type) =
+					chain.query_latest_ibc_events(finality_event, counterparty).await?;
+				Ok((client_msg, events, update_type))
+			},
 		}
 	}
 
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>> {
 		match self {
 			Self::Parachain(chain) => chain.ibc_events().await,
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.ibc_events().await,
 		}
 	}
 
@@ -182,7 +202,11 @@ impl IbcProvider for AnyChain {
 				.query_client_consensus(at, client_id, consensus_height)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain
+				.query_client_consensus(at, client_id, consensus_height)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -194,7 +218,8 @@ impl IbcProvider for AnyChain {
 		match self {
 			AnyChain::Parachain(chain) =>
 				chain.query_client_state(at, client_id).await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain.query_client_state(at, client_id).await.map_err(Into::into),
 		}
 	}
 
@@ -206,7 +231,9 @@ impl IbcProvider for AnyChain {
 		match self {
 			AnyChain::Parachain(chain) =>
 				chain.query_connection_end(at, connection_id).await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) =>
+				chain.query_connection_end(at, connection_id).await.map_err(Into::into),
 		}
 	}
 
@@ -219,14 +246,17 @@ impl IbcProvider for AnyChain {
 		match self {
 			AnyChain::Parachain(chain) =>
 				chain.query_channel_end(at, channel_id, port_id).await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) =>
+				chain.query_channel_end(at, channel_id, port_id).await.map_err(Into::into),
 		}
 	}
 
 	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
 		match self {
 			AnyChain::Parachain(chain) => chain.query_proof(at, keys).await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain.query_proof(at, keys).await.map_err(Into::into),
 		}
 	}
 
@@ -242,7 +272,11 @@ impl IbcProvider for AnyChain {
 				.query_packet_commitment(at, port_id, channel_id, seq)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain
+				.query_packet_commitment(at, port_id, channel_id, seq)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -258,7 +292,11 @@ impl IbcProvider for AnyChain {
 				.query_packet_acknowledgement(at, port_id, channel_id, seq)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain
+				.query_packet_acknowledgement(at, port_id, channel_id, seq)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -273,7 +311,11 @@ impl IbcProvider for AnyChain {
 				.query_next_sequence_recv(at, port_id, channel_id)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain
+				.query_next_sequence_recv(at, port_id, channel_id)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -289,7 +331,11 @@ impl IbcProvider for AnyChain {
 				.query_packet_receipt(at, port_id, channel_id, seq)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain
+				.query_packet_receipt(at, port_id, channel_id, seq)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -297,7 +343,8 @@ impl IbcProvider for AnyChain {
 		match self {
 			AnyChain::Parachain(chain) =>
 				chain.latest_height_and_timestamp().await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain.latest_height_and_timestamp().await.map_err(Into::into),
 		}
 	}
 
@@ -312,7 +359,11 @@ impl IbcProvider for AnyChain {
 				.query_packet_commitments(at, channel_id, port_id)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain
+				.query_packet_commitments(at, channel_id, port_id)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -327,7 +378,11 @@ impl IbcProvider for AnyChain {
 				.query_packet_acknowledgements(at, channel_id, port_id)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain
+				.query_packet_acknowledgements(at, channel_id, port_id)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -343,7 +398,11 @@ impl IbcProvider for AnyChain {
 				.query_unreceived_packets(at, channel_id, port_id, seqs)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain
+				.query_unreceived_packets(at, channel_id, port_id, seqs)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -359,14 +418,19 @@ impl IbcProvider for AnyChain {
 				.query_unreceived_acknowledgements(at, channel_id, port_id, seqs)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain
+				.query_unreceived_acknowledgements(at, channel_id, port_id, seqs)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
 	fn channel_whitelist(&self) -> Vec<(ChannelId, PortId)> {
 		match self {
 			Self::Parachain(chain) => chain.channel_whitelist(),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.channel_whitelist(),
 		}
 	}
 
@@ -378,7 +442,9 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) =>
 				chain.query_connection_channels(at, connection_id).await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) =>
+				chain.query_connection_channels(at, connection_id).await.map_err(Into::into),
 		}
 	}
 
@@ -391,7 +457,9 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) =>
 				chain.query_send_packets(channel_id, port_id, seqs).await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) =>
+				chain.query_send_packets(channel_id, port_id, seqs).await.map_err(Into::into),
 		}
 	}
 
@@ -404,14 +472,17 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) =>
 				chain.query_recv_packets(channel_id, port_id, seqs).await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) =>
+				chain.query_recv_packets(channel_id, port_id, seqs).await.map_err(Into::into),
 		}
 	}
 
 	fn expected_block_time(&self) -> Duration {
 		match self {
 			Self::Parachain(chain) => chain.expected_block_time(),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.expected_block_time(),
 		}
 	}
 
@@ -425,7 +496,11 @@ impl IbcProvider for AnyChain {
 				.query_client_update_time_and_height(client_id, client_height)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain
+				.query_client_update_time_and_height(client_id, client_height)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -436,42 +511,49 @@ impl IbcProvider for AnyChain {
 		match self {
 			AnyChain::Parachain(chain) =>
 				chain.query_host_consensus_state_proof(height).await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) =>
+				chain.query_host_consensus_state_proof(height).await.map_err(Into::into),
 		}
 	}
 
 	async fn query_ibc_balance(&self) -> Result<Vec<PrefixedCoin>, Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain.query_ibc_balance().await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.query_ibc_balance().await.map_err(Into::into),
 		}
 	}
 
 	fn connection_prefix(&self) -> CommitmentPrefix {
 		match self {
 			AnyChain::Parachain(chain) => chain.connection_prefix(),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain.connection_prefix(),
 		}
 	}
 
 	fn client_id(&self) -> ClientId {
 		match self {
 			AnyChain::Parachain(chain) => chain.client_id(),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain.client_id(),
 		}
 	}
 
 	fn connection_id(&self) -> ConnectionId {
 		match self {
 			AnyChain::Parachain(chain) => chain.connection_id(),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain.connection_id(),
 		}
 	}
 
 	fn client_type(&self) -> ClientType {
 		match self {
 			AnyChain::Parachain(chain) => chain.client_type(),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain.client_type(),
 		}
 	}
 
@@ -479,21 +561,24 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) =>
 				chain.query_timestamp_at(block_number).await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.query_timestamp_at(block_number).await.map_err(Into::into),
 		}
 	}
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain.query_clients().await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.query_clients().await.map_err(Into::into),
 		}
 	}
 
 	async fn query_channels(&self) -> Result<Vec<(ChannelId, PortId)>, Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain.query_channels().await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.query_channels().await.map_err(Into::into),
 		}
 	}
 
@@ -505,7 +590,9 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) =>
 				chain.query_connection_using_client(height, client_id).await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) =>
+				chain.query_connection_using_client(height, client_id).await.map_err(Into::into),
 		}
 	}
 
@@ -517,7 +604,9 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) =>
 				chain.is_update_required(latest_height, latest_client_height_on_counterparty),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) =>
+				chain.is_update_required(latest_height, latest_client_height_on_counterparty),
 		}
 	}
 	async fn initialize_client_state(
@@ -525,7 +614,8 @@ impl IbcProvider for AnyChain {
 	) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain.initialize_client_state().await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.initialize_client_state().await.map_err(Into::into),
 		}
 	}
 
@@ -541,7 +631,14 @@ impl IbcProvider for AnyChain {
 				)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain
+				.query_client_id_from_tx_hash(
+					downcast!(tx_id => AnyTransactionId::Cosmos)
+						.expect("Should be cosmos transaction id"),
+				)
+				.await
+				.map_err(Into::into),
 		}
 	}
 }
@@ -550,7 +647,8 @@ impl KeyProvider for AnyChain {
 	fn account_id(&self) -> Signer {
 		match self {
 			AnyChain::Parachain(parachain) => parachain.account_id(),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(cosmos) => cosmos.account_id(),
 		}
 	}
 }
@@ -560,21 +658,24 @@ impl Chain for AnyChain {
 	fn name(&self) -> &str {
 		match self {
 			Self::Parachain(chain) => chain.name(),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.name(),
 		}
 	}
 
 	fn block_max_weight(&self) -> u64 {
 		match self {
 			Self::Parachain(chain) => chain.block_max_weight(),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.block_max_weight(),
 		}
 	}
 
 	async fn estimate_weight(&self, msg: Vec<Any>) -> Result<u64, Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain.estimate_weight(msg).await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.estimate_weight(msg).await.map_err(Into::into),
 		}
 	}
 
@@ -586,7 +687,11 @@ impl Chain for AnyChain {
 				use futures::StreamExt;
 				Box::pin(chain.finality_notifications().await.map(|x| x.into()))
 			},
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => {
+				use futures::StreamExt;
+				Box::pin(chain.finality_notifications().await.map(|x| x.into()))
+			},
 		}
 	}
 
@@ -597,7 +702,12 @@ impl Chain for AnyChain {
 				.await
 				.map_err(Into::into)
 				.map(|id| AnyTransactionId::Parachain(id)),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain
+				.submit(messages)
+				.await
+				.map_err(Into::into)
+				.map(|id| AnyTransactionId::Cosmos(id)),
 		}
 	}
 }
@@ -608,7 +718,8 @@ impl primitives::TestProvider for AnyChain {
 	async fn send_transfer(&self, params: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain.send_transfer(params).await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.send_transfer(params).await.map_err(Into::into),
 		}
 	}
 
@@ -620,21 +731,24 @@ impl primitives::TestProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) =>
 				chain.send_ordered_packet(channel_id, timeout).await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.send_ordered_packet(channel_id, todo!()).await.map_err(Into::into),
 		}
 	}
 
 	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
 		match self {
 			Self::Parachain(chain) => chain.subscribe_blocks().await,
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.subscribe_blocks().await,
 		}
 	}
 
 	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
 		match self {
 			Self::Parachain(chain) => chain.set_channel_whitelist(channel_whitelist),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.set_channel_whitelist(channel_whitelist),
 		}
 	}
 }
@@ -644,6 +758,8 @@ impl AnyConfig {
 		Ok(match self {
 			AnyConfig::Parachain(config) =>
 				AnyChain::Parachain(ParachainClient::new(config).await?),
+			#[cfg(feature = "cosmos")]
+			AnyConfig::Cosmos(config) => AnyChain::Cosmos(CosmosClient::new(config).await?),
 		})
 	}
 }
