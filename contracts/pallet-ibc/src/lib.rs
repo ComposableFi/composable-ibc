@@ -169,6 +169,7 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	pub use ibc::signer::Signer;
+	use sp_core::ByteArray;
 
 	use crate::routing::{Context, ModuleRouter};
 	use ibc::{
@@ -597,10 +598,7 @@ pub mod pallet {
 			let to = match params.to {
 				MultiAddress::Id(id) => {
 					let account_id_32: AccountId32 = id.into();
-					runtime_interface::account_id_to_ss58(account_id_32.into())
-						.and_then(|val| {
-							String::from_utf8(val).map_err(|_| SS58CodecError::InvalidAccountId)
-						})
+					String::from_utf8(account_id_32.to_raw_vec())
 						.map_err(|_| Error::<T>::Utf8Error)?
 				},
 				MultiAddress::Raw(bytes) =>
