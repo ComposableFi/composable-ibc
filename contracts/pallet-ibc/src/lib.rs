@@ -169,7 +169,7 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	pub use ibc::signer::Signer;
-	use sp_core::ByteArray;
+	use sp_core::crypto::ByteArray;
 
 	use crate::routing::{Context, ModuleRouter};
 	use ibc::{
@@ -599,7 +599,7 @@ pub mod pallet {
 			let to = match params.to {
 				MultiAddress::Id(id) => {
 					// we convert id to hex string instead of ss58 because destination chain could
-					// have a different ss58 prefix from host chain
+					// have a different ss58 prefix from source chain
 					let account_id_32: AccountId32 = id.into();
 					let mut hex_string = hex::encode(account_id_32.to_raw_vec());
 					hex_string.insert_str(0, "0x");
