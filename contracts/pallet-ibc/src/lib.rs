@@ -585,7 +585,7 @@ pub mod pallet {
 			let denom = T::IbcDenomToAssetIdConversion::from_asset_id_to_denom(asset_id)
 				.ok_or_else(|| Error::<T>::InvalidAssetId)?;
 
-			let account_id_32: AccountId32 = origin.clone().into();
+			let account_id_32: AccountId32 = origin.into();
 			let from = {
 				let mut hex_string = hex::encode(account_id_32.to_raw_vec());
 				hex_string.insert_str(0, "0x");
