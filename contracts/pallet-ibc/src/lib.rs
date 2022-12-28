@@ -590,11 +590,12 @@ pub mod pallet {
 				.ok_or_else(|| Error::<T>::InvalidAssetId)?;
 
 			let account_id_32: AccountId32 = origin.clone().into();
-			let from = runtime_interface::account_id_to_ss58(account_id_32.into())
-				.and_then(|val| {
-					String::from_utf8(val).map_err(|_| SS58CodecError::InvalidAccountId)
-				})
-				.map_err(|_| Error::<T>::Utf8Error)?;
+			let from = runtime_interface::account_id_to_ss58(
+				account_id_32.into(),
+				<T as frame_system::Config>::SS58Prefix::get(),
+			)
+			.and_then(|val| String::from_utf8(val).map_err(|_| SS58CodecError::InvalidAccountId))
+			.map_err(|_| Error::<T>::Utf8Error)?;
 			let to = match params.to {
 				MultiAddress::Id(id) => {
 					// we convert id to hex string instead of ss58 because destination chain could
