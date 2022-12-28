@@ -83,6 +83,7 @@ where
 		channel_id: &ChannelId,
 		counterparty: &Counterparty,
 		version: &Version,
+		_relayer: &Signer,
 	) -> Result<(), Ics04Error> {
 		let mut ctx = Context::<T>::default();
 		on_chan_open_init(
@@ -109,6 +110,7 @@ where
 		counterparty: &Counterparty,
 		version: &Version,
 		counterparty_version: &Version,
+		_relayer: &Signer,
 	) -> Result<Version, Ics04Error> {
 		let mut ctx = Context::<T>::default();
 		on_chan_open_try(
@@ -132,6 +134,7 @@ where
 		port_id: &PortId,
 		channel_id: &ChannelId,
 		counterparty_version: &Version,
+		_relayer: &Signer,
 	) -> Result<(), Ics04Error> {
 		let _ = ChannelIds::<T>::try_mutate::<_, (), _>(|channels| {
 			channels.push(channel_id.to_string().as_bytes().to_vec());
@@ -148,6 +151,7 @@ where
 		output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
+		_relayer: &Signer,
 	) -> Result<(), Ics04Error> {
 		let _ = ChannelIds::<T>::try_mutate::<_, (), _>(|channels| {
 			channels.push(channel_id.to_string().as_bytes().to_vec());
@@ -164,6 +168,7 @@ where
 		output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
+		_relayer: &Signer,
 	) -> Result<(), Ics04Error> {
 		let _ = ChannelIds::<T>::try_mutate::<_, (), _>(|channels| {
 			let rem = channels
@@ -187,6 +192,7 @@ where
 		output: &mut ModuleOutputBuilder,
 		port_id: &PortId,
 		channel_id: &ChannelId,
+		_relayer: &Signer,
 	) -> Result<(), Ics04Error> {
 		let _ = ChannelIds::<T>::try_mutate::<_, (), _>(|channels| {
 			let rem = channels

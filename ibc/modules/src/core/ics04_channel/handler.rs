@@ -123,6 +123,7 @@ where
 			&result.channel_id,
 			msg.channel.counterparty(),
 			&msg.channel.version,
+			&msg.signer,
 		)?,
 		ChannelMsg::ChannelOpenTry(msg) => {
 			let version = cb.on_chan_open_try(
@@ -135,6 +136,7 @@ where
 				msg.channel.counterparty(),
 				msg.channel.version(),
 				&msg.counterparty_version,
+				&msg.signer,
 			)?;
 			result.channel_end.version = version;
 		},
@@ -144,13 +146,29 @@ where
 			&msg.port_id,
 			&result.channel_id,
 			&msg.counterparty_version,
+			&msg.signer,
 		)?,
-		ChannelMsg::ChannelOpenConfirm(msg) =>
-			cb.on_chan_open_confirm(&ctx_clone, module_output, &msg.port_id, &result.channel_id)?,
-		ChannelMsg::ChannelCloseInit(msg) =>
-			cb.on_chan_close_init(&ctx_clone, module_output, &msg.port_id, &result.channel_id)?,
-		ChannelMsg::ChannelCloseConfirm(msg) =>
-			cb.on_chan_close_confirm(&ctx_clone, module_output, &msg.port_id, &result.channel_id)?,
+		ChannelMsg::ChannelOpenConfirm(msg) => cb.on_chan_open_confirm(
+			&ctx_clone,
+			module_output,
+			&msg.port_id,
+			&result.channel_id,
+			&msg.signer,
+		)?,
+		ChannelMsg::ChannelCloseInit(msg) => cb.on_chan_close_init(
+			&ctx_clone,
+			module_output,
+			&msg.port_id,
+			&result.channel_id,
+			&msg.signer,
+		)?,
+		ChannelMsg::ChannelCloseConfirm(msg) => cb.on_chan_close_confirm(
+			&ctx_clone,
+			module_output,
+			&msg.port_id,
+			&result.channel_id,
+			&msg.signer,
+		)?,
 	}
 	Ok(result)
 }
