@@ -185,11 +185,7 @@ pub mod pallet {
 		timestamp::Timestamp,
 		Height,
 	};
-	use ibc_primitives::{
-		client_id_from_bytes, get_channel_escrow_address,
-		runtime_interface::{self, SS58CodecError},
-		IbcHandler,
-	};
+	use ibc_primitives::{client_id_from_bytes, get_channel_escrow_address, IbcHandler};
 	use light_clients::AnyClientState;
 	use sp_runtime::{
 		traits::{IdentifyAccount, Saturating},
@@ -393,7 +389,7 @@ pub mod pallet {
 		Events { events: Vec<Result<events::IbcEvent, errors::IbcError>> },
 		/// An Ibc token transfer has been started
 		TokenTransferInitiated {
-			from: <T as frame_system::Config>::AccountId,
+			from: Vec<u8>,
 			to: Vec<u8>,
 			ibc_denom: Vec<u8>,
 			local_asset_id: Option<T::AssetId>,
@@ -590,12 +586,12 @@ pub mod pallet {
 				.ok_or_else(|| Error::<T>::InvalidAssetId)?;
 
 			let account_id_32: AccountId32 = origin.clone().into();
-			let from = runtime_interface::account_id_to_ss58(
-				account_id_32.into(),
-				<T as frame_system::Config>::SS58Prefix::get(),
-			)
-			.and_then(|val| String::from_utf8(val).map_err(|_| SS58CodecError::InvalidAccountId))
-			.map_err(|_| Error::<T>::Utf8Error)?;
+			let from = {
+				let mut hex_string = hex::encode(account_id_32.to_raw_vec());
+				hex_string.insert_str(0, "0x");
+				hex_string
+			};
+
 			let to = match params.to {
 				MultiAddress::Id(id) => {
 					// we convert id to hex string instead of ss58 because destination chain could
@@ -686,7 +682,7 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::ChannelNotFound)?;
 
 			Self::deposit_event(Event::<T>::TokenTransferInitiated {
-				from: origin,
+				from: from.as_bytes().to_vec(),
 				to: to.as_bytes().to_vec(),
 				amount,
 				local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
