@@ -893,7 +893,7 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_open_init(&ctx, &mut output, order, &connection_hops, &port_id, &channel_id, &counterparty, &version).unwrap();
+		handler.on_chan_open_init(&ctx, &mut output, order, &connection_hops, &port_id, &channel_id, &counterparty, &version, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 
 	on_chan_open_try {
@@ -907,7 +907,7 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_open_try(&ctx, &mut output, order, &connection_hops, &port_id, &channel_id, &counterparty, &version, &version).unwrap();
+		handler.on_chan_open_try(&ctx, &mut output, order, &connection_hops, &port_id, &channel_id, &counterparty, &version, &version, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 
 	on_chan_open_ack {
@@ -918,7 +918,7 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_open_ack(&ctx, &mut output, &port_id, &channel_id, &version).unwrap();
+		handler.on_chan_open_ack(&ctx, &mut output, &port_id, &channel_id, &version, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 1)
@@ -931,7 +931,7 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_open_confirm(&ctx, &mut output, &port_id, &channel_id).unwrap();
+		handler.on_chan_open_confirm(&ctx, &mut output, &port_id, &channel_id, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 1)
@@ -946,7 +946,7 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_close_init(&ctx, &mut output, &port_id, &channel_id).unwrap();
+		handler.on_chan_close_init(&ctx, &mut output, &port_id, &channel_id, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 0)
@@ -961,7 +961,7 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_close_confirm(&ctx, &mut output, &port_id, &channel_id).unwrap();
+		handler.on_chan_close_confirm(&ctx, &mut output, &port_id, &channel_id, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 0)

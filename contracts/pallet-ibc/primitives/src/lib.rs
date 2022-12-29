@@ -536,7 +536,6 @@ where
 	type Error = &'static str;
 
 	/// Convert a signer to an IBC account.
-	/// Only valid hex strings are supported for now.
 	fn try_from(signer: ibc::signer::Signer) -> Result<Self, Self::Error> {
 		let acc_str = signer.as_ref();
 		if acc_str.starts_with("0x") {

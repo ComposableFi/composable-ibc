@@ -113,6 +113,7 @@ impl<C: HostBlockType + 'static> Module for DummyTransferModule<C> {
 		_counterparty: &Counterparty,
 		_version: &Version,
 		counterparty_version: &Version,
+		_relayer: &Signer,
 	) -> Result<Version, Error> {
 		Ok(counterparty_version.clone())
 	}

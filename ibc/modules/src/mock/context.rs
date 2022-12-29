@@ -1331,6 +1331,7 @@ mod tests {
 				_counterparty: &Counterparty,
 				_version: &Version,
 				counterparty_version: &Version,
+				_relayer: &Signer,
 			) -> Result<Version, Error> {
 				Ok(counterparty_version.clone())
 			}
@@ -1361,6 +1362,7 @@ mod tests {
 				_counterparty: &Counterparty,
 				_version: &Version,
 				counterparty_version: &Version,
+				_relayer: &Signer,
 			) -> Result<Version, Error> {
 				Ok(counterparty_version.clone())
 			}
