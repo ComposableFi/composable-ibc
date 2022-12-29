@@ -85,3 +85,88 @@ impl ChainInfo for ParachainRuntimeChainInfo {
 		)
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use crate::ParachainRuntimeChainInfo;
+	use ibc::{
+		core::{
+			ics02_client::{
+				context::ClientTypes,
+				msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient},
+			},
+			ics24_host::identifier::ClientId,
+		},
+		protobuf::Protobuf,
+		signer::Signer,
+		tx_msg::Msg,
+	};
+	use pallet_ibc::{
+		light_clients::{AnyClient, AnyClientMessage, AnyClientState, AnyConsensusState},
+		Any,
+	};
+	use std::str::FromStr;
+	use substrate_simnode::ChainInfo;
+
+	#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+	pub struct LocalClientTypes;
+
+	impl ClientTypes for LocalClientTypes {
+		type AnyClientMessage = AnyClientMessage;
+		type AnyClientState = AnyClientState;
+		type AnyConsensusState = AnyConsensusState;
+		type ClientDef = AnyClient;
+	}
+
+	#[test]
+	fn check_client_expiry() {
+		substrate_simnode::parachain_node::<ParachainRuntimeChainInfo, _, _>(|node| async move {
+			let sudo = node
+				.with_state(
+					None,
+					sudo::Pallet::<<ParachainRuntimeChainInfo as ChainInfo>::Runtime>::key,
+				)
+				.unwrap();
+			let (client_state, cs_state, client_message) =
+				pallet_ibc::benchmarks::grandpa_benchmark_utils::generate_finality_proof(3);
+			let msg_create_client = MsgCreateAnyClient::<LocalClientTypes> {
+				client_state: AnyClientState::Grandpa(client_state),
+				signer: Signer::from_str("relayer").unwrap(),
+				consensus_state: AnyConsensusState::Grandpa(cs_state),
+			};
+
+			let msg_create_client = Any {
+				type_url: msg_create_client.type_url().as_bytes().to_vec(),
+				value: msg_create_client.encode_vec(),
+			};
+			let msg_update_client = MsgUpdateAnyClient::<LocalClientTypes> {
+				client_id: ClientId::new("10-grandpa", 0).unwrap(),
+				client_message,
+				signer: Signer::from_str("relayer").unwrap(),
+			};
+
+			let msg_update_client = Any {
+				type_url: msg_update_client.type_url().as_bytes().to_vec(),
+				value: msg_update_client.encode_vec(),
+			};
+			let call =
+				pallet_ibc::Call::<<ParachainRuntimeChainInfo as ChainInfo>::Runtime>::deliver {
+					messages: vec![msg_create_client],
+				};
+			node.submit_extrinsic(call, sudo.clone()).await?;
+			let relaychain = light_client_common::RelayChain::default();
+			// Fast forward to a time beyond the trusting period of the client
+			let blocks_to_seal = (relaychain.trusting_period().as_secs() / 12).saturating_add(100);
+			node.seal_blocks(blocks_to_seal as usize).await;
+
+			let call =
+				pallet_ibc::Call::<<ParachainRuntimeChainInfo as ChainInfo>::Runtime>::deliver {
+					messages: vec![msg_update_client],
+				};
+
+			node.submit_extrinsic(call, sudo).await?;
+			Ok(())
+		})
+		.unwrap();
+	}
+}

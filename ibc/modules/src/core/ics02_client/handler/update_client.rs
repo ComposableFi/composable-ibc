@@ -80,12 +80,16 @@ where
 	tracing::debug!("latest consensus state: {:?}", latest_consensus_state);
 
 	let now = ctx.host_timestamp();
-	let duration = now.duration_since(&latest_consensus_state.timestamp()).ok_or_else(|| {
+	let last_update_timestamp =
+		ctx.client_update_time(&client_id, client_state.latest_height()).map_err(|_| {
+			Error::implementation_specific("Could not find update time for client".to_string())
+		})?;
+	let duration = now.duration_since(&last_update_timestamp).ok_or_else(|| {
 		Error::invalid_consensus_state_timestamp(latest_consensus_state.timestamp(), now)
 	})?;
 
 	if client_state.expired(duration) {
-		return Err(Error::header_not_within_trust_period(latest_consensus_state.timestamp(), now))
+		return Err(Error::header_not_within_trust_period(last_update_timestamp, now))
 	}
 
 	client_def

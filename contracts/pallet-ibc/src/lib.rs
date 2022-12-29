@@ -139,7 +139,7 @@ pub enum LightClientProtocol {
 	Grandpa,
 }
 #[cfg(any(test, feature = "runtime-benchmarks"))]
-pub(crate) mod benchmarks;
+pub mod benchmarks;
 
 #[cfg(test)]
 mod mock;

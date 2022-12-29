@@ -11,6 +11,7 @@ parachain-runtime = { path = "../parachain-node/runtime" }
 parachain-node = { path = "../parachain-node" }
 jsonrpsee = { version = "0.14.0", features = ["server"] }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
+sudo = { package = "pallet-sudo", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
@@ -25,3 +26,6 @@ sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = 
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 parachain-inherent = { package = "cumulus-primitives-parachain-inherent", git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.27" }
+light-client-common = { path = "../../light-clients/common" }
+pallet-ibc = { path = "../../contracts/pallet-ibc", features = [ "runtime-benchmarks" ] }
+ibc = { path = "../../ibc/modules" }
