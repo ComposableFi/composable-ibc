@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-substrate-simnode = { git = "https://github.com/polytope-labs/substrate-simnode", rev = "e3484aef8e7a4cbadf861efbb2929dc39ebfca86" }
+substrate-simnode = { git = "https://github.com/polytope-labs/substrate-simnode", rev = "e67d84d641d6d117ad6c93b9b48db83195304dc4" }
 parachain-runtime = { path = "../parachain-node/runtime" }
 parachain-node = { path = "../parachain-node" }
 jsonrpsee = { version = "0.14.0", features = ["server"] }
@@ -29,3 +29,5 @@ parachain-inherent = { package = "cumulus-primitives-parachain-inherent", git = 
 light-client-common = { path = "../../light-clients/common" }
 pallet-ibc = { path = "../../contracts/pallet-ibc", features = [ "runtime-benchmarks" ] }
 ibc = { path = "../../ibc/modules" }
+ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
+grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../algorithms/grandpa/primitives" }

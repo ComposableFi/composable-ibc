@@ -11615,7 +11615,9 @@ dependencies = [
  "cumulus-primitives-parachain-inherent",
  "frame-benchmarking",
  "frame-system",
+ "grandpa-light-client-primitives",
  "ibc",
+ "ics10-grandpa",
  "jsonrpsee 0.14.0",
  "light-client-common",
  "pallet-ibc",
@@ -11639,7 +11641,7 @@ dependencies = [
 [[package]]
 name = "simnode-runtime-apis"
 version = "0.1.0"
-source = "git+https://github.com/polytope-labs/substrate-simnode?rev=e3484aef8e7a4cbadf861efbb2929dc39ebfca86#e3484aef8e7a4cbadf861efbb2929dc39ebfca86"
+source = "git+https://github.com/polytope-labs/substrate-simnode?rev=e67d84d641d6d117ad6c93b9b48db83195304dc4#e67d84d641d6d117ad6c93b9b48db83195304dc4"
 dependencies = [
  "parity-scale-codec",
  "sp-api 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.27)",
@@ -13198,7 +13200,7 @@ dependencies = [
 [[package]]
 name = "substrate-simnode"
 version = "0.1.0"
-source = "git+https://github.com/polytope-labs/substrate-simnode?rev=e3484aef8e7a4cbadf861efbb2929dc39ebfca86#e3484aef8e7a4cbadf861efbb2929dc39ebfca86"
+source = "git+https://github.com/polytope-labs/substrate-simnode?rev=e67d84d641d6d117ad6c93b9b48db83195304dc4#e67d84d641d6d117ad6c93b9b48db83195304dc4"
 dependencies = [
  "clap",
  "cumulus-pallet-parachain-system",

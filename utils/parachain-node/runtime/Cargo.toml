@@ -86,7 +86,7 @@ parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polk
 asset-registry = { package = "orml-asset-registry", git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "377213f750755cc48e80a3131eaae63b5eda8362" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "377213f750755cc48e80a3131eaae63b5eda8362" }
 
-simnode-apis = { package = "simnode-runtime-apis", git = "https://github.com/polytope-labs/substrate-simnode", rev = "e3484aef8e7a4cbadf861efbb2929dc39ebfca86", default-features = false }
+simnode-apis = { package = "simnode-runtime-apis", git = "https://github.com/polytope-labs/substrate-simnode", rev = "e67d84d641d6d117ad6c93b9b48db83195304dc4", default-features = false }
 [features]
 default = [
 	"std",

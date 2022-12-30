@@ -16,8 +16,8 @@ impl substrate_simnode::SimnodeCli for ParachainCli {
 		&cli.run.base
 	}
 
-	fn log_filters(cli_config: &Self::CliConfig) -> Result<String, sc_cli::Error> {
-		cli_config.log_filters()
+	fn log_filters(_cli_config: &Self::CliConfig) -> Result<String, sc_cli::Error> {
+		Ok("pallet_ibc=trace".to_string())
 	}
 }
 
@@ -89,6 +89,8 @@ impl ChainInfo for ParachainRuntimeChainInfo {
 #[cfg(test)]
 mod tests {
 	use crate::ParachainRuntimeChainInfo;
+	use frame_benchmarking::frame_support::codec::Encode;
+	use grandpa_client_primitives::{justification::GrandpaJustification, Commit, FinalityProof};
 	use ibc::{
 		core::{
 			ics02_client::{
@@ -99,12 +101,15 @@ mod tests {
 		},
 		protobuf::Protobuf,
 		signer::Signer,
+		timestamp::Timestamp,
 		tx_msg::Msg,
 	};
+	use ics10_grandpa::client_message::RelayChainHeader;
 	use pallet_ibc::{
 		light_clients::{AnyClient, AnyClientMessage, AnyClientState, AnyConsensusState},
 		Any,
 	};
+	use sp_runtime::{testing::H256, SaturatedConversion};
 	use std::str::FromStr;
 	use substrate_simnode::ChainInfo;
 
@@ -127,12 +132,49 @@ mod tests {
 					sudo::Pallet::<<ParachainRuntimeChainInfo as ChainInfo>::Runtime>::key,
 				)
 				.unwrap();
-			let (client_state, cs_state, client_message) =
-				pallet_ibc::benchmarks::grandpa_benchmark_utils::generate_finality_proof(3);
+
+			let client_state = ics10_grandpa::client_state::ClientState {
+				relay_chain: Default::default(),
+				latest_relay_height: 100,
+				latest_relay_hash: Default::default(),
+				frozen_height: None,
+				latest_para_height: 10,
+				para_id: 100,
+				current_set_id: 1,
+				current_authorities: Default::default(),
+				_phantom: Default::default(),
+			};
+
+			let time = core::time::Duration::from_millis(1_000_000_000u64.saturating_mul(1000));
+			let consensus_state = ics10_grandpa::consensus_state::ConsensusState {
+				timestamp: Timestamp::from_nanoseconds(time.as_nanos().saturated_into::<u64>())
+					.unwrap()
+					.into_tm_time()
+					.unwrap(),
+				root: H256::zero().as_bytes().to_vec().into(),
+			};
+
+			let justification = GrandpaJustification::<RelayChainHeader> {
+				round: 1,
+				commit: Commit::<RelayChainHeader> {
+					target_hash: Default::default(),
+					target_number: Default::default(),
+					precommits: Default::default(),
+				},
+				votes_ancestries: vec![],
+			};
+			let grandpa_header = ics10_grandpa::client_message::Header {
+				finality_proof: FinalityProof {
+					block: Default::default(),
+					justification: justification.encode(),
+					unknown_headers: Default::default(),
+				},
+				parachain_headers: Default::default(),
+			};
 			let msg_create_client = MsgCreateAnyClient::<LocalClientTypes> {
 				client_state: AnyClientState::Grandpa(client_state),
 				signer: Signer::from_str("relayer").unwrap(),
-				consensus_state: AnyConsensusState::Grandpa(cs_state),
+				consensus_state: AnyConsensusState::Grandpa(consensus_state),
 			};
 
 			let msg_create_client = Any {
@@ -141,7 +183,9 @@ mod tests {
 			};
 			let msg_update_client = MsgUpdateAnyClient::<LocalClientTypes> {
 				client_id: ClientId::new("10-grandpa", 0).unwrap(),
-				client_message,
+				client_message: AnyClientMessage::Grandpa(
+					ics10_grandpa::client_message::ClientMessage::Header(grandpa_header),
+				),
 				signer: Signer::from_str("relayer").unwrap(),
 			};
 
@@ -158,13 +202,29 @@ mod tests {
 			// Fast forward to a time beyond the trusting period of the client
 			let blocks_to_seal = (relaychain.trusting_period().as_secs() / 12).saturating_add(100);
 			node.seal_blocks(blocks_to_seal as usize).await;
-
 			let call =
 				pallet_ibc::Call::<<ParachainRuntimeChainInfo as ChainInfo>::Runtime>::deliver {
 					messages: vec![msg_update_client],
 				};
 
 			node.submit_extrinsic(call, sudo).await?;
+			node.seal_blocks(1).await;
+			let events = node.events(None);
+			assert!(events.into_iter().any(|ev| {
+				match ev.event {
+					parachain_runtime::Event::Ibc(pallet_ibc::Event::Events { events }) => {
+						for ev in events {
+							if let Err(pallet_ibc::errors::IbcError::Ics02Client { message }) = ev {
+								let err_str = String::from_utf8(message).unwrap();
+								// Assert that client expiry was validated
+								return err_str.contains("HeaderNotWithinTrustPeriod")
+							}
+						}
+						return false
+					},
+					_ => false,
+				}
+			}));
 			Ok(())
 		})
 		.unwrap();
