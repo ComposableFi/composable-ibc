@@ -157,7 +157,7 @@ mod tests {
 	use crate::{
 		core::{
 			ics02_client::{
-				context::ClientReader,
+				context::{ClientKeeper, ClientReader},
 				error::{Error, ErrorDetail},
 				handler::{dispatch, ClientResult::Update},
 				msgs::{update_client::MsgUpdateAnyClient, ClientMsg},
@@ -184,13 +184,15 @@ mod tests {
 
 		let timestamp = Timestamp::now();
 
-		let ctx =
+		let mut ctx =
 			MockContext::<MockClientTypes>::default().with_client(&client_id, Height::new(0, 42));
 		let msg = MsgUpdateAnyClient {
 			client_id: client_id.clone(),
 			client_message: MockHeader::new(Height::new(0, 46)).with_timestamp(timestamp).into(),
 			signer,
 		};
+		ctx.store_update_time(client_id.clone(), Height::new(0, 42), Timestamp::now())
+			.unwrap();
 
 		let output = dispatch(&ctx, ClientMsg::UpdateClient(msg.clone()));
 
@@ -270,6 +272,7 @@ mod tests {
 
 		for cid in &client_ids {
 			ctx = ctx.with_client(cid, initial_height);
+			ctx.store_update_time(cid.clone(), initial_height, Timestamp::now()).unwrap()
 		}
 
 		for cid in &client_ids {
