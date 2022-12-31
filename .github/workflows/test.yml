@@ -149,7 +149,7 @@ jobs:
 
       - name: Run simnode tests
         run: |
-          cargo +nightly test -p simnode --locked --release
+          SKIP_WASM_BUILD=1 cargo +nightly test -p simnode --locked --release
 
       - name: Run hyperspace integration tests
         run: |
