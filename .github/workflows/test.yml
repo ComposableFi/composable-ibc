@@ -59,6 +59,7 @@ jobs:
           # Get Rust
           curl https://sh.rustup.rs -sSf | bash -s -- -y
           $HOME/.cargo/bin/rustup toolchain install nightly
+          $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain nightly
 
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
@@ -149,7 +150,7 @@ jobs:
 
       - name: Run simnode tests
         run: |
-          SKIP_WASM_BUILD=1 cargo +nightly test -p simnode --locked --release
+          cargo +nightly test -p simnode --locked --release
 
       - name: Run hyperspace integration tests
         run: |
