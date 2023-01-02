@@ -347,7 +347,8 @@ fn on_deliver_ics20_recv_packet() {
 			signer: Signer::from_str(MODULE_ID).unwrap(),
 		};
 
-		let msg = Any { type_url: msg.type_url().as_bytes().to_vec(), value: msg.encode_vec() };
+		let msg =
+			Any { type_url: msg.type_url().as_bytes().to_vec(), value: msg.encode_vec().unwrap() };
 
 		let account_data = Assets::balance(2u128, AccountId32::new(pair.public().0));
 		// Assert account balance before transfer

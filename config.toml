@@ -1,0 +1,31 @@
+[chain_a]
+type = "parachain"
+name = "picasso"
+para_id = 2000
+parachain_rpc_url = "ws://127.0.0.1:9188"
+relay_chain_rpc_url = "ws://127.0.0.1:9944"
+client_id = "10-grandpa-0"
+connection_id = "connection-0"
+channel_whitelist = []
+commitment_prefix = "0x6962632f"
+private_key = "//Alice"
+ss58_version = 49
+key_type = "sr25519"
+finality_protocol = "Grandpa"
+
+[chain_b]
+type = "cosmos"
+name = "gaia"
+rpc_url = "ws://127.0.0.1:9988"
+grpc_url = "ws://127.0.0.1:9944"
+client_id = "10-grandpa-0"
+connection_id = "connection-0"
+channel_whitelist = []
+commitment_prefix = "0x6962632f"
+private_key = "//Alice"
+ss58_version = 49
+key_type = "sr25519"
+finality_protocol = "Grandpa"
+
+[core]
+prometheus_endpoint = "https://127.0.0.1"

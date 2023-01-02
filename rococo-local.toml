@@ -1,0 +1,14 @@
+type = 'parachain'
+name = 'rococo-local'
+para_id = 2000
+parachain_rpc_url = 'ws://parachain-node-0-dev-2000-TestSubstrateToCosmosIBC:27451'
+relay_chain_rpc_url = 'ws://relaychain-0-rococo-local-TestSubstrateToCosmosIBC:27451'
+client_id = '10-grandpa-0'
+connection_id = 'connection-0'
+beefy_activation_block = 0
+commitment_prefix = '0x6962632f'
+private_key = '//Alice'
+ss58_version = 49
+channel_whitelist = []
+finality_protocol = 'Grandpa'
+key_type = 'sr25519'

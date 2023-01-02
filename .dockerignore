@@ -1,4 +1,5 @@
 **/target
+**/target_docker
 **/node_modules
 **/.git
 **/.github

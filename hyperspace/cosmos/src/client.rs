@@ -4,6 +4,7 @@ use super::{
 	light_client::LightClient,
 	tx::{broadcast_tx, confirm_tx, sign_tx, simulate_tx},
 };
+use bip32::{ExtendedPrivateKey, PrivateKeyBytes, PublicKeyBytes, XPub as ExtendedPublicKey};
 use core::convert::{From, Into, TryFrom};
 use ibc_proto::{
 	cosmos::{
@@ -35,6 +36,50 @@ use serde::Deserialize;
 use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
 use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient, Url};
+
+#[derive(Debug, Deserialize)]
+pub struct ConfigKeyEntry {
+	public_key: String,
+	private_key: String,
+	account: String,
+	address: Vec<u8>,
+}
+
+// pub fn decode_key(data: &[u8]) -> Result<ExtendedPublicKey, Error> {
+// 	if data.len() != 78 {
+// 		return Err(Error::WrongExtendedKeyLength(data.len()))
+// 	}
+//
+// 	Ok(ExtendedPublicKey {
+// 		network: if data[0..4] == [0x04u8, 0x88, 0xB2, 0x1E] {
+// 			Network::Bitcoin
+// 		} else if data[0..4] == [0x04u8, 0x35, 0x87, 0xCF] {
+// 			Network::Testnet
+// 		} else {
+// 			let mut ver = [0u8; 4];
+// 			ver.copy_from_slice(&data[0..4]);
+// 			return Err(Error::UnknownVersion(ver))
+// 		},
+// 		depth: data[4],
+// 		parent_fingerprint: Fingerprint::from(&data[5..9]),
+// 		child_number: endian::slice_to_u32_be(&data[9..13]).into(),
+// 		chain_code: ChainCode::from(&data[13..45]),
+// 		public_key: secp256k1::PublicKey::from_slice(&data[45..78])?,
+// 	})
+// }
+
+impl TryFrom<ConfigKeyEntry> for KeyEntry {
+	type Error = bip32::Error;
+
+	fn try_from(value: ConfigKeyEntry) -> Result<Self, Self::Error> {
+		Ok(KeyEntry {
+			public_key: ExtendedPublicKey::from_str(&value.public_key)?,
+			private_key: ExtendedPrivateKey::from_str(&value.private_key)?,
+			account: value.account,
+			address: value.address,
+		})
+	}
+}
 
 // Implements the [`crate::Chain`] trait for cosmos.
 /// This is responsible for:
@@ -96,7 +141,7 @@ pub struct CosmosClientConfig {
 	/// Maximun transaction size
 	pub max_tx_size: usize,
 	/// The key that signs transactions
-	pub keybase: KeyEntry,
+	pub keybase: ConfigKeyEntry,
 	/*
 	Here is a list of dropped configuration parameters from Hermes Config.toml
 	that could be set to default values or removed for the MVP phase:
@@ -149,7 +194,7 @@ where
 			account_prefix: config.account_prefix,
 			commitment_prefix,
 			max_tx_size: config.max_tx_size,
-			keybase: config.keybase,
+			keybase: KeyEntry::try_from(config.keybase).map_err(|e| e.to_string())?,
 			channel_whitelist: vec![],
 			_phantom: std::marker::PhantomData,
 		})

@@ -81,6 +81,7 @@ use tendermint_rpc::{
 };
 use tonic::IntoRequest;
 
+use ibc_proto::ibc::core::channel::v1::IdentifiedChannel;
 pub use tendermint::Hash;
 
 #[derive(Clone, Debug)]

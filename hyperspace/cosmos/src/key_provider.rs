@@ -1,21 +1,18 @@
 use super::client::CosmosClient;
 use bech32::{ToBase32, Variant};
-use bitcoin::{
-	hashes::hex::ToHex,
-	util::bip32::{ExtendedPrivKey, ExtendedPubKey},
-};
+use bip32::{XPrv as ExtendedPrivateKey, XPub as ExtendedPublicKey};
 use primitives::{error::Error, KeyProvider};
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, str::FromStr};
 use tendermint::account::Id as AccountId;
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KeyEntry {
 	/// Public key
-	pub public_key: ExtendedPubKey,
+	pub public_key: ExtendedPublicKey,
 
 	/// Private key
-	pub private_key: ExtendedPrivKey,
+	pub private_key: ExtendedPrivateKey,
 
 	/// Account Bech32 format
 	pub account: String,
@@ -26,14 +23,15 @@ pub struct KeyEntry {
 
 impl KeyEntry {
 	pub fn new(
-		public_key: ExtendedPubKey,
-		private_key: ExtendedPrivKey,
+		public_key: ExtendedPublicKey,
+		private_key: ExtendedPrivateKey,
 		account: String,
 		address: Vec<u8>,
 	) -> Self {
 		Self { public_key, private_key, account, address }
 	}
 
+	/*
 	pub fn from_file(path: PathBuf) -> Result<KeyEntry, Error> {
 		if !path.as_path().exists() {
 			return Err(Error::from(format!("Key file {} does not exist", path.display())))
@@ -47,12 +45,13 @@ impl KeyEntry {
 
 		Ok(key_entry)
 	}
+	 */
 }
 
 impl<H> KeyProvider for CosmosClient<H> {
 	fn account_id(&self) -> ibc::signer::Signer {
 		let key_entry = self.keybase.clone();
-		let address = key_entry.address.to_hex();
+		let address = hex::encode(&key_entry.address);
 		let account = AccountId::from_str(address.as_str())
 			.map_err(|e| Error::from(format!("Could not parse account id {}", e)))
 			.unwrap();

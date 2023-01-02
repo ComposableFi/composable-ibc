@@ -35,6 +35,21 @@ pub struct Cli {
 	pub subcommand: Subcommand,
 }
 
+#[derive(Debug, Parser)]
+pub enum QuerySubcommand {
+	#[clap(name = "channels", about = "Query channels for a chain")]
+	Channels(QueryCmd),
+}
+
+#[derive(Debug, Clone, Parser)]
+pub struct QueryCmd {
+	/// Relayer chain config path.
+	#[clap(long)]
+	config: String,
+	// #[clap(action)]
+	// chain_id: String,
+}
+
 /// Possible subcommands of the main binary.
 #[derive(Debug, Parser)]
 pub enum Subcommand {
@@ -46,6 +61,9 @@ pub enum Subcommand {
 	CreateConnection(Cmd),
 	#[clap(name = "create-channel", about = "Creates a channel on the specified port")]
 	CreateChannel(Cmd),
+	#[clap(name = "query", about = "Creates a channel on the specified port")]
+	#[structopt(subcommand)]
+	Query(QuerySubcommand),
 }
 
 #[derive(Debug, Clone, Parser)]
@@ -63,7 +81,6 @@ pub struct Cmd {
 	#[clap(long)]
 	port_id: Option<String>,
 	/// Connection delay period in seconds
-	#[clap(long)]
 	#[clap(long)]
 	delay_period: Option<u32>,
 	/// Channel order
@@ -187,6 +204,26 @@ impl Cmd {
 		log::info!("ChannelId on Chain {}: {}", chain_a.name(), channel_id_a);
 		log::info!("ChannelId on Chain {}: {}", chain_b.name(), channel_id_b);
 		handle.abort();
+		Ok(())
+	}
+}
+
+impl QueryCmd {
+	async fn parse_config(&self) -> Result<AnyConfig> {
+		use tokio::fs::read_to_string;
+		let path: PathBuf = self.config.parse()?;
+		let file_content = read_to_string(path).await?;
+		let config: AnyConfig = toml::from_str(&file_content)?;
+
+		Ok(config)
+	}
+
+	pub async fn query_channels(&self) -> Result<()> {
+		let config = self.parse_config().await?;
+		let chain = config.into_client().await?;
+
+		chain.query_channels().await?;
+
 		Ok(())
 	}
 }

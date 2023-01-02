@@ -1,0 +1,16 @@
+type = 'cosmos'
+name = ''
+rpc_url = 'http://ibcgo-1-fn-0-TestSubstrateToCosmosIBC:26657'
+grpc_url = 'http://ibcgo-1-fn-0-TestSubstrateToCosmosIBC:9090'
+websocket_url = 'ws://ibcgo-1-fn-0-TestSubstrateToCosmosIBC'
+chain_id = 'ibcgo-1'
+account_prefix = 'cosmos'
+store_prefix = 'ibc'
+max_tx_size = 200000
+
+[keybase]
+public_key = 'spub4W7TSjsuqcUE17mSB2ajhZsbwkefsHWKsXCbERimu3z2QLN9EFgqqpppiBn4tTNPFoNVTo1b3BgCZAaFJuUgTZeFhzJjUHkK8X7kSC5c7yn'
+private_key = 'sprv8H873EM21Euvndgy513jLRvsPipBTpnUWJGzS3KALiT3XY2zgiNbJ2WLrvPzRhg7GuAoujHd5d6cpBe887vTbJghja8kmRdkHoNgamx6WWr'
+account = 'cosmos1nnypkcfrvu3e9dhzeggpn4kh622l4cq7wwwrn0'
+#account = 'SbazASbNxT2g5TKADAyF96MWSrpsmYafpP'
+address = [156, 200, 27, 97, 35, 103, 35, 146, 182, 226, 202, 16, 25, 214, 215, 210, 149, 250, 224, 30]

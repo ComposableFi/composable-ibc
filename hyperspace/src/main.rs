@@ -15,12 +15,14 @@
 use anyhow::Result;
 use clap::Parser;
 use hyperspace_core::{
-	command::{Cli, Subcommand},
+	command::{Cli, QuerySubcommand, Subcommand},
 	logging,
 };
 
 #[tokio::main]
 async fn main() -> Result<()> {
+	use QuerySubcommand::*;
+
 	logging::setup_logging();
 	let cli = Cli::parse();
 
@@ -29,5 +31,6 @@ async fn main() -> Result<()> {
 		Subcommand::CreateClients(cmd) => cmd.create_clients().await,
 		Subcommand::CreateConnection(cmd) => cmd.create_connection().await,
 		Subcommand::CreateChannel(cmd) => cmd.create_channel().await,
+		Subcommand::Query(Channels(cmd)) => cmd.query_channels().await,
 	}
 }

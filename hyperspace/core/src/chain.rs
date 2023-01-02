@@ -732,7 +732,7 @@ impl primitives::TestProvider for AnyChain {
 			Self::Parachain(chain) =>
 				chain.send_ordered_packet(channel_id, timeout).await.map_err(Into::into),
 			#[cfg(feature = "cosmos")]
-			Self::Cosmos(chain) => chain.send_ordered_packet(channel_id, todo!()).await.map_err(Into::into),
+			Self::Cosmos(chain) => chain.send_ordered_packet(channel_id, timeout).await.map_err(Into::into),
 		}
 	}
 

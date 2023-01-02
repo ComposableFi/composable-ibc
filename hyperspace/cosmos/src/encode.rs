@@ -13,9 +13,11 @@ use k256::ecdsa::{signature::Signer as _, Signature, SigningKey};
 // use primitives::error::Error;
 use prost::Message;
 
+//
+
 pub fn encode_key_bytes(key: &KeyEntry) -> Result<Vec<u8>, Error> {
 	let mut pk_buf = Vec::new();
-	Message::encode(&key.public_key.to_pub().to_bytes(), &mut pk_buf)
+	Message::encode(&key.public_key.public_key().to_bytes().as_slice().to_vec(), &mut pk_buf)
 		.map_err(|e| Error::from(e.to_string()))?;
 	Ok(pk_buf)
 }
@@ -53,7 +55,7 @@ pub fn encode_sign_doc(
 	prost::Message::encode(&sign_doc, &mut signdoc_buf).unwrap();
 
 	// Create signature
-	let private_key_bytes = key.private_key.to_priv().to_bytes();
+	let private_key_bytes = key.private_key.private_key().to_bytes();
 	let signing_key = SigningKey::from_bytes(private_key_bytes.as_slice())
 		.map_err(|e| Error::from(e.to_string()))?;
 	let signature: Signature = signing_key.sign(&signdoc_buf);
