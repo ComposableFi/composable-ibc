@@ -351,7 +351,8 @@ fn on_deliver_ics20_recv_packet() {
 
 		let balance =
 			<Assets as Inspect<AccountId>>::balance(2, &AccountId32::new(pair.public().0));
-		assert_eq!(balance, amt.into())
+		let fee = <Test as crate::ics20_fee::Config>::ServiceCharge::get() * amt;
+		assert_eq!(balance, amt - fee)
 	})
 }
 

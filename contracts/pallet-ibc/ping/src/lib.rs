@@ -267,14 +267,14 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 		_output: &mut ModuleOutputBuilder,
 		packet: &Packet,
 		_relayer: &Signer,
-	) -> Result<(), Ics04Error> {
+	) -> Result<Acknowledgement, Ics04Error> {
 		let success = "ping-success".as_bytes().to_vec();
 		let data = String::from_utf8(packet.data.clone()).ok();
 		log::info!("Received Packet Sequence {:?}, Packet Data {:?}", packet.sequence, data);
 		let packet = packet.clone();
-		T::IbcHandler::write_acknowledgement(&packet, success)
+		T::IbcHandler::write_acknowledgement(&packet, success.clone())
 			.map_err(|e| Ics04Error::implementation_specific(format!("{:?}", e)))?;
-		Ok(())
+		Ok(success.into())
 	}
 
 	fn on_acknowledgement_packet(

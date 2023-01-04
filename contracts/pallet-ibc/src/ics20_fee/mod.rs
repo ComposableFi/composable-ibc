@@ -16,7 +16,9 @@ use crate::routing::Context;
 
 use core::fmt::Formatter;
 use ibc::{
-	applications::transfer::packet::PacketData,
+	applications::transfer::{
+		context::BankKeeper, is_receiver_chain_source, packet::PacketData, TracePrefix,
+	},
 	core::{
 		ics04_channel::{
 			channel::{Counterparty, Order},
@@ -30,6 +32,7 @@ use ibc::{
 	},
 	signer::Signer,
 };
+use ibc_primitives::IbcAccount;
 use sp_core::crypto::AccountId32;
 use sp_runtime::traits::{AccountIdConversion, Get};
 use sp_std::marker::PhantomData;
@@ -40,12 +43,12 @@ pub use pallet::*;
 pub mod pallet {
 	use frame_support::{pallet_prelude::*, PalletId};
 	use frame_system::pallet_prelude::OriginFor;
-	use sp_runtime::{traits::Get, Percent};
+	use sp_runtime::{traits::Get, Perbill};
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + crate::Config {
 		#[pallet::constant]
-		type ServiceCharge: Get<Percent>;
+		type ServiceCharge: Get<Perbill>;
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 	}
@@ -57,22 +60,29 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
-	pub type ServiceCharge<T: Config> = StorageValue<_, Percent, OptionQuery>;
+	pub type ServiceCharge<T: Config> = StorageValue<_, Perbill, OptionQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(0)]
-		pub fn set_charge(origin: OriginFor<T>, charge: u8) -> DispatchResult {
+		pub fn set_charge(origin: OriginFor<T>, charge: u32) -> DispatchResult {
 			<T as crate::Config>::AdminOrigin::ensure_origin(origin)?;
-			<ServiceCharge<T>>::put(Percent::from_percent(charge));
+			<ServiceCharge<T>>::put(Perbill::from_percent(charge));
 			Ok(())
 		}
 	}
 }
 
+#[derive(Clone, PartialEq, Eq)]
 pub struct Ics20ServiceCharge<T: Config> {
-	pub inner: Box<dyn Module>,
+	pub inner: crate::ics20::IbcModule<T>,
 	pub _phantom: PhantomData<T>,
+}
+
+impl<T: Config> Default for Ics20ServiceCharge<T> {
+	fn default() -> Self {
+		Self { inner: <crate::ics20::IbcModule<T>>::default(), _phantom: Default::default() }
+	}
 }
 
 impl<T: Config> core::fmt::Debug for Ics20ServiceCharge<T> {
@@ -85,6 +95,7 @@ impl<T: Config + Send + Sync> Module for Ics20ServiceCharge<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
+	<T as crate::Config>::AccountIdConversion: From<IbcAccount<T::AccountId>>,
 {
 	fn on_chan_open_init(
 		&mut self,
@@ -204,34 +215,43 @@ where
 		relayer: &Signer,
 	) -> Result<Acknowledgement, Ics04Error> {
 		let mut ctx = Context::<T>::default();
-		let mut packet = packet.clone();
-		let mut packet_data = serde_json::from_slice::<PacketData>(packet.data.as_slice())
-			.map_err(|e| {
+		let packet_data =
+			serde_json::from_slice::<PacketData>(packet.data.as_slice()).map_err(|e| {
 				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
 			})?;
-		let percent = ServiceCharge::<T>::get().unwrap_or(T::ServiceCharge::get()).deconstruct();
-		let fee = packet_data
-			.token
-			.amount
-			.as_u256()
-			.checked_mul(percent.into())
-			.and_then(|prod| prod.checked_div(100u8.into()));
-		if let Some(fee) = &fee {
-			let remainder = packet_data.token.amount.checked_sub((*fee).into());
-			packet_data.token.amount = remainder.unwrap_or(packet_data.token.amount);
-		}
-		packet.data = serde_json::to_vec(&packet_data).map_err(|e| {
-			Ics04Error::implementation_specific(format!("Failed to encode packet data {:?}", e))
-		})?;
-		let ack = self.inner.on_recv_packet(&mut ctx, output, &packet, relayer)?;
-		// Send from the receiver to the account
+		let percent = ServiceCharge::<T>::get().unwrap_or(T::ServiceCharge::get());
+		let fee = percent * packet_data.token.amount.as_u256().as_u128();
+		// Send full amount to receiver
+		let ack = self.inner.on_recv_packet(&mut ctx, output, packet, relayer)?;
+		// Send fee from the receiver's account to the pallet account
 		let receiver = <T as crate::Config>::AccountIdConversion::try_from(packet_data.receiver)
 			.map_err(|_| Ics04Error::implementation_specific("Failed to parse account".to_string()))
 			.expect(
 				"Account Id conversion should not fail, it has been validated in a previous step",
 			);
 		let pallet_account: T::AccountId = T::PalletId::get().into_account_truncating();
+		let pallet_account = IbcAccount(pallet_account);
+		let prefixed_coin = if is_receiver_chain_source(
+			packet.source_port.clone(),
+			packet.source_channel,
+			&packet_data.token.denom,
+		) {
+			let prefix = TracePrefix::new(packet.source_port.clone(), packet.source_channel);
+			let mut c = packet_data.token;
+			c.denom.remove_trace_prefix(&prefix);
+			c.amount = fee.into();
+			c
+		} else {
+			let prefix =
+				TracePrefix::new(packet.destination_port.clone(), packet.destination_channel);
+			let mut c = packet_data.token;
+			c.denom.add_trace_prefix(prefix);
+			c.amount = fee.into();
+			c
+		};
 
+		ctx.send_coins(&receiver, &(pallet_account.into()), &prefixed_coin)
+			.map_err(|e| Ics04Error::app_module(e.to_string()))?;
 		Ok(ack)
 	}
 

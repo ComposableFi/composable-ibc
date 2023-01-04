@@ -29,7 +29,7 @@ use crate::{
 		ics05_port::context::PortReader,
 		ics24_host::identifier::{ChannelId, ConnectionId, PortId},
 	},
-	events::ModuleEvent,
+	events::IbcEvent,
 	handler::HandlerOutputBuilder,
 	signer::Signer,
 };
@@ -101,7 +101,7 @@ impl AsRef<str> for ModuleId {
 /// Types implementing this trait are expected to implement `From<GenericAcknowledgement>`
 pub trait Acknowledgement: AsRef<[u8]> {}
 
-pub type ModuleOutputBuilder = HandlerOutputBuilder<(), ModuleEvent>;
+pub type ModuleOutputBuilder = HandlerOutputBuilder<(), IbcEvent>;
 
 pub trait Module: Send + Sync + AsAnyMut {
 	#[allow(clippy::too_many_arguments)]
@@ -180,7 +180,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 		Ok(())
 	}
 
-	/// Modules should write acknowledgement to storage in this callback
+	/// Modules can choose to write acknowledgement to storage in this callback
 	fn on_recv_packet(
 		&self,
 		_ctx: &dyn ModuleCallbackContext,

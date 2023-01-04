@@ -7,6 +7,7 @@ use frame_support::{
 		fungibles::{metadata::Mutate, Create, InspectMetadata},
 		ConstU64, Everything,
 	},
+	PalletId,
 };
 use frame_system as system;
 use ibc_primitives::IbcAccount;
@@ -20,7 +21,7 @@ use sp_keystore::{testing::KeyStore, KeystoreExt};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
-	MultiSignature,
+	MultiSignature, Perbill,
 };
 use std::sync::Arc;
 use system::EnsureRoot;
@@ -66,6 +67,7 @@ frame_support::construct_runtime!(
 		Assets: pallet_assets,
 		IbcPing: pallet_ibc_ping,
 		Ibc: pallet_ibc,
+		Ics20Fee: crate::ics20_fee
 	}
 );
 
@@ -192,6 +194,16 @@ impl Config for Test {
 	type SpamProtectionDeposit = SpamProtectionDeposit;
 }
 
+parameter_types! {
+	pub const FeePalletId: PalletId = PalletId(*b"ics20fee");
+	pub const ServiceCharge: Perbill = Perbill::from_percent(1);
+}
+
+impl crate::ics20_fee::Config for Test {
+	type ServiceCharge = ServiceCharge;
+	type PalletId = FeePalletId;
+}
+
 impl pallet_timestamp::Config for Test {
 	type Moment = u64;
 	type OnTimestampSet = ();
@@ -253,9 +265,19 @@ where
 	}
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Default)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Router {
 	ibc_ping: pallet_ibc_ping::IbcModule<Test>,
+	ics20_with_fee: crate::ics20_fee::Ics20ServiceCharge<Test>,
+}
+
+impl Default for Router {
+	fn default() -> Self {
+		Self {
+			ibc_ping: Default::default(),
+			ics20_with_fee: crate::ics20_fee::Ics20ServiceCharge::<Test>::default(),
+		}
+	}
 }
 
 impl ModuleRouter for Router {
@@ -265,12 +287,13 @@ impl ModuleRouter for Router {
 	) -> Option<&mut dyn ibc::core::ics26_routing::context::Module> {
 		match module_id.as_ref() {
 			pallet_ibc_ping::MODULE_ID => Some(&mut self.ibc_ping),
+			crate::ics20::MODULE_ID_STR => Some(&mut self.ics20_with_fee),
 			&_ => None,
 		}
 	}
 
 	fn has_route(module_id: &ibc::core::ics26_routing::context::ModuleId) -> bool {
-		matches!(module_id.as_ref(), pallet_ibc_ping::MODULE_ID,)
+		matches!(module_id.as_ref(), pallet_ibc_ping::MODULE_ID | crate::ics20::MODULE_ID_STR)
 	}
 
 	fn lookup_module_by_port(

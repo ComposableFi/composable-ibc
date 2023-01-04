@@ -231,6 +231,12 @@ pub trait ChannelKeeper {
 		ack_commitment: AcknowledgementCommitment,
 	) -> Result<(), Error>;
 
+	fn store_raw_acknowledgement(
+		&mut self,
+		key: (PortId, ChannelId, Sequence),
+		ack: Acknowledgement,
+	) -> Result<(), Error>;
+
 	fn delete_packet_acknowledgement(
 		&mut self,
 		key: (PortId, ChannelId, Sequence),

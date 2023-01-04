@@ -7,6 +7,7 @@ use alloc::{
 };
 use core::fmt::Formatter;
 use frame_support::weights::Weight;
+pub use ibc::applications::transfer::{MODULE_ID_STR, PORT_ID_STR};
 use ibc::{
 	applications::transfer::{
 		acknowledgement::{Acknowledgement as Ics20Acknowledgement, ACK_ERR_STR, ACK_SUCCESS_B64},

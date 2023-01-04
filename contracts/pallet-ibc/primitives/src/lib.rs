@@ -506,7 +506,7 @@ pub fn get_channel_escrow_address(
 // This is needed because Ics20 traits require an implementation of TryFrom<Signer> for AccountId
 // associated type
 #[derive(Clone)]
-pub struct IbcAccount<AccountId>(AccountId);
+pub struct IbcAccount<AccountId>(pub AccountId);
 
 impl<AccountId> IdentifyAccount for IbcAccount<AccountId> {
 	type AccountId = AccountId;
