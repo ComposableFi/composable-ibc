@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::routing::Context;
-use alloc::format;
+use alloc::{format, string::ToString};
 use core::fmt::Formatter;
 use ibc::{
 	applications::transfer::{
