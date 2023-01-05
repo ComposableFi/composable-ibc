@@ -4011,6 +4011,7 @@ name = "ibc-primitives"
 version = "0.1.0"
 dependencies = [
  "base58",
+ "blake2",
  "frame-support",
  "hex",
  "ibc",

@@ -165,9 +165,12 @@ where
 
 /// uses host functions for hashing
 fn ss58hash(data: &[u8]) -> Vec<u8> {
-	let mut pre_image = b"SS58PRE".to_vec();
-	pre_image.extend(data);
-	sp_io::hashing::blake2_256(&pre_image).to_vec()
+	use blake2::{Blake2b512, Digest};
+
+	let mut ctx = Blake2b512::new();
+	ctx.update(b"SS58PRE");
+	ctx.update(data);
+	ctx.finalize().to_vec()
 }
 
 #[cfg(test)]
