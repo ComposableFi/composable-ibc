@@ -44,6 +44,7 @@ members = [
     "utils/subxt/generated",
     "utils/parachain-node",
     "utils/parachain-node/runtime",
+    "utils/simnode"
 ]
 
 [patch."https://github.com/paritytech/jsonrpsee"]

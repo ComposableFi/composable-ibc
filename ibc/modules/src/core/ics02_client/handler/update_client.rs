@@ -80,12 +80,16 @@ where
 	tracing::debug!("latest consensus state: {:?}", latest_consensus_state);
 
 	let now = ctx.host_timestamp();
-	let duration = now.duration_since(&latest_consensus_state.timestamp()).ok_or_else(|| {
+	let last_update_timestamp =
+		ctx.client_update_time(&client_id, client_state.latest_height()).map_err(|_| {
+			Error::implementation_specific("Could not find update time for client".to_string())
+		})?;
+	let duration = now.duration_since(&last_update_timestamp).ok_or_else(|| {
 		Error::invalid_consensus_state_timestamp(latest_consensus_state.timestamp(), now)
 	})?;
 
 	if client_state.expired(duration) {
-		return Err(Error::header_not_within_trust_period(latest_consensus_state.timestamp(), now))
+		return Err(Error::header_not_within_trust_period(last_update_timestamp, now))
 	}
 
 	client_def
@@ -153,7 +157,7 @@ mod tests {
 	use crate::{
 		core::{
 			ics02_client::{
-				context::ClientReader,
+				context::{ClientKeeper, ClientReader},
 				error::{Error, ErrorDetail},
 				handler::{dispatch, ClientResult::Update},
 				msgs::{update_client::MsgUpdateAnyClient, ClientMsg},
@@ -180,13 +184,15 @@ mod tests {
 
 		let timestamp = Timestamp::now();
 
-		let ctx =
+		let mut ctx =
 			MockContext::<MockClientTypes>::default().with_client(&client_id, Height::new(0, 42));
 		let msg = MsgUpdateAnyClient {
 			client_id: client_id.clone(),
 			client_message: MockHeader::new(Height::new(0, 46)).with_timestamp(timestamp).into(),
 			signer,
 		};
+		ctx.store_update_time(client_id.clone(), Height::new(0, 42), Timestamp::now())
+			.unwrap();
 
 		let output = dispatch(&ctx, ClientMsg::UpdateClient(msg.clone()));
 
@@ -266,6 +272,7 @@ mod tests {
 
 		for cid in &client_ids {
 			ctx = ctx.with_client(cid, initial_height);
+			ctx.store_update_time(cid.clone(), initial_height, Timestamp::now()).unwrap()
 		}
 
 		for cid in &client_ids {
