@@ -81,10 +81,10 @@ pub fn ss58_to_account_id_32(raw_str: &str) -> Result<[u8; 32], SS58CodecError> 
 		.map_err(|_| SS58CodecError::InvalidString)
 }
 
-pub fn account_id_to_ss58(bytes: [u8; 32], version: u16) -> Result<Vec<u8>, SS58CodecError> {
+pub fn account_id_to_ss58(bytes: [u8; 32], version: u16) -> Vec<u8> {
 	let account_id = AccountId32::new(bytes);
 	let encoded = to_ss58check_with_version(account_id, version);
-	Ok(encoded.as_bytes().to_vec())
+	encoded.as_bytes().to_vec()
 }
 
 // lifted directly from sp-core
@@ -181,6 +181,15 @@ mod tests {
 		ecdsa::{Pair, Public},
 		Pair as _,
 	};
+
+	#[test]
+	fn ss58_test() {
+		// make sure that decode(encode(address)) = address
+		let alice = "5yNZjX24n2eg7W6EVamaTXNQbWCwchhThEaSWB7V3GRjtHeL";
+		let account_id = ss58_to_account_id_32(alice).unwrap();
+		let ss58_account = account_id_to_ss58(account_id.into(), 49);
+		assert_eq!(alice, String::from_utf8(ss58_account).unwrap());
+	}
 
 	#[test]
 	fn ss58check_format_check_works() {
