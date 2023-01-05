@@ -19,7 +19,6 @@ use crate::{
 		ics04_channel::{
 			channel::ChannelEnd,
 			error::Error,
-			events::WriteAcknowledgement,
 			msgs::{ChannelMsg, PacketMsg},
 			packet::PacketResult,
 		},
@@ -28,7 +27,6 @@ use crate::{
 			Ics26Context, ModuleId, ModuleOutputBuilder, ReaderContext, Router,
 		},
 	},
-	events::IbcEvent,
 	handler::{HandlerOutput, HandlerOutputBuilder},
 };
 use alloc::string::ToString;
@@ -232,34 +230,8 @@ where
 
 	match msg {
 		PacketMsg::RecvPacket(msg) => {
-			let ack = cb
-				.on_recv_packet(&ctx_clone, module_output, &msg.packet, &msg.signer)
+			cb.on_recv_packet(&ctx_clone, module_output, &msg.packet, &msg.signer)
 				.map_err(|e| Error::app_module(e.to_string()))?;
-
-			if ack.as_ref().is_empty() {
-				return Err(Error::invalid_acknowledgement())
-			}
-			// NOTE: IBC app modules or middlewares might have written the acknowledgement
-			// synchronously on the OnRecvPacket callback so we only write the acknowledgement if it
-			// does not exist
-			let key = (
-				msg.packet.destination_port.clone(),
-				msg.packet.destination_channel.clone(),
-				msg.packet.sequence,
-			);
-			match ctx.get_packet_acknowledgement(&key) {
-				Ok(_) => {},
-				Err(_) => {
-					let ack_commitment = ctx.ack_commitment(ack.clone());
-					ctx.store_raw_acknowledgement(key.clone(), ack.clone())?;
-					ctx.store_packet_acknowledgement(key, ack_commitment)?;
-					module_output.emit(IbcEvent::WriteAcknowledgement(WriteAcknowledgement {
-						height: ctx.host_height(),
-						packet: msg.packet.clone(),
-						ack: ack.into_bytes(),
-					}))
-				},
-			}
 		},
 		PacketMsg::AckPacket(msg) => cb.on_acknowledgement_packet(
 			&ctx_clone,

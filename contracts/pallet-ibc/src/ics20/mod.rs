@@ -36,7 +36,7 @@ use ibc::{
 	},
 	signer::Signer,
 };
-use ibc_primitives::{CallbackWeight, IbcHandler};
+use ibc_primitives::{CallbackWeight, HandlerMessage, IbcHandler};
 use sp_core::crypto::AccountId32;
 use sp_std::marker::PhantomData;
 
@@ -221,7 +221,11 @@ where
 		let ack = match result {
 			Err(err) => {
 				let ack = format!("{}: {:?}", ACK_ERR_STR, err).as_bytes().to_vec();
-				Pallet::<T>::write_acknowledgement(&packet, ack.clone()).map_err(|e| {
+				Pallet::<T>::handle_message(HandlerMessage::WriteAck {
+					packet: packet.clone(),
+					ack: ack.clone(),
+				})
+				.map_err(|e| {
 					Ics04Error::implementation_specific(format!("[on_recv_packet] {:#?}", e))
 				})?;
 				ack
@@ -244,10 +248,10 @@ where
 					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
 				});
 				let packet = packet.clone();
-				Pallet::<T>::write_acknowledgement(
-					&packet,
-					Ics20Acknowledgement::success().as_ref().to_vec(),
-				)
+				Pallet::<T>::handle_message(HandlerMessage::WriteAck {
+					packet,
+					ack: Ics20Acknowledgement::success().as_ref().to_vec(),
+				})
 				.map_err(|e| {
 					Ics04Error::implementation_specific(format!("[on_recv_packet] {:#?}", e))
 				})?;

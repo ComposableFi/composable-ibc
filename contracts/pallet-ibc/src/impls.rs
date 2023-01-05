@@ -3,7 +3,6 @@ use core::time::Duration;
 
 use super::*;
 use crate::{
-	events::IbcEvent,
 	ics23::{
 		acknowledgements::Acknowledgements, channels::Channels, client_states::ClientStates,
 		connections::Connections, consensus_states::ConsensusStates,
@@ -805,36 +804,9 @@ where
 			},
 			HandlerMessage::SendPacket { data, timeout, port_id, channel_id } =>
 				Pallet::<T>::send_packet(data, timeout, port_id, channel_id),
+			HandlerMessage::WriteAck { ack, packet } =>
+				Pallet::<T>::write_acknowledgement(packet, ack),
 		}
-	}
-
-	fn write_acknowledgement(packet: &Packet, ack: Vec<u8>) -> Result<(), IbcHandlerError> {
-		let mut ctx = Context::<T>::default();
-		Self::store_raw_acknowledgement(
-			(packet.destination_port.clone(), packet.destination_channel, packet.sequence),
-			ack.clone(),
-		)
-		.map_err(|e| IbcHandlerError::AcknowledgementError {
-			msg: Some(format!("Failed to store acknowledgement off chain {:?}", e)),
-		})?;
-		let ack = ctx.ack_commitment(ack.into());
-		ctx.store_packet_acknowledgement(
-			(packet.destination_port.clone(), packet.destination_channel, packet.sequence),
-			ack,
-		)
-		.map_err(|e| IbcHandlerError::WriteAcknowledgementError { msg: Some(e.to_string()) })?;
-		let host_height = ctx.host_height();
-		let event = IbcEvent::WriteAcknowledgement {
-			revision_height: host_height.revision_height,
-			revision_number: host_height.revision_number,
-			port_id: packet.source_port.as_bytes().to_vec(),
-			channel_id: packet.source_channel.clone().to_string().as_bytes().to_vec(),
-			dest_port: packet.destination_port.as_bytes().to_vec(),
-			dest_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
-			sequence: packet.sequence.into(),
-		};
-		Self::deposit_event(Event::<T>::Events { events: vec![Ok(event)] });
-		Ok(())
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
@@ -1004,6 +976,23 @@ where
 		let res = ibc::core::ics26_routing::handler::deliver::<_>(&mut ctx, msg)
 			.map_err(|e| IbcHandlerError::ChannelInitError { msg: Some(e.to_string()) })?;
 		Self::deposit_event(res.events.into());
+		Ok(())
+	}
+
+	fn write_acknowledgement(packet: Packet, ack: Vec<u8>) -> Result<(), IbcHandlerError> {
+		let mut ctx = Context::<T>::default();
+		let result =
+			ibc::core::ics04_channel::handler::write_acknowledgement::process(&ctx, packet, ack)
+				.map_err(|e| IbcHandlerError::AcknowledgementError {
+					msg: Some(format!("Failed to validate acknowledgement{:?}", e)),
+				})?;
+
+		ctx.store_packet_result(result.result).map_err(|e| {
+			IbcHandlerError::AcknowledgementError {
+				msg: Some(format!("Failed to store acknowledgement{:?}", e)),
+			}
+		})?;
+		Self::deposit_event(result.events.into());
 		Ok(())
 	}
 

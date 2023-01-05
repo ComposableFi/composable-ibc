@@ -73,6 +73,12 @@ pub enum HandlerMessage<AccountId> {
 		/// channel id as utf8 string bytes
 		channel_id: ChannelId,
 	},
+	WriteAck {
+		/// Raw acknowledgement bytes
+		ack: Vec<u8>,
+		/// Packet
+		packet: Packet,
+	},
 }
 
 #[derive(
@@ -364,7 +370,6 @@ pub trait IbcHandler<AccountId> {
 	) -> Result<(Height, Timestamp), Error>;
 	/// Handle a message
 	fn handle_message(msg: HandlerMessage<AccountId>) -> Result<(), Error>;
-	fn write_acknowledgement(packet: &Packet, ack: Vec<u8>) -> Result<(), Error>;
 	/// testing related methods
 	#[cfg(feature = "runtime-benchmarks")]
 	fn create_client() -> Result<ClientId, Error>;
