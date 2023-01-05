@@ -19,7 +19,7 @@ use alloc::{
 	format,
 	string::{String, ToString},
 };
-use core::{fmt::Formatter, str::FromStr};
+use core::fmt::Formatter;
 use frame_support::weights::Weight;
 use ibc::{
 	applications::transfer::{
@@ -34,7 +34,7 @@ use ibc::{
 			on_ack_packet::process_ack_packet, on_recv_packet::process_recv_packet,
 			on_timeout_packet::process_timeout_packet,
 		},
-		PrefixedCoin, PrefixedDenom, TracePrefix,
+		PrefixedCoin, TracePrefix,
 	},
 	core::{
 		ics04_channel::{
@@ -242,7 +242,6 @@ where
 			},
 			Ok(packet_data) => {
 				let denom = full_ibc_denom(packet, packet_data.token.clone());
-				let prefixed_denom = PrefixedDenom::from_str(&denom).expect("Should not fail");
 				Pallet::<T>::deposit_event(Event::<T>::TokenReceived {
 					from: packet_data.sender.to_string().as_bytes().to_vec(),
 					to: packet_data.receiver.to_string().as_bytes().to_vec(),
@@ -253,7 +252,7 @@ where
 					is_receiver_source: is_receiver_chain_source(
 						packet.source_port.clone(),
 						packet.source_channel.clone(),
-						&prefixed_denom,
+						&packet_data.token.denom,
 					),
 					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
 					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
@@ -300,8 +299,6 @@ where
 			})?;
 		process_ack_packet(&mut ctx, packet, &packet_data, &ack)
 			.map_err(|e| Ics04Error::implementation_specific(e.to_string()))?;
-		let denom = full_ibc_denom(packet, packet_data.token.clone());
-		let prefixed_denom = PrefixedDenom::from_str(&denom).expect("Should not fail");
 		match ack {
 			Ics20Acknowledgement::Success(_) =>
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
@@ -316,7 +313,7 @@ where
 					is_sender_source: is_sender_chain_source(
 						packet.source_port.clone(),
 						packet.source_channel.clone(),
-						&prefixed_denom,
+						&packet_data.token.denom,
 					),
 					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
 					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
@@ -334,7 +331,7 @@ where
 					is_sender_source: is_sender_chain_source(
 						packet.source_port.clone(),
 						packet.source_channel.clone(),
-						&prefixed_denom,
+						&packet_data.token.denom,
 					),
 					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
 					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),

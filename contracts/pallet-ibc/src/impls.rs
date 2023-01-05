@@ -73,7 +73,10 @@ use ibc_primitives::{
 };
 use scale_info::prelude::string::ToString;
 use sp_core::{crypto::AccountId32, offchain::StorageKind};
-use sp_runtime::{offchain::storage::StorageValueRef, traits::IdentifyAccount};
+use sp_runtime::{
+	offchain::storage::StorageValueRef,
+	traits::{Get, IdentifyAccount},
+};
 use tendermint_proto::Protobuf;
 
 pub const OFFCHAIN_SEND_PACKET_SEQS: &[u8] = b"pallet_ibc:pending_send_packet_sequences";
@@ -1025,11 +1028,14 @@ where
 		channel_id: ChannelId,
 	) -> Result<MsgTransfer<PrefixedCoin>, IbcHandlerError> {
 		let account_id_32: AccountId32 = from.into();
-		let from = runtime_interface::account_id_to_ss58(account_id_32.into())
-			.and_then(|val| String::from_utf8(val).map_err(|_| SS58CodecError::InvalidAccountId))
-			.map_err(|_| IbcHandlerError::SendTransferError {
-				msg: Some("Account Id conversion failed".to_string()),
-			})?;
+		let from = runtime_interface::account_id_to_ss58(
+			account_id_32.into(),
+			<T as frame_system::Config>::SS58Prefix::get(),
+		)
+		.and_then(|val| String::from_utf8(val).map_err(|_| SS58CodecError::InvalidAccountId))
+		.map_err(|_| IbcHandlerError::SendTransferError {
+			msg: Some("Account Id conversion failed".to_string()),
+		})?;
 		let (latest_height, latest_timestamp) =
 			Pallet::<T>::latest_height_and_timestamp(&PortId::transfer(), &channel_id).map_err(
 				|_| IbcHandlerError::TimestampOrHeightError {
