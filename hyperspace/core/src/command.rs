@@ -105,10 +105,10 @@ impl Cmd {
 		let config: Config = toml::from_str(&file_content)?;
 		let any_chain_a = config.chain_a.into_client().await?;
 		let any_chain_b = config.chain_b.into_client().await?;
-		
+
 		fish(any_chain_a, any_chain_b).await
 	}
-	
+
 	pub async fn create_clients(&self) -> Result<Config> {
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
