@@ -47,7 +47,7 @@ use ibc_proto::{
 use pallet_ibc::light_clients::AnyClientMessage;
 #[cfg(any(test, feature = "testing"))]
 use pallet_ibc::Timeout;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use ibc::core::ics02_client::events::UpdateClient;
@@ -93,20 +93,20 @@ impl subxt::Config for DefaultConfig {
 	type ExtrinsicParams = PolkadotExtrinsicParams<Self>;
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Config {
 	pub chain_a: AnyConfig,
 	pub chain_b: AnyConfig,
 	pub core: CoreConfig,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AnyConfig {
 	Parachain(parachain::ParachainClientConfig),
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct CoreConfig {
 	pub prometheus_endpoint: Option<String>,
 }
@@ -672,5 +672,29 @@ impl AnyConfig {
 			AnyConfig::Parachain(config) =>
 				AnyChain::Parachain(ParachainClient::new(config).await?),
 		})
+	}
+
+	pub fn set_client_id(&mut self, client_id: ClientId) {
+		match self {
+			Self::Parachain(chain) => {
+				chain.client_id.replace(client_id);
+			},
+		}
+	}
+
+	pub fn set_connection_id(&mut self, connection_id: ConnectionId) {
+		match self {
+			Self::Parachain(chain) => {
+				chain.connection_id.replace(connection_id);
+			},
+		}
+	}
+
+	pub fn set_channel_whitelist(&mut self, channel_id: ChannelId, port_id: PortId) {
+		match self {
+			Self::Parachain(chain) => {
+				chain.channel_whitelist.push((channel_id, port_id));
+			},
+		}
 	}
 }
