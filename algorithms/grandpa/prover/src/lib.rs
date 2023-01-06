@@ -24,13 +24,11 @@ use beefy_prover::helpers::{
 	fetch_timestamp_extrinsic_with_proof, unsafe_arc_cast, TimeStampExtWithProof,
 };
 use codec::{Decode, Encode};
-use finality_grandpa::Chain;
 use finality_grandpa_rpc::GrandpaApiClient;
 use jsonrpsee::{async_client::Client, ws_client::WsClientBuilder};
 use primitives::{
-	justification::{AncestryChain, GrandpaJustification},
-	parachain_header_storage_key, ClientState, FinalityProof, ParachainHeaderProofs,
-	ParachainHeadersWithFinalityProof,
+	justification::GrandpaJustification, parachain_header_storage_key, ClientState, FinalityProof,
+	ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
 };
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
@@ -325,28 +323,6 @@ where
 					.map_err(|err| anyhow!("Error fetching timestamp with proof: {err:?}"))?;
 			let proofs = ParachainHeaderProofs { state_proof, extrinsic, extrinsic_proof };
 			parachain_headers_with_proof.insert(header.hash().into(), proofs);
-		}
-
-		// now to prune useless unknown headers, we only need the unknown_headers for the relay
-		// chain header for the least parachain height up to the latest finalized relay chain block.
-		if let Some((relay_hash, _)) = para_headers.into_iter().min_by_key(|(_, h)| *h.number()) {
-			let ancestry = AncestryChain::new(&finality_proof.unknown_headers);
-			let mut route = ancestry.ancestry(relay_hash.into(), finality_proof.block)?;
-			route.sort();
-			finality_proof.unknown_headers = finality_proof
-				.unknown_headers
-				.into_iter()
-				.filter(|h| route.binary_search(&h.hash()).is_ok())
-				.collect::<Vec<_>>();
-		} else {
-			// in the special case where there's no parachain headers, let's only send the the
-			// finality target and it's parent block. Fishermen should detect any byzantine
-			// activity.
-			let len = finality_proof.unknown_headers.len();
-			if len > 2 {
-				finality_proof.unknown_headers =
-					finality_proof.unknown_headers[(len - 2)..].to_owned()
-			}
 		}
 
 		Ok(ParachainHeadersWithFinalityProof {

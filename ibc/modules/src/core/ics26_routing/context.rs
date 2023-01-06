@@ -92,6 +92,12 @@ impl Borrow<str> for ModuleId {
 	}
 }
 
+impl AsRef<str> for ModuleId {
+	fn as_ref(&self) -> &str {
+		self.0.as_str()
+	}
+}
+
 /// Types implementing this trait are expected to implement `From<GenericAcknowledgement>`
 pub trait Acknowledgement: AsRef<[u8]> {}
 
@@ -109,6 +115,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 		_channel_id: &ChannelId,
 		_counterparty: &Counterparty,
 		_version: &Version,
+		_relayer: &Signer,
 	) -> Result<(), Error> {
 		Ok(())
 	}
@@ -125,6 +132,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 		_counterparty: &Counterparty,
 		_version: &Version,
 		_counterparty_version: &Version,
+		_relayer: &Signer,
 	) -> Result<Version, Error>;
 
 	fn on_chan_open_ack(
@@ -134,6 +142,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 		_port_id: &PortId,
 		_channel_id: &ChannelId,
 		_counterparty_version: &Version,
+		_relayer: &Signer,
 	) -> Result<(), Error> {
 		Ok(())
 	}
@@ -144,6 +153,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 		_output: &mut ModuleOutputBuilder,
 		_port_id: &PortId,
 		_channel_id: &ChannelId,
+		_relayer: &Signer,
 	) -> Result<(), Error> {
 		Ok(())
 	}
@@ -154,6 +164,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 		_output: &mut ModuleOutputBuilder,
 		_port_id: &PortId,
 		_channel_id: &ChannelId,
+		_relayer: &Signer,
 	) -> Result<(), Error> {
 		Ok(())
 	}
@@ -164,6 +175,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 		_output: &mut ModuleOutputBuilder,
 		_port_id: &PortId,
 		_channel_id: &ChannelId,
+		_relayer: &Signer,
 	) -> Result<(), Error> {
 		Ok(())
 	}
@@ -229,8 +241,8 @@ impl<M: Any + Module> AsAnyMut for M {
 /// instantiation using the `RouterBuilder`.
 pub trait Router {
 	/// Returns a mutable reference to a `Module` registered against the specified `ModuleId`
-	fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module>;
+	fn get_route_mut(&mut self, module_id: &ModuleId) -> Option<&mut dyn Module>;
 
 	/// Returns true if the `Router` has a `Module` registered against the specified `ModuleId`
-	fn has_route(&self, module_id: &impl Borrow<ModuleId>) -> bool;
+	fn has_route(&self, module_id: &ModuleId) -> bool;
 }

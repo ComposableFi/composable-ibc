@@ -22,14 +22,14 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 extern crate alloc;
 
-use alloc::string::{String, ToString};
+use alloc::string::String;
 use asset_registry::{AssetMetadata, DefaultAssetMetadata};
 
 mod weights;
 pub mod xcm_config;
 
 use codec::Encode;
-use core::{borrow::Borrow, str::FromStr};
+use core::str::FromStr;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use ibc::core::{
 	ics24_host::identifier::PortId,
@@ -44,7 +44,9 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Get, IdentifyAccount, Verify},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, MultiSignature,
+	ApplyExtrinsicResult, DispatchError, Either,
+	Either::*,
+	MultiSignature,
 };
 
 use sp_std::prelude::*;
@@ -65,7 +67,7 @@ use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
 };
-use pallet_ibc::{DenomToAssetId, IbcAssetIds, IbcDenoms};
+use pallet_ibc::{DenomToAssetId, IbcAssetIds, IbcAssets, IbcDenoms};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
@@ -538,15 +540,15 @@ pub struct Router {
 }
 
 impl ModuleRouter for Router {
-	fn get_route_mut(&mut self, module_id: &impl Borrow<ModuleId>) -> Option<&mut dyn Module> {
-		match module_id.borrow().to_string().as_str() {
+	fn get_route_mut(&mut self, module_id: &ModuleId) -> Option<&mut dyn Module> {
+		match module_id.as_ref() {
 			pallet_ibc_ping::MODULE_ID => Some(&mut self.pallet_ibc_ping),
 			_ => None,
 		}
 	}
 
-	fn has_route(module_id: &impl Borrow<ModuleId>) -> bool {
-		matches!(module_id.borrow().to_string().as_str(), pallet_ibc_ping::MODULE_ID)
+	fn has_route(module_id: &ModuleId) -> bool {
+		matches!(module_id.as_ref(), pallet_ibc_ping::MODULE_ID)
 	}
 
 	fn lookup_module_by_port(port_id: &PortId) -> Option<ModuleId> {
@@ -649,30 +651,23 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 		String::from_utf8(name).ok()
 	}
 
-	fn ibc_assets(
-		start_key: Option<AssetId>,
-		offset: Option<u32>,
-		mut limit: u64,
-	) -> (Vec<Vec<u8>>, u64, Option<AssetId>) {
-		let mut iterator = if let Some(asset_id) = start_key {
-			let raw_key = asset_id.encode();
-			IbcAssetIds::<Runtime>::iter_from(raw_key).skip(0)
-		} else if let Some(offset) = offset {
-			IbcAssetIds::<Runtime>::iter().skip(offset as usize)
-		} else {
-			IbcAssetIds::<Runtime>::iter().skip(0)
+	fn ibc_assets(start_key: Option<Either<AssetId, u32>>, limit: u64) -> IbcAssets<AssetId> {
+		let mut iterator = match start_key {
+			None => IbcAssetIds::<Runtime>::iter().skip(0),
+			Some(Left(asset_id)) => {
+				let raw_key = asset_id.encode();
+				IbcAssetIds::<Runtime>::iter_from(raw_key).skip(0)
+			},
+			Some(Right(offset)) => IbcAssetIds::<Runtime>::iter().skip(offset as usize),
 		};
 
-		let mut denoms = vec![];
-		for (_, denom) in iterator.by_ref() {
-			denoms.push(denom);
-			limit -= 1;
-			if limit == 0 {
-				break
-			}
+		let denoms = iterator.by_ref().take(limit as usize).map(|(_, denom)| denom).collect();
+		let maybe_currency_id = iterator.next().map(|(id, ..)| id);
+		IbcAssets {
+			denoms,
+			total_count: IbcAssetIds::<Runtime>::count() as u64,
+			next_id: maybe_currency_id,
 		}
-
-		(denoms, IbcAssetIds::<Runtime>::count() as u64, iterator.next().map(|(id, ..)| id))
 	}
 }
 
@@ -969,10 +964,11 @@ impl_runtime_apis! {
 		}
 
 		fn denom_traces(key: Option<AssetId>, offset: Option<u32>, limit: u64, count_total: bool) -> ibc_primitives::QueryDenomTracesResponse {
-			Ibc::get_denom_traces(key, offset, limit, count_total)
+			let key = key.map(|k| Either::Left(k)).or_else(|| offset.map(|o| Either::Right(o)));
+			Ibc::get_denom_traces(key, limit, count_total)
 		}
 
-		fn block_events(extrinsic_index: Option<u32>) -> Vec<pallet_ibc::events::IbcEvent> {
+		fn block_events(extrinsic_index: Option<u32>) -> Vec<Result<pallet_ibc::events::IbcEvent, pallet_ibc::errors::IbcError>> {
 			let mut raw_events = frame_system::Pallet::<Self>::read_events_no_consensus().into_iter();
 			if let Some(idx) = extrinsic_index {
 				raw_events.find_map(|e| {
@@ -995,6 +991,40 @@ impl_runtime_apis! {
 					}
 				}).flatten().collect()
 			}
+		}
+	}
+
+	impl<Call, AccountId> simnode_apis::CreateTransactionApi<Block, AccountId, Call> for Runtime
+		where
+			Call: codec::Codec,
+			AccountId: codec::Codec + codec::EncodeLike<sp_runtime::AccountId32> + Into<sp_runtime::AccountId32> + Clone+ PartialEq + scale_info::TypeInfo + core::fmt::Debug,
+	{
+		fn create_transaction(call: Call, signer: AccountId) -> Vec<u8> {
+			use sp_runtime::{
+				generic::Era, MultiSignature,
+				traits::StaticLookup,
+			};
+			use sp_core::sr25519;
+			let nonce = frame_system::Pallet::<Runtime>::account_nonce(signer.clone());
+			let extra = (
+				frame_system::CheckNonZeroSender::<Runtime>::new(),
+				frame_system::CheckSpecVersion::<Runtime>::new(),
+				frame_system::CheckTxVersion::<Runtime>::new(),
+				frame_system::CheckGenesis::<Runtime>::new(),
+				frame_system::CheckEra::<Runtime>::from(Era::Immortal),
+				frame_system::CheckNonce::<Runtime>::from(nonce),
+				frame_system::CheckWeight::<Runtime>::new(),
+				pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(0),
+			);
+			let signature = MultiSignature::from(sr25519::Signature([0_u8;64]));
+			let address = AccountIdLookup::unlookup(signer.into());
+			let ext = generic::UncheckedExtrinsic::<Address, Call, Signature, SignedExtra>::new_signed(
+				call,
+				address,
+				signature,
+				extra,
+			);
+			ext.encode()
 		}
 	}
 

@@ -39,6 +39,7 @@ use ibc::{
 		ics02_client::{
 			client_consensus::ConsensusState as ConsensusStateT,
 			client_state::{ClientState as ClientStateT, ClientType},
+			events::UpdateClient,
 		},
 		ics04_channel::{
 			channel::{ChannelEnd, Order},
@@ -57,7 +58,7 @@ use ibc_proto::ibc::core::{
 	channel::v1::QueryChannelsResponse, connection::v1::IdentifiedConnection,
 };
 use ibc_rpc::PacketInfo;
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
+use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 
 pub mod error;
 pub mod mock;
@@ -115,7 +116,7 @@ pub trait IbcProvider {
 		T: Chain;
 
 	/// Return a stream that yields when new [`IbcEvents`] are parsed from a finality notification
-	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>>;
+	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>>;
 
 	/// Query client consensus state with proof
 	/// return the consensus height for the client along with the response
@@ -358,10 +359,21 @@ pub trait KeyProvider {
 	fn account_id(&self) -> Signer;
 }
 
+/// Provides an interface for managing IBC misbehaviour.
+#[async_trait::async_trait]
+pub trait MisbehaviourHandler {
+	/// Check the client message for misbehaviour and submit it to the chain if any.
+	async fn check_for_misbehaviour<C: Chain>(
+		&self,
+		counterparty: &C,
+		client_message: AnyClientMessage,
+	) -> Result<(), anyhow::Error>;
+}
+
 /// Provides an interface for the chain to the relayer core for submitting IbcEvents as well as
 /// finality notifications
 #[async_trait::async_trait]
-pub trait Chain: IbcProvider + KeyProvider + Send + Sync {
+pub trait Chain: IbcProvider + MisbehaviourHandler + KeyProvider + Send + Sync {
 	/// Name of this chain, used in logs.
 	fn name(&self) -> &str;
 
@@ -380,6 +392,12 @@ pub trait Chain: IbcProvider + KeyProvider + Send + Sync {
 	/// chain.
 	/// Should return the transaction id
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Self::Error>;
+
+	/// Returns an [`AnyClientMessage`] for an [`UpdateClient`] event
+	async fn query_client_message(
+		&self,
+		update: UpdateClient,
+	) -> Result<AnyClientMessage, Self::Error>;
 }
 
 /// Returns undelivered packet sequences that have been sent out from

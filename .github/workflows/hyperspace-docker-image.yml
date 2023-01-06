@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   build-and-publish:
@@ -12,9 +12,9 @@ jobs:
     concurrency:
       group: hyperspace-docker-image-${{ github.ref }}
       cancel-in-progress: true
-    strategy: 
+    strategy:
       fail-fast: true
-      
+
     steps:
     - name: Clean up
       continue-on-error: true
@@ -23,14 +23,14 @@ jobs:
         docker system prune --force --all --volumes
 
     - uses: actions/checkout@v2
-      with: 
+      with:
         fetch-depth: 0
 
     - name: Login to DockerHub
-      uses: docker/login-action@v1 
+      uses: docker/login-action@v1
       with:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
-        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}  
+        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
     - name: Build Docker image
       run: make -f hyperspace/Makefile build-docker-image-hyperspace

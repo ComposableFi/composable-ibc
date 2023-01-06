@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::string::FromUtf8Error;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -40,6 +41,8 @@ pub enum Error {
 	IbcProofError(#[from] ibc::proofs::ProofError),
 	#[error("Hex decode error")]
 	HexDecode(#[from] hex::FromHexError),
+	#[error("String from utf-8 error")]
+	StringFromUtf8(#[from] FromUtf8Error),
 }
 
 impl From<String> for Error {

@@ -13,9 +13,8 @@
 // limitations under the License.
 
 #![warn(unused_variables)]
-#![allow(clippy::all)]
 
-use futures::StreamExt;
+use futures::{future::ready, StreamExt};
 use primitives::Chain;
 
 pub mod chain;
@@ -27,6 +26,7 @@ pub mod packets;
 pub mod queue;
 
 use events::{has_packet_events, parse_events};
+use ibc::events::IbcEvent;
 use metrics::handler::MetricsHandler;
 
 /// Core relayer loop, waits for new finality events and forwards any new [`ibc::IbcEvents`]
@@ -53,6 +53,58 @@ where
 			// new finality event from chain B
 			result = chain_b_finality.next() => {
 				process_finality_event!(chain_b, chain_a, chain_b_metrics, result)
+			}
+		}
+	}
+
+	Ok(())
+}
+
+pub async fn fish<A, B>(chain_a: A, chain_b: B) -> Result<(), anyhow::Error>
+where
+	A: Chain,
+	A::Error: From<B::Error>,
+	B: Chain,
+	B::Error: From<A::Error>,
+{
+	// we only care about events where the counterparty light client is updated.
+	let (mut chain_a_client_updates, mut chain_b_client_updates) = (
+		chain_a.ibc_events().await.filter_map(|ev| {
+			ready(match ev {
+				IbcEvent::UpdateClient(update) if chain_b.client_id() == *update.client_id() =>
+					Some(update),
+				_ => None,
+			})
+		}),
+		chain_b.ibc_events().await.filter_map(|ev| {
+			ready(match ev {
+				IbcEvent::UpdateClient(update) if chain_a.client_id() == *update.client_id() =>
+					Some(update),
+				_ => None,
+			})
+		}),
+	);
+
+	// loop forever
+	loop {
+		tokio::select! {
+			// new finality event from chain A
+			update = chain_a_client_updates.next() => {
+				let update = match update {
+					Some(update) => update,
+					None => break,
+				};
+				let message = chain_a.query_client_message(update).await?;
+				chain_b.check_for_misbehaviour(&chain_a, message).await?;
+			}
+			// new finality event from chain B
+			update = chain_b_client_updates.next() => {
+				let update = match update {
+					Some(update) => update,
+					None => break,
+				};
+				let message = chain_b.query_client_message(update).await?;
+				chain_a.check_for_misbehaviour(&chain_b, message).await?;
 			}
 		}
 	}

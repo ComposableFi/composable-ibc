@@ -130,7 +130,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let value = create_client_update::<T>().encode_vec();
 
 		let msg = Any { type_url: UPDATE_CLIENT_TYPE_URL.to_string().as_bytes().to_vec(), value };
@@ -156,7 +158,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 
 		// We update the light client state so it can have the required client and consensus states required to process
 		// the proofs that will be submitted
@@ -189,6 +193,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		// Create a connection end and put in storage
 		// Successful processing of a connection open confirm message requires a compatible connection end with state INIT or TRYOPEN
 		// to exist on the local chain
@@ -228,7 +235,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		// Create a connection end and put in storage
 		// Successful processing of a connection open confirm message requires a compatible connection end with state TryOpen
 		// to exist on the local chain
@@ -315,7 +324,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
@@ -362,7 +373,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
@@ -424,7 +437,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
@@ -479,7 +494,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
@@ -533,7 +550,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
@@ -592,7 +611,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(0);
@@ -654,7 +675,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(0);
@@ -714,7 +737,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(0);
@@ -893,7 +918,7 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_open_init(&ctx, &mut output, order, &connection_hops, &port_id, &channel_id, &counterparty, &version).unwrap();
+		handler.on_chan_open_init(&ctx, &mut output, order, &connection_hops, &port_id, &channel_id, &counterparty, &version, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 
 	on_chan_open_try {
@@ -907,7 +932,7 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_open_try(&ctx, &mut output, order, &connection_hops, &port_id, &channel_id, &counterparty, &version, &version).unwrap();
+		handler.on_chan_open_try(&ctx, &mut output, order, &connection_hops, &port_id, &channel_id, &counterparty, &version, &version, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 
 	on_chan_open_ack {
@@ -918,7 +943,7 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_open_ack(&ctx, &mut output, &port_id, &channel_id, &version).unwrap();
+		handler.on_chan_open_ack(&ctx, &mut output, &port_id, &channel_id, &version, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 1)
@@ -931,7 +956,7 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_open_confirm(&ctx, &mut output, &port_id, &channel_id).unwrap();
+		handler.on_chan_open_confirm(&ctx, &mut output, &port_id, &channel_id, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 1)
@@ -946,7 +971,7 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_close_init(&ctx, &mut output, &port_id, &channel_id).unwrap();
+		handler.on_chan_close_init(&ctx, &mut output, &port_id, &channel_id, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 0)
@@ -961,7 +986,7 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_close_confirm(&ctx, &mut output, &port_id, &channel_id).unwrap();
+		handler.on_chan_close_confirm(&ctx, &mut output, &port_id, &channel_id, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 0)
@@ -1220,7 +1245,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(2000, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(GRANDPA_UPDATE_TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(2000, 1), time).unwrap();
 		let msg = MsgUpdateAnyClient::<routing::Context<T>> {
 			client_id: client_id.clone(),
 			client_message,

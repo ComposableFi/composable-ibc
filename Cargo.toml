@@ -37,19 +37,25 @@ members = [
     "hyperspace/parachain",
     "hyperspace/cosmos",
     "hyperspace/testsuite",
+    "hyperspace/metrics",
 
     # utilities
     "utils/subxt/codegen",
     "utils/subxt/generated",
     "utils/parachain-node",
     "utils/parachain-node/runtime",
+    "utils/simnode"
 ]
 
+[patch."https://github.com/paritytech/jsonrpsee"]
+jsonrpsee = { version = "0.15.1" }
 
 [patch.crates-io]
+sc-executor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-application-crypto = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
+sp-version = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-core-hashing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-debug-derive = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
 sp-externalities = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }

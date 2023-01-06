@@ -21,4 +21,4 @@
 include!(concat!(env!("OUT_DIR"), "/runtime.rs"));
 
 #[cfg(not(feature = "build-metadata-from-ws"))]
-pub use subxt_generated::rococo::*;
+pub use subxt_generated::relaychain::*;

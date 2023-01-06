@@ -23,7 +23,7 @@ relaychain:
 # Parachain Configuration
 parachains:
   # Config for first parachain
-  - image: seunlanlege/centauri-parachain:v0.9.27
+  - image: parachain-node:latest
     chain: # this could be a string like `dev` or a config object
       base: dev-2000 # the chain to use
       collators: # override collators
@@ -54,7 +54,7 @@ parachains:
       - flags:
           - --charlie
   # Config for second parachain
-  - image: seunlanlege/centauri-parachain:v0.9.27
+  - image: parachain-node:latest
     chain: # this could be a string like `dev` or a config object
       base: dev-2001 # the chain to use
       collators: # override collators

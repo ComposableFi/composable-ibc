@@ -232,10 +232,11 @@ where
 	) -> Result<(Vec<ParachainHeader>, BatchProof<H256>), Error>
 	where
 		T::BlockNumber: Ord + sp_runtime::traits::Zero,
+		u32: From<T::BlockNumber>,
 	{
-		let header_numbers = header_numbers.into_iter().collect();
+		let header_numbers = header_numbers.into_iter().map(From::from).collect();
 		let FinalizedParaHeads { leaf_indices, raw_finalized_heads: finalized_blocks } =
-			fetch_finalized_parachain_heads(
+			fetch_finalized_parachain_heads::<T>(
 				&self.relay_client,
 				commitment_block_number,
 				latest_beefy_height,

@@ -49,5 +49,6 @@ async fn main() -> Result<()> {
 				.await
 				.map_err(|e| anyhow!(e))
 		},
+		Subcommand::Fish(cmd) => cmd.fish().await,
 	}
 }

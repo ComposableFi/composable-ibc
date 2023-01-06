@@ -15,7 +15,10 @@
 
 use primitives::HostFunctions;
 use sp_core::ed25519::{Public, Signature};
-use sp_runtime::{app_crypto::RuntimePublic, traits::BlakeTwo256};
+use sp_runtime::{
+	app_crypto::RuntimePublic,
+	traits::{BlakeTwo256, Header},
+};
 use std::fmt::Debug;
 
 /// Only holds implementations for the relevant Host Functions for the verifier
@@ -27,7 +30,17 @@ impl light_client_common::HostFunctions for HostFunctionsProvider {
 }
 
 impl HostFunctions for HostFunctionsProvider {
+	type Header = sp_runtime::generic::Header<u32, BlakeTwo256>;
+
 	fn ed25519_verify(sig: &Signature, msg: &[u8], pubkey: &Public) -> bool {
 		pubkey.verify(&msg, sig)
+	}
+
+	fn insert_relay_header_hashes(_headers: &[<Self::Header as Header>::Hash]) {
+		unimplemented!()
+	}
+
+	fn contains_relay_header_hash(_hash: <Self::Header as Header>::Hash) -> bool {
+		unimplemented!()
 	}
 }
