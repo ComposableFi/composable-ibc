@@ -21,7 +21,7 @@ use sp_keystore::{testing::KeyStore, KeystoreExt};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
-	MultiSignature, Perbill,
+	MultiSignature, Percent,
 };
 use std::sync::Arc;
 use system::EnsureRoot;
@@ -29,7 +29,7 @@ use system::EnsureRoot;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 type Header = generic::Header<u32, BlakeTwo256>;
-use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::traits::{AccountIdConversion, Get, IdentifyAccount, Verify};
 
 pub type AssetId = u128;
 pub type Amount = i128;
@@ -195,13 +195,20 @@ impl Config for Test {
 }
 
 parameter_types! {
-	pub const FeePalletId: PalletId = PalletId(*b"ics20fee");
-	pub const ServiceCharge: Perbill = Perbill::from_percent(1);
+	pub const ServiceCharge: Percent = Percent::from_percent(1);
+}
+
+pub struct PalletAccount;
+
+impl Get<IbcAccount<AccountId>> for PalletAccount {
+	fn get() -> IbcAccount<AccountId> {
+		IbcAccount(PalletId(*b"ics20fee").into_account_truncating())
+	}
 }
 
 impl crate::ics20_fee::Config for Test {
 	type ServiceCharge = ServiceCharge;
-	type PalletId = FeePalletId;
+	type PalletAccount = PalletAccount;
 }
 
 impl pallet_timestamp::Config for Test {
@@ -273,10 +280,7 @@ pub struct Router {
 
 impl Default for Router {
 	fn default() -> Self {
-		Self {
-			ibc_ping: Default::default(),
-			ics20_with_fee: crate::ics20_fee::Ics20ServiceCharge::<Test>::default(),
-		}
+		Self { ibc_ping: Default::default(), ics20_with_fee: Default::default() }
 	}
 }
 

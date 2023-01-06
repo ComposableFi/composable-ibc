@@ -3,6 +3,7 @@ pub mod context;
 use crate::{routing::Context, ChannelIds, Config, DenomToAssetId, Event, Pallet, WeightInfo};
 use alloc::{
 	format,
+	str::FromStr,
 	string::{String, ToString},
 };
 use core::fmt::Formatter;
@@ -21,7 +22,7 @@ use ibc::{
 			on_ack_packet::process_ack_packet, on_recv_packet::process_recv_packet,
 			on_timeout_packet::process_timeout_packet,
 		},
-		PrefixedCoin, TracePrefix,
+		PrefixedCoin, PrefixedDenom, TracePrefix,
 	},
 	core::{
 		ics04_channel::{
@@ -231,31 +232,57 @@ where
 				ack
 			},
 			Ok(packet_data) => {
-				let denom = full_ibc_denom(packet, packet_data.token.clone());
-				Pallet::<T>::deposit_event(Event::<T>::TokenReceived {
-					from: packet_data.sender.to_string().as_bytes().to_vec(),
-					to: packet_data.receiver.to_string().as_bytes().to_vec(),
-					ibc_denom: denom.as_bytes().to_vec(),
-					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
+				let amount = packet_data.token.amount.as_u256();
+				let u256_words = &amount.as_ref()[2..];
+				// We need to reject transaction amounts that are larger than u128 since we expect
+				// the balance type of the runtime to be a u128; For a U256 to be converted to a
+				// u128 without truncating, the last two words should be zero
+				if u256_words[0] != 0 || u256_words[1] != 0 {
+					let ack = format!("{}: Token amount exceeds bounds for u128", ACK_ERR_STR)
+						.as_bytes()
+						.to_vec();
+					Pallet::<T>::handle_message(HandlerMessage::WriteAck {
+						packet: packet.clone(),
+						ack: ack.clone(),
+					})
+					.map_err(|e| {
+						Ics04Error::implementation_specific(format!("[on_recv_packet] {:#?}", e))
+					})?;
+					ack
+				} else {
+					let denom = full_ibc_denom(packet, packet_data.token.clone());
+					let prefixed_denom = PrefixedDenom::from_str(&denom).expect("Should not fail");
+					Pallet::<T>::deposit_event(Event::<T>::TokenReceived {
+						from: packet_data.sender.to_string().as_bytes().to_vec(),
+						to: packet_data.receiver.to_string().as_bytes().to_vec(),
+						ibc_denom: denom.as_bytes().to_vec(),
+						local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
+							&denom,
+						)
 						.ok(),
-					amount: packet_data.token.amount.as_u256().as_u128().into(),
-					is_receiver_source: is_receiver_chain_source(
-						packet.source_port.clone(),
-						packet.source_channel.clone(),
-						&packet_data.token.denom,
-					),
-					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
-					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
-				});
-				let packet = packet.clone();
-				Pallet::<T>::handle_message(HandlerMessage::WriteAck {
-					packet,
-					ack: Ics20Acknowledgement::success().as_ref().to_vec(),
-				})
-				.map_err(|e| {
-					Ics04Error::implementation_specific(format!("[on_recv_packet] {:#?}", e))
-				})?;
-				Ics20Acknowledgement::success().as_ref().to_vec()
+						amount: packet_data.token.amount.as_u256().as_u128().into(),
+						is_receiver_source: is_receiver_chain_source(
+							packet.source_port.clone(),
+							packet.source_channel.clone(),
+							&prefixed_denom,
+						),
+						source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
+						destination_channel: packet
+							.destination_channel
+							.to_string()
+							.as_bytes()
+							.to_vec(),
+					});
+					let packet = packet.clone();
+					Pallet::<T>::handle_message(HandlerMessage::WriteAck {
+						packet,
+						ack: Ics20Acknowledgement::success().as_ref().to_vec(),
+					})
+					.map_err(|e| {
+						Ics04Error::implementation_specific(format!("[on_recv_packet] {:#?}", e))
+					})?;
+					Ics20Acknowledgement::success().as_ref().to_vec()
+				}
 			},
 		};
 		Ok(Acknowledgement::from_bytes(ack))
