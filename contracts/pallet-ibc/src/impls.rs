@@ -62,14 +62,13 @@ use ibc::{
 };
 use ibc_primitives::{
 	apply_prefix, channel_id_from_bytes, client_id_from_bytes, connection_id_from_bytes,
-	get_channel_escrow_address, port_id_from_bytes, runtime_interface,
-	runtime_interface::SS58CodecError, ConnectionHandshake, Error as IbcHandlerError,
-	HandlerMessage, IbcHandler, IdentifiedChannel, IdentifiedClientState, IdentifiedConnection,
-	PacketInfo, PacketState, QueryChannelResponse, QueryChannelsResponse, QueryClientStateResponse,
-	QueryConnectionResponse, QueryConnectionsResponse, QueryConsensusStateResponse,
-	QueryNextSequenceReceiveResponse, QueryPacketAcknowledgementResponse,
-	QueryPacketAcknowledgementsResponse, QueryPacketCommitmentResponse,
-	QueryPacketCommitmentsResponse, QueryPacketReceiptResponse,
+	get_channel_escrow_address, port_id_from_bytes, runtime_interface, ConnectionHandshake,
+	Error as IbcHandlerError, HandlerMessage, IbcHandler, IdentifiedChannel, IdentifiedClientState,
+	IdentifiedConnection, PacketInfo, PacketState, QueryChannelResponse, QueryChannelsResponse,
+	QueryClientStateResponse, QueryConnectionResponse, QueryConnectionsResponse,
+	QueryConsensusStateResponse, QueryNextSequenceReceiveResponse,
+	QueryPacketAcknowledgementResponse, QueryPacketAcknowledgementsResponse,
+	QueryPacketCommitmentResponse, QueryPacketCommitmentsResponse, QueryPacketReceiptResponse,
 };
 use scale_info::prelude::string::ToString;
 use sp_core::{crypto::AccountId32, offchain::StorageKind};
@@ -1031,9 +1030,8 @@ where
 		let from = runtime_interface::account_id_to_ss58(
 			account_id_32.into(),
 			<T as frame_system::Config>::SS58Prefix::get(),
-		)
-		.and_then(|val| String::from_utf8(val).map_err(|_| SS58CodecError::InvalidAccountId))
-		.map_err(|_| IbcHandlerError::SendTransferError {
+		);
+		let from = String::from_utf8(from).map_err(|_| IbcHandlerError::SendTransferError {
 			msg: Some("Account Id conversion failed".to_string()),
 		})?;
 		let (latest_height, latest_timestamp) =
