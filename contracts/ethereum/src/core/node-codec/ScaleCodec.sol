@@ -12,7 +12,7 @@ contract ScaleCodec is ICodec {
         pure
         returns (uint32 value)
     {
-        uint8 prefix = input[0]; // todo: readByte here
+        uint8 prefix = input[0];
         if (prefix % 4 == 0) {
             value = uint32(prefix) >> 2;
         } else if (prefix % 4 == 1) {
@@ -20,14 +20,14 @@ contract ScaleCodec is ICodec {
             if (x > 0x0011_1111 && x <= 0x0011_1111_1111_1111) {
                 value = uint32(x);
             } else {
-                // handle error: U32_OUT_OF_RANGE
+                revert("U32_OUT_OF_RANGE");
             }
         } else if (prefix % 4 == 2) {
             uint32 x = decodeU32(input) >> 2;
             if (x > 0x0011_1111_1111_1111 && x <= uint32(0xffffffff) >> 2) {
                 value = x;
             } else {
-                // handle error: U32_OUT_OF_RANGE
+                revert("U32_OUT_OF_RANGE");
             }
         } else {
             if (prefix >> 2 == 0) {
@@ -35,10 +35,10 @@ contract ScaleCodec is ICodec {
                 if (x > uint32(0xffffffff) >> 2) {
                     value = x;
                 } else {
-                    // handle error: U32_OUT_OF_RANGE
+                    revert("U32_OUT_OF_RANGE");
                 }
             } else {
-                // handle error: U32_OUT_OF_RANGE
+                revert("U32_OUT_OF_RANGE");
             }
         }
         return value;
@@ -46,28 +46,36 @@ contract ScaleCodec is ICodec {
 
     // Basic integers are encoded using a fixed-width little-endian (LE) format.
     function decodeU16(uint8[] memory input) public pure returns (uint16) {
-        // todo: implementation
+        // Check that the input is the correct length for a U16
+        require(input.length == 2, "Input length must be 2 for U16 decoding");
+
+        // Initialize a variable to hold the result
+        uint16 result;
+
+        // Iterate through the input bytes, starting from the least significant byte
+        for (uint256 i = 0; i < 2; i++) {
+            // Shift the result left by 8 bits and add the current input byte
+            result = (result << 8) + input[i];
+        }
+
+        // Return the result
+        return result;
     }
 
     function decodeU32(uint8[] memory input) public pure returns (uint32) {
-        // todo: implementation
-    }
+        // Check that the input is the correct length for a U32
+        require(input.length == 4, "Input length must be 4 for U32 decoding");
 
-    function readByte(uint8[] memory input)
-        external
-        pure
-        returns (uint8[] memory)
-    {
-        uint8[] memory buffer;
-        buffer[0] = 0;
-        return read(input, buffer);
-    }
+        // Initialize a variable to hold the result
+        uint32 result;
 
-    function read(uint8[] memory input, uint8[] memory into)
-        internal
-        pure
-        returns (uint8[] memory)
-    {
-        require(into.length <= input.length, "Not enough data to fill buffer");
+        // Iterate through the input bytes, starting from the least significant byte
+        for (uint256 i = 0; i < 4; i++) {
+            // Shift the result left by 8 bits and add the current input byte
+            result = (result << 8) + input[i];
+        }
+
+        // Return the result
+        return result;
     }
 }
