@@ -246,18 +246,15 @@ where
 				msg.packet.destination_channel.clone(),
 				msg.packet.sequence,
 			);
-			match ctx.get_packet_acknowledgement(&key) {
-				Ok(_) => {},
-				Err(_) => {
-					let ack_commitment = ctx.ack_commitment(ack.clone());
-					ctx.store_raw_acknowledgement(key.clone(), ack.clone())?;
-					ctx.store_packet_acknowledgement(key, ack_commitment)?;
-					module_output.emit(IbcEvent::WriteAcknowledgement(WriteAcknowledgement {
-						height: ctx.host_height(),
-						packet: msg.packet.clone(),
-						ack: ack.into_bytes(),
-					}))
-				},
+			if let Err(_) = ctx.get_packet_acknowledgement(&key) {
+				let ack_commitment = ctx.ack_commitment(ack.clone());
+				ctx.store_raw_acknowledgement(key.clone(), ack.clone())?;
+				ctx.store_packet_acknowledgement(key, ack_commitment)?;
+				module_output.emit(IbcEvent::WriteAcknowledgement(WriteAcknowledgement {
+					height: ctx.host_height(),
+					packet: msg.packet.clone(),
+					ack: ack.into_bytes(),
+				}))
 			}
 		},
 		PacketMsg::AckPacket(msg) => cb.on_acknowledgement_packet(
