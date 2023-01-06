@@ -81,9 +81,9 @@ pub fn ss58_to_account_id_32(raw_str: &str) -> Result<[u8; 32], SS58CodecError> 
 		.map_err(|_| SS58CodecError::InvalidString)
 }
 
-pub fn account_id_to_ss58(bytes: [u8; 32]) -> Result<Vec<u8>, SS58CodecError> {
+pub fn account_id_to_ss58(bytes: [u8; 32], version: u16) -> Result<Vec<u8>, SS58CodecError> {
 	let account_id = AccountId32::new(bytes);
-	let encoded = to_ss58check_with_version(account_id, 49); // todo: this should be based on the runtime.
+	let encoded = to_ss58check_with_version(account_id, version);
 	Ok(encoded.as_bytes().to_vec())
 }
 

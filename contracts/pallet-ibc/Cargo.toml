@@ -40,12 +40,11 @@ light-client-common = { path = "../../light-clients/common", default-features = 
 ics10-grandpa = { path = "../../light-clients/ics10-grandpa", default-features = false }
 ics11-beefy = { path = "../../light-clients/ics11-beefy", default-features = false }
 ics07-tendermint = { path = "../../light-clients/ics07-tendermint", default-features = false }
-
+hex = { version = "0.4.3", default-features = false }
 # local deps
 ibc-primitives = { path = "primitives", default-features = false }
 
 # optional
-hex = { version = "0.4.3", default-features = false, optional = true }
 hex-literal = { version = "0.3.4", default-features = false, optional = true }
 prost = { version = "0.11", default-features = false, optional = true }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, optional = true }
@@ -128,6 +127,7 @@ std = [
   "sp-finality-grandpa/std",
   "finality-grandpa/std",
   "serde",
+  "hex/std"
 ]
 
 runtime-benchmarks = [
@@ -139,7 +139,6 @@ runtime-benchmarks = [
   "hex-literal",
   "pallet-timestamp",
   "pallet-timestamp/runtime-benchmarks",
-  "hex",
   "simple-iavl",
   "prost",
   "ibc-primitives/runtime-benchmarks",
