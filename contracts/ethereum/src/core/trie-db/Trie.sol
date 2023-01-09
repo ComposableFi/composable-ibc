@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
-import "../interfaces/ITrie.sol";
+import "../../interfaces/ITrie.sol";
+import "../../interfaces/ISpec.sol";
 import "./LookUp.sol";
 
-contract Trie is ITrie {
+contract Trie is ITrie, ISpec {
     address owner;
     LookUp lookUpContract;
 
@@ -19,11 +20,11 @@ contract Trie is ITrie {
     }
 
     function getWith(
-        bytes32 root,
+        bytes memory root,
         TrieLayout calldata layout,
         uint8[] calldata key,
         DB[] calldata KVStore
-    ) external returns (bytes memory value) {
+    ) external view returns (uint8[] memory value) {
         bool ok = false;
         (ok, value) = lookUpContract.lookUpWithoutCache(
             KVStore,
