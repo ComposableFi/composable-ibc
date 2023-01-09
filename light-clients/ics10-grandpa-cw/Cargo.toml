@@ -57,7 +57,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, features = ["disable_panic_handler", "disable_oom", "disable_allocator"] }
 sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, features = [] }
-prost = { version = "0.10", default-features = false }
+prost = { version = "0.11", default-features = false }
 blake2-rfc = { version = "0.2.18", default-features = false }
 ed25519-dalek = { version = "1.0.1", default-features = false, features = ["u64_backend"] }
 twox-hash = { version = "1.6.3", default-features = false, features = ["digest_0_10"] }

@@ -4289,7 +4289,7 @@ dependencies = [
 name = "ics08-wasm"
 version = "0.1.0"
 dependencies = [
- "prost 0.10.4",
+ "prost 0.11.5",
  "prost-build 0.11.1",
 ]
 
@@ -4358,7 +4358,7 @@ dependencies = [
  "ics23 0.8.0-alpha",
  "light-client-common",
  "pallet-ibc",
- "prost 0.10.4",
+ "prost 0.11.5",
  "schemars",
  "serde",
  "sha2 0.10.6",

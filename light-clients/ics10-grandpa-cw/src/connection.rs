@@ -8,8 +8,14 @@ use ibc::{
 	},
 	Height,
 };
+use std::time::Duration;
 
 impl<'a, H: HostFunctions> ConnectionReader for Context<'a, H> {
+	fn minimum_delay_period(&self) -> Duration {
+		// FIXME: delay period
+		Duration::from_secs(0)
+	}
+
 	fn connection_end(&self, _conn_id: &ConnectionId) -> Result<ConnectionEnd, Error> {
 		Err(Error::implementation_specific(
 			"'connection_end' is unavailable from the client".to_string(),
