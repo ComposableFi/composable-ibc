@@ -991,17 +991,14 @@ where
 
 	fn write_acknowledgement(packet: Packet, ack: Vec<u8>) -> Result<(), IbcHandlerError> {
 		let mut ctx = Context::<T>::default();
+		let error = |action, err| {
+			let msg = Some(format!("Failed to {} acknowledgement{:?}", action, err));
+			IbcHandlerError::AcknowledgementError { msg }
+		};
 		let result =
 			ibc::core::ics04_channel::handler::write_acknowledgement::process(&ctx, packet, ack)
-				.map_err(|e| IbcHandlerError::AcknowledgementError {
-					msg: Some(format!("Failed to validate acknowledgement{:?}", e)),
-				})?;
-
-		ctx.store_packet_result(result.result).map_err(|e| {
-			IbcHandlerError::AcknowledgementError {
-				msg: Some(format!("Failed to store acknowledgement{:?}", e)),
-			}
-		})?;
+				.map_err(|e| error("validate", e))?;
+		ctx.store_packet_result(result.result).map_err(|e| error("store", e))?;
 		Self::deposit_event(result.events.into());
 		Ok(())
 	}
