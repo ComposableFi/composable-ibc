@@ -10,7 +10,7 @@ contract HashDBRef is ITrie, ISpec {
 
     function get(
         DB[] memory KVStore,
-        bytes32 hash,
+        bytes memory hash,
         Slice calldata nibble_key,
         Hasher memory hasher
     ) external view returns (uint8[] memory value) {
@@ -42,9 +42,11 @@ contract HashDBRef is ITrie, ISpec {
         return value;
     }
 
-    function combine(bytes32 hash, Slice calldata nibble_key)
+    function combine(bytes memory hash, Slice calldata nibble_key)
         internal
         view
         returns (bytes memory)
-    {}
+    {
+        // TODO: figure this out
+    }
 }

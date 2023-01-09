@@ -66,15 +66,12 @@ contract NibbleSlice is ITrie {
         uint256 split = s.offset / nibbleOps.NIBBLE_PER_BYTE();
         uint256 ix = s.offset % nibbleOps.NIBBLE_PER_BYTE();
         uint8[] memory slicedArray = s.data;
+        for (uint8 i; i < split; i++) {
+            slicedArray[i] = s.data[i];
+        }
         if (ix == 0) {
-            for (uint8 i; i < split; i++) {
-                slicedArray[i] = s.data[i];
-            }
             s.offset = 0;
         } else {
-            for (uint8 i; i < split; i++) {
-                slicedArray[i] = s.data[i];
-            }
             s.offset = nibbleOps.padLeft(s.data[split]);
         }
         return Slice(slicedArray, s.offset);

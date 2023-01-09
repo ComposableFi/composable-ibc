@@ -12,6 +12,14 @@ contract NodeBuilder is ICodec, ITrie {
 
     uint8 constant NIBBLE_LENGTH = 16;
 
+    /**
+     * @dev Builds a Node object from a NodePlan object.
+     * A NodePlan is a  blueprint for decoding a Node from a byte slice.
+     * Stores NodePlanType and additional data needed to build Node.
+     * @param nodePlan The NodePlan object specifying how to build the Node.
+     * @param data The data needed to build the Node.
+     * @return The built Node object.
+     */
     function buildNode(NodePlanStruct memory nodePlan, uint8[] calldata data)
         external
         view
@@ -75,6 +83,14 @@ contract NodeBuilder is ICodec, ITrie {
         }
     }
 
+    /**
+     * @dev Builds a Slice object from a SlicePlan object.
+     * A SlicePlan is a Plan for decoding a nibble slice from a byte slice.
+     * Stores start/end indices and offset within the key/value it belongs to.
+     * @param slicePlan The SlicePlan object specifying how to build the Slice.
+     * @param data The data needed to build the Slice.
+     * @return The built Slice object.
+     */
     function buildSlice(SlicePlan memory slicePlan, uint8[] calldata data)
         internal
         pure
@@ -87,25 +103,38 @@ contract NodeBuilder is ICodec, ITrie {
             );
     }
 
+    /**
+     * @dev Builds a Value object from a ValuePlan object.
+     * A ValuePlan is a Plan for representing a key/value pair in a NodePlan.
+     * Stores start/end indices and boolean indicating whether data is stored inline.
+     * @param valuePlan The ValuePlan object specifying how to build the Value.
+     * @param data The data needed to build the Value.
+     * @return The built Value object.
+     */
     function buildValue(ValuePlan memory valuePlan, uint8[] calldata data)
         internal
         pure
         returns (Value memory)
     {
-        if (valuePlan.isInline) {
-            return Value(true, data[valuePlan.start:valuePlan.end]);
-        }
-        return Value(false, data[valuePlan.start:valuePlan.end]);
+        return Value(valuePlan.isInline, data[valuePlan.start:valuePlan.end]);
     }
 
+    /**
+     * @dev Builds a NodeHandle object from a NodeHandlePlan object.
+     * A NodeHandlePlan is a decoding plan for constructing a NodeHandle from an encoded trie node.
+     * Stores start/end indices and boolean indicating whether data is a hash.
+     * @param nodeHandlePlan The NodeHandlePlan object specifying how to build the NodeHandle.
+     * @param data The data needed to build the NodeHandle.
+     * @return The built NodeHandle object.
+     */
     function buildNodeHandle(
         NodeHandlePlan memory nodeHandlePlan,
         uint8[] calldata data
     ) internal pure returns (NodeHandle memory) {
-        if (nodeHandlePlan.isHash) {
-            return
-                NodeHandle(true, data[nodeHandlePlan.start:nodeHandlePlan.end]);
-        }
-        return NodeHandle(false, data[nodeHandlePlan.start:nodeHandlePlan.end]);
+        return
+            NodeHandle(
+                nodeHandlePlan.isHash,
+                data[nodeHandlePlan.start:nodeHandlePlan.end]
+            );
     }
 }
