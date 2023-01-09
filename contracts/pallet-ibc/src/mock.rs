@@ -7,7 +7,6 @@ use frame_support::{
 		fungibles::{metadata::Mutate, Create, InspectMetadata},
 		ConstU64, Everything,
 	},
-	PalletId,
 };
 use frame_system as system;
 use ibc_primitives::IbcAccount;
@@ -29,7 +28,7 @@ use system::EnsureRoot;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 type Header = generic::Header<u32, BlakeTwo256>;
-use sp_runtime::traits::{AccountIdConversion, Get, IdentifyAccount, Verify};
+use sp_runtime::traits::{IdentifyAccount, Verify};
 
 pub type AssetId = u128;
 pub type Amount = i128;
@@ -196,19 +195,12 @@ impl Config for Test {
 
 parameter_types! {
 	pub const ServiceCharge: Percent = Percent::from_percent(1);
-}
-
-pub struct PalletAccount;
-
-impl Get<IbcAccount<AccountId>> for PalletAccount {
-	fn get() -> IbcAccount<AccountId> {
-		IbcAccount(PalletId(*b"ics20fee").into_account_truncating())
-	}
+	pub const PalletId: frame_support::PalletId = frame_support::PalletId(*b"ics20fee");
 }
 
 impl crate::ics20_fee::Config for Test {
 	type ServiceCharge = ServiceCharge;
-	type PalletAccount = PalletAccount;
+	type PalletId = PalletId;
 }
 
 impl pallet_timestamp::Config for Test {
@@ -272,16 +264,10 @@ where
 	}
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Router {
 	ibc_ping: pallet_ibc_ping::IbcModule<Test>,
 	ics20_with_fee: crate::ics20_fee::Ics20ServiceCharge<Test>,
-}
-
-impl Default for Router {
-	fn default() -> Self {
-		Self { ibc_ping: Default::default(), ics20_with_fee: Default::default() }
-	}
 }
 
 impl ModuleRouter for Router {

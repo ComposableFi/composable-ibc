@@ -39,16 +39,20 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::pallet_prelude::*;
+	use frame_support::{pallet_prelude::*, PalletId};
 	use frame_system::pallet_prelude::OriginFor;
 	use ibc_primitives::IbcAccount;
-	use sp_runtime::{traits::Get, Percent};
+	use sp_runtime::{
+		traits::{AccountIdConversion, Get},
+		Percent,
+	};
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + crate::Config {
 		#[pallet::constant]
 		type ServiceCharge: Get<Percent>;
-		type PalletAccount: Get<IbcAccount<Self::AccountId>>;
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
 	}
 
 	#[pallet::pallet]
@@ -66,6 +70,15 @@ pub mod pallet {
 			<T as crate::Config>::AdminOrigin::ensure_origin(origin)?;
 			<ServiceCharge<T>>::put(charge);
 			Ok(())
+		}
+	}
+
+	impl<T: Config> Pallet<T>
+	where
+		<T as crate::Config>::AccountIdConversion: From<IbcAccount<T::AccountId>>,
+	{
+		pub fn account_id() -> <T as crate::Config>::AccountIdConversion {
+			IbcAccount(T::PalletId::get().into_account_truncating()).into()
 		}
 	}
 }
@@ -210,17 +223,14 @@ where
 			// in the ics20 on_recv_packet callback so we can multiply safely.
 			// Percent does Non-Overflowing multiplication so this is infallible
 			let fee = percent * packet_data.token.amount.as_u256().low_u128();
-			// This account conversion is infallible if the ics20 on_recv_packet callback executed
-			// successfully
 			let receiver = <T as crate::Config>::AccountIdConversion::try_from(
 				packet_data.receiver,
 			)
-			.map_err(|_| Ics04Error::implementation_specific("Failed to parse account".to_string()))
-			.expect(
-				"Account Id conversion should not fail, it has been validated in a previous step",
-			);
-			let pallet_account = T::PalletAccount::get();
-			let prefixed_coin = if is_receiver_chain_source(
+			.map_err(|_| {
+				Ics04Error::implementation_specific("Failed to receiver account".to_string())
+			})?;
+			let pallet_account = Pallet::<T>::account_id();
+			let mut prefixed_coin = if is_receiver_chain_source(
 				packet.source_port.clone(),
 				packet.source_channel,
 				&packet_data.token.denom,
@@ -228,19 +238,18 @@ where
 				let prefix = TracePrefix::new(packet.source_port.clone(), packet.source_channel);
 				let mut c = packet_data.token;
 				c.denom.remove_trace_prefix(&prefix);
-				c.amount = fee.into();
 				c
 			} else {
 				let prefix =
 					TracePrefix::new(packet.destination_port.clone(), packet.destination_channel);
 				let mut c = packet_data.token;
 				c.denom.add_trace_prefix(prefix);
-				c.amount = fee.into();
 				c
 			};
+			prefixed_coin.amount = fee.into();
 			// Now we proceed to send the service fee from the receiver's account to the pallet
 			// account
-			ctx.send_coins(&receiver, &(pallet_account.into()), &prefixed_coin)
+			ctx.send_coins(&receiver, &pallet_account, &prefixed_coin)
 				.map_err(|e| Ics04Error::app_module(e.to_string()))?;
 		}
 		Ok(ack)

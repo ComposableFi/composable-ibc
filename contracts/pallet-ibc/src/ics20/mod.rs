@@ -6,7 +6,7 @@ use alloc::{
 	str::FromStr,
 	string::{String, ToString},
 };
-use core::fmt::Formatter;
+
 use frame_support::weights::Weight;
 pub use ibc::applications::transfer::{MODULE_ID_STR, PORT_ID_STR};
 use ibc::{
@@ -41,14 +41,8 @@ use ibc_primitives::{CallbackWeight, HandlerMessage, IbcHandler};
 use sp_core::crypto::AccountId32;
 use sp_std::marker::PhantomData;
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, Debug, PartialEq)]
 pub struct IbcModule<T: Config>(PhantomData<T>);
-
-impl<T: Config> core::fmt::Debug for IbcModule<T> {
-	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-		write!(f, "ibc-transfer")
-	}
-}
 
 impl<T: Config> Default for IbcModule<T> {
 	fn default() -> Self {
