@@ -1,0 +1,10 @@
+[package]
+name = "ics08-wasm"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+prost-build = "0.11.1"
+
+[dependencies]
+prost = { version = "0.10", default-features = false }
