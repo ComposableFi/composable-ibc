@@ -5,14 +5,25 @@ import "../../interfaces/ITrie.sol";
 import "../../interfaces/ISpec.sol";
 import "./NibbleSlice.sol";
 import "./HashDBRef.sol";
+import "../node-codec/NodeCodec.sol";
+import "../node-codec/NodeBuilder.sol";
 
 contract LookUp is ITrie, ISpec {
     NibbleSlice nibbleSlice;
     HashDBRef db;
+    NodeCodec nodeCodec;
+    NodeBuilder nodeBuilder;
 
-    constructor(address nibbleSliceAddress, address hashDbAddress) {
+    constructor(
+        address nibbleSliceAddress,
+        address hashDbAddress,
+        address nodeCodecAddress,
+        address nodeBuilderAddress
+    ) {
         nibbleSlice = NibbleSlice(nibbleSliceAddress);
         db = HashDBRef(hashDbAddress);
+        nodeCodec = NodeCodec(nodeCodecAddress);
+        nodeBuilder = NodeBuilder(nodeBuilderAddress);
     }
 
     /**
@@ -29,9 +40,9 @@ contract LookUp is ITrie, ISpec {
     function lookUpWithoutCache(
         DB[] memory KVStore,
         uint8[] calldata key,
-        bytes32 rootHash,
+        bytes memory rootHash,
         TrieLayout calldata layout
-    ) external returns (bool, uint8[] memory result) {
+    ) external view returns (bool, uint8[] memory result) {
         // keeps track of the number of nibbles in the key that have been traversed
         uint8 keyNibbles = 0;
         // keeps track of the remaining nibbles in the key to be looked up
@@ -58,12 +69,9 @@ contract LookUp is ITrie, ISpec {
                 return (false, result);
             }
 
-            uint256 nodeDataIdx = 0;
-
-            while (nodeDataIdx < nodeData.length) {
+            while (true) {
                 // decode the node data from the codec instance
-                decoded = decodeUsingCodec(nodeData[nodeDataIdx], layout.Codec);
-                nodeDataIdx++;
+                decoded = decodeUsingCodec(nodeData, layout.Hash);
 
                 if (decoded.nodeType == NodeType.Leaf) {
                     // check if the slice matches the partial key
@@ -173,15 +181,14 @@ contract LookUp is ITrie, ISpec {
         DB[] memory KVStore,
         Value memory value,
         Slice memory prefix,
-        bytes32 hash,
+        bytes memory hash,
         TrieLayout calldata layout
     ) internal view returns (uint8[] memory) {
         if (value.isInline) {
             // if the value is inline, decode it and return the result
             return _decodeValue(layout.Hash, value.data);
         } else {
-            // // if the value is a node, get the hash value and lookup the value in the db
-            // bytes memory v =
+            // if the value is a node, get the hash value and lookup the value in the db
             // If a value is found, decode and return the result
             return
                 _decodeValue(
@@ -196,31 +203,38 @@ contract LookUp is ITrie, ISpec {
         pure
         returns (uint8[] memory)
     {
-        return value;
+        return value; // TODO: check if bytes or uint8 array
     }
 
     function _decodeHash(uint8[] memory data, Hasher memory hasher)
         internal
         pure
-        returns (bytes32)
+        returns (bytes memory)
     {
-        if (data.length != hasher.hasherLength) {
-            return 0x0;
-        }
-        bytes32 hash = 0x0;
+        require(
+            data.length == hasher.hasherLength,
+            "data length not equal to hasher length"
+        );
 
+        bytes memory hash = new bytes(hasher.hasherLength);
         // copy the data from the input slice to the hash variable
         for (uint256 i = 0; i < data.length; i++) {
             assembly {
-                let b := mload(add(data, i))
-                mstore(add(hash, i), b)
+                mstore(add(hash, i), mload(add(data, i)))
             }
         }
         return hash;
     }
 
-    function decodeUsingCodec(uint8 node_data, NodeCodec codec)
+    function decodeUsingCodec(uint8[] memory node_data, Hasher memory hasher)
         internal
+        view
         returns (Node memory)
-    {}
+    {
+        return
+            nodeBuilder.buildNode(
+                nodeCodec.decodePlan(node_data, hasher),
+                node_data
+            );
+    }
 }

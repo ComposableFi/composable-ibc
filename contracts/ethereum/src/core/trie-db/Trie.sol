@@ -20,11 +20,11 @@ contract Trie is ITrie, ISpec {
     }
 
     function getWith(
-        bytes32 root,
+        bytes memory root,
         TrieLayout calldata layout,
         uint8[] calldata key,
         DB[] calldata KVStore
-    ) external returns (uint8[] memory value) {
+    ) external view returns (uint8[] memory value) {
         bool ok = false;
         (ok, value) = lookUpContract.lookUpWithoutCache(
             KVStore,

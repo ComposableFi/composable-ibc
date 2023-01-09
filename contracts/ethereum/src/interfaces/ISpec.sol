@@ -12,15 +12,10 @@ interface ISpec {
         uint8 hasherLength;
     }
 
-    enum NodeCodec {
-        ParityScaleCodec
-    }
-
     struct TrieLayout {
         bool USE_EXTENSION;
         bool ALLOW_EMPTY;
         bool MAX_INLINE_VALUE;
         Hasher Hash;
-        NodeCodec Codec;
     }
 }
