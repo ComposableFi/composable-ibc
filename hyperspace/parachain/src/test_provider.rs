@@ -41,7 +41,11 @@ use sp_runtime::{
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr};
-use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip};
+#[cfg(feature = "dali")]
+use subxt::tx::AssetTip as Tip;
+#[cfg(not(feature = "dali"))]
+use subxt::tx::PlainTip as Tip;
+use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams};
 
 impl<T: config::Config + Send + Sync> ParachainClient<T>
 where
@@ -112,6 +116,10 @@ where
 					api::runtime_types::ibc_primitives::Timeout::Absolute { timestamp, height },
 			},
 		};
+
+		#[cfg(feature = "dali")]
+		let asset_id = api::runtime_types::primitives::currency::CurrencyId(asset_id);
+
 		// Submit extrinsic to parachain node
 		let call = api::tx().ibc().transfer(params, asset_id, amount.into());
 
@@ -178,7 +186,7 @@ where
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
 	RelayChainHeader: From<T::Header>,
 {
 	async fn send_transfer(&self, transfer: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
