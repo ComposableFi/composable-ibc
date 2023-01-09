@@ -209,20 +209,15 @@ contract LookUp is ITrie, ISpec {
     function _decodeHash(uint8[] memory data, Hasher memory hasher)
         internal
         pure
-        returns (bytes memory)
+        returns (bytes memory hash)
     {
         require(
             data.length == hasher.hasherLength,
             "data length not equal to hasher length"
         );
 
-        bytes memory hash = new bytes(hasher.hasherLength);
-        // copy the data from the input slice to the hash variable
-        for (uint256 i = 0; i < data.length; i++) {
-            assembly {
-                mstore(add(hash, i), mload(add(data, i)))
-            }
-        }
+        // TODO: based on the hashed, implement this when bytes/uint8 array is clear
+
         return hash;
     }
 
