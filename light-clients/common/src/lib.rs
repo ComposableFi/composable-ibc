@@ -25,6 +25,7 @@ use alloc::{string::ToString, vec, vec::Vec};
 use anyhow::anyhow;
 use codec::Compact;
 use core::{
+	cmp::Ordering,
 	fmt,
 	fmt::{Debug, Display, Formatter},
 	str::FromStr,
@@ -232,4 +233,43 @@ where
 	}
 
 	Ok(())
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct LocalHeight {
+	/// Previously known as "epoch"
+	pub revision_number: u64,
+	/// The height of a block
+	pub revision_height: u64,
+}
+
+impl LocalHeight {
+	/// Returns the next minimal successor height.
+	pub fn succ(self) -> Self {
+		Self { revision_number: self.revision_number, revision_height: self.revision_height + 1 }
+	}
+}
+
+impl From<Height> for LocalHeight {
+	fn from(val: Height) -> Self {
+		LocalHeight { revision_number: val.revision_number, revision_height: val.revision_height }
+	}
+}
+
+impl From<LocalHeight> for Height {
+	fn from(val: LocalHeight) -> Self {
+		Height { revision_number: val.revision_number, revision_height: val.revision_height }
+	}
+}
+
+impl PartialOrd for LocalHeight {
+	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+		Some(self.cmp(other))
+	}
+}
+
+impl Ord for LocalHeight {
+	fn cmp(&self, other: &Self) -> Ordering {
+		Height::from(*self).cmp(&Height::from(*other))
+	}
 }

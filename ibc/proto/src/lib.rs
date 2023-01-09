@@ -216,7 +216,7 @@ pub mod ics23 {
 	include_proto!("ics23.rs");
 }
 
-pub(crate) mod base64 {
+pub mod base64 {
 	use alloc::{string::String, vec::Vec};
 
 	use serde::{Deserialize, Deserializer, Serialize, Serializer};
