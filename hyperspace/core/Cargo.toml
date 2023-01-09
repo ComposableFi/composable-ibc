@@ -68,3 +68,4 @@ build-metadata-from-ws = [
 #near = ["dep:near"]
 #cosmos = ["dep:cosmos"]
 testing = [ "primitives/testing", "parachain/testing" ]
+dali = ["parachain/dali"]

@@ -16,6 +16,10 @@ use crate::{
 	config, parachain::api, signer::ExtrinsicSigner, utils::unsafe_cast_to_jsonrpsee_client, Error,
 	ParachainClient,
 };
+#[cfg(feature = "dali")]
+use api::runtime_types::dali_runtime::Call;
+#[cfg(not(feature = "dali"))]
+use api::runtime_types::parachain_runtime::Call;
 use finality_grandpa::BlockNumberOps;
 use futures::{Stream, StreamExt};
 use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
@@ -116,10 +120,7 @@ where
 		Ok(())
 	}
 
-	pub async fn submit_sudo_call(
-		&self,
-		call: api::runtime_types::parachain_runtime::Call,
-	) -> Result<(), Error> {
+	pub async fn submit_sudo_call(&self, call: Call) -> Result<(), Error> {
 		let signer = ExtrinsicSigner::<T, Self>::new(
 			self.key_store.clone(),
 			self.key_type_id.clone(),
@@ -151,9 +152,7 @@ where
 	) -> Result<(), Error> {
 		let params = api::runtime_types::pallet_ibc::PalletParams { receive_enabled, send_enabled };
 
-		let call = api::runtime_types::parachain_runtime::Call::Ibc(
-			api::runtime_types::pallet_ibc::pallet::Call::set_params { params },
-		);
+		let call = Call::Ibc(api::runtime_types::pallet_ibc::pallet::Call::set_params { params });
 
 		self.submit_sudo_call(call).await?;
 

@@ -219,8 +219,12 @@ where
 		use api::runtime_types::{
 			frame_system::EventRecord,
 			pallet_ibc::pallet::{Call as IbcCall, Event as PalletEvent},
-			parachain_runtime::{Call as RuntimeCall, Event},
 		};
+
+		#[cfg(feature = "dali")]
+		use api::runtime_types::dali_runtime::{Call as RuntimeCall, Event};
+		#[cfg(not(feature = "dali"))]
+		use api::runtime_types::parachain_runtime::{Call as RuntimeCall, Event};
 		use pallet_ibc::events::IbcEvent as RawIbcEvent;
 
 		let host_height = update.height();
