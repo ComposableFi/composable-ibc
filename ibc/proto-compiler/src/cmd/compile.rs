@@ -148,6 +148,10 @@ impl CompileCmd {
 			.type_attribute(".ibc.core.types.v1", attrs_serde)
 			.type_attribute(".ibc.applications.transfer.v1", attrs_serde)
 			.type_attribute(".ibc.applications.interchain_accounts.controller.v1", attrs_serde)
+			.type_attribute(
+				".ibc.applications.interchain_accounts.v1.InterchainAccountPacketData",
+				attrs_serde,
+			)
 			.type_attribute(".ics23", attrs_serde)
 			.type_attribute(".ics23.LeafOp", attrs_eq)
 			.type_attribute(".ics23.LeafOp", attrs_jsonschema)
@@ -203,6 +207,7 @@ impl CompileCmd {
 		];
 
 		let mut proto_includes_paths = vec![
+			format!("{}/../proto/definitions/third_party", root),
 			format!("{}/../proto", root),
 			format!("{}/proto", sdk_dir.display()),
 			format!("{}/third_party/proto", sdk_dir.display()),

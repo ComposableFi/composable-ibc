@@ -1,46 +1,16 @@
-/// MsgRegisterAccount defines the payload for Msg/RegisterAccount
-#[derive(::serde::Serialize, ::serde::Deserialize)]
+/// Message type to push new wasm code
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgRegisterAccount {
+pub struct MsgPushNewWasmCode {
     #[prost(string, tag="1")]
-    pub connection_id: ::prost::alloc::string::String,
-    #[prost(string, tag="2")]
-    pub owner: ::prost::alloc::string::String,
-    #[prost(string, tag="3")]
-    pub version: ::prost::alloc::string::String,
+    pub signer: ::prost::alloc::string::String,
+    #[prost(bytes="vec", tag="3")]
+    pub code: ::prost::alloc::vec::Vec<u8>,
 }
-/// MsgRegisterAccountResponse defines the response for Msg/RegisterAccount
-#[derive(::serde::Serialize, ::serde::Deserialize)]
+/// Response in case of successful handling
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgRegisterAccountResponse {
-    #[prost(string, tag="1")]
-    pub channel_id: ::prost::alloc::string::String,
-}
-/// MsgSubmitTx defines the payload for MsgSubmitTx
-#[derive(::serde::Serialize, ::serde::Deserialize)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgSubmitTx {
-    #[prost(string, tag="1")]
-    pub owner: ::prost::alloc::string::String,
-    #[prost(string, tag="2")]
-    pub connection_id: ::prost::alloc::string::String,
-    /// Timeout height relative to the current block height.
-    /// The timeout is disabled when set to 0.
-    #[prost(message, optional, tag="3")]
-    pub timeout_height: ::core::option::Option<super::super::super::super::core::client::v1::Height>,
-    /// Timeout timestamp in absolute nanoseconds since unix epoch.
-    /// The timeout is disabled when set to 0.
-    #[prost(uint64, tag="4")]
-    pub timeout_timestamp: u64,
-    #[prost(message, optional, tag="5")]
-    pub packet_data: ::core::option::Option<super::super::v1::InterchainAccountPacketData>,
-}
-/// MsgSubmitTxResponse defines the response for MsgSubmitTx
-#[derive(::serde::Serialize, ::serde::Deserialize)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgSubmitTxResponse {
-    #[prost(uint64, tag="1")]
-    pub sequence: u64,
+pub struct MsgPushNewWasmCodeResponse {
+    #[prost(bytes="vec", tag="1")]
+    pub code_id: ::prost::alloc::vec::Vec<u8>,
 }
 /// Generated client implementations.
 #[cfg(feature = "client")]
@@ -48,7 +18,7 @@ pub mod msg_client {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
     use tonic::codegen::http::Uri;
-    /// Msg defines the 27-interchain-accounts/controller Msg service.
+    /// Msg defines the ibc/wasm Msg service.
     #[derive(Debug, Clone)]
     pub struct MsgClient<T> {
         inner: tonic::client::Grpc<T>,
@@ -113,11 +83,11 @@ pub mod msg_client {
             self.inner = self.inner.accept_compressed(encoding);
             self
         }
-        /// RegisterAccount defines a rpc handler for MsgRegisterAccount.
-        pub async fn register_account(
+        /// PushNewWasmCode defines a rpc handler method for PushNewWasmCode.
+        pub async fn push_new_wasm_code(
             &mut self,
-            request: impl tonic::IntoRequest<super::MsgRegisterAccount>,
-        ) -> Result<tonic::Response<super::MsgRegisterAccountResponse>, tonic::Status> {
+            request: impl tonic::IntoRequest<super::MsgPushNewWasmCode>,
+        ) -> Result<tonic::Response<super::MsgPushNewWasmCodeResponse>, tonic::Status> {
             self.inner
                 .ready()
                 .await
@@ -129,27 +99,7 @@ pub mod msg_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/ibc.applications.interchain_accounts.controller.v1.Msg/RegisterAccount",
-            );
-            self.inner.unary(request.into_request(), path, codec).await
-        }
-        /// SubmitTx defines a rpc handler for MsgSubmitTx.
-        pub async fn submit_tx(
-            &mut self,
-            request: impl tonic::IntoRequest<super::MsgSubmitTx>,
-        ) -> Result<tonic::Response<super::MsgSubmitTxResponse>, tonic::Status> {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/ibc.applications.interchain_accounts.controller.v1.Msg/SubmitTx",
+                "/ibc.lightclients.wasm.v1.Msg/PushNewWasmCode",
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
@@ -163,18 +113,13 @@ pub mod msg_server {
     ///Generated trait containing gRPC methods that should be implemented for use with MsgServer.
     #[async_trait]
     pub trait Msg: Send + Sync + 'static {
-        /// RegisterAccount defines a rpc handler for MsgRegisterAccount.
-        async fn register_account(
+        /// PushNewWasmCode defines a rpc handler method for PushNewWasmCode.
+        async fn push_new_wasm_code(
             &self,
-            request: tonic::Request<super::MsgRegisterAccount>,
-        ) -> Result<tonic::Response<super::MsgRegisterAccountResponse>, tonic::Status>;
-        /// SubmitTx defines a rpc handler for MsgSubmitTx.
-        async fn submit_tx(
-            &self,
-            request: tonic::Request<super::MsgSubmitTx>,
-        ) -> Result<tonic::Response<super::MsgSubmitTxResponse>, tonic::Status>;
+            request: tonic::Request<super::MsgPushNewWasmCode>,
+        ) -> Result<tonic::Response<super::MsgPushNewWasmCodeResponse>, tonic::Status>;
     }
-    /// Msg defines the 27-interchain-accounts/controller Msg service.
+    /// Msg defines the ibc/wasm Msg service.
     #[derive(Debug)]
     pub struct MsgServer<T: Msg> {
         inner: _Inner<T>,
@@ -234,23 +179,23 @@ pub mod msg_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
-                "/ibc.applications.interchain_accounts.controller.v1.Msg/RegisterAccount" => {
+                "/ibc.lightclients.wasm.v1.Msg/PushNewWasmCode" => {
                     #[allow(non_camel_case_types)]
-                    struct RegisterAccountSvc<T: Msg>(pub Arc<T>);
-                    impl<T: Msg> tonic::server::UnaryService<super::MsgRegisterAccount>
-                    for RegisterAccountSvc<T> {
-                        type Response = super::MsgRegisterAccountResponse;
+                    struct PushNewWasmCodeSvc<T: Msg>(pub Arc<T>);
+                    impl<T: Msg> tonic::server::UnaryService<super::MsgPushNewWasmCode>
+                    for PushNewWasmCodeSvc<T> {
+                        type Response = super::MsgPushNewWasmCodeResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::MsgRegisterAccount>,
+                            request: tonic::Request<super::MsgPushNewWasmCode>,
                         ) -> Self::Future {
                             let inner = self.0.clone();
                             let fut = async move {
-                                (*inner).register_account(request).await
+                                (*inner).push_new_wasm_code(request).await
                             };
                             Box::pin(fut)
                         }
@@ -260,43 +205,7 @@ pub mod msg_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = RegisterAccountSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
-                    };
-                    Box::pin(fut)
-                }
-                "/ibc.applications.interchain_accounts.controller.v1.Msg/SubmitTx" => {
-                    #[allow(non_camel_case_types)]
-                    struct SubmitTxSvc<T: Msg>(pub Arc<T>);
-                    impl<T: Msg> tonic::server::UnaryService<super::MsgSubmitTx>
-                    for SubmitTxSvc<T> {
-                        type Response = super::MsgSubmitTxResponse;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::MsgSubmitTx>,
-                        ) -> Self::Future {
-                            let inner = self.0.clone();
-                            let fut = async move { (*inner).submit_tx(request).await };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = SubmitTxSvc(inner);
+                        let method = PushNewWasmCodeSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
@@ -344,30 +253,20 @@ pub mod msg_server {
         }
     }
     impl<T: Msg> tonic::server::NamedService for MsgServer<T> {
-        const NAME: &'static str = "ibc.applications.interchain_accounts.controller.v1.Msg";
+        const NAME: &'static str = "ibc.lightclients.wasm.v1.Msg";
     }
 }
-/// Params defines the set of on-chain interchain accounts parameters.
-/// The following parameters may be used to disable the controller submodule.
-#[derive(::serde::Serialize, ::serde::Deserialize)]
+/// WasmCode query
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Params {
-    /// controller_enabled enables or disables the controller submodule.
-    #[prost(bool, tag="1")]
-    pub controller_enabled: bool,
+pub struct WasmCodeQuery {
+    #[prost(string, tag="1")]
+    pub code_id: ::prost::alloc::string::String,
 }
-/// QueryParamsRequest is the request type for the Query/Params RPC method.
-#[derive(::serde::Serialize, ::serde::Deserialize)]
+/// WasmCode response
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct QueryParamsRequest {
-}
-/// QueryParamsResponse is the response type for the Query/Params RPC method.
-#[derive(::serde::Serialize, ::serde::Deserialize)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct QueryParamsResponse {
-    /// params defines the parameters of the module.
-    #[prost(message, optional, tag="1")]
-    pub params: ::core::option::Option<Params>,
+pub struct WasmCodeResponse {
+    #[prost(bytes="vec", tag="1")]
+    pub code: ::prost::alloc::vec::Vec<u8>,
 }
 /// Generated client implementations.
 #[cfg(feature = "client")]
@@ -375,7 +274,7 @@ pub mod query_client {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
     use tonic::codegen::http::Uri;
-    /// Query provides defines the gRPC querier service.
+    /// Query service for wasm module
     #[derive(Debug, Clone)]
     pub struct QueryClient<T> {
         inner: tonic::client::Grpc<T>,
@@ -440,11 +339,11 @@ pub mod query_client {
             self.inner = self.inner.accept_compressed(encoding);
             self
         }
-        /// Params queries all parameters of the ICA controller submodule.
-        pub async fn params(
+        /// Get Wasm code for given code id
+        pub async fn wasm_code(
             &mut self,
-            request: impl tonic::IntoRequest<super::QueryParamsRequest>,
-        ) -> Result<tonic::Response<super::QueryParamsResponse>, tonic::Status> {
+            request: impl tonic::IntoRequest<super::WasmCodeQuery>,
+        ) -> Result<tonic::Response<super::WasmCodeResponse>, tonic::Status> {
             self.inner
                 .ready()
                 .await
@@ -456,7 +355,7 @@ pub mod query_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/ibc.applications.interchain_accounts.controller.v1.Query/Params",
+                "/ibc.lightclients.wasm.v1.Query/WasmCode",
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
@@ -470,13 +369,13 @@ pub mod query_server {
     ///Generated trait containing gRPC methods that should be implemented for use with QueryServer.
     #[async_trait]
     pub trait Query: Send + Sync + 'static {
-        /// Params queries all parameters of the ICA controller submodule.
-        async fn params(
+        /// Get Wasm code for given code id
+        async fn wasm_code(
             &self,
-            request: tonic::Request<super::QueryParamsRequest>,
-        ) -> Result<tonic::Response<super::QueryParamsResponse>, tonic::Status>;
+            request: tonic::Request<super::WasmCodeQuery>,
+        ) -> Result<tonic::Response<super::WasmCodeResponse>, tonic::Status>;
     }
-    /// Query provides defines the gRPC querier service.
+    /// Query service for wasm module
     #[derive(Debug)]
     pub struct QueryServer<T: Query> {
         inner: _Inner<T>,
@@ -536,22 +435,22 @@ pub mod query_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
-                "/ibc.applications.interchain_accounts.controller.v1.Query/Params" => {
+                "/ibc.lightclients.wasm.v1.Query/WasmCode" => {
                     #[allow(non_camel_case_types)]
-                    struct ParamsSvc<T: Query>(pub Arc<T>);
-                    impl<T: Query> tonic::server::UnaryService<super::QueryParamsRequest>
-                    for ParamsSvc<T> {
-                        type Response = super::QueryParamsResponse;
+                    struct WasmCodeSvc<T: Query>(pub Arc<T>);
+                    impl<T: Query> tonic::server::UnaryService<super::WasmCodeQuery>
+                    for WasmCodeSvc<T> {
+                        type Response = super::WasmCodeResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::QueryParamsRequest>,
+                            request: tonic::Request<super::WasmCodeQuery>,
                         ) -> Self::Future {
                             let inner = self.0.clone();
-                            let fut = async move { (*inner).params(request).await };
+                            let fut = async move { (*inner).wasm_code(request).await };
                             Box::pin(fut)
                         }
                     }
@@ -560,7 +459,7 @@ pub mod query_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = ParamsSvc(inner);
+                        let method = WasmCodeSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
@@ -608,6 +507,51 @@ pub mod query_server {
         }
     }
     impl<T: Query> tonic::server::NamedService for QueryServer<T> {
-        const NAME: &'static str = "ibc.applications.interchain_accounts.controller.v1.Query";
+        const NAME: &'static str = "ibc.lightclients.wasm.v1.Query";
     }
+}
+/// Wasm light client's Client state
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ClientState {
+    #[prost(bytes="vec", tag="1")]
+    pub data: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes="vec", tag="2")]
+    pub code_id: ::prost::alloc::vec::Vec<u8>,
+    #[prost(message, optional, tag="3")]
+    pub latest_height: ::core::option::Option<super::super::super::core::client::v1::Height>,
+    #[prost(message, repeated, tag="4")]
+    pub proof_specs: ::prost::alloc::vec::Vec<super::super::super::super::ics23::ProofSpec>,
+    #[prost(string, tag="5")]
+    pub repository: ::prost::alloc::string::String,
+}
+/// Wasm light client's ConsensusState
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ConsensusState {
+    #[prost(bytes="vec", tag="1")]
+    pub data: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes="vec", tag="2")]
+    pub code_id: ::prost::alloc::vec::Vec<u8>,
+    /// timestamp that corresponds to the block height in which the ConsensusState
+    /// was stored.
+    #[prost(uint64, tag="3")]
+    pub timestamp: u64,
+    /// commitment root
+    #[prost(message, optional, tag="4")]
+    pub root: ::core::option::Option<super::super::super::core::commitment::v1::MerkleRoot>,
+}
+/// Wasm light client Header
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Header {
+    #[prost(bytes="vec", tag="1")]
+    pub data: ::prost::alloc::vec::Vec<u8>,
+    #[prost(message, optional, tag="2")]
+    pub height: ::core::option::Option<super::super::super::core::client::v1::Height>,
+}
+/// Wasm light client Misbehaviour
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Misbehaviour {
+    #[prost(string, tag="1")]
+    pub client_id: ::prost::alloc::string::String,
+    #[prost(bytes="vec", tag="2")]
+    pub data: ::prost::alloc::vec::Vec<u8>,
 }

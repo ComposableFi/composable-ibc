@@ -60,6 +60,8 @@ pub struct ConsensusState {
 /// that implements Misbehaviour interface expected by ICS-02
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Misbehaviour {
+    /// ClientID is deprecated
+    #[deprecated]
     #[prost(string, tag="1")]
     pub client_id: ::prost::alloc::string::String,
     #[prost(message, optional, tag="2")]

@@ -32,8 +32,7 @@ pub fn encode_signer_info(sequence: u64, key_bytes: Vec<u8>) -> Result<SignerInf
 }
 
 pub fn encode_auth_info(signer_info: SignerInfo, fee: Fee) -> Result<(AuthInfo, Vec<u8>), Error> {
-	let auth_info =
-		AuthInfo { signer_infos: vec![signer_info], fee: Some(fee) /* tip: None */ };
+	let auth_info = AuthInfo { signer_infos: vec![signer_info], fee: Some(fee), tip: None };
 	let mut auth_info_bytes = Vec::new();
 	Message::encode(&auth_info, &mut auth_info_bytes).map_err(|e| Error::from(e.to_string()))?;
 

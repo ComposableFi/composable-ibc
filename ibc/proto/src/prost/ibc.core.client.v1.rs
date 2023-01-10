@@ -106,6 +106,9 @@ pub struct Params {
     /// allowed_clients defines the list of allowed client state types.
     #[prost(string, repeated, tag="1")]
     pub allowed_clients: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// ehether or not wasm clients are enabled
+    #[prost(bool, tag="2")]
+    pub wasm_clients_enabled: bool,
 }
 /// GenesisState defines the ibc client submodule's genesis state.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
@@ -172,14 +175,14 @@ pub struct MsgCreateClient {
 pub struct MsgCreateClientResponse {
 }
 /// MsgUpdateClient defines an sdk.Msg to update a IBC client state using
-/// the given header.
+/// the given client message.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgUpdateClient {
     /// client unique identifier
     #[prost(string, tag="1")]
     pub client_id: ::prost::alloc::string::String,
-    /// header to update the light client
+    /// client message to update the light client
     #[prost(message, optional, tag="2")]
     pub client_message: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
     /// signer address
@@ -223,16 +226,20 @@ pub struct MsgUpgradeClientResponse {
 }
 /// MsgSubmitMisbehaviour defines an sdk.Msg type that submits Evidence for
 /// light client misbehaviour.
+/// Warning: DEPRECATED
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgSubmitMisbehaviour {
     /// client unique identifier
+    #[deprecated]
     #[prost(string, tag="1")]
     pub client_id: ::prost::alloc::string::String,
     /// misbehaviour used for freezing the light client
+    #[deprecated]
     #[prost(message, optional, tag="2")]
     pub misbehaviour: ::core::option::Option<super::super::super::super::google::protobuf::Any>,
     /// signer address
+    #[deprecated]
     #[prost(string, tag="3")]
     pub signer: ::prost::alloc::string::String,
 }
