@@ -4071,6 +4071,7 @@ dependencies = [
  "ibc",
  "ibc-proto",
  "ibc-rpc",
+ "ics08-wasm",
  "log",
  "pallet-ibc",
  "parity-scale-codec",
@@ -4289,8 +4290,9 @@ dependencies = [
 name = "ics08-wasm"
 version = "0.1.0"
 dependencies = [
+ "ibc",
+ "ibc-proto",
  "prost 0.11.5",
- "prost-build 0.11.1",
 ]
 
 [[package]]
@@ -6992,6 +6994,7 @@ dependencies = [
  "ibc-primitives",
  "ibc-proto",
  "ics07-tendermint",
+ "ics08-wasm",
  "ics10-grandpa",
  "ics11-beefy",
  "ics23 0.8.1",
@@ -14752,6 +14755,11 @@ dependencies = [
 ]
 
 [[patch.unused]]
+name = "wasmi-validation"
+version = "0.4.1"
+source = "git+https://github.com/ComposableFi/wasmi?rev=cd8c0c775a1d197a35ff3d5c7d6cded3d476411b#cd8c0c775a1d197a35ff3d5c7d6cded3d476411b"
+
+[[patch.unused]]
 name = "pallet-asset-tx-payment"
 version = "4.0.0-dev"
 source = "git+https://github.com/vmarkushin/substrate?rev=4f143018dd45282cbdf8de57e0e8f8c6fbadbac4#4f143018dd45282cbdf8de57e0e8f8c6fbadbac4"
@@ -14770,8 +14778,3 @@ source = "git+https://github.com/vmarkushin/substrate?rev=4f143018dd45282cbdf8de
 name = "sc-consensus-manual-seal"
 version = "0.10.0-dev"
 source = "git+https://github.com/vmarkushin/substrate?rev=4f143018dd45282cbdf8de57e0e8f8c6fbadbac4#4f143018dd45282cbdf8de57e0e8f8c6fbadbac4"
-
-[[patch.unused]]
-name = "wasmi-validation"
-version = "0.4.1"
-source = "git+https://github.com/ComposableFi/wasmi?rev=cd8c0c775a1d197a35ff3d5c7d6cded3d476411b#cd8c0c775a1d197a35ff3d5c7d6cded3d476411b"

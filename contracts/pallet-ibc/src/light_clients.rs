@@ -20,6 +20,10 @@ use ibc::core::{
 use ibc_derive::{ClientDef, ClientMessage, ClientState, ConsensusState, Protobuf};
 use ibc_primitives::runtime_interface;
 use ibc_proto::google::protobuf::Any;
+use ics08_wasm::{
+	client_message::WASM_CLIENT_MESSAGE_TYPE_URL, client_state::WASM_CLIENT_STATE_TYPE_URL,
+	consensus_state::WASM_CONSENSUS_STATE_TYPE_URL,
+};
 use ics10_grandpa::{
 	client_message::GRANDPA_CLIENT_MESSAGE_TYPE_URL, client_state::GRANDPA_CLIENT_STATE_TYPE_URL,
 	consensus_state::GRANDPA_CONSENSUS_STATE_TYPE_URL,
@@ -166,6 +170,7 @@ pub enum AnyClient {
 	Grandpa(ics10_grandpa::client_def::GrandpaClient<HostFunctionsManager>),
 	Beefy(ics11_beefy::client_def::BeefyClient<HostFunctionsManager>),
 	Tendermint(ics07_tendermint::client_def::TendermintClient<HostFunctionsManager>),
+	Wasm(ics08_wasm::client_def::WasmClient),
 	#[cfg(test)]
 	Mock(ibc::mock::client_def::MockClient),
 }
@@ -175,6 +180,7 @@ pub enum AnyUpgradeOptions {
 	Grandpa(ics10_grandpa::client_state::UpgradeOptions),
 	Beefy(ics11_beefy::client_state::UpgradeOptions),
 	Tendermint(ics07_tendermint::client_state::UpgradeOptions),
+	Wasm(()),
 	#[cfg(test)]
 	Mock(()),
 }
@@ -187,6 +193,8 @@ pub enum AnyClientState {
 	Beefy(ics11_beefy::client_state::ClientState<HostFunctionsManager>),
 	#[ibc(proto_url = "TENDERMINT_CLIENT_STATE_TYPE_URL")]
 	Tendermint(ics07_tendermint::client_state::ClientState<HostFunctionsManager>),
+	#[ibc(proto_url = "WASM_CLIENT_STATE_TYPE_URL")]
+	Wasm(ics08_wasm::client_state::ClientState),
 	#[cfg(test)]
 	#[ibc(proto_url = "MOCK_CLIENT_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockClientState),
@@ -200,6 +208,8 @@ pub enum AnyConsensusState {
 	Beefy(ics11_beefy::consensus_state::ConsensusState),
 	#[ibc(proto_url = "TENDERMINT_CONSENSUS_STATE_TYPE_URL")]
 	Tendermint(ics07_tendermint::consensus_state::ConsensusState),
+	#[ibc(proto_url = "WASM_CONSENSUS_STATE_TYPE_URL")]
+	Wasm(ics08_wasm::consensus_state::ConsensusState),
 	#[cfg(test)]
 	#[ibc(proto_url = "MOCK_CONSENSUS_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockConsensusState),
@@ -214,6 +224,8 @@ pub enum AnyClientMessage {
 	Beefy(ics11_beefy::client_message::ClientMessage),
 	#[ibc(proto_url = "TENDERMINT_CLIENT_MESSAGE_TYPE_URL")]
 	Tendermint(ics07_tendermint::client_message::ClientMessage),
+	#[ibc(proto_url = "WASM_CLIENT_MESSAGE_TYPE_URL")]
+	Wasm(ics08_wasm::client_message::ClientMessage),
 	#[cfg(test)]
 	#[ibc(proto_url = "MOCK_CLIENT_MESSAGE_TYPE_URL")]
 	Mock(ibc::mock::header::MockClientMessage),
@@ -238,6 +250,10 @@ impl TryFrom<Any> for AnyClientMessage {
 				ics07_tendermint::client_message::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			)),
+			WASM_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Wasm(
+				ics08_wasm::client_message::ClientMessage::decode_vec(&value.value)
+					.map_err(ics02_client::error::Error::decode_raw_header)?,
+			)),
 			_ => Err(ics02_client::error::Error::unknown_consensus_state_type(value.type_url)),
 		}
 	}
@@ -256,6 +272,10 @@ impl From<AnyClientMessage> for Any {
 			},
 			AnyClientMessage::Tendermint(msg) => Any {
 				type_url: TENDERMINT_CLIENT_MESSAGE_TYPE_URL.to_string(),
+				value: msg.encode_vec().expect("encode_vec failed"),
+			},
+			AnyClientMessage::Wasm(msg) => Any {
+				type_url: WASM_CLIENT_MESSAGE_TYPE_URL.to_string(),
 				value: msg.encode_vec().expect("encode_vec failed"),
 			},
 			#[cfg(test)]

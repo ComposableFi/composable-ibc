@@ -753,6 +753,7 @@ pub mod pallet {
 							.map_err(|_| Error::<T>::ClientFreezeFailed)?,
 					)
 				},
+				AnyClientState::Wasm(_) => return Err(Error::<T>::ClientFreezeFailed.into()),
 				#[cfg(test)]
 				AnyClientState::Mock(mut ms) => {
 					ms.frozen_height =

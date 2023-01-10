@@ -16,7 +16,7 @@ use crate::{mock::LocalClientTypes, Chain};
 use futures::{future, StreamExt};
 use ibc::{
 	core::{
-		ics02_client::msgs::create_client::MsgCreateAnyClient,
+		ics02_client::{client_state::ClientState, msgs::create_client::MsgCreateAnyClient},
 		ics03_connection::{connection::Counterparty, msgs::conn_open_init::MsgConnectionOpenInit},
 		ics04_channel,
 		ics04_channel::{
@@ -31,6 +31,7 @@ use ibc::{
 	tx_msg::Msg,
 };
 use ibc_proto::google::protobuf::Any;
+use pallet_ibc::light_clients::AnyClientState;
 use std::{future::Future, time::Duration};
 
 pub async fn timeout_future<T: Future>(future: T, secs: u64, reason: String) -> T::Output {
@@ -47,6 +48,26 @@ pub async fn create_clients(
 ) -> Result<(ClientId, ClientId), anyhow::Error> {
 	let (client_state_a, cs_state_a) = chain_a.initialize_client_state().await?;
 	let (client_state_b, cs_state_b) = chain_b.initialize_client_state().await?;
+
+	let use_wasm_a = false;
+	let client_state_a = if use_wasm_a {
+		AnyClientState::Wasm(ics08_wasm::client_state::ClientState {
+			data: client_state_a.encode_to_vec(),
+			code_id: vec![],
+		})
+	} else {
+		client_state_a
+	};
+
+	let use_wasm_b = true;
+	let client_state_b = if use_wasm_b {
+		AnyClientState::Wasm(ics08_wasm::client_state::ClientState {
+			data: client_state_b.encode_to_vec(),
+			code_id: vec![],
+		})
+	} else {
+		client_state_b
+	};
 
 	let msg = MsgCreateAnyClient::<LocalClientTypes> {
 		client_state: client_state_b,
