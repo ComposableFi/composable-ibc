@@ -62,6 +62,7 @@ use sp_runtime::{
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr, time::Duration};
 use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip};
 
+#[derive(Debug)]
 pub struct TransactionId<Hash> {
 	pub ext_hash: Hash,
 	pub block_hash: Hash,
@@ -655,5 +656,9 @@ where
 		let client_id = ClientId::from_str(&identified_client_state.client_id)
 			.expect("Should have a valid client id");
 		Ok(client_id)
+	}
+
+	async fn upload_wasm(&self, _wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
+		Err(Error::Custom("Uploading WASM to parachain is not supported".to_string()))
 	}
 }

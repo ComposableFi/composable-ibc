@@ -70,7 +70,7 @@ use ics07_tendermint::{
 use pallet_ibc::light_clients::{
 	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
 };
-use primitives::{mock::LocalClientTypes, Chain, IbcProvider, UpdateType};
+use primitives::{mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType};
 use std::{pin::Pin, str::FromStr, time::Duration};
 use tendermint::{block::Height as TmHeight, Time};
 use tendermint_rpc::{
@@ -81,8 +81,12 @@ use tendermint_rpc::{
 };
 use tonic::IntoRequest;
 
-use ibc_proto::ibc::core::channel::v1::IdentifiedChannel;
+use ibc_proto::ibc::{
+	core::channel::v1::IdentifiedChannel,
+	lightclients::wasm::v1::{msg_client::MsgClient, MsgPushNewWasmCode},
+};
 pub use tendermint::Hash;
+use tonic::transport::Endpoint;
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
@@ -1059,5 +1063,21 @@ where
 				})
 			}
 		}
+	}
+
+	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
+		let msg = MsgPushNewWasmCode { signer: self.account_id().to_string(), code: wasm };
+		let resp = MsgClient::connect(
+			Endpoint::try_from(self.grpc_url.to_string())
+				.map_err(|e| Error::from(format!("Failed to parse grpc url: {:?}", e)))?,
+		)
+		.await
+		.map_err(|e| Error::from(format!("Failed to connect to grpc endpoint: {:?}", e)))?
+		.push_new_wasm_code(msg)
+		.await
+		.map_err(|e| {
+			Error::from(format!("Failed to upload wasm code to grpc endpoint: {:?}", e))
+		})?;
+		Ok(resp.into_inner().code_id)
 	}
 }

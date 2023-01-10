@@ -171,6 +171,9 @@ pub struct ParachainClientConfig {
 	pub finality_protocol: FinalityProtocol,
 	/// Digital signature scheme
 	pub key_type: String,
+	/// All the client states and headers will be wrapped in WASM ones.
+	#[serde(default)]
+	pub is_wasm_client: bool,
 }
 
 impl<T> ParachainClient<T>

@@ -327,6 +327,8 @@ pub trait IbcProvider {
 		&self,
 		tx_id: Self::TransactionId,
 	) -> Result<ClientId, Self::Error>;
+
+	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error>;
 }
 
 /// Provides an interface that allows us run the hyperspace-testsuite

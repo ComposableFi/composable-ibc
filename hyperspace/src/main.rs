@@ -28,6 +28,7 @@ async fn main() -> Result<()> {
 
 	match &cli.subcommand {
 		Subcommand::Relay(cmd) => cmd.run().await,
+		Subcommand::UploadWasm(cmd) => cmd.run().await,
 		Subcommand::CreateClients(cmd) => cmd.create_clients().await,
 		Subcommand::CreateConnection(cmd) => cmd.create_connection().await,
 		Subcommand::CreateChannel(cmd) => cmd.create_channel().await,

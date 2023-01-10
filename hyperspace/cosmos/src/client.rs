@@ -25,6 +25,7 @@ use ibc::core::{
 		IBC_QUERY_PATH,
 	},
 };
+use ibc_proto::ibc::lightclients::wasm::v1::{msg_client::MsgClient, MsgPushNewWasmCode};
 use ics07_tendermint::{
 	client_message::Header, client_state::ClientState, consensus_state::ConsensusState,
 	merkle::convert_tm_to_ics_merkle_proof,
@@ -142,6 +143,9 @@ pub struct CosmosClientConfig {
 	pub max_tx_size: usize,
 	/// The key that signs transactions
 	pub keybase: ConfigKeyEntry,
+	/// All the client states and headers will be wrapped in WASM ones.
+	#[serde(default)]
+	pub is_wasm_client: bool,
 	/*
 	Here is a list of dropped configuration parameters from Hermes Config.toml
 	that could be set to default values or removed for the MVP phase:

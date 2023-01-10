@@ -14,15 +14,16 @@
 
 use anyhow::Result;
 use clap::Parser;
-use primitives::Chain;
+use primitives::{Chain, KeyProvider};
 use prometheus::Registry;
 use std::{path::PathBuf, str::FromStr, time::Duration};
 
 use crate::{
-	chain::{AnyConfig, Config, CoreConfig},
+	chain::{AnyChain, AnyConfig, Config, CoreConfig},
 	relay,
 };
 use ibc::core::{ics04_channel::channel::Order, ics24_host::identifier::PortId};
+use ibc_proto::ibc::lightclients::wasm::v1::{msg_client::MsgClient, MsgPushNewWasmCode};
 use metrics::{data::Metrics, handler::MetricsHandler, init_prometheus};
 use primitives::{
 	utils::{create_channel, create_clients, create_connection},
@@ -55,6 +56,8 @@ pub struct QueryCmd {
 pub enum Subcommand {
 	#[clap(name = "relay", about = "Start relaying messages between two chains")]
 	Relay(Cmd),
+	#[clap(name = "upload-wasm", about = "Upload a WASM blob to the chain")]
+	UploadWasm(UploadWasmCmd),
 	#[clap(name = "create-clients", about = "Creates light clients on both chains")]
 	CreateClients(Cmd),
 	#[clap(name = "create-connection", about = "Creates a connection between both chains")]
@@ -89,6 +92,30 @@ pub struct Cmd {
 	/// Channel version
 	#[clap(long)]
 	version: Option<String>,
+}
+
+#[derive(Debug, Clone, Parser)]
+pub struct UploadWasmCmd {
+	/// Relayer chain config path.
+	#[clap(long)]
+	config: String,
+	/// Path to the wasm file.
+	#[clap(long)]
+	wasm_path: PathBuf,
+}
+
+impl UploadWasmCmd {
+	pub async fn run(&self) -> Result<()> {
+		use tokio::fs::read_to_string;
+		let path: PathBuf = self.config.parse()?;
+		let file_content = read_to_string(path).await?;
+		let config: AnyConfig = toml::from_str(&file_content)?;
+		let client = config.into_client().await?;
+		let wasm = tokio::fs::read(&self.wasm_path).await?;
+		let code_id = client.upload_wasm(wasm).await?;
+		println!("WASM blob uploaded. Code ID: {:?}", code_id);
+		Ok(())
+	}
 }
 
 impl Cmd {

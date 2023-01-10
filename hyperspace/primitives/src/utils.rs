@@ -49,26 +49,6 @@ pub async fn create_clients(
 	let (client_state_a, cs_state_a) = chain_a.initialize_client_state().await?;
 	let (client_state_b, cs_state_b) = chain_b.initialize_client_state().await?;
 
-	let use_wasm_a = false;
-	let client_state_a = if use_wasm_a {
-		AnyClientState::Wasm(ics08_wasm::client_state::ClientState {
-			data: client_state_a.encode_to_vec(),
-			code_id: vec![],
-		})
-	} else {
-		client_state_a
-	};
-
-	let use_wasm_b = true;
-	let client_state_b = if use_wasm_b {
-		AnyClientState::Wasm(ics08_wasm::client_state::ClientState {
-			data: client_state_b.encode_to_vec(),
-			code_id: vec![],
-		})
-	} else {
-		client_state_b
-	};
-
 	let msg = MsgCreateAnyClient::<LocalClientTypes> {
 		client_state: client_state_b,
 		consensus_state: cs_state_b,

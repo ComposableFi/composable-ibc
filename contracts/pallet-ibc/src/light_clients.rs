@@ -22,7 +22,7 @@ use ibc_primitives::runtime_interface;
 use ibc_proto::google::protobuf::Any;
 use ics08_wasm::{
 	client_message::WASM_CLIENT_MESSAGE_TYPE_URL, client_state::WASM_CLIENT_STATE_TYPE_URL,
-	consensus_state::WASM_CONSENSUS_STATE_TYPE_URL,
+	consensus_state::WASM_CONSENSUS_STATE_TYPE_URL, Bytes,
 };
 use ics10_grandpa::{
 	client_message::GRANDPA_CLIENT_MESSAGE_TYPE_URL, client_state::GRANDPA_CLIENT_STATE_TYPE_URL,
@@ -200,6 +200,12 @@ pub enum AnyClientState {
 	Mock(ibc::mock::client_state::MockClientState),
 }
 
+impl AnyClientState {
+	pub fn wasm(inner: Self, code_id: Bytes) -> Self {
+		Self::Wasm(ics08_wasm::client_state::ClientState { data: inner.encode_to_vec(), code_id })
+	}
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, ConsensusState, Protobuf)]
 pub enum AnyConsensusState {
 	#[ibc(proto_url = "GRANDPA_CONSENSUS_STATE_TYPE_URL")]
@@ -213,6 +219,16 @@ pub enum AnyConsensusState {
 	#[cfg(test)]
 	#[ibc(proto_url = "MOCK_CONSENSUS_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockConsensusState),
+}
+
+impl AnyConsensusState {
+	pub fn wasm(inner: Self, code_id: Bytes, timestamp: u64) -> Self {
+		Self::Wasm(ics08_wasm::consensus_state::ConsensusState {
+			data: inner.encode_to_vec(),
+			code_id,
+			timestamp,
+		})
+	}
 }
 
 #[derive(Clone, Debug, ClientMessage)]
