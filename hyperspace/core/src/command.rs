@@ -18,7 +18,7 @@ use primitives::Chain;
 use prometheus::Registry;
 use std::{path::PathBuf, str::FromStr, time::Duration};
 
-use crate::{chain::Config, fish, relay};
+use crate::{chain::Config, fish, relay, Mode};
 use ibc::core::{ics04_channel::channel::Order, ics24_host::identifier::PortId};
 use metrics::{data::Metrics, handler::MetricsHandler, init_prometheus};
 use primitives::{
@@ -95,7 +95,8 @@ impl Cmd {
 			tokio::spawn(init_prometheus(addr, registry.clone()));
 		}
 
-		relay(any_chain_a, any_chain_b, Some(metrics_handler_a), Some(metrics_handler_b)).await
+		relay(any_chain_a, any_chain_b, Some(metrics_handler_a), Some(metrics_handler_b), None)
+			.await
 	}
 
 	/// Run fisherman
@@ -151,7 +152,9 @@ impl Cmd {
 		let any_chain_a_clone = any_chain_a.clone();
 		let any_chain_b_clone = any_chain_b.clone();
 		let handle = tokio::task::spawn(async move {
-			relay(any_chain_a_clone, any_chain_b_clone, None, None).await.unwrap();
+			relay(any_chain_a_clone, any_chain_b_clone, None, None, Some(Mode::Light))
+				.await
+				.unwrap();
 		});
 
 		let (connection_id_a, connection_id_b) =
@@ -189,7 +192,9 @@ impl Cmd {
 		let any_chain_a_clone = any_chain_a.clone();
 		let any_chain_b_clone = any_chain_b.clone();
 		let handle = tokio::task::spawn(async move {
-			relay(any_chain_a_clone, any_chain_b_clone, None, None).await.unwrap();
+			relay(any_chain_a_clone, any_chain_b_clone, None, None, Some(Mode::Light))
+				.await
+				.unwrap();
 		});
 
 		let order = Order::from_str(order).expect("Expected one of 'ordered' or 'unordered'");
