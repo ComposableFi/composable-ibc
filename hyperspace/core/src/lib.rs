@@ -34,6 +34,7 @@ pub enum Mode {
 	/// Run without trying to relay packets or query channel state
 	Light,
 }
+
 /// Core relayer loop, waits for new finality events and forwards any new [`ibc::IbcEvents`]
 /// to the counter party chain.
 pub async fn relay<A, B>(

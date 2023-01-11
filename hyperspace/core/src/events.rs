@@ -535,6 +535,7 @@ pub async fn parse_events(
 			_ => continue,
 		}
 	}
+
 	// In light mode do not try to query channel state
 	if let Some(Mode::Light) = mode {
 		return Ok((messages, vec![]))
