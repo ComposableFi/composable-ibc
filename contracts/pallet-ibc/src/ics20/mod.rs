@@ -245,7 +245,11 @@ where
 					ack
 				} else {
 					let denom = full_ibc_denom(packet, packet_data.token.clone());
-					let prefixed_denom = PrefixedDenom::from_str(&denom).expect("Should not fail");
+					let prefixed_denom = PrefixedDenom::from_str(&denom).map_err(|_| {
+						Ics04Error::implementation_specific(
+							"Failed to parse token denom".to_string(),
+						)
+					})?;
 					Pallet::<T>::deposit_event(Event::<T>::TokenReceived {
 						from: packet_data.sender.to_string().as_bytes().to_vec(),
 						to: packet_data.receiver.to_string().as_bytes().to_vec(),

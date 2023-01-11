@@ -69,9 +69,15 @@ pub mod pallet {
 	}
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Ics20ServiceCharge<T: Config> {
 	pub inner: crate::ics20::IbcModule<T>,
+}
+
+impl<T: Config> Default for Ics20ServiceCharge<T> {
+	fn default() -> Self {
+		Self { inner: crate::ics20::IbcModule::<T>::default() }
+	}
 }
 
 impl<T: Config + Send + Sync> Module for Ics20ServiceCharge<T>
