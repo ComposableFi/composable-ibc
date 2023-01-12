@@ -458,7 +458,10 @@ pub(crate) fn create_conn_open_confirm<T: Config>() -> (ConsensusState, MsgConne
 				Some(
 					ibc::proofs::ConsensusProof::new(
 						consensus_buf.try_into().unwrap(),
-						Height::new(u32::from(parachain_info::Pallet::<T>::parachain_id()).into(), 1),
+						Height::new(
+							u32::from(parachain_info::Pallet::<T>::parachain_id()).into(),
+							1,
+						),
 					)
 					.unwrap(),
 				),

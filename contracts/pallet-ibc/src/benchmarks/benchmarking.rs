@@ -13,13 +13,13 @@ use crate::{
 	Any, Config,
 };
 
+use codec::EncodeLike;
 use core::str::FromStr;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::traits::fungibles::{Inspect, Mutate};
 use frame_system::RawOrigin;
 use ibc_primitives::IbcHandler;
 use sp_runtime::traits::IdentifyAccount;
-use codec::EncodeLike;
 
 use crate::routing::Context;
 use ibc::{
@@ -93,7 +93,7 @@ benchmarks! {
 				T: Send + Sync + pallet_timestamp::Config<Moment = u64> + parachain_info::Config + Config,
 		AccountId32: From<<T as frame_system::Config>::AccountId>,
 		T::AssetId: From<u128>,
-    <T as frame_system::pallet::Config>::AccountId: EncodeLike
+	<T as frame_system::pallet::Config>::AccountId: EncodeLike
 	}
 
 	// Run these benchmarks via
