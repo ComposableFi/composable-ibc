@@ -70,7 +70,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// The overarching event type.
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// ibc subsystem
 		type IbcHandler: ibc_primitives::IbcHandler<<Self as frame_system::Config>::AccountId>;
@@ -310,31 +310,31 @@ impl<T: Config> Default for WeightHandler<T> {
 
 impl<T: Config> CallbackWeight for WeightHandler<T> {
 	fn on_chan_open_init(&self) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_open_try(&self) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_open_ack(&self, _port_id: &PortId, _channel_id: &ChannelId) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_open_confirm(&self, _port_id: &PortId, _channel_id: &ChannelId) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_close_init(&self, _port_id: &PortId, _channel_id: &ChannelId) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_close_confirm(&self, _port_id: &PortId, _channel_id: &ChannelId) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_recv_packet(&self, _packet: &Packet) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_acknowledgement_packet(
@@ -342,10 +342,10 @@ impl<T: Config> CallbackWeight for WeightHandler<T> {
 		_packet: &Packet,
 		_acknowledgement: &Acknowledgement,
 	) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_timeout_packet(&self, _packet: &Packet) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 }

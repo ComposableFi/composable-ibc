@@ -130,7 +130,7 @@ where
 			)
 			.await
 			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
-		Ok(dispatch_info.weight)
+		Ok(dispatch_info.weight.ref_time())
 	}
 
 	async fn finality_notifications(

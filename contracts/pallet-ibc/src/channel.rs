@@ -265,7 +265,7 @@ where
 impl<T: Config + Sync + Send> ChannelKeeper for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 	Self: ChannelReader,
 {
 	fn store_packet_commitment(

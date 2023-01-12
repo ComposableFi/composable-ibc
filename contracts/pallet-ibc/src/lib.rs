@@ -187,9 +187,12 @@ pub mod pallet {
 	pub trait Config: frame_system::Config + parachain_info::Config + core::fmt::Debug {
 		type TimeProvider: UnixTime;
 		/// The overarching event type.
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// Currency type of the runtime
-		type NativeCurrency: ReservableCurrency<Self::AccountId, Balance = Self::Balance>;
+		type NativeCurrency: ReservableCurrency<
+			<Self as frame_system::Config>::AccountId,
+			Balance = Self::Balance,
+		>;
 		/// Runtime balance type
 		type Balance: Balance + From<u128>;
 		/// AssetId type
@@ -205,12 +208,22 @@ pub mod pallet {
 		const LIGHT_CLIENT_PROTOCOL: LightClientProtocol;
 		/// Account Id Conversion from SS58 string or hex string
 		type AccountIdConversion: TryFrom<Signer>
-			+ IdentifyAccount<AccountId = Self::AccountId>
+			+ IdentifyAccount<AccountId = <Self as frame_system::Config>::AccountId>
 			+ Clone;
 		/// Set of traits needed to handle fungible assets
-		type Fungibles: Transfer<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
-			+ Mutate<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
-			+ Inspect<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>;
+		type Fungibles: Transfer<
+				<Self as frame_system::Config>::AccountId,
+				Balance = Self::Balance,
+				AssetId = Self::AssetId,
+			> + Mutate<
+				<Self as frame_system::Config>::AccountId,
+				Balance = Self::Balance,
+				AssetId = Self::AssetId,
+			> + Inspect<
+				<Self as frame_system::Config>::AccountId,
+				Balance = Self::Balance,
+				AssetId = Self::AssetId,
+			>;
 		/// Expected block time in milliseconds
 		#[pallet::constant]
 		type ExpectedBlockTime: Get<u64>;
@@ -227,9 +240,9 @@ pub mod pallet {
 		/// benchmarking weight info
 		type WeightInfo: WeightInfo;
 		/// Origin allowed to unfreeze light clients
-		type AdminOrigin: EnsureOrigin<Self::Origin>;
+		type AdminOrigin: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
 		/// Origin allowed to freeze light clients
-		type SentryOrigin: EnsureOrigin<Self::Origin>;
+		type SentryOrigin: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
 		/// Amount to be reserved for client and connection creation
 		#[pallet::constant]
 		type SpamProtectionDeposit: Get<Self::Balance>;
@@ -322,7 +335,8 @@ pub mod pallet {
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
 	/// Active Escrow addresses
-	pub type EscrowAddresses<T: Config> = StorageValue<_, BTreeSet<T::AccountId>, ValueQuery>;
+	pub type EscrowAddresses<T: Config> =
+		StorageValue<_, BTreeSet<<T as frame_system::Config>::AccountId>, ValueQuery>;
 
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
@@ -429,7 +443,7 @@ pub mod pallet {
 		/// Client has been frozen
 		ClientFrozen { client_id: Vec<u8>, height: u64, revision_number: u64 },
 		/// Asset Admin Account Updated
-		AssetAdminUpdated { admin_account: T::AccountId },
+		AssetAdminUpdated { admin_account: <T as frame_system::Config>::AccountId },
 	}
 
 	/// Errors inform users that something went wrong.
@@ -504,7 +518,7 @@ pub mod pallet {
 	where
 		u32: From<<T as frame_system::Config>::BlockNumber>,
 		T: Send + Sync,
-		AccountId32: From<T::AccountId>,
+		AccountId32: From<<T as frame_system::Config>::AccountId>,
 	{
 		fn offchain_worker(_n: BlockNumberFor<T>) {
 			let _ = Pallet::<T>::packet_cleanup();
@@ -518,7 +532,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T>
 	where
 		T: Send + Sync,
-		AccountId32: From<T::AccountId>,
+		AccountId32: From<<T as frame_system::Config>::AccountId>,
 		u32: From<<T as frame_system::Config>::BlockNumber>,
 	{
 		#[pallet::weight(crate::weight::deliver::< T > (messages))]
@@ -550,10 +564,9 @@ pub mod pallet {
 			let reserve_amt = T::SpamProtectionDeposit::get().saturating_mul(reserve_count.into());
 
 			if reserve_amt >= T::SpamProtectionDeposit::get() {
-				<T::NativeCurrency as ReservableCurrency<T::AccountId>>::reserve(
-					&sender,
-					reserve_amt.into(),
-				)?;
+				<T::NativeCurrency as ReservableCurrency<
+					<T as frame_system::Config>::AccountId,
+				>>::reserve(&sender, reserve_amt.into())?;
 			}
 			Self::execute_ibc_messages(&mut ctx, messages);
 
@@ -564,7 +577,7 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::transfer())]
 		pub fn transfer(
 			origin: OriginFor<T>,
-			params: TransferParams<T::AccountId>,
+			params: TransferParams<<T as frame_system::Config>::AccountId>,
 			asset_id: T::AssetId,
 			amount: T::Balance,
 		) -> DispatchResult {

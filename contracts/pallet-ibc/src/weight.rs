@@ -46,111 +46,111 @@ pub trait WeightInfo {
 
 impl WeightInfo for () {
 	fn create_client() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn conn_open_init() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn update_tendermint_client() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn conn_try_open_tendermint() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn conn_open_ack_tendermint() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn conn_open_confirm_tendermint() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn channel_open_init() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn channel_open_try_tendermint() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn channel_open_ack_tendermint() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn channel_open_confirm_tendermint() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn channel_close_init() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn channel_close_confirm_tendermint() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn recv_packet_tendermint(_i: u32) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn ack_packet_tendermint(_i: u32, _j: u32) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn timeout_packet_tendermint(_i: u32) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn set_params() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn transfer() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_open_init() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_open_try() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_recv_packet() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_open_ack() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_open_confirm() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_close_init() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_close_confirm() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_acknowledgement_packet() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_timeout_packet() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn update_grandpa_client(_i: u32) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 }
 

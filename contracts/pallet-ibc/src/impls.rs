@@ -72,7 +72,7 @@ impl<T: Config> Pallet<T>
 where
 	T: Send + Sync,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	pub(crate) fn execute_ibc_messages(
 		ctx: &mut Context<T>,
@@ -105,7 +105,7 @@ impl<T: Config> Pallet<T>
 where
 	T: Send + Sync,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	// IBC Runtime Api helper methods
 	/// Get a channel state
@@ -749,7 +749,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Returns true if address provided is an escrow address
-	pub fn is_escrow_address(address: T::AccountId) -> bool {
+	pub fn is_escrow_address(address: <T as frame_system::Config>::AccountId) -> bool {
 		let set = EscrowAddresses::<T>::get();
 		set.contains(&address)
 	}
@@ -779,10 +779,10 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-impl<T: Config + Send + Sync> IbcHandler<T::AccountId> for Pallet<T>
+impl<T: Config + Send + Sync> IbcHandler<<T as frame_system::Config>::AccountId> for Pallet<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	fn latest_height_and_timestamp(
 		port_id: &PortId,
@@ -791,7 +791,9 @@ where
 		Pallet::<T>::latest_height_and_timestamp(port_id, channel_id)
 	}
 
-	fn handle_message(msg: HandlerMessage<T::AccountId>) -> Result<(), IbcHandlerError> {
+	fn handle_message(
+		msg: HandlerMessage<<T as frame_system::Config>::AccountId>,
+	) -> Result<(), IbcHandlerError> {
 		match msg {
 			HandlerMessage::OpenChannel { port_id, channel_end } =>
 				Pallet::<T>::open_channel(port_id, channel_end),
@@ -891,7 +893,7 @@ where
 impl<T: Config + Send + Sync> Pallet<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	fn send_packet(
 		data: Vec<u8>,
@@ -1007,7 +1009,7 @@ where
 
 	fn to_msg_transfer(
 		coin: PrefixedCoin,
-		from: T::AccountId,
+		from: <T as frame_system::Config>::AccountId,
 		to: Signer,
 		timeout: Timeout,
 		channel_id: ChannelId,

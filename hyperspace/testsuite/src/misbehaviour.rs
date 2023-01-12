@@ -17,8 +17,8 @@ use sp_core::{Decode, Encode, Pair};
 use sp_finality_grandpa::{AuthorityId, AuthoritySignature};
 use sp_keyring::ed25519::Keyring;
 use sp_runtime::{codec::Compact, traits::BlakeTwo256};
-use sp_state_machine::{prove_read_on_trie_backend, TrieBackend};
-use sp_trie::{generate_trie_proof, LayoutV0, MemoryDB, TrieDBMut, TrieMut};
+use sp_state_machine::{prove_read_on_trie_backend, TrieBackendBuilder};
+use sp_trie::{generate_trie_proof, LayoutV0, MemoryDB, TrieMut, TrieDBMutBuilder};
 use std::{
 	collections::BTreeMap,
 	time::{Duration, SystemTime, UNIX_EPOCH},
@@ -80,7 +80,7 @@ where
 	let key = Compact(0u32).encode();
 	let extrinsics_root = {
 		let mut root = Default::default();
-		let mut trie = <TrieDBMut<LayoutV0<BlakeTwo256>>>::new(&mut para_db, &mut root);
+		let mut trie = <TrieDBMutBuilder<LayoutV0<BlakeTwo256>>>::new(&mut para_db, &mut root).build();
 		trie.insert(&key, &timestamp_extrinsic).unwrap();
 		*trie.root()
 	};
@@ -102,7 +102,7 @@ where
 	let key = parachain_header_storage_key(client_state.para_id);
 	let mut root = Default::default();
 	let state_root = {
-		let mut trie = TrieDBMut::<LayoutV0<BlakeTwo256>>::new(&mut para_db, &mut root);
+		let mut trie = TrieDBMutBuilder::<LayoutV0<BlakeTwo256>>::new(&mut para_db, &mut root).build();
 		trie.insert(key.as_ref(), &parachain_header.encode().encode()).unwrap();
 		*trie.root()
 	};
@@ -173,7 +173,7 @@ where
 	};
 	let mut parachain_headers = BTreeMap::default();
 	let state_proof =
-		prove_read_on_trie_backend(&TrieBackend::new(para_db.clone(), root), &[key.as_ref()])
+		prove_read_on_trie_backend(&TrieBackendBuilder::new(para_db.clone(), root).build(), &[key.as_ref()])
 			.unwrap()
 			.into_nodes()
 			.into_iter()
