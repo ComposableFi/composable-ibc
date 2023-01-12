@@ -24,7 +24,9 @@ use ibc::applications::transfer::msgs::transfer::MsgTransfer;
 use ibc::{
 	applications::transfer::PrefixedCoin,
 	core::{
-		ics02_client::{client_state::ClientType, msgs::create_client::MsgCreateAnyClient},
+		ics02_client::{
+			client_state::ClientType, events::CodeId, msgs::create_client::MsgCreateAnyClient,
+		},
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
@@ -846,24 +848,25 @@ impl primitives::TestProvider for AnyChain {
 }
 
 impl AnyConfig {
-	pub fn should_wrap_in_wasm(&self) -> bool {
+	pub fn wasm_code_id(&self) -> Option<CodeId> {
 		match self {
-			AnyConfig::Parachain(config) => config.is_wasm_client,
+			AnyConfig::Parachain(config) => config.wasm_code_id.as_ref(),
 			#[cfg(feature = "cosmos")]
-			AnyConfig::Cosmos(config) => config.is_wasm_client,
+			AnyConfig::Cosmos(config) => config.wasm_code_id.as_ref(),
 		}
+		.map(|s| hex::decode(s).expect("Wasm code id is hex-encoded"))
 	}
 
 	pub async fn into_client(self) -> anyhow::Result<AnyChain> {
-		let should_wrap = self.should_wrap_in_wasm();
+		let maybe_wasm_code_id = self.wasm_code_id();
 		let chain = match self {
 			AnyConfig::Parachain(config) =>
 				AnyChain::Parachain(ParachainClient::new(config).await?),
 			#[cfg(feature = "cosmos")]
 			AnyConfig::Cosmos(config) => AnyChain::Cosmos(CosmosClient::new(config).await?),
 		};
-		if should_wrap {
-			Ok(AnyChain::Wasm(WasmChain { inner: Box::new(chain), code_id: Vec::new() }))
+		if let Some(code_id) = maybe_wasm_code_id {
+			Ok(AnyChain::Wasm(WasmChain { inner: Box::new(chain), code_id }))
 		} else {
 			Ok(chain)
 		}

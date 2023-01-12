@@ -3955,6 +3955,7 @@ dependencies = [
  "ibc-proto",
  "ibc-rpc",
  "ics07-tendermint",
+ "ics08-wasm",
  "itertools",
  "jsonrpsee 0.15.1",
  "jsonrpsee-ws-client 0.14.0",
@@ -3975,6 +3976,8 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tonic",
+ "tracing",
+ "tracing-subscriber 0.3.16",
 ]
 
 [[package]]
@@ -4135,6 +4138,7 @@ dependencies = [
  "derive_more",
  "env_logger",
  "flex-error",
+ "hex",
  "ibc-derive",
  "ibc-proto",
  "ics23 0.8.1",
@@ -14755,11 +14759,6 @@ dependencies = [
 ]
 
 [[patch.unused]]
-name = "wasmi-validation"
-version = "0.4.1"
-source = "git+https://github.com/ComposableFi/wasmi?rev=cd8c0c775a1d197a35ff3d5c7d6cded3d476411b#cd8c0c775a1d197a35ff3d5c7d6cded3d476411b"
-
-[[patch.unused]]
 name = "pallet-asset-tx-payment"
 version = "4.0.0-dev"
 source = "git+https://github.com/vmarkushin/substrate?rev=4f143018dd45282cbdf8de57e0e8f8c6fbadbac4#4f143018dd45282cbdf8de57e0e8f8c6fbadbac4"
@@ -14778,3 +14777,8 @@ source = "git+https://github.com/vmarkushin/substrate?rev=4f143018dd45282cbdf8de
 name = "sc-consensus-manual-seal"
 version = "0.10.0-dev"
 source = "git+https://github.com/vmarkushin/substrate?rev=4f143018dd45282cbdf8de57e0e8f8c6fbadbac4#4f143018dd45282cbdf8de57e0e8f8c6fbadbac4"
+
+[[patch.unused]]
+name = "wasmi-validation"
+version = "0.4.1"
+source = "git+https://github.com/ComposableFi/wasmi?rev=cd8c0c775a1d197a35ff3d5c7d6cded3d476411b#cd8c0c775a1d197a35ff3d5c7d6cded3d476411b"

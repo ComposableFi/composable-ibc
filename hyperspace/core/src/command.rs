@@ -113,7 +113,7 @@ impl UploadWasmCmd {
 		let client = config.into_client().await?;
 		let wasm = tokio::fs::read(&self.wasm_path).await?;
 		let code_id = client.upload_wasm(wasm).await?;
-		println!("WASM blob uploaded. Code ID: {:?}", code_id);
+		println!("WASM blob uploaded. Code ID: {}", hex::encode(&code_id));
 		Ok(())
 	}
 }

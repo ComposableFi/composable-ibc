@@ -1,4 +1,4 @@
-use crate::TimeoutHeight;
+use crate::{error::Error, TimeoutHeight};
 use core::{
 	convert::TryFrom,
 	fmt::{Display, Error as FmtError, Formatter},
@@ -63,7 +63,8 @@ pub fn event_is_type_client(ev: &IbcEvent) -> bool {
 		IbcEvent::CreateClient(_) |
 			IbcEvent::UpdateClient(_) |
 			IbcEvent::UpgradeClient(_) |
-			IbcEvent::ClientMisbehaviour(_)
+			IbcEvent::ClientMisbehaviour(_) |
+			IbcEvent::PushWasmCode(_)
 	)
 }
 
@@ -117,6 +118,8 @@ pub fn ibc_event_try_from_abci_event(
 		Ok(IbcEventType::ClientMisbehaviour) => Ok(IbcEvent::ClientMisbehaviour(
 			client_misbehaviour_try_from_abci_event(abci_event).map_err(IbcEventError::client)?,
 		)),
+		Ok(IbcEventType::PushWasmCode) =>
+			Ok(IbcEvent::PushWasmCode(push_wasm_code_try_from_abci_event(abci_event)?)),
 		Ok(IbcEventType::OpenInitConnection) => Ok(IbcEvent::OpenInitConnection(
 			connection_open_init_try_from_abci_event(abci_event)
 				.map_err(IbcEventError::connection)?,
@@ -198,6 +201,25 @@ pub fn client_misbehaviour_try_from_abci_event(
 	abci_event: &AbciEvent,
 ) -> Result<client_events::ClientMisbehaviour, ClientError> {
 	client_extract_attributes_from_tx(abci_event).map(client_events::ClientMisbehaviour)
+}
+
+pub fn push_wasm_code_try_from_abci_event(
+	abci_event: &AbciEvent,
+) -> Result<client_events::PushWasmCode, IbcEventError> {
+	let mut code_id = None;
+	for tag in &abci_event.attributes {
+		let key = tag.key.as_str();
+		let value = tag.value.as_str();
+		match key {
+			client_events::WASM_CODE_ID_ATTRIBUTE_KEY =>
+				code_id = Some(hex::decode(value).map_err(IbcEventError::from_hex_error)?),
+			_ => {},
+		}
+	}
+
+	Ok(client_events::PushWasmCode(code_id.ok_or_else(|| {
+		IbcEventError::missing_key(client_events::WASM_CODE_ID_ATTRIBUTE_KEY.to_owned())
+	})?))
 }
 
 pub fn connection_open_init_try_from_abci_event(

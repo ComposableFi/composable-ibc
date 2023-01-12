@@ -91,7 +91,11 @@ define_error! {
 
 		UnsupportedAbciEvent
 			{event_type: String}
-			|e| { format_args!("Unable to parse abci event type '{}' into IbcEvent", e.event_type)}
+			|e| { format_args!("Unable to parse abci event type '{}' into IbcEvent", e.event_type)},
+
+		FromHexError
+			[ TraceError<hex::FromHexError> ]
+			| _ | { "error decoding hex" }
 	}
 }
 
@@ -125,6 +129,7 @@ const CREATE_CLIENT_EVENT: &str = "create_client";
 const UPDATE_CLIENT_EVENT: &str = "update_client";
 const CLIENT_MISBEHAVIOUR_EVENT: &str = "client_misbehaviour";
 const UPGRADE_CLIENT_EVENT: &str = "upgrade_client";
+const PUSH_WASM_CODE_EVENT: &str = "push_wasm_code";
 /// Connection event types
 const CONNECTION_INIT_EVENT: &str = "connection_open_init";
 const CONNECTION_TRY_EVENT: &str = "connection_open_try";
@@ -153,6 +158,7 @@ pub enum IbcEventType {
 	UpdateClient,
 	UpgradeClient,
 	ClientMisbehaviour,
+	PushWasmCode,
 	OpenInitConnection,
 	OpenTryConnection,
 	OpenAckConnection,
@@ -182,6 +188,7 @@ impl IbcEventType {
 			IbcEventType::UpdateClient => UPDATE_CLIENT_EVENT,
 			IbcEventType::UpgradeClient => UPGRADE_CLIENT_EVENT,
 			IbcEventType::ClientMisbehaviour => CLIENT_MISBEHAVIOUR_EVENT,
+			IbcEventType::PushWasmCode => PUSH_WASM_CODE_EVENT,
 			IbcEventType::OpenInitConnection => CONNECTION_INIT_EVENT,
 			IbcEventType::OpenTryConnection => CONNECTION_TRY_EVENT,
 			IbcEventType::OpenAckConnection => CONNECTION_ACK_EVENT,
@@ -215,6 +222,7 @@ impl FromStr for IbcEventType {
 			UPDATE_CLIENT_EVENT => Ok(IbcEventType::UpdateClient),
 			UPGRADE_CLIENT_EVENT => Ok(IbcEventType::UpgradeClient),
 			CLIENT_MISBEHAVIOUR_EVENT => Ok(IbcEventType::ClientMisbehaviour),
+			PUSH_WASM_CODE_EVENT => Ok(IbcEventType::PushWasmCode),
 			CONNECTION_INIT_EVENT => Ok(IbcEventType::OpenInitConnection),
 			CONNECTION_TRY_EVENT => Ok(IbcEventType::OpenTryConnection),
 			CONNECTION_ACK_EVENT => Ok(IbcEventType::OpenAckConnection),
@@ -249,6 +257,7 @@ pub enum IbcEvent {
 	UpdateClient(ClientEvents::UpdateClient),
 	UpgradeClient(ClientEvents::UpgradeClient),
 	ClientMisbehaviour(ClientEvents::ClientMisbehaviour),
+	PushWasmCode(ClientEvents::PushWasmCode),
 
 	OpenInitConnection(ConnectionEvents::OpenInit),
 	OpenTryConnection(ConnectionEvents::OpenTry),
@@ -302,6 +311,7 @@ impl fmt::Display for IbcEvent {
 			IbcEvent::UpdateClient(ev) => write!(f, "UpdateClientEv({})", ev),
 			IbcEvent::UpgradeClient(ev) => write!(f, "UpgradeClientEv({:?})", ev),
 			IbcEvent::ClientMisbehaviour(ev) => write!(f, "ClientMisbehaviourEv({:?})", ev),
+			IbcEvent::PushWasmCode(ev) => write!(f, "PushWasmCodeEv({:?})", ev),
 
 			IbcEvent::OpenInitConnection(ev) => write!(f, "OpenInitConnectionEv({:?})", ev),
 			IbcEvent::OpenTryConnection(ev) => write!(f, "OpenTryConnectionEv({:?})", ev),
@@ -398,6 +408,7 @@ impl IbcEvent {
 			IbcEvent::UpdateClient(_) => IbcEventType::UpdateClient,
 			IbcEvent::ClientMisbehaviour(_) => IbcEventType::ClientMisbehaviour,
 			IbcEvent::UpgradeClient(_) => IbcEventType::UpgradeClient,
+			IbcEvent::PushWasmCode(_) => IbcEventType::PushWasmCode,
 			IbcEvent::OpenInitConnection(_) => IbcEventType::OpenInitConnection,
 			IbcEvent::OpenTryConnection(_) => IbcEventType::OpenTryConnection,
 			IbcEvent::OpenAckConnection(_) => IbcEventType::OpenAckConnection,

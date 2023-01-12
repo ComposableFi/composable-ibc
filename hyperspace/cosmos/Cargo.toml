@@ -38,8 +38,12 @@ ed25519-dalek = "1.0.1"
 ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto" }
 ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
+ics08-wasm = { path = "../../light-clients/ics08-wasm" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
+
+tracing-subscriber = { version = "0.3.11", features = ["fmt"]}
+tracing = "0.1.36"
 
 # tendermint
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "eac7b5a17f872c3af3b576fe485dc55e0526fa24", default-features = false, features = [

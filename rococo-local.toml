@@ -12,3 +12,4 @@ ss58_version = 49
 channel_whitelist = []
 finality_protocol = 'Grandpa'
 key_type = 'sr25519'
+wasm_code_id = "00"

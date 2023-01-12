@@ -143,9 +143,9 @@ pub struct CosmosClientConfig {
 	pub max_tx_size: usize,
 	/// The key that signs transactions
 	pub keybase: ConfigKeyEntry,
-	/// All the client states and headers will be wrapped in WASM ones.
+	/// All the client states and headers will be wrapped in WASM ones using the WASM code ID.
 	#[serde(default)]
-	pub is_wasm_client: bool,
+	pub wasm_code_id: Option<String>,
 	/*
 	Here is a list of dropped configuration parameters from Hermes Config.toml
 	that could be set to default values or removed for the MVP phase:
@@ -257,7 +257,7 @@ where
 			messages,
 			Fee {
 				amount: vec![Coin {
-					denom: "stake".to_string(), //TODO: This could be added to the config
+					denom: "uatom".to_string(), //TODO: This could be added to the config
 					amount: "4000".to_string(), //TODO: This could be added to the config
 				}],
 				gas_limit: 400000_u64, //TODO: This could be added to the config
@@ -266,7 +266,11 @@ where
 			},
 		)?;
 		// Simulate transaction
-		// let res = simulate_tx(self.grpc_url.clone(), tx, tx_bytes.clone()).await?;
+		let res = simulate_tx(self.grpc_url.clone(), tx, tx_bytes.clone()).await?;
+		// dbg!(res);
+
+		tracing_subscriber::fmt::try_init().unwrap();
+		tracing::info!("Simulated transaction: {:?}", res);
 
 		// Broadcast transaction
 		let hash = broadcast_tx(&self.rpc_client, tx_bytes).await?;

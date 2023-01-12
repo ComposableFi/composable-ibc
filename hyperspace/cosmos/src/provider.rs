@@ -72,7 +72,7 @@ use pallet_ibc::light_clients::{
 };
 use primitives::{mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType};
 use std::{pin::Pin, str::FromStr, time::Duration};
-use tendermint::{block::Height as TmHeight, Time};
+use tendermint::{abci::response::DeliverTx, block::Height as TmHeight, Time};
 use tendermint_rpc::{
 	endpoint::tx::Response,
 	event::{Event, EventData},
@@ -82,10 +82,12 @@ use tendermint_rpc::{
 use tonic::IntoRequest;
 
 use ibc_proto::ibc::{
-	core::channel::v1::IdentifiedChannel,
-	lightclients::wasm::v1::{msg_client::MsgClient, MsgPushNewWasmCode},
+	core::channel::v1::IdentifiedChannel, lightclients::wasm::v1::msg_client::MsgClient,
 };
+use ics08_wasm::msg::MsgPushNewWasmCode;
 pub use tendermint::Hash;
+use tendermint_rpc::response::Wrapper;
+use tokio::time::sleep;
 use tonic::transport::Endpoint;
 
 #[derive(Clone, Debug)]
@@ -1066,18 +1068,136 @@ where
 	}
 
 	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
-		let msg = MsgPushNewWasmCode { signer: self.account_id().to_string(), code: wasm };
-		let resp = MsgClient::connect(
-			Endpoint::try_from(self.grpc_url.to_string())
-				.map_err(|e| Error::from(format!("Failed to parse grpc url: {:?}", e)))?,
-		)
-		.await
-		.map_err(|e| Error::from(format!("Failed to connect to grpc endpoint: {:?}", e)))?
-		.push_new_wasm_code(msg)
-		.await
-		.map_err(|e| {
-			Error::from(format!("Failed to upload wasm code to grpc endpoint: {:?}", e))
-		})?;
-		Ok(resp.into_inner().code_id)
+		let j = r#"{
+  "jsonrpc": "2.0",
+  "id": "b4a2adb3-2796-4a0e-a804-4d67ba675839",
+  "result": {
+    "node_info": {
+      "protocol_version": {
+        "p2p": "8",
+        "block": "11",
+        "app": "0"
+      },
+      "id": "59a5eaae8d14c93e635b18747589dc0177e9b695",
+      "listen_addr": "tcp://0.0.0.0:26656",
+      "network": "my-test-chain",
+      "version": "0.34.21",
+      "channels": "40202122233038606100",
+      "moniker": "foobar",
+      "other": {
+        "tx_index": "on",
+        "rpc_address": "tcp://127.0.0.1:26657"
+      }
+    },
+    "sync_info": {
+      "latest_block_hash": "14ED66AC0F5BF5B752EBAFEFBBDBC8AE8704791BABC38E9282373638A3AB0725",
+      "latest_app_hash": "87D56F28A84ECD7FB2FDEF591E14DEC440C8C0A414F60A665FBF6653DF164327",
+      "latest_block_height": "1803",
+      "latest_block_time": "2023-01-12T10:43:11.400083Z",
+      "earliest_block_hash": "BF2893E15B352745DFF5F07B154E16E9799988509F8A704D58136A2E09969969",
+      "earliest_app_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "earliest_block_height": "1",
+      "earliest_block_time": "2023-01-11T16:56:08.27068Z",
+      "catching_up": false
+    },
+    "validator_info": {
+      "address": "89CED186011D42AC57481CA678A49E4E3EC816CA",
+      "pub_key": {
+        "type": "tendermint/PubKeyEd25519",
+        "value": "qX5LST+X2i3JhtMnFuE9t+22OvqiYt4+Gm0oYWkTM2Q="
+      },
+      "voting_power": "100"
+    }
+  }
+}"#;
+
+		// let w = Wrapper::<Response>::from_str();
+		let msg = MsgPushNewWasmCode { signer: self.account_id(), code: wasm };
+		let hash = self.submit(vec![msg.into()]).await?;
+		let resp = self.wait_for_tx_result(hash).await?;
+		let height = Height::new(
+			ChainId::chain_version(self.chain_id.to_string().as_str()),
+			resp.height.value(),
+		);
+		let deliver_tx_result = resp.tx_result;
+		let mut result = deliver_tx_result
+			.events
+			.iter()
+			.flat_map(|e| ibc_event_try_from_abci_event(e, height).ok().into_iter())
+			.filter(|e| matches!(e, IbcEvent::PushWasmCode(_)))
+			.collect::<Vec<_>>();
+		let code_id = if result.clone().len() != 1 {
+			return Err(Error::from(format!(
+				"Expected exactly one PushWasmCode event, found {}",
+				result.len()
+			)))
+		} else {
+			match result.pop().unwrap() {
+				IbcEvent::PushWasmCode(ev) => ev.0,
+				_ => unreachable!(),
+			}
+		};
+		// let resp = MsgClient::connect(
+		// 	Endpoint::try_from(self.grpc_url.to_string())
+		// 		.map_err(|e| Error::from(format!("Failed to parse grpc url: {:?}", e)))?,
+		// )
+		// .await
+		// .map_err(|e| Error::from(format!("Failed to connect to grpc endpoint: {:?}", e)))?
+		// .push_new_wasm_code(msg)
+		// .await
+		// .map_err(|e| {
+		// 	Error::from(format!("Failed to upload wasm code to grpc endpoint: {:?}", e))
+		// })?;
+
+		Ok(code_id)
+	}
+}
+
+impl<H: Clone + Send + Sync + 'static> CosmosClient<H> {
+	async fn wait_for_tx_result(
+		&self,
+		tx_id: <Self as IbcProvider>::TransactionId,
+	) -> Result<Response, <Self as IbcProvider>::Error> {
+		const WAIT_BACKOFF: Duration = Duration::from_millis(300);
+		const TIME_OUT: Duration = Duration::from_millis(30000);
+		let start_time = std::time::Instant::now();
+
+		let response: Response = loop {
+			let response = self
+				.rpc_client
+				.tx_search(
+					Query::eq("tx.hash", tx_id.hash.to_string()),
+					false,
+					1,
+					1, // get only the first Tx matching the query
+					Order::Ascending,
+				)
+				.await
+				.map_err(|e| Error::from(format!("Failed to query tx hash: {}", e)))?;
+			match response.txs.into_iter().next() {
+				None => {
+					let elapsed = start_time.elapsed();
+					if &elapsed > &TIME_OUT {
+						return Err(Error::from(format!(
+							"Timeout waiting for tx {:?} to be included in a block",
+							tx_id.hash
+						)))
+					} else {
+						sleep(WAIT_BACKOFF).await;
+					}
+				},
+				Some(resp) => break resp,
+			}
+		};
+
+		let deliver_tx_result = &response.tx_result;
+		if deliver_tx_result.code.is_err() {
+			Err(Error::from(format!(
+				"Transaction failed with code {:?} and log {:?}",
+				deliver_tx_result.code, deliver_tx_result.log
+			)))
+		} else {
+			Ok(response)
+		}
 	}
 }
