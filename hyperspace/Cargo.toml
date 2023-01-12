@@ -11,3 +11,6 @@ anyhow = "1.0.66"
 hyperspace-core = { path = "./core" }
 toml = "0.5.9"
 
+
+[features]
+dali = ["hyperspace-core/dali"]

@@ -32,7 +32,7 @@ impl fmt::Debug for CommitmentRoot {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		let hex = Hex::upper_case()
 			.encode_to_string(&self.bytes)
-			.map_err(|_| Default::default())?;
+			.map_err(|_| fmt::Error::default())?;
 		f.debug_tuple("CommitmentRoot").field(&hex).finish()
 	}
 }
@@ -78,7 +78,7 @@ impl fmt::Debug for CommitmentProofBytes {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		let hex = Hex::upper_case()
 			.encode_to_string(&self.bytes)
-			.map_err(|_| Default::default())?;
+			.map_err(|_| fmt::Error::default())?;
 		f.debug_tuple("CommitmentProof").field(&hex).finish()
 	}
 }

@@ -14,7 +14,7 @@
 
 #[macro_export]
 macro_rules! process_finality_event {
-	($source:ident, $sink:ident, $metrics:expr, $result:ident) => {
+	($source:ident, $sink:ident, $metrics:expr, $mode:ident, $result:ident) => {
 		match $result {
 			// stream closed
 			None => break,
@@ -40,7 +40,7 @@ macro_rules! process_finality_event {
 				}
 				let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
 				let (mut messages, timeouts) =
-					parse_events(&mut $source, &mut $sink, events).await?;
+					parse_events(&mut $source, &mut $sink, events, $mode).await?;
 				if !timeouts.is_empty() {
 					if let Some(metrics) = $metrics.as_ref() {
 						metrics.handle_timeouts(timeouts.as_slice()).await;

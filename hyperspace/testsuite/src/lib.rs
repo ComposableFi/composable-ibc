@@ -62,7 +62,7 @@ where
 	let client_b_clone = chain_b.clone();
 	// Start relayer loop
 	let handle = tokio::task::spawn(async move {
-		hyperspace_core::relay(client_a_clone, client_b_clone, None, None)
+		hyperspace_core::relay(client_a_clone, client_b_clone, None, None, None)
 			.await
 			.unwrap()
 	});
@@ -476,7 +476,7 @@ pub async fn ibc_messaging_packet_height_timeout_with_connection_delay<A, B>(
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
-		hyperspace_core::relay(client_a_clone, client_b_clone, None, None)
+		hyperspace_core::relay(client_a_clone, client_b_clone, None, None, None)
 			.await
 			.unwrap()
 	});
@@ -505,7 +505,7 @@ pub async fn ibc_messaging_packet_timestamp_timeout_with_connection_delay<A, B>(
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
-		hyperspace_core::relay(client_a_clone, client_b_clone, None, None)
+		hyperspace_core::relay(client_a_clone, client_b_clone, None, None, None)
 			.await
 			.unwrap()
 	});
@@ -533,7 +533,7 @@ where
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
-		hyperspace_core::relay(client_a_clone, client_b_clone, None, None)
+		hyperspace_core::relay(client_a_clone, client_b_clone, None, None, None)
 			.await
 			.unwrap()
 	});
@@ -560,7 +560,7 @@ where
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
-		hyperspace_core::relay(client_a_clone, client_b_clone, None, None)
+		hyperspace_core::relay(client_a_clone, client_b_clone, None, None, None)
 			.await
 			.unwrap()
 	});
@@ -587,7 +587,7 @@ where
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
-		hyperspace_core::relay(client_a_clone, client_b_clone, None, None)
+		hyperspace_core::relay(client_a_clone, client_b_clone, None, None, None)
 			.await
 			.unwrap()
 	});

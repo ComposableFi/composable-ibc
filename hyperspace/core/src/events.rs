@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::packets::query_ready_and_timed_out_packets;
 #[cfg(feature = "testing")]
 use crate::send_packet_relay::packet_relay_status;
+use crate::{packets::query_ready_and_timed_out_packets, Mode};
 use codec::Encode;
 use ibc::{
 	core::{
@@ -61,6 +61,7 @@ pub async fn parse_events(
 	source: &mut impl Chain,
 	sink: &mut impl Chain,
 	events: Vec<IbcEvent>,
+	mode: Option<Mode>,
 ) -> Result<(Vec<Any>, Vec<Any>), anyhow::Error> {
 	let mut messages = vec![];
 	// 1. translate events to messages
@@ -533,6 +534,11 @@ pub async fn parse_events(
 			},
 			_ => continue,
 		}
+	}
+
+	// In light mode do not try to query channel state
+	if let Some(Mode::Light) = mode {
+		return Ok((messages, vec![]))
 	}
 
 	// 2. query packets that can now be sent, at this sink height because of connection delay.

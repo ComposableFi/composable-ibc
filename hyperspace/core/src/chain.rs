@@ -56,9 +56,17 @@ use parachain::{config, ParachainClient};
 use primitives::{Chain, IbcProvider, KeyProvider, MisbehaviourHandler, UpdateType};
 use sp_runtime::generic::Era;
 use std::{pin::Pin, time::Duration};
-use subxt::{
-	tx::{ExtrinsicParams, PolkadotExtrinsicParams, PolkadotExtrinsicParamsBuilder},
-	Error, OnlineClient,
+#[cfg(feature = "dali")]
+use subxt::tx::{
+	SubstrateExtrinsicParams as ParachainExtrinsicParams,
+	SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
+};
+use subxt::{tx::ExtrinsicParams, Error, OnlineClient};
+
+#[cfg(not(feature = "dali"))]
+use subxt::tx::{
+	PolkadotExtrinsicParams as ParachainExtrinsicParams,
+	PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
 };
 
 // TODO: expose extrinsic param builder
@@ -75,7 +83,7 @@ impl config::Config for DefaultConfig {
 		Error,
 	> {
 		let params =
-			PolkadotExtrinsicParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
+			ParachainExtrinsicsParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
 		Ok(params.into())
 	}
 }
@@ -90,7 +98,7 @@ impl subxt::Config for DefaultConfig {
 	type Header = sp_runtime::generic::Header<Self::BlockNumber, sp_runtime::traits::BlakeTwo256>;
 	type Signature = sp_runtime::MultiSignature;
 	type Extrinsic = sp_runtime::OpaqueExtrinsic;
-	type ExtrinsicParams = PolkadotExtrinsicParams<Self>;
+	type ExtrinsicParams = ParachainExtrinsicParams<Self>;
 }
 
 #[derive(Serialize, Deserialize)]

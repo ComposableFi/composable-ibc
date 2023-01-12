@@ -61,7 +61,12 @@ use sp_runtime::{
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr, time::Duration};
-use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip};
+#[cfg(feature = "dali")]
+use subxt::tx::AssetTip as Tip;
+use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams};
+
+#[cfg(not(feature = "dali"))]
+use subxt::tx::PlainTip as Tip;
 
 pub struct TransactionId<Hash> {
 	pub ext_hash: Hash,
@@ -86,7 +91,7 @@ where
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
 	RelayChainHeader: From<T::Header>,
 {
 	type FinalityEvent = FinalityEvent;
