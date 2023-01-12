@@ -26,7 +26,17 @@ use sp_runtime::{
 	traits::{Header as HeaderT, IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
+#[cfg(feature = "dali")]
+use subxt::tx::{
+	AssetTip as Tip, SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
+};
 use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams};
+
+#[cfg(not(feature = "dali"))]
+use subxt::tx::{
+	PlainTip as Tip, PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
+};
+
 use transaction_payment_rpc::TransactionPaymentApiClient;
 use transaction_payment_runtime_api::RuntimeDispatchInfo;
 
@@ -60,7 +70,6 @@ use ics10_grandpa::client_message::{ClientMessage, Misbehaviour, RelayChainHeade
 use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::mock::LocalClientTypes;
 use sp_core::{twox_128, H256};
-use subxt::tx::{PlainTip, PolkadotExtrinsicParamsBuilder};
 use tokio::time::sleep;
 
 type GrandpaJustification = grandpa_light_client_primitives::justification::GrandpaJustification<
@@ -91,7 +100,7 @@ where
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	sp_core::H256: From<T::Hash>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
 	RelayChainHeader: From<T::Header>,
 {
 	fn name(&self) -> &str {
@@ -116,8 +125,8 @@ where
 				.map(|msg| RawAny { type_url: msg.type_url.as_bytes().to_vec(), value: msg.value })
 				.collect::<Vec<_>>();
 
-			let tx_params = PolkadotExtrinsicParamsBuilder::new()
-				.tip(PlainTip::new(100_000))
+			let tx_params = ParachainExtrinsicsParamsBuilder::new()
+				.tip(Tip::new(100_000))
 				.era(Era::Immortal, self.para_client.genesis_hash());
 			let call = api::tx().ibc().deliver(messages);
 			self.para_client.tx().create_signed(&call, &signer, tx_params.into()).await?
@@ -219,8 +228,12 @@ where
 		use api::runtime_types::{
 			frame_system::EventRecord,
 			pallet_ibc::pallet::{Call as IbcCall, Event as PalletEvent},
-			parachain_runtime::{Call as RuntimeCall, Event},
 		};
+
+		#[cfg(feature = "dali")]
+		use api::runtime_types::dali_runtime::{Call as RuntimeCall, Event};
+		#[cfg(not(feature = "dali"))]
+		use api::runtime_types::parachain_runtime::{Call as RuntimeCall, Event};
 		use pallet_ibc::events::IbcEvent as RawIbcEvent;
 
 		let host_height = update.height();
@@ -338,7 +351,7 @@ where
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	sp_core::H256: From<T::Hash>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
 	RelayChainHeader: From<T::Header>,
 {
 	async fn check_for_misbehaviour<C: Chain>(

@@ -49,8 +49,13 @@ use std::{
 	collections::{BTreeMap, BTreeSet, HashMap},
 	fmt::Display,
 };
-use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip};
+#[cfg(feature = "dali")]
+use subxt::tx::AssetTip as Tip;
+use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams};
 use tendermint_proto::Protobuf;
+
+#[cfg(not(feature = "dali"))]
+use subxt::tx::PlainTip as Tip;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum FinalityProtocol {
@@ -96,7 +101,7 @@ impl FinalityProtocol {
 		BTreeMap<H256, ParachainHeaderProofs>:
 			From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 		<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-			From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
+			From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
 	{
 		match self {
 			FinalityProtocol::Grandpa =>
@@ -126,7 +131,7 @@ where
 	T::Signature: From<MultiSignature>,
 	T::BlockNumber: From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
 	T::Hash: From<sp_core::H256>,
 	sp_core::H256: From<T::Hash>,
 {
@@ -330,7 +335,7 @@ where
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
 {
 	let justification = match finality_event {
 		FinalityEvent::Grandpa(justification) => justification,

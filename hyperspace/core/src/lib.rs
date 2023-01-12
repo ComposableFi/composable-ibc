@@ -29,6 +29,12 @@ use events::{has_packet_events, parse_events};
 use ibc::events::IbcEvent;
 use metrics::handler::MetricsHandler;
 
+#[derive(Copy, Debug, Clone)]
+pub enum Mode {
+	/// Run without trying to relay packets or query channel state
+	Light,
+}
+
 /// Core relayer loop, waits for new finality events and forwards any new [`ibc::IbcEvents`]
 /// to the counter party chain.
 pub async fn relay<A, B>(
@@ -36,6 +42,7 @@ pub async fn relay<A, B>(
 	mut chain_b: B,
 	mut chain_a_metrics: Option<MetricsHandler>,
 	mut chain_b_metrics: Option<MetricsHandler>,
+	mode: Option<Mode>,
 ) -> Result<(), anyhow::Error>
 where
 	A: Chain,
@@ -48,11 +55,11 @@ where
 		tokio::select! {
 			// new finality event from chain A
 			result = chain_a_finality.next() => {
-				process_finality_event!(chain_a, chain_b, chain_a_metrics, result)
+				process_finality_event!(chain_a, chain_b, chain_a_metrics, mode, result)
 			}
 			// new finality event from chain B
 			result = chain_b_finality.next() => {
-				process_finality_event!(chain_b, chain_a, chain_b_metrics, result)
+				process_finality_event!(chain_b, chain_a, chain_b_metrics, mode, result)
 			}
 		}
 	}

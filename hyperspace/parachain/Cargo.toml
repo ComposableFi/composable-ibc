@@ -94,4 +94,5 @@ build-metadata-from-ws = [
     "grandpa-prover/build-metadata-from-ws",
     "beefy-prover/build-metadata-from-ws",
 ]
+dali = []
 testing = ["primitives/testing"]
