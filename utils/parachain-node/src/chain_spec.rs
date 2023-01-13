@@ -213,7 +213,7 @@ fn testnet_genesis(
 			candidacy_bond: EXISTENTIAL_DEPOSIT * 16,
 			..Default::default()
 		},
-		transaction_payment: parachain_runtime::TransactionPaymentConfig {},
+		transaction_payment: parachain_runtime::TransactionPaymentConfig::default(),
 		assets: parachain_runtime::AssetsConfig {
 			assets: vec![(1, root.clone(), true, 1)],
 			metadata: vec![(1, b"UNIT".to_vec(), b"UNIT".to_vec(), 12)],

@@ -81,8 +81,8 @@ impl system::Config for Test {
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();
-	type Origin = Origin;
-	type Call = Call;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
 	type Index = u64;
 	type BlockNumber = u32;
 	type Hash = H256;
@@ -90,7 +90,7 @@ impl system::Config for Test {
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
 	type PalletInfo = PalletInfo;
@@ -106,7 +106,7 @@ impl system::Config for Test {
 impl parachain_info::Config for Test {}
 
 impl pallet_ibc_ping::Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 
 	type IbcHandler = Ibc;
 }
@@ -123,7 +123,7 @@ impl pallet_assets::Config for Test {
 	type AssetId = AssetId;
 	type Balance = Balance;
 	type WeightInfo = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type ForceOrigin = EnsureRoot<AccountId>;
 	type AssetDeposit = ();
@@ -151,7 +151,7 @@ parameter_type_with_key! {
 
 type ReserveIdentifier = [u8; 8];
 impl orml_tokens::Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = AssetId;
@@ -164,11 +164,14 @@ impl orml_tokens::Config for Test {
 	type DustRemovalWhitelist = Everything;
 	type OnKilledTokenAccount = ();
 	type OnNewTokenAccount = ();
+	type OnSlash = ();
+	type OnDeposit = ();
+	type OnTransfer = ();
 }
 
 impl Config for Test {
 	type TimeProvider = Timestamp;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type NativeCurrency = Balances;
 	type Balance = Balance;
 	type AssetId = AssetId;

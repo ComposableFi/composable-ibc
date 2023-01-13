@@ -40,11 +40,11 @@ members = [
     "hyperspace/metrics",
 
     # utilities
-    # "utils/subxt/codegen",
-    # "utils/subxt/generated",
-    # "utils/parachain-node",
-    # "utils/parachain-node/runtime",
-    # "utils/simnode"
+     "utils/subxt/codegen",
+     "utils/subxt/generated",
+     "utils/parachain-node",
+     "utils/parachain-node/runtime",
+     "utils/simnode"
 ]
 
 [patch."https://github.com/paritytech/jsonrpsee"]
