@@ -38,9 +38,15 @@ pub mod constants {
 			let w = super::constants::ExtrinsicBaseWeight::get();
 
 			// At least 10 µs.
-			assert!(w >= constants::WEIGHT_PER_MICROS, mul(10), "Weight should be at least 10 µs.");
+			assert!(
+				w.ref_time() >= constants::WEIGHT_PER_MICROS.mul(10).ref_time(),
+				"Weight should be at least 10 µs."
+			);
 			// At most 1 ms.
-			assert!(w <= constants::WEIGHT_PER_MILLIS, "Weight should be at most 1 ms.");
+			assert!(
+				w.ref_time() <= constants::WEIGHT_PER_MILLIS.ref_time(),
+				"Weight should be at most 1 ms."
+			);
 		}
 	}
 }
