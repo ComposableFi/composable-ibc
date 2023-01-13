@@ -17,9 +17,9 @@ use crate::{
 	ParachainClient,
 };
 #[cfg(feature = "dali")]
-use api::runtime_types::dali_runtime::Call;
+use api::runtime_types::dali_runtime::RuntimeCall;
 #[cfg(not(feature = "dali"))]
-use api::runtime_types::parachain_runtime::Call;
+use api::runtime_types::parachain_runtime::RuntimeCall;
 use finality_grandpa::BlockNumberOps;
 use futures::{Stream, StreamExt};
 use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
@@ -128,7 +128,7 @@ where
 		Ok(())
 	}
 
-	pub async fn submit_sudo_call(&self, call: Call) -> Result<(), Error> {
+	pub async fn submit_sudo_call(&self, call: RuntimeCall) -> Result<(), Error> {
 		let signer = ExtrinsicSigner::<T, Self>::new(
 			self.key_store.clone(),
 			self.key_type_id.clone(),
@@ -160,7 +160,8 @@ where
 	) -> Result<(), Error> {
 		let params = api::runtime_types::pallet_ibc::PalletParams { receive_enabled, send_enabled };
 
-		let call = Call::Ibc(api::runtime_types::pallet_ibc::pallet::Call::set_params { params });
+		let call =
+			RuntimeCall::Ibc(api::runtime_types::pallet_ibc::pallet::Call::set_params { params });
 
 		self.submit_sudo_call(call).await?;
 
