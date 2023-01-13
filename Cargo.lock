@@ -3903,7 +3903,6 @@ dependencies = [
  "clap",
  "codegen",
  "derive_more",
- "env_logger 0.9.3",
  "finality-grandpa",
  "frame-support",
  "frame-system",
