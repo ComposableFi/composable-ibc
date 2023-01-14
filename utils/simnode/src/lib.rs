@@ -211,7 +211,7 @@ mod tests {
 			let events = node.events(None);
 			assert!(events.into_iter().any(|ev| {
 				match ev.event {
-					parachain_runtime::Event::Ibc(pallet_ibc::Event::Events { events }) => {
+					parachain_runtime::RuntimeEvent::Ibc(pallet_ibc::Event::Events { events }) => {
 						for ev in events {
 							if let Err(pallet_ibc::errors::IbcError::Ics02Client { message }) = ev {
 								let err_str = String::from_utf8(message).unwrap();
