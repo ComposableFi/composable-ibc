@@ -202,7 +202,7 @@ where
 		output: &mut ModuleOutputBuilder,
 		packet: &Packet,
 		_relayer: &Signer,
-	) -> Result<(), Ics04Error> {
+	) -> Result<Acknowledgement, Ics04Error> {
 		let mut ctx = Context::<T>::default();
 		let result = serde_json::from_slice(packet.data.as_slice())
 			.map_err(|e| {
@@ -216,15 +216,14 @@ where
 						Ics04Error::implementation_specific(e.to_string())
 					})
 			});
-		match result {
+
+		let ack = match result {
 			Err(err) => {
-				Pallet::<T>::write_acknowledgement(
-					&packet,
-					format!("{}: {:?}", ACK_ERR_STR, err).as_bytes().to_vec(),
-				)
-				.map_err(|e| {
+				let ack = format!("{}: {:?}", ACK_ERR_STR, err).as_bytes().to_vec();
+				Pallet::<T>::write_acknowledgement(&packet, ack.clone()).map_err(|e| {
 					Ics04Error::implementation_specific(format!("[on_recv_packet] {:#?}", e))
 				})?;
+				ack
 			},
 			Ok(packet_data) => {
 				let denom = full_ibc_denom(packet, packet_data.token.clone());
@@ -251,9 +250,10 @@ where
 				.map_err(|e| {
 					Ics04Error::implementation_specific(format!("[on_recv_packet] {:#?}", e))
 				})?;
+				Ics20Acknowledgement::success().as_ref().to_vec()
 			},
-		}
-		Ok(())
+		};
+		Ok(Acknowledgement::from_bytes(ack))
 	}
 
 	fn on_acknowledgement_packet(

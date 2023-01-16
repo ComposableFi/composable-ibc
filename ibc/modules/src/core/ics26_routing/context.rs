@@ -187,8 +187,8 @@ pub trait Module: Send + Sync + AsAnyMut {
 		_output: &mut ModuleOutputBuilder,
 		_packet: &Packet,
 		_relayer: &Signer,
-	) -> Result<(), Error> {
-		Ok(())
+	) -> Result<GenericAcknowledgement, Error> {
+		Ok(GenericAcknowledgement::from_bytes(Default::default()))
 	}
 
 	fn on_acknowledgement_packet(
