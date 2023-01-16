@@ -73,7 +73,7 @@ fn setup_client_and_consensus_state(port_id: PortId) {
 	let mut ctx = Context::<Test>::default();
 
 	let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
-	assert_ok!(Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]));
+	assert_ok!(Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]));
 
 	let connection_id = ConnectionId::new(0);
 	let commitment_prefix: CommitmentPrefix =
@@ -126,7 +126,7 @@ fn initialize_connection() {
 
 		let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
 
-		assert_ok!(Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]));
+		assert_ok!(Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]));
 
 		let value = conn_open_init::MsgConnectionOpenInit {
 			client_id,
@@ -145,7 +145,7 @@ fn initialize_connection() {
 			value: value.encode_vec(),
 		};
 
-		assert_ok!(Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]));
+		assert_ok!(Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]));
 	})
 }
 
@@ -173,7 +173,7 @@ fn initialize_connection_with_low_delay() {
 
 		let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
 
-		assert_ok!(Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]));
+		assert_ok!(Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]));
 
 		let value = conn_open_init::MsgConnectionOpenInit {
 			client_id,
@@ -192,7 +192,7 @@ fn initialize_connection_with_low_delay() {
 			value: value.encode_vec(),
 		};
 
-		Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
+		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
 
 		let result = ConnectionReader::connection_end(&ctx, &ConnectionId::new(0));
 
@@ -219,13 +219,16 @@ fn send_transfer() {
 			<Test as frame_system::Config>::AccountId,
 		>>::mint_into(asset_id, &AccountId32::new([0; 32]), balance).unwrap();
 
-		Ibc::set_params(Origin::root(), PalletParams { send_enabled: true, receive_enabled: true })
-			.unwrap();
+		Ibc::set_params(
+			RuntimeOrigin::root(),
+			PalletParams { send_enabled: true, receive_enabled: true },
+		)
+		.unwrap();
 
 		let timeout = Timeout::Offset { timestamp: Some(1000), height: Some(5) };
 
 		Ibc::transfer(
-			Origin::signed(AccountId32::new([0; 32])),
+			RuntimeOrigin::signed(AccountId32::new([0; 32])),
 			TransferParams {
 				to: MultiAddress::Raw(ss58_address.as_bytes().to_vec()),
 				source_channel: 0,
@@ -292,8 +295,11 @@ fn on_deliver_ics20_recv_packet() {
 		>>::mint_into(asset_id, &channel_escrow_address, balance)
 		.unwrap();
 
-		Ibc::set_params(Origin::root(), PalletParams { send_enabled: true, receive_enabled: true })
-			.unwrap();
+		Ibc::set_params(
+			RuntimeOrigin::root(),
+			PalletParams { send_enabled: true, receive_enabled: true },
+		)
+		.unwrap();
 
 		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
 		let amt = 1000 * MILLIS;
@@ -341,7 +347,7 @@ fn on_deliver_ics20_recv_packet() {
 		let account_data = Assets::balance(2u128, AccountId32::new(pair.public().0));
 		// Assert account balance before transfer
 		assert_eq!(account_data, 0);
-		Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
+		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
 
 		let balance =
 			<Assets as Inspect<AccountId>>::balance(2, &AccountId32::new(pair.public().0));

@@ -23,7 +23,7 @@ derive_more = { version = "0.99", features = ["from"]  }
 serde = { version="1.0.137", features = ["derive"]}
 tokio-stream = { version = "0.1.9", features = ["sync"]}
 thiserror = "1.0.31"
-jsonrpsee = { version = "0.14.1", features = ["async-client", "jsonrpsee-client-transport", "client-ws-transport", "http-client"] }
+jsonrpsee = { version = "0.15.1", features = ["async-client", "jsonrpsee-client-transport", "client-ws-transport", "http-client"] }
 openssl-probe = "0.1.2"
 
 # substrate

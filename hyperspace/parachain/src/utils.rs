@@ -20,7 +20,7 @@ use crate::parachain::api::runtime_types::pallet_ibc::events::IbcEvent as Metada
 use beefy_primitives::known_payload_ids::MMR_ROOT_ID;
 use beefy_prover::helpers::unsafe_arc_cast;
 use codec::Decode;
-use frame_support::weights::DispatchClass;
+use frame_support::pallet_prelude::{DispatchClass, Weight};
 use frame_system::limits::BlockWeights;
 use pallet_ibc::events::IbcEvent as RawIbcEvent;
 use sp_core::H256;
@@ -386,8 +386,8 @@ pub async fn fetch_max_extrinsic_weight<T: config::Config>(
 	let max_extrinsic_weight = extrinsic_weights
 		.max_extrinsic
 		.or(extrinsic_weights.max_total)
-		.unwrap_or(u64::MAX);
-	Ok(max_extrinsic_weight)
+		.unwrap_or(Weight::from_ref_time(u64::MAX));
+	Ok(max_extrinsic_weight.ref_time())
 }
 
 pub unsafe fn unsafe_cast_to_jsonrpsee_client(

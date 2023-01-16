@@ -156,6 +156,6 @@ jobs:
         run: |
           cargo +nightly test -p hyperspace-testsuite --locked --release
 
-      - name: Termintate local parachain cluster
+      - name: Terminate local parachain cluster
         run: |
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml down -v

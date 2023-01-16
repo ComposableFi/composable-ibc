@@ -19,15 +19,15 @@ codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive
 derive_more = "0.99.17"
 downcast-rs = "1.2.0"
 jsonrpsee = { version = "0.15.1", features = ["async-client", "jsonrpsee-ws-client"] }
-jsonrpsee-ws-client = "0.14.0"
+jsonrpsee-ws-client = "0.15.1"
 finality-grandpa = "0.16.0"
 
-finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false }
+finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30", default-features = false }
 
 beefy-prover = { path = "../../beefy/prover" }
 primitives = { package = "grandpa-light-client-primitives", path = "../primitives" }

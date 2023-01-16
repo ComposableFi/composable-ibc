@@ -134,7 +134,7 @@ where
 	fn host_height(&self) -> Height {
 		log::trace!(target: "pallet_ibc", "in client: [host_height]");
 		let current_height = host_height::<T>();
-		let para_id: u32 = parachain_info::Pallet::<T>::get().into();
+		let para_id: u32 = parachain_info::Pallet::<T>::parachain_id().into();
 		Height::new(para_id.into(), current_height)
 	}
 
@@ -196,9 +196,11 @@ where
 				height
 			))
 		})?;
-		let header_hash = frame_system::BlockHash::<T>::get(T::BlockNumber::from(height));
+		let header_hash = frame_system::BlockHash::<T>::get(
+			<T as frame_system::Config>::BlockNumber::from(height),
+		);
 		// we don't even have the hash for this height (anymore?)
-		if header_hash == T::Hash::default() {
+		if header_hash == <T as frame_system::Config>::Hash::default() {
 			Err(ICS02Error::implementation_specific(format!(
 				"[host_consensus_state]: Unknown height {}",
 				height
@@ -212,12 +214,13 @@ where
 					e
 				))
 			})?;
-		let header = T::Header::decode(&mut &connection_proof.header[..]).map_err(|e| {
-			ICS02Error::implementation_specific(format!(
-				"[host_consensus_state]: Failed to decode header: {:?}",
-				e
-			))
-		})?;
+		let header = <T as frame_system::Config>::Header::decode(&mut &connection_proof.header[..])
+			.map_err(|e| {
+				ICS02Error::implementation_specific(format!(
+					"[host_consensus_state]: Failed to decode header: {:?}",
+					e
+				))
+			})?;
 		if header.hash() != header_hash {
 			Err(ICS02Error::implementation_specific(format!(
 				"[host_consensus_state]: Incorrect host consensus state for height {}",

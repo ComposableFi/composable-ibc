@@ -13,6 +13,7 @@ use crate::{
 	Any, Config,
 };
 
+use codec::EncodeLike;
 use core::str::FromStr;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::traits::fungibles::{Inspect, Mutate};
@@ -78,7 +79,7 @@ use sp_core::crypto::AccountId32;
 use sp_std::vec;
 use tendermint_proto::Protobuf;
 
-fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
+fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
 	frame_system::Pallet::<T>::assert_last_event(generic_event.into());
 }
 
@@ -90,8 +91,9 @@ benchmarks! {
 		where u32: From<<T as frame_system::Config>::BlockNumber>,
 				<T as frame_system::Config>::BlockNumber: From<u32>,
 				T: Send + Sync + pallet_timestamp::Config<Moment = u64> + parachain_info::Config + Config,
-		AccountId32: From<T::AccountId>,
+		AccountId32: From<<T as frame_system::Config>::AccountId>,
 		T::AssetId: From<u128>,
+	<T as frame_system::pallet::Config>::AccountId: EncodeLike
 	}
 
 	// Run these benchmarks via
@@ -122,7 +124,7 @@ benchmarks! {
 		let value = create_client_update::<T>().encode_vec();
 
 		let msg = Any { type_url: UPDATE_CLIENT_TYPE_URL.to_string().as_bytes().to_vec(), value };
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let client_state = ClientStates::<T>::get(&client_id).unwrap();
@@ -157,7 +159,7 @@ benchmarks! {
 		let (cs_state, value) = create_conn_open_try::<T>();
 		// Update consensus state with the new root that we'll enable proofs to be correctly verified
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 		let msg = Any { type_url: CONN_TRY_OPEN_TYPE_URL.as_bytes().to_vec(), value: value.encode_vec() };
 		log::trace!(target: "pallet_ibc", "\n\n\n\n\n\n<=============== Begin benchmark ====================>\n\n\n\n\n");
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
@@ -200,7 +202,7 @@ benchmarks! {
 
 		let (cs_state, value) = create_conn_open_ack::<T>();
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 		let msg = Any { type_url: CONN_OPEN_ACK_TYPE_URL.as_bytes().to_vec(), value: value.encode_vec() };
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -245,7 +247,7 @@ benchmarks! {
 		let (cs_state, value) = create_conn_open_confirm::<T>();
 		// Update consensus state with the new root that we'll enable proofs to be correctly verified
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 		let msg = Any { type_url: CONN_OPEN_CONFIRM_TYPE_URL.as_bytes().to_vec(), value: value.encode_vec() };
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -290,7 +292,7 @@ benchmarks! {
 			signer: Signer::from_str(MODULE_ID).unwrap()
 		}.encode_vec();
 
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 		let msg = Any { type_url: CHAN_OPEN_TYPE_URL.as_bytes().to_vec(), value };
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -339,7 +341,7 @@ benchmarks! {
 			type_url: CHAN_OPEN_TRY_TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let channel_end = ctx.channel_end(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0))).unwrap();
@@ -403,7 +405,7 @@ benchmarks! {
 			type_url: CHAN_OPEN_ACK_TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let channel_end = ctx.channel_end(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0))).unwrap();
@@ -460,7 +462,7 @@ benchmarks! {
 			type_url: CHAN_OPEN_CONFIRM_TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let channel_end = ctx.channel_end(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0))).unwrap();
@@ -516,7 +518,7 @@ benchmarks! {
 			type_url: CHAN_CLOSE_INIT_TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let channel_end = ctx.channel_end(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0))).unwrap();
@@ -573,7 +575,7 @@ benchmarks! {
 			type_url: CHAN_CLOSE_CONFIRM_TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let channel_end = ctx.channel_end(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0))).unwrap();
@@ -633,7 +635,7 @@ benchmarks! {
 			type_url: RECV_PACKET_TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let receipt = ctx.get_packet_receipt(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0), 1u64.into())).unwrap();
@@ -698,7 +700,7 @@ benchmarks! {
 			type_url: ACK_PACKET_TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let res = ctx.get_packet_commitment(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0), 1u64.into()));
@@ -761,7 +763,7 @@ benchmarks! {
 			type_url: TIMEOUT_TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let res = ctx.get_packet_commitment(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0), 1u64.into()));
@@ -803,7 +805,7 @@ benchmarks! {
 			type_url: conn_open_init_mod::TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -823,7 +825,7 @@ benchmarks! {
 		.encode_vec();
 
 		let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		assert_eq!(ClientCounter::<T>::get(), 1)
@@ -831,7 +833,7 @@ benchmarks! {
 
 
 	transfer {
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 		let client_id = Pallet::<T>::create_client().unwrap();
 		let connection_id = ConnectionId::new(0);
 		Pallet::<T>::create_connection(client_id, connection_id.clone()).unwrap();
@@ -850,7 +852,7 @@ benchmarks! {
 		let channel_id = ChannelId::new(0);
 		let denom = "transfer/channel-15/uatom".to_string();
 		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
+		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
 			asset_id,
 			&caller,
 			balance.into(),
@@ -873,7 +875,7 @@ benchmarks! {
 
 	}:_(RawOrigin::Signed(caller.clone()), transfer_params, asset_id.into(), amt.into())
 	verify {
-		assert_eq!(<<T as Config>::Fungibles as Inspect<T::AccountId>>::balance(
+		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
 			asset_id.into(),
 			&caller
 		), (balance - amt).into());
@@ -979,7 +981,7 @@ benchmarks! {
 	}
 
 	on_recv_packet {
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 		let client_id = Pallet::<T>::create_client().unwrap();
 		let connection_id = ConnectionId::new(0);
 		Pallet::<T>::create_connection(client_id, connection_id.clone()).unwrap();
@@ -1000,9 +1002,9 @@ benchmarks! {
 		let denom = "transfer/channel-1/PICA".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
-		let channel_escrow_address: T::AccountId = channel_escrow_address.into_account();
+		let channel_escrow_address: <T as frame_system::Config>::AccountId = channel_escrow_address.into_account();
 		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
+		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
 			asset_id,
 			&channel_escrow_address,
 			balance.into(),
@@ -1051,14 +1053,14 @@ benchmarks! {
 
 	 }
 	verify {
-		assert_eq!(<<T as Config>::Fungibles as Inspect<T::AccountId>>::balance(
+		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
 			asset_id,
 			&caller
 		), amt.into());
 	}
 
 	on_acknowledgement_packet {
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 		let client_id = Pallet::<T>::create_client().unwrap();
 		let connection_id = ConnectionId::new(0);
 		Pallet::<T>::create_connection(client_id, connection_id.clone()).unwrap();
@@ -1079,9 +1081,9 @@ benchmarks! {
 		let denom = "PICA".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
-		let channel_escrow_address: T::AccountId = channel_escrow_address.into_account();
+		let channel_escrow_address: <T as frame_system::Config>::AccountId = channel_escrow_address.into_account();
 		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
+		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
 			asset_id,
 			&channel_escrow_address,
 			balance.into(),
@@ -1130,14 +1132,14 @@ benchmarks! {
 	   handler.on_acknowledgement_packet(&ctx, &mut output, &packet, &ack, &signer).unwrap();
 	}
 	verify {
-		assert_eq!(<<T as Config>::Fungibles as Inspect<T::AccountId>>::balance(
+		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
 			asset_id,
 			&caller
 		), amt.into());
 	}
 
 	on_timeout_packet {
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 		let client_id = Pallet::<T>::create_client().unwrap();
 		let connection_id = ConnectionId::new(0);
 		Pallet::<T>::create_connection(client_id, connection_id.clone()).unwrap();
@@ -1158,9 +1160,9 @@ benchmarks! {
 		let denom = "PICA".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
-		let channel_escrow_address: T::AccountId = channel_escrow_address.into_account();
+		let channel_escrow_address: <T as frame_system::Config>::AccountId = channel_escrow_address.into_account();
 		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
+		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
 			asset_id,
 			&channel_escrow_address,
 			balance.into(),
@@ -1208,7 +1210,7 @@ benchmarks! {
 		handler.on_timeout_packet(&ctx, &mut output, &packet, &signer).unwrap();
 	}
 	verify {
-		assert_eq!(<<T as Config>::Fungibles as Inspect<T::AccountId>>::balance(
+		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
 			asset_id,
 			&caller
 		), amt.into());
@@ -1241,7 +1243,7 @@ benchmarks! {
 		};
 
 		let msg = Any { type_url: UPDATE_CLIENT_TYPE_URL.to_string().as_bytes().to_vec(), value: msg.encode_vec() };
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let client_state = ClientStates::<T>::get(&client_id).unwrap();

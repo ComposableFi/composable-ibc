@@ -55,7 +55,7 @@ pub trait ModuleRouter: Default + Clone + Eq + PartialEq + Debug {
 impl<T: Config + Send + Sync> Router for IbcRouter<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	fn get_route_mut(&mut self, module_id: &ModuleId) -> Option<&mut dyn Module> {
 		// check if the user has defined any custom routes
@@ -82,7 +82,7 @@ where
 impl<T: Config + Send + Sync> Ics26Context for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	type Router = IbcRouter<T>;
 
@@ -98,13 +98,13 @@ where
 impl<T: Config + Send + Sync> ReaderContext for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 }
 
 impl<T: Config + Send + Sync> ModuleCallbackContext for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 }

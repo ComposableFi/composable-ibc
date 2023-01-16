@@ -139,7 +139,7 @@ where
 			)
 			.await
 			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
-		Ok(dispatch_info.weight)
+		Ok(dispatch_info.weight.ref_time())
 	}
 
 	async fn finality_notifications(
@@ -231,9 +231,9 @@ where
 		};
 
 		#[cfg(feature = "dali")]
-		use api::runtime_types::dali_runtime::{Call as RuntimeCall, Event};
+		use api::runtime_types::dali_runtime::{RuntimeCall, RuntimeEvent};
 		#[cfg(not(feature = "dali"))]
-		use api::runtime_types::parachain_runtime::{Call as RuntimeCall, Event};
+		use api::runtime_types::parachain_runtime::{RuntimeCall, RuntimeEvent};
 		use pallet_ibc::events::IbcEvent as RawIbcEvent;
 
 		let host_height = update.height();
@@ -266,7 +266,7 @@ where
 			.await?
 			.map(|e| e.0)
 			.ok_or_else(|| Error::from("No events found".to_owned()))?;
-		let events: Vec<EventRecord<Event, H256>> = Decode::decode(&mut &*event_bytes)
+		let events: Vec<EventRecord<RuntimeEvent, H256>> = Decode::decode(&mut &*event_bytes)
 			.map_err(|e| Error::from(format!("Failed to decode events: {:?}", e)))?;
 		let (transaction_index, event_index) = events
 			.into_iter()
@@ -278,7 +278,7 @@ where
 						return None
 					},
 				};
-				if let Event::Ibc(PalletEvent::Events { events }) = pallet_event.event {
+				if let RuntimeEvent::Ibc(PalletEvent::Events { events }) = pallet_event.event {
 					events.into_iter().enumerate().find_map(|(i, event)| match event {
 						Ok(ibc_event) => IbcEvent::try_from(RawIbcEvent::from(
 							MetadataIbcEventWrapper(ibc_event),
