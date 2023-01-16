@@ -64,3 +64,8 @@ result
 
 # lean setup
 lean-setup/
+
+# hardhat
+artifacts
+cache
+typechain-types

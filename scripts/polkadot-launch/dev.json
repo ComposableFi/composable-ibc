@@ -20,7 +20,7 @@
         "wsPort": 9944,
         "port": 30444,
         "basePath": "/tmp/polkadot-launch/relaychains/alice",
-        "flags": ["--rpc-cors=all", "--beefy", "--enable-offchain-indexing=true"]
+        "flags": ["--rpc-cors=all", "--beefy", "--enable-offchain-indexing=true", "--pruning=archive"]
       },
       {
         "name": "bob",

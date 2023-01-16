@@ -8040,22 +8040,16 @@ pub mod api {
 			)]
 			#[doc = "Events emitted by the ibc subsystem"]
 			pub struct Events {
-				pub events: ::std::vec::Vec<runtime_types::pallet_ibc::events::IbcEvent>,
+				pub events: ::std::vec::Vec<
+					::core::result::Result<
+						runtime_types::pallet_ibc::events::IbcEvent,
+						runtime_types::pallet_ibc::errors::IbcError,
+					>,
+				>,
 			}
 			impl ::subxt::events::StaticEvent for Events {
 				const PALLET: &'static str = "Ibc";
 				const EVENT: &'static str = "Events";
-			}
-			#[derive(
-				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
-			)]
-			#[doc = "Errors emitted by the ibc subsystem"]
-			pub struct Errors {
-				pub errors: ::std::vec::Vec<runtime_types::pallet_ibc::errors::IbcError>,
-			}
-			impl ::subxt::events::StaticEvent for Errors {
-				const PALLET: &'static str = "Ibc";
-				const EVENT: &'static str = "Errors";
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -11399,11 +11393,15 @@ pub mod api {
 				pub enum Event {
 					#[codec(index = 0)]
 					#[doc = "Events emitted by the ibc subsystem"]
-					Events { events: ::std::vec::Vec<runtime_types::pallet_ibc::events::IbcEvent> },
+					Events {
+						events: ::std::vec::Vec<
+							::core::result::Result<
+								runtime_types::pallet_ibc::events::IbcEvent,
+								runtime_types::pallet_ibc::errors::IbcError,
+							>,
+						>,
+					},
 					#[codec(index = 1)]
-					#[doc = "Errors emitted by the ibc subsystem"]
-					Errors { errors: ::std::vec::Vec<runtime_types::pallet_ibc::errors::IbcError> },
-					#[codec(index = 2)]
 					#[doc = "An Ibc token transfer has been started"]
 					TokenTransferInitiated {
 						from: ::subxt::ext::sp_core::crypto::AccountId32,
@@ -11415,19 +11413,19 @@ pub mod api {
 						source_channel: ::std::vec::Vec<::core::primitive::u8>,
 						destination_channel: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec(index = 3)]
+					#[codec(index = 2)]
 					#[doc = "A channel has been opened"]
 					ChannelOpened {
 						channel_id: ::std::vec::Vec<::core::primitive::u8>,
 						port_id: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec(index = 4)]
+					#[codec(index = 3)]
 					#[doc = "Pallet params updated"]
 					ParamsUpdated {
 						send_enabled: ::core::primitive::bool,
 						receive_enabled: ::core::primitive::bool,
 					},
-					#[codec(index = 5)]
+					#[codec(index = 4)]
 					#[doc = "An outgoing Ibc token transfer has been completed and burnt"]
 					TokenTransferCompleted {
 						from: ::std::vec::Vec<::core::primitive::u8>,
@@ -11439,7 +11437,7 @@ pub mod api {
 						source_channel: ::std::vec::Vec<::core::primitive::u8>,
 						destination_channel: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec(index = 6)]
+					#[codec(index = 5)]
 					#[doc = "Ibc tokens have been received and minted"]
 					TokenReceived {
 						from: ::std::vec::Vec<::core::primitive::u8>,
@@ -11451,7 +11449,7 @@ pub mod api {
 						source_channel: ::std::vec::Vec<::core::primitive::u8>,
 						destination_channel: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec(index = 7)]
+					#[codec(index = 6)]
 					#[doc = "Ibc transfer failed, received an acknowledgement error, tokens have been refunded"]
 					TokenTransferFailed {
 						from: ::std::vec::Vec<::core::primitive::u8>,
@@ -11463,20 +11461,20 @@ pub mod api {
 						source_channel: ::std::vec::Vec<::core::primitive::u8>,
 						destination_channel: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec(index = 8)]
+					#[codec(index = 7)]
 					#[doc = "On recv packet was not processed successfully processes"]
 					OnRecvPacketError { msg: ::std::vec::Vec<::core::primitive::u8> },
-					#[codec(index = 9)]
+					#[codec(index = 8)]
 					#[doc = "Client upgrade path has been set"]
 					ClientUpgradeSet,
-					#[codec(index = 10)]
+					#[codec(index = 9)]
 					#[doc = "Client has been frozen"]
 					ClientFrozen {
 						client_id: ::std::vec::Vec<::core::primitive::u8>,
 						height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
 					},
-					#[codec(index = 11)]
+					#[codec(index = 10)]
 					#[doc = "Asset Admin Account Updated"]
 					AssetAdminUpdated { admin_account: ::subxt::ext::sp_core::crypto::AccountId32 },
 				}

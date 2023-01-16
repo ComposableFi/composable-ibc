@@ -49,7 +49,7 @@ pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
 	proof: ParachainHeadersWithFinalityProof<H>,
 ) -> Result<ClientState<H::Hash>, error::Error>
 where
-	H: Header<Hash = H256>,
+	H: Header<Hash = H256, Number = u32>,
 	H::Number: finality_grandpa::BlockNumberOps + Into<u32>,
 	Host: HostFunctions,
 	Host::BlakeTwo256: Hasher<Out = H256>,
@@ -58,6 +58,7 @@ where
 
 	// 1. First validate unknown headers.
 	let headers = AncestryChain::<H>::new(&finality_proof.unknown_headers);
+
 	let target = finality_proof
 		.unknown_headers
 		.iter()
@@ -69,18 +70,34 @@ where
 		Err(anyhow!("Latest finalized block should be highest block in unknown_headers"))?;
 	}
 
-	let from = finality_proof
+	let justification = GrandpaJustification::<H>::decode(&mut &finality_proof.justification[..])?;
+
+	if justification.commit.target_hash != finality_proof.block {
+		Err(anyhow!("Justification target hash and finality proof block hash mismatch"))?;
+	}
+
+	let from = client_state.latest_relay_hash;
+
+	let base = finality_proof
 		.unknown_headers
 		.iter()
 		.min_by_key(|h| *h.number())
 		.ok_or_else(|| anyhow!("Unknown headers can't be empty!"))?;
-	let mut finalized = headers
-		.ancestry(from.hash(), target.hash())
-		.map_err(|_| anyhow!("Invalid ancestry!"))?;
+
+	if base.number() < &client_state.latest_relay_height {
+		headers.ancestry(base.hash(), client_state.latest_relay_hash).map_err(|_| {
+			anyhow!(
+				"[verify_parachain_headers_with_grandpa_finality_proof] Invalid ancestry (base -> latest relay block)!"
+			)
+		})?;
+	}
+
+	let mut finalized = headers.ancestry(from, target.hash()).map_err(|_| {
+		anyhow!("[verify_parachain_headers_with_grandpa_finality_proof] Invalid ancestry!")
+	})?;
 	finalized.sort();
 
 	// 2. verify justification.
-	let justification = GrandpaJustification::<H>::decode(&mut &finality_proof.justification[..])?;
 	justification.verify::<Host>(client_state.current_set_id, &client_state.current_authorities)?;
 
 	// 3. verify state proofs of parachain headers in finalized relay chain headers.

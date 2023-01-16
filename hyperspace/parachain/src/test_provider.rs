@@ -24,6 +24,7 @@ use ibc::{
 	core::ics24_host::identifier::{ChannelId, ClientId, PortId},
 };
 use ibc_rpc::IbcApiClient;
+use ics10_grandpa::client_message::RelayChainHeader;
 use jsonrpsee::core::client::SubscriptionClientT;
 use pallet_ibc::{MultiAddress, Timeout, TransferParams};
 use primitives::{KeyProvider, TestProvider};
@@ -56,6 +57,7 @@ where
 		From<FinalityProof<T::Header>>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
+	T::BlockNumber: Ord + sp_runtime::traits::Zero,
 {
 	pub fn set_client_id(&mut self, client_id: ClientId) {
 		self.client_id = Some(client_id)
@@ -101,9 +103,9 @@ where
 			source_channel: params.source_channel,
 			timeout: match params.timeout {
 				Timeout::Offset { timestamp, height } =>
-					api::runtime_types::pallet_ibc::Timeout::Offset { timestamp, height },
+					api::runtime_types::ibc_primitives::Timeout::Offset { timestamp, height },
 				Timeout::Absolute { timestamp, height } =>
-					api::runtime_types::pallet_ibc::Timeout::Absolute { timestamp, height },
+					api::runtime_types::ibc_primitives::Timeout::Absolute { timestamp, height },
 			},
 		};
 		// Submit extrinsic to parachain node
@@ -178,6 +180,7 @@ where
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
+	RelayChainHeader: From<T::Header>,
 {
 	async fn send_transfer(&self, transfer: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
 		let account_id = AccountId32::from_ss58check(transfer.receiver.as_ref()).unwrap();

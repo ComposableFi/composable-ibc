@@ -25,7 +25,6 @@ use anyhow::anyhow;
 use codec::{Decode, Encode};
 use grandpa_client_primitives::{FinalityProof, ParachainHeaderProofs};
 use primitive_types::H256;
-use sp_finality_grandpa::Equivocation;
 use sp_runtime::traits::BlakeTwo256;
 use tendermint_proto::Protobuf;
 
@@ -47,14 +46,15 @@ pub struct Header {
 	pub parachain_headers: BTreeMap<H256, ParachainHeaderProofs>,
 }
 
-///  Misbehaviour type for GRANDPA
+/// Misbehaviour type for GRANDPA. If both first and second proofs are valid
+/// (that is, form a valid canonical chain of blocks where on of the chain is a fork of
+/// the main one)
 #[derive(Clone, Debug)]
 pub struct Misbehaviour {
-	/// set id for these misbehaviours
-	pub set_id: u64,
-	/// If there are equivocations for at least 1/3 of the validator set, then we  have to freeze
-	/// the client as the byzantine resistance for GRANDPA requires 2/3+1 honest majority
-	pub equivocations: Vec<Equivocation<H256, u32>>,
+	/// first proof of misbehaviour
+	pub first_finality_proof: FinalityProof<RelayChainHeader>,
+	/// second proof of misbehaviour
+	pub second_finality_proof: FinalityProof<RelayChainHeader>,
 }
 
 /// [`ClientMessage`] for Ics10-GRANDPA
@@ -62,7 +62,7 @@ pub struct Misbehaviour {
 pub enum ClientMessage {
 	/// This is the variant for header updates
 	Header(Header),
-	//// This is for submitting misbehaviors. todo:
+	/// This is for submitting misbehaviors.
 	Misbehaviour(Misbehaviour),
 }
 
@@ -115,14 +115,27 @@ impl TryFrom<RawHeader> for Header {
 			})
 			.collect::<Result<_, Error>>()?;
 
-		Ok(Header {
-			finality_proof: FinalityProof {
-				block,
-				justification: finality_proof.justification,
-				unknown_headers,
+				ClientMessage::Header(Header {
+					finality_proof: FinalityProof {
+						block,
+						justification: finality_proof.justification,
+						unknown_headers,
+					},
+					parachain_headers,
+				})
 			},
-			parachain_headers,
-		})
+			client_message::Message::Misbehaviour(raw_misbehaviour) =>
+				ClientMessage::Misbehaviour(Misbehaviour {
+					first_finality_proof: Decode::decode(
+						&mut &*raw_misbehaviour.first_finality_proof,
+					)?,
+					second_finality_proof: Decode::decode(
+						&mut &*raw_misbehaviour.second_finality_proof,
+					)?,
+				}),
+		};
+
+		Ok(message)
 	}
 }
 
@@ -197,8 +210,8 @@ impl From<ClientMessage> for RawClientMessage {
 				RawClientMessage { message: Some(client_message::Message::Header(header.into())) },
 			ClientMessage::Misbehaviour(misbehaviior) => RawClientMessage {
 				message: Some(client_message::Message::Misbehaviour(RawMisbehaviour {
-					set_id: misbehaviior.set_id,
-					equivocations: misbehaviior.equivocations.encode(),
+					first_finality_proof: misbehaviior.first_finality_proof.encode(),
+					second_finality_proof: misbehaviior.second_finality_proof.encode(),
 				})),
 			},
 		}

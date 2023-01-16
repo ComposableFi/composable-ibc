@@ -177,6 +177,7 @@ services:
       - --log=ibc_transfer=trace,pallet_ibc=trace,grandpa-verifier=trace,runtime=trace
       - --force-authoring
       - --execution=wasm
+      - --enable-offchain-indexing=true
       - --alice
       - --node-key=7c667a99279cf5a884d6bb86fac6e320ef2d413dc880f01ff0e1ad353d615045
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
@@ -184,7 +185,6 @@ services:
       - --chain=/app/rococo-local.json
       - --execution=wasm
       - --name=relaychain-alice
-      - --enable-offchain-indexing=true
     environment: {}
     ulimits: *a1
   parachain-2000-1:
@@ -210,14 +210,13 @@ services:
       - --log=ibc_transfer=trace,pallet_ibc=trace,grandpa-verifier=trace,runtime=trace
       - --force-authoring
       - --execution=wasm
+      - --enable-offchain-indexing=true
       - --bob
-      - >-
-        --bootnodes=/dns/parachain-2000-0/tcp/30333/p2p/12D3KooWNDsLfXwYCiNSV3LWAwc3rJ7cdjqenzvzsvp1PTtCpbpo
+      - --bootnodes=/dns/parachain-2000-0/tcp/30333/p2p/12D3KooWNDsLfXwYCiNSV3LWAwc3rJ7cdjqenzvzsvp1PTtCpbpo
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
-      - --enable-offchain-indexing=true
     environment: {}
     ulimits: *a1
   parachain-2000-2:
@@ -243,14 +242,13 @@ services:
       - --log=ibc_transfer=trace,pallet_ibc=trace,grandpa-verifier=trace,runtime=trace
       - --force-authoring
       - --execution=wasm
+      - --enable-offchain-indexing=true
       - --charlie
-      - >-
-        --bootnodes=/dns/parachain-2000-0/tcp/30333/p2p/12D3KooWNDsLfXwYCiNSV3LWAwc3rJ7cdjqenzvzsvp1PTtCpbpo
+      - --bootnodes=/dns/parachain-2000-0/tcp/30333/p2p/12D3KooWNDsLfXwYCiNSV3LWAwc3rJ7cdjqenzvzsvp1PTtCpbpo
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
-      - --enable-offchain-indexing=true
     environment: {}
     ulimits: *a1
   parachain-2001-0:
@@ -276,13 +274,13 @@ services:
       - --log=ibc_transfer=trace,pallet_ibc=trace,grandpa-verifier=trace,runtime=trace
       - --force-authoring
       - --execution=wasm
+      - --enable-offchain-indexing=true
       - --alice
       - --node-key=e5ad8b579451f25035feeccaee89468a7fba53fbce35d27afe5fdbbf412722e9
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
-      - --enable-offchain-indexing=true
     environment: {}
     ulimits: *a1
   parachain-2001-1:
@@ -308,14 +306,13 @@ services:
       - --log=ibc_transfer=trace,pallet_ibc=trace,grandpa-verifier=trace,runtime=trace
       - --force-authoring
       - --execution=wasm
+      - --enable-offchain-indexing=true
       - --bob
-      - >-
-        --bootnodes=/dns/parachain-2001-0/tcp/30333/p2p/12D3KooWSMHyxxKbzzJxe44hHwSx7KWZM6Go3SrdhcvGLyc4z4XZ
+      - --bootnodes=/dns/parachain-2001-0/tcp/30333/p2p/12D3KooWSMHyxxKbzzJxe44hHwSx7KWZM6Go3SrdhcvGLyc4z4XZ
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
-      - --enable-offchain-indexing=true
     environment: {}
     ulimits: *a1
   parachain-2001-2:
@@ -341,14 +338,13 @@ services:
       - --log=ibc_transfer=trace,pallet_ibc=trace,grandpa-verifier=trace,runtime=trace
       - --force-authoring
       - --execution=wasm
+      - --enable-offchain-indexing=true
       - --charlie
-      - >-
-        --bootnodes=/dns/parachain-2001-0/tcp/30333/p2p/12D3KooWSMHyxxKbzzJxe44hHwSx7KWZM6Go3SrdhcvGLyc4z4XZ
+      - --bootnodes=/dns/parachain-2001-0/tcp/30333/p2p/12D3KooWSMHyxxKbzzJxe44hHwSx7KWZM6Go3SrdhcvGLyc4z4XZ
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
-      - --enable-offchain-indexing=true
     environment: {}
     ulimits: *a1
 volumes:

@@ -72,7 +72,10 @@ where
 			&proof,
 			consensus_state.root(),
 			channel_end.counterparty().port_id(),
-			channel_end.counterparty().channel_id().unwrap(),
+			channel_end
+				.counterparty()
+				.channel_id()
+				.ok_or_else(|| Error::missing_channel_id())?,
 			expected_chan,
 		)
 		.map_err(Error::verify_channel_failed)

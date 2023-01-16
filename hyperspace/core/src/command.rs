@@ -21,7 +21,7 @@ use tokio::time::sleep;
 
 use crate::{
 	chain::{AnyChain, AnyConfig, Config, CoreConfig},
-	relay,
+	fish, relay,
 };
 use ibc::core::{ics04_channel::channel::Order, ics24_host::identifier::PortId};
 use ibc_proto::ibc::lightclients::wasm::v1::{msg_client::MsgClient, MsgPushNewWasmCode};
@@ -59,6 +59,11 @@ pub enum Subcommand {
 	Relay(Cmd),
 	#[clap(name = "upload-wasm", about = "Upload a WASM blob to the chain")]
 	UploadWasm(UploadWasmCmd),
+	#[clap(
+		name = "fish",
+		about = "Start the relayer in fishing mode (catching malicious transactions)"
+	)]
+	Fish(Cmd),
 	#[clap(name = "create-clients", about = "Creates light clients on both chains")]
 	CreateClients(Cmd),
 	#[clap(name = "create-connection", about = "Creates a connection between both chains")]
@@ -155,6 +160,17 @@ impl Cmd {
 		}
 
 		relay(chain_a, chain_b, Some(metrics_handler_a), Some(metrics_handler_b)).await
+	}
+
+	/// Run fisherman
+	pub async fn fish(&self) -> Result<()> {
+		let path: PathBuf = self.config.parse()?;
+		let file_content = tokio::fs::read_to_string(path).await?;
+		let config: Config = toml::from_str(&file_content)?;
+		let any_chain_a = config.chain_a.into_client().await?;
+		let any_chain_b = config.chain_b.into_client().await?;
+
+		fish(any_chain_a, any_chain_b).await
 	}
 
 	pub async fn create_clients(&self) -> Result<()> {
