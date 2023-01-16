@@ -117,10 +117,10 @@ where
 	where
 		C: Chain,
 	{
-		let client_id = counterparty.client_id();
+		let client_id = self.client_id();
 		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
 		let latest_cp_client_state =
-			counterparty.query_client_state(latest_cp_height, client_id).await?;
+			counterparty.query_client_state(latest_cp_height, client_id.clone()).await?;
 		let client_state_response = latest_cp_client_state
 			.client_state
 			.ok_or_else(|| Error::Custom("counterparty returned empty client state".to_string()))?;
@@ -163,7 +163,7 @@ where
 		let update_header = self.msg_update_client_header(client_state.latest_height).await?;
 		let update_client_header = {
 			let msg = MsgUpdateAnyClient::<LocalClientTypes> {
-				client_id: self.client_id(),
+				client_id,
 				client_message: AnyClientMessage::Tendermint(ClientMessage::Header(
 					update_header.0,
 				)),

@@ -161,7 +161,6 @@ impl Cmd {
 		let config = self.parse_config().await?;
 		let chain_a = config.chain_a.into_client().await?;
 		let chain_b = config.chain_b.into_client().await?;
-		// let chain_b = chain_a.clone();
 
 		let (client_id_a_on_b, client_id_b_on_a) = create_clients(&chain_a, &chain_b).await?;
 		log::info!(
@@ -190,18 +189,15 @@ impl Cmd {
 
 		let chain_a_clone = chain_a.clone();
 		let chain_b_clone = chain_b.clone();
-		// let handle = tokio::task::spawn(async move {
-		// 	relay(chain_a_clone, chain_b_clone, None, None).await.unwrap();
-		// });
+		let handle = tokio::task::spawn(async move {
+			relay(chain_a_clone, chain_b_clone, None, None).await.unwrap();
+		});
 
-		let (connection_id_a, connection_id_b) =
+		let (connection_id_b, connection_id_a) =
 			create_connection(&chain_a, &chain_b, delay).await?;
-		log::info!("ConnectionId on Chain {}: {}", chain_a.name(), connection_id_a); //
-		if let Some(connection_id_b) = connection_id_b {
-			log::info!("ConnectionId on Chain {}: {}", chain_b.name(), connection_id_b);
-		}
-		// sleep(Duration::from_secs(10000)).await;
-		// handle.abort();
+		log::info!("ConnectionId on Chain {}: {}", chain_b.name(), connection_id_b);
+		log::info!("ConnectionId on Chain {}: {}", chain_a.name(), connection_id_a);
+		handle.abort();
 		Ok(())
 	}
 

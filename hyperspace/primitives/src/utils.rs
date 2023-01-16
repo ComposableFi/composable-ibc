@@ -80,50 +80,55 @@ pub async fn create_clients(
 /// Completes the connection handshake process
 /// The relayer process must be running before this function is executed
 pub async fn create_connection(
-	chain_a: &impl Chain,
-	chain_b: &impl Chain,
+	chain_a: &impl Chain, // ibc - tendermint
+	chain_b: &impl Chain, // substrate - wasm
 	delay_period: Duration,
-) -> Result<(ConnectionId, Option<ConnectionId>), anyhow::Error> {
+) -> Result<(ConnectionId, ConnectionId), anyhow::Error> {
 	let msg = MsgConnectionOpenInit {
-		client_id: chain_b.client_id(),
-		counterparty: Counterparty::new(chain_a.client_id(), None, chain_a.connection_prefix()),
+		client_id: chain_a.client_id(),
+		counterparty: Counterparty::new(chain_b.client_id(), None, chain_b.connection_prefix()),
 		version: Some(Default::default()),
 		delay_period,
 		signer: chain_b.account_id(),
 	};
 
+	println!("{:?}", msg);
+
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().expect("encode msg") };
 
 	chain_b.submit(vec![msg]).await?;
 
-	// log::info!(target: "hyperspace", "============= Wait till both chains have completed
-	// connection handshake =============");
+	log::info!(target: "hyperspace", "============= Wait till both chains have completed connection handshake =============");
 
 	// wait till both chains have completed connection handshake
-	// let future = chain_b
-	// 	.ibc_events()
-	// 	.await
-	// 	.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmConnection(_))))
-	// 	.take(1)
-	// 	.collect::<Vec<_>>();
-	//
-	// let mut events = timeout_future(
-	// 	future,
-	// 	15 * 60,
-	// 	format!("Didn't see OpenConfirmConnection on {}", chain_b.name()),
-	// )
-	// .await;
-	//
-	// let (connection_id_b, connection_id_a) = match events.pop() {
-	// 	Some(IbcEvent::OpenConfirmConnection(conn)) => (
-	// 		conn.connection_id().unwrap().clone(),
-	// 		conn.attributes().counterparty_connection_id.clone(),
-	// 	),
-	// 	got => panic!("Last event should be OpenConfirmConnection: {got:?}"),
-	// };
-	std::process::exit(0);
+	let future = chain_b
+		.ibc_events()
+		.await
+		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmConnection(_))))
+		.take(1)
+		.collect::<Vec<_>>();
 
-	// Ok((connection_id_b, connection_id_a))
+	let mut events = timeout_future(
+		future,
+		15 * 60,
+		format!("Didn't see OpenConfirmConnection on {}", chain_b.name()),
+	)
+	.await;
+
+	println!("{:?}", events);
+
+	let (connection_id_b, connection_id_a) = match events.pop() {
+		Some(IbcEvent::OpenConfirmConnection(conn)) => (
+			conn.connection_id().unwrap().clone(),
+			conn.attributes()
+				.counterparty_connection_id
+				.clone()
+				.expect("Failed to create connection"),
+		),
+		got => panic!("Last event should be OpenConfirmConnection: {got:?}"),
+	};
+
+	Ok((connection_id_b, connection_id_a))
 }
 
 /// Completes the chanel handshake process

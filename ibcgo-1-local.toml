@@ -8,7 +8,7 @@ account_prefix = 'cosmos'
 store_prefix = 'ibc'
 max_tx_size = 200000
 connection_id = 'connection-0'
-client_id = "08-wasm-0"
+client_id = "07-tendermint-0"
 wasm_code_id = "e0e0fda1d756f6ed060b32f392291b119194b38dcbefcf0e6cc762dc1dc0507b"
 wasm_client_type = "10-grandpa"
 

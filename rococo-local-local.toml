@@ -11,4 +11,4 @@ ss58_version = 49
 channel_whitelist = []
 finality_protocol = 'Grandpa'
 key_type = 'sr25519'
-client_id = "07-tendermint-0"
+client_id = "08-wasm-0"

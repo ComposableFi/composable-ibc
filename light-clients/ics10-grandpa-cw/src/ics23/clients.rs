@@ -4,7 +4,6 @@ use cosmwasm_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixe
 use ibc::core::ics24_host::{identifier::ClientId, path::ClientTypePath};
 use sp_std::prelude::*;
 
-
 /// client_id => client_type
 /// trie key path: "clients/{}/clientType"
 pub struct Clients<'a>(PrefixedStorage<'a>);
