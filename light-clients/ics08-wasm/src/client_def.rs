@@ -1,10 +1,15 @@
 use crate::{
 	client_message::ClientMessage, client_state::ClientState, consensus_state::ConsensusState,
+	Bytes,
 };
+use alloc::{boxed::Box, vec::Vec};
+use core::{fmt::Debug, marker::PhantomData};
 use ibc::{
 	core::{
 		ics02_client::{
+			client_consensus::ConsensusState as IbcConsensusState,
 			client_def::{ClientDef, ConsensusUpdateResult},
+			client_state::{ClientState as IbcClientState, ClientType},
 			error::Error,
 		},
 		ics03_connection::connection::ConnectionEnd,
@@ -20,188 +25,365 @@ use ibc::{
 	Height,
 };
 
-#[derive(Clone, Debug, PartialEq, Eq, Copy, Default)]
-pub struct WasmClient {}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WasmClient<AnyClient, AnyClientState, AnyConsensusState> {
+	pub inner: Box<AnyClient>,
+	pub _phantom: PhantomData<(AnyClientState, AnyConsensusState)>,
+}
 
-impl ClientDef for WasmClient {
-	type ClientMessage = ClientMessage;
-	type ClientState = ClientState;
-	type ConsensusState = ConsensusState;
+impl<AnyClient, AnyClientState, AnyConsensusState> ClientDef
+	for WasmClient<AnyClient, AnyClientState, AnyConsensusState>
+where
+	AnyClient: ClientDef<ClientState = AnyClientState, ConsensusState = AnyConsensusState>
+		+ Debug
+		+ Send
+		+ Sync
+		+ Eq,
+	AnyClientState: Clone + Eq + IbcClientState<ClientDef = AnyClient>,
+	AnyClientState: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyConsensusState: IbcConsensusState + Eq,
+	AnyConsensusState: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyClient::ClientMessage: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+{
+	type ClientMessage = ClientMessage<AnyClient::ClientMessage>;
+	type ClientState = ClientState<AnyClient, AnyClientState, AnyConsensusState>;
+	type ConsensusState = ConsensusState<AnyConsensusState>;
 
 	fn verify_client_message<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_id: ClientId,
-		_client_state: Self::ClientState,
-		_client_msg: Self::ClientMessage,
+		ctx: &Ctx,
+		client_id: ClientId,
+		client_state: Self::ClientState,
+		client_msg: Self::ClientMessage,
 	) -> Result<(), Error> {
-		todo!()
+		self.inner.verify_client_message(
+			ctx,
+			client_id,
+			*client_state.inner,
+			client_msg.into_inner(),
+		)
 	}
 
 	fn update_state<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_id: ClientId,
-		_client_state: Self::ClientState,
-		_client_msg: Self::ClientMessage,
+		ctx: &Ctx,
+		client_id: ClientId,
+		client_state: Self::ClientState,
+		client_msg: Self::ClientMessage,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error> {
-		todo!()
+		let (inner_client_state, inner_consensus_update_result) = self.inner.update_state(
+			ctx,
+			client_id,
+			*client_state.inner,
+			client_msg.into_inner(),
+		)?;
+		let client_state = ClientState {
+			data: client_state.data.clone(),
+			code_id: client_state.code_id.clone(),
+			inner: Box::new(inner_client_state),
+			latest_height: client_state.latest_height,
+			proof_specs: client_state.proof_specs.clone(),
+			repository: client_state.repository.clone(),
+			_phantom: PhantomData,
+		};
+		Ok((client_state, inner_consensus_update_result))
 	}
 
 	fn update_state_on_misbehaviour(
 		&self,
-		_client_state: Self::ClientState,
-		_client_msg: Self::ClientMessage,
+		client_state: Self::ClientState,
+		client_msg: Self::ClientMessage,
 	) -> Result<Self::ClientState, Error> {
-		todo!()
+		let inner_client_state = self
+			.inner
+			.update_state_on_misbehaviour(*client_state.inner, client_msg.into_inner())?;
+		Ok(ClientState {
+			data: client_state.data.clone(),
+			code_id: client_state.code_id.clone(),
+			inner: Box::new(inner_client_state),
+			latest_height: client_state.latest_height,
+			proof_specs: client_state.proof_specs.clone(),
+			repository: client_state.repository.clone(),
+			_phantom: PhantomData,
+		})
 	}
 
 	fn check_for_misbehaviour<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_id: ClientId,
-		_client_state: Self::ClientState,
-		_client_msg: Self::ClientMessage,
+		ctx: &Ctx,
+		client_id: ClientId,
+		client_state: Self::ClientState,
+		client_msg: Self::ClientMessage,
 	) -> Result<bool, Error> {
-		todo!()
+		self.inner.check_for_misbehaviour(
+			ctx,
+			client_id,
+			*client_state.inner,
+			client_msg.into_inner(),
+		)
 	}
 
 	fn verify_upgrade_and_update_state<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_id: ClientId,
-		_old_client_state: &Self::ClientState,
-		_upgrade_client_state: &Self::ClientState,
-		_upgrade_consensus_state: &Self::ConsensusState,
-		_proof_upgrade_client: Vec<u8>,
-		_proof_upgrade_consensus_state: Vec<u8>,
+		ctx: &Ctx,
+		client_id: ClientId,
+		old_client_state: &Self::ClientState,
+		upgrade_client_state: &Self::ClientState,
+		upgrade_consensus_state: &Self::ConsensusState,
+		proof_upgrade_client: Vec<u8>,
+		proof_upgrade_consensus_state: Vec<u8>,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error> {
-		todo!()
+		self.inner
+			.verify_upgrade_and_update_state(
+				ctx,
+				client_id,
+				&old_client_state.inner,
+				&upgrade_client_state.inner,
+				&upgrade_consensus_state.inner,
+				proof_upgrade_client,
+				proof_upgrade_consensus_state,
+			)
+			.map(|(client_state, result)| {
+				(
+					ClientState {
+						inner: Box::new(client_state),
+						data: old_client_state.data.clone(),
+						code_id: old_client_state.code_id.clone(),
+						latest_height: old_client_state.latest_height.clone(),
+						proof_specs: old_client_state.proof_specs.clone(),
+						repository: old_client_state.repository.clone(),
+						_phantom: Default::default(),
+					},
+					result,
+				)
+			})
 	}
 
 	fn verify_client_consensus_state<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_state: &Self::ClientState,
-		_height: Height,
-		_prefix: &CommitmentPrefix,
-		_proof: &CommitmentProofBytes,
-		_root: &CommitmentRoot,
-		_client_id: &ClientId,
-		_consensus_height: Height,
-		_expected_consensus_state: &Ctx::AnyConsensusState,
+		ctx: &Ctx,
+		client_state: &Self::ClientState,
+		height: Height,
+		prefix: &CommitmentPrefix,
+		proof: &CommitmentProofBytes,
+		root: &CommitmentRoot,
+		client_id: &ClientId,
+		consensus_height: Height,
+		expected_consensus_state: &Ctx::AnyConsensusState,
 	) -> Result<(), Error> {
-		todo!()
+		self.inner
+			.verify_client_consensus_state(
+				ctx,
+				&client_state.inner,
+				height,
+				prefix,
+				proof,
+				root,
+				client_id,
+				consensus_height,
+				expected_consensus_state,
+			)
+			.map_err(|e| e.into())
 	}
 
 	fn verify_connection_state<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_id: &ClientId,
-		_client_state: &Self::ClientState,
-		_height: Height,
-		_prefix: &CommitmentPrefix,
-		_proof: &CommitmentProofBytes,
-		_root: &CommitmentRoot,
-		_connection_id: &ConnectionId,
-		_expected_connection_end: &ConnectionEnd,
+		ctx: &Ctx,
+		client_id: &ClientId,
+		client_state: &Self::ClientState,
+		height: Height,
+		prefix: &CommitmentPrefix,
+		proof: &CommitmentProofBytes,
+		root: &CommitmentRoot,
+		connection_id: &ConnectionId,
+		expected_connection_end: &ConnectionEnd,
 	) -> Result<(), Error> {
-		todo!()
+		self.inner
+			.verify_connection_state(
+				ctx,
+				client_id,
+				&client_state.inner,
+				height,
+				prefix,
+				proof,
+				root,
+				connection_id,
+				expected_connection_end,
+			)
+			.map_err(|e| e.into())
 	}
 
 	fn verify_channel_state<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_id: &ClientId,
-		_client_state: &Self::ClientState,
-		_height: Height,
-		_prefix: &CommitmentPrefix,
-		_proof: &CommitmentProofBytes,
-		_root: &CommitmentRoot,
-		_port_id: &PortId,
-		_channel_id: &ChannelId,
-		_expected_channel_end: &ChannelEnd,
+		ctx: &Ctx,
+		client_id: &ClientId,
+		client_state: &Self::ClientState,
+		height: Height,
+		prefix: &CommitmentPrefix,
+		proof: &CommitmentProofBytes,
+		root: &CommitmentRoot,
+		port_id: &PortId,
+		channel_id: &ChannelId,
+		expected_channel_end: &ChannelEnd,
 	) -> Result<(), Error> {
-		todo!()
+		self.inner
+			.verify_channel_state(
+				ctx,
+				client_id,
+				&client_state.inner,
+				height,
+				prefix,
+				proof,
+				root,
+				port_id,
+				channel_id,
+				expected_channel_end,
+			)
+			.map_err(|e| e.into())
 	}
 
 	fn verify_client_full_state<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_state: &Self::ClientState,
-		_height: Height,
-		_prefix: &CommitmentPrefix,
-		_proof: &CommitmentProofBytes,
-		_root: &CommitmentRoot,
-		_client_id: &ClientId,
-		_expected_client_state: &Ctx::AnyClientState,
+		ctx: &Ctx,
+		client_state: &Self::ClientState,
+		height: Height,
+		prefix: &CommitmentPrefix,
+		proof: &CommitmentProofBytes,
+		root: &CommitmentRoot,
+		client_id: &ClientId,
+		expected_client_state: &Ctx::AnyClientState,
 	) -> Result<(), Error> {
-		todo!()
+		self.inner
+			.verify_client_full_state(
+				ctx,
+				&client_state.inner,
+				height,
+				prefix,
+				proof,
+				root,
+				client_id,
+				expected_client_state,
+			)
+			.map_err(|e| e.into())
 	}
 
 	fn verify_packet_data<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_id: &ClientId,
-		_client_state: &Self::ClientState,
-		_height: Height,
-		_connection_end: &ConnectionEnd,
-		_proof: &CommitmentProofBytes,
-		_root: &CommitmentRoot,
-		_port_id: &PortId,
-		_channel_id: &ChannelId,
-		_sequence: Sequence,
-		_commitment: PacketCommitment,
+		ctx: &Ctx,
+		client_id: &ClientId,
+		client_state: &Self::ClientState,
+		height: Height,
+		connection_end: &ConnectionEnd,
+		proof: &CommitmentProofBytes,
+		root: &CommitmentRoot,
+		port_id: &PortId,
+		channel_id: &ChannelId,
+		sequence: Sequence,
+		commitment: PacketCommitment,
 	) -> Result<(), Error> {
-		todo!()
+		self.inner
+			.verify_packet_data(
+				ctx,
+				client_id,
+				&client_state.inner,
+				height,
+				connection_end,
+				proof,
+				root,
+				port_id,
+				channel_id,
+				sequence,
+				commitment,
+			)
+			.map_err(|e| e.into())
 	}
 
 	fn verify_packet_acknowledgement<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_id: &ClientId,
-		_client_state: &Self::ClientState,
-		_height: Height,
-		_connection_end: &ConnectionEnd,
-		_proof: &CommitmentProofBytes,
-		_root: &CommitmentRoot,
-		_port_id: &PortId,
-		_channel_id: &ChannelId,
-		_sequence: Sequence,
-		_ack: AcknowledgementCommitment,
+		ctx: &Ctx,
+		client_id: &ClientId,
+		client_state: &Self::ClientState,
+		height: Height,
+		connection_end: &ConnectionEnd,
+		proof: &CommitmentProofBytes,
+		root: &CommitmentRoot,
+		port_id: &PortId,
+		channel_id: &ChannelId,
+		sequence: Sequence,
+		ack: AcknowledgementCommitment,
 	) -> Result<(), Error> {
-		todo!()
+		self.inner
+			.verify_packet_acknowledgement(
+				ctx,
+				client_id,
+				&client_state.inner,
+				height,
+				connection_end,
+				proof,
+				root,
+				port_id,
+				channel_id,
+				sequence,
+				ack,
+			)
+			.map_err(|e| e.into())
 	}
 
 	fn verify_next_sequence_recv<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_id: &ClientId,
-		_client_state: &Self::ClientState,
-		_height: Height,
-		_connection_end: &ConnectionEnd,
-		_proof: &CommitmentProofBytes,
-		_root: &CommitmentRoot,
-		_port_id: &PortId,
-		_channel_id: &ChannelId,
-		_sequence: Sequence,
+		ctx: &Ctx,
+		client_id: &ClientId,
+		client_state: &Self::ClientState,
+		height: Height,
+		connection_end: &ConnectionEnd,
+		proof: &CommitmentProofBytes,
+		root: &CommitmentRoot,
+		port_id: &PortId,
+		channel_id: &ChannelId,
+		sequence: Sequence,
 	) -> Result<(), Error> {
-		todo!()
+		self.inner
+			.verify_next_sequence_recv(
+				ctx,
+				client_id,
+				&client_state.inner,
+				height,
+				connection_end,
+				proof,
+				root,
+				port_id,
+				channel_id,
+				sequence,
+			)
+			.map_err(|e| e.into())
 	}
 
 	fn verify_packet_receipt_absence<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_id: &ClientId,
-		_client_state: &Self::ClientState,
-		_height: Height,
-		_connection_end: &ConnectionEnd,
-		_proof: &CommitmentProofBytes,
-		_root: &CommitmentRoot,
-		_port_id: &PortId,
-		_channel_id: &ChannelId,
-		_sequence: Sequence,
+		ctx: &Ctx,
+		client_id: &ClientId,
+		client_state: &Self::ClientState,
+		height: Height,
+		connection_end: &ConnectionEnd,
+		proof: &CommitmentProofBytes,
+		root: &CommitmentRoot,
+		port_id: &PortId,
+		channel_id: &ChannelId,
+		sequence: Sequence,
 	) -> Result<(), Error> {
-		todo!()
+		self.inner
+			.verify_packet_receipt_absence(
+				ctx,
+				client_id,
+				&client_state.inner,
+				height,
+				connection_end,
+				proof,
+				root,
+				port_id,
+				channel_id,
+				sequence,
+			)
+			.map_err(|e| e.into())
 	}
 }

@@ -22,4 +22,5 @@ bash
 
 # cargo build --bin hyperspace
 # cargo run --bin hyperspace -- upload-wasm --config ibcgo-1.toml --wasm-path ./target/wasm32-unknown-unknown/release/ics10_grandpa_cw.wasm
+# ./target_docker/debug/hyperspace create-clients --config-a ibcgo-1.toml --config-b rococo-local.toml --config-core core.toml
 # ./target_docker/debug/hyperspace create-connection --config-a ibcgo-1.toml --config-b rococo-local.toml --config-core core.toml --delay-period 10 --port-id testport --order unordered

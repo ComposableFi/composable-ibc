@@ -481,6 +481,7 @@ pub struct ClientState {
 	#[prost(string, tag = "5")]
 	pub repository: ::prost::alloc::string::String,
 }
+
 /// Wasm light client's ConsensusState
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ConsensusState {

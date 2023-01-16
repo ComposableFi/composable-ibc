@@ -17,6 +17,7 @@ use clap::Parser;
 use primitives::{Chain, KeyProvider};
 use prometheus::Registry;
 use std::{path::PathBuf, str::FromStr, time::Duration};
+use tokio::time::sleep;
 
 use crate::{
 	chain::{AnyChain, AnyConfig, Config, CoreConfig},
@@ -160,6 +161,7 @@ impl Cmd {
 		let config = self.parse_config().await?;
 		let chain_a = config.chain_a.into_client().await?;
 		let chain_b = config.chain_b.into_client().await?;
+		// let chain_b = chain_a.clone();
 
 		let (client_id_a_on_b, client_id_b_on_a) = create_clients(&chain_a, &chain_b).await?;
 		log::info!(
@@ -188,15 +190,18 @@ impl Cmd {
 
 		let chain_a_clone = chain_a.clone();
 		let chain_b_clone = chain_b.clone();
-		let handle = tokio::task::spawn(async move {
-			relay(chain_a_clone, chain_b_clone, None, None).await.unwrap();
-		});
+		// let handle = tokio::task::spawn(async move {
+		// 	relay(chain_a_clone, chain_b_clone, None, None).await.unwrap();
+		// });
 
 		let (connection_id_a, connection_id_b) =
 			create_connection(&chain_a, &chain_b, delay).await?;
-		log::info!("ConnectionId on Chain {}: {}", chain_a.name(), connection_id_a);
-		log::info!("ConnectionId on Chain {}: {}", chain_b.name(), connection_id_b);
-		handle.abort();
+		log::info!("ConnectionId on Chain {}: {}", chain_a.name(), connection_id_a); //
+		if let Some(connection_id_b) = connection_id_b {
+			log::info!("ConnectionId on Chain {}: {}", chain_b.name(), connection_id_b);
+		}
+		// sleep(Duration::from_secs(10000)).await;
+		// handle.abort();
 		Ok(())
 	}
 
@@ -220,9 +225,9 @@ impl Cmd {
 
 		let chain_a_clone = chain_a.clone();
 		let chain_b_clone = chain_b.clone();
-		let handle = tokio::task::spawn(async move {
-			relay(chain_a_clone, chain_b_clone, None, None).await.unwrap();
-		});
+		// let handle = tokio::task::spawn(async move {
+		// 	relay(chain_a_clone, chain_b_clone, None, None).await.unwrap();
+		// });
 
 		let order = Order::from_str(order).expect("Expected one of 'ordered' or 'unordered'");
 		let (channel_id_a, channel_id_b) =
@@ -230,7 +235,7 @@ impl Cmd {
 				.await?;
 		log::info!("ChannelId on Chain {}: {}", chain_a.name(), channel_id_a);
 		log::info!("ChannelId on Chain {}: {}", chain_b.name(), channel_id_b);
-		handle.abort();
+		// handle.abort();
 		Ok(())
 	}
 }

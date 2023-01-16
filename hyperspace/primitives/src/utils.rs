@@ -56,8 +56,9 @@ pub async fn create_clients(
 	};
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().expect("encode msg") };
-
+	println!("Submitting message to A: {:?}", msg.type_url);
 	let tx_id = chain_a.submit(vec![msg]).await?;
+	println!("Submitted message to A: {:?}", tx_id);
 	let client_id_b_on_a = chain_a.query_client_id_from_tx_hash(tx_id).await?;
 
 	let msg = MsgCreateAnyClient::<LocalClientTypes> {
@@ -68,7 +69,9 @@ pub async fn create_clients(
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().expect("encode msg") };
 
+	println!("Submitting message to B: {:?}", msg.type_url);
 	let tx_id = chain_b.submit(vec![msg]).await?;
+	println!("Submitted message to B: {:?}", tx_id);
 	let client_id_a_on_b = chain_b.query_client_id_from_tx_hash(tx_id).await?;
 
 	Ok((client_id_a_on_b, client_id_b_on_a))
@@ -80,45 +83,47 @@ pub async fn create_connection(
 	chain_a: &impl Chain,
 	chain_b: &impl Chain,
 	delay_period: Duration,
-) -> Result<(ConnectionId, ConnectionId), anyhow::Error> {
+) -> Result<(ConnectionId, Option<ConnectionId>), anyhow::Error> {
 	let msg = MsgConnectionOpenInit {
-		client_id: chain_a.client_id(),
-		counterparty: Counterparty::new(chain_b.client_id(), None, chain_b.connection_prefix()),
+		client_id: chain_b.client_id(),
+		counterparty: Counterparty::new(chain_a.client_id(), None, chain_a.connection_prefix()),
 		version: Some(Default::default()),
 		delay_period,
-		signer: chain_a.account_id(),
+		signer: chain_b.account_id(),
 	};
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().expect("encode msg") };
 
-	chain_a.submit(vec![msg]).await?;
+	chain_b.submit(vec![msg]).await?;
 
-	log::info!(target: "hyperspace", "============= Wait till both chains have completed connection handshake =============");
+	// log::info!(target: "hyperspace", "============= Wait till both chains have completed
+	// connection handshake =============");
 
 	// wait till both chains have completed connection handshake
-	let future = chain_b
-		.ibc_events()
-		.await
-		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmConnection(_))))
-		.take(1)
-		.collect::<Vec<_>>();
+	// let future = chain_b
+	// 	.ibc_events()
+	// 	.await
+	// 	.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmConnection(_))))
+	// 	.take(1)
+	// 	.collect::<Vec<_>>();
+	//
+	// let mut events = timeout_future(
+	// 	future,
+	// 	15 * 60,
+	// 	format!("Didn't see OpenConfirmConnection on {}", chain_b.name()),
+	// )
+	// .await;
+	//
+	// let (connection_id_b, connection_id_a) = match events.pop() {
+	// 	Some(IbcEvent::OpenConfirmConnection(conn)) => (
+	// 		conn.connection_id().unwrap().clone(),
+	// 		conn.attributes().counterparty_connection_id.clone(),
+	// 	),
+	// 	got => panic!("Last event should be OpenConfirmConnection: {got:?}"),
+	// };
+	std::process::exit(0);
 
-	let mut events = timeout_future(
-		future,
-		15 * 60,
-		format!("Didn't see OpenConfirmConnection on {}", chain_b.name()),
-	)
-	.await;
-
-	let (connection_id_b, connection_id_a) = match events.pop() {
-		Some(IbcEvent::OpenConfirmConnection(conn)) => (
-			conn.connection_id().unwrap().clone(),
-			conn.attributes().counterparty_connection_id.as_ref().unwrap().clone(),
-		),
-		got => panic!("Last event should be OpenConfirmConnection: {got:?}"),
-	};
-
-	Ok((connection_id_a, connection_id_b))
+	// Ok((connection_id_b, connection_id_a))
 }
 
 /// Completes the chanel handshake process
@@ -145,27 +150,29 @@ pub async fn create_channel(
 
 	chain_a.submit(vec![msg]).await?;
 
-	log::info!(target: "hyperspace", "============= Wait till both chains have completed channel handshake =============");
+	// log::info!(target: "hyperspace", "============= Wait till both chains have completed channel
+	// handshake =============");
 
-	let future = chain_b
-		.ibc_events()
-		.await
-		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmChannel(_))))
-		.take(1)
-		.collect::<Vec<_>>();
+	// let future = chain_b
+	// 	.ibc_events()
+	// 	.await
+	// 	.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmChannel(_))))
+	// 	.take(1)
+	// 	.collect::<Vec<_>>();
 
-	let mut events = timeout_future(
-		future,
-		15 * 60,
-		format!("Didn't see OpenConfirmChannel on {}", chain_b.name()),
-	)
-	.await;
+	// let mut events = timeout_future(
+	// 	future,
+	// 	15 * 60,
+	// 	format!("Didn't see OpenConfirmChannel on {}", chain_b.name()),
+	// )
+	// .await;
 
-	let (channel_id_a, channel_id_b) = match events.pop() {
-		Some(IbcEvent::OpenConfirmChannel(chan)) =>
-			(chan.counterparty_channel_id.unwrap(), chan.channel_id().unwrap().clone()),
-		got => panic!("Last event should be OpenConfirmChannel: {got:?}"),
-	};
+	// let (channel_id_a, channel_id_b) = match events.pop() {
+	// 	Some(IbcEvent::OpenConfirmChannel(chan)) =>
+	// 		(chan.counterparty_channel_id.unwrap(), chan.channel_id().unwrap().clone()),
+	// 	got => panic!("Last event should be OpenConfirmChannel: {got:?}"),
+	// };
+	std::process::exit(0);
 
-	Ok((channel_id_a, channel_id_b))
+	// Ok((channel_id_a, channel_id_b))
 }

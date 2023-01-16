@@ -7,6 +7,7 @@ chain_id = 'ibcgo-1'
 account_prefix = 'cosmos'
 store_prefix = 'ibc'
 max_tx_size = 200000
+wasm_code_id = "e0e0fda1d756f6ed060b32f392291b119194b38dcbefcf0e6cc762dc1dc0507b"
 
 [keybase]
 public_key = 'spub4W7TSjsuqcUE17mSB2ajhZsbwkefsHWKsXCbERimu3z2QLN9EFgqqpppiBn4tTNPFoNVTo1b3BgCZAaFJuUgTZeFhzJjUHkK8X7kSC5c7yn'

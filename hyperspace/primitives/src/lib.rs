@@ -14,7 +14,7 @@
 
 #![allow(clippy::all)]
 
-use std::{pin::Pin, str::FromStr, time::Duration};
+use std::{fmt::Debug, pin::Pin, str::FromStr, time::Duration};
 
 use futures::Stream;
 use ibc_proto::{
@@ -98,7 +98,7 @@ pub trait IbcProvider {
 	type FinalityEvent;
 
 	/// A representation of the transaction id for the chain
-	type TransactionId;
+	type TransactionId: Debug;
 
 	/// Error type, just needs to implement standard error trait.
 	type Error: std::error::Error + From<String> + Send + Sync + 'static;

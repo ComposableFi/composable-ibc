@@ -12,10 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloc::{borrow::ToOwned, format, string::ToString, vec::Vec};
+use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, vec::Vec};
 use ibc::core::{
 	ics02_client,
-	ics02_client::{client_consensus::ConsensusState, client_state::ClientState},
+	ics02_client::{
+		client_consensus::ConsensusState,
+		client_state::{ClientState, ClientType},
+	},
+	ics23_commitment::commitment::CommitmentRoot,
 };
 use ibc_derive::{ClientDef, ClientMessage, ClientState, ConsensusState, Protobuf};
 use ibc_primitives::runtime_interface;
@@ -170,7 +174,7 @@ pub enum AnyClient {
 	Grandpa(ics10_grandpa::client_def::GrandpaClient<HostFunctionsManager>),
 	Beefy(ics11_beefy::client_def::BeefyClient<HostFunctionsManager>),
 	Tendermint(ics07_tendermint::client_def::TendermintClient<HostFunctionsManager>),
-	Wasm(ics08_wasm::client_def::WasmClient),
+	Wasm(ics08_wasm::client_def::WasmClient<AnyClient, AnyClientState, AnyConsensusState>),
 	#[cfg(test)]
 	Mock(ibc::mock::client_def::MockClient),
 }
@@ -180,7 +184,7 @@ pub enum AnyUpgradeOptions {
 	Grandpa(ics10_grandpa::client_state::UpgradeOptions),
 	Beefy(ics11_beefy::client_state::UpgradeOptions),
 	Tendermint(ics07_tendermint::client_state::UpgradeOptions),
-	Wasm(()),
+	Wasm(Box<Self>),
 	#[cfg(test)]
 	Mock(()),
 }
@@ -194,15 +198,107 @@ pub enum AnyClientState {
 	#[ibc(proto_url = "TENDERMINT_CLIENT_STATE_TYPE_URL")]
 	Tendermint(ics07_tendermint::client_state::ClientState<HostFunctionsManager>),
 	#[ibc(proto_url = "WASM_CLIENT_STATE_TYPE_URL")]
-	Wasm(ics08_wasm::client_state::ClientState),
+	Wasm(ics08_wasm::client_state::ClientState<AnyClient, Self, AnyConsensusState>),
 	#[cfg(test)]
 	#[ibc(proto_url = "MOCK_CLIENT_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockClientState),
 }
 
+impl TryFrom<(ClientType, &'_ Bytes)> for AnyClientState {
+	type Error = ();
+
+	fn try_from((client_type, data): (ClientType, &Bytes)) -> Result<Self, Self::Error> {
+		let tendermint_client_type =
+			ics07_tendermint::client_state::ClientState::<HostFunctionsManager>::client_type();
+		let beefy_client_type =
+			ics11_beefy::client_state::ClientState::<HostFunctionsManager>::client_type();
+		let grandpa_client_type =
+			ics10_grandpa::client_state::ClientState::<HostFunctionsManager>::client_type();
+		#[cfg(test)]
+		let mock_client_type = ibc::mock::client_state::MockClientState::client_type();
+
+		Ok(match &client_type {
+			s if *s == tendermint_client_type =>
+				Self::Tendermint(Protobuf::decode_vec(data).map_err(|_| ())?),
+			s if *s == beefy_client_type =>
+				Self::Beefy(Protobuf::decode_vec(data).map_err(|_| ())?),
+			s if *s == grandpa_client_type =>
+				Self::Grandpa(Protobuf::decode_vec(data).map_err(|e| panic!("{:?}", e))?),
+			#[cfg(test)]
+			s if *s == mock_client_type => Self::Mock(Protobuf::decode_vec(data).map_err(|_| ())?),
+			s => {
+				panic!("unsupported client type: {}", s);
+				return Err(())
+			},
+		})
+	}
+}
+
+impl TryFrom<(ClientType, &'_ Bytes)> for AnyConsensusState {
+	type Error = ();
+
+	fn try_from((client_type, data): (ClientType, &Bytes)) -> Result<Self, Self::Error> {
+		let tendermint_client_type =
+			ics07_tendermint::client_state::ClientState::<HostFunctionsManager>::client_type();
+		let beefy_client_type =
+			ics11_beefy::client_state::ClientState::<HostFunctionsManager>::client_type();
+		let grandpa_client_type =
+			ics10_grandpa::client_state::ClientState::<HostFunctionsManager>::client_type();
+		#[cfg(test)]
+		let mock_client_type = ibc::mock::client_state::MockClientState::client_type();
+
+		Ok(match &client_type {
+			s if *s == tendermint_client_type =>
+				Self::Tendermint(Protobuf::decode_vec(data).map_err(|_| ())?),
+			s if *s == beefy_client_type =>
+				Self::Beefy(Protobuf::decode_vec(data).map_err(|_| ())?),
+			s if *s == grandpa_client_type =>
+				Self::Grandpa(Protobuf::decode_vec(data).map_err(|_| ())?),
+			#[cfg(test)]
+			s if *s == mock_client_type => Self::Mock(Protobuf::decode_vec(data).map_err(|_| ())?),
+			_ => return Err(()),
+		})
+	}
+}
+
+impl TryFrom<(ClientType, &'_ Bytes)> for AnyClientMessage {
+	type Error = ();
+
+	fn try_from((client_type, data): (ClientType, &Bytes)) -> Result<Self, Self::Error> {
+		let tendermint_client_type =
+			ics07_tendermint::client_state::ClientState::<HostFunctionsManager>::client_type();
+		let beefy_client_type =
+			ics11_beefy::client_state::ClientState::<HostFunctionsManager>::client_type();
+		let grandpa_client_type =
+			ics10_grandpa::client_state::ClientState::<HostFunctionsManager>::client_type();
+		#[cfg(test)]
+		let mock_client_type = ibc::mock::client_state::MockClientState::client_type();
+
+		Ok(match &client_type {
+			s if *s == tendermint_client_type =>
+				Self::Tendermint(Protobuf::decode_vec(data).map_err(|_| ())?),
+			s if *s == beefy_client_type =>
+				Self::Beefy(Protobuf::decode_vec(data).map_err(|_| ())?),
+			s if *s == grandpa_client_type =>
+				Self::Grandpa(Protobuf::decode_vec(data).map_err(|_| ())?),
+			#[cfg(test)]
+			s if *s == mock_client_type => Self::Mock(Protobuf::decode_vec(data).map_err(|_| ())?),
+			_ => return Err(()),
+		})
+	}
+}
+
 impl AnyClientState {
 	pub fn wasm(inner: Self, code_id: Bytes) -> Self {
-		Self::Wasm(ics08_wasm::client_state::ClientState { data: inner.encode_to_vec(), code_id })
+		Self::Wasm(ics08_wasm::client_state::ClientState::<AnyClient, Self, AnyConsensusState> {
+			data: inner.encode_to_vec(),
+			latest_height: inner.latest_height(), // TODO: check if this is correct
+			inner: Box::new(inner),
+			proof_specs: Vec::new(),
+			repository: "empty".to_string(),
+			code_id,
+			_phantom: Default::default(),
+		})
 	}
 }
 
@@ -215,7 +311,7 @@ pub enum AnyConsensusState {
 	#[ibc(proto_url = "TENDERMINT_CONSENSUS_STATE_TYPE_URL")]
 	Tendermint(ics07_tendermint::consensus_state::ConsensusState),
 	#[ibc(proto_url = "WASM_CONSENSUS_STATE_TYPE_URL")]
-	Wasm(ics08_wasm::consensus_state::ConsensusState),
+	Wasm(ics08_wasm::consensus_state::ConsensusState<Self>),
 	#[cfg(test)]
 	#[ibc(proto_url = "MOCK_CONSENSUS_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockConsensusState),
@@ -227,6 +323,8 @@ impl AnyConsensusState {
 			data: inner.encode_to_vec(),
 			code_id,
 			timestamp,
+			root: CommitmentRoot::from_bytes(&[1u8; 32].to_vec()),
+			inner: Box::new(inner),
 		})
 	}
 }
@@ -241,7 +339,7 @@ pub enum AnyClientMessage {
 	#[ibc(proto_url = "TENDERMINT_CLIENT_MESSAGE_TYPE_URL")]
 	Tendermint(ics07_tendermint::client_message::ClientMessage),
 	#[ibc(proto_url = "WASM_CLIENT_MESSAGE_TYPE_URL")]
-	Wasm(ics08_wasm::client_message::ClientMessage),
+	Wasm(ics08_wasm::client_message::ClientMessage<Self>),
 	#[cfg(test)]
 	#[ibc(proto_url = "MOCK_CLIENT_MESSAGE_TYPE_URL")]
 	Mock(ibc::mock::header::MockClientMessage),

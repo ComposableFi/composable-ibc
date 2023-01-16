@@ -1,4 +1,6 @@
 use crate::Bytes;
+use alloc::string::ToString;
+use core::str::FromStr;
 use ibc::{
 	protobuf::Protobuf,
 	signer::{Signer, SignerError},
@@ -6,7 +8,6 @@ use ibc::{
 use ibc_proto::{
 	google::protobuf::Any, ibc::lightclients::wasm::v1::MsgPushNewWasmCode as RawMsgPushNewWasmCode,
 };
-use std::str::FromStr;
 
 pub const WASM_PUSH_WASM_CODE_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.MsgPushNewWasmCode";
 

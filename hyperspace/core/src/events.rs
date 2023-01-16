@@ -101,7 +101,7 @@ pub async fn parse_events(
 
 					let client_state = client_state_response
 						.client_state
-						.map(AnyClientState::try_from)
+						.map(|any| AnyClientState::try_from(any))
 						.ok_or_else(|| Error::Custom(format!("Client state is empty")))??;
 					let consensus_proof = source
 						.query_client_consensus(

@@ -23,7 +23,7 @@ use hyperspace_core::{
 async fn main() -> Result<()> {
 	use QuerySubcommand::*;
 
-	// logging::setup_logging();
+	logging::setup_logging();
 	let cli = Cli::parse();
 
 	match &cli.subcommand {

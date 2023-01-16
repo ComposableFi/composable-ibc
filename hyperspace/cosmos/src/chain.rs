@@ -30,7 +30,7 @@ where
 	async fn estimate_weight(&self, messages: Vec<Any>) -> Result<u64, Self::Error> {
 		let account_info = self.query_account().await?;
 		let fee = Fee {
-			amount: vec![Coin { denom: "uatom".to_string(), amount: "4000".to_string() }],
+			amount: vec![Coin { denom: "stake".to_string(), amount: "4000".to_string() }],
 			gas_limit: 400000_u64,
 			payer: "".to_string(),
 			granter: "".to_string(),

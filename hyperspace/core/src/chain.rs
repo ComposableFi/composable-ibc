@@ -27,6 +27,10 @@ use ibc::{
 		ics02_client::{
 			client_state::ClientType, events::CodeId, msgs::create_client::MsgCreateAnyClient,
 		},
+		ics03_connection::msgs::{
+			conn_open_ack::MsgConnectionOpenAck, conn_open_init::MsgConnectionOpenInit,
+			conn_open_try::MsgConnectionOpenTry,
+		},
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
@@ -121,6 +125,7 @@ pub struct CoreConfig {
 pub struct WasmChain {
 	pub inner: Box<AnyChain>,
 	pub code_id: Bytes,
+	pub client_type: ClientType,
 }
 
 #[derive(Clone)]
@@ -788,15 +793,48 @@ impl Chain for AnyChain {
 }
 
 fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Any {
-	use ibc::core::ics02_client::msgs::create_client::TYPE_URL as CREATE_CLIENT_TYPE_URL;
+	use ibc::core::{
+		ics02_client::msgs::create_client::TYPE_URL as CREATE_CLIENT_TYPE_URL,
+		ics03_connection::msgs::{
+			conn_open_ack::TYPE_URL as CONN_OPEN_ACK_TYPE_URL,
+			conn_open_try::TYPE_URL as CONN_OPEN_TRY_TYPE_URL,
+		},
+	};
 
 	println!("converting: {}", msg.type_url);
 	match msg.type_url.as_str() {
 		CREATE_CLIENT_TYPE_URL => {
-			let mut msg = MsgCreateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
-			msg.consensus_state = AnyConsensusState::wasm(msg.consensus_state, code_id.clone(), 0);
-			msg.client_state = AnyClientState::wasm(msg.client_state, code_id);
-			msg.to_any()
+			let mut msg_decoded =
+				MsgCreateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+			if matches!(msg_decoded.consensus_state, AnyConsensusState::Wasm(_)) {
+				return msg
+			}
+			msg_decoded.consensus_state =
+				AnyConsensusState::wasm(msg_decoded.consensus_state, code_id.clone(), 1);
+			msg_decoded.client_state = AnyClientState::wasm(msg_decoded.client_state, code_id);
+			msg_decoded.to_any()
+		},
+		CONN_OPEN_TRY_TYPE_URL => {
+			let mut msg_decoded =
+				MsgConnectionOpenTry::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+			if matches!(msg_decoded.client_state, Some(AnyClientState::Wasm(_))) {
+				return msg
+			}
+			msg_decoded.client_state = msg_decoded
+				.client_state
+				.map(|client_state| AnyClientState::wasm(client_state, code_id));
+			msg_decoded.to_any()
+		},
+		CONN_OPEN_ACK_TYPE_URL => {
+			let mut msg_decoded =
+				MsgConnectionOpenAck::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+			if matches!(msg_decoded.client_state, Some(AnyClientState::Wasm(_))) {
+				return msg
+			}
+			msg_decoded.client_state = msg_decoded
+				.client_state
+				.map(|client_state| AnyClientState::wasm(client_state, code_id));
+			msg_decoded.to_any()
 		},
 		_ => msg,
 	}
@@ -848,13 +886,21 @@ impl primitives::TestProvider for AnyChain {
 }
 
 impl AnyConfig {
-	pub fn wasm_code_id(&self) -> Option<CodeId> {
-		match self {
-			AnyConfig::Parachain(config) => config.wasm_code_id.as_ref(),
+	pub fn wasm_code_id(&self) -> Option<(CodeId, ClientType)> {
+		let (maybe_code_id, maybe_client_type) = match self {
+			AnyConfig::Parachain(config) =>
+				(config.wasm_code_id.as_ref(), config.wasm_client_type.as_ref()),
 			#[cfg(feature = "cosmos")]
-			AnyConfig::Cosmos(config) => config.wasm_code_id.as_ref(),
+			AnyConfig::Cosmos(config) => (config.wasm_code_id.as_ref(), config.wasm_client_type.as_ref()),
+		};
+		if maybe_code_id.is_some() != maybe_client_type.is_some() {
+			panic!("Wasm code id and client type must be both set or both unset");
 		}
-		.map(|s| hex::decode(s).expect("Wasm code id is hex-encoded"))
+
+		let maybe_code_id =
+			maybe_code_id.map(|s| hex::decode(s).expect("Wasm code id is hex-encoded"));
+
+		maybe_code_id.map(|code_id| (code_id, maybe_client_type.unwrap().clone()))
 	}
 
 	pub async fn into_client(self) -> anyhow::Result<AnyChain> {
@@ -865,8 +911,10 @@ impl AnyConfig {
 			#[cfg(feature = "cosmos")]
 			AnyConfig::Cosmos(config) => AnyChain::Cosmos(CosmosClient::new(config).await?),
 		};
-		if let Some(code_id) = maybe_wasm_code_id {
-			Ok(AnyChain::Wasm(WasmChain { inner: Box::new(chain), code_id }))
+		if let Some((code_id, client_type)) = maybe_wasm_code_id {
+			// println!("inserting wasm client {}", client_type);
+			ics08_wasm::add_wasm_client_type(code_id.clone(), client_type.clone());
+			Ok(AnyChain::Wasm(WasmChain { inner: Box::new(chain), code_id, client_type }))
 		} else {
 			Ok(chain)
 		}

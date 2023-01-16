@@ -673,7 +673,7 @@ where
 			.client_state(&at, client_id.as_bytes().to_vec())
 			.ok()
 			.flatten()
-			.ok_or_else(|| runtime_error_into_rpc_error("Error querying client state"))?;
+			.ok_or_else(|| runtime_error_into_rpc_error("[API] Error querying client state"))?;
 		let mut keys = vec![result.trie_key];
 		let child_trie_key = api
 			.child_trie_key(&at)
@@ -686,8 +686,9 @@ where
 			.iter_nodes()
 			.collect::<Vec<_>>()
 			.encode();
-		let client_state = AnyClientState::decode_vec(&result.client_state)
-			.map_err(|_| runtime_error_into_rpc_error("Error querying client state"))?;
+		let client_state = AnyClientState::decode_vec(&result.client_state).map_err(|e| {
+			runtime_error_into_rpc_error(format!("Error querying client state: {:?}", e))
+		})?;
 		Ok(QueryClientStateResponse {
 			client_state: Some(client_state.into()),
 			proof,

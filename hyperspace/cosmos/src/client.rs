@@ -146,6 +146,9 @@ pub struct CosmosClientConfig {
 	/// All the client states and headers will be wrapped in WASM ones using the WASM code ID.
 	#[serde(default)]
 	pub wasm_code_id: Option<String>,
+	/// The underlying WASM client type.
+	#[serde(default)]
+	pub wasm_client_type: Option<String>,
 	/*
 	Here is a list of dropped configuration parameters from Hermes Config.toml
 	that could be set to default values or removed for the MVP phase:
@@ -178,10 +181,13 @@ where
 		let rpc_client = HttpClient::new(config.rpc_url.clone())
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 		let chain_id = ChainId::from(config.chain_id);
-		let client_id = Some(
-			ClientId::new(&ClientState::<HostFunctions>::client_type(), 0)
-				.map_err(|e| Error::from(format!("Invalid client id {:?}", e)))?,
-		);
+		let client_id = config
+			.client_id
+			.map(|client_id| {
+				ClientId::from_str(&client_id)
+					.map_err(|e| Error::from(format!("Invalid client id {:?}", e)))
+			})
+			.transpose()?;
 		let light_client = LightClient::init_light_client(config.rpc_url.clone()).await?;
 		let commitment_prefix = CommitmentPrefix::try_from(config.store_prefix.as_bytes().to_vec())
 			.map_err(|e| Error::from(format!("Invalid store prefix {:?}", e)))?;
@@ -193,7 +199,13 @@ where
 			grpc_url: config.grpc_url,
 			websocket_url: config.websocket_url,
 			client_id,
-			connection_id: None,
+			connection_id: config
+				.connection_id
+				.map(|connection_id| {
+					ConnectionId::from_str(&connection_id)
+						.map_err(|e| Error::from(format!("Invalid connection id {:?}", e)))
+				})
+				.transpose()?,
 			light_client,
 			account_prefix: config.account_prefix,
 			commitment_prefix,
@@ -257,19 +269,18 @@ where
 			messages,
 			Fee {
 				amount: vec![Coin {
-					denom: "uatom".to_string(), //TODO: This could be added to the config
-					amount: "4000".to_string(), //TODO: This could be added to the config
+					denom: "stake".to_string(),    //TODO: This could be added to the config
+					amount: "1000000".to_string(), //TODO: This could be added to the config
 				}],
-				gas_limit: 400000_u64, //TODO: This could be added to the config
+				gas_limit: (i64::MAX - 1) as u64, //TODO: This could be added to the config
 				payer: "".to_string(),
 				granter: "".to_string(),
 			},
 		)?;
 		// Simulate transaction
 		let res = simulate_tx(self.grpc_url.clone(), tx, tx_bytes.clone()).await?;
-		// dbg!(res);
+		println!("res = {:?}", &res);
 
-		tracing_subscriber::fmt::try_init().unwrap();
 		tracing::info!("Simulated transaction: {:?}", res);
 
 		// Broadcast transaction

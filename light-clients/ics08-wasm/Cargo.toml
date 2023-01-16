@@ -7,3 +7,8 @@ edition = "2021"
 prost = { version = "0.11", default-features = false }
 ibc = { path = "../../ibc/modules", default-features = false }
 ibc-proto = { path = "../../ibc/proto", default-features = false }
+spin = { version = "0.9.4", default-features = false, features = ["rwlock"] }
+hex = { version = "0.4.3", default-features = false }
+
+[features]
+default = []

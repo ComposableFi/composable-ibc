@@ -1068,50 +1068,6 @@ where
 	}
 
 	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
-		let j = r#"{
-  "jsonrpc": "2.0",
-  "id": "b4a2adb3-2796-4a0e-a804-4d67ba675839",
-  "result": {
-    "node_info": {
-      "protocol_version": {
-        "p2p": "8",
-        "block": "11",
-        "app": "0"
-      },
-      "id": "59a5eaae8d14c93e635b18747589dc0177e9b695",
-      "listen_addr": "tcp://0.0.0.0:26656",
-      "network": "my-test-chain",
-      "version": "0.34.21",
-      "channels": "40202122233038606100",
-      "moniker": "foobar",
-      "other": {
-        "tx_index": "on",
-        "rpc_address": "tcp://127.0.0.1:26657"
-      }
-    },
-    "sync_info": {
-      "latest_block_hash": "14ED66AC0F5BF5B752EBAFEFBBDBC8AE8704791BABC38E9282373638A3AB0725",
-      "latest_app_hash": "87D56F28A84ECD7FB2FDEF591E14DEC440C8C0A414F60A665FBF6653DF164327",
-      "latest_block_height": "1803",
-      "latest_block_time": "2023-01-12T10:43:11.400083Z",
-      "earliest_block_hash": "BF2893E15B352745DFF5F07B154E16E9799988509F8A704D58136A2E09969969",
-      "earliest_app_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
-      "earliest_block_height": "1",
-      "earliest_block_time": "2023-01-11T16:56:08.27068Z",
-      "catching_up": false
-    },
-    "validator_info": {
-      "address": "89CED186011D42AC57481CA678A49E4E3EC816CA",
-      "pub_key": {
-        "type": "tendermint/PubKeyEd25519",
-        "value": "qX5LST+X2i3JhtMnFuE9t+22OvqiYt4+Gm0oYWkTM2Q="
-      },
-      "voting_power": "100"
-    }
-  }
-}"#;
-
-		// let w = Wrapper::<Response>::from_str();
 		let msg = MsgPushNewWasmCode { signer: self.account_id(), code: wasm };
 		let hash = self.submit(vec![msg.into()]).await?;
 		let resp = self.wait_for_tx_result(hash).await?;
