@@ -32,7 +32,7 @@ contract TestScaleCodec is Test {
         assert(actual == expected);
     }
 
-    // Test that decodeCompactU32 returns the correct value for a two-byte input
+    // Test that decodeCompactU32 reverts for three-byte input
     function testRevertDecodeCompactU32ThreeByte() public {
         uint8[] memory input = new uint8[](3);
         input[0] = 0xfe;
@@ -81,7 +81,7 @@ contract TestScaleCodec is Test {
         assert(actual == expected);
     }
 
-    // Test that decodeCompactU32 returns the correct value for a two-byte input
+    // Test that decodeCompactU32 reverts for a five-byte input
     function testRevertDecodeCompactU32FiveByte() public {
         uint8[] memory input = new uint8[](5);
         input[0] = 0xff;
@@ -126,6 +126,7 @@ contract TestScaleCodec is Test {
         assert(actual == expected);
     }
 
+    // Test that decodeU32 returns the correct value
     function testDecodeU32() public view {
         uint8[] memory input = new uint8[](4);
         input[0] = 0xff;
