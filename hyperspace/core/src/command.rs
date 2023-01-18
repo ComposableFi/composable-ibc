@@ -229,12 +229,12 @@ impl Cmd {
 		let any_chain_a = config.chain_a.clone().into_client().await?;
 		let any_chain_b = config.chain_b.clone().into_client().await?;
 
-		if !any_chain_a.is_synced(&any_chain_b) {
+		if !any_chain_a.is_synced(&any_chain_b).await? {
 			let messages = any_chain_a.fetch_mandatory_updates(&any_chain_b).await?;
 			any_chain_b.submit(messages).await?;
 		}
 
-		if !any_chain_b.is_synced(&any_chain_a) {
+		if !any_chain_b.is_synced(&any_chain_a).await? {
 			let messages = any_chain_b.fetch_mandatory_updates(&any_chain_a).await?;
 			any_chain_a.submit(messages).await?;
 		}
