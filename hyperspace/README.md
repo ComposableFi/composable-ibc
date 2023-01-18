@@ -160,6 +160,9 @@ on:
 
 The CLI interface can be used to start the relayer from a config file and also perform the IBC setup on both chains. It assumes that `hyperspace` was already built.
 
+A template configuration file (which is needed to run the CLI) can be found
+[here](./config.toml)
+
 - [`relay`](/hyperspace/core/src/command.rs#L24)  
   This command accepts a path to a config file and spawns the relayer alongside a Prometheus server for monitoring.  
   The config file must have all the parameters necessary for the chain clients to work correctly.
