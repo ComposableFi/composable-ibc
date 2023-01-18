@@ -20,7 +20,6 @@ contract ScaleCodec {
         } else if (prefix % 4 == 2) {
             result = uint32(decodeU32(input) >> 2);
         } else if (prefix % 4 == 3) {
-            require(prefix >> 2 == 0, "U32 out of range.");
             result = uint32(decodeU32(input));
             require(result > (4294967295 >> 2), "U32 out of range.");
         } else {
