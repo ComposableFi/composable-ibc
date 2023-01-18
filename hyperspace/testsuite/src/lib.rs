@@ -604,10 +604,19 @@ where
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
-	tokio::time::sleep(Duration::from_secs(60 * 15)).await;
+	tokio::time::sleep(Duration::from_secs(60 * 20)).await;
 	let messages_to_b = chain_a.fetch_mandatory_updates(chain_b).await.unwrap();
 	let messages_to_a = chain_b.fetch_mandatory_updates(chain_a).await.unwrap();
-
+	log::info!(target: "hyperspace",
+		"Syncing Client on {} {:?}",
+		chain_a.name(),
+		messages_to_a.clone().into_iter().map(|msg| msg.type_url).collect::<Vec<_>>()
+	);
+	log::info!(target: "hyperspace",
+		"Syncing Client on {} {:?}",
+		chain_b.name(),
+		messages_to_b.clone().into_iter().map(|msg| msg.type_url).collect::<Vec<_>>()
+	);
 	chain_a.submit(messages_to_a).await.unwrap();
 	chain_b.submit(messages_to_b).await.unwrap();
 
