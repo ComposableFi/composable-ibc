@@ -604,7 +604,14 @@ where
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
-	tokio::time::sleep(Duration::from_secs(60 * 10)).await;
-	let messages = chain_a.fetch_mandatory_updates(chain_b).await.unwrap();
-	log::info!(target: "hyperspace", "Missed updates {}", messages.len());
+	tokio::time::sleep(Duration::from_secs(60 * 15)).await;
+	let messages_to_b = chain_a.fetch_mandatory_updates(chain_b).await.unwrap();
+	let messages_to_a = chain_b.fetch_mandatory_updates(chain_a).await.unwrap();
+
+	chain_a.submit(messages_to_a).await.unwrap();
+	chain_b.submit(messages_to_b).await.unwrap();
+
+	let (handle, channel_id, channel_b, _connection_id) =
+		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(0)).await;
+	handle.abort();
 }

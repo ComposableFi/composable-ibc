@@ -1,15 +1,11 @@
-use anyhow::anyhow;
-use codec::{Decode, Encode};
-use std::{collections::BTreeMap, fmt::Display, future::Future, pin::Pin, time::Duration};
+use std::{collections::BTreeMap, fmt::Display};
 
-use beefy_gadget_rpc::BeefyApiClient;
 use finality_grandpa::BlockNumberOps;
 use grandpa_light_client_primitives::{
 	FinalityProof, ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
 };
 use ibc_proto::google::protobuf::Any;
 use sp_runtime::{
-	generic::Era,
 	traits::{Header as HeaderT, IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
@@ -23,11 +19,11 @@ use ibc::core::ics02_client::msgs::update_client::MsgUpdateAnyClient;
 use subxt::tx::PlainTip as Tip;
 use tendermint_proto::Protobuf;
 
-use ibc::{core::ics24_host::identifier::ClientId, signer::Signer, tx_msg::Msg, Height};
+use ibc::{core::ics24_host::identifier::ClientId, signer::Signer, tx_msg::Msg};
 use ics10_grandpa::client_message::{ClientMessage, Header as GrandpaHeader, RelayChainHeader};
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState};
 
-use primitives::{mock::LocalClientTypes, Chain, IbcProvider, LightClientSync};
+use primitives::{mock::LocalClientTypes, Chain, LightClientSync};
 
 use super::{error::Error, ParachainClient};
 use crate::{config, finality_protocol::FinalityProtocol};
@@ -85,7 +81,7 @@ where
 					(latest_finalized_height - session_end_block) / session_length;
 				// If no session changes have occurred between the last update and the latest
 				// finalized height then the light client is still in sync
-				Ok(!(session_changes > 1))
+				Ok(!(session_changes >= 1))
 			},
 			FinalityProtocol::Beefy => unimplemented!(),
 		}

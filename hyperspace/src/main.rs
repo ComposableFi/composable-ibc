@@ -50,5 +50,6 @@ async fn main() -> Result<()> {
 				.map_err(|e| anyhow!(e))
 		},
 		Subcommand::Fish(cmd) => cmd.fish().await,
+		Subcommand::SyncClients(cmd) => cmd.sync_clients().await,
 	}
 }
