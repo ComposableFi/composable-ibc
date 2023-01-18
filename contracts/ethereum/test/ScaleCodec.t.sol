@@ -11,11 +11,38 @@ contract TestScaleCodec is Test {
         scaleCodec = new ScaleCodec();
     }
 
+    // Test that decodeCompactU32 reverts for empty input
+    function testRevertDecodeCompactU32Empty() public {
+        uint8[] memory input = new uint8[](0);
+        vm.expectRevert(bytes("Input array must not be empty."));
+        scaleCodec.decodeCompactU32(input);
+    }
+
     // Test that decodeCompactU32 returns the correct value for a single-byte input
-    function testDecodeCompactU32SingleByte() public view {
+    function testDecodeCompactU32SingleByte_1() public view {
+        uint8[] memory input = new uint8[](1);
+        input[0] = 0x00;
+        uint32 expected = 0;
+        uint32 actual = scaleCodec.decodeCompactU32(input);
+        console.log(actual);
+        assert(actual == expected);
+    }
+
+    // Test that decodeCompactU32 returns the correct value for a single-byte input
+    function testDecodeCompactU32SingleByte_2() public view {
         uint8[] memory input = new uint8[](1);
         input[0] = 0x04;
         uint32 expected = 1;
+        uint32 actual = scaleCodec.decodeCompactU32(input);
+        console.log(actual);
+        assert(actual == expected);
+    }
+
+    // Test that decodeCompactU32 returns the correct value for a single-byte input
+    function testDecodeCompactU32SingleByte_3() public view {
+        uint8[] memory input = new uint8[](1);
+        input[0] = 0xa8;
+        uint32 expected = 42;
         uint32 actual = scaleCodec.decodeCompactU32(input);
         console.log(actual);
         assert(actual == expected);
