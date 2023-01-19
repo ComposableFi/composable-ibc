@@ -1,6 +1,7 @@
 use cosmwasm_std::{DepsMut, Env, Storage};
 use grandpa_light_client_primitives::HostFunctions;
 use ibc::core::ics26_routing::context::ReaderContext;
+use ics10_grandpa::client_message::RelayChainHeader;
 use std::{fmt, fmt::Debug, marker::PhantomData};
 
 pub struct Context<'a, H> {
@@ -47,4 +48,4 @@ impl<'a, H> Context<'a, H> {
 	}
 }
 
-impl<'a, H: HostFunctions> ReaderContext for Context<'a, H> {}
+impl<'a, H: HostFunctions<Header = RelayChainHeader>> ReaderContext for Context<'a, H> {}

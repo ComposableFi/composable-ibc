@@ -164,13 +164,11 @@ impl Cmd {
 
 	/// Run fisherman
 	pub async fn fish(&self) -> Result<()> {
-		let path: PathBuf = self.config.parse()?;
-		let file_content = tokio::fs::read_to_string(path).await?;
-		let config: Config = toml::from_str(&file_content)?;
-		let any_chain_a = config.chain_a.into_client().await?;
-		let any_chain_b = config.chain_b.into_client().await?;
+		let config = self.parse_config().await?;
+		let chain_a = config.chain_a.into_client().await?;
+		let chain_b = config.chain_b.into_client().await?;
 
-		fish(any_chain_a, any_chain_b).await
+		fish(chain_a, chain_b).await
 	}
 
 	pub async fn create_clients(&self) -> Result<()> {
@@ -237,9 +235,9 @@ impl Cmd {
 
 		let chain_a_clone = chain_a.clone();
 		let chain_b_clone = chain_b.clone();
-		// let handle = tokio::task::spawn(async move {
-		// 	relay(chain_a_clone, chain_b_clone, None, None).await.unwrap();
-		// });
+		let handle = tokio::task::spawn(async move {
+			relay(chain_a_clone, chain_b_clone, None, None).await.unwrap();
+		});
 
 		let order = Order::from_str(order).expect("Expected one of 'ordered' or 'unordered'");
 		let (channel_id_a, channel_id_b) =
@@ -247,7 +245,7 @@ impl Cmd {
 				.await?;
 		log::info!("ChannelId on Chain {}: {}", chain_a.name(), channel_id_a);
 		log::info!("ChannelId on Chain {}: {}", chain_b.name(), channel_id_b);
-		// handle.abort();
+		handle.abort();
 		Ok(())
 	}
 }

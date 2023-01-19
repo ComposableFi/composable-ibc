@@ -1,11 +1,13 @@
 use super::{client::CosmosClient, tx::sign_tx};
 use crate::{error::Error, provider::FinalityEvent};
 use futures::{Stream, StreamExt};
+use ibc::core::ics02_client::events::UpdateClient;
 use ibc_proto::{
 	cosmos::{base::v1beta1::Coin, tx::v1beta1::Fee},
 	google::protobuf::Any,
 };
-use primitives::{Chain, IbcProvider};
+use pallet_ibc::light_clients::AnyClientMessage;
+use primitives::{Chain, IbcProvider, MisbehaviourHandler};
 use prost::Message;
 use std::pin::Pin;
 use tendermint_rpc::{
@@ -103,7 +105,36 @@ where
 	}
 
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
+		println!("Submitting messages");
+		for msg in messages.iter() {
+			if msg.type_url.contains("Wasm") {
+				continue
+			}
+			println!("Message {}: {}", msg.type_url, hex::encode(&msg.value));
+		}
 		let hash = self.submit_call(messages).await?;
+		println!("Submitted. Tx hash: {}", hash);
 		Ok(Self::TransactionId { hash })
+	}
+
+	async fn query_client_message(
+		&self,
+		update: UpdateClient,
+	) -> Result<AnyClientMessage, Self::Error> {
+		todo!()
+	}
+}
+
+#[async_trait::async_trait]
+impl<H> MisbehaviourHandler for CosmosClient<H>
+where
+	H: Clone + Send + Sync + 'static,
+{
+	async fn check_for_misbehaviour<C: Chain>(
+		&self,
+		_counterparty: &C,
+		_client_message: AnyClientMessage,
+	) -> Result<(), anyhow::Error> {
+		Ok(())
 	}
 }

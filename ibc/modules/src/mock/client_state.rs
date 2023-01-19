@@ -153,7 +153,7 @@ impl ClientState for MockClientState {
 	}
 
 	fn encode_to_vec(&self) -> Vec<u8> {
-		self.encode_vec()
+		self.encode_vec().unwrap()
 	}
 }
 
@@ -324,6 +324,6 @@ impl ConsensusState for MockConsensusState {
 	}
 
 	fn encode_to_vec(&self) -> Vec<u8> {
-		self.encode_vec()
+		self.encode_vec().unwrap()
 	}
 }

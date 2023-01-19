@@ -153,9 +153,13 @@ where
 					let ibc_event = ibc_event_try_from_abci_event(&event, ibc_height).ok();
 					match ibc_event {
 						Some(ev) => {
+							println!("Encountered event: {:?}", event);
 							ibc_events.push(ev);
 						},
-						None => continue,
+						None => {
+							println!("Skipped event: {:?}", event);
+							continue
+						},
 					}
 				}
 			}
@@ -179,7 +183,7 @@ where
 
 	// Changed result: `Item =` from `IbcEvent` to `IbcEventWithHeight` to include the necessary
 	// height field, as `height` is removed from `Attribute` from ibc-rs v0.22.0
-	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent>>> {
+	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
 		// Create websocket client. Like what `EventMonitor::subscribe()` does in `hermes`
 		let (ws_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
 			.await
@@ -251,6 +255,8 @@ where
 									events_with_height
 										.push(IbcEventWithHeight::new(ibc_event, height));
 								}
+							} else {
+								println!("Failed to parse event {:?}", abci_event);
 							}
 						}
 					},

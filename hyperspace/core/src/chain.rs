@@ -25,7 +25,9 @@ use ibc::{
 	applications::transfer::PrefixedCoin,
 	core::{
 		ics02_client::{
-			client_state::ClientType, events::CodeId, msgs::create_client::MsgCreateAnyClient,
+			client_state::ClientType,
+			events::{CodeId, UpdateClient},
+			msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient},
 		},
 		ics03_connection::msgs::{
 			conn_open_ack::MsgConnectionOpenAck, conn_open_init::MsgConnectionOpenInit,
@@ -57,11 +59,6 @@ use ics08_wasm::Bytes;
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 #[cfg(any(test, feature = "testing"))]
 use pallet_ibc::Timeout;
-use serde::Deserialize;
-use thiserror::Error;
-
-use ibc::core::ics02_client::events::UpdateClient;
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use parachain::{config, ParachainClient};
 use primitives::{
 	mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, MisbehaviourHandler, UpdateType,
@@ -804,10 +801,12 @@ impl Chain for AnyChain {
 				.map_err(Into::into)
 				.map(|id| AnyTransactionId::Cosmos(id)),
 			Self::Wasm(chain) => {
+				println!("start converting");
 				let messages = messages
 					.into_iter()
 					.map(|msg| wrap_any_msg_into_wasm(msg, chain.code_id.clone()))
 					.collect();
+				println!("stop converting, submitting to {}", chain.inner.name());
 				chain.inner.submit(messages).await.map_err(Into::into)
 			},
 		}
@@ -825,8 +824,12 @@ impl Chain for AnyChain {
 }
 
 fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Any {
+	// TODO: consider rewriting with Ics26Envelope
 	use ibc::core::{
-		ics02_client::msgs::create_client::TYPE_URL as CREATE_CLIENT_TYPE_URL,
+		ics02_client::msgs::{
+			create_client::TYPE_URL as CREATE_CLIENT_TYPE_URL,
+			update_client::TYPE_URL as UPDATE_CLIENT_TYPE_URL,
+		},
 		ics03_connection::msgs::{
 			conn_open_ack::TYPE_URL as CONN_OPEN_ACK_TYPE_URL,
 			conn_open_try::TYPE_URL as CONN_OPEN_TRY_TYPE_URL,
@@ -838,9 +841,6 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Any {
 		CREATE_CLIENT_TYPE_URL => {
 			let mut msg_decoded =
 				MsgCreateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
-			if matches!(msg_decoded.consensus_state, AnyConsensusState::Wasm(_)) {
-				return msg
-			}
 			msg_decoded.consensus_state =
 				AnyConsensusState::wasm(msg_decoded.consensus_state, code_id.clone(), 1);
 			msg_decoded.client_state = AnyClientState::wasm(msg_decoded.client_state, code_id);
@@ -849,24 +849,28 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Any {
 		CONN_OPEN_TRY_TYPE_URL => {
 			let mut msg_decoded =
 				MsgConnectionOpenTry::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
-			if matches!(msg_decoded.client_state, Some(AnyClientState::Wasm(_))) {
-				return msg
-			}
-			msg_decoded.client_state = msg_decoded
-				.client_state
-				.map(|client_state| AnyClientState::wasm(client_state, code_id));
+			// println!("decoded: {:?}", msg_decoded);
+			// msg_decoded.client_state = msg_decoded
+			// 	.client_state
+			// 	.map(|client_state| AnyClientState::wasm(client_state, code_id));
 			msg_decoded.to_any()
 		},
 		CONN_OPEN_ACK_TYPE_URL => {
 			let mut msg_decoded =
 				MsgConnectionOpenAck::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
-			if matches!(msg_decoded.client_state, Some(AnyClientState::Wasm(_))) {
-				return msg
-			}
 			msg_decoded.client_state = msg_decoded
 				.client_state
 				.map(|client_state| AnyClientState::wasm(client_state, code_id));
 			msg_decoded.to_any()
+		},
+		UPDATE_CLIENT_TYPE_URL => {
+			let mut msg_decoded =
+				MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+			msg_decoded.client_message = AnyClientMessage::wasm(msg_decoded.client_message);
+			// println!("decoded {}: {:?}", UPDATE_CLIENT_TYPE_URL, msg_decoded);
+			let any = msg_decoded.to_any();
+			// println!("converted {}: {}", any.type_url, hex::encode(&any.value));
+			any
 		},
 		_ => msg,
 	}

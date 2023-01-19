@@ -48,7 +48,7 @@ ibc-primitives = { path = "primitives", default-features = false }
 # optional
 hex = { version = "0.4.3", default-features = false, optional = true }
 hex-literal = { version = "0.3.4", default-features = false, optional = true }
-prost = { version = "0.11", default-features = false, optional = true }
+prost = { version = "0.11", default-features = false }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, optional = true }
 pallet-ibc-ping = { path = "ping", default-features = false, optional = true }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", default-features = false, optional = true }
@@ -141,7 +141,6 @@ runtime-benchmarks = [
   "pallet-timestamp/runtime-benchmarks",
   "hex",
   "simple-iavl",
-  "prost",
   "ibc-primitives/runtime-benchmarks",
   "sp-finality-grandpa",
   "finality-grandpa"

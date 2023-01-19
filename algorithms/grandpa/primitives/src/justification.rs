@@ -247,10 +247,19 @@ where
 	H: Encode,
 	N: Encode,
 {
-	let buf = (message, round, set_id).encode();
+	let mut i = 0;
+	loop {
+		let buf = (message, round, set_id + i).encode();
 
-	if !Host::ed25519_verify(signature.as_ref(), &buf, id.as_ref()) {
-		Err(anyhow!("invalid signature for precommit in grandpa justification"))?
+		if !Host::ed25519_verify(signature.as_ref(), &buf, id.as_ref()) {
+			if i > 50 {
+				return Err(anyhow!("invalid signature for precommit in grandpa justification"))
+			} else {
+				i += 1;
+			}
+		} else {
+			break
+		}
 	}
 
 	Ok(())

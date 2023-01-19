@@ -24,6 +24,7 @@ use ibc::{
 	},
 	Height,
 };
+use ibc_proto::google::protobuf::Any;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WasmClient<AnyClient, AnyClientState, AnyConsensusState> {
@@ -40,10 +41,10 @@ where
 		+ Sync
 		+ Eq,
 	AnyClientState: Clone + Eq + IbcClientState<ClientDef = AnyClient>,
-	AnyClientState: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyClientState: TryFrom<Any>,
 	AnyConsensusState: IbcConsensusState + Eq,
-	AnyConsensusState: for<'a> TryFrom<(ClientType, &'a Bytes)>,
-	AnyClient::ClientMessage: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyConsensusState: TryFrom<Any>,
+	AnyClient::ClientMessage: TryFrom<Any>,
 {
 	type ClientMessage = ClientMessage<AnyClient::ClientMessage>;
 	type ClientState = ClientState<AnyClient, AnyClientState, AnyConsensusState>;

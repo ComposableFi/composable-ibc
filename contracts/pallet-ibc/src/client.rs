@@ -427,7 +427,8 @@ where
 	}
 
 	fn validate_self_client(&self, client_state: &AnyClientState) -> Result<(), ICS02Error> {
-		let (relay_chain, para_id, latest_para_height) = match client_state {
+		let unpacked = client_state.unpack_recursive();
+		let (relay_chain, para_id, latest_para_height) = match unpacked {
 			AnyClientState::Beefy(client_state) => {
 				if client_state.is_frozen() {
 					Err(ICS02Error::implementation_specific(format!("client state is frozen")))?

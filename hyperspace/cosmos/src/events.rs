@@ -170,7 +170,10 @@ pub fn ibc_event_try_from_abci_event(
 			timeout_packet_try_from_abci_event(abci_event, height)
 				.map_err(IbcEventError::channel)?,
 		)),
-		_ => Err(IbcEventError::unsupported_abci_event(abci_event.kind.to_owned())),
+		_ => {
+			println!("IBC event type not recognized: {}", abci_event.kind);
+			Err(IbcEventError::unsupported_abci_event(abci_event.kind.to_owned()))
+		},
 	}
 }
 

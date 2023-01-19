@@ -261,6 +261,7 @@ where
 
 	pub async fn submit_call(&self, messages: Vec<Any>) -> Result<Hash, Error> {
 		let account_info = self.query_account().await?;
+
 		// Sign transaction
 		let (tx, _, tx_bytes) = sign_tx(
 			self.keybase.clone(),
@@ -277,6 +278,7 @@ where
 				granter: "".to_string(),
 			},
 		)?;
+
 		// Simulate transaction
 		let res = simulate_tx(self.grpc_url.clone(), tx, tx_bytes.clone()).await?;
 		println!("res = {:?}", &res);
@@ -286,6 +288,7 @@ where
 		// Broadcast transaction
 		let hash = broadcast_tx(&self.rpc_client, tx_bytes).await?;
 		log::info!(target: "hyperspace-light", "🤝 Transaction sent with hash: {:?}", hash);
+		log::info!("🤝 Transaction sent with hash: {:?}", hash);
 
 		// wait for confirmation
 		confirm_tx(&self.rpc_client, hash).await
@@ -321,7 +324,7 @@ where
 
 		let update_type = match latest_light_block.validators == latest_light_block.next_validators
 		{
-			true => UpdateType::Mandatory,
+			true => UpdateType::Optional,
 			false => UpdateType::Mandatory,
 		};
 		Ok((

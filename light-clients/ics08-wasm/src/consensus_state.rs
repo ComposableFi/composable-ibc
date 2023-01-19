@@ -1,4 +1,4 @@
-use crate::{client_state::Any, Bytes};
+use crate::Bytes;
 use alloc::{
 	boxed::Box,
 	string::{String, ToString},
@@ -16,12 +16,14 @@ use ibc::{
 	timestamp::Timestamp,
 };
 use ibc_proto::{
+	google::protobuf::Any,
 	ibc::{
 		core::{client::v1::Height, commitment::v1::MerkleRoot},
 		lightclients::wasm::v1::ConsensusState as RawConsensusState,
 	},
 	ics23::ProofSpec,
 };
+use prost::Message;
 
 pub const WASM_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.ConsensusState";
 
@@ -42,7 +44,7 @@ pub struct ConsensusState<AnyConsensusState> {
 impl<AnyConsensusState: IbcConsensusState> IbcConsensusState for ConsensusState<AnyConsensusState>
 where
 	AnyConsensusState: Clone + Debug + Send + Sync,
-	AnyConsensusState: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyConsensusState: TryFrom<Any>,
 {
 	type Error = Infallible;
 
@@ -63,17 +65,29 @@ where
 	}
 }
 
+impl<AnyConsensusState> ConsensusState<AnyConsensusState>
+where
+	AnyConsensusState: Clone + Debug + Send + Sync,
+	AnyConsensusState: TryFrom<Any> + IbcConsensusState,
+{
+	pub fn to_any(&self) -> Any {
+		Any { type_url: WASM_CONSENSUS_STATE_TYPE_URL.to_string(), value: self.encode_to_vec() }
+	}
+}
+
 impl<AnyConsensusState> TryFrom<RawConsensusState> for ConsensusState<AnyConsensusState>
 where
-	AnyConsensusState: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyConsensusState: TryFrom<Any>,
 {
 	type Error = String;
 
 	fn try_from(raw: RawConsensusState) -> Result<Self, Self::Error> {
-		let client_type = crate::get_wasm_client_type(&raw.code_id)
-			.expect("WASM client type is not set for the code_id");
-		let any = Any::decode_vec(&raw.data).unwrap();
-		let inner = AnyConsensusState::try_from((client_type, &any.value))
+		#[cfg(feature = "std")]
+		println!("RawConsensusState.code_id = {}", hex::encode(&raw.code_id));
+		#[cfg(feature = "std")]
+		println!("RawConsensusState.data = {}", hex::encode(&raw.data));
+		let any = Any::decode(&mut &raw.data[..]).unwrap();
+		let inner = AnyConsensusState::try_from(any)
 			.map_err(|_| ())
 			.expect("Any* cannot be decoded");
 		Ok(Self {
@@ -100,6 +114,6 @@ impl<AnyConsensusState> From<ConsensusState<AnyConsensusState>> for RawConsensus
 impl<AnyConsensusState> Protobuf<RawConsensusState> for ConsensusState<AnyConsensusState>
 where
 	AnyConsensusState: Clone,
-	AnyConsensusState: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyConsensusState: TryFrom<Any>,
 {
 }

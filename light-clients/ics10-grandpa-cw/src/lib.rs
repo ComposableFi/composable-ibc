@@ -18,6 +18,6 @@ mod types;
 pub use crate::error::ContractError;
 
 pub const CLIENT_STATE: &'static [u8] = b"client_state";
-pub const STORAGE_PREFIX: &'static [u8] = b"ibc";
+pub const STORAGE_PREFIX: &'static [u8] = b"";
 
 pub type Bytes = Vec<u8>;

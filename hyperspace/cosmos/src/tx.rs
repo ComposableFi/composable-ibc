@@ -8,6 +8,7 @@ use super::{
 use crate::error::Error;
 // use primitives::error::Error;
 use core::time::Duration;
+use futures::TryFutureExt;
 use ibc::core::ics24_host::identifier::ChainId;
 use ibc_proto::{
 	cosmos::{
@@ -23,6 +24,7 @@ use tendermint::Hash;
 use tendermint_rpc::{
 	endpoint::tx::Response as TxResponse, query::Query, Client, HttpClient, Order, Url,
 };
+use tokio::time::error::Elapsed;
 
 pub fn sign_tx(
 	key: KeyEntry,
@@ -71,11 +73,16 @@ pub async fn simulate_tx(
 		.await
 		.map_err(|e| Error::from(e.to_string()))?;
 	let request = tonic::Request::new(req);
-	let response = client
-		.simulate(request)
-		.await
-		.map_err(|e| Error::from(e.to_string()))?
-		.into_inner();
+
+	println!("sim");
+
+	let response = tokio::time::timeout(
+		Duration::from_secs(15),
+		client.simulate(request).map_err(|e| Error::from(e.to_string())),
+	)
+	.await
+	.map_err(|_| Error::from("simulation timeout".to_string()))??
+	.into_inner();
 	Ok(response)
 }
 

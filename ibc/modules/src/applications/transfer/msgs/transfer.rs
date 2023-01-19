@@ -24,7 +24,7 @@ use ibc_proto::{
 use tendermint_proto::Protobuf;
 
 use crate::{
-	applications::transfer::{error::Error, PrefixedCoin},
+	applications::transfer::error::Error,
 	core::{
 		ics02_client::height::Height,
 		ics24_host::identifier::{ChannelId, PortId},

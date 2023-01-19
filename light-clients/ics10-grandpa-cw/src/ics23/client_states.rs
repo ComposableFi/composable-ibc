@@ -12,8 +12,9 @@ impl<'a> ClientStates<'a> {
 		ClientStates(prefixed(storage, STORAGE_PREFIX))
 	}
 
-	pub fn key(client_id: ClientId) -> Vec<u8> {
-		let client_state_path = format!("{}", ClientStatePath(client_id));
+	pub fn key(_client_id: ClientId) -> Vec<u8> {
+		let client_state_path = format!("clientState");
+		// let client_state_path = format!("{}", ClientStatePath(client_id));
 		client_state_path.into_bytes()
 	}
 

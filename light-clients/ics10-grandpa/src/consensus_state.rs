@@ -23,9 +23,10 @@ use tendermint_proto::{google::protobuf as tpb, Protobuf};
 
 use crate::proto::ConsensusState as RawConsensusState;
 
-use crate::error::Error;
+use crate::{alloc::string::ToString, error::Error};
 use grandpa_client_primitives::{parachain_header_storage_key, ParachainHeaderProofs};
 use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp, Height};
+use ibc_proto::google::protobuf::Any;
 use light_client_common::{decode_timestamp_extrinsic, state_machine};
 use primitive_types::H256;
 use sp_runtime::{generic, traits::BlakeTwo256, SaturatedConversion};
@@ -43,6 +44,13 @@ pub struct ConsensusState {
 impl ConsensusState {
 	pub fn new(root: Vec<u8>, timestamp: Time) -> Self {
 		Self { timestamp, root: root.into() }
+	}
+
+	pub fn to_any(&self) -> Any {
+		Any {
+			type_url: GRANDPA_CONSENSUS_STATE_TYPE_URL.to_string(),
+			value: self.encode_vec().expect("encode ConsensusState"),
+		}
 	}
 
 	pub fn from_header<H>(

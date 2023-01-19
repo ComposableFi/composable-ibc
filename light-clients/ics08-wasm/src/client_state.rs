@@ -18,9 +18,10 @@ use ibc::{
 	Height,
 };
 use ibc_proto::{
-	google::protobuf::Any as RawAny, ibc::lightclients::wasm::v1::ClientState as RawClientState,
+	google::protobuf::Any, ibc::lightclients::wasm::v1::ClientState as RawClientState,
 	ics23::ProofSpec,
 };
+use prost::Message;
 
 pub const WASM_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.ClientState";
 
@@ -42,16 +43,17 @@ pub struct ClientState<AnyClient, AnyClientState, AnyConsensusState> {
 impl<AnyClient, AnyClientState, AnyConsensusState> IbcClientState
 	for ClientState<AnyClient, AnyClientState, AnyConsensusState>
 where
-	AnyClientState: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyClientState: TryFrom<Any>,
 	AnyConsensusState: IbcConsensusState + Eq,
-	AnyConsensusState: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyConsensusState: TryFrom<Any>,
+	AnyConsensusState: TryFrom<Any>,
 	AnyClient: ClientDef<ClientState = AnyClientState, ConsensusState = AnyConsensusState>
 		+ Debug
 		+ Send
 		+ Sync
 		+ Eq,
 	AnyClientState: IbcClientState<ClientDef = AnyClient> + Eq,
-	AnyClient::ClientMessage: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyClient::ClientMessage: TryFrom<Any>,
 {
 	type UpgradeOptions = Box<AnyClientState::UpgradeOptions>;
 	type ClientDef = WasmClient<AnyClient, AnyClientState, AnyConsensusState>;
@@ -99,42 +101,18 @@ where
 	}
 }
 
-#[derive(Clone)]
-pub struct Any {
-	pub type_url: String,
-	pub value: Bytes,
-}
-
-impl Protobuf<RawAny> for Any {}
-
-impl From<RawAny> for Any {
-	fn from(value: RawAny) -> Self {
-		Self { type_url: value.type_url, value: value.value }
-	}
-}
-
-impl From<Any> for RawAny {
-	fn from(value: Any) -> Self {
-		Self { type_url: value.type_url, value: value.value }
-	}
-}
-
 impl<AnyClient, AnyClientState, AnyConsensusState> TryFrom<RawClientState>
 	for ClientState<AnyClient, AnyClientState, AnyConsensusState>
 where
-	AnyClientState: for<'a> TryFrom<(ClientType, &'a Bytes)>,
-	// Self::Error: for<'a> From<<AnyClientState as TryFrom<(ClientType, &'a Bytes)>>::Error>,
+	AnyClientState: TryFrom<Any>,
 {
 	type Error = String;
 
 	fn try_from(raw: RawClientState) -> Result<Self, Self::Error> {
-		let client_type = crate::get_wasm_client_type(&raw.code_id).expect(&format!(
-			"WASM client type is not set for the code_id: {}",
-			hex::encode(&raw.code_id)
-		));
-		// panic!("DATA  = {}", hex::encode(&raw.data));
-		let any = Any::decode_vec(&raw.data).unwrap();
-		let inner = AnyClientState::try_from((client_type, &any.value))
+		#[cfg(feature = "std")]
+		println!("DATA = {}", hex::encode(&raw.data));
+		let any = Any::decode(&mut &raw.data[..]).unwrap();
+		let inner = AnyClientState::try_from(any)
 			.map_err(|_| ())
 			// .map_err(|e| println!("Error: {:?}", e))?;
 			.expect("Any* cannot be decoded");
@@ -171,7 +149,7 @@ impl<AnyClient, AnyClientState, AnyConsensusState> Protobuf<RawClientState>
 	for ClientState<AnyClient, AnyClientState, AnyConsensusState>
 where
 	AnyClientState: Clone,
-	AnyClientState: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyClientState: TryFrom<Any>,
 	AnyConsensusState: Clone,
 	AnyClient: Clone,
 {

@@ -101,7 +101,7 @@ pub async fn create_connection(
 	log::info!(target: "hyperspace", "============= Wait till both chains have completed connection handshake =============");
 
 	// wait till both chains have completed connection handshake
-	let future = chain_b
+	let future = chain_a
 		.ibc_events()
 		.await
 		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmConnection(_))))
@@ -111,7 +111,7 @@ pub async fn create_connection(
 	let mut events = timeout_future(
 		future,
 		15 * 60,
-		format!("Didn't see OpenConfirmConnection on {}", chain_b.name()),
+		format!("Didn't see OpenConfirmConnection on {}", chain_a.name()),
 	)
 	.await;
 
@@ -155,29 +155,27 @@ pub async fn create_channel(
 
 	chain_a.submit(vec![msg]).await?;
 
-	// log::info!(target: "hyperspace", "============= Wait till both chains have completed channel
-	// handshake =============");
+	log::info!(target: "hyperspace", "============= Wait till both chains have completed channel handshake =============");
 
-	// let future = chain_b
-	// 	.ibc_events()
-	// 	.await
-	// 	.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmChannel(_))))
-	// 	.take(1)
-	// 	.collect::<Vec<_>>();
+	let future = chain_b
+		.ibc_events()
+		.await
+		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmChannel(_))))
+		.take(1)
+		.collect::<Vec<_>>();
 
-	// let mut events = timeout_future(
-	// 	future,
-	// 	15 * 60,
-	// 	format!("Didn't see OpenConfirmChannel on {}", chain_b.name()),
-	// )
-	// .await;
+	let mut events = timeout_future(
+		future,
+		15 * 60,
+		format!("Didn't see OpenConfirmChannel on {}", chain_b.name()),
+	)
+	.await;
 
-	// let (channel_id_a, channel_id_b) = match events.pop() {
-	// 	Some(IbcEvent::OpenConfirmChannel(chan)) =>
-	// 		(chan.counterparty_channel_id.unwrap(), chan.channel_id().unwrap().clone()),
-	// 	got => panic!("Last event should be OpenConfirmChannel: {got:?}"),
-	// };
-	std::process::exit(0);
+	let (channel_id_a, channel_id_b) = match events.pop() {
+		Some(IbcEvent::OpenConfirmChannel(chan)) =>
+			(chan.counterparty_channel_id.unwrap(), chan.channel_id().unwrap().clone()),
+		got => panic!("Last event should be OpenConfirmChannel: {got:?}"),
+	};
 
-	// Ok((channel_id_a, channel_id_b))
+	Ok((channel_id_a, channel_id_b))
 }

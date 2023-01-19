@@ -40,6 +40,7 @@ members = [
     "hyperspace/cosmos",
     "hyperspace/testsuite",
     "hyperspace/metrics",
+    "hyperspace/wasm",
 
     # utilities
     "utils/subxt/codegen",

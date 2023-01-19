@@ -1,20 +1,20 @@
 use crate::STORAGE_PREFIX;
 use cosmwasm_std::Storage;
-use cosmwasm_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use ibc::core::ics24_host::{identifier::ClientId, path::ClientTypePath};
 use sp_std::prelude::*;
 
 /// client_id => client_type
 /// trie key path: "clients/{}/clientType"
-pub struct Clients<'a>(PrefixedStorage<'a>);
+pub struct Clients<'a>(&'a mut dyn Storage);
 
 impl<'a> Clients<'a> {
 	pub fn new(storage: &'a mut dyn Storage) -> Self {
-		Clients(prefixed(storage, STORAGE_PREFIX))
+		Clients(storage)
 	}
 
-	pub fn key(client_id: ClientId) -> Vec<u8> {
-		let client_type_path = format!("{}", ClientTypePath(client_id));
+	pub fn key(_client_id: ClientId) -> Vec<u8> {
+		// let client_type_path = format!("{}", ClientTypePath(client_id));
+		let client_type_path = format!("clientType");
 		client_type_path.into_bytes()
 	}
 
@@ -31,11 +31,11 @@ impl<'a> Clients<'a> {
 	}
 }
 
-pub struct ReadonlyClients<'a>(ReadonlyPrefixedStorage<'a>);
+pub struct ReadonlyClients<'a>(&'a dyn Storage);
 
 impl<'a> ReadonlyClients<'a> {
 	pub fn new(storage: &'a dyn Storage) -> Self {
-		ReadonlyClients(prefixed_read(storage, STORAGE_PREFIX))
+		ReadonlyClients(storage)
 	}
 
 	pub fn get(&self, client_id: &ClientId) -> Option<Vec<u8>> {

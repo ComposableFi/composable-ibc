@@ -4048,7 +4048,6 @@ dependencies = [
  "sp-core",
  "sp-finality-grandpa",
  "sp-io",
- "sp-keyring",
  "sp-keystore",
  "sp-mmr-primitives",
  "sp-runtime",
@@ -4089,19 +4088,29 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "finality-grandpa",
  "futures",
+ "grandpa-light-client-primitives",
+ "grandpa-light-client-verifier",
+ "hex",
  "hyperspace-core",
  "hyperspace-parachain",
  "hyperspace-primitives",
  "ibc",
  "ibc-proto",
+ "ics10-grandpa",
+ "light-client-common",
  "log",
  "pallet-ibc",
+ "polkadot-core-primitives",
  "serde_json",
  "sp-core",
+ "sp-finality-grandpa",
  "sp-keyring",
  "sp-keystore",
  "sp-runtime",
+ "sp-state-machine",
+ "sp-trie",
  "subxt",
  "tendermint-proto",
  "tokio",
@@ -4135,6 +4144,7 @@ dependencies = [
 name = "ibc"
 version = "0.15.0"
 dependencies = [
+ "cosmwasm-schema",
  "derive_more",
  "env_logger",
  "flex-error",
@@ -4294,10 +4304,12 @@ dependencies = [
 name = "ics08-wasm"
 version = "0.1.0"
 dependencies = [
+ "cosmwasm-schema",
  "hex",
  "ibc",
  "ibc-proto",
  "prost 0.11.5",
+ "serde",
  "spin 0.9.4",
 ]
 
@@ -4362,6 +4374,7 @@ dependencies = [
  "ibc",
  "ibc-derive",
  "ibc-proto",
+ "ics08-wasm",
  "ics10-grandpa",
  "ics23 0.8.0-alpha",
  "light-client-common",
@@ -7624,6 +7637,7 @@ dependencies = [
  "ibc-runtime-api",
  "jsonrpsee 0.14.0",
  "log",
+ "pallet-ibc",
  "pallet-transaction-payment-rpc",
  "parachain-runtime",
  "parity-scale-codec",
@@ -13951,6 +13965,16 @@ name = "wasi"
 version = "0.11.0+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
+
+[[package]]
+name = "wasm"
+version = "0.1.0"
+dependencies = [
+ "ibc",
+ "ibc-proto",
+ "ibc-rpc",
+ "ics07-tendermint",
+]
 
 [[package]]
 name = "wasm-bindgen"

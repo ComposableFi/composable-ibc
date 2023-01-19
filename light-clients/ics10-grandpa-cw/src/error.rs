@@ -25,6 +25,8 @@ pub enum ContractError {
 	Path(ibc::core::ics24_host::path::PathError),
 	#[display(fmt = "IBC proof error: {_0}")]
 	Proof(ibc::proofs::ProofError),
+	#[display(fmt = "IBC commitment error: {_0}")]
+	Commitment(ibc::core::ics23_commitment::error::Error),
 	#[display(fmt = "Proto decode error: {_0}")]
 	ProtoDecode(prost::DecodeError),
 	#[display(fmt = "From UTF8 error: {_0}")]

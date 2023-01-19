@@ -40,6 +40,7 @@
 
 //! Pallet IBC
 //! Implements the ibc protocol for substrate runtimes.
+#[macro_use]
 extern crate alloc;
 
 use codec::{Decode, Encode};

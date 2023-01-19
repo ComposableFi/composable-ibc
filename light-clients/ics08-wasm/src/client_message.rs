@@ -1,5 +1,7 @@
-use crate::{client_state::Any as MyAny, Bytes};
+use crate::{msg::Base64, Bytes};
 use alloc::{boxed::Box, string::ToString, vec::Vec};
+#[cfg(feature = "cosmwasm")]
+use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::{
 		ics02_client::{
@@ -15,6 +17,7 @@ use ibc_proto::{
 	google::protobuf::Any,
 	ibc::lightclients::wasm::v1::{Header as RawHeader, Misbehaviour as RawMisbehaviour},
 };
+use prost::Message;
 
 pub const WASM_HEADER_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.Header";
 pub const WASM_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.Misbehaviour";
@@ -45,7 +48,7 @@ impl<AnyClientMessage> ClientMessage<AnyClientMessage> {
 impl<AnyClientMessage> IbcClientMessage for ClientMessage<AnyClientMessage>
 where
 	AnyClientMessage: IbcClientMessage,
-	AnyClientMessage: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyClientMessage: TryFrom<Any>,
 {
 	fn encode_to_vec(&self) -> Vec<u8> {
 		self.encode_vec().expect("encode to vec cannot fail")
@@ -55,14 +58,14 @@ where
 impl<AnyClientMessage> Protobuf<Any> for ClientMessage<AnyClientMessage>
 where
 	AnyClientMessage: Clone,
-	AnyClientMessage: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyClientMessage: TryFrom<Any>,
 {
 }
 
 impl<AnyClientMessage> TryFrom<Any> for ClientMessage<AnyClientMessage>
 where
 	AnyClientMessage: Clone,
-	AnyClientMessage: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyClientMessage: TryFrom<Any>,
 {
 	type Error = Error;
 
@@ -83,7 +86,7 @@ where
 impl<AnyClientMessage> From<ClientMessage<AnyClientMessage>> for Any
 where
 	AnyClientMessage: Clone,
-	AnyClientMessage: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyClientMessage: TryFrom<Any>,
 {
 	fn from(msg: ClientMessage<AnyClientMessage>) -> Self {
 		match msg {
@@ -102,24 +105,19 @@ where
 impl<AnyClientMessage> Protobuf<RawMisbehaviour> for Misbehaviour<AnyClientMessage>
 where
 	AnyClientMessage: Clone,
-	AnyClientMessage: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyClientMessage: TryFrom<Any>,
 {
 }
 
 impl<AnyClientMessage> TryFrom<RawMisbehaviour> for Misbehaviour<AnyClientMessage>
 where
-	AnyClientMessage: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyClientMessage: TryFrom<Any>,
 {
 	type Error = Error;
 
 	fn try_from(raw: RawMisbehaviour) -> Result<Self, Self::Error> {
-		let code_id =
-			hex::decode("e0e0fda1d756f6ed060b32f392291b119194b38dcbefcf0e6cc762dc1dc0507b")
-				.unwrap();
-		let client_type = crate::get_wasm_client_type(&code_id)
-			.expect("WASM client type is not set for the code_id");
-		let any = MyAny::decode_vec(&raw.data).unwrap();
-		let inner = AnyClientMessage::try_from((client_type, &any.value))
+		let any = Any::decode(&mut &raw.data[..]).unwrap();
+		let inner = AnyClientMessage::try_from(any)
 			.map_err(|_| ())
 			// .map_err(|e| println!("Error: {:?}", e))?;
 			.expect("Any* cannot be decoded");
@@ -134,42 +132,41 @@ where
 impl<AnyClientMessage> Protobuf<RawHeader> for Header<AnyClientMessage>
 where
 	AnyClientMessage: Clone,
-	AnyClientMessage: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyClientMessage: TryFrom<Any>,
 {
 }
 
 impl<AnyClientMessage> TryFrom<RawHeader> for Header<AnyClientMessage>
 where
-	AnyClientMessage: for<'a> TryFrom<(ClientType, &'a Bytes)>,
+	AnyClientMessage: TryFrom<Any>,
 {
 	type Error = Error;
 
 	fn try_from(raw: RawHeader) -> Result<Self, Self::Error> {
-		let code_id =
-			hex::decode("e0e0fda1d756f6ed060b32f392291b119194b38dcbefcf0e6cc762dc1dc0507b")
-				.unwrap();
-		let client_type = crate::get_wasm_client_type(&code_id)
-			.expect("WASM client type is not set for the code_id");
-		let any = MyAny::decode_vec(&raw.data).unwrap();
-		let inner = AnyClientMessage::try_from((client_type, &any.value))
-			.map_err(|_| ())
-			// .map_err(|e| println!("Error: {:?}", e))?;
-			.expect("Any* cannot be decoded");
+		let any = Any::decode(&mut &raw.data[..]).unwrap();
+		let inner =
+			AnyClientMessage::try_from(any).map_err(|_| ()).expect("Any* cannot be decoded");
 
-		let header =
-			Self { inner: Box::new(inner), data: raw.data, height: raw.height.map(|h| h.into()) };
+		let header = Self {
+			inner: Box::new(inner),
+			data: raw.data,
+			height: raw.height.expect("header is some").into(),
+		};
 		Ok(header)
 	}
 }
 
-// #[cw_serde]
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "cosmwasm", cw_serde)]
+#[cfg_attr(not(feature = "cosmwasm"), derive(Clone, Debug, PartialEq))]
+#[derive(Eq)]
 pub struct Header<AnyClientMessage> {
-	// #[schemars(with = "String")]
-	// #[serde(with = "Base64", default)]
+	#[cfg_attr(feature = "cosmwasm", serde(skip))]
+	#[cfg_attr(feature = "cosmwasm", schemars(skip))]
 	pub inner: Box<AnyClientMessage>,
+	#[cfg_attr(feature = "cosmwasm", schemars(with = "String"))]
+	#[cfg_attr(feature = "cosmwasm", serde(with = "Base64", default))]
 	pub data: Bytes,
-	pub height: Option<Height>,
+	pub height: Height,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -189,6 +186,6 @@ impl<AnyClientMessage> From<Misbehaviour<AnyClientMessage>> for RawMisbehaviour 
 
 impl<AnyClientMessage> From<Header<AnyClientMessage>> for RawHeader {
 	fn from(value: Header<AnyClientMessage>) -> Self {
-		RawHeader { data: value.data, height: None }
+		RawHeader { data: value.data, height: Some(value.height.into()) }
 	}
 }

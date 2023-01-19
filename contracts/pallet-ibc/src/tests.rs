@@ -79,7 +79,8 @@ fn setup_client_and_consensus_state(port_id: PortId) {
 		Signer::from_str(MODULE_ID).unwrap(),
 	)
 	.unwrap()
-	.encode_vec();
+	.encode_vec()
+	.unwrap();
 	let mut ctx = Context::<Test>::default();
 
 	let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
@@ -129,7 +130,8 @@ fn initialize_connection() {
 			Signer::from_str(MODULE_ID).unwrap(),
 		)
 		.unwrap()
-		.encode_vec();
+		.encode_vec()
+		.unwrap();
 
 		let commitment_prefix: CommitmentPrefix =
 			<Test as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
@@ -152,7 +154,7 @@ fn initialize_connection() {
 
 		let msg = Any {
 			type_url: conn_open_init::TYPE_URL.as_bytes().to_vec(),
-			value: value.encode_vec(),
+			value: value.encode_vec().unwrap(),
 		};
 
 		assert_ok!(Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]));
@@ -176,7 +178,8 @@ fn initialize_connection_with_low_delay() {
 			Signer::from_str(MODULE_ID).unwrap(),
 		)
 		.unwrap()
-		.encode_vec();
+		.encode_vec()
+		.unwrap();
 
 		let commitment_prefix: CommitmentPrefix =
 			<Test as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
@@ -199,7 +202,7 @@ fn initialize_connection_with_low_delay() {
 
 		let msg = Any {
 			type_url: conn_open_init::TYPE_URL.as_bytes().to_vec(),
-			value: value.encode_vec(),
+			value: value.encode_vec().unwrap(),
 		};
 
 		Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
