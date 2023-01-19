@@ -19,11 +19,11 @@ hex-literal = "0.3.4"
 jsonrpsee = { version = "0.15.1", features = ["server"] }
 
 # Local
-parachain-runtime = { path = "runtime" }
-ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
-ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
-ibc-runtime-api = { path = "../../contracts/pallet-ibc/runtime-api" }
-pallet-ibc = { path = "../../contracts/pallet-ibc" }
+parachain-runtime = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
+ibc-runtime-api = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
+pallet-ibc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
+ibc-primitives = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
+ibc-rpc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }

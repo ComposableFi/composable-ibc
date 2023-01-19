@@ -20,10 +20,10 @@ log = "0.4.17"
 subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }
 
 # ibc
-ibc = { path = "../../ibc/modules", features = [] }
-ibc-proto = { path = "../../ibc/proto" }
-pallet-ibc = { path = "../../contracts/pallet-ibc" }
-ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
+ibc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", features = [] }
+ibc-proto = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
+pallet-ibc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
+ibc-rpc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 
 [features]
 testing = []

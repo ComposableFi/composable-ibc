@@ -6,11 +6,11 @@ description = "Hyperspace core exports the relayer and fisherman tasks, and a Cl
 authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <wizdave97@gmail.com>"]
 
 [dependencies]
-primitives = { path = "../primitives", package = "hyperspace-primitives" }
-parachain = { path = "../parachain", package = "hyperspace-parachain" }
-cosmos = { path = "../cosmos", package = "hyperspace-cosmos", optional = true }
+primitives = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", package = "hyperspace-primitives" }
+parachain = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", package = "hyperspace-parachain" }
+cosmos = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", package = "hyperspace-cosmos", optional = true }
 #near = { path = "near", package = "hyperspace-near", optional = true }
-metrics = { path = "../metrics", package = "hyperspace-metrics" }
+metrics = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", package = "hyperspace-metrics" }
 
 # crates.io
 anyhow = "1.0.65"
@@ -29,16 +29,16 @@ derive_more = { version = "0.99.17", features = ["from"] }
 prometheus = { version = "0.13.0", default-features = false }
 
 # ibc
-ibc = { path = "../../ibc/modules", features = [] }
-ibc-proto = { path = "../../ibc/proto" }
+ibc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", features = [] }
+ibc-proto = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
-ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
+ibc-rpc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 
-ics11-beefy = { path = "../../light-clients/ics11-beefy" }
+ics11-beefy = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 #ics13-near = { path = "../../light-clients/ics13-near" }
-light-client-common = { path = "../../light-clients/common" }
-pallet-ibc = { path = "../../contracts/pallet-ibc" }
-ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
+light-client-common = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
+pallet-ibc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
+ics10-grandpa = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
@@ -48,7 +48,7 @@ subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab2
 [dev-dependencies]
 derive_more = "0.99.17"
 prost = "0.11"
-parachain = { path = "../parachain", package = "hyperspace-parachain", features = ["testing"] }
+parachain = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", features = ["testing"], package = "hyperspace-parachain" }
 
 # substrate
 subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }

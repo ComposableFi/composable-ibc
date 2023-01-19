@@ -11,15 +11,17 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 hex-literal = { version = "0.3.3" }
-ibc-primitives = { path = "../primitives" }
+ibc-primitives = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 jsonrpsee = { version = "0.15.1", features = ["server", "macros"] }
-pallet-ibc = { path = ".." }
+pallet-ibc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.45"
 
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
-ibc-proto = { path = "../../../ibc/proto", default-features = false }
-ibc-runtime-api = { path = "../runtime-api" }
+ibc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", default-features = false }
+ibc-derive = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", default-features = false }
+ibc-proto = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", default-features = false }
+ibc-runtime-api = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 sc-chain-spec = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
 sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
@@ -29,10 +31,3 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
 tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
 
-[dependencies.ibc]
-path = "../../../ibc/modules"
-default-features = false
-
-[dependencies.ibc-derive]
-path = "../../../ibc/derive"
-default-features = false

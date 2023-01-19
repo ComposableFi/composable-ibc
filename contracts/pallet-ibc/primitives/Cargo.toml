@@ -26,10 +26,7 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30", default-features = false }
 
-
-[dependencies.ibc]
-path = "../../../ibc/modules"
-default-features = false
+ibc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", default-features = false }
 
 [dependencies.codec]
 package = "parity-scale-codec"

@@ -26,11 +26,11 @@ serde = { version = "1.0.140", optional = true, features = ["derive"] }
 smallvec = "1.9.0"
 
 # Local
-ibc = { path = "../../../ibc/modules", default-features = false }
-pallet-ibc = { path = "../../../contracts/pallet-ibc", default-features = false }
-pallet-ibc-ping = { path = "../../../contracts/pallet-ibc/ping", default-features = false }
-ibc-primitives = { path = "../../../contracts/pallet-ibc/primitives", default-features = false }
-ibc-runtime-api = { path = "../../../contracts/pallet-ibc/runtime-api", default-features = false }
+ibc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", default-features = false }
+pallet-ibc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", default-features = false }
+pallet-ibc-ping = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", default-features = false }
+ibc-primitives = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", default-features = false }
+ibc-runtime-api = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", default-features = false }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.30" }

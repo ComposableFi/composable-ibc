@@ -7,8 +7,8 @@ edition = "2021"
 
 [dependencies]
 substrate-simnode = { git = "https://github.com/polytope-labs/substrate-simnode", branch = "polkadot-v0.9.30" }
-parachain-runtime = { path = "../parachain-node/runtime" }
-parachain-node = { path = "../parachain-node" }
+parachain-runtime = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
+parachain-node = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 jsonrpsee = { version = "0.15.1", features = ["server"] }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
 sudo = { package = "pallet-sudo", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
@@ -26,8 +26,8 @@ sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = 
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
 parachain-inherent = { package = "cumulus-primitives-parachain-inherent", git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.30" }
-light-client-common = { path = "../../light-clients/common" }
-pallet-ibc = { path = "../../contracts/pallet-ibc", features = [ "runtime-benchmarks" ] }
-ibc = { path = "../../ibc/modules" }
-ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
-grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../algorithms/grandpa/primitives" }
+light-client-common = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
+pallet-ibc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", features = [ "runtime-benchmarks" ] }
+ibc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
+ics10-grandpa = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
+grandpa-client-primitives = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", package = "grandpa-light-client-primitives" }

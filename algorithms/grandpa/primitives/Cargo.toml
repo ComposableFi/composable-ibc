@@ -22,7 +22,7 @@ sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch 
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30", default-features = false }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30", default-features = false }
 
-light-client-common = { path = "../../../light-clients/common", default-features = false }
+light-client-common = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", default-features = false }
 
 [features]
 default = ["std"]

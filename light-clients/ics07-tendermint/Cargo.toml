@@ -11,8 +11,8 @@ default = ["std"]
 std = []
 
 [dependencies]
-ibc = { path = "../../ibc/modules", default-features = false }
-ibc-proto = { path = "../../ibc/proto", default-features = false }
+ibc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", default-features = false }
+ibc-proto = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", default-features = false }
 
 ics23 = { git = "https://github.com/confio/ics23", rev = "a4daeb4c24ce1be827829c0841446abc690c4f11", default-features = false }
 time = { version = "0.3", default-features = false }
@@ -28,8 +28,8 @@ tendermint-light-client-verifier = { git = "https://github.com/composableFi/tend
 
 
 [dev-dependencies]
-ibc = { path = "../../ibc/modules", features = ["mocks"] }
-ibc-derive = { path = "../../ibc/derive" }
+ibc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", features = ["mocks"] }
+ibc-derive = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 env_logger = "0.9.0"
 tracing-subscriber = { version = "0.3.11", features = ["fmt", "env-filter", "json"]}
 test-log = { version = "0.2.10", features = ["trace"] }

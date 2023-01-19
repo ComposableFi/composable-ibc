@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Composable Developers"]
 
 [dependencies]
-primitives = { path = "../primitives", package = "hyperspace-primitives" }
+primitives = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", package = "hyperspace-primitives" }
 
 # crates.io
 anyhow = "1.0.65"
@@ -32,8 +32,8 @@ sp-runtime = "6.0.0"
 sp-keystore = "0.12.0"
 
 # ibc
-ibc = { path = "../../ibc/modules", features = [] }
-ibc-proto = { path = "../../ibc/proto" }
+ibc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", features = [] }
+ibc-proto = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
 
 # near

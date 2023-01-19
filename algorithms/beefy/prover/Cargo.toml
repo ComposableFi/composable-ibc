@@ -10,7 +10,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 [build-dependencies]
 anyhow = "1.0.66"
 once_cell = "1.16.0"
-subxt-codegen = { package = "codegen", path = "../../../utils/subxt/codegen" }
+subxt-codegen = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", package = "codegen" }
 tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
 
 [dependencies]
@@ -27,7 +27,7 @@ beefy-primitives = { git = "https://github.com/paritytech/substrate", branch = "
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 rs_merkle = "1.2.0"
 derive_more = { version = "0.99.17", features = ["from"]  }
-light-client-common = { path = "../../../light-clients/common" }
+light-client-common = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 jsonrpsee-core = { version = "0.15.1", features = ["async-client"] }
 
 # Optional deps
@@ -37,7 +37,7 @@ serde_json = { version = "1.0.74" }
 pallet-mmr-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
 hex = { version = "0.4.3" }
-beefy-light-client-primitives = {  path = "../primitives" }
+beefy-light-client-primitives = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 subxt-generated = { path = "../../../utils/subxt/generated" }
 
 [features]

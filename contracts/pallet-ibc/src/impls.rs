@@ -837,6 +837,10 @@ where
 		Ok(())
 	}
 
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	fn create_client() -> Result<ClientId, IbcHandlerError> {
+		todo!()
+	}
 	#[cfg(feature = "runtime-benchmarks")]
 	fn create_client() -> Result<ClientId, IbcHandlerError> {
 		use crate::{
@@ -860,6 +864,13 @@ where
 		Ok(client_id)
 	}
 
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	fn create_connection(
+		_client_id: ClientId,
+		_connection_id: ConnectionId,
+	) -> Result<(), IbcHandlerError> {
+		todo!()
+	}
 	#[cfg(feature = "runtime-benchmarks")]
 	fn create_connection(
 		client_id: ClientId,

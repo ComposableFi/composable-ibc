@@ -35,13 +35,13 @@ prost-build = "0.11.1"
 
 [dependencies]
 # ibc deps
-ibc = { path = "../../ibc/modules", default-features = false }
-ibc-proto = { path = "../../ibc/proto", default-features = false }
+ibc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", default-features = false }
+ibc-proto = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", default-features = false }
 
 # local deps
-grandpa-client = { package = "grandpa-light-client-verifier", path = "../../algorithms/grandpa/verifier",  default-features = false }
-grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../algorithms/grandpa/primitives", default-features = false }
-light-client-common = { path = "../common", default-features = false }
+grandpa-client = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", default-features = false, package = "grandpa-light-client-verifier" }
+grandpa-client-primitives = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", default-features = false, package = "grandpa-light-client-primitives" }
+light-client-common = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", default-features = false }
 
 # crates.io
 prost = { version = "0.11", default-features = false }
@@ -68,10 +68,10 @@ log = "0.4"
 futures = "0.3.24"
 env_logger = "0.9.0"
 serde = { version = "1.0.144", features = ["derive"] }
-beefy-prover = { path = "../../algorithms/beefy/prover" }
-grandpa-prover = { path = "../../algorithms/grandpa/prover" }
-ibc = { path = "../../ibc/modules", features = ["mocks"] }
-ibc-derive = { path = "../../ibc/derive" }
+beefy-prover = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
+grandpa-prover = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
+ibc = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", features = ["mocks"] }
+ibc-derive = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }
 tokio = { version = "1.21.1", features = ["macros"] }
 sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
