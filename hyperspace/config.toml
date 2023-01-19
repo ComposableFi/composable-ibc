@@ -1,3 +1,4 @@
+# Parachain to Parachain configuration template
 [chain_a]
 type = "parachain"
 name = "picasso"
