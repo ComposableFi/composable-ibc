@@ -22,7 +22,7 @@ static RELAY_URL: Lazy<String> = Lazy::new(|| {
 
 static PARA_URL: Lazy<String> = Lazy::new(|| {
 	let ip = std::env::var("PARA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-	format!("ws://{}:9988", ip)
+	format!("ws://{}:9188", ip)
 });
 
 #[tokio::main]
