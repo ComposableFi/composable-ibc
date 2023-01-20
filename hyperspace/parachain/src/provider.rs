@@ -128,7 +128,7 @@ where
 					Ok(ev) => ev,
 					Err(err) => {
 						log::error!("Error in IbcEvent stream: {err:?}");
-						return futures::future::ready(None)
+						return futures::future::ready(None);
 					},
 				};
 				let result = events
@@ -149,7 +149,7 @@ where
 					Ok(ev) => ev,
 					Err(err) => {
 						log::error!("Failed to decode event: {err:?}");
-						return futures::future::ready(None)
+						return futures::future::ready(None);
 					},
 				};
 				futures::future::ready(Some(stream::iter(events)))
@@ -232,7 +232,18 @@ where
 		)
 		.await
 		.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
-
+		let header_hash = self
+			.para_client
+			.rpc()
+			.block_hash(Some(at.revision_height.into()))
+			.await
+			.unwrap();
+		let header = self.para_client.rpc().header(header_hash).await.unwrap().unwrap();
+		let state_root = header.state_root();
+		// log the header_hash, header and state_root
+		log::info!("header_hash: {:?}", header_hash);
+		log::info!("header: {:?}", header);
+		log::info!("state_root: {:?}", state_root);
 		Ok(proof.proof)
 	}
 
