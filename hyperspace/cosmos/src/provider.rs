@@ -111,12 +111,15 @@ where
 
 	async fn query_latest_ibc_events<C>(
 		&mut self,
-		_finality_event: Self::FinalityEvent,
+		finality_event: Self::FinalityEvent,
 		counterparty: &C,
 	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
 		C: Chain,
 	{
+		let finality_event_height = match finality_event {
+			FinalityEvent::Tendermint(h) => h,
+		};
 		let client_id = self.client_id();
 		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
 		let latest_cp_client_state =
@@ -128,10 +131,11 @@ where
 			ClientState::<HostFunctionsManager>::decode_vec(&client_state_response.value)
 				.map_err(|_| Error::Custom("failed to decode client state response".to_string()))?;
 		let latest_cp_client_height = client_state.latest_height().revision_height;
-		let latest_height = self.latest_height_and_timestamp().await?.0;
+		let latest_revision = self.latest_height_and_timestamp().await?.0.revision_number;
 
 		let mut ibc_events: Vec<IbcEvent> = vec![];
-		for height in latest_cp_client_height + 1..latest_height.revision_height + 1 {
+		for height in latest_cp_client_height + 1..=finality_event_height.value() {
+			// for height in latest_cp_client_height + 1..latest_height.revision_height + 1 {
 			let block_results = self
 				.rpc_client
 				.block_results(TmHeight::try_from(height).unwrap())
@@ -147,7 +151,8 @@ where
 				None => continue,
 			};
 
-			let ibc_height = Height::new(latest_height.revision_number, height);
+			let ibc_height = Height::new(latest_revision, height);
+			// let ibc_height = Height::new(latest_height.revision_number, height);
 			for tx in tx_results.iter() {
 				for event in tx.clone().events {
 					let ibc_event = ibc_event_try_from_abci_event(&event, ibc_height).ok();

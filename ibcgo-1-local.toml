@@ -17,5 +17,3 @@ public_key = 'spub4W7TSjsuqcUE17mSB2ajhZsbwkefsHWKsXCbERimu3z2QLN9EFgqqpppiBn4tT
 private_key = 'sprv8H873EM21Euvndgy513jLRvsPipBTpnUWJGzS3KALiT3XY2zgiNbJ2WLrvPzRhg7GuAoujHd5d6cpBe887vTbJghja8kmRdkHoNgamx6WWr'
 account = 'cosmos1nnypkcfrvu3e9dhzeggpn4kh622l4cq7wwwrn0'
 address = [156, 200, 27, 97, 35, 103, 35, 146, 182, 226, 202, 16, 25, 214, 215, 210, 149, 250, 224, 30]
-
-# message: Ics03ConnectionSubdetail { source: Ics02Client(Ics02ClientSubdetail { source: UnknownClientType(UnknownClientTypeSubdetail { client_type: 08-wasm }) }) }

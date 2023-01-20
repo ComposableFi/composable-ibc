@@ -322,6 +322,7 @@ where
 					.await
 					.map_err(|err| anyhow!("Error fetching timestamp with proof: {err:?}"))?;
 			let proofs = ParachainHeaderProofs { state_proof, extrinsic, extrinsic_proof };
+			println!("parachain_header_height = {:?}", header.number());
 			parachain_headers_with_proof.insert(header.hash().into(), proofs);
 		}
 
