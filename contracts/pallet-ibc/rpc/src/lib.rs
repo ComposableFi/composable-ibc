@@ -97,7 +97,7 @@ impl<Hash: std::fmt::Debug> Display for BlockNumberOrHash<Hash> {
 }
 
 /// Proof for a set of keys
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Proof {
 	/// Trie proof
 	pub proof: Vec<u8>,
@@ -1530,8 +1530,9 @@ where
 					client_state: Some(client_state.into()),
 				})
 			},
-			_ =>
-				Err(runtime_error_into_rpc_error("[ibc_rpc]: Could not find client creation event")),
+			_ => {
+				Err(runtime_error_into_rpc_error("[ibc_rpc]: Could not find client creation event"))
+			},
 		}
 	}
 
