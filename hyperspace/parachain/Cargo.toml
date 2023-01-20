@@ -41,7 +41,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 
 # subxt
 subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }
-subxt-generated = { path = "../../utils/subxt/generated" }
+subxt-generated = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 
 beefy-primitives = {  git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
 beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
@@ -86,7 +86,7 @@ clap = {version = "3.2.0", features = ["derive"]}
 state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
 prost = "0.11"
 primitives = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", package = "hyperspace-primitives" }
-subxt-generated = { path = "../../utils/subxt/generated" }
+subxt-generated = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 
 [features]
 build-metadata-from-ws = [

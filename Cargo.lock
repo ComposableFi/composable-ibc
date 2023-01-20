@@ -748,7 +748,7 @@ dependencies = [
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
  "sp-trie 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
  "subxt",
- "subxt-generated 0.1.0",
+ "subxt-generated 0.1.0 (git+https://github.com/ComposableFi/centauri.git?rev=83d7cffce6032cc12ac44fd718798069dd966c45)",
  "tokio",
 ]
 
@@ -3605,7 +3605,7 @@ dependencies = [
  "sp-state-machine 0.12.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
  "sp-trie 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
  "subxt",
- "subxt-generated 0.1.0",
+ "subxt-generated 0.1.0 (git+https://github.com/ComposableFi/centauri.git?rev=83d7cffce6032cc12ac44fd718798069dd966c45)",
  "tokio",
 ]
 
@@ -4168,7 +4168,7 @@ dependencies = [
  "sp-trie 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
  "ss58-registry",
  "subxt",
- "subxt-generated 0.1.0",
+ "subxt-generated 0.1.0 (git+https://github.com/ComposableFi/centauri.git?rev=83d7cffce6032cc12ac44fd718798069dd966c45)",
  "tendermint-proto",
  "thiserror",
  "tokio",

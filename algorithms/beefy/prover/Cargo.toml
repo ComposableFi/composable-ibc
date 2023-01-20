@@ -38,7 +38,7 @@ pallet-mmr-rpc = { git = "https://github.com/paritytech/substrate", branch = "po
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
 hex = { version = "0.4.3" }
 beefy-light-client-primitives = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
-subxt-generated = { path = "../../../utils/subxt/generated" }
+subxt-generated = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 
 [features]
 build-metadata-from-ws = []

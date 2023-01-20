@@ -32,7 +32,7 @@ sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch 
 beefy-prover = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 primitives = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45", package = "grandpa-light-client-primitives" }
 light-client-common = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
-subxt-generated = { path = "../../../utils/subxt/generated" }
+subxt-generated = { git = "https://github.com/ComposableFi/centauri.git", rev = "83d7cffce6032cc12ac44fd718798069dd966c45" }
 
 [features]
 build-metadata-from-ws = []
