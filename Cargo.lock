@@ -1287,6 +1287,61 @@ dependencies = [
 ]
 
 [[package]]
+name = "composable-maths"
+version = "1.0.0"
+source = "git+https://github.com/composableFi/composable#d7807d8c0cdc856d39ae95e67683e3ba45893544"
+dependencies = [
+ "composable-support",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "rust_decimal",
+ "scale-info",
+ "sp-arithmetic 5.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
+]
+
+[[package]]
+name = "composable-support"
+version = "1.0.0"
+source = "git+https://github.com/composableFi/composable#d7807d8c0cdc856d39ae95e67683e3ba45893544"
+dependencies = [
+ "frame-support",
+ "hex",
+ "is_sorted",
+ "num-traits",
+ "p256",
+ "parity-scale-codec",
+ "rustc-hex",
+ "scale-info",
+ "sp-arithmetic 5.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
+ "sp-io 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
+]
+
+[[package]]
+name = "composable-traits"
+version = "1.0.0"
+source = "git+https://github.com/composableFi/composable#d7807d8c0cdc856d39ae95e67683e3ba45893544"
+dependencies = [
+ "bitflags",
+ "composable-support",
+ "frame-support",
+ "frame-system",
+ "pallet-proxy",
+ "parity-scale-codec",
+ "polkadot-parachain",
+ "scale-info",
+ "sp-arithmetic 5.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
+ "xcm",
+]
+
+[[package]]
 name = "concurrent-queue"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4515,6 +4570,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "is_sorted"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "357376465c37db3372ef6a00585d336ed3d0f11d4345eef77ebcb05865392b21"
+
+[[package]]
 name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6440,6 +6501,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "p256"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19736d80675fbe9fe33426268150b951a3fb8f5cfca2a23a17c85ef3adb24e3b"
+dependencies = [
+ "ecdsa",
+ "elliptic-curve",
+ "sec1",
+ "sha2 0.9.9",
+]
+
+[[package]]
 name = "packed_simd_2"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6842,6 +6915,7 @@ dependencies = [
  "pallet-assets",
  "pallet-balances",
  "pallet-ibc-ping",
+ "pallet-pablo",
  "pallet-timestamp",
  "parachain-info",
  "parity-scale-codec",
@@ -7083,6 +7157,27 @@ dependencies = [
  "scale-info",
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
  "sp-staking",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
+]
+
+[[package]]
+name = "pallet-pablo"
+version = "1.0.0"
+source = "git+https://github.com/composableFi/composable#d7807d8c0cdc856d39ae95e67683e3ba45893544"
+dependencies = [
+ "composable-maths",
+ "composable-support",
+ "composable-traits",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "rust_decimal",
+ "scale-info",
+ "sp-arithmetic 5.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
+ "sp-io 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.30)",
 ]
 
@@ -9879,6 +9974,16 @@ checksum = "034e22c514f5c0cb8a10ff341b9b048b5ceb21591f31c8f44c43b960f9b3524a"
 dependencies = [
  "libc",
  "winapi",
+]
+
+[[package]]
+name = "rust_decimal"
+version = "1.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fe32e8c89834541077a5c5bbe5691aa69324361e27e6aeb3552a737db4a70c8"
+dependencies = [
+ "arrayvec 0.7.2",
+ "num-traits",
 ]
 
 [[package]]
