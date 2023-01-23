@@ -52,6 +52,7 @@ use sp_std::{marker::PhantomData, prelude::*, str::FromStr};
 mod channel;
 mod client;
 mod connection;
+mod fees;
 pub mod errors;
 pub mod events;
 pub mod ics20;

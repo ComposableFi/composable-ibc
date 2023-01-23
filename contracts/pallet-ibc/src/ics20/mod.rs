@@ -1,11 +1,13 @@
 pub mod context;
 
-use crate::{routing::Context, ChannelIds, Config, DenomToAssetId, Event, Pallet, WeightInfo};
+use crate::{
+	fees::FeeCharger, routing::Context, ChannelIds, Config, DenomToAssetId, Event, Pallet,
+	WeightInfo,
+};
 use alloc::{
 	format,
 	string::{String, ToString},
 };
-use composable_traits::dex::Amm;
 use core::fmt::Formatter;
 use frame_support::weights::Weight;
 use ibc::{
@@ -249,13 +251,8 @@ where
 				});
 				let packet = packet.clone();
 
-				// Fee _algorithm_:
-				// - if there is a Pool in Pablo, then swap
-				// - if no Pool in Pablo, get percentage fee
-
-				// TODO(vim): handle the case in which the direct pool with USD{T, C} does not exist
-				// through routing. Is it maybe done automatically?
-				T::Pablo::do_buy();
+				// TODO(blas): handle error?
+				FeeCharger::<T::Pablo>::charge_fee();
 
 				Pallet::<T>::write_acknowledgement(
 					&packet,
