@@ -16,7 +16,7 @@ use sp_core::H256;
 use sp_finality_grandpa::{AuthorityId, AuthoritySignature, KEY_TYPE};
 use sp_runtime::{traits::BlakeTwo256, SaturatedConversion};
 use sp_std::prelude::*;
-use sp_trie::{generate_trie_proof, LayoutV0, MemoryDB, StorageProof, TrieDBMut, TrieMut};
+use sp_trie::{generate_trie_proof, LayoutV0, MemoryDB, StorageProof, TrieDBMutBuilder, TrieMut};
 
 pub const GRANDPA_UPDATE_TIMESTAMP: u64 = 1650894363;
 /// Builds a grandpa client message that that contains the requested number of precommits
@@ -40,7 +40,8 @@ pub fn generate_finality_proof(
 	let key = Compact(0u32).encode();
 	let extrinsics_root = {
 		let mut root = Default::default();
-		let mut trie = <TrieDBMut<LayoutV0<BlakeTwo256>>>::new(&mut para_db, &mut root);
+		let mut trie =
+			<TrieDBMutBuilder<LayoutV0<BlakeTwo256>>>::new(&mut para_db, &mut root).build();
 		trie.insert(&key, &timestamp_extrinsic).unwrap();
 		*trie.root()
 	};
@@ -66,7 +67,8 @@ pub fn generate_finality_proof(
 	let key = parachain_header_storage_key(para_id);
 	let mut root = Default::default();
 	let state_root = {
-		let mut trie = TrieDBMut::<LayoutV0<BlakeTwo256>>::new(&mut para_db, &mut root);
+		let mut trie =
+			TrieDBMutBuilder::<LayoutV0<BlakeTwo256>>::new(&mut para_db, &mut root).build();
 		trie.insert(key.as_ref(), &parachain_header.encode().encode()).unwrap();
 		*trie.root()
 	};

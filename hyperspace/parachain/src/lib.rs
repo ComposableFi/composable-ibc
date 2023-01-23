@@ -31,6 +31,7 @@ pub mod finality_protocol;
 pub mod test_provider;
 
 use error::Error;
+use frame_support::Serialize;
 use serde::Deserialize;
 
 use beefy_light_client_primitives::{ClientState, MmrUpdateProof};
@@ -143,7 +144,7 @@ impl FromStr for KeyType {
 }
 
 /// config options for [`ParachainClient`]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ParachainClientConfig {
 	/// Chain name
 	pub name: String,

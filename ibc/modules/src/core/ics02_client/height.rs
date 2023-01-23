@@ -21,7 +21,18 @@ use ibc_proto::ibc::core::client::v1::Height as RawHeight;
 use serde_derive::{Deserialize, Serialize};
 use tendermint_proto::Protobuf;
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(
+	Copy,
+	Clone,
+	PartialEq,
+	Eq,
+	Hash,
+	Serialize,
+	Deserialize,
+	codec::Encode,
+	codec::Decode,
+	scale_info::TypeInfo,
+)]
 #[cfg_attr(feature = "cosmwasm", derive(JsonSchema))]
 pub struct Height {
 	/// Previously known as "epoch"

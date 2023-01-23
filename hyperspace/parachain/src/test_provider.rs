@@ -16,6 +16,10 @@ use crate::{
 	config, parachain::api, signer::ExtrinsicSigner, utils::unsafe_cast_to_jsonrpsee_client, Error,
 	ParachainClient,
 };
+#[cfg(feature = "dali")]
+use api::runtime_types::dali_runtime::RuntimeCall;
+#[cfg(not(feature = "dali"))]
+use api::runtime_types::parachain_runtime::RuntimeCall;
 use finality_grandpa::BlockNumberOps;
 use futures::{Stream, StreamExt};
 use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
@@ -37,7 +41,11 @@ use sp_runtime::{
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr};
-use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams, PlainTip};
+#[cfg(feature = "dali")]
+use subxt::tx::AssetTip as Tip;
+#[cfg(not(feature = "dali"))]
+use subxt::tx::PlainTip as Tip;
+use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams};
 
 impl<T: config::Config + Send + Sync> ParachainClient<T>
 where
@@ -108,6 +116,10 @@ where
 					api::runtime_types::ibc_primitives::Timeout::Absolute { timestamp, height },
 			},
 		};
+
+		#[cfg(feature = "dali")]
+		let asset_id = api::runtime_types::primitives::currency::CurrencyId(asset_id);
+
 		// Submit extrinsic to parachain node
 		let call = api::tx().ibc().transfer(params, asset_id, amount.into());
 
@@ -116,10 +128,7 @@ where
 		Ok(())
 	}
 
-	pub async fn submit_sudo_call(
-		&self,
-		call: api::runtime_types::parachain_runtime::Call,
-	) -> Result<(), Error> {
+	pub async fn submit_sudo_call(&self, call: RuntimeCall) -> Result<(), Error> {
 		let signer = ExtrinsicSigner::<T, Self>::new(
 			self.key_store.clone(),
 			self.key_type_id.clone(),
@@ -151,9 +160,8 @@ where
 	) -> Result<(), Error> {
 		let params = api::runtime_types::pallet_ibc::PalletParams { receive_enabled, send_enabled };
 
-		let call = api::runtime_types::parachain_runtime::Call::Ibc(
-			api::runtime_types::pallet_ibc::pallet::Call::set_params { params },
-		);
+		let call =
+			RuntimeCall::Ibc(api::runtime_types::pallet_ibc::pallet::Call::set_params { params });
 
 		self.submit_sudo_call(call).await?;
 
@@ -179,7 +187,7 @@ where
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, PlainTip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
 	RelayChainHeader: From<T::Header>,
 {
 	async fn send_transfer(&self, transfer: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {

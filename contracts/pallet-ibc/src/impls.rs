@@ -1,17 +1,3 @@
-// Copyright 2022 ComposableFi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 use alloc::collections::{BTreeMap, BTreeSet};
 use core::time::Duration;
 
@@ -62,18 +48,20 @@ use ibc::{
 };
 use ibc_primitives::{
 	apply_prefix, channel_id_from_bytes, client_id_from_bytes, connection_id_from_bytes,
-	get_channel_escrow_address, port_id_from_bytes, runtime_interface,
-	runtime_interface::SS58CodecError, ConnectionHandshake, Error as IbcHandlerError,
-	HandlerMessage, IbcHandler, IdentifiedChannel, IdentifiedClientState, IdentifiedConnection,
-	PacketInfo, PacketState, QueryChannelResponse, QueryChannelsResponse, QueryClientStateResponse,
-	QueryConnectionResponse, QueryConnectionsResponse, QueryConsensusStateResponse,
-	QueryNextSequenceReceiveResponse, QueryPacketAcknowledgementResponse,
-	QueryPacketAcknowledgementsResponse, QueryPacketCommitmentResponse,
-	QueryPacketCommitmentsResponse, QueryPacketReceiptResponse,
+	get_channel_escrow_address, port_id_from_bytes, runtime_interface, ConnectionHandshake,
+	Error as IbcHandlerError, HandlerMessage, IbcHandler, IdentifiedChannel, IdentifiedClientState,
+	IdentifiedConnection, PacketInfo, PacketState, QueryChannelResponse, QueryChannelsResponse,
+	QueryClientStateResponse, QueryConnectionResponse, QueryConnectionsResponse,
+	QueryConsensusStateResponse, QueryNextSequenceReceiveResponse,
+	QueryPacketAcknowledgementResponse, QueryPacketAcknowledgementsResponse,
+	QueryPacketCommitmentResponse, QueryPacketCommitmentsResponse, QueryPacketReceiptResponse,
 };
 use scale_info::prelude::string::ToString;
 use sp_core::{crypto::AccountId32, offchain::StorageKind};
-use sp_runtime::{offchain::storage::StorageValueRef, traits::IdentifyAccount};
+use sp_runtime::{
+	offchain::storage::StorageValueRef,
+	traits::{Get, IdentifyAccount},
+};
 use tendermint_proto::Protobuf;
 
 pub const OFFCHAIN_SEND_PACKET_SEQS: &[u8] = b"pallet_ibc:pending_send_packet_sequences";
@@ -84,7 +72,7 @@ impl<T: Config> Pallet<T>
 where
 	T: Send + Sync,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	pub(crate) fn execute_ibc_messages(
 		ctx: &mut Context<T>,
@@ -117,7 +105,7 @@ impl<T: Config> Pallet<T>
 where
 	T: Send + Sync,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	// IBC Runtime Api helper methods
 	/// Get a channel state
@@ -761,7 +749,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Returns true if address provided is an escrow address
-	pub fn is_escrow_address(address: T::AccountId) -> bool {
+	pub fn is_escrow_address(address: <T as frame_system::Config>::AccountId) -> bool {
 		let set = EscrowAddresses::<T>::get();
 		set.contains(&address)
 	}
@@ -791,10 +779,10 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-impl<T: Config + Send + Sync> IbcHandler<T::AccountId> for Pallet<T>
+impl<T: Config + Send + Sync> IbcHandler<<T as frame_system::Config>::AccountId> for Pallet<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	fn latest_height_and_timestamp(
 		port_id: &PortId,
@@ -803,7 +791,9 @@ where
 		Pallet::<T>::latest_height_and_timestamp(port_id, channel_id)
 	}
 
-	fn handle_message(msg: HandlerMessage<T::AccountId>) -> Result<(), IbcHandlerError> {
+	fn handle_message(
+		msg: HandlerMessage<<T as frame_system::Config>::AccountId>,
+	) -> Result<(), IbcHandlerError> {
 		match msg {
 			HandlerMessage::OpenChannel { port_id, channel_end } =>
 				Pallet::<T>::open_channel(port_id, channel_end),
@@ -903,7 +893,7 @@ where
 impl<T: Config + Send + Sync> Pallet<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	fn send_packet(
 		data: Vec<u8>,
@@ -1021,17 +1011,19 @@ where
 
 	fn to_msg_transfer(
 		coin: PrefixedCoin,
-		from: T::AccountId,
+		from: <T as frame_system::Config>::AccountId,
 		to: Signer,
 		timeout: Timeout,
 		channel_id: ChannelId,
 	) -> Result<MsgTransfer<PrefixedCoin>, IbcHandlerError> {
 		let account_id_32: AccountId32 = from.into();
-		let from = runtime_interface::account_id_to_ss58(account_id_32.into())
-			.and_then(|val| String::from_utf8(val).map_err(|_| SS58CodecError::InvalidAccountId))
-			.map_err(|_| IbcHandlerError::SendTransferError {
-				msg: Some("Account Id conversion failed".to_string()),
-			})?;
+		let from = runtime_interface::account_id_to_ss58(
+			account_id_32.into(),
+			<T as frame_system::Config>::SS58Prefix::get(),
+		);
+		let from = String::from_utf8(from).map_err(|_| IbcHandlerError::SendTransferError {
+			msg: Some("Account Id conversion failed".to_string()),
+		})?;
 		let (latest_height, latest_timestamp) =
 			Pallet::<T>::latest_height_and_timestamp(&PortId::transfer(), &channel_id).map_err(
 				|_| IbcHandlerError::TimestampOrHeightError {

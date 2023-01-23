@@ -1,35 +1,25 @@
-// Copyright 2022 ComposableFi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 use crate::{
 	impls::{OFFCHAIN_RECV_PACKET_SEQS, OFFCHAIN_SEND_PACKET_SEQS},
 	light_clients::{AnyClientState, AnyConsensusState},
 	mock::*,
 	routing::Context,
-	Any, Config, DenomToAssetId, MultiAddress, Pallet, PalletParams, Timeout, TransferParams,
-	MODULE_ID,
+	Any, Config, ConsensusHeights, DenomToAssetId, MultiAddress, Pallet, PalletParams, Timeout,
+	TransferParams, MODULE_ID,
 };
 use core::time::Duration;
 use frame_support::{
 	assert_ok,
-	traits::fungibles::{Inspect, Mutate},
+	traits::{
+		fungibles::{Inspect, Mutate},
+		Len,
+	},
 };
 use ibc::{
 	applications::transfer::{packet::PacketData, Coin, PrefixedDenom, VERSION},
 	core::{
 		ics02_client::{
 			client_state::ClientState,
+			context::{ClientKeeper, ClientReader},
 			height::Height,
 			msgs::create_client::{MsgCreateAnyClient, TYPE_URL},
 		},
@@ -84,7 +74,7 @@ fn setup_client_and_consensus_state(port_id: PortId) {
 	let mut ctx = Context::<Test>::default();
 
 	let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
-	assert_ok!(Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]));
+	assert_ok!(Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]));
 
 	let connection_id = ConnectionId::new(0);
 	let commitment_prefix: CommitmentPrefix =
@@ -138,7 +128,7 @@ fn initialize_connection() {
 
 		let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
 
-		assert_ok!(Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]));
+		assert_ok!(Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]));
 
 		let value = conn_open_init::MsgConnectionOpenInit {
 			client_id,
@@ -157,7 +147,7 @@ fn initialize_connection() {
 			value: value.encode_vec().unwrap(),
 		};
 
-		assert_ok!(Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]));
+		assert_ok!(Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]));
 	})
 }
 
@@ -186,7 +176,7 @@ fn initialize_connection_with_low_delay() {
 
 		let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
 
-		assert_ok!(Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]));
+		assert_ok!(Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]));
 
 		let value = conn_open_init::MsgConnectionOpenInit {
 			client_id,
@@ -205,7 +195,7 @@ fn initialize_connection_with_low_delay() {
 			value: value.encode_vec().unwrap(),
 		};
 
-		Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
+		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
 
 		let result = ConnectionReader::connection_end(&ctx, &ConnectionId::new(0));
 
@@ -219,8 +209,7 @@ fn send_transfer() {
 	let mut ext = new_test_ext();
 	ext.execute_with(|| {
 		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
-		let raw_user =
-			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0).unwrap();
+		let raw_user = ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
 		let ss58_address = String::from_utf8(raw_user).unwrap();
 		setup_client_and_consensus_state(PortId::transfer());
 		let balance = 100000 * MILLIS;
@@ -233,13 +222,16 @@ fn send_transfer() {
 			<Test as frame_system::Config>::AccountId,
 		>>::mint_into(asset_id, &AccountId32::new([0; 32]), balance).unwrap();
 
-		Ibc::set_params(Origin::root(), PalletParams { send_enabled: true, receive_enabled: true })
-			.unwrap();
+		Ibc::set_params(
+			RuntimeOrigin::root(),
+			PalletParams { send_enabled: true, receive_enabled: true },
+		)
+		.unwrap();
 
 		let timeout = Timeout::Offset { timestamp: Some(1000), height: Some(5) };
 
 		Ibc::transfer(
-			Origin::signed(AccountId32::new([0; 32])),
+			RuntimeOrigin::signed(AccountId32::new([0; 32])),
 			TransferParams {
 				to: MultiAddress::Raw(ss58_address.as_bytes().to_vec()),
 				source_channel: 0,
@@ -276,7 +268,7 @@ fn on_deliver_ics20_recv_packet() {
 		// Create  a new account
 		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
 		let ss58_address_bytes =
-			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0).unwrap();
+			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
 		let ss58_address = String::from_utf8(ss58_address_bytes).unwrap();
 		frame_system::Pallet::<Test>::set_block_number(1u32);
 		let asset_id =
@@ -306,8 +298,11 @@ fn on_deliver_ics20_recv_packet() {
 		>>::mint_into(asset_id, &channel_escrow_address, balance)
 		.unwrap();
 
-		Ibc::set_params(Origin::root(), PalletParams { send_enabled: true, receive_enabled: true })
-			.unwrap();
+		Ibc::set_params(
+			RuntimeOrigin::root(),
+			PalletParams { send_enabled: true, receive_enabled: true },
+		)
+		.unwrap();
 
 		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
 		let amt = 1000 * MILLIS;
@@ -356,7 +351,7 @@ fn on_deliver_ics20_recv_packet() {
 		let account_data = Assets::balance(2u128, AccountId32::new(pair.public().0));
 		// Assert account balance before transfer
 		assert_eq!(account_data, 0);
-		Ibc::deliver(Origin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
+		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
 
 		let balance =
 			<Assets as Inspect<AccountId>>::balance(2, &AccountId32::new(pair.public().0));
@@ -569,4 +564,70 @@ fn should_cleanup_offchain_packets_correctly() {
 		assert_eq!(last_removed_send, 10);
 		assert_eq!(last_removed_ack, 10);
 	});
+}
+
+#[test]
+fn test_next_and_previous_consensus_state_for_beefy_and_grandpa_clients() {
+	new_test_ext().execute_with(|| {
+		let client_id_beefy = ClientId::from_str("11-beefy-0").unwrap();
+		let mut ctx = Context::<Test>::default();
+		let mock_cs_state = MockConsensusState::new(MockHeader::default());
+		ctx.store_consensus_state(
+			client_id_beefy.clone(),
+			Height::new(0, 10),
+			AnyConsensusState::Mock(mock_cs_state.clone()),
+		)
+		.unwrap();
+		// Should return None for Beefy and grandpa clients since we do not cache recent consensus
+		// heights for beefy and grandpa
+		assert!(ctx
+			.prev_consensus_state(&client_id_beefy, Height::new(0, 15))
+			.unwrap()
+			.is_none());
+		assert!(ctx.next_consensus_state(&client_id_beefy, Height::new(0, 5)).unwrap().is_none());
+
+		let client_id_grandpa = ClientId::from_str("10-grandpa-0").unwrap();
+		ctx.store_consensus_state(
+			client_id_grandpa.clone(),
+			Height::new(0, 10),
+			AnyConsensusState::Mock(mock_cs_state.clone()),
+		)
+		.unwrap();
+		assert!(ctx
+			.prev_consensus_state(&client_id_grandpa, Height::new(0, 15))
+			.unwrap()
+			.is_none());
+		assert!(ctx
+			.next_consensus_state(&client_id_grandpa, Height::new(0, 5))
+			.unwrap()
+			.is_none());
+	})
+}
+
+#[test]
+fn test_next_and_previous_consensus_state_for_other_client_types() {
+	new_test_ext().execute_with(|| {
+		let client_id = ClientId::from_str("07-tendermint-0").unwrap();
+		let mut ctx = Context::<Test>::default();
+		let mock_cs_state = MockConsensusState::new(MockHeader::default());
+		// lets store 512 consensus states, only the 256 most recent should remain after the loop
+		for i in 1..=512u64 {
+			ctx.store_consensus_state(
+				client_id.clone(),
+				Height::new(0, i),
+				AnyConsensusState::Mock(mock_cs_state.clone()),
+			)
+			.unwrap();
+		}
+
+		let stored_heights = ConsensusHeights::<Test>::get(client_id.as_bytes().to_vec());
+
+		assert_eq!(stored_heights.len(), 256);
+		assert_eq!(stored_heights.iter().rev().next(), Some(&Height::new(0, 512)));
+
+		// Should return None for Beefy and grandpa clients since we do not cache recent consensus
+		// heights for beefy and grandpa
+		assert!(ctx.prev_consensus_state(&client_id, Height::new(0, 300)).unwrap().is_some());
+		assert!(ctx.next_consensus_state(&client_id, Height::new(0, 400)).unwrap().is_some());
+	})
 }

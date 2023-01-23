@@ -1,17 +1,3 @@
-// Copyright 2022 ComposableFi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 use super::*;
 use core::fmt::Debug;
 use ibc::{
@@ -69,7 +55,7 @@ pub trait ModuleRouter: Default + Clone + Eq + PartialEq + Debug {
 impl<T: Config + Send + Sync> Router for IbcRouter<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	fn get_route_mut(&mut self, module_id: &ModuleId) -> Option<&mut dyn Module> {
 		// check if the user has defined any custom routes
@@ -96,7 +82,7 @@ where
 impl<T: Config + Send + Sync> Ics26Context for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	type Router = IbcRouter<T>;
 
@@ -112,13 +98,13 @@ where
 impl<T: Config + Send + Sync> ReaderContext for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 }
 
 impl<T: Config + Send + Sync> ModuleCallbackContext for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 }

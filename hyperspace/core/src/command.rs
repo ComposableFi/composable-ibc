@@ -19,10 +19,7 @@ use prometheus::Registry;
 use std::{path::PathBuf, str::FromStr, time::Duration};
 use tokio::time::sleep;
 
-use crate::{
-	chain::{AnyChain, AnyConfig, Config, CoreConfig},
-	fish, relay,
-};
+use crate::{chain::Config, fish, relay, AnyChain, AnyConfig, CoreConfig, Mode};
 use ibc::core::{ics04_channel::channel::Order, ics24_host::identifier::PortId};
 use ibc_proto::ibc::lightclients::wasm::v1::{msg_client::MsgClient, MsgPushNewWasmCode};
 use metrics::{data::Metrics, handler::MetricsHandler, init_prometheus};
@@ -98,6 +95,9 @@ pub struct Cmd {
 	/// Channel version
 	#[clap(long)]
 	version: Option<String>,
+	/// New config path to avoid overriding existing configuration
+	#[clap(long)]
+	pub new_config: Option<String>,
 }
 
 #[derive(Debug, Clone, Parser)]
@@ -159,7 +159,7 @@ impl Cmd {
 			tokio::spawn(init_prometheus(addr, registry.clone()));
 		}
 
-		relay(chain_a, chain_b, Some(metrics_handler_a), Some(metrics_handler_b)).await
+		relay(chain_a, chain_b, Some(metrics_handler_a), Some(metrics_handler_b), None).await
 	}
 
 	/// Run fisherman
@@ -189,10 +189,13 @@ impl Cmd {
 			chain_b.name(),
 			client_id_a_on_b
 		);
-		Ok(())
+		config.chain_a.set_client_id(client_id_a_on_b);
+		config.chain_b.set_client_id(client_id_b_on_a);
+
+		Ok(config)
 	}
 
-	pub async fn create_connection(&self) -> Result<()> {
+	pub async fn create_connection(&self) -> Result<Config> {
 		let delay = self
 			.delay_period
 			.expect("delay_period should be provided when creating a connection");
@@ -204,7 +207,9 @@ impl Cmd {
 		let chain_a_clone = chain_a.clone();
 		let chain_b_clone = chain_b.clone();
 		let handle = tokio::task::spawn(async move {
-			relay(chain_a_clone, chain_b_clone, None, None).await.unwrap();
+			relay(chain_a_clone, chain_b_clone, None, None, Some(Mode::Light))
+				.await
+				.unwrap();
 		});
 
 		let (connection_id_b, connection_id_a) =
@@ -212,10 +217,14 @@ impl Cmd {
 		log::info!("ConnectionId on Chain {}: {}", chain_b.name(), connection_id_b);
 		log::info!("ConnectionId on Chain {}: {}", chain_a.name(), connection_id_a);
 		handle.abort();
-		Ok(())
+
+		config.chain_a.set_connection_id(connection_id_a);
+		config.chain_b.set_connection_id(connection_id_b);
+
+		Ok(config)
 	}
 
-	pub async fn create_channel(&self) -> Result<()> {
+	pub async fn create_channel(&self) -> Result<Config> {
 		let port_id = PortId::from_str(
 			self.port_id
 				.as_ref()
@@ -236,17 +245,29 @@ impl Cmd {
 		let chain_a_clone = chain_a.clone();
 		let chain_b_clone = chain_b.clone();
 		let handle = tokio::task::spawn(async move {
-			relay(chain_a_clone, chain_b_clone, None, None).await.unwrap();
+			relay(chain_a_clone, chain_b_clone, None, None, Some(Mode::Light))
+				.await
+				.unwrap();
 		});
 
 		let order = Order::from_str(order).expect("Expected one of 'ordered' or 'unordered'");
-		let (channel_id_a, channel_id_b) =
-			create_channel(&chain_a, &chain_b, chain_a.connection_id(), port_id, version, order)
-				.await?;
+		let (channel_id_a, channel_id_b) = create_channel(
+			&chain_a,
+			&chain_b,
+			chain_a.connection_id(),
+			port_id.clone(),
+			version,
+			order,
+		)
+		.await?;
 		log::info!("ChannelId on Chain {}: {}", chain_a.name(), channel_id_a);
 		log::info!("ChannelId on Chain {}: {}", chain_b.name(), channel_id_b);
 		handle.abort();
-		Ok(())
+
+		config.chain_a.set_channel_whitelist(channel_id_a, port_id.clone());
+		config.chain_b.set_channel_whitelist(channel_id_b, port_id);
+
+		Ok(config)
 	}
 }
 

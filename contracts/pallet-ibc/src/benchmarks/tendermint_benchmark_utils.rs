@@ -1,24 +1,9 @@
-// Copyright 2022 ComposableFi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 use crate::{
 	light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager},
 	routing::Context,
 	Config, MODULE_ID,
 };
 use core::{str::FromStr, time::Duration};
-use frame_support::traits::Get;
 use ibc::{
 	core::{
 		ics02_client::{msgs::update_client::MsgUpdateAnyClient, trust_threshold::TrustThreshold},
@@ -209,7 +194,7 @@ where
 	);
 
 	let (client_state, cs_state) = create_mock_beefy_client_state();
-	let id: u32 = parachain_info::Pallet::<T>::get().into();
+	let id: u32 = parachain_info::Pallet::<T>::parachain_id().into();
 	let consensus_path = format!(
 		"{}",
 		ClientConsensusStatePath {
@@ -266,7 +251,7 @@ where
 		root: root.into(),
 		next_validators_hash: header.signed_header.header.next_validators_hash,
 	};
-	let para_id: u32 = parachain_info::Pallet::<T>::get().into();
+	let para_id: u32 = parachain_info::Pallet::<T>::parachain_id().into();
 	(
 		cs_state,
 		MsgConnectionOpenTry {
@@ -316,7 +301,7 @@ where
 	);
 
 	let (client_state, cs_state) = create_mock_beefy_client_state();
-	let para_id: u32 = parachain_info::Pallet::<T>::get().into();
+	let para_id: u32 = parachain_info::Pallet::<T>::parachain_id().into();
 	let consensus_path = format!(
 		"{}",
 		ClientConsensusStatePath {
@@ -373,7 +358,7 @@ where
 		root: root.into(),
 		next_validators_hash: header.signed_header.header.next_validators_hash,
 	};
-	let para_id: u32 = parachain_info::Pallet::<T>::get().into();
+	let para_id: u32 = parachain_info::Pallet::<T>::parachain_id().into();
 	(
 		cs_state,
 		MsgConnectionOpenAck {
@@ -420,7 +405,7 @@ pub(crate) fn create_conn_open_confirm<T: Config>() -> (ConsensusState, MsgConne
 		"{}",
 		ClientConsensusStatePath {
 			client_id: counterparty_client_id,
-			epoch: u32::from(parachain_info::Pallet::<T>::get()).into(),
+			epoch: u32::from(parachain_info::Pallet::<T>::parachain_id()).into(),
 			height: 1
 		}
 	)
@@ -473,7 +458,10 @@ pub(crate) fn create_conn_open_confirm<T: Config>() -> (ConsensusState, MsgConne
 				Some(
 					ibc::proofs::ConsensusProof::new(
 						consensus_buf.try_into().unwrap(),
-						Height::new(u32::from(parachain_info::Pallet::<T>::get()).into(), 1),
+						Height::new(
+							u32::from(parachain_info::Pallet::<T>::parachain_id()).into(),
+							1,
+						),
 					)
 					.unwrap(),
 				),
@@ -726,7 +714,7 @@ pub(crate) fn create_recv_packet<T: Config + Send + Sync>(
 ) -> (ConsensusState, MsgRecvPacket)
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
 	let packet = Packet {
@@ -795,7 +783,7 @@ pub(crate) fn create_ack_packet<T: Config + Send + Sync>(
 ) -> (ConsensusState, MsgAcknowledgement)
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
 	let packet = Packet {
@@ -865,7 +853,7 @@ pub(crate) fn create_timeout_packet<T: Config + Send + Sync>(
 ) -> (ConsensusState, MsgTimeout)
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
 	let packet = Packet {

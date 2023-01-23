@@ -1,17 +1,3 @@
-// Copyright 2022 ComposableFi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 //! Benchmarking setup for pallet-template
 
 #[allow(unused)]
@@ -27,6 +13,7 @@ use crate::{
 	Any, Config,
 };
 
+use codec::EncodeLike;
 use core::str::FromStr;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::traits::fungibles::{Inspect, Mutate};
@@ -92,7 +79,7 @@ use sp_core::crypto::AccountId32;
 use sp_std::vec;
 use tendermint_proto::Protobuf;
 
-fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
+fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
 	frame_system::Pallet::<T>::assert_last_event(generic_event.into());
 }
 
@@ -104,8 +91,9 @@ benchmarks! {
 		where u32: From<<T as frame_system::Config>::BlockNumber>,
 				<T as frame_system::Config>::BlockNumber: From<u32>,
 				T: Send + Sync + pallet_timestamp::Config<Moment = u64> + parachain_info::Config + Config,
-		AccountId32: From<T::AccountId>,
+		AccountId32: From<<T as frame_system::Config>::AccountId>,
 		T::AssetId: From<u128>,
+	<T as frame_system::pallet::Config>::AccountId: EncodeLike
 	}
 
 	// Run these benchmarks via
@@ -130,11 +118,13 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let value = create_client_update::<T>().encode_vec();
 
 		let msg = Any { type_url: UPDATE_CLIENT_TYPE_URL.to_string().as_bytes().to_vec(), value };
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let client_state = ClientStates::<T>::get(&client_id).unwrap();
@@ -156,7 +146,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 
 		// We update the light client state so it can have the required client and consensus states required to process
 		// the proofs that will be submitted
@@ -167,7 +159,7 @@ benchmarks! {
 		let (cs_state, value) = create_conn_open_try::<T>();
 		// Update consensus state with the new root that we'll enable proofs to be correctly verified
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 		let msg = Any { type_url: CONN_TRY_OPEN_TYPE_URL.as_bytes().to_vec(), value: value.encode_vec() };
 		log::trace!(target: "pallet_ibc", "\n\n\n\n\n\n<=============== Begin benchmark ====================>\n\n\n\n\n");
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
@@ -189,6 +181,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		// Create a connection end and put in storage
 		// Successful processing of a connection open confirm message requires a compatible connection end with state INIT or TRYOPEN
 		// to exist on the local chain
@@ -207,7 +202,7 @@ benchmarks! {
 
 		let (cs_state, value) = create_conn_open_ack::<T>();
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 		let msg = Any { type_url: CONN_OPEN_ACK_TYPE_URL.as_bytes().to_vec(), value: value.encode_vec() };
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -228,7 +223,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		// Create a connection end and put in storage
 		// Successful processing of a connection open confirm message requires a compatible connection end with state TryOpen
 		// to exist on the local chain
@@ -250,7 +247,7 @@ benchmarks! {
 		let (cs_state, value) = create_conn_open_confirm::<T>();
 		// Update consensus state with the new root that we'll enable proofs to be correctly verified
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 		let msg = Any { type_url: CONN_OPEN_CONFIRM_TYPE_URL.as_bytes().to_vec(), value: value.encode_vec() };
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -295,7 +292,7 @@ benchmarks! {
 			signer: Signer::from_str(MODULE_ID).unwrap()
 		}.encode_vec();
 
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 		let msg = Any { type_url: CHAN_OPEN_TYPE_URL.as_bytes().to_vec(), value };
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -315,7 +312,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
@@ -342,7 +341,7 @@ benchmarks! {
 			type_url: CHAN_OPEN_TRY_TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let channel_end = ctx.channel_end(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0))).unwrap();
@@ -362,7 +361,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
@@ -404,7 +405,7 @@ benchmarks! {
 			type_url: CHAN_OPEN_ACK_TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let channel_end = ctx.channel_end(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0))).unwrap();
@@ -424,7 +425,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
@@ -459,7 +462,7 @@ benchmarks! {
 			type_url: CHAN_OPEN_CONFIRM_TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let channel_end = ctx.channel_end(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0))).unwrap();
@@ -479,7 +482,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
@@ -513,7 +518,7 @@ benchmarks! {
 			type_url: CHAN_CLOSE_INIT_TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let channel_end = ctx.channel_end(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0))).unwrap();
@@ -533,7 +538,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(1000);
@@ -568,7 +575,7 @@ benchmarks! {
 			type_url: CHAN_CLOSE_CONFIRM_TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let channel_end = ctx.channel_end(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0))).unwrap();
@@ -592,7 +599,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(0);
@@ -626,7 +635,7 @@ benchmarks! {
 			type_url: RECV_PACKET_TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let receipt = ctx.get_packet_receipt(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0), 1u64.into())).unwrap();
@@ -654,7 +663,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(0);
@@ -689,7 +700,7 @@ benchmarks! {
 			type_url: ACK_PACKET_TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let res = ctx.get_packet_commitment(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0), 1u64.into()));
@@ -714,7 +725,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 		let delay_period = core::time::Duration::from_nanos(0);
@@ -750,7 +763,7 @@ benchmarks! {
 			type_url: TIMEOUT_TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let res = ctx.get_packet_commitment(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0), 1u64.into()));
@@ -792,7 +805,7 @@ benchmarks! {
 			type_url: conn_open_init_mod::TYPE_URL.as_bytes().to_vec(),
 			value: value.encode_vec()
 		};
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -812,7 +825,7 @@ benchmarks! {
 		.encode_vec();
 
 		let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		assert_eq!(ClientCounter::<T>::get(), 1)
@@ -820,7 +833,7 @@ benchmarks! {
 
 
 	transfer {
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 		let client_id = Pallet::<T>::create_client().unwrap();
 		let connection_id = ConnectionId::new(0);
 		Pallet::<T>::create_connection(client_id, connection_id.clone()).unwrap();
@@ -839,7 +852,7 @@ benchmarks! {
 		let channel_id = ChannelId::new(0);
 		let denom = "transfer/channel-15/uatom".to_string();
 		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
+		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
 			asset_id,
 			&caller,
 			balance.into(),
@@ -862,7 +875,7 @@ benchmarks! {
 
 	}:_(RawOrigin::Signed(caller.clone()), transfer_params, asset_id.into(), amt.into())
 	verify {
-		assert_eq!(<<T as Config>::Fungibles as Inspect<T::AccountId>>::balance(
+		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
 			asset_id.into(),
 			&caller
 		), (balance - amt).into());
@@ -893,7 +906,7 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_open_init(&ctx, &mut output, order, &connection_hops, &port_id, &channel_id, &counterparty, &version).unwrap();
+		handler.on_chan_open_init(&ctx, &mut output, order, &connection_hops, &port_id, &channel_id, &counterparty, &version, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 
 	on_chan_open_try {
@@ -907,7 +920,7 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_open_try(&ctx, &mut output, order, &connection_hops, &port_id, &channel_id, &counterparty, &version, &version).unwrap();
+		handler.on_chan_open_try(&ctx, &mut output, order, &connection_hops, &port_id, &channel_id, &counterparty, &version, &version, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 
 	on_chan_open_ack {
@@ -918,7 +931,7 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_open_ack(&ctx, &mut output, &port_id, &channel_id, &version).unwrap();
+		handler.on_chan_open_ack(&ctx, &mut output, &port_id, &channel_id, &version, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 1)
@@ -931,7 +944,7 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_open_confirm(&ctx, &mut output, &port_id, &channel_id).unwrap();
+		handler.on_chan_open_confirm(&ctx, &mut output, &port_id, &channel_id, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 1)
@@ -946,7 +959,7 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_close_init(&ctx, &mut output, &port_id, &channel_id).unwrap();
+		handler.on_chan_close_init(&ctx, &mut output, &port_id, &channel_id, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 0)
@@ -961,14 +974,14 @@ benchmarks! {
 		let mut handler = IbcModule::<T>::default();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_chan_close_confirm(&ctx, &mut output, &port_id, &channel_id).unwrap();
+		handler.on_chan_close_confirm(&ctx, &mut output, &port_id, &channel_id, &Signer::from_str(MODULE_ID).unwrap()).unwrap();
 	}
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 0)
 	}
 
 	on_recv_packet {
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 		let client_id = Pallet::<T>::create_client().unwrap();
 		let connection_id = ConnectionId::new(0);
 		Pallet::<T>::create_connection(client_id, connection_id.clone()).unwrap();
@@ -989,9 +1002,9 @@ benchmarks! {
 		let denom = "transfer/channel-1/PICA".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
-		let channel_escrow_address: T::AccountId = channel_escrow_address.into_account();
+		let channel_escrow_address: <T as frame_system::Config>::AccountId = channel_escrow_address.into_account();
 		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
+		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
 			asset_id,
 			&channel_escrow_address,
 			balance.into(),
@@ -1040,14 +1053,14 @@ benchmarks! {
 
 	 }
 	verify {
-		assert_eq!(<<T as Config>::Fungibles as Inspect<T::AccountId>>::balance(
+		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
 			asset_id,
 			&caller
 		), amt.into());
 	}
 
 	on_acknowledgement_packet {
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 		let client_id = Pallet::<T>::create_client().unwrap();
 		let connection_id = ConnectionId::new(0);
 		Pallet::<T>::create_connection(client_id, connection_id.clone()).unwrap();
@@ -1068,9 +1081,9 @@ benchmarks! {
 		let denom = "PICA".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
-		let channel_escrow_address: T::AccountId = channel_escrow_address.into_account();
+		let channel_escrow_address: <T as frame_system::Config>::AccountId = channel_escrow_address.into_account();
 		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
+		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
 			asset_id,
 			&channel_escrow_address,
 			balance.into(),
@@ -1119,14 +1132,14 @@ benchmarks! {
 	   handler.on_acknowledgement_packet(&ctx, &mut output, &packet, &ack, &signer).unwrap();
 	}
 	verify {
-		assert_eq!(<<T as Config>::Fungibles as Inspect<T::AccountId>>::balance(
+		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
 			asset_id,
 			&caller
 		), amt.into());
 	}
 
 	on_timeout_packet {
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 		let client_id = Pallet::<T>::create_client().unwrap();
 		let connection_id = ConnectionId::new(0);
 		Pallet::<T>::create_connection(client_id, connection_id.clone()).unwrap();
@@ -1147,9 +1160,9 @@ benchmarks! {
 		let denom = "PICA".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
-		let channel_escrow_address: T::AccountId = channel_escrow_address.into_account();
+		let channel_escrow_address: <T as frame_system::Config>::AccountId = channel_escrow_address.into_account();
 		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
+		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
 			asset_id,
 			&channel_escrow_address,
 			balance.into(),
@@ -1197,7 +1210,7 @@ benchmarks! {
 		handler.on_timeout_packet(&ctx, &mut output, &packet, &signer).unwrap();
 	}
 	verify {
-		assert_eq!(<<T as Config>::Fungibles as Inspect<T::AccountId>>::balance(
+		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
 			asset_id,
 			&caller
 		), amt.into());
@@ -1220,7 +1233,9 @@ benchmarks! {
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(2000, 1), mock_cs_state).unwrap();
-
+		let time = core::time::Duration::from_millis(GRANDPA_UPDATE_TIMESTAMP.saturating_mul(1000));
+		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
+		ctx.store_update_time(client_id.clone(), Height::new(2000, 1), time).unwrap();
 		let msg = MsgUpdateAnyClient::<routing::Context<T>> {
 			client_id: client_id.clone(),
 			client_message,
@@ -1228,7 +1243,7 @@ benchmarks! {
 		};
 
 		let msg = Any { type_url: UPDATE_CLIENT_TYPE_URL.to_string().as_bytes().to_vec(), value: msg.encode_vec().unwrap() };
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let client_state = ClientStates::<T>::get(&client_id).unwrap();

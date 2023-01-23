@@ -1,16 +1,3 @@
-// Copyright 2022 ComposableFi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(unreachable_patterns)]
 #![allow(clippy::type_complexity)]
@@ -170,6 +157,7 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	pub use ibc::signer::Signer;
+	use sp_core::crypto::ByteArray;
 
 	use crate::routing::{Context, ModuleRouter};
 	use ibc::{
@@ -185,15 +173,11 @@ pub mod pallet {
 		timestamp::Timestamp,
 		Height,
 	};
-	use ibc_primitives::{
-		client_id_from_bytes, get_channel_escrow_address,
-		runtime_interface::{self, SS58CodecError},
-		IbcHandler,
-	};
+	use ibc_primitives::{client_id_from_bytes, get_channel_escrow_address, IbcHandler};
 	use light_clients::AnyClientState;
 	use sp_runtime::{
 		traits::{IdentifyAccount, Saturating},
-		AccountId32,
+		AccountId32, BoundedBTreeSet,
 	};
 	#[cfg(feature = "std")]
 	use sp_runtime::{Deserialize, Serialize};
@@ -204,9 +188,12 @@ pub mod pallet {
 	pub trait Config: frame_system::Config + parachain_info::Config + core::fmt::Debug {
 		type TimeProvider: UnixTime;
 		/// The overarching event type.
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// Currency type of the runtime
-		type NativeCurrency: ReservableCurrency<Self::AccountId, Balance = Self::Balance>;
+		type NativeCurrency: ReservableCurrency<
+			<Self as frame_system::Config>::AccountId,
+			Balance = Self::Balance,
+		>;
 		/// Runtime balance type
 		type Balance: Balance + From<u128>;
 		/// AssetId type
@@ -222,12 +209,22 @@ pub mod pallet {
 		const LIGHT_CLIENT_PROTOCOL: LightClientProtocol;
 		/// Account Id Conversion from SS58 string or hex string
 		type AccountIdConversion: TryFrom<Signer>
-			+ IdentifyAccount<AccountId = Self::AccountId>
+			+ IdentifyAccount<AccountId = <Self as frame_system::Config>::AccountId>
 			+ Clone;
 		/// Set of traits needed to handle fungible assets
-		type Fungibles: Transfer<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
-			+ Mutate<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
-			+ Inspect<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>;
+		type Fungibles: Transfer<
+				<Self as frame_system::Config>::AccountId,
+				Balance = Self::Balance,
+				AssetId = Self::AssetId,
+			> + Mutate<
+				<Self as frame_system::Config>::AccountId,
+				Balance = Self::Balance,
+				AssetId = Self::AssetId,
+			> + Inspect<
+				<Self as frame_system::Config>::AccountId,
+				Balance = Self::Balance,
+				AssetId = Self::AssetId,
+			>;
 		/// Expected block time in milliseconds
 		#[pallet::constant]
 		type ExpectedBlockTime: Get<u64>;
@@ -244,9 +241,9 @@ pub mod pallet {
 		/// benchmarking weight info
 		type WeightInfo: WeightInfo;
 		/// Origin allowed to unfreeze light clients
-		type AdminOrigin: EnsureOrigin<Self::Origin>;
+		type AdminOrigin: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
 		/// Origin allowed to freeze light clients
-		type SentryOrigin: EnsureOrigin<Self::Origin>;
+		type SentryOrigin: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
 		/// Amount to be reserved for client and connection creation
 		#[pallet::constant]
 		type SpamProtectionDeposit: Get<Self::Balance>;
@@ -339,7 +336,20 @@ pub mod pallet {
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
 	/// Active Escrow addresses
-	pub type EscrowAddresses<T: Config> = StorageValue<_, BTreeSet<T::AccountId>, ValueQuery>;
+	pub type EscrowAddresses<T: Config> =
+		StorageValue<_, BTreeSet<<T as frame_system::Config>::AccountId>, ValueQuery>;
+
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// Consensus heights
+	/// Stored as a tuple of (revision_number, revision_height)
+	pub type ConsensusHeights<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		Vec<u8>,
+		BoundedBTreeSet<Height, frame_support::traits::ConstU32<256>>,
+		ValueQuery,
+	>;
 
 	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 	pub struct AssetConfig<AssetId> {
@@ -381,7 +391,7 @@ pub mod pallet {
 		Events { events: Vec<Result<events::IbcEvent, errors::IbcError>> },
 		/// An Ibc token transfer has been started
 		TokenTransferInitiated {
-			from: <T as frame_system::Config>::AccountId,
+			from: Vec<u8>,
 			to: Vec<u8>,
 			ibc_denom: Vec<u8>,
 			local_asset_id: Option<T::AssetId>,
@@ -434,7 +444,7 @@ pub mod pallet {
 		/// Client has been frozen
 		ClientFrozen { client_id: Vec<u8>, height: u64, revision_number: u64 },
 		/// Asset Admin Account Updated
-		AssetAdminUpdated { admin_account: T::AccountId },
+		AssetAdminUpdated { admin_account: <T as frame_system::Config>::AccountId },
 	}
 
 	/// Errors inform users that something went wrong.
@@ -509,7 +519,7 @@ pub mod pallet {
 	where
 		u32: From<<T as frame_system::Config>::BlockNumber>,
 		T: Send + Sync,
-		AccountId32: From<T::AccountId>,
+		AccountId32: From<<T as frame_system::Config>::AccountId>,
 	{
 		fn offchain_worker(_n: BlockNumberFor<T>) {
 			let _ = Pallet::<T>::packet_cleanup();
@@ -523,7 +533,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T>
 	where
 		T: Send + Sync,
-		AccountId32: From<T::AccountId>,
+		AccountId32: From<<T as frame_system::Config>::AccountId>,
 		u32: From<<T as frame_system::Config>::BlockNumber>,
 	{
 		#[pallet::weight(crate::weight::deliver::< T > (messages))]
@@ -555,10 +565,9 @@ pub mod pallet {
 			let reserve_amt = T::SpamProtectionDeposit::get().saturating_mul(reserve_count.into());
 
 			if reserve_amt >= T::SpamProtectionDeposit::get() {
-				<T::NativeCurrency as ReservableCurrency<T::AccountId>>::reserve(
-					&sender,
-					reserve_amt.into(),
-				)?;
+				<T::NativeCurrency as ReservableCurrency<
+					<T as frame_system::Config>::AccountId,
+				>>::reserve(&sender, reserve_amt.into())?;
 			}
 			Self::execute_ibc_messages(&mut ctx, messages);
 
@@ -569,7 +578,7 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::transfer())]
 		pub fn transfer(
 			origin: OriginFor<T>,
-			params: TransferParams<T::AccountId>,
+			params: TransferParams<<T as frame_system::Config>::AccountId>,
 			asset_id: T::AssetId,
 			amount: T::Balance,
 		) -> DispatchResult {
@@ -577,20 +586,21 @@ pub mod pallet {
 			let denom = T::IbcDenomToAssetIdConversion::from_asset_id_to_denom(asset_id)
 				.ok_or_else(|| Error::<T>::InvalidAssetId)?;
 
-			let account_id_32: AccountId32 = origin.clone().into();
-			let from = runtime_interface::account_id_to_ss58(account_id_32.into())
-				.and_then(|val| {
-					String::from_utf8(val).map_err(|_| SS58CodecError::InvalidAccountId)
-				})
-				.map_err(|_| Error::<T>::Utf8Error)?;
+			let account_id_32: AccountId32 = origin.into();
+			let from = {
+				let mut hex_string = hex::encode(account_id_32.to_raw_vec());
+				hex_string.insert_str(0, "0x");
+				hex_string
+			};
+
 			let to = match params.to {
 				MultiAddress::Id(id) => {
+					// we convert id to hex string instead of ss58 because destination chain could
+					// have a different ss58 prefix from source chain
 					let account_id_32: AccountId32 = id.into();
-					runtime_interface::account_id_to_ss58(account_id_32.into())
-						.and_then(|val| {
-							String::from_utf8(val).map_err(|_| SS58CodecError::InvalidAccountId)
-						})
-						.map_err(|_| Error::<T>::Utf8Error)?
+					let mut hex_string = hex::encode(account_id_32.to_raw_vec());
+					hex_string.insert_str(0, "0x");
+					hex_string
 				},
 				MultiAddress::Raw(bytes) =>
 					String::from_utf8(bytes).map_err(|_| Error::<T>::Utf8Error)?,
@@ -673,7 +683,7 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::ChannelNotFound)?;
 
 			Self::deposit_event(Event::<T>::TokenTransferInitiated {
-				from: origin,
+				from: from.as_bytes().to_vec(),
 				to: to.as_bytes().to_vec(),
 				amount,
 				local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(

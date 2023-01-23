@@ -1,17 +1,3 @@
-// Copyright 2022 ComposableFi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 use super::super::*;
 use crate::routing::Context;
 use frame_support::traits::{
@@ -33,7 +19,7 @@ use sp_runtime::traits::IdentifyAccount;
 impl<T: Config + Send + Sync> Ics20Reader for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	type AccountId = T::AccountIdConversion;
 
@@ -65,7 +51,7 @@ where
 impl<T: Config + Send + Sync> Ics20Keeper for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	type AccountId = T::AccountIdConversion;
 }
@@ -73,7 +59,7 @@ where
 impl<T: Config + Send + Sync> Ics20Context for Context<T>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	type AccountId = T::AccountIdConversion;
 }
@@ -82,7 +68,7 @@ impl<T> BankKeeper for Context<T>
 where
 	T: Config + Send + Sync,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<T::AccountId>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	type AccountId = T::AccountIdConversion;
 
@@ -98,7 +84,7 @@ where
 		let asset_id = T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
 			.map_err(|_| Ics20Error::invalid_token())?;
 		if asset_id == T::NativeAssetId::get() {
-			<T::NativeCurrency as Currency<T::AccountId>>::transfer(
+			<T::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::transfer(
 				&from.clone().into_account(),
 				&to.clone().into_account(),
 				amount.into(),
@@ -109,7 +95,7 @@ where
 				Ics20Error::invalid_token()
 			})?;
 		} else {
-			<<T as Config>::Fungibles as Transfer<T::AccountId>>::transfer(
+			<<T as Config>::Fungibles as Transfer<<T as frame_system::Config>::AccountId>>::transfer(
 				asset_id.into(),
 				&from.clone().into_account(),
 				&to.clone().into_account(),
@@ -140,7 +126,7 @@ where
 				))
 			})?;
 
-		<<T as Config>::Fungibles as Mutate<T::AccountId>>::mint_into(
+		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
 			asset_id.into(),
 			&account.clone().into_account(),
 			amount,
@@ -162,7 +148,7 @@ where
 		// Token should be registered already if burning a voucher
 		let asset_id = T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
 			.map_err(|_| Ics20Error::invalid_token())?;
-		<<T as Config>::Fungibles as Mutate<T::AccountId>>::burn_from(
+		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::burn_from(
 			asset_id.into(),
 			&account.clone().into_account(),
 			amount,

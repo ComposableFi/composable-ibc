@@ -59,6 +59,11 @@ use ics08_wasm::Bytes;
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 #[cfg(any(test, feature = "testing"))]
 use pallet_ibc::Timeout;
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
+use ibc::core::ics02_client::events::UpdateClient;
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use parachain::{config, ParachainClient};
 use primitives::{
 	mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, MisbehaviourHandler, UpdateType,
@@ -66,9 +71,17 @@ use primitives::{
 use serde::Deserialize;
 use sp_runtime::generic::Era;
 use std::{pin::Pin, time::Duration};
-use subxt::{
-	tx::{ExtrinsicParams, PolkadotExtrinsicParams, PolkadotExtrinsicParamsBuilder},
-	Error, OnlineClient,
+#[cfg(feature = "dali")]
+use subxt::tx::{
+	SubstrateExtrinsicParams as ParachainExtrinsicParams,
+	SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
+};
+use subxt::{tx::ExtrinsicParams, Error, OnlineClient};
+
+#[cfg(not(feature = "dali"))]
+use subxt::tx::{
+	PolkadotExtrinsicParams as ParachainExtrinsicParams,
+	PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
 };
 use tendermint_proto::Protobuf;
 use thiserror::Error;
@@ -87,7 +100,7 @@ impl config::Config for DefaultConfig {
 		Error,
 	> {
 		let params =
-			PolkadotExtrinsicParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
+			ParachainExtrinsicsParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
 		Ok(params.into())
 	}
 }
@@ -102,17 +115,17 @@ impl subxt::Config for DefaultConfig {
 	type Header = sp_runtime::generic::Header<Self::BlockNumber, sp_runtime::traits::BlakeTwo256>;
 	type Signature = sp_runtime::MultiSignature;
 	type Extrinsic = sp_runtime::OpaqueExtrinsic;
-	type ExtrinsicParams = PolkadotExtrinsicParams<Self>;
+	type ExtrinsicParams = ParachainExtrinsicParams<Self>;
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Config {
 	pub chain_a: AnyConfig,
 	pub chain_b: AnyConfig,
 	pub core: CoreConfig,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AnyConfig {
 	Parachain(parachain::ParachainClientConfig),
@@ -120,7 +133,7 @@ pub enum AnyConfig {
 	Cosmos(CosmosClientConfig),
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct CoreConfig {
 	pub prometheus_endpoint: Option<String>,
 }
@@ -953,6 +966,30 @@ impl AnyConfig {
 			Ok(AnyChain::Wasm(WasmChain { inner: Box::new(chain), code_id, client_type }))
 		} else {
 			Ok(chain)
+		}
+	}
+
+	pub fn set_client_id(&mut self, client_id: ClientId) {
+		match self {
+			Self::Parachain(chain) => {
+				chain.client_id.replace(client_id);
+			},
+		}
+	}
+
+	pub fn set_connection_id(&mut self, connection_id: ConnectionId) {
+		match self {
+			Self::Parachain(chain) => {
+				chain.connection_id.replace(connection_id);
+			},
+		}
+	}
+
+	pub fn set_channel_whitelist(&mut self, channel_id: ChannelId, port_id: PortId) {
+		match self {
+			Self::Parachain(chain) => {
+				chain.channel_whitelist.push((channel_id, port_id));
+			},
 		}
 	}
 }

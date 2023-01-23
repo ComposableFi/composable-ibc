@@ -27,16 +27,16 @@ pallet-ibc = { path = "../../contracts/pallet-ibc" }
 ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
 
 # substrate
-polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.27" }
+polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.30" }
 grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../algorithms/grandpa/primitives", default-features = false }
 finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-features = false }
-sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27", features = ["full_crypto"] }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
+sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30", features = ["full_crypto"] }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
 light-client-common = { path = "../../light-clients/common" }
 grandpa-light-client = { path = "../../algorithms/grandpa/verifier", package = "grandpa-light-client-verifier" }
 hex = "0.4.3"
