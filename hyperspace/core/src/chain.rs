@@ -59,30 +59,24 @@ use ics08_wasm::Bytes;
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 #[cfg(any(test, feature = "testing"))]
 use pallet_ibc::Timeout;
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
-
-use ibc::core::ics02_client::events::UpdateClient;
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use parachain::{config, ParachainClient};
 use primitives::{
 	mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, MisbehaviourHandler, UpdateType,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sp_runtime::generic::Era;
 use std::{pin::Pin, time::Duration};
+#[cfg(not(feature = "dali"))]
+use subxt::tx::{
+	PolkadotExtrinsicParams as ParachainExtrinsicParams,
+	PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
+};
 #[cfg(feature = "dali")]
 use subxt::tx::{
 	SubstrateExtrinsicParams as ParachainExtrinsicParams,
 	SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
 };
 use subxt::{tx::ExtrinsicParams, Error, OnlineClient};
-
-#[cfg(not(feature = "dali"))]
-use subxt::tx::{
-	PolkadotExtrinsicParams as ParachainExtrinsicParams,
-	PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
-};
 use tendermint_proto::Protobuf;
 use thiserror::Error;
 
@@ -974,6 +968,9 @@ impl AnyConfig {
 			Self::Parachain(chain) => {
 				chain.client_id.replace(client_id);
 			},
+			Self::Cosmos(chain) => {
+				chain.client_id.replace(client_id.to_string());
+			},
 		}
 	}
 
@@ -982,6 +979,9 @@ impl AnyConfig {
 			Self::Parachain(chain) => {
 				chain.connection_id.replace(connection_id);
 			},
+			Self::Cosmos(chain) => {
+				chain.connection_id.replace(connection_id.to_string());
+			},
 		}
 	}
 
@@ -989,6 +989,9 @@ impl AnyConfig {
 		match self {
 			Self::Parachain(chain) => {
 				chain.channel_whitelist.push((channel_id, port_id));
+			},
+			Self::Cosmos(_chain) => {
+				// chain.channel_whitelist.push((channel_id.to_string(), port_id.to_string()));
 			},
 		}
 	}

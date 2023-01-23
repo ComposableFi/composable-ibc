@@ -19,7 +19,10 @@ use prometheus::Registry;
 use std::{path::PathBuf, str::FromStr, time::Duration};
 use tokio::time::sleep;
 
-use crate::{chain::Config, fish, relay, AnyChain, AnyConfig, CoreConfig, Mode};
+use crate::{
+	chain::{AnyConfig, Config, CoreConfig},
+	fish, relay, Mode,
+};
 use ibc::core::{ics04_channel::channel::Order, ics24_host::identifier::PortId};
 use ibc_proto::ibc::lightclients::wasm::v1::{msg_client::MsgClient, MsgPushNewWasmCode};
 use metrics::{data::Metrics, handler::MetricsHandler, init_prometheus};
@@ -76,7 +79,7 @@ pub enum Subcommand {
 pub struct Cmd {
 	/// Relayer chain A config path.
 	#[clap(long)]
-	config_a: String,
+	pub config_a: String,
 	/// Relayer chain B config path.
 	#[clap(long)]
 	config_b: String,
@@ -171,10 +174,10 @@ impl Cmd {
 		fish(chain_a, chain_b).await
 	}
 
-	pub async fn create_clients(&self) -> Result<()> {
-		let config = self.parse_config().await?;
-		let chain_a = config.chain_a.into_client().await?;
-		let chain_b = config.chain_b.into_client().await?;
+	pub async fn create_clients(&self) -> Result<Config> {
+		let mut config = self.parse_config().await?;
+		let chain_a = config.chain_a.clone().into_client().await?;
+		let chain_b = config.chain_b.clone().into_client().await?;
 
 		let (client_id_a_on_b, client_id_b_on_a) = create_clients(&chain_a, &chain_b).await?;
 		log::info!(
@@ -200,9 +203,9 @@ impl Cmd {
 			.delay_period
 			.expect("delay_period should be provided when creating a connection");
 		let delay = Duration::from_secs(delay.into());
-		let config = self.parse_config().await?;
-		let chain_a = config.chain_a.into_client().await?;
-		let chain_b = config.chain_b.into_client().await?;
+		let mut config = self.parse_config().await?;
+		let chain_a = config.chain_a.clone().into_client().await?;
+		let chain_b = config.chain_b.clone().into_client().await?;
 
 		let chain_a_clone = chain_a.clone();
 		let chain_b_clone = chain_b.clone();
@@ -238,9 +241,9 @@ impl Cmd {
 			.expect("version must be specified when creating a channel")
 			.clone();
 		let order = self.order.as_ref().expect("order must be specified when creating a channel, expected one of 'ordered' or 'unordered'").as_str();
-		let config = self.parse_config().await?;
-		let chain_a = config.chain_a.into_client().await?;
-		let chain_b = config.chain_b.into_client().await?;
+		let mut config = self.parse_config().await?;
+		let chain_a = config.chain_a.clone().into_client().await?;
+		let chain_b = config.chain_b.clone().into_client().await?;
 
 		let chain_a_clone = chain_a.clone();
 		let chain_b_clone = chain_b.clone();

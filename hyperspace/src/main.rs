@@ -33,25 +33,31 @@ async fn main() -> Result<()> {
 		Subcommand::UploadWasm(cmd) => cmd.run().await,
 		Subcommand::CreateClients(cmd) => {
 			let new_config = cmd.create_clients().await?;
-			let config = cmd.new_config.as_ref().cloned().unwrap_or_else(|| cmd.config.clone());
-			tokio::fs::write(config.parse::<PathBuf>()?, toml::to_string(&new_config)?)
-				.await
-				.map_err(|e| anyhow!(e))
+			// let config = cmd.new_config.as_ref().cloned().unwrap_or_else(||
+			// cmd.config_a.clone()); tokio::fs::write(config.parse::<PathBuf>()?,
+			// toml::to_string(&new_config)?) 	.await
+			// 	.map_err(|e| anyhow!(e))
+			Ok(())
 		},
 		Subcommand::CreateConnection(cmd) => {
 			let new_config = cmd.create_connection().await?;
-			let config = cmd.new_config.as_ref().cloned().unwrap_or_else(|| cmd.config.clone());
-			tokio::fs::write(config.parse::<PathBuf>()?, toml::to_string(&new_config)?)
-				.await
-				.map_err(|e| anyhow!(e))
+			// let config = cmd.new_config.as_ref().cloned().unwrap_or_else(|| cmd.config.clone());
+			// tokio::fs::write(config.parse::<PathBuf>()?, toml::to_string(&new_config)?)
+			// 	.await
+			// 	.map_err(|e| anyhow!(e))
+			Ok(())
 		},
 		Subcommand::CreateChannel(cmd) => {
 			let new_config = cmd.create_channel().await?;
-			let config = cmd.new_config.as_ref().cloned().unwrap_or_else(|| cmd.config.clone());
-			tokio::fs::write(config.parse::<PathBuf>()?, toml::to_string(&new_config)?)
-				.await
-				.map_err(|e| anyhow!(e))
+			// let config = cmd.new_config.as_ref().cloned().unwrap_or_else(|| cmd.config.clone());
+			// tokio::fs::write(config.parse::<PathBuf>()?, toml::to_string(&new_config)?)
+			// 	.await
+			// 	.map_err(|e| anyhow!(e))
+			Ok(())
 		},
 		Subcommand::Fish(cmd) => cmd.fish().await,
+		Subcommand::Query(cmd) => {
+			panic!()
+		},
 	}
 }
