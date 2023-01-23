@@ -33,12 +33,12 @@ use ics07_tendermint::{
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use primitives::{IbcProvider, KeyProvider, UpdateType};
 use prost::Message;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
 use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient, Url};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ConfigKeyEntry {
 	public_key: String,
 	private_key: String,
@@ -119,7 +119,7 @@ pub struct CosmosClient<H> {
 	pub _phantom: std::marker::PhantomData<H>,
 }
 /// config options for [`ParachainClient`]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CosmosClientConfig {
 	/// Chain name
 	pub name: String,

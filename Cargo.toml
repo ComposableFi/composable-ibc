@@ -40,14 +40,13 @@ members = [
     "hyperspace/cosmos",
     "hyperspace/testsuite",
     "hyperspace/metrics",
-    "hyperspace/wasm",
 
     # utilities
-     "utils/subxt/codegen",
-     "utils/subxt/generated",
-     "utils/parachain-node",
-     "utils/parachain-node/runtime",
-     "utils/simnode"
+    "utils/subxt/codegen",
+    "utils/subxt/generated",
+    "utils/parachain-node",
+    "utils/parachain-node/runtime",
+    "utils/simnode"
 ]
 
 [patch."https://github.com/paritytech/jsonrpsee"]
@@ -175,6 +174,7 @@ sc-finality-grandpa-rpc = { git = "https://github.com/vmarkushin/substrate", rev
 sc-informant = { git = "https://github.com/vmarkushin/substrate", rev = "1e6c14ac9e4f0be2c416af583f85aaf2f37f510c" }
 sc-keystore = { git = "https://github.com/vmarkushin/substrate", rev = "1e6c14ac9e4f0be2c416af583f85aaf2f37f510c" }
 sc-network = { git = "https://github.com/vmarkushin/substrate", rev = "1e6c14ac9e4f0be2c416af583f85aaf2f37f510c" }
+sc-network-common = { git = "https://github.com/vmarkushin/substrate", rev = "1e6c14ac9e4f0be2c416af583f85aaf2f37f510c" }
 sc-network-gossip = { git = "https://github.com/vmarkushin/substrate", rev = "1e6c14ac9e4f0be2c416af583f85aaf2f37f510c" }
 sc-offchain = { git = "https://github.com/vmarkushin/substrate", rev = "1e6c14ac9e4f0be2c416af583f85aaf2f37f510c" }
 sc-peerset = { git = "https://github.com/vmarkushin/substrate", rev = "1e6c14ac9e4f0be2c416af583f85aaf2f37f510c" }

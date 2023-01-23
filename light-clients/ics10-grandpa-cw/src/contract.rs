@@ -72,7 +72,8 @@ impl grandpa_light_client_primitives::HostFunctions for HostFunctions {
 		msg: &[u8],
 		pub_key: &sp_core::ed25519::Public,
 	) -> bool {
-		use ed25519_dalek::{PublicKey, Signature, Verifier};
+		use ed25519_zebra::{PublicKey, Signature, Verifier};
+		// use ed25519_dalek::{PublicKey, Signature, Verifier};
 		let sig = Signature::from_bytes(sig.as_ref()).unwrap();
 		let pub_key = PublicKey::from_bytes(pub_key.as_ref()).unwrap();
 		pub_key.verify(msg, &sig).is_ok()
