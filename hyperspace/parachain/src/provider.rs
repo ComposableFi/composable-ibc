@@ -240,8 +240,7 @@ where
 			.unwrap();
 		let header = self.para_client.rpc().header(header_hash).await.unwrap().unwrap();
 		let state_root = header.state_root();
-		let keys_cloned = keys.clone();
-		log::info!("keys: {:?}", keys_cloned);
+		log::info!("keys: {:?}", &keys);
 		log::info!("proof: {:?}", proof);
 		log::info!("state_root: {:?}", state_root);
 		Ok(proof.proof)
