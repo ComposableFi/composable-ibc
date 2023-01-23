@@ -97,7 +97,7 @@ impl<Hash: std::fmt::Debug> Display for BlockNumberOrHash<Hash> {
 }
 
 /// Proof for a set of keys
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Proof {
 	/// Trie proof
 	pub proof: Vec<u8>,
