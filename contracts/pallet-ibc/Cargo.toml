@@ -45,7 +45,7 @@ hex = { version = "0.4.3", default-features = false }
 ibc-primitives = { path = "primitives", default-features = false }
 
 # flat fee
-pallet-pablo = { git = "https://github.com/composableFi/composable", package = "pallet-pablo", default-features = false }
+composable-traits = { git = "https://github.com/composableFi/composable", package = "composable-traits", default-features = false }
 
 # optional
 hex-literal = { version = "0.3.4", default-features = false, optional = true }
@@ -130,7 +130,8 @@ std = [
   "sp-finality-grandpa/std",
   "finality-grandpa/std",
   "serde",
-  "hex/std"
+  "hex/std",
+  "composable-traits/std"
 ]
 
 runtime-benchmarks = [

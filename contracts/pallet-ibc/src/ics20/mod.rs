@@ -5,6 +5,7 @@ use alloc::{
 	format,
 	string::{String, ToString},
 };
+use composable_traits::dex::Amm;
 use core::fmt::Formatter;
 use frame_support::weights::Weight;
 use ibc::{
@@ -228,6 +229,9 @@ where
 			},
 			Ok(packet_data) => {
 				let denom = full_ibc_denom(packet, packet_data.token.clone());
+				// Fee (TODO)
+				// ensure that the denom is whitelisted
+
 				Pallet::<T>::deposit_event(Event::<T>::TokenReceived {
 					from: packet_data.sender.to_string().as_bytes().to_vec(),
 					to: packet_data.receiver.to_string().as_bytes().to_vec(),
@@ -244,6 +248,15 @@ where
 					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
 				});
 				let packet = packet.clone();
+
+				// Fee _algorithm_:
+				// - if there is a Pool in Pablo, then swap
+				// - if no Pool in Pablo, get percentage fee
+
+				// TODO(vim): handle the case in which the direct pool with USD{T, C} does not exist
+				// through routing. Is it maybe done automatically?
+				T::Pablo::do_buy();
+
 				Pallet::<T>::write_acknowledgement(
 					&packet,
 					Ics20Acknowledgement::success().as_ref().to_vec(),
