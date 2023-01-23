@@ -225,7 +225,7 @@ where
 	}
 
 	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
-		log::info!("keys: {:?}", &keys);
+		println!("keys: {:?}", &keys);
 		let proof = IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_proof(
 			&*self.para_ws_client,
 			at.revision_height as u32,
@@ -241,8 +241,8 @@ where
 			.unwrap();
 		let header = self.para_client.rpc().header(header_hash).await.unwrap().unwrap();
 		let state_root = header.state_root();
-		log::info!("proof: {:?}", proof);
-		log::info!("state_root: {:?}", state_root);
+		println!("proof: {:?}", proof);
+		println!("state_root: {:?}", state_root);
 		Ok(proof.proof)
 	}
 
