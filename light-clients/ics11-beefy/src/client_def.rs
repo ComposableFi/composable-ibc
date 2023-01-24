@@ -121,7 +121,7 @@ where
 
 					let parachain_update_proof = ParachainsUpdateProof {
 						parachain_headers,
-						mmr_proof: BatchProof {
+						mmr_proof: Proof {
 							leaf_indices,
 							leaf_count,
 							items: headers_with_proof

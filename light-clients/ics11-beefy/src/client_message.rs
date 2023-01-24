@@ -37,7 +37,7 @@ use beefy_primitives::{
 	Commitment, Payload,
 };
 use codec::{Decode, Encode};
-use pallet_mmr_primitives::Proof;
+use pallet_mmr_primitives::BatchProof;
 use primitive_types::H256;
 use sp_runtime::{
 	generic::Header as SubstrateHeader,
