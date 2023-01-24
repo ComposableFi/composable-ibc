@@ -131,7 +131,7 @@ pub struct ParachainsUpdateProof {
 	/// Parachai headers
 	pub parachain_headers: Vec<ParachainHeader>,
 	/// Mmr Batch proof for parachain headers
-	pub mmr_proof: pallet_mmr_primitives::BatchProof<H256>,
+	pub mmr_proof: pallet_mmr_primitives::Proof<H256>,
 }
 
 /// MMR nodes & size -related utilities.

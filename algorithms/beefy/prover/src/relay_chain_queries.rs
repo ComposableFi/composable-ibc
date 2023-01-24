@@ -22,9 +22,10 @@ use beefy_primitives::{SignedCommitment, VersionedFinalityProof};
 use codec::{Decode, Encode};
 use pallet_mmr_rpc::{LeafBatchProof, LeafProof};
 use sp_core::{hexdisplay::AsBytesRef, storage::StorageKey, H256};
-use sp_runtime::traits::{Header, Zero};
+use sp_runtime::traits::Zero;
+use sp_primitives::Justifications;
 use std::collections::{BTreeMap, BTreeSet};
-use subxt::{rpc::rpc_params, Config, OnlineClient};
+use subxt::{config::Header, rpc::rpc_params, Config, OnlineClient};
 
 /// This contains the leaf indices of the relay chain blocks and a map of relay chain heights to a
 /// map of all parachain headers at those heights Used for generating [`ParaHeadsProof`]
@@ -104,13 +105,13 @@ where
 
 		let para_header: T::Header = Decode::decode(&mut &heads[&para_id][..])
 			.map_err(|_| Error::Custom(format!("Failed to decode header for {para_id}")))?;
-		let para_block_number = *para_header.number();
+		let para_block_number = para_header.number();
 		// skip genesis header or any unknown headers
 		if para_block_number == Zero::zero() || !header_numbers.contains(&para_block_number) {
 			continue
 		}
 
-		let block_number = u32::from(*header.number());
+		let block_number = u32::from(header.number());
 		finalized_blocks.insert(block_number as u64, heads);
 		leaf_indices.push(get_leaf_index_for_block_number(beefy_activation_block, block_number));
 	}
@@ -134,7 +135,7 @@ pub async fn fetch_beefy_justification<T: Config>(
 
 	let justifications = block.justifications.expect("Block should have valid justifications");
 
-	let beefy_justification = justifications
+	let beefy_justification = Justifications(justifications)
 		.into_justification(beefy_primitives::BEEFY_ENGINE_ID)
 		.expect("Should have valid beefy justification");
 	let VersionedFinalityProof::V1(signed_commitment) = VersionedFinalityProof::<
