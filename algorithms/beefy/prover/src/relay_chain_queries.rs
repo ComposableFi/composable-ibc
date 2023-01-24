@@ -22,8 +22,8 @@ use beefy_primitives::{SignedCommitment, VersionedFinalityProof};
 use codec::{Decode, Encode};
 use pallet_mmr_rpc::{LeafBatchProof, LeafProof};
 use sp_core::{hexdisplay::AsBytesRef, storage::StorageKey, H256};
-use sp_runtime::traits::Zero;
 use sp_primitives::Justifications;
+use sp_runtime::traits::Zero;
 use std::collections::{BTreeMap, BTreeSet};
 use subxt::{config::Header, rpc::rpc_params, Config, OnlineClient};
 
