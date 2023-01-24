@@ -37,6 +37,7 @@ use prost::Message;
 use sp_runtime::traits::{BlakeTwo256, Header};
 use sp_runtime_interface::unpack_ptr_and_len;
 use std::{collections::BTreeSet, str::FromStr};
+use ed25519_zebra::VerificationKeyBytes;
 
 /*
 // version info for migration info
@@ -72,11 +73,12 @@ impl grandpa_light_client_primitives::HostFunctions for HostFunctions {
 		msg: &[u8],
 		pub_key: &sp_core::ed25519::Public,
 	) -> bool {
-		use ed25519_zebra::{PublicKey, Signature, Verifier};
-		// use ed25519_dalek::{PublicKey, Signature, Verifier};
-		let sig = Signature::from_bytes(sig.as_ref()).unwrap();
-		let pub_key = PublicKey::from_bytes(pub_key.as_ref()).unwrap();
-		pub_key.verify(msg, &sig).is_ok()
+		use ed25519_zebra::{Signature, VerificationKey as PublicKey, VerificationKeyBytes};
+		let bytes: [u8; 64] = (sig.clone()).try_into().unwrap();
+		let sig = Signature::from(bytes);
+		let slice: &[u8] = pub_key.as_ref();
+		let pub_key = PublicKey::try_from(VerificationKeyBytes::try_from(slice).unwrap()).unwrap();
+		pub_key.verify(&sig, msg).is_ok()
 	}
 
 	// TODO: cw-grandpa insert_relay_header_hashes

@@ -4493,6 +4493,7 @@ dependencies = [
  "cw2",
  "derive_more",
  "digest 0.10.6",
+ "ed25519-zebra",
  "grandpa-light-client-primitives",
  "hex",
  "hyperspace-primitives",
@@ -15265,6 +15266,11 @@ dependencies = [
 ]
 
 [[patch.unused]]
+name = "wasmi-validation"
+version = "0.4.1"
+source = "git+https://github.com/ComposableFi/wasmi?rev=cd8c0c775a1d197a35ff3d5c7d6cded3d476411b#cd8c0c775a1d197a35ff3d5c7d6cded3d476411b"
+
+[[patch.unused]]
 name = "pallet-asset-tx-payment"
 version = "4.0.0-dev"
 source = "git+https://github.com/vmarkushin/substrate?rev=1e6c14ac9e4f0be2c416af583f85aaf2f37f510c#1e6c14ac9e4f0be2c416af583f85aaf2f37f510c"
@@ -15288,8 +15294,3 @@ source = "git+https://github.com/vmarkushin/substrate?rev=1e6c14ac9e4f0be2c416af
 name = "sp-serializer"
 version = "4.0.0-dev"
 source = "git+https://github.com/vmarkushin/substrate?rev=1e6c14ac9e4f0be2c416af583f85aaf2f37f510c#1e6c14ac9e4f0be2c416af583f85aaf2f37f510c"
-
-[[patch.unused]]
-name = "wasmi-validation"
-version = "0.4.1"
-source = "git+https://github.com/ComposableFi/wasmi?rev=cd8c0c775a1d197a35ff3d5c7d6cded3d476411b#cd8c0c775a1d197a35ff3d5c7d6cded3d476411b"
