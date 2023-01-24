@@ -67,7 +67,8 @@ where
 			_ => {},
 		}
 	}
-	let previous_finalized_block_number: subxt::rpc::BlockNumber = (latest_beefy_height + 1).into();
+	let previous_finalized_block_number: subxt::rpc::types::BlockNumber =
+		(latest_beefy_height + 1).into();
 	let previous_finalized_hash = client
 		.rpc()
 		.block_hash(Some(previous_finalized_block_number))
