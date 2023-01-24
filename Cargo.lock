@@ -7620,7 +7620,7 @@ dependencies = [
  "polkadot-runtime-common",
  "scale-info",
  "serde",
- "simnode-runtime-apis 0.1.0 (git+https://github.com/composableFi/sc-simnode?branch=polkadot-v0.9.33)",
+ "simnode-runtime-apis",
  "smallvec",
  "sp-api",
  "sp-block-builder",
@@ -11728,16 +11728,6 @@ dependencies = [
 [[package]]
 name = "simnode-runtime-apis"
 version = "0.1.0"
-source = "git+https://github.com/composableFi/sc-simnode?branch=polkadot-v0.9.33#d7205e39380b76d41869c18a43b9719a5fad2193"
-dependencies = [
- "parity-scale-codec",
- "sp-api",
- "sp-std 4.0.0",
-]
-
-[[package]]
-name = "simnode-runtime-apis"
-version = "0.1.0"
 source = "git+https://github.com/polytope-labs/sc-simnode?rev=fcfa2dee4ebdd4652375ec9c4b3eba2a63c2d28f#fcfa2dee4ebdd4652375ec9c4b3eba2a63c2d28f"
 dependencies = [
  "parity-scale-codec",
@@ -13154,7 +13144,7 @@ dependencies = [
  "sc-tracing",
  "sc-transaction-pool",
  "sc-transaction-pool-api",
- "simnode-runtime-apis 0.1.0 (git+https://github.com/polytope-labs/sc-simnode?rev=fcfa2dee4ebdd4652375ec9c4b3eba2a63c2d28f)",
+ "simnode-runtime-apis",
  "sp-api",
  "sp-block-builder",
  "sp-blockchain",
