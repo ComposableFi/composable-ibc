@@ -5567,6 +5567,7 @@ dependencies = [
  "parity-scale-codec",
  "primitive-types 0.11.1",
  "serde",
+ "sp-core 6.0.0",
  "sp-storage 6.0.0",
  "sp-trie 6.0.0",
 ]

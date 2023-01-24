@@ -49,7 +49,7 @@ use ibc::{
 	test_utils::get_dummy_account_id,
 	Height,
 };
-use primitive_types::H256;
+use sp_core::H256;
 use std::{mem::size_of_val, time::Duration};
 use subxt::{ext::sp_core::hexdisplay::AsBytesRef, PolkadotConfig};
 

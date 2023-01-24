@@ -64,6 +64,9 @@ primitive-types = { version = "0.11.1", default-features = false }
 tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
 tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
 
+#substrate
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false }
+
 [dev-dependencies]
 futures = "0.3.24"
 serde = { version = "1.0.144", features = ["derive"] }

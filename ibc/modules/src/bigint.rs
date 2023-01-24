@@ -12,4 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use primitive_types::U256;
+pub use sp_core::U256;

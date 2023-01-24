@@ -32,13 +32,13 @@ use beefy_light_client_primitives::{
 	SignedCommitment,
 };
 use beefy_primitives::{
-	known_payload_ids::MMR_ROOT_ID,
+	known_payloads::MMR_ROOT_ID,
 	mmr::{MmrLeaf, MmrLeafVersion},
 	Commitment, Payload,
 };
 use codec::{Decode, Encode};
-use pallet_mmr_primitives::BatchProof;
-use primitive_types::H256;
+use pallet_mmr_primitives::Proof;
+use sp_core::H256;
 use sp_runtime::{
 	generic::Header as SubstrateHeader,
 	traits::{BlakeTwo256, SaturatedConversion},
@@ -207,7 +207,10 @@ impl TryFrom<RawClientMessage> for ClientMessage {
 								}
 								let mut payload_id = [0u8; 2];
 								payload_id.copy_from_slice(&item.payload_id);
-								Some(Payload::new(payload_id, item.payload_data.clone()))
+								Some(Payload::from_single_entry(
+									payload_id,
+									item.payload_data.clone(),
+								))
 							})
 							.collect::<Vec<_>>()
 							.get(0)
@@ -280,7 +283,7 @@ impl TryFrom<RawClientMessage> for ClientMessage {
 								.map_err(|e| Error::Custom(format!("{e}")))?,
 						},
 						mmr_proof: Proof {
-							leaf_index: mmr_update.mmr_leaf_index,
+							leaf_indices: vec![mmr_update.mmr_leaf_index], // TODO(blas): fix this
 							leaf_count: mmr_update.mmr_leaf_index + 1,
 							items: mmr_update
 								.mmr_proof
@@ -403,7 +406,8 @@ impl From<ClientMessage> for RawClientMessage {
 								}),
 								parachain_heads: mmr_update.latest_mmr_leaf.leaf_extra.encode(),
 							}),
-							mmr_leaf_index: mmr_update.mmr_proof.leaf_index,
+							mmr_leaf_index: mmr_update.mmr_proof.leaf_indices[0], /* TODO(blas):
+							                                                       * fix this */
 							mmr_proof: mmr_update
 								.mmr_proof
 								.items

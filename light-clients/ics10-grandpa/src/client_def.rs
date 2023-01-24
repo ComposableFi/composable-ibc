@@ -54,7 +54,7 @@ use ibc::{
 use light_client_common::{
 	state_machine, verify_delay_passed, verify_membership, verify_non_membership,
 };
-use primitive_types::H256;
+use sp_core::H256;
 use sp_runtime::traits::Header;
 use sp_trie::StorageProof;
 use tendermint_proto::Protobuf;

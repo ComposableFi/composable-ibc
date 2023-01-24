@@ -27,13 +27,13 @@ use codec::{Decode, Encode};
 use finality_grandpa::Chain;
 use hash_db::Hasher;
 use light_client_common::state_machine;
-use primitive_types::H256;
 use primitives::{
 	error,
 	justification::{find_scheduled_change, AncestryChain, GrandpaJustification},
 	parachain_header_storage_key, ClientState, HostFunctions, ParachainHeaderProofs,
 	ParachainHeadersWithFinalityProof,
 };
+use sp_core::H256;
 use sp_runtime::traits::Header;
 use sp_trie::{LayoutV0, StorageProof};
 

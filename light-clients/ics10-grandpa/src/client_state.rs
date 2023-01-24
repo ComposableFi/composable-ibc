@@ -27,9 +27,8 @@ use ibc::{
 	Height,
 };
 use light_client_common::RelayChain;
-use primitive_types::H256;
 use serde::{Deserialize, Serialize};
-use sp_core::ed25519::Public;
+use sp_core::{ed25519::Public, H256};
 use sp_finality_grandpa::AuthorityList;
 use tendermint_proto::Protobuf;
 

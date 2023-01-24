@@ -14,12 +14,12 @@
 // limitations under the License.
 
 use alloc::string::ToString;
-use beefy_primitives::{known_payload_ids::MMR_ROOT_ID, mmr::BeefyNextAuthoritySet};
+use beefy_primitives::{known_payloads::MMR_ROOT_ID, mmr::BeefyNextAuthoritySet};
 use codec::{Decode, Encode};
 use core::{convert::TryFrom, fmt::Debug, marker::PhantomData, time::Duration};
 use ibc::prelude::*;
-use primitive_types::H256;
 use serde::{Deserialize, Serialize};
+use sp_core::H256;
 use sp_runtime::SaturatedConversion;
 use tendermint_proto::Protobuf;
 

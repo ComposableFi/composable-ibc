@@ -163,7 +163,7 @@ where
 	let proof =
 		mmr_lib::MerkleProof::<_, MerkleHasher<H>>::new(mmr_size, mmr_update.mmr_proof.items);
 
-	let leaf_pos = mmr_lib::leaf_index_to_pos(mmr_update.mmr_proof.leaf_index);
+	let leaf_pos = mmr_lib::leaf_index_to_pos(mmr_update.mmr_proof.leaf_indices[0]); // TODO(blas): fix this
 
 	let root = proof.calculate_root(vec![(leaf_pos, node.into())])?;
 	if root != mmr_root_hash {

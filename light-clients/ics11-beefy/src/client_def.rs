@@ -18,8 +18,8 @@ use beefy_light_client_primitives::{
 };
 use codec::{Decode, Encode};
 use core::{fmt::Debug, marker::PhantomData};
-use pallet_mmr_primitives::BatchProof;
-use primitive_types::H256;
+use pallet_mmr_primitives::Proof;
+use sp_core::H256;
 use tendermint_proto::Protobuf;
 
 use crate::{

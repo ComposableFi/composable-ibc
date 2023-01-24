@@ -21,6 +21,7 @@ sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false }
 sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false }
 
 primitives = { package = "grandpa-light-client-primitives", path = "../primitives", default-features = false }
 light-client-common = { path = "../../../light-clients/common", default-features = false }
