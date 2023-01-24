@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-substrate-simnode = { git = "https://github.com/composableFi/sc-simnode", branch = "polkadot-v0.9.33" }
+substrate-simnode = { git = "https://github.com/polytope-labs/sc-simnode", rev = "fcfa2dee4ebdd4652375ec9c4b3eba2a63c2d28f" }
 parachain-runtime = { path = "../parachain-node/runtime" }
 parachain-node = { path = "../parachain-node" }
 jsonrpsee = { version = "0.15.1", features = ["server"] }
