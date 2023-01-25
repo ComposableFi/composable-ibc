@@ -163,7 +163,15 @@ where
 	let proof =
 		mmr_lib::MerkleProof::<_, MerkleHasher<H>>::new(mmr_size, mmr_update.mmr_proof.items);
 
-	let leaf_pos = mmr_lib::leaf_index_to_pos(mmr_update.mmr_proof.leaf_indices[0]); // TODO(blas): fix this
+	// We are trying to verify the proof for the latest mmr leaf so we expect the proof to contain a
+	// singular leaf index
+	let leaf_index = if mmr_update.mmr_proof.leaf_indices.len() == 1 {
+		mmr_update.mmr_proof.leaf_indices[0]
+	} else {
+		Err(BeefyClientError::ExpectedSingleLeafIndex)?
+	};
+
+	let leaf_pos = mmr_lib::leaf_index_to_pos(leaf_index);
 
 	let root = proof.calculate_root(vec![(leaf_pos, node.into())])?;
 	if root != mmr_root_hash {
