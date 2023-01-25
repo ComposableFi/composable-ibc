@@ -49,13 +49,10 @@ use std::{
 	collections::{BTreeMap, BTreeSet, HashMap},
 	fmt::Display,
 };
+use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, substrate::AssetTip as Tip, ExtrinsicParams};
 #[cfg(feature = "dali")]
-use subxt::tx::AssetTip as Tip;
-use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams};
+use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, polkadot::PlainTip, ExtrinsicParams};
 use tendermint_proto::Protobuf;
-
-#[cfg(not(feature = "dali"))]
-use subxt::tx::PlainTip as Tip;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum FinalityProtocol {

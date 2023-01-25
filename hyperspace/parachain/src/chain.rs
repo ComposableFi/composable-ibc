@@ -26,15 +26,16 @@ use sp_runtime::{
 	traits::{Header as HeaderT, IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
+use subxt::config::substrate::AssetTip as Tip;
 #[cfg(feature = "dali")]
 use subxt::tx::{
-	AssetTip as Tip, SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
+	SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
 };
-use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams};
+use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams};
 
 #[cfg(not(feature = "dali"))]
-use subxt::tx::{
-	PlainTip as Tip, PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
+use subxt::config::polkadot::{
+	PlainTip, PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
 };
 
 use transaction_payment_rpc::TransactionPaymentApiClient;

@@ -44,8 +44,8 @@ use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr};
 #[cfg(feature = "dali")]
 use subxt::tx::AssetTip as Tip;
 #[cfg(not(feature = "dali"))]
-use subxt::tx::PlainTip as Tip;
-use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams};
+use subxt::config::polkadot::PlainTip as Tip;
+use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams};
 
 impl<T: config::Config + Send + Sync> ParachainClient<T>
 where

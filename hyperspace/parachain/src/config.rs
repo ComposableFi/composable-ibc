@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use async_trait::async_trait;
-use subxt::{tx::ExtrinsicParams, OnlineClient};
+use subxt::{config::ExtrinsicParams, OnlineClient};
 
 pub type CustomExtrinsicParams<T> = <<T as subxt::Config>::ExtrinsicParams as ExtrinsicParams<
 	<T as subxt::Config>::Index,
