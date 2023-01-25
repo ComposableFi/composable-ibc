@@ -42,6 +42,9 @@ sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 beefy-prover = { path = "../prover" }
 hex = "0.4.3"
 futures = "0.3.21"
+beefy-gadget = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
+serde = "1.0.144"
+
 
 [features]
 default = ["std", "build-metadata-from-ws"]

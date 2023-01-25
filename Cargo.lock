@@ -606,6 +606,7 @@ dependencies = [
 name = "beefy-light-client"
 version = "0.1.0"
 dependencies = [
+ "beefy-gadget",
  "beefy-light-client-primitives",
  "beefy-primitives",
  "beefy-prover",
@@ -621,6 +622,7 @@ dependencies = [
  "pallet-mmr-rpc",
  "parity-scale-codec",
  "rs_merkle",
+ "serde",
  "serde_json",
  "sp-core 6.0.0",
  "sp-core-hashing 4.0.0",
@@ -695,6 +697,7 @@ dependencies = [
  "pallet-mmr-rpc",
  "parity-scale-codec",
  "rs_merkle",
+ "serde",
  "serde_json",
  "sp-core 6.0.0",
  "sp-core-hashing 4.0.0",

@@ -176,7 +176,7 @@ pub async fn fetch_mmr_proof<T: Config>(
 ) -> Result<LeavesProof<H256>, Error> {
 	let proof: LeavesProof<H256> = client
 		.rpc()
-		.request("mmr_generateBatchProof", rpc_params!(leaf_indices, block_hash))
+		.request("mmr_generateProof", rpc_params!(leaf_indices, block_hash))
 		.await?;
 	Ok(proof)
 }

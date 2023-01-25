@@ -29,6 +29,7 @@ rs_merkle = "1.2.0"
 derive_more = { version = "0.99.17", features = ["from"]  }
 light-client-common = { path = "../../../light-clients/common" }
 jsonrpsee-core = { version = "0.16", features = ["async-client"] }
+serde = "1.0.144"
 
 # Optional deps
 subxt = { git = "https://github.com/paritytech/subxt", rev = "e4e9562b45451f807099a0749dfc4f9a100247c6", features = ["substrate-compat"] }

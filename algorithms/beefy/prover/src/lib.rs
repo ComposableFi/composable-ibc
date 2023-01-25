@@ -44,6 +44,7 @@ use helpers::{
 use hex_literal::hex;
 use pallet_mmr_primitives::Proof;
 use relay_chain_queries::fetch_beefy_justification;
+use serde::{Deserialize, Serialize};
 use sp_core::{hexdisplay::AsBytesRef, keccak_256, H256};
 use sp_io::crypto;
 use sp_runtime::traits::BlakeTwo256;
@@ -55,6 +56,10 @@ use crate::{
 };
 use helpers::{prove_authority_set, AuthorityProofWithSignatures};
 use relay_chain_queries::{fetch_finalized_parachain_heads, fetch_mmr_proof, FinalizedParaHeads};
+
+/// finality proof
+#[derive(Clone, Serialize, Deserialize)]
+pub struct EncodedVersionedFinalityProof(pub sp_core::Bytes);
 
 /// Host function implementation for beefy light client.
 #[derive(Clone, PartialEq, Eq, Debug, Default)]

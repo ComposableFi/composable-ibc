@@ -26,7 +26,7 @@ use serde::{Deserialize, Serialize};
 use sp_core::H256;
 use subxt::{
 	config::substrate::{BlakeTwo256, SubstrateHeader},
-	PolkadotConfig,
+	rpc_params, PolkadotConfig,
 };
 
 pub type Justification = GrandpaJustification<Header>;
@@ -66,15 +66,16 @@ async fn follow_grandpa_justifications() {
 		.collect::<Vec<_>>()
 		.await;
 
-	let mut subscription =
-		GrandpaApiClient::<JustificationNotification, H256, u32>::subscribe_justifications(
-			// we cast between the same type but different crate versions.
-			&*unsafe {
-				unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(prover.relay_ws_client.clone())
-			},
+	let mut subscription = prover
+		.relay_client
+		.rpc()
+		.subscribe::<JustificationNotification>(
+			"grandpa_subscribeJustifications",
+			rpc_params![],
+			"grandpa_unsubscribeJustifications",
 		)
 		.await
-		.expect("Failed to subscribe to grandpa justifications")
+		.unwrap()
 		.take(100);
 
 	let mut client_state = prover.initialize_client_state().await.unwrap();
