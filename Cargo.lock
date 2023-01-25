@@ -3448,7 +3448,7 @@ dependencies = [
  "finality-grandpa",
  "grandpa-light-client-primitives",
  "hex",
- "jsonrpsee 0.15.1",
+ "jsonrpsee 0.16.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpsee-ws-client 0.15.1",
  "light-client-common",
  "once_cell",
@@ -4556,6 +4556,7 @@ dependencies = [
  "jsonrpsee-http-client 0.16.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpsee-server",
  "jsonrpsee-types 0.16.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jsonrpsee-ws-client 0.16.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4568,7 +4569,7 @@ dependencies = [
  "jsonrpsee-http-client 0.16.2 (git+https://github.com/paritytech/jsonrpsee)",
  "jsonrpsee-types 0.16.2 (git+https://github.com/paritytech/jsonrpsee)",
  "jsonrpsee-wasm-client",
- "jsonrpsee-ws-client 0.16.2",
+ "jsonrpsee-ws-client 0.16.2 (git+https://github.com/paritytech/jsonrpsee)",
 ]
 
 [[package]]
@@ -4870,6 +4871,18 @@ dependencies = [
  "jsonrpsee-client-transport 0.15.1",
  "jsonrpsee-core 0.15.1",
  "jsonrpsee-types 0.15.1",
+]
+
+[[package]]
+name = "jsonrpsee-ws-client"
+version = "0.16.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b83daeecfc6517cfe210df24e570fb06213533dfb990318fae781f4c7119dd9"
+dependencies = [
+ "http",
+ "jsonrpsee-client-transport 0.16.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jsonrpsee-core 0.16.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jsonrpsee-types 0.16.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
