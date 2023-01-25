@@ -62,7 +62,7 @@ use frame_support::{
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureRoot,
+	EnsureRoot, EnsureSigned,
 };
 use pallet_ibc::{DenomToAssetId, IbcAssetIds, IbcAssets, IbcDenoms};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -511,6 +511,7 @@ impl pallet_assets::Config for Runtime {
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type Currency = Balances;
+	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
 	type ForceOrigin = EnsureRoot<AccountId>;
 	type AssetDeposit = ();
 	type AssetAccountDeposit = ();
