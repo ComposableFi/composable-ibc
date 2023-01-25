@@ -75,7 +75,7 @@ pub struct ClientState {
 }
 
 /// Holds relavant parachain proofs for both header and timestamp extrinsic.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Encode, Decode)]
 pub struct ParachainHeaderProofs {
 	/// State proofs that prove a parachain header exists at a given relay chain height
 	pub state_proof: Vec<Vec<u8>>,
@@ -86,7 +86,7 @@ pub struct ParachainHeaderProofs {
 }
 
 /// Parachain headers with a Grandpa finality proof.
-#[derive(Clone)]
+#[derive(Clone, Encode, Decode)]
 pub struct ParachainHeadersWithFinalityProof<H: codec::Codec> {
 	/// The grandpa finality proof: contains relay chain headers from the
 	/// last known finalized grandpa block.

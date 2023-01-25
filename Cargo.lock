@@ -3413,6 +3413,7 @@ dependencies = [
  "hash-db",
  "hex",
  "hex-literal",
+ "jsonrpsee-core 0.15.1",
  "jsonrpsee-ws-client 0.15.1",
  "light-client-common",
  "log",

@@ -40,6 +40,7 @@ hex-literal = "0.3.4"
 grandpa-prover = { path = "../prover" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
 jsonrpsee-ws-client = "0.15.1"
+jsonrpsee-core = "0.15.1"
 
 [features]
 default = ["std", "build-metadata-from-ws"]
