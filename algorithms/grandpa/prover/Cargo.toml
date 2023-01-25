@@ -18,7 +18,7 @@ subxt = { git = "https://github.com/paritytech/subxt", rev = "e4e9562b45451f8070
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 derive_more = "0.99.17"
 downcast-rs = "1.2.0"
-jsonrpsee = { version = "0.16", features = ["async-client", "jsonrpsee-ws-client"] }
+jsonrpsee = { version = "0.15.1", features = ["async-client", "jsonrpsee-ws-client"] }
 jsonrpsee-ws-client = "0.15.1"
 finality-grandpa = "0.16.0"
 
