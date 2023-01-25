@@ -61,7 +61,9 @@ use sp_runtime::{
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr, time::Duration};
-use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, substrate::AssetTip as Tip, ExtrinsicParams};
+use subxt::config::{
+	extrinsic_params::BaseExtrinsicParamsBuilder, substrate::AssetTip as Tip, ExtrinsicParams,
+};
 #[cfg(feature = "dali")]
 use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams};
 

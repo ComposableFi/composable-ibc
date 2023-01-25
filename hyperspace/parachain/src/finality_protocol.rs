@@ -49,9 +49,13 @@ use std::{
 	collections::{BTreeMap, BTreeSet, HashMap},
 	fmt::Display,
 };
-use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, substrate::AssetTip as Tip, ExtrinsicParams};
 #[cfg(feature = "dali")]
-use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, polkadot::PlainTip, ExtrinsicParams};
+use subxt::config::{
+	extrinsic_params::BaseExtrinsicParamsBuilder, polkadot::PlainTip, ExtrinsicParams,
+};
+use subxt::config::{
+	extrinsic_params::BaseExtrinsicParamsBuilder, substrate::AssetTip as Tip, ExtrinsicParams,
+};
 use tendermint_proto::Protobuf;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

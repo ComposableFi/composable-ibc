@@ -41,11 +41,11 @@ use sp_runtime::{
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr};
-#[cfg(feature = "dali")]
-use subxt::tx::AssetTip as Tip;
 #[cfg(not(feature = "dali"))]
 use subxt::config::polkadot::PlainTip as Tip;
 use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams};
+#[cfg(feature = "dali")]
+use subxt::tx::AssetTip as Tip;
 
 impl<T: config::Config + Send + Sync> ParachainClient<T>
 where
