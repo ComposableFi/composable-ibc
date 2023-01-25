@@ -151,8 +151,7 @@ where
 						&*self.relay_ws_client,
 					)
 						.await
-						.expect("Failed to subscribe to grandpa justifications")
-						.chunks(6);
+						.expect("Failed to subscribe to grandpa justifications");
 
 				let stream = subscription.filter_map(|justification_notif| {
 					let encoded_justification = match justification_notif {
