@@ -345,10 +345,10 @@ where
 	B::Error: From<A::Error>,
 {
 	let (previous_balance, ..) = send_transfer(chain_a, chain_b, channel_id, None).await;
-	assert_send_transfer(chain_a, previous_balance, 25 * 60).await;
+	assert_send_transfer(chain_a, previous_balance, 20 * 60).await;
 	// now send from chain b.
 	let (previous_balance, ..) = send_transfer(chain_b, chain_a, channel_id, None).await;
-	assert_send_transfer(chain_b, previous_balance, 25 * 60).await;
+	assert_send_transfer(chain_b, previous_balance, 20 * 60).await;
 	log::info!(target: "hyperspace", "🚀🚀 Token Transfer successful with connection delay");
 }
 

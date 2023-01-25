@@ -51,14 +51,10 @@ where
 	let (mut chain_a_finality, mut chain_b_finality) =
 		(chain_a.finality_notifications().await, chain_b.finality_notifications().await);
 	// loop forever
-	let mut count = 0;
 	loop {
 		tokio::select! {
 			// new finality event from chain A
 			result  = chain_a_finality.next() => {
-				if count < 4 {
-					continue
-				}
 				process_finality_event!(chain_a, chain_b, chain_a_metrics, mode, result)
 			}
 			// new finality event from chain B
@@ -66,7 +62,6 @@ where
 				process_finality_event!(chain_b, chain_a, chain_b_metrics, mode, result)
 			}
 		}
-		count += 1;
 	}
 
 	Ok(())
