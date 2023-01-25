@@ -476,7 +476,7 @@ where
 					Error::from(format!("[construct_beefy_client_state] Failed due to {:?}", e))
 				})?;
 
-			let subxt_block_number: subxt::rpc::BlockNumber =
+			let subxt_block_number: subxt::rpc::types::BlockNumber =
 				beefy_state.latest_beefy_height.into();
 			let block_hash = self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?;
 			let heads_addr = polkadot::api::storage().paras().heads(
@@ -510,7 +510,7 @@ where
 			if block_number == 0 {
 				continue
 			}
-			let subxt_block_number: subxt::rpc::BlockNumber = block_number.into();
+			let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
 			let block_hash =
 				self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
 			let timestamp_addr = api::storage().timestamp().now();
@@ -593,7 +593,7 @@ where
 			client_state.para_id = self.para_id;
 			client_state.latest_relay_height = light_client_state.latest_relay_height;
 
-			let subxt_block_number: subxt::rpc::BlockNumber = block_number.into();
+			let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
 			let block_hash =
 				self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
 			let timestamp_addr = api::storage().timestamp().now();

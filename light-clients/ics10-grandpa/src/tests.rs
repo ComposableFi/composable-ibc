@@ -142,7 +142,7 @@ async fn test_continuous_update_of_grandpa_client() {
 			current_authorities: client_state.current_authorities,
 			_phantom: Default::default(),
 		};
-		let subxt_block_number: subxt::rpc::BlockNumber = decoded_para_head.number.into();
+		let subxt_block_number: subxt::rpc::types::BlockNumber = decoded_para_head.number.into();
 		let block_hash =
 			prover.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
 

@@ -20,9 +20,8 @@ use crate::{
 use beefy_light_client_primitives::get_leaf_index_for_block_number;
 use beefy_primitives::{SignedCommitment, VersionedFinalityProof};
 use codec::{Decode, Encode};
-use pallet_mmr_rpc::{LeafBatchProof, LeafProof};
+use pallet_mmr_rpc::LeavesProof;
 use sp_core::{hexdisplay::AsBytesRef, storage::StorageKey, H256};
-use sp_primitives::Justifications;
 use sp_runtime::traits::Zero;
 use std::collections::{BTreeMap, BTreeSet};
 use subxt::{config::Header, rpc::rpc_params, Config, OnlineClient};
@@ -49,19 +48,30 @@ where
 	u32: From<<T as subxt::Config>::BlockNumber>,
 	T::BlockNumber: Ord + Zero,
 {
-	let subxt_block_number: subxt::rpc::BlockNumber = commitment_block_number.into();
+	let subxt_block_number: subxt::rpc::types::BlockNumber = commitment_block_number.into();
 	let block_hash = client.rpc().block_hash(Some(subxt_block_number)).await?;
 
 	let mut para_ids = vec![];
 	let key = runtime::api::storage().paras().parachains();
 	let ids = client
 		.storage()
-		.fetch(&key, block_hash)
+		.at(block_hash)
+		.await
+		.expect("Storage client should be available")
+		.fetch(&key)
 		.await?
 		.ok_or_else(|| Error::Custom(format!("No ParaIds on relay chain?")))?;
 	for id in ids {
 		let key = runtime::api::storage().paras().para_lifecycles(&id);
-		match client.storage().fetch(&key, block_hash).await?.expect("ParaId is known") {
+		match client
+			.storage()
+			.at(block_hash)
+			.await
+			.expect("Storage client should be available")
+			.fetch(&key)
+			.await?
+			.expect("ParaId is known")
+		{
 			// only care about active parachains.
 			ParaLifecycle::Parachain => para_ids.push(id),
 			_ => {},
@@ -99,7 +109,14 @@ where
 		let mut heads = BTreeMap::new();
 		for id in para_ids.iter() {
 			let key = runtime::api::storage().paras().heads(id);
-			if let Some(head) = client.storage().fetch(&key, Some(header.hash())).await? {
+			if let Some(head) = client
+				.storage()
+				.at(Some(header.hash()))
+				.await
+				.expect("Storage client should be available")
+				.fetch(&key)
+				.await?
+			{
 				heads.insert(id.0, head.0);
 			}
 		}
@@ -136,8 +153,11 @@ pub async fn fetch_beefy_justification<T: Config>(
 
 	let justifications = block.justifications.expect("Block should have valid justifications");
 
-	let beefy_justification = Justifications(justifications)
-		.into_justification(beefy_primitives::BEEFY_ENGINE_ID)
+	let beefy_justification = justifications
+		.into_iter()
+		.find_map(|justfication| {
+			(justfication.0 == beefy_primitives::BEEFY_ENGINE_ID).then(|| justfication.1)
+		})
 		.expect("Should have valid beefy justification");
 	let VersionedFinalityProof::V1(signed_commitment) = VersionedFinalityProof::<
 		u32,
@@ -148,30 +168,16 @@ pub async fn fetch_beefy_justification<T: Config>(
 	Ok((signed_commitment, latest_beefy_finalized))
 }
 
-/// Query a batch leaf proof
-pub async fn fetch_mmr_batch_proof<T: Config>(
+/// Query a mmr  proof
+pub async fn fetch_mmr_proof<T: Config>(
 	client: &OnlineClient<T>,
 	leaf_indices: Vec<u32>,
 	block_hash: Option<T::Hash>,
-) -> Result<LeafBatchProof<H256>, Error> {
-	let proof: LeafBatchProof<H256> = client
+) -> Result<LeavesProof<H256>, Error> {
+	let proof: LeavesProof<H256> = client
 		.rpc()
 		.request("mmr_generateBatchProof", rpc_params!(leaf_indices, block_hash))
 		.await?;
-	Ok(proof)
-}
-
-/// Query a single leaf proof
-pub async fn fetch_mmr_leaf_proof<T: Config>(
-	client: &OnlineClient<T>,
-	leaf_index: u64,
-	block_hash: Option<T::Hash>,
-) -> Result<LeafProof<H256>, Error> {
-	let proof: LeafProof<H256> = client
-		.rpc()
-		.request("mmr_generateProof", rpc_params!(leaf_index, block_hash))
-		.await?;
-
 	Ok(proof)
 }
 

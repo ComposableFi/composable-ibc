@@ -32,7 +32,7 @@ use beefy_light_client_primitives::{
 	ParachainHeader, PartialMmrLeaf, SignedCommitment,
 };
 use beefy_primitives::{
-	known_payload_ids::MMR_ROOT_ID,
+	known_payloads::MMR_ROOT_ID,
 	mmr::{BeefyNextAuthoritySet, MmrLeaf},
 };
 use codec::{Decode, Encode};
@@ -42,21 +42,19 @@ use helpers::{
 	ParaHeadsProof, TimeStampExtWithProof,
 };
 use hex_literal::hex;
-use pallet_mmr_primitives::BatchProof;
-use relay_chain_queries::{fetch_beefy_justification, fetch_mmr_batch_proof};
+use pallet_mmr_primitives::Proof;
+use relay_chain_queries::fetch_beefy_justification;
 use sp_core::{hexdisplay::AsBytesRef, keccak_256, H256};
 use sp_io::crypto;
-use sp_runtime::traits::{BlakeTwo256, Header as HeaderT};
-use subxt::{rpc::rpc_params, Config, OnlineClient};
+use sp_runtime::traits::BlakeTwo256;
+use subxt::{config::Header as HeaderT, rpc::rpc_params, Config, OnlineClient};
 
 use crate::{
 	relay_chain_queries::parachain_header_storage_key,
 	runtime::api::runtime_types::polkadot_parachain::primitives::Id,
 };
 use helpers::{prove_authority_set, AuthorityProofWithSignatures};
-use relay_chain_queries::{
-	fetch_finalized_parachain_heads, fetch_mmr_leaf_proof, FinalizedParaHeads,
-};
+use relay_chain_queries::{fetch_finalized_parachain_heads, fetch_mmr_proof, FinalizedParaHeads};
 
 /// Host function implementation for beefy light client.
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
@@ -129,19 +127,22 @@ where
 		let header = client.rpc().header(Some(latest_beefy_finalized)).await.unwrap().unwrap();
 		let validator_set_id = {
 			let key = runtime::api::storage().beefy().validator_set_id();
-			client.storage().fetch(&key, None).await.unwrap().unwrap()
+			client.storage().at(None).await.unwrap().fetch(&key).await.unwrap().unwrap()
 		};
 
 		let next_val_set = {
 			let key = runtime::api::storage().mmr_leaf().beefy_next_authorities();
 			client
 				.storage()
-				.fetch(&key, None)
+				.at(None)
+				.await
+				.expect("storage client should be available")
+				.fetch(&key)
 				.await
 				.unwrap()
 				.expect("Authorirty set should be defined")
 		};
-		let latest_beefy_height: u64 = (*header.number()).into();
+		let latest_beefy_height: u64 = (header.number()).into();
 		ClientState {
 			latest_beefy_height: latest_beefy_height as u32,
 			mmr_root_hash: Default::default(),
@@ -170,9 +171,9 @@ where
 		u32: From<T::BlockNumber>,
 		T::BlockNumber: From<u32>,
 	{
-		let subxt_block_number: subxt::rpc::BlockNumber = commitment_block_number.into();
+		let subxt_block_number: subxt::rpc::types::BlockNumber = commitment_block_number.into();
 		let block_hash = self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?;
-		let previous_finalized_block_number: subxt::rpc::BlockNumber =
+		let previous_finalized_block_number: subxt::rpc::types::BlockNumber =
 			(latest_beefy_height + 1).into();
 		let previous_finalized_hash = self
 			.relay_client
@@ -210,7 +211,10 @@ where
 			let head = self
 				.relay_client
 				.storage()
-				.fetch(&key, Some(header.hash()))
+				.at(Some(header.hash()))
+				.await
+				.expect("storage client should be available")
+				.fetch(&key)
 				.await?
 				.expect("Header exists in its own changeset; qed");
 
@@ -229,7 +233,7 @@ where
 		commitment_block_number: u32,
 		latest_beefy_height: u32,
 		header_numbers: Vec<T::BlockNumber>,
-	) -> Result<(Vec<ParachainHeader>, BatchProof<H256>), Error>
+	) -> Result<(Vec<ParachainHeader>, Proof<H256>), Error>
 	where
 		T::BlockNumber: Ord + sp_runtime::traits::Zero,
 		u32: From<T::BlockNumber>,
@@ -246,11 +250,10 @@ where
 			)
 			.await?;
 
-		let subxt_block_number: subxt::rpc::BlockNumber = commitment_block_number.into();
+		let subxt_block_number: subxt::rpc::types::BlockNumber = commitment_block_number.into();
 		let block_hash = self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?;
 
-		let batch_proof =
-			fetch_mmr_batch_proof(&self.relay_client, leaf_indices, block_hash).await?;
+		let batch_proof = fetch_mmr_proof(&self.relay_client, leaf_indices, block_hash).await?;
 
 		let leaves: Vec<Vec<u8>> = Decode::decode(&mut &*batch_proof.leaves.to_vec())?;
 
@@ -298,8 +301,7 @@ where
 			parachain_headers.push(header);
 		}
 
-		let batch_proof: pallet_mmr_primitives::BatchProof<H256> =
-			Decode::decode(&mut batch_proof.proof.0.as_slice())?;
+		let batch_proof: Proof<H256> = Decode::decode(&mut batch_proof.proof.0.as_slice())?;
 		Ok((parachain_headers, batch_proof))
 	}
 
@@ -312,7 +314,7 @@ where
 			beefy_primitives::crypto::Signature,
 		>,
 	) -> Result<MmrUpdateProof, Error> {
-		let subxt_block_number: subxt::rpc::BlockNumber =
+		let subxt_block_number: subxt::rpc::types::BlockNumber =
 			signed_commitment.commitment.block_number.into();
 		let block_hash = self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?;
 
@@ -320,7 +322,10 @@ where
 			let key = runtime::api::storage().beefy().authorities();
 			self.relay_client
 				.storage()
-				.fetch(&key, block_hash)
+				.at(block_hash)
+				.await
+				.expect("storage client should exist")
+				.fetch(&key)
 				.await?
 				.ok_or_else(|| Error::Custom(format!("No beefy authorities found!")))?
 				.0
@@ -330,11 +335,9 @@ where
 		let block_number = signed_commitment.commitment.block_number;
 		let leaf_index = get_leaf_index_for_block_number(self.beefy_activation_block, block_number);
 		let leaf_proof =
-			fetch_mmr_leaf_proof(&self.relay_client, leaf_index.into(), block_hash).await?;
-
-		let opaque_leaf: Vec<u8> = codec::Decode::decode(&mut &*leaf_proof.leaf.0)?;
-		let latest_leaf: MmrLeaf<u32, H256, H256, H256> =
-			codec::Decode::decode(&mut &*opaque_leaf)?;
+			fetch_mmr_proof(&self.relay_client, vec![leaf_index.into()], block_hash).await?;
+		let leaves: Vec<Vec<u8>> = codec::Decode::decode(&mut &*leaf_proof.leaves.0)?;
+		let latest_leaf: MmrLeaf<u32, H256, H256, H256> = codec::Decode::decode(&mut &*leaves[0])?;
 		let mmr_proof: pallet_mmr_primitives::Proof<H256> =
 			codec::Decode::decode(&mut &*leaf_proof.proof.0)?;
 
@@ -369,7 +372,10 @@ where
 			let key = runtime::api::storage().mmr_leaf().beefy_next_authorities();
 			self.relay_client
 				.storage()
-				.fetch(&key, Some(latest_beefy_finalized))
+				.at(Some(latest_beefy_finalized))
+				.await
+				.expect("Storage client should be available")
+				.fetch(&key)
 				.await?
 				.expect("Should retrieve next authority set")
 				.encode()
@@ -381,7 +387,10 @@ where
 			let key = runtime::api::storage().beefy().authorities();
 			self.relay_client
 				.storage()
-				.fetch(&key, Some(latest_beefy_finalized))
+				.at(Some(latest_beefy_finalized))
+				.await
+				.expect("Storage client should be available")
+				.fetch(&key)
 				.await?
 				.expect("Should retrieve next authority set")
 				.0

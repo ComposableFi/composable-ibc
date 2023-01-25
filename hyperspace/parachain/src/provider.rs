@@ -321,7 +321,7 @@ where
 		let latest_height: u64 = (*finalized_header.number()).into();
 		let height = Height::new(self.para_id.into(), latest_height.into());
 
-		let subxt_block_number: subxt::rpc::BlockNumber = latest_height.into();
+		let subxt_block_number: subxt::rpc::types::BlockNumber = latest_height.into();
 		let block_hash = self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
 		let timestamp_addr = parachain::api::storage().timestamp().now();
 		let unix_timestamp_millis = self
@@ -555,7 +555,7 @@ where
 	}
 
 	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error> {
-		let subxt_block_number: subxt::rpc::BlockNumber = block_number.into();
+		let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
 		let block_hash = self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
 		let timestamp_addr = parachain::api::storage().timestamp().now();
 		let unix_timestamp_millis = self
