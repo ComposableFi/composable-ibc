@@ -82,6 +82,8 @@ async fn follow_grandpa_justifications() {
 		let justification =
 			Justification::decode(&mut &justification[..]).expect("Failed to decode justification");
 
+		println!("{:#?}", justification);
+		println!("current_set_id: {}", client_state.latest_relay_height);
 		let finalized_para_header = prover
 			.query_latest_finalized_parachain_header(justification.commit.target_number)
 			.await
