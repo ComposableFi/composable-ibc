@@ -45,9 +45,9 @@ mod tests;
 /// Next, we prove the finality of parachain headers, by verifying patricia-merkle trie state proofs
 /// of these headers, stored at the recently finalized relay chain heights.
 pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
-	mut client_state: ClientState<H::Hash>,
+	mut client_state: ClientState,
 	proof: ParachainHeadersWithFinalityProof<H>,
-) -> Result<ClientState<H::Hash>, error::Error>
+) -> Result<ClientState, error::Error>
 where
 	H: Header<Hash = H256, Number = u32>,
 	H::Number: finality_grandpa::BlockNumberOps + Into<u32>,

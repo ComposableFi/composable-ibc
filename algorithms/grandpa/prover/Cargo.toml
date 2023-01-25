@@ -14,11 +14,11 @@ subxt-codegen = { package = "codegen", path = "../../../utils/subxt/codegen" }
 hex = "0.4.3"
 anyhow = "1.0.64"
 serde = "1.0.144"
-subxt = { git = "https://github.com/paritytech/subxt", rev = "e4e9562b45451f807099a0749dfc4f9a100247c6" }
+subxt = { git = "https://github.com/paritytech/subxt", rev = "e4e9562b45451f807099a0749dfc4f9a100247c6", features = ["substrate-compat"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 derive_more = "0.99.17"
 downcast-rs = "1.2.0"
-jsonrpsee = { version = "0.15.1", features = ["async-client", "jsonrpsee-ws-client"] }
+jsonrpsee = { version = "0.16", features = ["async-client", "jsonrpsee-ws-client"] }
 jsonrpsee-ws-client = "0.15.1"
 finality-grandpa = "0.16.0"
 

@@ -32,7 +32,7 @@ light-client-common = { path = "../../../light-clients/common", default-features
 
 [dev-dependencies]
 tokio = { version = "1.17.0", features = ["full"] }
-subxt = { git = "https://github.com/paritytech/subxt", rev = "e4e9562b45451f807099a0749dfc4f9a100247c6" }
+subxt = { git = "https://github.com/paritytech/subxt", rev = "e4e9562b45451f807099a0749dfc4f9a100247c6", features = ["substrate-compat"] }
 hex-literal = "0.3.4"
 serde_json = "1.0.74"
 pallet-mmr-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
