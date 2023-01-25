@@ -57,8 +57,8 @@ pub struct ClientState<H> {
 	pub _phantom: PhantomData<H>,
 }
 
-impl<H> From<ClientState<H>> for grandpa_client_primitives::ClientState<H256> {
-	fn from(client_state: ClientState<H>) -> grandpa_client_primitives::ClientState<H256> {
+impl<H> From<ClientState<H>> for grandpa_client_primitives::ClientState {
+	fn from(client_state: ClientState<H>) -> grandpa_client_primitives::ClientState {
 		grandpa_client_primitives::ClientState {
 			current_authorities: client_state.current_authorities,
 			current_set_id: client_state.current_set_id,
