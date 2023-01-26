@@ -159,7 +159,6 @@ jobs:
       - name: Terminate local parachain cluster
         run: |
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml down -v
-    name: build project
     
   test-solidity:
     runs-on:
