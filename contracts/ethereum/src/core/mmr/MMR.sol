@@ -427,7 +427,7 @@ library MMR {
         uint256 left,
         uint256 right
     ) public pure returns (bytes32[] memory sortedArr) {
-        if (arr.length == 0) {
+        if (arr.length == 0) || left >= right {
             return arr;
         }
         if (left >= right) return arr;
