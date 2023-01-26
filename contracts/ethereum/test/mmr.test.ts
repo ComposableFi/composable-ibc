@@ -19,16 +19,16 @@ describe("MMR contract", function () {
     mmr = await MMRWrapper.deploy();
 
     testValues = [
-      ethers.utils.formatBytes32String("0x0001"),
-      ethers.utils.formatBytes32String("0x0002"),
-      ethers.utils.formatBytes32String("0x0003"),
-      ethers.utils.formatBytes32String("0x0004"),
-      ethers.utils.formatBytes32String("0x0005"),
-      ethers.utils.formatBytes32String("0x0006"),
-      ethers.utils.formatBytes32String("0x0007"),
-      ethers.utils.formatBytes32String("0x0008"),
-      ethers.utils.formatBytes32String("0x0009"),
-      ethers.utils.formatBytes32String("0x000a"),
+      ethers.utils.formatBytes32String("0x0001"), // index 0
+      ethers.utils.formatBytes32String("0x0002"), // index 1
+      ethers.utils.formatBytes32String("0x0003"), // index 3
+      ethers.utils.formatBytes32String("0x0004"), // index 4
+      ethers.utils.formatBytes32String("0x0005"), // index 7
+      ethers.utils.formatBytes32String("0x0006"), // index 8
+      ethers.utils.formatBytes32String("0x0007"), // index 10
+      ethers.utils.formatBytes32String("0x0008"), // index 11
+      ethers.utils.formatBytes32String("0x0009"), // index 15
+      ethers.utils.formatBytes32String("0x000a"), // index 16
     ];
     for (let i = 0; i < testValues.length; i++) {
       await mmr.append(testValues[i]);
@@ -38,149 +38,149 @@ describe("MMR contract", function () {
   it("Should construct correct mmr tree", async function () {
     await loadFixture(deployMMRFixture);
 
-    let position1Value = ethers.utils.keccak256(
+    let position0Value = ethers.utils.keccak256(
       ethers.utils.solidityPack(
         ["bytes32"],
         [testValues[0]]
       )
     );
-    expect(position1Value).to.be.equal(await mmr.getNode(1));
+    expect(position0Value).to.be.equal(await mmr.getNode(0));
 
-    let position2Value = ethers.utils.keccak256(
+    let position1Value = ethers.utils.keccak256(
       ethers.utils.solidityPack(
         ["bytes32"],
         [testValues[1]]
       )
     );
-    expect(position2Value).to.be.equal(await mmr.getNode(2));
+    expect(position1Value).to.be.equal(await mmr.getNode(1));
 
-    let position4Value = ethers.utils.keccak256(
+    let position3Value = ethers.utils.keccak256(
         ethers.utils.solidityPack(
         ["bytes32"],
         [testValues[2]]
       )
     );
-    expect(position4Value).to.be.equal(await mmr.getNode(4));
+    expect(position3Value).to.be.equal(await mmr.getNode(3));
 
-    let position5Value = ethers.utils.keccak256(
+    let position4Value = ethers.utils.keccak256(
       ethers.utils.solidityPack(
         ["bytes32"],
         [testValues[3]]
       )
     );
-    expect(position5Value).to.be.equal(await mmr.getNode(5));
+    expect(position4Value).to.be.equal(await mmr.getNode(4));
 
-    let position8Value = ethers.utils.keccak256(
+    let position7Value = ethers.utils.keccak256(
       ethers.utils.solidityPack(
         ["bytes32"],
         [testValues[4]]
       )
     );
-    expect(position8Value).to.be.equal(await mmr.getNode(8));
+    expect(position7Value).to.be.equal(await mmr.getNode(7));
 
-    let position9Value = ethers.utils.keccak256(
+    let position8Value = ethers.utils.keccak256(
       ethers.utils.solidityPack(
         ["bytes32"],
         [testValues[5]]
       )
     );
-    expect(position9Value).to.be.equal(await mmr.getNode(9));
+    expect(position8Value).to.be.equal(await mmr.getNode(8));
 
-    let position11Value = ethers.utils.keccak256(
+    let position10Value = ethers.utils.keccak256(
       ethers.utils.solidityPack(
         ["bytes32"],
         [testValues[6]]
       )
     );
-    expect(position11Value).to.be.equal(await mmr.getNode(11));
+    expect(position10Value).to.be.equal(await mmr.getNode(10));
 
-    let position12Value = ethers.utils.keccak256(
+    let position11Value = ethers.utils.keccak256(
       ethers.utils.solidityPack(
         ["bytes32"],
         [testValues[7]]
       )
     );
-    expect(position12Value).to.be.equal(await mmr.getNode(12));
+    expect(position11Value).to.be.equal(await mmr.getNode(11));
 
-    let position16Value = ethers.utils.keccak256(
+    let position15Value = ethers.utils.keccak256(
       ethers.utils.solidityPack(
         ["bytes32"],
         [testValues[8]]
       )
     );
-    expect(position16Value).to.be.equal(await mmr.getNode(16));
+    expect(position15Value).to.be.equal(await mmr.getNode(15));
 
-    let position17Value = ethers.utils.keccak256(
+    let position16Value = ethers.utils.keccak256(
       ethers.utils.solidityPack(
         ["bytes32"],
         [testValues[9]]
       )
     );
-    expect(position17Value).to.be.equal(await mmr.getNode(17));
+    expect(position16Value).to.be.equal(await mmr.getNode(16));
 
-    let position3Value = ethers.utils.keccak256(
+    let position2Value = ethers.utils.keccak256(
       ethers.utils.solidityPack(
         ["bytes32", "bytes32"],
-        [position1Value, position2Value]
+        [position0Value, position1Value]
       )
     );
-    expect(position3Value).to.be.equal(await mmr.getNode(3));
+    expect(position2Value).to.be.equal(await mmr.getNode(2));
+    let position5Value = ethers.utils.keccak256(
+      ethers.utils.solidityPack(
+        ["bytes32", "bytes32"],
+        [position3Value, position4Value]
+      )
+    );
+    expect(position5Value).to.be.equal(await mmr.getNode(5));
+    let position9Value = ethers.utils.keccak256(
+      ethers.utils.solidityPack(
+        ["bytes32", "bytes32"],
+        [position7Value, position8Value]
+      )
+    );
+    expect(position9Value).to.be.equal(await mmr.getNode(9));
+    let position12Value = ethers.utils.keccak256(
+      ethers.utils.solidityPack(
+        ["bytes32", "bytes32"],
+        [position10Value, position11Value]
+      )
+    );
+    expect(position12Value).to.be.equal(await mmr.getNode(12));
+    let position17Value = ethers.utils.keccak256(
+      ethers.utils.solidityPack(
+        ["bytes32", "bytes32"],
+        [position15Value, position16Value]
+      )
+    );
+    expect(position17Value).to.be.equal(await mmr.getNode(17));
     let position6Value = ethers.utils.keccak256(
       ethers.utils.solidityPack(
         ["bytes32", "bytes32"],
-        [position4Value, position5Value]
+        [position2Value, position5Value]
       )
     );
     expect(position6Value).to.be.equal(await mmr.getNode(6));
-    let position10Value = ethers.utils.keccak256(
-      ethers.utils.solidityPack(
-        ["bytes32", "bytes32"],
-        [position8Value, position9Value]
-      )
-    );
-    expect(position10Value).to.be.equal(await mmr.getNode(10));
     let position13Value = ethers.utils.keccak256(
       ethers.utils.solidityPack(
         ["bytes32", "bytes32"],
-        [position11Value, position12Value]
+        [position9Value, position12Value]
       )
     );
     expect(position13Value).to.be.equal(await mmr.getNode(13));
-    let position18Value = ethers.utils.keccak256(
-      ethers.utils.solidityPack(
-        ["bytes32", "bytes32"],
-        [position16Value, position17Value]
-      )
-    );
-    expect(position18Value).to.be.equal(await mmr.getNode(18));
-    let position7Value = ethers.utils.keccak256(
-      ethers.utils.solidityPack(
-        ["bytes32", "bytes32"],
-        [position3Value, position6Value]
-      )
-    );
-    expect(position7Value).to.be.equal(await mmr.getNode(7));
     let position14Value = ethers.utils.keccak256(
       ethers.utils.solidityPack(
         ["bytes32", "bytes32"],
-        [position10Value, position13Value]
+        [position6Value, position13Value]
       )
     );
     expect(position14Value).to.be.equal(await mmr.getNode(14));
-    let position15Value = ethers.utils.keccak256(
-      ethers.utils.solidityPack(
-        ["bytes32", "bytes32"],
-        [position7Value, position14Value]
-      )
-    );
-    expect(position15Value).to.be.equal(await mmr.getNode(15));
 
     const size = 18;
     //keccak256(abi.encodePacked(size, keccak256(abi.encodePacked(size, peaks)))
     let root = ethers.utils.keccak256(
             ethers.utils.solidityPack(
               ["bytes32", "bytes32"],
-              [position15Value, position18Value]
+              [position14Value, position17Value]
             )
           );
 
@@ -192,7 +192,7 @@ describe("MMR contract", function () {
     await loadFixture(deployMMRFixture);
 
     // create proof
-    const index = 17;
+    const index = 16;
     const data = await mmr.getMerkleProof(index);
     const root = data.root;
     const width = data.width;
@@ -212,7 +212,7 @@ describe("MMR contract", function () {
     await loadFixture(deployMMRFixture);
 
     // create proof
-    const index = 17;
+    const index = 16;
     const data = await mmr.getMerkleProof(index);
     const root = data.root;
     const width = data.width;

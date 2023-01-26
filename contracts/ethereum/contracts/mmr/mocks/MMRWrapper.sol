@@ -29,7 +29,7 @@ contract MMRWrapper {
     verified = MMR.inclusionProof(
         root,
         width,
-        index,
+        index + 1,
         value,
         peaks,
         siblings
@@ -42,11 +42,11 @@ contract MMRWrapper {
       bytes32[] memory peakBagging,
       bytes32[] memory siblings
   ){
-    return mmr.getMerkleProof(index);
+    return mmr.getMerkleProof(index + 1);
   }
 
   function getNode(uint256 index) public view returns (bytes32) {
-    return mmr.getNode(index);
+    return mmr.getNode(index + 1);
   }
   
 }
