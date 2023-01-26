@@ -1,5 +1,3 @@
-import { extendEnvironment } from "hardhat/config";
-
 const { BigNumber } = require('ethers')
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
@@ -7,7 +5,6 @@ const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("MMR contract", function () {
   let mmr;
-  let mmrNew;
   let MMRWrapper;
   let owner;
   let testValues: any;
@@ -219,6 +216,9 @@ describe("MMR contract", function () {
       )
     ).to.be.revertedWith("Hashed peak is invalid");
   });
+
+  // tests from substrate implementation
+  // https://github.com/paritytech/substrate/blob/master/frame/beefy-mmr/primitives/src/lib.rs#L404
   describe("substrate tests", function () {
     async function testMMR(dataArray: any, root: string) {
       let mmrNew = await createMMR();

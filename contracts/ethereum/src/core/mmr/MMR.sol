@@ -417,7 +417,7 @@ library MMR {
 
     /// @notice sort array of hashes
     /// @dev returns a sorted array using quicksort algorithm and recursion
-    /// @dev this function changes the order of the input array
+    /// @dev !! this function changes the order of the input array
     /// @param arr array of hashes
     /// @param left partition left index
     /// @param right partition right index
