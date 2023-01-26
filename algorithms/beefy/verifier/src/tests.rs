@@ -14,8 +14,8 @@
 // limitations under the License.
 
 use beefy_light_client_primitives::{
-	error::BeefyClientError, MmrUpdateProof, ParachainsUpdateProof, SignatureWithAuthorityIndex,
-	SignedCommitment,
+	error::BeefyClientError, EncodedVersionedFinalityProof, MmrUpdateProof, ParachainsUpdateProof,
+	SignatureWithAuthorityIndex, SignedCommitment,
 };
 use beefy_primitives::{
 	known_payloads::MMR_ROOT_ID,
@@ -25,15 +25,11 @@ use beefy_primitives::{
 use beefy_prover::{Crypto, Prover};
 use futures::stream::StreamExt;
 use pallet_mmr_primitives::Proof;
-use serde::{Deserialize, Serialize};
 use sp_core::bytes::to_hex;
 use subxt::{
 	rpc::{rpc_params, Subscription},
 	PolkadotConfig,
 };
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct EncodedVersionedFinalityProof(pub sp_core::Bytes);
 
 #[tokio::test]
 #[ignore]
@@ -50,7 +46,10 @@ async fn test_verify_mmr_with_proof() {
 	let para_client = subxt::client::OnlineClient::<PolkadotConfig>::from_url(para_ws_url)
 		.await
 		.unwrap();
-
+	println!("Waiting for parachain to start producing blocks");
+	let block_sub = para_client.blocks().subscribe_finalized().await.unwrap();
+	block_sub.take(2).collect::<Vec<_>>().await;
+	println!("Parachain has started producing blocks");
 	let mut client_state = Prover::get_initial_client_state(Some(&client)).await;
 	let subscription: Subscription<EncodedVersionedFinalityProof> = client
 		.rpc()
@@ -62,8 +61,7 @@ async fn test_verify_mmr_with_proof() {
 		.await
 		.unwrap();
 
-	let parachain_client =
-		Prover { relay_client: client, para_client, beefy_activation_block: 0, para_id: 2000 };
+	let parachain_client = Prover { relay_client: client, para_client, para_id: 2000 };
 
 	let mut subscription_stream = subscription.enumerate().take(100);
 	while let Some((count, Ok(encoded_versioned_finality_proof))) = subscription_stream.next().await
@@ -223,6 +221,10 @@ async fn verify_parachain_headers() {
 		.await
 		.unwrap();
 
+	println!("Waiting for parachain to start producing blocks");
+	let block_sub = para_client.blocks().subscribe_finalized().await.unwrap();
+	block_sub.take(2).collect::<Vec<_>>().await;
+	println!("Parachain has started producing blocks");
 	let mut client_state = Prover::get_initial_client_state(Some(&client)).await;
 	let subscription: Subscription<EncodedVersionedFinalityProof> = client
 		.rpc()
@@ -234,13 +236,7 @@ async fn verify_parachain_headers() {
 		.await
 		.unwrap();
 
-	println!("Waiting for parachain to start producing blocks");
-	let block_sub = para_client.blocks().subscribe_finalized().await.unwrap();
-	block_sub.take(2).collect::<Vec<_>>().await;
-	println!("Parachain has started producing blocks");
-
-	let parachain_client =
-		Prover { relay_client: client, para_client, beefy_activation_block: 0, para_id: 2000 };
+	let parachain_client = Prover { relay_client: client, para_client, para_id: 2000 };
 
 	let mut subscription_stream = subscription.enumerate().take(100);
 	while let Some((count, Ok(encoded_versioned_finality_proof))) = subscription_stream.next().await

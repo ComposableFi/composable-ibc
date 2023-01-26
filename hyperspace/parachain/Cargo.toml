@@ -30,7 +30,7 @@ serde = {version="1.0.137", features = ["derive"]}
 tokio-stream = { version = "0.1.9", features = ["sync"]}
 thiserror = "1.0.31"
 itertools = "0.10.3"
-jsonrpsee = "0.16"
+jsonrpsee = "0.15.1"
 jsonrpsee-ws-client = "0.15.1"
 finality-grandpa = "0.16.0"
 
@@ -40,7 +40,7 @@ ss58-registry = "1.28.0"
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
 
 # subxt
-subxt = { git = "https://github.com/paritytech/subxt", rev = "e4e9562b45451f807099a0749dfc4f9a100247c6", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/ComposableFi/subxt", rev = "7a54d51ffe1d2daf785d13040276e5cbe30c29ed", features = ["substrate-compat"] }
 subxt-generated = { path = "../../utils/subxt/generated" }
 
 beefy-primitives = {  git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }

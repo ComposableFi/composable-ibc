@@ -31,7 +31,7 @@ light-client-common = { path = "../../../light-clients/common" }
 jsonrpsee-core = { version = "0.15.1", features = ["async-client"] }
 
 # Optional deps
-subxt = { git = "https://github.com/paritytech/subxt", rev = "e4e9562b45451f807099a0749dfc4f9a100247c6", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/ComposableFi/subxt", rev = "7a54d51ffe1d2daf785d13040276e5cbe30c29ed", features = ["substrate-compat"] }
 hex-literal = { version = "0.3.4" }
 serde_json = { version = "1.0.74" }
 pallet-mmr-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }

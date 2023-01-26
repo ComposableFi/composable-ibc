@@ -17,7 +17,6 @@ use super::runtime;
 use crate::{
 	error::Error, runtime::api::runtime_types::polkadot_runtime_parachains::paras::ParaLifecycle,
 };
-use beefy_light_client_primitives::get_leaf_index_for_block_number;
 use beefy_primitives::{SignedCommitment, VersionedFinalityProof};
 use codec::{Decode, Encode};
 use pallet_mmr_rpc::LeavesProof;
@@ -29,8 +28,8 @@ use subxt::{config::Header, rpc::rpc_params, Config, OnlineClient};
 /// This contains the leaf indices of the relay chain blocks and a map of relay chain heights to a
 /// map of all parachain headers at those heights Used for generating [`ParaHeadsProof`]
 pub struct FinalizedParaHeads {
-	/// Leaf indices
-	pub leaf_indices: Vec<u32>,
+	/// Block numbers
+	pub block_numbers: Vec<u32>,
 	/// Map of relay chain heights to map of para ids and parachain headers SCALE-encoded
 	pub raw_finalized_heads: BTreeMap<u64, BTreeMap<u32, Vec<u8>>>,
 }
@@ -41,7 +40,6 @@ pub async fn fetch_finalized_parachain_heads<T: Config>(
 	commitment_block_number: u32,
 	latest_beefy_height: u32,
 	para_id: u32,
-	beefy_activation_block: u32,
 	header_numbers: &BTreeSet<T::BlockNumber>,
 ) -> Result<FinalizedParaHeads, Error>
 where
@@ -99,7 +97,7 @@ where
 		)
 		.await?;
 	let mut finalized_blocks = BTreeMap::new();
-	let mut leaf_indices = vec![];
+	let mut block_numbers = vec![];
 
 	for changes in change_set {
 		let header = client.rpc().header(Some(changes.block)).await?.ok_or_else(|| {
@@ -131,10 +129,10 @@ where
 
 		let block_number = u32::from(header.number());
 		finalized_blocks.insert(block_number as u64, heads);
-		leaf_indices.push(get_leaf_index_for_block_number(beefy_activation_block, block_number));
+		block_numbers.push(block_number);
 	}
 
-	Ok(FinalizedParaHeads { raw_finalized_heads: finalized_blocks, leaf_indices })
+	Ok(FinalizedParaHeads { raw_finalized_heads: finalized_blocks, block_numbers })
 }
 
 /// Get beefy justification for latest finalized beefy block
@@ -171,12 +169,15 @@ pub async fn fetch_beefy_justification<T: Config>(
 /// Query a mmr  proof
 pub async fn fetch_mmr_proof<T: Config>(
 	client: &OnlineClient<T>,
-	leaf_indices: Vec<u32>,
+	block_numbers: Vec<u32>,
 	block_hash: Option<T::Hash>,
 ) -> Result<LeavesProof<H256>, Error> {
 	let proof: LeavesProof<H256> = client
 		.rpc()
-		.request("mmr_generateProof", rpc_params!(leaf_indices, block_hash))
+		.request(
+			"mmr_generateProof",
+			rpc_params!(block_numbers, Option::<T::Hash>::None, block_hash),
+		)
 		.await?;
 	Ok(proof)
 }

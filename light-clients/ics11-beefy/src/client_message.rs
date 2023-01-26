@@ -68,6 +68,8 @@ pub struct ParachainHeadersWithProof {
 	pub headers: Vec<ParachainHeader>, // contains the parachain headers
 	pub mmr_proofs: Vec<Vec<u8>>,      // mmr proofs for these headers
 	pub mmr_size: u64,                 // The latest mmr size
+	pub leaf_indices: Vec<u64>,        // The mmr leaf indices for the proof
+	pub leaf_count: u64,               // The mmr leaf count when the proof was generated
 }
 
 impl ibc::core::ics02_client::client_message::ClientMessage for ClientMessage {
@@ -185,6 +187,8 @@ impl TryFrom<RawClientMessage> for ClientMessage {
 							headers: parachain_headers,
 							mmr_proofs: consensus_update.mmr_proofs,
 							mmr_size: consensus_update.mmr_size,
+							leaf_indices: consensus_update.leaf_indices,
+							leaf_count: consensus_update.leaf_count,
 						})
 					})
 					.flatten();
@@ -380,6 +384,8 @@ impl From<ClientMessage> for RawClientMessage {
 							parachain_headers,
 							mmr_proofs: headers.mmr_proofs,
 							mmr_size: headers.mmr_size,
+							leaf_indices: headers.leaf_indices,
+							leaf_count: headers.leaf_count,
 						}
 					}),
 					client_state: if let Some(mmr_update) = beefy_header.mmr_update_proof {

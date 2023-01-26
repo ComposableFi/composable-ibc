@@ -24,9 +24,8 @@ extern crate alloc;
 mod tests;
 
 use beefy_light_client_primitives::{
-	error::BeefyClientError, get_leaf_index_for_block_number, BeefyNextAuthoritySet, ClientState,
-	HostFunctions, MerkleHasher, MmrUpdateProof, NodesUtils, ParachainsUpdateProof,
-	SignatureWithAuthorityIndex, HASH_LENGTH,
+	error::BeefyClientError, BeefyNextAuthoritySet, ClientState, HostFunctions, MerkleHasher,
+	MmrUpdateProof, NodesUtils, ParachainsUpdateProof, SignatureWithAuthorityIndex, HASH_LENGTH,
 };
 use beefy_primitives::{known_payloads::MMR_ROOT_ID, mmr::MmrLeaf};
 use codec::{Decode, Encode};
@@ -203,7 +202,13 @@ where
 {
 	let mut mmr_leaves = Vec::new();
 
-	for parachain_header in parachain_headers {
+	if mmr_proof.leaf_indices.len() != parachain_headers.len() {
+		Err(BeefyClientError::Custom(
+			"leaf indices is not equal to number of parachain headers".to_string(),
+		))?
+	}
+
+	for (index, parachain_header) in parachain_headers.into_iter().enumerate() {
 		let decoded_para_header =
 			Header::<u32, BlakeTwo256>::decode(&mut &*parachain_header.parachain_header)?;
 
@@ -247,12 +252,8 @@ where
 		};
 
 		let node = mmr_leaf.using_encoded(|leaf| H::keccak_256(leaf));
-		let leaf_index = get_leaf_index_for_block_number(
-			trusted_client_state.beefy_activation_block,
-			parachain_header.partial_mmr_leaf.parent_number_and_hash.0 + 1,
-		);
-
-		let leaf_pos = mmr_lib::leaf_index_to_pos(leaf_index as u64);
+		let leaf_index = mmr_proof.leaf_indices[index];
+		let leaf_pos = mmr_lib::leaf_index_to_pos(leaf_index);
 		mmr_leaves.push((leaf_pos, H256::from_slice(&node)));
 	}
 

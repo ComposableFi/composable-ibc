@@ -70,10 +70,10 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 [dev-dependencies]
 futures = "0.3.24"
 serde = { version = "1.0.144", features = ["derive"] }
-beefy-prover = { path = "../../algorithms/beefy/prover" }
+beefy-prover = { path = "../../algorithms/beefy/prover", features = ["build-metadata-from-ws"] }
 ibc = { path = "../../ibc/modules", features = ["mocks"] }
 ibc-derive = { path = "../../ibc/derive" }
-subxt = { git = "https://github.com/paritytech/subxt", rev = "e4e9562b45451f807099a0749dfc4f9a100247c6", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/ComposableFi/subxt", rev = "7a54d51ffe1d2daf785d13040276e5cbe30c29ed", features = ["substrate-compat"] }
 tokio = { version = "1.21.1", features = ["macros"] }
 sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }

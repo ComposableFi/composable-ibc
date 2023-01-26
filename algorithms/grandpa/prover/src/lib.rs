@@ -106,12 +106,19 @@ where
 	/// Construct the inital client state.
 	pub async fn initialize_client_state(&self) -> Result<ClientState, anyhow::Error> {
 		use sp_finality_grandpa::AuthorityList;
+		let latest_relay_hash = self.relay_client.rpc().finalized_head().await?;
+		let header = self
+			.relay_client
+			.rpc()
+			.header(Some(latest_relay_hash))
+			.await?
+			.ok_or_else(|| anyhow!("Header not found for hash: {latest_relay_hash:?}"))?;
 
 		let current_set_id = {
 			let key = polkadot::api::storage().grandpa().current_set_id();
 			self.relay_client
 				.storage()
-				.at(None)
+				.at(Some(latest_relay_hash))
 				.await
 				.expect("Storage client should be available")
 				.fetch(&key)
@@ -126,7 +133,11 @@ where
 				.rpc()
 				.request::<String>(
 					"state_call",
-					subxt::rpc_params!("GrandpaApi_grandpa_authorities", "0x"),
+					subxt::rpc_params!(
+						"GrandpaApi_grandpa_authorities",
+						"0x",
+						Some(format!("{:?}", latest_relay_hash))
+					),
 				)
 				.await
 				.map(|res| hex::decode(&res[2..]))??;
@@ -142,14 +153,6 @@ where
 			}
 		}
 
-		let latest_relay_hash = self.relay_client.rpc().finalized_head().await?;
-
-		let header = self
-			.relay_client
-			.rpc()
-			.header(Some(latest_relay_hash))
-			.await?
-			.ok_or_else(|| anyhow!("Header not found for hash: {latest_relay_hash:?}"))?;
 		let latest_relay_height = u32::from(header.number());
 		let finalized_para_header =
 			self.query_latest_finalized_parachain_header(latest_relay_height).await?;
@@ -248,12 +251,15 @@ where
 		.await?
 		.ok_or_else(|| anyhow!("No justification found for block: {:?}", latest_finalized_height))?
 		.0;
+
 		let mut finality_proof = FinalityProof::<H>::decode(&mut &encoded[..])?;
+
 		let justification =
 			GrandpaJustification::<H>::decode(&mut &finality_proof.justification[..])?;
 
 		// sometimes we might get a justification for latest_finalized_height - 1, sigh
 		let latest_finalized_height = u32::from(justification.commit.target_number);
+
 		finality_proof.block = justification.commit.target_hash;
 
 		let start = self

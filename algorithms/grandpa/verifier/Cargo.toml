@@ -27,7 +27,7 @@ primitives = { package = "grandpa-light-client-primitives", path = "../primitive
 light-client-common = { path = "../../../light-clients/common", default-features = false }
 
 [dev-dependencies]
-subxt = { git = "https://github.com/paritytech/subxt", rev = "e4e9562b45451f807099a0749dfc4f9a100247c6", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/ComposableFi/subxt", rev = "7a54d51ffe1d2daf785d13040276e5cbe30c29ed", features = ["substrate-compat"] }
 futures = "0.3.24"
 hex = "0.4.3"
 serde = "1.0.144"
@@ -37,7 +37,7 @@ polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", bra
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
 finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
 hex-literal = "0.3.4"
-grandpa-prover = { path = "../prover" }
+grandpa-prover = { path = "../prover", features = ["build-metadata-from-ws"] }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
 jsonrpsee-ws-client = "0.15.1"
 jsonrpsee-core = "0.15.1"

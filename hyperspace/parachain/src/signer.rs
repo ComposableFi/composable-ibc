@@ -67,10 +67,6 @@ where
 	P: KeyProvider + 'static,
 	T::Signature: From<MultiSignature>,
 {
-	fn nonce(&self) -> Option<T::Index> {
-		self.nonce
-	}
-
 	fn account_id(&self) -> &T::AccountId {
 		&self.account_id
 	}

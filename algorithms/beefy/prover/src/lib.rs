@@ -28,8 +28,8 @@ pub mod relay_chain_queries;
 pub mod runtime;
 
 use beefy_light_client_primitives::{
-	get_leaf_index_for_block_number, ClientState, HostFunctions, MerkleHasher, MmrUpdateProof,
-	ParachainHeader, PartialMmrLeaf, SignedCommitment,
+	ClientState, HostFunctions, MerkleHasher, MmrUpdateProof, ParachainHeader, PartialMmrLeaf,
+	SignedCommitment,
 };
 use beefy_primitives::{
 	known_payloads::MMR_ROOT_ID,
@@ -44,7 +44,6 @@ use helpers::{
 use hex_literal::hex;
 use pallet_mmr_primitives::Proof;
 use relay_chain_queries::fetch_beefy_justification;
-use serde::{Deserialize, Serialize};
 use sp_core::{hexdisplay::AsBytesRef, keccak_256, H256};
 use sp_io::crypto;
 use sp_runtime::traits::BlakeTwo256;
@@ -56,10 +55,6 @@ use crate::{
 };
 use helpers::{prove_authority_set, AuthorityProofWithSignatures};
 use relay_chain_queries::{fetch_finalized_parachain_heads, fetch_mmr_proof, FinalizedParaHeads};
-
-/// finality proof
-#[derive(Clone, Serialize, Deserialize)]
-pub struct EncodedVersionedFinalityProof(pub sp_core::Bytes);
 
 /// Host function implementation for beefy light client.
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
@@ -90,8 +85,6 @@ pub struct Prover<T: Config> {
 	pub relay_client: OnlineClient<T>,
 	/// Subxt client for the parachain
 	pub para_client: OnlineClient<T>,
-	/// Block at which beefy was activated
-	pub beefy_activation_block: u32,
 	/// Para Id for the associated parachain.
 	pub para_id: u32,
 }
@@ -120,7 +113,6 @@ where
 						"baa93c7834125ee3120bac6e3342bd3f28611110ad21ab6075367abdffefeb09"
 					)),
 				},
-				beefy_activation_block: 0,
 			}
 		}
 		// Get initial validator set
@@ -132,14 +124,22 @@ where
 		let header = client.rpc().header(Some(latest_beefy_finalized)).await.unwrap().unwrap();
 		let validator_set_id = {
 			let key = runtime::api::storage().beefy().validator_set_id();
-			client.storage().at(None).await.unwrap().fetch(&key).await.unwrap().unwrap()
+			client
+				.storage()
+				.at(Some(latest_beefy_finalized))
+				.await
+				.unwrap()
+				.fetch(&key)
+				.await
+				.unwrap()
+				.unwrap()
 		};
 
 		let next_val_set = {
 			let key = runtime::api::storage().mmr_leaf().beefy_next_authorities();
 			client
 				.storage()
-				.at(None)
+				.at(Some(latest_beefy_finalized))
 				.await
 				.expect("storage client should be available")
 				.fetch(&key)
@@ -161,7 +161,6 @@ where
 				len: next_val_set.len,
 				root: next_val_set.root,
 			},
-			beefy_activation_block: 0,
 		}
 	}
 
@@ -232,7 +231,7 @@ where
 	}
 
 	/// This will query the finalized parachain headers between the given relay chain blocks
-	/// Only including the given parachain headers into the [`MmrBatchProof`]
+	/// Only including the given parachain headers into the [`Proof`]
 	pub async fn query_finalized_parachain_headers_with_proof(
 		&self,
 		commitment_block_number: u32,
@@ -244,13 +243,12 @@ where
 		u32: From<T::BlockNumber>,
 	{
 		let header_numbers = header_numbers.into_iter().map(From::from).collect();
-		let FinalizedParaHeads { leaf_indices, raw_finalized_heads: finalized_blocks } =
+		let FinalizedParaHeads { block_numbers, raw_finalized_heads: finalized_blocks } =
 			fetch_finalized_parachain_heads::<T>(
 				&self.relay_client,
 				commitment_block_number,
 				latest_beefy_height,
 				self.para_id,
-				self.beefy_activation_block,
 				&header_numbers,
 			)
 			.await?;
@@ -258,7 +256,7 @@ where
 		let subxt_block_number: subxt::rpc::types::BlockNumber = commitment_block_number.into();
 		let block_hash = self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?;
 
-		let batch_proof = fetch_mmr_proof(&self.relay_client, leaf_indices, block_hash).await?;
+		let batch_proof = fetch_mmr_proof(&self.relay_client, block_numbers, block_hash).await?;
 
 		let leaves: Vec<Vec<u8>> = Decode::decode(&mut &*batch_proof.leaves.to_vec())?;
 
@@ -338,9 +336,8 @@ where
 
 		// Current LeafIndex
 		let block_number = signed_commitment.commitment.block_number;
-		let leaf_index = get_leaf_index_for_block_number(self.beefy_activation_block, block_number);
 		let leaf_proof =
-			fetch_mmr_proof(&self.relay_client, vec![leaf_index.into()], block_hash).await?;
+			fetch_mmr_proof(&self.relay_client, vec![block_number.into()], block_hash).await?;
 		let leaves: Vec<Vec<u8>> = codec::Decode::decode(&mut &*leaf_proof.leaves.0)?;
 		let latest_leaf: MmrLeaf<u32, H256, H256, H256> = codec::Decode::decode(&mut &*leaves[0])?;
 		let mmr_proof: pallet_mmr_primitives::Proof<H256> =
@@ -365,10 +362,7 @@ where
 	}
 
 	/// Construct a beefy client state to be submitted to the counterparty chain
-	pub async fn construct_beefy_client_state(
-		&self,
-		beefy_activation_block: u32,
-	) -> Result<ClientState, Error> {
+	pub async fn construct_beefy_client_state(&self) -> Result<ClientState, Error> {
 		let (signed_commitment, latest_beefy_finalized) =
 			fetch_beefy_justification(&self.relay_client).await?;
 
@@ -424,7 +418,6 @@ where
 		let client_state = ClientState {
 			mmr_root_hash,
 			latest_beefy_height: signed_commitment.commitment.block_number as u32,
-			beefy_activation_block,
 			current_authorities: current_authority_set.clone(),
 			next_authorities: next_authority_set.clone(),
 		};

@@ -17,7 +17,7 @@ mmr-lib= { package = "ckb-merkle-mountain-range", version = "0.3.2", default-fea
 pallet-mmr-primitives = { package = "sp-mmr-primitives", default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
 derive_more = { version = "0.99.17", default-features = false, features = ["from"]  }
 light-client-common = { path = "../../../light-clients/common", default-features = false }
-
+serde = { version = "1.0.144", features = ["derive"], optional = true }
 [features]
 default = ["std"]
 std = [
@@ -29,4 +29,5 @@ std = [
     "mmr-lib/std",
     "pallet-mmr-primitives/std",
     "light-client-common/std",
+    "serde"
 ]

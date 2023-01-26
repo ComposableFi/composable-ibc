@@ -15,15 +15,11 @@
 
 use crate::verify_parachain_headers_with_grandpa_finality_proof;
 use codec::{Decode, Encode};
-use finality_grandpa_rpc::GrandpaApiClient;
 use futures::StreamExt;
-use grandpa_prover::{
-	beefy_prover::helpers::unsafe_arc_cast, host_functions::HostFunctionsProvider, GrandpaProver,
-};
+use grandpa_prover::{host_functions::HostFunctionsProvider, GrandpaProver};
 use polkadot_core_primitives::Header;
 use primitives::{justification::GrandpaJustification, ParachainHeadersWithFinalityProof};
 use serde::{Deserialize, Serialize};
-use sp_core::H256;
 use subxt::{
 	config::substrate::{BlakeTwo256, SubstrateHeader},
 	rpc_params, PolkadotConfig,
@@ -100,6 +96,7 @@ async fn follow_grandpa_justifications() {
 		}
 
 		println!("current_set_id: {}", client_state.current_set_id);
+		println!("latest_relay_height: {}", client_state.latest_relay_height);
 		println!(
 			"For relay chain header: Hash({:?}), Number({})",
 			justification.commit.target_hash, justification.commit.target_number

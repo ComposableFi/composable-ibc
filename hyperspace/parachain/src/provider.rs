@@ -61,14 +61,14 @@ use sp_runtime::{
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr, time::Duration};
-use subxt::config::{
-	extrinsic_params::BaseExtrinsicParamsBuilder, substrate::AssetTip as Tip, ExtrinsicParams,
-};
-#[cfg(feature = "dali")]
+
 use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams};
 
 #[cfg(not(feature = "dali"))]
-use subxt::config::polkadot::PlainTip;
+use subxt::config::polkadot::PlainTip as Tip;
+
+#[cfg(feature = "dali")]
+use subxt::config::substrate::AssetTip as Tip;
 
 pub struct TransactionId<Hash> {
 	pub ext_hash: Hash,

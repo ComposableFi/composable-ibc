@@ -38,15 +38,15 @@ use beefy_light_client_primitives::{ClientState, MmrUpdateProof};
 use beefy_prover::Prover;
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
 use ics11_beefy::client_message::ParachainHeader;
-use pallet_mmr_primitives::BatchProof;
+use pallet_mmr_primitives::Proof;
 use sp_core::{ecdsa, ed25519, sr25519, Bytes, Pair, H256};
 use sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
-	KeyTypeId, MultiSignature,
+	KeyTypeId, MultiSignature, MultiSigner,
 };
 use ss58_registry::Ss58AddressFormat;
-use subxt::ext::sp_runtime::{traits::Header as HeaderT, MultiSigner};
+use subxt::config::Header as HeaderT;
 
 use crate::{
 	parachain::api,
@@ -90,8 +90,6 @@ pub struct ParachainClient<T: config::Config> {
 	pub para_ws_client: Arc<jsonrpsee_ws_client::WsClient>,
 	/// Parachain Id
 	pub para_id: u32,
-	/// Beefy activation block
-	pub beefy_activation_block: Option<u32>,
 	/// Light client id on counterparty chain
 	pub client_id: Option<ClientId>,
 	/// Connection Id
@@ -158,8 +156,6 @@ pub struct ParachainClientConfig {
 	pub client_id: Option<ClientId>,
 	/// Connection Id
 	pub connection_id: Option<ConnectionId>,
-	/// Beefy activation block
-	pub beefy_activation_block: Option<u32>,
 	/// Commitment prefix
 	pub commitment_prefix: Bytes,
 	/// Raw private key for signing transactions
@@ -243,7 +239,6 @@ where
 			client_id: config.client_id,
 			commitment_prefix: config.commitment_prefix.0,
 			connection_id: config.connection_id,
-			beefy_activation_block: config.beefy_activation_block,
 			public_key,
 			key_store,
 			key_type_id,
@@ -295,7 +290,6 @@ where
 		let client_wrapper = Prover {
 			relay_client: self.relay_client.clone(),
 			para_client: self.para_client.clone(),
-			beefy_activation_block: client_state.beefy_activation_block,
 			para_id: self.para_id,
 		};
 
@@ -319,14 +313,13 @@ where
 		commitment_block_number: u32,
 		client_state: &ClientState,
 		headers: Vec<T::BlockNumber>,
-	) -> Result<(Vec<ParachainHeader>, BatchProof<H256>), Error>
+	) -> Result<(Vec<ParachainHeader>, Proof<H256>), Error>
 	where
 		T::BlockNumber: Ord + sp_runtime::traits::Zero,
 	{
 		let client_wrapper = Prover {
 			relay_client: self.relay_client.clone(),
 			para_client: self.para_client.clone(),
-			beefy_activation_block: client_state.beefy_activation_block,
 			para_id: self.para_id,
 		};
 
@@ -366,12 +359,10 @@ where
 			u32,
 			beefy_primitives::crypto::Signature,
 		>,
-		client_state: &ClientState,
 	) -> Result<MmrUpdateProof, Error> {
 		let prover = Prover {
 			relay_client: self.relay_client.clone(),
 			para_client: self.para_client.clone(),
-			beefy_activation_block: client_state.beefy_activation_block,
 			para_id: self.para_id,
 		};
 
@@ -438,7 +429,7 @@ where
 	H256: From<T::Hash>,
 	T::BlockNumber: Ord + sp_runtime::traits::Zero + One,
 	T::Header: HeaderT,
-	<T::Header as HeaderT>::Hash: From<T::Hash>,
+	<<T::Header as HeaderT>::Hasher as subxt::config::Hasher>::Output: From<T::Hash>,
 	T::BlockNumber: From<u32>,
 	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
 		From<FinalityProof<T::Header>>,
@@ -458,23 +449,17 @@ where
 		u32: From<<T as subxt::Config>::BlockNumber>,
 	{
 		use ibc::core::ics24_host::identifier::ChainId;
-		let beefy_activation_block =
-			self.beefy_activation_block.expect("beefy_activation_block was not defined");
 		let api = self.relay_client.storage();
 		let para_client_api = self.para_client.storage();
 		let client_wrapper = Prover {
 			relay_client: self.relay_client.clone(),
 			para_client: self.para_client.clone(),
-			beefy_activation_block,
 			para_id: self.para_id,
 		};
 		loop {
-			let beefy_state = client_wrapper
-				.construct_beefy_client_state(beefy_activation_block)
-				.await
-				.map_err(|e| {
-					Error::from(format!("[construct_beefy_client_state] Failed due to {:?}", e))
-				})?;
+			let beefy_state = client_wrapper.construct_beefy_client_state().await.map_err(|e| {
+				Error::from(format!("[construct_beefy_client_state] Failed due to {:?}", e))
+			})?;
 
 			let subxt_block_number: subxt::rpc::types::BlockNumber =
 				beefy_state.latest_beefy_height.into();
@@ -499,7 +484,6 @@ where
 				mmr_root_hash: beefy_state.mmr_root_hash,
 				latest_beefy_height: beefy_state.latest_beefy_height,
 				frozen_height: None,
-				beefy_activation_block: beefy_state.beefy_activation_block,
 				latest_para_height: block_number,
 				para_id: self.para_id,
 				authority: beefy_state.current_authorities,

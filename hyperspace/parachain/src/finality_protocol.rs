@@ -127,7 +127,6 @@ where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
 		+ From<<T as subxt::Config>::BlockNumber>,
 	ParachainClient<T>: Chain + KeyProvider,
-	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	T::Signature: From<MultiSignature>,
 	T::BlockNumber: From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
@@ -287,15 +286,15 @@ where
 		Some(ParachainHeadersWithProof {
 			headers,
 			mmr_size,
+			leaf_indices: batch_proof.leaf_indices,
 			mmr_proofs: batch_proof.items.into_iter().map(|item| item.encode()).collect(),
+			leaf_count: batch_proof.leaf_count,
 		})
 	} else {
 		None
 	};
 
-	let mmr_update = source
-		.query_beefy_mmr_update_proof(signed_commitment, &beefy_client_state)
-		.await?;
+	let mmr_update = source.query_beefy_mmr_update_proof(signed_commitment).await?;
 
 	let update_header = {
 		let msg = MsgUpdateAnyClient::<LocalClientTypes> {
@@ -325,7 +324,6 @@ where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
 		+ From<<T as subxt::Config>::BlockNumber>,
 	ParachainClient<T>: Chain + KeyProvider,
-	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	T::Signature: From<MultiSignature>,
 	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
