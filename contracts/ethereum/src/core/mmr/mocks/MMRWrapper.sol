@@ -10,7 +10,7 @@ contract MMRWrapper {
   bytes32 public rootHash;
   bool public verified;
 
-  function append(bytes32 hash) external {
+  function append(bytes memory hash) external {
     mmr.append(hash);
   }
 
@@ -22,7 +22,7 @@ contract MMRWrapper {
       bytes32 root,
       uint256 width,
       uint256 index,
-      bytes32 value,
+      bytes memory value,
       bytes32[] memory peaks,
       bytes32[] memory siblings
   ) external {
@@ -48,5 +48,4 @@ contract MMRWrapper {
   function getNode(uint256 index) public view returns (bytes32) {
     return mmr.getNode(index + 1);
   }
-  
 }

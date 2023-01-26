@@ -1,6 +1,5 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.17;
-import "hardhat/console.sol"; 
 
 /**
  * @author Wanseob Lim <email@wanseob.com>
@@ -16,21 +15,21 @@ library MMR {
         uint256 size;
         uint256 width;
         mapping(uint256 => bytes32) hashes;
-        mapping(bytes32 => bytes32) data;
+        mapping(bytes32 => bytes) data;
     }
 
     /**
      * @dev This only stores the hashed value of the leaf.
      *      If you need to retrieve the detail data later, use a map to store them.
      */
-    function append(Tree storage tree, bytes32 data) public {
+    function append(Tree storage tree, bytes memory data) public {
         // Hash the leaf node first
-        bytes32 dataHash = keccak256(abi.encodePacked(data));
+        bytes32 dataHash = hashLeaf(data);
         if(keccak256(abi.encodePacked(tree.data[dataHash])) != dataHash) {
             tree.data[dataHash] = data;
         }
         // Put the hashed leaf to the map
-        tree.hashes[tree.size + 1] = dataHash ;
+        tree.hashes[tree.size + 1] = dataHash;
         tree.width += 1;
         // Find peaks for the enlarged tree
         uint256[] memory peakIndexes = getPeakIndexes(tree.width);
@@ -137,7 +136,7 @@ library MMR {
         bytes32 root,
         uint256 width,
         bytes32[] memory peaks,
-        bytes32[] memory itemHashes
+        bytes[] memory itemHashes
     ) public pure returns (bytes32 newRoot) {
         // Check the root equals the peak bagging hash
         require(root == peakBagging(width, peaks), "Invalid root hash from the peaks");
@@ -152,7 +151,11 @@ library MMR {
 
     function peakBagging(uint256 width, bytes32[] memory peaks) public pure returns (bytes32) {
         require(numOfPeaks(width) == peaks.length, "Received invalid number of peaks");
-        return keccak256(abi.encodePacked(peaks));
+        // If there is only one peak, return it
+        if (peaks.length == 1) {
+            return peaks[0];
+        }
+        return keccak256(abi.encodePacked(sortHashes(peaks)));
     }
 
     function peaksToPeakMap(uint width, bytes32[] memory peaks) public pure returns (bytes32[255] memory peakMap) {
@@ -187,7 +190,7 @@ library MMR {
     function peakUpdate(
         uint width,
         bytes32[255] memory prevPeakMap,
-        bytes32 itemHash
+        bytes memory itemHash
     ) public pure returns (
         bytes32[255] memory nextPeakMap
     ) {
@@ -238,14 +241,12 @@ library MMR {
         bytes32 root,
         uint256 width,
         uint256 index,
-        bytes32 value,
+        bytes memory value,
         bytes32[] memory peaks,
         bytes32[] memory siblings
     ) public pure returns (bool) {
         uint size = getSize(width);
         require(size >= index, "Index is out of range");
-        // Check the root equals the peak bagging hash
-        require(root == keccak256(abi.encodePacked(peaks)), "Invalid root hash from the peaks");
 
         // Find the mountain where the target index belongs to
         uint256 cursor;
@@ -258,6 +259,10 @@ library MMR {
                 break;
             }
         }
+
+        // Check the root equals the peak bagging hash
+        require(root == keccak256(abi.encodePacked(sortHashes(peaks))), "Invalid root hash from the peaks");
+
         require(targetPeak != bytes32(0), "Target is not found");
 
         // Find the path climbing down
@@ -287,12 +292,8 @@ library MMR {
             if (height == 0) {
                 // cursor is on the leaf
                 node = hashLeaf(value);
-            } else if (cursor - 1 == path[height - 1]) {
-                // cursor is on a parent and a sibling is on the left
-                node = hashBranch(siblings[height - 1], node);
             } else {
-                // cursor is on a parent and a sibling is on the right
-                node = hashBranch(node, siblings[height - 1]);
+                node = hashBranch(siblings[height - 1], node);
             }
             // Climb up
             height++;
@@ -304,18 +305,22 @@ library MMR {
     }
 
     /**
-     * @dev It returns the hash a parent node with hash(M | Left child | Right child)
-     *      M is the index of the node
+     * @dev It returns the hash a parent node with hash(Left child | Right child)
+     *      Left child is always the smaller one
      */
     function hashBranch(bytes32 left, bytes32 right) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(left, right));
+        if (left <= right) {
+            return keccak256(abi.encodePacked(left, right));
+        } else{
+            return keccak256(abi.encodePacked(right, left));
+        }
     }
 
     /**
-     * @dev it returns the hash of a leaf node with hash(M | DATA )
+     * @dev it returns the hash of a leaf node with hash(DATA )
      *      M is the index of the node
      */
-    function hashLeaf(bytes32 dataHash) public pure returns (bytes32) {
+    function hashLeaf(bytes memory dataHash) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(dataHash));
     }
 
@@ -404,5 +409,41 @@ library MMR {
             tree.hashes[index] = hashBranch(leftHash, rightHash);
         }
         return tree.hashes[index];
+    }
+
+    function sortHashes(bytes32[] memory arr) public pure returns (bytes32[] memory sortedArr) {
+        if (arr.length > 0) return _quickSort(arr, 0, arr.length - 1);
+    }
+
+    /// @notice sort array of hashes
+    /// @dev returns a sorted array using quicksort algorithm and recursion
+    /// @dev this function changes the order of the input array
+    /// @param arr array of hashes
+    /// @param left partition left index
+    /// @param right partition right index
+    /// @return sortedArr sorted array
+    function _quickSort(
+        bytes32[] memory arr,
+        uint256 left,
+        uint256 right
+    ) public pure returns (bytes32[] memory sortedArr) {
+        if (arr.length == 0) {
+            return arr;
+        }
+        if (left >= right) return arr;
+        bytes32 p = arr[(left + right) / 2]; // p = the pivot value
+        uint256 i = left;
+        uint256 j = right;
+        while (i < j) {
+            while (arr[i] < p) ++i;
+            while (arr[j] > p) --j; // arr[j] > p means p still to the left, so j > 0
+            if (arr[i] > arr[j]) {
+                (arr[i], arr[j]) = (arr[j], arr[i]);
+            } else ++i;
+        }
+
+        // Note --j was only done when a[j] > p.  So we know: a[j] == p, a[<j] <= p, a[>j] > p
+        if (j > left) _quickSort(arr, left, j - 1); // j > left, so j > 0
+        return _quickSort(arr, j + 1, right);
     }
 }
