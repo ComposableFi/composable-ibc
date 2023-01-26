@@ -1,17 +1,3 @@
-// Copyright 2022 ComposableFi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 use super::*;
 use crate::{light_clients::AnyClientMessage, routing::Context};
 use core::marker::PhantomData;
@@ -60,111 +46,111 @@ pub trait WeightInfo {
 
 impl WeightInfo for () {
 	fn create_client() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn conn_open_init() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn update_tendermint_client() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn conn_try_open_tendermint() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn conn_open_ack_tendermint() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn conn_open_confirm_tendermint() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn channel_open_init() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn channel_open_try_tendermint() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn channel_open_ack_tendermint() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn channel_open_confirm_tendermint() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn channel_close_init() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn channel_close_confirm_tendermint() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn recv_packet_tendermint(_i: u32) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn ack_packet_tendermint(_i: u32, _j: u32) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn timeout_packet_tendermint(_i: u32) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn set_params() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn transfer() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_open_init() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_open_try() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_recv_packet() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_open_ack() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_open_confirm() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_close_init() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_close_confirm() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_acknowledgement_packet() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_timeout_packet() -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn update_grandpa_client(_i: u32) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 }
 

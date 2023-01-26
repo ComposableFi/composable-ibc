@@ -15,7 +15,7 @@ clap = { version = "3.2.22", features = ["derive", "env"] }
 serde_json = "1.0.91"
 
 subxt-codegen = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }
-jsonrpsee = { version = "0.14.0", features = ["async-client", "client-ws-transport", "http-client"] }
+jsonrpsee = { version = "0.15.1", features = ["async-client", "client-ws-transport", "http-client"] }
 frame-metadata = { version = "15.0.0", features = ["v14", "std"] }
 syn = "1.0.98"
 codec = { package = "parity-scale-codec", version = "3.0.0" }

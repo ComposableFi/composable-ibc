@@ -1,17 +1,3 @@
-// Copyright 2022 ComposableFi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
@@ -84,7 +70,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// The overarching event type.
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// ibc subsystem
 		type IbcHandler: ibc_primitives::IbcHandler<<Self as frame_system::Config>::AccountId>;
@@ -324,31 +310,31 @@ impl<T: Config> Default for WeightHandler<T> {
 
 impl<T: Config> CallbackWeight for WeightHandler<T> {
 	fn on_chan_open_init(&self) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_open_try(&self) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_open_ack(&self, _port_id: &PortId, _channel_id: &ChannelId) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_open_confirm(&self, _port_id: &PortId, _channel_id: &ChannelId) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_close_init(&self, _port_id: &PortId, _channel_id: &ChannelId) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_chan_close_confirm(&self, _port_id: &PortId, _channel_id: &ChannelId) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_recv_packet(&self, _packet: &Packet) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_acknowledgement_packet(
@@ -356,10 +342,10 @@ impl<T: Config> CallbackWeight for WeightHandler<T> {
 		_packet: &Packet,
 		_acknowledgement: &Acknowledgement,
 	) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 
 	fn on_timeout_packet(&self, _packet: &Packet) -> Weight {
-		0
+		Weight::from_ref_time(0)
 	}
 }

@@ -14,28 +14,28 @@ subxt-codegen = { package = "codegen", path = "../../../utils/subxt/codegen" }
 tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
 
 [dependencies]
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-sp-runtime = "6.0.0" 
-sp-core =  "6.0.0" 
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+sp-runtime = "6.0.0"
+sp-core =  "6.0.0"
 sp-io = "6.0.0"
-sp-core-hashing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27"}
-beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-pallet-mmr = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-pallet-mmr-primitives = { package = "sp-mmr-primitives", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-beefy-primitives = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
+sp-core-hashing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30"}
+beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+pallet-mmr = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+pallet-mmr-primitives = { package = "sp-mmr-primitives", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+beefy-primitives = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 rs_merkle = "1.2.0"
 derive_more = { version = "0.99.17", features = ["from"]  }
 light-client-common = { path = "../../../light-clients/common" }
-jsonrpsee-core = { version = "0.14.0", features = ["async-client"] }
+jsonrpsee-core = { version = "0.15.1", features = ["async-client"] }
 
 # Optional deps
 subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }
 hex-literal = { version = "0.3.4" }
 serde_json = { version = "1.0.74" }
-pallet-mmr-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.27" }
+pallet-mmr-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
 hex = { version = "0.4.3" }
 beefy-light-client-primitives = {  path = "../primitives" }
 subxt-generated = { path = "../../../utils/subxt/generated" }

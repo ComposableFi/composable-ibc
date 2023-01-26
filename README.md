@@ -24,8 +24,8 @@ This contains utility functions for assembling Grandpa proofs as well as paracha
 
 A `no_std` compatible crate which contains primitive types which are shared by both crates.
 
-### [Hyperspace Relayer](hyperspace/core/src/lib.rs)
-
+### [Hyperspace Relayer](hyperspace/README.md)
+Looking for instructions on how to run the relayer? [Check here](hyperspace/README.md#running-the-relayer)
 
 Rust implementation of the IBC relayer algorithm.
 

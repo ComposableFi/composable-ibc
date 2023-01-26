@@ -17,7 +17,6 @@ use crate::{error, Commit, HostFunctions};
 use alloc::collections::{BTreeMap, BTreeSet};
 use anyhow::anyhow;
 use codec::{Decode, Encode};
-use core::fmt::Debug;
 use finality_grandpa::voter_set::VoterSet;
 use sp_finality_grandpa::{
 	AuthorityId, AuthorityList, AuthoritySignature, ConsensusLog, Equivocation, RoundNumber,

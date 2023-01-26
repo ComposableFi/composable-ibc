@@ -4,11 +4,11 @@
 The relayer is designed to be:
 
 ### 1. Stateless 
-This means that the relayer does not perform **any form** of data caching. The relayer therefore relies heavily on  
+This means that the relayer does not perform **any form** of data caching. The relayer, therefore, relies heavily on  
 the nodes it's connected to for sourcing data as needed. This design choice eliminates a class of bugs that could come from cache invalidation.
 
 ### 2. Event Driven
-The relayer follows an event driven model, where it waits idly until it receives a finality notification from any of the chains it's connected to. The finality notification represents new IBC messages and events that have finalized and ready to be sent to the connected counterparty chain.
+The relayer follows an event-driven model, where it waits idly until it receives a finality notification from any of the chains it's connected to. The finality notification represents new IBC messages and events that have been finalized and are ready to be sent to the connected counterparty chain.
 
 ## Relayer Loop
 
@@ -16,19 +16,17 @@ The relayer has a single entry point, which is the [`relay`](/hyperspace/core/sr
 alongside optional metric handlers and starts the relayer loop.  
 
 The relayer loops awaits finality events from the finality subscription of the chain handlers.  
-Whenever a finality event is received, the latest ibc events are queried using `query_latest_ibc_events`.  
+Whenever a finality event is received, the latest IBC events are queried using `query_latest_ibc_events`.  
 These events are then parsed into the appropriate outgoing IBC messages, and sent off to the counterparty chain.
-
-The `query_ready_and_timed_out_packets` which queries a chain and  
+The `query_ready_and_timed_out_packets` queries a chain and  
 produces all packet messages that have passed the connection delay check.
-It also returns timed out packet messages that have passed the connection delay check.  
+It also returns timed-out packet messages that have passed the connection delay check.  
 
 ### Connection delay and Packet Timeout
  
 The relayer needs to submit packets with a proof fetched at a height where the equivalent client consensus state on the  
-counterparty chain has satisfied the connection delay.    
-Since the relayer has no cache of the block heights at which packets events were emitted, it has to go through a more   
-rigorous process to identify when the connection delay has been satisfied for some arbitrary consensus height.  
+counterparty chain has satisfied the connection delay.
+Since the relayer has no cache of the block heights at which packet events were emitted, it has to go through a more rigorous process to identify when the connection delay has been satisfied for some arbitrary consensus height.  
 The following pseudocode describes how connection delays and packet timeouts are handled:
 
 ```rust
@@ -144,15 +142,32 @@ if the estimate exceeds the latter then the ibc messages are split into smaller 
 these chunks are then submitted as individual transactions.  
 
 
-## CLI Interface
+## Running the relayer
 
-The CLI interface can be used to start the relayer from a config file and also performing the IBC setup on both chains.
+### How to build Hyperspace
+
+```
+make build-release-hyperspace
+```
+
+The binary will leave in the root directory of `centauri` repository,
+on:
+```
+./target/release/hyperspace
+```
+
+### Running Hyperspace - CLI Interface
+
+The CLI interface can be used to start the relayer from a config file and also perform the IBC setup on both chains. It assumes that `hyperspace` was already built.
+
+A template configuration file (which is needed to run the CLI) can be found
+[here](./config.toml)
 
 - [`relay`](/hyperspace/core/src/command.rs#L24)  
-  This command accepts a path to a config file and spawns the relayer alongside a prometheus server for monitoring.  
+  This command accepts a path to a config file and spawns the relayer alongside a Prometheus server for monitoring.  
   The config file must have all the parameters necessary for the chain clients to work correctly.
 - [`create-clients`](/hyperspace/core/src/command.rs#L26)  
-  This command takes a path to a config file and attempts to create a light clients of each chain on its counterparty.
+  This command takes a path to a config file and attempts to create a light client of each chain on its counterparty.
 - [`create-connection`](/hyperspace/core/src/command.rs#L28)  
   This command takes a path to a config file and delay period in seconds and attempts to complete the connection  
   handshake between both chains.
@@ -165,8 +180,11 @@ The CLI interface can be used to start the relayer from a config file and also p
 
 ### Metrics
 
-The relayer can be spawn with metrics enabled. The [`metrics`](/hyperspace/metrics/README.md) crate provides a prometheus server that collects data  
+The relayer can be spawned with metrics enabled. The [`metrics`](/hyperspace/metrics/README.md) crate provides a Prometheus server that collects data  
 about the relayer's operation.  
 
-Metrics collected are centered around packets and light client state on either chain and also the cost of transactions submitted on both chains.  
+Metrics collected are centered around packets and light client states on either chain and also the cost of transactions submitted on both chains.  
 
+### Troubleshooting
+
+Update this section with feedback!

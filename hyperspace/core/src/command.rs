@@ -18,7 +18,7 @@ use primitives::Chain;
 use prometheus::Registry;
 use std::{path::PathBuf, str::FromStr, time::Duration};
 
-use crate::{chain::Config, fish, relay};
+use crate::{chain::Config, fish, relay, Mode};
 use ibc::core::{ics04_channel::channel::Order, ics24_host::identifier::PortId};
 use metrics::{data::Metrics, handler::MetricsHandler, init_prometheus};
 use primitives::{
@@ -54,7 +54,7 @@ pub enum Subcommand {
 pub struct Cmd {
 	/// Relayer config path.
 	#[clap(long)]
-	config: String,
+	pub config: String,
 	/// Port id for channel creation
 	#[clap(long)]
 	port_id: Option<String>,
@@ -68,6 +68,9 @@ pub struct Cmd {
 	/// Channel version
 	#[clap(long)]
 	version: Option<String>,
+	/// New config path to avoid overriding existing configuration
+	#[clap(long)]
+	pub new_config: Option<String>,
 }
 
 impl Cmd {
@@ -92,7 +95,8 @@ impl Cmd {
 			tokio::spawn(init_prometheus(addr, registry.clone()));
 		}
 
-		relay(any_chain_a, any_chain_b, Some(metrics_handler_a), Some(metrics_handler_b)).await
+		relay(any_chain_a, any_chain_b, Some(metrics_handler_a), Some(metrics_handler_b), None)
+			.await
 	}
 
 	/// Run fisherman
@@ -106,12 +110,13 @@ impl Cmd {
 		fish(any_chain_a, any_chain_b).await
 	}
 
-	pub async fn create_clients(&self) -> Result<()> {
+	pub async fn create_clients(&self) -> Result<Config> {
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
-		let config: Config = toml::from_str(&file_content)?;
-		let any_chain_a = config.chain_a.into_client().await?;
-		let any_chain_b = config.chain_b.into_client().await?;
+		let mut config: Config = toml::from_str(&file_content)?;
+
+		let any_chain_a = config.chain_a.clone().into_client().await?;
+		let any_chain_b = config.chain_b.clone().into_client().await?;
 
 		let (client_id_a_on_b, client_id_b_on_a) =
 			create_clients(&any_chain_a, &any_chain_b).await?;
@@ -127,24 +132,29 @@ impl Cmd {
 			any_chain_b.name(),
 			client_id_a_on_b
 		);
-		Ok(())
+		config.chain_a.set_client_id(client_id_a_on_b);
+		config.chain_b.set_client_id(client_id_b_on_a);
+
+		Ok(config)
 	}
 
-	pub async fn create_connection(&self) -> Result<()> {
+	pub async fn create_connection(&self) -> Result<Config> {
 		let delay = self
 			.delay_period
 			.expect("delay_period should be provided when creating a connection");
 		let delay = Duration::from_secs(delay.into());
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
-		let config: Config = toml::from_str(&file_content)?;
-		let any_chain_a = config.chain_a.into_client().await?;
-		let any_chain_b = config.chain_b.into_client().await?;
+		let mut config: Config = toml::from_str(&file_content)?;
+		let any_chain_a = config.chain_a.clone().into_client().await?;
+		let any_chain_b = config.chain_b.clone().into_client().await?;
 
 		let any_chain_a_clone = any_chain_a.clone();
 		let any_chain_b_clone = any_chain_b.clone();
 		let handle = tokio::task::spawn(async move {
-			relay(any_chain_a_clone, any_chain_b_clone, None, None).await.unwrap();
+			relay(any_chain_a_clone, any_chain_b_clone, None, None, Some(Mode::Light))
+				.await
+				.unwrap();
 		});
 
 		let (connection_id_a, connection_id_b) =
@@ -152,10 +162,14 @@ impl Cmd {
 		log::info!("ConnectionId on Chain {}: {}", any_chain_a.name(), connection_id_a);
 		log::info!("ConnectionId on Chain {}: {}", any_chain_b.name(), connection_id_b);
 		handle.abort();
-		Ok(())
+
+		config.chain_a.set_connection_id(connection_id_a);
+		config.chain_b.set_connection_id(connection_id_b);
+
+		Ok(config)
 	}
 
-	pub async fn create_channel(&self) -> Result<()> {
+	pub async fn create_channel(&self) -> Result<Config> {
 		let port_id = PortId::from_str(
 			self.port_id
 				.as_ref()
@@ -171,14 +185,16 @@ impl Cmd {
 		let order = self.order.as_ref().expect("order must be specified when creating a channel, expected one of 'ordered' or 'unordered'").as_str();
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
-		let config: Config = toml::from_str(&file_content)?;
-		let any_chain_a = config.chain_a.into_client().await?;
-		let any_chain_b = config.chain_b.into_client().await?;
+		let mut config: Config = toml::from_str(&file_content)?;
+		let any_chain_a = config.chain_a.clone().into_client().await?;
+		let any_chain_b = config.chain_b.clone().into_client().await?;
 
 		let any_chain_a_clone = any_chain_a.clone();
 		let any_chain_b_clone = any_chain_b.clone();
 		let handle = tokio::task::spawn(async move {
-			relay(any_chain_a_clone, any_chain_b_clone, None, None).await.unwrap();
+			relay(any_chain_a_clone, any_chain_b_clone, None, None, Some(Mode::Light))
+				.await
+				.unwrap();
 		});
 
 		let order = Order::from_str(order).expect("Expected one of 'ordered' or 'unordered'");
@@ -186,7 +202,7 @@ impl Cmd {
 			&any_chain_a,
 			&any_chain_b,
 			any_chain_a.connection_id(),
-			port_id,
+			port_id.clone(),
 			version,
 			order,
 		)
@@ -194,6 +210,10 @@ impl Cmd {
 		log::info!("ChannelId on Chain {}: {}", any_chain_a.name(), channel_id_a);
 		log::info!("ChannelId on Chain {}: {}", any_chain_b.name(), channel_id_b);
 		handle.abort();
-		Ok(())
+
+		config.chain_a.set_channel_whitelist(channel_id_a, port_id.clone());
+		config.chain_b.set_channel_whitelist(channel_id_b, port_id);
+
+		Ok(config)
 	}
 }

@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
-import "../interfaces/ITrie.sol";
-import "./Codec.sol";
-import "../utils/Blake2b.sol";
+import "../../interfaces/ITrie.sol";
+import "../../interfaces/ISpec.sol";
+import "../../utils/Blake2b.sol";
 
-contract HashDBRef is ITrie {
+contract HashDBRef is ITrie, ISpec {
     using Blake2b for Blake2b.Instance;
 
     function get(
         DB[] memory KVStore,
-        bytes32 hash,
+        bytes memory hash,
         Slice calldata nibble_key,
-        Hasher hasher
-    ) external view returns (bytes memory value) {
+        Hasher memory hasher
+    ) external view returns (uint8[] memory value) {
         for (uint256 i = 0; i < KVStore.length; i++) {
             bytes memory storeKey;
             // compute the key for the key-value store
-            if (hasher == Hasher.BLAKE2B) {
+            if (hasher.hasherType == HasherType.BLAKE2B) {
                 Blake2b.Instance memory instance = Blake2b.init(hex"", 64);
                 // Todo: check encoder in parity implementation
                 bytes memory input = combine(hash, nibble_key);
@@ -39,12 +39,14 @@ contract HashDBRef is ITrie {
             }
         }
         // if the value is not found in any of the key-value stores, return an empty value
-        return "";
+        return value;
     }
 
-    function combine(bytes32 hash, Slice calldata nibble_key)
+    function combine(bytes memory hash, Slice calldata nibble_key)
         internal
         view
         returns (bytes memory)
-    {}
+    {
+        // TODO: figure this out
+    }
 }

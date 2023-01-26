@@ -1,17 +1,3 @@
-// Copyright 2022 ComposableFi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 use super::*;
 
 use crate::{
@@ -148,7 +134,7 @@ where
 	fn host_height(&self) -> Height {
 		log::trace!(target: "pallet_ibc", "in client: [host_height]");
 		let current_height = host_height::<T>();
-		let para_id: u32 = parachain_info::Pallet::<T>::get().into();
+		let para_id: u32 = parachain_info::Pallet::<T>::parachain_id().into();
 		Height::new(para_id.into(), current_height)
 	}
 
@@ -210,9 +196,11 @@ where
 				height
 			))
 		})?;
-		let header_hash = frame_system::BlockHash::<T>::get(T::BlockNumber::from(height));
+		let header_hash = frame_system::BlockHash::<T>::get(
+			<T as frame_system::Config>::BlockNumber::from(height),
+		);
 		// we don't even have the hash for this height (anymore?)
-		if header_hash == T::Hash::default() {
+		if header_hash == <T as frame_system::Config>::Hash::default() {
 			Err(ICS02Error::implementation_specific(format!(
 				"[host_consensus_state]: Unknown height {}",
 				height
@@ -226,12 +214,13 @@ where
 					e
 				))
 			})?;
-		let header = T::Header::decode(&mut &connection_proof.header[..]).map_err(|e| {
-			ICS02Error::implementation_specific(format!(
-				"[host_consensus_state]: Failed to decode header: {:?}",
-				e
-			))
-		})?;
+		let header = <T as frame_system::Config>::Header::decode(&mut &connection_proof.header[..])
+			.map_err(|e| {
+				ICS02Error::implementation_specific(format!(
+					"[host_consensus_state]: Failed to decode header: {:?}",
+					e
+				))
+			})?;
 		if header.hash() != header_hash {
 			Err(ICS02Error::implementation_specific(format!(
 				"[host_consensus_state]: Incorrect host consensus state for height {}",

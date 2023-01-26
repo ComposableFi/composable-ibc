@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
-import "../interfaces/ITrie.sol";
+import "../../interfaces/ITrie.sol";
+import "../../utils/NibbleOps.sol";
 
 contract NibbleSlice is ITrie {
-    uint8 constant NIBBLE_PER_BYTE = 2;
-    // Nibble (half a byte).
-    uint8 constant PADDING_BITMASK = 0x0F;
-
     uint8 constant BIT_PER_NIBBLE = 4;
+
+    NibbleOps nibbleOps;
+
+    constructor(address nibbleOpsAddress) {
+        nibbleOps = NibbleOps(nibbleOpsAddress);
+    }
 
     /**
      * @dev Function calculates the new offset for the slice data by adding the given offset to the current offset
@@ -19,7 +22,7 @@ contract NibbleSlice is ITrie {
      */
     function mid(Slice memory slice, uint8 start)
         external
-        pure
+        view
         returns (Slice memory)
     {
         // check if the start position is within the bounds of the slice data
@@ -34,9 +37,12 @@ contract NibbleSlice is ITrie {
      *
      * @return The length of the slice data in nibbles.
      */
-    function len(Slice memory slice) public pure returns (uint8) {
+    function len(Slice memory slice) public view returns (uint8) {
         // return the length of the slice data in nibbles
-        return uint8(slice.data.length * NIBBLE_PER_BYTE - slice.offset);
+        return
+            uint8(
+                slice.data.length * nibbleOps.NIBBLE_PER_BYTE() - slice.offset
+            );
     }
 
     /**
@@ -45,7 +51,7 @@ contract NibbleSlice is ITrie {
      * @param slice The slice to check.
      * @return True if the slice is empty, false otherwise.
      */
-    function isEmpty(Slice memory slice) public pure returns (bool) {
+    function isEmpty(Slice memory slice) public view returns (bool) {
         // check if the length of the slice data is 0
         return len(slice) == 0;
     }
@@ -56,20 +62,17 @@ contract NibbleSlice is ITrie {
      * @param s The slice to check.
      * @return The slice with the left nibble of each byte.
      */
-    function left(Slice memory s) public pure returns (Slice memory) {
-        uint8 split = s.offset / NIBBLE_PER_BYTE;
-        uint8 ix = s.offset % NIBBLE_PER_BYTE;
+    function left(Slice memory s) public view returns (Slice memory) {
+        uint256 split = s.offset / nibbleOps.NIBBLE_PER_BYTE();
+        uint256 ix = s.offset % nibbleOps.NIBBLE_PER_BYTE();
         uint8[] memory slicedArray = s.data;
+        for (uint8 i; i < split; i++) {
+            slicedArray[i] = s.data[i];
+        }
         if (ix == 0) {
-            for (uint8 i; i < split; i++) {
-                slicedArray[i] = s.data[i];
-            }
             s.offset = 0;
         } else {
-            for (uint8 i; i < split; i++) {
-                slicedArray[i] = s.data[i];
-            }
-            s.offset = padLeft(s.data[split]);
+            s.offset = nibbleOps.padLeft(s.data[split]);
         }
         return Slice(slicedArray, s.offset);
     }
@@ -92,7 +95,7 @@ contract NibbleSlice is ITrie {
      */
     function startWith(Slice memory partialSlice, Slice memory slice)
         external
-        pure
+        view
         returns (bool)
     {
         return commonPrefix(partialSlice, slice) == slice.data.length;
@@ -109,42 +112,23 @@ contract NibbleSlice is ITrie {
      * @param i The index of the nibble to get.
      * @return The nibble value at the given index.
      */
-    function at(Slice memory s, uint256 i) public pure returns (uint8) {
+    function at(Slice memory s, uint256 i) public view returns (uint8) {
         // check if the given index is within the bounds of the slice data
         require(i < len(s), "Index out of bounds");
         // Calculate the index of the byte containing the nibble at position `i`.
-        uint256 ix = (s.offset + i) / NIBBLE_PER_BYTE;
+        uint256 ix = (s.offset + i) / nibbleOps.NIBBLE_PER_BYTE();
         // Calculate the nibble offset within the byte.
-        uint256 pad = (s.offset + i) % NIBBLE_PER_BYTE;
+        uint256 pad = (s.offset + i) % nibbleOps.NIBBLE_PER_BYTE();
         // Return the nibble value by applying the padding mask to the byte at index `ix`.
 
         if (pad == 0) {
             return
-                (s.data[ix] & (PADDING_BITMASK << BIT_PER_NIBBLE)) >>
+                (s.data[ix] &
+                    (nibbleOps.PADDING_BITMASK() << BIT_PER_NIBBLE)) >>
                 BIT_PER_NIBBLE;
         } else {
-            return s.data[ix] & PADDING_BITMASK;
+            return s.data[ix] & nibbleOps.PADDING_BITMASK();
         }
-    }
-
-    /**
-     * @dev Function to mask the given byte, keeping the left nibble.
-     *
-     * @param b The byte to mask.
-     * @return The masked byte with the left nibble.
-     */
-    function padLeft(uint8 b) public pure returns (uint8) {
-        return b & ~PADDING_BITMASK;
-    }
-
-    /**
-     * @dev Function to mask the given byte, keeping the right nibble.
-     *
-     * @param b The byte to mask.
-     * @return The masked byte with the right nibble.
-     */
-    function padRight(uint256 b) public pure returns (uint256) {
-        return b & PADDING_BITMASK;
     }
 
     /**
@@ -156,16 +140,17 @@ contract NibbleSlice is ITrie {
      */
     function biggestDepth(uint256[] memory v1, uint256[] memory v2)
         public
-        pure
+        view
         returns (uint256)
     {
         uint256 upperBound = min(v1.length, v2.length);
         for (uint256 a = 0; a < upperBound; a++) {
             if (v1[a] != v2[a]) {
-                return a * NIBBLE_PER_BYTE + leftCommon(v1[a], v2[a]);
+                return
+                    a * nibbleOps.NIBBLE_PER_BYTE() + leftCommon(v1[a], v2[a]);
             }
         }
-        return upperBound * NIBBLE_PER_BYTE;
+        return upperBound * nibbleOps.NIBBLE_PER_BYTE();
     }
 
     /**
@@ -199,17 +184,17 @@ contract NibbleSlice is ITrie {
      */
     function commonPrefix(Slice memory slice1, Slice memory slice2)
         public
-        pure
+        view
         returns (uint256)
     {
         // Calculate the nibble alignment for each slice
-        uint256 self_align = slice1.offset % NIBBLE_PER_BYTE;
-        uint256 them_align = slice2.offset % NIBBLE_PER_BYTE;
+        uint256 self_align = slice1.offset % nibbleOps.NIBBLE_PER_BYTE();
+        uint256 them_align = slice2.offset % nibbleOps.NIBBLE_PER_BYTE();
 
         if (self_align == them_align) {
             // If the alignments are the same, we can compare the byte slices directly
-            uint256 self_start = slice1.offset / NIBBLE_PER_BYTE;
-            uint256 them_start = slice2.offset / NIBBLE_PER_BYTE;
+            uint256 self_start = slice1.offset / nibbleOps.NIBBLE_PER_BYTE();
+            uint256 them_start = slice2.offset / nibbleOps.NIBBLE_PER_BYTE();
             uint256[] memory array1;
             for (uint256 i = self_start; i < slice1.data.length; i++) {
                 array1[i] = slice1.data[i];
@@ -224,8 +209,8 @@ contract NibbleSlice is ITrie {
                 // If the alignments are not 0, we need to compare the first nibble
                 // separately and adjust the start indices accordingly
                 if (
-                    padRight(slice1.data[self_start]) !=
-                    padRight(slice2.data[them_start])
+                    nibbleOps.padRight(slice1.data[self_start]) !=
+                    nibbleOps.padRight(slice2.data[them_start])
                 ) {
                     return 0;
                 }

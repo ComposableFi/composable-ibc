@@ -19,7 +19,7 @@ use codec::{Decode, Encode};
 use frame_support::sp_runtime::traits::Convert;
 use sp_core::keccak_256;
 use sp_runtime::traits::BlakeTwo256;
-use sp_trie::{generate_trie_proof, TrieDBMut, TrieMut};
+use sp_trie::{generate_trie_proof, TrieDBMutBuilder, TrieMut};
 use std::{collections::BTreeMap, sync::Arc};
 use subxt::{Config, OnlineClient};
 
@@ -77,7 +77,8 @@ pub async fn fetch_timestamp_extrinsic_with_proof<T: Config>(
 
 		let root = {
 			let mut root = Default::default();
-			let mut trie = <TrieDBMut<sp_trie::LayoutV0<BlakeTwo256>>>::new(&mut db, &mut root);
+			let mut trie =
+				<TrieDBMutBuilder<sp_trie::LayoutV0<BlakeTwo256>>>::new(&mut db, &mut root).build();
 
 			for (i, ext) in extrinsics.into_iter().enumerate() {
 				let key = codec::Compact(i as u32).encode();

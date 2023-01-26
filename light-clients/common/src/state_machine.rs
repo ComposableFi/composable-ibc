@@ -20,7 +20,7 @@ use codec::Decode;
 use core::fmt::Debug;
 use hash_db::{HashDB, Hasher, EMPTY_PREFIX};
 use sp_storage::ChildInfo;
-use sp_trie::{KeySpacedDB, LayoutV0, StorageProof, Trie, TrieDB};
+use sp_trie::{KeySpacedDB, LayoutV0, StorageProof, Trie, TrieDBBuilder};
 
 #[derive(Debug, derive_more::From, derive_more::Display)]
 pub enum Error<H>
@@ -51,7 +51,7 @@ where
 	I: IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
 {
 	let memory_db = proof.into_memory_db::<H>();
-	let trie = TrieDB::<LayoutV0<H>>::new(&memory_db, &root)?;
+	let trie = TrieDBBuilder::<LayoutV0<H>>::new(&memory_db, &root).build();
 	let child_root = trie
 		.get(child_info.prefixed_storage_key().as_slice())?
 		.map(|r| {
@@ -65,7 +65,7 @@ where
 		.ok_or(Error::<H>::ChildRootNotFound)?;
 
 	let child_db = KeySpacedDB::new(&memory_db, child_info.keyspace());
-	let child_trie = TrieDB::<LayoutV0<H>>::new(&child_db, &child_root)?;
+	let child_trie = TrieDBBuilder::<LayoutV0<H>>::new(&child_db, &child_root).build();
 
 	for (key, value) in items {
 		let recovered = child_trie.get(&key)?.and_then(|val| Decode::decode(&mut &val[..]).ok());
@@ -100,7 +100,7 @@ where
 		Err(Error::InvalidProof)?
 	}
 
-	let trie = TrieDB::<LayoutV0<H>>::new(&db, root)?;
+	let trie = TrieDBBuilder::<LayoutV0<H>>::new(&db, root).build();
 	let mut result = BTreeMap::new();
 
 	for key in keys.into_iter() {

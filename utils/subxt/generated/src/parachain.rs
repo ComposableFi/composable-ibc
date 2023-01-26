@@ -315,7 +315,7 @@ pub mod api {
 			)]
 			#[doc = "An extrinsic completed successfully."]
 			pub struct ExtrinsicSuccess {
-				pub dispatch_info: runtime_types::frame_support::weights::DispatchInfo,
+				pub dispatch_info: runtime_types::frame_support::dispatch::DispatchInfo,
 			}
 			impl ::subxt::events::StaticEvent for ExtrinsicSuccess {
 				const PALLET: &'static str = "System";
@@ -327,7 +327,7 @@ pub mod api {
 			#[doc = "An extrinsic failed."]
 			pub struct ExtrinsicFailed {
 				pub dispatch_error: runtime_types::sp_runtime::DispatchError,
-				pub dispatch_info: runtime_types::frame_support::weights::DispatchInfo,
+				pub dispatch_info: runtime_types::frame_support::dispatch::DispatchInfo,
 			}
 			impl ::subxt::events::StaticEvent for ExtrinsicFailed {
 				const PALLET: &'static str = "System";
@@ -460,8 +460,8 @@ pub mod api {
 					&self,
 				) -> ::subxt::storage::address::StaticStorageAddress<
 					::subxt::metadata::DecodeStaticType<
-						runtime_types::frame_support::weights::PerDispatchClass<
-							::core::primitive::u64,
+						runtime_types::frame_support::dispatch::PerDispatchClass<
+							runtime_types::sp_weights::weight_v2::Weight,
 						>,
 					>,
 					::subxt::storage::address::Yes,
@@ -473,9 +473,9 @@ pub mod api {
 						"BlockWeight",
 						vec![],
 						[
-							91u8, 211u8, 177u8, 36u8, 147u8, 249u8, 55u8, 164u8, 48u8, 49u8, 55u8,
-							11u8, 121u8, 193u8, 103u8, 69u8, 38u8, 142u8, 148u8, 36u8, 137u8, 41u8,
-							115u8, 195u8, 31u8, 174u8, 163u8, 125u8, 69u8, 5u8, 94u8, 79u8,
+							25u8, 97u8, 54u8, 87u8, 196u8, 64u8, 243u8, 40u8, 63u8, 215u8, 225u8,
+							108u8, 83u8, 110u8, 180u8, 62u8, 160u8, 84u8, 65u8, 29u8, 225u8, 34u8,
+							221u8, 108u8, 242u8, 129u8, 215u8, 27u8, 28u8, 158u8, 72u8, 250u8,
 						],
 					)
 				}
@@ -665,7 +665,7 @@ pub mod api {
 					::subxt::metadata::DecodeStaticType<
 						::std::vec::Vec<
 							runtime_types::frame_system::EventRecord<
-								runtime_types::parachain_runtime::Event,
+								runtime_types::parachain_runtime::RuntimeEvent,
 								::subxt::ext::sp_core::H256,
 							>,
 						>,
@@ -679,9 +679,10 @@ pub mod api {
 						"Events",
 						vec![],
 						[
-							43u8, 247u8, 177u8, 215u8, 184u8, 241u8, 93u8, 10u8, 175u8, 103u8,
-							105u8, 25u8, 193u8, 89u8, 167u8, 6u8, 41u8, 35u8, 254u8, 195u8, 37u8,
-							71u8, 27u8, 14u8, 93u8, 100u8, 61u8, 121u8, 96u8, 29u8, 157u8, 124u8,
+							33u8, 249u8, 59u8, 215u8, 248u8, 109u8, 125u8, 252u8, 191u8, 67u8,
+							243u8, 230u8, 146u8, 146u8, 110u8, 163u8, 236u8, 32u8, 7u8, 75u8, 36u8,
+							121u8, 164u8, 201u8, 216u8, 68u8, 174u8, 45u8, 197u8, 160u8, 211u8,
+							223u8,
 						],
 					)
 				}
@@ -877,10 +878,9 @@ pub mod api {
 						"System",
 						"BlockWeights",
 						[
-							153u8, 164u8, 86u8, 79u8, 97u8, 114u8, 248u8, 181u8, 179u8, 186u8,
-							214u8, 124u8, 215u8, 96u8, 116u8, 109u8, 215u8, 182u8, 61u8, 10u8,
-							77u8, 74u8, 29u8, 125u8, 131u8, 111u8, 249u8, 208u8, 233u8, 170u8,
-							11u8, 14u8,
+							64u8, 123u8, 136u8, 20u8, 38u8, 151u8, 254u8, 81u8, 251u8, 41u8, 4u8,
+							87u8, 167u8, 25u8, 149u8, 3u8, 17u8, 65u8, 145u8, 192u8, 195u8, 87u8,
+							182u8, 78u8, 104u8, 147u8, 9u8, 56u8, 146u8, 20u8, 47u8, 22u8,
 						],
 					)
 				}
@@ -924,9 +924,7 @@ pub mod api {
 				pub fn db_weight(
 					&self,
 				) -> ::subxt::constants::StaticConstantAddress<
-					::subxt::metadata::DecodeStaticType<
-						runtime_types::frame_support::weights::RuntimeDbWeight,
-					>,
+					::subxt::metadata::DecodeStaticType<runtime_types::sp_weights::RuntimeDbWeight>,
 				> {
 					::subxt::constants::StaticConstantAddress::new(
 						"System",
@@ -955,7 +953,7 @@ pub mod api {
 						],
 					)
 				}
-				#[doc = " The designated SS85 prefix of this chain."]
+				#[doc = " The designated SS58 prefix of this chain."]
 				#[doc = ""]
 				#[doc = " This replaces the \"ss58Format\" property declared in the chain spec. Reason is"]
 				#[doc = " that the runtime should know about the prefix in order to make use of it as"]
@@ -1204,7 +1202,7 @@ pub mod api {
 				}
 			}
 		}
-		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 		pub type Event = runtime_types::cumulus_pallet_parachain_system::pallet::Event;
 		pub mod events {
 			use super::runtime_types;
@@ -1270,7 +1268,7 @@ pub mod api {
 			)]
 			#[doc = "Downward messages were processed using the given weight."]
 			pub struct DownwardMessagesProcessed {
-				pub weight_used: ::core::primitive::u64,
+				pub weight_used: runtime_types::sp_weights::weight_v2::Weight,
 				pub dmq_head: ::subxt::ext::sp_core::H256,
 			}
 			impl ::subxt::events::StaticEvent for DownwardMessagesProcessed {
@@ -1706,7 +1704,9 @@ pub mod api {
 				pub fn reserved_xcmp_weight_override(
 					&self,
 				) -> ::subxt::storage::address::StaticStorageAddress<
-					::subxt::metadata::DecodeStaticType<::core::primitive::u64>,
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::sp_weights::weight_v2::Weight,
+					>,
 					::subxt::storage::address::Yes,
 					(),
 					(),
@@ -1716,10 +1716,10 @@ pub mod api {
 						"ReservedXcmpWeightOverride",
 						vec![],
 						[
-							250u8, 177u8, 18u8, 183u8, 23u8, 84u8, 14u8, 178u8, 92u8, 60u8, 210u8,
-							155u8, 63u8, 58u8, 105u8, 196u8, 184u8, 235u8, 145u8, 11u8, 215u8,
-							121u8, 60u8, 140u8, 14u8, 50u8, 185u8, 101u8, 210u8, 230u8, 180u8,
-							250u8,
+							57u8, 33u8, 20u8, 185u8, 196u8, 134u8, 221u8, 101u8, 193u8, 35u8,
+							188u8, 20u8, 196u8, 187u8, 250u8, 197u8, 71u8, 120u8, 181u8, 199u8,
+							230u8, 228u8, 150u8, 47u8, 164u8, 9u8, 175u8, 194u8, 74u8, 28u8, 255u8,
+							89u8,
 						],
 					)
 				}
@@ -1728,7 +1728,9 @@ pub mod api {
 				pub fn reserved_dmp_weight_override(
 					&self,
 				) -> ::subxt::storage::address::StaticStorageAddress<
-					::subxt::metadata::DecodeStaticType<::core::primitive::u64>,
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::sp_weights::weight_v2::Weight,
+					>,
 					::subxt::storage::address::Yes,
 					(),
 					(),
@@ -1738,10 +1740,10 @@ pub mod api {
 						"ReservedDmpWeightOverride",
 						vec![],
 						[
-							20u8, 145u8, 152u8, 245u8, 73u8, 101u8, 125u8, 190u8, 151u8, 180u8,
-							22u8, 157u8, 58u8, 115u8, 165u8, 167u8, 117u8, 166u8, 201u8, 10u8,
-							206u8, 255u8, 206u8, 40u8, 40u8, 63u8, 228u8, 53u8, 58u8, 47u8, 121u8,
-							76u8,
+							215u8, 1u8, 158u8, 251u8, 154u8, 183u8, 174u8, 105u8, 10u8, 171u8,
+							120u8, 18u8, 193u8, 242u8, 54u8, 166u8, 138u8, 53u8, 237u8, 198u8,
+							255u8, 98u8, 100u8, 139u8, 130u8, 4u8, 242u8, 146u8, 162u8, 213u8,
+							50u8, 239u8,
 						],
 					)
 				}
@@ -2098,7 +2100,7 @@ pub mod api {
 				}
 			}
 		}
-		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 		pub type Event = runtime_types::pallet_balances::pallet::Event;
 		pub mod events {
 			use super::runtime_types;
@@ -2355,7 +2357,7 @@ pub mod api {
 					_0: impl ::std::borrow::Borrow<::subxt::ext::sp_core::crypto::AccountId32>,
 				) -> ::subxt::storage::address::StaticStorageAddress<
 					::subxt::metadata::DecodeStaticType<
-						runtime_types::sp_runtime::bounded::weak_bounded_vec::WeakBoundedVec<
+						runtime_types::sp_core::bounded::weak_bounded_vec::WeakBoundedVec<
 							runtime_types::pallet_balances::BalanceLock<::core::primitive::u128>,
 						>,
 					>,
@@ -2383,7 +2385,7 @@ pub mod api {
 					&self,
 				) -> ::subxt::storage::address::StaticStorageAddress<
 					::subxt::metadata::DecodeStaticType<
-						runtime_types::sp_runtime::bounded::weak_bounded_vec::WeakBoundedVec<
+						runtime_types::sp_core::bounded::weak_bounded_vec::WeakBoundedVec<
 							runtime_types::pallet_balances::BalanceLock<::core::primitive::u128>,
 						>,
 					>,
@@ -2408,7 +2410,7 @@ pub mod api {
 					_0: impl ::std::borrow::Borrow<::subxt::ext::sp_core::crypto::AccountId32>,
 				) -> ::subxt::storage::address::StaticStorageAddress<
 					::subxt::metadata::DecodeStaticType<
-						runtime_types::sp_runtime::bounded::bounded_vec::BoundedVec<
+						runtime_types::sp_core::bounded::bounded_vec::BoundedVec<
 							runtime_types::pallet_balances::ReserveData<
 								[::core::primitive::u8; 8usize],
 								::core::primitive::u128,
@@ -2438,7 +2440,7 @@ pub mod api {
 					&self,
 				) -> ::subxt::storage::address::StaticStorageAddress<
 					::subxt::metadata::DecodeStaticType<
-						runtime_types::sp_runtime::bounded::bounded_vec::BoundedVec<
+						runtime_types::sp_core::bounded::bounded_vec::BoundedVec<
 							runtime_types::pallet_balances::ReserveData<
 								[::core::primitive::u8; 8usize],
 								::core::primitive::u128,
@@ -2545,7 +2547,7 @@ pub mod api {
 	}
 	pub mod transaction_payment {
 		use super::{root_mod, runtime_types};
-		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 		pub type Event = runtime_types::pallet_transaction_payment::pallet::Event;
 		pub mod events {
 			use super::runtime_types;
@@ -2709,7 +2711,7 @@ pub mod api {
 					&self,
 				) -> ::subxt::storage::address::StaticStorageAddress<
 					::subxt::metadata::DecodeStaticType<
-						runtime_types::sp_runtime::bounded::bounded_vec::BoundedVec<
+						runtime_types::sp_core::bounded::bounded_vec::BoundedVec<
 							runtime_types::pallet_authorship::UncleEntryItem<
 								::core::primitive::u32,
 								::subxt::ext::sp_core::H256,
@@ -2933,7 +2935,7 @@ pub mod api {
 				}
 			}
 		}
-		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 		pub type Event = runtime_types::pallet_collator_selection::pallet::Event;
 		pub mod events {
 			use super::runtime_types;
@@ -3004,7 +3006,7 @@ pub mod api {
 					&self,
 				) -> ::subxt::storage::address::StaticStorageAddress<
 					::subxt::metadata::DecodeStaticType<
-						runtime_types::sp_runtime::bounded::bounded_vec::BoundedVec<
+						runtime_types::sp_core::bounded::bounded_vec::BoundedVec<
 							::subxt::ext::sp_core::crypto::AccountId32,
 						>,
 					>,
@@ -3028,7 +3030,7 @@ pub mod api {
 					&self,
 				) -> ::subxt::storage::address::StaticStorageAddress<
 					::subxt::metadata::DecodeStaticType<
-						runtime_types::sp_runtime::bounded::bounded_vec::BoundedVec<
+						runtime_types::sp_core::bounded::bounded_vec::BoundedVec<
 							runtime_types::pallet_collator_selection::pallet::CandidateInfo<
 								::subxt::ext::sp_core::crypto::AccountId32,
 								::core::primitive::u128,
@@ -3223,7 +3225,7 @@ pub mod api {
 				}
 			}
 		}
-		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 		pub type Event = runtime_types::pallet_session::pallet::Event;
 		pub mod events {
 			use super::runtime_types;
@@ -3471,7 +3473,7 @@ pub mod api {
 					&self,
 				) -> ::subxt::storage::address::StaticStorageAddress<
 					::subxt::metadata::DecodeStaticType<
-						runtime_types::sp_runtime::bounded::bounded_vec::BoundedVec<
+						runtime_types::sp_core::bounded::bounded_vec::BoundedVec<
 							runtime_types::sp_consensus_aura::sr25519::app_sr25519::Public,
 						>,
 					>,
@@ -3532,7 +3534,7 @@ pub mod api {
 					&self,
 				) -> ::subxt::storage::address::StaticStorageAddress<
 					::subxt::metadata::DecodeStaticType<
-						runtime_types::sp_runtime::bounded::bounded_vec::BoundedVec<
+						runtime_types::sp_core::bounded::bounded_vec::BoundedVec<
 							runtime_types::sp_consensus_aura::sr25519::app_sr25519::Public,
 						>,
 					>,
@@ -3566,7 +3568,7 @@ pub mod api {
 			)]
 			pub struct ServiceOverweight {
 				pub index: ::core::primitive::u64,
-				pub weight_limit: ::core::primitive::u64,
+				pub weight_limit: runtime_types::sp_weights::weight_v2::Weight,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -3604,31 +3606,22 @@ pub mod api {
 				pub new: ::core::primitive::u32,
 			}
 			#[derive(
-				:: subxt :: ext :: codec :: CompactAs,
-				:: subxt :: ext :: codec :: Decode,
-				:: subxt :: ext :: codec :: Encode,
-				Debug,
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct UpdateThresholdWeight {
-				pub new: ::core::primitive::u64,
+				pub new: runtime_types::sp_weights::weight_v2::Weight,
 			}
 			#[derive(
-				:: subxt :: ext :: codec :: CompactAs,
-				:: subxt :: ext :: codec :: Decode,
-				:: subxt :: ext :: codec :: Encode,
-				Debug,
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct UpdateWeightRestrictDecay {
-				pub new: ::core::primitive::u64,
+				pub new: runtime_types::sp_weights::weight_v2::Weight,
 			}
 			#[derive(
-				:: subxt :: ext :: codec :: CompactAs,
-				:: subxt :: ext :: codec :: Decode,
-				:: subxt :: ext :: codec :: Encode,
-				Debug,
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct UpdateXcmpMaxIndividualWeight {
-				pub new: ::core::primitive::u64,
+				pub new: runtime_types::sp_weights::weight_v2::Weight,
 			}
 			pub struct TransactionApi;
 			impl TransactionApi {
@@ -3648,16 +3641,16 @@ pub mod api {
 				pub fn service_overweight(
 					&self,
 					index: ::core::primitive::u64,
-					weight_limit: ::core::primitive::u64,
+					weight_limit: runtime_types::sp_weights::weight_v2::Weight,
 				) -> ::subxt::tx::StaticTxPayload<ServiceOverweight> {
 					::subxt::tx::StaticTxPayload::new(
 						"XcmpQueue",
 						"service_overweight",
 						ServiceOverweight { index, weight_limit },
 						[
-							225u8, 41u8, 132u8, 91u8, 28u8, 116u8, 89u8, 197u8, 194u8, 131u8, 28u8,
-							217u8, 102u8, 241u8, 122u8, 230u8, 242u8, 75u8, 83u8, 67u8, 104u8,
-							55u8, 133u8, 129u8, 91u8, 25u8, 185u8, 131u8, 22u8, 253u8, 84u8, 221u8,
+							162u8, 46u8, 217u8, 245u8, 241u8, 67u8, 14u8, 88u8, 80u8, 138u8, 47u8,
+							41u8, 52u8, 109u8, 132u8, 113u8, 251u8, 112u8, 223u8, 238u8, 135u8,
+							207u8, 230u8, 226u8, 24u8, 88u8, 18u8, 191u8, 46u8, 160u8, 196u8, 50u8,
 						],
 					)
 				}
@@ -3766,16 +3759,17 @@ pub mod api {
 				#[doc = "- `new`: Desired value for `QueueConfigData.threshold_weight`"]
 				pub fn update_threshold_weight(
 					&self,
-					new: ::core::primitive::u64,
+					new: runtime_types::sp_weights::weight_v2::Weight,
 				) -> ::subxt::tx::StaticTxPayload<UpdateThresholdWeight> {
 					::subxt::tx::StaticTxPayload::new(
 						"XcmpQueue",
 						"update_threshold_weight",
 						UpdateThresholdWeight { new },
 						[
-							129u8, 208u8, 93u8, 179u8, 45u8, 236u8, 84u8, 209u8, 37u8, 226u8, 88u8,
-							123u8, 156u8, 101u8, 93u8, 84u8, 110u8, 61u8, 56u8, 45u8, 14u8, 120u8,
-							181u8, 71u8, 174u8, 104u8, 225u8, 36u8, 17u8, 74u8, 94u8, 59u8,
+							180u8, 179u8, 106u8, 47u8, 46u8, 178u8, 87u8, 176u8, 246u8, 35u8,
+							204u8, 50u8, 161u8, 20u8, 28u8, 101u8, 158u8, 236u8, 219u8, 112u8,
+							34u8, 15u8, 231u8, 127u8, 172u8, 0u8, 228u8, 32u8, 164u8, 153u8, 120u8,
+							161u8,
 						],
 					)
 				}
@@ -3786,17 +3780,16 @@ pub mod api {
 				#[doc = "- `new`: Desired value for `QueueConfigData.weight_restrict_decay`."]
 				pub fn update_weight_restrict_decay(
 					&self,
-					new: ::core::primitive::u64,
+					new: runtime_types::sp_weights::weight_v2::Weight,
 				) -> ::subxt::tx::StaticTxPayload<UpdateWeightRestrictDecay> {
 					::subxt::tx::StaticTxPayload::new(
 						"XcmpQueue",
 						"update_weight_restrict_decay",
 						UpdateWeightRestrictDecay { new },
 						[
-							73u8, 98u8, 189u8, 10u8, 137u8, 162u8, 71u8, 54u8, 24u8, 117u8, 15u8,
-							137u8, 251u8, 121u8, 86u8, 5u8, 123u8, 42u8, 151u8, 244u8, 200u8,
-							140u8, 104u8, 149u8, 101u8, 14u8, 58u8, 163u8, 208u8, 205u8, 177u8,
-							142u8,
+							239u8, 227u8, 177u8, 160u8, 41u8, 233u8, 144u8, 44u8, 37u8, 94u8,
+							112u8, 251u8, 105u8, 168u8, 236u8, 73u8, 169u8, 8u8, 68u8, 81u8, 242u8,
+							6u8, 152u8, 146u8, 230u8, 232u8, 212u8, 132u8, 55u8, 26u8, 149u8, 42u8,
 						],
 					)
 				}
@@ -3807,22 +3800,22 @@ pub mod api {
 				#[doc = "- `new`: Desired value for `QueueConfigData.xcmp_max_individual_weight`."]
 				pub fn update_xcmp_max_individual_weight(
 					&self,
-					new: ::core::primitive::u64,
+					new: runtime_types::sp_weights::weight_v2::Weight,
 				) -> ::subxt::tx::StaticTxPayload<UpdateXcmpMaxIndividualWeight> {
 					::subxt::tx::StaticTxPayload::new(
 						"XcmpQueue",
 						"update_xcmp_max_individual_weight",
 						UpdateXcmpMaxIndividualWeight { new },
 						[
-							52u8, 93u8, 25u8, 215u8, 36u8, 235u8, 88u8, 49u8, 142u8, 132u8, 57u8,
-							2u8, 204u8, 195u8, 166u8, 254u8, 235u8, 247u8, 142u8, 207u8, 224u8,
-							43u8, 7u8, 106u8, 142u8, 3u8, 188u8, 101u8, 9u8, 75u8, 57u8, 39u8,
+							143u8, 90u8, 3u8, 57u8, 255u8, 65u8, 176u8, 51u8, 48u8, 148u8, 150u8,
+							212u8, 236u8, 190u8, 106u8, 213u8, 42u8, 137u8, 9u8, 188u8, 87u8,
+							177u8, 3u8, 94u8, 21u8, 86u8, 167u8, 166u8, 56u8, 70u8, 104u8, 180u8,
 						],
 					)
 				}
 			}
 		}
-		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 		pub type Event = runtime_types::cumulus_pallet_xcmp_queue::pallet::Event;
 		pub mod events {
 			use super::runtime_types;
@@ -3832,7 +3825,7 @@ pub mod api {
 			#[doc = "Some XCM was executed ok."]
 			pub struct Success {
 				pub message_hash: ::core::option::Option<::subxt::ext::sp_core::H256>,
-				pub weight: ::core::primitive::u64,
+				pub weight: runtime_types::sp_weights::weight_v2::Weight,
 			}
 			impl ::subxt::events::StaticEvent for Success {
 				const PALLET: &'static str = "XcmpQueue";
@@ -3845,7 +3838,7 @@ pub mod api {
 			pub struct Fail {
 				pub message_hash: ::core::option::Option<::subxt::ext::sp_core::H256>,
 				pub error: runtime_types::xcm::v2::traits::Error,
-				pub weight: ::core::primitive::u64,
+				pub weight: runtime_types::sp_weights::weight_v2::Weight,
 			}
 			impl ::subxt::events::StaticEvent for Fail {
 				const PALLET: &'static str = "XcmpQueue";
@@ -3903,7 +3896,7 @@ pub mod api {
 				pub sender: runtime_types::polkadot_parachain::primitives::Id,
 				pub sent_at: ::core::primitive::u32,
 				pub index: ::core::primitive::u64,
-				pub required: ::core::primitive::u64,
+				pub required: runtime_types::sp_weights::weight_v2::Weight,
 			}
 			impl ::subxt::events::StaticEvent for OverweightEnqueued {
 				const PALLET: &'static str = "XcmpQueue";
@@ -3915,7 +3908,7 @@ pub mod api {
 			#[doc = "An XCM from the overweight queue was executed with the given actual weight used."]
 			pub struct OverweightServiced {
 				pub index: ::core::primitive::u64,
-				pub used: ::core::primitive::u64,
+				pub used: runtime_types::sp_weights::weight_v2::Weight,
 			}
 			impl ::subxt::events::StaticEvent for OverweightServiced {
 				const PALLET: &'static str = "XcmpQueue";
@@ -4145,9 +4138,9 @@ pub mod api {
 						"QueueConfig",
 						vec![],
 						[
-							19u8, 251u8, 183u8, 11u8, 104u8, 50u8, 57u8, 111u8, 143u8, 89u8, 220u8,
-							164u8, 171u8, 188u8, 161u8, 46u8, 70u8, 6u8, 12u8, 88u8, 151u8, 92u8,
-							140u8, 28u8, 113u8, 51u8, 147u8, 57u8, 150u8, 206u8, 179u8, 152u8,
+							93u8, 70u8, 64u8, 223u8, 213u8, 33u8, 157u8, 14u8, 118u8, 103u8, 79u8,
+							60u8, 54u8, 16u8, 10u8, 190u8, 51u8, 230u8, 160u8, 226u8, 96u8, 238u8,
+							171u8, 82u8, 71u8, 84u8, 139u8, 90u8, 148u8, 148u8, 63u8, 20u8,
 						],
 					)
 				}
@@ -4292,7 +4285,7 @@ pub mod api {
 			)]
 			pub struct Execute {
 				pub message: ::std::boxed::Box<runtime_types::xcm::VersionedXcm>,
-				pub max_weight: ::core::primitive::u64,
+				pub max_weight: runtime_types::sp_weights::weight_v2::Weight,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -4452,16 +4445,17 @@ pub mod api {
 				pub fn execute(
 					&self,
 					message: runtime_types::xcm::VersionedXcm,
-					max_weight: ::core::primitive::u64,
+					max_weight: runtime_types::sp_weights::weight_v2::Weight,
 				) -> ::subxt::tx::StaticTxPayload<Execute> {
 					::subxt::tx::StaticTxPayload::new(
 						"PolkadotXcm",
 						"execute",
 						Execute { message: ::std::boxed::Box::new(message), max_weight },
 						[
-							191u8, 177u8, 39u8, 21u8, 1u8, 110u8, 39u8, 58u8, 94u8, 27u8, 44u8,
-							18u8, 253u8, 135u8, 100u8, 205u8, 0u8, 231u8, 68u8, 247u8, 5u8, 140u8,
-							131u8, 184u8, 251u8, 197u8, 100u8, 113u8, 253u8, 255u8, 120u8, 206u8,
+							212u8, 76u8, 149u8, 118u8, 145u8, 199u8, 59u8, 158u8, 221u8, 134u8,
+							6u8, 31u8, 212u8, 186u8, 25u8, 111u8, 124u8, 78u8, 207u8, 101u8, 83u8,
+							6u8, 252u8, 19u8, 110u8, 169u8, 103u8, 193u8, 119u8, 53u8, 164u8,
+							144u8,
 						],
 					)
 				}
@@ -4639,7 +4633,7 @@ pub mod api {
 				}
 			}
 		}
-		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 		pub type Event = runtime_types::pallet_xcm::pallet::Event;
 		pub mod events {
 			use super::runtime_types;
@@ -4728,8 +4722,8 @@ pub mod api {
 				pub ::core::primitive::u64,
 				pub ::core::primitive::u8,
 				pub ::core::primitive::u8,
-				pub ::core::primitive::u64,
-				pub ::core::primitive::u64,
+				pub runtime_types::sp_weights::weight_v2::Weight,
+				pub runtime_types::sp_weights::weight_v2::Weight,
 			);
 			impl ::subxt::events::StaticEvent for NotifyOverweight {
 				const PALLET: &'static str = "PolkadotXcm";
@@ -5214,7 +5208,7 @@ pub mod api {
 					&self,
 				) -> ::subxt::storage::address::StaticStorageAddress<
 					::subxt::metadata::DecodeStaticType<
-						runtime_types::sp_runtime::bounded::bounded_vec::BoundedVec<(
+						runtime_types::sp_core::bounded::bounded_vec::BoundedVec<(
 							runtime_types::xcm::VersionedMultiLocation,
 							::core::primitive::u32,
 						)>,
@@ -5269,7 +5263,7 @@ pub mod api {
 			pub struct TransactionApi;
 			impl TransactionApi {}
 		}
-		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 		pub type Event = runtime_types::cumulus_pallet_xcm::pallet::Event;
 		pub mod events {
 			use super::runtime_types;
@@ -5319,7 +5313,7 @@ pub mod api {
 			)]
 			pub struct ServiceOverweight {
 				pub index: ::core::primitive::u64,
-				pub weight_limit: ::core::primitive::u64,
+				pub weight_limit: runtime_types::sp_weights::weight_v2::Weight,
 			}
 			pub struct TransactionApi;
 			impl TransactionApi {
@@ -5338,22 +5332,22 @@ pub mod api {
 				pub fn service_overweight(
 					&self,
 					index: ::core::primitive::u64,
-					weight_limit: ::core::primitive::u64,
+					weight_limit: runtime_types::sp_weights::weight_v2::Weight,
 				) -> ::subxt::tx::StaticTxPayload<ServiceOverweight> {
 					::subxt::tx::StaticTxPayload::new(
 						"DmpQueue",
 						"service_overweight",
 						ServiceOverweight { index, weight_limit },
 						[
-							225u8, 41u8, 132u8, 91u8, 28u8, 116u8, 89u8, 197u8, 194u8, 131u8, 28u8,
-							217u8, 102u8, 241u8, 122u8, 230u8, 242u8, 75u8, 83u8, 67u8, 104u8,
-							55u8, 133u8, 129u8, 91u8, 25u8, 185u8, 131u8, 22u8, 253u8, 84u8, 221u8,
+							162u8, 46u8, 217u8, 245u8, 241u8, 67u8, 14u8, 88u8, 80u8, 138u8, 47u8,
+							41u8, 52u8, 109u8, 132u8, 113u8, 251u8, 112u8, 223u8, 238u8, 135u8,
+							207u8, 230u8, 226u8, 24u8, 88u8, 18u8, 191u8, 46u8, 160u8, 196u8, 50u8,
 						],
 					)
 				}
 			}
 		}
-		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 		pub type Event = runtime_types::cumulus_pallet_dmp_queue::pallet::Event;
 		pub mod events {
 			use super::runtime_types;
@@ -5397,8 +5391,8 @@ pub mod api {
 			#[doc = "The weight limit for handling downward messages was reached."]
 			pub struct WeightExhausted {
 				pub message_id: [::core::primitive::u8; 32usize],
-				pub remaining_weight: ::core::primitive::u64,
-				pub required_weight: ::core::primitive::u64,
+				pub remaining_weight: runtime_types::sp_weights::weight_v2::Weight,
+				pub required_weight: runtime_types::sp_weights::weight_v2::Weight,
 			}
 			impl ::subxt::events::StaticEvent for WeightExhausted {
 				const PALLET: &'static str = "DmpQueue";
@@ -5411,7 +5405,7 @@ pub mod api {
 			pub struct OverweightEnqueued {
 				pub message_id: [::core::primitive::u8; 32usize],
 				pub overweight_index: ::core::primitive::u64,
-				pub required_weight: ::core::primitive::u64,
+				pub required_weight: runtime_types::sp_weights::weight_v2::Weight,
 			}
 			impl ::subxt::events::StaticEvent for OverweightEnqueued {
 				const PALLET: &'static str = "DmpQueue";
@@ -5423,7 +5417,7 @@ pub mod api {
 			#[doc = "Downward message from the overweight queue was executed."]
 			pub struct OverweightServiced {
 				pub overweight_index: ::core::primitive::u64,
-				pub weight_used: ::core::primitive::u64,
+				pub weight_used: runtime_types::sp_weights::weight_v2::Weight,
 			}
 			impl ::subxt::events::StaticEvent for OverweightServiced {
 				const PALLET: &'static str = "DmpQueue";
@@ -5450,9 +5444,9 @@ pub mod api {
 						"Configuration",
 						vec![],
 						[
-							1u8, 54u8, 187u8, 187u8, 248u8, 220u8, 44u8, 119u8, 173u8, 91u8, 236u8,
-							102u8, 123u8, 199u8, 153u8, 26u8, 188u8, 102u8, 123u8, 180u8, 149u8,
-							239u8, 184u8, 96u8, 100u8, 52u8, 150u8, 23u8, 26u8, 144u8, 0u8, 224u8,
+							242u8, 156u8, 77u8, 209u8, 44u8, 160u8, 89u8, 179u8, 113u8, 81u8,
+							143u8, 83u8, 152u8, 49u8, 41u8, 58u8, 83u8, 100u8, 134u8, 0u8, 1u8,
+							130u8, 58u8, 243u8, 61u8, 26u8, 39u8, 156u8, 115u8, 185u8, 76u8, 251u8,
 						],
 					)
 				}
@@ -5598,14 +5592,14 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct Sudo {
-				pub call: ::std::boxed::Box<runtime_types::parachain_runtime::Call>,
+				pub call: ::std::boxed::Box<runtime_types::parachain_runtime::RuntimeCall>,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct SudoUncheckedWeight {
-				pub call: ::std::boxed::Box<runtime_types::parachain_runtime::Call>,
-				pub weight: ::core::primitive::u64,
+				pub call: ::std::boxed::Box<runtime_types::parachain_runtime::RuntimeCall>,
+				pub weight: runtime_types::sp_weights::weight_v2::Weight,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -5624,7 +5618,7 @@ pub mod api {
 					::subxt::ext::sp_core::crypto::AccountId32,
 					(),
 				>,
-				pub call: ::std::boxed::Box<runtime_types::parachain_runtime::Call>,
+				pub call: ::std::boxed::Box<runtime_types::parachain_runtime::RuntimeCall>,
 			}
 			pub struct TransactionApi;
 			impl TransactionApi {
@@ -5640,17 +5634,17 @@ pub mod api {
 				#[doc = "# </weight>"]
 				pub fn sudo(
 					&self,
-					call: runtime_types::parachain_runtime::Call,
+					call: runtime_types::parachain_runtime::RuntimeCall,
 				) -> ::subxt::tx::StaticTxPayload<Sudo> {
 					::subxt::tx::StaticTxPayload::new(
 						"Sudo",
 						"sudo",
 						Sudo { call: ::std::boxed::Box::new(call) },
 						[
-							157u8, 103u8, 40u8, 106u8, 115u8, 27u8, 148u8, 190u8, 45u8, 135u8,
-							78u8, 112u8, 172u8, 223u8, 115u8, 74u8, 175u8, 106u8, 97u8, 181u8,
-							89u8, 224u8, 62u8, 226u8, 58u8, 89u8, 74u8, 233u8, 110u8, 214u8, 0u8,
-							90u8,
+							106u8, 82u8, 78u8, 216u8, 201u8, 229u8, 115u8, 60u8, 123u8, 44u8, 28u8,
+							232u8, 218u8, 204u8, 112u8, 164u8, 175u8, 159u8, 252u8, 165u8, 28u8,
+							202u8, 47u8, 163u8, 66u8, 12u8, 160u8, 221u8, 228u8, 180u8, 23u8,
+							124u8,
 						],
 					)
 				}
@@ -5666,18 +5660,18 @@ pub mod api {
 				#[doc = "# </weight>"]
 				pub fn sudo_unchecked_weight(
 					&self,
-					call: runtime_types::parachain_runtime::Call,
-					weight: ::core::primitive::u64,
+					call: runtime_types::parachain_runtime::RuntimeCall,
+					weight: runtime_types::sp_weights::weight_v2::Weight,
 				) -> ::subxt::tx::StaticTxPayload<SudoUncheckedWeight> {
 					::subxt::tx::StaticTxPayload::new(
 						"Sudo",
 						"sudo_unchecked_weight",
 						SudoUncheckedWeight { call: ::std::boxed::Box::new(call), weight },
 						[
-							123u8, 192u8, 216u8, 46u8, 252u8, 222u8, 182u8, 169u8, 104u8, 214u8,
-							106u8, 44u8, 226u8, 65u8, 212u8, 228u8, 56u8, 162u8, 95u8, 122u8,
-							111u8, 128u8, 207u8, 24u8, 60u8, 51u8, 238u8, 53u8, 45u8, 115u8, 74u8,
-							157u8,
+							117u8, 152u8, 255u8, 44u8, 103u8, 98u8, 196u8, 73u8, 100u8, 108u8,
+							46u8, 45u8, 97u8, 157u8, 71u8, 174u8, 75u8, 96u8, 116u8, 219u8, 211u8,
+							102u8, 207u8, 219u8, 31u8, 93u8, 191u8, 155u8, 84u8, 148u8, 145u8,
+							16u8,
 						],
 					)
 				}
@@ -5726,22 +5720,22 @@ pub mod api {
 						::subxt::ext::sp_core::crypto::AccountId32,
 						(),
 					>,
-					call: runtime_types::parachain_runtime::Call,
+					call: runtime_types::parachain_runtime::RuntimeCall,
 				) -> ::subxt::tx::StaticTxPayload<SudoAs> {
 					::subxt::tx::StaticTxPayload::new(
 						"Sudo",
 						"sudo_as",
 						SudoAs { who, call: ::std::boxed::Box::new(call) },
 						[
-							144u8, 124u8, 211u8, 169u8, 115u8, 138u8, 144u8, 60u8, 11u8, 81u8,
-							20u8, 248u8, 11u8, 67u8, 139u8, 26u8, 163u8, 42u8, 90u8, 130u8, 100u8,
-							163u8, 76u8, 117u8, 31u8, 82u8, 234u8, 61u8, 99u8, 51u8, 189u8, 221u8,
+							35u8, 168u8, 191u8, 163u8, 131u8, 50u8, 162u8, 46u8, 158u8, 55u8, 55u8,
+							219u8, 228u8, 109u8, 219u8, 142u8, 86u8, 156u8, 151u8, 147u8, 184u8,
+							141u8, 201u8, 182u8, 218u8, 0u8, 206u8, 233u8, 80u8, 87u8, 50u8, 241u8,
 						],
 					)
 				}
 			}
 		}
-		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 		pub type Event = runtime_types::pallet_sudo::pallet::Event;
 		pub mod events {
 			use super::runtime_types;
@@ -5839,7 +5833,7 @@ pub mod api {
 				}
 			}
 		}
-		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 		pub type Event = runtime_types::pallet_ibc_ping::pallet::Event;
 		pub mod events {
 			use super::runtime_types;
@@ -7046,7 +7040,7 @@ pub mod api {
 				}
 			}
 		}
-		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 		pub type Event = runtime_types::pallet_assets::pallet::Event;
 		pub mod events {
 			use super::runtime_types;
@@ -7497,7 +7491,7 @@ pub mod api {
 					::subxt::metadata::DecodeStaticType<
 						runtime_types::pallet_assets::types::AssetMetadata<
 							::core::primitive::u128,
-							runtime_types::sp_runtime::bounded::bounded_vec::BoundedVec<
+							runtime_types::sp_core::bounded::bounded_vec::BoundedVec<
 								::core::primitive::u8,
 							>,
 						>,
@@ -7527,7 +7521,7 @@ pub mod api {
 					::subxt::metadata::DecodeStaticType<
 						runtime_types::pallet_assets::types::AssetMetadata<
 							::core::primitive::u128,
-							runtime_types::sp_runtime::bounded::bounded_vec::BoundedVec<
+							runtime_types::sp_core::bounded::bounded_vec::BoundedVec<
 								::core::primitive::u8,
 							>,
 						>,
@@ -7739,7 +7733,7 @@ pub mod api {
 				}
 			}
 		}
-		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 		pub type Event = runtime_types::orml_asset_registry::module::Event;
 		pub mod events {
 			use super::runtime_types;
@@ -8031,7 +8025,7 @@ pub mod api {
 				}
 			}
 		}
-		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 		pub type Event = runtime_types::pallet_ibc::pallet::Event;
 		pub mod events {
 			use super::runtime_types;
@@ -8056,7 +8050,7 @@ pub mod api {
 			)]
 			#[doc = "An Ibc token transfer has been started"]
 			pub struct TokenTransferInitiated {
-				pub from: ::subxt::ext::sp_core::crypto::AccountId32,
+				pub from: ::std::vec::Vec<::core::primitive::u8>,
 				pub to: ::std::vec::Vec<::core::primitive::u8>,
 				pub ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
 				pub local_asset_id: ::core::option::Option<::core::primitive::u128>,
@@ -8732,7 +8726,7 @@ pub mod api {
 					_0: impl ::std::borrow::Borrow<[::core::primitive::u8]>,
 				) -> ::subxt::storage::address::StaticStorageAddress<
 					::subxt::metadata::DecodeStaticType<
-						runtime_types::sp_runtime::bounded::bounded_btree_set::BoundedBTreeSet<
+						runtime_types::sp_core::bounded::bounded_btree_set::BoundedBTreeSet<
 							runtime_types::ibc::core::ics02_client::height::Height,
 						>,
 					>,
@@ -8761,7 +8755,7 @@ pub mod api {
 					&self,
 				) -> ::subxt::storage::address::StaticStorageAddress<
 					::subxt::metadata::DecodeStaticType<
-						runtime_types::sp_runtime::bounded::bounded_btree_set::BoundedBTreeSet<
+						runtime_types::sp_core::bounded::bounded_btree_set::BoundedBTreeSet<
 							runtime_types::ibc::core::ics02_client::height::Height,
 						>,
 					>,
@@ -8883,13 +8877,13 @@ pub mod api {
 					#[doc = "- `OverweightServiced`: On success."]
 					service_overweight {
 						index: ::core::primitive::u64,
-						weight_limit: ::core::primitive::u64,
+						weight_limit: runtime_types::sp_weights::weight_v2::Weight,
 					},
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/v3/runtime/events-and-errors)\n\t\t\tof this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
 					#[codec(index = 0)]
 					#[doc = "The message index given is unknown."]
@@ -8901,7 +8895,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
 					#[codec(index = 0)]
 					#[doc = "Downward message is invalid XCM."]
@@ -8919,32 +8913,29 @@ pub mod api {
 					#[doc = "The weight limit for handling downward messages was reached."]
 					WeightExhausted {
 						message_id: [::core::primitive::u8; 32usize],
-						remaining_weight: ::core::primitive::u64,
-						required_weight: ::core::primitive::u64,
+						remaining_weight: runtime_types::sp_weights::weight_v2::Weight,
+						required_weight: runtime_types::sp_weights::weight_v2::Weight,
 					},
 					#[codec(index = 4)]
 					#[doc = "Downward message is overweight and was placed in the overweight queue."]
 					OverweightEnqueued {
 						message_id: [::core::primitive::u8; 32usize],
 						overweight_index: ::core::primitive::u64,
-						required_weight: ::core::primitive::u64,
+						required_weight: runtime_types::sp_weights::weight_v2::Weight,
 					},
 					#[codec(index = 5)]
 					#[doc = "Downward message from the overweight queue was executed."]
 					OverweightServiced {
 						overweight_index: ::core::primitive::u64,
-						weight_used: ::core::primitive::u64,
+						weight_used: runtime_types::sp_weights::weight_v2::Weight,
 					},
 				}
 			}
 			#[derive(
-				:: subxt :: ext :: codec :: CompactAs,
-				:: subxt :: ext :: codec :: Decode,
-				:: subxt :: ext :: codec :: Encode,
-				Debug,
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct ConfigData {
-				pub max_individual: ::core::primitive::u64,
+				pub max_individual: runtime_types::sp_weights::weight_v2::Weight,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -8968,7 +8959,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/v3/runtime/events-and-errors)\n\t\t\tof this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
 					#[codec(index = 0)]
 					#[doc = "Attempt to upgrade validation function while existing upgrade pending"]
@@ -8999,7 +8990,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
 					#[codec(index = 0)]
 					#[doc = "The validation function has been scheduled to apply."]
@@ -9019,7 +9010,7 @@ pub mod api {
 					#[codec(index = 5)]
 					#[doc = "Downward messages were processed using the given weight."]
 					DownwardMessagesProcessed {
-						weight_used: ::core::primitive::u64,
+						weight_used: runtime_types::sp_weights::weight_v2::Weight,
 						dmq_head: ::subxt::ext::sp_core::H256,
 					},
 				}
@@ -9055,12 +9046,12 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/v3/runtime/events-and-errors)\n\t\t\tof this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
 					#[codec(index = 0)]
 					#[doc = "Downward message is invalid XCM."]
@@ -9105,7 +9096,7 @@ pub mod api {
 					#[doc = "- `OverweightServiced`: On success."]
 					service_overweight {
 						index: ::core::primitive::u64,
-						weight_limit: ::core::primitive::u64,
+						weight_limit: runtime_types::sp_weights::weight_v2::Weight,
 					},
 					#[codec(index = 1)]
 					#[doc = "Suspends all XCM executions for the XCMP queue, regardless of the sender's origin."]
@@ -9145,26 +9136,30 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "- `origin`: Must pass `Root`."]
 					#[doc = "- `new`: Desired value for `QueueConfigData.threshold_weight`"]
-					update_threshold_weight { new: ::core::primitive::u64 },
+					update_threshold_weight { new: runtime_types::sp_weights::weight_v2::Weight },
 					#[codec(index = 7)]
 					#[doc = "Overwrites the speed to which the available weight approaches the maximum weight."]
 					#[doc = "A lower number results in a faster progression. A value of 1 makes the entire weight available initially."]
 					#[doc = ""]
 					#[doc = "- `origin`: Must pass `Root`."]
 					#[doc = "- `new`: Desired value for `QueueConfigData.weight_restrict_decay`."]
-					update_weight_restrict_decay { new: ::core::primitive::u64 },
+					update_weight_restrict_decay {
+						new: runtime_types::sp_weights::weight_v2::Weight,
+					},
 					#[codec(index = 8)]
 					#[doc = "Overwrite the maximum amount of weight any individual message may consume."]
 					#[doc = "Messages above this weight go into the overweight queue and may only be serviced explicitly."]
 					#[doc = ""]
 					#[doc = "- `origin`: Must pass `Root`."]
 					#[doc = "- `new`: Desired value for `QueueConfigData.xcmp_max_individual_weight`."]
-					update_xcmp_max_individual_weight { new: ::core::primitive::u64 },
+					update_xcmp_max_individual_weight {
+						new: runtime_types::sp_weights::weight_v2::Weight,
+					},
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/v3/runtime/events-and-errors)\n\t\t\tof this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
 					#[codec(index = 0)]
 					#[doc = "Failed to send XCM message."]
@@ -9185,20 +9180,20 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
 					#[codec(index = 0)]
 					#[doc = "Some XCM was executed ok."]
 					Success {
 						message_hash: ::core::option::Option<::subxt::ext::sp_core::H256>,
-						weight: ::core::primitive::u64,
+						weight: runtime_types::sp_weights::weight_v2::Weight,
 					},
 					#[codec(index = 1)]
 					#[doc = "Some XCM failed."]
 					Fail {
 						message_hash: ::core::option::Option<::subxt::ext::sp_core::H256>,
 						error: runtime_types::xcm::v2::traits::Error,
-						weight: ::core::primitive::u64,
+						weight: runtime_types::sp_weights::weight_v2::Weight,
 					},
 					#[codec(index = 2)]
 					#[doc = "Bad XCM version used."]
@@ -9222,13 +9217,13 @@ pub mod api {
 						sender: runtime_types::polkadot_parachain::primitives::Id,
 						sent_at: ::core::primitive::u32,
 						index: ::core::primitive::u64,
-						required: ::core::primitive::u64,
+						required: runtime_types::sp_weights::weight_v2::Weight,
 					},
 					#[codec(index = 7)]
 					#[doc = "An XCM from the overweight queue was executed with the given actual weight used."]
 					OverweightServiced {
 						index: ::core::primitive::u64,
-						used: ::core::primitive::u64,
+						used: runtime_types::sp_weights::weight_v2::Weight,
 					},
 				}
 			}
@@ -9278,9 +9273,9 @@ pub mod api {
 				pub suspend_threshold: ::core::primitive::u32,
 				pub drop_threshold: ::core::primitive::u32,
 				pub resume_threshold: ::core::primitive::u32,
-				pub threshold_weight: ::core::primitive::u64,
-				pub weight_restrict_decay: ::core::primitive::u64,
-				pub xcmp_max_individual_weight: ::core::primitive::u64,
+				pub threshold_weight: runtime_types::sp_weights::weight_v2::Weight,
+				pub weight_restrict_decay: runtime_types::sp_weights::weight_v2::Weight,
+				pub xcmp_max_individual_weight: runtime_types::sp_weights::weight_v2::Weight,
 			}
 		}
 		pub mod cumulus_primitives_parachain_inherent {
@@ -9316,27 +9311,7 @@ pub mod api {
 		}
 		pub mod frame_support {
 			use super::runtime_types;
-			pub mod traits {
-				use super::runtime_types;
-				pub mod tokens {
-					use super::runtime_types;
-					pub mod misc {
-						use super::runtime_types;
-						#[derive(
-							:: subxt :: ext :: codec :: Decode,
-							:: subxt :: ext :: codec :: Encode,
-							Debug,
-						)]
-						pub enum BalanceStatus {
-							#[codec(index = 0)]
-							Free,
-							#[codec(index = 1)]
-							Reserved,
-						}
-					}
-				}
-			}
-			pub mod weights {
+			pub mod dispatch {
 				use super::runtime_types;
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -9353,9 +9328,9 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub struct DispatchInfo {
-					pub weight: ::core::primitive::u64,
-					pub class: runtime_types::frame_support::weights::DispatchClass,
-					pub pays_fee: runtime_types::frame_support::weights::Pays,
+					pub weight: runtime_types::sp_weights::weight_v2::Weight,
+					pub class: runtime_types::frame_support::dispatch::DispatchClass,
+					pub pays_fee: runtime_types::frame_support::dispatch::Pays,
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -9374,12 +9349,25 @@ pub mod api {
 					pub operational: _0,
 					pub mandatory: _0,
 				}
-				#[derive(
-					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
-				)]
-				pub struct RuntimeDbWeight {
-					pub read: ::core::primitive::u64,
-					pub write: ::core::primitive::u64,
+			}
+			pub mod traits {
+				use super::runtime_types;
+				pub mod tokens {
+					use super::runtime_types;
+					pub mod misc {
+						use super::runtime_types;
+						#[derive(
+							:: subxt :: ext :: codec :: Decode,
+							:: subxt :: ext :: codec :: Encode,
+							Debug,
+						)]
+						pub enum BalanceStatus {
+							#[codec(index = 0)]
+							Free,
+							#[codec(index = 1)]
+							Reserved,
+						}
+					}
 				}
 			}
 		}
@@ -9457,7 +9445,7 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub struct BlockLength {
-					pub max: runtime_types::frame_support::weights::PerDispatchClass<
+					pub max: runtime_types::frame_support::dispatch::PerDispatchClass<
 						::core::primitive::u32,
 					>,
 				}
@@ -9465,9 +9453,9 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub struct BlockWeights {
-					pub base_block: ::core::primitive::u64,
-					pub max_block: ::core::primitive::u64,
-					pub per_class: runtime_types::frame_support::weights::PerDispatchClass<
+					pub base_block: runtime_types::sp_weights::weight_v2::Weight,
+					pub max_block: runtime_types::sp_weights::weight_v2::Weight,
+					pub per_class: runtime_types::frame_support::dispatch::PerDispatchClass<
 						runtime_types::frame_system::limits::WeightsPerClass,
 					>,
 				}
@@ -9475,10 +9463,13 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub struct WeightsPerClass {
-					pub base_extrinsic: ::core::primitive::u64,
-					pub max_extrinsic: ::core::option::Option<::core::primitive::u64>,
-					pub max_total: ::core::option::Option<::core::primitive::u64>,
-					pub reserved: ::core::option::Option<::core::primitive::u64>,
+					pub base_extrinsic: runtime_types::sp_weights::weight_v2::Weight,
+					pub max_extrinsic:
+						::core::option::Option<runtime_types::sp_weights::weight_v2::Weight>,
+					pub max_total:
+						::core::option::Option<runtime_types::sp_weights::weight_v2::Weight>,
+					pub reserved:
+						::core::option::Option<runtime_types::sp_weights::weight_v2::Weight>,
 				}
 			}
 			pub mod pallet {
@@ -9586,13 +9577,13 @@ pub mod api {
 					#[codec(index = 0)]
 					#[doc = "An extrinsic completed successfully."]
 					ExtrinsicSuccess {
-						dispatch_info: runtime_types::frame_support::weights::DispatchInfo,
+						dispatch_info: runtime_types::frame_support::dispatch::DispatchInfo,
 					},
 					#[codec(index = 1)]
 					#[doc = "An extrinsic failed."]
 					ExtrinsicFailed {
 						dispatch_error: runtime_types::sp_runtime::DispatchError,
-						dispatch_info: runtime_types::frame_support::weights::DispatchInfo,
+						dispatch_info: runtime_types::frame_support::dispatch::DispatchInfo,
 					},
 					#[codec(index = 2)]
 					#[doc = "`:code` was updated."]
@@ -9721,7 +9712,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/v3/runtime/events-and-errors)\n\t\t\tof this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
 					#[codec(index = 0)]
 					#[doc = "Asset was not found."]
@@ -9743,7 +9734,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
 					#[codec(index = 0)]
 					RegisteredAsset {
@@ -10400,7 +10391,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/v3/runtime/events-and-errors)\n\t\t\tof this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
 					#[codec(index = 0)]
 					#[doc = "Account balance must be greater than or equal to the transfer amount."]
@@ -10453,7 +10444,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
 					#[codec(index = 0)]
 					#[doc = "Some asset class was created."]
@@ -10667,7 +10658,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/v3/runtime/events-and-errors)\n\t\t\tof this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
 					#[codec(index = 0)]
 					#[doc = "The uncle parent not in the chain."]
@@ -10838,7 +10829,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/v3/runtime/events-and-errors)\n\t\t\tof this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
 					#[codec(index = 0)]
 					#[doc = "Vesting balance too high to send value"]
@@ -10868,7 +10859,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
 					#[codec(index = 0)]
 					#[doc = "An account was created with some free balance."]
@@ -11031,7 +11022,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/v3/runtime/events-and-errors)\n\t\t\tof this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
 					#[codec(index = 0)]
 					#[doc = "Too many candidates"]
@@ -11067,7 +11058,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
 					#[codec(index = 0)]
 					NewInvulnerables {
@@ -11464,7 +11455,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
 					#[codec(index = 0)]
 					#[doc = "Events emitted by the ibc subsystem"]
@@ -11479,7 +11470,7 @@ pub mod api {
 					#[codec(index = 1)]
 					#[doc = "An Ibc token transfer has been started"]
 					TokenTransferInitiated {
-						from: ::subxt::ext::sp_core::crypto::AccountId32,
+						from: ::std::vec::Vec<::core::primitive::u8>,
 						to: ::std::vec::Vec<::core::primitive::u8>,
 						ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
 						local_asset_id: ::core::option::Option<::core::primitive::u128>,
@@ -11608,7 +11599,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/v3/runtime/events-and-errors)\n\t\t\tof this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
 					#[codec(index = 0)]
 					#[doc = "Invalid params passed"]
@@ -11623,7 +11614,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
 					#[codec(index = 0)]
 					#[doc = "A send packet has been registered"]
@@ -11717,7 +11708,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
 					#[codec(index = 0)]
 					#[doc = "New session has happened. Note that the argument is the session index, not the"]
@@ -11746,7 +11737,7 @@ pub mod api {
 					#[doc = "- One DB write (event)."]
 					#[doc = "- Weight of derivative `call` execution + 10,000."]
 					#[doc = "# </weight>"]
-					sudo { call: ::std::boxed::Box<runtime_types::parachain_runtime::Call> },
+					sudo { call: ::std::boxed::Box<runtime_types::parachain_runtime::RuntimeCall> },
 					#[codec(index = 1)]
 					#[doc = "Authenticates the sudo key and dispatches a function call with `Root` origin."]
 					#[doc = "This function does not check the weight of the call, and instead allows the"]
@@ -11759,8 +11750,8 @@ pub mod api {
 					#[doc = "- The weight of this call is defined by the caller."]
 					#[doc = "# </weight>"]
 					sudo_unchecked_weight {
-						call: ::std::boxed::Box<runtime_types::parachain_runtime::Call>,
-						weight: ::core::primitive::u64,
+						call: ::std::boxed::Box<runtime_types::parachain_runtime::RuntimeCall>,
+						weight: runtime_types::sp_weights::weight_v2::Weight,
 					},
 					#[codec(index = 2)]
 					#[doc = "Authenticates the current sudo key and sets the given AccountId (`new`) as the new sudo"]
@@ -11796,7 +11787,7 @@ pub mod api {
 							::subxt::ext::sp_core::crypto::AccountId32,
 							(),
 						>,
-						call: ::std::boxed::Box<runtime_types::parachain_runtime::Call>,
+						call: ::std::boxed::Box<runtime_types::parachain_runtime::RuntimeCall>,
 					},
 				}
 				#[derive(
@@ -11811,7 +11802,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
 					#[codec(index = 0)]
 					#[doc = "A sudo just took place. \\[result\\]"]
@@ -11874,7 +11865,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
 					#[codec(index = 0)]
 					#[doc = "A transaction fee `actual_fee`, of which `tip` was added to the minimum inclusion fee,"]
@@ -11973,7 +11964,7 @@ pub mod api {
 					#[doc = "to completion; only that *some* of it was executed."]
 					execute {
 						message: ::std::boxed::Box<runtime_types::xcm::VersionedXcm>,
-						max_weight: ::core::primitive::u64,
+						max_weight: runtime_types::sp_weights::weight_v2::Weight,
 					},
 					#[codec(index = 4)]
 					#[doc = "Extoll that a particular destination can be communicated with through a particular"]
@@ -12069,7 +12060,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/v3/runtime/events-and-errors)\n\t\t\tof this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
 					#[codec(index = 0)]
 					#[doc = "The desired destination was unreachable, generally because there is a no way of routing"]
@@ -12117,7 +12108,7 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/v3/runtime/events-and-errors) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
 					#[codec(index = 0)]
 					#[doc = "Execution of an XCM message was attempted."]
@@ -12165,8 +12156,8 @@ pub mod api {
 						::core::primitive::u64,
 						::core::primitive::u8,
 						::core::primitive::u8,
-						::core::primitive::u64,
-						::core::primitive::u64,
+						runtime_types::sp_weights::weight_v2::Weight,
+						runtime_types::sp_weights::weight_v2::Weight,
 					),
 					#[codec(index = 6)]
 					#[doc = "Query response has been received and query is removed. There was a general error with"]
@@ -12319,7 +12310,11 @@ pub mod api {
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
-			pub enum Call {
+			pub struct Runtime;
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			pub enum RuntimeCall {
 				#[codec(index = 0)]
 				System(runtime_types::frame_system::pallet::Call),
 				#[codec(index = 1)]
@@ -12358,7 +12353,7 @@ pub mod api {
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
-			pub enum Event {
+			pub enum RuntimeEvent {
 				#[codec(index = 0)]
 				System(runtime_types::frame_system::pallet::Event),
 				#[codec(index = 2)]
@@ -12390,10 +12385,6 @@ pub mod api {
 				#[codec(index = 255)]
 				Ibc(runtime_types::pallet_ibc::pallet::Event),
 			}
-			#[derive(
-				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
-			)]
-			pub struct Runtime;
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
@@ -12557,6 +12548,36 @@ pub mod api {
 		}
 		pub mod sp_core {
 			use super::runtime_types;
+			pub mod bounded {
+				use super::runtime_types;
+				pub mod bounded_btree_set {
+					use super::runtime_types;
+					#[derive(
+						:: subxt :: ext :: codec :: Decode,
+						:: subxt :: ext :: codec :: Encode,
+						Debug,
+					)]
+					pub struct BoundedBTreeSet<_0>(pub ::std::vec::Vec<_0>);
+				}
+				pub mod bounded_vec {
+					use super::runtime_types;
+					#[derive(
+						:: subxt :: ext :: codec :: Decode,
+						:: subxt :: ext :: codec :: Encode,
+						Debug,
+					)]
+					pub struct BoundedVec<_0>(pub ::std::vec::Vec<_0>);
+				}
+				pub mod weak_bounded_vec {
+					use super::runtime_types;
+					#[derive(
+						:: subxt :: ext :: codec :: Decode,
+						:: subxt :: ext :: codec :: Encode,
+						Debug,
+					)]
+					pub struct WeakBoundedVec<_0>(pub ::std::vec::Vec<_0>);
+				}
+			}
 			pub mod crypto {
 				use super::runtime_types;
 				#[derive(
@@ -12596,36 +12617,6 @@ pub mod api {
 		}
 		pub mod sp_runtime {
 			use super::runtime_types;
-			pub mod bounded {
-				use super::runtime_types;
-				pub mod bounded_btree_set {
-					use super::runtime_types;
-					#[derive(
-						:: subxt :: ext :: codec :: Decode,
-						:: subxt :: ext :: codec :: Encode,
-						Debug,
-					)]
-					pub struct BoundedBTreeSet<_0>(pub ::std::vec::Vec<_0>);
-				}
-				pub mod bounded_vec {
-					use super::runtime_types;
-					#[derive(
-						:: subxt :: ext :: codec :: Decode,
-						:: subxt :: ext :: codec :: Encode,
-						Debug,
-					)]
-					pub struct BoundedVec<_0>(pub ::std::vec::Vec<_0>);
-				}
-				pub mod weak_bounded_vec {
-					use super::runtime_types;
-					#[derive(
-						:: subxt :: ext :: codec :: Decode,
-						:: subxt :: ext :: codec :: Encode,
-						Debug,
-					)]
-					pub struct WeakBoundedVec<_0>(pub ::std::vec::Vec<_0>);
-				}
-			}
 			pub mod generic {
 				use super::runtime_types;
 				pub mod digest {
@@ -13356,6 +13347,28 @@ pub mod api {
 				pub state_version: ::core::primitive::u8,
 			}
 		}
+		pub mod sp_weights {
+			use super::runtime_types;
+			pub mod weight_v2 {
+				use super::runtime_types;
+				#[derive(
+					:: subxt :: ext :: codec :: CompactAs,
+					:: subxt :: ext :: codec :: Decode,
+					:: subxt :: ext :: codec :: Encode,
+					Debug,
+				)]
+				pub struct Weight {
+					pub ref_time: ::core::primitive::u64,
+				}
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			pub struct RuntimeDbWeight {
+				pub read: ::core::primitive::u64,
+				pub write: ::core::primitive::u64,
+			}
+		}
 		pub mod xcm {
 			use super::runtime_types;
 			pub mod double_encoded {
@@ -13381,7 +13394,7 @@ pub mod api {
 						Unit,
 						#[codec(index = 1)]
 						Named(
-							runtime_types::sp_runtime::bounded::weak_bounded_vec::WeakBoundedVec<
+							runtime_types::sp_core::bounded::weak_bounded_vec::WeakBoundedVec<
 								::core::primitive::u8,
 							>,
 						),
@@ -13463,7 +13476,7 @@ pub mod api {
 						GeneralIndex(#[codec(compact)] ::core::primitive::u128),
 						#[codec(index = 7)]
 						GeneralKey(
-							runtime_types::sp_runtime::bounded::weak_bounded_vec::WeakBoundedVec<
+							runtime_types::sp_core::bounded::weak_bounded_vec::WeakBoundedVec<
 								::core::primitive::u8,
 							>,
 						),
@@ -13485,7 +13498,7 @@ pub mod api {
 						Any,
 						#[codec(index = 1)]
 						Named(
-							runtime_types::sp_runtime::bounded::weak_bounded_vec::WeakBoundedVec<
+							runtime_types::sp_core::bounded::weak_bounded_vec::WeakBoundedVec<
 								::core::primitive::u8,
 							>,
 						),
@@ -13804,7 +13817,7 @@ pub mod api {
 						GeneralIndex(#[codec(compact)] ::core::primitive::u128),
 						#[codec(index = 6)]
 						GeneralKey(
-							runtime_types::sp_runtime::bounded::weak_bounded_vec::WeakBoundedVec<
+							runtime_types::sp_core::bounded::weak_bounded_vec::WeakBoundedVec<
 								::core::primitive::u8,
 							>,
 						),
@@ -14589,9 +14602,9 @@ pub mod api {
 		let runtime_metadata_hash = client.metadata().metadata_hash(&PALLETS);
 		if runtime_metadata_hash !=
 			[
-				188u8, 148u8, 214u8, 177u8, 91u8, 198u8, 70u8, 73u8, 250u8, 224u8, 62u8, 252u8,
-				165u8, 46u8, 33u8, 109u8, 248u8, 51u8, 40u8, 88u8, 227u8, 214u8, 43u8, 209u8,
-				211u8, 243u8, 153u8, 161u8, 216u8, 120u8, 76u8, 64u8,
+				32u8, 228u8, 99u8, 191u8, 112u8, 184u8, 193u8, 146u8, 4u8, 38u8, 17u8, 108u8,
+				225u8, 121u8, 235u8, 67u8, 247u8, 235u8, 174u8, 248u8, 12u8, 228u8, 55u8, 208u8,
+				52u8, 58u8, 68u8, 63u8, 46u8, 160u8, 113u8, 16u8,
 			] {
 			Err(::subxt::error::MetadataError::IncompatibleMetadata)
 		} else {
