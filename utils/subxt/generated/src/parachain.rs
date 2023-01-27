@@ -474,9 +474,10 @@ pub mod api {
 						"BlockWeight",
 						vec![],
 						[
-							25u8, 97u8, 54u8, 87u8, 196u8, 64u8, 243u8, 40u8, 63u8, 215u8, 225u8,
-							108u8, 83u8, 110u8, 180u8, 62u8, 160u8, 84u8, 65u8, 29u8, 225u8, 34u8,
-							221u8, 108u8, 242u8, 129u8, 215u8, 27u8, 28u8, 158u8, 72u8, 250u8,
+							120u8, 67u8, 71u8, 163u8, 36u8, 202u8, 52u8, 106u8, 143u8, 155u8,
+							144u8, 87u8, 142u8, 241u8, 232u8, 183u8, 56u8, 235u8, 27u8, 237u8,
+							20u8, 202u8, 33u8, 85u8, 189u8, 0u8, 28u8, 52u8, 198u8, 40u8, 219u8,
+							54u8,
 						],
 					)
 				}
@@ -680,10 +681,9 @@ pub mod api {
 						"Events",
 						vec![],
 						[
-							33u8, 249u8, 59u8, 215u8, 248u8, 109u8, 125u8, 252u8, 191u8, 67u8,
-							243u8, 230u8, 146u8, 146u8, 110u8, 163u8, 236u8, 32u8, 7u8, 75u8, 36u8,
-							121u8, 164u8, 201u8, 216u8, 68u8, 174u8, 45u8, 197u8, 160u8, 211u8,
-							223u8,
+							75u8, 183u8, 245u8, 228u8, 94u8, 80u8, 145u8, 50u8, 37u8, 2u8, 167u8,
+							131u8, 74u8, 255u8, 236u8, 116u8, 51u8, 56u8, 126u8, 45u8, 15u8, 72u8,
+							144u8, 231u8, 37u8, 96u8, 176u8, 158u8, 163u8, 16u8, 30u8, 154u8,
 						],
 					)
 				}
@@ -879,9 +879,10 @@ pub mod api {
 						"System",
 						"BlockWeights",
 						[
-							64u8, 123u8, 136u8, 20u8, 38u8, 151u8, 254u8, 81u8, 251u8, 41u8, 4u8,
-							87u8, 167u8, 25u8, 149u8, 3u8, 17u8, 65u8, 145u8, 192u8, 195u8, 87u8,
-							182u8, 78u8, 104u8, 147u8, 9u8, 56u8, 146u8, 20u8, 47u8, 22u8,
+							118u8, 253u8, 239u8, 217u8, 145u8, 115u8, 85u8, 86u8, 172u8, 248u8,
+							139u8, 32u8, 158u8, 126u8, 172u8, 188u8, 197u8, 105u8, 145u8, 235u8,
+							171u8, 50u8, 31u8, 225u8, 167u8, 187u8, 241u8, 87u8, 6u8, 17u8, 234u8,
+							185u8,
 						],
 					)
 				}
@@ -1717,10 +1718,9 @@ pub mod api {
 						"ReservedXcmpWeightOverride",
 						vec![],
 						[
-							57u8, 33u8, 20u8, 185u8, 196u8, 134u8, 221u8, 101u8, 193u8, 35u8,
-							188u8, 20u8, 196u8, 187u8, 250u8, 197u8, 71u8, 120u8, 181u8, 199u8,
-							230u8, 228u8, 150u8, 47u8, 164u8, 9u8, 175u8, 194u8, 74u8, 28u8, 255u8,
-							89u8,
+							180u8, 90u8, 34u8, 178u8, 1u8, 242u8, 211u8, 97u8, 100u8, 34u8, 39u8,
+							42u8, 142u8, 249u8, 236u8, 194u8, 244u8, 164u8, 96u8, 54u8, 98u8, 46u8,
+							92u8, 196u8, 185u8, 51u8, 231u8, 234u8, 249u8, 143u8, 244u8, 64u8,
 						],
 					)
 				}
@@ -1741,10 +1741,9 @@ pub mod api {
 						"ReservedDmpWeightOverride",
 						vec![],
 						[
-							215u8, 1u8, 158u8, 251u8, 154u8, 183u8, 174u8, 105u8, 10u8, 171u8,
-							120u8, 18u8, 193u8, 242u8, 54u8, 166u8, 138u8, 53u8, 237u8, 198u8,
-							255u8, 98u8, 100u8, 139u8, 130u8, 4u8, 242u8, 146u8, 162u8, 213u8,
-							50u8, 239u8,
+							90u8, 122u8, 168u8, 240u8, 95u8, 195u8, 160u8, 109u8, 175u8, 170u8,
+							227u8, 44u8, 139u8, 176u8, 32u8, 161u8, 57u8, 233u8, 56u8, 55u8, 123u8,
+							168u8, 174u8, 96u8, 159u8, 62u8, 186u8, 186u8, 17u8, 70u8, 57u8, 246u8,
 						],
 					)
 				}
@@ -3527,7 +3526,7 @@ pub mod api {
 			)]
 			pub struct ServiceOverweight {
 				pub index: ::core::primitive::u64,
-				pub weight_limit: runtime_types::sp_weights::weight_v2::Weight,
+				pub weight_limit: ::core::primitive::u64,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -3565,22 +3564,31 @@ pub mod api {
 				pub new: ::core::primitive::u32,
 			}
 			#[derive(
-				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				:: subxt :: ext :: codec :: CompactAs,
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				Debug,
 			)]
 			pub struct UpdateThresholdWeight {
-				pub new: runtime_types::sp_weights::weight_v2::Weight,
+				pub new: ::core::primitive::u64,
 			}
 			#[derive(
-				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				:: subxt :: ext :: codec :: CompactAs,
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				Debug,
 			)]
 			pub struct UpdateWeightRestrictDecay {
-				pub new: runtime_types::sp_weights::weight_v2::Weight,
+				pub new: ::core::primitive::u64,
 			}
 			#[derive(
-				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				:: subxt :: ext :: codec :: CompactAs,
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				Debug,
 			)]
 			pub struct UpdateXcmpMaxIndividualWeight {
-				pub new: runtime_types::sp_weights::weight_v2::Weight,
+				pub new: ::core::primitive::u64,
 			}
 			pub struct TransactionApi;
 			impl TransactionApi {
@@ -3600,16 +3608,16 @@ pub mod api {
 				pub fn service_overweight(
 					&self,
 					index: ::core::primitive::u64,
-					weight_limit: runtime_types::sp_weights::weight_v2::Weight,
+					weight_limit: ::core::primitive::u64,
 				) -> ::subxt::tx::StaticTxPayload<ServiceOverweight> {
 					::subxt::tx::StaticTxPayload::new(
 						"XcmpQueue",
 						"service_overweight",
 						ServiceOverweight { index, weight_limit },
 						[
-							162u8, 46u8, 217u8, 245u8, 241u8, 67u8, 14u8, 88u8, 80u8, 138u8, 47u8,
-							41u8, 52u8, 109u8, 132u8, 113u8, 251u8, 112u8, 223u8, 238u8, 135u8,
-							207u8, 230u8, 226u8, 24u8, 88u8, 18u8, 191u8, 46u8, 160u8, 196u8, 50u8,
+							225u8, 41u8, 132u8, 91u8, 28u8, 116u8, 89u8, 197u8, 194u8, 131u8, 28u8,
+							217u8, 102u8, 241u8, 122u8, 230u8, 242u8, 75u8, 83u8, 67u8, 104u8,
+							55u8, 133u8, 129u8, 91u8, 25u8, 185u8, 131u8, 22u8, 253u8, 84u8, 221u8,
 						],
 					)
 				}
@@ -3718,17 +3726,16 @@ pub mod api {
 				#[doc = "- `new`: Desired value for `QueueConfigData.threshold_weight`"]
 				pub fn update_threshold_weight(
 					&self,
-					new: runtime_types::sp_weights::weight_v2::Weight,
+					new: ::core::primitive::u64,
 				) -> ::subxt::tx::StaticTxPayload<UpdateThresholdWeight> {
 					::subxt::tx::StaticTxPayload::new(
 						"XcmpQueue",
 						"update_threshold_weight",
 						UpdateThresholdWeight { new },
 						[
-							180u8, 179u8, 106u8, 47u8, 46u8, 178u8, 87u8, 176u8, 246u8, 35u8,
-							204u8, 50u8, 161u8, 20u8, 28u8, 101u8, 158u8, 236u8, 219u8, 112u8,
-							34u8, 15u8, 231u8, 127u8, 172u8, 0u8, 228u8, 32u8, 164u8, 153u8, 120u8,
-							161u8,
+							129u8, 208u8, 93u8, 179u8, 45u8, 236u8, 84u8, 209u8, 37u8, 226u8, 88u8,
+							123u8, 156u8, 101u8, 93u8, 84u8, 110u8, 61u8, 56u8, 45u8, 14u8, 120u8,
+							181u8, 71u8, 174u8, 104u8, 225u8, 36u8, 17u8, 74u8, 94u8, 59u8,
 						],
 					)
 				}
@@ -3739,16 +3746,17 @@ pub mod api {
 				#[doc = "- `new`: Desired value for `QueueConfigData.weight_restrict_decay`."]
 				pub fn update_weight_restrict_decay(
 					&self,
-					new: runtime_types::sp_weights::weight_v2::Weight,
+					new: ::core::primitive::u64,
 				) -> ::subxt::tx::StaticTxPayload<UpdateWeightRestrictDecay> {
 					::subxt::tx::StaticTxPayload::new(
 						"XcmpQueue",
 						"update_weight_restrict_decay",
 						UpdateWeightRestrictDecay { new },
 						[
-							239u8, 227u8, 177u8, 160u8, 41u8, 233u8, 144u8, 44u8, 37u8, 94u8,
-							112u8, 251u8, 105u8, 168u8, 236u8, 73u8, 169u8, 8u8, 68u8, 81u8, 242u8,
-							6u8, 152u8, 146u8, 230u8, 232u8, 212u8, 132u8, 55u8, 26u8, 149u8, 42u8,
+							73u8, 98u8, 189u8, 10u8, 137u8, 162u8, 71u8, 54u8, 24u8, 117u8, 15u8,
+							137u8, 251u8, 121u8, 86u8, 5u8, 123u8, 42u8, 151u8, 244u8, 200u8,
+							140u8, 104u8, 149u8, 101u8, 14u8, 58u8, 163u8, 208u8, 205u8, 177u8,
+							142u8,
 						],
 					)
 				}
@@ -3759,16 +3767,16 @@ pub mod api {
 				#[doc = "- `new`: Desired value for `QueueConfigData.xcmp_max_individual_weight`."]
 				pub fn update_xcmp_max_individual_weight(
 					&self,
-					new: runtime_types::sp_weights::weight_v2::Weight,
+					new: ::core::primitive::u64,
 				) -> ::subxt::tx::StaticTxPayload<UpdateXcmpMaxIndividualWeight> {
 					::subxt::tx::StaticTxPayload::new(
 						"XcmpQueue",
 						"update_xcmp_max_individual_weight",
 						UpdateXcmpMaxIndividualWeight { new },
 						[
-							143u8, 90u8, 3u8, 57u8, 255u8, 65u8, 176u8, 51u8, 48u8, 148u8, 150u8,
-							212u8, 236u8, 190u8, 106u8, 213u8, 42u8, 137u8, 9u8, 188u8, 87u8,
-							177u8, 3u8, 94u8, 21u8, 86u8, 167u8, 166u8, 56u8, 70u8, 104u8, 180u8,
+							52u8, 93u8, 25u8, 215u8, 36u8, 235u8, 88u8, 49u8, 142u8, 132u8, 57u8,
+							2u8, 204u8, 195u8, 166u8, 254u8, 235u8, 247u8, 142u8, 207u8, 224u8,
+							43u8, 7u8, 106u8, 142u8, 3u8, 188u8, 101u8, 9u8, 75u8, 57u8, 39u8,
 						],
 					)
 				}
@@ -4097,9 +4105,9 @@ pub mod api {
 						"QueueConfig",
 						vec![],
 						[
-							93u8, 70u8, 64u8, 223u8, 213u8, 33u8, 157u8, 14u8, 118u8, 103u8, 79u8,
-							60u8, 54u8, 16u8, 10u8, 190u8, 51u8, 230u8, 160u8, 226u8, 96u8, 238u8,
-							171u8, 82u8, 71u8, 84u8, 139u8, 90u8, 148u8, 148u8, 63u8, 20u8,
+							154u8, 172u8, 227u8, 208u8, 130u8, 93u8, 173u8, 129u8, 33u8, 75u8,
+							180u8, 100u8, 35u8, 154u8, 40u8, 188u8, 86u8, 53u8, 74u8, 118u8, 131u8,
+							159u8, 240u8, 159u8, 185u8, 45u8, 165u8, 6u8, 90u8, 125u8, 77u8, 253u8,
 						],
 					)
 				}
@@ -4244,7 +4252,7 @@ pub mod api {
 			)]
 			pub struct Execute {
 				pub message: ::std::boxed::Box<runtime_types::xcm::VersionedXcm>,
-				pub max_weight: runtime_types::sp_weights::weight_v2::Weight,
+				pub max_weight: ::core::primitive::u64,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -4404,17 +4412,16 @@ pub mod api {
 				pub fn execute(
 					&self,
 					message: runtime_types::xcm::VersionedXcm,
-					max_weight: runtime_types::sp_weights::weight_v2::Weight,
+					max_weight: ::core::primitive::u64,
 				) -> ::subxt::tx::StaticTxPayload<Execute> {
 					::subxt::tx::StaticTxPayload::new(
 						"PolkadotXcm",
 						"execute",
 						Execute { message: ::std::boxed::Box::new(message), max_weight },
 						[
-							212u8, 76u8, 149u8, 118u8, 145u8, 199u8, 59u8, 158u8, 221u8, 134u8,
-							6u8, 31u8, 212u8, 186u8, 25u8, 111u8, 124u8, 78u8, 207u8, 101u8, 83u8,
-							6u8, 252u8, 19u8, 110u8, 169u8, 103u8, 193u8, 119u8, 53u8, 164u8,
-							144u8,
+							191u8, 177u8, 39u8, 21u8, 1u8, 110u8, 39u8, 58u8, 94u8, 27u8, 44u8,
+							18u8, 253u8, 135u8, 100u8, 205u8, 0u8, 231u8, 68u8, 247u8, 5u8, 140u8,
+							131u8, 184u8, 251u8, 197u8, 100u8, 113u8, 253u8, 255u8, 120u8, 206u8,
 						],
 					)
 				}
@@ -4847,6 +4854,21 @@ pub mod api {
 				const PALLET: &'static str = "PolkadotXcm";
 				const EVENT: &'static str = "NotifyTargetMigrationFail";
 			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			#[doc = "Some assets have been claimed from an asset trap"]
+			#[doc = ""]
+			#[doc = "\\[ hash, origin, assets \\]"]
+			pub struct AssetsClaimed(
+				pub ::subxt::utils::H256,
+				pub runtime_types::xcm::v1::multilocation::MultiLocation,
+				pub runtime_types::xcm::VersionedMultiAssets,
+			);
+			impl ::subxt::events::StaticEvent for AssetsClaimed {
+				const PALLET: &'static str = "PolkadotXcm";
+				const EVENT: &'static str = "AssetsClaimed";
+			}
 		}
 		pub mod storage {
 			use super::runtime_types;
@@ -5272,7 +5294,7 @@ pub mod api {
 			)]
 			pub struct ServiceOverweight {
 				pub index: ::core::primitive::u64,
-				pub weight_limit: runtime_types::sp_weights::weight_v2::Weight,
+				pub weight_limit: ::core::primitive::u64,
 			}
 			pub struct TransactionApi;
 			impl TransactionApi {
@@ -5291,16 +5313,16 @@ pub mod api {
 				pub fn service_overweight(
 					&self,
 					index: ::core::primitive::u64,
-					weight_limit: runtime_types::sp_weights::weight_v2::Weight,
+					weight_limit: ::core::primitive::u64,
 				) -> ::subxt::tx::StaticTxPayload<ServiceOverweight> {
 					::subxt::tx::StaticTxPayload::new(
 						"DmpQueue",
 						"service_overweight",
 						ServiceOverweight { index, weight_limit },
 						[
-							162u8, 46u8, 217u8, 245u8, 241u8, 67u8, 14u8, 88u8, 80u8, 138u8, 47u8,
-							41u8, 52u8, 109u8, 132u8, 113u8, 251u8, 112u8, 223u8, 238u8, 135u8,
-							207u8, 230u8, 226u8, 24u8, 88u8, 18u8, 191u8, 46u8, 160u8, 196u8, 50u8,
+							225u8, 41u8, 132u8, 91u8, 28u8, 116u8, 89u8, 197u8, 194u8, 131u8, 28u8,
+							217u8, 102u8, 241u8, 122u8, 230u8, 242u8, 75u8, 83u8, 67u8, 104u8,
+							55u8, 133u8, 129u8, 91u8, 25u8, 185u8, 131u8, 22u8, 253u8, 84u8, 221u8,
 						],
 					)
 				}
@@ -5403,9 +5425,9 @@ pub mod api {
 						"Configuration",
 						vec![],
 						[
-							242u8, 156u8, 77u8, 209u8, 44u8, 160u8, 89u8, 179u8, 113u8, 81u8,
-							143u8, 83u8, 152u8, 49u8, 41u8, 58u8, 83u8, 100u8, 134u8, 0u8, 1u8,
-							130u8, 58u8, 243u8, 61u8, 26u8, 39u8, 156u8, 115u8, 185u8, 76u8, 251u8,
+							133u8, 113u8, 115u8, 164u8, 128u8, 145u8, 234u8, 106u8, 150u8, 54u8,
+							247u8, 135u8, 181u8, 197u8, 178u8, 30u8, 204u8, 46u8, 6u8, 137u8, 82u8,
+							1u8, 75u8, 171u8, 7u8, 157u8, 3u8, 19u8, 92u8, 10u8, 234u8, 66u8,
 						],
 					)
 				}
@@ -5594,10 +5616,10 @@ pub mod api {
 						"sudo",
 						Sudo { call: ::std::boxed::Box::new(call) },
 						[
-							106u8, 82u8, 78u8, 216u8, 201u8, 229u8, 115u8, 60u8, 123u8, 44u8, 28u8,
-							232u8, 218u8, 204u8, 112u8, 164u8, 175u8, 159u8, 252u8, 165u8, 28u8,
-							202u8, 47u8, 163u8, 66u8, 12u8, 160u8, 221u8, 228u8, 180u8, 23u8,
-							124u8,
+							74u8, 109u8, 45u8, 177u8, 181u8, 81u8, 67u8, 54u8, 55u8, 134u8, 243u8,
+							226u8, 228u8, 143u8, 115u8, 223u8, 220u8, 144u8, 99u8, 37u8, 125u8,
+							2u8, 236u8, 183u8, 120u8, 149u8, 44u8, 114u8, 150u8, 196u8, 131u8,
+							185u8,
 						],
 					)
 				}
@@ -5621,10 +5643,10 @@ pub mod api {
 						"sudo_unchecked_weight",
 						SudoUncheckedWeight { call: ::std::boxed::Box::new(call), weight },
 						[
-							117u8, 152u8, 255u8, 44u8, 103u8, 98u8, 196u8, 73u8, 100u8, 108u8,
-							46u8, 45u8, 97u8, 157u8, 71u8, 174u8, 75u8, 96u8, 116u8, 219u8, 211u8,
-							102u8, 207u8, 219u8, 31u8, 93u8, 191u8, 155u8, 84u8, 148u8, 145u8,
-							16u8,
+							0u8, 28u8, 79u8, 218u8, 178u8, 83u8, 193u8, 37u8, 69u8, 167u8, 192u8,
+							163u8, 159u8, 63u8, 230u8, 115u8, 49u8, 223u8, 222u8, 160u8, 148u8,
+							219u8, 200u8, 27u8, 102u8, 181u8, 139u8, 71u8, 215u8, 35u8, 136u8,
+							101u8,
 						],
 					)
 				}
@@ -5674,9 +5696,10 @@ pub mod api {
 						"sudo_as",
 						SudoAs { who, call: ::std::boxed::Box::new(call) },
 						[
-							35u8, 168u8, 191u8, 163u8, 131u8, 50u8, 162u8, 46u8, 158u8, 55u8, 55u8,
-							219u8, 228u8, 109u8, 219u8, 142u8, 86u8, 156u8, 151u8, 147u8, 184u8,
-							141u8, 201u8, 182u8, 218u8, 0u8, 206u8, 233u8, 80u8, 87u8, 50u8, 241u8,
+							130u8, 201u8, 232u8, 173u8, 142u8, 48u8, 192u8, 21u8, 237u8, 185u8,
+							164u8, 222u8, 29u8, 226u8, 164u8, 207u8, 132u8, 163u8, 151u8, 2u8,
+							81u8, 197u8, 76u8, 73u8, 126u8, 73u8, 221u8, 53u8, 20u8, 58u8, 226u8,
+							218u8,
 						],
 					)
 				}
@@ -6049,7 +6072,7 @@ pub mod api {
 				#[doc = ""]
 				#[doc = "This new asset class has no assets initially and its owner is the origin."]
 				#[doc = ""]
-				#[doc = "The origin must be Signed and the sender must have sufficient funds free."]
+				#[doc = "The origin must conform to the configured `CreateOrigin` and have sufficient funds free."]
 				#[doc = ""]
 				#[doc = "Funds of sender are reserved by `AssetDeposit`."]
 				#[doc = ""]
@@ -8676,7 +8699,7 @@ pub mod api {
 					#[doc = "- `OverweightServiced`: On success."]
 					service_overweight {
 						index: ::core::primitive::u64,
-						weight_limit: runtime_types::sp_weights::weight_v2::Weight,
+						weight_limit: ::core::primitive::u64,
 					},
 				}
 				#[derive(
@@ -8895,7 +8918,7 @@ pub mod api {
 					#[doc = "- `OverweightServiced`: On success."]
 					service_overweight {
 						index: ::core::primitive::u64,
-						weight_limit: runtime_types::sp_weights::weight_v2::Weight,
+						weight_limit: ::core::primitive::u64,
 					},
 					#[codec(index = 1)]
 					#[doc = "Suspends all XCM executions for the XCMP queue, regardless of the sender's origin."]
@@ -8935,25 +8958,21 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "- `origin`: Must pass `Root`."]
 					#[doc = "- `new`: Desired value for `QueueConfigData.threshold_weight`"]
-					update_threshold_weight { new: runtime_types::sp_weights::weight_v2::Weight },
+					update_threshold_weight { new: ::core::primitive::u64 },
 					#[codec(index = 7)]
 					#[doc = "Overwrites the speed to which the available weight approaches the maximum weight."]
 					#[doc = "A lower number results in a faster progression. A value of 1 makes the entire weight available initially."]
 					#[doc = ""]
 					#[doc = "- `origin`: Must pass `Root`."]
 					#[doc = "- `new`: Desired value for `QueueConfigData.weight_restrict_decay`."]
-					update_weight_restrict_decay {
-						new: runtime_types::sp_weights::weight_v2::Weight,
-					},
+					update_weight_restrict_decay { new: ::core::primitive::u64 },
 					#[codec(index = 8)]
 					#[doc = "Overwrite the maximum amount of weight any individual message may consume."]
 					#[doc = "Messages above this weight go into the overweight queue and may only be serviced explicitly."]
 					#[doc = ""]
 					#[doc = "- `origin`: Must pass `Root`."]
 					#[doc = "- `new`: Desired value for `QueueConfigData.xcmp_max_individual_weight`."]
-					update_xcmp_max_individual_weight {
-						new: runtime_types::sp_weights::weight_v2::Weight,
-					},
+					update_xcmp_max_individual_weight { new: ::core::primitive::u64 },
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -9579,7 +9598,7 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "This new asset class has no assets initially and its owner is the origin."]
 					#[doc = ""]
-					#[doc = "The origin must be Signed and the sender must have sufficient funds free."]
+					#[doc = "The origin must conform to the configured `CreateOrigin` and have sufficient funds free."]
 					#[doc = ""]
 					#[doc = "Funds of sender are reserved by `AssetDeposit`."]
 					#[doc = ""]
@@ -10531,7 +10550,7 @@ pub mod api {
 					#[doc = "Account liquidity restrictions prevent withdrawal"]
 					LiquidityRestrictions,
 					#[codec(index = 2)]
-					#[doc = "Balance too low to send value"]
+					#[doc = "Balance too low to send value."]
 					InsufficientBalance,
 					#[codec(index = 3)]
 					#[doc = "Value too low to create account due to existential deposit"]
@@ -11626,7 +11645,7 @@ pub mod api {
 					#[doc = "to completion; only that *some* of it was executed."]
 					execute {
 						message: ::std::boxed::Box<runtime_types::xcm::VersionedXcm>,
-						max_weight: runtime_types::sp_weights::weight_v2::Weight,
+						max_weight: ::core::primitive::u64,
 					},
 					#[codec(index = 4)]
 					#[doc = "Extoll that a particular destination can be communicated with through a particular"]
@@ -11918,6 +11937,15 @@ pub mod api {
 					NotifyTargetMigrationFail(
 						runtime_types::xcm::VersionedMultiLocation,
 						::core::primitive::u64,
+					),
+					#[codec(index = 16)]
+					#[doc = "Some assets have been claimed from an asset trap"]
+					#[doc = ""]
+					#[doc = "\\[ hash, origin, assets \\]"]
+					AssetsClaimed(
+						::subxt::utils::H256,
+						runtime_types::xcm::v1::multilocation::MultiLocation,
+						runtime_types::xcm::VersionedMultiAssets,
 					),
 				}
 				#[derive(
@@ -12903,6 +12931,12 @@ pub mod api {
 				Arithmetic(runtime_types::sp_runtime::ArithmeticError),
 				#[codec(index = 9)]
 				Transactional(runtime_types::sp_runtime::TransactionalError),
+				#[codec(index = 10)]
+				Exhausted,
+				#[codec(index = 11)]
+				Corruption,
+				#[codec(index = 12)]
+				Unavailable,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -12985,13 +13019,13 @@ pub mod api {
 			pub mod weight_v2 {
 				use super::runtime_types;
 				#[derive(
-					:: subxt :: ext :: codec :: CompactAs,
-					:: subxt :: ext :: codec :: Decode,
-					:: subxt :: ext :: codec :: Encode,
-					Debug,
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub struct Weight {
+					#[codec(compact)]
 					pub ref_time: ::core::primitive::u64,
+					#[codec(compact)]
+					pub proof_size: ::core::primitive::u64,
 				}
 			}
 			#[derive(
@@ -14235,9 +14269,9 @@ pub mod api {
 		let runtime_metadata_hash = client.metadata().metadata_hash(&PALLETS);
 		if runtime_metadata_hash !=
 			[
-				32u8, 228u8, 99u8, 191u8, 112u8, 184u8, 193u8, 146u8, 4u8, 38u8, 17u8, 108u8,
-				225u8, 121u8, 235u8, 67u8, 247u8, 235u8, 174u8, 248u8, 12u8, 228u8, 55u8, 208u8,
-				52u8, 58u8, 68u8, 63u8, 46u8, 160u8, 113u8, 16u8,
+				105u8, 174u8, 59u8, 212u8, 90u8, 228u8, 78u8, 23u8, 80u8, 88u8, 127u8, 13u8, 180u8,
+				80u8, 93u8, 193u8, 157u8, 237u8, 214u8, 13u8, 122u8, 129u8, 150u8, 178u8, 229u8,
+				145u8, 181u8, 231u8, 90u8, 169u8, 204u8, 246u8,
 			] {
 			Err(::subxt::error::MetadataError::IncompatibleMetadata)
 		} else {

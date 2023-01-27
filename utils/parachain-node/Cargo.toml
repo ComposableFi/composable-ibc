@@ -10,7 +10,7 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
-clap = { version = "3.2.15", features = ["derive"] }
+clap = { version = "4.0.22", features = ["derive"] }
 derive_more = "0.99.2"
 log = "0.4.17"
 codec = { package = "parity-scale-codec", version = "3.0.0" }
@@ -64,7 +64,7 @@ substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate
 try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
 
 # Polkadot
-polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.33", optional = true }
+polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.33" }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.33" }
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.33" }
 polkadot-service = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.33" }
@@ -79,10 +79,10 @@ cumulus-client-network = { git = "https://github.com/paritytech/cumulus", branch
 cumulus-client-service = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.33" }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.33" }
 cumulus-primitives-parachain-inherent = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.33" }
-cumulus-relay-chain-inprocess-interface = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.33", optional = true }
+cumulus-relay-chain-inprocess-interface = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.33" }
 cumulus-relay-chain-interface = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.33" }
 cumulus-relay-chain-rpc-interface = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.33" }
-
+cumulus-relay-chain-minimal-node = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.33" }
 [build-dependencies]
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
 
@@ -90,7 +90,6 @@ substrate-build-script-utils = { git = "https://github.com/paritytech/substrate"
 default = []
 runtime-benchmarks = [
 	"parachain-runtime/runtime-benchmarks",
-	"polkadot-cli/runtime-benchmarks",
-	"cumulus-relay-chain-inprocess-interface"
+	"polkadot-cli/runtime-benchmarks"
 ]
 try-runtime = ["parachain-runtime/try-runtime"]

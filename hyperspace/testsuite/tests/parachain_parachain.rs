@@ -31,7 +31,6 @@ use subxt::{
 		extrinsic_params::Era,
 		polkadot::{PolkadotExtrinsicParams, PolkadotExtrinsicParamsBuilder},
 	},
-	tx::{PolkadotExtrinsicParams, PolkadotExtrinsicParamsBuilder},
 	Error, OnlineClient,
 };
 
@@ -139,7 +138,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 	let _ = chain_a
 		.relay_client
 		.rpc()
-		.subscribe_blocks()
+		.subscribe_finalized_block_headers()
 		.await
 		.unwrap()
 		.filter_map(|result| futures::future::ready(result.ok()))
