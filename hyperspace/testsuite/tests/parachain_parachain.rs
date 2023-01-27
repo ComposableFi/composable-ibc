@@ -26,8 +26,11 @@ use hyperspace_testsuite::{
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
 };
-use sp_runtime::generic::Era;
 use subxt::{
+	config::{
+		extrinsic_params::Era,
+		polkadot::{PolkadotExtrinsicParams, PolkadotExtrinsicParamsBuilder},
+	},
 	tx::{PolkadotExtrinsicParams, PolkadotExtrinsicParamsBuilder},
 	Error, OnlineClient,
 };
@@ -66,6 +69,9 @@ pub enum DefaultConfig {}
 #[async_trait]
 impl config::Config for DefaultConfig {
 	type AssetId = u128;
+	type Signature = <Self as subxt::Config>::Signature;
+	type Address = <Self as subxt::Config>::Address;
+
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,
 	) -> Result<CustomExtrinsicParams<Self>, Error> {
@@ -81,9 +87,13 @@ impl subxt::Config for DefaultConfig {
 	type Hash = sp_core::H256;
 	type AccountId = sp_runtime::AccountId32;
 	type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
-	type Header = sp_runtime::generic::Header<Self::BlockNumber, sp_runtime::traits::BlakeTwo256>;
+	type Header = subxt::config::substrate::SubstrateHeader<
+		Self::BlockNumber,
+		subxt::config::substrate::BlakeTwo256,
+	>;
 	type Signature = sp_runtime::MultiSignature;
 	type ExtrinsicParams = PolkadotExtrinsicParams<Self>;
+	type Hasher = subxt::config::substrate::BlakeTwo256;
 }
 
 async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<DefaultConfig>) {
@@ -97,7 +107,6 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 		parachain_rpc_url: args.chain_a,
 		relay_chain_rpc_url: args.relay_chain.clone(),
 		client_id: None,
-		beefy_activation_block: None,
 		connection_id: None,
 		commitment_prefix: args.connection_prefix_b.as_bytes().to_vec().into(),
 		ss58_version: 42,
@@ -112,7 +121,6 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 		parachain_rpc_url: args.chain_b,
 		relay_chain_rpc_url: args.relay_chain,
 		client_id: None,
-		beefy_activation_block: None,
 		connection_id: None,
 		commitment_prefix: args.connection_prefix_b.as_bytes().to_vec().into(),
 		private_key: "//Alice".to_string(),

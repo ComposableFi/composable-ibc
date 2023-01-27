@@ -22,13 +22,12 @@ use api::runtime_types::dali_runtime::RuntimeCall;
 use api::runtime_types::parachain_runtime::RuntimeCall;
 use finality_grandpa::BlockNumberOps;
 use futures::{Stream, StreamExt};
-use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
+use grandpa_light_client_primitives::ParachainHeaderProofs;
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
 	core::ics24_host::identifier::{ChannelId, ClientId, PortId},
 };
 use ibc_rpc::IbcApiClient;
-use ics10_grandpa::client_message::RelayChainHeader;
 use jsonrpsee::core::client::SubscriptionClientT;
 use pallet_ibc::{MultiAddress, Timeout, TransferParams};
 use primitives::{KeyProvider, TestProvider};
@@ -57,18 +56,18 @@ where
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	<T as subxt::Config>::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	H256: From<T::Hash>,
 
 	T::BlockNumber: Ord + sp_runtime::traits::Zero + One,
 	T::Header: HeaderT,
-	<T::Header as HeaderT>::Hash: From<T::Hash>,
+	<<T::Header as HeaderT>::Hasher as subxt::config::Hasher>::Output: From<T::Hash>,
 	T::BlockNumber: From<u32>,
-	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
-		From<FinalityProof<T::Header>>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	T::BlockNumber: Ord + sp_runtime::traits::Zero,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	pub fn set_client_id(&mut self, client_id: ClientId) {
 		self.client_id = Some(client_id)
@@ -182,17 +181,16 @@ where
 	<<T as config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	<T as subxt::Config>::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	H256: From<T::Hash>,
-	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
-		From<FinalityProof<T::Header>>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
-	RelayChainHeader: From<T::Header>,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	async fn send_transfer(&self, transfer: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
 		let account_id = AccountId32::from_ss58check(transfer.receiver.as_ref()).unwrap();
@@ -241,7 +239,7 @@ where
 			.unwrap()
 			.map(|header| {
 				let header = header.unwrap();
-				let block_number: u64 = (*header.number()).into();
+				let block_number: u64 = (header.number()).into();
 				block_number
 			});
 

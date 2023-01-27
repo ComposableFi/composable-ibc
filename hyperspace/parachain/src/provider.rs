@@ -21,7 +21,7 @@ use beefy_prover::helpers::fetch_timestamp_extrinsic_with_proof;
 use codec::Encode;
 use finality_grandpa::BlockNumberOps;
 use futures::Stream;
-use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
+use grandpa_light_client_primitives::ParachainHeaderProofs;
 use ibc::{
 	applications::transfer::{Amount, PrefixedCoin, PrefixedDenom},
 	core::{
@@ -48,7 +48,6 @@ use ibc_proto::{
 	},
 };
 use ibc_rpc::{IbcApiClient, PacketInfo};
-use ics10_grandpa::client_message::RelayChainHeader;
 use ics11_beefy::client_state::ClientState as BeefyClientState;
 use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
@@ -88,17 +87,16 @@ where
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	<T as subxt::Config>::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	sp_core::H256: From<T::Hash>,
-	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
-		From<FinalityProof<T::Header>>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
-	RelayChainHeader: From<T::Header>,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	type FinalityEvent = FinalityEvent;
 	type TransactionId = TransactionId<T::Hash>;
@@ -123,14 +121,14 @@ where
 		use pallet_ibc::events::IbcEvent as RawIbcEvent;
 		let (tx, rx) = tokio::sync::mpsc::channel(32);
 		let event = self.para_client.events();
+		let para_client = self.para_client.clone();
 		tokio::spawn(async move {
-			let stream = self
-				.para_client
+			let stream = para_client
 				.blocks()
 				.subscribe_all()
 				.await
 				.expect("should susbcribe to blocks")
-				.filter_map(|block| async move {
+				.filter_map(|block| async {
 					let block = block.ok()?;
 					let events = event.at(Some(block.hash())).await.ok()?;
 					let result = events
@@ -165,6 +163,7 @@ where
 
 		Box::pin(ReceiverStream::new(rx))
 	}
+
 	async fn query_client_consensus(
 		&self,
 		at: Height,

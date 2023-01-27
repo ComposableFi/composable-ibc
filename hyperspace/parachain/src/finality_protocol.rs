@@ -20,8 +20,7 @@ use beefy_light_client_primitives::{ClientState as BeefyPrimitivesClientState, N
 use codec::{Decode, Encode};
 use finality_grandpa::BlockNumberOps;
 use grandpa_light_client_primitives::{
-	justification::find_scheduled_change, FinalityProof, ParachainHeaderProofs,
-	ParachainHeadersWithFinalityProof,
+	justification::find_scheduled_change, ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
 };
 use ibc::{
 	core::ics02_client::{client_state::ClientState as _, msgs::update_client::MsgUpdateAnyClient},
@@ -93,16 +92,16 @@ impl FinalityProtocol {
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-		<T as subxt::Config>::Signature: From<MultiSignature>,
+		<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 		T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 		T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 		sp_core::H256: From<T::Hash>,
-		FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
-			From<FinalityProof<T::Header>>,
 		BTreeMap<H256, ParachainHeaderProofs>:
 			From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 		<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 			From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
+		<T as subxt::Config>::AccountId: Send + Sync,
+		<T as subxt::Config>::Address: Send + Sync,
 	{
 		match self {
 			FinalityProtocol::Grandpa =>
@@ -130,12 +129,14 @@ where
 	<<T as config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	<T as subxt::Config>::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	T::BlockNumber: From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
 	T::Hash: From<sp_core::H256>,
 	sp_core::H256: From<T::Hash>,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	let signed_commitment = match finality_event {
 		FinalityEvent::Beefy(signed_commitment) => signed_commitment,
@@ -328,16 +329,16 @@ where
 	<<T as config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	<T as subxt::Config>::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	sp_core::H256: From<T::Hash>,
-	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
-		From<FinalityProof<T::Header>>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	let justification = match finality_event {
 		FinalityEvent::Grandpa(justification) => justification,
@@ -455,7 +456,7 @@ where
 		para_id: client_state.para_id,
 	};
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
-		.query_finalized_parachain_headers_with_proof(
+		.query_finalized_parachain_headers_with_proof::<T::Header>(
 			&cs,
 			justification.commit.target_number.into(),
 			headers_with_events.into_iter().collect(),
@@ -483,7 +484,8 @@ where
 		};
 
 	let grandpa_header = GrandpaHeader {
-		finality_proof: finality_proof.into(),
+		finality_proof: codec::Decode::decode(&mut &*finality_proof.encode())
+			.expect("Same struct from different crates,decode should not fail"),
 		parachain_headers: parachain_headers.into(),
 	};
 

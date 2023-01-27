@@ -61,7 +61,7 @@ use ics11_beefy::{
 use primitives::KeyProvider;
 
 use crate::{finality_protocol::FinalityProtocol, signer::ExtrinsicSigner};
-use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
+use grandpa_light_client_primitives::ParachainHeaderProofs;
 use grandpa_prover::GrandpaProver;
 use ibc::timestamp::Timestamp;
 use ics10_grandpa::client_state::ClientState as GrandpaClientState;
@@ -260,9 +260,11 @@ where
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	<T as subxt::Config>::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	H256: From<T::Hash>,
 	T::BlockNumber: From<u32> + Ord + sp_runtime::traits::Zero + One,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	/// Returns a grandpa proving client.
 	pub fn grandpa_prover(&self) -> GrandpaProver<T> {
@@ -427,16 +429,16 @@ where
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	<T as subxt::Config>::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	H256: From<T::Hash>,
 	T::BlockNumber: Ord + sp_runtime::traits::Zero + One,
 	T::Header: HeaderT,
 	<<T::Header as HeaderT>::Hasher as subxt::config::Hasher>::Output: From<T::Hash>,
 	T::BlockNumber: From<u32>,
-	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
-		From<FinalityProof<T::Header>>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	/// Construct a beefy client state to be submitted to the counterparty chain
 	pub async fn construct_beefy_client_state(

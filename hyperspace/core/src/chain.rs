@@ -54,17 +54,17 @@ use ibc::core::ics02_client::events::UpdateClient;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use parachain::{config, ParachainClient};
 use primitives::{Chain, IbcProvider, KeyProvider, MisbehaviourHandler, UpdateType};
-use sp_runtime::generic::Era;
 use std::{pin::Pin, time::Duration};
 #[cfg(feature = "dali")]
-use subxt::tx::{
+use subxt::config::substrate::{
 	SubstrateExtrinsicParams as ParachainExtrinsicParams,
 	SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
 };
-use subxt::{tx::ExtrinsicParams, Error, OnlineClient};
+use subxt::{config::ExtrinsicParams, Error, OnlineClient};
 
+use subxt::config::extrinsic_params::Era;
 #[cfg(not(feature = "dali"))]
-use subxt::tx::{
+use subxt::config::polkadot::{
 	PolkadotExtrinsicParams as ParachainExtrinsicParams,
 	PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
 };
@@ -76,6 +76,9 @@ pub enum DefaultConfig {}
 #[async_trait]
 impl config::Config for DefaultConfig {
 	type AssetId = u128;
+	type Signature = <Self as subxt::Config>::Signature;
+	type Address = <Self as subxt::Config>::Address;
+
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,
 	) -> Result<
@@ -92,12 +95,14 @@ impl subxt::Config for DefaultConfig {
 	type Index = u32;
 	type BlockNumber = u32;
 	type Hash = sp_core::H256;
-	type Hashing = sp_runtime::traits::BlakeTwo256;
+	type Hasher = subxt::config::substrate::BlakeTwo256;
 	type AccountId = sp_runtime::AccountId32;
 	type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
-	type Header = sp_runtime::generic::Header<Self::BlockNumber, sp_runtime::traits::BlakeTwo256>;
+	type Header = subxt::config::substrate::SubstrateHeader<
+		Self::BlockNumber,
+		subxt::config::substrate::BlakeTwo256,
+	>;
 	type Signature = sp_runtime::MultiSignature;
-	type Extrinsic = sp_runtime::OpaqueExtrinsic;
 	type ExtrinsicParams = ParachainExtrinsicParams<Self>;
 }
 

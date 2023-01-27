@@ -26,9 +26,8 @@ use primitives::KeyProvider;
 
 /// A [`Signer`] implementation.
 #[derive(Clone)]
-pub struct ExtrinsicSigner<T: config::Config + Send + Sync, Provider: KeyProvider> {
+pub struct ExtrinsicSigner<T: config::Config, Provider: KeyProvider> {
 	account_id: T::AccountId,
-	nonce: Option<T::Index>,
 	signer: MultiSigner,
 	key_store: SyncCryptoStorePtr,
 	key_type_id: KeyTypeId,
@@ -42,6 +41,9 @@ where
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	P: KeyProvider,
 	MultiSigner: From<MultiSigner>,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
+	<T as subxt::Config>::Signature: Send + Sync,
 {
 	/// Creates a new [`Signer`] from a key store reference and key type
 	pub fn new(
@@ -54,7 +56,6 @@ where
 				.into_account();
 		Self {
 			account_id,
-			nonce: None,
 			key_store,
 			key_type_id,
 			signer: MultiSigner::from(public_key),
@@ -68,7 +69,9 @@ where
 	T: config::Config + Send + Sync,
 	T::AccountId: Into<<T as subxt::Config>::Address> + Clone + 'static,
 	P: KeyProvider + 'static,
-	<T as subxt::Config>::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	fn account_id(&self) -> &T::AccountId {
 		&self.account_id

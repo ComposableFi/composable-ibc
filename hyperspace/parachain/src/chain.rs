@@ -88,17 +88,16 @@ where
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	<T as subxt::Config>::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
-	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
-		From<FinalityProof<T::Header>>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	sp_core::H256: From<T::Hash>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
-	RelayChainHeader: From<T::Header>,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	fn name(&self) -> &str {
 		&*self.name
@@ -346,17 +345,16 @@ where
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	<T as subxt::Config>::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
-	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
-		From<FinalityProof<T::Header>>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	sp_core::H256: From<T::Hash>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
-	RelayChainHeader: From<T::Header>,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	async fn check_for_misbehaviour<C: Chain>(
 		&self,
@@ -441,7 +439,11 @@ where
 							.ok_or_else(|| {
 								anyhow!("No header found for hash: {:?}", unknown_header_hash)
 							})?;
-						trusted_finality_proof.unknown_headers.push(unknown_header.into());
+						trusted_finality_proof
+							.unknown_headers
+							.push(codec::Decode::decode(&mut &*unknown_header.encode()).expect(
+							"Same header struct defined in different crates, decoding cannot panic",
+						));
 					}
 
 					let misbehaviour = ClientMessage::Misbehaviour(Misbehaviour {
