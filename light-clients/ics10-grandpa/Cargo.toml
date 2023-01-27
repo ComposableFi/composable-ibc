@@ -21,7 +21,6 @@ std = [
     "prost-types/std",
     "codec/std",
     "anyhow/std",
-    "primitive-types/std",
     "serde/std",
     "sp-core/std",
     "sp-runtime/std",
@@ -49,7 +48,6 @@ prost-types = { version = "0.11", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 anyhow = { version = "1.0.65", default-features = false }
 derive_more = { version = "0.99.17", default-features = false, features = ["from"] }
-primitive-types = { version = "0.11.1", default-features = false }
 serde = { version = "1.0.144", default-features = false, features = ["derive"] }
 
 # substrate deps

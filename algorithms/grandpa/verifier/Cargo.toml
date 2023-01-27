@@ -12,7 +12,6 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 anyhow = { version = "1.0.64", default-features = false }
 finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-features = false }
 hash-db = { version = "0.15.2", default-features = false }
-primitive-types = { version = "0.11.1", default-features = false }
 
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false }
@@ -50,7 +49,6 @@ std = [
     "anyhow/std",
     "finality-grandpa/std",
     "hash-db/std",
-    "primitive-types/std",
     "frame-support/std",
     "sp-runtime/std",
     "sp-std/std",

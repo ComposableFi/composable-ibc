@@ -61,7 +61,7 @@ sp-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polk
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
-try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
+try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", optional = true }
 
 # Polkadot
 polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.33" }
@@ -92,4 +92,4 @@ runtime-benchmarks = [
 	"parachain-runtime/runtime-benchmarks",
 	"polkadot-cli/runtime-benchmarks"
 ]
-try-runtime = ["parachain-runtime/try-runtime"]
+try-runtime = ["parachain-runtime/try-runtime", "try-runtime-cli"]

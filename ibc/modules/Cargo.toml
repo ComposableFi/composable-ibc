@@ -23,10 +23,10 @@ std = [
     "ibc-proto/std",
     "ics23/std",
     "clock",
-    "sp-core/std",
     "sp-std/std",
     "codec/std",
-    "scale-info/std"
+    "scale-info/std",
+    "primitive-types/std"
 ]
 clock = ["tendermint/clock", "time/std"]
 
@@ -51,13 +51,12 @@ flex-error = { version = "0.4.4", default-features = false }
 num-traits = { version = "0.2.15", default-features = false }
 derive_more = { version = "0.99.17", default-features = false, features = ["from", "into", "display"] }
 uint = { version = "0.9", default-features = false }
-primitive-types = { version = "0.12", default-features = false, features = ["serde_no_std"] }
+primitive-types = { version = "0.12.0", default-features = false, features = ["serde_no_std"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 sha2 = { version = "0.10.2", optional = true }
 tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
 tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false }
 
 [dev-dependencies]
 env_logger = "0.9.0"

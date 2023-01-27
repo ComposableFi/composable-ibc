@@ -2755,18 +2755,6 @@ dependencies = [
 
 [[package]]
 name = "fixed-hash"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfcf0ed7fe52a17a03854ec54a9f76d6d84508d1c0e66bc1793301c73fc8493c"
-dependencies = [
- "byteorder",
- "rand 0.8.5",
- "rustc-hex",
- "static_assertions",
-]
-
-[[package]]
-name = "fixed-hash"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "835c052cb0c08c1acf6ffd71c022172e18723949c8282f2b9f27efbc51e64534"
@@ -3465,7 +3453,6 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "polkadot-core-primitives",
- "primitive-types 0.11.1",
  "sc-finality-grandpa-rpc",
  "serde",
  "sp-core 6.0.0",
@@ -4079,7 +4066,7 @@ dependencies = [
  "modelator",
  "num-traits",
  "parity-scale-codec",
- "primitive-types 0.12.1",
+ "primitive-types",
  "prost",
  "safe-regex",
  "scale-info",
@@ -4248,7 +4235,6 @@ dependencies = [
  "light-client-common",
  "log",
  "parity-scale-codec",
- "primitive-types 0.11.1",
  "prost",
  "prost-build",
  "prost-types",
@@ -4284,7 +4270,6 @@ dependencies = [
  "ibc-proto",
  "light-client-common",
  "parity-scale-codec",
- "primitive-types 0.11.1",
  "prost",
  "prost-build",
  "prost-types",
@@ -5514,7 +5499,6 @@ dependencies = [
  "hash-db",
  "ibc",
  "parity-scale-codec",
- "primitive-types 0.11.1",
  "serde",
  "sp-core 6.0.0",
  "sp-storage 6.0.0",
@@ -7653,7 +7637,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "parity-util-mem-derive",
  "parking_lot 0.12.1",
- "primitive-types 0.12.1",
+ "primitive-types",
  "smallvec",
  "winapi",
 ]
@@ -9136,22 +9120,11 @@ dependencies = [
 
 [[package]]
 name = "primitive-types"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e28720988bff275df1f51b171e1b2a18c30d194c4d2b61defdacecd625a5d94a"
-dependencies = [
- "fixed-hash 0.7.0",
- "impl-codec",
- "uint",
-]
-
-[[package]]
-name = "primitive-types"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f3486ccba82358b11a77516035647c34ba167dfa53312630de83b12bd4f3d66"
 dependencies = [
- "fixed-hash 0.8.0",
+ "fixed-hash",
  "impl-codec",
  "impl-serde",
  "scale-info",
@@ -11981,7 +11954,7 @@ dependencies = [
  "num-traits",
  "parity-scale-codec",
  "parking_lot 0.12.1",
- "primitive-types 0.12.1",
+ "primitive-types",
  "rand 0.7.3",
  "regex",
  "scale-info",
@@ -12025,7 +11998,7 @@ dependencies = [
  "merlin",
  "parity-scale-codec",
  "parking_lot 0.12.1",
- "primitive-types 0.12.1",
+ "primitive-types",
  "rand 0.8.5",
  "regex",
  "scale-info",
@@ -12403,7 +12376,7 @@ dependencies = [
  "bytes",
  "impl-trait-for-tuples",
  "parity-scale-codec",
- "primitive-types 0.12.1",
+ "primitive-types",
  "sp-externalities 0.12.0",
  "sp-runtime-interface-proc-macro 5.0.0",
  "sp-std 4.0.0",
@@ -12422,7 +12395,7 @@ dependencies = [
  "bytes",
  "impl-trait-for-tuples",
  "parity-scale-codec",
- "primitive-types 0.12.1",
+ "primitive-types",
  "sp-externalities 0.15.0",
  "sp-runtime-interface-proc-macro 7.0.0",
  "sp-std 6.0.0",
@@ -13071,7 +13044,7 @@ dependencies = [
  "jsonrpsee 0.15.1",
  "parity-scale-codec",
  "parking_lot 0.12.1",
- "primitive-types 0.12.1",
+ "primitive-types",
  "scale-bits",
  "scale-decode",
  "scale-info",
