@@ -1,6 +1,7 @@
 pragma solidity ^0.8.17;
 
 // SPDX-License-Identifier: Apache2
+// source: https://github.com/polytope-labs/solidity-merkle-trees/blob/main/lib/MerkleMultiProof.sol
 struct Node {
     uint256 k_index;
     bytes32 node;
