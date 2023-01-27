@@ -155,8 +155,15 @@ where
 			let mut stream = Box::pin(stream);
 
 			while let Some(evs) = stream.next().await {
+				let mut should_exit = false;
 				for ev in evs {
-					tx.send(ev).await.unwrap()
+					if let Err(_) = tx.send(ev).await {
+						should_exit = true;
+						break
+					}
+				}
+				if should_exit {
+					break
 				}
 			}
 		});
