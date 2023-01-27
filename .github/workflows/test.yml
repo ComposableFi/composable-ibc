@@ -159,3 +159,23 @@ jobs:
       - name: Terminate local parachain cluster
         run: |
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml down -v
+    
+  test-solidity:
+    runs-on:
+      - self-hosted
+      - sre
+    defaults:
+      run:
+        shell: bash
+        working-directory: contracts/ethereum
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Install dependencies
+        run: npm install 
+      - name: run unit test 
+        run: npm run test
