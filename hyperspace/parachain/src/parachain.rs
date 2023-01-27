@@ -30,9 +30,9 @@ use api::runtime_types::dali_runtime::RuntimeCall;
 #[cfg(not(feature = "dali"))]
 use api::runtime_types::parachain_runtime::RuntimeCall;
 
+use crate::config::Config;
 use codec::{Compact, Decode, Input};
 use sp_runtime::generic::Era;
-use subxt::Config;
 
 pub type Balance = u128;
 pub type SignedExtra = (Era, CheckNonce, Compact<Balance>);

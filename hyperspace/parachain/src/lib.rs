@@ -256,10 +256,11 @@ impl<T: config::Config + Send + Sync> ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	Self: KeyProvider,
-	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	<<T as config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	T::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature>,
 	H256: From<T::Hash>,
 	T::BlockNumber: From<u32> + Ord + sp_runtime::traits::Zero + One,
 {
@@ -379,12 +380,6 @@ where
 	/// We retry sending the transaction up to 5 times in the case where the transaction pool might
 	/// reject the transaction because of conflicting nonces.
 	pub async fn submit_call<C: TxPayload>(&self, call: C) -> Result<(T::Hash, T::Hash), Error> {
-		let signer = ExtrinsicSigner::<T, Self>::new(
-			self.key_store.clone(),
-			self.key_type_id.clone(),
-			self.public_key.clone(),
-		);
-
 		// Try extrinsic submission five times in case of failures
 		let mut count = 0;
 		let progress = loop {
@@ -394,11 +389,17 @@ where
 
 			let other_params = T::custom_extrinsic_params(&self.para_client).await?;
 
-			let res = self
-				.para_client
-				.tx()
-				.sign_and_submit_then_watch(&call, &signer, other_params)
-				.await;
+			let res = {
+				let signer = ExtrinsicSigner::<T, Self>::new(
+					self.key_store.clone(),
+					self.key_type_id.clone(),
+					self.public_key.clone(),
+				);
+				self.para_client
+					.tx()
+					.sign_and_submit_then_watch(&call, &signer, other_params)
+					.await
+			};
 			match res {
 				Ok(progress) => break progress,
 				Err(e) => {
@@ -422,10 +423,11 @@ impl<T: config::Config + Send + Sync> ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	Self: KeyProvider,
-	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	<<T as config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	T::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature>,
 	H256: From<T::Hash>,
 	T::BlockNumber: Ord + sp_runtime::traits::Zero + One,
 	T::Header: HeaderT,
@@ -442,7 +444,7 @@ where
 	) -> Result<(AnyClientState, AnyConsensusState), Error>
 	where
 		Self: KeyProvider,
-		<T::Signature as Verify>::Signer:
+		<<T as config::Config>::Signature as Verify>::Signer:
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
@@ -467,12 +469,13 @@ where
 			let heads_addr = polkadot::api::storage().paras().heads(
 				&polkadot::api::runtime_types::polkadot_parachain::primitives::Id(self.para_id),
 			);
-			let head_data = api.fetch(&heads_addr, block_hash).await?.ok_or_else(|| {
-				Error::Custom(format!(
-					"Couldn't find header for ParaId({}) at relay block {:?}",
-					self.para_id, block_hash
-				))
-			})?;
+			let head_data =
+				api.at(block_hash).await?.fetch(&heads_addr).await?.ok_or_else(|| {
+					Error::Custom(format!(
+						"Couldn't find header for ParaId({}) at relay block {:?}",
+						self.para_id, block_hash
+					))
+				})?;
 			let decoded_para_head = sp_runtime::generic::Header::<
 				u32,
 				sp_runtime::traits::BlakeTwo256,
@@ -499,7 +502,9 @@ where
 				self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
 			let timestamp_addr = api::storage().timestamp().now();
 			let unix_timestamp_millis = para_client_api
-				.fetch(&timestamp_addr, block_hash)
+				.at(block_hash)
+				.await?
+				.fetch(&timestamp_addr)
 				.await?
 				.expect("Timestamp should exist");
 			let timestamp_nanos = Duration::from_millis(unix_timestamp_millis).as_nanos() as u64;
@@ -521,11 +526,12 @@ where
 	) -> Result<(AnyClientState, AnyConsensusState), Error>
 	where
 		Self: KeyProvider,
-		<T::Signature as Verify>::Signer:
+		<<T as config::Config>::Signature as Verify>::Signer:
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 		u32: From<<T as subxt::Config>::BlockNumber>,
+		<T as subxt::Config>::Hash: From<H256>,
 	{
 		let relay_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.relay_ws_client) };
 		let para_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.para_ws_client) };
@@ -548,7 +554,9 @@ where
 				&polkadot::api::runtime_types::polkadot_parachain::primitives::Id(self.para_id),
 			);
 			let head_data = api
-				.fetch(&heads_addr, Some(light_client_state.latest_relay_hash))
+				.at(Some(light_client_state.latest_relay_hash.into()))
+				.await?
+				.fetch(&heads_addr)
 				.await?
 				.ok_or_else(|| {
 					Error::Custom(format!(
@@ -582,7 +590,9 @@ where
 				self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
 			let timestamp_addr = api::storage().timestamp().now();
 			let unix_timestamp_millis = para_client_api
-				.fetch(&timestamp_addr, block_hash)
+				.at(block_hash)
+				.await?
+				.fetch(&timestamp_addr)
 				.await?
 				.expect("Timestamp should exist");
 			let timestamp_nanos = Duration::from_millis(unix_timestamp_millis).as_nanos() as u64;

@@ -42,19 +42,19 @@ use primitives::{
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
 use sp_runtime::{
-	traits::{Header as HeaderT, IdentifyAccount, One, Verify},
+	traits::{BlakeTwo256, IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
 use std::{
 	collections::{BTreeMap, BTreeSet, HashMap},
 	fmt::Display,
 };
+#[cfg(not(feature = "dali"))]
+use subxt::config::polkadot::PlainTip as Tip;
 #[cfg(feature = "dali")]
+use subxt::config::substrate::AssetTip as Tip;
 use subxt::config::{
-	extrinsic_params::BaseExtrinsicParamsBuilder, polkadot::PlainTip, ExtrinsicParams,
-};
-use subxt::config::{
-	extrinsic_params::BaseExtrinsicParamsBuilder, substrate::AssetTip as Tip, ExtrinsicParams,
+	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT,
 };
 use tendermint_proto::Protobuf;
 
@@ -89,11 +89,11 @@ impl FinalityProtocol {
 		u32: From<<T as subxt::Config>::BlockNumber>,
 		ParachainClient<T>: Chain,
 		ParachainClient<T>: KeyProvider,
-		<T::Signature as Verify>::Signer:
+		<<T as config::Config>::Signature as Verify>::Signer:
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-		T::Signature: From<MultiSignature>,
+		<T as subxt::Config>::Signature: From<MultiSignature>,
 		T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 		T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 		sp_core::H256: From<T::Hash>,
@@ -127,8 +127,10 @@ where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
 		+ From<<T as subxt::Config>::BlockNumber>,
 	ParachainClient<T>: Chain + KeyProvider,
+	<<T as config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	T::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature>,
 	T::BlockNumber: From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
@@ -153,7 +155,6 @@ where
 			mmr_root_hash: client_state.mmr_root_hash,
 			current_authorities: client_state.authority.clone(),
 			next_authorities: client_state.next_authority_set.clone(),
-			beefy_activation_block: client_state.beefy_activation_block,
 		},
 		c => Err(Error::ClientStateRehydration(format!(
 			"Expected AnyClientState::Beefy found: {:?}",
@@ -185,7 +186,7 @@ where
 		.await?;
 
 	log::info!(
-		"Fetching events from {} for blocks {}..{}",
+		"Fetching events from {} for blocks {:?}..{:?}",
 		source.name(),
 		headers[0].number(),
 		headers.last().unwrap().number()
@@ -196,7 +197,7 @@ where
 	// block that was already finalized in a former beefy block might still be part of
 	// the parachain headers in a later beefy block, discovered this from previous logs
 	let finalized_blocks =
-		headers.iter().map(|header| u32::from(*header.number())).collect::<Vec<_>>();
+		headers.iter().map(|header| u32::from(header.number())).collect::<Vec<_>>();
 
 	let finalized_block_numbers = finalized_blocks
 		.iter()
@@ -324,8 +325,10 @@ where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
 		+ From<<T as subxt::Config>::BlockNumber>,
 	ParachainClient<T>: Chain + KeyProvider,
+	<<T as config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	T::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature>,
 	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	sp_core::H256: From<T::Hash>,
@@ -375,7 +378,7 @@ where
 
 	// notice the inclusive range
 	let finalized_blocks = ((client_state.latest_para_height + 1)..=
-		u32::from(*finalized_para_header.number()))
+		u32::from(finalized_para_header.number()))
 		.collect::<Vec<_>>();
 
 	log::info!(
@@ -443,10 +446,10 @@ where
 		headers_with_events.insert(T::BlockNumber::from(latest_finalized_block));
 	}
 
-	let cs = grandpa_light_client_primitives::ClientState::<T::Hash> {
+	let cs = grandpa_light_client_primitives::ClientState {
 		current_authorities: client_state.current_authorities.clone(),
 		current_set_id: client_state.current_set_id,
-		latest_relay_hash: T::Hash::from(client_state.latest_relay_hash.as_fixed_bytes().clone()),
+		latest_relay_hash: client_state.latest_relay_hash,
 		latest_relay_height: client_state.latest_relay_height,
 		latest_para_height: client_state.latest_para_height,
 		para_id: client_state.para_id,
@@ -459,17 +462,17 @@ where
 		)
 		.await?;
 
-	let target =
-		source
-			.relay_client
-			.rpc()
-			.header(Some(finality_proof.block))
-			.await?
-			.ok_or_else(|| {
-				Error::from(
-					"Could not find relay chain header for justification target".to_string(),
-				)
-			})?;
+	let target = source
+		.relay_client
+		.rpc()
+		.header(Some(finality_proof.block.into()))
+		.await?
+		.ok_or_else(|| {
+			Error::from("Could not find relay chain header for justification target".to_string())
+		})?
+		.encode();
+	let target = sp_runtime::generic::Header::<u32, BlakeTwo256>::decode(&mut &*target)
+		.expect("Should not panic, same struct from different crates");
 
 	let authority_set_changed_scheduled = find_scheduled_change(&target).is_some();
 	// if validator set has changed this is a mandatory update

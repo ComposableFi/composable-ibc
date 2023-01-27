@@ -37,13 +37,15 @@ use sp_core::{
 	H256,
 };
 use sp_runtime::{
-	traits::{Header as HeaderT, IdentifyAccount, One, Verify},
+	traits::{IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr};
 #[cfg(not(feature = "dali"))]
 use subxt::config::polkadot::PlainTip as Tip;
-use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams};
+use subxt::config::{
+	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT,
+};
 #[cfg(feature = "dali")]
 use subxt::tx::AssetTip as Tip;
 
@@ -51,10 +53,11 @@ impl<T: config::Config + Send + Sync> ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	Self: KeyProvider,
-	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	<<T as config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	T::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature>,
 	H256: From<T::Hash>,
 
 	T::BlockNumber: Ord + sp_runtime::traits::Zero + One,
@@ -176,9 +179,10 @@ where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	u32: From<<T as subxt::Config>::BlockNumber>,
 	Self: KeyProvider,
-	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	<<T as config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	T::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature>,
 	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	H256: From<T::Hash>,
