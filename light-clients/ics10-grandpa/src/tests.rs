@@ -24,11 +24,12 @@ use crate::{
 use beefy_prover::helpers::{
 	fetch_timestamp_extrinsic_with_proof, unsafe_arc_cast, TimeStampExtWithProof,
 };
-use codec::Decode;
+use codec::{Decode, Encode};
 use finality_grandpa_rpc::GrandpaApiClient;
 use futures::stream::StreamExt;
 use grandpa_client_primitives::{
 	justification::GrandpaJustification, parachain_header_storage_key, ParachainHeaderProofs,
+	ParachainHeadersWithFinalityProof,
 };
 use grandpa_prover::{polkadot, GrandpaProver, JustificationNotification};
 use ibc::{
@@ -49,9 +50,12 @@ use ibc::{
 	test_utils::get_dummy_account_id,
 	Height,
 };
-use primitive_types::H256;
+use sp_core::{hexdisplay::AsBytesRef, H256};
 use std::{mem::size_of_val, time::Duration};
-use subxt::{ext::sp_core::hexdisplay::AsBytesRef, PolkadotConfig};
+use subxt::{
+	config::substrate::{BlakeTwo256, SubstrateHeader},
+	PolkadotConfig,
+};
 
 pub type Justification = GrandpaJustification<RelayChainHeader>;
 
@@ -88,15 +92,16 @@ async fn test_continuous_update_of_grandpa_client() {
 	let session_length = prover.session_length().await.unwrap();
 	prover
 		.relay_client
-		.rpc()
-		.subscribe_blocks()
+		.blocks()
+		.subscribe_finalized()
 		.await
 		.unwrap()
 		.filter_map(|result| futures::future::ready(result.ok()))
-		.skip_while(|h| futures::future::ready(h.number < (session_length * 2) + 10))
+		.skip_while(|h| futures::future::ready(h.number() < (session_length * 2) + 10))
 		.take(1)
 		.collect::<Vec<_>>()
 		.await;
+
 	println!("Grandpa proofs are now available");
 
 	let (client_state, consensus_state) = loop {
@@ -117,7 +122,10 @@ async fn test_continuous_update_of_grandpa_client() {
 			prover
 				.relay_client
 				.storage()
-				.fetch(&key, Some(client_state.latest_relay_hash))
+				.at(Some(client_state.latest_relay_hash))
+				.await
+				.unwrap()
+				.fetch(&key)
 				.await
 				.unwrap()
 				.unwrap()
@@ -142,7 +150,7 @@ async fn test_continuous_update_of_grandpa_client() {
 			current_authorities: client_state.current_authorities,
 			_phantom: Default::default(),
 		};
-		let subxt_block_number: subxt::rpc::BlockNumber = decoded_para_head.number.into();
+		let subxt_block_number: subxt::rpc::types::BlockNumber = decoded_para_head.number.into();
 		let block_hash =
 			prover.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
 
@@ -226,13 +234,16 @@ async fn test_continuous_update_of_grandpa_client() {
 		}
 
 		let proof = prover
-			.query_finalized_parachain_headers_with_proof(
+			.query_finalized_parachain_headers_with_proof::<SubstrateHeader<u32, BlakeTwo256>>(
 				&(client_state.clone().into()),
 				justification.commit.target_number,
 				header_numbers.clone(),
 			)
 			.await
 			.expect("Failed to fetch finalized parachain headers with proof");
+		let proof = proof.encode();
+		let proof =
+			ParachainHeadersWithFinalityProof::<RelayChainHeader>::decode(&mut &*proof).unwrap();
 		println!("========= New Justification =========");
 		println!("justification size: {}kb", size_of_val(&*justification_bytes) / 1000);
 		println!("current_set_id: {}", client_state.current_set_id);

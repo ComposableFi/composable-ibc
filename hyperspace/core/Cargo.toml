@@ -40,10 +40,10 @@ light-client-common = { path = "../../light-clients/common" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
 
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
-sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
-subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
+sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
+subxt = { git = "https://github.com/ComposableFi/subxt", rev = "7a54d51ffe1d2daf785d13040276e5cbe30c29ed", features = ["substrate-compat"] }
 
 [dev-dependencies]
 derive_more = "0.99.17"
@@ -51,11 +51,11 @@ prost = "0.11"
 parachain = { path = "../parachain", package = "hyperspace-parachain", features = ["testing"] }
 
 # substrate
-subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
-state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
-sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+subxt = { git = "https://github.com/ComposableFi/subxt", rev = "7a54d51ffe1d2daf785d13040276e5cbe30c29ed", features = ["substrate-compat"] }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
+state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
+sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
 
 # composable
 #comosable-primitives = { package = "primitives",  path = "../contracts/pallet-ibc" }

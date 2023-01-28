@@ -24,11 +24,10 @@ extern crate alloc;
 mod tests;
 
 use beefy_light_client_primitives::{
-	error::BeefyClientError, get_leaf_index_for_block_number, BeefyNextAuthoritySet, ClientState,
-	HostFunctions, MerkleHasher, MmrUpdateProof, NodesUtils, ParachainsUpdateProof,
-	SignatureWithAuthorityIndex, HASH_LENGTH,
+	error::BeefyClientError, BeefyNextAuthoritySet, ClientState, HostFunctions, MerkleHasher,
+	MmrUpdateProof, NodesUtils, ParachainsUpdateProof, SignatureWithAuthorityIndex, HASH_LENGTH,
 };
-use beefy_primitives::{known_payload_ids::MMR_ROOT_ID, mmr::MmrLeaf};
+use beefy_primitives::{known_payloads::MMR_ROOT_ID, mmr::MmrLeaf};
 use codec::{Decode, Encode};
 use frame_support::sp_runtime::{app_crypto::ByteArray, traits::Convert};
 use sp_core::H256;
@@ -163,7 +162,15 @@ where
 	let proof =
 		mmr_lib::MerkleProof::<_, MerkleHasher<H>>::new(mmr_size, mmr_update.mmr_proof.items);
 
-	let leaf_pos = mmr_lib::leaf_index_to_pos(mmr_update.mmr_proof.leaf_index);
+	// We are trying to verify the proof for the latest mmr leaf so we expect the proof to contain a
+	// singular leaf index
+	let leaf_index = mmr_update
+		.mmr_proof
+		.leaf_indices
+		.get(0)
+		.ok_or(BeefyClientError::ExpectedSingleLeafIndex)?;
+
+	let leaf_pos = mmr_lib::leaf_index_to_pos(*leaf_index);
 
 	let root = proof.calculate_root(vec![(leaf_pos, node.into())])?;
 	if root != mmr_root_hash {
@@ -195,7 +202,13 @@ where
 {
 	let mut mmr_leaves = Vec::new();
 
-	for parachain_header in parachain_headers {
+	if mmr_proof.leaf_indices.len() != parachain_headers.len() {
+		Err(BeefyClientError::Custom(
+			"leaf indices is not equal to number of parachain headers".to_string(),
+		))?
+	}
+
+	for (index, parachain_header) in parachain_headers.into_iter().enumerate() {
 		let decoded_para_header =
 			Header::<u32, BlakeTwo256>::decode(&mut &*parachain_header.parachain_header)?;
 
@@ -239,12 +252,8 @@ where
 		};
 
 		let node = mmr_leaf.using_encoded(|leaf| H::keccak_256(leaf));
-		let leaf_index = get_leaf_index_for_block_number(
-			trusted_client_state.beefy_activation_block,
-			parachain_header.partial_mmr_leaf.parent_number_and_hash.0 + 1,
-		);
-
-		let leaf_pos = mmr_lib::leaf_index_to_pos(leaf_index as u64);
+		let leaf_index = mmr_proof.leaf_indices[index];
+		let leaf_pos = mmr_lib::leaf_index_to_pos(leaf_index);
 		mmr_leaves.push((leaf_pos, H256::from_slice(&node)));
 	}
 

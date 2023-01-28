@@ -38,15 +38,15 @@ use beefy_light_client_primitives::{ClientState, MmrUpdateProof};
 use beefy_prover::Prover;
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
 use ics11_beefy::client_message::ParachainHeader;
-use pallet_mmr_primitives::BatchProof;
+use pallet_mmr_primitives::Proof;
 use sp_core::{ecdsa, ed25519, sr25519, Bytes, Pair, H256};
 use sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
-	KeyTypeId, MultiSignature,
+	KeyTypeId, MultiSignature, MultiSigner,
 };
 use ss58_registry::Ss58AddressFormat;
-use subxt::ext::sp_runtime::{traits::Header as HeaderT, MultiSigner};
+use subxt::config::Header as HeaderT;
 
 use crate::{
 	parachain::api,
@@ -61,7 +61,7 @@ use ics11_beefy::{
 use primitives::KeyProvider;
 
 use crate::{finality_protocol::FinalityProtocol, signer::ExtrinsicSigner};
-use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
+use grandpa_light_client_primitives::ParachainHeaderProofs;
 use grandpa_prover::GrandpaProver;
 use ibc::timestamp::Timestamp;
 use ics10_grandpa::client_state::ClientState as GrandpaClientState;
@@ -90,8 +90,6 @@ pub struct ParachainClient<T: config::Config> {
 	pub para_ws_client: Arc<jsonrpsee_ws_client::WsClient>,
 	/// Parachain Id
 	pub para_id: u32,
-	/// Beefy activation block
-	pub beefy_activation_block: Option<u32>,
 	/// Light client id on counterparty chain
 	pub client_id: Option<ClientId>,
 	/// Connection Id
@@ -158,8 +156,6 @@ pub struct ParachainClientConfig {
 	pub client_id: Option<ClientId>,
 	/// Connection Id
 	pub connection_id: Option<ConnectionId>,
-	/// Beefy activation block
-	pub beefy_activation_block: Option<u32>,
 	/// Commitment prefix
 	pub commitment_prefix: Bytes,
 	/// Raw private key for signing transactions
@@ -243,7 +239,6 @@ where
 			client_id: config.client_id,
 			commitment_prefix: config.commitment_prefix.0,
 			connection_id: config.connection_id,
-			beefy_activation_block: config.beefy_activation_block,
 			public_key,
 			key_store,
 			key_type_id,
@@ -261,12 +256,15 @@ impl<T: config::Config + Send + Sync> ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	Self: KeyProvider,
-	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	<<T as config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	T::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	H256: From<T::Hash>,
 	T::BlockNumber: From<u32> + Ord + sp_runtime::traits::Zero + One,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	/// Returns a grandpa proving client.
 	pub fn grandpa_prover(&self) -> GrandpaProver<T> {
@@ -295,7 +293,6 @@ where
 		let client_wrapper = Prover {
 			relay_client: self.relay_client.clone(),
 			para_client: self.para_client.clone(),
-			beefy_activation_block: client_state.beefy_activation_block,
 			para_id: self.para_id,
 		};
 
@@ -319,14 +316,13 @@ where
 		commitment_block_number: u32,
 		client_state: &ClientState,
 		headers: Vec<T::BlockNumber>,
-	) -> Result<(Vec<ParachainHeader>, BatchProof<H256>), Error>
+	) -> Result<(Vec<ParachainHeader>, Proof<H256>), Error>
 	where
 		T::BlockNumber: Ord + sp_runtime::traits::Zero,
 	{
 		let client_wrapper = Prover {
 			relay_client: self.relay_client.clone(),
 			para_client: self.para_client.clone(),
-			beefy_activation_block: client_state.beefy_activation_block,
 			para_id: self.para_id,
 		};
 
@@ -366,12 +362,10 @@ where
 			u32,
 			beefy_primitives::crypto::Signature,
 		>,
-		client_state: &ClientState,
 	) -> Result<MmrUpdateProof, Error> {
 		let prover = Prover {
 			relay_client: self.relay_client.clone(),
 			para_client: self.para_client.clone(),
-			beefy_activation_block: client_state.beefy_activation_block,
 			para_id: self.para_id,
 		};
 
@@ -388,12 +382,6 @@ where
 	/// We retry sending the transaction up to 5 times in the case where the transaction pool might
 	/// reject the transaction because of conflicting nonces.
 	pub async fn submit_call<C: TxPayload>(&self, call: C) -> Result<(T::Hash, T::Hash), Error> {
-		let signer = ExtrinsicSigner::<T, Self>::new(
-			self.key_store.clone(),
-			self.key_type_id.clone(),
-			self.public_key.clone(),
-		);
-
 		// Try extrinsic submission five times in case of failures
 		let mut count = 0;
 		let progress = loop {
@@ -403,11 +391,17 @@ where
 
 			let other_params = T::custom_extrinsic_params(&self.para_client).await?;
 
-			let res = self
-				.para_client
-				.tx()
-				.sign_and_submit_then_watch(&call, &signer, other_params)
-				.await;
+			let res = {
+				let signer = ExtrinsicSigner::<T, Self>::new(
+					self.key_store.clone(),
+					self.key_type_id.clone(),
+					self.public_key.clone(),
+				);
+				self.para_client
+					.tx()
+					.sign_and_submit_then_watch(&call, &signer, other_params)
+					.await
+			};
 			match res {
 				Ok(progress) => break progress,
 				Err(e) => {
@@ -431,19 +425,20 @@ impl<T: config::Config + Send + Sync> ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	Self: KeyProvider,
-	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	<<T as config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	T::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	H256: From<T::Hash>,
 	T::BlockNumber: Ord + sp_runtime::traits::Zero + One,
 	T::Header: HeaderT,
-	<T::Header as HeaderT>::Hash: From<T::Hash>,
+	<<T::Header as HeaderT>::Hasher as subxt::config::Hasher>::Output: From<T::Hash>,
 	T::BlockNumber: From<u32>,
-	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
-		From<FinalityProof<T::Header>>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	/// Construct a beefy client state to be submitted to the counterparty chain
 	pub async fn construct_beefy_client_state(
@@ -451,43 +446,38 @@ where
 	) -> Result<(AnyClientState, AnyConsensusState), Error>
 	where
 		Self: KeyProvider,
-		<T::Signature as Verify>::Signer:
+		<<T as config::Config>::Signature as Verify>::Signer:
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 		u32: From<<T as subxt::Config>::BlockNumber>,
 	{
 		use ibc::core::ics24_host::identifier::ChainId;
-		let beefy_activation_block =
-			self.beefy_activation_block.expect("beefy_activation_block was not defined");
 		let api = self.relay_client.storage();
 		let para_client_api = self.para_client.storage();
 		let client_wrapper = Prover {
 			relay_client: self.relay_client.clone(),
 			para_client: self.para_client.clone(),
-			beefy_activation_block,
 			para_id: self.para_id,
 		};
 		loop {
-			let beefy_state = client_wrapper
-				.construct_beefy_client_state(beefy_activation_block)
-				.await
-				.map_err(|e| {
-					Error::from(format!("[construct_beefy_client_state] Failed due to {:?}", e))
-				})?;
+			let beefy_state = client_wrapper.construct_beefy_client_state().await.map_err(|e| {
+				Error::from(format!("[construct_beefy_client_state] Failed due to {:?}", e))
+			})?;
 
-			let subxt_block_number: subxt::rpc::BlockNumber =
+			let subxt_block_number: subxt::rpc::types::BlockNumber =
 				beefy_state.latest_beefy_height.into();
 			let block_hash = self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?;
 			let heads_addr = polkadot::api::storage().paras().heads(
 				&polkadot::api::runtime_types::polkadot_parachain::primitives::Id(self.para_id),
 			);
-			let head_data = api.fetch(&heads_addr, block_hash).await?.ok_or_else(|| {
-				Error::Custom(format!(
-					"Couldn't find header for ParaId({}) at relay block {:?}",
-					self.para_id, block_hash
-				))
-			})?;
+			let head_data =
+				api.at(block_hash).await?.fetch(&heads_addr).await?.ok_or_else(|| {
+					Error::Custom(format!(
+						"Couldn't find header for ParaId({}) at relay block {:?}",
+						self.para_id, block_hash
+					))
+				})?;
 			let decoded_para_head = sp_runtime::generic::Header::<
 				u32,
 				sp_runtime::traits::BlakeTwo256,
@@ -499,7 +489,6 @@ where
 				mmr_root_hash: beefy_state.mmr_root_hash,
 				latest_beefy_height: beefy_state.latest_beefy_height,
 				frozen_height: None,
-				beefy_activation_block: beefy_state.beefy_activation_block,
 				latest_para_height: block_number,
 				para_id: self.para_id,
 				authority: beefy_state.current_authorities,
@@ -510,12 +499,14 @@ where
 			if block_number == 0 {
 				continue
 			}
-			let subxt_block_number: subxt::rpc::BlockNumber = block_number.into();
+			let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
 			let block_hash =
 				self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
 			let timestamp_addr = api::storage().timestamp().now();
 			let unix_timestamp_millis = para_client_api
-				.fetch(&timestamp_addr, block_hash)
+				.at(block_hash)
+				.await?
+				.fetch(&timestamp_addr)
 				.await?
 				.expect("Timestamp should exist");
 			let timestamp_nanos = Duration::from_millis(unix_timestamp_millis).as_nanos() as u64;
@@ -537,11 +528,12 @@ where
 	) -> Result<(AnyClientState, AnyConsensusState), Error>
 	where
 		Self: KeyProvider,
-		<T::Signature as Verify>::Signer:
+		<<T as config::Config>::Signature as Verify>::Signer:
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 		u32: From<<T as subxt::Config>::BlockNumber>,
+		<T as subxt::Config>::Hash: From<H256>,
 	{
 		let relay_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.relay_ws_client) };
 		let para_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.para_ws_client) };
@@ -564,7 +556,9 @@ where
 				&polkadot::api::runtime_types::polkadot_parachain::primitives::Id(self.para_id),
 			);
 			let head_data = api
-				.fetch(&heads_addr, Some(light_client_state.latest_relay_hash))
+				.at(Some(light_client_state.latest_relay_hash.into()))
+				.await?
+				.fetch(&heads_addr)
 				.await?
 				.ok_or_else(|| {
 					Error::Custom(format!(
@@ -593,12 +587,14 @@ where
 			client_state.para_id = self.para_id;
 			client_state.latest_relay_height = light_client_state.latest_relay_height;
 
-			let subxt_block_number: subxt::rpc::BlockNumber = block_number.into();
+			let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
 			let block_hash =
 				self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
 			let timestamp_addr = api::storage().timestamp().now();
 			let unix_timestamp_millis = para_client_api
-				.fetch(&timestamp_addr, block_hash)
+				.at(block_hash)
+				.await?
+				.fetch(&timestamp_addr)
 				.await?
 				.expect("Timestamp should exist");
 			let timestamp_nanos = Duration::from_millis(unix_timestamp_millis).as_nanos() as u64;

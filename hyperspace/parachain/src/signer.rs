@@ -28,7 +28,6 @@ use primitives::KeyProvider;
 #[derive(Clone)]
 pub struct ExtrinsicSigner<T: config::Config, Provider: KeyProvider> {
 	account_id: T::AccountId,
-	nonce: Option<T::Index>,
 	signer: MultiSigner,
 	key_store: SyncCryptoStorePtr,
 	key_type_id: KeyTypeId,
@@ -37,10 +36,14 @@ pub struct ExtrinsicSigner<T: config::Config, Provider: KeyProvider> {
 
 impl<T, P> ExtrinsicSigner<T, P>
 where
-	T: config::Config,
-	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	T: config::Config + Send + Sync,
+	<<T as config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	P: KeyProvider,
 	MultiSigner: From<MultiSigner>,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
+	<T as subxt::Config>::Signature: Send + Sync,
 {
 	/// Creates a new [`Signer`] from a key store reference and key type
 	pub fn new(
@@ -48,10 +51,11 @@ where
 		key_type_id: KeyTypeId,
 		public_key: MultiSigner,
 	) -> Self {
-		let account_id = <T::Signature as Verify>::Signer::from(public_key.clone()).into_account();
+		let account_id =
+			<<T as config::Config>::Signature as Verify>::Signer::from(public_key.clone())
+				.into_account();
 		Self {
 			account_id,
-			nonce: None,
 			key_store,
 			key_type_id,
 			signer: MultiSigner::from(public_key),
@@ -62,24 +66,22 @@ where
 
 impl<T, P> Signer<T> for ExtrinsicSigner<T, P>
 where
-	T: config::Config,
-	T::AccountId: Into<T::Address> + Clone + 'static,
+	T: config::Config + Send + Sync,
+	T::AccountId: Into<<T as subxt::Config>::Address> + Clone + 'static,
 	P: KeyProvider + 'static,
-	T::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
-	fn nonce(&self) -> Option<T::Index> {
-		self.nonce
-	}
-
 	fn account_id(&self) -> &T::AccountId {
 		&self.account_id
 	}
 
-	fn address(&self) -> T::Address {
+	fn address(&self) -> <T as subxt::Config>::Address {
 		self.account_id.clone().into()
 	}
 
-	fn sign(&self, signer_payload: &[u8]) -> T::Signature {
+	fn sign(&self, signer_payload: &[u8]) -> <T as subxt::Config>::Signature {
 		let (crypto_type_id, public_key) = match &self.signer {
 			MultiSigner::Ed25519(key) => (sp_core::ed25519::CRYPTO_ID, key.0.to_vec()),
 			MultiSigner::Sr25519(key) => (sp_core::sr25519::CRYPTO_ID, key.0.to_vec()),

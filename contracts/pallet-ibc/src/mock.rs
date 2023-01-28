@@ -5,10 +5,11 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		fungibles::{metadata::Mutate, Create, InspectMetadata},
-		ConstU64, Everything,
+		AsEnsureOriginWithArg, ConstU64, Everything,
 	},
 };
 use frame_system as system;
+use frame_system::EnsureSigned;
 use ibc_primitives::IbcAccount;
 use light_client_common::RelayChain;
 use orml_traits::parameter_type_with_key;
@@ -134,6 +135,7 @@ impl pallet_assets::Config for Test {
 	type StringLimit = StringLimit;
 	type Freezer = ();
 	type Extra = ();
+	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
 }
 
 parameter_types! {
@@ -157,16 +159,11 @@ impl orml_tokens::Config for Test {
 	type CurrencyId = AssetId;
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = ();
 	type MaxLocks = MaxLocks;
 	type ReserveIdentifier = ReserveIdentifier;
 	type MaxReserves = frame_support::traits::ConstU32<2>;
 	type DustRemovalWhitelist = Everything;
-	type OnKilledTokenAccount = ();
-	type OnNewTokenAccount = ();
-	type OnSlash = ();
-	type OnDeposit = ();
-	type OnTransfer = ();
+	type CurrencyHooks = ();
 }
 
 impl Config for Test {

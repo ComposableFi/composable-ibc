@@ -27,20 +27,18 @@ use codec::{Decode, Encode};
 use finality_grandpa_rpc::GrandpaApiClient;
 use jsonrpsee::{async_client::Client, ws_client::WsClientBuilder};
 use primitives::{
-	justification::GrandpaJustification, parachain_header_storage_key, ClientState, FinalityProof,
-	ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
+	parachain_header_storage_key, ClientState, FinalityProof, ParachainHeaderProofs,
+	ParachainHeadersWithFinalityProof,
 };
 use serde::{Deserialize, Serialize};
-use sp_core::H256;
-use sp_runtime::traits::{Header, Zero};
+use sp_core::{hexdisplay::AsBytesRef, H256};
+use sp_finality_grandpa::{AuthorityId, AuthoritySignature};
+use sp_runtime::traits::{One, Zero};
 use std::{
 	collections::{BTreeMap, BTreeSet},
 	sync::Arc,
 };
-use subxt::{
-	ext::{sp_core::hexdisplay::AsBytesRef, sp_runtime::traits::One},
-	Config, OnlineClient,
-};
+use subxt::{config::Header, Config, OnlineClient};
 
 /// Host function implementation for the verifier
 pub mod host_functions;
@@ -63,6 +61,23 @@ pub struct GrandpaProver<T: Config> {
 	pub para_id: u32,
 }
 
+// We redefine these here because we want the header to be bounded by subxt::config::Header in the
+// prover
+/// Commit
+pub type Commit = finality_grandpa::Commit<H256, u32, AuthoritySignature, AuthorityId>;
+
+/// Justification
+#[cfg_attr(any(feature = "std", test), derive(Debug))]
+#[derive(Clone, Encode, Decode)]
+pub struct GrandpaJustification<H: Header + codec::Decode> {
+	/// Current voting round number, monotonically increasing
+	pub round: u64,
+	/// Contains block hash & number that's being finalized and the signatures.
+	pub commit: Commit,
+	/// Contains the path from a [`PreCommit`]'s target hash to the GHOST finalized block.
+	pub votes_ancestries: Vec<H>,
+}
+
 /// An encoded justification proving that the given header has been finalized
 #[derive(Clone, Serialize, Deserialize)]
 pub struct JustificationNotification(pub sp_core::Bytes);
@@ -72,6 +87,7 @@ where
 	T: Config,
 	T::BlockNumber: Ord + Zero,
 	u32: From<T::BlockNumber>,
+	sp_core::H256: From<T::Hash>,
 {
 	/// Initializes the parachain and relay chain clients given the ws urls.
 	pub async fn new(
@@ -88,14 +104,24 @@ where
 	}
 
 	/// Construct the inital client state.
-	pub async fn initialize_client_state(&self) -> Result<ClientState<T::Hash>, anyhow::Error> {
+	pub async fn initialize_client_state(&self) -> Result<ClientState, anyhow::Error> {
 		use sp_finality_grandpa::AuthorityList;
+		let latest_relay_hash = self.relay_client.rpc().finalized_head().await?;
+		let header = self
+			.relay_client
+			.rpc()
+			.header(Some(latest_relay_hash))
+			.await?
+			.ok_or_else(|| anyhow!("Header not found for hash: {latest_relay_hash:?}"))?;
 
 		let current_set_id = {
 			let key = polkadot::api::storage().grandpa().current_set_id();
 			self.relay_client
 				.storage()
-				.fetch(&key, None)
+				.at(Some(latest_relay_hash))
+				.await
+				.expect("Storage client should be available")
+				.fetch(&key)
 				.await
 				.unwrap()
 				.expect("Failed to fetch current set id")
@@ -107,7 +133,11 @@ where
 				.rpc()
 				.request::<String>(
 					"state_call",
-					subxt::rpc_params!("GrandpaApi_grandpa_authorities", "0x"),
+					subxt::rpc_params!(
+						"GrandpaApi_grandpa_authorities",
+						"0x",
+						Some(format!("{:?}", latest_relay_hash))
+					),
 				)
 				.await
 				.map(|res| hex::decode(&res[2..]))??;
@@ -123,15 +153,7 @@ where
 			}
 		}
 
-		let latest_relay_hash = self.relay_client.rpc().finalized_head().await?;
-
-		let header = self
-			.relay_client
-			.rpc()
-			.header(Some(latest_relay_hash))
-			.await?
-			.ok_or_else(|| anyhow!("Header not found for hash: {latest_relay_hash:?}"))?;
-		let latest_relay_height = u32::from(*header.number());
+		let latest_relay_height = u32::from(header.number());
 		let finalized_para_header =
 			self.query_latest_finalized_parachain_header(latest_relay_height).await?;
 
@@ -139,10 +161,10 @@ where
 			current_authorities,
 			current_set_id,
 			latest_relay_height,
-			latest_relay_hash,
+			latest_relay_hash: latest_relay_hash.into(),
 			para_id: self.para_id,
 			// we'll set this below
-			latest_para_height: u32::from(*finalized_para_header.number()),
+			latest_para_height: u32::from(finalized_para_header.number()),
 		})
 	}
 
@@ -161,7 +183,10 @@ where
 		let header = self
 			.relay_client
 			.storage()
-			.fetch(&key, Some(latest_finalized_hash))
+			.at(Some(latest_finalized_hash))
+			.await
+			.expect("storage client should be available")
+			.fetch(&key)
 			.await?
 			.ok_or_else(|| anyhow!("parachain header not found for para id: {}", self.para_id))?;
 		let header = T::Header::decode(&mut &header.0[..])
@@ -174,15 +199,15 @@ where
 	/// relay chain height.
 	pub async fn query_finalized_parachain_headers_with_proof<H>(
 		&self,
-		client_state: &ClientState<T::Hash>,
+		client_state: &ClientState,
 		mut latest_finalized_height: u32,
 		header_numbers: Vec<T::BlockNumber>,
 	) -> Result<ParachainHeadersWithFinalityProof<H>, anyhow::Error>
 	where
-		H: Header,
-		u32: From<H::Number>,
-		H::Hash: From<T::Hash>,
-		T::Hash: From<H::Hash>,
+		H: Header + codec::Decode,
+		u32: From<<H as Header>::Number>,
+		<H::Hasher as subxt::config::Hasher>::Output: From<T::Hash>,
+		T::Hash: From<<H::Hasher as subxt::config::Hasher>::Output>,
 		H::Number: finality_grandpa::BlockNumberOps,
 		T::BlockNumber: One,
 	{
@@ -196,7 +221,10 @@ where
 		let validation_data = self
 			.para_client
 			.storage()
-			.fetch(&address, Some(previous_para_hash))
+			.at(Some(previous_para_hash))
+			.await
+			.expect("storage client should be available")
+			.fetch(&address)
 			.await
 			.unwrap()
 			.unwrap();
@@ -223,12 +251,15 @@ where
 		.await?
 		.ok_or_else(|| anyhow!("No justification found for block: {:?}", latest_finalized_height))?
 		.0;
+
 		let mut finality_proof = FinalityProof::<H>::decode(&mut &encoded[..])?;
+
 		let justification =
 			GrandpaJustification::<H>::decode(&mut &finality_proof.justification[..])?;
 
 		// sometimes we might get a justification for latest_finalized_height - 1, sigh
 		let latest_finalized_height = u32::from(justification.commit.target_number);
+
 		finality_proof.block = justification.commit.target_hash;
 
 		let start = self
@@ -277,8 +308,7 @@ where
 			.query_storage(keys.clone(), start, Some(latest_finalized_hash))
 			.await?;
 
-		let mut parachain_headers_with_proof =
-			BTreeMap::<H::Hash, ParachainHeaderProofs>::default();
+		let mut parachain_headers_with_proof = BTreeMap::<H256, ParachainHeaderProofs>::default();
 		let mut para_headers = vec![];
 
 		for changes in change_set {
@@ -293,14 +323,17 @@ where
 				let key = polkadot::api::storage().paras().heads(&Id(self.para_id));
 				self.relay_client
 					.storage()
-					.fetch(&key, Some(header.hash()))
+					.at(Some(header.hash()))
+					.await
+					.expect("Storage client to be available")
+					.fetch(&key)
 					.await?
 					.expect("Header exists in its own changeset; qed")
 					.0
 			};
 
 			let para_header: T::Header = Decode::decode(&mut &parachain_header_bytes[..])?;
-			let para_block_number = *para_header.number();
+			let para_block_number = para_header.number();
 			// skip genesis header or any unknown headers
 			if para_block_number == Zero::zero() || !header_numbers.contains(&para_block_number) {
 				continue
@@ -338,7 +371,10 @@ where
 		let (previous_epoch_start, current_epoch_start) = self
 			.relay_client
 			.storage()
-			.fetch(&epoch_addr, block_hash)
+			.at(block_hash)
+			.await
+			.expect("storage client to be available")
+			.fetch(&epoch_addr)
 			.await?
 			.ok_or_else(|| anyhow!("Failed to fetch epoch information"))?;
 		Ok(current_epoch_start + (current_epoch_start - previous_epoch_start))
@@ -346,7 +382,7 @@ where
 
 	/// Returns the session length in blocks
 	pub async fn session_length(&self) -> Result<u32, anyhow::Error> {
-		let metadata = self.relay_client.rpc().metadata().await?;
+		let metadata = self.relay_client.rpc().metadata(None).await?;
 		let metadata = metadata.pallet("Babe")?.constant("EpochDuration")?;
 		Ok(Decode::decode(&mut &metadata.value[..])?)
 	}

@@ -22,20 +22,15 @@ use futures::{Stream, StreamExt, TryFutureExt};
 use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
 use ibc_proto::google::protobuf::Any;
 use sp_runtime::{
-	generic::Era,
-	traits::{Header as HeaderT, IdentifyAccount, One, Verify},
+	traits::{IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
 #[cfg(feature = "dali")]
-use subxt::tx::{
-	AssetTip as Tip, SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
-};
-use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams};
+use subxt::config::substrate::AssetTip as Tip;
+use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams};
 
 #[cfg(not(feature = "dali"))]
-use subxt::tx::{
-	PlainTip as Tip, PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
-};
+use subxt::config::polkadot::PlainTip as Tip;
 
 use transaction_payment_rpc::TransactionPaymentApiClient;
 use transaction_payment_runtime_api::RuntimeDispatchInfo;
@@ -70,6 +65,7 @@ use ics10_grandpa::client_message::{ClientMessage, Misbehaviour, RelayChainHeade
 use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::mock::LocalClientTypes;
 use sp_core::{twox_128, H256};
+use subxt::config::{extrinsic_params::Era, Header as HeaderT};
 use tokio::time::sleep;
 
 type GrandpaJustification = grandpa_light_client_primitives::justification::GrandpaJustification<
@@ -88,20 +84,20 @@ impl<T: config::Config + Send + Sync> Chain for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	u32: From<<T as subxt::Config>::BlockNumber>,
-	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	<<T as config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	T::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
-	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
-		From<FinalityProof<T::Header>>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	sp_core::H256: From<T::Hash>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
-	RelayChainHeader: From<T::Header>,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	fn name(&self) -> &str {
 		&*self.name
@@ -125,21 +121,24 @@ where
 				.map(|msg| RawAny { type_url: msg.type_url.as_bytes().to_vec(), value: msg.value })
 				.collect::<Vec<_>>();
 
-			let tx_params = ParachainExtrinsicsParamsBuilder::new()
+			let tx_params = BaseExtrinsicParamsBuilder::new()
 				.tip(Tip::new(100_000))
 				.era(Era::Immortal, self.para_client.genesis_hash());
 			let call = api::tx().ibc().deliver(messages);
-			self.para_client.tx().create_signed(&call, &signer, tx_params.into()).await?
+			self.para_client
+				.tx()
+				.create_signed(&call, &signer, tx_params.into())
+				.await?
+				.encoded()
+				.to_vec()
 		};
-		let dispatch_info =
-			TransactionPaymentApiClient::<sp_core::H256, RuntimeDispatchInfo<u128>>::query_info(
-				&*self.para_ws_client,
-				extrinsic.encoded().to_vec().into(),
-				None,
-			)
-			.await
-			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
-		Ok(dispatch_info.weight.ref_time())
+		let dispatch_info = TransactionPaymentApiClient::<
+			sp_core::H256,
+			RuntimeDispatchInfo<u128, u64>,
+		>::query_info(&*self.para_ws_client, extrinsic.into(), None)
+		.await
+		.map_err(|e| Error::from(format!("Rpc Error From Estimating weight {:?}", e)))?;
+		Ok(dispatch_info.weight)
 	}
 
 	async fn finality_notifications(
@@ -307,8 +306,9 @@ where
 
 		let extrinsic_opaque =
 			block.block.extrinsics.get(transaction_index).expect("Extrinsic not found");
-		let unchecked_extrinsic = UncheckedExtrinsic::<T>::decode(&mut &*extrinsic_opaque.encode())
-			.map_err(|e| Error::from(format!("Extrinsic decode error: {}", e)))?;
+		let unchecked_extrinsic =
+			UncheckedExtrinsic::<T>::decode(&mut &*extrinsic_opaque.0.encode())
+				.map_err(|e| Error::from(format!("Extrinsic decode error: {}", e)))?;
 
 		match unchecked_extrinsic.function {
 			RuntimeCall::Ibc(IbcCall::deliver { messages }) => {
@@ -339,20 +339,20 @@ impl<T: config::Config + Send + Sync> MisbehaviourHandler for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	u32: From<<T as subxt::Config>::BlockNumber>,
-	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	<<T as config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	T::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
-	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
-		From<FinalityProof<T::Header>>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	sp_core::H256: From<T::Hash>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
-	RelayChainHeader: From<T::Header>,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	async fn check_for_misbehaviour<C: Chain>(
 		&self,
@@ -377,7 +377,7 @@ where
 						anyhow!("No header found for hash: {:?}", base_header.parent_hash)
 					})?;
 
-				let common_ancestor_block_number = u32::from(*common_ancestor_header.number());
+				let common_ancestor_block_number = u32::from(common_ancestor_header.number());
 				let encoded =
 					GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 						&*self.relay_ws_client,
@@ -437,7 +437,11 @@ where
 							.ok_or_else(|| {
 								anyhow!("No header found for hash: {:?}", unknown_header_hash)
 							})?;
-						trusted_finality_proof.unknown_headers.push(unknown_header.into());
+						trusted_finality_proof
+							.unknown_headers
+							.push(codec::Decode::decode(&mut &*unknown_header.encode()).expect(
+							"Same header struct defined in different crates, decoding cannot panic",
+						));
 					}
 
 					let misbehaviour = ClientMessage::Misbehaviour(Misbehaviour {

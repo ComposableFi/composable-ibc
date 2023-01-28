@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use async_trait::async_trait;
-use subxt::{tx::ExtrinsicParams, OnlineClient};
+use subxt::{config::ExtrinsicParams, OnlineClient};
 
 pub type CustomExtrinsicParams<T> = <<T as subxt::Config>::ExtrinsicParams as ExtrinsicParams<
 	<T as subxt::Config>::Index,
@@ -26,6 +26,10 @@ pub type CustomExtrinsicParams<T> = <<T as subxt::Config>::ExtrinsicParams as Ex
 pub trait Config: subxt::Config + Sized {
 	/// Asset Id type used by the parachain runtime
 	type AssetId: codec::Codec + serde::Serialize + Send + Sync + 'static;
+	/// the signature type of the runtime
+	type Signature: sp_runtime::traits::Verify + From<<Self as subxt::Config>::Signature>;
+	/// Address type used by the runtime;
+	type Address: codec::Codec + From<<Self as subxt::Config>::Address>;
 	/// use the subxt client to fetch any neccessary data needed for the extrinsic metadata.
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,

@@ -27,7 +27,7 @@ use crate::error::Error;
 use grandpa_client_primitives::{parachain_header_storage_key, ParachainHeaderProofs};
 use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp, Height};
 use light_client_common::{decode_timestamp_extrinsic, state_machine};
-use primitive_types::H256;
+use sp_core::H256;
 use sp_runtime::{generic, traits::BlakeTwo256, SaturatedConversion};
 use sp_trie::StorageProof;
 

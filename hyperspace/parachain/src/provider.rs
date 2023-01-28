@@ -21,7 +21,7 @@ use beefy_prover::helpers::fetch_timestamp_extrinsic_with_proof;
 use codec::Encode;
 use finality_grandpa::BlockNumberOps;
 use futures::Stream;
-use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
+use grandpa_light_client_primitives::ParachainHeaderProofs;
 use ibc::{
 	applications::transfer::{Amount, PrefixedCoin, PrefixedDenom},
 	core::{
@@ -48,7 +48,6 @@ use ibc_proto::{
 	},
 };
 use ibc_rpc::{IbcApiClient, PacketInfo};
-use ics10_grandpa::client_message::RelayChainHeader;
 use ics11_beefy::client_state::ClientState as BeefyClientState;
 use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
@@ -57,16 +56,21 @@ use pallet_ibc::{
 use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
 use sp_core::H256;
 use sp_runtime::{
-	traits::{Header as HeaderT, IdentifyAccount, One, Verify},
+	traits::{IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr, time::Duration};
-#[cfg(feature = "dali")]
-use subxt::tx::AssetTip as Tip;
-use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams};
+
+use subxt::config::{
+	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT,
+};
 
 #[cfg(not(feature = "dali"))]
-use subxt::tx::PlainTip as Tip;
+use subxt::config::polkadot::PlainTip as Tip;
+
+#[cfg(feature = "dali")]
+use subxt::config::substrate::AssetTip as Tip;
+use tokio_stream::wrappers::ReceiverStream;
 
 pub struct TransactionId<Hash> {
 	pub ext_hash: Hash,
@@ -79,20 +83,20 @@ where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	u32: From<<T as subxt::Config>::BlockNumber>,
 	Self: KeyProvider,
-	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	<<T as config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	T::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	sp_core::H256: From<T::Hash>,
-	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
-		From<FinalityProof<T::Header>>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
-	RelayChainHeader: From<T::Header>,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	type FinalityEvent = FinalityEvent;
 	type TransactionId = TransactionId<T::Hash>;
@@ -113,50 +117,60 @@ where
 	}
 
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
-		use futures::{stream, StreamExt};
+		use futures::StreamExt;
 		use pallet_ibc::events::IbcEvent as RawIbcEvent;
+		let (tx, rx) = tokio::sync::mpsc::channel(32);
+		let event = self.para_client.events();
+		let para_client = self.para_client.clone();
+		tokio::spawn(async move {
+			let stream = para_client
+				.blocks()
+				.subscribe_all()
+				.await
+				.expect("should susbcribe to blocks")
+				.filter_map(|block| async {
+					let block = block.ok()?;
+					let events = event.at(Some(block.hash())).await.ok()?;
+					let result = events
+						.find::<parachain::api::ibc::events::Events>()
+						.filter_map(|ev| {
+							let ev = ev.ok()?.events;
+							ev.into_iter()
+								.filter_map(|ev| {
+									Some(
+										IbcEvent::try_from(RawIbcEvent::from(
+											MetadataIbcEventWrapper(ev.ok()?),
+										))
+										.map_err(|e| subxt::Error::Other(e.to_string())),
+									)
+								})
+								.collect::<Result<Vec<_>, _>>()
+								.ok()
+						})
+						.flatten()
+						.collect::<Vec<_>>();
+					Some(result)
+				});
 
-		let stream = self
-			.para_client
-			.events()
-			.subscribe()
-			.await
-			.expect("Failed to subscribe to events")
-			.filter_events::<(parachain::api::ibc::events::Events,)>()
-			.filter_map(|result| {
-				let events = match result {
-					Ok(ev) => ev,
-					Err(err) => {
-						log::error!("Error in IbcEvent stream: {err:?}");
-						return futures::future::ready(None)
-					},
-				};
-				let result = events
-					.event
-					.events
-					.into_iter()
-					.filter_map(|ev| {
-						Some(
-							IbcEvent::try_from(RawIbcEvent::from(MetadataIbcEventWrapper(
-								ev.ok()?,
-							)))
-							.map_err(|e| subxt::Error::Other(e.to_string())),
-						)
-					})
-					.collect::<Result<Vec<_>, _>>();
+			let mut stream = Box::pin(stream);
 
-				let events = match result {
-					Ok(ev) => ev,
-					Err(err) => {
-						log::error!("Failed to decode event: {err:?}");
-						return futures::future::ready(None)
-					},
-				};
-				futures::future::ready(Some(stream::iter(events)))
-			})
-			.flatten();
-		Box::pin(stream)
+			while let Some(evs) = stream.next().await {
+				let mut should_exit = false;
+				for ev in evs {
+					if let Err(_) = tx.send(ev).await {
+						should_exit = true;
+						break
+					}
+				}
+				if should_exit {
+					break
+				}
+			}
+		});
+
+		Box::pin(ReceiverStream::new(rx))
 	}
+
 	async fn query_client_consensus(
 		&self,
 		at: Height,
@@ -318,16 +332,18 @@ where
 			.header(None)
 			.await?
 			.ok_or_else(|| Error::Custom("Latest height query returned None".to_string()))?;
-		let latest_height: u64 = (*finalized_header.number()).into();
+		let latest_height: u64 = (finalized_header.number()).into();
 		let height = Height::new(self.para_id.into(), latest_height.into());
 
-		let subxt_block_number: subxt::rpc::BlockNumber = latest_height.into();
+		let subxt_block_number: subxt::rpc::types::BlockNumber = latest_height.into();
 		let block_hash = self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
 		let timestamp_addr = parachain::api::storage().timestamp().now();
 		let unix_timestamp_millis = self
 			.para_client
 			.storage()
-			.fetch(&timestamp_addr, block_hash)
+			.at(block_hash)
+			.await?
+			.fetch(&timestamp_addr)
 			.await?
 			.ok_or_else(|| Error::from("Timestamp should exist".to_string()))?;
 		let timestamp_nanos = Duration::from_millis(unix_timestamp_millis).as_nanos() as u64;
@@ -520,11 +536,14 @@ where
 
 	async fn query_ibc_balance(&self) -> Result<Vec<PrefixedCoin>, Self::Error> {
 		let account = self.public_key.clone().into_account();
+		let account = subxt::utils::AccountId32::from(<[u8; 32]>::from(account));
 		let account_addr = parachain::api::storage().system().account(&account);
 		let balance = self
 			.para_client
 			.storage()
-			.fetch(&account_addr, None)
+			.at(None)
+			.await?
+			.fetch(&account_addr)
 			.await?
 			.expect("Account data should exist");
 
@@ -555,13 +574,15 @@ where
 	}
 
 	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error> {
-		let subxt_block_number: subxt::rpc::BlockNumber = block_number.into();
+		let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
 		let block_hash = self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
 		let timestamp_addr = parachain::api::storage().timestamp().now();
 		let unix_timestamp_millis = self
 			.para_client
 			.storage()
-			.fetch(&timestamp_addr, block_hash)
+			.at(block_hash)
+			.await?
+			.fetch(&timestamp_addr)
 			.await?
 			.expect("Timestamp should exist");
 		let timestamp_nanos = Duration::from_millis(unix_timestamp_millis).as_nanos() as u64;
