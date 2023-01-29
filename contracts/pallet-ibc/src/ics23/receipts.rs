@@ -8,7 +8,7 @@ use ibc::core::{
 	},
 };
 use ibc_primitives::apply_prefix;
-use sp_std::{marker::PhantomData, prelude::*};
+use sp_std::marker::PhantomData;
 
 // todo: pruning
 /// (port_id, channel_id, sequence) => hash

@@ -3,7 +3,7 @@ use crate::{
 	light_clients::{AnyClientState, AnyConsensusState},
 	mock::*,
 	routing::Context,
-	Any, Config, ConsensusHeights, DenomToAssetId, MultiAddress, Pallet, PalletParams, Timeout,
+	Config, ConsensusHeights, DenomToAssetId, MultiAddress, Pallet, PalletParams, Timeout,
 	TransferParams, MODULE_ID,
 };
 use core::time::Duration;
@@ -55,6 +55,7 @@ use std::{
 	str::FromStr,
 };
 use tendermint_proto::Protobuf;
+use ibc_proto::google::protobuf::Any;
 
 fn setup_client_and_consensus_state(port_id: PortId) {
 	// Set up client state and consensus states
@@ -72,7 +73,7 @@ fn setup_client_and_consensus_state(port_id: PortId) {
 	.encode_vec();
 	let mut ctx = Context::<Test>::default();
 
-	let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
+	let msg = Any { type_url: TYPE_URL.to_string(), value: msg };
 	assert_ok!(Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]));
 
 	let connection_id = ConnectionId::new(0);
@@ -124,7 +125,7 @@ fn initialize_connection() {
 		let commitment_prefix: CommitmentPrefix =
 			<Test as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 
-		let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
+		let msg = Any { type_url: TYPE_URL.to_string(), value: msg };
 
 		assert_ok!(Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]));
 
@@ -141,7 +142,7 @@ fn initialize_connection() {
 		};
 
 		let msg = Any {
-			type_url: conn_open_init::TYPE_URL.as_bytes().to_vec(),
+			type_url: conn_open_init::TYPE_URL.to_string(),
 			value: value.encode_vec(),
 		};
 
@@ -171,7 +172,7 @@ fn initialize_connection_with_low_delay() {
 		let commitment_prefix: CommitmentPrefix =
 			<Test as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
 
-		let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
+		let msg = Any { type_url: TYPE_URL.to_string(), value: msg };
 
 		assert_ok!(Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]));
 
@@ -188,7 +189,7 @@ fn initialize_connection_with_low_delay() {
 		};
 
 		let msg = Any {
-			type_url: conn_open_init::TYPE_URL.as_bytes().to_vec(),
+			type_url: conn_open_init::TYPE_URL.to_string(),
 			value: value.encode_vec(),
 		};
 
@@ -246,9 +247,9 @@ fn send_transfer() {
 		let channel_id = ChannelId::new(0);
 		let port_id = PortId::transfer();
 		let packet_info = Pallet::<Test>::get_send_packet_info(
-			channel_id.to_string().as_bytes().to_vec(),
-			port_id.as_bytes().to_vec(),
-			vec![1],
+			channel_id,
+			port_id,
+			vec![1.into()],
 		)
 		.unwrap()
 		.get(0)
@@ -342,7 +343,7 @@ fn on_deliver_ics20_recv_packet() {
 			signer: Signer::from_str(MODULE_ID).unwrap(),
 		};
 
-		let msg = Any { type_url: msg.type_url().as_bytes().to_vec(), value: msg.encode_vec() };
+		let msg = Any { type_url: msg.type_url().to_string(), value: msg.encode_vec() };
 
 		let account_data = Assets::balance(2u128, AccountId32::new(pair.public().0));
 		// Assert account balance before transfer
@@ -391,9 +392,9 @@ fn should_fetch_recv_packet_with_acknowledgement() {
 		let channel_id = ChannelId::new(0);
 		let port_id = PortId::transfer();
 		let packet_info = Pallet::<Test>::get_recv_packet_info(
-			channel_id.to_string().as_bytes().to_vec(),
-			port_id.as_bytes().to_vec(),
-			vec![1],
+			channel_id,
+			port_id,
+			vec![1.into()],
 		)
 		.unwrap()
 		.get(0)
@@ -485,21 +486,18 @@ fn should_cleanup_offchain_packets_correctly() {
 	ext.execute_with(|| {
 		let pending_send_packet_seqs = StorageValueRef::persistent(OFFCHAIN_SEND_PACKET_SEQS);
 		let pending_recv_packet_seqs = StorageValueRef::persistent(OFFCHAIN_RECV_PACKET_SEQS);
-		let pending_send_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
+		let pending_send_sequences: BTreeMap<(PortId, ChannelId), (BTreeSet<u64>, u64)> =
 			pending_send_packet_seqs.get::<_>().ok().flatten().unwrap();
-		let pending_recv_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
+		let pending_recv_sequences: BTreeMap<(PortId, ChannelId), (BTreeSet<u64>, u64)> =
 			pending_recv_packet_seqs.get::<_>().ok().flatten().unwrap();
 
-		let channel_id_bytes = channel_id.to_string().as_bytes().to_vec();
-		let port_id_bytes = port_id.as_bytes().to_vec();
-
 		let (send_seq_set, last_removed_send) = pending_send_sequences
-			.get(&(port_id_bytes.clone(), channel_id_bytes.clone()))
+			.get(&(port_id.clone(), channel_id.clone()))
 			.map(|set| set.clone())
 			.unwrap();
 
 		let (recv_seq_set, last_removed_ack) = pending_recv_sequences
-			.get(&(port_id_bytes, channel_id_bytes))
+			.get(&(port_id.clone(), channel_id.clone()))
 			.map(|set| set.clone())
 			.unwrap();
 
@@ -616,7 +614,7 @@ fn test_next_and_previous_consensus_state_for_other_client_types() {
 			.unwrap();
 		}
 
-		let stored_heights = ConsensusHeights::<Test>::get(client_id.as_bytes().to_vec());
+		let stored_heights = ConsensusHeights::<Test>::get(client_id.clone());
 
 		assert_eq!(stored_heights.len(), 256);
 		assert_eq!(stored_heights.iter().rev().next(), Some(&Height::new(0, 512)));
