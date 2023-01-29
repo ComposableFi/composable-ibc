@@ -15,7 +15,6 @@ use ibc::{
 	},
 	Height,
 };
-use tendermint_proto::Protobuf;
 
 impl<T: Config + Sync + Send> ConnectionReader for Context<T>
 where
@@ -27,13 +26,8 @@ where
 
 	fn connection_end(&self, conn_id: &ConnectionId) -> Result<ConnectionEnd, ICS03Error> {
 		log::trace!(target: "pallet_ibc", "in connection : [connection_end] >> connection_id = {:?}", conn_id);
-
-		let data = <Connections<T>>::get(conn_id)
-			.ok_or_else(|| ICS03Error::connection_not_found(conn_id.clone()))?;
-		let ret = ConnectionEnd::decode_vec(&data)
-			.map_err(|_| ICS03Error::connection_mismatch(conn_id.clone()))?;
-		log::trace!(target: "pallet_ibc", "in connection : [connection_end] >>  connection_end = {:?}", ret);
-		Ok(ret)
+		<Connections<T>>::get(conn_id)
+			.ok_or_else(|| ICS03Error::connection_not_found(conn_id.clone()))
 	}
 
 	fn host_oldest_height(&self) -> Height {
@@ -85,9 +79,6 @@ where
 		);
 
 		<Connections<T>>::insert(&connection_id, connection_end);
-
-		let temp = ConnectionReader::connection_end(self, &connection_id);
-		log::trace!(target: "pallet_ibc", "in connection : [store_connection] >> read store after: {:?}", temp);
 		Ok(())
 	}
 
@@ -103,13 +94,10 @@ where
 			client_id
 		);
 
-		ConnectionClient::<T>::try_mutate::<_, _, ICS03Error, _>(
-			client_id.as_bytes().to_vec(),
-			|val| {
-				val.push(connection_id.as_bytes().to_vec());
-				Ok(())
-			},
-		)
+		ConnectionClient::<T>::try_mutate::<_, _, ICS03Error, _>(client_id, |val| {
+			val.push(connection_id);
+			Ok(())
+		})
 	}
 
 	fn increase_connection_counter(&mut self) {

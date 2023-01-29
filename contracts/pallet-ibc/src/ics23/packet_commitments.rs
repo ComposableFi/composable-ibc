@@ -24,14 +24,12 @@ impl<T: Config> PacketCommitment<T> {
 		let commitment_path = CommitmentsPath { port_id, channel_id, sequence };
 		let commitment_path = format!("{}", commitment_path);
 		let commitment_key = apply_prefix(T::PALLET_PREFIX, vec![commitment_path]);
-		child::put(
-			&ChildInfo::new_default(T::PALLET_PREFIX),
-			&commitment_key,
-			&commitment.into_vec(),
-		)
+		child::put(&ChildInfo::new_default(T::PALLET_PREFIX), &commitment_key, &commitment)
 	}
 
-	pub fn get((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) -> Option<Vec<u8>> {
+	pub fn get(
+		(port_id, channel_id, sequence): (PortId, ChannelId, Sequence),
+	) -> Option<PacketCommitmentType> {
 		let commitment_path = CommitmentsPath { port_id, channel_id, sequence };
 		let commitment_path = format!("{}", commitment_path);
 		let commitment_key = apply_prefix(T::PALLET_PREFIX, vec![commitment_path]);
@@ -53,7 +51,7 @@ impl<T: Config> PacketCommitment<T> {
 	}
 
 	// WARNING: too expensive to be called from an on-chain context, only here for rpc layer.
-	pub fn iter() -> impl Iterator<Item = ((PortId, ChannelId, Sequence), Vec<u8>)> {
+	pub fn iter() -> impl Iterator<Item = ((PortId, ChannelId, Sequence), PacketCommitmentType)> {
 		let prefix = "commitments/ports/".to_string();
 		let prefix_key = apply_prefix(T::PALLET_PREFIX, vec![prefix.clone()]);
 		ChildTriePrefixIterator::with_prefix(&ChildInfo::new_default(T::PALLET_PREFIX), &prefix_key)

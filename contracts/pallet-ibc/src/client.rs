@@ -39,21 +39,7 @@ where
 {
 	fn client_type(&self, client_id: &ClientId) -> Result<ClientType, ICS02Error> {
 		log::trace!(target: "pallet_ibc", "in client : [client_type] >> client_id = {:?}", client_id);
-
-		if <Clients<T>>::contains_key(client_id) {
-			let data = <Clients<T>>::get(client_id)
-				.ok_or_else(|| ICS02Error::client_not_found(client_id.clone()))?;
-			let data = String::from_utf8(data).map_err(|e| {
-				ICS02Error::implementation_specific(format!(
-					"[client_type]: error decoding client type bytes to string {}",
-					e
-				))
-			})?;
-			Ok(data)
-		} else {
-			log::trace!(target: "pallet_ibc", "in client : [client_type] >> read client_type is None");
-			Err(ICS02Error::client_not_found(client_id.clone()))
-		}
+		<Clients<T>>::get(client_id).ok_or_else(|| ICS02Error::client_not_found(client_id.clone()))
 	}
 
 	fn client_state(&self, client_id: &ClientId) -> Result<AnyClientState, ICS02Error> {
@@ -104,7 +90,7 @@ where
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<Option<AnyConsensusState>, ICS02Error> {
-		let consensus_heights = ConsensusHeights::<T>::get(client_id.as_bytes().to_vec());
+		let consensus_heights = ConsensusHeights::<T>::get(client_id);
 		let cs_state = consensus_heights
 			.into_iter()
 			.filter(|next_height| next_height > &height)
@@ -120,7 +106,7 @@ where
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<Option<AnyConsensusState>, ICS02Error> {
-		let consensus_heights = ConsensusHeights::<T>::get(client_id.as_bytes().to_vec());
+		let consensus_heights = ConsensusHeights::<T>::get(client_id);
 		let cs_state = consensus_heights
 			.into_iter()
 			.filter(|prev_height| prev_height < &height)
@@ -291,7 +277,7 @@ where
 		let count = ClientCounter::<T>::get();
 		log::trace!(target: "pallet_ibc", "in client : [client_counter] >> client_counter: {:?}", count);
 
-		Ok(count as u64)
+		Ok(count)
 	}
 }
 
@@ -316,8 +302,6 @@ where
 			client_id,
 			client_type
 		);
-
-		let client_type = client_type.as_bytes().to_vec();
 		<Clients<T>>::insert(&client_id, client_type);
 		Ok(())
 	}
@@ -356,7 +340,7 @@ where
 		if !client_id.as_str().starts_with("10-grandpa") &&
 			!client_id.as_str().starts_with("11-beefy")
 		{
-			let mut stored_heights = ConsensusHeights::<T>::get(client_id.as_bytes().to_vec());
+			let mut stored_heights = ConsensusHeights::<T>::get(client_id.clone());
 			if let Err(val) = stored_heights.try_insert(height) {
 				let first = stored_heights
 					.iter()
@@ -368,7 +352,7 @@ where
 					.try_insert(val)
 					.expect("Cannot panic, since bounds cannot be exceeded at this point");
 			}
-			ConsensusHeights::<T>::insert(client_id.as_bytes().to_vec(), stored_heights);
+			ConsensusHeights::<T>::insert(client_id, stored_heights);
 		}
 
 		Ok(())
@@ -389,9 +373,7 @@ where
 		timestamp: Timestamp,
 	) -> Result<(), ICS02Error> {
 		log::trace!(target: "pallet_ibc", "in client: [store_update_time] >> Client Height {:?}, Host Timestamp {:?} ", height, timestamp);
-		let height = height.encode_vec();
 		let timestamp = timestamp.nanoseconds();
-		let client_id = client_id.as_bytes().to_vec();
 		ClientUpdateTime::<T>::insert(client_id, height, timestamp);
 		Ok(())
 	}
@@ -403,9 +385,6 @@ where
 		host_height: Height,
 	) -> Result<(), ICS02Error> {
 		log::trace!(target: "pallet_ibc", "in client: [store_update_height] >> Client Height {:?}, Host Height {:?} ", height, host_height);
-		let height = height.encode_vec();
-		let host_height = host_height.encode_vec();
-		let client_id = client_id.as_bytes().to_vec();
 		ClientUpdateHeight::<T>::insert(client_id, height, host_height);
 		Ok(())
 	}

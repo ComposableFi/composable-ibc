@@ -34,6 +34,11 @@ const CLIENT_TYPE_ATTRIBUTE_KEY: &str = "client_type";
 /// The content of the `key` field for the attribute containing the height.
 const CONSENSUS_HEIGHT_ATTRIBUTE_KEY: &str = "consensus_height";
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 /// NewBlock event signals the committing & execution of a new block.
 // TODO - find a better place for NewBlock
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
@@ -59,6 +64,11 @@ impl From<NewBlock> for IbcEvent {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Attributes {
 	pub height: Height,
@@ -112,6 +122,11 @@ impl core::fmt::Display for Attributes {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 /// CreateClient event signals the creation of a new on-chain client (IBC client).
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct CreateClient(pub Attributes);
@@ -146,6 +161,11 @@ impl core::fmt::Display for CreateClient {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 /// UpdateClient event signals a recent update of an on-chain client (IBC Client).
 // TODO: use generic header type
 #[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
@@ -200,6 +220,11 @@ impl core::fmt::Debug for UpdateClient {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 /// ClientMisbehaviour event signals the update of an on-chain client (IBC Client) with evidence of
 /// misbehaviour.
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
@@ -229,6 +254,11 @@ impl From<ClientMisbehaviour> for IbcEvent {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 /// Signals a recent upgrade of an on-chain client (IBC Client).
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct UpgradeClient(pub Attributes);

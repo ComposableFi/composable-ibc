@@ -11,7 +11,6 @@ use ibc::core::{
 };
 use ibc_primitives::apply_prefix;
 use sp_std::{marker::PhantomData, prelude::*, str::FromStr};
-use tendermint_proto::Protobuf;
 
 // todo: pruning
 /// (port_id, channel_id) => ChannelEnd
@@ -19,24 +18,20 @@ use tendermint_proto::Protobuf;
 pub struct Channels<T>(PhantomData<T>);
 
 impl<T: Config> Channels<T> {
-	pub fn get(port_id: PortId, channel_id: ChannelId) -> Option<Vec<u8>> {
+	pub fn get(port_id: PortId, channel_id: ChannelId) -> Option<ChannelEnd> {
 		let channel_path = format!("{}", ChannelEndsPath(port_id, channel_id));
 		let channel_key = apply_prefix(T::PALLET_PREFIX, vec![channel_path]);
 		child::get(&ChildInfo::new_default(T::PALLET_PREFIX), &channel_key)
 	}
 
-	pub fn insert(port_id: PortId, channel_id: ChannelId, channel_end: &ChannelEnd) {
+	pub fn insert(port_id: PortId, channel_id: ChannelId, channel_end: ChannelEnd) {
 		let channel_path = format!("{}", ChannelEndsPath(port_id, channel_id));
 		let channel_key = apply_prefix(T::PALLET_PREFIX, vec![channel_path]);
-		child::put(
-			&ChildInfo::new_default(T::PALLET_PREFIX),
-			&channel_key,
-			&channel_end.encode_vec(),
-		);
+		child::put(&ChildInfo::new_default(T::PALLET_PREFIX), &channel_key, &channel_end);
 	}
 
 	// WARNING: too expensive to be called from an on-chain context, only here for rpc layer.
-	pub fn iter() -> impl Iterator<Item = (Vec<u8>, Vec<u8>, Vec<u8>)> {
+	pub fn iter() -> impl Iterator<Item = (PortId, ChannelId, ChannelEnd)> {
 		let prefix = "channelEnds/ports/".to_string();
 		let key = apply_prefix(T::PALLET_PREFIX, vec![prefix.clone()]);
 		ChildTriePrefixIterator::with_prefix(&ChildInfo::new_default(T::PALLET_PREFIX), &key)
@@ -45,11 +40,7 @@ impl<T: Config> Channels<T> {
 				if let Path::ChannelEnds(ChannelEndsPath(port_id, channel_id)) =
 					Path::from_str(&path).ok()?
 				{
-					return Some((
-						port_id.as_bytes().to_vec(),
-						channel_id.to_string().as_bytes().to_vec(),
-						value,
-					))
+					return Some((port_id, channel_id, value))
 				}
 				None
 			})

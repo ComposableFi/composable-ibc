@@ -224,6 +224,11 @@ fn extract_attributes(object: &RawObject<'_>, namespace: &str) -> Result<Attribu
 	})
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Attributes {
 	pub height: Height,
@@ -357,6 +362,11 @@ trait EventType {
 	fn event_type() -> IbcEventType;
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct OpenInit {
 	pub height: Height,
@@ -407,6 +417,11 @@ impl EventType for OpenInit {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct OpenTry {
 	pub height: Height,
@@ -456,6 +471,11 @@ impl EventType for OpenTry {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct OpenAck {
 	pub height: Height,
@@ -510,6 +530,11 @@ impl EventType for OpenAck {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct OpenConfirm {
 	pub height: Height,
@@ -560,6 +585,11 @@ impl EventType for OpenConfirm {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct CloseInit {
 	pub height: Height,
@@ -651,6 +681,11 @@ impl EventType for CloseInit {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct CloseConfirm {
 	pub height: Height,
@@ -750,6 +785,11 @@ macro_rules! impl_try_from_raw_obj_for_event {
 
 impl_try_from_raw_obj_for_event!(OpenInit, OpenTry, OpenAck, OpenConfirm, CloseInit, CloseConfirm);
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct SendPacket {
 	pub height: Height,
@@ -804,6 +844,11 @@ impl core::fmt::Debug for SendPacket {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct ReceivePacket {
 	pub height: Height,
@@ -852,6 +897,11 @@ impl core::fmt::Display for ReceivePacket {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct WriteAcknowledgement {
 	pub height: Height,
@@ -919,6 +969,11 @@ impl core::fmt::Debug for WriteAcknowledgement {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct AcknowledgePacket {
 	pub height: Height,
@@ -967,6 +1022,11 @@ impl core::fmt::Debug for AcknowledgePacket {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct TimeoutPacket {
 	pub height: Height,
@@ -1015,6 +1075,11 @@ impl core::fmt::Display for TimeoutPacket {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct TimeoutOnClosePacket {
 	pub height: Height,

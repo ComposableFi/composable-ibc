@@ -27,6 +27,11 @@ use crate::{
 
 pub const TYPE_URL: &str = "/ibc.core.channel.v1.MsgAcknowledgement";
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 /// A generic Acknowledgement type that modules may interpret as they like.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Acknowledgement(Vec<u8>);

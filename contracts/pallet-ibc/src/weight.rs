@@ -7,12 +7,12 @@ use ibc::core::{
 	ics02_client::msgs::ClientMsg,
 	ics03_connection::{context::ConnectionReader, msgs::ConnectionMsg},
 	ics04_channel::msgs::{ChannelMsg, PacketMsg},
-	ics24_host::identifier::ClientId,
+	ics24_host::identifier::{ChannelId, ClientId, PortId},
 	ics26_routing::msgs::Ics26Envelope,
 };
-use ibc_primitives::{client_id_from_bytes, CallbackWeight};
+use ibc_primitives::CallbackWeight;
+use ibc_proto::google::protobuf::Any;
 use ics10_grandpa::client_message::{ClientMessage, RelayChainHeader};
-use scale_info::prelude::string::ToString;
 
 pub trait WeightInfo {
 	fn create_client() -> Weight;
@@ -167,13 +167,16 @@ impl<T: Config> WeightRouter<T> {
 }
 
 /// Get client id for a port and channel combination
-pub fn channel_client<T: Config>(channel_id: &[u8], port_id: &[u8]) -> Result<ClientId, Error<T>> {
+pub fn channel_client<T: Config>(
+	channel_id: &ChannelId,
+	port_id: &PortId,
+) -> Result<ClientId, Error<T>> {
 	for (connection_id, channels) in ChannelsConnection::<T>::iter() {
-		if channels.contains(&(port_id.to_vec(), channel_id.to_vec())) {
+		if channels.contains(&(port_id.clone(), channel_id.clone())) {
 			if let Some((client_id, ..)) = ConnectionClient::<T>::iter()
 				.find(|(.., connection_ids)| connection_ids.contains(&connection_id))
 			{
-				return client_id_from_bytes(client_id).map_err(|_| Error::<T>::Other)
+				return Ok(client_id)
 			}
 		}
 	}
@@ -186,9 +189,7 @@ where
 {
 	msgs.iter()
 		.filter_map(|msg| {
-			let type_url = String::from_utf8(msg.type_url.clone()).unwrap_or_default();
-			let msg = ibc_proto::google::protobuf::Any { type_url, value: msg.value.clone() };
-			let msg: Option<Ics26Envelope<Context<T>>> = msg.try_into().ok();
+			let msg: Option<Ics26Envelope<Context<T>>> = msg.clone().try_into().ok();
 			msg
 		})
 		.fold(Weight::default(), |acc, msg| {
@@ -330,8 +331,8 @@ where
 						let cb_weight =
 							cb.on_chan_open_ack(&channel_msg.port_id, &channel_msg.channel_id);
 						let lc_verification_weight = match channel_client::<T>(
-							channel_msg.port_id.as_bytes(),
-							channel_msg.channel_id.to_string().as_bytes(),
+							&channel_msg.channel_id,
+							&channel_msg.port_id,
 						) {
 							Ok(client_id) => {
 								let client_type = client_id
@@ -354,8 +355,8 @@ where
 						let cb_weight =
 							cb.on_chan_open_confirm(&channel_msg.port_id, &channel_msg.channel_id);
 						let lc_verification_weight = match channel_client::<T>(
-							channel_msg.port_id.as_bytes(),
-							channel_msg.channel_id.to_string().as_bytes(),
+							&channel_msg.channel_id,
+							&channel_msg.port_id,
 						) {
 							Ok(client_id) => {
 								let client_type = client_id
@@ -378,8 +379,8 @@ where
 						let cb_weight =
 							cb.on_chan_close_init(&channel_msg.port_id, &channel_msg.channel_id);
 						let lc_verification_weight = match channel_client::<T>(
-							channel_msg.port_id.as_bytes(),
-							channel_msg.channel_id.to_string().as_bytes(),
+							&channel_msg.channel_id,
+							&channel_msg.port_id,
 						) {
 							Ok(client_id) => {
 								let client_type = client_id
@@ -402,8 +403,8 @@ where
 						let cb_weight =
 							cb.on_chan_close_confirm(&channel_msg.port_id, &channel_msg.channel_id);
 						let lc_verification_weight = match channel_client::<T>(
-							channel_msg.port_id.as_bytes(),
-							channel_msg.channel_id.to_string().as_bytes(),
+							&channel_msg.channel_id,
+							&channel_msg.port_id,
 						) {
 							Ok(client_id) => {
 								let client_type = client_id
@@ -430,8 +431,8 @@ where
 						.unwrap_or_else(|| Box::new(()));
 						let cb_weight = cb.on_recv_packet(&packet_msg.packet);
 						let lc_verification_weight = match channel_client::<T>(
-							packet_msg.packet.destination_port.as_bytes(),
-							packet_msg.packet.destination_channel.to_string().as_bytes(),
+							&packet_msg.packet.destination_channel,
+							&packet_msg.packet.destination_port,
 						) {
 							Ok(client_id) => {
 								let client_type = client_id
@@ -460,8 +461,8 @@ where
 							&packet_msg.acknowledgement,
 						);
 						let lc_verification_weight = match channel_client::<T>(
-							packet_msg.packet.destination_port.as_bytes(),
-							packet_msg.packet.destination_channel.to_string().as_bytes(),
+							&packet_msg.packet.destination_channel,
+							&packet_msg.packet.destination_port,
 						) {
 							Ok(client_id) => {
 								let client_type = client_id
@@ -488,8 +489,8 @@ where
 						.unwrap_or_else(|| Box::new(()));
 						let cb_weight = cb.on_timeout_packet(&packet_msg.packet);
 						let lc_verification_weight = match channel_client::<T>(
-							packet_msg.packet.destination_port.as_bytes(),
-							packet_msg.packet.destination_channel.to_string().as_bytes(),
+							&packet_msg.packet.destination_channel,
+							&packet_msg.packet.destination_port,
 						) {
 							Ok(client_id) => {
 								let client_type = client_id
@@ -515,8 +516,8 @@ where
 						.unwrap_or_else(|| Box::new(()));
 						let cb_weight = cb.on_timeout_packet(&packet_msg.packet);
 						let lc_verification_weight = match channel_client::<T>(
-							packet_msg.packet.destination_port.as_bytes(),
-							packet_msg.packet.destination_channel.to_string().as_bytes(),
+							&packet_msg.packet.destination_channel,
+							&packet_msg.packet.destination_port,
 						) {
 							Ok(client_id) => {
 								let client_type = client_id

@@ -29,7 +29,7 @@ use crate::{
 };
 use alloc::{format, vec::Vec};
 
-#[derive(codec::Decode, codec::Encode)]
+#[derive(parity_scale_codec::Decode, parity_scale_codec::Encode)]
 pub struct ConsensusProofwithHostConsensusStateProof {
 	pub host_consensus_state_proof: Vec<u8>,
 	pub consensus_proof: Vec<u8>,
@@ -151,7 +151,7 @@ pub fn verify_consensus_proof<Ctx: ReaderContext>(
 		client_type if !client_type.contains("tendermint") => {
 			// if the host is beefy or near, we need to decode the proof before passing it on.
 			let connection_proof: ConsensusProofwithHostConsensusStateProof =
-				codec::Decode::decode(&mut proof.proof().as_bytes()).map_err(|e| {
+				parity_scale_codec::Decode::decode(&mut proof.proof().as_bytes()).map_err(|e| {
 					Error::implementation_specific(format!("failed to decode: {:?}", e))
 				})?;
 			// Fetch the expected consensus state from the historical (local) header data.

@@ -54,6 +54,11 @@ pub enum PacketResult {
 	Timeout(TimeoutPacketResult),
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Clone, Debug)]
 pub enum Receipt {
 	Ok,
@@ -71,6 +76,11 @@ impl core::fmt::Display for PacketMsgType {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 /// The sequence number of a packet enforces ordering among packets from the same source.
 #[derive(
 	Copy, Clone, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Deserialize, Serialize,
@@ -116,6 +126,11 @@ impl core::fmt::Display for Sequence {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Clone, Default, Hash, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Packet {
 	pub sequence: Sequence,

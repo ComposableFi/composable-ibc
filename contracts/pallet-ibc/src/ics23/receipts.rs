@@ -1,7 +1,7 @@
 use crate::{format, Config};
 use frame_support::storage::{child, child::ChildInfo};
 use ibc::core::{
-	ics04_channel::packet::Sequence,
+	ics04_channel::packet::{Receipt, Sequence},
 	ics24_host::{
 		identifier::{ChannelId, PortId},
 		path::ReceiptsPath,
@@ -18,7 +18,7 @@ pub struct PacketReceipt<T>(PhantomData<T>);
 impl<T: Config> PacketReceipt<T> {
 	pub fn insert(
 		(port_id, channel_id, sequence): (PortId, ChannelId, Sequence),
-		receipt: Vec<u8>,
+		receipt: Receipt,
 	) {
 		let receipt_path = ReceiptsPath { port_id, channel_id, sequence };
 		let receipt_path = format!("{}", receipt_path);
@@ -26,7 +26,7 @@ impl<T: Config> PacketReceipt<T> {
 		child::put(&ChildInfo::new_default(T::PALLET_PREFIX), &receipt_key, &receipt)
 	}
 
-	pub fn get((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) -> Option<Vec<u8>> {
+	pub fn get((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) -> Option<Receipt> {
 		let receipt_path = ReceiptsPath { port_id, channel_id, sequence };
 		let receipt_path = format!("{}", receipt_path);
 		let receipt_key = apply_prefix(T::PALLET_PREFIX, vec![receipt_path]);

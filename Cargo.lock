@@ -875,8 +875,18 @@ version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "15bf3650200d8bffa99015595e10f1fbd17de07abbc25bb067da79e769939bfa"
 dependencies = [
- "borsh-derive",
+ "borsh-derive 0.9.3",
  "hashbrown 0.11.2",
+]
+
+[[package]]
+name = "borsh"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "822462c1e7b17b31961798a6874b36daea6818e99e0cb7d3b7b0fa3c477751c3"
+dependencies = [
+ "borsh-derive 0.10.0",
+ "hashbrown 0.12.3",
 ]
 
 [[package]]
@@ -885,8 +895,21 @@ version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6441c552f230375d18e3cc377677914d2ca2b0d36e52129fe15450a2dce46775"
 dependencies = [
- "borsh-derive-internal",
- "borsh-schema-derive-internal",
+ "borsh-derive-internal 0.9.3",
+ "borsh-schema-derive-internal 0.9.3",
+ "proc-macro-crate 0.1.5",
+ "proc-macro2",
+ "syn",
+]
+
+[[package]]
+name = "borsh-derive"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "37626c9e941a687ee9abef6065b44c379478ae563b7483c613dd705ef1dff59e"
+dependencies = [
+ "borsh-derive-internal 0.10.0",
+ "borsh-schema-derive-internal 0.10.0",
  "proc-macro-crate 0.1.5",
  "proc-macro2",
  "syn",
@@ -904,10 +927,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "borsh-derive-internal"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "61820b4c5693eafb998b1e67485423c923db4a75f72585c247bdee32bad81e7b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "borsh-schema-derive-internal"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdbd5696d8bfa21d53d9fe39a714a18538bad11492a42d066dbbc395fb1951c0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "borsh-schema-derive-internal"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c76cdbfa13def20d1f8af3ae7b3c6771f06352a74221d8851262ac384c122b8e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4057,8 +4102,9 @@ dependencies = [
 name = "ibc"
 version = "0.15.0"
 dependencies = [
+ "borsh 0.10.0",
  "derive_more",
- "env_logger 0.9.3",
+ "env_logger 0.10.0",
  "flex-error",
  "ibc-derive",
  "ibc-proto",
@@ -4127,8 +4173,11 @@ name = "ibc-proto"
 version = "0.18.0"
 dependencies = [
  "base64 0.13.1",
+ "borsh 0.10.0",
  "bytes",
+ "parity-scale-codec",
  "prost",
+ "scale-info",
  "schemars",
  "serde",
  "tendermint-proto",
@@ -4291,7 +4340,7 @@ dependencies = [
 name = "ics13-near"
 version = "0.1.0"
 dependencies = [
- "borsh",
+ "borsh 0.9.3",
  "bytes",
  "derive_more",
  "env_logger 0.9.3",
@@ -11606,7 +11655,7 @@ dependencies = [
  "bytes",
  "ics23",
  "proptest",
- "rand 0.4.6",
+ "rand 0.8.5",
  "sha2 0.10.6",
  "tendermint",
 ]
@@ -13978,9 +14027,9 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "digest 0.10.6",
- "rand 0.4.6",
+ "rand 0.8.5",
  "static_assertions",
 ]
 

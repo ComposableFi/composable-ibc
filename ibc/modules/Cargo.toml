@@ -24,7 +24,7 @@ std = [
     "ics23/std",
     "clock",
     "sp-std/std",
-    "codec/std",
+    "parity-scale-codec/std",
     "scale-info/std",
     "primitive-types/std"
 ]
@@ -33,10 +33,12 @@ clock = ["tendermint/clock", "time/std"]
 # This feature grants access to development-time mocking libraries, such as `MockContext` or `MockHeader`.
 # Depends on the `testgen` suite for generating Tendermint light blocks.
 mocks = ["clock", "std", "sha2"]
+parity-scale-codec = []
+borsh = ["dep:borsh"]
 
 [dependencies]
 # Proto definitions for all IBC-related interfaces, e.g., connections or channels.
-ibc-proto = { version = "0.18.0", path = "../proto", default-features = false }
+ibc-proto = { version = "0.18.0", path = "../proto", default-features = false, features = ["parity-scale-codec", "borsh"] }
 derive = { path = "../derive", package = "ibc-derive" }
 ics23 = { git = "https://github.com/confio/ics23", rev = "a4daeb4c24ce1be827829c0841446abc690c4f11", default-features = false }
 time = { version = "0.3", default-features = false }
@@ -52,14 +54,16 @@ num-traits = { version = "0.2.15", default-features = false }
 derive_more = { version = "0.99.17", default-features = false, features = ["from", "into", "display"] }
 uint = { version = "0.9", default-features = false }
 primitive-types = { version = "0.12.0", default-features = false, features = ["serde_no_std"] }
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+parity-scale-codec = { version = "3.0.0", default-features = false, features = ["derive"] }
 sha2 = { version = "0.10.2", optional = true }
 tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
 tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+## for borsh encode or decode
+borsh = {version = "0.10.0", default-features = false, optional = true }
 
 [dev-dependencies]
-env_logger = "0.9.0"
+env_logger = "0.10.0"
 tracing-subscriber = { version = "0.3.11", features = ["fmt", "env-filter", "json"]}
 test-log = { version = "0.2.10", features = ["trace"] }
 modelator = "0.4.2"

@@ -29,6 +29,11 @@ tonic       = { version = "0.8.2", optional = true, default-features = false }
 serde       = { version = "1.0", default-features = false }
 schemars    = { version = "0.8", optional = true }
 base64      = { version = "0.13", default-features = false, features = ["alloc"] }
+## for codec encode or decode
+parity-scale-codec = { version = "3.0.0", default-features = false, features = ["full"], optional = true }
+scale-info = { version = "2.1.2", default-features = false, features = ["derive"], optional = true }
+## for borsh encode or decode
+borsh = {version = "0.10.0", default-features = false, optional = true }
 
 tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
 
@@ -38,3 +43,5 @@ std         = []
 client      = ["std", "tonic", "tonic/codegen", "tonic/transport", "tonic/prost"]
 json-schema = ["std", "schemars"]
 server      = ["std", "tonic", "tonic/codegen", "tonic/transport", "tonic/prost"]
+parity-scale-codec = ["dep:parity-scale-codec", "dep:scale-info"]
+borsh = ["dep:borsh"]

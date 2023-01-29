@@ -24,10 +24,12 @@ impl<T: Config> Acknowledgements<T> {
 		let ack_path = AcksPath { port_id, channel_id, sequence };
 		let ack_path = format!("{}", ack_path);
 		let ack_key = apply_prefix(T::PALLET_PREFIX, vec![ack_path]);
-		child::put(&ChildInfo::new_default(T::PALLET_PREFIX), &ack_key, &ack.into_vec())
+		child::put(&ChildInfo::new_default(T::PALLET_PREFIX), &ack_key, &ack)
 	}
 
-	pub fn get((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) -> Option<Vec<u8>> {
+	pub fn get(
+		(port_id, channel_id, sequence): (PortId, ChannelId, Sequence),
+	) -> Option<AcknowledgementCommitment> {
 		let ack_path = AcksPath { port_id, channel_id, sequence };
 		let ack_path = format!("{}", ack_path);
 		let ack_key = apply_prefix(T::PALLET_PREFIX, vec![ack_path]);
@@ -49,7 +51,8 @@ impl<T: Config> Acknowledgements<T> {
 	}
 
 	// WARNING: too expensive to be called from an on-chain context, only here for rpc layer.
-	pub fn iter() -> impl Iterator<Item = ((PortId, ChannelId, Sequence), Vec<u8>)> {
+	pub fn iter() -> impl Iterator<Item = ((PortId, ChannelId, Sequence), AcknowledgementCommitment)>
+	{
 		let prefix = "acks/ports/".to_string();
 		let prefix_key = apply_prefix(T::PALLET_PREFIX, vec![prefix.clone()]);
 		ChildTriePrefixIterator::with_prefix(&ChildInfo::new_default(T::PALLET_PREFIX), &prefix_key)

@@ -3,6 +3,7 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::useless_format)]
 #![allow(non_camel_case_types)]
+#![allow(dead_code)]
 #![deny(
 	unused_imports,
 	clippy::useless_conversion,
@@ -28,21 +29,19 @@
 //! Pallet IBC
 //! Implements the ibc protocol for substrate runtimes.
 extern crate alloc;
+extern crate core;
 
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use cumulus_primitives_core::ParaId;
 use frame_system::ensure_signed;
 pub use pallet::*;
-use scale_info::{
-	prelude::{
-		format,
-		string::{String, ToString},
-		vec,
-	},
-	TypeInfo,
+use scale_info::prelude::{
+	format,
+	string::{String, ToString},
+	vec,
 };
-use sp_runtime::{Either, RuntimeDebug};
+use sp_runtime::Either;
 use sp_std::{marker::PhantomData, prelude::*, str::FromStr};
 
 mod channel;
@@ -60,18 +59,6 @@ pub use ibc_primitives::Timeout;
 pub use light_client_common;
 
 pub const MODULE_ID: &str = "pallet_ibc";
-
-#[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct Any {
-	pub type_url: Vec<u8>,
-	pub value: Vec<u8>,
-}
-
-impl From<ibc_proto::google::protobuf::Any> for Any {
-	fn from(any: ibc_proto::google::protobuf::Any) -> Self {
-		Self { type_url: any.type_url.as_bytes().to_vec(), value: any.value }
-	}
-}
 
 #[derive(
 	frame_support::RuntimeDebug,
@@ -167,12 +154,13 @@ pub mod pallet {
 		core::{
 			ics02_client::context::{ClientKeeper, ClientReader},
 			ics04_channel::context::ChannelReader,
-			ics24_host::identifier::{ChannelId, PortId},
+			ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 		},
 		timestamp::Timestamp,
 		Height,
 	};
 	use ibc_primitives::{client_id_from_bytes, get_channel_escrow_address, IbcHandler};
+	use ibc_proto::google::protobuf::Any;
 	use light_clients::AnyClientState;
 	use sp_runtime::{
 		traits::{IdentifyAccount, Saturating},
@@ -258,17 +246,17 @@ pub mod pallet {
 	pub type ClientUpdateHeight<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
-		Vec<u8>,
+		ClientId,
 		Blake2_128Concat,
-		Vec<u8>,
-		Vec<u8>,
+		Height,
+		Height,
 		OptionQuery,
 	>;
 
 	#[pallet::storage]
 	/// client_id , Height => Timestamp
 	pub type ClientUpdateTime<T: Config> =
-		StorageDoubleMap<_, Blake2_128Concat, Vec<u8>, Blake2_128Concat, Vec<u8>, u64, OptionQuery>;
+		StorageDoubleMap<_, Blake2_128Concat, ClientId, Blake2_128Concat, Height, u64, OptionQuery>;
 
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
@@ -282,12 +270,12 @@ pub mod pallet {
 	#[allow(clippy::disallowed_types)]
 	/// connection_identifier => Vec<(port_id, channel_id)>
 	pub type ChannelsConnection<T: Config> =
-		StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<(Vec<u8>, Vec<u8>)>, ValueQuery>;
+		StorageMap<_, Blake2_128Concat, ConnectionId, Vec<(PortId, ChannelId)>, ValueQuery>;
 
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
 	/// counter for clients
-	pub type ClientCounter<T: Config> = StorageValue<_, u32, ValueQuery>;
+	pub type ClientCounter<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
@@ -308,7 +296,7 @@ pub mod pallet {
 	#[allow(clippy::disallowed_types)]
 	/// client_id => Vec<Connection_id>
 	pub type ConnectionClient<T: Config> =
-		StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<Vec<u8>>, ValueQuery>;
+		StorageMap<_, Blake2_128Concat, ClientId, Vec<ConnectionId>, ValueQuery>;
 
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
@@ -345,7 +333,7 @@ pub mod pallet {
 	pub type ConsensusHeights<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
-		Vec<u8>,
+		ClientId,
 		BoundedBTreeSet<Height, frame_support::traits::ConstU32<256>>,
 		ValueQuery,
 	>;
@@ -387,7 +375,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Events emitted by the ibc subsystem
-		Events { events: Vec<Result<events::IbcEvent, errors::IbcError>> },
+		Events { events: Vec<Result<ibc::events::IbcEvent, errors::IbcError>> },
 		/// An Ibc token transfer has been started
 		TokenTransferInitiated {
 			from: Vec<u8>,
@@ -538,29 +526,12 @@ pub mod pallet {
 		#[pallet::weight(crate::weight::deliver::< T > (messages))]
 		#[frame_support::transactional]
 		pub fn deliver(origin: OriginFor<T>, messages: Vec<Any>) -> DispatchResult {
-			use ibc::core::{
-				ics02_client::msgs::create_client, ics03_connection::msgs::conn_open_init,
-			};
 			let sender = ensure_signed(origin)?;
 
 			// reserve a fixed deposit for every client and connection created
 			// so people don't spam our chain with useless clients.
 			let mut ctx = routing::Context::<T>::new();
-			let mut reserve_count = 0u128;
-			let messages = messages
-				.into_iter()
-				.filter_map(|message| {
-					let type_url = String::from_utf8(message.type_url.clone()).ok()?;
-					if matches!(
-						type_url.as_str(),
-						create_client::TYPE_URL | conn_open_init::TYPE_URL
-					) {
-						reserve_count += 1;
-					}
-
-					Some(Ok(ibc_proto::google::protobuf::Any { type_url, value: message.value }))
-				})
-				.collect::<Result<Vec<ibc_proto::google::protobuf::Any>, Error<T>>>()?;
+			let reserve_count = 0u128;
 			let reserve_amt = T::SpamProtectionDeposit::get().saturating_mul(reserve_count.into());
 
 			if reserve_amt >= T::SpamProtectionDeposit::get() {

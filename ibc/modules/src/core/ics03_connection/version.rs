@@ -22,6 +22,11 @@ use tendermint_proto::Protobuf;
 
 use crate::core::{ics03_connection::error::Error, ics04_channel::channel::Order};
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 /// Stores the identifier and the features supported by a version
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Version {

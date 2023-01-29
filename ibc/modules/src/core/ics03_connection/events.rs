@@ -87,6 +87,11 @@ fn extract_attributes_from_tx(event: &tendermint::abci::Event) -> Result<Attribu
 	Ok(attr)
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Attributes {
 	pub height: Height,
@@ -138,6 +143,11 @@ impl From<Attributes> for Vec<EventAttribute> {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct OpenInit(Attributes);
 
@@ -175,6 +185,11 @@ impl From<OpenInit> for AbciEvent {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct OpenTry(Attributes);
 
@@ -212,6 +227,11 @@ impl From<OpenTry> for AbciEvent {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct OpenAck(Attributes);
 
@@ -249,6 +269,11 @@ impl From<OpenAck> for AbciEvent {
 	}
 }
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct OpenConfirm(Attributes);
 

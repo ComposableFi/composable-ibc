@@ -3,7 +3,6 @@ use core::time::Duration;
 
 use super::*;
 use crate::{
-	events::IbcEvent,
 	ics23::{
 		acknowledgements::Acknowledgements, channels::Channels, client_states::ClientStates,
 		connections::Connections, consensus_states::ConsensusStates,
@@ -29,7 +28,7 @@ use ibc::{
 			context::{ChannelKeeper, ChannelReader},
 			error::Error as Ics04Error,
 			msgs::{chan_close_init::MsgChannelCloseInit, chan_open_init::MsgChannelOpenInit},
-			packet::{Packet, Sequence},
+			packet::{Packet, Receipt, Sequence},
 		},
 		ics24_host::{
 			identifier::*,
@@ -121,7 +120,11 @@ where
 		let channel_path = format!("{}", ChannelEndsPath(port_id, channel_id));
 		let key = apply_prefix(T::PALLET_PREFIX, vec![channel_path]);
 
-		Ok(QueryChannelResponse { channel, trie_key: key, height: host_height::<T>() })
+		Ok(QueryChannelResponse {
+			channel: channel.encode_vec(),
+			trie_key: key,
+			height: host_height::<T>(),
+		})
 	}
 
 	/// Get a connection state
@@ -134,7 +137,11 @@ where
 		let connection_path = format!("{}", ConnectionsPath(connection_id));
 		let key = apply_prefix(T::PALLET_PREFIX, vec![connection_path]);
 
-		Ok(QueryConnectionResponse { connection, trie_key: key, height: host_height::<T>() })
+		Ok(QueryConnectionResponse {
+			connection: connection.encode_vec(),
+			trie_key: key,
+			height: host_height::<T>(),
+		})
 	}
 
 	/// Get a client state
@@ -195,17 +202,15 @@ where
 
 	/// Get all connection states for a client
 	pub fn connection_using_client(
-		client_id: Vec<u8>,
+		client_id: ClientId,
 	) -> Result<Vec<IdentifiedConnection>, Error<T>> {
 		let connection_ids = ConnectionClient::<T>::get(client_id);
 		let connections = connection_ids
 			.into_iter()
 			.filter_map(|connection_id| {
-				let conn_id = connection_id_from_bytes(connection_id.clone()).ok()?;
-
 				Some(IdentifiedConnection {
-					connection_end: Connections::<T>::get(&conn_id)?,
-					connection_id,
+					connection_end: Connections::<T>::get(&connection_id)?.encode_vec(),
+					connection_id: connection_id.as_bytes().to_vec(),
 				})
 			})
 			.collect::<Vec<_>>();
@@ -244,7 +249,11 @@ where
 	pub fn channels() -> Result<QueryChannelsResponse, Error<T>> {
 		let channels = Channels::<T>::iter()
 			.map(|(port_id, channel_id, channel_end)| {
-				Ok(IdentifiedChannel { channel_id, port_id, channel_end })
+				Ok(IdentifiedChannel {
+					channel_id: format!("{}", channel_id).as_bytes().to_vec(),
+					port_id: port_id.as_bytes().to_vec(),
+					channel_end: channel_end.encode_vec(),
+				})
 			})
 			.collect::<Result<Vec<_>, Error<T>>>()?;
 
@@ -255,7 +264,10 @@ where
 	pub fn connections() -> Result<QueryConnectionsResponse, Error<T>> {
 		let connections = Connections::<T>::iter()
 			.map(|(connection_id, connection_end)| {
-				Ok(IdentifiedConnection { connection_id, connection_end })
+				Ok(IdentifiedConnection {
+					connection_id: connection_id.as_bytes().to_vec(),
+					connection_end: connection_end.encode_vec(),
+				})
 			})
 			.collect::<Result<Vec<_>, Error<T>>>()?;
 
@@ -263,23 +275,20 @@ where
 	}
 
 	/// Get all channels bound to this connection
-	pub fn connection_channels(connection_id: Vec<u8>) -> Result<QueryChannelsResponse, Error<T>> {
+	pub fn connection_channels(
+		connection_id: ConnectionId,
+	) -> Result<QueryChannelsResponse, Error<T>> {
 		let identifiers = ChannelsConnection::<T>::get(connection_id);
 
 		let channels = identifiers
 			.into_iter()
-			.map(|(port_id_bytes, channel_id_bytes)| {
-				let channel_id = channel_id_from_bytes(channel_id_bytes.clone())
-					.map_err(|_| Error::<T>::DecodingError)?;
-				let port_id = port_id_from_bytes(port_id_bytes.clone())
-					.map_err(|_| Error::<T>::DecodingError)?;
-
-				let channel_end =
-					Channels::<T>::get(port_id, channel_id).ok_or(Error::<T>::ChannelNotFound)?;
+			.map(|(port_id, channel_id)| {
+				let channel_end = Channels::<T>::get(port_id.clone(), channel_id.clone())
+					.ok_or(Error::<T>::ChannelNotFound)?;
 				Ok(IdentifiedChannel {
-					channel_id: channel_id_bytes,
-					port_id: port_id_bytes,
-					channel_end,
+					channel_id: format!("{}", channel_id).as_bytes().to_vec(),
+					port_id: port_id.as_bytes().to_vec(),
+					channel_end: channel_end.encode_vec(),
 				})
 			})
 			.collect::<Result<Vec<_>, Error<T>>>()?;
@@ -301,7 +310,7 @@ where
 						port_id: port_id_bytes.clone(),
 						channel_id: channel_id_bytes.clone(),
 						sequence: s.into(),
-						data: commitment,
+						data: commitment.into_vec(),
 					};
 					Some(packet_state)
 				} else {
@@ -328,7 +337,7 @@ where
 						port_id: port_id_bytes.clone(),
 						channel_id: channel_id_bytes.clone(),
 						sequence: s.into(),
-						data: ack,
+						data: ack.into_vec(),
 					};
 					Some(packet_state)
 				} else {
@@ -383,7 +392,11 @@ where
 		let next_seq_recv_path = format!("{}", SeqRecvsPath(port_id, channel_id));
 		let key = apply_prefix(T::PALLET_PREFIX, vec![next_seq_recv_path]);
 
-		Ok(QueryNextSequenceReceiveResponse { sequence, trie_key: key, height: host_height::<T>() })
+		Ok(QueryNextSequenceReceiveResponse {
+			sequence: sequence.into(),
+			trie_key: key,
+			height: host_height::<T>(),
+		})
 	}
 
 	pub fn packet_commitment(
@@ -400,7 +413,11 @@ where
 		let commitment_path = format!("{}", CommitmentsPath { port_id, channel_id, sequence });
 		let key = apply_prefix(T::PALLET_PREFIX, vec![commitment_path]);
 
-		Ok(QueryPacketCommitmentResponse { commitment, trie_key: key, height: host_height::<T>() })
+		Ok(QueryPacketCommitmentResponse {
+			commitment: commitment.into_vec(),
+			trie_key: key,
+			height: host_height::<T>(),
+		})
 	}
 
 	pub fn packet_acknowledgement(
@@ -417,24 +434,25 @@ where
 		let acks_path = format!("{}", AcksPath { port_id, channel_id, sequence });
 		let key = apply_prefix(T::PALLET_PREFIX, vec![acks_path]);
 
-		Ok(QueryPacketAcknowledgementResponse { ack, trie_key: key, height: host_height::<T>() })
+		Ok(QueryPacketAcknowledgementResponse {
+			ack: ack.into_vec(),
+			trie_key: key,
+			height: host_height::<T>(),
+		})
 	}
 
 	pub fn packet_receipt(
-		channel_id: Vec<u8>,
-		port_id: Vec<u8>,
-		seq: u64,
+		channel_id: ChannelId,
+		port_id: PortId,
+		seq: Sequence,
 	) -> Result<QueryPacketReceiptResponse, Error<T>> {
-		let port_id = port_id_from_bytes(port_id).map_err(|_| Error::<T>::DecodingError)?;
-		let channel_id =
-			channel_id_from_bytes(channel_id).map_err(|_| Error::<T>::DecodingError)?;
-		let sequence = ibc::core::ics04_channel::packet::Sequence::from(seq);
-		let receipt = PacketReceipt::<T>::get((port_id.clone(), channel_id, sequence))
+		let receipt = PacketReceipt::<T>::get((port_id.clone(), channel_id.clone(), seq))
 			.ok_or(Error::<T>::PacketReceiptNotFound)?;
-		let receipt = String::from_utf8(receipt).map_err(|_| Error::<T>::DecodingError)?;
-		let receipt_path = format!("{}", ReceiptsPath { port_id, channel_id, sequence });
+		let receipt_path = format!("{}", ReceiptsPath { port_id, channel_id, sequence: seq });
 		let key = apply_prefix(T::PALLET_PREFIX, vec![receipt_path]);
-		let receipt = &receipt == "Ok";
+		let receipt = match receipt {
+			Receipt::Ok => true,
+		};
 		Ok(QueryPacketReceiptResponse { receipt, trie_key: key, height: host_height::<T>() })
 	}
 
@@ -479,17 +497,25 @@ where
 		Ok(balance.parse().unwrap_or_default())
 	}
 
-	pub fn offchain_send_packet_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
+	pub fn offchain_send_packet_key(
+		channel_id: ChannelId,
+		port_id: PortId,
+		seq: Sequence,
+	) -> Vec<u8> {
 		let pair = (T::PALLET_PREFIX.to_vec(), b"SEND_PACKET", channel_id, port_id, seq);
 		pair.encode()
 	}
 
-	pub fn offchain_recv_packet_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
+	pub fn offchain_recv_packet_key(
+		channel_id: ChannelId,
+		port_id: PortId,
+		seq: Sequence,
+	) -> Vec<u8> {
 		let pair = (T::PALLET_PREFIX.to_vec(), b"RECV_PACKET", channel_id, port_id, seq);
 		pair.encode()
 	}
 
-	pub fn offchain_ack_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
+	pub fn offchain_ack_key(channel_id: ChannelId, port_id: PortId, seq: Sequence) -> Vec<u8> {
 		let pair = (T::PALLET_PREFIX.to_vec(), b"ACK", channel_id, port_id, seq);
 		pair.encode()
 	}
@@ -498,11 +524,7 @@ where
 		key: (PortId, ChannelId, Sequence),
 		ack: Vec<u8>,
 	) -> Result<(), Error<T>> {
-		let channel_id = key.1.to_string().as_bytes().to_vec();
-		let port_id = key.0.as_bytes().to_vec();
-		let seq = u64::from(key.2);
-
-		let key = Pallet::<T>::offchain_ack_key(channel_id, port_id, seq);
+		let key = Pallet::<T>::offchain_ack_key(key.1, key.0, key.2);
 		sp_io::offchain_index::set(&key, &ack);
 		log::trace!(target: "pallet_ibc", "in channel: [store_raw_acknowledgement] >> writing acknowledgement {:?} {:?}", key, ack);
 		Ok(())
@@ -511,20 +533,15 @@ where
 	pub(crate) fn packet_cleanup() -> Result<(), Error<T>> {
 		let pending_send_packet_seqs = StorageValueRef::persistent(OFFCHAIN_SEND_PACKET_SEQS);
 		let pending_recv_packet_seqs = StorageValueRef::persistent(OFFCHAIN_RECV_PACKET_SEQS);
-		let mut pending_send_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
+		let mut pending_send_sequences: BTreeMap<(PortId, ChannelId), (BTreeSet<u64>, u64)> =
 			pending_send_packet_seqs.get::<_>().ok().flatten().unwrap_or_default();
-		let mut pending_recv_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
+		let mut pending_recv_sequences: BTreeMap<(PortId, ChannelId), (BTreeSet<u64>, u64)> =
 			pending_recv_packet_seqs.get::<_>().ok().flatten().unwrap_or_default();
 		let ctx = routing::Context::<T>::default();
 
-		for (port_id_bytes, channel_id_bytes, _) in Channels::<T>::iter() {
-			let channel_id = channel_id_from_bytes(channel_id_bytes.clone())
-				.map_err(|_| Error::<T>::DecodingError)?;
-			let port_id =
-				port_id_from_bytes(port_id_bytes.clone()).map_err(|_| Error::<T>::DecodingError)?;
-
+		for (port_id, channel_id, _) in Channels::<T>::iter() {
 			let (mut send_seq_set, mut last_removed_send) = pending_send_sequences
-				.get(&(port_id_bytes.clone(), channel_id_bytes.clone()))
+				.get(&(port_id.clone(), channel_id.clone()))
 				.map(|set| set.clone())
 				.unwrap_or_default();
 			let last_removed_send_copy = last_removed_send;
@@ -533,9 +550,9 @@ where
 			for seq in send_seq_set.clone() {
 				if !PacketCommitment::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
 					let offchain_key = Pallet::<T>::offchain_send_packet_key(
-						channel_id_bytes.clone(),
-						port_id_bytes.clone(),
-						seq,
+						channel_id.clone(),
+						port_id.clone(),
+						seq.into(),
 					);
 					sp_io::offchain_index::clear(&offchain_key);
 					send_seq_set.remove(&seq);
@@ -555,9 +572,9 @@ where
 			for seq in range {
 				if !PacketCommitment::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
 					let offchain_key = Pallet::<T>::offchain_send_packet_key(
-						channel_id_bytes.clone(),
-						port_id_bytes.clone(),
-						seq,
+						channel_id.clone(),
+						port_id.clone(),
+						seq.into(),
 					);
 					if sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, &offchain_key)
 						.is_some()
@@ -572,13 +589,13 @@ where
 			}
 
 			pending_send_sequences.insert(
-				(port_id_bytes.clone(), channel_id_bytes.clone()),
+				(port_id.clone(), channel_id.clone()),
 				(send_seq_set, last_removed_send.max(last_removed_send_copy)),
 			);
 			pending_send_packet_seqs.set(&pending_send_sequences);
 
 			let (mut recv_seq_set, mut last_removed_ack) = pending_recv_sequences
-				.get(&(port_id_bytes.clone(), channel_id_bytes.clone()))
+				.get(&(port_id.clone(), channel_id.clone()))
 				.map(|set| set.clone())
 				.unwrap_or_default();
 			let last_removed_ack_copy = last_removed_ack;
@@ -587,14 +604,14 @@ where
 			for seq in recv_seq_set.clone() {
 				if !Acknowledgements::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
 					let offchain_key = Pallet::<T>::offchain_recv_packet_key(
-						channel_id_bytes.clone(),
-						port_id_bytes.clone(),
-						seq,
+						channel_id.clone(),
+						port_id.clone(),
+						seq.into(),
 					);
 					let ack_key = Pallet::<T>::offchain_ack_key(
-						channel_id_bytes.clone(),
-						port_id_bytes.clone(),
-						seq,
+						channel_id.clone(),
+						port_id.clone(),
+						seq.into(),
 					);
 					sp_io::offchain_index::clear(&offchain_key);
 					sp_io::offchain_index::clear(&ack_key);
@@ -614,15 +631,15 @@ where
 			for seq in range {
 				if !Acknowledgements::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
 					let offchain_key = Pallet::<T>::offchain_recv_packet_key(
-						channel_id_bytes.clone(),
-						port_id_bytes.clone(),
-						seq,
+						channel_id.clone(),
+						port_id.clone(),
+						seq.into(),
 					);
 
 					let ack_key = Pallet::<T>::offchain_ack_key(
-						channel_id_bytes.clone(),
-						port_id_bytes.clone(),
-						seq,
+						channel_id.clone(),
+						port_id.clone(),
+						seq.into(),
 					);
 					if sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, &offchain_key)
 						.is_some()
@@ -637,7 +654,7 @@ where
 				}
 			}
 			pending_recv_sequences.insert(
-				(port_id_bytes.clone(), channel_id_bytes.clone()),
+				(port_id.clone(), channel_id.clone()),
 				(recv_seq_set, last_removed_ack.max(last_removed_ack_copy)),
 			);
 
@@ -647,9 +664,9 @@ where
 	}
 
 	pub fn get_send_packet_info(
-		channel_id: Vec<u8>,
-		port_id: Vec<u8>,
-		sequences: Vec<u64>,
+		channel_id: ChannelId,
+		port_id: PortId,
+		sequences: Vec<Sequence>,
 	) -> Result<Vec<PacketInfo>, Error<T>> {
 		let packets = sequences
 			.clone()
@@ -666,9 +683,9 @@ where
 	}
 
 	pub fn get_recv_packet_info(
-		channel_id: Vec<u8>,
-		port_id: Vec<u8>,
-		sequences: Vec<u64>,
+		channel_id: ChannelId,
+		port_id: PortId,
+		sequences: Vec<Sequence>,
 	) -> Result<Vec<PacketInfo>, Error<T>> {
 		let packets = sequences
 			.clone()
@@ -820,20 +837,16 @@ where
 		let ack = ctx.ack_commitment(ack.into());
 		ctx.store_packet_acknowledgement(
 			(packet.destination_port.clone(), packet.destination_channel, packet.sequence),
-			ack,
+			ack.clone(),
 		)
 		.map_err(|e| IbcHandlerError::WriteAcknowledgementError { msg: Some(e.to_string()) })?;
 		let host_height = ctx.host_height();
-		let event = IbcEvent::WriteAcknowledgement {
-			revision_height: host_height.revision_height,
-			revision_number: host_height.revision_number,
-			port_id: packet.source_port.as_bytes().to_vec(),
-			channel_id: packet.source_channel.clone().to_string().as_bytes().to_vec(),
-			dest_port: packet.destination_port.as_bytes().to_vec(),
-			dest_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
-			sequence: packet.sequence.into(),
+		let event = ibc::core::ics04_channel::events::WriteAcknowledgement {
+			height: host_height,
+			packet: packet.clone(),
+			ack: ack.into_vec(),
 		};
-		Self::deposit_event(Event::<T>::Events { events: vec![Ok(event)] });
+		Self::deposit_event(Event::<T>::Events { events: vec![Ok(event.into())] });
 		Ok(())
 	}
 

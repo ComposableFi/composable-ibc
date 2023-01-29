@@ -29,7 +29,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false }
 # ibc
-ibc-proto = { path = "../../ibc/proto", default-features = false }
+ibc-proto = { path = "../../ibc/proto", default-features = false, features = ["parity-scale-codec"] }
 tendermint = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", optional = true, default-features = false } # cannot be defined as optional in workspace
 tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
 ics23 = { git = "https://github.com/confio/ics23", rev = "a4daeb4c24ce1be827829c0841446abc690c4f11", default-features = false }
@@ -58,6 +58,7 @@ serde = { version = "1.0", optional = true }
 [dependencies.ibc]
 path = "../../ibc/modules"
 default-features = false
+features = ["parity-scale-codec"]
 
 [dependencies.ibc-derive]
 path = "../../ibc/derive"

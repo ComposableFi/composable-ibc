@@ -20,6 +20,11 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::{applications::transfer, prelude::*};
 
+#[cfg_attr(
+	feature = "parity-scale-codec",
+	derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
+#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize, borsh::BorshDeserialize))]
 /// The version field for a `ChannelEnd`.
 ///
 /// This field is opaque to the core IBC protocol.

@@ -1,9 +1,12 @@
 use crate::{format, Config};
 use alloc::vec;
 use frame_support::storage::{child, child::ChildInfo};
-use ibc::core::ics24_host::{
-	identifier::{ChannelId, PortId},
-	path::SeqSendsPath,
+use ibc::core::{
+	ics04_channel::packet::Sequence,
+	ics24_host::{
+		identifier::{ChannelId, PortId},
+		path::SeqSendsPath,
+	},
 };
 use ibc_primitives::apply_prefix;
 use sp_std::marker::PhantomData;
@@ -14,13 +17,13 @@ use sp_std::marker::PhantomData;
 pub struct NextSequenceSend<T>(PhantomData<T>);
 
 impl<T: Config> NextSequenceSend<T> {
-	pub fn get(port_id: PortId, channel_id: ChannelId) -> Option<u64> {
+	pub fn get(port_id: PortId, channel_id: ChannelId) -> Option<Sequence> {
 		let next_seq_send_path = format!("{}", SeqSendsPath(port_id, channel_id));
 		let next_seq_send_key = apply_prefix(T::PALLET_PREFIX, vec![next_seq_send_path]);
 		child::get(&ChildInfo::new_default(T::PALLET_PREFIX), &next_seq_send_key)
 	}
 
-	pub fn insert(port_id: PortId, channel_id: ChannelId, seq: u64) {
+	pub fn insert(port_id: PortId, channel_id: ChannelId, seq: Sequence) {
 		let next_seq_send_path = format!("{}", SeqSendsPath(port_id, channel_id));
 		let next_seq_send_key = apply_prefix(T::PALLET_PREFIX, vec![next_seq_send_path]);
 		child::put(&ChildInfo::new_default(T::PALLET_PREFIX), &next_seq_send_key, &seq)
