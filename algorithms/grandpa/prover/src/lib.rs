@@ -197,11 +197,11 @@ where
 
 	/// Returns the finality proof for the given parachain header numbers finalized by the given
 	/// relay chain height.
-	pub async fn query_finalized_parachain_headers_with_proof<H>(
+	pub async fn query_finality_proof<H, F>(
 		&self,
-		client_state: &ClientState,
-		mut latest_finalized_height: u32,
-		header_numbers: Vec<T::BlockNumber>,
+		previous_finalized_height: u32,
+		latest_finalized_height: u32,
+		skip_para_block: F,
 	) -> Result<ParachainHeadersWithFinalityProof<H>, anyhow::Error>
 	where
 		H: Header + codec::Decode,
@@ -210,37 +210,8 @@ where
 		T::Hash: From<<H::Hasher as subxt::config::Hasher>::Output>,
 		H::Number: finality_grandpa::BlockNumberOps,
 		T::BlockNumber: One,
+		F: Fn(&H::Number) -> bool,
 	{
-		let previous_para_hash = self
-			.para_client
-			.rpc()
-			.block_hash(Some((client_state.latest_para_height + 1).into()))
-			.await?
-			.ok_or_else(|| anyhow!("Failed to fetch previous finalized parachain + 1 hash"))?;
-		let address = parachain::api::storage().parachain_system().validation_data();
-		let validation_data = self
-			.para_client
-			.storage()
-			.at(Some(previous_para_hash))
-			.await
-			.expect("storage client should be available")
-			.fetch(&address)
-			.await
-			.unwrap()
-			.unwrap();
-		// This ensures we don't miss any parachain blocks.
-		let previous_finalized_height =
-			validation_data.relay_parent_number.min(client_state.latest_relay_height);
-
-		// we want to know if we've missed any authority set changes since we last updated the
-		// relay chain on the light client.
-		let session_end = self.session_end_for_block(client_state.latest_relay_height).await?;
-
-		if client_state.latest_relay_height != session_end && latest_finalized_height > session_end
-		{
-			latest_finalized_height = session_end
-		}
-
 		let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 			// we cast between the same type but different crate versions.
 			&*unsafe {
@@ -335,7 +306,7 @@ where
 			let para_header: T::Header = Decode::decode(&mut &parachain_header_bytes[..])?;
 			let para_block_number = para_header.number();
 			// skip genesis header or any unknown headers
-			if para_block_number == Zero::zero() || !header_numbers.contains(&para_block_number) {
+			if para_block_number == Zero::zero() || skip_para_block(&para_block_number) {
 				continue
 			}
 			para_headers.push((header.hash(), para_header.clone()));
@@ -364,8 +335,57 @@ where
 		})
 	}
 
+	/// Returns the finality proof for the given parachain header numbers finalized by the given
+	/// relay chain height.
+	pub async fn query_finalized_parachain_headers_with_proof<H>(
+		&self,
+		client_state: &ClientState<T::Hash>,
+		mut latest_finalized_height: u32,
+		header_numbers: Vec<T::BlockNumber>,
+	) -> Result<ParachainHeadersWithFinalityProof<H>, anyhow::Error>
+	where
+		H: Header,
+		u32: From<H::Number>,
+		H::Hash: From<T::Hash>,
+		T::Hash: From<H::Hash>,
+		H::Number: finality_grandpa::BlockNumberOps,
+		T::BlockNumber: One,
+	{
+		let previous_para_hash = self
+			.para_client
+			.rpc()
+			.block_hash(Some((client_state.latest_para_height + 1).into()))
+			.await?
+			.ok_or_else(|| anyhow!("Failed to fetch previous finalized parachain + 1 hash"))?;
+		let address = parachain::api::storage().parachain_system().validation_data();
+		let validation_data = self
+			.para_client
+			.storage()
+			.fetch(&address, Some(previous_para_hash))
+			.await
+			.unwrap()
+			.unwrap();
+		// This ensures we don't miss any parachain blocks.
+		let previous_finalized_height =
+			validation_data.relay_parent_number.min(client_state.latest_relay_height);
+
+		// we want to know if we've missed any authority set changes since we last updated the
+		// relay chain on the light client.
+		let session_end = self.session_end_for_block(client_state.latest_relay_height).await?;
+
+		if client_state.latest_relay_height != session_end && latest_finalized_height > session_end
+		{
+			latest_finalized_height = session_end
+		}
+
+		self.query_finality_proof(previous_finalized_height, latest_finalized_height, |block| {
+			!header_numbers.contains(block)
+		})
+		.await
+	}
+
 	// Queries the block at which the epoch for the given block belongs to ends.
-	async fn session_end_for_block(&self, block: u32) -> Result<u32, anyhow::Error> {
+	pub async fn session_end_for_block(&self, block: u32) -> Result<u32, anyhow::Error> {
 		let epoch_addr = polkadot::api::storage().babe().epoch_start();
 		let block_hash = self.relay_client.rpc().block_hash(Some(block.into())).await?;
 		let (previous_epoch_start, current_epoch_start) = self

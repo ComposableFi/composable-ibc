@@ -370,6 +370,20 @@ pub trait MisbehaviourHandler {
 	) -> Result<(), anyhow::Error>;
 }
 
+/// Provides an interface for syncing light clients to the latest state
+#[async_trait::async_trait]
+pub trait LightClientSync {
+	/// Checks if the self's light client on counterparty is synced
+	async fn is_synced<C: Chain>(&self, counterparty: &C) -> Result<bool, anyhow::Error>;
+
+	/// Get all the messages from self required to update self's light client on the counterparty
+	async fn fetch_mandatory_updates<C: Chain>(
+		&self,
+		counterparty: &C,
+		latest_client_height: Height,
+	) -> Result<Vec<Any>, anyhow::Error>;
+}
+
 /// Provides an interface for the chain to the relayer core for submitting IbcEvents as well as
 /// finality notifications
 #[async_trait::async_trait]
