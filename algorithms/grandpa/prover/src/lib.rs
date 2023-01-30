@@ -195,14 +195,16 @@ where
 		Ok(header)
 	}
 
-	/// Returns the finality proof for the given parachain header numbers finalized by the given
-	/// relay chain height.
-	pub async fn query_finality_proof<H, F>(
+	/// Returns a tuple of the finality proof for the given parachain `header_numbers` finalized by
+	/// `latest_finalized_height` and also latest parachain block finalized by the former.
+	/// If `header_numbers` is empty we only fetch the proof for the latest finalized parachain
+	/// block
+	pub async fn query_finality_proof<H>(
 		&self,
 		previous_finalized_height: u32,
 		latest_finalized_height: u32,
-		skip_para_block: F,
-	) -> Result<ParachainHeadersWithFinalityProof<H>, anyhow::Error>
+		mut header_numbers: Vec<T::BlockNumber>,
+	) -> Result<(ParachainHeadersWithFinalityProof<H>, T::BlockNumber), anyhow::Error>
 	where
 		H: Header + codec::Decode,
 		u32: From<<H as Header>::Number>,
@@ -210,7 +212,6 @@ where
 		T::Hash: From<<H::Hasher as subxt::config::Hasher>::Output>,
 		H::Number: finality_grandpa::BlockNumberOps,
 		T::BlockNumber: One,
-		F: Fn(&<T as Config>::BlockNumber) -> bool,
 	{
 		let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 			// we cast between the same type but different crate versions.
@@ -272,49 +273,28 @@ where
 		// we are interested only in the blocks where our parachain header changes.
 		let para_storage_key = parachain_header_storage_key(self.para_id);
 		let keys = vec![para_storage_key.as_bytes_ref()];
+		let mut parachain_headers_with_proof =
+			BTreeMap::<H::Hash, ParachainHeaderProofs>::default();
 
-		let change_set = self
-			.relay_client
-			.rpc()
-			.query_storage(keys.clone(), start, Some(latest_finalized_hash))
-			.await?;
-
-		let mut parachain_headers_with_proof = BTreeMap::<H256, ParachainHeaderProofs>::default();
-		let mut para_headers = vec![];
-
-		for changes in change_set {
-			let header = self
-				.relay_client
-				.rpc()
-				.header(Some(changes.block))
-				.await?
-				.ok_or_else(|| anyhow!("block not found {:?}", changes.block))?;
-
+		let (parachain_headers_with_proof, latest_finalized_para_block) = if header_numbers
+			.is_empty()
+		{
 			let parachain_header_bytes = {
 				let key = polkadot::api::storage().paras().heads(&Id(self.para_id));
 				self.relay_client
 					.storage()
-					.at(Some(header.hash()))
-					.await
-					.expect("Storage client to be available")
-					.fetch(&key)
+					.fetch(&key, Some(latest_finalized_hash))
 					.await?
 					.expect("Header exists in its own changeset; qed")
 					.0
 			};
 
 			let para_header: T::Header = Decode::decode(&mut &parachain_header_bytes[..])?;
-			let para_block_number = para_header.number();
-			// skip genesis header or any unknown headers
-			if para_block_number == Zero::zero() || skip_para_block(&para_block_number) {
-				continue
-			}
-			para_headers.push((header.hash(), para_header.clone()));
 
 			let state_proof = self
 				.relay_client
 				.rpc()
-				.read_proof(keys.clone(), Some(header.hash()))
+				.read_proof(keys.clone(), Some(latest_finalized_hash))
 				.await?
 				.proof
 				.into_iter()
@@ -326,21 +306,86 @@ where
 					.await
 					.map_err(|err| anyhow!("Error fetching timestamp with proof: {err:?}"))?;
 			let proofs = ParachainHeaderProofs { state_proof, extrinsic, extrinsic_proof };
-			parachain_headers_with_proof.insert(header.hash().into(), proofs);
-		}
+			parachain_headers_with_proof.insert(latest_finalized_hash.into(), proofs);
+			(parachain_headers_with_proof, *para_header.number())
+		} else {
+			let change_set = self
+				.relay_client
+				.rpc()
+				.query_storage(keys.clone(), start, Some(latest_finalized_hash))
+				.await?;
 
-		Ok(ParachainHeadersWithFinalityProof {
-			finality_proof,
-			parachain_headers: parachain_headers_with_proof,
-		})
+			for changes in change_set {
+				let header = self
+					.relay_client
+					.rpc()
+					.header(Some(changes.block))
+					.await?
+					.ok_or_else(|| anyhow!("block not found {:?}", changes.block))?;
+
+				let parachain_header_bytes = {
+					let key = polkadot::api::storage().paras().heads(&Id(self.para_id));
+					self.relay_client
+						.storage()
+						.fetch(&key, Some(header.hash()))
+						.await?
+						.expect("Header exists in its own changeset; qed")
+						.0
+				};
+
+				let para_header: T::Header = Decode::decode(&mut &parachain_header_bytes[..])?;
+				let para_block_number = *para_header.number();
+				// skip genesis header or any unknown headers
+				if para_block_number == Zero::zero() || !header_numbers.contains(&para_block_number)
+				{
+					continue
+				}
+
+				let state_proof = self
+					.relay_client
+					.rpc()
+					.read_proof(keys.clone(), Some(header.hash()))
+					.await?
+					.proof
+					.into_iter()
+					.map(|p| p.0)
+					.collect();
+
+				let TimeStampExtWithProof { ext: extrinsic, proof: extrinsic_proof } =
+					fetch_timestamp_extrinsic_with_proof(
+						&self.para_client,
+						Some(para_header.hash()),
+					)
+					.await
+					.map_err(|err| anyhow!("Error fetching timestamp with proof: {err:?}"))?;
+				let proofs = ParachainHeaderProofs { state_proof, extrinsic, extrinsic_proof };
+				parachain_headers_with_proof.insert(header.hash().into(), proofs);
+			}
+
+			header_numbers.sort();
+
+			(
+				parachain_headers_with_proof,
+				header_numbers.into_iter().max().expect("Header numbers is not empty"),
+			)
+		};
+
+		Ok((
+			ParachainHeadersWithFinalityProof {
+				finality_proof,
+				parachain_headers: parachain_headers_with_proof,
+			},
+			latest_finalized_para_block,
+		))
 	}
 
 	/// Returns the finality proof for the given parachain header numbers finalized by the given
 	/// relay chain height.
 	pub async fn query_finalized_parachain_headers_with_proof<H>(
 		&self,
-		client_state: &ClientState<T::Hash>,
-		mut latest_finalized_height: u32,
+		previous_finalized_para_height: u32,
+		previous_finalized_relay_height: u32,
+		latest_finalized_height: u32,
 		header_numbers: Vec<T::BlockNumber>,
 	) -> Result<ParachainHeadersWithFinalityProof<H>, anyhow::Error>
 	where
@@ -354,7 +399,7 @@ where
 		let previous_para_hash = self
 			.para_client
 			.rpc()
-			.block_hash(Some((client_state.latest_para_height + 1).into()))
+			.block_hash(Some((previous_finalized_para_height + 1).into()))
 			.await?
 			.ok_or_else(|| anyhow!("Failed to fetch previous finalized parachain + 1 hash"))?;
 		let address = parachain::api::storage().parachain_system().validation_data();
@@ -367,21 +412,16 @@ where
 			.unwrap();
 		// This ensures we don't miss any parachain blocks.
 		let previous_finalized_height =
-			validation_data.relay_parent_number.min(client_state.latest_relay_height);
+			validation_data.relay_parent_number.min(previous_finalized_relay_height);
 
-		// we want to know if we've missed any authority set changes since we last updated the
-		// relay chain on the light client.
-		let session_end = self.session_end_for_block(client_state.latest_relay_height).await?;
-
-		if client_state.latest_relay_height != session_end && latest_finalized_height > session_end
-		{
-			latest_finalized_height = session_end
-		}
-
-		self.query_finality_proof(previous_finalized_height, latest_finalized_height, |block| {
-			!header_numbers.contains(block)
-		})
-		.await
+		let (para_headers_with_proof, ..) = self
+			.query_finality_proof(
+				previous_finalized_height,
+				latest_finalized_height,
+				header_numbers,
+			)
+			.await?;
+		Ok(para_headers_with_proof)
 	}
 
 	/// Queries the block at which the epoch for the given block belongs to ends.

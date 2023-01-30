@@ -165,7 +165,7 @@ impl IbcProvider for AnyChain {
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &T,
-	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
 		T: Chain,
 	{

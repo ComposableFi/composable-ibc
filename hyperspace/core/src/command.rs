@@ -225,7 +225,7 @@ impl Cmd {
 	pub async fn sync_clients(&self) -> Result<()> {
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
-		let mut config: Config = toml::from_str(&file_content)?;
+		let config: Config = toml::from_str(&file_content)?;
 		let any_chain_a = config.chain_a.clone().into_client().await?;
 		let any_chain_b = config.chain_b.clone().into_client().await?;
 

@@ -80,7 +80,7 @@ impl FinalityProtocol {
 		source: &mut ParachainClient<T>,
 		finality_event: FinalityEvent,
 		counterparty: &C,
-	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
 		T: config::Config + Send + Sync,
 		C: Chain,
@@ -119,7 +119,7 @@ pub async fn query_latest_ibc_events_with_beefy<T, C>(
 	source: &mut ParachainClient<T>,
 	finality_event: FinalityEvent,
 	counterparty: &C,
-) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 where
 	T: config::Config + Send + Sync,
 	C: Chain,
@@ -311,7 +311,7 @@ where
 		Any { value, type_url: msg.type_url() }
 	};
 
-	Ok((update_header, events, update_type))
+	Ok((vec![update_header], events, update_type))
 }
 
 /// Query the latest events that have been finalized by the GRANDPA finality protocol.
@@ -319,7 +319,7 @@ pub async fn query_latest_ibc_events_with_grandpa<T, C>(
 	source: &mut ParachainClient<T>,
 	finality_event: FinalityEvent,
 	counterparty: &C,
-) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 where
 	T: config::Config + Send + Sync,
 	C: Chain,
@@ -370,6 +370,18 @@ where
 		))?
 	}
 
+	let (mut missed_updates, previous_finalized_relay_height, previous_finalized_para_height) =
+		source
+			.query_missed_grandpa_updates(
+				client_state.latest_relay_height,
+				justification.commit.target_number,
+				source.client_id(),
+				counterparty.account_id(),
+			)
+			.await?;
+	let previous_finalized_para_height = previous_finalized_para_height
+		.map(|height| u32::from(height))
+		.unwrap_or(client_state.latest_para_height);
 	let prover = source.grandpa_prover();
 
 	// fetch the latest finalized parachain header
@@ -378,8 +390,8 @@ where
 		.await?;
 
 	// notice the inclusive range
-	let finalized_blocks = ((client_state.latest_para_height + 1)..=
-		u32::from(finalized_para_header.number()))
+	let finalized_blocks = ((previous_finalized_para_height + 1)..=
+		u32::from(*finalized_para_header.number()))
 		.collect::<Vec<_>>();
 
 	log::info!(
@@ -447,18 +459,11 @@ where
 		headers_with_events.insert(T::BlockNumber::from(latest_finalized_block));
 	}
 
-	let cs = grandpa_light_client_primitives::ClientState {
-		current_authorities: client_state.current_authorities.clone(),
-		current_set_id: client_state.current_set_id,
-		latest_relay_hash: client_state.latest_relay_hash,
-		latest_relay_height: client_state.latest_relay_height,
-		latest_para_height: client_state.latest_para_height,
-		para_id: client_state.para_id,
-	};
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
-		.query_finalized_parachain_headers_with_proof::<T::Header>(
-			&cs,
-			justification.commit.target_number.into(),
+		.query_finalized_parachain_headers_with_proof(
+			previous_finalized_para_height,
+			previous_finalized_relay_height,
+			justification.commit.target_number,
 			headers_with_events.into_iter().collect(),
 		)
 		.await?;
@@ -499,5 +504,7 @@ where
 		Any { value, type_url: msg.type_url() }
 	};
 
-	Ok((update_header, events, update_type))
+	missed_updates.push(update_header);
+
+	Ok((missed_updates, events, update_type))
 }

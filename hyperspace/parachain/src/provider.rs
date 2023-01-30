@@ -106,7 +106,7 @@ where
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &C,
-	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
 		C: Chain,
 	{
@@ -246,7 +246,6 @@ where
 		)
 		.await
 		.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
-
 		Ok(proof.proof)
 	}
 

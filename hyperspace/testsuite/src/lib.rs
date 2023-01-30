@@ -620,7 +620,6 @@ where
 	chain_a.submit(messages_to_a).await.unwrap();
 	chain_b.submit(messages_to_b).await.unwrap();
 
-	let (handle, channel_id, channel_b, _connection_id) =
-		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(0)).await;
+	let (handle, ..) = setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(0)).await;
 	handle.abort();
 }
