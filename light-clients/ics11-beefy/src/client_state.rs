@@ -14,12 +14,12 @@
 // limitations under the License.
 
 use alloc::string::ToString;
-use beefy_primitives::{known_payload_ids::MMR_ROOT_ID, mmr::BeefyNextAuthoritySet};
+use beefy_primitives::{known_payloads::MMR_ROOT_ID, mmr::BeefyNextAuthoritySet};
 use codec::{Decode, Encode};
 use core::{convert::TryFrom, fmt::Debug, marker::PhantomData, time::Duration};
 use ibc::prelude::*;
-use primitive_types::H256;
 use serde::{Deserialize, Serialize};
+use sp_core::H256;
 use sp_runtime::SaturatedConversion;
 use tendermint_proto::Protobuf;
 
@@ -50,9 +50,6 @@ pub struct ClientState<H> {
 	pub latest_beefy_height: u32,
 	/// Block height when the client was frozen due to a misbehaviour
 	pub frozen_height: Option<Height>,
-	/// Block number that the beefy protocol was activated on the relay chain.
-	/// This should be the first block in the merkle-mountain-range tree.
-	pub beefy_activation_block: u32,
 	/// latest parachain height
 	pub latest_para_height: u32,
 	/// ParaId of associated parachain
@@ -74,18 +71,10 @@ impl<H: Clone> ClientState<H> {
 		para_id: u32,
 		latest_para_height: u32,
 		mmr_root_hash: H256,
-		beefy_activation_block: u32,
 		latest_beefy_height: u32,
 		authority_set: BeefyNextAuthoritySet<H256>,
 		next_authority_set: BeefyNextAuthoritySet<H256>,
 	) -> Result<ClientState<H>, Error> {
-		if beefy_activation_block > latest_beefy_height {
-			return Err(Error::Custom(
-				"ClientState beefy activation block cannot be greater than latest_beefy_height"
-					.to_string(),
-			))
-		}
-
 		if authority_set.id >= next_authority_set.id {
 			return Err(Error::Custom(
 				"ClientState next authority set id must be greater than current authority set id"
@@ -99,7 +88,6 @@ impl<H: Clone> ClientState<H> {
 			mmr_root_hash,
 			latest_beefy_height,
 			frozen_height: None,
-			beefy_activation_block,
 			authority: authority_set,
 			next_authority_set,
 			relay_chain,
@@ -107,13 +95,6 @@ impl<H: Clone> ClientState<H> {
 			para_id,
 			_phantom: PhantomData,
 		})
-	}
-
-	pub fn to_leaf_index(&self, block_number: u32) -> u32 {
-		if self.beefy_activation_block == 0 {
-			return block_number.saturating_sub(1)
-		}
-		self.beefy_activation_block.saturating_sub(block_number + 1)
 	}
 
 	/// Should only be called if this header has been verified successfully
@@ -320,7 +301,6 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 			mmr_root_hash,
 			latest_beefy_height: raw.latest_beefy_height,
 			frozen_height: raw.frozen_height.map(|height| Height::new(raw.para_id.into(), height)),
-			beefy_activation_block: raw.beefy_activation_block,
 			authority: authority_set,
 			next_authority_set,
 			relay_chain,
@@ -339,7 +319,6 @@ impl<H> From<ClientState<H>> for RawClientState {
 			frozen_height: client_state
 				.frozen_height
 				.map(|frozen_height| frozen_height.revision_height),
-			beefy_activation_block: client_state.beefy_activation_block,
 			authority: Some(BeefyAuthoritySet {
 				id: client_state.authority.id,
 				len: client_state.authority.len,
@@ -369,7 +348,6 @@ pub mod test_util {
 				2000,
 				0,
 				Default::default(),
-				0,
 				0,
 				Default::default(),
 				Default::default(),

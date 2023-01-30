@@ -18,8 +18,8 @@ use beefy_light_client_primitives::{
 };
 use codec::{Decode, Encode};
 use core::{fmt::Debug, marker::PhantomData};
-use pallet_mmr_primitives::BatchProof;
-use primitive_types::H256;
+use pallet_mmr_primitives::Proof;
+use sp_core::H256;
 use tendermint_proto::Protobuf;
 
 use crate::{
@@ -80,7 +80,6 @@ where
 					mmr_root_hash: client_state.mmr_root_hash,
 					current_authorities: client_state.authority.clone(),
 					next_authorities: client_state.next_authority_set.clone(),
-					beefy_activation_block: client_state.beefy_activation_block,
 				};
 				// If mmr update exists verify it and return the new light client state
 				// or else return existing light client state
@@ -93,37 +92,26 @@ where
 
 				// Extract parachain headers from the beefy header if they exist
 				if let Some(headers_with_proof) = header.headers_with_proof {
-					let mut leaf_indices = vec![];
 					let parachain_headers = headers_with_proof
 						.headers
 						.into_iter()
-						.map(|header| {
-							let leaf_index = client_state.to_leaf_index(
-								header.partial_mmr_leaf.parent_number_and_hash.0 + 1,
-							);
-							leaf_indices.push(leaf_index as u64);
-							ParachainHeader {
-								parachain_header: header.parachain_header.encode(),
-								partial_mmr_leaf: header.partial_mmr_leaf,
-								para_id: client_state.para_id,
-								parachain_heads_proof: header.parachain_heads_proof,
-								heads_leaf_index: header.heads_leaf_index,
-								heads_total_count: header.heads_total_count,
-								extrinsic_proof: header.extrinsic_proof,
-								timestamp_extrinsic: header.timestamp_extrinsic,
-							}
+						.map(|header| ParachainHeader {
+							parachain_header: header.parachain_header.encode(),
+							partial_mmr_leaf: header.partial_mmr_leaf,
+							para_id: client_state.para_id,
+							parachain_heads_proof: header.parachain_heads_proof,
+							heads_leaf_index: header.heads_leaf_index,
+							heads_total_count: header.heads_total_count,
+							extrinsic_proof: header.extrinsic_proof,
+							timestamp_extrinsic: header.timestamp_extrinsic,
 						})
 						.collect::<Vec<_>>();
 
-					let leaf_count = (client_state
-						.to_leaf_index(light_client_state.latest_beefy_height) +
-						1) as u64;
-
 					let parachain_update_proof = ParachainsUpdateProof {
 						parachain_headers,
-						mmr_proof: BatchProof {
-							leaf_indices,
-							leaf_count,
+						mmr_proof: Proof {
+							leaf_indices: headers_with_proof.leaf_indices,
+							leaf_count: headers_with_proof.leaf_count,
 							items: headers_with_proof
 								.mmr_proofs
 								.into_iter()

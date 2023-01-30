@@ -14,17 +14,16 @@
 // limitations under the License.
 
 use crate::verify_parachain_headers_with_grandpa_finality_proof;
-use codec::Decode;
-use finality_grandpa_rpc::GrandpaApiClient;
+use codec::{Decode, Encode};
 use futures::StreamExt;
-use grandpa_prover::{
-	beefy_prover::helpers::unsafe_arc_cast, host_functions::HostFunctionsProvider, GrandpaProver,
-};
+use grandpa_prover::{host_functions::HostFunctionsProvider, GrandpaProver};
 use polkadot_core_primitives::Header;
-use primitives::justification::GrandpaJustification;
+use primitives::{justification::GrandpaJustification, ParachainHeadersWithFinalityProof};
 use serde::{Deserialize, Serialize};
-use sp_core::H256;
-use subxt::PolkadotConfig;
+use subxt::{
+	config::substrate::{BlakeTwo256, SubstrateHeader},
+	rpc_params, PolkadotConfig,
+};
 
 pub type Justification = GrandpaJustification<Header>;
 
@@ -53,30 +52,30 @@ async fn follow_grandpa_justifications() {
 	let session_length = prover.session_length().await.unwrap();
 	prover
 		.relay_client
-		.rpc()
-		.subscribe_blocks()
+		.blocks()
+		.subscribe_finalized()
 		.await
 		.unwrap()
 		.filter_map(|result| futures::future::ready(result.ok()))
-		.skip_while(|h| futures::future::ready(h.number < (session_length * 2) + 10))
+		.skip_while(|h| futures::future::ready(h.number() < (session_length * 2) + 10))
 		.take(1)
 		.collect::<Vec<_>>()
 		.await;
-	println!("Grandpa proofs are now available");
 
-	let mut subscription =
-		GrandpaApiClient::<JustificationNotification, H256, u32>::subscribe_justifications(
-			// we cast between the same type but different crate versions.
-			&*unsafe {
-				unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(prover.relay_ws_client.clone())
-			},
+	let mut subscription = prover
+		.relay_client
+		.rpc()
+		.subscribe::<JustificationNotification>(
+			"grandpa_subscribeJustifications",
+			rpc_params![],
+			"grandpa_unsubscribeJustifications",
 		)
 		.await
-		.expect("Failed to subscribe to grandpa justifications")
+		.unwrap()
 		.take(100);
 
 	let mut client_state = prover.initialize_client_state().await.unwrap();
-
+	println!("Grandpa proofs are now available");
 	while let Some(Ok(JustificationNotification(sp_core::Bytes(justification)))) =
 		subscription.next().await
 	{
@@ -97,6 +96,7 @@ async fn follow_grandpa_justifications() {
 		}
 
 		println!("current_set_id: {}", client_state.current_set_id);
+		println!("latest_relay_height: {}", client_state.latest_relay_height);
 		println!(
 			"For relay chain header: Hash({:?}), Number({})",
 			justification.commit.target_hash, justification.commit.target_number
@@ -106,13 +106,16 @@ async fn follow_grandpa_justifications() {
 		dbg!(&header_numbers);
 
 		let proof = prover
-			.query_finalized_parachain_headers_with_proof(
+			.query_finalized_parachain_headers_with_proof::<SubstrateHeader<u32, BlakeTwo256>>(
 				&client_state,
 				justification.commit.target_number,
 				header_numbers,
 			)
 			.await
 			.expect("Failed to fetch finalized parachain headers with proof");
+
+		let proof = proof.encode();
+		let proof = ParachainHeadersWithFinalityProof::<Header>::decode(&mut &*proof).unwrap();
 
 		let new_client_state = verify_parachain_headers_with_grandpa_finality_proof::<
 			Header,

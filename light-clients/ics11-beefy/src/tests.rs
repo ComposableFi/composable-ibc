@@ -24,7 +24,8 @@ use crate::{
 		AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager, MockClientTypes,
 	},
 };
-use beefy_light_client_primitives::{NodesUtils, PartialMmrLeaf};
+use beefy_light_client_primitives::{EncodedVersionedFinalityProof, NodesUtils, PartialMmrLeaf};
+use beefy_primitives::VersionedFinalityProof;
 use beefy_prover::{
 	helpers::{fetch_timestamp_extrinsic_with_proof, TimeStampExtWithProof},
 	runtime, Prover,
@@ -49,7 +50,6 @@ use ibc::{
 	test_utils::get_dummy_account_id,
 	Height,
 };
-use json::Value;
 use std::time::Duration;
 use subxt::{
 	rpc::{rpc_params, Subscription},
@@ -92,18 +92,18 @@ async fn test_continuous_update_of_beefy_client() {
 	let client_wrapper = Prover {
 		relay_client: relay_client.clone(),
 		para_client: para_client.clone(),
-		beefy_activation_block: 0,
 		para_id: 2000,
 	};
 
 	println!("Waiting for parachain to start producing blocks");
-	let block_sub = para_client.rpc().subscribe_blocks().await.unwrap();
+	let block_sub = para_client.blocks().subscribe_finalized().await.unwrap();
 	block_sub.take(2).collect::<Vec<_>>().await;
 	println!("Parachain has started producing blocks");
 
 	let (client_state, consensus_state) = loop {
-		let beefy_state = client_wrapper.construct_beefy_client_state(0).await.unwrap();
-		let subxt_block_number: subxt::rpc::BlockNumber = beefy_state.latest_beefy_height.into();
+		let beefy_state = client_wrapper.construct_beefy_client_state().await.unwrap();
+		let subxt_block_number: subxt::rpc::types::BlockNumber =
+			beefy_state.latest_beefy_height.into();
 		let block_hash = client_wrapper
 			.relay_client
 			.rpc()
@@ -116,7 +116,15 @@ async fn test_continuous_update_of_beefy_client() {
 					client_wrapper.para_id,
 				),
 			);
-			relay_client.storage().fetch(&key, block_hash).await.unwrap().unwrap()
+			relay_client
+				.storage()
+				.at(block_hash)
+				.await
+				.expect("storage client should be available")
+				.fetch(&key)
+				.await
+				.unwrap()
+				.unwrap()
 		};
 		let decoded_para_head = frame_support::sp_runtime::generic::Header::<
 			u32,
@@ -130,7 +138,6 @@ async fn test_continuous_update_of_beefy_client() {
 			mmr_root_hash: beefy_state.mmr_root_hash,
 			latest_beefy_height: beefy_state.latest_beefy_height,
 			frozen_height: None,
-			beefy_activation_block: beefy_state.beefy_activation_block,
 			latest_para_height: block_number,
 			para_id: client_wrapper.para_id,
 			authority: beefy_state.current_authorities,
@@ -141,7 +148,7 @@ async fn test_continuous_update_of_beefy_client() {
 		if block_number == 0 {
 			continue
 		}
-		let subxt_block_number: subxt::rpc::BlockNumber = block_number.into();
+		let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
 		let block_hash = client_wrapper
 			.para_client
 			.rpc()
@@ -178,7 +185,7 @@ async fn test_continuous_update_of_beefy_client() {
 	// Create the client
 	let res = dispatch(&ctx, ClientMsg::CreateClient(create_client)).unwrap();
 	ctx.store_client_result(res.result).unwrap();
-	let subscription: Subscription<String> = relay_client
+	let subscription: Subscription<EncodedVersionedFinalityProof> = relay_client
 		.rpc()
 		.subscribe(
 			"beefy_subscribeJustifications",
@@ -187,14 +194,19 @@ async fn test_continuous_update_of_beefy_client() {
 		)
 		.await
 		.unwrap();
-	let mut subscription = subscription.take(100);
+	let mut subscription_stream = subscription.enumerate().take(100);
 
-	while let Some(Ok(commitment)) = subscription.next().await {
-		let recv_commitment: sp_core::Bytes = json::from_value(Value::String(commitment)).unwrap();
-		let signed_commitment: beefy_primitives::SignedCommitment<
+	while let Some((count, Ok(encoded_versioned_finality_proof))) = subscription_stream.next().await
+	{
+		let beefy_version_finality_proof: VersionedFinalityProof<
 			u32,
 			beefy_primitives::crypto::Signature,
-		> = codec::Decode::decode(&mut &*recv_commitment).unwrap();
+		> = codec::Decode::decode(&mut &*encoded_versioned_finality_proof.0 .0).unwrap();
+
+		let signed_commitment = match beefy_version_finality_proof {
+			VersionedFinalityProof::V1(commitment) => commitment,
+		};
+
 		let client_state: BeefyClientState<HostFunctionsManager> =
 			match ctx.client_state(&client_id).unwrap() {
 				AnyClientState::Beefy(client_state) => client_state,
@@ -256,6 +268,8 @@ async fn test_continuous_update_of_beefy_client() {
 					.collect(),
 				mmr_proofs: batch_proof.items.into_iter().map(|item| item.encode()).collect(),
 				mmr_size,
+				leaf_indices: batch_proof.leaf_indices,
+				leaf_count: batch_proof.leaf_count,
 			}),
 			mmr_update_proof: Some(mmr_update),
 		};

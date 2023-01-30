@@ -28,9 +28,8 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use light_client_common::RelayChain;
-use primitive_types::H256;
 use serde::{Deserialize, Serialize};
-use sp_core::ed25519::Public;
+use sp_core::{ed25519::Public, H256};
 use sp_finality_grandpa::AuthorityList;
 use tendermint_proto::Protobuf;
 
@@ -59,8 +58,8 @@ pub struct ClientState<H> {
 	pub _phantom: PhantomData<H>,
 }
 
-impl<H> From<ClientState<H>> for grandpa_client_primitives::ClientState<H256> {
-	fn from(client_state: ClientState<H>) -> grandpa_client_primitives::ClientState<H256> {
+impl<H> From<ClientState<H>> for grandpa_client_primitives::ClientState {
+	fn from(client_state: ClientState<H>) -> grandpa_client_primitives::ClientState {
 		grandpa_client_primitives::ClientState {
 			current_authorities: client_state.current_authorities,
 			current_set_id: client_state.current_set_id,

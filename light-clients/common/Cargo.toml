@@ -9,7 +9,6 @@ default = ["std"]
 std = [
     "anyhow/std",
     "codec/std",
-    "primitive-types/std",
     "serde/std",
     "hash-db/std",
     "ibc/std",
@@ -21,14 +20,16 @@ std = [
 # crates.io
 anyhow = { version = "1.0.65", default-features = false }
 codec = { version = "3.2.1", package = "parity-scale-codec", default-features = false }
-primitive-types = { version = "0.11.1", default-features = false }
 serde = { version = "1.0.144", default-features = false, features = ["derive"] }
 derive_more = { version = "0.99.17", default-features = false, features = ["from"] }
 hash-db = { version = "0.15.2", default-features = false }
+
+# substrate
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false }
 
 # ibc
 ibc = { path = "../../ibc/modules", default-features = false }
 
 # substrate
-sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30", default-features = false }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30", default-features = false }
+sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false }
