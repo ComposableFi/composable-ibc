@@ -1,26 +1,28 @@
+use codec::Encode;
 use std::{
 	collections::{BTreeMap, BTreeSet, HashMap},
 	fmt::Display,
 };
 
 use finality_grandpa::BlockNumberOps;
-use grandpa_light_client_primitives::{
-	FinalityProof, ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
-};
+use grandpa_light_client_primitives::{ParachainHeaderProofs, ParachainHeadersWithFinalityProof};
 use ibc_proto::google::protobuf::Any;
 use sp_core::H256;
 use sp_runtime::{
-	traits::{Header as HeaderT, IdentifyAccount, One, Verify},
+	traits::{IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
 #[cfg(feature = "dali")]
-use subxt::tx::AssetTip as Tip;
-use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams};
+use subxt::config::substrate::AssetTip as Tip;
+use subxt::config::{
+	extrinsic_params::{BaseExtrinsicParamsBuilder, ExtrinsicParams},
+	Header as HeaderT,
+};
 
 use grandpa_prover::GrandpaProver;
 use ibc::core::ics02_client::msgs::update_client::MsgUpdateAnyClient;
 #[cfg(not(feature = "dali"))]
-use subxt::tx::PlainTip as Tip;
+use subxt::config::polkadot::PlainTip as Tip;
 use tendermint_proto::Protobuf;
 
 use ibc::{core::ics24_host::identifier::ClientId, events::IbcEvent, signer::Signer, tx_msg::Msg};
@@ -36,22 +38,23 @@ use crate::{config, finality_protocol::FinalityProtocol};
 #[async_trait::async_trait]
 impl<T: config::Config + Send + Sync> LightClientSync for ParachainClient<T>
 where
-	T: config::Config + Send + Sync,
-	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
-		+ From<<T as subxt::Config>::BlockNumber>,
-	Self: Chain + KeyProvider,
-	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
+	u32: From<<T as subxt::Config>::BlockNumber>,
+	Self: KeyProvider,
+	<<T as config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	T::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	sp_core::H256: From<T::Hash>,
-	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
-		From<FinalityProof<T::Header>>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	async fn is_synced<C: Chain>(&self, counterparty: &C) -> Result<bool, anyhow::Error> {
 		let latest_height = counterparty.latest_height_and_timestamp().await?.0;
@@ -81,7 +84,7 @@ where
 				let session_length = prover.session_length().await?;
 				let session_end_block =
 					prover.session_end_for_block(previous_finalized_height).await?;
-				let latest_finalized_height = u32::from(*finalized_head.number());
+				let latest_finalized_height = u32::from(finalized_head.number());
 				let session_changes =
 					(latest_finalized_height - session_end_block) / session_length;
 				// If no session changes have occurred between the last update and the latest
@@ -119,7 +122,7 @@ where
 					self.relay_client.rpc().header(Some(latest_hash)).await?.ok_or_else(|| {
 						Error::Custom(format!("Expected finalized header, found None"))
 					})?;
-				let latest_finalized_height = u32::from(*finalized_head.number());
+				let latest_finalized_height = u32::from(finalized_head.number());
 				let (mut messages, _events, previous_para_height, previous_finalized_height) = self
 					.query_missed_grandpa_updates(
 						client_state.latest_para_height,
@@ -136,6 +139,7 @@ where
 					latest_finalized_height,
 					self.client_id(),
 					counterparty.account_id(),
+					&self.name,
 				)
 				.await?;
 				messages.push(latest_message);
@@ -151,22 +155,19 @@ where
 
 impl<T: config::Config + Send + Sync> ParachainClient<T>
 where
-	T: config::Config + Send + Sync,
-	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
-		+ From<<T as subxt::Config>::BlockNumber>,
-	Self: Chain + KeyProvider,
-	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
+	Self: KeyProvider,
+	<<T as config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	T::Signature: From<MultiSignature>,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
-	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
-	sp_core::H256: From<T::Hash>,
-	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
-		From<FinalityProof<T::Header>>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
+	H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
+	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	/// Returns a tuple of the client update messages in the exclusive range
 	/// `previous_finalized_height..latest_finalized_height`, relay chain block of the last message
@@ -202,6 +203,7 @@ where
 				session_end_block,
 				client_id.clone(),
 				signer.clone(),
+				&self.name,
 			)
 			.await?;
 			messages.push(msg);
@@ -222,22 +224,32 @@ async fn get_message<T: crate::config::Config>(
 	latest_finalized_height: u32,
 	client_id: ClientId,
 	signer: Signer,
+	name: &str,
 ) -> Result<(Any, Vec<IbcEvent>, u32, u32), anyhow::Error>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
 		+ From<<T as subxt::Config>::BlockNumber>,
 	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
-	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
-		From<FinalityProof<T::Header>>,
+	H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 {
 	// fetch the latest finalized parachain header
 	let finalized_para_header =
 		prover.query_latest_finalized_parachain_header(latest_finalized_height).await?;
-	let latest_finalized_para_height = u32::from(*finalized_para_header.number());
+	let latest_finalized_para_height = u32::from(finalized_para_header.number());
 	let finalized_blocks =
 		((previous_finalized_para_height + 1)..=latest_finalized_para_height).collect::<Vec<_>>();
+
+	if !finalized_blocks.is_empty() {
+		log::info!(
+			"Fetching events from {} for blocks {}..{}",
+			name,
+			finalized_blocks[0],
+			finalized_blocks.last().unwrap(),
+		);
+	}
+
 	let finalized_block_numbers = finalized_blocks
 		.iter()
 		.map(|h| BlockNumberOrHash::Number(*h))
@@ -268,15 +280,17 @@ where
 
 	let events: Vec<IbcEvent> = events.into_values().flatten().collect();
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
-		.query_finalized_parachain_headers_with_proof(
+		.query_finalized_parachain_headers_with_proof::<T::Header>(
 			previous_finalized_height,
 			latest_finalized_height,
+			None,
 			headers_with_events.into_iter().collect(),
 		)
 		.await?;
 
 	let grandpa_header = GrandpaHeader {
-		finality_proof: finality_proof.into(),
+		finality_proof: codec::Decode::decode(&mut &*finality_proof.encode())
+			.expect("Same struct from different crates,decode should not fail"),
 		parachain_headers: parachain_headers.into(),
 	};
 

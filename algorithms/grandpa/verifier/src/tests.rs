@@ -107,6 +107,7 @@ async fn follow_grandpa_justifications() {
 			.query_finalized_parachain_headers_with_proof(
 				client_state.latest_relay_height,
 				justification.commit.target_number,
+				None,
 				header_numbers,
 			)
 			.await

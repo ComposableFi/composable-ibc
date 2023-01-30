@@ -392,20 +392,18 @@ where
 		.await?;
 
 	// notice the inclusive range
-	let mut finalized_blocks = ((previous_finalized_para_height + 1)..=
-		u32::from(*finalized_para_header.number()))
+	let finalized_blocks = ((previous_finalized_para_height + 1)..=
+		u32::from(finalized_para_header.number()))
 		.collect::<Vec<_>>();
 
-	if finalized_blocks.is_empty() {
-		finalized_blocks.push(u32::from(*finalized_para_header.number()))
+	if !finalized_blocks.is_empty() {
+		log::info!(
+			"Fetching events from {} for blocks {}..{}",
+			source.name(),
+			finalized_blocks[0],
+			finalized_blocks.last().unwrap(),
+		);
 	}
-
-	log::info!(
-		"Fetching events from {} for blocks {}..{}",
-		source.name(),
-		finalized_blocks[0],
-		finalized_blocks.last().unwrap(),
-	);
 
 	let finalized_block_numbers = finalized_blocks
 		.iter()
@@ -424,7 +422,7 @@ where
 		false
 	};
 
-	let latest_finalized_block = u32::from(*finalized_para_header.number());
+	let latest_finalized_block = u32::from(finalized_para_header.number());
 
 	let is_update_required = source.is_update_required(
 		justification.commit.target_number as u64,
@@ -466,9 +464,10 @@ where
 	}
 
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
-		.query_finalized_parachain_headers_with_proof(
+		.query_finalized_parachain_headers_with_proof::<T::Header>(
 			previous_finalized_relay_height,
 			justification.commit.target_number,
+			Some(justification.encode()),
 			headers_with_events.into_iter().collect(),
 		)
 		.await?;

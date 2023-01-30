@@ -235,6 +235,7 @@ async fn test_continuous_update_of_grandpa_client() {
 			.query_finalized_parachain_headers_with_proof(
 				client_state.latest_relay_height,
 				justification.commit.target_number,
+				None,
 				header_numbers.clone(),
 			)
 			.await

@@ -197,12 +197,11 @@ where
 
 	/// Returns a tuple of the finality proof for the given parachain `header_numbers` finalized by
 	/// `latest_finalized_height`.
-	/// If `header_numbers` is empty we only fetch the proof for the latest finalized parachain
-	/// block
 	pub async fn query_finalized_parachain_headers_with_proof<H>(
 		&self,
 		previous_finalized_height: u32,
-		latest_finalized_height: u32,
+		mut latest_finalized_height: u32,
+		latest_justification: Option<Vec<u8>>,
 		header_numbers: Vec<T::BlockNumber>,
 	) -> Result<ParachainHeadersWithFinalityProof<H>, anyhow::Error>
 	where
@@ -213,26 +212,40 @@ where
 		H::Number: finality_grandpa::BlockNumberOps,
 		T::BlockNumber: One,
 	{
-		let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
-			// we cast between the same type but different crate versions.
-			&*unsafe {
-				unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(self.relay_ws_client.clone())
-			},
-			latest_finalized_height,
-		)
-		.await?
-		.ok_or_else(|| anyhow!("No justification found for block: {:?}", latest_finalized_height))?
-		.0;
+		let mut finality_proof = if let Some(justification) = latest_justification {
+			let justification = GrandpaJustification::<H>::decode(&mut &*justification)?;
 
-		let mut finality_proof = FinalityProof::<H>::decode(&mut &encoded[..])?;
+			FinalityProof::<H> {
+				block: justification.commit.target_hash,
+				justification: justification.encode(),
+				unknown_headers: vec![],
+			}
+		} else {
+			let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
+				// we cast between the same type but different crate versions.
+				&*unsafe {
+					unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(
+						self.relay_ws_client.clone(),
+					)
+				},
+				latest_finalized_height,
+			)
+			.await?
+			.ok_or_else(|| {
+				anyhow!("No justification found for block: {:?}", latest_finalized_height)
+			})?
+			.0;
 
-		let justification =
-			GrandpaJustification::<H>::decode(&mut &finality_proof.justification[..])?;
+			let mut finality_proof = FinalityProof::<H>::decode(&mut &encoded[..])?;
 
-		// sometimes we might get a justification for latest_finalized_height - 1, sigh
-		let latest_finalized_height = u32::from(justification.commit.target_number);
+			let justification =
+				GrandpaJustification::<H>::decode(&mut &finality_proof.justification[..])?;
 
-		finality_proof.block = justification.commit.target_hash;
+			finality_proof.block = justification.commit.target_hash;
+
+			latest_finalized_height = u32::from(justification.commit.target_number);
+			finality_proof
+		};
 
 		let start = self
 			.relay_client
@@ -273,8 +286,7 @@ where
 		// we are interested only in the blocks where our parachain header changes.
 		let para_storage_key = parachain_header_storage_key(self.para_id);
 		let keys = vec![para_storage_key.as_bytes_ref()];
-		let mut parachain_headers_with_proof =
-			BTreeMap::<H::Hash, ParachainHeaderProofs>::default();
+		let mut parachain_headers_with_proof = BTreeMap::<H256, ParachainHeaderProofs>::default();
 
 		let change_set = self
 			.relay_client
@@ -294,14 +306,16 @@ where
 				let key = polkadot::api::storage().paras().heads(&Id(self.para_id));
 				self.relay_client
 					.storage()
-					.fetch(&key, Some(header.hash()))
+					.at(Some(header.hash()))
+					.await?
+					.fetch(&key)
 					.await?
 					.expect("Header exists in its own changeset; qed")
 					.0
 			};
 
 			let para_header: T::Header = Decode::decode(&mut &parachain_header_bytes[..])?;
-			let para_block_number = *para_header.number();
+			let para_block_number = para_header.number();
 			// skip genesis header or any unknown headers
 			if para_block_number == Zero::zero() || !header_numbers.contains(&para_block_number) {
 				continue
