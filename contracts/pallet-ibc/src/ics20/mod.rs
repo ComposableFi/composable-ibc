@@ -304,7 +304,11 @@ where
 					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
 					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
 				}),
-			Ics20Acknowledgement::Error(_) =>
+			Ics20Acknowledgement::Error(e) => {
+				log::trace!(
+					target: "pallet_ibc",
+					"[transfer] error: acknowledgement error: {e}",
+				);
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferFailed {
 					from: packet_data.sender.to_string().as_bytes().to_vec(),
 					to: packet_data.receiver.to_string().as_bytes().to_vec(),
@@ -321,7 +325,8 @@ where
 					),
 					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
 					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
-				}),
+				})
+			},
 		}
 
 		Ok(())

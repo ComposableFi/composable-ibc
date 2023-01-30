@@ -105,7 +105,9 @@ pub fn ibc_event_try_from_abci_event(
 	abci_event: &AbciEvent,
 	height: Height,
 ) -> Result<IbcEvent, IbcEventError> {
-	match abci_event.kind.parse() {
+	// println!("Got IBC event type: {}", abci_event.kind);
+
+	match &abci_event.kind.parse() {
 		Ok(IbcEventType::CreateClient) => Ok(IbcEvent::CreateClient(
 			create_client_try_from_abci_event(abci_event).map_err(IbcEventError::client)?,
 		)),
@@ -124,10 +126,12 @@ pub fn ibc_event_try_from_abci_event(
 			connection_open_init_try_from_abci_event(abci_event)
 				.map_err(IbcEventError::connection)?,
 		)),
-		Ok(IbcEventType::OpenTryConnection) => Ok(IbcEvent::OpenTryConnection(
-			connection_open_try_try_from_abci_event(abci_event)
-				.map_err(IbcEventError::connection)?,
-		)),
+		Ok(IbcEventType::OpenTryConnection) => {
+			Ok(IbcEvent::OpenTryConnection(
+				connection_open_try_try_from_abci_event(abci_event)
+					.map_err(IbcEventError::connection)?,
+			))
+		},
 		Ok(IbcEventType::OpenAckConnection) => Ok(IbcEvent::OpenAckConnection(
 			connection_open_ack_try_from_abci_event(abci_event)
 				.map_err(IbcEventError::connection)?,
@@ -378,6 +382,7 @@ fn client_extract_attributes_from_tx(event: &AbciEvent) -> Result<ClientAttribut
 				attr.consensus_height = value
 					.parse()
 					.map_err(|e| ClientError::invalid_string_as_height(value.to_string(), e))?,
+			client_events::HEIGHT_ATTRIBUTE_KEY => attr.height = value.parse().unwrap(),
 			_ => {},
 		}
 	}
@@ -420,6 +425,7 @@ fn connection_extract_attributes_from_tx(
 				attr.counterparty_client_id =
 					value.parse().map_err(ConnectionError::invalid_identifier)?;
 			},
+			connection_events::HEIGHT_ATTRIBUTE_KEY => attr.height = value.parse().unwrap(),
 			_ => {},
 		}
 	}
@@ -450,6 +456,7 @@ fn channel_extract_attributes_from_tx(
 			channel_events::COUNTERPARTY_CHANNEL_ID_ATTRIBUTE_KEY => {
 				attr.counterparty_channel_id = value.parse().ok();
 			},
+			channel_events::HEIGHT_ATTRIBUTE_KEY => attr.height = value.parse().unwrap(),
 			_ => {},
 		}
 	}

@@ -281,9 +281,12 @@ where
 
 		// Simulate transaction
 		let res = simulate_tx(self.grpc_url.clone(), tx, tx_bytes.clone()).await?;
-		println!("res = {:?}", &res);
+		res.result
+			.map(|r| println!("Simulated transaction: events: {:?}\nlogs: {}", r.events, r.log));
+		// println!("res = {:?}", &res);
 
-		tracing::info!("Simulated transaction: {:?}", res);
+		// if res.result
+		// tracing::info!("Simulated transaction: {:?}", res);
 
 		// Broadcast transaction
 		let hash = broadcast_tx(&self.rpc_client, tx_bytes).await?;
@@ -296,46 +299,57 @@ where
 
 	pub async fn msg_update_client_header(
 		&self,
+		from: TmHeight,
+		to: TmHeight,
 		trusted_height: Height,
-	) -> Result<(Header, UpdateType), Error> {
-		let latest_light_block =
-			self.light_client.io.fetch_light_block(AtHeight::Highest).map_err(|e| {
+	) -> Result<Vec<(Header, UpdateType)>, Error> {
+		let mut xs = Vec::new();
+		for height in from.value()..=to.value() {
+			let latest_light_block = self
+				.light_client
+				.io
+				.fetch_light_block(AtHeight::At(height.try_into().unwrap()))
+				.map_err(|e| {
+					Error::from(format!(
+						"Failed to fetch light block for chain {:?} with error {:?}",
+						self.name, e
+					))
+				})?;
+			let height = TmHeight::try_from(trusted_height.revision_height).map_err(|e| {
 				Error::from(format!(
-					"Failed to fetch light block for chain {:?} with error {:?}",
+					"Failed to convert height for chain {:?} with error {:?}",
 					self.name, e
 				))
 			})?;
-		let height = TmHeight::try_from(trusted_height.revision_height).map_err(|e| {
-			Error::from(format!(
-				"Failed to convert height for chain {:?} with error {:?}",
-				self.name, e
-			))
-		})?;
-		let trusted_light_block = self
-			.light_client
-			.io
-			.fetch_light_block(AtHeight::At(height.increment()))
-			.map_err(|e| {
-				Error::from(format!(
-					"Failed to fetch light block for chain {:?} with error {:?}",
-					self.name, e
-				))
-			})?;
+			let trusted_light_block = self
+				.light_client
+				.io
+				.fetch_light_block(AtHeight::At(height.increment()))
+				.map_err(|e| {
+					Error::from(format!(
+						"Failed to fetch light block for chain {:?} with error {:?}",
+						self.name, e
+					))
+				})?;
 
-		let update_type = match latest_light_block.validators == latest_light_block.next_validators
-		{
-			true => UpdateType::Optional,
-			false => UpdateType::Mandatory,
-		};
-		Ok((
-			Header {
-				signed_header: latest_light_block.signed_header,
-				validator_set: latest_light_block.validators,
-				trusted_height,
-				trusted_validator_set: trusted_light_block.validators,
-			},
-			update_type,
-		))
+			let update_type =
+				match latest_light_block.validators == latest_light_block.next_validators {
+					true => UpdateType::Mandatory,
+					false => UpdateType::Mandatory,
+				};
+			xs.push(
+				((
+					Header {
+						signed_header: latest_light_block.signed_header,
+						validator_set: latest_light_block.validators,
+						trusted_height,
+						trusted_validator_set: trusted_light_block.validators,
+					},
+					update_type,
+				)),
+			);
+		}
+		Ok(xs)
 	}
 
 	/// Uses the GRPC client to retrieve the account sequence

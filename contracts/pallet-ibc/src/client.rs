@@ -28,6 +28,7 @@ use tendermint_proto::Protobuf;
 #[derive(Encode, Decode)]
 pub struct HostConsensusProof {
 	pub header: Vec<u8>,
+	pub code_id: Option<Vec<u8>>,
 	pub extrinsic: Vec<u8>,
 	pub extrinsic_proof: Vec<Vec<u8>>,
 }
@@ -179,7 +180,7 @@ where
 		height: Height,
 		proof: Option<Vec<u8>>,
 	) -> Result<AnyConsensusState, ICS02Error> {
-		log::trace!(target: "pallet_ibc", "in client: [host_consensus_state]");
+		log::trace!(target: "pallet_ibc", "in client: [host_consensus_state] height = {:?}", height);
 		use codec::Compact;
 		use sp_core::H256;
 		use sp_runtime::traits::{BlakeTwo256, Header};
@@ -281,7 +282,14 @@ where
 					timestamp,
 					root: header.state_root().as_ref().to_vec().into(),
 				};
-				AnyConsensusState::Grandpa(cs_state)
+				let cs = AnyConsensusState::Grandpa(cs_state);
+
+				if let Some(code_id) = connection_proof.code_id {
+					let timestamp1 = cs.timestamp();
+					AnyConsensusState::wasm(cs, code_id, timestamp1.nanoseconds() / 1_000_000_000)
+				} else {
+					cs
+				}
 			},
 		};
 		Ok(consensus_state)

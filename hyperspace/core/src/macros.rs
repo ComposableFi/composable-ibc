@@ -21,7 +21,7 @@ macro_rules! process_finality_event {
 			Some(finality_event) => {
 				log::info!("=======================================================");
 				log::info!("Received finality notification from {}", $source.name());
-				let (msg_update_client, events, update_type) =
+				let (mut msg_update_client, events, update_type) =
 					match $source.query_latest_ibc_events(finality_event, &$sink).await {
 						Ok(resp) => resp,
 						Err(err) => {
@@ -39,6 +39,7 @@ macro_rules! process_finality_event {
 					}
 				}
 				let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
+				log::info!("Received events: {event_types:#?}");
 				let (mut messages, timeouts) =
 					parse_events(&mut $source, &mut $sink, events, $mode).await?;
 				if !timeouts.is_empty() {
@@ -73,14 +74,14 @@ macro_rules! process_finality_event {
 					),
 				};
 				// insert client update at first position.
-				messages.insert(0, msg_update_client);
+				msg_update_client.extend(messages);
 				if let Some(metrics) = $metrics.as_ref() {
-					metrics.handle_messages(messages.as_slice()).await;
+					metrics.handle_messages(msg_update_client.as_slice()).await;
 				}
 				let type_urls =
-					messages.iter().map(|msg| msg.type_url.as_str()).collect::<Vec<_>>();
+					msg_update_client.iter().map(|msg| msg.type_url.as_str()).collect::<Vec<_>>();
 				log::info!("Submitting messages to {}: {type_urls:#?}", $sink.name());
-				queue::flush_message_batch(messages, $metrics.as_ref(), &$sink).await?;
+				queue::flush_message_batch(msg_update_client, $metrics.as_ref(), &$sink).await?;
 			},
 		}
 	};

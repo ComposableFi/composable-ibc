@@ -20,6 +20,7 @@ use cosmwasm_std::{
 };
 use cw_storage_plus::{Item, Map};
 use digest::Digest;
+use ed25519_zebra::VerificationKeyBytes;
 use ibc::core::{
 	ics02_client::{
 		client_def::{ClientDef, ConsensusUpdateResult},
@@ -37,7 +38,6 @@ use prost::Message;
 use sp_runtime::traits::{BlakeTwo256, Header};
 use sp_runtime_interface::unpack_ptr_and_len;
 use std::{collections::BTreeSet, str::FromStr};
-use ed25519_zebra::VerificationKeyBytes;
 
 /*
 // version info for migration info
@@ -157,7 +157,7 @@ fn process_message(
 	ctx: &mut Context<HostFunctions>,
 	client_id: ClientId,
 ) -> Result<Binary, ContractError> {
-	log!(ctx, "process_message: {:?}", msg);
+	// log!(ctx, "process_message: {:?}", msg);
 	let result = match msg {
 		ExecuteMsg::Validate(_) => todo!(),
 		ExecuteMsg::Status(_) => todo!(),

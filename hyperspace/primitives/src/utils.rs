@@ -86,7 +86,7 @@ pub async fn create_connection(
 ) -> Result<(ConnectionId, ConnectionId), anyhow::Error> {
 	let msg = MsgConnectionOpenInit {
 		client_id: chain_a.client_id(),
-		counterparty: Counterparty::new(chain_b.client_id(), None, chain_b.connection_prefix()),
+		counterparty: Counterparty::new(chain_b.client_id(), None, chain_a.connection_prefix()),
 		version: Some(Default::default()),
 		delay_period,
 		signer: chain_b.account_id(),

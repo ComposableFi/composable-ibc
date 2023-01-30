@@ -141,8 +141,8 @@ impl core::fmt::Display for Misbehaviour {
 }
 
 /// Tendermint consensus header
-#[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Clone, PartialEq, Eq, Deserialize, Serialize, Debug)]
+// #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Header {
 	pub signed_header: SignedHeader, // contains the commitment root
 	pub validator_set: ValidatorSet, // the validator set that signed Header
@@ -152,12 +152,12 @@ pub struct Header {
 	pub trusted_validator_set: ValidatorSet, // the last trusted validator set at trusted height
 }
 
-#[cfg(not(feature = "std"))]
-impl core::fmt::Debug for Header {
-	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
-		write!(f, " Header {{...}}")
-	}
-}
+// #[cfg(not(feature = "std"))]
+// impl core::fmt::Debug for Header {
+// 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+// 		write!(f, " Header {{...}}")
+// 	}
+// }
 
 impl Header {
 	pub fn height(&self) -> Height {

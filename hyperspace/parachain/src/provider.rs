@@ -103,14 +103,16 @@ where
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &C,
-	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
 		C: Chain,
 	{
-		self.finality_protocol
+		let (any, events, update_type) = self
+			.finality_protocol
 			.clone()
 			.query_latest_ibc_events(self, finality_event, counterparty)
-			.await
+			.await?;
+		Ok((vec![any], events, update_type))
 	}
 
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
@@ -513,6 +515,7 @@ where
 
 		let host_consensus_proof = HostConsensusProof {
 			header: header.encode(),
+			code_id: self.counterparty_wasm_code_id.clone(),
 			extrinsic: extrinsic_with_proof.ext,
 			extrinsic_proof: extrinsic_with_proof.proof,
 		};

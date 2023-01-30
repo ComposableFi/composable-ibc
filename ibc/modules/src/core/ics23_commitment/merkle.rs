@@ -39,10 +39,16 @@ impl From<CommitmentRoot> for MerkleRoot {
 	}
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct MerkleProof<H> {
 	pub proofs: Vec<CommitmentProof>,
 	_phantom: PhantomData<H>,
+}
+
+impl<H> Clone for MerkleProof<H> {
+	fn clone(&self) -> Self {
+		Self { proofs: self.proofs.clone(), _phantom: PhantomData }
+	}
 }
 
 /// Convert to ics23::CommitmentProof

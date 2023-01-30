@@ -191,7 +191,7 @@ mod tests {
 	#[test]
 	fn encode_any() {
 		let header = MockHeader::new(Height::new(1, 10)).with_timestamp(Timestamp::none());
-		let bytes = AnyClientMessage::from(header).encode_vec();
+		let bytes = AnyClientMessage::from(header).encode_vec().unwrap();
 
 		assert_eq!(
 			&bytes,

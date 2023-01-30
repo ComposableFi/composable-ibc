@@ -9,7 +9,7 @@ store_prefix = 'ibc'
 max_tx_size = 200000
 connection_id = 'connection-0'
 client_id = "07-tendermint-0"
-wasm_code_id = "529bd2bd8662106957584d45ed5671679f0598d08c6bb0be6c4d4fc6df7ea054"
+wasm_code_id = "1322d57aa7b6a44bb9306cd58a86277d0d90bad2bbe453ffe3026d1ba48ae9fd"
 wasm_client_type = "10-grandpa"
 
 [keybase]

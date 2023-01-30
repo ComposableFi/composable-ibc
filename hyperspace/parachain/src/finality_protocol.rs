@@ -55,6 +55,9 @@ use subxt::tx::AssetTip as Tip;
 use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams};
 use tendermint_proto::Protobuf;
 
+use beefy_prover::helpers::unsafe_arc_cast;
+use grandpa_light_client_primitives::justification::GrandpaJustification;
+use grandpa_prover::JustificationNotification;
 #[cfg(not(feature = "dali"))]
 use subxt::tx::PlainTip as Tip;
 
@@ -362,15 +365,64 @@ where
 
 	let prover = source.grandpa_prover();
 
+	let mut session_end = prover.session_end_for_block(client_state.latest_relay_height).await?;
+
+	if dbg!(client_state.latest_relay_height) == dbg!(session_end) {
+		session_end = prover.session_end_for_block(client_state.latest_relay_height + 1).await?;
+		dbg!(session_end);
+	}
+
+	let mut latest_finalized_height = session_end; // justification.commit.target_number;
+											   // if latest_finalized_height > session_end
+											   // {
+											   // 	latest_finalized_height = session_end;
+											   // }
+	use finality_grandpa_rpc::GrandpaApiClient;
+
+	let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
+		// we cast between the same type but different crate versions.
+		&*unsafe {
+			unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(source.relay_ws_client.clone())
+		},
+		latest_finalized_height,
+	)
+	.await?
+	.ok_or_else(|| anyhow!("No justification found for block: {:?}", latest_finalized_height))?
+	.0;
+	let mut finality_proof = FinalityProof::<
+		sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>,
+	>::decode(&mut &encoded[..])?;
+	let justification = GrandpaJustification::<
+		sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>,
+	>::decode(&mut &finality_proof.justification[..])?;
+
+	if justification.commit.target_number <= client_state.latest_relay_height {
+		Err(anyhow!(
+			"skipping outdated commit 2: {}, with latest relay height: {}",
+			justification.commit.target_number,
+			client_state.latest_relay_height
+		))?
+	}
+
 	// fetch the latest finalized parachain header
 	let finalized_para_header = prover
 		.query_latest_finalized_parachain_header(justification.commit.target_number)
 		.await?;
 
+	// if client_state.latest_para_height + 1 >= u32::from(*finalized_para_header.number()) {
+	// 	Err(anyhow!(
+	// 		"skipping outdated commit 3",
+	// 	))?
+	// }
+
 	// notice the inclusive range
 	let finalized_blocks = ((client_state.latest_para_height + 1)..=
 		u32::from(*finalized_para_header.number()))
 		.collect::<Vec<_>>();
+
+	if finalized_blocks.is_empty() {
+		Err(anyhow!("skipping outdated commit 4",))?
+	}
 
 	log::info!(
 		"Fetching events from {} for blocks {}..{}",

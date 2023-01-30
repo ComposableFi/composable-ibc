@@ -4404,6 +4404,7 @@ dependencies = [
  "bytes",
  "env_logger 0.9.3",
  "flex-error",
+ "hex",
  "ibc",
  "ibc-derive",
  "ibc-proto",

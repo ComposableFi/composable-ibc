@@ -188,7 +188,7 @@ impl IbcProvider for AnyChain {
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &T,
-	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
 		T: Chain,
 	{
@@ -808,12 +808,10 @@ impl Chain for AnyChain {
 				.map_err(Into::into)
 				.map(|id| AnyTransactionId::Cosmos(id)),
 			Self::Wasm(chain) => {
-				println!("start converting");
 				let messages = messages
 					.into_iter()
 					.map(|msg| wrap_any_msg_into_wasm(msg, chain.code_id.clone()))
 					.collect();
-				println!("stop converting, submitting to {}", chain.inner.name());
 				chain.inner.submit(messages).await.map_err(Into::into)
 			},
 		}

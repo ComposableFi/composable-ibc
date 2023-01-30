@@ -124,12 +124,6 @@ where
 	fn block_max_weight(&self) -> u64 {
 		self.max_extrinsic_weight
 	}
-	/*
-	Error executing Wasm: Wasmer runtime error: RuntimeError: Aborted: panicked at 'verify_membership failed: Failed to verify proof for path: connections/connection-0, error: ValueMismatch {
-		key: Some(    \"ibc/connections/connection-0\",),
-		expected: Some(    [10,15,48,55,45,116,101,110,100,101,114,109,105,110,116,45,48,18,35,10,1,49,18,13,79,82,68,69,82,95,79,82,68,69,82,69,68,18,15,79,82,68,69,82,95,85,78,79,82,68,69,82,69,68,24,1,34,18,10,9,48,56,45,119,97,115,109,45,48,26,5,10,3,105,98,99,  ],),
-		got: Some(         [10,15,48,55,45,116,101,110,100,101,114,109,105,110,116,45,48,18,35,10,1,49,18,13,79,82,68,69,82,95,79,82,68,69,82,69,68,18,15,79,82,68,69,82,95,85,78,79,82,68,69,82,69,68,24,1,34,19,10,9,48,56,45,119,97,115,109,45,48,26,6,10,4,105,98,99,47],),\n}',
-	 */
 
 	async fn estimate_weight(&self, messages: Vec<Any>) -> Result<u64, Self::Error> {
 		let extrinsic = {
@@ -172,9 +166,10 @@ where
 						&*self.relay_ws_client,
 					)
 						.await
-						.expect("Failed to subscribe to grandpa justifications")
-						.chunks(6)
-						.map(|mut notifs| notifs.remove(notifs.len() - 1)); // skip every 4 finality notifications
+						.expect("Failed to subscribe to grandpa justifications");
+				// .chunks(6)
+				// .map(|mut notifs| notifs.remove(notifs.len() - 1)); // skip every 4 finality
+				// notifications
 
 				let stream = subscription.filter_map(|justification_notif| {
 					let encoded_justification = match justification_notif {

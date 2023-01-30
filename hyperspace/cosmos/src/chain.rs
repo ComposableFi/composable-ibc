@@ -88,17 +88,28 @@ where
 			.subscribe(Query::from(EventType::NewBlock))
 			.await
 			.map_err(|e| Error::from(format!("failed to subscribe to new blocks {:?}", e)))
-			.unwrap();
+			.unwrap()
+			.chunks(6);
 		log::info!(target: "hyperspace-light", "🛰️ Subscribed to {} listening to finality notifications", self.name);
-		let stream = subscription.filter_map(|event| {
-			let Event { data, events: _, query: _ } =
-				event.map_err(|e| Error::from(format!("failed to get event {:?}", e))).unwrap();
-			let height = match data {
-				EventData::NewBlock { block, .. } => block.unwrap().header.height,
-				// EventData::Tx { tx_result } => TmHeight::try_from(tx_result.height).unwrap(),
-				_ => unreachable!(),
+		let stream = subscription.filter_map(|events| {
+			let events = events
+				.into_iter()
+				.collect::<Result<Vec<_>, _>>()
+				.map_err(|e| Error::from(format!("failed to get event {:?}", e)))
+				.unwrap();
+			let get_height = |event: &Event| {
+				let Event { data, events: _, query: _ } = &event;
+				let height = match &data {
+					EventData::NewBlock { block, .. } => block.as_ref().unwrap().header.height,
+					// EventData::Tx { tx_result } => TmHeight::try_from(tx_result.height).unwrap(),
+					_ => unreachable!(),
+				};
+				height
 			};
-			futures::future::ready(Some(FinalityEvent::Tendermint(height)))
+			futures::future::ready(Some(FinalityEvent::Tendermint {
+				from: get_height(events.first().unwrap()),
+				to: get_height(events.last().unwrap()),
+			}))
 		});
 
 		Box::pin(stream)
@@ -110,7 +121,7 @@ where
 			if msg.type_url.contains("Wasm") {
 				continue
 			}
-			println!("Message {}: {}", msg.type_url, hex::encode(&msg.value));
+			// println!("Message {}: {}", msg.type_url, hex::encode(&msg.value));
 		}
 		let hash = self.submit_call(messages).await?;
 		println!("Submitted. Tx hash: {}", hash);

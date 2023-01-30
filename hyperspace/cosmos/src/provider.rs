@@ -81,6 +81,7 @@ use tendermint_rpc::{
 };
 use tonic::IntoRequest;
 
+use ibc::events::IbcEventType;
 use ibc_proto::ibc::{
 	core::channel::v1::IdentifiedChannel, lightclients::wasm::v1::msg_client::MsgClient,
 };
@@ -92,7 +93,7 @@ use tonic::transport::Endpoint;
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
-	Tendermint(TmHeight),
+	Tendermint { from: TmHeight, to: TmHeight },
 }
 
 #[derive(Clone, Debug)]
@@ -113,12 +114,12 @@ where
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &C,
-	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
 		C: Chain,
 	{
 		let finality_event_height = match finality_event {
-			FinalityEvent::Tendermint(h) => h,
+			FinalityEvent::Tendermint { from: _, to } => to,
 		};
 		let client_id = self.client_id();
 		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
@@ -131,11 +132,18 @@ where
 			ClientState::<HostFunctionsManager>::decode_vec(&client_state_response.value)
 				.map_err(|_| Error::Custom("failed to decode client state response".to_string()))?;
 		let latest_cp_client_height = client_state.latest_height().revision_height;
-		let latest_revision = self.latest_height_and_timestamp().await?.0.revision_number;
+		let latest_height = self.latest_height_and_timestamp().await?.0;
+		// println!("latest_height_and_timestamp = {}", latest_height.revision_height);
+		let latest_revision = latest_height.revision_number;
 
 		let mut ibc_events: Vec<IbcEvent> = vec![];
-		for height in latest_cp_client_height + 1..=finality_event_height.value() {
-			// for height in latest_cp_client_height + 1..latest_height.revision_height + 1 {
+		let from = TmHeight::try_from(latest_cp_client_height).unwrap();
+		// let to = latest_height.revision_height; // .saturating_sub(2);
+		let to = finality_event_height;
+		// println!("Finality height = {finality_event_height}");
+		println!("[Cosmos] Getting blocks {}..{}", from, to);
+
+		for height in from.value()..to.value() {
 			let block_results = self
 				.rpc_client
 				.block_results(TmHeight::try_from(height).unwrap())
@@ -146,6 +154,7 @@ where
 						height, e
 					))
 				})?;
+			// TODO: handle: block_results.begin_block_events, block_results.end_block_events
 			let tx_results = match block_results.txs_results {
 				Some(tx) => tx,
 				None => continue,
@@ -157,33 +166,43 @@ where
 				for event in tx.clone().events {
 					let ibc_event = ibc_event_try_from_abci_event(&event, ibc_height).ok();
 					match ibc_event {
-						Some(ev) => {
-							println!("Encountered event: {:?}", event);
+						Some(mut ev) => {
+							ev.set_height(ibc_height);
+							println!("Encountered event at {height}: {:?}", event.kind);
 							ibc_events.push(ev);
 						},
 						None => {
-							println!("Skipped event: {:?}", event);
+							// println!("Skipped event: {:?}", event.kind);
 							continue
 						},
 					}
 				}
 			}
 		}
-		let update_header = self.msg_update_client_header(client_state.latest_height).await?;
-		let update_client_header = {
-			let msg = MsgUpdateAnyClient::<LocalClientTypes> {
-				client_id,
-				client_message: AnyClientMessage::Tendermint(ClientMessage::Header(
-					update_header.0,
-				)),
-				signer: counterparty.account_id(),
+		let updates = self
+			.msg_update_client_header(from, to, dbg!(client_state.latest_height))
+			.await?;
+		let mut update_client_headers = Vec::new();
+		let mut update_headers = Vec::new();
+		for (update_header, update_type) in updates {
+			dbg!(update_header.height().revision_height);
+			let update_client_header = {
+				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
+					client_id: client_id.clone(),
+					client_message: AnyClientMessage::Tendermint(ClientMessage::Header(
+						update_header,
+					)),
+					signer: counterparty.account_id(),
+				};
+				let value = msg.encode_vec().map_err(|e| {
+					Error::from(format!("Failed to encode MsgUpdateClient {:?}: {:?}", msg, e))
+				})?;
+				Any { value, type_url: msg.type_url() }
 			};
-			let value = msg.encode_vec().map_err(|e| {
-				Error::from(format!("Failed to encode MsgUpdateClient {:?}: {:?}", msg, e))
-			})?;
-			Any { value, type_url: msg.type_url() }
-		};
-		Ok((update_client_header, ibc_events, update_header.1))
+			update_client_headers.push(update_client_header);
+			update_headers.push(update_type);
+		}
+		Ok((update_client_headers, ibc_events, update_headers.remove(0)))
 	}
 
 	// Changed result: `Item =` from `IbcEvent` to `IbcEventWithHeight` to include the necessary
@@ -240,15 +259,22 @@ where
 							tx_result.height as u64,
 						);
 						for abci_event in &tx_result.result.events {
+							// println!("Got event {:?}", abci_event);
 							if let Ok(ibc_event) = ibc_event_try_from_abci_event(abci_event, height)
 							{
+								// dbg!(ibc_event.event_type());
+								if ibc_event.event_type() == IbcEventType::OpenTryConnection {
+									println!("Got event {:?}", ibc_event);
+								}
 								if query == Query::eq("message.module", "ibc_client").to_string() &&
 									event_is_type_client(&ibc_event)
 								{
 									events_with_height
 										.push(IbcEventWithHeight::new(ibc_event, height));
-								} else if query ==
-									Query::eq("message.module", "ibc_connection").to_string() &&
+								} else if (query ==
+									Query::eq("message.module", "ibc_connection").to_string() ||
+									query ==
+										Query::eq("message.module", "ibc_client").to_string()) &&
 									event_is_type_connection(&ibc_event)
 								{
 									events_with_height
@@ -310,7 +336,7 @@ where
 		Ok(QueryConsensusStateResponse {
 			consensus_state: response.consensus_state,
 			proof,
-			proof_height: incerement_proof_height(response.proof_height),
+			proof_height: incerement_proof_height(Some(at.into())),
 		})
 	}
 
@@ -338,7 +364,7 @@ where
 		Ok(QueryClientStateResponse {
 			client_state: response.client_state,
 			proof,
-			proof_height: incerement_proof_height(response.proof_height),
+			proof_height: incerement_proof_height(Some(at.into())),
 		})
 	}
 
@@ -367,10 +393,11 @@ where
 			.to_string()
 			.into_bytes();
 		let proof = self.query_proof(at, vec![path_bytes]).await?;
+		println!("proof_height = at = {at}");
 		Ok(QueryConnectionResponse {
 			connection: response.connection,
 			proof,
-			proof_height: incerement_proof_height(response.proof_height),
+			proof_height: incerement_proof_height(Some(at.into())),
 		})
 	}
 
@@ -406,7 +433,7 @@ where
 		Ok(QueryChannelResponse {
 			channel: response.channel,
 			proof,
-			proof_height: incerement_proof_height(response.proof_height),
+			proof_height: incerement_proof_height(Some(at.into())),
 		})
 	}
 
@@ -452,7 +479,7 @@ where
 		Ok(QueryPacketCommitmentResponse {
 			commitment: response.commitment,
 			proof,
-			proof_height: incerement_proof_height(response.proof_height),
+			proof_height: incerement_proof_height(Some(at.into())),
 		})
 	}
 
@@ -493,7 +520,7 @@ where
 		Ok(QueryPacketAcknowledgementResponse {
 			acknowledgement: res.value,
 			proof,
-			proof_height: incerement_proof_height(response.proof_height),
+			proof_height: incerement_proof_height(Some(at.into())),
 		})
 	}
 
@@ -528,7 +555,7 @@ where
 		Ok(QueryNextSequenceReceiveResponse {
 			next_sequence_receive: response.next_sequence_receive,
 			proof,
-			proof_height: incerement_proof_height(response.proof_height),
+			proof_height: incerement_proof_height(Some(at.into())),
 		})
 	}
 
@@ -570,7 +597,7 @@ where
 		Ok(QueryPacketReceiptResponse {
 			received: res.value[0] == 1,
 			proof,
-			proof_height: incerement_proof_height(response.proof_height),
+			proof_height: incerement_proof_height(Some(at.into())),
 		})
 	}
 

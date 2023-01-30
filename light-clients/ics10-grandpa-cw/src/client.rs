@@ -114,6 +114,9 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'
 			"in client : [consensus_state] >> consensus_state (raw): {}",
 			hex::encode(&value)
 		);
+		// AnyConsensusState::Wasm(AnyConsensusState::Grandpa(ConsensusState))
+		// .inner = Grandpa
+		// root(self) = self.inner.root()
 		let any = Any::decode(&mut &value[..]).map_err(Error::decode)?;
 		let wasm_consensus_state =
 			ics08_wasm::consensus_state::ConsensusState::<FakeInner>::decode_vec(&*any.value)
@@ -230,8 +233,8 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientKeeper for Context<'
 		let wasm_consensus_state = ics08_wasm::consensus_state::ConsensusState {
 			data: consensus_state.to_any().encode_to_vec(),
 			code_id: code_id(self.deps.storage),
-			timestamp: self.host_timestamp().nanoseconds() / 1_000_000_000,
-			root: CommitmentRoot::from_bytes(&vec![1, 2, 3]),
+			timestamp: consensus_state.timestamp().nanoseconds() / 1_000_000_000, /* self.host_timestamp().nanoseconds() / 1_000_000_000, */
+			root: CommitmentRoot::from_bytes(&vec![1; 32]),
 			inner: Box::new(FakeInner),
 		};
 		let vec1 = wasm_consensus_state.to_any().encode_to_vec();

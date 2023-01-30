@@ -412,7 +412,7 @@ impl AnyConsensusState {
 			data: inner.encode_to_vec(),
 			code_id,
 			timestamp,
-			root: CommitmentRoot::from_bytes(&[1u8; 32].to_vec()),
+			root: CommitmentRoot::from_bytes(&vec![1; 32]),
 			inner: Box::new(inner),
 		})
 	}
