@@ -210,7 +210,7 @@ where
 		T::Hash: From<<H::Hasher as subxt::config::Hasher>::Output>,
 		H::Number: finality_grandpa::BlockNumberOps,
 		T::BlockNumber: One,
-		F: Fn(&H::Number) -> bool,
+		F: Fn(&<T as Config>::BlockNumber) -> bool,
 	{
 		let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 			// we cast between the same type but different crate versions.
@@ -384,7 +384,7 @@ where
 		.await
 	}
 
-	// Queries the block at which the epoch for the given block belongs to ends.
+	/// Queries the block at which the epoch for the given block belongs to ends.
 	pub async fn session_end_for_block(&self, block: u32) -> Result<u32, anyhow::Error> {
 		let epoch_addr = polkadot::api::storage().babe().epoch_start();
 		let block_hash = self.relay_client.rpc().block_hash(Some(block.into())).await?;

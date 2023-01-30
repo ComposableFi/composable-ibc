@@ -594,3 +594,17 @@ where
 	send_packet_and_assert_timeout_on_channel_close(chain_a, chain_b, channel_id).await;
 	handle.abort()
 }
+
+pub async fn client_synchronization_test<A, B>(chain_a: &A, chain_b: &B)
+where
+	A: TestProvider,
+	A::FinalityEvent: Send + Sync,
+	A::Error: From<B::Error>,
+	B: TestProvider,
+	B::FinalityEvent: Send + Sync,
+	B::Error: From<A::Error>,
+{
+	tokio::time::sleep(Duration::from_secs(60 * 10)).await;
+	let messages = chain_a.fetch_mandatory_updates(chain_b).await.unwrap();
+	log::info!(target: "hyperspace", "Missed updates {}", messages.len());
+}

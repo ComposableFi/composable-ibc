@@ -53,7 +53,9 @@ use thiserror::Error;
 use ibc::core::ics02_client::events::UpdateClient;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use parachain::{config, ParachainClient};
-use primitives::{Chain, IbcProvider, KeyProvider, MisbehaviourHandler, UpdateType};
+use primitives::{
+	Chain, IbcProvider, KeyProvider, LightClientSync, MisbehaviourHandler, UpdateType,
+};
 use std::{pin::Pin, time::Duration};
 #[cfg(feature = "dali")]
 use subxt::config::substrate::{
@@ -637,6 +639,27 @@ impl Chain for AnyChain {
 	) -> Result<AnyClientMessage, Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain.query_client_message(update).await.map_err(Into::into),
+			_ => unreachable!(),
+		}
+	}
+}
+
+#[async_trait]
+impl LightClientSync for AnyChain {
+	async fn is_synced<C: Chain>(&self, counterparty: &C) -> Result<bool, anyhow::Error> {
+		match self {
+			Self::Parachain(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
+			_ => unreachable!(),
+		}
+	}
+
+	async fn fetch_mandatory_updates<C: Chain>(
+		&self,
+		counterparty: &C,
+	) -> Result<Vec<Any>, anyhow::Error> {
+		match self {
+			Self::Parachain(chain) =>
+				chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}

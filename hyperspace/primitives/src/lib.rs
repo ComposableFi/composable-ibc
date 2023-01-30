@@ -380,14 +380,15 @@ pub trait LightClientSync {
 	async fn fetch_mandatory_updates<C: Chain>(
 		&self,
 		counterparty: &C,
-		latest_client_height: Height,
 	) -> Result<Vec<Any>, anyhow::Error>;
 }
 
 /// Provides an interface for the chain to the relayer core for submitting IbcEvents as well as
 /// finality notifications
 #[async_trait::async_trait]
-pub trait Chain: IbcProvider + MisbehaviourHandler + KeyProvider + Send + Sync {
+pub trait Chain:
+	IbcProvider + LightClientSync + MisbehaviourHandler + KeyProvider + Send + Sync
+{
 	/// Name of this chain, used in logs.
 	fn name(&self) -> &str;
 
