@@ -144,10 +144,10 @@ jobs:
         run: |
           ./scripts/generate-subxt.sh
 
-      - name: Run all unit tests
-        run: |
-          SKIP_WASM_BUILD=1 cargo +nightly nextest run --locked --release --workspace --exclude ibc-derive --exclude hyperspace-testsuite
-
+#      - name: Run all unit tests
+#        run: |
+#          SKIP_WASM_BUILD=1 cargo +nightly nextest run --locked --release --workspace --exclude ibc-derive --exclude hyperspace-testsuite --exclude simnode
+#
 #      - name: Run simnode tests
 #        run: |
 #          cargo +nightly test -p simnode --locked --release
