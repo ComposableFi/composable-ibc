@@ -106,8 +106,9 @@ async fn follow_grandpa_justifications() {
 		dbg!(&header_numbers);
 
 		let proof = prover
-			.query_finalized_parachain_headers_with_proof::<SubstrateHeader<u32, BlakeTwo256>>(
-				&client_state,
+			.query_finalized_parachain_headers_with_proof(
+				client_state.latest_para_height,
+				client_state.latest_relay_height,
 				justification.commit.target_number,
 				header_numbers,
 			)

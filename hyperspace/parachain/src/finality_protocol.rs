@@ -370,18 +370,15 @@ where
 		))?
 	}
 
-	let (mut missed_updates, previous_finalized_relay_height, previous_finalized_para_height) =
-		source
-			.query_missed_grandpa_updates(
-				client_state.latest_relay_height,
-				justification.commit.target_number,
-				source.client_id(),
-				counterparty.account_id(),
-			)
-			.await?;
-	let previous_finalized_para_height = previous_finalized_para_height
-		.map(|height| u32::from(height))
-		.unwrap_or(client_state.latest_para_height);
+	let (mut missed_updates, ..) = source
+		.query_missed_grandpa_updates(
+			client_state.latest_relay_height,
+			justification.commit.target_number,
+			source.client_id(),
+			counterparty.account_id(),
+		)
+		.await?;
+	let previous_finalized_para_height = client_state.latest_para_height;
 	let prover = source.grandpa_prover();
 
 	// fetch the latest finalized parachain header
@@ -462,7 +459,7 @@ where
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
 		.query_finalized_parachain_headers_with_proof(
 			previous_finalized_para_height,
-			previous_finalized_relay_height,
+			client_state.latest_relay_height,
 			justification.commit.target_number,
 			headers_with_events.into_iter().collect(),
 		)

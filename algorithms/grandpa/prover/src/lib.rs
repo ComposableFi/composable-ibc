@@ -196,15 +196,15 @@ where
 	}
 
 	/// Returns a tuple of the finality proof for the given parachain `header_numbers` finalized by
-	/// `latest_finalized_height` and also latest parachain block finalized by the former.
+	/// `latest_finalized_height`.
 	/// If `header_numbers` is empty we only fetch the proof for the latest finalized parachain
 	/// block
 	pub async fn query_finality_proof<H>(
 		&self,
 		previous_finalized_height: u32,
 		latest_finalized_height: u32,
-		mut header_numbers: Vec<T::BlockNumber>,
-	) -> Result<(ParachainHeadersWithFinalityProof<H>, T::BlockNumber), anyhow::Error>
+		header_numbers: Vec<T::BlockNumber>,
+	) -> Result<ParachainHeadersWithFinalityProof<H>, anyhow::Error>
 	where
 		H: Header + codec::Decode,
 		u32: From<<H as Header>::Number>,
@@ -276,9 +276,7 @@ where
 		let mut parachain_headers_with_proof =
 			BTreeMap::<H::Hash, ParachainHeaderProofs>::default();
 
-		let (parachain_headers_with_proof, latest_finalized_para_block) = if header_numbers
-			.is_empty()
-		{
+		let parachain_headers_with_proof = if header_numbers.is_empty() {
 			let parachain_header_bytes = {
 				let key = polkadot::api::storage().paras().heads(&Id(self.para_id));
 				self.relay_client
@@ -307,7 +305,7 @@ where
 					.map_err(|err| anyhow!("Error fetching timestamp with proof: {err:?}"))?;
 			let proofs = ParachainHeaderProofs { state_proof, extrinsic, extrinsic_proof };
 			parachain_headers_with_proof.insert(latest_finalized_hash.into(), proofs);
-			(parachain_headers_with_proof, *para_header.number())
+			parachain_headers_with_proof
 		} else {
 			let change_set = self
 				.relay_client
@@ -361,22 +359,13 @@ where
 				let proofs = ParachainHeaderProofs { state_proof, extrinsic, extrinsic_proof };
 				parachain_headers_with_proof.insert(header.hash().into(), proofs);
 			}
-
-			header_numbers.sort();
-
-			(
-				parachain_headers_with_proof,
-				header_numbers.into_iter().max().expect("Header numbers is not empty"),
-			)
+			parachain_headers_with_proof
 		};
 
-		Ok((
-			ParachainHeadersWithFinalityProof {
-				finality_proof,
-				parachain_headers: parachain_headers_with_proof,
-			},
-			latest_finalized_para_block,
-		))
+		Ok(ParachainHeadersWithFinalityProof {
+			finality_proof,
+			parachain_headers: parachain_headers_with_proof,
+		})
 	}
 
 	/// Returns the finality proof for the given parachain header numbers finalized by the given
@@ -414,14 +403,12 @@ where
 		let previous_finalized_height =
 			validation_data.relay_parent_number.min(previous_finalized_relay_height);
 
-		let (para_headers_with_proof, ..) = self
-			.query_finality_proof(
-				previous_finalized_height,
-				latest_finalized_height,
-				header_numbers,
-			)
-			.await?;
-		Ok(para_headers_with_proof)
+		self.query_finality_proof(
+			previous_finalized_height,
+			latest_finalized_height,
+			header_numbers,
+		)
+		.await
 	}
 
 	/// Queries the block at which the epoch for the given block belongs to ends.

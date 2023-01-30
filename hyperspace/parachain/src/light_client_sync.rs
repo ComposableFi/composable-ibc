@@ -115,7 +115,7 @@ where
 						Error::Custom(format!("Expected finalized header, found None"))
 					})?;
 				let latest_finalized_height = u32::from(*finalized_head.number());
-				let (mut messages, previous_finalized_height, ..) = self
+				let (mut messages, previous_finalized_height) = self
 					.query_missed_grandpa_updates(
 						client_state.latest_relay_height,
 						latest_finalized_height,
@@ -123,7 +123,7 @@ where
 						counterparty.account_id(),
 					)
 					.await?;
-				let (latest_message, ..) = get_message(
+				let latest_message = get_message(
 					prover,
 					previous_finalized_height,
 					latest_finalized_height,
@@ -170,7 +170,7 @@ where
 		latest_finalized_height: u32,
 		client_id: ClientId,
 		signer: Signer,
-	) -> Result<(Vec<Any>, u32, Option<T::BlockNumber>), anyhow::Error> {
+	) -> Result<(Vec<Any>, u32), anyhow::Error> {
 		let prover = self.grandpa_prover();
 		let session_length = prover.session_length().await?;
 		let mut session_end_block = {
@@ -184,9 +184,8 @@ where
 		// Get all session change blocks between previously finalized relaychain height and latest
 		// finalized height
 		let mut messages = vec![];
-		let mut latest_para_block = None;
 		while session_end_block < latest_finalized_height {
-			let (msg, para_block) = get_message(
+			let msg = get_message(
 				self.grandpa_prover(),
 				previous_finalized_height,
 				session_end_block,
@@ -195,23 +194,21 @@ where
 			)
 			.await?;
 			messages.push(msg);
-			latest_para_block = latest_para_block.max(Some(para_block));
 			previous_finalized_height = session_end_block;
 			session_end_block += session_length;
 		}
-		Ok((messages, previous_finalized_height, latest_para_block))
+		Ok((messages, previous_finalized_height))
 	}
 }
 
-/// Return a single client update message and the latest parachain block number finalized by that
-/// update
+/// Return a single client update message
 async fn get_message<T: crate::config::Config>(
 	prover: GrandpaProver<T>,
 	previous_finalized_height: u32,
 	latest_finalized_height: u32,
 	client_id: ClientId,
 	signer: Signer,
-) -> Result<(Any, T::BlockNumber), anyhow::Error>
+) -> Result<Any, anyhow::Error>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
 		+ From<<T as subxt::Config>::BlockNumber>,
@@ -221,10 +218,7 @@ where
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 {
-	let (
-		ParachainHeadersWithFinalityProof { finality_proof, parachain_headers },
-		latest_para_block,
-	) = prover
+	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
 		.query_finality_proof(previous_finalized_height, latest_finalized_height, vec![])
 		.await?;
 
@@ -239,5 +233,5 @@ where
 		signer,
 	};
 	let value = msg.encode_vec();
-	Result::<_, anyhow::Error>::Ok((Any { value, type_url: msg.type_url() }, latest_para_block))
+	Result::<_, anyhow::Error>::Ok(Any { value, type_url: msg.type_url() })
 }
