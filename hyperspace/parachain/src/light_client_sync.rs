@@ -1,10 +1,14 @@
-use std::{collections::BTreeMap, fmt::Display};
+use std::{
+	collections::{BTreeMap, BTreeSet, HashMap},
+	fmt::Display,
+};
 
 use finality_grandpa::BlockNumberOps;
 use grandpa_light_client_primitives::{
 	FinalityProof, ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
 };
 use ibc_proto::google::protobuf::Any;
+use sp_core::H256;
 use sp_runtime::{
 	traits::{Header as HeaderT, IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
@@ -19,7 +23,8 @@ use ibc::core::ics02_client::msgs::update_client::MsgUpdateAnyClient;
 use subxt::tx::PlainTip as Tip;
 use tendermint_proto::Protobuf;
 
-use ibc::{core::ics24_host::identifier::ClientId, signer::Signer, tx_msg::Msg};
+use ibc::{core::ics24_host::identifier::ClientId, events::IbcEvent, signer::Signer, tx_msg::Msg};
+use ibc_rpc::{BlockNumberOrHash, IbcApiClient};
 use ics10_grandpa::client_message::{ClientMessage, Header as GrandpaHeader};
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState};
 
@@ -115,16 +120,18 @@ where
 						Error::Custom(format!("Expected finalized header, found None"))
 					})?;
 				let latest_finalized_height = u32::from(*finalized_head.number());
-				let (mut messages, previous_finalized_height) = self
+				let (mut messages, _events, previous_para_height, previous_finalized_height) = self
 					.query_missed_grandpa_updates(
+						client_state.latest_para_height,
 						client_state.latest_relay_height,
 						latest_finalized_height,
 						self.client_id(),
 						counterparty.account_id(),
 					)
 					.await?;
-				let latest_message = get_message(
+				let (latest_message, ..) = get_message(
 					prover,
+					previous_para_height,
 					previous_finalized_height,
 					latest_finalized_height,
 					self.client_id(),
@@ -166,11 +173,12 @@ where
 	/// in the list and latest parachain block finalized by the last message in the list
 	pub async fn query_missed_grandpa_updates(
 		&self,
+		mut previous_finalized_para_height: u32,
 		mut previous_finalized_height: u32,
 		latest_finalized_height: u32,
 		client_id: ClientId,
 		signer: Signer,
-	) -> Result<(Vec<Any>, u32), anyhow::Error> {
+	) -> Result<(Vec<Any>, Vec<IbcEvent>, u32, u32), anyhow::Error> {
 		let prover = self.grandpa_prover();
 		let session_length = prover.session_length().await?;
 		let mut session_end_block = {
@@ -181,12 +189,15 @@ where
 			}
 			session_block_end
 		};
+
 		// Get all session change blocks between previously finalized relaychain height and latest
 		// finalized height
 		let mut messages = vec![];
+		let mut events = vec![];
 		while session_end_block < latest_finalized_height {
-			let msg = get_message(
+			let (msg, evs, previous_para_height, ..) = get_message(
 				self.grandpa_prover(),
+				previous_finalized_para_height,
 				previous_finalized_height,
 				session_end_block,
 				client_id.clone(),
@@ -194,21 +205,24 @@ where
 			)
 			.await?;
 			messages.push(msg);
+			events.extend(evs);
 			previous_finalized_height = session_end_block;
+			previous_finalized_para_height = previous_para_height;
 			session_end_block += session_length;
 		}
-		Ok((messages, previous_finalized_height))
+		Ok((messages, events, previous_finalized_para_height, previous_finalized_height))
 	}
 }
 
 /// Return a single client update message
 async fn get_message<T: crate::config::Config>(
 	prover: GrandpaProver<T>,
+	previous_finalized_para_height: u32,
 	previous_finalized_height: u32,
 	latest_finalized_height: u32,
 	client_id: ClientId,
 	signer: Signer,
-) -> Result<Any, anyhow::Error>
+) -> Result<(Any, Vec<IbcEvent>, u32, u32), anyhow::Error>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
 		+ From<<T as subxt::Config>::BlockNumber>,
@@ -218,8 +232,47 @@ where
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 {
+	// fetch the latest finalized parachain header
+	let finalized_para_header =
+		prover.query_latest_finalized_parachain_header(latest_finalized_height).await?;
+	let latest_finalized_para_height = u32::from(*finalized_para_header.number());
+	let finalized_blocks =
+		((previous_finalized_para_height + 1)..=latest_finalized_para_height).collect::<Vec<_>>();
+	let finalized_block_numbers = finalized_blocks
+		.iter()
+		.map(|h| BlockNumberOrHash::Number(*h))
+		.collect::<Vec<_>>();
+
+	// block_number => events
+	let events: HashMap<String, Vec<IbcEvent>> =
+		IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_events(
+			&*prover.para_ws_client,
+			finalized_block_numbers,
+		)
+		.await?;
+
+	// header number is serialized to string
+	let mut headers_with_events = events
+		.iter()
+		.filter_map(|(num, events)| {
+			if events.is_empty() {
+				None
+			} else {
+				str::parse::<u32>(&*num).ok().map(T::BlockNumber::from)
+			}
+		})
+		.collect::<BTreeSet<_>>();
+
+	// We always insert the latest finalized para height
+	headers_with_events.insert(T::BlockNumber::from(latest_finalized_para_height));
+
+	let events: Vec<IbcEvent> = events.into_values().flatten().collect();
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
-		.query_finality_proof(previous_finalized_height, latest_finalized_height, vec![])
+		.query_finalized_parachain_headers_with_proof(
+			previous_finalized_height,
+			latest_finalized_height,
+			headers_with_events.into_iter().collect(),
+		)
 		.await?;
 
 	let grandpa_header = GrandpaHeader {
@@ -233,5 +286,10 @@ where
 		signer,
 	};
 	let value = msg.encode_vec();
-	Result::<_, anyhow::Error>::Ok(Any { value, type_url: msg.type_url() })
+	Result::<_, anyhow::Error>::Ok((
+		Any { value, type_url: msg.type_url() },
+		events,
+		latest_finalized_para_height,
+		latest_finalized_height,
+	))
 }

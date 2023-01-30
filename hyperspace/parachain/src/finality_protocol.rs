@@ -370,15 +370,20 @@ where
 		))?
 	}
 
-	let (mut missed_updates, ..) = source
+	let (
+		mut missed_updates,
+		mut missed_events,
+		previous_finalized_para_height,
+		previous_finalized_relay_height,
+	) = source
 		.query_missed_grandpa_updates(
+			client_state.latest_para_height,
 			client_state.latest_relay_height,
 			justification.commit.target_number,
 			source.client_id(),
 			counterparty.account_id(),
 		)
 		.await?;
-	let previous_finalized_para_height = client_state.latest_para_height;
 	let prover = source.grandpa_prover();
 
 	// fetch the latest finalized parachain header
@@ -387,9 +392,13 @@ where
 		.await?;
 
 	// notice the inclusive range
-	let finalized_blocks = ((previous_finalized_para_height + 1)..=
+	let mut finalized_blocks = ((previous_finalized_para_height + 1)..=
 		u32::from(*finalized_para_header.number()))
 		.collect::<Vec<_>>();
+
+	if finalized_blocks.is_empty() {
+		finalized_blocks.push(u32::from(*finalized_para_header.number()))
+	}
 
 	log::info!(
 		"Fetching events from {} for blocks {}..{}",
@@ -415,11 +424,11 @@ where
 		false
 	};
 
-	let latest_finalized_block = finalized_blocks.into_iter().max().unwrap_or_default();
+	let latest_finalized_block = u32::from(*finalized_para_header.number());
 
 	let is_update_required = source.is_update_required(
-		latest_finalized_block.into(),
-		client_state.latest_height().revision_height,
+		justification.commit.target_number as u64,
+		client_state.latest_relay_height as u64,
 	);
 
 	// block_number => events
@@ -452,14 +461,13 @@ where
 		}
 	}
 
-	if is_update_required {
+	if is_update_required || headers_with_events.is_empty() {
 		headers_with_events.insert(T::BlockNumber::from(latest_finalized_block));
 	}
 
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
 		.query_finalized_parachain_headers_with_proof(
-			previous_finalized_para_height,
-			client_state.latest_relay_height,
+			previous_finalized_relay_height,
 			justification.commit.target_number,
 			headers_with_events.into_iter().collect(),
 		)
@@ -502,6 +510,7 @@ where
 	};
 
 	missed_updates.push(update_header);
+	missed_events.extend(events);
 
-	Ok((missed_updates, events, update_type))
+	Ok((missed_updates, missed_events, update_type))
 }

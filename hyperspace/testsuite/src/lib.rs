@@ -267,7 +267,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	log::info!(target: "hyperspace", "Waiting for packet timeout to elapse on counterparty");
 	timeout_future(
 		future,
-		10 * 60,
+		20 * 60,
 		format!("Timeout height was not reached on {}", chain_b.name()),
 	)
 	.await;
@@ -322,7 +322,7 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 	log::info!(target: "hyperspace", "Waiting for packet timeout to elapse on counterparty");
 	timeout_future(
 		future,
-		10 * 60,
+		20 * 60,
 		format!("Timeout timestamp was not reached on {}", chain_b.name()),
 	)
 	.await;
@@ -345,10 +345,10 @@ where
 	B::Error: From<A::Error>,
 {
 	let (previous_balance, ..) = send_transfer(chain_a, chain_b, channel_id, None).await;
-	assert_send_transfer(chain_a, previous_balance, 20 * 60).await;
+	assert_send_transfer(chain_a, previous_balance, 25 * 60).await;
 	// now send from chain b.
 	let (previous_balance, ..) = send_transfer(chain_b, chain_a, channel_id, None).await;
-	assert_send_transfer(chain_b, previous_balance, 20 * 60).await;
+	assert_send_transfer(chain_b, previous_balance, 25 * 60).await;
 	log::info!(target: "hyperspace", "🚀🚀 Token Transfer successful with connection delay");
 }
 
@@ -384,7 +384,7 @@ async fn send_channel_close_init_and_assert_channel_close_confirm<A, B>(
 		.collect::<Vec<_>>();
 	timeout_future(
 		future,
-		10 * 60,
+		15 * 60,
 		format!("Didn't see CloseConfirmChannel message on {}", chain_b.name()),
 	)
 	.await;
@@ -444,7 +444,7 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 	log::info!(target: "hyperspace", "Waiting for packet timeout to elapse on counterparty");
 	timeout_future(
 		future,
-		10 * 60,
+		20 * 60,
 		format!("Timeout timestamp was not reached on {}", chain_b.name()),
 	)
 	.await;

@@ -3423,6 +3423,7 @@ dependencies = [
  "frame-support",
  "hash-db",
  "light-client-common",
+ "log",
  "parity-scale-codec",
  "sp-core 6.0.0",
  "sp-finality-grandpa",

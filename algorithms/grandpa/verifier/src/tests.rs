@@ -91,10 +91,6 @@ async fn follow_grandpa_justifications() {
 		let header_numbers = ((client_state.latest_para_height + 1)..=finalized_para_header.number)
 			.collect::<Vec<_>>();
 
-		if header_numbers.len() == 0 {
-			continue
-		}
-
 		println!("current_set_id: {}", client_state.current_set_id);
 		println!("latest_relay_height: {}", client_state.latest_relay_height);
 		println!(
@@ -107,7 +103,6 @@ async fn follow_grandpa_justifications() {
 
 		let proof = prover
 			.query_finalized_parachain_headers_with_proof(
-				client_state.latest_para_height,
 				client_state.latest_relay_height,
 				justification.commit.target_number,
 				header_numbers,
