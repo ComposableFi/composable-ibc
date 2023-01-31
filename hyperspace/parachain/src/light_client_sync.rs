@@ -82,8 +82,8 @@ where
 					})?;
 				let previous_finalized_height = client_state.latest_relay_height;
 				let session_length = prover.session_length().await?;
-				let session_end_block =
-					prover.session_end_for_block(previous_finalized_height).await?;
+				let (.., session_end_block) =
+					prover.session_start_and_end_for_block(previous_finalized_height).await?;
 				let latest_finalized_height = u32::from(finalized_head.number());
 				let session_changes =
 					(latest_finalized_height - session_end_block) / session_length;
@@ -182,8 +182,8 @@ where
 	) -> Result<(Vec<Any>, Vec<IbcEvent>, u32, u32), anyhow::Error> {
 		let prover = self.grandpa_prover();
 		let mut session_end_block = {
-			let mut session_block_end =
-				prover.session_end_for_block(previous_finalized_height).await?;
+			let (.., mut session_block_end) =
+				prover.session_start_and_end_for_block(previous_finalized_height).await?;
 			if session_block_end == previous_finalized_height {
 				session_block_end += 1;
 			}

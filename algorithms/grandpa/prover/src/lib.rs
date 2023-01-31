@@ -346,7 +346,10 @@ where
 	}
 
 	/// Queries the block at which the epoch for the given block belongs to ends.
-	pub async fn session_end_for_block(&self, block: u32) -> Result<u32, anyhow::Error> {
+	pub async fn session_start_and_end_for_block(
+		&self,
+		block: u32,
+	) -> Result<(u32, u32), anyhow::Error> {
 		let epoch_addr = polkadot::api::storage().babe().epoch_start();
 		let block_hash = self.relay_client.rpc().block_hash(Some(block.into())).await?;
 		let (previous_epoch_start, current_epoch_start) = self
@@ -358,7 +361,10 @@ where
 			.fetch(&epoch_addr)
 			.await?
 			.ok_or_else(|| anyhow!("Failed to fetch epoch information"))?;
-		Ok(current_epoch_start + (current_epoch_start - previous_epoch_start))
+		Ok((
+			current_epoch_start,
+			current_epoch_start + (current_epoch_start - previous_epoch_start),
+		))
 	}
 
 	/// Returns the session length in blocks
