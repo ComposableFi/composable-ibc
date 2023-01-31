@@ -1,5 +1,5 @@
 type = 'cosmos'
-name = 'cosmos-local'
+name = 'cosmos_local'
 rpc_url = 'http://127.0.0.1:26657'
 grpc_url = 'http://127.0.0.1:9090'
 websocket_url = 'ws://127.0.0.1:26657/websocket'
