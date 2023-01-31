@@ -471,6 +471,11 @@ where
 		}
 	}
 
+	// We ensure we advance the finalized latest parachain height
+	if client_state.latest_para_height < u32::from(finalized_para_header.number()) {
+		headers_with_events.insert(finalized_para_header.number());
+	}
+
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
 		.query_finalized_parachain_headers_with_proof::<T::Header>(
 			client_state.latest_relay_height,
