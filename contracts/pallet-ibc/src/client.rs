@@ -333,7 +333,7 @@ where
 			client_state
 		);
 
-		let data = client_state.encode_to_vec();
+		let data = client_state.encode_to_vec().map_err(ICS02Error::encode)?;
 		// store client states key-value
 		<ClientStates<T>>::insert(&client_id, data);
 
@@ -349,7 +349,7 @@ where
 		log::trace!(target: "pallet_ibc", "in client : [store_consensus_state] >> client_id: {:?}, height = {:?}, consensus_state = {:?}",
 			client_id, height, consensus_state);
 
-		let data = consensus_state.encode_to_vec();
+		let data = consensus_state.encode_to_vec().map_err(ICS02Error::encode)?;
 		// todo: pruning
 		ConsensusStates::<T>::insert(client_id.clone(), height, data);
 		// We do not need this hack for neither beefy nor grandpa clients
@@ -389,7 +389,7 @@ where
 		timestamp: Timestamp,
 	) -> Result<(), ICS02Error> {
 		log::trace!(target: "pallet_ibc", "in client: [store_update_time] >> Client Height {:?}, Host Timestamp {:?} ", height, timestamp);
-		let height = height.encode_vec();
+		let height = height.encode_vec().map_err(ICS02Error::encode)?;
 		let timestamp = timestamp.nanoseconds();
 		let client_id = client_id.as_bytes().to_vec();
 		ClientUpdateTime::<T>::insert(client_id, height, timestamp);
@@ -403,8 +403,8 @@ where
 		host_height: Height,
 	) -> Result<(), ICS02Error> {
 		log::trace!(target: "pallet_ibc", "in client: [store_update_height] >> Client Height {:?}, Host Height {:?} ", height, host_height);
-		let height = height.encode_vec();
-		let host_height = host_height.encode_vec();
+		let height = height.encode_vec().map_err(ICS02Error::encode)?;
+		let host_height = host_height.encode_vec().map_err(ICS02Error::encode)?;
 		let client_id = client_id.as_bytes().to_vec();
 		ClientUpdateHeight::<T>::insert(client_id, height, host_height);
 		Ok(())

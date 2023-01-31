@@ -1000,7 +1000,7 @@ where
 		};
 
 		let msg =
-			ibc_proto::google::protobuf::Any { type_url: msg.type_url(), value: msg.encode_vec() };
+			ibc_proto::google::protobuf::Any { type_url: msg.type_url(), value: msg.encode_vec().map_err(|e| IbcHandlerError::Other { msg: Some(e.to_string()) })? };
 		let res = ibc::core::ics26_routing::handler::deliver::<_>(&mut ctx, msg)
 			.map_err(|e| IbcHandlerError::ChannelInitError { msg: Some(e.to_string()) })?;
 		Self::deposit_event(res.events.into());
@@ -1099,7 +1099,7 @@ where
 				.map_err(|_| IbcHandlerError::ChannelInitError { msg: None })?,
 		};
 		let msg =
-			ibc_proto::google::protobuf::Any { type_url: msg.type_url(), value: msg.encode_vec() };
+			ibc_proto::google::protobuf::Any { type_url: msg.type_url(), value: msg.encode_vec().map_err(|e| IbcHandlerError::Other { msg: Some(e.to_string()) })? };
 		let res = ibc::core::ics26_routing::handler::deliver::<_>(&mut ctx, msg)
 			.map_err(|e| IbcHandlerError::ChannelCloseError { msg: Some(e.to_string()) })?;
 		Self::deposit_event(res.events.into());

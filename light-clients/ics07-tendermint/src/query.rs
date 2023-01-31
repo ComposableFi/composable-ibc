@@ -13,12 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use tendermint_rpc::abci::transaction::Hash;
-
 use ibc::core::{
 	ics02_client::client_consensus::QueryClientEventRequest,
 	ics04_channel::channel::QueryPacketEventDataRequest,
 };
+use tendermint::Hash;
 
 /// Used for queries and not yet standardized in channel's query.proto
 #[derive(Clone, Debug)]

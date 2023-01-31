@@ -26,6 +26,10 @@ extern crate ibc_derive;
 extern crate alloc;
 
 use core::fmt::Debug;
+use tendermint_light_client_verifier::{
+	operations::{CommitValidator, VotingPowerCalculator},
+	predicates::VerificationPredicates,
+};
 
 pub mod client_def;
 pub mod client_message;
@@ -41,7 +45,9 @@ mod query;
 /// Host functions that allow the light client verify cryptographic proofs in native.
 pub trait HostFunctionsProvider:
 	ics23::HostFunctionsProvider
-	+ tendermint_light_client_verifier::host_functions::CryptoProvider
+	+ VerificationPredicates
+	+ VotingPowerCalculator
+	+ CommitValidator
 	+ Debug
 	+ Clone
 	+ Send

@@ -59,7 +59,7 @@ impl State {
 	pub(crate) fn impl_fn_encode_to_vec(&self) -> proc_macro2::TokenStream {
 		let crate_ = &self.crate_ident;
 		quote! {
-			fn encode_to_vec(&self) -> ::alloc::vec::Vec<u8> {
+			fn encode_to_vec(&self) -> ::core::result::Result<::alloc::vec::Vec<u8>, ::tendermint_proto::Error> {
 				#crate_::protobuf::Protobuf::encode_vec(self)
 			}
 		}
