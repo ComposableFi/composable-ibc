@@ -26,7 +26,6 @@ std = [
     "sp-std/std",
     "codec/std",
     "scale-info/std",
-    "primitive-types/std"
 ]
 clock = ["tendermint/clock", "time/std"]
 cosmwasm = ["cosmwasm-schema"]
@@ -38,7 +37,7 @@ mocks = ["clock", "std", "sha2"]
 [dependencies]
 # Proto definitions for all IBC-related interfaces, e.g., connections or channels.
 ibc-proto = { version = "0.18.0", path = "../proto", default-features = false }
-derive = { path = "../derive", package = "ibc-derive" }
+derive = { path = "../derive", package = "ibc-derive", default-features = false }
 ics23 = { git = "https://github.com/confio/ics23", rev = "a4daeb4c24ce1be827829c0841446abc690c4f11", default-features = false }
 time = { version = "0.3", default-features = false }
 serde_derive = { version = "1.0.104", default-features = false }

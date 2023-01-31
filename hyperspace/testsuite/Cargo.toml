@@ -45,7 +45,11 @@ hex = "0.4.3"
 subxt = { git = "https://github.com/ComposableFi/subxt", rev = "7a54d51ffe1d2daf785d13040276e5cbe30c29ed", features = ["substrate-compat"] }
 hyperspace-core = { path = "../core", features = ["testing", "build-metadata-from-ws"] }
 hyperspace-parachain = { path = "../parachain", features = ["testing", "build-metadata-from-ws"] }
+hyperspace-cosmos = { path = "../cosmos", features = [] }
 
 # We need this so the tests run sequentially
 [[test]]
 name = "parachain_parachain"
+
+[[test]]
+name = "parachain_cosmos"

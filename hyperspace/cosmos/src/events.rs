@@ -126,12 +126,10 @@ pub fn ibc_event_try_from_abci_event(
 			connection_open_init_try_from_abci_event(abci_event)
 				.map_err(IbcEventError::connection)?,
 		)),
-		Ok(IbcEventType::OpenTryConnection) => {
-			Ok(IbcEvent::OpenTryConnection(
-				connection_open_try_try_from_abci_event(abci_event)
-					.map_err(IbcEventError::connection)?,
-			))
-		},
+		Ok(IbcEventType::OpenTryConnection) => Ok(IbcEvent::OpenTryConnection(
+			connection_open_try_try_from_abci_event(abci_event)
+				.map_err(IbcEventError::connection)?,
+		)),
 		Ok(IbcEventType::OpenAckConnection) => Ok(IbcEvent::OpenAckConnection(
 			connection_open_ack_try_from_abci_event(abci_event)
 				.map_err(IbcEventError::connection)?,

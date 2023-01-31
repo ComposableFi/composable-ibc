@@ -65,11 +65,6 @@ use primitives::{
 };
 use serde::{Deserialize, Serialize};
 use std::{pin::Pin, time::Duration};
-#[cfg(not(feature = "dali"))]
-use subxt::tx::{
-	PolkadotExtrinsicParams as ParachainExtrinsicParams,
-	PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
-};
 #[cfg(feature = "dali")]
 use subxt::config::substrate::{
 	SubstrateExtrinsicParams as ParachainExtrinsicParams,

@@ -25,7 +25,6 @@ flex-error = { version = "0.4.4", default-features = false }
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "eac7b5a17f872c3af3b576fe485dc55e0526fa24", default-features = false }
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "eac7b5a17f872c3af3b576fe485dc55e0526fa24", default-features = false }
 tendermint-light-client-verifier = { git = "https://github.com/informalsystems/tendermint-rs", rev = "eac7b5a17f872c3af3b576fe485dc55e0526fa24", default-features = false }
-#frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30", default-features = false }
 log = { version = "0.4.0", default-features = false }
 hex = { version = "0.4.3", default-features = false }
 

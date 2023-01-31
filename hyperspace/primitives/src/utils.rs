@@ -80,13 +80,13 @@ pub async fn create_clients(
 /// Completes the connection handshake process
 /// The relayer process must be running before this function is executed
 pub async fn create_connection(
-	chain_a: &impl Chain, // ibc - tendermint
-	chain_b: &impl Chain, // substrate - wasm
+	chain_a: &impl Chain,
+	chain_b: &impl Chain,
 	delay_period: Duration,
 ) -> Result<(ConnectionId, ConnectionId), anyhow::Error> {
 	let msg = MsgConnectionOpenInit {
-		client_id: chain_b.client_id(),
-		counterparty: Counterparty::new(chain_a.client_id(), None, chain_a.connection_prefix()),
+		client_id: chain_a.client_id(),
+		counterparty: Counterparty::new(chain_b.client_id(), None, chain_a.connection_prefix()),
 		version: Some(Default::default()),
 		delay_period,
 		signer: chain_b.account_id(),

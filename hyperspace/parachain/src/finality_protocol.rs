@@ -17,11 +17,14 @@
 use crate::{config, error::Error, ParachainClient};
 use anyhow::anyhow;
 use beefy_light_client_primitives::{ClientState as BeefyPrimitivesClientState, NodesUtils};
+use beefy_prover::helpers::unsafe_arc_cast;
 use codec::{Decode, Encode};
 use finality_grandpa::BlockNumberOps;
 use grandpa_light_client_primitives::{
-	justification::find_scheduled_change, ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
+	justification::{find_scheduled_change, GrandpaJustification},
+	FinalityProof, ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
 };
+use grandpa_prover::JustificationNotification;
 use ibc::{
 	core::ics02_client::{client_state::ClientState as _, msgs::update_client::MsgUpdateAnyClient},
 	events::IbcEvent,
@@ -57,9 +60,6 @@ use subxt::config::{
 	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT,
 };
 use tendermint_proto::Protobuf;
-use beefy_prover::helpers::unsafe_arc_cast;
-use grandpa_light_client_primitives::justification::GrandpaJustification;
-use grandpa_prover::JustificationNotification;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum FinalityProtocol {
@@ -370,16 +370,11 @@ where
 
 	let mut session_end = prover.session_end_for_block(client_state.latest_relay_height).await?;
 
-	if dbg!(client_state.latest_relay_height) == dbg!(session_end) {
+	if client_state.latest_relay_height == session_end {
 		session_end = prover.session_end_for_block(client_state.latest_relay_height + 1).await?;
-		dbg!(session_end);
 	}
 
-	let mut latest_finalized_height = session_end; // justification.commit.target_number;
-											   // if latest_finalized_height > session_end
-											   // {
-											   // 	latest_finalized_height = session_end;
-											   // }
+	let mut latest_finalized_height = session_end;
 	use finality_grandpa_rpc::GrandpaApiClient;
 
 	let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
@@ -411,12 +406,6 @@ where
 	let finalized_para_header = prover
 		.query_latest_finalized_parachain_header(justification.commit.target_number)
 		.await?;
-
-	// if client_state.latest_para_height + 1 >= u32::from(*finalized_para_header.number()) {
-	// 	Err(anyhow!(
-	// 		"skipping outdated commit 3",
-	// 	))?
-	// }
 
 	// notice the inclusive range
 	let finalized_blocks = ((client_state.latest_para_height + 1)..=
