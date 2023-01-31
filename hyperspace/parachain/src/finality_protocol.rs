@@ -374,7 +374,9 @@ where
 		session_end + 1
 	} else if client_state.latest_relay_height == session_start {
 		session_start + 1
-	} else if client_state.latest_relay_height > session_start && client_state.latest_relay_height < session_end {
+	} else if client_state.latest_relay_height > session_start &&
+		client_state.latest_relay_height < session_end
+	{
 		client_state.latest_relay_height + 1
 	} else {
 		session_end
