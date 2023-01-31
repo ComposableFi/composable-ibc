@@ -232,7 +232,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		println!("Client State: {:?}", client_state);
 		println!("Finalized para header: {:?}", finalized_para_header.number);
 		let proof = prover
-			.query_finalized_parachain_headers_with_proof(
+			.query_finalized_parachain_headers_with_proof::<SubstrateHeader<u32, BlakeTwo256>>(
 				client_state.latest_relay_height,
 				justification.commit.target_number,
 				None,

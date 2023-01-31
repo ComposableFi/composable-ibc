@@ -82,8 +82,6 @@ async fn follow_grandpa_justifications() {
 		let justification =
 			Justification::decode(&mut &justification[..]).expect("Failed to decode justification");
 
-		println!("{:#?}", justification);
-		println!("current_set_id: {}", client_state.latest_relay_height);
 		let finalized_para_header = prover
 			.query_latest_finalized_parachain_header(justification.commit.target_number)
 			.await
@@ -92,6 +90,10 @@ async fn follow_grandpa_justifications() {
 		// notice the inclusive range
 		let header_numbers = ((client_state.latest_para_height + 1)..=finalized_para_header.number)
 			.collect::<Vec<_>>();
+
+		if header_numbers.len() == 0 {
+			continue
+		}
 
 		println!("current_set_id: {}", client_state.current_set_id);
 		println!("latest_relay_height: {}", client_state.latest_relay_height);
@@ -104,7 +106,7 @@ async fn follow_grandpa_justifications() {
 		dbg!(&header_numbers);
 
 		let proof = prover
-			.query_finalized_parachain_headers_with_proof(
+			.query_finalized_parachain_headers_with_proof::<SubstrateHeader<u32, BlakeTwo256>>(
 				client_state.latest_relay_height,
 				justification.commit.target_number,
 				None,

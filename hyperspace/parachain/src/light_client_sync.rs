@@ -181,12 +181,11 @@ where
 		signer: Signer,
 	) -> Result<(Vec<Any>, Vec<IbcEvent>, u32, u32), anyhow::Error> {
 		let prover = self.grandpa_prover();
-		let session_length = prover.session_length().await?;
 		let mut session_end_block = {
 			let mut session_block_end =
 				prover.session_end_for_block(previous_finalized_height).await?;
 			if session_block_end == previous_finalized_height {
-				session_block_end += session_length;
+				session_block_end += 1;
 			}
 			session_block_end
 		};
@@ -210,7 +209,7 @@ where
 			events.extend(evs);
 			previous_finalized_height = session_end_block;
 			previous_finalized_para_height = previous_para_height;
-			session_end_block += session_length;
+			session_end_block += 1;
 		}
 		Ok((messages, events, previous_finalized_para_height, previous_finalized_height))
 	}

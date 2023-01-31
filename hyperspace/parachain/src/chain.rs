@@ -49,7 +49,6 @@ use crate::{
 	utils::MetadataIbcEventWrapper,
 	FinalityProtocol,
 };
-use beefy_prover::helpers::unsafe_arc_cast;
 use finality_grandpa_rpc::GrandpaApiClient;
 use ibc::{
 	core::{
@@ -147,58 +146,34 @@ where
 	) -> Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>> {
 		match self.finality_protocol {
 			FinalityProtocol::Grandpa => {
-				let (tx, rx) =
-					tokio::sync::mpsc::channel::<<Self as IbcProvider>::FinalityEvent>(64);
-				let stream = tokio_stream::wrappers::ReceiverStream::new(rx);
-				let prover = self.grandpa_prover();
-				tokio::spawn(async move {
-					// Use justification stream to listen for notifications but prove finality of
-					// latest block instead
-					let mut subscription = GrandpaApiClient::<
-						JustificationNotification,
-						sp_core::H256,
-						u32,
-					>::subscribe_justifications(&*prover.relay_ws_client)
-					.await
-					.expect("Failed to subscribe to grandpa justifications");
-					while let Some(_) = subscription.next().await {
-						let finalized_hash = prover
-							.relay_client
-							.rpc()
-							.finalized_head()
-							.await
-							.expect("Failed to fetch finalized relay height");
-						let finalized_block = prover
-							.relay_client
-							.blocks()
-							.at(Some(finalized_hash))
-							.await
-							.expect("Expected block to be available")
-							.number();
-						let encoded =
-							GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
-								// we cast between the same type but different crate versions.
-								&*unsafe {
-									unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(
-										prover.relay_ws_client.clone(),
-									)
-								},
-								u32::from(finalized_block),
-							)
-								.await.ok().flatten().expect("Failed to fetch finality proof")
-								.0;
+				let subscription =
+					GrandpaApiClient::<JustificationNotification, sp_core::H256, u32>::subscribe_justifications(
+						&*self.relay_ws_client,
+					)
+						.await
+						.expect("Failed to subscribe to grandpa justifications")
+						.chunks(3)
+						.map(|mut notifs| notifs.remove(notifs.len() - 1)); // skip every 3 finality notifications
 
-						let finality_proof = FinalityProof::<T::Header>::decode(&mut &encoded[..])
-							.expect("Expected valid encoded finality proof");
+				let stream = subscription.filter_map(|justification_notif| {
+					let encoded_justification = match justification_notif {
+						Ok(JustificationNotification(sp_core::Bytes(justification))) =>
+							justification,
+						Err(err) => {
+							log::error!("Failed to fetch Justification: {}", err);
+							return futures::future::ready(None)
+						},
+					};
 
-						let justification =
-							GrandpaJustification::decode(&mut &finality_proof.justification[..])
-								.expect("Expected valid justification");
-
-						if let Err(_) = tx.send(Self::FinalityEvent::Grandpa(justification)).await {
-							break
-						}
-					}
+					let justification =
+						match GrandpaJustification::decode(&mut &*encoded_justification) {
+							Ok(j) => j,
+							Err(err) => {
+								log::error!("Grandpa Justification scale decode error: {}", err);
+								return futures::future::ready(None)
+							},
+						};
+					futures::future::ready(Some(Self::FinalityEvent::Grandpa(justification)))
 				});
 
 				Box::pin(Box::new(stream))

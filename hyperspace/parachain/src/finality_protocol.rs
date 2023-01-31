@@ -19,8 +19,10 @@ use anyhow::anyhow;
 use beefy_light_client_primitives::{ClientState as BeefyPrimitivesClientState, NodesUtils};
 use codec::{Decode, Encode};
 use finality_grandpa::BlockNumberOps;
+use finality_grandpa_rpc::GrandpaApiClient;
 use grandpa_light_client_primitives::{
-	justification::find_scheduled_change, ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
+	justification::find_scheduled_change, FinalityProof, ParachainHeaderProofs,
+	ParachainHeadersWithFinalityProof,
 };
 use ibc::{
 	core::ics02_client::{client_state::ClientState as _, msgs::update_client::MsgUpdateAnyClient},
@@ -48,6 +50,9 @@ use std::{
 	collections::{BTreeMap, BTreeSet, HashMap},
 	fmt::Display,
 };
+
+use beefy_prover::helpers::unsafe_arc_cast;
+use grandpa_prover::{GrandpaJustification, JustificationNotification};
 #[cfg(not(feature = "dali"))]
 use subxt::config::polkadot::PlainTip as Tip;
 #[cfg(feature = "dali")]
@@ -340,7 +345,7 @@ where
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
-	let justification = match finality_event {
+	let _justification = match finality_event {
 		FinalityEvent::Grandpa(justification) => justification,
 		_ => panic!("Expected grandpa finality event"),
 	};
@@ -362,29 +367,33 @@ where
 		)))?,
 	};
 
-	if justification.commit.target_number <= client_state.latest_relay_height {
-		Err(anyhow!(
-			"skipping outdated commit: {}, with latest relay height: {}",
-			justification.commit.target_number,
-			client_state.latest_relay_height
-		))?
-	}
-
-	let (
-		mut missed_updates,
-		mut missed_events,
-		previous_finalized_para_height,
-		previous_finalized_relay_height,
-	) = source
-		.query_missed_grandpa_updates(
-			client_state.latest_para_height,
-			client_state.latest_relay_height,
-			justification.commit.target_number,
-			source.client_id(),
-			counterparty.account_id(),
-		)
-		.await?;
 	let prover = source.grandpa_prover();
+	let session_end = prover.session_end_for_block(client_state.latest_relay_height).await?;
+	let next_relay_height =
+		if session_end == client_state.latest_relay_height { session_end + 1 } else { session_end };
+
+	let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
+		// we cast between the same type but different crate versions.
+		&*unsafe {
+			unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(prover.relay_ws_client.clone())
+		},
+		next_relay_height,
+	)
+	.await
+	.map_err(|_| {
+		Error::Custom(
+		format!("Next relay block {} has not been finalized, previous finalized height on counterparty {}",
+				next_relay_height, client_state.latest_relay_height
+		)
+	)
+	})?
+	.ok_or_else(|| anyhow!("No justification found for block: {:?}", next_relay_height))?
+	.0;
+
+	let finality_proof = FinalityProof::<T::Header>::decode(&mut &encoded[..])?;
+
+	let justification =
+		GrandpaJustification::<T::Header>::decode(&mut &finality_proof.justification[..])?;
 
 	// fetch the latest finalized parachain header
 	let finalized_para_header = prover
@@ -392,7 +401,7 @@ where
 		.await?;
 
 	// notice the inclusive range
-	let finalized_blocks = ((previous_finalized_para_height + 1)..=
+	let finalized_blocks = ((client_state.latest_para_height + 1)..=
 		u32::from(finalized_para_header.number()))
 		.collect::<Vec<_>>();
 
@@ -421,13 +430,6 @@ where
 	} else {
 		false
 	};
-
-	let latest_finalized_block = u32::from(finalized_para_header.number());
-
-	let is_update_required = source.is_update_required(
-		justification.commit.target_number as u64,
-		client_state.latest_relay_height as u64,
-	);
 
 	// block_number => events
 	let events: HashMap<String, Vec<IbcEvent>> =
@@ -459,13 +461,9 @@ where
 		}
 	}
 
-	if is_update_required || headers_with_events.is_empty() {
-		headers_with_events.insert(T::BlockNumber::from(latest_finalized_block));
-	}
-
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
 		.query_finalized_parachain_headers_with_proof::<T::Header>(
-			previous_finalized_relay_height,
+			client_state.latest_relay_height,
 			justification.commit.target_number,
 			Some(justification.encode()),
 			headers_with_events.into_iter().collect(),
@@ -486,11 +484,10 @@ where
 
 	let authority_set_changed_scheduled = find_scheduled_change(&target).is_some();
 	// if validator set has changed this is a mandatory update
-	let update_type =
-		match authority_set_changed_scheduled || timeout_update_required || is_update_required {
-			true => UpdateType::Mandatory,
-			false => UpdateType::Optional,
-		};
+	let update_type = match authority_set_changed_scheduled || timeout_update_required {
+		true => UpdateType::Mandatory,
+		false => UpdateType::Optional,
+	};
 
 	let grandpa_header = GrandpaHeader {
 		finality_proof: codec::Decode::decode(&mut &*finality_proof.encode())
@@ -508,8 +505,5 @@ where
 		Any { value, type_url: msg.type_url() }
 	};
 
-	missed_updates.push(update_header);
-	missed_events.extend(events);
-
-	Ok((missed_updates, missed_events, update_type))
+	Ok((vec![update_header], events, update_type))
 }
