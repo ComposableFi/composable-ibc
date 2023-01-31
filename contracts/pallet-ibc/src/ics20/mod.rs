@@ -279,24 +279,23 @@ where
 		process_ack_packet(&mut ctx, packet, &packet_data, &ack)
 			.map_err(|e| Ics04Error::implementation_specific(e.to_string()))?;
 		match ack.into_result() {
-			Ok(_) =>
-				Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
-					from: packet_data.sender.to_string().as_bytes().to_vec(),
-					to: packet_data.receiver.to_string().as_bytes().to_vec(),
-					ibc_denom: packet_data.token.denom.to_string().as_bytes().to_vec(),
-					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
-						&packet_data.token.denom.to_string(),
-					)
-					.ok(),
-					amount: packet_data.token.amount.as_u256().as_u128().into(),
-					is_sender_source: is_sender_chain_source(
-						packet.source_port.clone(),
-						packet.source_channel.clone(),
-						&packet_data.token.denom,
-					),
-					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
-					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
-				}),
+			Ok(_) => Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
+				from: packet_data.sender.to_string().as_bytes().to_vec(),
+				to: packet_data.receiver.to_string().as_bytes().to_vec(),
+				ibc_denom: packet_data.token.denom.to_string().as_bytes().to_vec(),
+				local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
+					&packet_data.token.denom.to_string(),
+				)
+				.ok(),
+				amount: packet_data.token.amount.as_u256().as_u128().into(),
+				is_sender_source: is_sender_chain_source(
+					packet.source_port.clone(),
+					packet.source_channel.clone(),
+					&packet_data.token.denom,
+				),
+				source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
+				destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
+			}),
 			Err(e) => {
 				log::trace!(
 					target: "pallet_ibc",
