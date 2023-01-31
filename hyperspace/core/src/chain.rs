@@ -887,6 +887,17 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Any {
 	}
 }
 
+impl AnyChain {
+	pub fn set_client_id(&mut self, client_id: ClientId) {
+		match self {
+			Self::Parachain(chain) => chain.set_client_id(client_id),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.set_client_id(client_id),
+			Self::Wasm(chain) => chain.inner.set_client_id(client_id),
+		}
+	}
+}
+
 #[cfg(any(test, feature = "testing"))]
 #[async_trait]
 impl primitives::TestProvider for AnyChain {

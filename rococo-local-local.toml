@@ -12,4 +12,4 @@ channel_whitelist = []
 finality_protocol = 'Grandpa'
 key_type = 'sr25519'
 client_id = "08-wasm-0"
-counterparty_wasm_code_id = "1322d57aa7b6a44bb9306cd58a86277d0d90bad2bbe453ffe3026d1ba48ae9fd"
+counterparty_wasm_code_id = "6b1025f8e590cd41071e75171c5c67b632ef8466ed7fc23251b6f1fbe1295a22"

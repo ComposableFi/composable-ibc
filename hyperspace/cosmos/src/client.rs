@@ -40,10 +40,10 @@ use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient, Url};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ConfigKeyEntry {
-	public_key: String,
-	private_key: String,
-	account: String,
-	address: Vec<u8>,
+	pub public_key: String,
+	pub private_key: String,
+	pub account: String,
+	pub address: Vec<u8>,
 }
 
 // pub fn decode_key(data: &[u8]) -> Result<ExtendedPublicKey, Error> {

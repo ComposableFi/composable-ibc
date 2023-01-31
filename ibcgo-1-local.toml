@@ -1,5 +1,5 @@
 type = 'cosmos'
-name = 'simapp'
+name = 'cosmos-local'
 rpc_url = 'http://127.0.0.1:26657'
 grpc_url = 'http://127.0.0.1:9090'
 websocket_url = 'ws://127.0.0.1:26657/websocket'
@@ -9,7 +9,7 @@ store_prefix = 'ibc'
 max_tx_size = 200000
 connection_id = 'connection-0'
 client_id = "07-tendermint-0"
-wasm_code_id = "1322d57aa7b6a44bb9306cd58a86277d0d90bad2bbe453ffe3026d1ba48ae9fd"
+wasm_code_id = "6b1025f8e590cd41071e75171c5c67b632ef8466ed7fc23251b6f1fbe1295a22"
 wasm_client_type = "10-grandpa"
 
 [keybase]
