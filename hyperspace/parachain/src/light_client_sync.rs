@@ -275,9 +275,6 @@ where
 		})
 		.collect::<BTreeSet<_>>();
 
-	// We always insert the latest finalized para height
-	headers_with_events.insert(T::BlockNumber::from(latest_finalized_para_height));
-
 	// We ensure we advance the finalized latest parachain height
 	if previous_finalized_para_height < u32::from(finalized_para_header.number()) {
 		headers_with_events.insert(finalized_para_header.number());
