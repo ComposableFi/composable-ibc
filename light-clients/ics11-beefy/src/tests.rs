@@ -196,8 +196,7 @@ async fn test_continuous_update_of_beefy_client() {
 		.unwrap();
 	let mut subscription_stream = subscription.enumerate().take(100);
 
-	while let Some((count, Ok(encoded_versioned_finality_proof))) = subscription_stream.next().await
-	{
+	while let Some((_, Ok(encoded_versioned_finality_proof))) = subscription_stream.next().await {
 		let beefy_version_finality_proof: VersionedFinalityProof<
 			u32,
 			beefy_primitives::crypto::Signature,

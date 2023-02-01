@@ -9,7 +9,7 @@ use core::fmt::Formatter;
 use frame_support::weights::Weight;
 use ibc::{
 	applications::transfer::{
-		acknowledgement::{Acknowledgement as Ics20Acknowledgement, ACK_ERR_STR, ACK_SUCCESS_B64},
+		acknowledgement::{Acknowledgement as Ics20Acknowledgement, ACK_ERR_STR},
 		context::{
 			on_chan_close_confirm, on_chan_close_init, on_chan_open_ack, on_chan_open_confirm,
 			on_chan_open_init, on_chan_open_try,
@@ -246,7 +246,7 @@ where
 				let packet = packet.clone();
 				Pallet::<T>::write_acknowledgement(
 					&packet,
-					Ics20Acknowledgement::success().as_ref().to_vec(),
+					Ics20Acknowledgement::success().to_string().into_bytes(),
 				)
 				.map_err(|e| {
 					Ics04Error::implementation_specific(format!("[on_recv_packet] {:#?}", e))
@@ -269,14 +269,7 @@ where
 			serde_json::from_slice(packet.data.as_slice()).map_err(|e| {
 				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
 			})?;
-		let ack = String::from_utf8(acknowledgement.as_ref().to_vec())
-			.map(|val| {
-				if val.as_bytes() == ACK_SUCCESS_B64 {
-					Ics20Acknowledgement::Success(ACK_SUCCESS_B64.to_vec())
-				} else {
-					Ics20Acknowledgement::Error(val)
-				}
-			})
+		let ack = serde_json::from_slice::<Ics20Acknowledgement>(&acknowledgement.as_ref())
 			.map_err(|e| {
 				Ics04Error::implementation_specific(format!(
 					"Failed to decode acknowledgement data {:?}",
@@ -285,26 +278,29 @@ where
 			})?;
 		process_ack_packet(&mut ctx, packet, &packet_data, &ack)
 			.map_err(|e| Ics04Error::implementation_specific(e.to_string()))?;
-		match ack {
-			Ics20Acknowledgement::Success(_) =>
-				Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
-					from: packet_data.sender.to_string().as_bytes().to_vec(),
-					to: packet_data.receiver.to_string().as_bytes().to_vec(),
-					ibc_denom: packet_data.token.denom.to_string().as_bytes().to_vec(),
-					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
-						&packet_data.token.denom.to_string(),
-					)
-					.ok(),
-					amount: packet_data.token.amount.as_u256().as_u128().into(),
-					is_sender_source: is_sender_chain_source(
-						packet.source_port.clone(),
-						packet.source_channel.clone(),
-						&packet_data.token.denom,
-					),
-					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
-					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
-				}),
-			Ics20Acknowledgement::Error(_) =>
+		match ack.into_result() {
+			Ok(_) => Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
+				from: packet_data.sender.to_string().as_bytes().to_vec(),
+				to: packet_data.receiver.to_string().as_bytes().to_vec(),
+				ibc_denom: packet_data.token.denom.to_string().as_bytes().to_vec(),
+				local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
+					&packet_data.token.denom.to_string(),
+				)
+				.ok(),
+				amount: packet_data.token.amount.as_u256().as_u128().into(),
+				is_sender_source: is_sender_chain_source(
+					packet.source_port.clone(),
+					packet.source_channel.clone(),
+					&packet_data.token.denom,
+				),
+				source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
+				destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
+			}),
+			Err(e) => {
+				log::trace!(
+					target: "pallet_ibc",
+					"[transfer] error: acknowledgement error: {e}",
+				);
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferFailed {
 					from: packet_data.sender.to_string().as_bytes().to_vec(),
 					to: packet_data.receiver.to_string().as_bytes().to_vec(),
@@ -321,7 +317,8 @@ where
 					),
 					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
 					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
-				}),
+				})
+			},
 		}
 
 		Ok(())
