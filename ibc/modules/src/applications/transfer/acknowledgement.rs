@@ -24,32 +24,30 @@ pub const ACK_ERR_STR: &str = "error handling packet on destination chain: see e
 pub const ACK_SUCCESS_B64: &str = "AQ==";
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Acknowledgement {
-	#[serde(skip_serializing_if = "Option::is_none")]
-	result: Option<String>,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	error: Option<String>,
+#[serde(rename_all = "snake_case")]
+pub enum Acknowledgement {
+	Result(String),
+	Error(String),
 }
 
 impl Acknowledgement {
 	pub fn success() -> Self {
-		Self { result: Some(ACK_SUCCESS_B64.to_string()), error: None }
+		Self::Result(ACK_SUCCESS_B64.to_string())
 	}
 
 	pub fn from_error(err: Error) -> Self {
-		Self { result: None, error: Some(err.to_string()) }
+		Self::Error(err.to_string())
 	}
 
 	pub fn is_successful(&self) -> bool {
-		self.result.as_deref() == Some(ACK_SUCCESS_B64)
+		matches!(self, Self::Result(s) if s == ACK_SUCCESS_B64)
 	}
 
 	pub fn into_result(self) -> Result<String, String> {
-		match (self.result, self.error) {
-			(Some(r), None) if r == ACK_SUCCESS_B64 => Ok(r),
-			(Some(r), None) => Err(r),
-			(None, Some(e)) => Err(e),
-			_ => unreachable!("invalid response"),
+		match self {
+			Self::Result(r) if r == ACK_SUCCESS_B64 => Ok(r),
+			Self::Result(r) => Err(r),
+			Self::Error(e) => Err(e),
 		}
 	}
 }
