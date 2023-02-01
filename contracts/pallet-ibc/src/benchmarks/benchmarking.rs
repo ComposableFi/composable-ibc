@@ -24,7 +24,9 @@ use sp_runtime::traits::IdentifyAccount;
 use crate::routing::Context;
 use ibc::{
 	applications::transfer::{
-		acknowledgement::ACK_ERR_STR, packet::PacketData, Amount, Coin, PrefixedDenom, VERSION,
+		acknowledgement::{Acknowledgement as TransferAck, ACK_ERR_STR},
+		packet::PacketData,
+		Amount, Coin, PrefixedDenom, VERSION,
 	},
 	core::{
 		ics02_client::{
@@ -1126,7 +1128,7 @@ benchmarks! {
 		 let mut handler = IbcModule::<T>::default();
 		 let mut output = HandlerOutputBuilder::new();
 		 let signer = Signer::from_str("relayer").unwrap();
-		 let ack: Acknowledgement = ACK_ERR_STR.to_string().as_bytes().to_vec().into();
+		 let ack: Acknowledgement = TransferAck::Error(ACK_ERR_STR.to_string()).to_string().into_bytes().into();
 	}:{
 		let ctx = routing::Context::<T>::new();
 	   handler.on_acknowledgement_packet(&ctx, &mut output, &packet, &ack, &signer).unwrap();
