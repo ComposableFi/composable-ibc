@@ -316,7 +316,7 @@ pub trait IbcProvider {
 		&self,
 		latest_height: u64,
 		latest_client_height_on_counterparty: u64,
-	) -> bool;
+	) -> Result<bool, Self::Error>;
 
 	/// This should return a subjectively chosen client and consensus state for this chain.
 	async fn initialize_client_state(

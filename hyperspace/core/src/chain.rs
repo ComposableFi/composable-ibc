@@ -526,14 +526,16 @@ impl IbcProvider for AnyChain {
 		}
 	}
 
-	fn is_update_required(
+	async fn is_update_required(
 		&self,
 		latest_height: u64,
 		latest_client_height_on_counterparty: u64,
-	) -> bool {
+	) -> Result<bool, Self::Error> {
 		match self {
-			Self::Parachain(chain) =>
-				chain.is_update_required(latest_height, latest_client_height_on_counterparty),
+			Self::Parachain(chain) => chain
+				.is_update_required(latest_height, latest_client_height_on_counterparty)
+				.await
+				.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}

@@ -647,7 +647,10 @@ where
 		latest_client_height_on_counterparty: u64,
 	) -> Result<bool, Self::Error> {
 		let prover = self.grandpa_prover();
-		let session_length = prover.session_length().await?;
+		let session_length = prover
+			.session_length()
+			.await
+			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
 		// We divide the session into some places and if the diff in block updates is greater than
 		// this update is required
 		let base =

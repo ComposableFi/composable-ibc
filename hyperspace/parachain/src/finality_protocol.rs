@@ -234,10 +234,12 @@ where
 	let authority_set_changed =
 		signed_commitment.commitment.validator_set_id == beefy_client_state.next_authorities.id;
 
-	let is_update_required = source.is_update_required(
-		latest_finalized_block.into(),
-		client_state.latest_height().revision_height,
-	);
+	let is_update_required = source
+		.is_update_required(
+			latest_finalized_block.into(),
+			client_state.latest_height().revision_height,
+		)
+		.await?;
 
 	// if validator set has changed this is a mandatory update
 	let update_type = match authority_set_changed || timeout_update_required || is_update_required {
@@ -370,12 +372,13 @@ where
 	let prover = source.grandpa_prover();
 	let (session_start, session_end) =
 		prover.session_start_and_end_for_block(client_state.latest_relay_height).await?;
-	let next_relay_height =
-		if client_state.latest_relay_height >= session_start || client_state <= session_end {
-			client_state.latest_relay_height + 1
-		} else {
-			session_end
-		};
+	let next_relay_height = if client_state.latest_relay_height >= session_start ||
+		client_state.latest_relay_height <= session_end
+	{
+		client_state.latest_relay_height + 1
+	} else {
+		session_end
+	};
 
 	let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 		// we cast between the same type but different crate versions.
@@ -469,10 +472,12 @@ where
 	// In a situation where the sessions last a couple hours and we don't see any ibc events during
 	// a session we want to send some block updates in between the session, this would serve as
 	// checkpoints so we don't end up with a very large finality proof at the session end.
-	let is_update_required = source.is_update_required(
-		justification.commit.target_number.into(),
-		client_state.latest_relay_height.into(),
-	)?;
+	let is_update_required = source
+		.is_update_required(
+			justification.commit.target_number.into(),
+			client_state.latest_relay_height.into(),
+		)
+		.await?;
 
 	// We ensure we advance the finalized latest parachain height
 	if client_state.latest_para_height < u32::from(finalized_para_header.number()) {
