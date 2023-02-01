@@ -77,7 +77,7 @@ fn create_avl() -> simple_iavl::avl::AvlTree<Vec<u8>, Vec<u8>> {
 /// Creates a tendermint header
 /// Light signed header bytes obtained from
 /// `tendermint_testgen::LightBlock::new_default_with_time_and_chain_id("test-chain".to_string(),
-/// Time::now(), 2).generate().unwrap().signed_header.encode_vec();`
+/// Time::now(), 2).generate().unwrap().signed_header.encode_vec().unwrap();`
 fn create_tendermint_header() -> ics07_tendermint::client_message::Header {
 	let raw_validator_set = hex_literal::hex!("0a3c0a14a6e7b6810df8120580f2a81710e228f454f99c9712220a2050c4a5871ad3379f2879d12cef750d1211633283a9c3730238e6ddf084db4c8a18320a3c0a14c7832263600476fd6ff4c5cb0a86080d0e5f48b212220a20ebe80b7cadea277ac05fb85c7164fe15ebd6873c4a74b3296a462a1026fd9b0f18321864").to_vec();
 	let raw_signed_header = hex_literal::hex!("0a9c010a02080b120a746573742d636861696e1802220c08abc49a930610a8f39fc1014220e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf984a20e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf985220e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf987214a6e7b6810df8120580f2a81710e228f454f99c9712a202080210011a480a20afc35ec1d9620052c6d71122cb5504ee68802184023a217547ca2248df902fbb122408011220afc35ec1d9620052c6d71122cb5504ee68802184023a217547ca2248df902fbb226808021214a6e7b6810df8120580f2a81710e228f454f99c971a0c08abc49a930610a8f39fc1012240a91380fe3cde0147994b82a0b00b28bd82870df38b2cad5b4ba25c9a4c833cd50f3143ffaa4e924eccd143639fb3decf6b94570aff2c50f1346e88d06555fd0d226808021214c7832263600476fd6ff4c5cb0a86080d0e5f48b21a0c08abc49a930610a8f39fc10122407e2e349d9a0adfc3564654fcf88d328cf50a13179cc5ddaf87dd0e1abd4b45685312def0affbae29e8b7882af3b76b056f81b701bb2e43769fb63fe3696b090f").to_vec();
@@ -114,7 +114,7 @@ pub(crate) fn create_mock_state() -> (TendermintClientState<HostFunctionsManager
 
 	// Light signed header bytes obtained from
 	// `tendermint_testgen::LightBlock::new_default_with_time_and_chain_id("test-chain".to_string(),
-	// Time::now(), 1 ).generate().unwrap().signed_header.encode_vec();`
+	// Time::now(), 1 ).generate().unwrap().signed_header.encode_vec().unwrap();`
 	let raw_signed_header = hex_literal::hex!("0a9c010a02080b120a746573742d636861696e1801220c08c9b99a93061088cdfc87014220e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf984a20e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf985220e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf987214a6e7b6810df8120580f2a81710e228f454f99c9712a202080110011a480a20219a163917d9297e8f15bff09da55f82dc4594002fd3b0ade63971c1c7768333122408011220219a163917d9297e8f15bff09da55f82dc4594002fd3b0ade63971c1c7768333226808021214a6e7b6810df8120580f2a81710e228f454f99c971a0c08c9b99a93061088cdfc870122401ba8b679b2cbf5cd7b166a704fa299c8b2161b96da49068a25bf84141242aa3550ee2b2f7ad78ef520a8d723267864dcf7f814382d4418bed783746732d45a0e226808021214c7832263600476fd6ff4c5cb0a86080d0e5f48b21a0c08c9b99a93061088cdfc870122406cb04246b99e1813aae77b6b8328728b0763a5396eef72b3300b81814671ccb8d44d0e28cdcf818a3002f837c09c5b6cddefc4ba36f6408e51eb4ed9d95fbd08").to_vec();
 	let signed_header = SignedHeader::decode_vec(&raw_signed_header).unwrap();
 	let mock_cs_state =
@@ -207,9 +207,13 @@ where
 
 	let client_path = format!("{}", ClientStatePath(counterparty_client_id)).as_bytes().to_vec();
 	let path = format!("{}", ConnectionsPath(ConnectionId::new(1))).as_bytes().to_vec();
-	avl_tree.insert(path.clone(), connection_end.encode_vec());
-	avl_tree.insert(consensus_path.clone(), AnyConsensusState::Beefy(cs_state).encode_vec());
-	avl_tree.insert(client_path.clone(), AnyClientState::Beefy(client_state.clone()).encode_vec());
+	avl_tree.insert(path.clone(), connection_end.encode_vec().unwrap());
+	avl_tree
+		.insert(consensus_path.clone(), AnyConsensusState::Beefy(cs_state).encode_vec().unwrap());
+	avl_tree.insert(
+		client_path.clone(),
+		AnyClientState::Beefy(client_state.clone()).encode_vec().unwrap(),
+	);
 	let root = match *avl_tree.root_hash().unwrap() {
 		Hash::Sha256(root) => root.to_vec(),
 		Hash::None => panic!("Failed to generate root hash"),
@@ -314,9 +318,13 @@ where
 
 	let client_path = format!("{}", ClientStatePath(counterparty_client_id)).as_bytes().to_vec();
 	let path = format!("{}", ConnectionsPath(ConnectionId::new(1))).as_bytes().to_vec();
-	avl_tree.insert(path.clone(), connection_end.encode_vec());
-	avl_tree.insert(consensus_path.clone(), AnyConsensusState::Beefy(cs_state).encode_vec());
-	avl_tree.insert(client_path.clone(), AnyClientState::Beefy(client_state.clone()).encode_vec());
+	avl_tree.insert(path.clone(), connection_end.encode_vec().unwrap());
+	avl_tree
+		.insert(consensus_path.clone(), AnyConsensusState::Beefy(cs_state).encode_vec().unwrap());
+	avl_tree.insert(
+		client_path.clone(),
+		AnyClientState::Beefy(client_state.clone()).encode_vec().unwrap(),
+	);
 	let root = match *avl_tree.root_hash().unwrap() {
 		Hash::Sha256(root) => root.to_vec(),
 		Hash::None => panic!("Failed to generate root hash"),
@@ -412,8 +420,9 @@ pub(crate) fn create_conn_open_confirm<T: Config>() -> (ConsensusState, MsgConne
 	.to_vec();
 
 	let path = format!("{}", ConnectionsPath(ConnectionId::new(1))).as_bytes().to_vec();
-	avl_tree.insert(path.clone(), connection_end.encode_vec());
-	avl_tree.insert(consensus_path.clone(), AnyConsensusState::Beefy(cs_state).encode_vec());
+	avl_tree.insert(path.clone(), connection_end.encode_vec().unwrap());
+	avl_tree
+		.insert(consensus_path.clone(), AnyConsensusState::Beefy(cs_state).encode_vec().unwrap());
 	let root = match *avl_tree.root_hash().unwrap() {
 		Hash::Sha256(root) => root.to_vec(),
 		Hash::None => panic!("Failed to generate root hash"),
@@ -487,7 +496,7 @@ pub(crate) fn create_chan_open_try() -> (ConsensusState, MsgChannelOpenTry) {
 	let path = format!("{}", ChannelEndsPath(port_id.clone(), ChannelId::new(0)))
 		.as_bytes()
 		.to_vec();
-	avl_tree.insert(path.clone(), channel_end.encode_vec());
+	avl_tree.insert(path.clone(), channel_end.encode_vec().unwrap());
 	let root = match *avl_tree.root_hash().unwrap() {
 		Hash::Sha256(root) => root.to_vec(),
 		Hash::None => panic!("Failed to generate root hash"),
@@ -549,7 +558,7 @@ pub(crate) fn create_chan_open_ack() -> (ConsensusState, MsgChannelOpenAck) {
 	let path = format!("{}", ChannelEndsPath(port_id.clone(), ChannelId::new(0)))
 		.as_bytes()
 		.to_vec();
-	avl_tree.insert(path.clone(), channel_end.encode_vec());
+	avl_tree.insert(path.clone(), channel_end.encode_vec().unwrap());
 	let root = match *avl_tree.root_hash().unwrap() {
 		Hash::Sha256(root) => root.to_vec(),
 		Hash::None => panic!("Failed to generate root hash"),
@@ -605,7 +614,7 @@ pub(crate) fn create_chan_open_confirm() -> (ConsensusState, MsgChannelOpenConfi
 	let path = format!("{}", ChannelEndsPath(port_id.clone(), ChannelId::new(0)))
 		.as_bytes()
 		.to_vec();
-	avl_tree.insert(path.clone(), channel_end.encode_vec());
+	avl_tree.insert(path.clone(), channel_end.encode_vec().unwrap());
 	let root = match *avl_tree.root_hash().unwrap() {
 		Hash::Sha256(root) => root.to_vec(),
 		Hash::None => panic!("Failed to generate root hash"),
@@ -668,7 +677,7 @@ pub(crate) fn create_chan_close_confirm() -> (ConsensusState, MsgChannelCloseCon
 	let path = format!("{}", ChannelEndsPath(port_id.clone(), ChannelId::new(0)))
 		.as_bytes()
 		.to_vec();
-	avl_tree.insert(path.clone(), channel_end.encode_vec());
+	avl_tree.insert(path.clone(), channel_end.encode_vec().unwrap());
 	let root = match *avl_tree.root_hash().unwrap() {
 		Hash::Sha256(root) => root.to_vec(),
 		Hash::None => panic!("Failed to generate root hash"),
