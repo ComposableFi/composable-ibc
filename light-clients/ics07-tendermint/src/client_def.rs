@@ -41,7 +41,7 @@ use ibc::core::{
 	},
 	ics26_routing::context::ReaderContext,
 };
-use ibc_proto::ibc::core::commitment::v1::{MerkleProof as RawMerkleProof};
+use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
 use prost::Message;
 use tendermint_light_client_verifier::{
 	types::{TrustedBlockState, UntrustedBlockState},
@@ -56,11 +56,7 @@ use crate::{
 	error::Error,
 	HostFunctionsProvider,
 };
-use ibc::{
-	prelude::*,
-	timestamp::Timestamp,
-	Height,
-};
+use ibc::{prelude::*, timestamp::Timestamp, Height};
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct TendermintClient<H>(PhantomData<H>);

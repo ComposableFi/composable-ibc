@@ -289,8 +289,10 @@ impl From<AnyClientMessage> for Any {
 				type_url: GRANDPA_CLIENT_MESSAGE_TYPE_URL.to_string(),
 				value: msg.encode_vec().expect("Grandpa client message is always serializable"),
 			},
-			AnyClientMessage::Beefy(msg) =>
-				Any { type_url: BEEFY_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec().expect("Beefy client message is always serializable") },
+			AnyClientMessage::Beefy(msg) => Any {
+				type_url: BEEFY_CLIENT_MESSAGE_TYPE_URL.to_string(),
+				value: msg.encode_vec().expect("Beefy client message is always serializable"),
+			},
 			AnyClientMessage::Tendermint(msg) => Any {
 				type_url: TENDERMINT_CLIENT_MESSAGE_TYPE_URL.to_string(),
 				value: msg.encode_vec().expect("Tendermint client message is always serializable"),

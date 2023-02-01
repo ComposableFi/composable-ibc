@@ -375,7 +375,8 @@ where
 
 			let encoded = Ctx::AnyClientState::wrap(&upgrade_client_state.clone())
 				.expect("AnyConsensusState is type-checked; qed")
-				.encode_to_vec().map_err(Ics02Error::encode)?;
+				.encode_to_vec()
+				.map_err(Ics02Error::encode)?;
 
 			let value = state_machine::read_proof_check::<H::BlakeTwo256, _>(
 				&root,
@@ -402,7 +403,8 @@ where
 
 			let encoded = Ctx::AnyConsensusState::wrap(upgrade_client_state)
 				.expect("AnyConsensusState is type-checked; qed")
-				.encode_to_vec().map_err(Ics02Error::encode)?;
+				.encode_to_vec()
+				.map_err(Ics02Error::encode)?;
 
 			let value = state_machine::read_proof_check::<H::BlakeTwo256, _>(
 				&root,
