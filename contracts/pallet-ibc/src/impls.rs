@@ -853,7 +853,8 @@ where
 			Signer::from_str("pallet_ibc").unwrap(),
 		)
 		.unwrap()
-		.encode_vec();
+		.encode_vec()
+		.unwrap();
 		let msg = ibc_proto::google::protobuf::Any { type_url: TYPE_URL.to_string(), value: msg };
 		let mut ctx = Context::<T>::new();
 		ibc::core::ics26_routing::handler::deliver(&mut ctx, msg).unwrap();
