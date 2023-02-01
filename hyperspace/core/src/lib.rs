@@ -50,15 +50,21 @@ where
 {
 	let (mut chain_a_finality, mut chain_b_finality) =
 		(chain_a.finality_notifications().await, chain_b.finality_notifications().await);
+	// `select!` will spawn a new task for each notification, but we need
+	// the notifications to be processed sequentially
+	let lock_a = tokio::sync::Mutex::new(());
+	let lock_b = tokio::sync::Mutex::new(());
 	// loop forever
 	loop {
 		tokio::select! {
 			// new finality event from chain A
 			result = chain_a_finality.next() => {
+				let _guard = lock_a.lock().await;
 				process_finality_event!(chain_a, chain_b, chain_a_metrics, mode, result)
 			}
 			// new finality event from chain B
 			result = chain_b_finality.next() => {
+				let _guard = lock_b.lock().await;
 				process_finality_event!(chain_b, chain_a, chain_b_metrics, mode, result)
 			}
 		}

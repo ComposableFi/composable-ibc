@@ -163,7 +163,7 @@ impl IbcProvider for AnyChain {
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &T,
-	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		T: Chain,
 	{
@@ -171,9 +171,7 @@ impl IbcProvider for AnyChain {
 			AnyChain::Parachain(chain) => {
 				let finality_event = ibc::downcast!(finality_event => AnyFinalityEvent::Parachain)
 					.ok_or_else(|| AnyError::Other("Invalid finality event type".to_owned()))?;
-				let (client_msg, events, update_type) =
-					chain.query_latest_ibc_events(finality_event, counterparty).await?;
-				Ok((client_msg, events, update_type))
+				chain.query_latest_ibc_events(finality_event, counterparty).await
 			},
 			_ => unreachable!(),
 		}

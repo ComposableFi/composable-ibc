@@ -106,14 +106,16 @@ where
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &C,
-	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		C: Chain,
 	{
-		self.finality_protocol
+		let updates = self
+			.finality_protocol
 			.clone()
 			.query_latest_ibc_events(self, finality_event, counterparty)
-			.await
+			.await?;
+		Ok(updates)
 	}
 
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {

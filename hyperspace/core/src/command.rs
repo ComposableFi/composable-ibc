@@ -12,13 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::Parser;
 use primitives::Chain;
 use prometheus::Registry;
 use std::{path::PathBuf, str::FromStr, time::Duration};
 
-use crate::{chain::Config, fish, relay, Mode};
+use crate::{
+	chain::{AnyConfig, Config, CoreConfig},
+	fish, relay, Mode,
+};
 use ibc::core::{ics04_channel::channel::Order, ics24_host::identifier::PortId};
 use metrics::{data::Metrics, handler::MetricsHandler, init_prometheus};
 use primitives::{
@@ -73,9 +76,12 @@ pub struct Cmd {
 	/// Channel version
 	#[clap(long)]
 	version: Option<String>,
-	/// New config path to avoid overriding existing configuration
+	/// New config path for A to avoid overriding existing configuration
 	#[clap(long)]
-	pub new_config: Option<String>,
+	pub out_config_a: Option<String>,
+	/// New config path for B to avoid overriding existing configuration
+	#[clap(long)]
+	pub out_config_b: Option<String>,
 }
 
 impl Cmd {
@@ -222,5 +228,17 @@ impl Cmd {
 		config.chain_b.set_channel_whitelist(channel_id_b, port_id);
 
 		Ok(config)
+	}
+
+	pub async fn save_config(&self, new_config: &Config) -> Result<()> {
+		let path_a = self.out_config_a.as_ref().cloned().unwrap_or_else(|| self.config_a.clone());
+		let path_b = self.out_config_b.as_ref().cloned().unwrap_or_else(|| self.config_b.clone());
+		async fn write_config(path: String, config: &AnyConfig) -> Result<()> {
+			tokio::fs::write(path.parse::<PathBuf>()?, toml::to_string(config)?)
+				.await
+				.map_err(|e| anyhow!(e))
+		}
+		write_config(path_a, &new_config.chain_a).await?;
+		write_config(path_b, &new_config.chain_b).await
 	}
 }

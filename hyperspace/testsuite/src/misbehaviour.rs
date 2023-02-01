@@ -128,98 +128,99 @@ where
 	let precommit = Precommit { target_hash: header_hash, target_number: header.number };
 	let message = finality_grandpa::Message::Precommit(precommit.clone());
 
-	let (update_client_msg, _, _) = chain_b
+	let updates = chain_b
 		.query_latest_ibc_events(finality_event, chain_a)
 		.await
 		.expect("no event");
-	let mut msg =
-		MsgUpdateAnyClient::<LocalClientTypes>::decode(&mut update_client_msg.value.as_slice())
-			.unwrap();
-	let round = match &mut msg.client_message {
-		AnyClientMessage::Grandpa(ClientMessage::Header(header)) => {
-			let justification = GrandpaJustification::<RelayChainHeader>::decode(
-				&mut &*header.finality_proof.justification,
-			)
-			.unwrap();
+	for (update_client_msg, _, _) in updates {
+		let mut msg =
+			MsgUpdateAnyClient::<LocalClientTypes>::decode(&mut update_client_msg.value.as_slice())
+				.unwrap();
+		let round = match &mut msg.client_message {
+			AnyClientMessage::Grandpa(ClientMessage::Header(header)) => {
+				let justification = GrandpaJustification::<RelayChainHeader>::decode(
+					&mut &*header.finality_proof.justification,
+				)
+				.unwrap();
 
-			justification.round
-		},
-		_ => panic!("unexpected client message"),
-	};
-
-	// sign pre-commits by the authorities to vote for the highest block in the chain
-	let precommits = relaychain_authorities
-		.iter()
-		.map(|id| {
-			let key = id.pair();
-			let encoded = sp_finality_grandpa::localized_payload(round, set_id, &message);
-			let signature = AuthoritySignature::from(key.sign(&encoded));
-			SignedPrecommit {
-				precommit: precommit.clone(),
-				signature,
-				id: AuthorityId::from(key.public()),
-			}
-		})
-		.collect();
-	let commit = Commit::<RelayChainHeader> {
-		target_hash: header_hash,
-		target_number: header.number,
-		precommits,
-	};
-	let justification =
-		GrandpaJustification::<RelayChainHeader> { round, commit, votes_ancestries: vec![] };
-	let finality_proof = FinalityProof {
-		block: header_hash,
-		justification: justification.encode(),
-		unknown_headers: headers.clone(),
-	};
-	let mut parachain_headers = BTreeMap::default();
-	let state_proof = prove_read_on_trie_backend(
-		&TrieBackendBuilder::new(para_db.clone(), root).build(),
-		&[key.as_ref()],
-	)
-	.unwrap()
-	.into_nodes()
-	.into_iter()
-	.collect::<Vec<_>>();
-	// for each relaychain header we construct a corresponding parachain header proofs
-	for header in &headers {
-		parachain_headers.insert(
-			header.hash(),
-			ParachainHeaderProofs {
-				state_proof: state_proof.clone(),
-				extrinsic: timestamp_extrinsic.clone(),
-				extrinsic_proof: extrinsic_proof.clone(),
+				justification.round
 			},
-		);
-	}
+			_ => panic!("unexpected client message"),
+		};
 
-	let grandpa_header = GrandpaHeader { finality_proof, parachain_headers };
-	let client_message = AnyClientMessage::Grandpa(ClientMessage::Header(grandpa_header));
-
-	let msg =
-		MsgUpdateAnyClient::<LocalClientTypes>::new(msg.client_id, client_message, msg.signer);
-
-	let client_a_clone = chain_a.clone();
-	let misbehavour_event_handle = tokio::task::spawn(async move {
-		let mut events = client_a_clone.ibc_events().await;
-		while let Some(event) = events.next().await {
-			match event {
-				IbcEvent::ClientMisbehaviour { .. } => return,
-				_ => (),
-			}
+		// sign pre-commits by the authorities to vote for the highest block in the chain
+		let precommits = relaychain_authorities
+			.iter()
+			.map(|id| {
+				let key = id.pair();
+				let encoded = sp_finality_grandpa::localized_payload(round, set_id, &message);
+				let signature = AuthoritySignature::from(key.sign(&encoded));
+				SignedPrecommit {
+					precommit: precommit.clone(),
+					signature,
+					id: AuthorityId::from(key.public()),
+				}
+			})
+			.collect();
+		let commit = Commit::<RelayChainHeader> {
+			target_hash: header_hash,
+			target_number: header.number,
+			precommits,
+		};
+		let justification =
+			GrandpaJustification::<RelayChainHeader> { round, commit, votes_ancestries: vec![] };
+		let finality_proof = FinalityProof {
+			block: header_hash,
+			justification: justification.encode(),
+			unknown_headers: headers.clone(),
+		};
+		let mut parachain_headers = BTreeMap::default();
+		let state_proof = prove_read_on_trie_backend(
+			&TrieBackendBuilder::new(para_db.clone(), root).build(),
+			&[key.as_ref()],
+		)
+		.unwrap()
+		.into_nodes()
+		.into_iter()
+		.collect::<Vec<_>>();
+		// for each relaychain header we construct a corresponding parachain header proofs
+		for header in &headers {
+			parachain_headers.insert(
+				header.hash(),
+				ParachainHeaderProofs {
+					state_proof: state_proof.clone(),
+					extrinsic: timestamp_extrinsic.clone(),
+					extrinsic_proof: extrinsic_proof.clone(),
+				},
+			);
 		}
-	});
 
-	chain_a
-		.submit(vec![Any { value: msg.encode_vec().unwrap(), type_url: msg.type_url() }])
-		.await
-		.expect("failed to submit message");
+		let grandpa_header = GrandpaHeader { finality_proof, parachain_headers };
+		let client_message = AnyClientMessage::Grandpa(ClientMessage::Header(grandpa_header));
 
-	timeout(Duration::from_secs(12 * 60), misbehavour_event_handle)
-		.await
-		.expect("timeout")
-		.expect("failed to receive misbehaviour event");
+		let msg =
+			MsgUpdateAnyClient::<LocalClientTypes>::new(msg.client_id, client_message, msg.signer);
 
+		let client_a_clone = chain_a.clone();
+		let misbehavour_event_handle = tokio::task::spawn(async move {
+			let mut events = client_a_clone.ibc_events().await;
+			while let Some(event) = events.next().await {
+				match event {
+					IbcEvent::ClientMisbehaviour { .. } => return,
+					_ => (),
+				}
+			}
+		});
+
+		chain_a
+			.submit(vec![Any { value: msg.encode_vec().unwrap(), type_url: msg.type_url() }])
+			.await
+			.expect("failed to submit message");
+
+		timeout(Duration::from_secs(12 * 60), misbehavour_event_handle)
+			.await
+			.expect("timeout")
+			.expect("failed to receive misbehaviour event");
+	}
 	handle.abort()
 }
