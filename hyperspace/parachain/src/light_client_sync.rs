@@ -89,7 +89,7 @@ where
 					latest_finalized_height.saturating_sub(session_end_block) / session_length;
 				// If no session changes have occurred between the last update and the latest
 				// finalized height then the light client is still in sync
-				Ok(!(session_changes >= 1))
+				Ok(session_changes == 0)
 			},
 			FinalityProtocol::Beefy => unimplemented!(),
 		}
