@@ -887,6 +887,7 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Any {
 	}
 }
 
+#[cfg(any(test, feature = "testing"))]
 impl AnyChain {
 	pub fn set_client_id(&mut self, client_id: ClientId) {
 		match self {
