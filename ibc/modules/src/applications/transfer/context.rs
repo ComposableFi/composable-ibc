@@ -249,8 +249,7 @@ pub fn on_recv_packet<Ctx: 'static + Ics20Context>(
 ) -> Acknowledgement {
 	let data = match serde_json::from_slice::<PacketData>(&packet.data) {
 		Ok(data) => data,
-		Err(_) =>
-			return Acknowledgement::Error(Ics20Error::packet_data_deserialization().to_string()),
+		Err(_) => return Acknowledgement::from_error(Ics20Error::packet_data_deserialization()),
 	};
 
 	let ack = match process_recv_packet(ctx, output, packet, data.clone()) {

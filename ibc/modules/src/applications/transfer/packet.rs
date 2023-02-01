@@ -23,6 +23,7 @@ use crate::signer::Signer;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PacketData {
+	#[serde(flatten)]
 	pub token: PrefixedCoin,
 	pub sender: Signer,
 	pub receiver: Signer,
