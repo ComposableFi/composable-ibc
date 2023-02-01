@@ -370,15 +370,10 @@ where
 	};
 
 	let prover = source.grandpa_prover();
-	let (session_start, session_end) =
-		prover.session_start_and_end_for_block(client_state.latest_relay_height).await?;
-	let next_relay_height = if client_state.latest_relay_height >= session_start ||
-		client_state.latest_relay_height <= session_end
-	{
-		client_state.latest_relay_height + 1
-	} else {
-		session_end
-	};
+	// prove_finality will always give us the highest block finalized by the authority set for the
+	// block number passed, so we can't miss any authority set change since the session change block
+	// will always be finalized.
+	let next_relay_height = client_state.latest_relay_height + 1;
 
 	let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 		// we cast between the same type but different crate versions.

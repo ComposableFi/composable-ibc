@@ -658,7 +658,7 @@ impl LightClientSync for AnyChain {
 	async fn fetch_mandatory_updates<C: Chain>(
 		&self,
 		counterparty: &C,
-	) -> Result<Vec<Any>, anyhow::Error> {
+	) -> Result<(Vec<Any>, Vec<IbcEvent>), anyhow::Error> {
 		match self {
 			Self::Parachain(chain) =>
 				chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),

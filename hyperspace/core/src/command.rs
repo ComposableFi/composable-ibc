@@ -14,7 +14,7 @@
 
 use anyhow::Result;
 use clap::Parser;
-use primitives::{Chain, LightClientSync};
+use primitives::Chain;
 use prometheus::Registry;
 use std::{path::PathBuf, str::FromStr, time::Duration};
 
@@ -48,11 +48,6 @@ pub enum Subcommand {
 	CreateConnection(Cmd),
 	#[clap(name = "create-channel", about = "Creates a channel on the specified port")]
 	CreateChannel(Cmd),
-	#[clap(
-		name = "sync-clients",
-		about = "Tries to sync light clients on both chains to the latest"
-	)]
-	SyncClients(Cmd),
 }
 
 #[derive(Debug, Clone, Parser)]
@@ -220,25 +215,5 @@ impl Cmd {
 		config.chain_b.set_channel_whitelist(channel_id_b, port_id);
 
 		Ok(config)
-	}
-
-	pub async fn sync_clients(&self) -> Result<()> {
-		let path: PathBuf = self.config.parse()?;
-		let file_content = tokio::fs::read_to_string(path).await?;
-		let config: Config = toml::from_str(&file_content)?;
-		let any_chain_a = config.chain_a.clone().into_client().await?;
-		let any_chain_b = config.chain_b.clone().into_client().await?;
-
-		if !any_chain_a.is_synced(&any_chain_b).await? {
-			let messages = any_chain_a.fetch_mandatory_updates(&any_chain_b).await?;
-			any_chain_b.submit(messages).await?;
-		}
-
-		if !any_chain_b.is_synced(&any_chain_a).await? {
-			let messages = any_chain_b.fetch_mandatory_updates(&any_chain_a).await?;
-			any_chain_a.submit(messages).await?;
-		}
-
-		Ok(())
 	}
 }

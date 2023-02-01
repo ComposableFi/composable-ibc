@@ -86,7 +86,7 @@ where
 					prover.session_start_and_end_for_block(previous_finalized_height).await?;
 				let latest_finalized_height = u32::from(finalized_head.number());
 				let session_changes =
-					(latest_finalized_height - session_end_block) / session_length;
+					latest_finalized_height.saturating_sub(session_end_block) / session_length;
 				// If no session changes have occurred between the last update and the latest
 				// finalized height then the light client is still in sync
 				Ok(!(session_changes >= 1))
@@ -98,7 +98,7 @@ where
 	async fn fetch_mandatory_updates<C: Chain>(
 		&self,
 		counterparty: &C,
-	) -> Result<Vec<Any>, anyhow::Error> {
+	) -> Result<(Vec<Any>, Vec<IbcEvent>), anyhow::Error> {
 		let latest_height = counterparty.latest_height_and_timestamp().await?.0;
 		let response = counterparty.query_client_state(latest_height, self.client_id()).await?;
 		let client_state = response.client_state.ok_or_else(|| {
@@ -107,7 +107,7 @@ where
 
 		let client_state = AnyClientState::try_from(client_state)
 			.map_err(|_| Error::Custom("Failed to decode client state".to_string()))?;
-		let messages = match self.finality_protocol {
+		let (messages, events) = match self.finality_protocol {
 			FinalityProtocol::Grandpa => {
 				let prover = self.grandpa_prover();
 				let client_state = match client_state {
@@ -123,8 +123,8 @@ where
 						Error::Custom(format!("Expected finalized header, found None"))
 					})?;
 				let latest_finalized_height = u32::from(finalized_head.number());
-				let (mut messages, _events, previous_para_height, previous_finalized_height) = self
-					.query_missed_grandpa_updates(
+				let (mut messages, mut events, previous_para_height, previous_finalized_height) =
+					self.query_missed_grandpa_updates(
 						client_state.latest_para_height,
 						client_state.latest_relay_height,
 						latest_finalized_height,
@@ -132,7 +132,7 @@ where
 						counterparty.account_id(),
 					)
 					.await?;
-				let (latest_message, ..) = get_message(
+				let (latest_message, evs, ..) = get_message(
 					prover,
 					previous_para_height,
 					previous_finalized_height,
@@ -143,13 +143,14 @@ where
 				)
 				.await?;
 				messages.push(latest_message);
-				messages
+				events.extend(evs);
+				(messages, events)
 			},
 			// Current implementation of Beefy needs to be revised
 			FinalityProtocol::Beefy => unimplemented!(),
 		};
 
-		Ok(messages)
+		Ok((messages, events))
 	}
 }
 

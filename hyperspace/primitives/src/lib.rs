@@ -380,7 +380,7 @@ pub trait LightClientSync {
 	async fn fetch_mandatory_updates<C: Chain>(
 		&self,
 		counterparty: &C,
-	) -> Result<Vec<Any>, anyhow::Error>;
+	) -> Result<(Vec<Any>, Vec<IbcEvent>), anyhow::Error>;
 }
 
 /// Provides an interface for the chain to the relayer core for submitting IbcEvents as well as
