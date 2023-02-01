@@ -108,3 +108,21 @@ where
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 }
+
+/// Dummy router that routes to nowhere
+#[derive(Clone, Debug, Eq, PartialEq, Default)]
+pub struct NoneRouter {}
+
+impl ModuleRouter for NoneRouter {
+	fn get_route_mut(&mut self, _module_id: &ModuleId) -> Option<&mut dyn Module> {
+		None
+	}
+
+	fn has_route(_module_id: &ModuleId) -> bool {
+		false
+	}
+
+	fn lookup_module_by_port(_port_id: &PortId) -> Option<ModuleId> {
+		None
+	}
+}
