@@ -370,17 +370,12 @@ where
 	let prover = source.grandpa_prover();
 	let (session_start, session_end) =
 		prover.session_start_and_end_for_block(client_state.latest_relay_height).await?;
-	let next_relay_height = if session_end == client_state.latest_relay_height {
-		session_end + 1
-	} else if client_state.latest_relay_height == session_start {
-		session_start + 1
-	} else if client_state.latest_relay_height > session_start &&
-		client_state.latest_relay_height < session_end
-	{
-		client_state.latest_relay_height + 1
-	} else {
-		session_end
-	};
+	let next_relay_height =
+		if client_state.latest_relay_height >= session_start || client_state <= session_end {
+			client_state.latest_relay_height + 1
+		} else {
+			session_end
+		};
 
 	let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 		// we cast between the same type but different crate versions.
@@ -471,6 +466,14 @@ where
 		}
 	}
 
+	// In a situation where the sessions last a couple hours and we don't see any ibc events during
+	// a session we want to send some block updates in between the session, this would serve as
+	// checkpoints so we don't end up with a very large finality proof at the session end.
+	let is_update_required = source.is_update_required(
+		justification.commit.target_number.into(),
+		client_state.latest_relay_height.into(),
+	)?;
+
 	// We ensure we advance the finalized latest parachain height
 	if client_state.latest_para_height < u32::from(finalized_para_header.number()) {
 		headers_with_events.insert(finalized_para_header.number());
@@ -499,10 +502,11 @@ where
 
 	let authority_set_changed_scheduled = find_scheduled_change(&target).is_some();
 	// if validator set has changed this is a mandatory update
-	let update_type = match authority_set_changed_scheduled || timeout_update_required {
-		true => UpdateType::Mandatory,
-		false => UpdateType::Optional,
-	};
+	let update_type =
+		match authority_set_changed_scheduled || timeout_update_required || is_update_required {
+			true => UpdateType::Mandatory,
+			false => UpdateType::Optional,
+		};
 
 	let grandpa_header = GrandpaHeader {
 		finality_proof: codec::Decode::decode(&mut &*finality_proof.encode())

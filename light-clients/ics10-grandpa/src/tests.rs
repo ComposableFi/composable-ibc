@@ -300,8 +300,7 @@ async fn test_continuous_update_of_grandpa_client() {
 					_ => unreachable!("update handler result has incorrect type"),
 				}
 			},
-			// Err(e) => panic!("Unexpected error {:?}", e),
-			_ => {},
+			Err(e) => panic!("Unexpected error {:?}", e),
 		}
 	}
 }

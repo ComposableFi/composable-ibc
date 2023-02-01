@@ -312,7 +312,7 @@ pub trait IbcProvider {
 
 	/// Returns a boolean value that determines if the light client should receive a mandatory
 	/// update
-	fn is_update_required(
+	async fn is_update_required(
 		&self,
 		latest_height: u64,
 		latest_client_height_on_counterparty: u64,
