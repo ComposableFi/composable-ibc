@@ -114,13 +114,18 @@ that packets would be relayed between.
 
     impl hyperspace_primitives::IbcProvider for ChainA { ... }
     impl hyperspace_primitives::KeyProvider for ChainA { ... }
+    impl hyperspace_primitives::LightClientSync for ChainA { ... }
     impl hyperspace_primitives::Chain for ChainA { ... }
+
+
 
     pub struct ChainB { ... }
 
     impl hyperspace_primitives::IbcProvider for ChainB { ... }
     impl hyperspace_primitives::KeyProvider for ChainB { ... }
+    impl hyperspace_primitives::LightClientSync for ChainB { ... }
     impl hyperspace_primitives::Chain for ChainB { ... }
+
 
     async fn main() -> Result<(), anyhow::Error>{
         let chain_a = ChainA::default();
@@ -129,6 +134,9 @@ that packets would be relayed between.
         Ok(())
     }
 ```
+
+**Note*: When `hyperspace_core::relay` is executed the relayer automatically tries to sync the light clients on both chains to the latest  
+block height before starting the core relayer loop.  
 **Note** Correct functioning of the relayer is dependent on correct implementation of the trait methods, read documentation  
 for each of the trait methods for implementation details.
 

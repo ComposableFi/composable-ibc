@@ -17,14 +17,13 @@
 use crate::{config, error::Error, ParachainClient};
 use anyhow::anyhow;
 use beefy_light_client_primitives::{ClientState as BeefyPrimitivesClientState, NodesUtils};
-use beefy_prover::helpers::unsafe_arc_cast;
 use codec::{Decode, Encode};
 use finality_grandpa::BlockNumberOps;
+use finality_grandpa_rpc::GrandpaApiClient;
 use grandpa_light_client_primitives::{
-	justification::{find_scheduled_change, GrandpaJustification},
-	FinalityProof, ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
+	justification::find_scheduled_change, FinalityProof, ParachainHeaderProofs,
+	ParachainHeadersWithFinalityProof,
 };
-use grandpa_prover::JustificationNotification;
 use ibc::{
 	core::ics02_client::{client_state::ClientState as _, msgs::update_client::MsgUpdateAnyClient},
 	events::IbcEvent,
@@ -51,6 +50,9 @@ use std::{
 	collections::{BTreeMap, BTreeSet, HashMap},
 	fmt::Display,
 };
+
+use beefy_prover::helpers::unsafe_arc_cast;
+use grandpa_prover::{GrandpaJustification, JustificationNotification};
 #[cfg(not(feature = "dali"))]
 use subxt::config::polkadot::PlainTip as Tip;
 #[cfg(feature = "dali")]
@@ -83,7 +85,7 @@ impl FinalityProtocol {
 		source: &mut ParachainClient<T>,
 		finality_event: FinalityEvent,
 		counterparty: &C,
-	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
 		T: config::Config + Send + Sync,
 		C: Chain,
@@ -122,7 +124,7 @@ pub async fn query_latest_ibc_events_with_beefy<T, C>(
 	source: &mut ParachainClient<T>,
 	finality_event: FinalityEvent,
 	counterparty: &C,
-) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 where
 	T: config::Config + Send + Sync,
 	C: Chain,
@@ -151,12 +153,8 @@ where
 	let client_state = response.client_state.ok_or_else(|| {
 		Error::Custom("Received an empty client state from counterparty".to_string())
 	})?;
-	let client_state =
-		AnyClientState::decode_recursive(client_state, |c| matches!(c, AnyClientState::Beefy(_)))
-			.ok_or_else(|| Error::Custom(format!("Failed to decode client state")))?;
-	// let client_state = AnyClientState::try_from(client_state)
-	// 	.map_err(|_| Error::Custom("Failed to decode client state".to_string()))?;
-
+	let client_state = AnyClientState::try_from(client_state)
+		.map_err(|_| Error::Custom("Failed to decode client state".to_string()))?;
 	let beefy_client_state = match &client_state {
 		AnyClientState::Beefy(client_state) => BeefyPrimitivesClientState {
 			latest_beefy_height: client_state.latest_beefy_height,
@@ -164,7 +162,10 @@ where
 			current_authorities: client_state.authority.clone(),
 			next_authorities: client_state.next_authority_set.clone(),
 		},
-		_c => unreachable!(),
+		c => Err(Error::ClientStateRehydration(format!(
+			"Expected AnyClientState::Beefy found: {:?}",
+			c
+		)))?,
 	};
 
 	if signed_commitment.commitment.validator_set_id < beefy_client_state.current_authorities.id {
@@ -233,10 +234,12 @@ where
 	let authority_set_changed =
 		signed_commitment.commitment.validator_set_id == beefy_client_state.next_authorities.id;
 
-	let is_update_required = source.is_update_required(
-		latest_finalized_block.into(),
-		client_state.latest_height().revision_height,
-	);
+	let is_update_required = source
+		.is_update_required(
+			latest_finalized_block.into(),
+			client_state.latest_height().revision_height,
+		)
+		.await?;
 
 	// if validator set has changed this is a mandatory update
 	let update_type = match authority_set_changed || timeout_update_required || is_update_required {
@@ -311,11 +314,11 @@ where
 			})),
 			signer: counterparty.account_id(),
 		};
-		let value = msg.encode_vec().expect("could not encode message");
+		let value = msg.encode_vec();
 		Any { value, type_url: msg.type_url() }
 	};
 
-	Ok((update_header, events, update_type))
+	Ok((vec![update_header], events, update_type))
 }
 
 /// Query the latest events that have been finalized by the GRANDPA finality protocol.
@@ -323,7 +326,7 @@ pub async fn query_latest_ibc_events_with_grandpa<T, C>(
 	source: &mut ParachainClient<T>,
 	finality_event: FinalityEvent,
 	counterparty: &C,
-) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 where
 	T: config::Config + Send + Sync,
 	C: Chain,
@@ -344,62 +347,56 @@ where
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
-	let justification = match finality_event {
+	let _justification = match finality_event {
 		FinalityEvent::Grandpa(justification) => justification,
 		_ => panic!("Expected grandpa finality event"),
 	};
 	let client_id = source.client_id();
 	let latest_height = counterparty.latest_height_and_timestamp().await?.0;
 	let response = counterparty.query_client_state(latest_height, client_id).await?;
-	let any_client_state = response.client_state.clone().ok_or_else(|| {
+	let client_state = response.client_state.ok_or_else(|| {
 		Error::Custom("Received an empty client state from counterparty".to_string())
 	})?;
-	let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
-		.ok_or_else(|| Error::Custom(format!("Could not decode client state")))? else { unreachable!() };
 
-	if justification.commit.target_number <= client_state.latest_relay_height {
-		Err(anyhow!(
-			"skipping outdated commit: {}, with latest relay height: {}",
-			justification.commit.target_number,
-			client_state.latest_relay_height
-		))?
-	}
+	let client_state = AnyClientState::try_from(client_state)
+		.map_err(|_| Error::Custom("Failed to decode client state".to_string()))?;
+
+	let client_state = match client_state {
+		AnyClientState::Grandpa(client_state) => client_state,
+		c => Err(Error::ClientStateRehydration(format!(
+			"Expected AnyClientState::Grandpa found: {:?}",
+			c
+		)))?,
+	};
 
 	let prover = source.grandpa_prover();
-
-	let mut session_end = prover.session_end_for_block(client_state.latest_relay_height).await?;
-
-	if client_state.latest_relay_height == session_end {
-		session_end = prover.session_end_for_block(client_state.latest_relay_height + 1).await?;
-	}
-
-	let latest_finalized_height = session_end;
-	use finality_grandpa_rpc::GrandpaApiClient;
+	// prove_finality will always give us the highest block finalized by the authority set for the
+	// block number passed, so we can't miss any authority set change since the session change block
+	// will always be finalized.
+	let next_relay_height = client_state.latest_relay_height + 1;
 
 	let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 		// we cast between the same type but different crate versions.
 		&*unsafe {
-			unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(source.relay_ws_client.clone())
+			unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(prover.relay_ws_client.clone())
 		},
-		latest_finalized_height,
+		next_relay_height,
 	)
-	.await?
-	.ok_or_else(|| anyhow!("No justification found for block: {:?}", latest_finalized_height))?
+	.await
+	.map_err(|_| {
+		Error::Custom(
+		format!("Next relay block {} has not been finalized, previous finalized height on counterparty {}",
+				next_relay_height, client_state.latest_relay_height
+		)
+	)
+	})?
+	.ok_or_else(|| anyhow!("No justification found for block: {:?}", next_relay_height))?
 	.0;
-	let finality_proof = FinalityProof::<
-		sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>,
-	>::decode(&mut &encoded[..])?;
-	let justification = GrandpaJustification::<
-		sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>,
-	>::decode(&mut &finality_proof.justification[..])?;
 
-	if justification.commit.target_number <= client_state.latest_relay_height {
-		Err(anyhow!(
-			"skipping outdated commit 2: {}, with latest relay height: {}",
-			justification.commit.target_number,
-			client_state.latest_relay_height
-		))?
-	}
+	let finality_proof = FinalityProof::<T::Header>::decode(&mut &encoded[..])?;
+
+	let justification =
+		GrandpaJustification::<T::Header>::decode(&mut &finality_proof.justification[..])?;
 
 	// fetch the latest finalized parachain header
 	let finalized_para_header = prover
@@ -411,16 +408,14 @@ where
 		u32::from(finalized_para_header.number()))
 		.collect::<Vec<_>>();
 
-	if finalized_blocks.is_empty() {
-		Err(anyhow!("skipping outdated commit 4",))?
+	if !finalized_blocks.is_empty() {
+		log::info!(
+			"Fetching events from {} for blocks {}..{}",
+			source.name(),
+			finalized_blocks[0],
+			finalized_blocks.last().unwrap(),
+		);
 	}
-
-	log::info!(
-		"Fetching events from {} for blocks {}..{}",
-		source.name(),
-		finalized_blocks[0],
-		finalized_blocks.last().unwrap(),
-	);
 
 	let finalized_block_numbers = finalized_blocks
 		.iter()
@@ -438,13 +433,6 @@ where
 	} else {
 		false
 	};
-
-	let latest_finalized_block = finalized_blocks.into_iter().max().unwrap_or_default();
-
-	let is_update_required = source.is_update_required(
-		latest_finalized_block.into(),
-		client_state.latest_height().revision_height,
-	);
 
 	// block_number => events
 	let events: HashMap<String, Vec<IbcEvent>> =
@@ -476,22 +464,26 @@ where
 		}
 	}
 
-	if is_update_required {
-		headers_with_events.insert(T::BlockNumber::from(latest_finalized_block));
+	// In a situation where the sessions last a couple hours and we don't see any ibc events during
+	// a session we want to send some block updates in between the session, this would serve as
+	// checkpoints so we don't end up with a very large finality proof at the session end.
+	let is_update_required = source
+		.is_update_required(
+			justification.commit.target_number.into(),
+			client_state.latest_relay_height.into(),
+		)
+		.await?;
+
+	// We ensure we advance the finalized latest parachain height
+	if client_state.latest_para_height < u32::from(finalized_para_header.number()) {
+		headers_with_events.insert(finalized_para_header.number());
 	}
 
-	let cs = grandpa_light_client_primitives::ClientState {
-		current_authorities: client_state.current_authorities.clone(),
-		current_set_id: client_state.current_set_id,
-		latest_relay_hash: client_state.latest_relay_hash,
-		latest_relay_height: client_state.latest_relay_height,
-		latest_para_height: client_state.latest_para_height,
-		para_id: client_state.para_id,
-	};
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
 		.query_finalized_parachain_headers_with_proof::<T::Header>(
-			&cs,
-			justification.commit.target_number.into(),
+			client_state.latest_relay_height,
+			justification.commit.target_number,
+			Some(justification.encode()),
 			headers_with_events.into_iter().collect(),
 		)
 		.await?;
@@ -528,9 +520,9 @@ where
 			client_message: AnyClientMessage::Grandpa(ClientMessage::Header(grandpa_header)),
 			signer: counterparty.account_id(),
 		};
-		let value = msg.encode_vec().expect("could not encode message");
+		let value = msg.encode_vec();
 		Any { value, type_url: msg.type_url() }
 	};
 
-	Ok((update_header, events, update_type))
+	Ok((vec![update_header], events, update_type))
 }

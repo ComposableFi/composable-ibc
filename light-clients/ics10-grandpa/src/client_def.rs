@@ -197,8 +197,8 @@ where
 
 	fn update_state<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_id: ClientId,
+		ctx: &Ctx,
+		client_id: ClientId,
 		mut client_state: Self::ClientState,
 		client_message: Self::ClientMessage,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
@@ -230,11 +230,18 @@ where
 			let header = ancestry.header(&relay_hash).ok_or_else(|| {
 				Error::Custom(format!("No relay chain header found for hash: {relay_hash:?}"))
 			})?;
+
 			let (height, consensus_state) = ConsensusState::from_header::<H>(
 				parachain_header_proof,
 				client_state.para_id,
 				header.state_root.clone(),
 			)?;
+
+			// Skip duplicate consensus states
+			if ctx.consensus_state(&client_id, height).is_ok() {
+				continue
+			}
+
 			let wrapped = Ctx::AnyConsensusState::wrap(&consensus_state)
 				.expect("AnyConsenusState is type checked; qed");
 			consensus_states.push((height, wrapped));

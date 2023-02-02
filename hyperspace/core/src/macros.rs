@@ -39,8 +39,7 @@ macro_rules! process_finality_event {
 					}
 				}
 				let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
-				log::info!("Received events: {event_types:#?}");
-				let (messages, timeouts) =
+				let (mut messages, timeouts) =
 					parse_events(&mut $source, &mut $sink, events, $mode).await?;
 				if !timeouts.is_empty() {
 					if let Some(metrics) = $metrics.as_ref() {
@@ -74,7 +73,8 @@ macro_rules! process_finality_event {
 					),
 				};
 				// insert client update at first position.
-				msg_update_client.extend(messages);
+				msg_update_client.append(&mut messages);
+
 				if let Some(metrics) = $metrics.as_ref() {
 					metrics.handle_messages(msg_update_client.as_slice()).await;
 				}

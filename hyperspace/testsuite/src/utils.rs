@@ -14,14 +14,14 @@
 
 use crate::StreamExt;
 use futures::future;
-use hyperspace_primitives::{utils::timeout_future, TestProvider};
+use hyperspace_primitives::{utils::timeout_after, TestProvider};
 use ibc::events::IbcEvent;
 
 pub fn parse_amount(amount: String) -> u128 {
 	str::parse::<u128>(&amount).expect("Failed to parse as u128")
 }
 
-pub async fn assert_timeout_packet<A>(chain: &A)
+pub async fn assert_timeout_packet<A>(chain: &A, blocks: u64)
 where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -38,5 +38,6 @@ where
 		})
 		.take(1)
 		.collect::<Vec<_>>();
-	timeout_future(future, 20 * 60, format!("Didn't see Timeout packet on {}", chain.name())).await;
+	timeout_after(chain, future, blocks, format!("Didn't see Timeout packet on {}", chain.name()))
+		.await;
 }

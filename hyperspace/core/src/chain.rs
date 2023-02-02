@@ -60,7 +60,7 @@ use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusSt
 use pallet_ibc::Timeout;
 use parachain::{config, ParachainClient};
 use primitives::{
-	mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, MisbehaviourHandler, UpdateType,
+	Chain, IbcProvider, KeyProvider, LightClientSync, MisbehaviourHandler, UpdateType,
 };
 use serde::{Deserialize, Serialize};
 use std::{pin::Pin, time::Duration};
@@ -666,14 +666,16 @@ impl IbcProvider for AnyChain {
 		}
 	}
 
-	fn is_update_required(
+	async fn is_update_required(
 		&self,
 		latest_height: u64,
 		latest_client_height_on_counterparty: u64,
-	) -> bool {
+	) -> Result<bool, Self::Error> {
 		match self {
-			Self::Parachain(chain) =>
-				chain.is_update_required(latest_height, latest_client_height_on_counterparty),
+			Self::Parachain(chain) => chain
+				.is_update_required(latest_height, latest_client_height_on_counterparty)
+				.await
+				.map_err(Into::into),
 			#[cfg(feature = "cosmos")]
 			Self::Cosmos(chain) =>
 				chain.is_update_required(latest_height, latest_client_height_on_counterparty),
@@ -827,6 +829,27 @@ impl Chain for AnyChain {
 	) -> Result<AnyClientMessage, Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain.query_client_message(update).await.map_err(Into::into),
+			_ => unreachable!(),
+		}
+	}
+}
+
+#[async_trait]
+impl LightClientSync for AnyChain {
+	async fn is_synced<C: Chain>(&self, counterparty: &C) -> Result<bool, anyhow::Error> {
+		match self {
+			Self::Parachain(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
+			_ => unreachable!(),
+		}
+	}
+
+	async fn fetch_mandatory_updates<C: Chain>(
+		&self,
+		counterparty: &C,
+	) -> Result<(Vec<Any>, Vec<IbcEvent>), anyhow::Error> {
+		match self {
+			Self::Parachain(chain) =>
+				chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}
