@@ -381,7 +381,7 @@ where
 				let encoded =
 					GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 						&*self.relay_ws_client,
-						common_ancestor_block_number,
+						common_ancestor_block_number + 1,
 					)
 					.await?
 					.ok_or_else(|| {
