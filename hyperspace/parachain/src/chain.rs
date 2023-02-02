@@ -12,25 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[derive(Clone, Debug)]
-struct User {
-	name: String,
-	email: String,
-	age: u32,
-	parents: Vec<User>,
-}
-
-impl User {
-	pub fn new(name: String, email: String, age: u32, parents: Vec<User>) -> Self {
-		Self { name, email, age, parents }
-	}
-}
-
 use anyhow::anyhow;
-use codec::{Decode, Encode};
-use std::{collections::BTreeMap, fmt::Display, pin::Pin, time::Duration};
-
 use beefy_gadget_rpc::BeefyApiClient;
+use codec::{Decode, Encode};
 use finality_grandpa::BlockNumberOps;
 use futures::{Stream, StreamExt, TryFutureExt};
 use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
@@ -39,6 +23,7 @@ use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
+use std::{collections::BTreeMap, fmt::Display, pin::Pin, time::Duration};
 #[cfg(feature = "dali")]
 use subxt::config::substrate::AssetTip as Tip;
 use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams};

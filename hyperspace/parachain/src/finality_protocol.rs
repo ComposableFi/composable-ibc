@@ -41,7 +41,6 @@ use primitives::{
 	mock::LocalClientTypes, query_maximum_height_for_timeout_proofs, Chain, IbcProvider,
 	KeyProvider, UpdateType,
 };
-use prost::Message;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
 use sp_runtime::{
