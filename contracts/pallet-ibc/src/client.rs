@@ -28,7 +28,6 @@ use tendermint_proto::Protobuf;
 #[derive(Encode, Decode)]
 pub struct HostConsensusProof {
 	pub header: Vec<u8>,
-	pub code_id: Option<Vec<u8>>,
 	pub extrinsic: Vec<u8>,
 	pub extrinsic_proof: Vec<Vec<u8>>,
 }
@@ -179,6 +178,7 @@ where
 		&self,
 		height: Height,
 		proof: Option<Vec<u8>>,
+		client_state: &AnyClientState,
 	) -> Result<AnyConsensusState, ICS02Error> {
 		log::trace!(target: "pallet_ibc", "in client: [host_consensus_state] height = {:?}", height);
 		use codec::Compact;
@@ -284,11 +284,17 @@ where
 				};
 				let cs = AnyConsensusState::Grandpa(cs_state);
 
-				if let Some(code_id) = connection_proof.code_id {
-					let timestamp1 = cs.timestamp();
-					AnyConsensusState::wasm(cs, code_id, timestamp1.nanoseconds() / 1_000_000_000)
-				} else {
-					cs
+				match &client_state {
+					AnyClientState::Wasm(wasm) => {
+						let code_id = wasm.code_id.clone();
+						let timestamp1 = cs.timestamp();
+						AnyConsensusState::wasm(
+							cs,
+							code_id,
+							timestamp1.nanoseconds() / 1_000_000_000,
+						)
+					},
+					_ => cs,
 				}
 			},
 		};

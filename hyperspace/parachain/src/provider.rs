@@ -531,7 +531,6 @@ where
 
 		let host_consensus_proof = HostConsensusProof {
 			header: header.encode(),
-			code_id: self.counterparty_wasm_code_id.clone(),
 			extrinsic: extrinsic_with_proof.ext,
 			extrinsic_proof: extrinsic_with_proof.proof,
 		};

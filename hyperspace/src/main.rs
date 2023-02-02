@@ -26,7 +26,10 @@ async fn main() -> Result<()> {
 
 	match &cli.subcommand {
 		Subcommand::Relay(cmd) => cmd.run().await,
-		Subcommand::UploadWasm(cmd) => cmd.run().await,
+		Subcommand::UploadWasm(cmd) => {
+			let new_config = cmd.run().await?;
+			cmd.save_config(&new_config).await
+		},
 		Subcommand::CreateClients(cmd) => {
 			let new_config = cmd.create_clients().await?;
 			cmd.save_config(&new_config).await

@@ -111,22 +111,32 @@ pub struct UploadWasmCmd {
 	/// Relayer chain config path.
 	#[clap(long)]
 	config: String,
+	/// New config path to avoid overriding existing configuration.
+	#[clap(long)]
+	pub out_config: Option<String>,
 	/// Path to the wasm file.
 	#[clap(long)]
 	wasm_path: PathBuf,
 }
 
 impl UploadWasmCmd {
-	pub async fn run(&self) -> Result<()> {
+	pub async fn run(&self) -> Result<AnyConfig> {
 		use tokio::fs::read_to_string;
 		let path: PathBuf = self.config.parse()?;
 		let file_content = read_to_string(path).await?;
-		let config: AnyConfig = toml::from_str(&file_content)?;
-		let client = config.into_client().await?;
+		let mut config: AnyConfig = toml::from_str(&file_content)?;
+		let client = config.clone().into_client().await?;
 		let wasm = tokio::fs::read(&self.wasm_path).await?;
 		let code_id = client.upload_wasm(wasm).await?;
-		println!("WASM blob uploaded. Code ID: {}", hex::encode(&code_id));
-		Ok(())
+		let code_id_str = hex::encode(&code_id);
+		println!("{}", code_id_str);
+		config.set_wasm_code_id(code_id_str);
+		Ok(config)
+	}
+
+	pub async fn save_config(&self, new_config: &AnyConfig) -> Result<()> {
+		let path = self.out_config.as_ref().cloned().unwrap_or_else(|| self.config.clone());
+		write_config(path, &new_config).await
 	}
 }
 
@@ -279,11 +289,6 @@ impl Cmd {
 	pub async fn save_config(&self, new_config: &Config) -> Result<()> {
 		let path_a = self.out_config_a.as_ref().cloned().unwrap_or_else(|| self.config_a.clone());
 		let path_b = self.out_config_b.as_ref().cloned().unwrap_or_else(|| self.config_b.clone());
-		async fn write_config(path: String, config: &AnyConfig) -> Result<()> {
-			tokio::fs::write(path.parse::<PathBuf>()?, toml::to_string(config)?)
-				.await
-				.map_err(|e| anyhow!(e))
-		}
 		write_config(path_a, &new_config.chain_a).await?;
 		write_config(path_b, &new_config.chain_b).await
 	}
@@ -307,4 +312,10 @@ impl QueryCmd {
 
 		Ok(())
 	}
+}
+
+async fn write_config(path: String, config: &AnyConfig) -> Result<()> {
+	tokio::fs::write(path.parse::<PathBuf>()?, toml::to_string(config)?)
+		.await
+		.map_err(|e| anyhow!(e))
 }

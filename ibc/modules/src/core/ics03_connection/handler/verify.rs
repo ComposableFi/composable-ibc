@@ -94,7 +94,7 @@ pub fn verify_client_proof<Ctx: ReaderContext>(
 	ctx: &Ctx,
 	height: Height,
 	connection_end: &ConnectionEnd,
-	expected_client_state: Ctx::AnyClientState,
+	expected_client_state: &Ctx::AnyClientState,
 	proof_height: Height,
 	proof: &CommitmentProofBytes,
 ) -> Result<(), Error> {
@@ -132,6 +132,7 @@ pub fn verify_consensus_proof<Ctx: ReaderContext>(
 	height: Height,
 	connection_end: &ConnectionEnd,
 	proof: &ConsensusProof,
+	proof_client_state: &Ctx::AnyClientState,
 ) -> Result<(), Error> {
 	// Fetch the client state (IBC client on the local chain).
 	let client_state = ctx.client_state(connection_end.client_id()).map_err(Error::ics02_client)?;
@@ -159,6 +160,7 @@ pub fn verify_consensus_proof<Ctx: ReaderContext>(
 				.host_consensus_state(
 					proof.height(),
 					Some(connection_proof.host_consensus_state_proof),
+					&proof_client_state,
 				)
 				.map_err(|e| Error::consensus_state_verification_failure(proof.height(), e))?;
 			(
@@ -170,7 +172,7 @@ pub fn verify_consensus_proof<Ctx: ReaderContext>(
 		},
 		_ => (
 			proof.proof().clone(),
-			ctx.host_consensus_state(proof.height(), None)
+			ctx.host_consensus_state(proof.height(), None, &proof_client_state)
 				.map_err(|e| Error::consensus_state_verification_failure(proof.height(), e))?,
 		),
 	};

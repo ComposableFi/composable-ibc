@@ -110,7 +110,6 @@ pub struct ParachainClient<T: config::Config> {
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 	/// Finality protocol to use, eg Beefy, Grandpa
 	pub finality_protocol: FinalityProtocol,
-	pub counterparty_wasm_code_id: Option<Vec<u8>>,
 }
 
 enum KeyType {
@@ -172,12 +171,6 @@ pub struct ParachainClientConfig {
 	/// All the client states and headers will be wrapped in WASM ones using the WASM code ID.
 	#[serde(default)]
 	pub wasm_code_id: Option<String>,
-	/// The underlying WASM client type.
-	#[serde(default)]
-	pub wasm_client_type: Option<String>,
-	/// Counterparty's WASM code ID.
-	#[serde(default)]
-	pub counterparty_wasm_code_id: Option<String>,
 }
 
 impl<T> ParachainClient<T>
@@ -258,9 +251,6 @@ where
 			ss58_version: Ss58AddressFormat::from(config.ss58_version),
 			channel_whitelist: config.channel_whitelist,
 			finality_protocol: config.finality_protocol,
-			counterparty_wasm_code_id: config
-				.counterparty_wasm_code_id
-				.map(|id| hex::decode(id).expect("invalid hex")),
 		})
 	}
 }

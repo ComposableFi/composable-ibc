@@ -182,6 +182,7 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'
 		&self,
 		height: Height,
 		_proof: Option<Vec<u8>>,
+		_client_state: &ClientState<H>,
 	) -> Result<ConsensusState, Error> {
 		let consensus_state =
 			HOST_CONSENSUS_STATE.load(self.storage(), height.revision_height).map_err(|_| {

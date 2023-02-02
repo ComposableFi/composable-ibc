@@ -142,7 +142,6 @@ pub struct CoreConfig {
 pub struct WasmChain {
 	pub inner: Box<AnyChain>,
 	pub code_id: Bytes,
-	pub client_type: ClientType,
 }
 
 #[derive(Clone)]
@@ -945,21 +944,25 @@ impl primitives::TestProvider for AnyChain {
 }
 
 impl AnyConfig {
-	pub fn wasm_code_id(&self) -> Option<(CodeId, ClientType)> {
-		let (maybe_code_id, maybe_client_type) = match self {
-			AnyConfig::Parachain(config) =>
-				(config.wasm_code_id.as_ref(), config.wasm_client_type.as_ref()),
+	pub fn wasm_code_id(&self) -> Option<CodeId> {
+		let maybe_code_id = match self {
+			AnyConfig::Parachain(config) => config.wasm_code_id.as_ref(),
 			#[cfg(feature = "cosmos")]
-			AnyConfig::Cosmos(config) => (config.wasm_code_id.as_ref(), config.wasm_client_type.as_ref()),
+			AnyConfig::Cosmos(config) => config.wasm_code_id.as_ref(),
 		};
-		if maybe_code_id.is_some() != maybe_client_type.is_some() {
-			panic!("Wasm code id and client type must be both set or both unset");
-		}
 
 		let maybe_code_id =
 			maybe_code_id.map(|s| hex::decode(s).expect("Wasm code id is hex-encoded"));
 
-		maybe_code_id.map(|code_id| (code_id, maybe_client_type.unwrap().clone()))
+		maybe_code_id
+	}
+
+	pub fn set_wasm_code_id(&mut self, code_id: String) {
+		match self {
+			AnyConfig::Parachain(config) => config.wasm_code_id = Some(code_id),
+			#[cfg(feature = "cosmos")]
+			AnyConfig::Cosmos(config) => config.wasm_code_id = Some(code_id),
+		}
 	}
 
 	pub async fn into_client(self) -> anyhow::Result<AnyChain> {
@@ -970,10 +973,8 @@ impl AnyConfig {
 			#[cfg(feature = "cosmos")]
 			AnyConfig::Cosmos(config) => AnyChain::Cosmos(CosmosClient::new(config).await?),
 		};
-		if let Some((code_id, client_type)) = maybe_wasm_code_id {
-			// println!("inserting wasm client {}", client_type);
-			ics08_wasm::add_wasm_client_type(code_id.clone(), client_type.clone());
-			Ok(AnyChain::Wasm(WasmChain { inner: Box::new(chain), code_id, client_type }))
+		if let Some(code_id) = maybe_wasm_code_id {
+			Ok(AnyChain::Wasm(WasmChain { inner: Box::new(chain), code_id }))
 		} else {
 			Ok(chain)
 		}

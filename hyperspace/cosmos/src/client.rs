@@ -141,14 +141,12 @@ pub struct CosmosClientConfig {
 	pub store_prefix: String,
 	/// Maximun transaction size
 	pub max_tx_size: usize,
-	/// The key that signs transactions
-	pub keybase: ConfigKeyEntry,
 	/// All the client states and headers will be wrapped in WASM ones using the WASM code ID.
 	#[serde(default)]
 	pub wasm_code_id: Option<String>,
-	/// The underlying WASM client type.
-	#[serde(default)]
-	pub wasm_client_type: Option<String>,
+	// The underlying WASM client type.
+	// #[serde(default)]
+	// pub wasm_client_type: Option<String>,
 	/*
 	Here is a list of dropped configuration parameters from Hermes Config.toml
 	that could be set to default values or removed for the MVP phase:
@@ -169,6 +167,8 @@ pub struct CosmosClientConfig {
 	pub address_type: AddressType,			    //TODO: Type = cosmos
 	pub extension_options: Vec<ExtensionOption>,//TODO: Could be set to None
 	*/
+	/// The key that signs transactions
+	pub keybase: ConfigKeyEntry,
 }
 
 impl<H> CosmosClient<H>
