@@ -1,4 +1,4 @@
-use crate::{setup_connection_and_channel, StreamExt};
+use crate::StreamExt;
 use finality_grandpa::{Precommit, SignedPrecommit};
 use grandpa_client_primitives::{
 	justification::GrandpaJustification, parachain_header_storage_key, Commit, FinalityProof,
@@ -36,10 +36,6 @@ where
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
-	let (handle, _channel_id, _channel_b, _connection_id) =
-		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(60 * 2)).await;
-	handle.abort();
-
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
