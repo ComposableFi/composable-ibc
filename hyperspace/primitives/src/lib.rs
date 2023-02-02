@@ -627,8 +627,9 @@ pub async fn query_maximum_height_for_timeout_proofs(
 				continue
 			}
 			let period = Duration::from_nanos(period);
-			let approx_height =
+			let period =
 				calculate_block_delay(period, sink.expected_block_time()).saturating_add(1);
+			let approx_height = send_packet.height + period;
 			let timeout_height = if send_packet.timeout_height.revision_height < approx_height {
 				send_packet.timeout_height.revision_height
 			} else {
