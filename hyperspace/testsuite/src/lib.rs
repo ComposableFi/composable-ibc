@@ -18,7 +18,7 @@ use crate::utils::{assert_timeout_packet, parse_amount};
 use futures::{future, StreamExt};
 use hyperspace_core::send_packet_relay::set_relay_status;
 use hyperspace_primitives::{
-	utils::{create_channel, create_connection, timeout_future},
+	utils::{create_channel, create_connection, timeout_after, timeout_future},
 	TestProvider,
 };
 use ibc::{
@@ -203,7 +203,7 @@ where
 	(amount, msg)
 }
 
-async fn assert_send_transfer<A>(chain: &A, previous_balance: u128, wait_time: u64)
+async fn assert_send_transfer<A>(chain: &A, previous_balance: u128, wait_blocks: u64)
 where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -215,8 +215,13 @@ where
 		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::AcknowledgePacket(_))))
 		.take(1)
 		.collect::<Vec<_>>();
-	timeout_future(future, wait_time, format!("Didn't see AcknowledgePacket on {}", chain.name()))
-		.await;
+	timeout_after(
+		chain,
+		future,
+		wait_blocks,
+		format!("Didn't see AcknowledgePacket on {}", chain.name()),
+	)
+	.await;
 
 	let balance = chain
 		.query_ibc_balance()
@@ -267,7 +272,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	log::info!(target: "hyperspace", "Waiting for packet timeout to elapse on counterparty");
 	timeout_future(
 		future,
-		10 * 60,
+		20 * 60,
 		format!("Timeout height was not reached on {}", chain_b.name()),
 	)
 	.await;
@@ -275,7 +280,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	log::info!(target: "hyperspace", "Resuming send packet relay");
 	set_relay_status(true);
 
-	assert_timeout_packet(chain_a).await;
+	assert_timeout_packet(chain_a, 35).await;
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for height timeout");
 }
 
@@ -322,7 +327,7 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 	log::info!(target: "hyperspace", "Waiting for packet timeout to elapse on counterparty");
 	timeout_future(
 		future,
-		10 * 60,
+		20 * 60,
 		format!("Timeout timestamp was not reached on {}", chain_b.name()),
 	)
 	.await;
@@ -330,7 +335,7 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 	log::info!(target: "hyperspace", "Resuming send packet relay");
 	set_relay_status(true);
 
-	assert_timeout_packet(chain_a).await;
+	assert_timeout_packet(chain_a, 50).await;
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for timeout timestamp");
 }
 
@@ -345,10 +350,10 @@ where
 	B::Error: From<A::Error>,
 {
 	let (previous_balance, ..) = send_transfer(chain_a, chain_b, channel_id, None).await;
-	assert_send_transfer(chain_a, previous_balance, 20 * 60).await;
+	assert_send_transfer(chain_a, previous_balance, 120).await;
 	// now send from chain b.
 	let (previous_balance, ..) = send_transfer(chain_b, chain_a, channel_id, None).await;
-	assert_send_transfer(chain_b, previous_balance, 20 * 60).await;
+	assert_send_transfer(chain_b, previous_balance, 120).await;
 	log::info!(target: "hyperspace", "🚀🚀 Token Transfer successful with connection delay");
 }
 
@@ -382,9 +387,10 @@ async fn send_channel_close_init_and_assert_channel_close_confirm<A, B>(
 		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::CloseConfirmChannel(_))))
 		.take(1)
 		.collect::<Vec<_>>();
-	timeout_future(
+	timeout_after(
+		chain_b,
 		future,
-		10 * 60,
+		30,
 		format!("Didn't see CloseConfirmChannel message on {}", chain_b.name()),
 	)
 	.await;
@@ -441,17 +447,17 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 		.take(1)
 		.collect::<Vec<_>>();
 
-	log::info!(target: "hyperspace", "Waiting for packet timeout to elapse on counterparty");
 	timeout_future(
 		future,
-		10 * 60,
+		20 * 60,
 		format!("Timeout timestamp was not reached on {}", chain_b.name()),
 	)
 	.await;
+	log::info!(target: "hyperspace", "Packet timeout has elapsed on counterparty");
 
 	set_relay_status(true);
 
-	assert_timeout_packet(chain_a).await;
+	assert_timeout_packet(chain_a, 50).await;
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for channel close");
 }
 
@@ -593,4 +599,21 @@ where
 	});
 	send_packet_and_assert_timeout_on_channel_close(chain_a, chain_b, channel_id).await;
 	handle.abort()
+}
+
+pub async fn client_synchronization_test<A, B>(chain_a: &A, chain_b: &B)
+where
+	A: TestProvider,
+	A::FinalityEvent: Send + Sync,
+	A::Error: From<B::Error>,
+	B: TestProvider,
+	B::FinalityEvent: Send + Sync,
+	B::Error: From<A::Error>,
+{
+	// Wait for some sessions to pass while task is asleep, clients will go out of sync
+	tokio::time::sleep(Duration::from_secs(60 * 20)).await;
+	// if clients synced correctly then channel and connection setup should succeed
+	let (handle, ..) = setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(0)).await;
+	log::info!(target: "hyperspace", "🚀🚀 Clients were successfully synced");
+	handle.abort();
 }

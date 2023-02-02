@@ -27,6 +27,7 @@ pub mod signer;
 pub mod utils;
 
 pub mod finality_protocol;
+pub mod light_client_sync;
 #[cfg(any(test, feature = "testing"))]
 pub mod test_provider;
 

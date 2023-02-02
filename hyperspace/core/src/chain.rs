@@ -53,7 +53,9 @@ use thiserror::Error;
 use ibc::core::ics02_client::events::UpdateClient;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use parachain::{config, ParachainClient};
-use primitives::{Chain, IbcProvider, KeyProvider, MisbehaviourHandler, UpdateType};
+use primitives::{
+	Chain, IbcProvider, KeyProvider, LightClientSync, MisbehaviourHandler, UpdateType,
+};
 use std::{pin::Pin, time::Duration};
 #[cfg(feature = "dali")]
 use subxt::config::substrate::{
@@ -163,7 +165,7 @@ impl IbcProvider for AnyChain {
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &T,
-	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
 		T: Chain,
 	{
@@ -524,14 +526,16 @@ impl IbcProvider for AnyChain {
 		}
 	}
 
-	fn is_update_required(
+	async fn is_update_required(
 		&self,
 		latest_height: u64,
 		latest_client_height_on_counterparty: u64,
-	) -> bool {
+	) -> Result<bool, Self::Error> {
 		match self {
-			Self::Parachain(chain) =>
-				chain.is_update_required(latest_height, latest_client_height_on_counterparty),
+			Self::Parachain(chain) => chain
+				.is_update_required(latest_height, latest_client_height_on_counterparty)
+				.await
+				.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}
@@ -637,6 +641,27 @@ impl Chain for AnyChain {
 	) -> Result<AnyClientMessage, Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain.query_client_message(update).await.map_err(Into::into),
+			_ => unreachable!(),
+		}
+	}
+}
+
+#[async_trait]
+impl LightClientSync for AnyChain {
+	async fn is_synced<C: Chain>(&self, counterparty: &C) -> Result<bool, anyhow::Error> {
+		match self {
+			Self::Parachain(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
+			_ => unreachable!(),
+		}
+	}
+
+	async fn fetch_mandatory_updates<C: Chain>(
+		&self,
+		counterparty: &C,
+	) -> Result<(Vec<Any>, Vec<IbcEvent>), anyhow::Error> {
+		match self {
+			Self::Parachain(chain) =>
+				chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}

@@ -111,7 +111,7 @@ pub trait IbcProvider {
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &T,
-	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
 		T: Chain;
 
@@ -312,11 +312,11 @@ pub trait IbcProvider {
 
 	/// Returns a boolean value that determines if the light client should receive a mandatory
 	/// update
-	fn is_update_required(
+	async fn is_update_required(
 		&self,
 		latest_height: u64,
 		latest_client_height_on_counterparty: u64,
-	) -> bool;
+	) -> Result<bool, Self::Error>;
 
 	/// This should return a subjectively chosen client and consensus state for this chain.
 	async fn initialize_client_state(
@@ -370,10 +370,25 @@ pub trait MisbehaviourHandler {
 	) -> Result<(), anyhow::Error>;
 }
 
+/// Provides an interface for syncing light clients to the latest state
+#[async_trait::async_trait]
+pub trait LightClientSync {
+	/// Checks if the self's light client on counterparty is synced
+	async fn is_synced<C: Chain>(&self, counterparty: &C) -> Result<bool, anyhow::Error>;
+
+	/// Get all the messages from self required to update self's light client on the counterparty
+	async fn fetch_mandatory_updates<C: Chain>(
+		&self,
+		counterparty: &C,
+	) -> Result<(Vec<Any>, Vec<IbcEvent>), anyhow::Error>;
+}
+
 /// Provides an interface for the chain to the relayer core for submitting IbcEvents as well as
 /// finality notifications
 #[async_trait::async_trait]
-pub trait Chain: IbcProvider + MisbehaviourHandler + KeyProvider + Send + Sync {
+pub trait Chain:
+	IbcProvider + LightClientSync + MisbehaviourHandler + KeyProvider + Send + Sync
+{
 	/// Name of this chain, used in logs.
 	fn name(&self) -> &str;
 
@@ -612,8 +627,9 @@ pub async fn query_maximum_height_for_timeout_proofs(
 				continue
 			}
 			let period = Duration::from_nanos(period);
-			let approx_height =
+			let period =
 				calculate_block_delay(period, sink.expected_block_time()).saturating_add(1);
+			let approx_height = send_packet.height + period;
 			let timeout_height = if send_packet.timeout_height.revision_height < approx_height {
 				send_packet.timeout_height.revision_height
 			} else {
