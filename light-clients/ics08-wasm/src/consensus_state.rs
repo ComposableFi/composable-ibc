@@ -7,21 +7,14 @@ use alloc::{
 use core::{convert::Infallible, fmt::Debug};
 use ibc::{
 	core::{
-		ics02_client::{
-			client_consensus::ConsensusState as IbcConsensusState, client_state::ClientType,
-		},
+		ics02_client::client_consensus::ConsensusState as IbcConsensusState,
 		ics23_commitment::commitment::CommitmentRoot,
 	},
 	protobuf::Protobuf,
 	timestamp::Timestamp,
 };
 use ibc_proto::{
-	google::protobuf::Any,
-	ibc::{
-		core::{client::v1::Height, commitment::v1::MerkleRoot},
-		lightclients::wasm::v1::ConsensusState as RawConsensusState,
-	},
-	ics23::ProofSpec,
+	google::protobuf::Any, ibc::lightclients::wasm::v1::ConsensusState as RawConsensusState,
 };
 use prost::Message;
 

@@ -24,7 +24,6 @@ use tendermint::Hash;
 use tendermint_rpc::{
 	endpoint::tx::Response as TxResponse, query::Query, Client, HttpClient, Order, Url,
 };
-use tokio::time::error::Elapsed;
 
 pub fn sign_tx(
 	key: KeyEntry,

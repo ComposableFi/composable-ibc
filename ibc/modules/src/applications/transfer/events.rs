@@ -93,11 +93,7 @@ impl From<AckStatusEvent> for ModuleEvent {
 			module_name: MODULE_ID_STR.parse().expect("invalid ModuleId"),
 			attributes: vec![],
 		};
-		let attr_label = if acknowledgement.is_successful() {
-			"success"
-		} else {
-			"error"
-		};
+		let attr_label = if acknowledgement.is_successful() { "success" } else { "error" };
 		event.attributes.push((attr_label, acknowledgement.to_string()).into());
 		event
 	}

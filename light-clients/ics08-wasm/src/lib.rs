@@ -3,9 +3,7 @@
 #[macro_use]
 extern crate alloc;
 
-use alloc::{collections::BTreeMap, vec::Vec};
-use ibc::core::ics02_client::{client_state::ClientType, events::CodeId};
-use spin::RwLock;
+use alloc::vec::Vec;
 
 pub mod client_def;
 pub mod client_message;

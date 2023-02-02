@@ -132,9 +132,9 @@ where
 		.query_latest_ibc_events(finality_event, chain_a)
 		.await
 		.expect("no event");
-	let mut msg : MsgUpdateAnyClient::<LocalClientTypes> = todo!();
-		// MsgUpdateAnyClient::<LocalClientTypes>::decode(&mut update_client_msg.value.as_slice())
-		// 	.unwrap();
+	let mut msg: MsgUpdateAnyClient<LocalClientTypes> = todo!();
+	// MsgUpdateAnyClient::<LocalClientTypes>::decode(&mut update_client_msg.value.as_slice())
+	// 	.unwrap();
 	let round = match &mut msg.client_message {
 		AnyClientMessage::Grandpa(ClientMessage::Header(header)) => {
 			let justification = GrandpaJustification::<RelayChainHeader>::decode(

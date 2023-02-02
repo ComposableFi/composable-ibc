@@ -13,10 +13,9 @@
 // limitations under the License.
 
 use super::error::Error;
-use crate::{core::ics26_routing::context::Acknowledgement as AckTrait, prelude::*};
+use crate::prelude::*;
 use core::fmt::{Display, Formatter};
-
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// A string constant included in error acknowledgements.
 /// NOTE: Changing this const is state machine breaking as acknowledgements are written into state
@@ -33,17 +32,11 @@ pub struct Acknowledgement {
 
 impl Acknowledgement {
 	pub fn success() -> Self {
-		Self {
-			result: Some(ACK_SUCCESS_B64.to_string()),
-			error: None,
-		}
+		Self { result: Some(ACK_SUCCESS_B64.to_string()), error: None }
 	}
 
 	pub fn from_error(err: Error) -> Self {
-		Self {
-			result: None,
-			error: Some(err.to_string()),
-		}
+		Self { result: None, error: Some(err.to_string()) }
 	}
 
 	pub fn is_successful(&self) -> bool {

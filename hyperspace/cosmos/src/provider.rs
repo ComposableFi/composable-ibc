@@ -6,7 +6,7 @@ use super::{
 	},
 	utils::incerement_proof_height,
 };
-use crate::{error::Error, HostFunctions};
+use crate::error::Error;
 use futures::{
 	stream::{self, select_all},
 	Stream, StreamExt,
@@ -38,7 +38,6 @@ use ibc::{
 	core::ics02_client::{client_state::ClientType, msgs::update_client::MsgUpdateAnyClient},
 	protobuf::Protobuf,
 };
-use ibc_proto::ibc::core::client::v1::MsgUpdateClient;
 use ibc_proto::{
 	cosmos::bank::v1beta1::QueryBalanceRequest,
 	google::protobuf::Any,
@@ -72,7 +71,7 @@ use pallet_ibc::light_clients::{
 };
 use primitives::{mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType};
 use std::{pin::Pin, str::FromStr, time::Duration};
-use tendermint::{abci::response::DeliverTx, block::Height as TmHeight, Time};
+use tendermint::block::Height as TmHeight;
 use tendermint_rpc::{
 	endpoint::tx::Response,
 	event::{Event, EventData},
@@ -82,14 +81,9 @@ use tendermint_rpc::{
 use tonic::IntoRequest;
 
 use ibc::events::IbcEventType;
-use ibc_proto::ibc::{
-	core::channel::v1::IdentifiedChannel, lightclients::wasm::v1::msg_client::MsgClient,
-};
 use ics08_wasm::msg::MsgPushNewWasmCode;
 pub use tendermint::Hash;
-use tendermint_rpc::response::Wrapper;
 use tokio::time::sleep;
-use tonic::transport::Endpoint;
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
@@ -504,7 +498,7 @@ where
 		}
 		.into_request();
 
-		let response = grpc_client
+		let _response = grpc_client
 			.packet_acknowledgement(request)
 			.await
 			.map_err(|e| Error::from(e.to_string()))?
@@ -580,7 +574,7 @@ where
 		}
 		.into_request();
 
-		let response = grpc_client
+		let _response = grpc_client
 			.packet_receipt(request)
 			.await
 			.map_err(|e| Error::from(e.to_string()))?
@@ -797,7 +791,7 @@ where
 					.and_eq(format!("{}.packet_src_port", "send_packet"), port_id.to_string())
 					.and_eq(format!("{}.packet_sequence", "send_packet"), seq.to_string());
 
-			let mut response = self
+			let _response = self
 				.rpc_client
 				.block_search(
 					query_str,
@@ -833,9 +827,9 @@ where
 
 	async fn query_recv_packets(
 		&self,
-		channel_id: ChannelId,
-		port_id: PortId,
-		seqs: Vec<u64>,
+		_channel_id: ChannelId,
+		_port_id: PortId,
+		_seqs: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Self::Error> {
 		todo!()
 	}
@@ -846,15 +840,15 @@ where
 
 	async fn query_client_update_time_and_height(
 		&self,
-		client_id: ClientId,
-		client_height: Height,
+		_client_id: ClientId,
+		_client_height: Height,
 	) -> Result<(Height, Timestamp), Self::Error> {
 		todo!()
 	}
 
 	async fn query_host_consensus_state_proof(
 		&self,
-		height: Height,
+		_height: Height,
 	) -> Result<Option<Vec<u8>>, Self::Error> {
 		todo!()
 	}
@@ -934,7 +928,7 @@ where
 			.into_inner();
 
 		// Deserialize into domain type
-		let mut clients: Vec<ClientId> = response
+		let clients: Vec<ClientId> = response
 			.client_states
 			.into_iter()
 			.filter_map(|cs| {
@@ -971,8 +965,8 @@ where
 
 	async fn query_connection_using_client(
 		&self,
-		height: u32,
-		client_id: String,
+		_height: u32,
+		_client_id: String,
 	) -> Result<Vec<IdentifiedConnection>, Self::Error> {
 		let mut grpc_client =
 			ibc_proto::ibc::core::connection::v1::query_client::QueryClient::connect(
@@ -1003,8 +997,8 @@ where
 
 	fn is_update_required(
 		&self,
-		latest_height: u64,
-		latest_client_height_on_counterparty: u64,
+		_latest_height: u64,
+		_latest_client_height_on_counterparty: u64,
 	) -> bool {
 		// TODO: Implement is_update_required
 		false

@@ -1,4 +1,3 @@
-use crate::{log, Bytes, STORAGE_PREFIX};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Storage;
 use ibc::{
@@ -35,7 +34,7 @@ impl<'a> ConsensusStates<'a> {
 		ConsensusStates(storage)
 	}
 
-	pub fn consensus_state_client_key(client_id: ClientId) -> Vec<u8> {
+	pub fn consensus_state_client_key(_client_id: ClientId) -> Vec<u8> {
 		format!("consensusStates/").into_bytes()
 		// format!("clients/{}/consensusStates/", client_id).into_bytes()
 	}
@@ -140,14 +139,14 @@ impl ClientState for FakeInner {
 
 	fn upgrade(
 		self,
-		upgrade_height: Height,
-		upgrade_options: Self::UpgradeOptions,
-		chain_id: ChainId,
+		_upgrade_height: Height,
+		_upgrade_options: Self::UpgradeOptions,
+		_chain_id: ChainId,
 	) -> Self {
 		unimplemented!()
 	}
 
-	fn expired(&self, elapsed: Duration) -> bool {
+	fn expired(&self, _elapsed: Duration) -> bool {
 		unimplemented!()
 	}
 
@@ -169,177 +168,177 @@ impl ClientDef for FakeInner {
 
 	fn verify_client_message<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: ClientId,
-		client_state: Self::ClientState,
-		client_msg: Self::ClientMessage,
+		_ctx: &Ctx,
+		_client_id: ClientId,
+		_client_state: Self::ClientState,
+		_client_msg: Self::ClientMessage,
 	) -> Result<(), Error> {
 		unimplemented!()
 	}
 
 	fn update_state<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: ClientId,
-		client_state: Self::ClientState,
-		client_msg: Self::ClientMessage,
+		_ctx: &Ctx,
+		_client_id: ClientId,
+		_client_state: Self::ClientState,
+		_client_msg: Self::ClientMessage,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error> {
 		unimplemented!()
 	}
 
 	fn update_state_on_misbehaviour(
 		&self,
-		client_state: Self::ClientState,
-		client_msg: Self::ClientMessage,
+		_client_state: Self::ClientState,
+		_client_msg: Self::ClientMessage,
 	) -> Result<Self::ClientState, Error> {
 		unimplemented!()
 	}
 
 	fn check_for_misbehaviour<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: ClientId,
-		client_state: Self::ClientState,
-		client_msg: Self::ClientMessage,
+		_ctx: &Ctx,
+		_client_id: ClientId,
+		_client_state: Self::ClientState,
+		_client_msg: Self::ClientMessage,
 	) -> Result<bool, Error> {
 		unimplemented!()
 	}
 
 	fn verify_upgrade_and_update_state<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: ClientId,
-		old_client_state: &Self::ClientState,
-		upgrade_client_state: &Self::ClientState,
-		upgrade_consensus_state: &Self::ConsensusState,
-		proof_upgrade_client: Vec<u8>,
-		proof_upgrade_consensus_state: Vec<u8>,
+		_ctx: &Ctx,
+		_client_id: ClientId,
+		_old_client_state: &Self::ClientState,
+		_upgrade_client_state: &Self::ClientState,
+		_upgrade_consensus_state: &Self::ConsensusState,
+		_proof_upgrade_client: Vec<u8>,
+		_proof_upgrade_consensus_state: Vec<u8>,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error> {
 		unimplemented!()
 	}
 
 	fn verify_client_consensus_state<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_state: &Self::ClientState,
-		height: Height,
-		prefix: &CommitmentPrefix,
-		proof: &CommitmentProofBytes,
-		root: &CommitmentRoot,
-		client_id: &ClientId,
-		consensus_height: Height,
-		expected_consensus_state: &Ctx::AnyConsensusState,
+		_ctx: &Ctx,
+		_client_state: &Self::ClientState,
+		_height: Height,
+		_prefix: &CommitmentPrefix,
+		_proof: &CommitmentProofBytes,
+		_root: &CommitmentRoot,
+		_client_id: &ClientId,
+		_consensus_height: Height,
+		_expected_consensus_state: &Ctx::AnyConsensusState,
 	) -> Result<(), Error> {
 		unimplemented!()
 	}
 
 	fn verify_connection_state<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: &ClientId,
-		client_state: &Self::ClientState,
-		height: Height,
-		prefix: &CommitmentPrefix,
-		proof: &CommitmentProofBytes,
-		root: &CommitmentRoot,
-		connection_id: &ConnectionId,
-		expected_connection_end: &ConnectionEnd,
+		_ctx: &Ctx,
+		_client_id: &ClientId,
+		_client_state: &Self::ClientState,
+		_height: Height,
+		_prefix: &CommitmentPrefix,
+		_proof: &CommitmentProofBytes,
+		_root: &CommitmentRoot,
+		_connection_id: &ConnectionId,
+		_expected_connection_end: &ConnectionEnd,
 	) -> Result<(), Error> {
 		unimplemented!()
 	}
 
 	fn verify_channel_state<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: &ClientId,
-		client_state: &Self::ClientState,
-		height: Height,
-		prefix: &CommitmentPrefix,
-		proof: &CommitmentProofBytes,
-		root: &CommitmentRoot,
-		port_id: &PortId,
-		channel_id: &ChannelId,
-		expected_channel_end: &ChannelEnd,
+		_ctx: &Ctx,
+		_client_id: &ClientId,
+		_client_state: &Self::ClientState,
+		_height: Height,
+		_prefix: &CommitmentPrefix,
+		_proof: &CommitmentProofBytes,
+		_root: &CommitmentRoot,
+		_port_id: &PortId,
+		_channel_id: &ChannelId,
+		_expected_channel_end: &ChannelEnd,
 	) -> Result<(), Error> {
 		unimplemented!()
 	}
 
 	fn verify_client_full_state<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_state: &Self::ClientState,
-		height: Height,
-		prefix: &CommitmentPrefix,
-		proof: &CommitmentProofBytes,
-		root: &CommitmentRoot,
-		client_id: &ClientId,
-		expected_client_state: &Ctx::AnyClientState,
+		_ctx: &Ctx,
+		_client_state: &Self::ClientState,
+		_height: Height,
+		_prefix: &CommitmentPrefix,
+		_proof: &CommitmentProofBytes,
+		_root: &CommitmentRoot,
+		_client_id: &ClientId,
+		_expected_client_state: &Ctx::AnyClientState,
 	) -> Result<(), Error> {
 		unimplemented!()
 	}
 
 	fn verify_packet_data<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: &ClientId,
-		client_state: &Self::ClientState,
-		height: Height,
-		connection_end: &ConnectionEnd,
-		proof: &CommitmentProofBytes,
-		root: &CommitmentRoot,
-		port_id: &PortId,
-		channel_id: &ChannelId,
-		sequence: Sequence,
-		commitment: PacketCommitment,
+		_ctx: &Ctx,
+		_client_id: &ClientId,
+		_client_state: &Self::ClientState,
+		_height: Height,
+		_connection_end: &ConnectionEnd,
+		_proof: &CommitmentProofBytes,
+		_root: &CommitmentRoot,
+		_port_id: &PortId,
+		_channel_id: &ChannelId,
+		_sequence: Sequence,
+		_commitment: PacketCommitment,
 	) -> Result<(), Error> {
 		unimplemented!()
 	}
 
 	fn verify_packet_acknowledgement<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: &ClientId,
-		client_state: &Self::ClientState,
-		height: Height,
-		connection_end: &ConnectionEnd,
-		proof: &CommitmentProofBytes,
-		root: &CommitmentRoot,
-		port_id: &PortId,
-		channel_id: &ChannelId,
-		sequence: Sequence,
-		ack: AcknowledgementCommitment,
+		_ctx: &Ctx,
+		_client_id: &ClientId,
+		_client_state: &Self::ClientState,
+		_height: Height,
+		_connection_end: &ConnectionEnd,
+		_proof: &CommitmentProofBytes,
+		_root: &CommitmentRoot,
+		_port_id: &PortId,
+		_channel_id: &ChannelId,
+		_sequence: Sequence,
+		_ack: AcknowledgementCommitment,
 	) -> Result<(), Error> {
 		unimplemented!()
 	}
 
 	fn verify_next_sequence_recv<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: &ClientId,
-		client_state: &Self::ClientState,
-		height: Height,
-		connection_end: &ConnectionEnd,
-		proof: &CommitmentProofBytes,
-		root: &CommitmentRoot,
-		port_id: &PortId,
-		channel_id: &ChannelId,
-		sequence: Sequence,
+		_ctx: &Ctx,
+		_client_id: &ClientId,
+		_client_state: &Self::ClientState,
+		_height: Height,
+		_connection_end: &ConnectionEnd,
+		_proof: &CommitmentProofBytes,
+		_root: &CommitmentRoot,
+		_port_id: &PortId,
+		_channel_id: &ChannelId,
+		_sequence: Sequence,
 	) -> Result<(), Error> {
 		unimplemented!()
 	}
 
 	fn verify_packet_receipt_absence<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: &ClientId,
-		client_state: &Self::ClientState,
-		height: Height,
-		connection_end: &ConnectionEnd,
-		proof: &CommitmentProofBytes,
-		root: &CommitmentRoot,
-		port_id: &PortId,
-		channel_id: &ChannelId,
-		sequence: Sequence,
+		_ctx: &Ctx,
+		_client_id: &ClientId,
+		_client_state: &Self::ClientState,
+		_height: Height,
+		_connection_end: &ConnectionEnd,
+		_proof: &CommitmentProofBytes,
+		_root: &CommitmentRoot,
+		_port_id: &PortId,
+		_channel_id: &ChannelId,
+		_sequence: Sequence,
 	) -> Result<(), Error> {
 		unimplemented!()
 	}

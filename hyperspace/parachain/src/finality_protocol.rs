@@ -165,7 +165,7 @@ where
 			current_authorities: client_state.authority.clone(),
 			next_authorities: client_state.next_authority_set.clone(),
 		},
-		c => unreachable!(),
+		_c => unreachable!(),
 	};
 
 	if signed_commitment.commitment.validator_set_id < beefy_client_state.current_authorities.id {
@@ -352,7 +352,7 @@ where
 	let client_id = source.client_id();
 	let latest_height = counterparty.latest_height_and_timestamp().await?.0;
 	let response = counterparty.query_client_state(latest_height, client_id).await?;
-	let mut any_client_state = response.client_state.clone().ok_or_else(|| {
+	let any_client_state = response.client_state.clone().ok_or_else(|| {
 		Error::Custom("Received an empty client state from counterparty".to_string())
 	})?;
 	let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
@@ -374,7 +374,7 @@ where
 		session_end = prover.session_end_for_block(client_state.latest_relay_height + 1).await?;
 	}
 
-	let mut latest_finalized_height = session_end;
+	let latest_finalized_height = session_end;
 	use finality_grandpa_rpc::GrandpaApiClient;
 
 	let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
@@ -387,7 +387,7 @@ where
 	.await?
 	.ok_or_else(|| anyhow!("No justification found for block: {:?}", latest_finalized_height))?
 	.0;
-	let mut finality_proof = FinalityProof::<
+	let finality_proof = FinalityProof::<
 		sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>,
 	>::decode(&mut &encoded[..])?;
 	let justification = GrandpaJustification::<

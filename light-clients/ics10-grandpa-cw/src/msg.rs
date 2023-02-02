@@ -199,7 +199,7 @@ impl TryFrom<VerifyMembershipMsgRaw> for VerifyMembershipMsg {
 	fn try_from(raw: VerifyMembershipMsgRaw) -> Result<Self, Self::Error> {
 		let proof = CommitmentProofBytes::try_from(raw.proof)?;
 		let mut merkle_path: MerklePath = MerklePath::decode(&*raw.path)?;
-		let mut prefix = merkle_path.key_path.remove(0).into_bytes();
+		let prefix = merkle_path.key_path.remove(0).into_bytes();
 		let path_str = merkle_path.key_path.join("");
 		let path = Path::from_str(&path_str)?;
 		let height = Height::from(raw.height);
@@ -239,7 +239,7 @@ impl TryFrom<VerifyNonMembershipMsgRaw> for VerifyNonMembershipMsg {
 	fn try_from(raw: VerifyNonMembershipMsgRaw) -> Result<Self, Self::Error> {
 		let proof = CommitmentProofBytes::try_from(raw.proof)?;
 		let mut merkle_path: MerklePath = MerklePath::decode(&*raw.path)?;
-		let mut prefix = merkle_path.key_path.remove(0).into_bytes();
+		let prefix = merkle_path.key_path.remove(0).into_bytes();
 		let path_str = merkle_path.key_path.join("");
 		let path = Path::from_str(&path_str)?;
 		let height = Height::from(raw.height);

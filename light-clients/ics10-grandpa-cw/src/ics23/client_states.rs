@@ -1,7 +1,7 @@
 use crate::STORAGE_PREFIX;
 use cosmwasm_std::Storage;
 use cosmwasm_storage::{prefixed, PrefixedStorage, ReadonlyPrefixedStorage};
-use ibc::core::ics24_host::{identifier::ClientId, path::ClientStatePath};
+use ibc::core::ics24_host::identifier::ClientId;
 
 /// client_id => client_states
 /// trie key path: "clients/{client_id}/clientState"

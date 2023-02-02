@@ -43,7 +43,7 @@ async fn main() -> Result<()> {
 			cmd.save_config(&new_config).await
 		},
 		Subcommand::Fish(cmd) => cmd.fish().await,
-		Subcommand::Query(cmd) => {
+		Subcommand::Query(_cmd) => {
 			panic!()
 		},
 	}

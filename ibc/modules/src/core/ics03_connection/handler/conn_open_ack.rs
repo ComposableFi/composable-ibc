@@ -16,7 +16,6 @@
 
 use crate::{
 	core::{
-		ics02_client::context::ClientTypes,
 		ics03_connection::{
 			connection::{ConnectionEnd, Counterparty, State},
 			error::Error,

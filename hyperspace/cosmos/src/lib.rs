@@ -13,9 +13,7 @@
 // limitations under the License.
 
 use ibc::core::ics02_client::height::Height;
-use ibc_proto::ics23;
-use ics07_tendermint::HostFunctionsProvider;
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 
 pub mod chain;
 pub mod client;

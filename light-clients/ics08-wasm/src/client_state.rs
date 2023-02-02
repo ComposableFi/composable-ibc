@@ -8,9 +8,8 @@ use core::{fmt::Debug, marker::PhantomData, time::Duration};
 use ibc::{
 	core::{
 		ics02_client::{
-			client_consensus::ConsensusState as IbcConsensusState,
-			client_def::ClientDef,
-			client_state::{ClientState as IbcClientState, ClientType},
+			client_consensus::ConsensusState as IbcConsensusState, client_def::ClientDef,
+			client_state::ClientState as IbcClientState,
 		},
 		ics24_host::identifier::ChainId,
 	},

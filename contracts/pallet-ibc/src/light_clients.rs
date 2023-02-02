@@ -355,7 +355,7 @@ impl TryFrom<(ClientType, &'_ Bytes)> for AnyClientMessage {
 		let grandpa_client_type =
 			ics10_grandpa::client_state::ClientState::<HostFunctionsManager>::client_type();
 		#[cfg(test)]
-		let mock_client_type = ibc::mock::client_state::MockClientState::client_type();
+		let _mock_client_type = ibc::mock::client_state::MockClientState::client_type();
 
 		Ok(match &client_type {
 			s if *s == tendermint_client_type =>
@@ -460,16 +460,16 @@ impl AnyClientMessage {
 		match self {
 			Self::Tendermint(ics07_tendermint::client_message::ClientMessage::Header(h)) =>
 				Left(h.height()),
-			Self::Beefy(ics11_beefy::client_message::ClientMessage::Header(h)) => Left(todo!()),
+			Self::Beefy(ics11_beefy::client_message::ClientMessage::Header(_h)) => Left(todo!()),
 			Self::Grandpa(ics10_grandpa::client_message::ClientMessage::Header(h)) =>
 				Left(h.height()),
-			Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(h)) => Left(todo!()),
+			Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(_h)) => Left(todo!()),
 			#[cfg(test)]
-			Self::Mock(ibc::mock::header::MockClientMessage::Header(h)) => Left(todo!()),
+			Self::Mock(ibc::mock::header::MockClientMessage::Header(_h)) => Left(todo!()),
 
-			Self::Tendermint(ics07_tendermint::client_message::ClientMessage::Misbehaviour(m)) =>
+			Self::Tendermint(ics07_tendermint::client_message::ClientMessage::Misbehaviour(_m)) =>
 				Right(todo!()),
-			Self::Beefy(ics11_beefy::client_message::ClientMessage::Misbehaviour(m)) =>
+			Self::Beefy(ics11_beefy::client_message::ClientMessage::Misbehaviour(_m)) =>
 				Right(todo!()),
 			Self::Grandpa(ics10_grandpa::client_message::ClientMessage::Misbehaviour(m)) =>
 				Right(m.client_id()),

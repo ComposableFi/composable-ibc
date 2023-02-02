@@ -4,7 +4,7 @@ use super::{
 	light_client::LightClient,
 	tx::{broadcast_tx, confirm_tx, sign_tx, simulate_tx},
 };
-use bip32::{ExtendedPrivateKey, PrivateKeyBytes, PublicKeyBytes, XPub as ExtendedPublicKey};
+use bip32::{ExtendedPrivateKey, XPub as ExtendedPublicKey};
 use core::convert::{From, Into, TryFrom};
 use ibc_proto::{
 	cosmos::{
@@ -16,16 +16,16 @@ use ibc_proto::{
 };
 use std::str::FromStr;
 // use ibc_relayer_types::{
-use crate::{error::Error, HostFunctions};
+use crate::error::Error;
 use ibc::core::{
-	ics02_client::{client_state::ClientType, height::Height},
+	ics02_client::height::Height,
 	ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
 	ics24_host::{
 		identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 		IBC_QUERY_PATH,
 	},
 };
-use ibc_proto::ibc::lightclients::wasm::v1::{msg_client::MsgClient, MsgPushNewWasmCode};
+
 use ics07_tendermint::{
 	client_message::Header, client_state::ClientState, consensus_state::ConsensusState,
 	merkle::convert_tm_to_ics_merkle_proof,
@@ -337,17 +337,15 @@ where
 					true => UpdateType::Mandatory,
 					false => UpdateType::Mandatory,
 				};
-			xs.push(
-				((
-					Header {
-						signed_header: latest_light_block.signed_header,
-						validator_set: latest_light_block.validators,
-						trusted_height,
-						trusted_validator_set: trusted_light_block.validators,
-					},
-					update_type,
-				)),
-			);
+			xs.push((
+				Header {
+					signed_header: latest_light_block.signed_header,
+					validator_set: latest_light_block.validators,
+					trusted_height,
+					trusted_validator_set: trusted_light_block.validators,
+				},
+				update_type,
+			));
 		}
 		Ok(xs)
 	}

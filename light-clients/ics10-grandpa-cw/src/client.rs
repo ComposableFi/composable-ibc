@@ -5,7 +5,6 @@ use crate::{
 		ConsensusStates, FakeInner, ReadonlyClientStates, ReadonlyClients, ReadonlyConsensusStates,
 	},
 	log,
-	msg::WasmConsensusState,
 };
 use grandpa_light_client_primitives::HostFunctions;
 use ibc::{
@@ -23,7 +22,7 @@ use ibc::{
 	timestamp::Timestamp,
 	Height,
 };
-use ibc_proto::{google::protobuf::Any, ibc::core::commitment::v1::MerkleRoot};
+use ibc_proto::google::protobuf::Any;
 use ics10_grandpa::{
 	client_def::GrandpaClient,
 	client_message::{ClientMessage, RelayChainHeader},

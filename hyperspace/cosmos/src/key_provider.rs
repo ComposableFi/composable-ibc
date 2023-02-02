@@ -2,8 +2,7 @@ use super::client::CosmosClient;
 use bech32::{ToBase32, Variant};
 use bip32::{XPrv as ExtendedPrivateKey, XPub as ExtendedPublicKey};
 use primitives::{error::Error, KeyProvider};
-use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, str::FromStr};
+use std::str::FromStr;
 use tendermint::account::Id as AccountId;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

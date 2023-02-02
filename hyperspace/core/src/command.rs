@@ -12,24 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::{anyhow, Result};
-use clap::Parser;
-use primitives::{Chain, KeyProvider};
-use prometheus::Registry;
-use std::{path::PathBuf, str::FromStr, time::Duration};
-use tokio::time::sleep;
-
 use crate::{
 	chain::{AnyConfig, Config, CoreConfig},
 	fish, relay, Mode,
 };
+use anyhow::{anyhow, Result};
+use clap::Parser;
 use ibc::core::{ics04_channel::channel::Order, ics24_host::identifier::PortId};
-use ibc_proto::ibc::lightclients::wasm::v1::{msg_client::MsgClient, MsgPushNewWasmCode};
 use metrics::{data::Metrics, handler::MetricsHandler, init_prometheus};
 use primitives::{
 	utils::{create_channel, create_clients, create_connection},
-	IbcProvider,
+	Chain, IbcProvider,
 };
+use prometheus::Registry;
+use std::{path::PathBuf, str::FromStr, time::Duration};
 
 #[derive(Debug, Parser)]
 pub struct Cli {

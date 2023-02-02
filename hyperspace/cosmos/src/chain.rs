@@ -130,7 +130,7 @@ where
 
 	async fn query_client_message(
 		&self,
-		update: UpdateClient,
+		_update: UpdateClient,
 	) -> Result<AnyClientMessage, Self::Error> {
 		todo!()
 	}

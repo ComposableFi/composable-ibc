@@ -1,5 +1,5 @@
 //! This section mainly has been ported from `InformalSystems/hermes/relayer/src/light_client`
-use crate::{error::Error, HostFunctions};
+use crate::error::Error;
 use ibc::Height;
 use ics07_tendermint::client_state::ClientState;
 use pallet_ibc::light_clients::HostFunctionsManager;
@@ -14,11 +14,9 @@ use tendermint_light_client::{
 	store::{memory::MemoryStore, LightStore},
 };
 use tendermint_light_client_verifier::{
-	operations::{self, ProdCommitValidator, ProdVotingPowerCalculator},
 	options::Options as TmOptions,
-	predicates::ProdPredicates,
 	types::{Height as TMHeight, LightBlock, PeerId, Status},
-	PredicateVerifier, ProdVerifier,
+	PredicateVerifier,
 };
 use tendermint_rpc::{Client, HttpClient, Url};
 

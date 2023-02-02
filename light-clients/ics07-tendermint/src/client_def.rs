@@ -41,7 +41,7 @@ use ibc::core::{
 	},
 	ics26_routing::context::ReaderContext,
 };
-use ibc_proto::ibc::core::commitment::v1::{MerklePath, MerkleProof as RawMerkleProof, MerkleRoot};
+use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
 use prost::Message;
 use tendermint_light_client_verifier::{
 	types::{TrustedBlockState, UntrustedBlockState},
@@ -56,17 +56,8 @@ use crate::{
 	error::Error,
 	HostFunctionsProvider,
 };
-use ibc::{
-	applications::transfer::{
-		packet::PacketData, Amount, BaseDenom, Coin, PrefixedCoin, PrefixedDenom, TracePath,
-	},
-	core::ics23_commitment::specs::ProofSpecs,
-	prelude::*,
-	signer::Signer,
-	timestamp::Timestamp,
-	Height,
-};
-use ibc_proto::{ibc::core::channel::v1::MsgAcknowledgement, ics23::ProofSpec};
+use ibc::{prelude::*, timestamp::Timestamp, Height};
+use ibc_proto::ics23::ProofSpec;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct TendermintClient<H>(PhantomData<H>);
@@ -605,7 +596,7 @@ where
 
 #[test]
 fn test_vrfy() {
-	use crate::mock::Crypto;
+
 	// path: MerklePath { key_path: ["ibc/", "connections/connection-0"] },
 	// value: 0a0930382d7761736d2d3012230a0131120d4f524445525f4f524445524544120f4f524445525f554e4f524445524544180222270a0f30372d74656e6465726d696e742d30120c636f6e6e656374696f6e2d301a060a046962632f,
 	// merkle_proof:

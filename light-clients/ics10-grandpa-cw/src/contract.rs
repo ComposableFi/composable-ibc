@@ -1,7 +1,6 @@
 use crate::{
 	context::Context,
 	error::ContractError,
-	ics23::{ClientStates, ConsensusStates},
 	log,
 	msg::{
 		CheckForMisbehaviourMsg, ClientStateCallResponse, ContractResult, ExecuteMsg,
@@ -20,7 +19,6 @@ use cosmwasm_std::{
 };
 use cw_storage_plus::{Item, Map};
 use digest::Digest;
-use ed25519_zebra::VerificationKeyBytes;
 use ibc::core::{
 	ics02_client::{
 		client_def::{ClientDef, ConsensusUpdateResult},
@@ -31,9 +29,8 @@ use ibc::core::{
 };
 use ics10_grandpa::{
 	client_def::GrandpaClient, client_message::RelayChainHeader, consensus_state::ConsensusState,
-	proto::ClientState as RawClientState,
 };
-use light_client_common::{verify_membership, verify_non_membership, LocalHeight};
+use light_client_common::{verify_non_membership, LocalHeight};
 use prost::Message;
 use sp_runtime::traits::{BlakeTwo256, Header};
 use sp_runtime_interface::unpack_ptr_and_len;
@@ -112,7 +109,7 @@ impl grandpa_light_client_primitives::HostFunctions for HostFunctions {
 	}
 
 	// TODO: cw-grandpa contains_relay_header_hash
-	fn contains_relay_header_hash(hash: <Self::Header as Header>::Hash) -> bool {
+	fn contains_relay_header_hash(_hash: <Self::Header as Header>::Hash) -> bool {
 		// GrandpaHeaderHashesSetStorage::get().contains(&hash)
 		false
 	}
@@ -130,7 +127,7 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-	mut deps: DepsMut,
+	deps: DepsMut,
 	env: Env,
 	_info: MessageInfo,
 	msg: ExecuteMsg,
@@ -167,7 +164,7 @@ fn process_message(
 		ExecuteMsg::Initialize(_) => todo!(),
 		ExecuteMsg::VerifyMembership(msg) => {
 			let msg = VerifyMembershipMsg::try_from(msg).unwrap();
-			let consensus_state = ctx
+			let _consensus_state = ctx
 				.consensus_state(&client_id, msg.height)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
 				.unwrap();
@@ -236,7 +233,7 @@ fn process_message(
 					client_state.data = cs.to_any().encode_to_vec();
 					// client_state.data = RawClientState::from(cs).encode_to_vec();
 					match cu {
-						ConsensusUpdateResult::Single(cs) => {
+						ConsensusUpdateResult::Single(_cs) => {
 							log!(ctx, "Storing consensus state: {:?}", height);
 							// let wasm_cs = WasmConsensusState::from(cs);
 							// ctx.store_consensus_state(client_id.clone(), height, cs).unwrap();
@@ -345,25 +342,9 @@ pub fn code_id(store: &dyn Storage) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use cosmwasm_std::{
-		attr, coins,
-		testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
-		CosmosMsg,
-	};
-	use hyperspace_primitives::mock::LocalClientTypes;
-	use ibc::{
-		core::ics02_client::msgs::{
-			create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient,
-		},
-		protobuf::Protobuf,
-	};
-	use ibc_proto::ibc::core::{
-		client::v1::{MsgCreateClient, MsgUpdateClient},
-		connection::v1::ConnectionEnd,
-	};
-	use ics10_grandpa::client_message::ClientMessage;
-	use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
-	use sp_core::{Encode, NativeOrEncoded::Encoded};
+	use ibc::protobuf::Protobuf;
+	use ibc_proto::ibc::core::connection::v1::ConnectionEnd;
+	use sp_core::Encode;
 	// use prost::Message;
 	// use sp_core::{Decode, Encode};
 
@@ -378,7 +359,7 @@ mod tests {
 		println!("{}", hex::encode(x));
 		println!("{}", hex::encode(Encode::encode(&x.to_vec())));
 		// let v: Vec<u8> = Vec::decode(&mut &x[..]).unwrap();
-		let data1: ConnectionEnd = ConnectionEnd::decode(&mut &x[..]).unwrap();
+		let _data1: ConnectionEnd = ConnectionEnd::decode(&mut &x[..]).unwrap();
 		// println!("{:?}", data1.encode());
 		// let init_a_data =
 		// &*hex::decode("

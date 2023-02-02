@@ -14,19 +14,17 @@
 
 use async_trait::async_trait;
 use futures::StreamExt;
-use hyperspace_core::logging;
+use hyperspace_core::{
+	chain::{AnyChain, AnyConfig},
+	logging,
+};
+use hyperspace_cosmos::client::{ConfigKeyEntry, CosmosClient, CosmosClientConfig};
 use hyperspace_parachain::{
 	config, config::CustomExtrinsicParams, finality_protocol::FinalityProtocol, ParachainClient,
 	ParachainClientConfig,
 };
-use hyperspace_cosmos::client::{CosmosClientConfig, CosmosClient, ConfigKeyEntry};
 use hyperspace_primitives::{utils::create_clients, IbcProvider};
-use hyperspace_testsuite::{
-	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
-	ibc_messaging_packet_timeout_on_channel_close,
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
-	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
-};
+use hyperspace_testsuite::ibc_messaging_with_connection_delay;
 use subxt::{
 	config::{
 		extrinsic_params::Era,
@@ -34,7 +32,6 @@ use subxt::{
 	},
 	Error, OnlineClient,
 };
-use hyperspace_core::chain::{AnyChain, AnyConfig, WasmChain};
 
 #[derive(Debug, Clone)]
 pub struct Args {
@@ -54,7 +51,9 @@ impl Default for Args {
 		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
 		let para = std::env::var("PARA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
 		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| "../../target/wasm32-unknown-unknown/release/ics10_grandpa_cw.wasm".to_string());
+		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
+			"../../target/wasm32-unknown-unknown/release/ics10_grandpa_cw.wasm".to_string()
+		});
 
 		Args {
 			chain_a: format!("ws://{para}:9188"),
@@ -108,7 +107,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	let args = Args::default();
 
 	// Create client configurations
-	let mut config_a = ParachainClientConfig {
+	let config_a = ParachainClientConfig {
 		name: format!("parachain"),
 		para_id: args.para_id,
 		parachain_rpc_url: args.chain_a,
@@ -122,8 +121,6 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		private_key: "//Alice".to_string(),
 		key_type: "sr25519".to_string(),
 		wasm_code_id: None,
-		wasm_client_type: None,
-		counterparty_wasm_code_id: None,
 	};
 
 	let mut config_b = CosmosClientConfig {
@@ -144,19 +141,16 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 			address: vec![156, 200, 27, 97, 35, 103, 35, 146, 182, 226, 202, 16, 25, 214, 215, 210, 149, 250, 224, 30],
 		},
 		wasm_code_id: None,
-		wasm_client_type: None,
 	};
 
-	let mut chain_a = ParachainClient::<DefaultConfig>::new(config_a.clone()).await.unwrap();
-	let mut chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.unwrap();
+	let _chain_a = ParachainClient::<DefaultConfig>::new(config_a.clone()).await.unwrap();
+	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.unwrap();
 
 	let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
 	let code_id = chain_b.upload_wasm(wasm_data).await.unwrap();
 
 	let code_id_str = hex::encode(code_id);
-	config_a.counterparty_wasm_code_id = Some(code_id_str.clone());
 	config_b.wasm_code_id = Some(code_id_str);
-	config_b.wasm_client_type = Some(chain_a.client_type());
 
 	let mut chain_a_wrapped = AnyConfig::Parachain(config_a).into_client().await.unwrap();
 	let mut chain_b_wrapped = AnyConfig::Cosmos(config_b).into_client().await.unwrap();
@@ -189,7 +183,6 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		return (chain_a_wrapped, chain_b_wrapped)
 	}
 
-
 	let (client_a, client_b) = create_clients(&chain_a_wrapped, &chain_b_wrapped).await.unwrap();
 	chain_a_wrapped.set_client_id(client_a);
 	chain_b_wrapped.set_client_id(client_b);
@@ -208,7 +201,8 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 
 	// timeouts + connection delay
 	// ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
-	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
+	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(&mut chain_a, &mut
+	// chain_b).await;
 
 	// channel closing semantics
 	// ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b).await;

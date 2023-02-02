@@ -16,9 +16,7 @@ use crate::{config, Error};
 use beefy_light_client_primitives::{ClientState, MmrUpdateProof};
 use std::sync::Arc;
 
-use crate::parachain::api::runtime_types::pallet_ibc::events::{
-	IbcEvent as MetadataIbcEvent, IbcEvent,
-};
+use crate::parachain::api::runtime_types::pallet_ibc::events::IbcEvent as MetadataIbcEvent;
 use beefy_primitives::known_payloads::MMR_ROOT_ID;
 use beefy_prover::helpers::unsafe_arc_cast;
 use codec::Decode;

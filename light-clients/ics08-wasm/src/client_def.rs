@@ -1,6 +1,5 @@
 use crate::{
 	client_message::ClientMessage, client_state::ClientState, consensus_state::ConsensusState,
-	Bytes,
 };
 use alloc::{boxed::Box, vec::Vec};
 use core::{fmt::Debug, marker::PhantomData};
@@ -9,7 +8,7 @@ use ibc::{
 		ics02_client::{
 			client_consensus::ConsensusState as IbcConsensusState,
 			client_def::{ClientDef, ConsensusUpdateResult},
-			client_state::{ClientState as IbcClientState, ClientType},
+			client_state::ClientState as IbcClientState,
 			error::Error,
 		},
 		ics03_connection::connection::ConnectionEnd,

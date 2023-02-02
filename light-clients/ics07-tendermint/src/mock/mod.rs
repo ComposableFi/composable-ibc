@@ -205,7 +205,7 @@ impl ics23::HostFunctionsProvider for Crypto {
 pub struct LocalSha256;
 
 impl Sha256 for LocalSha256 {
-	fn digest(data: impl AsRef<[u8]>) -> [u8; HASH_SIZE] {
+	fn digest(_data: impl AsRef<[u8]>) -> [u8; HASH_SIZE] {
 		todo!()
 	}
 }
@@ -231,9 +231,9 @@ impl VerificationPredicates for Crypto {
 impl VotingPowerCalculator for Crypto {
 	fn voting_power_in(
 		&self,
-		signed_header: &SignedHeader,
-		validator_set: &ValidatorSet,
-		trust_threshold: TrustThreshold,
+		_signed_header: &SignedHeader,
+		_validator_set: &ValidatorSet,
+		_trust_threshold: TrustThreshold,
 	) -> Result<VotingPowerTally, VerificationError> {
 		todo!()
 	}

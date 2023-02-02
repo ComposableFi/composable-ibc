@@ -1,12 +1,9 @@
-use crate::{error::Error, TimeoutHeight};
+use crate::TimeoutHeight;
 use core::{
 	convert::TryFrom,
 	fmt::{Display, Error as FmtError, Formatter},
 };
-use ibc::{
-	core::ics02_client::{client_message::ClientMessage, height::HeightConversionSubdetail},
-	protobuf::Protobuf,
-};
+use ibc::protobuf::Protobuf;
 use ibc::{
 	// clients::ics07_tendermint::header::decode_header as tm_decode_header,
 	core::{

@@ -30,8 +30,7 @@ use ibc::{
 			msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient},
 		},
 		ics03_connection::msgs::{
-			conn_open_ack::MsgConnectionOpenAck, conn_open_init::MsgConnectionOpenInit,
-			conn_open_try::MsgConnectionOpenTry,
+			conn_open_ack::MsgConnectionOpenAck, conn_open_try::MsgConnectionOpenTry,
 		},
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
@@ -857,7 +856,7 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Any {
 			msg_decoded.to_any()
 		},
 		CONN_OPEN_TRY_TYPE_URL => {
-			let mut msg_decoded =
+			let msg_decoded =
 				MsgConnectionOpenTry::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
 			// println!("decoded: {:?}", msg_decoded);
 			// msg_decoded.client_state = msg_decoded

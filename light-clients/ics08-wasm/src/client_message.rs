@@ -4,10 +4,7 @@ use alloc::{boxed::Box, string::ToString, vec::Vec};
 use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::{
-		ics02_client::{
-			client_message::ClientMessage as IbcClientMessage, client_state::ClientType,
-			error::Error,
-		},
+		ics02_client::{client_message::ClientMessage as IbcClientMessage, error::Error},
 		ics24_host::identifier::ClientId,
 	},
 	protobuf::Protobuf,

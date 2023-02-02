@@ -40,7 +40,7 @@ macro_rules! process_finality_event {
 				}
 				let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
 				log::info!("Received events: {event_types:#?}");
-				let (mut messages, timeouts) =
+				let (messages, timeouts) =
 					parse_events(&mut $source, &mut $sink, events, $mode).await?;
 				if !timeouts.is_empty() {
 					if let Some(metrics) = $metrics.as_ref() {

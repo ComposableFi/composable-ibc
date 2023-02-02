@@ -1,6 +1,5 @@
-use crate::STORAGE_PREFIX;
 use cosmwasm_std::Storage;
-use ibc::core::ics24_host::{identifier::ClientId, path::ClientTypePath};
+use ibc::core::ics24_host::identifier::ClientId;
 use sp_std::prelude::*;
 
 /// client_id => client_type
