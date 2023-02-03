@@ -35,6 +35,8 @@ pub enum BeefyClientError {
 		/// Commitment block number received
 		commitment_block_number: u32,
 	},
+	/// Expected proof for latest leaf, found a batch proof
+	ExpectedSingleLeafIndex,
 	/// Mmr root hash not found in commitment
 	MmrRootHashNotFound,
 	/// Invalid Authority set id received

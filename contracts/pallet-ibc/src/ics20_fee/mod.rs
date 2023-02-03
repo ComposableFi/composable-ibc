@@ -203,7 +203,9 @@ where
 		let ack = self.inner.on_recv_packet(&mut ctx, output, packet, relayer)?;
 		// We only take the fee charge if the acknowledgement is not an error
 		if ack.as_ref() ==
-			ibc::applications::transfer::acknowledgement::Acknowledgement::success().as_ref()
+			ibc::applications::transfer::acknowledgement::Acknowledgement::success()
+				.to_string()
+				.as_bytes()
 		{
 			// We have ensured that token amounts larger than the max value for a u128 are rejected
 			// in the ics20 on_recv_packet callback so we can multiply safely.

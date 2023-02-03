@@ -130,7 +130,6 @@ pub(crate) fn create_mock_beefy_client_state(
 		mmr_root_hash: Default::default(),
 		latest_beefy_height: 1,
 		frozen_height: None,
-		beefy_activation_block: 0,
 		latest_para_height: 0,
 		para_id: 2087,
 		authority: Default::default(),

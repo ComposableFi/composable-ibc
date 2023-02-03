@@ -2,7 +2,7 @@
 
 set -e
 
-cargo run --bin codegen -- --path ./utils/subxt/generated/src
+cargo +nightly run --bin codegen -- --path ./utils/subxt/generated/src
 cargo +nightly fmt -- --emit=files
 if [[ -z $(git status -s) ]]
 then

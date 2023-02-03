@@ -53,18 +53,20 @@ use thiserror::Error;
 use ibc::core::ics02_client::events::UpdateClient;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use parachain::{config, ParachainClient};
-use primitives::{Chain, IbcProvider, KeyProvider, MisbehaviourHandler, UpdateType};
-use sp_runtime::generic::Era;
+use primitives::{
+	Chain, IbcProvider, KeyProvider, LightClientSync, MisbehaviourHandler, UpdateType,
+};
 use std::{pin::Pin, time::Duration};
 #[cfg(feature = "dali")]
-use subxt::tx::{
+use subxt::config::substrate::{
 	SubstrateExtrinsicParams as ParachainExtrinsicParams,
 	SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
 };
-use subxt::{tx::ExtrinsicParams, Error, OnlineClient};
+use subxt::{config::ExtrinsicParams, Error, OnlineClient};
 
+use subxt::config::extrinsic_params::Era;
 #[cfg(not(feature = "dali"))]
-use subxt::tx::{
+use subxt::config::polkadot::{
 	PolkadotExtrinsicParams as ParachainExtrinsicParams,
 	PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
 };
@@ -76,6 +78,9 @@ pub enum DefaultConfig {}
 #[async_trait]
 impl config::Config for DefaultConfig {
 	type AssetId = u128;
+	type Signature = <Self as subxt::Config>::Signature;
+	type Address = <Self as subxt::Config>::Address;
+
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,
 	) -> Result<
@@ -92,12 +97,14 @@ impl subxt::Config for DefaultConfig {
 	type Index = u32;
 	type BlockNumber = u32;
 	type Hash = sp_core::H256;
-	type Hashing = sp_runtime::traits::BlakeTwo256;
+	type Hasher = subxt::config::substrate::BlakeTwo256;
 	type AccountId = sp_runtime::AccountId32;
 	type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
-	type Header = sp_runtime::generic::Header<Self::BlockNumber, sp_runtime::traits::BlakeTwo256>;
+	type Header = subxt::config::substrate::SubstrateHeader<
+		Self::BlockNumber,
+		subxt::config::substrate::BlakeTwo256,
+	>;
 	type Signature = sp_runtime::MultiSignature;
-	type Extrinsic = sp_runtime::OpaqueExtrinsic;
 	type ExtrinsicParams = ParachainExtrinsicParams<Self>;
 }
 
@@ -158,7 +165,7 @@ impl IbcProvider for AnyChain {
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &T,
-	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
 		T: Chain,
 	{
@@ -519,14 +526,16 @@ impl IbcProvider for AnyChain {
 		}
 	}
 
-	fn is_update_required(
+	async fn is_update_required(
 		&self,
 		latest_height: u64,
 		latest_client_height_on_counterparty: u64,
-	) -> bool {
+	) -> Result<bool, Self::Error> {
 		match self {
-			Self::Parachain(chain) =>
-				chain.is_update_required(latest_height, latest_client_height_on_counterparty),
+			Self::Parachain(chain) => chain
+				.is_update_required(latest_height, latest_client_height_on_counterparty)
+				.await
+				.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}
@@ -632,6 +641,27 @@ impl Chain for AnyChain {
 	) -> Result<AnyClientMessage, Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain.query_client_message(update).await.map_err(Into::into),
+			_ => unreachable!(),
+		}
+	}
+}
+
+#[async_trait]
+impl LightClientSync for AnyChain {
+	async fn is_synced<C: Chain>(&self, counterparty: &C) -> Result<bool, anyhow::Error> {
+		match self {
+			Self::Parachain(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
+			_ => unreachable!(),
+		}
+	}
+
+	async fn fetch_mandatory_updates<C: Chain>(
+		&self,
+		counterparty: &C,
+	) -> Result<(Vec<Any>, Vec<IbcEvent>), anyhow::Error> {
+		match self {
+			Self::Parachain(chain) =>
+				chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}

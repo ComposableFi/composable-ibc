@@ -17,20 +17,19 @@ use super::runtime;
 use crate::{
 	error::Error, runtime::api::runtime_types::polkadot_runtime_parachains::paras::ParaLifecycle,
 };
-use beefy_light_client_primitives::get_leaf_index_for_block_number;
 use beefy_primitives::{SignedCommitment, VersionedFinalityProof};
 use codec::{Decode, Encode};
-use pallet_mmr_rpc::{LeafBatchProof, LeafProof};
+use pallet_mmr_rpc::LeavesProof;
 use sp_core::{hexdisplay::AsBytesRef, storage::StorageKey, H256};
-use sp_runtime::traits::{Header, Zero};
+use sp_runtime::traits::Zero;
 use std::collections::{BTreeMap, BTreeSet};
-use subxt::{rpc::rpc_params, Config, OnlineClient};
+use subxt::{config::Header, rpc::rpc_params, Config, OnlineClient};
 
 /// This contains the leaf indices of the relay chain blocks and a map of relay chain heights to a
 /// map of all parachain headers at those heights Used for generating [`ParaHeadsProof`]
 pub struct FinalizedParaHeads {
-	/// Leaf indices
-	pub leaf_indices: Vec<u32>,
+	/// Block numbers
+	pub block_numbers: Vec<u32>,
 	/// Map of relay chain heights to map of para ids and parachain headers SCALE-encoded
 	pub raw_finalized_heads: BTreeMap<u64, BTreeMap<u32, Vec<u8>>>,
 }
@@ -41,32 +40,43 @@ pub async fn fetch_finalized_parachain_heads<T: Config>(
 	commitment_block_number: u32,
 	latest_beefy_height: u32,
 	para_id: u32,
-	beefy_activation_block: u32,
 	header_numbers: &BTreeSet<T::BlockNumber>,
 ) -> Result<FinalizedParaHeads, Error>
 where
 	u32: From<<T as subxt::Config>::BlockNumber>,
 	T::BlockNumber: Ord + Zero,
 {
-	let subxt_block_number: subxt::rpc::BlockNumber = commitment_block_number.into();
+	let subxt_block_number: subxt::rpc::types::BlockNumber = commitment_block_number.into();
 	let block_hash = client.rpc().block_hash(Some(subxt_block_number)).await?;
 
 	let mut para_ids = vec![];
 	let key = runtime::api::storage().paras().parachains();
 	let ids = client
 		.storage()
-		.fetch(&key, block_hash)
+		.at(block_hash)
+		.await
+		.expect("Storage client should be available")
+		.fetch(&key)
 		.await?
 		.ok_or_else(|| Error::Custom(format!("No ParaIds on relay chain?")))?;
 	for id in ids {
 		let key = runtime::api::storage().paras().para_lifecycles(&id);
-		match client.storage().fetch(&key, block_hash).await?.expect("ParaId is known") {
+		match client
+			.storage()
+			.at(block_hash)
+			.await
+			.expect("Storage client should be available")
+			.fetch(&key)
+			.await?
+			.expect("ParaId is known")
+		{
 			// only care about active parachains.
 			ParaLifecycle::Parachain => para_ids.push(id),
 			_ => {},
 		}
 	}
-	let previous_finalized_block_number: subxt::rpc::BlockNumber = (latest_beefy_height + 1).into();
+	let previous_finalized_block_number: subxt::rpc::types::BlockNumber =
+		(latest_beefy_height + 1).into();
 	let previous_finalized_hash = client
 		.rpc()
 		.block_hash(Some(previous_finalized_block_number))
@@ -87,7 +97,7 @@ where
 		)
 		.await?;
 	let mut finalized_blocks = BTreeMap::new();
-	let mut leaf_indices = vec![];
+	let mut block_numbers = vec![];
 
 	for changes in change_set {
 		let header = client.rpc().header(Some(changes.block)).await?.ok_or_else(|| {
@@ -97,25 +107,32 @@ where
 		let mut heads = BTreeMap::new();
 		for id in para_ids.iter() {
 			let key = runtime::api::storage().paras().heads(id);
-			if let Some(head) = client.storage().fetch(&key, Some(header.hash())).await? {
+			if let Some(head) = client
+				.storage()
+				.at(Some(header.hash()))
+				.await
+				.expect("Storage client should be available")
+				.fetch(&key)
+				.await?
+			{
 				heads.insert(id.0, head.0);
 			}
 		}
 
 		let para_header: T::Header = Decode::decode(&mut &heads[&para_id][..])
 			.map_err(|_| Error::Custom(format!("Failed to decode header for {para_id}")))?;
-		let para_block_number = *para_header.number();
+		let para_block_number = para_header.number();
 		// skip genesis header or any unknown headers
 		if para_block_number == Zero::zero() || !header_numbers.contains(&para_block_number) {
 			continue
 		}
 
-		let block_number = u32::from(*header.number());
+		let block_number = u32::from(header.number());
 		finalized_blocks.insert(block_number as u64, heads);
-		leaf_indices.push(get_leaf_index_for_block_number(beefy_activation_block, block_number));
+		block_numbers.push(block_number);
 	}
 
-	Ok(FinalizedParaHeads { raw_finalized_heads: finalized_blocks, leaf_indices })
+	Ok(FinalizedParaHeads { raw_finalized_heads: finalized_blocks, block_numbers })
 }
 
 /// Get beefy justification for latest finalized beefy block
@@ -135,7 +152,10 @@ pub async fn fetch_beefy_justification<T: Config>(
 	let justifications = block.justifications.expect("Block should have valid justifications");
 
 	let beefy_justification = justifications
-		.into_justification(beefy_primitives::BEEFY_ENGINE_ID)
+		.into_iter()
+		.find_map(|justfication| {
+			(justfication.0 == beefy_primitives::BEEFY_ENGINE_ID).then(|| justfication.1)
+		})
 		.expect("Should have valid beefy justification");
 	let VersionedFinalityProof::V1(signed_commitment) = VersionedFinalityProof::<
 		u32,
@@ -146,30 +166,19 @@ pub async fn fetch_beefy_justification<T: Config>(
 	Ok((signed_commitment, latest_beefy_finalized))
 }
 
-/// Query a batch leaf proof
-pub async fn fetch_mmr_batch_proof<T: Config>(
+/// Query a mmr  proof
+pub async fn fetch_mmr_proof<T: Config>(
 	client: &OnlineClient<T>,
-	leaf_indices: Vec<u32>,
+	block_numbers: Vec<u32>,
 	block_hash: Option<T::Hash>,
-) -> Result<LeafBatchProof<H256>, Error> {
-	let proof: LeafBatchProof<H256> = client
+) -> Result<LeavesProof<H256>, Error> {
+	let proof: LeavesProof<H256> = client
 		.rpc()
-		.request("mmr_generateBatchProof", rpc_params!(leaf_indices, block_hash))
+		.request(
+			"mmr_generateProof",
+			rpc_params!(block_numbers, Option::<T::Hash>::None, block_hash),
+		)
 		.await?;
-	Ok(proof)
-}
-
-/// Query a single leaf proof
-pub async fn fetch_mmr_leaf_proof<T: Config>(
-	client: &OnlineClient<T>,
-	leaf_index: u64,
-	block_hash: Option<T::Hash>,
-) -> Result<LeafProof<H256>, Error> {
-	let proof: LeafProof<H256> = client
-		.rpc()
-		.request("mmr_generateProof", rpc_params!(leaf_index, block_hash))
-		.await?;
-
 	Ok(proof)
 }
 

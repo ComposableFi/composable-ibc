@@ -26,9 +26,8 @@ pub fn process_ack_packet(
 	data: &PacketData,
 	ack: &Acknowledgement,
 ) -> Result<(), Ics20Error> {
-	if matches!(ack, Acknowledgement::Error(_)) {
+	if !ack.is_successful() {
 		refund_packet_token(ctx, packet, data)?;
 	}
-
 	Ok(())
 }

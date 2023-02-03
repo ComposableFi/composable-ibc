@@ -24,7 +24,7 @@ extern crate alloc;
 use alloc::collections::BTreeMap;
 use codec::{Decode, Encode};
 use core::fmt::Debug;
-use sp_core::{ed25519, sp_std};
+use sp_core::{ed25519, sp_std, H256};
 use sp_finality_grandpa::{AuthorityId, AuthorityList, AuthoritySignature};
 use sp_runtime::traits::Header;
 use sp_std::prelude::*;
@@ -34,7 +34,8 @@ use sp_storage::StorageKey;
 pub mod error;
 /// GRANDPA justification utilities
 pub mod justification;
-
+/// Represents a Hash in this library
+pub type Hash = H256;
 /// A commit message for this chain's block type.
 pub type Commit<H> = finality_grandpa::Commit<
 	<H as Header>::Hash,
@@ -47,9 +48,9 @@ pub type Commit<H> = finality_grandpa::Commit<
 /// 1) the justification for the descendant block F;
 /// 2) headers sub-chain (B; F] if B != F;
 #[derive(Debug, PartialEq, Encode, Decode, Clone)]
-pub struct FinalityProof<H: Header> {
+pub struct FinalityProof<H: codec::Codec> {
 	/// The hash of block F for which justification is provided.
-	pub block: H::Hash,
+	pub block: Hash,
 	/// Justification of the block F.
 	pub justification: Vec<u8>,
 	/// The set of headers in the range (B; F] that we believe are unknown to the caller. Ordered.
@@ -58,7 +59,7 @@ pub struct FinalityProof<H: Header> {
 
 /// Previous light client state.
 #[derive(Clone)]
-pub struct ClientState<H> {
+pub struct ClientState {
 	/// Current authority set
 	pub current_authorities: AuthorityList,
 	/// Id of the current authority set.
@@ -68,13 +69,13 @@ pub struct ClientState<H> {
 	/// latest finalized height on the parachain.
 	pub latest_para_height: u32,
 	/// latest finalized hash on the relay chain.
-	pub latest_relay_hash: H,
+	pub latest_relay_hash: Hash,
 	/// para_id of associated parachain
 	pub para_id: u32,
 }
 
 /// Holds relavant parachain proofs for both header and timestamp extrinsic.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Encode, Decode)]
 pub struct ParachainHeaderProofs {
 	/// State proofs that prove a parachain header exists at a given relay chain height
 	pub state_proof: Vec<Vec<u8>>,
@@ -85,15 +86,15 @@ pub struct ParachainHeaderProofs {
 }
 
 /// Parachain headers with a Grandpa finality proof.
-#[derive(Clone)]
-pub struct ParachainHeadersWithFinalityProof<H: Header> {
+#[derive(Clone, Encode, Decode)]
+pub struct ParachainHeadersWithFinalityProof<H: codec::Codec> {
 	/// The grandpa finality proof: contains relay chain headers from the
 	/// last known finalized grandpa block.
 	pub finality_proof: FinalityProof<H>,
 	/// Contains a map of relay chain header hashes to parachain headers
 	/// finalzed at the relay chain height. We check for this parachain header finalization
 	/// via state proofs. Also contains extrinsic proof for timestamp.
-	pub parachain_headers: BTreeMap<H::Hash, ParachainHeaderProofs>,
+	pub parachain_headers: BTreeMap<Hash, ParachainHeaderProofs>,
 }
 
 /// Host functions that allow the light client perform cryptographic operations in native.

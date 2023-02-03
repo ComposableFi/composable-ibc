@@ -27,20 +27,18 @@ use codec::{Decode, Encode};
 use finality_grandpa_rpc::GrandpaApiClient;
 use jsonrpsee::{async_client::Client, ws_client::WsClientBuilder};
 use primitives::{
-	justification::GrandpaJustification, parachain_header_storage_key, ClientState, FinalityProof,
-	ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
+	parachain_header_storage_key, ClientState, FinalityProof, ParachainHeaderProofs,
+	ParachainHeadersWithFinalityProof,
 };
 use serde::{Deserialize, Serialize};
-use sp_core::H256;
-use sp_runtime::traits::{Header, Zero};
+use sp_core::{hexdisplay::AsBytesRef, H256};
+use sp_finality_grandpa::{AuthorityId, AuthoritySignature};
+use sp_runtime::traits::{One, Zero};
 use std::{
 	collections::{BTreeMap, BTreeSet},
 	sync::Arc,
 };
-use subxt::{
-	ext::{sp_core::hexdisplay::AsBytesRef, sp_runtime::traits::One},
-	Config, OnlineClient,
-};
+use subxt::{config::Header, Config, OnlineClient};
 
 /// Host function implementation for the verifier
 pub mod host_functions;
@@ -63,6 +61,23 @@ pub struct GrandpaProver<T: Config> {
 	pub para_id: u32,
 }
 
+// We redefine these here because we want the header to be bounded by subxt::config::Header in the
+// prover
+/// Commit
+pub type Commit = finality_grandpa::Commit<H256, u32, AuthoritySignature, AuthorityId>;
+
+/// Justification
+#[cfg_attr(any(feature = "std", test), derive(Debug))]
+#[derive(Clone, Encode, Decode)]
+pub struct GrandpaJustification<H: Header + codec::Decode> {
+	/// Current voting round number, monotonically increasing
+	pub round: u64,
+	/// Contains block hash & number that's being finalized and the signatures.
+	pub commit: Commit,
+	/// Contains the path from a [`PreCommit`]'s target hash to the GHOST finalized block.
+	pub votes_ancestries: Vec<H>,
+}
+
 /// An encoded justification proving that the given header has been finalized
 #[derive(Clone, Serialize, Deserialize)]
 pub struct JustificationNotification(pub sp_core::Bytes);
@@ -72,6 +87,7 @@ where
 	T: Config,
 	T::BlockNumber: Ord + Zero,
 	u32: From<T::BlockNumber>,
+	sp_core::H256: From<T::Hash>,
 {
 	/// Initializes the parachain and relay chain clients given the ws urls.
 	pub async fn new(
@@ -88,14 +104,24 @@ where
 	}
 
 	/// Construct the inital client state.
-	pub async fn initialize_client_state(&self) -> Result<ClientState<T::Hash>, anyhow::Error> {
+	pub async fn initialize_client_state(&self) -> Result<ClientState, anyhow::Error> {
 		use sp_finality_grandpa::AuthorityList;
+		let latest_relay_hash = self.relay_client.rpc().finalized_head().await?;
+		let header = self
+			.relay_client
+			.rpc()
+			.header(Some(latest_relay_hash))
+			.await?
+			.ok_or_else(|| anyhow!("Header not found for hash: {latest_relay_hash:?}"))?;
 
 		let current_set_id = {
 			let key = polkadot::api::storage().grandpa().current_set_id();
 			self.relay_client
 				.storage()
-				.fetch(&key, None)
+				.at(Some(latest_relay_hash))
+				.await
+				.expect("Storage client should be available")
+				.fetch(&key)
 				.await
 				.unwrap()
 				.expect("Failed to fetch current set id")
@@ -107,7 +133,11 @@ where
 				.rpc()
 				.request::<String>(
 					"state_call",
-					subxt::rpc_params!("GrandpaApi_grandpa_authorities", "0x"),
+					subxt::rpc_params!(
+						"GrandpaApi_grandpa_authorities",
+						"0x",
+						Some(format!("{:?}", latest_relay_hash))
+					),
 				)
 				.await
 				.map(|res| hex::decode(&res[2..]))??;
@@ -123,15 +153,7 @@ where
 			}
 		}
 
-		let latest_relay_hash = self.relay_client.rpc().finalized_head().await?;
-
-		let header = self
-			.relay_client
-			.rpc()
-			.header(Some(latest_relay_hash))
-			.await?
-			.ok_or_else(|| anyhow!("Header not found for hash: {latest_relay_hash:?}"))?;
-		let latest_relay_height = u32::from(*header.number());
+		let latest_relay_height = u32::from(header.number());
 		let finalized_para_header =
 			self.query_latest_finalized_parachain_header(latest_relay_height).await?;
 
@@ -139,10 +161,10 @@ where
 			current_authorities,
 			current_set_id,
 			latest_relay_height,
-			latest_relay_hash,
+			latest_relay_hash: latest_relay_hash.into(),
 			para_id: self.para_id,
 			// we'll set this below
-			latest_para_height: u32::from(*finalized_para_header.number()),
+			latest_para_height: u32::from(finalized_para_header.number()),
 		})
 	}
 
@@ -161,7 +183,10 @@ where
 		let header = self
 			.relay_client
 			.storage()
-			.fetch(&key, Some(latest_finalized_hash))
+			.at(Some(latest_finalized_hash))
+			.await
+			.expect("storage client should be available")
+			.fetch(&key)
 			.await?
 			.ok_or_else(|| anyhow!("parachain header not found for para id: {}", self.para_id))?;
 		let header = T::Header::decode(&mut &header.0[..])
@@ -170,66 +195,57 @@ where
 		Ok(header)
 	}
 
-	/// Returns the finality proof for the given parachain header numbers finalized by the given
-	/// relay chain height.
+	/// Returns a tuple of the finality proof for the given parachain `header_numbers` finalized by
+	/// `latest_finalized_height`.
 	pub async fn query_finalized_parachain_headers_with_proof<H>(
 		&self,
-		client_state: &ClientState<T::Hash>,
+		previous_finalized_height: u32,
 		mut latest_finalized_height: u32,
+		latest_justification: Option<Vec<u8>>,
 		header_numbers: Vec<T::BlockNumber>,
 	) -> Result<ParachainHeadersWithFinalityProof<H>, anyhow::Error>
 	where
-		H: Header,
-		u32: From<H::Number>,
-		H::Hash: From<T::Hash>,
-		T::Hash: From<H::Hash>,
+		H: Header + codec::Decode,
+		u32: From<<H as Header>::Number>,
+		<H::Hasher as subxt::config::Hasher>::Output: From<T::Hash>,
+		T::Hash: From<<H::Hasher as subxt::config::Hasher>::Output>,
 		H::Number: finality_grandpa::BlockNumberOps,
 		T::BlockNumber: One,
 	{
-		let previous_para_hash = self
-			.para_client
-			.rpc()
-			.block_hash(Some((client_state.latest_para_height + 1).into()))
+		let mut finality_proof = if let Some(justification) = latest_justification {
+			let justification = GrandpaJustification::<H>::decode(&mut &*justification)?;
+
+			FinalityProof::<H> {
+				block: justification.commit.target_hash,
+				justification: justification.encode(),
+				unknown_headers: vec![],
+			}
+		} else {
+			let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
+				// we cast between the same type but different crate versions.
+				&*unsafe {
+					unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(
+						self.relay_ws_client.clone(),
+					)
+				},
+				latest_finalized_height,
+			)
 			.await?
-			.ok_or_else(|| anyhow!("Failed to fetch previous finalized parachain + 1 hash"))?;
-		let address = parachain::api::storage().parachain_system().validation_data();
-		let validation_data = self
-			.para_client
-			.storage()
-			.fetch(&address, Some(previous_para_hash))
-			.await
-			.unwrap()
-			.unwrap();
-		// This ensures we don't miss any parachain blocks.
-		let previous_finalized_height =
-			validation_data.relay_parent_number.min(client_state.latest_relay_height);
+			.ok_or_else(|| {
+				anyhow!("No justification found for block: {:?}", latest_finalized_height)
+			})?
+			.0;
 
-		// we want to know if we've missed any authority set changes since we last updated the
-		// relay chain on the light client.
-		let session_end = self.session_end_for_block(client_state.latest_relay_height).await?;
+			let mut finality_proof = FinalityProof::<H>::decode(&mut &encoded[..])?;
 
-		if client_state.latest_relay_height != session_end && latest_finalized_height > session_end
-		{
-			latest_finalized_height = session_end
-		}
+			let justification =
+				GrandpaJustification::<H>::decode(&mut &finality_proof.justification[..])?;
 
-		let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
-			// we cast between the same type but different crate versions.
-			&*unsafe {
-				unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(self.relay_ws_client.clone())
-			},
-			latest_finalized_height,
-		)
-		.await?
-		.ok_or_else(|| anyhow!("No justification found for block: {:?}", latest_finalized_height))?
-		.0;
-		let mut finality_proof = FinalityProof::<H>::decode(&mut &encoded[..])?;
-		let justification =
-			GrandpaJustification::<H>::decode(&mut &finality_proof.justification[..])?;
+			finality_proof.block = justification.commit.target_hash;
 
-		// sometimes we might get a justification for latest_finalized_height - 1, sigh
-		let latest_finalized_height = u32::from(justification.commit.target_number);
-		finality_proof.block = justification.commit.target_hash;
+			latest_finalized_height = u32::from(justification.commit.target_number);
+			finality_proof
+		};
 
 		let start = self
 			.relay_client
@@ -270,16 +286,13 @@ where
 		// we are interested only in the blocks where our parachain header changes.
 		let para_storage_key = parachain_header_storage_key(self.para_id);
 		let keys = vec![para_storage_key.as_bytes_ref()];
+		let mut parachain_headers_with_proof = BTreeMap::<H256, ParachainHeaderProofs>::default();
 
 		let change_set = self
 			.relay_client
 			.rpc()
 			.query_storage(keys.clone(), start, Some(latest_finalized_hash))
 			.await?;
-
-		let mut parachain_headers_with_proof =
-			BTreeMap::<H::Hash, ParachainHeaderProofs>::default();
-		let mut para_headers = vec![];
 
 		for changes in change_set {
 			let header = self
@@ -293,19 +306,20 @@ where
 				let key = polkadot::api::storage().paras().heads(&Id(self.para_id));
 				self.relay_client
 					.storage()
-					.fetch(&key, Some(header.hash()))
+					.at(Some(header.hash()))
+					.await?
+					.fetch(&key)
 					.await?
 					.expect("Header exists in its own changeset; qed")
 					.0
 			};
 
 			let para_header: T::Header = Decode::decode(&mut &parachain_header_bytes[..])?;
-			let para_block_number = *para_header.number();
+			let para_block_number = para_header.number();
 			// skip genesis header or any unknown headers
 			if para_block_number == Zero::zero() || !header_numbers.contains(&para_block_number) {
 				continue
 			}
-			para_headers.push((header.hash(), para_header.clone()));
 
 			let state_proof = self
 				.relay_client
@@ -331,22 +345,31 @@ where
 		})
 	}
 
-	// Queries the block at which the epoch for the given block belongs to ends.
-	async fn session_end_for_block(&self, block: u32) -> Result<u32, anyhow::Error> {
+	/// Queries the block at which the epoch for the given block belongs to ends.
+	pub async fn session_start_and_end_for_block(
+		&self,
+		block: u32,
+	) -> Result<(u32, u32), anyhow::Error> {
 		let epoch_addr = polkadot::api::storage().babe().epoch_start();
 		let block_hash = self.relay_client.rpc().block_hash(Some(block.into())).await?;
 		let (previous_epoch_start, current_epoch_start) = self
 			.relay_client
 			.storage()
-			.fetch(&epoch_addr, block_hash)
+			.at(block_hash)
+			.await
+			.expect("storage client to be available")
+			.fetch(&epoch_addr)
 			.await?
 			.ok_or_else(|| anyhow!("Failed to fetch epoch information"))?;
-		Ok(current_epoch_start + (current_epoch_start - previous_epoch_start))
+		Ok((
+			current_epoch_start,
+			current_epoch_start + (current_epoch_start - previous_epoch_start),
+		))
 	}
 
 	/// Returns the session length in blocks
 	pub async fn session_length(&self) -> Result<u32, anyhow::Error> {
-		let metadata = self.relay_client.rpc().metadata().await?;
+		let metadata = self.relay_client.rpc().metadata(None).await?;
 		let metadata = metadata.pallet("Babe")?.constant("EpochDuration")?;
 		Ok(Decode::decode(&mut &metadata.value[..])?)
 	}

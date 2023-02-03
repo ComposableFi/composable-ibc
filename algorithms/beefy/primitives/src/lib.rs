@@ -38,8 +38,6 @@ pub struct ClientState {
 	pub current_authorities: BeefyNextAuthoritySet<H256>,
 	/// Authorities for the next session
 	pub next_authorities: BeefyNextAuthoritySet<H256>,
-	/// Beefy activation block
-	pub beefy_activation_block: u32,
 }
 
 /// Host functions that allow the light client perform cryptographic operations in native.
@@ -131,8 +129,13 @@ pub struct ParachainsUpdateProof {
 	/// Parachai headers
 	pub parachain_headers: Vec<ParachainHeader>,
 	/// Mmr Batch proof for parachain headers
-	pub mmr_proof: pallet_mmr_primitives::BatchProof<H256>,
+	pub mmr_proof: pallet_mmr_primitives::Proof<H256>,
 }
+
+#[cfg(feature = "std")]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+/// finality proof
+pub struct EncodedVersionedFinalityProof(pub sp_core::Bytes);
 
 /// MMR nodes & size -related utilities.
 pub struct NodesUtils {
@@ -179,17 +182,5 @@ impl<T: HostFunctions + Clone> rs_merkle::Hasher for MerkleHasher<T> {
 	type Hash = [u8; 32];
 	fn hash(data: &[u8]) -> Self::Hash {
 		T::keccak_256(data)
-	}
-}
-
-/// Calculate the leaf index for this block number
-pub fn get_leaf_index_for_block_number(activation_block: u32, block_number: u32) -> u32 {
-	// calculate the leaf index for this leaf.
-	if activation_block == 0 {
-		// in this case the leaf index is the same as the block number - 1 (leaf index starts at 0)
-		block_number - 1
-	} else {
-		// in this case the leaf index is activation block - current block number.
-		activation_block - (block_number + 1)
 	}
 }

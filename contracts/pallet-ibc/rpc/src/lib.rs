@@ -598,6 +598,11 @@ where
 	fn query_proof(&self, height: u32, mut keys: Vec<Vec<u8>>) -> Result<Proof> {
 		let api = self.client.runtime_api();
 		let at = BlockId::Number(height.into());
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
 			.para_id(&at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -607,7 +612,7 @@ where
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
 			.client
-			.read_child_proof(&at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
+			.read_child_proof(hash_at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
 			.map_err(runtime_error_into_rpc_error)?
 			.iter_nodes()
 			.collect::<Vec<_>>()
@@ -651,6 +656,11 @@ where
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
 			.para_id(&at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -666,7 +676,7 @@ where
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
 			.client
-			.read_child_proof(&at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
+			.read_child_proof(hash_at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
 			.map_err(runtime_error_into_rpc_error)?
 			.iter_nodes()
 			.collect::<Vec<_>>()
@@ -697,6 +707,11 @@ where
 		} else {
 			BlockId::Hash(self.client.info().best_hash)
 		};
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
 			.para_id(&at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -720,7 +735,7 @@ where
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
 			.client
-			.read_child_proof(&at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
+			.read_child_proof(hash_at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
 			.map_err(runtime_error_into_rpc_error)?
 			.iter_nodes()
 			.collect::<Vec<_>>()
@@ -775,6 +790,11 @@ where
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
 			.para_id(&at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -793,7 +813,7 @@ where
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
 			.client
-			.read_child_proof(&at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
+			.read_child_proof(hash_at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
 			.map_err(runtime_error_into_rpc_error)?
 			.iter_nodes()
 			.collect::<Vec<_>>()
@@ -893,6 +913,11 @@ where
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
 			.para_id(&at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -908,7 +933,7 @@ where
 		let proof = self
 			.client
 			.read_child_proof(
-				&at,
+				hash_at,
 				&child_info,
 				&mut result.trie_keys.iter_mut().map(|nodes| &nodes[..]),
 			)
@@ -941,6 +966,11 @@ where
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
 			.para_id(&at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -958,7 +988,7 @@ where
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
 			.client
-			.read_child_proof(&at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
+			.read_child_proof(hash_at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
 			.map_err(runtime_error_into_rpc_error)?
 			.iter_nodes()
 			.collect::<Vec<_>>()
@@ -1235,6 +1265,11 @@ where
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
 			.para_id(&at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -1250,7 +1285,7 @@ where
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
 			.client
-			.read_child_proof(&at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
+			.read_child_proof(hash_at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
 			.map_err(runtime_error_into_rpc_error)?
 			.iter_nodes()
 			.collect::<Vec<_>>()
@@ -1275,6 +1310,11 @@ where
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
 			.para_id(&at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -1295,7 +1335,7 @@ where
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
 			.client
-			.read_child_proof(&at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
+			.read_child_proof(hash_at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
 			.map_err(runtime_error_into_rpc_error)?
 			.iter_nodes()
 			.collect::<Vec<_>>()
@@ -1320,6 +1360,11 @@ where
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
 			.para_id(&at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -1340,7 +1385,7 @@ where
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
 			.client
-			.read_child_proof(&at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
+			.read_child_proof(hash_at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
 			.map_err(runtime_error_into_rpc_error)?
 			.iter_nodes()
 			.collect::<Vec<_>>()
@@ -1365,6 +1410,11 @@ where
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
 			.para_id(&at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -1380,7 +1430,7 @@ where
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
 			.client
-			.read_child_proof(&at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
+			.read_child_proof(hash_at, &child_info, &mut keys.iter_mut().map(|nodes| &nodes[..]))
 			.map_err(runtime_error_into_rpc_error)?
 			.iter_nodes()
 			.collect::<Vec<_>>()
