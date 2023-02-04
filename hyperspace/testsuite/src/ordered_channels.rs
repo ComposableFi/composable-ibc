@@ -219,7 +219,7 @@ async fn send_ordered_packet_and_assert_timeout<A, B>(
 
 	set_relay_status(true);
 
-	assert_timeout_packet(chain_a).await;
+	assert_timeout_packet(chain_a, 130).await;
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for ordered channel");
 }
 

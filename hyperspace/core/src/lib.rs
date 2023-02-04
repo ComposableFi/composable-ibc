@@ -50,11 +50,44 @@ where
 {
 	let (mut chain_a_finality, mut chain_b_finality) =
 		(chain_a.finality_notifications().await, chain_b.finality_notifications().await);
+
+	// If light clients on both chains are not synced then send the old updates and events before
+	// listening for new events
+	if !chain_a.is_synced(&chain_b).await? {
+		let (mut messages, events) = chain_a.fetch_mandatory_updates(&chain_b).await?;
+		// we use light mode because channel state will be queried during the full relay operation
+		let (parsed_messages, ..) =
+			parse_events(&mut chain_a, &mut chain_b, events, Some(Mode::Light)).await?;
+		messages.extend(parsed_messages);
+		log::info!(target: "hyperspace",
+			"Syncing Chain {}'s light client on chain {} {:#?}",
+			chain_a.name(),
+				chain_b.name(),
+			messages.iter().map(|msg| &msg.type_url).collect::<Vec<_>>()
+		);
+		queue::flush_message_batch(messages, chain_a_metrics.as_ref(), &chain_b).await?;
+	}
+
+	if !chain_b.is_synced(&chain_a).await? {
+		let (mut messages, events) = chain_b.fetch_mandatory_updates(&chain_a).await?;
+		// we use light mode because channel state will be queried during the full relay operation
+		let (parsed_messages, ..) =
+			parse_events(&mut chain_b, &mut chain_a, events, Some(Mode::Light)).await?;
+		messages.extend(parsed_messages);
+		log::info!(target: "hyperspace",
+			"Syncing Chain {}'s light client on chain {} {:#?}",
+			chain_b.name(),
+				chain_a.name(),
+			messages.iter().map(|msg| &msg.type_url).collect::<Vec<_>>()
+		);
+		queue::flush_message_batch(messages, chain_b_metrics.as_ref(), &chain_a).await?;
+	}
+
 	// loop forever
 	loop {
 		tokio::select! {
 			// new finality event from chain A
-			result = chain_a_finality.next() => {
+			result  = chain_a_finality.next() => {
 				process_finality_event!(chain_a, chain_b, chain_a_metrics, mode, result)
 			}
 			// new finality event from chain B

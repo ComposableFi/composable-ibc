@@ -160,12 +160,13 @@ impl fmt::Display for TracePath {
 
 /// A type that contains the base denomination for ICS20 and the source tracing information path.
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(into = "String")]
+#[serde(try_from = "String")]
 pub struct PrefixedDenom {
 	/// A series of `{port-id}/{channel-id}`s for tracing the source of the token.
-	#[serde(with = "serde_string")]
-	trace_path: TracePath,
+	pub trace_path: TracePath,
 	/// Base denomination of the relayed fungible token.
-	base_denom: BaseDenom,
+	pub base_denom: BaseDenom,
 }
 
 impl PrefixedDenom {
@@ -259,6 +260,14 @@ impl FromStr for PrefixedDenom {
 	}
 }
 
+impl TryFrom<String> for PrefixedDenom {
+	type Error = Error;
+
+	fn try_from(value: String) -> Result<Self, Self::Error> {
+		Self::from_str(&value)
+	}
+}
+
 impl TryFrom<RawDenomTrace> for PrefixedDenom {
 	type Error = Error;
 
@@ -278,6 +287,16 @@ impl From<PrefixedDenom> for RawDenomTrace {
 impl From<BaseDenom> for PrefixedDenom {
 	fn from(denom: BaseDenom) -> Self {
 		Self { trace_path: Default::default(), base_denom: denom }
+	}
+}
+
+impl From<PrefixedDenom> for String {
+	fn from(denom: PrefixedDenom) -> Self {
+		if denom.trace_path.0.is_empty() {
+			format!("{}", denom.base_denom)
+		} else {
+			format!("{}/{}", denom.trace_path, denom.base_denom)
+		}
 	}
 }
 
@@ -370,6 +389,7 @@ impl fmt::Display for PrefixedCoin {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::{applications::transfer::packet::PacketData, signer::Signer};
 
 	#[test]
 	fn test_denom_validation() -> Result<(), Error> {
@@ -465,5 +485,27 @@ mod tests {
 		assert!(trace_path.is_empty());
 
 		Ok(())
+	}
+
+	#[test]
+	fn packet_data_serde() {
+		let packet_data = PacketData {
+			token: PrefixedCoin {
+				denom: PrefixedDenom {
+					trace_path: TracePath::from_str("transfer/channel-0/transfer/channel-1")
+						.unwrap(),
+					base_denom: BaseDenom::from_str("UNIT").unwrap(),
+				},
+				amount: Amount::from_str("10000000000").unwrap(),
+			},
+			sender: Signer::from_str("sender").unwrap(),
+			receiver: Signer::from_str("receiver").unwrap(),
+		};
+		let string = serde_json::to_string(&packet_data).unwrap();
+		assert_eq!(
+			string,
+			r#"{"denom":"transfer/channel-0/transfer/channel-1/UNIT","amount":"10000000000","sender":"sender","receiver":"receiver"}"#
+		);
+		assert_eq!(packet_data, serde_json::from_str(&string).unwrap());
 	}
 }

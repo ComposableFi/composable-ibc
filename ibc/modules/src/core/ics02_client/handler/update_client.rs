@@ -110,7 +110,7 @@ where
 		)
 		.map_err(|e| Error::header_verification_failure(e.to_string()))?;
 
-	let event_attributes = Attributes {
+	let mut event_attributes = Attributes {
 		client_id: client_id.clone(),
 		height: ctx.host_height(),
 		client_type: client_type.to_owned(),
@@ -135,6 +135,8 @@ where
 	let (new_client_state, new_consensus_state) = client_def
 		.update_state(ctx, client_id.clone(), client_state, client_message)
 		.map_err(|e| Error::header_verification_failure(e.to_string()))?;
+
+	event_attributes.consensus_height = new_client_state.latest_height();
 
 	let result = ClientResult::<Ctx>::Update(Result {
 		client_id,

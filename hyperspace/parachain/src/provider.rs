@@ -106,7 +106,7 @@ where
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &C,
-	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
 		C: Chain,
 	{
@@ -246,7 +246,6 @@ where
 		)
 		.await
 		.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
-
 		Ok(proof.proof)
 	}
 
@@ -642,13 +641,22 @@ where
 		Ok(response)
 	}
 
-	fn is_update_required(
+	async fn is_update_required(
 		&self,
 		latest_height: u64,
 		latest_client_height_on_counterparty: u64,
-	) -> bool {
-		let refresh_period: u64 = if cfg!(feature = "testing") { 15 } else { 50 };
-		latest_height - latest_client_height_on_counterparty >= refresh_period
+	) -> Result<bool, Self::Error> {
+		let prover = self.grandpa_prover();
+		let session_length = prover
+			.session_length()
+			.await
+			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
+		// We divide the session into some places and if the diff in block updates is greater than
+		// this update is required
+		let base =
+			if cfg!(test) { (session_length / 2) as u64 } else { (session_length / 12) as u64 };
+		let diff = latest_height - latest_client_height_on_counterparty;
+		Ok(base >= diff)
 	}
 
 	async fn initialize_client_state(

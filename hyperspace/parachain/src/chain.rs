@@ -152,8 +152,8 @@ where
 					)
 						.await
 						.expect("Failed to subscribe to grandpa justifications")
-						.chunks(6)
-						.map(|mut notifs| notifs.remove(notifs.len() - 1)); // skip every 4 finality notifications
+						.chunks(3)
+						.map(|mut notifs| notifs.remove(notifs.len() - 1)); // skip every 3 finality notifications
 
 				let stream = subscription.filter_map(|justification_notif| {
 					let encoded_justification = match justification_notif {
@@ -381,7 +381,7 @@ where
 				let encoded =
 					GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 						&*self.relay_ws_client,
-						common_ancestor_block_number,
+						common_ancestor_block_number + 1,
 					)
 					.await?
 					.ok_or_else(|| {

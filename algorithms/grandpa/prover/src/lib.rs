@@ -195,12 +195,13 @@ where
 		Ok(header)
 	}
 
-	/// Returns the finality proof for the given parachain header numbers finalized by the given
-	/// relay chain height.
+	/// Returns a tuple of the finality proof for the given parachain `header_numbers` finalized by
+	/// `latest_finalized_height`.
 	pub async fn query_finalized_parachain_headers_with_proof<H>(
 		&self,
-		client_state: &ClientState,
+		previous_finalized_height: u32,
 		mut latest_finalized_height: u32,
+		latest_justification: Option<Vec<u8>>,
 		header_numbers: Vec<T::BlockNumber>,
 	) -> Result<ParachainHeadersWithFinalityProof<H>, anyhow::Error>
 	where
@@ -211,56 +212,40 @@ where
 		H::Number: finality_grandpa::BlockNumberOps,
 		T::BlockNumber: One,
 	{
-		let previous_para_hash = self
-			.para_client
-			.rpc()
-			.block_hash(Some((client_state.latest_para_height + 1).into()))
+		let mut finality_proof = if let Some(justification) = latest_justification {
+			let justification = GrandpaJustification::<H>::decode(&mut &*justification)?;
+
+			FinalityProof::<H> {
+				block: justification.commit.target_hash,
+				justification: justification.encode(),
+				unknown_headers: vec![],
+			}
+		} else {
+			let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
+				// we cast between the same type but different crate versions.
+				&*unsafe {
+					unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(
+						self.relay_ws_client.clone(),
+					)
+				},
+				latest_finalized_height,
+			)
 			.await?
-			.ok_or_else(|| anyhow!("Failed to fetch previous finalized parachain + 1 hash"))?;
-		let address = parachain::api::storage().parachain_system().validation_data();
-		let validation_data = self
-			.para_client
-			.storage()
-			.at(Some(previous_para_hash))
-			.await
-			.expect("storage client should be available")
-			.fetch(&address)
-			.await
-			.unwrap()
-			.unwrap();
-		// This ensures we don't miss any parachain blocks.
-		let previous_finalized_height =
-			validation_data.relay_parent_number.min(client_state.latest_relay_height);
+			.ok_or_else(|| {
+				anyhow!("No justification found for block: {:?}", latest_finalized_height)
+			})?
+			.0;
 
-		// we want to know if we've missed any authority set changes since we last updated the
-		// relay chain on the light client.
-		let session_end = self.session_end_for_block(client_state.latest_relay_height).await?;
+			let mut finality_proof = FinalityProof::<H>::decode(&mut &encoded[..])?;
 
-		if client_state.latest_relay_height != session_end && latest_finalized_height > session_end
-		{
-			latest_finalized_height = session_end
-		}
+			let justification =
+				GrandpaJustification::<H>::decode(&mut &finality_proof.justification[..])?;
 
-		let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
-			// we cast between the same type but different crate versions.
-			&*unsafe {
-				unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(self.relay_ws_client.clone())
-			},
-			latest_finalized_height,
-		)
-		.await?
-		.ok_or_else(|| anyhow!("No justification found for block: {:?}", latest_finalized_height))?
-		.0;
+			finality_proof.block = justification.commit.target_hash;
 
-		let mut finality_proof = FinalityProof::<H>::decode(&mut &encoded[..])?;
-
-		let justification =
-			GrandpaJustification::<H>::decode(&mut &finality_proof.justification[..])?;
-
-		// sometimes we might get a justification for latest_finalized_height - 1, sigh
-		let latest_finalized_height = u32::from(justification.commit.target_number);
-
-		finality_proof.block = justification.commit.target_hash;
+			latest_finalized_height = u32::from(justification.commit.target_number);
+			finality_proof
+		};
 
 		let start = self
 			.relay_client
@@ -301,15 +286,13 @@ where
 		// we are interested only in the blocks where our parachain header changes.
 		let para_storage_key = parachain_header_storage_key(self.para_id);
 		let keys = vec![para_storage_key.as_bytes_ref()];
+		let mut parachain_headers_with_proof = BTreeMap::<H256, ParachainHeaderProofs>::default();
 
 		let change_set = self
 			.relay_client
 			.rpc()
 			.query_storage(keys.clone(), start, Some(latest_finalized_hash))
 			.await?;
-
-		let mut parachain_headers_with_proof = BTreeMap::<H256, ParachainHeaderProofs>::default();
-		let mut para_headers = vec![];
 
 		for changes in change_set {
 			let header = self
@@ -324,8 +307,7 @@ where
 				self.relay_client
 					.storage()
 					.at(Some(header.hash()))
-					.await
-					.expect("Storage client to be available")
+					.await?
 					.fetch(&key)
 					.await?
 					.expect("Header exists in its own changeset; qed")
@@ -338,7 +320,6 @@ where
 			if para_block_number == Zero::zero() || !header_numbers.contains(&para_block_number) {
 				continue
 			}
-			para_headers.push((header.hash(), para_header.clone()));
 
 			let state_proof = self
 				.relay_client
@@ -364,8 +345,11 @@ where
 		})
 	}
 
-	// Queries the block at which the epoch for the given block belongs to ends.
-	async fn session_end_for_block(&self, block: u32) -> Result<u32, anyhow::Error> {
+	/// Queries the block at which the epoch for the given block belongs to ends.
+	pub async fn session_start_and_end_for_block(
+		&self,
+		block: u32,
+	) -> Result<(u32, u32), anyhow::Error> {
 		let epoch_addr = polkadot::api::storage().babe().epoch_start();
 		let block_hash = self.relay_client.rpc().block_hash(Some(block.into())).await?;
 		let (previous_epoch_start, current_epoch_start) = self
@@ -377,7 +361,10 @@ where
 			.fetch(&epoch_addr)
 			.await?
 			.ok_or_else(|| anyhow!("Failed to fetch epoch information"))?;
-		Ok(current_epoch_start + (current_epoch_start - previous_epoch_start))
+		Ok((
+			current_epoch_start,
+			current_epoch_start + (current_epoch_start - previous_epoch_start),
+		))
 	}
 
 	/// Returns the session length in blocks
