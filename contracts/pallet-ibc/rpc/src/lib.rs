@@ -12,7 +12,9 @@ use ibc::{
 	events::IbcEvent as RawIbcEvent,
 };
 
+use hash_db::Hasher;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
+use sp_trie::{LayoutV0, TrieDBBuilder};
 use std::{collections::HashMap, fmt::Display, str::FromStr, sync::Arc};
 
 use ibc_proto::{
@@ -44,7 +46,7 @@ use jsonrpsee::{
 };
 use pallet_ibc::events::IbcEvent;
 use sc_chain_spec::Properties;
-use sc_client_api::{BlockBackend, ProofProvider};
+use sc_client_api::{BlockBackend, ProofProvider, StorageProof};
 use serde::{Deserialize, Serialize};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
@@ -103,6 +105,13 @@ pub struct Proof {
 	pub proof: Vec<u8>,
 	/// Height at which proof was recovered
 	pub height: ibc_proto::ibc::core::client::v1::Height,
+}
+
+/// Proof for main and child trie
+#[derive(codec::Encode, codec::Decode)]
+pub struct IbcProof {
+	child_trie_proof: Vec<Vec<u8>>,
+	child_trie_root_proof: Vec<Vec<u8>>,
 }
 
 /// Packet info
@@ -416,6 +425,19 @@ fn runtime_error_into_rpc_error(e: impl std::fmt::Display) -> RpcError {
 	)))
 }
 
+fn generate_trie_proof<H>(proof: Vec<u8>, state_root: H::Out) -> Result<IbcProof>
+where
+	H: Hasher,
+{
+	let trie_proof = codec::Decode::decode(&mut &*proof)
+		.map_err(|err| "Failed to decode proof nodes for path: {path}: {err:#?}");
+	let combined_proof = StorageProof::new(trie_proof);
+	let memory_db = combined_proof.into_memory_db::<H>();
+	let trie = TrieDBBuilder::<LayoutV0<H>>::new(&memory_db, &state_root).build();
+
+	// TODO: split proofs here
+}
+
 /// An implementation of IBC specific RPC methods.
 pub struct IbcRpcHandler<C, B> {
 	client: Arc<C>,
@@ -617,6 +639,12 @@ where
 			.iter_nodes()
 			.collect::<Vec<_>>()
 			.encode();
+		let header = self
+			.client
+			.expect_header(at)
+			.map_err(|_| RpcError::Custom("Unknown header".into()))?;
+		let state_root: Hasher::Out = header.state_root().into();
+		let ibc_proofs = generate_trie_proof(proof, state_root);
 		Ok(Proof {
 			proof,
 			height: ibc_proto::ibc::core::client::v1::Height {
@@ -1577,8 +1605,9 @@ where
 					client_state: Some(client_state.into()),
 				})
 			},
-			_ =>
-				Err(runtime_error_into_rpc_error("[ibc_rpc]: Could not find client creation event")),
+			_ => {
+				Err(runtime_error_into_rpc_error("[ibc_rpc]: Could not find client creation event"))
+			},
 		}
 	}
 
