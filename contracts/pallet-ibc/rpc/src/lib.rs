@@ -14,7 +14,7 @@ use ibc::{
 
 use hash_db::Hasher;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
-use sp_trie::{LayoutV0, TrieDBBuilder};
+use sp_trie::{LayoutV0, Trie, TrieDBBuilder};
 use std::{collections::HashMap, fmt::Display, str::FromStr, sync::Arc};
 
 use ibc_proto::{
@@ -425,7 +425,11 @@ fn runtime_error_into_rpc_error(e: impl std::fmt::Display) -> RpcError {
 	)))
 }
 
-fn generate_trie_proof<H>(proof: Vec<u8>, state_root: H::Out) -> Result<IbcProof>
+fn generate_trie_proof<H>(
+	proof: Vec<u8>,
+	state_root: H::Out,
+	child_info: ChildInfo,
+) -> Result<IbcProof>
 where
 	H: Hasher,
 {
@@ -434,8 +438,19 @@ where
 	let combined_proof = StorageProof::new(trie_proof);
 	let memory_db = combined_proof.into_memory_db::<H>();
 	let trie = TrieDBBuilder::<LayoutV0<H>>::new(&memory_db, &state_root).build();
+	let child_root = trie
+		.get(child_info.prefixed_storage_key().as_slice())?
+		.map(|r| {
+			let mut hash = H::Out::default();
 
+			// root is fetched from DB, not writable by runtime, so it's always valid.
+			hash.as_mut().copy_from_slice(&r[..]);
+
+			hash
+		})
+		.ok_or(|| runtime_error_into_rpc_error("Error fetching packets"));
 	// TODO: split proofs here
+	Ok(IbcProof { child_trie_proof: (), child_trie_root_proof: () })
 }
 
 /// An implementation of IBC specific RPC methods.
@@ -644,7 +659,7 @@ where
 			.expect_header(at)
 			.map_err(|_| RpcError::Custom("Unknown header".into()))?;
 		let state_root: Hasher::Out = header.state_root().into();
-		let ibc_proofs = generate_trie_proof(proof, state_root);
+		let ibc_proofs = generate_trie_proof(proof, state_root, child_info);
 		Ok(Proof {
 			proof,
 			height: ibc_proto::ibc::core::client::v1::Height {
