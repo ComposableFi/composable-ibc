@@ -45,7 +45,7 @@ use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
 use prost::Message;
 use tendermint_light_client_verifier::{
 	types::{TrustedBlockState, UntrustedBlockState},
-	PredicateVerifier, Verdict, Verifier,
+	Verdict, Verifier,
 };
 use tendermint_proto::Protobuf;
 
@@ -54,7 +54,7 @@ use crate::{
 	client_state::ClientState,
 	consensus_state::ConsensusState,
 	error::Error,
-	HostFunctionsProvider,
+	HostFunctionsProvider, ProdVerifier,
 };
 use ibc::{prelude::*, timestamp::Timestamp, Height};
 
@@ -146,7 +146,7 @@ where
 
 				let options = client_state.as_light_client_options()?;
 
-				let verifier = PredicateVerifier::<H, H, H>::default();
+				let verifier = ProdVerifier::<H>::default();
 				let verdict = verifier.verify(
 					untrusted_state,
 					trusted_state,

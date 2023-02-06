@@ -25,14 +25,12 @@ use crate::{
 	HostFunctionsProvider,
 };
 use tendermint::{
-	crypto::Sha256,
+	crypto::{
+		signature::{Error, Verifier},
+		Sha256,
+	},
 	merkle::{Hash, MerkleHash, NonIncremental, HASH_SIZE},
-};
-use tendermint_light_client_verifier::{
-	errors::VerificationError,
-	operations::{CommitValidator, VotingPowerCalculator, VotingPowerTally},
-	predicates::VerificationPredicates,
-	types::{SignedHeader, TrustThreshold, ValidatorSet},
+	PublicKey, Signature,
 };
 
 use crate::{client_message::ClientMessage, mock::host::MockHostBlock};
@@ -184,44 +182,30 @@ impl ics23::HostFunctionsProvider for Crypto {
 	}
 }
 
-#[derive(Default)]
-pub struct LocalSha256;
-
-impl Sha256 for LocalSha256 {
+impl Sha256 for Crypto {
 	fn digest(_data: impl AsRef<[u8]>) -> [u8; HASH_SIZE] {
 		unimplemented!()
 	}
 }
 
-impl MerkleHash for LocalSha256 {
+impl MerkleHash for Crypto {
 	fn empty_hash(&mut self) -> Hash {
-		NonIncremental::<LocalSha256>::default().empty_hash()
+		NonIncremental::<Self>::default().empty_hash()
 	}
 
 	fn leaf_hash(&mut self, bytes: &[u8]) -> Hash {
-		NonIncremental::<LocalSha256>::default().leaf_hash(bytes)
+		NonIncremental::<Self>::default().leaf_hash(bytes)
 	}
 
 	fn inner_hash(&mut self, left: Hash, right: Hash) -> Hash {
-		NonIncremental::<LocalSha256>::default().inner_hash(left, right)
+		NonIncremental::<Self>::default().inner_hash(left, right)
 	}
 }
 
-impl VerificationPredicates for Crypto {
-	type Sha256 = LocalSha256;
-}
-
-impl VotingPowerCalculator for Crypto {
-	fn voting_power_in(
-		&self,
-		_signed_header: &SignedHeader,
-		_validator_set: &ValidatorSet,
-		_trust_threshold: TrustThreshold,
-	) -> Result<VotingPowerTally, VerificationError> {
+impl Verifier for Crypto {
+	fn verify(_pubkey: PublicKey, _msg: &[u8], _signature: &Signature) -> Result<(), Error> {
 		unimplemented!()
 	}
 }
-
-impl CommitValidator for Crypto {}
 
 impl HostFunctionsProvider for Crypto {}

@@ -19,23 +19,19 @@ use ics11_beefy::{
 	client_message::BEEFY_CLIENT_MESSAGE_TYPE_URL, client_state::BEEFY_CLIENT_STATE_TYPE_URL,
 	consensus_state::BEEFY_CONSENSUS_STATE_TYPE_URL,
 };
-use sp_core::{ed25519, H256};
+use sp_core::{ed25519, ByteArray, H256};
 use sp_runtime::{
 	app_crypto::RuntimePublic,
 	traits::{BlakeTwo256, ConstU32, Header},
 	BoundedBTreeSet, BoundedVec,
 };
 use tendermint::{
-	crypto::Sha256,
-	merkle::{Hash, MerkleHash, NonIncremental, HASH_SIZE},
-};
-use tendermint_light_client_verifier::{
-	errors::VerificationError,
-	operations::{
-		CommitValidator, ProdVotingPowerCalculator, VotingPowerCalculator, VotingPowerTally,
+	crypto::{
+		signature::{Error as TendermintCryptoError, Verifier},
+		Sha256,
 	},
-	predicates::VerificationPredicates,
-	types::{SignedHeader, TrustThreshold, ValidatorSet},
+	merkle::{Hash, MerkleHash, NonIncremental, HASH_SIZE},
+	PublicKey, Signature,
 };
 use tendermint_proto::Protobuf;
 
@@ -70,45 +66,41 @@ impl ics23::HostFunctionsProvider for HostFunctionsManager {
 	}
 }
 
-#[derive(Default)]
-pub struct SubstrateSha256;
-
-impl Sha256 for SubstrateSha256 {
+impl Sha256 for HostFunctionsManager {
 	fn digest(data: impl AsRef<[u8]>) -> [u8; HASH_SIZE] {
 		sp_io::hashing::sha2_256(data.as_ref())
 	}
 }
 
-impl MerkleHash for SubstrateSha256 {
+impl MerkleHash for HostFunctionsManager {
 	fn empty_hash(&mut self) -> Hash {
-		NonIncremental::<SubstrateSha256>::default().empty_hash()
+		NonIncremental::<Self>::default().empty_hash()
 	}
 
 	fn leaf_hash(&mut self, bytes: &[u8]) -> Hash {
-		NonIncremental::<SubstrateSha256>::default().leaf_hash(bytes)
+		NonIncremental::<Self>::default().leaf_hash(bytes)
 	}
 
 	fn inner_hash(&mut self, left: Hash, right: Hash) -> Hash {
-		NonIncremental::<SubstrateSha256>::default().inner_hash(left, right)
+		NonIncremental::<Self>::default().inner_hash(left, right)
 	}
 }
 
-impl VerificationPredicates for HostFunctionsManager {
-	type Sha256 = SubstrateSha256;
-}
-
-impl VotingPowerCalculator for HostFunctionsManager {
-	fn voting_power_in(
-		&self,
-		signed_header: &SignedHeader,
-		validator_set: &ValidatorSet,
-		trust_threshold: TrustThreshold,
-	) -> Result<VotingPowerTally, VerificationError> {
-		ProdVotingPowerCalculator.voting_power_in(signed_header, validator_set, trust_threshold)
+impl Verifier for HostFunctionsManager {
+	fn verify(
+		pubkey: PublicKey,
+		msg: &[u8],
+		signature: &Signature,
+	) -> Result<(), TendermintCryptoError> {
+		let signature = sp_core::ed25519::Signature::from_slice(signature.as_bytes())
+			.ok_or_else(|| TendermintCryptoError::MalformedSignature)?;
+		let public_key = sp_core::ed25519::Public::from_slice(pubkey.to_bytes().as_slice())
+			.map_err(|_| TendermintCryptoError::MalformedPublicKey)?;
+		sp_io::crypto::ed25519_verify(&signature, msg, &public_key)
+			.then(|| ())
+			.ok_or_else(|| TendermintCryptoError::VerificationFailed)
 	}
 }
-
-impl CommitValidator for HostFunctionsManager {}
 
 impl ics07_tendermint::HostFunctionsProvider for HostFunctionsManager {}
 
