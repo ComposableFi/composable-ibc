@@ -16,10 +16,15 @@
 use crate::verify_parachain_headers_with_grandpa_finality_proof;
 use codec::{Decode, Encode};
 use futures::StreamExt;
-use grandpa_prover::{host_functions::HostFunctionsProvider, GrandpaProver};
+use grandpa_prover::{
+	beefy_prover::helpers::unsafe_arc_cast, host_functions::HostFunctionsProvider, GrandpaProver,
+};
 use polkadot_core_primitives::Header;
-use primitives::{justification::GrandpaJustification, ParachainHeadersWithFinalityProof};
+use primitives::{
+	justification::GrandpaJustification, FinalityProof, ParachainHeadersWithFinalityProof,
+};
 use serde::{Deserialize, Serialize};
+use sp_core::H256;
 use subxt::{
 	config::substrate::{BlakeTwo256, SubstrateHeader},
 	rpc_params, PolkadotConfig,
@@ -76,11 +81,24 @@ async fn follow_grandpa_justifications() {
 
 	let mut client_state = prover.initialize_client_state().await.unwrap();
 	println!("Grandpa proofs are now available");
-	while let Some(Ok(JustificationNotification(sp_core::Bytes(justification)))) =
-		subscription.next().await
-	{
-		let justification =
-			Justification::decode(&mut &justification[..]).expect("Failed to decode justification");
+	while let Some(Ok(JustificationNotification(sp_core::Bytes(_)))) = subscription.next().await {
+		let next_relay_height = client_state.latest_relay_height + 1;
+
+		let encoded = finality_grandpa_rpc::GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
+			// we cast between the same type but different crate versions.
+			&*unsafe {
+				unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(prover.relay_ws_client.clone())
+			},
+			next_relay_height,
+		)
+			.await
+			.unwrap()
+			.unwrap()
+			.0;
+
+		let finality_proof = FinalityProof::<Header>::decode(&mut &encoded[..]).unwrap();
+
+		let justification = Justification::decode(&mut &finality_proof.justification[..]).unwrap();
 
 		let finalized_para_header = prover
 			.query_latest_finalized_parachain_header(justification.commit.target_number)
@@ -107,8 +125,9 @@ async fn follow_grandpa_justifications() {
 
 		let proof = prover
 			.query_finalized_parachain_headers_with_proof::<SubstrateHeader<u32, BlakeTwo256>>(
-				&client_state,
+				client_state.latest_relay_height,
 				justification.commit.target_number,
+				Some(justification.encode()),
 				header_numbers,
 			)
 			.await

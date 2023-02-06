@@ -18,6 +18,7 @@ use alloc::collections::{BTreeMap, BTreeSet};
 use anyhow::anyhow;
 use codec::{Decode, Encode};
 use finality_grandpa::voter_set::VoterSet;
+use frame_support::log;
 use sp_finality_grandpa::{
 	AuthorityId, AuthorityList, AuthoritySignature, ConsensusLog, Equivocation, RoundNumber,
 	ScheduledChange, SetId, GRANDPA_ENGINE_ID,
@@ -246,6 +247,7 @@ where
 	H: Encode,
 	N: Encode,
 {
+	log::trace!(target: "pallet_ibc", "Justification Message {:?}", (round, set_id));
 	let buf = (message, round, set_id).encode();
 
 	if !Host::ed25519_verify(signature.as_ref(), &buf, id.as_ref()) {

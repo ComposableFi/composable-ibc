@@ -22,6 +22,7 @@ services:
       - --rpc-methods=unsafe
       - --beefy
       - --enable-offchain-indexing=true
+      - --pruning=archive
     environment:
       RUST_LOG: parachain::candidate-backing=trace
     ulimits:
@@ -51,6 +52,7 @@ services:
       - --rpc-methods=unsafe
       - --beefy
       - --enable-offchain-indexing=true
+      - --pruning=archive
     environment:
       RUST_LOG: parachain::candidate-backing=trace
     ulimits: *a1
@@ -181,6 +183,7 @@ services:
       - --alice
       - --node-key=d02c041f177a1d58da919567c4ac5b8a4f5e972cda85577d0435ea67bdf48f7a
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
+      - --pruning=archive
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
@@ -278,6 +281,7 @@ services:
       - --alice
       - --node-key=c3dcaff04f173ed7741a63c45e2d5d4053e7c1a76b13ec6820ad9ac24a849025
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
+      - --pruning=archive
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm

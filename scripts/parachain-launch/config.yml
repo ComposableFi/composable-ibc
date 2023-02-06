@@ -13,6 +13,7 @@ relaychain:
     - --rpc-methods=unsafe
     - --beefy
     - --enable-offchain-indexing=true
+    - --pruning=archive
   nodes: # nodes config
     - name: alice # the node name and session key, this imply `--alice`
       wsPort: 9944 # default ws port number is `9944 + global_node_index`
@@ -42,6 +43,7 @@ parachains:
       - --force-authoring
       - --execution=wasm
       - --enable-offchain-indexing=true
+      - --pruning=archive
     relaychainFlags: # CLI flags for the relaychain port
       - --execution=wasm
 #    volumePath: /acala/data # The path to mount volume and base path, default to /data
@@ -73,6 +75,7 @@ parachains:
       - --force-authoring
       - --execution=wasm
       - --enable-offchain-indexing=true
+      - --pruning=archive
     relaychainFlags: # CLI flags for the relaychain port
       - --execution=wasm
     nodes: # nodes config

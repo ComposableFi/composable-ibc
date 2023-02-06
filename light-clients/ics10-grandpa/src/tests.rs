@@ -28,8 +28,8 @@ use codec::{Decode, Encode};
 use finality_grandpa_rpc::GrandpaApiClient;
 use futures::stream::StreamExt;
 use grandpa_client_primitives::{
-	justification::GrandpaJustification, parachain_header_storage_key, ParachainHeaderProofs,
-	ParachainHeadersWithFinalityProof,
+	justification::GrandpaJustification, parachain_header_storage_key, FinalityProof,
+	ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
 };
 use grandpa_prover::{polkadot, GrandpaProver, JustificationNotification};
 use ibc::{
@@ -51,13 +51,11 @@ use ibc::{
 	Height,
 };
 use sp_core::{hexdisplay::AsBytesRef, H256};
-use std::{mem::size_of_val, time::Duration};
+use std::time::Duration;
 use subxt::{
 	config::substrate::{BlakeTwo256, SubstrateHeader},
 	PolkadotConfig,
 };
-
-pub type Justification = GrandpaJustification<RelayChainHeader>;
 
 #[tokio::test]
 async fn test_continuous_update_of_grandpa_client() {
@@ -201,25 +199,33 @@ async fn test_continuous_update_of_grandpa_client() {
 		.expect("Failed to subscribe to grandpa justifications");
 	let mut subscription = subscription.take(100);
 
-	while let Some(Ok(JustificationNotification(sp_core::Bytes(justification_bytes)))) =
-		subscription.next().await
-	{
+	while let Some(Ok(JustificationNotification(sp_core::Bytes(_)))) = subscription.next().await {
 		let client_state: ClientState<HostFunctionsManager> =
 			match ctx.client_state(&client_id).unwrap() {
 				AnyClientState::Grandpa(client_state) => client_state,
 				_ => panic!("unexpected client state"),
 			};
 
-		let justification = Justification::decode(&mut &justification_bytes[..])
-			.expect("Failed to decode justification");
+		let next_relay_height = client_state.latest_relay_height + 1;
 
-		if justification.commit.target_number <= client_state.latest_relay_height {
-			println!(
-				"skipping outdated commit: {}, with latest relay height: {}",
-				justification.commit.target_number, client_state.latest_relay_height
-			);
-			continue
-		}
+		let encoded = finality_grandpa_rpc::GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
+			// we cast between the same type but different crate versions.
+			&*unsafe {
+				unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(prover.relay_ws_client.clone())
+			},
+			next_relay_height,
+		)
+			.await
+			.unwrap()
+			.unwrap()
+			.0;
+
+		let finality_proof = FinalityProof::<RelayChainHeader>::decode(&mut &encoded[..]).unwrap();
+
+		let justification = GrandpaJustification::<RelayChainHeader>::decode(
+			&mut &finality_proof.justification[..],
+		)
+		.unwrap();
 
 		let finalized_para_header = prover
 			.query_latest_finalized_parachain_header(justification.commit.target_number)
@@ -229,14 +235,13 @@ async fn test_continuous_update_of_grandpa_client() {
 		let header_numbers = ((client_state.latest_para_height + 1)..=finalized_para_header.number)
 			.collect::<Vec<_>>();
 
-		if header_numbers.len() == 0 {
-			continue
-		}
-
+		println!("Client State: {:?}", client_state);
+		println!("Finalized para header: {:?}", finalized_para_header.number);
 		let proof = prover
 			.query_finalized_parachain_headers_with_proof::<SubstrateHeader<u32, BlakeTwo256>>(
-				&(client_state.clone().into()),
+				client_state.latest_relay_height,
 				justification.commit.target_number,
+				Some(justification.encode()),
 				header_numbers.clone(),
 			)
 			.await
@@ -245,7 +250,6 @@ async fn test_continuous_update_of_grandpa_client() {
 		let proof =
 			ParachainHeadersWithFinalityProof::<RelayChainHeader>::decode(&mut &*proof).unwrap();
 		println!("========= New Justification =========");
-		println!("justification size: {}kb", size_of_val(&*justification_bytes) / 1000);
 		println!("current_set_id: {}", client_state.current_set_id);
 		println!(
 			"For relay chain header: Hash({:?}), Number({})",
