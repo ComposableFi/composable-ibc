@@ -71,6 +71,7 @@ use subxt::config::substrate::{
 };
 use subxt::{config::ExtrinsicParams, Error, OnlineClient};
 
+use primitives::mock::LocalClientTypes;
 use subxt::config::extrinsic_params::Era;
 #[cfg(not(feature = "dali"))]
 use subxt::config::polkadot::{
@@ -677,10 +678,15 @@ impl IbcProvider for AnyChain {
 				.await
 				.map_err(Into::into),
 			#[cfg(feature = "cosmos")]
-			Self::Cosmos(chain) =>
-				chain.is_update_required(latest_height, latest_client_height_on_counterparty),
-			Self::Wasm(c) =>
-				c.inner.is_update_required(latest_height, latest_client_height_on_counterparty),
+			Self::Cosmos(chain) => chain
+				.is_update_required(latest_height, latest_client_height_on_counterparty)
+				.await
+				.map_err(Into::into),
+			Self::Wasm(c) => c
+				.inner
+				.is_update_required(latest_height, latest_client_height_on_counterparty)
+				.await
+				.map_err(Into::into),
 		}
 	}
 	async fn initialize_client_state(
@@ -738,7 +744,9 @@ impl MisbehaviourHandler for AnyChain {
 		match self {
 			AnyChain::Parachain(parachain) =>
 				parachain.check_for_misbehaviour(counterparty, client_message).await,
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(cosmos) => cosmos.check_for_misbehaviour(counterparty, client_message).await,
+			AnyChain::Wasm(c) => c.inner.check_for_misbehaviour(counterparty, client_message).await,
 		}
 	}
 }
@@ -829,7 +837,9 @@ impl Chain for AnyChain {
 	) -> Result<AnyClientMessage, Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain.query_client_message(update).await.map_err(Into::into),
-			_ => unreachable!(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.query_client_message(update).await.map_err(Into::into),
+			Self::Wasm(c) => c.inner.query_client_message(update).await,
 		}
 	}
 }
@@ -839,7 +849,8 @@ impl LightClientSync for AnyChain {
 	async fn is_synced<C: Chain>(&self, counterparty: &C) -> Result<bool, anyhow::Error> {
 		match self {
 			Self::Parachain(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
-			_ => unreachable!(),
+			Self::Cosmos(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
+			Self::Wasm(c) => c.inner.is_synced(counterparty).await,
 		}
 	}
 
@@ -850,7 +861,9 @@ impl LightClientSync for AnyChain {
 		match self {
 			Self::Parachain(chain) =>
 				chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
-			_ => unreachable!(),
+			Self::Cosmos(chain) =>
+				chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
+			Self::Wasm(c) => c.inner.fetch_mandatory_updates(counterparty).await,
 		}
 	}
 }

@@ -1,13 +1,17 @@
 use super::client::CosmosClient;
 use core::pin::Pin;
-use futures::Stream;
-// use ibc::{applications::transfer::msgs::transfer::MsgTransfer, tx_msg::Msg};
+use futures::{future, stream, FutureExt, Stream, StreamExt};
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
 	core::ics24_host::identifier::{ChannelId, PortId},
 	tx_msg::Msg,
 };
 use primitives::TestProvider;
+use tendermint_rpc::{
+	event::{Event, EventData},
+	query::{EventType, Query},
+	SubscriptionClient, WebSocketClient,
+};
 
 #[async_trait::async_trait]
 impl<H> TestProvider for CosmosClient<H>
@@ -32,7 +36,25 @@ where
 
 	/// Returns a stream that yields chain Block number
 	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
-		todo!()
+		let (ws_client, ws_driver) =
+			WebSocketClient::new(self.websocket_url.clone()).await.unwrap();
+		tokio::spawn(ws_driver.run());
+		let subscription = ws_client.subscribe(Query::from(EventType::NewBlock)).await.unwrap();
+		log::info!(target: "hyperspace-light", "🛰️ Subscribed to {} listening to finality notifications", self.name);
+		let stream = subscription.filter_map(|event| {
+			let event = event.unwrap();
+			let get_height = |event: &Event| {
+				let Event { data, events: _, query: _ } = &event;
+				let height = match &data {
+					EventData::NewBlock { block, .. } =>
+						block.as_ref().unwrap().header.height.value(),
+					_ => unreachable!(),
+				};
+				height
+			};
+			futures::future::ready(Some(get_height(&event)))
+		});
+		Box::pin(stream)
 	}
 
 	/// Set the channel whitelist for the relayer task.

@@ -11,10 +11,7 @@ use ibc::{
 	},
 	events::IbcEvent as RawIbcEvent,
 };
-
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
-use std::{collections::HashMap, fmt::Display, str::FromStr, sync::Arc};
-
+use ibc_primitives::PacketInfo as RawPacketInfo;
 use ibc_proto::{
 	cosmos::base::{query::v1beta1::PageResponse, v1beta1::Coin},
 	ibc::{
@@ -42,7 +39,10 @@ use jsonrpsee::{
 	proc_macros::rpc,
 	types::{error::CallError, ErrorObject},
 };
-use pallet_ibc::events::IbcEvent;
+use pallet_ibc::{
+	events::IbcEvent,
+	light_clients::{AnyClientState, AnyConsensusState},
+};
 use sc_chain_spec::Properties;
 use sc_client_api::{BlockBackend, ProofProvider};
 use serde::{Deserialize, Serialize};
@@ -53,6 +53,7 @@ use sp_runtime::{
 	generic::BlockId,
 	traits::{Block as BlockT, Header as HeaderT},
 };
+use std::{collections::HashMap, fmt::Display, str::FromStr, sync::Arc};
 use tendermint_proto::Protobuf;
 pub mod events;
 use events::filter_map_pallet_event;
@@ -130,6 +131,27 @@ pub struct PacketInfo {
 	pub timeout_timestamp: u64,
 	/// Packet acknowledgement
 	pub ack: Option<Vec<u8>>,
+}
+
+impl From<RawPacketInfo> for PacketInfo {
+	fn from(info: RawPacketInfo) -> Self {
+		Self {
+			height: info.height.unwrap_or_default(),
+			sequence: info.sequence,
+			source_port: String::from_utf8(info.source_port).unwrap_or_default(),
+			source_channel: String::from_utf8(info.source_channel).unwrap_or_default(),
+			destination_port: String::from_utf8(info.destination_port).unwrap_or_default(),
+			destination_channel: String::from_utf8(info.destination_channel).unwrap_or_default(),
+			channel_order: info.channel_order.to_string(),
+			data: info.data,
+			timeout_height: Height {
+				revision_number: info.timeout_height.0,
+				revision_height: info.timeout_height.1,
+			},
+			timeout_timestamp: info.timeout_timestamp,
+			ack: info.ack,
+		}
+	}
 }
 
 /// IBC RPC methods.

@@ -109,7 +109,7 @@ where
 
 	fn try_from(raw: RawClientState) -> Result<Self, Self::Error> {
 		#[cfg(feature = "std")]
-		println!("DATA = {}", hex::encode(&raw.data));
+		// println!("DATA = {}", hex::encode(&raw.data));
 		let any = Any::decode(&mut &raw.data[..]).unwrap();
 		let inner = AnyClientState::try_from(any)
 			.map_err(|_| ())

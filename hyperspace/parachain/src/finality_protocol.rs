@@ -153,8 +153,9 @@ where
 	let client_state = response.client_state.ok_or_else(|| {
 		Error::Custom("Received an empty client state from counterparty".to_string())
 	})?;
-	let client_state = AnyClientState::try_from(client_state)
-		.map_err(|_| Error::Custom("Failed to decode client state".to_string()))?;
+	let client_state =
+		AnyClientState::decode_recursive(client_state, |c| matches!(c, AnyClientState::Beefy(_)))
+			.ok_or_else(|| Error::Custom(format!("Failed to decode client state")))?;
 	let beefy_client_state = match &client_state {
 		AnyClientState::Beefy(client_state) => BeefyPrimitivesClientState {
 			latest_beefy_height: client_state.latest_beefy_height,
@@ -314,7 +315,7 @@ where
 			})),
 			signer: counterparty.account_id(),
 		};
-		let value = msg.encode_vec();
+		let value = msg.encode_vec().unwrap();
 		Any { value, type_url: msg.type_url() }
 	};
 
@@ -354,20 +355,11 @@ where
 	let client_id = source.client_id();
 	let latest_height = counterparty.latest_height_and_timestamp().await?.0;
 	let response = counterparty.query_client_state(latest_height, client_id).await?;
-	let client_state = response.client_state.ok_or_else(|| {
+	let any_client_state = response.client_state.ok_or_else(|| {
 		Error::Custom("Received an empty client state from counterparty".to_string())
 	})?;
-
-	let client_state = AnyClientState::try_from(client_state)
-		.map_err(|_| Error::Custom("Failed to decode client state".to_string()))?;
-
-	let client_state = match client_state {
-		AnyClientState::Grandpa(client_state) => client_state,
-		c => Err(Error::ClientStateRehydration(format!(
-			"Expected AnyClientState::Grandpa found: {:?}",
-			c
-		)))?,
-	};
+	let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
+		.ok_or_else(|| Error::Custom(format!("Could not decode client state")))? else { unreachable!() };
 
 	let prover = source.grandpa_prover();
 	// prove_finality will always give us the highest block finalized by the authority set for the
@@ -520,7 +512,7 @@ where
 			client_message: AnyClientMessage::Grandpa(ClientMessage::Header(grandpa_header)),
 			signer: counterparty.account_id(),
 		};
-		let value = msg.encode_vec();
+		let value = msg.encode_vec().unwrap();
 		Any { value, type_url: msg.type_url() }
 	};
 

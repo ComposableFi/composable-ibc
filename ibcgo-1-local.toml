@@ -9,7 +9,7 @@ connection_id = "connection-0"
 account_prefix = "cosmos"
 store_prefix = "ibc"
 max_tx_size = 200000
-wasm_code_id = "6b1025f8e590cd41071e75171c5c67b632ef8466ed7fc23251b6f1fbe1295a22"
+wasm_code_id = "cfd2199578332b5fd859f3b76cb0b29757c6b52c5df79566cdc3598039dbe43e"
 
 [keybase]
 public_key = "spub4W7TSjsuqcUE17mSB2ajhZsbwkefsHWKsXCbERimu3z2QLN9EFgqqpppiBn4tTNPFoNVTo1b3BgCZAaFJuUgTZeFhzJjUHkK8X7kSC5c7yn"

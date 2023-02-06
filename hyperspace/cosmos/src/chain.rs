@@ -1,13 +1,13 @@
 use super::{client::CosmosClient, tx::sign_tx};
 use crate::{error::Error, provider::FinalityEvent};
 use futures::{Stream, StreamExt};
-use ibc::core::ics02_client::events::UpdateClient;
+use ibc::{core::ics02_client::events::UpdateClient, events::IbcEvent};
 use ibc_proto::{
 	cosmos::{base::v1beta1::Coin, tx::v1beta1::Fee},
 	google::protobuf::Any,
 };
 use pallet_ibc::light_clients::AnyClientMessage;
-use primitives::{Chain, IbcProvider, MisbehaviourHandler};
+use primitives::{Chain, IbcProvider, LightClientSync, MisbehaviourHandler};
 use prost::Message;
 use std::pin::Pin;
 use tendermint_rpc::{
@@ -15,6 +15,23 @@ use tendermint_rpc::{
 	query::{EventType, Query},
 	SubscriptionClient, WebSocketClient,
 };
+
+#[async_trait::async_trait]
+impl<H> LightClientSync for CosmosClient<H>
+where
+	H: 'static + Clone + Send + Sync,
+{
+	async fn is_synced<C: Chain>(&self, _counterparty: &C) -> Result<bool, anyhow::Error> {
+		Ok(true)
+	}
+
+	async fn fetch_mandatory_updates<C: Chain>(
+		&self,
+		_counterparty: &C,
+	) -> Result<(Vec<Any>, Vec<IbcEvent>), anyhow::Error> {
+		Ok((vec![], vec![]))
+	}
+}
 
 #[async_trait::async_trait]
 impl<H> Chain for CosmosClient<H>

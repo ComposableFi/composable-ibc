@@ -59,22 +59,16 @@ where
 	async fn is_synced<C: Chain>(&self, counterparty: &C) -> Result<bool, anyhow::Error> {
 		let latest_height = counterparty.latest_height_and_timestamp().await?.0;
 		let response = counterparty.query_client_state(latest_height, self.client_id()).await?;
-		let client_state = response.client_state.ok_or_else(|| {
+		let any_client_state = response.client_state.ok_or_else(|| {
 			Error::Custom("Received an empty client state from counterparty".to_string())
 		})?;
 
-		let client_state = AnyClientState::try_from(client_state)
-			.map_err(|_| Error::Custom("Failed to decode client state".to_string()))?;
 		match self.finality_protocol {
 			FinalityProtocol::Grandpa => {
 				let prover = self.grandpa_prover();
-				let client_state = match client_state {
-					AnyClientState::Grandpa(client_state) => client_state,
-					c => Err(Error::Custom(format!(
-						"Expected AnyClientState::Grandpa found: {:?}",
-						c
-					)))?,
-				};
+				let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
+					.ok_or_else(|| Error::Custom(format!("Could not decode client state")))? else { unreachable!() };
+
 				let latest_hash = self.relay_client.rpc().finalized_head().await?;
 				let finalized_head =
 					self.relay_client.rpc().header(Some(latest_hash)).await?.ok_or_else(|| {
@@ -101,22 +95,15 @@ where
 	) -> Result<(Vec<Any>, Vec<IbcEvent>), anyhow::Error> {
 		let latest_height = counterparty.latest_height_and_timestamp().await?.0;
 		let response = counterparty.query_client_state(latest_height, self.client_id()).await?;
-		let client_state = response.client_state.ok_or_else(|| {
+		let any_client_state = response.client_state.ok_or_else(|| {
 			Error::Custom("Received an empty client state from counterparty".to_string())
 		})?;
 
-		let client_state = AnyClientState::try_from(client_state)
-			.map_err(|_| Error::Custom("Failed to decode client state".to_string()))?;
 		let (messages, events) = match self.finality_protocol {
 			FinalityProtocol::Grandpa => {
 				let prover = self.grandpa_prover();
-				let client_state = match client_state {
-					AnyClientState::Grandpa(client_state) => client_state,
-					c => Err(Error::Custom(format!(
-						"Expected AnyClientState::Grandpa found: {:?}",
-						c
-					)))?,
-				};
+				let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
+					.ok_or_else(|| Error::Custom(format!("Could not decode client state")))? else { unreachable!() };
 				let latest_hash = self.relay_client.rpc().finalized_head().await?;
 				let finalized_head =
 					self.relay_client.rpc().header(Some(latest_hash)).await?.ok_or_else(|| {
@@ -302,7 +289,7 @@ where
 		client_message: AnyClientMessage::Grandpa(ClientMessage::Header(grandpa_header)),
 		signer,
 	};
-	let value = msg.encode_vec();
+	let value = msg.encode_vec().unwrap();
 	Result::<_, anyhow::Error>::Ok((
 		Any { value, type_url: msg.type_url() },
 		events,

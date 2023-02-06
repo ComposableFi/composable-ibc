@@ -33,6 +33,7 @@ use ibc::{
 	timestamp::Timestamp,
 	Height,
 };
+use ibc_primitives::PacketInfo as IbcPacketInfo;
 use ibc_proto::{
 	google::protobuf::Any,
 	ibc::core::{
@@ -116,7 +117,7 @@ where
 			.clone()
 			.query_latest_ibc_events(self, finality_event, counterparty)
 			.await?;
-		Ok((vec![any], events, update_type))
+		Ok((any, events, update_type))
 	}
 
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {

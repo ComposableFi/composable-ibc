@@ -143,12 +143,12 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		wasm_code_id: None,
 	};
 
-	let _chain_a = ParachainClient::<DefaultConfig>::new(config_a.clone()).await.unwrap();
 	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.unwrap();
 
 	let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
 	let code_id = chain_b.upload_wasm(wasm_data).await.unwrap();
-
+	// let code_id =
+	// 	hex::decode("cfd2199578332b5fd859f3b76cb0b29757c6b52c5df79566cdc3598039dbe43e").unwrap();
 	let code_id_str = hex::encode(code_id);
 	config_b.wasm_code_id = Some(code_id_str);
 
@@ -183,10 +183,10 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		return (chain_a_wrapped, chain_b_wrapped)
 	}
 
-	let (client_a, client_b) = create_clients(&chain_a_wrapped, &chain_b_wrapped).await.unwrap();
+	let (client_b, client_a) = create_clients(&chain_b_wrapped, &chain_a_wrapped).await.unwrap();
 	chain_a_wrapped.set_client_id(client_a);
 	chain_b_wrapped.set_client_id(client_b);
-	(chain_a_wrapped, chain_b_wrapped)
+	(chain_b_wrapped, chain_a_wrapped)
 }
 
 #[tokio::test]

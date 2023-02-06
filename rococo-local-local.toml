@@ -8,6 +8,6 @@ connection_id = "connection-0"
 commitment_prefix = "0x6962632f"
 private_key = "//Alice"
 ss58_version = 49
-channel_whitelist = [["channel-0", "transfer"], ["channel-0", "transfer"], ["channel-0", "transfer"]]
+channel_whitelist = [["channel-0", "transfer"], ["channel-0", "transfer"], ["channel-0", "transfer"], ["channel-0", "transfer"], ["channel-0", "transfer"], ["channel-0", "transfer"]]
 finality_protocol = "Grandpa"
 key_type = "sr25519"

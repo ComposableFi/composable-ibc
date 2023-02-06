@@ -38,6 +38,7 @@ use ibc::{
 	core::ics02_client::{client_state::ClientType, msgs::update_client::MsgUpdateAnyClient},
 	protobuf::Protobuf,
 };
+use ibc_primitives::PacketInfo as IbcPacketInfo;
 use ibc_proto::{
 	cosmos::bank::v1beta1::QueryBalanceRequest,
 	google::protobuf::Any,
@@ -79,8 +80,9 @@ use tendermint_rpc::{
 	Client, Error as RpcError, Order, SubscriptionClient, WebSocketClient,
 };
 use tonic::IntoRequest;
-
-use ibc::events::IbcEventType;
+// use primitives::Pa
+use ibc::{core::ics04_channel::events::try_from_tx, events::IbcEventType};
+use ibc_proto::ibc::core::client::v1::QueryConsensusStatesRequest;
 use ics08_wasm::msg::MsgPushNewWasmCode;
 pub use tendermint::Hash;
 use tokio::time::sleep;
@@ -783,7 +785,7 @@ where
 		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Self::Error> {
-		// let mut block_events = vec![];
+		let mut block_events = vec![];
 
 		for seq in seqs {
 			let query_str =
@@ -791,7 +793,7 @@ where
 					.and_eq(format!("{}.packet_src_port", "send_packet"), port_id.to_string())
 					.and_eq(format!("{}.packet_sequence", "send_packet"), seq.to_string());
 
-			let _response = self
+			let response = self
 				.rpc_client
 				.block_search(
 					query_str,
@@ -802,36 +804,87 @@ where
 				.await
 				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 
-			// if let Some(block) = response.blocks.first().map(|first| &first.block) {
-			//     let tm_height =
-			//         tendermint::block::Height::try_from(block.header.height.value()).unwrap();
-			//     let response = self
-			//         .rpc_client
-			//         .block_results(tm_height)
-			//         .await
-			//         .map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+			if let Some(block) = response.blocks.first().map(|first| &first.block) {
+				let tm_height =
+					tendermint::block::Height::try_from(block.header.height.value()).unwrap();
+				let response = self
+					.rpc_client
+					.block_results(tm_height)
+					.await
+					.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 
-			//     block_events.append(
-			//         &mut response
-			//             .begin_block_events
-			//             .unwrap_or_default()
-			//             .into_iter()
-			//             .filter_map(|ev| filter_matching_event(ev, request, seqs))
-			//             .map(|ev| IbcEventWithHeight::new(ev, response_height))
-			//             .collect(),
-			//     );
-			// }
+				block_events.append(
+					&mut response
+						.begin_block_events
+						.unwrap_or_default()
+						.into_iter()
+						.filter_map(|ev| {
+							let ev = try_from_tx(&ev)?;
+							match ev {
+								IbcEvent::SendPacket(p) =>
+									Some(PacketInfo::from(IbcPacketInfo::from(p.packet))),
+								_ => None,
+							}
+						})
+						.collect(),
+				);
+			}
 		}
-		todo!()
+		Ok(block_events)
 	}
 
 	async fn query_recv_packets(
 		&self,
-		_channel_id: ChannelId,
-		_port_id: PortId,
-		_seqs: Vec<u64>,
+		channel_id: ChannelId,
+		port_id: PortId,
+		seqs: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Self::Error> {
-		todo!()
+		let mut block_events = vec![];
+
+		for seq in seqs {
+			let query_str =
+				Query::eq(format!("{}.packet_src_channel", "recv_packet"), channel_id.to_string())
+					.and_eq(format!("{}.packet_src_port", "recv_packet"), port_id.to_string())
+					.and_eq(format!("{}.packet_sequence", "recv_packet"), seq.to_string());
+
+			let response = self
+				.rpc_client
+				.block_search(
+					query_str,
+					1,
+					1, // get only the first Tx matching the query
+					Order::Ascending,
+				)
+				.await
+				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+
+			if let Some(block) = response.blocks.first().map(|first| &first.block) {
+				let tm_height =
+					tendermint::block::Height::try_from(block.header.height.value()).unwrap();
+				let response = self
+					.rpc_client
+					.block_results(tm_height)
+					.await
+					.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+
+				block_events.append(
+					&mut response
+						.begin_block_events
+						.unwrap_or_default()
+						.into_iter()
+						.filter_map(|ev| {
+							let ev = try_from_tx(&ev)?;
+							match ev {
+								IbcEvent::ReceivePacket(p) =>
+									Some(PacketInfo::from(IbcPacketInfo::from(p.packet))),
+								_ => None,
+							}
+						})
+						.collect(),
+				);
+			}
+		}
+		Ok(block_events)
 	}
 
 	fn expected_block_time(&self) -> Duration {
@@ -843,7 +896,33 @@ where
 		_client_id: ClientId,
 		_client_height: Height,
 	) -> Result<(Height, Timestamp), Self::Error> {
-		todo!()
+		// let mut grpc_client =
+		// ibc_proto::ibc::core::client::v1::query_client::QueryClient::connect( 	self.grpc_url.
+		// clone().to_string(), )
+		// // ibc_proto::ibc::core::channel::v1::query_client::QueryClient::connect(
+		// // 	self.grpc_url.clone().to_string(),
+		// // )
+		// .await
+		// .map_err(|e| Error::from(format!("{:?}", e)))?;
+		// // QueryClient
+		// let request = tonic::Request::new(QueryConsensusStatesRequest {
+		// 	client_id: "".to_string(),
+		// 	pagination: None,
+		// });
+		//
+		// let response = grpc_client
+		// 	.consensus_state(request)
+		// 	.await
+		// 	.map_err(|e| Error::from(format!("{:?}", e)))?
+		// 	.into_inner();
+		// let channels = QueryChannelsResponse {
+		// 	channels: response.channels,
+		// 	pagination: response.pagination,
+		// 	height: response.height,
+		// };
+		//
+		// Ok(channels)
+		Ok((Height::new(2000, 1), Timestamp::from_nanoseconds(1).unwrap()))
 	}
 
 	async fn query_host_consensus_state_proof(
@@ -854,7 +933,7 @@ where
 	}
 
 	async fn query_ibc_balance(&self) -> Result<Vec<PrefixedCoin>, Self::Error> {
-		let denom = "samoleans";
+		let denom = "ibc/47B97D8FF01DA03FCB2F4B1FFEC931645F254E21EF465FA95CBA6888CB964DC4";
 		let mut grpc_client = ibc_proto::cosmos::bank::v1beta1::query_client::QueryClient::connect(
 			self.grpc_url.clone().to_string(),
 		)
@@ -995,13 +1074,13 @@ where
 		Ok(connections)
 	}
 
-	fn is_update_required(
+	async fn is_update_required(
 		&self,
 		_latest_height: u64,
 		_latest_client_height_on_counterparty: u64,
-	) -> bool {
+	) -> Result<bool, Self::Error> {
 		// TODO: Implement is_update_required
-		false
+		Ok(false)
 	}
 
 	async fn initialize_client_state(

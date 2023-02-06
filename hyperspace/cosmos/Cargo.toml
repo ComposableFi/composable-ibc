@@ -38,6 +38,7 @@ ed25519-zebra = { version = "3.1.0" }
 # composable
 ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto" }
+ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
 ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
 ics08-wasm = { path = "../../light-clients/ics08-wasm" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
