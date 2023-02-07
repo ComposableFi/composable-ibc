@@ -1,6 +1,6 @@
 # Relaychain Configuration
 relaychain:
-  image: seunlanlege/centauri-polkadot:v0.9.27 # the docker image to use
+  image: parity/polkadot:v0.9.33 # the docker image to use
   chain: rococo-local # the chain to use
   runtimeGenesisConfig: # additonal genesis override
     configuration:
