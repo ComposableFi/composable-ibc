@@ -53,9 +53,21 @@ use ics11_beefy::{
 	consensus_state::ConsensusState as BeefyConsensusState,
 };
 use scale_info::prelude::{format, string::ToString};
-use sp_core::crypto::AccountId32;
+use sp_core::crypto::{AccountId32, ByteArray};
+use sp_finality_grandpa::{AuthoritySignature, KEY_TYPE};
 use sp_std::prelude::*;
-use tendermint::{block::signed_header::SignedHeader, validator::Set as ValidatorSet, Hash};
+use tendermint::{
+	account,
+	block::{parts::Header as PartSetHeader, signed_header::SignedHeader},
+	chain,
+	signature::Ed25519Signature,
+	validator,
+	validator::Set as ValidatorSet,
+	vote,
+	vote::ValidatorIndex,
+	AppHash, Hash,
+};
+use tendermint_light_client_verifier::types::Validator;
 use tendermint_proto::Protobuf;
 
 #[derive(codec::Encode)]
@@ -79,8 +91,14 @@ fn create_avl() -> simple_iavl::avl::AvlTree<Vec<u8>, Vec<u8>> {
 /// `tendermint_testgen::LightBlock::new_default_with_time_and_chain_id("test-chain".to_string(),
 /// Time::now(), 2).generate().unwrap().signed_header.encode_vec().unwrap();`
 fn create_tendermint_header() -> ics07_tendermint::client_message::Header {
-	let raw_validator_set = hex_literal::hex!("0a3c0a14a6e7b6810df8120580f2a81710e228f454f99c9712220a2050c4a5871ad3379f2879d12cef750d1211633283a9c3730238e6ddf084db4c8a18320a3c0a14c7832263600476fd6ff4c5cb0a86080d0e5f48b212220a20ebe80b7cadea277ac05fb85c7164fe15ebd6873c4a74b3296a462a1026fd9b0f18321864").to_vec();
-	let raw_signed_header = hex_literal::hex!("0a9c010a02080b120a746573742d636861696e1802220c08abc49a930610a8f39fc1014220e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf984a20e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf985220e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf987214a6e7b6810df8120580f2a81710e228f454f99c9712a202080210011a480a20afc35ec1d9620052c6d71122cb5504ee68802184023a217547ca2248df902fbb122408011220afc35ec1d9620052c6d71122cb5504ee68802184023a217547ca2248df902fbb226808021214a6e7b6810df8120580f2a81710e228f454f99c971a0c08abc49a930610a8f39fc1012240a91380fe3cde0147994b82a0b00b28bd82870df38b2cad5b4ba25c9a4c833cd50f3143ffaa4e924eccd143639fb3decf6b94570aff2c50f1346e88d06555fd0d226808021214c7832263600476fd6ff4c5cb0a86080d0e5f48b21a0c08abc49a930610a8f39fc10122407e2e349d9a0adfc3564654fcf88d328cf50a13179cc5ddaf87dd0e1abd4b45685312def0affbae29e8b7882af3b76b056f81b701bb2e43769fb63fe3696b090f").to_vec();
+	let raw_validator_set =
+hex_literal::hex!("
+0a3c0a14a6e7b6810df8120580f2a81710e228f454f99c9712220a2050c4a5871ad3379f2879d12cef750d1211633283a9c3730238e6ddf084db4c8a18320a3c0a14c7832263600476fd6ff4c5cb0a86080d0e5f48b212220a20ebe80b7cadea277ac05fb85c7164fe15ebd6873c4a74b3296a462a1026fd9b0f18321864"
+).to_vec();
+	let raw_signed_header =
+hex_literal::hex!("
+0a9c010a02080b120a746573742d636861696e1802220c08abc49a930610a8f39fc1014220e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf984a20e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf985220e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf987214a6e7b6810df8120580f2a81710e228f454f99c9712a202080210011a480a20afc35ec1d9620052c6d71122cb5504ee68802184023a217547ca2248df902fbb122408011220afc35ec1d9620052c6d71122cb5504ee68802184023a217547ca2248df902fbb226808021214a6e7b6810df8120580f2a81710e228f454f99c971a0c08abc49a930610a8f39fc1012240a91380fe3cde0147994b82a0b00b28bd82870df38b2cad5b4ba25c9a4c833cd50f3143ffaa4e924eccd143639fb3decf6b94570aff2c50f1346e88d06555fd0d226808021214c7832263600476fd6ff4c5cb0a86080d0e5f48b21a0c08abc49a930610a8f39fc10122407e2e349d9a0adfc3564654fcf88d328cf50a13179cc5ddaf87dd0e1abd4b45685312def0affbae29e8b7882af3b76b056f81b701bb2e43769fb63fe3696b090f"
+).to_vec();
 	let signed_header = SignedHeader::decode_vec(&raw_signed_header).unwrap();
 
 	let validator_set = ValidatorSet::decode_vec(&raw_validator_set).unwrap();
@@ -91,6 +109,194 @@ fn create_tendermint_header() -> ics07_tendermint::client_message::Header {
 		trusted_height: Height::new(0, 1),
 		trusted_validator_set: validator_set,
 	}
+}
+
+fn generate_validator(public_key: sp_core::ed25519::Public) -> validator::Info {
+	let public_key = tendermint::PublicKey::from_raw_ed25519(public_key.as_slice()).unwrap();
+	let info = validator::Info {
+		address: {
+			let digest = sp_io::hashing::sha2_256(public_key.to_bytes().as_slice())
+				[..account::LENGTH]
+				.to_vec();
+			account::Id::try_from(digest).unwrap()
+		},
+		pub_key: public_key,
+		power: vote::Power::try_from(1u32).unwrap(),
+		name: None,
+		proposer_priority: validator::ProposerPriority::from(1),
+	};
+	info
+}
+
+fn generate_block_header(
+	validators: Vec<Validator>,
+	chain_id: tendermint::chain::Id,
+	last_block_id_hash: Option<tendermint::Hash>,
+	height: u64,
+) -> tendermint::block::Header {
+	let proposer_index = 0;
+	let proposer_address = validators[proposer_index].address;
+
+	let valset = validator::Set::without_proposer(validators.clone());
+	let next_valset = validator::Set::without_proposer(validators);
+
+	let time = Timestamp::from_nanoseconds(
+		tendermint::Time::now().unix_timestamp_nanos().saturating_add(1_000_000) as u64,
+	)
+	.unwrap()
+	.into_tm_time()
+	.unwrap();
+
+	let last_block_id = last_block_id_hash
+		.map(|hash| tendermint::block::Id { hash, part_set_header: Default::default() });
+
+	let header = tendermint::block::Header {
+		// block version in Tendermint-go is hardcoded with value 11
+		// so we do the same with MBT for now for compatibility
+		version: tendermint::block::header::Version { block: 11, app: 0 },
+		chain_id,
+		height: tendermint::block::Height::try_from(height).unwrap(),
+		time,
+		last_block_id,
+		last_commit_hash: None,
+		data_hash: None,
+		validators_hash: valset.hash_with::<HostFunctionsManager>(),
+		next_validators_hash: next_valset.hash_with::<HostFunctionsManager>(),
+		consensus_hash: valset.hash_with::<HostFunctionsManager>(), /* TODO: currently not clear
+		                                                             * how to produce a valid
+		                                                             * hash */
+		app_hash: AppHash::from_hex_upper("").unwrap(),
+		last_results_hash: None,
+		evidence_hash: None,
+		proposer_address,
+	};
+	header
+}
+
+pub fn get_vote_sign_bytes(chain_id: chain::Id, vote: &vote::Vote) -> Vec<u8> {
+	let signed_vote = vote::SignedVote::from_vote(vote.clone(), chain_id).unwrap();
+
+	signed_vote.sign_bytes()
+}
+
+fn generate_vote(
+	validator: Validator,
+	validator_index: u32,
+	header: &tendermint::block::Header,
+) -> vote::Vote {
+	let block_id = tendermint::block::Id {
+		hash: header.hash_with::<HostFunctionsManager>(),
+		part_set_header: PartSetHeader::new(1, header.hash_with::<HostFunctionsManager>()).unwrap(),
+	};
+
+	let timestamp = header.time;
+
+	let mut vote = vote::Vote {
+		vote_type: vote::Type::Precommit,
+		height: header.height,
+		round: tendermint::block::Round::try_from(1).unwrap(),
+		block_id: Some(block_id),
+		timestamp: Some(timestamp),
+		validator_address: validator.address,
+		validator_index: ValidatorIndex::try_from(validator_index).unwrap(),
+		signature: tendermint::Signature::new(vec![0_u8; Ed25519Signature::BYTE_SIZE]).unwrap(),
+	};
+
+	let sign_bytes = get_vote_sign_bytes(header.chain_id.clone(), &vote);
+	let public_key =
+		sp_core::ed25519::Public::from_slice(validator.pub_key.to_bytes().as_slice()).unwrap();
+	let signature = AuthoritySignature::from(
+		sp_io::crypto::ed25519_sign(KEY_TYPE, &public_key, &sign_bytes).unwrap(),
+	);
+	vote.signature = tendermint::Signature::new(signature.to_vec()).unwrap();
+
+	vote
+}
+
+pub fn generate_tendermint_header(
+	pre_commits: u32,
+) -> (
+	TendermintClientState<HostFunctionsManager>,
+	ConsensusState,
+	ics07_tendermint::client_message::Header,
+) {
+	let mut validators = vec![];
+	for i in 1..=pre_commits {
+		let public_key =
+			sp_io::crypto::ed25519_generate(KEY_TYPE, Some(format!("//{}", i).as_bytes().to_vec()));
+		let validator = generate_validator(public_key.clone());
+		validators.push(validator);
+	}
+	let next_valset = validator::Set::without_proposer(validators.clone());
+	let header = generate_block_header(
+		validators.clone(),
+		chain::Id::from_str("test-chain").unwrap(),
+		None,
+		2,
+	);
+
+	let spec = simple_iavl::avl::get_proof_spec();
+	// The tendermint light client requires two proof specs one for the iavl tree used to
+	// in constructing the ibc commitment root and another for the tendermint state tree
+	// For the benchmarks we use the same spec for both so we can use one single iavl tree
+	// to generate both proofs.
+	let proof_specs = ProofSpecs::from(vec![spec.clone(), spec]);
+
+	let tendermint_client_state = TendermintClientState::new(
+		ChainId::from_string("test-chain"),
+		TrustThreshold::ONE_THIRD,
+		Duration::new(65000, 0),
+		Duration::new(128000, 0),
+		Duration::new(3, 0),
+		Height::new(0, 1),
+		proof_specs,
+		vec!["".to_string()],
+	)
+	.unwrap();
+
+	let mut commit_sigs = vec![];
+	for (i, validator) in validators.iter().enumerate() {
+		let vote = generate_vote(validator.clone(), i as u32, &header);
+		let commit_sig = tendermint::block::CommitSig::BlockIdFlagCommit {
+			validator_address: vote.validator_address,
+			timestamp: vote.timestamp.unwrap(),
+			signature: vote.signature,
+		};
+
+		commit_sigs.push(commit_sig)
+	}
+
+	let tm_consensus_state = ics07_tendermint::consensus_state::ConsensusState {
+		timestamp: Timestamp::from_nanoseconds(
+			tendermint::Time::now().unix_timestamp_nanos().saturating_add(1_000_000) as u64,
+		)
+		.unwrap()
+		.into_tm_time()
+		.unwrap(),
+		root: sp_core::H256::zero().as_bytes().to_vec().into(),
+		next_validators_hash: next_valset.hash_with::<HostFunctionsManager>(),
+	};
+	let block_id = tendermint::block::Id {
+		hash: header.hash_with::<HostFunctionsManager>(),
+		part_set_header: PartSetHeader::new(1, header.hash_with::<HostFunctionsManager>()).unwrap(),
+	};
+
+	let valset = validator::Set::without_proposer(validators);
+
+	let commit = tendermint::block::Commit {
+		height: tendermint::block::Height::try_from(2u32).unwrap(),
+		round: tendermint::block::Round::try_from(1u32).unwrap(),
+		block_id,
+		signatures: commit_sigs,
+	};
+	let tm_header = ics07_tendermint::client_message::Header {
+		signed_header: SignedHeader::new(header, commit).unwrap(),
+		validator_set: valset.clone(),
+		trusted_height: Height::new(0, 1),
+		trusted_validator_set: valset,
+	};
+
+	(tendermint_client_state, tm_consensus_state, tm_header)
 }
 
 pub(crate) fn create_mock_state() -> (TendermintClientState<HostFunctionsManager>, ConsensusState) {
