@@ -47,7 +47,7 @@ use ibc_proto::{
 		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
 	},
 };
-use ibc_rpc::{IbcApiClient, IbcProof, PacketInfo};
+use ibc_rpc::{IbcApiClient, PacketInfo};
 use ics11_beefy::client_state::ClientState as BeefyClientState;
 use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
@@ -238,7 +238,7 @@ where
 		Ok(response)
 	}
 
-	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<IbcProof, Self::Error> {
+	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
 		let proof = IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_proof(
 			&*self.para_ws_client,
 			at.revision_height as u32,
@@ -246,7 +246,7 @@ where
 		)
 		.await
 		.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
-		Ok(proof.ibc_proof)
+		Ok(proof.proof)
 	}
 
 	async fn query_packet_commitment(
