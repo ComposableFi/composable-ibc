@@ -50,10 +50,10 @@ use sc_client_api::{BlockBackend, ProofProvider, StorageProof};
 use serde::{Deserialize, Serialize};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
-use sp_core::{blake2_256, storage::ChildInfo, H256};
+use sp_core::{blake2_256, storage::ChildInfo};
 use sp_runtime::{
 	generic::BlockId,
-	traits::{BlakeTwo256, Block as BlockT, Header as HeaderT},
+	traits::{Block as BlockT, Header as HeaderT},
 };
 use tendermint_proto::Protobuf;
 pub mod events;
@@ -435,14 +435,14 @@ where
 	H: Hasher,
 {
 	let trie_proof = codec::Decode::decode(&mut &*proof)
-		.map_err(|err| "Failed to decode proof nodes for path: {path}: {err:#?}");
+		.map_err(|_err| "Failed to decode proof nodes for path: {path}: {err:#?}");
 	let combined_proof = StorageProof::new(trie_proof);
-	let memory_db = combined_proof.into_memory_db::<BlakeTwo256>();
-	let trie = TrieDBBuilder::<LayoutV0<BlakeTwo256>>::new(&memory_db, &state_root).build();
+	let memory_db = combined_proof.into_memory_db::<H>();
+	let trie = TrieDBBuilder::<LayoutV0<H>>::new(&memory_db, &state_root).build();
 	let child_root = match trie.get(child_info.prefixed_storage_key().as_slice()) {
 		Ok(r) => match r {
 			Some(r) => {
-				let mut hash: H256 = Default::default();
+				let mut hash = H::Out::default();
 				hash.as_mut().copy_from_slice(&r[..]);
 				hash
 			},
@@ -451,16 +451,22 @@ where
 		Err(e) => return Err(runtime_error_into_rpc_error("Error fetching packets")),
 	};
 
-	let trie_key = vec![child_info.prefixed_storage_key().as_slice()];
-	let child_trie_root_proof = generate_trie_proof::<sp_trie::LayoutV0<BlakeTwo256>, _, _, _>(
+	let binding = child_info.prefixed_storage_key();
+	let binding_slice = binding.as_slice();
+	let trie_key = vec![&binding_slice];
+	let child_trie_root_proof = match generate_trie_proof::<sp_trie::LayoutV0<H>, _, _, _>(
 		&memory_db, state_root, &*trie_key,
-	)
-	.unwrap();
+	) {
+		Ok(proof) => proof,
+		Err(_e) => return Err(runtime_error_into_rpc_error("Error fetching packets")),
+	};
+
 	let child_db = KeySpacedDB::new(&memory_db, child_info.keyspace());
-	let child_trie_proof = generate_trie_proof::<sp_trie::LayoutV0<BlakeTwo256>, _, _, _>(
-		&child_db, child_root, &keys,
-	)
-	.unwrap();
+	let child_trie_proof =
+		match generate_trie_proof::<sp_trie::LayoutV0<H>, _, _, _>(&child_db, child_root, &keys) {
+			Ok(proof) => proof,
+			Err(_e) => return Err(runtime_error_into_rpc_error("Error fetching packets")),
+		};
 	Ok(IbcProof { child_trie_proof, child_trie_root_proof })
 }
 
