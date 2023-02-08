@@ -289,7 +289,7 @@ where
 		self.expired(elapsed)
 	}
 
-	fn encode_to_vec(&self) -> Vec<u8> {
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
 		self.encode_vec()
 	}
 }

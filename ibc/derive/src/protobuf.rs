@@ -79,7 +79,7 @@ impl State {
 				#(#attrs)*
 				#this ::<#gen_params> ::#variant_ident(value) => #proto_any {
 					type_url: ::alloc::string::ToString::to_string(&#type_url),
-					value: value.encode_to_vec(),
+					value: value.encode_to_vec().expect("encode_to_vec failed"),
 				},
 			})
 		});

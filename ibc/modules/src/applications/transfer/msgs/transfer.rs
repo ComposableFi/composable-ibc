@@ -134,9 +134,14 @@ impl TryFrom<Any> for MsgTransfer {
 	}
 }
 
-impl From<MsgTransfer> for Any {
-	fn from(msg: MsgTransfer) -> Self {
-		Self { type_url: TYPE_URL.to_string(), value: msg.encode_vec() }
+impl TryFrom<MsgTransfer> for Any {
+	type Error = Error;
+
+	fn try_from(msg: MsgTransfer) -> Result<Self, Self::Error> {
+		Ok(Self {
+			type_url: TYPE_URL.to_string(),
+			value: msg.encode_vec().map_err(Error::decode_raw_msg)?,
+		})
 	}
 }
 

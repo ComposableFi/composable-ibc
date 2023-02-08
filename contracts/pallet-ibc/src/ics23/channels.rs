@@ -31,7 +31,7 @@ impl<T: Config> Channels<T> {
 		child::put(
 			&ChildInfo::new_default(T::PALLET_PREFIX),
 			&channel_key,
-			&channel_end.encode_vec(),
+			&channel_end.encode_vec().expect("encode channel end"),
 		);
 	}
 

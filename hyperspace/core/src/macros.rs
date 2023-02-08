@@ -72,7 +72,8 @@ macro_rules! process_finality_event {
 						$source.name()
 					),
 				};
-				// insert client update at first position.
+				// todo: we should be able skip update clients that are optional even when messages
+				// is not empty. insert client update at first position.
 				msg_update_client.append(&mut messages);
 
 				if let Some(metrics) = $metrics.as_ref() {

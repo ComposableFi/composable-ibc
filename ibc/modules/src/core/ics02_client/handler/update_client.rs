@@ -84,6 +84,7 @@ where
 		ctx.client_update_time(&client_id, client_state.latest_height()).map_err(|_| {
 			Error::implementation_specific("Could not find update time for client".to_string())
 		})?;
+
 	let duration = now.duration_since(&last_update_timestamp).ok_or_else(|| {
 		Error::invalid_consensus_state_timestamp(latest_consensus_state.timestamp(), now)
 	})?;

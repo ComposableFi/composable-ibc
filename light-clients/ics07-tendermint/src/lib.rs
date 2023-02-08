@@ -26,6 +26,15 @@ extern crate ibc_derive;
 extern crate alloc;
 
 use core::fmt::Debug;
+use tendermint::{
+	crypto::{signature::Verifier, Sha256},
+	merkle::MerkleHash,
+};
+use tendermint_light_client_verifier::{
+	operations::{ProdCommitValidator, ProvidedVotingPowerCalculator},
+	predicates::VerificationPredicates,
+	PredicateVerifier,
+};
 
 pub mod client_def;
 pub mod client_message;
@@ -41,7 +50,9 @@ mod query;
 /// Host functions that allow the light client verify cryptographic proofs in native.
 pub trait HostFunctionsProvider:
 	ics23::HostFunctionsProvider
-	+ tendermint_light_client_verifier::host_functions::CryptoProvider
+	+ Sha256
+	+ MerkleHash
+	+ Verifier
 	+ Debug
 	+ Clone
 	+ Send
@@ -50,6 +61,18 @@ pub trait HostFunctionsProvider:
 	+ Eq
 {
 }
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ProdPredicates<H: HostFunctionsProvider>(core::marker::PhantomData<H>);
+
+impl<H: HostFunctionsProvider> VerificationPredicates for ProdPredicates<H> {
+	type Sha256 = H;
+}
+
+pub type ProdVotingPowerCalculator<H> = ProvidedVotingPowerCalculator<H>;
+
+pub type ProdVerifier<H> =
+	PredicateVerifier<ProdPredicates<H>, ProdVotingPowerCalculator<H>, ProdCommitValidator>;
 
 #[cfg(test)]
 mod tests {
