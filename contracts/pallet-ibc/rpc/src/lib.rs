@@ -14,7 +14,7 @@ use ibc::{
 
 use hash_db::Hasher;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
-use sp_trie::{generate_trie_proof, LayoutV0, Trie, TrieDBBuilder};
+use sp_trie::{generate_trie_proof, KeySpacedDB, LayoutV0, Trie, TrieDBBuilder};
 use std::{collections::HashMap, fmt::Display, str::FromStr, sync::Arc};
 
 use ibc_proto::{
@@ -448,10 +448,13 @@ where
 		})
 		.ok_or_else(|| runtime_error_into_rpc_error("Error fetching packets"))?;
 
-	// TODO: split proofs here
 	let trie_key = vec![child_info.prefixed_storage_key().as_slice()];
-	let child_trie_root_proof = generate_trie_proof(&memory_db, child_root, &*trie_key).unwrap();
-	Ok(IbcProof { child_trie_proof: (), child_trie_root_proof })
+	let child_trie_root_proof = generate_trie_proof(&memory_db, &state_root, &*trie_key).unwrap();
+	let child_db = KeySpacedDB::new(&memory_db, child_info.keyspace());
+	let child_trie = TrieDBBuilder::<LayoutV0<H>>::new(&child_db, &child_root).build();
+	// TODO: which key??
+	let child_trie_proof = generate_trie_proof(&child_db, &child_root, &*vec![]).unwrap();
+	Ok(IbcProof { child_trie_proof, child_trie_root_proof })
 }
 
 /// An implementation of IBC specific RPC methods.
