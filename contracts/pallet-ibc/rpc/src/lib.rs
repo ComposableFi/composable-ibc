@@ -50,10 +50,10 @@ use sc_client_api::{BlockBackend, ProofProvider, StorageProof};
 use serde::{Deserialize, Serialize};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
-use sp_core::{blake2_256, storage::ChildInfo};
+use sp_core::{blake2_256, storage::ChildInfo, H256};
 use sp_runtime::{
 	generic::BlockId,
-	traits::{Block as BlockT, Header as HeaderT},
+	traits::{BlakeTwo256, Block as BlockT, Header as HeaderT},
 };
 use tendermint_proto::Protobuf;
 pub mod events;
@@ -437,22 +437,30 @@ where
 	let trie_proof = codec::Decode::decode(&mut &*proof)
 		.map_err(|err| "Failed to decode proof nodes for path: {path}: {err:#?}");
 	let combined_proof = StorageProof::new(trie_proof);
-	let memory_db = combined_proof.into_memory_db::<H>();
-	let trie = TrieDBBuilder::<LayoutV0<H>>::new(&memory_db, &state_root).build();
-	let child_root = trie
-		.get(child_info.prefixed_storage_key().as_slice())?
-		.map(|r| {
-			let mut hash = H::Out::default();
-			// root is fetched from DB, not writable by runtime, so it's always valid.
-			hash.as_mut().copy_from_slice(&r[..]);
-			hash
-		})
-		.ok_or_else(|| runtime_error_into_rpc_error("Error fetching packets"))?;
+	let memory_db = combined_proof.into_memory_db::<BlakeTwo256>();
+	let trie = TrieDBBuilder::<LayoutV0<BlakeTwo256>>::new(&memory_db, &state_root).build();
+	let child_root = match trie.get(child_info.prefixed_storage_key().as_slice()) {
+		Ok(r) => match r {
+			Some(r) => {
+				let mut hash: H256 = Default::default();
+				hash.as_mut().copy_from_slice(&r[..]);
+				hash
+			},
+			None => return Err(runtime_error_into_rpc_error("Error fetching packets")),
+		},
+		Err(e) => return Err(runtime_error_into_rpc_error("Error fetching packets")),
+	};
 
 	let trie_key = vec![child_info.prefixed_storage_key().as_slice()];
-	let child_trie_root_proof = generate_trie_proof(&memory_db, &state_root, &*trie_key).unwrap();
+	let child_trie_root_proof = generate_trie_proof::<sp_trie::LayoutV0<BlakeTwo256>, _, _, _>(
+		&memory_db, state_root, &*trie_key,
+	)
+	.unwrap();
 	let child_db = KeySpacedDB::new(&memory_db, child_info.keyspace());
-	let child_trie_proof = generate_trie_proof(&child_db, &child_root, &keys).unwrap();
+	let child_trie_proof = generate_trie_proof::<sp_trie::LayoutV0<BlakeTwo256>, _, _, _>(
+		&child_db, child_root, &keys,
+	)
+	.unwrap();
 	Ok(IbcProof { child_trie_proof, child_trie_root_proof })
 }
 
@@ -662,10 +670,14 @@ where
 			.expect_header(at)
 			.map_err(|_| RpcError::Custom("Unknown header".into()))?;
 		let state_root = *header.state_root();
-		let ibc_proof = generate_trie_proofs::<<Block::Header as HeaderT>::Hashing>(
+		let ibc_proof = match generate_trie_proofs::<<Block::Header as HeaderT>::Hashing>(
 			proof, state_root, child_info, keys,
-		)
-		.unwrap();
+		) {
+			Ok(p) => p,
+			Err(e) => {
+				return Err(e);
+			},
+		};
 		Ok(Proof {
 			ibc_proof,
 			height: ibc_proto::ibc::core::client::v1::Height {
@@ -1626,8 +1638,9 @@ where
 					client_state: Some(client_state.into()),
 				})
 			},
-			_ =>
-				Err(runtime_error_into_rpc_error("[ibc_rpc]: Could not find client creation event")),
+			_ => {
+				Err(runtime_error_into_rpc_error("[ibc_rpc]: Could not find client creation event"))
+			},
 		}
 	}
 
