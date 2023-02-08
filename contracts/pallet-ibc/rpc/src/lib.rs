@@ -661,8 +661,11 @@ where
 			.client
 			.expect_header(at)
 			.map_err(|_| RpcError::Custom("Unknown header".into()))?;
-		let state_root: Hasher::Out = header.state_root().into();
-		let ibc_proof = generate_trie_proofs(proof, state_root, child_info, keys).unwrap();
+		let state_root = *header.state_root();
+		let ibc_proof = generate_trie_proofs::<<Block::Header as HeaderT>::Hashing>(
+			proof, state_root, child_info, keys,
+		)
+		.unwrap();
 		Ok(Proof {
 			ibc_proof,
 			height: ibc_proto::ibc::core::client::v1::Height {
@@ -1623,9 +1626,8 @@ where
 					client_state: Some(client_state.into()),
 				})
 			},
-			_ => {
-				Err(runtime_error_into_rpc_error("[ibc_rpc]: Could not find client creation event"))
-			},
+			_ =>
+				Err(runtime_error_into_rpc_error("[ibc_rpc]: Could not find client creation event")),
 		}
 	}
 
