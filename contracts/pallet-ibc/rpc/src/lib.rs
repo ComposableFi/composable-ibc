@@ -102,13 +102,13 @@ impl<Hash: std::fmt::Debug> Display for BlockNumberOrHash<Hash> {
 #[derive(Serialize, Deserialize)]
 pub struct Proof {
 	/// Trie proof
-	pub proof: Vec<u8>,
+	pub ibc_proof: IbcProof,
 	/// Height at which proof was recovered
 	pub height: ibc_proto::ibc::core::client::v1::Height,
 }
 
 /// Proof for main and child trie
-#[derive(codec::Encode, codec::Decode)]
+#[derive(codec::Encode, codec::Decode, Serialize, Deserialize)]
 pub struct IbcProof {
 	child_trie_proof: Vec<Vec<u8>>,
 	child_trie_root_proof: Vec<Vec<u8>>,
@@ -429,6 +429,7 @@ fn generate_trie_proofs<H>(
 	proof: Vec<u8>,
 	state_root: H::Out,
 	child_info: ChildInfo,
+	keys: Vec<Vec<u8>>,
 ) -> Result<IbcProof>
 where
 	H: Hasher,
@@ -451,9 +452,7 @@ where
 	let trie_key = vec![child_info.prefixed_storage_key().as_slice()];
 	let child_trie_root_proof = generate_trie_proof(&memory_db, &state_root, &*trie_key).unwrap();
 	let child_db = KeySpacedDB::new(&memory_db, child_info.keyspace());
-	let child_trie = TrieDBBuilder::<LayoutV0<H>>::new(&child_db, &child_root).build();
-	// TODO: which key??
-	let child_trie_proof = generate_trie_proof(&child_db, &child_root, &*vec![]).unwrap();
+	let child_trie_proof = generate_trie_proof(&child_db, &child_root, &keys).unwrap();
 	Ok(IbcProof { child_trie_proof, child_trie_root_proof })
 }
 
@@ -663,9 +662,9 @@ where
 			.expect_header(at)
 			.map_err(|_| RpcError::Custom("Unknown header".into()))?;
 		let state_root: Hasher::Out = header.state_root().into();
-		let ibc_proofs = generate_trie_proofs(proof, state_root, child_info);
+		let ibc_proof = generate_trie_proofs(proof, state_root, child_info, keys).unwrap();
 		Ok(Proof {
-			proof,
+			ibc_proof,
 			height: ibc_proto::ibc::core::client::v1::Height {
 				revision_number: para_id.into(),
 				revision_height: height as u64,
