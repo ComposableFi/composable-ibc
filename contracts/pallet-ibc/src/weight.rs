@@ -17,7 +17,7 @@ use scale_info::prelude::string::ToString;
 pub trait WeightInfo {
 	fn create_client() -> Weight;
 	fn conn_open_init() -> Weight;
-	fn update_tendermint_client() -> Weight;
+	fn update_tendermint_client(i: u32) -> Weight;
 	fn conn_try_open_tendermint() -> Weight;
 	fn conn_open_ack_tendermint() -> Weight;
 	fn conn_open_confirm_tendermint() -> Weight;
@@ -53,7 +53,7 @@ impl WeightInfo for () {
 		Weight::from_ref_time(0)
 	}
 
-	fn update_tendermint_client() -> Weight {
+	fn update_tendermint_client(_i: u32) -> Weight {
 		Weight::from_ref_time(0)
 	}
 
@@ -204,8 +204,19 @@ where
 							.rsplit_once('-')
 							.map(|(client_type_str, ..)| client_type_str);
 						match client_type {
-							Some(ty) if ty.contains("tendermint") =>
-								<T as Config>::WeightInfo::update_tendermint_client(),
+							Some(ty) if ty.contains("tendermint") => match msg.client_message {
+								AnyClientMessage::Tendermint(client_message) => match client_message {
+									ics07_tendermint::client_message::ClientMessage::Header(header) => {
+										<T as Config>::WeightInfo::update_tendermint_client(header.signed_header.commit.signatures.len() as u32)
+									}
+									ics07_tendermint::client_message::ClientMessage::Misbehaviour(misbehaviour) => {
+										<T as Config>::WeightInfo::update_tendermint_client(misbehaviour.header1.signed_header.commit.signatures.len() as u32).
+											saturating_add(<T as Config>::WeightInfo::update_tendermint_client(misbehaviour.header2.signed_header.commit.signatures.len() as u32))
+									}
+
+								}
+								_ => return Weight::MAX,
+							}
 							Some(ty) if ty.contains("grandpa") => match msg.client_message {
 								AnyClientMessage::Grandpa(client_message) => match client_message {
 									ClientMessage::Header(header) => {
@@ -218,7 +229,25 @@ where
 											justification.commit.precommits.len() as u32,
 										)
 									},
-									ClientMessage::Misbehaviour(_) => Weight::default(),
+									ClientMessage::Misbehaviour(misbehaviour) => {
+										let justification_a =
+											GrandpaJustification::<RelayChainHeader>::decode(
+												&mut &*misbehaviour.first_finality_proof.justification,
+											)
+												.expect("Justification should be valid");
+
+										let justification_b =
+											GrandpaJustification::<RelayChainHeader>::decode(
+												&mut &*misbehaviour.second_finality_proof.justification,
+											)
+												.expect("Justification should be valid");
+
+										<T as Config>::WeightInfo::update_grandpa_client(
+											justification_a.commit.precommits.len() as u32,
+										).saturating_add(<T as Config>::WeightInfo::update_grandpa_client(
+											justification_b.commit.precommits.len() as u32,
+										))
+									},
 								},
 								_ => return Weight::MAX,
 							},

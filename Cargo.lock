@@ -10388,6 +10388,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "sc-consensus-manual-seal"
+version = "0.10.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.33#2dff067e9f7f6f3cc4dbfdaaa97753eccc407689"
+dependencies = [
+ "assert_matches",
+ "async-trait",
+ "futures",
+ "jsonrpsee 0.15.1",
+ "log",
+ "parity-scale-codec",
+ "sc-client-api",
+ "sc-consensus",
+ "sc-consensus-aura",
+ "sc-consensus-babe",
+ "sc-consensus-epochs",
+ "sc-transaction-pool",
+ "sc-transaction-pool-api",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-consensus",
+ "sp-consensus-aura",
+ "sp-consensus-babe",
+ "sp-consensus-slots",
+ "sp-core 6.0.0",
+ "sp-inherents",
+ "sp-keystore 0.12.0",
+ "sp-runtime 6.0.0",
+ "sp-timestamp",
+ "substrate-prometheus-endpoint",
+ "thiserror",
+]
+
+[[package]]
 name = "sc-consensus-slots"
 version = "0.10.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.33#2dff067e9f7f6f3cc4dbfdaaa97753eccc407689"
@@ -11589,6 +11623,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "simnode"
+version = "0.1.0"
+dependencies = [
+ "cumulus-primitives-parachain-inherent",
+ "frame-benchmarking",
+ "frame-system",
+ "grandpa-light-client-primitives",
+ "ibc",
+ "ics10-grandpa",
+ "jsonrpsee 0.15.1",
+ "light-client-common",
+ "pallet-ibc",
+ "pallet-sudo",
+ "pallet-transaction-payment",
+ "parachain-node",
+ "parachain-runtime",
+ "sc-cli",
+ "sc-client-api",
+ "sc-consensus",
+ "sc-consensus-manual-seal",
+ "sc-executor",
+ "sc-service",
+ "sp-api",
+ "sp-consensus-aura",
+ "sp-runtime 6.0.0",
+ "sp-transaction-pool",
+ "substrate-simnode",
+]
+
+[[package]]
 name = "simnode-runtime-apis"
 version = "0.1.0"
 source = "git+https://github.com/polytope-labs/sc-simnode?rev=fcfa2dee4ebdd4652375ec9c4b3eba2a63c2d28f#fcfa2dee4ebdd4652375ec9c4b3eba2a63c2d28f"
@@ -11611,7 +11675,7 @@ dependencies = [
  "bytes",
  "ics23",
  "proptest",
- "rand 0.8.5",
+ "rand 0.4.6",
  "sha2 0.10.6",
  "tendermint",
 ]
@@ -12975,6 +13039,61 @@ dependencies = [
 ]
 
 [[package]]
+name = "substrate-simnode"
+version = "0.1.0"
+source = "git+https://github.com/polytope-labs/sc-simnode?rev=fcfa2dee4ebdd4652375ec9c4b3eba2a63c2d28f#fcfa2dee4ebdd4652375ec9c4b3eba2a63c2d28f"
+dependencies = [
+ "clap 3.2.23",
+ "cumulus-pallet-parachain-system",
+ "cumulus-primitives-parachain-inherent",
+ "cumulus-test-relay-sproof-builder",
+ "frame-system",
+ "futures",
+ "jsonrpsee 0.15.1",
+ "log",
+ "num-traits",
+ "parachain-info",
+ "parity-scale-codec",
+ "polkadot-primitives",
+ "sc-basic-authorship",
+ "sc-cli",
+ "sc-client-api",
+ "sc-consensus",
+ "sc-consensus-babe",
+ "sc-consensus-manual-seal",
+ "sc-executor",
+ "sc-finality-grandpa",
+ "sc-informant",
+ "sc-network",
+ "sc-rpc",
+ "sc-rpc-server",
+ "sc-service",
+ "sc-tracing",
+ "sc-transaction-pool",
+ "sc-transaction-pool-api",
+ "simnode-runtime-apis",
+ "sp-api",
+ "sp-block-builder",
+ "sp-blockchain",
+ "sp-consensus",
+ "sp-consensus-aura",
+ "sp-consensus-babe",
+ "sp-core 6.0.0",
+ "sp-externalities 0.12.0",
+ "sp-finality-grandpa",
+ "sp-inherents",
+ "sp-keyring",
+ "sp-offchain",
+ "sp-runtime 6.0.0",
+ "sp-runtime-interface 6.0.0",
+ "sp-session",
+ "sp-state-machine 0.12.0",
+ "sp-transaction-pool",
+ "sp-wasm-interface 6.0.0",
+ "tokio",
+]
+
+[[package]]
 name = "substrate-state-trie-migration-rpc"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.33#2dff067e9f7f6f3cc4dbfdaaa97753eccc407689"
@@ -13982,9 +14101,9 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.6",
- "rand 0.8.5",
+ "rand 0.4.6",
  "static_assertions",
 ]
 

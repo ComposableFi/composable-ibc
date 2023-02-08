@@ -95,7 +95,10 @@ where
 		if cfg!(any(test, feature = "runtime-benchmarks")) {
 			"tendermint".to_string()
 		} else {
-			"beefy".to_string()
+			match <T as Config>::LIGHT_CLIENT_PROTOCOL {
+				LightClientProtocol::Beefy => "beefy".to_string(),
+				LightClientProtocol::Grandpa => "grandpa".to_string(),
+			}
 		}
 	}
 

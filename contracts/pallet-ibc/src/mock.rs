@@ -175,7 +175,7 @@ impl Config for Test {
 	type NativeAssetId = NativeAssetId;
 	type IbcDenomToAssetIdConversion = ();
 	const PALLET_PREFIX: &'static [u8] = b"ibc/";
-	const LIGHT_CLIENT_PROTOCOL: crate::LightClientProtocol = LightClientProtocol::Beefy;
+	const LIGHT_CLIENT_PROTOCOL: crate::LightClientProtocol = LightClientProtocol::Grandpa;
 	type AccountIdConversion = IbcAccount<AccountId>;
 	type Fungibles = Assets;
 	type ExpectedBlockTime = ExpectedBlockTime;

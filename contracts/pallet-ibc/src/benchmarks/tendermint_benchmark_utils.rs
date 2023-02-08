@@ -61,20 +61,21 @@ use tendermint::{
 	block::{parts::Header as PartSetHeader, signed_header::SignedHeader},
 	chain,
 	signature::Ed25519Signature,
-	validator,
-	validator::Set as ValidatorSet,
-	vote,
+	validator, vote,
 	vote::ValidatorIndex,
 	AppHash, Hash,
 };
 use tendermint_light_client_verifier::types::Validator;
 use tendermint_proto::Protobuf;
 
+pub const TENDERMINT_TIMESTAMP: u64 = 1650894363;
+
 #[derive(codec::Encode)]
 struct ConsensusProofwithHostConsensusStateProof {
 	host_proof: Vec<u8>,
 	connection_proof: Vec<u8>,
 }
+
 /// Create a mock avl implementation that can be used to mock tendermint's iavl tree.
 fn create_avl() -> simple_iavl::avl::AvlTree<Vec<u8>, Vec<u8>> {
 	let mut avl_tree = simple_iavl::avl::AvlTree::new();
@@ -87,28 +88,9 @@ fn create_avl() -> simple_iavl::avl::AvlTree<Vec<u8>, Vec<u8>> {
 }
 
 /// Creates a tendermint header
-/// Light signed header bytes obtained from
-/// `tendermint_testgen::LightBlock::new_default_with_time_and_chain_id("test-chain".to_string(),
-/// Time::now(), 2).generate().unwrap().signed_header.encode_vec().unwrap();`
 fn create_tendermint_header() -> ics07_tendermint::client_message::Header {
-	let raw_validator_set =
-hex_literal::hex!("
-0a3c0a14a6e7b6810df8120580f2a81710e228f454f99c9712220a2050c4a5871ad3379f2879d12cef750d1211633283a9c3730238e6ddf084db4c8a18320a3c0a14c7832263600476fd6ff4c5cb0a86080d0e5f48b212220a20ebe80b7cadea277ac05fb85c7164fe15ebd6873c4a74b3296a462a1026fd9b0f18321864"
-).to_vec();
-	let raw_signed_header =
-hex_literal::hex!("
-0a9c010a02080b120a746573742d636861696e1802220c08abc49a930610a8f39fc1014220e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf984a20e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf985220e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf987214a6e7b6810df8120580f2a81710e228f454f99c9712a202080210011a480a20afc35ec1d9620052c6d71122cb5504ee68802184023a217547ca2248df902fbb122408011220afc35ec1d9620052c6d71122cb5504ee68802184023a217547ca2248df902fbb226808021214a6e7b6810df8120580f2a81710e228f454f99c971a0c08abc49a930610a8f39fc1012240a91380fe3cde0147994b82a0b00b28bd82870df38b2cad5b4ba25c9a4c833cd50f3143ffaa4e924eccd143639fb3decf6b94570aff2c50f1346e88d06555fd0d226808021214c7832263600476fd6ff4c5cb0a86080d0e5f48b21a0c08abc49a930610a8f39fc10122407e2e349d9a0adfc3564654fcf88d328cf50a13179cc5ddaf87dd0e1abd4b45685312def0affbae29e8b7882af3b76b056f81b701bb2e43769fb63fe3696b090f"
-).to_vec();
-	let signed_header = SignedHeader::decode_vec(&raw_signed_header).unwrap();
-
-	let validator_set = ValidatorSet::decode_vec(&raw_validator_set).unwrap();
-
-	ics07_tendermint::client_message::Header {
-		signed_header,
-		validator_set: validator_set.clone(),
-		trusted_height: Height::new(0, 1),
-		trusted_validator_set: validator_set,
-	}
+	let (.., header) = generate_tendermint_header(2, 2);
+	header
 }
 
 fn generate_validator(public_key: sp_core::ed25519::Public) -> validator::Info {
@@ -139,20 +121,17 @@ fn generate_block_header(
 
 	let valset = validator::Set::without_proposer(validators.clone());
 	let next_valset = validator::Set::without_proposer(validators);
-
-	let time = Timestamp::from_nanoseconds(
-		tendermint::Time::now().unix_timestamp_nanos().saturating_add(1_000_000) as u64,
-	)
-	.unwrap()
-	.into_tm_time()
-	.unwrap();
+	let time = core::time::Duration::from_millis(TENDERMINT_TIMESTAMP.saturating_mul(1000));
+	let time = Timestamp::from_nanoseconds(time.as_nanos() as u64)
+		.unwrap()
+		.into_tm_time()
+		.unwrap();
 
 	let last_block_id = last_block_id_hash
 		.map(|hash| tendermint::block::Id { hash, part_set_header: Default::default() });
 
 	let header = tendermint::block::Header {
 		// block version in Tendermint-go is hardcoded with value 11
-		// so we do the same with MBT for now for compatibility
 		version: tendermint::block::header::Version { block: 11, app: 0 },
 		chain_id,
 		height: tendermint::block::Height::try_from(height).unwrap(),
@@ -215,6 +194,7 @@ fn generate_vote(
 
 pub fn generate_tendermint_header(
 	pre_commits: u32,
+	height: u64,
 ) -> (
 	TendermintClientState<HostFunctionsManager>,
 	ConsensusState,
@@ -232,7 +212,7 @@ pub fn generate_tendermint_header(
 		validators.clone(),
 		chain::Id::from_str("test-chain").unwrap(),
 		None,
-		2,
+		height,
 	);
 
 	let spec = simple_iavl::avl::get_proof_spec();
@@ -265,17 +245,17 @@ pub fn generate_tendermint_header(
 
 		commit_sigs.push(commit_sig)
 	}
-
+	let time = core::time::Duration::from_millis(TENDERMINT_TIMESTAMP.saturating_mul(1000)) -
+		core::time::Duration::from_secs(10 * 60);
 	let tm_consensus_state = ics07_tendermint::consensus_state::ConsensusState {
-		timestamp: Timestamp::from_nanoseconds(
-			tendermint::Time::now().unix_timestamp_nanos().saturating_add(1_000_000) as u64,
-		)
-		.unwrap()
-		.into_tm_time()
-		.unwrap(),
+		timestamp: Timestamp::from_nanoseconds(time.as_nanos() as u64)
+			.unwrap()
+			.into_tm_time()
+			.unwrap(),
 		root: sp_core::H256::zero().as_bytes().to_vec().into(),
 		next_validators_hash: next_valset.hash_with::<HostFunctionsManager>(),
 	};
+
 	let block_id = tendermint::block::Id {
 		hash: header.hash_with::<HostFunctionsManager>(),
 		part_set_header: PartSetHeader::new(1, header.hash_with::<HostFunctionsManager>()).unwrap(),
@@ -300,32 +280,8 @@ pub fn generate_tendermint_header(
 }
 
 pub(crate) fn create_mock_state() -> (TendermintClientState<HostFunctionsManager>, ConsensusState) {
-	let spec = simple_iavl::avl::get_proof_spec();
-	// The tendermint light client requires two proof specs one for the iavl tree used to
-	// in constructing the ibc commitment root and another for the tendermint state tree
-	// For the benchmarks we use the same spec for both so we can use one single iavl tree
-	// to generate both proofs.
-	let proof_specs = ProofSpecs::from(vec![spec.clone(), spec]);
-	let mock_client_state = TendermintClientState::new(
-		ChainId::from_string("test-chain"),
-		TrustThreshold::ONE_THIRD,
-		Duration::new(65000, 0),
-		Duration::new(128000, 0),
-		Duration::new(3, 0),
-		Height::new(0, 1),
-		proof_specs,
-		vec!["".to_string()],
-	)
-	.unwrap();
-
-	// Light signed header bytes obtained from
-	// `tendermint_testgen::LightBlock::new_default_with_time_and_chain_id("test-chain".to_string(),
-	// Time::now(), 1 ).generate().unwrap().signed_header.encode_vec().unwrap();`
-	let raw_signed_header = hex_literal::hex!("0a9c010a02080b120a746573742d636861696e1801220c08c9b99a93061088cdfc87014220e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf984a20e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf985220e4d2147e1c5994daf958eafa8413706f1c75e1a2813a2cd0d32876a25d9bcf987214a6e7b6810df8120580f2a81710e228f454f99c9712a202080110011a480a20219a163917d9297e8f15bff09da55f82dc4594002fd3b0ade63971c1c7768333122408011220219a163917d9297e8f15bff09da55f82dc4594002fd3b0ade63971c1c7768333226808021214a6e7b6810df8120580f2a81710e228f454f99c971a0c08c9b99a93061088cdfc870122401ba8b679b2cbf5cd7b166a704fa299c8b2161b96da49068a25bf84141242aa3550ee2b2f7ad78ef520a8d723267864dcf7f814382d4418bed783746732d45a0e226808021214c7832263600476fd6ff4c5cb0a86080d0e5f48b21a0c08c9b99a93061088cdfc870122406cb04246b99e1813aae77b6b8328728b0763a5396eef72b3300b81814671ccb8d44d0e28cdcf818a3002f837c09c5b6cddefc4ba36f6408e51eb4ed9d95fbd08").to_vec();
-	let signed_header = SignedHeader::decode_vec(&raw_signed_header).unwrap();
-	let mock_cs_state =
-		ics07_tendermint::consensus_state::ConsensusState::from(signed_header.header);
-	(mock_client_state, mock_cs_state)
+	let (client_state, cs_state, ..) = generate_tendermint_header(2, 2);
+	(client_state, cs_state)
 }
 
 pub(crate) fn create_mock_beefy_client_state(
@@ -346,6 +302,29 @@ pub(crate) fn create_mock_beefy_client_state(
 	let timestamp = ibc::timestamp::Timestamp::from_nanoseconds(1).unwrap();
 	let timestamp = timestamp.into_tm_time().unwrap();
 	let cs_state = BeefyConsensusState { timestamp, root: vec![].into() };
+	(client_state, cs_state)
+}
+
+pub(crate) fn create_mock_grandpa_client_state() -> (
+	ics10_grandpa::client_state::ClientState<HostFunctionsManager>,
+	ics10_grandpa::consensus_state::ConsensusState,
+) {
+	let client_state = ics10_grandpa::client_state::ClientState {
+		relay_chain: Default::default(),
+		latest_relay_hash: Default::default(),
+		latest_relay_height: 1,
+		frozen_height: None,
+		latest_para_height: 0,
+		para_id: 2087,
+		current_set_id: 0,
+		current_authorities: vec![],
+		_phantom: Default::default(),
+	};
+
+	let timestamp = ibc::timestamp::Timestamp::from_nanoseconds(1).unwrap();
+	let timestamp = timestamp.into_tm_time().unwrap();
+	let cs_state =
+		ics10_grandpa::consensus_state::ConsensusState { timestamp, root: vec![].into() };
 	(client_state, cs_state)
 }
 
@@ -379,7 +358,7 @@ where
 	<T as frame_system::Config>::BlockNumber: From<u32>,
 {
 	let client_id = ClientId::new("07-tendermint", 0).unwrap();
-	let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
+	let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 	let commitment_prefix: CommitmentPrefix = "ibc/".as_bytes().to_vec().try_into().unwrap();
 	let chain_a_counterparty = Counterparty::new(
 		counterparty_client_id.clone(),
@@ -398,7 +377,7 @@ where
 		delay_period,
 	);
 
-	let (client_state, cs_state) = create_mock_beefy_client_state();
+	let (client_state, cs_state) = create_mock_grandpa_client_state();
 	let id: u32 = parachain_info::Pallet::<T>::parachain_id().into();
 	let consensus_path = format!(
 		"{}",
@@ -415,10 +394,10 @@ where
 	let path = format!("{}", ConnectionsPath(ConnectionId::new(1))).as_bytes().to_vec();
 	avl_tree.insert(path.clone(), connection_end.encode_vec().unwrap());
 	avl_tree
-		.insert(consensus_path.clone(), AnyConsensusState::Beefy(cs_state).encode_vec().unwrap());
+		.insert(consensus_path.clone(), AnyConsensusState::Grandpa(cs_state).encode_vec().unwrap());
 	avl_tree.insert(
 		client_path.clone(),
-		AnyClientState::Beefy(client_state.clone()).encode_vec().unwrap(),
+		AnyClientState::Grandpa(client_state.clone()).encode_vec().unwrap(),
 	);
 	let root = match *avl_tree.root_hash().unwrap() {
 		Hash::Sha256(root) => root.to_vec(),
@@ -465,7 +444,7 @@ where
 		cs_state,
 		MsgConnectionOpenTry {
 			client_id,
-			client_state: Some(AnyClientState::Beefy(client_state)),
+			client_state: Some(AnyClientState::Grandpa(client_state)),
 			counterparty: chain_a_counterparty,
 			counterparty_versions: vec![ConnVersion::default()],
 			proofs: Proofs::new(
@@ -495,9 +474,9 @@ where
 	<T as frame_system::Config>::BlockNumber: From<u32>,
 {
 	let client_id = ClientId::new("07-tendermint", 0).unwrap();
-	let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
+	let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 	let commitment_prefix: CommitmentPrefix = "ibc/".as_bytes().to_vec().try_into().unwrap();
-	let delay_period = core::time::Duration::from_nanos(1000);
+	let delay_period = core::time::Duration::from_secs(1000);
 	let chain_b_connection_counterparty =
 		Counterparty::new(client_id, Some(ConnectionId::new(0)), commitment_prefix);
 	let mut avl_tree = create_avl();
@@ -509,7 +488,7 @@ where
 		delay_period,
 	);
 
-	let (client_state, cs_state) = create_mock_beefy_client_state();
+	let (client_state, cs_state) = create_mock_grandpa_client_state();
 	let para_id: u32 = parachain_info::Pallet::<T>::parachain_id().into();
 	let consensus_path = format!(
 		"{}",
@@ -526,10 +505,10 @@ where
 	let path = format!("{}", ConnectionsPath(ConnectionId::new(1))).as_bytes().to_vec();
 	avl_tree.insert(path.clone(), connection_end.encode_vec().unwrap());
 	avl_tree
-		.insert(consensus_path.clone(), AnyConsensusState::Beefy(cs_state).encode_vec().unwrap());
+		.insert(consensus_path.clone(), AnyConsensusState::Grandpa(cs_state).encode_vec().unwrap());
 	avl_tree.insert(
 		client_path.clone(),
-		AnyClientState::Beefy(client_state.clone()).encode_vec().unwrap(),
+		AnyClientState::Grandpa(client_state.clone()).encode_vec().unwrap(),
 	);
 	let root = match *avl_tree.root_hash().unwrap() {
 		Hash::Sha256(root) => root.to_vec(),
@@ -577,7 +556,7 @@ where
 		MsgConnectionOpenAck {
 			connection_id: ConnectionId::new(0),
 			counterparty_connection_id: ConnectionId::new(1),
-			client_state: Some(AnyClientState::Beefy(client_state)),
+			client_state: Some(AnyClientState::Grandpa(client_state)),
 			proofs: Proofs::new(
 				buf.try_into().unwrap(),
 				Some(client_buf.try_into().unwrap()),
@@ -600,9 +579,9 @@ where
 
 pub(crate) fn create_conn_open_confirm<T: Config>() -> (ConsensusState, MsgConnectionOpenConfirm) {
 	let client_id = ClientId::new("07-tendermint", 0).unwrap();
-	let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
+	let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 	let commitment_prefix: CommitmentPrefix = "ibc/".as_bytes().to_vec().try_into().unwrap();
-	let delay_period = core::time::Duration::from_nanos(1000);
+	let delay_period = core::time::Duration::from_secs(1000);
 	let chain_b_connection_counterparty =
 		Counterparty::new(client_id, Some(ConnectionId::new(0)), commitment_prefix);
 	let mut avl_tree = create_avl();
