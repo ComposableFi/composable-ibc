@@ -22,7 +22,9 @@ use hyperspace_primitives::{
 	TestProvider,
 };
 use ibc::{
-	applications::transfer::{msgs::transfer::MsgTransfer, Amount, PrefixedCoin, VERSION},
+	applications::transfer::{
+		events::Event::Transfer, msgs::transfer::MsgTransfer, Amount, PrefixedCoin, VERSION,
+	},
 	core::{
 		ics04_channel::{
 			channel::{ChannelEnd, Order, State},
@@ -349,11 +351,13 @@ where
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
+	log::info!(target: "hyperspace", "Sending transfer from {}", chain_b.name());
+	let (previous_balance, ..) = send_transfer(chain_b, chain_a, channel_id, None).await;
+	assert_send_transfer(chain_b, previous_balance, 120).await;
+	log::info!(target: "hyperspace", "Sending transfer from {}", chain_a.name());
 	let (previous_balance, ..) = send_transfer(chain_a, chain_b, channel_id, None).await;
 	assert_send_transfer(chain_a, previous_balance, 120).await;
 	// now send from chain b.
-	let (previous_balance, ..) = send_transfer(chain_b, chain_a, channel_id, None).await;
-	assert_send_transfer(chain_b, previous_balance, 120).await;
 	log::info!(target: "hyperspace", "🚀🚀 Token Transfer successful with connection delay");
 }
 
@@ -531,7 +535,7 @@ where
 	B::Error: From<A::Error>,
 {
 	let (handle, channel_id, channel_b, _connection_id) =
-		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(60 * 5)).await; // 5 mins delay
+		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(30)).await; // 5 mins
 	handle.abort();
 	// Set channel whitelist and restart relayer loop
 	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
@@ -543,6 +547,7 @@ where
 			.await
 			.unwrap()
 	});
+	// let channel_id = ChannelId::new(0);
 	send_packet_with_connection_delay(chain_a, chain_b, channel_id).await;
 	handle.abort()
 }

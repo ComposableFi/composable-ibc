@@ -16,6 +16,7 @@
 
 use serde_derive::{Deserialize, Serialize};
 use tendermint::abci::{Event as AbciEvent, EventAttribute};
+use tracing::log;
 
 use crate::{
 	core::{
@@ -120,7 +121,7 @@ pub fn try_from_tx(event: &tendermint::abci::Event) -> Option<IbcEvent> {
 				})
 				.ok()
 		},
-		_ => None,
+		err => None,
 	}
 }
 

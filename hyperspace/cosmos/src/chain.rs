@@ -141,7 +141,7 @@ where
 			// println!("Message {}: {}", msg.type_url, hex::encode(&msg.value));
 		}
 		let hash = self.submit_call(messages).await?;
-		println!("Submitted. Tx hash: {}", hash);
+		log::debug!(target: "hyperspace", "Submitted. Tx hash: {}", hash);
 		Ok(Self::TransactionId { hash })
 	}
 

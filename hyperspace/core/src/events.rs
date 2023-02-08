@@ -422,8 +422,10 @@ pub async fn parse_events(
 				messages.push(msg)
 			},
 			IbcEvent::SendPacket(send_packet) => {
+				log::info!("Sending packet");
 				#[cfg(feature = "testing")]
 				if !packet_relay_status() {
+					log::warn!("Skipping packet relay due to testing feature");
 					continue
 				}
 				// can we send this packet?
@@ -454,6 +456,10 @@ pub async fn parse_events(
 					})?)?;
 				if !connection_end.delay_period().is_zero() {
 					// We can't send this packet immediately because of connection delays
+					log::warn!(
+						"Skipping packet relay because of connection delays {:?}",
+						connection_end.delay_period()
+					);
 					continue
 				}
 				let seq = u64::from(send_packet.packet.sequence);
@@ -478,6 +484,7 @@ pub async fn parse_events(
 				let value = msg.encode_vec().expect("could not encode message");
 				let msg = Any { value, type_url: msg.type_url() };
 				messages.push(msg);
+				log::info!("Sending packet {:?}", packet);
 			},
 			IbcEvent::WriteAcknowledgement(write_ack) => {
 				let port_id = &write_ack.packet.source_port.clone();

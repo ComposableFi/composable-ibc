@@ -54,7 +54,6 @@ use crate::{
 	client_state::ClientState,
 	consensus_state::ConsensusState,
 	error::Error,
-	mock::Crypto,
 	HostFunctionsProvider,
 };
 use ibc::{core::ics23_commitment::specs::ProofSpecs, prelude::*, timestamp::Timestamp, Height};
@@ -597,6 +596,7 @@ where
 
 #[test]
 fn test_vrfy() {
+	use crate::mock::Crypto;
 	// path: MerklePath { key_path: ["ibc/", "connections/connection-0"] },
 	// value: 0a0930382d7761736d2d3012230a0131120d4f524445525f4f524445524544120f4f524445525f554e4f524445524544180222270a0f30372d74656e6465726d696e742d30120c636f6e6e656374696f6e2d301a060a046962632f,
 	// merkle_proof:

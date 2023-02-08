@@ -133,6 +133,7 @@ pub async fn get_timeout_proof_height(
 	}
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum VerifyDelayOn {
 	Source,
 	Sink,
@@ -149,6 +150,7 @@ pub async fn verify_delay_passed(
 	proof_height: Height,
 	verify_delay_on: VerifyDelayOn,
 ) -> Result<bool, anyhow::Error> {
+	log::debug!(target: "hyperspace", "Verifying delay passed for source: {source_height}, {source_timestamp}, sink: {sink_height}, {sink_timestamp}, connection delay: {}, proof height: {proof_height}, verify delay on: {verify_delay_on:?}", connection_delay.as_secs());
 	match verify_delay_on {
 		VerifyDelayOn::Source => {
 			if let Ok((sink_client_update_height, sink_client_update_time)) =
@@ -156,18 +158,14 @@ pub async fn verify_delay_passed(
 			{
 				let block_delay =
 					calculate_block_delay(connection_delay, source.expected_block_time());
-				if !has_delay_elapsed(
+				has_delay_elapsed(
 					source_timestamp,
 					source_height,
 					sink_client_update_time,
 					sink_client_update_height, // shouldn't be the latest.
 					connection_delay,
 					block_delay,
-				)? {
-					Ok(false)
-				} else {
-					Ok(true)
-				}
+				)
 			} else {
 				Ok(false)
 			}
@@ -178,18 +176,14 @@ pub async fn verify_delay_passed(
 			{
 				let block_delay =
 					calculate_block_delay(connection_delay, sink.expected_block_time());
-				if !has_delay_elapsed(
+				has_delay_elapsed(
 					sink_timestamp,
 					sink_height,
 					source_client_update_time,
 					source_client_update_height,
 					connection_delay,
 					block_delay,
-				)? {
-					Ok(false)
-				} else {
-					Ok(true)
-				}
+				)
 			} else {
 				Ok(false)
 			}

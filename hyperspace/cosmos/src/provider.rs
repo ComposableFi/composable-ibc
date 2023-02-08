@@ -71,7 +71,7 @@ use pallet_ibc::light_clients::{
 	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
 };
 use primitives::{mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType};
-use std::{pin::Pin, str::FromStr, time::Duration};
+use std::{pin::Pin, str::FromStr, thread, time::Duration};
 use tendermint::block::Height as TmHeight;
 use tendermint_rpc::{
 	endpoint::tx::Response,
@@ -81,11 +81,16 @@ use tendermint_rpc::{
 };
 use tonic::IntoRequest;
 // use primitives::Pa
-use ibc::{core::ics04_channel::events::try_from_tx, events::IbcEventType};
+use ibc::{
+	applications::transfer::{BaseDenom, TracePath},
+	core::ics04_channel::events::try_from_tx,
+	events::IbcEventType,
+};
 use ibc_proto::ibc::core::client::v1::QueryConsensusStatesRequest;
 use ics08_wasm::msg::MsgPushNewWasmCode;
 pub use tendermint::Hash;
 use tokio::time::sleep;
+use tracing_subscriber::fmt::time;
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
@@ -893,36 +898,52 @@ where
 
 	async fn query_client_update_time_and_height(
 		&self,
-		_client_id: ClientId,
-		_client_height: Height,
+		client_id: ClientId,
+		client_height: Height,
 	) -> Result<(Height, Timestamp), Self::Error> {
-		// let mut grpc_client =
-		// ibc_proto::ibc::core::client::v1::query_client::QueryClient::connect( 	self.grpc_url.
-		// clone().to_string(), )
-		// // ibc_proto::ibc::core::channel::v1::query_client::QueryClient::connect(
-		// // 	self.grpc_url.clone().to_string(),
-		// // )
-		// .await
-		// .map_err(|e| Error::from(format!("{:?}", e)))?;
-		// // QueryClient
-		// let request = tonic::Request::new(QueryConsensusStatesRequest {
-		// 	client_id: "".to_string(),
-		// 	pagination: None,
-		// });
-		//
-		// let response = grpc_client
-		// 	.consensus_state(request)
-		// 	.await
-		// 	.map_err(|e| Error::from(format!("{:?}", e)))?
-		// 	.into_inner();
-		// let channels = QueryChannelsResponse {
-		// 	channels: response.channels,
-		// 	pagination: response.pagination,
-		// 	height: response.height,
-		// };
-		//
-		// Ok(channels)
-		Ok((Height::new(2000, 1), Timestamp::from_nanoseconds(1).unwrap()))
+		log::debug!(
+			target: "hyperspace_cosmos",
+			"Querying client update time and height for client {:?} at height {:?}",
+			client_id,
+			client_height
+		);
+
+		let string = client_height.to_string();
+		let query_str = Query::eq("update_client.client_id", client_id.to_string());
+
+		let response = self
+			.rpc_client
+			.tx_search(
+				query_str,
+				false,
+				1,
+				1, // get only the first Tx matching the query
+				Order::Ascending,
+			)
+			.await
+			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+
+		for tx in response.txs {
+			for ev in &tx.tx_result.events {
+				let height = tx.height.value();
+				let ev = ibc_event_try_from_abci_event(ev, Height::new(1, height));
+				match ev {
+					Ok(IbcEvent::UpdateClient(p)) => {
+						let timestamp = self.query_timestamp_at(height).await?;
+						let (h, _) = self.latest_height_and_timestamp().await?;
+
+						return Ok((
+							// TODO: check that `h.revision_number` is correct to use here
+							Height::new(h.revision_number, height),
+							Timestamp::from_nanoseconds(timestamp).unwrap(),
+						))
+					},
+					_ => (),
+				}
+			}
+		}
+
+		Err(Error::from("not found".to_string()))
 	}
 
 	async fn query_host_consensus_state_proof(
@@ -934,6 +955,7 @@ where
 
 	async fn query_ibc_balance(&self) -> Result<Vec<PrefixedCoin>, Self::Error> {
 		let denom = "ibc/47B97D8FF01DA03FCB2F4B1FFEC931645F254E21EF465FA95CBA6888CB964DC4";
+		// let denom = "transfer/channel-0/ibc";
 		let mut grpc_client = ibc_proto::cosmos::bank::v1beta1::query_client::QueryClient::connect(
 			self.grpc_url.clone().to_string(),
 		)
@@ -957,7 +979,11 @@ where
 			.ok_or_else(|| Error::from(format!("No balance for denom {}", denom)))?;
 
 		Ok(vec![PrefixedCoin {
-			denom: PrefixedDenom::from_str(balance.denom.as_str()).unwrap(),
+			denom: PrefixedDenom {
+				trace_path: TracePath::default(),
+				base_denom: BaseDenom::from_str(denom).unwrap(),
+			},
+			// denom: PrefixedDenom::from_str(balance.denom.as_str()).unwrap(),
 			amount: Amount::from_str(balance.amount.as_str()).unwrap(),
 		}])
 	}

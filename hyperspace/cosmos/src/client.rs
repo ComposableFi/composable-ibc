@@ -282,7 +282,7 @@ where
 		// Simulate transaction
 		let res = simulate_tx(self.grpc_url.clone(), tx, tx_bytes.clone()).await?;
 		res.result
-			.map(|r| println!("Simulated transaction: events: {:?}\nlogs: {}", r.events, r.log));
+			.map(|r| log::error!(target: "hyperspace", "Simulated transaction: events: {:?}\nlogs: {}", r.events, r.log));
 		// println!("res = {:?}", &res);
 
 		// if res.result
@@ -291,7 +291,6 @@ where
 		// Broadcast transaction
 		let hash = broadcast_tx(&self.rpc_client, tx_bytes).await?;
 		log::info!(target: "hyperspace-light", "🤝 Transaction sent with hash: {:?}", hash);
-		log::info!("🤝 Transaction sent with hash: {:?}", hash);
 
 		// wait for confirmation
 		confirm_tx(&self.rpc_client, hash).await

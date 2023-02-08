@@ -62,6 +62,7 @@ pub async fn query_ready_and_timed_out_packets(
 			})?)?;
 		// we're only interested in open or closed channels
 		if !matches!(source_channel_end.state, State::Open | State::Closed) {
+			log::debug!(target: "hyperspace", "Skipping channel {:?}/{:?} because it is not open or closed", channel_id, port_id.clone());
 			continue
 		}
 		let connection_id = source_channel_end
@@ -177,6 +178,7 @@ pub async fn query_ready_and_timed_out_packets(
 				{
 					proof_height
 				} else {
+					log::debug!(target: "hyperspace", "Skipping packet {:?} as no timeout proof height could be found", packet);
 					continue
 				};
 
@@ -194,6 +196,7 @@ pub async fn query_ready_and_timed_out_packets(
 				)
 				.await?
 				{
+					log::debug!(target: "hyperspace", "Skipping packet {:?} as connection delay has not passed", packet);
 					continue
 				}
 
@@ -215,12 +218,14 @@ pub async fn query_ready_and_timed_out_packets(
 			// Since we have no reference point for when this channel was closed so we can't
 			// calculate connection delays yet
 			if sink_channel_end.state == State::Closed {
+				log::debug!(target: "hyperspace", "Skipping packet {:?} as channel is closed on sink", packet);
 				continue
 			}
 
 			#[cfg(feature = "testing")]
 			// If packet relay status is paused skip
 			if !packet_relay_status() {
+				log::warn!("Skipping packet relay due to testing feature");
 				continue
 			}
 
@@ -230,6 +235,7 @@ pub async fn query_ready_and_timed_out_packets(
 			// creation height on source chain
 			if send_packet.height > latest_source_height_on_sink.revision_height {
 				// Sink does not have client update required to prove recv packet message
+				log::debug!(target: "hyperspace", "Skipping packet {:?} as sink does not have client update required to prove recv packet message", packet);
 				continue
 			}
 
@@ -245,6 +251,7 @@ pub async fn query_ready_and_timed_out_packets(
 			{
 				proof_height
 			} else {
+				log::debug!(target: "hyperspace", "Skipping packet {:?} as no proof height could be found", packet);
 				continue
 			};
 
@@ -261,6 +268,7 @@ pub async fn query_ready_and_timed_out_packets(
 			)
 			.await?
 			{
+				log::debug!(target: "hyperspace", "Skipping packet {:?} as connection delay has not passed", packet);
 				continue
 			}
 
@@ -280,6 +288,7 @@ pub async fn query_ready_and_timed_out_packets(
 		.await?;
 		// Get acknowledgement messages
 		if source_channel_end.state == State::Closed {
+			log::debug!(target: "hyperspace", "Skipping acknowledgements for channel {:?} as channel is closed on source", channel_id);
 			continue
 		}
 		let acknowledgements = source.query_recv_packets(channel_id, port_id, acks).await?;
@@ -289,6 +298,7 @@ pub async fn query_ready_and_timed_out_packets(
 				ack
 			} else {
 				// Packet has no valid acknowledgement, skip
+				log::debug!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as packet has no valid acknowledgement", packet);
 				continue
 			};
 
@@ -298,6 +308,7 @@ pub async fn query_ready_and_timed_out_packets(
 			// acknowledgement creation height on source chain
 			if acknowledgement.height > latest_source_height_on_sink.revision_height {
 				// Sink does not have client update required to prove acknowledgement packet message
+				log::debug!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as sink does not have client update required to prove acknowledgement packet message", packet);
 				continue
 			}
 
@@ -313,6 +324,7 @@ pub async fn query_ready_and_timed_out_packets(
 			{
 				proof_height
 			} else {
+				log::debug!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as no proof height could be found", packet);
 				continue
 			};
 
@@ -329,6 +341,7 @@ pub async fn query_ready_and_timed_out_packets(
 			)
 			.await?
 			{
+				log::debug!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as connection delay has not passed", packet);
 				continue
 			}
 

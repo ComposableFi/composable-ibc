@@ -25,6 +25,12 @@ use hyperspace_parachain::{
 };
 use hyperspace_primitives::{utils::create_clients, IbcProvider};
 use hyperspace_testsuite::ibc_messaging_with_connection_delay;
+use ibc::{
+	applications::transfer::PrefixedDenom,
+	core::{ics02_client::height::Height, ics24_host::identifier::ClientId},
+};
+use sp_core::hashing::sha2_256;
+use std::str::FromStr;
 use subxt::{
 	config::{
 		extrinsic_params::Era,
@@ -32,6 +38,7 @@ use subxt::{
 	},
 	Error, OnlineClient,
 };
+use tendermint_proto::Protobuf;
 
 #[derive(Debug, Clone)]
 pub struct Args {
@@ -142,11 +149,18 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		},
 		wasm_code_id: None,
 	};
+	// cfd2199578332b5fd859f3b76cb0b29757c6b52c5df79566cdc3598039dbe43e
 
 	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.unwrap();
 
 	let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
-	let code_id = chain_b.upload_wasm(wasm_data).await.unwrap();
+	let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
+		Ok(code_id) => code_id,
+		Err(e) => {
+			log::error!(target: "hyperspace", "Failed to upload wasm: {:?}", e);
+			sha2_256(&wasm_data).to_vec()
+		},
+	};
 	// let code_id =
 	// 	hex::decode("cfd2199578332b5fd859f3b76cb0b29757c6b52c5df79566cdc3598039dbe43e").unwrap();
 	let code_id_str = hex::encode(code_id);
@@ -156,6 +170,24 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	let mut chain_b_wrapped = AnyConfig::Cosmos(config_b).into_client().await.unwrap();
 
 	let AnyChain::Parachain(chain_a) = &mut chain_a_wrapped else { unreachable!() };
+
+	// let t = chain_a
+	// 	.query_client_update_time_and_height(
+	// 		ClientId::from_str("07-tendermint-0").unwrap(),
+	// 		Height::new(1, 46),
+	// 	)
+	// 	.await
+	// 	.unwrap();
+	// println!("{:?}", t);
+	// let t = chain_b
+	// 	.query_client_update_time_and_height(
+	// 		ClientId::from_str("08-wasm-0").unwrap(),
+	// 		Height::new(2000, 20),
+	// 	)
+	// 	.await
+	// 	.unwrap();
+	// log::info!("{:?}", t);
+	// std::process::exit(0);
 
 	// Wait until for parachains to start producing blocks
 	log::info!(target: "hyperspace", "Waiting for  block production from parachain");
@@ -180,7 +212,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
 		chain_a_wrapped.set_client_id(clients_on_b[0].clone());
 		chain_b_wrapped.set_client_id(clients_on_b[0].clone());
-		return (chain_a_wrapped, chain_b_wrapped)
+		return (chain_b_wrapped, chain_a_wrapped)
 	}
 
 	let (client_b, client_a) = create_clients(&chain_b_wrapped, &chain_a_wrapped).await.unwrap();
@@ -189,10 +221,23 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	(chain_b_wrapped, chain_a_wrapped)
 }
 
+#[test]
+fn tst() {
+	// let denom = "ibc/47B97D8FF01DA03FCB2F4B1FFEC931645F254E21EF465FA95CBA6888CB964DC4";
+	let denom = "transfer/channel-0/ibc";
+	PrefixedDenom::try_from(denom.to_string()).unwrap();
+}
+
 #[tokio::test]
 #[ignore]
 async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
+	// let h1 = Height::decode_vec(&hex::decode("0801102e").unwrap()).unwrap();
+	// let h2 = Height::decode_vec(&hex::decode("08d00f100a").unwrap()).unwrap();
+	// println!("{:?} {:?}", h1, h2);
+	// let h1 = Height::decode_vec(&hex::decode("0801102e").unwrap()).unwrap();
+	// t = 1675774128035000000
+
 	let (mut chain_a, mut chain_b) = setup_clients().await;
 	// Run tests sequentially
 

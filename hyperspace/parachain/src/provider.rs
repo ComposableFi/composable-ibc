@@ -498,6 +498,12 @@ where
 		client_id: ClientId,
 		client_height: Height,
 	) -> Result<(Height, Timestamp), Self::Error> {
+		log::debug!(
+			target: "hyperspace_parachain",
+			"Querying client update time and height for client {:?} at height {:?}",
+			client_id,
+			client_height
+		);
 		let response = IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_client_update_time_and_height(
 			&*self.para_ws_client,
 			client_id.to_string(),

@@ -334,7 +334,7 @@ pub trait IbcProvider {
 
 /// Provides an interface that allows us run the hyperspace-testsuite
 /// with [`Chain`] implementations.
-#[cfg(feature = "testing")]
+#[cfg(any(feature = "testing", test))]
 #[async_trait::async_trait]
 pub trait TestProvider: Chain + Clone + 'static {
 	/// Initiate an ibc transfer on chain.

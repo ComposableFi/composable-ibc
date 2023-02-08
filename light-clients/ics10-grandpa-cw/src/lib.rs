@@ -1,9 +1,11 @@
 extern crate alloc;
+extern crate core;
 
 mod channel;
 mod client;
 mod connection;
 mod context;
+mod context_impl;
 pub mod contract;
 mod error;
 pub mod helpers;
