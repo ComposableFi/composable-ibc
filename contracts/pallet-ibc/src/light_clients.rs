@@ -28,7 +28,7 @@ use sp_runtime::{
 use tendermint::{
 	crypto::{
 		signature::{Error as TendermintCryptoError, Verifier},
-		Sha256,
+		Sha256 as TendermintSha256,
 	},
 	merkle::{Hash, MerkleHash, NonIncremental, HASH_SIZE},
 	PublicKey, Signature,
@@ -66,7 +66,7 @@ impl ics23::HostFunctionsProvider for HostFunctionsManager {
 	}
 }
 
-impl Sha256 for HostFunctionsManager {
+impl TendermintSha256 for HostFunctionsManager {
 	fn digest(data: impl AsRef<[u8]>) -> [u8; HASH_SIZE] {
 		sp_io::hashing::sha2_256(data.as_ref())
 	}
