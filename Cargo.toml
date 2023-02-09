@@ -45,9 +45,6 @@ members = [
      "utils/parachain-node",
      "utils/parachain-node/runtime",
 #     "utils/simnode"
-
-    "frame/merkle-mountain-range",
-    "frame/merkle-mountain-range/rpc",
 ]
 
 [patch."https://github.com/paritytech/jsonrpsee"]

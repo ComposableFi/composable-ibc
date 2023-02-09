@@ -45,9 +45,9 @@ subxt-generated = { path = "../../utils/subxt/generated" }
 
 beefy-primitives = {  git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34", package = "sp-beefy" }
 beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
-pallet-mmr = { path = "../../frame/merkle-mountain-range" }
+pallet-mmr = { package = "pallet-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 pallet-mmr-primitives = { package = "sp-mmr-primitives", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
-pallet-mmr-rpc = { path = "../../frame/merkle-mountain-range/rpc", package = "pallet-mmr-rpc" }
+pallet-mmr-rpc = { package = "mmr-gadget", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
