@@ -21,7 +21,7 @@
 extern crate alloc;
 extern crate core;
 
-use alloc::{string::ToString, vec, vec::Vec};
+use alloc::{string::ToString, vec::Vec};
 use anyhow::anyhow;
 use codec::Compact;
 use core::{
@@ -39,10 +39,11 @@ use ibc::{
 	},
 	Height,
 };
+
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
 use sp_storage::ChildInfo;
-use sp_trie::StorageProof;
+use sp_trie::{verify_trie_proof, LayoutV0};
 
 pub mod state_machine;
 
@@ -50,6 +51,13 @@ pub mod state_machine;
 pub trait HostFunctions: Clone + Send + Sync + Eq + Debug + Default {
 	/// Blake2-256 hashing implementation
 	type BlakeTwo256: hash_db::Hasher<Out = H256> + Debug + 'static;
+}
+
+/// Proof for main and child trie
+#[derive(codec::Encode, codec::Decode, Serialize, Deserialize)]
+pub struct IbcProof {
+	child_trie_proof: Vec<Vec<u8>>,
+	child_trie_root_proof: Vec<Vec<u8>>,
 }
 
 /// Membership proof verification via child trie host function
@@ -65,25 +73,37 @@ where
 	H: hash_db::Hasher<Out = H256> + Debug + 'static,
 {
 	if root.as_bytes().len() != 32 {
-		return Err(anyhow!("invalid commitment root length: {}", root.as_bytes().len()))
+		return Err(anyhow!("invalid commitment root length: {}", root.as_bytes().len()));
 	}
 	let path: Path = path.into();
 	let path = path.to_string();
 	let mut key = prefix.as_bytes().to_vec();
 	key.extend(path.as_bytes());
-	let trie_proof: Vec<Vec<u8>> = codec::Decode::decode(&mut &*proof.as_bytes())
+	let ibc_proof: IbcProof = codec::Decode::decode(&mut &*proof.as_bytes())
 		.map_err(|err| anyhow!("Failed to decode proof nodes for path: {path}: {err:#?}"))?;
-	let proof = StorageProof::new(trie_proof);
 	let root = H256::from_slice(root.as_bytes());
 	let child_info = ChildInfo::new_default(prefix.as_bytes());
-	state_machine::read_child_proof_check::<H, _>(
-		root.into(),
-		proof,
-		child_info,
-		vec![(key, Some(value))],
-	)
-	.map_err(|err| anyhow!("Failed to verify proof for path: {path}, error: {err:#?}"))?;
-	Ok(())
+	let binding = child_info.prefixed_storage_key();
+	let trie_key = binding.as_slice();
+	// todo: get child root
+	let child_root_proof = &ibc_proof.child_trie_root_proof;
+	let child_proof = &ibc_proof.child_trie_proof;
+
+	let verify_root = verify_trie_proof::<LayoutV0<H>, _, _, _>(
+		&root.into(),
+		child_root_proof,
+		&[(trie_key, Some(&value))],
+	);
+	let verify_path = verify_trie_proof::<LayoutV0<H>, _, _, _>(
+		&root.into(),
+		child_proof,
+		&[(key, Some(&value))],
+	);
+
+	match (verify_root, verify_path) {
+		(Ok(_), Ok(_)) => Ok(()),
+		_ => Err(anyhow!("verification failed")),
+	}
 }
 
 /// Non-membership proof verification via child trie host function
@@ -98,20 +118,37 @@ where
 	H: hash_db::Hasher<Out = H256> + Debug + 'static,
 {
 	if root.as_bytes().len() != 32 {
-		return Err(anyhow!("invalid commitment root length: {}", root.as_bytes().len()))
+		return Err(anyhow!("invalid commitment root length: {}", root.as_bytes().len()));
 	}
 	let path: Path = path.into();
 	let path = path.to_string();
 	let mut key = prefix.as_bytes().to_vec();
 	key.extend(path.as_bytes());
-	let trie_proof: Vec<Vec<u8>> =
-		codec::Decode::decode(&mut &*proof.as_bytes()).map_err(anyhow::Error::msg)?;
-	let proof = StorageProof::new(trie_proof);
+	let ibc_proof: IbcProof = codec::Decode::decode(&mut &*proof.as_bytes())
+		.map_err(|err| anyhow!("Failed to decode proof nodes for path: {path}: {err:#?}"))?;
 	let root = H256::from_slice(root.as_bytes());
 	let child_info = ChildInfo::new_default(prefix.as_bytes());
-	state_machine::read_child_proof_check::<H, _>(root, proof, child_info, vec![(key, None)])
-		.map_err(anyhow::Error::msg)?;
-	Ok(())
+	let binding = child_info.prefixed_storage_key();
+	let trie_key = binding.as_slice();
+	// todo: get child root
+	let child_root_proof = &ibc_proof.child_trie_root_proof;
+	let child_proof = &ibc_proof.child_trie_proof;
+
+	let verify_root = verify_trie_proof::<LayoutV0<H>, _, _, _>(
+		&root.into(),
+		child_root_proof,
+		&[(trie_key, None::<Vec<u8>>)],
+	);
+	let verify_path = verify_trie_proof::<LayoutV0<H>, _, _, _>(
+		&root.into(),
+		child_proof,
+		&[(key, None::<Vec<u8>>)],
+	);
+
+	match (verify_root, verify_path) {
+		(Ok(_), Ok(_)) => Ok(()),
+		_ => Err(anyhow!("verification failed")),
+	}
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -190,7 +227,7 @@ impl FromStr for RelayChain {
 pub fn decode_timestamp_extrinsic(ext: &Vec<u8>) -> Result<u64, anyhow::Error> {
 	// Timestamp extrinsic should be the first inherent and hence the first extrinsic
 	// https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
-	// Decoding from the [2..] because the timestamp inmherent has two extra bytes before the call
+	// Decoding from the [2..] because the timestamp inherently has two extra bytes before the call
 	// that represents the call length and the extrinsic version.
 	let (_, _, timestamp): (u8, u8, Compact<u64>) = codec::Decode::decode(&mut &ext[2..])
 		.map_err(|err| anyhow!("Failed to decode extrinsic: {err}"))?;
@@ -223,7 +260,7 @@ where
 	if !(current_time == earliest_time || current_time.after(&earliest_time)) {
 		return Err(anyhow!(
 			"Not enough time elapsed current time: {current_time}, earliest time: {earliest_time}"
-		))
+		));
 	}
 
 	let earliest_height = processed_height.add(delay_period_blocks);
