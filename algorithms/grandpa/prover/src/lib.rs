@@ -285,7 +285,7 @@ where
 
 		// we are interested only in the blocks where our parachain header changes.
 		let para_storage_key = parachain_header_storage_key(self.para_id);
-		let keys = vec![para_storage_key.as_bytes_ref()];
+		let keys = vec![para_storage_key.as_ref()];
 		let mut parachain_headers_with_proof = BTreeMap::<H256, ParachainHeaderProofs>::default();
 
 		let change_set = self
