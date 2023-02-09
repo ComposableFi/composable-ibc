@@ -363,11 +363,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		// leaf_idx = (leaves_count - 1) - (current_block_num - block_num);
 		let best_block_num = <frame_system::Pallet<T>>::block_number();
 		let blocks_diff = best_block_num.checked_sub(&block_num).ok_or_else(|| {
-			primitives::Error::BlockNumToLeafIndex
+			primitives::Error::InvalidLeafIndex
 				.log_debug("The provided block_number is greater than the best block number.")
 		})?;
 		let blocks_diff_as_leaf_idx = blocks_diff.try_into().map_err(|_| {
-			primitives::Error::BlockNumToLeafIndex
+			primitives::Error::InvalidLeafIndex
 				.log_debug("The `blocks_diff` couldn't be converted to `LeafIndex`.")
 		})?;
 
@@ -375,7 +375,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			.checked_sub(1)
 			.and_then(|last_leaf_idx| last_leaf_idx.checked_sub(blocks_diff_as_leaf_idx))
 			.ok_or_else(|| {
-				primitives::Error::BlockNumToLeafIndex
+				primitives::Error::InvalidLeafIndex
 					.log_debug("There aren't enough leaves in the chain.")
 			})?;
 		Ok(leaf_idx)
