@@ -21,7 +21,7 @@ sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0
 sp-core-hashing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34"}
 beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
-pallet-mmr = { path = "../../../frame/merkle-mountain-range" }
+pallet-mmr = { package = "pallet-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 pallet-mmr-primitives = { package = "sp-mmr-primitives", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 beefy-primitives = { package = "sp-beefy", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
@@ -34,7 +34,7 @@ jsonrpsee-core = { version = "0.15.1", features = ["async-client"] }
 subxt = { git = "https://github.com/ComposableFi/subxt", rev = "7a54d51ffe1d2daf785d13040276e5cbe30c29ed", features = ["substrate-compat"] }
 hex-literal = { version = "0.3.4" }
 serde_json = { version = "1.0.74" }
-pallet-mmr-rpc = { path = "../../../frame/merkle-mountain-range/rpc" }
+pallet-mmr-rpc = { package = "mmr-gadget", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 hex = { version = "0.4.3" }
 beefy-light-client-primitives = {  path = "../primitives" }
