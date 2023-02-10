@@ -151,7 +151,7 @@ pub mod pallet {
 		traits::{
 			fungibles::{Inspect, Mutate, Transfer},
 			tokens::{AssetId, Balance},
-			ReservableCurrency, UnixTime,
+			Contains, ReservableCurrency, UnixTime,
 		},
 	};
 	use frame_system::pallet_prelude::*;
@@ -246,6 +246,8 @@ pub mod pallet {
 		/// Amount to be reserved for client and connection creation
 		#[pallet::constant]
 		type SpamProtectionDeposit: Get<Self::Balance>;
+		/// Whitelist mechanism - likely to be temporary while we test the bridge
+		type Whitelist: Contains<<Self as frame_system::Config>::AccountId>;
 	}
 
 	#[pallet::pallet]
