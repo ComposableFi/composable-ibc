@@ -89,21 +89,29 @@ where
 	let child_root_proof = &ibc_proof.child_trie_root_proof;
 	let child_proof = &ibc_proof.child_trie_proof;
 
-	let verify_root_result = verify_trie_proof::<LayoutV0<H>, _, _, _>(
+	let child_trie_root = match verify_trie_proof::<LayoutV0<H>, _, _, _>(
 		&root.into(),
 		child_root_proof,
 		&[(trie_key, Some(&value))],
-	);
-	let verify_path_result = verify_trie_proof::<LayoutV0<H>, _, _, _>(
-		&root.into(),
+	) {
+		Ok(()) => Ok(()),
+		Err(sp_trie::VerifyError::RootMismatch(child_trie_root)) => Err(Ok(child_trie_root)),
+		Err(err) => Err(Err(err)),
+	};
+
+	let child_trie_root = match child_trie_root {
+		Ok(()) => return Err(anyhow!("Unexpected child trie root")),
+		Err(Ok(child_trie_root)) => child_trie_root,
+		Err(Err(_err)) => return Err(anyhow!("Child root extraction failed")),
+	};
+
+	match verify_trie_proof::<LayoutV0<H>, _, _, _>(
+		&child_trie_root.into(),
 		child_proof,
 		&[(key, Some(&value))],
-	);
-
-	match (verify_root_result, verify_path_result) {
-		(Ok(_), Ok(_)) => Ok(()),
-		(Err(_e), _) => Err(anyhow!("root verification failed")),
-		(_, Err(_e)) => Err(anyhow!("path verification failed")),
+	) {
+		Ok(_) => Ok(()),
+		Err(_e) => Err(anyhow!("verification failed")),
 	}
 }
 
