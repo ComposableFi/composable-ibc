@@ -1,46 +1,26 @@
-/// ListAllInterfacesRequest is the request type of the ListAllInterfaces RPC.
+/// ConfigRequest defines the request structure for the Config gRPC query.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ListAllInterfacesRequest {}
-/// ListAllInterfacesResponse is the response type of the ListAllInterfaces RPC.
+pub struct ConfigRequest {}
+/// ConfigResponse defines the response structure for the Config gRPC query.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ListAllInterfacesResponse {
-    /// interface_names is an array of all the registered interfaces.
-    #[prost(string, repeated, tag = "1")]
-    pub interface_names: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-}
-/// ListImplementationsRequest is the request type of the ListImplementations
-/// RPC.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ListImplementationsRequest {
-    /// interface_name defines the interface to query the implementations for.
+pub struct ConfigResponse {
     #[prost(string, tag = "1")]
-    pub interface_name: ::prost::alloc::string::String,
-}
-/// ListImplementationsResponse is the response type of the ListImplementations
-/// RPC.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ListImplementationsResponse {
-    #[prost(string, repeated, tag = "1")]
-    pub implementation_message_names: ::prost::alloc::vec::Vec<
-        ::prost::alloc::string::String,
-    >,
+    pub minimum_gas_price: ::prost::alloc::string::String,
 }
 /// Generated client implementations.
 #[cfg(feature = "client")]
-pub mod reflection_service_client {
+pub mod service_client {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
     use tonic::codegen::http::Uri;
-    /// ReflectionService defines a service for interface reflection.
+    /// Service defines the gRPC querier service for node related queries.
     #[derive(Debug, Clone)]
-    pub struct ReflectionServiceClient<T> {
+    pub struct ServiceClient<T> {
         inner: tonic::client::Grpc<T>,
     }
-    impl ReflectionServiceClient<tonic::transport::Channel> {
+    impl ServiceClient<tonic::transport::Channel> {
         /// Attempt to create a new client by connecting to a given endpoint.
         pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
         where
@@ -51,7 +31,7 @@ pub mod reflection_service_client {
             Ok(Self::new(conn))
         }
     }
-    impl<T> ReflectionServiceClient<T>
+    impl<T> ServiceClient<T>
     where
         T: tonic::client::GrpcService<tonic::body::BoxBody>,
         T::Error: Into<StdError>,
@@ -69,7 +49,7 @@ pub mod reflection_service_client {
         pub fn with_interceptor<F>(
             inner: T,
             interceptor: F,
-        ) -> ReflectionServiceClient<InterceptedService<T, F>>
+        ) -> ServiceClient<InterceptedService<T, F>>
         where
             F: tonic::service::Interceptor,
             T::ResponseBody: Default,
@@ -83,7 +63,7 @@ pub mod reflection_service_client {
                 http::Request<tonic::body::BoxBody>,
             >>::Error: Into<StdError> + Send + Sync,
         {
-            ReflectionServiceClient::new(InterceptedService::new(inner, interceptor))
+            ServiceClient::new(InterceptedService::new(inner, interceptor))
         }
         /// Compress requests with the given encoding.
         ///
@@ -100,12 +80,11 @@ pub mod reflection_service_client {
             self.inner = self.inner.accept_compressed(encoding);
             self
         }
-        /// ListAllInterfaces lists all the interfaces registered in the interface
-        /// registry.
-        pub async fn list_all_interfaces(
+        /// Config queries for the operator configuration.
+        pub async fn config(
             &mut self,
-            request: impl tonic::IntoRequest<super::ListAllInterfacesRequest>,
-        ) -> Result<tonic::Response<super::ListAllInterfacesResponse>, tonic::Status> {
+            request: impl tonic::IntoRequest<super::ConfigRequest>,
+        ) -> Result<tonic::Response<super::ConfigResponse>, tonic::Status> {
             self.inner
                 .ready()
                 .await
@@ -117,28 +96,7 @@ pub mod reflection_service_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/cosmos.base.reflection.v1beta1.ReflectionService/ListAllInterfaces",
-            );
-            self.inner.unary(request.into_request(), path, codec).await
-        }
-        /// ListImplementations list all the concrete types that implement a given
-        /// interface.
-        pub async fn list_implementations(
-            &mut self,
-            request: impl tonic::IntoRequest<super::ListImplementationsRequest>,
-        ) -> Result<tonic::Response<super::ListImplementationsResponse>, tonic::Status> {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/cosmos.base.reflection.v1beta1.ReflectionService/ListImplementations",
+                "/cosmos.base.node.v1beta1.Service/Config",
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
@@ -146,34 +104,27 @@ pub mod reflection_service_client {
 }
 /// Generated server implementations.
 #[cfg(feature = "server")]
-pub mod reflection_service_server {
+pub mod service_server {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
-    /// Generated trait containing gRPC methods that should be implemented for use with ReflectionServiceServer.
+    /// Generated trait containing gRPC methods that should be implemented for use with ServiceServer.
     #[async_trait]
-    pub trait ReflectionService: Send + Sync + 'static {
-        /// ListAllInterfaces lists all the interfaces registered in the interface
-        /// registry.
-        async fn list_all_interfaces(
+    pub trait Service: Send + Sync + 'static {
+        /// Config queries for the operator configuration.
+        async fn config(
             &self,
-            request: tonic::Request<super::ListAllInterfacesRequest>,
-        ) -> Result<tonic::Response<super::ListAllInterfacesResponse>, tonic::Status>;
-        /// ListImplementations list all the concrete types that implement a given
-        /// interface.
-        async fn list_implementations(
-            &self,
-            request: tonic::Request<super::ListImplementationsRequest>,
-        ) -> Result<tonic::Response<super::ListImplementationsResponse>, tonic::Status>;
+            request: tonic::Request<super::ConfigRequest>,
+        ) -> Result<tonic::Response<super::ConfigResponse>, tonic::Status>;
     }
-    /// ReflectionService defines a service for interface reflection.
+    /// Service defines the gRPC querier service for node related queries.
     #[derive(Debug)]
-    pub struct ReflectionServiceServer<T: ReflectionService> {
+    pub struct ServiceServer<T: Service> {
         inner: _Inner<T>,
         accept_compression_encodings: EnabledCompressionEncodings,
         send_compression_encodings: EnabledCompressionEncodings,
     }
     struct _Inner<T>(Arc<T>);
-    impl<T: ReflectionService> ReflectionServiceServer<T> {
+    impl<T: Service> ServiceServer<T> {
         pub fn new(inner: T) -> Self {
             Self::from_arc(Arc::new(inner))
         }
@@ -207,9 +158,9 @@ pub mod reflection_service_server {
             self
         }
     }
-    impl<T, B> tonic::codegen::Service<http::Request<B>> for ReflectionServiceServer<T>
+    impl<T, B> tonic::codegen::Service<http::Request<B>> for ServiceServer<T>
     where
-        T: ReflectionService,
+        T: Service,
         B: Body + Send + 'static,
         B::Error: Into<StdError> + Send + 'static,
     {
@@ -225,26 +176,22 @@ pub mod reflection_service_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
-                "/cosmos.base.reflection.v1beta1.ReflectionService/ListAllInterfaces" => {
+                "/cosmos.base.node.v1beta1.Service/Config" => {
                     #[allow(non_camel_case_types)]
-                    struct ListAllInterfacesSvc<T: ReflectionService>(pub Arc<T>);
-                    impl<
-                        T: ReflectionService,
-                    > tonic::server::UnaryService<super::ListAllInterfacesRequest>
-                    for ListAllInterfacesSvc<T> {
-                        type Response = super::ListAllInterfacesResponse;
+                    struct ConfigSvc<T: Service>(pub Arc<T>);
+                    impl<T: Service> tonic::server::UnaryService<super::ConfigRequest>
+                    for ConfigSvc<T> {
+                        type Response = super::ConfigResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::ListAllInterfacesRequest>,
+                            request: tonic::Request<super::ConfigRequest>,
                         ) -> Self::Future {
                             let inner = self.0.clone();
-                            let fut = async move {
-                                (*inner).list_all_interfaces(request).await
-                            };
+                            let fut = async move { (*inner).config(request).await };
                             Box::pin(fut)
                         }
                     }
@@ -253,47 +200,7 @@ pub mod reflection_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = ListAllInterfacesSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
-                    };
-                    Box::pin(fut)
-                }
-                "/cosmos.base.reflection.v1beta1.ReflectionService/ListImplementations" => {
-                    #[allow(non_camel_case_types)]
-                    struct ListImplementationsSvc<T: ReflectionService>(pub Arc<T>);
-                    impl<
-                        T: ReflectionService,
-                    > tonic::server::UnaryService<super::ListImplementationsRequest>
-                    for ListImplementationsSvc<T> {
-                        type Response = super::ListImplementationsResponse;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::ListImplementationsRequest>,
-                        ) -> Self::Future {
-                            let inner = self.0.clone();
-                            let fut = async move {
-                                (*inner).list_implementations(request).await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = ListImplementationsSvc(inner);
+                        let method = ConfigSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
@@ -320,7 +227,7 @@ pub mod reflection_service_server {
             }
         }
     }
-    impl<T: ReflectionService> Clone for ReflectionServiceServer<T> {
+    impl<T: Service> Clone for ServiceServer<T> {
         fn clone(&self) -> Self {
             let inner = self.inner.clone();
             Self {
@@ -330,7 +237,7 @@ pub mod reflection_service_server {
             }
         }
     }
-    impl<T: ReflectionService> Clone for _Inner<T> {
+    impl<T: Service> Clone for _Inner<T> {
         fn clone(&self) -> Self {
             Self(self.0.clone())
         }
@@ -340,8 +247,7 @@ pub mod reflection_service_server {
             write!(f, "{:?}", self.0)
         }
     }
-    impl<T: ReflectionService> tonic::server::NamedService
-    for ReflectionServiceServer<T> {
-        const NAME: &'static str = "cosmos.base.reflection.v1beta1.ReflectionService";
+    impl<T: Service> tonic::server::NamedService for ServiceServer<T> {
+        const NAME: &'static str = "cosmos.base.node.v1beta1.Service";
     }
 }
