@@ -647,6 +647,7 @@ pub mod pallet {
 				receiver: Signer::from_str(&to).map_err(|_| Error::<T>::Utf8Error)?,
 				timeout_height,
 				timeout_timestamp,
+				memo: Default::default(),
 			};
 			let is_sender_source = is_sender_chain_source(
 				msg.source_port.clone(),

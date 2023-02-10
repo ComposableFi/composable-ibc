@@ -1080,6 +1080,7 @@ where
 			receiver: to,
 			timeout_height,
 			timeout_timestamp,
+			memo: Default::default(),
 		};
 		Ok(msg)
 	}
