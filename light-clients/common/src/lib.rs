@@ -89,20 +89,21 @@ where
 	let child_root_proof = &ibc_proof.child_trie_root_proof;
 	let child_proof = &ibc_proof.child_trie_proof;
 
-	let verify_root = verify_trie_proof::<LayoutV0<H>, _, _, _>(
+	let verify_root_result = verify_trie_proof::<LayoutV0<H>, _, _, _>(
 		&root.into(),
 		child_root_proof,
 		&[(trie_key, Some(&value))],
 	);
-	let verify_path = verify_trie_proof::<LayoutV0<H>, _, _, _>(
+	let verify_path_result = verify_trie_proof::<LayoutV0<H>, _, _, _>(
 		&root.into(),
 		child_proof,
 		&[(key, Some(&value))],
 	);
 
-	match (verify_root, verify_path) {
+	match (verify_root_result, verify_path_result) {
 		(Ok(_), Ok(_)) => Ok(()),
-		_ => Err(anyhow!("verification failed")),
+		(Err(_e), _) => Err(anyhow!("root verification failed")),
+		(_, Err(_e)) => Err(anyhow!("path verification failed")),
 	}
 }
 
@@ -134,20 +135,21 @@ where
 	let child_root_proof = &ibc_proof.child_trie_root_proof;
 	let child_proof = &ibc_proof.child_trie_proof;
 
-	let verify_root = verify_trie_proof::<LayoutV0<H>, _, _, _>(
+	let verify_child_trie_root_result = verify_trie_proof::<LayoutV0<H>, _, _, _>(
 		&root.into(),
 		child_root_proof,
 		&[(trie_key, None::<Vec<u8>>)],
 	);
-	let verify_path = verify_trie_proof::<LayoutV0<H>, _, _, _>(
+	let verify_child_trie_result = verify_trie_proof::<LayoutV0<H>, _, _, _>(
 		&root.into(),
 		child_proof,
 		&[(key, None::<Vec<u8>>)],
 	);
 
-	match (verify_root, verify_path) {
+	match (verify_child_trie_root_result, verify_child_trie_result) {
 		(Ok(_), Ok(_)) => Ok(()),
-		_ => Err(anyhow!("verification failed")),
+		(Err(_e), _) => Err(anyhow!("child trie root verification failed")),
+		(_, Err(_e)) => Err(anyhow!("child trie verification failed")),
 	}
 }
 

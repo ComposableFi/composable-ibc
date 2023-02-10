@@ -1,8 +1,8 @@
 #![warn(missing_docs)]
 
 //! IBC RPC Implementation.
-
 use codec::Encode;
+use ibc::protobuf::Protobuf;
 use ibc::{
 	core::{
 		ics03_connection::connection::ConnectionEnd,
@@ -55,7 +55,6 @@ use sp_runtime::{
 	generic::BlockId,
 	traits::{Block as BlockT, Header as HeaderT},
 };
-use tendermint_proto::Protobuf;
 pub mod events;
 use events::filter_map_pallet_event;
 
