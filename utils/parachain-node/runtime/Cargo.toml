@@ -83,8 +83,8 @@ cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus", ta
 pallet-collator-selection = { git = "https://github.com/paritytech/cumulus", tag = "parachains-v9360", default-features = false }
 parachain-info = { git = "https://github.com/paritytech/cumulus", tag = "parachains-v9360", default-features = false }
 
-asset-registry = { package = "orml-asset-registry", git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.34" }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.34" }
+asset-registry = { package = "orml-asset-registry", git = "https://github.com/obsessed-cake/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.34" }
+orml-traits = { git = "https://github.com/obsessed-cake/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.34" }
 
 simnode-apis = { package = "simnode-runtime-apis", git = "https://github.com/polytope-labs/sc-simnode", rev = "fcfa2dee4ebdd4652375ec9c4b3eba2a63c2d28f", default-features = false }
 
