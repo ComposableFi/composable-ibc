@@ -78,8 +78,8 @@ default-features = false
 chrono = "0.4.19"
 hex = "0.4.3"
 hex-literal = { version = "0.3.4" }
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.33" }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.33" }
+orml-tokens = { git = "https://github.com/obsessed-cake/open-runtime-module-library", branch = "polkadot-v0.9.34" }
+orml-traits = { git = "https://github.com/obsessed-cake/open-runtime-module-library", branch = "polkadot-v0.9.34" }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 prost = { version = "0.11" }
 serde = { version = "1.0" }
