@@ -31,7 +31,7 @@ use primitives::{
 	ParachainHeadersWithFinalityProof,
 };
 use serde::{Deserialize, Serialize};
-use sp_core::{hexdisplay::AsBytesRef, H256};
+use sp_core::H256;
 use sp_finality_grandpa::{AuthorityId, AuthoritySignature};
 use sp_runtime::traits::{One, Zero};
 use std::{
