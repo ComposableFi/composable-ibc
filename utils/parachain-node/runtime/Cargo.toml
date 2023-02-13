@@ -86,7 +86,7 @@ parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polk
 asset-registry = { package = "orml-asset-registry", git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.36" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.36" }
 
-simnode-apis = { package = "simnode-runtime-apis", git = "https://github.com/polytope-labs/sc-simnode", rev = "fcfa2dee4ebdd4652375ec9c4b3eba2a63c2d28f", default-features = false }
+simnode-apis = { package = "simnode-runtime-apis", git = "https://github.com/polytope-labs/sc-simnode", rev = "a7f6c574398a7fe8d48b5b8177e68426d70b2ba5", default-features = false }
 
 
 [features]
@@ -146,7 +146,8 @@ std = [
 	"xcm/std",
 	"asset-registry/std",
 	"orml-traits/std",
-	"simnode-apis/std"
+	"simnode-apis/std",
+	"frame-benchmarking/std",
 ]
 
 runtime-benchmarks = [
