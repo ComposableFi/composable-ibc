@@ -229,10 +229,6 @@ where
 			},
 			Ok(packet_data) => {
 				let denom = full_ibc_denom(packet, packet_data.token.clone());
-				if let Err(_) = <T::HandleMemo>::execute_memo(&packet_data) {
-					// If executing memo failed do we revert the successful ics20 transfer or do we
-				} else {
-				}
 				Pallet::<T>::deposit_event(Event::<T>::TokenReceived {
 					from: packet_data.sender.to_string().as_bytes().to_vec(),
 					to: packet_data.receiver.to_string().as_bytes().to_vec(),
