@@ -123,7 +123,7 @@ where
 		let asset_id = api::runtime_types::primitives::currency::CurrencyId(asset_id);
 
 		// Submit extrinsic to parachain node
-		let call = api::tx().ibc().transfer(params, asset_id, amount.into());
+		let call = api::tx().ibc().transfer(params, asset_id, amount.into(), None);
 
 		self.submit_call(call).await?;
 

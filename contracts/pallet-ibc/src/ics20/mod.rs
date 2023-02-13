@@ -408,12 +408,12 @@ pub fn full_ibc_denom(packet: &Packet, mut token: PrefixedCoin) -> String {
 
 use ibc::applications::transfer::error::Error as Ics20Error;
 
-pub trait HandleMemo {
-	fn execute_memo(packet_data: &PacketData) -> Result<(), Ics20Error>;
+pub trait HandleMemo<T: Config> {
+	fn execute_memo(packet_data: &PacketData, receiver: T::AccountId) -> Result<(), Ics20Error>;
 }
 
-impl HandleMemo for () {
-	fn execute_memo(_packet_data: &PacketData) -> Result<(), Ics20Error> {
+impl<T: Config> HandleMemo<T> for () {
+	fn execute_memo(_packet_data: &PacketData, _receiver: T::AccountId) -> Result<(), Ics20Error> {
 		Ok(())
 	}
 }

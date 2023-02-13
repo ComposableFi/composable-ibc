@@ -250,7 +250,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type SpamProtectionDeposit: Get<Self::Balance>;
 		/// Handle Ics20 Memo
-		type HandleMemo: HandleMemo;
+		type HandleMemo: HandleMemo<Self>;
 		/// Memo Message types supported by the runtime
 		type MemoMessage: codec::Codec
 			+ FromStr

@@ -16,6 +16,7 @@ use ibc::{
 	},
 	signer::Signer,
 };
+use sp_runtime::traits::IdentifyAccount;
 
 /// This middleware should be used to wrap ics20 to execute memo
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -145,7 +146,12 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 			serde_json::from_slice(packet.data.as_slice()).map_err(|e| {
 				Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
 			})?;
-		<T as Config>::HandleMemo::execute_memo(&packet_data)
+		let receiver = <T as Config>::AccountIdConversion::try_from(packet_data.receiver.clone())
+			.map_err(|_| {
+				Error::implementation_specific(format!("Failed to parse receiver account"))
+			})?
+			.into_account();
+		<T as Config>::HandleMemo::execute_memo(&packet_data, receiver)
 			.map_err(|e| Error::implementation_specific(format!("Failed to execute memo {:?}", e)))
 	}
 
