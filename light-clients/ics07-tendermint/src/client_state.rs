@@ -361,7 +361,7 @@ mod tests {
 	use ibc::{prelude::*, Height};
 	use test_log::test;
 
-	use ibc_proto::ics23::ProofSpec as Ics23ProofSpec;
+	use ibc_proto::cosmos::ics23::v1::ProofSpec as Ics23ProofSpec;
 	use tendermint_rpc::endpoint::abci_query::AbciQuery;
 
 	use crate::{client_state::ClientState, mock::Crypto};

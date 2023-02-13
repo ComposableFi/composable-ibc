@@ -462,6 +462,7 @@ where
 			)
 			.unwrap(),
 			delay_period,
+			host_consensus_state_proof: vec![],
 			signer: Signer::from_str(MODULE_ID).unwrap(),
 		},
 	)
