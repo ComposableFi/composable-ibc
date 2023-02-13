@@ -208,6 +208,7 @@ pub async fn parse_events(
 							None,
 							proof_height,
 						)?,
+						host_consensus_state_proof: vec![],
 						version: connection_end
 							.versions()
 							.get(0)
