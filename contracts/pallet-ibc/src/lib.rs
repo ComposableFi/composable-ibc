@@ -513,6 +513,8 @@ pub mod pallet {
 		ClientUpdateNotFound,
 		/// Error Freezing client
 		ClientFreezeFailed,
+		/// Access denied
+		AccessDenied,
 	}
 
 	#[pallet::hooks]
@@ -584,6 +586,10 @@ pub mod pallet {
 			amount: T::Balance,
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
+			// Ensure that the signer is whitelisted
+			if !T::Whitelist::contains(&origin) {
+				return Err(Error::<T>::AccessDenied.into())
+			}
 			let denom = T::IbcDenomToAssetIdConversion::from_asset_id_to_denom(asset_id)
 				.ok_or_else(|| Error::<T>::InvalidAssetId)?;
 
