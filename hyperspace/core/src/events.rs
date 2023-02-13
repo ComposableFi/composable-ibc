@@ -510,6 +510,8 @@ pub async fn parse_events(
 						Error::Custom(format!("ConnectionEnd not found for {:?}", connection_id))
 					})?)?;
 				if !connection_end.delay_period().is_zero() {
+					log::debug!(target: "hyperspace", "Skipping write acknowledgement because of connection delay {:?}",
+						connection_end.delay_period());
 					// We can't send this packet immediately because of connection delays
 					continue
 				}

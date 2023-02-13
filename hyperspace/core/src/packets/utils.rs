@@ -199,19 +199,18 @@ pub async fn construct_timeout_message(
 	next_sequence_recv: u64,
 	proof_height: Height,
 ) -> Result<Any, anyhow::Error> {
-	let key = if sink_channel_end.ordering == Order::Ordered {
-		let path = get_key_path(KeyPathType::SeqRecv, &packet);
-		apply_prefix(sink.connection_prefix().into_vec(), path)
+	let path_type = if sink_channel_end.ordering == Order::Ordered {
+		KeyPathType::SeqRecv
 	} else {
-		let path = get_key_path(KeyPathType::ReceiptPath, &packet);
-		apply_prefix(sink.connection_prefix().into_vec(), path)
+		KeyPathType::ReceiptPath
 	};
+	let key = get_key_path(path_type, &packet).into_bytes();
 
 	let proof_unreceived = sink.query_proof(proof_height, vec![key]).await?;
 	let proof_unreceived = CommitmentProofBytes::try_from(proof_unreceived)?;
+	// TODO if source.client_type() == "07-tendermint" {
 	let msg = if sink_channel_end.state == State::Closed {
-		let path = get_key_path(KeyPathType::ChannelPath, &packet);
-		let channel_key = apply_prefix(sink.connection_prefix().into_vec(), path);
+		let channel_key = get_key_path(KeyPathType::ChannelPath, &packet).into_bytes();
 		let proof_closed = sink.query_proof(proof_height, vec![channel_key]).await?;
 		let proof_closed = CommitmentProofBytes::try_from(proof_closed)?;
 		let msg = MsgTimeoutOnClose {
@@ -240,13 +239,15 @@ pub async fn construct_recv_message(
 	source: &impl Chain,
 	sink: &impl Chain,
 	packet: Packet,
-	proof_height: Height,
+	mut proof_height: Height,
 ) -> Result<Any, anyhow::Error> {
-	let path = get_key_path(KeyPathType::CommitmentPath, &packet);
-
-	let key = apply_prefix(source.connection_prefix().into_vec(), path);
+	let key = get_key_path(KeyPathType::CommitmentPath, &packet).into_bytes();
 	let proof = source.query_proof(proof_height, vec![key]).await?;
 	let commitment_proof = CommitmentProofBytes::try_from(proof)?;
+	if source.client_type() == "07-tendermint" {
+		log::debug!(target: "hyperspace", "inc height {} -> {}", proof_height, proof_height.increment());
+		proof_height = proof_height.increment();
+	}
 	let msg = MsgRecvPacket {
 		packet,
 		proofs: Proofs::new(commitment_proof, None, None, None, proof_height)?,
@@ -262,13 +263,16 @@ pub async fn construct_ack_message(
 	sink: &impl Chain,
 	packet: Packet,
 	ack: Vec<u8>,
-	proof_height: Height,
+	mut proof_height: Height,
 ) -> Result<Any, anyhow::Error> {
-	let path = get_key_path(KeyPathType::AcksPath, &packet);
-
-	let key = apply_prefix(source.connection_prefix().into_vec(), path);
-	let proof = source.query_proof(proof_height, vec![key]).await?;
+	let key = get_key_path(KeyPathType::AcksPath, &packet);
+	log::debug!(target: "hyperspace", "query proof for acks path: {:?}", key);
+	let proof = source.query_proof(proof_height, vec![key.into_bytes()]).await?;
 	let commitment_proof = CommitmentProofBytes::try_from(proof)?;
+	if source.client_type() == "07-tendermint" {
+		log::debug!(target: "hyperspace", "inc height {} -> {}", proof_height, proof_height.increment());
+		proof_height = proof_height.increment();
+	}
 	let msg = MsgAcknowledgement {
 		packet,
 		proofs: Proofs::new(commitment_proof, None, None, None, proof_height)?,

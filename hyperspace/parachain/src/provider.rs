@@ -54,7 +54,7 @@ use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
 	HostConsensusProof,
 };
-use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
+use primitives::{apply_prefix, Chain, IbcProvider, KeyProvider, UpdateType};
 use sp_core::H256;
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
@@ -242,11 +242,18 @@ where
 		Ok(response)
 	}
 
+	/// Query the proof of the given keys at the given height.
+	///
+	/// Note: all the keys will be prefixed with the connection prefix.
 	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
+		let prefix = self.connection_prefix().into_vec();
+		let prefixed_keys =
+			keys.into_iter().map(|path| apply_prefix(prefix.clone(), path)).collect();
+
 		let proof = IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_proof(
 			&*self.para_ws_client,
 			at.revision_height as u32,
-			keys,
+			prefixed_keys,
 		)
 		.await
 		.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
@@ -420,6 +427,14 @@ where
 		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error> {
+		log::debug!(
+			target: "hyperspace_parachain",
+			"query_unreceived_acknowledgements at: {:?}, channel_id: {:?}, port_id: {:?}, seqs: {:?}",
+			at,
+			channel_id,
+			port_id,
+			seqs
+		);
 		let res = IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_unreceived_acknowledgements(
 			&*self.para_ws_client,
 			at.revision_height as u32,

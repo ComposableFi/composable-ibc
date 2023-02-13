@@ -85,8 +85,8 @@ impl UpdateType {
 	}
 }
 
-pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: String) -> Vec<u8> {
-	let path = path.as_bytes().to_vec();
+pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: impl Into<Vec<u8>>) -> Vec<u8> {
+	let path = path.into();
 	commitment_prefix.extend_from_slice(&path);
 	commitment_prefix
 }
@@ -487,6 +487,11 @@ pub async fn query_undelivered_acks(
 	let seqs = source
 		.query_packet_acknowledgements(source_height, channel_id, port_id.clone())
 		.await?;
+	log::debug!(
+		target: "hyperspace",
+		"Found {} packet acks from {} chain",
+		seqs.len(), source.name()
+	);
 	let counterparty_channel_id = channel_end
 		.counterparty()
 		.channel_id
@@ -501,6 +506,11 @@ pub async fn query_undelivered_acks(
 			seqs,
 		)
 		.await?;
+	log::debug!(
+		target: "hyperspace",
+		"Found {} undelivered packet acks from {} chain",
+		undelivered_acks.len(), sink.name()
+	);
 
 	Ok(undelivered_acks)
 }

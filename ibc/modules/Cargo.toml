@@ -71,3 +71,4 @@ serde_json = "1.0.74"
 sha3 = { version = "0.10.1" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33"}
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
+log = "0.4.17"

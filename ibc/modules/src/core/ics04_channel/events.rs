@@ -16,7 +16,6 @@
 
 use serde_derive::{Deserialize, Serialize};
 use tendermint::abci::{Event as AbciEvent, EventAttribute};
-use tracing::log;
 
 use crate::{
 	core::{

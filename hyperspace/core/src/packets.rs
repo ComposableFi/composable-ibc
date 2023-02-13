@@ -312,6 +312,8 @@ pub async fn query_ready_and_timed_out_packets(
 				continue
 			}
 
+			log::debug!(target: "hyperspace", "sink_height: {:?}, latest_source_height_on_sink: {:?}, acknowledgement.height: {}", sink_height, latest_source_height_on_sink, acknowledgement.height);
+
 			let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(
 				sink,
 				sink_height,
@@ -322,6 +324,7 @@ pub async fn query_ready_and_timed_out_packets(
 			)
 			.await
 			{
+				log::debug!(target: "hyperspace", "Using proof height: {}", proof_height);
 				proof_height
 			} else {
 				log::debug!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as no proof height could be found", packet);

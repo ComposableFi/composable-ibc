@@ -142,7 +142,7 @@ where
 		// let to = latest_height.revision_height; // .saturating_sub(2);
 		let to = finality_event_height;
 		// println!("Finality height = {finality_event_height}");
-		println!("[Cosmos] Getting blocks {}..{}", from, to);
+		log::info!(target: "hyperspace_cosmos", "Getting blocks {}..{}", from, to);
 
 		for height in from.value()..to.value() {
 			let block_results = self
@@ -169,24 +169,22 @@ where
 					match ibc_event {
 						Some(mut ev) => {
 							ev.set_height(ibc_height);
-							println!("Encountered event at {height}: {:?}", event.kind);
+							log::debug!(target: "hyperspace_cosmos", "Encountered event at {height}: {:?}", event.kind);
 							ibc_events.push(ev);
 						},
 						None => {
-							// println!("Skipped event: {:?}", event.kind);
+							log::debug!(target: "hyperspace_cosmos", "Skipped event: {:?}", event.kind);
 							continue
 						},
 					}
 				}
 			}
 		}
-		let updates = self
-			.msg_update_client_header(from, to, dbg!(client_state.latest_height))
-			.await?;
+		let updates = self.msg_update_client_header(from, to, client_state.latest_height).await?;
 		let mut update_client_headers = Vec::new();
 		let mut update_headers = Vec::new();
 		for (update_header, update_type) in updates {
-			dbg!(update_header.height().revision_height);
+			log::info!(target: "hyperspace_cosmos", "Fetching block {}", update_header.height().revision_height);
 			let update_client_header = {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 					client_id: client_id.clone(),
@@ -660,6 +658,12 @@ where
 		channel_id: ChannelId,
 		port_id: PortId,
 	) -> Result<Vec<u64>, Self::Error> {
+		log::debug!(
+			target: "hyperspace_cosmos",
+			"Querying packet acknowledgements for channel {:?} on port {:?}",
+			channel_id,
+			port_id
+		);
 		let mut grpc_client =
 			ibc_proto::ibc::core::channel::v1::query_client::QueryClient::connect(
 				self.grpc_url.clone().to_string(),
@@ -790,6 +794,10 @@ where
 		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Self::Error> {
+		log::debug!(
+			target: "hyperspace",
+			"query_send_packets: channel_id: {}, port_id: {}, seqs: {:?}", channel_id, port_id, seqs
+		);
 		let mut block_events = vec![];
 
 		for seq in seqs {
@@ -800,8 +808,9 @@ where
 
 			let response = self
 				.rpc_client
-				.block_search(
+				.tx_search(
 					query_str,
+					true,
 					1,
 					1, // get only the first Tx matching the query
 					Order::Ascending,
@@ -809,30 +818,21 @@ where
 				.await
 				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 
-			if let Some(block) = response.blocks.first().map(|first| &first.block) {
-				let tm_height =
-					tendermint::block::Height::try_from(block.header.height.value()).unwrap();
-				let response = self
-					.rpc_client
-					.block_results(tm_height)
-					.await
-					.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+			for tx in response.txs {
+				for ev in &tx.tx_result.events {
+					let height = tx.height.value();
+					// TODO: check revision number
+					let ev = ibc_event_try_from_abci_event(ev, Height::new(1, height));
 
-				block_events.append(
-					&mut response
-						.begin_block_events
-						.unwrap_or_default()
-						.into_iter()
-						.filter_map(|ev| {
-							let ev = try_from_tx(&ev)?;
-							match ev {
-								IbcEvent::SendPacket(p) =>
-									Some(PacketInfo::from(IbcPacketInfo::from(p.packet))),
-								_ => None,
-							}
-						})
-						.collect(),
-				);
+					match ev {
+						Ok(IbcEvent::SendPacket(p)) => {
+							let mut info = PacketInfo::from(IbcPacketInfo::from(p.packet));
+							info.height = p.height.revision_height;
+							block_events.push(info)
+						},
+						_ => (),
+					}
+				}
 			}
 		}
 		Ok(block_events)
@@ -844,6 +844,10 @@ where
 		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Self::Error> {
+		log::debug!(
+			target: "hyperspace",
+			"query_recv_packets: channel_id: {}, port_id: {}, seqs: {:?}", channel_id, port_id, seqs
+		);
 		let mut block_events = vec![];
 
 		for seq in seqs {
@@ -854,8 +858,9 @@ where
 
 			let response = self
 				.rpc_client
-				.block_search(
+				.tx_search(
 					query_str,
+					true,
 					1,
 					1, // get only the first Tx matching the query
 					Order::Ascending,
@@ -863,30 +868,23 @@ where
 				.await
 				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 
-			if let Some(block) = response.blocks.first().map(|first| &first.block) {
-				let tm_height =
-					tendermint::block::Height::try_from(block.header.height.value()).unwrap();
-				let response = self
-					.rpc_client
-					.block_results(tm_height)
-					.await
-					.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
-
-				block_events.append(
-					&mut response
-						.begin_block_events
-						.unwrap_or_default()
-						.into_iter()
-						.filter_map(|ev| {
-							let ev = try_from_tx(&ev)?;
-							match ev {
-								IbcEvent::ReceivePacket(p) =>
-									Some(PacketInfo::from(IbcPacketInfo::from(p.packet))),
-								_ => None,
-							}
-						})
-						.collect(),
-				);
+			for tx in response.txs {
+				for ev in &tx.tx_result.events {
+					let height = tx.height.value();
+					// TODO: check revision number
+					log::debug!(target: "hyperspace", "ev = {:?}", ev);
+					let ev = ibc_event_try_from_abci_event(ev, Height::new(1, height));
+					match ev {
+						Ok(IbcEvent::WriteAcknowledgement(p)) => {
+							log::debug!(target: "hyperspace", "p.h = {}", p.height);
+							let mut info = PacketInfo::from(IbcPacketInfo::from(p.packet));
+							info.ack = Some(p.ack);
+							info.height = p.height.revision_height; // + 1;
+							block_events.push(info)
+						},
+						_ => (),
+					}
+				}
 			}
 		}
 		Ok(block_events)
@@ -915,7 +913,7 @@ where
 			.rpc_client
 			.tx_search(
 				query_str,
-				false,
+				true,
 				1,
 				1, // get only the first Tx matching the query
 				Order::Ascending,
@@ -926,12 +924,12 @@ where
 		for tx in response.txs {
 			for ev in &tx.tx_result.events {
 				let height = tx.height.value();
+				// TODO: check revision number
 				let ev = ibc_event_try_from_abci_event(ev, Height::new(1, height));
+				let timestamp = self.query_timestamp_at(height).await?;
+				let (h, _) = self.latest_height_and_timestamp().await?;
 				match ev {
 					Ok(IbcEvent::UpdateClient(p)) => {
-						let timestamp = self.query_timestamp_at(height).await?;
-						let (h, _) = self.latest_height_and_timestamp().await?;
-
 						return Ok((
 							// TODO: check that `h.revision_number` is correct to use here
 							Height::new(h.revision_number, height),
