@@ -48,7 +48,7 @@ members = [
 ]
 
 [patch."https://github.com/paritytech/jsonrpsee"]
-jsonrpsee = { version = "0.15.1" }
+jsonrpsee = { version = "0.16.2" }
 
 [patch.crates-io]
 sc-executor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }

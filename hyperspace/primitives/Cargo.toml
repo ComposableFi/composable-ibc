@@ -17,7 +17,7 @@ thiserror = "1.0.31"
 log = "0.4.17"
 
 # substrate
-subxt = { git = "https://github.com/ComposableFi/subxt", rev = "7a54d51ffe1d2daf785d13040276e5cbe30c29ed", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/paritytech/subxt",  rev = "c0198acea854b24e161dbeb714e71d56830d51ef", features = ["substrate-compat"] }
 
 # ibc
 ibc = { path = "../../ibc/modules", features = [] }

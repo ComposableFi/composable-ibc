@@ -126,10 +126,7 @@ where
 			let key = runtime::api::storage().beefy().validator_set_id();
 			client
 				.storage()
-				.at(Some(latest_beefy_finalized))
-				.await
-				.unwrap()
-				.fetch(&key)
+				.fetch(&key, Some(latest_beefy_finalized))
 				.await
 				.unwrap()
 				.unwrap()
@@ -139,10 +136,7 @@ where
 			let key = runtime::api::storage().mmr_leaf().beefy_next_authorities();
 			client
 				.storage()
-				.at(Some(latest_beefy_finalized))
-				.await
-				.expect("storage client should be available")
-				.fetch(&key)
+				.fetch(&key, Some(latest_beefy_finalized))
 				.await
 				.unwrap()
 				.expect("Authorirty set should be defined")
@@ -215,10 +209,7 @@ where
 			let head = self
 				.relay_client
 				.storage()
-				.at(Some(header.hash()))
-				.await
-				.expect("storage client should be available")
-				.fetch(&key)
+				.fetch(&key, Some(header.hash()))
 				.await?
 				.expect("Header exists in its own changeset; qed");
 
@@ -325,10 +316,7 @@ where
 			let key = runtime::api::storage().beefy().authorities();
 			self.relay_client
 				.storage()
-				.at(block_hash)
-				.await
-				.expect("storage client should exist")
-				.fetch(&key)
+				.fetch(&key, block_hash)
 				.await?
 				.ok_or_else(|| Error::Custom(format!("No beefy authorities found!")))?
 				.0
@@ -371,10 +359,7 @@ where
 			let key = runtime::api::storage().mmr_leaf().beefy_next_authorities();
 			self.relay_client
 				.storage()
-				.at(Some(latest_beefy_finalized))
-				.await
-				.expect("Storage client should be available")
-				.fetch(&key)
+				.fetch(&key, Some(latest_beefy_finalized))
 				.await?
 				.expect("Should retrieve next authority set")
 				.encode()
@@ -386,10 +371,7 @@ where
 			let key = runtime::api::storage().beefy().authorities();
 			self.relay_client
 				.storage()
-				.at(Some(latest_beefy_finalized))
-				.await
-				.expect("Storage client should be available")
-				.fetch(&key)
+				.fetch(&key, Some(latest_beefy_finalized))
 				.await?
 				.expect("Should retrieve next authority set")
 				.0

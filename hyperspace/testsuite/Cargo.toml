@@ -42,7 +42,7 @@ grandpa-light-client = { path = "../../algorithms/grandpa/verifier", package = "
 hex = "0.4.3"
 
 [dev-dependencies]
-subxt = { git = "https://github.com/ComposableFi/subxt", rev = "7a54d51ffe1d2daf785d13040276e5cbe30c29ed", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/paritytech/subxt",  rev = "c0198acea854b24e161dbeb714e71d56830d51ef", features = ["substrate-compat"] }
 hyperspace-core = { path = "../core", features = ["testing", "build-metadata-from-ws"] }
 hyperspace-parachain = { path = "../parachain", features = ["testing", "build-metadata-from-ws"] }
 

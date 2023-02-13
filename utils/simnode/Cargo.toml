@@ -9,7 +9,7 @@ edition = "2021"
 substrate-simnode = { git = "https://github.com/polytope-labs/sc-simnode", rev = "fcfa2dee4ebdd4652375ec9c4b3eba2a63c2d28f" }
 parachain-runtime = { path = "../parachain-node/runtime" }
 parachain-node = { path = "../parachain-node" }
-jsonrpsee = { version = "0.15.1", features = ["server"] }
+jsonrpsee = { version = "0.16.2", features = ["server"] }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 sudo = { package = "pallet-sudo", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }

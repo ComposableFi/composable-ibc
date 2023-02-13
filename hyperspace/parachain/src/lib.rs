@@ -472,13 +472,12 @@ where
 			let heads_addr = polkadot::api::storage().paras().heads(
 				&polkadot::api::runtime_types::polkadot_parachain::primitives::Id(self.para_id),
 			);
-			let head_data =
-				api.at(block_hash).await?.fetch(&heads_addr).await?.ok_or_else(|| {
-					Error::Custom(format!(
-						"Couldn't find header for ParaId({}) at relay block {:?}",
-						self.para_id, block_hash
-					))
-				})?;
+			let head_data = api.fetch(&heads_addr, block_hash).await?.ok_or_else(|| {
+				Error::Custom(format!(
+					"Couldn't find header for ParaId({}) at relay block {:?}",
+					self.para_id, block_hash
+				))
+			})?;
 			let decoded_para_head = sp_runtime::generic::Header::<
 				u32,
 				sp_runtime::traits::BlakeTwo256,
@@ -505,9 +504,7 @@ where
 				self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
 			let timestamp_addr = api::storage().timestamp().now();
 			let unix_timestamp_millis = para_client_api
-				.at(block_hash)
-				.await?
-				.fetch(&timestamp_addr)
+				.fetch(&timestamp_addr, block_hash)
 				.await?
 				.expect("Timestamp should exist");
 			let timestamp_nanos = Duration::from_millis(unix_timestamp_millis).as_nanos() as u64;
@@ -557,9 +554,7 @@ where
 				&polkadot::api::runtime_types::polkadot_parachain::primitives::Id(self.para_id),
 			);
 			let head_data = api
-				.at(Some(light_client_state.latest_relay_hash.into()))
-				.await?
-				.fetch(&heads_addr)
+				.fetch(&heads_addr, Some(light_client_state.latest_relay_hash.into()))
 				.await?
 				.ok_or_else(|| {
 					Error::Custom(format!(
@@ -593,9 +588,7 @@ where
 				self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
 			let timestamp_addr = api::storage().timestamp().now();
 			let unix_timestamp_millis = para_client_api
-				.at(block_hash)
-				.await?
-				.fetch(&timestamp_addr)
+				.fetch(&timestamp_addr, block_hash)
 				.await?
 				.expect("Timestamp should exist");
 			let timestamp_nanos = Duration::from_millis(unix_timestamp_millis).as_nanos() as u64;
