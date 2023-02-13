@@ -12,7 +12,7 @@ subxt-codegen = { package = "codegen", path = "../../utils/subxt/codegen" }
 tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
 
 [dependencies]
-primitives = { path = "../primitives", package = "hyperspace-primitives" }
+primitives = { path = "../primitives", package = "hyperspace-primitives", features = ["testing"] }
 
 # crates.io
 anyhow = "1.0.65"
@@ -49,7 +49,7 @@ pallet-mmr = { package = "pallet-mmr", git = "https://github.com/paritytech/subs
 pallet-mmr-primitives = { package = "sp-mmr-primitives", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 pallet-mmr-rpc = { package = "mmr-gadget", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34", default-features = false }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 transaction-payment-rpc = { package = "pallet-transaction-payment-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
@@ -85,13 +85,17 @@ derive_more = "0.99.17"
 clap = {version = "3.2.0", features = ["derive"]}
 state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 prost = "0.11"
-primitives = { path = "../primitives", package = "hyperspace-primitives" }
+primitives = { path = "../primitives", package = "hyperspace-primitives", features = ["testing"] }
 subxt-generated = { path = "../../utils/subxt/generated" }
 
 [features]
+default = ["std"]
 build-metadata-from-ws = [
     "grandpa-prover/build-metadata-from-ws",
     "beefy-prover/build-metadata-from-ws",
 ]
 dali = []
 testing = ["primitives/testing"]
+std = [
+    "sp-io/std"
+]

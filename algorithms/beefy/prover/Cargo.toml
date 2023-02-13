@@ -17,7 +17,7 @@ tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 sp-core =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34", default-features = false }
 sp-core-hashing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34"}
 beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
@@ -41,4 +41,8 @@ beefy-light-client-primitives = {  path = "../primitives" }
 subxt-generated = { path = "../../../utils/subxt/generated" }
 
 [features]
+default = ["std"]
 build-metadata-from-ws = []
+std = [
+    "sp-io/std",
+]
