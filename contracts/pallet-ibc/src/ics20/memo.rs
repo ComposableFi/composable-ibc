@@ -20,7 +20,7 @@ use sp_runtime::traits::IdentifyAccount;
 
 /// This middleware should be used to wrap ics20 to execute memo
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Memo<T, S: Clone + Default + PartialEq + Eq + Debug> {
+pub struct Memo<T: Config, S: Module + Clone + Default + PartialEq + Eq + Debug> {
 	inner: S,
 	_phantom: core::marker::PhantomData<T>,
 }
