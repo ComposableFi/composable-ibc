@@ -136,6 +136,8 @@ impl pallet_assets::Config for Test {
 	type Freezer = ();
 	type Extra = ();
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+	type RemoveItemsLimit = ConstU32<128>;
+	type AssetIdParameter = Self::AssetId;
 }
 
 parameter_types! {
