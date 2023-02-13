@@ -37,7 +37,7 @@ finality-grandpa = "0.16.0"
 # substrate
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34", features = ["full_crypto"] }
 ss58-registry = "1.28.0"
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34", default-features = false }
 
 # subxt
 subxt = { git = "https://github.com/ComposableFi/subxt", rev = "7a54d51ffe1d2daf785d13040276e5cbe30c29ed", features = ["substrate-compat"] }
@@ -77,7 +77,7 @@ grandpa-prover = { path = "../../algorithms/grandpa/prover" }
 grandpa-light-client-primitives = { path = "../../algorithms/grandpa/primitives" }
 ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
 finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
-polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.33" }
+polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.34" }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 
 [dev-dependencies]
