@@ -202,6 +202,7 @@ pub mod test_util {
 			proof_client: get_dummy_proof(),
 			version: Some(Version::default().into()),
 			signer: get_dummy_bech32_account(),
+			host_consensus_state_proof: vec![],
 		}
 	}
 }

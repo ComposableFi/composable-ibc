@@ -176,6 +176,7 @@ pub mod test_util {
 			receiver: address,
 			timeout_timestamp: Timestamp::now().add(Duration::from_secs(10)).unwrap(),
 			timeout_height: Height { revision_number: 0, revision_height: height },
+			memo: "".to_string(),
 		}
 	}
 }

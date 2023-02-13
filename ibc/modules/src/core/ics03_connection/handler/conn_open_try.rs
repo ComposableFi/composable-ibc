@@ -116,7 +116,13 @@ pub(crate) fn process<Ctx: ReaderContext>(
 		client_proof,
 	)?;
 
-	verify_consensus_proof::<_>(ctx, msg.proofs.height(), &new_connection_end, &consensus_proof)?;
+	verify_consensus_proof::<_>(
+		ctx,
+		msg.proofs.height(),
+		&new_connection_end,
+		&consensus_proof,
+		msg.host_consensus_state_proof,
+	)?;
 
 	// Transition the connection end to the new state & pick a version.
 	new_connection_end.set_state(State::TryOpen);

@@ -72,7 +72,7 @@ where
 			token: coin,
 			sender: msg.sender.clone(),
 			receiver: msg.receiver.clone(),
-			memo: Default::default(),
+			memo: msg.memo,
 		};
 		serde_json::to_vec(&data).expect("PacketData's infallible Serialize impl failed")
 	};
