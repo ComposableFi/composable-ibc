@@ -19,6 +19,10 @@ use ibc::{
 use sp_runtime::traits::IdentifyAccount;
 
 /// This middleware should be used to wrap ics20 to execute memo
+/// We chose to use this as a middleware so that we can easily choose
+/// at what layer of the ics20 stack the memo should be executed.
+/// For example ics20 fees are meant to be collected before memo is executed, so
+/// this allows an ics20 fee middleware to be executed before the memo is executed
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Memo<T: Config, S: Module + Clone + Default + PartialEq + Eq + Debug> {
 	inner: S,
