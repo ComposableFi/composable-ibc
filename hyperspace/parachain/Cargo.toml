@@ -48,7 +48,7 @@ beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech
 pallet-mmr = { package = "pallet-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 pallet-mmr-primitives = { package = "sp-mmr-primitives", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 pallet-mmr-rpc = { package = "mmr-gadget", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
@@ -97,5 +97,6 @@ build-metadata-from-ws = [
 dali = []
 testing = ["primitives/testing"]
 std = [
-    "sp-io/std"
+    "sp-io/std",
+    "frame-support/std"
 ]
