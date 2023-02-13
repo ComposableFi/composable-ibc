@@ -698,16 +698,17 @@ impl pallet_ibc::Config for Runtime {
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type SentryOrigin = EnsureRoot<AccountId>;
 	type SpamProtectionDeposit = SpamProtectionDeposit;
-	type Whitelist = SimpleIBCWhiteList;
+	type Whitelist = AllowAll;
 }
 
-pub struct SimpleIBCWhiteList {}
+pub struct AllowAll {}
 
-impl Contains<AccountId> for SimpleIBCWhiteList {
+impl Contains<AccountId> for AllowAll {
 	fn contains(_account_id: &AccountId) -> bool {
 		true
 	}
 }
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where

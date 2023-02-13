@@ -5,7 +5,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		fungibles::{metadata::Mutate, Create, InspectMetadata},
-		AsEnsureOriginWithArg, ConstU64, Contains, Everything,
+		AllowAll, AsEnsureOriginWithArg, ConstU64, Everything,
 	},
 };
 use frame_system as system;
@@ -187,7 +187,7 @@ impl Config for Test {
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type SentryOrigin = EnsureRoot<AccountId>;
 	type SpamProtectionDeposit = SpamProtectionDeposit;
-	type Whitelist = MockIBCWhiteList;
+	type Whitelist = AllowAll;
 }
 
 impl pallet_timestamp::Config for Test {
@@ -280,13 +280,5 @@ impl ModuleRouter for Router {
 					.ok(),
 			_ => None,
 		}
-	}
-}
-
-pub struct MockIBCWhiteList {}
-
-impl Contains<AccountId> for MockIBCWhiteList {
-	fn contains(_account_id: &AccountId) -> bool {
-		true
 	}
 }
