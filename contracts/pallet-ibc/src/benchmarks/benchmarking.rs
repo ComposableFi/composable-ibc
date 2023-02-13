@@ -881,7 +881,7 @@ benchmarks! {
 
 		let amt = 1000 * MILLIS;
 
-	}:_(RawOrigin::Signed(caller.clone()), transfer_params, asset_id.into(), amt.into())
+	}:_(RawOrigin::Signed(caller.clone()), transfer_params, asset_id.into(), amt.into(), None)
 	verify {
 		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
 			asset_id.into(),
@@ -1038,6 +1038,7 @@ benchmarks! {
 			token: coin,
 			sender: Signer::from_str("alice").unwrap(),
 			receiver: Signer::from_str(&hex_string).unwrap(),
+			memo: "".to_string()
 		};
 
 		let data = serde_json::to_vec(&packet_data).unwrap();
@@ -1117,6 +1118,7 @@ benchmarks! {
 			token: coin,
 			sender: Signer::from_str(&hex_string).unwrap(),
 			receiver: Signer::from_str("alice").unwrap(),
+			memo: "".to_string()
 		};
 
 		let data = serde_json::to_vec(&packet_data).unwrap();
@@ -1196,6 +1198,7 @@ benchmarks! {
 			token: coin,
 			sender: Signer::from_str(&hex_string).unwrap(),
 			receiver: Signer::from_str("alice").unwrap(),
+			memo: "".to_string()
 		};
 
 		let data = serde_json::to_vec(&packet_data).unwrap();

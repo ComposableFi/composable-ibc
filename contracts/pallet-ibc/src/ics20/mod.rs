@@ -1,4 +1,5 @@
 pub mod context;
+pub mod memo;
 
 use crate::{routing::Context, ChannelIds, Config, DenomToAssetId, Event, Pallet, WeightInfo};
 use alloc::{
@@ -228,6 +229,10 @@ where
 			},
 			Ok(packet_data) => {
 				let denom = full_ibc_denom(packet, packet_data.token.clone());
+				if let Err(_) = <T::HandleMemo>::execute_memo(&packet_data) {
+					// If executing memo failed do we revert the successful ics20 transfer or do we
+				} else {
+				}
 				Pallet::<T>::deposit_event(Event::<T>::TokenReceived {
 					from: packet_data.sender.to_string().as_bytes().to_vec(),
 					to: packet_data.receiver.to_string().as_bytes().to_vec(),
@@ -402,5 +407,17 @@ pub fn full_ibc_denom(packet: &Packet, mut token: PrefixedCoin) -> String {
 
 		token.denom.add_trace_prefix(prefix);
 		token.denom.to_string()
+	}
+}
+
+use ibc::applications::transfer::error::Error as Ics20Error;
+
+pub trait HandleMemo {
+	fn execute_memo(packet_data: &PacketData) -> Result<(), Ics20Error>;
+}
+
+impl HandleMemo for () {
+	fn execute_memo(_packet_data: &PacketData) -> Result<(), Ics20Error> {
+		Ok(())
 	}
 }
