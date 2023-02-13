@@ -3940,7 +3940,6 @@ dependencies = [
  "jsonrpsee-ws-client",
  "light-client-common",
  "log",
- "mmr-gadget",
  "once_cell",
  "pallet-beefy-mmr",
  "pallet-ibc",
