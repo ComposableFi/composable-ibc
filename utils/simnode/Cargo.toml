@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-substrate-simnode = { git = "https://github.com/polytope-labs/sc-simnode", rev = "fcfa2dee4ebdd4652375ec9c4b3eba2a63c2d28f" }
+substrate-simnode = { git = "https://github.com/polytope-labs/sc-simnode", rev = "a7f6c574398a7fe8d48b5b8177e68426d70b2ba5" }
 parachain-runtime = { path = "../parachain-node/runtime" }
 parachain-node = { path = "../parachain-node" }
 jsonrpsee = { version = "0.16.2", features = ["server"] }
