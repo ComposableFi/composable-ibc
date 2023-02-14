@@ -120,10 +120,7 @@ async fn test_continuous_update_of_grandpa_client() {
 			prover
 				.relay_client
 				.storage()
-				.at(Some(client_state.latest_relay_hash))
-				.await
-				.unwrap()
-				.fetch(&key)
+				.fetch(&key, Some(client_state.latest_relay_hash))
 				.await
 				.unwrap()
 				.unwrap()
@@ -160,7 +157,7 @@ async fn test_continuous_update_of_grandpa_client() {
 			.relay_client
 			.rpc()
 			.read_proof(
-				vec![parachain_header_storage_key(prover.para_id).as_bytes_ref()],
+				vec![parachain_header_storage_key(prover.para_id).0.as_bytes_ref()],
 				Some(client_state.latest_relay_hash),
 			)
 			.await
