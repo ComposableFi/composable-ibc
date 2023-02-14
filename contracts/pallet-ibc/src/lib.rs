@@ -548,6 +548,7 @@ pub mod pallet {
 		AccountId32: From<<T as frame_system::Config>::AccountId>,
 		u32: From<<T as frame_system::Config>::BlockNumber>,
 	{
+		#[pallet::call_index(0)]
 		#[pallet::weight(crate::weight::deliver::< T > (messages))]
 		#[frame_support::transactional]
 		pub fn deliver(origin: OriginFor<T>, messages: Vec<Any>) -> DispatchResult {
@@ -586,6 +587,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(1)]
 		#[frame_support::transactional]
 		#[pallet::weight(<T as Config>::WeightInfo::transfer())]
 		pub fn transfer(
@@ -718,6 +720,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(2)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_params())]
 		pub fn set_params(origin: OriginFor<T>, params: PalletParams) -> DispatchResult {
 			<T as Config>::AdminOrigin::ensure_origin(origin)?;
@@ -732,6 +735,7 @@ pub mod pallet {
 		/// We write the consensus & client state under these predefined paths so that
 		/// we can produce state proofs of the values to connected chains
 		/// in order to execute client upgrades.
+		#[pallet::call_index(3)]
 		#[pallet::weight(0)]
 		pub fn upgrade_client(origin: OriginFor<T>, params: UpgradeParams) -> DispatchResult {
 			<T as Config>::AdminOrigin::ensure_origin(origin)?;
@@ -747,6 +751,7 @@ pub mod pallet {
 		}
 
 		/// Freeze a client at a specific height
+		#[pallet::call_index(4)]
 		#[pallet::weight(0)]
 		pub fn freeze_client(
 			origin: OriginFor<T>,

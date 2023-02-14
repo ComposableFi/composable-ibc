@@ -72,7 +72,7 @@ serde = { version = "1.0.144", features = ["derive"] }
 beefy-prover = { path = "../../algorithms/beefy/prover", features = ["build-metadata-from-ws"] }
 ibc = { path = "../../ibc/modules", features = ["mocks"] }
 ibc-derive = { path = "../../ibc/derive" }
-subxt = { git = "https://github.com/paritytech/subxt",  rev = "c0198acea854b24e161dbeb714e71d56830d51ef", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
 tokio = { version = "1.21.1", features = ["macros"] }
 sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }

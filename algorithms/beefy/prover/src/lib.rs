@@ -126,7 +126,10 @@ where
 			let key = runtime::api::storage().beefy().validator_set_id();
 			client
 				.storage()
-				.fetch(&key, Some(latest_beefy_finalized))
+				.at(Some(latest_beefy_finalized))
+				.await
+				.expect("Storage client")
+				.fetch(&key)
 				.await
 				.unwrap()
 				.unwrap()
@@ -136,7 +139,10 @@ where
 			let key = runtime::api::storage().mmr_leaf().beefy_next_authorities();
 			client
 				.storage()
-				.fetch(&key, Some(latest_beefy_finalized))
+				.at(Some(latest_beefy_finalized))
+				.await
+				.expect("Storage client")
+				.fetch(&key)
 				.await
 				.unwrap()
 				.expect("Authorirty set should be defined")
@@ -209,7 +215,10 @@ where
 			let head = self
 				.relay_client
 				.storage()
-				.fetch(&key, Some(header.hash()))
+				.at(Some(header.hash()))
+				.await
+				.expect("Storage client")
+				.fetch(&key)
 				.await?
 				.expect("Header exists in its own changeset; qed");
 
@@ -316,7 +325,10 @@ where
 			let key = runtime::api::storage().beefy().authorities();
 			self.relay_client
 				.storage()
-				.fetch(&key, block_hash)
+				.at(block_hash)
+				.await
+				.expect("Storage client")
+				.fetch(&key)
 				.await?
 				.ok_or_else(|| Error::Custom(format!("No beefy authorities found!")))?
 				.0
@@ -359,7 +371,10 @@ where
 			let key = runtime::api::storage().mmr_leaf().beefy_next_authorities();
 			self.relay_client
 				.storage()
-				.fetch(&key, Some(latest_beefy_finalized))
+				.at(Some(latest_beefy_finalized))
+				.await
+				.expect("Storage client")
+				.fetch(&key)
 				.await?
 				.expect("Should retrieve next authority set")
 				.encode()
@@ -371,7 +386,10 @@ where
 			let key = runtime::api::storage().beefy().authorities();
 			self.relay_client
 				.storage()
-				.fetch(&key, Some(latest_beefy_finalized))
+				.at(Some(latest_beefy_finalized))
+				.await
+				.expect("Storage client")
+				.fetch(&key)
 				.await?
 				.expect("Should retrieve next authority set")
 				.0
