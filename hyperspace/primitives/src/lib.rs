@@ -415,6 +415,8 @@ pub trait Chain:
 		&self,
 		update: UpdateClient,
 	) -> Result<AnyClientMessage, Self::Error>;
+
+	async fn get_proof_height(&self, block_height: Height) -> Height;
 }
 
 /// Returns undelivered packet sequences that have been sent out from

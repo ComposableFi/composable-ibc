@@ -842,6 +842,15 @@ impl Chain for AnyChain {
 			Self::Wasm(c) => c.inner.query_client_message(update).await,
 		}
 	}
+
+	async fn get_proof_height(&self, block_height: Height) -> Height {
+		match self {
+			Self::Parachain(chain) => chain.get_proof_height(block_height).await,
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.get_proof_height(block_height).await,
+			Self::Wasm(c) => c.inner.get_proof_height(block_height).await,
+		}
+	}
 }
 
 #[async_trait]

@@ -1,7 +1,7 @@
 use super::{client::CosmosClient, tx::sign_tx};
 use crate::{error::Error, provider::FinalityEvent};
 use futures::{Stream, StreamExt};
-use ibc::{core::ics02_client::events::UpdateClient, events::IbcEvent};
+use ibc::{core::ics02_client::events::UpdateClient, events::IbcEvent, Height};
 use ibc_proto::{
 	cosmos::{base::v1beta1::Coin, tx::v1beta1::Fee},
 	google::protobuf::Any,
@@ -150,6 +150,10 @@ where
 		_update: UpdateClient,
 	) -> Result<AnyClientMessage, Self::Error> {
 		todo!()
+	}
+
+	async fn get_proof_height(&self, block_height: Height) -> Height {
+		block_height.increment()
 	}
 }
 

@@ -111,6 +111,7 @@ pub async fn parse_events(
 							client_state.latest_height(),
 						)
 						.await?;
+					let new_proof_height = consensus_proof.proof_height.clone();
 					let consensus_proof =
 						query_consensus_proof(sink, client_state.clone(), consensus_proof).await?;
 
@@ -133,7 +134,10 @@ pub async fn parse_events(
 								client_state.latest_height(),
 							)?),
 							None,
-							proof_height,
+							new_proof_height.map(|x| x.into()).unwrap_or_else(|| {
+								log::debug!(target: "hyperspace", "using default proof_height for open_conn_try");
+								proof_height
+							}),
 						)?,
 						delay_period: connection_end.delay_period(),
 						signer: sink.account_id(),
@@ -186,7 +190,9 @@ pub async fn parse_events(
 							client_state.latest_height(),
 						)
 						.await?;
-					let consensus_proof =
+					let new_proof_height = consensus_proof.proof_height.clone();
+					log::debug!(target: "hyperspace", "pe, OpenTryConnection: {new_proof_height:?} vs {proof_height:?}");
+					let consensus_proof_raw =
 						query_consensus_proof(sink, client_state.clone(), consensus_proof).await?;
 					// Construct OpenAck
 					let msg = MsgConnectionOpenAck::<LocalClientTypes> {
@@ -202,11 +208,14 @@ pub async fn parse_events(
 							connection_proof,
 							client_state_proof,
 							Some(ConsensusProof::new(
-								CommitmentProofBytes::try_from(consensus_proof)?,
+								CommitmentProofBytes::try_from(consensus_proof_raw)?,
 								client_state.latest_height(),
 							)?),
 							None,
-							proof_height,
+							new_proof_height.map(|x| x.into()).unwrap_or_else(|| {
+								log::debug!(target: "hyperspace", "using default proof_height for open_conn_try");
+								proof_height
+							}),
 						)?,
 						version: connection_end
 							.versions()
@@ -261,7 +270,6 @@ pub async fn parse_events(
 							})?
 							.clone(),
 						proofs: Proofs::new(connection_proof, None, None, None, proof_height)?,
-
 						signer: sink.account_id(),
 					};
 

@@ -59,6 +59,7 @@ use ibc::{
 	},
 	events::IbcEvent,
 	tx_msg::Msg,
+	Height,
 };
 use ics10_grandpa::client_message::{ClientMessage, Misbehaviour, RelayChainHeader};
 use pallet_ibc::light_clients::AnyClientMessage;
@@ -334,6 +335,10 @@ where
 		}
 
 		Err(Error::from("No client message found".to_owned()))
+	}
+
+	async fn get_proof_height(&self, block_height: Height) -> Height {
+		block_height
 	}
 }
 

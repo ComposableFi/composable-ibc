@@ -153,16 +153,18 @@ pub async fn verify_delay_passed(
 	log::debug!(target: "hyperspace", "Verifying delay passed for source: {source_height}, {source_timestamp}, sink: {sink_height}, {sink_timestamp}, connection delay: {}, proof height: {proof_height}, verify delay on: {verify_delay_on:?}", connection_delay.as_secs());
 	match verify_delay_on {
 		VerifyDelayOn::Source => {
-			if let Ok((sink_client_update_height, sink_client_update_time)) =
-				source.query_client_update_time_and_height(sink.client_id(), proof_height).await
+			let actual_proof_height = sink.get_proof_height(proof_height).await;
+			if let Ok((source_client_update_height, source_client_update_time)) = source
+				.query_client_update_time_and_height(sink.client_id(), actual_proof_height)
+				.await
 			{
 				let block_delay =
 					calculate_block_delay(connection_delay, source.expected_block_time());
 				has_delay_elapsed(
 					source_timestamp,
 					source_height,
-					sink_client_update_time,
-					sink_client_update_height, // shouldn't be the latest.
+					source_client_update_time,
+					source_client_update_height, // shouldn't be the latest.
 					connection_delay,
 					block_delay,
 				)
@@ -171,16 +173,18 @@ pub async fn verify_delay_passed(
 			}
 		},
 		VerifyDelayOn::Sink => {
-			if let Ok((source_client_update_height, source_client_update_time)) =
-				sink.query_client_update_time_and_height(source.client_id(), proof_height).await
+			let actual_proof_height = source.get_proof_height(proof_height).await;
+			if let Ok((sink_client_update_height, sink_client_update_time)) = sink
+				.query_client_update_time_and_height(source.client_id(), actual_proof_height)
+				.await
 			{
 				let block_delay =
 					calculate_block_delay(connection_delay, sink.expected_block_time());
 				has_delay_elapsed(
 					sink_timestamp,
 					sink_height,
-					source_client_update_time,
-					source_client_update_height,
+					sink_client_update_time,
+					sink_client_update_height,
 					connection_delay,
 					block_delay,
 				)
@@ -208,24 +212,31 @@ pub async fn construct_timeout_message(
 
 	let proof_unreceived = sink.query_proof(proof_height, vec![key]).await?;
 	let proof_unreceived = CommitmentProofBytes::try_from(proof_unreceived)?;
-	// TODO if source.client_type() == "07-tendermint" {
 	let msg = if sink_channel_end.state == State::Closed {
 		let channel_key = get_key_path(KeyPathType::ChannelPath, &packet).into_bytes();
 		let proof_closed = sink.query_proof(proof_height, vec![channel_key]).await?;
 		let proof_closed = CommitmentProofBytes::try_from(proof_closed)?;
+		let actual_proof_height = source.get_proof_height(proof_height).await;
 		let msg = MsgTimeoutOnClose {
 			packet,
 			next_sequence_recv: next_sequence_recv.into(),
-			proofs: Proofs::new(proof_unreceived, None, None, Some(proof_closed), proof_height)?,
+			proofs: Proofs::new(
+				proof_unreceived,
+				None,
+				None,
+				Some(proof_closed),
+				actual_proof_height,
+			)?,
 			signer: source.account_id(),
 		};
 		let value = msg.encode_vec().expect("could not encode message");
 		Any { value, type_url: msg.type_url() }
 	} else {
+		let actual_proof_height = source.get_proof_height(proof_height).await;
 		let msg = MsgTimeout {
 			packet,
 			next_sequence_recv: next_sequence_recv.into(),
-			proofs: Proofs::new(proof_unreceived, None, None, None, proof_height)?,
+			proofs: Proofs::new(proof_unreceived, None, None, None, actual_proof_height)?,
 
 			signer: source.account_id(),
 		};
@@ -244,13 +255,10 @@ pub async fn construct_recv_message(
 	let key = get_key_path(KeyPathType::CommitmentPath, &packet).into_bytes();
 	let proof = source.query_proof(proof_height, vec![key]).await?;
 	let commitment_proof = CommitmentProofBytes::try_from(proof)?;
-	if source.client_type() == "07-tendermint" {
-		log::debug!(target: "hyperspace", "inc height {} -> {}", proof_height, proof_height.increment());
-		proof_height = proof_height.increment();
-	}
+	let actual_proof_height = source.get_proof_height(proof_height).await;
 	let msg = MsgRecvPacket {
 		packet,
-		proofs: Proofs::new(commitment_proof, None, None, None, proof_height)?,
+		proofs: Proofs::new(commitment_proof, None, None, None, actual_proof_height)?,
 		signer: sink.account_id(),
 	};
 	let value = msg.encode_vec().expect("could not encode message");
@@ -263,19 +271,16 @@ pub async fn construct_ack_message(
 	sink: &impl Chain,
 	packet: Packet,
 	ack: Vec<u8>,
-	mut proof_height: Height,
+	proof_height: Height,
 ) -> Result<Any, anyhow::Error> {
 	let key = get_key_path(KeyPathType::AcksPath, &packet);
 	log::debug!(target: "hyperspace", "query proof for acks path: {:?}", key);
 	let proof = source.query_proof(proof_height, vec![key.into_bytes()]).await?;
 	let commitment_proof = CommitmentProofBytes::try_from(proof)?;
-	if source.client_type() == "07-tendermint" {
-		log::debug!(target: "hyperspace", "inc height {} -> {}", proof_height, proof_height.increment());
-		proof_height = proof_height.increment();
-	}
+	let actual_proof_height = source.get_proof_height(proof_height).await;
 	let msg = MsgAcknowledgement {
 		packet,
-		proofs: Proofs::new(commitment_proof, None, None, None, proof_height)?,
+		proofs: Proofs::new(commitment_proof, None, None, None, actual_proof_height)?,
 		acknowledgement: ack.into(),
 		signer: sink.account_id(),
 	};
