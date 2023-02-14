@@ -799,8 +799,8 @@ where
 				Pallet::<T>::open_channel(port_id, channel_end),
 			HandlerMessage::CloseChannel { channel_id, port_id } =>
 				Pallet::<T>::close_channel(port_id, channel_id),
-			HandlerMessage::Transfer { timeout, to, from, channel_id, coin } => {
-				let msg = Pallet::<T>::to_msg_transfer(coin, from, to, timeout, channel_id)?;
+			HandlerMessage::Transfer { timeout, to, from, channel_id, coin, memo } => {
+				let msg = Pallet::<T>::to_msg_transfer(coin, from, to, timeout, channel_id, memo)?;
 				Pallet::<T>::send_transfer(msg)
 			},
 			HandlerMessage::SendPacket { data, timeout, port_id, channel_id } =>
@@ -1018,6 +1018,7 @@ where
 		to: Signer,
 		timeout: Timeout,
 		channel_id: ChannelId,
+		memo: String,
 	) -> Result<MsgTransfer<PrefixedCoin>, IbcHandlerError> {
 		let account_id_32: AccountId32 = from.into();
 		let from = runtime_interface::account_id_to_ss58(
@@ -1080,6 +1081,7 @@ where
 			receiver: to,
 			timeout_height,
 			timeout_timestamp,
+			memo,
 		};
 		Ok(msg)
 	}

@@ -68,8 +68,12 @@ where
 	}
 
 	let data = {
-		let data =
-			PacketData { token: coin, sender: msg.sender.clone(), receiver: msg.receiver.clone() };
+		let data = PacketData {
+			token: coin,
+			sender: msg.sender.clone(),
+			receiver: msg.receiver.clone(),
+			memo: msg.memo,
+		};
 		serde_json::to_vec(&data).expect("PacketData's infallible Serialize impl failed")
 	};
 

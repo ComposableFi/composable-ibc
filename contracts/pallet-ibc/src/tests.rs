@@ -239,6 +239,7 @@ fn send_transfer() {
 			},
 			asset_id,
 			balance,
+			None,
 		)
 		.unwrap();
 	});
@@ -315,6 +316,7 @@ fn on_deliver_ics20_recv_packet() {
 			token: coin,
 			sender: Signer::from_str("alice").unwrap(),
 			receiver: Signer::from_str(&ss58_address).unwrap(),
+			memo: "".to_string(),
 		};
 
 		let data = serde_json::to_vec(&packet_data).unwrap();

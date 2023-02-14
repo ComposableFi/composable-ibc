@@ -22,7 +22,7 @@ pub fn convert_tm_to_ics_merkle_proof<H>(tm_proof: &ProofOps) -> Result<MerklePr
 	let mut proofs = Vec::new();
 
 	for op in &tm_proof.ops {
-		let mut parsed = ibc_proto::ics23::CommitmentProof { proof: None };
+		let mut parsed = ibc_proto::cosmos::ics23::v1::CommitmentProof { proof: None };
 		prost::Message::merge(&mut parsed, op.data.as_slice())
 			.map_err(Error::commitment_proof_decoding_failed)?;
 

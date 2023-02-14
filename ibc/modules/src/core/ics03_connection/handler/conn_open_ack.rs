@@ -122,7 +122,13 @@ pub(crate) fn process<Ctx: ReaderContext>(
 		client_proof,
 	)?;
 
-	verify_consensus_proof::<Ctx>(ctx, msg.proofs.height(), &conn_end, &consensus_proof)?;
+	verify_consensus_proof::<Ctx>(
+		ctx,
+		msg.proofs.height(),
+		&conn_end,
+		&consensus_proof,
+		msg.host_consensus_state_proof,
+	)?;
 
 	output.log("success: connection verification passed");
 
