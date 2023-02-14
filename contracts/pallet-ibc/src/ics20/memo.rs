@@ -7,7 +7,7 @@ use ibc::{
 		ics04_channel::{
 			channel::{Counterparty, Order},
 			error::Error,
-			msgs::acknowledgement::Acknowledgement as GenericAcknowledgement,
+			msgs::acknowledgement::{Acknowledgement as GenericAcknowledgement, Acknowledgement},
 			packet::Packet,
 			Version,
 		},
@@ -144,8 +144,8 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 		output: &mut ModuleOutputBuilder,
 		packet: &Packet,
 		relayer: &Signer,
-	) -> Result<(), Error> {
-		let _ = self.inner.on_recv_packet(ctx, output, packet, relayer)?;
+	) -> Result<Acknowledgement, Error> {
+		let ack = self.inner.on_recv_packet(ctx, output, packet, relayer)?;
 		let packet_data: PacketData =
 			serde_json::from_slice(packet.data.as_slice()).map_err(|e| {
 				Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
@@ -155,8 +155,10 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 				Error::implementation_specific(format!("Failed to parse receiver account"))
 			})?
 			.into_account();
-		<T as Config>::HandleMemo::execute_memo(&packet_data, receiver)
-			.map_err(|e| Error::implementation_specific(format!("Failed to execute memo {:?}", e)))
+		<T as Config>::HandleMemo::execute_memo(&packet_data, receiver).map_err(|e| {
+			Error::implementation_specific(format!("Failed to execute memo {:?}", e))
+		})?;
+		Ok(ack)
 	}
 
 	fn on_acknowledgement_packet(

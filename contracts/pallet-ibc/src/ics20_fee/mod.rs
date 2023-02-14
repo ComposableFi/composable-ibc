@@ -1,5 +1,6 @@
 use crate::routing::Context;
 use alloc::{format, string::ToString};
+use core::fmt::Debug;
 use ibc::{
 	applications::transfer::{
 		context::BankKeeper, is_receiver_chain_source, packet::PacketData, TracePrefix,
@@ -70,17 +71,21 @@ pub mod pallet {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Ics20ServiceCharge<T: Config> {
-	pub inner: crate::ics20::IbcModule<T>,
+pub struct Ics20ServiceCharge<T: Config, S: Module + Clone + Default + PartialEq + Eq + Debug> {
+	inner: S,
+	_phantom: core::marker::PhantomData<T>,
 }
 
-impl<T: Config> Default for Ics20ServiceCharge<T> {
+impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Default
+	for Ics20ServiceCharge<T, S>
+{
 	fn default() -> Self {
-		Self { inner: crate::ics20::IbcModule::<T>::default() }
+		Self { inner: S::default(), _phantom: Default::default() }
 	}
 }
 
-impl<T: Config + Send + Sync> Module for Ics20ServiceCharge<T>
+impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Module
+	for Ics20ServiceCharge<T, S>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
