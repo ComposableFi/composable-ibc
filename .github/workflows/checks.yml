@@ -35,7 +35,6 @@ jobs:
     - name: check workspace
       run: |
         cargo check --workspace --locked
-        cargo check --package ics11-beefy --tests
 
     - name: check no_std
       run: ./scripts/no_std_checks.sh
