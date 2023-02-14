@@ -21,7 +21,6 @@ use ibc::{
 		ics02_client::client_state::ClientState as ClientStateT,
 		ics03_connection::{
 			connection::{ConnectionEnd, Counterparty},
-			handler::verify::ConsensusProofwithHostConsensusStateProof,
 			msgs::{
 				conn_open_ack::MsgConnectionOpenAck, conn_open_confirm::MsgConnectionOpenConfirm,
 				conn_open_try::MsgConnectionOpenTry,
@@ -42,7 +41,7 @@ use ibc::{
 	tx_msg::Msg,
 	Height,
 };
-use ibc_proto::{google::protobuf::Any, ibc::core::client::v1::QueryConsensusStateResponse};
+use ibc_proto::google::protobuf::Any;
 use pallet_ibc::light_clients::AnyClientState;
 use primitives::{error::Error, mock::LocalClientTypes, Chain};
 use tendermint_proto::Protobuf;
@@ -111,8 +110,8 @@ pub async fn parse_events(
 							client_state.latest_height(),
 						)
 						.await?;
-					let consensus_proof =
-						query_consensus_proof(sink, client_state.clone(), consensus_proof).await?;
+					let host_consensus_state_proof =
+						query_host_consensus_state_proof(sink, client_state.clone()).await?;
 
 					// Construct OpenTry
 					let msg = MsgConnectionOpenTry::<LocalClientTypes> {
@@ -129,7 +128,7 @@ pub async fn parse_events(
 							connection_proof,
 							client_state_proof,
 							Some(ConsensusProof::new(
-								CommitmentProofBytes::try_from(consensus_proof)?,
+								CommitmentProofBytes::try_from(consensus_proof.proof)?,
 								client_state.latest_height(),
 							)?),
 							None,
@@ -137,6 +136,7 @@ pub async fn parse_events(
 						)?,
 						delay_period: connection_end.delay_period(),
 						signer: sink.account_id(),
+						host_consensus_state_proof,
 					};
 
 					let value = msg.encode_vec()?;
@@ -186,8 +186,8 @@ pub async fn parse_events(
 							client_state.latest_height(),
 						)
 						.await?;
-					let consensus_proof =
-						query_consensus_proof(sink, client_state.clone(), consensus_proof).await?;
+					let host_consensus_state_proof =
+						query_host_consensus_state_proof(sink, client_state.clone()).await?;
 					// Construct OpenAck
 					let msg = MsgConnectionOpenAck::<LocalClientTypes> {
 						connection_id: counterparty
@@ -202,12 +202,13 @@ pub async fn parse_events(
 							connection_proof,
 							client_state_proof,
 							Some(ConsensusProof::new(
-								CommitmentProofBytes::try_from(consensus_proof)?,
+								CommitmentProofBytes::try_from(consensus_proof.proof)?,
 								client_state.latest_height(),
 							)?),
 							None,
 							proof_height,
 						)?,
+						host_consensus_state_proof,
 						version: connection_end
 							.versions()
 							.get(0)
@@ -549,28 +550,21 @@ pub async fn parse_events(
 	Ok((messages, timed_out_packets))
 }
 
-/// Fetch the connection proof for the sink chain.
-async fn query_consensus_proof(
+/// Fetch the consensus state proof for the sink chain.
+async fn query_host_consensus_state_proof(
 	sink: &impl Chain,
 	client_state: AnyClientState,
-	consensus_proof: QueryConsensusStateResponse,
 ) -> Result<Vec<u8>, anyhow::Error> {
 	let client_type = sink.client_type();
-	let consensus_proof_bytes = if !client_type.contains("tendermint") {
-		let host_consensus_state_proof = sink
-			.query_host_consensus_state_proof(client_state.latest_height())
+	let host_consensus_state_proof = if !client_type.contains("tendermint") {
+		sink.query_host_consensus_state_proof(client_state.latest_height())
 			.await?
-			.expect("Host chain requires consensus state proof; qed");
-		ConsensusProofwithHostConsensusStateProof {
-			host_consensus_state_proof,
-			consensus_proof: consensus_proof.proof,
-		}
-		.encode()
+			.expect("Host chain requires consensus state proof; qed")
 	} else {
-		consensus_proof.proof
+		vec![]
 	};
 
-	Ok(consensus_proof_bytes)
+	Ok(host_consensus_state_proof)
 }
 
 pub fn has_packet_events(event_types: &[IbcEventType]) -> bool {

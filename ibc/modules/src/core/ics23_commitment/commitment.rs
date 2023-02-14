@@ -180,7 +180,8 @@ impl Serialize for CommitmentPrefix {
 pub mod test_util {
 	use crate::prelude::*;
 	use ibc_proto::{
-		ibc::core::commitment::v1::MerkleProof as RawMerkleProof, ics23::CommitmentProof,
+		cosmos::ics23::v1::CommitmentProof,
+		ibc::core::commitment::v1::MerkleProof as RawMerkleProof,
 	};
 
 	/// Returns a dummy `RawMerkleProof`, for testing only!

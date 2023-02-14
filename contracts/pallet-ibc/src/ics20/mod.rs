@@ -1,4 +1,5 @@
 pub mod context;
+pub mod memo;
 
 use crate::{routing::Context, ChannelIds, Config, DenomToAssetId, Event, Pallet, WeightInfo};
 use alloc::{
@@ -402,5 +403,17 @@ pub fn full_ibc_denom(packet: &Packet, mut token: PrefixedCoin) -> String {
 
 		token.denom.add_trace_prefix(prefix);
 		token.denom.to_string()
+	}
+}
+
+use ibc::applications::transfer::error::Error as Ics20Error;
+
+pub trait HandleMemo<T: Config> {
+	fn execute_memo(packet_data: &PacketData, receiver: T::AccountId) -> Result<(), Ics20Error>;
+}
+
+impl<T: Config> HandleMemo<T> for () {
+	fn execute_memo(_packet_data: &PacketData, _receiver: T::AccountId) -> Result<(), Ics20Error> {
+		Ok(())
 	}
 }

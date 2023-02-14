@@ -198,6 +198,7 @@ where
 		receiver: chain_b.account_id(),
 		timeout_height,
 		timeout_timestamp,
+		memo: "".to_string(),
 	};
 	chain_a.send_transfer(msg.clone()).await.expect("Failed to send transfer: ");
 	(amount, msg)
