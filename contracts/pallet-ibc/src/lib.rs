@@ -151,7 +151,7 @@ pub mod pallet {
 		traits::{
 			fungibles::{Inspect, Mutate, Transfer},
 			tokens::{AssetId, Balance},
-			ReservableCurrency, UnixTime,
+			Contains, ReservableCurrency, UnixTime,
 		},
 	};
 	use frame_system::pallet_prelude::*;
@@ -249,6 +249,8 @@ pub mod pallet {
 		/// Amount to be reserved for client and connection creation
 		#[pallet::constant]
 		type SpamProtectionDeposit: Get<Self::Balance>;
+		/// Whitelist mechanism - likely to be temporary while we test the bridge
+		type Whitelist: Contains<<Self as frame_system::Config>::AccountId>;
 		/// Handle Ics20 Memo
 		type HandleMemo: HandleMemo<Self>;
 		/// Memo Message types supported by the runtime
@@ -524,6 +526,8 @@ pub mod pallet {
 		ClientUpdateNotFound,
 		/// Error Freezing client
 		ClientFreezeFailed,
+		/// Access denied
+		AccessDenied,
 	}
 
 	#[pallet::hooks]
@@ -598,6 +602,8 @@ pub mod pallet {
 			memo: Option<T::MemoMessage>,
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
+			// Ensure that the signer is whitelisted
+			ensure!(T::Whitelist::contains(&origin), Error::<T>::AccessDenied);
 			let denom = T::IbcDenomToAssetIdConversion::from_asset_id_to_denom(asset_id)
 				.ok_or_else(|| Error::<T>::InvalidAssetId)?;
 

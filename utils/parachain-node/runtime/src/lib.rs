@@ -53,7 +53,7 @@ use frame_support::{
 	construct_runtime,
 	dispatch::DispatchClass,
 	parameter_types,
-	traits::{fungibles::InspectMetadata, AsEnsureOriginWithArg, Everything},
+	traits::{fungibles::InspectMetadata, AsEnsureOriginWithArg, Contains, Everything},
 	weights::{
 		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
 		WeightToFeeCoefficients, WeightToFeePolynomial,
@@ -719,8 +719,17 @@ impl pallet_ibc::Config for Runtime {
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type SentryOrigin = EnsureRoot<AccountId>;
 	type SpamProtectionDeposit = SpamProtectionDeposit;
+	type Whitelist = AllowAll;
 	type MemoMessage = MemoMessage;
 	type HandleMemo = ();
+}
+
+pub struct AllowAll {}
+
+impl Contains<AccountId> for AllowAll {
+	fn contains(_account_id: &AccountId) -> bool {
+		true
+	}
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
