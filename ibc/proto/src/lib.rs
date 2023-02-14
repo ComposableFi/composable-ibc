@@ -136,6 +136,11 @@ pub mod cosmos {
 			include_proto!("cosmos.gov.v1beta1.rs");
 		}
 	}
+	pub mod ics23 {
+		pub mod v1 {
+			include_proto!("cosmos.ics23.v1.rs");
+		}
+	}
 }
 
 pub mod ibc {
@@ -198,7 +203,7 @@ pub mod ibc {
 	pub mod lightclients {
 		pub mod solomachine {
 			pub mod v1 {
-				include_proto!("ibc.lightclients.solomachine.v1.rs");
+				include_proto!("ibc.lightclients.solomachine.v3.rs");
 			}
 		}
 		pub mod tendermint {
@@ -210,10 +215,6 @@ pub mod ibc {
 	pub mod mock {
 		include_proto!("ibc.mock.rs");
 	}
-}
-
-pub mod ics23 {
-	include_proto!("ics23.rs");
 }
 
 pub(crate) mod base64 {

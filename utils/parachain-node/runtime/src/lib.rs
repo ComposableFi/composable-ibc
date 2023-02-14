@@ -676,6 +676,25 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 	}
 }
 
+#[derive(
+	Debug, codec::Encode, Clone, codec::Decode, PartialEq, Eq, scale_info::TypeInfo, Default,
+)]
+pub struct MemoMessage;
+
+impl alloc::string::ToString for MemoMessage {
+	fn to_string(&self) -> String {
+		Default::default()
+	}
+}
+
+impl core::str::FromStr for MemoMessage {
+	type Err = ();
+
+	fn from_str(_s: &str) -> Result<Self, Self::Err> {
+		Ok(Default::default())
+	}
+}
+
 impl pallet_ibc::Config for Runtime {
 	type TimeProvider = Timestamp;
 	type RuntimeEvent = RuntimeEvent;
@@ -698,6 +717,8 @@ impl pallet_ibc::Config for Runtime {
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type SentryOrigin = EnsureRoot<AccountId>;
 	type SpamProtectionDeposit = SpamProtectionDeposit;
+	type MemoMessage = MemoMessage;
+	type HandleMemo = ();
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

@@ -32,7 +32,23 @@ pub struct CompileCmd {
 
 	#[argh(option, short = 'i')]
 	/// path to the Cosmos IBC proto files
-	ibc: Option<PathBuf>,
+	ibc: PathBuf,
+
+	#[argh(option)]
+	/// path to gogo proto
+	gogo: PathBuf,
+
+	#[argh(option)]
+	/// path to cosmos_proto
+	cosmos: PathBuf,
+
+	#[argh(option)]
+	/// path to cosmos/ics23
+	ics23: PathBuf,
+
+	#[argh(option)]
+	/// path to Google apis
+	google: PathBuf,
 
 	#[argh(option, short = 'o')]
 	/// path to output the generated Rust sources into
@@ -42,26 +58,42 @@ pub struct CompileCmd {
 impl CompileCmd {
 	pub fn run(&self) {
 		let tmp_sdk = TempDir::new("ibc-proto-sdk").unwrap();
-		Self::compile_sdk_protos(&self.sdk, tmp_sdk.as_ref(), self.ibc.clone());
+		Self::compile_sdk_protos(
+			&self.sdk,
+			&self.ibc,
+			&self.gogo,
+			&self.google,
+			&self.cosmos,
+			&self.ics23,
+			tmp_sdk.as_ref(),
+		);
 
-		match &self.ibc {
-			None => {
-				println!("[info ] Omitting the IBC-go repo");
-				Self::copy_generated_files(tmp_sdk.as_ref(), None, &self.out);
-			},
-			Some(ibc_path) => {
-				let tmp_ibc = TempDir::new("ibc-proto-ibc-go").unwrap();
+		let tmp_ibc = TempDir::new("ibc-proto-ibc-go").unwrap();
 
-				Self::compile_ibc_protos(ibc_path, tmp_ibc.as_ref());
+		Self::compile_ibc_protos(
+			&self.ibc,
+			&self.sdk,
+			&self.gogo,
+			&self.google,
+			&self.cosmos,
+			&self.ics23,
+			tmp_ibc.as_ref(),
+		);
 
-				// Merge the generated files into a single directory, taking care not to overwrite
-				// anything
-				Self::copy_generated_files(tmp_sdk.as_ref(), Some(tmp_ibc.as_ref()), &self.out);
-			},
-		}
+		// Merge the generated files into a single directory, taking care not to overwrite
+		// anything
+		Self::copy_generated_files(tmp_sdk.as_ref(), Some(tmp_ibc.as_ref()), &self.out);
 	}
 
-	fn compile_ibc_protos(ibc_dir: &Path, out_dir: &Path) {
+	fn compile_ibc_protos(
+		ibc_dir: &Path,
+		sdk_dir: &Path,
+		gogo: &Path,
+		google: &Path,
+		cosmos_proto: &Path,
+		ics23: &Path,
+		out_dir: &Path,
+	) {
 		println!("[info ] Compiling IBC .proto files to Rust into '{}'...", out_dir.display());
 
 		// Paths
@@ -70,8 +102,15 @@ impl CompileCmd {
 			format!("{}/proto/ibc", ibc_dir.display()),
 		];
 
+		let root = env!("CARGO_MANIFEST_DIR");
+
 		let proto_includes_paths = [
+			format!("{}", gogo.display()),
+			format!("{}", google.display()),
+			format!("{}/proto", cosmos_proto.display()),
+			format!("{}/proto", ics23.display()),
 			format!("{}/proto", ibc_dir.display()),
+			format!("{}/proto", sdk_dir.display()),
 			format!("{}/third_party/proto", ibc_dir.display()),
 		];
 
@@ -148,27 +187,31 @@ impl CompileCmd {
 			.type_attribute(".ibc.core.types.v1", attrs_serde)
 			.type_attribute(".ibc.applications.transfer.v1", attrs_serde)
 			.type_attribute(".ibc.applications.interchain_accounts.controller.v1", attrs_serde)
-			.type_attribute(".ics23", attrs_serde)
-			.type_attribute(".ics23.LeafOp", attrs_eq)
-			.type_attribute(".ics23.LeafOp", attrs_jsonschema)
-			.field_attribute(".ics23.LeafOp.prehash_key", attrs_serde_default)
-			.field_attribute(".ics23.LeafOp.prefix", attrs_serde_base64)
-			.field_attribute(".ics23.LeafOp.prefix", attrs_jsonschema_str)
-			.type_attribute(".ics23.InnerOp", attrs_jsonschema)
-			.field_attribute(".ics23.InnerOp.prefix", attrs_serde_base64)
-			.field_attribute(".ics23.InnerOp.prefix", attrs_jsonschema_str)
-			.field_attribute(".ics23.InnerOp.suffix", attrs_serde_base64)
-			.field_attribute(".ics23.InnerOp.suffix", attrs_jsonschema_str)
-			.type_attribute(".ics23.InnerOp", attrs_eq)
-			.type_attribute(".ics23.ProofSpec", attrs_eq)
-			.type_attribute(".ics23.ProofSpec", attrs_jsonschema)
-			.field_attribute(".ics23.ProofSpec.max_depth", attrs_serde_default)
-			.field_attribute(".ics23.ProofSpec.min_depth", attrs_serde_default)
-			.type_attribute(".ics23.InnerSpec", attrs_eq)
-			.type_attribute(".ics23.InnerSpec", attrs_jsonschema)
-			.field_attribute(".ics23.InnerSpec.empty_child", attrs_serde_default)
-			.field_attribute(".ics23.InnerSpec.empty_child", attrs_serde_base64)
-			.field_attribute(".ics23.InnerSpec.empty_child", attrs_jsonschema_str)
+			.type_attribute(
+				".ibc.applications.interchain_accounts.v1.InterchainAccountPacketData",
+				attrs_serde,
+			)
+			.type_attribute(".cosmos.ics23", attrs_serde)
+			.type_attribute(".cosmos.ics23.v1.LeafOp", attrs_eq)
+			.type_attribute(".cosmos.ics23.v1.LeafOp", attrs_jsonschema)
+			.field_attribute(".cosmos.ics23.v1.LeafOp.prehash_key", attrs_serde_default)
+			.field_attribute(".cosmos.ics23.v1.LeafOp.prefix", attrs_serde_base64)
+			.field_attribute(".cosmos.ics23.v1.LeafOp.prefix", attrs_jsonschema_str)
+			.type_attribute(".cosmos.ics23.v1.InnerOp", attrs_jsonschema)
+			.field_attribute(".cosmos.ics23.v1.InnerOp.prefix", attrs_serde_base64)
+			.field_attribute(".cosmos.ics23.v1.InnerOp.prefix", attrs_jsonschema_str)
+			.field_attribute(".cosmos.ics23.v1.InnerOp.suffix", attrs_serde_base64)
+			.field_attribute(".cosmos.ics23.v1.InnerOp.suffix", attrs_jsonschema_str)
+			.type_attribute(".cosmos.ics23.v1.InnerOp", attrs_eq)
+			.type_attribute(".cosmos.ics23.v1.ProofSpec", attrs_eq)
+			.type_attribute(".cosmos.ics23.v1.ProofSpec", attrs_jsonschema)
+			.field_attribute(".cosmos.ics23.v1.ProofSpec.max_depth", attrs_serde_default)
+			.field_attribute(".cosmos.ics23.v1.ProofSpec.min_depth", attrs_serde_default)
+			.type_attribute(".cosmos.ics23.v1.InnerSpec", attrs_eq)
+			.type_attribute(".cosmos.ics23.v1.InnerSpec", attrs_jsonschema)
+			.field_attribute(".cosmos.ics23.v1.InnerSpec.empty_child", attrs_serde_default)
+			.field_attribute(".cosmos.ics23.v1.InnerSpec.empty_child", attrs_serde_base64)
+			.field_attribute(".cosmos.ics23.v1.InnerSpec.empty_child", attrs_jsonschema_str)
 			.compile(&protos, &includes);
 
 		match compilation {
@@ -182,7 +225,15 @@ impl CompileCmd {
 		}
 	}
 
-	fn compile_sdk_protos(sdk_dir: &Path, out_dir: &Path, ibc_dep: Option<PathBuf>) {
+	fn compile_sdk_protos(
+		sdk_dir: &Path,
+		ibc_dir: &Path,
+		gogo: &Path,
+		google: &Path,
+		cosmos_proto: &Path,
+		ics23: &Path,
+		out_dir: &Path,
+	) {
 		println!(
 			"[info ] Compiling Cosmos-SDK .proto files to Rust into '{}'...",
 			out_dir.display()
@@ -203,15 +254,15 @@ impl CompileCmd {
 		];
 
 		let mut proto_includes_paths = vec![
+			format!("{}", gogo.display()),
+			format!("{}", google.display()),
+			format!("{}/proto", cosmos_proto.display()),
+			format!("{}/proto", ics23.display()),
 			format!("{}/../proto", root),
 			format!("{}/proto", sdk_dir.display()),
 			format!("{}/third_party/proto", sdk_dir.display()),
+			format!("{}/proto", ibc_dir.display()),
 		];
-
-		if let Some(ibc_dir) = ibc_dep {
-			// Use the IBC proto files from the SDK
-			proto_includes_paths.push(format!("{}/proto", ibc_dir.display()));
-		}
 
 		// List available proto files
 		let mut protos: Vec<PathBuf> = vec![];
@@ -253,11 +304,12 @@ impl CompileCmd {
 			.type_attribute(".cosmos.base.v1beta1", attrs_serde)
 			.type_attribute(".cosmos.base.query.v1beta1", attrs_serde)
 			.type_attribute(".cosmos.bank.v1beta1", attrs_serde)
+			.type_attribute(".cosmos_proto", attrs_serde)
 			.compile(&protos, &includes);
 
 		match compilation {
 			Ok(_) => {
-				println!("Successfully compiled proto files");
+				println!("Successfully compiled sdk proto files");
 			},
 			Err(e) => {
 				println!("Failed to compile:{:?}", e.to_string());

@@ -5616,10 +5616,9 @@ pub mod api {
 						"sudo",
 						Sudo { call: ::std::boxed::Box::new(call) },
 						[
-							74u8, 109u8, 45u8, 177u8, 181u8, 81u8, 67u8, 54u8, 55u8, 134u8, 243u8,
-							226u8, 228u8, 143u8, 115u8, 223u8, 220u8, 144u8, 99u8, 37u8, 125u8,
-							2u8, 236u8, 183u8, 120u8, 149u8, 44u8, 114u8, 150u8, 196u8, 131u8,
-							185u8,
+							61u8, 69u8, 210u8, 124u8, 24u8, 70u8, 238u8, 252u8, 250u8, 227u8,
+							186u8, 43u8, 175u8, 28u8, 20u8, 127u8, 8u8, 181u8, 154u8, 174u8, 173u8,
+							106u8, 78u8, 6u8, 152u8, 235u8, 92u8, 41u8, 110u8, 11u8, 71u8, 22u8,
 						],
 					)
 				}
@@ -5643,10 +5642,10 @@ pub mod api {
 						"sudo_unchecked_weight",
 						SudoUncheckedWeight { call: ::std::boxed::Box::new(call), weight },
 						[
-							0u8, 28u8, 79u8, 218u8, 178u8, 83u8, 193u8, 37u8, 69u8, 167u8, 192u8,
-							163u8, 159u8, 63u8, 230u8, 115u8, 49u8, 223u8, 222u8, 160u8, 148u8,
-							219u8, 200u8, 27u8, 102u8, 181u8, 139u8, 71u8, 215u8, 35u8, 136u8,
-							101u8,
+							212u8, 52u8, 130u8, 35u8, 117u8, 163u8, 145u8, 120u8, 214u8, 217u8,
+							251u8, 122u8, 223u8, 197u8, 220u8, 90u8, 191u8, 43u8, 225u8, 90u8,
+							239u8, 243u8, 75u8, 99u8, 2u8, 70u8, 47u8, 4u8, 78u8, 215u8, 77u8,
+							230u8,
 						],
 					)
 				}
@@ -5696,10 +5695,10 @@ pub mod api {
 						"sudo_as",
 						SudoAs { who, call: ::std::boxed::Box::new(call) },
 						[
-							130u8, 201u8, 232u8, 173u8, 142u8, 48u8, 192u8, 21u8, 237u8, 185u8,
-							164u8, 222u8, 29u8, 226u8, 164u8, 207u8, 132u8, 163u8, 151u8, 2u8,
-							81u8, 197u8, 76u8, 73u8, 126u8, 73u8, 221u8, 53u8, 20u8, 58u8, 226u8,
-							218u8,
+							196u8, 254u8, 80u8, 185u8, 34u8, 32u8, 98u8, 242u8, 237u8, 110u8,
+							179u8, 106u8, 105u8, 6u8, 125u8, 25u8, 172u8, 111u8, 147u8, 208u8,
+							25u8, 222u8, 235u8, 81u8, 210u8, 108u8, 61u8, 253u8, 133u8, 92u8, 22u8,
+							17u8,
 						],
 					)
 				}
@@ -7738,6 +7737,7 @@ pub mod api {
 				pub params: runtime_types::pallet_ibc::TransferParams<::subxt::utils::AccountId32>,
 				pub asset_id: ::core::primitive::u128,
 				pub amount: ::core::primitive::u128,
+				pub memo: ::core::option::Option<runtime_types::parachain_runtime::MemoMessage>,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -7781,16 +7781,17 @@ pub mod api {
 					params: runtime_types::pallet_ibc::TransferParams<::subxt::utils::AccountId32>,
 					asset_id: ::core::primitive::u128,
 					amount: ::core::primitive::u128,
+					memo: ::core::option::Option<runtime_types::parachain_runtime::MemoMessage>,
 				) -> ::subxt::tx::StaticTxPayload<Transfer> {
 					::subxt::tx::StaticTxPayload::new(
 						"Ibc",
 						"transfer",
-						Transfer { params, asset_id, amount },
+						Transfer { params, asset_id, amount, memo },
 						[
-							126u8, 30u8, 168u8, 114u8, 3u8, 125u8, 185u8, 145u8, 187u8, 173u8,
-							20u8, 241u8, 233u8, 215u8, 52u8, 12u8, 150u8, 174u8, 242u8, 58u8,
-							116u8, 11u8, 102u8, 61u8, 221u8, 30u8, 117u8, 47u8, 73u8, 230u8, 8u8,
-							0u8,
+							139u8, 239u8, 162u8, 96u8, 182u8, 247u8, 244u8, 34u8, 1u8, 164u8,
+							206u8, 183u8, 108u8, 136u8, 200u8, 45u8, 117u8, 167u8, 226u8, 114u8,
+							53u8, 230u8, 5u8, 207u8, 131u8, 3u8, 191u8, 149u8, 255u8, 23u8, 52u8,
+							42u8,
 						],
 					)
 				}
@@ -11030,6 +11031,7 @@ pub mod api {
 							runtime_types::pallet_ibc::TransferParams<::subxt::utils::AccountId32>,
 						asset_id: ::core::primitive::u128,
 						amount: ::core::primitive::u128,
+						memo: ::core::option::Option<runtime_types::parachain_runtime::MemoMessage>,
 					},
 					#[codec(index = 2)]
 					set_params { params: runtime_types::pallet_ibc::PalletParams },
@@ -11997,6 +11999,10 @@ pub mod api {
 		}
 		pub mod parachain_runtime {
 			use super::runtime_types;
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			pub struct MemoMessage;
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
@@ -14269,9 +14275,9 @@ pub mod api {
 		let runtime_metadata_hash = client.metadata().metadata_hash(&PALLETS);
 		if runtime_metadata_hash !=
 			[
-				105u8, 174u8, 59u8, 212u8, 90u8, 228u8, 78u8, 23u8, 80u8, 88u8, 127u8, 13u8, 180u8,
-				80u8, 93u8, 193u8, 157u8, 237u8, 214u8, 13u8, 122u8, 129u8, 150u8, 178u8, 229u8,
-				145u8, 181u8, 231u8, 90u8, 169u8, 204u8, 246u8,
+				196u8, 200u8, 21u8, 235u8, 179u8, 24u8, 158u8, 34u8, 117u8, 71u8, 221u8, 224u8,
+				115u8, 154u8, 242u8, 111u8, 216u8, 219u8, 162u8, 175u8, 56u8, 62u8, 159u8, 6u8,
+				107u8, 207u8, 255u8, 247u8, 125u8, 43u8, 129u8, 79u8,
 			] {
 			Err(::subxt::error::MetadataError::IncompatibleMetadata)
 		} else {

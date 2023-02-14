@@ -27,13 +27,8 @@ use crate::{
 	proofs::ConsensusProof,
 	Height,
 };
-use alloc::{format, vec::Vec};
+use alloc::vec::Vec;
 
-#[derive(codec::Decode, codec::Encode)]
-pub struct ConsensusProofwithHostConsensusStateProof {
-	pub host_consensus_state_proof: Vec<u8>,
-	pub consensus_proof: Vec<u8>,
-}
 /// Verifies the authenticity and semantic correctness of a commitment `proof`. The commitment
 /// claims to prove that an object of type connection exists on the source chain (i.e., the chain
 /// which created this proof). This object must match the state of `expected_conn`.
@@ -132,6 +127,7 @@ pub fn verify_consensus_proof<Ctx: ReaderContext>(
 	height: Height,
 	connection_end: &ConnectionEnd,
 	proof: &ConsensusProof,
+	host_consensus_state_proof: Vec<u8>,
 ) -> Result<(), Error> {
 	// Fetch the client state (IBC client on the local chain).
 	let client_state = ctx.client_state(connection_end.client_id()).map_err(Error::ics02_client)?;
@@ -146,33 +142,15 @@ pub fn verify_consensus_proof<Ctx: ReaderContext>(
 
 	let client = client_state.client_def();
 
-	// todo: we can remove this hack, once this is merged https://github.com/cosmos/ibc/pull/839
-	let (consensus_proof, expected_consensus) = match ctx.host_client_type() {
-		client_type if !client_type.contains("tendermint") => {
-			// if the host is beefy or near, we need to decode the proof before passing it on.
-			let connection_proof: ConsensusProofwithHostConsensusStateProof =
-				codec::Decode::decode(&mut proof.proof().as_bytes()).map_err(|e| {
-					Error::implementation_specific(format!("failed to decode: {:?}", e))
-				})?;
-			// Fetch the expected consensus state from the historical (local) header data.
-			let expected_consensus = ctx
-				.host_consensus_state(
-					proof.height(),
-					Some(connection_proof.host_consensus_state_proof),
-				)
-				.map_err(|e| Error::consensus_state_verification_failure(proof.height(), e))?;
-			(
-				CommitmentProofBytes::try_from(connection_proof.consensus_proof).map_err(|e| {
-					Error::implementation_specific(format!("empty proof bytes: {:?}", e))
-				})?,
-				expected_consensus,
-			)
-		},
-		_ => (
-			proof.proof().clone(),
-			ctx.host_consensus_state(proof.height(), None)
-				.map_err(|e| Error::consensus_state_verification_failure(proof.height(), e))?,
-		),
+	let expected_consensus = if !host_consensus_state_proof.is_empty() {
+		// Fetch the expected consensus state from the historical (local) header data.
+		let expected_consensus = ctx
+			.host_consensus_state(proof.height(), Some(host_consensus_state_proof))
+			.map_err(|e| Error::consensus_state_verification_failure(proof.height(), e))?;
+		expected_consensus
+	} else {
+		ctx.host_consensus_state(proof.height(), None)
+			.map_err(|e| Error::consensus_state_verification_failure(proof.height(), e))?
 	};
 
 	client
@@ -181,7 +159,7 @@ pub fn verify_consensus_proof<Ctx: ReaderContext>(
 			&client_state,
 			height,
 			connection_end.counterparty().prefix(),
-			&consensus_proof,
+			proof.proof(),
 			consensus_state.root(),
 			connection_end.counterparty().client_id(),
 			proof.height(),

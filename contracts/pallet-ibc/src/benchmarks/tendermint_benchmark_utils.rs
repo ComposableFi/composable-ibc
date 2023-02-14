@@ -44,7 +44,7 @@ use ibc::{
 	timestamp::Timestamp,
 	Height,
 };
-use ibc_proto::{ibc::core::commitment::v1::MerkleProof, ics23::CommitmentProof};
+use ibc_proto::{cosmos::ics23::v1::CommitmentProof, ibc::core::commitment::v1::MerkleProof};
 use ics07_tendermint::{
 	client_state::ClientState as TendermintClientState, consensus_state::ConsensusState,
 };
@@ -462,6 +462,7 @@ where
 			)
 			.unwrap(),
 			delay_period,
+			host_consensus_state_proof: vec![],
 			signer: Signer::from_str(MODULE_ID).unwrap(),
 		},
 	)
@@ -573,6 +574,7 @@ where
 			.unwrap(),
 			version: ConnVersion::default(),
 			signer: Signer::from_str(MODULE_ID).unwrap(),
+			host_consensus_state_proof: Default::default(),
 		},
 	)
 }
