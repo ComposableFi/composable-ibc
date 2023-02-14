@@ -24,6 +24,14 @@ use crate::{
 	consensus_state::ConsensusState as TendermintConsensusState,
 	HostFunctionsProvider,
 };
+use tendermint::{
+	crypto::{
+		signature::{Error, Verifier},
+		Sha256,
+	},
+	merkle::{Hash, MerkleHash, NonIncremental, HASH_SIZE},
+	PublicKey, Signature,
+};
 
 use crate::{client_message::ClientMessage, mock::host::MockHostBlock};
 use ibc::{
@@ -43,7 +51,6 @@ use ibc::{
 };
 use ibc_derive::{ClientDef, ClientMessage, ClientState, ConsensusState};
 use ibc_proto::google::protobuf::Any;
-use tendermint_light_client_verifier::host_functions::CryptoProvider as TendermintHostFunctionsProvider;
 use tendermint_proto::Protobuf;
 
 pub const MOCK_CLIENT_STATE_TYPE_URL: &str = "/ibc.mock.ClientState";
@@ -110,7 +117,7 @@ impl From<AnyClientMessage> for Any {
 			},
 			AnyClientMessage::Tendermint(msg) => Any {
 				type_url: TENDERMINT_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec(),
+				value: msg.encode_vec().unwrap(),
 			},
 		}
 	}
@@ -154,8 +161,8 @@ impl HostBlockType for MockClientTypes {
 pub struct Crypto;
 
 impl ics23::HostFunctionsProvider for Crypto {
-	fn sha2_256(_message: &[u8]) -> [u8; 32] {
-		unimplemented!()
+	fn sha2_256(message: &[u8]) -> [u8; 32] {
+		sha2::Sha256::digest(message)
 	}
 
 	fn sha2_512(_message: &[u8]) -> [u8; 64] {
@@ -175,16 +182,28 @@ impl ics23::HostFunctionsProvider for Crypto {
 	}
 }
 
-impl TendermintHostFunctionsProvider for Crypto {
-	fn sha2_256(_preimage: &[u8]) -> [u8; 32] {
+impl Sha256 for Crypto {
+	fn digest(_data: impl AsRef<[u8]>) -> [u8; HASH_SIZE] {
 		unimplemented!()
 	}
+}
 
-	fn ed25519_verify(_sig: &[u8], _msg: &[u8], _pub_key: &[u8]) -> Result<(), ()> {
-		unimplemented!()
+impl MerkleHash for Crypto {
+	fn empty_hash(&mut self) -> Hash {
+		NonIncremental::<Self>::default().empty_hash()
 	}
 
-	fn secp256k1_verify(_sig: &[u8], _message: &[u8], _public: &[u8]) -> Result<(), ()> {
+	fn leaf_hash(&mut self, bytes: &[u8]) -> Hash {
+		NonIncremental::<Self>::default().leaf_hash(bytes)
+	}
+
+	fn inner_hash(&mut self, left: Hash, right: Hash) -> Hash {
+		NonIncremental::<Self>::default().inner_hash(left, right)
+	}
+}
+
+impl Verifier for Crypto {
+	fn verify(_pubkey: PublicKey, _msg: &[u8], _signature: &Signature) -> Result<(), Error> {
 		unimplemented!()
 	}
 }

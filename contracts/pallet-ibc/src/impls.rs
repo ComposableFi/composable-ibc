@@ -808,8 +808,8 @@ where
 				Pallet::<T>::open_channel(port_id, channel_end),
 			HandlerMessage::CloseChannel { channel_id, port_id } =>
 				Pallet::<T>::close_channel(port_id, channel_id),
-			HandlerMessage::Transfer { timeout, to, from, channel_id, coin } => {
-				let msg = Pallet::<T>::to_msg_transfer(coin, from, to, timeout, channel_id)?;
+			HandlerMessage::Transfer { timeout, to, from, channel_id, coin, memo } => {
+				let msg = Pallet::<T>::to_msg_transfer(coin, from, to, timeout, channel_id, memo)?;
 				Pallet::<T>::send_transfer(msg)
 			},
 			HandlerMessage::SendPacket { data, timeout, port_id, channel_id } =>
@@ -835,7 +835,8 @@ where
 			Signer::from_str("pallet_ibc").unwrap(),
 		)
 		.unwrap()
-		.encode_vec();
+		.encode_vec()
+		.unwrap();
 		let msg = ibc_proto::google::protobuf::Any { type_url: TYPE_URL.to_string(), value: msg };
 		let mut ctx = Context::<T>::new();
 		ibc::core::ics26_routing::handler::deliver(&mut ctx, msg).unwrap();
@@ -981,8 +982,12 @@ where
 				.map_err(|_| IbcHandlerError::ChannelInitError { msg: None })?,
 		};
 
-		let msg =
-			ibc_proto::google::protobuf::Any { type_url: msg.type_url(), value: msg.encode_vec() };
+		let msg = ibc_proto::google::protobuf::Any {
+			type_url: msg.type_url(),
+			value: msg
+				.encode_vec()
+				.map_err(|e| IbcHandlerError::Other { msg: Some(e.to_string()) })?,
+		};
 		let res = ibc::core::ics26_routing::handler::deliver::<_>(&mut ctx, msg)
 			.map_err(|e| IbcHandlerError::ChannelInitError { msg: Some(e.to_string()) })?;
 		Self::deposit_event(res.events.into());
@@ -1009,6 +1014,7 @@ where
 		to: Signer,
 		timeout: Timeout,
 		channel_id: ChannelId,
+		memo: String,
 	) -> Result<MsgTransfer<PrefixedCoin>, IbcHandlerError> {
 		let account_id_32: AccountId32 = from.into();
 		let from = runtime_interface::account_id_to_ss58(
@@ -1071,6 +1077,7 @@ where
 			receiver: to,
 			timeout_height,
 			timeout_timestamp,
+			memo,
 		};
 		Ok(msg)
 	}
@@ -1094,8 +1101,12 @@ where
 			signer: Signer::from_str(MODULE_ID)
 				.map_err(|_| IbcHandlerError::ChannelInitError { msg: None })?,
 		};
-		let msg =
-			ibc_proto::google::protobuf::Any { type_url: msg.type_url(), value: msg.encode_vec() };
+		let msg = ibc_proto::google::protobuf::Any {
+			type_url: msg.type_url(),
+			value: msg
+				.encode_vec()
+				.map_err(|e| IbcHandlerError::Other { msg: Some(e.to_string()) })?,
+		};
 		let res = ibc::core::ics26_routing::handler::deliver::<_>(&mut ctx, msg)
 			.map_err(|e| IbcHandlerError::ChannelCloseError { msg: Some(e.to_string()) })?;
 		Self::deposit_event(res.events.into());

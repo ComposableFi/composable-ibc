@@ -302,7 +302,7 @@ where
 		client_message: AnyClientMessage::Grandpa(ClientMessage::Header(grandpa_header)),
 		signer,
 	};
-	let value = msg.encode_vec();
+	let value = msg.encode_vec()?;
 	Result::<_, anyhow::Error>::Ok((
 		Any { value, type_url: msg.type_url() },
 		events,

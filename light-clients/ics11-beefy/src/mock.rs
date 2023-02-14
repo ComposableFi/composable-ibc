@@ -128,7 +128,7 @@ impl From<AnyClientMessage> for Any {
 			},
 			AnyClientMessage::Beefy(beefy) => Any {
 				type_url: BEEFY_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: beefy.encode_vec(),
+				value: beefy.encode_vec().unwrap(),
 			},
 		}
 	}

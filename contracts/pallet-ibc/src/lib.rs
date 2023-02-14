@@ -159,7 +159,10 @@ pub mod pallet {
 	pub use ibc::signer::Signer;
 	use sp_core::crypto::ByteArray;
 
-	use crate::routing::{Context, ModuleRouter};
+	use crate::{
+		ics20::HandleMemo,
+		routing::{Context, ModuleRouter},
+	};
 	use ibc::{
 		applications::transfer::{
 			is_sender_chain_source, msgs::transfer::MsgTransfer, Amount, PrefixedCoin,
@@ -247,6 +250,16 @@ pub mod pallet {
 		/// Amount to be reserved for client and connection creation
 		#[pallet::constant]
 		type SpamProtectionDeposit: Get<Self::Balance>;
+		/// Handle Ics20 Memo
+		type HandleMemo: HandleMemo<Self>;
+		/// Memo Message types supported by the runtime
+		type MemoMessage: codec::Codec
+			+ FromStr
+			+ ToString
+			+ Debug
+			+ scale_info::TypeInfo
+			+ Clone
+			+ Eq;
 	}
 
 	#[pallet::pallet]
@@ -581,6 +594,7 @@ pub mod pallet {
 			params: TransferParams<<T as frame_system::Config>::AccountId>,
 			asset_id: T::AssetId,
 			amount: T::Balance,
+			memo: Option<T::MemoMessage>,
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
 			let denom = T::IbcDenomToAssetIdConversion::from_asset_id_to_denom(asset_id)
@@ -648,6 +662,7 @@ pub mod pallet {
 				receiver: Signer::from_str(&to).map_err(|_| Error::<T>::Utf8Error)?,
 				timeout_height,
 				timeout_timestamp,
+				memo: memo.map(|memo| memo.to_string()).unwrap_or_default(),
 			};
 			let is_sender_source = is_sender_chain_source(
 				msg.source_port.clone(),

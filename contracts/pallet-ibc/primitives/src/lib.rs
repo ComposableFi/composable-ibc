@@ -62,6 +62,7 @@ pub enum HandlerMessage<AccountId> {
 		timeout: Timeout,
 		from: AccountId,
 		to: Signer,
+		memo: String,
 	},
 	SendPacket {
 		/// packet data

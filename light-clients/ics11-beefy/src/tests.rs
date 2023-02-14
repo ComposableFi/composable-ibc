@@ -116,15 +116,7 @@ async fn test_continuous_update_of_beefy_client() {
 					client_wrapper.para_id,
 				),
 			);
-			relay_client
-				.storage()
-				.at(block_hash)
-				.await
-				.expect("storage client should be available")
-				.fetch(&key)
-				.await
-				.unwrap()
-				.unwrap()
+			relay_client.storage().fetch(&key, block_hash).await.unwrap().unwrap()
 		};
 		let decoded_para_head = frame_support::sp_runtime::generic::Header::<
 			u32,
@@ -196,7 +188,9 @@ async fn test_continuous_update_of_beefy_client() {
 		.unwrap();
 	let mut subscription_stream = subscription.enumerate().take(100);
 
-	while let Some((_, Ok(encoded_versioned_finality_proof))) = subscription_stream.next().await {
+	while let Some((_count, Ok(encoded_versioned_finality_proof))) =
+		subscription_stream.next().await
+	{
 		let beefy_version_finality_proof: VersionedFinalityProof<
 			u32,
 			beefy_primitives::crypto::Signature,

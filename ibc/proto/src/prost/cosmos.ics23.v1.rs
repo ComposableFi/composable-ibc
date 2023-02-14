@@ -19,15 +19,16 @@
 /// in the ProofSpec is valuable to prevent this mutability. And why all trees should
 /// length-prefix the data before hashing it.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ExistenceProof {
-    #[prost(bytes="vec", tag="1")]
+    #[prost(bytes = "vec", tag = "1")]
     pub key: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub value: ::prost::alloc::vec::Vec<u8>,
-    #[prost(message, optional, tag="3")]
+    #[prost(message, optional, tag = "3")]
     pub leaf: ::core::option::Option<LeafOp>,
-    #[prost(message, repeated, tag="4")]
+    #[prost(message, repeated, tag = "4")]
     pub path: ::prost::alloc::vec::Vec<InnerOp>,
 }
 ///
@@ -35,36 +36,39 @@ pub struct ExistenceProof {
 /// one right of the desired key. If both proofs are valid AND they are neighbors,
 /// then there is no valid proof for the given key.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct NonExistenceProof {
     /// TODO: remove this as unnecessary??? we prove a range
-    #[prost(bytes="vec", tag="1")]
+    #[prost(bytes = "vec", tag = "1")]
     pub key: ::prost::alloc::vec::Vec<u8>,
-    #[prost(message, optional, tag="2")]
+    #[prost(message, optional, tag = "2")]
     pub left: ::core::option::Option<ExistenceProof>,
-    #[prost(message, optional, tag="3")]
+    #[prost(message, optional, tag = "3")]
     pub right: ::core::option::Option<ExistenceProof>,
 }
 ///
 /// CommitmentProof is either an ExistenceProof or a NonExistenceProof, or a Batch of such messages
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CommitmentProof {
-    #[prost(oneof="commitment_proof::Proof", tags="1, 2, 3, 4")]
+    #[prost(oneof = "commitment_proof::Proof", tags = "1, 2, 3, 4")]
     pub proof: ::core::option::Option<commitment_proof::Proof>,
 }
 /// Nested message and enum types in `CommitmentProof`.
 pub mod commitment_proof {
     #[derive(::serde::Serialize, ::serde::Deserialize)]
+    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Proof {
-        #[prost(message, tag="1")]
+        #[prost(message, tag = "1")]
         Exist(super::ExistenceProof),
-        #[prost(message, tag="2")]
+        #[prost(message, tag = "2")]
         Nonexist(super::NonExistenceProof),
-        #[prost(message, tag="3")]
+        #[prost(message, tag = "3")]
         Batch(super::BatchProof),
-        #[prost(message, tag="4")]
+        #[prost(message, tag = "4")]
         Compressed(super::CompressedBatchProof),
     }
 }
@@ -86,20 +90,21 @@ pub mod commitment_proof {
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[derive(Eq)]
 #[cfg_attr(feature = "json-schema", derive(::schemars::JsonSchema))]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LeafOp {
-    #[prost(enumeration="HashOp", tag="1")]
+    #[prost(enumeration = "HashOp", tag = "1")]
     pub hash: i32,
-    #[prost(enumeration="HashOp", tag="2")]
+    #[prost(enumeration = "HashOp", tag = "2")]
     #[serde(default)]
     pub prehash_key: i32,
-    #[prost(enumeration="HashOp", tag="3")]
+    #[prost(enumeration = "HashOp", tag = "3")]
     pub prehash_value: i32,
-    #[prost(enumeration="LengthOp", tag="4")]
+    #[prost(enumeration = "LengthOp", tag = "4")]
     pub length: i32,
     /// prefix is a fixed bytes that may optionally be included at the beginning to differentiate
     /// a leaf node from an inner node.
-    #[prost(bytes="vec", tag="5")]
+    #[prost(bytes = "vec", tag = "5")]
     #[serde(with = "crate::base64")]
     #[cfg_attr(feature = "json-schema", schemars(with = "String"))]
     pub prefix: ::prost::alloc::vec::Vec<u8>,
@@ -123,15 +128,16 @@ pub struct LeafOp {
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[cfg_attr(feature = "json-schema", derive(::schemars::JsonSchema))]
 #[derive(Eq)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct InnerOp {
-    #[prost(enumeration="HashOp", tag="1")]
+    #[prost(enumeration = "HashOp", tag = "1")]
     pub hash: i32,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     #[serde(with = "crate::base64")]
     #[cfg_attr(feature = "json-schema", schemars(with = "String"))]
     pub prefix: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="3")]
+    #[prost(bytes = "vec", tag = "3")]
     #[serde(with = "crate::base64")]
     #[cfg_attr(feature = "json-schema", schemars(with = "String"))]
     pub suffix: ::prost::alloc::vec::Vec<u8>,
@@ -150,20 +156,21 @@ pub struct InnerOp {
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[derive(Eq)]
 #[cfg_attr(feature = "json-schema", derive(::schemars::JsonSchema))]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProofSpec {
     /// any field in the ExistenceProof must be the same as in this spec.
-    /// except Prefix, which is just the first bytes of prefix (spec can be longer) 
-    #[prost(message, optional, tag="1")]
+    /// except Prefix, which is just the first bytes of prefix (spec can be longer)
+    #[prost(message, optional, tag = "1")]
     pub leaf_spec: ::core::option::Option<LeafOp>,
-    #[prost(message, optional, tag="2")]
+    #[prost(message, optional, tag = "2")]
     pub inner_spec: ::core::option::Option<InnerSpec>,
     /// max_depth (if > 0) is the maximum number of InnerOps allowed (mainly for fixed-depth tries)
-    #[prost(int32, tag="3")]
+    #[prost(int32, tag = "3")]
     #[serde(default)]
     pub max_depth: i32,
     /// min_depth (if > 0) is the minimum number of InnerOps allowed (mainly for fixed-depth tries)
-    #[prost(int32, tag="4")]
+    #[prost(int32, tag = "4")]
     #[serde(default)]
     pub min_depth: i32,
 }
@@ -179,105 +186,112 @@ pub struct ProofSpec {
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[derive(Eq)]
 #[cfg_attr(feature = "json-schema", derive(::schemars::JsonSchema))]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct InnerSpec {
     /// Child order is the ordering of the children node, must count from 0
     /// iavl tree is [0, 1] (left then right)
     /// merk is [0, 2, 1] (left, right, here)
-    #[prost(int32, repeated, tag="1")]
+    #[prost(int32, repeated, tag = "1")]
     pub child_order: ::prost::alloc::vec::Vec<i32>,
-    #[prost(int32, tag="2")]
+    #[prost(int32, tag = "2")]
     pub child_size: i32,
-    #[prost(int32, tag="3")]
+    #[prost(int32, tag = "3")]
     pub min_prefix_length: i32,
-    #[prost(int32, tag="4")]
+    #[prost(int32, tag = "4")]
     pub max_prefix_length: i32,
     /// empty child is the prehash image that is used when one child is nil (eg. 20 bytes of 0)
-    #[prost(bytes="vec", tag="5")]
+    #[prost(bytes = "vec", tag = "5")]
     #[serde(default)]
     #[serde(with = "crate::base64")]
     #[cfg_attr(feature = "json-schema", schemars(with = "String"))]
     pub empty_child: ::prost::alloc::vec::Vec<u8>,
     /// hash is the algorithm that must be used for each InnerOp
-    #[prost(enumeration="HashOp", tag="6")]
+    #[prost(enumeration = "HashOp", tag = "6")]
     pub hash: i32,
 }
 ///
 /// BatchProof is a group of multiple proof types than can be compressed
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BatchProof {
-    #[prost(message, repeated, tag="1")]
+    #[prost(message, repeated, tag = "1")]
     pub entries: ::prost::alloc::vec::Vec<BatchEntry>,
 }
 /// Use BatchEntry not CommitmentProof, to avoid recursion
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BatchEntry {
-    #[prost(oneof="batch_entry::Proof", tags="1, 2")]
+    #[prost(oneof = "batch_entry::Proof", tags = "1, 2")]
     pub proof: ::core::option::Option<batch_entry::Proof>,
 }
 /// Nested message and enum types in `BatchEntry`.
 pub mod batch_entry {
     #[derive(::serde::Serialize, ::serde::Deserialize)]
+    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Proof {
-        #[prost(message, tag="1")]
+        #[prost(message, tag = "1")]
         Exist(super::ExistenceProof),
-        #[prost(message, tag="2")]
+        #[prost(message, tag = "2")]
         Nonexist(super::NonExistenceProof),
     }
 }
-// ***** all items here are compressed forms ******
-
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CompressedBatchProof {
-    #[prost(message, repeated, tag="1")]
+    #[prost(message, repeated, tag = "1")]
     pub entries: ::prost::alloc::vec::Vec<CompressedBatchEntry>,
-    #[prost(message, repeated, tag="2")]
+    #[prost(message, repeated, tag = "2")]
     pub lookup_inners: ::prost::alloc::vec::Vec<InnerOp>,
 }
 /// Use BatchEntry not CommitmentProof, to avoid recursion
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CompressedBatchEntry {
-    #[prost(oneof="compressed_batch_entry::Proof", tags="1, 2")]
+    #[prost(oneof = "compressed_batch_entry::Proof", tags = "1, 2")]
     pub proof: ::core::option::Option<compressed_batch_entry::Proof>,
 }
 /// Nested message and enum types in `CompressedBatchEntry`.
 pub mod compressed_batch_entry {
     #[derive(::serde::Serialize, ::serde::Deserialize)]
+    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Proof {
-        #[prost(message, tag="1")]
+        #[prost(message, tag = "1")]
         Exist(super::CompressedExistenceProof),
-        #[prost(message, tag="2")]
+        #[prost(message, tag = "2")]
         Nonexist(super::CompressedNonExistenceProof),
     }
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CompressedExistenceProof {
-    #[prost(bytes="vec", tag="1")]
+    #[prost(bytes = "vec", tag = "1")]
     pub key: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub value: ::prost::alloc::vec::Vec<u8>,
-    #[prost(message, optional, tag="3")]
+    #[prost(message, optional, tag = "3")]
     pub leaf: ::core::option::Option<LeafOp>,
     /// these are indexes into the lookup_inners table in CompressedBatchProof
-    #[prost(int32, repeated, tag="4")]
+    #[prost(int32, repeated, tag = "4")]
     pub path: ::prost::alloc::vec::Vec<i32>,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CompressedNonExistenceProof {
     /// TODO: remove this as unnecessary??? we prove a range
-    #[prost(bytes="vec", tag="1")]
+    #[prost(bytes = "vec", tag = "1")]
     pub key: ::prost::alloc::vec::Vec<u8>,
-    #[prost(message, optional, tag="2")]
+    #[prost(message, optional, tag = "2")]
     pub left: ::core::option::Option<CompressedExistenceProof>,
-    #[prost(message, optional, tag="3")]
+    #[prost(message, optional, tag = "3")]
     pub right: ::core::option::Option<CompressedExistenceProof>,
 }
 #[derive(::serde::Serialize, ::serde::Deserialize)]
@@ -292,6 +306,7 @@ pub enum HashOp {
     Ripemd160 = 4,
     /// ripemd160(sha256(x))
     Bitcoin = 5,
+    Sha512256 = 6,
 }
 impl HashOp {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -306,6 +321,20 @@ impl HashOp {
             HashOp::Keccak => "KECCAK",
             HashOp::Ripemd160 => "RIPEMD160",
             HashOp::Bitcoin => "BITCOIN",
+            HashOp::Sha512256 => "SHA512_256",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "NO_HASH" => Some(Self::NoHash),
+            "SHA256" => Some(Self::Sha256),
+            "SHA512" => Some(Self::Sha512),
+            "KECCAK" => Some(Self::Keccak),
+            "RIPEMD160" => Some(Self::Ripemd160),
+            "BITCOIN" => Some(Self::Bitcoin),
+            "SHA512_256" => Some(Self::Sha512256),
+            _ => None,
         }
     }
 }
@@ -353,6 +382,21 @@ impl LengthOp {
             LengthOp::Fixed64Little => "FIXED64_LITTLE",
             LengthOp::Require32Bytes => "REQUIRE_32_BYTES",
             LengthOp::Require64Bytes => "REQUIRE_64_BYTES",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "NO_PREFIX" => Some(Self::NoPrefix),
+            "VAR_PROTO" => Some(Self::VarProto),
+            "VAR_RLP" => Some(Self::VarRlp),
+            "FIXED32_BIG" => Some(Self::Fixed32Big),
+            "FIXED32_LITTLE" => Some(Self::Fixed32Little),
+            "FIXED64_BIG" => Some(Self::Fixed64Big),
+            "FIXED64_LITTLE" => Some(Self::Fixed64Little),
+            "REQUIRE_32_BYTES" => Some(Self::Require32Bytes),
+            "REQUIRE_64_BYTES" => Some(Self::Require64Bytes),
+            _ => None,
         }
     }
 }

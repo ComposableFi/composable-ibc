@@ -23,18 +23,18 @@ derive_more = { version = "0.99", features = ["from"]  }
 serde = { version="1.0.137", features = ["derive"]}
 tokio-stream = { version = "0.1.9", features = ["sync"]}
 thiserror = "1.0.31"
-jsonrpsee = { version = "0.15.1", features = ["async-client", "jsonrpsee-client-transport", "client-ws-transport", "http-client"] }
+jsonrpsee = { version = "0.16.2", features = ["async-client", "jsonrpsee-client-transport", "client-ws-transport", "http-client"] }
 openssl-probe = "0.1.2"
 
 # substrate
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 sp-keystore = "0.12.0"
 
 # ibc
 ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto" }
-tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
+tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "47e28b50d20138234f7a8b4254da71469f401714", default-features = false }
 
 # near
 near-crypto = "0.14.0"

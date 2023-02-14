@@ -73,7 +73,7 @@ impl MockClientMessage {
 }
 
 impl ClientMessage for MockClientMessage {
-	fn encode_to_vec(&self) -> Vec<u8> {
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
 		unreachable!()
 	}
 }
@@ -100,11 +100,13 @@ impl TryFrom<Any> for AnyClientMessage {
 impl From<AnyClientMessage> for Any {
 	fn from(client_msg: AnyClientMessage) -> Self {
 		match client_msg {
-			AnyClientMessage::Mock(MockClientMessage::Header(header)) =>
-				Any { type_url: MOCK_HEADER_TYPE_URL.to_string(), value: header.encode_vec() },
+			AnyClientMessage::Mock(MockClientMessage::Header(header)) => Any {
+				type_url: MOCK_HEADER_TYPE_URL.to_string(),
+				value: header.encode_vec().unwrap(),
+			},
 			AnyClientMessage::Mock(MockClientMessage::Misbehaviour(misbehaviour)) => Any {
 				type_url: MOCK_MISBEHAVIOUR_TYPE_URL.to_string(),
-				value: misbehaviour.encode_vec(),
+				value: misbehaviour.encode_vec().unwrap(),
 			},
 		}
 	}
@@ -189,7 +191,7 @@ mod tests {
 	#[test]
 	fn encode_any() {
 		let header = MockHeader::new(Height::new(1, 10)).with_timestamp(Timestamp::none());
-		let bytes = AnyClientMessage::from(header).encode_vec();
+		let bytes = AnyClientMessage::from(header).encode_vec().unwrap();
 
 		assert_eq!(
 			&bytes,

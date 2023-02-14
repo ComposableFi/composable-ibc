@@ -143,7 +143,7 @@ impl From<AnyClientMessage> for Any {
 			},
 			AnyClientMessage::Grandpa(msg) => Any {
 				type_url: GRANDPA_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec(),
+				value: msg.encode_vec().unwrap(),
 			},
 		}
 	}

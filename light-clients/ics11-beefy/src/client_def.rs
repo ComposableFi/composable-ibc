@@ -268,7 +268,7 @@ where
 			epoch: consensus_height.revision_number,
 			height: consensus_height.revision_height,
 		};
-		let value = expected_consensus_state.encode_to_vec();
+		let value = expected_consensus_state.encode_to_vec().map_err(Ics02Error::encode)?;
 		verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
 			.map_err(Error::Anyhow)?;
 		Ok(())
@@ -289,7 +289,7 @@ where
 	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ConnectionsPath(connection_id.clone());
-		let value = expected_connection_end.encode_vec();
+		let value = expected_connection_end.encode_vec().map_err(Ics02Error::encode)?;
 		verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
 			.map_err(Error::Anyhow)?;
 		Ok(())
@@ -310,7 +310,7 @@ where
 	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ChannelEndsPath(port_id.clone(), *channel_id);
-		let value = expected_channel_end.encode_vec();
+		let value = expected_channel_end.encode_vec().map_err(Ics02Error::encode)?;
 		verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
 			.map_err(Error::Anyhow)?;
 		Ok(())
@@ -329,7 +329,7 @@ where
 	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ClientStatePath(client_id.clone());
-		let value = expected_client_state.encode_to_vec();
+		let value = expected_client_state.encode_to_vec().map_err(Ics02Error::encode)?;
 		verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
 			.map_err(Error::Anyhow)?;
 		Ok(())

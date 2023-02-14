@@ -28,7 +28,7 @@ use ibc::{
 	core::ics24_host::identifier::{ChannelId, ClientId, PortId},
 };
 use ibc_rpc::IbcApiClient;
-use jsonrpsee::core::client::SubscriptionClientT;
+use jsonrpsee::{core::client::SubscriptionClientT, rpc_params};
 use pallet_ibc::{MultiAddress, Timeout, TransferParams};
 use primitives::{KeyProvider, TestProvider};
 use sp_core::{
@@ -123,7 +123,7 @@ where
 		let asset_id = api::runtime_types::primitives::currency::CurrencyId(asset_id);
 
 		// Submit extrinsic to parachain node
-		let call = api::tx().ibc().transfer(params, asset_id, amount.into());
+		let call = api::tx().ibc().transfer(params, asset_id, amount.into(), None);
 
 		self.submit_call(call).await?;
 
@@ -234,7 +234,11 @@ where
 	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
 		let para_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.para_ws_client) };
 		let stream = para_client
-			.subscribe::<T::Header>("chain_subscribeNewHeads", None, "chain_unsubscribeNewHeads")
+			.subscribe::<T::Header, _>(
+				"chain_subscribeNewHeads",
+				rpc_params![],
+				"chain_unsubscribeNewHeads",
+			)
 			.await
 			.unwrap()
 			.map(|header| {

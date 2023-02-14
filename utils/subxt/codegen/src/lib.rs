@@ -21,7 +21,7 @@ use jsonrpsee::{
 	rpc_params,
 };
 use std::{env, fs, path::Path};
-use subxt_codegen::{CratePath, DerivesRegistry, TypeSubstitutes};
+use subxt_codegen::{CratePath, DerivesRegistry};
 
 pub async fn fetch_metadata_ws(url: &str) -> anyhow::Result<Vec<u8>> {
 	let (sender, receiver) = WsTransportClientBuilder::default()
@@ -52,12 +52,7 @@ pub fn codegen<I: Input>(encoded: &mut I) -> anyhow::Result<String> {
 	let mut derives = DerivesRegistry::new(&crate_path);
 	derives.extend_for_all(p.into_iter());
 
-	let runtime_api = generator.generate_runtime(
-		item_mod,
-		derives,
-		TypeSubstitutes::new(&crate_path),
-		crate_path,
-	);
+	let runtime_api = generator.generate_runtime(item_mod, derives, crate_path);
 	Ok(format!("{}", runtime_api))
 }
 
