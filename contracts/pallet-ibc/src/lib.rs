@@ -601,9 +601,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
 			// Ensure that the signer is whitelisted
-			if !T::Whitelist::contains(&origin) {
-				return Err(Error::<T>::AccessDenied.into())
-			}
+			ensure!(T::Whitelist::contains(&origin), Error::<T>::AccessDenied);
 			let denom = T::IbcDenomToAssetIdConversion::from_asset_id_to_denom(asset_id)
 				.ok_or_else(|| Error::<T>::InvalidAssetId)?;
 
