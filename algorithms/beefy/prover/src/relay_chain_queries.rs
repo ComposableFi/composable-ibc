@@ -53,12 +53,23 @@ where
 	let key = runtime::api::storage().paras().parachains();
 	let ids = client
 		.storage()
-		.fetch(&key, block_hash)
+		.at(block_hash)
+		.await
+		.expect("Storage client")
+		.fetch(&key)
 		.await?
 		.ok_or_else(|| Error::Custom(format!("No ParaIds on relay chain?")))?;
 	for id in ids {
 		let key = runtime::api::storage().paras().para_lifecycles(&id);
-		match client.storage().fetch(&key, block_hash).await?.expect("ParaId is known") {
+		match client
+			.storage()
+			.at(block_hash)
+			.await
+			.expect("Storage client")
+			.fetch(&key)
+			.await?
+			.expect("ParaId is known")
+		{
 			// only care about active parachains.
 			ParaLifecycle::Parachain => para_ids.push(id),
 			_ => {},
@@ -96,7 +107,14 @@ where
 		let mut heads = BTreeMap::new();
 		for id in para_ids.iter() {
 			let key = runtime::api::storage().paras().heads(id);
-			if let Some(head) = client.storage().fetch(&key, Some(header.hash())).await? {
+			if let Some(head) = client
+				.storage()
+				.at(Some(header.hash()))
+				.await
+				.expect("Storage client")
+				.fetch(&key)
+				.await?
+			{
 				heads.insert(id.0, head.0);
 			}
 		}

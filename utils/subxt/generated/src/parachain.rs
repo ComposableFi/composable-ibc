@@ -66,12 +66,6 @@ pub mod api {
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
-			pub struct FillBlock {
-				pub ratio: runtime_types::sp_arithmetic::per_things::Perbill,
-			}
-			#[derive(
-				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
-			)]
 			pub struct Remark {
 				pub remark: ::std::vec::Vec<::core::primitive::u8>,
 			}
@@ -126,23 +120,6 @@ pub mod api {
 			}
 			pub struct TransactionApi;
 			impl TransactionApi {
-				#[doc = "A dispatch that will fill the block weight up to the given ratio."]
-				pub fn fill_block(
-					&self,
-					ratio: runtime_types::sp_arithmetic::per_things::Perbill,
-				) -> ::subxt::tx::StaticTxPayload<FillBlock> {
-					::subxt::tx::StaticTxPayload::new(
-						"System",
-						"fill_block",
-						FillBlock { ratio },
-						[
-							48u8, 18u8, 205u8, 90u8, 222u8, 4u8, 20u8, 251u8, 173u8, 76u8, 167u8,
-							4u8, 83u8, 203u8, 160u8, 89u8, 132u8, 218u8, 191u8, 145u8, 130u8,
-							245u8, 177u8, 201u8, 169u8, 129u8, 173u8, 105u8, 88u8, 45u8, 136u8,
-							191u8,
-						],
-					)
-				}
 				#[doc = "Make some on-chain remark."]
 				#[doc = ""]
 				#[doc = "# <weight>"]
@@ -681,9 +658,10 @@ pub mod api {
 						"Events",
 						vec![],
 						[
-							75u8, 183u8, 245u8, 228u8, 94u8, 80u8, 145u8, 50u8, 37u8, 2u8, 167u8,
-							131u8, 74u8, 255u8, 236u8, 116u8, 51u8, 56u8, 126u8, 45u8, 15u8, 72u8,
-							144u8, 231u8, 37u8, 96u8, 176u8, 158u8, 163u8, 16u8, 30u8, 154u8,
+							134u8, 194u8, 13u8, 63u8, 144u8, 96u8, 227u8, 135u8, 220u8, 192u8,
+							26u8, 103u8, 62u8, 58u8, 193u8, 164u8, 119u8, 180u8, 183u8, 88u8,
+							230u8, 235u8, 196u8, 161u8, 105u8, 207u8, 39u8, 42u8, 85u8, 164u8,
+							14u8, 46u8,
 						],
 					)
 				}
@@ -2214,6 +2192,27 @@ pub mod api {
 						],
 					)
 				}
+				#[doc = " The total units of outstanding deactivated balance in the system."]
+				pub fn inactive_issuance(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::u128>,
+					::subxt::storage::address::Yes,
+					::subxt::storage::address::Yes,
+					(),
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Balances",
+						"InactiveIssuance",
+						vec![],
+						[
+							74u8, 203u8, 111u8, 142u8, 225u8, 104u8, 173u8, 51u8, 226u8, 12u8,
+							85u8, 135u8, 41u8, 206u8, 177u8, 238u8, 94u8, 246u8, 184u8, 250u8,
+							140u8, 213u8, 91u8, 118u8, 163u8, 111u8, 211u8, 46u8, 204u8, 160u8,
+							154u8, 21u8,
+						],
+					)
+				}
 				#[doc = " The Balances pallet example of storing the balance of an account."]
 				#[doc = ""]
 				#[doc = " # Example"]
@@ -2417,29 +2416,6 @@ pub mod api {
 							17u8, 32u8, 191u8, 46u8, 76u8, 220u8, 101u8, 100u8, 42u8, 250u8, 128u8,
 							167u8, 117u8, 44u8, 85u8, 96u8, 105u8, 216u8, 16u8, 147u8, 74u8, 55u8,
 							183u8, 94u8, 160u8, 177u8, 26u8, 187u8, 71u8, 197u8, 187u8, 163u8,
-						],
-					)
-				}
-				#[doc = " Storage version of the pallet."]
-				#[doc = ""]
-				#[doc = " This is set to v2.0.0 for new networks."]
-				pub fn storage_version(
-					&self,
-				) -> ::subxt::storage::address::StaticStorageAddress<
-					::subxt::metadata::DecodeStaticType<runtime_types::pallet_balances::Releases>,
-					::subxt::storage::address::Yes,
-					::subxt::storage::address::Yes,
-					(),
-				> {
-					::subxt::storage::address::StaticStorageAddress::new(
-						"Balances",
-						"StorageVersion",
-						vec![],
-						[
-							135u8, 96u8, 28u8, 234u8, 124u8, 212u8, 56u8, 140u8, 40u8, 101u8,
-							235u8, 128u8, 136u8, 221u8, 182u8, 81u8, 17u8, 9u8, 184u8, 228u8,
-							174u8, 165u8, 200u8, 162u8, 214u8, 178u8, 227u8, 72u8, 34u8, 5u8,
-							173u8, 96u8,
 						],
 					)
 				}
@@ -5616,9 +5592,9 @@ pub mod api {
 						"sudo",
 						Sudo { call: ::std::boxed::Box::new(call) },
 						[
-							61u8, 69u8, 210u8, 124u8, 24u8, 70u8, 238u8, 252u8, 250u8, 227u8,
-							186u8, 43u8, 175u8, 28u8, 20u8, 127u8, 8u8, 181u8, 154u8, 174u8, 173u8,
-							106u8, 78u8, 6u8, 152u8, 235u8, 92u8, 41u8, 110u8, 11u8, 71u8, 22u8,
+							135u8, 144u8, 183u8, 67u8, 1u8, 81u8, 236u8, 203u8, 233u8, 89u8, 34u8,
+							23u8, 226u8, 130u8, 139u8, 2u8, 83u8, 207u8, 116u8, 59u8, 204u8, 3u8,
+							132u8, 60u8, 27u8, 120u8, 86u8, 126u8, 192u8, 76u8, 134u8, 99u8,
 						],
 					)
 				}
@@ -5642,10 +5618,10 @@ pub mod api {
 						"sudo_unchecked_weight",
 						SudoUncheckedWeight { call: ::std::boxed::Box::new(call), weight },
 						[
-							212u8, 52u8, 130u8, 35u8, 117u8, 163u8, 145u8, 120u8, 214u8, 217u8,
-							251u8, 122u8, 223u8, 197u8, 220u8, 90u8, 191u8, 43u8, 225u8, 90u8,
-							239u8, 243u8, 75u8, 99u8, 2u8, 70u8, 47u8, 4u8, 78u8, 215u8, 77u8,
-							230u8,
+							145u8, 246u8, 202u8, 183u8, 105u8, 0u8, 98u8, 38u8, 121u8, 224u8, 54u8,
+							137u8, 9u8, 202u8, 95u8, 244u8, 188u8, 251u8, 245u8, 253u8, 182u8,
+							232u8, 123u8, 215u8, 211u8, 67u8, 244u8, 89u8, 212u8, 100u8, 128u8,
+							102u8,
 						],
 					)
 				}
@@ -5695,10 +5671,9 @@ pub mod api {
 						"sudo_as",
 						SudoAs { who, call: ::std::boxed::Box::new(call) },
 						[
-							196u8, 254u8, 80u8, 185u8, 34u8, 32u8, 98u8, 242u8, 237u8, 110u8,
-							179u8, 106u8, 105u8, 6u8, 125u8, 25u8, 172u8, 111u8, 147u8, 208u8,
-							25u8, 222u8, 235u8, 81u8, 210u8, 108u8, 61u8, 253u8, 133u8, 92u8, 22u8,
-							17u8,
+							122u8, 68u8, 114u8, 143u8, 236u8, 246u8, 82u8, 242u8, 3u8, 224u8, 32u8,
+							190u8, 192u8, 249u8, 206u8, 38u8, 201u8, 175u8, 95u8, 34u8, 160u8,
+							137u8, 77u8, 120u8, 193u8, 76u8, 142u8, 162u8, 123u8, 93u8, 7u8, 43u8,
 						],
 					)
 				}
@@ -5839,7 +5814,6 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct Create {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub admin: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 				pub min_balance: ::core::primitive::u128,
@@ -5848,7 +5822,6 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct ForceCreate {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub owner: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 				pub is_sufficient: ::core::primitive::bool,
@@ -5856,18 +5829,45 @@ pub mod api {
 				pub min_balance: ::core::primitive::u128,
 			}
 			#[derive(
-				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				:: subxt :: ext :: codec :: CompactAs,
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				Debug,
 			)]
-			pub struct Destroy {
-				#[codec(compact)]
+			pub struct StartDestroy {
 				pub id: ::core::primitive::u128,
-				pub witness: runtime_types::pallet_assets::types::DestroyWitness,
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: CompactAs,
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				Debug,
+			)]
+			pub struct DestroyAccounts {
+				pub id: ::core::primitive::u128,
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: CompactAs,
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				Debug,
+			)]
+			pub struct DestroyApprovals {
+				pub id: ::core::primitive::u128,
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: CompactAs,
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				Debug,
+			)]
+			pub struct FinishDestroy {
+				pub id: ::core::primitive::u128,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct Mint {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub beneficiary: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 				#[codec(compact)]
@@ -5877,7 +5877,6 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct Burn {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub who: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 				#[codec(compact)]
@@ -5887,7 +5886,6 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct Transfer {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub target: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 				#[codec(compact)]
@@ -5897,7 +5895,6 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct TransferKeepAlive {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub target: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 				#[codec(compact)]
@@ -5907,7 +5904,6 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct ForceTransfer {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub source: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 				pub dest: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
@@ -5918,7 +5914,6 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct Freeze {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub who: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 			}
@@ -5926,29 +5921,31 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct Thaw {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub who: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 			}
 			#[derive(
-				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				:: subxt :: ext :: codec :: CompactAs,
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				Debug,
 			)]
 			pub struct FreezeAsset {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 			}
 			#[derive(
-				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				:: subxt :: ext :: codec :: CompactAs,
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				Debug,
 			)]
 			pub struct ThawAsset {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct TransferOwnership {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub owner: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 			}
@@ -5956,7 +5953,6 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct SetTeam {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub issuer: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 				pub admin: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
@@ -5966,24 +5962,24 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct SetMetadata {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub name: ::std::vec::Vec<::core::primitive::u8>,
 				pub symbol: ::std::vec::Vec<::core::primitive::u8>,
 				pub decimals: ::core::primitive::u8,
 			}
 			#[derive(
-				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				:: subxt :: ext :: codec :: CompactAs,
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				Debug,
 			)]
 			pub struct ClearMetadata {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct ForceSetMetadata {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub name: ::std::vec::Vec<::core::primitive::u8>,
 				pub symbol: ::std::vec::Vec<::core::primitive::u8>,
@@ -5991,17 +5987,18 @@ pub mod api {
 				pub is_frozen: ::core::primitive::bool,
 			}
 			#[derive(
-				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				:: subxt :: ext :: codec :: CompactAs,
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				Debug,
 			)]
 			pub struct ForceClearMetadata {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct ForceAssetStatus {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub owner: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 				pub issuer: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
@@ -6016,7 +6013,6 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct ApproveTransfer {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub delegate: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 				#[codec(compact)]
@@ -6026,7 +6022,6 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct CancelApproval {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub delegate: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 			}
@@ -6034,7 +6029,6 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct ForceCancelApproval {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub owner: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 				pub delegate: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
@@ -6043,7 +6037,6 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct TransferApproved {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub owner: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 				pub destination: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
@@ -6051,17 +6044,18 @@ pub mod api {
 				pub amount: ::core::primitive::u128,
 			}
 			#[derive(
-				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				:: subxt :: ext :: codec :: CompactAs,
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				Debug,
 			)]
 			pub struct Touch {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct Refund {
-				#[codec(compact)]
 				pub id: ::core::primitive::u128,
 				pub allow_burn: ::core::primitive::bool,
 			}
@@ -6097,9 +6091,9 @@ pub mod api {
 						"create",
 						Create { id, admin, min_balance },
 						[
-							142u8, 26u8, 211u8, 242u8, 115u8, 25u8, 192u8, 8u8, 229u8, 194u8, 33u8,
-							252u8, 218u8, 217u8, 216u8, 233u8, 134u8, 31u8, 96u8, 151u8, 163u8,
-							126u8, 25u8, 19u8, 43u8, 78u8, 249u8, 85u8, 220u8, 88u8, 8u8, 11u8,
+							225u8, 176u8, 199u8, 21u8, 197u8, 143u8, 80u8, 251u8, 144u8, 88u8,
+							211u8, 198u8, 87u8, 246u8, 8u8, 212u8, 32u8, 168u8, 200u8, 19u8, 218u8,
+							98u8, 102u8, 74u8, 66u8, 214u8, 255u8, 130u8, 79u8, 46u8, 150u8, 147u8,
 						],
 					)
 				}
@@ -6134,44 +6128,118 @@ pub mod api {
 						"force_create",
 						ForceCreate { id, owner, is_sufficient, min_balance },
 						[
-							72u8, 99u8, 108u8, 213u8, 36u8, 43u8, 110u8, 164u8, 234u8, 58u8, 96u8,
-							155u8, 55u8, 117u8, 254u8, 33u8, 191u8, 246u8, 51u8, 50u8, 21u8, 169u8,
-							27u8, 153u8, 39u8, 177u8, 255u8, 239u8, 58u8, 59u8, 158u8, 220u8,
+							125u8, 100u8, 232u8, 82u8, 114u8, 133u8, 127u8, 9u8, 131u8, 239u8,
+							253u8, 154u8, 119u8, 226u8, 5u8, 250u8, 184u8, 25u8, 99u8, 201u8,
+							216u8, 118u8, 206u8, 174u8, 206u8, 186u8, 25u8, 223u8, 48u8, 68u8,
+							89u8, 246u8,
 						],
 					)
 				}
-				#[doc = "Destroy a class of fungible assets."]
+				#[doc = "Start the process of destroying a fungible asset class."]
 				#[doc = ""]
-				#[doc = "The origin must conform to `ForceOrigin` or must be Signed and the sender must be the"]
-				#[doc = "owner of the asset `id`."]
+				#[doc = "`start_destroy` is the first in a series of extrinsics that should be called, to allow"]
+				#[doc = "destruction of an asset class."]
+				#[doc = ""]
+				#[doc = "The origin must conform to `ForceOrigin` or must be `Signed` by the asset's `owner`."]
 				#[doc = ""]
 				#[doc = "- `id`: The identifier of the asset to be destroyed. This must identify an existing"]
-				#[doc = "asset."]
+				#[doc = "  asset."]
 				#[doc = ""]
-				#[doc = "Emits `Destroyed` event when successful."]
-				#[doc = ""]
-				#[doc = "NOTE: It can be helpful to first freeze an asset before destroying it so that you"]
-				#[doc = "can provide accurate witness information and prevent users from manipulating state"]
-				#[doc = "in a way that can make it harder to destroy."]
-				#[doc = ""]
-				#[doc = "Weight: `O(c + p + a)` where:"]
-				#[doc = "- `c = (witness.accounts - witness.sufficients)`"]
-				#[doc = "- `s = witness.sufficients`"]
-				#[doc = "- `a = witness.approvals`"]
-				pub fn destroy(
+				#[doc = "The asset class must be frozen before calling `start_destroy`."]
+				pub fn start_destroy(
 					&self,
 					id: ::core::primitive::u128,
-					witness: runtime_types::pallet_assets::types::DestroyWitness,
-				) -> ::subxt::tx::StaticTxPayload<Destroy> {
+				) -> ::subxt::tx::StaticTxPayload<StartDestroy> {
 					::subxt::tx::StaticTxPayload::new(
 						"Assets",
-						"destroy",
-						Destroy { id, witness },
+						"start_destroy",
+						StartDestroy { id },
 						[
-							183u8, 52u8, 56u8, 40u8, 161u8, 252u8, 91u8, 170u8, 109u8, 241u8,
-							158u8, 69u8, 216u8, 170u8, 106u8, 182u8, 82u8, 0u8, 178u8, 26u8, 88u8,
-							86u8, 70u8, 127u8, 104u8, 122u8, 253u8, 107u8, 100u8, 81u8, 67u8,
-							246u8,
+							17u8, 4u8, 86u8, 25u8, 27u8, 1u8, 247u8, 121u8, 173u8, 57u8, 64u8,
+							119u8, 95u8, 160u8, 216u8, 242u8, 251u8, 157u8, 216u8, 177u8, 15u8,
+							245u8, 31u8, 233u8, 255u8, 115u8, 224u8, 232u8, 149u8, 65u8, 88u8,
+							120u8,
+						],
+					)
+				}
+				#[doc = "Destroy all accounts associated with a given asset."]
+				#[doc = ""]
+				#[doc = "`destroy_accounts` should only be called after `start_destroy` has been called, and the"]
+				#[doc = "asset is in a `Destroying` state."]
+				#[doc = ""]
+				#[doc = "Due to weight restrictions, this function may need to be called multiple times to fully"]
+				#[doc = "destroy all accounts. It will destroy `RemoveItemsLimit` accounts at a time."]
+				#[doc = ""]
+				#[doc = "- `id`: The identifier of the asset to be destroyed. This must identify an existing"]
+				#[doc = "  asset."]
+				#[doc = ""]
+				#[doc = "Each call emits the `Event::DestroyedAccounts` event."]
+				pub fn destroy_accounts(
+					&self,
+					id: ::core::primitive::u128,
+				) -> ::subxt::tx::StaticTxPayload<DestroyAccounts> {
+					::subxt::tx::StaticTxPayload::new(
+						"Assets",
+						"destroy_accounts",
+						DestroyAccounts { id },
+						[
+							237u8, 4u8, 150u8, 71u8, 217u8, 89u8, 105u8, 93u8, 205u8, 48u8, 180u8,
+							103u8, 153u8, 181u8, 207u8, 39u8, 239u8, 25u8, 218u8, 152u8, 242u8,
+							107u8, 59u8, 192u8, 61u8, 48u8, 89u8, 57u8, 228u8, 41u8, 120u8, 7u8,
+						],
+					)
+				}
+				#[doc = "Destroy all approvals associated with a given asset up to the max (T::RemoveItemsLimit)."]
+				#[doc = ""]
+				#[doc = "`destroy_approvals` should only be called after `start_destroy` has been called, and the"]
+				#[doc = "asset is in a `Destroying` state."]
+				#[doc = ""]
+				#[doc = "Due to weight restrictions, this function may need to be called multiple times to fully"]
+				#[doc = "destroy all approvals. It will destroy `RemoveItemsLimit` approvals at a time."]
+				#[doc = ""]
+				#[doc = "- `id`: The identifier of the asset to be destroyed. This must identify an existing"]
+				#[doc = "  asset."]
+				#[doc = ""]
+				#[doc = "Each call emits the `Event::DestroyedApprovals` event."]
+				pub fn destroy_approvals(
+					&self,
+					id: ::core::primitive::u128,
+				) -> ::subxt::tx::StaticTxPayload<DestroyApprovals> {
+					::subxt::tx::StaticTxPayload::new(
+						"Assets",
+						"destroy_approvals",
+						DestroyApprovals { id },
+						[
+							115u8, 83u8, 28u8, 76u8, 37u8, 89u8, 131u8, 255u8, 144u8, 106u8, 65u8,
+							70u8, 120u8, 213u8, 133u8, 188u8, 95u8, 254u8, 225u8, 43u8, 124u8,
+							108u8, 126u8, 26u8, 113u8, 234u8, 46u8, 242u8, 147u8, 167u8, 212u8,
+							211u8,
+						],
+					)
+				}
+				#[doc = "Complete destroying asset and unreserve currency."]
+				#[doc = ""]
+				#[doc = "`finish_destroy` should only be called after `start_destroy` has been called, and the"]
+				#[doc = "asset is in a `Destroying` state. All accounts or approvals should be destroyed before"]
+				#[doc = "hand."]
+				#[doc = ""]
+				#[doc = "- `id`: The identifier of the asset to be destroyed. This must identify an existing"]
+				#[doc = "  asset."]
+				#[doc = ""]
+				#[doc = "Each successful call emits the `Event::Destroyed` event."]
+				pub fn finish_destroy(
+					&self,
+					id: ::core::primitive::u128,
+				) -> ::subxt::tx::StaticTxPayload<FinishDestroy> {
+					::subxt::tx::StaticTxPayload::new(
+						"Assets",
+						"finish_destroy",
+						FinishDestroy { id },
+						[
+							184u8, 173u8, 24u8, 13u8, 129u8, 220u8, 76u8, 130u8, 223u8, 51u8,
+							205u8, 221u8, 28u8, 76u8, 181u8, 253u8, 112u8, 64u8, 55u8, 66u8, 152u8,
+							204u8, 199u8, 177u8, 79u8, 87u8, 216u8, 139u8, 165u8, 147u8, 44u8,
+							142u8,
 						],
 					)
 				}
@@ -6198,9 +6266,10 @@ pub mod api {
 						"mint",
 						Mint { id, beneficiary, amount },
 						[
-							229u8, 200u8, 12u8, 126u8, 52u8, 12u8, 171u8, 100u8, 152u8, 113u8,
-							114u8, 83u8, 178u8, 15u8, 80u8, 12u8, 230u8, 141u8, 18u8, 155u8, 124u8,
-							255u8, 53u8, 92u8, 65u8, 37u8, 173u8, 224u8, 122u8, 102u8, 109u8, 15u8,
+							152u8, 144u8, 135u8, 192u8, 12u8, 107u8, 188u8, 134u8, 133u8, 15u8,
+							106u8, 183u8, 195u8, 156u8, 220u8, 1u8, 99u8, 123u8, 207u8, 97u8,
+							158u8, 206u8, 131u8, 74u8, 231u8, 129u8, 33u8, 210u8, 152u8, 71u8,
+							47u8, 78u8,
 						],
 					)
 				}
@@ -6230,10 +6299,10 @@ pub mod api {
 						"burn",
 						Burn { id, who, amount },
 						[
-							215u8, 92u8, 78u8, 189u8, 185u8, 221u8, 48u8, 193u8, 12u8, 185u8,
-							114u8, 164u8, 162u8, 157u8, 90u8, 253u8, 129u8, 104u8, 252u8, 227u8,
-							30u8, 29u8, 215u8, 186u8, 235u8, 85u8, 167u8, 41u8, 131u8, 220u8,
-							184u8, 242u8,
+							229u8, 158u8, 49u8, 41u8, 33u8, 196u8, 164u8, 192u8, 105u8, 165u8,
+							156u8, 29u8, 128u8, 15u8, 251u8, 216u8, 4u8, 85u8, 228u8, 247u8, 101u8,
+							159u8, 238u8, 215u8, 172u8, 253u8, 16u8, 173u8, 115u8, 11u8, 110u8,
+							1u8,
 						],
 					)
 				}
@@ -6266,10 +6335,10 @@ pub mod api {
 						"transfer",
 						Transfer { id, target, amount },
 						[
-							162u8, 30u8, 88u8, 36u8, 26u8, 87u8, 130u8, 201u8, 234u8, 92u8, 65u8,
-							216u8, 139u8, 145u8, 43u8, 231u8, 221u8, 57u8, 251u8, 73u8, 112u8,
-							172u8, 39u8, 196u8, 19u8, 198u8, 140u8, 29u8, 61u8, 228u8, 106u8,
-							238u8,
+							130u8, 26u8, 127u8, 109u8, 243u8, 204u8, 169u8, 144u8, 173u8, 1u8,
+							102u8, 163u8, 56u8, 103u8, 130u8, 233u8, 167u8, 150u8, 181u8, 28u8,
+							143u8, 37u8, 92u8, 36u8, 68u8, 21u8, 25u8, 236u8, 77u8, 220u8, 120u8,
+							41u8,
 						],
 					)
 				}
@@ -6302,9 +6371,10 @@ pub mod api {
 						"transfer_keep_alive",
 						TransferKeepAlive { id, target, amount },
 						[
-							248u8, 6u8, 41u8, 68u8, 23u8, 229u8, 171u8, 235u8, 213u8, 184u8, 61u8,
-							141u8, 130u8, 132u8, 207u8, 177u8, 188u8, 89u8, 188u8, 156u8, 114u8,
-							200u8, 223u8, 97u8, 83u8, 19u8, 135u8, 27u8, 123u8, 10u8, 235u8, 76u8,
+							43u8, 162u8, 208u8, 112u8, 225u8, 141u8, 184u8, 143u8, 254u8, 175u8,
+							88u8, 125u8, 51u8, 143u8, 122u8, 46u8, 130u8, 83u8, 82u8, 52u8, 15u8,
+							22u8, 180u8, 231u8, 192u8, 151u8, 128u8, 220u8, 223u8, 223u8, 14u8,
+							140u8,
 						],
 					)
 				}
@@ -6339,9 +6409,9 @@ pub mod api {
 						"force_transfer",
 						ForceTransfer { id, source, dest, amount },
 						[
-							64u8, 71u8, 236u8, 12u8, 10u8, 20u8, 5u8, 227u8, 104u8, 175u8, 97u8,
-							55u8, 52u8, 195u8, 52u8, 211u8, 29u8, 113u8, 109u8, 192u8, 46u8, 72u8,
-							140u8, 70u8, 163u8, 52u8, 196u8, 145u8, 113u8, 156u8, 186u8, 55u8,
+							128u8, 181u8, 134u8, 48u8, 125u8, 229u8, 122u8, 162u8, 60u8, 226u8,
+							49u8, 100u8, 104u8, 87u8, 181u8, 190u8, 4u8, 111u8, 156u8, 14u8, 186u8,
+							107u8, 96u8, 195u8, 42u8, 229u8, 19u8, 192u8, 167u8, 52u8, 53u8, 181u8,
 						],
 					)
 				}
@@ -6365,9 +6435,10 @@ pub mod api {
 						"freeze",
 						Freeze { id, who },
 						[
-							238u8, 4u8, 95u8, 112u8, 162u8, 153u8, 53u8, 91u8, 146u8, 254u8, 209u8,
-							12u8, 222u8, 51u8, 214u8, 238u8, 178u8, 188u8, 206u8, 204u8, 118u8,
-							83u8, 76u8, 15u8, 62u8, 87u8, 185u8, 226u8, 107u8, 14u8, 53u8, 176u8,
+							196u8, 164u8, 21u8, 22u8, 241u8, 245u8, 30u8, 225u8, 53u8, 135u8,
+							245u8, 64u8, 91u8, 208u8, 252u8, 118u8, 190u8, 186u8, 91u8, 82u8,
+							134u8, 170u8, 65u8, 230u8, 24u8, 100u8, 161u8, 45u8, 147u8, 224u8,
+							171u8, 3u8,
 						],
 					)
 				}
@@ -6391,10 +6462,10 @@ pub mod api {
 						"thaw",
 						Thaw { id, who },
 						[
-							135u8, 135u8, 90u8, 45u8, 229u8, 30u8, 115u8, 177u8, 204u8, 143u8,
-							144u8, 116u8, 243u8, 186u8, 173u8, 200u8, 52u8, 40u8, 120u8, 33u8,
-							249u8, 224u8, 174u8, 247u8, 223u8, 210u8, 73u8, 215u8, 186u8, 209u8,
-							157u8, 91u8,
+							108u8, 131u8, 195u8, 127u8, 185u8, 210u8, 222u8, 209u8, 28u8, 65u8,
+							58u8, 52u8, 117u8, 80u8, 234u8, 218u8, 96u8, 113u8, 147u8, 250u8,
+							154u8, 170u8, 26u8, 132u8, 168u8, 247u8, 138u8, 149u8, 147u8, 2u8,
+							88u8, 52u8,
 						],
 					)
 				}
@@ -6416,10 +6487,10 @@ pub mod api {
 						"freeze_asset",
 						FreezeAsset { id },
 						[
-							143u8, 236u8, 41u8, 9u8, 222u8, 193u8, 21u8, 39u8, 2u8, 191u8, 102u8,
-							224u8, 203u8, 101u8, 40u8, 138u8, 128u8, 226u8, 197u8, 143u8, 216u8,
-							63u8, 151u8, 49u8, 155u8, 221u8, 207u8, 161u8, 92u8, 236u8, 150u8,
-							221u8,
+							244u8, 202u8, 138u8, 48u8, 40u8, 209u8, 139u8, 192u8, 23u8, 17u8,
+							179u8, 37u8, 17u8, 145u8, 147u8, 81u8, 147u8, 86u8, 250u8, 111u8,
+							201u8, 29u8, 54u8, 103u8, 92u8, 93u8, 146u8, 2u8, 178u8, 180u8, 213u8,
+							128u8,
 						],
 					)
 				}
@@ -6441,9 +6512,9 @@ pub mod api {
 						"thaw_asset",
 						ThawAsset { id },
 						[
-							76u8, 108u8, 33u8, 107u8, 82u8, 243u8, 182u8, 166u8, 220u8, 76u8, 4u8,
-							20u8, 233u8, 183u8, 19u8, 198u8, 79u8, 79u8, 230u8, 34u8, 231u8, 112u8,
-							239u8, 199u8, 242u8, 140u8, 115u8, 230u8, 11u8, 3u8, 176u8, 63u8,
+							109u8, 204u8, 31u8, 31u8, 191u8, 57u8, 183u8, 2u8, 100u8, 28u8, 58u8,
+							189u8, 84u8, 234u8, 12u8, 86u8, 65u8, 94u8, 28u8, 143u8, 211u8, 72u8,
+							43u8, 249u8, 135u8, 110u8, 1u8, 180u8, 180u8, 163u8, 233u8, 146u8,
 						],
 					)
 				}
@@ -6467,10 +6538,10 @@ pub mod api {
 						"transfer_ownership",
 						TransferOwnership { id, owner },
 						[
-							178u8, 53u8, 191u8, 144u8, 167u8, 148u8, 182u8, 247u8, 205u8, 78u8,
-							253u8, 71u8, 0u8, 161u8, 42u8, 144u8, 109u8, 147u8, 195u8, 180u8,
-							118u8, 208u8, 64u8, 138u8, 229u8, 139u8, 220u8, 66u8, 132u8, 46u8,
-							129u8, 208u8,
+							230u8, 203u8, 116u8, 232u8, 252u8, 233u8, 63u8, 10u8, 5u8, 106u8,
+							146u8, 10u8, 89u8, 146u8, 205u8, 152u8, 192u8, 208u8, 125u8, 39u8,
+							243u8, 154u8, 3u8, 189u8, 84u8, 50u8, 202u8, 213u8, 212u8, 192u8,
+							240u8, 65u8,
 						],
 					)
 				}
@@ -6498,10 +6569,9 @@ pub mod api {
 						"set_team",
 						SetTeam { id, issuer, admin, freezer },
 						[
-							158u8, 0u8, 167u8, 98u8, 22u8, 185u8, 117u8, 9u8, 59u8, 67u8, 122u8,
-							71u8, 82u8, 172u8, 184u8, 121u8, 115u8, 135u8, 73u8, 152u8, 229u8,
-							151u8, 10u8, 136u8, 82u8, 196u8, 142u8, 244u8, 17u8, 113u8, 154u8,
-							72u8,
+							157u8, 145u8, 247u8, 246u8, 51u8, 5u8, 124u8, 209u8, 118u8, 196u8,
+							91u8, 11u8, 253u8, 218u8, 93u8, 198u8, 142u8, 32u8, 36u8, 111u8, 102u8,
+							62u8, 145u8, 206u8, 239u8, 120u8, 69u8, 62u8, 161u8, 3u8, 198u8, 87u8,
 						],
 					)
 				}
@@ -6533,10 +6603,9 @@ pub mod api {
 						"set_metadata",
 						SetMetadata { id, name, symbol, decimals },
 						[
-							2u8, 98u8, 101u8, 38u8, 45u8, 19u8, 137u8, 54u8, 16u8, 23u8, 1u8,
-							182u8, 149u8, 208u8, 216u8, 170u8, 147u8, 128u8, 198u8, 169u8, 244u8,
-							121u8, 139u8, 66u8, 225u8, 146u8, 162u8, 14u8, 44u8, 250u8, 16u8,
-							137u8,
+							7u8, 45u8, 208u8, 190u8, 24u8, 148u8, 163u8, 83u8, 26u8, 251u8, 86u8,
+							141u8, 31u8, 10u8, 188u8, 246u8, 100u8, 129u8, 239u8, 209u8, 212u8,
+							203u8, 7u8, 79u8, 116u8, 218u8, 219u8, 43u8, 176u8, 230u8, 121u8, 10u8,
 						],
 					)
 				}
@@ -6560,9 +6629,10 @@ pub mod api {
 						"clear_metadata",
 						ClearMetadata { id },
 						[
-							203u8, 43u8, 102u8, 26u8, 145u8, 21u8, 241u8, 238u8, 108u8, 74u8, 71u8,
-							14u8, 69u8, 132u8, 237u8, 223u8, 78u8, 160u8, 86u8, 1u8, 200u8, 168u8,
-							238u8, 49u8, 105u8, 176u8, 76u8, 63u8, 126u8, 71u8, 189u8, 192u8,
+							215u8, 189u8, 217u8, 128u8, 114u8, 27u8, 230u8, 127u8, 84u8, 20u8,
+							139u8, 119u8, 162u8, 244u8, 230u8, 43u8, 65u8, 208u8, 24u8, 105u8,
+							195u8, 216u8, 35u8, 64u8, 101u8, 8u8, 107u8, 184u8, 249u8, 135u8,
+							208u8, 246u8,
 						],
 					)
 				}
@@ -6593,10 +6663,9 @@ pub mod api {
 						"force_set_metadata",
 						ForceSetMetadata { id, name, symbol, decimals, is_frozen },
 						[
-							98u8, 119u8, 248u8, 186u8, 149u8, 217u8, 63u8, 146u8, 247u8, 15u8,
-							132u8, 152u8, 239u8, 65u8, 226u8, 204u8, 198u8, 55u8, 188u8, 239u8,
-							136u8, 78u8, 20u8, 83u8, 209u8, 168u8, 215u8, 156u8, 57u8, 147u8, 28u8,
-							109u8,
+							228u8, 188u8, 110u8, 103u8, 41u8, 19u8, 39u8, 233u8, 62u8, 64u8, 216u8,
+							152u8, 77u8, 88u8, 235u8, 214u8, 77u8, 128u8, 16u8, 214u8, 75u8, 196u8,
+							226u8, 153u8, 172u8, 218u8, 50u8, 160u8, 243u8, 31u8, 181u8, 32u8,
 						],
 					)
 				}
@@ -6620,10 +6689,9 @@ pub mod api {
 						"force_clear_metadata",
 						ForceClearMetadata { id },
 						[
-							48u8, 251u8, 205u8, 159u8, 163u8, 213u8, 97u8, 254u8, 20u8, 98u8,
-							246u8, 182u8, 77u8, 226u8, 24u8, 34u8, 3u8, 213u8, 131u8, 232u8, 75u8,
-							124u8, 96u8, 187u8, 116u8, 143u8, 13u8, 17u8, 220u8, 102u8, 244u8,
-							144u8,
+							222u8, 171u8, 238u8, 134u8, 163u8, 160u8, 130u8, 200u8, 62u8, 174u8,
+							113u8, 189u8, 102u8, 222u8, 6u8, 160u8, 20u8, 77u8, 241u8, 41u8, 227u8,
+							66u8, 254u8, 56u8, 188u8, 210u8, 18u8, 74u8, 142u8, 190u8, 245u8, 68u8,
 						],
 					)
 				}
@@ -6674,9 +6742,9 @@ pub mod api {
 							is_frozen,
 						},
 						[
-							244u8, 218u8, 14u8, 227u8, 39u8, 76u8, 62u8, 47u8, 254u8, 74u8, 153u8,
-							243u8, 199u8, 24u8, 133u8, 121u8, 103u8, 35u8, 188u8, 164u8, 21u8,
-							244u8, 25u8, 74u8, 6u8, 98u8, 0u8, 94u8, 3u8, 163u8, 40u8, 205u8,
+							17u8, 196u8, 58u8, 230u8, 36u8, 218u8, 145u8, 80u8, 4u8, 102u8, 103u8,
+							211u8, 106u8, 97u8, 216u8, 2u8, 51u8, 89u8, 203u8, 46u8, 204u8, 105u8,
+							58u8, 245u8, 210u8, 208u8, 202u8, 38u8, 132u8, 94u8, 52u8, 116u8,
 						],
 					)
 				}
@@ -6711,9 +6779,9 @@ pub mod api {
 						"approve_transfer",
 						ApproveTransfer { id, delegate, amount },
 						[
-							206u8, 129u8, 0u8, 213u8, 213u8, 23u8, 149u8, 131u8, 57u8, 118u8,
-							116u8, 32u8, 149u8, 195u8, 59u8, 255u8, 129u8, 38u8, 69u8, 174u8, 78u8,
-							28u8, 99u8, 234u8, 237u8, 213u8, 254u8, 59u8, 155u8, 4u8, 139u8, 139u8,
+							212u8, 11u8, 73u8, 174u8, 32u8, 165u8, 146u8, 122u8, 35u8, 36u8, 86u8,
+							48u8, 96u8, 103u8, 208u8, 93u8, 148u8, 86u8, 182u8, 202u8, 227u8,
+							202u8, 242u8, 144u8, 83u8, 2u8, 234u8, 27u8, 147u8, 128u8, 11u8, 74u8,
 						],
 					)
 				}
@@ -6740,9 +6808,9 @@ pub mod api {
 						"cancel_approval",
 						CancelApproval { id, delegate },
 						[
-							0u8, 158u8, 247u8, 196u8, 56u8, 159u8, 21u8, 4u8, 113u8, 252u8, 212u8,
-							154u8, 94u8, 72u8, 5u8, 233u8, 195u8, 252u8, 30u8, 25u8, 148u8, 218u8,
-							236u8, 82u8, 166u8, 58u8, 74u8, 17u8, 232u8, 179u8, 126u8, 234u8,
+							171u8, 238u8, 85u8, 216u8, 188u8, 191u8, 161u8, 189u8, 151u8, 253u8,
+							52u8, 159u8, 39u8, 38u8, 20u8, 24u8, 199u8, 19u8, 10u8, 26u8, 208u8,
+							192u8, 87u8, 105u8, 104u8, 79u8, 70u8, 196u8, 12u8, 54u8, 102u8, 132u8,
 						],
 					)
 				}
@@ -6770,9 +6838,10 @@ pub mod api {
 						"force_cancel_approval",
 						ForceCancelApproval { id, owner, delegate },
 						[
-							18u8, 58u8, 156u8, 26u8, 40u8, 68u8, 208u8, 28u8, 239u8, 67u8, 207u8,
-							184u8, 6u8, 178u8, 187u8, 86u8, 203u8, 177u8, 139u8, 37u8, 136u8, 49u8,
-							129u8, 165u8, 51u8, 7u8, 157u8, 120u8, 129u8, 14u8, 177u8, 128u8,
+							250u8, 221u8, 97u8, 70u8, 129u8, 233u8, 184u8, 131u8, 191u8, 110u8,
+							167u8, 42u8, 107u8, 58u8, 170u8, 220u8, 22u8, 90u8, 199u8, 214u8,
+							155u8, 86u8, 169u8, 87u8, 173u8, 7u8, 159u8, 32u8, 150u8, 30u8, 42u8,
+							187u8,
 						],
 					)
 				}
@@ -6806,10 +6875,10 @@ pub mod api {
 						"transfer_approved",
 						TransferApproved { id, owner, destination, amount },
 						[
-							217u8, 22u8, 40u8, 177u8, 232u8, 27u8, 123u8, 82u8, 142u8, 124u8,
-							183u8, 246u8, 188u8, 228u8, 206u8, 217u8, 0u8, 184u8, 44u8, 205u8,
-							50u8, 100u8, 194u8, 47u8, 53u8, 248u8, 205u8, 21u8, 133u8, 220u8,
-							181u8, 200u8,
+							149u8, 1u8, 85u8, 66u8, 241u8, 162u8, 110u8, 41u8, 191u8, 155u8, 122u8,
+							208u8, 40u8, 30u8, 68u8, 62u8, 100u8, 164u8, 175u8, 173u8, 207u8,
+							245u8, 244u8, 194u8, 127u8, 126u8, 29u8, 67u8, 10u8, 144u8, 196u8,
+							108u8,
 						],
 					)
 				}
@@ -6831,10 +6900,10 @@ pub mod api {
 						"touch",
 						Touch { id },
 						[
-							204u8, 178u8, 116u8, 113u8, 68u8, 63u8, 58u8, 179u8, 73u8, 226u8,
-							224u8, 63u8, 182u8, 77u8, 43u8, 186u8, 247u8, 26u8, 247u8, 78u8, 228u8,
-							149u8, 162u8, 119u8, 188u8, 215u8, 122u8, 49u8, 19u8, 41u8, 251u8,
-							218u8,
+							166u8, 148u8, 100u8, 28u8, 138u8, 80u8, 156u8, 32u8, 222u8, 33u8,
+							118u8, 118u8, 127u8, 160u8, 68u8, 42u8, 50u8, 26u8, 153u8, 238u8,
+							254u8, 146u8, 87u8, 220u8, 136u8, 118u8, 123u8, 68u8, 17u8, 211u8,
+							141u8, 87u8,
 						],
 					)
 				}
@@ -6856,10 +6925,10 @@ pub mod api {
 						"refund",
 						Refund { id, allow_burn },
 						[
-							162u8, 52u8, 208u8, 78u8, 108u8, 88u8, 200u8, 116u8, 179u8, 110u8,
-							219u8, 41u8, 53u8, 70u8, 108u8, 190u8, 146u8, 194u8, 46u8, 117u8,
-							135u8, 78u8, 57u8, 163u8, 108u8, 202u8, 168u8, 204u8, 1u8, 231u8, 42u8,
-							94u8,
+							148u8, 82u8, 150u8, 130u8, 107u8, 193u8, 213u8, 220u8, 96u8, 103u8,
+							243u8, 21u8, 199u8, 250u8, 233u8, 204u8, 35u8, 10u8, 41u8, 241u8,
+							120u8, 39u8, 246u8, 127u8, 60u8, 169u8, 2u8, 165u8, 38u8, 7u8, 225u8,
+							30u8,
 						],
 					)
 				}
@@ -6999,6 +7068,46 @@ pub mod api {
 			impl ::subxt::events::StaticEvent for AssetThawed {
 				const PALLET: &'static str = "Assets";
 				const EVENT: &'static str = "AssetThawed";
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			#[doc = "Accounts were destroyed for given asset."]
+			pub struct AccountsDestroyed {
+				pub asset_id: ::core::primitive::u128,
+				pub accounts_destroyed: ::core::primitive::u32,
+				pub accounts_remaining: ::core::primitive::u32,
+			}
+			impl ::subxt::events::StaticEvent for AccountsDestroyed {
+				const PALLET: &'static str = "Assets";
+				const EVENT: &'static str = "AccountsDestroyed";
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			#[doc = "Approvals were destroyed for given asset."]
+			pub struct ApprovalsDestroyed {
+				pub asset_id: ::core::primitive::u128,
+				pub approvals_destroyed: ::core::primitive::u32,
+				pub approvals_remaining: ::core::primitive::u32,
+			}
+			impl ::subxt::events::StaticEvent for ApprovalsDestroyed {
+				const PALLET: &'static str = "Assets";
+				const EVENT: &'static str = "ApprovalsDestroyed";
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: CompactAs,
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				Debug,
+			)]
+			#[doc = "An asset class is in the process of being destroyed."]
+			pub struct DestructionStarted {
+				pub asset_id: ::core::primitive::u128,
+			}
+			impl ::subxt::events::StaticEvent for DestructionStarted {
+				const PALLET: &'static str = "Assets";
+				const EVENT: &'static str = "DestructionStarted";
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: CompactAs,
@@ -7141,9 +7250,9 @@ pub mod api {
 							::subxt::storage::address::StorageHasher::Blake2_128Concat,
 						)],
 						[
-							254u8, 219u8, 24u8, 7u8, 169u8, 16u8, 29u8, 63u8, 4u8, 199u8, 85u8,
-							89u8, 208u8, 119u8, 245u8, 187u8, 48u8, 57u8, 112u8, 0u8, 53u8, 71u8,
-							112u8, 127u8, 148u8, 237u8, 94u8, 56u8, 252u8, 84u8, 184u8, 133u8,
+							235u8, 101u8, 13u8, 79u8, 35u8, 101u8, 157u8, 30u8, 200u8, 57u8, 153u8,
+							110u8, 216u8, 187u8, 206u8, 135u8, 131u8, 154u8, 27u8, 229u8, 245u8,
+							246u8, 218u8, 162u8, 213u8, 62u8, 56u8, 116u8, 8u8, 38u8, 112u8, 142u8,
 						],
 					)
 				}
@@ -7167,9 +7276,9 @@ pub mod api {
 						"Asset",
 						Vec::new(),
 						[
-							254u8, 219u8, 24u8, 7u8, 169u8, 16u8, 29u8, 63u8, 4u8, 199u8, 85u8,
-							89u8, 208u8, 119u8, 245u8, 187u8, 48u8, 57u8, 112u8, 0u8, 53u8, 71u8,
-							112u8, 127u8, 148u8, 237u8, 94u8, 56u8, 252u8, 84u8, 184u8, 133u8,
+							235u8, 101u8, 13u8, 79u8, 35u8, 101u8, 157u8, 30u8, 200u8, 57u8, 153u8,
+							110u8, 216u8, 187u8, 206u8, 135u8, 131u8, 154u8, 27u8, 229u8, 245u8,
+							246u8, 218u8, 162u8, 213u8, 62u8, 56u8, 116u8, 8u8, 38u8, 112u8, 142u8,
 						],
 					)
 				}
@@ -7372,6 +7481,25 @@ pub mod api {
 			use super::runtime_types;
 			pub struct ConstantsApi;
 			impl ConstantsApi {
+				#[doc = " Max number of items to destroy per `destroy_accounts` and `destroy_approvals` call."]
+				#[doc = ""]
+				#[doc = " Must be configured to result in a weight that makes each call fit in a block."]
+				pub fn remove_items_limit(
+					&self,
+				) -> ::subxt::constants::StaticConstantAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::u32>,
+				> {
+					::subxt::constants::StaticConstantAddress::new(
+						"Assets",
+						"RemoveItemsLimit",
+						[
+							98u8, 252u8, 116u8, 72u8, 26u8, 180u8, 225u8, 83u8, 200u8, 157u8,
+							125u8, 151u8, 53u8, 76u8, 168u8, 26u8, 10u8, 9u8, 98u8, 68u8, 9u8,
+							178u8, 197u8, 113u8, 31u8, 79u8, 200u8, 90u8, 203u8, 100u8, 41u8,
+							145u8,
+						],
+					)
+				}
 				#[doc = " The basic amount of funds that must be reserved for an asset."]
 				pub fn asset_deposit(
 					&self,
@@ -9295,19 +9423,16 @@ pub mod api {
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
 					#[codec(index = 0)]
-					#[doc = "A dispatch that will fill the block weight up to the given ratio."]
-					fill_block { ratio: runtime_types::sp_arithmetic::per_things::Perbill },
-					#[codec(index = 1)]
 					#[doc = "Make some on-chain remark."]
 					#[doc = ""]
 					#[doc = "# <weight>"]
 					#[doc = "- `O(1)`"]
 					#[doc = "# </weight>"]
 					remark { remark: ::std::vec::Vec<::core::primitive::u8> },
-					#[codec(index = 2)]
+					#[codec(index = 1)]
 					#[doc = "Set the number of pages in the WebAssembly environment's heap."]
 					set_heap_pages { pages: ::core::primitive::u64 },
-					#[codec(index = 3)]
+					#[codec(index = 2)]
 					#[doc = "Set the new runtime code."]
 					#[doc = ""]
 					#[doc = "# <weight>"]
@@ -9321,7 +9446,7 @@ pub mod api {
 					#[doc = "expensive. We will treat this as a full block."]
 					#[doc = "# </weight>"]
 					set_code { code: ::std::vec::Vec<::core::primitive::u8> },
-					#[codec(index = 4)]
+					#[codec(index = 3)]
 					#[doc = "Set the new runtime code without doing any checks of the given `code`."]
 					#[doc = ""]
 					#[doc = "# <weight>"]
@@ -9332,7 +9457,7 @@ pub mod api {
 					#[doc = "The weight of this function is dependent on the runtime. We will treat this as a full"]
 					#[doc = "block. # </weight>"]
 					set_code_without_checks { code: ::std::vec::Vec<::core::primitive::u8> },
-					#[codec(index = 5)]
+					#[codec(index = 4)]
 					#[doc = "Set some items of storage."]
 					set_storage {
 						items: ::std::vec::Vec<(
@@ -9340,10 +9465,10 @@ pub mod api {
 							::std::vec::Vec<::core::primitive::u8>,
 						)>,
 					},
-					#[codec(index = 6)]
+					#[codec(index = 5)]
 					#[doc = "Kill some items from storage."]
 					kill_storage { keys: ::std::vec::Vec<::std::vec::Vec<::core::primitive::u8>> },
-					#[codec(index = 7)]
+					#[codec(index = 6)]
 					#[doc = "Kill all storage items with a key that starts with the given prefix."]
 					#[doc = ""]
 					#[doc = "**NOTE:** We rely on the Root origin to provide us the number of subkeys under"]
@@ -9352,7 +9477,7 @@ pub mod api {
 						prefix: ::std::vec::Vec<::core::primitive::u8>,
 						subkeys: ::core::primitive::u32,
 					},
-					#[codec(index = 8)]
+					#[codec(index = 7)]
 					#[doc = "Make some on-chain remark and emit event."]
 					remark_with_event { remark: ::std::vec::Vec<::core::primitive::u8> },
 				}
@@ -9615,7 +9740,6 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`"]
 					create {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						admin: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 						min_balance: ::core::primitive::u128,
@@ -9641,7 +9765,6 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`"]
 					force_create {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						owner: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 						is_sufficient: ::core::primitive::bool,
@@ -9649,30 +9772,59 @@ pub mod api {
 						min_balance: ::core::primitive::u128,
 					},
 					#[codec(index = 2)]
-					#[doc = "Destroy a class of fungible assets."]
+					#[doc = "Start the process of destroying a fungible asset class."]
 					#[doc = ""]
-					#[doc = "The origin must conform to `ForceOrigin` or must be Signed and the sender must be the"]
-					#[doc = "owner of the asset `id`."]
+					#[doc = "`start_destroy` is the first in a series of extrinsics that should be called, to allow"]
+					#[doc = "destruction of an asset class."]
+					#[doc = ""]
+					#[doc = "The origin must conform to `ForceOrigin` or must be `Signed` by the asset's `owner`."]
 					#[doc = ""]
 					#[doc = "- `id`: The identifier of the asset to be destroyed. This must identify an existing"]
-					#[doc = "asset."]
+					#[doc = "  asset."]
 					#[doc = ""]
-					#[doc = "Emits `Destroyed` event when successful."]
-					#[doc = ""]
-					#[doc = "NOTE: It can be helpful to first freeze an asset before destroying it so that you"]
-					#[doc = "can provide accurate witness information and prevent users from manipulating state"]
-					#[doc = "in a way that can make it harder to destroy."]
-					#[doc = ""]
-					#[doc = "Weight: `O(c + p + a)` where:"]
-					#[doc = "- `c = (witness.accounts - witness.sufficients)`"]
-					#[doc = "- `s = witness.sufficients`"]
-					#[doc = "- `a = witness.approvals`"]
-					destroy {
-						#[codec(compact)]
-						id: ::core::primitive::u128,
-						witness: runtime_types::pallet_assets::types::DestroyWitness,
-					},
+					#[doc = "The asset class must be frozen before calling `start_destroy`."]
+					start_destroy { id: ::core::primitive::u128 },
 					#[codec(index = 3)]
+					#[doc = "Destroy all accounts associated with a given asset."]
+					#[doc = ""]
+					#[doc = "`destroy_accounts` should only be called after `start_destroy` has been called, and the"]
+					#[doc = "asset is in a `Destroying` state."]
+					#[doc = ""]
+					#[doc = "Due to weight restrictions, this function may need to be called multiple times to fully"]
+					#[doc = "destroy all accounts. It will destroy `RemoveItemsLimit` accounts at a time."]
+					#[doc = ""]
+					#[doc = "- `id`: The identifier of the asset to be destroyed. This must identify an existing"]
+					#[doc = "  asset."]
+					#[doc = ""]
+					#[doc = "Each call emits the `Event::DestroyedAccounts` event."]
+					destroy_accounts { id: ::core::primitive::u128 },
+					#[codec(index = 4)]
+					#[doc = "Destroy all approvals associated with a given asset up to the max (T::RemoveItemsLimit)."]
+					#[doc = ""]
+					#[doc = "`destroy_approvals` should only be called after `start_destroy` has been called, and the"]
+					#[doc = "asset is in a `Destroying` state."]
+					#[doc = ""]
+					#[doc = "Due to weight restrictions, this function may need to be called multiple times to fully"]
+					#[doc = "destroy all approvals. It will destroy `RemoveItemsLimit` approvals at a time."]
+					#[doc = ""]
+					#[doc = "- `id`: The identifier of the asset to be destroyed. This must identify an existing"]
+					#[doc = "  asset."]
+					#[doc = ""]
+					#[doc = "Each call emits the `Event::DestroyedApprovals` event."]
+					destroy_approvals { id: ::core::primitive::u128 },
+					#[codec(index = 5)]
+					#[doc = "Complete destroying asset and unreserve currency."]
+					#[doc = ""]
+					#[doc = "`finish_destroy` should only be called after `start_destroy` has been called, and the"]
+					#[doc = "asset is in a `Destroying` state. All accounts or approvals should be destroyed before"]
+					#[doc = "hand."]
+					#[doc = ""]
+					#[doc = "- `id`: The identifier of the asset to be destroyed. This must identify an existing"]
+					#[doc = "  asset."]
+					#[doc = ""]
+					#[doc = "Each successful call emits the `Event::Destroyed` event."]
+					finish_destroy { id: ::core::primitive::u128 },
+					#[codec(index = 6)]
 					#[doc = "Mint assets of a particular class."]
 					#[doc = ""]
 					#[doc = "The origin must be Signed and the sender must be the Issuer of the asset `id`."]
@@ -9686,13 +9838,12 @@ pub mod api {
 					#[doc = "Weight: `O(1)`"]
 					#[doc = "Modes: Pre-existing balance of `beneficiary`; Account pre-existence of `beneficiary`."]
 					mint {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						beneficiary: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 						#[codec(compact)]
 						amount: ::core::primitive::u128,
 					},
-					#[codec(index = 4)]
+					#[codec(index = 7)]
 					#[doc = "Reduce the balance of `who` by as much as possible up to `amount` assets of `id`."]
 					#[doc = ""]
 					#[doc = "Origin must be Signed and the sender should be the Manager of the asset `id`."]
@@ -9709,13 +9860,12 @@ pub mod api {
 					#[doc = "Weight: `O(1)`"]
 					#[doc = "Modes: Post-existence of `who`; Pre & post Zombie-status of `who`."]
 					burn {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						who: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 						#[codec(compact)]
 						amount: ::core::primitive::u128,
 					},
-					#[codec(index = 5)]
+					#[codec(index = 8)]
 					#[doc = "Move some assets from the sender account to another."]
 					#[doc = ""]
 					#[doc = "Origin must be Signed."]
@@ -9735,13 +9885,12 @@ pub mod api {
 					#[doc = "Modes: Pre-existence of `target`; Post-existence of sender; Account pre-existence of"]
 					#[doc = "`target`."]
 					transfer {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						target: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 						#[codec(compact)]
 						amount: ::core::primitive::u128,
 					},
-					#[codec(index = 6)]
+					#[codec(index = 9)]
 					#[doc = "Move some assets from the sender account to another, keeping the sender account alive."]
 					#[doc = ""]
 					#[doc = "Origin must be Signed."]
@@ -9761,13 +9910,12 @@ pub mod api {
 					#[doc = "Modes: Pre-existence of `target`; Post-existence of sender; Account pre-existence of"]
 					#[doc = "`target`."]
 					transfer_keep_alive {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						target: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 						#[codec(compact)]
 						amount: ::core::primitive::u128,
 					},
-					#[codec(index = 7)]
+					#[codec(index = 10)]
 					#[doc = "Move some assets from one account to another."]
 					#[doc = ""]
 					#[doc = "Origin must be Signed and the sender should be the Admin of the asset `id`."]
@@ -9788,14 +9936,13 @@ pub mod api {
 					#[doc = "Modes: Pre-existence of `dest`; Post-existence of `source`; Account pre-existence of"]
 					#[doc = "`dest`."]
 					force_transfer {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						source: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 						dest: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 						#[codec(compact)]
 						amount: ::core::primitive::u128,
 					},
-					#[codec(index = 8)]
+					#[codec(index = 11)]
 					#[doc = "Disallow further unprivileged transfers from an account."]
 					#[doc = ""]
 					#[doc = "Origin must be Signed and the sender should be the Freezer of the asset `id`."]
@@ -9807,11 +9954,10 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`"]
 					freeze {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						who: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 					},
-					#[codec(index = 9)]
+					#[codec(index = 12)]
 					#[doc = "Allow unprivileged transfers from an account again."]
 					#[doc = ""]
 					#[doc = "Origin must be Signed and the sender should be the Admin of the asset `id`."]
@@ -9823,11 +9969,10 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`"]
 					thaw {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						who: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 					},
-					#[codec(index = 10)]
+					#[codec(index = 13)]
 					#[doc = "Disallow further unprivileged transfers for the asset class."]
 					#[doc = ""]
 					#[doc = "Origin must be Signed and the sender should be the Freezer of the asset `id`."]
@@ -9837,11 +9982,8 @@ pub mod api {
 					#[doc = "Emits `Frozen`."]
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`"]
-					freeze_asset {
-						#[codec(compact)]
-						id: ::core::primitive::u128,
-					},
-					#[codec(index = 11)]
+					freeze_asset { id: ::core::primitive::u128 },
+					#[codec(index = 14)]
 					#[doc = "Allow unprivileged transfers for the asset again."]
 					#[doc = ""]
 					#[doc = "Origin must be Signed and the sender should be the Admin of the asset `id`."]
@@ -9851,11 +9993,8 @@ pub mod api {
 					#[doc = "Emits `Thawed`."]
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`"]
-					thaw_asset {
-						#[codec(compact)]
-						id: ::core::primitive::u128,
-					},
-					#[codec(index = 12)]
+					thaw_asset { id: ::core::primitive::u128 },
+					#[codec(index = 15)]
 					#[doc = "Change the Owner of an asset."]
 					#[doc = ""]
 					#[doc = "Origin must be Signed and the sender should be the Owner of the asset `id`."]
@@ -9867,11 +10006,10 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`"]
 					transfer_ownership {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						owner: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 					},
-					#[codec(index = 13)]
+					#[codec(index = 16)]
 					#[doc = "Change the Issuer, Admin and Freezer of an asset."]
 					#[doc = ""]
 					#[doc = "Origin must be Signed and the sender should be the Owner of the asset `id`."]
@@ -9885,13 +10023,12 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`"]
 					set_team {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						issuer: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 						admin: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 						freezer: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 					},
-					#[codec(index = 14)]
+					#[codec(index = 17)]
 					#[doc = "Set the metadata for an asset."]
 					#[doc = ""]
 					#[doc = "Origin must be Signed and the sender should be the Owner of the asset `id`."]
@@ -9909,13 +10046,12 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`"]
 					set_metadata {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						name: ::std::vec::Vec<::core::primitive::u8>,
 						symbol: ::std::vec::Vec<::core::primitive::u8>,
 						decimals: ::core::primitive::u8,
 					},
-					#[codec(index = 15)]
+					#[codec(index = 18)]
 					#[doc = "Clear the metadata for an asset."]
 					#[doc = ""]
 					#[doc = "Origin must be Signed and the sender should be the Owner of the asset `id`."]
@@ -9927,11 +10063,8 @@ pub mod api {
 					#[doc = "Emits `MetadataCleared`."]
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`"]
-					clear_metadata {
-						#[codec(compact)]
-						id: ::core::primitive::u128,
-					},
-					#[codec(index = 16)]
+					clear_metadata { id: ::core::primitive::u128 },
+					#[codec(index = 19)]
 					#[doc = "Force the metadata for an asset to some value."]
 					#[doc = ""]
 					#[doc = "Origin must be ForceOrigin."]
@@ -9947,14 +10080,13 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "Weight: `O(N + S)` where N and S are the length of the name and symbol respectively."]
 					force_set_metadata {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						name: ::std::vec::Vec<::core::primitive::u8>,
 						symbol: ::std::vec::Vec<::core::primitive::u8>,
 						decimals: ::core::primitive::u8,
 						is_frozen: ::core::primitive::bool,
 					},
-					#[codec(index = 17)]
+					#[codec(index = 20)]
 					#[doc = "Clear the metadata for an asset."]
 					#[doc = ""]
 					#[doc = "Origin must be ForceOrigin."]
@@ -9966,11 +10098,8 @@ pub mod api {
 					#[doc = "Emits `MetadataCleared`."]
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`"]
-					force_clear_metadata {
-						#[codec(compact)]
-						id: ::core::primitive::u128,
-					},
-					#[codec(index = 18)]
+					force_clear_metadata { id: ::core::primitive::u128 },
+					#[codec(index = 21)]
 					#[doc = "Alter the attributes of a given asset."]
 					#[doc = ""]
 					#[doc = "Origin must be `ForceOrigin`."]
@@ -9994,7 +10123,6 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`"]
 					force_asset_status {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						owner: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 						issuer: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
@@ -10005,7 +10133,7 @@ pub mod api {
 						is_sufficient: ::core::primitive::bool,
 						is_frozen: ::core::primitive::bool,
 					},
-					#[codec(index = 19)]
+					#[codec(index = 22)]
 					#[doc = "Approve an amount of asset for transfer by a delegated third-party account."]
 					#[doc = ""]
 					#[doc = "Origin must be Signed."]
@@ -10027,13 +10155,12 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`"]
 					approve_transfer {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						delegate: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 						#[codec(compact)]
 						amount: ::core::primitive::u128,
 					},
-					#[codec(index = 20)]
+					#[codec(index = 23)]
 					#[doc = "Cancel all of some asset approved for delegated transfer by a third-party account."]
 					#[doc = ""]
 					#[doc = "Origin must be Signed and there must be an approval in place between signer and"]
@@ -10048,11 +10175,10 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`"]
 					cancel_approval {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						delegate: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 					},
-					#[codec(index = 21)]
+					#[codec(index = 24)]
 					#[doc = "Cancel all of some asset approved for delegated transfer by a third-party account."]
 					#[doc = ""]
 					#[doc = "Origin must be either ForceOrigin or Signed origin with the signer being the Admin"]
@@ -10067,12 +10193,11 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`"]
 					force_cancel_approval {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						owner: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 						delegate: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 					},
-					#[codec(index = 22)]
+					#[codec(index = 25)]
 					#[doc = "Transfer some asset balance from a previously delegated account to some third-party"]
 					#[doc = "account."]
 					#[doc = ""]
@@ -10092,14 +10217,13 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`"]
 					transfer_approved {
-						#[codec(compact)]
 						id: ::core::primitive::u128,
 						owner: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 						destination: ::subxt::utils::MultiAddress<::subxt::utils::AccountId32, ()>,
 						#[codec(compact)]
 						amount: ::core::primitive::u128,
 					},
-					#[codec(index = 23)]
+					#[codec(index = 26)]
 					#[doc = "Create an asset account for non-provider assets."]
 					#[doc = ""]
 					#[doc = "A deposit will be taken from the signer account."]
@@ -10109,11 +10233,8 @@ pub mod api {
 					#[doc = "- `id`: The identifier of the asset for the account to be created."]
 					#[doc = ""]
 					#[doc = "Emits `Touched` event when successful."]
-					touch {
-						#[codec(compact)]
-						id: ::core::primitive::u128,
-					},
-					#[codec(index = 24)]
+					touch { id: ::core::primitive::u128 },
+					#[codec(index = 27)]
 					#[doc = "Return the deposit (if any) of an asset account."]
 					#[doc = ""]
 					#[doc = "The origin must be Signed."]
@@ -10122,11 +10243,7 @@ pub mod api {
 					#[doc = "- `allow_burn`: If `true` then assets may be destroyed in order to complete the refund."]
 					#[doc = ""]
 					#[doc = "Emits `Refunded` event when successful."]
-					refund {
-						#[codec(compact)]
-						id: ::core::primitive::u128,
-						allow_burn: ::core::primitive::bool,
-					},
+					refund { id: ::core::primitive::u128, allow_burn: ::core::primitive::bool },
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -10180,6 +10297,19 @@ pub mod api {
 					#[codec(index = 14)]
 					#[doc = "The operation would result in funds being burned."]
 					WouldBurn,
+					#[codec(index = 15)]
+					#[doc = "The asset is a live asset and is actively being used. Usually emit for operations such"]
+					#[doc = "as `start_destroy` which require the asset to be in a destroying state."]
+					LiveAsset,
+					#[codec(index = 16)]
+					#[doc = "The asset is not live, and likely being destroyed."]
+					AssetNotLive,
+					#[codec(index = 17)]
+					#[doc = "The asset status is not the expected status."]
+					IncorrectStatus,
+					#[codec(index = 18)]
+					#[doc = "The asset should be frozen before the given operation."]
+					NotFrozen,
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -10242,15 +10372,32 @@ pub mod api {
 					#[doc = "Some asset `asset_id` was thawed."]
 					AssetThawed { asset_id: ::core::primitive::u128 },
 					#[codec(index = 10)]
+					#[doc = "Accounts were destroyed for given asset."]
+					AccountsDestroyed {
+						asset_id: ::core::primitive::u128,
+						accounts_destroyed: ::core::primitive::u32,
+						accounts_remaining: ::core::primitive::u32,
+					},
+					#[codec(index = 11)]
+					#[doc = "Approvals were destroyed for given asset."]
+					ApprovalsDestroyed {
+						asset_id: ::core::primitive::u128,
+						approvals_destroyed: ::core::primitive::u32,
+						approvals_remaining: ::core::primitive::u32,
+					},
+					#[codec(index = 12)]
+					#[doc = "An asset class is in the process of being destroyed."]
+					DestructionStarted { asset_id: ::core::primitive::u128 },
+					#[codec(index = 13)]
 					#[doc = "An asset class was destroyed."]
 					Destroyed { asset_id: ::core::primitive::u128 },
-					#[codec(index = 11)]
+					#[codec(index = 14)]
 					#[doc = "Some asset class was force-created."]
 					ForceCreated {
 						asset_id: ::core::primitive::u128,
 						owner: ::subxt::utils::AccountId32,
 					},
-					#[codec(index = 12)]
+					#[codec(index = 15)]
 					#[doc = "New metadata has been set for an asset."]
 					MetadataSet {
 						asset_id: ::core::primitive::u128,
@@ -10259,10 +10406,10 @@ pub mod api {
 						decimals: ::core::primitive::u8,
 						is_frozen: ::core::primitive::bool,
 					},
-					#[codec(index = 13)]
+					#[codec(index = 16)]
 					#[doc = "Metadata has been cleared for an asset."]
 					MetadataCleared { asset_id: ::core::primitive::u128 },
-					#[codec(index = 14)]
+					#[codec(index = 17)]
 					#[doc = "(Additional) funds have been approved for transfer to a destination account."]
 					ApprovedTransfer {
 						asset_id: ::core::primitive::u128,
@@ -10270,14 +10417,14 @@ pub mod api {
 						delegate: ::subxt::utils::AccountId32,
 						amount: ::core::primitive::u128,
 					},
-					#[codec(index = 15)]
+					#[codec(index = 18)]
 					#[doc = "An approval for account `delegate` was cancelled by `owner`."]
 					ApprovalCancelled {
 						asset_id: ::core::primitive::u128,
 						owner: ::subxt::utils::AccountId32,
 						delegate: ::subxt::utils::AccountId32,
 					},
-					#[codec(index = 16)]
+					#[codec(index = 19)]
 					#[doc = "An `amount` was transferred in its entirety from `owner` to `destination` by"]
 					#[doc = "the approved `delegate`."]
 					TransferredApproved {
@@ -10287,7 +10434,7 @@ pub mod api {
 						destination: ::subxt::utils::AccountId32,
 						amount: ::core::primitive::u128,
 					},
-					#[codec(index = 17)]
+					#[codec(index = 20)]
 					#[doc = "An asset has had its attributes changed by the `Force` origin."]
 					AssetStatusChanged { asset_id: ::core::primitive::u128 },
 				}
@@ -10329,7 +10476,7 @@ pub mod api {
 					pub accounts: ::core::primitive::u32,
 					pub sufficients: ::core::primitive::u32,
 					pub approvals: ::core::primitive::u32,
-					pub is_frozen: ::core::primitive::bool,
+					pub status: runtime_types::pallet_assets::types::AssetStatus,
 					#[codec(skip)]
 					pub __subxt_unused_type_params: ::core::marker::PhantomData<_2>,
 				}
@@ -10346,13 +10493,13 @@ pub mod api {
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
-				pub struct DestroyWitness {
-					#[codec(compact)]
-					pub accounts: ::core::primitive::u32,
-					#[codec(compact)]
-					pub sufficients: ::core::primitive::u32,
-					#[codec(compact)]
-					pub approvals: ::core::primitive::u32,
+				pub enum AssetStatus {
+					#[codec(index = 0)]
+					Live,
+					#[codec(index = 1)]
+					Frozen,
+					#[codec(index = 2)]
+					Destroying,
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -10655,15 +10802,6 @@ pub mod api {
 				Misc,
 				#[codec(index = 2)]
 				All,
-			}
-			#[derive(
-				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
-			)]
-			pub enum Releases {
-				#[codec(index = 0)]
-				V1_0_0,
-				#[codec(index = 1)]
-				V2_0_0,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -12198,16 +12336,6 @@ pub mod api {
 					Debug,
 				)]
 				pub struct FixedU128(pub ::core::primitive::u128);
-			}
-			pub mod per_things {
-				use super::runtime_types;
-				#[derive(
-					:: subxt :: ext :: codec :: CompactAs,
-					:: subxt :: ext :: codec :: Decode,
-					:: subxt :: ext :: codec :: Encode,
-					Debug,
-				)]
-				pub struct Perbill(pub ::core::primitive::u32);
 			}
 		}
 		pub mod sp_consensus_aura {
@@ -14275,9 +14403,9 @@ pub mod api {
 		let runtime_metadata_hash = client.metadata().metadata_hash(&PALLETS);
 		if runtime_metadata_hash !=
 			[
-				196u8, 200u8, 21u8, 235u8, 179u8, 24u8, 158u8, 34u8, 117u8, 71u8, 221u8, 224u8,
-				115u8, 154u8, 242u8, 111u8, 216u8, 219u8, 162u8, 175u8, 56u8, 62u8, 159u8, 6u8,
-				107u8, 207u8, 255u8, 247u8, 125u8, 43u8, 129u8, 79u8,
+				229u8, 227u8, 11u8, 184u8, 231u8, 227u8, 164u8, 93u8, 76u8, 187u8, 246u8, 153u8,
+				195u8, 113u8, 152u8, 1u8, 97u8, 52u8, 93u8, 84u8, 54u8, 28u8, 6u8, 35u8, 2u8,
+				106u8, 108u8, 200u8, 121u8, 192u8, 211u8, 80u8,
 			] {
 			Err(::subxt::error::MetadataError::IncompatibleMetadata)
 		} else {

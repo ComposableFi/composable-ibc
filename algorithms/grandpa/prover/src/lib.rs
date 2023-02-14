@@ -118,7 +118,10 @@ where
 			let key = polkadot::api::storage().grandpa().current_set_id();
 			self.relay_client
 				.storage()
-				.fetch(&key, Some(latest_relay_hash))
+				.at(Some(latest_relay_hash))
+				.await
+				.expect("Storage client")
+				.fetch(&key)
 				.await
 				.unwrap()
 				.expect("Failed to fetch current set id")
@@ -180,7 +183,10 @@ where
 		let header = self
 			.relay_client
 			.storage()
-			.fetch(&key, Some(latest_finalized_hash))
+			.at(Some(latest_finalized_hash))
+			.await
+			.expect("Storage client")
+			.fetch(&key)
 			.await?
 			.ok_or_else(|| anyhow!("parachain header not found for para id: {}", self.para_id))?;
 		let header = T::Header::decode(&mut &header.0[..])
@@ -300,7 +306,10 @@ where
 				let key = polkadot::api::storage().paras().heads(&Id(self.para_id));
 				self.relay_client
 					.storage()
-					.fetch(&key, Some(header.hash()))
+					.at(Some(header.hash()))
+					.await
+					.expect("Storage client")
+					.fetch(&key)
 					.await?
 					.expect("Header exists in its own changeset; qed")
 					.0
@@ -347,7 +356,10 @@ where
 		let (previous_epoch_start, current_epoch_start) = self
 			.relay_client
 			.storage()
-			.fetch(&epoch_addr, block_hash)
+			.at(block_hash)
+			.await
+			.expect("Storage client")
+			.fetch(&epoch_addr)
 			.await?
 			.ok_or_else(|| anyhow!("Failed to fetch epoch information"))?;
 		Ok((
