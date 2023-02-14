@@ -43,7 +43,7 @@ ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-subxt = { git = "https://github.com/paritytech/subxt",  rev = "c0198acea854b24e161dbeb714e71d56830d51ef", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
 
 [dev-dependencies]
 derive_more = "0.99.17"
@@ -51,7 +51,7 @@ prost = "0.11"
 parachain = { path = "../parachain", package = "hyperspace-parachain", features = ["testing"] }
 
 # substrate
-subxt = { git = "https://github.com/paritytech/subxt",  rev = "c0198acea854b24e161dbeb714e71d56830d51ef", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
