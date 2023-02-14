@@ -340,9 +340,7 @@ where
 		let unix_timestamp_millis = self
 			.para_client
 			.storage()
-			.at(block_hash)
-			.await?
-			.fetch(&timestamp_addr)
+			.fetch(&timestamp_addr, block_hash)
 			.await?
 			.ok_or_else(|| Error::from("Timestamp should exist".to_string()))?;
 		let timestamp_nanos = Duration::from_millis(unix_timestamp_millis).as_nanos() as u64;
@@ -540,9 +538,7 @@ where
 		let balance = self
 			.para_client
 			.storage()
-			.at(None)
-			.await?
-			.fetch(&account_addr)
+			.fetch(&account_addr, None)
 			.await?
 			.expect("Account data should exist");
 
@@ -579,9 +575,7 @@ where
 		let unix_timestamp_millis = self
 			.para_client
 			.storage()
-			.at(block_hash)
-			.await?
-			.fetch(&timestamp_addr)
+			.fetch(&timestamp_addr, block_hash)
 			.await?
 			.expect("Timestamp should exist");
 		let timestamp_nanos = Duration::from_millis(unix_timestamp_millis).as_nanos() as u64;

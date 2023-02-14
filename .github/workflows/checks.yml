@@ -33,7 +33,8 @@ jobs:
         version: '3.x'
 
     - name: check workspace
-      run: cargo check --workspace --locked
+      run: |
+        cargo check --workspace --locked
 
     - name: check no_std
       run: ./scripts/no_std_checks.sh
