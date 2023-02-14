@@ -120,7 +120,10 @@ async fn test_continuous_update_of_grandpa_client() {
 			prover
 				.relay_client
 				.storage()
-				.fetch(&key, Some(client_state.latest_relay_hash))
+				.at(Some(client_state.latest_relay_hash))
+				.await
+				.expect("Storage client")
+				.fetch(&key)
 				.await
 				.unwrap()
 				.unwrap()
