@@ -165,7 +165,7 @@ where
 		.pop()
 		.expect("No Ibc balances");
 
-	let amount = parse_amount(balance.amount.to_string());
+	let amount = balance.amount.as_u256().as_u128();
 	let coin = PrefixedCoin {
 		denom: balance.denom,
 		amount: Amount::from_str(&format!("{}", (amount * 20) / 100)).expect("Infallible"),
@@ -231,7 +231,7 @@ where
 		.pop()
 		.expect("No Ibc balances");
 
-	let new_amount = parse_amount(balance.amount.to_string());
+	let new_amount = balance.amount.as_u256().as_u128();
 	assert!(new_amount <= (previous_balance * 80) / 100);
 }
 

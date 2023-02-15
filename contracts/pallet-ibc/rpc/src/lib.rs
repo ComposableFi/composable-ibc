@@ -640,10 +640,7 @@ where
 		let denom = format!("{}", self.chain_props.get("tokenSymbol").cloned().unwrap_or_default());
 
 		match api.query_balance_with_address(&at, addr.as_bytes().to_vec()).ok().flatten() {
-			Some(amt) => Ok(Coin {
-				denom,
-				amount: serde_json::to_string(&sp_core::U256::from(amt)).unwrap_or_default(),
-			}),
+			Some(amt) => Ok(Coin { denom, amount: sp_core::U256::from(amt).as_u128().to_string() }),
 			None => Err(runtime_error_into_rpc_error("Error querying balance")),
 		}
 	}
