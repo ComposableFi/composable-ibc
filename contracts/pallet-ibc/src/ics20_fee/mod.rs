@@ -38,6 +38,8 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + crate::Config {
+		/// The overarching event type.
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		#[pallet::constant]
 		type ServiceCharge: Get<Percent>;
 		#[pallet::constant]
@@ -52,8 +54,15 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type ServiceCharge<T: Config> = StorageValue<_, Percent, OptionQuery>;
 
+	#[pallet::event]
+	#[pallet::generate_deposit(pub (super) fn deposit_event)]
+	pub enum Event<T: Config> {
+		IbcTransferFeeCollected { amount: T::Balance },
+	}
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
 		#[pallet::weight(0)]
 		pub fn set_charge(origin: OriginFor<T>, charge: Percent) -> DispatchResult {
 			<T as crate::Config>::AdminOrigin::ensure_origin(origin)?;
@@ -248,6 +257,7 @@ where
 			packet.data = serde_json::to_vec(&packet_data).map_err(|_| {
 				Ics04Error::implementation_specific("Failed to receiver account".to_string())
 			})?;
+			Pallet::<T>::deposit_event(Event::<T>::IbcTransferFeeCollected { amount: fee.into() })
 		}
 		Ok(ack)
 	}

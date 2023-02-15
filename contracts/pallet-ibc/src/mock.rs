@@ -201,6 +201,7 @@ parameter_types! {
 }
 
 impl crate::ics20_fee::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
 	type ServiceCharge = ServiceCharge;
 	type PalletId = PalletId;
 }
