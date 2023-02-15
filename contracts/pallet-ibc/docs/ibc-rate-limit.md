@@ -38,6 +38,9 @@ quota_out_initialization = base_value_out
 amount_in <= quota_in
 amount_out <= quota_out
 
+// constraints
+0 < epoch_rate_in < 1
+0 < epoch_rate_out < 1
 ```
 
 ## Rate limiting formula
