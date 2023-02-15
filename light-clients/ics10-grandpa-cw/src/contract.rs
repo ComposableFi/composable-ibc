@@ -30,7 +30,7 @@ use ibc::core::{
 use ics10_grandpa::{
 	client_def::GrandpaClient, client_message::RelayChainHeader, consensus_state::ConsensusState,
 };
-use light_client_common::{verify_non_membership, LocalHeight};
+use light_client_common::{verify_membership, verify_non_membership, LocalHeight};
 use prost::Message;
 use sp_runtime::traits::{BlakeTwo256, Header};
 use sp_runtime_interface::unpack_ptr_and_len;
@@ -164,21 +164,21 @@ fn process_message(
 		ExecuteMsg::Initialize(_) => todo!(),
 		ExecuteMsg::VerifyMembership(msg) => {
 			let msg = VerifyMembershipMsg::try_from(msg).unwrap();
-			let _consensus_state = ctx
+			let consensus_state = ctx
 				.consensus_state(&client_id, msg.height)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
 				.unwrap();
-			// verify_membership::<BlakeTwo256, _>(
-			// 	&msg.prefix,
-			// 	&msg.proof,
-			// 	&consensus_state.root,
-			// 	msg.path,
-			// 	msg.value,
-			// )
-			// .map_err(|e| {
-			// 	panic!("verify_membership failed: {:?}", e);
-			// 	ContractError::Grandpa(e.to_string())
-			// })
+			verify_membership::<BlakeTwo256, _>(
+				&msg.prefix,
+				&msg.proof,
+				&consensus_state.root,
+				msg.path,
+				msg.value,
+			)
+			.map_err(|e| {
+				panic!("verify_membership failed: {:?}", e);
+				ContractError::Grandpa(e.to_string())
+			})?;
 			Ok(()).map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyNonMembership(msg) => {

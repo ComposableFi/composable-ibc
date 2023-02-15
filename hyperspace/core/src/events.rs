@@ -28,7 +28,7 @@ use ibc::{
 			},
 		},
 		ics04_channel::{
-			channel::{ChannelEnd, Counterparty as ChannelCounterparty},
+			channel::{ChannelEnd, Counterparty as ChannelCounterparty, State},
 			msgs::{
 				acknowledgement::MsgAcknowledgement, chan_close_confirm::MsgChannelCloseConfirm,
 				chan_open_ack::MsgChannelOpenAck, chan_open_confirm::MsgChannelOpenConfirm,
@@ -42,7 +42,13 @@ use ibc::{
 	tx_msg::Msg,
 	Height,
 };
-use ibc_proto::{google::protobuf::Any, ibc::core::client::v1::QueryConsensusStateResponse};
+use ibc_proto::{
+	google::protobuf::Any,
+	ibc::core::{
+		client::v1::QueryConsensusStateResponse,
+		connection::v1::MsgConnectionOpenAck as RawMsgConnectionOpenAck,
+	},
+};
 use pallet_ibc::light_clients::AnyClientState;
 use primitives::{error::Error, mock::LocalClientTypes, Chain};
 use tendermint_proto::Protobuf;
@@ -111,7 +117,6 @@ pub async fn parse_events(
 							client_state.latest_height(),
 						)
 						.await?;
-					let new_proof_height = consensus_proof.proof_height.clone();
 					let consensus_proof =
 						query_consensus_proof(sink, client_state.clone(), consensus_proof).await?;
 
@@ -134,10 +139,7 @@ pub async fn parse_events(
 								client_state.latest_height(),
 							)?),
 							None,
-							new_proof_height.map(|x| x.into()).unwrap_or_else(|| {
-								log::debug!(target: "hyperspace", "using default proof_height for open_conn_try");
-								proof_height
-							}),
+							proof_height,
 						)?,
 						delay_period: connection_end.delay_period(),
 						signer: sink.account_id(),
@@ -191,7 +193,6 @@ pub async fn parse_events(
 						)
 						.await?;
 					let new_proof_height = consensus_proof.proof_height.clone();
-					log::debug!(target: "hyperspace", "pe, OpenTryConnection: {new_proof_height:?} vs {proof_height:?}");
 					let consensus_proof_raw =
 						query_consensus_proof(sink, client_state.clone(), consensus_proof).await?;
 					// Construct OpenAck
@@ -212,10 +213,7 @@ pub async fn parse_events(
 								client_state.latest_height(),
 							)?),
 							None,
-							new_proof_height.map(|x| x.into()).unwrap_or_else(|| {
-								log::debug!(target: "hyperspace", "using default proof_height for open_conn_try");
-								proof_height
-							}),
+							proof_height,
 						)?,
 						version: connection_end
 							.versions()
@@ -300,7 +298,7 @@ pub async fn parse_events(
 					// Construct the channel end as we expect it to be constructed on the
 					// receiving chain
 					let channel = ChannelEnd::new(
-						channel_end.state,
+						State::TryOpen,
 						channel_end.ordering,
 						ChannelCounterparty::new(open_init.port_id, Some(channel_id)),
 						channel_end.connection_hops.clone(),
@@ -320,7 +318,6 @@ pub async fn parse_events(
 						channel,
 						counterparty_version: channel_end.version,
 						proofs: Proofs::new(channel_proof, None, None, None, proof_height)?,
-
 						signer: sink.account_id(),
 					};
 

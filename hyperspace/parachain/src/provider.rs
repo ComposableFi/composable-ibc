@@ -561,6 +561,7 @@ where
 	async fn query_ibc_balance(&self) -> Result<Vec<PrefixedCoin>, Self::Error> {
 		let account = self.public_key.clone().into_account();
 		let account = subxt::utils::AccountId32::from(<[u8; 32]>::from(account));
+		// let account_addr = parachain::api::storage().assets().account(2, &account);
 		let account_addr = parachain::api::storage().system().account(&account);
 		let balance = self
 			.para_client
@@ -573,6 +574,8 @@ where
 
 		// todo: how should we handle assets?
 		Ok(vec![PrefixedCoin {
+			// denom: PrefixedDenom::from_str("transfer/channel-0/stake")?,
+			// amount: Amount::from_str(&format!("{}", balance.balance))?,
 			denom: PrefixedDenom::from_str("UNIT")?,
 			amount: Amount::from_str(&format!("{}", balance.data.free))?,
 		}])

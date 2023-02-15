@@ -23,7 +23,7 @@ pub mod events;
 pub mod key_provider;
 pub mod light_client;
 pub mod provider;
-#[cfg(feature = "testing")]
+#[cfg(any(test, feature = "testing"))]
 pub mod test_provider;
 pub mod tx;
 pub mod utils;

@@ -71,6 +71,7 @@ use subxt::config::substrate::{
 };
 use subxt::{config::ExtrinsicParams, Error, OnlineClient};
 
+use ibc::core::ics02_client::client_consensus::ConsensusState;
 use primitives::mock::LocalClientTypes;
 use subxt::config::extrinsic_params::Era;
 #[cfg(not(feature = "dali"))]
@@ -895,8 +896,9 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Any {
 		CREATE_CLIENT_TYPE_URL => {
 			let mut msg_decoded =
 				MsgCreateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+			let timestamp = msg_decoded.consensus_state.timestamp().nanoseconds() / 1_000_000_000;
 			msg_decoded.consensus_state =
-				AnyConsensusState::wasm(msg_decoded.consensus_state, code_id.clone(), 1);
+				AnyConsensusState::wasm(msg_decoded.consensus_state, code_id.clone(), timestamp);
 			msg_decoded.client_state = AnyClientState::wasm(msg_decoded.client_state, code_id);
 			msg_decoded.to_any()
 		},
@@ -912,9 +914,6 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Any {
 		CONN_OPEN_ACK_TYPE_URL => {
 			let mut msg_decoded =
 				MsgConnectionOpenAck::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
-			msg_decoded.client_state = msg_decoded
-				.client_state
-				.map(|client_state| AnyClientState::wasm(client_state, code_id));
 			msg_decoded.to_any()
 		},
 		UPDATE_CLIENT_TYPE_URL => {
