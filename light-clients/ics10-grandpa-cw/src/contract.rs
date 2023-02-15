@@ -157,7 +157,16 @@ fn process_message(
 	// log!(ctx, "process_message: {:?}", msg);
 	let result = match msg {
 		ExecuteMsg::Validate(_) => todo!(),
-		ExecuteMsg::Status(_) => todo!(),
+		ExecuteMsg::Status(_) => {
+			let client_state = ctx
+				.client_state(&client_id)
+				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
+			if client_state.frozen_height().is_some() {
+				Ok(to_binary("Frozen"))
+			} else {
+				Ok(to_binary("Active"))
+			}
+		},
 		ExecuteMsg::ExportedMetadata(_) => todo!(),
 		ExecuteMsg::ZeroCustomFields(_) => todo!(),
 		ExecuteMsg::GetTimestampAtHeight(_) => todo!(),
