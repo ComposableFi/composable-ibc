@@ -47,9 +47,13 @@ use ibc::{
 	signer::Signer,
 	tx_msg::Msg,
 };
-use ibc_primitives::{get_channel_escrow_address, IbcHandler};
+use ibc_primitives::{get_channel_escrow_address, HandlerMessage, IbcHandler};
 use sp_core::Pair;
-use sp_runtime::{offchain::storage::StorageValueRef, traits::IdentifyAccount, AccountId32};
+use sp_runtime::{
+	offchain::storage::StorageValueRef,
+	traits::{AccountIdConversion, IdentifyAccount},
+	AccountId32,
+};
 use std::{
 	collections::{BTreeMap, BTreeSet},
 	str::FromStr,
@@ -357,7 +361,13 @@ fn on_deliver_ics20_recv_packet() {
 
 		let balance =
 			<Assets as Inspect<AccountId>>::balance(2, &AccountId32::new(pair.public().0));
-		assert_eq!(balance, amt.into())
+		let pallet_balance = <Assets as Inspect<AccountId>>::balance(
+			2,
+			&<Test as crate::ics20_fee::Config>::PalletId::get().into_account_truncating(),
+		);
+		let fee = <Test as crate::ics20_fee::Config>::ServiceCharge::get() * amt;
+		assert_eq!(balance, amt - fee);
+		assert_eq!(pallet_balance, fee)
 	})
 }
 
@@ -371,7 +381,8 @@ fn should_fetch_recv_packet_with_acknowledgement() {
 
 		let mut ctx = Context::<Test>::default();
 
-		let channel_end = ChannelEnd::default();
+		let mut channel_end = ChannelEnd::default();
+		channel_end.state = State::Open;
 		ctx.store_channel((port_id.clone(), channel_id), &channel_end).unwrap();
 		let packet = Packet {
 			sequence: 1u64.into(),
@@ -387,7 +398,7 @@ fn should_fetch_recv_packet_with_acknowledgement() {
 		ctx.store_recv_packet((port_id.clone(), channel_id, packet.sequence), packet.clone())
 			.unwrap();
 		let ack = "success".as_bytes().to_vec();
-		Pallet::<Test>::write_acknowledgement(&packet, ack).unwrap();
+		Pallet::<Test>::handle_message(HandlerMessage::WriteAck { packet, ack }).unwrap();
 	});
 
 	ext.persist_offchain_overlay();

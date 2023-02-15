@@ -47,6 +47,7 @@ use crate::{
 			commitment::{AcknowledgementCommitment, PacketCommitment},
 			context::{ChannelKeeper, ChannelReader},
 			error::Error as Ics04Error,
+			msgs::acknowledgement::Acknowledgement,
 			packet::{Receipt, Sequence},
 		},
 		ics05_port::{
@@ -865,6 +866,14 @@ impl<C: HostBlockType> ChannelKeeper for MockContext<C> {
 		Ok(())
 	}
 
+	fn store_raw_acknowledgement(
+		&mut self,
+		key: (PortId, ChannelId, Sequence),
+		ack: Acknowledgement,
+	) -> Result<(), Ics04Error> {
+		Ok(())
+	}
+
 	fn store_recv_packet(
 		&mut self,
 		_key: (PortId, ChannelId, Sequence),
@@ -1335,16 +1344,6 @@ mod tests {
 			) -> Result<Version, Error> {
 				Ok(counterparty_version.clone())
 			}
-
-			fn on_recv_packet(
-				&self,
-				_ctx: &dyn ModuleCallbackContext,
-				_output: &mut ModuleOutputBuilder,
-				_packet: &Packet,
-				_relayer: &Signer,
-			) -> Result<(), Error> {
-				Ok(())
-			}
 		}
 
 		#[derive(Debug, Default)]
@@ -1396,7 +1395,7 @@ mod tests {
 			let result = m.on_recv_packet(
 				&ctx_clone,
 				&mut ModuleOutputBuilder::new(),
-				&Packet::default(),
+				&mut Packet::default(),
 				&get_dummy_bech32_account().parse().unwrap(),
 			);
 			(module_id, result)

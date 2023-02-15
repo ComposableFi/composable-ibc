@@ -22,6 +22,7 @@ use ibc::{
 			commitment::{AcknowledgementCommitment, PacketCommitment as PacketCommitmentType},
 			context::{ChannelKeeper, ChannelReader},
 			error::Error as ICS04Error,
+			msgs::acknowledgement::Acknowledgement,
 			packet::{Receipt, Sequence},
 		},
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
@@ -357,6 +358,16 @@ where
 		}
 
 		Ok(())
+	}
+
+	fn store_raw_acknowledgement(
+		&mut self,
+		key: (PortId, ChannelId, Sequence),
+		ack: Acknowledgement,
+	) -> Result<(), ICS04Error> {
+		Pallet::<T>::store_raw_acknowledgement(key, ack.into_bytes()).map_err(|_| {
+			ICS04Error::implementation_specific("Error storing acknowledgement".to_string())
+		})
 	}
 
 	fn store_packet_acknowledgement(

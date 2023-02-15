@@ -4,10 +4,12 @@ pub mod memo;
 use crate::{routing::Context, ChannelIds, Config, DenomToAssetId, Event, Pallet, WeightInfo};
 use alloc::{
 	format,
+	str::FromStr,
 	string::{String, ToString},
 };
-use core::fmt::Formatter;
+
 use frame_support::weights::Weight;
+pub use ibc::applications::transfer::{MODULE_ID_STR, PORT_ID_STR};
 use ibc::{
 	applications::transfer::{
 		acknowledgement::{Acknowledgement as Ics20Acknowledgement, ACK_ERR_STR},
@@ -21,7 +23,7 @@ use ibc::{
 			on_ack_packet::process_ack_packet, on_recv_packet::process_recv_packet,
 			on_timeout_packet::process_timeout_packet,
 		},
-		PrefixedCoin, TracePrefix,
+		PrefixedCoin, PrefixedDenom, TracePrefix,
 	},
 	core::{
 		ics04_channel::{
@@ -36,18 +38,12 @@ use ibc::{
 	},
 	signer::Signer,
 };
-use ibc_primitives::{CallbackWeight, IbcHandler};
+use ibc_primitives::{CallbackWeight, HandlerMessage, IbcHandler};
 use sp_core::crypto::AccountId32;
 use sp_std::marker::PhantomData;
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, Debug, PartialEq)]
 pub struct IbcModule<T: Config>(PhantomData<T>);
-
-impl<T: Config> core::fmt::Debug for IbcModule<T> {
-	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-		write!(f, "ibc-transfer")
-	}
-}
 
 impl<T: Config> Default for IbcModule<T> {
 	fn default() -> Self {
@@ -201,15 +197,21 @@ where
 		&self,
 		_ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
-		packet: &Packet,
+		packet: &mut Packet,
 		_relayer: &Signer,
-	) -> Result<(), Ics04Error> {
+	) -> Result<Acknowledgement, Ics04Error> {
 		let mut ctx = Context::<T>::default();
 		let result = serde_json::from_slice(packet.data.as_slice())
 			.map_err(|e| {
 				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
 			})
 			.and_then(|packet_data: PacketData| {
+				// We need to reject transaction amounts that are larger than u128 since we expect
+				// the balance type of the runtime to be a u128; For a U256 to be converted to a
+				// u128 without truncating, the last two words should be zero
+				let amount = packet_data.token.amount.as_u256();
+				u128::try_from(amount)
+					.map_err(|e| Ics04Error::implementation_specific(format!("{:?}", e)))?;
 				process_recv_packet(&mut ctx, output, packet, packet_data.clone())
 					.map(|_| packet_data)
 					.map_err(|e| {
@@ -217,18 +219,26 @@ where
 						Ics04Error::implementation_specific(e.to_string())
 					})
 			});
-		match result {
+
+		let ack = match result {
 			Err(err) => {
-				Pallet::<T>::write_acknowledgement(
-					&packet,
-					format!("{}: {:?}", ACK_ERR_STR, err).as_bytes().to_vec(),
-				)
+				let ack = Ics20Acknowledgement::Error(format!("{}: {:?}", ACK_ERR_STR, err))
+					.to_string()
+					.into_bytes();
+				Pallet::<T>::handle_message(HandlerMessage::WriteAck {
+					packet: packet.clone(),
+					ack: ack.clone(),
+				})
 				.map_err(|e| {
 					Ics04Error::implementation_specific(format!("[on_recv_packet] {:#?}", e))
 				})?;
+				ack
 			},
 			Ok(packet_data) => {
 				let denom = full_ibc_denom(packet, packet_data.token.clone());
+				let prefixed_denom = PrefixedDenom::from_str(&denom).map_err(|_| {
+					Ics04Error::implementation_specific("Failed to parse token denom".to_string())
+				})?;
 				Pallet::<T>::deposit_event(Event::<T>::TokenReceived {
 					from: packet_data.sender.to_string().as_bytes().to_vec(),
 					to: packet_data.receiver.to_string().as_bytes().to_vec(),
@@ -239,29 +249,30 @@ where
 					is_receiver_source: is_receiver_chain_source(
 						packet.source_port.clone(),
 						packet.source_channel.clone(),
-						&packet_data.token.denom,
+						&prefixed_denom,
 					),
 					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
 					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
 				});
 				let packet = packet.clone();
-				Pallet::<T>::write_acknowledgement(
-					&packet,
-					Ics20Acknowledgement::success().to_string().into_bytes(),
-				)
+				Pallet::<T>::handle_message(HandlerMessage::WriteAck {
+					packet,
+					ack: Ics20Acknowledgement::success().to_string().into_bytes(),
+				})
 				.map_err(|e| {
 					Ics04Error::implementation_specific(format!("[on_recv_packet] {:#?}", e))
 				})?;
+				Ics20Acknowledgement::success().to_string().into_bytes()
 			},
-		}
-		Ok(())
+		};
+		Ok(Acknowledgement::from_bytes(ack))
 	}
 
 	fn on_acknowledgement_packet(
 		&mut self,
 		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
-		packet: &Packet,
+		packet: &mut Packet,
 		acknowledgement: &Acknowledgement,
 		_relayer: &Signer,
 	) -> Result<(), Ics04Error> {
@@ -329,7 +340,7 @@ where
 		&mut self,
 		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
-		packet: &Packet,
+		packet: &mut Packet,
 		_relayer: &Signer,
 	) -> Result<(), Ics04Error> {
 		let mut ctx = Context::<T>::default();

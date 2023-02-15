@@ -345,6 +345,12 @@ impl From<u64> for Amount {
 	}
 }
 
+impl From<u128> for Amount {
+	fn from(v: u128) -> Self {
+		Self(v.into())
+	}
+}
+
 /// Coin defines a token with a denomination and an amount.
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Coin<D> {

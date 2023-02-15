@@ -537,21 +537,18 @@ where
 	async fn query_ibc_balance(&self) -> Result<Vec<PrefixedCoin>, Self::Error> {
 		let account = self.public_key.clone().into_account();
 		let account = subxt::utils::AccountId32::from(<[u8; 32]>::from(account));
-		let account_addr = parachain::api::storage().system().account(&account);
-		let balance = self
-			.para_client
-			.storage()
-			.at(None)
+		let mut hex_string = hex::encode(account.0.to_vec());
+		hex_string.insert_str(0, "0x");
+		let coin: ibc_proto::cosmos::base::v1beta1::Coin =
+			IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_balance_with_address(
+				&*self.para_ws_client,
+				hex_string,
+			)
 			.await
-			.expect("Storage client")
-			.fetch(&account_addr)
-			.await?
-			.expect("Account data should exist");
-
-		// todo: how should we handle assets?
+			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
 		Ok(vec![PrefixedCoin {
-			denom: PrefixedDenom::from_str("UNIT")?,
-			amount: Amount::from_str(&format!("{}", balance.data.free))?,
+			denom: PrefixedDenom::from_str(&coin.denom)?,
+			amount: Amount::from_str(&coin.amount)?,
 		}])
 	}
 

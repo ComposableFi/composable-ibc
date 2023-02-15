@@ -134,6 +134,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+pub mod ics20_fee;
 mod impls;
 pub mod weight;
 

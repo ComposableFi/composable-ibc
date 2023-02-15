@@ -996,17 +996,18 @@ benchmarks! {
 		let port_id = PortId::transfer();
 		let counterparty = channel::Counterparty::new(port_id.clone(), Some(ChannelId::new(1)));
 		let channel_end = channel::ChannelEnd::new(
-			channel::State::Init,
+			channel::State::Open,
 			Order::Unordered,
 			counterparty,
 			vec![connection_id],
 			Version::new(VERSION.to_string()),
 		);
 
-
+		let mut ctx = routing::Context::<T>::new();
 		let balance = 100000 * MILLIS;
-		Pallet::<T>::handle_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
 		let channel_id = ChannelId::new(0);
+		ctx.store_channel((port_id.clone(), channel_id), &channel_end).unwrap();
+
 		let denom = "transfer/channel-1/PICA".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
@@ -1042,7 +1043,7 @@ benchmarks! {
 		};
 
 		let data = serde_json::to_vec(&packet_data).unwrap();
-		let packet = Packet {
+		let mut packet = Packet {
 			sequence: 0u64.into(),
 			source_port: port_id.clone(),
 			source_channel: ChannelId::new(1),
@@ -1057,8 +1058,8 @@ benchmarks! {
 		 let mut output = HandlerOutputBuilder::new();
 		 let signer = Signer::from_str("relayer").unwrap();
 	}:{
-		let ctx = routing::Context::<T>::new();
-		handler.on_recv_packet(&ctx, &mut output, &packet, &signer).unwrap();
+
+		handler.on_recv_packet(&ctx, &mut output, &mut packet, &signer).unwrap();
 
 	 }
 	verify {
@@ -1122,7 +1123,7 @@ benchmarks! {
 		};
 
 		let data = serde_json::to_vec(&packet_data).unwrap();
-		let packet = Packet {
+		let mut packet = Packet {
 			sequence: 0u64.into(),
 			source_port: port_id.clone(),
 			source_channel: ChannelId::new(0),
@@ -1139,7 +1140,7 @@ benchmarks! {
 		 let ack: Acknowledgement = TransferAck::Error(ACK_ERR_STR.to_string()).to_string().into_bytes().into();
 	}:{
 		let ctx = routing::Context::<T>::new();
-	   handler.on_acknowledgement_packet(&ctx, &mut output, &packet, &ack, &signer).unwrap();
+	   handler.on_acknowledgement_packet(&ctx, &mut output, &mut packet, &ack, &signer).unwrap();
 	}
 	verify {
 		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
@@ -1202,7 +1203,7 @@ benchmarks! {
 		};
 
 		let data = serde_json::to_vec(&packet_data).unwrap();
-		let packet = Packet {
+		let mut packet = Packet {
 			sequence: 0u64.into(),
 			source_port: port_id.clone(),
 			source_channel: ChannelId::new(0),
@@ -1218,7 +1219,7 @@ benchmarks! {
 		 let signer = Signer::from_str("relayer").unwrap();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_timeout_packet(&ctx, &mut output, &packet, &signer).unwrap();
+		handler.on_timeout_packet(&ctx, &mut output, &mut packet, &signer).unwrap();
 	}
 	verify {
 		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(

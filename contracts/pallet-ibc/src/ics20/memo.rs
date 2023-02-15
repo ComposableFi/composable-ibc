@@ -7,7 +7,7 @@ use ibc::{
 		ics04_channel::{
 			channel::{Counterparty, Order},
 			error::Error,
-			msgs::acknowledgement::Acknowledgement as GenericAcknowledgement,
+			msgs::acknowledgement::{Acknowledgement as GenericAcknowledgement, Acknowledgement},
 			packet::Packet,
 			Version,
 		},
@@ -23,6 +23,13 @@ use sp_runtime::traits::IdentifyAccount;
 /// at what layer of the ics20 stack the memo should be executed.
 /// For example ics20 fees are meant to be collected before memo is executed, so
 /// this allows an ics20 fee middleware to be executed before the memo is executed
+/// USAGE:
+/// pub struct Router {
+/// 	ics20: crate::ics20::memo::Memo<
+/// 		Runtime,
+/// 		crate::ics20_fee::Ics20ServiceCharge<Runtime, crate::ics20::IbcModule<Runtime>>,
+/// 	>,
+/// }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Memo<T: Config, S: Module + Clone + Default + PartialEq + Eq + Debug> {
 	inner: S,
@@ -142,10 +149,10 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 		&self,
 		ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
-		packet: &Packet,
+		packet: &mut Packet,
 		relayer: &Signer,
-	) -> Result<(), Error> {
-		let _ = self.inner.on_recv_packet(ctx, output, packet, relayer)?;
+	) -> Result<Acknowledgement, Error> {
+		let ack = self.inner.on_recv_packet(ctx, output, packet, relayer)?;
 		let packet_data: PacketData =
 			serde_json::from_slice(packet.data.as_slice()).map_err(|e| {
 				Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
@@ -155,15 +162,17 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 				Error::implementation_specific(format!("Failed to parse receiver account"))
 			})?
 			.into_account();
-		<T as Config>::HandleMemo::execute_memo(&packet_data, receiver)
-			.map_err(|e| Error::implementation_specific(format!("Failed to execute memo {:?}", e)))
+		<T as Config>::HandleMemo::execute_memo(&packet_data, receiver).map_err(|e| {
+			Error::implementation_specific(format!("Failed to execute memo {:?}", e))
+		})?;
+		Ok(ack)
 	}
 
 	fn on_acknowledgement_packet(
 		&mut self,
 		ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
-		packet: &Packet,
+		packet: &mut Packet,
 		acknowledgement: &GenericAcknowledgement,
 		relayer: &Signer,
 	) -> Result<(), Error> {
@@ -175,7 +184,7 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 		&mut self,
 		ctx: &dyn ModuleCallbackContext,
 		output: &mut ModuleOutputBuilder,
-		packet: &Packet,
+		packet: &mut Packet,
 		relayer: &Signer,
 	) -> Result<(), Error> {
 		self.inner.on_timeout_packet(ctx, output, packet, relayer)

@@ -21,7 +21,7 @@ use sp_keystore::{testing::KeyStore, KeystoreExt};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
-	MultiSignature,
+	MultiSignature, Percent,
 };
 use std::sync::Arc;
 use system::EnsureRoot;
@@ -66,6 +66,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens,
 		Assets: pallet_assets,
 		IbcPing: pallet_ibc_ping,
+		Ics20Fee: crate::ics20_fee,
 		Ibc: pallet_ibc,
 	}
 );
@@ -194,6 +195,17 @@ impl Config for Test {
 	type MemoMessage = MemoMessage;
 }
 
+parameter_types! {
+	pub const ServiceCharge: Percent = Percent::from_percent(1);
+	pub const PalletId: frame_support::PalletId = frame_support::PalletId(*b"ics20fee");
+}
+
+impl crate::ics20_fee::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type ServiceCharge = ServiceCharge;
+	type PalletId = PalletId;
+}
+
 #[derive(
 	Debug, codec::Encode, Clone, codec::Decode, PartialEq, Eq, scale_info::TypeInfo, Default,
 )]
@@ -277,7 +289,10 @@ where
 #[derive(Clone, Debug, Eq, PartialEq, Default)]
 pub struct Router {
 	ibc_ping: pallet_ibc_ping::IbcModule<Test>,
-	ics20: crate::ics20::memo::Memo<Test, crate::ics20::IbcModule<Test>>,
+	ics20: crate::ics20::memo::Memo<
+		Test,
+		crate::ics20_fee::Ics20ServiceCharge<Test, crate::ics20::IbcModule<Test>>,
+	>,
 }
 
 impl ModuleRouter for Router {
