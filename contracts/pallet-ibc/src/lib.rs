@@ -152,7 +152,7 @@ pub mod pallet {
 		traits::{
 			fungibles::{Inspect, Mutate, Transfer},
 			tokens::{AssetId, Balance},
-			ReservableCurrency, UnixTime,
+			Contains, ReservableCurrency, UnixTime,
 		},
 	};
 	use frame_system::pallet_prelude::*;
@@ -250,6 +250,8 @@ pub mod pallet {
 		/// Amount to be reserved for client and connection creation
 		#[pallet::constant]
 		type SpamProtectionDeposit: Get<Self::Balance>;
+		/// Whitelist mechanism - likely to be temporary while we test the bridge
+		type Whitelist: Contains<<Self as frame_system::Config>::AccountId>;
 		/// Handle Ics20 Memo
 		type HandleMemo: HandleMemo<Self>;
 		/// Memo Message types supported by the runtime
@@ -525,6 +527,8 @@ pub mod pallet {
 		ClientUpdateNotFound,
 		/// Error Freezing client
 		ClientFreezeFailed,
+		/// Access denied
+		AccessDenied,
 	}
 
 	#[pallet::hooks]
@@ -549,6 +553,7 @@ pub mod pallet {
 		AccountId32: From<<T as frame_system::Config>::AccountId>,
 		u32: From<<T as frame_system::Config>::BlockNumber>,
 	{
+		#[pallet::call_index(0)]
 		#[pallet::weight(crate::weight::deliver::< T > (messages))]
 		#[frame_support::transactional]
 		pub fn deliver(origin: OriginFor<T>, messages: Vec<Any>) -> DispatchResult {
@@ -587,6 +592,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(1)]
 		#[frame_support::transactional]
 		#[pallet::weight(<T as Config>::WeightInfo::transfer())]
 		pub fn transfer(
@@ -597,6 +603,8 @@ pub mod pallet {
 			memo: Option<T::MemoMessage>,
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
+			// Ensure that the signer is whitelisted
+			ensure!(T::Whitelist::contains(&origin), Error::<T>::AccessDenied);
 			let denom = T::IbcDenomToAssetIdConversion::from_asset_id_to_denom(asset_id)
 				.ok_or_else(|| Error::<T>::InvalidAssetId)?;
 
@@ -719,6 +727,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(2)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_params())]
 		pub fn set_params(origin: OriginFor<T>, params: PalletParams) -> DispatchResult {
 			<T as Config>::AdminOrigin::ensure_origin(origin)?;
@@ -733,6 +742,7 @@ pub mod pallet {
 		/// We write the consensus & client state under these predefined paths so that
 		/// we can produce state proofs of the values to connected chains
 		/// in order to execute client upgrades.
+		#[pallet::call_index(3)]
 		#[pallet::weight(0)]
 		pub fn upgrade_client(origin: OriginFor<T>, params: UpgradeParams) -> DispatchResult {
 			<T as Config>::AdminOrigin::ensure_origin(origin)?;
@@ -748,6 +758,7 @@ pub mod pallet {
 		}
 
 		/// Freeze a client at a specific height
+		#[pallet::call_index(4)]
 		#[pallet::weight(0)]
 		pub fn freeze_client(
 			origin: OriginFor<T>,
