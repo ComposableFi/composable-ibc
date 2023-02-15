@@ -26,8 +26,8 @@ use sp_runtime::traits::IdentifyAccount;
 /// USAGE:
 /// pub struct Router {
 /// 	ics20: crate::ics20::memo::Memo<
-/// 		Test,
-/// 		crate::ics20_fee::Ics20ServiceCharge<Test, crate::ics20::IbcModule<Test>>,
+/// 		Runtime,
+/// 		crate::ics20_fee::Ics20ServiceCharge<Runtime, crate::ics20::IbcModule<Runtime>>,
 /// 	>,
 /// }
 #[derive(Clone, Debug, PartialEq, Eq)]
