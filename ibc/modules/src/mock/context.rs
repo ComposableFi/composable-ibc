@@ -1395,7 +1395,7 @@ mod tests {
 			let result = m.on_recv_packet(
 				&ctx_clone,
 				&mut ModuleOutputBuilder::new(),
-				&Packet::default(),
+				&mut Packet::default(),
 				&get_dummy_bech32_account().parse().unwrap(),
 			);
 			(module_id, result)
