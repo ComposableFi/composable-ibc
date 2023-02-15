@@ -232,8 +232,9 @@ where
 
 	match msg {
 		PacketMsg::RecvPacket(msg) => {
+			let mut packet = msg.packet.clone();
 			let ack = cb
-				.on_recv_packet(&ctx_clone, module_output, &msg.packet, &msg.signer)
+				.on_recv_packet(&ctx_clone, module_output, &mut packet, &msg.signer)
 				.map_err(|e| Error::app_module(e.to_string()))?;
 			if ack.as_ref().is_empty() {
 				return Err(Error::invalid_acknowledgement())
@@ -257,17 +258,24 @@ where
 				}))
 			}
 		},
-		PacketMsg::AckPacket(msg) => cb.on_acknowledgement_packet(
-			&ctx_clone,
-			module_output,
-			&msg.packet,
-			&msg.acknowledgement,
-			&msg.signer,
-		)?,
-		PacketMsg::ToPacket(msg) =>
-			cb.on_timeout_packet(&ctx_clone, module_output, &msg.packet, &msg.signer)?,
-		PacketMsg::ToClosePacket(msg) =>
-			cb.on_timeout_packet(&ctx_clone, module_output, &msg.packet, &msg.signer)?,
+		PacketMsg::AckPacket(msg) => {
+			let mut packet = msg.packet.clone();
+			cb.on_acknowledgement_packet(
+				&ctx_clone,
+				module_output,
+				&mut packet,
+				&msg.acknowledgement,
+				&msg.signer,
+			)?
+		},
+		PacketMsg::ToPacket(msg) => {
+			let mut packet = msg.packet.clone();
+			cb.on_timeout_packet(&ctx_clone, module_output, &mut packet, &msg.signer)?
+		},
+		PacketMsg::ToClosePacket(msg) => {
+			let mut packet = msg.packet.clone();
+			cb.on_timeout_packet(&ctx_clone, module_output, &mut packet, &msg.signer)?
+		},
 	};
 	Ok(())
 }

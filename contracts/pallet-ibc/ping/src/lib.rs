@@ -265,7 +265,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 		&self,
 		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
-		packet: &Packet,
+		packet: &mut Packet,
 		_relayer: &Signer,
 	) -> Result<Acknowledgement, Ics04Error> {
 		let success = "ping-success".as_bytes().to_vec();
@@ -281,7 +281,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 		&mut self,
 		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
-		packet: &Packet,
+		packet: &mut Packet,
 		acknowledgement: &Acknowledgement,
 		_relayer: &Signer,
 	) -> Result<(), Ics04Error> {
@@ -293,7 +293,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 		&mut self,
 		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
-		packet: &Packet,
+		packet: &mut Packet,
 		_relayer: &Signer,
 	) -> Result<(), Ics04Error> {
 		log::info!("Timeout Packet {:?}", packet);

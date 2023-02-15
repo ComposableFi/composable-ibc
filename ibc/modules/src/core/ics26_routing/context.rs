@@ -185,7 +185,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 		&self,
 		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
-		_packet: &Packet,
+		_packet: &mut Packet,
 		_relayer: &Signer,
 	) -> Result<GenericAcknowledgement, Error> {
 		Ok(GenericAcknowledgement::from_bytes(Default::default()))
@@ -195,7 +195,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 		&mut self,
 		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
-		_packet: &Packet,
+		_packet: &mut Packet,
 		_acknowledgement: &GenericAcknowledgement,
 		_relayer: &Signer,
 	) -> Result<(), Error> {
@@ -206,7 +206,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 		&mut self,
 		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
-		_packet: &Packet,
+		_packet: &mut Packet,
 		_relayer: &Signer,
 	) -> Result<(), Error> {
 		Ok(())
