@@ -9,7 +9,7 @@ use crate::{
 	},
 	ics20::IbcModule,
 	ics23::client_states::ClientStates,
-	light_clients::{AnyClientState, AnyConsensusState},
+	light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState},
 	Any, Config,
 };
 
@@ -85,7 +85,6 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
 	frame_system::Pallet::<T>::assert_last_event(generic_event.into());
 }
 
-const TIMESTAMP: u64 = 1650894363;
 const MILLIS: u128 = 1_000_000;
 
 benchmarks! {
@@ -106,26 +105,33 @@ benchmarks! {
 
 	// update_client
 	update_tendermint_client {
+		let i in 1..100u32;
 		let mut ctx = routing::Context::<T>::new();
 		// Set timestamp to the same timestamp used in generating tendermint header, because there
 		// will be a comparison between the local timestamp and the timestamp existing in the header
 		// after factoring in the trusting period for the light client.
-		let now: <T as pallet_timestamp::Config>::Moment = TIMESTAMP.saturating_mul(1000);
+		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
 		pallet_timestamp::Pallet::<T>::set_timestamp(now);
-		let (mock_client_state, mock_cs_state) = create_mock_state();
+		let (mock_client_state, mock_cs_state, header) = generate_tendermint_header(i, 2);
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
 		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();
-		let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
+		let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = core::time::Duration::from_millis(TENDERMINT_TIMESTAMP.saturating_mul(1000));
 		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
 		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
-		let value = create_client_update::<T>().encode_vec().unwrap();
+		let msg = MsgUpdateAnyClient::<routing::Context<T>> {
+			client_id: ClientId::new("07-tendermint", 0).unwrap(),
+			client_message: AnyClientMessage::Tendermint(
+				ics07_tendermint::client_message::ClientMessage::Header(header),
+			),
+			signer: Signer::from_str(MODULE_ID).unwrap(),
+		};
 
-		let msg = Any { type_url: UPDATE_CLIENT_TYPE_URL.to_string().as_bytes().to_vec(), value };
+		let msg = Any { type_url: UPDATE_CLIENT_TYPE_URL.to_string().as_bytes().to_vec(), value: msg.encode_vec().unwrap() };
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -137,18 +143,18 @@ benchmarks! {
 	// connection open try
 	conn_try_open_tendermint {
 		let mut ctx = routing::Context::<T>::new();
-		let now: <T as pallet_timestamp::Config>::Moment = TIMESTAMP.saturating_mul(1000);
+		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
 		pallet_timestamp::Pallet::<T>::set_timestamp(now);
 		// Create initial client state and consensus state
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
 		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();
-		let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
+		let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = core::time::Duration::from_millis(TENDERMINT_TIMESTAMP.saturating_mul(1000));
 		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
 		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 
@@ -173,17 +179,17 @@ benchmarks! {
 	// connection open ack
 	conn_open_ack_tendermint {
 		let mut ctx = routing::Context::<T>::new();
-		let now: <T as pallet_timestamp::Config>::Moment = TIMESTAMP.saturating_mul(1000);
+		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
 		pallet_timestamp::Pallet::<T>::set_timestamp(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
 		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();
-		let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
+		let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = core::time::Duration::from_millis(TENDERMINT_TIMESTAMP.saturating_mul(1000));
 		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
 		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		// Create a connection end and put in storage
@@ -191,7 +197,7 @@ benchmarks! {
 		// to exist on the local chain
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
-		let delay_period = core::time::Duration::from_nanos(1000);
+		let delay_period = core::time::Duration::from_secs(1000);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::Init, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
 
@@ -215,17 +221,17 @@ benchmarks! {
 	// connection open confirm
 	conn_open_confirm_tendermint {
 		let mut ctx = routing::Context::<T>::new();
-		let now: <T as pallet_timestamp::Config>::Moment = TIMESTAMP.saturating_mul(1000);
+		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
 		pallet_timestamp::Pallet::<T>::set_timestamp(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
 		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();
-		let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
+		let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = core::time::Duration::from_millis(TENDERMINT_TIMESTAMP.saturating_mul(1000));
 		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
 		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		// Create a connection end and put in storage
@@ -233,7 +239,7 @@ benchmarks! {
 		// to exist on the local chain
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
-		let delay_period = core::time::Duration::from_nanos(1000);
+		let delay_period = core::time::Duration::from_secs(1000);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::TryOpen, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
 
@@ -265,14 +271,14 @@ benchmarks! {
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
 		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();
-		let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
+		let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
 
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
-		let delay_period = core::time::Duration::from_nanos(1000);
+		let delay_period = core::time::Duration::from_secs(1000);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::Open, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
 
@@ -304,22 +310,22 @@ benchmarks! {
 	// channel_open_try
 	channel_open_try_tendermint {
 		let mut ctx = routing::Context::<T>::new();
-		let now: <T as pallet_timestamp::Config>::Moment = TIMESTAMP.saturating_mul(1000);
+		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
 		pallet_timestamp::Pallet::<T>::set_timestamp(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
 		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();
-		let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
+		let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = core::time::Duration::from_millis(TENDERMINT_TIMESTAMP.saturating_mul(1000));
 		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
 		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
-		let delay_period = core::time::Duration::from_nanos(1000);
+		let delay_period = core::time::Duration::from_secs(1000);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::Open, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
 
@@ -353,22 +359,22 @@ benchmarks! {
 	// channel_open_ack
 	channel_open_ack_tendermint {
 		let mut ctx = routing::Context::<T>::new();
-		let now: <T as pallet_timestamp::Config>::Moment = TIMESTAMP.saturating_mul(1000);
+		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
 		pallet_timestamp::Pallet::<T>::set_timestamp(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
 		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();
-		let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
+		let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = core::time::Duration::from_millis(TENDERMINT_TIMESTAMP.saturating_mul(1000));
 		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
 		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
-		let delay_period = core::time::Duration::from_nanos(1000);
+		let delay_period = core::time::Duration::from_secs(1000);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::Open, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
 
@@ -417,22 +423,22 @@ benchmarks! {
 	// channel_open_confirm
 	channel_open_confirm_tendermint {
 		let mut ctx = routing::Context::<T>::new();
-		let now: <T as pallet_timestamp::Config>::Moment = TIMESTAMP.saturating_mul(1000);
+		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
 		pallet_timestamp::Pallet::<T>::set_timestamp(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
 		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();
-		let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
+		let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = core::time::Duration::from_millis(TENDERMINT_TIMESTAMP.saturating_mul(1000));
 		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
 		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
-		let delay_period = core::time::Duration::from_nanos(1000);
+		let delay_period = core::time::Duration::from_secs(1000);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::Open, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
 
@@ -474,22 +480,22 @@ benchmarks! {
 	// channel_close_init
 	channel_close_init {
 		let mut ctx = routing::Context::<T>::new();
-		let now: <T as pallet_timestamp::Config>::Moment = TIMESTAMP.saturating_mul(1000);
+		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
 		pallet_timestamp::Pallet::<T>::set_timestamp(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
 		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();
-		let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
+		let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = core::time::Duration::from_millis(TENDERMINT_TIMESTAMP.saturating_mul(1000));
 		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
 		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
-		let delay_period = core::time::Duration::from_nanos(1000);
+		let delay_period = core::time::Duration::from_secs(1000);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::Open, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
 
@@ -530,22 +536,22 @@ benchmarks! {
 	// channel_close_confirm
 	channel_close_confirm_tendermint {
 		let mut ctx = routing::Context::<T>::new();
-		let now: <T as pallet_timestamp::Config>::Moment = TIMESTAMP.saturating_mul(1000);
+		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
 		pallet_timestamp::Pallet::<T>::set_timestamp(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
 		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();
-		let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
+		let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = core::time::Duration::from_millis(TENDERMINT_TIMESTAMP.saturating_mul(1000));
 		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
 		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
 		let commitment_prefix: CommitmentPrefix = <T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
-		let delay_period = core::time::Duration::from_nanos(1000);
+		let delay_period = core::time::Duration::from_secs(1000);
 		let connection_counterparty = Counterparty::new(counterparty_client_id, Some(ConnectionId::new(1)), commitment_prefix);
 		let connection_end = ConnectionEnd::new(State::Open, client_id.clone(), connection_counterparty, vec![ConnVersion::default()], delay_period);
 
@@ -590,18 +596,18 @@ benchmarks! {
 		let i in 1..1000u32;
 		let data = vec![0u8;i.try_into().unwrap()];
 		let mut ctx = routing::Context::<T>::new();
-		let now: <T as pallet_timestamp::Config>::Moment = TIMESTAMP.saturating_mul(1000);
+		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
 		pallet_timestamp::Pallet::<T>::set_timestamp(now);
 		frame_system::Pallet::<T>::set_block_number(2u32.into());
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
 		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();
-		let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
+		let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = core::time::Duration::from_millis(TENDERMINT_TIMESTAMP.saturating_mul(1000));
 		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
 		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
@@ -654,18 +660,18 @@ benchmarks! {
 		let data = vec![0u8;i.try_into().unwrap()];
 		let ack = vec![0u8;j.try_into().unwrap()];
 		let mut ctx = routing::Context::<T>::new();
-		let now: <T as pallet_timestamp::Config>::Moment = TIMESTAMP.saturating_mul(1000);
+		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
 		pallet_timestamp::Pallet::<T>::set_timestamp(now);
 		frame_system::Pallet::<T>::set_block_number(2u32.into());
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
 		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();
-		let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
+		let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = core::time::Duration::from_millis(TENDERMINT_TIMESTAMP.saturating_mul(1000));
 		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
 		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
@@ -716,18 +722,18 @@ benchmarks! {
 		let i in 1..1000u32;
 		let data = vec![0u8;i.try_into().unwrap()];
 		let mut ctx = routing::Context::<T>::new();
-		let now: <T as pallet_timestamp::Config>::Moment = TIMESTAMP.saturating_mul(1000);
+		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
 		pallet_timestamp::Pallet::<T>::set_timestamp(now);
 		frame_system::Pallet::<T>::set_block_number(2u32.into());
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
 		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();
-		let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
+		let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
-		let time = core::time::Duration::from_millis(TIMESTAMP.saturating_mul(1000));
+		let time = core::time::Duration::from_millis(TENDERMINT_TIMESTAMP.saturating_mul(1000));
 		let time = Timestamp::from_nanoseconds(time.as_nanos() as u64).unwrap();
 		ctx.store_update_time(client_id.clone(), Height::new(0, 1), time).unwrap();
 		let connection_id = ConnectionId::new(0);
@@ -780,13 +786,13 @@ benchmarks! {
 
 	conn_open_init {
 		let mut ctx = routing::Context::<T>::new();
-		let now: <T as pallet_timestamp::Config>::Moment = TIMESTAMP.saturating_mul(1000);
+		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
 		pallet_timestamp::Pallet::<T>::set_timestamp(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
 		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();
-		let counterparty_client_id = ClientId::new("11-beefy", 1).unwrap();
+		let counterparty_client_id = ClientId::new("10-grandpa", 1).unwrap();
 		ctx.store_client_type(client_id.clone(), mock_client_state.client_type()).unwrap();
 		ctx.store_client_state(client_id.clone(), mock_client_state).unwrap();
 		ctx.store_consensus_state(client_id.clone(), Height::new(0, 1), mock_cs_state).unwrap();
@@ -875,7 +881,7 @@ benchmarks! {
 
 		let amt = 1000 * MILLIS;
 
-	}:_(RawOrigin::Signed(caller.clone()), transfer_params, asset_id.into(), amt.into())
+	}:_(RawOrigin::Signed(caller.clone()), transfer_params, asset_id.into(), amt.into(), None)
 	verify {
 		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
 			asset_id.into(),
@@ -990,17 +996,18 @@ benchmarks! {
 		let port_id = PortId::transfer();
 		let counterparty = channel::Counterparty::new(port_id.clone(), Some(ChannelId::new(1)));
 		let channel_end = channel::ChannelEnd::new(
-			channel::State::Init,
+			channel::State::Open,
 			Order::Unordered,
 			counterparty,
 			vec![connection_id],
 			Version::new(VERSION.to_string()),
 		);
 
-
+		let mut ctx = routing::Context::<T>::new();
 		let balance = 100000 * MILLIS;
-		Pallet::<T>::handle_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
 		let channel_id = ChannelId::new(0);
+		ctx.store_channel((port_id.clone(), channel_id), &channel_end).unwrap();
+
 		let denom = "transfer/channel-1/PICA".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
@@ -1032,10 +1039,11 @@ benchmarks! {
 			token: coin,
 			sender: Signer::from_str("alice").unwrap(),
 			receiver: Signer::from_str(&hex_string).unwrap(),
+			memo: "".to_string()
 		};
 
 		let data = serde_json::to_vec(&packet_data).unwrap();
-		let packet = Packet {
+		let mut packet = Packet {
 			sequence: 0u64.into(),
 			source_port: port_id.clone(),
 			source_channel: ChannelId::new(1),
@@ -1050,8 +1058,8 @@ benchmarks! {
 		 let mut output = HandlerOutputBuilder::new();
 		 let signer = Signer::from_str("relayer").unwrap();
 	}:{
-		let ctx = routing::Context::<T>::new();
-		handler.on_recv_packet(&ctx, &mut output, &packet, &signer).unwrap();
+
+		handler.on_recv_packet(&ctx, &mut output, &mut packet, &signer).unwrap();
 
 	 }
 	verify {
@@ -1111,10 +1119,11 @@ benchmarks! {
 			token: coin,
 			sender: Signer::from_str(&hex_string).unwrap(),
 			receiver: Signer::from_str("alice").unwrap(),
+			memo: "".to_string()
 		};
 
 		let data = serde_json::to_vec(&packet_data).unwrap();
-		let packet = Packet {
+		let mut packet = Packet {
 			sequence: 0u64.into(),
 			source_port: port_id.clone(),
 			source_channel: ChannelId::new(0),
@@ -1131,7 +1140,7 @@ benchmarks! {
 		 let ack: Acknowledgement = TransferAck::Error(ACK_ERR_STR.to_string()).to_string().into_bytes().into();
 	}:{
 		let ctx = routing::Context::<T>::new();
-	   handler.on_acknowledgement_packet(&ctx, &mut output, &packet, &ack, &signer).unwrap();
+	   handler.on_acknowledgement_packet(&ctx, &mut output, &mut packet, &ack, &signer).unwrap();
 	}
 	verify {
 		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
@@ -1190,10 +1199,11 @@ benchmarks! {
 			token: coin,
 			sender: Signer::from_str(&hex_string).unwrap(),
 			receiver: Signer::from_str("alice").unwrap(),
+			memo: "".to_string()
 		};
 
 		let data = serde_json::to_vec(&packet_data).unwrap();
-		let packet = Packet {
+		let mut packet = Packet {
 			sequence: 0u64.into(),
 			source_port: port_id.clone(),
 			source_channel: ChannelId::new(0),
@@ -1209,7 +1219,7 @@ benchmarks! {
 		 let signer = Signer::from_str("relayer").unwrap();
 	}:{
 		let ctx = routing::Context::<T>::new();
-		handler.on_timeout_packet(&ctx, &mut output, &packet, &signer).unwrap();
+		handler.on_timeout_packet(&ctx, &mut output, &mut packet, &signer).unwrap();
 	}
 	verify {
 		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(

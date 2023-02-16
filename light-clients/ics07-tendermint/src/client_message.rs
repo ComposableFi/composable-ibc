@@ -53,7 +53,7 @@ pub enum ClientMessage {
 }
 
 impl ics02_client::client_message::ClientMessage for ClientMessage {
-	fn encode_to_vec(&self) -> Vec<u8> {
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
 		self.encode_vec().expect("encode to vec cannot fail")
 	}
 }
@@ -83,11 +83,13 @@ impl From<ClientMessage> for Any {
 	fn from(msg: ClientMessage) -> Self {
 		match msg {
 			ClientMessage::Header(header) => Any {
-				value: header.encode_vec().expect("encode header"),
+				value: header.encode_vec().expect("failed to encode ClientMessage.header"),
 				type_url: TENDERMINT_HEADER_TYPE_URL.to_string(),
 			},
 			ClientMessage::Misbehaviour(misbheaviour) => Any {
-				value: misbheaviour.encode_vec().expect("encode misbehaviour"),
+				value: misbheaviour
+					.encode_vec()
+					.expect("failed to encode ClientMessage.misbehaviour"),
 				type_url: TENDERMINT_MISBEHAVIOUR_TYPE_URL.to_string(),
 			},
 		}

@@ -1,28 +1,33 @@
 /// ListAllInterfacesRequest is the request type of the ListAllInterfaces RPC.
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ListAllInterfacesRequest {
-}
+pub struct ListAllInterfacesRequest {}
 /// ListAllInterfacesResponse is the response type of the ListAllInterfaces RPC.
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListAllInterfacesResponse {
     /// interface_names is an array of all the registered interfaces.
-    #[prost(string, repeated, tag="1")]
+    #[prost(string, repeated, tag = "1")]
     pub interface_names: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// ListImplementationsRequest is the request type of the ListImplementations
 /// RPC.
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListImplementationsRequest {
     /// interface_name defines the interface to query the implementations for.
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub interface_name: ::prost::alloc::string::String,
 }
 /// ListImplementationsResponse is the response type of the ListImplementations
 /// RPC.
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListImplementationsResponse {
-    #[prost(string, repeated, tag="1")]
-    pub implementation_message_names: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    #[prost(string, repeated, tag = "1")]
+    pub implementation_message_names: ::prost::alloc::vec::Vec<
+        ::prost::alloc::string::String,
+    >,
 }
 /// Generated client implementations.
 #[cfg(feature = "client")]
@@ -144,7 +149,7 @@ pub mod reflection_service_client {
 pub mod reflection_service_server {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
-    ///Generated trait containing gRPC methods that should be implemented for use with ReflectionServiceServer.
+    /// Generated trait containing gRPC methods that should be implemented for use with ReflectionServiceServer.
     #[async_trait]
     pub trait ReflectionService: Send + Sync + 'static {
         /// ListAllInterfaces lists all the interfaces registered in the interface

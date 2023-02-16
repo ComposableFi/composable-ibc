@@ -128,7 +128,7 @@ where
 				.storage()
 				.at(Some(latest_beefy_finalized))
 				.await
-				.unwrap()
+				.expect("Storage client")
 				.fetch(&key)
 				.await
 				.unwrap()
@@ -141,7 +141,7 @@ where
 				.storage()
 				.at(Some(latest_beefy_finalized))
 				.await
-				.expect("storage client should be available")
+				.expect("Storage client")
 				.fetch(&key)
 				.await
 				.unwrap()
@@ -217,7 +217,7 @@ where
 				.storage()
 				.at(Some(header.hash()))
 				.await
-				.expect("storage client should be available")
+				.expect("Storage client")
 				.fetch(&key)
 				.await?
 				.expect("Header exists in its own changeset; qed");
@@ -327,7 +327,7 @@ where
 				.storage()
 				.at(block_hash)
 				.await
-				.expect("storage client should exist")
+				.expect("Storage client")
 				.fetch(&key)
 				.await?
 				.ok_or_else(|| Error::Custom(format!("No beefy authorities found!")))?
@@ -373,7 +373,7 @@ where
 				.storage()
 				.at(Some(latest_beefy_finalized))
 				.await
-				.expect("Storage client should be available")
+				.expect("Storage client")
 				.fetch(&key)
 				.await?
 				.expect("Should retrieve next authority set")
@@ -388,7 +388,7 @@ where
 				.storage()
 				.at(Some(latest_beefy_finalized))
 				.await
-				.expect("Storage client should be available")
+				.expect("Storage client")
 				.fetch(&key)
 				.await?
 				.expect("Should retrieve next authority set")

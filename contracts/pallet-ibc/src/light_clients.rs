@@ -39,7 +39,7 @@ use ics11_beefy::{
 	consensus_state::BEEFY_CONSENSUS_STATE_TYPE_URL,
 };
 use prost::Message;
-use sp_core::{ed25519, H256};
+use sp_core::{crypto::ByteArray, ed25519, H256};
 use sp_runtime::{
 	app_crypto::RuntimePublic,
 	traits::{BlakeTwo256, ConstU32, Header},
@@ -56,6 +56,14 @@ use tendermint_light_client_verifier::{
 	},
 	predicates::VerificationPredicates,
 	types::{SignedHeader, TrustThreshold, ValidatorSet},
+};
+use tendermint::{
+	crypto::{
+		signature::{Error as TendermintCryptoError, Verifier},
+		Sha256 as TendermintSha256,
+	},
+	merkle::{Hash, MerkleHash, NonIncremental, HASH_SIZE},
+	PublicKey, Signature,
 };
 use tendermint_proto::Protobuf;
 
@@ -92,26 +100,39 @@ impl ics23::HostFunctionsProvider for HostFunctionsManager {
 	}
 }
 
-#[derive(Default)]
-pub struct SubstrateSha256;
-
-impl Sha256 for SubstrateSha256 {
+impl TendermintSha256 for HostFunctionsManager {
 	fn digest(data: impl AsRef<[u8]>) -> [u8; HASH_SIZE] {
 		sp_io::hashing::sha2_256(data.as_ref())
 	}
 }
 
-impl MerkleHash for SubstrateSha256 {
+impl MerkleHash for HostFunctionsManager {
 	fn empty_hash(&mut self) -> Hash {
-		NonIncremental::<SubstrateSha256>::default().empty_hash()
+		NonIncremental::<Self>::default().empty_hash()
 	}
 
 	fn leaf_hash(&mut self, bytes: &[u8]) -> Hash {
-		NonIncremental::<SubstrateSha256>::default().leaf_hash(bytes)
+		NonIncremental::<Self>::default().leaf_hash(bytes)
 	}
 
 	fn inner_hash(&mut self, left: Hash, right: Hash) -> Hash {
-		NonIncremental::<SubstrateSha256>::default().inner_hash(left, right)
+		NonIncremental::<Self>::default().inner_hash(left, right)
+	}
+}
+
+impl Verifier for HostFunctionsManager {
+	fn verify(
+		pubkey: PublicKey,
+		msg: &[u8],
+		signature: &Signature,
+	) -> Result<(), TendermintCryptoError> {
+		let signature = sp_core::ed25519::Signature::from_slice(signature.as_bytes())
+			.ok_or_else(|| TendermintCryptoError::MalformedSignature)?;
+		let public_key = sp_core::ed25519::Public::from_slice(pubkey.to_bytes().as_slice())
+			.map_err(|_| TendermintCryptoError::MalformedPublicKey)?;
+		sp_io::crypto::ed25519_verify(&signature, msg, &public_key)
+			.then(|| ())
+			.ok_or_else(|| TendermintCryptoError::VerificationFailed)
 	}
 }
 

@@ -413,7 +413,7 @@ pub mod abci_application_client {
 pub mod abci_application_server {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
-    ///Generated trait containing gRPC methods that should be implemented for use with AbciApplicationServer.
+    /// Generated trait containing gRPC methods that should be implemented for use with AbciApplicationServer.
     #[async_trait]
     pub trait AbciApplication: Send + Sync + 'static {
         async fn echo(

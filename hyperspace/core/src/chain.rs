@@ -63,6 +63,14 @@ use primitives::{
 	Chain, IbcProvider, KeyProvider, LightClientSync, MisbehaviourHandler, UpdateType,
 };
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
+use ibc::core::ics02_client::events::UpdateClient;
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
+use parachain::{config, ParachainClient};
+use primitives::{
+	Chain, IbcProvider, KeyProvider, LightClientSync, MisbehaviourHandler, UpdateType,
+};
 use std::{pin::Pin, time::Duration};
 #[cfg(feature = "dali")]
 use subxt::config::substrate::{
@@ -937,6 +945,27 @@ impl AnyChain {
 			#[cfg(feature = "cosmos")]
 			Self::Cosmos(chain) => chain.set_client_id(client_id),
 			Self::Wasm(chain) => chain.inner.set_client_id(client_id),
+		}
+	}
+}
+
+#[async_trait]
+impl LightClientSync for AnyChain {
+	async fn is_synced<C: Chain>(&self, counterparty: &C) -> Result<bool, anyhow::Error> {
+		match self {
+			Self::Parachain(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
+			_ => unreachable!(),
+		}
+	}
+
+	async fn fetch_mandatory_updates<C: Chain>(
+		&self,
+		counterparty: &C,
+	) -> Result<(Vec<Any>, Vec<IbcEvent>), anyhow::Error> {
+		match self {
+			Self::Parachain(chain) =>
+				chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
+			_ => unreachable!(),
 		}
 	}
 }

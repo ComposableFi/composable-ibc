@@ -315,7 +315,7 @@ where
 			})),
 			signer: counterparty.account_id(),
 		};
-		let value = msg.encode_vec().unwrap();
+		let value = msg.encode_vec()?;
 		Any { value, type_url: msg.type_url() }
 	};
 
@@ -358,8 +358,17 @@ where
 	let any_client_state = response.client_state.ok_or_else(|| {
 		Error::Custom("Received an empty client state from counterparty".to_string())
 	})?;
+
 	let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
 		.ok_or_else(|| Error::Custom(format!("Could not decode client state")))? else { unreachable!() };
+
+	if justification.commit.target_number <= client_state.latest_relay_height {
+		Err(anyhow!(
+			"skipping outdated commit: {}, with latest relay height: {}",
+			justification.commit.target_number,
+			client_state.latest_relay_height
+		))?
+	}
 
 	let prover = source.grandpa_prover();
 	// prove_finality will always give us the highest block finalized by the authority set for the
@@ -512,7 +521,7 @@ where
 			client_message: AnyClientMessage::Grandpa(ClientMessage::Header(grandpa_header)),
 			signer: counterparty.account_id(),
 		};
-		let value = msg.encode_vec().unwrap();
+		let value = msg.encode_vec()?;
 		Any { value, type_url: msg.type_url() }
 	};
 

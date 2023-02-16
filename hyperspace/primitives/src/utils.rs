@@ -14,7 +14,7 @@
 
 #[cfg(any(feature = "testing", test))]
 use crate::TestProvider;
-use crate::{mock::LocalClientTypes, Chain};
+use crate::{mock::LocalClientTypes, Chain, TestProvider};
 use futures::{future, StreamExt};
 use ibc::{
 	core::{
@@ -43,7 +43,6 @@ pub async fn timeout_future<T: Future>(future: T, secs: u64, reason: String) -> 
 	}
 }
 
-#[cfg(any(feature = "testing", test))]
 pub async fn timeout_after<C: TestProvider, T: Future + Send + 'static>(
 	chain: &C,
 	future: T,
@@ -76,8 +75,8 @@ pub async fn create_clients(
 		signer: chain_a.account_id(),
 	};
 
-	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().expect("encode msg") };
-	println!("Submitting message to A: {:?}", msg.type_url);
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
+
 	let tx_id = chain_a.submit(vec![msg]).await?;
 	println!("Submitted message to A: {:?}", tx_id);
 	let client_id_b_on_a = chain_a.query_client_id_from_tx_hash(tx_id).await?;
@@ -88,7 +87,7 @@ pub async fn create_clients(
 		signer: chain_b.account_id(),
 	};
 
-	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().expect("encode msg") };
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
 
 	println!("Submitting message to B: {:?}", msg.type_url);
 	let tx_id = chain_b.submit(vec![msg]).await?;
@@ -113,9 +112,7 @@ pub async fn create_connection(
 		signer: chain_b.account_id(),
 	};
 
-	println!("{:?}", msg);
-
-	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().expect("encode msg") };
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
 
 	chain_b.submit(vec![msg]).await?;
 
@@ -172,7 +169,7 @@ pub async fn create_channel(
 
 	let msg = MsgChannelOpenInit::new(port_id, channel, chain_a.account_id());
 
-	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().expect("") };
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
 
 	chain_a.submit(vec![msg]).await?;
 

@@ -52,7 +52,8 @@ use crate::{
 };
 
 use crate::core::{
-	ics02_client::context::ClientTypes, ics26_routing::context::ModuleCallbackContext,
+	ics02_client::context::ClientTypes, ics04_channel::msgs::acknowledgement::Acknowledgement,
+	ics26_routing::context::ModuleCallbackContext,
 };
 use tendermint::{block, consensus, evidence, public_key::Algorithm};
 
@@ -355,6 +356,14 @@ impl<C: HostBlockType> ChannelKeeper for DummyTransferModule<C> {
 		&mut self,
 		_key: (PortId, ChannelId, Sequence),
 		_packet: crate::core::ics04_channel::packet::Packet,
+	) -> Result<(), Error> {
+		Ok(())
+	}
+
+	fn store_raw_acknowledgement(
+		&mut self,
+		key: (PortId, ChannelId, Sequence),
+		ack: Acknowledgement,
 	) -> Result<(), Error> {
 		Ok(())
 	}

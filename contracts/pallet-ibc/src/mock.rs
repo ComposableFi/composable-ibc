@@ -5,7 +5,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		fungibles::{metadata::Mutate, Create, InspectMetadata},
-		AsEnsureOriginWithArg, ConstU64, Everything,
+		AllowAll, AsEnsureOriginWithArg, ConstU64, Everything,
 	},
 };
 use frame_system as system;
@@ -21,7 +21,7 @@ use sp_keystore::{testing::KeyStore, KeystoreExt};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
-	MultiSignature,
+	MultiSignature, Percent,
 };
 use std::sync::Arc;
 use system::EnsureRoot;
@@ -66,6 +66,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens,
 		Assets: pallet_assets,
 		IbcPing: pallet_ibc_ping,
+		Ics20Fee: crate::ics20_fee,
 		Ibc: pallet_ibc,
 	}
 );
@@ -136,6 +137,8 @@ impl pallet_assets::Config for Test {
 	type Freezer = ();
 	type Extra = ();
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+	type RemoveItemsLimit = ConstU32<128>;
+	type AssetIdParameter = Self::AssetId;
 }
 
 parameter_types! {
@@ -175,7 +178,7 @@ impl Config for Test {
 	type NativeAssetId = NativeAssetId;
 	type IbcDenomToAssetIdConversion = ();
 	const PALLET_PREFIX: &'static [u8] = b"ibc/";
-	const LIGHT_CLIENT_PROTOCOL: crate::LightClientProtocol = LightClientProtocol::Beefy;
+	const LIGHT_CLIENT_PROTOCOL: crate::LightClientProtocol = LightClientProtocol::Grandpa;
 	type AccountIdConversion = IbcAccount<AccountId>;
 	type Fungibles = Assets;
 	type ExpectedBlockTime = ExpectedBlockTime;
@@ -187,6 +190,39 @@ impl Config for Test {
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type SentryOrigin = EnsureRoot<AccountId>;
 	type SpamProtectionDeposit = SpamProtectionDeposit;
+	type Whitelist = AllowAll;
+	type HandleMemo = ();
+	type MemoMessage = MemoMessage;
+}
+
+parameter_types! {
+	pub const ServiceCharge: Percent = Percent::from_percent(1);
+	pub const PalletId: frame_support::PalletId = frame_support::PalletId(*b"ics20fee");
+}
+
+impl crate::ics20_fee::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type ServiceCharge = ServiceCharge;
+	type PalletId = PalletId;
+}
+
+#[derive(
+	Debug, codec::Encode, Clone, codec::Decode, PartialEq, Eq, scale_info::TypeInfo, Default,
+)]
+pub struct MemoMessage;
+
+impl ToString for MemoMessage {
+	fn to_string(&self) -> String {
+		Default::default()
+	}
+}
+
+impl FromStr for MemoMessage {
+	type Err = ();
+
+	fn from_str(_s: &str) -> Result<Self, Self::Err> {
+		Ok(Default::default())
+	}
 }
 
 impl pallet_timestamp::Config for Test {
@@ -253,6 +289,10 @@ where
 #[derive(Clone, Debug, Eq, PartialEq, Default)]
 pub struct Router {
 	ibc_ping: pallet_ibc_ping::IbcModule<Test>,
+	ics20: crate::ics20::memo::Memo<
+		Test,
+		crate::ics20_fee::Ics20ServiceCharge<Test, crate::ics20::IbcModule<Test>>,
+	>,
 }
 
 impl ModuleRouter for Router {
@@ -262,12 +302,16 @@ impl ModuleRouter for Router {
 	) -> Option<&mut dyn ibc::core::ics26_routing::context::Module> {
 		match module_id.as_ref() {
 			pallet_ibc_ping::MODULE_ID => Some(&mut self.ibc_ping),
+			ibc::applications::transfer::MODULE_ID_STR => Some(&mut self.ics20),
 			&_ => None,
 		}
 	}
 
 	fn has_route(module_id: &ibc::core::ics26_routing::context::ModuleId) -> bool {
-		matches!(module_id.as_ref(), pallet_ibc_ping::MODULE_ID,)
+		matches!(
+			module_id.as_ref(),
+			pallet_ibc_ping::MODULE_ID | ibc::applications::transfer::MODULE_ID_STR
+		)
 	}
 
 	fn lookup_module_by_port(
@@ -277,6 +321,11 @@ impl ModuleRouter for Router {
 			pallet_ibc_ping::PORT_ID =>
 				ibc::core::ics26_routing::context::ModuleId::from_str(pallet_ibc_ping::MODULE_ID)
 					.ok(),
+			ibc::applications::transfer::PORT_ID_STR =>
+				ibc::core::ics26_routing::context::ModuleId::from_str(
+					ibc::applications::transfer::MODULE_ID_STR,
+				)
+				.ok(),
 			_ => None,
 		}
 	}

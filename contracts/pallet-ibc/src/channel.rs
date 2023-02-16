@@ -16,11 +16,13 @@ use crate::{
 };
 use ibc::{
 	core::{
+		ics02_client::error::Error as ICS02Error,
 		ics04_channel::{
 			channel::ChannelEnd,
 			commitment::{AcknowledgementCommitment, PacketCommitment as PacketCommitmentType},
 			context::{ChannelKeeper, ChannelReader},
 			error::Error as ICS04Error,
+			msgs::acknowledgement::Acknowledgement,
 			packet::{Receipt, Sequence},
 		},
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
@@ -204,7 +206,9 @@ where
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<Timestamp, ICS04Error> {
-		let encoded_height = height.encode_vec().expect("encoding height failed");
+		let encoded_height = height
+			.encode_vec()
+			.map_err(|e| ICS04Error::ics02_client(ICS02Error::encode(e)))?;
 		let client_id_bytes = client_id.as_bytes().to_vec();
 		let timestamp =
 			ClientUpdateTime::<T>::get(&client_id_bytes, &encoded_height).ok_or_else(|| {
@@ -228,7 +232,9 @@ where
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<Height, ICS04Error> {
-		let encoded_height = height.encode_vec().expect("encoding height failed");
+		let encoded_height = height
+			.encode_vec()
+			.map_err(|e| ICS04Error::ics02_client(ICS02Error::encode(e)))?;
 		let client_id_bytes = client_id.as_bytes().to_vec();
 		let host_height = ClientUpdateHeight::<T>::get(&client_id_bytes, &encoded_height)
 			.ok_or_else(|| {
@@ -352,6 +358,16 @@ where
 		}
 
 		Ok(())
+	}
+
+	fn store_raw_acknowledgement(
+		&mut self,
+		key: (PortId, ChannelId, Sequence),
+		ack: Acknowledgement,
+	) -> Result<(), ICS04Error> {
+		Pallet::<T>::store_raw_acknowledgement(key, ack.into_bytes()).map_err(|_| {
+			ICS04Error::implementation_specific("Error storing acknowledgement".to_string())
+		})
 	}
 
 	fn store_packet_acknowledgement(

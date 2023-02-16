@@ -156,6 +156,10 @@ define_error! {
 			[ TraceError<prost::DecodeError> ]
 			| _ | { "decode error" },
 
+		Encode
+			[ TraceError<tendermint_proto::Error> ]
+			| _ | { "encode error" },
+
 		MissingHeight
 			| _ | { "invalid raw client consensus state: the height field is missing" },
 

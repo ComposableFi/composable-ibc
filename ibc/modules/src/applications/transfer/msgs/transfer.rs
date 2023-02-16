@@ -61,6 +61,8 @@ pub struct MsgTransfer<C = Coin> {
 	/// Timeout timestamp relative to the current block timestamp.
 	/// The timeout is disabled when set to 0.
 	pub timeout_timestamp: Timestamp,
+	/// Memo field
+	pub memo: String,
 }
 
 impl<C> Msg for MsgTransfer<C>
@@ -112,6 +114,7 @@ where
 			receiver: raw_msg.receiver.parse().map_err(Error::signer)?,
 			timeout_height,
 			timeout_timestamp,
+			memo: raw_msg.memo,
 		})
 	}
 }
@@ -129,6 +132,7 @@ where
 			receiver: domain_msg.receiver.to_string(),
 			timeout_height: Some(domain_msg.timeout_height.into()),
 			timeout_timestamp: domain_msg.timeout_timestamp.nanoseconds(),
+			memo: domain_msg.memo,
 		}
 	}
 }
@@ -160,7 +164,7 @@ where
 	}
 }
 
-impl<C> From<MsgTransfer<C>> for Any
+impl<C> TryFrom<MsgTransfer<C>> for Any
 where
 	C: Protobuf<Coin>,
 	C: From<Coin>,
@@ -169,13 +173,32 @@ where
 	MsgTransfer<C>: TryFrom<RawMsgTransfer>,
 	<MsgTransfer<C> as TryFrom<RawMsgTransfer>>::Error: Display,
 {
-	fn from(msg: MsgTransfer<C>) -> Self {
-		Self {
+	type Error = Error;
+
+	fn try_from(msg: MsgTransfer<C>) -> Result<Self, Self::Error> {
+		Ok(Self {
 			type_url: TYPE_URL.to_string(),
-			value: msg.encode_vec().expect("correct buffer length"),
-		}
+			value: msg.encode_vec().map_err(Error::decode_raw_msg)?,
+		})
 	}
 }
+
+// impl<C> From<MsgTransfer<C>> for Any
+// where
+// 	C: Protobuf<Coin>,
+// 	C: From<Coin>,
+// 	Coin: From<C>,
+// 	<C as TryFrom<Coin>>::Error: Display,
+// 	MsgTransfer<C>: TryFrom<RawMsgTransfer>,
+// 	<MsgTransfer<C> as TryFrom<RawMsgTransfer>>::Error: Display,
+// {
+// 	fn from(msg: MsgTransfer<C>) -> Self {
+// 		Self {
+// 			type_url: TYPE_URL.to_string(),
+// 			value: msg.encode_vec().expect("correct buffer length"),
+// 		}
+// 	}
+// }
 
 #[cfg(test)]
 pub mod test_util {
@@ -204,6 +227,7 @@ pub mod test_util {
 			receiver: address,
 			timeout_timestamp: Timestamp::now().add(Duration::from_secs(10)).unwrap(),
 			timeout_height: Height { revision_number: 0, revision_height: height },
+			memo: "".to_string(),
 		}
 	}
 }

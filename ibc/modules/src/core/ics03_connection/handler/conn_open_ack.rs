@@ -127,7 +127,8 @@ pub(crate) fn process<Ctx: ReaderContext>(
 		msg.proofs.height(),
 		&conn_end,
 		&consensus_proof,
-		&client_state,
+		// TODO: check
+		msg.host_consensus_state_proof,
 	)?;
 
 	output.log("success: connection verification passed");

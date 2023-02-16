@@ -51,13 +51,9 @@ pub fn codegen<I: Input>(encoded: &mut I) -> anyhow::Result<String> {
 		.collect::<Result<Vec<_>, _>>()?;
 	let mut derives = DerivesRegistry::new(&crate_path);
 	derives.extend_for_all(p.into_iter());
+	let type_subsitutes = TypeSubstitutes::new(&crate_path);
 
-	let runtime_api = generator.generate_runtime(
-		item_mod,
-		derives,
-		TypeSubstitutes::new(&crate_path),
-		crate_path,
-	);
+	let runtime_api = generator.generate_runtime(item_mod, derives, type_subsitutes, crate_path);
 	Ok(format!("{}", runtime_api))
 }
 

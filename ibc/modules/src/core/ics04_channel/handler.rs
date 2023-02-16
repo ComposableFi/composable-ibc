@@ -19,6 +19,7 @@ use crate::{
 		ics04_channel::{
 			channel::ChannelEnd,
 			error::Error,
+			events::WriteAcknowledgement,
 			msgs::{ChannelMsg, PacketMsg},
 			packet::PacketResult,
 		},
@@ -27,6 +28,7 @@ use crate::{
 			Ics26Context, ModuleId, ModuleOutputBuilder, ReaderContext, Router,
 		},
 	},
+	events::IbcEvent,
 	handler::{HandlerOutput, HandlerOutputBuilder},
 };
 use alloc::string::ToString;
@@ -230,20 +232,50 @@ where
 
 	match msg {
 		PacketMsg::RecvPacket(msg) => {
-			cb.on_recv_packet(&ctx_clone, module_output, &msg.packet, &msg.signer)
+			let mut packet = msg.packet.clone();
+			let ack = cb
+				.on_recv_packet(&ctx_clone, module_output, &mut packet, &msg.signer)
 				.map_err(|e| Error::app_module(e.to_string()))?;
+			if ack.as_ref().is_empty() {
+				return Err(Error::invalid_acknowledgement())
+			}
+			// NOTE: IBC app modules or middlewares might have written the acknowledgement
+			// synchronously on the OnRecvPacket callback so we only write the acknowledgement if it
+			// does not exist
+			let key = (
+				msg.packet.destination_port.clone(),
+				msg.packet.destination_channel.clone(),
+				msg.packet.sequence,
+			);
+			if let Err(_) = ctx.get_packet_acknowledgement(&key) {
+				let ack_commitment = ctx.ack_commitment(ack.clone());
+				ctx.store_raw_acknowledgement(key.clone(), ack.clone())?;
+				ctx.store_packet_acknowledgement(key, ack_commitment)?;
+				module_output.emit(IbcEvent::WriteAcknowledgement(WriteAcknowledgement {
+					height: ctx.host_height(),
+					packet: msg.packet.clone(),
+					ack: ack.into_bytes(),
+				}))
+			}
 		},
-		PacketMsg::AckPacket(msg) => cb.on_acknowledgement_packet(
-			&ctx_clone,
-			module_output,
-			&msg.packet,
-			&msg.acknowledgement,
-			&msg.signer,
-		)?,
-		PacketMsg::ToPacket(msg) =>
-			cb.on_timeout_packet(&ctx_clone, module_output, &msg.packet, &msg.signer)?,
-		PacketMsg::ToClosePacket(msg) =>
-			cb.on_timeout_packet(&ctx_clone, module_output, &msg.packet, &msg.signer)?,
+		PacketMsg::AckPacket(msg) => {
+			let mut packet = msg.packet.clone();
+			cb.on_acknowledgement_packet(
+				&ctx_clone,
+				module_output,
+				&mut packet,
+				&msg.acknowledgement,
+				&msg.signer,
+			)?
+		},
+		PacketMsg::ToPacket(msg) => {
+			let mut packet = msg.packet.clone();
+			cb.on_timeout_packet(&ctx_clone, module_output, &mut packet, &msg.signer)?
+		},
+		PacketMsg::ToClosePacket(msg) => {
+			let mut packet = msg.packet.clone();
+			cb.on_timeout_packet(&ctx_clone, module_output, &mut packet, &msg.signer)?
+		},
 	};
 	Ok(())
 }

@@ -40,7 +40,7 @@ impl client_consensus::ConsensusState for ConsensusState {
 		todo!()
 	}
 
-	fn encode_to_vec(&self) -> Vec<u8> {
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
 		todo!("Encode to vec")
 	}
 }

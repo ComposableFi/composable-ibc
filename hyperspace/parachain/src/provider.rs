@@ -351,7 +351,8 @@ where
 			.para_client
 			.storage()
 			.at(block_hash)
-			.await?
+			.await
+			.expect("Storage client")
 			.fetch(&timestamp_addr)
 			.await?
 			.ok_or_else(|| Error::from("Timestamp should exist".to_string()))?;
@@ -561,22 +562,20 @@ where
 		let account = self.public_key.clone().into_account();
 		let account = subxt::utils::AccountId32::from(<[u8; 32]>::from(account));
 		// let account_addr = parachain::api::storage().assets().account(2, &account);
-		let account_addr = parachain::api::storage().system().account(&account);
-		let balance = self
-			.para_client
-			.storage()
-			.at(None)
-			.await?
-			.fetch(&account_addr)
-			.await?
-			.expect("Account data should exist");
-
-		// todo: how should we handle assets?
+		let mut hex_string = hex::encode(account.0.to_vec());
+		hex_string.insert_str(0, "0x");
+		let coin: ibc_proto::cosmos::base::v1beta1::Coin =
+			IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_balance_with_address(
+				&*self.para_ws_client,
+				hex_string,
+			)
+			.await
+			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
 		Ok(vec![PrefixedCoin {
 			// denom: PrefixedDenom::from_str("transfer/channel-0/stake")?,
 			// amount: Amount::from_str(&format!("{}", balance.balance))?,
-			denom: PrefixedDenom::from_str("UNIT")?,
-			amount: Amount::from_str(&format!("{}", balance.data.free))?,
+			denom: PrefixedDenom::from_str(&coin.denom)?,
+			amount: Amount::from_str(&coin.amount)?,
 		}])
 	}
 
@@ -607,7 +606,8 @@ where
 			.para_client
 			.storage()
 			.at(block_hash)
-			.await?
+			.await
+			.expect("Storage client")
 			.fetch(&timestamp_addr)
 			.await?
 			.expect("Timestamp should exist");
