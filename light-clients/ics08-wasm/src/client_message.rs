@@ -1,4 +1,4 @@
-use crate::{msg::Base64, Bytes};
+use crate::{Bytes};
 use alloc::{boxed::Box, string::ToString, vec::Vec};
 #[cfg(feature = "cosmwasm")]
 use cosmwasm_schema::cw_serde;
