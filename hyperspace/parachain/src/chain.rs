@@ -31,7 +31,7 @@ use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParam
 use subxt::config::substrate::AssetTip as Tip;
 #[cfg(feature = "dali")]
 type RuntimeDispatchInfo =
-	transaction_payment_runtime_api::RuntimeDispatchInfo<u128, frame_support::wights::Weight>;
+	transaction_payment_runtime_api::RuntimeDispatchInfo<u128, frame_support::weights::Weight>;
 
 #[cfg(not(feature = "dali"))]
 use subxt::config::polkadot::PlainTip as Tip;
@@ -151,7 +151,7 @@ where
 			return Ok(dispatch_info.weight.ref_time)
 		}
 
-		#[cfg(note(feature = "dali"))]
+		#[cfg(not(feature = "dali"))]
 		{
 			return Ok(dispatch_info.weight)
 		}
