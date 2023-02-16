@@ -145,7 +145,16 @@ where
 			)
 			.await
 			.map_err(|e| Error::from(format!("Rpc Error From Estimating weight {:?}", e)))?;
-		Ok(dispatch_info.weight)
+
+		#[cfg(feature = "dali")]
+		{
+			return Ok(dispatch_info.weight.ref_time)
+		}
+
+		#[cfg(note(feature = "dali"))]
+		{
+			return Ok(dispatch_info.weight)
+		}
 	}
 
 	async fn finality_notifications(
