@@ -912,7 +912,7 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Any {
 			msg_decoded.to_any()
 		},
 		CONN_OPEN_ACK_TYPE_URL => {
-			let mut msg_decoded =
+			let msg_decoded =
 				MsgConnectionOpenAck::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
 			msg_decoded.to_any()
 		},
