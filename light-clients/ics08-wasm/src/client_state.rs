@@ -18,7 +18,6 @@ use ibc::{
 };
 use ibc_proto::{
 	google::protobuf::Any, ibc::lightclients::wasm::v1::ClientState as RawClientState,
-	ics23::ProofSpec,
 };
 use prost::Message;
 
@@ -34,8 +33,6 @@ pub struct ClientState<AnyClient, AnyClientState, AnyConsensusState> {
 	pub code_id: Bytes,
 	pub inner: Box<AnyClientState>,
 	pub latest_height: Height,
-	pub proof_specs: Vec<ProofSpec>,
-	pub repository: String,
 	pub _phantom: PhantomData<(AnyConsensusState, AnyClient)>,
 }
 
@@ -95,8 +92,8 @@ where
 		self.inner.expired(elapsed)
 	}
 
-	fn encode_to_vec(&self) -> Vec<u8> {
-		self.encode_vec().unwrap()
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
+		self.encode_vec()
 	}
 }
 
@@ -123,8 +120,6 @@ where
 				.latest_height
 				.map(|h| Height::new(h.revision_number, h.revision_height))
 				.unwrap_or_default(),
-			proof_specs: raw.proof_specs,
-			repository: raw.repository,
 			_phantom: Default::default(),
 		})
 	}
@@ -138,8 +133,6 @@ impl<AnyClient, AnyClientState, AnyConsensusState>
 			data: client_state.data,
 			code_id: client_state.code_id,
 			latest_height: Some(client_state.latest_height.into()),
-			proof_specs: client_state.proof_specs,
-			repository: client_state.repository,
 		}
 	}
 }

@@ -48,16 +48,16 @@ derive_more = "0.99.17"
 ibc = { path = "../../ibc/modules", default-features = false }
 ibc-derive = { path = "../../ibc/derive", default-features = false }
 ibc-proto = { path = "../../ibc/proto", default-features = false, features = ["json-schema"] }
-ics23 = { git = "https://github.com/composablefi/ics23", rev = "b500a5c6068eb53c83c4c6c13bd9d8c25e0bf927", default-features = false }
+ics23 = { git = "https://github.com/confio/ics23", rev = "a4daeb4c24ce1be827829c0841446abc690c4f11", default-features = false }
 ics10-grandpa = { path = "../ics10-grandpa", default-features = false }
 grandpa-light-client-primitives = { path = "../../algorithms/grandpa/primitives", default-features = false }
 light-client-common = { path = "../../light-clients/common", default-features = false  }
 ics08-wasm = { path = "../ics08-wasm", default-features = false, features = ["cosmwasm"] }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false, features = ["disable_panic_handler", "disable_oom", "disable_allocator"] }
-sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33", default-features = false, features = [] }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, features = ["disable_panic_handler", "disable_oom", "disable_allocator"] }
+sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, features = [] }
 prost = { version = "0.11", default-features = false }
 blake2-rfc = { version = "0.2.18", default-features = false }
 ed25519-zebra = { version = "3.1.0", default-features = false }
@@ -65,6 +65,7 @@ twox-hash = { version = "1.6.3", default-features = false, features = ["digest_0
 byteorder = { version = "1.3.2", default-features = false }
 digest = { version = "0.10.3", default-features = false }
 hex = "0.4.3"
+tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "47e28b50d20138234f7a8b4254da71469f401714", default-features = false }
 
 [dev-dependencies]
 cw-multi-test = "0.15.1"

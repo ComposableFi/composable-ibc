@@ -1,4 +1,4 @@
-use crate::Bytes;
+use crate::{msg::Base64, Bytes};
 use alloc::{boxed::Box, string::ToString, vec::Vec};
 #[cfg(feature = "cosmwasm")]
 use cosmwasm_schema::cw_serde;
@@ -47,8 +47,8 @@ where
 	AnyClientMessage: IbcClientMessage,
 	AnyClientMessage: TryFrom<Any>,
 {
-	fn encode_to_vec(&self) -> Vec<u8> {
-		self.encode_vec().expect("encode to vec cannot fail")
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
+		self.encode_vec()
 	}
 }
 

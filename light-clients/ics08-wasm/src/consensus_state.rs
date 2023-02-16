@@ -53,8 +53,8 @@ where
 		Timestamp::from_nanoseconds(self.timestamp.saturating_mul(1000000000)).unwrap()
 	}
 
-	fn encode_to_vec(&self) -> Vec<u8> {
-		self.encode_vec().unwrap()
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
+		self.encode_vec()
 	}
 }
 
@@ -64,7 +64,10 @@ where
 	AnyConsensusState: TryFrom<Any> + IbcConsensusState,
 {
 	pub fn to_any(&self) -> Any {
-		Any { type_url: WASM_CONSENSUS_STATE_TYPE_URL.to_string(), value: self.encode_to_vec() }
+		Any {
+			type_url: WASM_CONSENSUS_STATE_TYPE_URL.to_string(),
+			value: self.encode_to_vec().unwrap(),
+		}
 	}
 }
 

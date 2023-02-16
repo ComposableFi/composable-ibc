@@ -108,7 +108,7 @@ impl ConsensusState for FakeInner {
 		unimplemented!()
 	}
 
-	fn encode_to_vec(&self) -> Vec<u8> {
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
 		unimplemented!()
 	}
 }
@@ -150,13 +150,13 @@ impl ClientState for FakeInner {
 		unimplemented!()
 	}
 
-	fn encode_to_vec(&self) -> Vec<u8> {
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
 		unimplemented!()
 	}
 }
 
 impl ClientMessage for FakeInner {
-	fn encode_to_vec(&self) -> Vec<u8> {
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
 		unimplemented!()
 	}
 }

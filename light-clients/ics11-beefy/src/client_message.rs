@@ -74,7 +74,7 @@ pub struct ParachainHeadersWithProof {
 
 impl ibc::core::ics02_client::client_message::ClientMessage for ClientMessage {
 	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
-		self.encode_vec().expect("encode ClientMessage to vec")
+		self.encode_vec()
 	}
 }
 

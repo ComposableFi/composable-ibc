@@ -290,7 +290,7 @@ where
 	}
 
 	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
-		self.encode_vec().expect("encoding client state failed")
+		self.encode_vec()
 	}
 }
 

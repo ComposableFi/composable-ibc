@@ -15,7 +15,6 @@ use ibc_proto::{
 		client::v1::Height as HeightRaw,
 		commitment::v1::{MerklePath, MerkleRoot},
 	},
-	ics23::ProofSpec,
 };
 use ics08_wasm::client_message::Header as WasmHeader;
 use ics10_grandpa::{
@@ -47,8 +46,6 @@ pub struct WasmClientState {
 	#[serde(with = "Base64", default)]
 	pub code_id: Bytes,
 	pub latest_height: HeightRaw,
-	pub proof_specs: Vec<ProofSpec>,
-	pub repository: String,
 }
 
 #[cw_serde]

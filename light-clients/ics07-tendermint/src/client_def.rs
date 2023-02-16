@@ -57,7 +57,6 @@ use crate::{
 	HostFunctionsProvider, ProdVerifier,
 };
 use ibc::{prelude::*, timestamp::Timestamp, Height};
-use ibc_proto::ics23::ProofSpec;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct TendermintClient<H>(PhantomData<H>);
@@ -82,16 +81,6 @@ where
 	{
 		match message {
 			ClientMessage::Header(header) => {
-				log::info!("Got header.height = {:?}", header.height());
-				log::info!(
-					"Got state header.signed_header.header = {:?}",
-					header.signed_header.header
-				);
-				log::info!(
-					"Got state header.signed_header.commit.height = {:?}",
-					header.signed_header.commit.height
-				);
-
 				if header.height().revision_number != client_state.chain_id.version() {
 					return Err(Ics02Error::client_error(
 						client_state.client_type().to_owned(),
@@ -157,7 +146,7 @@ where
 
 				let options = client_state.as_light_client_options()?;
 
-				let verifier = PredicateVerifier::<H, H, H>::default();
+				let verifier = ProdVerifier::<H>::default();
 				let verdict = verifier.verify(
 					untrusted_state,
 					trusted_state,
@@ -211,18 +200,7 @@ where
 		let cs = Ctx::AnyConsensusState::wrap(&header_consensus_state).ok_or_else(|| {
 			Ics02Error::unknown_consensus_state_type("Ctx::AnyConsensusState".to_string())
 		})?;
-		let state = client_state.with_header(header.clone());
-		log::info!("Updating state header.height = {:?}", header.height());
-		log::info!(
-			"Updating state header.signed_header.header = {:?}",
-			header.signed_header.header
-		);
-		log::info!(
-			"Updating state header.signed_header.commit.height = {:?}",
-			header.signed_header.commit.height
-		);
-		log::info!("state = {state:?}\ncs = {cs:?}");
-		Ok((state, ConsensusUpdateResult::Single(cs)))
+		Ok((client_state.with_header(header), ConsensusUpdateResult::Single(cs)))
 	}
 
 	fn update_state_on_misbehaviour(
@@ -576,17 +554,17 @@ where
 	// use ibc_proto::ics23::{InnerSpec as IbcInnerSpec, LeafOp as IbcLeafOp, ProofSpec as
 	// IbcProofSpec};
 
-	let ps: Vec<ProofSpec> = client_state.proof_specs.clone().into();
-	let ps_e = ps
-		.into_iter()
-		.map(|ps| hex::encode(ps.encode_to_vec()))
-		.collect::<Vec<_>>()
-		.join(",");
+	// let ps: Vec<_> = client_state.proof_specs.clone().into();
+	// let ps_e = ps
+	// 	.into_iter()
+	// 	.map(|ps| hex::encode(ps.encode_to_vec()))
+	// 	.collect::<Vec<_>>()
+	// 	.join(",");
 	let mp: ibc_proto::ibc::core::commitment::v1::MerkleProof = merkle_proof.clone().into();
 	let mp_e = hex::encode(mp.encode_to_vec());
 	log::trace!(
 		target: "pallet_ibc",
-		"verify_membership:\npath: {merkle_path:?},\nvalue: {val},\nmerkle_proof: {mp_e}\nroot: {rt}, client_state.proof_specs: {ps_e}",
+		"verify_membership:\npath: {merkle_path:?},\nvalue: {val},\nmerkle_proof: {mp_e}\nroot: {rt}, client_state.proof_specs:",
 	);
 
 	merkle_proof

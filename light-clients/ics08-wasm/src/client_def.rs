@@ -82,8 +82,6 @@ where
 			code_id: client_state.code_id.clone(),
 			inner: Box::new(inner_client_state),
 			latest_height: client_state.latest_height,
-			proof_specs: client_state.proof_specs.clone(),
-			repository: client_state.repository.clone(),
 			_phantom: PhantomData,
 		};
 		Ok((client_state, inner_consensus_update_result))
@@ -102,8 +100,6 @@ where
 			code_id: client_state.code_id.clone(),
 			inner: Box::new(inner_client_state),
 			latest_height: client_state.latest_height,
-			proof_specs: client_state.proof_specs.clone(),
-			repository: client_state.repository.clone(),
 			_phantom: PhantomData,
 		})
 	}
@@ -150,8 +146,6 @@ where
 						data: old_client_state.data.clone(),
 						code_id: old_client_state.code_id.clone(),
 						latest_height: old_client_state.latest_height.clone(),
-						proof_specs: old_client_state.proof_specs.clone(),
-						repository: old_client_state.repository.clone(),
 						_phantom: Default::default(),
 					},
 					result,

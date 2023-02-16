@@ -157,6 +157,7 @@ where
 		&self,
 		_height: Height,
 		_proof: Option<Vec<u8>>,
+		_client_state: &AnyClientState,
 	) -> Result<AnyConsensusState, ICS02Error> {
 		let timestamp = Timestamp::from_nanoseconds(1).unwrap();
 		let timestamp = timestamp.into_tm_time().unwrap();

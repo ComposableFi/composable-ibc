@@ -17,7 +17,7 @@ use ibc::{
 };
 use ibc_derive::{ClientDef, ClientMessage, ClientState, ConsensusState, Protobuf};
 use ibc_primitives::runtime_interface;
-use ibc_proto::{google::protobuf::Any, ics23::ProofSpec};
+use ibc_proto::google::protobuf::Any;
 use ics08_wasm::{
 	client_message::{
 		WASM_CLIENT_MESSAGE_TYPE_URL, WASM_HEADER_TYPE_URL, WASM_MISBEHAVIOUR_TYPE_URL,
@@ -44,18 +44,6 @@ use sp_runtime::{
 	app_crypto::RuntimePublic,
 	traits::{BlakeTwo256, ConstU32, Header},
 	BoundedBTreeSet, BoundedVec, Either,
-};
-use tendermint::{
-	crypto::Sha256,
-	merkle::{Hash, MerkleHash, NonIncremental, HASH_SIZE},
-};
-use tendermint_light_client_verifier::{
-	errors::VerificationError,
-	operations::{
-		CommitValidator, ProdVotingPowerCalculator, VotingPowerCalculator, VotingPowerTally,
-	},
-	predicates::VerificationPredicates,
-	types::{SignedHeader, TrustThreshold, ValidatorSet},
 };
 use tendermint::{
 	crypto::{
@@ -135,23 +123,6 @@ impl Verifier for HostFunctionsManager {
 			.ok_or_else(|| TendermintCryptoError::VerificationFailed)
 	}
 }
-
-impl VerificationPredicates for HostFunctionsManager {
-	type Sha256 = SubstrateSha256;
-}
-
-impl VotingPowerCalculator for HostFunctionsManager {
-	fn voting_power_in(
-		&self,
-		signed_header: &SignedHeader,
-		validator_set: &ValidatorSet,
-		trust_threshold: TrustThreshold,
-	) -> Result<VotingPowerTally, VerificationError> {
-		ProdVotingPowerCalculator.voting_power_in(signed_header, validator_set, trust_threshold)
-	}
-}
-
-impl CommitValidator for HostFunctionsManager {}
 
 impl ics07_tendermint::HostFunctionsProvider for HostFunctionsManager {}
 
@@ -310,16 +281,9 @@ impl AnyClientState {
 impl AnyClientState {
 	pub fn wasm(inner: Self, code_id: Bytes) -> Self {
 		Self::Wasm(ics08_wasm::client_state::ClientState::<AnyClient, Self, AnyConsensusState> {
-			data: inner.encode_to_vec(),
+			data: inner.encode_to_vec().unwrap(),
 			latest_height: inner.latest_height(), // TODO: check if this is correct
 			inner: Box::new(inner),
-			proof_specs: vec![ProofSpec {
-				leaf_spec: None,
-				inner_spec: None,
-				max_depth: 0,
-				min_depth: 0,
-			}],
-			repository: "empty".to_string(),
 			code_id,
 			_phantom: Default::default(),
 		})
@@ -344,7 +308,7 @@ pub enum AnyConsensusState {
 impl AnyConsensusState {
 	pub fn wasm(inner: Self, code_id: Bytes, timestamp: u64) -> Self {
 		Self::Wasm(ics08_wasm::consensus_state::ConsensusState {
-			data: inner.encode_to_vec(),
+			data: inner.encode_to_vec().unwrap(),
 			code_id,
 			timestamp,
 			root: CommitmentRoot::from_bytes(&vec![1; 32]),
@@ -418,7 +382,7 @@ impl AnyClientMessage {
 		match inner_thing {
 			Either::Left(h) => Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(
 				ics08_wasm::client_message::Header {
-					data: inner.encode_to_vec(),
+					data: inner.encode_to_vec().unwrap(),
 					#[cfg(not(feature = "std"))]
 					height: h,
 					#[cfg(feature = "std")]
@@ -429,7 +393,7 @@ impl AnyClientMessage {
 			Either::Right(cid) =>
 				Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(
 					ics08_wasm::client_message::Misbehaviour {
-						data: inner.encode_to_vec(),
+						data: inner.encode_to_vec().unwrap(),
 						client_id: cid,
 						inner: Box::new(inner),
 					},

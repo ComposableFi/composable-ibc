@@ -88,7 +88,7 @@ pub enum ClientMessage {
 
 impl ibc::core::ics02_client::client_message::ClientMessage for ClientMessage {
 	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
-		self.encode_vec().expect("encode to vec cannot fail")
+		self.encode_vec()
 	}
 }
 
