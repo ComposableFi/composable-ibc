@@ -42,13 +42,7 @@ use ibc::{
 	tx_msg::Msg,
 	Height,
 };
-use ibc_proto::{
-	google::protobuf::Any,
-	ibc::core::{
-		client::v1::QueryConsensusStateResponse,
-		connection::v1::MsgConnectionOpenAck as RawMsgConnectionOpenAck,
-	},
-};
+use ibc_proto::{google::protobuf::Any, ibc::core::client::v1::QueryConsensusStateResponse};
 use pallet_ibc::light_clients::AnyClientState;
 use primitives::{error::Error, mock::LocalClientTypes, Chain};
 use tendermint_proto::Protobuf;
@@ -192,7 +186,6 @@ pub async fn parse_events(
 							client_state.latest_height(),
 						)
 						.await?;
-					let new_proof_height = consensus_proof.proof_height.clone();
 					let consensus_proof_raw =
 						query_consensus_proof(sink, client_state.clone(), consensus_proof).await?;
 					// Construct OpenAck

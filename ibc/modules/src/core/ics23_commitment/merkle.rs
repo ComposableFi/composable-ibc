@@ -116,6 +116,7 @@ impl<H: HostFunctionsProvider> MerkleProof<H> {
 
 		let mut subroot = value.clone();
 		let mut value = value;
+		// println!("value: {}", hex::encode(&value));
 
 		// keys are represented from root-to-leaf
 		for ((proof, spec), key) in self
@@ -127,8 +128,16 @@ impl<H: HostFunctionsProvider> MerkleProof<H> {
 		{
 			match &proof.proof {
 				Some(Proof::Exist(existence_proof)) => {
+					// for p in &existence_proof.path {
+					// 	println!("path_pref: {}", hex::encode(&p.prefix));
+					// 	println!("path_post: {}", hex::encode(&p.suffix));
+					// }
+					// println!("key: {}", String::from_utf8_lossy(&existence_proof.key));
+					// println!("val: {}", hex::encode(&existence_proof.value));
+					// println!("leaf: {:?}", existence_proof.leaf);
+
 					subroot = calculate_existence_root::<H>(existence_proof)
-						.map_err(|e| Error::invalid_merkle_proof())?;
+						.map_err(|_| Error::invalid_merkle_proof())?;
 					// println!("subroot: {}", hex::encode(&subroot));
 					if !verify_membership::<H>(proof, spec, &subroot, key.as_bytes(), &value) {
 						return Err(Error::verification_failure())

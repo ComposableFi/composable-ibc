@@ -37,7 +37,7 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use pallet_ibc::light_clients::AnyClientState;
-use primitives::{apply_prefix, find_suitable_proof_height_for_client, Chain};
+use primitives::{find_suitable_proof_height_for_client, Chain};
 use std::time::Duration;
 use tendermint_proto::Protobuf;
 
@@ -250,7 +250,7 @@ pub async fn construct_recv_message(
 	source: &impl Chain,
 	sink: &impl Chain,
 	packet: Packet,
-	mut proof_height: Height,
+	proof_height: Height,
 ) -> Result<Any, anyhow::Error> {
 	let key = get_key_path(KeyPathType::CommitmentPath, &packet).into_bytes();
 	let proof = source.query_proof(proof_height, vec![key]).await?;

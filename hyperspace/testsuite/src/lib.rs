@@ -22,9 +22,7 @@ use hyperspace_primitives::{
 	TestProvider,
 };
 use ibc::{
-	applications::transfer::{
-		events::Event::Transfer, msgs::transfer::MsgTransfer, Amount, PrefixedCoin, VERSION,
-	},
+	applications::transfer::{msgs::transfer::MsgTransfer, Amount, PrefixedCoin, VERSION},
 	core::{
 		ics04_channel::{
 			channel::{ChannelEnd, Order, State},
@@ -351,12 +349,12 @@ where
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
-	log::info!(target: "hyperspace", "Sending transfer from {}", chain_b.name());
-	let (previous_balance, ..) = send_transfer(chain_b, chain_a, channel_id, None).await;
-	assert_send_transfer(chain_b, previous_balance, 120).await;
 	log::info!(target: "hyperspace", "Sending transfer from {}", chain_a.name());
 	let (previous_balance, ..) = send_transfer(chain_a, chain_b, channel_id, None).await;
 	assert_send_transfer(chain_a, previous_balance, 120).await;
+	log::info!(target: "hyperspace", "Sending transfer from {}", chain_b.name());
+	let (previous_balance, ..) = send_transfer(chain_b, chain_a, channel_id, None).await;
+	assert_send_transfer(chain_b, previous_balance, 120).await;
 	// now send from chain b.
 	log::info!(target: "hyperspace", "🚀🚀 Token Transfer successful with connection delay");
 }

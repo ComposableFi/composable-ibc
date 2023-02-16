@@ -31,7 +31,7 @@ use ibc_proto::{
 };
 
 use crate::error::Error;
-#[cfg(feature = "testing")]
+#[cfg(any(feature = "testing", test))]
 use ibc::applications::transfer::msgs::transfer::MsgTransfer;
 use ibc::{
 	applications::transfer::PrefixedCoin,

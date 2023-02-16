@@ -15,7 +15,7 @@
 use anyhow::Result;
 use clap::Parser;
 use hyperspace_core::{
-	command::{Cli, Subcommand, QuerySubcommand},
+	command::{Cli, QuerySubcommand, Subcommand},
 	logging,
 };
 
@@ -43,14 +43,12 @@ async fn main() -> Result<()> {
 			cmd.save_config(&new_config).await
 		},
 		Subcommand::Fish(cmd) => cmd.fish().await,
-		Subcommand::Query(cmd) => {
-			match cmd {
-				QuerySubcommand::Channels(q) => {
-					q.query_channels().await?;
-					Ok(())
-				}
-				_ => panic!()
-			}
+		Subcommand::Query(cmd) => match cmd {
+			QuerySubcommand::Channels(q) => {
+				q.query_channels().await?;
+				Ok(())
+			},
+			_ => panic!(),
 		},
 	}
 }

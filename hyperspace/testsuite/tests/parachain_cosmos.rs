@@ -20,17 +20,15 @@ use hyperspace_core::{
 };
 use hyperspace_cosmos::client::{ConfigKeyEntry, CosmosClient, CosmosClientConfig};
 use hyperspace_parachain::{
-	config, config::CustomExtrinsicParams, finality_protocol::FinalityProtocol, ParachainClient,
+	config, config::CustomExtrinsicParams, finality_protocol::FinalityProtocol,
 	ParachainClientConfig,
 };
 use hyperspace_primitives::{utils::create_clients, IbcProvider};
-use hyperspace_testsuite::ibc_messaging_with_connection_delay;
-use ibc::{
-	applications::transfer::PrefixedDenom,
-	core::{ics02_client::height::Height, ics24_host::identifier::ClientId},
+use hyperspace_testsuite::{
+	ibc_messaging_packet_height_timeout_with_connection_delay, ibc_messaging_with_connection_delay,
 };
+use ibc::{self, applications::transfer::PrefixedDenom};
 use sp_core::hashing::sha2_256;
-use std::str::FromStr;
 use subxt::{
 	config::{
 		extrinsic_params::Era,
@@ -38,7 +36,6 @@ use subxt::{
 	},
 	Error, OnlineClient,
 };
-use tendermint_proto::Protobuf;
 
 #[derive(Debug, Clone)]
 pub struct Args {
@@ -171,26 +168,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 
 	let AnyChain::Parachain(chain_a) = &mut chain_a_wrapped else { unreachable!() };
 
-	// let t = chain_a
-	// 	.query_client_update_time_and_height(
-	// 		ClientId::from_str("07-tendermint-0").unwrap(),
-	// 		Height::new(1, 46),
-	// 	)
-	// 	.await
-	// 	.unwrap();
-	// println!("{:?}", t);
-	// let t = chain_b
-	// 	.query_client_update_time_and_height(
-	// 		ClientId::from_str("08-wasm-0").unwrap(),
-	// 		Height::new(2000, 20),
-	// 	)
-	// 	.await
-	// 	.unwrap();
-	// log::info!("{:?}", t);
-	// std::process::exit(0);
-
 	// Wait until for parachains to start producing blocks
-	log::info!(target: "hyperspace", "Waiting for  block production from parachain");
+	log::info!(target: "hyperspace", "Waiting for block production from parachain");
 	let session_length = chain_a.grandpa_prover().session_length().await.unwrap();
 	let _ = chain_a
 		.relay_client
@@ -212,13 +191,13 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
 		chain_a_wrapped.set_client_id(clients_on_b[0].clone());
 		chain_b_wrapped.set_client_id(clients_on_b[0].clone());
-		return (chain_b_wrapped, chain_a_wrapped)
+		return (chain_a_wrapped, chain_b_wrapped)
 	}
 
 	let (client_b, client_a) = create_clients(&chain_b_wrapped, &chain_a_wrapped).await.unwrap();
 	chain_a_wrapped.set_client_id(client_a);
 	chain_b_wrapped.set_client_id(client_b);
-	(chain_b_wrapped, chain_a_wrapped)
+	(chain_a_wrapped, chain_b_wrapped)
 }
 
 #[test]
@@ -230,13 +209,10 @@ fn tst() {
 
 #[tokio::test]
 #[ignore]
-async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
+async fn parachain_to_cosmos_ibc_messaging_full_integration_test() {
+	// TODO: codespace sdk code 32: incorrect account sequence: account sequence mismatch, expected
+	// 7, got 6
 	logging::setup_logging();
-	// let h1 = Height::decode_vec(&hex::decode("0801102e").unwrap()).unwrap();
-	// let h2 = Height::decode_vec(&hex::decode("08d00f100a").unwrap()).unwrap();
-	// println!("{:?} {:?}", h1, h2);
-	// let h1 = Height::decode_vec(&hex::decode("0801102e").unwrap()).unwrap();
-	// t = 1675774128035000000
 
 	let (mut chain_a, mut chain_b) = setup_clients().await;
 	// Run tests sequentially
@@ -245,7 +221,7 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 	ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b).await;
 
 	// timeouts + connection delay
-	// ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
+	ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
 	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(&mut chain_a, &mut
 	// chain_b).await;
 

@@ -18,10 +18,7 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use clap::Parser;
-use ibc::core::{
-	ics04_channel::channel::Order,
-	ics24_host::identifier::{ChannelId, PortId}
-};
+use ibc::core::{ics04_channel::channel::Order, ics24_host::identifier::PortId};
 use metrics::{data::Metrics, handler::MetricsHandler, init_prometheus};
 use primitives::{
 	utils::{create_channel, create_clients, create_connection},
@@ -307,7 +304,8 @@ impl QueryCmd {
 		let config = self.parse_config().await?;
 		let chain = config.into_client().await?;
 
-		let channels = chain.query_channels().await?.iter().for_each(|c| println!("{}: {}", c.0, c.1));
+		let _channels =
+			chain.query_channels().await?.iter().for_each(|c| println!("{}: {}", c.0, c.1));
 		Ok(())
 	}
 }

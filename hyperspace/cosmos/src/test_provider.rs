@@ -1,6 +1,6 @@
 use super::client::CosmosClient;
 use core::pin::Pin;
-use futures::{future, stream, FutureExt, Stream, StreamExt};
+use futures::{Stream, StreamExt};
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
 	core::ics24_host::identifier::{ChannelId, PortId},
