@@ -33,7 +33,7 @@ use ibc::{
 	timestamp::Timestamp,
 	Height,
 };
-use ibc_primitives::PacketInfo as IbcPacketInfo;
+
 use ibc_proto::{
 	google::protobuf::Any,
 	ibc::core::{

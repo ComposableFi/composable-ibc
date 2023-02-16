@@ -30,6 +30,7 @@ use ibc::core::{
 	ics23_commitment::{
 		commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
 		merkle::{apply_prefix, MerkleProof},
+		specs::ProofSpecs,
 	},
 	ics24_host::{
 		identifier::{ChannelId, ClientId, ConnectionId, PortId},
@@ -41,7 +42,10 @@ use ibc::core::{
 	},
 	ics26_routing::context::ReaderContext,
 };
-use ibc_proto::ibc::core::commitment::v1::{MerkleProof as RawMerkleProof};
+use ibc_proto::{
+	google::protobuf::Any,
+	ibc::core::commitment::v1::{MerklePath, MerkleProof as RawMerkleProof},
+};
 use prost::Message;
 use tendermint_light_client_verifier::{
 	types::{TrustedBlockState, UntrustedBlockState},
@@ -57,7 +61,7 @@ use crate::{
 	HostFunctionsProvider,
 };
 use ibc::{prelude::*, timestamp::Timestamp, Height};
-use ibc_proto::{ics23::ProofSpec};
+use ibc_proto::ics23::ProofSpec;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct TendermintClient<H>(PhantomData<H>);
