@@ -71,7 +71,7 @@ use pallet_ibc::light_clients::{
 	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
 };
 use primitives::{mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType};
-use std::{pin::Pin, str::FromStr, thread, time::Duration};
+use std::{pin::Pin, str::FromStr, time::Duration};
 use tendermint::block::Height as TmHeight;
 use tendermint_rpc::{
 	endpoint::tx::Response,
@@ -83,14 +83,13 @@ use tonic::IntoRequest;
 // use primitives::Pa
 use ibc::{
 	applications::transfer::{BaseDenom, TracePath},
-	core::ics04_channel::events::try_from_tx,
 	events::IbcEventType,
 };
-use ibc_proto::ibc::core::client::v1::QueryConsensusStatesRequest;
+
 use ics08_wasm::msg::MsgPushNewWasmCode;
 pub use tendermint::Hash;
 use tokio::time::sleep;
-use tracing_subscriber::fmt::time;
+
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
@@ -906,7 +905,7 @@ where
 			client_height
 		);
 
-		let string = client_height.to_string();
+		let _string = client_height.to_string();
 		let query_str = Query::eq("update_client.client_id", client_id.to_string());
 
 		let response = self
@@ -929,7 +928,7 @@ where
 				let timestamp = self.query_timestamp_at(height).await?;
 				let (h, _) = self.latest_height_and_timestamp().await?;
 				match ev {
-					Ok(IbcEvent::UpdateClient(p)) => {
+					Ok(IbcEvent::UpdateClient(_p)) => {
 						return Ok((
 							// TODO: check that `h.revision_number` is correct to use here
 							Height::new(h.revision_number, height),
