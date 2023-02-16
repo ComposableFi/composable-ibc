@@ -51,6 +51,7 @@ pub struct MsgConnectionOpenTry<C: ClientTypes + Clone + Debug + PartialEq + Eq>
 	pub proofs: Proofs,
 	pub delay_period: Duration,
 	pub signer: Signer,
+	pub host_consensus_state_proof: Vec<u8>,
 }
 
 impl<C> MsgConnectionOpenTry<C>
@@ -150,6 +151,7 @@ where
 			.map_err(Error::invalid_proof)?,
 			delay_period: Duration::from_nanos(msg.delay_period),
 			signer: msg.signer.parse().map_err(Error::signer)?,
+			host_consensus_state_proof: msg.host_consensus_state_proof,
 		})
 	}
 }
@@ -182,6 +184,7 @@ where
 				.consensus_proof()
 				.map_or_else(|| None, |h| Some(h.height().into())),
 			signer: ics_msg.signer.to_string(),
+			host_consensus_state_proof: ics_msg.host_consensus_state_proof,
 			..Default::default()
 		}
 	}

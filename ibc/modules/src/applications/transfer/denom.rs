@@ -345,6 +345,12 @@ impl From<u64> for Amount {
 	}
 }
 
+impl From<u128> for Amount {
+	fn from(v: u128) -> Self {
+		Self(v.into())
+	}
+}
+
 /// Coin defines a token with a denomination and an amount.
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Coin<D> {
@@ -500,11 +506,12 @@ mod tests {
 			},
 			sender: Signer::from_str("sender").unwrap(),
 			receiver: Signer::from_str("receiver").unwrap(),
+			memo: "".to_string(),
 		};
 		let string = serde_json::to_string(&packet_data).unwrap();
 		assert_eq!(
 			string,
-			r#"{"denom":"transfer/channel-0/transfer/channel-1/UNIT","amount":"10000000000","sender":"sender","receiver":"receiver"}"#
+			r#"{"denom":"transfer/channel-0/transfer/channel-1/UNIT","amount":"10000000000","sender":"sender","receiver":"receiver","memo":""}"#
 		);
 		assert_eq!(packet_data, serde_json::from_str(&string).unwrap());
 	}

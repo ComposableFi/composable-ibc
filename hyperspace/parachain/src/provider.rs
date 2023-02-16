@@ -352,7 +352,8 @@ where
 			.para_client
 			.storage()
 			.at(block_hash)
-			.await?
+			.await
+			.expect("Storage client")
 			.fetch(&timestamp_addr)
 			.await?
 			.ok_or_else(|| Error::from("Timestamp should exist".to_string()))?;
@@ -608,7 +609,8 @@ where
 			.para_client
 			.storage()
 			.at(block_hash)
-			.await?
+			.await
+			.expect("Storage client")
 			.fetch(&timestamp_addr)
 			.await?
 			.expect("Timestamp should exist");

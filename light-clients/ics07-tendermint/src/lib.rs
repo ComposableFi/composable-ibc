@@ -24,12 +24,16 @@ extern crate serde;
 #[macro_use]
 extern crate ibc_derive;
 extern crate alloc;
-extern crate core;
 
 use core::fmt::Debug;
+use tendermint::{
+	crypto::{signature::Verifier, Sha256},
+	merkle::MerkleHash,
+};
 use tendermint_light_client_verifier::{
-	operations::{CommitValidator, VotingPowerCalculator},
+	operations::{ProdCommitValidator, ProvidedVotingPowerCalculator},
 	predicates::VerificationPredicates,
+	PredicateVerifier,
 };
 
 pub mod client_def;
@@ -37,7 +41,7 @@ pub mod client_message;
 pub mod client_state;
 pub mod consensus_state;
 pub mod error;
-pub mod merkle;
+mod merkle;
 #[cfg(any(test, feature = "mocks"))]
 pub mod mock;
 #[cfg(any(test, feature = "mocks"))]
@@ -46,9 +50,9 @@ mod query;
 /// Host functions that allow the light client verify cryptographic proofs in native.
 pub trait HostFunctionsProvider:
 	ics23::HostFunctionsProvider
-	+ VerificationPredicates
-	+ VotingPowerCalculator
-	+ CommitValidator
+	+ Sha256
+	+ MerkleHash
+	+ Verifier
 	+ Debug
 	+ Clone
 	+ Send
@@ -57,6 +61,18 @@ pub trait HostFunctionsProvider:
 	+ Eq
 {
 }
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ProdPredicates<H: HostFunctionsProvider>(core::marker::PhantomData<H>);
+
+impl<H: HostFunctionsProvider> VerificationPredicates for ProdPredicates<H> {
+	type Sha256 = H;
+}
+
+pub type ProdVotingPowerCalculator<H> = ProvidedVotingPowerCalculator<H>;
+
+pub type ProdVerifier<H> =
+	PredicateVerifier<ProdPredicates<H>, ProdVotingPowerCalculator<H>, ProdCommitValidator>;
 
 #[cfg(test)]
 mod tests {

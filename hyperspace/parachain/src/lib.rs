@@ -475,8 +475,13 @@ where
 			let heads_addr = polkadot::api::storage().paras().heads(
 				&polkadot::api::runtime_types::polkadot_parachain::primitives::Id(self.para_id),
 			);
-			let head_data =
-				api.at(block_hash).await?.fetch(&heads_addr).await?.ok_or_else(|| {
+			let head_data = api
+				.at(block_hash)
+				.await
+				.expect("Storage client")
+				.fetch(&heads_addr)
+				.await?
+				.ok_or_else(|| {
 					Error::Custom(format!(
 						"Couldn't find header for ParaId({}) at relay block {:?}",
 						self.para_id, block_hash
@@ -509,7 +514,8 @@ where
 			let timestamp_addr = api::storage().timestamp().now();
 			let unix_timestamp_millis = para_client_api
 				.at(block_hash)
-				.await?
+				.await
+				.expect("Storage client")
 				.fetch(&timestamp_addr)
 				.await?
 				.expect("Timestamp should exist");
@@ -561,7 +567,8 @@ where
 			);
 			let head_data = api
 				.at(Some(light_client_state.latest_relay_hash.into()))
-				.await?
+				.await
+				.expect("Storage client")
 				.fetch(&heads_addr)
 				.await?
 				.ok_or_else(|| {
@@ -597,7 +604,8 @@ where
 			let timestamp_addr = api::storage().timestamp().now();
 			let unix_timestamp_millis = para_client_api
 				.at(block_hash)
-				.await?
+				.await
+				.expect("Storage client")
 				.fetch(&timestamp_addr)
 				.await?
 				.expect("Timestamp should exist");

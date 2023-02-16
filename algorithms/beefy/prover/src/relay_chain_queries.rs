@@ -55,7 +55,7 @@ where
 		.storage()
 		.at(block_hash)
 		.await
-		.expect("Storage client should be available")
+		.expect("Storage client")
 		.fetch(&key)
 		.await?
 		.ok_or_else(|| Error::Custom(format!("No ParaIds on relay chain?")))?;
@@ -65,7 +65,7 @@ where
 			.storage()
 			.at(block_hash)
 			.await
-			.expect("Storage client should be available")
+			.expect("Storage client")
 			.fetch(&key)
 			.await?
 			.expect("ParaId is known")
@@ -111,7 +111,7 @@ where
 				.storage()
 				.at(Some(header.hash()))
 				.await
-				.expect("Storage client should be available")
+				.expect("Storage client")
 				.fetch(&key)
 				.await?
 			{

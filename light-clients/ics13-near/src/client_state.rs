@@ -99,7 +99,7 @@ impl<H: HostFunctionsTrait> ClientState for NearClientState<H> {
 		todo!()
 	}
 
-	fn encode_to_vec(&self) -> Vec<u8> {
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
 		todo!("implement encoding")
 	}
 }

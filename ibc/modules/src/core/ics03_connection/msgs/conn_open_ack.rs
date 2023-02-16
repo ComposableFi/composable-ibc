@@ -44,6 +44,7 @@ pub struct MsgConnectionOpenAck<C: ClientTypes> {
 	pub counterparty_connection_id: ConnectionId,
 	pub client_state: Option<C::AnyClientState>,
 	pub proofs: Proofs,
+	pub host_consensus_state_proof: Vec<u8>,
 	pub version: Version,
 	pub signer: Signer,
 }
@@ -135,6 +136,7 @@ where
 			)
 			.map_err(Error::invalid_proof)?,
 			signer: msg.signer.parse().map_err(Error::signer)?,
+			host_consensus_state_proof: msg.host_consensus_state_proof,
 		})
 	}
 }
@@ -161,6 +163,7 @@ where
 				.consensus_proof()
 				.map_or_else(|| None, |h| Some(h.height().into())),
 			version: Some(ics_msg.version.into()),
+			host_consensus_state_proof: ics_msg.host_consensus_state_proof,
 			signer: ics_msg.signer.to_string(),
 		}
 	}
@@ -199,6 +202,7 @@ pub mod test_util {
 			proof_client: get_dummy_proof(),
 			version: Some(Version::default().into()),
 			signer: get_dummy_bech32_account(),
+			host_consensus_state_proof: vec![],
 		}
 	}
 }

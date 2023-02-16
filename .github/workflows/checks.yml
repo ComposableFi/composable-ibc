@@ -11,15 +11,14 @@ on:
 
 jobs:
   checker:
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
     concurrency:
       group: lint-${{ github.ref }}
       cancel-in-progress: true
     container:
       image: paritytech/ci-linux:production
-    runs-on: ${{ matrix.os }}
+    runs-on:
+      - self-hosted
+      - x64-monster
     steps:
     - uses: actions/checkout@v2
 
@@ -33,7 +32,8 @@ jobs:
         version: '3.x'
 
     - name: check workspace
-      run: cargo check --workspace --locked
+      run: |
+        cargo check --workspace --locked
 
     - name: check no_std
       run: ./scripts/no_std_checks.sh

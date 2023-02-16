@@ -18,7 +18,6 @@ use crate::{
 		msgs::transfer::MsgTransfer, packet::PacketData, Coin, PrefixedCoin,
 	},
 	core::ics04_channel::{handler::send_packet::send_packet, packet::Packet},
-	events::ModuleEvent,
 	handler::{HandlerOutput, HandlerOutputBuilder},
 	prelude::*,
 };
@@ -68,8 +67,12 @@ where
 	}
 
 	let data = {
-		let data =
-			PacketData { token: coin, sender: msg.sender.clone(), receiver: msg.receiver.clone() };
+		let data = PacketData {
+			token: coin,
+			sender: msg.sender.clone(),
+			receiver: msg.receiver.clone(),
+			memo: msg.memo,
+		};
 		serde_json::to_vec(&data).expect("PacketData's infallible Serialize impl failed")
 	};
 
@@ -97,7 +100,7 @@ where
 	));
 
 	let transfer_event = TransferEvent { sender: msg.sender, receiver: msg.receiver };
-	output.emit(ModuleEvent::from(transfer_event).into());
+	output.emit(transfer_event.into());
 
 	Ok(())
 }

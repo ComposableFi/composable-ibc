@@ -18,6 +18,7 @@ use alloc::collections::{BTreeMap, BTreeSet};
 use anyhow::anyhow;
 use codec::{Decode, Encode};
 use finality_grandpa::voter_set::VoterSet;
+use frame_support::log;
 use sp_finality_grandpa::{
 	AuthorityId, AuthorityList, AuthoritySignature, ConsensusLog, Equivocation, RoundNumber,
 	ScheduledChange, SetId, GRANDPA_ENGINE_ID,
@@ -246,19 +247,11 @@ where
 	H: Encode,
 	N: Encode,
 {
-	let mut i = 0;
-	loop {
-		let buf = (message, round, set_id + i).encode();
+	log::trace!(target: "pallet_ibc", "Justification Message {:?}", (round, set_id));
+	let buf = (message, round, set_id).encode();
 
-		if !Host::ed25519_verify(signature.as_ref(), &buf, id.as_ref()) {
-			if i > 50 {
-				return Err(anyhow!("invalid signature for precommit in grandpa justification"))
-			} else {
-				i += 1;
-			}
-		} else {
-			break
-		}
+	if !Host::ed25519_verify(signature.as_ref(), &buf, id.as_ref()) {
+		Err(anyhow!("invalid signature for precommit in grandpa justification"))?
 	}
 
 	Ok(())

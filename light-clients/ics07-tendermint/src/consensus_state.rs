@@ -48,8 +48,8 @@ impl ibc::core::ics02_client::client_consensus::ConsensusState for ConsensusStat
 		self.timestamp.into()
 	}
 
-	fn encode_to_vec(&self) -> Vec<u8> {
-		self.encode_vec().expect("encode to vec cannot fail")
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
+		self.encode_vec()
 	}
 }
 

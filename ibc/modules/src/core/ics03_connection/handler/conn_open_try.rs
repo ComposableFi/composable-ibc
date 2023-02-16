@@ -111,7 +111,7 @@ pub(crate) fn process<Ctx: ReaderContext>(
 		ctx,
 		msg.proofs.height(),
 		&new_connection_end,
-		&client_state,
+		client_state,
 		msg.proofs.height(),
 		client_proof,
 	)?;
@@ -121,7 +121,7 @@ pub(crate) fn process<Ctx: ReaderContext>(
 		msg.proofs.height(),
 		&new_connection_end,
 		&consensus_proof,
-		&client_state,
+		msg.host_consensus_state_proof,
 	)?;
 
 	// Transition the connection end to the new state & pick a version.

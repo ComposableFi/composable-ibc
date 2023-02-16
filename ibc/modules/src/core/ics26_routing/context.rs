@@ -29,7 +29,7 @@ use crate::{
 		ics05_port::context::PortReader,
 		ics24_host::identifier::{ChannelId, ConnectionId, PortId},
 	},
-	events::ModuleEvent,
+	events::IbcEvent,
 	handler::HandlerOutputBuilder,
 	signer::Signer,
 };
@@ -101,7 +101,7 @@ impl AsRef<str> for ModuleId {
 /// Types implementing this trait are expected to implement `From<GenericAcknowledgement>`
 pub trait Acknowledgement: AsRef<[u8]> {}
 
-pub type ModuleOutputBuilder = HandlerOutputBuilder<(), ModuleEvent>;
+pub type ModuleOutputBuilder = HandlerOutputBuilder<(), IbcEvent>;
 
 pub trait Module: Send + Sync + AsAnyMut {
 	#[allow(clippy::too_many_arguments)]
@@ -180,22 +180,22 @@ pub trait Module: Send + Sync + AsAnyMut {
 		Ok(())
 	}
 
-	/// Modules should write acknowledgement to storage in this callback
+	/// Modules can choose to write acknowledgement to storage in this callback
 	fn on_recv_packet(
 		&self,
 		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
-		_packet: &Packet,
+		_packet: &mut Packet,
 		_relayer: &Signer,
-	) -> Result<(), Error> {
-		Ok(())
+	) -> Result<GenericAcknowledgement, Error> {
+		Ok(GenericAcknowledgement::from_bytes(Default::default()))
 	}
 
 	fn on_acknowledgement_packet(
 		&mut self,
 		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
-		_packet: &Packet,
+		_packet: &mut Packet,
 		_acknowledgement: &GenericAcknowledgement,
 		_relayer: &Signer,
 	) -> Result<(), Error> {
@@ -206,7 +206,7 @@ pub trait Module: Send + Sync + AsAnyMut {
 		&mut self,
 		_ctx: &dyn ModuleCallbackContext,
 		_output: &mut ModuleOutputBuilder,
-		_packet: &Packet,
+		_packet: &mut Packet,
 		_relayer: &Signer,
 	) -> Result<(), Error> {
 		Ok(())

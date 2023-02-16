@@ -118,7 +118,7 @@ pub trait ChannelReader {
 
 /// A context supplying all the necessary write-only dependencies (i.e., storage writing facility)
 /// for processing any `ChannelMsg`.
-pub trait ChannelKeeper {
+pub trait ChannelKeeper: ChannelReader {
 	fn store_channel_result(&mut self, result: ChannelResult) -> Result<(), Error> {
 		// The handler processed this channel & some modifications occurred, store the new end.
 		self.store_channel((result.port_id.clone(), result.channel_id), &result.channel_end)?;
@@ -171,9 +171,14 @@ pub trait ChannelKeeper {
 				RecvPacketResult::NoOp => unreachable!(),
 			},
 			PacketResult::WriteAck(res) => {
+				let ack_commitment = self.ack_commitment(res.ack.clone().into());
 				self.store_packet_acknowledgement(
 					(res.port_id.clone(), res.channel_id, res.seq),
-					res.ack_commitment,
+					ack_commitment,
+				)?;
+				self.store_raw_acknowledgement(
+					(res.port_id.clone(), res.channel_id, res.seq),
+					res.ack.into(),
 				)?;
 			},
 			PacketResult::Ack(res) => {
@@ -229,6 +234,12 @@ pub trait ChannelKeeper {
 		&mut self,
 		key: (PortId, ChannelId, Sequence),
 		ack_commitment: AcknowledgementCommitment,
+	) -> Result<(), Error>;
+
+	fn store_raw_acknowledgement(
+		&mut self,
+		key: (PortId, ChannelId, Sequence),
+		ack: Acknowledgement,
 	) -> Result<(), Error>;
 
 	fn delete_packet_acknowledgement(

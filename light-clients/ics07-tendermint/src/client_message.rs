@@ -12,29 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![allow(deprecated)]
+use ibc::prelude::*;
+
+use tendermint_proto::Protobuf;
+
+use ibc_proto::ibc::lightclients::tendermint::v1::Misbehaviour as RawMisbehaviour;
 
 use crate::error::Error;
-use alloc::{string::ToString, vec::Vec};
-use bytes::Buf;
+use ibc::{core::ics24_host::identifier::ClientId, Height};
+use ibc_proto::google::protobuf::Any;
+
 use core::cmp::Ordering;
-use ibc::{
-	core::{
-		ics02_client,
-		ics24_host::identifier::{ChainId, ClientId},
-	},
-	prelude::*,
-	timestamp::Timestamp,
-	Height,
-};
-use ibc_proto::{
-	google::protobuf::Any,
-	ibc::lightclients::tendermint::v1::{Header as RawHeader, Misbehaviour as RawMisbehaviour},
-};
+
+use bytes::Buf;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use tendermint::{block::signed_header::SignedHeader, validator::Set as ValidatorSet};
-use tendermint_proto::Protobuf;
+
+use alloc::{string::ToString, vec::Vec};
+
+use ibc_proto::ibc::lightclients::tendermint::v1::Header as RawHeader;
+
+use ibc::{
+	core::{ics02_client, ics24_host::identifier::ChainId},
+	timestamp::Timestamp,
+};
 
 pub const TENDERMINT_HEADER_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.Header";
 pub const TENDERMINT_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.Misbehaviour";
@@ -53,8 +55,8 @@ pub enum ClientMessage {
 }
 
 impl ics02_client::client_message::ClientMessage for ClientMessage {
-	fn encode_to_vec(&self) -> Vec<u8> {
-		self.encode_vec().expect("encode to vec cannot fail")
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
+		self.encode_vec()
 	}
 }
 
@@ -83,11 +85,13 @@ impl From<ClientMessage> for Any {
 	fn from(msg: ClientMessage) -> Self {
 		match msg {
 			ClientMessage::Header(header) => Any {
-				value: header.encode_vec().expect("encode header"),
+				value: header.encode_vec().expect("failed to encode ClientMessage.header"),
 				type_url: TENDERMINT_HEADER_TYPE_URL.to_string(),
 			},
 			ClientMessage::Misbehaviour(misbheaviour) => Any {
-				value: misbheaviour.encode_vec().expect("encode misbehaviour"),
+				value: misbheaviour
+					.encode_vec()
+					.expect("failed to encode ClientMessage.misbehaviour"),
 				type_url: TENDERMINT_MISBEHAVIOUR_TYPE_URL.to_string(),
 			},
 		}
@@ -139,8 +143,7 @@ impl core::fmt::Display for Misbehaviour {
 }
 
 /// Tendermint consensus header
-#[derive(Clone, PartialEq, Eq, Deserialize, Serialize, Debug)]
-// #[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Header {
 	pub signed_header: SignedHeader, // contains the commitment root
 	pub validator_set: ValidatorSet, // the validator set that signed Header
@@ -150,12 +153,11 @@ pub struct Header {
 	pub trusted_validator_set: ValidatorSet, // the last trusted validator set at trusted height
 }
 
-// #[cfg(not(feature = "std"))]
-// impl core::fmt::Debug for Header {
-// 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
-// 		write!(f, " Header {{...}}")
-// 	}
-// }
+impl core::fmt::Debug for Header {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+		write!(f, " Header {{...}}")
+	}
+}
 
 impl Header {
 	pub fn height(&self) -> Height {

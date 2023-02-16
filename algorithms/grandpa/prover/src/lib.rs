@@ -31,7 +31,7 @@ use primitives::{
 	ParachainHeadersWithFinalityProof,
 };
 use serde::{Deserialize, Serialize};
-use sp_core::{hexdisplay::AsBytesRef, H256};
+use sp_core::H256;
 use sp_finality_grandpa::{AuthorityId, AuthoritySignature};
 use sp_runtime::traits::{One, Zero};
 use std::{
@@ -120,7 +120,7 @@ where
 				.storage()
 				.at(Some(latest_relay_hash))
 				.await
-				.expect("Storage client should be available")
+				.expect("Storage client")
 				.fetch(&key)
 				.await
 				.unwrap()
@@ -185,7 +185,7 @@ where
 			.storage()
 			.at(Some(latest_finalized_hash))
 			.await
-			.expect("storage client should be available")
+			.expect("Storage client")
 			.fetch(&key)
 			.await?
 			.ok_or_else(|| anyhow!("parachain header not found for para id: {}", self.para_id))?;
@@ -285,7 +285,7 @@ where
 
 		// we are interested only in the blocks where our parachain header changes.
 		let para_storage_key = parachain_header_storage_key(self.para_id);
-		let keys = vec![para_storage_key.as_bytes_ref()];
+		let keys = vec![para_storage_key.as_ref()];
 		let mut parachain_headers_with_proof = BTreeMap::<H256, ParachainHeaderProofs>::default();
 
 		let change_set = self
@@ -307,7 +307,8 @@ where
 				self.relay_client
 					.storage()
 					.at(Some(header.hash()))
-					.await?
+					.await
+					.expect("Storage client")
 					.fetch(&key)
 					.await?
 					.expect("Header exists in its own changeset; qed")
@@ -357,7 +358,7 @@ where
 			.storage()
 			.at(block_hash)
 			.await
-			.expect("storage client to be available")
+			.expect("Storage client")
 			.fetch(&epoch_addr)
 			.await?
 			.ok_or_else(|| anyhow!("Failed to fetch epoch information"))?;

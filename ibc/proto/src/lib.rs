@@ -136,6 +136,11 @@ pub mod cosmos {
 			include_proto!("cosmos.gov.v1beta1.rs");
 		}
 	}
+	pub mod ics23 {
+		pub mod v1 {
+			include_proto!("cosmos.ics23.v1.rs");
+		}
+	}
 }
 
 pub mod ibc {
@@ -198,17 +203,12 @@ pub mod ibc {
 	pub mod lightclients {
 		pub mod solomachine {
 			pub mod v1 {
-				include_proto!("ibc.lightclients.solomachine.v1.rs");
+				include_proto!("ibc.lightclients.solomachine.v3.rs");
 			}
 		}
 		pub mod tendermint {
 			pub mod v1 {
 				include_proto!("ibc.lightclients.tendermint.v1.rs");
-			}
-		}
-		pub mod wasm {
-			pub mod v1 {
-				include_proto!("ibc.lightclients.wasm.v1.rs");
 			}
 		}
 	}
@@ -217,11 +217,7 @@ pub mod ibc {
 	}
 }
 
-pub mod ics23 {
-	include_proto!("ics23.rs");
-}
-
-pub mod base64 {
+pub(crate) mod base64 {
 	use alloc::{string::String, vec::Vec};
 
 	use serde::{Deserialize, Deserializer, Serialize, Serializer};

@@ -14,7 +14,7 @@
 
 #[cfg(any(feature = "testing", test))]
 use crate::TestProvider;
-use crate::{mock::LocalClientTypes, Chain};
+use crate::{mock::LocalClientTypes, Chain, TestProvider};
 use futures::{future, StreamExt};
 use ibc::{
 	core::{
