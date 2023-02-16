@@ -120,7 +120,7 @@ pub fn try_from_tx(event: &tendermint::abci::Event) -> Option<IbcEvent> {
 				})
 				.ok()
 		},
-		err => None,
+		_err => None,
 	}
 }
 
