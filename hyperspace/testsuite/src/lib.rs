@@ -23,7 +23,7 @@ use hyperspace_primitives::{
 };
 use ibc::{
 	applications::transfer::{
-		events::Event::Transfer, msgs::transfer::MsgTransfer, Amount, PrefixedCoin, VERSION,
+		msgs::transfer::MsgTransfer, Amount, PrefixedCoin, VERSION,
 	},
 	core::{
 		ics04_channel::{
