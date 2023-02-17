@@ -6,7 +6,6 @@ use ibc::{
 		acknowledgement::Acknowledgement as Ics20Ack, context::BankKeeper,
 		is_receiver_chain_source, packet::PacketData, TracePrefix,
 	},
-	bigint::U256,
 	core::{
 		ics04_channel::{
 			channel::{Counterparty, Order},
@@ -25,6 +24,9 @@ use sp_core::crypto::AccountId32;
 use sp_runtime::traits::Get;
 
 pub use pallet::*;
+
+use self::fee_charger::{ChargeFeeOutput, FeeCharger};
+mod fee_charger;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -57,7 +59,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		IbcTransferFeeCollected { amount: T::Balance },
+		IbcTransferFeeCollected { amount: T::Balance, denom: alloc::string::String },
 	}
 
 	#[pallet::call]
@@ -214,22 +216,17 @@ where
 			.map_err(|e| {
 				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
 			})?;
-		let percent = ServiceCharge::<T>::get().unwrap_or(T::ServiceCharge::get());
 		// Send full amount to receiver using the default ics20 logic
 		let ack = self.inner.on_recv_packet(&mut ctx, output, packet, relayer)?;
 		// We only take the fee charge if the acknowledgement is not an error
 		if ack.as_ref() == Ics20Ack::success().to_string().as_bytes() {
-			// We have ensured that token amounts larger than the max value for a u128 are rejected
-			// in the ics20 on_recv_packet callback so we can multiply safely.
-			// Percent does Non-Overflowing multiplication so this is infallible
-			let fee = percent * packet_data.token.amount.as_u256().low_u128();
 			let receiver =
 				<T as crate::Config>::AccountIdConversion::try_from(packet_data.receiver.clone())
 					.map_err(|_| {
 					Ics04Error::implementation_specific("Failed to receiver account".to_string())
 				})?;
 			let pallet_account = Pallet::<T>::account_id();
-			let mut prefixed_coin = if is_receiver_chain_source(
+			let prefixed_coin = if is_receiver_chain_source(
 				packet.source_port.clone(),
 				packet.source_channel,
 				&packet_data.token.denom,
@@ -245,19 +242,27 @@ where
 				c.denom.add_trace_prefix(prefix);
 				c
 			};
-			prefixed_coin.amount = fee.into();
+
+			let percent = ServiceCharge::<T>::get().unwrap_or(T::ServiceCharge::get());
+
+			let fee_charger = FeeCharger::<T::Pablo>::new(percent);
+			let ChargeFeeOutput { prefixed_coin_fee, remaining_amount } =
+				fee_charger.charge_fee(&packet_data.token);
+
 			// Now we proceed to send the service fee from the receiver's account to the pallet
 			// account
-			ctx.send_coins(&receiver, &pallet_account, &prefixed_coin)
+			ctx.send_coins(&receiver, &pallet_account, &prefixed_coin_fee)
 				.map_err(|e| Ics04Error::app_module(e.to_string()))?;
 			// We modify the packet data to remove the fee so any other middleware has access to the
 			// correct amount deposited in the receiver's account
-			packet_data.token.amount =
-				(packet_data.token.amount.as_u256() - U256::from(fee)).into();
+			packet_data.token.amount = remaining_amount;
 			packet.data = serde_json::to_vec(&packet_data).map_err(|_| {
 				Ics04Error::implementation_specific("Failed to receiver account".to_string())
 			})?;
-			Pallet::<T>::deposit_event(Event::<T>::IbcTransferFeeCollected { amount: fee.into() })
+			Pallet::<T>::deposit_event(Event::<T>::IbcTransferFeeCollected {
+				amount: prefixed_coin_fee.amount.as_u256().as_u128().into(),
+				denom: prefixed_coin_fee.denom.base_denom.as_str().to_string(),
+			})
 		}
 		Ok(ack)
 	}
