@@ -26,7 +26,6 @@ use ibc::{
 	core::{ics02_client::client_state::ClientType, ics24_host::identifier::ChainId},
 	Height,
 };
-use ibc_proto::google::protobuf::Any;
 use light_client_common::RelayChain;
 use serde::{Deserialize, Serialize};
 use sp_core::{ed25519::Public, H256};
@@ -92,13 +91,6 @@ impl<H: Clone> ClientState<H> {
 			Some(frozen_height) if frozen_height <= height =>
 				Err(Error::Custom(format!("Client has been frozen at height {frozen_height}"))),
 			_ => Ok(()),
-		}
-	}
-
-	pub fn to_any(&self) -> Any {
-		Any {
-			type_url: GRANDPA_CLIENT_STATE_TYPE_URL.to_string(),
-			value: self.encode_vec().unwrap(),
 		}
 	}
 }
@@ -189,8 +181,8 @@ where
 		self.expired(elapsed)
 	}
 
-	fn encode_to_vec(&self) -> Vec<u8> {
-		self.encode_vec().expect("Encoding client state failed")
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
+		self.encode_vec()
 	}
 }
 

@@ -5,7 +5,6 @@ use alloc::{
 	vec::Vec,
 };
 use core::{fmt::Debug, marker::PhantomData, time::Duration};
-use cosmos::ics23::ProofSpec;
 use ibc::{
 	core::{
 		ics02_client::{
@@ -17,7 +16,6 @@ use ibc::{
 	protobuf::Protobuf,
 	Height,
 };
-
 use ibc_proto::{
 	google::protobuf::Any, ibc::lightclients::wasm::v1::ClientState as RawClientState,
 	ics23::ProofSpec,

@@ -25,8 +25,6 @@ flex-error = { version = "0.4.4", default-features = false }
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "47e28b50d20138234f7a8b4254da71469f401714", default-features = false }
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "47e28b50d20138234f7a8b4254da71469f401714", default-features = false }
 tendermint-light-client-verifier = { git = "https://github.com/informalsystems/tendermint-rs", rev = "47e28b50d20138234f7a8b4254da71469f401714", default-features = false }
-log = { version = "0.4.0", default-features = false }
-hex = { version = "0.4.3", default-features = false }
 
 [dev-dependencies]
 ibc = { path = "../../ibc/modules", features = ["mocks"] }

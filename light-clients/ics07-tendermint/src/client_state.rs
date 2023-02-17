@@ -289,8 +289,8 @@ where
 		self.expired(elapsed)
 	}
 
-	fn encode_to_vec(&self) -> Vec<u8> {
-		self.encode_vec().expect("encoding client state failed")
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
+		self.encode_vec()
 	}
 }
 
@@ -361,7 +361,7 @@ mod tests {
 	use ibc::{prelude::*, Height};
 	use test_log::test;
 
-	use ibc_proto::ics23::ProofSpec as Ics23ProofSpec;
+	use ibc_proto::cosmos::ics23::v1::ProofSpec as Ics23ProofSpec;
 	use tendermint_rpc::endpoint::abci_query::AbciQuery;
 
 	use crate::{client_state::ClientState, mock::Crypto};

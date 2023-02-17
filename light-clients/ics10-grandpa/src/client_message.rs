@@ -24,15 +24,12 @@ use alloc::{collections::BTreeMap, vec::Vec};
 use anyhow::anyhow;
 use codec::{Decode, Encode};
 use grandpa_client_primitives::{FinalityProof, ParachainHeaderProofs};
-use ibc::{core::ics24_host::identifier::ClientId, Height};
 use sp_core::H256;
 use sp_runtime::traits::BlakeTwo256;
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA header
 pub const GRANDPA_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.ClientMessage";
-pub const GRANDPA_HEADER_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.Header";
-pub const GRANDPA_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.Misbehaviour";
 
 /// Relay chain substrate header type
 pub type RelayChainHeader = sp_runtime::generic::Header<u32, BlakeTwo256>;
@@ -49,16 +46,6 @@ pub struct Header {
 	pub parachain_headers: BTreeMap<H256, ParachainHeaderProofs>,
 }
 
-impl Header {
-	pub fn height(&self) -> Height {
-		// FIXME: proper grandpa header height calculation
-		Height {
-			revision_height: self.finality_proof.unknown_headers.last().unwrap().number.into(),
-			revision_number: 2000,
-		}
-	}
-}
-
 /// Misbehaviour type for GRANDPA. If both first and second proofs are valid
 /// (that is, form a valid canonical chain of blocks where on of the chain is a fork of
 /// the main one)
@@ -68,13 +55,6 @@ pub struct Misbehaviour {
 	pub first_finality_proof: FinalityProof<RelayChainHeader>,
 	/// second proof of misbehaviour
 	pub second_finality_proof: FinalityProof<RelayChainHeader>,
-}
-
-impl Misbehaviour {
-	pub fn client_id(&self) -> ClientId {
-		// FIXME: proper grandpa client id calculation
-		ClientId::new("10-grandpa", 0).unwrap()
-	}
 }
 
 /// [`ClientMessage`] for Ics10-GRANDPA
@@ -87,113 +67,8 @@ pub enum ClientMessage {
 }
 
 impl ibc::core::ics02_client::client_message::ClientMessage for ClientMessage {
-	fn encode_to_vec(&self) -> Vec<u8> {
-		self.encode_vec().expect("encode to vec cannot fail")
-	}
-}
-
-impl Protobuf<RawHeader> for Header {}
-
-impl TryFrom<RawHeader> for Header {
-	type Error = Error;
-
-	fn try_from(raw_header: RawHeader) -> Result<Self, Self::Error> {
-		let finality_proof = raw_header
-			.finality_proof
-			.ok_or_else(|| anyhow!("Grandpa finality proof is required!"))?;
-		let block = if finality_proof.block.len() == 32 {
-			sp_core::H256::from_slice(&*finality_proof.block)
-		} else {
-			Err(anyhow!("Invalid hash type with length: {}", finality_proof.block.len()))?
-		};
-
-		let parachain_headers = raw_header
-			.parachain_headers
-			.into_iter()
-			.map(|header| {
-				let block = if header.relay_hash.len() == 32 {
-					H256::from_slice(&*header.relay_hash)
-				} else {
-					Err(anyhow!("Invalid hash type with length: {}", header.relay_hash.len()))?
-				};
-				let proto::ParachainHeaderProofs { state_proof, extrinsic_proof, extrinsic } =
-					header
-						.parachain_header
-						.ok_or_else(|| anyhow!("Parachain header is required!"))?;
-				let parachain_header_proofs =
-					ParachainHeaderProofs { state_proof, extrinsic, extrinsic_proof };
-				Ok((block, parachain_header_proofs))
-			})
-			.collect::<Result<_, Error>>()?;
-
-		let unknown_headers = finality_proof
-			.unknown_headers
-			.into_iter()
-			.map(|h| {
-				let header = codec::Decode::decode(&mut &h[..])?;
-				Ok(header)
-			})
-			.collect::<Result<_, Error>>()?;
-
-		Ok(Header {
-			finality_proof: FinalityProof {
-				block,
-				justification: finality_proof.justification,
-				unknown_headers,
-			},
-			parachain_headers,
-		})
-	}
-}
-
-impl From<Header> for RawHeader {
-	fn from(header: Header) -> Self {
-		let parachain_headers = header
-			.parachain_headers
-			.into_iter()
-			.map(|(hash, parachain_header_proofs)| proto::ParachainHeaderWithRelayHash {
-				relay_hash: hash.as_bytes().to_vec(),
-				parachain_header: Some(proto::ParachainHeaderProofs {
-					state_proof: parachain_header_proofs.state_proof,
-					extrinsic: parachain_header_proofs.extrinsic,
-					extrinsic_proof: parachain_header_proofs.extrinsic_proof,
-				}),
-			})
-			.collect();
-		let finality_proof = proto::FinalityProof {
-			block: header.finality_proof.block.as_bytes().to_vec(),
-			justification: header.finality_proof.justification,
-			unknown_headers: header
-				.finality_proof
-				.unknown_headers
-				.into_iter()
-				.map(|h| h.encode())
-				.collect(),
-		};
-
-		RawHeader { finality_proof: Some(finality_proof), parachain_headers }
-	}
-}
-
-impl Protobuf<RawMisbehaviour> for Misbehaviour {}
-
-impl TryFrom<RawMisbehaviour> for Misbehaviour {
-	type Error = Error;
-
-	fn try_from(value: RawMisbehaviour) -> Result<Self, Self::Error> {
-		Ok(Misbehaviour {
-			first_finality_proof: Decode::decode(&mut &*value.first_finality_proof)?,
-			second_finality_proof: Decode::decode(&mut &*value.second_finality_proof)?,
-		})
-	}
-}
-
-impl From<Misbehaviour> for RawMisbehaviour {
-	fn from(value: Misbehaviour) -> Self {
-		RawMisbehaviour {
-			first_finality_proof: value.first_finality_proof.encode(),
-			second_finality_proof: value.second_finality_proof.encode(),
-		}
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
+		self.encode_vec()
 	}
 }
 
@@ -207,10 +82,68 @@ impl TryFrom<RawClientMessage> for ClientMessage {
 			.message
 			.ok_or_else(|| anyhow!("Must supply either Header or Misbehaviour type!"))?
 		{
-			client_message::Message::Header(raw_header) =>
-				ClientMessage::Header(Header::try_from(raw_header)?),
+			client_message::Message::Header(raw_header) => {
+				let finality_proof = raw_header
+					.finality_proof
+					.ok_or_else(|| anyhow!("Grandpa finality proof is required!"))?;
+				let block = if finality_proof.block.len() == 32 {
+					sp_core::H256::from_slice(&*finality_proof.block)
+				} else {
+					Err(anyhow!("Invalid hash type with length: {}", finality_proof.block.len()))?
+				};
+
+				let parachain_headers = raw_header
+					.parachain_headers
+					.into_iter()
+					.map(|header| {
+						let block = if header.relay_hash.len() == 32 {
+							H256::from_slice(&*header.relay_hash)
+						} else {
+							Err(anyhow!(
+								"Invalid hash type with length: {}",
+								header.relay_hash.len()
+							))?
+						};
+						let proto::ParachainHeaderProofs {
+							state_proof,
+							extrinsic_proof,
+							extrinsic,
+						} = header
+							.parachain_header
+							.ok_or_else(|| anyhow!("Parachain header is required!"))?;
+						let parachain_header_proofs =
+							ParachainHeaderProofs { state_proof, extrinsic, extrinsic_proof };
+						Ok((block, parachain_header_proofs))
+					})
+					.collect::<Result<_, Error>>()?;
+
+				let unknown_headers = finality_proof
+					.unknown_headers
+					.into_iter()
+					.map(|h| {
+						let header = codec::Decode::decode(&mut &h[..])?;
+						Ok(header)
+					})
+					.collect::<Result<_, Error>>()?;
+
+				ClientMessage::Header(Header {
+					finality_proof: FinalityProof {
+						block,
+						justification: finality_proof.justification,
+						unknown_headers,
+					},
+					parachain_headers,
+				})
+			},
 			client_message::Message::Misbehaviour(raw_misbehaviour) =>
-				ClientMessage::Misbehaviour(Misbehaviour::try_from(raw_misbehaviour)?),
+				ClientMessage::Misbehaviour(Misbehaviour {
+					first_finality_proof: Decode::decode(
+						&mut &*raw_misbehaviour.first_finality_proof,
+					)?,
+					second_finality_proof: Decode::decode(
+						&mut &*raw_misbehaviour.second_finality_proof,
+					)?,
+				}),
 		};
 
 		Ok(message)
@@ -220,10 +153,42 @@ impl TryFrom<RawClientMessage> for ClientMessage {
 impl From<ClientMessage> for RawClientMessage {
 	fn from(client_message: ClientMessage) -> Self {
 		match client_message {
-			ClientMessage::Header(header) =>
-				RawClientMessage { message: Some(client_message::Message::Header(header.into())) },
+			ClientMessage::Header(header) => {
+				let parachain_headers = header
+					.parachain_headers
+					.into_iter()
+					.map(|(hash, parachain_header_proofs)| proto::ParachainHeaderWithRelayHash {
+						relay_hash: hash.as_bytes().to_vec(),
+						parachain_header: Some(proto::ParachainHeaderProofs {
+							state_proof: parachain_header_proofs.state_proof,
+							extrinsic: parachain_header_proofs.extrinsic,
+							extrinsic_proof: parachain_header_proofs.extrinsic_proof,
+						}),
+					})
+					.collect();
+				let finality_proof = proto::FinalityProof {
+					block: header.finality_proof.block.as_bytes().to_vec(),
+					justification: header.finality_proof.justification,
+					unknown_headers: header
+						.finality_proof
+						.unknown_headers
+						.into_iter()
+						.map(|h| h.encode())
+						.collect(),
+				};
+
+				RawClientMessage {
+					message: Some(client_message::Message::Header(RawHeader {
+						finality_proof: Some(finality_proof),
+						parachain_headers,
+					})),
+				}
+			},
 			ClientMessage::Misbehaviour(misbehaviior) => RawClientMessage {
-				message: Some(client_message::Message::Misbehaviour(misbehaviior.into())),
+				message: Some(client_message::Message::Misbehaviour(RawMisbehaviour {
+					first_finality_proof: misbehaviior.first_finality_proof.encode(),
+					second_finality_proof: misbehaviior.second_finality_proof.encode(),
+				})),
 			},
 		}
 	}
