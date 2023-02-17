@@ -1,6 +1,6 @@
 [package]
 name = "ics11-beefy"
-version = "0.1.0"
+version = "0.15.0"
 edition = "2021"
 authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <wizdave97@gmail.com>"]
 
@@ -19,7 +19,7 @@ std = [
     "beefy-light-client-primitives/std",
     "light-client-common/std",
     "pallet-mmr-primitives/std",
-    "beefy-primitives/std",
+    "sp-beefy/std",
     "sp-runtime/std",
     "sp-storage/std",
     "sp-trie/std",
@@ -47,7 +47,7 @@ light-client-common = { path = "../common", default-features = false }
 
 # substrate deps
 pallet-mmr-primitives = { package = "sp-mmr-primitives", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-beefy-primitives = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, package = "sp-beefy" }
+sp-beefy = "14.0.0"
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }

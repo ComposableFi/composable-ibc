@@ -5,9 +5,7 @@ use ibc::{
 	protobuf::Protobuf,
 	signer::{Signer, SignerError},
 };
-use ibc_proto::{
-	google::protobuf::Any, ibc::lightclients::wasm::v1::MsgPushNewWasmCode as RawMsgPushNewWasmCode,
-};
+use ibc_proto::{google::protobuf::Any, ibc::lightclients};
 #[cfg(feature = "cosmwasm")]
 use serde::{Deserializer, Serializer};
 

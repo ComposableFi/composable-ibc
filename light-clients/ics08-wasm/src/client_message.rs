@@ -10,10 +10,7 @@ use ibc::{
 	protobuf::Protobuf,
 	Height,
 };
-use ibc_proto::{
-	google::protobuf::Any,
-	ibc::lightclients::wasm::v1::{Header as RawHeader, Misbehaviour as RawMisbehaviour},
-};
+use ibc_proto::google::protobuf::Any;
 use prost::Message;
 
 pub const WASM_HEADER_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.Header";

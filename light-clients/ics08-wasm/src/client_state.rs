@@ -16,10 +16,7 @@ use ibc::{
 	protobuf::Protobuf,
 	Height,
 };
-use ibc_proto::{
-	google::protobuf::Any, ibc::lightclients::wasm::v1::ClientState as RawClientState,
-	ics23::ProofSpec,
-};
+use ibc_proto::google::protobuf::Any;
 use prost::Message;
 
 pub const WASM_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.ClientState";

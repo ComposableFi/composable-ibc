@@ -13,9 +13,7 @@ use ibc::{
 	protobuf::Protobuf,
 	timestamp::Timestamp,
 };
-use ibc_proto::{
-	google::protobuf::Any, ibc::lightclients::wasm::v1::ConsensusState as RawConsensusState,
-};
+use ibc_proto::google::protobuf::Any;
 use prost::Message;
 
 pub const WASM_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.ConsensusState";
@@ -64,7 +62,10 @@ where
 	AnyConsensusState: TryFrom<Any> + IbcConsensusState,
 {
 	pub fn to_any(&self) -> Any {
-		Any { type_url: WASM_CONSENSUS_STATE_TYPE_URL.to_string(), value: self.encode_to_vec() }
+		Any {
+			type_url: WASM_CONSENSUS_STATE_TYPE_URL.to_string(),
+			value: self.encode_to_vec().unwrap_or(default),
+		}
 	}
 }
 
