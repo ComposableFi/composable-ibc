@@ -1220,7 +1220,7 @@ name = "codegen"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "clap 3.2.23",
+ "clap 4.1.4",
  "frame-metadata",
  "hex",
  "jsonrpsee",
@@ -3840,7 +3840,7 @@ name = "hyperspace"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "clap 3.2.23",
+ "clap 4.1.4",
  "hyperspace-core",
  "tokio",
  "toml 0.7.2",
@@ -3852,7 +3852,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "clap 3.2.23",
+ "clap 4.1.4",
  "derive_more",
  "env_logger 0.10.0",
  "frame-support",
@@ -3917,7 +3917,7 @@ dependencies = [
  "beefy-light-client",
  "beefy-light-client-primitives",
  "beefy-prover",
- "clap 3.2.23",
+ "clap 4.1.4",
  "codegen",
  "derive_more",
  "finality-grandpa",
