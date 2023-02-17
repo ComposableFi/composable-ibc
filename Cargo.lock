@@ -3428,7 +3428,7 @@ name = "grandpa-light-client-verifier"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "env_logger 0.9.3",
+ "env_logger 0.10.0",
  "finality-grandpa",
  "frame-support",
  "futures",
@@ -3854,7 +3854,7 @@ dependencies = [
  "async-trait",
  "clap 3.2.23",
  "derive_more",
- "env_logger 0.9.3",
+ "env_logger 0.10.0",
  "frame-support",
  "futures",
  "hex",
@@ -4053,7 +4053,7 @@ name = "ibc"
 version = "0.15.0"
 dependencies = [
  "derive_more",
- "env_logger 0.9.3",
+ "env_logger 0.10.0",
  "flex-error",
  "ibc-derive",
  "ibc-proto",
@@ -4184,7 +4184,7 @@ name = "ics07-tendermint"
 version = "0.1.0"
 dependencies = [
  "bytes",
- "env_logger 0.9.3",
+ "env_logger 0.10.0",
  "flex-error",
  "ibc",
  "ibc-derive",
@@ -4215,7 +4215,7 @@ dependencies = [
  "anyhow",
  "beefy-prover",
  "derive_more",
- "env_logger 0.9.3",
+ "env_logger 0.10.0",
  "finality-grandpa",
  "frame-support",
  "futures",
@@ -4289,7 +4289,7 @@ dependencies = [
  "borsh",
  "bytes",
  "derive_more",
- "env_logger 0.9.3",
+ "env_logger 0.10.0",
  "flex-error",
  "ibc",
  "ibc-derive",
@@ -14333,7 +14333,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.6",
  "rand 0.8.5",
  "static_assertions",

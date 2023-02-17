@@ -30,7 +30,7 @@ subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a41
 futures = "0.3.24"
 hex = "0.4.3"
 serde = "1.0.144"
-env_logger = "0.9.0"
+env_logger = "0.10.0"
 log = "0.4.17"
 polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.36" }
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
