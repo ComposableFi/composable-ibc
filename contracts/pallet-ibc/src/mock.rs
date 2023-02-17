@@ -1,4 +1,5 @@
 use crate::{self as pallet_ibc, routing::ModuleRouter};
+use composable_traits::dex::Amm;
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::ConstU32,
@@ -21,7 +22,7 @@ use sp_keystore::{testing::KeyStore, KeystoreExt};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
-	MultiSignature, Percent,
+	AccountId32, MultiSignature, Percent,
 };
 use std::sync::Arc;
 use system::EnsureRoot;
@@ -204,6 +205,8 @@ impl crate::ics20_fee::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ServiceCharge = ServiceCharge;
 	type PalletId = PalletId;
+	type PoolId = u128;
+	type Pablo = Pablo;
 }
 
 #[derive(
@@ -328,5 +331,125 @@ impl ModuleRouter for Router {
 				.ok(),
 			_ => None,
 		}
+	}
+}
+
+pub struct Pablo {}
+
+impl Amm for Pablo {
+	type AssetId = u128;
+
+	type Balance = Balance;
+
+	type AccountId = AccountId32;
+
+	type PoolId = u128;
+
+	fn pool_exists(pool_id: Self::PoolId) -> bool {
+		false
+	}
+
+	fn assets(
+		pool_id: Self::PoolId,
+	) -> Result<
+		alloc::collections::BTreeMap<Self::AssetId, sp_runtime::Permill>,
+		sp_runtime::DispatchError,
+	> {
+		todo!()
+	}
+
+	fn lp_token(pool_id: Self::PoolId) -> Result<Self::AssetId, sp_runtime::DispatchError> {
+		todo!()
+	}
+
+	fn redeemable_assets_for_lp_tokens(
+		pool_id: Self::PoolId,
+		lp_amount: Self::Balance,
+	) -> Result<alloc::collections::BTreeMap<Self::AssetId, Self::Balance>, sp_runtime::DispatchError>
+	where
+		Self::AssetId: sp_std::cmp::Ord,
+	{
+		todo!()
+	}
+
+	fn simulate_add_liquidity(
+		who: &Self::AccountId,
+		pool_id: Self::PoolId,
+		amounts: alloc::collections::BTreeMap<Self::AssetId, Self::Balance>,
+	) -> Result<Self::Balance, sp_runtime::DispatchError>
+	where
+		Self::AssetId: sp_std::cmp::Ord,
+	{
+		todo!()
+	}
+
+	fn simulate_remove_liquidity(
+		who: &Self::AccountId,
+		pool_id: Self::PoolId,
+		lp_amount: Self::Balance,
+		min_amounts: alloc::collections::BTreeMap<Self::AssetId, Self::Balance>,
+	) -> Result<alloc::collections::BTreeMap<Self::AssetId, Self::Balance>, sp_runtime::DispatchError>
+	where
+		Self::AssetId: sp_std::cmp::Ord,
+	{
+		todo!()
+	}
+
+	fn spot_price(
+		pool_id: Self::PoolId,
+		base_asset: composable_traits::dex::AssetAmount<Self::AssetId, Self::Balance>,
+		quote_asset_id: Self::AssetId,
+		calculate_with_fees: bool,
+	) -> Result<
+		composable_traits::dex::SwapResult<Self::AssetId, Self::Balance>,
+		sp_runtime::DispatchError,
+	> {
+		todo!()
+	}
+
+	fn do_buy(
+		who: &Self::AccountId,
+		pool_id: Self::PoolId,
+		in_asset_id: Self::AssetId,
+		out_asset: composable_traits::dex::AssetAmount<Self::AssetId, Self::Balance>,
+		keep_alive: bool,
+	) -> Result<
+		composable_traits::dex::SwapResult<Self::AssetId, Self::Balance>,
+		sp_runtime::DispatchError,
+	> {
+		todo!()
+	}
+
+	fn add_liquidity(
+		who: &Self::AccountId,
+		pool_id: Self::PoolId,
+		assets: alloc::collections::BTreeMap<Self::AssetId, Self::Balance>,
+		min_mint_amount: Self::Balance,
+		keep_alive: bool,
+	) -> Result<Self::Balance, sp_runtime::DispatchError> {
+		todo!()
+	}
+
+	fn remove_liquidity(
+		who: &Self::AccountId,
+		pool_id: Self::PoolId,
+		lp_amount: Self::Balance,
+		min_receive: alloc::collections::BTreeMap<Self::AssetId, Self::Balance>,
+	) -> Result<alloc::collections::BTreeMap<Self::AssetId, Self::Balance>, sp_runtime::DispatchError>
+	{
+		todo!()
+	}
+
+	fn do_swap(
+		who: &Self::AccountId,
+		pool_id: Self::PoolId,
+		in_asset: composable_traits::dex::AssetAmount<Self::AssetId, Self::Balance>,
+		min_receive: composable_traits::dex::AssetAmount<Self::AssetId, Self::Balance>,
+		keep_alive: bool,
+	) -> Result<
+		composable_traits::dex::SwapResult<Self::AssetId, Self::Balance>,
+		sp_runtime::DispatchError,
+	> {
+		todo!()
 	}
 }

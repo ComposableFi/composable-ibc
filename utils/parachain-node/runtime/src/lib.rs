@@ -722,8 +722,6 @@ impl pallet_ibc::Config for Runtime {
 	type Whitelist = AllowAll;
 	type MemoMessage = MemoMessage;
 	type HandleMemo = ();
-	type PoolId;
-	type Pablo; // TODO: vim - can I get help to construct an impl of this? same for mock
 }
 
 pub struct AllowAll {}

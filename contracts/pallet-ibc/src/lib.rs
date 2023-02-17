@@ -29,8 +29,7 @@
 //! Implements the ibc protocol for substrate runtimes.
 extern crate alloc;
 
-use codec::{Decode, Encode, FullCodec};
-use composable_traits::dex::Amm;
+use codec::{Decode, Encode};
 use core::fmt::Debug;
 use cumulus_primitives_core::ParaId;
 use frame_system::ensure_signed;
@@ -43,10 +42,7 @@ use scale_info::{
 	},
 	TypeInfo,
 };
-use sp_runtime::{
-	traits::{CheckedAdd, One, Zero},
-	Either, RuntimeDebug,
-};
+use sp_runtime::{Either, RuntimeDebug};
 use sp_std::{marker::PhantomData, prelude::*, str::FromStr};
 
 mod channel;
@@ -255,25 +251,6 @@ pub mod pallet {
 		#[pallet::constant]
 		type SpamProtectionDeposit: Get<Self::Balance>;
 
-		/// Flat fee
-		type PoolId: FullCodec
-			+ MaxEncodedLen
-			+ Default
-			+ TypeInfo
-			+ Eq
-			+ PartialEq
-			+ Ord
-			+ Copy
-			+ Debug
-			+ CheckedAdd
-			+ Zero
-			+ One;
-		type Pablo: Amm<
-			AssetId = Self::AssetId,
-			Balance = Self::Balance,
-			AccountId = Self::AccountId,
-			PoolId = Self::PoolId,
-		>;
 		/// Whitelist mechanism - likely to be temporary while we test the bridge
 		type Whitelist: Contains<<Self as frame_system::Config>::AccountId>;
 		/// Handle Ics20 Memo

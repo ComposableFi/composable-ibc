@@ -30,11 +30,15 @@ mod fee_charger;
 
 #[frame_support::pallet]
 pub mod pallet {
+	use core::fmt::Debug;
+
+	use codec::FullCodec;
+	use composable_traits::dex::Amm;
 	use frame_support::{pallet_prelude::*, PalletId};
 	use frame_system::pallet_prelude::OriginFor;
 	use ibc_primitives::IbcAccount;
 	use sp_runtime::{
-		traits::{AccountIdConversion, Get},
+		traits::{AccountIdConversion, CheckedAdd, Get, One, Zero},
 		Percent,
 	};
 
@@ -46,6 +50,26 @@ pub mod pallet {
 		type ServiceCharge: Get<Percent>;
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
+
+		/// Flat fee
+		type PoolId: FullCodec
+			+ MaxEncodedLen
+			+ Default
+			+ TypeInfo
+			+ Eq
+			+ PartialEq
+			+ Ord
+			+ Copy
+			+ Debug
+			+ CheckedAdd
+			+ Zero
+			+ One;
+		type Pablo: Amm<
+			AssetId = Self::AssetId,
+			Balance = Self::Balance,
+			AccountId = Self::AccountId,
+			PoolId = Self::PoolId,
+		>;
 	}
 
 	#[pallet::pallet]

@@ -29,10 +29,8 @@ impl<A: Amm> FeeCharger<A> {
 		// - if there is a Pool in Pablo, then swap
 		// - if no Pool in Pablo, get percentage fee
 
-		// TODO(vim): handle the case in which the direct pool with USD{T, C} does not exist
-		// through routing. Is it maybe done automatically?
 		let mut prefixed_coin_fee = packet_amount.clone();
-		let mut packet_remaining_amount = packet_amount;
+		let packet_remaining_amount = packet_amount;
 
 		//SAFETY: We have ensured that token amounts larger than the max value for a u128 are
 		// rejected in the ics20 on_recv_packet callback so we can multiply safely.
