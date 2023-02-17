@@ -60,8 +60,8 @@ prost-types = { version = "0.11", default-features = false }
 serde = { version = "1.0", default-features = false }
 bytes = { version = "1.1.0", default-features = false }
 derive_more = { version = "0.99.17", default-features = false, features = ["from"] }
-tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "47e28b50d20138234f7a8b4254da71469f401714", default-features = false }
-tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "47e28b50d20138234f7a8b4254da71469f401714", default-features = false }
+tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 
 #substrate
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }

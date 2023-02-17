@@ -787,7 +787,7 @@ where
 
 	async fn query_host_consensus_state_proof(
 		&self,
-		_height: Height,
+		_client_state: &AnyClientState,
 	) -> Result<Option<Vec<u8>>, Self::Error> {
 		todo!()
 	}

@@ -25,6 +25,7 @@ use ibc::{
 	applications::transfer::PrefixedCoin,
 	core::{
 		ics02_client::{
+			client_consensus::ConsensusState,
 			client_state::ClientType,
 			events::{CodeId, UpdateClient},
 			msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient},
@@ -60,32 +61,24 @@ use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusSt
 use pallet_ibc::Timeout;
 use parachain::{config, ParachainClient};
 use primitives::{
-	Chain, IbcProvider, KeyProvider, LightClientSync, MisbehaviourHandler, UpdateType,
+	mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, LightClientSync, MisbehaviourHandler,
+	UpdateType,
 };
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
-
-use ibc::core::ics02_client::events::UpdateClient;
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
-use parachain::{config, ParachainClient};
-use primitives::{
-	Chain, IbcProvider, KeyProvider, LightClientSync, MisbehaviourHandler, UpdateType,
-};
 use std::{pin::Pin, time::Duration};
+#[cfg(not(feature = "dali"))]
+use subxt::config::polkadot::{
+	PolkadotExtrinsicParams as ParachainExtrinsicParams,
+	PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
+};
 #[cfg(feature = "dali")]
 use subxt::config::substrate::{
 	SubstrateExtrinsicParams as ParachainExtrinsicParams,
 	SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
 };
-use subxt::{config::ExtrinsicParams, Error, OnlineClient};
-
-use ibc::core::ics02_client::client_consensus::ConsensusState;
-use primitives::mock::LocalClientTypes;
-use subxt::config::extrinsic_params::Era;
-#[cfg(not(feature = "dali"))]
-use subxt::config::polkadot::{
-	PolkadotExtrinsicParams as ParachainExtrinsicParams,
-	PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
+use subxt::{
+	config::{extrinsic_params::Era, ExtrinsicParams},
+	Error, OnlineClient,
 };
 use tendermint_proto::Protobuf;
 use thiserror::Error;
@@ -576,7 +569,7 @@ impl IbcProvider for AnyChain {
 
 	async fn query_host_consensus_state_proof(
 		&self,
-		height: Height,
+		height: &AnyClientState,
 	) -> Result<Option<Vec<u8>>, Self::Error> {
 		match self {
 			AnyChain::Parachain(chain) =>
@@ -904,19 +897,14 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Any {
 		CREATE_CLIENT_TYPE_URL => {
 			let mut msg_decoded =
 				MsgCreateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
-			let timestamp = msg_decoded.consensus_state.timestamp().nanoseconds() / 1_000_000_000;
 			msg_decoded.consensus_state =
-				AnyConsensusState::wasm(msg_decoded.consensus_state, code_id.clone(), timestamp);
+				AnyConsensusState::wasm(msg_decoded.consensus_state, code_id.clone());
 			msg_decoded.client_state = AnyClientState::wasm(msg_decoded.client_state, code_id);
 			msg_decoded.to_any()
 		},
 		CONN_OPEN_TRY_TYPE_URL => {
 			let msg_decoded =
 				MsgConnectionOpenTry::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
-			// println!("decoded: {:?}", msg_decoded);
-			// msg_decoded.client_state = msg_decoded
-			// 	.client_state
-			// 	.map(|client_state| AnyClientState::wasm(client_state, code_id));
 			msg_decoded.to_any()
 		},
 		CONN_OPEN_ACK_TYPE_URL => {
@@ -928,9 +916,7 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Any {
 			let mut msg_decoded =
 				MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
 			msg_decoded.client_message = AnyClientMessage::wasm(msg_decoded.client_message);
-			// println!("decoded {}: {:?}", UPDATE_CLIENT_TYPE_URL, msg_decoded);
 			let any = msg_decoded.to_any();
-			// println!("converted {}: {}", any.type_url, hex::encode(&any.value));
 			any
 		},
 		_ => msg,
@@ -945,27 +931,6 @@ impl AnyChain {
 			#[cfg(feature = "cosmos")]
 			Self::Cosmos(chain) => chain.set_client_id(client_id),
 			Self::Wasm(chain) => chain.inner.set_client_id(client_id),
-		}
-	}
-}
-
-#[async_trait]
-impl LightClientSync for AnyChain {
-	async fn is_synced<C: Chain>(&self, counterparty: &C) -> Result<bool, anyhow::Error> {
-		match self {
-			Self::Parachain(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
-			_ => unreachable!(),
-		}
-	}
-
-	async fn fetch_mandatory_updates<C: Chain>(
-		&self,
-		counterparty: &C,
-	) -> Result<(Vec<Any>, Vec<IbcEvent>), anyhow::Error> {
-		match self {
-			Self::Parachain(chain) =>
-				chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 }

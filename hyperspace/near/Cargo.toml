@@ -34,7 +34,7 @@ sp-keystore = "0.12.0"
 # ibc
 ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto" }
-tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "47e28b50d20138234f7a8b4254da71469f401714", default-features = false }
+tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 
 # near
 near-crypto = "0.14.0"

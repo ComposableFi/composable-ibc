@@ -276,7 +276,7 @@ pub trait IbcProvider {
 	/// consensus state proof.
 	async fn query_host_consensus_state_proof(
 		&self,
-		height: Height,
+		client_state: &AnyClientState,
 	) -> Result<Option<Vec<u8>>, Self::Error>;
 
 	/// Should return the list of ibc denoms available to this account to spend.

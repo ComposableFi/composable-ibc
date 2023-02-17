@@ -18,7 +18,9 @@ use crate::{packets::query_ready_and_timed_out_packets, Mode};
 use codec::Encode;
 use ibc::{
 	core::{
-		ics02_client::client_state::ClientState as ClientStateT,
+		ics02_client::{
+			client_consensus::ConsensusState, client_state::ClientState as ClientStateT,
+		},
 		ics03_connection::{
 			connection::{ConnectionEnd, Counterparty},
 			msgs::{
@@ -42,7 +44,7 @@ use ibc::{
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
-use pallet_ibc::light_clients::AnyClientState;
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use primitives::{error::Error, mock::LocalClientTypes, Chain};
 use tendermint_proto::Protobuf;
 
@@ -564,7 +566,7 @@ async fn query_host_consensus_state_proof(
 ) -> Result<Vec<u8>, anyhow::Error> {
 	let client_type = sink.client_type();
 	let host_consensus_state_proof = if !client_type.contains("tendermint") {
-		sink.query_host_consensus_state_proof(client_state.latest_height())
+		sink.query_host_consensus_state_proof(&client_state)
 			.await?
 			.expect("Host chain requires consensus state proof; qed")
 	} else {

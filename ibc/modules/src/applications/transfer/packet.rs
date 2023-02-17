@@ -27,6 +27,7 @@ pub struct PacketData {
 	pub token: PrefixedCoin,
 	pub sender: Signer,
 	pub receiver: Signer,
+	#[serde(default)]
 	pub memo: String,
 }
 

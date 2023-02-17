@@ -306,11 +306,11 @@ pub enum AnyConsensusState {
 }
 
 impl AnyConsensusState {
-	pub fn wasm(inner: Self, code_id: Bytes, timestamp: u64) -> Self {
+	pub fn wasm(inner: Self, code_id: Bytes) -> Self {
 		Self::Wasm(ics08_wasm::consensus_state::ConsensusState {
+			timestamp: inner.timestamp().nanoseconds() / 1_000_000_000,
 			data: inner.encode_to_vec().unwrap(),
 			code_id,
-			timestamp,
 			root: CommitmentRoot::from_bytes(&vec![1; 32]),
 			inner: Box::new(inner),
 		})

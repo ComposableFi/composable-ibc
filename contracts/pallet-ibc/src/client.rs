@@ -30,6 +30,7 @@ pub struct HostConsensusProof {
 	pub header: Vec<u8>,
 	pub extrinsic: Vec<u8>,
 	pub extrinsic_proof: Vec<Vec<u8>>,
+	pub code_id: Option<Vec<u8>>,
 }
 
 impl<T: Config + Send + Sync> ClientReader for Context<T>
@@ -290,15 +291,17 @@ where
 
 				match &client_state {
 					AnyClientState::Wasm(wasm) => {
+						log::trace!(target: "pallet_ibc", "in client : [host_consensus_state] >> using wasm code id" );
 						let code_id = wasm.code_id.clone();
-						let timestamp1 = cs.timestamp();
-						AnyConsensusState::wasm(
-							cs,
-							code_id,
-							timestamp1.nanoseconds() / 1_000_000_000,
-						)
+						AnyConsensusState::wasm(cs, code_id)
 					},
-					_ => cs,
+					_ =>
+						if let Some(code_id) = connection_proof.code_id {
+							log::trace!(target: "pallet_ibc", "in client : [host_consensus_state] >> using wasm code id");
+							AnyConsensusState::wasm(cs, code_id)
+						} else {
+							cs
+						},
 				}
 			},
 		};

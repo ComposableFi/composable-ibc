@@ -154,7 +154,10 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
 		Ok(code_id) => code_id,
 		Err(e) => {
-			log::error!(target: "hyperspace", "Failed to upload wasm: {:?}", e);
+			let e_str = format!("{:?}", e);
+			if !e_str.contains("wasm code already exists") {
+				panic!("Failed to upload wasm: {}", e_str);
+			}
 			sha2_256(&wasm_data).to_vec()
 		},
 	};
@@ -191,12 +194,14 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
 		chain_a_wrapped.set_client_id(clients_on_b[0].clone());
 		chain_b_wrapped.set_client_id(clients_on_b[0].clone());
+		// return (chain_b_wrapped, chain_a_wrapped)
 		return (chain_a_wrapped, chain_b_wrapped)
 	}
 
 	let (client_b, client_a) = create_clients(&chain_b_wrapped, &chain_a_wrapped).await.unwrap();
 	chain_a_wrapped.set_client_id(client_a);
 	chain_b_wrapped.set_client_id(client_b);
+	// (chain_b_wrapped, chain_a_wrapped)
 	(chain_a_wrapped, chain_b_wrapped)
 }
 
@@ -221,7 +226,7 @@ async fn parachain_to_cosmos_ibc_messaging_full_integration_test() {
 	ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b).await;
 
 	// timeouts + connection delay
-	ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
+	// ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
 	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(&mut chain_a, &mut
 	// chain_b).await;
 

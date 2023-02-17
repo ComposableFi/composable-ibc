@@ -1,7 +1,7 @@
 //! This section mainly has been ported from `InformalSystems/hermes/relayer/src/light_client`
 use crate::error::Error;
 use ibc::Height;
-use ics07_tendermint::client_state::ClientState;
+use ics07_tendermint::{client_state::ClientState, ProdVerifier};
 use pallet_ibc::light_clients::HostFunctionsManager;
 use tendermint::trust_threshold::TrustThresholdFraction;
 use tendermint_light_client::{
@@ -61,11 +61,7 @@ impl LightClient {
 		};
 		let clock = components::clock::SystemClock;
 		let scheduler = components::scheduler::basic_bisecting_schedule;
-		let verifier: PredicateVerifier<
-			HostFunctionsManager,
-			HostFunctionsManager,
-			HostFunctionsManager,
-		> = PredicateVerifier::default();
+		let verifier: ProdVerifier<HostFunctionsManager> = PredicateVerifier::default();
 
 		Ok(TmLightClient::new(self.peer_id, params, clock, scheduler, verifier, self.io.clone()))
 	}

@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(any(feature = "testing", test))]
-use crate::TestProvider;
 use crate::{mock::LocalClientTypes, Chain, TestProvider};
 use futures::{future, StreamExt};
 use ibc::{
