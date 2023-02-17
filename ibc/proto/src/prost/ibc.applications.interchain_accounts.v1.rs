@@ -1,14 +1,3 @@
-/// An InterchainAccount is defined as a BaseAccount & the address of the account owner on the controller chain
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct InterchainAccount {
-    #[prost(message, optional, tag = "1")]
-    pub base_account: ::core::option::Option<
-        super::super::super::super::cosmos::auth::v1beta1::BaseAccount,
-    >,
-    #[prost(string, tag = "2")]
-    pub account_owner: ::prost::alloc::string::String,
-}
 /// InterchainAccountPacketData is comprised of a raw transaction, type of transaction and optional memo field.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -84,4 +73,15 @@ pub struct Metadata {
     /// tx_type defines the type of transactions the interchain account can execute
     #[prost(string, tag = "6")]
     pub tx_type: ::prost::alloc::string::String,
+}
+/// An InterchainAccount is defined as a BaseAccount & the address of the account owner on the controller chain
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct InterchainAccount {
+    #[prost(message, optional, tag = "1")]
+    pub base_account: ::core::option::Option<
+        super::super::super::super::cosmos::auth::v1beta1::BaseAccount,
+    >,
+    #[prost(string, tag = "2")]
+    pub account_owner: ::prost::alloc::string::String,
 }
