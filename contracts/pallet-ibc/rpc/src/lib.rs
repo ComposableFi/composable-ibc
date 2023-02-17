@@ -2,7 +2,6 @@
 
 //! IBC RPC Implementation.
 use codec::Encode;
-use ibc::protobuf::Protobuf;
 use ibc::{
 	core::{
 		ics03_connection::connection::ConnectionEnd,
@@ -10,6 +9,7 @@ use ibc::{
 		ics24_host::identifier::{ChannelId, ConnectionId, PortId},
 	},
 	events::IbcEvent as RawIbcEvent,
+	protobuf::Protobuf,
 };
 
 use hash_db::Hasher;
@@ -679,9 +679,7 @@ where
 			proof, state_root, child_info, keys,
 		) {
 			Ok(p) => p,
-			Err(e) => {
-				return Err(e);
-			},
+			Err(e) => return Err(e),
 		};
 		let proof = ibc_proof.encode();
 		Ok(Proof {
@@ -754,9 +752,7 @@ where
 			proof, state_root, child_info, keys,
 		) {
 			Ok(p) => p,
-			Err(e) => {
-				return Err(e);
-			},
+			Err(e) => return Err(e),
 		};
 		let client_state = AnyClientState::decode_vec(&result.client_state)
 			.map_err(|_| runtime_error_into_rpc_error("Error querying client state"))?;
@@ -827,9 +823,7 @@ where
 			proof, state_root, child_info, keys,
 		) {
 			Ok(p) => p,
-			Err(e) => {
-				return Err(e);
-			},
+			Err(e) => return Err(e),
 		};
 		let proof = ibc_proof.encode();
 		Ok(QueryConsensusStateResponse {
@@ -919,9 +913,7 @@ where
 			proof, state_root, child_info, keys,
 		) {
 			Ok(p) => p,
-			Err(e) => {
-				return Err(e);
-			},
+			Err(e) => return Err(e),
 		};
 		let proof = ibc_proof.encode();
 		Ok(QueryConnectionResponse {
@@ -1059,9 +1051,7 @@ where
 			result.trie_keys,
 		) {
 			Ok(p) => p,
-			Err(e) => {
-				return Err(e);
-			},
+			Err(e) => return Err(e),
 		};
 		let proof = ibc_proof.encode();
 		let client_state = AnyClientState::decode_vec(&result.client_state)
@@ -1124,9 +1114,7 @@ where
 			proof, state_root, child_info, keys,
 		) {
 			Ok(p) => p,
-			Err(e) => {
-				return Err(e);
-			},
+			Err(e) => return Err(e),
 		};
 		let proof = ibc_proof.encode();
 		Ok(QueryChannelResponse {
@@ -1435,9 +1423,7 @@ where
 			proof, state_root, child_info, keys,
 		) {
 			Ok(p) => p,
-			Err(e) => {
-				return Err(e);
-			},
+			Err(e) => return Err(e),
 		};
 		let proof = ibc_proof.encode();
 		Ok(QueryNextSequenceReceiveResponse {
@@ -1499,9 +1485,7 @@ where
 			proof, state_root, child_info, keys,
 		) {
 			Ok(p) => p,
-			Err(e) => {
-				return Err(e);
-			},
+			Err(e) => return Err(e),
 		};
 		let proof = ibc_proof.encode();
 		Ok(QueryPacketCommitmentResponse {
@@ -1563,9 +1547,7 @@ where
 			proof, state_root, child_info, keys,
 		) {
 			Ok(p) => p,
-			Err(e) => {
-				return Err(e);
-			},
+			Err(e) => return Err(e),
 		};
 		let proof = ibc_proof.encode();
 		Ok(QueryPacketAcknowledgementResponse {
@@ -1622,9 +1604,7 @@ where
 			proof, state_root, child_info, keys,
 		) {
 			Ok(p) => p,
-			Err(e) => {
-				return Err(e);
-			},
+			Err(e) => return Err(e),
 		};
 		let proof = ibc_proof.encode();
 		Ok(QueryPacketReceiptResponse {
@@ -1772,9 +1752,8 @@ where
 					client_state: Some(client_state.into()),
 				})
 			},
-			_ => {
-				Err(runtime_error_into_rpc_error("[ibc_rpc]: Could not find client creation event"))
-			},
+			_ =>
+				Err(runtime_error_into_rpc_error("[ibc_rpc]: Could not find client creation event")),
 		}
 	}
 

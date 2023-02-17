@@ -159,11 +159,11 @@ where
 				for ev in evs {
 					if let Err(_) = tx.send(ev).await {
 						should_exit = true;
-						break;
+						break
 					}
 				}
 				if should_exit {
-					break;
+					break
 				}
 			}
 		});
