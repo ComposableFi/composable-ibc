@@ -40,17 +40,20 @@ cargo run -- clone --out /tmp/cosmos --sdk-tag v0.44.3 --ibc-go-commit 7cd110e8e
 
 but it's really like:
 
-git clone <https://github.com/gogo/googlapis>
-git clone <https://github.com/cosmos/cosmos-proto>
-git clone <https://github.com/cosmos/gogoproto>
-git clone <https://github.com/confio/ics23>
+```bash
+cd ~/tmp/cosmos
+# Clone various other repositories
+# make sure to check out the commit you want.  Should exactly match sdk/ibc-go
+git clone https://github.com/gogo/googlapis
+git clone https://github.com/cosmos/cosmos-proto
+git clone https://github.com/cosmos/gogoproto
+git clone https://github.com/confio/ics23
+```
 
 ### Generate Rust sources from Protobuf definitions
 
 To generate the Rust sources from the Protobuf definitions, and copy them to the `src/prost` folder `ibc-proto` crate within the `ibc-rs` project:
 
 ```bash
-ibc-proto-compiler compile --sdk /tmp/cosmos/sdk --ibc /tmp/cosmos/ibc --out ../proto/src/prost
+ibc-proto-compiler compile --sdk /tmp/cosmos/sdk --ibc /tmp/cosmos/ibc --out ../proto/src/prost --gogo ~/gogoproto --cosmos ~/cosmos-proto --ics23 ~/ics23 --google ~/googleapis
 ```
-
-Note: the `--ibc` option is not mandatory; if omitted, then the IBC .proto files from the SDK repository will be used
