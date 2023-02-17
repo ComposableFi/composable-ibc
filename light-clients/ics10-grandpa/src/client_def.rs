@@ -54,7 +54,7 @@ use ibc::{
 use light_client_common::{
 	state_machine, verify_delay_passed, verify_membership, verify_non_membership,
 };
-use primitive_types::H256;
+use sp_core::H256;
 use sp_runtime::traits::Header;
 use sp_trie::StorageProof;
 use tendermint_proto::Protobuf;
@@ -197,8 +197,8 @@ where
 
 	fn update_state<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_id: ClientId,
+		ctx: &Ctx,
+		client_id: ClientId,
 		mut client_state: Self::ClientState,
 		client_message: Self::ClientMessage,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
@@ -230,11 +230,18 @@ where
 			let header = ancestry.header(&relay_hash).ok_or_else(|| {
 				Error::Custom(format!("No relay chain header found for hash: {relay_hash:?}"))
 			})?;
+
 			let (height, consensus_state) = ConsensusState::from_header::<H>(
 				parachain_header_proof,
 				client_state.para_id,
 				header.state_root.clone(),
 			)?;
+
+			// Skip duplicate consensus states
+			if ctx.consensus_state(&client_id, height).is_ok() {
+				continue
+			}
+
 			let wrapped = Ctx::AnyConsensusState::wrap(&consensus_state)
 				.expect("AnyConsenusState is type checked; qed");
 			consensus_states.push((height, wrapped));
@@ -375,7 +382,8 @@ where
 
 			let encoded = Ctx::AnyClientState::wrap(&upgrade_client_state.clone())
 				.expect("AnyConsensusState is type-checked; qed")
-				.encode_to_vec();
+				.encode_to_vec()
+				.map_err(Ics02Error::encode)?;
 
 			let value = state_machine::read_proof_check::<H::BlakeTwo256, _>(
 				&root,
@@ -402,7 +410,8 @@ where
 
 			let encoded = Ctx::AnyConsensusState::wrap(upgrade_client_state)
 				.expect("AnyConsensusState is type-checked; qed")
-				.encode_to_vec();
+				.encode_to_vec()
+				.map_err(Ics02Error::encode)?;
 
 			let value = state_machine::read_proof_check::<H::BlakeTwo256, _>(
 				&root,
@@ -446,7 +455,7 @@ where
 			epoch: consensus_height.revision_number,
 			height: consensus_height.revision_height,
 		};
-		let value = expected_consensus_state.encode_to_vec();
+		let value = expected_consensus_state.encode_to_vec().map_err(Ics02Error::encode)?;
 		verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
 			.map_err(Error::Anyhow)?;
 		Ok(())
@@ -466,7 +475,7 @@ where
 	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ConnectionsPath(connection_id.clone());
-		let value = expected_connection_end.encode_vec();
+		let value = expected_connection_end.encode_vec().map_err(Ics02Error::encode)?;
 		verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
 			.map_err(Error::Anyhow)?;
 		Ok(())
@@ -487,7 +496,7 @@ where
 	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ChannelEndsPath(port_id.clone(), *channel_id);
-		let value = expected_channel_end.encode_vec();
+		let value = expected_channel_end.encode_vec().map_err(Ics02Error::encode)?;
 		verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
 			.map_err(Error::Anyhow)?;
 		Ok(())
@@ -506,7 +515,7 @@ where
 	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ClientStatePath(client_id.clone());
-		let value = expected_client_state.encode_to_vec();
+		let value = expected_client_state.encode_to_vec().map_err(Ics02Error::encode)?;
 		verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
 			.map_err(Error::Anyhow)?;
 		Ok(())

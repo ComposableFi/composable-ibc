@@ -47,9 +47,13 @@ use ibc::{
 	signer::Signer,
 	tx_msg::Msg,
 };
-use ibc_primitives::{get_channel_escrow_address, IbcHandler};
+use ibc_primitives::{get_channel_escrow_address, HandlerMessage, IbcHandler};
 use sp_core::Pair;
-use sp_runtime::{offchain::storage::StorageValueRef, traits::IdentifyAccount, AccountId32};
+use sp_runtime::{
+	offchain::storage::StorageValueRef,
+	traits::{AccountIdConversion, IdentifyAccount},
+	AccountId32,
+};
 use std::{
 	collections::{BTreeMap, BTreeSet},
 	str::FromStr,
@@ -69,7 +73,8 @@ fn setup_client_and_consensus_state(port_id: PortId) {
 		Signer::from_str(MODULE_ID).unwrap(),
 	)
 	.unwrap()
-	.encode_vec();
+	.encode_vec()
+	.unwrap();
 	let mut ctx = Context::<Test>::default();
 
 	let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
@@ -119,7 +124,8 @@ fn initialize_connection() {
 			Signer::from_str(MODULE_ID).unwrap(),
 		)
 		.unwrap()
-		.encode_vec();
+		.encode_vec()
+		.unwrap();
 
 		let commitment_prefix: CommitmentPrefix =
 			<Test as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
@@ -142,7 +148,7 @@ fn initialize_connection() {
 
 		let msg = Any {
 			type_url: conn_open_init::TYPE_URL.as_bytes().to_vec(),
-			value: value.encode_vec(),
+			value: value.encode_vec().unwrap(),
 		};
 
 		assert_ok!(Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]));
@@ -166,7 +172,8 @@ fn initialize_connection_with_low_delay() {
 			Signer::from_str(MODULE_ID).unwrap(),
 		)
 		.unwrap()
-		.encode_vec();
+		.encode_vec()
+		.unwrap();
 
 		let commitment_prefix: CommitmentPrefix =
 			<Test as Config>::PALLET_PREFIX.to_vec().try_into().unwrap();
@@ -189,7 +196,7 @@ fn initialize_connection_with_low_delay() {
 
 		let msg = Any {
 			type_url: conn_open_init::TYPE_URL.as_bytes().to_vec(),
-			value: value.encode_vec(),
+			value: value.encode_vec().unwrap(),
 		};
 
 		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
@@ -236,6 +243,7 @@ fn send_transfer() {
 			},
 			asset_id,
 			balance,
+			None,
 		)
 		.unwrap();
 	});
@@ -312,6 +320,7 @@ fn on_deliver_ics20_recv_packet() {
 			token: coin,
 			sender: Signer::from_str("alice").unwrap(),
 			receiver: Signer::from_str(&ss58_address).unwrap(),
+			memo: "".to_string(),
 		};
 
 		let data = serde_json::to_vec(&packet_data).unwrap();
@@ -342,7 +351,8 @@ fn on_deliver_ics20_recv_packet() {
 			signer: Signer::from_str(MODULE_ID).unwrap(),
 		};
 
-		let msg = Any { type_url: msg.type_url().as_bytes().to_vec(), value: msg.encode_vec() };
+		let msg =
+			Any { type_url: msg.type_url().as_bytes().to_vec(), value: msg.encode_vec().unwrap() };
 
 		let account_data = Assets::balance(2u128, AccountId32::new(pair.public().0));
 		// Assert account balance before transfer
@@ -351,7 +361,13 @@ fn on_deliver_ics20_recv_packet() {
 
 		let balance =
 			<Assets as Inspect<AccountId>>::balance(2, &AccountId32::new(pair.public().0));
-		assert_eq!(balance, amt.into())
+		let pallet_balance = <Assets as Inspect<AccountId>>::balance(
+			2,
+			&<Test as crate::ics20_fee::Config>::PalletId::get().into_account_truncating(),
+		);
+		let fee = <Test as crate::ics20_fee::Config>::ServiceCharge::get() * amt;
+		assert_eq!(balance, amt - fee);
+		assert_eq!(pallet_balance, fee)
 	})
 }
 
@@ -365,7 +381,8 @@ fn should_fetch_recv_packet_with_acknowledgement() {
 
 		let mut ctx = Context::<Test>::default();
 
-		let channel_end = ChannelEnd::default();
+		let mut channel_end = ChannelEnd::default();
+		channel_end.state = State::Open;
 		ctx.store_channel((port_id.clone(), channel_id), &channel_end).unwrap();
 		let packet = Packet {
 			sequence: 1u64.into(),
@@ -381,7 +398,7 @@ fn should_fetch_recv_packet_with_acknowledgement() {
 		ctx.store_recv_packet((port_id.clone(), channel_id, packet.sequence), packet.clone())
 			.unwrap();
 		let ack = "success".as_bytes().to_vec();
-		Pallet::<Test>::write_acknowledgement(&packet, ack).unwrap();
+		Pallet::<Test>::handle_message(HandlerMessage::WriteAck { packet, ack }).unwrap();
 	});
 
 	ext.persist_offchain_overlay();

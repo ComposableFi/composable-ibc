@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{mock::LocalClientTypes, Chain};
+use crate::{mock::LocalClientTypes, Chain, TestProvider};
 use futures::{future, StreamExt};
 use ibc::{
 	core::{
@@ -41,6 +41,25 @@ pub async fn timeout_future<T: Future>(future: T, secs: u64, reason: String) -> 
 	}
 }
 
+pub async fn timeout_after<C: TestProvider, T: Future + Send + 'static>(
+	chain: &C,
+	future: T,
+	blocks: u64,
+	reason: String,
+) where
+	T::Output: Send + 'static,
+{
+	let task = tokio::spawn(future);
+	let task_2 =
+		tokio::spawn(chain.subscribe_blocks().await.take(blocks as usize).collect::<Vec<_>>());
+	tokio::select! {
+		_output = task => {}
+		_blocks = task_2 => {
+			panic!("Future didn't finish after {blocks:?} produced, {reason}")
+		}
+	}
+}
+
 pub async fn create_clients(
 	chain_a: &impl Chain,
 	chain_b: &impl Chain,
@@ -54,7 +73,7 @@ pub async fn create_clients(
 		signer: chain_a.account_id(),
 	};
 
-	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec() };
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
 
 	let tx_id = chain_a.submit(vec![msg]).await?;
 	let client_id_b_on_a = chain_a.query_client_id_from_tx_hash(tx_id).await?;
@@ -65,7 +84,7 @@ pub async fn create_clients(
 		signer: chain_b.account_id(),
 	};
 
-	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec() };
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
 
 	let tx_id = chain_b.submit(vec![msg]).await?;
 	let client_id_a_on_b = chain_b.query_client_id_from_tx_hash(tx_id).await?;
@@ -81,14 +100,14 @@ pub async fn create_connection(
 	delay_period: Duration,
 ) -> Result<(ConnectionId, ConnectionId), anyhow::Error> {
 	let msg = MsgConnectionOpenInit {
-		client_id: chain_a.client_id(),
-		counterparty: Counterparty::new(chain_b.client_id(), None, chain_b.connection_prefix()),
+		client_id: chain_b.client_id(),
+		counterparty: Counterparty::new(chain_a.client_id(), None, chain_b.connection_prefix()),
 		version: Some(Default::default()),
 		delay_period,
 		signer: chain_a.account_id(),
 	};
 
-	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec() };
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
 
 	chain_a.submit(vec![msg]).await?;
 
@@ -140,7 +159,7 @@ pub async fn create_channel(
 
 	let msg = MsgChannelOpenInit::new(port_id, channel, chain_a.account_id());
 
-	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec() };
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
 
 	chain_a.submit(vec![msg]).await?;
 

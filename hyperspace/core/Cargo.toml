@@ -31,7 +31,7 @@ prometheus = { version = "0.13.0", default-features = false }
 # ibc
 ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto" }
-tendermint-proto = { git = "https://github.com/composableFi/tendermint-rs", rev = "2c513dcaf2385d5b5f55e129a5ed11cc8d8ad5d0", default-features = false }
+tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "47e28b50d20138234f7a8b4254da71469f401714", default-features = false }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 
 ics11-beefy = { path = "../../light-clients/ics11-beefy" }
@@ -40,10 +40,10 @@ light-client-common = { path = "../../light-clients/common" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
 
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
-sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
-subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
 
 [dev-dependencies]
 derive_more = "0.99.17"
@@ -51,11 +51,11 @@ prost = "0.11"
 parachain = { path = "../parachain", package = "hyperspace-parachain", features = ["testing"] }
 
 # substrate
-subxt = { git = "https://github.com/paritytech/subxt", rev = "1736f618d940a69ab212a686984c3be25b08d1c2" }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
-state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
-sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.30" }
+subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 
 # composable
 #comosable-primitives = { package = "primitives",  path = "../contracts/pallet-ibc" }

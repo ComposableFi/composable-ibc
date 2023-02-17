@@ -62,6 +62,7 @@ pub enum HandlerMessage<AccountId> {
 		timeout: Timeout,
 		from: AccountId,
 		to: Signer,
+		memo: String,
 	},
 	SendPacket {
 		/// packet data
@@ -72,6 +73,12 @@ pub enum HandlerMessage<AccountId> {
 		port_id: PortId,
 		/// channel id as utf8 string bytes
 		channel_id: ChannelId,
+	},
+	WriteAck {
+		/// Raw acknowledgement bytes
+		ack: Vec<u8>,
+		/// Packet
+		packet: Packet,
 	},
 }
 
@@ -364,7 +371,6 @@ pub trait IbcHandler<AccountId> {
 	) -> Result<(Height, Timestamp), Error>;
 	/// Handle a message
 	fn handle_message(msg: HandlerMessage<AccountId>) -> Result<(), Error>;
-	fn write_acknowledgement(packet: &Packet, ack: Vec<u8>) -> Result<(), Error>;
 	/// testing related methods
 	#[cfg(feature = "runtime-benchmarks")]
 	fn create_client() -> Result<ClientId, Error>;
@@ -506,7 +512,7 @@ pub fn get_channel_escrow_address(
 // This is needed because Ics20 traits require an implementation of TryFrom<Signer> for AccountId
 // associated type
 #[derive(Clone)]
-pub struct IbcAccount<AccountId>(AccountId);
+pub struct IbcAccount<AccountId>(pub AccountId);
 
 impl<AccountId> IdentifyAccount for IbcAccount<AccountId> {
 	type AccountId = AccountId;

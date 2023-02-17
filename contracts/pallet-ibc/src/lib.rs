@@ -52,7 +52,6 @@ use sp_std::{marker::PhantomData, prelude::*, str::FromStr};
 mod channel;
 mod client;
 mod connection;
-mod fees;
 pub mod errors;
 pub mod events;
 pub mod ics20;
@@ -139,6 +138,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+pub mod ics20_fee;
 mod impls;
 pub mod weight;
 
@@ -156,14 +156,17 @@ pub mod pallet {
 		traits::{
 			fungibles::{Inspect, Mutate, Transfer},
 			tokens::{AssetId, Balance},
-			ReservableCurrency, UnixTime,
+			Contains, ReservableCurrency, UnixTime,
 		},
 	};
 	use frame_system::pallet_prelude::*;
 	pub use ibc::signer::Signer;
 	use sp_core::crypto::ByteArray;
 
-	use crate::routing::{Context, ModuleRouter};
+	use crate::{
+		ics20::HandleMemo,
+		routing::{Context, ModuleRouter},
+	};
 	use ibc::{
 		applications::transfer::{
 			is_sender_chain_source, msgs::transfer::MsgTransfer, Amount, PrefixedCoin,
@@ -271,6 +274,18 @@ pub mod pallet {
 			AccountId = Self::AccountId,
 			PoolId = Self::PoolId,
 		>;
+		/// Whitelist mechanism - likely to be temporary while we test the bridge
+		type Whitelist: Contains<<Self as frame_system::Config>::AccountId>;
+		/// Handle Ics20 Memo
+		type HandleMemo: HandleMemo<Self>;
+		/// Memo Message types supported by the runtime
+		type MemoMessage: codec::Codec
+			+ FromStr
+			+ ToString
+			+ Debug
+			+ scale_info::TypeInfo
+			+ Clone
+			+ Eq;
 	}
 
 	#[pallet::pallet]
@@ -536,6 +551,8 @@ pub mod pallet {
 		ClientUpdateNotFound,
 		/// Error Freezing client
 		ClientFreezeFailed,
+		/// Access denied
+		AccessDenied,
 	}
 
 	#[pallet::hooks]
@@ -560,6 +577,7 @@ pub mod pallet {
 		AccountId32: From<<T as frame_system::Config>::AccountId>,
 		u32: From<<T as frame_system::Config>::BlockNumber>,
 	{
+		#[pallet::call_index(0)]
 		#[pallet::weight(crate::weight::deliver::< T > (messages))]
 		#[frame_support::transactional]
 		pub fn deliver(origin: OriginFor<T>, messages: Vec<Any>) -> DispatchResult {
@@ -598,6 +616,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(1)]
 		#[frame_support::transactional]
 		#[pallet::weight(<T as Config>::WeightInfo::transfer())]
 		pub fn transfer(
@@ -605,8 +624,11 @@ pub mod pallet {
 			params: TransferParams<<T as frame_system::Config>::AccountId>,
 			asset_id: T::AssetId,
 			amount: T::Balance,
+			memo: Option<T::MemoMessage>,
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
+			// Ensure that the signer is whitelisted
+			ensure!(T::Whitelist::contains(&origin), Error::<T>::AccessDenied);
 			let denom = T::IbcDenomToAssetIdConversion::from_asset_id_to_denom(asset_id)
 				.ok_or_else(|| Error::<T>::InvalidAssetId)?;
 
@@ -672,6 +694,7 @@ pub mod pallet {
 				receiver: Signer::from_str(&to).map_err(|_| Error::<T>::Utf8Error)?,
 				timeout_height,
 				timeout_timestamp,
+				memo: memo.map(|memo| memo.to_string()).unwrap_or_default(),
 			};
 			let is_sender_source = is_sender_chain_source(
 				msg.source_port.clone(),
@@ -728,6 +751,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::call_index(2)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_params())]
 		pub fn set_params(origin: OriginFor<T>, params: PalletParams) -> DispatchResult {
 			<T as Config>::AdminOrigin::ensure_origin(origin)?;
@@ -742,6 +766,7 @@ pub mod pallet {
 		/// We write the consensus & client state under these predefined paths so that
 		/// we can produce state proofs of the values to connected chains
 		/// in order to execute client upgrades.
+		#[pallet::call_index(3)]
 		#[pallet::weight(0)]
 		pub fn upgrade_client(origin: OriginFor<T>, params: UpgradeParams) -> DispatchResult {
 			<T as Config>::AdminOrigin::ensure_origin(origin)?;
@@ -757,6 +782,7 @@ pub mod pallet {
 		}
 
 		/// Freeze a client at a specific height
+		#[pallet::call_index(4)]
 		#[pallet::weight(0)]
 		pub fn freeze_client(
 			origin: OriginFor<T>,

@@ -60,6 +60,8 @@ pub struct MsgTransfer<C = Coin> {
 	/// Timeout timestamp relative to the current block timestamp.
 	/// The timeout is disabled when set to 0.
 	pub timeout_timestamp: Timestamp,
+	/// Memo field
+	pub memo: String,
 }
 
 impl Msg for MsgTransfer {
@@ -103,6 +105,7 @@ impl TryFrom<RawMsgTransfer> for MsgTransfer {
 			receiver: raw_msg.receiver.parse().map_err(Error::signer)?,
 			timeout_height,
 			timeout_timestamp,
+			memo: raw_msg.memo,
 		})
 	}
 }
@@ -117,6 +120,7 @@ impl From<MsgTransfer> for RawMsgTransfer {
 			receiver: domain_msg.receiver.to_string(),
 			timeout_height: Some(domain_msg.timeout_height.into()),
 			timeout_timestamp: domain_msg.timeout_timestamp.nanoseconds(),
+			memo: domain_msg.memo,
 		}
 	}
 }
@@ -134,9 +138,14 @@ impl TryFrom<Any> for MsgTransfer {
 	}
 }
 
-impl From<MsgTransfer> for Any {
-	fn from(msg: MsgTransfer) -> Self {
-		Self { type_url: TYPE_URL.to_string(), value: msg.encode_vec() }
+impl TryFrom<MsgTransfer> for Any {
+	type Error = Error;
+
+	fn try_from(msg: MsgTransfer) -> Result<Self, Self::Error> {
+		Ok(Self {
+			type_url: TYPE_URL.to_string(),
+			value: msg.encode_vec().map_err(Error::decode_raw_msg)?,
+		})
 	}
 }
 
@@ -167,6 +176,7 @@ pub mod test_util {
 			receiver: address,
 			timeout_timestamp: Timestamp::now().add(Duration::from_secs(10)).unwrap(),
 			timeout_height: Height { revision_number: 0, revision_height: height },
+			memo: "".to_string(),
 		}
 	}
 }

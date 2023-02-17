@@ -39,8 +39,8 @@ use ibc::{
 	},
 	Height,
 };
-use primitive_types::H256;
 use serde::{Deserialize, Serialize};
+use sp_core::H256;
 use sp_storage::ChildInfo;
 use sp_trie::StorageProof;
 

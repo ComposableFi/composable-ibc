@@ -19,6 +19,7 @@ use anyhow::anyhow;
 use beefy_light_client_primitives::{ClientState as BeefyPrimitivesClientState, NodesUtils};
 use codec::{Decode, Encode};
 use finality_grandpa::BlockNumberOps;
+use finality_grandpa_rpc::GrandpaApiClient;
 use grandpa_light_client_primitives::{
 	justification::find_scheduled_change, FinalityProof, ParachainHeaderProofs,
 	ParachainHeadersWithFinalityProof,
@@ -42,20 +43,24 @@ use primitives::{
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
 use sp_runtime::{
-	traits::{Header as HeaderT, IdentifyAccount, One, Verify},
+	traits::{BlakeTwo256, IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
 use std::{
 	collections::{BTreeMap, BTreeSet, HashMap},
 	fmt::Display,
 };
-#[cfg(feature = "dali")]
-use subxt::tx::AssetTip as Tip;
-use subxt::tx::{BaseExtrinsicParamsBuilder, ExtrinsicParams};
-use tendermint_proto::Protobuf;
 
+use beefy_prover::helpers::unsafe_arc_cast;
+use grandpa_prover::{GrandpaJustification, JustificationNotification};
 #[cfg(not(feature = "dali"))]
-use subxt::tx::PlainTip as Tip;
+use subxt::config::polkadot::PlainTip as Tip;
+#[cfg(feature = "dali")]
+use subxt::config::substrate::AssetTip as Tip;
+use subxt::config::{
+	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT,
+};
+use tendermint_proto::Protobuf;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum FinalityProtocol {
@@ -80,7 +85,7 @@ impl FinalityProtocol {
 		source: &mut ParachainClient<T>,
 		finality_event: FinalityEvent,
 		counterparty: &C,
-	) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
 		T: config::Config + Send + Sync,
 		C: Chain,
@@ -88,20 +93,20 @@ impl FinalityProtocol {
 		u32: From<<T as subxt::Config>::BlockNumber>,
 		ParachainClient<T>: Chain,
 		ParachainClient<T>: KeyProvider,
-		<T::Signature as Verify>::Signer:
+		<<T as config::Config>::Signature as Verify>::Signer:
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-		T::Signature: From<MultiSignature>,
+		<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 		T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 		T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 		sp_core::H256: From<T::Hash>,
-		FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
-			From<FinalityProof<T::Header>>,
 		BTreeMap<H256, ParachainHeaderProofs>:
 			From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 		<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 			From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
+		<T as subxt::Config>::AccountId: Send + Sync,
+		<T as subxt::Config>::Address: Send + Sync,
 	{
 		match self {
 			FinalityProtocol::Grandpa =>
@@ -119,21 +124,24 @@ pub async fn query_latest_ibc_events_with_beefy<T, C>(
 	source: &mut ParachainClient<T>,
 	finality_event: FinalityEvent,
 	counterparty: &C,
-) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 where
 	T: config::Config + Send + Sync,
 	C: Chain,
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
 		+ From<<T as subxt::Config>::BlockNumber>,
 	ParachainClient<T>: Chain + KeyProvider,
-	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	<<T as config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	T::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	T::BlockNumber: From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
 	T::Hash: From<sp_core::H256>,
 	sp_core::H256: From<T::Hash>,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
 	let signed_commitment = match finality_event {
 		FinalityEvent::Beefy(signed_commitment) => signed_commitment,
@@ -153,7 +161,6 @@ where
 			mmr_root_hash: client_state.mmr_root_hash,
 			current_authorities: client_state.authority.clone(),
 			next_authorities: client_state.next_authority_set.clone(),
-			beefy_activation_block: client_state.beefy_activation_block,
 		},
 		c => Err(Error::ClientStateRehydration(format!(
 			"Expected AnyClientState::Beefy found: {:?}",
@@ -185,7 +192,7 @@ where
 		.await?;
 
 	log::info!(
-		"Fetching events from {} for blocks {}..{}",
+		"Fetching events from {} for blocks {:?}..{:?}",
 		source.name(),
 		headers[0].number(),
 		headers.last().unwrap().number()
@@ -196,7 +203,7 @@ where
 	// block that was already finalized in a former beefy block might still be part of
 	// the parachain headers in a later beefy block, discovered this from previous logs
 	let finalized_blocks =
-		headers.iter().map(|header| u32::from(*header.number())).collect::<Vec<_>>();
+		headers.iter().map(|header| u32::from(header.number())).collect::<Vec<_>>();
 
 	let finalized_block_numbers = finalized_blocks
 		.iter()
@@ -227,10 +234,12 @@ where
 	let authority_set_changed =
 		signed_commitment.commitment.validator_set_id == beefy_client_state.next_authorities.id;
 
-	let is_update_required = source.is_update_required(
-		latest_finalized_block.into(),
-		client_state.latest_height().revision_height,
-	);
+	let is_update_required = source
+		.is_update_required(
+			latest_finalized_block.into(),
+			client_state.latest_height().revision_height,
+		)
+		.await?;
 
 	// if validator set has changed this is a mandatory update
 	let update_type = match authority_set_changed || timeout_update_required || is_update_required {
@@ -286,15 +295,15 @@ where
 		Some(ParachainHeadersWithProof {
 			headers,
 			mmr_size,
+			leaf_indices: batch_proof.leaf_indices,
 			mmr_proofs: batch_proof.items.into_iter().map(|item| item.encode()).collect(),
+			leaf_count: batch_proof.leaf_count,
 		})
 	} else {
 		None
 	};
 
-	let mmr_update = source
-		.query_beefy_mmr_update_proof(signed_commitment, &beefy_client_state)
-		.await?;
+	let mmr_update = source.query_beefy_mmr_update_proof(signed_commitment).await?;
 
 	let update_header = {
 		let msg = MsgUpdateAnyClient::<LocalClientTypes> {
@@ -305,11 +314,11 @@ where
 			})),
 			signer: counterparty.account_id(),
 		};
-		let value = msg.encode_vec();
+		let value = msg.encode_vec()?;
 		Any { value, type_url: msg.type_url() }
 	};
 
-	Ok((update_header, events, update_type))
+	Ok((vec![update_header], events, update_type))
 }
 
 /// Query the latest events that have been finalized by the GRANDPA finality protocol.
@@ -317,27 +326,28 @@ pub async fn query_latest_ibc_events_with_grandpa<T, C>(
 	source: &mut ParachainClient<T>,
 	finality_event: FinalityEvent,
 	counterparty: &C,
-) -> Result<(Any, Vec<IbcEvent>, UpdateType), anyhow::Error>
+) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 where
 	T: config::Config + Send + Sync,
 	C: Chain,
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
 		+ From<<T as subxt::Config>::BlockNumber>,
 	ParachainClient<T>: Chain + KeyProvider,
-	<T::Signature as Verify>::Signer: From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	<<T as config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-	T::Signature: From<MultiSignature>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	sp_core::H256: From<T::Hash>,
-	FinalityProof<sp_runtime::generic::Header<u32, sp_runtime::traits::BlakeTwo256>>:
-		From<FinalityProof<T::Header>>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
 {
-	let justification = match finality_event {
+	let _justification = match finality_event {
 		FinalityEvent::Grandpa(justification) => justification,
 		_ => panic!("Expected grandpa finality event"),
 	};
@@ -359,15 +369,34 @@ where
 		)))?,
 	};
 
-	if justification.commit.target_number <= client_state.latest_relay_height {
-		Err(anyhow!(
-			"skipping outdated commit: {}, with latest relay height: {}",
-			justification.commit.target_number,
-			client_state.latest_relay_height
-		))?
-	}
-
 	let prover = source.grandpa_prover();
+	// prove_finality will always give us the highest block finalized by the authority set for the
+	// block number passed, so we can't miss any authority set change since the session change block
+	// will always be finalized.
+	let next_relay_height = client_state.latest_relay_height + 1;
+
+	let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
+		// we cast between the same type but different crate versions.
+		&*unsafe {
+			unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(prover.relay_ws_client.clone())
+		},
+		next_relay_height,
+	)
+	.await
+	.map_err(|_| {
+		Error::Custom(
+		format!("Next relay block {} has not been finalized, previous finalized height on counterparty {}",
+				next_relay_height, client_state.latest_relay_height
+		)
+	)
+	})?
+	.ok_or_else(|| anyhow!("No justification found for block: {:?}", next_relay_height))?
+	.0;
+
+	let finality_proof = FinalityProof::<T::Header>::decode(&mut &encoded[..])?;
+
+	let justification =
+		GrandpaJustification::<T::Header>::decode(&mut &finality_proof.justification[..])?;
 
 	// fetch the latest finalized parachain header
 	let finalized_para_header = prover
@@ -376,15 +405,17 @@ where
 
 	// notice the inclusive range
 	let finalized_blocks = ((client_state.latest_para_height + 1)..=
-		u32::from(*finalized_para_header.number()))
+		u32::from(finalized_para_header.number()))
 		.collect::<Vec<_>>();
 
-	log::info!(
-		"Fetching events from {} for blocks {}..{}",
-		source.name(),
-		finalized_blocks[0],
-		finalized_blocks.last().unwrap(),
-	);
+	if !finalized_blocks.is_empty() {
+		log::info!(
+			"Fetching events from {} for blocks {}..{}",
+			source.name(),
+			finalized_blocks[0],
+			finalized_blocks.last().unwrap(),
+		);
+	}
 
 	let finalized_block_numbers = finalized_blocks
 		.iter()
@@ -402,13 +433,6 @@ where
 	} else {
 		false
 	};
-
-	let latest_finalized_block = finalized_blocks.into_iter().max().unwrap_or_default();
-
-	let is_update_required = source.is_update_required(
-		latest_finalized_block.into(),
-		client_state.latest_height().revision_height,
-	);
 
 	// block_number => events
 	let events: HashMap<String, Vec<IbcEvent>> =
@@ -440,37 +464,41 @@ where
 		}
 	}
 
-	if is_update_required {
-		headers_with_events.insert(T::BlockNumber::from(latest_finalized_block));
+	// In a situation where the sessions last a couple hours and we don't see any ibc events during
+	// a session we want to send some block updates in between the session, this would serve as
+	// checkpoints so we don't end up with a very large finality proof at the session end.
+	let is_update_required = source
+		.is_update_required(
+			justification.commit.target_number.into(),
+			client_state.latest_relay_height.into(),
+		)
+		.await?;
+
+	// We ensure we advance the finalized latest parachain height
+	if client_state.latest_para_height < u32::from(finalized_para_header.number()) {
+		headers_with_events.insert(finalized_para_header.number());
 	}
 
-	let cs = grandpa_light_client_primitives::ClientState::<T::Hash> {
-		current_authorities: client_state.current_authorities.clone(),
-		current_set_id: client_state.current_set_id,
-		latest_relay_hash: T::Hash::from(client_state.latest_relay_hash.as_fixed_bytes().clone()),
-		latest_relay_height: client_state.latest_relay_height,
-		latest_para_height: client_state.latest_para_height,
-		para_id: client_state.para_id,
-	};
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
-		.query_finalized_parachain_headers_with_proof(
-			&cs,
-			justification.commit.target_number.into(),
+		.query_finalized_parachain_headers_with_proof::<T::Header>(
+			client_state.latest_relay_height,
+			justification.commit.target_number,
+			Some(justification.encode()),
 			headers_with_events.into_iter().collect(),
 		)
 		.await?;
 
-	let target =
-		source
-			.relay_client
-			.rpc()
-			.header(Some(finality_proof.block))
-			.await?
-			.ok_or_else(|| {
-				Error::from(
-					"Could not find relay chain header for justification target".to_string(),
-				)
-			})?;
+	let target = source
+		.relay_client
+		.rpc()
+		.header(Some(finality_proof.block.into()))
+		.await?
+		.ok_or_else(|| {
+			Error::from("Could not find relay chain header for justification target".to_string())
+		})?
+		.encode();
+	let target = sp_runtime::generic::Header::<u32, BlakeTwo256>::decode(&mut &*target)
+		.expect("Should not panic, same struct from different crates");
 
 	let authority_set_changed_scheduled = find_scheduled_change(&target).is_some();
 	// if validator set has changed this is a mandatory update
@@ -481,7 +509,8 @@ where
 		};
 
 	let grandpa_header = GrandpaHeader {
-		finality_proof: finality_proof.into(),
+		finality_proof: codec::Decode::decode(&mut &*finality_proof.encode())
+			.expect("Same struct from different crates,decode should not fail"),
 		parachain_headers: parachain_headers.into(),
 	};
 
@@ -491,9 +520,9 @@ where
 			client_message: AnyClientMessage::Grandpa(ClientMessage::Header(grandpa_header)),
 			signer: counterparty.account_id(),
 		};
-		let value = msg.encode_vec();
+		let value = msg.encode_vec()?;
 		Any { value, type_url: msg.type_url() }
 	};
 
-	Ok((update_header, events, update_type))
+	Ok((vec![update_header], events, update_type))
 }

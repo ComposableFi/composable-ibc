@@ -78,7 +78,7 @@ where
 		to: &Self::AccountId,
 		amt: &ibc::applications::transfer::PrefixedCoin,
 	) -> Result<(), Ics20Error> {
-		let amount: T::Balance = amt.amount.as_u256().low_u128().into();
+		let amount: T::Balance = amt.amount.as_u256().as_u128().into();
 		let denom = amt.denom.to_string();
 		// Token should be registered already if sending an ibc asset
 		let asset_id = T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
@@ -116,7 +116,7 @@ where
 		account: &Self::AccountId,
 		amt: &ibc::applications::transfer::PrefixedCoin,
 	) -> Result<(), Ics20Error> {
-		let amount: T::Balance = amt.amount.as_u256().low_u128().into();
+		let amount: T::Balance = amt.amount.as_u256().as_u128().into();
 		let denom = amt.denom.to_string();
 		// Find existing asset or create a new one
 		let asset_id =
@@ -143,7 +143,7 @@ where
 		account: &Self::AccountId,
 		amt: &ibc::applications::transfer::PrefixedCoin,
 	) -> Result<(), Ics20Error> {
-		let amount: T::Balance = amt.amount.as_u256().low_u128().into();
+		let amount: T::Balance = amt.amount.as_u256().as_u128().into();
 		let denom = amt.denom.to_string();
 		// Token should be registered already if burning a voucher
 		let asset_id = T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)

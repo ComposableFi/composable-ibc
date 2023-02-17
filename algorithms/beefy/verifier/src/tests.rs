@@ -14,18 +14,17 @@
 // limitations under the License.
 
 use beefy_light_client_primitives::{
-	error::BeefyClientError, MmrUpdateProof, ParachainsUpdateProof, SignatureWithAuthorityIndex,
-	SignedCommitment,
+	error::BeefyClientError, EncodedVersionedFinalityProof, MmrUpdateProof, ParachainsUpdateProof,
+	SignatureWithAuthorityIndex, SignedCommitment,
 };
 use beefy_primitives::{
-	known_payload_ids::MMR_ROOT_ID,
+	known_payloads::MMR_ROOT_ID,
 	mmr::{BeefyNextAuthoritySet, MmrLeaf},
-	Payload,
+	Payload, VersionedFinalityProof,
 };
 use beefy_prover::{Crypto, Prover};
 use futures::stream::StreamExt;
 use pallet_mmr_primitives::Proof;
-use serde_json::Value;
 use sp_core::bytes::to_hex;
 use subxt::{
 	rpc::{rpc_params, Subscription},
@@ -47,9 +46,12 @@ async fn test_verify_mmr_with_proof() {
 	let para_client = subxt::client::OnlineClient::<PolkadotConfig>::from_url(para_ws_url)
 		.await
 		.unwrap();
-
+	println!("Waiting for parachain to start producing blocks");
+	let block_sub = para_client.blocks().subscribe_finalized().await.unwrap();
+	block_sub.take(2).collect::<Vec<_>>().await;
+	println!("Parachain has started producing blocks");
 	let mut client_state = Prover::get_initial_client_state(Some(&client)).await;
-	let subscription: Subscription<String> = client
+	let subscription: Subscription<EncodedVersionedFinalityProof> = client
 		.rpc()
 		.subscribe(
 			"beefy_subscribeJustifications",
@@ -59,17 +61,19 @@ async fn test_verify_mmr_with_proof() {
 		.await
 		.unwrap();
 
-	let parachain_client =
-		Prover { relay_client: client, para_client, beefy_activation_block: 0, para_id: 2000 };
+	let parachain_client = Prover { relay_client: client, para_client, para_id: 2000 };
 
 	let mut subscription_stream = subscription.enumerate().take(100);
-	while let Some((count, Ok(commitment))) = subscription_stream.next().await {
-		let recv_commitment: sp_core::Bytes =
-			serde_json::from_value(Value::String(commitment)).unwrap();
-		let signed_commitment: beefy_primitives::SignedCommitment<
+	while let Some((count, Ok(encoded_versioned_finality_proof))) = subscription_stream.next().await
+	{
+		let beefy_version_finality_proof: VersionedFinalityProof<
 			u32,
 			beefy_primitives::crypto::Signature,
-		> = codec::Decode::decode(&mut &*recv_commitment).unwrap();
+		> = codec::Decode::decode(&mut &*encoded_versioned_finality_proof.0 .0).unwrap();
+
+		let signed_commitment = match beefy_version_finality_proof {
+			VersionedFinalityProof::V1(commitment) => commitment,
+		};
 
 		match signed_commitment.commitment.validator_set_id {
 			id if id < client_state.current_authorities.id => {
@@ -119,7 +123,7 @@ async fn should_fail_with_incomplete_signature_threshold() {
 	let mmr_update = MmrUpdateProof {
 		signed_commitment: SignedCommitment {
 			commitment: beefy_primitives::Commitment {
-				payload: Payload::new(MMR_ROOT_ID, vec![0u8; 32]),
+				payload: Payload::from_single_entry(MMR_ROOT_ID, vec![0u8; 32]),
 				block_number: Default::default(),
 				validator_set_id: 3,
 			},
@@ -135,7 +139,7 @@ async fn should_fail_with_incomplete_signature_threshold() {
 			},
 			leaf_extra: Default::default(),
 		},
-		mmr_proof: Proof { leaf_index: 0, leaf_count: 0, items: vec![] },
+		mmr_proof: Proof { leaf_indices: vec![0], leaf_count: 0, items: vec![] },
 		authority_proof: vec![],
 	};
 
@@ -158,7 +162,7 @@ async fn should_fail_with_invalid_validator_set_id() {
 	let mmr_update = MmrUpdateProof {
 		signed_commitment: SignedCommitment {
 			commitment: beefy_primitives::Commitment {
-				payload: Payload::new(MMR_ROOT_ID, vec![0u8; 32]),
+				payload: Payload::from_single_entry(MMR_ROOT_ID, vec![0u8; 32]),
 				block_number: Default::default(),
 				validator_set_id: 3,
 			},
@@ -174,7 +178,7 @@ async fn should_fail_with_invalid_validator_set_id() {
 			},
 			leaf_extra: Default::default(),
 		},
-		mmr_proof: Proof { leaf_index: 0, leaf_count: 0, items: vec![] },
+		mmr_proof: Proof { leaf_indices: vec![0], leaf_count: 0, items: vec![] },
 		authority_proof: vec![],
 	};
 
@@ -217,8 +221,12 @@ async fn verify_parachain_headers() {
 		.await
 		.unwrap();
 
+	println!("Waiting for parachain to start producing blocks");
+	let block_sub = para_client.blocks().subscribe_finalized().await.unwrap();
+	block_sub.take(2).collect::<Vec<_>>().await;
+	println!("Parachain has started producing blocks");
 	let mut client_state = Prover::get_initial_client_state(Some(&client)).await;
-	let subscription: Subscription<String> = client
+	let subscription: Subscription<EncodedVersionedFinalityProof> = client
 		.rpc()
 		.subscribe(
 			"beefy_subscribeJustifications",
@@ -228,22 +236,19 @@ async fn verify_parachain_headers() {
 		.await
 		.unwrap();
 
-	println!("Waiting for parachain to start producing blocks");
-	let block_sub = para_client.rpc().subscribe_blocks().await.unwrap();
-	block_sub.take(2).collect::<Vec<_>>().await;
-	println!("Parachain has started producing blocks");
-
-	let parachain_client =
-		Prover { relay_client: client, para_client, beefy_activation_block: 0, para_id: 2000 };
+	let parachain_client = Prover { relay_client: client, para_client, para_id: 2000 };
 
 	let mut subscription_stream = subscription.enumerate().take(100);
-	while let Some((count, Ok(commitment))) = subscription_stream.next().await {
-		let recv_commitment: sp_core::Bytes =
-			serde_json::from_value(Value::String(commitment)).unwrap();
-		let signed_commitment: beefy_primitives::SignedCommitment<
+	while let Some((count, Ok(encoded_versioned_finality_proof))) = subscription_stream.next().await
+	{
+		let beefy_version_finality_proof: VersionedFinalityProof<
 			u32,
 			beefy_primitives::crypto::Signature,
-		> = codec::Decode::decode(&mut &*recv_commitment).unwrap();
+		> = codec::Decode::decode(&mut &*encoded_versioned_finality_proof.0 .0).unwrap();
+
+		let signed_commitment = match beefy_version_finality_proof {
+			VersionedFinalityProof::V1(commitment) => commitment,
+		};
 
 		match signed_commitment.commitment.validator_set_id {
 			id if id < client_state.current_authorities.id => {

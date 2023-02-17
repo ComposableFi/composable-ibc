@@ -19,11 +19,19 @@ use ics11_beefy::{
 	client_message::BEEFY_CLIENT_MESSAGE_TYPE_URL, client_state::BEEFY_CLIENT_STATE_TYPE_URL,
 	consensus_state::BEEFY_CONSENSUS_STATE_TYPE_URL,
 };
-use sp_core::{ed25519, H256};
+use sp_core::{crypto::ByteArray, ed25519, H256};
 use sp_runtime::{
 	app_crypto::RuntimePublic,
 	traits::{BlakeTwo256, ConstU32, Header},
 	BoundedBTreeSet, BoundedVec,
+};
+use tendermint::{
+	crypto::{
+		signature::{Error as TendermintCryptoError, Verifier},
+		Sha256 as TendermintSha256,
+	},
+	merkle::{Hash, MerkleHash, NonIncremental, HASH_SIZE},
+	PublicKey, Signature,
 };
 use tendermint_proto::Protobuf;
 
@@ -58,27 +66,39 @@ impl ics23::HostFunctionsProvider for HostFunctionsManager {
 	}
 }
 
-impl tendermint_light_client_verifier::host_functions::CryptoProvider for HostFunctionsManager {
-	fn sha2_256(message: &[u8]) -> [u8; 32] {
-		sp_io::hashing::sha2_256(message)
+impl TendermintSha256 for HostFunctionsManager {
+	fn digest(data: impl AsRef<[u8]>) -> [u8; HASH_SIZE] {
+		sp_io::hashing::sha2_256(data.as_ref())
+	}
+}
+
+impl MerkleHash for HostFunctionsManager {
+	fn empty_hash(&mut self) -> Hash {
+		NonIncremental::<Self>::default().empty_hash()
 	}
 
-	fn ed25519_verify(signature: &[u8], msg: &[u8], pubkey: &[u8]) -> Result<(), ()> {
-		if let Some((signature, public_key)) =
-			ed25519::Signature::from_slice(signature).and_then(|sig| {
-				let public = sp_core::ed25519::Public::try_from(pubkey).ok()?;
-				Some((sig, public))
-			}) {
-			sp_io::crypto::ed25519_verify(&signature, msg, &public_key)
-				.then(|| ())
-				.ok_or(())
-		} else {
-			Err(())
-		}
+	fn leaf_hash(&mut self, bytes: &[u8]) -> Hash {
+		NonIncremental::<Self>::default().leaf_hash(bytes)
 	}
 
-	fn secp256k1_verify(_: &[u8], _: &[u8], _: &[u8]) -> Result<(), ()> {
-		unimplemented!()
+	fn inner_hash(&mut self, left: Hash, right: Hash) -> Hash {
+		NonIncremental::<Self>::default().inner_hash(left, right)
+	}
+}
+
+impl Verifier for HostFunctionsManager {
+	fn verify(
+		pubkey: PublicKey,
+		msg: &[u8],
+		signature: &Signature,
+	) -> Result<(), TendermintCryptoError> {
+		let signature = sp_core::ed25519::Signature::from_slice(signature.as_bytes())
+			.ok_or_else(|| TendermintCryptoError::MalformedSignature)?;
+		let public_key = sp_core::ed25519::Public::from_slice(pubkey.to_bytes().as_slice())
+			.map_err(|_| TendermintCryptoError::MalformedPublicKey)?;
+		sp_io::crypto::ed25519_verify(&signature, msg, &public_key)
+			.then(|| ())
+			.ok_or_else(|| TendermintCryptoError::VerificationFailed)
 	}
 }
 
@@ -259,13 +279,15 @@ impl From<AnyClientMessage> for Any {
 		match client_msg {
 			AnyClientMessage::Grandpa(msg) => Any {
 				type_url: GRANDPA_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec(),
+				value: msg.encode_vec().expect("Grandpa client message is always serializable"),
 			},
-			AnyClientMessage::Beefy(msg) =>
-				Any { type_url: BEEFY_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() },
+			AnyClientMessage::Beefy(msg) => Any {
+				type_url: BEEFY_CLIENT_MESSAGE_TYPE_URL.to_string(),
+				value: msg.encode_vec().expect("Beefy client message is always serializable"),
+			},
 			AnyClientMessage::Tendermint(msg) => Any {
 				type_url: TENDERMINT_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec(),
+				value: msg.encode_vec().expect("Tendermint client message is always serializable"),
 			},
 			#[cfg(test)]
 			AnyClientMessage::Mock(_msg) => panic!("MockHeader can't be serialized"),

@@ -53,16 +53,16 @@ use frame_support::{
 	construct_runtime,
 	dispatch::DispatchClass,
 	parameter_types,
-	traits::{fungibles::InspectMetadata, AsEnsureOriginWithArg, Everything},
+	traits::{fungibles::InspectMetadata, AsEnsureOriginWithArg, Contains, Everything},
 	weights::{
-		constants::WEIGHT_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
+		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
 		WeightToFeeCoefficients, WeightToFeePolynomial,
 	},
 	PalletId,
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureRoot,
+	EnsureRoot, EnsureSigned,
 };
 use pallet_ibc::{DenomToAssetId, IbcAssetIds, IbcAssets, IbcDenoms};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -203,8 +203,8 @@ impl_opaque_keys! {
 
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("centuari"),
-	impl_name: create_runtime_str!("centuari"),
+	spec_name: create_runtime_str!("centauri"),
+	impl_name: create_runtime_str!("centauri"),
 	authoring_version: 1,
 	spec_version: 1,
 	impl_version: 0,
@@ -247,7 +247,9 @@ const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(5);
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 /// We allow for 0.5 of a second of compute with a 12 second average block time.
-const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND.div(2);
+const MAXIMUM_BLOCK_WEIGHT: Weight =
+	Weight::from_ref_time(WEIGHT_REF_TIME_PER_SECOND.saturating_div(2))
+		.set_proof_size(cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64);
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -511,6 +513,7 @@ impl pallet_assets::Config for Runtime {
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type Currency = Balances;
+	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
 	type ForceOrigin = EnsureRoot<AccountId>;
 	type AssetDeposit = ();
 	type AssetAccountDeposit = ();
@@ -521,6 +524,8 @@ impl pallet_assets::Config for Runtime {
 	type Freezer = ();
 	type Extra = ();
 	type WeightInfo = ();
+	type RemoveItemsLimit = sp_core::ConstU32<128>;
+	type AssetIdParameter = Self::AssetId;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -673,6 +678,25 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 	}
 }
 
+#[derive(
+	Debug, codec::Encode, Clone, codec::Decode, PartialEq, Eq, scale_info::TypeInfo, Default,
+)]
+pub struct MemoMessage;
+
+impl alloc::string::ToString for MemoMessage {
+	fn to_string(&self) -> String {
+		Default::default()
+	}
+}
+
+impl core::str::FromStr for MemoMessage {
+	type Err = ();
+
+	fn from_str(_s: &str) -> Result<Self, Self::Err> {
+		Ok(Default::default())
+	}
+}
+
 impl pallet_ibc::Config for Runtime {
 	type TimeProvider = Timestamp;
 	type RuntimeEvent = RuntimeEvent;
@@ -695,6 +719,17 @@ impl pallet_ibc::Config for Runtime {
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type SentryOrigin = EnsureRoot<AccountId>;
 	type SpamProtectionDeposit = SpamProtectionDeposit;
+	type Whitelist = AllowAll;
+	type MemoMessage = MemoMessage;
+	type HandleMemo = ();
+}
+
+pub struct AllowAll {}
+
+impl Contains<AccountId> for AllowAll {
+	fn contains(_account_id: &AccountId) -> bool {
+		true
+	}
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

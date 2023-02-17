@@ -24,7 +24,7 @@ use alloc::{collections::BTreeMap, vec::Vec};
 use anyhow::anyhow;
 use codec::{Decode, Encode};
 use grandpa_client_primitives::{FinalityProof, ParachainHeaderProofs};
-use primitive_types::H256;
+use sp_core::H256;
 use sp_runtime::traits::BlakeTwo256;
 use tendermint_proto::Protobuf;
 
@@ -67,7 +67,7 @@ pub enum ClientMessage {
 }
 
 impl ibc::core::ics02_client::client_message::ClientMessage for ClientMessage {
-	fn encode_to_vec(&self) -> Vec<u8> {
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
 		self.encode_vec()
 	}
 }
@@ -87,7 +87,7 @@ impl TryFrom<RawClientMessage> for ClientMessage {
 					.finality_proof
 					.ok_or_else(|| anyhow!("Grandpa finality proof is required!"))?;
 				let block = if finality_proof.block.len() == 32 {
-					H256::from_slice(&*finality_proof.block)
+					sp_core::H256::from_slice(&*finality_proof.block)
 				} else {
 					Err(anyhow!("Invalid hash type with length: {}", finality_proof.block.len()))?
 				};

@@ -12,18 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::prelude::*;
-use core::cmp::Ordering;
-
-use core::{num::ParseIntError, str::FromStr};
-
+use crate::{core::ics02_client::error::Error, prelude::*};
+use core::{cmp::Ordering, num::ParseIntError, str::FromStr};
 use flex_error::{define_error, TraceError};
+use ibc_proto::ibc::core::client::v1::Height as RawHeight;
 use serde_derive::{Deserialize, Serialize};
 use tendermint_proto::Protobuf;
-
-use ibc_proto::ibc::core::client::v1::Height as RawHeight;
-
-use crate::core::ics02_client::error::Error;
 
 #[derive(
 	Copy,

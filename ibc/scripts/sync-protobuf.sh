@@ -24,6 +24,10 @@ set -eou pipefail
 CACHE_PATH="${XDG_CACHE_HOME:-$HOME/.cache}"
 COSMOS_SDK_GIT="${COSMOS_SDK_GIT:-$CACHE_PATH/cosmos/cosmos-sdk.git}"
 IBC_GO_GIT="${IBC_GO_GIT:-$CACHE_PATH/ibc-go.git}"
+GOGO_PROTO_GIT="${GOGO_PROTO_GIT:-$CACHE_PATH/gogoproto.git}"
+COSMOS_PROTO_GIT="${COSMOS_PROTO_GIT:-$CACHE_PATH/cosmos-proto.git}"
+GOOGLE_APIS_GIT="${GOOGLE_APIS_GIT:-$CACHE_PATH/googleapis.git}"
+ICS23_GIT="${ICS23_GIT:-$CACHE_PATH/ics23.git}"
 
 
 COSMOS_SDK_COMMIT="$(cat ibc/proto/src/COSMOS_SDK_COMMIT)"
@@ -55,12 +59,45 @@ else
 	echo "Using existing cosmos-sdk bare git repository at $COSMOS_SDK_GIT"
 fi
 
+
 if [[ ! -e "$IBC_GO_GIT" ]]
 then
 	echo "Cloning ibc-go source code to as bare git repository to $IBC_GO_GIT"
 	git clone --mirror https://github.com/cosmos/ibc-go.git "$IBC_GO_GIT"
 else
 	echo "Using existing ibc-go bare git repository at $IBC_GO_GIT"
+fi
+
+if [[ ! -e "$GOGO_PROTO_GIT" ]]
+then
+	echo "Cloning gogoproto source code to as bare git repository to $GOGO_PROTO_GIT"
+	git clone --mirror https://github.com/cosmos/gogoproto.git "$GOGO_PROTO_GIT"
+else
+	echo "Using existing gogoproto bare git repository at $GOGO_PROTO_GIT"
+fi
+
+if [[ ! -e "$COSMOS_PROTO_GIT" ]]
+then
+	echo "Cloning cosmos_proto source code to as bare git repository to $COSMOS_PROTO_GIT"
+	git clone --mirror https://github.com/cosmos/cosmos-proto.git "$COSMOS_PROTO_GIT"
+else
+	echo "Using existing cosmos_proto bare git repository at $COSMOS_PROTO_GIT"
+fi
+
+if [[ ! -e "$GOOGLE_APIS_GIT" ]]
+then
+	echo "Cloning googleapis source code to as bare git repository to $GOOGLE_APIS_GIT"
+	git clone --mirror https://github.com/googleapis/googleapis.git "$GOOGLE_APIS_GIT"
+else
+	echo "Using existing googleapis bare git repository at $GOOGLE_APIS_GIT"
+fi
+
+if [[ ! -e "$ICS23_GIT" ]]
+then
+	echo "Cloning ics23 source code to as bare git repository to $ICS23_GIT"
+	git clone --mirror https://github.com/cosmos/ics23.git "$ICS23_GIT"
+else
+	echo "Using existing ics23 bare git repository at $ICS23_GIT"
 fi
 
 # Update the repositories using git fetch. This is so that
@@ -70,6 +107,22 @@ git fetch
 popd
 
 pushd "$IBC_GO_GIT"
+git fetch
+popd
+
+pushd "$GOGO_PROTO_GIT"
+git fetch
+popd
+
+pushd "$COSMOS_PROTO_GIT"
+git fetch
+popd
+
+pushd "$GOOGLE_APIS_GIT"
+git fetch
+popd
+
+pushd "$ICS23_GIT"
 git fetch
 popd
 
@@ -97,6 +150,29 @@ git checkout "$IBC_GO_COMMIT"
 git checkout -b "$IBC_GO_COMMIT"
 popd
 
+GOGO_DIR=$(mktemp -d /tmp/gogo-XXXXXXXX)
+
+pushd "$GOGO_DIR"
+git clone "$GOGO_PROTO_GIT" .
+popd
+
+COSMOS_PROTO_DIR=$(mktemp -d /tmp/cosmos-proto-XXXXXXXX)
+
+pushd "$COSMOS_PROTO_DIR"
+git clone "$COSMOS_PROTO_GIT" .
+popd
+
+GOOGLE_DIR=$(mktemp -d /tmp/google-apis-XXXXXXXX)
+
+pushd "$GOOGLE_DIR"
+git clone "$GOOGLE_APIS_GIT" .
+popd
+
+ICS23_DIR=$(mktemp -d /tmp/ics23-XXXXXXXX)
+
+pushd "$ICS23_DIR"
+git clone "$ICS23_GIT" .
+popd
 
 # Remove the existing generated protobuf files
 # so that the newly generated code does not
@@ -114,7 +190,7 @@ cargo +nightly build
 # and once for no-std version with --build-tonic set to false
 
 cargo +nightly run -- compile \
-	--sdk "$COSMOS_SDK_DIR" --ibc "$IBC_GO_DIR" --out ../proto/src/prost
+	--sdk "$COSMOS_SDK_DIR" --ibc "$IBC_GO_DIR" --gogo "$GOGO_DIR" --google "$GOOGLE_DIR" --cosmos "$COSMOS_PROTO_DIR" --ics23 "$ICS23_DIR" --out ../proto/src/prost
 
 # Remove the temporary checkouts of the repositories
 
