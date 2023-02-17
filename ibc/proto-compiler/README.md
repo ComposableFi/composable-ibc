@@ -38,6 +38,13 @@ Alternatively, one can check out a tag for the Cosmos SDK with the `--sdk-tag` o
 cargo run -- clone --out /tmp/cosmos --sdk-tag v0.44.3 --ibc-go-commit 7cd110e8e58b84a283af8abe0af6eade6a0126b9
 ```
 
+but it's really like:
+
+git clone <https://github.com/gogo/googlapis>
+git clone <https://github.com/cosmos/cosmos-proto>
+git clone <https://github.com/cosmos/gogoproto>
+git clone <https://github.com/confio/ics23>
+
 ### Generate Rust sources from Protobuf definitions
 
 To generate the Rust sources from the Protobuf definitions, and copy them to the `src/prost` folder `ibc-proto` crate within the `ibc-rs` project:
