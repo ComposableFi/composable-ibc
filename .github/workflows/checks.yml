@@ -20,7 +20,7 @@ jobs:
       - self-hosted
       - x64-monster
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Rustup show
       run: |
