@@ -2,10 +2,7 @@ use super::*;
 use crate::errors::IbcError;
 use ibc::{
 	core::{
-		ics02_client::{
-			events as ClientEvents,
-			events::{CodeId, NewBlock},
-		},
+		ics02_client::{events as ClientEvents, events::NewBlock},
 		ics03_connection::events as ConnectionEvents,
 		ics04_channel::{events as ChannelEvents, packet::Packet},
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
@@ -61,8 +58,6 @@ pub enum IbcEvent {
 		consensus_height: u64,
 		consensus_revision_number: u64,
 	},
-	/// Push WASM Code
-	PushWasmCode { wasm_code_id: CodeId },
 	/// Connection open init
 	OpenInitConnection {
 		revision_height: u64,
@@ -438,10 +433,6 @@ impl From<RawIbcEvent> for IbcEvent {
 				kind: ev.kind.as_bytes().to_vec(),
 				module_id: ev.module_name.to_string().as_bytes().to_vec(),
 			},
-			RawIbcEvent::PushWasmCode(ev) => {
-				let wasm_code_id = ev.0;
-				IbcEvent::PushWasmCode { wasm_code_id }
-			},
 		}
 	}
 }
@@ -545,8 +536,6 @@ impl TryFrom<IbcEvent> for RawIbcEvent {
 					consensus_height: Height::new(consensus_revision_number, consensus_height),
 				},
 			))),
-			IbcEvent::PushWasmCode { wasm_code_id } =>
-				Ok(RawIbcEvent::PushWasmCode(ClientEvents::PushWasmCode(wasm_code_id))),
 			IbcEvent::OpenInitConnection {
 				revision_height,
 				revision_number,

@@ -7077,7 +7077,6 @@ dependencies = [
  "ibc-primitives",
  "ibc-proto",
  "ics07-tendermint",
- "ics08-wasm",
  "ics10-grandpa",
  "ics11-beefy",
  "ics23 0.8.1",

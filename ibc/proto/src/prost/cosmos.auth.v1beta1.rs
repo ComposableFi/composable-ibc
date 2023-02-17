@@ -70,11 +70,7 @@ pub struct QueryAccountRequest {
 	#[prost(string, tag = "1")]
 	pub address: ::prost::alloc::string::String,
 }
-/// QueryModuleAccountsRequest is the request type for the Query/ModuleAccounts RPC method.
-///
-/// Since: cosmos-sdk 0.46
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct QueryModuleAccountsRequest {}
+
 /// QueryParamsResponse is the response type for the Query/Params RPC method.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QueryParamsResponse {
@@ -94,14 +90,7 @@ pub struct QueryAccountResponse {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QueryParamsRequest {}
-/// QueryParamsResponse is the response type for the Query/Params RPC method.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct QueryParamsResponse {
-	/// params defines the parameters of the module.
-	#[prost(message, optional, tag = "1")]
-	pub params: ::core::option::Option<Params>,
-}
+
 /// QueryModuleAccountsRequest is the request type for the Query/ModuleAccounts RPC method.
 ///
 /// Since: cosmos-sdk 0.46

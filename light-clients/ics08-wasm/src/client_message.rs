@@ -47,9 +47,7 @@ where
 	AnyClientMessage: IbcClientMessage,
 	AnyClientMessage: TryFrom<Any>,
 {
-	fn encode_to_vec(&self) -> Vec<u8> {
-		self.encode_vec().expect("encode to vec cannot fail")
-	}
+	fn encode_to_vec(&self) -> std::result::Result<std::vec::Vec<u8>, ibc::protobuf::Error> {}
 }
 
 impl<AnyClientMessage> Protobuf<Any> for ClientMessage<AnyClientMessage>

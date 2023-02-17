@@ -16,9 +16,10 @@ use ibc::{
 	protobuf::Protobuf,
 	Height,
 };
+
 use ibc_proto::{
-	google::protobuf::Any, ibc::lightclients::wasm::v1::ClientState as RawClientState,
-	ics23::ProofSpec,
+	cosmos::ics23::ProofSpec, google::protobuf::Any,
+	ibc::lightclients::wasm::v1::ClientState as RawClientState,
 };
 use prost::Message;
 
