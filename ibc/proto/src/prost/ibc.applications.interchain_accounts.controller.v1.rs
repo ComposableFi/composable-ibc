@@ -1,3 +1,13 @@
+/// Params defines the set of on-chain interchain accounts parameters.
+/// The following parameters may be used to disable the controller submodule.
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Params {
+    /// controller_enabled enables or disables the controller submodule.
+    #[prost(bool, tag = "1")]
+    pub controller_enabled: bool,
+}
 /// MsgRegisterInterchainAccount defines the payload for Msg/RegisterAccount
 #[derive(::serde::Serialize, ::serde::Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -356,16 +366,6 @@ pub mod msg_server {
     impl<T: Msg> tonic::server::NamedService for MsgServer<T> {
         const NAME: &'static str = "ibc.applications.interchain_accounts.controller.v1.Msg";
     }
-}
-/// Params defines the set of on-chain interchain accounts parameters.
-/// The following parameters may be used to disable the controller submodule.
-#[derive(::serde::Serialize, ::serde::Deserialize)]
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Params {
-    /// controller_enabled enables or disables the controller submodule.
-    #[prost(bool, tag = "1")]
-    pub controller_enabled: bool,
 }
 /// QueryInterchainAccountRequest is the request type for the Query/InterchainAccount RPC method.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
