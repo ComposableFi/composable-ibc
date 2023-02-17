@@ -1,45 +1,47 @@
-/// MsgRegisterAccount defines the payload for Msg/RegisterAccount
+/// MsgRegisterInterchainAccount defines the payload for Msg/RegisterAccount
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgRegisterAccount {
-    #[prost(string, tag="1")]
-    pub connection_id: ::prost::alloc::string::String,
-    #[prost(string, tag="2")]
+pub struct MsgRegisterInterchainAccount {
+    #[prost(string, tag = "1")]
     pub owner: ::prost::alloc::string::String,
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "2")]
+    pub connection_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
     pub version: ::prost::alloc::string::String,
 }
-/// MsgRegisterAccountResponse defines the response for Msg/RegisterAccount
+/// MsgRegisterInterchainAccountResponse defines the response for Msg/RegisterAccount
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgRegisterAccountResponse {
-    #[prost(string, tag="1")]
+pub struct MsgRegisterInterchainAccountResponse {
+    #[prost(string, tag = "1")]
     pub channel_id: ::prost::alloc::string::String,
 }
-/// MsgSubmitTx defines the payload for MsgSubmitTx
+/// MsgSendTx defines the payload for Msg/SendTx
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgSubmitTx {
-    #[prost(string, tag="1")]
+pub struct MsgSendTx {
+    #[prost(string, tag = "1")]
     pub owner: ::prost::alloc::string::String,
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub connection_id: ::prost::alloc::string::String,
-    /// Timeout height relative to the current block height.
-    /// The timeout is disabled when set to 0.
-    #[prost(message, optional, tag="3")]
-    pub timeout_height: ::core::option::Option<super::super::super::super::core::client::v1::Height>,
-    /// Timeout timestamp in absolute nanoseconds since unix epoch.
-    /// The timeout is disabled when set to 0.
-    #[prost(uint64, tag="4")]
-    pub timeout_timestamp: u64,
-    #[prost(message, optional, tag="5")]
-    pub packet_data: ::core::option::Option<super::super::v1::InterchainAccountPacketData>,
+    #[prost(message, optional, tag = "3")]
+    pub packet_data: ::core::option::Option<
+        super::super::v1::InterchainAccountPacketData,
+    >,
+    /// Relative timeout timestamp provided will be added to the current block time during transaction execution.
+    /// The timeout timestamp must be non-zero.
+    #[prost(uint64, tag = "4")]
+    pub relative_timeout: u64,
 }
-/// MsgSubmitTxResponse defines the response for MsgSubmitTx
+/// MsgSendTxResponse defines the response for MsgSendTx
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgSubmitTxResponse {
-    #[prost(uint64, tag="1")]
+pub struct MsgSendTxResponse {
+    #[prost(uint64, tag = "1")]
     pub sequence: u64,
 }
 /// Generated client implementations.
@@ -113,11 +115,14 @@ pub mod msg_client {
             self.inner = self.inner.accept_compressed(encoding);
             self
         }
-        /// RegisterAccount defines a rpc handler for MsgRegisterAccount.
-        pub async fn register_account(
+        /// RegisterInterchainAccount defines a rpc handler for MsgRegisterInterchainAccount.
+        pub async fn register_interchain_account(
             &mut self,
-            request: impl tonic::IntoRequest<super::MsgRegisterAccount>,
-        ) -> Result<tonic::Response<super::MsgRegisterAccountResponse>, tonic::Status> {
+            request: impl tonic::IntoRequest<super::MsgRegisterInterchainAccount>,
+        ) -> Result<
+            tonic::Response<super::MsgRegisterInterchainAccountResponse>,
+            tonic::Status,
+        > {
             self.inner
                 .ready()
                 .await
@@ -129,15 +134,15 @@ pub mod msg_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/ibc.applications.interchain_accounts.controller.v1.Msg/RegisterAccount",
+                "/ibc.applications.interchain_accounts.controller.v1.Msg/RegisterInterchainAccount",
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
-        /// SubmitTx defines a rpc handler for MsgSubmitTx.
-        pub async fn submit_tx(
+        /// SendTx defines a rpc handler for MsgSendTx.
+        pub async fn send_tx(
             &mut self,
-            request: impl tonic::IntoRequest<super::MsgSubmitTx>,
-        ) -> Result<tonic::Response<super::MsgSubmitTxResponse>, tonic::Status> {
+            request: impl tonic::IntoRequest<super::MsgSendTx>,
+        ) -> Result<tonic::Response<super::MsgSendTxResponse>, tonic::Status> {
             self.inner
                 .ready()
                 .await
@@ -149,7 +154,7 @@ pub mod msg_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/ibc.applications.interchain_accounts.controller.v1.Msg/SubmitTx",
+                "/ibc.applications.interchain_accounts.controller.v1.Msg/SendTx",
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
@@ -160,19 +165,22 @@ pub mod msg_client {
 pub mod msg_server {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
-    ///Generated trait containing gRPC methods that should be implemented for use with MsgServer.
+    /// Generated trait containing gRPC methods that should be implemented for use with MsgServer.
     #[async_trait]
     pub trait Msg: Send + Sync + 'static {
-        /// RegisterAccount defines a rpc handler for MsgRegisterAccount.
-        async fn register_account(
+        /// RegisterInterchainAccount defines a rpc handler for MsgRegisterInterchainAccount.
+        async fn register_interchain_account(
             &self,
-            request: tonic::Request<super::MsgRegisterAccount>,
-        ) -> Result<tonic::Response<super::MsgRegisterAccountResponse>, tonic::Status>;
-        /// SubmitTx defines a rpc handler for MsgSubmitTx.
-        async fn submit_tx(
+            request: tonic::Request<super::MsgRegisterInterchainAccount>,
+        ) -> Result<
+            tonic::Response<super::MsgRegisterInterchainAccountResponse>,
+            tonic::Status,
+        >;
+        /// SendTx defines a rpc handler for MsgSendTx.
+        async fn send_tx(
             &self,
-            request: tonic::Request<super::MsgSubmitTx>,
-        ) -> Result<tonic::Response<super::MsgSubmitTxResponse>, tonic::Status>;
+            request: tonic::Request<super::MsgSendTx>,
+        ) -> Result<tonic::Response<super::MsgSendTxResponse>, tonic::Status>;
     }
     /// Msg defines the 27-interchain-accounts/controller Msg service.
     #[derive(Debug)]
@@ -234,23 +242,25 @@ pub mod msg_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
-                "/ibc.applications.interchain_accounts.controller.v1.Msg/RegisterAccount" => {
+                "/ibc.applications.interchain_accounts.controller.v1.Msg/RegisterInterchainAccount" => {
                     #[allow(non_camel_case_types)]
-                    struct RegisterAccountSvc<T: Msg>(pub Arc<T>);
-                    impl<T: Msg> tonic::server::UnaryService<super::MsgRegisterAccount>
-                    for RegisterAccountSvc<T> {
-                        type Response = super::MsgRegisterAccountResponse;
+                    struct RegisterInterchainAccountSvc<T: Msg>(pub Arc<T>);
+                    impl<
+                        T: Msg,
+                    > tonic::server::UnaryService<super::MsgRegisterInterchainAccount>
+                    for RegisterInterchainAccountSvc<T> {
+                        type Response = super::MsgRegisterInterchainAccountResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::MsgRegisterAccount>,
+                            request: tonic::Request<super::MsgRegisterInterchainAccount>,
                         ) -> Self::Future {
                             let inner = self.0.clone();
                             let fut = async move {
-                                (*inner).register_account(request).await
+                                (*inner).register_interchain_account(request).await
                             };
                             Box::pin(fut)
                         }
@@ -260,7 +270,7 @@ pub mod msg_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = RegisterAccountSvc(inner);
+                        let method = RegisterInterchainAccountSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
@@ -272,22 +282,22 @@ pub mod msg_server {
                     };
                     Box::pin(fut)
                 }
-                "/ibc.applications.interchain_accounts.controller.v1.Msg/SubmitTx" => {
+                "/ibc.applications.interchain_accounts.controller.v1.Msg/SendTx" => {
                     #[allow(non_camel_case_types)]
-                    struct SubmitTxSvc<T: Msg>(pub Arc<T>);
-                    impl<T: Msg> tonic::server::UnaryService<super::MsgSubmitTx>
-                    for SubmitTxSvc<T> {
-                        type Response = super::MsgSubmitTxResponse;
+                    struct SendTxSvc<T: Msg>(pub Arc<T>);
+                    impl<T: Msg> tonic::server::UnaryService<super::MsgSendTx>
+                    for SendTxSvc<T> {
+                        type Response = super::MsgSendTxResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::MsgSubmitTx>,
+                            request: tonic::Request<super::MsgSendTx>,
                         ) -> Self::Future {
                             let inner = self.0.clone();
-                            let fut = async move { (*inner).submit_tx(request).await };
+                            let fut = async move { (*inner).send_tx(request).await };
                             Box::pin(fut)
                         }
                     }
@@ -296,7 +306,7 @@ pub mod msg_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = SubmitTxSvc(inner);
+                        let method = SendTxSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
@@ -350,23 +360,43 @@ pub mod msg_server {
 /// Params defines the set of on-chain interchain accounts parameters.
 /// The following parameters may be used to disable the controller submodule.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Params {
     /// controller_enabled enables or disables the controller submodule.
-    #[prost(bool, tag="1")]
+    #[prost(bool, tag = "1")]
     pub controller_enabled: bool,
+}
+/// QueryInterchainAccountRequest is the request type for the Query/InterchainAccount RPC method.
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct QueryInterchainAccountRequest {
+    #[prost(string, tag = "1")]
+    pub owner: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub connection_id: ::prost::alloc::string::String,
+}
+/// QueryInterchainAccountResponse the response type for the Query/InterchainAccount RPC method.
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct QueryInterchainAccountResponse {
+    #[prost(string, tag = "1")]
+    pub address: ::prost::alloc::string::String,
 }
 /// QueryParamsRequest is the request type for the Query/Params RPC method.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct QueryParamsRequest {
-}
+pub struct QueryParamsRequest {}
 /// QueryParamsResponse is the response type for the Query/Params RPC method.
 #[derive(::serde::Serialize, ::serde::Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QueryParamsResponse {
     /// params defines the parameters of the module.
-    #[prost(message, optional, tag="1")]
+    #[prost(message, optional, tag = "1")]
     pub params: ::core::option::Option<Params>,
 }
 /// Generated client implementations.
@@ -440,6 +470,29 @@ pub mod query_client {
             self.inner = self.inner.accept_compressed(encoding);
             self
         }
+        /// InterchainAccount returns the interchain account address for a given owner address on a given connection
+        pub async fn interchain_account(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryInterchainAccountRequest>,
+        ) -> Result<
+            tonic::Response<super::QueryInterchainAccountResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/ibc.applications.interchain_accounts.controller.v1.Query/InterchainAccount",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
         /// Params queries all parameters of the ICA controller submodule.
         pub async fn params(
             &mut self,
@@ -467,9 +520,17 @@ pub mod query_client {
 pub mod query_server {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
-    ///Generated trait containing gRPC methods that should be implemented for use with QueryServer.
+    /// Generated trait containing gRPC methods that should be implemented for use with QueryServer.
     #[async_trait]
     pub trait Query: Send + Sync + 'static {
+        /// InterchainAccount returns the interchain account address for a given owner address on a given connection
+        async fn interchain_account(
+            &self,
+            request: tonic::Request<super::QueryInterchainAccountRequest>,
+        ) -> Result<
+            tonic::Response<super::QueryInterchainAccountResponse>,
+            tonic::Status,
+        >;
         /// Params queries all parameters of the ICA controller submodule.
         async fn params(
             &self,
@@ -536,6 +597,46 @@ pub mod query_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
+                "/ibc.applications.interchain_accounts.controller.v1.Query/InterchainAccount" => {
+                    #[allow(non_camel_case_types)]
+                    struct InterchainAccountSvc<T: Query>(pub Arc<T>);
+                    impl<
+                        T: Query,
+                    > tonic::server::UnaryService<super::QueryInterchainAccountRequest>
+                    for InterchainAccountSvc<T> {
+                        type Response = super::QueryInterchainAccountResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::QueryInterchainAccountRequest>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move {
+                                (*inner).interchain_account(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = InterchainAccountSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
                 "/ibc.applications.interchain_accounts.controller.v1.Query/Params" => {
                     #[allow(non_camel_case_types)]
                     struct ParamsSvc<T: Query>(pub Arc<T>);

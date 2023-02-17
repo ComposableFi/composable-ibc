@@ -349,7 +349,9 @@ mod tests {
 				token: PrefixedCoin { denom, amount: msg_transfer_two.token.amount },
 				sender: msg_transfer_two.sender.clone(),
 				receiver: msg_transfer_two.receiver.clone(),
+				memo: "".to_string(),
 			};
+
 			serde_json::to_vec(&data).expect("PacketData's infallible Serialize impl failed")
 		};
 		msg_to_on_close.packet.data = packet_data;

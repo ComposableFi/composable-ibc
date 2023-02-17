@@ -1,7 +1,7 @@
 [package]
 name = "simple-iavl"
-version = "0.1.0"
-edition = "2018"
+version = "0.15.0"
+edition = "2021"
 license = "Apache-2.0"
 readme = "README.md"
 categories = ["cryptography::cryptocurrencies"]
@@ -15,7 +15,7 @@ description = """
 bytes = { version = "1.1.0", default-features = false }
 ics23 = { git = "https://github.com/confio/ics23", rev = "a4daeb4c24ce1be827829c0841446abc690c4f11", default-features = false }
 sha2 = { version = "0.10.2", default-features = false }
-tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "eac7b5a17f872c3af3b576fe485dc55e0526fa24", default-features = false }
+tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "47e28b50d20138234f7a8b4254da71469f401714", default-features = false }
 
 [dev-dependencies]
 proptest = "*"

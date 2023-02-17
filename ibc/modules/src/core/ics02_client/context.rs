@@ -95,7 +95,6 @@ pub trait ClientReader: ClientKeeper {
 		&self,
 		height: Height,
 		proof: Option<Vec<u8>>,
-		client_state: &Self::AnyClientState,
 	) -> Result<Self::AnyConsensusState, Error>;
 
 	/// Returns a natural number, counting how many clients have been created thus far.
@@ -104,9 +103,9 @@ pub trait ClientReader: ClientKeeper {
 	fn client_counter(&self) -> Result<u64, Error>;
 }
 
-pub trait ClientTypes {
+pub trait ClientTypes: 'static {
 	type AnyClientMessage: ClientMessage;
-	type AnyClientState: ClientState<ClientDef = Self::ClientDef> + Eq + 'static;
+	type AnyClientState: ClientState<ClientDef = Self::ClientDef> + Eq;
 	type AnyConsensusState: ConsensusState + Eq + 'static;
 
 	/// Client definition type (used for verification)

@@ -39,16 +39,10 @@ impl From<CommitmentRoot> for MerkleRoot {
 	}
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct MerkleProof<H> {
 	pub proofs: Vec<CommitmentProof>,
 	_phantom: PhantomData<H>,
-}
-
-impl<H> Clone for MerkleProof<H> {
-	fn clone(&self) -> Self {
-		Self { proofs: self.proofs.clone(), _phantom: PhantomData }
-	}
 }
 
 /// Convert to ics23::CommitmentProof
@@ -116,7 +110,6 @@ impl<H: HostFunctionsProvider> MerkleProof<H> {
 
 		let mut subroot = value.clone();
 		let mut value = value;
-
 		// keys are represented from root-to-leaf
 		for ((proof, spec), key) in self
 			.proofs
@@ -128,20 +121,16 @@ impl<H: HostFunctionsProvider> MerkleProof<H> {
 			match &proof.proof {
 				Some(Proof::Exist(existence_proof)) => {
 					subroot = calculate_existence_root::<H>(existence_proof)
-						.map_err(|e| Error::invalid_merkle_proof())?;
-					// println!("subroot: {}", hex::encode(&subroot));
+						.map_err(|_| Error::invalid_merkle_proof())?;
 					if !verify_membership::<H>(proof, spec, &subroot, key.as_bytes(), &value) {
 						return Err(Error::verification_failure())
 					}
 					value = subroot.clone();
-					// println!("value: {}", hex::encode(&value));
 				},
 				_ => return Err(Error::invalid_merkle_proof()),
 			}
 		}
 
-		// println!("root.hash: {}", hex::encode(&root.hash));
-		// println!("subroot: {}", hex::encode(&subroot));
 		if root.hash != subroot {
 			return Err(Error::verification_failure())
 		}

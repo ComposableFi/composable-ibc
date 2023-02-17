@@ -18,6 +18,7 @@ pallet-mmr-primitives = { package = "sp-mmr-primitives", default-features = fals
 derive_more = { version = "0.99.17", default-features = false, features = ["from"]  }
 light-client-common = { path = "../../../light-clients/common", default-features = false }
 serde = { version = "1.0.144", features = ["derive"], optional = true }
+
 [features]
 default = ["std"]
 std = [

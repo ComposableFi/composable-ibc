@@ -26,8 +26,7 @@ use crate::{
 			error as client_error, events as ClientEvents, events::NewBlock, height::HeightError,
 		},
 		ics03_connection::{
-			error as connection_error, events as ConnectionEvents,
-			events::Attributes as ConnectionAttributes,
+			events as ConnectionEvents, events::Attributes as ConnectionAttributes,
 		},
 		ics04_channel::{
 			error as channel_error, events as ChannelEvents,
@@ -58,10 +57,6 @@ define_error! {
 			[ channel_error::Error ]
 			| _ | { "channel error" },
 
-		Connection
-			[ connection_error::Error ]
-			| _ | { "connection error" },
-
 		Timestamp
 			[ ParseTimestampError ]
 			| _ | { "error parsing timestamp" },
@@ -88,14 +83,6 @@ define_error! {
 		MalformedModuleEvent
 			{ event: ModuleEvent }
 			| e | { format_args!("module event cannot use core event types: {:?}", e.event) },
-
-		UnsupportedAbciEvent
-			{event_type: String}
-			|e| { format_args!("Unable to parse abci event type '{}' into IbcEvent", e.event_type)},
-
-		FromHexError
-			[ TraceError<hex::FromHexError> ]
-			| _ | { "error decoding hex" }
 	}
 }
 
@@ -129,7 +116,6 @@ const CREATE_CLIENT_EVENT: &str = "create_client";
 const UPDATE_CLIENT_EVENT: &str = "update_client";
 const CLIENT_MISBEHAVIOUR_EVENT: &str = "client_misbehaviour";
 const UPGRADE_CLIENT_EVENT: &str = "upgrade_client";
-const PUSH_WASM_CODE_EVENT: &str = "push_wasm_code";
 /// Connection event types
 const CONNECTION_INIT_EVENT: &str = "connection_open_init";
 const CONNECTION_TRY_EVENT: &str = "connection_open_try";
@@ -144,21 +130,20 @@ const CHANNEL_CLOSE_INIT_EVENT: &str = "channel_close_init";
 const CHANNEL_CLOSE_CONFIRM_EVENT: &str = "channel_close_confirm";
 /// Packet event types
 const SEND_PACKET_EVENT: &str = "send_packet";
-const RECEIVE_PACKET_EVENT: &str = "recv_packet";
+const RECEIVE_PACKET_EVENT: &str = "receive_packet";
 const WRITE_ACK_EVENT: &str = "write_acknowledgement";
 const ACK_PACKET_EVENT: &str = "acknowledge_packet";
 const TIMEOUT_EVENT: &str = "timeout_packet";
 const TIMEOUT_ON_CLOSE_EVENT: &str = "timeout_packet_on_close";
 
 /// Events types
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum IbcEventType {
 	NewBlock,
 	CreateClient,
 	UpdateClient,
 	UpgradeClient,
 	ClientMisbehaviour,
-	PushWasmCode,
 	OpenInitConnection,
 	OpenTryConnection,
 	OpenAckConnection,
@@ -188,7 +173,6 @@ impl IbcEventType {
 			IbcEventType::UpdateClient => UPDATE_CLIENT_EVENT,
 			IbcEventType::UpgradeClient => UPGRADE_CLIENT_EVENT,
 			IbcEventType::ClientMisbehaviour => CLIENT_MISBEHAVIOUR_EVENT,
-			IbcEventType::PushWasmCode => PUSH_WASM_CODE_EVENT,
 			IbcEventType::OpenInitConnection => CONNECTION_INIT_EVENT,
 			IbcEventType::OpenTryConnection => CONNECTION_TRY_EVENT,
 			IbcEventType::OpenAckConnection => CONNECTION_ACK_EVENT,
@@ -222,7 +206,6 @@ impl FromStr for IbcEventType {
 			UPDATE_CLIENT_EVENT => Ok(IbcEventType::UpdateClient),
 			UPGRADE_CLIENT_EVENT => Ok(IbcEventType::UpgradeClient),
 			CLIENT_MISBEHAVIOUR_EVENT => Ok(IbcEventType::ClientMisbehaviour),
-			PUSH_WASM_CODE_EVENT => Ok(IbcEventType::PushWasmCode),
 			CONNECTION_INIT_EVENT => Ok(IbcEventType::OpenInitConnection),
 			CONNECTION_TRY_EVENT => Ok(IbcEventType::OpenTryConnection),
 			CONNECTION_ACK_EVENT => Ok(IbcEventType::OpenAckConnection),
@@ -257,7 +240,6 @@ pub enum IbcEvent {
 	UpdateClient(ClientEvents::UpdateClient),
 	UpgradeClient(ClientEvents::UpgradeClient),
 	ClientMisbehaviour(ClientEvents::ClientMisbehaviour),
-	PushWasmCode(ClientEvents::PushWasmCode),
 
 	OpenInitConnection(ConnectionEvents::OpenInit),
 	OpenTryConnection(ConnectionEvents::OpenTry),
@@ -311,7 +293,6 @@ impl fmt::Display for IbcEvent {
 			IbcEvent::UpdateClient(ev) => write!(f, "UpdateClientEv({})", ev),
 			IbcEvent::UpgradeClient(ev) => write!(f, "UpgradeClientEv({:?})", ev),
 			IbcEvent::ClientMisbehaviour(ev) => write!(f, "ClientMisbehaviourEv({:?})", ev),
-			IbcEvent::PushWasmCode(ev) => write!(f, "PushWasmCodeEv({:?})", ev),
 
 			IbcEvent::OpenInitConnection(ev) => write!(f, "OpenInitConnectionEv({:?})", ev),
 			IbcEvent::OpenTryConnection(ev) => write!(f, "OpenTryConnectionEv({:?})", ev),
@@ -397,7 +378,6 @@ impl IbcEvent {
 			IbcEvent::WriteAcknowledgement(ev) => ev.set_height(height),
 			IbcEvent::AcknowledgePacket(ev) => ev.set_height(height),
 			IbcEvent::TimeoutPacket(ev) => ev.set_height(height),
-			IbcEvent::PushWasmCode(_ev) => (),
 			_ => unimplemented!(),
 		}
 	}
@@ -409,7 +389,6 @@ impl IbcEvent {
 			IbcEvent::UpdateClient(_) => IbcEventType::UpdateClient,
 			IbcEvent::ClientMisbehaviour(_) => IbcEventType::ClientMisbehaviour,
 			IbcEvent::UpgradeClient(_) => IbcEventType::UpgradeClient,
-			IbcEvent::PushWasmCode(_) => IbcEventType::PushWasmCode,
 			IbcEvent::OpenInitConnection(_) => IbcEventType::OpenInitConnection,
 			IbcEvent::OpenTryConnection(_) => IbcEventType::OpenTryConnection,
 			IbcEvent::OpenAckConnection(_) => IbcEventType::OpenAckConnection,

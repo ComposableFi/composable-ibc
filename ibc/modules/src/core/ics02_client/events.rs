@@ -23,19 +23,16 @@ use serde_derive::{Deserialize, Serialize};
 use tendermint::abci::EventAttribute;
 
 /// The content of the `key` field for the attribute containing the height.
-pub const HEIGHT_ATTRIBUTE_KEY: &str = "height";
+const HEIGHT_ATTRIBUTE_KEY: &str = "height";
 
 /// The content of the `key` field for the attribute containing the client identifier.
-pub const CLIENT_ID_ATTRIBUTE_KEY: &str = "client_id";
+const CLIENT_ID_ATTRIBUTE_KEY: &str = "client_id";
 
 /// The content of the `key` field for the attribute containing the client type.
-pub const CLIENT_TYPE_ATTRIBUTE_KEY: &str = "client_type";
+const CLIENT_TYPE_ATTRIBUTE_KEY: &str = "client_type";
 
 /// The content of the `key` field for the attribute containing the height.
-pub const CONSENSUS_HEIGHT_ATTRIBUTE_KEY: &str = "consensus_height";
-
-/// The content of the `key` field for the attribute containing WASM code ID.
-pub const WASM_CODE_ID_ATTRIBUTE_KEY: &str = "wasm_code_id";
+const CONSENSUS_HEIGHT_ATTRIBUTE_KEY: &str = "consensus_height";
 
 /// NewBlock event signals the committing & execution of a new block.
 // TODO - find a better place for NewBlock
@@ -251,23 +248,5 @@ impl UpgradeClient {
 impl From<Attributes> for UpgradeClient {
 	fn from(attrs: Attributes) -> Self {
 		UpgradeClient(attrs)
-	}
-}
-
-impl From<UpgradeClient> for IbcEvent {
-	fn from(v: UpgradeClient) -> Self {
-		IbcEvent::UpgradeClient(v)
-	}
-}
-
-pub type CodeId = Vec<u8>;
-
-/// Signals a recent pushed WASM code to the chain.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
-pub struct PushWasmCode(pub CodeId);
-
-impl From<PushWasmCode> for IbcEvent {
-	fn from(v: PushWasmCode) -> Self {
-		IbcEvent::PushWasmCode(v)
 	}
 }

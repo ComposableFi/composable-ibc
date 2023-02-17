@@ -46,7 +46,7 @@ pub trait ConsensusState: Clone + Debug + Send + Sync {
 		sub_state.downcast_ref::<Self>().cloned()
 	}
 
-	fn encode_to_vec(&self) -> Vec<u8>;
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error>;
 }
 
 /// Query request for a single client event, identified by `event_id`, for `client_id`.

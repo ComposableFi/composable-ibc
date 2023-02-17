@@ -21,11 +21,10 @@ use subtle_encoding::{Encoding, Hex};
 
 use super::merkle::MerkleProof;
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize)]
 #[serde(transparent)]
 pub struct CommitmentRoot {
 	#[serde(serialize_with = "crate::serializers::ser_hex_upper")]
-	#[serde(deserialize_with = "crate::serializers::deser_hex_upper")]
 	bytes: Vec<u8>,
 }
 
@@ -181,7 +180,8 @@ impl Serialize for CommitmentPrefix {
 pub mod test_util {
 	use crate::prelude::*;
 	use ibc_proto::{
-		ibc::core::commitment::v1::MerkleProof as RawMerkleProof, ics23::CommitmentProof,
+		cosmos::ics23::v1::CommitmentProof,
+		ibc::core::commitment::v1::MerkleProof as RawMerkleProof,
 	};
 
 	/// Returns a dummy `RawMerkleProof`, for testing only!

@@ -156,6 +156,10 @@ define_error! {
 			[ TraceError<prost::DecodeError> ]
 			| _ | { "decode error" },
 
+		Encode
+			[ TraceError<tendermint_proto::Error> ]
+			| _ | { "encode error" },
+
 		MissingHeight
 			| _ | { "invalid raw client consensus state: the height field is missing" },
 
@@ -166,9 +170,6 @@ define_error! {
 		InvalidRawHeader
 			[ TraceError<TendermintProtoError> ]
 			| _ | { "invalid raw header" },
-
-		MalformedHeader
-			| _ | { "malformed header; expected to be hex encoded" },
 
 		MissingRawHeader
 			| _ | { "missing raw header" },

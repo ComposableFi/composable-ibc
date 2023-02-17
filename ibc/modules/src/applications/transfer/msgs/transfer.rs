@@ -15,7 +15,6 @@
 //! This is the definition of a transfer messages that an application submits to a chain.
 
 use crate::prelude::*;
-use core::fmt::Display;
 
 use ibc_proto::{
 	cosmos::base::v1beta1::Coin, google::protobuf::Any,
@@ -61,13 +60,11 @@ pub struct MsgTransfer<C = Coin> {
 	/// Timeout timestamp relative to the current block timestamp.
 	/// The timeout is disabled when set to 0.
 	pub timeout_timestamp: Timestamp,
+	/// Memo field
+	pub memo: String,
 }
 
-impl<C> Msg for MsgTransfer<C>
-where
-	C: Clone,
-	Coin: From<C>,
-{
+impl Msg for MsgTransfer {
 	type ValidationError = Error;
 	type Raw = RawMsgTransfer;
 
@@ -80,10 +77,7 @@ where
 	}
 }
 
-impl<C: TryFrom<Coin>> TryFrom<RawMsgTransfer> for MsgTransfer<C>
-where
-	Error: From<<C as TryFrom<Coin>>::Error>,
-{
+impl TryFrom<RawMsgTransfer> for MsgTransfer {
 	type Error = Error;
 
 	fn try_from(raw_msg: RawMsgTransfer) -> Result<Self, Self::Error> {
@@ -106,50 +100,34 @@ where
 				.source_channel
 				.parse()
 				.map_err(|e| Error::invalid_channel_id(raw_msg.source_channel.clone(), e))?,
-			token: C::try_from(raw_msg.token.ok_or_else(Error::invalid_token)?)?,
-			// .map_err(|e| Error::decode_raw_msg(e))?,
+			token: raw_msg.token.ok_or_else(Error::invalid_token)?,
 			sender: raw_msg.sender.parse().map_err(Error::signer)?,
 			receiver: raw_msg.receiver.parse().map_err(Error::signer)?,
 			timeout_height,
 			timeout_timestamp,
+			memo: raw_msg.memo,
 		})
 	}
 }
 
-impl<C> From<MsgTransfer<C>> for RawMsgTransfer
-where
-	Coin: From<C>,
-{
-	fn from(domain_msg: MsgTransfer<C>) -> Self {
+impl From<MsgTransfer> for RawMsgTransfer {
+	fn from(domain_msg: MsgTransfer) -> Self {
 		RawMsgTransfer {
 			source_port: domain_msg.source_port.to_string(),
 			source_channel: domain_msg.source_channel.to_string(),
-			token: Some(domain_msg.token.into()),
+			token: Some(domain_msg.token),
 			sender: domain_msg.sender.to_string(),
 			receiver: domain_msg.receiver.to_string(),
 			timeout_height: Some(domain_msg.timeout_height.into()),
 			timeout_timestamp: domain_msg.timeout_timestamp.nanoseconds(),
+			memo: domain_msg.memo,
 		}
 	}
 }
 
-impl<C: Protobuf<Coin>> Protobuf<RawMsgTransfer> for MsgTransfer<C>
-where
-	Coin: From<C>,
-	<C as TryFrom<Coin>>::Error: Display,
-	MsgTransfer<C>: TryFrom<RawMsgTransfer>,
-	<MsgTransfer<C> as TryFrom<RawMsgTransfer>>::Error: Display,
-{
-}
+impl Protobuf<RawMsgTransfer> for MsgTransfer {}
 
-impl<C> TryFrom<Any> for MsgTransfer<C>
-where
-	C: TryFrom<Any> + Protobuf<Coin>,
-	<C as TryFrom<Coin>>::Error: Display,
-	Coin: From<C>,
-	MsgTransfer<C>: TryFrom<RawMsgTransfer>,
-	<MsgTransfer<C> as TryFrom<RawMsgTransfer>>::Error: Display,
-{
+impl TryFrom<Any> for MsgTransfer {
 	type Error = Error;
 
 	fn try_from(raw: Any) -> Result<Self, Self::Error> {
@@ -160,20 +138,14 @@ where
 	}
 }
 
-impl<C> From<MsgTransfer<C>> for Any
-where
-	C: Protobuf<Coin>,
-	C: From<Coin>,
-	Coin: From<C>,
-	<C as TryFrom<Coin>>::Error: Display,
-	MsgTransfer<C>: TryFrom<RawMsgTransfer>,
-	<MsgTransfer<C> as TryFrom<RawMsgTransfer>>::Error: Display,
-{
-	fn from(msg: MsgTransfer<C>) -> Self {
-		Self {
+impl TryFrom<MsgTransfer> for Any {
+	type Error = Error;
+
+	fn try_from(msg: MsgTransfer) -> Result<Self, Self::Error> {
+		Ok(Self {
 			type_url: TYPE_URL.to_string(),
-			value: msg.encode_vec().expect("correct buffer length"),
-		}
+			value: msg.encode_vec().map_err(Error::decode_raw_msg)?,
+		})
 	}
 }
 
@@ -204,6 +176,7 @@ pub mod test_util {
 			receiver: address,
 			timeout_timestamp: Timestamp::now().add(Duration::from_secs(10)).unwrap(),
 			timeout_height: Height { revision_number: 0, revision_height: height },
+			memo: "".to_string(),
 		}
 	}
 }

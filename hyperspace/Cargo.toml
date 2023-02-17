@@ -10,7 +10,12 @@ clap = { version = "3.2.22", features = ["derive"] }
 anyhow = "1.0.66"
 hyperspace-core = { path = "./core" }
 toml = "0.5.9"
+primitives = { path = "primitives", package = "hyperspace-primitives" }
+
 
 
 [features]
 dali = ["hyperspace-core/dali"]
+testing = [
+    "primitives/testing"
+]

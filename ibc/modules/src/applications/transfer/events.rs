@@ -16,7 +16,7 @@ use crate::{
 	applications::transfer::{
 		acknowledgement::Acknowledgement, Amount, PrefixedDenom, MODULE_ID_STR,
 	},
-	events::ModuleEvent,
+	events::{IbcEvent, ModuleEvent},
 	prelude::*,
 	signer::Signer,
 };
@@ -42,10 +42,10 @@ pub struct RecvEvent {
 	pub success: bool,
 }
 
-impl From<RecvEvent> for ModuleEvent {
+impl From<RecvEvent> for IbcEvent {
 	fn from(ev: RecvEvent) -> Self {
 		let RecvEvent { receiver, denom, amount, success } = ev;
-		Self {
+		IbcEvent::AppModule(ModuleEvent {
 			kind: EVENT_TYPE_PACKET.to_string(),
 			module_name: MODULE_ID_STR.parse().expect("invalid ModuleId"),
 			attributes: vec![
@@ -54,7 +54,7 @@ impl From<RecvEvent> for ModuleEvent {
 				("amount", amount).into(),
 				("success", success).into(),
 			],
-		}
+		})
 	}
 }
 
@@ -65,10 +65,10 @@ pub struct AckEvent {
 	pub acknowledgement: Acknowledgement,
 }
 
-impl From<AckEvent> for ModuleEvent {
+impl From<AckEvent> for IbcEvent {
 	fn from(ev: AckEvent) -> Self {
 		let AckEvent { receiver, denom, amount, acknowledgement } = ev;
-		Self {
+		IbcEvent::AppModule(ModuleEvent {
 			kind: EVENT_TYPE_PACKET.to_string(),
 			module_name: MODULE_ID_STR.parse().expect("invalid ModuleId"),
 			attributes: vec![
@@ -77,7 +77,7 @@ impl From<AckEvent> for ModuleEvent {
 				("amount", amount).into(),
 				("acknowledgement", acknowledgement).into(),
 			],
-		}
+		})
 	}
 }
 
@@ -85,17 +85,17 @@ pub struct AckStatusEvent {
 	pub acknowledgement: Acknowledgement,
 }
 
-impl From<AckStatusEvent> for ModuleEvent {
+impl From<AckStatusEvent> for IbcEvent {
 	fn from(ev: AckStatusEvent) -> Self {
 		let AckStatusEvent { acknowledgement } = ev;
-		let mut event = Self {
+		let mut event = ModuleEvent {
 			kind: EVENT_TYPE_PACKET.to_string(),
 			module_name: MODULE_ID_STR.parse().expect("invalid ModuleId"),
 			attributes: vec![],
 		};
 		let attr_label = if acknowledgement.is_successful() { "success" } else { "error" };
 		event.attributes.push((attr_label, acknowledgement.to_string()).into());
-		event
+		IbcEvent::AppModule(event)
 	}
 }
 
@@ -105,10 +105,10 @@ pub struct TimeoutEvent {
 	pub refund_amount: Amount,
 }
 
-impl From<TimeoutEvent> for ModuleEvent {
+impl From<TimeoutEvent> for IbcEvent {
 	fn from(ev: TimeoutEvent) -> Self {
 		let TimeoutEvent { refund_receiver, refund_denom, refund_amount } = ev;
-		Self {
+		IbcEvent::AppModule(ModuleEvent {
 			kind: EVENT_TYPE_TIMEOUT.to_string(),
 			module_name: MODULE_ID_STR.parse().expect("invalid ModuleId"),
 			attributes: vec![
@@ -116,7 +116,7 @@ impl From<TimeoutEvent> for ModuleEvent {
 				("refund_denom", refund_denom).into(),
 				("refund_amount", refund_amount).into(),
 			],
-		}
+		})
 	}
 }
 
@@ -125,10 +125,10 @@ pub struct DenomTraceEvent {
 	pub denom: PrefixedDenom,
 }
 
-impl From<DenomTraceEvent> for ModuleEvent {
+impl From<DenomTraceEvent> for IbcEvent {
 	fn from(ev: DenomTraceEvent) -> Self {
 		let DenomTraceEvent { trace_hash, denom } = ev;
-		let mut ev = Self {
+		let mut ev = ModuleEvent {
 			kind: EVENT_TYPE_DENOM_TRACE.to_string(),
 			module_name: MODULE_ID_STR.parse().expect("invalid ModuleId"),
 			attributes: vec![("denom", denom).into()],
@@ -136,7 +136,7 @@ impl From<DenomTraceEvent> for ModuleEvent {
 		if let Some(hash) = trace_hash {
 			ev.attributes.push(("trace_hash", hash).into());
 		}
-		ev
+		IbcEvent::AppModule(ev)
 	}
 }
 
@@ -145,26 +145,13 @@ pub struct TransferEvent {
 	pub receiver: Signer,
 }
 
-impl From<TransferEvent> for ModuleEvent {
+impl From<TransferEvent> for IbcEvent {
 	fn from(ev: TransferEvent) -> Self {
 		let TransferEvent { sender, receiver } = ev;
-		Self {
+		IbcEvent::AppModule(ModuleEvent {
 			kind: EVENT_TYPE_TRANSFER.to_string(),
 			module_name: MODULE_ID_STR.parse().expect("invalid ModuleId"),
 			attributes: vec![("sender", sender).into(), ("receiver", receiver).into()],
-		}
-	}
-}
-
-impl From<Event> for ModuleEvent {
-	fn from(ev: Event) -> Self {
-		match ev {
-			Event::Recv(ev) => ev.into(),
-			Event::Ack(ev) => ev.into(),
-			Event::AckStatus(ev) => ev.into(),
-			Event::Timeout(ev) => ev.into(),
-			Event::DenomTrace(ev) => ev.into(),
-			Event::Transfer(ev) => ev.into(),
-		}
+		})
 	}
 }

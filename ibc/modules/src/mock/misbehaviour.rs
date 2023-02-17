@@ -40,8 +40,8 @@ pub struct MockMisbehaviour {
 }
 
 impl MockMisbehaviour {
-	fn encode_to_vec(&self) -> Vec<u8> {
-		self.encode_vec().unwrap()
+	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
+		self.encode_vec()
 	}
 }
 
