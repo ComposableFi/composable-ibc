@@ -14,11 +14,20 @@ cargo build --locked
 
 Run the following command to clone the Cosmos SDK and the IBC-Go repositories, and check out a specific commit:
 
+Note: this represents the tips of the release branches:
+
+cosmos-sdk: release/v0.47.x
+ibc-go: release/v7.0.x
+
 ```bash
-cargo run -- clone --out /tmp/cosmos --sdk-commit b75c29fc15d3320ec0c7596dbd7c787c48dccad8 --ibc-go-commit 7cd110e8e58b84a283af8abe0af6eade6a0126b9
+# Install the proto compiler
+cargo install --path . --locked
+# Clone the Cosmos SDK and IBC-Go repositories
+ibc-proto-compiler clone --out /tmp/cosmos --sdk-commit 5f4ddc6f80f9707320eec42182184207fff3833a --ibc-go-commit a58e5d2ff94672e1d2745bc689205281da2c1430
 ```
 
 Note:
+
 - the full commit hash must be specified
 - the option `--ibc-go-commit` is not mandatory: if skipped, then the IBC go repository is omitted.
 - ideally make sure the target directory `/tmp/cosmos` is empty
@@ -34,8 +43,7 @@ cargo run -- clone --out /tmp/cosmos --sdk-tag v0.44.3 --ibc-go-commit 7cd110e8e
 To generate the Rust sources from the Protobuf definitions, and copy them to the `src/prost` folder `ibc-proto` crate within the `ibc-rs` project:
 
 ```bash
-cargo run -- compile --sdk /tmp/cosmos/sdk --ibc /tmp/cosmos/ibc --out ../proto/src/prost
+ibc-proto-compiler compile --sdk /tmp/cosmos/sdk --ibc /tmp/cosmos/ibc --out ../proto/src/prost
 ```
 
 Note: the `--ibc` option is not mandatory; if omitted, then the IBC .proto files from the SDK repository will be used
-

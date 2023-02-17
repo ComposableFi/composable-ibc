@@ -78,4 +78,4 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 json = { package = "serde_json", version = "1.0.85" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
 finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
-jsonrpsee-ws-client = "0.15.1"
+jsonrpsee-ws-client = "0.16.2"

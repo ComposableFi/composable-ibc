@@ -30,8 +30,8 @@ serde = {version="1.0.137", features = ["derive"]}
 tokio-stream = { version = "0.1.9", features = ["sync"]}
 thiserror = "1.0.31"
 itertools = "0.10.3"
-jsonrpsee = "0.15.1"
-jsonrpsee-ws-client = "0.15.1"
+jsonrpsee = "0.16.2"
+jsonrpsee-ws-client = "0.16.2"
 finality-grandpa = "0.16.0"
 prost = { version = "0.11" }
 
