@@ -25,20 +25,15 @@ use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
-use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams};
-
 #[cfg(feature = "dali")]
 use subxt::config::substrate::AssetTip as Tip;
-#[cfg(feature = "dali")]
-type RuntimeDispatchInfo =
-	transaction_payment_runtime_api::RuntimeDispatchInfo<u128, frame_support::weights::Weight>;
+use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams};
 
 #[cfg(not(feature = "dali"))]
 use subxt::config::polkadot::PlainTip as Tip;
-#[cfg(not(feature = "dali"))]
-type RuntimeDispatchInfo = transaction_payment_runtime_api::RuntimeDispatchInfo<u128, u64>;
 
 use transaction_payment_rpc::TransactionPaymentApiClient;
+use transaction_payment_runtime_api::RuntimeDispatchInfo;
 
 use primitives::{Chain, IbcProvider, MisbehaviourHandler};
 
@@ -137,24 +132,13 @@ where
 				.encoded()
 				.to_vec()
 		};
-		let dispatch_info =
-			TransactionPaymentApiClient::<sp_core::H256, RuntimeDispatchInfo>::query_info(
-				&*self.para_ws_client,
-				extrinsic.into(),
-				None,
-			)
-			.await
-			.map_err(|e| Error::from(format!("Rpc Error From Estimating weight {:?}", e)))?;
-
-		#[cfg(feature = "dali")]
-		{
-			return Ok(dispatch_info.weight.ref_time)
-		}
-
-		#[cfg(not(feature = "dali"))]
-		{
-			return Ok(dispatch_info.weight)
-		}
+		let dispatch_info = TransactionPaymentApiClient::<
+			sp_core::H256,
+			RuntimeDispatchInfo<u128, u64>,
+		>::query_info(&*self.para_ws_client, extrinsic.into(), None)
+		.await
+		.map_err(|e| Error::from(format!("Rpc Error From Estimating weight {:?}", e)))?;
+		Ok(dispatch_info.weight)
 	}
 
 	async fn finality_notifications(
