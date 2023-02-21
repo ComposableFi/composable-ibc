@@ -16,9 +16,7 @@ jobs:
       cancel-in-progress: true
     container:
       image: paritytech/ci-linux:production
-    runs-on:
-      - self-hosted
-      - x64-monster
+    runs-on: [ubuntu-latest]
     steps:
     - uses: actions/checkout@v2
 
