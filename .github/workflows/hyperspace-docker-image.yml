@@ -8,7 +8,9 @@ on:
 
 jobs:
   build-and-publish:
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - x64-monster
     concurrency:
       group: hyperspace-docker-image-${{ github.ref }}
       cancel-in-progress: true
