@@ -109,10 +109,6 @@ where
 {
 }
 
-// /// Dummy router that routes to nowhere
-// #[derive(Clone, Debug, Eq, PartialEq, Default)]
-// pub struct NoneRouter {}
-
 impl ModuleRouter for () {
 	fn get_route_mut(&mut self, _module_id: &ModuleId) -> Option<&mut dyn Module> {
 		None
