@@ -49,7 +49,7 @@ impl pallet_ibc::Config for Runtime {
     type ParaId = parachain_info::Pallet<Runtime>;
     type RelayChain = RelayChainId;
     type AdminOrigin = EnsureRoot<AccountId>;
-    type SentryOrigin = EnsureRoot<AccountId>;
+    type FreezeOrigin = EnsureRoot<AccountId>;
     type SpamProtectionDeposit = SpamProtectionDeposit;
 }
 

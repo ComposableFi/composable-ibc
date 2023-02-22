@@ -121,6 +121,9 @@ pub struct TransferParams<AccountId> {
 	pub timeout: Timeout,
 }
 
+#[derive(
+	frame_support::RuntimeDebug, PartialEq, Eq, scale_info::TypeInfo, Encode, Decode, Clone,
+)]
 pub enum LightClientProtocol {
 	Beefy,
 	Grandpa,
@@ -152,7 +155,7 @@ pub mod pallet {
 		traits::{
 			fungibles::{Inspect, Mutate, Transfer},
 			tokens::{AssetId, Balance},
-			Contains, ReservableCurrency, UnixTime,
+			ReservableCurrency, UnixTime,
 		},
 	};
 	use frame_system::pallet_prelude::*;
@@ -210,6 +213,8 @@ pub mod pallet {
 		const PALLET_PREFIX: &'static [u8];
 		/// Light client protocol this chain is operating
 		const LIGHT_CLIENT_PROTOCOL: LightClientProtocol;
+		#[pallet::constant]
+		type LightClientProtocol: Get<LightClientProtocol>;
 		/// Account Id Conversion from SS58 string or hex string
 		type AccountIdConversion: TryFrom<Signer>
 			+ IdentifyAccount<AccountId = <Self as frame_system::Config>::AccountId>
@@ -244,14 +249,14 @@ pub mod pallet {
 		/// benchmarking weight info
 		type WeightInfo: WeightInfo;
 		/// Origin allowed to unfreeze light clients
-		type AdminOrigin: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
+		type AdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 		/// Origin allowed to freeze light clients
-		type SentryOrigin: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
+		type FreezeOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 		/// Amount to be reserved for client and connection creation
 		#[pallet::constant]
 		type SpamProtectionDeposit: Get<Self::Balance>;
-		/// Whitelist mechanism - likely to be temporary while we test the bridge
-		type Whitelist: Contains<<Self as frame_system::Config>::AccountId>;
+		type IbcAccountId :  Into<AccountId32>;
+		type TransferOrigin: EnsureOrigin<Self::RuntimeOrigin, Success= Self::IbcAccountId>;
 		/// Handle Ics20 Memo
 		type HandleMemo: HandleMemo<Self>;
 		/// Memo Message types supported by the runtime
@@ -602,12 +607,9 @@ pub mod pallet {
 			amount: T::Balance,
 			memo: Option<T::MemoMessage>,
 		) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			// Ensure that the signer is whitelisted
-			ensure!(T::Whitelist::contains(&origin), Error::<T>::AccessDenied);
+			let origin = T::TransferOrigin::ensure_origin(origin)?.into();
 			let denom = T::IbcDenomToAssetIdConversion::from_asset_id_to_denom(asset_id)
-				.ok_or_else(|| Error::<T>::InvalidAssetId)?;
-
+			.ok_or_else(|| Error::<T>::InvalidAssetId)?;
 			let account_id_32: AccountId32 = origin.into();
 			let from = {
 				let mut hex_string = hex::encode(account_id_32.to_raw_vec());
@@ -766,7 +768,7 @@ pub mod pallet {
 			height: u64,
 		) -> DispatchResult {
 			use ibc::core::ics02_client::client_state::ClientState;
-			<T as Config>::SentryOrigin::ensure_origin(origin)?;
+			<T as Config>::FreezeOrigin::ensure_origin(origin)?;
 			let client_id =
 				client_id_from_bytes(client_id).map_err(|_| Error::<T>::DecodingError)?;
 			let mut ctx = routing::Context::<T>::default();
