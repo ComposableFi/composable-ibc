@@ -892,7 +892,6 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Any {
 		},
 	};
 
-	println!("converting: {}", msg.type_url);
 	match msg.type_url.as_str() {
 		CREATE_CLIENT_TYPE_URL => {
 			let mut msg_decoded =

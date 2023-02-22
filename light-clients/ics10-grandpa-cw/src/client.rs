@@ -233,7 +233,7 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientKeeper for Context<'
 		let wasm_consensus_state = ics08_wasm::consensus_state::ConsensusState {
 			data: consensus_state.to_any().encode_to_vec(),
 			code_id: code_id(self.deps.storage),
-			timestamp: consensus_state.timestamp().nanoseconds() / 1_000_000_000, /* self.host_timestamp().nanoseconds() / 1_000_000_000, */
+			timestamp: consensus_state.timestamp().nanoseconds() / 1_000_000_000,
 			root: CommitmentRoot::from_bytes(&vec![1; 32]),
 			inner: Box::new(FakeInner),
 		};

@@ -383,10 +383,7 @@ impl AnyClientMessage {
 			Either::Left(h) => Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(
 				ics08_wasm::client_message::Header {
 					data: inner.encode_to_vec().unwrap(),
-					#[cfg(not(feature = "std"))]
 					height: h,
-					#[cfg(feature = "std")]
-					height: dbg!(h),
 					inner: Box::new(inner),
 				},
 			)),
@@ -398,6 +395,26 @@ impl AnyClientMessage {
 						inner: Box::new(inner),
 					},
 				)),
+		}
+	}
+
+	pub fn unpack_recursive(&self) -> &Self {
+		match self {
+			Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(h)) =>
+				h.inner.unpack_recursive(),
+			Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(m)) =>
+				m.inner.unpack_recursive(),
+			_ => self,
+		}
+	}
+
+	pub fn unpack_recursive_into(self) -> Self {
+		match self {
+			Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(h)) =>
+				h.inner.unpack_recursive_into(),
+			Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(m)) =>
+				m.inner.unpack_recursive_into(),
+			_ => self,
 		}
 	}
 }

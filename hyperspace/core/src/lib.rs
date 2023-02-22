@@ -134,8 +134,12 @@ where
 					Some(update) => update,
 					None => break,
 				};
-				let message = chain_a.query_client_message(update).await?;
-				chain_b.check_for_misbehaviour(&chain_a, message).await?;
+				// TODO: why we need to sleep in case of tendermint?
+				if chain_a.client_type() == "07-tendermint" {
+					tokio::time::sleep(chain_a.expected_block_time()).await;
+				}
+				let message = chain_a.query_client_message(update).await.map_err(|e| { log::info!("error: {}", e); e })?;
+				chain_b.check_for_misbehaviour(&chain_a, message).await.map_err(|e| { log::info!("error: {}", e); e })?;
 			}
 			// new finality event from chain B
 			update = chain_b_client_updates.next() => {
@@ -143,8 +147,11 @@ where
 					Some(update) => update,
 					None => break,
 				};
-				let message = chain_b.query_client_message(update).await?;
-				chain_a.check_for_misbehaviour(&chain_b, message).await?;
+				if chain_a.client_type() == "07-tendermint" {
+					tokio::time::sleep(chain_a.expected_block_time()).await;
+				}
+				let message = chain_b.query_client_message(update).await.map_err(|e| { log::info!("error: {}", e); e })?;
+				chain_a.check_for_misbehaviour(&chain_b, message).await.map_err(|e| { log::info!("error: {}", e); e })?;
 			}
 		}
 	}

@@ -15,7 +15,7 @@ use ibc_proto::{
 };
 use ics08_wasm::client_message::Header as WasmHeader;
 use ics10_grandpa::{
-	client_message::{ClientMessage, Header},
+	client_message::{ClientMessage, Header, Misbehaviour},
 	client_state::ClientState,
 	consensus_state::ConsensusState,
 };
@@ -242,6 +242,7 @@ impl TryFrom<VerifyNonMembershipMsgRaw> for VerifyNonMembershipMsg {
 
 #[cw_serde]
 pub struct WasmMisbehaviour {
+	pub client_id: String,
 	#[schemars(with = "String")]
 	#[serde(with = "Base64", default)]
 	pub data: Bytes,
@@ -282,7 +283,10 @@ impl<H: Clone> VerifyClientMessage<H> {
 				let any = Any::decode(&mut header.data.as_slice()).unwrap();
 				ClientMessage::Header(Header::decode_vec(&any.value).unwrap())
 			},
-			ClientMessageRaw::Misbehaviour(_) => unimplemented!("misbehaviour"),
+			ClientMessageRaw::Misbehaviour(misbehaviour) => {
+				let any = Any::decode(&mut misbehaviour.data.as_slice()).unwrap();
+				ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value).unwrap())
+			},
 		};
 		client_message
 	}
@@ -290,13 +294,13 @@ impl<H: Clone> VerifyClientMessage<H> {
 
 #[cw_serde]
 pub struct CheckForMisbehaviourMsgRaw {
-	pub client_id: String,
-	pub client_state: Bytes,
-	pub client_message: Bytes,
+	// pub client_id: String,
+	pub client_state: WasmClientState,
+	pub misbehaviour: WasmMisbehaviour,
 }
 
 pub struct CheckForMisbehaviourMsg<H> {
-	pub client_id: ClientId,
+	// pub client_id: ClientId,
 	pub client_state: ClientState<H>,
 	pub client_message: ClientMessage,
 }
@@ -305,17 +309,20 @@ impl<H: Clone> TryFrom<CheckForMisbehaviourMsgRaw> for CheckForMisbehaviourMsg<H
 	type Error = ContractError;
 
 	fn try_from(raw: CheckForMisbehaviourMsgRaw) -> Result<Self, Self::Error> {
-		let client_id = ClientId::from_str(&raw.client_id)?;
-		let client_state = ClientState::decode_vec(&raw.client_state)?;
-		let client_message = ClientMessage::decode_vec(&raw.client_message)?;
-		Ok(Self { client_id, client_state, client_message })
+		// let client_id = ClientId::from_str(&raw.client_id)?;
+		let any = Any::decode(&*raw.client_state.data).expect("A");
+		let client_state = ClientState::<H>::decode_vec(&any.value).expect("B");
+		let any = Any::decode(&*raw.misbehaviour.data).expect("C");
+		let client_message =
+			ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value).expect("D"));
+		Ok(Self { client_state, client_message })
 	}
 }
 
 #[cw_serde]
 pub struct UpdateStateOnMisbehaviourMsgRaw {
-	pub client_state: Bytes,
-	pub client_message: Bytes,
+	pub client_state: WasmClientState,
+	pub client_message: WasmMisbehaviour,
 }
 
 pub struct UpdateStateOnMisbehaviourMsg<H> {
@@ -326,9 +333,12 @@ pub struct UpdateStateOnMisbehaviourMsg<H> {
 impl<H: Clone> TryFrom<UpdateStateOnMisbehaviourMsgRaw> for UpdateStateOnMisbehaviourMsg<H> {
 	type Error = ContractError;
 
-	fn try_from(msg: UpdateStateOnMisbehaviourMsgRaw) -> Result<Self, Self::Error> {
-		let client_state = ClientState::decode_vec(&msg.client_state)?;
-		let client_message = ClientMessage::decode_vec(&msg.client_message)?;
+	fn try_from(raw: UpdateStateOnMisbehaviourMsgRaw) -> Result<Self, Self::Error> {
+		let any = Any::decode(&*raw.client_state.data).expect("A");
+		let client_state = ClientState::<H>::decode_vec(&any.value).expect("B");
+		let any = Any::decode(&*raw.client_message.data).expect("C");
+		let client_message =
+			ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value).expect("D"));
 		Ok(Self { client_state, client_message })
 	}
 }

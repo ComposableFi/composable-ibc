@@ -17,17 +17,31 @@ use futures::StreamExt;
 use hyperspace_core::{
 	chain::{AnyChain, AnyConfig},
 	logging,
+	packets::utils::{construct_recv_message, get_timeout_proof_height},
 };
 use hyperspace_cosmos::client::{ConfigKeyEntry, CosmosClient, CosmosClientConfig};
 use hyperspace_parachain::{
 	config, config::CustomExtrinsicParams, finality_protocol::FinalityProtocol,
 	ParachainClientConfig,
 };
-use hyperspace_primitives::{utils::create_clients, IbcProvider};
+use hyperspace_primitives::{utils::create_clients, Chain, IbcProvider};
 use hyperspace_testsuite::{
-	ibc_messaging_packet_height_timeout_with_connection_delay, ibc_messaging_with_connection_delay,
+	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
+	ibc_messaging_packet_timeout_on_channel_close,
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
+	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
 };
-use ibc::{self, applications::transfer::PrefixedDenom};
+use ibc::{
+	self,
+	applications::transfer::PrefixedDenom,
+	core::{
+		ics02_client::events::{Attributes, UpdateClient},
+		ics04_channel::packet::{Packet, Sequence},
+		ics24_host::identifier::{ChannelId, ClientId, PortId},
+	},
+	timestamp::Timestamp,
+	Height,
+};
 use sp_core::hashing::sha2_256;
 use subxt::{
 	config::{
@@ -193,7 +207,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 
 	if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
 		chain_a_wrapped.set_client_id(clients_on_b[0].clone());
-		chain_b_wrapped.set_client_id(clients_on_b[0].clone());
+		chain_b_wrapped.set_client_id(clients_on_a[0].clone());
 		// return (chain_b_wrapped, chain_a_wrapped)
 		return (chain_a_wrapped, chain_b_wrapped)
 	}
@@ -226,14 +240,43 @@ async fn parachain_to_cosmos_ibc_messaging_full_integration_test() {
 	ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b).await;
 
 	// timeouts + connection delay
-	// ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
-	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(&mut chain_a, &mut
-	// chain_b).await;
+	ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
 
 	// channel closing semantics
-	// ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b).await;
-	// ibc_channel_close(&mut chain_a, &mut chain_b).await;
+	ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b).await;
+	ibc_channel_close(&mut chain_a, &mut chain_b).await;
 
+	log::info!("{}", chain_a.client_type());
+	// 10-grandpa
 	// misbehaviour
-	// ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
+	// if chain_a.client_type() == "07-tendermint" {
+	// 	ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
+	// } else {
+	ibc_messaging_submit_misbehaviour(&mut chain_b, &mut chain_a).await;
+	// }
+}
+
+#[tokio::test]
+#[ignore]
+async fn cosmos_to_parachain_ibc_messaging_full_integration_test() {
+	logging::setup_logging();
+
+	let (mut chain_a, mut chain_b) = setup_clients().await;
+	let (mut chain_b, mut chain_a) = (chain_a, chain_b);
+
+	// Run tests sequentially
+
+	// no timeouts + connection delay
+	ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b).await;
+
+	// timeouts + connection delay
+	ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
+
+	// channel closing semantics
+	ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b).await;
+	ibc_channel_close(&mut chain_a, &mut chain_b).await;
+
+	ibc_messaging_submit_misbehaviour(&mut chain_b, &mut chain_a).await;
 }

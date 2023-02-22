@@ -110,8 +110,11 @@ impl grandpa_light_client_primitives::HostFunctions for HostFunctions {
 
 	// TODO: cw-grandpa contains_relay_header_hash
 	fn contains_relay_header_hash(_hash: <Self::Header as Header>::Hash) -> bool {
-		// GrandpaHeaderHashesSetStorage::get().contains(&hash)
-		false
+		// GRANDPA_HEADER_HASHES_STORAGE
+		// 	.load(&self.0.storage)
+		// 	.unwrap_or_default()
+		// 	.contains(&hash)
+		true
 	}
 }
 

@@ -265,7 +265,7 @@ where
 										.push(IbcEventWithHeight::new(ibc_event, height));
 								}
 							} else {
-								println!("Failed to parse event {:?}", abci_event);
+								log::debug!(target: "hyperspace_cosmos", "Failed to parse event {:?}", abci_event);
 							}
 						}
 					},
@@ -453,10 +453,11 @@ where
 			return Err(Error::from(format!("Node is still syncing")))
 		}
 
-		let time = response.sync_info.latest_block_time;
+		let header = self.rpc_client.latest_block().await.unwrap().block.header;
+		let time = header.time;
 		let height = Height::new(
 			ChainId::chain_version(response.node_info.network.as_str()),
-			u64::from(response.sync_info.latest_block_height),
+			header.height.value(),
 		);
 
 		Ok((height, time.into()))
