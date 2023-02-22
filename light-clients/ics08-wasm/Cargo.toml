@@ -9,7 +9,7 @@ ibc = { path = "../../ibc/modules", default-features = false }
 ibc-proto = { path = "../../ibc/proto", default-features = false }
 spin = { version = "0.9.4", default-features = false, features = ["rwlock"] }
 hex = { version = "0.4.3", default-features = false }
-cosmwasm-schema = { version = "1.1.3", default-features = false, optional = true }
+cosmwasm-schema = { version = "1.2.1", default-features = false, optional = true }
 serde = { version = "1.0.145", default-features = false, features = ["derive"], optional = true }
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 

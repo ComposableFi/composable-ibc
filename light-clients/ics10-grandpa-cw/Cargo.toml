@@ -48,7 +48,7 @@ derive_more = "0.99.17"
 ibc = { path = "../../ibc/modules", default-features = false }
 ibc-derive = { path = "../../ibc/derive", default-features = false }
 ibc-proto = { path = "../../ibc/proto", default-features = false, features = ["json-schema"] }
-ics23 = { git = "https://github.com/cosmos/ics23", rev = "f3d3020a29a81346829ff1ad42d50b9cd84ea7f0", default-features = false }
+ics23 = { version = "0.9.0", default-features = false }
 ics10-grandpa = { path = "../ics10-grandpa", default-features = false }
 grandpa-light-client-primitives = { path = "../../algorithms/grandpa/primitives", default-features = false }
 light-client-common = { path = "../../light-clients/common", default-features = false  }

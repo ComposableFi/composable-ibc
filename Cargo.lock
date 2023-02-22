@@ -4344,7 +4344,7 @@ dependencies = [
  "hex",
  "ibc-derive",
  "ibc-proto",
- "ics23 0.8.1",
+ "ics23",
  "log",
  "modelator",
  "num-traits",
@@ -4478,7 +4478,7 @@ dependencies = [
  "ibc",
  "ibc-derive",
  "ibc-proto",
- "ics23 0.8.1",
+ "ics23",
  "log",
  "modelator",
  "prost 0.11.6",
@@ -4573,7 +4573,7 @@ dependencies = [
  "ibc-proto",
  "ics08-wasm",
  "ics10-grandpa",
- "ics23 0.9.0",
+ "ics23",
  "light-client-common",
  "pallet-ibc",
  "prost 0.11.6",
@@ -4638,7 +4638,7 @@ dependencies = [
  "ibc",
  "ibc-derive",
  "ibc-proto",
- "ics23 0.8.1",
+ "ics23",
  "modelator",
  "num-traits",
  "parity-scale-codec",
@@ -4666,8 +4666,9 @@ dependencies = [
 
 [[package]]
 name = "ics23"
-version = "0.8.1"
-source = "git+https://github.com/confio/ics23?rev=a4daeb4c24ce1be827829c0841446abc690c4f11#a4daeb4c24ce1be827829c0841446abc690c4f11"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca44b684ce1859cff746ff46f5765ab72e12e3c06f76a8356db8f9a2ecf43f17"
 dependencies = [
  "anyhow",
  "bytes",
@@ -4676,17 +4677,6 @@ dependencies = [
  "ripemd",
  "sha2 0.10.6",
  "sha3",
-]
-
-[[package]]
-name = "ics23"
-version = "0.9.0"
-source = "git+https://github.com/cosmos/ics23?rev=f3d3020a29a81346829ff1ad42d50b9cd84ea7f0#f3d3020a29a81346829ff1ad42d50b9cd84ea7f0"
-dependencies = [
- "anyhow",
- "bytes",
- "hex",
- "prost 0.11.6",
 ]
 
 [[package]]
@@ -7095,7 +7085,7 @@ dependencies = [
  "ics08-wasm",
  "ics10-grandpa",
  "ics11-beefy",
- "ics23 0.8.1",
+ "ics23",
  "light-client-common",
  "log",
  "orml-tokens",
@@ -12014,7 +12004,7 @@ name = "simple-iavl"
 version = "0.1.0"
 dependencies = [
  "bytes",
- "ics23 0.8.1",
+ "ics23",
  "proptest",
  "rand 0.8.5",
  "sha2 0.10.6",
