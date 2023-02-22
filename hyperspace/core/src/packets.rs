@@ -124,7 +124,7 @@ pub async fn query_ready_and_timed_out_packets(
 		})?;
 
 		let sink_client_state_on_source =
-			sink.query_client_state(sink_height, source.client_id()).await?;
+			source.query_client_state(source_height, sink.client_id()).await?;
 		let sink_client_state_on_source = AnyClientState::try_from(
 			sink_client_state_on_source.client_state.ok_or_else(|| {
 				Error::Custom(format!(
