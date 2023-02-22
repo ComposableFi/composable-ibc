@@ -4119,7 +4119,7 @@ dependencies = [
  "sp-state-machine 0.13.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-trie 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "subxt",
- "tendermint-proto",
+ "tendermint-proto 0.29.0",
  "thiserror",
  "tokio",
  "toml",
@@ -4157,10 +4157,10 @@ dependencies = [
  "rs_merkle",
  "serde",
  "serde_json",
- "tendermint",
+ "tendermint 0.28.0",
  "tendermint-light-client",
  "tendermint-light-client-verifier",
- "tendermint-proto",
+ "tendermint-proto 0.29.0",
  "tendermint-rpc",
  "thiserror",
  "tokio",
@@ -4181,7 +4181,7 @@ dependencies = [
  "ibc-proto",
  "log",
  "prometheus",
- "tendermint-proto",
+ "tendermint-proto 0.29.0",
  "thiserror",
  "tokio",
 ]
@@ -4244,7 +4244,7 @@ dependencies = [
  "ss58-registry",
  "subxt",
  "subxt-generated",
- "tendermint-proto",
+ "tendermint-proto 0.29.0",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -4301,7 +4301,7 @@ dependencies = [
  "sp-state-machine 0.13.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-trie 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "subxt",
- "tendermint-proto",
+ "tendermint-proto 0.29.0",
  "tokio",
  "tracing",
  "tracing-fmt",
@@ -4361,8 +4361,8 @@ dependencies = [
  "sp-core 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-std 5.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "subtle-encoding",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.29.0",
+ "tendermint-proto 0.29.0",
  "test-log",
  "time 0.3.19",
  "tokio",
@@ -4414,7 +4414,7 @@ dependencies = [
  "prost 0.11.6",
  "schemars",
  "serde",
- "tendermint-proto",
+ "tendermint-proto 0.29.0",
  "tonic",
 ]
 
@@ -4453,7 +4453,7 @@ dependencies = [
  "sp-core 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-runtime 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-trie 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
- "tendermint-proto",
+ "tendermint-proto 0.29.0",
 ]
 
 [[package]]
@@ -4486,9 +4486,9 @@ dependencies = [
  "serde_json",
  "sha2 0.10.6",
  "subtle-encoding",
- "tendermint",
+ "tendermint 0.29.0",
  "tendermint-light-client-verifier",
- "tendermint-proto",
+ "tendermint-proto 0.29.0",
  "tendermint-rpc",
  "tendermint-testgen",
  "test-log",
@@ -4508,7 +4508,7 @@ dependencies = [
  "prost 0.11.6",
  "serde",
  "spin 0.9.5",
- "tendermint-proto",
+ "tendermint-proto 0.29.0",
 ]
 
 [[package]]
@@ -4545,8 +4545,8 @@ dependencies = [
  "sp-state-machine 0.13.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-trie 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "subxt",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.29.0",
+ "tendermint-proto 0.29.0",
  "tokio",
 ]
 
@@ -4586,7 +4586,7 @@ dependencies = [
  "sp-runtime 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-runtime-interface 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-std 5.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
- "tendermint-proto",
+ "tendermint-proto 0.29.0",
  "thiserror",
  "twox-hash",
 ]
@@ -4621,8 +4621,8 @@ dependencies = [
  "sp-storage 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-trie 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "subxt",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.29.0",
+ "tendermint-proto 0.29.0",
  "tokio",
 ]
 
@@ -4652,8 +4652,8 @@ dependencies = [
  "sha3",
  "sp-core 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "subtle-encoding",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.29.0",
+ "tendermint-proto 0.29.0",
  "tendermint-rpc",
  "tendermint-testgen",
  "test-log",
@@ -7110,9 +7110,9 @@ dependencies = [
  "sp-runtime 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-std 5.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-trie 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
- "tendermint",
+ "tendermint 0.29.0",
  "tendermint-light-client-verifier",
- "tendermint-proto",
+ "tendermint-proto 0.29.0",
 ]
 
 [[package]]
@@ -12008,7 +12008,7 @@ dependencies = [
  "proptest",
  "rand 0.8.5",
  "sha2 0.10.6",
- "tendermint",
+ "tendermint 0.29.0",
 ]
 
 [[package]]
@@ -14059,7 +14059,34 @@ dependencies = [
  "signature",
  "subtle",
  "subtle-encoding",
- "tendermint-proto",
+ "tendermint-proto 0.28.0",
+ "time 0.3.19",
+ "zeroize",
+]
+
+[[package]]
+name = "tendermint"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0bb661ab5325af3741b7c37e81ce4bddbf9fdd4e2fb602357843becc8f235041"
+dependencies = [
+ "bytes",
+ "digest 0.10.6",
+ "ed25519",
+ "flex-error",
+ "futures",
+ "num-traits",
+ "once_cell",
+ "prost 0.11.6",
+ "prost-types",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "serde_repr",
+ "signature",
+ "subtle",
+ "subtle-encoding",
+ "tendermint-proto 0.29.0",
  "time 0.3.19",
  "zeroize",
 ]
@@ -14072,7 +14099,7 @@ dependencies = [
  "flex-error",
  "serde",
  "serde_json",
- "tendermint",
+ "tendermint 0.28.0",
  "toml",
  "url",
 ]
@@ -14091,7 +14118,7 @@ dependencies = [
  "serde_cbor",
  "serde_derive",
  "static_assertions",
- "tendermint",
+ "tendermint 0.28.0",
  "tendermint-light-client-verifier",
  "tendermint-rpc",
  "time 0.3.19",
@@ -14106,7 +14133,7 @@ dependencies = [
  "derive_more",
  "flex-error",
  "serde",
- "tendermint",
+ "tendermint 0.28.0",
  "time 0.3.19",
 ]
 
@@ -14114,6 +14141,24 @@ dependencies = [
 name = "tendermint-proto"
 version = "0.28.0"
 source = "git+https://github.com/informalsystems/tendermint-rs?rev=e81f7bf23d63ffbcd242381d1ce5e35da3515ff1#e81f7bf23d63ffbcd242381d1ce5e35da3515ff1"
+dependencies = [
+ "bytes",
+ "flex-error",
+ "num-derive",
+ "num-traits",
+ "prost 0.11.6",
+ "prost-types",
+ "serde",
+ "serde_bytes",
+ "subtle-encoding",
+ "time 0.3.19",
+]
+
+[[package]]
+name = "tendermint-proto"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c2e8dc89de3ab71cf63adcc71eb76200fae5a9ba7afd659fee54e0810beac8f"
 dependencies = [
  "bytes",
  "flex-error",
@@ -14149,7 +14194,7 @@ dependencies = [
  "serde_json",
  "subtle",
  "subtle-encoding",
- "tendermint",
+ "tendermint 0.28.0",
  "tendermint-config",
  "thiserror",
  "time 0.3.19",
@@ -14171,7 +14216,7 @@ dependencies = [
  "serde_json",
  "simple-error",
  "tempfile",
- "tendermint",
+ "tendermint 0.28.0",
  "time 0.3.19",
 ]
 
