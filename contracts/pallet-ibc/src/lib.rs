@@ -32,7 +32,6 @@ extern crate alloc;
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use cumulus_primitives_core::ParaId;
-use frame_system::ensure_signed;
 pub use pallet::*;
 use scale_info::{
 	prelude::{
@@ -259,6 +258,8 @@ pub mod pallet {
 		type SpamProtectionDeposit: Get<Self::Balance>;
 		type IbcAccountId: Into<AccountId32>;
 		type TransferOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = Self::IbcAccountId>;
+		type RelayerOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = Self::AccountId>;
+
 		/// Handle Ics20 Memo
 		type HandleMemo: HandleMemo<Self>;
 		/// Memo Message types supported by the runtime
@@ -567,7 +568,7 @@ pub mod pallet {
 			use ibc::core::{
 				ics02_client::msgs::create_client, ics03_connection::msgs::conn_open_init,
 			};
-			let sender = ensure_signed(origin)?;
+			let sender = T::RelayerOrigin::ensure_origin(origin)?;
 
 			// reserve a fixed deposit for every client and connection created
 			// so people don't spam our chain with useless clients.
@@ -579,7 +580,9 @@ pub mod pallet {
 					let type_url = String::from_utf8(message.type_url.clone()).ok()?;
 					if matches!(
 						type_url.as_str(),
-						create_client::TYPE_URL | conn_open_init::TYPE_URL
+						create_client::TYPE_URL |
+							conn_open_init::TYPE_URL |
+							ibc::core::ics04_channel::msgs::chan_open_init::TYPE_URL
 					) {
 						reserve_count += 1;
 					}

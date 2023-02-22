@@ -197,6 +197,7 @@ impl Config for Test {
 	type SpamProtectionDeposit = SpamProtectionDeposit;
 	type IbcAccountId = Self::AccountId;
 	type TransferOrigin = EnsureSigned<Self::IbcAccountId>;
+	type RelayerOrigin = EnsureSigned<Self::AccountId>;
 	type HandleMemo = ();
 	type MemoMessage = MemoMessage;
 }

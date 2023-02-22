@@ -722,19 +722,12 @@ impl pallet_ibc::Config for Runtime {
 	type FreezeOrigin = EnsureRoot<AccountId>;
 	type SpamProtectionDeposit = SpamProtectionDeposit;
 	type TransferOrigin = EnsureSigned<Self::IbcAccountId>;
+	type RelayerOrigin = EnsureSigned<Self::AccountId>;
 	type MemoMessage = MemoMessage;
 	type HandleMemo = ();
 	type PalletPrefix = IbcTriePrefix;
 	type LightClientProtocol = GRANDPA;
 	type IbcAccountId = Self::AccountId;
-}
-
-pub struct AllowAll {}
-
-impl Contains<AccountId> for AllowAll {
-	fn contains(_account_id: &AccountId) -> bool {
-		true
-	}
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
