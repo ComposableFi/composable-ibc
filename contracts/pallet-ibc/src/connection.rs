@@ -54,7 +54,7 @@ where
 	fn commitment_prefix(&self) -> CommitmentPrefix {
 		log::trace!(target: "pallet_ibc", "in connection : [commitment_prefix] >> CommitmentPrefix = {:?}", "ibc");
 		// If this conversion fails it means the runtime was not configured well
-		T::PALLET_PREFIX
+		T::PalletPrefix::get()
 			.to_vec()
 			.try_into()
 			.map_err(|_| panic!("Connection prefix supplied in pallet runtime config is invalid"))

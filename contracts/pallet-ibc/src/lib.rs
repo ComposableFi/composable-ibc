@@ -209,10 +209,12 @@ pub mod pallet {
 		type NativeAssetId: Get<Self::AssetId>;
 		/// Convert ibc denom to asset id and vice versa
 		type IbcDenomToAssetIdConversion: DenomToAssetId<Self>;
+		
 		/// Prefix for events stored in the Off-chain DB via Indexing API, child trie and connection
-		const PALLET_PREFIX: &'static [u8];
+		#[pallet::constant]
+		type PalletPrefix: Get<&'static [u8]>;
+
 		/// Light client protocol this chain is operating
-		const LIGHT_CLIENT_PROTOCOL: LightClientProtocol;
 		#[pallet::constant]
 		type LightClientProtocol: Get<LightClientProtocol>;
 		/// Account Id Conversion from SS58 string or hex string

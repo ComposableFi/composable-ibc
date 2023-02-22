@@ -6,6 +6,7 @@ use ibc::{
 };
 use ibc_primitives::apply_prefix;
 use sp_std::{marker::PhantomData, prelude::*};
+use sp_core::Get;
 
 /// client_id, height => consensus_state
 /// trie key path: "clients/{client_id}/consensusStates/{height}"
@@ -20,8 +21,8 @@ impl<T: Config> ConsensusStates<T> {
 			height: height.revision_height,
 		};
 		let path = format!("{}", consensus_path);
-		let key = apply_prefix(T::PALLET_PREFIX, vec![path]);
-		child::get(&ChildInfo::new_default(T::PALLET_PREFIX), &key)
+		let key = apply_prefix(T::PalletPrefix::get(), vec![path]);
+		child::get(&ChildInfo::new_default(T::PalletPrefix::get()), &key)
 	}
 
 	pub fn insert(client_id: ClientId, height: Height, consensus_state: Vec<u8>) {
@@ -31,7 +32,7 @@ impl<T: Config> ConsensusStates<T> {
 			height: height.revision_height,
 		};
 		let path = format!("{}", consensus_path);
-		let key = apply_prefix(T::PALLET_PREFIX, vec![path]);
-		child::put(&ChildInfo::new_default(T::PALLET_PREFIX), &key, &consensus_state)
+		let key = apply_prefix(T::PalletPrefix::get(), vec![path]);
+		child::put(&ChildInfo::new_default(T::PalletPrefix::get()), &key, &consensus_state)
 	}
 }

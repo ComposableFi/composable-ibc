@@ -7,6 +7,7 @@ use ibc::core::ics24_host::{
 };
 use ibc_primitives::apply_prefix;
 use sp_std::marker::PhantomData;
+use sp_core::Get;
 
 // todo: pruning
 /// (port_id, channel_id) => Sequence
@@ -16,13 +17,13 @@ pub struct NextSequenceSend<T>(PhantomData<T>);
 impl<T: Config> NextSequenceSend<T> {
 	pub fn get(port_id: PortId, channel_id: ChannelId) -> Option<u64> {
 		let next_seq_send_path = format!("{}", SeqSendsPath(port_id, channel_id));
-		let next_seq_send_key = apply_prefix(T::PALLET_PREFIX, vec![next_seq_send_path]);
-		child::get(&ChildInfo::new_default(T::PALLET_PREFIX), &next_seq_send_key)
+		let next_seq_send_key = apply_prefix(T::PalletPrefix::get(), vec![next_seq_send_path]);
+		child::get(&ChildInfo::new_default(T::PalletPrefix::get()), &next_seq_send_key)
 	}
 
 	pub fn insert(port_id: PortId, channel_id: ChannelId, seq: u64) {
 		let next_seq_send_path = format!("{}", SeqSendsPath(port_id, channel_id));
-		let next_seq_send_key = apply_prefix(T::PALLET_PREFIX, vec![next_seq_send_path]);
-		child::put(&ChildInfo::new_default(T::PALLET_PREFIX), &next_seq_send_key, &seq)
+		let next_seq_send_key = apply_prefix(T::PalletPrefix::get(), vec![next_seq_send_path]);
+		child::put(&ChildInfo::new_default(T::PalletPrefix::get()), &next_seq_send_key, &seq)
 	}
 }
