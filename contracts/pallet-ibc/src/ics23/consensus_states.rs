@@ -5,8 +5,8 @@ use ibc::{
 	Height,
 };
 use ibc_primitives::apply_prefix;
-use sp_std::{marker::PhantomData, prelude::*};
 use sp_core::Get;
+use sp_std::{marker::PhantomData, prelude::*};
 
 /// client_id, height => consensus_state
 /// trie key path: "clients/{client_id}/consensusStates/{height}"

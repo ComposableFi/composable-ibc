@@ -36,7 +36,7 @@ use ibc::core::{
 	ics26_routing::context::{Module, ModuleId},
 };
 use orml_traits::asset_registry::AssetProcessor;
-use pallet_ibc::light_client_common::RelayChain;
+use pallet_ibc::{light_client_common::RelayChain, LightClientProtocol};
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -697,6 +697,11 @@ impl core::str::FromStr for MemoMessage {
 	}
 }
 
+parameter_types! {
+	pub const GRANDPA: LightClientProtocol = LightClientProtocol::Grandpa;
+	pub const IbcTriePrefix : &'static [u8] = b"ibc/";
+}
+
 impl pallet_ibc::Config for Runtime {
 	type TimeProvider = Timestamp;
 	type RuntimeEvent = RuntimeEvent;
@@ -705,9 +710,6 @@ impl pallet_ibc::Config for Runtime {
 	type AssetId = AssetId;
 	type NativeAssetId = NativeAssetId;
 	type IbcDenomToAssetIdConversion = IbcDenomToAssetIdConversion;
-	const PALLET_PREFIX: &'static [u8] = b"ibc/";
-	const LIGHT_CLIENT_PROTOCOL: pallet_ibc::LightClientProtocol =
-		pallet_ibc::LightClientProtocol::Grandpa;
 	type AccountIdConversion = ibc_primitives::IbcAccount<AccountId>;
 	type Fungibles = Assets;
 	type ExpectedBlockTime = ExpectedBlockTime;
@@ -717,11 +719,14 @@ impl pallet_ibc::Config for Runtime {
 	type RelayChain = RelayChainId;
 	type WeightInfo = ();
 	type AdminOrigin = EnsureRoot<AccountId>;
-	type SentryOrigin = EnsureRoot<AccountId>;
+	type FreezeOrigin = EnsureRoot<AccountId>;
 	type SpamProtectionDeposit = SpamProtectionDeposit;
-	type Whitelist = AllowAll;
+	type TransferOrigin = EnsureSigned<Self::IbcAccountId>;
 	type MemoMessage = MemoMessage;
 	type HandleMemo = ();
+	type PalletPrefix = IbcTriePrefix;
+	type LightClientProtocol = GRANDPA;
+	type IbcAccountId = Self::AccountId;
 }
 
 pub struct AllowAll {}
@@ -901,7 +906,7 @@ impl_runtime_apis! {
 		}
 
 		fn child_trie_key() -> Vec<u8> {
-			<Runtime as pallet_ibc::Config>::PALLET_PREFIX.to_vec()
+			<Runtime as pallet_ibc::Config>::PalletPrefix::get().to_vec()
 		}
 
 		fn query_balance_with_address(addr: Vec<u8>) -> Option<u128> {

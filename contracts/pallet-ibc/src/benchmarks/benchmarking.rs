@@ -19,8 +19,8 @@ use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::traits::fungibles::{Inspect, Mutate};
 use frame_system::RawOrigin;
 use ibc_primitives::IbcHandler;
-use sp_runtime::traits::IdentifyAccount;
 use sp_core::Get;
+use sp_runtime::traits::IdentifyAccount;
 
 use crate::routing::Context;
 use ibc::{

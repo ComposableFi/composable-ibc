@@ -171,9 +171,8 @@ impl orml_tokens::Config for Test {
 
 parameter_types! {
 	pub const GRANDPA: LightClientProtocol = LightClientProtocol::Grandpa;
-	pub const IbcTriePrefix : &'static [u8] = b"ibc/"; 
+	pub const IbcTriePrefix : &'static [u8] = b"ibc/";
 }
-
 
 impl Config for Test {
 	type TimeProvider = Timestamp;
@@ -184,7 +183,7 @@ impl Config for Test {
 	type NativeAssetId = NativeAssetId;
 	type IbcDenomToAssetIdConversion = ();
 	type PalletPrefix = IbcTriePrefix;
-	type LightClientProtocol =  GRANDPA;
+	type LightClientProtocol = GRANDPA;
 	type AccountIdConversion = IbcAccount<AccountId>;
 	type Fungibles = Assets;
 	type ExpectedBlockTime = ExpectedBlockTime;

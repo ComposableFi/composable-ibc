@@ -6,8 +6,8 @@ use ibc::core::ics24_host::{
 	path::SeqRecvsPath,
 };
 use ibc_primitives::apply_prefix;
-use sp_std::marker::PhantomData;
 use sp_core::Get;
+use sp_std::marker::PhantomData;
 
 // todo: pruning
 /// (port_id, channel_id) => Sequence

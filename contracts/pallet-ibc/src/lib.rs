@@ -209,7 +209,7 @@ pub mod pallet {
 		type NativeAssetId: Get<Self::AssetId>;
 		/// Convert ibc denom to asset id and vice versa
 		type IbcDenomToAssetIdConversion: DenomToAssetId<Self>;
-		
+
 		/// Prefix for events stored in the Off-chain DB via Indexing API, child trie and connection
 		#[pallet::constant]
 		type PalletPrefix: Get<&'static [u8]>;
@@ -257,8 +257,8 @@ pub mod pallet {
 		/// Amount to be reserved for client and connection creation
 		#[pallet::constant]
 		type SpamProtectionDeposit: Get<Self::Balance>;
-		type IbcAccountId :  Into<AccountId32>;
-		type TransferOrigin: EnsureOrigin<Self::RuntimeOrigin, Success= Self::IbcAccountId>;
+		type IbcAccountId: Into<AccountId32>;
+		type TransferOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = Self::IbcAccountId>;
 		/// Handle Ics20 Memo
 		type HandleMemo: HandleMemo<Self>;
 		/// Memo Message types supported by the runtime
@@ -611,7 +611,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let origin = T::TransferOrigin::ensure_origin(origin)?.into();
 			let denom = T::IbcDenomToAssetIdConversion::from_asset_id_to_denom(asset_id)
-			.ok_or_else(|| Error::<T>::InvalidAssetId)?;
+				.ok_or_else(|| Error::<T>::InvalidAssetId)?;
 			let account_id_32: AccountId32 = origin.into();
 			let from = {
 				let mut hex_string = hex::encode(account_id_32.to_raw_vec());

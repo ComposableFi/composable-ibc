@@ -10,9 +10,9 @@ use ibc::core::{
 	},
 };
 use ibc_primitives::apply_prefix;
+use sp_core::Get;
 use sp_std::{marker::PhantomData, prelude::*, str::FromStr};
 use tendermint_proto::Protobuf;
-use sp_core::Get;
 
 // todo: pruning
 /// (port_id, channel_id) => ChannelEnd

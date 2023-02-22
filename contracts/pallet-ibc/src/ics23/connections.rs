@@ -6,9 +6,9 @@ use ibc::core::{
 	ics24_host::{identifier::ConnectionId, path::ConnectionsPath},
 };
 use ibc_primitives::apply_prefix;
+use sp_core::Get;
 use sp_std::{marker::PhantomData, prelude::*};
 use tendermint_proto::Protobuf;
-use sp_core::Get;
 
 // todo: pruning
 /// connection_id => ConnectionEnd

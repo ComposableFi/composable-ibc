@@ -10,8 +10,8 @@ use ibc::core::{
 	},
 };
 use ibc_primitives::apply_prefix;
-use sp_std::{marker::PhantomData, prelude::*, str::FromStr};
 use sp_core::Get;
+use sp_std::{marker::PhantomData, prelude::*, str::FromStr};
 
 /// (port_id, channel_id, sequence) => hash
 /// trie key path: "acks/ports/{port_id}/channels/{channel_id}/sequences/{sequence}"
@@ -53,15 +53,18 @@ impl<T: Config> Acknowledgements<T> {
 	pub fn iter() -> impl Iterator<Item = ((PortId, ChannelId, Sequence), Vec<u8>)> {
 		let prefix = "acks/ports/".to_string();
 		let prefix_key = apply_prefix(T::PalletPrefix::get(), vec![prefix.clone()]);
-		ChildTriePrefixIterator::with_prefix(&ChildInfo::new_default(T::PalletPrefix::get()), &prefix_key)
-			.filter_map(move |(remaining_key, value)| {
-				let path = format!("{prefix}{}", String::from_utf8(remaining_key).ok()?);
-				if let Path::Acks(AcksPath { port_id, channel_id, sequence }) =
-					Path::from_str(&path).ok()?
-				{
-					return Some(((port_id, channel_id, sequence), value))
-				}
-				None
-			})
+		ChildTriePrefixIterator::with_prefix(
+			&ChildInfo::new_default(T::PalletPrefix::get()),
+			&prefix_key,
+		)
+		.filter_map(move |(remaining_key, value)| {
+			let path = format!("{prefix}{}", String::from_utf8(remaining_key).ok()?);
+			if let Path::Acks(AcksPath { port_id, channel_id, sequence }) =
+				Path::from_str(&path).ok()?
+			{
+				return Some(((port_id, channel_id, sequence), value))
+			}
+			None
+		})
 	}
 }

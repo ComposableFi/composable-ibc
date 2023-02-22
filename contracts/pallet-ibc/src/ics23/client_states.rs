@@ -3,8 +3,8 @@ use alloc::string::{String, ToString};
 use frame_support::storage::{child, child::ChildInfo, ChildTriePrefixIterator};
 use ibc::core::ics24_host::{identifier::ClientId, path::ClientStatePath, Path};
 use ibc_primitives::apply_prefix;
-use sp_std::{marker::PhantomData, prelude::*, str::FromStr};
 use sp_core::Get;
+use sp_std::{marker::PhantomData, prelude::*, str::FromStr};
 
 /// client_id => client_states
 /// trie key path: "clients/{client_id}/clientState"
@@ -20,7 +20,11 @@ impl<T: Config> ClientStates<T> {
 	pub fn insert(client_id: &ClientId, client_state: Vec<u8>) {
 		let client_state_path = format!("{}", ClientStatePath(client_id.clone()));
 		let client_state_key = apply_prefix(T::PalletPrefix::get(), vec![client_state_path]);
-		child::put(&ChildInfo::new_default(T::PalletPrefix::get()), &client_state_key, &client_state);
+		child::put(
+			&ChildInfo::new_default(T::PalletPrefix::get()),
+			&client_state_key,
+			&client_state,
+		);
 	}
 
 	pub fn _contains_key(client_id: &ClientId) -> bool {
