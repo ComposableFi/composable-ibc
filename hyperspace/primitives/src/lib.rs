@@ -97,9 +97,10 @@ pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: impl Into<Vec<u8>>) ->
 pub trait IbcProvider {
 	/// Finality event type, passed on to [`Chain::query_latest_ibc_events`]
 	type FinalityEvent;
-
 	/// A representation of the transaction id for the chain
 	type TransactionId: Debug;
+	/// Asset Id
+	type AssetId: Clone;
 
 	/// Error type, just needs to implement standard error trait.
 	type Error: std::error::Error + From<String> + Send + Sync + 'static;
@@ -280,7 +281,10 @@ pub trait IbcProvider {
 	) -> Result<Option<Vec<u8>>, Self::Error>;
 
 	/// Should return the list of ibc denoms available to this account to spend.
-	async fn query_ibc_balance(&self) -> Result<Vec<PrefixedCoin>, Self::Error>;
+	async fn query_ibc_balance(
+		&self,
+		asset_id: Self::AssetId,
+	) -> Result<Vec<PrefixedCoin>, Self::Error>;
 
 	/// Return the chain connection prefix
 	fn connection_prefix(&self) -> CommitmentPrefix;

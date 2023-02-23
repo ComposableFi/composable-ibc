@@ -93,6 +93,7 @@ where
 	type FinalityEvent = FinalityEvent;
 	type TransactionId = TransactionId<tendermint::Hash>;
 	type Error = Error;
+	type AssetId = String;
 
 	async fn query_latest_ibc_events<C>(
 		&mut self,
@@ -237,13 +238,8 @@ where
 							tx_result.height as u64,
 						);
 						for abci_event in &tx_result.result.events {
-							// println!("Got event {:?}", abci_event);
 							if let Ok(ibc_event) = ibc_event_try_from_abci_event(abci_event, height)
 							{
-								// dbg!(ibc_event.event_type());
-								if ibc_event.event_type() == IbcEventType::OpenTryConnection {
-									println!("Got event {:?}", ibc_event);
-								}
 								if query == Query::eq("message.module", "ibc_client").to_string() &&
 									event_is_type_client(&ibc_event)
 								{
@@ -793,10 +789,11 @@ where
 		todo!()
 	}
 
-	async fn query_ibc_balance(&self) -> Result<Vec<PrefixedCoin>, Self::Error> {
-		// let denom = "stake";
-		let denom = "ibc/47B97D8FF01DA03FCB2F4B1FFEC931645F254E21EF465FA95CBA6888CB964DC4";
-		// let denom = "transfer/channel-0/ibc";
+	async fn query_ibc_balance(
+		&self,
+		asset_id: Self::AssetId,
+	) -> Result<Vec<PrefixedCoin>, Self::Error> {
+		let denom = &asset_id;
 		let mut grpc_client = ibc_proto::cosmos::bank::v1beta1::query_client::QueryClient::connect(
 			self.grpc_url.clone().to_string(),
 		)

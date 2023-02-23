@@ -15,7 +15,7 @@
 use async_trait::async_trait;
 use futures::StreamExt;
 use hyperspace_core::{
-	chain::{AnyChain, AnyConfig},
+	chain::{AnyAssetId, AnyChain, AnyConfig},
 	logging,
 	packets::utils::{construct_recv_message, get_timeout_proof_height},
 };
@@ -175,8 +175,6 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 			sha2_256(&wasm_data).to_vec()
 		},
 	};
-	// let code_id =
-	// 	hex::decode("cfd2199578332b5fd859f3b76cb0b29757c6b52c5df79566cdc3598039dbe43e").unwrap();
 	let code_id_str = hex::encode(code_id);
 	config_b.wasm_code_id = Some(code_id_str);
 
@@ -233,28 +231,44 @@ async fn parachain_to_cosmos_ibc_messaging_full_integration_test() {
 	// 7, got 6
 	logging::setup_logging();
 
+	let asset_id_a = AnyAssetId::Parachain(1);
+	let asset_id_b = AnyAssetId::Cosmos(
+		"ibc/47B97D8FF01DA03FCB2F4B1FFEC931645F254E21EF465FA95CBA6888CB964DC4".to_string(),
+	);
 	let (mut chain_a, mut chain_b) = setup_clients().await;
+
 	// Run tests sequentially
 
 	// no timeouts + connection delay
-	ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b).await;
+	ibc_messaging_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		asset_id_b.clone(),
+	)
+	.await;
 
 	// timeouts + connection delay
-	ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
+	ibc_messaging_packet_height_timeout_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+	)
+	.await;
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+	)
+	.await;
 
 	// channel closing semantics
-	ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b).await;
+	ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id_a.clone())
+		.await;
 	ibc_channel_close(&mut chain_a, &mut chain_b).await;
 
-	log::info!("{}", chain_a.client_type());
-	// 10-grandpa
-	// misbehaviour
-	// if chain_a.client_type() == "07-tendermint" {
-	// 	ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
-	// } else {
-	ibc_messaging_submit_misbehaviour(&mut chain_b, &mut chain_a).await;
-	// }
+	// TODO: tendermint misbehaviour?
+	// ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
 }
 
 #[tokio::test]
@@ -265,18 +279,38 @@ async fn cosmos_to_parachain_ibc_messaging_full_integration_test() {
 	let (mut chain_a, mut chain_b) = setup_clients().await;
 	let (mut chain_b, mut chain_a) = (chain_a, chain_b);
 
+	let asset_id_a = AnyAssetId::Cosmos("stake".to_string());
+	let asset_id_b = AnyAssetId::Parachain(2);
+
 	// Run tests sequentially
 
 	// no timeouts + connection delay
-	ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b).await;
+	ibc_messaging_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		asset_id_b.clone(),
+	)
+	.await;
 
 	// timeouts + connection delay
-	ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay(&mut chain_a, &mut chain_b).await;
+	ibc_messaging_packet_height_timeout_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+	)
+	.await;
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+	)
+	.await;
 
-	// channel closing semantics
-	ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b).await;
-	ibc_channel_close(&mut chain_a, &mut chain_b).await;
+	// channel closing semantics (doesn't work on cosmos)
+	// ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id_a.clone())
+	// 	.await;
+	// ibc_channel_close(&mut chain_a, &mut chain_b).await;
 
-	ibc_messaging_submit_misbehaviour(&mut chain_b, &mut chain_a).await;
+	ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
 }

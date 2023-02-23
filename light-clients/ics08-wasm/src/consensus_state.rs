@@ -48,9 +48,7 @@ where
 	}
 
 	fn timestamp(&self) -> Timestamp {
-		// TODO: use self.timestamp?
-		// self.inner.timestamp()
-		Timestamp::from_nanoseconds(self.timestamp.saturating_mul(1000000000)).unwrap()
+		Timestamp::from_nanoseconds(self.timestamp).unwrap()
 	}
 
 	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
@@ -78,10 +76,6 @@ where
 	type Error = String;
 
 	fn try_from(raw: RawConsensusState) -> Result<Self, Self::Error> {
-		#[cfg(feature = "std")]
-		println!("RawConsensusState.code_id = {}", hex::encode(&raw.code_id));
-		#[cfg(feature = "std")]
-		println!("RawConsensusState.data = {}", hex::encode(&raw.data));
 		let any = Any::decode(&mut &raw.data[..]).unwrap();
 		let inner = AnyConsensusState::try_from(any)
 			.map_err(|_| ())

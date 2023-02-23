@@ -20,7 +20,7 @@ use crate::{
 	IbcAssets, Pallet, Params, MODULE_ID,
 };
 use codec::{Decode, Encode};
-use frame_support::traits::Currency;
+use frame_support::traits::{fungibles::Inspect, Currency};
 use ibc::{
 	applications::transfer::{
 		msgs::transfer::MsgTransfer, relay::send_transfer::send_transfer, PrefixedCoin,
@@ -478,14 +478,23 @@ where
 		})
 	}
 
-	pub fn query_balance_with_address(addr: Vec<u8>) -> Result<u128, Error<T>> {
+	pub fn query_balance_with_address(
+		addr: Vec<u8>,
+		asset_id: T::AssetId,
+	) -> Result<u128, Error<T>> {
 		let hex_string = String::from_utf8(addr).map_err(|_| Error::<T>::DecodingError)?;
 		let signer = Signer::from_str(&hex_string).map_err(|_| Error::<T>::DecodingError)?;
 		let ibc_acc =
 			T::AccountIdConversion::try_from(signer).map_err(|_| Error::<T>::DecodingError)?;
 		let account_id = ibc_acc.into_account();
-		let balance = format!("{:?}", T::NativeCurrency::free_balance(&account_id));
-		Ok(balance.parse().unwrap_or_default())
+
+		if asset_id == T::NativeAssetId::get() {
+			let balance = format!("{:?}", T::NativeCurrency::free_balance(&account_id));
+			Ok(balance.parse().unwrap_or_default())
+		} else {
+			let balance = format!("{:?}", T::Fungibles::balance(asset_id, &account_id));
+			Ok(balance.parse().unwrap_or_default())
+		}
 	}
 
 	pub fn offchain_send_packet_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {

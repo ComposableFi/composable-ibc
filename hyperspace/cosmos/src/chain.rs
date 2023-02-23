@@ -146,12 +146,6 @@ where
 	}
 
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
-		for msg in messages.iter() {
-			if msg.type_url.contains("Wasm") {
-				continue
-			}
-			// println!("Message {}: {}", msg.type_url, hex::encode(&msg.value));
-		}
 		let hash = self.submit_call(messages).await?;
 		log::debug!(target: "hyperspace", "Submitted. Tx hash: {}", hash);
 		Ok(Self::TransactionId { hash })

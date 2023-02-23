@@ -14,7 +14,7 @@ use ibc_proto::{
 	},
 	google::protobuf::Any,
 };
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc, time::Duration};
 // use ibc_relayer_types::{
 use crate::error::Error;
 use ibc::core::{
@@ -117,6 +117,9 @@ pub struct CosmosClient<H> {
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 	/// Finality protocol to use, eg Tenderminet
 	pub _phantom: std::marker::PhantomData<H>,
+	/// Mutex used to sequentially send transactions. This is necessary because
+	/// account sequence numbers are not updated until the transaction is processed.
+	pub tx_mutex: Arc<tokio::sync::Mutex<()>>,
 }
 
 /// config options for [`ParachainClient`]
@@ -214,6 +217,7 @@ where
 			keybase: KeyEntry::try_from(config.keybase).map_err(|e| e.to_string())?,
 			channel_whitelist: vec![],
 			_phantom: std::marker::PhantomData,
+			tx_mutex: Default::default(),
 		})
 	}
 
@@ -261,6 +265,7 @@ where
 	}
 
 	pub async fn submit_call(&self, messages: Vec<Any>) -> Result<Hash, Error> {
+		let _lock = self.tx_mutex.lock().await;
 		let account_info = self.query_account().await?;
 
 		// Sign transaction
@@ -285,8 +290,6 @@ where
 		res.result
 			.map(|r| log::info!(target: "hyperspace", "Simulated transaction: events: {:?}\nlogs: {}", r.events, r.log));
 		// println!("res = {:?}", &res);
-
-		// if res.result
 		// tracing::info!("Simulated transaction: {:?}", res);
 
 		// Broadcast transaction

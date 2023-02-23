@@ -198,7 +198,7 @@ where
 	/// Query balance of an address on chain, addr should be a valid hexadecimal or SS58 string,
 	/// representing the account id.
 	#[method(name = "ibc_queryBalanceWithAddress")]
-	fn query_balance_with_address(&self, addr: String) -> Result<Coin>;
+	fn query_balance_with_address(&self, addr: String, asset_id: AssetId) -> Result<Coin>;
 
 	/// Query a client state
 	#[method(name = "ibc_queryClientState")]
@@ -656,12 +656,17 @@ where
 		}
 	}
 
-	fn query_balance_with_address(&self, addr: String) -> Result<Coin> {
+	fn query_balance_with_address(&self, addr: String, asset_id: AssetId) -> Result<Coin> {
 		let api = self.client.runtime_api();
 		let at = BlockId::Hash(self.client.info().best_hash);
-		let denom = format!("{}", self.chain_props.get("tokenSymbol").cloned().unwrap_or_default());
+		let value = self.chain_props.get("tokenSymbol").cloned().unwrap_or_default();
+		let denom = format!("{}", value);
 
-		match api.query_balance_with_address(&at, addr.as_bytes().to_vec()).ok().flatten() {
+		match api
+			.query_balance_with_address(&at, addr.as_bytes().to_vec(), asset_id)
+			.ok()
+			.flatten()
+		{
 			Some(amt) => Ok(Coin { denom, amount: sp_core::U256::from(amt).as_u128().to_string() }),
 			None => Err(runtime_error_into_rpc_error("Error querying balance")),
 		}

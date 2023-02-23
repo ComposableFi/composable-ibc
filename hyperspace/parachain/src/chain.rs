@@ -98,6 +98,7 @@ where
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
+	<T as config::Config>::AssetId: Clone,
 {
 	fn name(&self) -> &str {
 		&*self.name
