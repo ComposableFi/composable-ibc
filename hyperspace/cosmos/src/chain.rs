@@ -1,19 +1,32 @@
 use super::{client::CosmosClient, tx::sign_tx};
-use crate::{error::Error, provider::FinalityEvent};
+use crate::{error::Error, events::client_extract_attributes_from_tx, provider::FinalityEvent};
 use futures::{Stream, StreamExt};
-use ibc::{core::ics02_client::events::UpdateClient, events::IbcEvent, Height};
+use ibc::{
+	core::{
+		ics02_client::{events::UpdateClient, msgs::ClientMsg},
+		ics26_routing::msgs::Ics26Envelope,
+	},
+	events::IbcEvent,
+	Height,
+};
 use ibc_proto::{
-	cosmos::{base::v1beta1::Coin, tx::v1beta1::Fee},
+	cosmos::{
+		base::v1beta1::Coin,
+		tx::v1beta1::{service_client::ServiceClient, Fee, GetTxsEventRequest, OrderBy, Tx},
+	},
 	google::protobuf::Any,
 };
 use pallet_ibc::light_clients::AnyClientMessage;
-use primitives::{Chain, IbcProvider, LightClientSync, MisbehaviourHandler};
+use primitives::{
+	mock::LocalClientTypes, Chain, IbcProvider, LightClientSync, MisbehaviourHandler,
+};
 use prost::Message;
+use serde::Deserialize;
 use std::pin::Pin;
 use tendermint_rpc::{
 	event::{Event, EventData},
 	query::{EventType, Query},
-	SubscriptionClient, WebSocketClient,
+	Client, Order, SubscriptionClient, WebSocketClient,
 };
 
 #[async_trait::async_trait]
@@ -133,7 +146,6 @@ where
 	}
 
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
-		println!("Submitting messages");
 		for msg in messages.iter() {
 			if msg.type_url.contains("Wasm") {
 				continue
@@ -147,9 +159,91 @@ where
 
 	async fn query_client_message(
 		&self,
-		_update: UpdateClient,
+		update: UpdateClient,
 	) -> Result<AnyClientMessage, Self::Error> {
-		todo!()
+		log::info!("height={}", update.consensus_height());
+		let query_str = Query::eq("update_client.client_id", update.client_id().to_string())
+			.and_eq("update_client.client_type", update.client_type())
+			.and_eq("update_client.consensus_heights", update.consensus_height().to_string());
+		// omit this field since the first three should be enough to identify the update
+		// .and_eq("update_client.header", hex::encode(&update.header.unwrap_or_default()))
+		use tendermint::abci::Event as AbciEvent;
+
+		let mut client = ServiceClient::connect(self.grpc_url.to_string())
+			.await
+			.map_err(|e| Error::from(e.to_string()))?;
+		let mut resp = client
+			.get_txs_event(GetTxsEventRequest {
+				events: query_str
+					.conditions
+					.into_iter()
+					.map(|c| c.to_string().replace(" = ", "="))
+					.collect(),
+				// pagination: None,
+				order_by: OrderBy::Desc.into(),
+				page: 1,
+				limit: 1,
+				..Default::default()
+			})
+			.await
+			.map_err(|e| Error::from(e.to_string()))?
+			.into_inner();
+		let mut idx = None;
+		'l: for l in resp
+			.tx_responses
+			.pop()
+			.ok_or_else(|| {
+				Error::from(format!("Failed to find tx for update client: {:?}", update))
+			})?
+			.logs
+		{
+			for ev in l.events {
+				let e = AbciEvent {
+					kind: ev.r#type,
+					attributes: ev
+						.attributes
+						.into_iter()
+						.map(|a| tendermint::abci::EventAttribute {
+							key: a.key,
+							value: a.value,
+							index: false,
+						})
+						.collect(),
+				};
+				let attr = client_extract_attributes_from_tx(&e).map_err(|e| {
+					Error::from(format!("Failed to extract attributes from tx: {}", e))
+				})?;
+				if attr.client_id == *update.client_id() &&
+					attr.client_type == update.client_type() &&
+					attr.consensus_height == update.consensus_height()
+				{
+					idx = Some(l.msg_index);
+					break 'l
+				}
+			}
+		}
+		let idx =
+			idx.ok_or(Error::from("Failed to find matching update client event".to_string()))?;
+		let x = resp
+			.txs
+			.pop()
+			.ok_or_else(|| {
+				Error::from(format!("Failed to find tx for update client in `txs`: {:?}", update))
+			})?
+			.body
+			.ok_or_else(|| {
+				Error::from(format!("Failed to find tx for update client in `body`: {:?}", update))
+			})?
+			.messages
+			.remove(idx as usize);
+		let envelope = Ics26Envelope::<LocalClientTypes>::try_from(x);
+		match envelope {
+			Ok(Ics26Envelope::Ics2Msg(ClientMsg::UpdateClient(update_msg))) =>
+				return Ok(update_msg.client_message),
+			_ => (),
+		}
+
+		Err(Error::from("Failed to find matching update client event".to_string()))
 	}
 
 	async fn get_proof_height(&self, block_height: Height) -> Height {

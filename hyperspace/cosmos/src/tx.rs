@@ -73,8 +73,6 @@ pub async fn simulate_tx(
 		.map_err(|e| Error::from(e.to_string()))?;
 	let request = tonic::Request::new(req);
 
-	println!("sim");
-
 	let response = tokio::time::timeout(
 		Duration::from_secs(15),
 		client.simulate(request).map_err(|e| Error::from(e.to_string())),

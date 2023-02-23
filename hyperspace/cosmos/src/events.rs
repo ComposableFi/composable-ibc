@@ -374,7 +374,9 @@ pub fn timeout_packet_try_from_abci_event(
 		.map_err(|_| ChannelError::abci_conversion_failed(abci_event.kind.to_owned()))
 }
 
-fn client_extract_attributes_from_tx(event: &AbciEvent) -> Result<ClientAttributes, ClientError> {
+pub fn client_extract_attributes_from_tx(
+	event: &AbciEvent,
+) -> Result<ClientAttributes, ClientError> {
 	let mut attr = ClientAttributes::default();
 
 	for tag in &event.attributes {

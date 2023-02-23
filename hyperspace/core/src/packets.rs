@@ -178,7 +178,7 @@ pub async fn query_ready_and_timed_out_packets(
 				{
 					proof_height
 				} else {
-					log::debug!(target: "hyperspace", "Skipping packet {:?} as no timeout proof height could be found", packet);
+					log::debug!(target: "hyperspace", "Skipping packet as no timeout proof height could be found: {:?}", packet);
 					continue
 				};
 
@@ -196,7 +196,7 @@ pub async fn query_ready_and_timed_out_packets(
 				)
 				.await?
 				{
-					log::debug!(target: "hyperspace", "Skipping packet {:?} as connection delay has not passed", packet);
+					log::debug!(target: "hyperspace", "Skipping packet as connection delay has not passed {:?}", packet);
 					continue
 				}
 
@@ -268,7 +268,7 @@ pub async fn query_ready_and_timed_out_packets(
 			)
 			.await?
 			{
-				log::debug!(target: "hyperspace", "Skipping packet {:?} as connection delay has not passed", packet);
+				log::debug!(target: "hyperspace", "Skipping packet as connection delay has not passed {:?}", packet);
 				continue
 			}
 
@@ -344,7 +344,7 @@ pub async fn query_ready_and_timed_out_packets(
 			)
 			.await?
 			{
-				log::debug!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as connection delay has not passed", packet);
+				log::debug!(target: "hyperspace", "Skipping acknowledgement for packet as connection delay has not passed {:?}", packet);
 				continue
 			}
 

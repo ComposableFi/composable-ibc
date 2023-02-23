@@ -47,19 +47,24 @@ where
 		Keyring::Alice,
 		Keyring::Bob,
 		Keyring::Charlie,
-		Keyring::Dave,
-		Keyring::Eve,
-		Keyring::Ferdie,
+		// Keyring::Dave,
+		// Keyring::Eve,
+		// Keyring::Ferdie,
 	];
 
+	// chain_a = cosmos
+	// chain_b = parachain
 	// query the current client state that will be used to construct a fraudulent finality proof
 	let client_id = chain_b.client_id();
 	let latest_height = chain_a.latest_height_and_timestamp().await.unwrap().0;
 	let response = chain_a.query_client_state(latest_height, client_id).await.unwrap();
-	let client_state = match AnyClientState::try_from(response.client_state.unwrap()).unwrap() {
-		AnyClientState::Grandpa(cs) => cs,
-		_ => panic!("unexpected client state"),
-	};
+	// let client_state = match AnyClientState::try_from(response.client_state.unwrap()).unwrap() {
+	// 	AnyClientState::Grandpa(cs) => cs,
+	// 	_ => panic!("unexpected client state"),
+	// };
+	let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(response.client_state.unwrap(), |cs| {
+		matches!(cs, AnyClientState::Grandpa(_))
+	}).unwrap() else { unreachable!() };
 
 	let finality_event = chain_b.finality_notifications().await.next().await.expect("no event");
 	let set_id = client_state.current_set_id;

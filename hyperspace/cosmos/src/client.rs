@@ -118,6 +118,7 @@ pub struct CosmosClient<H> {
 	/// Finality protocol to use, eg Tenderminet
 	pub _phantom: std::marker::PhantomData<H>,
 }
+
 /// config options for [`ParachainClient`]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CosmosClientConfig {
@@ -282,7 +283,7 @@ where
 		// Simulate transaction
 		let res = simulate_tx(self.grpc_url.clone(), tx, tx_bytes.clone()).await?;
 		res.result
-			.map(|r| log::error!(target: "hyperspace", "Simulated transaction: events: {:?}\nlogs: {}", r.events, r.log));
+			.map(|r| log::info!(target: "hyperspace", "Simulated transaction: events: {:?}\nlogs: {}", r.events, r.log));
 		// println!("res = {:?}", &res);
 
 		// if res.result

@@ -216,7 +216,7 @@ pub async fn construct_timeout_message(
 		let channel_key = get_key_path(KeyPathType::ChannelPath, &packet).into_bytes();
 		let proof_closed = sink.query_proof(proof_height, vec![channel_key]).await?;
 		let proof_closed = CommitmentProofBytes::try_from(proof_closed)?;
-		let actual_proof_height = source.get_proof_height(proof_height).await;
+		let actual_proof_height = sink.get_proof_height(proof_height).await;
 		let msg = MsgTimeoutOnClose {
 			packet,
 			next_sequence_recv: next_sequence_recv.into(),
@@ -232,12 +232,12 @@ pub async fn construct_timeout_message(
 		let value = msg.encode_vec()?;
 		Any { value, type_url: msg.type_url() }
 	} else {
-		let actual_proof_height = source.get_proof_height(proof_height).await;
+		let actual_proof_height = sink.get_proof_height(proof_height).await;
+		log::debug!(target: "hyperspace", "actual_proof_height={actual_proof_height}");
 		let msg = MsgTimeout {
 			packet,
 			next_sequence_recv: next_sequence_recv.into(),
 			proofs: Proofs::new(proof_unreceived, None, None, None, actual_proof_height)?,
-
 			signer: source.account_id(),
 		};
 		let value = msg.encode_vec()?;
