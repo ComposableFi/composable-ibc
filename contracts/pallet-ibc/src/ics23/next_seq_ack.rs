@@ -6,6 +6,7 @@ use ibc::core::ics24_host::{
 	path::SeqAcksPath,
 };
 use ibc_primitives::apply_prefix;
+use sp_core::Get;
 use sp_std::marker::PhantomData;
 
 // todo: pruning
@@ -16,13 +17,13 @@ pub struct NextSequenceAck<T>(PhantomData<T>);
 impl<T: Config> NextSequenceAck<T> {
 	pub fn get(port_id: PortId, channel_id: ChannelId) -> Option<u64> {
 		let next_seq_ack_path = format!("{}", SeqAcksPath(port_id, channel_id));
-		let next_seq_ack_key = apply_prefix(T::PALLET_PREFIX, vec![next_seq_ack_path]);
-		child::get(&ChildInfo::new_default(T::PALLET_PREFIX), &next_seq_ack_key)
+		let next_seq_ack_key = apply_prefix(T::PalletPrefix::get(), vec![next_seq_ack_path]);
+		child::get(&ChildInfo::new_default(T::PalletPrefix::get()), &next_seq_ack_key)
 	}
 
 	pub fn insert(port_id: PortId, channel_id: ChannelId, seq: u64) {
 		let next_seq_ack_path = format!("{}", SeqAcksPath(port_id, channel_id));
-		let next_seq_ack_key = apply_prefix(T::PALLET_PREFIX, vec![next_seq_ack_path]);
-		child::put(&ChildInfo::new_default(T::PALLET_PREFIX), &next_seq_ack_key, &seq)
+		let next_seq_ack_key = apply_prefix(T::PalletPrefix::get(), vec![next_seq_ack_path]);
+		child::put(&ChildInfo::new_default(T::PalletPrefix::get()), &next_seq_ack_key, &seq)
 	}
 }

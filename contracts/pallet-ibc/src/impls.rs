@@ -128,7 +128,7 @@ where
 		let channel =
 			Channels::<T>::get(port_id.clone(), channel_id).ok_or(Error::<T>::ChannelNotFound)?;
 		let channel_path = format!("{}", ChannelEndsPath(port_id, channel_id));
-		let key = apply_prefix(T::PALLET_PREFIX, vec![channel_path]);
+		let key = apply_prefix(T::PalletPrefix::get(), vec![channel_path]);
 
 		Ok(QueryChannelResponse { channel, trie_key: key, height: host_height::<T>() })
 	}
@@ -141,7 +141,7 @@ where
 			Connections::<T>::get(&connection_id).ok_or(Error::<T>::ConnectionNotFound)?;
 
 		let connection_path = format!("{}", ConnectionsPath(connection_id));
-		let key = apply_prefix(T::PALLET_PREFIX, vec![connection_path]);
+		let key = apply_prefix(T::PalletPrefix::get(), vec![connection_path]);
 
 		Ok(QueryConnectionResponse { connection, trie_key: key, height: host_height::<T>() })
 	}
@@ -153,7 +153,7 @@ where
 			ClientStates::<T>::get(&client_id).ok_or(Error::<T>::ClientStateNotFound)?;
 		let client_state_path = format!("{}", ClientStatePath(client_id));
 
-		let key = apply_prefix(T::PALLET_PREFIX, vec![client_state_path]);
+		let key = apply_prefix(T::PalletPrefix::get(), vec![client_state_path]);
 
 		Ok(QueryClientStateResponse { client_state, trie_key: key, height: host_height::<T>() })
 	}
@@ -193,7 +193,7 @@ where
 		};
 
 		let path = format!("{}", consensus_path);
-		let key = apply_prefix(T::PALLET_PREFIX, vec![path]);
+		let key = apply_prefix(T::PalletPrefix::get(), vec![path]);
 
 		Ok(QueryConsensusStateResponse {
 			consensus_state,
@@ -390,7 +390,7 @@ where
 		let sequence = NextSequenceRecv::<T>::get(port_id.clone(), channel_id)
 			.ok_or(Error::<T>::SendPacketError)?;
 		let next_seq_recv_path = format!("{}", SeqRecvsPath(port_id, channel_id));
-		let key = apply_prefix(T::PALLET_PREFIX, vec![next_seq_recv_path]);
+		let key = apply_prefix(T::PalletPrefix::get(), vec![next_seq_recv_path]);
 
 		Ok(QueryNextSequenceReceiveResponse { sequence, trie_key: key, height: host_height::<T>() })
 	}
@@ -407,7 +407,7 @@ where
 			.ok_or(Error::<T>::PacketCommitmentNotFound)?;
 		let sequence = ibc::core::ics04_channel::packet::Sequence::from(seq);
 		let commitment_path = format!("{}", CommitmentsPath { port_id, channel_id, sequence });
-		let key = apply_prefix(T::PALLET_PREFIX, vec![commitment_path]);
+		let key = apply_prefix(T::PalletPrefix::get(), vec![commitment_path]);
 
 		Ok(QueryPacketCommitmentResponse { commitment, trie_key: key, height: host_height::<T>() })
 	}
@@ -424,7 +424,7 @@ where
 		let ack = Acknowledgements::<T>::get((port_id.clone(), channel_id, sequence))
 			.ok_or(Error::<T>::PacketCommitmentNotFound)?;
 		let acks_path = format!("{}", AcksPath { port_id, channel_id, sequence });
-		let key = apply_prefix(T::PALLET_PREFIX, vec![acks_path]);
+		let key = apply_prefix(T::PalletPrefix::get(), vec![acks_path]);
 
 		Ok(QueryPacketAcknowledgementResponse { ack, trie_key: key, height: host_height::<T>() })
 	}
@@ -442,7 +442,7 @@ where
 			.ok_or(Error::<T>::PacketReceiptNotFound)?;
 		let receipt = String::from_utf8(receipt).map_err(|_| Error::<T>::DecodingError)?;
 		let receipt_path = format!("{}", ReceiptsPath { port_id, channel_id, sequence });
-		let key = apply_prefix(T::PALLET_PREFIX, vec![receipt_path]);
+		let key = apply_prefix(T::PalletPrefix::get(), vec![receipt_path]);
 		let receipt = &receipt == "Ok";
 		Ok(QueryPacketReceiptResponse { receipt, trie_key: key, height: host_height::<T>() })
 	}
@@ -459,7 +459,7 @@ where
 		let height = client_state_decoded.latest_height();
 		let connection_id =
 			connection_id_from_bytes(connection_id).map_err(|_| Error::<T>::DecodingError)?;
-		let prefix = T::PALLET_PREFIX;
+		let prefix = T::PalletPrefix::get();
 		let connection_path = format!("{}", ConnectionsPath(connection_id));
 		let consensus_path = ClientConsensusStatePath {
 			client_id: client_id.clone(),
@@ -489,17 +489,17 @@ where
 	}
 
 	pub fn offchain_send_packet_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
-		let pair = (T::PALLET_PREFIX.to_vec(), b"SEND_PACKET", channel_id, port_id, seq);
+		let pair = (T::PalletPrefix::get().to_vec(), b"SEND_PACKET", channel_id, port_id, seq);
 		pair.encode()
 	}
 
 	pub fn offchain_recv_packet_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
-		let pair = (T::PALLET_PREFIX.to_vec(), b"RECV_PACKET", channel_id, port_id, seq);
+		let pair = (T::PalletPrefix::get().to_vec(), b"RECV_PACKET", channel_id, port_id, seq);
 		pair.encode()
 	}
 
 	pub fn offchain_ack_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
-		let pair = (T::PALLET_PREFIX.to_vec(), b"ACK", channel_id, port_id, seq);
+		let pair = (T::PalletPrefix::get().to_vec(), b"ACK", channel_id, port_id, seq);
 		pair.encode()
 	}
 
@@ -857,7 +857,7 @@ where
 		let counter_party = Counterparty::new(
 			client_id.clone(),
 			Some(ConnectionId::new(1)),
-			<T as Config>::PALLET_PREFIX.to_vec().try_into().unwrap(),
+			<T as Config>::PalletPrefix::get().to_vec().try_into().unwrap(),
 		);
 		let connection_end = ConnectionEnd::new(
 			State::Open,
