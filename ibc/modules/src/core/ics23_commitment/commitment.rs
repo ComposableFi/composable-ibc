@@ -26,7 +26,7 @@ use super::merkle::MerkleProof;
 pub struct CommitmentRoot {
 	#[serde(serialize_with = "crate::serializers::ser_hex_upper")]
 	#[serde(deserialize_with = "crate::serializers::deser_hex_upper")]
-	bytes: Vec<u8>,
+	pub bytes: Vec<u8>,
 }
 
 impl fmt::Debug for CommitmentRoot {

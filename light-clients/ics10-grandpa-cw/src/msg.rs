@@ -9,11 +9,11 @@ use ibc::{
 	protobuf::Protobuf,
 	Height,
 };
-use ibc_proto::{
-	google::protobuf::Any,
-	ibc::core::{client::v1::Height as HeightRaw, commitment::v1::MerkleRoot},
+use ibc_proto::{google::protobuf::Any, ibc::core::client::v1::Height as HeightRaw};
+use ics08_wasm::{
+	client_message::Header as WasmHeader, client_state::ClientState as WasmClientState,
+	consensus_state::ConsensusState as WasmConsensusState,
 };
-use ics08_wasm::client_message::Header as WasmHeader;
 use ics10_grandpa::{
 	client_message::{ClientMessage, Header, Misbehaviour},
 	client_state::ClientState,
@@ -32,29 +32,6 @@ impl Base64 {
 	pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<u8>, D::Error> {
 		ibc_proto::base64::deserialize(deserializer)
 	}
-}
-
-#[cw_serde]
-pub struct WasmClientState {
-	#[schemars(with = "String")]
-	#[serde(with = "Base64", default)]
-	pub data: Bytes,
-	#[schemars(with = "String")]
-	#[serde(with = "Base64", default)]
-	pub code_id: Bytes,
-	pub latest_height: HeightRaw,
-}
-
-#[cw_serde]
-pub struct WasmConsensusState {
-	#[schemars(with = "String")]
-	#[serde(with = "Base64", default)]
-	pub data: Bytes,
-	#[schemars(with = "String")]
-	#[serde(with = "Base64", default)]
-	pub code_id: Bytes,
-	pub timestamp: u64,
-	pub root: MerkleRoot,
 }
 
 #[cw_serde]
@@ -82,38 +59,31 @@ impl ContractResult {
 
 #[cw_serde]
 pub struct ClientStateCallResponse {
-	pub client_state: WasmClientState,
-	pub new_consensus_state: WasmConsensusState,
-	pub new_client_state: WasmClientState,
+	pub client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
+	pub new_consensus_state: WasmConsensusState<FakeInner>,
+	pub new_client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
 	pub result: ContractResult,
 }
 
 #[cw_serde]
 pub struct InitializeState {
-	pub client_state: WasmClientState,
-	pub consensus_state: WasmConsensusState,
+	pub client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
+	pub consensus_state: WasmConsensusState<FakeInner>,
 }
 
 #[cw_serde]
-pub struct InstantiateMsg {
-	// initialize_state: InitializeState,
-}
+pub struct InstantiateMsg {}
 
 #[cw_serde]
 pub struct ClientCreateRequest {
-	client_create_request: WasmConsensusState,
+	client_create_request: WasmConsensusState<FakeInner>,
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
 	InitializeState(InitializeState),
-	ClientCreateRequest(WasmClientState),
-	Validate(ValidateMsg),
+	ClientCreateRequest(WasmClientState<FakeInner, FakeInner, FakeInner>),
 	Status(StatusMsg),
-	ExportedMetadata(ExportedMetadataMsg),
-	ZeroCustomFields(ZeroCustomFieldsMsg),
-	GetTimestampAtHeight(GetTimestampAtHeightMsg),
-	Initialize(InitializeMsg),
 	VerifyMembership(VerifyMembershipMsgRaw),
 	VerifyNonMembership(VerifyNonMembershipMsgRaw),
 	VerifyClientMessage(VerifyClientMessageRaw),
@@ -133,8 +103,6 @@ pub enum QueryMsg {
 	GetLatestHeightsMsg(GetLatestHeightsMsg),
 }
 
-// ClientState interface related messages
-// Reference: https://github.com/cosmos/ibc-go/blob/main/modules/core/exported/client.go#L36
 #[cw_serde]
 pub struct ClientTypeMsg {}
 
@@ -142,26 +110,7 @@ pub struct ClientTypeMsg {}
 pub struct GetLatestHeightsMsg {}
 
 #[cw_serde]
-pub struct ValidateMsg {}
-
-#[cw_serde]
-pub struct StatusMsg {
-	// how do we handle ctx sdk.Context, clientStore sdk.KVStore, cdc codec.BinaryCodec
-}
-
-#[cw_serde]
-pub struct ExportedMetadataMsg {
-	// clientStore sdk.KVStore
-}
-
-#[cw_serde]
-pub struct ZeroCustomFieldsMsg {}
-
-#[cw_serde]
-pub struct GetTimestampAtHeightMsg {}
-
-#[cw_serde]
-pub struct InitializeMsg {}
+pub struct StatusMsg {}
 
 #[cw_serde]
 pub struct MerklePath {
@@ -256,7 +205,7 @@ pub enum ClientMessageRaw {
 
 #[cw_serde]
 pub struct VerifyClientMessageRaw {
-	pub client_state: WasmClientState,
+	pub client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
 	pub client_message: ClientMessageRaw,
 }
 
@@ -295,7 +244,7 @@ impl<H: Clone> VerifyClientMessage<H> {
 #[cw_serde]
 pub struct CheckForMisbehaviourMsgRaw {
 	// pub client_id: String,
-	pub client_state: WasmClientState,
+	pub client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
 	pub misbehaviour: WasmMisbehaviour,
 }
 
@@ -321,7 +270,7 @@ impl<H: Clone> TryFrom<CheckForMisbehaviourMsgRaw> for CheckForMisbehaviourMsg<H
 
 #[cw_serde]
 pub struct UpdateStateOnMisbehaviourMsgRaw {
-	pub client_state: WasmClientState,
+	pub client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
 	pub client_message: WasmMisbehaviour,
 }
 
@@ -345,7 +294,7 @@ impl<H: Clone> TryFrom<UpdateStateOnMisbehaviourMsgRaw> for UpdateStateOnMisbeha
 
 #[cw_serde]
 pub struct UpdateStateMsgRaw {
-	pub client_state: WasmClientState,
+	pub client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
 	pub client_message: ClientMessageRaw,
 }
 

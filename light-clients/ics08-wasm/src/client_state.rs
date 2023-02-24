@@ -1,3 +1,5 @@
+#[cfg(feature = "cosmwasm")]
+use crate::msg::Base64;
 use crate::{client_def::WasmClient, Bytes};
 use alloc::{
 	boxed::Box,
@@ -5,6 +7,8 @@ use alloc::{
 	vec::Vec,
 };
 use core::{fmt::Debug, marker::PhantomData, time::Duration};
+#[cfg(feature = "cosmwasm")]
+use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::{
 		ics02_client::{
@@ -23,16 +27,22 @@ use prost::Message;
 
 pub const WASM_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.ClientState";
 
-#[derive(Clone, PartialEq, Debug, Eq)]
+#[cfg_attr(feature = "cosmwasm", cw_serde)]
+#[cfg_attr(not(feature = "cosmwasm"), derive(Clone, Debug, PartialEq))]
+#[derive(Eq)]
 pub struct ClientState<AnyClient, AnyClientState, AnyConsensusState> {
-	// #[schemars(with = "String")]
-	// #[serde(with = "Base64", default)]
+	#[cfg_attr(feature = "cosmwasm", schemars(with = "String"))]
+	#[cfg_attr(feature = "cosmwasm", serde(with = "Base64", default))]
 	pub data: Bytes,
-	// #[schemars(with = "String")]
-	// #[serde(with = "Base64", default)]
+	#[cfg_attr(feature = "cosmwasm", schemars(with = "String"))]
+	#[cfg_attr(feature = "cosmwasm", serde(with = "Base64", default))]
 	pub code_id: Bytes,
-	pub inner: Box<AnyClientState>,
 	pub latest_height: Height,
+	#[cfg_attr(feature = "cosmwasm", serde(skip))]
+	#[cfg_attr(feature = "cosmwasm", schemars(skip))]
+	pub inner: Box<AnyClientState>,
+	#[cfg_attr(feature = "cosmwasm", serde(skip))]
+	#[cfg_attr(feature = "cosmwasm", schemars(skip))]
 	pub _phantom: PhantomData<(AnyConsensusState, AnyClient)>,
 }
 
