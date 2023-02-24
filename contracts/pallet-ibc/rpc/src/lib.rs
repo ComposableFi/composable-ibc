@@ -466,7 +466,7 @@ where
 		+ ProofProvider<Block>
 		+ BlockBackend<Block>,
 	C::Api: IbcRuntimeApi<Block, AssetId>,
-	AssetId: codec::Codec,
+	AssetId: codec::Codec + Copy,
 {
 	fn query_send_packets(
 		&self,
@@ -505,7 +505,7 @@ where
 						|_| runtime_error_into_rpc_error("Failed to decode destination channel"),
 					)?,
 					data: packet.data,
-					timeout_height: ibc_proto::ibc::core::client::v1::Height {
+					timeout_height: Height {
 						revision_number: packet.timeout_height.0,
 						revision_height: packet.timeout_height.1,
 					},
@@ -641,10 +641,7 @@ where
 			.encode();
 		Ok(Proof {
 			proof,
-			height: ibc_proto::ibc::core::client::v1::Height {
-				revision_number: para_id.into(),
-				revision_height: height as u64,
-			},
+			height: Height { revision_number: para_id.into(), revision_height: height as u64 },
 		})
 	}
 
@@ -659,8 +656,21 @@ where
 	fn query_balance_with_address(&self, addr: String, asset_id: AssetId) -> Result<Coin> {
 		let api = self.client.runtime_api();
 		let at = BlockId::Hash(self.client.info().best_hash);
-		let value = self.chain_props.get("tokenSymbol").cloned().unwrap_or_default();
-		let denom = format!("{}", value);
+		let denom = String::from_utf8_lossy(
+			&api.denom_trace(&at, asset_id)
+				.map_err(|e| {
+					runtime_error_into_rpc_error(format!("failed to get denom trace: {}", e))
+				})?
+				.ok_or_else(|| runtime_error_into_rpc_error("denom trace not found"))?
+				.denom,
+		)
+		.to_string();
+		// T::IbcDenomToAssetIdConversion::from_asset_id_to_denom(asset_id)
+		// if asset_id == Native {
+		// let value = self.chain_props.get("tokenSymbol").cloned().unwrap_or_default();
+		// format!("{}", value)
+		// } else {
+		// };
 
 		match api
 			.query_balance_with_address(&at, addr.as_bytes().to_vec(), asset_id)

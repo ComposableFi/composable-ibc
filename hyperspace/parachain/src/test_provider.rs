@@ -207,7 +207,12 @@ where
 		};
 		let amount = str::parse::<u128>(&transfer.token.amount.to_string()).expect("Infallible!");
 		// TODO: get asset_id by denom
-		let asset_id = if transfer.token.denom.to_string() == *r#""UNIT""# { 1 } else { 2 };
+		let string = transfer.token.denom.to_string();
+		let asset_id = if string == *r#""UNIT""# || string == "UNIT" { 1 } else { 2 };
+		log::info!(
+			"Sending transfer: {:?}, asset id: {asset_id}, amount: {amount}",
+			transfer.token.denom
+		);
 		self.transfer_tokens(params, asset_id, amount).await?;
 
 		Ok(())
