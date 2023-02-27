@@ -100,21 +100,21 @@ pub async fn create_connection(
 	delay_period: Duration,
 ) -> Result<(ConnectionId, ConnectionId), anyhow::Error> {
 	let msg = MsgConnectionOpenInit {
-		client_id: chain_b.client_id(),
-		counterparty: Counterparty::new(chain_a.client_id(), None, chain_b.connection_prefix()),
+		client_id: chain_a.client_id(),
+		counterparty: Counterparty::new(chain_b.client_id(), None, chain_a.connection_prefix()),
 		version: Some(Default::default()),
 		delay_period,
-		signer: chain_a.account_id(),
+		signer: chain_b.account_id(),
 	};
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
 
-	chain_a.submit(vec![msg]).await?;
+	chain_b.submit(vec![msg]).await?;
 
 	log::info!(target: "hyperspace", "============= Wait till both chains have completed connection handshake =============");
 
 	// wait till both chains have completed connection handshake
-	let future = chain_b
+	let future = chain_a
 		.ibc_events()
 		.await
 		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmConnection(_))))
@@ -124,14 +124,17 @@ pub async fn create_connection(
 	let mut events = timeout_future(
 		future,
 		15 * 60,
-		format!("Didn't see OpenConfirmConnection on {}", chain_b.name()),
+		format!("Didn't see OpenConfirmConnection on {}", chain_a.name()),
 	)
 	.await;
 
-	let (connection_id_b, connection_id_a) = match events.pop() {
+	let (connection_id_a, connection_id_b) = match events.pop() {
 		Some(IbcEvent::OpenConfirmConnection(conn)) => (
 			conn.connection_id().unwrap().clone(),
-			conn.attributes().counterparty_connection_id.as_ref().unwrap().clone(),
+			conn.attributes()
+				.counterparty_connection_id
+				.clone()
+				.expect("Failed to create connection"),
 		),
 		got => panic!("Last event should be OpenConfirmConnection: {got:?}"),
 	};

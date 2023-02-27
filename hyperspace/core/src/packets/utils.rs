@@ -37,7 +37,7 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use pallet_ibc::light_clients::AnyClientState;
-use primitives::{apply_prefix, find_suitable_proof_height_for_client, Chain};
+use primitives::{find_suitable_proof_height_for_client, Chain};
 use std::time::Duration;
 use tendermint_proto::Protobuf;
 
@@ -151,45 +151,41 @@ pub async fn verify_delay_passed(
 ) -> Result<bool, anyhow::Error> {
 	match verify_delay_on {
 		VerifyDelayOn::Source => {
-			if let Ok((sink_client_update_height, sink_client_update_time)) =
-				source.query_client_update_time_and_height(sink.client_id(), proof_height).await
+			let actual_proof_height = sink.get_proof_height(proof_height).await;
+			if let Ok((source_client_update_height, source_client_update_time)) = source
+				.query_client_update_time_and_height(sink.client_id(), actual_proof_height)
+				.await
 			{
 				let block_delay =
 					calculate_block_delay(connection_delay, source.expected_block_time());
-				if !has_delay_elapsed(
+				has_delay_elapsed(
 					source_timestamp,
 					source_height,
-					sink_client_update_time,
-					sink_client_update_height, // shouldn't be the latest.
+					source_client_update_time,
+					source_client_update_height, // shouldn't be the latest.
 					connection_delay,
 					block_delay,
-				)? {
-					Ok(false)
-				} else {
-					Ok(true)
-				}
+				)
 			} else {
 				Ok(false)
 			}
 		},
 		VerifyDelayOn::Sink => {
-			if let Ok((source_client_update_height, source_client_update_time)) =
-				sink.query_client_update_time_and_height(source.client_id(), proof_height).await
+			let actual_proof_height = source.get_proof_height(proof_height).await;
+			if let Ok((sink_client_update_height, sink_client_update_time)) = sink
+				.query_client_update_time_and_height(source.client_id(), actual_proof_height)
+				.await
 			{
 				let block_delay =
 					calculate_block_delay(connection_delay, sink.expected_block_time());
-				if !has_delay_elapsed(
+				has_delay_elapsed(
 					sink_timestamp,
 					sink_height,
-					source_client_update_time,
-					source_client_update_height,
+					sink_client_update_time,
+					sink_client_update_height,
 					connection_delay,
 					block_delay,
-				)? {
-					Ok(false)
-				} else {
-					Ok(true)
-				}
+				)
 			} else {
 				Ok(false)
 			}
@@ -205,35 +201,41 @@ pub async fn construct_timeout_message(
 	next_sequence_recv: u64,
 	proof_height: Height,
 ) -> Result<Any, anyhow::Error> {
-	let key = if sink_channel_end.ordering == Order::Ordered {
-		let path = get_key_path(KeyPathType::SeqRecv, &packet);
-		apply_prefix(sink.connection_prefix().into_vec(), path)
+	let path_type = if sink_channel_end.ordering == Order::Ordered {
+		KeyPathType::SeqRecv
 	} else {
-		let path = get_key_path(KeyPathType::ReceiptPath, &packet);
-		apply_prefix(sink.connection_prefix().into_vec(), path)
+		KeyPathType::ReceiptPath
 	};
+	let key = get_key_path(path_type, &packet).into_bytes();
 
 	let proof_unreceived = sink.query_proof(proof_height, vec![key]).await?;
 	let proof_unreceived = CommitmentProofBytes::try_from(proof_unreceived)?;
 	let msg = if sink_channel_end.state == State::Closed {
-		let path = get_key_path(KeyPathType::ChannelPath, &packet);
-		let channel_key = apply_prefix(sink.connection_prefix().into_vec(), path);
+		let channel_key = get_key_path(KeyPathType::ChannelPath, &packet).into_bytes();
 		let proof_closed = sink.query_proof(proof_height, vec![channel_key]).await?;
 		let proof_closed = CommitmentProofBytes::try_from(proof_closed)?;
+		let actual_proof_height = sink.get_proof_height(proof_height).await;
 		let msg = MsgTimeoutOnClose {
 			packet,
 			next_sequence_recv: next_sequence_recv.into(),
-			proofs: Proofs::new(proof_unreceived, None, None, Some(proof_closed), proof_height)?,
+			proofs: Proofs::new(
+				proof_unreceived,
+				None,
+				None,
+				Some(proof_closed),
+				actual_proof_height,
+			)?,
 			signer: source.account_id(),
 		};
 		let value = msg.encode_vec()?;
 		Any { value, type_url: msg.type_url() }
 	} else {
+		let actual_proof_height = sink.get_proof_height(proof_height).await;
+		log::debug!(target: "hyperspace", "actual_proof_height={actual_proof_height}");
 		let msg = MsgTimeout {
 			packet,
 			next_sequence_recv: next_sequence_recv.into(),
-			proofs: Proofs::new(proof_unreceived, None, None, None, proof_height)?,
-
+			proofs: Proofs::new(proof_unreceived, None, None, None, actual_proof_height)?,
 			signer: source.account_id(),
 		};
 		let value = msg.encode_vec()?;
@@ -248,14 +250,13 @@ pub async fn construct_recv_message(
 	packet: Packet,
 	proof_height: Height,
 ) -> Result<Any, anyhow::Error> {
-	let path = get_key_path(KeyPathType::CommitmentPath, &packet);
-
-	let key = apply_prefix(source.connection_prefix().into_vec(), path);
+	let key = get_key_path(KeyPathType::CommitmentPath, &packet).into_bytes();
 	let proof = source.query_proof(proof_height, vec![key]).await?;
 	let commitment_proof = CommitmentProofBytes::try_from(proof)?;
+	let actual_proof_height = source.get_proof_height(proof_height).await;
 	let msg = MsgRecvPacket {
 		packet,
-		proofs: Proofs::new(commitment_proof, None, None, None, proof_height)?,
+		proofs: Proofs::new(commitment_proof, None, None, None, actual_proof_height)?,
 		signer: sink.account_id(),
 	};
 	let value = msg.encode_vec()?;
@@ -270,14 +271,14 @@ pub async fn construct_ack_message(
 	ack: Vec<u8>,
 	proof_height: Height,
 ) -> Result<Any, anyhow::Error> {
-	let path = get_key_path(KeyPathType::AcksPath, &packet);
-
-	let key = apply_prefix(source.connection_prefix().into_vec(), path);
-	let proof = source.query_proof(proof_height, vec![key]).await?;
+	let key = get_key_path(KeyPathType::AcksPath, &packet);
+	log::debug!(target: "hyperspace", "query proof for acks path: {:?}", key);
+	let proof = source.query_proof(proof_height, vec![key.into_bytes()]).await?;
 	let commitment_proof = CommitmentProofBytes::try_from(proof)?;
+	let actual_proof_height = source.get_proof_height(proof_height).await;
 	let msg = MsgAcknowledgement {
 		packet,
-		proofs: Proofs::new(commitment_proof, None, None, None, proof_height)?,
+		proofs: Proofs::new(commitment_proof, None, None, None, actual_proof_height)?,
 		acknowledgement: ack.into(),
 		signer: sink.account_id(),
 	};

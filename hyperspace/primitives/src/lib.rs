@@ -14,7 +14,7 @@
 
 #![allow(clippy::all)]
 
-use std::{pin::Pin, str::FromStr, time::Duration};
+use std::{fmt::Debug, pin::Pin, str::FromStr, time::Duration};
 
 use futures::Stream;
 use ibc_proto::{
@@ -31,7 +31,7 @@ use ibc_proto::{
 };
 
 use crate::error::Error;
-#[cfg(feature = "testing")]
+#[cfg(any(feature = "testing", test))]
 use ibc::applications::transfer::msgs::transfer::MsgTransfer;
 use ibc::{
 	applications::transfer::PrefixedCoin,
@@ -85,8 +85,8 @@ impl UpdateType {
 	}
 }
 
-pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: String) -> Vec<u8> {
-	let path = path.as_bytes().to_vec();
+pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: impl Into<Vec<u8>>) -> Vec<u8> {
+	let path = path.into();
 	commitment_prefix.extend_from_slice(&path);
 	commitment_prefix
 }
@@ -97,9 +97,10 @@ pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: String) -> Vec<u8> {
 pub trait IbcProvider {
 	/// Finality event type, passed on to [`Chain::query_latest_ibc_events`]
 	type FinalityEvent;
-
 	/// A representation of the transaction id for the chain
-	type TransactionId;
+	type TransactionId: Debug;
+	/// Asset Id
+	type AssetId: Clone;
 
 	/// Error type, just needs to implement standard error trait.
 	type Error: std::error::Error + From<String> + Send + Sync + 'static;
@@ -280,7 +281,10 @@ pub trait IbcProvider {
 	) -> Result<Option<Vec<u8>>, Self::Error>;
 
 	/// Should return the list of ibc denoms available to this account to spend.
-	async fn query_ibc_balance(&self) -> Result<Vec<PrefixedCoin>, Self::Error>;
+	async fn query_ibc_balance(
+		&self,
+		asset_id: Self::AssetId,
+	) -> Result<Vec<PrefixedCoin>, Self::Error>;
 
 	/// Return the chain connection prefix
 	fn connection_prefix(&self) -> CommitmentPrefix;
@@ -332,7 +336,7 @@ pub trait IbcProvider {
 
 /// Provides an interface that allows us run the hyperspace-testsuite
 /// with [`Chain`] implementations.
-#[cfg(feature = "testing")]
+#[cfg(any(feature = "testing", test))]
 #[async_trait::async_trait]
 pub trait TestProvider: Chain + Clone + 'static {
 	/// Initiate an ibc transfer on chain.
@@ -413,6 +417,8 @@ pub trait Chain:
 		&self,
 		update: UpdateClient,
 	) -> Result<AnyClientMessage, Self::Error>;
+
+	async fn get_proof_height(&self, block_height: Height) -> Height;
 }
 
 /// Returns undelivered packet sequences that have been sent out from
@@ -485,6 +491,11 @@ pub async fn query_undelivered_acks(
 	let seqs = source
 		.query_packet_acknowledgements(source_height, channel_id, port_id.clone())
 		.await?;
+	log::trace!(
+		target: "hyperspace",
+		"Found {} packet acks from {} chain",
+		seqs.len(), source.name()
+	);
 	let counterparty_channel_id = channel_end
 		.counterparty()
 		.channel_id
@@ -499,6 +510,11 @@ pub async fn query_undelivered_acks(
 			seqs,
 		)
 		.await?;
+	log::trace!(
+		target: "hyperspace",
+		"Found {} undelivered packet acks from {} chain",
+		undelivered_acks.len(), sink.name()
+	);
 
 	Ok(undelivered_acks)
 }
