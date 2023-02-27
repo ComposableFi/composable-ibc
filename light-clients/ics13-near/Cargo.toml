@@ -49,8 +49,8 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 sha3 = { version = "0.10.1", optional = true }
 ripemd = { version = "0.1.1", optional = true }
-tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "47e28b50d20138234f7a8b4254da71469f401714", default-features = false }
-tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "47e28b50d20138234f7a8b4254da71469f401714", default-features = false }
+tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 
 [dev-dependencies]
 ibc = { path = "../../ibc/modules", features = ['mocks'] }
@@ -59,8 +59,8 @@ tracing-subscriber = { version = "0.3.11", features = ["fmt", "env-filter", "jso
 test-log = { version = "0.2.10", features = ["trace"] }
 modelator = "0.4.2"
 sha2 = { version = "0.10.2" }
-tendermint-rpc = { git = "https://github.com/informalsystems/tendermint-rs", rev = "47e28b50d20138234f7a8b4254da71469f401714", features = ["http-client", "websocket-client"] }
-tendermint-testgen = { git = "https://github.com/informalsystems/tendermint-rs", rev = "47e28b50d20138234f7a8b4254da71469f401714" } # Needed for generating (synthetic) light blocks.
+tendermint-rpc = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", features = ["http-client", "websocket-client"] }
+tendermint-testgen = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1" } # Needed for generating (synthetic) light blocks.
 tokio = { version = "1.17.0", features = ["full"] }
 serde_json = "1.0.74"
 sha3 = { version = "0.10.1" }

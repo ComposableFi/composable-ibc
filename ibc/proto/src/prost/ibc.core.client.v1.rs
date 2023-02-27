@@ -121,6 +121,9 @@ pub struct Params {
     /// allowed_clients defines the list of allowed client state types.
     #[prost(string, repeated, tag = "1")]
     pub allowed_clients: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// ehether or not wasm clients are enabled
+    #[prost(bool, tag = "2")]
+    pub wasm_clients_enabled: bool,
 }
 /// GenesisState defines the ibc client submodule's genesis state.
 #[derive(::serde::Serialize, ::serde::Deserialize)]

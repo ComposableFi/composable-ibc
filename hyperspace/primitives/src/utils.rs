@@ -131,7 +131,10 @@ pub async fn create_connection(
 	let (connection_id_b, connection_id_a) = match events.pop() {
 		Some(IbcEvent::OpenConfirmConnection(conn)) => (
 			conn.connection_id().unwrap().clone(),
-			conn.attributes().counterparty_connection_id.as_ref().unwrap().clone(),
+			conn.attributes()
+				.counterparty_connection_id
+				.clone()
+				.expect("Failed to create connection"),
 		),
 		got => panic!("Last event should be OpenConfirmConnection: {got:?}"),
 	};
