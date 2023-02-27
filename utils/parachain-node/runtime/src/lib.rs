@@ -728,7 +728,7 @@ impl pallet_ibc::Config for Runtime {
 	type PalletPrefix = IbcTriePrefix;
 	type LightClientProtocol = GRANDPA;
 	type IbcAccountId = Self::AccountId;
-	type Ics20RateLimiter = ();
+	type Ics20RateLimiter = Everything;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

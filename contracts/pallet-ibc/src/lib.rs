@@ -142,19 +142,7 @@ pub mod weight;
 
 pub use weight::WeightInfo;
 
-pub type Ics20TransferMsg = ibc::applications::transfer::msgs::transfer::MsgTransfer<
-	ibc::applications::transfer::Coin<ibc::applications::transfer::PrefixedDenom>,
->;
-
-pub trait Ics20RateLimiter {
-	fn allow(msg: &Ics20TransferMsg) -> Result<(), ()>;
-}
-
-impl Ics20RateLimiter for () {
-	fn allow(_msg: &Ics20TransferMsg) -> Result<(), ()> {
-		Ok(())
-	}
-}
+use crate::ics20::{FlowType, Ics20RateLimiter};
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -695,7 +683,8 @@ pub mod pallet {
 				memo: memo.map(|memo| memo.to_string()).unwrap_or_default(),
 			};
 
-			T::Ics20RateLimiter::allow(&msg).map_err(|_| Error::<T>::RateLimiter)?;
+			T::Ics20RateLimiter::allow(&msg, FlowType::Transfer)
+				.map_err(|_| Error::<T>::RateLimiter)?;
 			let is_sender_source = is_sender_chain_source(
 				msg.source_port.clone(),
 				msg.source_channel,
