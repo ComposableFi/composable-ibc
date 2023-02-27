@@ -8748,6 +8748,40 @@ pub mod api {
 						],
 					)
 				}
+				#[doc = " Prefix for events stored in the Off-chain DB via Indexing API, child trie and connection"]
+				pub fn pallet_prefix(
+					&self,
+				) -> ::subxt::constants::StaticConstantAddress<
+					::subxt::metadata::DecodeStaticType<::std::vec::Vec<::core::primitive::u8>>,
+				> {
+					::subxt::constants::StaticConstantAddress::new(
+						"Ibc",
+						"PalletPrefix",
+						[
+							106u8, 50u8, 57u8, 116u8, 43u8, 202u8, 37u8, 248u8, 102u8, 22u8, 62u8,
+							22u8, 242u8, 54u8, 152u8, 168u8, 107u8, 64u8, 72u8, 172u8, 124u8, 40u8,
+							42u8, 110u8, 104u8, 145u8, 31u8, 144u8, 242u8, 189u8, 145u8, 208u8,
+						],
+					)
+				}
+				#[doc = " Light client protocol this chain is operating"]
+				pub fn light_client_protocol(
+					&self,
+				) -> ::subxt::constants::StaticConstantAddress<
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::pallet_ibc::LightClientProtocol,
+					>,
+				> {
+					::subxt::constants::StaticConstantAddress::new(
+						"Ibc",
+						"LightClientProtocol",
+						[
+							200u8, 116u8, 16u8, 82u8, 41u8, 118u8, 80u8, 243u8, 53u8, 143u8, 22u8,
+							2u8, 167u8, 246u8, 7u8, 151u8, 169u8, 50u8, 102u8, 67u8, 255u8, 148u8,
+							204u8, 202u8, 89u8, 187u8, 48u8, 204u8, 36u8, 113u8, 253u8, 204u8,
+						],
+					)
+				}
 				#[doc = " Expected block time in milliseconds"]
 				pub fn expected_block_time(
 					&self,
@@ -11283,6 +11317,9 @@ pub mod api {
 					#[codec(index = 30)]
 					#[doc = "Error Freezing client"]
 					ClientFreezeFailed,
+					#[codec(index = 31)]
+					#[doc = "Access denied"]
+					AccessDenied,
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -11383,6 +11420,15 @@ pub mod api {
 			pub struct Any {
 				pub type_url: ::std::vec::Vec<::core::primitive::u8>,
 				pub value: ::std::vec::Vec<::core::primitive::u8>,
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			pub enum LightClientProtocol {
+				#[codec(index = 0)]
+				Beefy,
+				#[codec(index = 1)]
+				Grandpa,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -14403,9 +14449,9 @@ pub mod api {
 		let runtime_metadata_hash = client.metadata().metadata_hash(&PALLETS);
 		if runtime_metadata_hash !=
 			[
-				229u8, 227u8, 11u8, 184u8, 231u8, 227u8, 164u8, 93u8, 76u8, 187u8, 246u8, 153u8,
-				195u8, 113u8, 152u8, 1u8, 97u8, 52u8, 93u8, 84u8, 54u8, 28u8, 6u8, 35u8, 2u8,
-				106u8, 108u8, 200u8, 121u8, 192u8, 211u8, 80u8,
+				50u8, 121u8, 68u8, 18u8, 128u8, 226u8, 151u8, 239u8, 11u8, 162u8, 237u8, 240u8,
+				209u8, 171u8, 94u8, 213u8, 179u8, 225u8, 185u8, 58u8, 183u8, 196u8, 163u8, 255u8,
+				108u8, 248u8, 66u8, 21u8, 199u8, 146u8, 220u8, 27u8,
 			] {
 			Err(::subxt::error::MetadataError::IncompatibleMetadata)
 		} else {
