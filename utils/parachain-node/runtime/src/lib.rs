@@ -53,7 +53,7 @@ use frame_support::{
 	construct_runtime,
 	dispatch::DispatchClass,
 	parameter_types,
-	traits::{fungibles::InspectMetadata, AsEnsureOriginWithArg, Contains, Everything},
+	traits::{fungibles::InspectMetadata, AsEnsureOriginWithArg, Everything},
 	weights::{
 		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
 		WeightToFeeCoefficients, WeightToFeePolynomial,
@@ -728,6 +728,7 @@ impl pallet_ibc::Config for Runtime {
 	type PalletPrefix = IbcTriePrefix;
 	type LightClientProtocol = GRANDPA;
 	type IbcAccountId = Self::AccountId;
+	type Ics20RateLimiter = ();
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
