@@ -17,10 +17,6 @@ use futures::future;
 use hyperspace_primitives::{utils::timeout_after, TestProvider};
 use ibc::events::IbcEvent;
 
-pub fn parse_amount(amount: String) -> u128 {
-	str::parse::<u128>(&amount).expect("Failed to parse as u128")
-}
-
 pub async fn assert_timeout_packet<A>(chain: &A, blocks: u64)
 where
 	A: TestProvider,

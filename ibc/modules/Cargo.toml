@@ -37,7 +37,7 @@ mocks = ["clock", "std", "sha2"]
 [dependencies]
 # Proto definitions for all IBC-related interfaces, e.g., connections or channels.
 ibc-proto = { version = "0.18.0", path = "../proto", default-features = false }
-derive = { path = "../derive", package = "ibc-derive" }
+derive = { path = "../derive", package = "ibc-derive", default-features = false }
 ics23 = { git = "https://github.com/confio/ics23", rev = "a4daeb4c24ce1be827829c0841446abc690c4f11", default-features = false }
 time = { version = "0.3", default-features = false }
 serde_derive = { version = "1.0.104", default-features = false }
@@ -51,6 +51,7 @@ flex-error = { version = "0.4.4", default-features = false }
 num-traits = { version = "0.2.15", default-features = false }
 derive_more = { version = "0.99.17", default-features = false, features = ["from", "into", "display"] }
 uint = { version = "0.9", default-features = false }
+hex = { version = "0.4.3", default-features = false }
 primitive-types = { version = "0.12.0", default-features = false, features = ["serde_no_std"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 sha2 = { version = "0.10.2", optional = true }

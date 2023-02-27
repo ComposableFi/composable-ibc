@@ -28,11 +28,11 @@ use crate::{
 };
 
 /// The content of the `key` field for the attribute containing the connection identifier.
-const HEIGHT_ATTRIBUTE_KEY: &str = "height";
-const CONN_ID_ATTRIBUTE_KEY: &str = "connection_id";
-const CLIENT_ID_ATTRIBUTE_KEY: &str = "client_id";
-const COUNTERPARTY_CONN_ID_ATTRIBUTE_KEY: &str = "counterparty_connection_id";
-const COUNTERPARTY_CLIENT_ID_ATTRIBUTE_KEY: &str = "counterparty_client_id";
+pub const HEIGHT_ATTRIBUTE_KEY: &str = "height";
+pub const CONN_ID_ATTRIBUTE_KEY: &str = "connection_id";
+pub const CLIENT_ID_ATTRIBUTE_KEY: &str = "client_id";
+pub const COUNTERPARTY_CONN_ID_ATTRIBUTE_KEY: &str = "counterparty_connection_id";
+pub const COUNTERPARTY_CLIENT_ID_ATTRIBUTE_KEY: &str = "counterparty_client_id";
 
 pub fn try_from_tx(event: &tendermint::abci::Event) -> Option<IbcEvent> {
 	match event.kind.parse() {
@@ -139,7 +139,7 @@ impl From<Attributes> for Vec<EventAttribute> {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
-pub struct OpenInit(Attributes);
+pub struct OpenInit(pub Attributes);
 
 impl OpenInit {
 	pub fn attributes(&self) -> &Attributes {
@@ -176,7 +176,7 @@ impl From<OpenInit> for AbciEvent {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
-pub struct OpenTry(Attributes);
+pub struct OpenTry(pub Attributes);
 
 impl OpenTry {
 	pub fn attributes(&self) -> &Attributes {
@@ -213,7 +213,7 @@ impl From<OpenTry> for AbciEvent {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
-pub struct OpenAck(Attributes);
+pub struct OpenAck(pub Attributes);
 
 impl OpenAck {
 	pub fn attributes(&self) -> &Attributes {
@@ -250,7 +250,7 @@ impl From<OpenAck> for AbciEvent {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
-pub struct OpenConfirm(Attributes);
+pub struct OpenConfirm(pub Attributes);
 
 impl OpenConfirm {
 	pub fn attributes(&self) -> &Attributes {
