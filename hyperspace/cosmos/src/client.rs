@@ -33,6 +33,22 @@ use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
 use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient, Url};
 
+const DEFAULT_FEE_DENOM: &str = "stake";
+const DEFAULT_FEE_AMOUNT: &str = "4000";
+const DEFAULT_GAS_LIMIT: u64 = (i64::MAX - 1) as u64;
+
+fn default_gas_limit() -> u64 {
+	DEFAULT_GAS_LIMIT
+}
+
+fn default_fee_denom() -> String {
+	DEFAULT_FEE_DENOM.to_string()
+}
+
+fn default_fee_amount() -> String {
+	DEFAULT_FEE_AMOUNT.to_string()
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ConfigKeyEntry {
 	pub public_key: String,
@@ -120,10 +136,13 @@ pub struct CosmosClientConfig {
 	/// Account prefix
 	pub account_prefix: String,
 	/// Fee denom
+	#[serde(default = "default_fee_denom")]
 	pub fee_denom: String,
 	/// Fee amount
+	#[serde(default = "default_fee_amount")]
 	pub fee_amount: String,
 	/// Fee amount
+	#[serde(default = "default_gas_limit")]
 	pub gas_limit: u64,
 	/// Store prefix
 	pub store_prefix: String,
@@ -154,6 +173,8 @@ pub struct CosmosClientConfig {
 	*/
 	/// The key that signs transactions
 	pub keybase: ConfigKeyEntry,
+	/// Whitelisted channels
+	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 }
 
 impl<H> CosmosClient<H>
@@ -199,7 +220,7 @@ where
 			gas_limit: config.gas_limit,
 			max_tx_size: config.max_tx_size,
 			keybase: KeyEntry::try_from(config.keybase).map_err(|e| e.to_string())?,
-			channel_whitelist: vec![],
+			channel_whitelist: config.channel_whitelist,
 			_phantom: std::marker::PhantomData,
 			tx_mutex: Default::default(),
 		})

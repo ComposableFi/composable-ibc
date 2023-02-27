@@ -898,8 +898,8 @@ impl AnyConfig {
 				chain.channel_whitelist.push((channel_id, port_id));
 			},
 			#[cfg(feature = "cosmos")]
-			Self::Cosmos(_chain) => {
-				// chain.channel_whitelist.push((channel_id.to_string(), port_id.to_string()));
+			Self::Cosmos(chain) => {
+				chain.channel_whitelist.push((channel_id, port_id));
 			},
 		}
 	}
