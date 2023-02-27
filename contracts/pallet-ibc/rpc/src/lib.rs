@@ -133,15 +133,17 @@ pub struct PacketInfo {
 	pub ack: Option<Vec<u8>>,
 }
 
-impl From<RawPacketInfo> for PacketInfo {
-	fn from(info: RawPacketInfo) -> Self {
-		Self {
-			height: info.height.unwrap_or_default(),
+impl TryFrom<RawPacketInfo> for PacketInfo {
+	type Error = ();
+
+	fn try_from(info: RawPacketInfo) -> core::result::Result<Self, ()> {
+		Ok(Self {
+			height: info.height.ok_or_else(|| ())?,
 			sequence: info.sequence,
-			source_port: String::from_utf8(info.source_port).unwrap_or_default(),
-			source_channel: String::from_utf8(info.source_channel).unwrap_or_default(),
-			destination_port: String::from_utf8(info.destination_port).unwrap_or_default(),
-			destination_channel: String::from_utf8(info.destination_channel).unwrap_or_default(),
+			source_port: String::from_utf8(info.source_port).map_err(|_| ())?,
+			source_channel: String::from_utf8(info.source_channel).map_err(|_| ())?,
+			destination_port: String::from_utf8(info.destination_port).map_err(|_| ())?,
+			destination_channel: String::from_utf8(info.destination_channel).map_err(|_| ())?,
 			channel_order: info.channel_order.to_string(),
 			data: info.data,
 			timeout_height: Height {
@@ -150,7 +152,7 @@ impl From<RawPacketInfo> for PacketInfo {
 			},
 			timeout_timestamp: info.timeout_timestamp,
 			ack: info.ack,
-		}
+		})
 	}
 }
 
@@ -656,15 +658,15 @@ where
 	fn query_balance_with_address(&self, addr: String, asset_id: AssetId) -> Result<Coin> {
 		let api = self.client.runtime_api();
 		let at = BlockId::Hash(self.client.info().best_hash);
-		let denom = String::from_utf8_lossy(
-			&api.denom_trace(&at, asset_id)
+		let denom = String::from_utf8(
+			api.denom_trace(&at, asset_id)
 				.map_err(|e| {
 					runtime_error_into_rpc_error(format!("failed to get denom trace: {}", e))
 				})?
 				.ok_or_else(|| runtime_error_into_rpc_error("denom trace not found"))?
 				.denom,
 		)
-		.to_string();
+		.map_err(|_| runtime_error_into_rpc_error("failed to convert denom to string"))?;
 
 		match api
 			.query_balance_with_address(&at, addr.as_bytes().to_vec(), asset_id)
