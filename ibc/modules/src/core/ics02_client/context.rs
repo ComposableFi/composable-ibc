@@ -103,9 +103,9 @@ pub trait ClientReader: ClientKeeper {
 	fn client_counter(&self) -> Result<u64, Error>;
 }
 
-pub trait ClientTypes: 'static {
+pub trait ClientTypes {
 	type AnyClientMessage: ClientMessage;
-	type AnyClientState: ClientState<ClientDef = Self::ClientDef> + Eq;
+	type AnyClientState: ClientState<ClientDef = Self::ClientDef> + Eq + 'static;
 	type AnyConsensusState: ConsensusState + Eq + 'static;
 
 	/// Client definition type (used for verification)

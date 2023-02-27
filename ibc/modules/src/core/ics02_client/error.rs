@@ -171,6 +171,9 @@ define_error! {
 			[ TraceError<TendermintProtoError> ]
 			| _ | { "invalid raw header" },
 
+		MalformedHeader
+			| _ | { "malformed header; expected to be hex encoded" },
+
 		MissingRawHeader
 			| _ | { "missing raw header" },
 

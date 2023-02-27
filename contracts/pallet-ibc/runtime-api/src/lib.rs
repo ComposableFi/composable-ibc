@@ -14,7 +14,7 @@ sp_api::decl_runtime_apis! {
 		fn para_id() -> u32;
 
 		/// Returns the balance of this address
-		fn query_balance_with_address(addr: Vec<u8>) -> Option<u128>;
+		fn query_balance_with_address(addr: Vec<u8>, asset_id: AssetId) -> Option<u128>;
 
 		/// Query receive packet info
 		fn query_send_packet_info(channel_id: Vec<u8>, port_id: Vec<u8>, seqs: Vec<u64>) -> Option<Vec<PacketInfo>>;

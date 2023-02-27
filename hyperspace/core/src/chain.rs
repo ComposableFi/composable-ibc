@@ -136,7 +136,12 @@ pub enum AnyFinalityEvent {
 	Parachain(parachain::finality_protocol::FinalityEvent),
 }
 
-#[derive(From)]
+#[derive(Clone)]
+pub enum AnyAssetId {
+	Parachain(<ParachainClient<DefaultConfig> as IbcProvider>::AssetId),
+}
+
+#[derive(From, Debug)]
 pub enum AnyTransactionId {
 	Parachain(parachain::provider::TransactionId<sp_core::H256>),
 }
@@ -160,6 +165,7 @@ impl IbcProvider for AnyChain {
 	type FinalityEvent = AnyFinalityEvent;
 	type TransactionId = AnyTransactionId;
 	type Error = AnyError;
+	type AssetId = AnyAssetId;
 
 	async fn query_latest_ibc_events<T>(
 		&mut self,
@@ -457,9 +463,13 @@ impl IbcProvider for AnyChain {
 		}
 	}
 
-	async fn query_ibc_balance(&self) -> Result<Vec<PrefixedCoin>, Self::Error> {
-		match self {
-			Self::Parachain(chain) => chain.query_ibc_balance().await.map_err(Into::into),
+	async fn query_ibc_balance(
+		&self,
+		asset_id: AnyAssetId,
+	) -> Result<Vec<PrefixedCoin>, Self::Error> {
+		match (self, asset_id) {
+			(Self::Parachain(chain), AnyAssetId::Parachain(asset_id)) =>
+				chain.query_ibc_balance(asset_id).await.map_err(Into::into),
 			_ => unreachable!(),
 		}
 	}
@@ -641,6 +651,13 @@ impl Chain for AnyChain {
 	) -> Result<AnyClientMessage, Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain.query_client_message(update).await.map_err(Into::into),
+			_ => unreachable!(),
+		}
+	}
+
+	async fn get_proof_height(&self, block_height: Height) -> Height {
+		match self {
+			Self::Parachain(chain) => chain.get_proof_height(block_height).await,
 			_ => unreachable!(),
 		}
 	}

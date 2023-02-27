@@ -27,7 +27,7 @@ use ibc::{
 			},
 		},
 		ics04_channel::{
-			channel::{ChannelEnd, Counterparty as ChannelCounterparty},
+			channel::{ChannelEnd, Counterparty as ChannelCounterparty, State},
 			msgs::{
 				acknowledgement::MsgAcknowledgement, chan_close_confirm::MsgChannelCloseConfirm,
 				chan_open_ack::MsgChannelOpenAck, chan_open_confirm::MsgChannelOpenConfirm,
@@ -262,7 +262,6 @@ pub async fn parse_events(
 							})?
 							.clone(),
 						proofs: Proofs::new(connection_proof, None, None, None, proof_height)?,
-
 						signer: sink.account_id(),
 					};
 
@@ -293,7 +292,7 @@ pub async fn parse_events(
 					// Construct the channel end as we expect it to be constructed on the
 					// receiving chain
 					let channel = ChannelEnd::new(
-						channel_end.state,
+						State::TryOpen,
 						channel_end.ordering,
 						ChannelCounterparty::new(open_init.port_id, Some(channel_id)),
 						channel_end.connection_hops.clone(),
@@ -313,7 +312,6 @@ pub async fn parse_events(
 						channel,
 						counterparty_version: channel_end.version,
 						proofs: Proofs::new(channel_proof, None, None, None, proof_height)?,
-
 						signer: sink.account_id(),
 					};
 
@@ -455,6 +453,11 @@ pub async fn parse_events(
 					})?)?;
 				if !connection_end.delay_period().is_zero() {
 					// We can't send this packet immediately because of connection delays
+					log::debug!(
+						target: "hyperspace",
+						"Skipping packet relay because of connection delays {:?}",
+						connection_end.delay_period()
+					);
 					continue
 				}
 				let seq = u64::from(send_packet.packet.sequence);
@@ -479,6 +482,7 @@ pub async fn parse_events(
 				let value = msg.encode_vec()?;
 				let msg = Any { value, type_url: msg.type_url() };
 				messages.push(msg);
+				log::debug!(target: "hyperspace", "Sending packet {:?}", packet);
 			},
 			IbcEvent::WriteAcknowledgement(write_ack) => {
 				let port_id = &write_ack.packet.source_port.clone();
@@ -504,6 +508,8 @@ pub async fn parse_events(
 						Error::Custom(format!("ConnectionEnd not found for {:?}", connection_id))
 					})?)?;
 				if !connection_end.delay_period().is_zero() {
+					log::debug!(target: "hyperspace", "Skipping write acknowledgement because of connection delay {:?}",
+						connection_end.delay_period());
 					// We can't send this packet immediately because of connection delays
 					continue
 				}

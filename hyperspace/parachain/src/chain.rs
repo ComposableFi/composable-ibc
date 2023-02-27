@@ -60,6 +60,7 @@ use ibc::{
 	},
 	events::IbcEvent,
 	tx_msg::Msg,
+	Height,
 };
 use ics10_grandpa::client_message::{ClientMessage, Misbehaviour, RelayChainHeader};
 use pallet_ibc::light_clients::AnyClientMessage;
@@ -98,6 +99,7 @@ where
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
+	<T as config::Config>::AssetId: Clone,
 {
 	fn name(&self) -> &str {
 		&*self.name
@@ -220,6 +222,8 @@ where
 		let call = api::tx().ibc().deliver(messages);
 		let (ext_hash, block_hash) = self.submit_call(call).await?;
 
+		log::debug!(target: "hyperspace_parachain", "Submitted extrinsic (hash: {:?}) to block {:?}", ext_hash, block_hash);
+
 		Ok(TransactionId { ext_hash, block_hash })
 	}
 
@@ -331,6 +335,10 @@ where
 		}
 
 		Err(Error::from("No client message found".to_owned()))
+	}
+
+	async fn get_proof_height(&self, block_height: Height) -> Height {
+		block_height
 	}
 }
 

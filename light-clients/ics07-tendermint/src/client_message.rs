@@ -12,31 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use ibc::prelude::*;
-
-use tendermint_proto::Protobuf;
-
-use ibc_proto::ibc::lightclients::tendermint::v1::Misbehaviour as RawMisbehaviour;
+#![allow(deprecated)]
 
 use crate::error::Error;
-use ibc::{core::ics24_host::identifier::ClientId, Height};
-use ibc_proto::google::protobuf::Any;
-
-use core::cmp::Ordering;
-
+use alloc::{string::ToString, vec::Vec};
 use bytes::Buf;
+use core::cmp::Ordering;
+use ibc::{
+	core::{
+		ics02_client,
+		ics24_host::identifier::{ChainId, ClientId},
+	},
+	prelude::*,
+	timestamp::Timestamp,
+	Height,
+};
+use ibc_proto::{
+	google::protobuf::Any,
+	ibc::lightclients::tendermint::v1::{Header as RawHeader, Misbehaviour as RawMisbehaviour},
+};
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use tendermint::{block::signed_header::SignedHeader, validator::Set as ValidatorSet};
-
-use alloc::{string::ToString, vec::Vec};
-
-use ibc_proto::ibc::lightclients::tendermint::v1::Header as RawHeader;
-
-use ibc::{
-	core::{ics02_client, ics24_host::identifier::ChainId},
-	timestamp::Timestamp,
-};
+use tendermint_proto::Protobuf;
 
 pub const TENDERMINT_HEADER_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.Header";
 pub const TENDERMINT_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.Misbehaviour";

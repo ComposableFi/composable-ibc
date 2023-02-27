@@ -191,6 +191,7 @@ where
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
+	<T as config::Config>::AssetId: Clone,
 {
 	async fn send_transfer(&self, transfer: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
 		let account_id = AccountId32::from_ss58check(transfer.receiver.as_ref()).unwrap();

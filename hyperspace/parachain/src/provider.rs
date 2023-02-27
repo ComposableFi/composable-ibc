@@ -53,7 +53,7 @@ use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
 	HostConsensusProof,
 };
-use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
+use primitives::{apply_prefix, Chain, IbcProvider, KeyProvider, UpdateType};
 use sp_core::H256;
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
@@ -72,6 +72,7 @@ use subxt::config::polkadot::PlainTip as Tip;
 use subxt::config::substrate::AssetTip as Tip;
 use tokio_stream::wrappers::ReceiverStream;
 
+#[derive(Debug)]
 pub struct TransactionId<Hash> {
 	pub ext_hash: Hash,
 	pub block_hash: Hash,
@@ -97,10 +98,12 @@ where
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
+	<T as config::Config>::AssetId: Clone,
 {
 	type FinalityEvent = FinalityEvent;
 	type TransactionId = TransactionId<T::Hash>;
 	type Error = Error;
+	type AssetId = <T as config::Config>::AssetId;
 
 	async fn query_latest_ibc_events<C>(
 		&mut self,
@@ -238,11 +241,18 @@ where
 		Ok(response)
 	}
 
+	/// Query the proof of the given keys at the given height.
+	///
+	/// Note: all the keys will be prefixed with the connection prefix.
 	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
+		let prefix = self.connection_prefix().into_vec();
+		let prefixed_keys =
+			keys.into_iter().map(|path| apply_prefix(prefix.clone(), path)).collect();
+
 		let proof = IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_proof(
 			&*self.para_ws_client,
 			at.revision_height as u32,
-			keys,
+			prefixed_keys,
 		)
 		.await
 		.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
@@ -417,6 +427,14 @@ where
 		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error> {
+		log::trace!(
+			target: "hyperspace_parachain",
+			"query_unreceived_acknowledgements at: {:?}, channel_id: {:?}, port_id: {:?}, seqs: {:?}",
+			at,
+			channel_id,
+			port_id,
+			seqs
+		);
 		let res = IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_unreceived_acknowledgements(
 			&*self.para_ws_client,
 			at.revision_height as u32,
@@ -495,6 +513,12 @@ where
 		client_id: ClientId,
 		client_height: Height,
 	) -> Result<(Height, Timestamp), Self::Error> {
+		log::trace!(
+			target: "hyperspace_parachain",
+			"Querying client update time and height for client {:?} at height {:?}",
+			client_id,
+			client_height
+		);
 		let response = IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_client_update_time_and_height(
 			&*self.para_ws_client,
 			client_id.to_string(),
@@ -534,7 +558,10 @@ where
 		Ok(Some(host_consensus_proof.encode()))
 	}
 
-	async fn query_ibc_balance(&self) -> Result<Vec<PrefixedCoin>, Self::Error> {
+	async fn query_ibc_balance(
+		&self,
+		asset_id: Self::AssetId,
+	) -> Result<Vec<PrefixedCoin>, Self::Error> {
 		let account = self.public_key.clone().into_account();
 		let account = subxt::utils::AccountId32::from(<[u8; 32]>::from(account));
 		let mut hex_string = hex::encode(account.0.to_vec());
@@ -543,6 +570,7 @@ where
 			IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_balance_with_address(
 				&*self.para_ws_client,
 				hex_string,
+				asset_id,
 			)
 			.await
 			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;

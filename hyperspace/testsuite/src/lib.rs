@@ -86,10 +86,6 @@ where
 			.unwrap();
 
 		let delay_period = Duration::from_nanos(connection_end.delay_period);
-
-		dbg!(&connection_delay);
-		dbg!(&delay_period);
-
 		if delay_period != connection_delay {
 			continue
 		}
@@ -147,6 +143,7 @@ where
 async fn send_transfer<A, B>(
 	chain_a: &A,
 	chain_b: &B,
+	asset_a: A::AssetId,
 	channel_id: ChannelId,
 	timeout: Option<Timeout>,
 ) -> (u128, MsgTransfer<PrefixedCoin>)
@@ -159,7 +156,7 @@ where
 	B::Error: From<A::Error>,
 {
 	let balance = chain_a
-		.query_ibc_balance()
+		.query_ibc_balance(asset_a)
 		.await
 		.expect("Can't query ibc balance")
 		.pop()
@@ -204,8 +201,12 @@ where
 	(amount, msg)
 }
 
-async fn assert_send_transfer<A>(chain: &A, previous_balance: u128, wait_blocks: u64)
-where
+async fn assert_send_transfer<A>(
+	chain: &A,
+	asset_id: A::AssetId,
+	previous_balance: u128,
+	wait_blocks: u64,
+) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
 {
@@ -225,7 +226,7 @@ where
 	.await;
 
 	let balance = chain
-		.query_ibc_balance()
+		.query_ibc_balance(asset_id)
 		.await
 		.expect("Can't query ibc balance")
 		.pop()
@@ -240,6 +241,7 @@ where
 async fn send_packet_and_assert_height_timeout<A, B>(
 	chain_a: &A,
 	chain_b: &B,
+	asset_a: A::AssetId,
 	channel_id: ChannelId,
 ) where
 	A: TestProvider,
@@ -255,6 +257,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	let (.., msg) = send_transfer(
 		chain_a,
 		chain_b,
+		asset_a,
 		channel_id,
 		Some(Timeout::Offset { timestamp: Some(60 * 60), height: Some(20) }),
 	)
@@ -290,6 +293,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 async fn send_packet_and_assert_timestamp_timeout<A, B>(
 	chain_a: &A,
 	chain_b: &B,
+	asset_a: A::AssetId,
 	channel_id: ChannelId,
 ) where
 	A: TestProvider,
@@ -305,6 +309,7 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 	let (.., msg) = send_transfer(
 		chain_a,
 		chain_b,
+		asset_a,
 		channel_id,
 		Some(Timeout::Offset { timestamp: Some(60 * 2), height: Some(400) }),
 	)
@@ -336,13 +341,18 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 	log::info!(target: "hyperspace", "Resuming send packet relay");
 	set_relay_status(true);
 
-	assert_timeout_packet(chain_a, 50).await;
+	assert_timeout_packet(chain_a, 200).await;
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for timeout timestamp");
 }
 
 /// Simply send a packet and check that it was acknowledged after the connection delay.
-async fn send_packet_with_connection_delay<A, B>(chain_a: &A, chain_b: &B, channel_id: ChannelId)
-where
+async fn send_packet_with_connection_delay<A, B>(
+	chain_a: &A,
+	chain_b: &B,
+	channel_id: ChannelId,
+	asset_a: A::AssetId,
+	asset_b: B::AssetId,
+) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
 	A::Error: From<B::Error>,
@@ -350,11 +360,15 @@ where
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
-	let (previous_balance, ..) = send_transfer(chain_a, chain_b, channel_id, None).await;
-	assert_send_transfer(chain_a, previous_balance, 120).await;
+	log::info!(target: "hyperspace", "Sending transfer from {}", chain_a.name());
+	let (previous_balance, ..) =
+		send_transfer(chain_a, chain_b, asset_a.clone(), channel_id, None).await;
+	assert_send_transfer(chain_a, asset_a, previous_balance, 120).await;
+	log::info!(target: "hyperspace", "Sending transfer from {}", chain_b.name());
+	let (previous_balance, ..) =
+		send_transfer(chain_b, chain_a, asset_b.clone(), channel_id, None).await;
+	assert_send_transfer(chain_b, asset_b, previous_balance, 120).await;
 	// now send from chain b.
-	let (previous_balance, ..) = send_transfer(chain_b, chain_a, channel_id, None).await;
-	assert_send_transfer(chain_b, previous_balance, 120).await;
 	log::info!(target: "hyperspace", "🚀🚀 Token Transfer successful with connection delay");
 }
 
@@ -403,6 +417,7 @@ async fn send_channel_close_init_and_assert_channel_close_confirm<A, B>(
 async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 	chain_a: &A,
 	chain_b: &B,
+	asset_a: A::AssetId,
 	channel_id: ChannelId,
 ) where
 	A: TestProvider,
@@ -418,6 +433,7 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 	let (.., msg_transfer) = send_transfer(
 		chain_a,
 		chain_b,
+		asset_a,
 		channel_id,
 		Some(Timeout::Offset { timestamp: Some(60 * 2), height: Some(400) }),
 	)
@@ -466,6 +482,7 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 pub async fn ibc_messaging_packet_height_timeout_with_connection_delay<A, B>(
 	chain_a: &mut A,
 	chain_b: &mut B,
+	asset_a: A::AssetId,
 ) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -487,7 +504,7 @@ pub async fn ibc_messaging_packet_height_timeout_with_connection_delay<A, B>(
 			.await
 			.unwrap()
 	});
-	send_packet_and_assert_height_timeout(chain_a, chain_b, channel_id).await;
+	send_packet_and_assert_height_timeout(chain_a, chain_b, asset_a, channel_id).await;
 	handle.abort()
 }
 
@@ -495,6 +512,7 @@ pub async fn ibc_messaging_packet_height_timeout_with_connection_delay<A, B>(
 pub async fn ibc_messaging_packet_timestamp_timeout_with_connection_delay<A, B>(
 	chain_a: &mut A,
 	chain_b: &mut B,
+	asset_a: A::AssetId,
 ) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -516,14 +534,18 @@ pub async fn ibc_messaging_packet_timestamp_timeout_with_connection_delay<A, B>(
 			.await
 			.unwrap()
 	});
-	send_packet_and_assert_timestamp_timeout(chain_a, chain_b, channel_id).await;
+	send_packet_and_assert_timestamp_timeout(chain_a, chain_b, asset_a, channel_id).await;
 	handle.abort()
 }
 
 /// Send a packet over a connection with a connection delay and assert the sending chain only sees
 /// the packet after the delay has elapsed.
-pub async fn ibc_messaging_with_connection_delay<A, B>(chain_a: &mut A, chain_b: &mut B)
-where
+pub async fn ibc_messaging_with_connection_delay<A, B>(
+	chain_a: &mut A,
+	chain_b: &mut B,
+	asset_a: A::AssetId,
+	asset_b: B::AssetId,
+) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
 	A::Error: From<B::Error>,
@@ -532,7 +554,7 @@ where
 	B::Error: From<A::Error>,
 {
 	let (handle, channel_id, channel_b, _connection_id) =
-		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(60 * 5)).await; // 5 mins delay
+		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(30)).await; // 5 mins
 	handle.abort();
 	// Set channel whitelist and restart relayer loop
 	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
@@ -544,7 +566,7 @@ where
 			.await
 			.unwrap()
 	});
-	send_packet_with_connection_delay(chain_a, chain_b, channel_id).await;
+	send_packet_with_connection_delay(chain_a, chain_b, channel_id, asset_a, asset_b).await;
 	handle.abort()
 }
 
@@ -576,8 +598,11 @@ where
 }
 
 ///
-pub async fn ibc_messaging_packet_timeout_on_channel_close<A, B>(chain_a: &mut A, chain_b: &mut B)
-where
+pub async fn ibc_messaging_packet_timeout_on_channel_close<A, B>(
+	chain_a: &mut A,
+	chain_b: &mut B,
+	asset_a: A::AssetId,
+) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
 	A::Error: From<B::Error>,
@@ -598,7 +623,7 @@ where
 			.await
 			.unwrap()
 	});
-	send_packet_and_assert_timeout_on_channel_close(chain_a, chain_b, channel_id).await;
+	send_packet_and_assert_timeout_on_channel_close(chain_a, chain_b, asset_a, channel_id).await;
 	handle.abort()
 }
 

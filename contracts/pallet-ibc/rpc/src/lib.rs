@@ -11,10 +11,7 @@ use ibc::{
 	},
 	events::IbcEvent as RawIbcEvent,
 };
-
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
-use std::{collections::HashMap, fmt::Display, str::FromStr, sync::Arc};
-
+use ibc_primitives::PacketInfo as RawPacketInfo;
 use ibc_proto::{
 	cosmos::base::{query::v1beta1::PageResponse, v1beta1::Coin},
 	ibc::{
@@ -42,7 +39,10 @@ use jsonrpsee::{
 	proc_macros::rpc,
 	types::{error::CallError, ErrorObject},
 };
-use pallet_ibc::events::IbcEvent;
+use pallet_ibc::{
+	events::IbcEvent,
+	light_clients::{AnyClientState, AnyConsensusState},
+};
 use sc_chain_spec::Properties;
 use sc_client_api::{BlockBackend, ProofProvider};
 use serde::{Deserialize, Serialize};
@@ -53,6 +53,7 @@ use sp_runtime::{
 	generic::BlockId,
 	traits::{Block as BlockT, Header as HeaderT},
 };
+use std::{collections::HashMap, fmt::Display, str::FromStr, sync::Arc};
 use tendermint_proto::Protobuf;
 pub mod events;
 use events::filter_map_pallet_event;
@@ -108,7 +109,7 @@ pub struct Proof {
 /// Packet info
 #[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PacketInfo {
-	/// Height at which packet event was emitted height
+	/// Minimal height at which packet proof is available
 	pub height: u64,
 	/// Packet sequence
 	pub sequence: u64,
@@ -130,6 +131,29 @@ pub struct PacketInfo {
 	pub timeout_timestamp: u64,
 	/// Packet acknowledgement
 	pub ack: Option<Vec<u8>>,
+}
+
+impl TryFrom<RawPacketInfo> for PacketInfo {
+	type Error = ();
+
+	fn try_from(info: RawPacketInfo) -> core::result::Result<Self, ()> {
+		Ok(Self {
+			height: info.height.ok_or_else(|| ())?,
+			sequence: info.sequence,
+			source_port: String::from_utf8(info.source_port).map_err(|_| ())?,
+			source_channel: String::from_utf8(info.source_channel).map_err(|_| ())?,
+			destination_port: String::from_utf8(info.destination_port).map_err(|_| ())?,
+			destination_channel: String::from_utf8(info.destination_channel).map_err(|_| ())?,
+			channel_order: info.channel_order.to_string(),
+			data: info.data,
+			timeout_height: Height {
+				revision_number: info.timeout_height.0,
+				revision_height: info.timeout_height.1,
+			},
+			timeout_timestamp: info.timeout_timestamp,
+			ack: info.ack,
+		})
+	}
 }
 
 /// IBC RPC methods.
@@ -176,7 +200,7 @@ where
 	/// Query balance of an address on chain, addr should be a valid hexadecimal or SS58 string,
 	/// representing the account id.
 	#[method(name = "ibc_queryBalanceWithAddress")]
-	fn query_balance_with_address(&self, addr: String) -> Result<Coin>;
+	fn query_balance_with_address(&self, addr: String, asset_id: AssetId) -> Result<Coin>;
 
 	/// Query a client state
 	#[method(name = "ibc_queryClientState")]
@@ -444,7 +468,7 @@ where
 		+ ProofProvider<Block>
 		+ BlockBackend<Block>,
 	C::Api: IbcRuntimeApi<Block, AssetId>,
-	AssetId: codec::Codec,
+	AssetId: codec::Codec + Copy,
 {
 	fn query_send_packets(
 		&self,
@@ -483,7 +507,7 @@ where
 						|_| runtime_error_into_rpc_error("Failed to decode destination channel"),
 					)?,
 					data: packet.data,
-					timeout_height: ibc_proto::ibc::core::client::v1::Height {
+					timeout_height: Height {
 						revision_number: packet.timeout_height.0,
 						revision_height: packet.timeout_height.1,
 					},
@@ -619,10 +643,7 @@ where
 			.encode();
 		Ok(Proof {
 			proof,
-			height: ibc_proto::ibc::core::client::v1::Height {
-				revision_number: para_id.into(),
-				revision_height: height as u64,
-			},
+			height: Height { revision_number: para_id.into(), revision_height: height as u64 },
 		})
 	}
 
@@ -634,12 +655,24 @@ where
 		}
 	}
 
-	fn query_balance_with_address(&self, addr: String) -> Result<Coin> {
+	fn query_balance_with_address(&self, addr: String, asset_id: AssetId) -> Result<Coin> {
 		let api = self.client.runtime_api();
 		let at = BlockId::Hash(self.client.info().best_hash);
-		let denom = format!("{}", self.chain_props.get("tokenSymbol").cloned().unwrap_or_default());
+		let denom = String::from_utf8(
+			api.denom_trace(&at, asset_id)
+				.map_err(|e| {
+					runtime_error_into_rpc_error(format!("failed to get denom trace: {}", e))
+				})?
+				.ok_or_else(|| runtime_error_into_rpc_error("denom trace not found"))?
+				.denom,
+		)
+		.map_err(|_| runtime_error_into_rpc_error("failed to convert denom to string"))?;
 
-		match api.query_balance_with_address(&at, addr.as_bytes().to_vec()).ok().flatten() {
+		match api
+			.query_balance_with_address(&at, addr.as_bytes().to_vec(), asset_id)
+			.ok()
+			.flatten()
+		{
 			Some(amt) => Ok(Coin { denom, amount: sp_core::U256::from(amt).as_u128().to_string() }),
 			None => Err(runtime_error_into_rpc_error("Error querying balance")),
 		}
@@ -665,7 +698,7 @@ where
 			.client_state(&at, client_id.as_bytes().to_vec())
 			.ok()
 			.flatten()
-			.ok_or_else(|| runtime_error_into_rpc_error("Error querying client state"))?;
+			.ok_or_else(|| runtime_error_into_rpc_error("[API] Error querying client state"))?;
 		let mut keys = vec![result.trie_key];
 		let child_trie_key = api
 			.child_trie_key(&at)
@@ -678,8 +711,9 @@ where
 			.iter_nodes()
 			.collect::<Vec<_>>()
 			.encode();
-		let client_state = AnyClientState::decode_vec(&result.client_state)
-			.map_err(|_| runtime_error_into_rpc_error("Error querying client state"))?;
+		let client_state = AnyClientState::decode_vec(&result.client_state).map_err(|e| {
+			runtime_error_into_rpc_error(format!("Error querying client state: {:?}", e))
+		})?;
 		Ok(QueryClientStateResponse {
 			client_state: Some(client_state.into()),
 			proof,
