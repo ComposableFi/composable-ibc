@@ -695,7 +695,7 @@ pub mod pallet {
 				memo: memo.map(|memo| memo.to_string()).unwrap_or_default(),
 			};
 
-			T::Ics20RateLimiter::allow(&msg).map_err(|_| Error::<T>::Utf8Error)?;
+			T::Ics20RateLimiter::allow(&msg).map_err(|_| Error::<T>::RateLimiter)?;
 			let is_sender_source = is_sender_chain_source(
 				msg.source_port.clone(),
 				msg.source_channel,
