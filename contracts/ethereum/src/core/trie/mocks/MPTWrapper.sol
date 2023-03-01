@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import "../LookUp.sol";
 
-contract YourContract {
+contract MPTWrapper {
     function verify(
         bytes32 root,
         bytes[] memory proof,
