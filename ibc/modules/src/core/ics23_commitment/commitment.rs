@@ -21,11 +21,12 @@ use subtle_encoding::{Encoding, Hex};
 
 use super::merkle::MerkleProof;
 
-#[derive(Clone, PartialEq, Eq, Serialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct CommitmentRoot {
 	#[serde(serialize_with = "crate::serializers::ser_hex_upper")]
-	bytes: Vec<u8>,
+	#[serde(deserialize_with = "crate::serializers::deser_hex_upper")]
+	pub bytes: Vec<u8>,
 }
 
 impl fmt::Debug for CommitmentRoot {

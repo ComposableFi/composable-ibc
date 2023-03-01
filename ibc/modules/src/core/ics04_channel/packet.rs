@@ -172,6 +172,7 @@ impl core::fmt::Debug for Packet {
 	}
 }
 
+#[derive(Debug)]
 pub enum TimeoutVariant {
 	Height,
 	Timestamp,

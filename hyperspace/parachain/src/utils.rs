@@ -350,6 +350,8 @@ impl From<MetadataIbcEventWrapper> for RawIbcEvent {
 				RawIbcEvent::AppModule { kind, module_id },
 			MetadataIbcEvent::Empty => RawIbcEvent::Empty,
 			MetadataIbcEvent::ChainError => RawIbcEvent::ChainError,
+			MetadataIbcEvent::PushWasmCode { wasm_code_id } =>
+				RawIbcEvent::PushWasmCode { wasm_code_id },
 		}
 	}
 }

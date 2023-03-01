@@ -1,0 +1,95 @@
+[package]
+name = "ics10-grandpa-cw"
+version = "0.1.0"
+authors = ["Composable Developers"]
+edition = "2021"
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true
+
+[package.metadata.scripts]
+optimize = """docker run --rm -v "$(pwd)":/code \
+  --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
+  --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
+  cosmwasm/rust-optimizer:0.12.6
+"""
+
+[dependencies]
+cosmwasm-schema = "1.1.3"
+cosmwasm-std = "1.1.3"
+cosmwasm-storage = "1.1.3"
+#cosmwasm-crypto = { version = "1.1.3", default-features = false }
+cw-storage-plus = "0.15.1"
+cw2 = "0.15.1"
+schemars = "0.8.10"
+serde = { version = "1.0.145", default-features = false, features = ["derive"] }
+thiserror = { version = "1.0.31" }
+sha2 = "0.10"
+sha3 = "0.10"
+derive_more = "0.99.17"
+
+ibc = { path = "../../ibc/modules", default-features = false }
+ibc-derive = { path = "../../ibc/derive", default-features = false }
+ibc-proto = { path = "../../ibc/proto", default-features = false, features = ["json-schema"] }
+ics23 = { git = "https://github.com/confio/ics23", rev = "a4daeb4c24ce1be827829c0841446abc690c4f11", default-features = false }
+ics10-grandpa = { path = "../ics10-grandpa", default-features = false }
+grandpa-light-client-primitives = { path = "../../algorithms/grandpa/primitives", default-features = false }
+light-client-common = { path = "../../light-clients/common", default-features = false  }
+ics08-wasm = { path = "../ics08-wasm", default-features = false, features = ["cosmwasm"] }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, features = ["disable_panic_handler", "disable_oom", "disable_allocator"] }
+sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, features = [] }
+prost = { version = "0.11", default-features = false }
+blake2-rfc = { version = "0.2.18", default-features = false }
+ed25519-zebra = { version = "3.1.0", default-features = false }
+twox-hash = { version = "1.6.3", default-features = false, features = ["digest_0_10"] }
+byteorder = { version = "1.3.2", default-features = false }
+digest = { version = "0.10.3", default-features = false }
+hex = "0.4.3"
+tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+finality-grandpa = { version = "0.16.0", default-features = false }
+
+[dev-dependencies]
+cw-multi-test = "0.15.1"
+hex = "0.4.3"
+hyperspace-primitives = { path = "../../hyperspace/primitives", features = ["testing"] }
+pallet-ibc = { path = "../../contracts/pallet-ibc" }
+serde-json-wasm = { version = "0.5.0", default-features = false }
+serde_json = { version = "1.0.93", default-features = false }
+
+[features]
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+# use library feature to disable all instantiate/execute/query exports
+library = []
+default = []
+std = []
+test = [
+  "sp-io/std",
+  "sp-runtime/std",
+  "sp-runtime-interface/std",
+  "sp-core/std",
+  "ics10-grandpa/std",
+  "grandpa-light-client-primitives/std",
+  "light-client-common/std",
+  "std"
+]

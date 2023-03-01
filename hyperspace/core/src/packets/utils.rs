@@ -133,6 +133,7 @@ pub async fn get_timeout_proof_height(
 	}
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum VerifyDelayOn {
 	Source,
 	Sink,
@@ -149,6 +150,7 @@ pub async fn verify_delay_passed(
 	proof_height: Height,
 	verify_delay_on: VerifyDelayOn,
 ) -> Result<bool, anyhow::Error> {
+	log::trace!(target: "hyperspace", "Verifying delay passed for source: {source_height}, {source_timestamp}, sink: {sink_height}, {sink_timestamp}, connection delay: {}, proof height: {proof_height}, verify delay on: {verify_delay_on:?}", connection_delay.as_secs());
 	match verify_delay_on {
 		VerifyDelayOn::Source => {
 			let actual_proof_height = sink.get_proof_height(proof_height).await;

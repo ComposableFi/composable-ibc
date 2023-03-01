@@ -24,12 +24,15 @@ use alloc::{collections::BTreeMap, vec::Vec};
 use anyhow::anyhow;
 use codec::{Decode, Encode};
 use grandpa_client_primitives::{FinalityProof, ParachainHeaderProofs};
+use ibc::{core::ics24_host::identifier::ClientId, Height};
 use sp_core::H256;
 use sp_runtime::traits::BlakeTwo256;
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA header
 pub const GRANDPA_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.ClientMessage";
+pub const GRANDPA_HEADER_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.Header";
+pub const GRANDPA_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.Misbehaviour";
 
 /// Relay chain substrate header type
 pub type RelayChainHeader = sp_runtime::generic::Header<u32, BlakeTwo256>;
@@ -46,6 +49,16 @@ pub struct Header {
 	pub parachain_headers: BTreeMap<H256, ParachainHeaderProofs>,
 }
 
+impl Header {
+	pub fn height(&self) -> Height {
+		// FIXME: proper grandpa header height calculation
+		Height {
+			revision_height: self.finality_proof.unknown_headers.last().unwrap().number.into(),
+			revision_number: 2000,
+		}
+	}
+}
+
 /// Misbehaviour type for GRANDPA. If both first and second proofs are valid
 /// (that is, form a valid canonical chain of blocks where on of the chain is a fork of
 /// the main one)
@@ -55,6 +68,13 @@ pub struct Misbehaviour {
 	pub first_finality_proof: FinalityProof<RelayChainHeader>,
 	/// second proof of misbehaviour
 	pub second_finality_proof: FinalityProof<RelayChainHeader>,
+}
+
+impl Misbehaviour {
+	pub fn client_id(&self) -> ClientId {
+		// FIXME: proper grandpa client id calculation
+		ClientId::new("10-grandpa", 0).unwrap()
+	}
 }
 
 /// [`ClientMessage`] for Ics10-GRANDPA

@@ -24,6 +24,7 @@ ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
+ics08-wasm = { path = "../../light-clients/ics08-wasm" }
 
 [features]
 testing = []

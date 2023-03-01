@@ -68,6 +68,7 @@ use subxt::config::{
 #[cfg(not(feature = "dali"))]
 use subxt::config::polkadot::PlainTip as Tip;
 
+use ibc::core::ics02_client::client_state::ClientState;
 #[cfg(feature = "dali")]
 use subxt::config::substrate::AssetTip as Tip;
 use tokio_stream::wrappers::ReceiverStream;
@@ -536,9 +537,13 @@ where
 
 	async fn query_host_consensus_state_proof(
 		&self,
-		height: Height,
+		client_state: &AnyClientState,
 	) -> Result<Option<Vec<u8>>, Self::Error> {
-		let hash = self.para_client.rpc().block_hash(Some(height.revision_height.into())).await?;
+		let hash = self
+			.para_client
+			.rpc()
+			.block_hash(Some(client_state.latest_height().revision_height.into()))
+			.await?;
 		let header = self
 			.para_client
 			.rpc()
@@ -549,11 +554,16 @@ where
 			fetch_timestamp_extrinsic_with_proof(&self.para_client, Some(header.hash()))
 				.await
 				.map_err(Error::BeefyProver)?;
-
+		let code_id = if let AnyClientState::Wasm(client_state) = &client_state {
+			Some(client_state.code_id.clone())
+		} else {
+			None
+		};
 		let host_consensus_proof = HostConsensusProof {
 			header: header.encode(),
 			extrinsic: extrinsic_with_proof.ext,
 			extrinsic_proof: extrinsic_with_proof.proof,
+			code_id,
 		};
 		Ok(Some(host_consensus_proof.encode()))
 	}
@@ -720,5 +730,9 @@ where
 		let client_id = ClientId::from_str(&identified_client_state.client_id)
 			.expect("Should have a valid client id");
 		Ok(client_id)
+	}
+
+	async fn upload_wasm(&self, _wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
+		Err(Error::Custom("Uploading WASM to parachain is not supported".to_string()))
 	}
 }

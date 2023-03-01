@@ -41,6 +41,8 @@ where
 	let handle = tokio::task::spawn(async move {
 		hyperspace_core::fish(client_a_clone, client_b_clone).await.unwrap()
 	});
+	let client_a_clone = chain_a.clone();
+	let client_b_clone = chain_b.clone();
 	info!("Waiting for the next block...");
 
 	let relaychain_authorities = [
@@ -56,10 +58,9 @@ where
 	let client_id = chain_b.client_id();
 	let latest_height = chain_a.latest_height_and_timestamp().await.unwrap().0;
 	let response = chain_a.query_client_state(latest_height, client_id).await.unwrap();
-	let client_state = match AnyClientState::try_from(response.client_state.unwrap()).unwrap() {
-		AnyClientState::Grandpa(cs) => cs,
-		_ => panic!("unexpected client state"),
-	};
+	let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(response.client_state.unwrap(), |cs| {
+		matches!(cs, AnyClientState::Grandpa(_))
+	}).unwrap() else { unreachable!() };
 
 	let finality_event = chain_b.finality_notifications().await.next().await.expect("no event");
 	let set_id = client_state.current_set_id;
@@ -218,5 +219,7 @@ where
 		.expect("timeout")
 		.expect("failed to receive misbehaviour event");
 
-	handle.abort()
+	tokio::time::sleep(Duration::from_secs(120)).await;
+
+	handle.abort();
 }

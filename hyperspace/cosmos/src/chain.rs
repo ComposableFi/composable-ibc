@@ -175,16 +175,12 @@ where
 			.map_err(|e| Error::from(e.to_string()))?
 			.into_inner();
 		let mut idx = None;
-		'l: for l in resp
-			.tx_responses
-			.pop()
-			.ok_or_else(|| {
-				Error::from(format!("Failed to find tx for update client: {:?}", update))
-			})?
-			.logs
-		{
-			for ev in l.events {
-				let e = AbciEvent {
+		let tx_response = resp.tx_responses.pop().ok_or_else(|| {
+			Error::from(format!("Failed to find tx for update client: {:?}", update))
+		})?;
+		'l: for log in tx_response.logs {
+			for ev in log.events {
+				let event = AbciEvent {
 					kind: ev.r#type,
 					attributes: ev
 						.attributes
@@ -196,14 +192,16 @@ where
 						})
 						.collect(),
 				};
-				let attr = client_extract_attributes_from_tx(&e).map_err(|e| {
-					Error::from(format!("Failed to extract attributes from tx: {}", e))
-				})?;
+				let attr = client_extract_attributes_from_tx(
+					&event,
+					Height::new(self.id().version(), tx_response.height as u64),
+				)
+				.map_err(|e| Error::from(format!("Failed to extract attributes from tx: {}", e)))?;
 				if attr.client_id == *update.client_id() &&
 					attr.client_type == update.client_type() &&
 					attr.consensus_height == update.consensus_height()
 				{
-					idx = Some(l.msg_index);
+					idx = Some(log.msg_index);
 					break 'l
 				}
 			}

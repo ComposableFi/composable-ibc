@@ -111,7 +111,7 @@ pub(crate) fn process<Ctx: ReaderContext>(
 		ctx,
 		msg.proofs.height(),
 		&new_connection_end,
-		client_state,
+		&client_state,
 		msg.proofs.height(),
 		client_proof,
 	)?;

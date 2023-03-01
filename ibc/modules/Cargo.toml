@@ -26,9 +26,9 @@ std = [
     "sp-std/std",
     "codec/std",
     "scale-info/std",
-    "primitive-types/std"
 ]
 clock = ["tendermint/clock", "time/std"]
+cosmwasm = ["cosmwasm-schema"]
 
 # This feature grants access to development-time mocking libraries, such as `MockContext` or `MockHeader`.
 # Depends on the `testgen` suite for generating Tendermint light blocks.
@@ -58,6 +58,7 @@ sha2 = { version = "0.10.2", optional = true }
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+cosmwasm-schema = { version = "1.1.3", default-features = false, optional = true }
 
 [dev-dependencies]
 env_logger = "0.9.0"

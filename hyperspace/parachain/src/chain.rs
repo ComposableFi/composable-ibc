@@ -367,6 +367,7 @@ where
 		counterparty: &C,
 		client_message: AnyClientMessage,
 	) -> Result<(), anyhow::Error> {
+		let client_message = client_message.unpack_recursive_into();
 		match client_message {
 			AnyClientMessage::Grandpa(ClientMessage::Header(header)) => {
 				let base_header = header

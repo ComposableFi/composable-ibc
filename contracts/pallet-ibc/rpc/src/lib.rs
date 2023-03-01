@@ -37,6 +37,7 @@ use ibc_runtime_api::IbcRuntimeApi;
 use jsonrpsee::{
 	core::{Error as RpcError, RpcResult as Result},
 	proc_macros::rpc,
+	tracing::log,
 	types::{error::CallError, ErrorObject},
 };
 use pallet_ibc::{
@@ -137,8 +138,9 @@ impl TryFrom<RawPacketInfo> for PacketInfo {
 	type Error = ();
 
 	fn try_from(info: RawPacketInfo) -> core::result::Result<Self, ()> {
+		log::info!("RawPacketInfo: {:?}", info);
 		Ok(Self {
-			height: info.height.ok_or_else(|| ())?,
+			height: info.height.unwrap_or_default(),
 			sequence: info.sequence,
 			source_port: String::from_utf8(info.source_port).map_err(|_| ())?,
 			source_channel: String::from_utf8(info.source_channel).map_err(|_| ())?,

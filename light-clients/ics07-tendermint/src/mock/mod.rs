@@ -32,6 +32,7 @@ use tendermint::{
 	merkle::{Hash, MerkleHash, NonIncremental, HASH_SIZE},
 	PublicKey, Signature,
 };
+use tendermint_light_client_verifier::operations::CommitValidator;
 
 use crate::{client_message::ClientMessage, mock::host::MockHostBlock};
 use ibc::{
@@ -207,5 +208,7 @@ impl Verifier for Crypto {
 		unimplemented!()
 	}
 }
+
+impl CommitValidator for Crypto {}
 
 impl HostFunctionsProvider for Crypto {}

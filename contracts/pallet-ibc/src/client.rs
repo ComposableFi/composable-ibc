@@ -30,6 +30,7 @@ pub struct HostConsensusProof {
 	pub header: Vec<u8>,
 	pub extrinsic: Vec<u8>,
 	pub extrinsic_proof: Vec<Vec<u8>>,
+	pub code_id: Option<Vec<u8>>,
 }
 
 impl<T: Config + Send + Sync> ClientReader for Context<T>
@@ -157,6 +158,7 @@ where
 		&self,
 		_height: Height,
 		_proof: Option<Vec<u8>>,
+		_client_state: &AnyClientState,
 	) -> Result<AnyConsensusState, ICS02Error> {
 		let timestamp = Timestamp::from_nanoseconds(1).unwrap();
 		let timestamp = timestamp.into_tm_time().unwrap();
@@ -181,8 +183,9 @@ where
 		&self,
 		height: Height,
 		proof: Option<Vec<u8>>,
+		client_state: &AnyClientState,
 	) -> Result<AnyConsensusState, ICS02Error> {
-		log::trace!(target: "pallet_ibc", "in client: [host_consensus_state]");
+		log::trace!(target: "pallet_ibc", "in client: [host_consensus_state] height = {:?}", height);
 		use codec::Compact;
 		use sp_core::H256;
 		use sp_runtime::traits::{BlakeTwo256, Header};
@@ -284,7 +287,22 @@ where
 					timestamp,
 					root: header.state_root().as_ref().to_vec().into(),
 				};
-				AnyConsensusState::Grandpa(cs_state)
+				let cs = AnyConsensusState::Grandpa(cs_state);
+
+				match &client_state {
+					AnyClientState::Wasm(wasm) => {
+						log::trace!(target: "pallet_ibc", "in client : [host_consensus_state] >> using wasm code id" );
+						let code_id = wasm.code_id.clone();
+						AnyConsensusState::wasm(cs, code_id)
+					},
+					_ =>
+						if let Some(code_id) = connection_proof.code_id {
+							log::trace!(target: "pallet_ibc", "in client : [host_consensus_state] >> using wasm code id");
+							AnyConsensusState::wasm(cs, code_id)
+						} else {
+							cs
+						},
+				}
 			},
 		};
 		Ok(consensus_state)
@@ -414,7 +432,8 @@ where
 	}
 
 	fn validate_self_client(&self, client_state: &AnyClientState) -> Result<(), ICS02Error> {
-		let (relay_chain, para_id, latest_para_height) = match client_state {
+		let unpacked = client_state.unpack_recursive();
+		let (relay_chain, para_id, latest_para_height) = match unpacked {
 			AnyClientState::Beefy(client_state) => {
 				if client_state.is_frozen() {
 					Err(ICS02Error::implementation_specific(format!("client state is frozen")))?

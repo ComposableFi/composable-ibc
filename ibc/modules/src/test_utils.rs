@@ -472,6 +472,7 @@ impl<C: HostBlockType> ClientReader for DummyTransferModule<C> {
 		&self,
 		_height: Height,
 		_proof: Option<Vec<u8>>,
+		_client_state: &Self::AnyClientState,
 	) -> Result<Self::AnyConsensusState, Ics02Error> {
 		unimplemented!()
 	}

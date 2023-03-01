@@ -36,6 +36,7 @@ ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 
 ics11-beefy = { path = "../../light-clients/ics11-beefy" }
 #ics13-near = { path = "../../light-clients/ics13-near" }
+ics08-wasm = { path = "../../light-clients/ics08-wasm", features = ["std"] }
 light-client-common = { path = "../../light-clients/common" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
@@ -44,6 +45,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
+prost = { version = "0.11", default-features = false }
 
 [dev-dependencies]
 derive_more = "0.99.17"

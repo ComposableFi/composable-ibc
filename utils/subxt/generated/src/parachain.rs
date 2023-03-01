@@ -658,10 +658,10 @@ pub mod api {
 						"Events",
 						vec![],
 						[
-							134u8, 194u8, 13u8, 63u8, 144u8, 96u8, 227u8, 135u8, 220u8, 192u8,
-							26u8, 103u8, 62u8, 58u8, 193u8, 164u8, 119u8, 180u8, 183u8, 88u8,
-							230u8, 235u8, 196u8, 161u8, 105u8, 207u8, 39u8, 42u8, 85u8, 164u8,
-							14u8, 46u8,
+							162u8, 111u8, 153u8, 168u8, 217u8, 165u8, 7u8, 75u8, 25u8, 186u8,
+							123u8, 139u8, 243u8, 95u8, 225u8, 199u8, 158u8, 199u8, 98u8, 238u8,
+							48u8, 212u8, 253u8, 174u8, 79u8, 75u8, 50u8, 180u8, 212u8, 56u8, 127u8,
+							212u8,
 						],
 					)
 				}
@@ -11014,6 +11014,8 @@ pub mod api {
 						consensus_revision_number: ::core::primitive::u64,
 					},
 					#[codec(index = 5)]
+					PushWasmCode { wasm_code_id: ::std::vec::Vec<::core::primitive::u8> },
+					#[codec(index = 6)]
 					OpenInitConnection {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -11024,7 +11026,7 @@ pub mod api {
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 						counterparty_client_id: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec(index = 6)]
+					#[codec(index = 7)]
 					OpenConfirmConnection {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -11035,7 +11037,7 @@ pub mod api {
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 						counterparty_client_id: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec(index = 7)]
+					#[codec(index = 8)]
 					OpenTryConnection {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -11046,7 +11048,7 @@ pub mod api {
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 						counterparty_client_id: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec(index = 8)]
+					#[codec(index = 9)]
 					OpenAckConnection {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -11057,7 +11059,7 @@ pub mod api {
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 						counterparty_client_id: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec(index = 9)]
+					#[codec(index = 10)]
 					OpenInitChannel {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -11068,7 +11070,7 @@ pub mod api {
 						counterparty_channel_id:
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 					},
-					#[codec(index = 10)]
+					#[codec(index = 11)]
 					OpenConfirmChannel {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -11079,7 +11081,7 @@ pub mod api {
 						counterparty_channel_id:
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 					},
-					#[codec(index = 11)]
+					#[codec(index = 12)]
 					OpenTryChannel {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -11090,7 +11092,7 @@ pub mod api {
 						counterparty_channel_id:
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 					},
-					#[codec(index = 12)]
+					#[codec(index = 13)]
 					OpenAckChannel {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -11101,7 +11103,7 @@ pub mod api {
 						counterparty_channel_id:
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 					},
-					#[codec(index = 13)]
+					#[codec(index = 14)]
 					CloseInitChannel {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -11112,7 +11114,7 @@ pub mod api {
 						counterparty_channel_id:
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 					},
-					#[codec(index = 14)]
+					#[codec(index = 15)]
 					CloseConfirmChannel {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -11123,7 +11125,7 @@ pub mod api {
 						counterparty_channel_id:
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 					},
-					#[codec(index = 15)]
+					#[codec(index = 16)]
 					ReceivePacket {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -11133,7 +11135,7 @@ pub mod api {
 						dest_channel: ::std::vec::Vec<::core::primitive::u8>,
 						sequence: ::core::primitive::u64,
 					},
-					#[codec(index = 16)]
+					#[codec(index = 17)]
 					SendPacket {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -11143,7 +11145,7 @@ pub mod api {
 						dest_channel: ::std::vec::Vec<::core::primitive::u8>,
 						sequence: ::core::primitive::u64,
 					},
-					#[codec(index = 17)]
+					#[codec(index = 18)]
 					AcknowledgePacket {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -11151,7 +11153,7 @@ pub mod api {
 						channel_id: ::std::vec::Vec<::core::primitive::u8>,
 						sequence: ::core::primitive::u64,
 					},
-					#[codec(index = 18)]
+					#[codec(index = 19)]
 					WriteAcknowledgement {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -11161,7 +11163,7 @@ pub mod api {
 						dest_channel: ::std::vec::Vec<::core::primitive::u8>,
 						sequence: ::core::primitive::u64,
 					},
-					#[codec(index = 19)]
+					#[codec(index = 20)]
 					TimeoutPacket {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -11169,7 +11171,7 @@ pub mod api {
 						channel_id: ::std::vec::Vec<::core::primitive::u8>,
 						sequence: ::core::primitive::u64,
 					},
-					#[codec(index = 20)]
+					#[codec(index = 21)]
 					TimeoutOnClosePacket {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -11177,11 +11179,11 @@ pub mod api {
 						channel_id: ::std::vec::Vec<::core::primitive::u8>,
 						sequence: ::core::primitive::u64,
 					},
-					#[codec(index = 21)]
-					Empty,
 					#[codec(index = 22)]
-					ChainError,
+					Empty,
 					#[codec(index = 23)]
+					ChainError,
+					#[codec(index = 24)]
 					AppModule {
 						kind: ::std::vec::Vec<::core::primitive::u8>,
 						module_id: ::std::vec::Vec<::core::primitive::u8>,
@@ -14449,9 +14451,9 @@ pub mod api {
 		let runtime_metadata_hash = client.metadata().metadata_hash(&PALLETS);
 		if runtime_metadata_hash !=
 			[
-				50u8, 121u8, 68u8, 18u8, 128u8, 226u8, 151u8, 239u8, 11u8, 162u8, 237u8, 240u8,
-				209u8, 171u8, 94u8, 213u8, 179u8, 225u8, 185u8, 58u8, 183u8, 196u8, 163u8, 255u8,
-				108u8, 248u8, 66u8, 21u8, 199u8, 146u8, 220u8, 27u8,
+				72u8, 194u8, 120u8, 20u8, 227u8, 214u8, 33u8, 94u8, 81u8, 215u8, 122u8, 201u8,
+				61u8, 241u8, 28u8, 30u8, 128u8, 41u8, 177u8, 125u8, 96u8, 245u8, 24u8, 247u8,
+				171u8, 186u8, 76u8, 24u8, 9u8, 82u8, 210u8, 176u8,
 			] {
 			Err(::subxt::error::MetadataError::IncompatibleMetadata)
 		} else {

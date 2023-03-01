@@ -27,7 +27,7 @@ use ibc::{
 			},
 		},
 	},
-	events::IbcEvent,
+	events::{IbcEvent, IbcEventType},
 	protobuf::Protobuf,
 	timestamp::Timestamp,
 	tx_msg::Msg,
@@ -57,10 +57,11 @@ use ibc_rpc::PacketInfo;
 use ics07_tendermint::{
 	client_message::ClientMessage, client_state::ClientState, consensus_state::ConsensusState,
 };
+use ics08_wasm::msg::MsgPushNewWasmCode;
 use pallet_ibc::light_clients::{
 	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
 };
-use primitives::{mock::LocalClientTypes, Chain, IbcProvider, UpdateType};
+use primitives::{mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType};
 use prost::Message;
 use std::{pin::Pin, str::FromStr, time::Duration};
 use tendermint::block::Height as TmHeight;
@@ -801,7 +802,7 @@ where
 
 	async fn query_host_consensus_state_proof(
 		&self,
-		_height: Height,
+		_client_state: &AnyClientState,
 	) -> Result<Option<Vec<u8>>, Self::Error> {
 		unimplemented!()
 	}
@@ -1059,6 +1060,47 @@ where
 				})
 			}
 		}
+	}
+
+	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
+		let msg = MsgPushNewWasmCode { signer: self.account_id(), code: wasm };
+		let hash = self.submit(vec![msg.into()]).await?;
+		let resp = self.wait_for_tx_result(hash).await?;
+		let height = Height::new(
+			ChainId::chain_version(self.chain_id.to_string().as_str()),
+			resp.height.value(),
+		);
+		let deliver_tx_result = resp.tx_result;
+		let mut result = deliver_tx_result
+			.events
+			.iter()
+			.flat_map(|e| ibc_event_try_from_abci_event(e, height).ok().into_iter())
+			.filter(|e| matches!(e, IbcEvent::PushWasmCode(_)))
+			.collect::<Vec<_>>();
+		let code_id = if result.clone().len() != 1 {
+			return Err(Error::from(format!(
+				"Expected exactly one PushWasmCode event, found {}",
+				result.len()
+			)))
+		} else {
+			match result.pop().unwrap() {
+				IbcEvent::PushWasmCode(ev) => ev.0,
+				_ => unreachable!(),
+			}
+		};
+		// let resp = MsgClient::connect(
+		// 	Endpoint::try_from(self.grpc_url.to_string())
+		// 		.map_err(|e| Error::from(format!("Failed to parse grpc url: {:?}", e)))?,
+		// )
+		// .await
+		// .map_err(|e| Error::from(format!("Failed to connect to grpc endpoint: {:?}", e)))?
+		// .push_new_wasm_code(msg)
+		// .await
+		// .map_err(|e| {
+		// 	Error::from(format!("Failed to upload wasm code to grpc endpoint: {:?}", e))
+		// })?;
+
+		Ok(code_id)
 	}
 }
 

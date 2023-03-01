@@ -277,7 +277,7 @@ pub trait IbcProvider {
 	/// consensus state proof.
 	async fn query_host_consensus_state_proof(
 		&self,
-		height: Height,
+		client_state: &AnyClientState,
 	) -> Result<Option<Vec<u8>>, Self::Error>;
 
 	/// Should return the list of ibc denoms available to this account to spend.
@@ -332,6 +332,8 @@ pub trait IbcProvider {
 		&self,
 		tx_id: Self::TransactionId,
 	) -> Result<ClientId, Self::Error>;
+
+	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error>;
 }
 
 /// Provides an interface that allows us run the hyperspace-testsuite

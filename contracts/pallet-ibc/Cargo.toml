@@ -37,6 +37,7 @@ ics23 = { git = "https://github.com/confio/ics23", rev = "a4daeb4c24ce1be827829c
 grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../algorithms/grandpa/primitives", default-features = false }
 beefy-client-primitives = { package = "beefy-light-client-primitives", path = "../../algorithms/beefy/primitives", default-features = false }
 light-client-common = { path = "../../light-clients/common", default-features = false }
+ics08-wasm = { path = "../../light-clients/ics08-wasm", default-features = false }
 ics10-grandpa = { path = "../../light-clients/ics10-grandpa", default-features = false }
 ics11-beefy = { path = "../../light-clients/ics11-beefy", default-features = false }
 ics07-tendermint = { path = "../../light-clients/ics07-tendermint", default-features = false }
@@ -46,14 +47,14 @@ ibc-primitives = { path = "primitives", default-features = false }
 
 # optional
 hex-literal = { version = "0.3.4", default-features = false, optional = true }
-prost = { version = "0.11", default-features = false, optional = true }
+prost = { version = "0.11", default-features = false }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, optional = true }
 pallet-ibc-ping = { path = "ping", default-features = false, optional = true }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, optional = true }
 simple-iavl = { path = "simple-iavl", default-features = false, optional = true }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false, optional = true }
 finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-features = false, optional = true }
-serde = { version = "1.0", optional = true }
+serde = { version = "1.0", default-features = false }
 
 [dependencies.ibc]
 path = "../../ibc/modules"
@@ -126,7 +127,7 @@ std = [
   "sp-finality-grandpa/std",
   "sp-finality-grandpa/std",
   "finality-grandpa/std",
-  "serde",
+#  "serde",
   "hex/std"
 ]
 
@@ -139,7 +140,6 @@ runtime-benchmarks = [
   "pallet-timestamp",
   "pallet-timestamp/runtime-benchmarks",
   "simple-iavl",
-  "prost",
   "ibc-primitives/runtime-benchmarks",
   "sp-finality-grandpa",
   "finality-grandpa"

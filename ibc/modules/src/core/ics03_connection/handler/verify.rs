@@ -89,7 +89,7 @@ pub fn verify_client_proof<Ctx: ReaderContext>(
 	ctx: &Ctx,
 	height: Height,
 	connection_end: &ConnectionEnd,
-	expected_client_state: Ctx::AnyClientState,
+	expected_client_state: &Ctx::AnyClientState,
 	proof_height: Height,
 	proof: &CommitmentProofBytes,
 ) -> Result<(), Error> {
@@ -145,11 +145,11 @@ pub fn verify_consensus_proof<Ctx: ReaderContext>(
 	let expected_consensus = if !host_consensus_state_proof.is_empty() {
 		// Fetch the expected consensus state from the historical (local) header data.
 		let expected_consensus = ctx
-			.host_consensus_state(proof.height(), Some(host_consensus_state_proof))
+			.host_consensus_state(proof.height(), Some(host_consensus_state_proof), &client_state)
 			.map_err(|e| Error::consensus_state_verification_failure(proof.height(), e))?;
 		expected_consensus
 	} else {
-		ctx.host_consensus_state(proof.height(), None)
+		ctx.host_consensus_state(proof.height(), None, &client_state)
 			.map_err(|e| Error::consensus_state_verification_failure(proof.height(), e))?
 	};
 
