@@ -142,6 +142,8 @@ pub mod weight;
 
 pub use weight::WeightInfo;
 
+use crate::ics20::{FlowType, Ics20RateLimiter};
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -259,7 +261,7 @@ pub mod pallet {
 		type IbcAccountId: Into<AccountId32>;
 		type TransferOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = Self::IbcAccountId>;
 		type RelayerOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = Self::AccountId>;
-
+		type Ics20RateLimiter: Ics20RateLimiter;
 		/// Handle Ics20 Memo
 		type HandleMemo: HandleMemo<Self>;
 		/// Memo Message types supported by the runtime
@@ -537,6 +539,7 @@ pub mod pallet {
 		ClientFreezeFailed,
 		/// Access denied
 		AccessDenied,
+		RateLimiter,
 	}
 
 	#[pallet::hooks]
@@ -679,6 +682,9 @@ pub mod pallet {
 				timeout_timestamp,
 				memo: memo.map(|memo| memo.to_string()).unwrap_or_default(),
 			};
+
+			T::Ics20RateLimiter::allow(&msg, FlowType::Transfer)
+				.map_err(|_| Error::<T>::RateLimiter)?;
 			let is_sender_source = is_sender_chain_source(
 				msg.source_port.clone(),
 				msg.source_channel,

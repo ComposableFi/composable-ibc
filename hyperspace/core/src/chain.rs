@@ -151,6 +151,11 @@ pub enum AnyAssetId {
 	Cosmos(<CosmosClient<DefaultConfig> as IbcProvider>::AssetId),
 }
 
+#[derive(Clone)]
+pub enum AnyAssetId {
+	Parachain(<ParachainClient<DefaultConfig> as IbcProvider>::AssetId),
+}
+
 #[derive(From, Debug)]
 pub enum AnyTransactionId {
 	Parachain(parachain::provider::TransactionId<sp_core::H256>),
@@ -779,6 +784,13 @@ impl Chain for AnyChain {
 			Self::Parachain(chain) => chain.get_proof_height(block_height).await,
 			#[cfg(feature = "cosmos")]
 			Self::Cosmos(chain) => chain.get_proof_height(block_height).await,
+		}
+	}
+
+	async fn get_proof_height(&self, block_height: Height) -> Height {
+		match self {
+			Self::Parachain(chain) => chain.get_proof_height(block_height).await,
+			_ => unreachable!(),
 		}
 	}
 }
