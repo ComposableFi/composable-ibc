@@ -365,7 +365,13 @@ pub fn client_extract_attributes_from_tx(
 				attr.consensus_height = value
 					.parse()
 					.map_err(|e| ClientError::invalid_string_as_height(value.to_string(), e))?,
-			client_events::HEIGHT_ATTRIBUTE_KEY => attr.height = value.parse().unwrap(),
+			client_events::HEIGHT_ATTRIBUTE_KEY =>
+				attr.height = value.parse().map_err(|e| {
+					ClientError::invalid_string_as_height(
+						"client_extract_attributes_from_tx".to_string(),
+						e,
+					)
+				})?,
 			_ => {},
 		}
 	}
@@ -408,7 +414,8 @@ fn connection_extract_attributes_from_tx(
 				attr.counterparty_client_id =
 					value.parse().map_err(ConnectionError::invalid_identifier)?;
 			},
-			connection_events::HEIGHT_ATTRIBUTE_KEY => attr.height = value.parse().unwrap(),
+			connection_events::HEIGHT_ATTRIBUTE_KEY =>
+				attr.height = value.parse().map_err(ConnectionError::invalid_packet_height)?,
 			_ => {},
 		}
 	}
@@ -439,7 +446,8 @@ fn channel_extract_attributes_from_tx(
 			channel_events::COUNTERPARTY_CHANNEL_ID_ATTRIBUTE_KEY => {
 				attr.counterparty_channel_id = value.parse().ok();
 			},
-			channel_events::HEIGHT_ATTRIBUTE_KEY => attr.height = value.parse().unwrap(),
+			channel_events::HEIGHT_ATTRIBUTE_KEY =>
+				attr.height = value.parse().map_err(ChannelError::invalid_packet_height)?,
 			_ => {},
 		}
 	}
@@ -475,10 +483,11 @@ fn extract_packet_and_write_ack_from_tx(
 					.into(),
 			channel_events::PKT_TIMEOUT_HEIGHT_ATTRIBUTE_KEY => {
 				packet.timeout_height =
-					parse_timeout_height(value)?.expect("timeout height is set");
+					parse_timeout_height(value)?.ok_or_else(|| ChannelError::missing_height())?;
 			},
 			channel_events::PKT_TIMEOUT_TIMESTAMP_ATTRIBUTE_KEY => {
-				packet.timeout_timestamp = value.parse().unwrap();
+				packet.timeout_timestamp =
+					value.parse().map_err(ChannelError::invalid_packet_timestamp)?;
 			},
 			channel_events::PKT_DATA_ATTRIBUTE_KEY => {
 				packet.data = Vec::from(value.as_bytes());

@@ -227,7 +227,9 @@ where
 	}
 
 	pub fn client_id(&self) -> ClientId {
-		self.client_id.as_ref().unwrap().clone()
+		self.client_id.clone().expect(
+			"Client id should be set after the client state is initialized and the client is created",
+		)
 	}
 
 	pub fn set_client_id(&mut self, client_id: ClientId) {
@@ -298,7 +300,7 @@ where
 			let latest_light_block = self
 				.light_client
 				.io
-				.fetch_light_block(AtHeight::At(height.try_into().unwrap()))
+				.fetch_light_block(AtHeight::At(height.try_into()?))
 				.map_err(|e| {
 					Error::from(format!(
 						"Failed to fetch light block for chain {:?} with error {:?}",
@@ -407,8 +409,9 @@ where
 			.proof
 			.map(|p| convert_tm_to_ics_merkle_proof::<H>(&p))
 			.transpose()
-			.map_err(|_| Error::Custom(format!("bad client state proof")))?;
-		let proof = CommitmentProofBytes::try_from(merkle_proof.unwrap())
+			.map_err(|_| Error::Custom(format!("bad client state proof")))?
+			.ok_or_else(|| Error::Custom(format!("proof not found")))?;
+		let proof = CommitmentProofBytes::try_from(merkle_proof)
 			.map_err(|err| Error::Custom(format!("bad client state proof: {}", err)))?;
 		Ok((response, proof.into()))
 	}

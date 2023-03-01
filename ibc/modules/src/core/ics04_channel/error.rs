@@ -275,6 +275,10 @@ define_error! {
 			[ crate::timestamp::ParseTimestampError ]
 			| _ | { "Invalid packet timeout timestamp value" },
 
+		InvalidPacketHeight
+			[ crate::core::ics02_client::height::HeightError ]
+			| _ | { "Invalid packet height value" },
+
 		ErrorInvalidConsensusState
 			| _ | { "Invalid timestamp in consensus state; timestamp must be a positive value" },
 

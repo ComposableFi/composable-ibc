@@ -125,7 +125,12 @@ where
 			let get_height = |event: &Event| {
 				let Event { data, events: _, query: _ } = &event;
 				let height = match &data {
-					EventData::NewBlock { block, .. } => block.as_ref().unwrap().header.height,
+					EventData::NewBlock { block, .. } =>
+						block
+							.as_ref()
+							.expect("NewBlock event should always have a block; qed")
+							.header
+							.height,
 					_ => unreachable!(),
 				};
 				height

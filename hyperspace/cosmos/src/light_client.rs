@@ -54,8 +54,7 @@ impl LightClient {
 			trust_threshold: TrustThresholdFraction::new(
 				client_state.trust_level.numerator(),
 				client_state.trust_level.denominator(),
-			)
-			.unwrap(),
+			)?,
 			trusting_period: client_state.trusting_period,
 			clock_drift: client_state.max_clock_drift,
 		};
@@ -74,8 +73,7 @@ impl LightClient {
 		let trusted_block = self
 			.io
 			.fetch_light_block(AtHeight::At(trusted_height))
-			.map_err(|e| Error::from(e.to_string()))
-			.unwrap();
+			.map_err(|e| Error::from(e.to_string()))?;
 		let mut store = MemoryStore::new();
 		store.insert(trusted_block, Status::Trusted);
 		Ok(LightClientState::new(store))
