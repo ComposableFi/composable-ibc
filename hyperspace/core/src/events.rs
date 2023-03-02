@@ -18,9 +18,7 @@ use crate::{packets::query_ready_and_timed_out_packets, Mode};
 use codec::Encode;
 use ibc::{
 	core::{
-		ics02_client::{
-			client_consensus::ConsensusState, client_state::ClientState as ClientStateT,
-		},
+		ics02_client::client_state::ClientState as ClientStateT,
 		ics03_connection::{
 			connection::{ConnectionEnd, Counterparty},
 			msgs::{
@@ -44,7 +42,7 @@ use ibc::{
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
+use pallet_ibc::light_clients::AnyClientState;
 use primitives::{error::Error, mock::LocalClientTypes, Chain};
 use tendermint_proto::Protobuf;
 

@@ -27,7 +27,7 @@ use ibc::{
 			},
 		},
 	},
-	events::{IbcEvent, IbcEventType},
+	events::IbcEvent,
 	protobuf::Protobuf,
 	timestamp::Timestamp,
 	tx_msg::Msg,

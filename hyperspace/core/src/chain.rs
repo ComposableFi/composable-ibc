@@ -25,7 +25,6 @@ use ibc::{
 	applications::transfer::PrefixedCoin,
 	core::{
 		ics02_client::{
-			client_consensus::ConsensusState,
 			client_state::ClientType,
 			events::{CodeId, UpdateClient},
 			msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient},

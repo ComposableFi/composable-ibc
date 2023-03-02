@@ -47,15 +47,13 @@ pub struct Header {
 	/// finalzed at the relay chain height. We check for this parachain header finalization
 	/// via state proofs. Also contains extrinsic proof for timestamp.
 	pub parachain_headers: BTreeMap<H256, ParachainHeaderProofs>,
+	/// Lazily initialized height
+	pub height: Height,
 }
 
 impl Header {
 	pub fn height(&self) -> Height {
-		// FIXME: proper grandpa header height calculation
-		Height {
-			revision_height: self.finality_proof.unknown_headers.last().unwrap().number.into(),
-			revision_number: 2000,
-		}
+		self.height
 	}
 }
 
@@ -102,7 +100,7 @@ impl TryFrom<RawHeader> for Header {
 			.finality_proof
 			.ok_or_else(|| anyhow!("Grandpa finality proof is required!"))?;
 		let block = if finality_proof.block.len() == 32 {
-			sp_core::H256::from_slice(&*finality_proof.block)
+			H256::from_slice(&*finality_proof.block)
 		} else {
 			Err(anyhow!("Invalid hash type with length: {}", finality_proof.block.len()))?
 		};
@@ -142,6 +140,7 @@ impl TryFrom<RawHeader> for Header {
 				unknown_headers,
 			},
 			parachain_headers,
+			height: Height::new(raw_header.para_id as u64, raw_header.para_height as u64),
 		})
 	}
 }
@@ -171,7 +170,12 @@ impl From<Header> for RawHeader {
 				.collect(),
 		};
 
-		RawHeader { finality_proof: Some(finality_proof), parachain_headers }
+		RawHeader {
+			finality_proof: Some(finality_proof),
+			parachain_headers,
+			para_id: header.height.revision_number as u32,
+			para_height: header.height.revision_height as u32,
+		}
 	}
 }
 

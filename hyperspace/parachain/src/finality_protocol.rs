@@ -28,6 +28,7 @@ use ibc::{
 	core::ics02_client::{client_state::ClientState as _, msgs::update_client::MsgUpdateAnyClient},
 	events::IbcEvent,
 	tx_msg::Msg,
+	Height,
 };
 use ibc_proto::google::protobuf::Any;
 use ibc_rpc::{BlockNumberOrHash, IbcApiClient};
@@ -397,9 +398,9 @@ where
 		.await?;
 
 	// notice the inclusive range
-	let finalized_blocks = ((client_state.latest_para_height + 1)..=
-		u32::from(finalized_para_header.number()))
-		.collect::<Vec<_>>();
+	let finalized_para_height = u32::from(finalized_para_header.number());
+	let finalized_blocks =
+		((client_state.latest_para_height + 1)..=finalized_para_height).collect::<Vec<_>>();
 
 	if !finalized_blocks.is_empty() {
 		log::info!(
@@ -468,11 +469,11 @@ where
 		.await?;
 
 	// We ensure we advance the finalized latest parachain height
-	if client_state.latest_para_height < u32::from(finalized_para_header.number()) {
+	if client_state.latest_para_height < finalized_para_height {
 		headers_with_events.insert(finalized_para_header.number());
 	}
 
-	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
+	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers, .. } = prover
 		.query_finalized_parachain_headers_with_proof::<T::Header>(
 			client_state.latest_relay_height,
 			justification.commit.target_number,
@@ -505,6 +506,7 @@ where
 		finality_proof: codec::Decode::decode(&mut &*finality_proof.encode())
 			.expect("Same struct from different crates,decode should not fail"),
 		parachain_headers: parachain_headers.into(),
+		height: Height::new(source.para_id as u64, finalized_para_height as u64),
 	};
 
 	let update_header = {

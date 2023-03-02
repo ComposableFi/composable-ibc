@@ -1,5 +1,11 @@
-use crate::{msg::Base64, Bytes};
-use alloc::{boxed::Box, string::ToString, vec::Vec};
+#[cfg(feature = "cosmwasm")]
+use crate::msg::Base64;
+use crate::Bytes;
+use alloc::{
+	boxed::Box,
+	string::{String, ToString},
+	vec::Vec,
+};
 use core::fmt::Display;
 #[cfg(feature = "cosmwasm")]
 use cosmwasm_schema::cw_serde;

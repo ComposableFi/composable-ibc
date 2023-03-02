@@ -6,7 +6,9 @@ use grandpa_client_primitives::{
 };
 use hyperspace_primitives::{mock::LocalClientTypes, TestProvider};
 use ibc::{
-	core::ics02_client::msgs::update_client::MsgUpdateAnyClient, events::IbcEvent, tx_msg::Msg,
+	core::ics02_client::{height::Height, msgs::update_client::MsgUpdateAnyClient},
+	events::IbcEvent,
+	tx_msg::Msg,
 };
 use ibc_proto::google::protobuf::Any;
 use ics10_grandpa::client_message::{ClientMessage, Header as GrandpaHeader, RelayChainHeader};
@@ -41,8 +43,6 @@ where
 	let handle = tokio::task::spawn(async move {
 		hyperspace_core::fish(client_a_clone, client_b_clone).await.unwrap()
 	});
-	let client_a_clone = chain_a.clone();
-	let client_b_clone = chain_b.clone();
 	info!("Waiting for the next block...");
 
 	let relaychain_authorities = [
@@ -192,7 +192,11 @@ where
 		);
 	}
 
-	let grandpa_header = GrandpaHeader { finality_proof, parachain_headers };
+	let grandpa_header = GrandpaHeader {
+		finality_proof,
+		parachain_headers,
+		height: Height::new(client_state.para_id as u64, parachain_header.number as u64),
+	};
 	let client_message = AnyClientMessage::Grandpa(ClientMessage::Header(grandpa_header));
 
 	let msg =

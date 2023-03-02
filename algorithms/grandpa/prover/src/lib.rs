@@ -294,6 +294,7 @@ where
 			.query_storage(keys.clone(), start, Some(latest_finalized_hash))
 			.await?;
 
+		let mut latest_para_height = 0u32;
 		for changes in change_set {
 			let header = self
 				.relay_client
@@ -337,12 +338,14 @@ where
 					.await
 					.map_err(|err| anyhow!("Error fetching timestamp with proof: {err:?}"))?;
 			let proofs = ParachainHeaderProofs { state_proof, extrinsic, extrinsic_proof };
+			latest_para_height = latest_para_height.max(u32::from(para_block_number));
 			parachain_headers_with_proof.insert(header.hash().into(), proofs);
 		}
 
 		Ok(ParachainHeadersWithFinalityProof {
 			finality_proof,
 			parachain_headers: parachain_headers_with_proof,
+			latest_para_height,
 		})
 	}
 

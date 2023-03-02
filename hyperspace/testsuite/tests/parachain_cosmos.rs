@@ -23,22 +23,13 @@ use hyperspace_parachain::{
 	config, config::CustomExtrinsicParams, finality_protocol::FinalityProtocol,
 	ParachainClientConfig,
 };
-use hyperspace_primitives::{utils::create_clients, Chain, IbcProvider};
+use hyperspace_primitives::{utils::create_clients, IbcProvider};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
-	ibc_messaging_packet_timeout_on_channel_close,
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
-	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
-};
-use ibc::core::{
-	ics02_client::{
-		events::{Attributes, UpdateClient},
-		height::Height,
-	},
-	ics24_host::identifier::ClientId,
+	ibc_messaging_packet_timeout_on_channel_close, ibc_messaging_with_connection_delay,
+	misbehaviour::ibc_messaging_submit_misbehaviour,
 };
 use sp_core::hashing::sha2_256;
-use std::str::FromStr;
 use subxt::{
 	config::{
 		extrinsic_params::Era,
@@ -273,27 +264,27 @@ async fn cosmos_to_parachain_ibc_messaging_full_integration_test() {
 	// Run tests sequentially
 
 	// no timeouts + connection delay
-	// ibc_messaging_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// 	asset_id_b.clone(),
-	// )
-	// .await;
-	//
-	// // timeouts + connection delay
-	// ibc_messaging_packet_height_timeout_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// )
-	// .await;
-	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// )
-	// .await;
+	ibc_messaging_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		asset_id_b.clone(),
+	)
+	.await;
+
+	// timeouts + connection delay
+	ibc_messaging_packet_height_timeout_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+	)
+	.await;
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+	)
+	.await;
 
 	// channel closing semantics (doesn't work on cosmos)
 	// ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id_a.clone())

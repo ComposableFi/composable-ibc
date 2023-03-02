@@ -82,9 +82,17 @@ where
 	) -> Result<(), Ics02Error> {
 		match client_message {
 			ClientMessage::Header(header) => {
+				if client_state.para_id as u64 != header.height.revision_number {
+					return Err(Error::Custom(format!(
+						"Para id mismatch: expected {}, got {}",
+						client_state.para_id, header.height.revision_number
+					))
+					.into())
+				}
 				let headers_with_finality_proof = ParachainHeadersWithFinalityProof {
 					finality_proof: header.finality_proof,
 					parachain_headers: header.parachain_headers,
+					latest_para_height: header.height.revision_height as u32,
 				};
 
 				grandpa_client::verify_parachain_headers_with_grandpa_finality_proof::<

@@ -15,7 +15,7 @@
 use anyhow::Result;
 use clap::Parser;
 use hyperspace_core::{
-	command::{Cli, QuerySubcommand, Subcommand},
+	command::{Cli, Subcommand},
 	logging,
 };
 

@@ -1,4 +1,5 @@
 use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, vec::Vec};
+use core::str::FromStr;
 use frame_support::{
 	pallet_prelude::{StorageValue, ValueQuery},
 	traits::StorageInstance,
@@ -43,7 +44,7 @@ use sp_core::{crypto::ByteArray, ed25519, H256};
 use sp_runtime::{
 	app_crypto::RuntimePublic,
 	traits::{BlakeTwo256, ConstU32, Header},
-	BoundedBTreeSet, BoundedVec, Either,
+	BoundedBTreeSet, BoundedVec,
 };
 use tendermint::{
 	crypto::{
@@ -334,67 +335,51 @@ pub enum AnyClientMessage {
 }
 
 impl AnyClientMessage {
-	pub fn is_header(&self) -> bool {
+	pub fn maybe_header_height(&self) -> Option<Height> {
 		match self {
-			Self::Tendermint(ics07_tendermint::client_message::ClientMessage::Header(_)) => true,
-			Self::Beefy(ics11_beefy::client_message::ClientMessage::Header(_)) => true,
-			Self::Grandpa(ics10_grandpa::client_message::ClientMessage::Header(_)) => true,
-			Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(_)) => true,
+			Self::Tendermint(inner) => match inner {
+				ics07_tendermint::client_message::ClientMessage::Header(h) => Some(h.height()),
+				ics07_tendermint::client_message::ClientMessage::Misbehaviour(_) => None,
+			},
+			Self::Beefy(inner) => match inner {
+				ics11_beefy::client_message::ClientMessage::Header(_) =>
+					unimplemented!("beefy header height"),
+				ics11_beefy::client_message::ClientMessage::Misbehaviour(_) => None,
+			},
+			Self::Grandpa(inner) => match inner {
+				ics10_grandpa::client_message::ClientMessage::Header(h) => Some(h.height()),
+				ics10_grandpa::client_message::ClientMessage::Misbehaviour(_) => None,
+			},
+			Self::Wasm(inner) => match inner {
+				ics08_wasm::client_message::ClientMessage::Header(h) =>
+					h.inner.maybe_header_height(),
+				ics08_wasm::client_message::ClientMessage::Misbehaviour(_) => None,
+			},
 			#[cfg(test)]
-			Self::Mock(ibc::mock::header::MockClientMessage::Header(_)) => true,
-
-			Self::Tendermint(ics07_tendermint::client_message::ClientMessage::Misbehaviour(_)) =>
-				false,
-			Self::Beefy(ics11_beefy::client_message::ClientMessage::Misbehaviour(_)) => false,
-			Self::Grandpa(ics10_grandpa::client_message::ClientMessage::Misbehaviour(_)) => false,
-			Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(_)) => false,
-			#[cfg(test)]
-			Self::Mock(ibc::mock::header::MockClientMessage::Misbehaviour(_)) => false,
-		}
-	}
-
-	pub fn inner_thing(&self) -> Either<Height, ClientId> {
-		use Either::*;
-
-		match self {
-			Self::Tendermint(ics07_tendermint::client_message::ClientMessage::Header(h)) =>
-				Left(h.height()),
-			Self::Beefy(ics11_beefy::client_message::ClientMessage::Header(_h)) => todo!(),
-			Self::Grandpa(ics10_grandpa::client_message::ClientMessage::Header(h)) =>
-				Left(h.height()),
-			Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(_h)) => todo!(),
-			#[cfg(test)]
-			Self::Mock(ibc::mock::header::MockClientMessage::Header(_h)) => todo!(),
-
-			Self::Tendermint(ics07_tendermint::client_message::ClientMessage::Misbehaviour(_m)) =>
-				todo!(),
-			Self::Beefy(ics11_beefy::client_message::ClientMessage::Misbehaviour(_m)) => todo!(),
-			Self::Grandpa(ics10_grandpa::client_message::ClientMessage::Misbehaviour(m)) =>
-				Right(m.client_id()),
-			Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(_)) => todo!(),
-			#[cfg(test)]
-			Self::Mock(ibc::mock::header::MockClientMessage::Misbehaviour(_)) => todo!(),
+			Self::Mock(inner) => match inner {
+				ibc::mock::header::MockClientMessage::Header(h) => Some(h.height()),
+				ibc::mock::header::MockClientMessage::Misbehaviour(_) => None,
+			},
 		}
 	}
 
 	pub fn wasm(inner: Self) -> Self {
-		let inner_thing = inner.inner_thing();
-		match inner_thing {
-			Either::Left(h) => Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(
+		let maybe_height = inner.maybe_header_height();
+		match maybe_height {
+			Some(height) => Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(
 				ics08_wasm::client_message::Header {
 					data: inner.encode_to_vec().unwrap(),
-					height: h,
+					height,
 					inner: Box::new(inner),
 				},
 			)),
-			Either::Right(cid) =>
-				Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(
-					ics08_wasm::client_message::Misbehaviour {
-						data: inner.encode_to_vec().unwrap(),
-						client_id: cid,
-						inner: Box::new(inner),
-					},
-				)),
+			None => Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(
+				ics08_wasm::client_message::Misbehaviour {
+					data: inner.encode_to_vec().unwrap(),
+					client_id: ClientId::from_str("00-unused-0").expect("valid client id"),
+					inner: Box::new(inner),
+				},
+			)),
 		}
 	}
 
