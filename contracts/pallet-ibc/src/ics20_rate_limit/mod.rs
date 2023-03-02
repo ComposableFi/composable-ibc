@@ -1,5 +1,5 @@
 use crate::routing::Context;
-use alloc::format;
+use alloc::{format, string::ToString};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use ibc::{
@@ -44,7 +44,6 @@ pub enum FlowType {
 const QUOTA_INTERVAL: u64 = 100;
 /// Keeps track of transferred and received volume in a period of time
 /// and sets the available amount that
-///
 #[derive(Encode, Decode, TypeInfo)]
 pub struct DenomStatePerChannel {
 	pub quota_tracker: QuotaTracker,
@@ -84,23 +83,21 @@ impl DenomStatePerChannel {
 
 	pub fn is_transfer_allowed(&self, amount: U256, flow_type: &FlowType) -> bool {
 		match flow_type {
-			FlowType::Inflow => {
-				self.current_volume_inflow.saturating_add(amount) <= self.quota_tracker.quota_inflow
-			},
-			FlowType::Outflow => {
-				self.current_volume_outflow.saturating_add(amount)
-					<= self.quota_tracker.quota_outflow
-			},
+			FlowType::Inflow =>
+				self.current_volume_inflow.saturating_add(amount) <= self.quota_tracker.quota_inflow,
+			FlowType::Outflow =>
+				self.current_volume_outflow.saturating_add(amount) <=
+					self.quota_tracker.quota_outflow,
 		}
 	}
 
 	/// Updates the quota in case there's a new period
 	pub fn update_quota_if_needed(&mut self, current_block: u64) {
 		// if not enough period has elapsed
-		if current_block
-			<= self.quota_tracker.initial_block + self.quota_tracker.current_quota_interval
+		if current_block <=
+			self.quota_tracker.initial_block + self.quota_tracker.current_quota_interval
 		{
-			return;
+			return
 		}
 
 		let next_period_amplifier =
@@ -117,8 +114,8 @@ impl DenomStatePerChannel {
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::pallet_prelude::*;
-	use frame_support::PalletId;
+	use alloc::string::String;
+	use frame_support::{pallet_prelude::*, PalletId};
 	use ibc_primitives::IbcAccount;
 	use sp_runtime::{
 		traits::{AccountIdConversion, Get},
@@ -302,7 +299,7 @@ where
 		let current_block_number: u32 = <frame_system::Pallet<T>>::block_number().into();
 		// 1. check if the denom on that channel is being tracker, and otherwise start trackign it
 		let mut denom_state_current_channel =
-			DenomStatePerChannelStorage::<T>::get(&packet_data.token.denom.to_string())
+			DenomStatePerChannelStorage::<T>::get(packet_data.token.denom.to_string())
 				.unwrap_or_else(|| {
 					let current_block_number = <frame_system::Pallet<T>>::block_number();
 					DenomStatePerChannel::new(QuotaTracker::new(
@@ -314,7 +311,7 @@ where
 		// 2. check if there is quota for the denom on this channel
 		if !denom_state_current_channel.is_transfer_allowed(token_amount, &flow_type) {
 			// TODO: do we want to return an error, or is it better to send an Acknowledgement?
-			return Err(Ics04Error::implementation_specific("Quota exceeded".to_string()));
+			return Err(Ics04Error::implementation_specific("Quota exceeded".to_string()))
 		}
 		// 3. if there's quota, update the volume
 		denom_state_current_channel.update_volume(token_amount, &flow_type);
