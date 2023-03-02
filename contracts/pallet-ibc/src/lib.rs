@@ -50,6 +50,7 @@ mod connection;
 pub mod errors;
 pub mod events;
 pub mod ics20;
+pub mod ics20_rate_limit;
 mod ics23;
 pub mod light_clients;
 mod port;

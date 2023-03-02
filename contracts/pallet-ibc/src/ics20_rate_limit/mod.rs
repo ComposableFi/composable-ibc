@@ -1,11 +1,9 @@
 use crate::routing::Context;
-use alloc::{format, string::ToString};
+use alloc::format;
+use codec::{Decode, Encode};
 use core::fmt::Debug;
 use ibc::{
-	applications::transfer::{
-		acknowledgement::Acknowledgement as Ics20Ack, context::BankKeeper,
-		is_receiver_chain_source, packet::PacketData, TracePrefix,
-	},
+	applications::transfer::{is_receiver_chain_source, packet::PacketData},
 	bigint::U256,
 	core::{
 		ics04_channel::{
@@ -21,24 +19,116 @@ use ibc::{
 	signer::Signer,
 };
 use ibc_primitives::IbcAccount;
+use scale_info::TypeInfo;
 use sp_core::crypto::AccountId32;
-use sp_runtime::traits::Get;
 
 pub use pallet::*;
 
+#[derive(Encode, Decode, TypeInfo)]
+pub struct QuotaTracker {
+	// defines the number of blocks for which the current quota applies
+	pub current_quota_interval: u64,
+	// defines the first block for which this quota is valid
+	pub initial_block: u64,
+	// todo: comment
+	pub quota_inflow: U256,
+	// todo: comment
+	pub quota_outflow: U256,
+}
+
+pub enum FlowType {
+	Inflow,
+	Outflow,
+}
+
+const QUOTA_INTERVAL: u64 = 100;
+/// Keeps track of transferred and received volume in a period of time
+/// and sets the available amount that
+///
+#[derive(Encode, Decode, TypeInfo)]
+pub struct DenomStatePerChannel {
+	pub quota_tracker: QuotaTracker,
+	pub current_volume_inflow: U256,
+	pub current_volume_outflow: U256,
+	pub next_period_amplifier_factor_percentage: U256,
+}
+
+impl QuotaTracker {
+	pub fn new(current_block: u64) -> Self {
+		Self {
+			current_quota_interval: QUOTA_INTERVAL,
+			initial_block: current_block,
+			quota_inflow: U256::zero(),
+			quota_outflow: U256::zero(),
+		}
+	}
+}
+impl DenomStatePerChannel {
+	pub fn new(quota_tracker: QuotaTracker) -> Self {
+		Self {
+			quota_tracker,
+			next_period_amplifier_factor_percentage: U256::from(15), // we start with 15%
+			current_volume_inflow: U256::default(),
+			current_volume_outflow: U256::default(),
+		}
+	}
+
+	pub fn update_volume(&mut self, amount: U256, flow_type: &FlowType) {
+		// safety: note that this will not overflow if `self.is_transfer_allowed()` is called
+		// before and ensured that it's true
+		match flow_type {
+			FlowType::Inflow => self.current_volume_inflow += amount,
+			FlowType::Outflow => self.current_volume_outflow += amount,
+		}
+	}
+
+	pub fn is_transfer_allowed(&self, amount: U256, flow_type: &FlowType) -> bool {
+		match flow_type {
+			FlowType::Inflow => {
+				self.current_volume_inflow.saturating_add(amount) <= self.quota_tracker.quota_inflow
+			},
+			FlowType::Outflow => {
+				self.current_volume_outflow.saturating_add(amount)
+					<= self.quota_tracker.quota_outflow
+			},
+		}
+	}
+
+	/// Updates the quota in case there's a new period
+	pub fn update_quota_if_needed(&mut self, current_block: u64) {
+		// if not enough period has elapsed
+		if current_block
+			<= self.quota_tracker.initial_block + self.quota_tracker.current_quota_interval
+		{
+			return;
+		}
+
+		let next_period_amplifier =
+			U256::from(1) + (self.next_period_amplifier_factor_percentage / U256::from(100));
+		self.quota_tracker.quota_inflow = self.current_volume_inflow * next_period_amplifier;
+		self.quota_tracker.quota_outflow = self.current_volume_outflow * next_period_amplifier;
+		self.current_volume_inflow = U256::zero();
+		self.current_volume_outflow = U256::zero();
+		self.quota_tracker.initial_block = current_block;
+
+		unimplemented!()
+	}
+}
+
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{pallet_prelude::*, PalletId};
+	use frame_support::pallet_prelude::*;
+	use frame_support::PalletId;
 	use ibc_primitives::IbcAccount;
 	use sp_runtime::{
 		traits::{AccountIdConversion, Get},
 		Percent,
 	};
 
+	use super::DenomStatePerChannel;
+
 	#[pallet::config]
 	pub trait Config: frame_system::Config + crate::Config {
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		#[pallet::constant]
 		type ServiceCharge: Get<Percent>;
 		#[pallet::constant]
@@ -51,13 +141,8 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::storage]
-	pub type ServiceCharge<T: Config> = StorageValue<_, Percent, OptionQuery>;
-
-	#[pallet::event]
-	#[pallet::generate_deposit(pub (super) fn deposit_event)]
-	pub enum Event<T: Config> {
-		IbcTransferFeeCollected { amount: T::Balance },
-	}
+	pub type DenomStatePerChannelStorage<T: Config> =
+		StorageMap<_, Blake2_128Concat, String, DenomStatePerChannel, OptionQuery>;
 
 	impl<T: Config> Pallet<T>
 	where
@@ -70,13 +155,13 @@ pub mod pallet {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Ics20ServiceCharge<T: Config, S: Module + Clone + Default + PartialEq + Eq + Debug> {
+pub struct Ics20RateLimiter<T: Config, S: Module + Clone + Default + PartialEq + Eq + Debug> {
 	inner: S,
 	_phantom: core::marker::PhantomData<T>,
 }
 
 impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Default
-	for Ics20ServiceCharge<T, S>
+	for Ics20RateLimiter<T, S>
 {
 	fn default() -> Self {
 		Self { inner: S::default(), _phantom: Default::default() }
@@ -84,7 +169,7 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 }
 
 impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Module
-	for Ics20ServiceCharge<T, S>
+	for Ics20RateLimiter<T, S>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
@@ -198,55 +283,45 @@ where
 		// Module ModuleCallbackContext does not have the ics20 context as part of its trait bounds
 		// so we define a new context
 		let mut ctx = Context::<T>::default();
-		let mut packet_data = serde_json::from_slice::<PacketData>(packet.data.as_slice())
-			.map_err(|e| {
+
+		let packet_data =
+			serde_json::from_slice::<PacketData>(packet.data.as_slice()).map_err(|e| {
 				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
 			})?;
-		let percent = ServiceCharge::<T>::get().unwrap_or(T::ServiceCharge::get());
-		// Send full amount to receiver using the default ics20 logic
-		let ack = self.inner.on_recv_packet(&mut ctx, output, packet, relayer)?;
-		// We only take the fee charge if the acknowledgement is not an error
-		if ack.as_ref() == Ics20Ack::success().to_string().as_bytes() {
-			// We have ensured that token amounts larger than the max value for a u128 are rejected
-			// in the ics20 on_recv_packet callback so we can multiply safely.
-			// Percent does Non-Overflowing multiplication so this is infallible
-			let fee = percent * packet_data.token.amount.as_u256().low_u128();
-			let receiver =
-				<T as crate::Config>::AccountIdConversion::try_from(packet_data.receiver.clone())
-					.map_err(|_| {
-					Ics04Error::implementation_specific("Failed to receiver account".to_string())
-				})?;
-			let pallet_account = Pallet::<T>::account_id();
-			let mut prefixed_coin = if is_receiver_chain_source(
-				packet.source_port.clone(),
-				packet.source_channel,
-				&packet_data.token.denom,
-			) {
-				let prefix = TracePrefix::new(packet.source_port.clone(), packet.source_channel);
-				let mut c = packet_data.token.clone();
-				c.denom.remove_trace_prefix(&prefix);
-				c
-			} else {
-				let prefix =
-					TracePrefix::new(packet.destination_port.clone(), packet.destination_channel);
-				let mut c = packet_data.token.clone();
-				c.denom.add_trace_prefix(prefix);
-				c
-			};
-			prefixed_coin.amount = fee.into();
-			// Now we proceed to send the service fee from the receiver's account to the pallet
-			// account
-			ctx.send_coins(&receiver, &pallet_account, &prefixed_coin)
-				.map_err(|e| Ics04Error::app_module(e.to_string()))?;
-			// We modify the packet data to remove the fee so any other middleware has access to the
-			// correct amount deposited in the receiver's account
-			packet_data.token.amount =
-				(packet_data.token.amount.as_u256() - U256::from(fee)).into();
-			packet.data = serde_json::to_vec(&packet_data).map_err(|_| {
-				Ics04Error::implementation_specific("Failed to receiver account".to_string())
-			})?;
-			Pallet::<T>::deposit_event(Event::<T>::IbcTransferFeeCollected { amount: fee.into() })
+
+		let flow_type = if is_receiver_chain_source(
+			packet.source_port.clone(),
+			packet.source_channel,
+			&packet_data.token.denom,
+		) {
+			FlowType::Inflow
+		} else {
+			FlowType::Outflow
+		};
+
+		let current_block_number: u32 = <frame_system::Pallet<T>>::block_number().into();
+		// 1. check if the denom on that channel is being tracker, and otherwise start trackign it
+		let mut denom_state_current_channel =
+			DenomStatePerChannelStorage::<T>::get(&packet_data.token.denom.to_string())
+				.unwrap_or_else(|| {
+					let current_block_number = <frame_system::Pallet<T>>::block_number();
+					DenomStatePerChannel::new(QuotaTracker::new(
+						u32::from(current_block_number) as _
+					))
+				});
+
+		let token_amount = packet_data.token.amount.into();
+		// 2. check if there is quota for the denom on this channel
+		if !denom_state_current_channel.is_transfer_allowed(token_amount, &flow_type) {
+			// TODO: do we want to return an error, or is it better to send an Acknowledgement?
+			return Err(Ics04Error::implementation_specific("Quota exceeded".to_string()));
 		}
+		// 3. if there's quota, update the volume
+		denom_state_current_channel.update_volume(token_amount, &flow_type);
+		denom_state_current_channel.update_quota_if_needed(current_block_number as _);
+		// 4. update the quota if necessary (in case of a new period)
+
+		let ack = self.inner.on_recv_packet(&mut ctx, output, packet, relayer)?;
 		Ok(ack)
 	}
 
