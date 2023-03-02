@@ -67,6 +67,7 @@ frame_support::construct_runtime!(
 		Assets: pallet_assets,
 		IbcPing: pallet_ibc_ping,
 		Ics20Fee: crate::ics20_fee,
+		Ics20RateLimiter: crate::ics20_rate_limit,
 		Ibc: pallet_ibc,
 	}
 );
@@ -206,12 +207,17 @@ impl Config for Test {
 parameter_types! {
 	pub const ServiceCharge: Percent = Percent::from_percent(1);
 	pub const PalletId: frame_support::PalletId = frame_support::PalletId(*b"ics20fee");
+	pub const RateLimitPalletId: frame_support::PalletId = frame_support::PalletId(*b"ics20rli");
 }
 
 impl crate::ics20_fee::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ServiceCharge = ServiceCharge;
 	type PalletId = PalletId;
+}
+
+impl crate::ics20_rate_limit::Config for Test {
+	type PalletId = RateLimitPalletId;
 }
 
 #[derive(
@@ -299,7 +305,10 @@ pub struct Router {
 	ibc_ping: pallet_ibc_ping::IbcModule<Test>,
 	ics20: crate::ics20::memo::Memo<
 		Test,
-		crate::ics20_fee::Ics20ServiceCharge<Test, crate::ics20::IbcModule<Test>>,
+		crate::ics20_fee::Ics20ServiceCharge<
+			Test,
+			crate::ics20_rate_limit::Ics20RateLimiter<Test, crate::ics20::IbcModule<Test>>,
+		>,
 	>,
 }
 
@@ -326,14 +335,16 @@ impl ModuleRouter for Router {
 		port_id: &ibc::core::ics24_host::identifier::PortId,
 	) -> Option<ibc::core::ics26_routing::context::ModuleId> {
 		match port_id.as_str() {
-			pallet_ibc_ping::PORT_ID =>
+			pallet_ibc_ping::PORT_ID => {
 				ibc::core::ics26_routing::context::ModuleId::from_str(pallet_ibc_ping::MODULE_ID)
-					.ok(),
-			ibc::applications::transfer::PORT_ID_STR =>
+					.ok()
+			},
+			ibc::applications::transfer::PORT_ID_STR => {
 				ibc::core::ics26_routing::context::ModuleId::from_str(
 					ibc::applications::transfer::MODULE_ID_STR,
 				)
-				.ok(),
+				.ok()
+			},
 			_ => None,
 		}
 	}

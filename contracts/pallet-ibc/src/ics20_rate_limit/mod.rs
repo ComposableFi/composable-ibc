@@ -57,11 +57,22 @@ impl QuotaTracker {
 		Self {
 			current_quota_interval: QUOTA_INTERVAL,
 			initial_block: current_block,
-			quota_inflow: U256::zero(),
-			quota_outflow: U256::zero(),
+			quota_inflow: U256::MAX,
+			quota_outflow: U256::MAX, // TODO: how do we parametrize this inside the runtime?
 		}
 	}
 }
+
+/// RateLimiter defines the minimum interface that is expected in order to
+/// 1. ensure that there is quota for this transaction
+/// 2. the available quota is recalculated
+/// 3. it refreshes the parameters whenever it's necessary
+pub trait RateLimiter {
+	fn update_volume(&mut self, amount: U256, flow_type: &FlowType);
+	fn is_transfer_allowed(&self, amount: U256, flow_type: &FlowType) -> bool;
+	fn calculate_new_quota_if_needed(&mut self, current_block: u64);
+}
+
 impl DenomStatePerChannel {
 	pub fn new(quota_tracker: QuotaTracker) -> Self {
 		Self {
@@ -71,8 +82,10 @@ impl DenomStatePerChannel {
 			current_volume_outflow: U256::default(),
 		}
 	}
+}
 
-	pub fn update_volume(&mut self, amount: U256, flow_type: &FlowType) {
+impl RateLimiter for DenomStatePerChannel {
+	fn update_volume(&mut self, amount: U256, flow_type: &FlowType) {
 		// safety: note that this will not overflow if `self.is_transfer_allowed()` is called
 		// before and ensured that it's true
 		match flow_type {
@@ -81,23 +94,25 @@ impl DenomStatePerChannel {
 		}
 	}
 
-	pub fn is_transfer_allowed(&self, amount: U256, flow_type: &FlowType) -> bool {
+	fn is_transfer_allowed(&self, amount: U256, flow_type: &FlowType) -> bool {
 		match flow_type {
-			FlowType::Inflow =>
-				self.current_volume_inflow.saturating_add(amount) <= self.quota_tracker.quota_inflow,
-			FlowType::Outflow =>
-				self.current_volume_outflow.saturating_add(amount) <=
-					self.quota_tracker.quota_outflow,
+			FlowType::Inflow => {
+				self.current_volume_inflow.saturating_add(amount) <= self.quota_tracker.quota_inflow
+			},
+			FlowType::Outflow => {
+				self.current_volume_outflow.saturating_add(amount)
+					<= self.quota_tracker.quota_outflow
+			},
 		}
 	}
 
 	/// Updates the quota in case there's a new period
-	pub fn update_quota_if_needed(&mut self, current_block: u64) {
+	fn calculate_new_quota_if_needed(&mut self, current_block: u64) {
 		// if not enough period has elapsed
-		if current_block <=
-			self.quota_tracker.initial_block + self.quota_tracker.current_quota_interval
+		if current_block
+			<= self.quota_tracker.initial_block + self.quota_tracker.current_quota_interval
 		{
-			return
+			return;
 		}
 
 		let next_period_amplifier =
@@ -117,17 +132,12 @@ pub mod pallet {
 	use alloc::string::String;
 	use frame_support::{pallet_prelude::*, PalletId};
 	use ibc_primitives::IbcAccount;
-	use sp_runtime::{
-		traits::{AccountIdConversion, Get},
-		Percent,
-	};
+	use sp_runtime::traits::{AccountIdConversion, Get};
 
 	use super::DenomStatePerChannel;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + crate::Config {
-		#[pallet::constant]
-		type ServiceCharge: Get<Percent>;
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 	}
@@ -280,7 +290,6 @@ where
 		// Module ModuleCallbackContext does not have the ics20 context as part of its trait bounds
 		// so we define a new context
 		let mut ctx = Context::<T>::default();
-
 		let packet_data =
 			serde_json::from_slice::<PacketData>(packet.data.as_slice()).map_err(|e| {
 				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
@@ -311,13 +320,12 @@ where
 		// 2. check if there is quota for the denom on this channel
 		if !denom_state_current_channel.is_transfer_allowed(token_amount, &flow_type) {
 			// TODO: do we want to return an error, or is it better to send an Acknowledgement?
-			return Err(Ics04Error::implementation_specific("Quota exceeded".to_string()))
+			return Err(Ics04Error::implementation_specific("Quota exceeded".to_string()));
 		}
 		// 3. if there's quota, update the volume
 		denom_state_current_channel.update_volume(token_amount, &flow_type);
-		denom_state_current_channel.update_quota_if_needed(current_block_number as _);
+		denom_state_current_channel.calculate_new_quota_if_needed(current_block_number as _);
 		// 4. update the quota if necessary (in case of a new period)
-
 		let ack = self.inner.on_recv_packet(&mut ctx, output, packet, relayer)?;
 		Ok(ack)
 	}
