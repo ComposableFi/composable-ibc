@@ -14,7 +14,7 @@
 
 use async_trait::async_trait;
 use futures::StreamExt;
-use hyperspace_core::{chain::AnyAssetId, logging};
+use hyperspace_core::logging;
 use hyperspace_parachain::{
 	config, config::CustomExtrinsicParams, finality_protocol::FinalityProtocol, ParachainClient,
 	ParachainClientConfig,

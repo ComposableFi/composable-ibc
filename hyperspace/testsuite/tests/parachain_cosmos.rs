@@ -148,6 +148,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 			address: vec![156, 200, 27, 97, 35, 103, 35, 146, 182, 226, 202, 16, 25, 214, 215, 210, 149, 250, 224, 30],
 		},
 		wasm_code_id: None,
+		channel_whitelist: vec![],
 	};
 	// cfd2199578332b5fd859f3b76cb0b29757c6b52c5df79566cdc3598039dbe43e
 
