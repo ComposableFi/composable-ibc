@@ -251,6 +251,8 @@ pub enum AnyClientState {
 }
 
 impl AnyClientState {
+	/// Recursively decode the client state from the given `Any` type, until it
+	/// matches the given predicate `f`. Only `Wasm` variant may be unpacked recursively.
 	pub fn decode_recursive<F>(mut any: Any, f: F) -> Option<Self>
 	where
 		F: Fn(&Self) -> bool,
