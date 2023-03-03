@@ -13,7 +13,6 @@ use tendermint_rpc::{
 	SubscriptionClient, WebSocketClient,
 };
 
-#[cfg(any(test, feature = "testing"))]
 #[async_trait::async_trait]
 impl<H> TestProvider for CosmosClient<H>
 where
