@@ -626,9 +626,10 @@ pub async fn query_maximum_height_for_timeout_proofs(
 		let send_packets =
 			source.query_send_packets(channel, port_id, undelivered_sequences).await.ok()?;
 		for send_packet in send_packets {
+			let revision_height = send_packet.height.expect("expected height for packet");
 			let sink_client_state = source
 				.query_client_state(
-					Height::new(source_height.revision_number, send_packet.height),
+					Height::new(source_height.revision_number, revision_height),
 					sink.client_id(),
 				)
 				.await
@@ -647,7 +648,7 @@ pub async fn query_maximum_height_for_timeout_proofs(
 			let period = Duration::from_nanos(period);
 			let period =
 				calculate_block_delay(period, sink.expected_block_time()).saturating_add(1);
-			let approx_height = send_packet.height + period;
+			let approx_height = revision_height + period;
 			let timeout_height = if send_packet.timeout_height.revision_height < approx_height {
 				send_packet.timeout_height.revision_height
 			} else {

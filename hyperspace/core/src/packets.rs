@@ -160,6 +160,9 @@ pub async fn query_ready_and_timed_out_packets(
 		for send_packet in send_packets {
 			let packet = packet_info_to_packet(&send_packet);
 			// Check if packet has timed out
+			let packet_height = send_packet.height.ok_or_else(|| {
+				Error::Custom(format!("Packet height not found for packet {:?}", packet))
+			})?;
 			if packet.timed_out(&sink_timestamp, sink_height) {
 				// so we know this packet has timed out on the sink, we need to find the maximum
 				// consensus state height at which we can generate a non-membership proof of the
@@ -172,7 +175,7 @@ pub async fn query_ready_and_timed_out_packets(
 					sink_timestamp,
 					latest_sink_height_on_source,
 					&packet,
-					send_packet.height,
+					packet_height,
 				)
 				.await
 				{
@@ -232,7 +235,7 @@ pub async fn query_ready_and_timed_out_packets(
 			// If sink does not have a client height that is equal to or greater than the packet
 			// creation height, we can't send it yet, packet_info.height should represent the packet
 			// creation height on source chain
-			if send_packet.height > latest_source_height_on_sink.revision_height {
+			if packet_height > latest_source_height_on_sink.revision_height {
 				// Sink does not have client update required to prove recv packet message
 				log::debug!(target: "hyperspace", "Skipping packet {:?} as sink does not have client update required to prove recv packet message", packet);
 				continue
@@ -242,7 +245,7 @@ pub async fn query_ready_and_timed_out_packets(
 				sink,
 				sink_height,
 				source.client_id(),
-				Height::new(latest_source_height_on_sink.revision_number, send_packet.height),
+				Height::new(latest_source_height_on_sink.revision_number, packet_height),
 				None,
 				latest_source_height_on_sink,
 			)
@@ -305,19 +308,22 @@ pub async fn query_ready_and_timed_out_packets(
 			// If sink does not have a client height that is equal to or greater than the packet
 			// creation height, we can't send it yet packet_info.height should represent the
 			// acknowledgement creation height on source chain
-			if acknowledgement.height > latest_source_height_on_sink.revision_height {
+			let ack_height = acknowledgement.height.ok_or_else(|| {
+				Error::Custom(format!("Packet height not found for packet {:?}", packet))
+			})?;
+			if ack_height > latest_source_height_on_sink.revision_height {
 				// Sink does not have client update required to prove acknowledgement packet message
 				log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as sink does not have client update required to prove acknowledgement packet message", packet);
 				continue
 			}
 
-			log::trace!(target: "hyperspace", "sink_height: {:?}, latest_source_height_on_sink: {:?}, acknowledgement.height: {}", sink_height, latest_source_height_on_sink, acknowledgement.height);
+			log::trace!(target: "hyperspace", "sink_height: {:?}, latest_source_height_on_sink: {:?}, acknowledgement.height: {}", sink_height, latest_source_height_on_sink, ack_height);
 
 			let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(
 				sink,
 				sink_height,
 				source.client_id(),
-				Height::new(latest_source_height_on_sink.revision_number, acknowledgement.height),
+				Height::new(latest_source_height_on_sink.revision_number, ack_height),
 				None,
 				latest_source_height_on_sink,
 			)

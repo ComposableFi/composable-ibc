@@ -687,7 +687,7 @@ where
 										"failed to convert packet info from IbcPacketInfo",
 									))
 								})?;
-							info.height = p.height.revision_height;
+							info.height = Some(p.height.revision_height);
 							block_events.push(info)
 						},
 						_ => (),
@@ -742,7 +742,7 @@ where
 									))
 								})?;
 							info.ack = Some(p.ack);
-							info.height = p.height.revision_height;
+							info.height = Some(p.height.revision_height);
 							block_events.push(info)
 						},
 						_ => (),
