@@ -11,8 +11,8 @@
   "author": "Nadeem Bhati <nadeem@composable.finance>",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^1.0.2",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.7",
+    "@nomicfoundation/hardhat-toolbox": "^1.0.2",
     "@nomiclabs/hardhat-ethers": "^2.0.6",
     "@nomiclabs/hardhat-waffle": "^2.0.3",
     "@typechain/ethers-v5": "^10.0.0",
@@ -28,5 +28,8 @@
     "ts-node": "^10.7.0",
     "typechain": "^8.0.0",
     "typescript": "^4.6.4"
+  },
+  "dependencies": {
+    "@polytope-labs/solidity-merkle-trees": "^0.2.0"
   }
 }
