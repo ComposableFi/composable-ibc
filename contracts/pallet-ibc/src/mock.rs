@@ -200,6 +200,7 @@ impl Config for Test {
 	type RelayerOrigin = EnsureSigned<Self::AccountId>;
 	type HandleMemo = ();
 	type MemoMessage = MemoMessage;
+	type Ics20RateLimiter = Everything;
 }
 
 parameter_types! {

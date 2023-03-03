@@ -102,8 +102,6 @@ impl CompileCmd {
 			format!("{}/proto/ibc", ibc_dir.display()),
 		];
 
-		let root = env!("CARGO_MANIFEST_DIR");
-
 		let proto_includes_paths = [
 			format!("{}", gogo.display()),
 			format!("{}", google.display()),
@@ -253,7 +251,7 @@ impl CompileCmd {
 			format!("{}/proto/cosmos/upgrade", sdk_dir.display()),
 		];
 
-		let mut proto_includes_paths = vec![
+		let proto_includes_paths = vec![
 			format!("{}", gogo.display()),
 			format!("{}", google.display()),
 			format!("{}/proto", cosmos_proto.display()),

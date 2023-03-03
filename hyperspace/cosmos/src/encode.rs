@@ -47,7 +47,7 @@ pub fn encode_sign_doc(
 
 	// A protobuf serialization of a SignDoc
 	let mut signdoc_buf = Vec::new();
-	Message::encode(&sign_doc, &mut signdoc_buf).unwrap();
+	Message::encode(&sign_doc, &mut signdoc_buf)?;
 
 	// Create signature
 	let private_key_bytes = key.private_key.private_key().to_bytes();

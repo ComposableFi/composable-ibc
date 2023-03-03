@@ -12,7 +12,6 @@ anyhow = "1.0.65"
 futures = "0.3.21"
 async-trait = "0.1.53"
 log = "0.4.17"
-env_logger = "0.9.0"
 hex = "0.4.3"
 tokio = { version = "1.19.2", features = ["macros", "sync"] }
 rs_merkle = "1.2.0"
@@ -24,8 +23,6 @@ serde = {version="1.0.137", features = ["derive"]}
 tokio-stream = { version = "0.1.9", features = ["sync"]}
 thiserror = "1.0.31"
 itertools = "0.10.3"
-jsonrpsee = "0.15.1"
-jsonrpsee-ws-client = "0.14.0"
 prost = { version = "0.11" }
 k256 = { version = "0.11.6", features = ["ecdsa-core", "ecdsa", "sha256"] }
 tonic = { version = "0.8", features = ["tls", "tls-roots"] }
@@ -42,7 +39,6 @@ ics08-wasm = { path = "../../light-clients/ics08-wasm" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 
-tracing-subscriber = { version = "0.3.11", features = ["fmt"]}
 tracing = "0.1.36"
 
 # tendermint

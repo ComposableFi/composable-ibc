@@ -42,6 +42,26 @@ use ibc_primitives::{CallbackWeight, HandlerMessage, IbcHandler};
 use sp_core::crypto::AccountId32;
 use sp_std::marker::PhantomData;
 
+pub type Ics20TransferMsg = ibc::applications::transfer::msgs::transfer::MsgTransfer<
+	ibc::applications::transfer::Coin<ibc::applications::transfer::PrefixedDenom>,
+>;
+
+#[derive(Debug, Clone, Copy)]
+pub enum FlowType {
+	Transfer,
+	Deliver,
+}
+
+pub trait Ics20RateLimiter {
+	fn allow(msg: &Ics20TransferMsg, flow_type: FlowType) -> Result<(), ()>;
+}
+
+impl Ics20RateLimiter for frame_support::traits::Everything {
+	fn allow(_msg: &Ics20TransferMsg, _flow_type: FlowType) -> Result<(), ()> {
+		Ok(())
+	}
+}
+
 #[derive(Clone, Eq, Debug, PartialEq)]
 pub struct IbcModule<T: Config>(PhantomData<T>);
 
@@ -209,6 +229,18 @@ where
 				// We need to reject transaction amounts that are larger than u128 since we expect
 				// the balance type of the runtime to be a u128; For a U256 to be converted to a
 				// u128 without truncating, the last two words should be zero
+				let msg = Ics20TransferMsg {
+					source_port: packet.source_port.clone(),
+					memo: packet_data.memo.clone(),
+					sender: packet_data.sender.clone(),
+					receiver: packet_data.receiver.clone(),
+					source_channel: packet.source_channel.clone(),
+					token: packet_data.token.clone(),
+					timeout_height: packet.timeout_height,
+					timeout_timestamp: packet.timeout_timestamp,
+				};
+				T::Ics20RateLimiter::allow(&msg, FlowType::Deliver)
+					.map_err(|_| Ics04Error::implementation_specific("rate limiter".to_string()))?;
 				let amount = packet_data.token.amount.as_u256();
 				u128::try_from(amount)
 					.map_err(|e| Ics04Error::implementation_specific(format!("{:?}", e)))?;

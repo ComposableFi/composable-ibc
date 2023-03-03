@@ -127,11 +127,8 @@ where
 		// query (exclusively) up to `to`, because the proof for the event at `to - 1` will be
 		// contained at `to` and will be fetched below by `msg_update_client_header`
 		for height in from.value()..to.value() {
-			let block_results = self
-				.rpc_client
-				.block_results(TmHeight::try_from(height).unwrap())
-				.await
-				.map_err(|e| {
+			let block_results =
+				self.rpc_client.block_results(TmHeight::try_from(height)?).await.map_err(|e| {
 					Error::from(format!(
 						"Failed to query block result for height {:?}: {:?}",
 						height, e
@@ -288,7 +285,7 @@ where
 		.to_string()
 		.into_bytes();
 		let (query_result, proof) = self.query_path(path_bytes.clone(), at, true).await?;
-		let consensus_state = Any::decode(&*query_result.value).unwrap();
+		let consensus_state = Any::decode(&*query_result.value)?;
 		Ok(QueryConsensusStateResponse {
 			consensus_state: Some(consensus_state),
 			proof,
@@ -304,7 +301,7 @@ where
 		let path_bytes =
 			Path::ClientState(ClientStatePath(client_id.clone())).to_string().into_bytes();
 		let (q, proof) = self.query_path(path_bytes.clone(), at, true).await?;
-		let client_state = Any::decode(&*q.value).unwrap();
+		let client_state = Any::decode(&*q.value)?;
 		Ok(QueryClientStateResponse {
 			client_state: Some(client_state),
 			proof,
@@ -321,7 +318,7 @@ where
 			.to_string()
 			.into_bytes();
 		let (q, proof) = self.query_path(path_bytes.clone(), at, true).await?;
-		let connection = ConnectionEnd::decode(&*q.value).unwrap();
+		let connection = ConnectionEnd::decode(&*q.value)?;
 		Ok(QueryConnectionResponse {
 			connection: Some(connection),
 			proof,
@@ -339,7 +336,7 @@ where
 			.to_string()
 			.into_bytes();
 		let (q, proof) = self.query_path(path_bytes.clone(), at, true).await?;
-		let channel = Channel::decode(&*q.value).unwrap();
+		let channel = Channel::decode(&*q.value)?;
 		Ok(QueryChannelResponse {
 			channel: Some(channel),
 			proof,
@@ -406,7 +403,12 @@ where
 			.to_string()
 			.into_bytes();
 		let (query_result, proof) = self.query_path(path_bytes.clone(), at, true).await?;
-		let next_sequence_receive = u64::from_be_bytes(query_result.value.try_into().unwrap());
+		let next_sequence_receive = u64::from_be_bytes(
+			query_result
+				.value
+				.try_into()
+				.map_err(|_| Error::Custom("invalid next_sequence_receive value".to_owned()))?,
+		);
 		Ok(QueryNextSequenceReceiveResponse {
 			next_sequence_receive,
 			proof,
@@ -790,7 +792,7 @@ where
 					Ok(IbcEvent::UpdateClient(_)) =>
 						return Ok((
 							Height::new(self.chain_id.version(), height),
-							Timestamp::from_nanoseconds(timestamp).unwrap(),
+							Timestamp::from_nanoseconds(timestamp)?,
 						)),
 					_ => (),
 				}
@@ -837,9 +839,9 @@ where
 		Ok(vec![PrefixedCoin {
 			denom: PrefixedDenom {
 				trace_path: TracePath::default(),
-				base_denom: BaseDenom::from_str(denom).unwrap(),
+				base_denom: BaseDenom::from_str(denom)?,
 			},
-			amount: Amount::from_str(balance.amount.as_str()).unwrap(),
+			amount: Amount::from_str(balance.amount.as_str())?,
 		}])
 	}
 
@@ -971,7 +973,7 @@ where
 	async fn initialize_client_state(
 		&self,
 	) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
-		let latest_height_timestamp = self.latest_height_and_timestamp().await.unwrap();
+		let latest_height_timestamp = self.latest_height_and_timestamp().await?;
 		let client_state = ClientState::new(
 			self.chain_id.clone(),
 			TrustThreshold::default(),
