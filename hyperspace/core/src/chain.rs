@@ -185,6 +185,12 @@ pub enum AnyError {
 	Other(String),
 }
 
+impl From<anyhow::Error> for AnyError {
+	fn from(e: anyhow::Error) -> Self {
+		Self::Other(e.to_string())
+	}
+}
+
 impl From<String> for AnyError {
 	fn from(s: String) -> Self {
 		Self::Other(s)
@@ -840,7 +846,7 @@ impl Chain for AnyChain {
 				let messages = messages
 					.into_iter()
 					.map(|msg| wrap_any_msg_into_wasm(msg, chain.code_id.clone()))
-					.collect();
+					.collect::<Result<Vec<_>, _>>()?;
 				chain.inner.submit(messages).await.map_err(Into::into)
 			},
 		}
@@ -892,7 +898,7 @@ impl LightClientSync for AnyChain {
 	}
 }
 
-fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Any {
+fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error> {
 	// TODO: consider rewriting with Ics26Envelope
 	use ibc::core::{
 		ics02_client::msgs::{
@@ -905,13 +911,13 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Any {
 		},
 	};
 
-	match msg.type_url.as_str() {
+	let msg = match msg.type_url.as_str() {
 		CREATE_CLIENT_TYPE_URL => {
 			let mut msg_decoded =
 				MsgCreateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
 			msg_decoded.consensus_state =
-				AnyConsensusState::wasm(msg_decoded.consensus_state, code_id.clone());
-			msg_decoded.client_state = AnyClientState::wasm(msg_decoded.client_state, code_id);
+				AnyConsensusState::wasm(msg_decoded.consensus_state, code_id.clone())?;
+			msg_decoded.client_state = AnyClientState::wasm(msg_decoded.client_state, code_id)?;
 			msg_decoded.to_any()
 		},
 		CONN_OPEN_TRY_TYPE_URL => {
@@ -927,12 +933,13 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Any {
 		UPDATE_CLIENT_TYPE_URL => {
 			let mut msg_decoded =
 				MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
-			msg_decoded.client_message = AnyClientMessage::wasm(msg_decoded.client_message);
+			msg_decoded.client_message = AnyClientMessage::wasm(msg_decoded.client_message)?;
 			let any = msg_decoded.to_any();
 			any
 		},
 		_ => msg,
-	}
+	};
+	Ok(msg)
 }
 
 #[cfg(any(test, feature = "testing"))]

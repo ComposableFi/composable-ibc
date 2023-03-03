@@ -282,14 +282,16 @@ impl AnyClientState {
 }
 
 impl AnyClientState {
-	pub fn wasm(inner: Self, code_id: Bytes) -> Self {
-		Self::Wasm(ics08_wasm::client_state::ClientState::<AnyClient, Self, AnyConsensusState> {
-			data: inner.encode_to_vec().unwrap(),
-			latest_height: inner.latest_height(), // TODO: check if this is correct
-			inner: Box::new(inner),
-			code_id,
-			_phantom: Default::default(),
-		})
+	pub fn wasm(inner: Self, code_id: Bytes) -> Result<Self, tendermint_proto::Error> {
+		Ok(Self::Wasm(
+			ics08_wasm::client_state::ClientState::<AnyClient, Self, AnyConsensusState> {
+				data: inner.encode_to_vec()?,
+				latest_height: inner.latest_height(),
+				inner: Box::new(inner),
+				code_id,
+				_phantom: Default::default(),
+			},
+		))
 	}
 }
 
@@ -309,14 +311,14 @@ pub enum AnyConsensusState {
 }
 
 impl AnyConsensusState {
-	pub fn wasm(inner: Self, code_id: Bytes) -> Self {
-		Self::Wasm(ics08_wasm::consensus_state::ConsensusState {
+	pub fn wasm(inner: Self, code_id: Bytes) -> Result<Self, tendermint_proto::Error> {
+		Ok(Self::Wasm(ics08_wasm::consensus_state::ConsensusState {
 			timestamp: inner.timestamp().nanoseconds(),
-			data: inner.encode_to_vec().unwrap(),
+			data: inner.encode_to_vec()?,
 			code_id,
 			root: CommitmentRoot::from_bytes(&vec![1; 32]),
 			inner: Box::new(inner),
-		})
+		}))
 	}
 }
 
@@ -365,24 +367,24 @@ impl AnyClientMessage {
 		}
 	}
 
-	pub fn wasm(inner: Self) -> Self {
+	pub fn wasm(inner: Self) -> Result<Self, tendermint_proto::Error> {
 		let maybe_height = inner.maybe_header_height();
-		match maybe_height {
+		Ok(match maybe_height {
 			Some(height) => Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(
 				ics08_wasm::client_message::Header {
-					data: inner.encode_to_vec().unwrap(),
+					data: inner.encode_to_vec()?,
 					height,
 					inner: Box::new(inner),
 				},
 			)),
 			None => Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(
 				ics08_wasm::client_message::Misbehaviour {
-					data: inner.encode_to_vec().unwrap(),
+					data: inner.encode_to_vec()?,
 					client_id: ClientId::from_str("00-unused-0").expect("valid client id"),
 					inner: Box::new(inner),
 				},
 			)),
-		}
+		})
 	}
 
 	pub fn unpack_recursive(&self) -> &Self {

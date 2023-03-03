@@ -293,12 +293,12 @@ where
 					AnyClientState::Wasm(wasm) => {
 						log::trace!(target: "pallet_ibc", "in client : [host_consensus_state] >> using wasm code id" );
 						let code_id = wasm.code_id.clone();
-						AnyConsensusState::wasm(cs, code_id)
+						AnyConsensusState::wasm(cs, code_id).map_err(ICS02Error::encode)?
 					},
 					_ =>
 						if let Some(code_id) = connection_proof.code_id {
 							log::trace!(target: "pallet_ibc", "in client : [host_consensus_state] >> using wasm code id");
-							AnyConsensusState::wasm(cs, code_id)
+							AnyConsensusState::wasm(cs, code_id).map_err(ICS02Error::encode)?
 						} else {
 							cs
 						},
