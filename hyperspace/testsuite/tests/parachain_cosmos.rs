@@ -26,8 +26,9 @@ use hyperspace_parachain::{
 use hyperspace_primitives::{utils::create_clients, IbcProvider};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
-	ibc_messaging_packet_timeout_on_channel_close, ibc_messaging_with_connection_delay,
-	misbehaviour::ibc_messaging_submit_misbehaviour,
+	ibc_messaging_packet_timeout_on_channel_close,
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
+	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
 };
 use sp_core::hashing::sha2_256;
 use subxt::{

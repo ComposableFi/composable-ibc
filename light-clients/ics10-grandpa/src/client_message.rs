@@ -24,7 +24,7 @@ use alloc::{collections::BTreeMap, vec::Vec};
 use anyhow::anyhow;
 use codec::{Decode, Encode};
 use grandpa_client_primitives::{FinalityProof, ParachainHeaderProofs};
-use ibc::{core::ics24_host::identifier::ClientId, Height};
+use ibc::Height;
 use sp_core::H256;
 use sp_runtime::traits::BlakeTwo256;
 use tendermint_proto::Protobuf;

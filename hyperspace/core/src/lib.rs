@@ -56,7 +56,7 @@ where
 	if !chain_a.is_synced(&chain_b).await? {
 		let (mut messages, events) = chain_a.fetch_mandatory_updates(&chain_b).await?;
 		// we use light mode because channel state will be queried during the full relay operation
-		let (parsed_messages, ..) =
+		let parsed_messages =
 			parse_events(&mut chain_a, &mut chain_b, events, Some(Mode::Light)).await?;
 		messages.extend(parsed_messages);
 		log::info!(target: "hyperspace",
@@ -71,7 +71,7 @@ where
 	if !chain_b.is_synced(&chain_a).await? {
 		let (mut messages, events) = chain_b.fetch_mandatory_updates(&chain_a).await?;
 		// we use light mode because channel state will be queried during the full relay operation
-		let (parsed_messages, ..) =
+		let parsed_messages =
 			parse_events(&mut chain_b, &mut chain_a, events, Some(Mode::Light)).await?;
 		messages.extend(parsed_messages);
 		log::info!(target: "hyperspace",
@@ -87,7 +87,7 @@ where
 	loop {
 		tokio::select! {
 			// new finality event from chain A
-			result  = chain_a_finality.next() => {
+			result = chain_a_finality.next() => {
 				process_finality_event!(chain_a, chain_b, chain_a_metrics, mode, result)
 			}
 			// new finality event from chain B

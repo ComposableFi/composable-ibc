@@ -223,6 +223,10 @@ pub trait IbcProvider {
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error>;
 
+	async fn on_undelivered_sequences(&self, seqs: &[u64]) -> Result<(), Self::Error>;
+
+	fn has_undelivered_sequences(&self) -> bool;
+
 	/// Given a list of packet acknowledgements sequences from the sink chain
 	/// return a list of acknowledgement sequences that have not been received on the source chain
 	async fn query_unreceived_acknowledgements(
@@ -467,6 +471,8 @@ pub async fn query_undelivered_sequences(
 			.next_sequence_receive;
 		seqs.into_iter().filter(|seq| *seq > next_seq_recv).collect()
 	};
+
+	source.on_undelivered_sequences(&undelivered_sequences).await?;
 
 	Ok(undelivered_sequences)
 }

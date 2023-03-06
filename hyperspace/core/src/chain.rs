@@ -749,6 +749,25 @@ impl IbcProvider for AnyChain {
 			Self::Wasm(c) => c.inner.upload_wasm(wasm).await,
 		}
 	}
+
+	async fn on_undelivered_sequences(&self, seqs: &[u64]) -> Result<(), Self::Error> {
+		match self {
+			Self::Parachain(chain) =>
+				chain.on_undelivered_sequences(seqs).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.on_undelivered_sequences(seqs).await.map_err(Into::into),
+			Self::Wasm(c) => c.inner.on_undelivered_sequences(seqs).await,
+		}
+	}
+
+	fn has_undelivered_sequences(&self) -> bool {
+		match self {
+			Self::Parachain(chain) => chain.has_undelivered_sequences(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.has_undelivered_sequences(),
+			Self::Wasm(c) => c.inner.has_undelivered_sequences(),
+		}
+	}
 }
 
 #[async_trait]

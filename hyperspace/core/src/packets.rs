@@ -221,7 +221,7 @@ pub async fn query_ready_and_timed_out_packets(
 			// Since we have no reference point for when this channel was closed so we can't
 			// calculate connection delays yet
 			if sink_channel_end.state == State::Closed {
-				log::debug!(target: "hyperspace", "Skipping packet {:?} as channel is closed on sink", packet);
+				log::debug!(target: "hyperspace", "Skipping packet as channel is closed on sink: {:?}", packet);
 				continue
 			}
 

@@ -14,7 +14,13 @@
 
 #![allow(clippy::all)]
 
-use std::{collections::BTreeMap, str::FromStr, sync::Arc, time::Duration};
+use std::{
+	cell::Cell,
+	collections::BTreeMap,
+	str::FromStr,
+	sync::{Arc, Mutex},
+	time::Duration,
+};
 
 pub mod chain;
 pub mod config;
@@ -111,6 +117,12 @@ pub struct ParachainClient<T: config::Config> {
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 	/// Finality protocol to use, eg Beefy, Grandpa
 	pub finality_protocol: FinalityProtocol,
+	/// Used to determine whether client updates should be forced to send
+	/// even if it's optional. It's required, because some timeout packets
+	/// should use proof of the client states.
+	///
+	/// Set inside `on_undelivered_sequences`.
+	pub maybe_has_undelivered_packets: Arc<Mutex<bool>>,
 }
 
 enum KeyType {
@@ -252,6 +264,7 @@ where
 			ss58_version: Ss58AddressFormat::from(config.ss58_version),
 			channel_whitelist: config.channel_whitelist,
 			finality_protocol: config.finality_protocol,
+			maybe_has_undelivered_packets: Default::default(),
 		})
 	}
 }

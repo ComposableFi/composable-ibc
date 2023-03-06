@@ -421,6 +421,15 @@ where
 		Ok(res)
 	}
 
+	async fn on_undelivered_sequences(&self, seqs: &[u64]) -> Result<(), Self::Error> {
+		*self.maybe_has_undelivered_packets.lock().unwrap() = !seqs.is_empty();
+		Ok(())
+	}
+
+	fn has_undelivered_sequences(&self) -> bool {
+		*self.maybe_has_undelivered_packets.lock().unwrap()
+	}
+
 	async fn query_unreceived_acknowledgements(
 		&self,
 		at: Height,

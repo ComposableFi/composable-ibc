@@ -32,65 +32,75 @@ macro_rules! process_finality_event {
 						continue
 					},
 				};
+
+				// query packets that can now be sent, at this sink height because of connection
+				// delay.
+				let (ready_packets, timeout_msgs) =
+					crate::packets::query_ready_and_timed_out_packets(&$source, &$sink).await?;
+
+				let mut msgs = Vec::new();
 				for (msg_update_client, events, update_type) in updates {
-					let mut msgs_update_client = vec![msg_update_client];
 					if let Some(metrics) = $metrics.as_mut() {
 						if let Err(e) = metrics.handle_events(events.as_slice()).await {
 							log::error!("Failed to handle metrics for {} {:?}", $source.name(), e);
 						}
 					}
 					let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
-					let (mut messages, timeouts) =
+					let mut messages =
 						parse_events(&mut $source, &mut $sink, events, $mode).await?;
-					if !timeouts.is_empty() {
-						if let Some(metrics) = $metrics.as_ref() {
-							metrics.handle_timeouts(timeouts.as_slice()).await;
-						}
-						let type_urls =
-							timeouts.iter().map(|msg| msg.type_url.as_str()).collect::<Vec<_>>();
-						log::info!(
-							"Submitting timeout messages to {}: {type_urls:#?}",
-							$source.name()
-						);
-						queue::flush_message_batch(timeouts, $metrics.as_ref(), &$source).await?;
-					}
+					log::info!(
+						"Has packets {}: {}",
+						$source.name(),
+						$source.has_undelivered_sequences()
+					);
 					// We want to send client update if packet messages exist but where not sent due
 					// to a connection delay even if client update message is optional
 					match (
-						update_type.is_optional(),
+						// TODO: we actually man send only when timeout of some packet has reached,
+						// not when we have *any* undelivered packets. But this requires rewriting
+						// `find_suitable_proof_height_for_client` function, that uses binary
+						// search, which won't work in this case
+						update_type.is_optional() && !$source.has_undelivered_sequences(),
 						has_packet_events(&event_types),
 						messages.is_empty(),
 					) {
 						(true, false, true) => {
 							// skip sending ibc messages if no new events
-							log::info!(
-								"Skipping finality notification for {}, No new events",
-								$source.name()
-							);
+							log::info!("Skipping finality notification for {}", $sink.name());
 							continue
 						},
 						(false, _, true) => log::info!(
 							"Sending mandatory client update message for {}",
-							$source.name()
+							$sink.name()
 						),
 						_ => log::info!(
 							"Received finalized events from: {} {event_types:#?}",
 							$source.name()
 						),
 					};
-					// todo: we should be able skip update clients that are optional even when
-					// messages is not empty. insert client update at first position.
-					msgs_update_client.append(&mut messages);
+					msgs.push(msg_update_client);
+					msgs.append(&mut messages);
+				}
+				msgs.extend(ready_packets);
+
+				if !msgs.is_empty() {
 					if let Some(metrics) = $metrics.as_ref() {
-						metrics.handle_messages(msgs_update_client.as_slice()).await;
+						metrics.handle_messages(msgs.as_slice()).await;
 					}
-					let type_urls = msgs_update_client
-						.iter()
-						.map(|msg| msg.type_url.as_str())
-						.collect::<Vec<_>>();
+					let type_urls =
+						msgs.iter().map(|msg| msg.type_url.as_str()).collect::<Vec<_>>();
 					log::info!("Submitting messages to {}: {type_urls:#?}", $sink.name());
-					queue::flush_message_batch(msgs_update_client, $metrics.as_ref(), &$sink)
-						.await?;
+					queue::flush_message_batch(msgs, $metrics.as_ref(), &$sink).await?;
+				}
+
+				if !timeout_msgs.is_empty() {
+					if let Some(metrics) = $metrics.as_ref() {
+						metrics.handle_timeouts(timeout_msgs.as_slice()).await;
+					}
+					let type_urls =
+						timeout_msgs.iter().map(|msg| msg.type_url.as_str()).collect::<Vec<_>>();
+					log::info!("Submitting timeout messages to {}: {type_urls:#?}", $source.name());
+					queue::flush_message_batch(timeout_msgs, $metrics.as_ref(), &$source).await?;
 				}
 			},
 		}

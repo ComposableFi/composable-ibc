@@ -19,7 +19,10 @@ use ibc_proto::{
 	cosmos::auth::v1beta1::{query_client::QueryClient, BaseAccount, QueryAccountRequest},
 	google::protobuf::Any,
 };
-use std::{str::FromStr, sync::Arc};
+use std::{
+	str::FromStr,
+	sync::{Arc, Mutex},
+};
 
 use ics07_tendermint::{
 	client_message::Header, client_state::ClientState, consensus_state::ConsensusState,
@@ -114,6 +117,12 @@ pub struct CosmosClient<H> {
 	/// Mutex used to sequentially send transactions. This is necessary because
 	/// account sequence numbers are not updated until the transaction is processed.
 	pub tx_mutex: Arc<tokio::sync::Mutex<()>>,
+	/// Used to determine whether client updates should be forced to send
+	/// even if it's optional. It's required, because some timeout packets
+	/// should use proof of the client states.
+	///
+	/// Set inside `on_undelivered_sequences`.
+	pub maybe_has_undelivered_packets: Arc<Mutex<bool>>,
 }
 
 /// config options for [`ParachainClient`]
@@ -223,6 +232,7 @@ where
 			channel_whitelist: config.channel_whitelist,
 			_phantom: std::marker::PhantomData,
 			tx_mutex: Default::default(),
+			maybe_has_undelivered_packets: Default::default(),
 		})
 	}
 
@@ -326,7 +336,7 @@ where
 
 			let update_type =
 				match latest_light_block.validators == latest_light_block.next_validators {
-					true => UpdateType::Mandatory,
+					true => UpdateType::Optional,
 					false => UpdateType::Mandatory,
 				};
 			xs.push((
