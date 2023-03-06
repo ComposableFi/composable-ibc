@@ -85,7 +85,7 @@ impl FinalityProtocol {
 		source: &mut ParachainClient<T>,
 		finality_event: FinalityEvent,
 		counterparty: &C,
-	) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		T: config::Config + Send + Sync,
 		C: Chain,
@@ -124,7 +124,7 @@ pub async fn query_latest_ibc_events_with_beefy<T, C>(
 	source: &mut ParachainClient<T>,
 	finality_event: FinalityEvent,
 	counterparty: &C,
-) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
+) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 where
 	T: config::Config + Send + Sync,
 	C: Chain,
@@ -318,7 +318,7 @@ where
 		Any { value, type_url: msg.type_url() }
 	};
 
-	Ok((vec![update_header], events, update_type))
+	Ok(vec![(update_header, events, update_type)])
 }
 
 /// Query the latest events that have been finalized by the GRANDPA finality protocol.
@@ -326,7 +326,7 @@ pub async fn query_latest_ibc_events_with_grandpa<T, C>(
 	source: &mut ParachainClient<T>,
 	finality_event: FinalityEvent,
 	counterparty: &C,
-) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
+) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 where
 	T: config::Config + Send + Sync,
 	C: Chain,
@@ -524,5 +524,5 @@ where
 		Any { value, type_url: msg.type_url() }
 	};
 
-	Ok((vec![update_header], events, update_type))
+	Ok(vec![(update_header, events, update_type)])
 }

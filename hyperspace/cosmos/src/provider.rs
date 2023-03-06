@@ -97,7 +97,7 @@ where
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &C,
-	) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		C: Chain,
 	{
@@ -118,51 +118,25 @@ where
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		let latest_revision = latest_height.revision_number;
 
-		let mut ibc_events: Vec<IbcEvent> = vec![];
 		let from = TmHeight::try_from(latest_cp_client_height).unwrap();
 		let to = finality_event_height;
 		log::info!(target: "hyperspace_cosmos", "Getting blocks {}..{}", from, to);
 
 		// query (exclusively) up to `to`, because the proof for the event at `to - 1` will be
 		// contained at `to` and will be fetched below by `msg_update_client_header`
+		let update_headers =
+			self.msg_update_client_header(from, to, client_state.latest_height).await?;
+		let mut block_events = Vec::new();
 		for height in from.value()..to.value() {
-			let block_results =
-				self.rpc_client.block_results(TmHeight::try_from(height)?).await.map_err(|e| {
-					Error::from(format!(
-						"Failed to query block result for height {:?}: {:?}",
-						height, e
-					))
-				})?;
-
-			let tx_events = block_results
-				.txs_results
-				.unwrap_or_default()
-				.into_iter()
-				.flat_map(|tx| tx.events);
-			let begin_events = block_results.begin_block_events.unwrap_or_default().into_iter();
-			let end_events = block_results.end_block_events.unwrap_or_default().into_iter();
-			let events = begin_events.chain(tx_events).chain(end_events);
-
-			let ibc_height = Height::new(latest_revision, height);
-			for event in events {
-				let ibc_event = ibc_event_try_from_abci_event(&event, ibc_height).ok();
-				match ibc_event {
-					Some(mut ev) => {
-						ev.set_height(ibc_height);
-						log::debug!(target: "hyperspace_cosmos", "Encountered event at {height}: {:?}", event.kind);
-						ibc_events.push(ev);
-					},
-					None => {
-						log::debug!(target: "hyperspace_cosmos", "Skipped event: {:?}", event.kind);
-						continue
-					},
-				}
-			}
+			let ibc_events = self.parse_ibc_events_at(latest_revision, height).await?;
+			block_events.push(ibc_events);
 		}
-		let updates = self.msg_update_client_header(from, to, client_state.latest_height).await?;
-		let mut update_client_headers = Vec::new();
-		let mut update_headers = Vec::new();
-		for (update_header, update_type) in updates {
+		// we don't submit events for the last block, because we don't have a proof for it
+		block_events.push(Vec::new());
+		assert_eq!(block_events.len(), update_headers.len(), "block events and updates must match");
+
+		let mut updates = Vec::new();
+		for (events, (update_header, update_type)) in block_events.into_iter().zip(update_headers) {
 			log::info!(target: "hyperspace_cosmos", "Fetching block {}", update_header.height().revision_height);
 			let update_client_header = {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
@@ -177,10 +151,9 @@ where
 				})?;
 				Any { value, type_url: msg.type_url() }
 			};
-			update_client_headers.push(update_client_header);
-			update_headers.push(update_type);
+			updates.push((update_client_header, events, update_type));
 		}
-		Ok((update_client_headers, ibc_events, update_headers.remove(0)))
+		Ok(updates)
 	}
 
 	// TODO: Changed result: `Item =` from `IbcEvent` to `IbcEventWithHeight` to include the
@@ -1063,6 +1036,53 @@ where
 				})
 			}
 		}
+	}
+}
+
+impl<H> CosmosClient<H>
+where
+	H: 'static + Clone + Send + Sync,
+{
+	async fn parse_ibc_events_at(
+		&mut self,
+		latest_revision: u64,
+		height: u64,
+	) -> Result<Vec<IbcEvent>, <Self as IbcProvider>::Error> {
+		let mut ibc_events = Vec::new();
+
+		let block_results =
+			self.rpc_client.block_results(TmHeight::try_from(height)?).await.map_err(|e| {
+				Error::from(format!(
+					"Failed to query block result for height {:?}: {:?}",
+					height, e
+				))
+			})?;
+
+		let tx_events = block_results
+			.txs_results
+			.unwrap_or_default()
+			.into_iter()
+			.flat_map(|tx| tx.events);
+		let begin_events = block_results.begin_block_events.unwrap_or_default().into_iter();
+		let end_events = block_results.end_block_events.unwrap_or_default().into_iter();
+		let events = begin_events.chain(tx_events).chain(end_events);
+
+		let ibc_height = Height::new(latest_revision, height);
+		for event in events {
+			let ibc_event = ibc_event_try_from_abci_event(&event, ibc_height).ok();
+			match ibc_event {
+				Some(mut ev) => {
+					ev.set_height(ibc_height);
+					log::debug!(target: "hyperspace_cosmos", "Encountered event at {height}: {:?}", event.kind);
+					ibc_events.push(ev);
+				},
+				None => {
+					log::debug!(target: "hyperspace_cosmos", "Skipped event: {:?}", event.kind);
+					continue
+				},
+			}
+		}
+		Ok(ibc_events)
 	}
 }
 

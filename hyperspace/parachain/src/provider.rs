@@ -109,7 +109,7 @@ where
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &C,
-	) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		C: Chain,
 	{
