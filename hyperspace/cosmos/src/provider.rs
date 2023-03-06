@@ -133,27 +133,29 @@ where
 						height, e
 					))
 				})?;
-			// TODO: handle block_results.begin_block_events, block_results.end_block_events?
-			let tx_results = match block_results.txs_results {
-				Some(tx) => tx,
-				None => continue,
-			};
+
+			let tx_events = block_results
+				.txs_results
+				.unwrap_or_default()
+				.into_iter()
+				.flat_map(|tx| tx.events);
+			let begin_events = block_results.begin_block_events.unwrap_or_default().into_iter();
+			let end_events = block_results.end_block_events.unwrap_or_default().into_iter();
+			let events = begin_events.chain(tx_events).chain(end_events);
 
 			let ibc_height = Height::new(latest_revision, height);
-			for tx in tx_results.iter() {
-				for event in tx.clone().events {
-					let ibc_event = ibc_event_try_from_abci_event(&event, ibc_height).ok();
-					match ibc_event {
-						Some(mut ev) => {
-							ev.set_height(ibc_height);
-							log::debug!(target: "hyperspace_cosmos", "Encountered event at {height}: {:?}", event.kind);
-							ibc_events.push(ev);
-						},
-						None => {
-							log::debug!(target: "hyperspace_cosmos", "Skipped event: {:?}", event.kind);
-							continue
-						},
-					}
+			for event in events {
+				let ibc_event = ibc_event_try_from_abci_event(&event, ibc_height).ok();
+				match ibc_event {
+					Some(mut ev) => {
+						ev.set_height(ibc_height);
+						log::debug!(target: "hyperspace_cosmos", "Encountered event at {height}: {:?}", event.kind);
+						ibc_events.push(ev);
+					},
+					None => {
+						log::debug!(target: "hyperspace_cosmos", "Skipped event: {:?}", event.kind);
+						continue
+					},
 				}
 			}
 		}
