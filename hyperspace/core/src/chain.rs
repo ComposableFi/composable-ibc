@@ -737,12 +737,12 @@ impl Chain for AnyChain {
 		match self {
 			Self::Parachain(chain) => {
 				use futures::StreamExt;
-				Box::pin(chain.finality_notifications().await.map(|x| x.into()))
+				Box::pin(chain.finality_notifications().await.map(Into::into))
 			},
 			#[cfg(feature = "cosmos")]
 			Self::Cosmos(chain) => {
 				use futures::StreamExt;
-				Box::pin(chain.finality_notifications().await.map(|x| x.into()))
+				Box::pin(chain.finality_notifications().await.map(Into::into))
 			},
 		}
 	}
