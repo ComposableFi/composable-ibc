@@ -64,7 +64,7 @@ pub fn encode_tx_body(messages: Vec<Any>) -> Result<(TxBody, Vec<u8>), Error> {
 		messages,
 		memo: "ibc".to_string(),
 		timeout_height: 0_u64,
-		extension_options: Vec::<Any>::default(), // TODO: Check if this is correct
+		extension_options: Vec::<Any>::default(),
 		non_critical_extension_options: Vec::<Any>::default(),
 	};
 	let mut body_bytes = Vec::new();
