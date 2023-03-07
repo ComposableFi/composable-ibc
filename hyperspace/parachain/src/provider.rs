@@ -99,10 +99,12 @@ where
 		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
+	<T as config::Config>::AssetId: Clone,
 {
 	type FinalityEvent = FinalityEvent;
 	type TransactionId = TransactionId<T::Hash>;
 	type Error = Error;
+	type AssetId = <T as config::Config>::AssetId;
 
 	async fn query_latest_ibc_events<C>(
 		&mut self,
@@ -568,16 +570,19 @@ where
 		Ok(Some(host_consensus_proof.encode()))
 	}
 
-	async fn query_ibc_balance(&self) -> Result<Vec<PrefixedCoin>, Self::Error> {
+	async fn query_ibc_balance(
+		&self,
+		asset_id: Self::AssetId,
+	) -> Result<Vec<PrefixedCoin>, Self::Error> {
 		let account = self.public_key.clone().into_account();
 		let account = subxt::utils::AccountId32::from(<[u8; 32]>::from(account));
-		// let account_addr = parachain::api::storage().assets().account(2, &account);
 		let mut hex_string = hex::encode(account.0.to_vec());
 		hex_string.insert_str(0, "0x");
 		let coin: ibc_proto::cosmos::base::v1beta1::Coin =
 			IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_balance_with_address(
 				&*self.para_ws_client,
 				hex_string,
+				asset_id,
 			)
 			.await
 			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
