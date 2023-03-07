@@ -1,4 +1,5 @@
 use super::client::CosmosClient;
+use crate::error::Error;
 use core::pin::Pin;
 use futures::{Stream, StreamExt};
 use ibc::{
@@ -31,7 +32,7 @@ where
 		_channel_id: ChannelId,
 		_timeout: pallet_ibc::Timeout,
 	) -> Result<(), Self::Error> {
-		todo!()
+		Err(Error::Custom("send_ordered_packet is not implemented yet".to_string()))
 	}
 
 	/// Returns a stream that yields chain Block number

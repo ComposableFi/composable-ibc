@@ -20,14 +20,6 @@ use tendermint_light_client_verifier::{
 };
 use tendermint_rpc::{Client, HttpClient, Url};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Verified<H> {
-	/// Verified target
-	pub target: H,
-	/// Supporting headers needed to verify `target`
-	pub supporting: Vec<H>,
-}
-
 #[derive(Clone, Debug)]
 pub struct LightClient {
 	pub peer_id: PeerId,
