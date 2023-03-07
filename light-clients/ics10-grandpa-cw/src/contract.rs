@@ -307,8 +307,8 @@ fn process_message(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(_deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 	match msg {
-		QueryMsg::ClientTypeMsg(_) => todo!(),
-		QueryMsg::GetLatestHeightsMsg(_) => todo!(),
+		QueryMsg::ClientTypeMsg(_) => unimplemented!("ClientTypeMsg"),
+		QueryMsg::GetLatestHeightsMsg(_) => unimplemented!("GetLatestHeightsMsg"),
 	}
 }
 

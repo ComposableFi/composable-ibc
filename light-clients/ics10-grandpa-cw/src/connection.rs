@@ -12,8 +12,7 @@ use std::time::Duration;
 
 impl<'a, H: HostFunctions> ConnectionReader for Context<'a, H> {
 	fn minimum_delay_period(&self) -> Duration {
-		// FIXME: delay period
-		Duration::from_secs(0)
+		unimplemented!("minimum_delay_period")
 	}
 
 	fn connection_end(&self, _conn_id: &ConnectionId) -> Result<ConnectionEnd, Error> {

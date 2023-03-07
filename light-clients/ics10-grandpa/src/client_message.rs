@@ -68,13 +68,6 @@ pub struct Misbehaviour {
 	pub second_finality_proof: FinalityProof<RelayChainHeader>,
 }
 
-impl Misbehaviour {
-	pub fn client_id(&self) -> ClientId {
-		// FIXME: proper grandpa client id calculation
-		ClientId::new("10-grandpa", 0).unwrap()
-	}
-}
-
 /// [`ClientMessage`] for Ics10-GRANDPA
 #[derive(Clone, Debug)]
 pub enum ClientMessage {

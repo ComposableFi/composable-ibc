@@ -85,8 +85,6 @@ where
 	}
 
 	fn latest_height(&self) -> Height {
-		// TODO: use self.latest_height?
-		// self.inner.latest_height()
 		self.latest_height
 	}
 
