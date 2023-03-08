@@ -13,12 +13,22 @@
 // limitations under the License.
 
 use async_trait::async_trait;
+use ibc::core::ics26_routing::msgs::Ics26Envelope;
+use ibc_proto::google::protobuf::Any;
 use subxt::{config::ExtrinsicParams, OnlineClient};
 
 pub type CustomExtrinsicParams<T> = <<T as subxt::Config>::ExtrinsicParams as ExtrinsicParams<
 	<T as subxt::Config>::Index,
 	<T as subxt::Config>::Hash,
 >>::OtherParams;
+
+pub trait TimestampStorage {
+	fn now() -> ();
+}
+
+pub trait IbcCallable {
+	fn extract_ibc_deliver_messages(&self) -> Option<Vec<Any>>;
+}
 
 /// This allows end users of this crate return the correct extrinsic metadata required by their
 /// runtimes into the transactions signed by this crate.
@@ -30,6 +40,11 @@ pub trait Config: subxt::Config + Sized {
 	type Signature: sp_runtime::traits::Verify + From<<Self as subxt::Config>::Signature>;
 	/// Address type used by the runtime;
 	type Address: codec::Codec + From<<Self as subxt::Config>::Address>;
+	/// Runtime call
+	type RuntimeCall: IbcCallable;
+	/// Runtime call
+	type Timestamp: TimestampStorage;
+
 	/// use the subxt client to fetch any neccessary data needed for the extrinsic metadata.
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,

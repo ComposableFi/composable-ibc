@@ -39,7 +39,7 @@ pub type SignedExtra = (Era, CheckNonce, Compact<Balance>);
 
 pub struct UncheckedExtrinsic<T: Config> {
 	pub signature: Option<(<T as Config>::Address, sp_runtime::MultiSignature, SignedExtra)>,
-	pub function: RuntimeCall,
+	pub function: T::RuntimeCall,
 }
 
 // the code was taken from https://github.com/paritytech/substrate/blob/0c1ccdaa53556a106aa69c23f19527e435970237/primitives/runtime/src/generic/unchecked_extrinsic.rs#L233

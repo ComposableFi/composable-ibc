@@ -346,7 +346,7 @@ where
 
 		let subxt_block_number: subxt::rpc::types::BlockNumber = latest_height.into();
 		let block_hash = self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
-		let timestamp_addr = parachain::api::storage().timestamp().now();
+		let timestamp_addr = T::Timestamp::now();
 		let unix_timestamp_millis = self
 			.para_client
 			.storage()

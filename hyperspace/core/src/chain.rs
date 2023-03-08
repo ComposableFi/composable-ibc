@@ -52,7 +52,7 @@ use thiserror::Error;
 
 use ibc::core::ics02_client::events::UpdateClient;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
-use parachain::{config, ParachainClient};
+use parachain::{config, config::TimestampStorage, ParachainClient};
 use primitives::{
 	Chain, IbcProvider, KeyProvider, LightClientSync, MisbehaviourHandler, UpdateType,
 };
@@ -75,11 +75,21 @@ use subxt::config::polkadot::{
 #[derive(Debug, Clone)]
 pub enum DefaultConfig {}
 
+struct DefaultTimestamp;
+
+impl TimestampStorage for DefaultTimestamp {
+	fn now() -> () {
+		parachain::api::storage().timestamp().now();
+	}
+}
+
 #[async_trait]
 impl config::Config for DefaultConfig {
 	type AssetId = u128;
 	type Signature = <Self as subxt::Config>::Signature;
 	type Address = <Self as subxt::Config>::Address;
+	type RuntimeCall = ();
+	type Timestamp = DefaultTimestamp;
 
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,
@@ -94,6 +104,44 @@ impl config::Config for DefaultConfig {
 }
 
 impl subxt::Config for DefaultConfig {
+	type Index = u32;
+	type BlockNumber = u32;
+	type Hash = sp_core::H256;
+	type Hasher = subxt::config::substrate::BlakeTwo256;
+	type AccountId = sp_runtime::AccountId32;
+	type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
+	type Header = subxt::config::substrate::SubstrateHeader<
+		Self::BlockNumber,
+		subxt::config::substrate::BlakeTwo256,
+	>;
+	type Signature = sp_runtime::MultiSignature;
+	type ExtrinsicParams = ParachainExtrinsicParams<Self>;
+}
+
+#[derive(Debug, Clone)]
+pub enum KusamaConfig {}
+
+#[async_trait]
+impl config::Config for KusamaConfig {
+	type AssetId = u128;
+	type Signature = <Self as subxt::Config>::Signature;
+	type Address = <Self as subxt::Config>::Address;
+	type RuntimeCall = ();
+	type Timestamp = ();
+
+	async fn custom_extrinsic_params(
+		client: &OnlineClient<Self>,
+	) -> Result<
+		<Self::ExtrinsicParams as ExtrinsicParams<Self::Index, Self::Hash>>::OtherParams,
+		Error,
+	> {
+		let params =
+			ParachainExtrinsicsParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
+		Ok(params.into())
+	}
+}
+
+impl subxt::Config for KusamaConfig {
 	type Index = u32;
 	type BlockNumber = u32;
 	type Hash = sp_core::H256;
@@ -129,6 +177,7 @@ pub struct CoreConfig {
 #[derive(Clone)]
 pub enum AnyChain {
 	Parachain(ParachainClient<DefaultConfig>),
+	Parachain2(ParachainClient<KusamaConfig>),
 }
 
 #[derive(From)]

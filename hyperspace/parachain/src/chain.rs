@@ -40,6 +40,7 @@ use primitives::{Chain, IbcProvider, MisbehaviourHandler};
 use super::{error::Error, signer::ExtrinsicSigner, ParachainClient};
 use crate::{
 	config,
+	config::IbcCallable,
 	parachain::{
 		api,
 		api::runtime_types::{frame_system::Phase, pallet_ibc::Any as RawAny},
@@ -314,25 +315,25 @@ where
 			UncheckedExtrinsic::<T>::decode(&mut &*extrinsic_opaque.0.encode())
 				.map_err(|e| Error::from(format!("Extrinsic decode error: {}", e)))?;
 
-		match unchecked_extrinsic.function {
-			RuntimeCall::Ibc(IbcCall::deliver { messages }) => {
-				let message = messages.get(event_index).ok_or_else(|| {
-					Error::from(format!("Message index {} out of bounds", event_index))
-				})?;
-				let envelope = Ics26Envelope::<LocalClientTypes>::try_from(Any {
-					type_url: String::from_utf8(message.type_url.clone()).map_err(|_| {
-						Error::from("failed to create String from utf-8".to_string())
-					})?,
-					value: message.value.clone(),
-				});
-				match envelope {
-					Ok(Ics26Envelope::Ics2Msg(ClientMsg::UpdateClient(update_msg))) =>
-						return Ok(update_msg.client_message),
-					_ => (),
-				}
-			},
+		let messages = unchecked_extrinsic.function.extract_ibc_deliver_messages()?;
+		// match unchecked_extrinsic.function {
+		// 	RuntimeCall::Ibc(IbcCall::deliver { messages }) => {
+		let message = messages
+			.get(event_index)
+			.ok_or_else(|| Error::from(format!("Message index {} out of bounds", event_index)))?;
+		let envelope = Ics26Envelope::<LocalClientTypes>::try_from(Any {
+			type_url: String::from_utf8(message.type_url.clone())
+				.map_err(|_| Error::from("failed to create String from utf-8".to_string()))?,
+			value: message.value.clone(),
+		});
+		match envelope {
+			Ok(Ics26Envelope::Ics2Msg(ClientMsg::UpdateClient(update_msg))) =>
+				return Ok(update_msg.client_message),
 			_ => (),
 		}
+		// },
+		// _ => (),
+		// }
 
 		Err(Error::from("No client message found".to_owned()))
 	}

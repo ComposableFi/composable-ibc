@@ -69,3 +69,4 @@ build-metadata-from-ws = [
 #cosmos = ["dep:cosmos"]
 testing = [ "primitives/testing", "parachain/testing" ]
 dali = ["parachain/dali"]
+kusama = []
