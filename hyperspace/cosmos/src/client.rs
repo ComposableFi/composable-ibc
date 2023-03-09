@@ -5,7 +5,7 @@ use super::{
 	tx::{broadcast_tx, confirm_tx, sign_tx, simulate_tx},
 };
 use crate::error::Error;
-use bip32::{ExtendedPrivateKey, XPub as ExtendedPublicKey};
+use bip32::{ExtendedPrivateKey, Mnemonic, XPub as ExtendedPublicKey, Prefix};
 use core::convert::{From, Into, TryFrom};
 use ibc::core::{
 	ics02_client::height::Height,
@@ -70,6 +70,21 @@ impl TryFrom<ConfigKeyEntry> for KeyEntry {
 	}
 }
 
+impl TryFrom<String> for KeyEntry {
+	type Error = bip32::Error;
+
+	fn try_from(mnemonic: String) -> Result<Self, Self::Error> {
+		let seed = Mnemonic::new(mnemonic, Default::default())?.to_seed("");
+		let key_m = bip32::XPrv::derive_from_path(seed, "m/44'/118'/0'/0/0".parse().unwrap())?;
+		Ok(KeyEntry {
+			public_key: ExtendedPublicKey::from_str(&key_m.public_key().to_string(Prefix::XPUB))?,
+			private_key: ExtendedPrivateKey::from_str(&key_m.to_string(Prefix::XPRV))?,
+			account: bech32::encode("cosmos", public_key, Variant::Bech32),
+			address: value.address,
+		})
+	}
+}
+
 // Implements the [`crate::Chain`] trait for cosmos.
 /// This is responsible for:
 /// 1. Tracking a cosmos light client on a counter-party chain, advancing this light
@@ -116,6 +131,11 @@ pub struct CosmosClient<H> {
 	pub tx_mutex: Arc<tokio::sync::Mutex<()>>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum KeyBaseConfig {
+	ConfigKeyEntry(ConfigKeyEntry),
+	Mnemonic(String),
+}
 /// config options for [`ParachainClient`]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CosmosClientConfig {
@@ -172,7 +192,7 @@ pub struct CosmosClientConfig {
 	pub extension_options: Vec<ExtensionOption>,// TODO: Could be set to None
 	*/
 	/// The key that signs transactions
-	pub keybase: ConfigKeyEntry,
+	pub keybase: KeyBaseConfig,
 	/// Whitelisted channels
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 }
@@ -198,6 +218,13 @@ where
 		let commitment_prefix = CommitmentPrefix::try_from(config.store_prefix.as_bytes().to_vec())
 			.map_err(|e| Error::from(format!("Invalid store prefix {:?}", e)))?;
 
+		let keybase: KeyEntry;
+		match config.keybase {
+			KeyBaseConfig::ConfigKeyEntry(configKey) => {
+				keybase = KeyEntry::try_from(configKey).map_err(|e| e.to_string())?
+			},
+			KeyBaseConfig::Mnemonic(mnemonic) => {},
+		}
 		Ok(Self {
 			name: config.name,
 			chain_id,
@@ -219,7 +246,7 @@ where
 			fee_amount: config.fee_amount,
 			gas_limit: config.gas_limit,
 			max_tx_size: config.max_tx_size,
-			keybase: KeyEntry::try_from(config.keybase).map_err(|e| e.to_string())?,
+			keybase,
 			channel_whitelist: config.channel_whitelist,
 			_phantom: std::marker::PhantomData,
 			tx_mutex: Default::default(),
@@ -393,7 +420,7 @@ where
 			return Err(Error::from(format!(
 				"Query failed with code {:?} and log {:?}",
 				response.code, response.log
-			)))
+			)));
 		}
 
 		if prove && response.proof.is_none() {
@@ -401,7 +428,7 @@ where
 			return Err(Error::from(format!(
 				"Query failed due to empty proof for chain {}",
 				self.name
-			)))
+			)));
 		}
 
 		let merkle_proof = response
