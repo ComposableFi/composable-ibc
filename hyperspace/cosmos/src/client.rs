@@ -87,7 +87,7 @@ impl TryFrom<String> for KeyEntry {
 		Ok(KeyEntry {
 			public_key: ExtendedPublicKey::from_str(&key_m.public_key().to_string(Prefix::XPUB))?,
 			private_key: ExtendedPrivateKey::from_str(&key_m.to_string(Prefix::XPRV))?,
-			account: account,
+			account: account.clone(),
 			address: account.as_bytes().to_vec(),
 		})
 	}
@@ -231,7 +231,9 @@ where
 			KeyBaseConfig::ConfigKeyEntry(configKey) => {
 				keybase = KeyEntry::try_from(configKey).map_err(|e| e.to_string())?
 			},
-			KeyBaseConfig::Mnemonic(mnemonic) => {},
+			KeyBaseConfig::Mnemonic(mnemonic) => {
+				keybase = KeyEntry::try_from(mnemonic).map_err(|e| e.to_string())?
+			},
 		}
 		Ok(Self {
 			name: config.name,
