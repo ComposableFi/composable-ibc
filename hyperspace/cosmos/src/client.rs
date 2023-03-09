@@ -6,6 +6,8 @@ use super::{
 };
 use crate::error::Error;
 use bip32::{ExtendedPrivateKey, Mnemonic, XPub as ExtendedPublicKey, Prefix};
+use secp256k1::{Secp256k1, SecretKey, PublicKey};
+use bech32::ToBase32;
 use core::convert::{From, Into, TryFrom};
 use ibc::core::{
 	ics02_client::height::Height,
@@ -75,12 +77,18 @@ impl TryFrom<String> for KeyEntry {
 
 	fn try_from(mnemonic: String) -> Result<Self, Self::Error> {
 		let seed = Mnemonic::new(mnemonic, Default::default())?.to_seed("");
-		let key_m = bip32::XPrv::derive_from_path(seed, "m/44'/118'/0'/0/0".parse().unwrap())?;
+		let key_m = bip32::XPrv::derive_from_path(seed, &"m/44'/118'/0'/0/0".parse().unwrap())?;
+		let secp = Secp256k1::new();
+		let public_key = PublicKey::from_secret_key(&secp, &SecretKey::from_slice(&key_m.to_bytes()).unwrap());
+		let public_key_bytes = public_key.serialize_uncompressed();
+		let hex_encoded_pub_key = hex::encode(&public_key_bytes[1..]);
+		let pub_key_data = hex::decode(&format!("04{}",hex_encoded_pub_key)).unwrap();
+		let account = bech32::encode("cosmos", pub_key_data.to_base32(), bech32::Variant::Bech32).unwrap();
 		Ok(KeyEntry {
 			public_key: ExtendedPublicKey::from_str(&key_m.public_key().to_string(Prefix::XPUB))?,
 			private_key: ExtendedPrivateKey::from_str(&key_m.to_string(Prefix::XPRV))?,
-			account: bech32::encode("cosmos", public_key, Variant::Bech32),
-			address: value.address,
+			account: account,
+			address: account.as_bytes().to_vec(),
 		})
 	}
 }

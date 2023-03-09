@@ -3962,6 +3962,7 @@ dependencies = [
  "async-trait",
  "bech32",
  "bip32",
+ "data-encoding",
  "derive_more",
  "ed25519-zebra",
  "futures",
@@ -3980,6 +3981,7 @@ dependencies = [
  "parity-scale-codec",
  "prost",
  "rs_merkle",
+ "secp256k1 0.26.0",
  "serde",
  "serde_json",
  "tendermint",
@@ -11329,7 +11331,16 @@ version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b1629c9c557ef9b293568b338dddfc8208c98a18c59d722a9d53f859d9c9b62"
 dependencies = [
- "secp256k1-sys",
+ "secp256k1-sys 0.6.1",
+]
+
+[[package]]
+name = "secp256k1"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4124a35fe33ae14259c490fd70fa199a32b9ce9502f2ee6bc4f81ec06fa65894"
+dependencies = [
+ "secp256k1-sys 0.8.0",
 ]
 
 [[package]]
@@ -11337,6 +11348,15 @@ name = "secp256k1-sys"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "83080e2c2fc1006e625be82e5d1eb6a43b7fd9578b617fcc55814daf286bba4b"
+dependencies = [
+ "cc",
+]
+
+[[package]]
+name = "secp256k1-sys"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "642a62736682fdd8c71da0eb273e453c8ac74e33b9fb310e22ba5b03ec7651ff"
 dependencies = [
  "cc",
 ]
@@ -12070,7 +12090,7 @@ dependencies = [
  "regex",
  "scale-info",
  "schnorrkel",
- "secp256k1",
+ "secp256k1 0.24.3",
  "secrecy",
  "serde",
  "sp-core-hashing 5.0.0 (git+https://github.com/paritytech/substrate?tag=monthly-2023-01)",
@@ -12114,7 +12134,7 @@ dependencies = [
  "regex",
  "scale-info",
  "schnorrkel",
- "secp256k1",
+ "secp256k1 0.24.3",
  "secrecy",
  "serde",
  "sp-core-hashing 5.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
@@ -12158,7 +12178,7 @@ dependencies = [
  "regex",
  "scale-info",
  "schnorrkel",
- "secp256k1",
+ "secp256k1 0.24.3",
  "secrecy",
  "serde",
  "sp-core-hashing 6.0.0",
@@ -12368,7 +12388,7 @@ dependencies = [
  "libsecp256k1",
  "log",
  "parity-scale-codec",
- "secp256k1",
+ "secp256k1 0.24.3",
  "sp-core 7.0.0 (git+https://github.com/paritytech/substrate?tag=monthly-2023-01)",
  "sp-externalities 0.13.0 (git+https://github.com/paritytech/substrate?tag=monthly-2023-01)",
  "sp-keystore 0.13.0 (git+https://github.com/paritytech/substrate?tag=monthly-2023-01)",
@@ -12394,7 +12414,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "parking_lot 0.12.1",
- "secp256k1",
+ "secp256k1 0.24.3",
  "sp-core 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-externalities 0.13.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-keystore 0.13.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
@@ -12421,7 +12441,7 @@ dependencies = [
  "libsecp256k1",
  "log",
  "parity-scale-codec",
- "secp256k1",
+ "secp256k1 0.24.3",
  "sp-core 11.0.0",
  "sp-externalities 0.15.0",
  "sp-keystore 0.17.0",

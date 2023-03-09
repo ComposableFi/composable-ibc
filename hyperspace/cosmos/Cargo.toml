@@ -26,8 +26,10 @@ itertools = "0.10.3"
 prost = { version = "0.11" }
 k256 = { version = "0.11.6", features = ["ecdsa-core", "ecdsa", "sha256"] }
 tonic = { version = "0.8", features = ["tls", "tls-roots"] }
-bech32 = "0.9.1"
+bech32 = "0.9.0"
 bip32 = "0.4.0"
+secp256k1 = "0.26.0"
+data-encoding = "2.3.3"
 ed25519-zebra = { version = "3.1.0" }
 
 # composable
