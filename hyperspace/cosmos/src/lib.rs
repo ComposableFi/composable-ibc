@@ -23,8 +23,11 @@ pub mod events;
 pub mod key_provider;
 pub mod light_client;
 pub mod provider;
-#[cfg(any(test, feature = "testing"))]
-pub mod test_provider;
+
+// For testing purpose
+// #[cfg(any(test, feature = "testing"))]
+// pub mod test_provider;
+
 pub mod tx;
 
 pub type TimeoutHeight = Option<Height>;

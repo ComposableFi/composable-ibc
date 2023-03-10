@@ -6,7 +6,7 @@ use super::{
 };
 use crate::error::Error;
 use bip32::{ExtendedPrivateKey, Mnemonic, XPub as ExtendedPublicKey, Prefix};
-use secp256k1::{Secp256k1, SecretKey, PublicKey};
+use secp256k1::{Message as Secp256k1Message, PublicKey, Secp256k1, SecretKey};
 use bech32::ToBase32;
 use core::convert::{From, Into, TryFrom};
 use ibc::core::{
@@ -34,6 +34,19 @@ use serde::{Deserialize, Serialize};
 use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
 use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient, Url};
+use ed25519_zebra::{SigningKey, VerificationKey, VerificationKeyBytes};
+use hdpath::StandardHDPath;
+use bitcoin::{
+    network::constants::Network,
+    util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey},
+};
+use ibc_relayer::{
+    chain::ChainType,
+    config::{ChainConfig, Config, AddressType},
+    keyring::{
+        AnySigningKeyPair, KeyRing, Secp256k1KeyPair, SigningKeyPair, SigningKeyPairSized, Store
+    },
+};
 
 const DEFAULT_FEE_DENOM: &str = "stake";
 const DEFAULT_FEE_AMOUNT: &str = "4000";
@@ -76,19 +89,19 @@ impl TryFrom<String> for KeyEntry {
 	type Error = bip32::Error;
 
 	fn try_from(mnemonic: String) -> Result<Self, Self::Error> {
-		let seed = Mnemonic::new(mnemonic, Default::default())?.to_seed("");
-		let key_m = bip32::XPrv::derive_from_path(seed, &"m/44'/118'/0'/0/0".parse().unwrap())?;
-		let secp = Secp256k1::new();
-		let public_key = PublicKey::from_secret_key(&secp, &SecretKey::from_slice(&key_m.to_bytes()).unwrap());
-		let public_key_bytes = public_key.serialize_uncompressed();
-		let hex_encoded_pub_key = hex::encode(&public_key_bytes[1..]);
-		let pub_key_data = hex::decode(&format!("04{}",hex_encoded_pub_key)).unwrap();
-		let account = bech32::encode("cosmos", pub_key_data.to_base32(), bech32::Variant::Bech32).unwrap();
+		let hdpath = StandardHDPath::from_str("m/44'/118'/0'/0/0").unwrap();
+		let key_pair = Secp256k1KeyPair::from_mnemonic(
+			&mnemonic,
+			&hdpath,
+			&AddressType::Cosmos,
+			"cosmos",
+		).unwrap();
+		// TODO: get priv and pub keys
 		Ok(KeyEntry {
-			public_key: ExtendedPublicKey::from_str(&key_m.public_key().to_string(Prefix::XPUB))?,
-			private_key: ExtendedPrivateKey::from_str(&key_m.to_string(Prefix::XPRV))?,
-			account: account.clone(),
-			address: account.as_bytes().to_vec(),
+			public_key: ExtendedPublicKey::from_str(&"todo")?,
+			private_key: ExtendedPrivateKey::from_str(&"todo")?,
+			account: key_pair.account(),
+			address: key_pair.account().as_bytes().to_vec(),
 		})
 	}
 }
@@ -228,8 +241,8 @@ where
 
 		let keybase: KeyEntry;
 		match config.keybase {
-			KeyBaseConfig::ConfigKeyEntry(configKey) => {
-				keybase = KeyEntry::try_from(configKey).map_err(|e| e.to_string())?
+			KeyBaseConfig::ConfigKeyEntry(config_key) => {
+				keybase = KeyEntry::try_from(config_key).map_err(|e| e.to_string())?
 			},
 			KeyBaseConfig::Mnemonic(mnemonic) => {
 				keybase = KeyEntry::try_from(mnemonic).map_err(|e| e.to_string())?
@@ -451,5 +464,31 @@ where
 		let proof = CommitmentProofBytes::try_from(merkle_proof)
 			.map_err(|err| Error::Custom(format!("bad client state proof: {}", err)))?;
 		Ok((response, proof.into()))
+	}
+}
+
+
+
+#[cfg(test)]
+pub mod tests {
+
+	use crate::key_provider::KeyEntry;
+    use bip32::{Prefix, XPrv};
+
+	#[test]
+	fn test_from_mnemonic() {
+		let mnemonic: String =
+			"idea gap afford glow ugly suspect exile wedding fiber turn opinion weekend moon project egg certain play obvious slice delay present weekend toe ask".to_string();
+		let keyEntry = KeyEntry::try_from(mnemonic);
+		let a;
+		match keyEntry {
+			Ok(gud) => {
+				a = gud;
+                println!("{:?}", a.account);
+                // assert_eq!(a.private_key.private_key())
+				assert_eq!(a.account, "cosmos15hf3dgggyt4azpd693ax7fdfve8d5m6ct72z9p".to_string())
+			},
+			Err(err) => eprintln!("Error: {}", err),
+		}
 	}
 }

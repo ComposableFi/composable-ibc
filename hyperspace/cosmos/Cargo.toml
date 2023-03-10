@@ -28,9 +28,13 @@ k256 = { version = "0.11.6", features = ["ecdsa-core", "ecdsa", "sha256"] }
 tonic = { version = "0.8", features = ["tls", "tls-roots"] }
 bech32 = "0.9.0"
 bip32 = "0.4.0"
-secp256k1 = "0.26.0"
+secp256k1 = { version = "0.24.2", features = ["rand-std"] }
 data-encoding = "2.3.3"
 ed25519-zebra = { version = "3.1.0" }
+tiny-bip39 = "1.0.0"
+ibc-relayer = "0.22.0"
+bitcoin = { version = "0.29.1", features = ["serde"] }
+hdpath = "0.6.1"
 
 # composable
 ibc = { path = "../../ibc/modules", features = [] }
