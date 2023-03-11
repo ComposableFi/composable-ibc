@@ -5,7 +5,7 @@ use super::{
 	tx::{broadcast_tx, confirm_tx, sign_tx, simulate_tx},
 };
 use crate::error::Error;
-use bip32::{ExtendedPrivateKey, Mnemonic, XPub as ExtendedPublicKey, Prefix};
+use bip32::{ExtendedPrivateKey, XPub as ExtendedPublicKey, Prefix};
 use secp256k1::{Message as Secp256k1Message, PublicKey, Secp256k1, SecretKey};
 use bech32::ToBase32;
 use core::convert::{From, Into, TryFrom};
@@ -38,8 +38,9 @@ use ed25519_zebra::{SigningKey, VerificationKey, VerificationKeyBytes};
 use hdpath::StandardHDPath;
 use bitcoin::{
     network::constants::Network,
-    util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey},
+    util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey}, hashes::hex::ToHex,
 };
+use bip39::{Mnemonic, Language, Seed};
 use ibc_relayer::{
     chain::ChainType,
     config::{ChainConfig, Config, AddressType},
@@ -96,14 +97,56 @@ impl TryFrom<String> for KeyEntry {
 			&AddressType::Cosmos,
 			"cosmos",
 		).unwrap();
-		// TODO: get priv and pub keys
+
+		let private_key = private_key_from_mnemonic(&mnemonic, &hdpath).unwrap();
+		let public_key = ExtendedPubKey::from_priv(&Secp256k1::signing_only(), &private_key);
+
 		Ok(KeyEntry {
-			public_key: ExtendedPublicKey::from_str(&"todo")?,
-			private_key: ExtendedPrivateKey::from_str(&"todo")?,
+			public_key: ExtendedPublicKey::from_str(&public_key.public_key.to_string())?,	// TODO: XPUB prefix
+			private_key: ExtendedPrivateKey::from_str(&private_key.private_key.secret_bytes().to_hex())?, // TODO: XPRI prefix
 			account: key_pair.account(),
 			address: key_pair.account().as_bytes().to_vec(),
 		})
 	}
+}
+
+pub fn private_key_from_mnemonic(
+    mnemonic_words: &str,
+    hd_path: &StandardHDPath,
+) -> Result<ExtendedPrivKey, Error> {
+    let mnemonic = Mnemonic::from_phrase(mnemonic_words, Language::English)
+        .map_err(|err| { Error::Custom("Invalid mnemonic".to_string())})?;
+
+    let seed = Seed::new(&mnemonic, "");
+
+    let base_key =
+        ExtendedPrivKey::new_master(Network::Bitcoin, seed.as_bytes()).map_err(|err| {
+            Error::Custom("bip32 key generation failed".to_string())
+        })?;
+
+    let private_key = base_key
+        .derive_priv(
+            &Secp256k1::new(),
+            &standard_path_to_derivation_path(hd_path),
+        )
+        .map_err(|err| {
+            Error::Custom("bip32 key generation failed".to_string())
+        })?;
+
+    Ok(private_key)
+}
+
+fn standard_path_to_derivation_path(path: &StandardHDPath) -> DerivationPath {
+    let child_numbers = vec![
+        ChildNumber::from_hardened_idx(path.purpose().as_value().as_number())
+            .expect("Purpose is not Hardened"),
+        ChildNumber::from_hardened_idx(path.coin_type()).expect("Coin Type is not Hardened"),
+        ChildNumber::from_hardened_idx(path.account()).expect("Account is not Hardened"),
+        ChildNumber::from_normal_idx(path.change()).expect("Change is Hardened"),
+        ChildNumber::from_normal_idx(path.index()).expect("Index is Hardened"),
+    ];
+
+    DerivationPath::from(child_numbers)
 }
 
 // Implements the [`crate::Chain`] trait for cosmos.
@@ -485,7 +528,9 @@ pub mod tests {
 			Ok(gud) => {
 				a = gud;
                 println!("{:?}", a.account);
-                // assert_eq!(a.private_key.private_key())
+                println!("{:?}", a.private_key);
+				println!("{:?}", a.public_key);
+
 				assert_eq!(a.account, "cosmos15hf3dgggyt4azpd693ax7fdfve8d5m6ct72z9p".to_string())
 			},
 			Err(err) => eprintln!("Error: {}", err),
