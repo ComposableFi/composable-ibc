@@ -1,6 +1,6 @@
 use crate::{ics23::FakeInner, Bytes, ContractError};
 use core::str::FromStr;
-use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::{
 		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
@@ -31,6 +31,17 @@ impl Base64 {
 
 	pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<u8>, D::Error> {
 		ibc_proto::base64::deserialize(deserializer)
+	}
+}
+
+#[cw_serde]
+pub struct QueryResponse {
+	pub status: String,
+}
+
+impl QueryResponse {
+	pub fn status(status: String) -> Self {
+		Self { status: status }
 	}
 }
 
@@ -83,7 +94,6 @@ pub struct ClientCreateRequest {
 pub enum ExecuteMsg {
 	InitializeState(InitializeState),
 	ClientCreateRequest(WasmClientState<FakeInner, FakeInner, FakeInner>),
-	Status(StatusMsg),
 	VerifyMembership(VerifyMembershipMsgRaw),
 	VerifyNonMembership(VerifyNonMembershipMsgRaw),
 	VerifyClientMessage(VerifyClientMessageRaw),
@@ -95,12 +105,10 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
-#[derive(QueryResponses)]
 pub enum QueryMsg {
-	#[returns(String)]
 	ClientTypeMsg(ClientTypeMsg),
-	#[returns(HeightRaw)]
 	GetLatestHeightsMsg(GetLatestHeightsMsg),
+	Status(StatusMsg),
 }
 
 #[cw_serde]
