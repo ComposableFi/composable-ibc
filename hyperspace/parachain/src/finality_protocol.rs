@@ -87,13 +87,13 @@ impl FinalityProtocol {
 		counterparty: &C,
 	) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 	where
-		T: config::Config + Send + Sync,
+		T: light_client_common::config::Config + Send + Sync,
 		C: Chain,
 		u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 		u32: From<<T as subxt::Config>::BlockNumber>,
 		ParachainClient<T>: Chain,
 		ParachainClient<T>: KeyProvider,
-		<<T as config::Config>::Signature as Verify>::Signer:
+		<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
@@ -126,12 +126,12 @@ pub async fn query_latest_ibc_events_with_beefy<T, C>(
 	counterparty: &C,
 ) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 where
-	T: config::Config + Send + Sync,
+	T: light_client_common::config::Config + Send + Sync,
 	C: Chain,
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
 		+ From<<T as subxt::Config>::BlockNumber>,
 	ParachainClient<T>: Chain + KeyProvider,
-	<<T as config::Config>::Signature as Verify>::Signer:
+	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
@@ -248,12 +248,14 @@ where
 	};
 
 	// block_number => events
-	let events: HashMap<String, Vec<IbcEvent>> =
-		IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_events(
-			&*source.para_ws_client,
-			finalized_block_numbers,
-		)
-		.await?;
+	let events: HashMap<String, Vec<IbcEvent>> = IbcApiClient::<
+		u32,
+		H256,
+		<T as light_client_common::config::Config>::AssetId,
+	>::query_events(
+		&*source.para_ws_client, finalized_block_numbers
+	)
+	.await?;
 
 	// header number is serialized to string
 	let mut headers_with_events = events
@@ -328,12 +330,12 @@ pub async fn query_latest_ibc_events_with_grandpa<T, C>(
 	counterparty: &C,
 ) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
 where
-	T: config::Config + Send + Sync,
+	T: light_client_common::config::Config + Send + Sync,
 	C: Chain,
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
 		+ From<<T as subxt::Config>::BlockNumber>,
 	ParachainClient<T>: Chain + KeyProvider,
-	<<T as config::Config>::Signature as Verify>::Signer:
+	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
@@ -435,12 +437,14 @@ where
 	};
 
 	// block_number => events
-	let events: HashMap<String, Vec<IbcEvent>> =
-		IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_events(
-			&*source.para_ws_client,
-			finalized_block_numbers,
-		)
-		.await?;
+	let events: HashMap<String, Vec<IbcEvent>> = IbcApiClient::<
+		u32,
+		H256,
+		<T as light_client_common::config::Config>::AssetId,
+	>::query_events(
+		&*source.para_ws_client, finalized_block_numbers
+	)
+	.await?;
 
 	// header number is serialized to string
 	let mut headers_with_events = events

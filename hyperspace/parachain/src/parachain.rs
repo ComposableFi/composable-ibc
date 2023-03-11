@@ -17,29 +17,14 @@
 
 #![allow(missing_docs)]
 
-#[cfg(feature = "build-metadata-from-ws")]
-include!(concat!(env!("OUT_DIR"), "/parachain.rs"));
-
-#[cfg(not(feature = "build-metadata-from-ws"))]
-pub use subxt_generated::parachain::*;
-
-use api::runtime_types::frame_system::extensions::check_nonce::CheckNonce;
-
-#[cfg(feature = "dali")]
-use api::runtime_types::dali_runtime::RuntimeCall;
-#[cfg(not(feature = "dali"))]
-use api::runtime_types::parachain_runtime::RuntimeCall;
-
-use crate::config::Config;
 use codec::{Compact, Decode, Input};
+use light_client_common::config::Config;
 use sp_runtime::generic::Era;
 
-pub type Balance = u128;
-pub type SignedExtra = (Era, CheckNonce, Compact<Balance>);
-
 pub struct UncheckedExtrinsic<T: Config> {
-	pub signature: Option<(<T as Config>::Address, sp_runtime::MultiSignature, SignedExtra)>,
-	pub function: T::RuntimeCall,
+	pub signature:
+		Option<(<T as Config>::Address, <T as Config>::Signature, <T as Config>::SignedExtra)>,
+	pub function: T::ParaRuntimeCall,
 }
 
 // the code was taken from https://github.com/paritytech/substrate/blob/0c1ccdaa53556a106aa69c23f19527e435970237/primitives/runtime/src/generic/unchecked_extrinsic.rs#L233

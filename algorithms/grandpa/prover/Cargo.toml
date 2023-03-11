@@ -32,7 +32,6 @@ sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch 
 beefy-prover = { path = "../../beefy/prover" }
 primitives = { package = "grandpa-light-client-primitives", path = "../primitives" }
 light-client-common = { path = "../../../light-clients/common" }
-subxt-generated = { path = "../../../utils/subxt/generated" }
 
 [features]
 build-metadata-from-ws = []

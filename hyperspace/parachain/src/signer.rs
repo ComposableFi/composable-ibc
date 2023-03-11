@@ -26,7 +26,7 @@ use primitives::KeyProvider;
 
 /// A [`Signer`] implementation.
 #[derive(Clone)]
-pub struct ExtrinsicSigner<T: config::Config, Provider: KeyProvider> {
+pub struct ExtrinsicSigner<T: light_client_common::config::Config, Provider: KeyProvider> {
 	account_id: T::AccountId,
 	signer: MultiSigner,
 	key_store: SyncCryptoStorePtr,
@@ -36,8 +36,8 @@ pub struct ExtrinsicSigner<T: config::Config, Provider: KeyProvider> {
 
 impl<T, P> ExtrinsicSigner<T, P>
 where
-	T: config::Config + Send + Sync,
-	<<T as config::Config>::Signature as Verify>::Signer:
+	T: light_client_common::config::Config + Send + Sync,
+	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	P: KeyProvider,
 	MultiSigner: From<MultiSigner>,
@@ -52,8 +52,10 @@ where
 		public_key: MultiSigner,
 	) -> Self {
 		let account_id =
-			<<T as config::Config>::Signature as Verify>::Signer::from(public_key.clone())
-				.into_account();
+			<<T as light_client_common::config::Config>::Signature as Verify>::Signer::from(
+				public_key.clone(),
+			)
+			.into_account();
 		Self {
 			account_id,
 			key_store,
@@ -66,7 +68,7 @@ where
 
 impl<T, P> Signer<T> for ExtrinsicSigner<T, P>
 where
-	T: config::Config + Send + Sync,
+	T: light_client_common::config::Config + Send + Sync,
 	T::AccountId: Into<<T as subxt::Config>::Address> + Clone + 'static,
 	P: KeyProvider + 'static,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,

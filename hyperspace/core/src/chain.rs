@@ -14,7 +14,10 @@
 
 #![allow(unreachable_patterns)]
 
+use crate::substrate::{default, default::DefaultConfig};
 use async_trait::async_trait;
+use codec::{Compact, Decode, Encode};
+use default::parachain_subxt::api::runtime_types::frame_system::EventRecord;
 use derive_more::From;
 use futures::Stream;
 #[cfg(any(test, feature = "testing"))]
@@ -22,7 +25,7 @@ use ibc::applications::transfer::msgs::transfer::MsgTransfer;
 use ibc::{
 	applications::transfer::PrefixedCoin,
 	core::{
-		ics02_client::client_state::ClientType,
+		ics02_client::{client_state::ClientType, events::UpdateClient},
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
@@ -44,117 +47,50 @@ use ibc_proto::{
 		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
 	},
 };
-use pallet_ibc::light_clients::AnyClientMessage;
+use light_client_common::config::{
+	EventRecordT, IbcEventsT, LocalStaticStorageAddress, RuntimeCall, RuntimeStorage,
+	RuntimeTransactions,
+};
 #[cfg(any(test, feature = "testing"))]
 use pallet_ibc::Timeout;
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
-
-use ibc::core::ics02_client::events::UpdateClient;
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
-use parachain::{config, config::TimestampStorage, ParachainClient};
+use pallet_ibc::{
+	errors::IbcError,
+	light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState},
+	MultiAddress, PalletParams, TransferParams,
+};
+use parachain::{config, ParachainClient};
 use primitives::{
 	Chain, IbcProvider, KeyProvider, LightClientSync, MisbehaviourHandler, UpdateType,
 };
-use std::{pin::Pin, time::Duration};
-#[cfg(feature = "dali")]
-use subxt::config::substrate::{
-	SubstrateExtrinsicParams as ParachainExtrinsicParams,
-	SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
-};
-use subxt::{config::ExtrinsicParams, Error, OnlineClient};
-
-use subxt::config::extrinsic_params::Era;
+use serde::{Deserialize, Serialize};
+use sp_core::{crypto::AccountId32, H256};
+use std::{borrow::Borrow, pin::Pin, time::Duration};
 #[cfg(not(feature = "dali"))]
 use subxt::config::polkadot::{
 	PolkadotExtrinsicParams as ParachainExtrinsicParams,
 	PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
 };
-
-// TODO: expose extrinsic param builder
-#[derive(Debug, Clone)]
-pub enum DefaultConfig {}
-
-struct DefaultTimestamp;
-
-impl TimestampStorage for DefaultTimestamp {
-	fn now() -> () {
-		parachain::api::storage().timestamp().now();
-	}
-}
-
-#[async_trait]
-impl config::Config for DefaultConfig {
-	type AssetId = u128;
-	type Signature = <Self as subxt::Config>::Signature;
-	type Address = <Self as subxt::Config>::Address;
-	type RuntimeCall = ();
-	type Timestamp = DefaultTimestamp;
-
-	async fn custom_extrinsic_params(
-		client: &OnlineClient<Self>,
-	) -> Result<
-		<Self::ExtrinsicParams as ExtrinsicParams<Self::Index, Self::Hash>>::OtherParams,
-		Error,
-	> {
-		let params =
-			ParachainExtrinsicsParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
-		Ok(params.into())
-	}
-}
-
-impl subxt::Config for DefaultConfig {
-	type Index = u32;
-	type BlockNumber = u32;
-	type Hash = sp_core::H256;
-	type Hasher = subxt::config::substrate::BlakeTwo256;
-	type AccountId = sp_runtime::AccountId32;
-	type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
-	type Header = subxt::config::substrate::SubstrateHeader<
-		Self::BlockNumber,
-		subxt::config::substrate::BlakeTwo256,
-	>;
-	type Signature = sp_runtime::MultiSignature;
-	type ExtrinsicParams = ParachainExtrinsicParams<Self>;
-}
-
-#[derive(Debug, Clone)]
-pub enum KusamaConfig {}
-
-#[async_trait]
-impl config::Config for KusamaConfig {
-	type AssetId = u128;
-	type Signature = <Self as subxt::Config>::Signature;
-	type Address = <Self as subxt::Config>::Address;
-	type RuntimeCall = ();
-	type Timestamp = ();
-
-	async fn custom_extrinsic_params(
-		client: &OnlineClient<Self>,
-	) -> Result<
-		<Self::ExtrinsicParams as ExtrinsicParams<Self::Index, Self::Hash>>::OtherParams,
-		Error,
-	> {
-		let params =
-			ParachainExtrinsicsParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
-		Ok(params.into())
-	}
-}
-
-impl subxt::Config for KusamaConfig {
-	type Index = u32;
-	type BlockNumber = u32;
-	type Hash = sp_core::H256;
-	type Hasher = subxt::config::substrate::BlakeTwo256;
-	type AccountId = sp_runtime::AccountId32;
-	type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
-	type Header = subxt::config::substrate::SubstrateHeader<
-		Self::BlockNumber,
-		subxt::config::substrate::BlakeTwo256,
-	>;
-	type Signature = sp_runtime::MultiSignature;
-	type ExtrinsicParams = ParachainExtrinsicParams<Self>;
-}
+#[cfg(feature = "dali")]
+use subxt::config::substrate::{
+	SubstrateExtrinsicParams as ParachainExtrinsicParams,
+	SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
+};
+use subxt::{
+	config::{extrinsic_params::Era, ExtrinsicParams},
+	events::{Phase, StaticEvent},
+	ext::frame_metadata::{
+		OpaqueMetadata, RuntimeMetadata, RuntimeMetadataDeprecated, RuntimeMetadataPrefixed,
+	},
+	metadata::{DecodeStaticType, DecodeWithMetadata},
+	storage,
+	storage::{
+		address::{StorageMapKey, Yes},
+		StaticStorageAddress, StorageAddress,
+	},
+	tx::StaticTxPayload,
+	Error, Metadata, OnlineClient,
+};
+use thiserror::Error;
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
@@ -177,7 +113,6 @@ pub struct CoreConfig {
 #[derive(Clone)]
 pub enum AnyChain {
 	Parachain(ParachainClient<DefaultConfig>),
-	Parachain2(ParachainClient<KusamaConfig>),
 }
 
 #[derive(From)]

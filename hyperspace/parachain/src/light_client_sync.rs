@@ -36,12 +36,12 @@ use super::{error::Error, ParachainClient};
 use crate::{config, finality_protocol::FinalityProtocol};
 
 #[async_trait::async_trait]
-impl<T: config::Config + Send + Sync> LightClientSync for ParachainClient<T>
+impl<T: light_client_common::config::Config + Send + Sync> LightClientSync for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	u32: From<<T as subxt::Config>::BlockNumber>,
 	Self: KeyProvider,
-	<<T as config::Config>::Signature as Verify>::Signer:
+	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
@@ -154,11 +154,11 @@ where
 	}
 }
 
-impl<T: config::Config + Send + Sync> ParachainClient<T>
+impl<T: light_client_common::config::Config + Send + Sync> ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	Self: KeyProvider,
-	<<T as config::Config>::Signature as Verify>::Signer:
+	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
@@ -218,7 +218,7 @@ where
 }
 
 /// Return a single client update message
-async fn get_message<T: crate::config::Config>(
+async fn get_message<T: light_client_common::config::Config>(
 	prover: GrandpaProver<T>,
 	previous_finalized_para_height: u32,
 	previous_finalized_height: u32,
@@ -257,12 +257,14 @@ where
 		.collect::<Vec<_>>();
 
 	// block_number => events
-	let events: HashMap<String, Vec<IbcEvent>> =
-		IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_events(
-			&*prover.para_ws_client,
-			finalized_block_numbers,
-		)
-		.await?;
+	let events: HashMap<String, Vec<IbcEvent>> = IbcApiClient::<
+		u32,
+		H256,
+		<T as light_client_common::config::Config>::AssetId,
+	>::query_events(
+		&*prover.para_ws_client, finalized_block_numbers
+	)
+	.await?;
 
 	// header number is serialized to string
 	let mut headers_with_events = events

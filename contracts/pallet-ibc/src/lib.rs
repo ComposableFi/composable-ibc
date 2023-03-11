@@ -72,6 +72,12 @@ impl From<ibc_proto::google::protobuf::Any> for Any {
 	}
 }
 
+impl From<Any> for ibc_proto::google::protobuf::Any {
+	fn from(any: Any) -> Self {
+		Self { type_url: String::from_utf8(any.type_url).unwrap(), value: any.value }
+	}
+}
+
 #[derive(
 	frame_support::RuntimeDebug,
 	PartialEq,

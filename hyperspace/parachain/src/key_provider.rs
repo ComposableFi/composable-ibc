@@ -22,7 +22,7 @@ use primitives::KeyProvider;
 
 use super::ParachainClient;
 
-impl<T: config::Config> KeyProvider for ParachainClient<T> {
+impl<T: light_client_common::config::Config> KeyProvider for ParachainClient<T> {
 	fn account_id(&self) -> ibc::signer::Signer {
 		let hex_string = self
 			.public_key

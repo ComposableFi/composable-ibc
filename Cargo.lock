@@ -3481,7 +3481,6 @@ dependencies = [
  "sp-state-machine 0.13.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-trie 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "subxt",
- "subxt-generated",
  "tokio",
 ]
 
@@ -3853,9 +3852,11 @@ dependencies = [
  "anyhow",
  "async-trait",
  "clap 3.2.23",
+ "codegen",
  "derive_more",
  "env_logger 0.9.3",
  "frame-support",
+ "frame-system",
  "futures",
  "hex",
  "hyperspace-cosmos",
@@ -3869,7 +3870,9 @@ dependencies = [
  "ics11-beefy",
  "light-client-common",
  "log",
+ "once_cell",
  "pallet-ibc",
+ "pallet-ibc-ping",
  "parity-scale-codec",
  "prometheus",
  "prost",
@@ -3881,6 +3884,7 @@ dependencies = [
  "sp-state-machine 0.13.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-trie 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "subxt",
+ "subxt-generated",
  "tendermint-proto",
  "thiserror",
  "tokio",
@@ -3943,6 +3947,7 @@ dependencies = [
  "once_cell",
  "pallet-beefy-mmr",
  "pallet-ibc",
+ "pallet-ibc-ping",
  "pallet-mmr",
  "pallet-transaction-payment-rpc",
  "pallet-transaction-payment-rpc-runtime-api",
@@ -4010,6 +4015,8 @@ dependencies = [
  "light-client-common",
  "log",
  "pallet-ibc",
+ "pallet-ibc-ping",
+ "parity-scale-codec",
  "polkadot-core-primitives",
  "serde_json",
  "sp-core 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
@@ -5369,14 +5376,18 @@ name = "light-client-common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "derive_more",
  "hash-db",
  "ibc",
+ "ibc-proto",
  "parity-scale-codec",
  "serde",
  "sp-core 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
+ "sp-runtime 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-storage 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-trie 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
+ "subxt",
 ]
 
 [[package]]
