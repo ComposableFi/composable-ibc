@@ -1,19 +1,3 @@
-pub mod parachain_subxt {
-	#[cfg(feature = "build-metadata-from-ws")]
-	include!(concat!(env!("OUT_DIR"), "/parachain.rs"));
-
-	#[cfg(not(feature = "build-metadata-from-ws"))]
-	pub use subxt_generated::parachain::*;
-}
-
-pub mod relaychain {
-	#[cfg(feature = "build-metadata-from-ws")]
-	include!(concat!(env!("OUT_DIR"), "/polkadot.rs"));
-
-	#[cfg(not(feature = "build-metadata-from-ws"))]
-	pub use subxt_generated::relaychain::*;
-}
-
 use self::parachain_subxt::api::{
 	ibc::calls::{Deliver, Transfer},
 	ibc_ping::calls::SendPing,
@@ -28,8 +12,10 @@ use self::parachain_subxt::api::{
 	sudo::calls::Sudo,
 };
 use crate::{
-	define_any_wrapper, define_head_data, define_ibc_event_wrapper, define_id,
-	define_pallet_params, define_send_ping_params, define_transfer_params,
+	define_any_wrapper, define_event_record, define_events, define_head_data,
+	define_ibc_event_wrapper, define_id, define_pallet_params, define_runtime_call,
+	define_runtime_event, define_runtime_storage, define_runtime_transactions,
+	define_send_ping_params, define_transfer_params,
 };
 use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
@@ -112,6 +98,24 @@ use subxt::{
 };
 use thiserror::Error;
 
+pub mod parachain_subxt {
+	#[cfg(feature = "build-metadata-from-ws")]
+	include!(concat!(env!("OUT_DIR"), "/parachain.rs"));
+
+	#[cfg(not(feature = "build-metadata-from-ws"))]
+	pub use subxt_generated::parachain::*;
+}
+
+pub mod relaychain {
+	#[cfg(feature = "build-metadata-from-ws")]
+	include!(concat!(env!("OUT_DIR"), "/polkadot.rs"));
+
+	#[cfg(not(feature = "build-metadata-from-ws"))]
+	pub use subxt_generated::relaychain::*;
+}
+
+pub type Balance = u128;
+
 // TODO: expose extrinsic param builder
 #[derive(Debug, Clone)]
 pub enum DefaultConfig {}
@@ -123,57 +127,15 @@ define_head_data!(
 	relaychain::api::runtime_types::polkadot_parachain::primitives::HeadData,
 );
 
-pub struct DefaultRuntimeStorage;
-
-impl RuntimeStorage for DefaultRuntimeStorage {
-	type HeadData = DefaultHeadData;
-	type Id = DefaultId;
-
-	fn timestamp_now() -> StaticStorageAddress<DecodeStaticType<u64>, Yes, Yes, ()> {
-		parachain_subxt::api::storage().timestamp().now()
-	}
-
-	fn paras_heads(
-		x: u32,
-	) -> LocalStaticStorageAddress<DecodeStaticType<Self::HeadData>, Yes, (), Yes> {
-		let x = relaychain::api::storage().paras().heads(&Self::Id::from(x).0);
-		let mut bytes = vec![];
-		fn fake_metadata() -> Metadata {
-			Metadata::try_from(RuntimeMetadataPrefixed(
-				META_RESERVED,
-				RuntimeMetadata::V14(RuntimeMetadataV14::new(
-					Vec::new(),
-					ExtrinsicMetadata {
-						ty: MetaType::new::<()>(),
-						version: 0,
-						signed_extensions: vec![],
-					},
-					MetaType::new::<()>(),
-				)),
-			))
-			.unwrap()
-		}
-		x.append_entry_bytes(&fake_metadata(), &mut bytes)
-			.expect("should always succeed");
-		LocalStaticStorageAddress {
-			pallet_name: "Paras",
-			entry_name: "Heads",
-			storage_entry_keys: bytes,
-			validation_hash: x.validation_hash(),
-			_marker: Default::default(),
-		}
-	}
-
-	fn grandpa_current_set_id() -> StaticStorageAddress<DecodeStaticType<u64>, Yes, Yes, ()> {
-		relaychain::api::storage().grandpa().current_set_id()
-	}
-
-	fn babe_epoch_start() -> StaticStorageAddress<DecodeStaticType<(u32, u32)>, Yes, Yes, ()> {
-		relaychain::api::storage().babe().epoch_start()
-	}
-}
-
-pub type Balance = u128;
+define_runtime_storage!(
+	DefaultRuntimeStorage,
+	DefaultHeadData,
+	DefaultId,
+	parachain_subxt::api::storage().timestamp().now(),
+	|x| relaychain::api::storage().paras().heads(x),
+	relaychain::api::storage().grandpa().current_set_id(),
+	relaychain::api::storage().babe().epoch_start()
+);
 
 define_pallet_params!(PalletParamsWrapper, PalletParams, RawPalletParams);
 
@@ -189,157 +151,50 @@ define_transfer_params!(
 
 define_any_wrapper!(AnyWrapper, parachain_subxt::api::runtime_types::pallet_ibc::Any);
 
-pub struct DefaultRuntimeTransactions;
-
-impl RuntimeTransactions for DefaultRuntimeTransactions {
-	type Deliver = Deliver;
-	type Transfer = Transfer;
-	type Sudo = Sudo;
-	type SendPing = SendPing;
-
-	type ParaRuntimeCall = DefaultParaRuntimeCall;
-	type SendPingParams = SendPingParams;
-	type TransferParams = TransferParams<AccountId32>;
-
-	fn ibc_deliver(messages: Vec<Any>) -> StaticTxPayload<Self::Deliver> {
-		parachain_subxt::api::tx().ibc().deliver(
-			messages
-				.into_iter()
-				.map(|x| parachain_subxt::api::runtime_types::pallet_ibc::Any {
-					type_url: x.type_url.into_bytes(),
-					value: x.value,
-				})
-				.collect(),
-		)
-	}
-
-	fn ibc_transfer(
-		params: Self::TransferParams,
-		asset_id: u128,
-		amount: u128,
-		memo: Option<()>,
-	) -> StaticTxPayload<Self::Transfer> {
-		parachain_subxt::api::tx().ibc().transfer(
-			TransferParamsWrapper(params).into(),
-			asset_id,
-			amount,
-			memo.map(|_| MemoMessage),
-		)
-	}
-
-	fn sudo_sudo(call: Self::ParaRuntimeCall) -> StaticTxPayload<Self::Sudo> {
-		parachain_subxt::api::tx().sudo().sudo(call.0)
-	}
-
-	fn ibc_ping_send_ping(params: SendPingParams) -> StaticTxPayload<Self::SendPing> {
-		parachain_subxt::api::tx()
-			.ibc_ping()
-			.send_ping(SendPingParamsWrapper(params).into())
-	}
-}
+define_runtime_transactions!(
+	DefaultRuntimeTransactions,
+	Deliver,
+	Transfer,
+	Sudo,
+	SendPing,
+	DefaultParaRuntimeCall,
+	SendPingParams,
+	TransferParams<AccountId32>,
+	TransferParamsWrapper,
+	SendPingParamsWrapper,
+	|type_url, value| parachain_subxt::api::runtime_types::pallet_ibc::Any { type_url, value },
+	|x| parachain_subxt::api::tx().ibc().deliver(x),
+	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, y, z, w),
+	|x| parachain_subxt::api::tx().sudo().sudo(x),
+	|x| parachain_subxt::api::tx().ibc_ping().send_ping(x),
+);
 
 /// Allows to implement traits for the subxt generated code
 define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);
 
-#[derive(Decode)]
-pub struct DefaultEventRecord(
+define_event_record!(
+	DefaultEventRecord,
 	EventRecord<<DefaultConfig as light_client_common::config::Config>::ParaRuntimeEvent, H256>,
+	IbcEventWrapper,
+	parachain_subxt::api::runtime_types::frame_system::Phase,
+	parachain_subxt::api::runtime_types::pallet_ibc::pallet::Event,
+	parachain_subxt::api::runtime_types::parachain_runtime::RuntimeEvent
 );
 
-impl EventRecordT for DefaultEventRecord {
-	type IbcEvent = pallet_ibc::events::IbcEvent;
+define_events!(DefaultEvents, parachain_subxt::api::ibc::events::Events, IbcEventWrapper);
 
-	fn phase(&self) -> Phase {
-		use parachain_subxt::api::runtime_types::frame_system::Phase as ParaPhase;
-		match self.0.phase {
-			ParaPhase::ApplyExtrinsic(i) => Phase::ApplyExtrinsic(i as u32),
-			ParaPhase::Finalization => Phase::Finalization,
-			ParaPhase::Initialization => Phase::Initialization,
-		}
-	}
+define_runtime_event!(
+	DefaultParaRuntimeEvent,
+	parachain_subxt::api::runtime_types::parachain_runtime::RuntimeEvent
+);
 
-	fn ibc_events(self) -> Option<Vec<pallet_ibc::events::IbcEvent>> {
-		use parachain_subxt::api::runtime_types::{
-			frame_system::EventRecord,
-			pallet_ibc::pallet::{Call as IbcCall, Event as PalletEvent},
-			parachain_runtime::{RuntimeCall, RuntimeEvent},
-		};
-		if let RuntimeEvent::Ibc(PalletEvent::Events { events }) = self.0.event.0 {
-			let events = events
-				.into_iter()
-				.filter_map(|event| {
-					let ev = event.ok()?;
-					Some(pallet_ibc::events::IbcEvent::from(IbcEventWrapper(ev)))
-				})
-				.collect();
-			Some(events)
-		} else {
-			None
-		}
-	}
-}
-
-#[derive(Decode)]
-pub struct DefaultEvents(parachain_subxt::api::ibc::events::Events);
-
-impl IbcEventsT for DefaultEvents {
-	type IbcEvent = pallet_ibc::events::IbcEvent;
-
-	fn events(self) -> Vec<Self::IbcEvent> {
-		self.0
-			.events
-			.into_iter()
-			.filter_map(|event| {
-				let ev = event.ok()?;
-				Some(Self::IbcEvent::from(IbcEventWrapper(ev)))
-			})
-			.collect()
-	}
-}
-
-impl StaticEvent for DefaultEvents {
-	const PALLET: &'static str = parachain_subxt::api::ibc::events::Events::PALLET;
-	const EVENT: &'static str = parachain_subxt::api::ibc::events::Events::EVENT;
-
-	fn is_event(pallet: &str, event: &str) -> bool {
-		parachain_subxt::api::ibc::events::Events::is_event(pallet, event)
-	}
-}
-
-#[derive(Decode)]
-pub struct DefaultParaRuntimeCall(
+define_runtime_call!(
+	DefaultParaRuntimeCall,
 	parachain_subxt::api::runtime_types::parachain_runtime::RuntimeCall,
+	PalletParamsWrapper,
+	AnyWrapper,
+	parachain_subxt::api::runtime_types::pallet_ibc::pallet::Call
 );
-
-#[derive(Decode)]
-pub struct DefaultParaRuntimeEvent(
-	parachain_subxt::api::runtime_types::parachain_runtime::RuntimeEvent,
-);
-
-impl RuntimeCall for DefaultParaRuntimeCall {
-	type PalletParams = PalletParams;
-
-	fn extract_ibc_deliver_messages(self) -> Option<Vec<Any>> {
-		use parachain_subxt::api::runtime_types::{
-			pallet_ibc::pallet::Call as IbcCall, parachain_runtime::RuntimeCall,
-		};
-		match self.0 {
-			RuntimeCall::Ibc(IbcCall::deliver { messages }) =>
-				Some(messages.into_iter().map(|m| AnyWrapper(m).into()).collect()),
-			_ => None,
-		}
-	}
-
-	fn pallet_ibc_set_params(params: PalletParams) -> Self {
-		use parachain_subxt::api::runtime_types::{
-			pallet_ibc::pallet::Call as IbcCall, parachain_runtime::RuntimeCall,
-		};
-
-		DefaultParaRuntimeCall(RuntimeCall::Ibc(IbcCall::set_params {
-			params: PalletParamsWrapper(params).into(),
-		}))
-	}
-}
 
 #[async_trait]
 impl light_client_common::config::Config for DefaultConfig {
