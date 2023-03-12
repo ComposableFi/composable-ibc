@@ -5,10 +5,10 @@ use super::{
 	tx::{broadcast_tx, confirm_tx, sign_tx, simulate_tx},
 };
 use crate::error::Error;
-use bip32::{ExtendedPrivateKey, XPub as ExtendedPublicKey, Prefix};
-use secp256k1::{Message as Secp256k1Message, PublicKey, Secp256k1, SecretKey};
 use bech32::ToBase32;
+use bip32::{ExtendedPrivateKey, Prefix, XPrv, XPub as ExtendedPublicKey};
 use core::convert::{From, Into, TryFrom};
+use digest::Digest;
 use ibc::core::{
 	ics02_client::height::Height,
 	ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
@@ -21,8 +21,25 @@ use ibc_proto::{
 	cosmos::auth::v1beta1::{query_client::QueryClient, BaseAccount, QueryAccountRequest},
 	google::protobuf::Any,
 };
-use std::{str::FromStr, sync::Arc};
+use ripemd::Ripemd160;
+use secp256k1::{Message as Secp256k1Message, PublicKey, Secp256k1, SecretKey};
+use std::{ops::Index, str::FromStr, sync::Arc};
 
+use bip39::{Language, Mnemonic, Seed};
+use bitcoin::{
+	hashes::hex::ToHex,
+	network::constants::Network,
+	util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey},
+};
+use ed25519_zebra::{SigningKey, VerificationKey, VerificationKeyBytes};
+use hdpath::StandardHDPath;
+use ibc_relayer::{
+	chain::ChainType,
+	config::{AddressType, ChainConfig, Config},
+	keyring::{
+		AnySigningKeyPair, KeyRing, Secp256k1KeyPair, SigningKeyPair, SigningKeyPairSized, Store,
+	},
+};
 use ics07_tendermint::{
 	client_message::Header, client_state::ClientState, consensus_state::ConsensusState,
 	merkle::convert_tm_to_ics_merkle_proof,
@@ -34,20 +51,6 @@ use serde::{Deserialize, Serialize};
 use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
 use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient, Url};
-use ed25519_zebra::{SigningKey, VerificationKey, VerificationKeyBytes};
-use hdpath::StandardHDPath;
-use bitcoin::{
-    network::constants::Network,
-    util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey}, hashes::hex::ToHex,
-};
-use bip39::{Mnemonic, Language, Seed};
-use ibc_relayer::{
-    chain::ChainType,
-    config::{ChainConfig, Config, AddressType},
-    keyring::{
-        AnySigningKeyPair, KeyRing, Secp256k1KeyPair, SigningKeyPair, SigningKeyPairSized, Store
-    },
-};
 
 const DEFAULT_FEE_DENOM: &str = "stake";
 const DEFAULT_FEE_AMOUNT: &str = "4000";
@@ -90,63 +93,56 @@ impl TryFrom<String> for KeyEntry {
 	type Error = bip32::Error;
 
 	fn try_from(mnemonic: String) -> Result<Self, Self::Error> {
-		let hdpath = StandardHDPath::from_str("m/44'/118'/0'/0/0").unwrap();
-		let key_pair = Secp256k1KeyPair::from_mnemonic(
-			&mnemonic,
-			&hdpath,
-			&AddressType::Cosmos,
-			"cosmos",
-		).unwrap();
+		// From mnemonic to pubkey
+		let seed = bip32::Mnemonic::new(mnemonic, Default::default())?.to_seed("");
+		let derive_path = bip32::DerivationPath::from_str("m/44'/118'/0'/0/0")?;
+		let key_m = bip32::XPrv::derive_from_path(seed, &derive_path)?;
 
-		let private_key = private_key_from_mnemonic(&mnemonic, &hdpath).unwrap();
-		let public_key = ExtendedPubKey::from_priv(&Secp256k1::signing_only(), &private_key);
-
+		// From pubkey to address
+		let compressed = key_m.public_key().to_bytes();
+		let sha256 = sha256::digest(&compressed);
+		let public_key_hash: [u8; 20] = Ripemd160::digest(sha256).into();
+		let account =
+			bech32::encode("cosmos", public_key_hash.to_base32(), bech32::Variant::Bech32).unwrap();
 		Ok(KeyEntry {
-			public_key: ExtendedPublicKey::from_str(&public_key.public_key.to_string())?,	// TODO: XPUB prefix
-			private_key: ExtendedPrivateKey::from_str(&private_key.private_key.secret_bytes().to_hex())?, // TODO: XPRI prefix
-			account: key_pair.account(),
-			address: key_pair.account().as_bytes().to_vec(),
+			public_key: ExtendedPublicKey::from_str(&key_m.public_key().to_string(Prefix::XPUB))?,
+			private_key: ExtendedPrivateKey::from_str(&key_m.to_string(Prefix::XPRV))?,
+			account,
+			address: public_key_hash.into(),
 		})
 	}
 }
 
 pub fn private_key_from_mnemonic(
-    mnemonic_words: &str,
-    hd_path: &StandardHDPath,
+	mnemonic_words: &str,
+	hd_path: &StandardHDPath,
 ) -> Result<ExtendedPrivKey, Error> {
-    let mnemonic = Mnemonic::from_phrase(mnemonic_words, Language::English)
-        .map_err(|err| { Error::Custom("Invalid mnemonic".to_string())})?;
+	let mnemonic = Mnemonic::from_phrase(mnemonic_words, Language::English)
+		.map_err(|err| Error::Custom("Invalid mnemonic".to_string()))?;
 
-    let seed = Seed::new(&mnemonic, "");
+	let seed = Seed::new(&mnemonic, "");
 
-    let base_key =
-        ExtendedPrivKey::new_master(Network::Bitcoin, seed.as_bytes()).map_err(|err| {
-            Error::Custom("bip32 key generation failed".to_string())
-        })?;
+	let base_key = ExtendedPrivKey::new_master(Network::Bitcoin, seed.as_bytes())
+		.map_err(|err| Error::Custom("bip32 key generation failed".to_string()))?;
 
-    let private_key = base_key
-        .derive_priv(
-            &Secp256k1::new(),
-            &standard_path_to_derivation_path(hd_path),
-        )
-        .map_err(|err| {
-            Error::Custom("bip32 key generation failed".to_string())
-        })?;
+	let private_key = base_key
+		.derive_priv(&Secp256k1::new(), &standard_path_to_derivation_path(hd_path))
+		.map_err(|err| Error::Custom("bip32 key generation failed".to_string()))?;
 
-    Ok(private_key)
+	Ok(private_key)
 }
 
 fn standard_path_to_derivation_path(path: &StandardHDPath) -> DerivationPath {
-    let child_numbers = vec![
-        ChildNumber::from_hardened_idx(path.purpose().as_value().as_number())
-            .expect("Purpose is not Hardened"),
-        ChildNumber::from_hardened_idx(path.coin_type()).expect("Coin Type is not Hardened"),
-        ChildNumber::from_hardened_idx(path.account()).expect("Account is not Hardened"),
-        ChildNumber::from_normal_idx(path.change()).expect("Change is Hardened"),
-        ChildNumber::from_normal_idx(path.index()).expect("Index is Hardened"),
-    ];
+	let child_numbers = vec![
+		ChildNumber::from_hardened_idx(path.purpose().as_value().as_number())
+			.expect("Purpose is not Hardened"),
+		ChildNumber::from_hardened_idx(path.coin_type()).expect("Coin Type is not Hardened"),
+		ChildNumber::from_hardened_idx(path.account()).expect("Account is not Hardened"),
+		ChildNumber::from_normal_idx(path.change()).expect("Change is Hardened"),
+		ChildNumber::from_normal_idx(path.index()).expect("Index is Hardened"),
+	];
 
-    DerivationPath::from(child_numbers)
+	DerivationPath::from(child_numbers)
 }
 
 // Implements the [`crate::Chain`] trait for cosmos.
@@ -510,16 +506,25 @@ where
 	}
 }
 
-
-
 #[cfg(test)]
 pub mod tests {
 
 	use crate::key_provider::KeyEntry;
-    use bip32::{Prefix, XPrv};
+	use bech32::ToBase32;
+	use bip32::{Prefix, XPrv};
 
 	#[test]
 	fn test_from_mnemonic() {
+		let b: [u8; 20] = [
+			156, 200, 27, 97, 35, 103, 35, 146, 182, 226, 202, 16, 25, 214, 215, 210, 149, 250,
+			224, 30,
+		]
+		.into();
+		println!(
+			"??? {}",
+			bech32::encode("cosmos", b.to_base32(), bech32::Variant::Bech32).unwrap()
+		);
+
 		let mnemonic: String =
 			"idea gap afford glow ugly suspect exile wedding fiber turn opinion weekend moon project egg certain play obvious slice delay present weekend toe ask".to_string();
 		let keyEntry = KeyEntry::try_from(mnemonic);
@@ -527,10 +532,9 @@ pub mod tests {
 		match keyEntry {
 			Ok(gud) => {
 				a = gud;
-                println!("{:?}", a.account);
-                println!("{:?}", a.private_key);
+				println!("{:?}", a.account);
+				println!("{:?}", a.private_key);
 				println!("{:?}", a.public_key);
-
 				assert_eq!(a.account, "cosmos15hf3dgggyt4azpd693ax7fdfve8d5m6ct72z9p".to_string())
 			},
 			Err(err) => eprintln!("Error: {}", err),

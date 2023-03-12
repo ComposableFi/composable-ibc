@@ -35,6 +35,9 @@ tiny-bip39 = "1.0.0"
 ibc-relayer = "0.22.0"
 bitcoin = { version = "0.29.1", features = ["serde"] }
 hdpath = "0.6.1"
+sha256 = "1.1.2"
+ripemd = "0.1.3"
+digest = "0.10.6"
 
 # composable
 ibc = { path = "../../ibc/modules", features = [] }
