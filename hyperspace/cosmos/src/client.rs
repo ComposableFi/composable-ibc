@@ -99,8 +99,9 @@ impl TryFrom<String> for KeyEntry {
 		let key_m = bip32::XPrv::derive_from_path(seed, &derive_path)?;
 
 		// From pubkey to address
-		let compressed = key_m.public_key().to_bytes();
-		let sha256 = sha256::digest(&compressed);
+		let binding = key_m.public_key().public_key().to_bytes();
+  		let compressed = binding.as_slice().clone();	// seriallize
+		let sha256 = sha256::digest(compressed);
 		let public_key_hash: [u8; 20] = Ripemd160::digest(sha256).into();
 		let account =
 			bech32::encode("cosmos", public_key_hash.to_base32(), bech32::Variant::Bech32).unwrap();
@@ -111,38 +112,6 @@ impl TryFrom<String> for KeyEntry {
 			address: public_key_hash.into(),
 		})
 	}
-}
-
-pub fn private_key_from_mnemonic(
-	mnemonic_words: &str,
-	hd_path: &StandardHDPath,
-) -> Result<ExtendedPrivKey, Error> {
-	let mnemonic = Mnemonic::from_phrase(mnemonic_words, Language::English)
-		.map_err(|err| Error::Custom("Invalid mnemonic".to_string()))?;
-
-	let seed = Seed::new(&mnemonic, "");
-
-	let base_key = ExtendedPrivKey::new_master(Network::Bitcoin, seed.as_bytes())
-		.map_err(|err| Error::Custom("bip32 key generation failed".to_string()))?;
-
-	let private_key = base_key
-		.derive_priv(&Secp256k1::new(), &standard_path_to_derivation_path(hd_path))
-		.map_err(|err| Error::Custom("bip32 key generation failed".to_string()))?;
-
-	Ok(private_key)
-}
-
-fn standard_path_to_derivation_path(path: &StandardHDPath) -> DerivationPath {
-	let child_numbers = vec![
-		ChildNumber::from_hardened_idx(path.purpose().as_value().as_number())
-			.expect("Purpose is not Hardened"),
-		ChildNumber::from_hardened_idx(path.coin_type()).expect("Coin Type is not Hardened"),
-		ChildNumber::from_hardened_idx(path.account()).expect("Account is not Hardened"),
-		ChildNumber::from_normal_idx(path.change()).expect("Change is Hardened"),
-		ChildNumber::from_normal_idx(path.index()).expect("Index is Hardened"),
-	];
-
-	DerivationPath::from(child_numbers)
 }
 
 // Implements the [`crate::Chain`] trait for cosmos.
@@ -512,18 +481,24 @@ pub mod tests {
 	use crate::key_provider::KeyEntry;
 	use bech32::ToBase32;
 	use bip32::{Prefix, XPrv};
+	use digest::Digest;
+	use ripemd::Ripemd160;
 
 	#[test]
 	fn test_from_mnemonic() {
+		let compressed = "4W7TSjsuqcUE17mSB2ajhZsbwkefsHWKsXCbERimu3z2QLN9EFgqqpppiBn4tTNPFoNVTo1b3BgCZAaFJuUgTZeFhzJjUHkK8X7kSC5c7yn".to_string();
+		let sha256 = sha256::digest(compressed);
+		let public_key_hash: [u8; 20] = Ripemd160::digest(sha256).into();
 		let b: [u8; 20] = [
 			156, 200, 27, 97, 35, 103, 35, 146, 182, 226, 202, 16, 25, 214, 215, 210, 149, 250,
 			224, 30,
 		]
 		.into();
 		println!(
-			"??? {}",
-			bech32::encode("cosmos", b.to_base32(), bech32::Variant::Bech32).unwrap()
+			"1 {}",
+			bech32::encode("cosmos", public_key_hash.to_base32(), bech32::Variant::Bech32).unwrap()
 		);
+		println!("2 {}", bech32::encode("cosmos", b.to_base32(), bech32::Variant::Bech32).unwrap());
 
 		let mnemonic: String =
 			"idea gap afford glow ugly suspect exile wedding fiber turn opinion weekend moon project egg certain play obvious slice delay present weekend toe ask".to_string();
