@@ -12,8 +12,6 @@ use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
-#[cfg(feature = "dali")]
-use subxt::config::substrate::AssetTip as Tip;
 use subxt::config::{
 	extrinsic_params::{BaseExtrinsicParamsBuilder, ExtrinsicParams},
 	Header as HeaderT,
@@ -21,8 +19,6 @@ use subxt::config::{
 
 use grandpa_prover::GrandpaProver;
 use ibc::core::ics02_client::msgs::update_client::MsgUpdateAnyClient;
-#[cfg(not(feature = "dali"))]
-use subxt::config::polkadot::PlainTip as Tip;
 use tendermint_proto::Protobuf;
 
 use ibc::{core::ics24_host::identifier::ClientId, events::IbcEvent, signer::Signer, tx_msg::Msg};
@@ -52,7 +48,7 @@ where
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {

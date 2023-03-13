@@ -12,34 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::anyhow;
-use codec::{Decode, Encode};
-use std::{collections::BTreeMap, fmt::Display, pin::Pin, time::Duration};
-
-use beefy_gadget_rpc::BeefyApiClient;
-use finality_grandpa::BlockNumberOps;
-use futures::{Stream, StreamExt, TryFutureExt};
-use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
-use ibc_proto::google::protobuf::Any;
-use sp_runtime::{
-	traits::{IdentifyAccount, One, Verify},
-	MultiSignature, MultiSigner,
-};
-#[cfg(feature = "dali")]
-use subxt::config::substrate::AssetTip as Tip;
-use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams};
-
-#[cfg(not(feature = "dali"))]
-use subxt::config::polkadot::PlainTip as Tip;
-
-use transaction_payment_rpc::TransactionPaymentApiClient;
-use transaction_payment_runtime_api::RuntimeDispatchInfo;
-
-use primitives::{Chain, IbcProvider, MisbehaviourHandler};
-
 use super::{error::Error, signer::ExtrinsicSigner, ParachainClient};
 use crate::{parachain::UncheckedExtrinsic, provider::TransactionId, FinalityProtocol};
+use anyhow::anyhow;
+use beefy_gadget_rpc::BeefyApiClient;
+use codec::{Decode, Encode};
+use finality_grandpa::BlockNumberOps;
 use finality_grandpa_rpc::GrandpaApiClient;
+use futures::{Stream, StreamExt, TryFutureExt};
+use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
 use ibc::{
 	core::{
 		ics02_client::{
@@ -52,16 +33,31 @@ use ibc::{
 	tx_msg::Msg,
 	Height,
 };
+use ibc_proto::google::protobuf::Any;
 use ics10_grandpa::client_message::{ClientMessage, Misbehaviour, RelayChainHeader};
 use light_client_common::config::{EventRecordT, RuntimeCall, RuntimeTransactions};
 use pallet_ibc::light_clients::AnyClientMessage;
-use primitives::mock::LocalClientTypes;
+use primitives::{mock::LocalClientTypes, Chain, IbcProvider, MisbehaviourHandler};
 use sp_core::{twox_128, H256};
+use sp_runtime::{
+	traits::{IdentifyAccount, One, Verify},
+	MultiSignature, MultiSigner,
+};
+use std::{collections::BTreeMap, fmt::Display, pin::Pin, time::Duration};
+// #[cfg(not(feature = "dali"))]
+// use subxt::config::polkadot::PlainTip as Tip;
+// #[cfg(feature = "dali")]
+// use subxt::config::substrate::AssetTip as Tip;
 use subxt::{
-	config::{extrinsic_params::Era, Header as HeaderT},
+	config::{
+		extrinsic_params::{BaseExtrinsicParamsBuilder, Era},
+		ExtrinsicParams, Header as HeaderT,
+	},
 	events::Phase,
 };
 use tokio::time::sleep;
+use transaction_payment_rpc::TransactionPaymentApiClient;
+use transaction_payment_runtime_api::RuntimeDispatchInfo;
 
 type GrandpaJustification = grandpa_light_client_primitives::justification::GrandpaJustification<
 	polkadot_core_primitives::Header,
@@ -90,7 +86,7 @@ where
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	sp_core::H256: From<T::Hash>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 	<T as light_client_common::config::Config>::AssetId: Clone,
@@ -118,9 +114,9 @@ where
 				.collect::<Vec<_>>();
 
 			let tx_params = BaseExtrinsicParamsBuilder::new()
-				.tip(Tip::new(100_000))
+				.tip(T::Tip::from(100_000u128))
 				.era(Era::Immortal, self.para_client.genesis_hash());
-			let call = T::Tx::ibc_deliver(messages); //api::tx().ibc().deliver(messages);
+			let call = T::Tx::ibc_deliver(messages);
 			self.para_client
 				.tx()
 				.create_signed(&call, &signer, tx_params.into())
@@ -128,12 +124,14 @@ where
 				.encoded()
 				.to_vec()
 		};
-		let dispatch_info = TransactionPaymentApiClient::<
-			sp_core::H256,
-			RuntimeDispatchInfo<u128, u64>,
-		>::query_info(&*self.para_ws_client, extrinsic.into(), None)
-		.await
-		.map_err(|e| Error::from(format!("Rpc Error From Estimating weight {:?}", e)))?;
+		let dispatch_info =
+			TransactionPaymentApiClient::<H256, RuntimeDispatchInfo<u128, u64>>::query_info(
+				&*self.para_ws_client,
+				extrinsic.into(),
+				None,
+			)
+			.await
+			.map_err(|e| Error::from(format!("Rpc Error From Estimating weight {:?}", e)))?;
 		Ok(dispatch_info.weight)
 	}
 
@@ -339,7 +337,7 @@ where
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	sp_core::H256: From<T::Hash>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {

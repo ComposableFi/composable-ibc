@@ -83,7 +83,6 @@ subxt-generated = { path = "../../utils/subxt/generated" }
 
 [features]
 default = ["std"]
-dali = []
 testing = ["primitives/testing"]
 std = [
     "sp-io/std",

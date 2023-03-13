@@ -34,19 +34,15 @@ use parachain_subxt::api::runtime_types::{
 };
 use relaychain::api::runtime_types::polkadot_runtime_parachains::paras::ParaLifecycle;
 use sp_core::{crypto::AccountId32, H256};
-
-#[cfg(not(feature = "dali"))]
-use subxt::config::polkadot::{
-	PolkadotExtrinsicParams as ParachainExtrinsicParams,
-	PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
-};
-#[cfg(feature = "dali")]
-use subxt::config::substrate::{
-	SubstrateExtrinsicParams as ParachainExtrinsicParams,
-	SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
-};
 use subxt::{
-	config::{extrinsic_params::Era, ExtrinsicParams},
+	config::{
+		extrinsic_params::Era,
+		polkadot::{
+			PlainTip as Tip, PolkadotExtrinsicParams as ParachainExtrinsicParams,
+			PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
+		},
+		ExtrinsicParams,
+	},
 	events::{Phase, StaticEvent},
 	metadata::DecodeStaticType,
 	storage::{address::Yes, StaticStorageAddress},
@@ -167,6 +163,7 @@ impl light_client_common::config::Config for DefaultConfig {
 	type AssetId = u128;
 	type Signature = <Self as subxt::Config>::Signature;
 	type Address = <Self as subxt::Config>::Address;
+	type Tip = Tip;
 	type ParaRuntimeCall = DefaultParaRuntimeCall;
 	type ParaRuntimeEvent = DefaultParaRuntimeEvent;
 	type Events = DefaultEvents;

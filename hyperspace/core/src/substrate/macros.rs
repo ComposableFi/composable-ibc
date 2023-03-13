@@ -725,7 +725,7 @@ macro_rules! define_events {
 			}
 		}
 
-		impl StaticEvent for DefaultEvents {
+		impl StaticEvent for $name {
 			const PALLET: &'static str = <$events>::PALLET;
 			const EVENT: &'static str = <$events>::EVENT;
 

@@ -53,10 +53,6 @@ use std::{
 
 use beefy_prover::helpers::unsafe_arc_cast;
 use grandpa_prover::{GrandpaJustification, JustificationNotification};
-#[cfg(not(feature = "dali"))]
-use subxt::config::polkadot::PlainTip as Tip;
-#[cfg(feature = "dali")]
-use subxt::config::substrate::AssetTip as Tip;
 use subxt::config::{
 	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT,
 };
@@ -104,7 +100,7 @@ impl FinalityProtocol {
 		BTreeMap<H256, ParachainHeaderProofs>:
 			From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 		<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-			From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
+			From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 		<T as subxt::Config>::AccountId: Send + Sync,
 		<T as subxt::Config>::Address: Send + Sync,
 	{
@@ -137,7 +133,7 @@ where
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	T::BlockNumber: From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	T::Hash: From<sp_core::H256>,
 	sp_core::H256: From<T::Hash>,
 	<T as subxt::Config>::AccountId: Send + Sync,
@@ -345,7 +341,7 @@ where
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {

@@ -185,6 +185,8 @@ pub trait Config: subxt::Config + Sized {
 	type Signature: sp_runtime::traits::Verify + From<<Self as subxt::Config>::Signature> + Decode;
 	/// Address type used by the runtime;
 	type Address: codec::Codec + From<<Self as subxt::Config>::Address>;
+	/// Tip
+	type Tip: Default + From<u128> + Send;
 	/// Runtime call
 	type ParaRuntimeCall: RuntimeCall + Decode;
 	/// Parachain runtime event
