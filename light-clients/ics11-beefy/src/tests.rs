@@ -28,10 +28,11 @@ use beefy_light_client_primitives::{EncodedVersionedFinalityProof, NodesUtils, P
 use beefy_primitives::VersionedFinalityProof;
 use beefy_prover::{
 	helpers::{fetch_timestamp_extrinsic_with_proof, TimeStampExtWithProof},
-	runtime, Prover,
+	Prover,
 };
 use codec::{Decode, Encode};
 use futures::stream::StreamExt;
+use hyperspace_core::substrate::DefaultConfig as PolkadotConfig;
 use ibc::{
 	core::{
 		ics02_client::{
@@ -50,11 +51,9 @@ use ibc::{
 	test_utils::get_dummy_account_id,
 	Height,
 };
+use light_client_common::config::RuntimeStorage;
 use std::time::Duration;
-use subxt::{
-	rpc::{rpc_params, Subscription},
-	PolkadotConfig,
-};
+use subxt::rpc::{rpc_params, Subscription};
 
 #[tokio::test]
 #[ignore]
@@ -111,10 +110,8 @@ async fn test_continuous_update_of_beefy_client() {
 			.await
 			.unwrap();
 		let head_data = {
-			let key = runtime::api::storage().paras().heads(
-				&runtime::api::runtime_types::polkadot_parachain::primitives::Id(
-					client_wrapper.para_id,
-				),
+			let key = <PolkadotConfig as light_client_common::config::Config>::Storage::paras_heads(
+				client_wrapper.para_id,
 			);
 			relay_client
 				.storage()
@@ -129,7 +126,7 @@ async fn test_continuous_update_of_beefy_client() {
 		let decoded_para_head = frame_support::sp_runtime::generic::Header::<
 			u32,
 			frame_support::sp_runtime::traits::BlakeTwo256,
-		>::decode(&mut &*head_data.0)
+		>::decode(&mut head_data.as_ref())
 		.unwrap();
 		let block_number = decoded_para_head.number;
 		let client_state = BeefyClientState {

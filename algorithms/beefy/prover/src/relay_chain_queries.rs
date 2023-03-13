@@ -13,12 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::runtime;
-use crate::{
-	error::Error, runtime::api::runtime_types::polkadot_runtime_parachains::paras::ParaLifecycle,
-};
+use crate::error::Error;
 use beefy_primitives::{SignedCommitment, VersionedFinalityProof};
 use codec::{Decode, Encode};
+use light_client_common::config::{ParaLifecycleT, RuntimeStorage};
 use pallet_mmr_rpc::LeavesProof;
 use sp_core::{hexdisplay::AsBytesRef, storage::StorageKey, H256};
 use sp_runtime::traits::Zero;
@@ -35,7 +33,7 @@ pub struct FinalizedParaHeads {
 }
 
 /// Get the raw parachain heads finalized in the provided block
-pub async fn fetch_finalized_parachain_heads<T: Config>(
+pub async fn fetch_finalized_parachain_heads<T: light_client_common::config::Config>(
 	client: &OnlineClient<T>,
 	commitment_block_number: u32,
 	latest_beefy_height: u32,
@@ -50,7 +48,7 @@ where
 	let block_hash = client.rpc().block_hash(Some(subxt_block_number)).await?;
 
 	let mut para_ids = vec![];
-	let key = runtime::api::storage().paras().parachains();
+	let key = T::Storage::paras_parachains();
 	let ids = client
 		.storage()
 		.at(block_hash)
@@ -60,19 +58,19 @@ where
 		.await?
 		.ok_or_else(|| Error::Custom(format!("No ParaIds on relay chain?")))?;
 	for id in ids {
-		let key = runtime::api::storage().paras().para_lifecycles(&id);
-		match client
+		let id = id.into();
+		let key = T::Storage::paras_para_lifecycles(id);
+		let lifecycle = client
 			.storage()
 			.at(block_hash)
 			.await
 			.expect("Storage client")
 			.fetch(&key)
 			.await?
-			.expect("ParaId is known")
-		{
-			// only care about active parachains.
-			ParaLifecycle::Parachain => para_ids.push(id),
-			_ => {},
+			.expect("ParaId is known");
+		// only care about active parachains.
+		if lifecycle.is_parachain() {
+			para_ids.push(id);
 		}
 	}
 	let previous_finalized_block_number: subxt::rpc::types::BlockNumber =
@@ -106,7 +104,8 @@ where
 
 		let mut heads = BTreeMap::new();
 		for id in para_ids.iter() {
-			let key = runtime::api::storage().paras().heads(id);
+			let id: u32 = (*id).into();
+			let key = T::Storage::paras_heads(id);
 			if let Some(head) = client
 				.storage()
 				.at(Some(header.hash()))
@@ -115,7 +114,7 @@ where
 				.fetch(&key)
 				.await?
 			{
-				heads.insert(id.0, head.0);
+				heads.insert(id, Into::<Vec<u8>>::into(head));
 			}
 		}
 

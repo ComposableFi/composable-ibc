@@ -4,11 +4,18 @@ macro_rules! define_id {
 		$name: ident,
 		$id_type: path
 	) => {
+		#[derive(Decode)]
 		pub struct $name(pub $id_type);
 
 		impl From<u32> for $name {
 			fn from(value: u32) -> Self {
 				$name($id_type(value))
+			}
+		}
+
+		impl From<$name> for u32 {
+			fn from(value: $name) -> Self {
+				value.0 .0
 			}
 		}
 	};
@@ -26,6 +33,50 @@ macro_rules! define_head_data {
 		impl AsRef<[u8]> for $name {
 			fn as_ref(&self) -> &[u8] {
 				self.0 .0.as_ref()
+			}
+		}
+
+		impl Into<Vec<u8>> for $name {
+			fn into(self) -> Vec<u8> {
+				self.0 .0
+			}
+		}
+	};
+}
+
+#[macro_export]
+macro_rules! define_para_lifecycle {
+	(
+		$name: ident,
+		$ty: ty
+	) => {
+		#[derive(Decode)]
+		pub struct $name(pub $ty);
+
+		impl ParaLifecycleT for $name {
+			fn is_parachain(&self) -> bool {
+				matches!(self.0, <$ty>::Parachain)
+			}
+		}
+	};
+}
+
+#[macro_export]
+macro_rules! define_beefy_authority_set {
+	(
+		$name: ident,
+		$ty: ty
+	) => {
+		#[derive(Decode, Encode)]
+		pub struct $name<T>(pub $ty);
+
+		impl BeefyAuthoritySetT for $name<H256> {
+			fn root(&self) -> H256 {
+				self.0.root
+			}
+
+			fn len(&self) -> u32 {
+				self.0.len
 			}
 		}
 	};
@@ -59,10 +110,7 @@ macro_rules! define_any_wrapper {
 
 		impl From<$name> for Any {
 			fn from(value: $name) -> Self {
-				Any {
-					type_url: String::from_utf8(value.0.type_url).expect("valid string"),
-					value: value.0.value,
-				}
+				Any { type_url: value.0.type_url, value: value.0.value }
 			}
 		}
 	};
@@ -469,12 +517,29 @@ macro_rules! define_transfer_params {
 
 #[macro_export]
 macro_rules! define_runtime_storage {
-	($name:ident, $head_data:ty, $id:ty, $timestamp_now: expr, $paras_heads: expr, $grandpa_current_set_id:expr, $babe_epoch_start:expr) => {
+	(
+		$name:ident,
+		$head_data:ty,
+		$id:ty,
+		$para_lifecycle:ty,
+		$beefy_authority_set:ty,
+		$timestamp_now:expr,
+		$paras_heads:expr,
+		$paras_para_lifecycles:expr,
+		$paras_parachains:expr,
+		$grandpa_current_set_id:expr,
+		$beefy_validator_set_id:expr,
+		$beefy_authorities:expr,
+		$mmr_leaf_beefy_next_authorities:expr,
+		$babe_epoch_start:expr
+	) => {
 		pub struct $name;
 
 		impl RuntimeStorage for $name {
 			type HeadData = $head_data;
 			type Id = $id;
+			type ParaLifecycle = $para_lifecycle;
+			type BeefyAuthoritySet = $beefy_authority_set;
 
 			fn timestamp_now() -> StaticStorageAddress<DecodeStaticType<u64>, Yes, Yes, ()> {
 				$timestamp_now
@@ -483,37 +548,48 @@ macro_rules! define_runtime_storage {
 			fn paras_heads(
 				x: u32,
 			) -> LocalStaticStorageAddress<DecodeStaticType<Self::HeadData>, Yes, (), Yes> {
-				let x = $paras_heads(&Self::Id::from(x).0);
-				let mut bytes = vec![];
-				fn fake_metadata() -> Metadata {
-					Metadata::try_from(RuntimeMetadataPrefixed(
-						META_RESERVED,
-						RuntimeMetadata::V14(RuntimeMetadataV14::new(
-							Vec::new(),
-							ExtrinsicMetadata {
-								ty: MetaType::new::<()>(),
-								version: 0,
-								signed_extensions: vec![],
-							},
-							MetaType::new::<()>(),
-						)),
-					))
-					.unwrap()
-				}
-				x.append_entry_bytes(&fake_metadata(), &mut bytes)
-					.expect("should always succeed");
-				LocalStaticStorageAddress {
-					pallet_name: "Paras",
-					entry_name: "Heads",
-					storage_entry_keys: bytes,
-					validation_hash: x.validation_hash(),
-					_marker: Default::default(),
-				}
+				let storage = $paras_heads(&Self::Id::from(x).0);
+				LocalStaticStorageAddress::new("Paras", "Heads", storage)
+			}
+
+			fn paras_para_lifecycles(
+				x: u32,
+			) -> LocalStaticStorageAddress<DecodeStaticType<Self::ParaLifecycle>, Yes, (), Yes> {
+				let storage = $paras_para_lifecycles(&Self::Id::from(x).0);
+				LocalStaticStorageAddress::new("Paras", "ParaLifecycles", storage)
+			}
+
+			fn paras_parachains(
+			) -> LocalStaticStorageAddress<DecodeStaticType<Vec<Self::Id>>, Yes, Yes, ()> {
+				let storage = $paras_parachains;
+				LocalStaticStorageAddress::new("Paras", "Parachains", storage)
 			}
 
 			fn grandpa_current_set_id() -> StaticStorageAddress<DecodeStaticType<u64>, Yes, Yes, ()>
 			{
 				$grandpa_current_set_id
+			}
+
+			fn beefy_validator_set_id() -> StaticStorageAddress<DecodeStaticType<u64>, Yes, Yes, ()>
+			{
+				$beefy_validator_set_id
+			}
+
+			fn beefy_authorities() -> LocalStaticStorageAddress<
+				DecodeStaticType<Vec<sp_beefy::crypto::Public>>,
+				Yes,
+				Yes,
+				(),
+			> {
+				let storage = $beefy_authorities;
+				LocalStaticStorageAddress::new("Beefy", "Authorities", storage)
+			}
+
+			fn mmr_leaf_beefy_next_authorities(
+			) -> LocalStaticStorageAddress<DecodeStaticType<Self::BeefyAuthoritySet>, Yes, Yes, ()>
+			{
+				let storage = $mmr_leaf_beefy_next_authorities;
+				LocalStaticStorageAddress::new("MmrLeaf", "BeefyNextAuthorities", storage)
 			}
 
 			fn babe_epoch_start() -> StaticStorageAddress<DecodeStaticType<(u32, u32)>, Yes, Yes, ()>
@@ -560,7 +636,7 @@ macro_rules! define_runtime_transactions {
 				$ibc_deliver(
 					messages
 						.into_iter()
-						.map(|x| Any { type_url: x.type_url.into_bytes(), value: x.value })
+						.map(|x| Any { type_url: x.type_url, value: x.value })
 						.collect(),
 				)
 			}

@@ -36,12 +36,6 @@ pub struct Cli {
 	/// Path to relaychain runtime wasm
 	#[clap(long)]
 	pub relaychain_wasm: Option<PathBuf>,
-	/// Path to parachain runtime wasm blob
-	#[clap(long)]
-	pub parachain_wasm2: Option<PathBuf>,
-	/// Path to relaychain runtime wasm
-	#[clap(long)]
-	pub relaychain_wasm2: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -62,8 +56,6 @@ async fn main() -> Result<(), anyhow::Error> {
 		let runtimes = [
 			(format!("ws://{}:{}", cli.relay_host, cli.relay_port), "relaychain"),
 			(format!("ws://{}:{}", cli.para_host, cli.para_port), "parachain"),
-			(format!("ws://{}:{}", cli.para_host, cli.para_port), "kusama"),
-			(format!("ws://{}:{}", cli.para_host, cli.para_port), "parachain2"),
 		];
 
 		for (url, runtime) in runtimes {

@@ -6,11 +6,7 @@ authors = ["Seun Lanlege <seunlanlege@gmail.com>"]
 
 
 [features]
-default = ["std", "build-metadata-from-ws"]
-build-metadata-from-ws = [
-    "beefy-prover/build-metadata-from-ws",
-    "grandpa-prover/build-metadata-from-ws",
-]
+default = ["std"]
 std = [
     "ibc/std",
     "ibc-proto/std",
@@ -67,7 +63,7 @@ futures = "0.3.24"
 env_logger = "0.9.0"
 serde = { version = "1.0.144", features = ["derive"] }
 beefy-prover = { path = "../../algorithms/beefy/prover" }
-grandpa-prover = { path = "../../algorithms/grandpa/prover", features = ["build-metadata-from-ws"] }
+grandpa-prover = { path = "../../algorithms/grandpa/prover" }
 ibc = { path = "../../ibc/modules", features = ["mocks"] }
 ibc-derive = { path = "../../ibc/derive" }
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }

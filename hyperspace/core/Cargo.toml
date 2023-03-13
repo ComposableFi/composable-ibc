@@ -49,6 +49,7 @@ ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+sp-beefy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
 subxt-generated = { path = "../../utils/subxt/generated" }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
@@ -71,11 +72,8 @@ sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkad
 #common = { path = "../contracts/pallet-ibc" }
 
 [features]
-build-metadata-from-ws = [
-    "parachain/build-metadata-from-ws",
-]
+build-metadata-from-ws = []
 #near = ["dep:near"]
 #cosmos = ["dep:cosmos"]
 testing = [ "primitives/testing", "parachain/testing" ]
 dali = ["parachain/dali"]
-kusama = []

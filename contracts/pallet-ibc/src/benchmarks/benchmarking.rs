@@ -132,7 +132,7 @@ benchmarks! {
 			signer: Signer::from_str(MODULE_ID).unwrap(),
 		};
 
-		let msg = Any { type_url: UPDATE_CLIENT_TYPE_URL.to_string().as_bytes().to_vec(), value: msg.encode_vec().unwrap() };
+		let msg = Any { type_url: UPDATE_CLIENT_TYPE_URL.to_string(), value: msg.encode_vec().unwrap() };
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -833,7 +833,7 @@ benchmarks! {
 		.unwrap()
 		.encode_vec().unwrap();
 
-		let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
+		let msg = Any { type_url: TYPE_URL.to_string(), value: msg };
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -1255,7 +1255,7 @@ benchmarks! {
 			signer: Signer::from_str("relayer").unwrap()
 		};
 
-		let msg = Any { type_url: UPDATE_CLIENT_TYPE_URL.to_string().as_bytes().to_vec(), value: msg.encode_vec().unwrap() };
+		let msg = Any { type_url: UPDATE_CLIENT_TYPE_URL.to_string(), value: msg.encode_vec().unwrap() };
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {

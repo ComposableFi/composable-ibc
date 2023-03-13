@@ -12,17 +12,18 @@ use self::parachain_subxt::api::{
 	sudo::calls::Sudo,
 };
 use crate::{
-	define_any_wrapper, define_event_record, define_events, define_head_data,
-	define_ibc_event_wrapper, define_id, define_pallet_params, define_runtime_call,
-	define_runtime_event, define_runtime_storage, define_runtime_transactions,
-	define_send_ping_params, define_transfer_params,
+	define_any_wrapper, define_beefy_authority_set, define_event_record, define_events,
+	define_head_data, define_ibc_event_wrapper, define_id, define_pallet_params,
+	define_para_lifecycle, define_runtime_call, define_runtime_event, define_runtime_storage,
+	define_runtime_transactions, define_send_ping_params, define_transfer_params,
+	substrate::default::relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
 };
 use async_trait::async_trait;
-use codec::{Compact, Decode};
+use codec::{Compact, Decode, Encode};
 use ibc_proto::google::protobuf::Any;
 use light_client_common::config::{
-	EventRecordT, IbcEventsT, LocalStaticStorageAddress, RuntimeCall, RuntimeStorage,
-	RuntimeTransactions,
+	BeefyAuthoritySetT, EventRecordT, IbcEventsT, LocalStaticStorageAddress, ParaLifecycleT,
+	RuntimeCall, RuntimeStorage, RuntimeTransactions,
 };
 use pallet_ibc::{
 	events::IbcEvent as RawIbcEvent, MultiAddress, PalletParams, Timeout, TransferParams,
@@ -31,8 +32,9 @@ use pallet_ibc_ping::SendPingParams;
 use parachain_subxt::api::runtime_types::{
 	ibc_primitives::Timeout as RawTimeout, parachain_runtime::MemoMessage,
 };
+use relaychain::api::runtime_types::polkadot_runtime_parachains::paras::ParaLifecycle;
 use sp_core::{crypto::AccountId32, H256};
-use sp_runtime::scale_info::MetaType;
+
 #[cfg(not(feature = "dali"))]
 use subxt::config::polkadot::{
 	PolkadotExtrinsicParams as ParachainExtrinsicParams,
@@ -46,14 +48,10 @@ use subxt::config::substrate::{
 use subxt::{
 	config::{extrinsic_params::Era, ExtrinsicParams},
 	events::{Phase, StaticEvent},
-	ext::frame_metadata::{
-		ExtrinsicMetadata, RuntimeMetadata, RuntimeMetadataPrefixed, RuntimeMetadataV14,
-		META_RESERVED,
-	},
 	metadata::DecodeStaticType,
-	storage::{address::Yes, StaticStorageAddress, StorageAddress},
+	storage::{address::Yes, StaticStorageAddress},
 	tx::StaticTxPayload,
-	Error, Metadata, OnlineClient,
+	Error, OnlineClient,
 };
 
 pub mod parachain_subxt {
@@ -61,7 +59,7 @@ pub mod parachain_subxt {
 	include!(concat!(env!("OUT_DIR"), "/parachain.rs"));
 
 	#[cfg(not(feature = "build-metadata-from-ws"))]
-	pub use subxt_generated::parachain::*;
+	pub use subxt_generated::default::parachain::*;
 }
 
 pub mod relaychain {
@@ -69,7 +67,7 @@ pub mod relaychain {
 	include!(concat!(env!("OUT_DIR"), "/polkadot.rs"));
 
 	#[cfg(not(feature = "build-metadata-from-ws"))]
-	pub use subxt_generated::relaychain::*;
+	pub use subxt_generated::default::relaychain::*;
 }
 
 pub type Balance = u128;
@@ -85,13 +83,24 @@ define_head_data!(
 	relaychain::api::runtime_types::polkadot_parachain::primitives::HeadData,
 );
 
+define_para_lifecycle!(DefaultParaLifecycle, ParaLifecycle);
+
+define_beefy_authority_set!(DefaultBeefyAuthoritySet, BeefyAuthoritySet<T>);
+
 define_runtime_storage!(
 	DefaultRuntimeStorage,
 	DefaultHeadData,
 	DefaultId,
+	DefaultParaLifecycle,
+	DefaultBeefyAuthoritySet<H256>,
 	parachain_subxt::api::storage().timestamp().now(),
 	|x| relaychain::api::storage().paras().heads(x),
+	|x| relaychain::api::storage().paras().para_lifecycles(x),
+	relaychain::api::storage().paras().parachains(),
 	relaychain::api::storage().grandpa().current_set_id(),
+	relaychain::api::storage().beefy().validator_set_id(),
+	relaychain::api::storage().beefy().authorities(),
+	relaychain::api::storage().mmr_leaf().beefy_next_authorities(),
 	relaychain::api::storage().babe().epoch_start()
 );
 
