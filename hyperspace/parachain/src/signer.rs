@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use codec::Decode;
+use primitives::KeyProvider;
 use sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
 use sp_runtime::{
 	app_crypto::CryptoTypePublicPair,
@@ -19,10 +21,6 @@ use sp_runtime::{
 	KeyTypeId, MultiSignature, MultiSigner,
 };
 use subxt::tx::Signer;
-
-use crate::config;
-use codec::Decode;
-use primitives::KeyProvider;
 
 /// A [`Signer`] implementation.
 #[derive(Clone)]

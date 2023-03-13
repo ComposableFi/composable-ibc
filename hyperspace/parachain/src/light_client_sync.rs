@@ -33,7 +33,7 @@ use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState};
 use primitives::{mock::LocalClientTypes, Chain, KeyProvider, LightClientSync};
 
 use super::{error::Error, ParachainClient};
-use crate::{config, finality_protocol::FinalityProtocol};
+use crate::{finality_protocol::FinalityProtocol};
 
 #[async_trait::async_trait]
 impl<T: light_client_common::config::Config + Send + Sync> LightClientSync for ParachainClient<T>

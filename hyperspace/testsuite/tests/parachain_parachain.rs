@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use async_trait::async_trait;
 use futures::StreamExt;
-use hyperspace_core::{chain::AnyAssetId, logging, substrate::DefaultConfig};
+use hyperspace_core::{logging, substrate::DefaultConfig};
 use hyperspace_parachain::{
-	config, finality_protocol::FinalityProtocol, ParachainClient, ParachainClientConfig,
+	finality_protocol::FinalityProtocol, ParachainClient, ParachainClientConfig,
 };
 use hyperspace_primitives::{utils::create_clients, IbcProvider};
 use hyperspace_testsuite::{
@@ -25,14 +24,6 @@ use hyperspace_testsuite::{
 	ibc_messaging_packet_timeout_on_channel_close,
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
-};
-use light_client_common::config::CustomExtrinsicParams;
-use subxt::{
-	config::{
-		extrinsic_params::Era,
-		polkadot::{PolkadotExtrinsicParams, PolkadotExtrinsicParamsBuilder},
-	},
-	Error, OnlineClient,
 };
 
 #[derive(Debug, Clone)]

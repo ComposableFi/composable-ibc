@@ -19,7 +19,6 @@
 
 use codec::{Compact, Decode, Input};
 use light_client_common::config::Config;
-use sp_runtime::generic::Era;
 
 pub struct UncheckedExtrinsic<T: Config> {
 	pub signature:

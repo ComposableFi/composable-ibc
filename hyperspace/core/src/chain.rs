@@ -14,10 +14,8 @@
 
 #![allow(unreachable_patterns)]
 
-use crate::substrate::{default, default::DefaultConfig};
+use crate::substrate::default::DefaultConfig;
 use async_trait::async_trait;
-use codec::{Compact, Decode, Encode};
-use default::parachain_subxt::api::runtime_types::frame_system::EventRecord;
 use derive_more::From;
 use futures::Stream;
 #[cfg(any(test, feature = "testing"))]
@@ -47,48 +45,19 @@ use ibc_proto::{
 		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
 	},
 };
-use light_client_common::config::{
-	EventRecordT, IbcEventsT, LocalStaticStorageAddress, RuntimeCall, RuntimeStorage,
-	RuntimeTransactions,
-};
+use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 #[cfg(any(test, feature = "testing"))]
 use pallet_ibc::Timeout;
-use pallet_ibc::{
-	errors::IbcError,
-	light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState},
-	MultiAddress, PalletParams, TransferParams,
-};
-use parachain::{config, ParachainClient};
+use parachain::ParachainClient;
 use primitives::{
 	Chain, IbcProvider, KeyProvider, LightClientSync, MisbehaviourHandler, UpdateType,
 };
 use serde::{Deserialize, Serialize};
-use sp_core::{crypto::AccountId32, H256};
-use std::{borrow::Borrow, pin::Pin, time::Duration};
-#[cfg(not(feature = "dali"))]
-use subxt::config::polkadot::{
-	PolkadotExtrinsicParams as ParachainExtrinsicParams,
-	PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
-};
+use std::{pin::Pin, time::Duration};
 #[cfg(feature = "dali")]
 use subxt::config::substrate::{
 	SubstrateExtrinsicParams as ParachainExtrinsicParams,
 	SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
-};
-use subxt::{
-	config::{extrinsic_params::Era, ExtrinsicParams},
-	events::{Phase, StaticEvent},
-	ext::frame_metadata::{
-		OpaqueMetadata, RuntimeMetadata, RuntimeMetadataDeprecated, RuntimeMetadataPrefixed,
-	},
-	metadata::{DecodeStaticType, DecodeWithMetadata},
-	storage,
-	storage::{
-		address::{StorageMapKey, Yes},
-		StaticStorageAddress, StorageAddress,
-	},
-	tx::StaticTxPayload,
-	Error, Metadata, OnlineClient,
 };
 use thiserror::Error;
 

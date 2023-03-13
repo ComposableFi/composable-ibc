@@ -4,7 +4,7 @@ macro_rules! define_id {
 		$name: ident,
 		$id_type: path
 	) => {
-		pub struct $name($id_type);
+		pub struct $name(pub $id_type);
 
 		impl From<u32> for $name {
 			fn from(value: u32) -> Self {
@@ -21,7 +21,7 @@ macro_rules! define_head_data {
 		$head_data_type: ty,
 	) => {
 		#[derive(Decode)]
-		pub struct $name($head_data_type);
+		pub struct $name(pub $head_data_type);
 
 		impl AsRef<[u8]> for $name {
 			fn as_ref(&self) -> &[u8] {
@@ -38,7 +38,7 @@ macro_rules! define_pallet_params {
 		$pallet_params_type: ty,
 		$raw_pallet_params_type: ty
 	) => {
-		pub struct $name($pallet_params_type);
+		pub struct $name(pub $pallet_params_type);
 
 		impl From<$name> for $raw_pallet_params_type {
 			fn from(value: $name) -> Self {
@@ -55,7 +55,7 @@ macro_rules! define_any_wrapper {
 		$name: ident,
 		$raw_any_type: ty
 	) => {
-		pub struct $name($raw_any_type);
+		pub struct $name(pub $raw_any_type);
 
 		impl From<$name> for Any {
 			fn from(value: $name) -> Self {
@@ -74,6 +74,7 @@ macro_rules! define_ibc_event_wrapper {
 		$name: ident,
 		$meta_ibc_event_type: ty
 	) => {
+		/// Allows to implement traits for the subxt generated code
 		pub struct $name(pub $meta_ibc_event_type);
 
 		impl From<$name> for RawIbcEvent {
@@ -409,9 +410,9 @@ macro_rules! define_send_ping_params {
 	(
 		$name: ident,
 		$send_ping_params_type: ty,
-		$raw_send_ping_params_type: ty,
+		$raw_send_ping_params_type: ty
 	) => {
-		pub struct $name($send_ping_params_type);
+		pub struct $name(pub $send_ping_params_type);
 
 		impl From<$name> for $raw_send_ping_params_type {
 			fn from(value: $name) -> Self {
@@ -434,9 +435,9 @@ macro_rules! define_transfer_params {
 		$transfer_params_type: ty,
 		$raw_transfer_params_type: ty,
 		$timeout_type: ty,
-		$address_type: ty,
+		$address_type: ty
 	) => {
-		pub struct $name($transfer_params_type);
+		pub struct $name(pub $transfer_params_type);
 
 		impl<T> From<$name> for $raw_transfer_params_type
 		where
@@ -536,11 +537,11 @@ macro_rules! define_runtime_transactions {
 		$transfer_params:ty,
 		$transfer_wrapper:expr,
 		$send_ping_params_wrapper:expr,
-		$any: expr,
+		$any: path,
 		$ibc_deliver: expr,
 		$ibc_transfer: expr,
 		$sudo_sudo: expr,
-		$ibc_ping_send_ping: expr,
+		$ibc_ping_send_ping: expr
 	) => {
 		pub struct $name;
 
@@ -555,8 +556,12 @@ macro_rules! define_runtime_transactions {
 			type TransferParams = $transfer_params;
 
 			fn ibc_deliver(messages: Vec<Any>) -> StaticTxPayload<Self::Deliver> {
+				use $any as Any;
 				$ibc_deliver(
-					messages.into_iter().map(|x| $any(x.type_url.into_bytes(), x.value)).collect(),
+					messages
+						.into_iter()
+						.map(|x| Any { type_url: x.type_url.into_bytes(), value: x.value })
+						.collect(),
 				)
 			}
 
@@ -589,7 +594,7 @@ macro_rules! define_runtime_transactions {
 macro_rules! define_event_record {
 	($name:ident, $event_record:ty, $ibc_event_wrapper: expr, $phase: path, $pallet_event: path, $runtime_event: path) => {
 		#[derive(Decode)]
-		pub struct $name($event_record);
+		pub struct $name(pub $event_record);
 
 		impl EventRecordT for $name {
 			type IbcEvent = pallet_ibc::events::IbcEvent;
@@ -627,7 +632,7 @@ macro_rules! define_event_record {
 macro_rules! define_events {
 	($name:ident, $events:ty, $ibc_event_wrapper: expr) => {
 		#[derive(Decode)]
-		pub struct $name($events);
+		pub struct $name(pub $events);
 
 		impl IbcEventsT for $name {
 			type IbcEvent = pallet_ibc::events::IbcEvent;
@@ -659,7 +664,7 @@ macro_rules! define_events {
 macro_rules! define_runtime_event {
 	($name:ident, $runtime_event:ty) => {
 		#[derive(Decode)]
-		pub struct $name($runtime_event);
+		pub struct $name(pub $runtime_event);
 	};
 }
 
@@ -667,7 +672,7 @@ macro_rules! define_runtime_event {
 macro_rules! define_runtime_call {
 	($name:ident, $runtime_call: path, $pallet_params_wrapper: expr, $any_wrapper: expr, $call: path) => {
 		#[derive(Decode)]
-		pub struct $name($runtime_call);
+		pub struct $name(pub $runtime_call);
 
 		impl RuntimeCall for $name {
 			type PalletParams = PalletParams;

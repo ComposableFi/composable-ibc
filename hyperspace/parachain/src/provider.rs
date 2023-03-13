@@ -14,9 +14,7 @@
 
 use super::{error::Error, ParachainClient};
 use crate::{
-	config,
 	finality_protocol::FinalityEvent,
-	parachain,
 	FinalityProtocol, // utils::MetadataIbcEventWrapper,
 	GrandpaClientState,
 };
@@ -125,7 +123,7 @@ where
 
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
 		use futures::StreamExt;
-		use pallet_ibc::events::IbcEvent as RawIbcEvent;
+		
 		let (tx, rx) = tokio::sync::mpsc::channel(32);
 		let event = self.para_client.events();
 		let para_client = self.para_client.clone();

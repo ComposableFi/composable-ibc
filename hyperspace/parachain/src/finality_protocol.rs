@@ -14,7 +14,7 @@
 
 //! Light client protocols for parachains.
 
-use crate::{config, error::Error, ParachainClient};
+use crate::{error::Error, ParachainClient};
 use anyhow::anyhow;
 use beefy_light_client_primitives::{ClientState as BeefyPrimitivesClientState, NodesUtils};
 use codec::{Decode, Encode};

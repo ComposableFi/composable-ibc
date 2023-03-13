@@ -18,58 +18,21 @@ use crate::{
 	define_send_ping_params, define_transfer_params,
 };
 use async_trait::async_trait;
-use codec::{Compact, Decode, Encode};
-use derive_more::From;
-use futures::Stream;
-#[cfg(any(test, feature = "testing"))]
-use ibc::applications::transfer::msgs::transfer::MsgTransfer;
-use ibc::{
-	applications::transfer::PrefixedCoin,
-	core::{
-		ics02_client::{client_state::ClientType, events::UpdateClient},
-		ics23_commitment::commitment::CommitmentPrefix,
-		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
-	},
-	downcast,
-	events::IbcEvent,
-	signer::Signer,
-	timestamp::Timestamp,
-	Height,
-};
-use ibc_proto::{
-	google::protobuf::Any,
-	ibc::core::{
-		channel::v1::{
-			QueryChannelResponse, QueryChannelsResponse, QueryNextSequenceReceiveResponse,
-			QueryPacketAcknowledgementResponse, QueryPacketCommitmentResponse,
-			QueryPacketReceiptResponse,
-		},
-		client::v1::{QueryClientStateResponse, QueryConsensusStateResponse},
-		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
-	},
-};
+use codec::{Compact, Decode};
+use ibc_proto::google::protobuf::Any;
 use light_client_common::config::{
 	EventRecordT, IbcEventsT, LocalStaticStorageAddress, RuntimeCall, RuntimeStorage,
 	RuntimeTransactions,
 };
 use pallet_ibc::{
-	errors::IbcError,
-	events::IbcEvent as RawIbcEvent,
-	light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState},
-	MultiAddress, PalletParams, Timeout, TransferParams,
+	events::IbcEvent as RawIbcEvent, MultiAddress, PalletParams, Timeout, TransferParams,
 };
 use pallet_ibc_ping::SendPingParams;
 use parachain_subxt::api::runtime_types::{
-	ibc_primitives::Timeout as RawTimeout, pallet_ibc::Any as RawAny,
-	parachain_runtime::MemoMessage,
+	ibc_primitives::Timeout as RawTimeout, parachain_runtime::MemoMessage,
 };
-use primitives::{
-	Chain, IbcProvider, KeyProvider, LightClientSync, MisbehaviourHandler, UpdateType,
-};
-use serde::{Deserialize, Serialize};
 use sp_core::{crypto::AccountId32, H256};
 use sp_runtime::scale_info::MetaType;
-use std::{borrow::Borrow, pin::Pin, time::Duration};
 #[cfg(not(feature = "dali"))]
 use subxt::config::polkadot::{
 	PolkadotExtrinsicParams as ParachainExtrinsicParams,
@@ -84,19 +47,14 @@ use subxt::{
 	config::{extrinsic_params::Era, ExtrinsicParams},
 	events::{Phase, StaticEvent},
 	ext::frame_metadata::{
-		ExtrinsicMetadata, OpaqueMetadata, RuntimeMetadata, RuntimeMetadataDeprecated,
-		RuntimeMetadataPrefixed, RuntimeMetadataV14, META_RESERVED,
+		ExtrinsicMetadata, RuntimeMetadata, RuntimeMetadataPrefixed, RuntimeMetadataV14,
+		META_RESERVED,
 	},
-	metadata::{DecodeStaticType, DecodeWithMetadata},
-	storage,
-	storage::{
-		address::{StorageMapKey, Yes},
-		StaticStorageAddress, StorageAddress,
-	},
+	metadata::DecodeStaticType,
+	storage::{address::Yes, StaticStorageAddress, StorageAddress},
 	tx::StaticTxPayload,
 	Error, Metadata, OnlineClient,
 };
-use thiserror::Error;
 
 pub mod parachain_subxt {
 	#[cfg(feature = "build-metadata-from-ws")]
@@ -139,14 +97,14 @@ define_runtime_storage!(
 
 define_pallet_params!(PalletParamsWrapper, PalletParams, RawPalletParams);
 
-define_send_ping_params!(SendPingParamsWrapper, SendPingParams, RawSendPingParams,);
+define_send_ping_params!(SendPingParamsWrapper, SendPingParams, RawSendPingParams);
 
 define_transfer_params!(
 	TransferParamsWrapper,
 	TransferParams<AccountId32>,
 	RawTransferParams<T>,
 	RawTimeout,
-	parachain_subxt::api::runtime_types::pallet_ibc::MultiAddress<T>,
+	parachain_subxt::api::runtime_types::pallet_ibc::MultiAddress<T>
 );
 
 define_any_wrapper!(AnyWrapper, parachain_subxt::api::runtime_types::pallet_ibc::Any);
@@ -162,14 +120,13 @@ define_runtime_transactions!(
 	TransferParams<AccountId32>,
 	TransferParamsWrapper,
 	SendPingParamsWrapper,
-	|type_url, value| parachain_subxt::api::runtime_types::pallet_ibc::Any { type_url, value },
+	parachain_subxt::api::runtime_types::pallet_ibc::Any,
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, y, z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),
-	|x| parachain_subxt::api::tx().ibc_ping().send_ping(x),
+	|x| parachain_subxt::api::tx().ibc_ping().send_ping(x)
 );
 
-/// Allows to implement traits for the subxt generated code
 define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);
 
 define_event_record!(

@@ -40,6 +40,8 @@ grandpa-prover = { path = "../prover", features = ["build-metadata-from-ws"] }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 jsonrpsee-ws-client = "0.16.2"
 jsonrpsee-core = "0.16.2"
+hyperspace-core = { path = "../../../hyperspace/core", features = ["testing", "build-metadata-from-ws"] }
+light-client-common = { path = "../../../light-clients/common", features = ["std"] }
 
 [features]
 default = ["std", "build-metadata-from-ws"]

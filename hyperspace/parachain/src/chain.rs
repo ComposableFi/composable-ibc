@@ -39,7 +39,6 @@ use primitives::{Chain, IbcProvider, MisbehaviourHandler};
 
 use super::{error::Error, signer::ExtrinsicSigner, ParachainClient};
 use crate::{
-	config,
 	parachain::UncheckedExtrinsic,
 	// utils::MetadataIbcEventWrapper,
 	provider::TransactionId,
@@ -228,8 +227,6 @@ where
 	}
 
 	async fn query_client_message(&self, update: UpdateClient) -> Result<AnyClientMessage, Error> {
-		use pallet_ibc::events::IbcEvent as RawIbcEvent;
-
 		let host_height = update.height();
 
 		let now = std::time::Instant::now();

@@ -17,7 +17,6 @@
 use std::{collections::BTreeMap, str::FromStr, sync::Arc, time::Duration};
 
 pub mod chain;
-pub mod config;
 pub mod error;
 pub mod key_provider;
 pub mod parachain;

@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{config, Error};
+use crate::Error;
 use beefy_light_client_primitives::{ClientState, MmrUpdateProof};
-use std::sync::Arc;
-
 use beefy_primitives::known_payloads::MMR_ROOT_ID;
 use beefy_prover::helpers::unsafe_arc_cast;
 use codec::Decode;
 use frame_support::pallet_prelude::{DispatchClass, Weight};
 use frame_system::limits::BlockWeights;
-use pallet_ibc::events::IbcEvent as RawIbcEvent;
 use sp_core::H256;
+use std::sync::Arc;
 
 pub fn get_updated_client_state(
 	mut client_state: ClientState,
