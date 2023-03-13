@@ -180,10 +180,10 @@ pub struct CosmosClientConfig {
 	pub address_type: AddressType,			    // TODO: Type = cosmos
 	pub extension_options: Vec<ExtensionOption>,// TODO: Could be set to None
 	*/
-	/// The key that signs transactions
-	pub keybase: ConfigKeyEntry,
 	/// Whitelisted channels
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
+	/// The key that signs transactions
+	pub keybase: ConfigKeyEntry,
 }
 
 impl<H> CosmosClient<H>
