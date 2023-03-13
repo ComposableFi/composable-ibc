@@ -38,12 +38,7 @@ use transaction_payment_runtime_api::RuntimeDispatchInfo;
 use primitives::{Chain, IbcProvider, MisbehaviourHandler};
 
 use super::{error::Error, signer::ExtrinsicSigner, ParachainClient};
-use crate::{
-	parachain::UncheckedExtrinsic,
-	// utils::MetadataIbcEventWrapper,
-	provider::TransactionId,
-	FinalityProtocol,
-};
+use crate::{parachain::UncheckedExtrinsic, provider::TransactionId, FinalityProtocol};
 use finality_grandpa_rpc::GrandpaApiClient;
 use ibc::{
 	core::{

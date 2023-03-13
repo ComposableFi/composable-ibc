@@ -22,6 +22,7 @@ use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
 	core::ics24_host::identifier::{ChannelId, ClientId, PortId},
 };
+use ibc_proto::google::protobuf::Any;
 use ibc_rpc::IbcApiClient;
 use jsonrpsee::{core::client::SubscriptionClientT, rpc_params};
 use light_client_common::config::{RuntimeCall, RuntimeTransactions};
@@ -74,8 +75,8 @@ where
 		self.client_id = Some(client_id)
 	}
 
-	pub async fn submit_create_client_msg(&self, msg: pallet_ibc::Any) -> Result<ClientId, Error> {
-		let call = T::Tx::ibc_deliver(vec![msg.into()]);
+	pub async fn submit_create_client_msg(&self, msg: Any) -> Result<ClientId, Error> {
+		let call = T::Tx::ibc_deliver(vec![msg]);
 		let (ext_hash, block_hash) = self.submit_call(call).await?;
 
 		// Query newly created client Id

@@ -37,7 +37,7 @@ use sp_core::H256;
 use sp_runtime::traits::Header;
 use sp_trie::{LayoutV0, StorageProof};
 
-#[cfg(all(feature = "std", test))]
+#[cfg(test)]
 mod tests;
 
 /// This function verifies the GRANDPA finality proof for relay chain headers.

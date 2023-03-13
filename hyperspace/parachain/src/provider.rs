@@ -13,11 +13,7 @@
 // limitations under the License.
 
 use super::{error::Error, ParachainClient};
-use crate::{
-	finality_protocol::FinalityEvent,
-	FinalityProtocol, // utils::MetadataIbcEventWrapper,
-	GrandpaClientState,
-};
+use crate::{finality_protocol::FinalityEvent, FinalityProtocol, GrandpaClientState};
 use beefy_prover::helpers::fetch_timestamp_extrinsic_with_proof;
 use codec::Encode;
 use finality_grandpa::BlockNumberOps;
@@ -123,7 +119,7 @@ where
 
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
 		use futures::StreamExt;
-		
+
 		let (tx, rx) = tokio::sync::mpsc::channel(32);
 		let event = self.para_client.events();
 		let para_client = self.para_client.clone();

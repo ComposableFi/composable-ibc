@@ -41,7 +41,6 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 
 # subxt
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
-#subxt-generated = { path = "../../utils/subxt/generated" }
 
 beefy-primitives = {  git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", package = "sp-beefy" }
 beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
