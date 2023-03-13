@@ -6,7 +6,7 @@ use super::{
 };
 use crate::error::Error;
 use bech32::ToBase32;
-use bip32::{ExtendedPrivateKey, Prefix, XPrv, XPub as ExtendedPublicKey};
+use bip32::{DerivationPath, ExtendedPrivateKey, Prefix, XPrv, XPub as ExtendedPublicKey, Mnemonic, Language};
 use core::convert::{From, Into, TryFrom};
 use digest::Digest;
 use ibc::core::{
@@ -22,24 +22,7 @@ use ibc_proto::{
 	google::protobuf::Any,
 };
 use ripemd::Ripemd160;
-use secp256k1::{Message as Secp256k1Message, PublicKey, Secp256k1, SecretKey};
-use std::{ops::Index, str::FromStr, sync::Arc};
-
-use bip39::{Language, Mnemonic, Seed};
-use bitcoin::{
-	hashes::hex::ToHex,
-	network::constants::Network,
-	util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey},
-};
-use ed25519_zebra::{SigningKey, VerificationKey, VerificationKeyBytes};
-use hdpath::StandardHDPath;
-use ibc_relayer::{
-	chain::ChainType,
-	config::{AddressType, ChainConfig, Config},
-	keyring::{
-		AnySigningKeyPair, KeyRing, Secp256k1KeyPair, SigningKeyPair, SigningKeyPairSized, Store,
-	},
-};
+use std::{str::FromStr, sync::Arc};
 use ics07_tendermint::{
 	client_message::Header, client_state::ClientState, consensus_state::ConsensusState,
 	merkle::convert_tm_to_ics_merkle_proof,
@@ -94,10 +77,9 @@ impl TryFrom<String> for KeyEntry {
 
 	fn try_from(mnemonic: String) -> Result<Self, Self::Error> {
 		// From mnemonic to pubkey
-		let mnemonic = bip39::Mnemonic::from_phrase(&mnemonic, Language::English).unwrap();
-		let seed = Seed::new(&mnemonic, "");
-		let derive_path = bip32::DerivationPath::from_str("m/44'/118'/0'/0/0")?;
-		let key_m = bip32::XPrv::derive_from_path(seed, &derive_path)?;
+		let mnemonic = bip39::Mnemonic::from_phrase(&mnemonic, bip39::Language::English).unwrap();
+		let seed = bip39::Seed::new(&mnemonic, "");
+		let key_m = XPrv::derive_from_path(seed, &DerivationPath::from_str("m/44'/118'/0'/0/0")?)?;
 
 		// From pubkey to address
 		let sha256 = sha2::Sha256::digest(key_m.public_key().to_bytes());
@@ -105,8 +87,8 @@ impl TryFrom<String> for KeyEntry {
 		let account =
 			bech32::encode("cosmos", public_key_hash.to_base32(), bech32::Variant::Bech32).unwrap();
 		Ok(KeyEntry {
-			public_key: ExtendedPublicKey::from_str(&key_m.public_key().to_string(Prefix::XPUB))?,
-			private_key: ExtendedPrivateKey::from_str(&key_m.to_string(Prefix::XPRV))?,
+			public_key: key_m.public_key(),
+			private_key: key_m,
 			account,
 			address: public_key_hash.into(),
 		})
@@ -478,27 +460,63 @@ where
 pub mod tests {
 
 	use crate::key_provider::KeyEntry;
-	use bech32::ToBase32;
-	use bip32::{Prefix, XPrv};
-	use digest::Digest;
-	use ripemd::Ripemd160;
+
+	struct TestVector {
+		mnemonic: &'static str,
+		private_key: [u8;32],
+		public_key: [u8;33],
+		account: &'static str,
+		address: [u8;20]
+	}
+	const TEST_VECTORS : &[TestVector] = &[
+		TestVector {
+			mnemonic: "idea gap afford glow ugly suspect exile wedding fiber turn opinion weekend moon project egg certain play obvious slice delay present weekend toe ask",
+			private_key: [
+				220, 53, 10, 206, 12, 57, 15, 47, 116, 210, 236, 140, 173, 220, 159, 74,
+				105, 112, 131, 55, 152, 173, 197, 173, 254, 22, 161, 53, 60, 30, 97, 181
+			],
+			public_key: [
+				2, 21, 157, 166, 61, 81, 112, 226, 211, 32, 5, 1, 133, 147, 182, 183, 41,
+				26, 243, 17, 241, 200, 87, 140, 93, 229, 26, 42, 81, 39, 208, 4, 219
+			],
+			account: "cosmos15hf3dgggyt4azpd693ax7fdfve8d5m6ct72z9p",
+			address: [165, 211, 22, 161, 8, 34, 235, 209, 5, 186, 44, 122, 111, 37, 169, 102, 78, 218, 111, 88], 
+		},
+		TestVector {
+			mnemonic: "elite program lift later ask fox change process dirt talk type coconut",
+			private_key: [97, 173, 171, 67, 228, 198, 20, 233, 30, 232, 208, 250, 151, 66, 76, 129, 83, 100, 17, 219, 74, 20, 43, 202, 110, 166, 72, 184, 100, 180, 135, 132],
+			public_key: [2, 167, 203, 215, 223, 101, 49, 90, 51, 44, 171, 156, 157, 167, 99, 213, 97, 84, 38, 210, 64, 168, 133, 38, 159, 49, 4, 24, 159, 137, 83, 92, 160],
+			account: "cosmos1dxsre7u4zkg28k4fqtgy2slcrrq46hqafe6547",
+			address: [105, 160, 60, 251, 149, 21, 144, 163, 218, 169, 2, 208, 69, 67, 248, 24, 193, 93, 92, 29], 
+		},
+		TestVector {
+			mnemonic: "habit few zero correct fancy hair common club slow lunch brief spawn away brief loyal flee witness possible faint legend spell arrive gravity hybrid",
+			private_key: [91, 189, 78, 43, 217, 14, 16, 247, 18, 196, 173, 149, 131, 156, 254, 191, 156, 154, 60, 255, 196, 2, 97, 219, 92, 160, 15, 224, 177, 216, 27, 44],
+			public_key: [3, 45, 249, 112, 87, 75, 114, 244, 199, 129, 6, 142, 9, 221, 205, 100, 226, 233, 131, 167, 146, 187, 181, 7, 176, 80, 107, 61, 151, 44, 185, 116, 116],
+			account: "cosmos1xf5280nzgqxyxps526vw0t6vd90gthd76fv6s8",
+			address: [50, 104, 163, 190, 98, 64, 12, 67, 6, 20, 86, 152, 231, 175, 76, 105, 94, 133, 221, 190], 
+		},
+	];
 
 	#[test]
 	fn test_from_mnemonic() {
-
-		let mnemonic: String =
-			"idea gap afford glow ugly suspect exile wedding fiber turn opinion weekend moon project egg certain play obvious slice delay present weekend toe ask".to_string();
-		let keyEntry = KeyEntry::try_from(mnemonic);
-		let a;
-		match keyEntry {
-			Ok(gud) => {
-				a = gud;
-				println!("{:?}", a.account);
-				println!("{:?}", a.private_key);
-				println!("{:?}", a.public_key);
-				assert_eq!(a.account, "cosmos15hf3dgggyt4azpd693ax7fdfve8d5m6ct72z9p".to_string())
-			},
-			Err(err) => eprintln!("Error: {}", err),
+		for vector in TEST_VECTORS {
+			match KeyEntry::try_from(vector.mnemonic.to_string()) {
+				Ok(key_entry) => {
+					assert_eq!(
+						key_entry.private_key.to_bytes(), vector.private_key
+					);
+					assert_eq!(
+						key_entry.public_key.to_bytes(),vector.public_key
+					);
+					assert_eq!(
+						key_entry.account, vector.account
+					);
+					assert_eq!(key_entry.address, vector.address);
+				},
+				Err(_) => panic!("Try from mnemonic failed"),
+			}
 		}
+		
 	}
 }
