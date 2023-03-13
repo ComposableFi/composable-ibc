@@ -94,14 +94,13 @@ impl TryFrom<String> for KeyEntry {
 
 	fn try_from(mnemonic: String) -> Result<Self, Self::Error> {
 		// From mnemonic to pubkey
-		let seed = bip32::Mnemonic::new(mnemonic, Default::default())?.to_seed("");
+		let mnemonic = bip39::Mnemonic::from_phrase(&mnemonic, Language::English).unwrap();
+		let seed = Seed::new(&mnemonic, "");
 		let derive_path = bip32::DerivationPath::from_str("m/44'/118'/0'/0/0")?;
 		let key_m = bip32::XPrv::derive_from_path(seed, &derive_path)?;
 
 		// From pubkey to address
-		let binding = key_m.public_key().public_key().to_bytes();
-  		let compressed = binding.as_slice().clone();	// seriallize
-		let sha256 = sha256::digest(compressed);
+		let sha256 = sha2::Sha256::digest(key_m.public_key().to_bytes());
 		let public_key_hash: [u8; 20] = Ripemd160::digest(sha256).into();
 		let account =
 			bech32::encode("cosmos", public_key_hash.to_base32(), bech32::Variant::Bech32).unwrap();
@@ -486,19 +485,6 @@ pub mod tests {
 
 	#[test]
 	fn test_from_mnemonic() {
-		let compressed = "4W7TSjsuqcUE17mSB2ajhZsbwkefsHWKsXCbERimu3z2QLN9EFgqqpppiBn4tTNPFoNVTo1b3BgCZAaFJuUgTZeFhzJjUHkK8X7kSC5c7yn".to_string();
-		let sha256 = sha256::digest(compressed);
-		let public_key_hash: [u8; 20] = Ripemd160::digest(sha256).into();
-		let b: [u8; 20] = [
-			156, 200, 27, 97, 35, 103, 35, 146, 182, 226, 202, 16, 25, 214, 215, 210, 149, 250,
-			224, 30,
-		]
-		.into();
-		println!(
-			"1 {}",
-			bech32::encode("cosmos", public_key_hash.to_base32(), bech32::Variant::Bech32).unwrap()
-		);
-		println!("2 {}", bech32::encode("cosmos", b.to_base32(), bech32::Variant::Bech32).unwrap());
 
 		let mnemonic: String =
 			"idea gap afford glow ugly suspect exile wedding fiber turn opinion weekend moon project egg certain play obvious slice delay present weekend toe ask".to_string();
