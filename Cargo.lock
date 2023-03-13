@@ -666,7 +666,6 @@ dependencies = [
  "sp-std 5.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "sp-trie 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36)",
  "subxt",
- "subxt-generated",
  "tokio",
 ]
 
