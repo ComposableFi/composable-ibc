@@ -48,7 +48,7 @@ macro_rules! process_finality_event {
 					let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
 					let mut messages =
 						parse_events(&mut $source, &mut $sink, events, $mode).await?;
-					log::info!(
+					log::debug!(
 						"Has packets {}: {}",
 						$source.name(),
 						$source.has_undelivered_sequences()

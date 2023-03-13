@@ -8,7 +8,7 @@ use ibc::{
 	},
 	Height,
 };
-use std::{char::DecodeUtf16, time::Duration};
+use std::time::Duration;
 
 impl<'a, H: HostFunctions> ConnectionReader for Context<'a, H> {
 	fn minimum_delay_period(&self) -> Duration {
