@@ -141,7 +141,6 @@ impl IbcProvider for AnyChain {
 					chain.query_latest_ibc_events(finality_event, counterparty).await?;
 				Ok((client_msg, events, update_type))
 			},
-			_ => unreachable!(),
 		}
 	}
 
@@ -149,7 +148,6 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.ibc_events().await,
 			Self::Dali(chain) => chain.ibc_events().await,
-			_ => unreachable!(),
 		}
 	}
 
@@ -168,7 +166,6 @@ impl IbcProvider for AnyChain {
 				.query_client_consensus(at, client_id, consensus_height)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -182,7 +179,6 @@ impl IbcProvider for AnyChain {
 				chain.query_client_state(at, client_id).await.map_err(Into::into),
 			AnyChain::Dali(chain) =>
 				chain.query_client_state(at, client_id).await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -196,7 +192,6 @@ impl IbcProvider for AnyChain {
 				chain.query_connection_end(at, connection_id).await.map_err(Into::into),
 			AnyChain::Dali(chain) =>
 				chain.query_connection_end(at, connection_id).await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -211,7 +206,6 @@ impl IbcProvider for AnyChain {
 				chain.query_channel_end(at, channel_id, port_id).await.map_err(Into::into),
 			AnyChain::Dali(chain) =>
 				chain.query_channel_end(at, channel_id, port_id).await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -219,7 +213,6 @@ impl IbcProvider for AnyChain {
 		match self {
 			AnyChain::Parachain(chain) => chain.query_proof(at, keys).await.map_err(Into::into),
 			AnyChain::Dali(chain) => chain.query_proof(at, keys).await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -239,7 +232,6 @@ impl IbcProvider for AnyChain {
 				.query_packet_commitment(at, port_id, channel_id, seq)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -259,7 +251,6 @@ impl IbcProvider for AnyChain {
 				.query_packet_acknowledgement(at, port_id, channel_id, seq)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -278,7 +269,6 @@ impl IbcProvider for AnyChain {
 				.query_next_sequence_recv(at, port_id, channel_id)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -298,7 +288,6 @@ impl IbcProvider for AnyChain {
 				.query_packet_receipt(at, port_id, channel_id, seq)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -307,7 +296,6 @@ impl IbcProvider for AnyChain {
 			AnyChain::Parachain(chain) =>
 				chain.latest_height_and_timestamp().await.map_err(Into::into),
 			AnyChain::Dali(chain) => chain.latest_height_and_timestamp().await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -326,7 +314,6 @@ impl IbcProvider for AnyChain {
 				.query_packet_commitments(at, channel_id, port_id)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -345,7 +332,6 @@ impl IbcProvider for AnyChain {
 				.query_packet_acknowledgements(at, channel_id, port_id)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -365,7 +351,6 @@ impl IbcProvider for AnyChain {
 				.query_unreceived_packets(at, channel_id, port_id, seqs)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -385,7 +370,6 @@ impl IbcProvider for AnyChain {
 				.query_unreceived_acknowledgements(at, channel_id, port_id, seqs)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -393,7 +377,6 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.channel_whitelist(),
 			Self::Dali(chain) => chain.channel_whitelist(),
-			_ => unreachable!(),
 		}
 	}
 
@@ -407,7 +390,6 @@ impl IbcProvider for AnyChain {
 				chain.query_connection_channels(at, connection_id).await.map_err(Into::into),
 			Self::Dali(chain) =>
 				chain.query_connection_channels(at, connection_id).await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -422,7 +404,6 @@ impl IbcProvider for AnyChain {
 				chain.query_send_packets(channel_id, port_id, seqs).await.map_err(Into::into),
 			Self::Dali(chain) =>
 				chain.query_send_packets(channel_id, port_id, seqs).await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -437,7 +418,6 @@ impl IbcProvider for AnyChain {
 				chain.query_recv_packets(channel_id, port_id, seqs).await.map_err(Into::into),
 			Self::Dali(chain) =>
 				chain.query_recv_packets(channel_id, port_id, seqs).await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -445,7 +425,6 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.expected_block_time(),
 			Self::Dali(chain) => chain.expected_block_time(),
-			_ => unreachable!(),
 		}
 	}
 
@@ -463,7 +442,6 @@ impl IbcProvider for AnyChain {
 				.query_client_update_time_and_height(client_id, client_height)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -476,7 +454,6 @@ impl IbcProvider for AnyChain {
 				chain.query_host_consensus_state_proof(height).await.map_err(Into::into),
 			AnyChain::Dali(chain) =>
 				chain.query_host_consensus_state_proof(height).await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -489,7 +466,7 @@ impl IbcProvider for AnyChain {
 				chain.query_ibc_balance(asset_id).await.map_err(Into::into),
 			(Self::Dali(chain), AnyAssetId::Dali(asset_id)) =>
 				chain.query_ibc_balance(asset_id).await.map_err(Into::into),
-			_ => unreachable!(),
+			(chain, _) => panic!("query_ibc_balance is not implemented for {}", chain.name(),),
 		}
 	}
 
@@ -497,7 +474,6 @@ impl IbcProvider for AnyChain {
 		match self {
 			AnyChain::Parachain(chain) => chain.connection_prefix(),
 			AnyChain::Dali(chain) => chain.connection_prefix(),
-			_ => unreachable!(),
 		}
 	}
 
@@ -505,7 +481,6 @@ impl IbcProvider for AnyChain {
 		match self {
 			AnyChain::Parachain(chain) => chain.client_id(),
 			AnyChain::Dali(chain) => chain.client_id(),
-			_ => unreachable!(),
 		}
 	}
 
@@ -513,7 +488,6 @@ impl IbcProvider for AnyChain {
 		match self {
 			AnyChain::Parachain(chain) => chain.connection_id(),
 			AnyChain::Dali(chain) => chain.connection_id(),
-			_ => unreachable!(),
 		}
 	}
 
@@ -521,7 +495,6 @@ impl IbcProvider for AnyChain {
 		match self {
 			AnyChain::Parachain(chain) => chain.client_type(),
 			AnyChain::Dali(chain) => chain.client_type(),
-			_ => unreachable!(),
 		}
 	}
 
@@ -530,7 +503,6 @@ impl IbcProvider for AnyChain {
 			Self::Parachain(chain) =>
 				chain.query_timestamp_at(block_number).await.map_err(Into::into),
 			Self::Dali(chain) => chain.query_timestamp_at(block_number).await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -538,7 +510,6 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.query_clients().await.map_err(Into::into),
 			Self::Dali(chain) => chain.query_clients().await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -546,7 +517,6 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.query_channels().await.map_err(Into::into),
 			Self::Dali(chain) => chain.query_channels().await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -560,7 +530,6 @@ impl IbcProvider for AnyChain {
 				chain.query_connection_using_client(height, client_id).await.map_err(Into::into),
 			Self::Dali(chain) =>
 				chain.query_connection_using_client(height, client_id).await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -578,7 +547,6 @@ impl IbcProvider for AnyChain {
 				.is_update_required(latest_height, latest_client_height_on_counterparty)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 	async fn initialize_client_state(
@@ -587,7 +555,6 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.initialize_client_state().await.map_err(Into::into),
 			Self::Dali(chain) => chain.initialize_client_state().await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -610,7 +577,6 @@ impl IbcProvider for AnyChain {
 				)
 				.await
 				.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 }
@@ -626,7 +592,6 @@ impl MisbehaviourHandler for AnyChain {
 			AnyChain::Parachain(parachain) =>
 				parachain.check_for_misbehaviour(counterparty, client_message).await,
 			AnyChain::Dali(dali) => dali.check_for_misbehaviour(counterparty, client_message).await,
-			_ => unreachable!(),
 		}
 	}
 }
@@ -636,7 +601,6 @@ impl KeyProvider for AnyChain {
 		match self {
 			AnyChain::Parachain(parachain) => parachain.account_id(),
 			AnyChain::Dali(dali) => dali.account_id(),
-			_ => unreachable!(),
 		}
 	}
 }
@@ -647,7 +611,6 @@ impl Chain for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.name(),
 			Self::Dali(chain) => chain.name(),
-			_ => unreachable!(),
 		}
 	}
 
@@ -655,7 +618,6 @@ impl Chain for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.block_max_weight(),
 			Self::Dali(chain) => chain.block_max_weight(),
-			_ => unreachable!(),
 		}
 	}
 
@@ -663,7 +625,6 @@ impl Chain for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.estimate_weight(msg).await.map_err(Into::into),
 			Self::Dali(chain) => chain.estimate_weight(msg).await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -679,7 +640,6 @@ impl Chain for AnyChain {
 				use futures::StreamExt;
 				Box::pin(chain.finality_notifications().await.map(AnyFinalityEvent::Dali))
 			},
-			_ => unreachable!(),
 		}
 	}
 
@@ -695,7 +655,6 @@ impl Chain for AnyChain {
 				.await
 				.map_err(Into::into)
 				.map(|id| AnyTransactionId::Parachain(id)),
-			_ => unreachable!(),
 		}
 	}
 
@@ -706,7 +665,6 @@ impl Chain for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.query_client_message(update).await.map_err(Into::into),
 			Self::Dali(chain) => chain.query_client_message(update).await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -714,7 +672,6 @@ impl Chain for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.get_proof_height(block_height).await,
 			Self::Dali(chain) => chain.get_proof_height(block_height).await,
-			_ => unreachable!(),
 		}
 	}
 }
@@ -725,7 +682,6 @@ impl LightClientSync for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
 			Self::Dali(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -738,7 +694,6 @@ impl LightClientSync for AnyChain {
 				chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
 			Self::Dali(chain) =>
 				chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 }
@@ -750,7 +705,6 @@ impl primitives::TestProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.send_transfer(params).await.map_err(Into::into),
 			Self::Dali(chain) => chain.send_transfer(params).await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -764,7 +718,6 @@ impl primitives::TestProvider for AnyChain {
 				chain.send_ordered_packet(channel_id, timeout).await.map_err(Into::into),
 			Self::Dali(chain) =>
 				chain.send_ordered_packet(channel_id, timeout).await.map_err(Into::into),
-			_ => unreachable!(),
 		}
 	}
 
@@ -772,7 +725,6 @@ impl primitives::TestProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.subscribe_blocks().await,
 			Self::Dali(chain) => chain.subscribe_blocks().await,
-			_ => unreachable!(),
 		}
 	}
 
@@ -780,7 +732,6 @@ impl primitives::TestProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.set_channel_whitelist(channel_whitelist),
 			Self::Dali(chain) => chain.set_channel_whitelist(channel_whitelist),
-			_ => unreachable!(),
 		}
 	}
 }
