@@ -29,9 +29,7 @@ use pallet_ibc::{
 	events::IbcEvent as RawIbcEvent, MultiAddress, PalletParams, Timeout, TransferParams,
 };
 use pallet_ibc_ping::SendPingParams;
-use parachain_subxt::api::runtime_types::{
-	ibc_primitives::Timeout as RawTimeout, parachain_runtime::MemoMessage,
-};
+use parachain_subxt::api::runtime_types::ibc_primitives::Timeout as RawTimeout;
 use relaychain::api::runtime_types::polkadot_runtime_parachains::paras::ParaLifecycle;
 use sp_core::{crypto::AccountId32, H256};
 use subxt::{
@@ -49,6 +47,9 @@ use subxt::{
 	tx::StaticTxPayload,
 	Error, OnlineClient,
 };
+use subxt_generated::dali::parachain::api::runtime_types::{
+	dali_runtime::MemoMessage, primitives::currency::CurrencyId,
+};
 
 pub mod parachain_subxt {
 	pub use subxt_generated::dali::parachain::*;
@@ -60,7 +61,6 @@ pub mod relaychain {
 
 pub type Balance = u128;
 
-// TODO: expose extrinsic param builder
 #[derive(Debug, Clone)]
 pub enum DaliConfig {}
 
@@ -119,7 +119,7 @@ define_runtime_transactions!(
 	SendPingParamsWrapper,
 	parachain_subxt::api::runtime_types::pallet_ibc::Any,
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
-	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, y, z, w),
+	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, CurrencyId(y), z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),
 	|x| parachain_subxt::api::tx().ibc_ping().send_ping(x)
 );
@@ -132,19 +132,19 @@ define_event_record!(
 	IbcEventWrapper,
 	parachain_subxt::api::runtime_types::frame_system::Phase,
 	parachain_subxt::api::runtime_types::pallet_ibc::pallet::Event,
-	parachain_subxt::api::runtime_types::parachain_runtime::RuntimeEvent
+	parachain_subxt::api::runtime_types::dali_runtime::RuntimeEvent
 );
 
 define_events!(DaliEvents, parachain_subxt::api::ibc::events::Events, IbcEventWrapper);
 
 define_runtime_event!(
 	DaliParaRuntimeEvent,
-	parachain_subxt::api::runtime_types::parachain_runtime::RuntimeEvent
+	parachain_subxt::api::runtime_types::dali_runtime::RuntimeEvent
 );
 
 define_runtime_call!(
 	DaliParaRuntimeCall,
-	parachain_subxt::api::runtime_types::parachain_runtime::RuntimeCall,
+	parachain_subxt::api::runtime_types::dali_runtime::RuntimeCall,
 	PalletParamsWrapper,
 	AnyWrapper,
 	parachain_subxt::api::runtime_types::pallet_ibc::pallet::Call

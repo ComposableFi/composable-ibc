@@ -68,7 +68,6 @@ pub mod relaychain {
 
 pub type Balance = u128;
 
-// TODO: expose extrinsic param builder
 #[derive(Debug, Clone)]
 pub enum DefaultConfig {}
 

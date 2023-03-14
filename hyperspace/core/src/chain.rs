@@ -67,6 +67,8 @@ pub struct Config {
 pub enum AnyConfig {
 	Parachain(parachain::ParachainClientConfig),
 	Dali(parachain::ParachainClientConfig),
+	Composable(parachain::ParachainClientConfig),
+	Picasso(parachain::ParachainClientConfig),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -78,23 +80,31 @@ pub struct CoreConfig {
 pub enum AnyChain {
 	Parachain(ParachainClient<DefaultConfig>),
 	Dali(ParachainClient<DaliConfig>),
+	Composable(ParachainClient<DefaultConfig>),
+	Picasso(ParachainClient<DaliConfig>),
 }
 
 pub enum AnyFinalityEvent {
 	Parachain(parachain::finality_protocol::FinalityEvent),
 	Dali(parachain::finality_protocol::FinalityEvent),
+	Composable(parachain::finality_protocol::FinalityEvent),
+	Picasso(parachain::finality_protocol::FinalityEvent),
 }
 
 #[derive(Clone)]
 pub enum AnyAssetId {
 	Parachain(<ParachainClient<DefaultConfig> as IbcProvider>::AssetId),
 	Dali(<ParachainClient<DaliConfig> as IbcProvider>::AssetId),
+	Composable(<ParachainClient<DaliConfig> as IbcProvider>::AssetId),
+	Picasso(<ParachainClient<DaliConfig> as IbcProvider>::AssetId),
 }
 
 #[derive(Debug)]
 pub enum AnyTransactionId {
 	Parachain(parachain::provider::TransactionId<sp_core::H256>),
 	Dali(parachain::provider::TransactionId<sp_core::H256>),
+	Composable(parachain::provider::TransactionId<sp_core::H256>),
+	Picasso(parachain::provider::TransactionId<sp_core::H256>),
 }
 
 #[derive(Error, Debug)]
@@ -141,6 +151,20 @@ impl IbcProvider for AnyChain {
 					chain.query_latest_ibc_events(finality_event, counterparty).await?;
 				Ok((client_msg, events, update_type))
 			},
+			AnyChain::Composable(chain) => {
+				let finality_event = ibc::downcast!(finality_event => AnyFinalityEvent::Composable)
+					.ok_or_else(|| AnyError::Other("Invalid finality event type".to_owned()))?;
+				let (client_msg, events, update_type) =
+					chain.query_latest_ibc_events(finality_event, counterparty).await?;
+				Ok((client_msg, events, update_type))
+			},
+			AnyChain::Picasso(chain) => {
+				let finality_event = ibc::downcast!(finality_event => AnyFinalityEvent::Picasso)
+					.ok_or_else(|| AnyError::Other("Invalid finality event type".to_owned()))?;
+				let (client_msg, events, update_type) =
+					chain.query_latest_ibc_events(finality_event, counterparty).await?;
+				Ok((client_msg, events, update_type))
+			},
 		}
 	}
 
@@ -148,6 +172,8 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.ibc_events().await,
 			Self::Dali(chain) => chain.ibc_events().await,
+			Self::Composable(chain) => chain.ibc_events().await,
+			Self::Picasso(chain) => chain.ibc_events().await,
 		}
 	}
 
@@ -166,6 +192,14 @@ impl IbcProvider for AnyChain {
 				.query_client_consensus(at, client_id, consensus_height)
 				.await
 				.map_err(Into::into),
+			AnyChain::Composable(chain) => chain
+				.query_client_consensus(at, client_id, consensus_height)
+				.await
+				.map_err(Into::into),
+			AnyChain::Picasso(chain) => chain
+				.query_client_consensus(at, client_id, consensus_height)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -179,6 +213,10 @@ impl IbcProvider for AnyChain {
 				chain.query_client_state(at, client_id).await.map_err(Into::into),
 			AnyChain::Dali(chain) =>
 				chain.query_client_state(at, client_id).await.map_err(Into::into),
+			AnyChain::Composable(chain) =>
+				chain.query_client_state(at, client_id).await.map_err(Into::into),
+			AnyChain::Picasso(chain) =>
+				chain.query_client_state(at, client_id).await.map_err(Into::into),
 		}
 	}
 
@@ -191,6 +229,10 @@ impl IbcProvider for AnyChain {
 			AnyChain::Parachain(chain) =>
 				chain.query_connection_end(at, connection_id).await.map_err(Into::into),
 			AnyChain::Dali(chain) =>
+				chain.query_connection_end(at, connection_id).await.map_err(Into::into),
+			AnyChain::Composable(chain) =>
+				chain.query_connection_end(at, connection_id).await.map_err(Into::into),
+			AnyChain::Picasso(chain) =>
 				chain.query_connection_end(at, connection_id).await.map_err(Into::into),
 		}
 	}
@@ -206,6 +248,10 @@ impl IbcProvider for AnyChain {
 				chain.query_channel_end(at, channel_id, port_id).await.map_err(Into::into),
 			AnyChain::Dali(chain) =>
 				chain.query_channel_end(at, channel_id, port_id).await.map_err(Into::into),
+			AnyChain::Composable(chain) =>
+				chain.query_channel_end(at, channel_id, port_id).await.map_err(Into::into),
+			AnyChain::Picasso(chain) =>
+				chain.query_channel_end(at, channel_id, port_id).await.map_err(Into::into),
 		}
 	}
 
@@ -213,6 +259,8 @@ impl IbcProvider for AnyChain {
 		match self {
 			AnyChain::Parachain(chain) => chain.query_proof(at, keys).await.map_err(Into::into),
 			AnyChain::Dali(chain) => chain.query_proof(at, keys).await.map_err(Into::into),
+			AnyChain::Composable(chain) => chain.query_proof(at, keys).await.map_err(Into::into),
+			AnyChain::Picasso(chain) => chain.query_proof(at, keys).await.map_err(Into::into),
 		}
 	}
 
@@ -229,6 +277,14 @@ impl IbcProvider for AnyChain {
 				.await
 				.map_err(Into::into),
 			AnyChain::Dali(chain) => chain
+				.query_packet_commitment(at, port_id, channel_id, seq)
+				.await
+				.map_err(Into::into),
+			AnyChain::Composable(chain) => chain
+				.query_packet_commitment(at, port_id, channel_id, seq)
+				.await
+				.map_err(Into::into),
+			AnyChain::Picasso(chain) => chain
 				.query_packet_commitment(at, port_id, channel_id, seq)
 				.await
 				.map_err(Into::into),
@@ -251,6 +307,14 @@ impl IbcProvider for AnyChain {
 				.query_packet_acknowledgement(at, port_id, channel_id, seq)
 				.await
 				.map_err(Into::into),
+			AnyChain::Composable(chain) => chain
+				.query_packet_acknowledgement(at, port_id, channel_id, seq)
+				.await
+				.map_err(Into::into),
+			AnyChain::Picasso(chain) => chain
+				.query_packet_acknowledgement(at, port_id, channel_id, seq)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -266,6 +330,14 @@ impl IbcProvider for AnyChain {
 				.await
 				.map_err(Into::into),
 			AnyChain::Dali(chain) => chain
+				.query_next_sequence_recv(at, port_id, channel_id)
+				.await
+				.map_err(Into::into),
+			AnyChain::Composable(chain) => chain
+				.query_next_sequence_recv(at, port_id, channel_id)
+				.await
+				.map_err(Into::into),
+			AnyChain::Picasso(chain) => chain
 				.query_next_sequence_recv(at, port_id, channel_id)
 				.await
 				.map_err(Into::into),
@@ -288,6 +360,14 @@ impl IbcProvider for AnyChain {
 				.query_packet_receipt(at, port_id, channel_id, seq)
 				.await
 				.map_err(Into::into),
+			AnyChain::Composable(chain) => chain
+				.query_packet_receipt(at, port_id, channel_id, seq)
+				.await
+				.map_err(Into::into),
+			AnyChain::Picasso(chain) => chain
+				.query_packet_receipt(at, port_id, channel_id, seq)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -296,6 +376,10 @@ impl IbcProvider for AnyChain {
 			AnyChain::Parachain(chain) =>
 				chain.latest_height_and_timestamp().await.map_err(Into::into),
 			AnyChain::Dali(chain) => chain.latest_height_and_timestamp().await.map_err(Into::into),
+			AnyChain::Composable(chain) =>
+				chain.latest_height_and_timestamp().await.map_err(Into::into),
+			AnyChain::Picasso(chain) =>
+				chain.latest_height_and_timestamp().await.map_err(Into::into),
 		}
 	}
 
@@ -314,6 +398,14 @@ impl IbcProvider for AnyChain {
 				.query_packet_commitments(at, channel_id, port_id)
 				.await
 				.map_err(Into::into),
+			Self::Composable(chain) => chain
+				.query_packet_commitments(at, channel_id, port_id)
+				.await
+				.map_err(Into::into),
+			Self::Picasso(chain) => chain
+				.query_packet_commitments(at, channel_id, port_id)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -329,6 +421,14 @@ impl IbcProvider for AnyChain {
 				.await
 				.map_err(Into::into),
 			Self::Dali(chain) => chain
+				.query_packet_acknowledgements(at, channel_id, port_id)
+				.await
+				.map_err(Into::into),
+			Self::Composable(chain) => chain
+				.query_packet_acknowledgements(at, channel_id, port_id)
+				.await
+				.map_err(Into::into),
+			Self::Picasso(chain) => chain
 				.query_packet_acknowledgements(at, channel_id, port_id)
 				.await
 				.map_err(Into::into),
@@ -351,6 +451,14 @@ impl IbcProvider for AnyChain {
 				.query_unreceived_packets(at, channel_id, port_id, seqs)
 				.await
 				.map_err(Into::into),
+			Self::Composable(chain) => chain
+				.query_unreceived_packets(at, channel_id, port_id, seqs)
+				.await
+				.map_err(Into::into),
+			Self::Picasso(chain) => chain
+				.query_unreceived_packets(at, channel_id, port_id, seqs)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -370,6 +478,14 @@ impl IbcProvider for AnyChain {
 				.query_unreceived_acknowledgements(at, channel_id, port_id, seqs)
 				.await
 				.map_err(Into::into),
+			Self::Composable(chain) => chain
+				.query_unreceived_acknowledgements(at, channel_id, port_id, seqs)
+				.await
+				.map_err(Into::into),
+			Self::Picasso(chain) => chain
+				.query_unreceived_acknowledgements(at, channel_id, port_id, seqs)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -377,6 +493,8 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.channel_whitelist(),
 			Self::Dali(chain) => chain.channel_whitelist(),
+			Self::Composable(chain) => chain.channel_whitelist(),
+			Self::Picasso(chain) => chain.channel_whitelist(),
 		}
 	}
 
@@ -389,6 +507,10 @@ impl IbcProvider for AnyChain {
 			Self::Parachain(chain) =>
 				chain.query_connection_channels(at, connection_id).await.map_err(Into::into),
 			Self::Dali(chain) =>
+				chain.query_connection_channels(at, connection_id).await.map_err(Into::into),
+			Self::Composable(chain) =>
+				chain.query_connection_channels(at, connection_id).await.map_err(Into::into),
+			Self::Picasso(chain) =>
 				chain.query_connection_channels(at, connection_id).await.map_err(Into::into),
 		}
 	}
@@ -404,6 +526,10 @@ impl IbcProvider for AnyChain {
 				chain.query_send_packets(channel_id, port_id, seqs).await.map_err(Into::into),
 			Self::Dali(chain) =>
 				chain.query_send_packets(channel_id, port_id, seqs).await.map_err(Into::into),
+			Self::Composable(chain) =>
+				chain.query_send_packets(channel_id, port_id, seqs).await.map_err(Into::into),
+			Self::Picasso(chain) =>
+				chain.query_send_packets(channel_id, port_id, seqs).await.map_err(Into::into),
 		}
 	}
 
@@ -418,6 +544,10 @@ impl IbcProvider for AnyChain {
 				chain.query_recv_packets(channel_id, port_id, seqs).await.map_err(Into::into),
 			Self::Dali(chain) =>
 				chain.query_recv_packets(channel_id, port_id, seqs).await.map_err(Into::into),
+			Self::Composable(chain) =>
+				chain.query_recv_packets(channel_id, port_id, seqs).await.map_err(Into::into),
+			Self::Picasso(chain) =>
+				chain.query_recv_packets(channel_id, port_id, seqs).await.map_err(Into::into),
 		}
 	}
 
@@ -425,6 +555,8 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.expected_block_time(),
 			Self::Dali(chain) => chain.expected_block_time(),
+			Self::Composable(chain) => chain.expected_block_time(),
+			Self::Picasso(chain) => chain.expected_block_time(),
 		}
 	}
 
@@ -442,6 +574,14 @@ impl IbcProvider for AnyChain {
 				.query_client_update_time_and_height(client_id, client_height)
 				.await
 				.map_err(Into::into),
+			Self::Composable(chain) => chain
+				.query_client_update_time_and_height(client_id, client_height)
+				.await
+				.map_err(Into::into),
+			Self::Picasso(chain) => chain
+				.query_client_update_time_and_height(client_id, client_height)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -453,6 +593,10 @@ impl IbcProvider for AnyChain {
 			AnyChain::Parachain(chain) =>
 				chain.query_host_consensus_state_proof(height).await.map_err(Into::into),
 			AnyChain::Dali(chain) =>
+				chain.query_host_consensus_state_proof(height).await.map_err(Into::into),
+			AnyChain::Composable(chain) =>
+				chain.query_host_consensus_state_proof(height).await.map_err(Into::into),
+			AnyChain::Picasso(chain) =>
 				chain.query_host_consensus_state_proof(height).await.map_err(Into::into),
 		}
 	}
@@ -466,6 +610,10 @@ impl IbcProvider for AnyChain {
 				chain.query_ibc_balance(asset_id).await.map_err(Into::into),
 			(Self::Dali(chain), AnyAssetId::Dali(asset_id)) =>
 				chain.query_ibc_balance(asset_id).await.map_err(Into::into),
+			(Self::Composable(chain), AnyAssetId::Composable(asset_id)) =>
+				chain.query_ibc_balance(asset_id).await.map_err(Into::into),
+			(Self::Picasso(chain), AnyAssetId::Picasso(asset_id)) =>
+				chain.query_ibc_balance(asset_id).await.map_err(Into::into),
 			(chain, _) => panic!("query_ibc_balance is not implemented for {}", chain.name(),),
 		}
 	}
@@ -474,6 +622,8 @@ impl IbcProvider for AnyChain {
 		match self {
 			AnyChain::Parachain(chain) => chain.connection_prefix(),
 			AnyChain::Dali(chain) => chain.connection_prefix(),
+			AnyChain::Composable(chain) => chain.connection_prefix(),
+			AnyChain::Picasso(chain) => chain.connection_prefix(),
 		}
 	}
 
@@ -481,6 +631,8 @@ impl IbcProvider for AnyChain {
 		match self {
 			AnyChain::Parachain(chain) => chain.client_id(),
 			AnyChain::Dali(chain) => chain.client_id(),
+			AnyChain::Composable(chain) => chain.client_id(),
+			AnyChain::Picasso(chain) => chain.client_id(),
 		}
 	}
 
@@ -488,6 +640,8 @@ impl IbcProvider for AnyChain {
 		match self {
 			AnyChain::Parachain(chain) => chain.connection_id(),
 			AnyChain::Dali(chain) => chain.connection_id(),
+			AnyChain::Composable(chain) => chain.connection_id(),
+			AnyChain::Picasso(chain) => chain.connection_id(),
 		}
 	}
 
@@ -495,6 +649,8 @@ impl IbcProvider for AnyChain {
 		match self {
 			AnyChain::Parachain(chain) => chain.client_type(),
 			AnyChain::Dali(chain) => chain.client_type(),
+			AnyChain::Composable(chain) => chain.client_type(),
+			AnyChain::Picasso(chain) => chain.client_type(),
 		}
 	}
 
@@ -503,6 +659,10 @@ impl IbcProvider for AnyChain {
 			Self::Parachain(chain) =>
 				chain.query_timestamp_at(block_number).await.map_err(Into::into),
 			Self::Dali(chain) => chain.query_timestamp_at(block_number).await.map_err(Into::into),
+			Self::Composable(chain) =>
+				chain.query_timestamp_at(block_number).await.map_err(Into::into),
+			Self::Picasso(chain) =>
+				chain.query_timestamp_at(block_number).await.map_err(Into::into),
 		}
 	}
 
@@ -510,6 +670,8 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.query_clients().await.map_err(Into::into),
 			Self::Dali(chain) => chain.query_clients().await.map_err(Into::into),
+			Self::Composable(chain) => chain.query_clients().await.map_err(Into::into),
+			Self::Picasso(chain) => chain.query_clients().await.map_err(Into::into),
 		}
 	}
 
@@ -517,6 +679,8 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.query_channels().await.map_err(Into::into),
 			Self::Dali(chain) => chain.query_channels().await.map_err(Into::into),
+			Self::Composable(chain) => chain.query_channels().await.map_err(Into::into),
+			Self::Picasso(chain) => chain.query_channels().await.map_err(Into::into),
 		}
 	}
 
@@ -529,6 +693,10 @@ impl IbcProvider for AnyChain {
 			Self::Parachain(chain) =>
 				chain.query_connection_using_client(height, client_id).await.map_err(Into::into),
 			Self::Dali(chain) =>
+				chain.query_connection_using_client(height, client_id).await.map_err(Into::into),
+			Self::Composable(chain) =>
+				chain.query_connection_using_client(height, client_id).await.map_err(Into::into),
+			Self::Picasso(chain) =>
 				chain.query_connection_using_client(height, client_id).await.map_err(Into::into),
 		}
 	}
@@ -547,6 +715,14 @@ impl IbcProvider for AnyChain {
 				.is_update_required(latest_height, latest_client_height_on_counterparty)
 				.await
 				.map_err(Into::into),
+			Self::Composable(chain) => chain
+				.is_update_required(latest_height, latest_client_height_on_counterparty)
+				.await
+				.map_err(Into::into),
+			Self::Picasso(chain) => chain
+				.is_update_required(latest_height, latest_client_height_on_counterparty)
+				.await
+				.map_err(Into::into),
 		}
 	}
 	async fn initialize_client_state(
@@ -555,6 +731,8 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.initialize_client_state().await.map_err(Into::into),
 			Self::Dali(chain) => chain.initialize_client_state().await.map_err(Into::into),
+			Self::Composable(chain) => chain.initialize_client_state().await.map_err(Into::into),
+			Self::Picasso(chain) => chain.initialize_client_state().await.map_err(Into::into),
 		}
 	}
 
@@ -577,6 +755,20 @@ impl IbcProvider for AnyChain {
 				)
 				.await
 				.map_err(Into::into),
+			Self::Composable(chain) => chain
+				.query_client_id_from_tx_hash(
+					downcast!(tx_id => AnyTransactionId::Dali)
+						.expect("Should be dali transaction id"),
+				)
+				.await
+				.map_err(Into::into),
+			Self::Picasso(chain) => chain
+				.query_client_id_from_tx_hash(
+					downcast!(tx_id => AnyTransactionId::Dali)
+						.expect("Should be dali transaction id"),
+				)
+				.await
+				.map_err(Into::into),
 		}
 	}
 }
@@ -592,6 +784,10 @@ impl MisbehaviourHandler for AnyChain {
 			AnyChain::Parachain(parachain) =>
 				parachain.check_for_misbehaviour(counterparty, client_message).await,
 			AnyChain::Dali(dali) => dali.check_for_misbehaviour(counterparty, client_message).await,
+			AnyChain::Composable(parachain) =>
+				parachain.check_for_misbehaviour(counterparty, client_message).await,
+			AnyChain::Picasso(dali) =>
+				dali.check_for_misbehaviour(counterparty, client_message).await,
 		}
 	}
 }
@@ -601,6 +797,8 @@ impl KeyProvider for AnyChain {
 		match self {
 			AnyChain::Parachain(parachain) => parachain.account_id(),
 			AnyChain::Dali(dali) => dali.account_id(),
+			AnyChain::Composable(parachain) => parachain.account_id(),
+			AnyChain::Picasso(dali) => dali.account_id(),
 		}
 	}
 }
@@ -611,6 +809,8 @@ impl Chain for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.name(),
 			Self::Dali(chain) => chain.name(),
+			Self::Composable(chain) => chain.name(),
+			Self::Picasso(chain) => chain.name(),
 		}
 	}
 
@@ -618,6 +818,8 @@ impl Chain for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.block_max_weight(),
 			Self::Dali(chain) => chain.block_max_weight(),
+			Self::Composable(chain) => chain.block_max_weight(),
+			Self::Picasso(chain) => chain.block_max_weight(),
 		}
 	}
 
@@ -625,6 +827,8 @@ impl Chain for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.estimate_weight(msg).await.map_err(Into::into),
 			Self::Dali(chain) => chain.estimate_weight(msg).await.map_err(Into::into),
+			Self::Composable(chain) => chain.estimate_weight(msg).await.map_err(Into::into),
+			Self::Picasso(chain) => chain.estimate_weight(msg).await.map_err(Into::into),
 		}
 	}
 
@@ -637,6 +841,14 @@ impl Chain for AnyChain {
 				Box::pin(chain.finality_notifications().await.map(AnyFinalityEvent::Parachain))
 			},
 			Self::Dali(chain) => {
+				use futures::StreamExt;
+				Box::pin(chain.finality_notifications().await.map(AnyFinalityEvent::Dali))
+			},
+			Self::Composable(chain) => {
+				use futures::StreamExt;
+				Box::pin(chain.finality_notifications().await.map(AnyFinalityEvent::Parachain))
+			},
+			Self::Picasso(chain) => {
 				use futures::StreamExt;
 				Box::pin(chain.finality_notifications().await.map(AnyFinalityEvent::Dali))
 			},
@@ -655,6 +867,16 @@ impl Chain for AnyChain {
 				.await
 				.map_err(Into::into)
 				.map(|id| AnyTransactionId::Parachain(id)),
+			Self::Composable(chain) => chain
+				.submit(messages)
+				.await
+				.map_err(Into::into)
+				.map(|id| AnyTransactionId::Parachain(id)),
+			Self::Picasso(chain) => chain
+				.submit(messages)
+				.await
+				.map_err(Into::into)
+				.map(|id| AnyTransactionId::Parachain(id)),
 		}
 	}
 
@@ -665,6 +887,8 @@ impl Chain for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.query_client_message(update).await.map_err(Into::into),
 			Self::Dali(chain) => chain.query_client_message(update).await.map_err(Into::into),
+			Self::Composable(chain) => chain.query_client_message(update).await.map_err(Into::into),
+			Self::Picasso(chain) => chain.query_client_message(update).await.map_err(Into::into),
 		}
 	}
 
@@ -672,6 +896,8 @@ impl Chain for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.get_proof_height(block_height).await,
 			Self::Dali(chain) => chain.get_proof_height(block_height).await,
+			Self::Composable(chain) => chain.get_proof_height(block_height).await,
+			Self::Picasso(chain) => chain.get_proof_height(block_height).await,
 		}
 	}
 }
@@ -682,6 +908,8 @@ impl LightClientSync for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
 			Self::Dali(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
+			Self::Composable(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
+			Self::Picasso(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
 		}
 	}
 
@@ -694,6 +922,10 @@ impl LightClientSync for AnyChain {
 				chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
 			Self::Dali(chain) =>
 				chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
+			Self::Composable(chain) =>
+				chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
+			Self::Picasso(chain) =>
+				chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
 		}
 	}
 }
@@ -705,6 +937,8 @@ impl primitives::TestProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.send_transfer(params).await.map_err(Into::into),
 			Self::Dali(chain) => chain.send_transfer(params).await.map_err(Into::into),
+			Self::Composable(chain) => chain.send_transfer(params).await.map_err(Into::into),
+			Self::Picasso(chain) => chain.send_transfer(params).await.map_err(Into::into),
 		}
 	}
 
@@ -718,6 +952,10 @@ impl primitives::TestProvider for AnyChain {
 				chain.send_ordered_packet(channel_id, timeout).await.map_err(Into::into),
 			Self::Dali(chain) =>
 				chain.send_ordered_packet(channel_id, timeout).await.map_err(Into::into),
+			Self::Composable(chain) =>
+				chain.send_ordered_packet(channel_id, timeout).await.map_err(Into::into),
+			Self::Picasso(chain) =>
+				chain.send_ordered_packet(channel_id, timeout).await.map_err(Into::into),
 		}
 	}
 
@@ -725,6 +963,8 @@ impl primitives::TestProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.subscribe_blocks().await,
 			Self::Dali(chain) => chain.subscribe_blocks().await,
+			Self::Composable(chain) => chain.subscribe_blocks().await,
+			Self::Picasso(chain) => chain.subscribe_blocks().await,
 		}
 	}
 
@@ -732,6 +972,8 @@ impl primitives::TestProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) => chain.set_channel_whitelist(channel_whitelist),
 			Self::Dali(chain) => chain.set_channel_whitelist(channel_whitelist),
+			Self::Composable(chain) => chain.set_channel_whitelist(channel_whitelist),
+			Self::Picasso(chain) => chain.set_channel_whitelist(channel_whitelist),
 		}
 	}
 }
@@ -742,6 +984,9 @@ impl AnyConfig {
 			AnyConfig::Parachain(config) =>
 				AnyChain::Parachain(ParachainClient::new(config).await?),
 			AnyConfig::Dali(config) => AnyChain::Dali(ParachainClient::new(config).await?),
+			AnyConfig::Composable(config) =>
+				AnyChain::Composable(ParachainClient::new(config).await?),
+			AnyConfig::Picasso(config) => AnyChain::Picasso(ParachainClient::new(config).await?),
 		})
 	}
 
@@ -751,6 +996,12 @@ impl AnyConfig {
 				chain.client_id.replace(client_id);
 			},
 			Self::Dali(chain) => {
+				chain.client_id.replace(client_id);
+			},
+			Self::Composable(chain) => {
+				chain.client_id.replace(client_id);
+			},
+			Self::Picasso(chain) => {
 				chain.client_id.replace(client_id);
 			},
 		}
@@ -764,6 +1015,12 @@ impl AnyConfig {
 			Self::Dali(chain) => {
 				chain.connection_id.replace(connection_id);
 			},
+			Self::Composable(chain) => {
+				chain.connection_id.replace(connection_id);
+			},
+			Self::Picasso(chain) => {
+				chain.connection_id.replace(connection_id);
+			},
 		}
 	}
 
@@ -773,6 +1030,12 @@ impl AnyConfig {
 				chain.channel_whitelist.push((channel_id, port_id));
 			},
 			Self::Dali(chain) => {
+				chain.channel_whitelist.push((channel_id, port_id));
+			},
+			Self::Composable(chain) => {
+				chain.channel_whitelist.push((channel_id, port_id));
+			},
+			Self::Picasso(chain) => {
 				chain.channel_whitelist.push((channel_id, port_id));
 			},
 		}

@@ -110,7 +110,10 @@ macro_rules! define_any_wrapper {
 
 		impl From<$name> for Any {
 			fn from(value: $name) -> Self {
-				Any { type_url: value.0.type_url, value: value.0.value }
+				Any {
+					type_url: String::from_utf8(value.0.type_url.into()).unwrap(),
+					value: value.0.value,
+				}
 			}
 		}
 	};
@@ -636,7 +639,7 @@ macro_rules! define_runtime_transactions {
 				$ibc_deliver(
 					messages
 						.into_iter()
-						.map(|x| Any { type_url: x.type_url, value: x.value })
+						.map(|x| Any { type_url: x.type_url.into(), value: x.value })
 						.collect(),
 				)
 			}
@@ -659,7 +662,7 @@ macro_rules! define_runtime_transactions {
 				$sudo_sudo(call.0)
 			}
 
-			fn ibc_ping_send_ping(params: SendPingParams) -> StaticTxPayload<Self::SendPing> {
+			fn ibc_ping_send_ping(params: Self::SendPingParams) -> StaticTxPayload<Self::SendPing> {
 				$ibc_ping_send_ping($send_ping_params_wrapper(params).into())
 			}
 		}
