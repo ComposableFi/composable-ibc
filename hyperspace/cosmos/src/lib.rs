@@ -24,8 +24,8 @@ pub mod key_provider;
 pub mod light_client;
 pub mod provider;
 
-// #[cfg(any(test, feature = "testing"))]
-// pub mod cosmos_test_provider;
+#[cfg(any(test, feature = "testing"))]
+pub mod cosmos_test_provider;
 
 pub mod tx;
 
