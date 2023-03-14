@@ -39,3 +39,5 @@ impl AnyChain {
     }
 }
 ```
+And don't forget to implement `query_ibc_balance`, since it will panic instead of a compilation error if not all the variants
+are handled.
