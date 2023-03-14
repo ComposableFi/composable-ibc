@@ -28,6 +28,3 @@ pub mod test_provider;
 pub mod tx;
 
 pub type TimeoutHeight = Option<Height>;
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct HostFunctions;
