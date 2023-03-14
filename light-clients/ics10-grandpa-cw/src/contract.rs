@@ -312,6 +312,8 @@ pub fn query(_deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 	}
 }
 
+// The FFIs below are required because of sp-io dependency that expects the functions to be
+// available on the host.
 #[no_mangle]
 // &[u8] -> [u8; 32]
 pub extern "C" fn ext_hashing_blake2_256_version_1(data: i64) -> i32 {

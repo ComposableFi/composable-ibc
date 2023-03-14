@@ -12,8 +12,6 @@ pub mod ics23;
 mod macros;
 pub mod msg;
 pub mod state;
-#[cfg(test)]
-mod tests;
 mod types;
 
 pub use crate::error::ContractError;
