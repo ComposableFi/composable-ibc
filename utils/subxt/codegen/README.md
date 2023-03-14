@@ -27,3 +27,15 @@ pub enum AnyChain {
 	NewChain(ParachainClient<NewChainConfig>), // <-- newly added variant
 }
 ```
+and implement all the methods in the file for the new variant. Usually it's enough to just copy the `Parachain` branch,
+for example:
+```rust
+impl AnyChain {
+    async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
+        match self {
+            Self::Parachain(chain) => chain.ibc_events().await,
+            Self::Dali(chain) => chain.ibc_events().await, // <-- copy-pasted from Parachain and changed to `Dali`
+        }
+    }
+}
+```
