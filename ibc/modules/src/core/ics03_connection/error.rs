@@ -78,6 +78,10 @@ define_error! {
 			[ ValidationError ]
 			| _ | { "identifier error" },
 
+		InvalidPacketHeight
+			[ crate::core::ics02_client::height::HeightError ]
+			| _ | { "Invalid packet height value" },
+
 		EmptyProtoConnectionEnd
 			| _ | { "ConnectionEnd domain object could not be constructed out of empty proto object" },
 

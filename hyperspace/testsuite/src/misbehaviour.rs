@@ -127,9 +127,11 @@ where
 	let (update_client_msg, _, _) = chain_b
 		.query_latest_ibc_events(finality_event, chain_a)
 		.await
-		.expect("no event");
+		.expect("no event")
+		.pop()
+		.unwrap();
 	let mut msg = MsgUpdateAnyClient::<LocalClientTypes>::decode(
-		&mut update_client_msg.last().unwrap().clone().value.as_slice(),
+		&mut update_client_msg.clone().value.as_slice(),
 	)
 	.unwrap();
 	let round = match &mut msg.client_message {

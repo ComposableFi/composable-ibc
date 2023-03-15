@@ -16,6 +16,9 @@
 
 use crate::substrate::{dali::DaliConfig, default::DefaultConfig};
 use async_trait::async_trait;
+#[cfg(feature = "cosmos")]
+use cosmos::client::{CosmosClient, CosmosClientConfig};
+use derive_more::From;
 use futures::Stream;
 #[cfg(any(test, feature = "testing"))]
 use ibc::applications::transfer::msgs::transfer::MsgTransfer;
@@ -69,6 +72,8 @@ pub enum AnyConfig {
 	Dali(parachain::ParachainClientConfig),
 	Composable(parachain::ParachainClientConfig),
 	Picasso(parachain::ParachainClientConfig),
+	#[cfg(feature = "cosmos")]
+	Cosmos(CosmosClientConfig),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -82,6 +87,8 @@ pub enum AnyChain {
 	Dali(ParachainClient<DaliConfig>),
 	Composable(ParachainClient<DefaultConfig>),
 	Picasso(ParachainClient<DaliConfig>),
+	#[cfg(feature = "cosmos")]
+	Cosmos(CosmosClient<DefaultConfig>),
 }
 
 pub enum AnyFinalityEvent {
@@ -89,6 +96,8 @@ pub enum AnyFinalityEvent {
 	Dali(parachain::finality_protocol::FinalityEvent),
 	Composable(parachain::finality_protocol::FinalityEvent),
 	Picasso(parachain::finality_protocol::FinalityEvent),
+	#[cfg(feature = "cosmos")]
+	Cosmos(cosmos::provider::FinalityEvent),
 }
 
 #[derive(Clone)]
@@ -97,6 +106,8 @@ pub enum AnyAssetId {
 	Dali(<ParachainClient<DaliConfig> as IbcProvider>::AssetId),
 	Composable(<ParachainClient<DaliConfig> as IbcProvider>::AssetId),
 	Picasso(<ParachainClient<DaliConfig> as IbcProvider>::AssetId),
+	#[cfg(feature = "cosmos")]
+	Cosmos(<CosmosClient<DefaultConfig> as IbcProvider>::AssetId),
 }
 
 #[derive(Debug)]
@@ -105,12 +116,17 @@ pub enum AnyTransactionId {
 	Dali(parachain::provider::TransactionId<sp_core::H256>),
 	Composable(parachain::provider::TransactionId<sp_core::H256>),
 	Picasso(parachain::provider::TransactionId<sp_core::H256>),
+	#[cfg(feature = "cosmos")]
+	Cosmos(cosmos::provider::TransactionId<cosmos::provider::Hash>),
 }
 
 #[derive(Error, Debug)]
 pub enum AnyError {
 	#[error("{0}")]
 	Parachain(#[from] parachain::error::Error),
+	#[cfg(feature = "cosmos")]
+	#[error("{0}")]
+	Cosmos(#[from] cosmos::error::Error),
 	#[error("{0}")]
 	Other(String),
 }
@@ -132,17 +148,21 @@ impl IbcProvider for AnyChain {
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &T,
-	) -> Result<(Vec<Any>, Vec<IbcEvent>, UpdateType), anyhow::Error>
+	) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		T: Chain,
 	{
 		match self {
 			AnyChain::Parachain(chain) => {
-				let finality_event = ibc::downcast!(finality_event => AnyFinalityEvent::Parachain)
+				let finality_event = downcast!(finality_event => AnyFinalityEvent::Parachain)
 					.ok_or_else(|| AnyError::Other("Invalid finality event type".to_owned()))?;
-				let (client_msg, events, update_type) =
-					chain.query_latest_ibc_events(finality_event, counterparty).await?;
-				Ok((client_msg, events, update_type))
+				chain.query_latest_ibc_events(finality_event, counterparty).await
+			},
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => {
+				let finality_event = downcast!(finality_event => AnyFinalityEvent::Cosmos)
+					.ok_or_else(|| AnyError::Other("Invalid finality event type".to_owned()))?;
+				chain.query_latest_ibc_events(finality_event, counterparty).await
 			},
 			AnyChain::Dali(chain) => {
 				let finality_event = ibc::downcast!(finality_event => AnyFinalityEvent::Dali)
@@ -174,6 +194,8 @@ impl IbcProvider for AnyChain {
 			Self::Dali(chain) => chain.ibc_events().await,
 			Self::Composable(chain) => chain.ibc_events().await,
 			Self::Picasso(chain) => chain.ibc_events().await,
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.ibc_events().await,
 		}
 	}
 
@@ -200,6 +222,11 @@ impl IbcProvider for AnyChain {
 				.query_client_consensus(at, client_id, consensus_height)
 				.await
 				.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain
+				.query_client_consensus(at, client_id, consensus_height)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -217,6 +244,8 @@ impl IbcProvider for AnyChain {
 				chain.query_client_state(at, client_id).await.map_err(Into::into),
 			AnyChain::Picasso(chain) =>
 				chain.query_client_state(at, client_id).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain.query_client_state(at, client_id).await.map_err(Into::into),
 		}
 	}
 
@@ -233,6 +262,9 @@ impl IbcProvider for AnyChain {
 			AnyChain::Composable(chain) =>
 				chain.query_connection_end(at, connection_id).await.map_err(Into::into),
 			AnyChain::Picasso(chain) =>
+				chain.query_connection_end(at, connection_id).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) =>
 				chain.query_connection_end(at, connection_id).await.map_err(Into::into),
 		}
 	}
@@ -252,6 +284,9 @@ impl IbcProvider for AnyChain {
 				chain.query_channel_end(at, channel_id, port_id).await.map_err(Into::into),
 			AnyChain::Picasso(chain) =>
 				chain.query_channel_end(at, channel_id, port_id).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) =>
+				chain.query_channel_end(at, channel_id, port_id).await.map_err(Into::into),
 		}
 	}
 
@@ -261,6 +296,8 @@ impl IbcProvider for AnyChain {
 			AnyChain::Dali(chain) => chain.query_proof(at, keys).await.map_err(Into::into),
 			AnyChain::Composable(chain) => chain.query_proof(at, keys).await.map_err(Into::into),
 			AnyChain::Picasso(chain) => chain.query_proof(at, keys).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain.query_proof(at, keys).await.map_err(Into::into),
 		}
 	}
 
@@ -285,6 +322,11 @@ impl IbcProvider for AnyChain {
 				.await
 				.map_err(Into::into),
 			AnyChain::Picasso(chain) => chain
+				.query_packet_commitment(at, port_id, channel_id, seq)
+				.await
+				.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain
 				.query_packet_commitment(at, port_id, channel_id, seq)
 				.await
 				.map_err(Into::into),
@@ -315,6 +357,11 @@ impl IbcProvider for AnyChain {
 				.query_packet_acknowledgement(at, port_id, channel_id, seq)
 				.await
 				.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain
+				.query_packet_acknowledgement(at, port_id, channel_id, seq)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -338,6 +385,11 @@ impl IbcProvider for AnyChain {
 				.await
 				.map_err(Into::into),
 			AnyChain::Picasso(chain) => chain
+				.query_next_sequence_recv(at, port_id, channel_id)
+				.await
+				.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain
 				.query_next_sequence_recv(at, port_id, channel_id)
 				.await
 				.map_err(Into::into),
@@ -368,6 +420,11 @@ impl IbcProvider for AnyChain {
 				.query_packet_receipt(at, port_id, channel_id, seq)
 				.await
 				.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain
+				.query_packet_receipt(at, port_id, channel_id, seq)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -380,6 +437,8 @@ impl IbcProvider for AnyChain {
 				chain.latest_height_and_timestamp().await.map_err(Into::into),
 			AnyChain::Picasso(chain) =>
 				chain.latest_height_and_timestamp().await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain.latest_height_and_timestamp().await.map_err(Into::into),
 		}
 	}
 
@@ -406,6 +465,11 @@ impl IbcProvider for AnyChain {
 				.query_packet_commitments(at, channel_id, port_id)
 				.await
 				.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain
+				.query_packet_commitments(at, channel_id, port_id)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -429,6 +493,11 @@ impl IbcProvider for AnyChain {
 				.await
 				.map_err(Into::into),
 			Self::Picasso(chain) => chain
+				.query_packet_acknowledgements(at, channel_id, port_id)
+				.await
+				.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain
 				.query_packet_acknowledgements(at, channel_id, port_id)
 				.await
 				.map_err(Into::into),
@@ -459,6 +528,11 @@ impl IbcProvider for AnyChain {
 				.query_unreceived_packets(at, channel_id, port_id, seqs)
 				.await
 				.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain
+				.query_unreceived_packets(at, channel_id, port_id, seqs)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -486,6 +560,11 @@ impl IbcProvider for AnyChain {
 				.query_unreceived_acknowledgements(at, channel_id, port_id, seqs)
 				.await
 				.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain
+				.query_unreceived_acknowledgements(at, channel_id, port_id, seqs)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -495,6 +574,8 @@ impl IbcProvider for AnyChain {
 			Self::Dali(chain) => chain.channel_whitelist(),
 			Self::Composable(chain) => chain.channel_whitelist(),
 			Self::Picasso(chain) => chain.channel_whitelist(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.channel_whitelist(),
 		}
 	}
 
@@ -511,6 +592,9 @@ impl IbcProvider for AnyChain {
 			Self::Composable(chain) =>
 				chain.query_connection_channels(at, connection_id).await.map_err(Into::into),
 			Self::Picasso(chain) =>
+				chain.query_connection_channels(at, connection_id).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) =>
 				chain.query_connection_channels(at, connection_id).await.map_err(Into::into),
 		}
 	}
@@ -530,6 +614,9 @@ impl IbcProvider for AnyChain {
 				chain.query_send_packets(channel_id, port_id, seqs).await.map_err(Into::into),
 			Self::Picasso(chain) =>
 				chain.query_send_packets(channel_id, port_id, seqs).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) =>
+				chain.query_send_packets(channel_id, port_id, seqs).await.map_err(Into::into),
 		}
 	}
 
@@ -548,6 +635,9 @@ impl IbcProvider for AnyChain {
 				chain.query_recv_packets(channel_id, port_id, seqs).await.map_err(Into::into),
 			Self::Picasso(chain) =>
 				chain.query_recv_packets(channel_id, port_id, seqs).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) =>
+				chain.query_recv_packets(channel_id, port_id, seqs).await.map_err(Into::into),
 		}
 	}
 
@@ -557,6 +647,8 @@ impl IbcProvider for AnyChain {
 			Self::Dali(chain) => chain.expected_block_time(),
 			Self::Composable(chain) => chain.expected_block_time(),
 			Self::Picasso(chain) => chain.expected_block_time(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.expected_block_time(),
 		}
 	}
 
@@ -582,6 +674,11 @@ impl IbcProvider for AnyChain {
 				.query_client_update_time_and_height(client_id, client_height)
 				.await
 				.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain
+				.query_client_update_time_and_height(client_id, client_height)
+				.await
+				.map_err(Into::into),
 		}
 	}
 
@@ -597,6 +694,9 @@ impl IbcProvider for AnyChain {
 			AnyChain::Composable(chain) =>
 				chain.query_host_consensus_state_proof(height).await.map_err(Into::into),
 			AnyChain::Picasso(chain) =>
+				chain.query_host_consensus_state_proof(height).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) =>
 				chain.query_host_consensus_state_proof(height).await.map_err(Into::into),
 		}
 	}
@@ -615,6 +715,11 @@ impl IbcProvider for AnyChain {
 			(Self::Picasso(chain), AnyAssetId::Picasso(asset_id)) =>
 				chain.query_ibc_balance(asset_id.into()).await.map_err(Into::into),
 			(chain, _) => panic!("query_ibc_balance is not implemented for {}", chain.name(),),
+				chain.query_ibc_balance(asset_id).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			(Self::Cosmos(chain), AnyAssetId::Cosmos(asset_id)) =>
+				chain.query_ibc_balance(asset_id).await.map_err(Into::into),
+			_ => unimplemented!(),
 		}
 	}
 
@@ -624,6 +729,8 @@ impl IbcProvider for AnyChain {
 			AnyChain::Dali(chain) => chain.connection_prefix(),
 			AnyChain::Composable(chain) => chain.connection_prefix(),
 			AnyChain::Picasso(chain) => chain.connection_prefix(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain.connection_prefix(),
 		}
 	}
 
@@ -633,6 +740,8 @@ impl IbcProvider for AnyChain {
 			AnyChain::Dali(chain) => chain.client_id(),
 			AnyChain::Composable(chain) => chain.client_id(),
 			AnyChain::Picasso(chain) => chain.client_id(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain.client_id(),
 		}
 	}
 
@@ -642,6 +751,8 @@ impl IbcProvider for AnyChain {
 			AnyChain::Dali(chain) => chain.connection_id(),
 			AnyChain::Composable(chain) => chain.connection_id(),
 			AnyChain::Picasso(chain) => chain.connection_id(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain.connection_id(),
 		}
 	}
 
@@ -651,6 +762,8 @@ impl IbcProvider for AnyChain {
 			AnyChain::Dali(chain) => chain.client_type(),
 			AnyChain::Composable(chain) => chain.client_type(),
 			AnyChain::Picasso(chain) => chain.client_type(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => chain.client_type(),
 		}
 	}
 
@@ -663,6 +776,8 @@ impl IbcProvider for AnyChain {
 				chain.query_timestamp_at(block_number).await.map_err(Into::into),
 			Self::Picasso(chain) =>
 				chain.query_timestamp_at(block_number).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.query_timestamp_at(block_number).await.map_err(Into::into),
 		}
 	}
 
@@ -672,6 +787,8 @@ impl IbcProvider for AnyChain {
 			Self::Dali(chain) => chain.query_clients().await.map_err(Into::into),
 			Self::Composable(chain) => chain.query_clients().await.map_err(Into::into),
 			Self::Picasso(chain) => chain.query_clients().await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.query_clients().await.map_err(Into::into),
 		}
 	}
 
@@ -681,6 +798,8 @@ impl IbcProvider for AnyChain {
 			Self::Dali(chain) => chain.query_channels().await.map_err(Into::into),
 			Self::Composable(chain) => chain.query_channels().await.map_err(Into::into),
 			Self::Picasso(chain) => chain.query_channels().await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.query_channels().await.map_err(Into::into),
 		}
 	}
 
@@ -697,6 +816,9 @@ impl IbcProvider for AnyChain {
 			Self::Composable(chain) =>
 				chain.query_connection_using_client(height, client_id).await.map_err(Into::into),
 			Self::Picasso(chain) =>
+				chain.query_connection_using_client(height, client_id).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) =>
 				chain.query_connection_using_client(height, client_id).await.map_err(Into::into),
 		}
 	}
@@ -723,6 +845,11 @@ impl IbcProvider for AnyChain {
 				.is_update_required(latest_height, latest_client_height_on_counterparty)
 				.await
 				.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain
+				.is_update_required(latest_height, latest_client_height_on_counterparty)
+				.await
+				.map_err(Into::into),
 		}
 	}
 	async fn initialize_client_state(
@@ -733,6 +860,8 @@ impl IbcProvider for AnyChain {
 			Self::Dali(chain) => chain.initialize_client_state().await.map_err(Into::into),
 			Self::Composable(chain) => chain.initialize_client_state().await.map_err(Into::into),
 			Self::Picasso(chain) => chain.initialize_client_state().await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.initialize_client_state().await.map_err(Into::into),
 		}
 	}
 
@@ -769,6 +898,14 @@ impl IbcProvider for AnyChain {
 				)
 				.await
 				.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain
+				.query_client_id_from_tx_hash(
+					downcast!(tx_id => AnyTransactionId::Cosmos)
+						.expect("Should be cosmos transaction id"),
+				)
+				.await
+				.map_err(Into::into),
 		}
 	}
 }
@@ -788,6 +925,8 @@ impl MisbehaviourHandler for AnyChain {
 				parachain.check_for_misbehaviour(counterparty, client_message).await,
 			AnyChain::Picasso(dali) =>
 				dali.check_for_misbehaviour(counterparty, client_message).await,
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(cosmos) => cosmos.check_for_misbehaviour(counterparty, client_message).await,
 		}
 	}
 }
@@ -799,6 +938,8 @@ impl KeyProvider for AnyChain {
 			AnyChain::Dali(dali) => dali.account_id(),
 			AnyChain::Composable(parachain) => parachain.account_id(),
 			AnyChain::Picasso(dali) => dali.account_id(),
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(cosmos) => cosmos.account_id(),
 		}
 	}
 }
@@ -811,6 +952,8 @@ impl Chain for AnyChain {
 			Self::Dali(chain) => chain.name(),
 			Self::Composable(chain) => chain.name(),
 			Self::Picasso(chain) => chain.name(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.name(),
 		}
 	}
 
@@ -820,6 +963,8 @@ impl Chain for AnyChain {
 			Self::Dali(chain) => chain.block_max_weight(),
 			Self::Composable(chain) => chain.block_max_weight(),
 			Self::Picasso(chain) => chain.block_max_weight(),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.block_max_weight(),
 		}
 	}
 
@@ -829,6 +974,8 @@ impl Chain for AnyChain {
 			Self::Dali(chain) => chain.estimate_weight(msg).await.map_err(Into::into),
 			Self::Composable(chain) => chain.estimate_weight(msg).await.map_err(Into::into),
 			Self::Picasso(chain) => chain.estimate_weight(msg).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.estimate_weight(msg).await.map_err(Into::into),
 		}
 	}
 
@@ -843,6 +990,7 @@ impl Chain for AnyChain {
 			Self::Dali(chain) => {
 				use futures::StreamExt;
 				Box::pin(chain.finality_notifications().await.map(AnyFinalityEvent::Dali))
+				Box::pin(chain.finality_notifications().await.map(Into::into))
 			},
 			Self::Composable(chain) => {
 				use futures::StreamExt;
@@ -851,6 +999,11 @@ impl Chain for AnyChain {
 			Self::Picasso(chain) => {
 				use futures::StreamExt;
 				Box::pin(chain.finality_notifications().await.map(AnyFinalityEvent::Dali))
+			},
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => {
+				use futures::StreamExt;
+				Box::pin(chain.finality_notifications().await.map(Into::into))
 			},
 		}
 	}
@@ -877,6 +1030,12 @@ impl Chain for AnyChain {
 				.await
 				.map_err(Into::into)
 				.map(|id| AnyTransactionId::Parachain(id)),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain
+				.submit(messages)
+				.await
+				.map_err(Into::into)
+				.map(|id| AnyTransactionId::Cosmos(id)),
 		}
 	}
 
@@ -889,6 +1048,8 @@ impl Chain for AnyChain {
 			Self::Dali(chain) => chain.query_client_message(update).await.map_err(Into::into),
 			Self::Composable(chain) => chain.query_client_message(update).await.map_err(Into::into),
 			Self::Picasso(chain) => chain.query_client_message(update).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.query_client_message(update).await.map_err(Into::into),
 		}
 	}
 
@@ -898,6 +1059,8 @@ impl Chain for AnyChain {
 			Self::Dali(chain) => chain.get_proof_height(block_height).await,
 			Self::Composable(chain) => chain.get_proof_height(block_height).await,
 			Self::Picasso(chain) => chain.get_proof_height(block_height).await,
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.get_proof_height(block_height).await,
 		}
 	}
 }
@@ -910,6 +1073,8 @@ impl LightClientSync for AnyChain {
 			Self::Dali(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
 			Self::Composable(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
 			Self::Picasso(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
 		}
 	}
 
@@ -926,6 +1091,19 @@ impl LightClientSync for AnyChain {
 				chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
 			Self::Picasso(chain) =>
 				chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
+		}
+	}
+}
+
+#[cfg(any(test, feature = "testing"))]
+impl AnyChain {
+	pub fn set_client_id(&mut self, client_id: ClientId) {
+		match self {
+			Self::Parachain(chain) => chain.set_client_id(client_id),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.set_client_id(client_id),
 		}
 	}
 }
@@ -939,6 +1117,8 @@ impl primitives::TestProvider for AnyChain {
 			Self::Dali(chain) => chain.send_transfer(params).await.map_err(Into::into),
 			Self::Composable(chain) => chain.send_transfer(params).await.map_err(Into::into),
 			Self::Picasso(chain) => chain.send_transfer(params).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.send_transfer(params).await.map_err(Into::into),
 		}
 	}
 
@@ -956,6 +1136,8 @@ impl primitives::TestProvider for AnyChain {
 				chain.send_ordered_packet(channel_id, timeout).await.map_err(Into::into),
 			Self::Picasso(chain) =>
 				chain.send_ordered_packet(channel_id, timeout).await.map_err(Into::into),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.send_ordered_packet(channel_id, timeout).await.map_err(Into::into),
 		}
 	}
 
@@ -965,6 +1147,8 @@ impl primitives::TestProvider for AnyChain {
 			Self::Dali(chain) => chain.subscribe_blocks().await,
 			Self::Composable(chain) => chain.subscribe_blocks().await,
 			Self::Picasso(chain) => chain.subscribe_blocks().await,
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.subscribe_blocks().await,
 		}
 	}
 
@@ -974,6 +1158,8 @@ impl primitives::TestProvider for AnyChain {
 			Self::Dali(chain) => chain.set_channel_whitelist(channel_whitelist),
 			Self::Composable(chain) => chain.set_channel_whitelist(channel_whitelist),
 			Self::Picasso(chain) => chain.set_channel_whitelist(channel_whitelist),
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => chain.set_channel_whitelist(channel_whitelist),
 		}
 	}
 }
@@ -987,6 +1173,8 @@ impl AnyConfig {
 			AnyConfig::Composable(config) =>
 				AnyChain::Composable(ParachainClient::new(config).await?),
 			AnyConfig::Picasso(config) => AnyChain::Picasso(ParachainClient::new(config).await?),
+			#[cfg(feature = "cosmos")]
+			AnyConfig::Cosmos(config) => AnyChain::Cosmos(CosmosClient::new(config).await?),
 		})
 	}
 
@@ -1003,6 +1191,10 @@ impl AnyConfig {
 			},
 			Self::Picasso(chain) => {
 				chain.client_id.replace(client_id);
+			},
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => {
+				chain.client_id.replace(client_id.to_string());
 			},
 		}
 	}
@@ -1021,6 +1213,10 @@ impl AnyConfig {
 			Self::Picasso(chain) => {
 				chain.connection_id.replace(connection_id);
 			},
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => {
+				chain.connection_id.replace(connection_id.to_string());
+			},
 		}
 	}
 
@@ -1036,6 +1232,10 @@ impl AnyConfig {
 				chain.channel_whitelist.push((channel_id, port_id));
 			},
 			Self::Picasso(chain) => {
+				chain.channel_whitelist.push((channel_id, port_id));
+			},
+			#[cfg(feature = "cosmos")]
+			Self::Cosmos(chain) => {
 				chain.channel_whitelist.push((channel_id, port_id));
 			},
 		}

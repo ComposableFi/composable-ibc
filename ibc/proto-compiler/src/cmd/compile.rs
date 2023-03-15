@@ -102,8 +102,6 @@ impl CompileCmd {
 			format!("{}/proto/ibc", ibc_dir.display()),
 		];
 
-		let _root = env!("CARGO_MANIFEST_DIR");
-
 		let proto_includes_paths = [
 			format!("{}", gogo.display()),
 			format!("{}", google.display()),
