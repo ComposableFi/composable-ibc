@@ -18,7 +18,6 @@ use crate::substrate::{dali::DaliConfig, default::DefaultConfig};
 use async_trait::async_trait;
 #[cfg(feature = "cosmos")]
 use cosmos::client::{CosmosClient, CosmosClientConfig};
-use derive_more::From;
 use futures::Stream;
 #[cfg(any(test, feature = "testing"))]
 use ibc::applications::transfer::msgs::transfer::MsgTransfer;
@@ -167,23 +166,17 @@ impl IbcProvider for AnyChain {
 			AnyChain::Dali(chain) => {
 				let finality_event = ibc::downcast!(finality_event => AnyFinalityEvent::Dali)
 					.ok_or_else(|| AnyError::Other("Invalid finality event type".to_owned()))?;
-				let (client_msg, events, update_type) =
-					chain.query_latest_ibc_events(finality_event, counterparty).await?;
-				Ok((client_msg, events, update_type))
+				chain.query_latest_ibc_events(finality_event, counterparty).await
 			},
 			AnyChain::Composable(chain) => {
 				let finality_event = ibc::downcast!(finality_event => AnyFinalityEvent::Composable)
 					.ok_or_else(|| AnyError::Other("Invalid finality event type".to_owned()))?;
-				let (client_msg, events, update_type) =
-					chain.query_latest_ibc_events(finality_event, counterparty).await?;
-				Ok((client_msg, events, update_type))
+				chain.query_latest_ibc_events(finality_event, counterparty).await
 			},
 			AnyChain::Picasso(chain) => {
 				let finality_event = ibc::downcast!(finality_event => AnyFinalityEvent::Picasso)
 					.ok_or_else(|| AnyError::Other("Invalid finality event type".to_owned()))?;
-				let (client_msg, events, update_type) =
-					chain.query_latest_ibc_events(finality_event, counterparty).await?;
-				Ok((client_msg, events, update_type))
+				chain.query_latest_ibc_events(finality_event, counterparty).await
 			},
 		}
 	}
@@ -714,12 +707,10 @@ impl IbcProvider for AnyChain {
 				chain.query_ibc_balance(asset_id.into()).await.map_err(Into::into),
 			(Self::Picasso(chain), AnyAssetId::Picasso(asset_id)) =>
 				chain.query_ibc_balance(asset_id.into()).await.map_err(Into::into),
-			(chain, _) => panic!("query_ibc_balance is not implemented for {}", chain.name(),),
-				chain.query_ibc_balance(asset_id).await.map_err(Into::into),
 			#[cfg(feature = "cosmos")]
 			(Self::Cosmos(chain), AnyAssetId::Cosmos(asset_id)) =>
-				chain.query_ibc_balance(asset_id).await.map_err(Into::into),
-			_ => unimplemented!(),
+				chain.query_ibc_balance(asset_id.into()).await.map_err(Into::into),
+			(chain, _) => panic!("query_ibc_balance is not implemented for {}", chain.name()),
 		}
 	}
 
@@ -990,7 +981,6 @@ impl Chain for AnyChain {
 			Self::Dali(chain) => {
 				use futures::StreamExt;
 				Box::pin(chain.finality_notifications().await.map(AnyFinalityEvent::Dali))
-				Box::pin(chain.finality_notifications().await.map(Into::into))
 			},
 			Self::Composable(chain) => {
 				use futures::StreamExt;
@@ -1003,7 +993,7 @@ impl Chain for AnyChain {
 			#[cfg(feature = "cosmos")]
 			Self::Cosmos(chain) => {
 				use futures::StreamExt;
-				Box::pin(chain.finality_notifications().await.map(Into::into))
+				Box::pin(chain.finality_notifications().await.map(AnyFinalityEvent::Cosmos))
 			},
 		}
 	}
@@ -1102,6 +1092,9 @@ impl AnyChain {
 	pub fn set_client_id(&mut self, client_id: ClientId) {
 		match self {
 			Self::Parachain(chain) => chain.set_client_id(client_id),
+			Self::Dali(chain) => chain.set_client_id(client_id),
+			Self::Composable(chain) => chain.set_client_id(client_id),
+			Self::Picasso(chain) => chain.set_client_id(client_id),
 			#[cfg(feature = "cosmos")]
 			Self::Cosmos(chain) => chain.set_client_id(client_id),
 		}
