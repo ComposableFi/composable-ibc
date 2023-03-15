@@ -29,7 +29,6 @@ use pallet_ibc::{
 	events::IbcEvent as RawIbcEvent, MultiAddress, PalletParams, Timeout, TransferParams,
 };
 use pallet_ibc_ping::SendPingParams;
-use parachain::parachain::UncheckedExtrinsic;
 use parachain_subxt::api::runtime_types::ibc_primitives::Timeout as RawTimeout;
 use relaychain::api::runtime_types::polkadot_runtime_parachains::paras::ParaLifecycle;
 use serde::{Serialize, Serializer};
