@@ -3,8 +3,8 @@ use crate::{
 	light_clients::{AnyClientState, AnyConsensusState},
 	mock::*,
 	routing::Context,
-	Any, Config, ConsensusHeights, DenomToAssetId, MultiAddress, Pallet, PalletParams, Timeout,
-	TransferParams, MODULE_ID,
+	Any, Config, ConsensusHeights, DenomToAssetId, MultiAddress, Pallet, Timeout, TransferParams,
+	MODULE_ID,
 };
 use core::time::Duration;
 use frame_support::{
@@ -226,12 +226,6 @@ fn send_transfer() {
 			<Test as frame_system::Config>::AccountId,
 		>>::mint_into(asset_id, &AccountId32::new([0; 32]), balance).unwrap();
 
-		Ibc::set_params(
-			RuntimeOrigin::root(),
-			PalletParams { send_enabled: true, receive_enabled: true },
-		)
-		.unwrap();
-
 		let timeout = Timeout::Offset { timestamp: Some(1000), height: Some(5) };
 
 		Ibc::transfer(
@@ -301,12 +295,6 @@ fn on_deliver_ics20_recv_packet() {
 		<<Test as Config>::Fungibles as Mutate<
 			<Test as frame_system::Config>::AccountId,
 		>>::mint_into(asset_id, &channel_escrow_address, balance)
-		.unwrap();
-
-		Ibc::set_params(
-			RuntimeOrigin::root(),
-			PalletParams { send_enabled: true, receive_enabled: true },
-		)
 		.unwrap();
 
 		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
