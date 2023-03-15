@@ -236,10 +236,11 @@ fn process_message(
 						&header.finality_proof.unknown_headers,
 					);
 					let from = msg.client_state.latest_relay_hash;
-					let finalized =
+					let mut finalized =
 						ancestry.ancestry(from, header.finality_proof.block).map_err(|_| {
 							ContractError::Grandpa(format!("[update_state] Invalid ancestry!"))
 						})?;
+					finalized.reverse();
 					finalized
 				},
 				_ => Vec::new(),
