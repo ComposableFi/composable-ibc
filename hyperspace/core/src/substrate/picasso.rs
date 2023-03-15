@@ -10,8 +10,8 @@ use self::parachain_subxt::api::{
 	sudo::calls::Sudo,
 };
 use crate::{
-	define_any_wrapper, define_beefy_authority_set, define_event_record, define_events,
-	define_head_data, define_ibc_event_wrapper, define_id, define_pallet_params,
+	define_any_wrapper, define_asset_id, define_beefy_authority_set, define_event_record,
+	define_events, define_head_data, define_ibc_event_wrapper, define_id, define_pallet_params,
 	define_para_lifecycle, define_runtime_call, define_runtime_event, define_runtime_storage,
 	define_runtime_transactions, define_transfer_params,
 	substrate::picasso::relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
@@ -29,6 +29,7 @@ use pallet_ibc::{
 use pallet_ibc_ping::SendPingParams;
 use parachain_subxt::api::runtime_types::ibc_primitives::Timeout as RawTimeout;
 use relaychain::api::runtime_types::polkadot_runtime_parachains::paras::ParaLifecycle;
+use serde::{Serialize, Serializer};
 use sp_core::{crypto::AccountId32, H256};
 use subxt::{
 	config::{
@@ -157,9 +158,11 @@ define_runtime_call!(
 	parachain_subxt::api::runtime_types::pallet_ibc::pallet::Call
 );
 
+define_asset_id!(CurrencyIdWrapper, CurrencyId);
+
 #[async_trait]
 impl light_client_common::config::Config for PicassoConfig {
-	type AssetId = u128;
+	type AssetId = CurrencyIdWrapper;
 	type Signature = <Self as subxt::Config>::Signature;
 	type Address = <Self as subxt::Config>::Address;
 	type Tip = Tip;
@@ -169,7 +172,7 @@ impl light_client_common::config::Config for PicassoConfig {
 	type EventRecord = PicassoEventRecord;
 	type Storage = PicassoRuntimeStorage;
 	type Tx = PicassoRuntimeTransactions;
-	type SignedExtra = (Era, CheckNonce, Compact<Balance>);
+	type SignedExtra = (Era, CheckNonce, Compact<Balance>, Option<Self::AssetId>);
 
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,

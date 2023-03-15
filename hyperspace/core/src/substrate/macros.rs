@@ -776,3 +776,40 @@ macro_rules! define_runtime_call {
 		}
 	};
 }
+
+#[macro_export]
+macro_rules! define_asset_id {
+	($name:ident, $ty:ty) => {
+		#[derive(Encode, Decode)]
+		pub struct $name(pub $ty);
+
+		impl From<u128> for $name {
+			fn from(value: u128) -> Self {
+				use $ty as CurrencyId;
+				Self(CurrencyId(value))
+			}
+		}
+
+		impl Into<u128> for $name {
+			fn into(self) -> u128 {
+				self.0 .0
+			}
+		}
+
+		impl Clone for $name {
+			fn clone(&self) -> Self {
+				use $ty as CurrencyId;
+				Self(CurrencyId(self.0 .0))
+			}
+		}
+
+		impl Serialize for $name {
+			fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+			where
+				S: Serializer,
+			{
+				serializer.serialize_u128(self.0 .0)
+			}
+		}
+	};
+}

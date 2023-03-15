@@ -211,7 +211,7 @@ where
 			.map(|msg| Any { type_url: msg.type_url.clone(), value: msg.value })
 			.collect::<Vec<_>>();
 
-		let call = T::Tx::ibc_deliver(messages); // api::tx().ibc().deliver(messages);
+		let call = T::Tx::ibc_deliver(messages);
 		let (ext_hash, block_hash) = self.submit_call(call).await?;
 
 		log::debug!(target: "hyperspace_parachain", "Submitted extrinsic (hash: {:?}) to block {:?}", ext_hash, block_hash);
@@ -288,6 +288,7 @@ where
 
 		let extrinsic_opaque =
 			block.block.extrinsics.get(transaction_index).expect("Extrinsic not found");
+
 		let unchecked_extrinsic =
 			UncheckedExtrinsic::<T>::decode(&mut &*extrinsic_opaque.0.encode())
 				.map_err(|e| Error::from(format!("Extrinsic decode error: {}", e)))?;
@@ -308,9 +309,6 @@ where
 				return Ok(update_msg.client_message),
 			_ => (),
 		}
-		// },
-		// _ => (),
-		// }
 
 		Err(Error::from("No client message found".to_owned()))
 	}

@@ -607,13 +607,13 @@ impl IbcProvider for AnyChain {
 	) -> Result<Vec<PrefixedCoin>, Self::Error> {
 		match (self, asset_id) {
 			(Self::Parachain(chain), AnyAssetId::Parachain(asset_id)) =>
-				chain.query_ibc_balance(asset_id).await.map_err(Into::into),
+				chain.query_ibc_balance(asset_id.into()).await.map_err(Into::into),
 			(Self::Dali(chain), AnyAssetId::Dali(asset_id)) =>
-				chain.query_ibc_balance(asset_id).await.map_err(Into::into),
+				chain.query_ibc_balance(asset_id.into()).await.map_err(Into::into),
 			(Self::Composable(chain), AnyAssetId::Composable(asset_id)) =>
-				chain.query_ibc_balance(asset_id).await.map_err(Into::into),
+				chain.query_ibc_balance(asset_id.into()).await.map_err(Into::into),
 			(Self::Picasso(chain), AnyAssetId::Picasso(asset_id)) =>
-				chain.query_ibc_balance(asset_id).await.map_err(Into::into),
+				chain.query_ibc_balance(asset_id.into()).await.map_err(Into::into),
 			(chain, _) => panic!("query_ibc_balance is not implemented for {}", chain.name(),),
 		}
 	}
