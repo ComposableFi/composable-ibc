@@ -23,16 +23,16 @@ use serde_derive::{Deserialize, Serialize};
 use tendermint::abci::EventAttribute;
 
 /// The content of the `key` field for the attribute containing the height.
-const HEIGHT_ATTRIBUTE_KEY: &str = "height";
+pub const HEIGHT_ATTRIBUTE_KEY: &str = "height";
 
 /// The content of the `key` field for the attribute containing the client identifier.
-const CLIENT_ID_ATTRIBUTE_KEY: &str = "client_id";
+pub const CLIENT_ID_ATTRIBUTE_KEY: &str = "client_id";
 
 /// The content of the `key` field for the attribute containing the client type.
-const CLIENT_TYPE_ATTRIBUTE_KEY: &str = "client_type";
+pub const CLIENT_TYPE_ATTRIBUTE_KEY: &str = "client_type";
 
 /// The content of the `key` field for the attribute containing the height.
-const CONSENSUS_HEIGHT_ATTRIBUTE_KEY: &str = "consensus_height";
+pub const CONSENSUS_HEIGHT_ATTRIBUTE_KEY: &str = "consensus_height";
 
 /// NewBlock event signals the committing & execution of a new block.
 // TODO - find a better place for NewBlock

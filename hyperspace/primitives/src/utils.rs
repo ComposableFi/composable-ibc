@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{mock::LocalClientTypes, Chain, TestProvider};
+#[cfg(any(test, feature = "testing"))]
+use crate::TestProvider;
+use crate::{mock::LocalClientTypes, Chain};
 use futures::{future, StreamExt};
 use ibc::{
 	core::{
@@ -41,6 +43,7 @@ pub async fn timeout_future<T: Future>(future: T, secs: u64, reason: String) -> 
 	}
 }
 
+#[cfg(any(test, feature = "testing"))]
 pub async fn timeout_after<C: TestProvider, T: Future + Send + 'static>(
 	chain: &C,
 	future: T,

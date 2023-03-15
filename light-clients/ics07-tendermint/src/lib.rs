@@ -41,7 +41,7 @@ pub mod client_message;
 pub mod client_state;
 pub mod consensus_state;
 pub mod error;
-mod merkle;
+pub mod merkle;
 #[cfg(any(test, feature = "mocks"))]
 pub mod mock;
 #[cfg(any(test, feature = "mocks"))]

@@ -45,7 +45,11 @@ hex = "0.4.3"
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
 hyperspace-core = { path = "../core", features = ["testing", "build-metadata-from-ws"] }
 hyperspace-parachain = { path = "../parachain", features = ["testing", "build-metadata-from-ws"] }
+hyperspace-cosmos = { path = "../cosmos", features = [] }
 
 # We need this so the tests run sequentially
 [[test]]
 name = "parachain_parachain"
+
+[[test]]
+name = "parachain_cosmos"

@@ -49,6 +49,7 @@ subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a41
 derive_more = "0.99.17"
 prost = "0.11"
 parachain = { path = "../parachain", package = "hyperspace-parachain", features = ["testing"] }
+cosmos = { path = "../cosmos", package = "hyperspace-cosmos", features = ["testing"] }
 
 # substrate
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
@@ -57,15 +58,16 @@ sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 
-# composable
-#comosable-primitives = { package = "primitives",  path = "../contracts/pallet-ibc" }
-#common = { path = "../contracts/pallet-ibc" }
-
 [features]
 build-metadata-from-ws = [
     "parachain/build-metadata-from-ws",
 ]
 #near = ["dep:near"]
-#cosmos = ["dep:cosmos"]
-testing = [ "primitives/testing", "parachain/testing" ]
+cosmos = ["dep:cosmos"]
+testing = [
+    "primitives/testing",
+    "parachain/testing",
+    "cosmos/testing",
+]
+default = ["cosmos"]
 dali = ["parachain/dali"]

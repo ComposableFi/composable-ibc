@@ -275,6 +275,10 @@ define_error! {
 			[ crate::timestamp::ParseTimestampError ]
 			| _ | { "Invalid packet timeout timestamp value" },
 
+		InvalidPacketHeight
+			[ crate::core::ics02_client::height::HeightError ]
+			| _ | { "Invalid packet height value" },
+
 		ErrorInvalidConsensusState
 			| _ | { "Invalid timestamp in consensus state; timestamp must be a positive value" },
 
@@ -385,6 +389,10 @@ define_error! {
 					"application module error: {0}",
 					e.description)
 			},
+
+		AbciConversionFailed
+			{ abci_event: String }
+			| e | { format_args!("Failed to convert abci event to IbcEvent: {}", e.abci_event)}
 	}
 }
 
