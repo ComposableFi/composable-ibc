@@ -875,11 +875,6 @@ benchmarks! {
 			timeout,
 		};
 
-		<Params<T>>::put(PalletParams {
-			send_enabled: true,
-			receive_enabled: true
-		});
-
 		let amt = 1000 * MILLIS;
 
 	}:_(RawOrigin::Signed(caller.clone()), transfer_params, asset_id.into(), amt.into(), None)
@@ -888,20 +883,6 @@ benchmarks! {
 			asset_id.into(),
 			&caller
 		), (balance - amt).into());
-	}
-
-	set_params {
-		let pallet_params = PalletParams {
-			send_enabled: true,
-			receive_enabled: true
-		};
-
-	}:_(RawOrigin::Root, pallet_params)
-	verify {
-		assert_last_event::<T>(Event::<T>::ParamsUpdated {
-			send_enabled: true,
-			receive_enabled: true
-		}.into())
 	}
 
 	on_chan_open_init {
@@ -1020,12 +1001,6 @@ benchmarks! {
 			balance.into(),
 		).unwrap();
 
-
-		<Params<T>>::put(PalletParams {
-			send_enabled: true,
-			receive_enabled: true
-		});
-
 		let raw_user: AccountId32 =  caller.clone().into();
 		let raw_user: &[u8] = raw_user.as_ref();
 		let mut hex_string = hex::encode_upper(raw_user.to_vec());
@@ -1100,12 +1075,6 @@ benchmarks! {
 			balance.into(),
 		).unwrap();
 
-
-		<Params<T>>::put(PalletParams {
-			send_enabled: true,
-			receive_enabled: true
-		});
-
 		let raw_user: AccountId32 =  caller.clone().into();
 		let raw_user: &[u8] = raw_user.as_ref();
 		let mut hex_string = hex::encode_upper(raw_user.to_vec());
@@ -1179,12 +1148,6 @@ benchmarks! {
 			&channel_escrow_address,
 			balance.into(),
 		).unwrap();
-
-
-		<Params<T>>::put(PalletParams {
-			send_enabled: true,
-			receive_enabled: true
-		});
 
 		let raw_user: AccountId32 =  caller.clone().into();
 		let raw_user: &[u8] = raw_user.as_ref();

@@ -72,23 +72,6 @@ impl From<ibc_proto::google::protobuf::Any> for Any {
 	}
 }
 
-#[derive(
-	frame_support::RuntimeDebug,
-	PartialEq,
-	Eq,
-	scale_info::TypeInfo,
-	Encode,
-	Decode,
-	Copy,
-	Clone,
-	Default,
-	codec::MaxEncodedLen,
-)]
-pub struct PalletParams {
-	pub send_enabled: bool,
-	pub receive_enabled: bool,
-}
-
 /// Params needed to upgrade clients for all connected chains.
 #[derive(
 	frame_support::RuntimeDebug, PartialEq, Eq, scale_info::TypeInfo, Encode, Decode, Clone,
@@ -272,6 +255,9 @@ pub mod pallet {
 			+ scale_info::TypeInfo
 			+ Clone
 			+ Eq;
+
+		type IsSendEnabled: Get<bool>;
+		type IsReceiveEnabled: Get<bool>;
 	}
 
 	#[pallet::pallet]
@@ -335,11 +321,6 @@ pub mod pallet {
 	/// client_id => Vec<Connection_id>
 	pub type ConnectionClient<T: Config> =
 		StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<Vec<u8>>, ValueQuery>;
-
-	#[pallet::storage]
-	#[allow(clippy::disallowed_types)]
-	/// Pallet Params used to disable sending or receipt of ibc tokens
-	pub type Params<T: Config> = StorageValue<_, PalletParams, ValueQuery>;
 
 	#[pallet::storage]
 	/// Map of asset id to ibc denom pairs (T::AssetId, Vec<u8>)
@@ -510,13 +491,17 @@ pub mod pallet {
 		/// Invalid message for extrinsic
 		InvalidMessageType,
 		/// The interchain token transfer was not successfully initiated
-		TransferFailed,
+		TransferInternals,
+		TransferSerde,
+		TransferOther,
+		TransferProtocol,
+		TransferSend,
 		/// Error Decoding utf8 bytes
 		Utf8Error,
 		/// Invalid asset id
 		InvalidAssetId,
 		/// Invalid Ibc denom
-		InvalidIbcDenom,
+		PrefixedDenomParse,
 		/// Invalid amount
 		InvalidAmount,
 		/// Invalid timestamp
@@ -637,7 +622,8 @@ pub mod pallet {
 				MultiAddress::Raw(bytes) =>
 					String::from_utf8(bytes).map_err(|_| Error::<T>::Utf8Error)?,
 			};
-			let denom = PrefixedDenom::from_str(&denom).map_err(|_| Error::<T>::InvalidIbcDenom)?;
+			let denom =
+				PrefixedDenom::from_str(&denom).map_err(|_| Error::<T>::PrefixedDenomParse)?;
 			let ibc_amount = Amount::from_str(&format!("{:?}", amount))
 				.map_err(|_| Error::<T>::InvalidAmount)?;
 			let coin = PrefixedCoin { denom, amount: ibc_amount };
@@ -710,8 +696,31 @@ pub mod pallet {
 			}
 
 			Pallet::<T>::send_transfer(msg).map_err(|e| {
-				log::trace!(target: "pallet_ibc", "[transfer]: error: {:?}", e);
-				Error::<T>::TransferFailed
+				log::debug!(target: "pallet_ibc", "[transfer]: error: {:?}", &e);
+				use ibc_primitives::Error::*;
+				match e {
+					SendPacketError { .. } => Error::<T>::TransferSend,
+					SendTransferError { .. } => Error::<T>::TransferSend,
+
+					ReceivePacketError { .. } => Error::<T>::TransferProtocol,
+					WriteAcknowledgementError { .. } => Error::<T>::TransferProtocol,
+					AcknowledgementError { .. } => Error::<T>::TransferProtocol,
+					TimeoutError { .. } => Error::<T>::TransferProtocol,
+
+					TimestampOrHeightNotFound { .. } => Error::<T>::TransferInternals,
+					ChannelOrPortError { .. } => Error::<T>::TransferInternals,
+					ClientStateError { .. } => Error::<T>::TransferInternals,
+					ConnectionIdError { .. } => Error::<T>::TransferInternals,
+					ClientIdError { .. } => Error::<T>::TransferInternals,
+					BindPortError { .. } => Error::<T>::TransferInternals,
+					ChannelInitError { .. } => Error::<T>::TransferInternals,
+					ChannelCloseError { .. } => Error::<T>::TransferInternals,
+
+					DecodingError { .. } => Error::<T>::TransferSerde,
+					ErrorDecodingPrefix => Error::<T>::TransferSerde,
+
+					Other { .. } => Error::<T>::TransferOther,
+				}
 			})?;
 			let ctx = Context::<T>::default();
 			let channel_end = ctx
@@ -736,18 +745,6 @@ pub mod pallet {
 					.to_string()
 					.as_bytes()
 					.to_vec(),
-			});
-			Ok(())
-		}
-
-		#[pallet::call_index(2)]
-		#[pallet::weight(<T as Config>::WeightInfo::set_params())]
-		pub fn set_params(origin: OriginFor<T>, params: PalletParams) -> DispatchResult {
-			<T as Config>::AdminOrigin::ensure_origin(origin)?;
-			<Params<T>>::put(params);
-			Self::deposit_event(Event::<T>::ParamsUpdated {
-				send_enabled: params.send_enabled,
-				receive_enabled: params.receive_enabled,
 			});
 			Ok(())
 		}

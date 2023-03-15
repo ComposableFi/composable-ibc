@@ -189,7 +189,6 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		.collect::<Vec<_>>()
 		.await;
 	log::info!(target: "hyperspace", "Parachain have started block production");
-	chain_a.set_pallet_params(true, true).await.unwrap();
 
 	let clients_on_a = chain_a_wrapped.query_clients().await.unwrap();
 	let clients_on_b = chain_b_wrapped.query_clients().await.unwrap();

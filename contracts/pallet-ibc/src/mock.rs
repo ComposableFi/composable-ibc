@@ -200,6 +200,8 @@ impl Config for Test {
 	type RelayerOrigin = EnsureSigned<Self::AccountId>;
 	type HandleMemo = ();
 	type MemoMessage = MemoMessage;
+	type IsReceiveEnabled = sp_core::ConstBool<true>;
+	type IsSendEnabled = sp_core::ConstBool<true>;
 	type Ics20RateLimiter = Everything;
 }
 
