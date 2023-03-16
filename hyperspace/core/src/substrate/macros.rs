@@ -83,24 +83,6 @@ macro_rules! define_beefy_authority_set {
 }
 
 #[macro_export]
-macro_rules! define_pallet_params {
-	(
-		$name: ident,
-		$pallet_params_type: ty,
-		$raw_pallet_params_type: ty
-	) => {
-		pub struct $name(pub $pallet_params_type);
-
-		impl From<$name> for $raw_pallet_params_type {
-			fn from(value: $name) -> Self {
-				let params = value.0;
-				Self { send_enabled: params.send_enabled, receive_enabled: params.receive_enabled }
-			}
-		}
-	};
-}
-
-#[macro_export]
 macro_rules! define_any_wrapper {
 	(
 		$name: ident,
@@ -749,13 +731,11 @@ macro_rules! define_runtime_event {
 
 #[macro_export]
 macro_rules! define_runtime_call {
-	($name:ident, $runtime_call: path, $pallet_params_wrapper: expr, $any_wrapper: expr, $call: path) => {
+	($name:ident, $runtime_call: path, $any_wrapper: expr, $call: path) => {
 		#[derive(Decode)]
 		pub struct $name(pub $runtime_call);
 
 		impl RuntimeCall for $name {
-			type PalletParams = PalletParams;
-
 			fn extract_ibc_deliver_messages(self) -> Option<Vec<Any>> {
 				use $call as IbcCall;
 				use $runtime_call as RuntimeCall;
@@ -764,14 +744,6 @@ macro_rules! define_runtime_call {
 						Some(messages.into_iter().map(|m| $any_wrapper(m).into()).collect()),
 					_ => None,
 				}
-			}
-
-			fn pallet_ibc_set_params(params: PalletParams) -> Self {
-				use $call as IbcCall;
-				use $runtime_call as RuntimeCall;
-				Self(RuntimeCall::Ibc(IbcCall::set_params {
-					params: $pallet_params_wrapper(params).into(),
-				}))
 			}
 		}
 	};

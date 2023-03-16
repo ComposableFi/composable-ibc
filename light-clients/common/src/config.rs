@@ -156,10 +156,7 @@ pub trait RuntimeStorage {
 }
 
 pub trait RuntimeCall {
-	type PalletParams;
-
 	fn extract_ibc_deliver_messages(self) -> Option<Vec<Any>>;
-	fn pallet_ibc_set_params(params: Self::PalletParams) -> Self;
 }
 
 pub trait EventRecordT {

@@ -25,8 +25,8 @@ use ibc::{
 use ibc_proto::google::protobuf::Any;
 use ibc_rpc::IbcApiClient;
 use jsonrpsee::{core::client::SubscriptionClientT, rpc_params};
-use light_client_common::config::{RuntimeCall, RuntimeTransactions};
-use pallet_ibc::{MultiAddress, PalletParams, Timeout, TransferParams};
+use light_client_common::config::RuntimeTransactions;
+use pallet_ibc::{MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;
 use primitives::{KeyProvider, TestProvider};
 use sp_core::{
@@ -61,8 +61,6 @@ where
 	T::BlockNumber: Ord + sp_runtime::traits::Zero,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
-	<<T as light_client_common::config::Config>::ParaRuntimeCall as RuntimeCall>::PalletParams:
-		From<PalletParams>,
 	<<T as light_client_common::config::Config>::Tx as RuntimeTransactions>::TransferParams:
 		From<TransferParams<AccountId32>>,
 {
@@ -149,8 +147,6 @@ where
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 	<T as light_client_common::config::Config>::AssetId: Clone,
-	<<T as light_client_common::config::Config>::ParaRuntimeCall as RuntimeCall>::PalletParams:
-		From<PalletParams>,
 	<<T as light_client_common::config::Config>::Tx as RuntimeTransactions>::TransferParams:
 		From<TransferParams<AccountId32>>,
 	<<T as light_client_common::config::Config>::Tx as RuntimeTransactions>::SendPingParams:

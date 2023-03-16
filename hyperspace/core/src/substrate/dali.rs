@@ -3,19 +3,16 @@ use self::parachain_subxt::api::{
 	ibc_ping::calls::SendPing,
 	runtime_types::{
 		frame_system::{extensions::check_nonce::CheckNonce, EventRecord},
-		pallet_ibc::{
-			events::IbcEvent as MetadataIbcEvent, PalletParams as RawPalletParams,
-			TransferParams as RawTransferParams,
-		},
+		pallet_ibc::{events::IbcEvent as MetadataIbcEvent, TransferParams as RawTransferParams},
 		pallet_ibc_ping::SendPingParams as RawSendPingParams,
 	},
 	sudo::calls::Sudo,
 };
 use crate::{
 	define_any_wrapper, define_asset_id, define_beefy_authority_set, define_event_record,
-	define_events, define_head_data, define_ibc_event_wrapper, define_id, define_pallet_params,
-	define_para_lifecycle, define_runtime_call, define_runtime_event, define_runtime_storage,
-	define_runtime_transactions, define_send_ping_params, define_transfer_params,
+	define_events, define_head_data, define_ibc_event_wrapper, define_id, define_para_lifecycle,
+	define_runtime_call, define_runtime_event, define_runtime_storage, define_runtime_transactions,
+	define_send_ping_params, define_transfer_params,
 	substrate::dali::relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
 };
 use async_trait::async_trait;
@@ -25,9 +22,7 @@ use light_client_common::config::{
 	BeefyAuthoritySetT, EventRecordT, IbcEventsT, LocalStaticStorageAddress, ParaLifecycleT,
 	RuntimeCall, RuntimeStorage, RuntimeTransactions,
 };
-use pallet_ibc::{
-	events::IbcEvent as RawIbcEvent, MultiAddress, PalletParams, Timeout, TransferParams,
-};
+use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;
 use parachain_subxt::api::runtime_types::ibc_primitives::Timeout as RawTimeout;
 use relaychain::api::runtime_types::polkadot_runtime_parachains::paras::ParaLifecycle;
@@ -93,8 +88,6 @@ define_runtime_storage!(
 	relaychain::api::storage().babe().epoch_start()
 );
 
-define_pallet_params!(PalletParamsWrapper, PalletParams, RawPalletParams);
-
 define_send_ping_params!(SendPingParamsWrapper, SendPingParams, RawSendPingParams);
 
 define_transfer_params!(
@@ -146,7 +139,6 @@ define_runtime_event!(
 define_runtime_call!(
 	DaliParaRuntimeCall,
 	parachain_subxt::api::runtime_types::dali_runtime::RuntimeCall,
-	PalletParamsWrapper,
 	AnyWrapper,
 	parachain_subxt::api::runtime_types::pallet_ibc::pallet::Call
 );
