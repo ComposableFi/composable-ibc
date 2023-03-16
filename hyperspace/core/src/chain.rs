@@ -224,6 +224,12 @@ impl IbcProvider for AnyChain {
 					.ok_or_else(|| AnyError::Other("Invalid finality event type".to_owned()))?;
 				chain.query_latest_ibc_events(finality_event, counterparty).await
 			},
+			#[cfg(feature = "cosmos")]
+			AnyChain::Cosmos(chain) => {
+				let finality_event = downcast!(finality_event => AnyFinalityEvent::Cosmos)
+					.ok_or_else(|| AnyError::Other("Invalid finality event type".to_owned()))?;
+				chain.query_latest_ibc_events(finality_event, counterparty).await
+			},
 			AnyChain::Wasm(c) =>
 				c.inner.query_latest_ibc_events(finality_event, counterparty).await,
 		}

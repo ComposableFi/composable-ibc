@@ -92,6 +92,9 @@ define_error! {
 		InvalidToken
 			| _ | { "invalid token" },
 
+		TokenBalanceChange
+			| _ | { "token balance change" },
+
 		Signer
 			[ SignerError ]
 			| _ | { "failed to parse signer" },
