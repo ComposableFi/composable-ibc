@@ -126,19 +126,6 @@ where
 
 		Ok(())
 	}
-
-	pub async fn set_pallet_params(
-		&self,
-		receive_enabled: bool,
-		send_enabled: bool,
-	) -> Result<(), Error> {
-		let params = PalletParams { receive_enabled, send_enabled };
-		let call = T::ParaRuntimeCall::pallet_ibc_set_params(params.into());
-
-		self.submit_sudo_call(call).await?;
-
-		Ok(())
-	}
 }
 
 #[async_trait::async_trait]
