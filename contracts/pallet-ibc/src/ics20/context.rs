@@ -40,11 +40,11 @@ where
 	}
 
 	fn is_send_enabled(&self) -> bool {
-		Pallet::<T>::is_send_enabled()
+		T::IsSendEnabled::get()
 	}
 
 	fn is_receive_enabled(&self) -> bool {
-		Pallet::<T>::is_receive_enabled()
+		T::IsReceiveEnabled::get()
 	}
 }
 
@@ -91,7 +91,7 @@ where
 				frame_support::traits::ExistenceRequirement::AllowDeath,
 			)
 			.map_err(|e| {
-				log::trace!(target: "pallet_ibc", "Failed to transfer ibc tokens: {:?}", e);
+				log::debug!(target: "pallet_ibc", "Failed to transfer ibc tokens: {:?}", e);
 				Ics20Error::invalid_token()
 			})?;
 		} else {
@@ -103,8 +103,8 @@ where
 				false,
 			)
 			.map_err(|e| {
-				log::trace!(target: "pallet_ibc", "Failed to transfer ibc tokens: {:?}", e);
-				Ics20Error::invalid_token()
+				log::debug!(target: "pallet_ibc", "Failed to transfer ibc tokens: {:?}", e);
+				Ics20Error::token_balance_change()
 			})?;
 		}
 
@@ -119,12 +119,8 @@ where
 		let amount: T::Balance = amt.amount.as_u256().as_u128().into();
 		let denom = amt.denom.to_string();
 		// Find existing asset or create a new one
-		let asset_id =
-			T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).map_err(|err| {
-				Ics20Error::implementation_specific(format!(
-					"Failed to create or find asset: {err:?}"
-				))
-			})?;
+		let asset_id = T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
+			.map_err(|err| Ics20Error::invalid_token())?;
 
 		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
 			asset_id.into(),
@@ -132,8 +128,8 @@ where
 			amount,
 		)
 		.map_err(|e| {
-			log::trace!(target: "pallet_ibc", "Failed to mint tokens: {:?}", e);
-			Ics20Error::invalid_token()
+			log::debug!(target: "pallet_ibc", "Failed to mint tokens: {:?}", e);
+			Ics20Error::token_balance_change()
 		})?;
 		Ok(())
 	}
@@ -154,7 +150,7 @@ where
 			amount,
 		)
 		.map_err(|e| {
-			log::trace!(target: "pallet_ibc", "Failed to burn tokens: {:?}", e);
+			log::debug!(target: "pallet_ibc", "Failed to burn tokens: {:?}", e);
 			Ics20Error::implementation_specific("Failed to burn tokens".to_string())
 		})?;
 		Ok(())

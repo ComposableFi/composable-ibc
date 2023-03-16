@@ -310,7 +310,7 @@ pub enum Error {
 	/// An error involving Client state
 	ClientStateError { msg: Option<String> },
 	/// An Error Involving the Timestamp and height
-	TimestampOrHeightError { msg: Option<String> },
+	TimestampOrHeightNotFound { msg: Option<String> },
 	/// Failed to register a token transfer packet
 	SendTransferError { msg: Option<String> },
 	/// Ics20 receive packet processing error

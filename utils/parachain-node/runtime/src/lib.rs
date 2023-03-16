@@ -724,6 +724,8 @@ impl pallet_ibc::Config for Runtime {
 	type TransferOrigin = EnsureSigned<Self::IbcAccountId>;
 	type RelayerOrigin = EnsureSigned<Self::AccountId>;
 	type MemoMessage = MemoMessage;
+	type IsReceiveEnabled = sp_core::ConstBool<true>;
+	type IsSendEnabled = sp_core::ConstBool<true>;
 	type HandleMemo = ();
 	type PalletPrefix = IbcTriePrefix;
 	type LightClientProtocol = GRANDPA;

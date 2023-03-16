@@ -17,7 +17,7 @@ use crate::{
 	routing,
 	routing::Context,
 	ChannelsConnection, Config, ConnectionClient, DenomToAssetId, Error, EscrowAddresses,
-	IbcAssets, Pallet, Params, MODULE_ID,
+	IbcAssets, Pallet, MODULE_ID,
 };
 use codec::{Decode, Encode};
 use frame_support::traits::{fungibles::Inspect, Currency};
@@ -735,14 +735,6 @@ where
 }
 
 impl<T: Config> Pallet<T> {
-	pub fn is_send_enabled() -> bool {
-		Params::<T>::get().send_enabled
-	}
-
-	pub fn is_receive_enabled() -> bool {
-		Params::<T>::get().receive_enabled
-	}
-
 	pub fn remove_channel_escrow_address(
 		port_id: &PortId,
 		channel_id: ChannelId,
@@ -920,7 +912,7 @@ where
 		)?;
 		let (latest_height, latest_timestamp) =
 			Pallet::<T>::latest_height_and_timestamp(&source_port, &source_channel).map_err(
-				|_| IbcHandlerError::TimestampOrHeightError {
+				|_| IbcHandlerError::TimestampOrHeightNotFound {
 					msg: Some("Failed to retreive client height and timestamp".to_string()),
 				},
 			)?;
@@ -1035,7 +1027,7 @@ where
 		})?;
 		let (latest_height, latest_timestamp) =
 			Pallet::<T>::latest_height_and_timestamp(&PortId::transfer(), &channel_id).map_err(
-				|_| IbcHandlerError::TimestampOrHeightError {
+				|_| IbcHandlerError::TimestampOrHeightNotFound {
 					msg: Some("Failed to retreive client height and timestamp".to_string()),
 				},
 			)?;
