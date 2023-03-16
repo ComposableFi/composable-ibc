@@ -362,8 +362,8 @@ impl<C: HostBlockType> ChannelKeeper for DummyTransferModule<C> {
 
 	fn store_raw_acknowledgement(
 		&mut self,
-		key: (PortId, ChannelId, Sequence),
-		ack: Acknowledgement,
+		_key: (PortId, ChannelId, Sequence),
+		_ack: Acknowledgement,
 	) -> Result<(), Error> {
 		Ok(())
 	}

@@ -120,7 +120,7 @@ where
 		let denom = amt.denom.to_string();
 		// Find existing asset or create a new one
 		let asset_id = T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
-			.map_err(|err| Ics20Error::invalid_token())?;
+			.map_err(|_err| Ics20Error::invalid_token())?;
 
 		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
 			asset_id.into(),

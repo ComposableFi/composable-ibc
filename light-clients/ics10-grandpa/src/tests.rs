@@ -259,6 +259,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		let header = Header {
 			finality_proof: proof.finality_proof,
 			parachain_headers: proof.parachain_headers.clone(),
+			height: Height::new(prover.para_id as u64, finalized_para_header.number as u64),
 		};
 		let msg = MsgUpdateAnyClient {
 			client_id: client_id.clone(),

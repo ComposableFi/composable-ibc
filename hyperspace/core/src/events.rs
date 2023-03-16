@@ -14,7 +14,7 @@
 
 #[cfg(feature = "testing")]
 use crate::send_packet_relay::packet_relay_status;
-use crate::{packets::query_ready_and_timed_out_packets, Mode};
+use crate::{Mode};
 use codec::Encode;
 use ibc::{
 	core::{

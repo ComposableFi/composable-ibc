@@ -868,8 +868,8 @@ impl<C: HostBlockType> ChannelKeeper for MockContext<C> {
 
 	fn store_raw_acknowledgement(
 		&mut self,
-		key: (PortId, ChannelId, Sequence),
-		ack: Acknowledgement,
+		_key: (PortId, ChannelId, Sequence),
+		_ack: Acknowledgement,
 	) -> Result<(), Ics04Error> {
 		Ok(())
 	}
