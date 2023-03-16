@@ -3962,7 +3962,9 @@ dependencies = [
  "async-trait",
  "bech32",
  "bip32",
+ "data-encoding",
  "derive_more",
+ "digest 0.10.6",
  "ed25519-zebra",
  "futures",
  "hex",
@@ -3979,15 +3981,19 @@ dependencies = [
  "pallet-ibc",
  "parity-scale-codec",
  "prost",
+ "ripemd",
  "rs_merkle",
+ "secp256k1",
  "serde",
  "serde_json",
+ "sha2 0.10.6",
  "tendermint",
  "tendermint-light-client",
  "tendermint-light-client-verifier",
  "tendermint-proto",
  "tendermint-rpc",
  "thiserror",
+ "tiny-bip39 1.0.0",
  "tokio",
  "tokio-stream",
  "tonic",
@@ -11329,6 +11335,7 @@ version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b1629c9c557ef9b293568b338dddfc8208c98a18c59d722a9d53f859d9c9b62"
 dependencies = [
+ "rand 0.8.5",
  "secp256k1-sys",
 ]
 
