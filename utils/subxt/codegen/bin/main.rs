@@ -22,11 +22,11 @@ use wasm_testbed::WasmTestBed;
 pub struct Cli {
 	#[clap(long)]
 	pub path: PathBuf,
-	#[clap(long, env = "RELAY_HOST", default_value = "127.0.0.1")]
+	#[clap(long, env = "RELAY_HOST", default_value = "ws://127.0.0.1")]
 	pub relay_host: String,
 	#[clap(long, default_value = "9944")]
 	pub relay_port: String,
-	#[clap(long, env = "PARA_HOST", default_value = "127.0.0.1")]
+	#[clap(long, env = "PARA_HOST", default_value = "ws://127.0.0.1")]
 	pub para_host: String,
 	#[clap(long, default_value = "9988")]
 	pub para_port: String,
@@ -40,7 +40,7 @@ pub struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
-	let cli = Cli::parse();
+	let mut cli = Cli::parse();
 
 	if let Some((parachain_wasm, relaychain_wasm)) = cli.parachain_wasm.zip(cli.relaychain_wasm) {
 		let runtimes = vec![(parachain_wasm, "parachain"), (relaychain_wasm, "relaychain")];
@@ -53,9 +53,15 @@ async fn main() -> Result<(), anyhow::Error> {
 			tokio::fs::write(&path, &code).await?;
 		}
 	} else {
+		if !cli.relay_host.contains("://") {
+			cli.relay_host = format!("ws://{}", cli.relay_host);
+		}
+		if !cli.para_host.contains("://") {
+			cli.para_host = format!("ws://{}", cli.para_host);
+		}
 		let runtimes = [
-			(format!("ws://{}:{}", cli.relay_host, cli.relay_port), "relaychain"),
-			(format!("ws://{}:{}", cli.para_host, cli.para_port), "parachain"),
+			(format!("{}:{}", cli.relay_host, cli.relay_port), "relaychain"),
+			(format!("{}:{}", cli.para_host, cli.para_port), "parachain"),
 		];
 
 		for (url, runtime) in runtimes {

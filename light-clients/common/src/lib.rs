@@ -44,6 +44,8 @@ use sp_core::H256;
 use sp_storage::ChildInfo;
 use sp_trie::StorageProof;
 
+#[cfg(feature = "std")]
+pub mod config;
 pub mod state_machine;
 
 /// Host functions that allow the light client perform cryptographic operations in native.

@@ -12,5 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod parachain;
-pub mod relaychain;
+pub mod composable;
+pub mod dali;
+pub mod default;
+pub mod picasso_kusama;
+pub mod picasso_rococo;

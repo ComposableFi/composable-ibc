@@ -12,17 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::str::FromStr;
-
+use super::ParachainClient;
+use primitives::KeyProvider;
 use sp_core::crypto::Ss58Codec;
 use sp_runtime::traits::IdentifyAccount;
+use std::str::FromStr;
 
-use crate::config;
-use primitives::KeyProvider;
-
-use super::ParachainClient;
-
-impl<T: config::Config> KeyProvider for ParachainClient<T> {
+impl<T: light_client_common::config::Config> KeyProvider for ParachainClient<T> {
 	fn account_id(&self) -> ibc::signer::Signer {
 		let hex_string = self
 			.public_key

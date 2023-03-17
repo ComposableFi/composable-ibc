@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use ibc::core::ics02_client::height::Height;
-use std::fmt::Debug;
 
 pub mod chain;
 pub mod client;

@@ -19,6 +19,7 @@ use futures::StreamExt;
 use grandpa_prover::{
 	beefy_prover::helpers::unsafe_arc_cast, host_functions::HostFunctionsProvider, GrandpaProver,
 };
+use hyperspace_core::substrate::DefaultConfig as PolkadotConfig;
 use polkadot_core_primitives::Header;
 use primitives::{
 	justification::GrandpaJustification, FinalityProof, ParachainHeadersWithFinalityProof,
@@ -27,7 +28,7 @@ use serde::{Deserialize, Serialize};
 use sp_core::H256;
 use subxt::{
 	config::substrate::{BlakeTwo256, SubstrateHeader},
-	rpc_params, PolkadotConfig,
+	rpc_params,
 };
 
 pub type Justification = GrandpaJustification<Header>;

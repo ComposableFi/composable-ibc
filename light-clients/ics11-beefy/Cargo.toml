@@ -8,10 +8,7 @@ authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <wizdave97@gmai
 all-features = true
 
 [features]
-default = ["std", "build-metadata-from-ws"]
-build-metadata-from-ws = [
-    "beefy-prover/build-metadata-from-ws",
-]
+default = ["std"]
 std = [
     "ibc/std",
     "ibc-proto/std",
@@ -69,7 +66,7 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 [dev-dependencies]
 futures = "0.3.24"
 serde = { version = "1.0.144", features = ["derive"] }
-beefy-prover = { path = "../../algorithms/beefy/prover", features = ["build-metadata-from-ws"] }
+beefy-prover = { path = "../../algorithms/beefy/prover" }
 ibc = { path = "../../ibc/modules", features = ["mocks"] }
 ibc-derive = { path = "../../ibc/derive" }
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
@@ -79,3 +76,4 @@ sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 json = { package = "serde_json", version = "1.0.85" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+hyperspace-core = { path = "../../hyperspace/core", features = ["testing", "build-metadata-from-ws"] }

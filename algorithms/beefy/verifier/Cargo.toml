@@ -39,15 +39,15 @@ pallet-mmr-rpc = { package = "mmr-gadget", git = "https://github.com/paritytech/
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-beefy-prover = { path = "../prover", features = ["build-metadata-from-ws"] }
+beefy-prover = { path = "../prover" }
 hex = "0.4.3"
 futures = "0.3.21"
 beefy-gadget = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+hyperspace-core = { path = "../../../hyperspace/core", features = ["testing", "build-metadata-from-ws"] }
 
 
 [features]
-default = ["std", "build-metadata-from-ws"]
-build-metadata-from-ws = ["beefy-prover/build-metadata-from-ws"]
+default = ["std"]
 std = [
     "codec/std",
     "sp-std/std",

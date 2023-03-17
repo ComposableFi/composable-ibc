@@ -24,12 +24,10 @@ use beefy_primitives::{
 };
 use beefy_prover::{Crypto, Prover};
 use futures::stream::StreamExt;
+use hyperspace_core::substrate::DefaultConfig as PolkadotConfig;
 use pallet_mmr_primitives::Proof;
 use sp_core::bytes::to_hex;
-use subxt::{
-	rpc::{rpc_params, Subscription},
-	PolkadotConfig,
-};
+use subxt::rpc::{rpc_params, Subscription};
 
 #[tokio::test]
 #[ignore]
@@ -150,10 +148,12 @@ async fn should_fail_with_incomplete_signature_threshold() {
 
 	match res {
 		Err(BeefyClientError::IncompleteSignatureThreshold) => {},
-		Err(err) =>
-			panic!("Expected {:?}  found {:?}", BeefyClientError::IncompleteSignatureThreshold, err),
-		Ok(val) =>
-			panic!("Expected {:?}  found {:?}", BeefyClientError::IncompleteSignatureThreshold, val),
+		Err(err) => {
+			panic!("Expected {:?}  found {:?}", BeefyClientError::IncompleteSignatureThreshold, err)
+		},
+		Ok(val) => {
+			panic!("Expected {:?}  found {:?}", BeefyClientError::IncompleteSignatureThreshold, val)
+		},
 	}
 }
 

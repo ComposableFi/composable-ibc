@@ -38,7 +38,3 @@ pallet-mmr-rpc = { package = "mmr-rpc", git = "https://github.com/paritytech/sub
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 hex = { version = "0.4.3" }
 beefy-light-client-primitives = {  path = "../primitives" }
-subxt-generated = { path = "../../../utils/subxt/generated" }
-
-[features]
-build-metadata-from-ws = []

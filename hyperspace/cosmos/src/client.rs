@@ -81,20 +81,32 @@ impl TryFrom<ConfigKeyEntry> for KeyEntry {
 	}
 }
 
-impl TryFrom<String> for KeyEntry {
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MnemonicEntry {
+	pub mnemonic: String,
+	pub prefix: String,
+}
+
+impl TryFrom<MnemonicEntry> for KeyEntry {
 	type Error = bip32::Error;
 
-	fn try_from(mnemonic: String) -> Result<Self, Self::Error> {
+	fn try_from(mnemonic_entry: MnemonicEntry) -> Result<Self, Self::Error> {
 		// From mnemonic to pubkey
-		let mnemonic = bip39::Mnemonic::from_phrase(&mnemonic, bip39::Language::English).unwrap();
+		let mnemonic =
+			bip39::Mnemonic::from_phrase(&mnemonic_entry.mnemonic, bip39::Language::English)
+				.unwrap();
 		let seed = bip39::Seed::new(&mnemonic, "");
 		let key_m = XPrv::derive_from_path(seed, &DerivationPath::from_str("m/44'/118'/0'/0/0")?)?;
 
 		// From pubkey to address
 		let sha256 = sha2::Sha256::digest(key_m.public_key().to_bytes());
 		let public_key_hash: [u8; 20] = Ripemd160::digest(sha256).into();
-		let account =
-			bech32::encode("cosmos", public_key_hash.to_base32(), bech32::Variant::Bech32).unwrap();
+		let account = bech32::encode(
+			&mnemonic_entry.prefix,
+			public_key_hash.to_base32(),
+			bech32::Variant::Bech32,
+		)
+		.unwrap();
 		Ok(KeyEntry {
 			public_key: key_m.public_key(),
 			private_key: key_m,
@@ -163,9 +175,9 @@ pub struct CosmosClientConfig {
 	/// Cosmos chain Id
 	pub chain_id: String,
 	/// Light client id on counterparty chain
-	pub client_id: Option<String>,
+	pub client_id: Option<ClientId>,
 	/// Connection Id
-	pub connection_id: Option<String>,
+	pub connection_id: Option<ConnectionId>,
 	/// Account prefix
 	pub account_prefix: String,
 	/// Fee denom
@@ -220,25 +232,20 @@ where
 		let rpc_client = HttpClient::new(config.rpc_url.clone())
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 		let chain_id = ChainId::from(config.chain_id);
-		let client_id = config
-			.client_id
-			.map(|client_id| {
-				ClientId::from_str(&client_id)
-					.map_err(|e| Error::from(format!("Invalid client id {:?}", e)))
-			})
-			.transpose()?;
 		let light_client = LightClient::init_light_client(config.rpc_url.clone()).await?;
 		let commitment_prefix = CommitmentPrefix::try_from(config.store_prefix.as_bytes().to_vec())
 			.map_err(|e| Error::from(format!("Invalid store prefix {:?}", e)))?;
 
 		let keybase: KeyEntry;
 		match config.keybase {
-			KeyBaseConfig::ConfigKeyEntry(config_key) => {
-				keybase = KeyEntry::try_from(config_key).map_err(|e| e.to_string())?
-			},
-			KeyBaseConfig::Mnemonic(mnemonic) => {
-				keybase = KeyEntry::try_from(mnemonic).map_err(|e| e.to_string())?
-			},
+			KeyBaseConfig::ConfigKeyEntry(config_key) =>
+				keybase = KeyEntry::try_from(config_key).map_err(|e| e.to_string())?,
+			KeyBaseConfig::Mnemonic(mnemonic) =>
+				keybase = KeyEntry::try_from(MnemonicEntry {
+					mnemonic,
+					prefix: config.account_prefix.clone(),
+				})
+				.map_err(|e| e.to_string())?,
 		}
 		Ok(Self {
 			name: config.name,
@@ -246,14 +253,8 @@ where
 			rpc_client,
 			grpc_url: config.grpc_url,
 			websocket_url: config.websocket_url,
-			client_id,
-			connection_id: config
-				.connection_id
-				.map(|connection_id| {
-					ConnectionId::from_str(&connection_id)
-						.map_err(|e| Error::from(format!("Invalid connection id {:?}", e)))
-				})
-				.transpose()?,
+			client_id: config.client_id,
+			connection_id: config.connection_id,
 			light_client,
 			account_prefix: config.account_prefix,
 			commitment_prefix,
@@ -261,7 +262,7 @@ where
 			fee_amount: config.fee_amount,
 			gas_limit: config.gas_limit,
 			max_tx_size: config.max_tx_size,
-			keybase: keybase,
+			keybase,
 			channel_whitelist: config.channel_whitelist,
 			_phantom: std::marker::PhantomData,
 			tx_mutex: Default::default(),
@@ -435,7 +436,7 @@ where
 			return Err(Error::from(format!(
 				"Query failed with code {:?} and log {:?}",
 				response.code, response.log
-			)));
+			)))
 		}
 
 		if prove && response.proof.is_none() {
@@ -443,7 +444,7 @@ where
 			return Err(Error::from(format!(
 				"Query failed due to empty proof for chain {}",
 				self.name
-			)));
+			)))
 		}
 
 		let merkle_proof = response
@@ -464,12 +465,13 @@ pub mod tests {
 
 	use crate::key_provider::KeyEntry;
 
+	use super::MnemonicEntry;
+
 	struct TestVector {
 		mnemonic: &'static str,
-		private_key: [u8;32],
-		public_key: [u8;33],
+		private_key: [u8; 32],
+		public_key: [u8; 33],
 		account: &'static str,
-		address: [u8;20]
 	}
 	const TEST_VECTORS : &[TestVector] = &[
 		TestVector {
@@ -483,43 +485,35 @@ pub mod tests {
 				26, 243, 17, 241, 200, 87, 140, 93, 229, 26, 42, 81, 39, 208, 4, 219
 			],
 			account: "cosmos15hf3dgggyt4azpd693ax7fdfve8d5m6ct72z9p",
-			address: [165, 211, 22, 161, 8, 34, 235, 209, 5, 186, 44, 122, 111, 37, 169, 102, 78, 218, 111, 88], 
 		},
 		TestVector {
 			mnemonic: "elite program lift later ask fox change process dirt talk type coconut",
 			private_key: [97, 173, 171, 67, 228, 198, 20, 233, 30, 232, 208, 250, 151, 66, 76, 129, 83, 100, 17, 219, 74, 20, 43, 202, 110, 166, 72, 184, 100, 180, 135, 132],
 			public_key: [2, 167, 203, 215, 223, 101, 49, 90, 51, 44, 171, 156, 157, 167, 99, 213, 97, 84, 38, 210, 64, 168, 133, 38, 159, 49, 4, 24, 159, 137, 83, 92, 160],
 			account: "cosmos1dxsre7u4zkg28k4fqtgy2slcrrq46hqafe6547",
-			address: [105, 160, 60, 251, 149, 21, 144, 163, 218, 169, 2, 208, 69, 67, 248, 24, 193, 93, 92, 29], 
 		},
 		TestVector {
 			mnemonic: "habit few zero correct fancy hair common club slow lunch brief spawn away brief loyal flee witness possible faint legend spell arrive gravity hybrid",
 			private_key: [91, 189, 78, 43, 217, 14, 16, 247, 18, 196, 173, 149, 131, 156, 254, 191, 156, 154, 60, 255, 196, 2, 97, 219, 92, 160, 15, 224, 177, 216, 27, 44],
 			public_key: [3, 45, 249, 112, 87, 75, 114, 244, 199, 129, 6, 142, 9, 221, 205, 100, 226, 233, 131, 167, 146, 187, 181, 7, 176, 80, 107, 61, 151, 44, 185, 116, 116],
 			account: "cosmos1xf5280nzgqxyxps526vw0t6vd90gthd76fv6s8",
-			address: [50, 104, 163, 190, 98, 64, 12, 67, 6, 20, 86, 152, 231, 175, 76, 105, 94, 133, 221, 190], 
 		},
 	];
 
 	#[test]
 	fn test_from_mnemonic() {
 		for vector in TEST_VECTORS {
-			match KeyEntry::try_from(vector.mnemonic.to_string()) {
+			match KeyEntry::try_from(MnemonicEntry {
+				mnemonic: vector.mnemonic.to_string(),
+				prefix: "cosmos".to_string(),
+			}) {
 				Ok(key_entry) => {
-					assert_eq!(
-						key_entry.private_key.to_bytes(), vector.private_key
-					);
-					assert_eq!(
-						key_entry.public_key.to_bytes(),vector.public_key
-					);
-					assert_eq!(
-						key_entry.account, vector.account
-					);
-					assert_eq!(key_entry.address, vector.address);
+					assert_eq!(key_entry.private_key.to_bytes(), vector.private_key);
+					assert_eq!(key_entry.public_key.to_bytes(), vector.public_key);
+					assert_eq!(key_entry.account, vector.account);
 				},
 				Err(_) => panic!("Try from mnemonic failed"),
 			}
 		}
-
 	}
 }

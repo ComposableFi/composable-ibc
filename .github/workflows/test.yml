@@ -159,7 +159,7 @@ jobs:
       - name: Terminate local parachain cluster
         run: |
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml down -v
-    
+
   test-solidity:
     runs-on:
       - self-hosted
@@ -176,6 +176,6 @@ jobs:
         with:
           node-version: 16
       - name: Install dependencies
-        run: npm install 
-      - name: run unit test 
+        run: npm install
+      - name: run unit test
         run: npm run test

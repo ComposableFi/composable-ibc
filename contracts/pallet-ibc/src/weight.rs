@@ -186,7 +186,7 @@ where
 {
 	msgs.iter()
 		.filter_map(|msg| {
-			let type_url = String::from_utf8(msg.type_url.clone()).unwrap_or_default();
+			let type_url = msg.type_url.clone();
 			let msg = ibc_proto::google::protobuf::Any { type_url, value: msg.value.clone() };
 			let msg: Option<Ics26Envelope<Context<T>>> = msg.try_into().ok();
 			msg
