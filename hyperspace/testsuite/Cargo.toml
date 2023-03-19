@@ -15,6 +15,8 @@ anyhow = "1.0.66"
 async-trait = "0.1.58"
 futures = "0.3.24"
 json = { version = "1.0.85", package = "serde_json" }
+codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
 
 ibc = { path = "../../ibc/modules" }
 ibc-proto = { path = "../../ibc/proto" }
@@ -24,6 +26,7 @@ hyperspace-core = { path = "../core", features = ["testing"] }
 hyperspace-parachain = { path = "../parachain", features = ["testing"] }
 hyperspace-primitives = { path = "../primitives", features = ["testing"] }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
+pallet-ibc-ping = { path = "../../contracts/pallet-ibc/ping" }
 ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
 
 # substrate
@@ -44,7 +47,7 @@ hex = "0.4.3"
 [dev-dependencies]
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
 hyperspace-core = { path = "../core", features = ["testing", "build-metadata-from-ws"] }
-hyperspace-parachain = { path = "../parachain", features = ["testing", "build-metadata-from-ws"] }
+hyperspace-parachain = { path = "../parachain", features = ["testing"] }
 hyperspace-cosmos = { path = "../cosmos", features = [] }
 
 # We need this so the tests run sequentially

@@ -12,12 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use async_trait::async_trait;
 use futures::StreamExt;
-use hyperspace_core::logging;
+use hyperspace_core::{logging, substrate::DefaultConfig};
 use hyperspace_parachain::{
-	config, config::CustomExtrinsicParams, finality_protocol::FinalityProtocol, ParachainClient,
-	ParachainClientConfig,
+	finality_protocol::FinalityProtocol, ParachainClient, ParachainClientConfig,
 };
 use hyperspace_primitives::{utils::create_clients, IbcProvider};
 use hyperspace_testsuite::{
@@ -26,13 +24,6 @@ use hyperspace_testsuite::{
 	ibc_messaging_packet_timeout_on_channel_close,
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
-};
-use subxt::{
-	config::{
-		extrinsic_params::Era,
-		polkadot::{PolkadotExtrinsicParams, PolkadotExtrinsicParamsBuilder},
-	},
-	Error, OnlineClient,
 };
 
 #[derive(Debug, Clone)]
@@ -61,39 +52,6 @@ impl Default for Args {
 			connection_prefix_b: "ibc/".to_string(),
 		}
 	}
-}
-
-#[derive(Debug, Clone)]
-pub enum DefaultConfig {}
-
-#[async_trait]
-impl config::Config for DefaultConfig {
-	type AssetId = u128;
-	type Signature = <Self as subxt::Config>::Signature;
-	type Address = <Self as subxt::Config>::Address;
-
-	async fn custom_extrinsic_params(
-		client: &OnlineClient<Self>,
-	) -> Result<CustomExtrinsicParams<Self>, Error> {
-		let params =
-			PolkadotExtrinsicParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
-		Ok(params.into())
-	}
-}
-
-impl subxt::Config for DefaultConfig {
-	type Index = u32;
-	type BlockNumber = u32;
-	type Hash = sp_core::H256;
-	type AccountId = sp_runtime::AccountId32;
-	type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
-	type Header = subxt::config::substrate::SubstrateHeader<
-		Self::BlockNumber,
-		subxt::config::substrate::BlakeTwo256,
-	>;
-	type Signature = sp_runtime::MultiSignature;
-	type ExtrinsicParams = PolkadotExtrinsicParams<Self>;
-	type Hasher = subxt::config::substrate::BlakeTwo256;
 }
 
 async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<DefaultConfig>) {

@@ -36,14 +36,15 @@ polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", bra
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
 finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 hex-literal = "0.3.4"
-grandpa-prover = { path = "../prover", features = ["build-metadata-from-ws"] }
+grandpa-prover = { path = "../prover" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
 jsonrpsee-ws-client = "0.16.2"
 jsonrpsee-core = "0.16.2"
+hyperspace-core = { path = "../../../hyperspace/core", features = ["testing", "build-metadata-from-ws"] }
+light-client-common = { path = "../../../light-clients/common", features = ["std"] }
 
 [features]
-default = ["std", "build-metadata-from-ws"]
-build-metadata-from-ws = ["grandpa-prover/build-metadata-from-ws"]
+default = ["std"]
 std = [
     "codec/std",
     "anyhow/std",

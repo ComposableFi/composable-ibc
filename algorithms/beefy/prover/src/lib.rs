@@ -24,8 +24,6 @@ pub mod error;
 pub mod helpers;
 /// Methods for querying the relay chain
 pub mod relay_chain_queries;
-/// Metadata generated code for interacting with the relay chain
-pub mod runtime;
 
 use beefy_light_client_primitives::{
 	ClientState, HostFunctions, MerkleHasher, MmrUpdateProof, ParachainHeader, PartialMmrLeaf,
@@ -49,11 +47,9 @@ use sp_io::crypto;
 use sp_runtime::traits::BlakeTwo256;
 use subxt::{config::Header as HeaderT, rpc::rpc_params, Config, OnlineClient};
 
-use crate::{
-	relay_chain_queries::parachain_header_storage_key,
-	runtime::api::runtime_types::polkadot_parachain::primitives::Id,
-};
+use crate::relay_chain_queries::parachain_header_storage_key;
 use helpers::{prove_authority_set, AuthorityProofWithSignatures};
+use light_client_common::config::{BeefyAuthoritySetT, RuntimeStorage};
 use relay_chain_queries::{fetch_finalized_parachain_heads, fetch_mmr_proof, FinalizedParaHeads};
 
 /// Host function implementation for beefy light client.
@@ -89,7 +85,7 @@ pub struct Prover<T: Config> {
 	pub para_id: u32,
 }
 
-impl<T: Config> Prover<T>
+impl<T: light_client_common::config::Config> Prover<T>
 where
 	u32: From<<T as subxt::Config>::BlockNumber>,
 {
@@ -123,7 +119,7 @@ where
 			client.rpc().request("beefy_getFinalizedHead", rpc_params!()).await.unwrap();
 		let header = client.rpc().header(Some(latest_beefy_finalized)).await.unwrap().unwrap();
 		let validator_set_id = {
-			let key = runtime::api::storage().beefy().validator_set_id();
+			let key = T::Storage::beefy_validator_set_id();
 			client
 				.storage()
 				.at(Some(latest_beefy_finalized))
@@ -136,7 +132,7 @@ where
 		};
 
 		let next_val_set = {
-			let key = runtime::api::storage().mmr_leaf().beefy_next_authorities();
+			let key = T::Storage::mmr_leaf_beefy_next_authorities();
 			client
 				.storage()
 				.at(Some(latest_beefy_finalized))
@@ -153,13 +149,13 @@ where
 			mmr_root_hash: Default::default(),
 			current_authorities: BeefyNextAuthoritySet {
 				id: validator_set_id,
-				len: next_val_set.len,
-				root: next_val_set.root,
+				len: next_val_set.len(),
+				root: next_val_set.root(),
 			},
 			next_authorities: BeefyNextAuthoritySet {
 				id: validator_set_id + 1,
-				len: next_val_set.len,
-				root: next_val_set.root,
+				len: next_val_set.len(),
+				root: next_val_set.root(),
 			},
 		}
 	}
@@ -211,7 +207,7 @@ where
 					))
 				})?;
 
-			let key = runtime::api::storage().paras().heads(&Id(self.para_id));
+			let key = T::Storage::paras_heads(self.para_id);
 			let head = self
 				.relay_client
 				.storage()
@@ -222,7 +218,7 @@ where
 				.await?
 				.expect("Header exists in its own changeset; qed");
 
-			let para_header = T::Header::decode(&mut &head.0[..])
+			let para_header = T::Header::decode(&mut head.as_ref())
 				.map_err(|_| Error::Custom(format!("Failed to decode header")))?;
 			headers.push(para_header);
 		}
@@ -322,7 +318,7 @@ where
 		let block_hash = self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?;
 
 		let current_authorities = {
-			let key = runtime::api::storage().beefy().authorities();
+			let key = T::Storage::beefy_authorities();
 			self.relay_client
 				.storage()
 				.at(block_hash)
@@ -331,7 +327,6 @@ where
 				.fetch(&key)
 				.await?
 				.ok_or_else(|| Error::Custom(format!("No beefy authorities found!")))?
-				.0
 		};
 
 		// Current LeafIndex
@@ -368,7 +363,7 @@ where
 
 		// Encoding and decoding to fix dependency version conflicts
 		let next_authority_set = {
-			let key = runtime::api::storage().mmr_leaf().beefy_next_authorities();
+			let key = T::Storage::mmr_leaf_beefy_next_authorities();
 			self.relay_client
 				.storage()
 				.at(Some(latest_beefy_finalized))
@@ -383,7 +378,7 @@ where
 			.expect("Should decode next authority set correctly");
 
 		let current_authorities = {
-			let key = runtime::api::storage().beefy().authorities();
+			let key = T::Storage::beefy_authorities();
 			self.relay_client
 				.storage()
 				.at(Some(latest_beefy_finalized))
@@ -392,7 +387,6 @@ where
 				.fetch(&key)
 				.await?
 				.expect("Should retrieve next authority set")
-				.0
 		};
 
 		let authority_address_hashes = hash_authority_addresses(
