@@ -31,6 +31,8 @@ members = [
     "light-clients/ics10-grandpa-cw",
     "light-clients/ics11-beefy",
     "light-clients/ics13-near",
+    "light-clients/icsxx-ethereum",
+    "light-clients/icsxx-ethereum-cw",
 
     # hyperspace
     "hyperspace",
