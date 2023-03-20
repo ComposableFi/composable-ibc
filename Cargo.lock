@@ -4490,7 +4490,6 @@ dependencies = [
  "ibc-proto",
  "prost 0.11.6",
  "serde",
- "spin 0.9.5",
  "tendermint-proto",
 ]
 
@@ -4545,7 +4544,6 @@ dependencies = [
  "cosmwasm-storage",
  "cw-multi-test",
  "cw-storage-plus",
- "cw2",
  "derive_more",
  "digest 0.10.6",
  "ed25519-zebra",
@@ -9902,7 +9900,7 @@ dependencies = [
  "cc",
  "libc",
  "once_cell",
- "spin 0.5.2",
+ "spin",
  "untrusted",
  "web-sys",
  "winapi",
@@ -13487,12 +13485,6 @@ name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
-
-[[package]]
-name = "spin"
-version = "0.9.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7dccf47db1b41fa1573ed27ccf5e08e3ca771cb994f776668c5ebda893b248fc"
 
 [[package]]
 name = "spki"

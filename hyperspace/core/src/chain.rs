@@ -65,6 +65,7 @@ use primitives::{
 };
 use serde::{Deserialize, Serialize};
 use std::{pin::Pin, time::Duration};
+use tendermint_proto::Protobuf;
 use thiserror::Error;
 
 #[derive(Serialize, Deserialize)]
@@ -977,6 +978,9 @@ impl IbcProvider for AnyChain {
 	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
 		match self {
 			Self::Parachain(chain) => chain.upload_wasm(wasm).await.map_err(Into::into),
+			Self::Dali(chain) => chain.upload_wasm(wasm).await.map_err(Into::into),
+			Self::Composable(chain) => chain.upload_wasm(wasm).await.map_err(Into::into),
+			Self::Picasso(chain) => chain.upload_wasm(wasm).await.map_err(Into::into),
 			#[cfg(feature = "cosmos")]
 			Self::Cosmos(chain) => chain.upload_wasm(wasm).await.map_err(Into::into),
 			Self::Wasm(c) => c.inner.upload_wasm(wasm).await,
@@ -987,6 +991,10 @@ impl IbcProvider for AnyChain {
 		match self {
 			Self::Parachain(chain) =>
 				chain.on_undelivered_sequences(seqs).await.map_err(Into::into),
+			Self::Dali(chain) => chain.on_undelivered_sequences(seqs).await.map_err(Into::into),
+			Self::Composable(chain) =>
+				chain.on_undelivered_sequences(seqs).await.map_err(Into::into),
+			Self::Picasso(chain) => chain.on_undelivered_sequences(seqs).await.map_err(Into::into),
 			#[cfg(feature = "cosmos")]
 			Self::Cosmos(chain) => chain.on_undelivered_sequences(seqs).await.map_err(Into::into),
 			Self::Wasm(c) => c.inner.on_undelivered_sequences(seqs).await,
@@ -996,6 +1004,9 @@ impl IbcProvider for AnyChain {
 	fn has_undelivered_sequences(&self) -> bool {
 		match self {
 			Self::Parachain(chain) => chain.has_undelivered_sequences(),
+			Self::Dali(chain) => chain.has_undelivered_sequences(),
+			Self::Composable(chain) => chain.has_undelivered_sequences(),
+			Self::Picasso(chain) => chain.has_undelivered_sequences(),
 			#[cfg(feature = "cosmos")]
 			Self::Cosmos(chain) => chain.has_undelivered_sequences(),
 			Self::Wasm(c) => c.inner.has_undelivered_sequences(),
@@ -1329,6 +1340,9 @@ impl AnyConfig {
 	pub fn wasm_code_id(&self) -> Option<CodeId> {
 		let maybe_code_id = match self {
 			AnyConfig::Parachain(config) => config.wasm_code_id.as_ref(),
+			AnyConfig::Dali(config) => config.wasm_code_id.as_ref(),
+			AnyConfig::Composable(config) => config.wasm_code_id.as_ref(),
+			AnyConfig::Picasso(config) => config.wasm_code_id.as_ref(),
 			#[cfg(feature = "cosmos")]
 			AnyConfig::Cosmos(config) => config.wasm_code_id.as_ref(),
 		};
@@ -1342,6 +1356,9 @@ impl AnyConfig {
 	pub fn set_wasm_code_id(&mut self, code_id: String) {
 		match self {
 			AnyConfig::Parachain(config) => config.wasm_code_id = Some(code_id),
+			AnyConfig::Dali(config) => config.wasm_code_id = Some(code_id),
+			AnyConfig::Composable(config) => config.wasm_code_id = Some(code_id),
+			AnyConfig::Picasso(config) => config.wasm_code_id = Some(code_id),
 			#[cfg(feature = "cosmos")]
 			AnyConfig::Cosmos(config) => config.wasm_code_id = Some(code_id),
 		}

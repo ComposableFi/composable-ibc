@@ -118,7 +118,7 @@ define_runtime_transactions!(
 	|x| parachain_subxt::api::tx().ibc_ping().send_ping(x)
 );
 
-define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);
+define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent,);
 
 define_event_record!(
 	DaliEventRecord,

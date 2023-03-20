@@ -22,7 +22,7 @@ use grandpa_light_client_primitives::ParachainHeaderProofs;
 use ibc::{
 	applications::transfer::{Amount, PrefixedCoin, PrefixedDenom},
 	core::{
-		ics02_client::client_state::ClientType,
+		ics02_client::client_state::{ClientState, ClientType},
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
