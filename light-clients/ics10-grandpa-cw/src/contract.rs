@@ -305,7 +305,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 		QueryMsg::ClientTypeMsg(_) => unimplemented!("ClientTypeMsg"),
 		QueryMsg::GetLatestHeightsMsg(_) => unimplemented!("GetLatestHeightsMsg"),
 		QueryMsg::Status(StatusMsg {}) => {
-			let client_state = get_client_state::<HostFunctions>(deps).unwrap();
+			let client_state = match get_client_state::<HostFunctions>(deps) {
+				Ok(client_state) => client_state,
+				Err(_) => return to_binary(&QueryResponse::status(
+					"Unknown".to_string(),
+				))
+			};
+				
 			if client_state.frozen_height().is_some() {
 				to_binary(&QueryResponse::status(
 					"Frozen".to_string(),
