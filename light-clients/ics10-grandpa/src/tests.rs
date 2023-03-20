@@ -31,7 +31,8 @@ use grandpa_client_primitives::{
 	justification::GrandpaJustification, parachain_header_storage_key, FinalityProof,
 	ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
 };
-use grandpa_prover::{polkadot, GrandpaProver, JustificationNotification};
+use grandpa_prover::{GrandpaProver, JustificationNotification};
+use hyperspace_core::substrate::DefaultConfig as PolkadotConfig;
 use ibc::{
 	core::{
 		ics02_client::{
@@ -50,12 +51,10 @@ use ibc::{
 	test_utils::get_dummy_account_id,
 	Height,
 };
+use light_client_common::config::RuntimeStorage;
 use sp_core::{hexdisplay::AsBytesRef, H256};
 use std::time::Duration;
-use subxt::{
-	config::substrate::{BlakeTwo256, SubstrateHeader},
-	PolkadotConfig,
-};
+use subxt::config::substrate::{BlakeTwo256, SubstrateHeader};
 
 #[tokio::test]
 async fn test_continuous_update_of_grandpa_client() {
@@ -114,8 +113,8 @@ async fn test_continuous_update_of_grandpa_client() {
 			.expect("Failed to fetch finalized header");
 
 		let head_data = {
-			let key = polkadot::api::storage().paras().heads(
-				&polkadot::api::runtime_types::polkadot_parachain::primitives::Id(prover.para_id),
+			let key = <<PolkadotConfig as light_client_common::config::Config>::Storage as RuntimeStorage>::paras_heads(
+				prover.para_id,
 			);
 			prover
 				.relay_client
@@ -131,7 +130,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		let decoded_para_head = frame_support::sp_runtime::generic::Header::<
 			u32,
 			sp_runtime::traits::BlakeTwo256,
-		>::decode(&mut &*head_data.0)
+		>::decode(&mut &*head_data.0 .0)
 		.expect("Failed to decode parachain header");
 		// we can't use the genesis block to construct the initial state.
 		if decoded_para_head.number == 0 {

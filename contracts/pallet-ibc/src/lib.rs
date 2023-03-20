@@ -63,13 +63,19 @@ pub const MODULE_ID: &str = "pallet_ibc";
 
 #[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct Any {
-	pub type_url: Vec<u8>,
+	pub type_url: String,
 	pub value: Vec<u8>,
 }
 
 impl From<ibc_proto::google::protobuf::Any> for Any {
 	fn from(any: ibc_proto::google::protobuf::Any) -> Self {
-		Self { type_url: any.type_url.as_bytes().to_vec(), value: any.value }
+		Self { type_url: any.type_url, value: any.value }
+	}
+}
+
+impl From<Any> for ibc_proto::google::protobuf::Any {
+	fn from(any: Any) -> Self {
+		Self { type_url: any.type_url, value: any.value }
 	}
 }
 
@@ -566,9 +572,8 @@ pub mod pallet {
 			let messages = messages
 				.into_iter()
 				.filter_map(|message| {
-					let type_url = String::from_utf8(message.type_url.clone()).ok()?;
 					if matches!(
-						type_url.as_str(),
+						message.type_url.as_str(),
 						create_client::TYPE_URL |
 							conn_open_init::TYPE_URL |
 							ibc::core::ics04_channel::msgs::chan_open_init::TYPE_URL
@@ -576,7 +581,10 @@ pub mod pallet {
 						reserve_count += 1;
 					}
 
-					Some(Ok(ibc_proto::google::protobuf::Any { type_url, value: message.value }))
+					Some(Ok(ibc_proto::google::protobuf::Any {
+						type_url: message.type_url,
+						value: message.value,
+					}))
 				})
 				.collect::<Result<Vec<ibc_proto::google::protobuf::Any>, Error<T>>>()?;
 			let reserve_amt = T::SpamProtectionDeposit::get().saturating_mul(reserve_count.into());

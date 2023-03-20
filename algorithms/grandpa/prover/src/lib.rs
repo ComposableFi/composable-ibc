@@ -17,7 +17,6 @@
 
 //! GRANDPA prover utilities
 
-use crate::polkadot::api::runtime_types::polkadot_parachain::primitives::Id;
 use anyhow::anyhow;
 pub use beefy_prover;
 use beefy_prover::helpers::{
@@ -26,6 +25,7 @@ use beefy_prover::helpers::{
 use codec::{Decode, Encode};
 use finality_grandpa_rpc::GrandpaApiClient;
 use jsonrpsee::{async_client::Client, ws_client::WsClientBuilder};
+use light_client_common::config::RuntimeStorage;
 use primitives::{
 	parachain_header_storage_key, ClientState, FinalityProof, ParachainHeaderProofs,
 	ParachainHeadersWithFinalityProof,
@@ -42,10 +42,6 @@ use subxt::{config::Header, Config, OnlineClient};
 
 /// Host function implementation for the verifier
 pub mod host_functions;
-/// Subxt generated code for the parachain
-pub mod parachain;
-/// Subxt generated code for the relay chain
-pub mod polkadot;
 
 /// Contains methods useful for proving parachain header finality using GRANDPA
 pub struct GrandpaProver<T: Config> {
@@ -84,7 +80,7 @@ pub struct JustificationNotification(pub sp_core::Bytes);
 
 impl<T> GrandpaProver<T>
 where
-	T: Config,
+	T: light_client_common::config::Config,
 	T::BlockNumber: Ord + Zero,
 	u32: From<T::BlockNumber>,
 	sp_core::H256: From<T::Hash>,
@@ -115,7 +111,7 @@ where
 			.ok_or_else(|| anyhow!("Header not found for hash: {latest_relay_hash:?}"))?;
 
 		let current_set_id = {
-			let key = polkadot::api::storage().grandpa().current_set_id();
+			let key = T::Storage::grandpa_current_set_id();
 			self.relay_client
 				.storage()
 				.at(Some(latest_relay_hash))
@@ -179,7 +175,7 @@ where
 			.block_hash(Some(latest_finalized_height.into()))
 			.await?
 			.ok_or_else(|| anyhow!("Block hash not found for number: {latest_finalized_height}"))?;
-		let key = polkadot::api::storage().paras().heads(&Id(self.para_id));
+		let key = T::Storage::paras_heads(self.para_id);
 		let header = self
 			.relay_client
 			.storage()
@@ -189,7 +185,7 @@ where
 			.fetch(&key)
 			.await?
 			.ok_or_else(|| anyhow!("parachain header not found for para id: {}", self.para_id))?;
-		let header = T::Header::decode(&mut &header.0[..])
+		let header = T::Header::decode(&mut header.as_ref())
 			.map_err(|_| anyhow!("Failed to decode header"))?;
 
 		Ok(header)
@@ -304,7 +300,7 @@ where
 				.ok_or_else(|| anyhow!("block not found {:?}", changes.block))?;
 
 			let parachain_header_bytes = {
-				let key = polkadot::api::storage().paras().heads(&Id(self.para_id));
+				let key = T::Storage::paras_heads(self.para_id);
 				self.relay_client
 					.storage()
 					.at(Some(header.hash()))
@@ -313,10 +309,9 @@ where
 					.fetch(&key)
 					.await?
 					.expect("Header exists in its own changeset; qed")
-					.0
 			};
 
-			let para_header: T::Header = Decode::decode(&mut &parachain_header_bytes[..])?;
+			let para_header: T::Header = Decode::decode(&mut parachain_header_bytes.as_ref())?;
 			let para_block_number = para_header.number();
 			// skip genesis header or any unknown headers
 			if para_block_number == Zero::zero() || !header_numbers.contains(&para_block_number) {
@@ -354,7 +349,7 @@ where
 		&self,
 		block: u32,
 	) -> Result<(u32, u32), anyhow::Error> {
-		let epoch_addr = polkadot::api::storage().babe().epoch_start();
+		let epoch_addr = T::Storage::babe_epoch_start();
 		let block_hash = self.relay_client.rpc().block_hash(Some(block.into())).await?;
 		let (previous_epoch_start, current_epoch_start) = self
 			.relay_client

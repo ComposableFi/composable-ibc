@@ -77,7 +77,7 @@ fn setup_client_and_consensus_state(port_id: PortId) {
 	.unwrap();
 	let mut ctx = Context::<Test>::default();
 
-	let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
+	let msg = Any { type_url: TYPE_URL.to_string(), value: msg };
 	assert_ok!(Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]));
 
 	let connection_id = ConnectionId::new(0);
@@ -130,7 +130,7 @@ fn initialize_connection() {
 		let commitment_prefix: CommitmentPrefix =
 			<Test as Config>::PalletPrefix::get().to_vec().try_into().unwrap();
 
-		let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
+		let msg = Any { type_url: TYPE_URL.to_string(), value: msg };
 
 		assert_ok!(Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]));
 
@@ -147,7 +147,7 @@ fn initialize_connection() {
 		};
 
 		let msg = Any {
-			type_url: conn_open_init::TYPE_URL.as_bytes().to_vec(),
+			type_url: conn_open_init::TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap(),
 		};
 
@@ -178,7 +178,7 @@ fn initialize_connection_with_low_delay() {
 		let commitment_prefix: CommitmentPrefix =
 			<Test as Config>::PalletPrefix::get().to_vec().try_into().unwrap();
 
-		let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
+		let msg = Any { type_url: TYPE_URL.to_string(), value: msg };
 
 		assert_ok!(Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]));
 
@@ -195,7 +195,7 @@ fn initialize_connection_with_low_delay() {
 		};
 
 		let msg = Any {
-			type_url: conn_open_init::TYPE_URL.as_bytes().to_vec(),
+			type_url: conn_open_init::TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap(),
 		};
 
@@ -339,8 +339,7 @@ fn on_deliver_ics20_recv_packet() {
 			signer: Signer::from_str(MODULE_ID).unwrap(),
 		};
 
-		let msg =
-			Any { type_url: msg.type_url().as_bytes().to_vec(), value: msg.encode_vec().unwrap() };
+		let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 
 		let account_data = Assets::balance(2u128, AccountId32::new(pair.public().0));
 		// Assert account balance before transfer

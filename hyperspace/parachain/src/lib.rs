@@ -22,11 +22,9 @@ use std::{
 };
 
 pub mod chain;
-pub mod config;
 pub mod error;
 pub mod key_provider;
 pub mod parachain;
-pub mod polkadot;
 pub mod provider;
 pub mod signer;
 pub mod utils;
@@ -54,10 +52,7 @@ use sp_runtime::{
 use ss58_registry::Ss58AddressFormat;
 use subxt::config::Header as HeaderT;
 
-use crate::{
-	parachain::api,
-	utils::{fetch_max_extrinsic_weight, unsafe_cast_to_jsonrpsee_client},
-};
+use crate::utils::{fetch_max_extrinsic_weight, unsafe_cast_to_jsonrpsee_client};
 use codec::Decode;
 use ics10_grandpa::consensus_state::ConsensusState as GrandpaConsensusState;
 use ics11_beefy::{
@@ -72,6 +67,7 @@ use grandpa_prover::GrandpaProver;
 use ibc::timestamp::Timestamp;
 use ics10_grandpa::client_state::ClientState as GrandpaClientState;
 use jsonrpsee_ws_client::WsClientBuilder;
+use light_client_common::config::RuntimeStorage;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use sp_keystore::testing::KeyStore;
 use sp_runtime::traits::One;
@@ -83,7 +79,7 @@ use subxt::tx::TxPayload;
 /// client state  as new finality proofs are observed.
 /// 2. Submiting new IBC messages to this parachain.
 #[derive(Clone)]
-pub struct ParachainClient<T: config::Config> {
+pub struct ParachainClient<T: light_client_common::config::Config> {
 	/// Chain name
 	pub name: String,
 	/// Relay chain rpc client
@@ -187,7 +183,7 @@ pub struct ParachainClientConfig {
 
 impl<T> ParachainClient<T>
 where
-	T: config::Config,
+	T: light_client_common::config::Config,
 {
 	/// Initializes a [`ParachainClient`] given a [`ParachainConfig`]
 	pub async fn new(config: ParachainClientConfig) -> Result<Self, Error> {
@@ -268,11 +264,11 @@ where
 	}
 }
 
-impl<T: config::Config + Send + Sync> ParachainClient<T>
+impl<T: light_client_common::config::Config + Send + Sync> ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	Self: KeyProvider,
-	<<T as config::Config>::Signature as Verify>::Signer:
+	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
@@ -437,11 +433,11 @@ where
 	}
 }
 
-impl<T: config::Config + Send + Sync> ParachainClient<T>
+impl<T: light_client_common::config::Config + Send + Sync> ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	Self: KeyProvider,
-	<<T as config::Config>::Signature as Verify>::Signer:
+	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
@@ -462,7 +458,7 @@ where
 	) -> Result<(AnyClientState, AnyConsensusState), Error>
 	where
 		Self: KeyProvider,
-		<<T as config::Config>::Signature as Verify>::Signer:
+		<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
@@ -484,9 +480,7 @@ where
 			let subxt_block_number: subxt::rpc::types::BlockNumber =
 				beefy_state.latest_beefy_height.into();
 			let block_hash = self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?;
-			let heads_addr = polkadot::api::storage().paras().heads(
-				&polkadot::api::runtime_types::polkadot_parachain::primitives::Id(self.para_id),
-			);
+			let heads_addr = T::Storage::paras_heads(self.para_id);
 			let head_data = api
 				.at(block_hash)
 				.await
@@ -502,7 +496,7 @@ where
 			let decoded_para_head = sp_runtime::generic::Header::<
 				u32,
 				sp_runtime::traits::BlakeTwo256,
-			>::decode(&mut &*head_data.0)?;
+			>::decode(&mut &*head_data.as_ref())?;
 			let block_number = decoded_para_head.number;
 			let client_state = BeefyClientState::<HostFunctionsManager> {
 				chain_id: ChainId::new("relay-chain".to_string(), 0),
@@ -523,7 +517,7 @@ where
 			let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
 			let block_hash =
 				self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
-			let timestamp_addr = api::storage().timestamp().now();
+			let timestamp_addr = T::Storage::timestamp_now();
 			let unix_timestamp_millis = para_client_api
 				.at(block_hash)
 				.await
@@ -550,7 +544,7 @@ where
 	) -> Result<(AnyClientState, AnyConsensusState), Error>
 	where
 		Self: KeyProvider,
-		<<T as config::Config>::Signature as Verify>::Signer:
+		<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
@@ -574,9 +568,7 @@ where
 				.await
 				.map_err(|e| Error::from(format!("Error constructing client state: {e}")))?;
 
-			let heads_addr = polkadot::api::storage().paras().heads(
-				&polkadot::api::runtime_types::polkadot_parachain::primitives::Id(self.para_id),
-			);
+			let heads_addr = T::Storage::paras_heads(self.para_id);
 			let head_data = api
 				.at(Some(light_client_state.latest_relay_hash.into()))
 				.await
@@ -592,7 +584,7 @@ where
 			let decoded_para_head = sp_runtime::generic::Header::<
 				u32,
 				sp_runtime::traits::BlakeTwo256,
-			>::decode(&mut &*head_data.0)?;
+			>::decode(&mut &*head_data.as_ref())?;
 			let block_number = decoded_para_head.number;
 			// we can't use the genesis block to construct the initial state.
 			if block_number == 0 {
@@ -613,7 +605,7 @@ where
 			let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
 			let block_hash =
 				self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
-			let timestamp_addr = api::storage().timestamp().now();
+			let timestamp_addr = T::Storage::timestamp_now();
 			let unix_timestamp_millis = para_client_api
 				.at(block_hash)
 				.await

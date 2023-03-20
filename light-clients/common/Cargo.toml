@@ -14,6 +14,7 @@ std = [
     "ibc/std",
     "sp-storage/std",
     "sp-trie/std",
+    "subxt",
 ]
 
 [dependencies]
@@ -23,13 +24,18 @@ codec = { version = "3.2.1", package = "parity-scale-codec", default-features = 
 serde = { version = "1.0.144", default-features = false, features = ["derive"] }
 derive_more = { version = "0.99.17", default-features = false, features = ["from"] }
 hash-db = { version = "0.15.2", default-features = false }
+async-trait = { version = "0.1.53", default-features = false }
 
 # substrate
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 
 # ibc
 ibc = { path = "../../ibc/modules", default-features = false }
+ibc-proto = { path = "../../ibc/proto", default-features = false }
 
 # substrate
 sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+sp-beefy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+subxt = { git = "https://github.com/paritytech/subxt", rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"], optional = true }

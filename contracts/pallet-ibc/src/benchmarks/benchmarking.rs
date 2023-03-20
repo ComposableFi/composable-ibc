@@ -132,7 +132,7 @@ benchmarks! {
 			signer: Signer::from_str(MODULE_ID).unwrap(),
 		};
 
-		let msg = Any { type_url: UPDATE_CLIENT_TYPE_URL.to_string().as_bytes().to_vec(), value: msg.encode_vec().unwrap() };
+		let msg = Any { type_url: UPDATE_CLIENT_TYPE_URL.to_string(), value: msg.encode_vec().unwrap() };
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -169,7 +169,7 @@ benchmarks! {
 		// Update consensus state with the new root that we'll enable proofs to be correctly verified
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
-		let msg = Any { type_url: CONN_TRY_OPEN_TYPE_URL.as_bytes().to_vec(), value: value.encode_vec().unwrap() };
+		let msg = Any { type_url: CONN_TRY_OPEN_TYPE_URL.to_string(), value: value.encode_vec().unwrap() };
 		log::trace!(target: "pallet_ibc", "\n\n\n\n\n\n<=============== Begin benchmark ====================>\n\n\n\n\n");
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -212,7 +212,7 @@ benchmarks! {
 		let (cs_state, value) = create_conn_open_ack::<T>();
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
-		let msg = Any { type_url: CONN_OPEN_ACK_TYPE_URL.as_bytes().to_vec(), value: value.encode_vec().unwrap() };
+		let msg = Any { type_url: CONN_OPEN_ACK_TYPE_URL.to_string(), value: value.encode_vec().unwrap() };
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let connection_end = ConnectionReader::connection_end(&ctx, &ConnectionId::new(0)).unwrap();
@@ -257,7 +257,7 @@ benchmarks! {
 		// Update consensus state with the new root that we'll enable proofs to be correctly verified
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
-		let msg = Any { type_url: CONN_OPEN_CONFIRM_TYPE_URL.as_bytes().to_vec(), value: value.encode_vec().unwrap() };
+		let msg = Any { type_url: CONN_OPEN_CONFIRM_TYPE_URL.to_string(), value: value.encode_vec().unwrap() };
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let connection_end = ConnectionReader::connection_end(&ctx, &ConnectionId::new(0)).unwrap();
@@ -302,7 +302,7 @@ benchmarks! {
 		}.encode_vec().unwrap();
 
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
-		let msg = Any { type_url: CHAN_OPEN_TYPE_URL.as_bytes().to_vec(), value };
+		let msg = Any { type_url: CHAN_OPEN_TYPE_URL.to_string(), value };
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		assert_eq!(ChannelCounter::<T>::get(), 1);
@@ -347,7 +347,7 @@ benchmarks! {
 		// Update consensus root for light client
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
 		let msg = Any {
-			type_url: CHAN_OPEN_TRY_TYPE_URL.as_bytes().to_vec(),
+			type_url: CHAN_OPEN_TRY_TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
@@ -411,7 +411,7 @@ benchmarks! {
 		let (cs_state, value) = create_chan_open_ack();
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
 		let msg = Any {
-			type_url: CHAN_OPEN_ACK_TYPE_URL.as_bytes().to_vec(),
+			type_url: CHAN_OPEN_ACK_TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
@@ -468,7 +468,7 @@ benchmarks! {
 		let (cs_state, value) = create_chan_open_confirm();
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
 		let msg = Any {
-			type_url: CHAN_OPEN_CONFIRM_TYPE_URL.as_bytes().to_vec(),
+			type_url: CHAN_OPEN_CONFIRM_TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
@@ -524,7 +524,7 @@ benchmarks! {
 
 		let value = create_chan_close_init();
 		let msg = Any {
-			type_url: CHAN_CLOSE_INIT_TYPE_URL.as_bytes().to_vec(),
+			type_url: CHAN_CLOSE_INIT_TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
@@ -581,7 +581,7 @@ benchmarks! {
 		let (cs_state, value) = create_chan_close_confirm();
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
 		let msg = Any {
-			type_url: CHAN_CLOSE_CONFIRM_TYPE_URL.as_bytes().to_vec(),
+			type_url: CHAN_CLOSE_CONFIRM_TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
@@ -641,7 +641,7 @@ benchmarks! {
 		let (cs_state, value) = create_recv_packet::<T>(data);
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
 		let msg = Any {
-			type_url: RECV_PACKET_TYPE_URL.as_bytes().to_vec(),
+			type_url: RECV_PACKET_TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
@@ -706,7 +706,7 @@ benchmarks! {
 		let (cs_state, value) = create_ack_packet::<T>(data, ack);
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
 		let msg = Any {
-			type_url: ACK_PACKET_TYPE_URL.as_bytes().to_vec(),
+			type_url: ACK_PACKET_TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
@@ -769,7 +769,7 @@ benchmarks! {
 		let (cs_state, value) = create_timeout_packet::<T>(data);
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
 		let msg = Any {
-			type_url: TIMEOUT_TYPE_URL.as_bytes().to_vec(),
+			type_url: TIMEOUT_TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
@@ -811,7 +811,7 @@ benchmarks! {
 		};
 
 		let msg = Any {
-			type_url: conn_open_init_mod::TYPE_URL.as_bytes().to_vec(),
+			type_url: conn_open_init_mod::TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
@@ -833,7 +833,7 @@ benchmarks! {
 		.unwrap()
 		.encode_vec().unwrap();
 
-		let msg = Any { type_url: TYPE_URL.to_string().as_bytes().to_vec(), value: msg };
+		let msg = Any { type_url: TYPE_URL.to_string(), value: msg };
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -1218,7 +1218,7 @@ benchmarks! {
 			signer: Signer::from_str("relayer").unwrap()
 		};
 
-		let msg = Any { type_url: UPDATE_CLIENT_TYPE_URL.to_string().as_bytes().to_vec(), value: msg.encode_vec().unwrap() };
+		let msg = Any { type_url: UPDATE_CLIENT_TYPE_URL.to_string(), value: msg.encode_vec().unwrap() };
 		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {

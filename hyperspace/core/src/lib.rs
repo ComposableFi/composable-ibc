@@ -24,6 +24,7 @@ pub mod logging;
 mod macros;
 pub mod packets;
 pub mod queue;
+pub mod substrate;
 
 use events::{has_packet_events, parse_events};
 use ibc::events::IbcEvent;
