@@ -5,11 +5,15 @@ use crate::{
 	log,
 	msg::{
 		CheckForMisbehaviourMsg, ClientStateCallResponse, ContractResult, ExecuteMsg,
-		InitializeState, InstantiateMsg, QueryMsg, StatusMsg, UpdateStateMsg,
+		InitializeState, InstantiateMsg, QueryMsg, QueryResponse, StatusMsg, UpdateStateMsg,
 		UpdateStateOnMisbehaviourMsg, VerifyClientMessage, VerifyMembershipMsg,
 		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
 	},
 	Bytes,
+	state::{
+		get_client_state,
+		get_consensus_state,
+	}
 };
 use byteorder::{ByteOrder, LittleEndian};
 use core::hash::Hasher;
@@ -140,16 +144,6 @@ fn process_message(
 ) -> Result<Binary, ContractError> {
 	// log!(ctx, "process_message: {:?}", msg);
 	let result = match msg {
-		ExecuteMsg::Status(StatusMsg {}) => {
-			let client_state = ctx
-				.client_state(&client_id)
-				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
-			if client_state.frozen_height().is_some() {
-				Ok(to_binary("Frozen"))
-			} else {
-				Ok(to_binary("Active"))
-			}
-		},
 		ExecuteMsg::VerifyMembership(msg) => {
 			let msg = VerifyMembershipMsg::try_from(msg)?;
 			let consensus_state = ctx
@@ -306,10 +300,35 @@ fn process_message(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
 	match msg {
 		QueryMsg::ClientTypeMsg(_) => unimplemented!("ClientTypeMsg"),
 		QueryMsg::GetLatestHeightsMsg(_) => unimplemented!("GetLatestHeightsMsg"),
+		QueryMsg::Status(StatusMsg {}) => {
+			let client_state = match get_client_state::<HostFunctions>(deps) {
+				Ok(client_state) => client_state,
+				Err(_) => return to_binary(&QueryResponse::status(
+					"Unknown".to_string(),
+				))
+			};
+				
+			if client_state.frozen_height().is_some() {
+				to_binary(&QueryResponse::status(
+					"Frozen".to_string(),
+				))
+			} else {
+				let height = client_state.latest_height();
+				match get_consensus_state(deps, &client_id, height) {
+					Ok(_) => to_binary(&QueryResponse::status(
+						"Active".to_string(),
+					)),
+					Err(_) => to_binary(&QueryResponse::status(
+						"Expired".to_string(),
+					))
+				}
+			}
+		},
 	}
 }
 
