@@ -4,8 +4,8 @@ use crate::{
 	ics23::FakeInner,
 	log,
 	msg::{
-		CheckForMisbehaviourMsg, ClientStateCallResponse, ContractResult, ExecuteMsg,
-		InitializeState, InstantiateMsg, QueryMsg, StatusMsg, UpdateStateMsg,
+		CheckForMisbehaviourMsg, ClientStateCallResponse, ContractResult, ExecuteMsg, ExportMetadataMsg,
+		InitializeState, InstantiateMsg, QueryMsg, QueryResponse, StatusMsg, UpdateStateMsg,
 		UpdateStateOnMisbehaviourMsg, VerifyClientMessage, VerifyMembershipMsg,
 		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
 	},
@@ -310,6 +310,9 @@ pub fn query(_deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 	match msg {
 		QueryMsg::ClientTypeMsg(_) => unimplemented!("ClientTypeMsg"),
 		QueryMsg::GetLatestHeightsMsg(_) => unimplemented!("GetLatestHeightsMsg"),
+		QueryMsg::ExportMetadata(ExportMetadataMsg {}) => {
+			to_binary(&QueryResponse::genesis_metadata(None))
+		},
 	}
 }
 
