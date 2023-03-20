@@ -211,12 +211,18 @@ fn process_message(
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
 				.map(|_| to_binary(&ContractResult::success()))
 		},
-		ExecuteMsg::UpdateStateOnMisbehaviour(msg) => {
-			let msg = UpdateStateOnMisbehaviourMsg::try_from(msg)?;
+		ExecuteMsg::UpdateStateOnMisbehaviour(msg_raw) => {
+			let mut client_state: WasmClientState<FakeInner, FakeInner, FakeInner> =
+				msg_raw.client_state.clone();
+			let msg = UpdateStateOnMisbehaviourMsg::try_from(msg_raw)?;
 			client
 				.update_state_on_misbehaviour(msg.client_state, msg.client_message)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
-				.map(|_| to_binary(&ContractResult::success()))
+				.and_then(|cs| {
+					client_state.data = cs.to_any().encode_to_vec();
+					Ok(to_binary(&client_state)
+						.and_then(|data| to_binary(&ContractResult::success().data(data.0))))
+				})
 		},
 		ExecuteMsg::UpdateState(msg_raw) => {
 			let mut client_state: WasmClientState<FakeInner, FakeInner, FakeInner> =
