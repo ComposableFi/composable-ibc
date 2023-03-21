@@ -1,6 +1,6 @@
 use crate::{ics23::FakeInner, Bytes, ContractError};
 use core::str::FromStr;
-use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::{
 		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
@@ -106,7 +106,6 @@ pub struct ClientCreateRequest {
 pub enum ExecuteMsg {
 	InitializeState(InitializeState),
 	ClientCreateRequest(WasmClientState<FakeInner, FakeInner, FakeInner>),
-	Status(StatusMsg),
 	VerifyMembership(VerifyMembershipMsgRaw),
 	VerifyNonMembership(VerifyNonMembershipMsgRaw),
 	VerifyClientMessage(VerifyClientMessageRaw),
@@ -122,6 +121,7 @@ pub enum QueryMsg {
 	ClientTypeMsg(ClientTypeMsg),
 	GetLatestHeightsMsg(GetLatestHeightsMsg),
 	ExportMetadata(ExportMetadataMsg),
+	Status(StatusMsg),
 }
 
 #[cw_serde]

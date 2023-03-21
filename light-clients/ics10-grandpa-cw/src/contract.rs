@@ -10,6 +10,10 @@ use crate::{
 		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
 	},
 	Bytes,
+	state::{
+		get_client_state,
+		get_consensus_state,
+	}
 };
 use byteorder::{ByteOrder, LittleEndian};
 use core::hash::Hasher;
@@ -140,16 +144,6 @@ fn process_message(
 ) -> Result<Binary, ContractError> {
 	// log!(ctx, "process_message: {:?}", msg);
 	let result = match msg {
-		ExecuteMsg::Status(StatusMsg {}) => {
-			let client_state = ctx
-				.client_state(&client_id)
-				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
-			if client_state.frozen_height().is_some() {
-				Ok(to_binary("Frozen"))
-			} else {
-				Ok(to_binary("Active"))
-			}
-		},
 		ExecuteMsg::VerifyMembership(msg) => {
 			let msg = VerifyMembershipMsg::try_from(msg)?;
 			let consensus_state = ctx
@@ -217,12 +211,18 @@ fn process_message(
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
 				.map(|_| to_binary(&ContractResult::success()))
 		},
-		ExecuteMsg::UpdateStateOnMisbehaviour(msg) => {
-			let msg = UpdateStateOnMisbehaviourMsg::try_from(msg)?;
+		ExecuteMsg::UpdateStateOnMisbehaviour(msg_raw) => {
+			let mut client_state: WasmClientState<FakeInner, FakeInner, FakeInner> =
+				msg_raw.client_state.clone();
+			let msg = UpdateStateOnMisbehaviourMsg::try_from(msg_raw)?;
 			client
 				.update_state_on_misbehaviour(msg.client_state, msg.client_message)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
-				.map(|_| to_binary(&ContractResult::success()))
+				.and_then(|cs| {
+					client_state.data = cs.to_any().encode_to_vec();
+					Ok(to_binary(&client_state)
+						.and_then(|data| to_binary(&ContractResult::success().data(data.0))))
+				})
 		},
 		ExecuteMsg::UpdateState(msg_raw) => {
 			let mut client_state: WasmClientState<FakeInner, FakeInner, FakeInner> =
@@ -306,12 +306,37 @@ fn process_message(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
 	match msg {
 		QueryMsg::ClientTypeMsg(_) => unimplemented!("ClientTypeMsg"),
 		QueryMsg::GetLatestHeightsMsg(_) => unimplemented!("GetLatestHeightsMsg"),
 		QueryMsg::ExportMetadata(ExportMetadataMsg {}) => {
 			to_binary(&QueryResponse::genesis_metadata(None))
+    }
+		QueryMsg::Status(StatusMsg {}) => {
+			let client_state = match get_client_state::<HostFunctions>(deps) {
+				Ok(client_state) => client_state,
+				Err(_) => return to_binary(&QueryResponse::status(
+					"Unknown".to_string(),
+				))
+			};
+				
+			if client_state.frozen_height().is_some() {
+				to_binary(&QueryResponse::status(
+					"Frozen".to_string(),
+				))
+			} else {
+				let height = client_state.latest_height();
+				match get_consensus_state(deps, &client_id, height) {
+					Ok(_) => to_binary(&QueryResponse::status(
+						"Active".to_string(),
+					)),
+					Err(_) => to_binary(&QueryResponse::status(
+						"Expired".to_string(),
+					))
+				}
+			}
 		},
 	}
 }

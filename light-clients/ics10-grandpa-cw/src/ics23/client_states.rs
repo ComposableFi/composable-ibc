@@ -1,15 +1,13 @@
-use crate::STORAGE_PREFIX;
 use cosmwasm_std::Storage;
-use cosmwasm_storage::{prefixed, PrefixedStorage, ReadonlyPrefixedStorage};
 use ibc::core::ics24_host::identifier::ClientId;
 
 /// client_id => client_states
 /// trie key path: "clients/{client_id}/clientState"
-pub struct ClientStates<'a>(PrefixedStorage<'a>);
+pub struct ClientStates<'a>(&'a mut dyn Storage);
 
 impl<'a> ClientStates<'a> {
 	pub fn new(storage: &'a mut dyn Storage) -> Self {
-		ClientStates(prefixed(storage, STORAGE_PREFIX))
+		ClientStates(storage)
 	}
 
 	pub fn key(_client_id: ClientId) -> Vec<u8> {
@@ -31,11 +29,11 @@ impl<'a> ClientStates<'a> {
 	}
 }
 
-pub struct ReadonlyClientStates<'a>(ReadonlyPrefixedStorage<'a>);
+pub struct ReadonlyClientStates<'a>(&'a dyn Storage);
 
 impl<'a> ReadonlyClientStates<'a> {
 	pub fn new(storage: &'a dyn Storage) -> Self {
-		ReadonlyClientStates(ReadonlyPrefixedStorage::new(storage, STORAGE_PREFIX))
+		ReadonlyClientStates(storage)
 	}
 
 	pub fn get(&self, client_id: &ClientId) -> Option<Vec<u8>> {
