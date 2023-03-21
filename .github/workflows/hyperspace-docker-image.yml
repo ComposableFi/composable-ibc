@@ -26,6 +26,10 @@ jobs:
         sudo chown -R $USER:$USER $GITHUB_WORKSPACE
         docker system prune --force --all --volumes
 
+    - name: Install dependencies
+      run: |
+        sudo apt-get install -y make build-essential
+
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
