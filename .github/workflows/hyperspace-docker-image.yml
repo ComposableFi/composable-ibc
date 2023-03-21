@@ -4,7 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - master
+      - obsessed-cake/CEN-80 # tmp
 
 jobs:
   build-and-publish:
