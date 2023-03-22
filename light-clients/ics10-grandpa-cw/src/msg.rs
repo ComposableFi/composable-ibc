@@ -4,7 +4,7 @@ use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::{
 		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
-		ics24_host::{identifier::ClientId, Path},
+		ics24_host::Path,
 	},
 	protobuf::Protobuf,
 	Height,
@@ -212,27 +212,23 @@ pub enum ClientMessageRaw {
 
 #[cw_serde]
 pub struct VerifyClientMessageRaw {
-	pub client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
 	pub client_message: ClientMessageRaw,
 }
 
-pub struct VerifyClientMessage<H> {
-	pub client_state: ClientState<H>,
+pub struct VerifyClientMessage {
 	pub client_message: ClientMessage,
 }
 
-impl<H: Clone> TryFrom<VerifyClientMessageRaw> for VerifyClientMessage<H> {
+impl TryFrom<VerifyClientMessageRaw> for VerifyClientMessage {
 	type Error = ContractError;
 
 	fn try_from(raw: VerifyClientMessageRaw) -> Result<Self, Self::Error> {
-		let any = Any::decode(&mut raw.client_state.data.as_slice())?;
-		let client_state = ClientState::decode_vec(&any.value)?;
 		let client_message = Self::decode_client_message(raw.client_message)?;
-		Ok(Self { client_state, client_message })
+		Ok(Self { client_message })
 	}
 }
 
-impl<H: Clone> VerifyClientMessage<H> {
+impl VerifyClientMessage {
 	fn decode_client_message(raw: ClientMessageRaw) -> Result<ClientMessage, ContractError> {
 		let client_message = match raw {
 			ClientMessageRaw::Header(header) => {
@@ -250,72 +246,57 @@ impl<H: Clone> VerifyClientMessage<H> {
 
 #[cw_serde]
 pub struct CheckForMisbehaviourMsgRaw {
-	// pub client_id: String,
-	pub client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
 	pub misbehaviour: WasmMisbehaviour,
 }
 
-pub struct CheckForMisbehaviourMsg<H> {
-	// pub client_id: ClientId,
-	pub client_state: ClientState<H>,
+pub struct CheckForMisbehaviourMsg {
 	pub client_message: ClientMessage,
 }
 
-impl<H: Clone> TryFrom<CheckForMisbehaviourMsgRaw> for CheckForMisbehaviourMsg<H> {
+impl TryFrom<CheckForMisbehaviourMsgRaw> for CheckForMisbehaviourMsg {
 	type Error = ContractError;
 
 	fn try_from(raw: CheckForMisbehaviourMsgRaw) -> Result<Self, Self::Error> {
-		// let client_id = ClientId::from_str(&raw.client_id)?;
-		let any = Any::decode(&*raw.client_state.data)?;
-		let client_state = ClientState::<H>::decode_vec(&any.value)?;
 		let any = Any::decode(&*raw.misbehaviour.data)?;
 		let client_message = ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value)?);
-		Ok(Self { client_state, client_message })
+		Ok(Self { client_message })
 	}
 }
 
 #[cw_serde]
 pub struct UpdateStateOnMisbehaviourMsgRaw {
-	pub client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
 	pub client_message: WasmMisbehaviour,
 }
 
-pub struct UpdateStateOnMisbehaviourMsg<H> {
-	pub client_state: ClientState<H>,
+pub struct UpdateStateOnMisbehaviourMsg {
 	pub client_message: ClientMessage,
 }
 
-impl<H: Clone> TryFrom<UpdateStateOnMisbehaviourMsgRaw> for UpdateStateOnMisbehaviourMsg<H> {
+impl TryFrom<UpdateStateOnMisbehaviourMsgRaw> for UpdateStateOnMisbehaviourMsg {
 	type Error = ContractError;
 
 	fn try_from(raw: UpdateStateOnMisbehaviourMsgRaw) -> Result<Self, Self::Error> {
-		let any = Any::decode(&*raw.client_state.data)?;
-		let client_state = ClientState::<H>::decode_vec(&any.value)?;
 		let any = Any::decode(&*raw.client_message.data)?;
 		let client_message = ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value)?);
-		Ok(Self { client_state, client_message })
+		Ok(Self { client_message })
 	}
 }
 
 #[cw_serde]
 pub struct UpdateStateMsgRaw {
-	pub client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
 	pub client_message: ClientMessageRaw,
 }
 
-pub struct UpdateStateMsg<H> {
-	pub client_state: ClientState<H>,
+pub struct UpdateStateMsg {
 	pub client_message: ClientMessage,
 }
 
-impl<H: Clone> TryFrom<UpdateStateMsgRaw> for UpdateStateMsg<H> {
+impl TryFrom<UpdateStateMsgRaw> for UpdateStateMsg {
 	type Error = ContractError;
 
 	fn try_from(raw: UpdateStateMsgRaw) -> Result<Self, Self::Error> {
-		let any = Any::decode(&mut raw.client_state.data.as_slice())?;
-		let client_state = ClientState::decode_vec(&any.value)?;
-		let client_message = VerifyClientMessage::<H>::decode_client_message(raw.client_message)?;
-		Ok(Self { client_state, client_message })
+		let client_message = VerifyClientMessage::decode_client_message(raw.client_message)?;
+		Ok(Self { client_message })
 	}
 }
 
@@ -326,17 +307,17 @@ pub struct CheckSubstituteAndUpdateStateMsg {
 
 #[cw_serde]
 pub struct VerifyUpgradeAndUpdateStateMsgRaw {
-	pub client_id: String,
-	pub old_client_state: Bytes,
-	pub upgrade_client_state: Bytes,
-	pub upgrade_consensus_state: Bytes,
+	pub upgrade_client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
+	pub upgrade_consensus_state: WasmConsensusState<FakeInner>,
+	#[schemars(with = "String")]
+	#[serde(with = "Base64", default)]
 	pub proof_upgrade_client: Vec<u8>,
+	#[schemars(with = "String")]
+	#[serde(with = "Base64", default)]
 	pub proof_upgrade_consensus_state: Vec<u8>,
 }
 
 pub struct VerifyUpgradeAndUpdateStateMsg<H> {
-	pub client_id: ClientId,
-	pub old_client_state: ClientState<H>,
 	pub upgrade_client_state: ClientState<H>,
 	pub upgrade_consensus_state: ConsensusState,
 	pub proof_upgrade_client: Vec<u8>,
@@ -346,18 +327,16 @@ pub struct VerifyUpgradeAndUpdateStateMsg<H> {
 impl<H: Clone> TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUpdateStateMsg<H> {
 	type Error = ContractError;
 
-	fn try_from(value: VerifyUpgradeAndUpdateStateMsgRaw) -> Result<Self, Self::Error> {
-		let client_id = ClientId::from_str(&value.client_id)?;
-		let old_client_state = ClientState::decode_vec(&value.old_client_state)?;
-		let upgrade_client_state = ClientState::decode_vec(&value.upgrade_client_state)?;
-		let upgrade_consensus_state = ConsensusState::decode_vec(&value.upgrade_consensus_state)?;
+	fn try_from(raw: VerifyUpgradeAndUpdateStateMsgRaw) -> Result<Self, Self::Error> {
+		let any = Any::decode(&mut raw.upgrade_client_state.data.as_slice())?;
+		let upgrade_client_state = ClientState::decode_vec(&any.value)?;
+		let any = Any::decode(&mut raw.upgrade_consensus_state.data.as_slice())?;
+		let upgrade_consensus_state = ConsensusState::decode_vec(&any.value)?;
 		Ok(VerifyUpgradeAndUpdateStateMsg {
-			client_id,
-			old_client_state,
 			upgrade_client_state,
 			upgrade_consensus_state,
-			proof_upgrade_client: value.proof_upgrade_client,
-			proof_upgrade_consensus_state: value.proof_upgrade_consensus_state,
+			proof_upgrade_client: raw.proof_upgrade_client,
+			proof_upgrade_consensus_state: raw.proof_upgrade_consensus_state,
 		})
 	}
 }
