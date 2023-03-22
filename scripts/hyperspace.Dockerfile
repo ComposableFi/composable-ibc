@@ -22,7 +22,7 @@ COPY --from=builder /code/target/release/hyperspace /usr/local/bin
 
 # add ca certificates so that it works with ssl endpoints
 RUN apt update && \
-	install -y ca-certificates
+	apt install -y ca-certificates
 
 # checks
 RUN ldd /usr/local/bin/hyperspace && \
