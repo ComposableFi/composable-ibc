@@ -9,11 +9,8 @@ use crate::{
 		UpdateStateOnMisbehaviourMsg, VerifyClientMessage, VerifyMembershipMsg,
 		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
 	},
+	state::{get_client_state, get_consensus_state},
 	Bytes,
-	state::{
-		get_client_state,
-		get_consensus_state,
-	}
 };
 use byteorder::{ByteOrder, LittleEndian};
 use core::hash::Hasher;
@@ -314,24 +311,16 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 		QueryMsg::Status(StatusMsg {}) => {
 			let client_state = match get_client_state::<HostFunctions>(deps) {
 				Ok(client_state) => client_state,
-				Err(_) => return to_binary(&QueryResponse::status(
-					"Unknown".to_string(),
-				))
+				Err(_) => return to_binary(&QueryResponse::status("Unknown".to_string())),
 			};
-				
+
 			if client_state.frozen_height().is_some() {
-				to_binary(&QueryResponse::status(
-					"Frozen".to_string(),
-				))
+				to_binary(&QueryResponse::status("Frozen".to_string()))
 			} else {
 				let height = client_state.latest_height();
 				match get_consensus_state(deps, &client_id, height) {
-					Ok(_) => to_binary(&QueryResponse::status(
-						"Active".to_string(),
-					)),
-					Err(_) => to_binary(&QueryResponse::status(
-						"Expired".to_string(),
-					))
+					Ok(_) => to_binary(&QueryResponse::status("Active".to_string())),
+					Err(_) => to_binary(&QueryResponse::status("Expired".to_string())),
 				}
 			}
 		},
