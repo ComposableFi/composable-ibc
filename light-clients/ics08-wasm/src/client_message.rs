@@ -12,7 +12,6 @@ use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::{
 		ics02_client::{client_message::ClientMessage as IbcClientMessage, error::Error},
-		ics24_host::identifier::ClientId,
 	},
 	protobuf::Protobuf,
 	Height,
@@ -131,10 +130,6 @@ where
 		Ok(Self {
 			inner: Box::new(inner),
 			data: raw.data,
-			client_id: raw
-				.client_id
-				.parse()
-				.map_err(|e| format!("failed to parse client id from raw misbehaviour: {}", e))?,
 		})
 	}
 }
@@ -192,12 +187,11 @@ pub struct Misbehaviour<AnyClientMessage> {
 	// #[serde(with = "Base64", default)]
 	pub inner: Box<AnyClientMessage>,
 	pub data: Bytes,
-	pub client_id: ClientId,
 }
 
 impl<AnyClientMessage> From<Misbehaviour<AnyClientMessage>> for RawMisbehaviour {
 	fn from(value: Misbehaviour<AnyClientMessage>) -> Self {
-		RawMisbehaviour { client_id: value.client_id.to_string(), data: value.data }
+		RawMisbehaviour { data: value.data }
 	}
 }
 

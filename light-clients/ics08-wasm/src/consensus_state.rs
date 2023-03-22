@@ -30,26 +30,11 @@ pub const WASM_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.Conse
 #[cfg_attr(feature = "cosmwasm", cw_serde)]
 #[cfg_attr(not(feature = "cosmwasm"), derive(Clone, Debug, PartialEq))]
 #[derive(Eq)]
-#[cfg_attr(feature = "cosmwasm", serde(remote = "CommitmentRoot"))]
-pub struct CommitmentRootBase64 {
-	#[cfg_attr(feature = "cosmwasm", schemars(with = "String"))]
-	#[cfg_attr(feature = "cosmwasm", serde(with = "Base64"))]
-	pub bytes: Vec<u8>,
-}
-
-#[cfg_attr(feature = "cosmwasm", cw_serde)]
-#[cfg_attr(not(feature = "cosmwasm"), derive(Clone, Debug, PartialEq))]
-#[derive(Eq)]
 pub struct ConsensusState<AnyConsensusState> {
 	#[cfg_attr(feature = "cosmwasm", schemars(with = "String"))]
 	#[cfg_attr(feature = "cosmwasm", serde(with = "Base64", default))]
 	pub data: Bytes,
-	#[cfg_attr(feature = "cosmwasm", schemars(with = "String"))]
-	#[cfg_attr(feature = "cosmwasm", serde(with = "Base64", default))]
-	pub code_id: Bytes,
 	pub timestamp: u64,
-	#[cfg_attr(feature = "cosmwasm", serde(with = "CommitmentRootBase64"))]
-	pub root: CommitmentRoot,
 	#[cfg_attr(feature = "cosmwasm", serde(skip))]
 	#[cfg_attr(feature = "cosmwasm", schemars(skip))]
 	pub inner: Box<AnyConsensusState>,
@@ -64,7 +49,7 @@ where
 	type Error = Infallible;
 
 	fn root(&self) -> &CommitmentRoot {
-		&self.root
+		unimplemented!()
 	}
 
 	fn timestamp(&self) -> Timestamp {
@@ -107,11 +92,7 @@ where
 		})?;
 		Ok(Self {
 			data: raw.data,
-			code_id: raw.code_id,
 			timestamp: raw.timestamp,
-			root: CommitmentRoot::from_bytes(
-				&raw.root.ok_or_else(|| "root is None".to_string())?.hash,
-			),
 			inner: Box::new(inner),
 		})
 	}
@@ -121,9 +102,7 @@ impl<AnyConsensusState> From<ConsensusState<AnyConsensusState>> for RawConsensus
 	fn from(value: ConsensusState<AnyConsensusState>) -> Self {
 		Self {
 			data: value.data,
-			code_id: value.code_id,
 			timestamp: value.timestamp,
-			root: Some(value.root.into()),
 		}
 	}
 }

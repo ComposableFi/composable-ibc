@@ -199,7 +199,6 @@ impl TryFrom<VerifyNonMembershipMsgRaw> for VerifyNonMembershipMsg {
 
 #[cw_serde]
 pub struct WasmMisbehaviour {
-	pub client_id: String,
 	#[schemars(with = "String")]
 	#[serde(with = "Base64", default)]
 	pub data: Bytes,

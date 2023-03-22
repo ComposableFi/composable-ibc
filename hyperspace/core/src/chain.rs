@@ -1235,7 +1235,7 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error
 			let mut msg_decoded =
 				MsgCreateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
 			msg_decoded.consensus_state =
-				AnyConsensusState::wasm(msg_decoded.consensus_state, code_id.clone())?;
+				AnyConsensusState::wasm(msg_decoded.consensus_state)?;
 			msg_decoded.client_state = AnyClientState::wasm(msg_decoded.client_state, code_id)?;
 			msg_decoded.to_any()
 		},
