@@ -35,13 +35,25 @@ impl Base64 {
 }
 
 #[cw_serde]
+pub struct GenesisMetadata {
+	pub key: Vec<u8>,
+	pub value: Vec<u8>,
+}
+
+#[cw_serde]
 pub struct QueryResponse {
 	pub status: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub genesis_metadata: Option<Vec<GenesisMetadata>>,
 }
 
 impl QueryResponse {
 	pub fn status(status: String) -> Self {
-		Self { status: status }
+		Self { status: status, genesis_metadata: None }
+	}
+
+	pub fn genesis_metadata(genesis_metadata: Option<Vec<GenesisMetadata>>) -> Self {
+		Self { status: "".to_string(), genesis_metadata: genesis_metadata}
 	}
 }
 
@@ -108,6 +120,7 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
 	ClientTypeMsg(ClientTypeMsg),
 	GetLatestHeightsMsg(GetLatestHeightsMsg),
+	ExportMetadata(ExportMetadataMsg),
 	Status(StatusMsg),
 }
 
@@ -119,6 +132,9 @@ pub struct GetLatestHeightsMsg {}
 
 #[cw_serde]
 pub struct StatusMsg {}
+
+#[cw_serde]
+pub struct ExportMetadataMsg {}
 
 #[cw_serde]
 pub struct MerklePath {
