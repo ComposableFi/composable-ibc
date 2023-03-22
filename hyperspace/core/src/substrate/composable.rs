@@ -32,9 +32,9 @@ use sp_core::{crypto::AccountId32, H256};
 use subxt::{
 	config::{
 		extrinsic_params::Era,
-		substrate::{
-			AssetTip as Tip, SubstrateExtrinsicParams as ParachainExtrinsicParams,
-			SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
+		polkadot::{
+			PlainTip as Tip, PolkadotExtrinsicParams as ParachainExtrinsicParams,
+			PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
 		},
 		ExtrinsicParams,
 	},
