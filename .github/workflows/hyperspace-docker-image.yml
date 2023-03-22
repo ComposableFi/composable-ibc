@@ -1,9 +1,6 @@
 name: "Build and publish Hyperspace Docker image"
 
 on:
-  pull_request: # tmp
-    branches:
-      - '*'
   push:
     branches:
       - master
