@@ -21,7 +21,8 @@ RUN useradd -m -u 1000 -U -s /bin/sh -d /centauri centauri
 COPY --from=builder /code/target/release/hyperspace /usr/local/bin
 
 # add ca certificates so that it works with ssl endpoints
-RUN apt install -y ca-certificates
+RUN apt update && \
+	install -y ca-certificates
 
 # checks
 RUN ldd /usr/local/bin/hyperspace && \
