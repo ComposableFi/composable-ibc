@@ -17,7 +17,8 @@
 use crate::{
 	chains,
 	substrate::{
-		dali::DaliConfig, default::DefaultConfig, ComposableConfig, PicassoPolkadotConfig,
+		dali::DaliConfig, default::DefaultConfig, ComposableConfig, PicassoKusamaConfig,
+		PicassoPolkadotConfig,
 	},
 };
 use async_trait::async_trait;
@@ -105,12 +106,20 @@ chains! {
 		<ParachainClient<ComposableConfig> as IbcProvider>::AssetId,
 		parachain::error::Error
 	),
-	Picasso(
+	PicassoPolkadot(
 		ParachainClientConfig,
 		ParachainClient<PicassoPolkadotConfig>,
 		parachain::finality_protocol::FinalityEvent,
 		parachain::provider::TransactionId<sp_core::H256>,
 		<ParachainClient<PicassoPolkadotConfig> as IbcProvider>::AssetId,
+		parachain::error::Error
+	),
+	PicassoKusama(
+		ParachainClientConfig,
+		ParachainClient<PicassoKusamaConfig>,
+		parachain::finality_protocol::FinalityEvent,
+		parachain::provider::TransactionId<sp_core::H256>,
+		<ParachainClient<PicassoKusamaConfig> as IbcProvider>::AssetId,
 		parachain::error::Error
 	),
 	Cosmos(
