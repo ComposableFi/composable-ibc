@@ -18,7 +18,7 @@ use crate::{
 	chains,
 	substrate::{
 		dali::DaliConfig, default::DefaultConfig, ComposableConfig, PicassoKusamaConfig,
-		PicassoPolkadotConfig,
+		PicassoRococoConfig,
 	},
 };
 use async_trait::async_trait;
@@ -85,7 +85,7 @@ chains! {
 	Parachain(ParachainClientConfig, ParachainClient<DefaultConfig>),
 	Dali(ParachainClientConfig, ParachainClient<DaliConfig>),
 	Composable(ParachainClientConfig, ParachainClient<ComposableConfig>),
-	PicassoPolkadot(ParachainClientConfig, ParachainClient<PicassoPolkadotConfig>),
+	PicassoRococo(ParachainClientConfig, ParachainClient<PicassoRococoConfig>),
 	PicassoKusama(ParachainClientConfig, ParachainClient<PicassoKusamaConfig>),
 	#[cfg(feature = "cosmos")]
 	Cosmos(CosmosClientConfig, CosmosClient<DefaultConfig>),

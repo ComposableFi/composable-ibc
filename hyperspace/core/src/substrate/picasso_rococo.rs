@@ -11,7 +11,7 @@ use crate::{
 	define_events, define_head_data, define_ibc_event_wrapper, define_id, define_para_lifecycle,
 	define_runtime_call, define_runtime_event, define_runtime_storage, define_runtime_transactions,
 	define_transfer_params,
-	substrate::picasso_polkadot::relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
+	substrate::picasso_rococo::relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
 };
 use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
@@ -41,16 +41,16 @@ use subxt::{
 	tx::StaticTxPayload,
 	Error, OnlineClient,
 };
-use subxt_generated::picasso_polkadot::parachain::api::runtime_types::{
+use subxt_generated::picasso_rococo::parachain::api::runtime_types::{
 	picasso_runtime::ibc::MemoMessage, primitives::currency::CurrencyId,
 };
 
 pub mod parachain_subxt {
-	pub use subxt_generated::picasso_polkadot::parachain::*;
+	pub use subxt_generated::picasso_rococo::parachain::*;
 }
 
 pub mod relaychain {
-	pub use subxt_generated::picasso_polkadot::relaychain::*;
+	pub use subxt_generated::picasso_rococo::relaychain::*;
 }
 
 pub type Balance = u128;
@@ -67,7 +67,7 @@ impl From<SendPingParams> for FakeSendPingParams {
 }
 
 #[derive(Debug, Clone)]
-pub enum PicassoPolkadotConfig {}
+pub enum PicassoRococoConfig {}
 
 define_id!(PicassoId, relaychain::api::runtime_types::polkadot_parachain::primitives::Id);
 
@@ -129,7 +129,7 @@ define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);
 
 define_event_record!(
 	PicassoEventRecord,
-	EventRecord<< PicassoPolkadotConfig as light_client_common::config::Config>::ParaRuntimeEvent, H256>,
+	EventRecord<< PicassoRococoConfig as light_client_common::config::Config>::ParaRuntimeEvent, H256>,
 	IbcEventWrapper,
 	parachain_subxt::api::runtime_types::frame_system::Phase,
 	parachain_subxt::api::runtime_types::pallet_ibc::pallet::Event,
@@ -153,7 +153,7 @@ define_runtime_call!(
 define_asset_id!(CurrencyIdWrapper, CurrencyId);
 
 #[async_trait]
-impl light_client_common::config::Config for PicassoPolkadotConfig {
+impl light_client_common::config::Config for PicassoRococoConfig {
 	type AssetId = CurrencyIdWrapper;
 	type Signature = <Self as subxt::Config>::Signature;
 	type Address = <Self as subxt::Config>::Address;
@@ -178,7 +178,7 @@ impl light_client_common::config::Config for PicassoPolkadotConfig {
 	}
 }
 
-impl subxt::Config for PicassoPolkadotConfig {
+impl subxt::Config for PicassoRococoConfig {
 	type Index = u32;
 	type BlockNumber = u32;
 	type Hash = H256;

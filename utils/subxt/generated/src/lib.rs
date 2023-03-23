@@ -16,4 +16,4 @@ pub mod composable;
 pub mod dali;
 pub mod default;
 pub mod picasso_kusama;
-pub mod picasso_polkadot;
+pub mod picasso_rococo;
