@@ -14,7 +14,7 @@
 
 #![allow(unreachable_patterns)]
 
-use crate::substrate::{dali::DaliConfig, default::DefaultConfig};
+use crate::substrate::{ComposableConfig, dali::DaliConfig, default::DefaultConfig, PicassoConfig};
 use async_trait::async_trait;
 #[cfg(feature = "cosmos")]
 use cosmos::client::{CosmosClient, CosmosClientConfig};
@@ -84,8 +84,8 @@ pub struct CoreConfig {
 pub enum AnyChain {
 	Parachain(ParachainClient<DefaultConfig>),
 	Dali(ParachainClient<DaliConfig>),
-	Composable(ParachainClient<DefaultConfig>),
-	Picasso(ParachainClient<DaliConfig>),
+	Composable(ParachainClient<ComposableConfig>),
+	Picasso(ParachainClient<PicassoConfig>),
 	#[cfg(feature = "cosmos")]
 	Cosmos(CosmosClient<DefaultConfig>),
 }
@@ -103,8 +103,8 @@ pub enum AnyFinalityEvent {
 pub enum AnyAssetId {
 	Parachain(<ParachainClient<DefaultConfig> as IbcProvider>::AssetId),
 	Dali(<ParachainClient<DaliConfig> as IbcProvider>::AssetId),
-	Composable(<ParachainClient<DaliConfig> as IbcProvider>::AssetId),
-	Picasso(<ParachainClient<DaliConfig> as IbcProvider>::AssetId),
+	Composable(<ParachainClient<ComposableConfig> as IbcProvider>::AssetId),
+	Picasso(<ParachainClient<PicassoConfig> as IbcProvider>::AssetId),
 	#[cfg(feature = "cosmos")]
 	Cosmos(<CosmosClient<DefaultConfig> as IbcProvider>::AssetId),
 }
