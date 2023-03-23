@@ -101,7 +101,7 @@ macro_rules! process_finality_event {
 macro_rules! chains {
 	($(
         $(#[$($meta:meta)*])*
-		$name:ident($config:path, $client:path, $fin_event:path, $tx_id:path, $asset_id:ty, $error:path),
+		$name:ident($config:path, $client:path),
 	)*) => {
 		#[derive(Debug, Serialize, Deserialize, Clone)]
 		#[serde(tag = "type", rename_all = "snake_case")]
@@ -123,7 +123,7 @@ macro_rules! chains {
 		pub enum AnyFinalityEvent {
 			$(
 				$(#[$($meta)*])*
-				$name($fin_event),
+				$name(<$client as IbcProvider>::FinalityEvent),
 			)*
 		}
 
@@ -131,7 +131,7 @@ macro_rules! chains {
 		pub enum AnyAssetId {
 			$(
 				$(#[$($meta)*])*
-				$name($asset_id),
+				$name(<$client as IbcProvider>::AssetId),
 			)*
 		}
 
@@ -139,7 +139,7 @@ macro_rules! chains {
 		pub enum AnyTransactionId {
 			$(
 				$(#[$($meta)*])*
-				$name($tx_id),
+				$name(<$client as IbcProvider>::TransactionId),
 			)*
 		}
 
@@ -148,7 +148,7 @@ macro_rules! chains {
 			$(
 				$(#[$($meta)*])*
 				#[error("{0}")]
-				$name($error),
+				$name(<$client as IbcProvider>::Error),
 			)*
 			#[error("{0}")]
 			Other(String),

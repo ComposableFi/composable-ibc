@@ -82,52 +82,11 @@ impl From<String> for AnyError {
 }
 
 chains! {
-	Parachain(
-		ParachainClientConfig,
-		ParachainClient<DefaultConfig>,
-		parachain::finality_protocol::FinalityEvent,
-		parachain::provider::TransactionId<sp_core::H256>,
-		<ParachainClient<DefaultConfig> as IbcProvider>::AssetId,
-		parachain::error::Error
-	),
-	Dali(
-		ParachainClientConfig,
-		ParachainClient<DaliConfig>,
-		parachain::finality_protocol::FinalityEvent,
-		parachain::provider::TransactionId<sp_core::H256>,
-		<ParachainClient<DaliConfig> as IbcProvider>::AssetId,
-		parachain::error::Error
-	),
-	Composable(
-		ParachainClientConfig,
-		ParachainClient<ComposableConfig>,
-		parachain::finality_protocol::FinalityEvent,
-		parachain::provider::TransactionId<sp_core::H256>,
-		<ParachainClient<ComposableConfig> as IbcProvider>::AssetId,
-		parachain::error::Error
-	),
-	PicassoPolkadot(
-		ParachainClientConfig,
-		ParachainClient<PicassoPolkadotConfig>,
-		parachain::finality_protocol::FinalityEvent,
-		parachain::provider::TransactionId<sp_core::H256>,
-		<ParachainClient<PicassoPolkadotConfig> as IbcProvider>::AssetId,
-		parachain::error::Error
-	),
-	PicassoKusama(
-		ParachainClientConfig,
-		ParachainClient<PicassoKusamaConfig>,
-		parachain::finality_protocol::FinalityEvent,
-		parachain::provider::TransactionId<sp_core::H256>,
-		<ParachainClient<PicassoKusamaConfig> as IbcProvider>::AssetId,
-		parachain::error::Error
-	),
-	Cosmos(
-		CosmosClientConfig,
-		CosmosClient<DefaultConfig>,
-		cosmos::provider::FinalityEvent,
-		cosmos::provider::TransactionId<cosmos::provider::Hash>,
-		<CosmosClient<DefaultConfig> as IbcProvider>::AssetId,
-		cosmos::error::Error
-	),
+	Parachain(ParachainClientConfig, ParachainClient<DefaultConfig>),
+	Dali(ParachainClientConfig, ParachainClient<DaliConfig>),
+	Composable(ParachainClientConfig, ParachainClient<ComposableConfig>),
+	PicassoPolkadot(ParachainClientConfig, ParachainClient<PicassoPolkadotConfig>),
+	PicassoKusama(ParachainClientConfig, ParachainClient<PicassoKusamaConfig>),
+	#[cfg(feature = "cosmos")]
+	Cosmos(CosmosClientConfig, CosmosClient<DefaultConfig>),
 }
