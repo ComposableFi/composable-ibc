@@ -7,11 +7,10 @@ use self::parachain_subxt::api::{
 	sudo::calls::Sudo,
 };
 use crate::{
-	define_any_wrapper, define_asset_id, define_beefy_authority_set, define_event_record,
-	define_events, define_head_data, define_ibc_event_wrapper, define_id, define_para_lifecycle,
-	define_runtime_call, define_runtime_event, define_runtime_storage, define_runtime_transactions,
+	define_any_wrapper, define_asset_id, define_event_record, define_events, define_head_data,
+	define_ibc_event_wrapper, define_id, define_para_lifecycle, define_runtime_call,
+	define_runtime_event, define_runtime_storage, define_runtime_transactions,
 	define_transfer_params,
-	substrate::picasso::relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
 };
 use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
@@ -78,22 +77,41 @@ define_head_data!(
 
 define_para_lifecycle!(PicassoParaLifecycle, ParaLifecycle);
 
-define_beefy_authority_set!(PicassoBeefyAuthoritySet, BeefyAuthoritySet<T>);
+#[derive(Decode, Encode)]
+pub struct PicassoBeefyAuthoritySet;
+
+impl BeefyAuthoritySetT for PicassoBeefyAuthoritySet {
+	fn root(&self) -> H256 {
+		unimplemented!()
+	}
+
+	fn len(&self) -> u32 {
+		unimplemented!()
+	}
+}
+
+fn unimplemented<T>(s: &'static str) -> T {
+	unimplemented!("{s}")
+}
 
 define_runtime_storage!(
 	PicassoRuntimeStorage,
 	PicassoHeadData,
 	PicassoId,
 	PicassoParaLifecycle,
-	PicassoBeefyAuthoritySet<H256>,
+	PicassoBeefyAuthoritySet,
 	parachain_subxt::api::storage().timestamp().now(),
 	|x| relaychain::api::storage().paras().heads(x),
 	|x| relaychain::api::storage().paras().para_lifecycles(x),
 	relaychain::api::storage().paras().parachains(),
 	relaychain::api::storage().grandpa().current_set_id(),
-	relaychain::api::storage().beefy().validator_set_id(),
-	relaychain::api::storage().beefy().authorities(),
-	relaychain::api::storage().mmr_leaf().beefy_next_authorities(),
+	unimplemented("relaychain::api::storage().beefy().validator_set_id()"),
+	unimplemented::<StaticStorageAddress<DecodeStaticType<()>, Yes, Yes, ()>>(
+		"relaychain::api::storage().beefy().authorities()"
+	),
+	unimplemented::<StaticStorageAddress<DecodeStaticType<()>, Yes, Yes, ()>>(
+		"relaychain::api::storage().mmr_leaf().beefy_next_authorities()"
+	),
 	relaychain::api::storage().babe().epoch_start()
 );
 
