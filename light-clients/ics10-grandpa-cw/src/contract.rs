@@ -4,16 +4,13 @@ use crate::{
 	ics23::FakeInner,
 	log,
 	msg::{
-		CheckForMisbehaviourMsg, ClientStateCallResponse, ContractResult, ExecuteMsg, ExportMetadataMsg,
-		InitializeState, InstantiateMsg, QueryMsg, QueryResponse, StatusMsg, UpdateStateMsg,
-		UpdateStateOnMisbehaviourMsg, VerifyClientMessage, VerifyMembershipMsg,
+		CheckForMisbehaviourMsg, ClientStateCallResponse, ContractResult, ExecuteMsg,
+		ExportMetadataMsg, InitializeState, InstantiateMsg, QueryMsg, QueryResponse, StatusMsg,
+		UpdateStateMsg, UpdateStateOnMisbehaviourMsg, VerifyClientMessage, VerifyMembershipMsg,
 		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
 	},
+	state::{get_client_state, get_consensus_state},
 	Bytes,
-	state::{
-		get_client_state,
-		get_consensus_state,
-	}
 };
 use byteorder::{ByteOrder, LittleEndian};
 use core::hash::Hasher;
@@ -311,30 +308,21 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 	match msg {
 		QueryMsg::ClientTypeMsg(_) => unimplemented!("ClientTypeMsg"),
 		QueryMsg::GetLatestHeightsMsg(_) => unimplemented!("GetLatestHeightsMsg"),
-		QueryMsg::ExportMetadata(ExportMetadataMsg {}) => {
-			to_binary(&QueryResponse::genesis_metadata(None))
-    }
+		QueryMsg::ExportMetadata(ExportMetadataMsg {}) =>
+			to_binary(&QueryResponse::genesis_metadata(None)),
 		QueryMsg::Status(StatusMsg {}) => {
 			let client_state = match get_client_state::<HostFunctions>(deps) {
 				Ok(client_state) => client_state,
-				Err(_) => return to_binary(&QueryResponse::status(
-					"Unknown".to_string(),
-				))
+				Err(_) => return to_binary(&QueryResponse::status("Unknown".to_string())),
 			};
-				
+
 			if client_state.frozen_height().is_some() {
-				to_binary(&QueryResponse::status(
-					"Frozen".to_string(),
-				))
+				to_binary(&QueryResponse::status("Frozen".to_string()))
 			} else {
 				let height = client_state.latest_height();
 				match get_consensus_state(deps, &client_id, height) {
-					Ok(_) => to_binary(&QueryResponse::status(
-						"Active".to_string(),
-					)),
-					Err(_) => to_binary(&QueryResponse::status(
-						"Expired".to_string(),
-					))
+					Ok(_) => to_binary(&QueryResponse::status("Active".to_string())),
+					Err(_) => to_binary(&QueryResponse::status("Expired".to_string())),
 				}
 			}
 		},

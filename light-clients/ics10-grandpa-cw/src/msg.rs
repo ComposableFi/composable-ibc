@@ -49,11 +49,11 @@ pub struct QueryResponse {
 
 impl QueryResponse {
 	pub fn status(status: String) -> Self {
-		Self { status: status, genesis_metadata: None }
+		Self { status, genesis_metadata: None }
 	}
 
 	pub fn genesis_metadata(genesis_metadata: Option<Vec<GenesisMetadata>>) -> Self {
-		Self { status: "".to_string(), genesis_metadata: genesis_metadata}
+		Self { status: "".to_string(), genesis_metadata }
 	}
 }
 
@@ -269,7 +269,7 @@ impl<H: Clone> VerifyClientMessage<H> {
 pub struct CheckForMisbehaviourMsgRaw {
 	// pub client_id: String,
 	pub client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
-	pub misbehaviour: WasmMisbehaviour,
+	pub client_message: ClientMessageRaw,
 }
 
 pub struct CheckForMisbehaviourMsg<H> {
@@ -285,8 +285,7 @@ impl<H: Clone> TryFrom<CheckForMisbehaviourMsgRaw> for CheckForMisbehaviourMsg<H
 		// let client_id = ClientId::from_str(&raw.client_id)?;
 		let any = Any::decode(&*raw.client_state.data)?;
 		let client_state = ClientState::<H>::decode_vec(&any.value)?;
-		let any = Any::decode(&*raw.misbehaviour.data)?;
-		let client_message = ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value)?);
+		let client_message = VerifyClientMessage::<H>::decode_client_message(raw.client_message)?;
 		Ok(Self { client_state, client_message })
 	}
 }
@@ -308,8 +307,9 @@ impl<H: Clone> TryFrom<UpdateStateOnMisbehaviourMsgRaw> for UpdateStateOnMisbeha
 	fn try_from(raw: UpdateStateOnMisbehaviourMsgRaw) -> Result<Self, Self::Error> {
 		let any = Any::decode(&*raw.client_state.data)?;
 		let client_state = ClientState::<H>::decode_vec(&any.value)?;
-		let any = Any::decode(&*raw.client_message.data)?;
-		let client_message = ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value)?);
+		let client_message = VerifyClientMessage::<H>::decode_client_message(
+			ClientMessageRaw::Misbehaviour(raw.client_message),
+		)?;
 		Ok(Self { client_state, client_message })
 	}
 }
