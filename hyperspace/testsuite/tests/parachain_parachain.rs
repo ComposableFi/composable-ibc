@@ -13,7 +13,10 @@
 // limitations under the License.
 
 use futures::StreamExt;
-use hyperspace_core::{logging, substrate::DefaultConfig};
+use hyperspace_core::{
+	logging,
+	substrate::{ComposableConfig, DaliConfig, DefaultConfig, PicassoConfig},
+};
 use hyperspace_parachain::{
 	finality_protocol::FinalityProtocol, ParachainClient, ParachainClientConfig,
 };
@@ -54,13 +57,60 @@ impl Default for Args {
 	}
 }
 
-async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<DefaultConfig>) {
+impl Args {
+	fn composable() -> Self {
+		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+		let para = std::env::var("PARA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+		Args {
+			chain_a: format!("ws://{para}:8988"),
+			chain_b: format!("ws://{para}:8188"),
+			relay_chain: format!("ws://{relay}:8944"),
+			para_id_a: 10009,
+			para_id_b: 10009,
+			connection_prefix_a: "ibc/".to_string(),
+			connection_prefix_b: "ibc/".to_string(),
+		}
+	}
+
+	fn dali() -> Self {
+		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+		let para = std::env::var("PARA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+
+		Args {
+			chain_a: format!("ws://{para}:8988"),
+			chain_b: format!("ws://{para}:8188"),
+			relay_chain: format!("ws://{relay}:8944"),
+			para_id_a: 2000,
+			para_id_b: 2001,
+			connection_prefix_a: "ibc/".to_string(),
+			connection_prefix_b: "ibc/".to_string(),
+		}
+	}
+
+	fn picasso() -> Self {
+		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+		let para = std::env::var("PARA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+
+		Args {
+			chain_a: format!("ws://{para}:7988"),
+			chain_b: format!("ws://{para}:7188"),
+			relay_chain: format!("ws://{relay}:9944"),
+			para_id_a: 2087,
+			para_id_b: 2001,
+			connection_prefix_a: "ibc/".to_string(),
+			connection_prefix_b: "ibc/".to_string(),
+		}
+	}
+}
+
+async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<PicassoConfig>) {
 	log::info!(target: "hyperspace", "=========================== Starting Test ===========================");
 	let args = Args::default();
+	let args_composable = Args::picasso();
 
 	// Create client configurations
 	let config_a = ParachainClientConfig {
-		name: format!("9988"),
+		name: format!("A"),
 		para_id: args.para_id_a,
 		parachain_rpc_url: args.chain_a,
 		relay_chain_rpc_url: args.relay_chain.clone(),
@@ -74,13 +124,13 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 		key_type: "sr25519".to_string(),
 	};
 	let config_b = ParachainClientConfig {
-		name: format!("9188"),
-		para_id: args.para_id_b,
-		parachain_rpc_url: args.chain_b,
-		relay_chain_rpc_url: args.relay_chain,
+		name: format!("B"),
+		para_id: args_composable.para_id_a,
+		parachain_rpc_url: args_composable.chain_a,
+		relay_chain_rpc_url: args_composable.relay_chain,
 		client_id: None,
 		connection_id: None,
-		commitment_prefix: args.connection_prefix_b.as_bytes().to_vec().into(),
+		commitment_prefix: args_composable.connection_prefix_b.as_bytes().to_vec().into(),
 		private_key: "//Alice".to_string(),
 		ss58_version: 42,
 		channel_whitelist: vec![],
@@ -89,7 +139,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 	};
 
 	let mut chain_a = ParachainClient::<DefaultConfig>::new(config_a).await.unwrap();
-	let mut chain_b = ParachainClient::<DefaultConfig>::new(config_b).await.unwrap();
+	let mut chain_b = ParachainClient::<PicassoConfig>::new(config_b).await.unwrap();
 
 	// Wait until for parachains to start producing blocks
 	log::info!(target: "hyperspace", "Waiting for  block production from parachains");
@@ -128,23 +178,34 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 	let (mut chain_a, mut chain_b) = setup_clients().await;
 	// Run tests sequentially
 
-	let asset_id = 1;
+	let asset_id = 1u128;
 
 	// no timeouts + connection delay
-	ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b, asset_id, asset_id).await;
+	ibc_messaging_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id.into(),
+		asset_id.into(),
+	)
+	.await;
 
 	// timeouts + connection delay
-	ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b, asset_id)
-		.await;
+	ibc_messaging_packet_height_timeout_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id.into(),
+	)
+	.await;
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
 		&mut chain_a,
 		&mut chain_b,
-		asset_id,
+		asset_id.into(),
 	)
 	.await;
 
 	// channel closing semantics
-	ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id).await;
+	ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id.into())
+		.await;
 	ibc_channel_close(&mut chain_a, &mut chain_b).await;
 
 	// Test sync abilities, run this before misbehaviour test

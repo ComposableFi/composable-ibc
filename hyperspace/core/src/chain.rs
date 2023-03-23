@@ -14,7 +14,7 @@
 
 #![allow(unreachable_patterns)]
 
-use crate::substrate::{ComposableConfig, dali::DaliConfig, default::DefaultConfig, PicassoConfig};
+use crate::substrate::{dali::DaliConfig, default::DefaultConfig, ComposableConfig, PicassoConfig};
 use async_trait::async_trait;
 #[cfg(feature = "cosmos")]
 use cosmos::client::{CosmosClient, CosmosClientConfig};
