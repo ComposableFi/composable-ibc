@@ -40,16 +40,16 @@ use subxt::{
 	tx::StaticTxPayload,
 	Error, OnlineClient,
 };
-use subxt_generated::picasso::parachain::api::runtime_types::{
+use subxt_generated::picasso_kusama::parachain::api::runtime_types::{
 	picasso_runtime::ibc::MemoMessage, primitives::currency::CurrencyId,
 };
 
 pub mod parachain_subxt {
-	pub use subxt_generated::picasso::parachain::*;
+	pub use subxt_generated::picasso_kusama::parachain::*;
 }
 
 pub mod relaychain {
-	pub use subxt_generated::picasso::relaychain::*;
+	pub use subxt_generated::picasso_kusama::relaychain::*;
 }
 
 pub type Balance = u128;
@@ -66,7 +66,7 @@ impl From<SendPingParams> for FakeSendPingParams {
 }
 
 #[derive(Debug, Clone)]
-pub enum PicassoConfig {}
+pub enum PicassoKusamaConfig {}
 
 define_id!(PicassoId, relaychain::api::runtime_types::polkadot_parachain::primitives::Id);
 
@@ -147,7 +147,7 @@ define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);
 
 define_event_record!(
 	PicassoEventRecord,
-	EventRecord<<PicassoConfig as light_client_common::config::Config>::ParaRuntimeEvent, H256>,
+	EventRecord<< PicassoKusamaConfig as light_client_common::config::Config>::ParaRuntimeEvent, H256>,
 	IbcEventWrapper,
 	parachain_subxt::api::runtime_types::frame_system::Phase,
 	parachain_subxt::api::runtime_types::pallet_ibc::pallet::Event,
@@ -171,7 +171,7 @@ define_runtime_call!(
 define_asset_id!(CurrencyIdWrapper, CurrencyId);
 
 #[async_trait]
-impl light_client_common::config::Config for PicassoConfig {
+impl light_client_common::config::Config for PicassoKusamaConfig {
 	type AssetId = CurrencyIdWrapper;
 	type Signature = <Self as subxt::Config>::Signature;
 	type Address = <Self as subxt::Config>::Address;
@@ -196,7 +196,7 @@ impl light_client_common::config::Config for PicassoConfig {
 	}
 }
 
-impl subxt::Config for PicassoConfig {
+impl subxt::Config for PicassoKusamaConfig {
 	type Index = u32;
 	type BlockNumber = u32;
 	type Hash = H256;

@@ -54,8 +54,8 @@ async fn main() -> Result<(), anyhow::Error> {
 		}
 	} else {
 		let runtimes = [
-			(format!("ws://{}:{}", cli.relay_host, cli.relay_port), "relaychain"),
-			(format!("ws://{}:{}", cli.para_host, cli.para_port), "parachain"),
+			(format!("{}:{}", cli.relay_host, cli.relay_port), "relaychain"),
+			(format!("{}:{}", cli.para_host, cli.para_port), "parachain"),
 		];
 
 		for (url, runtime) in runtimes {

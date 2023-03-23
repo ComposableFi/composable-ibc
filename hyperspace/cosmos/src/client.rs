@@ -130,9 +130,9 @@ pub struct CosmosClientConfig {
 	/// Cosmos chain Id
 	pub chain_id: String,
 	/// Light client id on counterparty chain
-	pub client_id: Option<String>,
+	pub client_id: Option<ClientId>,
 	/// Connection Id
-	pub connection_id: Option<String>,
+	pub connection_id: Option<ConnectionId>,
 	/// Account prefix
 	pub account_prefix: String,
 	/// Fee denom
@@ -187,13 +187,6 @@ where
 		let rpc_client = HttpClient::new(config.rpc_url.clone())
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 		let chain_id = ChainId::from(config.chain_id);
-		let client_id = config
-			.client_id
-			.map(|client_id| {
-				ClientId::from_str(&client_id)
-					.map_err(|e| Error::from(format!("Invalid client id {:?}", e)))
-			})
-			.transpose()?;
 		let light_client = LightClient::init_light_client(config.rpc_url.clone()).await?;
 		let commitment_prefix = CommitmentPrefix::try_from(config.store_prefix.as_bytes().to_vec())
 			.map_err(|e| Error::from(format!("Invalid store prefix {:?}", e)))?;
@@ -204,14 +197,8 @@ where
 			rpc_client,
 			grpc_url: config.grpc_url,
 			websocket_url: config.websocket_url,
-			client_id,
-			connection_id: config
-				.connection_id
-				.map(|connection_id| {
-					ConnectionId::from_str(&connection_id)
-						.map_err(|e| Error::from(format!("Invalid connection id {:?}", e)))
-				})
-				.transpose()?,
+			client_id: config.client_id,
+			connection_id: config.connection_id,
 			light_client,
 			account_prefix: config.account_prefix,
 			commitment_prefix,
