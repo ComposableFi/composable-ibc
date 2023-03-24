@@ -115,8 +115,8 @@ jobs:
           # GATEWAY_IP equals host ip where this docker container was ran, this ip has access to Docker port mapping.
           GATEWAY_IP=$(ip r l | grep default | awk '{print $3}')
           echo "GATEWAY_IP=$GATEWAY_IP" >> $GITHUB_ENV
-          echo "RELAY_HOST=$GATEWAY_IP" >> $GITHUB_ENV
-          echo "PARA_HOST=$GATEWAY_IP" >> $GITHUB_ENV
+          echo "RELAY_HOST=ws://$GATEWAY_IP" >> $GITHUB_ENV
+          echo "PARA_HOST=ws://$GATEWAY_IP" >> $GITHUB_ENV
 
       - name: Run local parachain cluster
         run: |
@@ -159,7 +159,7 @@ jobs:
       - name: Terminate local parachain cluster
         run: |
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml down -v
-    
+
   test-solidity:
     runs-on:
       - self-hosted
@@ -176,6 +176,6 @@ jobs:
         with:
           node-version: 16
       - name: Install dependencies
-        run: npm install 
-      - name: run unit test 
+        run: npm install
+      - name: run unit test
         run: npm run test
