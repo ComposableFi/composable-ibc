@@ -877,14 +877,14 @@ impl IbcProvider for AnyChain {
 				.map_err(Into::into),
 			Self::Composable(chain) => chain
 				.query_client_id_from_tx_hash(
-					downcast!(tx_id => AnyTransactionId::Dali)
+					downcast!(tx_id => AnyTransactionId::Composable)
 						.expect("Should be dali transaction id"),
 				)
 				.await
 				.map_err(Into::into),
 			Self::Picasso(chain) => chain
 				.query_client_id_from_tx_hash(
-					downcast!(tx_id => AnyTransactionId::Dali)
+					downcast!(tx_id => AnyTransactionId::Picasso)
 						.expect("Should be dali transaction id"),
 				)
 				.await
