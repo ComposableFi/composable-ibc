@@ -40,7 +40,7 @@ pub struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
-	let cli = Cli::parse();
+	let mut cli = Cli::parse();
 
 	if let Some((parachain_wasm, relaychain_wasm)) = cli.parachain_wasm.zip(cli.relaychain_wasm) {
 		let runtimes = vec![(parachain_wasm, "parachain"), (relaychain_wasm, "relaychain")];
@@ -53,6 +53,12 @@ async fn main() -> Result<(), anyhow::Error> {
 			tokio::fs::write(&path, &code).await?;
 		}
 	} else {
+		if !cli.relay_host.contains("://") {
+			cli.relay_host = format!("ws://{}", cli.relay_host);
+		}
+		if !cli.para_host.contains("://") {
+			cli.para_host = format!("ws://{}", cli.para_host);
+		}
 		let runtimes = [
 			(format!("{}:{}", cli.relay_host, cli.relay_port), "relaychain"),
 			(format!("{}:{}", cli.para_host, cli.para_port), "parachain"),
