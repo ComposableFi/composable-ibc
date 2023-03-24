@@ -22,11 +22,11 @@ use wasm_testbed::WasmTestBed;
 pub struct Cli {
 	#[clap(long)]
 	pub path: PathBuf,
-	#[clap(long, env = "RELAY_HOST", default_value = "127.0.0.1")]
+	#[clap(long, env = "RELAY_HOST", default_value = "ws://127.0.0.1")]
 	pub relay_host: String,
 	#[clap(long, default_value = "9944")]
 	pub relay_port: String,
-	#[clap(long, env = "PARA_HOST", default_value = "127.0.0.1")]
+	#[clap(long, env = "PARA_HOST", default_value = "ws://127.0.0.1")]
 	pub para_host: String,
 	#[clap(long, default_value = "9988")]
 	pub para_port: String,
