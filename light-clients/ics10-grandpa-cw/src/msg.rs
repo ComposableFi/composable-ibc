@@ -35,13 +35,25 @@ impl Base64 {
 }
 
 #[cw_serde]
+pub struct GenesisMetadata {
+	pub key: Vec<u8>,
+	pub value: Vec<u8>,
+}
+
+#[cw_serde]
 pub struct QueryResponse {
 	pub status: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub genesis_metadata: Option<Vec<GenesisMetadata>>,
 }
 
 impl QueryResponse {
 	pub fn status(status: String) -> Self {
-		Self { status: status }
+		Self { status, genesis_metadata: None }
+	}
+
+	pub fn genesis_metadata(genesis_metadata: Option<Vec<GenesisMetadata>>) -> Self {
+		Self { status: "".to_string(), genesis_metadata }
 	}
 }
 
@@ -51,15 +63,21 @@ pub struct ContractResult {
 	pub error_msg: String,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub data: Option<Vec<u8>>,
+	pub found_misbehaviour: bool,
 }
 
 impl ContractResult {
 	pub fn success() -> Self {
-		Self { is_valid: true, error_msg: "".to_string(), data: None }
+		Self { is_valid: true, error_msg: "".to_string(), data: None, found_misbehaviour: false }
 	}
 
 	pub fn error(msg: String) -> Self {
-		Self { is_valid: false, error_msg: msg, data: None }
+		Self { is_valid: false, error_msg: msg, data: None, found_misbehaviour: false }
+	}
+
+	pub fn misbehaviour(mut self, found: bool) -> Self {
+		self.found_misbehaviour = found;
+		self
 	}
 
 	pub fn data(mut self, data: Vec<u8>) -> Self {
@@ -108,6 +126,7 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
 	ClientTypeMsg(ClientTypeMsg),
 	GetLatestHeightsMsg(GetLatestHeightsMsg),
+	ExportMetadata(ExportMetadataMsg),
 	Status(StatusMsg),
 }
 
@@ -119,6 +138,9 @@ pub struct GetLatestHeightsMsg {}
 
 #[cw_serde]
 pub struct StatusMsg {}
+
+#[cw_serde]
+pub struct ExportMetadataMsg {}
 
 #[cw_serde]
 pub struct MerklePath {
@@ -246,7 +268,7 @@ impl VerifyClientMessage {
 
 #[cw_serde]
 pub struct CheckForMisbehaviourMsgRaw {
-	pub misbehaviour: WasmMisbehaviour,
+	pub client_message: ClientMessageRaw,
 }
 
 pub struct CheckForMisbehaviourMsg {
@@ -257,15 +279,14 @@ impl TryFrom<CheckForMisbehaviourMsgRaw> for CheckForMisbehaviourMsg {
 	type Error = ContractError;
 
 	fn try_from(raw: CheckForMisbehaviourMsgRaw) -> Result<Self, Self::Error> {
-		let any = Any::decode(&*raw.misbehaviour.data)?;
-		let client_message = ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value)?);
+		let client_message = VerifyClientMessage::<H>::decode_client_message(raw.client_message)?;
 		Ok(Self { client_message })
 	}
 }
 
 #[cw_serde]
 pub struct UpdateStateOnMisbehaviourMsgRaw {
-	pub client_message: WasmMisbehaviour,
+	pub client_message: ClientMessageRaw,
 }
 
 pub struct UpdateStateOnMisbehaviourMsg {
@@ -276,8 +297,7 @@ impl TryFrom<UpdateStateOnMisbehaviourMsgRaw> for UpdateStateOnMisbehaviourMsg {
 	type Error = ContractError;
 
 	fn try_from(raw: UpdateStateOnMisbehaviourMsgRaw) -> Result<Self, Self::Error> {
-		let any = Any::decode(&*raw.client_message.data)?;
-		let client_message = ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value)?);
+		let client_message = VerifyClientMessage::<H>::decode_client_message(raw.client_message)?;
 		Ok(Self { client_message })
 	}
 }
