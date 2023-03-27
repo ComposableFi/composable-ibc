@@ -15,9 +15,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use core::hash::Hasher;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-	to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
-};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw_storage_plus::{Item, Map};
 use digest::Digest;
 use grandpa_light_client_primitives::justification::AncestryChain;
@@ -168,7 +166,8 @@ fn process_message(
 			.map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyClientMessage(msg) => {
-			let client_state = ctx.client_state(&client_id)
+			let client_state = ctx
+				.client_state(&client_id)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 			let msg = VerifyClientMessage::try_from(msg)?;
 
@@ -199,18 +198,18 @@ fn process_message(
 			f
 		},
 		ExecuteMsg::CheckForMisbehaviour(msg) => {
-			let client_state = ctx.client_state(&client_id)
+			let client_state = ctx
+				.client_state(&client_id)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 			let msg = CheckForMisbehaviourMsg::try_from(msg)?;
 			client
 				.check_for_misbehaviour(ctx, client_id, client_state, msg.client_message)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
-				.map(|result| {
-					to_binary(&ContractResult::success().misbehaviour(result))
-				})
+				.map(|result| to_binary(&ContractResult::success().misbehaviour(result)))
 		},
 		ExecuteMsg::UpdateStateOnMisbehaviour(msg_raw) => {
-			let client_state = ctx.client_state(&client_id)
+			let client_state = ctx
+				.client_state(&client_id)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 			let msg = UpdateStateOnMisbehaviourMsg::try_from(msg_raw)?;
 			client
@@ -223,7 +222,8 @@ fn process_message(
 				})
 		},
 		ExecuteMsg::UpdateState(msg_raw) => {
-			let client_state = ctx.client_state(&client_id)
+			let client_state = ctx
+				.client_state(&client_id)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 			let msg = UpdateStateMsg::try_from(msg_raw)?;
 
@@ -274,9 +274,11 @@ fn process_message(
 			todo!("check substitute and update state")
 		},
 		ExecuteMsg::VerifyUpgradeAndUpdateState(msg) => {
-			let old_client_state = ctx.client_state(&client_id)
+			let old_client_state = ctx
+				.client_state(&client_id)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
-			let msg: VerifyUpgradeAndUpdateStateMsg<HostFunctions> = VerifyUpgradeAndUpdateStateMsg::try_from(msg)?;
+			let msg: VerifyUpgradeAndUpdateStateMsg<HostFunctions> =
+				VerifyUpgradeAndUpdateStateMsg::try_from(msg)?;
 			client
 				.verify_upgrade_and_update_state(
 					ctx,

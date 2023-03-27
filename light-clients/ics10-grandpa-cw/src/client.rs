@@ -2,7 +2,8 @@ use crate::{
 	context::Context,
 	contract::{CLIENT_COUNTER, CONSENSUS_STATES_HEIGHTS, HOST_CONSENSUS_STATE},
 	ics23::{
-		ConsensusStates, FakeInner, ReadonlyClientStates, ReadonlyClients, ReadonlyConsensusStates, ClientStates,
+		ClientStates, ConsensusStates, FakeInner, ReadonlyClientStates, ReadonlyClients,
+		ReadonlyConsensusStates,
 	},
 	log,
 };

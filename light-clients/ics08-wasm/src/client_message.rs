@@ -10,9 +10,7 @@ use core::fmt::Display;
 #[cfg(feature = "cosmwasm")]
 use cosmwasm_schema::cw_serde;
 use ibc::{
-	core::{
-		ics02_client::{client_message::ClientMessage as IbcClientMessage, error::Error},
-	},
+	core::ics02_client::{client_message::ClientMessage as IbcClientMessage, error::Error},
 	protobuf::Protobuf,
 	Height,
 };
@@ -127,10 +125,7 @@ where
 	fn try_from(raw: RawMisbehaviour) -> Result<Self, Self::Error> {
 		let any = Any::decode(&mut &raw.data[..]).map_err(|e| e.to_string())?;
 		let inner = AnyClientMessage::try_from(any).map_err(|e| e.to_string())?;
-		Ok(Self {
-			inner: Box::new(inner),
-			data: raw.data,
-		})
+		Ok(Self { inner: Box::new(inner), data: raw.data })
 	}
 }
 
