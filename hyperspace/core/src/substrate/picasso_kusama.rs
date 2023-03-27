@@ -143,7 +143,7 @@ define_runtime_transactions!(
 	|_: DummySendPingParamsWrapper<FakeSendPingParams>| unimplemented!("ping is not implemented")
 );
 
-define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);
+define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent,);
 
 define_event_record!(
 	PicassoEventRecord,
