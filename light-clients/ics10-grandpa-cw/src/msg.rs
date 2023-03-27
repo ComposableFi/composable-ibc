@@ -279,7 +279,7 @@ impl TryFrom<CheckForMisbehaviourMsgRaw> for CheckForMisbehaviourMsg {
 	type Error = ContractError;
 
 	fn try_from(raw: CheckForMisbehaviourMsgRaw) -> Result<Self, Self::Error> {
-		let client_message = VerifyClientMessage::<H>::decode_client_message(raw.client_message)?;
+		let client_message = VerifyClientMessage::decode_client_message(raw.client_message)?;
 		Ok(Self { client_message })
 	}
 }
@@ -297,7 +297,7 @@ impl TryFrom<UpdateStateOnMisbehaviourMsgRaw> for UpdateStateOnMisbehaviourMsg {
 	type Error = ContractError;
 
 	fn try_from(raw: UpdateStateOnMisbehaviourMsgRaw) -> Result<Self, Self::Error> {
-		let client_message = VerifyClientMessage::<H>::decode_client_message(raw.client_message)?;
+		let client_message = VerifyClientMessage::decode_client_message(raw.client_message)?;
 		Ok(Self { client_message })
 	}
 }
