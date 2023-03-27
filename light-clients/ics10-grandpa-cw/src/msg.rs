@@ -63,15 +63,21 @@ pub struct ContractResult {
 	pub error_msg: String,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub data: Option<Vec<u8>>,
+	pub found_misbehaviour: bool,
 }
 
 impl ContractResult {
 	pub fn success() -> Self {
-		Self { is_valid: true, error_msg: "".to_string(), data: None }
+		Self { is_valid: true, error_msg: "".to_string(), data: None, found_misbehaviour: false }
 	}
 
 	pub fn error(msg: String) -> Self {
-		Self { is_valid: false, error_msg: msg, data: None }
+		Self { is_valid: false, error_msg: msg, data: None, found_misbehaviour: false }
+	}
+
+	pub fn misbehaviour(mut self, found: bool) -> Self {
+		self.found_misbehaviour = found;
+		self
 	}
 
 	pub fn data(mut self, data: Vec<u8>) -> Self {
@@ -293,7 +299,7 @@ impl<H: Clone> TryFrom<CheckForMisbehaviourMsgRaw> for CheckForMisbehaviourMsg<H
 #[cw_serde]
 pub struct UpdateStateOnMisbehaviourMsgRaw {
 	pub client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
-	pub client_message: WasmMisbehaviour,
+	pub client_message: ClientMessageRaw,
 }
 
 pub struct UpdateStateOnMisbehaviourMsg<H> {
@@ -307,9 +313,7 @@ impl<H: Clone> TryFrom<UpdateStateOnMisbehaviourMsgRaw> for UpdateStateOnMisbeha
 	fn try_from(raw: UpdateStateOnMisbehaviourMsgRaw) -> Result<Self, Self::Error> {
 		let any = Any::decode(&*raw.client_state.data)?;
 		let client_state = ClientState::<H>::decode_vec(&any.value)?;
-		let client_message = VerifyClientMessage::<H>::decode_client_message(
-			ClientMessageRaw::Misbehaviour(raw.client_message),
-		)?;
+		let client_message = VerifyClientMessage::<H>::decode_client_message(raw.client_message)?;
 		Ok(Self { client_state, client_message })
 	}
 }

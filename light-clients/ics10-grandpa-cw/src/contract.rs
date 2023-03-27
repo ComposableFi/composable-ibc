@@ -206,7 +206,9 @@ fn process_message(
 			client
 				.check_for_misbehaviour(ctx, client_id, msg.client_state, msg.client_message)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
-				.map(|_| to_binary(&ContractResult::success()))
+				.map(|result| {
+					to_binary(&ContractResult::success().misbehaviour(result))
+				})
 		},
 		ExecuteMsg::UpdateStateOnMisbehaviour(msg_raw) => {
 			let mut client_state: WasmClientState<FakeInner, FakeInner, FakeInner> =
