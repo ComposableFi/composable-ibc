@@ -1,8 +1,8 @@
 use crate::{
 	context::Context,
-	contract::{code_id, CLIENT_COUNTER, CONSENSUS_STATES_HEIGHTS, HOST_CONSENSUS_STATE},
+	contract::{CLIENT_COUNTER, CONSENSUS_STATES_HEIGHTS, HOST_CONSENSUS_STATE},
 	ics23::{
-		ConsensusStates, FakeInner, ReadonlyClientStates, ReadonlyClients, ReadonlyConsensusStates,
+		ConsensusStates, FakeInner, ReadonlyClientStates, ReadonlyClients, ReadonlyConsensusStates, ClientStates,
 	},
 	log,
 };
@@ -15,7 +15,6 @@ use ibc::{
 			context::{ClientKeeper, ClientReader, ClientTypes},
 			error::Error,
 		},
-		ics23_commitment::commitment::CommitmentRoot,
 		ics24_host::identifier::ClientId,
 	},
 	protobuf::Protobuf,
@@ -204,10 +203,32 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientKeeper for Context<'
 
 	fn store_client_state(
 		&mut self,
-		_client_id: ClientId,
-		_client_state: Self::AnyClientState,
+		client_id: ClientId,
+		client_state: Self::AnyClientState,
 	) -> Result<(), Error> {
-		unimplemented!()
+		log!(self, "in client : [store_client_state]");
+		let client_states = ReadonlyClientStates::new(self.storage());
+		let data = client_states
+			.get(&client_id)
+			.ok_or_else(|| Error::client_not_found(client_id.clone()))?;
+		let any = Any::decode(&*data).map_err(Error::decode)?;
+		let mut wasm_client_state =
+			ics08_wasm::client_state::ClientState::<FakeInner, FakeInner, FakeInner>::decode_vec(
+				&any.value,
+			)
+			.map_err(|e| {
+				Error::implementation_specific(format!(
+					"[client_state]: error decoding client state bytes to WasmConsensusState {}",
+					e
+				))
+			})?;
+		wasm_client_state.data = client_state.to_any().encode_to_vec();
+		wasm_client_state.latest_height = client_state.latest_height().into();
+		let vec1 = wasm_client_state.to_any().encode_to_vec();
+		log!(self, "in cliden : [store_client_state] >> wasm client state (raw)");
+		let mut client_state_storage = ClientStates::new(self.storage_mut());
+		client_state_storage.insert(client_id, vec1);
+		Ok(())
 	}
 
 	fn store_consensus_state(
