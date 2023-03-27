@@ -7,11 +7,10 @@ use self::parachain_subxt::api::{
 	sudo::calls::Sudo,
 };
 use crate::{
-	define_any_wrapper, define_asset_id, define_beefy_authority_set, define_event_record,
-	define_events, define_head_data, define_ibc_event_wrapper, define_id, define_para_lifecycle,
-	define_runtime_call, define_runtime_event, define_runtime_storage, define_runtime_transactions,
+	define_any_wrapper, define_asset_id, define_event_record, define_events, define_head_data,
+	define_ibc_event_wrapper, define_id, define_para_lifecycle, define_runtime_call,
+	define_runtime_event, define_runtime_storage, define_runtime_transactions,
 	define_transfer_params,
-	substrate::picasso::relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
 };
 use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
@@ -41,16 +40,16 @@ use subxt::{
 	tx::StaticTxPayload,
 	Error, OnlineClient,
 };
-use subxt_generated::picasso::parachain::api::runtime_types::{
+use subxt_generated::picasso_kusama::parachain::api::runtime_types::{
 	picasso_runtime::ibc::MemoMessage, primitives::currency::CurrencyId,
 };
 
 pub mod parachain_subxt {
-	pub use subxt_generated::picasso::parachain::*;
+	pub use subxt_generated::picasso_kusama::parachain::*;
 }
 
 pub mod relaychain {
-	pub use subxt_generated::picasso::relaychain::*;
+	pub use subxt_generated::picasso_kusama::relaychain::*;
 }
 
 pub type Balance = u128;
@@ -67,7 +66,7 @@ impl From<SendPingParams> for FakeSendPingParams {
 }
 
 #[derive(Debug, Clone)]
-pub enum PicassoConfig {}
+pub enum PicassoKusamaConfig {}
 
 define_id!(PicassoId, relaychain::api::runtime_types::polkadot_parachain::primitives::Id);
 
@@ -78,22 +77,41 @@ define_head_data!(
 
 define_para_lifecycle!(PicassoParaLifecycle, ParaLifecycle);
 
-define_beefy_authority_set!(PicassoBeefyAuthoritySet, BeefyAuthoritySet<T>);
+#[derive(Decode, Encode)]
+pub struct PicassoBeefyAuthoritySet;
+
+impl BeefyAuthoritySetT for PicassoBeefyAuthoritySet {
+	fn root(&self) -> H256 {
+		unimplemented!()
+	}
+
+	fn len(&self) -> u32 {
+		unimplemented!()
+	}
+}
+
+fn unimplemented<T>(s: &'static str) -> T {
+	unimplemented!("{s}")
+}
 
 define_runtime_storage!(
 	PicassoRuntimeStorage,
 	PicassoHeadData,
 	PicassoId,
 	PicassoParaLifecycle,
-	PicassoBeefyAuthoritySet<H256>,
+	PicassoBeefyAuthoritySet,
 	parachain_subxt::api::storage().timestamp().now(),
 	|x| relaychain::api::storage().paras().heads(x),
 	|x| relaychain::api::storage().paras().para_lifecycles(x),
 	relaychain::api::storage().paras().parachains(),
 	relaychain::api::storage().grandpa().current_set_id(),
-	relaychain::api::storage().beefy().validator_set_id(),
-	relaychain::api::storage().beefy().authorities(),
-	relaychain::api::storage().mmr_leaf().beefy_next_authorities(),
+	unimplemented("relaychain::api::storage().beefy().validator_set_id()"),
+	unimplemented::<StaticStorageAddress<DecodeStaticType<()>, Yes, Yes, ()>>(
+		"relaychain::api::storage().beefy().authorities()"
+	),
+	unimplemented::<StaticStorageAddress<DecodeStaticType<()>, Yes, Yes, ()>>(
+		"relaychain::api::storage().mmr_leaf().beefy_next_authorities()"
+	),
 	relaychain::api::storage().babe().epoch_start()
 );
 
@@ -125,11 +143,11 @@ define_runtime_transactions!(
 	|_: DummySendPingParamsWrapper<FakeSendPingParams>| unimplemented!("ping is not implemented")
 );
 
-define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent,);
+define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);
 
 define_event_record!(
 	PicassoEventRecord,
-	EventRecord<<PicassoConfig as light_client_common::config::Config>::ParaRuntimeEvent, H256>,
+	EventRecord<< PicassoKusamaConfig as light_client_common::config::Config>::ParaRuntimeEvent, H256>,
 	IbcEventWrapper,
 	parachain_subxt::api::runtime_types::frame_system::Phase,
 	parachain_subxt::api::runtime_types::pallet_ibc::pallet::Event,
@@ -153,7 +171,7 @@ define_runtime_call!(
 define_asset_id!(CurrencyIdWrapper, CurrencyId);
 
 #[async_trait]
-impl light_client_common::config::Config for PicassoConfig {
+impl light_client_common::config::Config for PicassoKusamaConfig {
 	type AssetId = CurrencyIdWrapper;
 	type Signature = <Self as subxt::Config>::Signature;
 	type Address = <Self as subxt::Config>::Address;
@@ -178,7 +196,7 @@ impl light_client_common::config::Config for PicassoConfig {
 	}
 }
 
-impl subxt::Config for PicassoConfig {
+impl subxt::Config for PicassoKusamaConfig {
 	type Index = u32;
 	type BlockNumber = u32;
 	type Hash = H256;

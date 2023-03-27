@@ -1,21 +1,17 @@
 use self::parachain_subxt::api::{
 	ibc::calls::{Deliver, Transfer},
 	runtime_types::{
-		composable_runtime::ibc::MemoMessage,
 		frame_system::{extensions::check_nonce::CheckNonce, EventRecord},
 		pallet_ibc::{events::IbcEvent as MetadataIbcEvent, TransferParams as RawTransferParams},
 	},
 	sudo::calls::Sudo,
 };
 use crate::{
-	define_any_wrapper, define_beefy_authority_set, define_event_record, define_events,
-	define_head_data, define_ibc_event_wrapper, define_id, define_para_lifecycle,
+	define_any_wrapper, define_asset_id, define_beefy_authority_set, define_event_record,
+	define_events, define_head_data, define_ibc_event_wrapper, define_id, define_para_lifecycle,
 	define_runtime_call, define_runtime_event, define_runtime_storage, define_runtime_transactions,
 	define_transfer_params,
-	substrate::composable::{
-		parachain_subxt::api::runtime_types::primitives::currency::CurrencyId,
-		relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
-	},
+	substrate::picasso_rococo::relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
 };
 use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
@@ -28,13 +24,14 @@ use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, Transfe
 use pallet_ibc_ping::SendPingParams;
 use parachain_subxt::api::runtime_types::ibc_primitives::Timeout as RawTimeout;
 use relaychain::api::runtime_types::polkadot_runtime_parachains::paras::ParaLifecycle;
+use serde::{Serialize, Serializer};
 use sp_core::{crypto::AccountId32, H256};
 use subxt::{
 	config::{
 		extrinsic_params::Era,
-		polkadot::{
-			PlainTip as Tip, PolkadotExtrinsicParams as ParachainExtrinsicParams,
-			PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
+		substrate::{
+			AssetTip as Tip, SubstrateExtrinsicParams as ParachainExtrinsicParams,
+			SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
 		},
 		ExtrinsicParams,
 	},
@@ -44,13 +41,16 @@ use subxt::{
 	tx::StaticTxPayload,
 	Error, OnlineClient,
 };
+use subxt_generated::picasso_rococo::parachain::api::runtime_types::{
+	picasso_runtime::ibc::MemoMessage, primitives::currency::CurrencyId,
+};
 
 pub mod parachain_subxt {
-	pub use subxt_generated::composable::parachain::*;
+	pub use subxt_generated::picasso_rococo::parachain::*;
 }
 
 pub mod relaychain {
-	pub use subxt_generated::composable::relaychain::*;
+	pub use subxt_generated::picasso_rococo::relaychain::*;
 }
 
 pub type Balance = u128;
@@ -67,25 +67,25 @@ impl From<SendPingParams> for FakeSendPingParams {
 }
 
 #[derive(Debug, Clone)]
-pub enum ComposableConfig {}
+pub enum PicassoRococoConfig {}
 
-define_id!(ComposableId, relaychain::api::runtime_types::polkadot_parachain::primitives::Id);
+define_id!(PicassoId, relaychain::api::runtime_types::polkadot_parachain::primitives::Id);
 
 define_head_data!(
-	ComposableHeadData,
+	PicassoHeadData,
 	relaychain::api::runtime_types::polkadot_parachain::primitives::HeadData,
 );
 
-define_para_lifecycle!(ComposableParaLifecycle, ParaLifecycle);
+define_para_lifecycle!(PicassoParaLifecycle, ParaLifecycle);
 
-define_beefy_authority_set!(ComposableBeefyAuthoritySet, BeefyAuthoritySet<T>);
+define_beefy_authority_set!(PicassoBeefyAuthoritySet, BeefyAuthoritySet<T>);
 
 define_runtime_storage!(
-	ComposableRuntimeStorage,
-	ComposableHeadData,
-	ComposableId,
-	ComposableParaLifecycle,
-	ComposableBeefyAuthoritySet<H256>,
+	PicassoRuntimeStorage,
+	PicassoHeadData,
+	PicassoId,
+	PicassoParaLifecycle,
+	PicassoBeefyAuthoritySet<H256>,
 	parachain_subxt::api::storage().timestamp().now(),
 	|x| relaychain::api::storage().paras().heads(x),
 	|x| relaychain::api::storage().paras().para_lifecycles(x),
@@ -108,12 +108,12 @@ define_transfer_params!(
 define_any_wrapper!(AnyWrapper, parachain_subxt::api::runtime_types::pallet_ibc::Any);
 
 define_runtime_transactions!(
-	ComposableRuntimeTransactions,
+	PicassoRuntimeTransactions,
 	Deliver,
 	Transfer,
 	Sudo,
 	DummySendPingParamsWrapper<FakeSendPingParams>,
-	ComposableParaRuntimeCall,
+	PicassoParaRuntimeCall,
 	FakeSendPingParams,
 	TransferParams<AccountId32>,
 	TransferParamsWrapper,
@@ -128,41 +128,43 @@ define_runtime_transactions!(
 define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent,);
 
 define_event_record!(
-	ComposableEventRecord,
-	EventRecord<<ComposableConfig as light_client_common::config::Config>::ParaRuntimeEvent, H256>,
+	PicassoEventRecord,
+	EventRecord<< PicassoRococoConfig as light_client_common::config::Config>::ParaRuntimeEvent, H256>,
 	IbcEventWrapper,
 	parachain_subxt::api::runtime_types::frame_system::Phase,
 	parachain_subxt::api::runtime_types::pallet_ibc::pallet::Event,
-	parachain_subxt::api::runtime_types::composable_runtime::RuntimeEvent
+	parachain_subxt::api::runtime_types::picasso_runtime::RuntimeEvent
 );
 
-define_events!(ComposableEvents, parachain_subxt::api::ibc::events::Events, IbcEventWrapper);
+define_events!(PicassoEvents, parachain_subxt::api::ibc::events::Events, IbcEventWrapper);
 
 define_runtime_event!(
-	ComposableParaRuntimeEvent,
-	parachain_subxt::api::runtime_types::composable_runtime::RuntimeEvent
+	PicassoParaRuntimeEvent,
+	parachain_subxt::api::runtime_types::picasso_runtime::RuntimeEvent
 );
 
 define_runtime_call!(
-	ComposableParaRuntimeCall,
-	parachain_subxt::api::runtime_types::composable_runtime::RuntimeCall,
+	PicassoParaRuntimeCall,
+	parachain_subxt::api::runtime_types::picasso_runtime::RuntimeCall,
 	AnyWrapper,
 	parachain_subxt::api::runtime_types::pallet_ibc::pallet::Call
 );
 
+define_asset_id!(CurrencyIdWrapper, CurrencyId);
+
 #[async_trait]
-impl light_client_common::config::Config for ComposableConfig {
-	type AssetId = u128;
+impl light_client_common::config::Config for PicassoRococoConfig {
+	type AssetId = CurrencyIdWrapper;
 	type Signature = <Self as subxt::Config>::Signature;
 	type Address = <Self as subxt::Config>::Address;
 	type Tip = Tip;
-	type ParaRuntimeCall = ComposableParaRuntimeCall;
-	type ParaRuntimeEvent = ComposableParaRuntimeEvent;
-	type Events = ComposableEvents;
-	type EventRecord = ComposableEventRecord;
-	type Storage = ComposableRuntimeStorage;
-	type Tx = ComposableRuntimeTransactions;
-	type SignedExtra = (Era, CheckNonce, Compact<Balance>);
+	type ParaRuntimeCall = PicassoParaRuntimeCall;
+	type ParaRuntimeEvent = PicassoParaRuntimeEvent;
+	type Events = PicassoEvents;
+	type EventRecord = PicassoEventRecord;
+	type Storage = PicassoRuntimeStorage;
+	type Tx = PicassoRuntimeTransactions;
+	type SignedExtra = (Era, CheckNonce, Compact<Balance>, Option<Self::AssetId>);
 
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,
@@ -176,7 +178,7 @@ impl light_client_common::config::Config for ComposableConfig {
 	}
 }
 
-impl subxt::Config for ComposableConfig {
+impl subxt::Config for PicassoRococoConfig {
 	type Index = u32;
 	type BlockNumber = u32;
 	type Hash = H256;
