@@ -252,11 +252,12 @@ fn process_message(
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
 				.and_then(|(cs, cu)| {
 					ctx.insert_relay_header_hashes(&finalized_headers);
-					process_client_and_consensus_states(ctx, client_id.clone(), cs, cu)
+					store_client_and_consensus_states(ctx, client_id.clone(), cs, cu)
 				})
 		},
 		ExecuteMsg::CheckSubstituteAndUpdateState(msg) => {
 			let _msg = CheckSubstituteAndUpdateStateMsg::try_from(msg)?;
+			// manually load both states from the combined storage using the appropriate prefixes
 			let mut old_client_state = ctx
 				.client_state_prefixed(SUBJECT_PREFIX)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
@@ -265,9 +266,9 @@ fn process_message(
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 
 			// Check that the substitute client state is valid:
-			// all fields should be the same, except for the `relay_chain`, `para_id`,
-			// `latest_para_height`, `latest_relay_height`, `frozen_height`, `current_authorities`,
-			// `current_set_id`
+			// all fields should be the same as in the old state, except for the `relay_chain`,
+			// `para_id`, `latest_para_height`, `latest_relay_height`, `frozen_height`,
+			// `current_authorities`, `current_set_id`
 			old_client_state.relay_chain = substitute_client_state.relay_chain;
 			old_client_state.para_id = substitute_client_state.para_id;
 			old_client_state.latest_para_height = substitute_client_state.latest_para_height;
@@ -284,6 +285,7 @@ fn process_message(
 			}
 			let substitute_client_state = old_client_state;
 			let height = substitute_client_state.latest_height();
+			// consensus state should be replaced as well
 			let mut substitute_consensus_state =
 				ctx.consensus_state_prefixed(height, SUBSTITUTE_PREFIX)?;
 			substitute_consensus_state.timestamp = substitute_consensus_state
@@ -314,7 +316,7 @@ fn process_message(
 				)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
 				.and_then(|(cs, cu)| {
-					process_client_and_consensus_states(ctx, client_id.clone(), cs, cu)
+					store_client_and_consensus_states(ctx, client_id.clone(), cs, cu)
 				})
 		},
 		ExecuteMsg::InitializeState(InitializeState { client_state, consensus_state }) => {
@@ -359,7 +361,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 	}
 }
 
-fn process_client_and_consensus_states<H>(
+fn store_client_and_consensus_states<H>(
 	ctx: &mut Context<H>,
 	client_id: ClientId,
 	client_state: ClientState<H>,

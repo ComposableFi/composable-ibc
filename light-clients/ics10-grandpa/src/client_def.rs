@@ -446,6 +446,13 @@ where
 		))
 	}
 
+	/// Will try to update the client with the state of the substitute.
+	///
+	/// The following must always be true:
+	///   - The substitute client is the same type as the subject client
+	///   - The subject and substitute client states match in all parameters (expect `relay_chain`,
+	/// `para_id`, `latest_para_height`, `latest_relay_height`, `latest_relay_hash`,
+	/// `frozen_height`, `latest_para_height`, `current_set_id` and `current_authorities`).
 	fn check_substitute_and_update_state<Ctx: ReaderContext>(
 		&self,
 		_ctx: &Ctx,
