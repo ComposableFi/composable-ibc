@@ -6,6 +6,7 @@ use self::parachain_subxt::api::{
 	},
 	sudo::calls::Sudo,
 };
+use super::{unimplemented, DummyBeefyAuthoritySet};
 use crate::{
 	define_any_wrapper, define_asset_id, define_event_record, define_events, define_head_data,
 	define_ibc_event_wrapper, define_id, define_para_lifecycle, define_runtime_call,
@@ -16,8 +17,8 @@ use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
 use ibc_proto::google::protobuf::Any;
 use light_client_common::config::{
-	BeefyAuthoritySetT, EventRecordT, IbcEventsT, LocalStaticStorageAddress, ParaLifecycleT,
-	RuntimeCall, RuntimeStorage, RuntimeTransactions,
+	EventRecordT, IbcEventsT, LocalStaticStorageAddress, ParaLifecycleT, RuntimeCall,
+	RuntimeStorage, RuntimeTransactions,
 };
 use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;
@@ -77,29 +78,12 @@ define_head_data!(
 
 define_para_lifecycle!(PicassoParaLifecycle, ParaLifecycle);
 
-#[derive(Decode, Encode)]
-pub struct PicassoBeefyAuthoritySet;
-
-impl BeefyAuthoritySetT for PicassoBeefyAuthoritySet {
-	fn root(&self) -> H256 {
-		unimplemented!()
-	}
-
-	fn len(&self) -> u32 {
-		unimplemented!()
-	}
-}
-
-fn unimplemented<T>(s: &'static str) -> T {
-	unimplemented!("{s}")
-}
-
 define_runtime_storage!(
 	PicassoRuntimeStorage,
 	PicassoHeadData,
 	PicassoId,
 	PicassoParaLifecycle,
-	PicassoBeefyAuthoritySet,
+	DummyBeefyAuthoritySet,
 	parachain_subxt::api::storage().timestamp().now(),
 	|x| relaychain::api::storage().paras().heads(x),
 	|x| relaychain::api::storage().paras().para_lifecycles(x),
@@ -140,7 +124,7 @@ define_runtime_transactions!(
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, CurrencyId(y), z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),
-	|_: DummySendPingParamsWrapper<FakeSendPingParams>| unimplemented!("ping is not implemented")
+	|_: DummySendPingParamsWrapper<FakeSendPingParams>| unimplemented("ping is not implemented")
 );
 
 define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);
