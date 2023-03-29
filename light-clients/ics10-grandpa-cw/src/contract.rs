@@ -288,10 +288,6 @@ fn process_message(
 			// consensus state should be replaced as well
 			let mut substitute_consensus_state =
 				ctx.consensus_state_prefixed(height, SUBSTITUTE_PREFIX)?;
-			substitute_consensus_state.timestamp = substitute_consensus_state
-				.timestamp
-				.checked_add(std::time::Duration::from_nanos(1))
-				.unwrap();
 			ctx.store_consensus_state_prefixed(height, substitute_consensus_state, SUBJECT_PREFIX);
 			ctx.store_client_state_prefixed(substitute_client_state, SUBJECT_PREFIX)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
