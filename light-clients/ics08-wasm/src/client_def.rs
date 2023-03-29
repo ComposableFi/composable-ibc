@@ -159,6 +159,32 @@ where
 			})
 	}
 
+	fn check_substitute_and_update_state<Ctx: ReaderContext>(
+		&self,
+		ctx: &Ctx,
+		subject_client_id: ClientId,
+		substitute_client_id: ClientId,
+		old_client_state: Self::ClientState,
+		substitute_client_state: Self::ClientState,
+	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error> {
+		let (inner_client_state, inner_consensus_update_result) =
+			self.inner.check_substitute_and_update_state(
+				ctx,
+				subject_client_id,
+				substitute_client_id,
+				*old_client_state.inner,
+				*substitute_client_state.inner,
+			)?;
+		let client_state = ClientState {
+			data: old_client_state.data.clone(),
+			code_id: old_client_state.code_id.clone(),
+			inner: Box::new(inner_client_state),
+			latest_height: old_client_state.latest_height,
+			_phantom: PhantomData,
+		};
+		Ok((client_state, inner_consensus_update_result))
+	}
+
 	fn verify_client_consensus_state<Ctx: ReaderContext>(
 		&self,
 		ctx: &Ctx,

@@ -434,14 +434,14 @@ where
 		let unpacked = client_state.unpack_recursive();
 		let (relay_chain, para_id, latest_para_height) = match unpacked {
 			AnyClientState::Beefy(client_state) => {
-				if client_state.is_frozen() {
+				if client_state.frozen_height.is_some() {
 					Err(ICS02Error::implementation_specific(format!("client state is frozen")))?
 				}
 
 				(client_state.relay_chain, client_state.para_id, client_state.latest_para_height)
 			},
 			AnyClientState::Grandpa(client_state) => {
-				if client_state.is_frozen() {
+				if client_state.frozen_height.is_some() {
 					Err(ICS02Error::implementation_specific(format!("client state is frozen")))?
 				}
 

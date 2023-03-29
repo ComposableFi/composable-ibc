@@ -185,6 +185,7 @@ where
 					))?
 				}
 
+				// first_justification.round
 				let first_valid = first_justification
 					.verify::<H>(client_state.current_set_id, &client_state.current_authorities)
 					.is_ok();
@@ -443,6 +444,17 @@ where
 					.expect("AnyConsensusState is type-checked; qed"),
 			),
 		))
+	}
+
+	fn check_substitute_and_update_state<Ctx: ReaderContext>(
+		&self,
+		_ctx: &Ctx,
+		_subject_client_id: ClientId,
+		_substitute_client_id: ClientId,
+		_old_client_state: Self::ClientState,
+		_substitute_client_state: Self::ClientState,
+	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
+		unimplemented!("check_substitute_and_update_state not implemented for Grandpa client")
 	}
 
 	fn verify_client_consensus_state<Ctx: ReaderContext>(

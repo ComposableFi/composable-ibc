@@ -97,6 +97,15 @@ pub trait ClientDef: Clone {
 		proof_upgrade_consensus_state: Vec<u8>,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error>;
 
+	fn check_substitute_and_update_state<Ctx: ReaderContext>(
+		&self,
+		ctx: &Ctx,
+		subject_client_id: ClientId,
+		substitute_client_id: ClientId,
+		old_client_state: Self::ClientState,
+		substitute_client_state: Self::ClientState,
+	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error>;
+
 	/// Verification functions as specified in:
 	/// <https://github.com/cosmos/ibc/tree/master/spec/core/ics-002-client-semantics>
 	///
@@ -228,4 +237,6 @@ pub trait ClientDef: Clone {
 		channel_id: &ChannelId,
 		sequence: Sequence,
 	) -> Result<(), Error>;
+
+	// fn status(&self)
 }
