@@ -35,6 +35,10 @@ jobs:
       run: |
         cargo check --workspace --locked
 
+    - name: check hyperspace features
+      run: |
+        cargo check -p hyperspace-core --features=composable-beefy --locked
+
     - name: check no_std
       run: ./scripts/no_std_checks.sh
 
