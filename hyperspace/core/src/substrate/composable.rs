@@ -8,21 +8,21 @@ use self::parachain_subxt::api::{
 	sudo::calls::Sudo,
 };
 use crate::{
-	define_any_wrapper, define_beefy_authority_set, define_event_record, define_events,
-	define_head_data, define_ibc_event_wrapper, define_id, define_para_lifecycle,
-	define_runtime_call, define_runtime_event, define_runtime_storage, define_runtime_transactions,
+	define_any_wrapper, define_event_record, define_events, define_head_data,
+	define_ibc_event_wrapper, define_id, define_para_lifecycle, define_runtime_call,
+	define_runtime_event, define_runtime_storage, define_runtime_transactions,
 	define_transfer_params,
-	substrate::composable::{
-		parachain_subxt::api::runtime_types::primitives::currency::CurrencyId,
-		relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
+	substrate::{
+		composable::parachain_subxt::api::runtime_types::primitives::currency::CurrencyId,
+		unimplemented,
 	},
 };
 use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
 use ibc_proto::google::protobuf::Any;
 use light_client_common::config::{
-	BeefyAuthoritySetT, EventRecordT, IbcEventsT, LocalStaticStorageAddress, ParaLifecycleT,
-	RuntimeCall, RuntimeStorage, RuntimeTransactions,
+	EventRecordT, IbcEventsT, LocalStaticStorageAddress, ParaLifecycleT, RuntimeCall,
+	RuntimeStorage, RuntimeTransactions,
 };
 use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;
@@ -44,6 +44,16 @@ use subxt::{
 	tx::StaticTxPayload,
 	Error, OnlineClient,
 };
+
+#[cfg(feature = "composable-beefy")]
+use {
+	crate::define_beefy_authority_set,
+	crate::substrate::composable::relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
+	light_client_common::config::BeefyAuthoritySetT,
+};
+
+#[cfg(not(feature = "composable-beefy"))]
+use super::DummyBeefyAuthoritySet;
 
 pub mod parachain_subxt {
 	pub use subxt_generated::composable::parachain::*;
@@ -78,22 +88,53 @@ define_head_data!(
 
 define_para_lifecycle!(ComposableParaLifecycle, ParaLifecycle);
 
+#[cfg(feature = "composable-beefy")]
 define_beefy_authority_set!(ComposableBeefyAuthoritySet, BeefyAuthoritySet<T>);
+
+#[cfg(feature = "composable-beefy")]
+type ComposableBeefyAuthoritySetToUse = ComposableBeefyAuthoritySet<H256>;
+#[cfg(not(feature = "composable-beefy"))]
+type ComposableBeefyAuthoritySetToUse = DummyBeefyAuthoritySet;
 
 define_runtime_storage!(
 	ComposableRuntimeStorage,
 	ComposableHeadData,
 	ComposableId,
 	ComposableParaLifecycle,
-	ComposableBeefyAuthoritySet<H256>,
+	ComposableBeefyAuthoritySetToUse,
 	parachain_subxt::api::storage().timestamp().now(),
 	|x| relaychain::api::storage().paras().heads(x),
 	|x| relaychain::api::storage().paras().para_lifecycles(x),
 	relaychain::api::storage().paras().parachains(),
 	relaychain::api::storage().grandpa().current_set_id(),
-	relaychain::api::storage().beefy().validator_set_id(),
-	relaychain::api::storage().beefy().authorities(),
-	relaychain::api::storage().mmr_leaf().beefy_next_authorities(),
+	{
+		#[cfg(feature = "composable-beefy")]
+		{
+			relaychain::api::storage().beefy().validator_set_id()
+		}
+		#[cfg(not(feature = "composable-beefy"))]
+		unimplemented("relaychain::api::storage().beefy().validator_set_id()")
+	},
+	{
+		#[cfg(feature = "composable-beefy")]
+		{
+			relaychain::api::storage().beefy().authorities()
+		}
+		#[cfg(not(feature = "composable-beefy"))]
+		unimplemented::<StaticStorageAddress<DecodeStaticType<()>, Yes, Yes, ()>>(
+			"relaychain::api::storage().beefy().authorities()",
+		)
+	},
+	{
+		#[cfg(feature = "composable-beefy")]
+		{
+			relaychain::api::storage().mmr_leaf().beefy_next_authorities()
+		}
+		#[cfg(not(feature = "composable-beefy"))]
+		unimplemented::<StaticStorageAddress<DecodeStaticType<()>, Yes, Yes, ()>>(
+			"relaychain::api::storage().mmr_leaf().beefy_next_authorities()",
+		)
+	},
 	relaychain::api::storage().babe().epoch_start()
 );
 
@@ -122,7 +163,7 @@ define_runtime_transactions!(
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, CurrencyId(y), z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),
-	|_: DummySendPingParamsWrapper<FakeSendPingParams>| unimplemented!("ping is not implemented")
+	|_: DummySendPingParamsWrapper<FakeSendPingParams>| unimplemented("ping is not implemented")
 );
 
 define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);
