@@ -55,6 +55,7 @@ use light_client_common::config::RuntimeStorage;
 use sp_core::{hexdisplay::AsBytesRef, H256};
 use std::time::Duration;
 use subxt::config::substrate::{BlakeTwo256, SubstrateHeader};
+use vec1::Vec1;
 
 #[tokio::test]
 async fn test_continuous_update_of_grandpa_client() {
@@ -144,8 +145,14 @@ async fn test_continuous_update_of_grandpa_client() {
 			latest_para_height: decoded_para_head.number,
 			para_id: prover.para_id,
 			current_set_id: client_state.current_set_id,
-			current_authorities: client_state.current_authorities,
+			max_finalized_headers: client_state.max_finalized_headers,
+			// current_authorities: client_state.current_authorities,
 			_phantom: Default::default(),
+			authorities_changes: Vec1::new((
+				latest_relay_header.number,
+				client_state.current_set_id,
+				client_state.current_authorities,
+			)),
 		};
 		let subxt_block_number: subxt::rpc::types::BlockNumber = decoded_para_head.number.into();
 		let block_hash =

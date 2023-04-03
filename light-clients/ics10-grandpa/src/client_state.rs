@@ -17,7 +17,10 @@ use crate::{
 	client_def::GrandpaClient,
 	client_message::RelayChainHeader,
 	error::Error,
-	proto::{Authority as RawAuthority, ClientState as RawClientState},
+	proto::{
+		Authority as RawAuthority, AuthorityChange as RawAuthorityChange,
+		ClientState as RawClientState,
+	},
 };
 use alloc::{format, string::ToString, vec::Vec};
 use anyhow::anyhow;
@@ -31,17 +34,46 @@ use ibc::{
 		ics24_host::identifier::{ChainId, ClientId},
 		ics26_routing::context::ReaderContext,
 	},
+	timestamp::Timestamp,
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
 use light_client_common::RelayChain;
 use serde::{Deserialize, Serialize};
 use sp_core::{ed25519::Public, H256};
-use sp_finality_grandpa::AuthorityList;
+use sp_finality_grandpa::{AuthorityList, SetId};
+use tendermint::Time;
 use tendermint_proto::Protobuf;
+use vec1::Vec1;
 
 /// Protobuf type url for GRANDPA ClientState
 pub const GRANDPA_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.ClientState";
+
+/// Maximum time to keep a block number to block hash mapping (if number of items is greater than
+/// HEADER_ITEM_MIN_COUNT).
+pub const HEADER_ITEM_LIFETIME: Duration = Duration::from_secs(1 * 60 * 60);
+/// Minimum (if possible) number of block number to block hash mappings to keep (oldest pruned
+/// first).
+pub const HEADER_ITEM_MIN_COUNT: usize = 500;
+pub const SESSION_LENGTH: Duration = Duration::from_secs(6 * 60 * 60);
+/// Maximum time to keep a an authority set change (if number of items is greater than
+/// AUTHORITIES_CHANGE_ITEM_MIN_COUNT).
+pub const AUTHORITIES_CHANGE_ITEM_LIFETIME: Duration =
+	Duration::from_secs(3 * SESSION_LENGTH.as_secs());
+/// Minimum (if possible) number of authority set changes to keep (oldest pruned first).
+pub const AUTHORITIES_CHANGE_ITEM_MIN_COUNT: usize = 10;
+
+#[derive(PartialEq, Clone, Debug, Default, Eq)]
+pub struct AuthoritiesChange {
+	/// Block height at which the authorities set starts to be active.
+	pub height: u32,
+	/// When the change was scheduled.
+	pub timestamp: Timestamp,
+	/// Id of the new authority set.
+	pub set_id: SetId,
+	/// New authorities.
+	pub authorities: AuthorityList,
+}
 
 #[derive(PartialEq, Clone, Debug, Default, Eq)]
 pub struct ClientState<H> {
@@ -60,20 +92,25 @@ pub struct ClientState<H> {
 	/// Id of the current authority set.
 	pub current_set_id: u64,
 	/// authorities for the current round
-	pub current_authorities: AuthorityList,
+	// pub current_authorities: AuthorityList,
+	/// Maximum number of finalized headers per update. This is needed to prevent eclipse attacks,
+	/// since we don't store all the previously received headers in the light client.
+	pub max_finalized_headers: usize,
+	pub authorities_changes: Vec1<AuthoritiesChange>,
 	/// phantom type.
 	pub _phantom: PhantomData<H>,
 }
 
-impl<H> From<ClientState<H>> for grandpa_client_primitives::ClientState {
+impl<H: Clone> From<ClientState<H>> for grandpa_client_primitives::ClientState {
 	fn from(client_state: ClientState<H>) -> grandpa_client_primitives::ClientState {
 		grandpa_client_primitives::ClientState {
-			current_authorities: client_state.current_authorities,
+			current_authorities: client_state.current_authorities().clone(),
 			current_set_id: client_state.current_set_id,
 			latest_relay_hash: client_state.latest_relay_hash,
 			latest_relay_height: client_state.latest_relay_height,
 			latest_para_height: client_state.latest_para_height,
 			para_id: client_state.para_id,
+			max_finalized_headers: client_state.max_finalized_headers,
 		}
 	}
 }
@@ -106,6 +143,17 @@ impl<H: Clone> ClientState<H> {
 		Any {
 			type_url: GRANDPA_CLIENT_STATE_TYPE_URL.to_string(),
 			value: self.encode_vec().unwrap(),
+		}
+	}
+
+	pub fn current_authorities(&self) -> &AuthorityList {
+		let key = self
+			.authorities_changes
+			.binary_search_by_key(&self.latest_relay_height, |x| x.height)
+			.unwrap_or_else(|i| i);
+		match self.authorities_changes.get(key) {
+			Some(change) => &change.authorities,
+			_ => &self.authorities_changes.last().authorities,
 		}
 	}
 }
@@ -232,15 +280,15 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 	type Error = Error;
 
 	fn try_from(raw: RawClientState) -> Result<Self, Self::Error> {
-		let current_authorities = raw
-			.current_authorities
-			.into_iter()
-			.map(|set| {
-				let id = Public::try_from(&*set.public_key)
-					.map_err(|_| anyhow!("Invalid ed25519 public key"))?;
-				Ok((id.into(), set.weight))
-			})
-			.collect::<Result<_, Error>>()?;
+		// let current_authorities = raw
+		// 	.current_authorities
+		// 	.into_iter()
+		// 	.map(|set| {
+		// 		let id = Public::try_from(&*set.public_key)
+		// 			.map_err(|_| anyhow!("Invalid ed25519 public key"))?;
+		// 		Ok((id.into(), set.weight))
+		// 	})
+		// 	.collect::<Result<_, Error>>()?;
 
 		let relay_chain = RelayChain::from_i32(raw.relay_chain)?;
 		if raw.latest_relay_hash.len() != 32 {
@@ -256,7 +304,15 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 			latest_para_height: raw.latest_para_height,
 			para_id: raw.para_id,
 			current_set_id: raw.current_set_id,
-			current_authorities,
+			max_finalized_headers: raw.max_finalized_headers as usize,
+			authorities_changes: Vec1::try_from(
+				raw.authorities_changes
+					.into_iter()
+					.map(TryInto::try_into)
+					.collect::<Result<Vec<_>, _>>()?,
+			)
+			.map_err(|e| Error::Custom(e.to_string()))?,
+			// current_authorities,
 			latest_relay_hash,
 			latest_relay_height: raw.latest_relay_height,
 			_phantom: Default::default(),
@@ -276,15 +332,64 @@ impl<H> From<ClientState<H>> for RawClientState {
 			relay_chain: client_state.relay_chain as i32,
 			para_id: client_state.para_id,
 			latest_para_height: client_state.latest_para_height,
-			current_authorities: client_state
-				.current_authorities
+			authorities_changes: client_state
+				.authorities_changes
 				.into_iter()
-				.map(|(id, weight)| RawAuthority {
-					public_key: <sp_finality_grandpa::AuthorityId as AsRef<[u8]>>::as_ref(&id)
-						.to_vec(),
-					weight,
-				})
+				.map(Into::into)
 				.collect(),
+			max_finalized_headers: client_state.max_finalized_headers as u32,
 		}
+	}
+}
+
+impl From<AuthoritiesChange> for RawAuthorityChange {
+	fn from(change: AuthoritiesChange) -> Self {
+		let authorities = change
+			.authorities
+			.into_iter()
+			.map(|(id, weight)| RawAuthority {
+				public_key: <sp_finality_grandpa::AuthorityId as AsRef<[u8]>>::as_ref(&id).to_vec(),
+				weight,
+			})
+			.collect();
+		let tendermint_proto::google::protobuf::Timestamp { seconds, nanos } =
+			change.timestamp.into_tm_time().expect("shouldn't fail").into();
+		let timestamp = prost_types::Timestamp { seconds, nanos };
+		Self {
+			timestamp: Some(timestamp),
+			height: change.height,
+			set_id: change.set_id,
+			authorities,
+		}
+	}
+}
+
+impl TryFrom<RawAuthorityChange> for AuthoritiesChange {
+	type Error = Error;
+
+	fn try_from(raw: RawAuthorityChange) -> Result<Self, Self::Error> {
+		let authorities = raw
+			.authorities
+			.into_iter()
+			.map(|authority| {
+				let id = Public::try_from(&*authority.public_key)
+					.map_err(|_| anyhow!("Invalid ed25519 public key"))?;
+				Ok((id.into(), authority.weight))
+			})
+			.collect::<Result<_, Error>>()?;
+		// Ok((raw.height, raw.set_id, authorities))
+		let prost_types::Timestamp { seconds, nanos } =
+			raw.timestamp.ok_or_else(|| Error::Custom(format!("missing timestamp")))?;
+		let proto_timestamp = tendermint_proto::google::protobuf::Timestamp { seconds, nanos };
+		let timestamp: Time = proto_timestamp
+			.try_into()
+			.map_err(|e| Error::Custom(format!("invalid timestamp {e}")))?;
+
+		Ok(AuthoritiesChange {
+			height: raw.height,
+			timestamp: Timestamp::from(timestamp),
+			set_id: raw.set_id,
+			authorities,
+		})
 	}
 }

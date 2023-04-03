@@ -24,7 +24,7 @@ extern crate alloc;
 use alloc::collections::BTreeMap;
 use codec::{Decode, Encode};
 use core::fmt::Debug;
-use sp_core::{ed25519, sp_std, H256};
+use sp_core::{ed25519, offchain::Timestamp, sp_std, H256};
 use sp_finality_grandpa::{AuthorityId, AuthorityList, AuthoritySignature};
 use sp_runtime::traits::Header;
 use sp_std::prelude::*;
@@ -72,6 +72,9 @@ pub struct ClientState {
 	pub latest_relay_hash: Hash,
 	/// para_id of associated parachain
 	pub para_id: u32,
+	/// Maximum number of finalized headers per update. This is needed to prevent eclipse attacks,
+	/// since we don't store all the previously received headers in the light client.
+	pub max_finalized_headers: usize,
 }
 
 /// Holds relavant parachain proofs for both header and timestamp extrinsic.
@@ -107,7 +110,7 @@ pub trait HostFunctions: light_client_common::HostFunctions + 'static {
 	/// Verify an ed25519 signature
 	fn ed25519_verify(sig: &ed25519::Signature, msg: &[u8], pub_key: &ed25519::Public) -> bool;
 	/// Stores the given list of RelayChain header hashes in the light client's storage.
-	fn insert_relay_header_hashes(headers: &[<Self::Header as Header>::Hash]);
+	fn insert_relay_header_hashes(now_ms: u64, headers: &[<Self::Header as Header>::Hash]);
 	/// Checks if a RelayChain header hash exists in the light client's storage.
 	fn contains_relay_header_hash(hash: <Self::Header as Header>::Hash) -> bool;
 }

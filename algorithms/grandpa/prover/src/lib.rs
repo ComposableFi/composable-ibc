@@ -78,6 +78,9 @@ pub struct GrandpaJustification<H: Header + codec::Decode> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct JustificationNotification(pub sp_core::Bytes);
 
+/// Max number of submitted headers per update
+pub const DEFAULT_MAX_FINALIZED_HEADERS: usize = 100;
+
 impl<T> GrandpaProver<T>
 where
 	T: light_client_common::config::Config,
@@ -161,6 +164,7 @@ where
 			para_id: self.para_id,
 			// we'll set this below
 			latest_para_height: u32::from(finalized_para_header.number()),
+			max_finalized_headers: DEFAULT_MAX_FINALIZED_HEADERS,
 		})
 	}
 

@@ -229,3 +229,14 @@ where
 
 	handle.abort();
 }
+
+#[test]
+fn binary_search() {
+	let mut v = vec![1, 2, 5, 6, 7, 10];
+	let r1 = v.binary_search(&4).unwrap_or_else(|x| x);
+	let r2 = v.binary_search(&3).unwrap_or_else(|x| x);
+	let r3 = v.binary_search(&5).unwrap_or_else(|x| x);
+	assert_eq!(r1, r2);
+	assert_eq!(r1, r3);
+	assert_eq!(r1, 2); // 2
+}

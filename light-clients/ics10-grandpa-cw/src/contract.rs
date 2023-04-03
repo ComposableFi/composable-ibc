@@ -27,6 +27,7 @@ use ibc::core::{
 		height::Height,
 	},
 	ics24_host::identifier::ClientId,
+	ics26_routing::context::ReaderContext,
 };
 use ics08_wasm::{SUBJECT_PREFIX, SUBSTITUTE_PREFIX};
 use ics10_grandpa::{
@@ -61,7 +62,8 @@ pub const GRANDPA_HEADER_HASHES_STORAGE: Item<Vec<H256>> = Item::new("grandpa_he
 pub const GRANDPA_HEADER_HASHES_SET_STORAGE: Map<Vec<u8>, ()> =
 	Map::new("grandpa_header_hashes_set");
 
-pub const GRANDPA_BLOCK_HASHES_CACHE_SIZE: usize = 500;
+pub const GRANDPA_BLOCK_HASHES_CACHE_SIZE: usize = 5000;
+// Limit unknown_headers by 100
 
 #[derive(Clone, Copy, Debug, PartialEq, Default, Eq)]
 pub struct HostFunctions;
@@ -89,7 +91,7 @@ impl grandpa_light_client_primitives::HostFunctions for HostFunctions {
 		pub_key.verify(&sig, msg).is_ok()
 	}
 
-	fn insert_relay_header_hashes(_headers: &[<Self::Header as Header>::Hash]) {
+	fn insert_relay_header_hashes(_now_ms: u64, _headers: &[<Self::Header as Header>::Hash]) {
 		// implementation of this method is in `Context`
 	}
 
@@ -232,6 +234,7 @@ fn process_message(
 
 			let finalized_headers = match &msg.client_message {
 				ClientMessage::Header(header) => {
+					// header.finality_proof.
 					use finality_grandpa::Chain;
 					let ancestry = AncestryChain::<RelayChainHeader>::new(
 						&header.finality_proof.unknown_headers,
@@ -274,8 +277,8 @@ fn process_message(
 			old_client_state.latest_para_height = substitute_client_state.latest_para_height;
 			old_client_state.latest_relay_height = substitute_client_state.latest_relay_height;
 			old_client_state.frozen_height = substitute_client_state.frozen_height;
-			old_client_state.current_authorities =
-				substitute_client_state.current_authorities.clone();
+			old_client_state.authorities_changes =
+				substitute_client_state.authorities_changes.clone();
 			old_client_state.current_set_id = substitute_client_state.current_set_id;
 
 			if old_client_state != substitute_client_state {
@@ -286,7 +289,7 @@ fn process_message(
 			let substitute_client_state = old_client_state;
 			let height = substitute_client_state.latest_height();
 			// consensus state should be replaced as well
-			let mut substitute_consensus_state =
+			let substitute_consensus_state =
 				ctx.consensus_state_prefixed(height, SUBSTITUTE_PREFIX)?;
 			ctx.store_consensus_state_prefixed(height, substitute_consensus_state, SUBJECT_PREFIX);
 			ctx.store_client_state_prefixed(substitute_client_state, SUBJECT_PREFIX)

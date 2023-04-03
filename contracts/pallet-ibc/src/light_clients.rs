@@ -1,4 +1,6 @@
-use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, vec::Vec};
+use alloc::{
+	borrow::ToOwned, boxed::Box, collections::BTreeSet, format, string::ToString, vec::Vec,
+};
 use frame_support::{
 	pallet_prelude::{StorageValue, ValueQuery},
 	traits::StorageInstance,
@@ -29,7 +31,7 @@ use ics10_grandpa::{
 		RelayChainHeader, GRANDPA_CLIENT_MESSAGE_TYPE_URL, GRANDPA_HEADER_TYPE_URL,
 		GRANDPA_MISBEHAVIOUR_TYPE_URL,
 	},
-	client_state::GRANDPA_CLIENT_STATE_TYPE_URL,
+	client_state::{GRANDPA_CLIENT_STATE_TYPE_URL, HEADER_ITEM_LIFETIME, HEADER_ITEM_MIN_COUNT},
 	consensus_state::GRANDPA_CONSENSUS_STATE_TYPE_URL,
 };
 use ics11_beefy::{
@@ -40,8 +42,7 @@ use prost::Message;
 use sp_core::{crypto::ByteArray, ed25519, H256};
 use sp_runtime::{
 	app_crypto::RuntimePublic,
-	traits::{BlakeTwo256, ConstU32, Header},
-	BoundedBTreeSet, BoundedVec,
+	traits::{BlakeTwo256, Header},
 };
 use tendermint::{
 	crypto::{
@@ -132,11 +133,8 @@ impl StorageInstance for GrandpaHeaderHashesStorageInstance {
 
 	const STORAGE_PREFIX: &'static str = "HeaderHashes";
 }
-pub type GrandpaHeaderHashesStorage = StorageValue<
-	GrandpaHeaderHashesStorageInstance,
-	BoundedVec<H256, ConstU32<GRANDPA_BLOCK_HASHES_CACHE_SIZE>>,
-	ValueQuery,
->;
+pub type GrandpaHeaderHashesStorage =
+	StorageValue<GrandpaHeaderHashesStorageInstance, Vec<(u64, H256)>, ValueQuery>;
 
 pub struct GrandpaHeaderHashesSetStorageInstance;
 impl StorageInstance for GrandpaHeaderHashesSetStorageInstance {
@@ -144,16 +142,10 @@ impl StorageInstance for GrandpaHeaderHashesSetStorageInstance {
 		"ibc.lightclients.grandpa"
 	}
 
-	const STORAGE_PREFIX: &'static str = "HeaderHashesSet";
+	const STORAGE_PREFIX: &'static str = "HeaderHashesSetV2";
 }
-pub type GrandpaHeaderHashesSetStorage = StorageValue<
-	GrandpaHeaderHashesSetStorageInstance,
-	BoundedBTreeSet<H256, ConstU32<GRANDPA_BLOCK_HASHES_CACHE_SIZE>>,
-	ValueQuery,
->;
-
-/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
-const GRANDPA_BLOCK_HASHES_CACHE_SIZE: u32 = 500;
+pub type GrandpaHeaderHashesSetStorage =
+	StorageValue<GrandpaHeaderHashesSetStorageInstance, BTreeSet<H256>, ValueQuery>;
 
 impl grandpa_client_primitives::HostFunctions for HostFunctionsManager {
 	type Header = RelayChainHeader;
@@ -162,7 +154,7 @@ impl grandpa_client_primitives::HostFunctions for HostFunctionsManager {
 		pub_key.verify(&msg, sig)
 	}
 
-	fn insert_relay_header_hashes(new_hashes: &[<Self::Header as Header>::Hash]) {
+	fn insert_relay_header_hashes(now_ms: u64, new_hashes: &[<Self::Header as Header>::Hash]) {
 		if new_hashes.is_empty() {
 			return
 		}
@@ -170,21 +162,19 @@ impl grandpa_client_primitives::HostFunctions for HostFunctionsManager {
 		GrandpaHeaderHashesSetStorage::mutate(|hashes_set| {
 			GrandpaHeaderHashesStorage::mutate(|hashes| {
 				for hash in new_hashes {
-					match hashes.try_push(*hash) {
-						Ok(_) => {},
-						Err(_) => {
-							let old_hash = hashes.remove(0);
-							hashes_set.remove(&old_hash);
-							hashes.try_push(*hash).expect(
-								"we just removed an element, so there is space for this one; qed",
-							);
-						},
-					}
-					match hashes_set.try_insert(*hash) {
-						Ok(_) => {},
-						Err(_) => {
-							log::warn!("duplicated value in GrandpaHeaderHashesStorage or the storage is corrupted");
-						},
+					hashes.push((now_ms, *hash));
+					let expired = now_ms.saturating_sub(HEADER_ITEM_LIFETIME.as_millis() as u64);
+					let key = hashes
+						.binary_search_by_key(&expired, |(t, _)| *t)
+						.unwrap_or_else(|idx| idx);
+					hashes_set.insert(*hash);
+					// keep at least HEADER_ITEM_MIN_COUNT items if possible
+					let len = hashes.len();
+					let remove_up_to_index = key.min(len.saturating_sub(HEADER_ITEM_MIN_COUNT));
+					if remove_up_to_index < len {
+						for hash in hashes.drain(..remove_up_to_index).map(|(_, hash)| hash) {
+							hashes_set.remove(&hash);
+						}
 					}
 				}
 			});

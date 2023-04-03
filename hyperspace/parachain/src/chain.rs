@@ -393,43 +393,63 @@ where
 					.ok_or_else(|| anyhow!("No hash found for block: {:?}", from_block))?;
 
 				let base_header_hash = base_header.hash();
-				if base_header_hash != trusted_base_header_hash.into() {
-					log::warn!(
-						"Found misbehaviour on client {}: {:?} != {:?}",
-						self.client_id
-							.as_ref()
-							.map(|x| x.as_str().to_owned())
-							.unwrap_or_else(|| "{unknown}".to_owned()),
-						base_header_hash,
-						trusted_base_header_hash
-					);
+				// if base_header_hash != trusted_base_header_hash.into() {
+				// log::warn!(
+				// 	"Found misbehaviour on client {}: {:?} != {:?}",
+				// 	self.client_id
+				// 		.as_ref()
+				// 		.map(|x| x.as_str().to_owned())
+				// 		.unwrap_or_else(|| "{unknown}".to_owned()),
+				// 	base_header_hash,
+				// 	trusted_base_header_hash
+				// );
 
-					trusted_finality_proof.unknown_headers.clear();
-					for i in from_block..=to_block {
-						let unknown_header_hash =
-							self.relay_client.rpc().block_hash(Some(i.into())).await?.ok_or_else(
-								|| {
-									anyhow!(
-										"No block hash found for block number: {:?}",
-										common_ancestor_block_number
-									)
-								},
-							)?;
-						let unknown_header = self
-							.relay_client
-							.rpc()
-							.header(Some(unknown_header_hash))
-							.await?
-							.ok_or_else(|| {
-								anyhow!("No header found for hash: {:?}", unknown_header_hash)
-							})?;
-						trusted_finality_proof
-							.unknown_headers
-							.push(codec::Decode::decode(&mut &*unknown_header.encode()).expect(
-							"Same header struct defined in different crates, decoding cannot panic",
-						));
+				trusted_finality_proof.unknown_headers.clear();
+				let mut detected_misbehaviour = false;
+				for header in &header.finality_proof.unknown_headers {
+					let i = header.number;
+					// for i in from_block..=to_block {
+					let unknown_header_hash =
+						self.relay_client.rpc().block_hash(Some(i.into())).await?.ok_or_else(
+							|| {
+								anyhow!(
+									"No block hash found for block number: {:?}",
+									common_ancestor_block_number
+								)
+							},
+						)?;
+
+					if !detected_misbehaviour {
+						if unknown_header_hash != header.hash().into() {
+							detected_misbehaviour = true;
+							log::warn!(
+								"Found misbehaviour on client {}: {:?} != {:?}",
+								self.client_id
+									.as_ref()
+									.map(|x| x.as_str().to_owned())
+									.unwrap_or_else(|| "{unknown}".to_owned()),
+								base_header_hash,
+								trusted_base_header_hash
+							);
+						}
 					}
 
+					let unknown_header = self
+						.relay_client
+						.rpc()
+						.header(Some(unknown_header_hash))
+						.await?
+						.ok_or_else(|| {
+							anyhow!("No header found for hash: {:?}", unknown_header_hash)
+						})?;
+					trusted_finality_proof.unknown_headers.push(
+						codec::Decode::decode(&mut &*unknown_header.encode()).expect(
+							"Same header struct defined in different crates, decoding cannot panic",
+						),
+					);
+				}
+
+				if detected_misbehaviour {
 					let misbehaviour = ClientMessage::Misbehaviour(Misbehaviour {
 						first_finality_proof: header.finality_proof,
 						second_finality_proof: trusted_finality_proof,

@@ -29,7 +29,7 @@ use hash_db::Hasher;
 use light_client_common::state_machine;
 use primitives::{
 	error,
-	justification::{find_scheduled_change, AncestryChain, GrandpaJustification},
+	justification::{find_scheduled_change, validate_chain, AncestryChain, GrandpaJustification},
 	parachain_header_storage_key, ClientState, HostFunctions, ParachainHeaderProofs,
 	ParachainHeadersWithFinalityProof,
 };
@@ -58,7 +58,12 @@ where
 		proof;
 
 	// 1. First validate unknown headers.
-	let headers = AncestryChain::<H>::new(&finality_proof.unknown_headers);
+	// let (base, target) = validate_chain(
+	// 	client_state.latest_relay_hash,
+	// 	client_state.latest_relay_height,
+	// 	&finality_proof.unknown_headers,
+	// )?;
+	let headers = AncestryChain::new(&finality_proof.unknown_headers);
 
 	let target = finality_proof
 		.unknown_headers
@@ -66,8 +71,10 @@ where
 		.max_by_key(|h| *h.number())
 		.ok_or_else(|| anyhow!("Unknown headers can't be empty!"))?;
 
+	let target_hash = target.hash();
+
 	// this is illegal
-	if target.hash() != finality_proof.block {
+	if target_hash != finality_proof.block {
 		Err(anyhow!("Latest finalized block should be highest block in unknown_headers"))?;
 	}
 
@@ -85,7 +92,7 @@ where
 		.min_by_key(|h| *h.number())
 		.ok_or_else(|| anyhow!("Unknown headers can't be empty!"))?;
 
-	if base.number() < &client_state.latest_relay_height {
+	if base.number() <= &client_state.latest_relay_height {
 		headers.ancestry(base.hash(), client_state.latest_relay_hash).map_err(|_| {
 			anyhow!(
 				"[verify_parachain_headers_with_grandpa_finality_proof] Invalid ancestry (base -> latest relay block)!"
@@ -93,7 +100,7 @@ where
 		})?;
 	}
 
-	let mut finalized = headers.ancestry(from, target.hash()).map_err(|_| {
+	let mut finalized = headers.ancestry(from, target_hash).map_err(|_| {
 		anyhow!("[verify_parachain_headers_with_grandpa_finality_proof] Invalid ancestry!")
 	})?;
 	finalized.sort();
@@ -139,7 +146,7 @@ where
 	}
 
 	// 4. set new client state, optionally rotating authorities
-	client_state.latest_relay_hash = target.hash();
+	client_state.latest_relay_hash = target_hash;
 	client_state.latest_relay_height = (*target.number()).into();
 	if let Some(max_height) = para_heights.into_iter().max() {
 		if max_height != latest_para_height {
