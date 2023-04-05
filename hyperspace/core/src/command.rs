@@ -80,6 +80,7 @@ impl Cmd {
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
 		let config: Config = toml::from_str(&file_content)?;
+		//ASD
 		let any_chain_a = config.chain_a.into_client().await?;
 		let any_chain_b = config.chain_b.into_client().await?;
 
