@@ -5,8 +5,12 @@ use super::{
 	tx::{broadcast_tx, confirm_tx, sign_tx, simulate_tx},
 };
 use crate::error::Error;
-use bip32::{ExtendedPrivateKey, XPub as ExtendedPublicKey};
+use bech32::ToBase32;
+use bip32::{
+	DerivationPath, ExtendedPrivateKey, Language, Mnemonic, Prefix, XPrv, XPub as ExtendedPublicKey,
+};
 use core::convert::{From, Into, TryFrom};
+use digest::Digest;
 use ibc::core::{
 	ics02_client::height::Height,
 	ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
@@ -19,6 +23,7 @@ use ibc_proto::{
 	cosmos::auth::v1beta1::{query_client::QueryClient, BaseAccount, QueryAccountRequest},
 	google::protobuf::Any,
 };
+use ripemd::Ripemd160;
 use std::{str::FromStr, sync::Arc};
 
 use ics07_tendermint::{
@@ -50,6 +55,12 @@ fn default_fee_amount() -> String {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum KeyBaseConfig {
+	ConfigKeyEntry(ConfigKeyEntry),
+	Mnemonic(String),
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ConfigKeyEntry {
 	pub public_key: String,
 	pub private_key: String,
@@ -70,6 +81,39 @@ impl TryFrom<ConfigKeyEntry> for KeyEntry {
 	}
 }
 
+impl TryFrom<MnemonicEntry> for KeyEntry {
+	type Error = bip32::Error;
+
+	fn try_from(mnemonic_entry: MnemonicEntry) -> Result<Self, Self::Error> {
+		// From mnemonic to pubkey
+		let mnemonic =
+			bip39::Mnemonic::from_phrase(&mnemonic_entry.mnemonic, bip39::Language::English)
+				.unwrap();
+		let seed = bip39::Seed::new(&mnemonic, "");
+		let key_m = XPrv::derive_from_path(seed, &DerivationPath::from_str("m/44'/118'/0'/0/0")?)?;
+
+		// From pubkey to address
+		let sha256 = sha2::Sha256::digest(key_m.public_key().to_bytes());
+		let public_key_hash: [u8; 20] = Ripemd160::digest(sha256).into();
+		let account = bech32::encode(
+			&mnemonic_entry.prefix,
+			public_key_hash.to_base32(),
+			bech32::Variant::Bech32,
+		)
+		.unwrap();
+		Ok(KeyEntry {
+			public_key: key_m.public_key(),
+			private_key: key_m,
+			account,
+			address: public_key_hash.into(),
+		})
+	}
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MnemonicEntry {
+	pub mnemonic: String,
+	pub prefix: String,
+}
 // Implements the [`crate::Chain`] trait for cosmos.
 /// This is responsible for:
 /// 1. Tracking a cosmos light client on a counter-party chain, advancing this light
@@ -172,7 +216,7 @@ pub struct CosmosClientConfig {
 	pub extension_options: Vec<ExtensionOption>,// TODO: Could be set to None
 	*/
 	/// The key that signs transactions
-	pub keybase: ConfigKeyEntry,
+	pub keybase: KeyBaseConfig,
 	/// Whitelisted channels
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 }
@@ -191,6 +235,18 @@ where
 		let commitment_prefix = CommitmentPrefix::try_from(config.store_prefix.as_bytes().to_vec())
 			.map_err(|e| Error::from(format!("Invalid store prefix {:?}", e)))?;
 
+		let keybase: KeyEntry;
+		match config.keybase {
+			KeyBaseConfig::ConfigKeyEntry(config_key) =>
+				keybase = KeyEntry::try_from(config_key).map_err(|e| e.to_string())?,
+			KeyBaseConfig::Mnemonic(mnemonic) =>
+				keybase = KeyEntry::try_from(MnemonicEntry {
+					mnemonic,
+					prefix: config.account_prefix.clone(),
+				})
+				.map_err(|e| e.to_string())?,
+		}
+
 		Ok(Self {
 			name: config.name,
 			chain_id,
@@ -206,7 +262,7 @@ where
 			fee_amount: config.fee_amount,
 			gas_limit: config.gas_limit,
 			max_tx_size: config.max_tx_size,
-			keybase: KeyEntry::try_from(config.keybase).map_err(|e| e.to_string())?,
+			keybase,
 			channel_whitelist: config.channel_whitelist,
 			_phantom: std::marker::PhantomData,
 			tx_mutex: Default::default(),
@@ -401,5 +457,63 @@ where
 		let proof = CommitmentProofBytes::try_from(merkle_proof)
 			.map_err(|err| Error::Custom(format!("bad client state proof: {}", err)))?;
 		Ok((response, proof.into()))
+	}
+}
+
+#[cfg(test)]
+pub mod tests {
+
+	use crate::key_provider::KeyEntry;
+
+	use super::MnemonicEntry;
+
+	struct TestVector {
+		mnemonic: &'static str,
+		private_key: [u8; 32],
+		public_key: [u8; 33],
+		account: &'static str,
+	}
+	const TEST_VECTORS : &[TestVector] = &[
+		TestVector {
+			mnemonic: "idea gap afford glow ugly suspect exile wedding fiber turn opinion weekend moon project egg certain play obvious slice delay present weekend toe ask",
+			private_key: [
+				220, 53, 10, 206, 12, 57, 15, 47, 116, 210, 236, 140, 173, 220, 159, 74,
+				105, 112, 131, 55, 152, 173, 197, 173, 254, 22, 161, 53, 60, 30, 97, 181
+			],
+			public_key: [
+				2, 21, 157, 166, 61, 81, 112, 226, 211, 32, 5, 1, 133, 147, 182, 183, 41,
+				26, 243, 17, 241, 200, 87, 140, 93, 229, 26, 42, 81, 39, 208, 4, 219
+			],
+			account: "cosmos15hf3dgggyt4azpd693ax7fdfve8d5m6ct72z9p",
+		},
+		TestVector {
+			mnemonic: "elite program lift later ask fox change process dirt talk type coconut",
+			private_key: [97, 173, 171, 67, 228, 198, 20, 233, 30, 232, 208, 250, 151, 66, 76, 129, 83, 100, 17, 219, 74, 20, 43, 202, 110, 166, 72, 184, 100, 180, 135, 132],
+			public_key: [2, 167, 203, 215, 223, 101, 49, 90, 51, 44, 171, 156, 157, 167, 99, 213, 97, 84, 38, 210, 64, 168, 133, 38, 159, 49, 4, 24, 159, 137, 83, 92, 160],
+			account: "cosmos1dxsre7u4zkg28k4fqtgy2slcrrq46hqafe6547",
+		},
+		TestVector {
+			mnemonic: "habit few zero correct fancy hair common club slow lunch brief spawn away brief loyal flee witness possible faint legend spell arrive gravity hybrid",
+			private_key: [91, 189, 78, 43, 217, 14, 16, 247, 18, 196, 173, 149, 131, 156, 254, 191, 156, 154, 60, 255, 196, 2, 97, 219, 92, 160, 15, 224, 177, 216, 27, 44],
+			public_key: [3, 45, 249, 112, 87, 75, 114, 244, 199, 129, 6, 142, 9, 221, 205, 100, 226, 233, 131, 167, 146, 187, 181, 7, 176, 80, 107, 61, 151, 44, 185, 116, 116],
+			account: "cosmos1xf5280nzgqxyxps526vw0t6vd90gthd76fv6s8",
+		},
+	];
+
+	#[test]
+	fn test_from_mnemonic() {
+		for vector in TEST_VECTORS {
+			match KeyEntry::try_from(MnemonicEntry {
+				mnemonic: vector.mnemonic.to_string(),
+				prefix: "cosmos".to_string(),
+			}) {
+				Ok(key_entry) => {
+					assert_eq!(key_entry.private_key.to_bytes(), vector.private_key);
+					assert_eq!(key_entry.public_key.to_bytes(), vector.public_key);
+					assert_eq!(key_entry.account, vector.account);
+				},
+				Err(_) => panic!("Try from mnemonic failed"),
+			}
+		}
 	}
 }
