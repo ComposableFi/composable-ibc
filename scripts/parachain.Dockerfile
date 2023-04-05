@@ -25,7 +25,6 @@ COPY --from=build /code/target/release/parachain-node /usr/local/bin
 RUN apt update && \
     apt install -y ca-certificates && \
     update-ca-certificates && \
-    apt remove ca-certificates -y && \
     rm -rf /var/lib/apt/lists/*
 
 # check if executable works in this container
