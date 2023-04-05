@@ -76,7 +76,6 @@ impl From<SendPingParams> for FakeSendPingParams {
 	}
 }
 
-//ASD
 #[derive(Debug, Clone)]
 pub enum ComposableConfig {}
 
