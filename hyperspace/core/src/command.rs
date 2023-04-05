@@ -16,7 +16,7 @@ use anyhow::Result;
 use clap::Parser;
 use primitives::Chain;
 use prometheus::Registry;
-use std::{path::PathBuf, str::FromStr, time::Duration, num::NonZeroU64};
+use std::{num::NonZeroU64, path::PathBuf, str::FromStr, time::Duration};
 
 use crate::{chain::Config, fish, relay, Mode};
 use ibc::core::{ics04_channel::channel::Order, ics24_host::identifier::PortId};
@@ -79,7 +79,6 @@ impl Cmd {
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
 		let config: Config = toml::from_str(&file_content)?;
-		//ASD
 		let any_chain_a = config.chain_a.into_client().await?;
 		let any_chain_b = config.chain_b.into_client().await?;
 
@@ -139,8 +138,7 @@ impl Cmd {
 	}
 
 	pub async fn create_connection(&self) -> Result<Config> {
-		let delay_period_seconds: NonZeroU64  = self
-			.delay_period_seconds.into();
+		let delay_period_seconds: NonZeroU64 = self.delay_period_seconds.into();
 		let delay = Duration::from_secs(delay_period_seconds.into());
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
