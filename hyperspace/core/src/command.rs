@@ -16,7 +16,7 @@ use anyhow::Result;
 use clap::Parser;
 use primitives::Chain;
 use prometheus::Registry;
-use std::{path::PathBuf, str::FromStr, time::Duration};
+use std::{path::PathBuf, str::FromStr, time::Duration, num::NonZeroU64};
 
 use crate::{chain::Config, fish, relay, Mode};
 use ibc::core::{ics04_channel::channel::Order, ics24_host::identifier::PortId};
@@ -60,8 +60,7 @@ pub struct Cmd {
 	port_id: Option<String>,
 	/// Connection delay period in seconds
 	#[clap(long)]
-	#[clap(long)]
-	delay_period: Option<u32>,
+	delay_period_seconds: std::num::NonZeroU32,
 	/// Channel order
 	#[clap(long)]
 	order: Option<String>,
@@ -140,10 +139,9 @@ impl Cmd {
 	}
 
 	pub async fn create_connection(&self) -> Result<Config> {
-		let delay = self
-			.delay_period
-			.expect("delay_period should be provided when creating a connection");
-		let delay = Duration::from_secs(delay.into());
+		let delay_period_seconds: NonZeroU64  = self
+			.delay_period_seconds.into();
+		let delay = Duration::from_secs(delay_period_seconds.into());
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
 		let mut config: Config = toml::from_str(&file_content)?;
