@@ -81,7 +81,6 @@ impl From<String> for AnyError {
 	}
 }
 
-//ASD
 chains! {
 	Parachain(ParachainClientConfig, ParachainClient<DefaultConfig>),
 	Dali(ParachainClientConfig, ParachainClient<DaliConfig>),
