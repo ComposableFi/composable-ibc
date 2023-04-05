@@ -708,6 +708,7 @@ pub mod pallet {
 				use ibc_primitives::Error::*;
 				match e {
 					SendPacketError { .. } => Error::<T>::TransferSend,
+					// basically that can be anything, as simple as Balance too, but how one may get error of it?........		
 					SendTransferError { .. } => Error::<T>::TransferSend,
 
 					ReceivePacketError { .. } => Error::<T>::TransferProtocol,
