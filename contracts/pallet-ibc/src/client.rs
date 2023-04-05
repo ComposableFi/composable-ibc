@@ -96,7 +96,7 @@ where
 		if cfg!(any(test, feature = "runtime-benchmarks")) {
 			"tendermint".to_string()
 		} else {
-			match <T as Config>::LIGHT_CLIENT_PROTOCOL {
+			match <T as Config>::LightClientProtocol::get() {
 				LightClientProtocol::Beefy => "beefy".to_string(),
 				LightClientProtocol::Grandpa => "grandpa".to_string(),
 			}
@@ -163,7 +163,7 @@ where
 		let timestamp = Timestamp::from_nanoseconds(1).unwrap();
 		let timestamp = timestamp.into_tm_time().unwrap();
 
-		let consensus_state = match <T as Config>::LIGHT_CLIENT_PROTOCOL {
+		let consensus_state = match <T as Config>::LightClientProtocol::get() {
 			crate::LightClientProtocol::Beefy =>
 				AnyConsensusState::Beefy(ics11_beefy::consensus_state::ConsensusState {
 					timestamp,
@@ -274,7 +274,7 @@ where
 		};
 
 		// now this header can be trusted
-		let consensus_state = match <T as Config>::LIGHT_CLIENT_PROTOCOL {
+		let consensus_state = match <T as Config>::LightClientProtocol::get() {
 			crate::LightClientProtocol::Beefy => {
 				let cs_state = ics11_beefy::consensus_state::ConsensusState {
 					timestamp,
