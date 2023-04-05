@@ -88,6 +88,7 @@ pub fn channel_dispatch<Ctx>(
 where
 	Ctx: ReaderContext,
 {
+	log::debug!(target: "ics::channel", "dispatch {:?}",&msg);
 	let output = match msg {
 		ChannelMsg::ChannelOpenInit(msg) => chan_open_init::process(ctx, msg),
 		ChannelMsg::ChannelOpenTry(msg) => chan_open_try::process::<_>(ctx, msg),

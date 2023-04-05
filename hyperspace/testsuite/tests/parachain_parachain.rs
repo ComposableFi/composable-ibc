@@ -14,7 +14,7 @@
 
 use futures::StreamExt;
 use hyperspace_core::{logging, substrate::DefaultConfig};
-use hyperspace_parachain::{
+use hyperspace::parachain::{
 	finality_protocol::FinalityProtocol, ParachainClient, ParachainClientConfig,
 };
 use hyperspace_primitives::{utils::create_clients, IbcProvider, TestProvider};
