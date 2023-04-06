@@ -402,10 +402,6 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			assert!(
-				!self.assets.is_empty(),
-				"You must configure the native currency's asset_id and denom!"
-			);
 			for AssetConfig { id, denom } in &self.assets {
 				IbcDenoms::<T>::insert(denom.clone(), id);
 				IbcAssetIds::<T>::insert(id, denom);
