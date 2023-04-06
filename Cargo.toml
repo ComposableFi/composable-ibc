@@ -40,7 +40,7 @@ members = [
     "hyperspace/metrics",
 
     # utilities
-#    "utils/subxt/codegen",
+    "utils/subxt/codegen",
     "utils/subxt/generated",
     "utils/parachain-node",
     "utils/parachain-node/runtime",
@@ -78,7 +78,6 @@ sp-wasm-interface = { git = "https://github.com/paritytech/substrate", branch = 
 sp-weights = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 
-#[patch."https://github.com/paritytech/substrate?branch=polkadot-v0.9.36"]
 [patch."https://github.com/paritytech/substrate"]
 sc-executor = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.38" }
 sc-executor-common = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.38" }
