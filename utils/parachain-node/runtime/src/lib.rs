@@ -424,6 +424,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 	type ControllerOrigin = EnsureRoot<AccountId>;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+	type PriceForSiblingDelivery = ();
 	type WeightInfo = ();
 }
 
@@ -524,6 +525,7 @@ impl pallet_assets::Config for Runtime {
 	type WeightInfo = ();
 	type RemoveItemsLimit = sp_core::ConstU32<128>;
 	type AssetIdParameter = Self::AssetId;
+	type CallbackHandle = ();
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -886,6 +888,12 @@ impl_runtime_apis! {
 		) -> pallet_transaction_payment::FeeDetails<Balance> {
 			TransactionPayment::query_fee_details(uxt, len)
 		}
+		fn query_weight_to_fee(w: Weight) -> Balance {
+			TransactionPayment::weight_to_fee(w)
+		}
+		fn query_length_to_fee(l: u32) -> Balance {
+			TransactionPayment::length_to_fee(l)
+		}
 	}
 
 	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
@@ -1034,6 +1042,7 @@ impl_runtime_apis! {
 		where
 			RuntimeCall: codec::Codec,
 			AccountId: codec::Codec + codec::EncodeLike<sp_runtime::AccountId32> + Into<sp_runtime::AccountId32> + Clone+ PartialEq + scale_info::TypeInfo + core::fmt::Debug,
+			Block: sp_runtime::traits::Block
 	{
 		fn create_transaction(call: RuntimeCall, signer: AccountId) -> Vec<u8> {
 			use sp_runtime::{
