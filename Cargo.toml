@@ -40,7 +40,7 @@ members = [
     "hyperspace/metrics",
 
     # utilities
-#    "utils/subxt/codegen",
+    "utils/subxt/codegen",
     "utils/subxt/generated",
     "utils/parachain-node",
     "utils/parachain-node/runtime",
