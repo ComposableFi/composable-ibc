@@ -27,8 +27,8 @@ jsonrpsee = { version = "0.16.2", features = ["async-client", "jsonrpsee-client-
 openssl-probe = "0.1.2"
 
 # substrate
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-keystore = "0.12.0"
 
 # ibc

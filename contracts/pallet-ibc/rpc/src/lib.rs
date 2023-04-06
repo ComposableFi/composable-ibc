@@ -1569,8 +1569,7 @@ where
 		ext_hash: Block::Hash,
 	) -> Result<IdentifiedClientState> {
 		let api = self.client.runtime_api();
-		let at = BlockId::Hash(block_hash);
-		let block = self.client.block(&at).ok().flatten().ok_or_else(|| {
+		let block = self.client.block(block_hash).ok().flatten().ok_or_else(|| {
 			runtime_error_into_rpc_error("[ibc_rpc]: failed to find block with provided hash")
 		})?;
 		let extrinsics = block.block.extrinsics();
@@ -1585,7 +1584,7 @@ where
 			})?;
 
 		let events = api
-			.block_events(&at, Some(ext_index as u32))
+			.block_events(&BlockId::Number(*block.block.header().number()), Some(ext_index as _))
 			.map_err(|_| runtime_error_into_rpc_error("[ibc_rpc]: failed to read block events"))?;
 
 		// There should be only one ibc event in this list in this case
@@ -1597,7 +1596,10 @@ where
 		match event {
 			Ok(IbcEvent::CreateClient { client_id, .. }) => {
 				let result: ibc_primitives::QueryClientStateResponse = api
-					.client_state(&at, client_id.clone())
+					.client_state(
+						&BlockId::Number(*block.block.header().number()),
+						client_id.clone(),
+					)
 					.ok()
 					.flatten()
 					.ok_or_else(|| runtime_error_into_rpc_error("client state to exist"))?;

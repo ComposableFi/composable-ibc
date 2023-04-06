@@ -15,16 +15,16 @@ mmr-lib= { package = "ckb-merkle-mountain-range", version = "0.3.2", default-fea
 derive_more = { version = "0.99.17", default-features = false, features = ["from"]  }
 
 # substrate
-sp-std = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-sp-core = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-sp-core-hashing = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-pallet-mmr = { package = "pallet-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-pallet-mmr-primitives = { package = "sp-mmr-primitives", default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-beefy-primitives = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", package = "sp-beefy" }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
+sp-std = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+sp-core = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+sp-core-hashing = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+pallet-mmr = { package = "pallet-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+pallet-mmr-primitives = { package = "sp-mmr-primitives", default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+beefy-primitives = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", package = "sp-beefy" }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 
 # local
 beefy-light-client-primitives = { path = "../primitives", default-features = false }
@@ -35,14 +35,14 @@ tokio = { version = "1.17.0", features = ["full"] }
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
 hex-literal = "0.3.4"
 serde_json = "1.0.74"
-pallet-mmr-rpc = { package = "mmr-gadget", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+pallet-mmr-rpc = { package = "mmr-gadget", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 beefy-prover = { path = "../prover" }
 hex = "0.4.3"
 futures = "0.3.21"
-beefy-gadget = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+beefy-gadget = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 hyperspace-core = { path = "../../../hyperspace/core", features = ["testing", "build-metadata-from-ws"] }
 
 
