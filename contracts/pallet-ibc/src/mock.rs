@@ -139,6 +139,8 @@ impl pallet_assets::Config for Test {
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
 	type RemoveItemsLimit = ConstU32<128>;
 	type AssetIdParameter = Self::AssetId;
+
+	type CallbackHandle = ();
 }
 
 parameter_types! {

@@ -29,24 +29,24 @@ jsonrpsee-ws-client = "0.16.2"
 finality-grandpa = "0.16.0"
 
 # substrate
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", features = ["full_crypto"] }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", features = ["full_crypto"] }
 ss58-registry = "1.28.0"
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 
 # subxt
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
 
-beefy-primitives = {  git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", package = "sp-beefy" }
-beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-pallet-mmr = { package = "pallet-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-pallet-mmr-primitives = { package = "sp-mmr-primitives", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-transaction-payment-rpc = { package = "pallet-transaction-payment-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-transaction-payment-runtime-api = { package = "pallet-transaction-payment-rpc-runtime-api", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+beefy-primitives = {  git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", package = "sp-beefy" }
+beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+pallet-mmr = { package = "pallet-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+pallet-mmr-primitives = { package = "sp-mmr-primitives", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+transaction-payment-rpc = { package = "pallet-transaction-payment-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+transaction-payment-runtime-api = { package = "pallet-transaction-payment-rpc-runtime-api", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 
 # composable
 ibc = { path = "../../ibc/modules", features = [] }
@@ -63,20 +63,20 @@ beefy-prover = { path = "../../algorithms/beefy/prover" }
 beefy-light-client = { path = "../../algorithms/beefy/verifier" }
 beefy-light-client-primitives = {  path = "../../algorithms/beefy/primitives" }
 ics11-beefy = { path = "../../light-clients/ics11-beefy" }
-beefy-gadget-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+beefy-gadget-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 
 # Grandpa
 grandpa-prover = { path = "../../algorithms/grandpa/prover" }
 grandpa-light-client-primitives = { path = "../../algorithms/grandpa/primitives" }
 ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
-finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
-polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.36" }
-sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
+sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 
 [dev-dependencies]
 derive_more = "0.99.17"
 clap = {version = "3.2.0", features = ["derive"]}
-state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }
+state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 prost = "0.11"
 primitives = { path = "../primitives", package = "hyperspace-primitives", features = ["testing"] }
 subxt-generated = { path = "../../utils/subxt/generated" }

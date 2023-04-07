@@ -6,9 +6,7 @@ use super::{
 };
 use crate::error::Error;
 use bech32::ToBase32;
-use bip32::{
-	DerivationPath, ExtendedPrivateKey, Language, Mnemonic, Prefix, XPrv, XPub as ExtendedPublicKey,
-};
+use bip32::{DerivationPath, ExtendedPrivateKey, XPrv, XPub as ExtendedPublicKey};
 use core::convert::{From, Into, TryFrom};
 use digest::Digest;
 use ibc::core::{
