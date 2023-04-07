@@ -54,7 +54,7 @@ where
 	let MsgUpgradeAnyClient { client_id, .. } = msg;
 
 	// Read client state from the host chain store.
-	let client_state = ctx.client_state(&client_id)?;
+	let client_state = ctx.client_state(&client_id, &mut Vec::new())?;
 
 	if client_state.is_frozen() {
 		return Err(Error::client_frozen(client_id))

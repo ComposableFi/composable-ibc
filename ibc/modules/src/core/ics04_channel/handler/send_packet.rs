@@ -71,7 +71,7 @@ pub fn send_packet<Ctx: ReaderContext>(
 	let client_id = connection_end.client_id().clone();
 
 	let client_state = ctx
-		.client_state(&client_id)
+		.client_state(&client_id, &mut Vec::new())
 		.map_err(|e| Error::implementation_specific(e.to_string()))?;
 
 	// prevent accidental sends with clients that cannot be updated
@@ -86,7 +86,7 @@ pub fn send_packet<Ctx: ReaderContext>(
 	}
 
 	let consensus_state = ctx
-		.consensus_state(&client_id, latest_height)
+		.consensus_state(&client_id, latest_height, &mut Vec::new())
 		.map_err(|_| Error::error_invalid_consensus_state())?;
 	let latest_timestamp = consensus_state.timestamp();
 	let packet_timestamp = packet.timeout_timestamp;

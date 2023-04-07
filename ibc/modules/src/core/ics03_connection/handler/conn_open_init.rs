@@ -47,7 +47,7 @@ pub(crate) fn process<Ctx: ReaderContext>(
 	}
 
 	// An IBC client running on the local (host) chain should exist.
-	ctx.client_state(&msg.client_id).map_err(Error::ics02_client)?;
+	ctx.client_state(&msg.client_id, &mut Vec::new()).map_err(Error::ics02_client)?;
 
 	let versions = match msg.version {
 		Some(version) =>

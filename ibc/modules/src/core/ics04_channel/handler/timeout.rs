@@ -75,7 +75,7 @@ where
 	let proof_height = msg.proofs.height();
 
 	let consensus_state = ctx
-		.consensus_state(&client_id, proof_height)
+		.consensus_state(&client_id, proof_height, &mut Vec::new())
 		.map_err(|_| Error::error_invalid_consensus_state())?;
 
 	let proof_timestamp = consensus_state.timestamp();

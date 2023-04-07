@@ -41,7 +41,7 @@ pub fn verify_connection_proof<Ctx: ReaderContext>(
 	proof: &CommitmentProofBytes,
 ) -> Result<(), Error> {
 	// Fetch the client state (IBC client on the local/host chain).
-	let client_state = ctx.client_state(connection_end.client_id()).map_err(Error::ics02_client)?;
+	let client_state = ctx.client_state(connection_end.client_id(), &mut Vec::new()).map_err(Error::ics02_client)?;
 
 	// The client must not be frozen.
 	if client_state.is_frozen() {
@@ -50,7 +50,7 @@ pub fn verify_connection_proof<Ctx: ReaderContext>(
 
 	// The client must have the consensus state for the height where this proof was created.
 	let consensus_state = ctx
-		.consensus_state(connection_end.client_id(), proof_height)
+		.consensus_state(connection_end.client_id(), proof_height, &mut Vec::new())
 		.map_err(|e| Error::consensus_state_verification_failure(proof_height, e))?;
 
 	// A counterparty connection id of None causes `unwrap()` below and indicates an internal
@@ -94,14 +94,14 @@ pub fn verify_client_proof<Ctx: ReaderContext>(
 	proof: &CommitmentProofBytes,
 ) -> Result<(), Error> {
 	// Fetch the local client state (IBC client running on the host chain).
-	let client_state = ctx.client_state(connection_end.client_id()).map_err(Error::ics02_client)?;
+	let client_state = ctx.client_state(connection_end.client_id(), &mut Vec::new()).map_err(Error::ics02_client)?;
 
 	if client_state.is_frozen() {
 		return Err(Error::frozen_client(connection_end.client_id().clone()))
 	}
 
 	let consensus_state = ctx
-		.consensus_state(connection_end.client_id(), proof_height)
+		.consensus_state(connection_end.client_id(), proof_height, &mut Vec::new())
 		.map_err(|e| Error::consensus_state_verification_failure(proof_height, e))?;
 
 	let client_def = client_state.client_def();
@@ -130,14 +130,14 @@ pub fn verify_consensus_proof<Ctx: ReaderContext>(
 	host_consensus_state_proof: Vec<u8>,
 ) -> Result<(), Error> {
 	// Fetch the client state (IBC client on the local chain).
-	let client_state = ctx.client_state(connection_end.client_id()).map_err(Error::ics02_client)?;
+	let client_state = ctx.client_state(connection_end.client_id(), &mut Vec::new()).map_err(Error::ics02_client)?;
 
 	if client_state.is_frozen() {
 		return Err(Error::frozen_client(connection_end.client_id().clone()))
 	}
 
 	let consensus_state = ctx
-		.consensus_state(connection_end.client_id(), height)
+		.consensus_state(connection_end.client_id(), height, &mut Vec::new())
 		.map_err(|e| Error::consensus_state_verification_failure(height, e))?;
 
 	let client = client_state.client_def();

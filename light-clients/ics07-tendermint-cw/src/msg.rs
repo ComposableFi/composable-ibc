@@ -1,10 +1,13 @@
-use crate::{ics23::FakeInner, Bytes, ContractError};
-use core::str::FromStr;
+use crate::{ics23::FakeInner, Bytes, ContractError, contract::HostFunctions};
+use core::{
+	str::FromStr,
+	time::Duration,
+};
 use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::{
 		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
-		ics24_host::Path,
+		ics24_host::Path, ics02_client::trust_threshold::TrustThreshold,
 	},
 	protobuf::Protobuf,
 	Height,
@@ -14,10 +17,9 @@ use ics08_wasm::{
 	client_message::Header as WasmHeader, client_state::ClientState as WasmClientState,
 	consensus_state::ConsensusState as WasmConsensusState,
 };
-use ics10_grandpa::{
+use ics07_tendermint::{
 	client_message::{ClientMessage, Header, Misbehaviour},
 	client_state::ClientState,
-	consensus_state::ConsensusState,
 };
 use prost::Message;
 use serde::{Deserializer, Serializer};
@@ -87,31 +89,10 @@ impl ContractResult {
 }
 
 #[cw_serde]
-pub struct ClientStateCallResponse {
-	pub client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
-	pub new_consensus_state: WasmConsensusState<FakeInner>,
-	pub new_client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
-	pub result: ContractResult,
-}
-
-#[cw_serde]
-pub struct InitializeState {
-	pub client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
-	pub consensus_state: WasmConsensusState<FakeInner>,
-}
-
-#[cw_serde]
 pub struct InstantiateMsg {}
 
 #[cw_serde]
-pub struct ClientCreateRequest {
-	client_create_request: WasmConsensusState<FakeInner>,
-}
-
-#[cw_serde]
 pub enum ExecuteMsg {
-	InitializeState(InitializeState),
-	ClientCreateRequest(WasmClientState<FakeInner, FakeInner, FakeInner>),
 	VerifyMembership(VerifyMembershipMsgRaw),
 	VerifyNonMembership(VerifyNonMembershipMsgRaw),
 	VerifyClientMessage(VerifyClientMessageRaw),
@@ -167,6 +148,8 @@ pub struct VerifyMembershipMsg {
 	pub path: Path,
 	pub value: Vec<u8>,
 	pub height: Height,
+	pub delay_block_period: u64,
+	pub delay_time_period: u64,
 }
 
 impl TryFrom<VerifyMembershipMsgRaw> for VerifyMembershipMsg {
@@ -184,6 +167,8 @@ impl TryFrom<VerifyMembershipMsgRaw> for VerifyMembershipMsg {
 			value: raw.value,
 			height,
 			prefix: CommitmentPrefix::try_from(prefix)?,
+			delay_block_period: raw.delay_block_period,
+			delay_time_period: raw.delay_time_period,
 		})
 	}
 }
@@ -204,6 +189,8 @@ pub struct VerifyNonMembershipMsg {
 	pub proof: CommitmentProofBytes,
 	pub path: Path,
 	pub height: Height,
+	pub delay_block_period: u64,
+	pub delay_time_period: u64,
 }
 
 impl TryFrom<VerifyNonMembershipMsgRaw> for VerifyNonMembershipMsg {
@@ -215,7 +202,14 @@ impl TryFrom<VerifyNonMembershipMsgRaw> for VerifyNonMembershipMsg {
 		let path_str = raw.path.key_path.join("");
 		let path = Path::from_str(&path_str)?;
 		let height = Height::from(raw.height);
-		Ok(Self { proof, path, height, prefix: CommitmentPrefix::try_from(prefix)? })
+		Ok(Self { 
+			proof, 
+			path, 
+			height, 
+			prefix: CommitmentPrefix::try_from(prefix)?,
+			delay_block_period: raw.delay_block_period,
+			delay_time_period: raw.delay_time_period,
+		})
 	}
 }
 
@@ -330,32 +324,37 @@ pub struct VerifyUpgradeAndUpdateStateMsgRaw {
 	pub upgrade_consensus_state: WasmConsensusState<FakeInner>,
 	#[schemars(with = "String")]
 	#[serde(with = "Base64", default)]
-	pub proof_upgrade_client: Vec<u8>,
+	pub proof_upgrade_client: Bytes,
 	#[schemars(with = "String")]
 	#[serde(with = "Base64", default)]
-	pub proof_upgrade_consensus_state: Vec<u8>,
+	pub proof_upgrade_consensus_state: Bytes,
 }
 
-pub struct VerifyUpgradeAndUpdateStateMsg<H> {
-	pub upgrade_client_state: ClientState<H>,
-	pub upgrade_consensus_state: ConsensusState,
-	pub proof_upgrade_client: Vec<u8>,
-	pub proof_upgrade_consensus_state: Vec<u8>,
+pub struct VerifyUpgradeAndUpdateStateMsg {
+	pub upgrade_client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
+	pub upgrade_consensus_state: WasmConsensusState<FakeInner>,
+	pub proof_upgrade_client: CommitmentProofBytes,
+	pub proof_upgrade_consensus_state: CommitmentProofBytes,
 }
 
-impl<H: Clone> TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUpdateStateMsg<H> {
+impl TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUpdateStateMsg {
 	type Error = ContractError;
 
 	fn try_from(raw: VerifyUpgradeAndUpdateStateMsgRaw) -> Result<Self, Self::Error> {
 		let any = Any::decode(&mut raw.upgrade_client_state.data.as_slice())?;
-		let upgrade_client_state = ClientState::decode_vec(&any.value)?;
-		let any = Any::decode(&mut raw.upgrade_consensus_state.data.as_slice())?;
-		let upgrade_consensus_state = ConsensusState::decode_vec(&any.value)?;
+		let upgrade_client_state: ics07_tendermint::client_state::ClientState<HostFunctions> = ClientState::decode_vec(&any.value)?;
+		if upgrade_client_state.trust_level != TrustThreshold::ZERO ||
+			upgrade_client_state.trusting_period != Duration::ZERO ||
+			upgrade_client_state.max_clock_drift != Duration::ZERO ||
+			upgrade_client_state.frozen_height != None {
+				return ibc::prelude::Err(ContractError::Tendermint("Upgrade client state not zeroed".to_string()))
+			}
+		
 		Ok(VerifyUpgradeAndUpdateStateMsg {
-			upgrade_client_state,
-			upgrade_consensus_state,
-			proof_upgrade_client: raw.proof_upgrade_client,
-			proof_upgrade_consensus_state: raw.proof_upgrade_consensus_state,
+			upgrade_client_state: raw.upgrade_client_state,
+			upgrade_consensus_state: raw.upgrade_consensus_state,
+			proof_upgrade_client: CommitmentProofBytes::try_from(raw.proof_upgrade_client)?,
+			proof_upgrade_consensus_state: CommitmentProofBytes::try_from(raw.proof_upgrade_consensus_state)?,
 		})
 	}
 }

@@ -1135,11 +1135,11 @@ where
 		})?;
 
 		let client_state =
-			ctx.client_state(&client_id).map_err(|_| IbcHandlerError::ClientStateError {
+			ctx.client_state(&client_id, &mut Vec::new()).map_err(|_| IbcHandlerError::ClientStateError {
 				msg: Some(format!("CLient state not found for {:?}", client_id)),
 			})?;
 		let consensus_state = ctx
-			.consensus_state(&client_id, client_state.latest_height())
+			.consensus_state(&client_id, client_state.latest_height(), &mut Vec::new())
 			.map_err(|_| IbcHandlerError::Other {
 				msg: Some(format!(
 					"Consensus state not found for {:?} at {:?}",

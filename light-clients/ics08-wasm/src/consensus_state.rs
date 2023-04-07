@@ -90,13 +90,20 @@ where
 		let inner = AnyConsensusState::try_from(any).map_err(|e| {
 			format!("failed to decode ConsensusState::data into ConsensusState: {}", e)
 		})?;
-		Ok(Self { data: raw.data, timestamp: raw.timestamp, inner: Box::new(inner) })
+		Ok(Self {
+			data: raw.data,
+			timestamp: raw.timestamp,
+			inner: Box::new(inner),
+		})
 	}
 }
 
 impl<AnyConsensusState> From<ConsensusState<AnyConsensusState>> for RawConsensusState {
 	fn from(value: ConsensusState<AnyConsensusState>) -> Self {
-		Self { data: value.data, timestamp: value.timestamp }
+		Self {
+			data: value.data,
+			timestamp: value.timestamp,
+		}
 	}
 }
 

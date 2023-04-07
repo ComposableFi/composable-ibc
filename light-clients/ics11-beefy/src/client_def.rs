@@ -164,7 +164,7 @@ where
 				let height =
 					Height::new(client_state.para_id as u64, header.parachain_header.number as u64);
 				// Skip duplicate consensus states
-				if ctx.consensus_state(&client_id, height).is_ok() {
+				if ctx.consensus_state(&client_id, height, &mut Vec::new()).is_ok() {
 					continue
 				}
 				parachain_cs_states.push((

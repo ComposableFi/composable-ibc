@@ -59,6 +59,13 @@ pub enum Path {
 	Acks(AcksPath),
 	Receipts(ReceiptsPath),
 	Upgrade(ClientUpgradePath),
+	Outside(OutsidePath),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Display)]
+#[display(fmt = "{}", path)]
+pub struct OutsidePath{
+	pub path: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Display)]
@@ -188,8 +195,15 @@ impl FromStr for Path {
 			.or_else(|| parse_acks(&components))
 			.or_else(|| parse_receipts(&components))
 			.or_else(|| parse_upgrades(&components))
+			.or_else(|| parse_outside_paths(&components))
 			.ok_or_else(|| PathError::parse_failure(s.to_string()))
 	}
+}
+
+fn parse_outside_paths(components: &[&str]) -> Option<Path> {
+	Some(OutsidePath{
+		path: components.join("/").to_string()
+	}.into())
 }
 
 fn parse_client_paths(components: &[&str]) -> Option<Path> {

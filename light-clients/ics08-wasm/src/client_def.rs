@@ -55,6 +55,18 @@ where
 	type ClientState = ClientState<AnyClient, AnyClientState, AnyConsensusState>;
 	type ConsensusState = ConsensusState<AnyConsensusState>;
 
+
+	fn verify_misbehaviour_header<Ctx: ReaderContext>(
+		&self,
+		_ctx: &Ctx,
+		_client_id: ClientId,
+		_client_state: Self::ClientState,
+		_header: Self::ClientMessage,
+	) -> Result<(), Error>
+	{
+		Ok(())
+	}
+
 	fn verify_client_message<Ctx: ReaderContext>(
 		&self,
 		ctx: &Ctx,

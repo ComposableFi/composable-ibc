@@ -4481,6 +4481,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "ics07-tendermint-cw"
+version = "0.1.0"
+dependencies = [
+ "blake2-rfc",
+ "byteorder",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "derive_more",
+ "digest 0.10.6",
+ "ed25519",
+ "ed25519-consensus",
+ "ed25519-zebra",
+ "hex",
+ "hyperspace-primitives",
+ "ibc",
+ "ibc-derive",
+ "ibc-proto",
+ "ics07-tendermint",
+ "ics08-wasm",
+ "ics23",
+ "pallet-ibc",
+ "prost 0.11.6",
+ "schemars",
+ "serde",
+ "serde-json-wasm",
+ "serde_json",
+ "sha2 0.10.6",
+ "sha3",
+ "tendermint",
+ "tendermint-light-client-verifier",
+ "tendermint-proto",
+ "thiserror",
+ "twox-hash",
+]
+
+[[package]]
 name = "ics08-wasm"
 version = "0.1.0"
 dependencies = [

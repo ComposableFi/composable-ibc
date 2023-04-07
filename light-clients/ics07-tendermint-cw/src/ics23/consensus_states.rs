@@ -57,6 +57,11 @@ impl<'a> ConsensusStates<'a> {
 		let full_key = Self::consensus_state_key(height, prefix);	
 		self.0.set(&full_key, &consensus_state);
 	}
+
+	pub fn remove(&mut self, height: Height) {
+		let full_key = Self::consensus_state_key(height, &mut Vec::new());	
+		self.0.remove(&full_key);
+	}
 }
 
 /// client_id, height => consensus_state
@@ -156,19 +161,15 @@ impl ClientDef for FakeInner {
 	type ClientState = FakeInner;
 	type ConsensusState = FakeInner;
 
-	fn verify_misbehaviour_header<Ctx>(
+	fn verify_misbehaviour_header<Ctx: ReaderContext>(
 		&self,
 		_ctx: &Ctx,
 		_client_id: ClientId,
 		_client_state: Self::ClientState,
-		_message: Self::ClientMessage,
-	) -> Result<(), Error>
-	where
-		Ctx: ReaderContext,
-	{
+		_client_msg: Self::ClientMessage,
+	) -> Result<(), Error> {
 		unimplemented!()
 	}
-
 	fn verify_client_message<Ctx: ReaderContext>(
 		&self,
 		_ctx: &Ctx,

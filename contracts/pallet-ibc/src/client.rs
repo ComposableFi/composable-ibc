@@ -57,7 +57,7 @@ where
 		}
 	}
 
-	fn client_state(&self, client_id: &ClientId) -> Result<AnyClientState, ICS02Error> {
+	fn client_state(&self, client_id: &ClientId, prefix: &mut Vec<u8>) -> Result<AnyClientState, ICS02Error> {
 		log::trace!(target: "pallet_ibc", "in client : [client_state] >> client_id = {:?}", client_id);
 		let data = <ClientStates<T>>::get(client_id)
 			.ok_or_else(|| ICS02Error::client_not_found(client_id.clone()))?;
@@ -71,6 +71,7 @@ where
 		&self,
 		client_id: &ClientId,
 		height: Height,
+		prefix: &mut Vec<u8>,
 	) -> Result<AnyConsensusState, ICS02Error> {
 		log::trace!(target: "pallet_ibc",
 			"in client : [consensus_state] >> client_id = {:?}, height = {:?}",
@@ -113,7 +114,7 @@ where
 			.into_iter()
 			.filter(|next_height| next_height > &height)
 			.next()
-			.map(|next_height| self.consensus_state(client_id, next_height).ok())
+			.map(|next_height| self.consensus_state(client_id, next_height, &mut Vec::new()).ok())
 			.flatten();
 
 		Ok(cs_state)
@@ -130,7 +131,7 @@ where
 			.filter(|prev_height| prev_height < &height)
 			.rev()
 			.next()
-			.map(|prev_height| self.consensus_state(client_id, prev_height).ok())
+			.map(|prev_height| self.consensus_state(client_id, prev_height, &mut Vec::new()).ok())
 			.flatten();
 		Ok(cs_state)
 	}
@@ -346,6 +347,7 @@ where
 		&mut self,
 		client_id: ClientId,
 		client_state: AnyClientState,
+		prefix: &mut Vec<u8>,
 	) -> Result<(), ICS02Error> {
 		log::trace!(target: "pallet_ibc",
 			"in client : [store_client_state] >> client_id: {:?}, client_state = {:?}",
@@ -365,6 +367,7 @@ where
 		client_id: ClientId,
 		height: Height,
 		consensus_state: AnyConsensusState,
+		prefix: &mut Vec<u8>,
 	) -> Result<(), ICS02Error> {
 		log::trace!(target: "pallet_ibc", "in client : [store_consensus_state] >> client_id: {:?}, height = {:?}, consensus_state = {:?}",
 			client_id, height, consensus_state);

@@ -790,7 +790,7 @@ pub mod pallet {
 				client_id_from_bytes(client_id).map_err(|_| Error::<T>::DecodingError)?;
 			let mut ctx = routing::Context::<T>::default();
 			let client_state =
-				ctx.client_state(&client_id).map_err(|_| Error::<T>::ClientStateNotFound)?;
+				ctx.client_state(&client_id, &mut Vec::new()).map_err(|_| Error::<T>::ClientStateNotFound)?;
 			let frozen_state = match client_state {
 				AnyClientState::Grandpa(grandpa) => {
 					let latest_height = grandpa.latest_height();
@@ -825,7 +825,7 @@ pub mod pallet {
 			}
 			.ok_or_else(|| Error::<T>::ClientFreezeFailed)?;
 			let revision_number = frozen_state.latest_height().revision_number;
-			ctx.store_client_state(client_id.clone(), frozen_state)
+			ctx.store_client_state(client_id.clone(), frozen_state, &mut Vec::new())
 				.map_err(|_| Error::<T>::ClientFreezeFailed)?;
 
 			Self::deposit_event(Event::<T>::ClientFrozen {

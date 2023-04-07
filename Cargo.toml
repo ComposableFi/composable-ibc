@@ -26,6 +26,7 @@ members = [
     # ibc light clients
     "light-clients/common",
     "light-clients/ics07-tendermint",
+    "light-clients/ics07-tendermint-cw",
     "light-clients/ics08-wasm",
     "light-clients/ics10-grandpa",
     "light-clients/ics10-grandpa-cw",
