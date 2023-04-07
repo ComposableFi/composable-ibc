@@ -40,4 +40,4 @@ jobs:
         args: cargo-udeps --locked
 
     - name: Cargo udeps
-      run: SKIP_WASM_BUILD=1 cargo +nightly udeps --locked --all
+      run: SKIP_WASM_BUILD=1 cargo +nightly udeps --locked --all --all-targets
