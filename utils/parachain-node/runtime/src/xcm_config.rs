@@ -88,8 +88,9 @@ pub type XcmOriginToTransactDispatchOrigin = (
 );
 
 parameter_types! {
-	// One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
-	pub UnitWeightCost: u64 = 1_000_000_000;
+	// Taken from https://github.com/paritytech/polkadot/blob/2bbef460d24f44aeba9d4014062bb8c631327496/runtime/test-runtime/src/xcm_config.rs#L34
+	// TODO: @dzmitry-lahoda can you validate?
+	pub const UnitWeightCost: xcm::latest::Weight = frame_support::weights::Weight::from_parts(1_000, 1_000);
 	pub const MaxInstructions: u32 = 100;
 }
 

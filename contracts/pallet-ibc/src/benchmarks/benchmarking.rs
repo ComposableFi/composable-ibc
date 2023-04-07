@@ -82,10 +82,6 @@ use sp_core::crypto::AccountId32;
 use sp_std::vec;
 use tendermint_proto::Protobuf;
 
-fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
-	frame_system::Pallet::<T>::assert_last_event(generic_event.into());
-}
-
 const MILLIS: u128 = 1_000_000;
 
 benchmarks! {
