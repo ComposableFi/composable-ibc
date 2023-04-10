@@ -61,6 +61,6 @@ jobs:
         file: scripts/parachain.Dockerfile
         context: .
         push: true
-        platforms: linux/amd64,linux/arm64
+        platforms: linux/amd64
         tags: |
           composablefi/parachain-node:${{ env.DOCKER_IMAGE_TAG }}
