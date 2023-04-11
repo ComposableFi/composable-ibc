@@ -4,7 +4,7 @@ use core::pin::Pin;
 use futures::{Stream, StreamExt};
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
-	core::ics24_host::identifier::{ChannelId, ConnectionId, PortId},
+	core::ics24_host::identifier::ChannelId,
 	tx_msg::Msg,
 };
 use primitives::TestProvider;

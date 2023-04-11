@@ -15,7 +15,6 @@
 #![allow(clippy::all)]
 
 use std::{
-	cell::Cell,
 	collections::BTreeMap,
 	str::FromStr,
 	sync::{Arc, Mutex},

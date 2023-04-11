@@ -20,7 +20,7 @@ use futures::{Stream, StreamExt};
 use grandpa_light_client_primitives::ParachainHeaderProofs;
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
-	core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
+	core::ics24_host::identifier::{ChannelId, ClientId},
 };
 use ibc_proto::google::protobuf::Any;
 use ibc_rpc::IbcApiClient;
