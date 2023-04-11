@@ -292,8 +292,20 @@ pub trait IbcProvider {
 	/// Return the host chain's light client id on counterparty chain
 	fn client_id(&self) -> ClientId;
 
+	/// Set the client id for the relayer task.
+	fn set_client_id(&mut self, client_id: ClientId);
+
 	/// Return the connection id on this chain
-	fn connection_id(&self) -> ConnectionId;
+	fn connection_id(&self) -> Option<ConnectionId>;
+
+	/// Set the channel whitelist for the relayer task.
+	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>);
+
+	/// Set the channel whitelist for the relayer task.
+	fn add_channel_to_whitelist(&mut self, channel: (ChannelId, PortId));
+
+	/// Set the connection id for the relayer task.
+	fn set_connection_id(&mut self, connection_id: ConnectionId);
 
 	/// Returns the client type of this chain.
 	fn client_type(&self) -> ClientType;
@@ -332,6 +344,18 @@ pub trait IbcProvider {
 		&self,
 		tx_id: Self::TransactionId,
 	) -> Result<ClientId, Self::Error>;
+
+	/// Should find connection id that was created in this transaction
+	async fn query_connection_id_from_tx_hash(
+		&self,
+		tx_id: Self::TransactionId,
+	) -> Result<ConnectionId, Self::Error>;
+
+	/// Should find channel and port id that was created in this transaction
+	async fn query_channel_id_from_tx_hash(
+		&self,
+		tx_id: Self::TransactionId,
+	) -> Result<(ChannelId, PortId), Self::Error>;
 }
 
 /// Provides an interface that allows us run the hyperspace-testsuite
@@ -352,8 +376,8 @@ pub trait TestProvider: Chain + Clone + 'static {
 	/// Returns a stream that yields chain Block number
 	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>>;
 
-	/// Set the channel whitelist for the relayer task.
-	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>);
+	/// Increases IBC counters by 1 to check that relayer uses proper values for source/sink chains.
+	async fn increase_counters(&mut self) -> Result<(), Self::Error>;
 }
 
 /// Provides an interface for managing key management for signing.

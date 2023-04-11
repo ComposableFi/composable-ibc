@@ -88,7 +88,7 @@ where
 	loop {
 		tokio::select! {
 			// new finality event from chain A
-			result  = chain_a_finality.next() => {
+			result = chain_a_finality.next() => {
 				process_finality_event!(chain_a, chain_b, chain_a_metrics, mode, result)
 			}
 			// new finality event from chain B

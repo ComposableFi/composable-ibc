@@ -396,6 +396,8 @@ where
 					log::warn!(
 						"Found misbehaviour on client {}: {:?} != {:?}",
 						self.client_id
+							.lock()
+							.unwrap()
 							.as_ref()
 							.map(|x| x.as_str().to_owned())
 							.unwrap_or_else(|| "{unknown}".to_owned()),

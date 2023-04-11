@@ -34,9 +34,9 @@ use ibc_proto::{
 	google::protobuf::Any,
 	ibc::core::{
 		channel::v1::{
-			QueryChannelResponse, QueryChannelsResponse, QueryNextSequenceReceiveResponse,
-			QueryPacketAcknowledgementResponse, QueryPacketCommitmentResponse,
-			QueryPacketReceiptResponse,
+			IdentifiedChannel, QueryChannelResponse, QueryChannelsResponse,
+			QueryNextSequenceReceiveResponse, QueryPacketAcknowledgementResponse,
+			QueryPacketCommitmentResponse, QueryPacketReceiptResponse,
 		},
 		client::v1::{
 			IdentifiedClientState, QueryClientStateResponse, QueryConsensusStateResponse,
@@ -432,7 +432,7 @@ where
 	}
 
 	fn channel_whitelist(&self) -> Vec<(ChannelId, PortId)> {
-		self.channel_whitelist.clone()
+		self.channel_whitelist.lock().unwrap().clone()
 	}
 
 	async fn query_connection_channels(
@@ -575,8 +575,12 @@ where
 		self.client_id()
 	}
 
-	fn connection_id(&self) -> ConnectionId {
-		self.connection_id.as_ref().expect("Connection id should be defined").clone()
+	fn set_client_id(&mut self, client_id: ClientId) {
+		*self.client_id.lock().unwrap() = Some(client_id);
+	}
+
+	fn connection_id(&self) -> Option<ConnectionId> {
+		self.connection_id.lock().unwrap().clone()
 	}
 
 	fn client_type(&self) -> ClientType {
@@ -709,5 +713,66 @@ where
 		let client_id = ClientId::from_str(&identified_client_state.client_id)
 			.expect("Should have a valid client id");
 		Ok(client_id)
+	}
+
+	async fn query_connection_id_from_tx_hash(
+		&self,
+		tx_id: Self::TransactionId,
+	) -> Result<ConnectionId, Self::Error> {
+		// Query newly created connection Id
+		let TransactionId { ext_hash, block_hash } = tx_id;
+		let identified_connection: IdentifiedConnection = IbcApiClient::<
+			u32,
+			H256,
+			<T as light_client_common::config::Config>::AssetId,
+		>::query_newly_created_connection(
+			&*self.para_ws_client,
+			block_hash.into(),
+			ext_hash.into(),
+		)
+		.await
+		.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
+
+		let connection_id = ConnectionId::from_str(&identified_connection.id)
+			.expect("Should have a valid connection id");
+		Ok(connection_id)
+	}
+
+	async fn query_channel_id_from_tx_hash(
+		&self,
+		tx_id: Self::TransactionId,
+	) -> Result<(ChannelId, PortId), Self::Error> {
+		// Query newly created channel Id
+		let TransactionId { ext_hash, block_hash } = tx_id;
+		let identified_channel: IdentifiedChannel = IbcApiClient::<
+			u32,
+			H256,
+			<T as light_client_common::config::Config>::AssetId,
+		>::query_newly_created_channel(
+			&*self.para_ws_client,
+			block_hash.into(),
+			ext_hash.into(),
+		)
+		.await
+		.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
+
+		let channel_id = ChannelId::from_str(&identified_channel.channel_id)
+			.expect("Should have a valid channel id");
+		let port_id =
+			PortId::from_str(&identified_channel.port_id).expect("Should have a valid port id");
+		Ok((channel_id, port_id))
+	}
+
+	/// Set the channel whitelist for the relayer task.
+	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
+		*self.channel_whitelist.lock().unwrap() = channel_whitelist;
+	}
+
+	fn add_channel_to_whitelist(&mut self, channel: (ChannelId, PortId)) {
+		self.channel_whitelist.lock().unwrap().push(channel);
+	}
+
+	fn set_connection_id(&mut self, connection_id: ConnectionId) {
+		*self.connection_id.lock().unwrap() = Some(connection_id);
 	}
 }

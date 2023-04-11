@@ -827,8 +827,25 @@ where
 		self.client_id()
 	}
 
-	fn connection_id(&self) -> ConnectionId {
-		self.connection_id.as_ref().expect("Connection id should be defined").clone()
+	fn set_client_id(&mut self, client_id: ClientId) {
+		self.client_id = Some(client_id);
+	}
+
+	fn connection_id(&self) -> Option<ConnectionId> {
+		self.connection_id.clone()
+	}
+
+	/// Set the channel whitelist for the relayer task.
+	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
+		self.channel_whitelist = channel_whitelist;
+	}
+
+	fn add_channel_to_whitelist(&mut self, channel: (ChannelId, PortId)) {
+		self.channel_whitelist.push(channel);
+	}
+
+	fn set_connection_id(&mut self, connection_id: ConnectionId) {
+		self.connection_id = Some(connection_id);
 	}
 
 	fn client_type(&self) -> ClientType {
@@ -1036,6 +1053,20 @@ where
 				})
 			}
 		}
+	}
+
+	async fn query_connection_id_from_tx_hash(
+		&self,
+		_tx_id: Self::TransactionId,
+	) -> Result<ConnectionId, Self::Error> {
+		todo!()
+	}
+
+	async fn query_channel_id_from_tx_hash(
+		&self,
+		_tx_id: Self::TransactionId,
+	) -> Result<(ChannelId, PortId), Self::Error> {
+		todo!()
 	}
 }
 

@@ -552,7 +552,16 @@ macro_rules! chains {
 				}
 			}
 
-			fn connection_id(&self) -> ConnectionId {
+			fn set_client_id(&mut self, client_id: ClientId) {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.set_client_id(client_id),
+					)*
+				}
+			}
+
+			fn connection_id(&self) -> Option<ConnectionId> {
 				match self {
 					$(
 						$(#[$($meta)*])*
@@ -652,6 +661,69 @@ macro_rules! chains {
 							)
 							.await
 							.map_err(AnyError::$name),
+					)*
+				}
+			}
+
+			async fn query_connection_id_from_tx_hash(
+				&self,
+				tx_id: Self::TransactionId,
+			) -> Result<ConnectionId, Self::Error> {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain
+							.query_connection_id_from_tx_hash(
+								downcast!(tx_id => AnyTransactionId::$name)
+									.expect("Should be $name transaction id"),
+							)
+							.await
+							.map_err(AnyError::$name),
+					)*
+				}
+			}
+
+			async fn query_channel_id_from_tx_hash(
+				&self,
+				tx_id: Self::TransactionId,
+			) -> Result<(ChannelId, PortId), Self::Error> {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain
+							.query_channel_id_from_tx_hash(
+								downcast!(tx_id => AnyTransactionId::$name)
+									.expect("Should be $name transaction id"),
+							)
+							.await
+							.map_err(AnyError::$name),
+					)*
+				}
+			}
+
+			fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.set_channel_whitelist(channel_whitelist),
+					)*
+				}
+			}
+
+			fn add_channel_to_whitelist(&mut self, channel: (ChannelId, PortId)) {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.add_channel_to_whitelist(channel),
+					)*
+				}
+			}
+
+			fn set_connection_id(&mut self, connection_id: ConnectionId) {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.set_connection_id(connection_id),
 					)*
 				}
 			}
@@ -835,11 +907,11 @@ macro_rules! chains {
 				}
 			}
 
-			fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
+			async fn increase_counters(&mut self) -> Result<(), Self::Error> {
 				match self {
 					$(
 						$(#[$($meta)*])*
-						Self::$name(chain) => chain.set_channel_whitelist(channel_whitelist),
+						Self::$name(chain) => chain.increase_counters().await.map_err(AnyError::$name),
 					)*
 				}
 			}
