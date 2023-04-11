@@ -118,7 +118,7 @@ pub enum ExecuteMsg {
 	CheckForMisbehaviour(CheckForMisbehaviourMsgRaw),
 	UpdateStateOnMisbehaviour(UpdateStateOnMisbehaviourMsgRaw),
 	UpdateState(UpdateStateMsgRaw),
-	CheckSubstituteAndUpdateState(CheckSubstituteAndUpdateStateMsg),
+	CheckSubstituteAndUpdateState(CheckSubstituteAndUpdateStateMsgRaw),
 	VerifyUpgradeAndUpdateState(VerifyUpgradeAndUpdateStateMsgRaw),
 }
 
@@ -321,8 +321,18 @@ impl TryFrom<UpdateStateMsgRaw> for UpdateStateMsg {
 }
 
 #[cw_serde]
-pub struct CheckSubstituteAndUpdateStateMsg {
-	substitute_client_msg: Vec<u8>,
+pub struct CheckSubstituteAndUpdateStateMsgRaw {}
+
+pub struct CheckSubstituteAndUpdateStateMsg {}
+
+impl TryFrom<CheckSubstituteAndUpdateStateMsgRaw> for CheckSubstituteAndUpdateStateMsg {
+	type Error = ContractError;
+
+	fn try_from(
+		CheckSubstituteAndUpdateStateMsgRaw {}: CheckSubstituteAndUpdateStateMsgRaw,
+	) -> Result<Self, Self::Error> {
+		Ok(Self {})
+	}
 }
 
 #[cw_serde]

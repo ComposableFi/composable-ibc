@@ -331,7 +331,19 @@ where
 		_proof_upgrade_client: Vec<u8>,
 		_proof_upgrade_consensus_state: Vec<u8>,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
-		// TODO:
+		// TODO: tendermint verify_upgrade_and_update_state
+		Err(Ics02Error::implementation_specific("Not implemented".to_string()))
+	}
+
+	fn check_substitute_and_update_state<Ctx: ReaderContext>(
+		&self,
+		ctx: &Ctx,
+		subject_client_id: ClientId,
+		substitute_client_id: ClientId,
+		old_client_state: Self::ClientState,
+		substitute_client_state: Self::ClientState,
+	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
+		// TODO: tendermint check_substitute_and_update_state
 		Err(Ics02Error::implementation_specific("Not implemented".to_string()))
 	}
 

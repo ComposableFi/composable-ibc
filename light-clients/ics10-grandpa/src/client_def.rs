@@ -185,6 +185,7 @@ where
 					))?
 				}
 
+				// first_justification.round
 				let first_valid = first_justification
 					.verify::<H>(client_state.current_set_id, &client_state.current_authorities)
 					.is_ok();
@@ -443,6 +444,24 @@ where
 					.expect("AnyConsensusState is type-checked; qed"),
 			),
 		))
+	}
+
+	/// Will try to update the client with the state of the substitute.
+	///
+	/// The following must always be true:
+	///   - The substitute client is the same type as the subject client
+	///   - The subject and substitute client states match in all parameters (expect `relay_chain`,
+	/// `para_id`, `latest_para_height`, `latest_relay_height`, `latest_relay_hash`,
+	/// `frozen_height`, `latest_para_height`, `current_set_id` and `current_authorities`).
+	fn check_substitute_and_update_state<Ctx: ReaderContext>(
+		&self,
+		_ctx: &Ctx,
+		_subject_client_id: ClientId,
+		_substitute_client_id: ClientId,
+		_old_client_state: Self::ClientState,
+		_substitute_client_state: Self::ClientState,
+	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
+		unimplemented!("check_substitute_and_update_state not implemented for Grandpa client")
 	}
 
 	fn verify_client_consensus_state<Ctx: ReaderContext>(
