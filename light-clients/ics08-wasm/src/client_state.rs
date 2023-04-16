@@ -111,7 +111,8 @@ where
 	}
 }
 
-impl<AnyClient, AnyClientState, AnyConsensusState> ClientState<AnyClient, AnyClientState, AnyConsensusState>
+impl<AnyClient, AnyClientState, AnyConsensusState>
+	ClientState<AnyClient, AnyClientState, AnyConsensusState>
 where
 	AnyClientState: TryFrom<Any>,
 	<AnyClientState as TryFrom<Any>>::Error: Display,
@@ -130,9 +131,9 @@ where
 	pub fn to_any(&self) -> Any {
 		Any {
 			type_url: WASM_CLIENT_STATE_TYPE_URL.to_string(),
-			value: self.encode_to_vec().expect(
-				"ClientState<AnyClientState> is always valid and can be encoded to Any",
-			),
+			value: self
+				.encode_to_vec()
+				.expect("ClientState<AnyClientState> is always valid and can be encoded to Any"),
 		}
 	}
 }

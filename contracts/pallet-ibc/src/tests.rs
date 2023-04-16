@@ -576,7 +576,6 @@ fn test_next_and_previous_consensus_state_for_beefy_and_grandpa_clients() {
 			client_id_beefy.clone(),
 			Height::new(0, 10),
 			AnyConsensusState::Mock(mock_cs_state.clone()),
-			&mut Vec::new(),
 		)
 		.unwrap();
 		// Should return None for Beefy and grandpa clients since we do not cache recent consensus
@@ -592,7 +591,6 @@ fn test_next_and_previous_consensus_state_for_beefy_and_grandpa_clients() {
 			client_id_grandpa.clone(),
 			Height::new(0, 10),
 			AnyConsensusState::Mock(mock_cs_state.clone()),
-			&mut Vec::new(),
 		)
 		.unwrap();
 		assert!(ctx
@@ -618,7 +616,6 @@ fn test_next_and_previous_consensus_state_for_other_client_types() {
 				client_id.clone(),
 				Height::new(0, i),
 				AnyConsensusState::Mock(mock_cs_state.clone()),
-				&mut Vec::new(),
 			)
 			.unwrap();
 		}

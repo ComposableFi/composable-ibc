@@ -16,10 +16,7 @@ use crate::core::ics02_client::{client_consensus::ConsensusState, client_state::
 
 use crate::{
 	core::{
-		ics02_client::{
-			client_message::ClientMessage,
-			context::ClientTypes, error::Error,
-		},
+		ics02_client::{client_message::ClientMessage, context::ClientTypes, error::Error},
 		ics03_connection::connection::ConnectionEnd,
 		ics04_channel::{
 			channel::ChannelEnd,
@@ -106,6 +103,18 @@ pub trait ClientDef: Clone {
 		upgrade_consensus_state: &Self::ConsensusState,
 		proof_upgrade_client: Vec<u8>,
 		proof_upgrade_consensus_state: Vec<u8>,
+	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error>;
+
+	/// Must verify that the provided substitute may be used to update the subject client.
+	/// The light client must set the updated client and consensus states within the client store
+	/// for the subject client.
+	fn check_substitute_and_update_state<Ctx: ReaderContext>(
+		&self,
+		ctx: &Ctx,
+		subject_client_id: ClientId,
+		substitute_client_id: ClientId,
+		old_client_state: Self::ClientState,
+		substitute_client_state: Self::ClientState,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error>;
 
 	/// Verification functions as specified in:
@@ -239,4 +248,6 @@ pub trait ClientDef: Clone {
 		channel_id: &ChannelId,
 		sequence: Sequence,
 	) -> Result<(), Error>;
+
+	// fn status(&self)
 }

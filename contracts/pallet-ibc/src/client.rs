@@ -57,7 +57,7 @@ where
 		}
 	}
 
-	fn client_state(&self, client_id: &ClientId, prefix: &mut Vec<u8>) -> Result<AnyClientState, ICS02Error> {
+	fn client_state(&self, client_id: &ClientId) -> Result<AnyClientState, ICS02Error> {
 		log::trace!(target: "pallet_ibc", "in client : [client_state] >> client_id = {:?}", client_id);
 		let data = <ClientStates<T>>::get(client_id)
 			.ok_or_else(|| ICS02Error::client_not_found(client_id.clone()))?;
@@ -71,7 +71,6 @@ where
 		&self,
 		client_id: &ClientId,
 		height: Height,
-		prefix: &mut Vec<u8>,
 	) -> Result<AnyConsensusState, ICS02Error> {
 		log::trace!(target: "pallet_ibc",
 			"in client : [consensus_state] >> client_id = {:?}, height = {:?}",
@@ -114,7 +113,7 @@ where
 			.into_iter()
 			.filter(|next_height| next_height > &height)
 			.next()
-			.map(|next_height| self.consensus_state(client_id, next_height, &mut Vec::new()).ok())
+			.map(|next_height| self.consensus_state(client_id, next_height).ok())
 			.flatten();
 
 		Ok(cs_state)
@@ -131,7 +130,7 @@ where
 			.filter(|prev_height| prev_height < &height)
 			.rev()
 			.next()
-			.map(|prev_height| self.consensus_state(client_id, prev_height, &mut Vec::new()).ok())
+			.map(|prev_height| self.consensus_state(client_id, prev_height).ok())
 			.flatten();
 		Ok(cs_state)
 	}
@@ -347,7 +346,6 @@ where
 		&mut self,
 		client_id: ClientId,
 		client_state: AnyClientState,
-		prefix: &mut Vec<u8>,
 	) -> Result<(), ICS02Error> {
 		log::trace!(target: "pallet_ibc",
 			"in client : [store_client_state] >> client_id: {:?}, client_state = {:?}",
@@ -367,7 +365,6 @@ where
 		client_id: ClientId,
 		height: Height,
 		consensus_state: AnyConsensusState,
-		prefix: &mut Vec<u8>,
 	) -> Result<(), ICS02Error> {
 		log::trace!(target: "pallet_ibc", "in client : [store_consensus_state] >> client_id: {:?}, height = {:?}, consensus_state = {:?}",
 			client_id, height, consensus_state);
@@ -437,14 +434,14 @@ where
 		let unpacked = client_state.unpack_recursive();
 		let (relay_chain, para_id, latest_para_height) = match unpacked {
 			AnyClientState::Beefy(client_state) => {
-				if client_state.is_frozen() {
+				if client_state.frozen_height.is_some() {
 					Err(ICS02Error::implementation_specific(format!("client state is frozen")))?
 				}
 
 				(client_state.relay_chain, client_state.para_id, client_state.latest_para_height)
 			},
 			AnyClientState::Grandpa(client_state) => {
-				if client_state.is_frozen() {
+				if client_state.frozen_height.is_some() {
 					Err(ICS02Error::implementation_specific(format!("client state is frozen")))?
 				}
 

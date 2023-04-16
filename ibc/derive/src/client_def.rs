@@ -247,6 +247,58 @@ impl State {
 		}
 	}
 
+	fn impl_fn_check_substitute_and_update_state(&self) -> proc_macro2::TokenStream {
+		let error = &self.current_impl_error;
+		let crate_ = &self.crate_ident;
+		let trait_ = &self.current_impl_trait;
+		let client_state_trait = &self.client_state_trait;
+		let cases = self.clients.iter().map(|client| {
+			let variant_ident = &client.variant_ident;
+			let attrs = &client.attrs;
+			quote! {
+				#(#attrs)*
+				Self::#variant_ident(client) => {
+					let client_type = #client_state_trait::client_type(&old_client_state).to_owned();
+					let substitute_client_state = #crate_::downcast!(
+						substitute_client_state => Self::ClientState::#variant_ident
+					)
+					.ok_or_else(|| #error::client_args_type_mismatch(client_type.clone()))?;
+
+					let old_client_state = #crate_::downcast!(
+						old_client_state => Self::ClientState::#variant_ident
+					)
+					.ok_or_else(|| #error::client_args_type_mismatch(client_type))?;
+
+					let (new_state, new_consensus) = #trait_::check_substitute_and_update_state::<Ctx>(
+						client,
+						ctx,
+						subject_client_id,
+						substitute_client_id,
+						old_client_state,
+						substitute_client_state,
+					)?;
+
+					Ok((Self::ClientState::#variant_ident(new_state), new_consensus))
+				}
+			}
+		});
+
+		quote! {
+			fn check_substitute_and_update_state<Ctx: #crate_::core::ics26_routing::context::ReaderContext>(
+				&self,
+				ctx: &Ctx,
+				subject_client_id: #crate_::core::ics24_host::identifier::ClientId,
+				substitute_client_id: #crate_::core::ics24_host::identifier::ClientId,
+				old_client_state: Self::ClientState,
+				substitute_client_state: Self::ClientState,
+			) -> ::core::result::Result<(Self::ClientState, #crate_::core::ics02_client::client_def::ConsensusUpdateResult<Ctx>), #error> {
+				match self {
+					#(#cases)*
+				}
+			}
+		}
+	}
+
 	fn impl_fn_verify_client_consensus_state(&self) -> proc_macro2::TokenStream {
 		let crate_ = &self.crate_ident;
 		let trait_ = &self.current_impl_trait;
@@ -699,6 +751,7 @@ impl State {
 		let fn_update_state_on_misbehaviour = self.impl_fn_update_state_on_misbehaviour();
 		let fn_check_for_misbehaviour = self.impl_fn_check_for_misbehaviour();
 		let fn_verify_upgrade_and_update_state = self.impl_fn_verify_upgrade_and_update_state();
+		let fn_check_substitute_and_update_state = self.impl_fn_check_substitute_and_update_state();
 		let fn_verify_client_consensus_state = self.impl_fn_verify_client_consensus_state();
 		let fn_verify_connection_state = self.impl_fn_verify_connection_state();
 		let fn_verify_channel_state = self.impl_fn_verify_channel_state();
@@ -719,6 +772,7 @@ impl State {
 				#fn_update_state_on_misbehaviour
 				#fn_check_for_misbehaviour
 				#fn_verify_upgrade_and_update_state
+				#fn_check_substitute_and_update_state
 				#fn_verify_client_consensus_state
 				#fn_verify_connection_state
 				#fn_verify_channel_state

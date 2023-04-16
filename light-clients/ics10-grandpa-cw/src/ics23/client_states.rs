@@ -2,6 +2,7 @@ use cosmwasm_std::Storage;
 
 /// client_id => client_states
 /// trie key path: "clients/{client_id}/clientState"
+/// NOTE: the "clients/{client_id}" prefix is provided automatically by CosmWasm.
 pub struct ClientStates<'a>(&'a mut dyn Storage);
 
 impl<'a> ClientStates<'a> {
@@ -9,22 +10,29 @@ impl<'a> ClientStates<'a> {
 		ClientStates(storage)
 	}
 
-	pub fn key(prefix: &mut Vec<u8>) -> Vec<u8> {
+	pub fn key() -> Vec<u8> {
 		let client_state_path = format!("clientState");
-		prefix.append(&mut client_state_path.into_bytes());
-		prefix.clone()
+		client_state_path.into_bytes()
 	}
 
-	pub fn get(&self, prefix: &mut Vec<u8>) -> Option<Vec<u8>> {
-		self.0.get(&Self::key(prefix))
+	pub fn get(&self) -> Option<Vec<u8>> {
+		ReadonlyClientStates::new(self.0).get()
 	}
 
-	pub fn insert(&mut self, prefix: &mut Vec<u8>, client_state: Vec<u8>) {
-		self.0.set(&Self::key(prefix), &client_state);
+	pub fn get_prefixed(&self, prefix: &[u8]) -> Option<Vec<u8>> {
+		ReadonlyClientStates::new(self.0).get_prefixed(prefix)
 	}
 
-	pub fn contains_key(&self, prefix: &mut Vec<u8>) -> bool {
-		self.get(prefix).is_some()
+	pub fn insert(&mut self, client_state: Vec<u8>) {
+		self.0.set(&Self::key(), &client_state);
+	}
+
+	pub fn insert_prefixed(&mut self, client_state: Vec<u8>, prefix: &[u8]) {
+		self.0.set(&[prefix, Self::key().as_slice()].concat(), &client_state);
+	}
+
+	pub fn contains_key(&self) -> bool {
+		self.get().is_some()
 	}
 }
 
@@ -35,11 +43,15 @@ impl<'a> ReadonlyClientStates<'a> {
 		ReadonlyClientStates(storage)
 	}
 
-	pub fn get(&self, prefix: &mut Vec<u8>) -> Option<Vec<u8>> {
-		self.0.get(&ClientStates::key(prefix))
+	pub fn get(&self) -> Option<Vec<u8>> {
+		self.0.get(&ClientStates::key())
 	}
 
-	pub fn contains_key(&self, prefix: &mut Vec<u8>) -> bool {
-		self.get(prefix).is_some()
+	pub fn get_prefixed(&self, prefix: &[u8]) -> Option<Vec<u8>> {
+		self.0.get(&[prefix, ClientStates::key().as_slice()].concat())
+	}
+
+	pub fn contains_key(&self) -> bool {
+		self.get().is_some()
 	}
 }

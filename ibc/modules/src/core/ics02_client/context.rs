@@ -37,7 +37,7 @@ use core::fmt::Debug;
 /// Defines the read-only part of ICS2 (client functions) context.
 pub trait ClientReader: ClientKeeper {
 	fn client_type(&self, client_id: &ClientId) -> Result<ClientType, Error>;
-	fn client_state(&self, client_id: &ClientId, prefix: &mut Vec<u8>) -> Result<Self::AnyClientState, Error>;
+	fn client_state(&self, client_id: &ClientId) -> Result<Self::AnyClientState, Error>;
 
 	/// Retrieve the consensus state for the given client ID at the specified
 	/// height.
@@ -47,7 +47,6 @@ pub trait ClientReader: ClientKeeper {
 		&self,
 		client_id: &ClientId,
 		height: Height,
-		prefix: &mut Vec<u8>,
 	) -> Result<Self::AnyConsensusState, Error>;
 
 	/// This should return the host type.
@@ -60,7 +59,7 @@ pub trait ClientReader: ClientKeeper {
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<Option<Self::AnyConsensusState>, Error> {
-		match self.consensus_state(client_id, height, &mut Vec::new()) {
+		match self.consensus_state(client_id, height) {
 			Ok(cs) => Ok(Some(cs)),
 			Err(e) => match e.detail() {
 				ErrorDetail::ConsensusStateNotFound(_) => Ok(None),
@@ -139,12 +138,11 @@ where
 				let client_id = res.client_id.clone();
 
 				self.store_client_type(client_id.clone(), res.client_type)?;
-				self.store_client_state(client_id.clone(), res.client_state.clone(), &mut Vec::new())?;
+				self.store_client_state(client_id.clone(), res.client_state.clone())?;
 				self.store_consensus_state(
 					client_id,
 					res.client_state.latest_height(),
 					res.consensus_state,
-					&mut Vec::new(),
 				)?;
 				self.increase_client_counter();
 				self.store_update_time(
@@ -160,7 +158,7 @@ where
 				Ok(())
 			},
 			Update(res) => {
-				self.store_client_state(res.client_id.clone(), res.client_state.clone(), &mut Vec::new())?;
+				self.store_client_state(res.client_id.clone(), res.client_state.clone())?;
 				match res.consensus_state {
 					None => {},
 					Some(cs_state_update) => match cs_state_update {
@@ -169,7 +167,6 @@ where
 								res.client_id.clone(),
 								res.client_state.latest_height(),
 								cs_state,
-								&mut Vec::new(),
 							)?;
 
 							self.store_update_time(
@@ -189,7 +186,6 @@ where
 									res.client_id.clone(),
 									height,
 									cs_state,
-							&mut Vec::new(),
 								)?;
 								self.store_update_time(
 									res.client_id.clone(),
@@ -208,7 +204,7 @@ where
 				Ok(())
 			},
 			Upgrade(res) => {
-				self.store_client_state(res.client_id.clone(), res.client_state.clone(), &mut Vec::new())?;
+				self.store_client_state(res.client_id.clone(), res.client_state.clone())?;
 				match res.consensus_state {
 					None => {},
 					Some(cs_state_update) => match cs_state_update {
@@ -217,7 +213,6 @@ where
 								res.client_id.clone(),
 								res.client_state.latest_height(),
 								cs_state,
-								&mut Vec::new(),
 							)?;
 						},
 						ConsensusUpdateResult::Batch(cs_states) => {
@@ -226,7 +221,6 @@ where
 									res.client_id.clone(),
 									height,
 									cs_state,
-									&mut Vec::new(),
 								)?;
 							}
 						},
@@ -249,7 +243,6 @@ where
 		&mut self,
 		client_id: ClientId,
 		client_state: Self::AnyClientState,
-		prefix: &mut Vec<u8>,
 	) -> Result<(), Error>;
 
 	/// Called upon successful client creation and update
@@ -258,7 +251,6 @@ where
 		client_id: ClientId,
 		height: Height,
 		consensus_state: Self::AnyConsensusState,
-		prefix: &mut Vec<u8>,
 	) -> Result<(), Error>;
 
 	/// Called upon client creation.

@@ -164,7 +164,7 @@ where
 				let height =
 					Height::new(client_state.para_id as u64, header.parachain_header.number as u64);
 				// Skip duplicate consensus states
-				if ctx.consensus_state(&client_id, height, &mut Vec::new()).is_ok() {
+				if ctx.consensus_state(&client_id, height).is_ok() {
 					continue
 				}
 				parachain_cs_states.push((
@@ -246,6 +246,17 @@ where
 		_upgrade_consensus_state: &Self::ConsensusState,
 		_proof_upgrade_client: Vec<u8>,
 		_proof_upgrade_consensus_state: Vec<u8>,
+	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
+		Err(Error::Custom("Beefy Client doesn't need client upgrades".to_string()).into())
+	}
+
+	fn check_substitute_and_update_state<Ctx: ReaderContext>(
+		&self,
+		ctx: &Ctx,
+		subject_client_id: ClientId,
+		substitute_client_id: ClientId,
+		old_client_state: Self::ClientState,
+		substitute_client_state: Self::ClientState,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
 		Err(Error::Custom("Beefy Client doesn't need client upgrades".to_string()).into())
 	}

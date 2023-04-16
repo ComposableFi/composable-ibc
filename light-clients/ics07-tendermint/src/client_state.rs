@@ -14,7 +14,7 @@
 
 use ibc::prelude::*;
 
-use alloc::{string::ToString};
+use alloc::string::ToString;
 use core::{
 	convert::{TryFrom, TryInto},
 	fmt::Debug,
@@ -27,12 +27,8 @@ use tendermint_proto::Protobuf;
 use ibc_proto::google::protobuf::Any;
 use ibc_proto::ibc::lightclients::tendermint::v1::ClientState as RawClientState;
 use crate::{
-	client_def::TendermintClient,
-	client_message::Header,
-	error::Error, 
-	HostFunctionsProvider,
+	client_def::TendermintClient, client_message::Header, error::Error, HostFunctionsProvider,
 };
-
 use ibc::{
 	core::{
 		ics02_client::{
@@ -51,7 +47,7 @@ pub const TENDERMINT_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.tendermint
 #[derive(PartialEq, Eq, Debug, Clone, Default)]
 pub struct ClientState<H> {
 	pub chain_id: ChainId,
-	pub trust_level: TrustThreshold, 
+	pub trust_level: TrustThreshold,
 	pub trusting_period: Duration,
 	pub unbonding_period: Duration,
 	pub max_clock_drift: Duration,
@@ -252,7 +248,6 @@ impl<H> ClientState<H> {
 	}
 }
 
-
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UpgradeOptions {
 	pub unbonding_period: Duration,
@@ -264,7 +259,6 @@ impl<H> ibc::core::ics02_client::client_state::ClientState for ClientState<H>
 where
 	H: HostFunctionsProvider + Debug + Send + Sync + Eq + Clone,
 {
-	
 	type UpgradeOptions = UpgradeOptions;
 	type ClientDef = TendermintClient<H>;
 

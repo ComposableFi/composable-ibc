@@ -63,17 +63,17 @@ where
 	let client_type = ctx.client_type(&client_id)?;
 
 	// Read client state from the host chain store.
-	let client_state = ctx.client_state(&client_id, &mut Vec::new())?;
+	let client_state = ctx.client_state(&client_id)?;
 
 	let client_def = client_state.client_def();
 
-	if client_state.is_frozen() {
+	if client_state.is_frozen(ctx, &client_id) {
 		return Err(Error::client_frozen(client_id))
 	}
 
 	// Read consensus state from the host chain store.
 	let latest_consensus_state =
-		ctx.consensus_state(&client_id, client_state.latest_height(), &mut Vec::new()).map_err(|_| {
+		ctx.consensus_state(&client_id, client_state.latest_height()).map_err(|_| {
 			Error::consensus_state_not_found(client_id.clone(), client_state.latest_height())
 		})?;
 

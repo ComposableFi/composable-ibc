@@ -27,6 +27,7 @@ use std::{convert::Infallible, time::Duration};
 
 /// client_id, height => consensus_state
 /// trie key path: "clients/{client_id}/consensusStates/{height}"
+/// NOTE: the "clients/{client_id}" prefix is provided automatically by CosmWasm.
 pub struct ConsensusStates<'a>(&'a mut dyn Storage);
 
 impl<'a> ConsensusStates<'a> {
@@ -42,25 +43,40 @@ impl<'a> ConsensusStates<'a> {
 		format!("{}", height).into_bytes()
 	}
 
-	pub fn consensus_state_key(height: Height, prefix: &mut Vec<u8>) -> Vec<u8> {
-		prefix.append(&mut Self::consensus_state_client_key());
-		prefix.append(&mut Self::consensus_state_height_key(height));
-		prefix.clone()
+	pub fn consensus_state_key(height: Height) -> (Vec<u8>, Vec<u8>) {
+		let client_id_key = Self::consensus_state_client_key();
+		let height_key = Self::consensus_state_height_key(height);
+		(client_id_key, height_key)
 	}
 
-	pub fn get(&self, height: Height, prefix: &mut Vec<u8>) -> Option<Vec<u8>> {
-		let full_key = Self::consensus_state_key(height, prefix);	
-		self.0.get(&full_key)
+	pub fn get(&self, height: Height) -> Option<Vec<u8>> {
+		ReadonlyConsensusStates::new(self.0).get(height)
 	}
 
-	pub fn insert(&mut self, height: Height, consensus_state: Vec<u8>, prefix: &mut Vec<u8>) {
-		let full_key = Self::consensus_state_key(height, prefix);	
+	pub fn get_prefixed(&self, height: Height, prefix: &[u8]) -> Option<Vec<u8>> {
+		ReadonlyConsensusStates::new(self.0).get_prefixed(height, prefix)
+	}
+
+	pub fn insert(&mut self, height: Height, consensus_state: Vec<u8>) {
+		let (consensus_state_key_1, consensus_state_key_2) = Self::consensus_state_key(height);
+		let full_key =
+			[consensus_state_key_1.as_slice(), consensus_state_key_2.as_slice()].concat();
+
+		self.0.set(&full_key, &consensus_state);
+	}
+
+	pub fn insert_prefixed(&mut self, height: Height, consensus_state: Vec<u8>, prefix: &[u8]) {
+		let (consensus_state_key_1, consensus_state_key_2) = Self::consensus_state_key(height);
+		let full_key =
+			[prefix, consensus_state_key_1.as_slice(), consensus_state_key_2.as_slice()].concat();
+
 		self.0.set(&full_key, &consensus_state);
 	}
 }
 
 /// client_id, height => consensus_state
 /// trie key path: "clients/{client_id}/consensusStates/{height}"
+/// NOTE: the "clients/{client_id}" prefix is provided automatically by CosmWasm.
 pub struct ReadonlyConsensusStates<'a>(&'a dyn Storage);
 
 impl<'a> ReadonlyConsensusStates<'a> {
@@ -68,9 +84,19 @@ impl<'a> ReadonlyConsensusStates<'a> {
 		ReadonlyConsensusStates(storage)
 	}
 
-	pub fn get(&self, height: Height, prefix: &mut Vec<u8>) -> Option<Vec<u8>> {
+	pub fn get(&self, height: Height) -> Option<Vec<u8>> {
+		let (consensus_state_key_1, consensus_state_key_2) =
+			ConsensusStates::consensus_state_key(height);
 		let full_key =
-			ConsensusStates::consensus_state_key(height, prefix);
+			[consensus_state_key_1.as_slice(), consensus_state_key_2.as_slice()].concat();
+		self.0.get(&full_key)
+	}
+
+	pub fn get_prefixed(&self, height: Height, prefix: &[u8]) -> Option<Vec<u8>> {
+		let (consensus_state_key_1, consensus_state_key_2) =
+			ConsensusStates::consensus_state_key(height);
+		let full_key =
+			[prefix, consensus_state_key_1.as_slice(), consensus_state_key_2.as_slice()].concat();
 		self.0.get(&full_key)
 	}
 }
@@ -216,6 +242,17 @@ impl ClientDef for FakeInner {
 		_upgrade_consensus_state: &Self::ConsensusState,
 		_proof_upgrade_client: Vec<u8>,
 		_proof_upgrade_consensus_state: Vec<u8>,
+	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error> {
+		unimplemented!()
+	}
+
+	fn check_substitute_and_update_state<Ctx: ReaderContext>(
+		&self,
+		_ctx: &Ctx,
+		_subject_client_id: ClientId,
+		_substitute_client_id: ClientId,
+		_old_client_state: Self::ClientState,
+		_substitute_client_state: Self::ClientState,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error> {
 		unimplemented!()
 	}

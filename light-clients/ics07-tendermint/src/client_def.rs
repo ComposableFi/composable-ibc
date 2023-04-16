@@ -32,7 +32,7 @@ use ibc::core::{
 		merkle::{apply_prefix, MerkleProof},
 	},
 	ics24_host::{
-		identifier::{ChannelId, ClientId, ConnectionId, PortId, ChainId},
+		identifier::{ChannelId, ClientId, ConnectionId, PortId},
 		path::{
 			AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath, CommitmentsPath,
 			ConnectionsPath, ReceiptsPath, SeqRecvsPath,
@@ -41,11 +41,11 @@ use ibc::core::{
 	},
 	ics26_routing::context::ReaderContext,
 };
-use ibc_proto::ibc::core::commitment::v1::{MerkleProof as RawMerkleProof};
+use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
 use prost::Message;
 use tendermint_light_client_verifier::{
 	types::{TrustedBlockState, UntrustedBlockState},
-	Verdict, Verifier, 
+	Verdict, Verifier,
 };
 use tendermint_proto::Protobuf;
 
@@ -56,7 +56,7 @@ use crate::{
 	error::Error,
 	HostFunctionsProvider, ProdVerifier,
 };
-use ibc::{prelude::*, Height};
+use ibc::{prelude::*, timestamp::Timestamp, Height};
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct TendermintClient<H>(PhantomData<H>);
@@ -482,7 +482,20 @@ where
 		_proof_upgrade_client: Vec<u8>,
 		_proof_upgrade_consensus_state: Vec<u8>,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
-		unimplemented!()
+		// TODO: tendermint verify_upgrade_and_update_state
+		Err(Ics02Error::implementation_specific("Not implemented".to_string()))
+	}
+
+	fn check_substitute_and_update_state<Ctx: ReaderContext>(
+		&self,
+		ctx: &Ctx,
+		subject_client_id: ClientId,
+		substitute_client_id: ClientId,
+		old_client_state: Self::ClientState,
+		substitute_client_state: Self::ClientState,
+	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
+		// TODO: tendermint check_substitute_and_update_state
+		Err(Ics02Error::implementation_specific("Not implemented".to_string()))
 	}
 
 	fn verify_client_consensus_state<Ctx: ReaderContext>(

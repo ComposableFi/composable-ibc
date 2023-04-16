@@ -47,15 +47,15 @@ where
 	// This is the client which will perform proof verification.
 	let client_id = connection_end.client_id().clone();
 
-	let client_state = ctx.client_state(&client_id, &mut Vec::new()).map_err(Error::ics02_client)?;
+	let client_state = ctx.client_state(&client_id).map_err(Error::ics02_client)?;
 
 	// The client must not be frozen.
-	if client_state.is_frozen() {
+	if client_state.is_frozen(ctx, &client_id) {
 		return Err(Error::frozen_client(client_id))
 	}
 
 	let consensus_state = ctx
-		.consensus_state(&client_id, height, &mut Vec::new())
+		.consensus_state(&client_id, height)
 		.map_err(|_| Error::error_invalid_consensus_state())?;
 
 	let client_def = client_state.client_def();
@@ -90,15 +90,15 @@ pub fn verify_packet_recv_proofs<Ctx: ReaderContext>(
 	proofs: &Proofs,
 ) -> Result<(), Error> {
 	let client_id = connection_end.client_id();
-	let client_state = ctx.client_state(client_id, &mut Vec::new()).map_err(Error::ics02_client)?;
+	let client_state = ctx.client_state(client_id).map_err(Error::ics02_client)?;
 
 	// The client must not be frozen.
-	if client_state.is_frozen() {
+	if client_state.is_frozen(ctx, client_id) {
 		return Err(Error::frozen_client(client_id.clone()))
 	}
 
 	let consensus_state = ctx
-		.consensus_state(client_id, proofs.height(), &mut Vec::new())
+		.consensus_state(client_id, proofs.height())
 		.map_err(|_| Error::error_invalid_consensus_state())?;
 
 	let client_def = client_state.client_def();
@@ -136,15 +136,15 @@ pub fn verify_packet_acknowledgement_proofs<Ctx: ReaderContext>(
 	proofs: &Proofs,
 ) -> Result<(), Error> {
 	let client_id = connection_end.client_id();
-	let client_state = ctx.client_state(client_id, &mut Vec::new()).map_err(Error::ics02_client)?;
+	let client_state = ctx.client_state(client_id).map_err(Error::ics02_client)?;
 
 	// The client must not be frozen.
-	if client_state.is_frozen() {
+	if client_state.is_frozen(ctx, client_id) {
 		return Err(Error::frozen_client(client_id.clone()))
 	}
 
 	let consensus_state = ctx
-		.consensus_state(client_id, proofs.height(), &mut Vec::new())
+		.consensus_state(client_id, proofs.height())
 		.map_err(|_| Error::error_invalid_consensus_state())?;
 
 	let ack_commitment = ctx.ack_commitment(acknowledgement);
@@ -184,15 +184,15 @@ where
 	Ctx: ReaderContext,
 {
 	let client_id = connection_end.client_id();
-	let client_state = ctx.client_state(client_id, &mut Vec::new()).map_err(Error::ics02_client)?;
+	let client_state = ctx.client_state(client_id).map_err(Error::ics02_client)?;
 
 	// The client must not be frozen.
-	if client_state.is_frozen() {
+	if client_state.is_frozen(ctx, client_id) {
 		return Err(Error::frozen_client(client_id.clone()))
 	}
 
 	let consensus_state = ctx
-		.consensus_state(client_id, proofs.height(), &mut Vec::new())
+		.consensus_state(client_id, proofs.height())
 		.map_err(|_| Error::error_invalid_consensus_state())?;
 
 	let client_def = client_state.client_def();
@@ -227,15 +227,15 @@ where
 	Ctx: ReaderContext,
 {
 	let client_id = connection_end.client_id();
-	let client_state = ctx.client_state(client_id, &mut Vec::new()).map_err(Error::ics02_client)?;
+	let client_state = ctx.client_state(client_id).map_err(Error::ics02_client)?;
 
 	// The client must not be frozen.
-	if client_state.is_frozen() {
+	if client_state.is_frozen(ctx, client_id) {
 		return Err(Error::frozen_client(client_id.clone()))
 	}
 
 	let consensus_state = ctx
-		.consensus_state(client_id, proofs.height(), &mut Vec::new())
+		.consensus_state(client_id, proofs.height())
 		.map_err(|_| Error::error_invalid_consensus_state())?;
 
 	let client_def = client_state.client_def();

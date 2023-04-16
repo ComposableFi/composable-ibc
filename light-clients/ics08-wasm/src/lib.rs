@@ -12,3 +12,5 @@ pub mod consensus_state;
 pub mod msg;
 
 pub type Bytes = Vec<u8>;
+pub static SUBJECT_PREFIX: &[u8] = "subject/".as_bytes();
+pub static SUBSTITUTE_PREFIX: &[u8] = "substitute/".as_bytes();

@@ -3,10 +3,11 @@ use crate::{
 	error::ContractError,
 	log,
 	msg::{
-		CheckForMisbehaviourMsg, ClientStateCallResponse, ContractResult, ExecuteMsg,
-		ExportMetadataMsg, InitializeState, InstantiateMsg, QueryMsg, QueryResponse, StatusMsg,
-		UpdateStateMsg, UpdateStateOnMisbehaviourMsg, VerifyClientMessage, VerifyMembershipMsg,
-		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
+		CheckForMisbehaviourMsg, CheckSubstituteAndUpdateStateMsg, ClientStateCallResponse,
+		ContractResult, ExecuteMsg, ExportMetadataMsg, InitializeState, InstantiateMsg, QueryMsg,
+		QueryResponse, StatusMsg, UpdateStateMsg, UpdateStateOnMisbehaviourMsg,
+		VerifyClientMessage, VerifyMembershipMsg, VerifyNonMembershipMsg,
+		VerifyUpgradeAndUpdateStateMsg,
 	},
 	state::{get_client_state, get_consensus_state},
 	Bytes,
@@ -15,25 +16,23 @@ use byteorder::{ByteOrder, LittleEndian};
 use core::hash::Hasher;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-	to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
-};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw_storage_plus::{Item, Map};
 use digest::Digest;
 use grandpa_light_client_primitives::justification::AncestryChain;
-use ibc::{
-	core::{
-		ics02_client::{
-			client_def::{ClientDef, ConsensusUpdateResult},
-			context::{ClientKeeper, ClientReader},
-			height::Height,
-		},
-		ics24_host::identifier::ClientId,
+use ibc::core::{
+	ics02_client::{
+		client_def::{ClientDef, ConsensusUpdateResult},
+		context::{ClientKeeper, ClientReader},
+		height::Height,
 	},
+	ics24_host::identifier::ClientId,
 };
+use ics08_wasm::{SUBJECT_PREFIX, SUBSTITUTE_PREFIX};
 use ics10_grandpa::{
 	client_def::GrandpaClient,
 	client_message::{ClientMessage, RelayChainHeader},
+	client_state::ClientState,
 	consensus_state::ConsensusState,
 };
 use light_client_common::{verify_membership, verify_non_membership};
@@ -63,8 +62,6 @@ pub const GRANDPA_HEADER_HASHES_SET_STORAGE: Map<Vec<u8>, ()> =
 	Map::new("grandpa_header_hashes_set");
 
 pub const GRANDPA_BLOCK_HASHES_CACHE_SIZE: usize = 500;
-pub static SUBJECT_PREFIX: &[u8] = "subject/".as_bytes();
-pub static SUBSTITUTE_PREFIX: &[u8] = "substitute/".as_bytes(); 
 
 #[derive(Clone, Copy, Debug, PartialEq, Default, Eq)]
 pub struct HostFunctions;
@@ -144,7 +141,7 @@ fn process_message(
 		ExecuteMsg::VerifyMembership(msg) => {
 			let msg = VerifyMembershipMsg::try_from(msg)?;
 			let consensus_state = ctx
-				.consensus_state(&client_id, msg.height, &mut Vec::new())
+				.consensus_state(&client_id, msg.height)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 			verify_membership::<BlakeTwo256, _>(
 				&msg.prefix,
@@ -159,7 +156,7 @@ fn process_message(
 		ExecuteMsg::VerifyNonMembership(msg) => {
 			let msg = VerifyNonMembershipMsg::try_from(msg)?;
 			let consensus_state = ctx
-				.consensus_state(&client_id, msg.height, &mut Vec::new())
+				.consensus_state(&client_id, msg.height)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 
 			verify_non_membership::<BlakeTwo256, _>(
@@ -172,7 +169,8 @@ fn process_message(
 			.map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyClientMessage(msg) => {
-			let client_state = ctx.client_state(&client_id, &mut Vec::new())
+			let client_state = ctx
+				.client_state(&client_id)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 			let msg = VerifyClientMessage::try_from(msg)?;
 
@@ -203,31 +201,32 @@ fn process_message(
 			f
 		},
 		ExecuteMsg::CheckForMisbehaviour(msg) => {
-			let client_state = ctx.client_state(&client_id, &mut Vec::new())
+			let client_state = ctx
+				.client_state(&client_id)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 			let msg = CheckForMisbehaviourMsg::try_from(msg)?;
 			client
 				.check_for_misbehaviour(ctx, client_id, client_state, msg.client_message)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
-				.map(|result| {
-					to_binary(&ContractResult::success().misbehaviour(result))
-				})
+				.map(|result| to_binary(&ContractResult::success().misbehaviour(result)))
 		},
 		ExecuteMsg::UpdateStateOnMisbehaviour(msg_raw) => {
-			let client_state = ctx.client_state(&client_id, &mut Vec::new())
+			let client_state = ctx
+				.client_state(&client_id)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 			let msg = UpdateStateOnMisbehaviourMsg::try_from(msg_raw)?;
 			client
 				.update_state_on_misbehaviour(client_state, msg.client_message)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
 				.and_then(|cs| {
-					ctx.store_client_state(client_id, cs, &mut Vec::new())
+					ctx.store_client_state(client_id, cs)
 						.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 					Ok(to_binary(&ContractResult::success()))
 				})
 		},
 		ExecuteMsg::UpdateState(msg_raw) => {
-			let client_state = ctx.client_state(&client_id, &mut Vec::new())
+			let client_state = ctx
+				.client_state(&client_id)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 			let msg = UpdateStateMsg::try_from(msg_raw)?;
 
@@ -252,57 +251,69 @@ fn process_message(
 				.update_state(ctx, client_id.clone(), client_state, msg.client_message)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
 				.and_then(|(cs, cu)| {
-					let height = cs.latest_height();
-					log!(ctx, "Storing client state with height: {:?}", height);
 					ctx.insert_relay_header_hashes(&finalized_headers);
-
-					match cu {
-						ConsensusUpdateResult::Single(cs) => {
-							log!(ctx, "Storing consensus state: {:?}", height);
-							ctx.store_consensus_state(client_id.clone(), height, cs, &mut Vec::new())
-								.map_err(|e| ContractError::Grandpa(e.to_string()))?;
-						},
-						ConsensusUpdateResult::Batch(css) =>
-							for (height, cs) in css {
-								log!(ctx, "Storing consensus state: {:?}", height);
-								ctx.store_consensus_state(client_id.clone(), height, cs, &mut Vec::new())
-									.map_err(|e| ContractError::Grandpa(e.to_string()))?;
-							},
-					}
-					ctx.store_client_state(client_id, cs, &mut Vec::new())
-						.map_err(|e| ContractError::Grandpa(e.to_string()))?;
-					Ok(to_binary(&ContractResult::success()))
+					store_client_and_consensus_states(ctx, client_id.clone(), cs, cu)
 				})
 		},
-		ExecuteMsg::CheckSubstituteAndUpdateState(_msg) => {
-			log!(ctx, "In CheckSubstituteAndUpdateState");
-			let substitute_client_state = ctx.client_state(&client_id, &mut SUBSTITUTE_PREFIX.clone().to_vec())
+		ExecuteMsg::CheckSubstituteAndUpdateState(msg) => {
+			let _msg = CheckSubstituteAndUpdateStateMsg::try_from(msg)?;
+			// manually load both states from the combined storage using the appropriate prefixes
+			let mut old_client_state = ctx
+				.client_state_prefixed(SUBJECT_PREFIX)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
-			let height = substitute_client_state.latest_height();
-			let mut substitute_consensus_state = ctx.consensus_state(&client_id, height, &mut SUBSTITUTE_PREFIX.clone().to_vec())
-				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
-			substitute_consensus_state.timestamp = substitute_consensus_state.timestamp.checked_add(std::time::Duration::from_nanos(1)).unwrap();
-			ctx.store_consensus_state(client_id.clone(), height, substitute_consensus_state, &mut SUBJECT_PREFIX.clone().to_vec())
-				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
-			ctx.store_client_state(client_id, substitute_client_state, &mut SUBJECT_PREFIX.clone().to_vec())
+			let substitute_client_state = ctx
+				.client_state_prefixed(SUBSTITUTE_PREFIX)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 
-            Ok(()).map(|_| to_binary(&ContractResult::success()))
+			// Check that the substitute client state is valid:
+			// all fields should be the same as in the old state, except for the `relay_chain`,
+			// `para_id`, `latest_para_height`, `latest_relay_height`, `frozen_height`,
+			// `current_authorities`, `current_set_id`
+			old_client_state.relay_chain = substitute_client_state.relay_chain;
+			old_client_state.para_id = substitute_client_state.para_id;
+			old_client_state.latest_para_height = substitute_client_state.latest_para_height;
+			old_client_state.latest_relay_height = substitute_client_state.latest_relay_height;
+			old_client_state.frozen_height = substitute_client_state.frozen_height;
+			old_client_state.current_authorities =
+				substitute_client_state.current_authorities.clone();
+			old_client_state.current_set_id = substitute_client_state.current_set_id;
+
+			if old_client_state != substitute_client_state {
+				return Err(ContractError::Grandpa(
+					"subject client state does not match substitute client state".to_string(),
+				))
+			}
+			let substitute_client_state = old_client_state;
+			let height = substitute_client_state.latest_height();
+			// consensus state should be replaced as well
+			let mut substitute_consensus_state =
+				ctx.consensus_state_prefixed(height, SUBSTITUTE_PREFIX)?;
+			ctx.store_consensus_state_prefixed(height, substitute_consensus_state, SUBJECT_PREFIX);
+			ctx.store_client_state_prefixed(substitute_client_state, SUBJECT_PREFIX)
+				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
+
+			Ok(()).map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyUpgradeAndUpdateState(msg) => {
-			let mut old_client_state = ctx.client_state(&client_id, &mut Vec::new())
+			let old_client_state = ctx
+				.client_state(&client_id)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
-			let msg: VerifyUpgradeAndUpdateStateMsg<HostFunctions> = VerifyUpgradeAndUpdateStateMsg::try_from(msg)?;
-			let proof_upgraded_client = "upgraded client state proof".as_bytes().to_vec();
-            let proof_upgraded_cons_state= "upgraded consensus state proof".as_bytes().to_vec();
-            if msg.proof_upgrade_client.eq(&proof_upgraded_client) && 
-                msg.proof_upgrade_consensus_state.eq(&proof_upgraded_cons_state) {
-                    old_client_state.latest_para_height = old_client_state.latest_para_height+1;
-                    ctx.store_client_state(client_id, old_client_state, &mut Vec::new())
-                        .map_err(|e| ContractError::Grandpa(e.to_string()))?;
-                    return to_binary(&ContractResult::success()).map_err(|_| ContractError::Grandpa("failed".to_string()));
-            }
-            Ok(()).map(|_| to_binary(&ContractResult::error("failed".to_string())))
+			let msg: VerifyUpgradeAndUpdateStateMsg<HostFunctions> =
+				VerifyUpgradeAndUpdateStateMsg::try_from(msg)?;
+			client
+				.verify_upgrade_and_update_state(
+					ctx,
+					client_id.clone(),
+					&old_client_state,
+					&msg.upgrade_client_state,
+					&msg.upgrade_consensus_state,
+					msg.proof_upgrade_client,
+					msg.proof_upgrade_consensus_state,
+				)
+				.map_err(|e| ContractError::Grandpa(e.to_string()))
+				.and_then(|(cs, cu)| {
+					store_client_and_consensus_states(ctx, client_id.clone(), cs, cu)
+				})
 		},
 		ExecuteMsg::InitializeState(InitializeState { client_state, consensus_state }) => {
 			let state_call_response = ClientStateCallResponse {
@@ -344,6 +355,35 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 			}
 		},
 	}
+}
+
+fn store_client_and_consensus_states<H>(
+	ctx: &mut Context<H>,
+	client_id: ClientId,
+	client_state: ClientState<H>,
+	consensus_update: ConsensusUpdateResult<Context<H>>,
+) -> Result<StdResult<Binary>, ContractError>
+where
+	H: grandpa_light_client_primitives::HostFunctions<Header = RelayChainHeader>,
+{
+	let height = client_state.latest_height();
+	match consensus_update {
+		ConsensusUpdateResult::Single(cs) => {
+			log!(ctx, "Storing consensus state: {:?}", height);
+			ctx.store_consensus_state(client_id.clone(), height, cs)
+				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
+		},
+		ConsensusUpdateResult::Batch(css) =>
+			for (height, cs) in css {
+				log!(ctx, "Storing consensus state: {:?}", height);
+				ctx.store_consensus_state(client_id.clone(), height, cs)
+					.map_err(|e| ContractError::Grandpa(e.to_string()))?;
+			},
+	}
+	log!(ctx, "Storing client state with height: {:?}", height);
+	ctx.store_client_state(client_id, client_state)
+		.map_err(|e| ContractError::Grandpa(e.to_string()))?;
+	Ok(to_binary(&ContractResult::success()))
 }
 
 // The FFIs below are required because of sp-io dependency that expects the functions to be
