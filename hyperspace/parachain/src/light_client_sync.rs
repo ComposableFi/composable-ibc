@@ -279,7 +279,23 @@ where
 		headers_with_events.insert(finalized_para_header.number());
 	}
 
-	let events: Vec<IbcEvent> = events.into_values().flatten().collect();
+	let events: Vec<IbcEvent> = events
+		.into_values()
+		.flatten()
+		.filter(|e| {
+			let mut channel_and_port_ids = source.channel_whitelist();
+			channel_and_port_ids.extend(counterparty.channel_whitelist());
+			filter_events_by_ids(
+				e,
+				&[source.client_id(), counterparty.client_id()],
+				&[source.connection_id(), counterparty.connection_id()]
+					.into_iter()
+					.flatten()
+					.collect::<Vec<_>>(),
+				&channel_and_port_ids,
+			)
+		})
+		.collect();
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
 		.query_finalized_parachain_headers_with_proof::<T::Header>(
 			previous_finalized_height,
