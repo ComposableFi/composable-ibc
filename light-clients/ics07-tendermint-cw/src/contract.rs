@@ -48,7 +48,6 @@ use tendermint_light_client_verifier::operations::{CommitValidator};
 use ed25519_consensus::VerificationKey;
 use ics08_wasm::SUBJECT_PREFIX;
 
-//#[derive(Clone, Default, PartialEq, Debug, Eq)]
 #[derive(Clone, Copy, Debug, PartialEq, Default, Eq)]
 pub struct HostFunctions;
 

@@ -63,7 +63,7 @@ pub struct TendermintClient<H>(PhantomData<H>);
 
 impl<H> ClientDef for TendermintClient<H>
 where
-	H: HostFunctionsProvider + Clone + Send + Sync + Debug + Eq,
+	H: HostFunctionsProvider,
 {
 	type ClientMessage = ClientMessage;
 	type ClientState = ClientState<H>;

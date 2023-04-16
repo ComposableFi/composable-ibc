@@ -670,6 +670,7 @@ impl<C: HostBlockType> ClientKeeper for DummyTransferModule<C> {
 
 	fn validate_self_client(
 		&self,
+		_client_id: ClientId,
 		_client_state: &Self::AnyClientState,
 	) -> Result<(), Ics02Error> {
 		Ok(())

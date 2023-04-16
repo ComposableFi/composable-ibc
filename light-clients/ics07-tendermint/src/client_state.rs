@@ -18,7 +18,7 @@ use alloc::string::ToString;
 use core::{
 	convert::{TryFrom, TryInto},
 	fmt::Debug,
-	marker::{PhantomData, Send, Sync},
+	marker::PhantomData,
 	time::Duration,
 };
 use serde::{Deserialize, Serialize};
@@ -43,9 +43,7 @@ use ibc::{
 };
 
 pub const TENDERMINT_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.ClientState";
-
-// Remove Serialize and Deserialize
-#[derive(PartialEq, Eq, Debug, Clone, Default)]
+#[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
 pub struct ClientState<H> {
 	pub chain_id: ChainId,
 	pub trust_level: TrustThreshold,
@@ -258,7 +256,7 @@ pub struct UpgradeOptions {
 
 impl<H> ibc::core::ics02_client::client_state::ClientState for ClientState<H>
 where
-	H: HostFunctionsProvider + Debug + Send + Sync + Eq + Clone,
+	H: HostFunctionsProvider,
 {
 	type UpgradeOptions = UpgradeOptions;
 	type ClientDef = TendermintClient<H>;

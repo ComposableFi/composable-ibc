@@ -268,16 +268,4 @@ impl ClientDef for MockClient {
 	) -> Result<bool, Error> {
 		Ok(false)
 	}
-	
-	fn check_substitute_and_update_state<Ctx: ReaderContext>(
-			&self,
-			_ctx: &Ctx,
-			_subject_client_id: ClientId,
-			_substitute_client_id: ClientId,
-			_old_client_state: Self::ClientState,
-			_substitute_client_state: Self::ClientState,
-		) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error> {
-			unimplemented!()
-	}
-
 }
