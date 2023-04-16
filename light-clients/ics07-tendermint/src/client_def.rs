@@ -68,7 +68,7 @@ where
 	type ClientMessage = ClientMessage;
 	type ClientState = ClientState<H>;
 	type ConsensusState = ConsensusState;
-	
+
 	fn verify_client_message<Ctx>(
 		&self,
 		ctx: &Ctx,
@@ -420,7 +420,7 @@ where
 
 	fn verify_packet_data<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
+		ctx: &Ctx,
 		_client_id: &ClientId,
 		client_state: &Self::ClientState,
 		height: Height,
@@ -433,7 +433,7 @@ where
 		commitment: PacketCommitment,
 	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
-		//verify_delay_passed(ctx, height, connection_end)?;
+		verify_delay_passed(ctx, height, connection_end)?;
 
 		let commitment_path =
 			CommitmentsPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
@@ -450,7 +450,7 @@ where
 
 	fn verify_packet_acknowledgement<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
+		ctx: &Ctx,
 		_client_id: &ClientId,
 		client_state: &Self::ClientState,
 		height: Height,
@@ -464,7 +464,7 @@ where
 	) -> Result<(), Ics02Error> {
 		// client state height = consensus state height
 		client_state.verify_height(height)?;
-		//verify_delay_passed(ctx, height, connection_end)?;
+		verify_delay_passed(ctx, height, connection_end)?;
 
 		let ack_path = AcksPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
 		verify_membership::<H, _>(
@@ -479,7 +479,7 @@ where
 
 	fn verify_next_sequence_recv<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
+		ctx: &Ctx,
 		_client_id: &ClientId,
 		client_state: &Self::ClientState,
 		height: Height,
@@ -491,7 +491,7 @@ where
 		sequence: Sequence,
 	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
-		//verify_delay_passed(ctx, height, connection_end)?;
+		verify_delay_passed(ctx, height, connection_end)?;
 
 		let mut seq_bytes = Vec::new();
 		u64::from(sequence).encode(&mut seq_bytes).expect("buffer size too small");
@@ -509,7 +509,7 @@ where
 
 	fn verify_packet_receipt_absence<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
+		ctx: &Ctx,
 		_client_id: &ClientId,
 		client_state: &Self::ClientState,
 		height: Height,
@@ -521,7 +521,7 @@ where
 		sequence: Sequence,
 	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
-		//verify_delay_passed(ctx, height, connection_end)?;
+		verify_delay_passed(ctx, height, connection_end)?;
 
 		let receipt_path =
 			ReceiptsPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
@@ -578,13 +578,35 @@ where
 		.map_err(|e| Error::ics23_error(e).into())
 }
 
-pub fn verify_delay_passed<Ctx: ReaderContext>(
-	_ctx: &Ctx,
-	_height: Height,
-	_delay_period_time: u64,
-	_delay_period_height: u64,
+fn verify_delay_passed<Ctx: ReaderContext>(
+	ctx: &Ctx,
+	height: Height,
+	connection_end: &ConnectionEnd,
 ) -> Result<(), Ics02Error> {
-	unimplemented!()
+	let current_timestamp = ctx.host_timestamp();
+	let current_height = ctx.host_height();
+
+	let client_id = connection_end.client_id();
+	let processed_time = ctx
+		.client_update_time(client_id, height)
+		.map_err(|_| Error::processed_time_not_found(height))?;
+	let processed_height = ctx
+		.client_update_height(client_id, height)
+		.map_err(|_| Error::processed_height_not_found(height))?;
+
+	let delay_period_time = connection_end.delay_period();
+	let delay_period_height = ctx.block_delay(delay_period_time);
+	let delay_period_time_u64 = u64::try_from(delay_period_time.as_nanos()).unwrap();
+
+	ClientState::<()>::verify_delay_passed(
+		current_timestamp,
+		current_height,
+		processed_time.nanoseconds(),
+		processed_height.revision_height,
+		delay_period_time_u64,
+		delay_period_height,
+	)
+	.map_err(|e| e.into())
 }
 
 fn verify_misbehaviour_header<Ctx: ReaderContext, H: HostFunctionsProvider>(
