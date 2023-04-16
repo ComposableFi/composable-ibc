@@ -1,6 +1,5 @@
 use cosmwasm_std::Storage;
 use ibc::core::ics24_host::identifier::ClientId;
-//use sp_std::prelude::*;
 
 /// client_id => client_type
 /// trie key path: "clients/{}/clientType"
@@ -12,7 +11,6 @@ impl<'a> Clients<'a> {
 	}
 
 	pub fn key(_client_id: ClientId) -> Vec<u8> {
-		// let client_type_path = format!("{}", ClientTypePath(client_id));
 		let client_type_path = format!("clientType");
 		client_type_path.into_bytes()
 	}

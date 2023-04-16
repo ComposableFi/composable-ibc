@@ -1,10 +1,5 @@
-use cosmwasm_std::{
-	Storage,
-	Order,
-};
-use ibc::{
-	Height,
-};
+use cosmwasm_std::{Storage,	Order};
+use ibc::Height;
 
 use crate::msg::GenesisMetadata;
 

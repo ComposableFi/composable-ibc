@@ -13,7 +13,7 @@ pub enum ContractError {
 	// Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
 	#[display(fmt = "Storage error")]
 	StorageError,
-	// TODO: use `ics10-grandpa`'s error type here
+	// TODO: use `ics07-tendermint`'s error type here
 	#[display(fmt = "Tendermint error: {_0}")]
 	#[from(ignore)]
 	Tendermint(String),

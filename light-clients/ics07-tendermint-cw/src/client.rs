@@ -4,7 +4,6 @@ use crate::{
 		ConsensusStates, FakeInner, ReadonlyClientStates, ReadonlyClients, ReadonlyConsensusStates, 
 		ClientStates, ProcessedStates, ReadonlyProcessedStates,
 	},
-	//log,
 };
 use ibc::{
 	core::{
@@ -189,30 +188,13 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientKeeper for Context<'a, H> {
 		client_id: ClientId,
 		client_state: Self::AnyClientState,
 	) -> Result<(), Error> {
-		//log!(self, "in client : [store_client_state]");
 		let client_states = ReadonlyClientStates::new(self.storage());
 		let data = client_states
 			.get()
 			.ok_or_else(|| Error::client_not_found(client_id.clone()))?;
-		/*let any = Any::decode(&*data).map_err(Error::decode)?;
-		let mut wasm_client_state =
-			ics08_wasm::client_state::ClientState::<FakeInner, FakeInner, FakeInner>::decode_vec(
-				&any.value,
-			)
-			.map_err(|e| {
-				Error::implementation_specific(format!(
-					"[client_state]: error decoding client state bytes to WasmConsensusState {}",
-					e
-				))
-			})?;
-		wasm_client_state.data = client_state.to_any().encode_to_vec();
-		wasm_client_state.latest_height = client_state.latest_height().into();
-		let vec1 = wasm_client_state.to_any().encode_to_vec();*/
 		let encoded = Self::encode_client_state(client_state, data)?;
-		//log!(self, "in client : [store_client_state] >> wasm client state (raw)");
 		let mut client_state_storage = ClientStates::new(self.storage_mut());
 		client_state_storage.insert(encoded);
-		//client_state_storage.insert(vec1);
 		Ok(())
 	}
 
@@ -222,28 +204,9 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientKeeper for Context<'a, H> {
 		height: Height,
 		consensus_state: Self::AnyConsensusState,
 	) -> Result<(), Error> {
-		/*log!(
-			self,
-			"in client : [store_consensus_state] >> client_id = {:?}, height = {:?}",
-			client_id,
-			height,
-		);*/
-
-		/*let wasm_consensus_state = ics08_wasm::consensus_state::ConsensusState {
-			data: consensus_state.to_any().encode_to_vec(),
-			timestamp: consensus_state.timestamp().nanoseconds(),
-			inner: Box::new(FakeInner),
-		};
-		let vec1 = wasm_consensus_state.to_any().encode_to_vec();*/
 		let encoded = Self::encode_consensus_state(consensus_state);
-		/*log!(
-			self,
-			"in client : [store_consensus_state] >> wasm consensus state (raw) = {}",
-			hex::encode(&vec1)
-		);*/
 		let mut consensus_states = ConsensusStates::new(self.storage_mut());
 		consensus_states.insert(height, encoded);
-		//consensus_states.insert(height, vec1);
 
 		self.store_update_time(client_id.clone(), height, self.host_timestamp())?;
 		self.store_update_height(client_id, height, self.host_height())?;
