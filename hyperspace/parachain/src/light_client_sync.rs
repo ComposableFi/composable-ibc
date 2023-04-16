@@ -214,7 +214,7 @@ where
 }
 
 /// Return a single client update message
-async fn get_message<T: light_client_common::config::Config>(
+async fn get_message<T: light_client_common::config::Config + Send + Sync>(
 	prover: GrandpaProver<T>,
 	previous_finalized_para_height: u32,
 	previous_finalized_height: u32,
