@@ -67,6 +67,7 @@ pub async fn parse_events(
 	let mut messages = vec![];
 	// 1. translate events to messages
 	for event in events {
+		log::trace!(target: "hyperspace", "Parsing event: {:?}", event);
 		match event {
 			IbcEvent::OpenInitConnection(open_init) => {
 				if let Some(connection_id) = open_init.connection_id() {

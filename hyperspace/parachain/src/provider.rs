@@ -676,7 +676,9 @@ where
 		let base =
 			if cfg!(test) { (session_length / 2) as u64 } else { (session_length / 12) as u64 };
 		let diff = latest_height - latest_client_height_on_counterparty;
-		Ok(base >= diff)
+		log::debug!(target: "hyperspace", "Latest height: {}, Latest client height on counterparty: {}, Base: {}, Diff: {}", latest_height, latest_client_height_on_counterparty, base, diff);
+		let pruning_len = 25;
+		Ok(diff >= base.min(pruning_len as u64))
 	}
 
 	async fn initialize_client_state(

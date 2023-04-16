@@ -69,6 +69,7 @@ pub enum UpdateMessage {
 	Batch(Vec<Any>),
 }
 
+#[derive(Debug)]
 pub enum UpdateType {
 	// contains an authority set change.
 	Mandatory,
@@ -96,7 +97,7 @@ pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: impl Into<Vec<u8>>) ->
 #[async_trait::async_trait]
 pub trait IbcProvider {
 	/// Finality event type, passed on to [`Chain::query_latest_ibc_events`]
-	type FinalityEvent;
+	type FinalityEvent: Debug;
 	/// A representation of the transaction id for the chain
 	type TransactionId: Debug;
 	/// Asset Id

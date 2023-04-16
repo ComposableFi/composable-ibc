@@ -626,5 +626,7 @@ where
 		Any { value, type_url: msg.type_url() }
 	};
 
+	log::trace!(target: "hyperspace", "Sending update header with type {:?} to {}", update_type, source.name());
+
 	Ok(vec![(update_header, events, update_type)])
 }
