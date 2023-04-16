@@ -464,20 +464,6 @@ impl<C: HostBlockType> ClientReader for DummyTransferModule<C> {
 		}
 	}
 
-	fn processed_timestamp(
-		&self,
-		_height: Height,
-	) -> Result<u64, Ics02Error> {
-		unimplemented!()
-	}
-	
-	fn processed_height(
-		&self,
-		_height: Height,
-	) -> Result<u64, Ics02Error> {
-		unimplemented!()
-	}
-
 	fn host_height(&self) -> Height {
 		Height::zero()
 	}

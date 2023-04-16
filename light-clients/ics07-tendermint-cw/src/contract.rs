@@ -8,7 +8,13 @@ use crate::{
 		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
 	},
 	state::{get_client_state, get_consensus_state},
-	helpers::{verify_upgrade_and_update_state, check_substitute_and_update_state, prune_oldest_consensus_state}, ics23::ReadonlyProcessedStates,
+	helpers::{
+		verify_upgrade_and_update_state,
+		check_substitute_and_update_state,
+		prune_oldest_consensus_state,
+		verify_delay_passed,
+	},
+	ics23::ReadonlyProcessedStates,
 };
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -27,7 +33,7 @@ use ibc::{
 };
 use ics07_tendermint::{
 	HostFunctionsProvider,
-	client_def::{TendermintClient, verify_membership, verify_non_membership, verify_delay_passed},
+	client_def::{TendermintClient, verify_membership, verify_non_membership},
 };
 use std::str::FromStr;
 use tendermint::{
@@ -42,20 +48,12 @@ use tendermint_light_client_verifier::operations::{CommitValidator};
 use ed25519_consensus::VerificationKey;
 use ics08_wasm::SUBJECT_PREFIX;
 
-//pub static SUBJECT_PREFIX: &[u8] = "subject/".as_bytes();
-//pub static SUBSTITUTE_PREFIX: &[u8] = "substitute/".as_bytes(); 
-
 //#[derive(Clone, Default, PartialEq, Debug, Eq)]
 #[derive(Clone, Copy, Debug, PartialEq, Default, Eq)]
 pub struct HostFunctions;
 
-/*impl light_client_common::HostFunctions for HostFunctions {
-	type BlakeTwo256 = BlakeTwo256;
-}*/
-
 impl ics23::HostFunctionsProvider for HostFunctions {
 	fn sha2_256(message: &[u8]) -> [u8; 32] {
-		//Sha256::digest(message).into()
 		let mut hasher = Sha256::default();
 		hasher.update(message);
 		hasher.finalize().as_slice().try_into().expect("slice with incorrect length")
@@ -63,37 +61,24 @@ impl ics23::HostFunctionsProvider for HostFunctions {
 
 	fn sha2_512(_message: &[u8]) -> [u8; 64] {
 		unimplemented!()
-		//runtime_interface::sha2_512(message)
 	}
 
 	fn sha2_512_truncated(_message: &[u8]) -> [u8; 32] {
 		unimplemented!()
-		//runtime_interface::sha2_512_truncated(message)
 	}
 
 	fn sha3_512(_message: &[u8]) -> [u8; 64] {
 		unimplemented!()
-		//runtime_interface::sha3_512(message)
 	}
 
 	fn ripemd160(_message: &[u8]) -> [u8; 20] {
 		unimplemented!()
-		//runtime_interface::ripemd160(message)
 	}
 }
 
 impl TendermintSha256 for HostFunctions {
 	fn digest(data: impl AsRef<[u8]>) -> [u8; HASH_SIZE] {
-	//fn digest(data: impl AsRef<[u8]>) -> [u8; HASH_SIZE] {
 		Sha256::digest(&data).into()
-		/*let mut hasher = Sha256::default();
-		hasher.update(data);
-		hasher.finalize().as_slice().try_into().expect("slice with incorrect length")
-		//.to_vec().into()*/
-		//unimplemented!()
-		//sp_io::hashing::sha2_256(data.as_ref())
-		//let x: [u8; HASH_SIZE] = [0; HASH_SIZE];
-		//x
 	}
 }
 
@@ -332,10 +317,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 		QueryMsg::GetLatestHeightsMsg(_) => unimplemented!("GetLatestHeightsMsg"),
 		QueryMsg::ExportMetadata(ExportMetadataMsg {}) => {
 			let ro_proceeded_state = ReadonlyProcessedStates::new(deps.storage);
-			/*match ro_proceeded_state.get_metadata() {
-				Some(gm) => to_binary(&QueryResponse::genesis_metadata(gm)),
-				None => to_binary(&QueryResponse::genesis_metadata(None)),
-			}*/
 			to_binary(&QueryResponse::genesis_metadata(ro_proceeded_state.get_metadata()))
 		},
 		QueryMsg::Status(StatusMsg {}) => {

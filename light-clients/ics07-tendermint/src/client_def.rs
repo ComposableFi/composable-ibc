@@ -579,31 +579,12 @@ where
 }
 
 pub fn verify_delay_passed<Ctx: ReaderContext>(
-	ctx: &Ctx,
-	height: Height,
-	delay_period_time: u64,
-	delay_period_height: u64,
+	_ctx: &Ctx,
+	_height: Height,
+	_delay_period_time: u64,
+	_delay_period_height: u64,
 ) -> Result<(), Ics02Error> {
-	let current_timestamp = ctx.host_timestamp();
-	let current_height = ctx.host_height();
-
-	let processed_time = ctx
-		.processed_timestamp(height)
-		.map_err(|_| Error::processed_time_not_found(height))?;
-	let processed_height = ctx
-		.processed_height(height)
-		.map_err(|_| Error::processed_height_not_found(height))?;
-
-
-	ClientState::<()>::verify_delay_passed(
-		current_timestamp,
-		current_height,
-		processed_time,
-		processed_height,
-		delay_period_time,
-		delay_period_height,
-	)
-	.map_err(|e| e.into())
+	unimplemented!()
 }
 
 fn verify_misbehaviour_header<Ctx: ReaderContext, H: HostFunctionsProvider>(

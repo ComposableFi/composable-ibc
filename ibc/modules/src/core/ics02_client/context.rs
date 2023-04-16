@@ -102,16 +102,6 @@ pub trait ClientReader: ClientKeeper {
 	/// The value of this counter should increase only via method
 	/// `ClientKeeper::increase_client_counter`.
 	fn client_counter(&self) -> Result<u64, Error>;
-
-	fn processed_timestamp(
-		&self,
-		height: Height,
-	) -> Result<u64, Error>;
-
-	fn processed_height(
-		&self,
-		height: Height,
-	) -> Result<u64, Error>;
 }
 
 pub trait ClientTypes {

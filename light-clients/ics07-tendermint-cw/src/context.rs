@@ -1,9 +1,13 @@
 use crate::{
-	ics23::{ClientStates, ConsensusStates, ReadonlyClientStates, ReadonlyConsensusStates},
+	ics23::{ClientStates, ConsensusStates, ReadonlyClientStates, ReadonlyConsensusStates, ReadonlyProcessedStates},
 	ContractError,
 };
 use cosmwasm_std::{DepsMut, Env, Storage};
-use ibc::{core::ics26_routing::context::ReaderContext, Height};
+use ibc::{
+	core::ics02_client::error::Error,
+	core::ics26_routing::context::ReaderContext,
+	Height,
+};
 use ics07_tendermint::{
 	HostFunctionsProvider,
 	client_state::ClientState,
@@ -59,6 +63,34 @@ impl<'a, H> Context<'a, H>
 where
 	H: Clone,
 {
+	pub fn processed_timestamp(
+		&self,
+		height: Height,
+	) -> Result<u64, Error> {
+
+		let processed_state = ReadonlyProcessedStates::new(self.storage());
+		match processed_state.get_processed_time(height, &mut Vec::new()) {
+			Some(time) => Ok(time),
+			None => ibc::prelude::Err(Error::implementation_specific(format!(
+				"problem getting processed timestamp"
+			))),
+		}
+	}
+
+	pub fn processed_height(
+		&self,
+		height: Height,
+	) -> Result<u64, Error> {
+		
+		let processed_state = ReadonlyProcessedStates::new(self.storage());
+		match processed_state.get_processed_height(height, &mut Vec::new()) {
+			Some(p_height) => Ok(p_height),
+			None => ibc::prelude::Err(Error::implementation_specific(format!(
+				"problem getting processed height"
+			))),
+		}
+	}
+
 	pub fn consensus_state_prefixed(
 		&self,
 		height: Height,

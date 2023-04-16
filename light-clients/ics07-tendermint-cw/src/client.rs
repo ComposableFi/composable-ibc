@@ -39,11 +39,9 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientTypes for Context<'a, H> {
 
 impl<'a, H: HostFunctionsProvider + 'static> ClientReader for Context<'a, H> {
 	fn client_type(&self, client_id: &ClientId) -> Result<ClientType, Error> {
-		//log!(self, "in client : [client_type] >> client_id = {:?}", client_id);
 
 		let clients = ReadonlyClients::new(self.storage());
 		if !clients.contains_key(client_id) {
-			//log!(self, "in client : [client_type] >> read client_type is None");
 			return Err(Error::client_not_found(client_id.clone()))
 		}
 
@@ -59,34 +57,17 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientReader for Context<'a, H> {
 		match ClientType::from_str(&data) {
 			Err(_err) => Err(Error::unknown_client_type(data.to_string())),
 			Ok(val) => {
-				//log!(self, "in client : [client_type] >> client_type : {:?}", val);
 				Ok(val)
 			},
 		}
 	}
 	
 	fn client_state(&self, client_id: &ClientId) -> Result<ClientState<H>, Error> {
-		//log!(self, "in client : [client_state]");
 		let client_states = ReadonlyClientStates::new(self.storage());
 		let data = client_states
 			.get()
 			.ok_or_else(|| Error::client_not_found(client_id.clone()))?;
-		/*let any = Any::decode(&*data).map_err(Error::decode)?;
-		let wasm_state =
-			ics08_wasm::client_state::ClientState::<FakeInner, FakeInner, FakeInner>::decode_vec(
-				&any.value,
-			)
-			.map_err(|e| {
-				Error::implementation_specific(format!(
-					"[client_state]: error decoding client state bytes to WasmConsensusState {}",
-					e
-				))
-			})?;
-		let any = Any::decode(&*wasm_state.data).map_err(|e| Error::decode(e))?;
-		let state =
-			ClientState::<H>::decode_vec(&*any.value).map_err(Error::invalid_any_client_state)?;*/
 		let state = Self::decode_client_state(&data)?;
-		//log!(self, "in client : [client_state] >> any client_state: {:?}", state);
 		Ok(state)
 	}
 
@@ -95,35 +76,11 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientReader for Context<'a, H> {
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<ConsensusState, Error> {
-		/*log!(
-			self,
-			"in client : [consensus_state] >> client_id = {:?}, height = {:?}",
-			client_id,
-			height
-		);*/
-
 		let consensus_states = ReadonlyConsensusStates::new(self.storage());
 		let value = consensus_states
 			.get(height)
 			.ok_or_else(|| Error::consensus_state_not_found(client_id.clone(), height))?;
-		/*log!(
-			self,
-			"in client : [consensus_state] >> consensus_state (raw): {}",
-			hex::encode(&value)
-		);*/
-		/*let any = Any::decode(&mut &value[..]).map_err(Error::decode)?;
-		let wasm_consensus_state =
-			ics08_wasm::consensus_state::ConsensusState::<FakeInner>::decode_vec(&*any.value)
-				.map_err(Error::invalid_any_consensus_state)?;
-		let any = Any::decode(&mut &wasm_consensus_state.data[..]).map_err(Error::decode)?;
-		let any_consensus_state =
-			ConsensusState::decode_vec(&*any.value).map_err(Error::invalid_any_consensus_state)?;*/
 		let any_consensus_state = Self::decode_consensus_state(&value)?;
-		/*log!(
-			self,
-			"in client : [consensus_state] >> any consensus state = {:?}",
-			any_consensus_state
-		);*/
 		Ok(any_consensus_state)
 	}
 
@@ -185,7 +142,6 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientReader for Context<'a, H> {
 	}
 
 	fn host_height(&self) -> Height {
-		//log!(self, "in client: [host_height]");
 		Height::new(0, self.env.block.height)
 	}
 
@@ -209,34 +165,6 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientReader for Context<'a, H> {
 				))
 			})?;
 		Ok(consensus_state)*/
-	}
-
-	fn processed_timestamp(
-		&self,
-		height: Height,
-	) -> Result<u64, Error> {
-
-		let processed_state = ReadonlyProcessedStates::new(self.storage());
-		match processed_state.get_processed_time(height, &mut Vec::new()) {
-			Some(time) => Ok(time),
-			None => ibc::prelude::Err(Error::implementation_specific(format!(
-				"problem getting processed timestamp"
-			))),
-		}
-	}
-
-	fn processed_height(
-		&self,
-		height: Height,
-	) -> Result<u64, Error> {
-		
-		let processed_state = ReadonlyProcessedStates::new(self.storage());
-		match processed_state.get_processed_height(height, &mut Vec::new()) {
-			Some(p_height) => Ok(p_height),
-			None => ibc::prelude::Err(Error::implementation_specific(format!(
-				"problem getting processed height"
-			))),
-		}
 	}
 
 	fn client_counter(&self) -> Result<u64, Error> {

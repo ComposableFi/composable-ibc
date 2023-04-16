@@ -19,6 +19,7 @@ use ibc::{
 			client_consensus::ConsensusState as _,
 			context::ClientReader,
 			error::Error as Ics02Error,
+			height::Height,
 		},
 		ics23_commitment::{
 			commitment::CommitmentProofBytes,
@@ -32,6 +33,7 @@ use ics07_tendermint::{
 	HostFunctionsProvider,
 	consensus_state::ConsensusState,
 	client_state::{ClientState, UpgradeOptions},
+	error::Error,
 };
 
 use ics08_wasm::{
@@ -56,14 +58,42 @@ impl CwTemplateContract {
 	}
 }
 
+pub fn verify_delay_passed<H: HostFunctionsProvider + 'static>(
+	ctx: &Context<H>,
+	height: Height,
+	delay_period_time: u64,
+	delay_period_height: u64,
+) -> Result<(), Ics02Error> {
+	let current_timestamp = ctx.host_timestamp();
+	let current_height = ctx.host_height();
+
+	let processed_time = ctx
+		.processed_timestamp(height)
+		.map_err(|_| Error::processed_time_not_found(height))?;
+	let processed_height = ctx
+		.processed_height(height)
+		.map_err(|_| Error::processed_height_not_found(height))?;
+
+
+	ClientState::<()>::verify_delay_passed(
+		current_timestamp,
+		current_height,
+		processed_time,
+		processed_height,
+		delay_period_time,
+		delay_period_height,
+	)
+	.map_err(|e| e.into())
+}
+
 pub fn verify_upgrade_and_update_state<H: HostFunctionsProvider + 'static>(
 	ctx: &mut Context<H>,
 	client_id: ClientId,
 	old_client_state: ClientState<H>,
-	upgrade_client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,//,ClientState<H>,
-	upgrade_consensus_state: WasmConsensusState<FakeInner>,//ConsensusState,
+	upgrade_client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
+	upgrade_consensus_state: WasmConsensusState<FakeInner>,
 	proof_upgrade_client: CommitmentProofBytes,
-	proof_upgrade_consensus_state: CommitmentProofBytes,//Vec<u8>,
+	proof_upgrade_consensus_state: CommitmentProofBytes,
 ) -> Result<(ClientState<H>, ConsensusState), Ics02Error> {
 	if old_client_state.upgrade_path.is_empty() {
 		return Err(Ics02Error::implementation_specific("No upgrade path set".to_string()))

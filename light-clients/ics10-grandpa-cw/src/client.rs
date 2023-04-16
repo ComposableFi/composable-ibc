@@ -160,20 +160,6 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'
 		Ok(consensus_state)
 	}
 
-	fn processed_timestamp(
-		&self,
-		_height: Height,
-	) -> Result<u64, Error> {
-		unimplemented!()
-	}
-
-	fn processed_height(
-		&self,
-		_height: Height,
-	) -> Result<u64, Error> {
-		unimplemented!()
-	}
-
 	fn client_counter(&self) -> Result<u64, Error> {
 		let count = CLIENT_COUNTER.load(self.storage()).unwrap_or_default();
 		log!(self, "in client : [client_counter] >> client_counter: {:?}", count);

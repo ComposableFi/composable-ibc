@@ -989,19 +989,6 @@ where
 		MockClientState::client_type().to_owned()
 	}
 
-	fn processed_timestamp(
-		&self,
-		_height: Height,
-	) -> Result<u64, Ics02Error> {
-		unimplemented!()
-	}
-
-	fn processed_height(
-		&self,
-		_height: Height,
-	) -> Result<u64, Ics02Error> {
-		unimplemented!()
-	}
 	/// Search for the lowest consensus state higher than `height`.
 	fn next_consensus_state(
 		&self,
