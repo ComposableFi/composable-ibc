@@ -9,7 +9,6 @@ use crate::{
 	context::Context,
 	msg::ExecuteMsg,
 	ics23::{FakeInner, ProcessedStates, ConsensusStates},
-	contract::{SUBJECT_PREFIX, SUBSTITUTE_PREFIX},
 };
 use tendermint_proto::Protobuf;
 use ibc_proto::ibc::core::commitment::v1::{MerkleProof as RawMerkleProof, MerklePath};
@@ -38,6 +37,7 @@ use ics07_tendermint::{
 use ics08_wasm::{
 	client_state::ClientState as WasmClientState,
 	consensus_state::ConsensusState as WasmConsensusState,
+	SUBJECT_PREFIX, SUBSTITUTE_PREFIX,
 };
 
 /// CwTemplateContract is a wrapper around Addr that provides a lot of helpers
@@ -75,7 +75,7 @@ pub fn verify_upgrade_and_update_state<H: HostFunctionsProvider + 'static>(
 	}
 
 	let consensus_state = 
-		ctx.consensus_state(&client_id.clone(), latest_height, &mut Vec::new())?;
+		ctx.consensus_state(&client_id.clone(), latest_height)?;
 	
 	let mut upgrade_path = old_client_state.upgrade_path.clone();
 	let last_key = upgrade_path.remove(upgrade_path.len()-1);
@@ -126,12 +126,11 @@ pub fn verify_upgrade_and_update_state<H: HostFunctionsProvider + 'static>(
 
 pub fn check_substitute_and_update_state<H: HostFunctionsProvider + 'static>(
 	ctx: &mut Context<H>,
-	client_id: ClientId,
 ) -> Result<(ClientState<H>, ConsensusState), Ics02Error> {
-	let mut subject_client_state = ctx.client_state(&client_id, &mut SUBJECT_PREFIX.clone().to_vec())?;
-		//.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-	let substitute_client_state = ctx.client_state(&client_id, &mut SUBSTITUTE_PREFIX.clone().to_vec())?;
-		//.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+	let mut subject_client_state = ctx.client_state_prefixed(SUBJECT_PREFIX)
+		.map_err(|_| Ics02Error::implementation_specific("subject client state not found".to_string()))?;
+	let substitute_client_state = ctx.client_state_prefixed(SUBSTITUTE_PREFIX)
+		.map_err(|_| Ics02Error::implementation_specific("substitute client state not found".to_string()))?;
 	
 	if subject_client_state.trust_level != substitute_client_state.trust_level ||
 		subject_client_state.unbonding_period != substitute_client_state.unbonding_period ||
@@ -142,8 +141,8 @@ pub fn check_substitute_and_update_state<H: HostFunctionsProvider + 'static>(
 		}
 
 	let height = substitute_client_state.latest_height();
-	let substitute_consensus_state = ctx.consensus_state(&client_id, height, &mut SUBSTITUTE_PREFIX.clone().to_vec())?;
-	//			.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+	let substitute_consensus_state = ctx.consensus_state_prefixed(height, SUBSTITUTE_PREFIX)
+				.map_err(|_| Ics02Error::implementation_specific("substitute consensus state not found".to_string()))?;
 
 	let mut process_states = ProcessedStates::new(ctx.storage_mut());
 	let substitute_processed_time = process_states.get_processed_time(height, &mut SUBSTITUTE_PREFIX.clone().to_vec()).unwrap();

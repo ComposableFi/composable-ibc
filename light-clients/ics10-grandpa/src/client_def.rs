@@ -73,19 +73,6 @@ where
 	type ClientState = ClientState<H>;
 	type ConsensusState = ConsensusState;
 
-	fn verify_misbehaviour_header<Ctx: ReaderContext>(
-		&self,
-		_ctx: &Ctx,
-		_client_id: ClientId,
-		_client_state: Self::ClientState,
-		_message: Self::ClientMessage,
-	) -> Result<(), Ics02Error>
-	where
-		Ctx: ReaderContext,
-	{
-		Ok(())
-	}
-
 	fn verify_client_message<Ctx: ReaderContext>(
 		&self,
 		_ctx: &Ctx,

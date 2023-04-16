@@ -182,19 +182,6 @@ impl ClientDef for FakeInner {
 	type ClientState = FakeInner;
 	type ConsensusState = FakeInner;
 
-	fn verify_misbehaviour_header<Ctx>(
-		&self,
-		_ctx: &Ctx,
-		_client_id: ClientId,
-		_client_state: Self::ClientState,
-		_message: Self::ClientMessage,
-	) -> Result<(), Error>
-	where
-		Ctx: ReaderContext,
-	{
-		unimplemented!()
-	}
-
 	fn verify_client_message<Ctx: ReaderContext>(
 		&self,
 		_ctx: &Ctx,

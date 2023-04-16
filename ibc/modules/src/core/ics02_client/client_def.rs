@@ -56,14 +56,6 @@ pub trait ClientDef: Clone {
 	type ClientState: ClientState<ClientDef = Self> + Eq;
 	type ConsensusState: ConsensusState + Eq;
 
-	fn verify_misbehaviour_header<Ctx: ReaderContext>(
-		&self,
-		ctx: &Ctx,
-		client_id: ClientId,
-		client_state: Self::ClientState,
-		client_msg: Self::ClientMessage,
-	) -> Result<(), Error>;
-	
 	fn verify_client_message<Ctx: ReaderContext>(
 		&self,
 		ctx: &Ctx,

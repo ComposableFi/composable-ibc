@@ -32,7 +32,7 @@ use ibc::core::{
 		merkle::{apply_prefix, MerkleProof},
 	},
 	ics24_host::{
-		identifier::{ChannelId, ClientId, ConnectionId, PortId},
+		identifier::{ChannelId, ClientId, ConnectionId, PortId, ChainId},
 		path::{
 			AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath, CommitmentsPath,
 			ConnectionsPath, ReceiptsPath, SeqRecvsPath,
@@ -56,7 +56,7 @@ use crate::{
 	error::Error,
 	HostFunctionsProvider, ProdVerifier,
 };
-use ibc::{prelude::*, timestamp::Timestamp, Height};
+use ibc::{prelude::*, Height};
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct TendermintClient<H>(PhantomData<H>);
@@ -69,166 +69,6 @@ where
 	type ClientState = ClientState<H>;
 	type ConsensusState = ConsensusState;
 	
-	fn verify_misbehaviour_header<Ctx>(
-		&self,
-		ctx: &Ctx,
-		client_id: ClientId,
-		client_state: Self::ClientState,
-		message: Self::ClientMessage,
-	) -> Result<(), Ics02Error>
-	where
-		Ctx: ReaderContext,
-	{
-		match message {
-			ClientMessage::Header(header) => {
-				// Check if a consensus state is already installed; if so skip
-				let header_consensus_state = <ConsensusState as From<Header>>::from(header.clone());
-
-				let _ = match ctx.maybe_consensus_state(&client_id.clone(), header.height())? {
-					Some(cs) => {
-						let cs: ConsensusState =
-							cs.downcast().ok_or(Ics02Error::client_args_type_mismatch(
-								client_state.client_type().to_owned(),
-							))?;
-						// If this consensus state matches, skip verification
-						// (optimization)
-						if cs == header_consensus_state {
-							// Header is already installed and matches the incoming
-							// header (already verified)
-							return Ok(())
-						}
-						Some(cs)
-					},
-					None => None,
-				};
-
-				let trusted_consensus_state: Self::ConsensusState = ctx
-					.consensus_state(&client_id.clone(), header.trusted_height, &mut Vec::new())?
-					.downcast()
-					.ok_or(Ics02Error::client_args_type_mismatch(
-						ClientState::<H>::client_type().to_owned(),
-					))?;
-
-				if trusted_consensus_state.next_validators_hash.ne(&header.trusted_validator_set.hash_with::<H>()) {
-					return Err(Ics02Error::header_verification_failure("next val set mismatch".to_string()))
-				}
-
-				let chain_id = client_state.chain_id();
-				if !ChainId::is_epoch_format(chain_id.as_str()) {
-					return Err(Ics02Error::header_verification_failure("client state chain id not in epoch format".to_string()))
-				}
-		
-				let split: Vec<_> = chain_id.as_str().split('-').collect();
-				let chain_name = split.first().expect("get name from chain_id").parse().unwrap();
-				let chain_id = ChainId::new(chain_name, header.height().revision_number);
-				let tm_chain_id = tendermint::chain::Id::from_str(chain_id.as_str()).unwrap();
-				if tm_chain_id != header.signed_header.header.chain_id {
-					return Err(Ics02Error::header_verification_failure("chain id mismatch".to_string()))
-				}
-				
-				let trusted_state = TrustedBlockState {
-					chain_id: &tm_chain_id,
-					header_time: trusted_consensus_state.timestamp().into_tm_time().unwrap(),
-					height: header.trusted_height.revision_height.try_into().map_err(|_| {
-						Ics02Error::client_error(
-							client_state.client_type().to_owned(),
-							Error::invalid_header_height(header.trusted_height).to_string(),
-						)
-					})?,
-					next_validators: &header.trusted_validator_set,
-					next_validators_hash: trusted_consensus_state.next_validators_hash,
-				};
-
-				let untrusted_state = UntrustedBlockState {
-					signed_header: &header.signed_header,
-					validators: &header.validator_set,
-					// NB: This will skip the
-					// VerificationPredicates::next_validators_match check for the
-					// untrusted state.
-					next_validators: None,
-				};
-
-				let options = client_state.as_light_client_options()?;					
-
-				let verifier = ProdVerifier::<H>::default();
-
-				let verdict = verifier.verify_validator_sets(
-					&untrusted_state, 
-				);
-
-				match verdict {
-					Verdict::Success => {},
-					Verdict::NotEnoughTrust(voting_power_tally) =>
-						return Err(Error::not_enough_trusted_vals_signed(format!(
-							"voting power tally: {}",
-							voting_power_tally
-						))
-						.into()),
-					Verdict::Invalid(detail) =>
-						return Err(Error::verification_error(detail).into()),
-				}
-
-				let verdict = verifier.verify_commit_against_trusted(
-					&untrusted_state, 
-					&trusted_state, 
-					&options,
-				);
-
-				match verdict {
-					Verdict::Success => {},
-					Verdict::NotEnoughTrust(voting_power_tally) =>
-						return Err(Error::not_enough_trusted_vals_signed(format!(
-							"voting power tally: {}",
-							voting_power_tally
-						))
-						.into()),
-					Verdict::Invalid(detail) =>
-						return Err(Error::verification_error(detail).into()),
-				}
-
-				let verdict = verifier.verify_commit(
-					&untrusted_state, 
-				);
-
-				match verdict {
-					Verdict::Success => {},
-					Verdict::NotEnoughTrust(voting_power_tally) =>
-						return Err(Error::not_enough_trusted_vals_signed(format!(
-							"voting power tally: {}",
-							voting_power_tally
-						))
-						.into()),
-					Verdict::Invalid(detail) =>
-						return Err(Error::verification_error(detail).into()),
-				}
-
-				if let Ok(expires_at) = trusted_state.header_time + options.trusting_period {
-					if expires_at < ctx.host_timestamp().into_tm_time().unwrap() {
-						return Err(Ics02Error::header_verification_failure("Expired".to_string()))
-					}
-				} else {
-					return Err(Ics02Error::header_verification_failure("Can't get expire time".to_string()))
-				}
-			},
-			ClientMessage::Misbehaviour(misbehaviour) => {
-				self.verify_misbehaviour_header(
-					ctx,
-					client_id.clone(),
-					client_state.clone(),
-					ClientMessage::Header(misbehaviour.header1),
-				)?;
-				self.verify_misbehaviour_header(
-					ctx,
-					client_id.clone(),
-					client_state,
-					ClientMessage::Header(misbehaviour.header2),
-				)?;
-			},
-		};
-
-		Ok(())
-	}
-
 	fn verify_client_message<Ctx>(
 		&self,
 		ctx: &Ctx,
@@ -285,7 +125,7 @@ where
 				};
 
 				let trusted_consensus_state: Self::ConsensusState = ctx
-					.consensus_state(&client_id.clone(), header.trusted_height, &mut Vec::new())?
+					.consensus_state(&client_id.clone(), header.trusted_height)?
 					.downcast()
 					.ok_or(Ics02Error::client_args_type_mismatch(
 						ClientState::<H>::client_type().to_owned(),
@@ -342,13 +182,13 @@ where
 				}
 			},
 			ClientMessage::Misbehaviour(misbehaviour) => {
-				self.verify_misbehaviour_header(
+				verify_misbehaviour_header(
 					ctx,
 					client_id.clone(),
 					client_state.clone(),
 					ClientMessage::Header(misbehaviour.header1),
 				)?;
-				self.verify_misbehaviour_header(
+				verify_misbehaviour_header(
 					ctx,
 					client_id.clone(),
 					client_state,
@@ -488,11 +328,11 @@ where
 
 	fn check_substitute_and_update_state<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		subject_client_id: ClientId,
-		substitute_client_id: ClientId,
-		old_client_state: Self::ClientState,
-		substitute_client_state: Self::ClientState,
+		_ctx: &Ctx,
+		_subject_client_id: ClientId,
+		_substitute_client_id: ClientId,
+		_old_client_state: Self::ClientState,
+		_substitute_client_state: Self::ClientState,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
 		// TODO: tendermint check_substitute_and_update_state
 		Err(Ics02Error::implementation_specific("Not implemented".to_string()))
@@ -764,4 +604,148 @@ pub fn verify_delay_passed<Ctx: ReaderContext>(
 		delay_period_height,
 	)
 	.map_err(|e| e.into())
+}
+
+fn verify_misbehaviour_header<Ctx: ReaderContext, H: HostFunctionsProvider>(
+	ctx: &Ctx,
+	client_id: ClientId,
+	client_state: ClientState<H>,
+	message: ClientMessage,
+) -> Result<(), Ics02Error>
+{
+	match message {
+		ClientMessage::Header(header) => {
+			// Check if a consensus state is already installed; if so skip
+			let header_consensus_state = <ConsensusState as From<Header>>::from(header.clone());
+
+			let _ = match ctx.maybe_consensus_state(&client_id.clone(), header.height())? {
+				Some(cs) => {
+					let cs: ConsensusState =
+						cs.downcast().ok_or(Ics02Error::client_args_type_mismatch(
+							client_state.client_type().to_owned(),
+						))?;
+					// If this consensus state matches, skip verification
+					// (optimization)
+					if cs == header_consensus_state {
+						// Header is already installed and matches the incoming
+						// header (already verified)
+						return Ok(())
+					}
+					Some(cs)
+				},
+				None => None,
+			};
+
+			let trusted_consensus_state: ConsensusState = ctx
+				.consensus_state(&client_id.clone(), header.trusted_height)?
+				.downcast()
+				.ok_or(Ics02Error::client_args_type_mismatch(
+					ClientState::<H>::client_type().to_owned(),
+				))?;
+
+			if trusted_consensus_state.next_validators_hash.ne(&header.trusted_validator_set.hash_with::<H>()) {
+				return Err(Ics02Error::header_verification_failure("next val set mismatch".to_string()))
+			}
+
+			let chain_id = client_state.chain_id();
+			if !ChainId::is_epoch_format(chain_id.as_str()) {
+				return Err(Ics02Error::header_verification_failure("client state chain id not in epoch format".to_string()))
+			}
+	
+			let split: Vec<_> = chain_id.as_str().split('-').collect();
+			let chain_name = split.first().expect("get name from chain_id").parse().unwrap();
+			let chain_id = ChainId::new(chain_name, header.height().revision_number);
+			let tm_chain_id = tendermint::chain::Id::from_str(chain_id.as_str()).unwrap();
+			if tm_chain_id != header.signed_header.header.chain_id {
+				return Err(Ics02Error::header_verification_failure("chain id mismatch".to_string()))
+			}
+			
+			let trusted_state = TrustedBlockState {
+				chain_id: &tm_chain_id,
+				header_time: trusted_consensus_state.timestamp().into_tm_time().unwrap(),
+				height: header.trusted_height.revision_height.try_into().map_err(|_| {
+					Ics02Error::client_error(
+						client_state.client_type().to_owned(),
+						Error::invalid_header_height(header.trusted_height).to_string(),
+					)
+				})?,
+				next_validators: &header.trusted_validator_set,
+				next_validators_hash: trusted_consensus_state.next_validators_hash,
+			};
+
+			let untrusted_state = UntrustedBlockState {
+				signed_header: &header.signed_header,
+				validators: &header.validator_set,
+				// NB: This will skip the
+				// VerificationPredicates::next_validators_match check for the
+				// untrusted state.
+				next_validators: None,
+			};
+
+			let options = client_state.as_light_client_options()?;					
+
+			let verifier = ProdVerifier::<H>::default();
+
+			let verdict = verifier.verify_validator_sets(
+				&untrusted_state, 
+			);
+
+			match verdict {
+				Verdict::Success => {},
+				Verdict::NotEnoughTrust(voting_power_tally) =>
+					return Err(Error::not_enough_trusted_vals_signed(format!(
+						"voting power tally: {}",
+						voting_power_tally
+					))
+					.into()),
+				Verdict::Invalid(detail) =>
+					return Err(Error::verification_error(detail).into()),
+			}
+
+			let verdict = verifier.verify_commit_against_trusted(
+				&untrusted_state, 
+				&trusted_state, 
+				&options,
+			);
+
+			match verdict {
+				Verdict::Success => {},
+				Verdict::NotEnoughTrust(voting_power_tally) =>
+					return Err(Error::not_enough_trusted_vals_signed(format!(
+						"voting power tally: {}",
+						voting_power_tally
+					))
+					.into()),
+				Verdict::Invalid(detail) =>
+					return Err(Error::verification_error(detail).into()),
+			}
+
+			let verdict = verifier.verify_commit(
+				&untrusted_state, 
+			);
+
+			match verdict {
+				Verdict::Success => {},
+				Verdict::NotEnoughTrust(voting_power_tally) =>
+					return Err(Error::not_enough_trusted_vals_signed(format!(
+						"voting power tally: {}",
+						voting_power_tally
+					))
+					.into()),
+				Verdict::Invalid(detail) =>
+					return Err(Error::verification_error(detail).into()),
+			}
+
+			if let Ok(expires_at) = trusted_state.header_time + options.trusting_period {
+				if expires_at < ctx.host_timestamp().into_tm_time().unwrap() {
+					return Err(Ics02Error::header_verification_failure("Expired".to_string()))
+				}
+			} else {
+				return Err(Ics02Error::header_verification_failure("Can't get expire time".to_string()))
+			}
+		},
+		ClientMessage::Misbehaviour(_misbehaviour) => {},
+	};
+
+	Ok(())
 }

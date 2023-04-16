@@ -65,17 +65,6 @@ impl ClientDef for MockClient {
 	type ClientState = MockClientState;
 	type ConsensusState = MockConsensusState;
 
-	fn verify_misbehaviour_header<Ctx: ReaderContext>(
-		&self,
-		_ctx: &Ctx,
-		_client_id: ClientId,
-		_client_state: Self::ClientState,
-		_header: Self::ClientMessage,
-	) -> Result<(), Error>
-	{
-		Ok(())
-	}
-
 	fn update_state<Ctx: ReaderContext>(
 		&self,
 		_ctx: &Ctx,
@@ -279,4 +268,16 @@ impl ClientDef for MockClient {
 	) -> Result<bool, Error> {
 		Ok(false)
 	}
+	
+	fn check_substitute_and_update_state<Ctx: ReaderContext>(
+			&self,
+			_ctx: &Ctx,
+			_subject_client_id: ClientId,
+			_substitute_client_id: ClientId,
+			_old_client_state: Self::ClientState,
+			_substitute_client_state: Self::ClientState,
+		) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error> {
+			unimplemented!()
+	}
+
 }

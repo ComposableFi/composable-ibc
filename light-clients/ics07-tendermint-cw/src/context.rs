@@ -1,6 +1,14 @@
+use crate::{
+	ics23::{ClientStates, ConsensusStates, ReadonlyClientStates, ReadonlyConsensusStates},
+	ContractError,
+};
 use cosmwasm_std::{DepsMut, Env, Storage};
-use ibc::core::ics26_routing::context::ReaderContext;
-use ics07_tendermint::HostFunctionsProvider;
+use ibc::{core::ics26_routing::context::ReaderContext, Height};
+use ics07_tendermint::{
+	HostFunctionsProvider,
+	client_state::ClientState,
+	consensus_state::ConsensusState,
+};
 use std::{fmt, fmt::Debug, marker::PhantomData};
 
 pub struct Context<'a, H> {
@@ -44,6 +52,64 @@ impl<'a, H> Context<'a, H> {
 
 	pub fn storage_mut(&mut self) -> &mut dyn Storage {
 		self.deps.storage
+	}
+}
+
+impl<'a, H> Context<'a, H>
+where
+	H: Clone,
+{
+	pub fn consensus_state_prefixed(
+		&self,
+		height: Height,
+		prefix: &[u8],
+	) -> Result<ConsensusState, ContractError> {
+		let bytes = ReadonlyConsensusStates::new(self.storage())
+			.get_prefixed(height, prefix)
+			.ok_or_else(|| {
+				ContractError::Tendermint(format!(
+					"no consensus state found for height {} and prefix {:?}",
+					height, prefix,
+				))
+			})?;
+		Context::<H>::decode_consensus_state(&bytes)
+			.map_err(|e| ContractError::Tendermint(format!("error decoding consensus state: {:?}", e)))
+	}
+
+	pub fn store_consensus_state_prefixed(
+		&mut self,
+		height: Height,
+		consensus_state: ConsensusState,
+		prefix: &[u8],
+	) {
+		let encoded = Context::<H>::encode_consensus_state(consensus_state);
+		let mut consensus_states = ConsensusStates::new(self.storage_mut());
+		consensus_states.insert_prefixed(height, encoded, prefix);
+	}
+
+	pub fn client_state_prefixed(&self, prefix: &[u8]) -> Result<ClientState<H>, ContractError> {
+		let bytes =
+			ReadonlyClientStates::new(self.storage()).get_prefixed(prefix).ok_or_else(|| {
+				ContractError::Tendermint(format!("no client state found for prefix {:?}", prefix,))
+			})?;
+		Context::decode_client_state(&bytes)
+			.map_err(|e| ContractError::Tendermint(format!("error decoding client state: {:?}", e)))
+	}
+
+	pub fn store_client_state_prefixed(
+		&mut self,
+		client_state: ClientState<H>,
+		prefix: &[u8],
+	) -> Result<(), ContractError> {
+		let client_states = ReadonlyClientStates::new(self.storage());
+		let data = client_states.get_prefixed(prefix).ok_or_else(|| {
+			ContractError::Tendermint("no client state found for prefix".to_string())
+		})?;
+		let encoded = Context::<H>::encode_client_state(client_state, data)
+			.map_err(|e| ContractError::Tendermint(format!("error encoding client state: {:?}", e)))?;
+		let mut client_states = ClientStates::new(self.storage_mut());
+		client_states.insert_prefixed(encoded, prefix);
+		Ok(())
 	}
 }
 
