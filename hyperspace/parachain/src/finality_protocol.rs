@@ -339,7 +339,7 @@ where
 	Ok(vec![(update_header, events, update_type)])
 }
 
-fn filter_events_by_ids(
+pub fn filter_events_by_ids(
 	ev: &IbcEvent,
 	client_ids: &[ClientId],
 	connection_ids: &[ConnectionId],
