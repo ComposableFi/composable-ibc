@@ -33,7 +33,6 @@ macro_rules! process_finality_event {
 							$source.name(),
 							err
 						);
-						had_error = true;
 						continue
 					},
 				};

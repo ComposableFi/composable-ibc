@@ -4146,6 +4146,7 @@ dependencies = [
  "ibc-rpc",
  "ics10-grandpa",
  "ics11-beefy",
+ "itertools",
  "light-client-common",
  "log",
  "once_cell",
