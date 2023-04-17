@@ -32,7 +32,8 @@ use super::{error::Error, ParachainClient};
 use crate::finality_protocol::{filter_events_by_ids, FinalityProtocol};
 
 #[async_trait::async_trait]
-impl<T: light_client_common::config::Config + Send + Sync> LightClientSync for ParachainClient<T>
+impl<T: light_client_common::config::Config + Send + Sync + Clone> LightClientSync
+	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	u32: From<<T as subxt::Config>::BlockNumber>,
@@ -140,7 +141,7 @@ where
 	}
 }
 
-impl<T: light_client_common::config::Config + Send + Sync> ParachainClient<T>
+impl<T: light_client_common::config::Config + Send + Sync + Clone> ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	Self: KeyProvider,
