@@ -21,6 +21,7 @@ use crate::{
 	handler::{HandlerOutput, HandlerOutputBuilder},
 	prelude::*,
 };
+use tracing::log;
 
 /// This function handles the transfer sending logic.
 /// If this method returns an error, the runtime is expected to rollback all state modifications to
@@ -87,6 +88,7 @@ where
 		timeout_timestamp: msg.timeout_timestamp,
 	};
 
+	log::trace!(target: "pallet_ibc", "Sending packet: {:?}", packet);
 	let HandlerOutput { result, log, events } =
 		send_packet(ctx, packet).map_err(Error::ics04_channel)?;
 

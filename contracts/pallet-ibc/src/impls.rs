@@ -967,6 +967,7 @@ where
 		let send_packet_result =
 			ibc::core::ics04_channel::handler::send_packet::send_packet(&ctx, packet)
 				.map_err(|e| IbcHandlerError::SendPacketError { msg: Some(e.to_string()) })?;
+		log::trace!(target: "pallet_ibc", "send_packet_result: {:?}", send_packet_result);
 		ctx.store_packet_result(send_packet_result.result)
 			.map_err(|e| IbcHandlerError::SendPacketError { msg: Some(e.to_string()) })?;
 		Self::deposit_event(send_packet_result.events.into());
@@ -1004,6 +1005,7 @@ where
 		let result =
 			ibc::core::ics04_channel::handler::write_acknowledgement::process(&ctx, packet, ack)
 				.map_err(|e| error("validate", e))?;
+		log::trace!(target: "pallet_ibc", "write_acknowledgement_result: {:?}", result);
 		ctx.store_packet_result(result.result).map_err(|e| error("store", e))?;
 		Self::deposit_event(result.events.into());
 		Ok(())

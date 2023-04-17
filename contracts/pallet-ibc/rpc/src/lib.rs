@@ -109,7 +109,7 @@ pub struct Proof {
 }
 
 /// Packet info
-#[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Serialize, Deserialize, Debug)]
 pub struct PacketInfo {
 	/// Minimal height at which packet proof is available
 	pub height: u64,

@@ -40,6 +40,7 @@ use crate::{
 };
 use core::fmt::Debug;
 use ibc_proto::google::protobuf::Any;
+use tracing::log;
 
 /// Result of message execution - comprises of events emitted and logs entries created during the
 /// execution of a transaction message.
@@ -144,6 +145,7 @@ where
 			handler_builder.merge(module_output);
 			cb_result.map_err(Error::ics04_channel)?;
 
+			log::trace!(target: "pallet_ibc", "Ics4PacketMsg: {:?}", msg);
 			// Apply any results to the host chain store.
 			ctx.store_packet_result(packet_result).map_err(Error::ics04_channel)?;
 
