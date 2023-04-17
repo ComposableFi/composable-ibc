@@ -35,6 +35,7 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use ics10_grandpa::client_message::{ClientMessage, Misbehaviour, RelayChainHeader};
+use itertools::Itertools;
 use light_client_common::config::{EventRecordT, RuntimeCall, RuntimeTransactions};
 use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::{mock::LocalClientTypes, Chain, IbcProvider, MisbehaviourHandler};
@@ -211,6 +212,8 @@ where
 			.into_iter()
 			.map(|msg| Any { type_url: msg.type_url.clone(), value: msg.value })
 			.collect::<Vec<_>>();
+		let messages_urls = messages.iter().map(|msg| msg.type_url.clone()).join(", ");
+		log::debug!(target: "hyperspace_parachain", "Sending message: {messages_urls}");
 
 		let call = T::Tx::ibc_deliver(messages);
 		let (ext_hash, block_hash) = self.submit_call(call).await?;

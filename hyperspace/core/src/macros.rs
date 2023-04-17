@@ -32,6 +32,7 @@ macro_rules! process_finality_event {
 						continue
 					},
 				};
+				log::trace!(target: "hyperspace", "Received updates count: {}", updates.len());
 				for (msg_update_client, events, update_type) in updates {
 					let mut msgs_update_client = vec![msg_update_client];
 					if let Some(metrics) = $metrics.as_mut() {
@@ -42,6 +43,8 @@ macro_rules! process_finality_event {
 					let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
 					let (mut messages, timeouts) =
 						parse_events(&mut $source, &mut $sink, events, $mode).await?;
+					log::trace!(target: "hyperspace", "Received messages count: {}, timeouts count: {}", messages.len(), timeouts.len());
+
 					if !timeouts.is_empty() {
 						if let Some(metrics) = $metrics.as_ref() {
 							metrics.handle_timeouts(timeouts.as_slice()).await;
@@ -120,6 +123,7 @@ macro_rules! chains {
 			)*
 		}
 
+		#[derive(Debug)]
 		pub enum AnyFinalityEvent {
 			$(
 				$(#[$($meta)*])*
