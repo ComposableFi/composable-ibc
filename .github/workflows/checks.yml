@@ -33,6 +33,7 @@ jobs:
 
     - name: check workspace
       run: |
+        rustup target add wasm32-unknown-unknown
         cargo check --workspace --locked
 
     - name: check hyperspace features
