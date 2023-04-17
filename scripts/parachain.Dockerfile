@@ -13,6 +13,8 @@ RUN cp -R ./proto/include/* ${BASE}/include/
 
 COPY . .
 
+RUN rustup target add wasm32-unknown-unknown
+RUN rustup +nightly target add wasm32-unknown-unknown
 RUN cargo build --release -p parachain-node --features=testing
 
 FROM phusion/baseimage:focal-1.2.0
