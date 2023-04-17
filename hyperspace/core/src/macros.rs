@@ -23,6 +23,8 @@ macro_rules! process_finality_event {
 				log::info!("Received finality notification from {}", $source.name());
 				let sink_initial_rpc_call_delay = $sink.rpc_call_delay();
 				let source_initial_rpc_call_delay = $source.rpc_call_delay();
+				let mut had_error = false;
+
 				let updates = match $source.query_latest_ibc_events(finality_event, &$sink).await {
 					Ok(resp) => resp,
 					Err(err) => {
@@ -31,6 +33,7 @@ macro_rules! process_finality_event {
 							$source.name(),
 							err
 						);
+						had_error = true;
 						continue
 					},
 				};
@@ -52,6 +55,7 @@ macro_rules! process_finality_event {
 									Ok(_) => {},
 									Err(e) => log::error!("Failed to handle error for {} {:?}", $sink.name(), e),
 								}
+								had_error = true;
 								continue
 							},
 					};
@@ -67,17 +71,26 @@ macro_rules! process_finality_event {
 							"Submitting timeout messages to {}: {type_urls:#?}",
 							$source.name()
 						);
-						queue::flush_message_batch(timeouts, $metrics.as_ref(), &$source).await
-							.map_err(|e| {
+						match queue::flush_message_batch(timeouts, $metrics.as_ref(), &$source).await {
+							Ok(_) => {
+								log::trace!(target: "hyperspace", "Successfully submitted timeout messages to {}", $source.name());
+							},
+							Err(e) => {
 								log::error!(
 									target:"hyperspace",
 									"Failed to submit timeout messages to {} {:?}",
 									$source.name(),
 									e
 								);
-								e
-							})
-						?;
+								match $sink.handle_error(&e).and_then(|_| $source.handle_error(&e)) {
+									Ok(_) => {},
+									Err(e) => log::error!("Failed to handle error for {} {:?}", $sink.name(), e),
+								}
+								had_error = true;
+								continue
+							},
+						}
+
 					}
 					// We want to send client update if packet messages exist but where not sent due
 					// to a connection delay even if client update message is optional
@@ -129,9 +142,12 @@ macro_rules! process_finality_event {
 								Ok(_) => {},
 								Err(e) => log::error!("Failed to handle error for {} {:?}", $sink.name(), e),
 							}
+							had_error = true;
 							continue
 						},
 					}
+				}
+				if !had_error {
 					$sink.set_rpc_call_delay(sink_initial_rpc_call_delay);
 					$source.set_rpc_call_delay(source_initial_rpc_call_delay);
 				}
