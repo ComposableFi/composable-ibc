@@ -29,6 +29,7 @@ use ibc_proto::{
 		connection::v1::QueryConnectionResponse,
 	},
 };
+use tokio::task::JoinSet;
 
 use crate::error::Error;
 #[cfg(any(feature = "testing", test))]
@@ -415,7 +416,7 @@ pub trait LightClientSync {
 /// finality notifications
 #[async_trait::async_trait]
 pub trait Chain:
-	IbcProvider + LightClientSync + MisbehaviourHandler + KeyProvider + Send + Sync
+	IbcProvider + LightClientSync + MisbehaviourHandler + KeyProvider + Clone + Send + Sync + 'static
 {
 	/// Name of this chain, used in logs.
 	fn name(&self) -> &str;
@@ -631,9 +632,9 @@ pub async fn query_maximum_height_for_timeout_proofs(
 	source: &impl Chain,
 	sink: &impl Chain,
 ) -> Option<u64> {
-	let mut min_timeout_height = None;
 	let (source_height, ..) = source.latest_height_and_timestamp().await.ok()?;
 	let (sink_height, ..) = sink.latest_height_and_timestamp().await.ok()?;
+	let mut join_set: JoinSet<Option<_>> = JoinSet::new();
 	for (channel, port_id) in source.channel_whitelist() {
 		let undelivered_sequences = query_undelivered_sequences(
 			source_height,
@@ -648,36 +649,42 @@ pub async fn query_maximum_height_for_timeout_proofs(
 		let send_packets =
 			source.query_send_packets(channel, port_id, undelivered_sequences).await.ok()?;
 		for send_packet in send_packets {
-			let sink_client_state = source
-				.query_client_state(
-					Height::new(source_height.revision_number, send_packet.height),
-					sink.client_id(),
-				)
-				.await
-				.ok()?;
-			let sink_client_state =
-				AnyClientState::try_from(sink_client_state.client_state?).ok()?;
-			let height = sink_client_state.latest_height();
-			let timestamp_at_creation =
-				sink.query_timestamp_at(height.revision_height).await.ok()?;
-			let period = send_packet.timeout_timestamp.saturating_sub(timestamp_at_creation);
-			if period == 0 {
-				min_timeout_height =
-					min_timeout_height.max(Some(send_packet.timeout_height.revision_height));
-				continue
-			}
-			let period = Duration::from_nanos(period);
-			let period =
-				calculate_block_delay(period, sink.expected_block_time()).saturating_add(1);
-			let approx_height = send_packet.height + period;
-			let timeout_height = if send_packet.timeout_height.revision_height < approx_height {
-				send_packet.timeout_height.revision_height
-			} else {
-				approx_height
-			};
+			let source = source.clone();
+			let sink = sink.clone();
+			join_set.spawn(async move {
+				let sink_client_state = source
+					.query_client_state(
+						Height::new(source_height.revision_number, send_packet.height),
+						sink.client_id(),
+					)
+					.await
+					.ok()?;
+				let sink_client_state =
+					AnyClientState::try_from(sink_client_state.client_state?).ok()?;
+				let height = sink_client_state.latest_height();
+				let timestamp_at_creation =
+					sink.query_timestamp_at(height.revision_height).await.ok()?;
+				let period = send_packet.timeout_timestamp.saturating_sub(timestamp_at_creation);
+				if period == 0 {
+					return Some(send_packet.timeout_height.revision_height)
+				}
+				let period = Duration::from_nanos(period);
+				let period =
+					calculate_block_delay(period, sink.expected_block_time()).saturating_add(1);
+				let approx_height = send_packet.height + period;
+				let timeout_height = if send_packet.timeout_height.revision_height < approx_height {
+					send_packet.timeout_height.revision_height
+				} else {
+					approx_height
+				};
 
-			min_timeout_height = min_timeout_height.max(Some(timeout_height))
+				Some(timeout_height)
+			});
 		}
+	}
+	let mut min_timeout_height = None;
+	while let Some(timeout_height) = join_set.join_next().await {
+		min_timeout_height = min_timeout_height.max(timeout_height.ok()?)
 	}
 	min_timeout_height
 }

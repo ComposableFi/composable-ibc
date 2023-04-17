@@ -70,7 +70,8 @@ pub struct TransactionId<Hash> {
 }
 
 #[async_trait::async_trait]
-impl<T: light_client_common::config::Config + Send + Sync> IbcProvider for ParachainClient<T>
+impl<T: light_client_common::config::Config + Send + Sync + Clone> IbcProvider
+	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	u32: From<<T as subxt::Config>::BlockNumber>,

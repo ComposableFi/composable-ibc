@@ -26,3 +26,4 @@ sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch 
 beefy-prover = { path = "../../beefy/prover" }
 primitives = { package = "grandpa-light-client-primitives", path = "../primitives" }
 light-client-common = { path = "../../../light-clients/common" }
+tokio = "1.27.0"
