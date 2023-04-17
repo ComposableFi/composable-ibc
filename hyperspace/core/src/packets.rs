@@ -14,8 +14,10 @@
 
 #[cfg(feature = "testing")]
 use crate::send_packet_relay::packet_relay_status;
+use rand::Rng;
 use sp_runtime::Either::{Left, Right};
-use tokio::task::JoinSet;
+use std::time::Duration;
+use tokio::{task::JoinSet, time::sleep};
 
 use crate::packets::utils::{
 	construct_ack_message, construct_recv_message, construct_timeout_message,
@@ -175,7 +177,11 @@ pub async fn query_ready_and_timed_out_packets(
 			let source_connection_end = source_connection_end.clone();
 			let source = source.clone();
 			let sink = sink.clone();
+			let duration = Duration::from_millis(
+				rand::thread_rng().gen_range(1..source.rpc_call_delay().as_millis() as u64),
+			);
 			timeout_packets_join_set.spawn(async move {
+				sleep(duration).await;
 				let source = &source;
 				let sink = &sink;
 				let packet = packet_info_to_packet(&send_packet);
@@ -316,7 +322,11 @@ pub async fn query_ready_and_timed_out_packets(
 			let source_connection_end = source_connection_end.clone();
 			let source = source.clone();
 			let sink = sink.clone();
+			let duration1 = Duration::from_millis(
+				rand::thread_rng().gen_range(1..source.rpc_call_delay().as_millis() as u64),
+			);
 			acknowledgements_join_set.spawn(async move {
+				sleep(duration1).await;
 				let source = &source;
 				let sink = &sink;
 				let packet = packet_info_to_packet(&acknowledgement);

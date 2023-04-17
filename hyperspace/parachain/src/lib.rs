@@ -112,6 +112,9 @@ pub struct ParachainClient<T: light_client_common::config::Config> {
 	pub max_extrinsic_weight: u64,
 	/// Finality protocol to use, eg Beefy, Grandpa
 	pub finality_protocol: FinalityProtocol,
+	/// Delay between parallel RPC calls to be friendly with the node and avoid MaxSlotsExceeded
+	/// error
+	pub rpc_call_delay: Duration,
 }
 
 enum KeyType {
@@ -119,6 +122,8 @@ enum KeyType {
 	Ed25519,
 	Ecdsa,
 }
+
+pub const DEFAULT_RPC_CALL_DELAY: Duration = Duration::from_millis(10);
 
 impl KeyType {
 	pub fn to_key_type_id(&self) -> KeyTypeId {
@@ -250,6 +255,7 @@ where
 			ss58_version: Ss58AddressFormat::from(config.ss58_version),
 			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist)),
 			finality_protocol: config.finality_protocol,
+			rpc_call_delay: DEFAULT_RPC_CALL_DELAY,
 		})
 	}
 }
@@ -278,6 +284,7 @@ where
 			para_client: self.para_client.clone(),
 			para_ws_client,
 			para_id: self.para_id,
+			rpc_call_delay: self.rpc_call_delay,
 		}
 	}
 
@@ -554,6 +561,7 @@ where
 			para_client: self.para_client.clone(),
 			para_ws_client,
 			para_id: self.para_id,
+			rpc_call_delay: self.rpc_call_delay,
 		};
 		let api = self.relay_client.storage();
 		let para_client_api = self.para_client.storage();

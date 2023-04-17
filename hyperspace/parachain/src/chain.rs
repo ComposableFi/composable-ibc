@@ -320,6 +320,27 @@ where
 	async fn get_proof_height(&self, block_height: Height) -> Height {
 		block_height
 	}
+
+	fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error> {
+		if let Some(rpc_err) = error.downcast_ref::<Error>() {
+			match rpc_err {
+				Error::RpcError(s) =>
+					if s.contains("MaxSlotsExceeded") {
+						self.rpc_call_delay = self.rpc_call_delay * 2;
+					},
+				_ => (),
+			}
+		}
+		Ok(())
+	}
+
+	fn rpc_call_delay(&self) -> Duration {
+		self.rpc_call_delay
+	}
+
+	fn set_rpc_call_delay(&mut self, delay: Duration) {
+		self.rpc_call_delay = delay;
+	}
 }
 
 #[async_trait::async_trait]

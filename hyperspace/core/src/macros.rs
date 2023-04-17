@@ -21,6 +21,8 @@ macro_rules! process_finality_event {
 			Some(finality_event) => {
 				log::info!("=======================================================");
 				log::info!("Received finality notification from {}", $source.name());
+				let sink_initial_rpc_call_delay = $sink.rpc_call_delay();
+				let source_initial_rpc_call_delay = $source.rpc_call_delay();
 				let updates = match $source.query_latest_ibc_events(finality_event, &$sink).await {
 					Ok(resp) => resp,
 					Err(err) => {
@@ -42,18 +44,18 @@ macro_rules! process_finality_event {
 					}
 					let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
 					let (mut messages, timeouts) =
-						parse_events(&mut $source, &mut $sink, events, $mode).await
-						.map_err(|e| {
-							log::error!(
-								target:"hyperspace",
-								"Failed to parse events for {} {:?}",
-								$source.name(),
-								e
-							);
-							e
-					})
-						?;
-					log::trace!(target: "hyperspace", "Received messages count: {}, timeouts count: {}", messages.len(), timeouts.len());
+						match parse_events(&mut $source, &mut $sink, events, $mode).await {
+							Ok((msgs, timeouts)) => (msgs, timeouts),
+							Err(e) => {
+								log::error!("Failed to parse events for {} {:?}", $source.name(), e);
+								match $sink.handle_error(&e).and_then(|_| $source.handle_error(&e)) {
+									Ok(_) => {},
+									Err(e) => log::error!("Failed to handle error for {} {:?}", $sink.name(), e),
+								}
+								continue
+							},
+					};
+					log::trace!(target: "hyperspace", "Received messages, timeouts: {}, {}", messages.len(), timeouts.len());
 
 					if !timeouts.is_empty() {
 						if let Some(metrics) = $metrics.as_ref() {
@@ -112,15 +114,26 @@ macro_rules! process_finality_event {
 						.map(|msg| msg.type_url.as_str())
 						.collect::<Vec<_>>();
 					log::info!("Submitting messages to {}: {type_urls:#?}", $sink.name());
-					queue::flush_message_batch(msgs_update_client, $metrics.as_ref(), &$sink)
-						.await
-						.map_err(|e| {
+					match queue::flush_message_batch(msgs_update_client, $metrics.as_ref(), &$sink).await {
+						Ok(_) => {
+							log::trace!(target: "hyperspace", "Successfully submitted messages to {}", $sink.name());
+						},
+						Err(e) => {
 							log::error!(
 								target:"hyperspace",
-								"Failed to submit messages to {} {:?}", $sink.name(), e);
-							e
-						})
-						?;
+								"Failed to submit messages to {} {:?}",
+								$sink.name(),
+								e
+							);
+							match $sink.handle_error(&e).and_then(|_| $source.handle_error(&e)) {
+								Ok(_) => {},
+								Err(e) => log::error!("Failed to handle error for {} {:?}", $sink.name(), e),
+							}
+							continue
+						},
+					}
+					$sink.set_rpc_call_delay(sink_initial_rpc_call_delay);
+					$source.set_rpc_call_delay(source_initial_rpc_call_delay);
 				}
 			},
 		}
@@ -862,6 +875,33 @@ macro_rules! chains {
 					$(
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.get_proof_height(block_height).await,
+					)*
+				}
+			}
+
+			fn handle_error(&mut self, e: &anyhow::Error) -> std::result::Result<(), anyhow::Error> {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.handle_error(e),
+					)*
+				}
+			}
+
+			fn rpc_call_delay(&self) -> std::time::Duration {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.rpc_call_delay(),
+					)*
+				}
+			}
+
+			fn set_rpc_call_delay(&mut self, d: std::time::Duration) {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.set_rpc_call_delay(d),
 					)*
 				}
 			}

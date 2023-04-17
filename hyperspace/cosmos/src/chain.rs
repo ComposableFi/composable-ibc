@@ -22,7 +22,7 @@ use primitives::{
 	mock::LocalClientTypes, Chain, IbcProvider, LightClientSync, MisbehaviourHandler,
 };
 use prost::Message;
-use std::pin::Pin;
+use std::{pin::Pin, time::Duration};
 use tendermint_rpc::{
 	event::{Event, EventData},
 	query::{EventType, Query},
@@ -239,6 +239,18 @@ where
 
 	async fn get_proof_height(&self, block_height: Height) -> Height {
 		block_height.increment()
+	}
+
+	fn handle_error(&mut self, _error: &anyhow::Error) -> Result<(), anyhow::Error> {
+		todo!()
+	}
+
+	fn rpc_call_delay(&self) -> Duration {
+		todo!()
+	}
+
+	fn set_rpc_call_delay(&mut self, _delay: Duration) {
+		todo!()
 	}
 }
 

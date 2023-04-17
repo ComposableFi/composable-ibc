@@ -14,8 +14,6 @@
 
 #![allow(clippy::all)]
 
-use std::{fmt::Debug, pin::Pin, str::FromStr, time::Duration};
-
 use futures::Stream;
 use ibc_proto::{
 	google::protobuf::Any,
@@ -29,7 +27,9 @@ use ibc_proto::{
 		connection::v1::QueryConnectionResponse,
 	},
 };
-use tokio::task::JoinSet;
+use rand::Rng;
+use std::{fmt::Debug, pin::Pin, str::FromStr, time::Duration};
+use tokio::{task::JoinSet, time::sleep};
 
 use crate::error::Error;
 #[cfg(any(feature = "testing", test))]
@@ -445,6 +445,12 @@ pub trait Chain:
 	) -> Result<AnyClientMessage, Self::Error>;
 
 	async fn get_proof_height(&self, block_height: Height) -> Height;
+
+	fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error>;
+
+	fn rpc_call_delay(&self) -> Duration;
+
+	fn set_rpc_call_delay(&mut self, delay: Duration);
 }
 
 /// Returns undelivered packet sequences that have been sent out from
@@ -652,7 +658,11 @@ pub async fn query_maximum_height_for_timeout_proofs(
 		for send_packet in send_packets {
 			let source = source.clone();
 			let sink = sink.clone();
+			let duration = Duration::from_millis(
+				rand::thread_rng().gen_range(1..source.rpc_call_delay().as_millis()) as u64,
+			);
 			join_set.spawn(async move {
+				sleep(duration).await;
 				let sink_client_state = source
 					.query_client_state(
 						Height::new(source_height.revision_number, send_packet.height),
