@@ -42,7 +42,17 @@ macro_rules! process_finality_event {
 					}
 					let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
 					let (mut messages, timeouts) =
-						parse_events(&mut $source, &mut $sink, events, $mode).await?;
+						parse_events(&mut $source, &mut $sink, events, $mode).await
+						.map_err(|e| {
+							log::error!(
+								target:"hyperspace",
+								"Failed to parse events for {} {:?}",
+								$source.name(),
+								e
+							);
+							e
+					})
+						?;
 					log::trace!(target: "hyperspace", "Received messages count: {}, timeouts count: {}", messages.len(), timeouts.len());
 
 					if !timeouts.is_empty() {
@@ -55,7 +65,17 @@ macro_rules! process_finality_event {
 							"Submitting timeout messages to {}: {type_urls:#?}",
 							$source.name()
 						);
-						queue::flush_message_batch(timeouts, $metrics.as_ref(), &$source).await?;
+						queue::flush_message_batch(timeouts, $metrics.as_ref(), &$source).await
+							.map_err(|e| {
+								log::error!(
+									target:"hyperspace",
+									"Failed to submit timeout messages to {} {:?}",
+									$source.name(),
+									e
+								);
+								e
+							})
+						?;
 					}
 					// We want to send client update if packet messages exist but where not sent due
 					// to a connection delay even if client update message is optional
@@ -93,7 +113,14 @@ macro_rules! process_finality_event {
 						.collect::<Vec<_>>();
 					log::info!("Submitting messages to {}: {type_urls:#?}", $sink.name());
 					queue::flush_message_batch(msgs_update_client, $metrics.as_ref(), &$sink)
-						.await?;
+						.await
+						.map_err(|e| {
+							log::error!(
+								target:"hyperspace",
+								"Failed to submit messages to {} {:?}", $sink.name(), e);
+							e
+						})
+						?;
 				}
 			},
 		}
