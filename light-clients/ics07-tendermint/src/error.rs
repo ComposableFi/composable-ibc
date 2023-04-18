@@ -18,8 +18,7 @@ use flex_error::{define_error, TraceError};
 
 use ibc::{
 	core::{
-		ics02_client::error::Error as Ics02Error,
-		ics23_commitment::error::Error as Ics23Error,
+		ics02_client::error::Error as Ics02Error, ics23_commitment::error::Error as Ics23Error,
 		ics24_host::error::ValidationError,
 	},
 	timestamp::{Timestamp, TimestampOverflowError},

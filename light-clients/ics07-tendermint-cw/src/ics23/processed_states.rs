@@ -1,4 +1,4 @@
-use cosmwasm_std::{Storage,	Order};
+use cosmwasm_std::{Order, Storage};
 use ibc::Height;
 
 use crate::msg::GenesisMetadata;
@@ -32,11 +32,9 @@ impl<'a> ProcessedStates<'a> {
 	}
 
 	pub fn get_processed_time(&self, height: Height, prefix: &mut Vec<u8>) -> Option<u64> {
-		let full_key = Self::processed_time_key(height, prefix);	
+		let full_key = Self::processed_time_key(height, prefix);
 		match self.0.get(&full_key) {
-			Some(timestamp) => {
-				Some(u64::from_be_bytes(timestamp.try_into().unwrap()))
-			},
+			Some(timestamp) => Some(u64::from_be_bytes(timestamp.try_into().unwrap())),
 			None => None,
 		}
 	}
@@ -48,29 +46,30 @@ impl<'a> ProcessedStates<'a> {
 	}
 
 	pub fn get_processed_height(&self, height: Height, prefix: &mut Vec<u8>) -> Option<u64> {
-		let full_key = Self::processed_height_key(height, prefix);	
+		let full_key = Self::processed_height_key(height, prefix);
 		match self.0.get(&full_key) {
-			Some(height) => {
-				Some(u64::from_be_bytes(height.try_into().unwrap()))
-			},
+			Some(height) => Some(u64::from_be_bytes(height.try_into().unwrap())),
 			None => None,
 		}
 	}
 
-	pub fn set_processed_height(&mut self, height: Height, processed_height: u64, prefix: &mut Vec<u8>) {
+	pub fn set_processed_height(
+		&mut self,
+		height: Height,
+		processed_height: u64,
+		prefix: &mut Vec<u8>,
+	) {
 		let full_key = Self::processed_height_key(height, prefix);
 		let height_vec: [u8; 8] = processed_height.to_be_bytes();
 		self.0.set(&full_key, &height_vec);
 	}
 
 	pub fn get_iteration_key(&self, height: Height, prefix: &mut Vec<u8>) -> Option<Height> {
-		let full_key = Self::iteration_key(height, prefix);	
+		let full_key = Self::iteration_key(height, prefix);
 		match self.0.get(&full_key) {
-			Some(height) => {
-				match std::str::from_utf8(height.as_slice()) {
-					Ok(height_str) => Some(Height::try_from(height_str).unwrap()),
-					Err(_) => None,
-				}
+			Some(height) => match std::str::from_utf8(height.as_slice()) {
+				Ok(height_str) => Some(Height::try_from(height_str).unwrap()),
+				Err(_) => None,
 			},
 			None => None,
 		}
@@ -87,11 +86,9 @@ impl<'a> ProcessedStates<'a> {
 		let start_key = format!("iterateConsensusStates").into_bytes();
 		let mut iterator = self.0.range(Some(&start_key), Some(&full_key), Order::Ascending);
 		match iterator.next() {
-			Some((_, height)) => {
-				match std::str::from_utf8(height.as_slice()) {
-					Ok(height_str) => Some(Height::try_from(height_str).unwrap()),
-					Err(_) => None,
-				}
+			Some((_, height)) => match std::str::from_utf8(height.as_slice()) {
+				Ok(height_str) => Some(Height::try_from(height_str).unwrap()),
+				Err(_) => None,
 			},
 			None => None,
 		}
@@ -116,47 +113,39 @@ impl<'a> ReadonlyProcessedStates<'a> {
 	}
 
 	pub fn get_processed_time(&self, height: Height, prefix: &mut Vec<u8>) -> Option<u64> {
-		let full_key = ProcessedStates::processed_time_key(height, prefix);	
+		let full_key = ProcessedStates::processed_time_key(height, prefix);
 		match self.0.get(&full_key) {
-			Some(timestamp) => {
-				Some(u64::from_be_bytes(timestamp.try_into().unwrap()))
-			},
+			Some(timestamp) => Some(u64::from_be_bytes(timestamp.try_into().unwrap())),
 			None => None,
 		}
 	}
 
 	pub fn get_processed_height(&self, height: Height, prefix: &mut Vec<u8>) -> Option<u64> {
-		let full_key = ProcessedStates::processed_height_key(height, prefix);	
+		let full_key = ProcessedStates::processed_height_key(height, prefix);
 		match self.0.get(&full_key) {
-			Some(height) => {
-				Some(u64::from_be_bytes(height.try_into().unwrap()))
-			},
+			Some(height) => Some(u64::from_be_bytes(height.try_into().unwrap())),
 			None => None,
 		}
 	}
 
 	pub fn get_iteration_key(&self, height: Height, prefix: &mut Vec<u8>) -> Option<Height> {
-		let full_key = ProcessedStates::iteration_key(height, prefix);	
+		let full_key = ProcessedStates::iteration_key(height, prefix);
 		match self.0.get(&full_key) {
-			Some(height) => {
-				match std::str::from_utf8(height.as_slice()) {
-					Ok(height_str) => Some(Height::try_from(height_str).unwrap()),
-					Err(_) => None,
-				}
+			Some(height) => match std::str::from_utf8(height.as_slice()) {
+				Ok(height_str) => Some(Height::try_from(height_str).unwrap()),
+				Err(_) => None,
 			},
 			None => None,
 		}
 	}
 
 	pub fn get_next_height(&self, height: Height) -> Option<Height> {
-		let full_key = ProcessedStates::iteration_key(height, &mut Vec::new());	
+		let full_key = ProcessedStates::iteration_key(height, &mut Vec::new());
 		let mut iterator = self.0.range(Some(&full_key), None, Order::Ascending);
 		match iterator.next() {
-			Some((_, height)) => {
-				match std::str::from_utf8(height.as_slice()) {
-					Ok(height_str) => Some(Height::try_from(height_str).unwrap()),
-					Err(_) => None,
-				}
+			Some((_, height)) => match std::str::from_utf8(height.as_slice()) {
+				Ok(height_str) => Some(Height::try_from(height_str).unwrap()),
+				Err(_) => None,
 			},
 			None => None,
 		}
@@ -166,11 +155,9 @@ impl<'a> ReadonlyProcessedStates<'a> {
 		let full_key = ProcessedStates::iteration_key(height, &mut Vec::new());
 		let mut iterator = self.0.range(None, Some(&full_key), Order::Descending);
 		match iterator.next() {
-			Some((_, height)) => {
-				match std::str::from_utf8(height.as_slice()) {
-					Ok(height_str) => Some(Height::try_from(height_str).unwrap()),
-					Err(_) => None,
-				}
+			Some((_, height)) => match std::str::from_utf8(height.as_slice()) {
+				Ok(height_str) => Some(Height::try_from(height_str).unwrap()),
+				Err(_) => None,
 			},
 			None => None,
 		}
@@ -178,34 +165,30 @@ impl<'a> ReadonlyProcessedStates<'a> {
 
 	pub fn get_metadata(&self) -> Option<Vec<GenesisMetadata>> {
 		let mut gm: Vec<GenesisMetadata> = Vec::<GenesisMetadata>::new();
-		
+
 		let start_key = format!("iterateConsensusStates").into_bytes();
 		let mut iterator = self.0.range(Some(&start_key), None, Order::Ascending);
 		loop {
 			match iterator.next() {
-				Some((_, height)) => {
-					match std::str::from_utf8(height.as_slice()) {
-						Ok(height_str) => {
-							let height = Height::try_from(height_str).unwrap();
-							let processed_height_key = ProcessedStates::processed_height_key(height, &mut Vec::new());
-							gm.push(
-								GenesisMetadata {
-									key: processed_height_key.clone(),
-									value: self.0.get(&processed_height_key).unwrap(),
-								}
-							);
-							let processed_time_key = ProcessedStates::processed_time_key(height, &mut Vec::new());
-							gm.push(
-								GenesisMetadata {
-									key: processed_time_key.clone(),
-									value: self.0.get(&processed_time_key).unwrap(),
-								}
-							);
-						},
-						Err(_) => { break },
-					}
+				Some((_, height)) => match std::str::from_utf8(height.as_slice()) {
+					Ok(height_str) => {
+						let height = Height::try_from(height_str).unwrap();
+						let processed_height_key =
+							ProcessedStates::processed_height_key(height, &mut Vec::new());
+						gm.push(GenesisMetadata {
+							key: processed_height_key.clone(),
+							value: self.0.get(&processed_height_key).unwrap(),
+						});
+						let processed_time_key =
+							ProcessedStates::processed_time_key(height, &mut Vec::new());
+						gm.push(GenesisMetadata {
+							key: processed_time_key.clone(),
+							value: self.0.get(&processed_time_key).unwrap(),
+						});
+					},
+					Err(_) => break,
 				},
-				None => { break },
+				None => break,
 			}
 		}
 
@@ -213,14 +196,9 @@ impl<'a> ReadonlyProcessedStates<'a> {
 		loop {
 			match iterator.next() {
 				Some((key, height)) => {
-					gm.push(
-						GenesisMetadata {
-							key: key,
-							value: height,
-						}
-					);
+					gm.push(GenesisMetadata { key, value: height });
 				},
-				None => { break },
+				None => break,
 			}
 		}
 		Some(gm)

@@ -1,17 +1,17 @@
 use crate::{
-	ics23::{ClientStates, ConsensusStates, ReadonlyClientStates, ReadonlyConsensusStates, ReadonlyProcessedStates},
+	ics23::{
+		ClientStates, ConsensusStates, ReadonlyClientStates, ReadonlyConsensusStates,
+		ReadonlyProcessedStates,
+	},
 	ContractError,
 };
 use cosmwasm_std::{DepsMut, Env, Storage};
 use ibc::{
-	core::ics02_client::error::Error,
-	core::ics26_routing::context::ReaderContext,
+	core::{ics02_client::error::Error, ics26_routing::context::ReaderContext},
 	Height,
 };
 use ics07_tendermint::{
-	HostFunctionsProvider,
-	client_state::ClientState,
-	consensus_state::ConsensusState,
+	client_state::ClientState, consensus_state::ConsensusState, HostFunctionsProvider,
 };
 use std::{fmt, fmt::Debug, marker::PhantomData};
 
@@ -63,11 +63,7 @@ impl<'a, H> Context<'a, H>
 where
 	H: Clone,
 {
-	pub fn processed_timestamp(
-		&self,
-		height: Height,
-	) -> Result<u64, Error> {
-
+	pub fn processed_timestamp(&self, height: Height) -> Result<u64, Error> {
 		let processed_state = ReadonlyProcessedStates::new(self.storage());
 		match processed_state.get_processed_time(height, &mut Vec::new()) {
 			Some(time) => Ok(time),
@@ -77,11 +73,7 @@ where
 		}
 	}
 
-	pub fn processed_height(
-		&self,
-		height: Height,
-	) -> Result<u64, Error> {
-		
+	pub fn processed_height(&self, height: Height) -> Result<u64, Error> {
 		let processed_state = ReadonlyProcessedStates::new(self.storage());
 		match processed_state.get_processed_height(height, &mut Vec::new()) {
 			Some(p_height) => Ok(p_height),
@@ -104,8 +96,9 @@ where
 					height, prefix,
 				))
 			})?;
-		Context::<H>::decode_consensus_state(&bytes)
-			.map_err(|e| ContractError::Tendermint(format!("error decoding consensus state: {:?}", e)))
+		Context::<H>::decode_consensus_state(&bytes).map_err(|e| {
+			ContractError::Tendermint(format!("error decoding consensus state: {:?}", e))
+		})
 	}
 
 	pub fn store_consensus_state_prefixed(
@@ -137,8 +130,9 @@ where
 		let data = client_states.get_prefixed(prefix).ok_or_else(|| {
 			ContractError::Tendermint("no client state found for prefix".to_string())
 		})?;
-		let encoded = Context::<H>::encode_client_state(client_state, data)
-			.map_err(|e| ContractError::Tendermint(format!("error encoding client state: {:?}", e)))?;
+		let encoded = Context::<H>::encode_client_state(client_state, data).map_err(|e| {
+			ContractError::Tendermint(format!("error encoding client state: {:?}", e))
+		})?;
 		let mut client_states = ClientStates::new(self.storage_mut());
 		client_states.insert_prefixed(encoded, prefix);
 		Ok(())

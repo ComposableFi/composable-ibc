@@ -1,8 +1,8 @@
 use crate::{
 	context::Context,
 	ics23::{
-		ConsensusStates, FakeInner, ReadonlyClientStates, ReadonlyClients, ReadonlyConsensusStates, 
-		ClientStates, ProcessedStates, ReadonlyProcessedStates,
+		ClientStates, ConsensusStates, FakeInner, ProcessedStates, ReadonlyClientStates,
+		ReadonlyClients, ReadonlyConsensusStates, ReadonlyProcessedStates,
 	},
 };
 use ibc::{
@@ -21,9 +21,7 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use ics07_tendermint::{
-	client_def::TendermintClient,
-	client_message::ClientMessage,
-	client_state::ClientState,
+	client_def::TendermintClient, client_message::ClientMessage, client_state::ClientState,
 	consensus_state::ConsensusState, HostFunctionsProvider,
 };
 use prost::Message;
@@ -38,7 +36,6 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientTypes for Context<'a, H> {
 
 impl<'a, H: HostFunctionsProvider + 'static> ClientReader for Context<'a, H> {
 	fn client_type(&self, client_id: &ClientId) -> Result<ClientType, Error> {
-
 		let clients = ReadonlyClients::new(self.storage());
 		if !clients.contains_key(client_id) {
 			return Err(Error::client_not_found(client_id.clone()))
@@ -55,17 +52,13 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientReader for Context<'a, H> {
 		})?;
 		match ClientType::from_str(&data) {
 			Err(_err) => Err(Error::unknown_client_type(data.to_string())),
-			Ok(val) => {
-				Ok(val)
-			},
+			Ok(val) => Ok(val),
 		}
 	}
-	
+
 	fn client_state(&self, client_id: &ClientId) -> Result<ClientState<H>, Error> {
 		let client_states = ReadonlyClientStates::new(self.storage());
-		let data = client_states
-			.get()
-			.ok_or_else(|| Error::client_not_found(client_id.clone()))?;
+		let data = client_states.get().ok_or_else(|| Error::client_not_found(client_id.clone()))?;
 		let state = Self::decode_client_state(&data)?;
 		Ok(state)
 	}
@@ -109,16 +102,12 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientReader for Context<'a, H> {
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<Option<ConsensusState>, Error> {
-
 		let processed_state = ReadonlyProcessedStates::new(self.storage());
 		match processed_state.get_next_height(height) {
-			Some(next_height) => {
-				self.consensus_state(&client_id.clone(), next_height)
-				.and_then(|cs| {
-					Ok(Some(cs))
-				})
-			},
-			None => Ok(None)
+			Some(next_height) => self
+				.consensus_state(&client_id.clone(), next_height)
+				.and_then(|cs| Ok(Some(cs))),
+			None => Ok(None),
 		}
 	}
 
@@ -129,14 +118,10 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientReader for Context<'a, H> {
 	) -> Result<Option<ConsensusState>, Error> {
 		let processed_state = ReadonlyProcessedStates::new(self.storage());
 		match processed_state.get_prev_height(height) {
-			Some(prev_height) => {
-				self.consensus_state(&client_id.clone(), prev_height)
-				.and_then(|cs| {
-					Ok(Some(cs))
-				})
-
-			},
-			None => Ok(None)
+			Some(prev_height) => self
+				.consensus_state(&client_id.clone(), prev_height)
+				.and_then(|cs| Ok(Some(cs))),
+			None => Ok(None),
 		}
 	}
 
@@ -189,9 +174,7 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientKeeper for Context<'a, H> {
 		client_state: Self::AnyClientState,
 	) -> Result<(), Error> {
 		let client_states = ReadonlyClientStates::new(self.storage());
-		let data = client_states
-			.get()
-			.ok_or_else(|| Error::client_not_found(client_id.clone()))?;
+		let data = client_states.get().ok_or_else(|| Error::client_not_found(client_id.clone()))?;
 		let encoded = Self::encode_client_state(client_state, data)?;
 		let mut client_state_storage = ClientStates::new(self.storage_mut());
 		client_state_storage.insert(encoded);
@@ -226,7 +209,7 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientKeeper for Context<'a, H> {
 	) -> Result<(), Error> {
 		let mut processed_state = ProcessedStates::new(self.storage_mut());
 		processed_state.set_processed_time(height, timestamp.nanoseconds(), &mut Vec::new());
-		
+
 		Ok(())
 	}
 
@@ -236,7 +219,6 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientKeeper for Context<'a, H> {
 		height: Height,
 		host_height: Height,
 	) -> Result<(), Error> {
-		
 		let mut processed_state = ProcessedStates::new(self.storage_mut());
 		processed_state.set_processed_height(height, host_height.revision_height, &mut Vec::new());
 		processed_state.set_iteration_key(height, &mut Vec::new());

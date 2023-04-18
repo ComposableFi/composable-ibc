@@ -21,11 +21,12 @@ use core::{
 	marker::PhantomData,
 	time::Duration,
 };
+use ibc_proto::{
+	google::protobuf::Any, ibc::lightclients::tendermint::v1::ClientState as RawClientState,
+};
 use serde::{Deserialize, Serialize};
 use tendermint_light_client_verifier::options::Options;
 use tendermint_proto::Protobuf;
-use ibc_proto::google::protobuf::Any;
-use ibc_proto::ibc::lightclients::tendermint::v1::ClientState as RawClientState;
 
 use crate::{
 	client_def::TendermintClient, client_message::Header, error::Error, HostFunctionsProvider,
@@ -67,7 +68,6 @@ impl<H: Clone> ClientState<H> {
 		}
 	}
 }
-
 
 impl<H> ClientState<H> {
 	#[allow(clippy::too_many_arguments)]
@@ -219,8 +219,7 @@ impl<H> ClientState<H> {
 		delay_period_time: u64,
 		delay_period_blocks: u64,
 	) -> Result<(), Error> {
-		let earliest_time =
-			processed_time + delay_period_time;
+		let earliest_time = processed_time + delay_period_time;
 		if current_time.nanoseconds() <= earliest_time {
 			return Err(Error::not_enough_time_elapsed(current_time, earliest_time))
 		}

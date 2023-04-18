@@ -1,40 +1,36 @@
 use crate::{
 	context::Context,
 	error::ContractError,
-	msg::{
-		CheckForMisbehaviourMsg, ContractResult, ExecuteMsg,
-		ExportMetadataMsg, InstantiateMsg, QueryMsg, QueryResponse, StatusMsg,
-		UpdateStateMsg, UpdateStateOnMisbehaviourMsg, VerifyClientMessage, VerifyMembershipMsg,
-		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
-	},
-	state::{get_client_state, get_consensus_state},
 	helpers::{
+		check_substitute_and_update_state, prune_oldest_consensus_state, verify_delay_passed,
 		verify_upgrade_and_update_state,
-		check_substitute_and_update_state,
-		prune_oldest_consensus_state,
-		verify_delay_passed,
 	},
 	ics23::ReadonlyProcessedStates,
+	msg::{
+		CheckForMisbehaviourMsg, ContractResult, ExecuteMsg, ExportMetadataMsg, InstantiateMsg,
+		QueryMsg, QueryResponse, StatusMsg, UpdateStateMsg, UpdateStateOnMisbehaviourMsg,
+		VerifyClientMessage, VerifyMembershipMsg, VerifyNonMembershipMsg,
+		VerifyUpgradeAndUpdateStateMsg,
+	},
+	state::{get_client_state, get_consensus_state},
 };
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-	to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
-};
-use sha2::{Digest, Sha256};
-use ibc::{
-	core::{
-		ics02_client::{
-			client_def::{ClientDef, ConsensusUpdateResult},
-			context::{ClientKeeper, ClientReader},
-		},
-		ics24_host::identifier::ClientId,
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use ed25519_consensus::VerificationKey;
+use ibc::core::{
+	ics02_client::{
+		client_def::{ClientDef, ConsensusUpdateResult},
+		context::{ClientKeeper, ClientReader},
 	},
+	ics24_host::identifier::ClientId,
 };
 use ics07_tendermint::{
+	client_def::{verify_membership, verify_non_membership, TendermintClient},
 	HostFunctionsProvider,
-	client_def::{TendermintClient, verify_membership, verify_non_membership},
 };
+use ics08_wasm::SUBJECT_PREFIX;
+use sha2::{Digest, Sha256};
 use std::str::FromStr;
 use tendermint::{
 	crypto::{
@@ -44,9 +40,7 @@ use tendermint::{
 	merkle::{Hash, MerkleHash, NonIncremental, HASH_SIZE},
 	PublicKey, Signature,
 };
-use tendermint_light_client_verifier::operations::{CommitValidator};
-use ed25519_consensus::VerificationKey;
-use ics08_wasm::SUBJECT_PREFIX;
+use tendermint_light_client_verifier::operations::CommitValidator;
 
 #[derive(Clone, Copy, Debug, PartialEq, Default, Eq)]
 pub struct HostFunctions;
@@ -77,7 +71,7 @@ impl ics23::HostFunctionsProvider for HostFunctions {
 
 impl TendermintSha256 for HostFunctions {
 	fn digest(data: impl AsRef<[u8]>) -> [u8; HASH_SIZE] {
-		Sha256::digest(&data).into()
+		<Sha256 as tendermint::crypto::Sha256>::digest(&data).into()
 	}
 }
 
@@ -103,13 +97,10 @@ impl Verifier for HostFunctions {
 	) -> Result<(), TendermintCryptoError> {
 		let vk = pubkey.ed25519().expect("");
 		let pubkey2 = VerificationKey::try_from(vk.as_bytes())
-            .map_err(|_| TendermintCryptoError::MalformedPublicKey)?;
-        let sig = ed25519_consensus::Signature::try_from(signature.as_bytes())
-            .map_err(|_| TendermintCryptoError::MalformedSignature)?;
-        pubkey2
-            .verify(&sig, msg)
-			.map_err(|_| TendermintCryptoError::VerificationFailed)
-
+			.map_err(|_| TendermintCryptoError::MalformedPublicKey)?;
+		let sig = ed25519_consensus::Signature::try_from(signature.as_bytes())
+			.map_err(|_| TendermintCryptoError::MalformedSignature)?;
+		pubkey2.verify(&sig, msg).map_err(|_| TendermintCryptoError::VerificationFailed)
 	}
 }
 impl CommitValidator for HostFunctions {}
@@ -125,14 +116,14 @@ pub fn instantiate(
 	let _client = TendermintClient::<HostFunctions>::default();
 	let mut ctx = Context::<HostFunctions>::new(deps, env);
 	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
-	let client_state = 
-		ctx.client_state(&client_id.clone())
-				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+	let client_state = ctx
+		.client_state(&client_id.clone())
+		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 	ctx.store_update_height(client_id.clone(), client_state.latest_height, ctx.host_height())
 		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 	ctx.store_update_time(client_id.clone(), client_state.latest_height, ctx.host_timestamp())
 		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-	
+
 	Ok(Response::default())
 }
 
@@ -166,7 +157,8 @@ fn process_message(
 	//log!(ctx, "process_message: {:?}", msg);
 	let result = match msg {
 		ExecuteMsg::VerifyMembership(msg) => {
-			let client_state = ctx.client_state(&client_id)
+			let client_state = ctx
+				.client_state(&client_id)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 			let msg = VerifyMembershipMsg::try_from(msg)?;
 			verify_delay_passed(ctx, msg.height, msg.delay_time_period, msg.delay_block_period)
@@ -186,7 +178,8 @@ fn process_message(
 			Ok(()).map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyNonMembership(msg) => {
-			let client_state = ctx.client_state(&client_id)
+			let client_state = ctx
+				.client_state(&client_id)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 			let msg = VerifyNonMembershipMsg::try_from(msg)?;
 			verify_delay_passed(ctx, msg.height, msg.delay_time_period, msg.delay_block_period)
@@ -206,7 +199,8 @@ fn process_message(
 			.map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyClientMessage(msg) => {
-			let client_state = ctx.client_state(&client_id)
+			let client_state = ctx
+				.client_state(&client_id)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 			let msg = VerifyClientMessage::try_from(msg)?;
 			client
@@ -215,18 +209,18 @@ fn process_message(
 				.map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::CheckForMisbehaviour(msg) => {
-			let client_state = ctx.client_state(&client_id)
+			let client_state = ctx
+				.client_state(&client_id)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 			let msg = CheckForMisbehaviourMsg::try_from(msg)?;
 			client
 				.check_for_misbehaviour(ctx, client_id, client_state, msg.client_message)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))
-				.map(|result| {
-					to_binary(&ContractResult::success().misbehaviour(result))
-				})
+				.map(|result| to_binary(&ContractResult::success().misbehaviour(result)))
 		},
 		ExecuteMsg::UpdateStateOnMisbehaviour(msg_raw) => {
-			let client_state = ctx.client_state(&client_id)
+			let client_state = ctx
+				.client_state(&client_id)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 			let msg = UpdateStateOnMisbehaviourMsg::try_from(msg_raw)?;
 			client
@@ -239,7 +233,8 @@ fn process_message(
 				})
 		},
 		ExecuteMsg::UpdateState(msg_raw) => {
-			let client_state = ctx.client_state(&client_id)
+			let client_state = ctx
+				.client_state(&client_id)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 			let msg = UpdateStateMsg::try_from(msg_raw)?;
 			let latest_revision_height = client_state.latest_height().revision_height;
@@ -267,31 +262,30 @@ fn process_message(
 					Ok(to_binary(&ContractResult::success()))
 				})
 		},
-		ExecuteMsg::CheckSubstituteAndUpdateState(_msg) => {
-			check_substitute_and_update_state::<HostFunctions>(
-				ctx, 
-			)
-			.map_err(|e| ContractError::Tendermint(e.to_string()))
-			.and_then(|(cs, cu)| {
-				let height = cs.latest_height();
-				ctx.store_consensus_state_prefixed(height, cu, SUBJECT_PREFIX);
-				ctx.store_client_state_prefixed(cs, SUBJECT_PREFIX)
-					.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-				Ok(to_binary(&ContractResult::success()))
-			})
-		},
+		ExecuteMsg::CheckSubstituteAndUpdateState(_msg) =>
+			check_substitute_and_update_state::<HostFunctions>(ctx)
+				.map_err(|e| ContractError::Tendermint(e.to_string()))
+				.and_then(|(cs, cu)| {
+					let height = cs.latest_height();
+					ctx.store_consensus_state_prefixed(height, cu, SUBJECT_PREFIX);
+					ctx.store_client_state_prefixed(cs, SUBJECT_PREFIX)
+						.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+					Ok(to_binary(&ContractResult::success()))
+				}),
 		ExecuteMsg::VerifyUpgradeAndUpdateState(msg) => {
-			let old_client_state = ctx.client_state(&client_id.clone())
+			let old_client_state = ctx
+				.client_state(&client_id.clone())
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-			let msg: VerifyUpgradeAndUpdateStateMsg = VerifyUpgradeAndUpdateStateMsg::try_from(msg)?;
+			let msg: VerifyUpgradeAndUpdateStateMsg =
+				VerifyUpgradeAndUpdateStateMsg::try_from(msg)?;
 			verify_upgrade_and_update_state::<HostFunctions>(
-				ctx, 
-				client_id.clone(), 
-				old_client_state, 
+				ctx,
+				client_id.clone(),
+				old_client_state,
 				msg.upgrade_client_state,
-				msg.upgrade_consensus_state, 
-				msg.proof_upgrade_client, 
-				msg.proof_upgrade_consensus_state
+				msg.upgrade_consensus_state,
+				msg.proof_upgrade_client,
+				msg.proof_upgrade_consensus_state,
 			)
 			.map_err(|e| ContractError::Tendermint(e.to_string()))
 			.and_then(|(cs, cu)| {

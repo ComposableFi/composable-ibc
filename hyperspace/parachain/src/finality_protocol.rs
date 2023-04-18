@@ -412,6 +412,7 @@ pub fn filter_events_by_ids(
 			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
 		IbcEvent::CloseConfirmChannel(e) =>
 			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::PushWasmCode(_) => true,
 		IbcEvent::NewBlock(_) |
 		IbcEvent::AppModule(_) |
 		IbcEvent::Empty(_) |

@@ -225,7 +225,7 @@ pub struct CosmosClientConfig {
 	/// Whitelisted channels
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 	/// The key that signs transactions
-	pub keybase: ConfigKeyEntry,
+	pub keybase: KeyBaseConfig,
 }
 
 impl<H> CosmosClient<H>

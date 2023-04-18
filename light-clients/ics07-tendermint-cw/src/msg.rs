@@ -1,25 +1,23 @@
-use crate::{ics23::FakeInner, Bytes, ContractError, contract::HostFunctions};
-use core::{
-	str::FromStr,
-	time::Duration,
-};
+use crate::{contract::HostFunctions, ics23::FakeInner, Bytes, ContractError};
+use core::{str::FromStr, time::Duration};
 use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::{
+		ics02_client::trust_threshold::TrustThreshold,
 		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
-		ics24_host::Path, ics02_client::trust_threshold::TrustThreshold,
+		ics24_host::Path,
 	},
 	protobuf::Protobuf,
 	Height,
 };
 use ibc_proto::{google::protobuf::Any, ibc::core::client::v1::Height as HeightRaw};
-use ics08_wasm::{
-	client_message::Header as WasmHeader, client_state::ClientState as WasmClientState,
-	consensus_state::ConsensusState as WasmConsensusState,
-};
 use ics07_tendermint::{
 	client_message::{ClientMessage, Header, Misbehaviour},
 	client_state::ClientState,
+};
+use ics08_wasm::{
+	client_message::Header as WasmHeader, client_state::ClientState as WasmClientState,
+	consensus_state::ConsensusState as WasmConsensusState,
 };
 use prost::Message;
 use serde::{Deserializer, Serializer};
@@ -202,10 +200,10 @@ impl TryFrom<VerifyNonMembershipMsgRaw> for VerifyNonMembershipMsg {
 		let path_str = raw.path.key_path.join("");
 		let path = Path::from_str(&path_str)?;
 		let height = Height::from(raw.height);
-		Ok(Self { 
-			proof, 
-			path, 
-			height, 
+		Ok(Self {
+			proof,
+			path,
+			height,
 			prefix: CommitmentPrefix::try_from(prefix)?,
 			delay_block_period: raw.delay_block_period,
 			delay_time_period: raw.delay_time_period,
@@ -315,8 +313,7 @@ impl TryFrom<UpdateStateMsgRaw> for UpdateStateMsg {
 }
 
 #[cw_serde]
-pub struct CheckSubstituteAndUpdateStateMsg {
-}
+pub struct CheckSubstituteAndUpdateStateMsg {}
 
 #[cw_serde]
 pub struct VerifyUpgradeAndUpdateStateMsgRaw {
@@ -342,19 +339,25 @@ impl TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUpdateStateM
 
 	fn try_from(raw: VerifyUpgradeAndUpdateStateMsgRaw) -> Result<Self, Self::Error> {
 		let any = Any::decode(&mut raw.upgrade_client_state.data.as_slice())?;
-		let upgrade_client_state: ics07_tendermint::client_state::ClientState<HostFunctions> = ClientState::decode_vec(&any.value)?;
+		let upgrade_client_state: ics07_tendermint::client_state::ClientState<HostFunctions> =
+			ClientState::decode_vec(&any.value)?;
 		if upgrade_client_state.trust_level != TrustThreshold::ZERO ||
 			upgrade_client_state.trusting_period != Duration::ZERO ||
 			upgrade_client_state.max_clock_drift != Duration::ZERO ||
-			upgrade_client_state.frozen_height != None {
-				return ibc::prelude::Err(ContractError::Tendermint("Upgrade client state not zeroed".to_string()))
-			}
-		
+			upgrade_client_state.frozen_height != None
+		{
+			return ibc::prelude::Err(ContractError::Tendermint(
+				"Upgrade client state not zeroed".to_string(),
+			))
+		}
+
 		Ok(VerifyUpgradeAndUpdateStateMsg {
 			upgrade_client_state: raw.upgrade_client_state,
 			upgrade_consensus_state: raw.upgrade_consensus_state,
 			proof_upgrade_client: CommitmentProofBytes::try_from(raw.proof_upgrade_client)?,
-			proof_upgrade_consensus_state: CommitmentProofBytes::try_from(raw.proof_upgrade_consensus_state)?,
+			proof_upgrade_consensus_state: CommitmentProofBytes::try_from(
+				raw.proof_upgrade_consensus_state,
+			)?,
 		})
 	}
 }

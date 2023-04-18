@@ -167,10 +167,11 @@ impl Cmd {
 
 	pub async fn create_clients(&self) -> Result<Config> {
 		let mut config = self.parse_config().await?;
-		let chain_a = config.chain_a.clone().into_client().await?;
-		let chain_b = config.chain_b.clone().into_client().await?;
+		let mut chain_a = config.chain_a.clone().into_client().await?;
+		let mut chain_b = config.chain_b.clone().into_client().await?;
 
-		let (client_id_a_on_b, client_id_b_on_a) = create_clients(&chain_a, &chain_b).await?;
+		let (client_id_a_on_b, client_id_b_on_a) =
+			create_clients(&mut chain_a, &mut chain_b).await?;
 		log::info!(
 			"ClientId for Chain {} on Chain {}: {}",
 			chain_b.name(),
@@ -195,8 +196,8 @@ impl Cmd {
 			.expect("delay_period should be provided when creating a connection");
 		let delay = Duration::from_secs(delay.into());
 		let mut config = self.parse_config().await?;
-		let chain_a = config.chain_a.clone().into_client().await?;
-		let chain_b = config.chain_b.clone().into_client().await?;
+		let mut chain_a = config.chain_a.clone().into_client().await?;
+		let mut chain_b = config.chain_b.clone().into_client().await?;
 
 		let chain_a_clone = chain_a.clone();
 		let chain_b_clone = chain_b.clone();
@@ -207,7 +208,7 @@ impl Cmd {
 		});
 
 		let (connection_id_b, connection_id_a) =
-			create_connection(&chain_a, &chain_b, delay).await?;
+			create_connection(&mut chain_a, &mut chain_b, delay).await?;
 		log::info!("ConnectionId on Chain {}: {}", chain_b.name(), connection_id_b);
 		log::info!("ConnectionId on Chain {}: {}", chain_a.name(), connection_id_a);
 		handle.abort();
@@ -233,11 +234,11 @@ impl Cmd {
 			.clone();
 		let order = self.order.as_ref().expect("order must be specified when creating a channel, expected one of 'ordered' or 'unordered'").as_str();
 		let mut config = self.parse_config().await?;
-		let chain_a = config.chain_a.clone().into_client().await?;
-		let chain_b = config.chain_b.clone().into_client().await?;
+		let mut chain_a = config.chain_a.clone().into_client().await?;
+		let mut chain_b = config.chain_b.clone().into_client().await?;
 
-		let chain_a_clone = chain_a.clone();
-		let chain_b_clone = chain_b.clone();
+		let mut chain_a_clone = chain_a.clone();
+		let mut chain_b_clone = chain_b.clone();
 		let handle = tokio::task::spawn(async move {
 			relay(chain_a_clone, chain_b_clone, None, None, Some(Mode::Light))
 				.await
@@ -246,10 +247,10 @@ impl Cmd {
 
 		let order = Order::from_str(order).expect("Expected one of 'ordered' or 'unordered'");
 		let connection_id =
-			any_chain_a.connection_id().expect("Connection id should be defined").clone();
+			chain_a.connection_id().expect("Connection id should be defined").clone();
 		let (channel_id_a, channel_id_b) = create_channel(
-			&mut any_chain_a,
-			&mut any_chain_b,
+			&mut chain_a,
+			&mut chain_b,
 			connection_id,
 			port_id.clone(),
 			version,

@@ -64,7 +64,7 @@ pub enum Path {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Display)]
 #[display(fmt = "{}", path)]
-pub struct OutsidePath{
+pub struct OutsidePath {
 	pub path: String,
 }
 
@@ -201,9 +201,7 @@ impl FromStr for Path {
 }
 
 fn parse_outside_paths(components: &[&str]) -> Option<Path> {
-	Some(OutsidePath{
-		path: components.join("/").to_string()
-	}.into())
+	Some(OutsidePath { path: components.join("/").to_string() }.into())
 }
 
 fn parse_client_paths(components: &[&str]) -> Option<Path> {

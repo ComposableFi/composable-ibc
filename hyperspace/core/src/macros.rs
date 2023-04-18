@@ -607,6 +607,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.set_client_id(client_id),
 					)*
+					Self::Wasm(c) => c.inner.set_client_id(client_id),
 				}
 			}
 
@@ -772,6 +773,7 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.query_connection_id_from_tx_hash(tx_id).await,
 				}
 			}
 
@@ -790,6 +792,7 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.query_channel_id_from_tx_hash(tx_id).await,
 				}
 			}
 
@@ -799,6 +802,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.set_channel_whitelist(channel_whitelist),
 					)*
+					Self::Wasm(c) => c.inner.set_channel_whitelist(channel_whitelist),
 				}
 			}
 
@@ -808,6 +812,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.add_channel_to_whitelist(channel),
 					)*
+					Self::Wasm(c) => c.inner.add_channel_to_whitelist(channel),
 				}
 			}
 
@@ -817,6 +822,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.set_connection_id(connection_id),
 					)*
+					Self::Wasm(c) => c.inner.set_connection_id(connection_id),
 				}
 			}
 		}
@@ -1026,7 +1032,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.increase_counters().await.map_err(AnyError::$name),
 					)*
-					Self::Wasm(c) => c.inner.set_channel_whitelist(channel_whitelist),
+					Self::Wasm(c) => c.inner.increase_counters().await,
 				}
 			}
 		}

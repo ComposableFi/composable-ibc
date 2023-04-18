@@ -272,6 +272,15 @@ checksum = "a4c527152e37cf757a3f78aae5a06fbeefdb07ccc535c980a3208ee3060dd544"
 
 [[package]]
 name = "arrayvec"
+version = "0.4.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd9fd44efafa8690358b7408d253adf110036b88f55672a933f01d616ad9b1b9"
+dependencies = [
+ "nodrop",
+]
+
+[[package]]
+name = "arrayvec"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
@@ -817,6 +826,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46502ad458c9a52b69d4d4d32775c788b7a1b85e8bc9d482d92250fc0e3f8efe"
 dependencies = [
  "digest 0.10.6",
+]
+
+[[package]]
+name = "blake2-rfc"
+version = "0.2.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d6d530bdd2d52966a6d03b7a964add7ae1a288d25214066fd4b600f0f796400"
+dependencies = [
+ "arrayvec 0.4.12",
+ "constant_time_eq 0.1.5",
 ]
 
 [[package]]
@@ -1444,6 +1463,82 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b49ba7ef1ad6107f8824dbe97de947cbaac53c44e7f9756a1fba0d37c1eec505"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "cosmwasm-crypto"
+version = "1.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f22add0f9b2a5416df98c1d0248a8d8eedb882c38fbf0c5052b64eebe865df6d"
+dependencies = [
+ "digest 0.10.6",
+ "ed25519-zebra",
+ "k256",
+ "rand_core 0.6.4",
+ "thiserror",
+]
+
+[[package]]
+name = "cosmwasm-derive"
+version = "1.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2e64f710a18ef90d0a632cf27842e98ffc2d005a38a6f76c12fd0bc03bc1a2d"
+dependencies = [
+ "syn",
+]
+
+[[package]]
+name = "cosmwasm-schema"
+version = "1.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe5ad2e23a971b9e4cd57b20cee3e2e79c33799bed4b128e473aca3702bfe5dd"
+dependencies = [
+ "cosmwasm-schema-derive",
+ "schemars",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "cosmwasm-schema-derive"
+version = "1.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2926d159a9bb1a716a592b40280f1663f2491a9de3b6da77c0933cee2a2655b8"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "cosmwasm-std"
+version = "1.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76fee88ff5bf7bef55bd37ac0619974701b99bf6bd4b16cf56ee8810718abd71"
+dependencies = [
+ "base64 0.13.1",
+ "cosmwasm-crypto",
+ "cosmwasm-derive",
+ "derivative",
+ "forward_ref",
+ "hex",
+ "schemars",
+ "serde",
+ "serde-json-wasm",
+ "sha2 0.10.6",
+ "thiserror",
+ "uint",
+]
+
+[[package]]
+name = "cosmwasm-storage"
+version = "1.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "639bc36408bc1ac45e3323166ceeb8f0b91b55a941c4ad59d389829002fbbd94"
+dependencies = [
+ "cosmwasm-std",
+ "serde",
 ]
 
 [[package]]
@@ -2284,6 +2379,64 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-multi-test"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8e81b4a7821d5eeba0d23f737c16027b39a600742ca8c32eb980895ffd270f4"
+dependencies = [
+ "anyhow",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus",
+ "cw-utils",
+ "derivative",
+ "itertools",
+ "prost 0.9.0",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cw-storage-plus"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc6cf70ef7686e2da9ad7b067c5942cd3e88dd9453f7af42f54557f8af300fb0"
+dependencies = [
+ "cosmwasm-std",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "cw-utils"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ae0b69fa7679de78825b4edeeec045066aa2b2c4b6e063d80042e565bb4da5c"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw2",
+ "schemars",
+ "semver 1.0.16",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cw2"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5abb8ecea72e09afff830252963cb60faf945ce6cef2c20a43814516082653da"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "schemars",
+ "serde",
+]
+
+[[package]]
 name = "cxx"
 version = "1.0.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3049,6 +3202,12 @@ checksum = "a9c384f161156f5260c24a097c56119f9be8c798586aecc13afbcbe7b7e26bf8"
 dependencies = [
  "percent-encoding",
 ]
+
+[[package]]
+name = "forward_ref"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8cbd1169bd7b4a0a20d92b9af7a7e0422888bd38a6f5ec29c1fd8c1558a272e"
 
 [[package]]
 name = "fragile"
@@ -4142,6 +4301,7 @@ dependencies = [
  "ibc",
  "ibc-proto",
  "ibc-rpc",
+ "ics08-wasm",
  "ics10-grandpa",
  "ics11-beefy",
  "light-client-common",
@@ -4151,7 +4311,7 @@ dependencies = [
  "pallet-ibc-ping",
  "parity-scale-codec",
  "prometheus",
- "prost",
+ "prost 0.11.6",
  "serde",
  "sp-beefy",
  "sp-core 7.0.0",
@@ -4188,12 +4348,13 @@ dependencies = [
  "ibc-proto",
  "ibc-rpc",
  "ics07-tendermint",
+ "ics08-wasm",
  "itertools",
  "k256",
  "log",
  "pallet-ibc",
  "parity-scale-codec",
- "prost",
+ "prost 0.11.6",
  "ripemd",
  "rs_merkle",
  "serde",
@@ -4268,7 +4429,7 @@ dependencies = [
  "pallet-transaction-payment-rpc-runtime-api",
  "parity-scale-codec",
  "polkadot-core-primitives",
- "prost",
+ "prost 0.11.6",
  "rs_merkle",
  "sc-finality-grandpa-rpc",
  "serde",
@@ -4302,6 +4463,7 @@ dependencies = [
  "ibc",
  "ibc-proto",
  "ibc-rpc",
+ "ics08-wasm",
  "log",
  "pallet-ibc",
  "parity-scale-codec",
@@ -4375,6 +4537,7 @@ dependencies = [
 name = "ibc"
 version = "0.15.0"
 dependencies = [
+ "cosmwasm-schema",
  "derive_more",
  "env_logger 0.9.3",
  "flex-error",
@@ -4386,7 +4549,7 @@ dependencies = [
  "num-traits",
  "parity-scale-codec",
  "primitive-types",
- "prost",
+ "prost 0.11.6",
  "safe-regex",
  "scale-info",
  "serde",
@@ -4447,7 +4610,7 @@ version = "0.18.0"
 dependencies = [
  "base64 0.13.1",
  "bytes",
- "prost",
+ "prost 0.11.6",
  "schemars",
  "serde",
  "tendermint-proto",
@@ -4516,7 +4679,7 @@ dependencies = [
  "ics23",
  "log",
  "modelator",
- "prost",
+ "prost 0.11.6",
  "serde",
  "serde_json",
  "sha2 0.10.6",
@@ -4530,6 +4693,58 @@ dependencies = [
  "time 0.3.17",
  "tracing",
  "tracing-subscriber 0.3.16",
+]
+
+[[package]]
+name = "ics07-tendermint-cw"
+version = "0.1.0"
+dependencies = [
+ "blake2-rfc",
+ "byteorder",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "derive_more",
+ "digest 0.10.6",
+ "ed25519",
+ "ed25519-consensus",
+ "ed25519-zebra",
+ "hex",
+ "hyperspace-primitives",
+ "ibc",
+ "ibc-derive",
+ "ibc-proto",
+ "ics07-tendermint",
+ "ics08-wasm",
+ "ics23",
+ "pallet-ibc",
+ "prost 0.11.6",
+ "schemars",
+ "serde",
+ "serde-json-wasm",
+ "serde_json",
+ "sha2 0.10.6",
+ "sha3",
+ "tendermint",
+ "tendermint-light-client-verifier",
+ "tendermint-proto",
+ "thiserror",
+ "twox-hash",
+]
+
+[[package]]
+name = "ics08-wasm"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "hex",
+ "ibc",
+ "ibc-proto",
+ "prost 0.11.6",
+ "serde",
+ "tendermint-proto",
 ]
 
 [[package]]
@@ -4555,7 +4770,7 @@ dependencies = [
  "light-client-common",
  "log",
  "parity-scale-codec",
- "prost",
+ "prost 0.11.6",
  "prost-build",
  "prost-types",
  "sc-finality-grandpa-rpc",
@@ -4570,6 +4785,49 @@ dependencies = [
  "tendermint",
  "tendermint-proto",
  "tokio",
+]
+
+[[package]]
+name = "ics10-grandpa-cw"
+version = "0.1.0"
+dependencies = [
+ "blake2-rfc",
+ "byteorder",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "derive_more",
+ "digest 0.10.6",
+ "ed25519-zebra",
+ "finality-grandpa",
+ "grandpa-light-client-primitives",
+ "hex",
+ "hyperspace-primitives",
+ "ibc",
+ "ibc-derive",
+ "ibc-proto",
+ "ics08-wasm",
+ "ics10-grandpa",
+ "ics23",
+ "light-client-common",
+ "pallet-ibc",
+ "prost 0.11.6",
+ "schemars",
+ "serde",
+ "serde-json-wasm",
+ "serde_json",
+ "sha2 0.10.6",
+ "sha3",
+ "sp-core 7.0.0",
+ "sp-io 7.0.0",
+ "sp-runtime 7.0.0",
+ "sp-runtime-interface 7.0.0",
+ "sp-std 5.0.0",
+ "tendermint-proto",
+ "thiserror",
+ "twox-hash",
 ]
 
 [[package]]
@@ -4590,7 +4848,7 @@ dependencies = [
  "ibc-proto",
  "light-client-common",
  "parity-scale-codec",
- "prost",
+ "prost 0.11.6",
  "prost-build",
  "prost-types",
  "serde",
@@ -4624,7 +4882,7 @@ dependencies = [
  "modelator",
  "num-traits",
  "parity-scale-codec",
- "prost",
+ "prost 0.11.6",
  "ripemd",
  "safe-regex",
  "serde",
@@ -4654,7 +4912,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "hex",
- "prost",
+ "prost 0.11.6",
  "ripemd",
  "sha2 0.10.6",
  "sha3",
@@ -5345,7 +5603,7 @@ dependencies = [
  "once_cell",
  "parking_lot 0.12.1",
  "pin-project",
- "prost",
+ "prost 0.11.6",
  "prost-build",
  "rand 0.8.5",
  "rw-stream-sink",
@@ -5385,7 +5643,7 @@ dependencies = [
  "libp2p-swarm",
  "log",
  "lru 0.8.1",
- "prost",
+ "prost 0.11.6",
  "prost-build",
  "prost-codec",
  "smallvec",
@@ -5410,7 +5668,7 @@ dependencies = [
  "libp2p-core",
  "libp2p-swarm",
  "log",
- "prost",
+ "prost 0.11.6",
  "prost-build",
  "rand 0.8.5",
  "sha2 0.10.6",
@@ -5485,7 +5743,7 @@ dependencies = [
  "libp2p-core",
  "log",
  "once_cell",
- "prost",
+ "prost 0.11.6",
  "prost-build",
  "rand 0.8.5",
  "sha2 0.10.6",
@@ -5649,7 +5907,7 @@ dependencies = [
  "libp2p-noise",
  "log",
  "multihash",
- "prost",
+ "prost 0.11.6",
  "prost-build",
  "prost-codec",
  "rand 0.8.5",
@@ -6410,6 +6668,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "nodrop"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72ef4a56884ca558e5ddb05a1d1e7e1bfd9a68d9ed024c21704cc98872dae1bb"
+
+[[package]]
 name = "nohash-hasher"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7143,6 +7407,7 @@ dependencies = [
  "ibc-primitives",
  "ibc-proto",
  "ics07-tendermint",
+ "ics08-wasm",
  "ics10-grandpa",
  "ics11-beefy",
  "ics23",
@@ -7156,7 +7421,7 @@ dependencies = [
  "pallet-timestamp",
  "parachain-info",
  "parity-scale-codec",
- "prost",
+ "prost 0.11.6",
  "scale-info",
  "serde",
  "serde_json",
@@ -9642,12 +9907,22 @@ dependencies = [
 
 [[package]]
 name = "prost"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "444879275cb4fd84958b1a1d5420d15e6fcf7c235fe47f053c9c2a80aceb6001"
+dependencies = [
+ "bytes",
+ "prost-derive 0.9.0",
+]
+
+[[package]]
+name = "prost"
 version = "0.11.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "21dc42e00223fc37204bd4aa177e69420c604ca4a183209a8f9de30c6d934698"
 dependencies = [
  "bytes",
- "prost-derive",
+ "prost-derive 0.11.6",
 ]
 
 [[package]]
@@ -9664,7 +9939,7 @@ dependencies = [
  "multimap",
  "petgraph",
  "prettyplease",
- "prost",
+ "prost 0.11.6",
  "prost-types",
  "regex",
  "syn",
@@ -9680,9 +9955,22 @@ checksum = "0dc34979ff898b6e141106178981ce2596c387ea6e62533facfc61a37fc879c0"
 dependencies = [
  "asynchronous-codec",
  "bytes",
- "prost",
+ "prost 0.11.6",
  "thiserror",
  "unsigned-varint",
+]
+
+[[package]]
+name = "prost-derive"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9cc1a3263e07e0bf68e96268f37665207b49560d98739662cdfaae215c720fe"
+dependencies = [
+ "anyhow",
+ "itertools",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -9705,7 +9993,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a5e0526209433e96d83d750dd81a99118edbc55739e7e61a46764fd2ad537788"
 dependencies = [
  "bytes",
- "prost",
+ "prost 0.11.6",
 ]
 
 [[package]]
@@ -10524,7 +10812,7 @@ dependencies = [
  "libp2p",
  "log",
  "parity-scale-codec",
- "prost",
+ "prost 0.11.6",
  "prost-build",
  "rand 0.8.5",
  "sc-client-api 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
@@ -11285,7 +11573,7 @@ dependencies = [
  "futures",
  "libp2p",
  "log",
- "prost",
+ "prost 0.11.6",
  "prost-build",
  "sc-client-api 4.0.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.38)",
  "sc-network-common 0.10.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.38)",
@@ -11304,7 +11592,7 @@ dependencies = [
  "futures",
  "libp2p",
  "log",
- "prost",
+ "prost 0.11.6",
  "prost-build",
  "sc-client-api 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
  "sc-network-common 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
@@ -11394,7 +11682,7 @@ dependencies = [
  "libp2p",
  "log",
  "parity-scale-codec",
- "prost",
+ "prost 0.11.6",
  "prost-build",
  "sc-client-api 4.0.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.38)",
  "sc-network-common 0.10.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.38)",
@@ -11415,7 +11703,7 @@ dependencies = [
  "libp2p",
  "log",
  "parity-scale-codec",
- "prost",
+ "prost 0.11.6",
  "prost-build",
  "sc-client-api 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
  "sc-network-common 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
@@ -11440,7 +11728,7 @@ dependencies = [
  "lru 0.8.1",
  "mockall",
  "parity-scale-codec",
- "prost",
+ "prost 0.11.6",
  "prost-build",
  "sc-client-api 4.0.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.38)",
  "sc-consensus 0.10.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.38)",
@@ -11472,7 +11760,7 @@ dependencies = [
  "lru 0.8.1",
  "mockall",
  "parity-scale-codec",
- "prost",
+ "prost 0.11.6",
  "prost-build",
  "sc-client-api 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
  "sc-consensus 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
@@ -12554,6 +12842,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-json-wasm"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16a62a1fad1e1828b24acac8f2b468971dade7b8c3c2e672bcadefefb1f8c137"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_bytes"
 version = "0.11.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12596,9 +12893,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.92"
+version = "1.0.96"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7434af0dc1cbd59268aa98b4c22c131c0584d2232f6fb166efb993e2832e896a"
+checksum = "057d394a50403bcac12672b2b18fb387ab6d289d957dab67dd201875391e52f1"
 dependencies = [
  "itoa",
  "ryu",
@@ -14606,7 +14903,7 @@ dependencies = [
  "k256",
  "num-traits",
  "once_cell",
- "prost",
+ "prost 0.11.6",
  "prost-types",
  "ripemd",
  "serde",
@@ -14677,7 +14974,7 @@ dependencies = [
  "flex-error",
  "num-derive",
  "num-traits",
- "prost",
+ "prost 0.11.6",
  "prost-types",
  "serde",
  "serde_bytes",
@@ -15061,8 +15358,8 @@ dependencies = [
  "hyper-timeout",
  "percent-encoding",
  "pin-project",
- "prost",
- "prost-derive",
+ "prost 0.11.6",
+ "prost-derive 0.11.6",
  "rustls-native-certs 0.6.2",
  "rustls-pemfile",
  "tokio",

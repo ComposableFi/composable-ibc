@@ -1,4 +1,4 @@
-use crate::{context::Context};
+use crate::context::Context;
 use ibc::{
 	core::{
 		ics04_channel::{
@@ -13,9 +13,9 @@ use ibc::{
 	timestamp::Timestamp,
 	Height,
 };
+use ics07_tendermint::HostFunctionsProvider;
 use sha2::{Digest, Sha256};
 use std::time::Duration;
-use ics07_tendermint::HostFunctionsProvider;
 
 impl<'a, H: HostFunctionsProvider> ChannelReader for Context<'a, H> {
 	fn channel_end(&self, _port_channel_id: &(PortId, ChannelId)) -> Result<ChannelEnd, Error> {

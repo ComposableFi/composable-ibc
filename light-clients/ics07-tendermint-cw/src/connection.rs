@@ -7,8 +7,8 @@ use ibc::{
 	},
 	Height,
 };
-use std::time::Duration;
 use ics07_tendermint::HostFunctionsProvider;
+use std::time::Duration;
 
 impl<'a, H: HostFunctionsProvider> ConnectionReader for Context<'a, H> {
 	fn minimum_delay_period(&self) -> Duration {

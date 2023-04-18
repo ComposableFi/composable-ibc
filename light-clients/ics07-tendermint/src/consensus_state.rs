@@ -22,11 +22,13 @@ use tendermint_proto::{google::protobuf as tpb, Protobuf};
 
 use crate::{client_message::Header, error::Error};
 use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp};
-use ibc_proto::ibc::lightclients::tendermint::v1::ConsensusState as RawConsensusState;
-use ibc_proto::google::protobuf::Any;
+use ibc_proto::{
+	google::protobuf::Any, ibc::lightclients::tendermint::v1::ConsensusState as RawConsensusState,
+};
 
 /// Protobuf type url for TENDERMINT Consensus State
-pub const TENDERMINT_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.ConsensusState";
+pub const TENDERMINT_CONSENSUS_STATE_TYPE_URL: &str =
+	"/ibc.lightclients.tendermint.v1.ConsensusState";
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConsensusState {
