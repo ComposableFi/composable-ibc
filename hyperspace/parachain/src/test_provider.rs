@@ -20,7 +20,7 @@ use futures::{Stream, StreamExt};
 use grandpa_light_client_primitives::ParachainHeaderProofs;
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
-	core::ics24_host::identifier::{ChannelId, ClientId, PortId},
+	core::ics24_host::identifier::{ChannelId, ClientId},
 };
 use ibc_proto::google::protobuf::Any;
 use ibc_rpc::IbcApiClient;
@@ -41,6 +41,7 @@ use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr};
 use subxt::config::{
 	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT,
 };
+
 impl<T: light_client_common::config::Config + Send + Sync> ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
@@ -65,7 +66,7 @@ where
 		From<TransferParams<AccountId32>>,
 {
 	pub fn set_client_id(&mut self, client_id: ClientId) {
-		self.client_id = Some(client_id)
+		*self.client_id.lock().unwrap() = Some(client_id)
 	}
 
 	pub async fn submit_create_client_msg(&self, msg: Any) -> Result<ClientId, Error> {
@@ -210,7 +211,8 @@ where
 		Box::pin(Box::new(stream))
 	}
 
-	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
-		self.channel_whitelist = channel_whitelist;
+	async fn increase_counters(&mut self) -> Result<(), Self::Error> {
+		let call = T::Tx::ibc_increase_counters();
+		self.submit_sudo_call(call).await.map(|_| ())
 	}
 }

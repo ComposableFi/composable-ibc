@@ -602,7 +602,8 @@ macro_rules! define_runtime_transactions {
 		$ibc_deliver: expr,
 		$ibc_transfer: expr,
 		$sudo_sudo: expr,
-		$ibc_ping_send_ping: expr
+		$ibc_ping_send_ping: expr,
+		$ibc_increase_counters: expr
 	) => {
 		pub struct $name;
 
@@ -646,6 +647,10 @@ macro_rules! define_runtime_transactions {
 
 			fn ibc_ping_send_ping(params: Self::SendPingParams) -> StaticTxPayload<Self::SendPing> {
 				$ibc_ping_send_ping($send_ping_params_wrapper(params).into())
+			}
+
+			fn ibc_increase_counters() -> Self::ParaRuntimeCall {
+				$ibc_increase_counters()
 			}
 		}
 	};

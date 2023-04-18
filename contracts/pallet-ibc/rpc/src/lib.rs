@@ -50,13 +50,15 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_core::{blake2_256, storage::ChildInfo};
 use sp_runtime::{
-	generic::BlockId,
+	generic::{BlockId, SignedBlock},
 	traits::{Block as BlockT, Header as HeaderT},
 };
 use std::{collections::HashMap, fmt::Display, str::FromStr, sync::Arc};
 use tendermint_proto::Protobuf;
 pub mod events;
 use events::filter_map_pallet_event;
+use ibc_proto::ibc::core::channel::v1::IdentifiedChannel;
+use pallet_ibc::errors::IbcError;
 
 /// Connection handshake proof
 #[derive(Serialize, Deserialize)]
@@ -422,6 +424,22 @@ where
 		ext_hash: Hash,
 	) -> Result<IdentifiedClientState>;
 
+	/// Query newly created connection in block and extrinsic
+	#[method(name = "ibc_queryNewlyCreatedConnection")]
+	fn query_newly_created_connection(
+		&self,
+		block_hash: Hash,
+		ext_hash: Hash,
+	) -> Result<IdentifiedConnection>;
+
+	/// Query newly created channel in block and extrinsic
+	#[method(name = "ibc_queryNewlyCreatedChannel")]
+	fn query_newly_created_channel(
+		&self,
+		block_hash: Hash,
+		ext_hash: Hash,
+	) -> Result<IdentifiedChannel>;
+
 	/// Query Ibc Events that were deposited in a series of blocks
 	/// Using String keys because HashMap fails to deserialize when key is not a String
 	#[method(name = "ibc_queryEvents")]
@@ -441,14 +459,14 @@ fn runtime_error_into_rpc_error(e: impl std::fmt::Display) -> RpcError {
 }
 
 /// An implementation of IBC specific RPC methods.
-pub struct IbcRpcHandler<C, B> {
+pub struct IbcRpcHandler<C, B, AssetId> {
 	client: Arc<C>,
 	/// A copy of the chain properties.
 	pub chain_props: Properties,
-	_marker: std::marker::PhantomData<B>,
+	_marker: std::marker::PhantomData<(B, AssetId)>,
 }
 
-impl<C, B> IbcRpcHandler<C, B> {
+impl<C, B, AssetId> IbcRpcHandler<C, B, AssetId> {
 	/// Create new `IbcRpcHandler` with the given reference to the client.
 	pub fn new(client: Arc<C>, chain_props: Properties) -> Self {
 		Self { client, chain_props, _marker: Default::default() }
@@ -457,7 +475,7 @@ impl<C, B> IbcRpcHandler<C, B> {
 
 impl<C, Block, AssetId>
 	IbcApiServer<<<Block as BlockT>::Header as HeaderT>::Number, Block::Hash, AssetId>
-	for IbcRpcHandler<C, Block>
+	for IbcRpcHandler<C, Block, AssetId>
 where
 	Block: BlockT,
 	C: Send
@@ -468,7 +486,7 @@ where
 		+ ProofProvider<Block>
 		+ BlockBackend<Block>,
 	C::Api: IbcRuntimeApi<Block, AssetId>,
-	AssetId: codec::Codec + Copy,
+	AssetId: codec::Codec + Copy + Send + Sync + 'static,
 {
 	fn query_send_packets(
 		&self,
@@ -1568,30 +1586,8 @@ where
 		block_hash: Block::Hash,
 		ext_hash: Block::Hash,
 	) -> Result<IdentifiedClientState> {
+		let (block, event) = self.ibc_event_by_tx_id(block_hash, ext_hash)?;
 		let api = self.client.runtime_api();
-		let block = self.client.block(block_hash).ok().flatten().ok_or_else(|| {
-			runtime_error_into_rpc_error("[ibc_rpc]: failed to find block with provided hash")
-		})?;
-		let extrinsics = block.block.extrinsics();
-		let (ext_index, ..) = extrinsics
-			.iter()
-			.enumerate()
-			.find(|(_, ext)| ext_hash.as_ref() == blake2_256(ext.encode().as_slice()).as_ref())
-			.ok_or_else(|| {
-				runtime_error_into_rpc_error(
-					"[ibc_rpc]: failed to find extrinsic with provided hash",
-				)
-			})?;
-
-		let events = api
-			.block_events(&BlockId::Number(*block.block.header().number()), Some(ext_index as _))
-			.map_err(|_| runtime_error_into_rpc_error("[ibc_rpc]: failed to read block events"))?;
-
-		// There should be only one ibc event in this list in this case
-		let event = events
-			.get(0)
-			.ok_or_else(|| runtime_error_into_rpc_error("[ibc_rpc]: Could not find any ibc event"))?
-			.clone();
 
 		match event {
 			Ok(IbcEvent::CreateClient { client_id, .. }) => {
@@ -1612,6 +1608,76 @@ where
 					})?,
 					client_state: Some(client_state.into()),
 				})
+			},
+			_ =>
+				Err(runtime_error_into_rpc_error("[ibc_rpc]: Could not find client creation event")),
+		}
+	}
+
+	fn query_newly_created_connection(
+		&self,
+		block_hash: Block::Hash,
+		ext_hash: Block::Hash,
+	) -> Result<IdentifiedConnection> {
+		let (block, event) = self.ibc_event_by_tx_id(block_hash, ext_hash)?;
+
+		match event {
+			Ok(IbcEvent::OpenInitConnection { connection_id, client_id, .. }) => {
+				let connection_id =
+					connection_id.expect("connection id should exist after its creation");
+
+				let height = (*block.block.header().number()).try_into().map_err(|_| {
+					runtime_error_into_rpc_error("block number should be valid u64")
+				})?;
+				let connections: Vec<IdentifiedConnection> = self.query_connection_using_client(
+					height,
+					String::from_utf8(client_id).map_err(|_| {
+						runtime_error_into_rpc_error("client id should be valid utf8")
+					})?,
+				)?;
+				let connection = connections
+					.into_iter()
+					.find(|connection| connection.id.as_bytes() == connection_id)
+					.ok_or_else(|| {
+						runtime_error_into_rpc_error("connection should exist after its creation")
+					})?;
+				Ok(connection)
+			},
+			_ =>
+				Err(runtime_error_into_rpc_error("[ibc_rpc]: Could not find client creation event")),
+		}
+	}
+
+	fn query_newly_created_channel(
+		&self,
+		block_hash: Block::Hash,
+		ext_hash: Block::Hash,
+	) -> Result<IdentifiedChannel> {
+		let (block, event) = self.ibc_event_by_tx_id(block_hash, ext_hash)?;
+
+		match event {
+			Ok(IbcEvent::OpenInitChannel { channel_id, port_id, connection_id, .. }) => {
+				let channel_id = channel_id.expect("channel should exist after its creation");
+
+				let height = (*block.block.header().number()).try_into().map_err(|_| {
+					runtime_error_into_rpc_error("block number should be valid u64")
+				})?;
+				let channels: QueryChannelsResponse = self.query_connection_channels(
+					height,
+					String::from_utf8(connection_id.clone()).map_err(|_| {
+						runtime_error_into_rpc_error("connection id should be valid utf8")
+					})?,
+				)?;
+				let channel = channels
+					.channels
+					.into_iter()
+					.find(|ch| {
+						ch.channel_id.as_bytes() == channel_id && ch.port_id.as_bytes() == port_id
+					})
+					.ok_or_else(|| {
+						runtime_error_into_rpc_error("connection should exist after its creation")
+					})?;
+				Ok(channel)
 			},
 			_ =>
 				Err(runtime_error_into_rpc_error("[ibc_rpc]: Could not find client creation event")),
@@ -1642,5 +1708,51 @@ where
 			events.insert(block_number_or_hash.to_string(), temp);
 		}
 		Ok(events)
+	}
+}
+
+impl<C, Block, AssetId> IbcRpcHandler<C, Block, AssetId>
+where
+	Block: BlockT,
+	C: 'static
+		+ BlockBackend<Block>
+		+ HeaderBackend<Block>
+		+ ProofProvider<Block>
+		+ ProvideRuntimeApi<Block>
+		+ Send
+		+ Sync,
+	C::Api: IbcRuntimeApi<Block, AssetId>,
+	AssetId: codec::Codec + Copy,
+{
+	fn ibc_event_by_tx_id(
+		&self,
+		block_hash: <Block as BlockT>::Hash,
+		ext_hash: <Block as BlockT>::Hash,
+	) -> Result<(SignedBlock<Block>, core::result::Result<IbcEvent, IbcError>)> {
+		let api = self.client.runtime_api();
+		let block = self.client.block(block_hash).ok().flatten().ok_or_else(|| {
+			runtime_error_into_rpc_error("[ibc_rpc]: failed to find block with provided hash")
+		})?;
+		let extrinsics = block.block.extrinsics();
+		let (ext_index, ..) = extrinsics
+			.iter()
+			.enumerate()
+			.find(|(_, ext)| ext_hash.as_ref() == blake2_256(ext.encode().as_slice()).as_ref())
+			.ok_or_else(|| {
+				runtime_error_into_rpc_error(
+					"[ibc_rpc]: failed to find extrinsic with provided hash",
+				)
+			})?;
+
+		let events = api
+			.block_events(&BlockId::Number(*block.block.header().number()), Some(ext_index as _))
+			.map_err(|_| runtime_error_into_rpc_error("[ibc_rpc]: failed to read block events"))?;
+
+		// There should be only one ibc event in this list in this case
+		let event = events
+			.get(0)
+			.ok_or_else(|| runtime_error_into_rpc_error("[ibc_rpc]: Could not find any ibc event"))?
+			.clone();
+		Ok((block, event))
 	}
 }

@@ -53,6 +53,10 @@ use std::{
 
 use beefy_prover::helpers::unsafe_arc_cast;
 use grandpa_prover::{GrandpaJustification, JustificationNotification};
+use ibc::core::{
+	ics04_channel::packet::Packet,
+	ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
+};
 use subxt::config::{
 	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT,
 };
@@ -265,7 +269,23 @@ where
 		})
 		.collect::<BTreeSet<_>>();
 
-	let events: Vec<IbcEvent> = events.into_values().flatten().collect();
+	let events: Vec<IbcEvent> = events
+		.into_values()
+		.flatten()
+		.filter(|e| {
+			let mut channel_and_port_ids = source.channel_whitelist();
+			channel_and_port_ids.extend(counterparty.channel_whitelist());
+			filter_events_by_ids(
+				e,
+				&[source.client_id(), counterparty.client_id()],
+				&[source.connection_id(), counterparty.connection_id()]
+					.into_iter()
+					.flatten()
+					.collect::<Vec<_>>(),
+				&channel_and_port_ids,
+			)
+		})
+		.collect();
 
 	if timeout_update_required {
 		let max_height_for_timeouts = max_height_for_timeouts.unwrap();
@@ -317,6 +337,88 @@ where
 	};
 
 	Ok(vec![(update_header, events, update_type)])
+}
+
+pub fn filter_events_by_ids(
+	ev: &IbcEvent,
+	client_ids: &[ClientId],
+	connection_ids: &[ConnectionId],
+	channel_and_port_ids: &[(ChannelId, PortId)],
+) -> bool {
+	use ibc::core::{
+		ics02_client::events::Attributes as ClientAttributes,
+		ics03_connection::events::Attributes as ConnectionAttributes,
+		ics04_channel::events::Attributes as ChannelAttributes,
+	};
+	let channel_ids = channel_and_port_ids
+		.iter()
+		.map(|(channel_id, _)| channel_id)
+		.collect::<Vec<_>>();
+
+	let filter_packet = |packet: &Packet| {
+		channel_and_port_ids.contains(&(packet.source_channel.clone(), packet.source_port.clone())) ||
+			channel_and_port_ids
+				.contains(&(packet.destination_channel.clone(), packet.destination_port.clone()))
+	};
+	let filter_client_attributes =
+		|packet: &ClientAttributes| client_ids.contains(&packet.client_id);
+	let filter_connection_attributes = |packet: &ConnectionAttributes| {
+		packet
+			.connection_id
+			.as_ref()
+			.map(|id| connection_ids.contains(&id))
+			.unwrap_or(false) ||
+			packet
+				.counterparty_connection_id
+				.as_ref()
+				.map(|id| connection_ids.contains(&id))
+				.unwrap_or(false)
+	};
+	let filter_channel_attributes = |packet: &ChannelAttributes| {
+		packet.channel_id.as_ref().map(|id| channel_ids.contains(&id)).unwrap_or(false) ||
+			packet
+				.counterparty_channel_id
+				.as_ref()
+				.map(|id| channel_ids.contains(&id))
+				.unwrap_or(false)
+	};
+
+	let v = match ev {
+		IbcEvent::SendPacket(e) => filter_packet(&e.packet),
+		IbcEvent::WriteAcknowledgement(e) => filter_packet(&e.packet),
+		IbcEvent::TimeoutPacket(e) => filter_packet(&e.packet),
+		IbcEvent::ReceivePacket(e) => filter_packet(&e.packet),
+		IbcEvent::AcknowledgePacket(e) => filter_packet(&e.packet),
+		IbcEvent::TimeoutOnClosePacket(e) => filter_packet(&e.packet),
+		IbcEvent::CreateClient(e) => filter_client_attributes(&e.0),
+		IbcEvent::UpdateClient(e) => filter_client_attributes(&e.common),
+		IbcEvent::UpgradeClient(e) => filter_client_attributes(&e.0),
+		IbcEvent::ClientMisbehaviour(e) => filter_client_attributes(&e.0),
+		IbcEvent::OpenInitConnection(e) => filter_connection_attributes(&e.0),
+		IbcEvent::OpenTryConnection(e) => filter_connection_attributes(&e.0),
+		IbcEvent::OpenAckConnection(e) => filter_connection_attributes(&e.0),
+		IbcEvent::OpenConfirmConnection(e) => filter_connection_attributes(&e.0),
+		IbcEvent::OpenInitChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::OpenTryChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::OpenAckChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::OpenConfirmChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::CloseInitChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::CloseConfirmChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::NewBlock(_) |
+		IbcEvent::AppModule(_) |
+		IbcEvent::Empty(_) |
+		IbcEvent::ChainError(_) => true,
+	};
+	if !v {
+		log::debug!(target: "hyperspace_parachain", "Filtered out event: {:?}", ev);
+	}
+	v
 }
 
 /// Query the latest events that have been finalized by the GRANDPA finality protocol.
@@ -454,7 +556,23 @@ where
 		})
 		.collect::<BTreeSet<_>>();
 
-	let events: Vec<IbcEvent> = events.into_values().flatten().collect();
+	let events: Vec<IbcEvent> = events
+		.into_values()
+		.flatten()
+		.filter(|e| {
+			let mut channel_and_port_ids = source.channel_whitelist();
+			channel_and_port_ids.extend(counterparty.channel_whitelist());
+			filter_events_by_ids(
+				e,
+				&[source.client_id(), counterparty.client_id()],
+				&[source.connection_id(), counterparty.connection_id()]
+					.into_iter()
+					.flatten()
+					.collect::<Vec<_>>(),
+				&channel_and_port_ids,
+			)
+		})
+		.collect();
 
 	if timeout_update_required {
 		let max_height_for_timeouts = max_height_for_timeouts.unwrap();

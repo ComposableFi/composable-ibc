@@ -122,7 +122,8 @@ define_runtime_transactions!(
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, CurrencyId(y), z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),
-	|_: DummySendPingParamsWrapper<FakeSendPingParams>| unimplemented!("ping is not implemented")
+	|_: DummySendPingParamsWrapper<FakeSendPingParams>| unimplemented!("ping is not implemented"),
+	|| super::unimplemented("ibc_increase_counters is not implemented")
 );
 
 define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);

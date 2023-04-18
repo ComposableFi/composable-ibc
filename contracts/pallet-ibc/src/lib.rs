@@ -834,6 +834,29 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		#[pallet::call_index(5)]
+		#[pallet::weight(0)]
+		#[frame_support::transactional]
+		/// Increase all IBC counters by 1. Used only in testing to ensure that
+		/// relayer uses proper proper values for source/sink chains.
+		pub fn increase_counters(origin: OriginFor<T>) -> DispatchResult {
+			ensure_root(origin)?;
+			#[cfg(not(feature = "testing"))]
+			{
+				return Err(Error::<T>::AccessDenied.into())
+			}
+			#[cfg(feature = "testing")]
+			{
+				ChannelCounter::<T>::set(ChannelCounter::<T>::get() + 1);
+				PacketCounter::<T>::set(PacketCounter::<T>::get() + 1);
+				ClientCounter::<T>::set(ClientCounter::<T>::get() + 1);
+				ConnectionCounter::<T>::set(ConnectionCounter::<T>::get() + 1);
+				AcknowledgementCounter::<T>::set(AcknowledgementCounter::<T>::get() + 1);
+				PacketReceiptCounter::<T>::set(PacketReceiptCounter::<T>::get() + 1);
+				Ok(())
+			}
+		}
 	}
 }
 
