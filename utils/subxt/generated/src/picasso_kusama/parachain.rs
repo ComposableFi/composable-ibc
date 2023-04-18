@@ -2,7 +2,7 @@
 #[allow(clippy::all)]
 pub mod api {
 	use super::api as root_mod;
-	pub static PALLETS: [&str; 46usize] = [
+	pub static PALLETS: [&str; 47usize] = [
 		"System",
 		"Timestamp",
 		"Sudo",
@@ -47,6 +47,7 @@ pub mod api {
 		"BondedFinance",
 		"AssetsRegistry",
 		"Pablo",
+		"Oracle",
 		"CallFilter",
 		"Ibc",
 	];
@@ -124,6 +125,8 @@ pub mod api {
 		AssetsRegistry(assets_registry::Event),
 		#[codec(index = 60)]
 		Pablo(pablo::Event),
+		#[codec(index = 61)]
+		Oracle(oracle::Event),
 		#[codec(index = 100)]
 		CallFilter(call_filter::Event),
 		#[codec(index = 190)]
@@ -730,9 +733,10 @@ pub mod api {
 						"Events",
 						vec![],
 						[
-							16u8, 111u8, 58u8, 248u8, 63u8, 183u8, 21u8, 111u8, 164u8, 222u8,
-							141u8, 93u8, 140u8, 9u8, 93u8, 6u8, 164u8, 218u8, 12u8, 132u8, 169u8,
-							53u8, 156u8, 216u8, 97u8, 194u8, 166u8, 45u8, 253u8, 43u8, 0u8, 74u8,
+							220u8, 166u8, 2u8, 114u8, 60u8, 198u8, 203u8, 140u8, 88u8, 118u8, 77u8,
+							18u8, 41u8, 215u8, 159u8, 38u8, 150u8, 129u8, 229u8, 193u8, 144u8,
+							172u8, 55u8, 119u8, 190u8, 49u8, 158u8, 71u8, 169u8, 59u8, 106u8,
+							106u8,
 						],
 					)
 				}
@@ -1207,10 +1211,10 @@ pub mod api {
 						"sudo",
 						Sudo { call: ::std::boxed::Box::new(call) },
 						[
-							60u8, 29u8, 158u8, 235u8, 116u8, 31u8, 124u8, 117u8, 136u8, 127u8, 7u8,
-							255u8, 162u8, 52u8, 81u8, 149u8, 234u8, 173u8, 108u8, 118u8, 220u8,
-							12u8, 19u8, 191u8, 146u8, 250u8, 235u8, 211u8, 234u8, 110u8, 58u8,
-							112u8,
+							174u8, 22u8, 75u8, 80u8, 242u8, 138u8, 143u8, 112u8, 134u8, 222u8,
+							11u8, 130u8, 146u8, 170u8, 39u8, 103u8, 130u8, 131u8, 72u8, 27u8,
+							184u8, 61u8, 202u8, 12u8, 2u8, 152u8, 165u8, 84u8, 138u8, 91u8, 121u8,
+							166u8,
 						],
 					)
 				}
@@ -1234,10 +1238,10 @@ pub mod api {
 						"sudo_unchecked_weight",
 						SudoUncheckedWeight { call: ::std::boxed::Box::new(call), weight },
 						[
-							110u8, 146u8, 169u8, 117u8, 65u8, 214u8, 204u8, 25u8, 141u8, 101u8,
-							5u8, 176u8, 189u8, 100u8, 101u8, 204u8, 251u8, 88u8, 203u8, 191u8,
-							77u8, 195u8, 126u8, 122u8, 47u8, 67u8, 108u8, 128u8, 209u8, 142u8,
-							29u8, 146u8,
+							74u8, 37u8, 227u8, 117u8, 225u8, 39u8, 251u8, 108u8, 120u8, 29u8,
+							245u8, 153u8, 202u8, 253u8, 88u8, 105u8, 192u8, 242u8, 195u8, 51u8,
+							59u8, 154u8, 219u8, 228u8, 236u8, 161u8, 135u8, 114u8, 22u8, 138u8,
+							95u8, 222u8,
 						],
 					)
 				}
@@ -1293,10 +1297,9 @@ pub mod api {
 						"sudo_as",
 						SudoAs { who, call: ::std::boxed::Box::new(call) },
 						[
-							191u8, 112u8, 39u8, 108u8, 55u8, 243u8, 189u8, 104u8, 80u8, 58u8,
-							130u8, 230u8, 65u8, 246u8, 217u8, 149u8, 47u8, 33u8, 109u8, 59u8,
-							143u8, 164u8, 24u8, 163u8, 213u8, 88u8, 114u8, 64u8, 52u8, 225u8, 32u8,
-							40u8,
+							190u8, 231u8, 32u8, 91u8, 252u8, 102u8, 47u8, 197u8, 57u8, 119u8, 93u8,
+							13u8, 112u8, 217u8, 199u8, 151u8, 229u8, 168u8, 120u8, 185u8, 138u8,
+							10u8, 178u8, 35u8, 118u8, 36u8, 216u8, 47u8, 21u8, 235u8, 142u8, 107u8,
 						],
 					)
 				}
@@ -3860,10 +3863,9 @@ pub mod api {
 						"as_multi_threshold_1",
 						AsMultiThreshold1 { other_signatories, call: ::std::boxed::Box::new(call) },
 						[
-							196u8, 242u8, 94u8, 22u8, 251u8, 95u8, 159u8, 214u8, 226u8, 23u8, 14u8,
-							149u8, 141u8, 129u8, 200u8, 82u8, 196u8, 236u8, 70u8, 40u8, 78u8,
-							237u8, 50u8, 179u8, 245u8, 92u8, 168u8, 110u8, 81u8, 119u8, 131u8,
-							104u8,
+							34u8, 68u8, 173u8, 160u8, 96u8, 15u8, 254u8, 235u8, 12u8, 135u8, 221u8,
+							247u8, 210u8, 190u8, 174u8, 151u8, 216u8, 248u8, 84u8, 196u8, 62u8,
+							90u8, 91u8, 86u8, 102u8, 230u8, 32u8, 151u8, 204u8, 237u8, 39u8, 147u8,
 						],
 					)
 				}
@@ -3933,9 +3935,9 @@ pub mod api {
 							max_weight,
 						},
 						[
-							125u8, 94u8, 196u8, 220u8, 248u8, 50u8, 107u8, 174u8, 180u8, 59u8,
-							231u8, 124u8, 49u8, 56u8, 150u8, 93u8, 165u8, 107u8, 8u8, 239u8, 92u8,
-							88u8, 178u8, 41u8, 19u8, 64u8, 64u8, 37u8, 77u8, 130u8, 12u8, 163u8,
+							47u8, 91u8, 122u8, 97u8, 73u8, 167u8, 150u8, 242u8, 182u8, 6u8, 213u8,
+							112u8, 3u8, 204u8, 158u8, 67u8, 229u8, 114u8, 191u8, 48u8, 136u8, 90u8,
+							247u8, 65u8, 87u8, 89u8, 134u8, 78u8, 57u8, 170u8, 167u8, 85u8,
 						],
 					)
 				}
@@ -6013,9 +6015,9 @@ pub mod api {
 						"execute",
 						Execute { proposal: ::std::boxed::Box::new(proposal), length_bound },
 						[
-							48u8, 50u8, 17u8, 156u8, 219u8, 207u8, 3u8, 242u8, 123u8, 116u8, 172u8,
-							101u8, 175u8, 247u8, 191u8, 166u8, 182u8, 138u8, 207u8, 213u8, 8u8,
-							61u8, 82u8, 138u8, 143u8, 168u8, 238u8, 161u8, 50u8, 38u8, 152u8, 83u8,
+							148u8, 99u8, 129u8, 96u8, 155u8, 98u8, 190u8, 192u8, 212u8, 91u8,
+							123u8, 70u8, 240u8, 45u8, 207u8, 94u8, 21u8, 26u8, 154u8, 227u8, 63u8,
+							173u8, 70u8, 21u8, 173u8, 157u8, 1u8, 93u8, 8u8, 52u8, 116u8, 2u8,
 						],
 					)
 				}
@@ -6061,10 +6063,9 @@ pub mod api {
 							length_bound,
 						},
 						[
-							170u8, 105u8, 236u8, 17u8, 189u8, 194u8, 44u8, 140u8, 197u8, 98u8,
-							19u8, 218u8, 236u8, 52u8, 235u8, 17u8, 208u8, 33u8, 26u8, 22u8, 239u8,
-							194u8, 215u8, 2u8, 38u8, 136u8, 200u8, 123u8, 62u8, 163u8, 232u8,
-							140u8,
+							234u8, 217u8, 92u8, 216u8, 133u8, 193u8, 185u8, 251u8, 8u8, 82u8,
+							173u8, 156u8, 111u8, 33u8, 23u8, 95u8, 110u8, 199u8, 1u8, 196u8, 8u8,
+							151u8, 84u8, 177u8, 207u8, 199u8, 95u8, 73u8, 123u8, 12u8, 65u8, 144u8,
 						],
 					)
 				}
@@ -6380,9 +6381,10 @@ pub mod api {
 							::subxt::storage::address::StorageHasher::Identity,
 						)],
 						[
-							171u8, 116u8, 66u8, 102u8, 36u8, 119u8, 198u8, 181u8, 26u8, 226u8,
-							218u8, 34u8, 157u8, 77u8, 9u8, 151u8, 81u8, 237u8, 35u8, 222u8, 127u8,
-							254u8, 59u8, 186u8, 55u8, 197u8, 84u8, 132u8, 99u8, 158u8, 11u8, 62u8,
+							125u8, 222u8, 165u8, 227u8, 156u8, 61u8, 93u8, 250u8, 232u8, 12u8,
+							174u8, 7u8, 118u8, 40u8, 184u8, 135u8, 205u8, 246u8, 22u8, 108u8, 85u8,
+							53u8, 253u8, 104u8, 190u8, 100u8, 88u8, 119u8, 202u8, 151u8, 56u8,
+							72u8,
 						],
 					)
 				}
@@ -6402,9 +6404,10 @@ pub mod api {
 						"ProposalOf",
 						Vec::new(),
 						[
-							171u8, 116u8, 66u8, 102u8, 36u8, 119u8, 198u8, 181u8, 26u8, 226u8,
-							218u8, 34u8, 157u8, 77u8, 9u8, 151u8, 81u8, 237u8, 35u8, 222u8, 127u8,
-							254u8, 59u8, 186u8, 55u8, 197u8, 84u8, 132u8, 99u8, 158u8, 11u8, 62u8,
+							125u8, 222u8, 165u8, 227u8, 156u8, 61u8, 93u8, 250u8, 232u8, 12u8,
+							174u8, 7u8, 118u8, 40u8, 184u8, 135u8, 205u8, 246u8, 22u8, 108u8, 85u8,
+							53u8, 253u8, 104u8, 190u8, 100u8, 88u8, 119u8, 202u8, 151u8, 56u8,
+							72u8,
 						],
 					)
 				}
@@ -9051,9 +9054,9 @@ pub mod api {
 						"execute",
 						Execute { proposal: ::std::boxed::Box::new(proposal), length_bound },
 						[
-							48u8, 50u8, 17u8, 156u8, 219u8, 207u8, 3u8, 242u8, 123u8, 116u8, 172u8,
-							101u8, 175u8, 247u8, 191u8, 166u8, 182u8, 138u8, 207u8, 213u8, 8u8,
-							61u8, 82u8, 138u8, 143u8, 168u8, 238u8, 161u8, 50u8, 38u8, 152u8, 83u8,
+							148u8, 99u8, 129u8, 96u8, 155u8, 98u8, 190u8, 192u8, 212u8, 91u8,
+							123u8, 70u8, 240u8, 45u8, 207u8, 94u8, 21u8, 26u8, 154u8, 227u8, 63u8,
+							173u8, 70u8, 21u8, 173u8, 157u8, 1u8, 93u8, 8u8, 52u8, 116u8, 2u8,
 						],
 					)
 				}
@@ -9099,10 +9102,9 @@ pub mod api {
 							length_bound,
 						},
 						[
-							170u8, 105u8, 236u8, 17u8, 189u8, 194u8, 44u8, 140u8, 197u8, 98u8,
-							19u8, 218u8, 236u8, 52u8, 235u8, 17u8, 208u8, 33u8, 26u8, 22u8, 239u8,
-							194u8, 215u8, 2u8, 38u8, 136u8, 200u8, 123u8, 62u8, 163u8, 232u8,
-							140u8,
+							234u8, 217u8, 92u8, 216u8, 133u8, 193u8, 185u8, 251u8, 8u8, 82u8,
+							173u8, 156u8, 111u8, 33u8, 23u8, 95u8, 110u8, 199u8, 1u8, 196u8, 8u8,
+							151u8, 84u8, 177u8, 207u8, 199u8, 95u8, 73u8, 123u8, 12u8, 65u8, 144u8,
 						],
 					)
 				}
@@ -9418,9 +9420,10 @@ pub mod api {
 							::subxt::storage::address::StorageHasher::Identity,
 						)],
 						[
-							171u8, 116u8, 66u8, 102u8, 36u8, 119u8, 198u8, 181u8, 26u8, 226u8,
-							218u8, 34u8, 157u8, 77u8, 9u8, 151u8, 81u8, 237u8, 35u8, 222u8, 127u8,
-							254u8, 59u8, 186u8, 55u8, 197u8, 84u8, 132u8, 99u8, 158u8, 11u8, 62u8,
+							125u8, 222u8, 165u8, 227u8, 156u8, 61u8, 93u8, 250u8, 232u8, 12u8,
+							174u8, 7u8, 118u8, 40u8, 184u8, 135u8, 205u8, 246u8, 22u8, 108u8, 85u8,
+							53u8, 253u8, 104u8, 190u8, 100u8, 88u8, 119u8, 202u8, 151u8, 56u8,
+							72u8,
 						],
 					)
 				}
@@ -9440,9 +9443,10 @@ pub mod api {
 						"ProposalOf",
 						Vec::new(),
 						[
-							171u8, 116u8, 66u8, 102u8, 36u8, 119u8, 198u8, 181u8, 26u8, 226u8,
-							218u8, 34u8, 157u8, 77u8, 9u8, 151u8, 81u8, 237u8, 35u8, 222u8, 127u8,
-							254u8, 59u8, 186u8, 55u8, 197u8, 84u8, 132u8, 99u8, 158u8, 11u8, 62u8,
+							125u8, 222u8, 165u8, 227u8, 156u8, 61u8, 93u8, 250u8, 232u8, 12u8,
+							174u8, 7u8, 118u8, 40u8, 184u8, 135u8, 205u8, 246u8, 22u8, 108u8, 85u8,
+							53u8, 253u8, 104u8, 190u8, 100u8, 88u8, 119u8, 202u8, 151u8, 56u8,
+							72u8,
 						],
 					)
 				}
@@ -10042,9 +10046,9 @@ pub mod api {
 						"execute",
 						Execute { proposal: ::std::boxed::Box::new(proposal), length_bound },
 						[
-							48u8, 50u8, 17u8, 156u8, 219u8, 207u8, 3u8, 242u8, 123u8, 116u8, 172u8,
-							101u8, 175u8, 247u8, 191u8, 166u8, 182u8, 138u8, 207u8, 213u8, 8u8,
-							61u8, 82u8, 138u8, 143u8, 168u8, 238u8, 161u8, 50u8, 38u8, 152u8, 83u8,
+							148u8, 99u8, 129u8, 96u8, 155u8, 98u8, 190u8, 192u8, 212u8, 91u8,
+							123u8, 70u8, 240u8, 45u8, 207u8, 94u8, 21u8, 26u8, 154u8, 227u8, 63u8,
+							173u8, 70u8, 21u8, 173u8, 157u8, 1u8, 93u8, 8u8, 52u8, 116u8, 2u8,
 						],
 					)
 				}
@@ -10090,10 +10094,9 @@ pub mod api {
 							length_bound,
 						},
 						[
-							170u8, 105u8, 236u8, 17u8, 189u8, 194u8, 44u8, 140u8, 197u8, 98u8,
-							19u8, 218u8, 236u8, 52u8, 235u8, 17u8, 208u8, 33u8, 26u8, 22u8, 239u8,
-							194u8, 215u8, 2u8, 38u8, 136u8, 200u8, 123u8, 62u8, 163u8, 232u8,
-							140u8,
+							234u8, 217u8, 92u8, 216u8, 133u8, 193u8, 185u8, 251u8, 8u8, 82u8,
+							173u8, 156u8, 111u8, 33u8, 23u8, 95u8, 110u8, 199u8, 1u8, 196u8, 8u8,
+							151u8, 84u8, 177u8, 207u8, 199u8, 95u8, 73u8, 123u8, 12u8, 65u8, 144u8,
 						],
 					)
 				}
@@ -10409,9 +10412,10 @@ pub mod api {
 							::subxt::storage::address::StorageHasher::Identity,
 						)],
 						[
-							171u8, 116u8, 66u8, 102u8, 36u8, 119u8, 198u8, 181u8, 26u8, 226u8,
-							218u8, 34u8, 157u8, 77u8, 9u8, 151u8, 81u8, 237u8, 35u8, 222u8, 127u8,
-							254u8, 59u8, 186u8, 55u8, 197u8, 84u8, 132u8, 99u8, 158u8, 11u8, 62u8,
+							125u8, 222u8, 165u8, 227u8, 156u8, 61u8, 93u8, 250u8, 232u8, 12u8,
+							174u8, 7u8, 118u8, 40u8, 184u8, 135u8, 205u8, 246u8, 22u8, 108u8, 85u8,
+							53u8, 253u8, 104u8, 190u8, 100u8, 88u8, 119u8, 202u8, 151u8, 56u8,
+							72u8,
 						],
 					)
 				}
@@ -10431,9 +10435,10 @@ pub mod api {
 						"ProposalOf",
 						Vec::new(),
 						[
-							171u8, 116u8, 66u8, 102u8, 36u8, 119u8, 198u8, 181u8, 26u8, 226u8,
-							218u8, 34u8, 157u8, 77u8, 9u8, 151u8, 81u8, 237u8, 35u8, 222u8, 127u8,
-							254u8, 59u8, 186u8, 55u8, 197u8, 84u8, 132u8, 99u8, 158u8, 11u8, 62u8,
+							125u8, 222u8, 165u8, 227u8, 156u8, 61u8, 93u8, 250u8, 232u8, 12u8,
+							174u8, 7u8, 118u8, 40u8, 184u8, 135u8, 205u8, 246u8, 22u8, 108u8, 85u8,
+							53u8, 253u8, 104u8, 190u8, 100u8, 88u8, 119u8, 202u8, 151u8, 56u8,
+							72u8,
 						],
 					)
 				}
@@ -10974,9 +10979,9 @@ pub mod api {
 							call: ::std::boxed::Box::new(call),
 						},
 						[
-							69u8, 66u8, 119u8, 144u8, 20u8, 85u8, 40u8, 248u8, 53u8, 73u8, 160u8,
-							105u8, 190u8, 200u8, 171u8, 73u8, 38u8, 182u8, 44u8, 187u8, 69u8, 97u8,
-							142u8, 49u8, 68u8, 248u8, 118u8, 20u8, 237u8, 41u8, 160u8, 194u8,
+							243u8, 129u8, 202u8, 89u8, 147u8, 16u8, 121u8, 169u8, 99u8, 72u8,
+							161u8, 112u8, 47u8, 57u8, 66u8, 62u8, 152u8, 51u8, 79u8, 214u8, 42u8,
+							86u8, 214u8, 80u8, 181u8, 10u8, 177u8, 197u8, 10u8, 168u8, 45u8, 155u8,
 						],
 					)
 				}
@@ -11020,9 +11025,10 @@ pub mod api {
 							call: ::std::boxed::Box::new(call),
 						},
 						[
-							13u8, 111u8, 35u8, 228u8, 184u8, 115u8, 54u8, 186u8, 47u8, 96u8, 233u8,
-							143u8, 63u8, 112u8, 175u8, 221u8, 85u8, 50u8, 18u8, 201u8, 161u8,
-							114u8, 47u8, 50u8, 27u8, 126u8, 119u8, 16u8, 228u8, 57u8, 75u8, 74u8,
+							187u8, 188u8, 255u8, 249u8, 254u8, 125u8, 116u8, 2u8, 4u8, 137u8,
+							109u8, 124u8, 2u8, 233u8, 85u8, 117u8, 28u8, 118u8, 107u8, 179u8, 46u8,
+							96u8, 84u8, 161u8, 176u8, 127u8, 180u8, 143u8, 108u8, 169u8, 114u8,
+							3u8,
 						],
 					)
 				}
@@ -11067,9 +11073,10 @@ pub mod api {
 							call: ::std::boxed::Box::new(call),
 						},
 						[
-							168u8, 20u8, 170u8, 122u8, 21u8, 213u8, 169u8, 75u8, 106u8, 31u8,
-							176u8, 74u8, 2u8, 186u8, 184u8, 118u8, 91u8, 10u8, 185u8, 111u8, 123u8,
-							70u8, 229u8, 70u8, 195u8, 142u8, 238u8, 36u8, 57u8, 73u8, 62u8, 209u8,
+							101u8, 186u8, 81u8, 97u8, 177u8, 197u8, 43u8, 124u8, 154u8, 123u8,
+							45u8, 226u8, 41u8, 114u8, 61u8, 147u8, 217u8, 191u8, 208u8, 121u8,
+							72u8, 40u8, 118u8, 227u8, 173u8, 169u8, 152u8, 206u8, 201u8, 231u8,
+							81u8, 218u8,
 						],
 					)
 				}
@@ -11100,9 +11107,9 @@ pub mod api {
 							call: ::std::boxed::Box::new(call),
 						},
 						[
-							71u8, 22u8, 242u8, 185u8, 73u8, 195u8, 66u8, 126u8, 248u8, 61u8, 17u8,
-							102u8, 108u8, 223u8, 199u8, 94u8, 13u8, 103u8, 107u8, 46u8, 68u8, 9u8,
-							12u8, 141u8, 145u8, 47u8, 151u8, 103u8, 56u8, 17u8, 119u8, 64u8,
+							146u8, 211u8, 117u8, 11u8, 171u8, 102u8, 134u8, 178u8, 23u8, 34u8,
+							41u8, 152u8, 201u8, 205u8, 46u8, 18u8, 216u8, 6u8, 252u8, 21u8, 208u8,
+							73u8, 131u8, 58u8, 57u8, 94u8, 194u8, 24u8, 204u8, 160u8, 240u8, 244u8,
 						],
 					)
 				}
@@ -11462,9 +11469,9 @@ pub mod api {
 						"batch",
 						Batch { calls },
 						[
-							234u8, 115u8, 96u8, 192u8, 136u8, 246u8, 11u8, 154u8, 82u8, 143u8,
-							66u8, 74u8, 102u8, 76u8, 252u8, 75u8, 209u8, 59u8, 167u8, 110u8, 193u8,
-							55u8, 181u8, 114u8, 29u8, 89u8, 254u8, 63u8, 40u8, 70u8, 104u8, 169u8,
+							153u8, 231u8, 103u8, 49u8, 37u8, 108u8, 140u8, 224u8, 93u8, 184u8,
+							90u8, 17u8, 161u8, 5u8, 76u8, 202u8, 238u8, 73u8, 149u8, 7u8, 96u8,
+							70u8, 226u8, 242u8, 34u8, 243u8, 59u8, 43u8, 70u8, 253u8, 26u8, 39u8,
 						],
 					)
 				}
@@ -11491,10 +11498,9 @@ pub mod api {
 						"as_derivative",
 						AsDerivative { index, call: ::std::boxed::Box::new(call) },
 						[
-							97u8, 82u8, 165u8, 114u8, 124u8, 214u8, 234u8, 182u8, 7u8, 115u8,
-							158u8, 136u8, 217u8, 253u8, 67u8, 177u8, 149u8, 158u8, 112u8, 21u8,
-							60u8, 68u8, 247u8, 54u8, 174u8, 164u8, 18u8, 74u8, 28u8, 80u8, 132u8,
-							169u8,
+							87u8, 55u8, 179u8, 110u8, 88u8, 154u8, 11u8, 87u8, 223u8, 192u8, 13u8,
+							114u8, 101u8, 153u8, 156u8, 86u8, 46u8, 169u8, 173u8, 220u8, 114u8,
+							38u8, 87u8, 245u8, 63u8, 204u8, 160u8, 182u8, 5u8, 162u8, 145u8, 200u8,
 						],
 					)
 				}
@@ -11521,10 +11527,10 @@ pub mod api {
 						"batch_all",
 						BatchAll { calls },
 						[
-							238u8, 216u8, 80u8, 179u8, 155u8, 173u8, 204u8, 61u8, 7u8, 153u8,
-							151u8, 143u8, 156u8, 168u8, 81u8, 30u8, 60u8, 158u8, 100u8, 28u8,
-							219u8, 53u8, 206u8, 32u8, 96u8, 105u8, 64u8, 185u8, 28u8, 62u8, 141u8,
-							40u8,
+							9u8, 141u8, 240u8, 62u8, 148u8, 171u8, 31u8, 22u8, 217u8, 138u8, 72u8,
+							244u8, 8u8, 174u8, 198u8, 158u8, 147u8, 82u8, 56u8, 245u8, 232u8,
+							120u8, 175u8, 10u8, 73u8, 130u8, 126u8, 37u8, 204u8, 160u8, 16u8,
+							151u8,
 						],
 					)
 				}
@@ -11551,10 +11557,10 @@ pub mod api {
 							call: ::std::boxed::Box::new(call),
 						},
 						[
-							166u8, 172u8, 97u8, 128u8, 101u8, 45u8, 148u8, 251u8, 111u8, 228u8,
-							249u8, 40u8, 196u8, 53u8, 152u8, 207u8, 8u8, 115u8, 191u8, 125u8, 36u8,
-							154u8, 171u8, 129u8, 135u8, 22u8, 162u8, 103u8, 127u8, 245u8, 215u8,
-							83u8,
+							69u8, 106u8, 162u8, 191u8, 94u8, 23u8, 109u8, 170u8, 138u8, 49u8,
+							153u8, 22u8, 51u8, 148u8, 188u8, 53u8, 177u8, 23u8, 151u8, 81u8, 89u8,
+							96u8, 176u8, 122u8, 72u8, 137u8, 195u8, 236u8, 239u8, 36u8, 41u8,
+							206u8,
 						],
 					)
 				}
@@ -11581,10 +11587,9 @@ pub mod api {
 						"force_batch",
 						ForceBatch { calls },
 						[
-							128u8, 54u8, 139u8, 174u8, 51u8, 71u8, 201u8, 173u8, 161u8, 142u8,
-							145u8, 37u8, 188u8, 211u8, 211u8, 168u8, 72u8, 219u8, 42u8, 183u8,
-							235u8, 112u8, 99u8, 134u8, 58u8, 235u8, 193u8, 95u8, 185u8, 249u8,
-							190u8, 49u8,
+							106u8, 19u8, 155u8, 122u8, 82u8, 48u8, 12u8, 250u8, 175u8, 31u8, 167u8,
+							204u8, 242u8, 8u8, 219u8, 14u8, 128u8, 48u8, 134u8, 80u8, 147u8, 68u8,
+							20u8, 235u8, 101u8, 4u8, 0u8, 41u8, 100u8, 172u8, 168u8, 120u8,
 						],
 					)
 				}
@@ -11604,10 +11609,10 @@ pub mod api {
 						"with_weight",
 						WithWeight { call: ::std::boxed::Box::new(call), weight },
 						[
-							25u8, 106u8, 61u8, 40u8, 170u8, 58u8, 75u8, 181u8, 191u8, 107u8, 216u8,
-							240u8, 171u8, 150u8, 75u8, 72u8, 133u8, 182u8, 142u8, 80u8, 140u8,
-							138u8, 108u8, 190u8, 112u8, 165u8, 226u8, 31u8, 171u8, 136u8, 254u8,
-							50u8,
+							157u8, 118u8, 230u8, 203u8, 94u8, 190u8, 128u8, 236u8, 168u8, 111u8,
+							105u8, 2u8, 1u8, 51u8, 249u8, 212u8, 229u8, 55u8, 67u8, 76u8, 229u8,
+							192u8, 42u8, 227u8, 156u8, 162u8, 162u8, 207u8, 170u8, 180u8, 177u8,
+							49u8,
 						],
 					)
 				}
@@ -12109,9 +12114,9 @@ pub mod api {
 						"proxy",
 						Proxy { real, force_proxy_type, call: ::std::boxed::Box::new(call) },
 						[
-							233u8, 248u8, 87u8, 190u8, 94u8, 83u8, 150u8, 86u8, 239u8, 185u8,
-							235u8, 85u8, 57u8, 44u8, 150u8, 29u8, 5u8, 117u8, 255u8, 248u8, 251u8,
-							236u8, 21u8, 54u8, 70u8, 98u8, 147u8, 4u8, 143u8, 21u8, 225u8, 219u8,
+							24u8, 29u8, 71u8, 146u8, 139u8, 192u8, 191u8, 66u8, 136u8, 82u8, 185u8,
+							66u8, 110u8, 37u8, 86u8, 60u8, 178u8, 236u8, 152u8, 224u8, 25u8, 169u8,
+							100u8, 164u8, 189u8, 224u8, 110u8, 33u8, 166u8, 70u8, 114u8, 213u8,
 						],
 					)
 				}
@@ -12395,9 +12400,9 @@ pub mod api {
 							call: ::std::boxed::Box::new(call),
 						},
 						[
-							168u8, 1u8, 86u8, 225u8, 131u8, 18u8, 181u8, 95u8, 150u8, 103u8, 32u8,
-							54u8, 107u8, 203u8, 237u8, 128u8, 93u8, 14u8, 4u8, 201u8, 20u8, 230u8,
-							197u8, 181u8, 120u8, 36u8, 129u8, 214u8, 207u8, 89u8, 213u8, 54u8,
+							236u8, 50u8, 158u8, 187u8, 236u8, 108u8, 42u8, 199u8, 39u8, 56u8, 15u8,
+							140u8, 113u8, 85u8, 66u8, 125u8, 1u8, 187u8, 169u8, 90u8, 13u8, 107u8,
+							103u8, 82u8, 138u8, 236u8, 89u8, 240u8, 65u8, 71u8, 50u8, 84u8,
 						],
 					)
 				}
@@ -17502,7 +17507,7 @@ pub mod api {
 			pub struct Claim {
 				pub asset: runtime_types::primitives::currency::CurrencyId,
 				pub vesting_schedule_ids:
-					runtime_types::composable_traits::vesting::VestingScheduleIdSet<
+					runtime_types::pallet_vesting::types::VestingScheduleIdSet<
 						::core::primitive::u128,
 					>,
 			}
@@ -17519,7 +17524,7 @@ pub mod api {
 					::core::primitive::u32,
 				>,
 				pub asset: runtime_types::primitives::currency::CurrencyId,
-				pub schedule_info: runtime_types::composable_traits::vesting::VestingScheduleInfo<
+				pub schedule_info: runtime_types::pallet_vesting::types::VestingScheduleInfo<
 					::core::primitive::u32,
 					::core::primitive::u64,
 					::core::primitive::u128,
@@ -17535,7 +17540,7 @@ pub mod api {
 				>,
 				pub asset: runtime_types::primitives::currency::CurrencyId,
 				pub vesting_schedules: ::std::vec::Vec<
-					runtime_types::composable_traits::vesting::VestingScheduleInfo<
+					runtime_types::pallet_vesting::types::VestingScheduleInfo<
 						::core::primitive::u32,
 						::core::primitive::u64,
 						::core::primitive::u128,
@@ -17552,7 +17557,7 @@ pub mod api {
 				>,
 				pub asset: runtime_types::primitives::currency::CurrencyId,
 				pub vesting_schedule_ids:
-					runtime_types::composable_traits::vesting::VestingScheduleIdSet<
+					runtime_types::pallet_vesting::types::VestingScheduleIdSet<
 						::core::primitive::u128,
 					>,
 			}
@@ -17570,7 +17575,7 @@ pub mod api {
 				pub fn claim(
 					&self,
 					asset: runtime_types::primitives::currency::CurrencyId,
-					vesting_schedule_ids : runtime_types :: composable_traits :: vesting :: VestingScheduleIdSet < :: core :: primitive :: u128 >,
+					vesting_schedule_ids : runtime_types :: pallet_vesting :: types :: VestingScheduleIdSet < :: core :: primitive :: u128 >,
 				) -> ::subxt::tx::StaticTxPayload<Claim> {
 					::subxt::tx::StaticTxPayload::new(
 						"Vesting",
@@ -17607,7 +17612,7 @@ pub mod api {
 						::core::primitive::u32,
 					>,
 					asset: runtime_types::primitives::currency::CurrencyId,
-					schedule_info: runtime_types::composable_traits::vesting::VestingScheduleInfo<
+					schedule_info: runtime_types::pallet_vesting::types::VestingScheduleInfo<
 						::core::primitive::u32,
 						::core::primitive::u64,
 						::core::primitive::u128,
@@ -17641,7 +17646,7 @@ pub mod api {
 					>,
 					asset: runtime_types::primitives::currency::CurrencyId,
 					vesting_schedules: ::std::vec::Vec<
-						runtime_types::composable_traits::vesting::VestingScheduleInfo<
+						runtime_types::pallet_vesting::types::VestingScheduleInfo<
 							::core::primitive::u32,
 							::core::primitive::u64,
 							::core::primitive::u128,
@@ -17676,7 +17681,7 @@ pub mod api {
 						::core::primitive::u32,
 					>,
 					asset: runtime_types::primitives::currency::CurrencyId,
-					vesting_schedule_ids : runtime_types :: composable_traits :: vesting :: VestingScheduleIdSet < :: core :: primitive :: u128 >,
+					vesting_schedule_ids : runtime_types :: pallet_vesting :: types :: VestingScheduleIdSet < :: core :: primitive :: u128 >,
 				) -> ::subxt::tx::StaticTxPayload<ClaimFor> {
 					::subxt::tx::StaticTxPayload::new(
 						"Vesting",
@@ -17705,7 +17710,7 @@ pub mod api {
 				pub to: ::subxt::utils::AccountId32,
 				pub asset: runtime_types::primitives::currency::CurrencyId,
 				pub vesting_schedule_id: ::core::primitive::u128,
-				pub schedule: runtime_types::composable_traits::vesting::VestingSchedule<
+				pub schedule: runtime_types::pallet_vesting::types::VestingSchedule<
 					::core::primitive::u128,
 					::core::primitive::u32,
 					::core::primitive::u64,
@@ -17725,7 +17730,7 @@ pub mod api {
 				pub who: ::subxt::utils::AccountId32,
 				pub asset: runtime_types::primitives::currency::CurrencyId,
 				pub vesting_schedule_ids:
-					runtime_types::composable_traits::vesting::VestingScheduleIdSet<
+					runtime_types::pallet_vesting::types::VestingScheduleIdSet<
 						::core::primitive::u128,
 					>,
 				pub locked_amount: ::core::primitive::u128,
@@ -17766,7 +17771,7 @@ pub mod api {
 					::subxt::metadata::DecodeStaticType<
 						runtime_types::sp_core::bounded::bounded_btree_map::BoundedBTreeMap<
 							::core::primitive::u128,
-							runtime_types::composable_traits::vesting::VestingSchedule<
+							runtime_types::pallet_vesting::types::VestingSchedule<
 								::core::primitive::u128,
 								::core::primitive::u32,
 								::core::primitive::u64,
@@ -17808,7 +17813,7 @@ pub mod api {
 					::subxt::metadata::DecodeStaticType<
 						runtime_types::sp_core::bounded::bounded_btree_map::BoundedBTreeMap<
 							::core::primitive::u128,
-							runtime_types::composable_traits::vesting::VestingSchedule<
+							runtime_types::pallet_vesting::types::VestingSchedule<
 								::core::primitive::u128,
 								::core::primitive::u32,
 								::core::primitive::u64,
@@ -18215,9 +18220,8 @@ pub mod api {
 			pub struct RegisterAsset {
 				pub protocol_id: [::core::primitive::u8; 8usize],
 				pub nonce: ::core::primitive::u64,
-				pub location: ::core::option::Option<
-					runtime_types::composable_traits::xcm::assets::XcmAssetLocation,
-				>,
+				pub location:
+					::core::option::Option<runtime_types::primitives::currency::ForeignAssetId>,
 				pub asset_info:
 					runtime_types::composable_traits::assets::AssetInfo<::core::primitive::u128>,
 			}
@@ -18235,8 +18239,7 @@ pub mod api {
 			)]
 			pub struct SetMinFee {
 				pub target_parachain_id: runtime_types::polkadot_parachain::primitives::Id,
-				pub foreign_asset_id:
-					runtime_types::composable_traits::xcm::assets::XcmAssetLocation,
+				pub foreign_asset_id: runtime_types::primitives::currency::ForeignAssetId,
 				pub amount: ::core::option::Option<::core::primitive::u128>,
 			}
 			pub struct TransactionApi;
@@ -18256,7 +18259,7 @@ pub mod api {
 					protocol_id: [::core::primitive::u8; 8usize],
 					nonce: ::core::primitive::u64,
 					location: ::core::option::Option<
-						runtime_types::composable_traits::xcm::assets::XcmAssetLocation,
+						runtime_types::primitives::currency::ForeignAssetId,
 					>,
 					asset_info: runtime_types::composable_traits::assets::AssetInfo<
 						::core::primitive::u128,
@@ -18267,9 +18270,10 @@ pub mod api {
 						"register_asset",
 						RegisterAsset { protocol_id, nonce, location, asset_info },
 						[
-							207u8, 65u8, 154u8, 87u8, 203u8, 246u8, 40u8, 130u8, 1u8, 17u8, 175u8,
-							126u8, 54u8, 96u8, 220u8, 189u8, 3u8, 42u8, 186u8, 102u8, 152u8, 107u8,
-							111u8, 69u8, 34u8, 220u8, 250u8, 175u8, 128u8, 113u8, 145u8, 47u8,
+							244u8, 134u8, 22u8, 190u8, 254u8, 136u8, 30u8, 66u8, 254u8, 254u8,
+							105u8, 241u8, 151u8, 40u8, 140u8, 14u8, 109u8, 44u8, 101u8, 127u8, 8u8,
+							29u8, 172u8, 77u8, 55u8, 154u8, 117u8, 40u8, 202u8, 207u8, 223u8,
+							130u8,
 						],
 					)
 				}
@@ -18308,7 +18312,7 @@ pub mod api {
 				pub fn set_min_fee(
 					&self,
 					target_parachain_id: runtime_types::polkadot_parachain::primitives::Id,
-					foreign_asset_id : runtime_types :: composable_traits :: xcm :: assets :: XcmAssetLocation,
+					foreign_asset_id: runtime_types::primitives::currency::ForeignAssetId,
 					amount: ::core::option::Option<::core::primitive::u128>,
 				) -> ::subxt::tx::StaticTxPayload<SetMinFee> {
 					::subxt::tx::StaticTxPayload::new(
@@ -18316,10 +18320,10 @@ pub mod api {
 						"set_min_fee",
 						SetMinFee { target_parachain_id, foreign_asset_id, amount },
 						[
-							31u8, 190u8, 208u8, 102u8, 158u8, 215u8, 151u8, 219u8, 163u8, 144u8,
-							92u8, 54u8, 18u8, 96u8, 5u8, 129u8, 233u8, 154u8, 85u8, 52u8, 154u8,
-							172u8, 181u8, 151u8, 147u8, 128u8, 12u8, 230u8, 29u8, 151u8, 78u8,
-							95u8,
+							96u8, 165u8, 24u8, 51u8, 34u8, 214u8, 132u8, 183u8, 111u8, 43u8, 17u8,
+							27u8, 153u8, 191u8, 29u8, 67u8, 27u8, 116u8, 167u8, 228u8, 128u8,
+							154u8, 228u8, 123u8, 17u8, 239u8, 107u8, 111u8, 48u8, 98u8, 151u8,
+							116u8,
 						],
 					)
 				}
@@ -18334,9 +18338,8 @@ pub mod api {
 			)]
 			pub struct AssetRegistered {
 				pub asset_id: runtime_types::primitives::currency::CurrencyId,
-				pub location: ::core::option::Option<
-					runtime_types::composable_traits::xcm::assets::XcmAssetLocation,
-				>,
+				pub location:
+					::core::option::Option<runtime_types::primitives::currency::ForeignAssetId>,
 				pub asset_info:
 					runtime_types::composable_traits::assets::AssetInfo<::core::primitive::u128>,
 			}
@@ -18362,7 +18365,7 @@ pub mod api {
 			)]
 			pub struct AssetLocationUpdated {
 				pub asset_id: runtime_types::primitives::currency::CurrencyId,
-				pub location: runtime_types::composable_traits::xcm::assets::XcmAssetLocation,
+				pub location: runtime_types::primitives::currency::ForeignAssetId,
 			}
 			impl ::subxt::events::StaticEvent for AssetLocationUpdated {
 				const PALLET: &'static str = "AssetsRegistry";
@@ -18373,8 +18376,7 @@ pub mod api {
 			)]
 			pub struct MinFeeUpdated {
 				pub target_parachain_id: runtime_types::polkadot_parachain::primitives::Id,
-				pub foreign_asset_id:
-					runtime_types::composable_traits::xcm::assets::XcmAssetLocation,
+				pub foreign_asset_id: runtime_types::primitives::currency::ForeignAssetId,
 				pub amount: ::core::option::Option<::core::primitive::u128>,
 			}
 			impl ::subxt::events::StaticEvent for MinFeeUpdated {
@@ -18392,7 +18394,7 @@ pub mod api {
 					_0: impl ::std::borrow::Borrow<runtime_types::primitives::currency::CurrencyId>,
 				) -> ::subxt::storage::address::StaticStorageAddress<
 					::subxt::metadata::DecodeStaticType<
-						runtime_types::composable_traits::xcm::assets::XcmAssetLocation,
+						runtime_types::primitives::currency::ForeignAssetId,
 					>,
 					::subxt::storage::address::Yes,
 					(),
@@ -18403,13 +18405,13 @@ pub mod api {
 						"LocalToForeign",
 						vec![::subxt::storage::address::StorageMapKey::new(
 							_0.borrow(),
-							::subxt::storage::address::StorageHasher::Twox128,
+							::subxt::storage::address::StorageHasher::Blake2_128Concat,
 						)],
 						[
-							129u8, 213u8, 97u8, 59u8, 247u8, 178u8, 47u8, 178u8, 236u8, 166u8,
-							250u8, 96u8, 6u8, 202u8, 81u8, 115u8, 65u8, 242u8, 181u8, 86u8, 232u8,
-							222u8, 173u8, 125u8, 131u8, 124u8, 6u8, 85u8, 101u8, 253u8, 184u8,
-							170u8,
+							241u8, 172u8, 44u8, 128u8, 75u8, 193u8, 167u8, 213u8, 96u8, 255u8,
+							99u8, 202u8, 102u8, 175u8, 67u8, 183u8, 155u8, 60u8, 206u8, 197u8,
+							157u8, 115u8, 97u8, 140u8, 130u8, 249u8, 71u8, 146u8, 181u8, 88u8,
+							173u8, 236u8,
 						],
 					)
 				}
@@ -18418,7 +18420,7 @@ pub mod api {
 					&self,
 				) -> ::subxt::storage::address::StaticStorageAddress<
 					::subxt::metadata::DecodeStaticType<
-						runtime_types::composable_traits::xcm::assets::XcmAssetLocation,
+						runtime_types::primitives::currency::ForeignAssetId,
 					>,
 					(),
 					(),
@@ -18429,19 +18431,17 @@ pub mod api {
 						"LocalToForeign",
 						Vec::new(),
 						[
-							129u8, 213u8, 97u8, 59u8, 247u8, 178u8, 47u8, 178u8, 236u8, 166u8,
-							250u8, 96u8, 6u8, 202u8, 81u8, 115u8, 65u8, 242u8, 181u8, 86u8, 232u8,
-							222u8, 173u8, 125u8, 131u8, 124u8, 6u8, 85u8, 101u8, 253u8, 184u8,
-							170u8,
+							241u8, 172u8, 44u8, 128u8, 75u8, 193u8, 167u8, 213u8, 96u8, 255u8,
+							99u8, 202u8, 102u8, 175u8, 67u8, 183u8, 155u8, 60u8, 206u8, 197u8,
+							157u8, 115u8, 97u8, 140u8, 130u8, 249u8, 71u8, 146u8, 181u8, 88u8,
+							173u8, 236u8,
 						],
 					)
 				}
 				#[doc = " Mapping foreign asset to local asset."]
 				pub fn foreign_to_local(
 					&self,
-					_0: impl ::std::borrow::Borrow<
-						runtime_types::composable_traits::xcm::assets::XcmAssetLocation,
-					>,
+					_0: impl ::std::borrow::Borrow<runtime_types::primitives::currency::ForeignAssetId>,
 				) -> ::subxt::storage::address::StaticStorageAddress<
 					::subxt::metadata::DecodeStaticType<
 						runtime_types::primitives::currency::CurrencyId,
@@ -18458,10 +18458,9 @@ pub mod api {
 							::subxt::storage::address::StorageHasher::Blake2_128Concat,
 						)],
 						[
-							201u8, 111u8, 125u8, 255u8, 72u8, 118u8, 131u8, 187u8, 219u8, 168u8,
-							165u8, 3u8, 235u8, 125u8, 147u8, 223u8, 154u8, 248u8, 211u8, 36u8,
-							186u8, 160u8, 129u8, 9u8, 215u8, 74u8, 187u8, 205u8, 68u8, 230u8, 76u8,
-							1u8,
+							161u8, 73u8, 143u8, 57u8, 244u8, 236u8, 19u8, 104u8, 28u8, 113u8,
+							246u8, 218u8, 255u8, 101u8, 76u8, 69u8, 118u8, 73u8, 60u8, 7u8, 126u8,
+							140u8, 249u8, 94u8, 70u8, 17u8, 224u8, 239u8, 76u8, 100u8, 160u8, 25u8,
 						],
 					)
 				}
@@ -18481,19 +18480,16 @@ pub mod api {
 						"ForeignToLocal",
 						Vec::new(),
 						[
-							201u8, 111u8, 125u8, 255u8, 72u8, 118u8, 131u8, 187u8, 219u8, 168u8,
-							165u8, 3u8, 235u8, 125u8, 147u8, 223u8, 154u8, 248u8, 211u8, 36u8,
-							186u8, 160u8, 129u8, 9u8, 215u8, 74u8, 187u8, 205u8, 68u8, 230u8, 76u8,
-							1u8,
+							161u8, 73u8, 143u8, 57u8, 244u8, 236u8, 19u8, 104u8, 28u8, 113u8,
+							246u8, 218u8, 255u8, 101u8, 76u8, 69u8, 118u8, 73u8, 60u8, 7u8, 126u8,
+							140u8, 249u8, 94u8, 70u8, 17u8, 224u8, 239u8, 76u8, 100u8, 160u8, 25u8,
 						],
 					)
 				}
 				pub fn min_fee_amounts(
 					&self,
 					_0: impl ::std::borrow::Borrow<runtime_types::polkadot_parachain::primitives::Id>,
-					_1: impl ::std::borrow::Borrow<
-						runtime_types::composable_traits::xcm::assets::XcmAssetLocation,
-					>,
+					_1: impl ::std::borrow::Borrow<runtime_types::primitives::currency::ForeignAssetId>,
 				) -> ::subxt::storage::address::StaticStorageAddress<
 					::subxt::metadata::DecodeStaticType<::core::primitive::u128>,
 					::subxt::storage::address::Yes,
@@ -18514,10 +18510,9 @@ pub mod api {
 							),
 						],
 						[
-							201u8, 61u8, 93u8, 242u8, 53u8, 145u8, 46u8, 65u8, 24u8, 153u8, 31u8,
-							63u8, 242u8, 206u8, 82u8, 210u8, 251u8, 216u8, 213u8, 46u8, 62u8,
-							207u8, 54u8, 196u8, 105u8, 18u8, 160u8, 187u8, 8u8, 143u8, 133u8,
-							126u8,
+							237u8, 60u8, 130u8, 237u8, 135u8, 28u8, 24u8, 170u8, 31u8, 104u8,
+							193u8, 231u8, 107u8, 60u8, 73u8, 63u8, 113u8, 51u8, 244u8, 0u8, 249u8,
+							106u8, 35u8, 216u8, 87u8, 147u8, 103u8, 1u8, 171u8, 108u8, 98u8, 9u8,
 						],
 					)
 				}
@@ -18534,10 +18529,9 @@ pub mod api {
 						"MinFeeAmounts",
 						Vec::new(),
 						[
-							201u8, 61u8, 93u8, 242u8, 53u8, 145u8, 46u8, 65u8, 24u8, 153u8, 31u8,
-							63u8, 242u8, 206u8, 82u8, 210u8, 251u8, 216u8, 213u8, 46u8, 62u8,
-							207u8, 54u8, 196u8, 105u8, 18u8, 160u8, 187u8, 8u8, 143u8, 133u8,
-							126u8,
+							237u8, 60u8, 130u8, 237u8, 135u8, 28u8, 24u8, 170u8, 31u8, 104u8,
+							193u8, 231u8, 107u8, 60u8, 73u8, 63u8, 113u8, 51u8, 244u8, 0u8, 249u8,
+							106u8, 35u8, 216u8, 87u8, 147u8, 103u8, 1u8, 171u8, 108u8, 98u8, 9u8,
 						],
 					)
 				}
@@ -18558,13 +18552,12 @@ pub mod api {
 						"AssetRatio",
 						vec![::subxt::storage::address::StorageMapKey::new(
 							_0.borrow(),
-							::subxt::storage::address::StorageHasher::Twox128,
+							::subxt::storage::address::StorageHasher::Blake2_128Concat,
 						)],
 						[
-							87u8, 249u8, 21u8, 188u8, 120u8, 247u8, 11u8, 188u8, 151u8, 94u8, 63u8,
-							123u8, 252u8, 49u8, 162u8, 99u8, 247u8, 246u8, 250u8, 107u8, 86u8,
-							194u8, 28u8, 61u8, 226u8, 202u8, 45u8, 212u8, 146u8, 203u8, 156u8,
-							43u8,
+							17u8, 185u8, 148u8, 160u8, 80u8, 45u8, 67u8, 207u8, 123u8, 100u8, 65u8,
+							207u8, 92u8, 14u8, 93u8, 164u8, 238u8, 254u8, 92u8, 62u8, 210u8, 29u8,
+							165u8, 103u8, 62u8, 253u8, 104u8, 46u8, 87u8, 188u8, 2u8, 95u8,
 						],
 					)
 				}
@@ -18584,10 +18577,9 @@ pub mod api {
 						"AssetRatio",
 						Vec::new(),
 						[
-							87u8, 249u8, 21u8, 188u8, 120u8, 247u8, 11u8, 188u8, 151u8, 94u8, 63u8,
-							123u8, 252u8, 49u8, 162u8, 99u8, 247u8, 246u8, 250u8, 107u8, 86u8,
-							194u8, 28u8, 61u8, 226u8, 202u8, 45u8, 212u8, 146u8, 203u8, 156u8,
-							43u8,
+							17u8, 185u8, 148u8, 160u8, 80u8, 45u8, 67u8, 207u8, 123u8, 100u8, 65u8,
+							207u8, 92u8, 14u8, 93u8, 164u8, 238u8, 254u8, 92u8, 62u8, 210u8, 29u8,
+							165u8, 103u8, 62u8, 253u8, 104u8, 46u8, 87u8, 188u8, 2u8, 95u8,
 						],
 					)
 				}
@@ -18606,13 +18598,13 @@ pub mod api {
 						"ExistentialDeposit",
 						vec![::subxt::storage::address::StorageMapKey::new(
 							_0.borrow(),
-							::subxt::storage::address::StorageHasher::Twox128,
+							::subxt::storage::address::StorageHasher::Blake2_128Concat,
 						)],
 						[
-							72u8, 122u8, 141u8, 2u8, 125u8, 235u8, 104u8, 156u8, 37u8, 161u8, 42u8,
-							102u8, 30u8, 120u8, 192u8, 229u8, 115u8, 65u8, 73u8, 93u8, 148u8,
-							236u8, 46u8, 156u8, 73u8, 152u8, 75u8, 242u8, 38u8, 202u8, 125u8,
-							195u8,
+							127u8, 223u8, 220u8, 128u8, 43u8, 19u8, 146u8, 89u8, 158u8, 164u8,
+							31u8, 163u8, 151u8, 74u8, 146u8, 4u8, 168u8, 12u8, 221u8, 73u8, 32u8,
+							38u8, 71u8, 33u8, 228u8, 117u8, 213u8, 172u8, 26u8, 210u8, 228u8,
+							107u8,
 						],
 					)
 				}
@@ -18630,10 +18622,10 @@ pub mod api {
 						"ExistentialDeposit",
 						Vec::new(),
 						[
-							72u8, 122u8, 141u8, 2u8, 125u8, 235u8, 104u8, 156u8, 37u8, 161u8, 42u8,
-							102u8, 30u8, 120u8, 192u8, 229u8, 115u8, 65u8, 73u8, 93u8, 148u8,
-							236u8, 46u8, 156u8, 73u8, 152u8, 75u8, 242u8, 38u8, 202u8, 125u8,
-							195u8,
+							127u8, 223u8, 220u8, 128u8, 43u8, 19u8, 146u8, 89u8, 158u8, 164u8,
+							31u8, 163u8, 151u8, 74u8, 146u8, 4u8, 168u8, 12u8, 221u8, 73u8, 32u8,
+							38u8, 71u8, 33u8, 228u8, 117u8, 213u8, 172u8, 26u8, 210u8, 228u8,
+							107u8,
 						],
 					)
 				}
@@ -18643,13 +18635,13 @@ pub mod api {
 						"AssetName",
 						vec![::subxt::storage::address::StorageMapKey::new(
 							_0.borrow(),
-							::subxt::storage::address::StorageHasher::Twox128,
+							::subxt::storage::address::StorageHasher::Blake2_128Concat,
 						)],
 						[
-							255u8, 11u8, 230u8, 74u8, 243u8, 215u8, 145u8, 218u8, 112u8, 69u8,
-							143u8, 23u8, 6u8, 177u8, 196u8, 211u8, 31u8, 241u8, 206u8, 139u8, 12u8,
-							205u8, 137u8, 112u8, 211u8, 237u8, 231u8, 189u8, 40u8, 0u8, 203u8,
-							239u8,
+							155u8, 153u8, 205u8, 218u8, 104u8, 221u8, 182u8, 75u8, 75u8, 220u8,
+							223u8, 196u8, 241u8, 95u8, 74u8, 117u8, 209u8, 128u8, 19u8, 93u8,
+							137u8, 215u8, 238u8, 133u8, 17u8, 66u8, 102u8, 165u8, 63u8, 139u8,
+							242u8, 216u8,
 						],
 					)
 				}
@@ -18659,10 +18651,10 @@ pub mod api {
 						"AssetName",
 						Vec::new(),
 						[
-							255u8, 11u8, 230u8, 74u8, 243u8, 215u8, 145u8, 218u8, 112u8, 69u8,
-							143u8, 23u8, 6u8, 177u8, 196u8, 211u8, 31u8, 241u8, 206u8, 139u8, 12u8,
-							205u8, 137u8, 112u8, 211u8, 237u8, 231u8, 189u8, 40u8, 0u8, 203u8,
-							239u8,
+							155u8, 153u8, 205u8, 218u8, 104u8, 221u8, 182u8, 75u8, 75u8, 220u8,
+							223u8, 196u8, 241u8, 95u8, 74u8, 117u8, 209u8, 128u8, 19u8, 93u8,
+							137u8, 215u8, 238u8, 133u8, 17u8, 66u8, 102u8, 165u8, 63u8, 139u8,
+							242u8, 216u8,
 						],
 					)
 				}
@@ -18672,12 +18664,13 @@ pub mod api {
 						"AssetSymbol",
 						vec![::subxt::storage::address::StorageMapKey::new(
 							_0.borrow(),
-							::subxt::storage::address::StorageHasher::Twox128,
+							::subxt::storage::address::StorageHasher::Blake2_128Concat,
 						)],
 						[
-							230u8, 78u8, 95u8, 82u8, 10u8, 228u8, 148u8, 173u8, 53u8, 243u8, 201u8,
-							74u8, 235u8, 62u8, 108u8, 214u8, 6u8, 119u8, 205u8, 51u8, 103u8, 237u8,
-							119u8, 118u8, 90u8, 91u8, 147u8, 225u8, 213u8, 173u8, 91u8, 85u8,
+							33u8, 238u8, 10u8, 174u8, 250u8, 38u8, 250u8, 233u8, 199u8, 123u8,
+							195u8, 71u8, 37u8, 117u8, 179u8, 18u8, 168u8, 10u8, 229u8, 196u8,
+							122u8, 233u8, 252u8, 173u8, 114u8, 244u8, 200u8, 191u8, 208u8, 209u8,
+							251u8, 139u8,
 						],
 					)
 				}
@@ -18687,9 +18680,10 @@ pub mod api {
 						"AssetSymbol",
 						Vec::new(),
 						[
-							230u8, 78u8, 95u8, 82u8, 10u8, 228u8, 148u8, 173u8, 53u8, 243u8, 201u8,
-							74u8, 235u8, 62u8, 108u8, 214u8, 6u8, 119u8, 205u8, 51u8, 103u8, 237u8,
-							119u8, 118u8, 90u8, 91u8, 147u8, 225u8, 213u8, 173u8, 91u8, 85u8,
+							33u8, 238u8, 10u8, 174u8, 250u8, 38u8, 250u8, 233u8, 199u8, 123u8,
+							195u8, 71u8, 37u8, 117u8, 179u8, 18u8, 168u8, 10u8, 229u8, 196u8,
+							122u8, 233u8, 252u8, 173u8, 114u8, 244u8, 200u8, 191u8, 208u8, 209u8,
+							251u8, 139u8,
 						],
 					)
 				}
@@ -18708,13 +18702,13 @@ pub mod api {
 						"AssetDecimals",
 						vec![::subxt::storage::address::StorageMapKey::new(
 							_0.borrow(),
-							::subxt::storage::address::StorageHasher::Twox128,
+							::subxt::storage::address::StorageHasher::Blake2_128Concat,
 						)],
 						[
-							49u8, 64u8, 16u8, 163u8, 60u8, 136u8, 93u8, 88u8, 198u8, 124u8, 210u8,
-							121u8, 225u8, 249u8, 119u8, 121u8, 93u8, 158u8, 222u8, 47u8, 201u8,
-							89u8, 221u8, 119u8, 228u8, 66u8, 83u8, 159u8, 11u8, 122u8, 250u8,
-							100u8,
+							35u8, 231u8, 230u8, 103u8, 90u8, 169u8, 185u8, 105u8, 170u8, 88u8,
+							22u8, 22u8, 8u8, 45u8, 92u8, 85u8, 20u8, 170u8, 19u8, 14u8, 66u8,
+							142u8, 213u8, 90u8, 202u8, 63u8, 15u8, 230u8, 68u8, 255u8, 178u8,
+							238u8,
 						],
 					)
 				}
@@ -18732,10 +18726,10 @@ pub mod api {
 						"AssetDecimals",
 						Vec::new(),
 						[
-							49u8, 64u8, 16u8, 163u8, 60u8, 136u8, 93u8, 88u8, 198u8, 124u8, 210u8,
-							121u8, 225u8, 249u8, 119u8, 121u8, 93u8, 158u8, 222u8, 47u8, 201u8,
-							89u8, 221u8, 119u8, 228u8, 66u8, 83u8, 159u8, 11u8, 122u8, 250u8,
-							100u8,
+							35u8, 231u8, 230u8, 103u8, 90u8, 169u8, 185u8, 105u8, 170u8, 88u8,
+							22u8, 22u8, 8u8, 45u8, 92u8, 85u8, 20u8, 170u8, 19u8, 14u8, 66u8,
+							142u8, 213u8, 90u8, 202u8, 63u8, 15u8, 230u8, 68u8, 255u8, 178u8,
+							238u8,
 						],
 					)
 				}
@@ -19296,6 +19290,974 @@ pub mod api {
 			}
 		}
 	}
+	pub mod oracle {
+		use super::{root_mod, runtime_types};
+		#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
+		pub mod calls {
+			use super::{root_mod, runtime_types};
+			type DispatchError = runtime_types::sp_runtime::DispatchError;
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			pub struct AddAssetAndInfo {
+				pub asset_id: runtime_types::primitives::currency::CurrencyId,
+				pub threshold: runtime_types::sp_arithmetic::per_things::Percent,
+				pub min_answers: ::core::primitive::u32,
+				pub max_answers: ::core::primitive::u32,
+				pub block_interval: ::core::primitive::u32,
+				pub reward_weight: ::core::primitive::u128,
+				pub slash: ::core::primitive::u128,
+				pub emit_price_changes: ::core::primitive::bool,
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			pub struct SetSigner {
+				pub signer: ::subxt::utils::AccountId32,
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			pub struct AdjustRewards {
+				pub annual_cost_per_oracle: ::core::primitive::u128,
+				pub num_ideal_oracles: ::core::primitive::u8,
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: CompactAs,
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				Debug,
+			)]
+			pub struct AddStake {
+				pub stake: ::core::primitive::u128,
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			pub struct RemoveStake;
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			pub struct ReclaimStake;
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			pub struct SubmitPrice {
+				pub price: ::core::primitive::u128,
+				pub asset_id: runtime_types::primitives::currency::CurrencyId,
+			}
+			pub struct TransactionApi;
+			impl TransactionApi {
+				#[doc = "Permissioned call to add an asset"]
+				#[doc = ""]
+				#[doc = "- `asset_id`: Id for the asset"]
+				#[doc = "- `threshold`: Percent close to mean to be rewarded"]
+				#[doc = "- `min_answers`: Min answers before aggregation"]
+				#[doc = "- `max_answers`: Max answers to aggregate"]
+				#[doc = "- `block_interval`: blocks until oracle triggered"]
+				#[doc = "- `reward`: reward amount for correct answer"]
+				#[doc = "- `slash`: slash amount for bad answer"]
+				#[doc = "- `emit_price_changes`: emit PriceChanged event when asset price changes"]
+				#[doc = ""]
+				#[doc = "Emits `DepositEvent` event when successful."]
+				pub fn add_asset_and_info(
+					&self,
+					asset_id: runtime_types::primitives::currency::CurrencyId,
+					threshold: runtime_types::sp_arithmetic::per_things::Percent,
+					min_answers: ::core::primitive::u32,
+					max_answers: ::core::primitive::u32,
+					block_interval: ::core::primitive::u32,
+					reward_weight: ::core::primitive::u128,
+					slash: ::core::primitive::u128,
+					emit_price_changes: ::core::primitive::bool,
+				) -> ::subxt::tx::StaticTxPayload<AddAssetAndInfo> {
+					::subxt::tx::StaticTxPayload::new(
+						"Oracle",
+						"add_asset_and_info",
+						AddAssetAndInfo {
+							asset_id,
+							threshold,
+							min_answers,
+							max_answers,
+							block_interval,
+							reward_weight,
+							slash,
+							emit_price_changes,
+						},
+						[
+							41u8, 201u8, 103u8, 209u8, 101u8, 39u8, 254u8, 245u8, 188u8, 0u8, 5u8,
+							182u8, 148u8, 116u8, 55u8, 234u8, 155u8, 245u8, 49u8, 232u8, 125u8,
+							2u8, 9u8, 208u8, 121u8, 206u8, 112u8, 224u8, 174u8, 77u8, 130u8, 100u8,
+						],
+					)
+				}
+				#[doc = "Call for a signer to be set, called from controller, adds stake."]
+				#[doc = ""]
+				#[doc = "- `signer`: signer to tie controller to"]
+				#[doc = ""]
+				#[doc = "Emits `SignerSet` and `StakeAdded` events when successful."]
+				pub fn set_signer(
+					&self,
+					signer: ::subxt::utils::AccountId32,
+				) -> ::subxt::tx::StaticTxPayload<SetSigner> {
+					::subxt::tx::StaticTxPayload::new(
+						"Oracle",
+						"set_signer",
+						SetSigner { signer },
+						[
+							73u8, 228u8, 199u8, 211u8, 100u8, 63u8, 140u8, 6u8, 161u8, 1u8, 34u8,
+							191u8, 159u8, 173u8, 241u8, 217u8, 29u8, 185u8, 67u8, 187u8, 126u8,
+							88u8, 214u8, 207u8, 147u8, 70u8, 66u8, 237u8, 233u8, 97u8, 108u8, 44u8,
+						],
+					)
+				}
+				#[doc = "Call to start rewarding Oracles."]
+				#[doc = "- `annual_cost_per_oracle`: Annual cost of an Oracle."]
+				#[doc = "- `num_ideal_oracles`: Number of ideal Oracles. This in fact should be higher than the"]
+				#[doc = "  actual ideal number so that the Oracles make a profit under ideal conditions."]
+				#[doc = ""]
+				#[doc = "Emits `RewardRateSet` event when successful."]
+				pub fn adjust_rewards(
+					&self,
+					annual_cost_per_oracle: ::core::primitive::u128,
+					num_ideal_oracles: ::core::primitive::u8,
+				) -> ::subxt::tx::StaticTxPayload<AdjustRewards> {
+					::subxt::tx::StaticTxPayload::new(
+						"Oracle",
+						"adjust_rewards",
+						AdjustRewards { annual_cost_per_oracle, num_ideal_oracles },
+						[
+							199u8, 115u8, 9u8, 130u8, 73u8, 207u8, 189u8, 99u8, 79u8, 167u8, 51u8,
+							166u8, 192u8, 176u8, 178u8, 41u8, 170u8, 139u8, 147u8, 221u8, 142u8,
+							28u8, 0u8, 201u8, 215u8, 227u8, 36u8, 12u8, 185u8, 121u8, 103u8, 115u8,
+						],
+					)
+				}
+				#[doc = "call to add more stake from a controller"]
+				#[doc = ""]
+				#[doc = "- `stake`: amount to add to stake"]
+				#[doc = ""]
+				#[doc = "Emits `StakeAdded` event when successful."]
+				pub fn add_stake(
+					&self,
+					stake: ::core::primitive::u128,
+				) -> ::subxt::tx::StaticTxPayload<AddStake> {
+					::subxt::tx::StaticTxPayload::new(
+						"Oracle",
+						"add_stake",
+						AddStake { stake },
+						[
+							220u8, 69u8, 184u8, 4u8, 205u8, 132u8, 198u8, 237u8, 233u8, 244u8,
+							60u8, 140u8, 91u8, 114u8, 20u8, 161u8, 123u8, 197u8, 237u8, 194u8,
+							110u8, 163u8, 3u8, 230u8, 164u8, 58u8, 62u8, 55u8, 19u8, 65u8, 134u8,
+							18u8,
+						],
+					)
+				}
+				#[doc = "Call to put in a claim to remove stake, called from controller"]
+				#[doc = ""]
+				#[doc = "Emits `StakeRemoved` event when successful."]
+				pub fn remove_stake(&self) -> ::subxt::tx::StaticTxPayload<RemoveStake> {
+					::subxt::tx::StaticTxPayload::new(
+						"Oracle",
+						"remove_stake",
+						RemoveStake {},
+						[
+							109u8, 215u8, 126u8, 241u8, 3u8, 34u8, 227u8, 110u8, 116u8, 160u8,
+							101u8, 240u8, 73u8, 57u8, 225u8, 212u8, 100u8, 41u8, 126u8, 120u8,
+							206u8, 201u8, 191u8, 156u8, 142u8, 110u8, 62u8, 19u8, 226u8, 239u8,
+							93u8, 80u8,
+						],
+					)
+				}
+				#[doc = "Call to reclaim stake after proper time has passed, called from controller"]
+				#[doc = ""]
+				#[doc = "Emits `StakeReclaimed` event when successful."]
+				pub fn reclaim_stake(&self) -> ::subxt::tx::StaticTxPayload<ReclaimStake> {
+					::subxt::tx::StaticTxPayload::new(
+						"Oracle",
+						"reclaim_stake",
+						ReclaimStake {},
+						[
+							214u8, 66u8, 83u8, 162u8, 26u8, 140u8, 190u8, 228u8, 234u8, 121u8,
+							54u8, 75u8, 1u8, 193u8, 237u8, 149u8, 168u8, 46u8, 93u8, 146u8, 50u8,
+							64u8, 72u8, 217u8, 183u8, 6u8, 185u8, 103u8, 176u8, 54u8, 188u8, 149u8,
+						],
+					)
+				}
+				#[doc = "Call to submit a price, gas is returned if extrinsic is successful."]
+				#[doc = "Should be called from offchain worker but can be called manually too."]
+				#[doc = ""]
+				#[doc = "This is an operational transaction."]
+				#[doc = ""]
+				#[doc = "- `price`: price to submit, normalized to 12 decimals"]
+				#[doc = "- `asset_id`: id for the asset"]
+				#[doc = ""]
+				#[doc = "Emits `PriceSubmitted` event when successful."]
+				pub fn submit_price(
+					&self,
+					price: ::core::primitive::u128,
+					asset_id: runtime_types::primitives::currency::CurrencyId,
+				) -> ::subxt::tx::StaticTxPayload<SubmitPrice> {
+					::subxt::tx::StaticTxPayload::new(
+						"Oracle",
+						"submit_price",
+						SubmitPrice { price, asset_id },
+						[
+							70u8, 129u8, 251u8, 66u8, 231u8, 96u8, 152u8, 177u8, 223u8, 166u8,
+							233u8, 69u8, 71u8, 146u8, 181u8, 107u8, 174u8, 193u8, 253u8, 189u8,
+							4u8, 95u8, 157u8, 203u8, 220u8, 170u8, 192u8, 162u8, 252u8, 182u8,
+							244u8, 175u8,
+						],
+					)
+				}
+			}
+		}
+		#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+		pub type Event = runtime_types::pallet_oracle::pallet::Event;
+		pub mod events {
+			use super::runtime_types;
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			#[doc = "Asset info created or changed. \\[asset_id, threshold, min_answers, max_answers,"]
+			#[doc = "block_interval, reward, slash\\]"]
+			pub struct AssetInfoChange(
+				pub runtime_types::primitives::currency::CurrencyId,
+				pub runtime_types::sp_arithmetic::per_things::Percent,
+				pub ::core::primitive::u32,
+				pub ::core::primitive::u32,
+				pub ::core::primitive::u32,
+				pub ::core::primitive::u128,
+				pub ::core::primitive::u128,
+			);
+			impl ::subxt::events::StaticEvent for AssetInfoChange {
+				const PALLET: &'static str = "Oracle";
+				const EVENT: &'static str = "AssetInfoChange";
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			#[doc = "Signer was set. \\[signer, controller\\]"]
+			pub struct SignerSet(pub ::subxt::utils::AccountId32, pub ::subxt::utils::AccountId32);
+			impl ::subxt::events::StaticEvent for SignerSet {
+				const PALLET: &'static str = "Oracle";
+				const EVENT: &'static str = "SignerSet";
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			#[doc = "Stake was added. \\[added_by, amount_added, total_amount\\]"]
+			pub struct StakeAdded(
+				pub ::subxt::utils::AccountId32,
+				pub ::core::primitive::u128,
+				pub ::core::primitive::u128,
+			);
+			impl ::subxt::events::StaticEvent for StakeAdded {
+				const PALLET: &'static str = "Oracle";
+				const EVENT: &'static str = "StakeAdded";
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			#[doc = "Stake removed. \\[removed_by, amount, block_number\\]"]
+			pub struct StakeRemoved(
+				pub ::subxt::utils::AccountId32,
+				pub ::core::primitive::u128,
+				pub ::core::primitive::u32,
+			);
+			impl ::subxt::events::StaticEvent for StakeRemoved {
+				const PALLET: &'static str = "Oracle";
+				const EVENT: &'static str = "StakeRemoved";
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			#[doc = "Stake reclaimed. \\[reclaimed_by, amount\\]"]
+			pub struct StakeReclaimed(pub ::subxt::utils::AccountId32, pub ::core::primitive::u128);
+			impl ::subxt::events::StaticEvent for StakeReclaimed {
+				const PALLET: &'static str = "Oracle";
+				const EVENT: &'static str = "StakeReclaimed";
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			#[doc = "Price submitted by oracle. \\[oracle_address, asset_id, price\\]"]
+			pub struct PriceSubmitted(
+				pub ::subxt::utils::AccountId32,
+				pub runtime_types::primitives::currency::CurrencyId,
+				pub ::core::primitive::u128,
+			);
+			impl ::subxt::events::StaticEvent for PriceSubmitted {
+				const PALLET: &'static str = "Oracle";
+				const EVENT: &'static str = "PriceSubmitted";
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			#[doc = "Oracle slashed. \\[oracle_address, asset_id, amount\\]"]
+			pub struct UserSlashed(
+				pub ::subxt::utils::AccountId32,
+				pub runtime_types::primitives::currency::CurrencyId,
+				pub ::core::primitive::u128,
+			);
+			impl ::subxt::events::StaticEvent for UserSlashed {
+				const PALLET: &'static str = "Oracle";
+				const EVENT: &'static str = "UserSlashed";
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			#[doc = "Oracle rewarded. \\[oracle_address, asset_id, price\\]"]
+			pub struct OracleRewarded(
+				pub ::subxt::utils::AccountId32,
+				pub runtime_types::primitives::currency::CurrencyId,
+				pub ::core::primitive::u128,
+			);
+			impl ::subxt::events::StaticEvent for OracleRewarded {
+				const PALLET: &'static str = "Oracle";
+				const EVENT: &'static str = "OracleRewarded";
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: CompactAs,
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				Debug,
+			)]
+			#[doc = "Rewarding Started \\[rewarding start timestamp]"]
+			pub struct RewardingAdjustment(pub ::core::primitive::u64);
+			impl ::subxt::events::StaticEvent for RewardingAdjustment {
+				const PALLET: &'static str = "Oracle";
+				const EVENT: &'static str = "RewardingAdjustment";
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			#[doc = "Answer from oracle removed for staleness. \\[oracle_address, price\\]"]
+			pub struct AnswerPruned(pub ::subxt::utils::AccountId32, pub ::core::primitive::u128);
+			impl ::subxt::events::StaticEvent for AnswerPruned {
+				const PALLET: &'static str = "Oracle";
+				const EVENT: &'static str = "AnswerPruned";
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+			)]
+			#[doc = "Price changed by oracle \\[asset_id, price\\]"]
+			pub struct PriceChanged(
+				pub runtime_types::primitives::currency::CurrencyId,
+				pub ::core::primitive::u128,
+			);
+			impl ::subxt::events::StaticEvent for PriceChanged {
+				const PALLET: &'static str = "Oracle";
+				const EVENT: &'static str = "PriceChanged";
+			}
+		}
+		pub mod storage {
+			use super::runtime_types;
+			pub struct StorageApi;
+			impl StorageApi {
+				#[doc = " Total amount of assets"]
+				pub fn assets_count(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::u32>,
+					::subxt::storage::address::Yes,
+					::subxt::storage::address::Yes,
+					(),
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"AssetsCount",
+						vec![],
+						[
+							215u8, 70u8, 33u8, 171u8, 12u8, 49u8, 202u8, 86u8, 73u8, 211u8, 199u8,
+							120u8, 212u8, 27u8, 233u8, 0u8, 13u8, 97u8, 179u8, 132u8, 34u8, 70u8,
+							211u8, 86u8, 135u8, 179u8, 68u8, 39u8, 64u8, 79u8, 26u8, 211u8,
+						],
+					)
+				}
+				#[doc = " Rewarding history for Oracles. Used for calculating the current block reward."]
+				pub fn reward_tracker_store(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::composable_traits::oracle::RewardTracker<
+							::core::primitive::u128,
+							::core::primitive::u64,
+						>,
+					>,
+					::subxt::storage::address::Yes,
+					(),
+					(),
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"RewardTrackerStore",
+						vec![],
+						[
+							138u8, 225u8, 5u8, 227u8, 163u8, 131u8, 161u8, 5u8, 55u8, 131u8, 183u8,
+							12u8, 221u8, 80u8, 29u8, 132u8, 175u8, 96u8, 195u8, 102u8, 221u8, 42u8,
+							163u8, 201u8, 191u8, 24u8, 147u8, 191u8, 222u8, 207u8, 161u8, 242u8,
+						],
+					)
+				}
+				#[doc = " Mapping signing key to controller key"]
+				pub fn signer_to_controller(
+					&self,
+					_0: impl ::std::borrow::Borrow<::subxt::utils::AccountId32>,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<::subxt::utils::AccountId32>,
+					::subxt::storage::address::Yes,
+					(),
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"SignerToController",
+						vec![::subxt::storage::address::StorageMapKey::new(
+							_0.borrow(),
+							::subxt::storage::address::StorageHasher::Blake2_128Concat,
+						)],
+						[
+							170u8, 46u8, 103u8, 168u8, 186u8, 147u8, 69u8, 246u8, 17u8, 21u8,
+							183u8, 165u8, 202u8, 24u8, 10u8, 141u8, 79u8, 131u8, 178u8, 131u8,
+							90u8, 15u8, 47u8, 104u8, 4u8, 117u8, 95u8, 112u8, 180u8, 184u8, 152u8,
+							125u8,
+						],
+					)
+				}
+				#[doc = " Mapping signing key to controller key"]
+				pub fn signer_to_controller_root(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<::subxt::utils::AccountId32>,
+					(),
+					(),
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"SignerToController",
+						Vec::new(),
+						[
+							170u8, 46u8, 103u8, 168u8, 186u8, 147u8, 69u8, 246u8, 17u8, 21u8,
+							183u8, 165u8, 202u8, 24u8, 10u8, 141u8, 79u8, 131u8, 178u8, 131u8,
+							90u8, 15u8, 47u8, 104u8, 4u8, 117u8, 95u8, 112u8, 180u8, 184u8, 152u8,
+							125u8,
+						],
+					)
+				}
+				#[doc = " Mapping Controller key to signer key"]
+				pub fn controller_to_signer(
+					&self,
+					_0: impl ::std::borrow::Borrow<::subxt::utils::AccountId32>,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<::subxt::utils::AccountId32>,
+					::subxt::storage::address::Yes,
+					(),
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"ControllerToSigner",
+						vec![::subxt::storage::address::StorageMapKey::new(
+							_0.borrow(),
+							::subxt::storage::address::StorageHasher::Blake2_128Concat,
+						)],
+						[
+							254u8, 58u8, 117u8, 78u8, 93u8, 95u8, 74u8, 45u8, 170u8, 190u8, 136u8,
+							50u8, 125u8, 222u8, 31u8, 92u8, 91u8, 189u8, 157u8, 60u8, 124u8, 236u8,
+							144u8, 53u8, 182u8, 12u8, 101u8, 28u8, 236u8, 130u8, 25u8, 250u8,
+						],
+					)
+				}
+				#[doc = " Mapping Controller key to signer key"]
+				pub fn controller_to_signer_root(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<::subxt::utils::AccountId32>,
+					(),
+					(),
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"ControllerToSigner",
+						Vec::new(),
+						[
+							254u8, 58u8, 117u8, 78u8, 93u8, 95u8, 74u8, 45u8, 170u8, 190u8, 136u8,
+							50u8, 125u8, 222u8, 31u8, 92u8, 91u8, 189u8, 157u8, 60u8, 124u8, 236u8,
+							144u8, 53u8, 182u8, 12u8, 101u8, 28u8, 236u8, 130u8, 25u8, 250u8,
+						],
+					)
+				}
+				#[doc = " Tracking withdrawal requests"]
+				pub fn declared_withdraws(
+					&self,
+					_0: impl ::std::borrow::Borrow<::subxt::utils::AccountId32>,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::pallet_oracle::pallet::Withdraw<
+							::core::primitive::u128,
+							::core::primitive::u32,
+						>,
+					>,
+					::subxt::storage::address::Yes,
+					(),
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"DeclaredWithdraws",
+						vec![::subxt::storage::address::StorageMapKey::new(
+							_0.borrow(),
+							::subxt::storage::address::StorageHasher::Blake2_128Concat,
+						)],
+						[
+							19u8, 75u8, 148u8, 165u8, 117u8, 216u8, 35u8, 131u8, 84u8, 176u8,
+							128u8, 85u8, 105u8, 179u8, 203u8, 30u8, 91u8, 86u8, 74u8, 165u8, 57u8,
+							96u8, 245u8, 237u8, 145u8, 205u8, 254u8, 37u8, 139u8, 39u8, 214u8,
+							178u8,
+						],
+					)
+				}
+				#[doc = " Tracking withdrawal requests"]
+				pub fn declared_withdraws_root(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::pallet_oracle::pallet::Withdraw<
+							::core::primitive::u128,
+							::core::primitive::u32,
+						>,
+					>,
+					(),
+					(),
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"DeclaredWithdraws",
+						Vec::new(),
+						[
+							19u8, 75u8, 148u8, 165u8, 117u8, 216u8, 35u8, 131u8, 84u8, 176u8,
+							128u8, 85u8, 105u8, 179u8, 203u8, 30u8, 91u8, 86u8, 74u8, 165u8, 57u8,
+							96u8, 245u8, 237u8, 145u8, 205u8, 254u8, 37u8, 139u8, 39u8, 214u8,
+							178u8,
+						],
+					)
+				}
+				#[doc = " Mapping of signing key to stake"]
+				pub fn oracle_stake(
+					&self,
+					_0: impl ::std::borrow::Borrow<::subxt::utils::AccountId32>,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::u128>,
+					::subxt::storage::address::Yes,
+					(),
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"OracleStake",
+						vec![::subxt::storage::address::StorageMapKey::new(
+							_0.borrow(),
+							::subxt::storage::address::StorageHasher::Blake2_128Concat,
+						)],
+						[
+							101u8, 206u8, 86u8, 58u8, 134u8, 90u8, 48u8, 199u8, 183u8, 254u8,
+							225u8, 172u8, 78u8, 228u8, 57u8, 80u8, 203u8, 243u8, 65u8, 30u8, 134u8,
+							61u8, 12u8, 221u8, 225u8, 135u8, 110u8, 108u8, 42u8, 104u8, 44u8,
+							226u8,
+						],
+					)
+				}
+				#[doc = " Mapping of signing key to stake"]
+				pub fn oracle_stake_root(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::u128>,
+					(),
+					(),
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"OracleStake",
+						Vec::new(),
+						[
+							101u8, 206u8, 86u8, 58u8, 134u8, 90u8, 48u8, 199u8, 183u8, 254u8,
+							225u8, 172u8, 78u8, 228u8, 57u8, 80u8, 203u8, 243u8, 65u8, 30u8, 134u8,
+							61u8, 12u8, 221u8, 225u8, 135u8, 110u8, 108u8, 42u8, 104u8, 44u8,
+							226u8,
+						],
+					)
+				}
+				#[doc = " Mapping of slash amounts currently in transit"]
+				pub fn answer_in_transit(
+					&self,
+					_0: impl ::std::borrow::Borrow<::subxt::utils::AccountId32>,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::u128>,
+					::subxt::storage::address::Yes,
+					(),
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"AnswerInTransit",
+						vec![::subxt::storage::address::StorageMapKey::new(
+							_0.borrow(),
+							::subxt::storage::address::StorageHasher::Blake2_128Concat,
+						)],
+						[
+							92u8, 230u8, 213u8, 86u8, 216u8, 139u8, 55u8, 59u8, 218u8, 78u8, 99u8,
+							241u8, 118u8, 101u8, 224u8, 146u8, 209u8, 154u8, 236u8, 212u8, 117u8,
+							177u8, 128u8, 98u8, 226u8, 54u8, 102u8, 247u8, 136u8, 201u8, 174u8,
+							72u8,
+						],
+					)
+				}
+				#[doc = " Mapping of slash amounts currently in transit"]
+				pub fn answer_in_transit_root(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::u128>,
+					(),
+					(),
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"AnswerInTransit",
+						Vec::new(),
+						[
+							92u8, 230u8, 213u8, 86u8, 216u8, 139u8, 55u8, 59u8, 218u8, 78u8, 99u8,
+							241u8, 118u8, 101u8, 224u8, 146u8, 209u8, 154u8, 236u8, 212u8, 117u8,
+							177u8, 128u8, 98u8, 226u8, 54u8, 102u8, 247u8, 136u8, 201u8, 174u8,
+							72u8,
+						],
+					)
+				}
+				#[doc = " Price for an asset and blocknumber asset was updated at"]
+				pub fn prices(
+					&self,
+					_0: impl ::std::borrow::Borrow<runtime_types::primitives::currency::CurrencyId>,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::composable_traits::oracle::Price<
+							::core::primitive::u128,
+							::core::primitive::u32,
+						>,
+					>,
+					::subxt::storage::address::Yes,
+					::subxt::storage::address::Yes,
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"Prices",
+						vec![::subxt::storage::address::StorageMapKey::new(
+							_0.borrow(),
+							::subxt::storage::address::StorageHasher::Blake2_128Concat,
+						)],
+						[
+							4u8, 80u8, 102u8, 113u8, 107u8, 40u8, 145u8, 121u8, 49u8, 31u8, 22u8,
+							89u8, 162u8, 136u8, 215u8, 67u8, 138u8, 155u8, 58u8, 34u8, 173u8,
+							232u8, 102u8, 234u8, 158u8, 85u8, 143u8, 158u8, 175u8, 220u8, 131u8,
+							247u8,
+						],
+					)
+				}
+				#[doc = " Price for an asset and blocknumber asset was updated at"]
+				pub fn prices_root(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::composable_traits::oracle::Price<
+							::core::primitive::u128,
+							::core::primitive::u32,
+						>,
+					>,
+					(),
+					::subxt::storage::address::Yes,
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"Prices",
+						Vec::new(),
+						[
+							4u8, 80u8, 102u8, 113u8, 107u8, 40u8, 145u8, 121u8, 49u8, 31u8, 22u8,
+							89u8, 162u8, 136u8, 215u8, 67u8, 138u8, 155u8, 58u8, 34u8, 173u8,
+							232u8, 102u8, 234u8, 158u8, 85u8, 143u8, 158u8, 175u8, 220u8, 131u8,
+							247u8,
+						],
+					)
+				}
+				#[doc = " Price for an asset and blocknumber asset was updated at"]
+				pub fn price_history(
+					&self,
+					_0: impl ::std::borrow::Borrow<runtime_types::primitives::currency::CurrencyId>,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::sp_core::bounded::bounded_vec::BoundedVec<
+							runtime_types::composable_traits::oracle::Price<
+								::core::primitive::u128,
+								::core::primitive::u32,
+							>,
+						>,
+					>,
+					::subxt::storage::address::Yes,
+					::subxt::storage::address::Yes,
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"PriceHistory",
+						vec![::subxt::storage::address::StorageMapKey::new(
+							_0.borrow(),
+							::subxt::storage::address::StorageHasher::Blake2_128Concat,
+						)],
+						[
+							131u8, 141u8, 57u8, 31u8, 157u8, 216u8, 64u8, 237u8, 65u8, 106u8,
+							255u8, 249u8, 140u8, 190u8, 155u8, 88u8, 121u8, 68u8, 250u8, 79u8,
+							213u8, 141u8, 157u8, 76u8, 41u8, 53u8, 68u8, 154u8, 170u8, 143u8,
+							236u8, 40u8,
+						],
+					)
+				}
+				#[doc = " Price for an asset and blocknumber asset was updated at"]
+				pub fn price_history_root(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::sp_core::bounded::bounded_vec::BoundedVec<
+							runtime_types::composable_traits::oracle::Price<
+								::core::primitive::u128,
+								::core::primitive::u32,
+							>,
+						>,
+					>,
+					(),
+					::subxt::storage::address::Yes,
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"PriceHistory",
+						Vec::new(),
+						[
+							131u8, 141u8, 57u8, 31u8, 157u8, 216u8, 64u8, 237u8, 65u8, 106u8,
+							255u8, 249u8, 140u8, 190u8, 155u8, 88u8, 121u8, 68u8, 250u8, 79u8,
+							213u8, 141u8, 157u8, 76u8, 41u8, 53u8, 68u8, 154u8, 170u8, 143u8,
+							236u8, 40u8,
+						],
+					)
+				}
+				#[doc = " Temporary prices before aggregated"]
+				pub fn pre_prices(
+					&self,
+					_0: impl ::std::borrow::Borrow<runtime_types::primitives::currency::CurrencyId>,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::sp_core::bounded::bounded_vec::BoundedVec<
+							runtime_types::pallet_oracle::pallet::PrePrice<
+								::core::primitive::u128,
+								::core::primitive::u32,
+								::subxt::utils::AccountId32,
+							>,
+						>,
+					>,
+					::subxt::storage::address::Yes,
+					::subxt::storage::address::Yes,
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"PrePrices",
+						vec![::subxt::storage::address::StorageMapKey::new(
+							_0.borrow(),
+							::subxt::storage::address::StorageHasher::Blake2_128Concat,
+						)],
+						[
+							246u8, 156u8, 113u8, 22u8, 13u8, 231u8, 195u8, 151u8, 233u8, 97u8,
+							197u8, 167u8, 139u8, 179u8, 155u8, 6u8, 212u8, 153u8, 40u8, 84u8, 3u8,
+							38u8, 221u8, 206u8, 254u8, 41u8, 73u8, 25u8, 121u8, 147u8, 15u8, 214u8,
+						],
+					)
+				}
+				#[doc = " Temporary prices before aggregated"]
+				pub fn pre_prices_root(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::sp_core::bounded::bounded_vec::BoundedVec<
+							runtime_types::pallet_oracle::pallet::PrePrice<
+								::core::primitive::u128,
+								::core::primitive::u32,
+								::subxt::utils::AccountId32,
+							>,
+						>,
+					>,
+					(),
+					::subxt::storage::address::Yes,
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"PrePrices",
+						Vec::new(),
+						[
+							246u8, 156u8, 113u8, 22u8, 13u8, 231u8, 195u8, 151u8, 233u8, 97u8,
+							197u8, 167u8, 139u8, 179u8, 155u8, 6u8, 212u8, 153u8, 40u8, 84u8, 3u8,
+							38u8, 221u8, 206u8, 254u8, 41u8, 73u8, 25u8, 121u8, 147u8, 15u8, 214u8,
+						],
+					)
+				}
+				#[doc = " Information about asset, including precision threshold and max/min answers"]
+				pub fn assets_info(
+					&self,
+					_0: impl ::std::borrow::Borrow<runtime_types::primitives::currency::CurrencyId>,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::pallet_oracle::pallet::AssetInfo<
+							runtime_types::sp_arithmetic::per_things::Percent,
+							::core::primitive::u32,
+							::core::primitive::u128,
+						>,
+					>,
+					::subxt::storage::address::Yes,
+					(),
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"AssetsInfo",
+						vec![::subxt::storage::address::StorageMapKey::new(
+							_0.borrow(),
+							::subxt::storage::address::StorageHasher::Blake2_128Concat,
+						)],
+						[
+							41u8, 47u8, 99u8, 224u8, 72u8, 196u8, 28u8, 159u8, 34u8, 84u8, 157u8,
+							69u8, 143u8, 116u8, 20u8, 132u8, 121u8, 73u8, 48u8, 162u8, 67u8, 60u8,
+							28u8, 180u8, 113u8, 91u8, 181u8, 18u8, 55u8, 57u8, 244u8, 2u8,
+						],
+					)
+				}
+				#[doc = " Information about asset, including precision threshold and max/min answers"]
+				pub fn assets_info_root(
+					&self,
+				) -> ::subxt::storage::address::StaticStorageAddress<
+					::subxt::metadata::DecodeStaticType<
+						runtime_types::pallet_oracle::pallet::AssetInfo<
+							runtime_types::sp_arithmetic::per_things::Percent,
+							::core::primitive::u32,
+							::core::primitive::u128,
+						>,
+					>,
+					(),
+					(),
+					::subxt::storage::address::Yes,
+				> {
+					::subxt::storage::address::StaticStorageAddress::new(
+						"Oracle",
+						"AssetsInfo",
+						Vec::new(),
+						[
+							41u8, 47u8, 99u8, 224u8, 72u8, 196u8, 28u8, 159u8, 34u8, 84u8, 157u8,
+							69u8, 143u8, 116u8, 20u8, 132u8, 121u8, 73u8, 48u8, 162u8, 67u8, 60u8,
+							28u8, 180u8, 113u8, 91u8, 181u8, 18u8, 55u8, 57u8, 244u8, 2u8,
+						],
+					)
+				}
+			}
+		}
+		pub mod constants {
+			use super::runtime_types;
+			pub struct ConstantsApi;
+			impl ConstantsApi {
+				pub fn max_history(
+					&self,
+				) -> ::subxt::constants::StaticConstantAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::u32>,
+				> {
+					::subxt::constants::StaticConstantAddress::new(
+						"Oracle",
+						"MaxHistory",
+						[
+							98u8, 252u8, 116u8, 72u8, 26u8, 180u8, 225u8, 83u8, 200u8, 157u8,
+							125u8, 151u8, 53u8, 76u8, 168u8, 26u8, 10u8, 9u8, 98u8, 68u8, 9u8,
+							178u8, 197u8, 113u8, 31u8, 79u8, 200u8, 90u8, 203u8, 100u8, 41u8,
+							145u8,
+						],
+					)
+				}
+				pub fn twap_window(
+					&self,
+				) -> ::subxt::constants::StaticConstantAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::u16>,
+				> {
+					::subxt::constants::StaticConstantAddress::new(
+						"Oracle",
+						"TwapWindow",
+						[
+							116u8, 33u8, 2u8, 170u8, 181u8, 147u8, 171u8, 169u8, 167u8, 227u8,
+							41u8, 144u8, 11u8, 236u8, 82u8, 100u8, 74u8, 60u8, 184u8, 72u8, 169u8,
+							90u8, 208u8, 135u8, 15u8, 117u8, 10u8, 123u8, 128u8, 193u8, 29u8, 70u8,
+						],
+					)
+				}
+				pub fn max_pre_prices(
+					&self,
+				) -> ::subxt::constants::StaticConstantAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::u32>,
+				> {
+					::subxt::constants::StaticConstantAddress::new(
+						"Oracle",
+						"MaxPrePrices",
+						[
+							98u8, 252u8, 116u8, 72u8, 26u8, 180u8, 225u8, 83u8, 200u8, 157u8,
+							125u8, 151u8, 53u8, 76u8, 168u8, 26u8, 10u8, 9u8, 98u8, 68u8, 9u8,
+							178u8, 197u8, 113u8, 31u8, 79u8, 200u8, 90u8, 203u8, 100u8, 41u8,
+							145u8,
+						],
+					)
+				}
+				pub fn ms_per_block(
+					&self,
+				) -> ::subxt::constants::StaticConstantAddress<
+					::subxt::metadata::DecodeStaticType<::core::primitive::u64>,
+				> {
+					::subxt::constants::StaticConstantAddress::new(
+						"Oracle",
+						"MsPerBlock",
+						[
+							128u8, 214u8, 205u8, 242u8, 181u8, 142u8, 124u8, 231u8, 190u8, 146u8,
+							59u8, 226u8, 157u8, 101u8, 103u8, 117u8, 249u8, 65u8, 18u8, 191u8,
+							103u8, 119u8, 53u8, 85u8, 81u8, 96u8, 220u8, 42u8, 184u8, 239u8, 42u8,
+							246u8,
+						],
+					)
+				}
+				pub fn pallet_id(
+					&self,
+				) -> ::subxt::constants::StaticConstantAddress<
+					::subxt::metadata::DecodeStaticType<runtime_types::frame_support::PalletId>,
+				> {
+					::subxt::constants::StaticConstantAddress::new(
+						"Oracle",
+						"PalletId",
+						[
+							139u8, 109u8, 228u8, 151u8, 252u8, 32u8, 130u8, 69u8, 112u8, 154u8,
+							174u8, 45u8, 83u8, 245u8, 51u8, 132u8, 173u8, 5u8, 186u8, 24u8, 243u8,
+							9u8, 12u8, 214u8, 80u8, 74u8, 69u8, 189u8, 30u8, 94u8, 22u8, 39u8,
+						],
+					)
+				}
+			}
+		}
+	}
 	pub mod call_filter {
 		use super::{root_mod, runtime_types};
 		#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
@@ -19500,12 +20462,6 @@ pub mod api {
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
-			pub struct SetParams {
-				pub params: runtime_types::pallet_ibc::PalletParams,
-			}
-			#[derive(
-				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
-			)]
 			pub struct UpgradeClient {
 				pub params: runtime_types::pallet_ibc::UpgradeParams,
 			}
@@ -19527,10 +20483,10 @@ pub mod api {
 						"deliver",
 						Deliver { messages },
 						[
-							179u8, 205u8, 83u8, 66u8, 171u8, 103u8, 175u8, 57u8, 35u8, 60u8, 170u8,
-							172u8, 60u8, 57u8, 56u8, 226u8, 130u8, 222u8, 121u8, 25u8, 230u8,
-							143u8, 253u8, 77u8, 111u8, 152u8, 89u8, 150u8, 129u8, 239u8, 141u8,
-							61u8,
+							145u8, 52u8, 143u8, 156u8, 204u8, 181u8, 57u8, 94u8, 85u8, 140u8,
+							149u8, 91u8, 203u8, 234u8, 129u8, 192u8, 215u8, 195u8, 53u8, 180u8,
+							98u8, 195u8, 113u8, 238u8, 228u8, 88u8, 1u8, 36u8, 173u8, 185u8, 129u8,
+							108u8,
 						],
 					)
 				}
@@ -19549,22 +20505,6 @@ pub mod api {
 							104u8, 136u8, 36u8, 50u8, 105u8, 241u8, 120u8, 243u8, 74u8, 48u8,
 							173u8, 124u8, 56u8, 78u8, 20u8, 193u8, 27u8, 73u8, 16u8, 127u8, 125u8,
 							113u8, 70u8, 115u8, 43u8, 2u8, 103u8, 109u8, 208u8, 40u8, 10u8, 36u8,
-						],
-					)
-				}
-				pub fn set_params(
-					&self,
-					params: runtime_types::pallet_ibc::PalletParams,
-				) -> ::subxt::tx::StaticTxPayload<SetParams> {
-					::subxt::tx::StaticTxPayload::new(
-						"Ibc",
-						"set_params",
-						SetParams { params },
-						[
-							116u8, 243u8, 44u8, 94u8, 198u8, 240u8, 175u8, 200u8, 234u8, 175u8,
-							193u8, 228u8, 45u8, 51u8, 89u8, 123u8, 211u8, 209u8, 214u8, 0u8, 124u8,
-							86u8, 142u8, 43u8, 104u8, 198u8, 156u8, 224u8, 51u8, 82u8, 220u8,
-							165u8,
 						],
 					)
 				}
@@ -20102,26 +21042,6 @@ pub mod api {
 						],
 					)
 				}
-				#[doc = " Pallet Params used to disable sending or receipt of ibc tokens"]
-				pub fn params(
-					&self,
-				) -> ::subxt::storage::address::StaticStorageAddress<
-					::subxt::metadata::DecodeStaticType<runtime_types::pallet_ibc::PalletParams>,
-					::subxt::storage::address::Yes,
-					::subxt::storage::address::Yes,
-					(),
-				> {
-					::subxt::storage::address::StaticStorageAddress::new(
-						"Ibc",
-						"Params",
-						vec![],
-						[
-							53u8, 220u8, 56u8, 9u8, 21u8, 121u8, 177u8, 62u8, 240u8, 196u8, 215u8,
-							157u8, 220u8, 38u8, 85u8, 220u8, 196u8, 38u8, 44u8, 236u8, 64u8, 11u8,
-							242u8, 82u8, 230u8, 33u8, 60u8, 148u8, 35u8, 176u8, 81u8, 188u8,
-						],
-					)
-				}
 				#[doc = " Map of asset id to ibc denom pairs (T::AssetId, Vec<u8>)"]
 				#[doc = " ibc denoms represented as utf8 string bytes"]
 				pub fn ibc_asset_ids(
@@ -20652,6 +21572,26 @@ pub mod api {
 					Signed(_0),
 				}
 			}
+			pub mod oracle {
+				use super::runtime_types;
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				pub struct Price<_0, _1> {
+					pub price: _0,
+					pub block: _1,
+				}
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				pub struct RewardTracker<_0, _1> {
+					pub period: _1,
+					pub start: _1,
+					pub total_already_rewarded: _0,
+					pub current_block_reward: _0,
+					pub total_reward_weight: _0,
+				}
+			}
 			pub mod storage {
 				use super::runtime_types;
 				#[derive(
@@ -20662,51 +21602,6 @@ pub mod api {
 					Ignore,
 					#[codec(index = 1)]
 					Set(_0),
-				}
-			}
-			pub mod vesting {
-				use super::runtime_types;
-				#[derive(
-					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
-				)]
-				pub struct VestingSchedule<_0, _1, _2, _3> {
-					pub vesting_schedule_id: _0,
-					pub window: runtime_types::composable_traits::vesting::VestingWindow<_1, _2>,
-					pub period_count: _1,
-					#[codec(compact)]
-					pub per_period: _0,
-					pub already_claimed: _0,
-					#[codec(skip)]
-					pub __subxt_unused_type_params: ::core::marker::PhantomData<_3>,
-				}
-				#[derive(
-					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
-				)]
-				pub enum VestingScheduleIdSet<_0> {
-					#[codec(index = 0)]
-					All,
-					#[codec(index = 1)]
-					One(_0),
-					#[codec(index = 2)]
-					Many(runtime_types::sp_core::bounded::bounded_vec::BoundedVec<_0>),
-				}
-				#[derive(
-					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
-				)]
-				pub struct VestingScheduleInfo<_0, _1, _2> {
-					pub window: runtime_types::composable_traits::vesting::VestingWindow<_0, _1>,
-					pub period_count: _0,
-					#[codec(compact)]
-					pub per_period: _2,
-				}
-				#[derive(
-					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
-				)]
-				pub enum VestingWindow<_0, _1> {
-					#[codec(index = 0)]
-					MomentBased { start: _1, period: _1 },
-					#[codec(index = 1)]
-					BlockNumberBased { start: _0, period: _0 },
 				}
 			}
 			pub mod xcm {
@@ -21549,6 +22444,52 @@ pub mod api {
 		}
 		pub mod ibc {
 			use super::runtime_types;
+			pub mod applications {
+				use super::runtime_types;
+				pub mod transfer {
+					use super::runtime_types;
+					pub mod denom {
+						use super::runtime_types;
+						#[derive(
+							:: subxt :: ext :: codec :: Decode,
+							:: subxt :: ext :: codec :: Encode,
+							Debug,
+						)]
+						pub struct BaseDenom(pub ::std::string::String);
+						#[derive(
+							:: subxt :: ext :: codec :: Decode,
+							:: subxt :: ext :: codec :: Encode,
+							Debug,
+						)]
+						pub struct PrefixedDenom {
+							pub trace_path:
+								runtime_types::ibc::applications::transfer::denom::TracePath,
+							pub base_denom:
+								runtime_types::ibc::applications::transfer::denom::BaseDenom,
+						}
+						#[derive(
+							:: subxt :: ext :: codec :: Decode,
+							:: subxt :: ext :: codec :: Encode,
+							Debug,
+						)]
+						pub struct TracePath(
+							pub  ::std::vec::Vec<
+								runtime_types::ibc::applications::transfer::denom::TracePrefix,
+							>,
+						);
+						#[derive(
+							:: subxt :: ext :: codec :: Decode,
+							:: subxt :: ext :: codec :: Encode,
+							Debug,
+						)]
+						pub struct TracePrefix {
+							pub port_id: runtime_types::ibc::core::ics24_host::identifier::PortId,
+							pub channel_id:
+								runtime_types::ibc::core::ics24_host::identifier::ChannelId,
+						}
+					}
+				}
+			}
 			pub mod core {
 				use super::runtime_types;
 				pub mod ics02_client {
@@ -21564,6 +22505,24 @@ pub mod api {
 							pub revision_number: ::core::primitive::u64,
 							pub revision_height: ::core::primitive::u64,
 						}
+					}
+				}
+				pub mod ics24_host {
+					use super::runtime_types;
+					pub mod identifier {
+						use super::runtime_types;
+						#[derive(
+							:: subxt :: ext :: codec :: Decode,
+							:: subxt :: ext :: codec :: Encode,
+							Debug,
+						)]
+						pub struct ChannelId(pub ::std::string::String);
+						#[derive(
+							:: subxt :: ext :: codec :: Decode,
+							:: subxt :: ext :: codec :: Encode,
+							Debug,
+						)]
+						pub struct PortId(pub ::std::string::String);
 					}
 				}
 			}
@@ -22378,7 +23337,7 @@ pub mod api {
 						protocol_id: [::core::primitive::u8; 8usize],
 						nonce: ::core::primitive::u64,
 						location: ::core::option::Option<
-							runtime_types::composable_traits::xcm::assets::XcmAssetLocation,
+							runtime_types::primitives::currency::ForeignAssetId,
 						>,
 						asset_info: runtime_types::composable_traits::assets::AssetInfo<
 							::core::primitive::u128,
@@ -22407,8 +23366,7 @@ pub mod api {
 					#[doc = "If Some(MAX), than actually it forbids transfers."]
 					set_min_fee {
 						target_parachain_id: runtime_types::polkadot_parachain::primitives::Id,
-						foreign_asset_id:
-							runtime_types::composable_traits::xcm::assets::XcmAssetLocation,
+						foreign_asset_id: runtime_types::primitives::currency::ForeignAssetId,
 						amount: ::core::option::Option<::core::primitive::u128>,
 					},
 				}
@@ -22433,7 +23391,7 @@ pub mod api {
 					AssetRegistered {
 						asset_id: runtime_types::primitives::currency::CurrencyId,
 						location: ::core::option::Option<
-							runtime_types::composable_traits::xcm::assets::XcmAssetLocation,
+							runtime_types::primitives::currency::ForeignAssetId,
 						>,
 						asset_info: runtime_types::composable_traits::assets::AssetInfo<
 							::core::primitive::u128,
@@ -22449,13 +23407,12 @@ pub mod api {
 					#[codec(index = 2)]
 					AssetLocationUpdated {
 						asset_id: runtime_types::primitives::currency::CurrencyId,
-						location: runtime_types::composable_traits::xcm::assets::XcmAssetLocation,
+						location: runtime_types::primitives::currency::ForeignAssetId,
 					},
 					#[codec(index = 3)]
 					MinFeeUpdated {
 						target_parachain_id: runtime_types::polkadot_parachain::primitives::Id,
-						foreign_asset_id:
-							runtime_types::composable_traits::xcm::assets::XcmAssetLocation,
+						foreign_asset_id: runtime_types::primitives::currency::ForeignAssetId,
 						amount: ::core::option::Option<::core::primitive::u128>,
 					},
 				}
@@ -24523,8 +25480,6 @@ pub mod api {
 							runtime_types::picasso_runtime::ibc::MemoMessage,
 						>,
 					},
-					#[codec(index = 2)]
-					set_params { params: runtime_types::pallet_ibc::PalletParams },
 					#[codec(index = 3)]
 					#[doc = "We write the consensus & client state under these predefined paths so that"]
 					#[doc = "we can produce state proofs of the values to connected chains"]
@@ -24595,50 +25550,58 @@ pub mod api {
 					InvalidMessageType,
 					#[codec(index = 17)]
 					#[doc = "The interchain token transfer was not successfully initiated"]
-					TransferFailed,
+					TransferInternals,
 					#[codec(index = 18)]
+					TransferSerde,
+					#[codec(index = 19)]
+					TransferOther,
+					#[codec(index = 20)]
+					TransferProtocol,
+					#[codec(index = 21)]
+					TransferSend,
+					#[codec(index = 22)]
 					#[doc = "Error Decoding utf8 bytes"]
 					Utf8Error,
-					#[codec(index = 19)]
+					#[codec(index = 23)]
 					#[doc = "Invalid asset id"]
 					InvalidAssetId,
-					#[codec(index = 20)]
+					#[codec(index = 24)]
 					#[doc = "Invalid Ibc denom"]
-					InvalidIbcDenom,
-					#[codec(index = 21)]
+					PrefixedDenomParse,
+					#[codec(index = 25)]
 					#[doc = "Invalid amount"]
 					InvalidAmount,
-					#[codec(index = 22)]
+					#[codec(index = 26)]
 					#[doc = "Invalid timestamp"]
 					InvalidTimestamp,
-					#[codec(index = 23)]
+					#[codec(index = 27)]
 					#[doc = "Unable to get client revision number"]
 					FailedToGetRevisionNumber,
-					#[codec(index = 24)]
+					#[codec(index = 28)]
 					#[doc = "Invalid params passed"]
 					InvalidParams,
-					#[codec(index = 25)]
+					#[codec(index = 29)]
 					#[doc = "Error opening channel"]
 					ChannelInitError,
-					#[codec(index = 26)]
+					#[codec(index = 30)]
 					#[doc = "Latest height and timestamp for a client not found"]
 					TimestampAndHeightNotFound,
-					#[codec(index = 27)]
+					#[codec(index = 31)]
 					#[doc = "Failed to derive channel escrow address"]
 					ChannelEscrowAddress,
-					#[codec(index = 28)]
+					#[codec(index = 32)]
 					#[doc = "Error writing acknowledgement to storage"]
 					WriteAckError,
-					#[codec(index = 29)]
+					#[codec(index = 33)]
 					#[doc = "Client update time and height not found"]
 					ClientUpdateNotFound,
-					#[codec(index = 30)]
+					#[codec(index = 34)]
 					#[doc = "Error Freezing client"]
 					ClientFreezeFailed,
-					#[codec(index = 31)]
+					#[codec(index = 35)]
 					#[doc = "Access denied"]
 					AccessDenied,
-					#[codec(index = 32)]
+					#[codec(index = 36)]
 					RateLimiter,
 				}
 				#[derive(
@@ -24742,7 +25705,7 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct Any {
-				pub type_url: ::std::vec::Vec<::core::primitive::u8>,
+				pub type_url: ::std::string::String,
 				pub value: ::std::vec::Vec<::core::primitive::u8>,
 			}
 			#[derive(
@@ -24762,13 +25725,6 @@ pub mod api {
 				Id(_0),
 				#[codec(index = 1)]
 				Raw(::std::vec::Vec<::core::primitive::u8>),
-			}
-			#[derive(
-				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
-			)]
-			pub struct PalletParams {
-				pub send_enabled: ::core::primitive::bool,
-				pub receive_enabled: ::core::primitive::bool,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -25970,6 +26926,286 @@ pub mod api {
 			pub struct Timepoint<_0> {
 				pub height: _0,
 				pub index: _0,
+			}
+		}
+		pub mod pallet_oracle {
+			use super::runtime_types;
+			pub mod pallet {
+				use super::runtime_types;
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				pub struct AssetInfo<_0, _1, _2> {
+					pub threshold: _0,
+					pub min_answers: _1,
+					pub max_answers: _1,
+					pub block_interval: _1,
+					pub reward_weight: _2,
+					pub slash: _2,
+					pub emit_price_changes: ::core::primitive::bool,
+				}
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
+				pub enum Call {
+					#[codec(index = 0)]
+					#[doc = "Permissioned call to add an asset"]
+					#[doc = ""]
+					#[doc = "- `asset_id`: Id for the asset"]
+					#[doc = "- `threshold`: Percent close to mean to be rewarded"]
+					#[doc = "- `min_answers`: Min answers before aggregation"]
+					#[doc = "- `max_answers`: Max answers to aggregate"]
+					#[doc = "- `block_interval`: blocks until oracle triggered"]
+					#[doc = "- `reward`: reward amount for correct answer"]
+					#[doc = "- `slash`: slash amount for bad answer"]
+					#[doc = "- `emit_price_changes`: emit PriceChanged event when asset price changes"]
+					#[doc = ""]
+					#[doc = "Emits `DepositEvent` event when successful."]
+					add_asset_and_info {
+						asset_id: runtime_types::primitives::currency::CurrencyId,
+						threshold: runtime_types::sp_arithmetic::per_things::Percent,
+						min_answers: ::core::primitive::u32,
+						max_answers: ::core::primitive::u32,
+						block_interval: ::core::primitive::u32,
+						reward_weight: ::core::primitive::u128,
+						slash: ::core::primitive::u128,
+						emit_price_changes: ::core::primitive::bool,
+					},
+					#[codec(index = 1)]
+					#[doc = "Call for a signer to be set, called from controller, adds stake."]
+					#[doc = ""]
+					#[doc = "- `signer`: signer to tie controller to"]
+					#[doc = ""]
+					#[doc = "Emits `SignerSet` and `StakeAdded` events when successful."]
+					set_signer { signer: ::subxt::utils::AccountId32 },
+					#[codec(index = 2)]
+					#[doc = "Call to start rewarding Oracles."]
+					#[doc = "- `annual_cost_per_oracle`: Annual cost of an Oracle."]
+					#[doc = "- `num_ideal_oracles`: Number of ideal Oracles. This in fact should be higher than the"]
+					#[doc = "  actual ideal number so that the Oracles make a profit under ideal conditions."]
+					#[doc = ""]
+					#[doc = "Emits `RewardRateSet` event when successful."]
+					adjust_rewards {
+						annual_cost_per_oracle: ::core::primitive::u128,
+						num_ideal_oracles: ::core::primitive::u8,
+					},
+					#[codec(index = 3)]
+					#[doc = "call to add more stake from a controller"]
+					#[doc = ""]
+					#[doc = "- `stake`: amount to add to stake"]
+					#[doc = ""]
+					#[doc = "Emits `StakeAdded` event when successful."]
+					add_stake { stake: ::core::primitive::u128 },
+					#[codec(index = 4)]
+					#[doc = "Call to put in a claim to remove stake, called from controller"]
+					#[doc = ""]
+					#[doc = "Emits `StakeRemoved` event when successful."]
+					remove_stake,
+					#[codec(index = 5)]
+					#[doc = "Call to reclaim stake after proper time has passed, called from controller"]
+					#[doc = ""]
+					#[doc = "Emits `StakeReclaimed` event when successful."]
+					reclaim_stake,
+					#[codec(index = 6)]
+					#[doc = "Call to submit a price, gas is returned if extrinsic is successful."]
+					#[doc = "Should be called from offchain worker but can be called manually too."]
+					#[doc = ""]
+					#[doc = "This is an operational transaction."]
+					#[doc = ""]
+					#[doc = "- `price`: price to submit, normalized to 12 decimals"]
+					#[doc = "- `asset_id`: id for the asset"]
+					#[doc = ""]
+					#[doc = "Emits `PriceSubmitted` event when successful."]
+					submit_price {
+						price: ::core::primitive::u128,
+						asset_id: runtime_types::primitives::currency::CurrencyId,
+					},
+				}
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
+				pub enum Error {
+					#[codec(index = 0)]
+					#[doc = "Unknown"]
+					Unknown,
+					#[codec(index = 1)]
+					#[doc = "No Permission"]
+					NoPermission,
+					#[codec(index = 2)]
+					#[doc = "No stake for oracle"]
+					NoStake,
+					#[codec(index = 3)]
+					#[doc = "Stake is locked try again later"]
+					StakeLocked,
+					#[codec(index = 4)]
+					#[doc = "Not enough oracle stake for action"]
+					NotEnoughStake,
+					#[codec(index = 5)]
+					#[doc = "Not Enough Funds to complete action"]
+					NotEnoughFunds,
+					#[codec(index = 6)]
+					#[doc = "Invalid asset id"]
+					InvalidAssetId,
+					#[codec(index = 7)]
+					#[doc = "Price already submitted"]
+					AlreadySubmitted,
+					#[codec(index = 8)]
+					#[doc = "Max prices already reached"]
+					MaxPrices,
+					#[codec(index = 9)]
+					#[doc = "Price has not been requested"]
+					PriceNotRequested,
+					#[codec(index = 10)]
+					#[doc = "Signer has not been set"]
+					UnsetSigner,
+					#[codec(index = 11)]
+					#[doc = "Signer has already been set"]
+					AlreadySet,
+					#[codec(index = 12)]
+					#[doc = "No controller has been set"]
+					UnsetController,
+					#[codec(index = 13)]
+					#[doc = "This controller is already in use"]
+					ControllerUsed,
+					#[codec(index = 14)]
+					#[doc = "This signer is already in use"]
+					SignerUsed,
+					#[codec(index = 15)]
+					#[doc = "Error avoids a panic"]
+					AvoidPanic,
+					#[codec(index = 16)]
+					#[doc = "Max answers have been exceeded"]
+					ExceedMaxAnswers,
+					#[codec(index = 17)]
+					#[doc = "Invalid min answers"]
+					InvalidMinAnswers,
+					#[codec(index = 18)]
+					MaxAnswersLessThanMinAnswers,
+					#[codec(index = 19)]
+					#[doc = "Threshold exceeded"]
+					ExceedThreshold,
+					#[codec(index = 20)]
+					#[doc = "Asset count exceeded"]
+					ExceedAssetsCount,
+					#[codec(index = 21)]
+					#[doc = "Price not found"]
+					PriceNotFound,
+					#[codec(index = 22)]
+					#[doc = "Stake exceeded"]
+					ExceedStake,
+					#[codec(index = 23)]
+					#[doc = "Price weight must sum to 100"]
+					MustSumTo100,
+					#[codec(index = 24)]
+					#[doc = "Too many weighted averages requested"]
+					DepthTooLarge,
+					#[codec(index = 25)]
+					ArithmeticError,
+					#[codec(index = 26)]
+					#[doc = "Block interval is less then stale price"]
+					BlockIntervalLength,
+					#[codec(index = 27)]
+					#[doc = "There was an error transferring"]
+					TransferError,
+					#[codec(index = 28)]
+					MaxHistory,
+					#[codec(index = 29)]
+					MaxPrePrices,
+					#[codec(index = 30)]
+					#[doc = "Rewarding has not started"]
+					NoRewardTrackerSet,
+					#[codec(index = 31)]
+					#[doc = "Annual rewarding cost too high"]
+					AnnualRewardLessThanAlreadyRewarded,
+				}
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
+				pub enum Event {
+					#[codec(index = 0)]
+					#[doc = "Asset info created or changed. \\[asset_id, threshold, min_answers, max_answers,"]
+					#[doc = "block_interval, reward, slash\\]"]
+					AssetInfoChange(
+						runtime_types::primitives::currency::CurrencyId,
+						runtime_types::sp_arithmetic::per_things::Percent,
+						::core::primitive::u32,
+						::core::primitive::u32,
+						::core::primitive::u32,
+						::core::primitive::u128,
+						::core::primitive::u128,
+					),
+					#[codec(index = 1)]
+					#[doc = "Signer was set. \\[signer, controller\\]"]
+					SignerSet(::subxt::utils::AccountId32, ::subxt::utils::AccountId32),
+					#[codec(index = 2)]
+					#[doc = "Stake was added. \\[added_by, amount_added, total_amount\\]"]
+					StakeAdded(
+						::subxt::utils::AccountId32,
+						::core::primitive::u128,
+						::core::primitive::u128,
+					),
+					#[codec(index = 3)]
+					#[doc = "Stake removed. \\[removed_by, amount, block_number\\]"]
+					StakeRemoved(
+						::subxt::utils::AccountId32,
+						::core::primitive::u128,
+						::core::primitive::u32,
+					),
+					#[codec(index = 4)]
+					#[doc = "Stake reclaimed. \\[reclaimed_by, amount\\]"]
+					StakeReclaimed(::subxt::utils::AccountId32, ::core::primitive::u128),
+					#[codec(index = 5)]
+					#[doc = "Price submitted by oracle. \\[oracle_address, asset_id, price\\]"]
+					PriceSubmitted(
+						::subxt::utils::AccountId32,
+						runtime_types::primitives::currency::CurrencyId,
+						::core::primitive::u128,
+					),
+					#[codec(index = 6)]
+					#[doc = "Oracle slashed. \\[oracle_address, asset_id, amount\\]"]
+					UserSlashed(
+						::subxt::utils::AccountId32,
+						runtime_types::primitives::currency::CurrencyId,
+						::core::primitive::u128,
+					),
+					#[codec(index = 7)]
+					#[doc = "Oracle rewarded. \\[oracle_address, asset_id, price\\]"]
+					OracleRewarded(
+						::subxt::utils::AccountId32,
+						runtime_types::primitives::currency::CurrencyId,
+						::core::primitive::u128,
+					),
+					#[codec(index = 8)]
+					#[doc = "Rewarding Started \\[rewarding start timestamp]"]
+					RewardingAdjustment(::core::primitive::u64),
+					#[codec(index = 9)]
+					#[doc = "Answer from oracle removed for staleness. \\[oracle_address, price\\]"]
+					AnswerPruned(::subxt::utils::AccountId32, ::core::primitive::u128),
+					#[codec(index = 10)]
+					#[doc = "Price changed by oracle \\[asset_id, price\\]"]
+					PriceChanged(
+						runtime_types::primitives::currency::CurrencyId,
+						::core::primitive::u128,
+					),
+				}
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				pub struct PrePrice<_0, _1, _2> {
+					pub price: _0,
+					pub block: _1,
+					pub who: _2,
+				}
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				pub struct Withdraw<_0, _1> {
+					pub stake: _0,
+					pub unlock_block: _1,
+				}
 			}
 		}
 		pub mod pallet_pablo {
@@ -27356,7 +28592,7 @@ pub mod api {
 					claim {
 						asset: runtime_types::primitives::currency::CurrencyId,
 						vesting_schedule_ids:
-							runtime_types::composable_traits::vesting::VestingScheduleIdSet<
+							runtime_types::pallet_vesting::types::VestingScheduleIdSet<
 								::core::primitive::u128,
 							>,
 					},
@@ -27383,12 +28619,11 @@ pub mod api {
 							::core::primitive::u32,
 						>,
 						asset: runtime_types::primitives::currency::CurrencyId,
-						schedule_info:
-							runtime_types::composable_traits::vesting::VestingScheduleInfo<
-								::core::primitive::u32,
-								::core::primitive::u64,
-								::core::primitive::u128,
-							>,
+						schedule_info: runtime_types::pallet_vesting::types::VestingScheduleInfo<
+							::core::primitive::u32,
+							::core::primitive::u64,
+							::core::primitive::u128,
+						>,
 					},
 					#[codec(index = 2)]
 					#[doc = "Update vesting schedules"]
@@ -27407,7 +28642,7 @@ pub mod api {
 						>,
 						asset: runtime_types::primitives::currency::CurrencyId,
 						vesting_schedules: ::std::vec::Vec<
-							runtime_types::composable_traits::vesting::VestingScheduleInfo<
+							runtime_types::pallet_vesting::types::VestingScheduleInfo<
 								::core::primitive::u32,
 								::core::primitive::u64,
 								::core::primitive::u128,
@@ -27432,7 +28667,7 @@ pub mod api {
 						>,
 						asset: runtime_types::primitives::currency::CurrencyId,
 						vesting_schedule_ids:
-							runtime_types::composable_traits::vesting::VestingScheduleIdSet<
+							runtime_types::pallet_vesting::types::VestingScheduleIdSet<
 								::core::primitive::u128,
 							>,
 					},
@@ -27479,7 +28714,7 @@ pub mod api {
 						to: ::subxt::utils::AccountId32,
 						asset: runtime_types::primitives::currency::CurrencyId,
 						vesting_schedule_id: ::core::primitive::u128,
-						schedule: runtime_types::composable_traits::vesting::VestingSchedule<
+						schedule: runtime_types::pallet_vesting::types::VestingSchedule<
 							::core::primitive::u128,
 							::core::primitive::u32,
 							::core::primitive::u64,
@@ -27493,7 +28728,7 @@ pub mod api {
 						who: ::subxt::utils::AccountId32,
 						asset: runtime_types::primitives::currency::CurrencyId,
 						vesting_schedule_ids:
-							runtime_types::composable_traits::vesting::VestingScheduleIdSet<
+							runtime_types::pallet_vesting::types::VestingScheduleIdSet<
 								::core::primitive::u128,
 							>,
 						locked_amount: ::core::primitive::u128,
@@ -27506,6 +28741,51 @@ pub mod api {
 					#[codec(index = 2)]
 					#[doc = "Updated vesting schedules."]
 					VestingSchedulesUpdated { who: ::subxt::utils::AccountId32 },
+				}
+			}
+			pub mod types {
+				use super::runtime_types;
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				pub struct VestingSchedule<_0, _1, _2, _3> {
+					pub vesting_schedule_id: _0,
+					pub window: runtime_types::pallet_vesting::types::VestingWindow<_1, _2>,
+					pub period_count: _1,
+					#[codec(compact)]
+					pub per_period: _0,
+					pub already_claimed: _0,
+					#[codec(skip)]
+					pub __subxt_unused_type_params: ::core::marker::PhantomData<_3>,
+				}
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				pub enum VestingScheduleIdSet<_0> {
+					#[codec(index = 0)]
+					All,
+					#[codec(index = 1)]
+					One(_0),
+					#[codec(index = 2)]
+					Many(runtime_types::sp_core::bounded::bounded_vec::BoundedVec<_0>),
+				}
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				pub struct VestingScheduleInfo<_0, _1, _2> {
+					pub window: runtime_types::pallet_vesting::types::VestingWindow<_0, _1>,
+					pub period_count: _0,
+					#[codec(compact)]
+					pub per_period: _2,
+				}
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				pub enum VestingWindow<_0, _1> {
+					#[codec(index = 0)]
+					MomentBased { start: _1, period: _1 },
+					#[codec(index = 1)]
+					BlockNumberBased { start: _0, period: _0 },
 				}
 			}
 		}
@@ -28072,6 +29352,8 @@ pub mod api {
 				AssetsRegistry(runtime_types::pallet_assets_registry::pallet::Call),
 				#[codec(index = 60)]
 				Pablo(runtime_types::pallet_pablo::pallet::Call),
+				#[codec(index = 61)]
+				Oracle(runtime_types::pallet_oracle::pallet::Call),
 				#[codec(index = 100)]
 				CallFilter(runtime_types::pallet_call_filter::pallet::Call),
 				#[codec(index = 190)]
@@ -28153,6 +29435,8 @@ pub mod api {
 				AssetsRegistry(runtime_types::pallet_assets_registry::pallet::Event),
 				#[codec(index = 60)]
 				Pablo(runtime_types::pallet_pablo::pallet::Event),
+				#[codec(index = 61)]
+				Oracle(runtime_types::pallet_oracle::pallet::Event),
 				#[codec(index = 100)]
 				CallFilter(runtime_types::pallet_call_filter::pallet::Event),
 				#[codec(index = 190)]
@@ -28269,6 +29553,21 @@ pub mod api {
 					Debug,
 				)]
 				pub struct CurrencyId(pub ::core::primitive::u128);
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				pub enum ForeignAssetId {
+					#[codec(index = 0)]
+					Xcm(runtime_types::composable_traits::xcm::assets::XcmAssetLocation),
+					#[codec(index = 1)]
+					IbcIcs20(runtime_types::primitives::currency::PrefixedDenom),
+				}
+				#[derive(
+					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
+				)]
+				pub struct PrefixedDenom(
+					pub runtime_types::ibc::applications::transfer::denom::PrefixedDenom,
+				);
 			}
 		}
 		pub mod sp_arithmetic {
@@ -28292,6 +29591,13 @@ pub mod api {
 					Debug,
 				)]
 				pub struct Perbill(pub ::core::primitive::u32);
+				#[derive(
+					:: subxt :: ext :: codec :: CompactAs,
+					:: subxt :: ext :: codec :: Decode,
+					:: subxt :: ext :: codec :: Encode,
+					Debug,
+				)]
+				pub struct Percent(pub ::core::primitive::u8);
 				#[derive(
 					:: subxt :: ext :: codec :: CompactAs,
 					:: subxt :: ext :: codec :: Decode,
@@ -30318,6 +31624,9 @@ pub mod api {
 		pub fn pablo(&self) -> pablo::constants::ConstantsApi {
 			pablo::constants::ConstantsApi
 		}
+		pub fn oracle(&self) -> oracle::constants::ConstantsApi {
+			oracle::constants::ConstantsApi
+		}
 		pub fn call_filter(&self) -> call_filter::constants::ConstantsApi {
 			call_filter::constants::ConstantsApi
 		}
@@ -30451,6 +31760,9 @@ pub mod api {
 		pub fn pablo(&self) -> pablo::storage::StorageApi {
 			pablo::storage::StorageApi
 		}
+		pub fn oracle(&self) -> oracle::storage::StorageApi {
+			oracle::storage::StorageApi
+		}
 		pub fn call_filter(&self) -> call_filter::storage::StorageApi {
 			call_filter::storage::StorageApi
 		}
@@ -30582,6 +31894,9 @@ pub mod api {
 		pub fn pablo(&self) -> pablo::calls::TransactionApi {
 			pablo::calls::TransactionApi
 		}
+		pub fn oracle(&self) -> oracle::calls::TransactionApi {
+			oracle::calls::TransactionApi
+		}
 		pub fn call_filter(&self) -> call_filter::calls::TransactionApi {
 			call_filter::calls::TransactionApi
 		}
@@ -30596,9 +31911,9 @@ pub mod api {
 		let runtime_metadata_hash = client.metadata().metadata_hash(&PALLETS);
 		if runtime_metadata_hash !=
 			[
-				78u8, 202u8, 209u8, 224u8, 19u8, 127u8, 5u8, 14u8, 254u8, 174u8, 95u8, 169u8,
-				169u8, 214u8, 248u8, 181u8, 232u8, 121u8, 196u8, 108u8, 23u8, 42u8, 178u8, 118u8,
-				26u8, 200u8, 81u8, 170u8, 52u8, 65u8, 129u8, 214u8,
+				175u8, 170u8, 251u8, 183u8, 43u8, 129u8, 162u8, 175u8, 29u8, 100u8, 5u8, 43u8,
+				214u8, 167u8, 38u8, 34u8, 241u8, 157u8, 235u8, 194u8, 224u8, 197u8, 11u8, 39u8,
+				124u8, 204u8, 163u8, 38u8, 41u8, 127u8, 114u8, 230u8,
 			] {
 			Err(::subxt::error::MetadataError::IncompatibleMetadata)
 		} else {
