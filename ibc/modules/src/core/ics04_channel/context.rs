@@ -76,6 +76,8 @@ pub trait ChannelReader {
 		timeout_height: Height,
 		timeout_timestamp: Timestamp,
 	) -> PacketCommitment {
+		log::trace!(target: "pallet_ibc", "calc packet_commitment: packet_data={}, timeout_height={}, timeout_timestamp={}",
+			hex::encode(&packet_data), timeout_height, timeout_timestamp.nanoseconds());
 		let mut input = timeout_timestamp.nanoseconds().to_be_bytes().to_vec();
 		let revision_number = timeout_height.revision_number.to_be_bytes();
 		input.append(&mut revision_number.to_vec());

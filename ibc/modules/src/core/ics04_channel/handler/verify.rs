@@ -103,6 +103,7 @@ pub fn verify_packet_recv_proofs<Ctx: ReaderContext>(
 
 	let client_def = client_state.client_def();
 
+	log::trace!(target: "pallet_ibc", "(shit maybe) calc packet_commitment: seq={}" , packet.sequence);
 	let commitment =
 		ctx.packet_commitment(packet.data.clone(), packet.timeout_height, packet.timeout_timestamp);
 

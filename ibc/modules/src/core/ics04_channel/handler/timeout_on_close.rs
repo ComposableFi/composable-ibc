@@ -66,6 +66,7 @@ pub fn process<Ctx: ReaderContext>(
 		packet.sequence,
 	))?;
 
+	log::trace!(target: "pallet_ibc", "(shit) calc packet_commitment: seq={}" , packet.sequence);
 	let expected_commitment =
 		ctx.packet_commitment(packet.data.clone(), packet.timeout_height, packet.timeout_timestamp);
 	if packet_commitment != expected_commitment {

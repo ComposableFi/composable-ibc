@@ -103,6 +103,7 @@ pub fn send_packet<Ctx: ReaderContext>(
 
 	output.log("success: packet send ");
 
+	log::trace!(target: "pallet_ibc", "calc packet_commitment: seq={}" , packet.sequence);
 	let result = PacketResult::Send(SendPacketResult {
 		port_id: packet.source_port.clone(),
 		channel_id: packet.source_channel,

@@ -80,6 +80,7 @@ pub fn process<Ctx: ReaderContext>(
 		packet.sequence,
 	))?;
 
+	log::trace!(target: "pallet_ibc", "(shit) calc packet_commitment: seq={}" , packet.sequence);
 	if packet_commitment !=
 		ctx.packet_commitment(
 			packet.data.clone(),
@@ -181,6 +182,7 @@ mod tests {
 		.unwrap();
 		let packet = msg.packet.clone();
 
+		log::trace!(target: "pallet_ibc", "calc packet_commitment: seq={}" , packet.sequence);
 		let data = context.packet_commitment(
 			packet.data.clone(),
 			packet.timeout_height,
