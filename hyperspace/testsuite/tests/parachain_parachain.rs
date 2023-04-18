@@ -150,12 +150,13 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 		asset_id,
 	)
 	.await;
-	// Test sync abilities, run this before misbehaviour test
-	client_synchronization_test(&mut chain_a, &mut chain_b).await;
 
 	// channel closing semantics
 	ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id).await;
 	ibc_channel_close(&mut chain_a, &mut chain_b).await;
+
+	// Test sync abilities, run this before misbehaviour test
+	client_synchronization_test(&mut chain_a, &mut chain_b).await;
 
 	// misbehaviour
 	ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
