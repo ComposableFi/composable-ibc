@@ -93,9 +93,11 @@ pub struct ParachainClient<T: light_client_common::config::Config> {
 	/// Parachain Id
 	pub para_id: u32,
 	/// Light client id on counterparty chain
-	pub client_id: Option<ClientId>,
+	pub client_id: Arc<Mutex<Option<ClientId>>>,
 	/// Connection Id
-	pub connection_id: Option<ConnectionId>,
+	pub connection_id: Arc<Mutex<Option<ConnectionId>>>,
+	/// Channels cleared for packet relay
+	pub channel_whitelist: Arc<Mutex<Vec<(ChannelId, PortId)>>>,
 	/// ICS-23 provable store commitment prefix
 	pub commitment_prefix: Vec<u8>,
 	/// Public key for relayer on chain
@@ -108,8 +110,6 @@ pub struct ParachainClient<T: light_client_common::config::Config> {
 	pub ss58_version: Ss58AddressFormat,
 	/// the maximum extrinsic weight allowed by this client
 	pub max_extrinsic_weight: u64,
-	/// Channels cleared for packet relay
-	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 	/// Finality protocol to use, eg Beefy, Grandpa
 	pub finality_protocol: FinalityProtocol,
 	/// Used to determine whether client updates should be forced to send
@@ -247,9 +247,9 @@ where
 			para_client,
 			relay_client,
 			para_id: config.para_id,
-			client_id: config.client_id,
+			client_id: Arc::new(Mutex::new(config.client_id)),
 			commitment_prefix: config.commitment_prefix.0,
-			connection_id: config.connection_id,
+			connection_id: Arc::new(Mutex::new(config.connection_id)),
 			public_key,
 			key_store,
 			key_type_id,
@@ -257,7 +257,7 @@ where
 			para_ws_client,
 			relay_ws_client,
 			ss58_version: Ss58AddressFormat::from(config.ss58_version),
-			channel_whitelist: config.channel_whitelist,
+			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist)),
 			finality_protocol: config.finality_protocol,
 			maybe_has_undelivered_packets: Default::default(),
 		})
@@ -429,7 +429,12 @@ where
 	}
 
 	pub fn client_id(&self) -> ClientId {
-		self.client_id.as_ref().expect("Client Id should be defined").clone()
+		self.client_id
+			.lock()
+			.unwrap()
+			.as_ref()
+			.expect("Client Id should be defined")
+			.clone()
 	}
 }
 

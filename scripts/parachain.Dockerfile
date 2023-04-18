@@ -13,7 +13,9 @@ RUN cp -R ./proto/include/* ${BASE}/include/
 
 COPY . .
 
-RUN cargo build --release -p parachain-node
+RUN rustup target add wasm32-unknown-unknown
+RUN rustup +nightly target add wasm32-unknown-unknown
+RUN cargo build --release -p parachain-node --features=testing
 
 FROM phusion/baseimage:focal-1.2.0
 WORKDIR /node
@@ -25,7 +27,6 @@ COPY --from=build /code/target/release/parachain-node /usr/local/bin
 RUN apt update && \
     apt install -y ca-certificates && \
     update-ca-certificates && \
-    apt remove ca-certificates -y && \
     rm -rf /var/lib/apt/lists/*
 
 # check if executable works in this container

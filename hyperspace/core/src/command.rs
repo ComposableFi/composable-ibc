@@ -245,10 +245,12 @@ impl Cmd {
 		});
 
 		let order = Order::from_str(order).expect("Expected one of 'ordered' or 'unordered'");
+		let connection_id =
+			any_chain_a.connection_id().expect("Connection id should be defined").clone();
 		let (channel_id_a, channel_id_b) = create_channel(
-			&chain_a,
-			&chain_b,
-			chain_a.connection_id(),
+			&mut any_chain_a,
+			&mut any_chain_b,
+			connection_id,
 			port_id.clone(),
 			version,
 			order,

@@ -33,8 +33,8 @@ use tokio::task::JoinHandle;
 /// This will set up a connection and an ordered channel in-between the two chains with the provided
 /// port and channel version
 async fn setup_connection_and_channel<A, B>(
-	chain_a: &A,
-	chain_b: &B,
+	chain_a: &mut A,
+	chain_b: &mut B,
 	connection_delay: Duration,
 	port_id: PortId,
 	version: String,
@@ -110,19 +110,20 @@ where
 		}
 	}
 
-	let (connection_id, ..) = create_connection(chain_a, chain_b, connection_delay).await.unwrap();
+	let (connection_id_a, connection_id_b) =
+		create_connection(chain_a, chain_b, connection_delay).await.unwrap();
 
-	log::info!(target: "hyperspace", "============ Connection handshake completed: ConnectionId({connection_id}) ============");
+	log::info!(target: "hyperspace", "============ Connection handshake completed: ConnectionId({connection_id_a}), ConnectionId({connection_id_b}) ============");
 	log::info!(target: "hyperspace", "=========================== Starting channel handshake ===========================");
 
 	let (channel_id_a, channel_id_b) =
-		create_channel(chain_a, chain_b, connection_id.clone(), port_id, version, Order::Ordered)
+		create_channel(chain_a, chain_b, connection_id_a.clone(), port_id, version, Order::Ordered)
 			.await
 			.unwrap();
 	// channel handshake completed
 	log::info!(target: "hyperspace", "============ Channel handshake completed: ChannelId({channel_id_a}) ============");
 
-	(handle, channel_id_a, channel_id_b, connection_id)
+	(handle, channel_id_a, channel_id_b, connection_id_a)
 }
 
 /// Send a ordered packets and assert acknowledgement

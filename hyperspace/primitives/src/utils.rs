@@ -64,8 +64,8 @@ pub async fn timeout_after<C: TestProvider, T: Future + Send + 'static>(
 }
 
 pub async fn create_clients(
-	chain_a: &impl Chain,
-	chain_b: &impl Chain,
+	chain_a: &mut impl Chain,
+	chain_b: &mut impl Chain,
 ) -> Result<(ClientId, ClientId), anyhow::Error> {
 	let (client_state_a, cs_state_a) = chain_a.initialize_client_state().await?;
 	let (client_state_b, cs_state_b) = chain_b.initialize_client_state().await?;
@@ -80,6 +80,7 @@ pub async fn create_clients(
 
 	let tx_id = chain_a.submit(vec![msg]).await?;
 	let client_id_b_on_a = chain_a.query_client_id_from_tx_hash(tx_id).await?;
+	chain_a.set_client_id(client_id_b_on_a.clone());
 
 	let msg = MsgCreateAnyClient::<LocalClientTypes> {
 		client_state: client_state_a,
@@ -91,6 +92,7 @@ pub async fn create_clients(
 
 	let tx_id = chain_b.submit(vec![msg]).await?;
 	let client_id_a_on_b = chain_b.query_client_id_from_tx_hash(tx_id).await?;
+	chain_a.set_client_id(client_id_b_on_a.clone());
 
 	Ok((client_id_a_on_b, client_id_b_on_a))
 }
@@ -98,8 +100,8 @@ pub async fn create_clients(
 /// Completes the connection handshake process
 /// The relayer process must be running before this function is executed
 pub async fn create_connection(
-	chain_a: &impl Chain,
-	chain_b: &impl Chain,
+	chain_a: &mut impl Chain,
+	chain_b: &mut impl Chain,
 	delay_period: Duration,
 ) -> Result<(ConnectionId, ConnectionId), anyhow::Error> {
 	let msg = MsgConnectionOpenInit {
@@ -112,7 +114,12 @@ pub async fn create_connection(
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
 
-	chain_a.submit(vec![msg]).await?;
+	let tx_id = chain_a.submit(vec![msg]).await?;
+	#[cfg(feature = "testing")]
+	{
+		let connection_id_a = chain_a.query_connection_id_from_tx_hash(tx_id).await?;
+		chain_a.set_connection_id(connection_id_a.clone());
+	}
 
 	log::info!(target: "hyperspace", "============= Wait till both chains have completed connection handshake =============");
 
@@ -148,8 +155,8 @@ pub async fn create_connection(
 /// Completes the chanel handshake process
 /// The relayer process must be running before this function is executed
 pub async fn create_channel(
-	chain_a: &impl Chain,
-	chain_b: &impl Chain,
+	chain_a: &mut impl Chain,
+	chain_b: &mut impl Chain,
 	connection_id: ConnectionId,
 	port_id: PortId,
 	version: String,
@@ -167,7 +174,12 @@ pub async fn create_channel(
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
 
-	chain_a.submit(vec![msg]).await?;
+	let tx_id = chain_a.submit(vec![msg]).await?;
+	#[cfg(feature = "testing")]
+	{
+		let channel_id_a = chain_a.query_channel_id_from_tx_hash(tx_id).await?;
+		chain_a.add_channel_to_whitelist(channel_id_a);
+	}
 
 	log::info!(target: "hyperspace", "============= Wait till both chains have completed channel handshake =============");
 

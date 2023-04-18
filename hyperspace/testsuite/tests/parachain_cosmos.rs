@@ -100,12 +100,13 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		gas_limit: (i64::MAX - 1) as u64,
 		store_prefix: args.connection_prefix_b,
 		max_tx_size: 200000,
-		keybase: ConfigKeyEntry {
+		keybase: hyperspace_cosmos::client::KeyBaseConfig::ConfigKeyEntry (
+			ConfigKeyEntry {
 			public_key: "spub4W7TSjsuqcUE17mSB2ajhZsbwkefsHWKsXCbERimu3z2QLN9EFgqqpppiBn4tTNPFoNVTo1b3BgCZAaFJuUgTZeFhzJjUHkK8X7kSC5c7yn".to_string(),
 			private_key: "sprv8H873EM21Euvndgy513jLRvsPipBTpnUWJGzS3KALiT3XY2zgiNbJ2WLrvPzRhg7GuAoujHd5d6cpBe887vTbJghja8kmRdkHoNgamx6WWr".to_string(),
 			account: "cosmos1nnypkcfrvu3e9dhzeggpn4kh622l4cq7wwwrn0".to_string(),
 			address: vec![156, 200, 27, 97, 35, 103, 35, 146, 182, 226, 202, 16, 25, 214, 215, 210, 149, 250, 224, 30],
-		},
+		}),
 		wasm_code_id: None,
 		channel_whitelist: vec![],
 	};
@@ -156,7 +157,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		return (chain_a_wrapped, chain_b_wrapped)
 	}
 
-	let (client_b, client_a) = create_clients(&chain_b_wrapped, &chain_a_wrapped).await.unwrap();
+	let (client_b, client_a) =
+		create_clients(&mut chain_b_wrapped, &mut chain_a_wrapped).await.unwrap();
 	chain_a_wrapped.set_client_id(client_a);
 	chain_b_wrapped.set_client_id(client_b);
 	(chain_a_wrapped, chain_b_wrapped)
