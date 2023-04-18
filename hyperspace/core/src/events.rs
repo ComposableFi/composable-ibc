@@ -35,6 +35,7 @@ use ibc::{
 			},
 		},
 		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
+		ics24_host::identifier::ConnectionId,
 	},
 	events::{IbcEvent, IbcEventType},
 	proofs::{ConsensusProof, Proofs},
@@ -44,6 +45,7 @@ use ibc::{
 use ibc_proto::google::protobuf::Any;
 use pallet_ibc::light_clients::AnyClientState;
 use primitives::{error::Error, mock::LocalClientTypes, Chain};
+use std::str::FromStr;
 use tendermint_proto::Protobuf;
 
 /// Connection proof type
@@ -289,13 +291,30 @@ pub async fn parse_events(
 						})?)
 						.expect("Channel end decoding should not fail");
 					let counterparty = channel_end.counterparty();
+
+					let connection_response = source
+						.query_connection_end(open_init.height(), open_init.connection_id.clone())
+						.await?;
+					let connection_end = connection_response.connection.ok_or_else(|| {
+						Error::Custom(format!(
+							"[get_messages_for_events - open_chan_init] Connection end not found for {:?}",
+							open_init.connection_id.clone()
+						))
+					})?;
+					let counterparty_connection = connection_end.counterparty.ok_or_else(|| {
+						Error::Custom(format!(
+							"[get_messages_for_events - open_chan_init] Connection counterparty not found for {:?}",
+							open_init.connection_id.clone()
+						))
+					})?;
+
 					// Construct the channel end as we expect it to be constructed on the
 					// receiving chain
 					let channel = ChannelEnd::new(
 						State::TryOpen,
 						channel_end.ordering,
 						ChannelCounterparty::new(open_init.port_id, Some(channel_id)),
-						channel_end.connection_hops.clone(),
+						vec![ConnectionId::from_str(&counterparty_connection.connection_id)?],
 						channel_end.version.clone(),
 					);
 
@@ -485,8 +504,8 @@ pub async fn parse_events(
 				log::debug!(target: "hyperspace", "Sending packet {:?}", packet);
 			},
 			IbcEvent::WriteAcknowledgement(write_ack) => {
-				let port_id = &write_ack.packet.source_port.clone();
-				let channel_id = &write_ack.packet.source_channel.clone();
+				let port_id = &write_ack.packet.destination_port.clone();
+				let channel_id = &write_ack.packet.destination_channel.clone();
 				let channel_response = source
 					.query_channel_end(write_ack.height, channel_id.clone(), port_id.clone())
 					.await?;

@@ -113,6 +113,7 @@ pub trait RuntimeTransactions {
 	) -> StaticTxPayload<Self::Transfer>;
 	fn sudo_sudo(call: Self::ParaRuntimeCall) -> StaticTxPayload<Self::Sudo>;
 	fn ibc_ping_send_ping(params: Self::SendPingParams) -> StaticTxPayload<Self::SendPing>;
+	fn ibc_increase_counters() -> Self::ParaRuntimeCall;
 }
 
 pub trait BeefyAuthoritySetT {
@@ -185,7 +186,7 @@ pub trait Config: subxt::Config + Sized {
 	/// Tip
 	type Tip: Default + From<u128> + Send;
 	/// Runtime call
-	type ParaRuntimeCall: RuntimeCall + Decode;
+	type ParaRuntimeCall: RuntimeCall + Decode + Send;
 	/// Parachain runtime event
 	type ParaRuntimeEvent;
 	/// Parachain events. Used for subscriptions

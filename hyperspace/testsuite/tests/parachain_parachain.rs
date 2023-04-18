@@ -17,7 +17,7 @@ use hyperspace_core::{logging, substrate::DefaultConfig};
 use hyperspace_parachain::{
 	finality_protocol::FinalityProtocol, ParachainClient, ParachainClientConfig,
 };
-use hyperspace_primitives::{utils::create_clients, IbcProvider};
+use hyperspace_primitives::{utils::create_clients, IbcProvider, TestProvider};
 use hyperspace_testsuite::{
 	client_synchronization_test, ibc_channel_close,
 	ibc_messaging_packet_height_timeout_with_connection_delay,
@@ -107,16 +107,20 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 		.await;
 	log::info!(target: "hyperspace", "Parachains have started block production");
 
+	// We need to make difference between the chains' counters to ensure that
+	// proper values are used for source/sink client, connection, channel (etc.) ids.
+	chain_a.increase_counters().await.unwrap();
+
 	let clients_on_a = chain_a.query_clients().await.unwrap();
 	let clients_on_b = chain_b.query_clients().await.unwrap();
 
-	if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
-		chain_a.set_client_id(clients_on_b[0].clone());
-		chain_b.set_client_id(clients_on_b[0].clone());
-		return (chain_a, chain_b)
-	}
+	let (client_a, client_b) = if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
+		(clients_on_b[0].clone(), clients_on_b[0].clone())
+	} else {
+		create_clients(&mut chain_a, &mut chain_b).await.unwrap()
+	};
 
-	let (client_a, client_b) = create_clients(&chain_a, &chain_b).await.unwrap();
+	log::info!(target: "hyperspace_parachain", "Client IDs: {client_a}, {client_b}");
 	chain_a.set_client_id(client_a);
 	chain_b.set_client_id(client_b);
 	(chain_a, chain_b)
@@ -148,7 +152,7 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 	ibc_channel_close(&mut chain_a, &mut chain_b).await;
 
 	// Test sync abilities, run this before misbehaviour test
-	client_synchronization_test(&chain_a, &chain_b).await;
+	client_synchronization_test(&mut chain_a, &mut chain_b).await;
 
 	// misbehaviour
 	ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;

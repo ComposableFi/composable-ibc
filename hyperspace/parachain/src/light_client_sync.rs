@@ -29,7 +29,7 @@ use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState};
 use primitives::{mock::LocalClientTypes, Chain, KeyProvider, LightClientSync};
 
 use super::{error::Error, ParachainClient};
-use crate::finality_protocol::FinalityProtocol;
+use crate::finality_protocol::{filter_events_by_ids, FinalityProtocol};
 
 #[async_trait::async_trait]
 impl<T: light_client_common::config::Config + Send + Sync> LightClientSync for ParachainClient<T>
@@ -49,6 +49,7 @@ where
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
+	<T as light_client_common::config::Config>::AssetId: Clone,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
@@ -121,6 +122,7 @@ where
 				let latest_finalized_height = u32::from(finalized_head.number());
 				let (mut messages, mut events, previous_para_height, previous_finalized_height) =
 					self.query_missed_grandpa_updates(
+						counterparty,
 						client_state.latest_para_height,
 						client_state.latest_relay_height,
 						latest_finalized_height,
@@ -128,18 +130,6 @@ where
 						counterparty.account_id(),
 					)
 					.await?;
-				let (latest_message, evs, ..) = get_message(
-					prover,
-					previous_para_height,
-					previous_finalized_height,
-					latest_finalized_height,
-					self.client_id(),
-					counterparty.account_id(),
-					&self.name,
-				)
-				.await?;
-				messages.push(latest_message);
-				events.extend(evs);
 				(messages, events)
 			},
 			// Current implementation of Beefy needs to be revised
@@ -171,12 +161,24 @@ where
 	/// in the list and latest parachain block finalized by the last message in the list
 	pub async fn query_missed_grandpa_updates(
 		&self,
+		counterparty: &impl Chain,
 		mut previous_finalized_para_height: u32,
 		mut previous_finalized_height: u32,
 		latest_finalized_height: u32,
 		client_id: ClientId,
 		signer: Signer,
-	) -> Result<(Vec<Any>, Vec<IbcEvent>, u32, u32), anyhow::Error> {
+	) -> Result<(Vec<Any>, Vec<IbcEvent>, u32, u32), anyhow::Error>
+	where
+		<<T as subxt::Config>::ExtrinsicParams as ExtrinsicParams<
+			<T as subxt::Config>::Index,
+			<T as subxt::Config>::Hash,
+		>>::OtherParams: Sync
+			+ Send
+			+ From<BaseExtrinsicParamsBuilder<T, <T as light_client_common::config::Config>::Tip>>,
+		<T as subxt::Config>::Hash: From<H256>,
+		<T as subxt::Config>::Hash: From<[u8; 32]>,
+		<T as light_client_common::config::Config>::AssetId: Clone,
+	{
 		let prover = self.grandpa_prover();
 		let session_length = prover.session_length().await?;
 		let mut session_end_block = {
@@ -194,7 +196,9 @@ where
 		let mut events = vec![];
 		while session_end_block < latest_finalized_height {
 			let (msg, evs, previous_para_height, ..) = get_message(
-				self.grandpa_prover(),
+				self,
+				counterparty,
+				&prover,
 				previous_finalized_para_height,
 				previous_finalized_height,
 				session_end_block,
@@ -214,8 +218,10 @@ where
 }
 
 /// Return a single client update message
-async fn get_message<T: light_client_common::config::Config>(
-	prover: GrandpaProver<T>,
+async fn get_message<T: light_client_common::config::Config + Send + Sync>(
+	source: &impl Chain,
+	counterparty: &impl Chain,
+	prover: &GrandpaProver<T>,
 	previous_finalized_para_height: u32,
 	previous_finalized_height: u32,
 	latest_finalized_height: u32,
@@ -279,7 +285,23 @@ where
 		headers_with_events.insert(finalized_para_header.number());
 	}
 
-	let events: Vec<IbcEvent> = events.into_values().flatten().collect();
+	let events: Vec<IbcEvent> = events
+		.into_values()
+		.flatten()
+		.filter(|e| {
+			let mut channel_and_port_ids = source.channel_whitelist();
+			channel_and_port_ids.extend(counterparty.channel_whitelist());
+			filter_events_by_ids(
+				e,
+				&[source.client_id(), counterparty.client_id()],
+				&[source.connection_id(), counterparty.connection_id()]
+					.into_iter()
+					.flatten()
+					.collect::<Vec<_>>(),
+				&channel_and_port_ids,
+			)
+		})
+		.collect();
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
 		.query_finalized_parachain_headers_with_proof::<T::Header>(
 			previous_finalized_height,

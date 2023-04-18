@@ -4,7 +4,7 @@ use core::pin::Pin;
 use futures::{Stream, StreamExt};
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
-	core::ics24_host::identifier::{ChannelId, PortId},
+	core::ics24_host::identifier::ChannelId,
 	tx_msg::Msg,
 };
 use primitives::TestProvider;
@@ -58,8 +58,7 @@ where
 		Box::pin(stream)
 	}
 
-	/// Set the channel whitelist for the relayer task.
-	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
-		self.channel_whitelist = channel_whitelist;
+	async fn increase_counters(&mut self) -> Result<(), Self::Error> {
+		unimplemented!()
 	}
 }

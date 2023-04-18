@@ -115,11 +115,11 @@ impl Cmd {
 		let file_content = tokio::fs::read_to_string(path).await?;
 		let mut config: Config = toml::from_str(&file_content)?;
 
-		let any_chain_a = config.chain_a.clone().into_client().await?;
-		let any_chain_b = config.chain_b.clone().into_client().await?;
+		let mut any_chain_a = config.chain_a.clone().into_client().await?;
+		let mut any_chain_b = config.chain_b.clone().into_client().await?;
 
 		let (client_id_a_on_b, client_id_b_on_a) =
-			create_clients(&any_chain_a, &any_chain_b).await?;
+			create_clients(&mut any_chain_a, &mut any_chain_b).await?;
 		log::info!(
 			"ClientId for Chain {} on Chain {}: {}",
 			any_chain_b.name(),
@@ -146,8 +146,8 @@ impl Cmd {
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
 		let mut config: Config = toml::from_str(&file_content)?;
-		let any_chain_a = config.chain_a.clone().into_client().await?;
-		let any_chain_b = config.chain_b.clone().into_client().await?;
+		let mut any_chain_a = config.chain_a.clone().into_client().await?;
+		let mut any_chain_b = config.chain_b.clone().into_client().await?;
 
 		let any_chain_a_clone = any_chain_a.clone();
 		let any_chain_b_clone = any_chain_b.clone();
@@ -158,7 +158,7 @@ impl Cmd {
 		});
 
 		let (connection_id_a, connection_id_b) =
-			create_connection(&any_chain_a, &any_chain_b, delay).await?;
+			create_connection(&mut any_chain_a, &mut any_chain_b, delay).await?;
 		log::info!("ConnectionId on Chain {}: {}", any_chain_a.name(), connection_id_a);
 		log::info!("ConnectionId on Chain {}: {}", any_chain_b.name(), connection_id_b);
 		handle.abort();
@@ -186,8 +186,8 @@ impl Cmd {
 		let path: PathBuf = self.config.parse()?;
 		let file_content = tokio::fs::read_to_string(path).await?;
 		let mut config: Config = toml::from_str(&file_content)?;
-		let any_chain_a = config.chain_a.clone().into_client().await?;
-		let any_chain_b = config.chain_b.clone().into_client().await?;
+		let mut any_chain_a = config.chain_a.clone().into_client().await?;
+		let mut any_chain_b = config.chain_b.clone().into_client().await?;
 
 		let any_chain_a_clone = any_chain_a.clone();
 		let any_chain_b_clone = any_chain_b.clone();
@@ -198,10 +198,12 @@ impl Cmd {
 		});
 
 		let order = Order::from_str(order).expect("Expected one of 'ordered' or 'unordered'");
+		let connection_id =
+			any_chain_a.connection_id().expect("Connection id should be defined").clone();
 		let (channel_id_a, channel_id_b) = create_channel(
-			&any_chain_a,
-			&any_chain_b,
-			any_chain_a.connection_id(),
+			&mut any_chain_a,
+			&mut any_chain_b,
+			connection_id,
 			port_id.clone(),
 			version,
 			order,

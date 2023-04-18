@@ -32,9 +32,9 @@ use sp_core::{crypto::AccountId32, H256};
 use subxt::{
 	config::{
 		extrinsic_params::Era,
-		polkadot::{
-			PlainTip as Tip, PolkadotExtrinsicParams as ParachainExtrinsicParams,
-			PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
+		substrate::{
+			AssetTip as Tip, SubstrateExtrinsicParams as ParachainExtrinsicParams,
+			SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
 		},
 		ExtrinsicParams,
 	},
@@ -163,7 +163,8 @@ define_runtime_transactions!(
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, CurrencyId(y), z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),
-	|_: DummySendPingParamsWrapper<FakeSendPingParams>| unimplemented("ping is not implemented")
+	|_: DummySendPingParamsWrapper<FakeSendPingParams>| unimplemented("ping is not implemented"),
+	|| unimplemented("ibc_increase_counters is not implemented")
 );
 
 define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);

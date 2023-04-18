@@ -50,8 +50,16 @@ pub async fn query_ready_and_timed_out_packets(
 	let channel_whitelist = source.channel_whitelist();
 
 	for (channel_id, port_id) in channel_whitelist {
-		let source_channel_response =
-			source.query_channel_end(source_height, channel_id, port_id.clone()).await?;
+		let source_channel_response = match source
+			.query_channel_end(source_height, channel_id, port_id.clone())
+			.await
+		{
+			Ok(response) => response,
+			Err(e) => {
+				log::warn!(target: "hyperspace", "Failed to query channel end for {:?}/{:?}: {:?}", channel_id, port_id.clone(), e);
+				continue
+			},
+		};
 		let source_channel_end =
 			ChannelEnd::try_from(source_channel_response.channel.ok_or_else(|| {
 				Error::Custom(format!(
@@ -156,6 +164,8 @@ pub async fn query_ready_and_timed_out_packets(
 		)
 		.await?;
 
+		log::trace!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?}", seqs.len(), channel_id, port_id.clone());
+
 		let send_packets = source.query_send_packets(channel_id, port_id.clone(), seqs).await?;
 		for send_packet in send_packets {
 			let packet = packet_info_to_packet(&send_packet);
@@ -212,6 +222,8 @@ pub async fn query_ready_and_timed_out_packets(
 				.await?;
 				timeout_messages.push(msg);
 				continue
+			} else {
+				log::trace!(target: "hyperspace", "Skipping packet as it has not timed out: {:?}", packet);
 			}
 
 			// If packet has not timed out but channel is closed on sink we skip

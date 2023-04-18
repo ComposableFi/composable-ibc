@@ -149,7 +149,9 @@ std = [
 	"simnode-apis/std",
 	"frame-benchmarking/std",
 ]
-
+testing = [
+	"pallet-ibc/testing"
+]
 runtime-benchmarks = [
 	"hex-literal",
 	"frame-benchmarking/runtime-benchmarks",

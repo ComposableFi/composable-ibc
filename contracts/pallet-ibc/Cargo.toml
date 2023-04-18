@@ -97,6 +97,7 @@ features = ["mocks"]
 
 [features]
 default = ["std"]
+testing = []
 std = [
   "codec/std",
   "log/std",

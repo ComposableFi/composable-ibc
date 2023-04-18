@@ -121,7 +121,12 @@ define_runtime_transactions!(
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, y, z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),
-	|x| parachain_subxt::api::tx().ibc_ping().send_ping(x)
+	|x| parachain_subxt::api::tx().ibc_ping().send_ping(x),
+	|| DefaultParaRuntimeCall(
+		parachain_subxt::api::runtime_types::parachain_runtime::RuntimeCall::Ibc(
+			parachain_subxt::api::runtime_types::pallet_ibc::pallet::Call::increase_counters {}
+		)
+	)
 );
 
 define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);

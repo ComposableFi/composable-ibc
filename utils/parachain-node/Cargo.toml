@@ -93,3 +93,6 @@ runtime-benchmarks = [
 	"polkadot-cli/runtime-benchmarks"
 ]
 try-runtime = ["parachain-runtime/try-runtime", "try-runtime-cli"]
+testing = [
+	"parachain-runtime/testing",
+]

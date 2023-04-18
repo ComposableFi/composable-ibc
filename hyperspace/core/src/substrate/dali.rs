@@ -115,7 +115,8 @@ define_runtime_transactions!(
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, CurrencyId(y), z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),
-	|x| parachain_subxt::api::tx().ibc_ping().send_ping(x)
+	|x| parachain_subxt::api::tx().ibc_ping().send_ping(x),
+	|| super::unimplemented("ibc_increase_counters is not implemented")
 );
 
 define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);
