@@ -21,7 +21,6 @@ use crate::{
 	handler::{HandlerOutput, HandlerOutputBuilder},
 	prelude::*,
 };
-use tracing::log;
 
 /// This function handles the transfer sending logic.
 /// If this method returns an error, the runtime is expected to rollback all state modifications to

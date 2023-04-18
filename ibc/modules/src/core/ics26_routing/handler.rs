@@ -40,7 +40,6 @@ use crate::{
 };
 use core::fmt::Debug;
 use ibc_proto::google::protobuf::Any;
-use tracing::log;
 
 /// Result of message execution - comprises of events emitted and logs entries created during the
 /// execution of a transaction message.
