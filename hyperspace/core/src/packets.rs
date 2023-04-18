@@ -164,6 +164,8 @@ pub async fn query_ready_and_timed_out_packets(
 		)
 		.await?;
 
+		log::trace!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?}", seqs.len(), channel_id, port_id.clone());
+
 		let send_packets = source.query_send_packets(channel_id, port_id.clone(), seqs).await?;
 		for send_packet in send_packets {
 			let packet = packet_info_to_packet(&send_packet);
@@ -220,6 +222,8 @@ pub async fn query_ready_and_timed_out_packets(
 				.await?;
 				timeout_messages.push(msg);
 				continue
+			} else {
+				log::trace!(target: "hyperspace", "Skipping packet as it has not timed out: {:?}", packet);
 			}
 
 			// If packet has not timed out but channel is closed on sink we skip
