@@ -234,8 +234,8 @@ pub async fn query_ready_and_timed_out_packets(
 						.await?;
 					return Ok(Some(Left(msg)))
 				} else {
-				log::trace!(target: "hyperspace", "Skipping packet as it has not timed out: {:?}", packet);
-			}
+					log::trace!(target: "hyperspace", "Skipping packet as it has not timed out: {:?}", packet);
+				}
 
 				// If packet has not timed out but channel is closed on sink we skip
 				// Since we have no reference point for when this channel was closed so we can't

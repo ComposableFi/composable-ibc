@@ -21,6 +21,7 @@ jobs:
       image: ubuntu:jammy
       env:
         BUILD_DIR: /home/ghr/_work/_temp
+        RUST_LOG: hyperspace=trace,hyperspace_parachain=trace
       volumes:
         - /home/ghr/_work/_temp:/home/ghr/_work/_temp
     runs-on:
