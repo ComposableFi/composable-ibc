@@ -584,7 +584,7 @@ where
 	}
 
 	fn channel_whitelist(&self) -> Vec<(ChannelId, PortId)> {
-		self.channel_whitelist.clone()
+		self.channel_whitelist.lock().unwrap().clone()
 	}
 
 	async fn query_connection_channels(
@@ -828,24 +828,24 @@ where
 	}
 
 	fn set_client_id(&mut self, client_id: ClientId) {
-		self.client_id = Some(client_id);
+		*self.client_id.lock().unwrap() = Some(client_id);
 	}
 
 	fn connection_id(&self) -> Option<ConnectionId> {
-		self.connection_id.clone()
+		self.connection_id.lock().unwrap().clone()
 	}
 
 	/// Set the channel whitelist for the relayer task.
 	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
-		self.channel_whitelist = channel_whitelist;
+		*self.channel_whitelist.lock().unwrap() = channel_whitelist;
 	}
 
 	fn add_channel_to_whitelist(&mut self, channel: (ChannelId, PortId)) {
-		self.channel_whitelist.push(channel);
+		self.channel_whitelist.lock().unwrap().push(channel);
 	}
 
 	fn set_connection_id(&mut self, connection_id: ConnectionId) {
-		self.connection_id = Some(connection_id);
+		*self.connection_id.lock().unwrap() = Some(connection_id);
 	}
 
 	fn client_type(&self) -> ClientType {

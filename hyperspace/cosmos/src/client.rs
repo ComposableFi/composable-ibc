@@ -22,7 +22,10 @@ use ibc_proto::{
 	google::protobuf::Any,
 };
 use ripemd::Ripemd160;
-use std::{str::FromStr, sync::Arc};
+use std::{
+	str::FromStr,
+	sync::{Arc, Mutex},
+};
 
 use ics07_tendermint::{
 	client_message::Header, client_state::ClientState, consensus_state::ConsensusState,
@@ -130,9 +133,11 @@ pub struct CosmosClient<H> {
 	/// Chain Id
 	pub chain_id: ChainId,
 	/// Light client id on counterparty chain
-	pub client_id: Option<ClientId>,
+	pub client_id: Arc<Mutex<Option<ClientId>>>,
 	/// Connection Id
-	pub connection_id: Option<ConnectionId>,
+	pub connection_id: Arc<Mutex<Option<ConnectionId>>>,
+	/// Channels cleared for packet relay
+	pub channel_whitelist: Arc<Mutex<Vec<(ChannelId, PortId)>>>,
 	/// Light Client instance
 	pub light_client: LightClient,
 	/// The key that signs transactions
@@ -149,8 +154,6 @@ pub struct CosmosClient<H> {
 	pub gas_limit: u64,
 	/// Maximun transaction size
 	pub max_tx_size: usize,
-	/// Channels cleared for packet relay
-	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 	/// Finality protocol to use, eg Tenderminet
 	pub _phantom: std::marker::PhantomData<H>,
 	/// Mutex used to sequentially send transactions. This is necessary because
@@ -251,8 +254,9 @@ where
 			rpc_client,
 			grpc_url: config.grpc_url,
 			websocket_url: config.websocket_url,
-			client_id: config.client_id,
-			connection_id: config.connection_id,
+			client_id: Arc::new(Mutex::new(config.client_id)),
+			connection_id: Arc::new(Mutex::new(config.connection_id)),
+			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist)),
 			light_client,
 			account_prefix: config.account_prefix,
 			commitment_prefix,
@@ -261,20 +265,22 @@ where
 			gas_limit: config.gas_limit,
 			max_tx_size: config.max_tx_size,
 			keybase,
-			channel_whitelist: config.channel_whitelist,
 			_phantom: std::marker::PhantomData,
 			tx_mutex: Default::default(),
 		})
 	}
 
 	pub fn client_id(&self) -> ClientId {
-		self.client_id.clone().expect(
-			"Client id should be set after the client state is initialized and the client is created",
-		)
+		self.client_id
+			.lock()
+			.unwrap()
+			.as_ref()
+			.expect("Client Id should be defined")
+			.clone()
 	}
 
 	pub fn set_client_id(&mut self, client_id: ClientId) {
-		self.client_id = Some(client_id)
+		*self.client_id.lock().unwrap() = Some(client_id);
 	}
 
 	/// Construct a tendermint client state to be submitted to the counterparty chain
