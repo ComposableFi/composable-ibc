@@ -199,6 +199,7 @@ where
 		timeout_timestamp,
 		memo: "".to_string(),
 	};
+	// chain_a.query_seq_from_tx_hash();
 	chain_a.send_transfer(msg.clone()).await.expect("Failed to send transfer: ");
 	(amount, msg)
 }
@@ -672,7 +673,13 @@ where
 	// Wait for some sessions to pass while task is asleep, clients will go out of sync
 	tokio::time::sleep(Duration::from_secs(60 * 20)).await;
 	// if clients synced correctly then channel and connection setup should succeed
-	let (handle, ..) = setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(0)).await;
+	let client_a_clone = chain_a.clone();
+	let client_b_clone = chain_b.clone();
+	let handle = tokio::task::spawn(async move {
+		hyperspace_core::relay(client_a_clone, client_b_clone, None, None, None)
+			.await
+			.unwrap()
+	});
 	log::info!(target: "hyperspace", "🚀🚀 Clients were successfully synced");
 	handle.abort();
 }
