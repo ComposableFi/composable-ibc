@@ -309,6 +309,15 @@ pub async fn query_ready_and_timed_out_packets(
 			sink,
 		)
 		.await?;
+
+		while let Some(result) = timeout_packets_join_set.join_next().await {
+			let Some(either) = result?? else { continue };
+			match either {
+				Left(msg) => timeout_messages.push(msg),
+				Right(msg) => messages.push(msg),
+			}
+		}
+
 		// Get acknowledgement messages
 		if source_channel_end.state == State::Closed {
 			log::trace!(target: "hyperspace", "Skipping acknowledgements for channel {:?} as channel is closed on source", channel_id);
@@ -382,14 +391,6 @@ pub async fn query_ready_and_timed_out_packets(
 				// messages.push(msg)
 				Ok(Some(msg))
 			});
-		}
-
-		while let Some(result) = timeout_packets_join_set.join_next().await {
-			let Some(either) = result?? else { continue };
-			match either {
-				Left(msg) => timeout_messages.push(msg),
-				Right(msg) => messages.push(msg),
-			}
 		}
 
 		while let Some(result) = acknowledgements_join_set.join_next().await {
