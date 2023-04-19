@@ -4387,6 +4387,7 @@ dependencies = [
  "ibc-derive",
  "ibc-proto",
  "ics23",
+ "log",
  "modelator",
  "num-traits",
  "parity-scale-codec",
