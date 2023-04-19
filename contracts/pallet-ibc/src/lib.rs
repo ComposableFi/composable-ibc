@@ -363,6 +363,23 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// SendPackets info
+	pub type SendPackets<T: Config> =
+		StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<u8>, OptionQuery>;
+
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// RecvPackets info
+	pub type RecvPackets<T: Config> =
+		StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<u8>, OptionQuery>;
+
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// Acks info
+	pub type Acks<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<u8>, OptionQuery>;
+
 	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 	pub struct AssetConfig<AssetId> {
 		pub id: AssetId,

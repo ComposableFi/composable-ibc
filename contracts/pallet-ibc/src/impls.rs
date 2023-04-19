@@ -16,8 +16,8 @@ use crate::{
 	light_clients::AnyClientState,
 	routing,
 	routing::Context,
-	ChannelsConnection, Config, ConnectionClient, DenomToAssetId, Error, EscrowAddresses,
-	IbcAssets, Pallet, MODULE_ID,
+	Acks, ChannelsConnection, Config, ConnectionClient, DenomToAssetId, Error, EscrowAddresses,
+	IbcAssets, Pallet, RecvPackets, SendPackets, MODULE_ID,
 };
 use codec::{Decode, Encode};
 use frame_support::traits::{fungibles::Inspect, Currency};
@@ -64,7 +64,7 @@ use ibc_primitives::{
 	Timeout,
 };
 use scale_info::prelude::string::ToString;
-use sp_core::{crypto::AccountId32, offchain::StorageKind};
+use sp_core::crypto::AccountId32;
 use sp_runtime::{
 	offchain::storage::StorageValueRef,
 	traits::{Get, IdentifyAccount},
@@ -521,7 +521,7 @@ where
 		let seq = u64::from(key.2);
 
 		let key = Pallet::<T>::offchain_ack_key(channel_id, port_id, seq);
-		sp_io::offchain_index::set(&key, &ack);
+		Acks::<T>::insert(key.clone(), ack.clone());
 		log::trace!(target: "pallet_ibc", "in channel: [store_raw_acknowledgement] >> writing acknowledgement {:?} {:?}", key, ack);
 		Ok(())
 	}
@@ -555,7 +555,7 @@ where
 						port_id_bytes.clone(),
 						seq,
 					);
-					sp_io::offchain_index::clear(&offchain_key);
+					SendPackets::<T>::remove(offchain_key.clone());
 					send_seq_set.remove(&seq);
 					last_removed_send = seq
 				}
@@ -577,10 +577,8 @@ where
 						port_id_bytes.clone(),
 						seq,
 					);
-					if sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, &offchain_key)
-						.is_some()
-					{
-						sp_io::offchain_index::clear(&offchain_key);
+					if SendPackets::<T>::contains_key(offchain_key.clone()) {
+						SendPackets::<T>::remove(offchain_key.clone());
 						last_removed_send = seq;
 					}
 				} else {
@@ -614,8 +612,8 @@ where
 						port_id_bytes.clone(),
 						seq,
 					);
-					sp_io::offchain_index::clear(&offchain_key);
-					sp_io::offchain_index::clear(&ack_key);
+					RecvPackets::<T>::remove(offchain_key.clone());
+					Acks::<T>::remove(ack_key.clone());
 					recv_seq_set.remove(&seq);
 					last_removed_ack = seq;
 				}
@@ -642,11 +640,9 @@ where
 						port_id_bytes.clone(),
 						seq,
 					);
-					if sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, &offchain_key)
-						.is_some()
-					{
-						sp_io::offchain_index::clear(&offchain_key);
-						sp_io::offchain_index::clear(&ack_key);
+					if RecvPackets::<T>::contains_key(offchain_key.clone()) {
+						RecvPackets::<T>::remove(offchain_key.clone());
+						Acks::<T>::remove(ack_key.clone());
 						last_removed_ack = seq;
 					}
 				} else {
@@ -675,8 +671,7 @@ where
 			.filter_map(|seq| {
 				let key =
 					Pallet::<T>::offchain_send_packet_key(channel_id.clone(), port_id.clone(), seq);
-				sp_io::offchain::local_storage_get(sp_core::offchain::StorageKind::PERSISTENT, &key)
-					.and_then(|v| PacketInfo::decode(&mut &*v).ok())
+				SendPackets::<T>::get(key.clone()).and_then(|v| PacketInfo::decode(&mut &*v).ok())
 			})
 			.collect();
 		log::trace!(target: "pallet_ibc", "offchain_send_packets: {:?}, {:?}", sequences, packets);
@@ -696,15 +691,9 @@ where
 					Pallet::<T>::offchain_recv_packet_key(channel_id.clone(), port_id.clone(), seq);
 				let ack_key =
 					Pallet::<T>::offchain_ack_key(channel_id.clone(), port_id.clone(), seq);
-				let packet_info = sp_io::offchain::local_storage_get(
-					sp_core::offchain::StorageKind::PERSISTENT,
-					&key,
-				)
-				.and_then(|v| PacketInfo::decode(&mut &*v).ok());
-				let ack = sp_io::offchain::local_storage_get(
-					sp_core::offchain::StorageKind::PERSISTENT,
-					&ack_key,
-				);
+				let packet_info = RecvPackets::<T>::get(key.clone())
+					.and_then(|v| PacketInfo::decode(&mut &*v).ok());
+				let ack = Acks::<T>::get(ack_key.clone());
 				packet_info.map(|mut packet_info| {
 					packet_info.ack = ack;
 					packet_info
