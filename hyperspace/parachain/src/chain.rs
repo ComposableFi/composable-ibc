@@ -71,7 +71,8 @@ type BeefyJustification =
 struct JustificationNotification(sp_core::Bytes);
 
 #[async_trait::async_trait]
-impl<T: light_client_common::config::Config + Send + Sync> Chain for ParachainClient<T>
+impl<T: light_client_common::config::Config + Send + Sync + Clone + 'static> Chain
+	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	u32: From<<T as subxt::Config>::BlockNumber>,
@@ -406,6 +407,7 @@ where
 					);
 
 					trusted_finality_proof.unknown_headers.clear();
+					// TODO: parallelize this
 					for i in from_block..=to_block {
 						let unknown_header_hash =
 							self.relay_client.rpc().block_hash(Some(i.into())).await?.ok_or_else(

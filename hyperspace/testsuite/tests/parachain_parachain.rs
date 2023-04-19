@@ -25,6 +25,7 @@ use hyperspace_testsuite::{
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
 };
+use tokio::task::JoinSet;
 
 #[derive(Debug, Clone)]
 pub struct Args {
@@ -134,12 +135,15 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 
 	let asset_id = 1;
 
+	// let join_set = JoinSet::new();
+
 	// no timeouts + connection delay
 	ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b, asset_id, asset_id).await;
 
 	// timeouts + connection delay
 	ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b, asset_id)
 		.await;
+
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
 		&mut chain_a,
 		&mut chain_b,
