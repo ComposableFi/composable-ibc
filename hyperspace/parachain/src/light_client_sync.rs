@@ -31,6 +31,8 @@ use primitives::{mock::LocalClientTypes, Chain, KeyProvider, LightClientSync};
 use super::{error::Error, ParachainClient};
 use crate::finality_protocol::{filter_events_by_ids, FinalityProtocol};
 
+const MAX_HEADERS_PER_ITERATION: usize = 100;
+
 #[async_trait::async_trait]
 impl<T: light_client_common::config::Config + Send + Sync + Clone> LightClientSync
 	for ParachainClient<T>
@@ -107,7 +109,6 @@ where
 			.map_err(|_| Error::Custom("Failed to decode client state".to_string()))?;
 		let (messages, events) = match self.finality_protocol {
 			FinalityProtocol::Grandpa => {
-				let prover = self.grandpa_prover();
 				let client_state = match client_state {
 					AnyClientState::Grandpa(client_state) => client_state,
 					c => Err(Error::Custom(format!(
@@ -121,14 +122,15 @@ where
 						Error::Custom(format!("Expected finalized header, found None"))
 					})?;
 				let latest_finalized_height = u32::from(finalized_head.number());
-				let (mut messages, mut events, previous_para_height, previous_finalized_height) =
-					self.query_missed_grandpa_updates(
+				let (messages, events) = self
+					.query_missed_grandpa_updates(
 						counterparty,
 						client_state.latest_para_height,
 						client_state.latest_relay_height,
 						latest_finalized_height,
 						self.client_id(),
 						counterparty.account_id(),
+						MAX_HEADERS_PER_ITERATION,
 					)
 					.await?;
 				(messages, events)
@@ -168,7 +170,8 @@ where
 		latest_finalized_height: u32,
 		client_id: ClientId,
 		signer: Signer,
-	) -> Result<(Vec<Any>, Vec<IbcEvent>, u32, u32), anyhow::Error>
+		limit: usize,
+	) -> Result<(Vec<Any>, Vec<IbcEvent>), anyhow::Error>
 	where
 		<<T as subxt::Config>::ExtrinsicParams as ExtrinsicParams<
 			<T as subxt::Config>::Index,
@@ -195,7 +198,13 @@ where
 		// finalized height
 		let mut messages = vec![];
 		let mut events = vec![];
-		while session_end_block < latest_finalized_height {
+		let mut count = 0;
+		while session_end_block <= latest_finalized_height && count < limit {
+			log::debug!(
+				target: "hyperspace",
+				"Getting message for session end block: #{} (finalized #{}) ({}/{})",
+				session_end_block, latest_finalized_height, count + 1, limit
+			);
 			let (msg, evs, previous_para_height, ..) = get_message(
 				self,
 				counterparty,
@@ -213,8 +222,9 @@ where
 			previous_finalized_height = session_end_block;
 			previous_finalized_para_height = previous_para_height;
 			session_end_block += session_length;
+			count += 1;
 		}
-		Ok((messages, events, previous_finalized_para_height, previous_finalized_height))
+		Ok((messages, events))
 	}
 }
 
@@ -268,6 +278,8 @@ where
 		&*prover.para_ws_client, finalized_block_numbers
 	)
 	.await?;
+
+	log::trace!(target: "hyperspace_parachain", "Received events count: {}", events.len());
 
 	// header number is serialized to string
 	let mut headers_with_events = events
