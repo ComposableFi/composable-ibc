@@ -308,7 +308,7 @@ pub async fn query_ready_and_timed_out_packets(
 					}
 
 					if packet.timeout_height.is_zero() && packet.timeout_timestamp.nanoseconds() == 0 {
-						log::warn!(target: "hyperspace", "Skipping packet as packet timeout is zero {}", packet.sequence);
+						log::warn!(target: "hyperspace", "Skipping packet as packet timeout is zero: {}", packet.sequence);
 						return Ok(None)
 					}
 
@@ -331,18 +331,18 @@ pub async fn query_ready_and_timed_out_packets(
 			.take(MAX_PACKETS_TO_PROCESS)
 			.collect::<Vec<_>>();
 
-			// Get acknowledgement messages
-			if source_channel_end.state == State::Closed {
-				log::trace!(target: "hyperspace", "Skipping acknowledgements for channel {:?} as channel is closed on source", channel_id);
-				continue
-			}
-
 			while let Some(result) = timeout_packets_join_set.join_next().await {
 				let Some(either) = result?? else { continue };
 				match either {
 					Left(msg) => timeout_messages.push(msg),
 					Right(msg) => messages.push(msg),
 				}
+			}
+
+			// Get acknowledgement messages
+			if source_channel_end.state == State::Closed {
+				log::trace!(target: "hyperspace", "Skipping acknowledgements for channel {:?} as channel is closed on source", channel_id);
+				continue
 			}
 
 			let acknowledgements =

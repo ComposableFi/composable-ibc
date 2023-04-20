@@ -352,6 +352,8 @@ where
 						})
 						.await?;
 
+						log::info!(target: "hyperspace", "Reconnected to relay chain and parachain");
+
 						self.relay_ws_client = relay_ws_client;
 						self.para_ws_client = para_ws_client;
 						self.relay_client = relay_client;

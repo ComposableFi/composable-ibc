@@ -23,6 +23,7 @@ macro_rules! process_finality_event {
 				log::info!("Received finality notification from {}", $source.name());
 				let sink_initial_rpc_call_delay = $sink.rpc_call_delay();
 				let source_initial_rpc_call_delay = $source.rpc_call_delay();
+				// TODO: make better error handling
 				let mut had_error = false;
 
 				let updates = match $source.query_latest_ibc_events(finality_event, &$sink).await {
@@ -58,7 +59,7 @@ macro_rules! process_finality_event {
 								continue
 							},
 					};
-					log::trace!(target: "hyperspace", "Received messages, timeouts: {}, {}", messages.len(), timeouts.len());
+					log::trace!(target: "hyperspace", "Received messages count: {}, timeouts count: {}", messages.len(), timeouts.len());
 
 					if !timeouts.is_empty() {
 						if let Some(metrics) = $metrics.as_ref() {

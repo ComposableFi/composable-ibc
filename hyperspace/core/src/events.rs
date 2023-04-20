@@ -485,7 +485,7 @@ pub async fn parse_events(
 				if packet.timeout_height.is_zero() && packet.timeout_timestamp.nanoseconds() == 0 {
 					log::warn!(
 						target: "hyperspace",
-						"Skipping packet relay because packet timeout is zero {}",
+						"Skipping packet relay because packet timeout is zero: {}",
 						packet.sequence
 					);
 					continue

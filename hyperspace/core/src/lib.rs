@@ -52,6 +52,8 @@ where
 {
 	// If light clients on both chains are not synced then send the old updates and events before
 	// listening for new events
+	// `while` is used instead of `if` to guarantee synchronization even if the first try took too
+	// long
 	while !chain_a.is_synced(&chain_b).await? {
 		let (mut messages, events) = chain_a.fetch_mandatory_updates(&chain_b).await?;
 		// we use light mode because channel state will be queried during the full relay operation
