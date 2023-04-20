@@ -69,7 +69,7 @@ pub enum FinalityProtocol {
 }
 
 /// Finality event for parachains
-#[derive(Decode, Encode)]
+#[derive(Decode, Encode, Debug)]
 pub enum FinalityEvent {
 	Grandpa(
 		grandpa_light_client_primitives::justification::GrandpaJustification<
@@ -641,6 +641,8 @@ where
 		let value = msg.encode_vec()?;
 		Any { value, type_url: msg.type_url() }
 	};
+
+	log::trace!(target: "hyperspace", "Sending update header with type {:?} to {}", update_type, source.name());
 
 	Ok(vec![(update_header, events, update_type)])
 }

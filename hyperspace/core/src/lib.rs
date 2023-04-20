@@ -27,6 +27,7 @@ pub mod queue;
 pub mod substrate;
 
 use events::{has_packet_events, parse_events};
+use futures::TryFutureExt;
 use ibc::events::IbcEvent;
 use metrics::handler::MetricsHandler;
 
@@ -49,12 +50,11 @@ where
 	A: Chain,
 	B: Chain,
 {
-	let (mut chain_a_finality, mut chain_b_finality) =
-		(chain_a.finality_notifications().await, chain_b.finality_notifications().await);
-
 	// If light clients on both chains are not synced then send the old updates and events before
 	// listening for new events
-	if !chain_a.is_synced(&chain_b).await? {
+	// `while` is used instead of `if` to guarantee synchronization even if the first try took too
+	// long
+	while !chain_a.is_synced(&chain_b).await? {
 		let (mut messages, events) = chain_a.fetch_mandatory_updates(&chain_b).await?;
 		// we use light mode because channel state will be queried during the full relay operation
 		let (parsed_messages, ..) =
@@ -69,7 +69,7 @@ where
 		queue::flush_message_batch(messages, chain_a_metrics.as_ref(), &chain_b).await?;
 	}
 
-	if !chain_b.is_synced(&chain_a).await? {
+	while !chain_b.is_synced(&chain_a).await? {
 		let (mut messages, events) = chain_b.fetch_mandatory_updates(&chain_a).await?;
 		// we use light mode because channel state will be queried during the full relay operation
 		let (parsed_messages, ..) =
@@ -83,6 +83,9 @@ where
 		);
 		queue::flush_message_batch(messages, chain_b_metrics.as_ref(), &chain_a).await?;
 	}
+
+	let (mut chain_a_finality, mut chain_b_finality) =
+		(chain_a.finality_notifications().await, chain_b.finality_notifications().await);
 
 	// loop forever
 	loop {
