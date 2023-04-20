@@ -247,8 +247,8 @@ pub async fn query_ready_and_timed_out_packets(
 							.await?;
 						return Ok(Some(Left(msg)))
 					} else {
-				log::trace!(target: "hyperspace", "Skipping packet as it has not timed out: {:?}", packet);
-			}
+						log::trace!(target: "hyperspace", "Skipping packet as it has not timed out: {:?}", packet);
+					}
 
 					// If packet has not timed out but channel is closed on sink we skip
 					// Since we have no reference point for when this channel was closed so we can't
@@ -316,116 +316,115 @@ pub async fn query_ready_and_timed_out_packets(
 					Ok(Some(Right(msg)))
 				});
 			}
+		}
 
-			// query acknowledgements that are waiting for connection delay.
-			let acks = query_undelivered_acks(
-				source_height,
-				sink_height,
-				channel_id,
-				port_id.clone(),
-				source,
-				sink,
-			)
-			.await?
-			.into_iter()
-			.take(MAX_PACKETS_TO_PROCESS)
-			.collect::<Vec<_>>();
-
-			while let Some(result) = timeout_packets_join_set.join_next().await {
-				let Some(either) = result?? else { continue };
-				match either {
-					Left(msg) => timeout_messages.push(msg),
-					Right(msg) => messages.push(msg),
-				}
+		while let Some(result) = timeout_packets_join_set.join_next().await {
+			let Some(either) = result?? else { continue };
+			match either {
+				Left(msg) => timeout_messages.push(msg),
+				Right(msg) => messages.push(msg),
 			}
+		}
 
-			// Get acknowledgement messages
-			if source_channel_end.state == State::Closed {
-				log::trace!(target: "hyperspace", "Skipping acknowledgements for channel {:?} as channel is closed on source", channel_id);
-				continue
+		// Get acknowledgement messages
+		if source_channel_end.state == State::Closed {
+			log::trace!(target: "hyperspace", "Skipping acknowledgements for channel {:?} as channel is closed on source", channel_id);
+			continue
+		}
+
+		// query acknowledgements that are waiting for connection delay.
+		let acks = query_undelivered_acks(
+			source_height,
+			sink_height,
+			channel_id,
+			port_id.clone(),
+			source,
+			sink,
+		)
+		.await?
+		.into_iter()
+		.take(MAX_PACKETS_TO_PROCESS)
+		.collect::<Vec<_>>();
+
+		let acknowledgements = source.query_recv_packets(channel_id, port_id.clone(), acks).await?;
+		let mut acknowledgements_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+		for acknowledgements in acknowledgements.chunks(PROCESS_PACKETS_BATCH_SIZE) {
+			for acknowledgement in acknowledgements.to_owned() {
+				let source_connection_end = source_connection_end.clone();
+				let source = source.clone();
+				let sink = sink.clone();
+				let duration1 = Duration::from_millis(
+					rand::thread_rng().gen_range(1..source.rpc_call_delay().as_millis() as u64),
+				);
+				acknowledgements_join_set.spawn(async move {
+					sleep(duration1).await;
+					let source = &source;
+					let sink = &sink;
+					let packet = packet_info_to_packet(&acknowledgement);
+					let ack = if let Some(ack) = acknowledgement.ack {
+						ack
+					} else {
+						// Packet has no valid acknowledgement, skip
+						log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as packet has no valid acknowledgement", packet);
+						return Ok(None)
+					};
+
+					// Check if ack is ready to be sent to sink
+					// If sink does not have a client height that is equal to or greater than the packet
+					// creation height, we can't send it yet packet_info.height should represent the
+					// acknowledgement creation height on source chain
+					if acknowledgement.height > latest_source_height_on_sink.revision_height {
+						// Sink does not have client update required to prove acknowledgement packet message
+						log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as sink does not have client update required to prove acknowledgement packet message", packet);
+						return Ok(None)
+					}
+
+					log::trace!(target: "hyperspace", "sink_height: {:?}, latest_source_height_on_sink: {:?}, acknowledgement.height: {}", sink_height, latest_source_height_on_sink, acknowledgement.height);
+
+					let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(
+						sink,
+						sink_height,
+						source.client_id(),
+						Height::new(latest_source_height_on_sink.revision_number, acknowledgement.height),
+						None,
+						latest_source_height_on_sink,
+					)
+						.await
+					{
+						log::trace!(target: "hyperspace", "Using proof height: {}", proof_height);
+						proof_height
+					} else {
+						log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as no proof height could be found", packet);
+						return Ok(None)
+					};
+
+					if !verify_delay_passed(
+						source,
+						sink,
+						source_timestamp,
+						source_height,
+						sink_timestamp,
+						sink_height,
+						source_connection_end.delay_period(),
+						proof_height,
+						VerifyDelayOn::Sink,
+					)
+						.await?
+					{
+						log::trace!(target: "hyperspace", "Skipping acknowledgement for packet as connection delay has not passed {:?}", packet);
+						return Ok(None)
+					}
+
+					let msg = construct_ack_message(source, sink, packet, ack, proof_height).await?;
+					// messages.push(msg)
+					Ok(Some(msg))
+				});
 			}
+		}
 
-			let acknowledgements =
-				source.query_recv_packets(channel_id, port_id.clone(), acks).await?;
-			let mut acknowledgements_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
-			for acknowledgements in acknowledgements.chunks(PROCESS_PACKETS_BATCH_SIZE) {
-				for acknowledgement in acknowledgements.to_owned() {
-					let source_connection_end = source_connection_end.clone();
-					let source = source.clone();
-					let sink = sink.clone();
-					let duration1 = Duration::from_millis(
-						rand::thread_rng().gen_range(1..source.rpc_call_delay().as_millis() as u64),
-					);
-					acknowledgements_join_set.spawn(async move {
-						sleep(duration1).await;
-						let source = &source;
-						let sink = &sink;
-						let packet = packet_info_to_packet(&acknowledgement);
-						let ack = if let Some(ack) = acknowledgement.ack {
-							ack
-						} else {
-							// Packet has no valid acknowledgement, skip
-							log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as packet has no valid acknowledgement", packet);
-							return Ok(None)
-						};
-
-						// Check if ack is ready to be sent to sink
-						// If sink does not have a client height that is equal to or greater than the packet
-						// creation height, we can't send it yet packet_info.height should represent the
-						// acknowledgement creation height on source chain
-						if acknowledgement.height > latest_source_height_on_sink.revision_height {
-							// Sink does not have client update required to prove acknowledgement packet message
-							log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as sink does not have client update required to prove acknowledgement packet message", packet);
-							return Ok(None)
-						}
-
-						log::trace!(target: "hyperspace", "sink_height: {:?}, latest_source_height_on_sink: {:?}, acknowledgement.height: {}", sink_height, latest_source_height_on_sink, acknowledgement.height);
-
-						let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(
-							sink,
-							sink_height,
-							source.client_id(),
-							Height::new(latest_source_height_on_sink.revision_number, acknowledgement.height),
-							None,
-							latest_source_height_on_sink,
-						)
-							.await
-						{
-							log::trace!(target: "hyperspace", "Using proof height: {}", proof_height);
-							proof_height
-						} else {
-							log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as no proof height could be found", packet);
-							return Ok(None)
-						};
-
-						if !verify_delay_passed(
-							source,
-							sink,
-							source_timestamp,
-							source_height,
-							sink_timestamp,
-							sink_height,
-							source_connection_end.delay_period(),
-							proof_height,
-							VerifyDelayOn::Sink,
-						)
-							.await?
-						{
-							log::trace!(target: "hyperspace", "Skipping acknowledgement for packet as connection delay has not passed {:?}", packet);
-							return Ok(None)
-						}
-
-						let msg = construct_ack_message(source, sink, packet, ack, proof_height).await?;
-						// messages.push(msg)
-						Ok(Some(msg))
-					});
-				}
-
-				while let Some(result) = acknowledgements_join_set.join_next().await {
-					let Some(msg) = result?? else { continue };
-					messages.push(msg)
-				}
-			}
+		while let Some(result) = acknowledgements_join_set.join_next().await {
+			let Some(msg) = result?? else { continue };
+			messages.push(msg)
 		}
 	}
 
