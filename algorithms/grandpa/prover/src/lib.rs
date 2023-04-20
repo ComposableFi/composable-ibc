@@ -30,6 +30,7 @@ use primitives::{
 	parachain_header_storage_key, ClientState, FinalityProof, ParachainHeaderProofs,
 	ParachainHeadersWithFinalityProof,
 };
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
 use sp_finality_grandpa::{AuthorityId, AuthoritySignature};
@@ -37,9 +38,10 @@ use sp_runtime::traits::{One, Zero};
 use std::{
 	collections::{BTreeMap, BTreeSet},
 	sync::Arc,
+	time::Duration,
 };
 use subxt::{config::Header, Config, OnlineClient};
-use tokio::task::JoinSet;
+use tokio::{task::JoinSet, time::sleep};
 
 /// Host function implementation for the verifier
 pub mod host_functions;
@@ -56,6 +58,8 @@ pub struct GrandpaProver<T: Config> {
 	pub para_ws_client: Arc<Client>,
 	/// ParaId of the associated parachain
 	pub para_id: u32,
+	/// Delay between rpc calls to the RPC
+	pub rpc_call_delay: Duration,
 }
 
 // We redefine these here because we want the header to be bounded by subxt::config::Header in the
@@ -87,6 +91,7 @@ impl<T: Config> Clone for GrandpaProver<T> {
 			para_client: self.para_client.clone(),
 			para_ws_client: self.para_ws_client.clone(),
 			para_id: self.para_id,
+			rpc_call_delay: self.rpc_call_delay,
 		}
 	}
 }
@@ -103,13 +108,21 @@ where
 		relay_ws_url: &str,
 		para_ws_url: &str,
 		para_id: u32,
+		rpc_call_delay: Duration,
 	) -> Result<Self, anyhow::Error> {
 		let relay_ws_client = Arc::new(WsClientBuilder::default().build(relay_ws_url).await?);
 		let relay_client = OnlineClient::<T>::from_rpc_client(relay_ws_client.clone()).await?;
 		let para_ws_client = Arc::new(WsClientBuilder::default().build(para_ws_url).await?);
 		let para_client = OnlineClient::<T>::from_rpc_client(para_ws_client.clone()).await?;
 
-		Ok(Self { relay_ws_client, relay_client, para_ws_client, para_client, para_id })
+		Ok(Self {
+			relay_ws_client,
+			relay_client,
+			para_ws_client,
+			para_client,
+			para_id,
+			rpc_call_delay,
+		})
 	}
 
 	/// Construct the inital client state.
@@ -274,7 +287,10 @@ where
 		let mut unknown_headers_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 		for height in previous_finalized_height..=latest_finalized_height {
 			let prover = self.clone();
+			let to = self.rpc_call_delay.as_millis();
+			let duration = Duration::from_millis(rand::thread_rng().gen_range(1..to) as u64);
 			unknown_headers_join_set.spawn(async move {
+				sleep(duration).await;
 				let hash = prover
 					.relay_client
 					.rpc()
@@ -308,7 +324,10 @@ where
 			let header_numbers = header_numbers.clone();
 			let keys = vec![para_storage_key.clone()];
 			let client = self.clone();
+			let to = self.rpc_call_delay.as_millis();
+			let duration1 = Duration::from_millis(rand::thread_rng().gen_range(1..to) as u64);
 			change_set_join_set.spawn(async move {
+				sleep(duration1).await;
 				let header = client
 					.relay_client
 					.rpc()

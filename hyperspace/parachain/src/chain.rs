@@ -35,6 +35,8 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use ics10_grandpa::client_message::{ClientMessage, Misbehaviour, RelayChainHeader};
+use itertools::Itertools;
+use jsonrpsee_ws_client::WsClientBuilder;
 use light_client_common::config::{EventRecordT, RuntimeCall, RuntimeTransactions};
 use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::{mock::LocalClientTypes, Chain, IbcProvider, MisbehaviourHandler};
@@ -43,11 +45,12 @@ use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
-use std::{collections::BTreeMap, fmt::Display, pin::Pin, time::Duration};
+use std::{collections::BTreeMap, fmt::Display, pin::Pin, sync::Arc, time::Duration};
 // #[cfg(not(feature = "dali"))]
 // use subxt::config::polkadot::PlainTip as Tip;
 // #[cfg(feature = "dali")]
 // use subxt::config::substrate::AssetTip as Tip;
+use crate::utils::unsafe_cast_to_jsonrpsee_client;
 use subxt::{
 	config::{
 		extrinsic_params::{BaseExtrinsicParamsBuilder, Era},
@@ -211,6 +214,8 @@ where
 			.into_iter()
 			.map(|msg| Any { type_url: msg.type_url.clone(), value: msg.value })
 			.collect::<Vec<_>>();
+		let messages_urls = messages.iter().map(|msg| msg.type_url.clone()).join(", ");
+		log::debug!(target: "hyperspace_parachain", "Sending message: {messages_urls}");
 
 		let call = T::Tx::ibc_deliver(messages);
 		let (ext_hash, block_hash) = self.submit_call(call).await?;
@@ -316,6 +321,57 @@ where
 
 	async fn get_proof_height(&self, block_height: Height) -> Height {
 		block_height
+	}
+
+	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error> {
+		if let Some(rpc_err) = error.downcast_ref::<Error>() {
+			match rpc_err {
+				Error::RpcError(s) =>
+					if s.contains("MaxSlotsExceeded") {
+						self.rpc_call_delay = self.rpc_call_delay * 2;
+					} else if s.contains("restart required") {
+						let relay_ws_client = Arc::new(
+							WsClientBuilder::default()
+								.build(&self.relay_chain_rpc_url)
+								.await
+								.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
+						);
+						let para_ws_client = Arc::new(
+							WsClientBuilder::default()
+								.build(&self.parachain_rpc_url)
+								.await
+								.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
+						);
+
+						let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
+							unsafe_cast_to_jsonrpsee_client(&para_ws_client)
+						})
+						.await?;
+						let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
+							unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
+						})
+						.await?;
+
+						log::info!(target: "hyperspace", "Reconnected to relay chain and parachain");
+
+						self.relay_ws_client = relay_ws_client;
+						self.para_ws_client = para_ws_client;
+						self.relay_client = relay_client;
+						self.para_client = para_client;
+						self.rpc_call_delay = self.rpc_call_delay * 2;
+					},
+				_ => (),
+			}
+		}
+		Ok(())
+	}
+
+	fn rpc_call_delay(&self) -> Duration {
+		self.rpc_call_delay
+	}
+
+	fn set_rpc_call_delay(&mut self, delay: Duration) {
+		self.rpc_call_delay = delay;
 	}
 }
 

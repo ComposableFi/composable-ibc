@@ -21,12 +21,6 @@ use ibc_proto::{
 	cosmos::auth::v1beta1::{query_client::QueryClient, BaseAccount, QueryAccountRequest},
 	google::protobuf::Any,
 };
-use ripemd::Ripemd160;
-use std::{
-	str::FromStr,
-	sync::{Arc, Mutex},
-};
-
 use ics07_tendermint::{
 	client_message::Header, client_state::ClientState, consensus_state::ConsensusState,
 	merkle::convert_tm_to_ics_merkle_proof,
@@ -34,7 +28,12 @@ use ics07_tendermint::{
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use primitives::{IbcProvider, KeyProvider, UpdateType};
 use prost::Message;
+use ripemd::Ripemd160;
 use serde::{Deserialize, Serialize};
+use std::{
+	str::FromStr,
+	sync::{Arc, Mutex},
+};
 use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
 use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient, Url};
