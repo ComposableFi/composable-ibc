@@ -208,7 +208,7 @@ impl Config for Test {
 }
 
 parameter_types! {
-	pub const ServiceCharge: Percent = Percent::from_percent(1);
+	pub const ServiceCharge: Peribill = Peribill::from_percent(1);
 	pub const PalletId: frame_support::PalletId = frame_support::PalletId(*b"ics20fee");
 }
 
