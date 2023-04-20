@@ -27,6 +27,7 @@ pub mod queue;
 pub mod substrate;
 
 use events::{has_packet_events, parse_events};
+use futures::TryFutureExt;
 use ibc::events::IbcEvent;
 use metrics::handler::MetricsHandler;
 

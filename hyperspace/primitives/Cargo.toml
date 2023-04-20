@@ -15,6 +15,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive
 tokio = { version = "1.19.2", features = ["macros", "sync", "time"] }
 thiserror = "1.0.31"
 log = "0.4.17"
+rand = "0.8.5"
 
 # substrate
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }

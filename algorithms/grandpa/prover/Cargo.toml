@@ -15,6 +15,7 @@ downcast-rs = "1.2.0"
 jsonrpsee = { version = "0.16.2", features = ["async-client", "jsonrpsee-ws-client"] }
 jsonrpsee-ws-client = "0.16.2"
 finality-grandpa = "0.16.0"
+rand = "0.8.5"
 
 finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }

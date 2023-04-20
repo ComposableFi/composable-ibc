@@ -33,7 +33,7 @@ pub mod pallet {
 	use ibc_primitives::IbcAccount;
 	use sp_runtime::{
 		traits::{AccountIdConversion, Get},
-		Percent,
+		Perbill,
 	};
 
 	#[pallet::config]
@@ -41,7 +41,7 @@ pub mod pallet {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		#[pallet::constant]
-		type ServiceCharge: Get<Percent>;
+		type ServiceCharge: Get<Perbill>;
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 	}
@@ -52,7 +52,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::storage]
-	pub type ServiceCharge<T: Config> = StorageValue<_, Percent, OptionQuery>;
+	pub type ServiceCharge<T: Config> = StorageValue<_, Perbill, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
@@ -64,7 +64,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
 		#[pallet::weight(0)]
-		pub fn set_charge(origin: OriginFor<T>, charge: Percent) -> DispatchResult {
+		pub fn set_charge(origin: OriginFor<T>, charge: Perbill) -> DispatchResult {
 			<T as crate::Config>::AdminOrigin::ensure_origin(origin)?;
 			<ServiceCharge<T>>::put(charge);
 			Ok(())

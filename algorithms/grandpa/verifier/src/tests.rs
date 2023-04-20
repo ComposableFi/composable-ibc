@@ -26,6 +26,7 @@ use primitives::{
 };
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
+use std::time::Duration;
 use subxt::{
 	config::substrate::{BlakeTwo256, SubstrateHeader},
 	rpc_params,
@@ -50,9 +51,14 @@ async fn follow_grandpa_justifications() {
 	let relay_ws_url = format!("ws://{relay}:9944");
 	let para_ws_url = format!("ws://{para}:9188");
 
-	let prover = GrandpaProver::<PolkadotConfig>::new(&relay_ws_url, &para_ws_url, 2000)
-		.await
-		.unwrap();
+	let prover = GrandpaProver::<PolkadotConfig>::new(
+		&relay_ws_url,
+		&para_ws_url,
+		2000,
+		Duration::from_millis(100),
+	)
+	.await
+	.unwrap();
 
 	println!("Waiting for grandpa proofs to become available");
 	let session_length = prover.session_length().await.unwrap();

@@ -33,6 +33,8 @@ serde = "1.0.144"
 thiserror = "1.0.31"
 derive_more = { version = "0.99.17", features = ["from"] }
 prometheus = { version = "0.13.0", default-features = false }
+rand = "0.8.5"
+itertools = "0.10.5"
 
 # ibc
 ibc = { path = "../../ibc/modules", features = [] }
