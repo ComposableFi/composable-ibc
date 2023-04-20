@@ -13,9 +13,9 @@
 // limitations under the License.
 
 use futures::StreamExt;
-use hyperspace::{
-	core::logging,
-	parachain::{finality_protocol::FinalityProtocol, ParachainClient, ParachainClientConfig},
+use hyperspace_core::{logging, substrate::DefaultConfig};
+use hyperspace_parachain::{
+	finality_protocol::FinalityProtocol, ParachainClient, ParachainClientConfig,
 };
 use hyperspace_primitives::{utils::create_clients, IbcProvider, TestProvider};
 use hyperspace_testsuite::{
