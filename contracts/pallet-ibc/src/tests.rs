@@ -49,11 +49,7 @@ use ibc::{
 };
 use ibc_primitives::{get_channel_escrow_address, HandlerMessage, IbcHandler};
 use sp_core::Pair;
-use sp_runtime::{
-	offchain::storage::StorageValueRef,
-	traits::{AccountIdConversion, IdentifyAccount},
-	AccountId32,
-};
+use sp_runtime::{offchain::storage::StorageValueRef, traits::IdentifyAccount, AccountId32};
 use std::{
 	collections::{BTreeMap, BTreeSet},
 	str::FromStr,
@@ -350,7 +346,7 @@ fn on_deliver_ics20_recv_packet() {
 			<Assets as Inspect<AccountId>>::balance(2, &AccountId32::new(pair.public().0));
 		let pallet_balance = <Assets as Inspect<AccountId>>::balance(
 			2,
-			&<Test as crate::ics20_fee::Config>::PalletId::get().into_account_truncating(),
+			&<Test as crate::Config>::FeeAccount::get().into_account(),
 		);
 		let fee = <Test as crate::ics20_fee::Config>::ServiceCharge::get() * amt;
 		assert_eq!(balance, amt - fee);

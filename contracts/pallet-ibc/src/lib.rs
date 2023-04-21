@@ -264,6 +264,8 @@ pub mod pallet {
 
 		type IsSendEnabled: Get<bool>;
 		type IsReceiveEnabled: Get<bool>;
+
+		type FeeAccount: Get<Self::AccountIdConversion>;
 	}
 
 	#[pallet::pallet]
