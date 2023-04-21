@@ -14,10 +14,30 @@
 
 #[macro_export]
 macro_rules! process_finality_event {
-	($source:ident, $sink:ident, $metrics:expr, $mode:ident, $result:ident) => {
+	($source:ident, $sink:ident, $metrics:expr, $mode:ident, $result:ident, $stream_source:ident, $stream_sink:ident) => {
 		match $result {
 			// stream closed
-			None => break,
+			None => {
+				log::warn!("Stream closed for {}", $source.name());
+				$stream_source = loop {
+					match $source.finality_notifications().await {
+						Ok(stream) => break stream,
+						Err(e) => {
+							log::error!("Failed to get finality notifications for {} {:?}. Trying again in 30 seconds...", $source.name(), e);
+							tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+						},
+					};
+				};
+				$stream_sink = loop {
+					match $sink.finality_notifications().await {
+						Ok(stream) => break stream,
+						Err(e) => {
+							log::error!("Failed to get finality notifications for {} {:?}. Trying again in 30 seconds...", $sink.name(), e);
+							tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+						},
+					};
+				};
+			},
 			Some(finality_event) => {
 				log::info!("=======================================================");
 				log::info!("Received finality notification from {}", $source.name());
@@ -849,13 +869,17 @@ macro_rules! chains {
 
 			async fn finality_notifications(
 				&self,
-			) -> Pin<Box<dyn Stream<Item = Self::FinalityEvent> + Send + Sync>> {
+			) -> Result<Pin<Box<dyn Stream<Item = Self::FinalityEvent> + Send + Sync>>, Self::Error> {
 				match self {
 					$(
 						$(#[$($meta)*])*
 						Self::$name(chain) => {
 							use futures::StreamExt;
-							Box::pin(chain.finality_notifications().await.map(AnyFinalityEvent::$name))
+							Ok(
+								Box::pin(chain.finality_notifications().await
+									.map_err(AnyError::$name)?
+									.map(AnyFinalityEvent::$name))
+							)
 						},
 					)*
 				}
