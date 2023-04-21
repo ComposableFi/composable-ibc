@@ -220,7 +220,7 @@ where
 		let call = T::Tx::ibc_deliver(messages);
 		let (ext_hash, block_hash) = self.submit_call(call).await?;
 
-		log::debug!(target: "hyperspace_parachain", "Submitted extrinsic (hash: {:?}) to block {:?}", ext_hash, block_hash);
+		log::debug!(target: "hyperspace::parachain", "Submitted extrinsic (hash: {:?}) to block {:?}", ext_hash, block_hash);
 
 		Ok(TransactionId { ext_hash, block_hash })
 	}
