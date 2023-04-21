@@ -10,7 +10,7 @@ use frame_support::{
 };
 use frame_system as system;
 use frame_system::EnsureSigned;
-use ibc_primitives::IbcAccount;
+use ibc_primitives::{runtime_interface::ss58_to_account_id_32, IbcAccount};
 use light_client_common::RelayChain;
 use orml_traits::parameter_type_with_key;
 use sp_core::{
@@ -205,11 +205,19 @@ impl Config for Test {
 	type IsReceiveEnabled = sp_core::ConstBool<true>;
 	type IsSendEnabled = sp_core::ConstBool<true>;
 	type Ics20RateLimiter = Everything;
+	type FeeAccount = FeeAccount;
 }
 
 parameter_types! {
 	pub const ServiceCharge: Perbill = Perbill::from_percent(1);
 	pub const PalletId: frame_support::PalletId = frame_support::PalletId(*b"ics20fee");
+	pub FeeAccount: <Test as Config>::AccountIdConversion = create_alice_key();
+}
+
+fn create_alice_key() -> <Test as Config>::AccountIdConversion {
+	let alice = "5yNZjX24n2eg7W6EVamaTXNQbWCwchhThEaSWB7V3GRjtHeL";
+	let account_id_32 = ss58_to_account_id_32(alice).unwrap().into();
+	IbcAccount(account_id_32)
 }
 
 impl crate::ics20_fee::Config for Test {

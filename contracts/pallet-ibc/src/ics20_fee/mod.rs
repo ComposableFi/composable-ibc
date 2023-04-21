@@ -228,7 +228,6 @@ where
 					.map_err(|_| {
 					Ics04Error::implementation_specific("Failed to receiver account".to_string())
 				})?;
-			let pallet_account = Pallet::<T>::account_id();
 			let mut prefixed_coin = if is_receiver_chain_source(
 				packet.source_port.clone(),
 				packet.source_channel,
@@ -248,7 +247,8 @@ where
 			prefixed_coin.amount = fee.into();
 			// Now we proceed to send the service fee from the receiver's account to the pallet
 			// account
-			ctx.send_coins(&receiver, &pallet_account, &prefixed_coin)
+			let fee_account = T::FeeAccount::get();
+			ctx.send_coins(&receiver, &fee_account, &prefixed_coin)
 				.map_err(|e| Ics04Error::app_module(e.to_string()))?;
 			// We modify the packet data to remove the fee so any other middleware has access to the
 			// correct amount deposited in the receiver's account
