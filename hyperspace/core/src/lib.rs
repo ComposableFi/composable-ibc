@@ -51,7 +51,7 @@ where
 	B: Chain,
 {
 	let (mut chain_a_finality, mut chain_b_finality) =
-		(chain_a.finality_notifications().await, chain_b.finality_notifications().await);
+		(chain_a.finality_notifications().await?, chain_b.finality_notifications().await?);
 
 	// If light clients on both chains are not synced then send the old updates and events before
 	// listening for new events
