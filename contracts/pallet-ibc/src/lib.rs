@@ -681,6 +681,10 @@ pub mod pallet {
 				},
 			};
 
+			if timeout_height.is_zero() && timeout_timestamp.nanoseconds() == 0 {
+				return Err(Error::<T>::InvalidTimestamp.into())
+			}
+
 			let msg = MsgTransfer {
 				source_port,
 				source_channel: source_channel.clone(),
@@ -723,8 +727,6 @@ pub mod pallet {
 				use ibc_primitives::Error::*;
 				match e {
 					SendPacketError { .. } => Error::<T>::TransferSend,
-					// basically that can be anything, as simple as Balance too, but how one may get
-					// error of it?........
 					SendTransferError { .. } => Error::<T>::TransferSend,
 
 					ReceivePacketError { .. } => Error::<T>::TransferProtocol,

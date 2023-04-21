@@ -51,7 +51,7 @@ where
 	B: Chain,
 {
 	let (mut chain_a_finality, mut chain_b_finality) =
-		(chain_a.finality_notifications().await, chain_b.finality_notifications().await);
+		(chain_a.finality_notifications().await?, chain_b.finality_notifications().await?);
 
 	// If light clients on both chains are not synced then send the old updates and events before
 	// listening for new events
@@ -90,16 +90,14 @@ where
 		tokio::select! {
 			// new finality event from chain A
 			result = chain_a_finality.next() => {
-				process_finality_event!(chain_a, chain_b, chain_a_metrics, mode, result)
+				process_finality_event!(chain_a, chain_b, chain_a_metrics, mode, result, chain_a_finality, chain_b_finality)
 			}
 			// new finality event from chain B
 			result = chain_b_finality.next() => {
-				process_finality_event!(chain_b, chain_a, chain_b_metrics, mode, result)
+				process_finality_event!(chain_b, chain_a, chain_b_metrics, mode, result, chain_b_finality, chain_a_finality)
 			}
 		}
 	}
-
-	Ok(())
 }
 
 pub async fn fish<A, B>(chain_a: A, chain_b: B) -> Result<(), anyhow::Error>

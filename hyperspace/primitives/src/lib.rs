@@ -431,7 +431,7 @@ pub trait Chain:
 	/// Return a stream that yields when new [`IbcEvents`] are ready to be queried.
 	async fn finality_notifications(
 		&self,
-	) -> Pin<Box<dyn Stream<Item = Self::FinalityEvent> + Send + Sync>>;
+	) -> Result<Pin<Box<dyn Stream<Item = Self::FinalityEvent> + Send + Sync>>, Self::Error>;
 
 	/// This should be used to submit new messages [`Vec<Any>`] from a counterparty chain to this
 	/// chain.

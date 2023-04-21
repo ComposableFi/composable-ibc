@@ -141,15 +141,17 @@ where
 
 	async fn finality_notifications(
 		&self,
-	) -> Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>> {
+	) -> Result<
+		Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>>,
+		Error,
+	> {
 		match self.finality_protocol {
 			FinalityProtocol::Grandpa => {
 				let subscription =
 					GrandpaApiClient::<JustificationNotification, sp_core::H256, u32>::subscribe_justifications(
 						&*self.relay_ws_client,
 					)
-						.await
-						.expect("Failed to subscribe to grandpa justifications")
+						.await?
 						.chunks(3)
 						.map(|mut notifs| notifs.remove(notifs.len() - 1)); // skip every 3 finality notifications
 
@@ -174,7 +176,7 @@ where
 					futures::future::ready(Some(Self::FinalityEvent::Grandpa(justification)))
 				});
 
-				Box::pin(Box::new(stream))
+				Ok(Box::pin(Box::new(stream)))
 			},
 			FinalityProtocol::Beefy => {
 				let subscription =
@@ -204,7 +206,7 @@ where
 					futures::future::ready(Some(Self::FinalityEvent::Beefy(signed_commitment)))
 				});
 
-				Box::pin(Box::new(stream))
+				Ok(Box::pin(Box::new(stream)))
 			},
 		}
 	}
@@ -220,7 +222,7 @@ where
 		let call = T::Tx::ibc_deliver(messages);
 		let (ext_hash, block_hash) = self.submit_call(call).await?;
 
-		log::debug!(target: "hyperspace::parachain", "Submitted extrinsic (hash: {:?}) to block {:?}", ext_hash, block_hash);
+		log::debug!(target: "hyperspace_parachain", "Submitted extrinsic (hash: {:?}) to block {:?}", ext_hash, block_hash);
 
 		Ok(TransactionId { ext_hash, block_hash })
 	}
