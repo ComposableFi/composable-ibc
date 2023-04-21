@@ -679,6 +679,10 @@ pub mod pallet {
 				},
 			};
 
+			if timeout_height.is_zero() && timeout_timestamp.nanoseconds() == 0 {
+				return Err(Error::<T>::InvalidTimestamp.into())
+			}
+
 			let msg = MsgTransfer {
 				source_port,
 				source_channel: source_channel.clone(),
