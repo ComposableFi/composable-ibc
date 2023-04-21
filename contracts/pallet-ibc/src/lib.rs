@@ -402,10 +402,6 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			assert!(
-				!self.assets.is_empty(),
-				"You must configure the native currency's asset_id and denom!"
-			);
 			for AssetConfig { id, denom } in &self.assets {
 				IbcDenoms::<T>::insert(denom.clone(), id);
 				IbcAssetIds::<T>::insert(id, denom);
@@ -725,6 +721,8 @@ pub mod pallet {
 				use ibc_primitives::Error::*;
 				match e {
 					SendPacketError { .. } => Error::<T>::TransferSend,
+					// basically that can be anything, as simple as Balance too, but how one may get
+					// error of it?........
 					SendTransferError { .. } => Error::<T>::TransferSend,
 
 					ReceivePacketError { .. } => Error::<T>::TransferProtocol,

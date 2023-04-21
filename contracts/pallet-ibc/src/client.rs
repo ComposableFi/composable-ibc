@@ -433,11 +433,13 @@ where
 		};
 
 		if relay_chain != T::RelayChain::get() {
+			log::warn!(target : "pallet_ibc", "configured relay {} differs from provided in data {}", T::RelayChain::get(), relay_chain);
 			Err(ICS02Error::implementation_specific(format!("relay chain mis-match")))?
 		}
 
 		let self_para_id: u32 = T::ParaId::get().into();
 		if para_id != self_para_id {
+			log::warn!(target : "pallet_ibc", "configured para {} differs from provided in data {}", self_para_id, para_id);
 			Err(ICS02Error::implementation_specific(format!("para-id mis-match")))?
 		}
 

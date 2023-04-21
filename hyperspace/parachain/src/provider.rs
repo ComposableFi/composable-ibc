@@ -413,7 +413,7 @@ where
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error> {
 		log::trace!(
-			target: "hyperspace_parachain",
+			target: "hyperspace::parachain",
 			"query_unreceived_acknowledgements at: {:?}, channel_id: {:?}, port_id: {:?}, seqs: {:?}",
 			at,
 			channel_id,
@@ -499,7 +499,7 @@ where
 		client_height: Height,
 	) -> Result<(Height, Timestamp), Self::Error> {
 		log::trace!(
-			target: "hyperspace_parachain",
+			target: "hyperspace::parachain",
 			"Querying client update time and height for client {:?} at height {:?}",
 			client_id,
 			client_height

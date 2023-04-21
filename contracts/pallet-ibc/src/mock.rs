@@ -21,7 +21,7 @@ use sp_keystore::{testing::KeyStore, KeystoreExt};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
-	MultiSignature, Percent,
+	MultiSignature, Perbill,
 };
 use std::sync::Arc;
 use system::EnsureRoot;
@@ -208,7 +208,7 @@ impl Config for Test {
 }
 
 parameter_types! {
-	pub const ServiceCharge: Percent = Percent::from_percent(1);
+	pub const ServiceCharge: Perbill = Perbill::from_percent(1);
 	pub const PalletId: frame_support::PalletId = frame_support::PalletId(*b"ics20fee");
 }
 
