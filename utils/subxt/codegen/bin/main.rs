@@ -54,14 +54,14 @@ async fn main() -> Result<(), anyhow::Error> {
 		}
 	} else {
 		if !cli.relay_host.contains("://") {
-			cli.relay_host = format!("{}", cli.relay_host);
+			cli.relay_host = format!("ws://{}", cli.relay_host);
 		}
 		if !cli.para_host.contains("://") {
-			cli.para_host = format!("{}", cli.para_host);
+			cli.para_host = format!("ws://{}", cli.para_host);
 		}
 		let runtimes = [
-			(format!("{}", cli.relay_host,), "relaychain"),
-			(format!("{}", cli.para_host,), "parachain"),
+			(format!("{}:{}", cli.relay_host, cli.relay_port), "relaychain"),
+			(format!("{}:{}", cli.para_host, cli.para_port), "parachain"),
 		];
 
 		for (url, runtime) in runtimes {
