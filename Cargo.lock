@@ -4341,7 +4341,6 @@ dependencies = [
  "prost",
  "rs_merkle",
  "sc-finality-grandpa-rpc",
- "schnorrkel",
  "serde",
  "serde_json",
  "sp-beefy",
