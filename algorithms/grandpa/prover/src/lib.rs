@@ -24,7 +24,6 @@ use beefy_prover::helpers::{
 };
 use codec::{Decode, Encode};
 use finality_grandpa_rpc::GrandpaApiClient;
-use itertools::Itertools;
 use jsonrpsee::{async_client::Client, tracing::log, ws_client::WsClientBuilder};
 use light_client_common::config::RuntimeStorage;
 use primitives::{
