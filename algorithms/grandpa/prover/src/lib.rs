@@ -40,8 +40,13 @@ use std::{
 	sync::Arc,
 	time::Duration,
 };
-use subxt::{config::Header, Config, OnlineClient};
+use subxt::{config::Header, rpc::types::StorageChangeSet, Config, OnlineClient};
 use tokio::{task::JoinSet, time::sleep};
+
+/// The maximum number of authority set changes to request at once
+pub const PROCESS_CHANGES_SET_BATCH_SIZE: usize = 100;
+/// The maximum number of blocks to request at once
+pub const PROCESS_BLOCKS_BATCH_SIZE: usize = 100;
 
 /// Host function implementation for the verifier
 pub mod host_functions;
@@ -284,29 +289,40 @@ where
 			.await?
 			.ok_or_else(|| anyhow!("Failed to fetch previous finalized hash + 1"))?;
 
+		let mut unknown_headers = vec![];
 		let mut unknown_headers_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
-		for height in previous_finalized_height..=latest_finalized_height {
-			let prover = self.clone();
-			let to = self.rpc_call_delay.as_millis();
-			let duration = Duration::from_millis(rand::thread_rng().gen_range(1..to) as u64);
-			unknown_headers_join_set.spawn(async move {
-				sleep(duration).await;
-				let hash = prover
-					.relay_client
-					.rpc()
-					.block_hash(Some(height.into()))
-					.await?
-					.ok_or_else(|| anyhow!("Failed to fetch block has for height {height}"))?;
+		let heights = (previous_finalized_height..=latest_finalized_height).collect::<Vec<_>>();
+		for heights in heights.chunks(PROCESS_BLOCKS_BATCH_SIZE) {
+			for height in heights.to_owned() {
+				log::trace!(target: "hyperspace", "Processing height: {height}");
 
-				let header = prover
-					.relay_client
-					.rpc()
-					.header(Some(hash))
-					.await?
-					.ok_or_else(|| anyhow!("Header with hash: {hash:?} not found!"))?;
+				let prover = self.clone();
+				let to = self.rpc_call_delay.as_millis();
+				let duration = Duration::from_millis(rand::thread_rng().gen_range(1..to) as u64);
+				unknown_headers_join_set.spawn(async move {
+					sleep(duration).await;
+					let hash = prover
+						.relay_client
+						.rpc()
+						.block_hash(Some(height.into()))
+						.await?
+						.ok_or_else(|| anyhow!("Failed to fetch block has for height {height}"))?;
 
-				H::decode(&mut &header.encode()[..]).map_err(|e| e.into())
-			});
+					let header = prover
+						.relay_client
+						.rpc()
+						.header(Some(hash))
+						.await?
+						.ok_or_else(|| anyhow!("Header with hash: {hash:?} not found!"))?;
+
+					H::decode(&mut &header.encode()[..]).map_err(|e| e.into())
+				});
+			}
+
+			// TODO: change this to a binary tree with sorting over the header height
+			while let Some(header) = unknown_headers_join_set.join_next().await {
+				unknown_headers.push(header??);
+			}
 		}
 
 		// we are interested only in the blocks where our parachain header changes.
@@ -320,79 +336,92 @@ where
 			.await?;
 
 		let mut change_set_join_set: JoinSet<Result<Option<_>, anyhow::Error>> = JoinSet::new();
-		for changes in change_set {
-			let header_numbers = header_numbers.clone();
-			let keys = vec![para_storage_key.clone()];
-			let client = self.clone();
-			let to = self.rpc_call_delay.as_millis();
-			let duration1 = Duration::from_millis(rand::thread_rng().gen_range(1..to) as u64);
-			change_set_join_set.spawn(async move {
-				sleep(duration1).await;
-				let header = client
-					.relay_client
-					.rpc()
-					.header(Some(changes.block))
-					.await?
-					.ok_or_else(|| anyhow!("block not found {:?}", changes.block))?;
+		let mut parachain_headers_with_proof = BTreeMap::<H256, ParachainHeaderProofs>::default();
+		log::debug!(target:"hyperspace", "Got {} authority set changes", change_set.len());
 
-				let parachain_header_bytes = {
-					let key = T::Storage::paras_heads(client.para_id);
-					client
+		fn clone_storage_change_sets<T: light_client_common::config::Config + Send + Sync>(
+			changes: &[StorageChangeSet<T::Hash>],
+		) -> Vec<StorageChangeSet<T::Hash>> {
+			changes
+				.iter()
+				.map(|change| StorageChangeSet {
+					block: change.block.clone(),
+					changes: change.changes.clone(),
+				})
+				.collect()
+		}
+
+		for changes in change_set.chunks(PROCESS_CHANGES_SET_BATCH_SIZE) {
+			for change in clone_storage_change_sets::<T>(changes) {
+				let header_numbers = header_numbers.clone();
+				let keys = vec![para_storage_key.clone()];
+				let client = self.clone();
+				let to = self.rpc_call_delay.as_millis();
+				let duration1 = Duration::from_millis(rand::thread_rng().gen_range(1..to) as u64);
+				change_set_join_set.spawn(async move {
+					sleep(duration1).await;
+					let header = client
 						.relay_client
-						.storage()
-						.at(Some(header.hash()))
-						.await
-						.expect("Storage client")
-						.fetch(&key)
+						.rpc()
+						.header(Some(change.block))
 						.await?
-						.expect("Header exists in its own changeset; qed")
-				};
+						.ok_or_else(|| anyhow!("block not found {:?}", change.block))?;
 
-				let para_header: T::Header = Decode::decode(&mut parachain_header_bytes.as_ref())?;
-				let para_block_number = para_header.number();
-				// skip genesis header or any unknown headers
-				if para_block_number == Zero::zero() || !header_numbers.contains(&para_block_number)
-				{
-					return Ok(None)
+					let parachain_header_bytes = {
+						let key = T::Storage::paras_heads(client.para_id);
+						client
+							.relay_client
+							.storage()
+							.at(Some(header.hash()))
+							.await
+							.expect("Storage client")
+							.fetch(&key)
+							.await?
+							.expect("Header exists in its own changeset; qed")
+					};
+
+					let para_header: T::Header =
+						Decode::decode(&mut parachain_header_bytes.as_ref())?;
+					let para_block_number = para_header.number();
+					// skip genesis header or any unknown headers
+					if para_block_number == Zero::zero() ||
+						!header_numbers.contains(&para_block_number)
+					{
+						return Ok(None)
+					}
+
+					let state_proof = client
+						.relay_client
+						.rpc()
+						.read_proof(keys.iter().map(AsRef::as_ref), Some(header.hash()))
+						.await?
+						.proof
+						.into_iter()
+						.map(|p| p.0)
+						.collect();
+
+					let TimeStampExtWithProof { ext: extrinsic, proof: extrinsic_proof } =
+						fetch_timestamp_extrinsic_with_proof(
+							&client.para_client,
+							Some(para_header.hash()),
+						)
+						.await
+						.map_err(|err| anyhow!("Error fetching timestamp with proof: {err:?}"))?;
+					let proofs = ParachainHeaderProofs { state_proof, extrinsic, extrinsic_proof };
+					Ok(Some((H256::from(header.hash()), proofs)))
+				});
+			}
+
+			while let Some(res) = change_set_join_set.join_next().await {
+				if let Some((hash, proofs)) = res?? {
+					parachain_headers_with_proof.insert(hash, proofs);
 				}
-
-				let state_proof = client
-					.relay_client
-					.rpc()
-					.read_proof(keys.iter().map(AsRef::as_ref), Some(header.hash()))
-					.await?
-					.proof
-					.into_iter()
-					.map(|p| p.0)
-					.collect();
-
-				let TimeStampExtWithProof { ext: extrinsic, proof: extrinsic_proof } =
-					fetch_timestamp_extrinsic_with_proof(
-						&client.para_client,
-						Some(para_header.hash()),
-					)
-					.await
-					.map_err(|err| anyhow!("Error fetching timestamp with proof: {err:?}"))?;
-				let proofs = ParachainHeaderProofs { state_proof, extrinsic, extrinsic_proof };
-				Ok(Some((H256::from(header.hash()), proofs)))
-			});
+			}
 		}
 
-		// TODO: change this to a binary tree with sorting over the header height
-		let mut unknown_headers = vec![];
-		while let Some(header) = unknown_headers_join_set.join_next().await {
-			unknown_headers.push(header??);
-		}
 		unknown_headers.sort_by_key(|header| header.number());
 		// overwrite unknown headers
 		finality_proof.unknown_headers = unknown_headers;
-
-		let mut parachain_headers_with_proof = BTreeMap::<H256, ParachainHeaderProofs>::default();
-		while let Some(res) = change_set_join_set.join_next().await {
-			if let Some((hash, proofs)) = res?? {
-				parachain_headers_with_proof.insert(hash, proofs);
-			}
-		}
 
 		Ok(ParachainHeadersWithFinalityProof {
 			finality_proof,

@@ -331,7 +331,7 @@ where
 				Error::RpcError(s) =>
 					if s.contains("MaxSlotsExceeded") {
 						self.rpc_call_delay = self.rpc_call_delay * 2;
-					} else if s.contains("restart required") {
+					} else if s.contains("RestartNeeded") {
 						let relay_ws_client = Arc::new(
 							WsClientBuilder::default()
 								.build(&self.relay_chain_rpc_url)
