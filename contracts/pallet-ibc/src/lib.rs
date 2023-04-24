@@ -464,6 +464,17 @@ pub mod pallet {
 			source_channel: Vec<u8>,
 			destination_channel: Vec<u8>,
 		},
+		/// Happens when token transfer timeouts, tokens have been refunded. expected `TokenTransferFailed` does not happen in this case.
+		TokenTransferTimeout {
+			from: Vec<u8>,
+			to: Vec<u8>,
+			ibc_denom: Vec<u8>,
+			local_asset_id: Option<T::AssetId>,
+			amount: T::Balance,
+			is_sender_source: bool,
+			source_channel: Vec<u8>,
+			destination_channel: Vec<u8>,
+		},
 		/// On recv packet was not processed successfully processes
 		OnRecvPacketError { msg: Vec<u8> },
 		/// Client upgrade path has been set
