@@ -286,7 +286,7 @@ fn process_message(
 			let substitute_client_state = old_client_state;
 			let height = substitute_client_state.latest_height();
 			// consensus state should be replaced as well
-			let mut substitute_consensus_state =
+			let substitute_consensus_state =
 				ctx.consensus_state_prefixed(height, SUBSTITUTE_PREFIX)?;
 			ctx.store_consensus_state_prefixed(height, substitute_consensus_state, SUBJECT_PREFIX);
 			ctx.store_client_state_prefixed(substitute_client_state, SUBJECT_PREFIX)

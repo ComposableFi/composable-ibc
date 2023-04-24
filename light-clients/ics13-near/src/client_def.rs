@@ -209,11 +209,11 @@ impl<H: HostFunctionsTrait> ClientDef for NearClient<H> {
 
 	fn check_substitute_and_update_state<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		subject_client_id: ClientId,
-		substitute_client_id: ClientId,
-		old_client_state: Self::ClientState,
-		substitute_client_state: Self::ClientState,
+		_ctx: &Ctx,
+		_subject_client_id: ClientId,
+		_substitute_client_id: ClientId,
+		_old_client_state: Self::ClientState,
+		_substitute_client_state: Self::ClientState,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error> {
 		todo!()
 	}

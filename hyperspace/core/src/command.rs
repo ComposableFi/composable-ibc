@@ -238,8 +238,8 @@ impl Cmd {
 		let mut chain_a = config.chain_a.clone().into_client().await?;
 		let mut chain_b = config.chain_b.clone().into_client().await?;
 
-		let mut chain_a_clone = chain_a.clone();
-		let mut chain_b_clone = chain_b.clone();
+		let chain_a_clone = chain_a.clone();
+		let chain_b_clone = chain_b.clone();
 		let handle = tokio::task::spawn(async move {
 			relay(chain_a_clone, chain_b_clone, None, None, Some(Mode::Light))
 				.await

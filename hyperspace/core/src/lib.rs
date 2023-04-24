@@ -37,6 +37,19 @@ pub enum Mode {
 	Light,
 }
 
+/*
+T = A -(C)-> B
+A -> E -> Ibc(E) -> Process(E) -> [M] -> B (-> ProcessOnB([M])) -> [E]
+
+A = Cosmos
+B = Ethereum
+
+AonB = Cosmos client on Ethereum (contract), should verify cosmos (tendermint) consensus
+BonA = Ethereum client on Cosmos (contract), should verify ethereum consensus
+
+08-wasm
+
+ */
 /// Core relayer loop, waits for new finality events and forwards any new [`ibc::IbcEvents`]
 /// to the counter party chain.
 pub async fn relay<A, B>(

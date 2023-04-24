@@ -72,9 +72,9 @@ macro_rules! process_finality_event {
 						}
 					}
 					let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
-					let (mut messages, timeouts) =
+					let mut messages =
 						match parse_events(&mut $source, &mut $sink, events, $mode).await {
-							Ok((msgs, timeouts)) => (msgs, timeouts),
+							Ok(msgs) => msgs,
 							Err(e) => {
 								log::error!("Failed to parse events for {} {:?}", $source.name(), e);
 								match $sink.handle_error(&e).and_then(|_| $source.handle_error(&e)).await {
@@ -85,39 +85,8 @@ macro_rules! process_finality_event {
 								continue
 							},
 					};
-					log::trace!(target: "hyperspace", "Received messages count: {}, timeouts count: {}, has undelivered packets: {}", messages.len(), timeouts.len(), $source.has_undelivered_sequences());
+					log::trace!(target: "hyperspace", "Received messages count: {}, timeouts count: {}, has undelivered packets: {}", messages.len(), timeout_msgs.len(), $source.has_undelivered_sequences());
 
-					if !timeouts.is_empty() {
-						if let Some(metrics) = $metrics.as_ref() {
-							metrics.handle_timeouts(timeouts.as_slice()).await;
-						}
-						let type_urls =
-							timeouts.iter().map(|msg| msg.type_url.as_str()).collect::<Vec<_>>();
-						log::info!(
-							"Submitting timeout messages to {}: {type_urls:#?}",
-							$source.name()
-						);
-						match queue::flush_message_batch(timeouts, $metrics.as_ref(), &$source).await {
-							Ok(_) => {
-								log::trace!(target: "hyperspace", "Successfully submitted timeout messages to {}", $source.name());
-							},
-							Err(e) => {
-								log::error!(
-									target:"hyperspace",
-									"Failed to submit timeout messages to {} {:?}",
-									$source.name(),
-									e
-								);
-								match $sink.handle_error(&e).and_then(|_| $source.handle_error(&e)).await {
-									Ok(_) => {},
-									Err(e) => log::error!("Failed to handle error for {} {:?}", $sink.name(), e),
-								}
-								had_error = true;
-								continue
-							},
-						}
-
-					}
 					// We want to send client update if packet messages exist but where not sent due
 					// to a connection delay even if client update message is optional
 					match (
@@ -171,18 +140,38 @@ macro_rules! process_finality_event {
 								Err(e) => log::error!("Failed to handle error for {} {:?}", $sink.name(), e),
 							}
 							had_error = true;
-							continue
 						},
 					}
 				}
+
 				if !timeout_msgs.is_empty() {
 					if let Some(metrics) = $metrics.as_ref() {
 						metrics.handle_timeouts(timeout_msgs.as_slice()).await;
 					}
 					let type_urls =
 						timeout_msgs.iter().map(|msg| msg.type_url.as_str()).collect::<Vec<_>>();
-					log::info!("Submitting timeout messages to {}: {type_urls:#?}", $source.name());
-					queue::flush_message_batch(timeout_msgs, $metrics.as_ref(), &$source).await?;
+					log::info!(
+						"Submitting timeout messages to {}: {type_urls:#?}",
+						$source.name()
+					);
+					match queue::flush_message_batch(timeout_msgs, $metrics.as_ref(), &$source).await {
+						Ok(_) => {
+							log::trace!(target: "hyperspace", "Successfully submitted timeout messages to {}", $source.name());
+						},
+						Err(e) => {
+							log::error!(
+								target:"hyperspace",
+								"Failed to submit timeout messages to {} {:?}",
+								$source.name(),
+								e
+							);
+							match $sink.handle_error(&e).and_then(|_| $source.handle_error(&e)).await {
+								Ok(_) => {},
+								Err(e) => log::error!("Failed to handle error for {} {:?}", $sink.name(), e),
+							}
+							had_error = true;
+						},
+					}
 				}
 				if !had_error {
 					$sink.set_rpc_call_delay(sink_initial_rpc_call_delay);
@@ -1045,6 +1034,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.handle_error(e).await,
 					)*
+					Self::Wasm(c) => c.inner.handle_error(e).await,
 				}
 			}
 
@@ -1054,6 +1044,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.rpc_call_delay(),
 					)*
+					Self::Wasm(c) => c.inner.rpc_call_delay(),
 				}
 			}
 
@@ -1063,6 +1054,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.set_rpc_call_delay(d),
 					)*
+					Self::Wasm(c) => c.inner.set_rpc_call_delay(d),
 				}
 			}
 		}

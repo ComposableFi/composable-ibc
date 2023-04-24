@@ -686,9 +686,7 @@ pub async fn query_maximum_height_for_timeout_proofs(
 					sink.query_timestamp_at(height.revision_height).await.ok()?;
 				let period = send_packet.timeout_timestamp.saturating_sub(timestamp_at_creation);
 				if period == 0 {
-					min_timeout_height =
-						min_timeout_height.max(Some(send_packet.timeout_height.revision_height));
-					continue
+					return Some(send_packet.timeout_height.revision_height)
 				}
 				let period = Duration::from_nanos(period);
 				let period =
