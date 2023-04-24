@@ -82,6 +82,10 @@ use subxt::tx::TxPayload;
 pub struct ParachainClient<T: light_client_common::config::Config> {
 	/// Chain name
 	pub name: String,
+	/// rpc url for parachain
+	pub parachain_rpc_url: String,
+	/// rpc url for relay chain
+	pub relay_chain_rpc_url: String,
 	/// Relay chain rpc client
 	pub relay_client: subxt::OnlineClient<T>,
 	/// Parachain rpc client
@@ -112,6 +116,9 @@ pub struct ParachainClient<T: light_client_common::config::Config> {
 	pub max_extrinsic_weight: u64,
 	/// Finality protocol to use, eg Beefy, Grandpa
 	pub finality_protocol: FinalityProtocol,
+	/// Delay between parallel RPC calls to be friendly with the node and avoid MaxSlotsExceeded
+	/// error
+	pub rpc_call_delay: Duration,
 	/// Used to determine whether client updates should be forced to send
 	/// even if it's optional. It's required, because some timeout packets
 	/// should use proof of the client states.
@@ -125,6 +132,8 @@ enum KeyType {
 	Ed25519,
 	Ecdsa,
 }
+
+pub const DEFAULT_RPC_CALL_DELAY: Duration = Duration::from_millis(10);
 
 impl KeyType {
 	pub fn to_key_type_id(&self) -> KeyTypeId {
@@ -244,6 +253,8 @@ where
 
 		Ok(Self {
 			name: config.name,
+			parachain_rpc_url: config.parachain_rpc_url,
+			relay_chain_rpc_url: config.relay_chain_rpc_url,
 			para_client,
 			relay_client,
 			para_id: config.para_id,
@@ -259,6 +270,7 @@ where
 			ss58_version: Ss58AddressFormat::from(config.ss58_version),
 			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist)),
 			finality_protocol: config.finality_protocol,
+			rpc_call_delay: DEFAULT_RPC_CALL_DELAY,
 			maybe_has_undelivered_packets: Default::default(),
 		})
 	}
@@ -288,6 +300,7 @@ where
 			para_client: self.para_client.clone(),
 			para_ws_client,
 			para_id: self.para_id,
+			rpc_call_delay: self.rpc_call_delay,
 		}
 	}
 
@@ -564,6 +577,7 @@ where
 			para_client: self.para_client.clone(),
 			para_ws_client,
 			para_id: self.para_id,
+			rpc_call_delay: self.rpc_call_delay,
 		};
 		let api = self.relay_client.storage();
 		let para_client_api = self.para_client.storage();

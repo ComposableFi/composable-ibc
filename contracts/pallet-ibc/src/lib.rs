@@ -265,6 +265,8 @@ pub mod pallet {
 
 		type IsSendEnabled: Get<bool>;
 		type IsReceiveEnabled: Get<bool>;
+
+		type FeeAccount: Get<Self::AccountIdConversion>;
 	}
 
 	#[pallet::pallet]
@@ -364,6 +366,23 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// SendPackets info
+	pub type SendPackets<T: Config> =
+		StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<u8>, OptionQuery>;
+
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// RecvPackets info
+	pub type RecvPackets<T: Config> =
+		StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<u8>, OptionQuery>;
+
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// Acks info
+	pub type Acks<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<u8>, OptionQuery>;
+
 	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 	pub struct AssetConfig<AssetId> {
 		pub id: AssetId,
@@ -386,10 +405,6 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			assert!(
-				!self.assets.is_empty(),
-				"You must configure the native currency's asset_id and denom!"
-			);
 			for AssetConfig { id, denom } in &self.assets {
 				IbcDenoms::<T>::insert(denom.clone(), id);
 				IbcAssetIds::<T>::insert(id, denom);
@@ -666,6 +681,10 @@ pub mod pallet {
 					(height, timestamp)
 				},
 			};
+
+			if timeout_height.is_zero() && timeout_timestamp.nanoseconds() == 0 {
+				return Err(Error::<T>::InvalidTimestamp.into())
+			}
 
 			let msg = MsgTransfer {
 				source_port,

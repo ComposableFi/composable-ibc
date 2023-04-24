@@ -481,6 +481,16 @@ pub async fn parse_events(
 				}
 				let seq = u64::from(send_packet.packet.sequence);
 				let packet = send_packet.packet;
+
+				if packet.timeout_height.is_zero() && packet.timeout_timestamp.nanoseconds() == 0 {
+					log::warn!(
+						target: "hyperspace",
+						"Skipping packet relay because packet timeout is zero: {}",
+						packet.sequence
+					);
+					continue
+				}
+
 				let packet_commitment_response = source
 					.query_packet_commitment(send_packet.height, &port_id, &channel_id, seq)
 					.await?;

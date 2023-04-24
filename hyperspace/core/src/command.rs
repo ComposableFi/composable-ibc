@@ -25,7 +25,7 @@ use primitives::{
 	Chain, IbcProvider,
 };
 use prometheus::Registry;
-use std::{path::PathBuf, str::FromStr, time::Duration};
+use std::{num::NonZeroU64, path::PathBuf, str::FromStr, time::Duration};
 
 #[derive(Debug, Parser)]
 pub struct Cli {
@@ -69,7 +69,7 @@ pub struct Cmd {
 	port_id: Option<String>,
 	/// Connection delay period in seconds
 	#[clap(long)]
-	delay_period: Option<u32>,
+	delay_period: Option<std::num::NonZeroU32>,
 	/// Channel order
 	#[clap(long)]
 	order: Option<String>,
@@ -191,10 +191,11 @@ impl Cmd {
 	}
 
 	pub async fn create_connection(&self) -> Result<Config> {
-		let delay = self
+		let delay_period_seconds: NonZeroU64 = self
 			.delay_period
-			.expect("delay_period should be provided when creating a connection");
-		let delay = Duration::from_secs(delay.into());
+			.expect("delay_period should be provided when creating a connection")
+			.into();
+		let delay = Duration::from_secs(delay_period_seconds.into());
 		let mut config = self.parse_config().await?;
 		let mut chain_a = config.chain_a.clone().into_client().await?;
 		let mut chain_b = config.chain_b.clone().into_client().await?;

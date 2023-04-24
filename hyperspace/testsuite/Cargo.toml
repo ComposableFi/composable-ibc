@@ -43,6 +43,7 @@ sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "
 light-client-common = { path = "../../light-clients/common" }
 grandpa-light-client = { path = "../../algorithms/grandpa/verifier", package = "grandpa-light-client-verifier" }
 hex = "0.4.3"
+rand = "0.8.5"
 
 [dev-dependencies]
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }

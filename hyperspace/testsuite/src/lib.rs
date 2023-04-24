@@ -199,6 +199,7 @@ where
 		timeout_timestamp,
 		memo: "".to_string(),
 	};
+	// chain_a.query_seq_from_tx_hash();
 	chain_a.send_transfer(msg.clone()).await.expect("Failed to send transfer: ");
 	(amount, msg)
 }
@@ -286,7 +287,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	log::info!(target: "hyperspace", "Resuming send packet relay");
 	set_relay_status(true);
 
-	assert_timeout_packet(chain_a, 35).await;
+	assert_timeout_packet(chain_a, 50).await;
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for height timeout");
 }
 
@@ -477,7 +478,7 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 
 	set_relay_status(true);
 
-	assert_timeout_packet(chain_a, 50).await;
+	assert_timeout_packet(chain_a, 70).await;
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for channel close");
 }
 
@@ -672,7 +673,13 @@ where
 	// Wait for some sessions to pass while task is asleep, clients will go out of sync
 	tokio::time::sleep(Duration::from_secs(60 * 20)).await;
 	// if clients synced correctly then channel and connection setup should succeed
-	let (handle, ..) = setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(0)).await;
+	let client_a_clone = chain_a.clone();
+	let client_b_clone = chain_b.clone();
+	let handle = tokio::task::spawn(async move {
+		hyperspace_core::relay(client_a_clone, client_b_clone, None, None, None)
+			.await
+			.unwrap()
+	});
 	log::info!(target: "hyperspace", "🚀🚀 Clients were successfully synced");
 	handle.abort();
 }

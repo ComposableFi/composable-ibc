@@ -22,7 +22,7 @@ use primitives::{
 	mock::LocalClientTypes, Chain, IbcProvider, LightClientSync, MisbehaviourHandler,
 };
 use prost::Message;
-use std::pin::Pin;
+use std::{pin::Pin, time::Duration};
 use tendermint_rpc::{
 	event::{Event, EventData},
 	query::{EventType, Query},
@@ -103,17 +103,18 @@ where
 
 	async fn finality_notifications(
 		&self,
-	) -> Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>> {
+	) -> Result<
+		Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>>,
+		Error,
+	> {
 		let (ws_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
 			.await
-			.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))
-			.unwrap();
+			.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))?;
 		tokio::spawn(ws_driver.run());
 		let subscription = ws_client
 			.subscribe(Query::from(EventType::NewBlock))
 			.await
-			.map_err(|e| Error::from(format!("failed to subscribe to new blocks {:?}", e)))
-			.unwrap()
+			.map_err(|e| Error::from(format!("failed to subscribe to new blocks {:?}", e)))?
 			.chunks(6);
 		log::info!(target: "hyperspace_cosmos", "🛰️ Subscribed to {} listening to finality notifications", self.name);
 		let stream = subscription.filter_map(|events| {
@@ -141,7 +142,7 @@ where
 			}))
 		});
 
-		Box::pin(stream)
+		Ok(Box::pin(stream))
 	}
 
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
@@ -238,6 +239,16 @@ where
 	async fn get_proof_height(&self, block_height: Height) -> Height {
 		block_height.increment()
 	}
+
+	async fn handle_error(&mut self, _error: &anyhow::Error) -> Result<(), anyhow::Error> {
+		Ok(())
+	}
+
+	fn rpc_call_delay(&self) -> Duration {
+		Duration::from_millis(100)
+	}
+
+	fn set_rpc_call_delay(&mut self, _delay: Duration) {}
 }
 
 impl<H> CosmosClient<H>

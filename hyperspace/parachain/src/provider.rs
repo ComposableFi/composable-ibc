@@ -70,7 +70,8 @@ pub struct TransactionId<Hash> {
 }
 
 #[async_trait::async_trait]
-impl<T: light_client_common::config::Config + Send + Sync> IbcProvider for ParachainClient<T>
+impl<T: light_client_common::config::Config + Send + Sync + Clone> IbcProvider
+	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	u32: From<<T as subxt::Config>::BlockNumber>,
@@ -694,7 +695,8 @@ where
 		let base =
 			if cfg!(test) { (session_length / 2) as u64 } else { (session_length / 12) as u64 };
 		let diff = latest_height - latest_client_height_on_counterparty;
-		Ok(base >= diff)
+		let pruning_len = 256;
+		Ok(diff >= base.min(pruning_len as u64))
 	}
 
 	async fn initialize_client_state(

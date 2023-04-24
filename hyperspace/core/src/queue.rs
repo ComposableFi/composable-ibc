@@ -48,8 +48,9 @@ pub async fn flush_message_batch(
 		"Outgoing messages weight: {} exceeds the block max weight: {}. Chunking {} messages into {} chunks",
         batch_weight, block_max_weight, msgs.len(), chunk,
 	);
+	let chunk_size = msgs.len() / chunk;
 	// TODO: return number of failed messages and record it to metrics
-	for batch in msgs.chunks(chunk) {
+	for batch in msgs.chunks(chunk_size) {
 		// send out batches.
 		sink.submit(batch.to_vec()).await?;
 	}
