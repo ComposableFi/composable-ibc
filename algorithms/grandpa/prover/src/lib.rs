@@ -104,8 +104,8 @@ impl<T: Config> Clone for GrandpaProver<T> {
 impl<T> GrandpaProver<T>
 where
 	T: light_client_common::config::Config + Send + Sync,
-	T::BlockNumber: Ord + Zero,
-	u32: From<T::BlockNumber>,
+	<<T as subxt::Config>::Header as Header>::Number: Ord + Zero,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	sp_core::H256: From<T::Hash>,
 {
 	/// Initializes the parachain and relay chain clients given the ws urls.
@@ -131,7 +131,10 @@ where
 	}
 
 	/// Construct the inital client state.
-	pub async fn initialize_client_state(&self) -> Result<ClientState, anyhow::Error> {
+	pub async fn initialize_client_state(&self) -> Result<ClientState, anyhow::Error>
+	where
+		<T as subxt::Config>::Header: Decode,
+	{
 		use sp_finality_grandpa::AuthorityList;
 		let latest_relay_hash = self.relay_client.rpc().finalized_head().await?;
 		log::debug!(target: "hyperspace", "Latest relay hash: {:?}", latest_relay_hash);
@@ -146,9 +149,7 @@ where
 			let key = T::Storage::grandpa_current_set_id();
 			self.relay_client
 				.storage()
-				.at(Some(latest_relay_hash))
-				.await
-				.expect("Storage client")
+				.at(latest_relay_hash)
 				.fetch(&key)
 				.await
 				.unwrap()
@@ -200,7 +201,10 @@ where
 	pub async fn query_latest_finalized_parachain_header(
 		&self,
 		latest_finalized_height: u32,
-	) -> Result<T::Header, anyhow::Error> {
+	) -> Result<T::Header, anyhow::Error>
+	where
+		<T as subxt::Config>::Header: Decode,
+	{
 		let latest_finalized_hash = self
 			.relay_client
 			.rpc()
@@ -211,9 +215,7 @@ where
 		let header = self
 			.relay_client
 			.storage()
-			.at(Some(latest_finalized_hash))
-			.await
-			.expect("Storage client")
+			.at(latest_finalized_hash)
 			.fetch(&key)
 			.await?
 			.ok_or_else(|| anyhow!("parachain header not found for para id: {}", self.para_id))?;
@@ -230,7 +232,7 @@ where
 		previous_finalized_height: u32,
 		mut latest_finalized_height: u32,
 		latest_justification: Option<Vec<u8>>,
-		header_numbers: Vec<T::BlockNumber>,
+		header_numbers: Vec<<<T as subxt::Config>::Header as Header>::Number>,
 	) -> Result<ParachainHeadersWithFinalityProof<H>, anyhow::Error>
 	where
 		H: Header + codec::Decode + Send + 'static,
@@ -238,7 +240,8 @@ where
 		<H::Hasher as subxt::config::Hasher>::Output: From<T::Hash>,
 		T::Hash: From<<H::Hasher as subxt::config::Hasher>::Output>,
 		H::Number: finality_grandpa::BlockNumberOps,
-		T::BlockNumber: One,
+		<<T as subxt::Config>::Header as Header>::Number: One + Clone + Sync + Send,
+		<T as subxt::Config>::Header: Decode + Sync,
 	{
 		let mut finality_proof = if let Some(justification) = latest_justification {
 			let justification = GrandpaJustification::<H>::decode(&mut &*justification)?;
@@ -372,9 +375,7 @@ where
 						client
 							.relay_client
 							.storage()
-							.at(Some(header.hash()))
-							.await
-							.expect("Storage client")
+							.at(header.hash())
 							.fetch(&key)
 							.await?
 							.expect("Header exists in its own changeset; qed")
@@ -435,13 +436,16 @@ where
 		block: u32,
 	) -> Result<(u32, u32), anyhow::Error> {
 		let epoch_addr = T::Storage::babe_epoch_start();
-		let block_hash = self.relay_client.rpc().block_hash(Some(block.into())).await?;
+		let block_hash = self
+			.relay_client
+			.rpc()
+			.block_hash(Some(block.into()))
+			.await?
+			.ok_or_else(|| anyhow!("Failed to fetch block hash for block number {}", block))?;
 		let (previous_epoch_start, current_epoch_start) = self
 			.relay_client
 			.storage()
 			.at(block_hash)
-			.await
-			.expect("Storage client")
 			.fetch(&epoch_addr)
 			.await?
 			.ok_or_else(|| anyhow!("Failed to fetch epoch information"))?;

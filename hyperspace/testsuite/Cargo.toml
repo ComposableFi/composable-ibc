@@ -16,7 +16,7 @@ async-trait = "0.1.58"
 futures = "0.3.24"
 json = { version = "1.0.85", package = "serde_json" }
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
-subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
 
 ibc = { path = "../../ibc/modules" }
 ibc-proto = { path = "../../ibc/proto" }
@@ -46,7 +46,7 @@ hex = "0.4.3"
 rand = "0.8.5"
 
 [dev-dependencies]
-subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
 hyperspace-core = { path = "../core", features = ["testing", "build-metadata-from-ws"] }
 hyperspace-parachain = { path = "../parachain", features = ["testing"] }
 hyperspace-cosmos = { path = "../cosmos", features = [] }

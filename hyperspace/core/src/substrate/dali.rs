@@ -19,8 +19,8 @@ use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
 use ibc_proto::google::protobuf::Any;
 use light_client_common::config::{
-	BeefyAuthoritySetT, EventRecordT, IbcEventsT, LocalStaticStorageAddress, ParaLifecycleT,
-	RuntimeCall, RuntimeStorage, RuntimeTransactions,
+	BeefyAuthoritySetT, EventRecordT, IbcEventsT, LocalAddress, ParaLifecycleT, RuntimeCall,
+	RuntimeStorage, RuntimeTransactions,
 };
 use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;

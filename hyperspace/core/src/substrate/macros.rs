@@ -4,7 +4,9 @@ macro_rules! define_id {
 		$name: ident,
 		$id_type: path
 	) => {
-		#[derive(Decode)]
+		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 		pub struct $name(pub $id_type);
 
 		impl From<u32> for $name {
@@ -27,7 +29,9 @@ macro_rules! define_head_data {
 		$name: ident,
 		$head_data_type: ty,
 	) => {
-		#[derive(Decode)]
+		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 		pub struct $name(pub $head_data_type);
 
 		impl AsRef<[u8]> for $name {
@@ -50,7 +54,9 @@ macro_rules! define_para_lifecycle {
 		$name: ident,
 		$ty: ty
 	) => {
-		#[derive(Decode)]
+		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 		pub struct $name(pub $ty);
 
 		impl ParaLifecycleT for $name {
@@ -67,7 +73,9 @@ macro_rules! define_beefy_authority_set {
 		$name: ident,
 		$ty: ty
 	) => {
-		#[derive(Decode, Encode)]
+		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 		pub struct $name<T>(pub $ty);
 
 		impl BeefyAuthoritySetT for $name<H256> {
@@ -518,67 +526,81 @@ macro_rules! define_runtime_storage {
 		$mmr_leaf_beefy_next_authorities:expr,
 		$babe_epoch_start:expr
 	) => {
-		pub struct $name;
+		use std::borrow::Cow;
+		use subxt::{storage::StorageAddress, utils::Static};
 
+		pub struct $name;
 		impl RuntimeStorage for $name {
 			type HeadData = $head_data;
 			type Id = $id;
 			type ParaLifecycle = $para_lifecycle;
 			type BeefyAuthoritySet = $beefy_authority_set;
 
-			fn timestamp_now() -> StaticStorageAddress<DecodeStaticType<u64>, Yes, Yes, ()> {
+			fn timestamp_now() -> Address<StaticStorageMapKey, u64, Yes, Yes, ()> {
 				$timestamp_now
 			}
 
 			fn paras_heads(
 				x: u32,
-			) -> LocalStaticStorageAddress<DecodeStaticType<Self::HeadData>, Yes, (), Yes> {
+			) -> LocalAddress<StaticStorageMapKey, Self::HeadData, Yes, (), Yes> {
 				let storage = $paras_heads(&Self::Id::from(x).0);
-				LocalStaticStorageAddress::new("Paras", "Heads", storage)
+				LocalAddress::new(
+					Cow::Owned(storage.pallet_name().to_owned()),
+					Cow::Owned(storage.entry_name().to_owned()),
+					storage,
+				)
 			}
 
 			fn paras_para_lifecycles(
 				x: u32,
-			) -> LocalStaticStorageAddress<DecodeStaticType<Self::ParaLifecycle>, Yes, (), Yes> {
+			) -> LocalAddress<StaticStorageMapKey, Self::ParaLifecycle, Yes, (), Yes> {
 				let storage = $paras_para_lifecycles(&Self::Id::from(x).0);
-				LocalStaticStorageAddress::new("Paras", "ParaLifecycles", storage)
+				LocalAddress::new(
+					Cow::Owned(storage.pallet_name().to_owned()),
+					Cow::Owned(storage.entry_name().to_owned()),
+					storage,
+				)
 			}
 
 			fn paras_parachains(
-			) -> LocalStaticStorageAddress<DecodeStaticType<Vec<Self::Id>>, Yes, Yes, ()> {
+			) -> LocalAddress<StaticStorageMapKey, Vec<Static<Self::Id>>, Yes, Yes, ()> {
 				let storage = $paras_parachains;
-				LocalStaticStorageAddress::new("Paras", "Parachains", storage)
+				LocalAddress::new(
+					Cow::Owned(storage.pallet_name().to_owned()),
+					Cow::Owned(storage.entry_name().to_owned()),
+					storage,
+				)
 			}
 
-			fn grandpa_current_set_id() -> StaticStorageAddress<DecodeStaticType<u64>, Yes, Yes, ()>
-			{
+			fn grandpa_current_set_id() -> Address<StaticStorageMapKey, u64, Yes, Yes, ()> {
 				$grandpa_current_set_id
 			}
 
-			fn beefy_validator_set_id() -> StaticStorageAddress<DecodeStaticType<u64>, Yes, Yes, ()>
-			{
+			fn beefy_validator_set_id() -> Address<StaticStorageMapKey, u64, Yes, Yes, ()> {
 				$beefy_validator_set_id
 			}
 
-			fn beefy_authorities() -> LocalStaticStorageAddress<
-				DecodeStaticType<Vec<sp_beefy::crypto::Public>>,
-				Yes,
-				Yes,
-				(),
-			> {
+			fn beefy_authorities(
+			) -> LocalAddress<StaticStorageMapKey, Vec<sp_beefy::crypto::Public>, Yes, Yes, ()> {
 				let storage = $beefy_authorities;
-				LocalStaticStorageAddress::new("Beefy", "Authorities", storage)
+				LocalAddress::new(
+					Cow::Owned(storage.pallet_name().to_owned()),
+					Cow::Owned(storage.entry_name().to_owned()),
+					storage,
+				)
 			}
 
 			fn mmr_leaf_beefy_next_authorities(
-			) -> LocalStaticStorageAddress<DecodeStaticType<Self::BeefyAuthoritySet>, Yes, Yes, ()>
-			{
+			) -> LocalAddress<StaticStorageMapKey, Self::BeefyAuthoritySet, Yes, Yes, ()> {
 				let storage = $mmr_leaf_beefy_next_authorities;
-				LocalStaticStorageAddress::new("MmrLeaf", "BeefyNextAuthorities", storage)
+				LocalAddress::new(
+					Cow::Owned(storage.pallet_name().to_owned()),
+					Cow::Owned(storage.entry_name().to_owned()),
+					storage,
+				)
 			}
 
-			fn babe_epoch_start() -> StaticStorageAddress<DecodeStaticType<(u32, u32)>, Yes, Yes, ()>
-			{
+			fn babe_epoch_start() -> Address<StaticStorageMapKey, (u32, u32), Yes, Yes, ()> {
 				$babe_epoch_start
 			}
 		}
@@ -617,7 +639,7 @@ macro_rules! define_runtime_transactions {
 			type SendPingParams = $send_ping_params;
 			type TransferParams = $transfer_params;
 
-			fn ibc_deliver(messages: Vec<Any>) -> StaticTxPayload<Self::Deliver> {
+			fn ibc_deliver(messages: Vec<Any>) -> Payload<Self::Deliver> {
 				use $any as Any;
 				$ibc_deliver(
 					messages
@@ -632,7 +654,7 @@ macro_rules! define_runtime_transactions {
 				asset_id: u128,
 				amount: u128,
 				memo: Option<()>,
-			) -> StaticTxPayload<Self::Transfer> {
+			) -> Payload<Self::Transfer> {
 				$ibc_transfer(
 					$transfer_wrapper(params).into(),
 					asset_id,
@@ -641,11 +663,11 @@ macro_rules! define_runtime_transactions {
 				)
 			}
 
-			fn sudo_sudo(call: Self::ParaRuntimeCall) -> StaticTxPayload<Self::Sudo> {
+			fn sudo_sudo(call: Self::ParaRuntimeCall) -> Payload<Self::Sudo> {
 				$sudo_sudo(call.0)
 			}
 
-			fn ibc_ping_send_ping(params: Self::SendPingParams) -> StaticTxPayload<Self::SendPing> {
+			fn ibc_ping_send_ping(params: Self::SendPingParams) -> Payload<Self::SendPing> {
 				$ibc_ping_send_ping($send_ping_params_wrapper(params).into())
 			}
 
@@ -659,7 +681,9 @@ macro_rules! define_runtime_transactions {
 #[macro_export]
 macro_rules! define_event_record {
 	($name:ident, $event_record:ty, $ibc_event_wrapper: expr, $phase: path, $pallet_event: path, $runtime_event: path) => {
-		#[derive(Decode)]
+		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 		pub struct $name(pub $event_record);
 
 		impl EventRecordT for $name {
@@ -697,7 +721,9 @@ macro_rules! define_event_record {
 #[macro_export]
 macro_rules! define_events {
 	($name:ident, $events:ty, $ibc_event_wrapper: expr) => {
-		#[derive(Decode)]
+		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 		pub struct $name(pub $events);
 
 		impl IbcEventsT for $name {
@@ -729,7 +755,9 @@ macro_rules! define_events {
 #[macro_export]
 macro_rules! define_runtime_event {
 	($name:ident, $runtime_event:ty) => {
-		#[derive(Decode)]
+		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 		pub struct $name(pub $runtime_event);
 	};
 }
@@ -737,7 +765,9 @@ macro_rules! define_runtime_event {
 #[macro_export]
 macro_rules! define_runtime_call {
 	($name:ident, $runtime_call: path, $any_wrapper: expr, $call: path) => {
-		#[derive(Decode)]
+		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 		pub struct $name(pub $runtime_call);
 
 		impl RuntimeCall for $name {
@@ -757,7 +787,9 @@ macro_rules! define_runtime_call {
 #[macro_export]
 macro_rules! define_asset_id {
 	($name:ident, $ty:ty) => {
-		#[derive(Encode, Decode)]
+		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 		pub struct $name(pub $ty);
 
 		impl From<u128> for $name {

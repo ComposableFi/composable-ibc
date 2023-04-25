@@ -19,8 +19,8 @@ use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
 use ibc_proto::google::protobuf::Any;
 use light_client_common::config::{
-	BeefyAuthoritySetT, EventRecordT, IbcEventsT, LocalStaticStorageAddress, ParaLifecycleT,
-	RuntimeCall, RuntimeStorage, RuntimeTransactions,
+	BeefyAuthoritySetT, EventRecordT, IbcEventsT, LocalAddress, ParaLifecycleT, RuntimeCall,
+	RuntimeStorage, RuntimeTransactions,
 };
 use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;
@@ -39,9 +39,11 @@ use subxt::{
 		ExtrinsicParams,
 	},
 	events::{Phase, StaticEvent},
-	metadata::DecodeStaticType,
-	storage::{address::Yes, StaticStorageAddress},
-	tx::StaticTxPayload,
+	storage::{
+		address::{StaticStorageMapKey, Yes},
+		Address,
+	},
+	tx::Payload,
 	Error, OnlineClient,
 };
 
@@ -182,15 +184,12 @@ impl light_client_common::config::Config for DefaultConfig {
 
 impl subxt::Config for DefaultConfig {
 	type Index = u32;
-	type BlockNumber = u32;
 	type Hash = H256;
 	type Hasher = subxt::config::substrate::BlakeTwo256;
 	type AccountId = AccountId32;
 	type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
-	type Header = subxt::config::substrate::SubstrateHeader<
-		Self::BlockNumber,
-		subxt::config::substrate::BlakeTwo256,
-	>;
+	type Header =
+		subxt::config::substrate::SubstrateHeader<u32, subxt::config::substrate::BlakeTwo256>;
 	type Signature = sp_runtime::MultiSignature;
 	type ExtrinsicParams = ParachainExtrinsicParams<Self>;
 }

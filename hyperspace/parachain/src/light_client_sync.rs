@@ -1,4 +1,4 @@
-use codec::Encode;
+use codec::{Decode, Encode};
 use std::{
 	collections::{BTreeMap, BTreeSet, HashMap},
 	fmt::Display,
@@ -14,7 +14,7 @@ use sp_runtime::{
 };
 use subxt::config::{
 	extrinsic_params::{BaseExtrinsicParamsBuilder, ExtrinsicParams},
-	Header as HeaderT,
+	Header as HeaderT, Header,
 };
 
 use grandpa_prover::GrandpaProver;
@@ -38,14 +38,16 @@ impl<T: light_client_common::config::Config + Send + Sync + Clone> LightClientSy
 	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<T as subxt::Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
@@ -155,7 +157,8 @@ where
 	H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
@@ -182,6 +185,8 @@ where
 		<T as subxt::Config>::Hash: From<H256>,
 		<T as subxt::Config>::Hash: From<[u8; 32]>,
 		<T as light_client_common::config::Config>::AssetId: Clone,
+		<T as subxt::Config>::Header: Decode + Send + Sync,
+		<<T as subxt::Config>::Header as HeaderT>::Number: Send + Sync,
 	{
 		let prover = self.grandpa_prover();
 		let session_length = prover.session_length().await?;
@@ -242,8 +247,10 @@ async fn get_message<T: light_client_common::config::Config + Send + Sync>(
 ) -> Result<(Any, Vec<IbcEvent>, u32, u32), anyhow::Error>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
-		+ From<<T as subxt::Config>::BlockNumber>,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+		+ From<<<T as subxt::Config>::Header as Header>::Number>,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync,
 	H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
@@ -288,7 +295,9 @@ where
 			if events.is_empty() {
 				None
 			} else {
-				str::parse::<u32>(&*num).ok().map(T::BlockNumber::from)
+				str::parse::<u32>(&*num)
+					.ok()
+					.map(<<T as subxt::Config>::Header as Header>::Number::from)
 			}
 		})
 		.collect::<BTreeSet<_>>();

@@ -50,7 +50,7 @@ use sp_runtime::{
 	KeyTypeId, MultiSignature, MultiSigner,
 };
 use ss58_registry::Ss58AddressFormat;
-use subxt::config::Header as HeaderT;
+use subxt::config::{Header as HeaderT, Header};
 
 use crate::utils::{fetch_max_extrinsic_weight, unsafe_cast_to_jsonrpsee_client};
 use codec::Decode;
@@ -276,7 +276,8 @@ where
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	H256: From<T::Hash>,
-	T::BlockNumber: From<u32> + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		From<u32> + Ord + sp_runtime::traits::Zero + One,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
@@ -302,8 +303,9 @@ where
 		client_state: &ClientState,
 	) -> Result<Vec<T::Header>, Error>
 	where
-		u32: From<T::BlockNumber>,
-		T::BlockNumber: From<u32>,
+		u32: From<<<T as subxt::Config>::Header as Header>::Number>,
+		<<T as subxt::Config>::Header as Header>::Number: From<u32>,
+		<T as subxt::Config>::Header: Decode,
 	{
 		let client_wrapper = Prover {
 			relay_client: self.relay_client.clone(),
@@ -330,10 +332,11 @@ where
 		&self,
 		commitment_block_number: u32,
 		client_state: &ClientState,
-		headers: Vec<T::BlockNumber>,
+		headers: Vec<<<T as subxt::Config>::Header as Header>::Number>,
 	) -> Result<(Vec<ParachainHeader>, Proof<H256>), Error>
 	where
-		T::BlockNumber: Ord + sp_runtime::traits::Zero,
+		<<T as subxt::Config>::Header as Header>::Number: Ord + sp_runtime::traits::Zero,
+		<T as subxt::Config>::Header: Decode,
 	{
 		let client_wrapper = Prover {
 			relay_client: self.relay_client.clone(),
@@ -426,7 +429,10 @@ where
 			}
 		};
 
-		let tx_in_block = progress.wait_for_in_block().await?;
+		let tx_in_block =
+			tokio::time::timeout(Duration::from_secs(60 * 2), progress.wait_for_in_block())
+				.await
+				.map_err(|_| Error::Custom("transaction submission timeout".to_string()))??;
 		tx_in_block.wait_for_success().await?;
 		Ok((tx_in_block.extrinsic_hash(), tx_in_block.block_hash()))
 	}
@@ -451,10 +457,10 @@ where
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	H256: From<T::Hash>,
-	T::BlockNumber: Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number: Ord + sp_runtime::traits::Zero + One,
 	T::Header: HeaderT,
 	<<T::Header as HeaderT>::Hasher as subxt::config::Hasher>::Output: From<T::Hash>,
-	T::BlockNumber: From<u32>,
+	<<T as subxt::Config>::Header as Header>::Number: From<u32>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T as subxt::Config>::AccountId: Send + Sync,
@@ -470,7 +476,7 @@ where
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-		u32: From<<T as subxt::Config>::BlockNumber>,
+		u32: From<<<T as subxt::Config>::Header as subxt::config::Header>::Number>,
 	{
 		use ibc::core::ics24_host::identifier::ChainId;
 		let api = self.relay_client.storage();
@@ -487,20 +493,17 @@ where
 
 			let subxt_block_number: subxt::rpc::types::BlockNumber =
 				beefy_state.latest_beefy_height.into();
-			let block_hash = self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?;
+			let block_hash =
+				self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
+					|| Error::Custom(format!("Couldn't find block hash for relay block",)),
+				)?;
 			let heads_addr = T::Storage::paras_heads(self.para_id);
-			let head_data = api
-				.at(block_hash)
-				.await
-				.expect("Storage client")
-				.fetch(&heads_addr)
-				.await?
-				.ok_or_else(|| {
-					Error::Custom(format!(
-						"Couldn't find header for ParaId({}) at relay block {:?}",
-						self.para_id, block_hash
-					))
-				})?;
+			let head_data = api.at(block_hash).fetch(&heads_addr).await?.ok_or_else(|| {
+				Error::Custom(format!(
+					"Couldn't find header for ParaId({}) at relay block {:?}",
+					self.para_id, block_hash
+				))
+			})?;
 			let decoded_para_head = sp_runtime::generic::Header::<
 				u32,
 				sp_runtime::traits::BlakeTwo256,
@@ -524,12 +527,12 @@ where
 			}
 			let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
 			let block_hash =
-				self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
+				self.para_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
+					|| Error::Custom(format!("Couldn't find block hash for para block",)),
+				)?;
 			let timestamp_addr = T::Storage::timestamp_now();
 			let unix_timestamp_millis = para_client_api
 				.at(block_hash)
-				.await
-				.expect("Storage client")
 				.fetch(&timestamp_addr)
 				.await?
 				.expect("Timestamp should exist");
@@ -556,8 +559,9 @@ where
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-		u32: From<<T as subxt::Config>::BlockNumber>,
+		u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 		<T as subxt::Config>::Hash: From<H256>,
+		<T as subxt::Config>::Header: Decode,
 	{
 		let relay_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.relay_ws_client) };
 		let para_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.para_ws_client) };
@@ -579,9 +583,7 @@ where
 
 			let heads_addr = T::Storage::paras_heads(self.para_id);
 			let head_data = api
-				.at(Some(light_client_state.latest_relay_hash.into()))
-				.await
-				.expect("Storage client")
+				.at(light_client_state.latest_relay_hash.into())
 				.fetch(&heads_addr)
 				.await?
 				.ok_or_else(|| {
@@ -613,12 +615,17 @@ where
 
 			let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
 			let block_hash =
-				self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
+				self.para_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
+					|| {
+						Error::Custom(format!(
+							"Couldn't find block hash for ParaId({}) at block number {}",
+							self.para_id, block_number
+						))
+					},
+				)?;
 			let timestamp_addr = T::Storage::timestamp_now();
 			let unix_timestamp_millis = para_client_api
 				.at(block_hash)
-				.await
-				.expect("Storage client")
 				.fetch(&timestamp_addr)
 				.await?
 				.expect("Timestamp should exist");

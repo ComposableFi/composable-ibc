@@ -1,3 +1,4 @@
+use alloc::borrow::Cow;
 use async_trait::async_trait;
 use codec::{Codec, Decode, Encode};
 use ibc::events::IbcEvent;
@@ -9,34 +10,47 @@ use subxt::{
 	config::ExtrinsicParams,
 	error::Error,
 	events::{Phase, StaticEvent},
-	ext::frame_metadata::{
-		ExtrinsicMetadata, RuntimeMetadata, RuntimeMetadataPrefixed, RuntimeMetadataV14,
-		META_RESERVED,
+	ext::{
+		frame_metadata::{
+			ExtrinsicMetadata, RuntimeMetadata, RuntimeMetadataPrefixed, RuntimeMetadataV14,
+			META_RESERVED,
+		},
+		scale_decode::DecodeAsType,
+		scale_encode::{EncodeAsFields, EncodeAsType},
 	},
-	metadata::{DecodeStaticType, DecodeWithMetadata, Metadata},
-	storage::{address::Yes, StaticStorageAddress, StorageAddress},
-	tx::StaticTxPayload,
+	metadata::{DecodeWithMetadata, Metadata},
+	storage::{
+		address::{StaticStorageMapKey, Yes},
+		Address, StorageAddress,
+	},
+	tx::Payload,
+	utils::{Encoded, Static},
 };
 
 /// This represents a statically generated storage lookup address.
-pub struct LocalStaticStorageAddress<ReturnTy, Fetchable, Defaultable, Iterable> {
-	pub pallet_name: &'static str,
-	pub entry_name: &'static str,
+pub struct LocalAddress<StorageKey, ReturnTy, Fetchable, Defaultable, Iterable> {
+	pub pallet_name: Cow<'static, str>,
+	pub entry_name: Cow<'static, str>,
 	// How to access the specific value at that storage address.
-	pub storage_entry_keys: Vec<u8>,
+	pub storage_entry_keys: Vec<StorageKey>,
 	// Hash provided from static code for validation.
 	pub validation_hash: Option<[u8; 32]>,
 	pub _marker: std::marker::PhantomData<(ReturnTy, Fetchable, Defaultable, Iterable)>,
 }
 
-impl<ReturnTy: DecodeWithMetadata, Fetchable, Defaultable, Iterable>
-	LocalStaticStorageAddress<ReturnTy, Fetchable, Defaultable, Iterable>
+impl<
+		// StorageKey: EncodeWithMetadata,
+		ReturnTy: DecodeWithMetadata,
+		Fetchable,
+		Defaultable,
+		Iterable,
+	> LocalAddress<StaticStorageMapKey, ReturnTy, Fetchable, Defaultable, Iterable>
 {
 	pub fn new<NewReturnTy>(
-		pallet_name: &'static str,
-		entry_name: &'static str,
-		storage: StaticStorageAddress<ReturnTy, Fetchable, Defaultable, Iterable>,
-	) -> LocalStaticStorageAddress<NewReturnTy, Fetchable, Defaultable, Iterable> {
+		pallet_name: Cow<'static, str>,
+		entry_name: Cow<'static, str>,
+		storage: Address<StaticStorageMapKey, ReturnTy, Fetchable, Defaultable, Iterable>,
+	) -> LocalAddress<StaticStorageMapKey, NewReturnTy, Fetchable, Defaultable, Iterable> {
 		let mut bytes = vec![];
 		fn fake_metadata() -> Metadata {
 			Metadata::try_from(RuntimeMetadataPrefixed(
@@ -56,10 +70,10 @@ impl<ReturnTy: DecodeWithMetadata, Fetchable, Defaultable, Iterable>
 		storage
 			.append_entry_bytes(&fake_metadata(), &mut bytes)
 			.expect("should always succeed");
-		LocalStaticStorageAddress {
+		LocalAddress {
 			pallet_name,
 			entry_name,
-			storage_entry_keys: bytes,
+			storage_entry_keys: vec![Static(Encoded(bytes))],
 			validation_hash: storage.validation_hash(),
 			_marker: Default::default(),
 		}
@@ -67,8 +81,9 @@ impl<ReturnTy: DecodeWithMetadata, Fetchable, Defaultable, Iterable>
 }
 
 impl<ReturnTy, Fetchable, Defaultable, Iterable> StorageAddress
-	for LocalStaticStorageAddress<ReturnTy, Fetchable, Defaultable, Iterable>
+	for LocalAddress<StaticStorageMapKey, ReturnTy, Fetchable, Defaultable, Iterable>
 where
+	// StorageKey: EncodeWithMetadata,
 	ReturnTy: DecodeWithMetadata,
 {
 	type Target = ReturnTy;
@@ -77,15 +92,17 @@ where
 	type IsFetchable = Fetchable;
 
 	fn pallet_name(&self) -> &str {
-		self.pallet_name
+		&self.pallet_name
 	}
 
 	fn entry_name(&self) -> &str {
-		self.entry_name
+		&self.entry_name
 	}
 
 	fn append_entry_bytes(&self, _metadata: &Metadata, bytes: &mut Vec<u8>) -> Result<(), Error> {
-		bytes.extend(&self.storage_entry_keys);
+		for k in &self.storage_entry_keys {
+			bytes.extend(&k.0 .0);
+		}
 		Ok(())
 	}
 
@@ -95,24 +112,24 @@ where
 }
 
 pub trait RuntimeTransactions {
-	type Deliver: Encode + Send + Sync;
-	type Transfer: Encode + Send + Sync;
-	type Sudo: Encode + Send + Sync;
-	type SendPing: Encode + Send + Sync;
+	type Deliver: Encode + EncodeAsFields + Send + Sync;
+	type Transfer: Encode + EncodeAsFields + Send + Sync;
+	type Sudo: Encode + EncodeAsFields + Send + Sync;
+	type SendPing: Encode + EncodeAsFields + Send + Sync;
 	type ParaRuntimeCall;
 
 	type SendPingParams;
 	type TransferParams;
 
-	fn ibc_deliver(messages: Vec<Any>) -> StaticTxPayload<Self::Deliver>;
+	fn ibc_deliver(messages: Vec<Any>) -> Payload<Self::Deliver>;
 	fn ibc_transfer(
 		params: Self::TransferParams,
 		asset_id: u128,
 		amount: u128,
 		memo: Option<()>,
-	) -> StaticTxPayload<Self::Transfer>;
-	fn sudo_sudo(call: Self::ParaRuntimeCall) -> StaticTxPayload<Self::Sudo>;
-	fn ibc_ping_send_ping(params: Self::SendPingParams) -> StaticTxPayload<Self::SendPing>;
+	) -> Payload<Self::Transfer>;
+	fn sudo_sudo(call: Self::ParaRuntimeCall) -> Payload<Self::Sudo>;
+	fn ibc_ping_send_ping(params: Self::SendPingParams) -> Payload<Self::SendPing>;
 	fn ibc_increase_counters() -> Self::ParaRuntimeCall;
 }
 
@@ -126,34 +143,34 @@ pub trait ParaLifecycleT {
 }
 
 pub trait RuntimeStorage {
-	type HeadData: Decode + AsRef<[u8]> + Into<Vec<u8>> + Sync + Send;
-	type Id: From<u32> + Into<u32> + Decode + Send + Sync;
-	type ParaLifecycle: ParaLifecycleT + Decode + Send + Sync;
-	type BeefyAuthoritySet: BeefyAuthoritySetT + Codec + Send + Sync;
+	type HeadData: Decode + DecodeAsType + AsRef<[u8]> + Into<Vec<u8>> + Sync + Send;
+	type Id: From<u32> + Into<u32> + Decode + DecodeAsType + Send + Sync;
+	type ParaLifecycle: ParaLifecycleT + Decode + DecodeAsType + Send + Sync;
+	type BeefyAuthoritySet: BeefyAuthoritySetT + Codec + EncodeAsType + DecodeAsType + Send + Sync;
 
-	fn timestamp_now() -> StaticStorageAddress<DecodeStaticType<u64>, Yes, Yes, ()>;
+	fn timestamp_now() -> Address<StaticStorageMapKey, u64, Yes, Yes, ()>;
 
-	fn paras_heads(
-		x: u32,
-	) -> LocalStaticStorageAddress<DecodeStaticType<Self::HeadData>, Yes, (), Yes>;
+	fn paras_heads(x: u32) -> LocalAddress<StaticStorageMapKey, Self::HeadData, Yes, (), Yes>;
+	// ) -> LocalAddress<DecodeStaticType<Self::HeadData>, Yes, (), Yes>;
 
 	fn paras_para_lifecycles(
 		x: u32,
-	) -> LocalStaticStorageAddress<DecodeStaticType<Self::ParaLifecycle>, Yes, (), Yes>;
+	) -> LocalAddress<StaticStorageMapKey, Self::ParaLifecycle, Yes, (), Yes>;
+	// ) -> LocalAddress<DecodeStaticType<Self::ParaLifecycle>, Yes, (), Yes>;
 
-	fn paras_parachains() -> LocalStaticStorageAddress<DecodeStaticType<Vec<Self::Id>>, Yes, Yes, ()>;
+	fn paras_parachains() -> LocalAddress<StaticStorageMapKey, Vec<Static<Self::Id>>, Yes, Yes, ()>;
 
-	fn grandpa_current_set_id() -> StaticStorageAddress<DecodeStaticType<u64>, Yes, Yes, ()>;
+	fn grandpa_current_set_id() -> Address<StaticStorageMapKey, u64, Yes, Yes, ()>;
 
-	fn beefy_validator_set_id() -> StaticStorageAddress<DecodeStaticType<u64>, Yes, Yes, ()>;
+	fn beefy_validator_set_id() -> Address<StaticStorageMapKey, u64, Yes, Yes, ()>;
 
 	fn beefy_authorities(
-	) -> LocalStaticStorageAddress<DecodeStaticType<Vec<sp_beefy::crypto::Public>>, Yes, Yes, ()>;
+	) -> LocalAddress<StaticStorageMapKey, Vec<sp_beefy::crypto::Public>, Yes, Yes, ()>;
 
 	fn mmr_leaf_beefy_next_authorities(
-	) -> LocalStaticStorageAddress<DecodeStaticType<Self::BeefyAuthoritySet>, Yes, Yes, ()>;
+	) -> LocalAddress<StaticStorageMapKey, Self::BeefyAuthoritySet, Yes, Yes, ()>;
 
-	fn babe_epoch_start() -> StaticStorageAddress<DecodeStaticType<(u32, u32)>, Yes, Yes, ()>;
+	fn babe_epoch_start() -> Address<StaticStorageMapKey, (u32, u32), Yes, Yes, ()>;
 }
 
 pub trait RuntimeCall {
