@@ -40,7 +40,10 @@ use std::{
 	sync::Arc,
 	time::Duration,
 };
-use subxt::{config::Header, rpc::types::StorageChangeSet, Config, OnlineClient};
+use subxt::{
+	config::Header, rpc::types::StorageChangeSet, storage::StorageAddress, Config, Metadata,
+	OnlineClient,
+};
 use tokio::{task::JoinSet, time::sleep};
 
 /// The maximum number of authority set changes to request at once
@@ -136,14 +139,16 @@ where
 		<T as subxt::Config>::Header: Decode,
 	{
 		use sp_finality_grandpa::AuthorityList;
-		let latest_relay_hash = self.relay_client.rpc().finalized_head().await?;
+		let latest_relay_hash = self.relay_client.rpc().finalized_head().await.unwrap();
 		log::debug!(target: "hyperspace", "Latest relay hash: {:?}", latest_relay_hash);
 		let header = self
 			.relay_client
 			.rpc()
 			.header(Some(latest_relay_hash))
-			.await?
-			.ok_or_else(|| anyhow!("Header not found for hash: {latest_relay_hash:?}"))?;
+			.await
+			.unwrap()
+			.ok_or_else(|| anyhow!("Header not found for hash: {latest_relay_hash:?}"))
+			.unwrap();
 
 		let current_set_id = {
 			let key = T::Storage::grandpa_current_set_id();
@@ -169,7 +174,9 @@ where
 					),
 				)
 				.await
-				.map(|res| hex::decode(&res[2..]))??;
+				.map(|res| hex::decode(&res[2..]))
+				.unwrap()
+				.unwrap();
 
 			AuthorityList::decode(&mut &bytes[..]).expect("Failed to scale decode authorities")
 		};
@@ -184,7 +191,7 @@ where
 
 		let latest_relay_height = u32::from(header.number());
 		let finalized_para_header =
-			self.query_latest_finalized_parachain_header(latest_relay_height).await?;
+			self.query_latest_finalized_parachain_header(latest_relay_height).await.unwrap();
 
 		Ok(ClientState {
 			current_authorities,
@@ -212,6 +219,26 @@ where
 			.await?
 			.ok_or_else(|| anyhow!("Block hash not found for number: {latest_finalized_height}"))?;
 		let key = T::Storage::paras_heads(self.para_id);
+		let md = self.relay_client.metadata();
+		pub(crate) fn write_storage_address_root_bytes<Address: StorageAddress>(
+			addr: &Address,
+			out: &mut Vec<u8>,
+		) {
+			out.extend(sp_core::hashing::twox_128(addr.pallet_name().as_bytes()));
+			out.extend(sp_core::hashing::twox_128(addr.entry_name().as_bytes()));
+		}
+
+		pub(crate) fn storage_address_bytes<Address: StorageAddress>(
+			addr: &Address,
+			metadata: &Metadata,
+		) -> Result<Vec<u8>, subxt::Error> {
+			let mut bytes = Vec::new();
+			write_storage_address_root_bytes(addr, &mut bytes);
+			addr.append_entry_bytes(metadata, &mut bytes)?;
+			Ok(bytes)
+		}
+		let bytes = storage_address_bytes(&key, &md)?;
+		log::info!("bytes = {}", hex::encode(&bytes));
 		let header = self
 			.relay_client
 			.storage()

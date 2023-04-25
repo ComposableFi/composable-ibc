@@ -8,17 +8,18 @@ use sp_runtime::scale_info::MetaType;
 use subxt::{
 	client::OnlineClient,
 	config::ExtrinsicParams,
-	error::Error,
+	error::{Error, StorageAddressError},
 	events::{Phase, StaticEvent},
 	ext::{
 		frame_metadata::{
 			ExtrinsicMetadata, RuntimeMetadata, RuntimeMetadataPrefixed, RuntimeMetadataV14,
-			META_RESERVED,
+			StorageEntryType, StorageHasher, META_RESERVED,
 		},
 		scale_decode::DecodeAsType,
 		scale_encode::{EncodeAsFields, EncodeAsType},
+		sp_runtime::{scale_info::TypeDef, Either},
 	},
-	metadata::{DecodeWithMetadata, Metadata},
+	metadata::{DecodeWithMetadata, EncodeWithMetadata, Metadata},
 	storage::{
 		address::{StaticStorageMapKey, Yes},
 		Address, StorageAddress,
@@ -38,6 +39,16 @@ pub struct LocalAddress<StorageKey, ReturnTy, Fetchable, Defaultable, Iterable> 
 	pub _marker: std::marker::PhantomData<(ReturnTy, Fetchable, Defaultable, Iterable)>,
 }
 
+impl<StorageKey, ReturnTy, Fetchable, Defaultable, Iterable>
+	From<Address<StorageKey, ReturnTy, Fetchable, Defaultable, Iterable>>
+	for LocalAddress<StorageKey, ReturnTy, Fetchable, Defaultable, Iterable>
+{
+	fn from(address: Address<StorageKey, ReturnTy, Fetchable, Defaultable, Iterable>) -> Self {
+		// SAFETY: layout of the structs should be the same
+		unsafe { std::mem::transmute(address) }
+	}
+}
+
 impl<
 		// StorageKey: EncodeWithMetadata,
 		ReturnTy: DecodeWithMetadata,
@@ -51,32 +62,51 @@ impl<
 		entry_name: Cow<'static, str>,
 		storage: Address<StaticStorageMapKey, ReturnTy, Fetchable, Defaultable, Iterable>,
 	) -> LocalAddress<StaticStorageMapKey, NewReturnTy, Fetchable, Defaultable, Iterable> {
-		let mut bytes = vec![];
-		fn fake_metadata() -> Metadata {
-			Metadata::try_from(RuntimeMetadataPrefixed(
-				META_RESERVED,
-				RuntimeMetadata::V14(RuntimeMetadataV14::new(
-					Vec::new(),
-					ExtrinsicMetadata {
-						ty: MetaType::new::<()>(),
-						version: 0,
-						signed_extensions: vec![],
-					},
-					MetaType::new::<()>(),
-				)),
-			))
-			.unwrap()
-		}
-		storage
-			.append_entry_bytes(&fake_metadata(), &mut bytes)
-			.expect("should always succeed");
+		let storage = LocalAddress::from(storage);
+		// let mut bytes = vec![];
+		// fn fake_metadata() -> Metadata {
+		// 	Metadata::try_from(RuntimeMetadataPrefixed(
+		// 		META_RESERVED,
+		// 		RuntimeMetadata::V14(RuntimeMetadataV14::new(
+		// 			Vec::new(),
+		// 			ExtrinsicMetadata {
+		// 				ty: MetaType::new::<()>(),
+		// 				version: 0,
+		// 				signed_extensions: vec![],
+		// 			},
+		// 			MetaType::new::<()>(),
+		// 		)),
+		// 	))
+		// 	.unwrap()
+		// }
+		// storage
+		// 	.append_entry_bytes(&fake_metadata(), &mut bytes)
+		// 	.expect("should always succeed");
 		LocalAddress {
 			pallet_name,
 			entry_name,
-			storage_entry_keys: vec![Static(Encoded(bytes))],
-			validation_hash: storage.validation_hash(),
+			storage_entry_keys: storage.storage_entry_keys, // vec![Static(Encoded(bytes))],
+			validation_hash: storage.validation_hash,
 			_marker: Default::default(),
 		}
+	}
+}
+
+fn hash_bytes(input: &[u8], hasher: &StorageHasher, bytes: &mut Vec<u8>) {
+	match hasher {
+		StorageHasher::Identity => bytes.extend(input),
+		StorageHasher::Blake2_128 => bytes.extend(sp_core::hashing::blake2_128(input)),
+		StorageHasher::Blake2_128Concat => {
+			bytes.extend(sp_core::hashing::blake2_128(input));
+			bytes.extend(input);
+		},
+		StorageHasher::Blake2_256 => bytes.extend(sp_core::hashing::blake2_256(input)),
+		StorageHasher::Twox128 => bytes.extend(sp_core::hashing::twox_128(input)),
+		StorageHasher::Twox256 => bytes.extend(sp_core::hashing::twox_256(input)),
+		StorageHasher::Twox64Concat => {
+			bytes.extend(sp_core::hashing::twox_64(input));
+			bytes.extend(input);
+		},
 	}
 }
 
@@ -99,11 +129,70 @@ where
 		&self.entry_name
 	}
 
-	fn append_entry_bytes(&self, _metadata: &Metadata, bytes: &mut Vec<u8>) -> Result<(), Error> {
-		for k in &self.storage_entry_keys {
-			bytes.extend(&k.0 .0);
+	fn append_entry_bytes(&self, metadata: &Metadata, bytes: &mut Vec<u8>) -> Result<(), Error> {
+		let pallet = metadata.pallet(&self.pallet_name)?;
+		let storage = pallet.storage(&self.entry_name)?;
+
+		match &storage.ty {
+			StorageEntryType::Plain(_) =>
+				if !self.storage_entry_keys.is_empty() {
+					Err(StorageAddressError::WrongNumberOfKeys {
+						expected: 0,
+						actual: self.storage_entry_keys.len(),
+					}
+					.into())
+				} else {
+					Ok(())
+				},
+			StorageEntryType::Map { hashers, key, .. } => {
+				let ty = metadata
+					.resolve_type(key.id)
+					.ok_or(StorageAddressError::TypeNotFound(key.id))?;
+
+				// If the key is a tuple, we encode each value to the corresponding tuple type.
+				// If the key is not a tuple, encode a single value to the key type.
+				let type_ids = match &ty.type_def {
+					TypeDef::Tuple(tuple) => Either::Left(tuple.fields.iter().map(|f| f.id)),
+					_other => Either::Right(std::iter::once(key.id)),
+				};
+
+				if type_ids.len() != self.storage_entry_keys.len() {
+					return Err(StorageAddressError::WrongNumberOfKeys {
+						expected: type_ids.len(),
+						actual: self.storage_entry_keys.len(),
+					}
+					.into())
+				}
+
+				if hashers.len() == 1 {
+					// One hasher; hash a tuple of all SCALE encoded bytes with the one hash
+					// function.
+					let mut input = Vec::new();
+					let iter = self.storage_entry_keys.iter().zip(type_ids);
+					for (key, type_id) in iter {
+						key.encode_with_metadata(type_id, metadata, &mut input)?;
+					}
+					hash_bytes(&input, &hashers[0], bytes);
+					Ok(())
+				} else if hashers.len() == type_ids.len() {
+					let iter = self.storage_entry_keys.iter().zip(type_ids).zip(hashers);
+					// A hasher per field; encode and hash each field independently.
+					for ((key, type_id), hasher) in iter {
+						let mut input = Vec::new();
+						key.encode_with_metadata(type_id, metadata, &mut input)?;
+						hash_bytes(&input, hasher, bytes);
+					}
+					Ok(())
+				} else {
+					// Mismatch; wrong number of hashers/fields.
+					Err(StorageAddressError::WrongNumberOfHashers {
+						hashers: hashers.len(),
+						fields: type_ids.len(),
+					}
+					.into())
+				}
+			},
 		}
-		Ok(())
 	}
 
 	fn validation_hash(&self) -> Option<[u8; 32]> {

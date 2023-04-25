@@ -31550,6 +31550,7 @@ pub mod api {
 				)]
 				#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
 				#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
+				#[repr(transparent)]
 				pub struct HeadData(pub ::std::vec::Vec<::core::primitive::u8>);
 				#[derive(
 					:: subxt :: ext :: codec :: Decode,
