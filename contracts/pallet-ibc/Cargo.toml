@@ -128,7 +128,7 @@ std = [
   "sp-finality-grandpa/std",
   "finality-grandpa/std",
   "serde",
-  "hex/std"
+  "hex/std",
 ]
 
 runtime-benchmarks = [
