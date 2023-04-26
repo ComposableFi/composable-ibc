@@ -4,9 +4,7 @@ macro_rules! define_id {
 		$name: ident,
 		$id_type: path
 	) => {
-		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
-		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
+		#[derive(Decode, Encode)]
 		pub struct $name(pub $id_type);
 
 		impl From<u32> for $name {
@@ -20,6 +18,14 @@ macro_rules! define_id {
 				value.0 .0
 			}
 		}
+
+		impl AsInner for $name {
+			type Inner = $id_type;
+
+			fn from_inner(inner: Self::Inner) -> Self {
+				$name(inner)
+			}
+		}
 	};
 }
 
@@ -29,9 +35,9 @@ macro_rules! define_head_data {
 		$name: ident,
 		$head_data_type: ty,
 	) => {
-		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
-		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
+		use light_client_common::config::AsInner;
+
+		#[derive(Decode, Encode)]
 		pub struct $name(pub $head_data_type);
 
 		impl AsRef<[u8]> for $name {
@@ -45,6 +51,14 @@ macro_rules! define_head_data {
 				self.0 .0
 			}
 		}
+
+		impl AsInner for $name {
+			type Inner = $head_data_type;
+
+			fn from_inner(inner: Self::Inner) -> Self {
+				$name(inner)
+			}
+		}
 	};
 }
 
@@ -54,14 +68,20 @@ macro_rules! define_para_lifecycle {
 		$name: ident,
 		$ty: ty
 	) => {
-		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
-		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
+		#[derive(Decode, Encode)]
 		pub struct $name(pub $ty);
 
 		impl ParaLifecycleT for $name {
 			fn is_parachain(&self) -> bool {
 				matches!(self.0, <$ty>::Parachain)
+			}
+		}
+
+		impl AsInner for $name {
+			type Inner = $ty;
+
+			fn from_inner(inner: Self::Inner) -> Self {
+				$name(inner)
 			}
 		}
 	};
@@ -73,9 +93,7 @@ macro_rules! define_beefy_authority_set {
 		$name: ident,
 		$ty: ty
 	) => {
-		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
-		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
+		#[derive(Decode, Encode)]
 		pub struct $name<T>(pub $ty);
 
 		impl BeefyAuthoritySetT for $name<H256> {
@@ -85,6 +103,26 @@ macro_rules! define_beefy_authority_set {
 
 			fn len(&self) -> u32 {
 				self.0.len
+			}
+		}
+
+		impl<
+				T: Encode
+					+ Decode
+					+ scale_decode::DecodeAsType
+					+ scale_encode::EncodeAsType
+					+ scale_decode::IntoVisitor
+					+ Send
+					+ Sync,
+			> AsInner for $name<T>
+		where
+			scale_decode::Error:
+				From<<<T as scale_decode::IntoVisitor>::Visitor as scale_decode::Visitor>::Error>,
+		{
+			type Inner = $ty;
+
+			fn from_inner(inner: Self::Inner) -> Self {
+				$name(inner)
 			}
 		}
 	};
@@ -104,6 +142,14 @@ macro_rules! define_any_wrapper {
 					type_url: String::from_utf8(value.0.type_url.into()).unwrap(),
 					value: value.0.value,
 				}
+			}
+		}
+
+		impl AsInner for $name {
+			type Inner = $raw_any_type;
+
+			fn from_inner(inner: Self::Inner) -> Self {
+				$name(inner)
 			}
 		}
 	};
@@ -443,6 +489,14 @@ macro_rules! define_ibc_event_wrapper {
 				}
 			}
 		}
+
+		impl AsInner for $name {
+			type Inner = $meta_ibc_event_type;
+
+			fn from_inner(inner: Self::Inner) -> Self {
+				Self(inner)
+			}
+		}
 	};
 }
 
@@ -542,7 +596,8 @@ macro_rules! define_runtime_storage {
 
 			fn paras_heads(
 				x: u32,
-			) -> LocalAddress<StaticStorageMapKey, Self::HeadData, Yes, (), Yes> {
+			) -> LocalAddress<StaticStorageMapKey, <Self::HeadData as AsInner>::Inner, Yes, (), Yes>
+			{
 				let storage = $paras_heads(&Self::Id::from(x).0);
 				LocalAddress::new(
 					Cow::Owned(storage.pallet_name().to_owned()),
@@ -553,7 +608,13 @@ macro_rules! define_runtime_storage {
 
 			fn paras_para_lifecycles(
 				x: u32,
-			) -> LocalAddress<StaticStorageMapKey, Self::ParaLifecycle, Yes, (), Yes> {
+			) -> LocalAddress<
+				StaticStorageMapKey,
+				<Self::ParaLifecycle as AsInner>::Inner,
+				Yes,
+				(),
+				Yes,
+			> {
 				let storage = $paras_para_lifecycles(&Self::Id::from(x).0);
 				LocalAddress::new(
 					Cow::Owned(storage.pallet_name().to_owned()),
@@ -562,8 +623,13 @@ macro_rules! define_runtime_storage {
 				)
 			}
 
-			fn paras_parachains(
-			) -> LocalAddress<StaticStorageMapKey, Vec<Static<Self::Id>>, Yes, Yes, ()> {
+			fn paras_parachains() -> LocalAddress<
+				StaticStorageMapKey,
+				Vec<Static<<Self::Id as AsInner>::Inner>>,
+				Yes,
+				Yes,
+				(),
+			> {
 				let storage = $paras_parachains;
 				LocalAddress::new(
 					Cow::Owned(storage.pallet_name().to_owned()),
@@ -590,8 +656,13 @@ macro_rules! define_runtime_storage {
 				)
 			}
 
-			fn mmr_leaf_beefy_next_authorities(
-			) -> LocalAddress<StaticStorageMapKey, Self::BeefyAuthoritySet, Yes, Yes, ()> {
+			fn mmr_leaf_beefy_next_authorities() -> LocalAddress<
+				StaticStorageMapKey,
+				<Self::BeefyAuthoritySet as AsInner>::Inner,
+				Yes,
+				Yes,
+				(),
+			> {
 				let storage = $mmr_leaf_beefy_next_authorities;
 				LocalAddress::new(
 					Cow::Owned(storage.pallet_name().to_owned()),
@@ -681,9 +752,7 @@ macro_rules! define_runtime_transactions {
 #[macro_export]
 macro_rules! define_event_record {
 	($name:ident, $event_record:ty, $ibc_event_wrapper: expr, $phase: path, $pallet_event: path, $runtime_event: path) => {
-		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
-		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
+		#[derive(Decode, Encode)]
 		pub struct $name(pub $event_record);
 
 		impl EventRecordT for $name {
@@ -701,7 +770,7 @@ macro_rules! define_event_record {
 			fn ibc_events(self) -> Option<Vec<pallet_ibc::events::IbcEvent>> {
 				use $pallet_event as PalletEvent;
 				use $runtime_event as RuntimeEvent;
-				if let RuntimeEvent::Ibc(PalletEvent::Events { events }) = self.0.event.0 {
+				if let RuntimeEvent::Ibc(PalletEvent::Events { events }) = self.0.event {
 					let events = events
 						.into_iter()
 						.filter_map(|event| {
@@ -715,15 +784,22 @@ macro_rules! define_event_record {
 				}
 			}
 		}
+
+		impl AsInner for $name {
+			type Inner = $event_record;
+
+			fn from_inner(inner: Self::Inner) -> Self {
+				Self(inner)
+			}
+		}
 	};
 }
 
 #[macro_export]
 macro_rules! define_events {
 	($name:ident, $events:ty, $ibc_event_wrapper: expr) => {
-		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
-		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
+		use light_client_common::config::AsInnerEvent;
+
 		pub struct $name(pub $events);
 
 		impl IbcEventsT for $name {
@@ -741,12 +817,11 @@ macro_rules! define_events {
 			}
 		}
 
-		impl StaticEvent for $name {
-			const PALLET: &'static str = <$events>::PALLET;
-			const EVENT: &'static str = <$events>::EVENT;
+		impl AsInnerEvent for $name {
+			type Inner = $events;
 
-			fn is_event(pallet: &str, event: &str) -> bool {
-				<$events>::is_event(pallet, event)
+			fn from_inner(inner: Self::Inner) -> Self {
+				Self(inner)
 			}
 		}
 	};
@@ -755,19 +830,22 @@ macro_rules! define_events {
 #[macro_export]
 macro_rules! define_runtime_event {
 	($name:ident, $runtime_event:ty) => {
-		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
-		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 		pub struct $name(pub $runtime_event);
+
+		impl AsInner for $name {
+			type Inner = $runtime_event;
+
+			fn from_inner(inner: Self::Inner) -> Self {
+				Self(inner)
+			}
+		}
 	};
 }
 
 #[macro_export]
 macro_rules! define_runtime_call {
 	($name:ident, $runtime_call: path, $any_wrapper: expr, $call: path) => {
-		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
-		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
+		#[derive(Decode, Encode)]
 		pub struct $name(pub $runtime_call);
 
 		impl RuntimeCall for $name {
@@ -787,9 +865,8 @@ macro_rules! define_runtime_call {
 #[macro_export]
 macro_rules! define_asset_id {
 	($name:ident, $ty:ty) => {
-		#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
-		#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-		#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
+		#[derive(Decode, Encode)]
+
 		pub struct $name(pub $ty);
 
 		impl From<u128> for $name {

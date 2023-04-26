@@ -25,7 +25,7 @@ use beefy_prover::helpers::{
 use codec::{Decode, Encode};
 use finality_grandpa_rpc::GrandpaApiClient;
 use jsonrpsee::{async_client::Client, tracing::log, ws_client::WsClientBuilder};
-use light_client_common::config::RuntimeStorage;
+use light_client_common::config::{AsInner, RuntimeStorage};
 use primitives::{
 	parachain_header_storage_key, ClientState, FinalityProof, ParachainHeaderProofs,
 	ParachainHeadersWithFinalityProof,
@@ -219,33 +219,16 @@ where
 			.await?
 			.ok_or_else(|| anyhow!("Block hash not found for number: {latest_finalized_height}"))?;
 		let key = T::Storage::paras_heads(self.para_id);
-		let md = self.relay_client.metadata();
-		pub(crate) fn write_storage_address_root_bytes<Address: StorageAddress>(
-			addr: &Address,
-			out: &mut Vec<u8>,
-		) {
-			out.extend(sp_core::hashing::twox_128(addr.pallet_name().as_bytes()));
-			out.extend(sp_core::hashing::twox_128(addr.entry_name().as_bytes()));
-		}
-
-		pub(crate) fn storage_address_bytes<Address: StorageAddress>(
-			addr: &Address,
-			metadata: &Metadata,
-		) -> Result<Vec<u8>, subxt::Error> {
-			let mut bytes = Vec::new();
-			write_storage_address_root_bytes(addr, &mut bytes);
-			addr.append_entry_bytes(metadata, &mut bytes)?;
-			Ok(bytes)
-		}
-		let bytes = storage_address_bytes(&key, &md)?;
-		log::info!("bytes = {}", hex::encode(&bytes));
-		let header = self
-			.relay_client
-			.storage()
-			.at(latest_finalized_hash)
-			.fetch(&key)
-			.await?
-			.ok_or_else(|| anyhow!("parachain header not found for para id: {}", self.para_id))?;
+		let header = <T::Storage as RuntimeStorage>::HeadData::from_inner(
+			self.relay_client
+				.storage()
+				.at(latest_finalized_hash)
+				.fetch(&key)
+				.await?
+				.ok_or_else(|| {
+					anyhow!("parachain header not found for para id: {}", self.para_id)
+				})?,
+		);
 		let header = T::Header::decode(&mut header.as_ref())
 			.map_err(|_| anyhow!("Failed to decode header"))?;
 
@@ -399,13 +382,14 @@ where
 
 					let parachain_header_bytes = {
 						let key = T::Storage::paras_heads(client.para_id);
-						client
+						let data = client
 							.relay_client
 							.storage()
 							.at(header.hash())
 							.fetch(&key)
 							.await?
-							.expect("Header exists in its own changeset; qed")
+							.expect("Header exists in its own changeset; qed");
+						<T::Storage as RuntimeStorage>::HeadData::from_inner(data)
 					};
 
 					let para_header: T::Header =

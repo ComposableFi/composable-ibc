@@ -135,7 +135,7 @@ define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);
 
 define_event_record!(
 	DefaultEventRecord,
-	EventRecord<<DefaultConfig as light_client_common::config::Config>::ParaRuntimeEvent, H256>,
+	EventRecord<<<DefaultConfig as light_client_common::config::Config>::ParaRuntimeEvent as AsInner>::Inner, H256>,
 	IbcEventWrapper,
 	parachain_subxt::api::runtime_types::frame_system::Phase,
 	parachain_subxt::api::runtime_types::pallet_ibc::pallet::Event,

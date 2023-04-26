@@ -67,7 +67,7 @@ use grandpa_prover::GrandpaProver;
 use ibc::timestamp::Timestamp;
 use ics10_grandpa::client_state::ClientState as GrandpaClientState;
 use jsonrpsee_ws_client::WsClientBuilder;
-use light_client_common::config::RuntimeStorage;
+use light_client_common::config::{AsInner, RuntimeStorage};
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use sp_keystore::testing::KeyStore;
 use sp_runtime::traits::One;
@@ -498,12 +498,14 @@ where
 					|| Error::Custom(format!("Couldn't find block hash for relay block",)),
 				)?;
 			let heads_addr = T::Storage::paras_heads(self.para_id);
-			let head_data = api.at(block_hash).fetch(&heads_addr).await?.ok_or_else(|| {
-				Error::Custom(format!(
-					"Couldn't find header for ParaId({}) at relay block {:?}",
-					self.para_id, block_hash
-				))
-			})?;
+			let head_data = <T::Storage as RuntimeStorage>::HeadData::from_inner(
+				api.at(block_hash).fetch(&heads_addr).await?.ok_or_else(|| {
+					Error::Custom(format!(
+						"Couldn't find header for ParaId({}) at relay block {:?}",
+						self.para_id, block_hash
+					))
+				})?,
+			);
 			let decoded_para_head = sp_runtime::generic::Header::<
 				u32,
 				sp_runtime::traits::BlakeTwo256,
@@ -582,16 +584,17 @@ where
 				.map_err(|e| Error::from(format!("Error constructing client state: {e}")))?;
 
 			let heads_addr = T::Storage::paras_heads(self.para_id);
-			let head_data = api
-				.at(light_client_state.latest_relay_hash.into())
-				.fetch(&heads_addr)
-				.await?
-				.ok_or_else(|| {
-					Error::Custom(format!(
-						"Couldn't find header for ParaId({}) at relay block {:?}",
-						self.para_id, light_client_state.latest_relay_hash
-					))
-				})?;
+			let head_data = <T::Storage as RuntimeStorage>::HeadData::from_inner(
+				api.at(light_client_state.latest_relay_hash.into())
+					.fetch(&heads_addr)
+					.await?
+					.ok_or_else(|| {
+						Error::Custom(format!(
+							"Couldn't find header for ParaId({}) at relay block {:?}",
+							self.para_id, light_client_state.latest_relay_hash
+						))
+					})?,
+			);
 			let decoded_para_head = sp_runtime::generic::Header::<
 				u32,
 				sp_runtime::traits::BlakeTwo256,

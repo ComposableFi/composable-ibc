@@ -231,23 +231,36 @@ pub trait ParaLifecycleT {
 	fn is_parachain(&self) -> bool;
 }
 
+pub trait AsInner {
+	type Inner: Encode + Decode + DecodeAsType + EncodeAsType + Send + Sync;
+
+	fn from_inner(inner: Self::Inner) -> Self;
+}
+
+pub trait AsInnerEvent {
+	type Inner: Encode + Decode + DecodeAsType + EncodeAsType + Send + Sync + StaticEvent;
+
+	fn from_inner(inner: Self::Inner) -> Self;
+}
+
 pub trait RuntimeStorage {
-	type HeadData: Decode + DecodeAsType + AsRef<[u8]> + Into<Vec<u8>> + Sync + Send;
-	type Id: From<u32> + Into<u32> + Decode + DecodeAsType + Send + Sync;
-	type ParaLifecycle: ParaLifecycleT + Decode + DecodeAsType + Send + Sync;
-	type BeefyAuthoritySet: BeefyAuthoritySetT + Codec + EncodeAsType + DecodeAsType + Send + Sync;
+	type HeadData: AsRef<[u8]> + Into<Vec<u8>> + Sync + Send + AsInner;
+	type Id: From<u32> + Into<u32> + Send + Sync + AsInner;
+	type ParaLifecycle: ParaLifecycleT + Send + Sync + AsInner;
+	type BeefyAuthoritySet: BeefyAuthoritySetT + Send + Sync + AsInner;
 
 	fn timestamp_now() -> Address<StaticStorageMapKey, u64, Yes, Yes, ()>;
 
-	fn paras_heads(x: u32) -> LocalAddress<StaticStorageMapKey, Self::HeadData, Yes, (), Yes>;
-	// ) -> LocalAddress<DecodeStaticType<Self::HeadData>, Yes, (), Yes>;
+	fn paras_heads(
+		x: u32,
+	) -> LocalAddress<StaticStorageMapKey, <Self::HeadData as AsInner>::Inner, Yes, (), Yes>;
 
 	fn paras_para_lifecycles(
 		x: u32,
-	) -> LocalAddress<StaticStorageMapKey, Self::ParaLifecycle, Yes, (), Yes>;
-	// ) -> LocalAddress<DecodeStaticType<Self::ParaLifecycle>, Yes, (), Yes>;
+	) -> LocalAddress<StaticStorageMapKey, <Self::ParaLifecycle as AsInner>::Inner, Yes, (), Yes>;
 
-	fn paras_parachains() -> LocalAddress<StaticStorageMapKey, Vec<Static<Self::Id>>, Yes, Yes, ()>;
+	fn paras_parachains(
+	) -> LocalAddress<StaticStorageMapKey, Vec<Static<<Self::Id as AsInner>::Inner>>, Yes, Yes, ()>;
 
 	fn grandpa_current_set_id() -> Address<StaticStorageMapKey, u64, Yes, Yes, ()>;
 
@@ -257,7 +270,7 @@ pub trait RuntimeStorage {
 	) -> LocalAddress<StaticStorageMapKey, Vec<sp_beefy::crypto::Public>, Yes, Yes, ()>;
 
 	fn mmr_leaf_beefy_next_authorities(
-	) -> LocalAddress<StaticStorageMapKey, Self::BeefyAuthoritySet, Yes, Yes, ()>;
+	) -> LocalAddress<StaticStorageMapKey, <Self::BeefyAuthoritySet as AsInner>::Inner, Yes, Yes, ()>;
 
 	fn babe_epoch_start() -> Address<StaticStorageMapKey, (u32, u32), Yes, Yes, ()>;
 }
@@ -294,9 +307,9 @@ pub trait Config: subxt::Config + Sized {
 	/// Runtime call
 	type ParaRuntimeCall: RuntimeCall + Decode + Send;
 	/// Parachain runtime event
-	type ParaRuntimeEvent;
+	type ParaRuntimeEvent: AsInner;
 	/// Parachain events. Used for subscriptions
-	type Events: StaticEvent + IbcEventsT;
+	type Events: IbcEventsT + AsInnerEvent;
 	/// The event is returned from the subscription
 	type EventRecord: Decode + EventRecordT + Send;
 	/// Runtime call

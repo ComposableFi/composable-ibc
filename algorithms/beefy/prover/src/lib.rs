@@ -47,7 +47,7 @@ use subxt::{
 };
 
 use crate::relay_chain_queries::parachain_header_storage_key;
-use light_client_common::config::{BeefyAuthoritySetT, RuntimeStorage};
+use light_client_common::config::{AsInner, BeefyAuthoritySetT, RuntimeStorage};
 use relay_chain_queries::{fetch_finalized_parachain_heads, fetch_mmr_proof, FinalizedParaHeads};
 
 /// Host function implementation for beefy light client.
@@ -123,13 +123,14 @@ where
 
 		let next_val_set = {
 			let key = T::Storage::mmr_leaf_beefy_next_authorities();
-			client
+			let data = client
 				.storage()
 				.at(latest_beefy_finalized)
 				.fetch(&key)
 				.await
 				.unwrap()
-				.expect("Authorirty set should be defined")
+				.expect("Authorirty set should be defined");
+			<T::Storage as RuntimeStorage>::BeefyAuthoritySet::from_inner(data)
 		};
 		let latest_beefy_height: u64 = (header.number()).into();
 		ClientState {
@@ -197,13 +198,14 @@ where
 				})?;
 
 			let key = T::Storage::paras_heads(self.para_id);
-			let head = self
-				.relay_client
-				.storage()
-				.at(header.hash())
-				.fetch(&key)
-				.await?
-				.expect("Header exists in its own changeset; qed");
+			let head = <<T::Storage as RuntimeStorage>::HeadData as AsInner>::from_inner(
+				self.relay_client
+					.storage()
+					.at(header.hash())
+					.fetch(&key)
+					.await?
+					.expect("Header exists in its own changeset; qed"),
+			);
 
 			let para_header = T::Header::decode(&mut head.as_ref())
 				.map_err(|_| Error::Custom(format!("Failed to decode header")))?;

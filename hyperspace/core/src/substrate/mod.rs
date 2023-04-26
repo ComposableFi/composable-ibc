@@ -13,12 +13,10 @@ pub use picasso_kusama::PicassoKusamaConfig;
 pub use picasso_rococo::PicassoRococoConfig;
 
 use codec::{Decode, Encode};
-use light_client_common::config::BeefyAuthoritySetT;
+use light_client_common::config::{AsInner, BeefyAuthoritySetT};
 use sp_core::H256;
 
-#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
-#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
+#[derive(Encode, Decode)]
 pub struct DummyBeefyAuthoritySet;
 
 impl BeefyAuthoritySetT for DummyBeefyAuthoritySet {
@@ -28,6 +26,14 @@ impl BeefyAuthoritySetT for DummyBeefyAuthoritySet {
 
 	fn len(&self) -> u32 {
 		unimplemented!("DummyBeefyAuthoritySet len")
+	}
+}
+
+impl AsInner for DummyBeefyAuthoritySet {
+	type Inner = ();
+
+	fn from_inner(_inner: Self::Inner) -> Self {
+		Self
 	}
 }
 

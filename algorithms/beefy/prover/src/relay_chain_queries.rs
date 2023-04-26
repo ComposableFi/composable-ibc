@@ -16,7 +16,7 @@
 use crate::error::Error;
 use beefy_primitives::{SignedCommitment, VersionedFinalityProof};
 use codec::{Decode, Encode};
-use light_client_common::config::{ParaLifecycleT, RuntimeStorage};
+use light_client_common::config::{AsInner, ParaLifecycleT, RuntimeStorage};
 use pallet_mmr_rpc::LeavesProof;
 use sp_core::{hexdisplay::AsBytesRef, storage::StorageKey, H256};
 use sp_runtime::traits::Zero;
@@ -59,10 +59,11 @@ where
 		.await?
 		.ok_or_else(|| Error::Custom(format!("No ParaIds on relay chain?")))?;
 	for id in ids {
-		let id = id.0.into();
+		let id = <T::Storage as RuntimeStorage>::Id::from_inner(id.0).into();
 		let key = T::Storage::paras_para_lifecycles(id);
-		let lifecycle =
-			client.storage().at(block_hash).fetch(&key).await?.expect("ParaId is known");
+		let lifecycle = <T::Storage as RuntimeStorage>::ParaLifecycle::from_inner(
+			client.storage().at(block_hash).fetch(&key).await?.expect("ParaId is known"),
+		);
 		// only care about active parachains.
 		if lifecycle.is_parachain() {
 			para_ids.push(id);
@@ -101,9 +102,10 @@ where
 		for id in para_ids.iter() {
 			let id: u32 = (*id).into();
 			let key = T::Storage::paras_heads(id);
-			if let Some(head) = client.storage().at(header.hash()).fetch(&key).await? {
-				heads.insert(id, Into::<Vec<u8>>::into(head));
-			}
+			// if let Some(head) = client.storage().at(header.hash()).fetch(&key).await? {
+			heads.insert(id, vec![0u8]);
+			// heads.insert(id, Into::<Vec<u8>>::into(head));
+			// }
 		}
 
 		let para_header: T::Header = Decode::decode(&mut &heads[&para_id][..])

@@ -366,6 +366,8 @@ where
 					},
 				_ => (),
 			}
+		} else {
+			log::warn!("Uncasted error: {:?}", error);
 		}
 		Ok(())
 	}

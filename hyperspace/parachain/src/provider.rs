@@ -46,7 +46,7 @@ use ibc_proto::{
 };
 use ibc_rpc::{IbcApiClient, PacketInfo};
 use ics11_beefy::client_state::ClientState as BeefyClientState;
-use light_client_common::config::{IbcEventsT, RuntimeStorage};
+use light_client_common::config::{AsInner, AsInnerEvent, IbcEventsT, RuntimeStorage};
 use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
 	HostConsensusProof,
@@ -129,9 +129,9 @@ where
 					let block = block.ok()?;
 					let events = event.at(block.hash()).await.ok()?;
 					let result = events
-						.find::<T::Events>()
+						.find::<<T::Events as AsInnerEvent>::Inner>()
 						.filter_map(|ev| {
-							let ev = ev.ok()?.events();
+							let ev = <T::Events as AsInnerEvent>::from_inner(ev.ok()?).events();
 							ev.into_iter()
 								.map(|ev| TryInto::<IbcEvent>::try_into(ev))
 								.collect::<Result<Vec<_>, _>>()
