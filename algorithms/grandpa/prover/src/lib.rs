@@ -40,10 +40,7 @@ use std::{
 	sync::Arc,
 	time::Duration,
 };
-use subxt::{
-	config::Header, rpc::types::StorageChangeSet, storage::StorageAddress, Config, Metadata,
-	OnlineClient,
-};
+use subxt::{config::Header, rpc::types::StorageChangeSet, Config, OnlineClient};
 use tokio::{task::JoinSet, time::sleep};
 
 /// The maximum number of authority set changes to request at once

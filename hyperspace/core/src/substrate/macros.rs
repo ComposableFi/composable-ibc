@@ -580,8 +580,7 @@ macro_rules! define_runtime_storage {
 		$mmr_leaf_beefy_next_authorities:expr,
 		$babe_epoch_start:expr
 	) => {
-		use std::borrow::Cow;
-		use subxt::{storage::StorageAddress, utils::Static};
+		use subxt::utils::Static;
 
 		pub struct $name;
 		impl RuntimeStorage for $name {
@@ -599,11 +598,7 @@ macro_rules! define_runtime_storage {
 			) -> LocalAddress<StaticStorageMapKey, <Self::HeadData as AsInner>::Inner, Yes, (), Yes>
 			{
 				let storage = $paras_heads(&Self::Id::from(x).0);
-				LocalAddress::new(
-					Cow::Owned(storage.pallet_name().to_owned()),
-					Cow::Owned(storage.entry_name().to_owned()),
-					storage,
-				)
+				LocalAddress::new(storage)
 			}
 
 			fn paras_para_lifecycles(
@@ -616,11 +611,7 @@ macro_rules! define_runtime_storage {
 				Yes,
 			> {
 				let storage = $paras_para_lifecycles(&Self::Id::from(x).0);
-				LocalAddress::new(
-					Cow::Owned(storage.pallet_name().to_owned()),
-					Cow::Owned(storage.entry_name().to_owned()),
-					storage,
-				)
+				LocalAddress::new(storage)
 			}
 
 			fn paras_parachains() -> LocalAddress<
@@ -631,11 +622,7 @@ macro_rules! define_runtime_storage {
 				(),
 			> {
 				let storage = $paras_parachains;
-				LocalAddress::new(
-					Cow::Owned(storage.pallet_name().to_owned()),
-					Cow::Owned(storage.entry_name().to_owned()),
-					storage,
-				)
+				LocalAddress::new(storage)
 			}
 
 			fn grandpa_current_set_id() -> Address<StaticStorageMapKey, u64, Yes, Yes, ()> {
@@ -649,11 +636,7 @@ macro_rules! define_runtime_storage {
 			fn beefy_authorities(
 			) -> LocalAddress<StaticStorageMapKey, Vec<sp_beefy::crypto::Public>, Yes, Yes, ()> {
 				let storage = $beefy_authorities;
-				LocalAddress::new(
-					Cow::Owned(storage.pallet_name().to_owned()),
-					Cow::Owned(storage.entry_name().to_owned()),
-					storage,
-				)
+				LocalAddress::new(storage)
 			}
 
 			fn mmr_leaf_beefy_next_authorities() -> LocalAddress<
@@ -664,11 +647,7 @@ macro_rules! define_runtime_storage {
 				(),
 			> {
 				let storage = $mmr_leaf_beefy_next_authorities;
-				LocalAddress::new(
-					Cow::Owned(storage.pallet_name().to_owned()),
-					Cow::Owned(storage.entry_name().to_owned()),
-					storage,
-				)
+				LocalAddress::new(storage)
 			}
 
 			fn babe_epoch_start() -> Address<StaticStorageMapKey, (u32, u32), Yes, Yes, ()> {

@@ -1,20 +1,16 @@
 use alloc::borrow::Cow;
 use async_trait::async_trait;
-use codec::{Codec, Decode, Encode};
+use codec::{Decode, Encode};
 use ibc::events::IbcEvent;
 use ibc_proto::google::protobuf::Any;
 use sp_core::H256;
-use sp_runtime::scale_info::MetaType;
 use subxt::{
 	client::OnlineClient,
 	config::ExtrinsicParams,
 	error::{Error, StorageAddressError},
 	events::{Phase, StaticEvent},
 	ext::{
-		frame_metadata::{
-			ExtrinsicMetadata, RuntimeMetadata, RuntimeMetadataPrefixed, RuntimeMetadataV14,
-			StorageEntryType, StorageHasher, META_RESERVED,
-		},
+		frame_metadata::{StorageEntryType, StorageHasher},
 		scale_decode::DecodeAsType,
 		scale_encode::{EncodeAsFields, EncodeAsType},
 		sp_runtime::{scale_info::TypeDef, Either},
@@ -25,7 +21,7 @@ use subxt::{
 		Address, StorageAddress,
 	},
 	tx::Payload,
-	utils::{Encoded, Static},
+	utils::Static,
 };
 
 /// This represents a statically generated storage lookup address.
@@ -49,43 +45,17 @@ impl<StorageKey, ReturnTy, Fetchable, Defaultable, Iterable>
 	}
 }
 
-impl<
-		// StorageKey: EncodeWithMetadata,
-		ReturnTy: DecodeWithMetadata,
-		Fetchable,
-		Defaultable,
-		Iterable,
-	> LocalAddress<StaticStorageMapKey, ReturnTy, Fetchable, Defaultable, Iterable>
+impl<ReturnTy: DecodeWithMetadata, Fetchable, Defaultable, Iterable>
+	LocalAddress<StaticStorageMapKey, ReturnTy, Fetchable, Defaultable, Iterable>
 {
 	pub fn new<NewReturnTy>(
-		pallet_name: Cow<'static, str>,
-		entry_name: Cow<'static, str>,
 		storage: Address<StaticStorageMapKey, ReturnTy, Fetchable, Defaultable, Iterable>,
 	) -> LocalAddress<StaticStorageMapKey, NewReturnTy, Fetchable, Defaultable, Iterable> {
 		let storage = LocalAddress::from(storage);
-		// let mut bytes = vec![];
-		// fn fake_metadata() -> Metadata {
-		// 	Metadata::try_from(RuntimeMetadataPrefixed(
-		// 		META_RESERVED,
-		// 		RuntimeMetadata::V14(RuntimeMetadataV14::new(
-		// 			Vec::new(),
-		// 			ExtrinsicMetadata {
-		// 				ty: MetaType::new::<()>(),
-		// 				version: 0,
-		// 				signed_extensions: vec![],
-		// 			},
-		// 			MetaType::new::<()>(),
-		// 		)),
-		// 	))
-		// 	.unwrap()
-		// }
-		// storage
-		// 	.append_entry_bytes(&fake_metadata(), &mut bytes)
-		// 	.expect("should always succeed");
 		LocalAddress {
-			pallet_name,
-			entry_name,
-			storage_entry_keys: storage.storage_entry_keys, // vec![Static(Encoded(bytes))],
+			pallet_name: storage.pallet_name,
+			entry_name: storage.entry_name,
+			storage_entry_keys: storage.storage_entry_keys,
 			validation_hash: storage.validation_hash,
 			_marker: Default::default(),
 		}

@@ -103,7 +103,12 @@ where
 			let id: u32 = (*id).into();
 			let key = T::Storage::paras_heads(id);
 			if let Some(head) = client.storage().at(header.hash()).fetch(&key).await? {
-				heads.insert(id, Into::<Vec<u8>>::into(head));
+				heads.insert(
+					id,
+					Into::<Vec<u8>>::into(<T::Storage as RuntimeStorage>::HeadData::from_inner(
+						head,
+					)),
+				);
 			}
 		}
 

@@ -35,7 +35,7 @@ use subxt::{
 		},
 		ExtrinsicParams,
 	},
-	events::{Phase, StaticEvent},
+	events::Phase,
 	storage::{
 		address::{StaticStorageMapKey, Yes},
 		Address,
