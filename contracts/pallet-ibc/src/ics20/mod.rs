@@ -272,8 +272,8 @@ where
 					Ics04Error::implementation_specific("Failed to parse token denom".to_string())
 				})?;
 				Pallet::<T>::deposit_event(Event::<T>::TokenReceived {
-					from: packet_data.sender.to_string().as_bytes().to_vec(),
-					to: packet_data.receiver.to_string().as_bytes().to_vec(),
+					from: packet_data.sender,
+					to: packet_data.receiver,
 					ibc_denom: denom.as_bytes().to_vec(),
 					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
 						.ok(),
@@ -324,8 +324,8 @@ where
 			.map_err(|e| Ics04Error::implementation_specific(e.to_string()))?;
 		match ack.into_result() {
 			Ok(_) => Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
-				from: packet_data.sender.to_string().as_bytes().to_vec(),
-				to: packet_data.receiver.to_string().as_bytes().to_vec(),
+				from: packet_data.sender,
+				to: packet_data.receiver,
 				ibc_denom: packet_data.token.denom.to_string().as_bytes().to_vec(),
 				local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
 					&packet_data.token.denom.to_string(),
@@ -342,12 +342,12 @@ where
 			}),
 			Err(e) => {
 				log::trace!(
-					target: "pallet_ibc",
-					"[transfer] error: acknowledgement error: {e}",
+					target: "pallet_ibc::transfer",
+					"error: acknowledgement error: {e}",
 				);
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferFailed {
-					from: packet_data.sender.to_string().as_bytes().to_vec(),
-					to: packet_data.receiver.to_string().as_bytes().to_vec(),
+					from: packet_data.sender,
+					to: packet_data.receiver,
 					ibc_denom: packet_data.token.denom.to_string().as_bytes().to_vec(),
 					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
 						&packet_data.token.denom.to_string(),
@@ -380,7 +380,23 @@ where
 			.map_err(|e| Ics04Error::app_module(format!("Failed to decode packet data {:?}", e)))?;
 		process_timeout_packet(&mut ctx, packet, &packet_data)
 			.map_err(|e| Ics04Error::app_module(e.to_string()))?;
-
+		Pallet::<T>::deposit_event(Event::<T>::TokenTransferTimeout {
+			from: packet_data.sender,
+			to: packet_data.receiver,
+			ibc_denom: packet_data.token.denom.to_string().as_bytes().to_vec(),
+			local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
+				&packet_data.token.denom.to_string(),
+			)
+			.ok(),
+			amount: packet_data.token.amount.as_u256().as_u128().into(),
+			is_sender_source: is_sender_chain_source(
+				packet.source_port.clone(),
+				packet.source_channel.clone(),
+				&packet_data.token.denom,
+			),
+			source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
+			destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
+		});
 		Ok(())
 	}
 }

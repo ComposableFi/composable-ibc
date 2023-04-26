@@ -103,7 +103,6 @@ where
 			});
 
 		log::trace!(target: "pallet_ibc", "logs: {:#?}", logs);
-		// todo: consolidate into one.
 		if !events.is_empty() {
 			Self::deposit_event(events.into())
 		};

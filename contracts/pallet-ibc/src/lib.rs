@@ -433,8 +433,8 @@ pub mod pallet {
 		ParamsUpdated { send_enabled: bool, receive_enabled: bool },
 		/// An outgoing Ibc token transfer has been completed and burnt
 		TokenTransferCompleted {
-			from: Vec<u8>,
-			to: Vec<u8>,
+			from: Signer,
+			to: Signer,
 			ibc_denom: Vec<u8>,
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
@@ -444,8 +444,8 @@ pub mod pallet {
 		},
 		/// Ibc tokens have been received and minted
 		TokenReceived {
-			from: Vec<u8>,
-			to: Vec<u8>,
+			from: Signer,
+			to: Signer,
 			ibc_denom: Vec<u8>,
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
@@ -455,8 +455,20 @@ pub mod pallet {
 		},
 		/// Ibc transfer failed, received an acknowledgement error, tokens have been refunded
 		TokenTransferFailed {
-			from: Vec<u8>,
-			to: Vec<u8>,
+			from: Signer,
+			to: Signer,
+			ibc_denom: Vec<u8>,
+			local_asset_id: Option<T::AssetId>,
+			amount: T::Balance,
+			is_sender_source: bool,
+			source_channel: Vec<u8>,
+			destination_channel: Vec<u8>,
+		},
+		/// Happens when token transfer timeouts, tokens have been refunded. expected
+		/// `TokenTransferFailed` does not happen in this case.
+		TokenTransferTimeout {
+			from: Signer,
+			to: Signer,
 			ibc_denom: Vec<u8>,
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
