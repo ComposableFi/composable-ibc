@@ -337,20 +337,141 @@ fn on_deliver_ics20_recv_packet() {
 
 		let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 
-		let account_data = Assets::balance(2u128, AccountId32::new(pair.public().0));
+		let account_data = Assets::balance(asset_id, AccountId32::new(pair.public().0));
 		// Assert account balance before transfer
 		assert_eq!(account_data, 0);
 		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
 
 		let balance =
-			<Assets as Inspect<AccountId>>::balance(2, &AccountId32::new(pair.public().0));
+			<Assets as Inspect<AccountId>>::balance(asset_id, &AccountId32::new(pair.public().0));
 		let pallet_balance = <Assets as Inspect<AccountId>>::balance(
-			2,
+			asset_id,
 			&<Test as crate::Config>::FeeAccount::get().into_account(),
 		);
 		let fee = <Test as crate::ics20_fee::Config>::ServiceCharge::get() * amt;
 		assert_eq!(balance, amt - fee);
 		assert_eq!(pallet_balance, fee)
+	})
+}
+
+#[test]
+fn on_deliver_ics20_recv_packet_should_not_double_spend() {
+	let mut ext = new_test_ext();
+	ext.execute_with(|| {
+		// Create  a new account
+		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
+		let ss58_address_bytes =
+			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
+		let ss58_address = String::from_utf8(ss58_address_bytes).unwrap();
+		frame_system::Pallet::<Test>::set_block_number(1u32);
+		let asset_id =
+			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
+				&"PICA".to_string(),
+			)
+			.unwrap();
+		setup_client_and_consensus_state(PortId::transfer());
+
+		let channel_id = ChannelId::new(0);
+		let balance = 100000 * MILLIS;
+
+		// We are simulating a transfer back to the source chain
+
+		let denom = "transfer/channel-1/PICA";
+		let channel_escrow_address =
+			get_channel_escrow_address(&PortId::transfer(), channel_id).unwrap();
+		let channel_escrow_address =
+			<Test as Config>::AccountIdConversion::try_from(channel_escrow_address)
+				.map_err(|_| ())
+				.unwrap();
+		let channel_escrow_address = channel_escrow_address.into_account();
+
+		// Endow escrow address with tokens
+		<<Test as Config>::Fungibles as Mutate<
+			<Test as frame_system::Config>::AccountId,
+		>>::mint_into(asset_id, &channel_escrow_address, balance)
+		.unwrap();
+
+		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
+		let amt = MILLIS / 100;
+		println!("Transferred Amount {}", amt);
+		let coin = Coin {
+			denom: prefixed_denom,
+			amount: ibc::applications::transfer::Amount::from_str(&format!("{:?}", amt)).unwrap(),
+		};
+		let packet_data = PacketData {
+			token: coin,
+			sender: Signer::from_str("alice").unwrap(),
+			receiver: Signer::from_str(&ss58_address).unwrap(),
+			memo: "".to_string(),
+		};
+
+		let data = serde_json::to_vec(&packet_data).unwrap();
+		let packet = Packet {
+			sequence: 1u64.into(),
+			source_port: PortId::transfer(),
+			source_channel: ChannelId::new(1),
+			destination_port: PortId::transfer(),
+			destination_channel: ChannelId::new(0),
+			data,
+			timeout_height: Height::new(2000, 5),
+			timeout_timestamp: ibc::timestamp::Timestamp::from_nanoseconds(
+				1690894363u64.saturating_mul(1000000000),
+			)
+			.unwrap(),
+		};
+
+		let msg = MsgRecvPacket {
+			packet,
+			proofs: Proofs::new(
+				vec![0u8; 32].try_into().unwrap(),
+				None,
+				None,
+				None,
+				Height::new(0, 1),
+			)
+			.unwrap(),
+			signer: Signer::from_str(MODULE_ID).unwrap(),
+		};
+
+		let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+
+		let account_data = Assets::balance(asset_id, AccountId32::new(pair.public().0));
+		// Assert account balance before transfer
+		assert_eq!(account_data, 0);
+		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg.clone()]).unwrap();
+
+		let account_data = Assets::balance(asset_id, AccountId32::new(pair.public().0));
+		// Assert account balance after transfer
+		assert_eq!(account_data, amt);
+
+		let balance =
+			<Assets as Inspect<AccountId>>::balance(asset_id, &AccountId32::new(pair.public().0));
+		let pallet_balance = <Assets as Inspect<AccountId>>::balance(
+			asset_id,
+			&<Test as crate::Config>::FeeAccount::get().into_account(),
+		);
+		// fee is less than ExistentialDeposit, so it is not deducted
+		let fee = 0;
+		assert_eq!(balance, amt);
+		assert_eq!(pallet_balance, fee);
+
+		// try sending the same packet again
+		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
+
+		let account_data = Assets::balance(asset_id, AccountId32::new(pair.public().0));
+		// Assert account balance after transfer
+		assert_eq!(account_data, amt);
+
+		let balance =
+			<Assets as Inspect<AccountId>>::balance(asset_id, &AccountId32::new(pair.public().0));
+		let pallet_balance = <Assets as Inspect<AccountId>>::balance(
+			asset_id,
+			&<Test as crate::Config>::FeeAccount::get().into_account(),
+		);
+		// fee is less than ExistentialDeposit, so it is not deducted
+		let fee = 0;
+		assert_eq!(balance, amt);
+		assert_eq!(pallet_balance, fee);
 	})
 }
 
