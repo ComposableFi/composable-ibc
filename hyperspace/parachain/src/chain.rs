@@ -326,45 +326,48 @@ where
 	}
 
 	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error> {
-		if let Some(rpc_err) = error.downcast_ref::<Error>() {
+		let err_str = if let Some(rpc_err) = error.downcast_ref::<Error>() {
 			match rpc_err {
-				Error::RpcError(s) =>
-					if s.contains("MaxSlotsExceeded") {
-						self.rpc_call_delay = self.rpc_call_delay * 2;
-					} else if s.contains("RestartNeeded") {
-						let relay_ws_client = Arc::new(
-							WsClientBuilder::default()
-								.build(&self.relay_chain_rpc_url)
-								.await
-								.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
-						);
-						let para_ws_client = Arc::new(
-							WsClientBuilder::default()
-								.build(&self.parachain_rpc_url)
-								.await
-								.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
-						);
-
-						let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
-							unsafe_cast_to_jsonrpsee_client(&para_ws_client)
-						})
-						.await?;
-						let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
-							unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
-						})
-						.await?;
-
-						log::info!(target: "hyperspace", "Reconnected to relay chain and parachain");
-
-						self.relay_ws_client = relay_ws_client;
-						self.para_ws_client = para_ws_client;
-						self.relay_client = relay_client;
-						self.para_client = para_client;
-						self.rpc_call_delay = self.rpc_call_delay * 2;
-					},
-				_ => (),
+				Error::RpcError(s) => s.clone(),
+				_ => "".to_string(),
 			}
+		} else {
+			error.to_string()
+		};
+		if err_str.contains("MaxSlotsExceeded") {
+			self.rpc_call_delay = self.rpc_call_delay * 2;
+		} else if err_str.contains("RestartNeeded") || err_str.contains("restart required") {
+			let relay_ws_client = Arc::new(
+				WsClientBuilder::default()
+					.build(&self.relay_chain_rpc_url)
+					.await
+					.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
+			);
+			let para_ws_client = Arc::new(
+				WsClientBuilder::default()
+					.build(&self.parachain_rpc_url)
+					.await
+					.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
+			);
+
+			let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
+				unsafe_cast_to_jsonrpsee_client(&para_ws_client)
+			})
+			.await?;
+			let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
+				unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
+			})
+			.await?;
+
+			log::info!(target: "hyperspace", "Reconnected to relay chain and parachain");
+
+			self.relay_ws_client = relay_ws_client;
+			self.para_ws_client = para_ws_client;
+			self.relay_client = relay_client;
+			self.para_client = para_client;
+			self.rpc_call_delay = self.rpc_call_delay * 2;
 		}
+
 		Ok(())
 	}
 

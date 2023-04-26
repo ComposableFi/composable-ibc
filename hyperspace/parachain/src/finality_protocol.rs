@@ -562,7 +562,7 @@ where
 		.filter(|e| {
 			let mut channel_and_port_ids = source.channel_whitelist();
 			channel_and_port_ids.extend(counterparty.channel_whitelist());
-			filter_events_by_ids(
+			let f = filter_events_by_ids(
 				e,
 				&[source.client_id(), counterparty.client_id()],
 				&[source.connection_id(), counterparty.connection_id()]
@@ -570,7 +570,9 @@ where
 					.flatten()
 					.collect::<Vec<_>>(),
 				&channel_and_port_ids,
-			)
+			);
+			log::trace!(target: "hyperspace", "Filtering event: {:?}: {f}", e.event_type());
+			f
 		})
 		.collect();
 
