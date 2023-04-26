@@ -102,10 +102,9 @@ where
 		for id in para_ids.iter() {
 			let id: u32 = (*id).into();
 			let key = T::Storage::paras_heads(id);
-			// if let Some(head) = client.storage().at(header.hash()).fetch(&key).await? {
-			heads.insert(id, vec![0u8]);
-			// heads.insert(id, Into::<Vec<u8>>::into(head));
-			// }
+			if let Some(head) = client.storage().at(header.hash()).fetch(&key).await? {
+				heads.insert(id, Into::<Vec<u8>>::into(head));
+			}
 		}
 
 		let para_header: T::Header = Decode::decode(&mut &heads[&para_id][..])
