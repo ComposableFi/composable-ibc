@@ -29,6 +29,7 @@ pub async fn flush_message_batch(
 		metrics.handle_transaction_costs(batch_weight, &msgs).await;
 	}
 
+	log::debug!(target: "hyperspace", "Outgoing messages weight: {} block max weight: {}", batch_weight, block_max_weight);
 	let ratio = (batch_weight / block_max_weight) as usize;
 	if ratio == 0 {
 		sink.submit(msgs).await?;
