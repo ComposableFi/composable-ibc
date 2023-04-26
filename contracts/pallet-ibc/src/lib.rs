@@ -172,7 +172,7 @@ pub mod pallet {
 	use ibc_primitives::{client_id_from_bytes, get_channel_escrow_address, IbcHandler};
 	use light_clients::AnyClientState;
 	use sp_runtime::{
-		traits::{IdentifyAccount, Saturating},
+		traits::{IdentifyAccount, Saturating, Zero},
 		AccountId32, BoundedBTreeSet,
 	};
 	#[cfg(feature = "std")]
@@ -264,8 +264,10 @@ pub mod pallet {
 
 		type IsSendEnabled: Get<bool>;
 		type IsReceiveEnabled: Get<bool>;
-
 		type FeeAccount: Get<Self::AccountIdConversion>;
+		/// Cleanup packets period (in blocks)
+		#[pallet::constant]
+		type CleanUpPacketsPeriod: Get<Self::BlockNumber>;
 	}
 
 	#[pallet::pallet]
@@ -381,6 +383,18 @@ pub mod pallet {
 	#[allow(clippy::disallowed_types)]
 	/// Acks info
 	pub type Acks<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<u8>, OptionQuery>;
+
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// Pending send packet sequences. Used in `packet_cleanup` procedure.
+	pub type PendingSendPacketSeqs<T: Config> =
+		StorageMap<_, Blake2_128Concat, (Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64), ValueQuery>;
+
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// Pending recv packet sequences. Used in `packet_cleanup` procedure.
+	pub type PendingRecvPacketSeqs<T: Config> =
+		StorageMap<_, Blake2_128Concat, (Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64), ValueQuery>;
 
 	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 	pub struct AssetConfig<AssetId> {
@@ -567,9 +581,22 @@ pub mod pallet {
 		T: Send + Sync,
 		AccountId32: From<<T as frame_system::Config>::AccountId>,
 	{
-		fn offchain_worker(_n: BlockNumberFor<T>) {
-			let _ = Pallet::<T>::packet_cleanup();
+		fn on_idle(n: BlockNumberFor<T>, remaining_weight: Weight) -> Weight {
+			if n % T::CleanUpPacketsPeriod::get() != T::BlockNumber::zero() {
+				return remaining_weight
+			}
+			log::trace!(target: "pallet_ibc", "Cleaning up packets");
+			let removed_packets_count = Pallet::<T>::packet_cleanup()
+				.map_err(|(e, n)| {
+					log::warn!(target: "pallet_ibc", "Error cleaning up packets: {:?}", e);
+					n
+				})
+				.unwrap_or_else(|n| n) as u64;
+			remaining_weight
+				.saturating_sub(T::WeightInfo::one_packet_cleanup() * removed_packets_count)
 		}
+
+		fn offchain_worker(_n: BlockNumberFor<T>) {}
 	}
 
 	// Dispatch able functions allows users to interact with the pallet and invoke state changes.

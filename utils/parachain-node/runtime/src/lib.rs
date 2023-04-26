@@ -702,6 +702,7 @@ parameter_types! {
 	pub const GRANDPA: LightClientProtocol = LightClientProtocol::Grandpa;
 	pub const IbcTriePrefix : &'static [u8] = b"ibc/";
 	pub FeeAccount: <Runtime as pallet_ibc::Config>::AccountIdConversion = create_alice_key();
+	pub const CleanUpPacketsPeriod: BlockNumber = 100;
 }
 
 fn create_alice_key() -> <Runtime as pallet_ibc::Config>::AccountIdConversion {
@@ -740,6 +741,7 @@ impl pallet_ibc::Config for Runtime {
 	type IbcAccountId = Self::AccountId;
 	type Ics20RateLimiter = Everything;
 	type FeeAccount = FeeAccount;
+	type CleanUpPacketsPeriod = CleanUpPacketsPeriod;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

@@ -1,9 +1,4 @@
-use alloc::{
-	collections::{BTreeMap, BTreeSet},
-	format,
-	str::FromStr,
-	string::String,
-};
+use alloc::{format, str::FromStr, string::String};
 use core::time::Duration;
 
 use crate::{
@@ -14,10 +9,10 @@ use crate::{
 		receipts::PacketReceipt,
 	},
 	light_clients::AnyClientState,
-	routing,
 	routing::Context,
 	Acks, ChannelsConnection, Config, ConnectionClient, DenomToAssetId, Error, EscrowAddresses,
-	IbcAssets, Pallet, RecvPackets, SendPackets, MODULE_ID,
+	IbcAssets, Pallet, PendingRecvPacketSeqs, PendingSendPacketSeqs, RecvPackets, SendPackets,
+	MODULE_ID,
 };
 use codec::{Decode, Encode};
 use frame_support::traits::{fungibles::Inspect, Currency};
@@ -66,15 +61,12 @@ use ibc_primitives::{
 use scale_info::prelude::string::ToString;
 use sp_core::crypto::AccountId32;
 use sp_runtime::{
-	offchain::storage::StorageValueRef,
 	traits::{Get, IdentifyAccount},
 	Either,
 };
 use sp_std::prelude::*;
 use tendermint_proto::Protobuf;
 
-pub const OFFCHAIN_SEND_PACKET_SEQS: &[u8] = b"pallet_ibc:pending_send_packet_sequences";
-pub const OFFCHAIN_RECV_PACKET_SEQS: &[u8] = b"pallet_ibc:pending_recv_packet_sequences";
 const PACKET_CLEANUP_PER_CYCLE: u64 = 1001;
 
 impl<T: Config> Pallet<T>
@@ -525,25 +517,19 @@ where
 		Ok(())
 	}
 
-	pub(crate) fn packet_cleanup() -> Result<(), Error<T>> {
-		let pending_send_packet_seqs = StorageValueRef::persistent(OFFCHAIN_SEND_PACKET_SEQS);
-		let pending_recv_packet_seqs = StorageValueRef::persistent(OFFCHAIN_RECV_PACKET_SEQS);
-		let mut pending_send_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
-			pending_send_packet_seqs.get::<_>().ok().flatten().unwrap_or_default();
-		let mut pending_recv_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
-			pending_recv_packet_seqs.get::<_>().ok().flatten().unwrap_or_default();
-		let ctx = routing::Context::<T>::default();
+	pub(crate) fn packet_cleanup() -> Result<usize, (Error<T>, usize)> {
+		let ctx = Context::<T>::default();
 
+		let mut removed_count = 0;
 		for (port_id_bytes, channel_id_bytes, _) in Channels::<T>::iter() {
 			let channel_id = channel_id_from_bytes(channel_id_bytes.clone())
-				.map_err(|_| Error::<T>::DecodingError)?;
-			let port_id =
-				port_id_from_bytes(port_id_bytes.clone()).map_err(|_| Error::<T>::DecodingError)?;
+				.map_err(|_| (Error::<T>::DecodingError, removed_count))?;
+			let port_id = port_id_from_bytes(port_id_bytes.clone())
+				.map_err(|_| (Error::<T>::DecodingError, removed_count))?;
 
-			let (mut send_seq_set, mut last_removed_send) = pending_send_sequences
-				.get(&(port_id_bytes.clone(), channel_id_bytes.clone()))
-				.map(|set| set.clone())
-				.unwrap_or_default();
+			let (mut send_seq_set, mut last_removed_send) =
+				PendingSendPacketSeqs::<T>::get(&(port_id_bytes.clone(), channel_id_bytes.clone()));
+
 			let last_removed_send_copy = last_removed_send;
 
 			// We first try to remove sequences that were skipped in a previous cycle
@@ -556,7 +542,8 @@ where
 					);
 					SendPackets::<T>::remove(offchain_key.clone());
 					send_seq_set.remove(&seq);
-					last_removed_send = seq
+					last_removed_send = seq;
+					removed_count += 1;
 				}
 			}
 			// Try removing at most 1000 sequences in this cycle starting from the last sequence
@@ -565,7 +552,7 @@ where
 				.get_next_sequence_send(&(port_id.clone(), channel_id.clone()))
 				.map_err(|_| {
 					log::trace!(target: "pallet_ibc", "Failed to run packet clean up");
-					Error::<T>::Other
+					(Error::<T>::Other, removed_count)
 				})?;
 			let range = (last_removed_send + 1)..
 				(last_removed_send + PACKET_CLEANUP_PER_CYCLE).min(next_seq_send.into());
@@ -579,6 +566,7 @@ where
 					if SendPackets::<T>::contains_key(offchain_key.clone()) {
 						SendPackets::<T>::remove(offchain_key.clone());
 						last_removed_send = seq;
+						removed_count += 1;
 					}
 				} else {
 					// Add sequence to pending removal list
@@ -586,16 +574,13 @@ where
 				}
 			}
 
-			pending_send_sequences.insert(
+			PendingSendPacketSeqs::<T>::insert(
 				(port_id_bytes.clone(), channel_id_bytes.clone()),
 				(send_seq_set, last_removed_send.max(last_removed_send_copy)),
 			);
-			pending_send_packet_seqs.set(&pending_send_sequences);
 
-			let (mut recv_seq_set, mut last_removed_ack) = pending_recv_sequences
-				.get(&(port_id_bytes.clone(), channel_id_bytes.clone()))
-				.map(|set| set.clone())
-				.unwrap_or_default();
+			let (mut recv_seq_set, mut last_removed_ack) =
+				PendingRecvPacketSeqs::<T>::get(&(port_id_bytes.clone(), channel_id_bytes.clone()));
 			let last_removed_ack_copy = last_removed_ack;
 
 			// We first try to remove sequences that were skipped in a previous cycle
@@ -615,6 +600,7 @@ where
 					Acks::<T>::remove(ack_key.clone());
 					recv_seq_set.remove(&seq);
 					last_removed_ack = seq;
+					removed_count += 1;
 				}
 			}
 			// Try removing at most 1000 sequences in this cycle from the last sequence removed
@@ -622,7 +608,7 @@ where
 				.get_next_sequence_recv(&(port_id.clone(), channel_id.clone()))
 				.map_err(|_| {
 					log::trace!(target: "pallet_ibc", "Failed to run packet clean up");
-					Error::<T>::Other
+					(Error::<T>::Other, removed_count)
 				})?;
 			let range = (last_removed_ack + 1)..
 				(last_removed_ack + PACKET_CLEANUP_PER_CYCLE).min(next_seq_recv.into());
@@ -643,20 +629,19 @@ where
 						RecvPackets::<T>::remove(offchain_key.clone());
 						Acks::<T>::remove(ack_key.clone());
 						last_removed_ack = seq;
+						removed_count += 1;
 					}
 				} else {
 					// Add sequence to pending removal list
 					recv_seq_set.insert(seq);
 				}
 			}
-			pending_recv_sequences.insert(
+			PendingRecvPacketSeqs::<T>::insert(
 				(port_id_bytes.clone(), channel_id_bytes.clone()),
 				(recv_seq_set, last_removed_ack.max(last_removed_ack_copy)),
 			);
-
-			pending_recv_packet_seqs.set(&pending_recv_sequences);
 		}
-		Ok(())
+		Ok(removed_count)
 	}
 
 	pub fn get_send_packet_info(

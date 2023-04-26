@@ -177,6 +177,7 @@ parameter_types! {
 	pub const ServiceCharge: Perbill = Perbill::from_percent(1);
 	pub const PalletId: frame_support::PalletId = frame_support::PalletId(*b"ics20fee");
 	pub FeeAccount: <Test as Config>::AccountIdConversion = create_alice_key();
+	pub const CleanUpPacketsPeriod: u32 = 10;
 }
 
 fn create_alice_key() -> <Test as Config>::AccountIdConversion {
@@ -215,6 +216,7 @@ impl Config for Test {
 	type IsSendEnabled = sp_core::ConstBool<true>;
 	type Ics20RateLimiter = Everything;
 	type FeeAccount = FeeAccount;
+	type CleanUpPacketsPeriod = CleanUpPacketsPeriod;
 }
 impl crate::ics20_fee::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
