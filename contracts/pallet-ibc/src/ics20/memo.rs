@@ -198,5 +198,6 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 		<T as Config>::HandleMemo::execute_memo(&packet_data, receiver).map_err(|e| {
 			Error::implementation_specific(format!("Failed to execute memo {:?}", e))
 		})?;
+		Ok(())
 	}
 }

@@ -207,10 +207,13 @@ where
 		packet: &mut Packet,
 		relayer: &Signer,
 	) -> Result<Acknowledgement, Ics04Error> {
-		let ack = self.inner.on_recv_packet(&mut ctx, output, packet, relayer)?;
+		// Module ModuleCallbackContext does not have the ics20 context as part of its trait bounds
+		// so we define a new context
+		let mut ctx = Context::<T>::default();
 		// We want the whole chain of calls to fail only if the ics20 transfer fails, because
 		// the other modules are not part of ics-20 standard
-		let _ = Self::process_fee(packet, &ack).map_err(|e| {
+		let ack = self.inner.on_recv_packet(&mut ctx, output, packet, relayer)?;
+		let _ = Self::process_fee(&mut ctx, packet, &ack).map_err(|e| {
 			log::error!(target: "pallet_ibc", "Error processing fee: {:?}", e);
 		});
 		Ok(ack)
@@ -243,11 +246,14 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 	Ics20ServiceCharge<T, S>
 where
 	<T as crate::Config>::AccountIdConversion: From<IbcAccount<T::AccountId>>,
+	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
-	fn process_fee(packet: &mut Packet, ack: &Acknowledgement) -> Result<(), Ics04Error> {
-		// Module ModuleCallbackContext does not have the ics20 context as part of its trait bounds
-		// so we define a new context
-		let mut ctx = Context::<T>::default();
+	fn process_fee(
+		ctx: &mut Context<T>,
+		packet: &mut Packet,
+		ack: &Acknowledgement,
+	) -> Result<(), Ics04Error> {
 		let mut packet_data = serde_json::from_slice::<PacketData>(packet.data.as_slice())
 			.map_err(|e| {
 				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
