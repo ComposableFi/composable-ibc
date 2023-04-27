@@ -128,7 +128,7 @@ enum KeyType {
 }
 
 pub const DEFAULT_RPC_CALL_DELAY: Duration = Duration::from_millis(10);
-pub const WAIT_FOR_IN_BLOCK_TIMEOUT: Duration = Duration::from_secs(60 * 4);
+pub const WAIT_FOR_IN_BLOCK_TIMEOUT: Duration = Duration::from_secs(60 * 1);
 
 impl KeyType {
 	pub fn to_key_type_id(&self) -> KeyTypeId {
