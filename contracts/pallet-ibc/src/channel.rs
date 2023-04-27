@@ -298,7 +298,7 @@ where
 		let port_id = key.0.as_bytes().to_vec();
 		let seq = u64::from(key.2);
 		let channel_end = ChannelReader::channel_end(self, &(key.0, key.1))?;
-		let key = Pallet::<T>::offchain_send_packet_key(channel_id, port_id, seq);
+		let key = Pallet::<T>::send_packet_key(channel_id, port_id, seq);
 
 		let mut packet_info: PacketInfo = packet.into();
 		packet_info.height = Some(host_height::<T>());
@@ -319,7 +319,7 @@ where
 		let port_id = key.0.as_bytes().to_vec();
 		let seq = u64::from(key.2);
 		let channel_end = ChannelReader::channel_end(self, &(key.0, key.1))?;
-		let key = Pallet::<T>::offchain_recv_packet_key(channel_id, port_id, seq);
+		let key = Pallet::<T>::recv_packet_key(channel_id, port_id, seq);
 		let mut packet_info: PacketInfo = packet.into();
 		packet_info.height = Some(host_height::<T>());
 		packet_info.channel_order = channel_end.ordering as u8;

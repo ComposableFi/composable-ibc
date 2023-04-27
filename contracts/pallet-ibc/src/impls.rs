@@ -488,17 +488,17 @@ where
 		}
 	}
 
-	pub fn offchain_send_packet_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
+	pub fn send_packet_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
 		let pair = (T::PalletPrefix::get().to_vec(), b"SEND_PACKET", channel_id, port_id, seq);
 		pair.encode()
 	}
 
-	pub fn offchain_recv_packet_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
+	pub fn recv_packet_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
 		let pair = (T::PalletPrefix::get().to_vec(), b"RECV_PACKET", channel_id, port_id, seq);
 		pair.encode()
 	}
 
-	pub fn offchain_ack_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
+	pub fn ack_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
 		let pair = (T::PalletPrefix::get().to_vec(), b"ACK", channel_id, port_id, seq);
 		pair.encode()
 	}
@@ -511,7 +511,7 @@ where
 		let port_id = key.0.as_bytes().to_vec();
 		let seq = u64::from(key.2);
 
-		let key = Pallet::<T>::offchain_ack_key(channel_id, port_id, seq);
+		let key = Pallet::<T>::ack_key(channel_id, port_id, seq);
 		Acks::<T>::insert(key.clone(), ack.clone());
 		log::trace!(target: "pallet_ibc", "in channel: [store_raw_acknowledgement] >> writing acknowledgement {:?} {:?}", key, ack);
 		Ok(())
@@ -535,12 +535,12 @@ where
 			// We first try to remove sequences that were skipped in a previous cycle
 			for seq in send_seq_set.clone() {
 				if !PacketCommitment::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
-					let offchain_key = Pallet::<T>::offchain_send_packet_key(
+					let key = Pallet::<T>::send_packet_key(
 						channel_id_bytes.clone(),
 						port_id_bytes.clone(),
 						seq,
 					);
-					SendPackets::<T>::remove(offchain_key.clone());
+					SendPackets::<T>::remove(key.clone());
 					send_seq_set.remove(&seq);
 					last_removed_send = seq;
 					removed_count += 1;
@@ -558,13 +558,13 @@ where
 				(last_removed_send + PACKET_CLEANUP_PER_CYCLE).min(next_seq_send.into());
 			for seq in range {
 				if !PacketCommitment::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
-					let offchain_key = Pallet::<T>::offchain_send_packet_key(
+					let key = Pallet::<T>::send_packet_key(
 						channel_id_bytes.clone(),
 						port_id_bytes.clone(),
 						seq,
 					);
-					if SendPackets::<T>::contains_key(offchain_key.clone()) {
-						SendPackets::<T>::remove(offchain_key.clone());
+					if SendPackets::<T>::contains_key(key.clone()) {
+						SendPackets::<T>::remove(key.clone());
 						last_removed_send = seq;
 						removed_count += 1;
 					}
@@ -586,17 +586,14 @@ where
 			// We first try to remove sequences that were skipped in a previous cycle
 			for seq in recv_seq_set.clone() {
 				if !Acknowledgements::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
-					let offchain_key = Pallet::<T>::offchain_recv_packet_key(
+					let key = Pallet::<T>::recv_packet_key(
 						channel_id_bytes.clone(),
 						port_id_bytes.clone(),
 						seq,
 					);
-					let ack_key = Pallet::<T>::offchain_ack_key(
-						channel_id_bytes.clone(),
-						port_id_bytes.clone(),
-						seq,
-					);
-					RecvPackets::<T>::remove(offchain_key.clone());
+					let ack_key =
+						Pallet::<T>::ack_key(channel_id_bytes.clone(), port_id_bytes.clone(), seq);
+					RecvPackets::<T>::remove(key.clone());
 					Acks::<T>::remove(ack_key.clone());
 					recv_seq_set.remove(&seq);
 					last_removed_ack = seq;
@@ -614,19 +611,16 @@ where
 				(last_removed_ack + PACKET_CLEANUP_PER_CYCLE).min(next_seq_recv.into());
 			for seq in range {
 				if !Acknowledgements::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
-					let offchain_key = Pallet::<T>::offchain_recv_packet_key(
+					let key = Pallet::<T>::recv_packet_key(
 						channel_id_bytes.clone(),
 						port_id_bytes.clone(),
 						seq,
 					);
 
-					let ack_key = Pallet::<T>::offchain_ack_key(
-						channel_id_bytes.clone(),
-						port_id_bytes.clone(),
-						seq,
-					);
-					if RecvPackets::<T>::contains_key(offchain_key.clone()) {
-						RecvPackets::<T>::remove(offchain_key.clone());
+					let ack_key =
+						Pallet::<T>::ack_key(channel_id_bytes.clone(), port_id_bytes.clone(), seq);
+					if RecvPackets::<T>::contains_key(key.clone()) {
+						RecvPackets::<T>::remove(key.clone());
 						Acks::<T>::remove(ack_key.clone());
 						last_removed_ack = seq;
 						removed_count += 1;
@@ -653,12 +647,11 @@ where
 			.clone()
 			.into_iter()
 			.filter_map(|seq| {
-				let key =
-					Pallet::<T>::offchain_send_packet_key(channel_id.clone(), port_id.clone(), seq);
+				let key = Pallet::<T>::send_packet_key(channel_id.clone(), port_id.clone(), seq);
 				SendPackets::<T>::get(key.clone()).and_then(|v| PacketInfo::decode(&mut &*v).ok())
 			})
 			.collect();
-		log::trace!(target: "pallet_ibc", "offchain_send_packets: {:?}, {:?}", sequences, packets);
+		log::trace!(target: "pallet_ibc", "get_send_packet_info: {:?}, {:?}", sequences, packets);
 		Ok(packets)
 	}
 
@@ -671,10 +664,8 @@ where
 			.clone()
 			.into_iter()
 			.filter_map(|seq| {
-				let key =
-					Pallet::<T>::offchain_recv_packet_key(channel_id.clone(), port_id.clone(), seq);
-				let ack_key =
-					Pallet::<T>::offchain_ack_key(channel_id.clone(), port_id.clone(), seq);
+				let key = Pallet::<T>::recv_packet_key(channel_id.clone(), port_id.clone(), seq);
+				let ack_key = Pallet::<T>::ack_key(channel_id.clone(), port_id.clone(), seq);
 				let packet_info = RecvPackets::<T>::get(key.clone())
 					.and_then(|v| PacketInfo::decode(&mut &*v).ok());
 				let ack = Acks::<T>::get(ack_key.clone());
@@ -684,7 +675,7 @@ where
 				})
 			})
 			.collect();
-		log::trace!(target: "pallet_ibc", "offchain_recv_packets: {:?}, {:?}", sequences, packets);
+		log::trace!(target: "pallet_ibc", "get_recv_packet_info: {:?}, {:?}", sequences, packets);
 		Ok(packets)
 	}
 
