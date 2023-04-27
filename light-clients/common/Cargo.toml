@@ -14,8 +14,8 @@ std = [
     "ibc/std",
     "sp-storage/std",
     "sp-trie/std",
-    "subxt",
 ]
+enable-subxt = ["subxt"]
 
 [dependencies]
 # crates.io

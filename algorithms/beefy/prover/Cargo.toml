@@ -27,7 +27,7 @@ beefy-primitives = { package = "sp-beefy", git = "https://github.com/paritytech/
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 rs_merkle = "1.2.0"
 derive_more = { version = "0.99.17", features = ["from"]  }
-light-client-common = { path = "../../../light-clients/common" }
+light-client-common = { path = "../../../light-clients/common", features = ["enable-subxt"] }
 jsonrpsee-core = { version = "0.16.2", features = ["async-client"] }
 
 # Optional deps
