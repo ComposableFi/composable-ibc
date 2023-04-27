@@ -38,13 +38,14 @@ members = [
     "hyperspace/cosmos",
     "hyperspace/testsuite",
     "hyperspace/metrics",
+    "hyperspace/ethereum",
 
     # utilities
     "utils/subxt/codegen",
     "utils/subxt/generated",
     "utils/parachain-node",
     "utils/parachain-node/runtime",
-#     "utils/simnode"
+    #     "utils/simnode"
 ]
 
 [patch."https://github.com/paritytech/jsonrpsee"]
@@ -77,6 +78,8 @@ sp-version-proc-macro = { git = "https://github.com/paritytech/substrate", branc
 sp-wasm-interface = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-weights = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+librocksdb-sys = { git = "https://github.com/rust-rocksdb/rust-rocksdb", branch = "master" }
+wasm-opt-sys = { git = "https://github.com/brson/wasm-opt-rs", branch = "master" }
 
 [patch."https://github.com/paritytech/substrate"]
 sc-executor = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.38" }
@@ -107,4 +110,3 @@ sp-version-proc-macro = { git = "https://github.com/paritytech//substrate.git", 
 sp-wasm-interface = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.38" }
 sp-weights = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.38" }
 try-runtime-cli = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.38" }
-
