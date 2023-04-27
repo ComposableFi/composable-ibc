@@ -38,3 +38,6 @@ pallet-mmr-rpc = { package = "mmr-rpc", git = "https://github.com/paritytech/sub
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 hex = { version = "0.4.3" }
 beefy-light-client-primitives = {  path = "../primitives" }
+
+[dev-dependencies]
+light-client-common = { path = "../../../light-clients/common" }
