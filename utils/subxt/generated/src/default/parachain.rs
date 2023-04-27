@@ -339,9 +339,9 @@ pub mod api {
 		let runtime_metadata_hash = client.metadata().metadata_hash(&PALLETS);
 		if runtime_metadata_hash !=
 			[
-				34u8, 144u8, 3u8, 217u8, 191u8, 243u8, 254u8, 35u8, 47u8, 55u8, 75u8, 157u8, 183u8,
-				191u8, 163u8, 194u8, 32u8, 134u8, 190u8, 119u8, 231u8, 37u8, 125u8, 123u8, 160u8,
-				183u8, 253u8, 36u8, 241u8, 128u8, 160u8, 30u8,
+				163u8, 135u8, 79u8, 105u8, 209u8, 90u8, 234u8, 227u8, 58u8, 124u8, 34u8, 179u8,
+				209u8, 139u8, 181u8, 77u8, 156u8, 2u8, 193u8, 208u8, 227u8, 121u8, 25u8, 213u8,
+				217u8, 26u8, 245u8, 29u8, 21u8, 70u8, 156u8, 133u8,
 			] {
 			Err(::subxt::error::MetadataError::IncompatibleMetadata)
 		} else {
@@ -964,9 +964,10 @@ pub mod api {
 						"Events",
 						vec![],
 						[
-							25u8, 113u8, 24u8, 66u8, 50u8, 52u8, 203u8, 98u8, 141u8, 60u8, 154u8,
-							150u8, 21u8, 182u8, 53u8, 80u8, 31u8, 66u8, 206u8, 7u8, 215u8, 28u8,
-							159u8, 77u8, 119u8, 81u8, 178u8, 142u8, 216u8, 124u8, 197u8, 4u8,
+							148u8, 72u8, 66u8, 116u8, 212u8, 237u8, 130u8, 217u8, 167u8, 110u8,
+							246u8, 248u8, 108u8, 87u8, 79u8, 65u8, 146u8, 125u8, 160u8, 94u8,
+							181u8, 251u8, 120u8, 6u8, 185u8, 89u8, 33u8, 155u8, 242u8, 46u8, 249u8,
+							2u8,
 						],
 					)
 				}
@@ -8072,8 +8073,8 @@ pub mod api {
 			#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
 			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 			pub struct TokenTransferCompleted {
-				pub from: ::std::vec::Vec<::core::primitive::u8>,
-				pub to: ::std::vec::Vec<::core::primitive::u8>,
+				pub from: runtime_types::ibc::signer::Signer,
+				pub to: runtime_types::ibc::signer::Signer,
 				pub ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
 				pub local_asset_id: ::core::option::Option<::core::primitive::u128>,
 				pub amount: ::core::primitive::u128,
@@ -8095,8 +8096,8 @@ pub mod api {
 			#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
 			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 			pub struct TokenReceived {
-				pub from: ::std::vec::Vec<::core::primitive::u8>,
-				pub to: ::std::vec::Vec<::core::primitive::u8>,
+				pub from: runtime_types::ibc::signer::Signer,
+				pub to: runtime_types::ibc::signer::Signer,
 				pub ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
 				pub local_asset_id: ::core::option::Option<::core::primitive::u128>,
 				pub amount: ::core::primitive::u128,
@@ -8118,8 +8119,8 @@ pub mod api {
 			#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
 			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 			pub struct TokenTransferFailed {
-				pub from: ::std::vec::Vec<::core::primitive::u8>,
-				pub to: ::std::vec::Vec<::core::primitive::u8>,
+				pub from: runtime_types::ibc::signer::Signer,
+				pub to: runtime_types::ibc::signer::Signer,
 				pub ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
 				pub local_asset_id: ::core::option::Option<::core::primitive::u128>,
 				pub amount: ::core::primitive::u128,
@@ -8130,6 +8131,29 @@ pub mod api {
 			impl ::subxt::events::StaticEvent for TokenTransferFailed {
 				const PALLET: &'static str = "Ibc";
 				const EVENT: &'static str = "TokenTransferFailed";
+			}
+			#[derive(
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				:: subxt :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
+			pub struct TokenTransferTimeout {
+				pub from: runtime_types::ibc::signer::Signer,
+				pub to: runtime_types::ibc::signer::Signer,
+				pub ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
+				pub local_asset_id: ::core::option::Option<::core::primitive::u128>,
+				pub amount: ::core::primitive::u128,
+				pub is_sender_source: ::core::primitive::bool,
+				pub source_channel: ::std::vec::Vec<::core::primitive::u8>,
+				pub destination_channel: ::std::vec::Vec<::core::primitive::u8>,
+			}
+			impl ::subxt::events::StaticEvent for TokenTransferTimeout {
+				const PALLET: &'static str = "Ibc";
+				const EVENT: &'static str = "TokenTransferTimeout";
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode,
@@ -9826,6 +9850,19 @@ pub mod api {
 					}
 				}
 			}
+			pub mod signer {
+				use super::runtime_types;
+				#[derive(
+					:: subxt :: ext :: codec :: Decode,
+					:: subxt :: ext :: codec :: Encode,
+					:: subxt :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+				#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
+				pub struct Signer(pub ::std::string::String);
+			}
 		}
 		pub mod ibc_primitives {
 			use super::runtime_types;
@@ -11094,8 +11131,8 @@ pub mod api {
 					},
 					#[codec(index = 4)]
 					TokenTransferCompleted {
-						from: ::std::vec::Vec<::core::primitive::u8>,
-						to: ::std::vec::Vec<::core::primitive::u8>,
+						from: runtime_types::ibc::signer::Signer,
+						to: runtime_types::ibc::signer::Signer,
 						ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
 						local_asset_id: ::core::option::Option<::core::primitive::u128>,
 						amount: ::core::primitive::u128,
@@ -11105,8 +11142,8 @@ pub mod api {
 					},
 					#[codec(index = 5)]
 					TokenReceived {
-						from: ::std::vec::Vec<::core::primitive::u8>,
-						to: ::std::vec::Vec<::core::primitive::u8>,
+						from: runtime_types::ibc::signer::Signer,
+						to: runtime_types::ibc::signer::Signer,
 						ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
 						local_asset_id: ::core::option::Option<::core::primitive::u128>,
 						amount: ::core::primitive::u128,
@@ -11116,8 +11153,8 @@ pub mod api {
 					},
 					#[codec(index = 6)]
 					TokenTransferFailed {
-						from: ::std::vec::Vec<::core::primitive::u8>,
-						to: ::std::vec::Vec<::core::primitive::u8>,
+						from: runtime_types::ibc::signer::Signer,
+						to: runtime_types::ibc::signer::Signer,
 						ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
 						local_asset_id: ::core::option::Option<::core::primitive::u128>,
 						amount: ::core::primitive::u128,
@@ -11126,16 +11163,27 @@ pub mod api {
 						destination_channel: ::std::vec::Vec<::core::primitive::u8>,
 					},
 					#[codec(index = 7)]
-					OnRecvPacketError { msg: ::std::vec::Vec<::core::primitive::u8> },
+					TokenTransferTimeout {
+						from: runtime_types::ibc::signer::Signer,
+						to: runtime_types::ibc::signer::Signer,
+						ibc_denom: ::std::vec::Vec<::core::primitive::u8>,
+						local_asset_id: ::core::option::Option<::core::primitive::u128>,
+						amount: ::core::primitive::u128,
+						is_sender_source: ::core::primitive::bool,
+						source_channel: ::std::vec::Vec<::core::primitive::u8>,
+						destination_channel: ::std::vec::Vec<::core::primitive::u8>,
+					},
 					#[codec(index = 8)]
-					ClientUpgradeSet,
+					OnRecvPacketError { msg: ::std::vec::Vec<::core::primitive::u8> },
 					#[codec(index = 9)]
+					ClientUpgradeSet,
+					#[codec(index = 10)]
 					ClientFrozen {
 						client_id: ::std::vec::Vec<::core::primitive::u8>,
 						height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
 					},
-					#[codec(index = 10)]
+					#[codec(index = 11)]
 					AssetAdminUpdated { admin_account: ::subxt::utils::AccountId32 },
 				}
 			}
