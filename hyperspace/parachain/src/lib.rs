@@ -128,6 +128,7 @@ enum KeyType {
 }
 
 pub const DEFAULT_RPC_CALL_DELAY: Duration = Duration::from_millis(10);
+pub const WAIT_FOR_IN_BLOCK_TIMEOUT: Duration = Duration::from_secs(60 * 4);
 
 impl KeyType {
 	pub fn to_key_type_id(&self) -> KeyTypeId {
@@ -430,9 +431,11 @@ where
 		};
 
 		let tx_in_block =
-			tokio::time::timeout(Duration::from_secs(60 * 2), progress.wait_for_in_block())
+			tokio::time::timeout(WAIT_FOR_IN_BLOCK_TIMEOUT, progress.wait_for_in_block())
 				.await
-				.map_err(|_| Error::Custom("transaction submission timeout".to_string()))??;
+				.map_err(|e| {
+					Error::from(format!("[submit_call] Failed to wait for in block due to {:?}", e))
+				})??;
 		tx_in_block.wait_for_success().await?;
 		Ok((tx_in_block.extrinsic_hash(), tx_in_block.block_hash()))
 	}
