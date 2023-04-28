@@ -72,7 +72,7 @@ use tendermint_rpc::{
 	query::{EventType, Query},
 	Client, Error as RpcError, Order, SubscriptionClient, WebSocketClient,
 };
-use tokio::time::sleep;
+use tokio::{task::JoinSet, time::sleep};
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
@@ -128,16 +128,31 @@ where
 		let update_headers =
 			self.msg_update_client_header(from, to, client_state.latest_height).await?;
 		let mut block_events = Vec::new();
-		block_events.push(Vec::new());
-		for height in from.value()..to.value() {
-			let ibc_events = self.parse_ibc_events_at(latest_revision, height).await?;
-			block_events.push(ibc_events);
+		block_events.push((0, Vec::new()));
+		let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+		let range = (from.value()..to.value()).collect::<Vec<_>>();
+		for heights in range.chunks(100) {
+			for height in heights.to_owned() {
+				log::trace!(target: "hyperspace_cosmos", "Parsing events at height {:?}", height);
+				let client = self.clone();
+				join_set.spawn(async move {
+					Ok((height, client.parse_ibc_events_at(latest_revision, height).await?))
+				});
+			}
+			while let Some(res) = join_set.join_next().await {
+				let out = res??;
+				block_events.push(out);
+			}
 		}
+
 		// we don't submit events for the last block, because we don't have a proof for it
 		assert_eq!(block_events.len(), update_headers.len(), "block events and updates must match");
+		block_events.sort_by_key(|(height, _)| *height);
 
 		let mut updates = Vec::new();
-		for (events, (update_header, update_type)) in block_events.into_iter().zip(update_headers) {
+		for (events, (update_header, update_type)) in
+			block_events.into_iter().map(|(_, events)| events).zip(update_headers)
+		{
 			log::info!(target: "hyperspace_cosmos", "Fetching block {}", update_header.height().revision_height);
 			let update_client_header = {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
@@ -1071,16 +1086,140 @@ where
 
 	async fn query_connection_id_from_tx_hash(
 		&self,
-		_tx_id: Self::TransactionId,
+		tx_id: Self::TransactionId,
 	) -> Result<ConnectionId, Self::Error> {
-		todo!()
+		const WAIT_BACKOFF: Duration = Duration::from_millis(300);
+		const TIME_OUT: Duration = Duration::from_millis(30000);
+		let start_time = std::time::Instant::now();
+
+		let response: Response = loop {
+			let response = self
+				.rpc_client
+				.tx_search(
+					Query::eq("tx.hash", tx_id.hash.to_string()),
+					false,
+					1,
+					1, // get only the first Tx matching the query
+					Order::Ascending,
+				)
+				.await
+				.map_err(|e| Error::from(format!("Failed to query tx hash: {}", e)))?;
+			match response.txs.into_iter().next() {
+				None => {
+					let elapsed = start_time.elapsed();
+					if &elapsed > &TIME_OUT {
+						return Err(Error::from(format!(
+							"Timeout waiting for tx {:?} to be included in a block",
+							tx_id.hash
+						)))
+					} else {
+						std::thread::sleep(WAIT_BACKOFF);
+					}
+				},
+				Some(resp) => break resp,
+			}
+		};
+
+		let height = Height::new(
+			ChainId::chain_version(self.chain_id.to_string().as_str()),
+			response.height.value(),
+		);
+		let deliver_tx_result = response.tx_result;
+		if deliver_tx_result.code.is_err() {
+			Err(Error::from(format!(
+				"Transaction failed with code {:?} and log {:?}",
+				deliver_tx_result.code, deliver_tx_result.log
+			)))
+		} else {
+			let result = deliver_tx_result
+				.events
+				.iter()
+				.flat_map(|e| ibc_event_try_from_abci_event(e, height).ok().into_iter())
+				.filter(|e| matches!(e, IbcEvent::OpenInitConnection(_)))
+				.collect::<Vec<_>>();
+			if result.clone().len() != 1 {
+				Err(Error::from(format!(
+					"Expected exactly one CreateClient event, found {}",
+					result.len()
+				)))
+			} else {
+				Ok(match result[0] {
+					IbcEvent::OpenInitConnection(ref e) =>
+						e.connection_id().expect("Connection id wasn't found").clone(),
+					_ => unreachable!(),
+				})
+			}
+		}
 	}
 
 	async fn query_channel_id_from_tx_hash(
 		&self,
-		_tx_id: Self::TransactionId,
+		tx_id: Self::TransactionId,
 	) -> Result<(ChannelId, PortId), Self::Error> {
-		todo!()
+		const WAIT_BACKOFF: Duration = Duration::from_millis(300);
+		const TIME_OUT: Duration = Duration::from_millis(30000);
+		let start_time = std::time::Instant::now();
+
+		let response: Response = loop {
+			let response = self
+				.rpc_client
+				.tx_search(
+					Query::eq("tx.hash", tx_id.hash.to_string()),
+					false,
+					1,
+					1, // get only the first Tx matching the query
+					Order::Ascending,
+				)
+				.await
+				.map_err(|e| Error::from(format!("Failed to query tx hash: {}", e)))?;
+			match response.txs.into_iter().next() {
+				None => {
+					let elapsed = start_time.elapsed();
+					if &elapsed > &TIME_OUT {
+						return Err(Error::from(format!(
+							"Timeout waiting for tx {:?} to be included in a block",
+							tx_id.hash
+						)))
+					} else {
+						std::thread::sleep(WAIT_BACKOFF);
+					}
+				},
+				Some(resp) => break resp,
+			}
+		};
+
+		let height = Height::new(
+			ChainId::chain_version(self.chain_id.to_string().as_str()),
+			response.height.value(),
+		);
+		let deliver_tx_result = response.tx_result;
+		if deliver_tx_result.code.is_err() {
+			Err(Error::from(format!(
+				"Transaction failed with code {:?} and log {:?}",
+				deliver_tx_result.code, deliver_tx_result.log
+			)))
+		} else {
+			let result = deliver_tx_result
+				.events
+				.iter()
+				.flat_map(|e| ibc_event_try_from_abci_event(e, height).ok().into_iter())
+				.filter(|e| matches!(e, IbcEvent::OpenInitChannel(_)))
+				.collect::<Vec<_>>();
+			if result.clone().len() != 1 {
+				Err(Error::from(format!(
+					"Expected exactly one CreateClient event, found {}",
+					result.len()
+				)))
+			} else {
+				Ok(match result[0] {
+					IbcEvent::OpenInitChannel(ref e) => (
+						e.channel_id().expect("Channel id wasn't found").clone(),
+						e.port_id().clone(),
+					),
+					_ => unreachable!(),
+				})
+			}
+		}
 	}
 
 	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
@@ -1130,7 +1269,7 @@ where
 	H: 'static + Clone + Send + Sync,
 {
 	async fn parse_ibc_events_at(
-		&mut self,
+		&self,
 		latest_revision: u64,
 		height: u64,
 	) -> Result<Vec<IbcEvent>, <Self as IbcProvider>::Error> {

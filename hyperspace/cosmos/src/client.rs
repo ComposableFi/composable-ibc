@@ -37,6 +37,7 @@ use std::{
 use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
 use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient, Url};
+use tokio::task::JoinSet;
 
 const DEFAULT_FEE_DENOM: &str = "stake";
 const DEFAULT_FEE_AMOUNT: &str = "4000";
@@ -124,7 +125,7 @@ pub struct CosmosClient<H> {
 	/// Chain name
 	pub name: String,
 	/// Chain rpc client
-	pub rpc_client: HttpClient,
+	pub rpc_client: Arc<HttpClient>,
 	/// Chain grpc address
 	pub grpc_url: Url,
 	/// Websocket chain ws client
@@ -256,7 +257,7 @@ where
 		Ok(Self {
 			name: config.name,
 			chain_id,
-			rpc_client,
+			rpc_client: Arc::new(rpc_client),
 			grpc_url: config.grpc_url,
 			websocket_url: config.websocket_url,
 			client_id: Arc::new(Mutex::new(config.client_id)),
@@ -349,49 +350,63 @@ where
 		trusted_height: Height,
 	) -> Result<Vec<(Header, UpdateType)>, Error> {
 		let mut xs = Vec::new();
-		for height in from.value()..=to.value() {
-			let latest_light_block = self
-				.light_client
-				.io
-				.fetch_light_block(AtHeight::At(height.try_into()?))
-				.map_err(|e| {
-					Error::from(format!(
-						"Failed to fetch light block for chain {:?} with error {:?}",
-						self.name, e
-					))
-				})?;
-			let height = TmHeight::try_from(trusted_height.revision_height).map_err(|e| {
-				Error::from(format!(
-					"Failed to convert height for chain {:?} with error {:?}",
-					self.name, e
-				))
-			})?;
-			let trusted_light_block = self
-				.light_client
-				.io
-				.fetch_light_block(AtHeight::At(height.increment()))
-				.map_err(|e| {
-					Error::from(format!(
-						"Failed to fetch light block for chain {:?} with error {:?}",
-						self.name, e
-					))
-				})?;
+		let heightss = (from.value()..=to.value()).collect::<Vec<_>>();
+		let client = Arc::new(self.clone());
+		for heights in heightss.chunks(5) {
+			let mut join_set = JoinSet::<Result<_, Error>>::new();
+			for height in heights.to_owned() {
+				let client = client.clone();
+				join_set.spawn(async move {
+					log::trace!(target: "hyperspace_cosmos", "Fetching header at height {:?}", height);
+					let latest_light_block = client
+						.light_client
+						.io
+						.fetch_light_block(AtHeight::At(height.try_into()?))
+						.map_err(|e| {
+							Error::from(format!(
+								"Failed to fetch light block for chain {:?} with error {:?}",
+								client.name, e
+							))
+						})?;
+					let height =
+						TmHeight::try_from(trusted_height.revision_height).map_err(|e| {
+							Error::from(format!(
+								"Failed to convert height for chain {:?} with error {:?}",
+								client.name, e
+							))
+						})?;
+					let trusted_light_block = client
+						.light_client
+						.io
+						.fetch_light_block(AtHeight::At(height.increment()))
+						.map_err(|e| {
+							Error::from(format!(
+								"Failed to fetch light block for chain {:?} with error {:?}",
+								client.name, e
+							))
+						})?;
 
-			let update_type =
-				match latest_light_block.validators == latest_light_block.next_validators {
-					true => UpdateType::Optional,
-					false => UpdateType::Mandatory,
-				};
-			xs.push((
-				Header {
-					signed_header: latest_light_block.signed_header,
-					validator_set: latest_light_block.validators,
-					trusted_height,
-					trusted_validator_set: trusted_light_block.validators,
-				},
-				update_type,
-			));
+					let update_type =
+						match latest_light_block.validators == latest_light_block.next_validators {
+							true => UpdateType::Optional,
+							false => UpdateType::Mandatory,
+						};
+					Ok((
+						Header {
+							signed_header: latest_light_block.signed_header,
+							validator_set: latest_light_block.validators,
+							trusted_height,
+							trusted_validator_set: trusted_light_block.validators,
+						},
+						update_type,
+					))
+				});
+			}
+			while let Some(res) = join_set.join_next().await {
+				xs.push(res.map_err(|e| Error::Custom(e.to_string()))??);
+			}
 		}
+		xs.sort_by_key(|(h, _)| h.trusted_height.revision_height);
 		Ok(xs)
 	}
 

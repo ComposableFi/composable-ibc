@@ -16,7 +16,7 @@
 use crate::send_packet_relay::packet_relay_status;
 use rand::Rng;
 use sp_runtime::Either::{Left, Right};
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 use tokio::{task::JoinSet, time::sleep};
 
 use crate::packets::utils::{
@@ -179,6 +179,8 @@ pub async fn query_ready_and_timed_out_packets(
 
 		let send_packets = source.query_send_packets(channel_id, port_id.clone(), seqs).await?;
 		let mut timeout_packets_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+		let source = Arc::new(source.clone());
+		let sink = Arc::new(sink.clone());
 		for send_packets in send_packets.chunks(PROCESS_PACKETS_BATCH_SIZE) {
 			for send_packet in send_packets.to_owned() {
 				let source_connection_end = source_connection_end.clone();
@@ -203,8 +205,8 @@ pub async fn query_ready_and_timed_out_packets(
 				// consensus state height at which we can generate a non-membership proof of the
 				// packet for the sink's client on the source.
 				let proof_height = if let Some(proof_height) = get_timeout_proof_height(
-					source,
-					sink,
+					&**source,
+					&**sink,
 					source_height,
 					sink_height,
 					sink_timestamp,
@@ -222,8 +224,8 @@ pub async fn query_ready_and_timed_out_packets(
 
 						// given this maximum height, has the connection delay been satisfied?
 						if !verify_delay_passed(
-							source,
-							sink,
+							&**source,
+							&**sink,
 							source_timestamp,
 							source_height,
 							sink_timestamp,
@@ -240,8 +242,8 @@ pub async fn query_ready_and_timed_out_packets(
 
 						// lets construct the timeout message to be sent to the source
 						let msg = construct_timeout_message(
-							source,
-							sink,
+							&**source,
+							&**sink,
 							&sink_channel_end,
 							packet,
 							next_sequence_recv.next_sequence_receive,
@@ -278,7 +280,7 @@ pub async fn query_ready_and_timed_out_packets(
 					}
 
 					let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(
-						sink,
+						&**sink,
 						sink_height,
 						source.client_id(),
 						Height::new(latest_source_height_on_sink.revision_number, packet_height),
@@ -294,8 +296,8 @@ pub async fn query_ready_and_timed_out_packets(
 					};
 
 					if !verify_delay_passed(
-						source,
-						sink,
+						&**source,
+						&**sink,
 						source_timestamp,
 						source_height,
 						sink_timestamp,
@@ -315,7 +317,7 @@ pub async fn query_ready_and_timed_out_packets(
 						return Ok(None)
 					}
 
-					let msg = construct_recv_message(source, sink, packet, proof_height).await?;
+					let msg = construct_recv_message(&**source, &**sink, packet, proof_height).await?;
 					Ok(Some(Right(msg)))
 				});
 			}
@@ -341,8 +343,8 @@ pub async fn query_ready_and_timed_out_packets(
 			sink_height,
 			channel_id,
 			port_id.clone(),
-			source,
-			sink,
+			&*source,
+			&*sink,
 		)
 		.await?
 		.into_iter()
@@ -388,7 +390,7 @@ pub async fn query_ready_and_timed_out_packets(
 					log::trace!(target: "hyperspace", "sink_height: {:?}, latest_source_height_on_sink: {:?}, acknowledgement.height: {}", sink_height, latest_source_height_on_sink, ack_height);
 
 					let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(
-						sink,
+						&**sink,
 						sink_height,
 						source.client_id(),
 						Height::new(latest_source_height_on_sink.revision_number, ack_height),
@@ -405,8 +407,8 @@ pub async fn query_ready_and_timed_out_packets(
 					};
 
 					if !verify_delay_passed(
-						source,
-						sink,
+						&**source,
+						&**sink,
 						source_timestamp,
 						source_height,
 						sink_timestamp,
@@ -421,7 +423,7 @@ pub async fn query_ready_and_timed_out_packets(
 						return Ok(None)
 					}
 
-					let msg = construct_ack_message(source, sink, packet, ack, proof_height).await?;
+					let msg = construct_ack_message(&**source, &**sink, packet, ack, proof_height).await?;
 					// messages.push(msg)
 					Ok(Some(msg))
 				});
