@@ -210,13 +210,56 @@ where
 		// Module ModuleCallbackContext does not have the ics20 context as part of its trait bounds
 		// so we define a new context
 		let mut ctx = Context::<T>::default();
+		// We want the whole chain of calls to fail only if the ics20 transfer fails, because
+		// the other modules are not part of ics-20 standard
+		let ack = self.inner.on_recv_packet(&mut ctx, output, packet, relayer)?;
+		let _ = Self::process_fee(&mut ctx, packet, &ack).map_err(|e| {
+			log::error!(target: "pallet_ibc", "Error processing fee: {:?}", e);
+		});
+		Ok(ack)
+	}
+
+	fn on_acknowledgement_packet(
+		&mut self,
+		ctx: &dyn ModuleCallbackContext,
+		output: &mut ModuleOutputBuilder,
+		packet: &mut Packet,
+		acknowledgement: &Acknowledgement,
+		relayer: &Signer,
+	) -> Result<(), Ics04Error> {
+		self.inner
+			.on_acknowledgement_packet(ctx, output, packet, acknowledgement, relayer)
+	}
+
+	fn on_timeout_packet(
+		&mut self,
+		ctx: &dyn ModuleCallbackContext,
+		output: &mut ModuleOutputBuilder,
+		packet: &mut Packet,
+		relayer: &Signer,
+	) -> Result<(), Ics04Error> {
+		self.inner.on_timeout_packet(ctx, output, packet, relayer)
+	}
+}
+
+impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug>
+	Ics20ServiceCharge<T, S>
+where
+	<T as crate::Config>::AccountIdConversion: From<IbcAccount<T::AccountId>>,
+	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
+{
+	fn process_fee(
+		ctx: &mut Context<T>,
+		packet: &mut Packet,
+		ack: &Acknowledgement,
+	) -> Result<(), Ics04Error> {
 		let mut packet_data = serde_json::from_slice::<PacketData>(packet.data.as_slice())
 			.map_err(|e| {
 				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
 			})?;
 		let percent = ServiceCharge::<T>::get().unwrap_or(T::ServiceCharge::get());
 		// Send full amount to receiver using the default ics20 logic
-		let ack = self.inner.on_recv_packet(&mut ctx, output, packet, relayer)?;
 		// We only take the fee charge if the acknowledgement is not an error
 		if ack.as_ref() == Ics20Ack::success().to_string().as_bytes() {
 			// We have ensured that token amounts larger than the max value for a u128 are rejected
@@ -259,28 +302,6 @@ where
 			})?;
 			Pallet::<T>::deposit_event(Event::<T>::IbcTransferFeeCollected { amount: fee.into() })
 		}
-		Ok(ack)
-	}
-
-	fn on_acknowledgement_packet(
-		&mut self,
-		ctx: &dyn ModuleCallbackContext,
-		output: &mut ModuleOutputBuilder,
-		packet: &mut Packet,
-		acknowledgement: &Acknowledgement,
-		relayer: &Signer,
-	) -> Result<(), Ics04Error> {
-		self.inner
-			.on_acknowledgement_packet(ctx, output, packet, acknowledgement, relayer)
-	}
-
-	fn on_timeout_packet(
-		&mut self,
-		ctx: &dyn ModuleCallbackContext,
-		output: &mut ModuleOutputBuilder,
-		packet: &mut Packet,
-		relayer: &Signer,
-	) -> Result<(), Ics04Error> {
-		self.inner.on_timeout_packet(ctx, output, packet, relayer)
+		Ok(())
 	}
 }
