@@ -1,0 +1,63 @@
+[package]
+name = "icsxx-ethereum"
+version = "0.1.0"
+edition = "2021"
+authors = ["Vladislav Markushin <negigic@gmail.com>"]
+
+[features]
+default = ["std"]
+std = [
+    "ibc/std",
+    "ibc-proto/std",
+    "light-client-common/std",
+    "prost/std",
+    "prost-types/std",
+    "anyhow/std",
+    "serde/std",
+    "sync-committee-verifier/std",
+    "sync-committee-primitives/std",
+]
+
+[build-dependencies]
+prost-build = "0.11.1"
+
+[dependencies]
+# ibc deps
+ibc = { path = "../../ibc/modules", default-features = false }
+ibc-proto = { path = "../../ibc/proto", default-features = false }
+
+# local deps
+sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "a326f56595fe51a8756cc6d7021a89564b8dc61f", default-features = false }
+sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "a326f56595fe51a8756cc6d7021a89564b8dc61f", default-features = false }
+light-client-common = { path = "../common", default-features = false }
+ethereum-consensus = { git = "https://github.com/polytope-labs/ethereum-consensus", rev = "d3fe0ad76613b52cdfbdea7c317ecdc35f271e4f", default-features = false }
+ssz-rs = { git = "https://github.com/polytope-labs/ssz-rs",rev = "2e28a8800787392045fb3f8f1eaef6c65a8600d7", default-features = false }
+
+# crates.io
+prost = { version = "0.11", default-features = false }
+prost-types = { version = "0.11", default-features = false }
+anyhow = { version = "1.0.65", default-features = false }
+derive_more = { version = "0.99.17", default-features = false, features = ["from"] }
+serde = { version = "1.0.144", default-features = false, features = ["derive"] }
+
+# substrate deps
+
+tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+
+[dev-dependencies]
+hex = "0.4.3"
+log = "0.4"
+futures = "0.3.24"
+env_logger = "0.9.0"
+serde = { version = "1.0.144", features = ["derive"] }
+ibc = { path = "../../ibc/modules", features = ["mocks"] }
+ibc-derive = { path = "../../ibc/derive" }
+tokio = { version = "1.21.1", features = ["macros"] }
+json = { package = "serde_json", version = "1.0.85" }
+jsonrpsee-ws-client = "0.16.2"
+actix-rt = "2.3.0"
+sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "a326f56595fe51a8756cc6d7021a89564b8dc61f", features = ["testing"] }
+sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "a326f56595fe51a8756cc6d7021a89564b8dc61f", features = ["testing"] }
+sync-committee-prover = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "a326f56595fe51a8756cc6d7021a89564b8dc61f" }
+
