@@ -108,25 +108,18 @@ async fn test_continuous_update_of_beefy_client() {
 			.rpc()
 			.block_hash(Some(subxt_block_number))
 			.await
+			.unwrap()
 			.unwrap();
 		let head_data = {
 			let key = <PolkadotConfig as light_client_common::config::Config>::Storage::paras_heads(
 				client_wrapper.para_id,
 			);
-			relay_client
-				.storage()
-				.at(block_hash)
-				.await
-				.expect("Storage client")
-				.fetch(&key)
-				.await
-				.unwrap()
-				.unwrap()
+			relay_client.storage().at(block_hash).fetch(&key).await.unwrap().unwrap()
 		};
 		let decoded_para_head = frame_support::sp_runtime::generic::Header::<
 			u32,
 			frame_support::sp_runtime::traits::BlakeTwo256,
-		>::decode(&mut head_data.as_ref())
+		>::decode(&mut &*head_data.0)
 		.unwrap();
 		let block_number = decoded_para_head.number;
 		let client_state = BeefyClientState {

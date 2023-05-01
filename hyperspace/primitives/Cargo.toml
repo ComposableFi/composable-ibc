@@ -18,7 +18,7 @@ log = "0.4.17"
 rand = "0.8.5"
 
 # substrate
-subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
 
 # ibc
 ibc = { path = "../../ibc/modules", features = [] }
