@@ -153,9 +153,7 @@ where
 					GrandpaApiClient::<JustificationNotification, sp_core::H256, u32>::subscribe_justifications(
 						&*self.relay_ws_client,
 					)
-						.await?
-						.chunks(3)
-						.map(|mut notifs| notifs.remove(notifs.len() - 1)); // skip every 3 finality notifications
+					.await?;
 
 				let stream = subscription.filter_map(|justification_notif| {
 					let encoded_justification = match justification_notif {
