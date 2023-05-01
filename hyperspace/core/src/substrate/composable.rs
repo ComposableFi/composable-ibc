@@ -21,8 +21,8 @@ use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
 use ibc_proto::google::protobuf::Any;
 use light_client_common::config::{
-	EventRecordT, IbcEventsT, LocalStaticStorageAddress, ParaLifecycleT, RuntimeCall,
-	RuntimeStorage, RuntimeTransactions,
+	EventRecordT, IbcEventsT, LocalAddress, ParaLifecycleT, RuntimeCall, RuntimeStorage,
+	RuntimeTransactions,
 };
 use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;
@@ -38,10 +38,12 @@ use subxt::{
 		},
 		ExtrinsicParams,
 	},
-	events::{Phase, StaticEvent},
-	metadata::DecodeStaticType,
-	storage::{address::Yes, StaticStorageAddress},
-	tx::StaticTxPayload,
+	events::Phase,
+	storage::{
+		address::{StaticStorageMapKey, Yes},
+		Address,
+	},
+	tx::Payload,
 	Error, OnlineClient,
 };
 
@@ -65,9 +67,13 @@ pub mod relaychain {
 
 pub type Balance = u128;
 
-#[derive(Encode)]
+#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 pub struct DummySendPingParamsWrapper<T>(T);
-#[derive(Encode)]
+#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 pub struct FakeSendPingParams;
 
 impl From<SendPingParams> for FakeSendPingParams {
@@ -88,11 +94,11 @@ define_head_data!(
 
 define_para_lifecycle!(ComposableParaLifecycle, ParaLifecycle);
 
-#[cfg(feature = "composable-beefy")]
-define_beefy_authority_set!(ComposableBeefyAuthoritySet, BeefyAuthoritySet<T>);
+// #[cfg(feature = "composable-beefy")]
+// define_beefy_authority_set!(ComposableBeefyAuthoritySet, BeefyAuthoritySet<T>);
 
-#[cfg(feature = "composable-beefy")]
-type ComposableBeefyAuthoritySetToUse = ComposableBeefyAuthoritySet<H256>;
+// #[cfg(feature = "composable-beefy")]
+// type ComposableBeefyAuthoritySetToUse = ComposableBeefyAuthoritySet<H256>;
 #[cfg(not(feature = "composable-beefy"))]
 type ComposableBeefyAuthoritySetToUse = DummyBeefyAuthoritySet;
 
@@ -121,7 +127,7 @@ define_runtime_storage!(
 			relaychain::api::storage().beefy().authorities()
 		}
 		#[cfg(not(feature = "composable-beefy"))]
-		unimplemented::<StaticStorageAddress<DecodeStaticType<()>, Yes, Yes, ()>>(
+		unimplemented::<Address<StaticStorageMapKey, (), Yes, Yes, ()>>(
 			"relaychain::api::storage().beefy().authorities()",
 		)
 	},
@@ -131,7 +137,7 @@ define_runtime_storage!(
 			relaychain::api::storage().mmr_leaf().beefy_next_authorities()
 		}
 		#[cfg(not(feature = "composable-beefy"))]
-		unimplemented::<StaticStorageAddress<DecodeStaticType<()>, Yes, Yes, ()>>(
+		unimplemented::<Address<StaticStorageMapKey, (), Yes, Yes, ()>>(
 			"relaychain::api::storage().mmr_leaf().beefy_next_authorities()",
 		)
 	},
@@ -171,7 +177,7 @@ define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);
 
 define_event_record!(
 	ComposableEventRecord,
-	EventRecord<<ComposableConfig as light_client_common::config::Config>::ParaRuntimeEvent, H256>,
+	EventRecord<<<ComposableConfig as light_client_common::config::Config>::ParaRuntimeEvent as AsInner>::Inner, H256>,
 	IbcEventWrapper,
 	parachain_subxt::api::runtime_types::frame_system::Phase,
 	parachain_subxt::api::runtime_types::pallet_ibc::pallet::Event,
@@ -220,15 +226,12 @@ impl light_client_common::config::Config for ComposableConfig {
 
 impl subxt::Config for ComposableConfig {
 	type Index = u32;
-	type BlockNumber = u32;
 	type Hash = H256;
 	type Hasher = subxt::config::substrate::BlakeTwo256;
 	type AccountId = AccountId32;
 	type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
-	type Header = subxt::config::substrate::SubstrateHeader<
-		Self::BlockNumber,
-		subxt::config::substrate::BlakeTwo256,
-	>;
+	type Header =
+		subxt::config::substrate::SubstrateHeader<u32, subxt::config::substrate::BlakeTwo256>;
 	type Signature = sp_runtime::MultiSignature;
 	type ExtrinsicParams = ParachainExtrinsicParams<Self>;
 }

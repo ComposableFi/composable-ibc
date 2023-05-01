@@ -47,10 +47,10 @@ derive_more = { version = "0.99.17", default-features = false, features = ["from
 serde = { version = "1.0.144", default-features = false, features = ["derive"] }
 
 # substrate deps
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
-sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
+sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 finality-grandpa = { version = "0.16.0", default-features = false }
 
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
@@ -66,14 +66,14 @@ beefy-prover = { path = "../../algorithms/beefy/prover" }
 grandpa-prover = { path = "../../algorithms/grandpa/prover" }
 ibc = { path = "../../ibc/modules", features = ["mocks"] }
 ibc-derive = { path = "../../ibc/derive" }
-subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
 tokio = { version = "1.21.1", features = ["macros"] }
-sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 json = { package = "serde_json", version = "1.0.85" }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+finality-grandpa-rpc = { package = "sc-finality-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 jsonrpsee-ws-client = "0.16.2"
 hyperspace-core = { path = "../../hyperspace/core", features = ["testing", "build-metadata-from-ws"] }
 light-client-common = { path = "../common", features = ["std"] }

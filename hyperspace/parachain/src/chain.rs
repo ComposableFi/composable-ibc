@@ -54,7 +54,7 @@ use crate::utils::unsafe_cast_to_jsonrpsee_client;
 use subxt::{
 	config::{
 		extrinsic_params::{BaseExtrinsicParamsBuilder, Era},
-		ExtrinsicParams, Header as HeaderT,
+		ExtrinsicParams, Header as HeaderT, Header,
 	},
 	events::Phase,
 };
@@ -78,13 +78,15 @@ impl<T: light_client_common::config::Config + Send + Sync + Clone + 'static> Cha
 	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<T as subxt::Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
@@ -385,13 +387,14 @@ impl<T: light_client_common::config::Config + Send + Sync> MisbehaviourHandler
 	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<T as subxt::Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,

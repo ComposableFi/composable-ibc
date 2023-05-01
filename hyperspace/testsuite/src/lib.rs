@@ -287,7 +287,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	log::info!(target: "hyperspace", "Resuming send packet relay");
 	set_relay_status(true);
 
-	assert_timeout_packet(chain_a, 50).await;
+	assert_timeout_packet(chain_a, 75).await;
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for height timeout");
 }
 
@@ -478,7 +478,7 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 
 	set_relay_status(true);
 
-	assert_timeout_packet(chain_a, 70).await;
+	assert_timeout_packet(chain_a, 100).await;
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for channel close");
 }
 

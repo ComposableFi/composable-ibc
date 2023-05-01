@@ -35,6 +35,8 @@ derive_more = { version = "0.99.17", features = ["from"] }
 prometheus = { version = "0.13.0", default-features = false }
 rand = "0.8.5"
 itertools = "0.10.5"
+scale-decode = "0.5.0"
+scale-encode = "0.1.2"
 
 # ibc
 ibc = { path = "../../ibc/modules", features = [] }
@@ -48,14 +50,14 @@ light-client-common = { path = "../../light-clients/common" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 pallet-ibc-ping = { path = "../../contracts/pallet-ibc/ping" }
 ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-sp-beefy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-beefy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
 subxt-generated = { path = "../../utils/subxt/generated" }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 
 [dev-dependencies]
 derive_more = "0.99.17"
@@ -64,11 +66,11 @@ parachain = { path = "../parachain", package = "hyperspace-parachain", features 
 cosmos = { path = "../cosmos", package = "hyperspace-cosmos", features = ["testing"] }
 
 # substrate
-subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 
 [features]
 build-metadata-from-ws = []
