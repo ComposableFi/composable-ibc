@@ -44,6 +44,10 @@ hex = { version = "0.4.3", default-features = false }
 # local deps
 ibc-primitives = { path = "primitives", default-features = false }
 
+# composable
+composable-traits = { git = "https://github.com/ComposableFi/composable", rev = "ee943708d3f9f75625c4088316715b056fd87b23", default-features = false }
+
+
 # optional
 hex-literal = { version = "0.3.4", default-features = false, optional = true }
 prost = { version = "0.11", default-features = false, optional = true }
@@ -100,6 +104,7 @@ default = ["std"]
 testing = []
 std = [
   "codec/std",
+  "composable-traits/std",
   "log/std",
   "scale-info/std",
   "serde_json/std",

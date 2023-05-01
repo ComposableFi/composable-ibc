@@ -176,6 +176,8 @@ parameter_types! {
 	pub const IbcTriePrefix : &'static [u8] = b"ibc/";
 	pub const ServiceCharge: Perbill = Perbill::from_percent(1);
 	pub const PalletId: frame_support::PalletId = frame_support::PalletId(*b"ics20fee");
+	pub const FlatFeeAssetId: AssetId = 130;
+	pub const FlatFeeAmount: AssetId = 10_000_000;
 	pub FeeAccount: <Test as Config>::AccountIdConversion = create_alice_key();
 }
 
@@ -216,10 +218,26 @@ impl Config for Test {
 	type Ics20RateLimiter = Everything;
 	type FeeAccount = FeeAccount;
 }
+#[derive(Debug, Clone)]
+pub struct FlatFeeConverterDummy<T>(_);
+impl<T> FlastFeeConverter for FlatFeeConverterDummy<T> {
+	type AssetId = T::AssetId;
+	type Balance = T::Balance;
+	fn get_flat_fee(
+		asset_id: Self::AssetId,
+		fee_asset_id: Self::AssetId,
+		fee_asset_amount: Self::Balance,
+	) -> Option<Self::Balance> {
+		Self::Balance::from(1_000)
+	}
+}
 impl crate::ics20_fee::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ServiceCharge = ServiceCharge;
 	type PalletId = PalletId;
+	type FlatFeeConverter = FlatFeeConverterDummy<Test>;
+	type FlatFeeAssetId = FlatFeeAssetId;
+	type FlastFeeAmount = FlatFeeAmount;
 }
 
 #[derive(
