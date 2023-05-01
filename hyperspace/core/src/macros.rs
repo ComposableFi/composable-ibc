@@ -869,7 +869,7 @@ macro_rules! chains {
 
 			async fn finality_notifications(
 				&self,
-			) -> Result<Pin<Box<dyn Stream<Item = Self::FinalityEvent> + Send + Sync>>, Self::Error> {
+			) -> Result<Pin<Box<dyn Stream<Item = Self::FinalityEvent> + Send>>, Self::Error> {
 				match self {
 					$(
 						$(#[$($meta)*])*

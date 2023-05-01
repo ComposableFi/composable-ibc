@@ -103,10 +103,7 @@ where
 
 	async fn finality_notifications(
 		&self,
-	) -> Result<
-		Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>>,
-		Error,
-	> {
+	) -> Result<Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send>>, Error> {
 		let (ws_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
 			.await
 			.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))?;
