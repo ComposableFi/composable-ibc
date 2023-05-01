@@ -44,7 +44,7 @@ use sp_core::H256;
 use sp_storage::ChildInfo;
 use sp_trie::StorageProof;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "enable-subxt")]
 pub mod config;
 pub mod state_machine;
 

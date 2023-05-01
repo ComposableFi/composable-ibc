@@ -54,7 +54,7 @@ use crate::utils::unsafe_cast_to_jsonrpsee_client;
 use subxt::{
 	config::{
 		extrinsic_params::{BaseExtrinsicParamsBuilder, Era},
-		ExtrinsicParams, Header as HeaderT,
+		ExtrinsicParams, Header as HeaderT, Header,
 	},
 	events::Phase,
 };
@@ -78,13 +78,15 @@ impl<T: light_client_common::config::Config + Send + Sync + Clone + 'static> Cha
 	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<T as subxt::Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
@@ -326,45 +328,48 @@ where
 	}
 
 	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error> {
-		if let Some(rpc_err) = error.downcast_ref::<Error>() {
+		let err_str = if let Some(rpc_err) = error.downcast_ref::<Error>() {
 			match rpc_err {
-				Error::RpcError(s) =>
-					if s.contains("MaxSlotsExceeded") {
-						self.rpc_call_delay = self.rpc_call_delay * 2;
-					} else if s.contains("RestartNeeded") {
-						let relay_ws_client = Arc::new(
-							WsClientBuilder::default()
-								.build(&self.relay_chain_rpc_url)
-								.await
-								.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
-						);
-						let para_ws_client = Arc::new(
-							WsClientBuilder::default()
-								.build(&self.parachain_rpc_url)
-								.await
-								.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
-						);
-
-						let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
-							unsafe_cast_to_jsonrpsee_client(&para_ws_client)
-						})
-						.await?;
-						let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
-							unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
-						})
-						.await?;
-
-						log::info!(target: "hyperspace", "Reconnected to relay chain and parachain");
-
-						self.relay_ws_client = relay_ws_client;
-						self.para_ws_client = para_ws_client;
-						self.relay_client = relay_client;
-						self.para_client = para_client;
-						self.rpc_call_delay = self.rpc_call_delay * 2;
-					},
-				_ => (),
+				Error::RpcError(s) => s.clone(),
+				_ => "".to_string(),
 			}
+		} else {
+			error.to_string()
+		};
+		if err_str.contains("MaxSlotsExceeded") {
+			self.rpc_call_delay = self.rpc_call_delay * 2;
+		} else if err_str.contains("RestartNeeded") || err_str.contains("restart required") {
+			let relay_ws_client = Arc::new(
+				WsClientBuilder::default()
+					.build(&self.relay_chain_rpc_url)
+					.await
+					.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
+			);
+			let para_ws_client = Arc::new(
+				WsClientBuilder::default()
+					.build(&self.parachain_rpc_url)
+					.await
+					.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
+			);
+
+			let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
+				unsafe_cast_to_jsonrpsee_client(&para_ws_client)
+			})
+			.await?;
+			let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
+				unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
+			})
+			.await?;
+
+			log::info!(target: "hyperspace", "Reconnected to relay chain and parachain");
+
+			self.relay_ws_client = relay_ws_client;
+			self.para_ws_client = para_ws_client;
+			self.relay_client = relay_client;
+			self.para_client = para_client;
+			self.rpc_call_delay = self.rpc_call_delay * 2;
 		}
+
 		Ok(())
 	}
 
@@ -382,13 +387,14 @@ impl<T: light_client_common::config::Config + Send + Sync> MisbehaviourHandler
 	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<T as subxt::Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,

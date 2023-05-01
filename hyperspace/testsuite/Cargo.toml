@@ -16,7 +16,7 @@ async-trait = "0.1.58"
 futures = "0.3.24"
 json = { version = "1.0.85", package = "serde_json" }
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
-subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
 
 ibc = { path = "../../ibc/modules" }
 ibc-proto = { path = "../../ibc/proto" }
@@ -30,23 +30,23 @@ pallet-ibc-ping = { path = "../../contracts/pallet-ibc/ping" }
 ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
 
 # substrate
-polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.38" }
+polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.39" }
 grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../algorithms/grandpa/primitives", default-features = false }
 finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-features = false }
-sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", features = ["full_crypto"] }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", features = ["full_crypto"] }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 light-client-common = { path = "../../light-clients/common" }
 grandpa-light-client = { path = "../../algorithms/grandpa/verifier", package = "grandpa-light-client-verifier" }
 hex = "0.4.3"
 rand = "0.8.5"
 
 [dev-dependencies]
-subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
 hyperspace-core = { path = "../core", features = ["testing", "build-metadata-from-ws"] }
 hyperspace-parachain = { path = "../parachain", features = ["testing"] }
 hyperspace-cosmos = { path = "../cosmos", features = [] }

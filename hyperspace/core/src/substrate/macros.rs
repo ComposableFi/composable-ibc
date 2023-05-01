@@ -4,7 +4,7 @@ macro_rules! define_id {
 		$name: ident,
 		$id_type: path
 	) => {
-		#[derive(Decode)]
+		#[derive(Decode, Encode)]
 		pub struct $name(pub $id_type);
 
 		impl From<u32> for $name {
@@ -18,6 +18,14 @@ macro_rules! define_id {
 				value.0 .0
 			}
 		}
+
+		impl AsInner for $name {
+			type Inner = $id_type;
+
+			fn from_inner(inner: Self::Inner) -> Self {
+				$name(inner)
+			}
+		}
 	};
 }
 
@@ -27,7 +35,9 @@ macro_rules! define_head_data {
 		$name: ident,
 		$head_data_type: ty,
 	) => {
-		#[derive(Decode)]
+		use light_client_common::config::AsInner;
+
+		#[derive(Decode, Encode)]
 		pub struct $name(pub $head_data_type);
 
 		impl AsRef<[u8]> for $name {
@@ -41,6 +51,14 @@ macro_rules! define_head_data {
 				self.0 .0
 			}
 		}
+
+		impl AsInner for $name {
+			type Inner = $head_data_type;
+
+			fn from_inner(inner: Self::Inner) -> Self {
+				$name(inner)
+			}
+		}
 	};
 }
 
@@ -50,12 +68,20 @@ macro_rules! define_para_lifecycle {
 		$name: ident,
 		$ty: ty
 	) => {
-		#[derive(Decode)]
+		#[derive(Decode, Encode)]
 		pub struct $name(pub $ty);
 
 		impl ParaLifecycleT for $name {
 			fn is_parachain(&self) -> bool {
 				matches!(self.0, <$ty>::Parachain)
+			}
+		}
+
+		impl AsInner for $name {
+			type Inner = $ty;
+
+			fn from_inner(inner: Self::Inner) -> Self {
+				$name(inner)
 			}
 		}
 	};
@@ -79,6 +105,26 @@ macro_rules! define_beefy_authority_set {
 				self.0.len
 			}
 		}
+
+		impl<
+				T: Encode
+					+ Decode
+					+ scale_decode::DecodeAsType
+					+ scale_encode::EncodeAsType
+					+ scale_decode::IntoVisitor
+					+ Send
+					+ Sync,
+			> AsInner for $name<T>
+		where
+			scale_decode::Error:
+				From<<<T as scale_decode::IntoVisitor>::Visitor as scale_decode::Visitor>::Error>,
+		{
+			type Inner = $ty;
+
+			fn from_inner(inner: Self::Inner) -> Self {
+				$name(inner)
+			}
+		}
 	};
 }
 
@@ -96,6 +142,14 @@ macro_rules! define_any_wrapper {
 					type_url: String::from_utf8(value.0.type_url.into()).unwrap(),
 					value: value.0.value,
 				}
+			}
+		}
+
+		impl AsInner for $name {
+			type Inner = $raw_any_type;
+
+			fn from_inner(inner: Self::Inner) -> Self {
+				$name(inner)
 			}
 		}
 	};
@@ -435,6 +489,14 @@ macro_rules! define_ibc_event_wrapper {
 				}
 			}
 		}
+
+		impl AsInner for $name {
+			type Inner = $meta_ibc_event_type;
+
+			fn from_inner(inner: Self::Inner) -> Self {
+				Self(inner)
+			}
+		}
 	};
 }
 
@@ -518,67 +580,77 @@ macro_rules! define_runtime_storage {
 		$mmr_leaf_beefy_next_authorities:expr,
 		$babe_epoch_start:expr
 	) => {
-		pub struct $name;
+		use subxt::utils::Static;
 
+		pub struct $name;
 		impl RuntimeStorage for $name {
 			type HeadData = $head_data;
 			type Id = $id;
 			type ParaLifecycle = $para_lifecycle;
 			type BeefyAuthoritySet = $beefy_authority_set;
 
-			fn timestamp_now() -> StaticStorageAddress<DecodeStaticType<u64>, Yes, Yes, ()> {
+			fn timestamp_now() -> Address<StaticStorageMapKey, u64, Yes, Yes, ()> {
 				$timestamp_now
 			}
 
 			fn paras_heads(
 				x: u32,
-			) -> LocalStaticStorageAddress<DecodeStaticType<Self::HeadData>, Yes, (), Yes> {
+			) -> LocalAddress<StaticStorageMapKey, <Self::HeadData as AsInner>::Inner, Yes, (), Yes>
+			{
 				let storage = $paras_heads(&Self::Id::from(x).0);
-				LocalStaticStorageAddress::new("Paras", "Heads", storage)
+				LocalAddress::new(storage)
 			}
 
 			fn paras_para_lifecycles(
 				x: u32,
-			) -> LocalStaticStorageAddress<DecodeStaticType<Self::ParaLifecycle>, Yes, (), Yes> {
+			) -> LocalAddress<
+				StaticStorageMapKey,
+				<Self::ParaLifecycle as AsInner>::Inner,
+				Yes,
+				(),
+				Yes,
+			> {
 				let storage = $paras_para_lifecycles(&Self::Id::from(x).0);
-				LocalStaticStorageAddress::new("Paras", "ParaLifecycles", storage)
+				LocalAddress::new(storage)
 			}
 
-			fn paras_parachains(
-			) -> LocalStaticStorageAddress<DecodeStaticType<Vec<Self::Id>>, Yes, Yes, ()> {
-				let storage = $paras_parachains;
-				LocalStaticStorageAddress::new("Paras", "Parachains", storage)
-			}
-
-			fn grandpa_current_set_id() -> StaticStorageAddress<DecodeStaticType<u64>, Yes, Yes, ()>
-			{
-				$grandpa_current_set_id
-			}
-
-			fn beefy_validator_set_id() -> StaticStorageAddress<DecodeStaticType<u64>, Yes, Yes, ()>
-			{
-				$beefy_validator_set_id
-			}
-
-			fn beefy_authorities() -> LocalStaticStorageAddress<
-				DecodeStaticType<Vec<sp_beefy::crypto::Public>>,
+			fn paras_parachains() -> LocalAddress<
+				StaticStorageMapKey,
+				Vec<Static<<Self::Id as AsInner>::Inner>>,
 				Yes,
 				Yes,
 				(),
 			> {
+				let storage = $paras_parachains;
+				LocalAddress::new(storage)
+			}
+
+			fn grandpa_current_set_id() -> Address<StaticStorageMapKey, u64, Yes, Yes, ()> {
+				$grandpa_current_set_id
+			}
+
+			fn beefy_validator_set_id() -> Address<StaticStorageMapKey, u64, Yes, Yes, ()> {
+				$beefy_validator_set_id
+			}
+
+			fn beefy_authorities(
+			) -> LocalAddress<StaticStorageMapKey, Vec<sp_beefy::crypto::Public>, Yes, Yes, ()> {
 				let storage = $beefy_authorities;
-				LocalStaticStorageAddress::new("Beefy", "Authorities", storage)
+				LocalAddress::new(storage)
 			}
 
-			fn mmr_leaf_beefy_next_authorities(
-			) -> LocalStaticStorageAddress<DecodeStaticType<Self::BeefyAuthoritySet>, Yes, Yes, ()>
-			{
+			fn mmr_leaf_beefy_next_authorities() -> LocalAddress<
+				StaticStorageMapKey,
+				<Self::BeefyAuthoritySet as AsInner>::Inner,
+				Yes,
+				Yes,
+				(),
+			> {
 				let storage = $mmr_leaf_beefy_next_authorities;
-				LocalStaticStorageAddress::new("MmrLeaf", "BeefyNextAuthorities", storage)
+				LocalAddress::new(storage)
 			}
 
-			fn babe_epoch_start() -> StaticStorageAddress<DecodeStaticType<(u32, u32)>, Yes, Yes, ()>
-			{
+			fn babe_epoch_start() -> Address<StaticStorageMapKey, (u32, u32), Yes, Yes, ()> {
 				$babe_epoch_start
 			}
 		}
@@ -617,7 +689,7 @@ macro_rules! define_runtime_transactions {
 			type SendPingParams = $send_ping_params;
 			type TransferParams = $transfer_params;
 
-			fn ibc_deliver(messages: Vec<Any>) -> StaticTxPayload<Self::Deliver> {
+			fn ibc_deliver(messages: Vec<Any>) -> Payload<Self::Deliver> {
 				use $any as Any;
 				$ibc_deliver(
 					messages
@@ -632,7 +704,7 @@ macro_rules! define_runtime_transactions {
 				asset_id: u128,
 				amount: u128,
 				memo: Option<()>,
-			) -> StaticTxPayload<Self::Transfer> {
+			) -> Payload<Self::Transfer> {
 				$ibc_transfer(
 					$transfer_wrapper(params).into(),
 					asset_id,
@@ -641,11 +713,11 @@ macro_rules! define_runtime_transactions {
 				)
 			}
 
-			fn sudo_sudo(call: Self::ParaRuntimeCall) -> StaticTxPayload<Self::Sudo> {
+			fn sudo_sudo(call: Self::ParaRuntimeCall) -> Payload<Self::Sudo> {
 				$sudo_sudo(call.0)
 			}
 
-			fn ibc_ping_send_ping(params: Self::SendPingParams) -> StaticTxPayload<Self::SendPing> {
+			fn ibc_ping_send_ping(params: Self::SendPingParams) -> Payload<Self::SendPing> {
 				$ibc_ping_send_ping($send_ping_params_wrapper(params).into())
 			}
 
@@ -659,7 +731,7 @@ macro_rules! define_runtime_transactions {
 #[macro_export]
 macro_rules! define_event_record {
 	($name:ident, $event_record:ty, $ibc_event_wrapper: expr, $phase: path, $pallet_event: path, $runtime_event: path) => {
-		#[derive(Decode)]
+		#[derive(Decode, Encode)]
 		pub struct $name(pub $event_record);
 
 		impl EventRecordT for $name {
@@ -677,7 +749,7 @@ macro_rules! define_event_record {
 			fn ibc_events(self) -> Option<Vec<pallet_ibc::events::IbcEvent>> {
 				use $pallet_event as PalletEvent;
 				use $runtime_event as RuntimeEvent;
-				if let RuntimeEvent::Ibc(PalletEvent::Events { events }) = self.0.event.0 {
+				if let RuntimeEvent::Ibc(PalletEvent::Events { events }) = self.0.event {
 					let events = events
 						.into_iter()
 						.filter_map(|event| {
@@ -691,13 +763,22 @@ macro_rules! define_event_record {
 				}
 			}
 		}
+
+		impl AsInner for $name {
+			type Inner = $event_record;
+
+			fn from_inner(inner: Self::Inner) -> Self {
+				Self(inner)
+			}
+		}
 	};
 }
 
 #[macro_export]
 macro_rules! define_events {
 	($name:ident, $events:ty, $ibc_event_wrapper: expr) => {
-		#[derive(Decode)]
+		use light_client_common::config::AsInnerEvent;
+
 		pub struct $name(pub $events);
 
 		impl IbcEventsT for $name {
@@ -715,12 +796,11 @@ macro_rules! define_events {
 			}
 		}
 
-		impl StaticEvent for $name {
-			const PALLET: &'static str = <$events>::PALLET;
-			const EVENT: &'static str = <$events>::EVENT;
+		impl AsInnerEvent for $name {
+			type Inner = $events;
 
-			fn is_event(pallet: &str, event: &str) -> bool {
-				<$events>::is_event(pallet, event)
+			fn from_inner(inner: Self::Inner) -> Self {
+				Self(inner)
 			}
 		}
 	};
@@ -729,15 +809,22 @@ macro_rules! define_events {
 #[macro_export]
 macro_rules! define_runtime_event {
 	($name:ident, $runtime_event:ty) => {
-		#[derive(Decode)]
 		pub struct $name(pub $runtime_event);
+
+		impl AsInner for $name {
+			type Inner = $runtime_event;
+
+			fn from_inner(inner: Self::Inner) -> Self {
+				Self(inner)
+			}
+		}
 	};
 }
 
 #[macro_export]
 macro_rules! define_runtime_call {
 	($name:ident, $runtime_call: path, $any_wrapper: expr, $call: path) => {
-		#[derive(Decode)]
+		#[derive(Decode, Encode)]
 		pub struct $name(pub $runtime_call);
 
 		impl RuntimeCall for $name {
@@ -757,7 +844,8 @@ macro_rules! define_runtime_call {
 #[macro_export]
 macro_rules! define_asset_id {
 	($name:ident, $ty:ty) => {
-		#[derive(Encode, Decode)]
+		#[derive(Decode, Encode)]
+
 		pub struct $name(pub $ty);
 
 		impl From<u128> for $name {

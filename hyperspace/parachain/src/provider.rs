@@ -15,7 +15,7 @@
 use super::{error::Error, ParachainClient};
 use crate::{finality_protocol::FinalityEvent, FinalityProtocol, GrandpaClientState};
 use beefy_prover::helpers::fetch_timestamp_extrinsic_with_proof;
-use codec::Encode;
+use codec::{Decode, Encode};
 use finality_grandpa::BlockNumberOps;
 use futures::Stream;
 use grandpa_light_client_primitives::ParachainHeaderProofs;
@@ -46,7 +46,7 @@ use ibc_proto::{
 };
 use ibc_rpc::{IbcApiClient, PacketInfo};
 use ics11_beefy::client_state::ClientState as BeefyClientState;
-use light_client_common::config::{IbcEventsT, RuntimeStorage};
+use light_client_common::config::{AsInnerEvent, IbcEventsT, RuntimeStorage};
 use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
 	HostConsensusProof,
@@ -59,7 +59,7 @@ use sp_runtime::{
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr, time::Duration};
 use subxt::config::{
-	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT,
+	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT, Header,
 };
 use tokio_stream::wrappers::ReceiverStream;
 
@@ -74,14 +74,16 @@ impl<T: light_client_common::config::Config + Send + Sync + Clone> IbcProvider
 	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<T as subxt::Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
@@ -125,11 +127,11 @@ where
 				.expect("should susbcribe to blocks")
 				.filter_map(|block| async {
 					let block = block.ok()?;
-					let events = event.at(Some(block.hash())).await.ok()?;
+					let events = event.at(block.hash()).await.ok()?;
 					let result = events
-						.find::<T::Events>()
+						.find::<<T::Events as AsInnerEvent>::Inner>()
 						.filter_map(|ev| {
-							let ev = ev.ok()?.events();
+							let ev = <T::Events as AsInnerEvent>::from_inner(ev.ok()?).events();
 							ev.into_iter()
 								.map(|ev| TryInto::<IbcEvent>::try_into(ev))
 								.collect::<Result<Vec<_>, _>>()
@@ -330,14 +332,15 @@ where
 		let height = Height::new(self.para_id.into(), latest_height.into());
 
 		let subxt_block_number: subxt::rpc::types::BlockNumber = latest_height.into();
-		let block_hash = self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
+		let block_hash =
+			self.para_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
+				|| Error::Custom("Latest block hash query returned None".to_string()),
+			)?;
 		let timestamp_addr = T::Storage::timestamp_now();
 		let unix_timestamp_millis = self
 			.para_client
 			.storage()
 			.at(block_hash)
-			.await
-			.expect("Storage client")
 			.fetch(&timestamp_addr)
 			.await?
 			.ok_or_else(|| Error::from("Timestamp should exist".to_string()))?;
@@ -593,14 +596,15 @@ where
 
 	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error> {
 		let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
-		let block_hash = self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
+		let block_hash =
+			self.para_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
+				|| Error::Custom("Block hash not found for block number".to_string()),
+			)?;
 		let timestamp_addr = T::Storage::timestamp_now();
 		let unix_timestamp_millis = self
 			.para_client
 			.storage()
 			.at(block_hash)
-			.await
-			.expect("Storage client")
 			.fetch(&timestamp_addr)
 			.await?
 			.expect("Timestamp should exist");
