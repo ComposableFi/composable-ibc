@@ -24,6 +24,8 @@ use crate::{
 use async_trait::async_trait;
 #[cfg(feature = "cosmos")]
 use cosmos::client::{CosmosClient, CosmosClientConfig};
+#[cfg(feature = "ethereum")]
+use ethereum::{client::Client as EthereumClient, config::Config as EthereumClientConfig};
 use futures::Stream;
 #[cfg(any(test, feature = "testing"))]
 use ibc::applications::transfer::msgs::transfer::MsgTransfer;
@@ -89,4 +91,6 @@ chains! {
 	PicassoKusama(ParachainClientConfig, ParachainClient<PicassoKusamaConfig>),
 	#[cfg(feature = "cosmos")]
 	Cosmos(CosmosClientConfig, CosmosClient<DefaultConfig>),
+	#[cfg(feature = "ethereum")]
+	Ethereum(EthereumClientConfig, EthereumClient),
 }

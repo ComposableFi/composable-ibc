@@ -1,45 +1,43 @@
+use ethers::types::H256;
 use primitives::IbcProvider;
 
 use futures::Stream;
+use thiserror::Error;
 
-use crate::client::Client;
+use crate::client::{Client, ClientError};
 
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
+pub struct Height(pub(crate) ethers::types::BlockNumber);
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum FinalityEvent {
+	Ethereum { hash: H256 },
+}
+
+#[async_trait::async_trait]
 impl IbcProvider for Client {
-	type FinalityEvent;
+	type FinalityEvent = FinalityEvent;
 
-	type TransactionId;
+	type TransactionId = ();
 
-	type AssetId;
+	type AssetId = ();
 
-	type Error;
+	type Error = ClientError;
 
-	fn query_latest_ibc_events<'life0, 'life1, 'async_trait, T>(
-		&'life0 mut self,
+	async fn query_latest_ibc_events<T>(
+		&mut self,
 		finality_event: Self::FinalityEvent,
-		counterparty: &'life1 T,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = Result<
-						Vec<(
-							ibc_proto::google::protobuf::Any,
-							Vec<ibc::events::IbcEvent>,
-							primitives::UpdateType,
-						)>,
-						anyhow::Error,
-					>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
+		counterparty: &T,
+	) -> Result<
+		Vec<(ibc_proto::google::protobuf::Any, Vec<ibc::events::IbcEvent>, primitives::UpdateType)>,
+		anyhow::Error,
 	>
 	where
 		T: primitives::Chain,
-		T: 'async_trait,
-		'life0: 'async_trait,
-		'life1: 'async_trait,
-		Self: 'async_trait,
 	{
-		todo!()
+		tracing::debug!(?finality_event, "querying latest ibc events");
+		tracing::warn!("TODO: implement query_latest_ibc_events");
+		Ok(vec![])
 	}
 
 	fn ibc_events<'life0, 'async_trait>(

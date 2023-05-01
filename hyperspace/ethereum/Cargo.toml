@@ -5,17 +5,28 @@ edition = "2021"
 authors = ["Composable Developers"]
 
 [dependencies]
-primitives = { path = "../primitives", package = "hyperspace-primitives" }
+primitives = { path = "../primitives", package = "hyperspace-primitives", features = [
+    "testing",
+] }
 
 # composable
 ibc = { path = "../../ibc/modules", features = [] }
-ibc-proto = { path = "../../ibc/proto" }
 ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
-ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
+ibc-proto = { path = "../../ibc/proto" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
+ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 
-ethers = "2.0.3"
-tokio = { version = "1.19.2", features = ["full"] }
-futures = "0.3.28"
 anyhow = "1.0.65"
+async-trait = "0.1.53"
+ethers = { version = "2.0.2", features = ["ws"] }
+futures = "0.3.28"
+http = "0.2.9"
+serde = { version = "1.0.137", features = ["derive"] }
+thiserror = "1.0.31"
+tokio = { version = "1.19.2", features = ["full"] }
+tracing = "0.1.36"
+async-stream = "0.3.5"
+
+[dev-dependencies]
+toml = "0.7.3"

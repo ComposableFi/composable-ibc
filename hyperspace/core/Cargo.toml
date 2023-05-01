@@ -15,6 +15,7 @@ tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
 primitives = { path = "../primitives", package = "hyperspace-primitives" }
 parachain = { path = "../parachain", package = "hyperspace-parachain" }
 cosmos = { path = "../cosmos", package = "hyperspace-cosmos", optional = true }
+ethereum = { path = "../ethereum", package = "hyperspace-ethereum", optional = true }
 #near = { path = "near", package = "hyperspace-near", optional = true }
 metrics = { path = "../metrics", package = "hyperspace-metrics" }
 
@@ -74,10 +75,7 @@ sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkad
 build-metadata-from-ws = []
 #near = ["dep:near"]
 cosmos = ["dep:cosmos"]
-testing = [
-    "primitives/testing",
-    "parachain/testing",
-    "cosmos/testing",
-]
-default = ["cosmos"]
+ethereum = ["dep:ethereum"]
+testing = ["primitives/testing", "parachain/testing", "cosmos/testing"]
+default = ["cosmos", "ethereum"]
 composable-beefy = []

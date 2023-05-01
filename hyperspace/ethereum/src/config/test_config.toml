@@ -1,0 +1,4 @@
+name = "mainnet"
+rpc_url = "http://localhost:7890"
+chain_id = "1337"
+channel_whitelist = []
