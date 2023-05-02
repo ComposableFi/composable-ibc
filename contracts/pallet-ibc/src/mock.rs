@@ -1,4 +1,4 @@
-use crate::{self as pallet_ibc, routing::ModuleRouter};
+use crate::{self as pallet_ibc, ics20_fee::FlatFeeConverter, routing::ModuleRouter};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::ConstU32,
@@ -8,7 +8,6 @@ use frame_support::{
 		AsEnsureOriginWithArg, ConstU64, Everything,
 	},
 };
-use crate::ics20_fee::FlatFeeConverter;
 use frame_system as system;
 use frame_system::EnsureSigned;
 use ibc_primitives::{runtime_interface::ss58_to_account_id_32, IbcAccount};
@@ -220,8 +219,8 @@ impl Config for Test {
 	type FeeAccount = FeeAccount;
 }
 #[derive(Debug, Clone)]
-pub struct FlatFeeConverterDummy<T : Config>(PhantomData<T>);
-impl<T : Config> FlatFeeConverter for FlatFeeConverterDummy<T> {
+pub struct FlatFeeConverterDummy<T: Config>(PhantomData<T>);
+impl<T: Config> FlatFeeConverter for FlatFeeConverterDummy<T> {
 	type AssetId = u128;
 	type Balance = u128;
 	fn get_flat_fee(
@@ -229,8 +228,8 @@ impl<T : Config> FlatFeeConverter for FlatFeeConverterDummy<T> {
 		fee_asset_id: Self::AssetId,
 		fee_asset_amount: Self::Balance,
 	) -> Option<u128> {
-		if asset_id == 3{
-			return Some(1000);
+		if asset_id == 3 {
+			return Some(1000)
 			// None
 		}
 		None
@@ -293,7 +292,7 @@ where
 	type Error = ();
 	fn from_denom_to_asset_id(_denom: &String) -> Result<T::AssetId, Self::Error> {
 		let mut id = 2u128;
-		if _denom.contains("FLATFEE"){
+		if _denom.contains("FLATFEE") {
 			id = 3;
 		}
 		if <<Test as Config>::Fungibles as InspectMetadata<AccountId>>::decimals(&id) == 0 {
