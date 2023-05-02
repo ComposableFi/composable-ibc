@@ -220,7 +220,8 @@ impl<H> ClientState<H> {
 		delay_period_blocks: u64,
 	) -> Result<(), Error> {
 		let earliest_time = processed_time + delay_period_time;
-		if current_time.nanoseconds() <= earliest_time {
+		/// NOTE: delay time period is inclusive, so if current_time is earliest_time, then we return no error
+		if current_time.nanoseconds() < earliest_time {
 			return Err(Error::not_enough_time_elapsed(current_time, earliest_time))
 		}
 
