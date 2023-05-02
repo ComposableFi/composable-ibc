@@ -1,4 +1,5 @@
 use crate::{
+	ics20_fee::FlatFeeConverter,
 	impls::{OFFCHAIN_RECV_PACKET_SEQS, OFFCHAIN_SEND_PACKET_SEQS},
 	light_clients::{AnyClientState, AnyConsensusState},
 	mock::*,
@@ -55,7 +56,6 @@ use std::{
 	str::FromStr,
 };
 use tendermint_proto::Protobuf;
-use crate::ics20_fee::FlatFeeConverter;
 
 fn setup_client_and_consensus_state(port_id: PortId) {
 	// Set up client state and consensus states
@@ -448,7 +448,12 @@ fn on_deliver_ics20_recv_packet_with_flat_fee() {
 			&<Test as crate::Config>::FeeAccount::get().into_account(),
 		);
 		let fee_asset_id = <Test as crate::ics20_fee::Config>::FlatFeeAssetId::get();
-		let fee = <Test as crate::ics20_fee::Config>::FlatFeeConverter::get_flat_fee(asset_id, fee_asset_id, amt).unwrap_or_default();
+		let fee = <Test as crate::ics20_fee::Config>::FlatFeeConverter::get_flat_fee(
+			asset_id,
+			fee_asset_id,
+			amt,
+		)
+		.unwrap_or_default();
 		assert_eq!(balance, amt - fee);
 		assert_eq!(pallet_balance, fee)
 	})
