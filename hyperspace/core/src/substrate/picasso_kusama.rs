@@ -17,8 +17,8 @@ use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
 use ibc_proto::google::protobuf::Any;
 use light_client_common::config::{
-	EventRecordT, IbcEventsT, LocalStaticStorageAddress, ParaLifecycleT, RuntimeCall,
-	RuntimeStorage, RuntimeTransactions,
+	EventRecordT, IbcEventsT, LocalAddress, ParaLifecycleT, RuntimeCall, RuntimeStorage,
+	RuntimeTransactions,
 };
 use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;
@@ -35,10 +35,12 @@ use subxt::{
 		},
 		ExtrinsicParams,
 	},
-	events::{Phase, StaticEvent},
-	metadata::DecodeStaticType,
-	storage::{address::Yes, StaticStorageAddress},
-	tx::StaticTxPayload,
+	events::Phase,
+	storage::{
+		address::{StaticStorageMapKey, Yes},
+		Address,
+	},
+	tx::Payload,
 	Error, OnlineClient,
 };
 use subxt_generated::picasso_kusama::parachain::api::runtime_types::{
@@ -55,9 +57,13 @@ pub mod relaychain {
 
 pub type Balance = u128;
 
-#[derive(Encode)]
+#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 pub struct DummySendPingParamsWrapper<T>(T);
-#[derive(Encode)]
+#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 pub struct FakeSendPingParams;
 
 impl From<SendPingParams> for FakeSendPingParams {
@@ -90,10 +96,10 @@ define_runtime_storage!(
 	relaychain::api::storage().paras().parachains(),
 	relaychain::api::storage().grandpa().current_set_id(),
 	unimplemented("relaychain::api::storage().beefy().validator_set_id()"),
-	unimplemented::<StaticStorageAddress<DecodeStaticType<()>, Yes, Yes, ()>>(
+	unimplemented::<Address<StaticStorageMapKey, (), Yes, Yes, ()>>(
 		"relaychain::api::storage().beefy().authorities()"
 	),
-	unimplemented::<StaticStorageAddress<DecodeStaticType<()>, Yes, Yes, ()>>(
+	unimplemented::<Address<StaticStorageMapKey, (), Yes, Yes, ()>>(
 		"relaychain::api::storage().mmr_leaf().beefy_next_authorities()"
 	),
 	relaychain::api::storage().babe().epoch_start()
@@ -132,7 +138,7 @@ define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);
 
 define_event_record!(
 	PicassoEventRecord,
-	EventRecord<< PicassoKusamaConfig as light_client_common::config::Config>::ParaRuntimeEvent, H256>,
+	EventRecord<<<PicassoKusamaConfig as light_client_common::config::Config>::ParaRuntimeEvent as AsInner>::Inner, H256>,
 	IbcEventWrapper,
 	parachain_subxt::api::runtime_types::frame_system::Phase,
 	parachain_subxt::api::runtime_types::pallet_ibc::pallet::Event,
@@ -183,15 +189,12 @@ impl light_client_common::config::Config for PicassoKusamaConfig {
 
 impl subxt::Config for PicassoKusamaConfig {
 	type Index = u32;
-	type BlockNumber = u32;
 	type Hash = H256;
 	type Hasher = subxt::config::substrate::BlakeTwo256;
 	type AccountId = AccountId32;
 	type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
-	type Header = subxt::config::substrate::SubstrateHeader<
-		Self::BlockNumber,
-		subxt::config::substrate::BlakeTwo256,
-	>;
+	type Header =
+		subxt::config::substrate::SubstrateHeader<u32, subxt::config::substrate::BlakeTwo256>;
 	type Signature = sp_runtime::MultiSignature;
 	type ExtrinsicParams = ParachainExtrinsicParams<Self>;
 }

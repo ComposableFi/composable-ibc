@@ -48,7 +48,7 @@ use sp_runtime::{
 };
 use std::{
 	collections::{BTreeMap, BTreeSet, HashMap},
-	fmt::Display,
+	fmt::{Debug, Display},
 };
 
 use beefy_prover::helpers::unsafe_arc_cast;
@@ -58,7 +58,7 @@ use ibc::core::{
 	ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 };
 use subxt::config::{
-	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT,
+	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT, Header,
 };
 use tendermint_proto::Protobuf;
 
@@ -90,7 +90,7 @@ impl FinalityProtocol {
 		T: light_client_common::config::Config + Send + Sync,
 		C: Chain,
 		u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-		u32: From<<T as subxt::Config>::BlockNumber>,
+		u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 		ParachainClient<T>: Chain,
 		ParachainClient<T>: KeyProvider,
 		<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
@@ -98,7 +98,15 @@ impl FinalityProtocol {
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 		<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-		T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+		<<T as subxt::Config>::Header as Header>::Number: BlockNumberOps
+			+ From<u32>
+			+ Display
+			+ Ord
+			+ sp_runtime::traits::Zero
+			+ One
+			+ Send
+			+ Sync,
+		<T as subxt::Config>::Header: Decode + Send + Sync,
 		T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 		sp_core::H256: From<T::Hash>,
 		BTreeMap<H256, ParachainHeaderProofs>:
@@ -129,13 +137,15 @@ where
 	T: light_client_common::config::Config + Send + Sync,
 	C: Chain,
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
-		+ From<<T as subxt::Config>::BlockNumber>,
+		+ From<<<T as subxt::Config>::Header as Header>::Number>,
 	ParachainClient<T>: Chain + KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		From<u32> + Debug + Display + Ord + sp_runtime::traits::Zero + One,
+	<T as subxt::Config>::Header: Decode,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	T::Hash: From<sp_core::H256>,
@@ -264,7 +274,9 @@ where
 			if events.is_empty() {
 				None
 			} else {
-				str::parse::<u32>(&*num).ok().map(T::BlockNumber::from)
+				str::parse::<u32>(&*num)
+					.ok()
+					.map(<<T as subxt::Config>::Header as Header>::Number::from)
 			}
 		})
 		.collect::<BTreeSet<_>>();
@@ -290,13 +302,16 @@ where
 	if timeout_update_required {
 		let max_height_for_timeouts = max_height_for_timeouts.unwrap();
 		if max_height_for_timeouts > client_state.latest_height().revision_height {
-			let max_timeout_height = T::BlockNumber::from(max_height_for_timeouts as u32);
+			let max_timeout_height = <<T as subxt::Config>::Header as Header>::Number::from(
+				max_height_for_timeouts as u32,
+			);
 			headers_with_events.insert(max_timeout_height);
 		}
 	}
 
 	if is_update_required {
-		headers_with_events.insert(T::BlockNumber::from(latest_finalized_block));
+		headers_with_events
+			.insert(<<T as subxt::Config>::Header as Header>::Number::from(latest_finalized_block));
 	}
 
 	// only query proofs for headers that actually have events or are mandatory
@@ -431,19 +446,21 @@ where
 	T: light_client_common::config::Config + Send + Sync,
 	C: Chain,
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
-		+ From<<T as subxt::Config>::BlockNumber>,
+		+ From<<<T as subxt::Config>::Header as Header>::Number>,
 	ParachainClient<T>: Chain + KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
@@ -551,7 +568,9 @@ where
 			if events.is_empty() {
 				None
 			} else {
-				str::parse::<u32>(&*num).ok().map(T::BlockNumber::from)
+				str::parse::<u32>(&*num)
+					.ok()
+					.map(<<T as subxt::Config>::Header as Header>::Number::from)
 			}
 		})
 		.collect::<BTreeSet<_>>();
@@ -579,7 +598,9 @@ where
 	if timeout_update_required {
 		let max_height_for_timeouts = max_height_for_timeouts.unwrap();
 		if max_height_for_timeouts > client_state.latest_height().revision_height {
-			let max_timeout_height = T::BlockNumber::from(max_height_for_timeouts as u32);
+			let max_timeout_height = <<T as subxt::Config>::Header as Header>::Number::from(
+				max_height_for_timeouts as u32,
+			);
 			headers_with_events.insert(max_timeout_height);
 		}
 	}

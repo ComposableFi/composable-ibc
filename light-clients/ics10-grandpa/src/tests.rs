@@ -124,9 +124,7 @@ async fn test_continuous_update_of_grandpa_client() {
 			prover
 				.relay_client
 				.storage()
-				.at(Some(client_state.latest_relay_hash))
-				.await
-				.expect("Storage client")
+				.at(client_state.latest_relay_hash)
 				.fetch(&key)
 				.await
 				.unwrap()
@@ -135,7 +133,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		let decoded_para_head = frame_support::sp_runtime::generic::Header::<
 			u32,
 			sp_runtime::traits::BlakeTwo256,
-		>::decode(&mut &*head_data.0 .0)
+		>::decode(&mut &*head_data.0)
 		.expect("Failed to decode parachain header");
 		// we can't use the genesis block to construct the initial state.
 		if decoded_para_head.number == 0 {

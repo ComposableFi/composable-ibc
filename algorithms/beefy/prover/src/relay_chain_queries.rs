@@ -16,7 +16,7 @@
 use crate::error::Error;
 use beefy_primitives::{SignedCommitment, VersionedFinalityProof};
 use codec::{Decode, Encode};
-use light_client_common::config::{ParaLifecycleT, RuntimeStorage};
+use light_client_common::config::{AsInner, ParaLifecycleT, RuntimeStorage};
 use pallet_mmr_rpc::LeavesProof;
 use sp_core::{hexdisplay::AsBytesRef, storage::StorageKey, H256};
 use sp_runtime::traits::Zero;
@@ -38,36 +38,32 @@ pub async fn fetch_finalized_parachain_heads<T: light_client_common::config::Con
 	commitment_block_number: u32,
 	latest_beefy_height: u32,
 	para_id: u32,
-	header_numbers: &BTreeSet<T::BlockNumber>,
+	header_numbers: &BTreeSet<<<T as Config>::Header as Header>::Number>,
 ) -> Result<FinalizedParaHeads, Error>
 where
-	u32: From<<T as subxt::Config>::BlockNumber>,
-	T::BlockNumber: Ord + Zero,
+	u32: From<<<T as Config>::Header as Header>::Number>,
+	<<T as Config>::Header as Header>::Number: Ord + Zero,
+	<T as subxt::Config>::Header: Decode,
 {
 	let subxt_block_number: subxt::rpc::types::BlockNumber = commitment_block_number.into();
-	let block_hash = client.rpc().block_hash(Some(subxt_block_number)).await?;
+	let block_hash = client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(|| {
+		Error::Custom(format!("Block hash not found for block number {}", commitment_block_number))
+	})?;
 
 	let mut para_ids = vec![];
 	let key = T::Storage::paras_parachains();
 	let ids = client
 		.storage()
 		.at(block_hash)
-		.await
-		.expect("Storage client")
 		.fetch(&key)
 		.await?
 		.ok_or_else(|| Error::Custom(format!("No ParaIds on relay chain?")))?;
 	for id in ids {
-		let id = id.into();
+		let id = <T::Storage as RuntimeStorage>::Id::from_inner(id.0).into();
 		let key = T::Storage::paras_para_lifecycles(id);
-		let lifecycle = client
-			.storage()
-			.at(block_hash)
-			.await
-			.expect("Storage client")
-			.fetch(&key)
-			.await?
-			.expect("ParaId is known");
+		let lifecycle = <T::Storage as RuntimeStorage>::ParaLifecycle::from_inner(
+			client.storage().at(block_hash).fetch(&key).await?.expect("ParaId is known"),
+		);
 		// only care about active parachains.
 		if lifecycle.is_parachain() {
 			para_ids.push(id);
@@ -91,7 +87,7 @@ where
 			// we are interested only in the blocks where our parachain header changes.
 			vec![parachain_header_storage_key(para_id).as_bytes_ref()],
 			previous_finalized_hash,
-			block_hash,
+			Some(block_hash),
 		)
 		.await?;
 	let mut finalized_blocks = BTreeMap::new();
@@ -106,15 +102,13 @@ where
 		for id in para_ids.iter() {
 			let id: u32 = (*id).into();
 			let key = T::Storage::paras_heads(id);
-			if let Some(head) = client
-				.storage()
-				.at(Some(header.hash()))
-				.await
-				.expect("Storage client")
-				.fetch(&key)
-				.await?
-			{
-				heads.insert(id, Into::<Vec<u8>>::into(head));
+			if let Some(head) = client.storage().at(header.hash()).fetch(&key).await? {
+				heads.insert(
+					id,
+					Into::<Vec<u8>>::into(<T::Storage as RuntimeStorage>::HeadData::from_inner(
+						head,
+					)),
+				);
 			}
 		}
 
