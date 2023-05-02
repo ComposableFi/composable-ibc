@@ -229,7 +229,7 @@ impl<T : Config> FlatFeeConverter for FlatFeeConverterDummy<T> {
 		fee_asset_id: Self::AssetId,
 		fee_asset_amount: Self::Balance,
 	) -> Option<u128> {
-		Some(1_000)
+		None
 	}
 }
 impl crate::ics20_fee::Config for Test {
