@@ -220,13 +220,17 @@ impl Config for Test {
 #[derive(Debug, Clone)]
 pub struct FlatFeeConverterDummy<T : Config>(PhantomData<T>);
 impl<T : Config> FlatFeeConverter for FlatFeeConverterDummy<T> {
-	type AssetId = T::AssetId;
-	type Balance = T::Balance;
+	type AssetId = u128;
+	type Balance = u128;
 	fn get_flat_fee(
 		asset_id: Self::AssetId,
 		fee_asset_id: Self::AssetId,
 		fee_asset_amount: Self::Balance,
 	) -> Option<u128> {
+		if asset_id == 3{
+			return Some(1000);
+			// None
+		}
 		None
 	}
 }
@@ -286,9 +290,13 @@ where
 {
 	type Error = ();
 	fn from_denom_to_asset_id(_denom: &String) -> Result<T::AssetId, Self::Error> {
-		if <<Test as Config>::Fungibles as InspectMetadata<AccountId>>::decimals(&2u128) == 0 {
+		let mut id = 2u128;
+		if _denom.contains("FLATFEE"){
+			id = 3;
+		}
+		if <<Test as Config>::Fungibles as InspectMetadata<AccountId>>::decimals(&id) == 0 {
 			<<Test as Config>::Fungibles as Create<AccountId>>::create(
-				2u128.into(),
+				id.into(),
 				AccountId::new([0; 32]),
 				true,
 				1000u128.into(),
@@ -296,7 +304,7 @@ where
 			.unwrap();
 
 			<<Test as Config>::Fungibles as Mutate<AccountId>>::set(
-				2u128.into(),
+				id.into(),
 				&AccountId::new([0; 32]),
 				vec![0; 32],
 				vec![0; 32],
@@ -304,7 +312,7 @@ where
 			)
 			.unwrap();
 		};
-		Ok(2u128.into())
+		Ok(id.into())
 	}
 
 	fn from_asset_id_to_denom(_id: T::AssetId) -> Option<String> {
