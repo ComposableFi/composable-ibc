@@ -1,6 +1,6 @@
 use crate::{routing::Context, DenomToAssetId};
 use alloc::{format, string::ToString};
-use core::fmt::Debug;
+use core::{fmt::Debug, marker::PhantomData};
 use ibc::{
 	applications::transfer::{
 		acknowledgement::Acknowledgement as Ics20Ack, context::BankKeeper,
@@ -103,6 +103,21 @@ pub trait FlatFeeConverter {
 		fee_asset_id: Self::AssetId,
 		fee_asset_amount: Self::Balance,
 	) -> Option<u128>;
+}
+
+pub struct NonFlatFeeConverter<T>(PhantomData<T>);
+
+impl<T: Config> FlatFeeConverter for NonFlatFeeConverter<T> {
+	type AssetId = T::AssetId;
+	type Balance = T::Balance;
+
+	fn get_flat_fee(
+		asset_id: Self::AssetId,
+		fee_asset_id: Self::AssetId,
+		fee_asset_amount: Self::Balance,
+	) -> Option<u128> {
+		None
+	}
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
