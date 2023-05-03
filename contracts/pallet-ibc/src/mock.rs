@@ -230,7 +230,6 @@ impl<T: Config> FlatFeeConverter for FlatFeeConverterDummy<T> {
 	) -> Option<u128> {
 		if asset_id == 3 {
 			return Some(1000)
-			// None
 		}
 		None
 	}
