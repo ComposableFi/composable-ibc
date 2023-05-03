@@ -216,6 +216,19 @@ impl Config for Test {
 	type Ics20RateLimiter = Everything;
 	type FeeAccount = FeeAccount;
 }
+#[derive(Debug, Clone)]
+pub struct FlatFeeConverterDummy<T>(_);
+impl<T> FlastFeeConverter for FlatFeeConverterDummy<T> {
+	type AssetId = T::AssetId;
+	type Balance = T::Balance;
+	fn get_flat_fee(
+		asset_id: Self::AssetId,
+		fee_asset_id: Self::AssetId,
+		fee_asset_amount: Self::Balance,
+	) -> Option<u128> {
+		Some(1_000)
+	}
+}
 impl crate::ics20_fee::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ServiceCharge = ServiceCharge;
