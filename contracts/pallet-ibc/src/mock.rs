@@ -8,6 +8,7 @@ use frame_support::{
 		AsEnsureOriginWithArg, ConstU64, Everything,
 	},
 };
+use crate::ics20_fee::FlatFeeConverter;
 use frame_system as system;
 use frame_system::EnsureSigned;
 use ibc_primitives::{runtime_interface::ss58_to_account_id_32, IbcAccount};
@@ -217,8 +218,8 @@ impl Config for Test {
 	type FeeAccount = FeeAccount;
 }
 #[derive(Debug, Clone)]
-pub struct FlatFeeConverterDummy<T>(_);
-impl<T> FlastFeeConverter for FlatFeeConverterDummy<T> {
+pub struct FlatFeeConverterDummy<T : Config>(PhantomData<T>);
+impl<T : Config> FlatFeeConverter for FlatFeeConverterDummy<T> {
 	type AssetId = T::AssetId;
 	type Balance = T::Balance;
 	fn get_flat_fee(
@@ -233,6 +234,9 @@ impl crate::ics20_fee::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ServiceCharge = ServiceCharge;
 	type PalletId = PalletId;
+	type FlatFeeConverter = FlatFeeConverterDummy<Test>;
+	type FlatFeeAssetId = FlatFeeAssetId;
+	type FlatFeeAmount = FlatFeeAmount;
 }
 
 #[derive(
