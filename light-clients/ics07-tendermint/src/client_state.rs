@@ -220,7 +220,9 @@ impl<H> ClientState<H> {
 		delay_period_blocks: u64,
 	) -> Result<(), Error> {
 		let earliest_time = processed_time + delay_period_time;
-		if current_time.nanoseconds() <= earliest_time {
+		/// NOTE: delay time period is inclusive, so if current_time is earliest_time, then we return no error
+		/// https://github.com/cosmos/ibc-go/blob/9ebc2f81049869bc40c443ffb72d9f3e47afb4fc/modules/light-clients/07-tendermint/client_state.go#L306
+		if current_time.nanoseconds() < earliest_time {
 			return Err(Error::not_enough_time_elapsed(current_time, earliest_time))
 		}
 
