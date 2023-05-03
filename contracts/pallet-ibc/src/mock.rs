@@ -177,6 +177,8 @@ parameter_types! {
 	pub const ServiceCharge: Perbill = Perbill::from_percent(1);
 	pub const PalletId: frame_support::PalletId = frame_support::PalletId(*b"ics20fee");
 	pub FeeAccount: <Test as Config>::AccountIdConversion = create_alice_key();
+	pub const FlatFeeAssetId: AssetId = 130;
+	pub const FlatFeeAmount: AssetId = 10_000_000;
 }
 
 fn create_alice_key() -> <Test as Config>::AccountIdConversion {
