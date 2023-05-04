@@ -1,4 +1,4 @@
-use crate::{self as pallet_ibc, routing::ModuleRouter};
+use crate::{self as pallet_ibc, ics20_fee::FlatFeeConverter, routing::ModuleRouter};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::ConstU32,
@@ -176,6 +176,8 @@ parameter_types! {
 	pub const IbcTriePrefix : &'static [u8] = b"ibc/";
 	pub const ServiceCharge: Perbill = Perbill::from_percent(1);
 	pub const PalletId: frame_support::PalletId = frame_support::PalletId(*b"ics20fee");
+	pub const FlatFeeAssetId: AssetId = 130;
+	pub const FlatFeeAmount: AssetId = 10_000_000;
 	pub FeeAccount: <Test as Config>::AccountIdConversion = create_alice_key();
 }
 
@@ -216,10 +218,29 @@ impl Config for Test {
 	type Ics20RateLimiter = Everything;
 	type FeeAccount = FeeAccount;
 }
+#[derive(Debug, Clone)]
+pub struct FlatFeeConverterDummy<T: Config>(PhantomData<T>);
+impl<T: Config> FlatFeeConverter for FlatFeeConverterDummy<T> {
+	type AssetId = u128;
+	type Balance = u128;
+	fn get_flat_fee(
+		asset_id: Self::AssetId,
+		fee_asset_id: Self::AssetId,
+		fee_asset_amount: Self::Balance,
+	) -> Option<u128> {
+		if asset_id == 3 {
+			return Some(1000)
+		}
+		None
+	}
+}
 impl crate::ics20_fee::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ServiceCharge = ServiceCharge;
 	type PalletId = PalletId;
+	type FlatFeeConverter = FlatFeeConverterDummy<Test>;
+	type FlatFeeAssetId = FlatFeeAssetId;
+	type FlatFeeAmount = FlatFeeAmount;
 }
 
 #[derive(
@@ -269,9 +290,13 @@ where
 {
 	type Error = ();
 	fn from_denom_to_asset_id(_denom: &String) -> Result<T::AssetId, Self::Error> {
-		if <<Test as Config>::Fungibles as InspectMetadata<AccountId>>::decimals(&2u128) == 0 {
+		let mut id = 2u128;
+		if _denom.contains("FLATFEE") {
+			id = 3;
+		}
+		if <<Test as Config>::Fungibles as InspectMetadata<AccountId>>::decimals(&id) == 0 {
 			<<Test as Config>::Fungibles as Create<AccountId>>::create(
-				2u128.into(),
+				id.into(),
 				AccountId::new([0; 32]),
 				true,
 				1000u128.into(),
@@ -279,7 +304,7 @@ where
 			.unwrap();
 
 			<<Test as Config>::Fungibles as Mutate<AccountId>>::set(
-				2u128.into(),
+				id.into(),
 				&AccountId::new([0; 32]),
 				vec![0; 32],
 				vec![0; 32],
@@ -287,7 +312,7 @@ where
 			)
 			.unwrap();
 		};
-		Ok(2u128.into())
+		Ok(id.into())
 	}
 
 	fn from_asset_id_to_denom(_id: T::AssetId) -> Option<String> {
