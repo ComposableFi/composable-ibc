@@ -50,6 +50,9 @@ prost = { version = "0.11", default-features = false, optional = true }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
 pallet-ibc-ping = { path = "ping", default-features = false, optional = true }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
+pallet-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
+sp-consensus-slots = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
+sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
 simple-iavl = { path = "simple-iavl", default-features = false, optional = true }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
 finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-features = false, optional = true }
@@ -81,6 +84,9 @@ hex-literal = { version = "0.3.4" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.39" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.39" }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+pallet-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-consensus-slots = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 prost = { version = "0.11" }
 serde = { version = "1.0" }
 simple-iavl = { path = "simple-iavl" }
@@ -139,6 +145,9 @@ runtime-benchmarks = [
   "hex-literal",
   "pallet-timestamp",
   "pallet-timestamp/runtime-benchmarks",
+  "pallet-aura",
+  "sp-consensus-slots",
+  "sp-consensus-aura",
   "simple-iavl",
   "prost",
   "ibc-primitives/runtime-benchmarks",

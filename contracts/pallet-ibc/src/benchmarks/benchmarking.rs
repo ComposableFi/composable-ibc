@@ -79,6 +79,7 @@ use ibc::{
 use ibc_primitives::get_channel_escrow_address;
 use scale_info::prelude::string::ToString;
 use sp_core::crypto::AccountId32;
+use sp_runtime::DigestItem;
 use sp_std::vec;
 use tendermint_proto::Protobuf;
 
@@ -88,10 +89,10 @@ benchmarks! {
 	where_clause {
 		where u32: From<<T as frame_system::Config>::BlockNumber>,
 				<T as frame_system::Config>::BlockNumber: From<u32>,
-				T: Send + Sync + pallet_timestamp::Config<Moment = u64> + parachain_info::Config + Config,
+				T: Send + Sync + pallet_timestamp::Config<Moment = u64> + parachain_info::Config + Config + pallet_aura::Config,
 		AccountId32: From<<T as frame_system::Config>::AccountId>,
 		T::AssetId: From<u128>,
-	<T as frame_system::pallet::Config>::AccountId: EncodeLike
+		<T as frame_system::pallet::Config>::AccountId: EncodeLike
 	}
 
 	// Run these benchmarks via
@@ -108,7 +109,8 @@ benchmarks! {
 		// will be a comparison between the local timestamp and the timestamp existing in the header
 		// after factoring in the trusting period for the light client.
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
+
 		let (mock_client_state, mock_cs_state, header) = generate_tendermint_header(i, 2);
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -141,7 +143,7 @@ benchmarks! {
 	conn_try_open_tendermint {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		// Create initial client state and consensus state
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
@@ -177,7 +179,7 @@ benchmarks! {
 	conn_open_ack_tendermint {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -219,7 +221,7 @@ benchmarks! {
 	conn_open_confirm_tendermint {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -308,7 +310,7 @@ benchmarks! {
 	channel_open_try_tendermint {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -357,7 +359,7 @@ benchmarks! {
 	channel_open_ack_tendermint {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -421,7 +423,7 @@ benchmarks! {
 	channel_open_confirm_tendermint {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -478,7 +480,7 @@ benchmarks! {
 	channel_close_init {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -534,7 +536,7 @@ benchmarks! {
 	channel_close_confirm_tendermint {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -594,7 +596,7 @@ benchmarks! {
 		let data = vec![0u8;i.try_into().unwrap()];
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		frame_system::Pallet::<T>::set_block_number(2u32.into());
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
@@ -658,7 +660,7 @@ benchmarks! {
 		let ack = vec![0u8;j.try_into().unwrap()];
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		frame_system::Pallet::<T>::set_block_number(2u32.into());
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
@@ -720,7 +722,7 @@ benchmarks! {
 		let data = vec![0u8;i.try_into().unwrap()];
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		frame_system::Pallet::<T>::set_block_number(2u32.into());
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
@@ -784,7 +786,7 @@ benchmarks! {
 	conn_open_init {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -1196,7 +1198,7 @@ benchmarks! {
 		// will be a comparison between the local timestamp and the timestamp existing in the header
 		// after factoring in the trusting period for the light client.
 		let now: <T as pallet_timestamp::Config>::Moment = GRANDPA_UPDATE_TIMESTAMP.saturating_mul(1000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		let (mock_client_state, mock_cs_state, client_message) = generate_finality_proof(i);
 		let mock_client_state = AnyClientState::Grandpa(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Grandpa(mock_cs_state);
@@ -1222,4 +1224,20 @@ benchmarks! {
 		let client_state = AnyClientState::decode_vec(&*client_state).unwrap();
 		assert_eq!(client_state.latest_height(), Height::new(2000, 2));
 	}
+}
+
+fn set_timestamp<T: pallet_timestamp::Config + pallet_aura::Config>(time: T::Moment) {
+	use frame_benchmarking::Zero;
+	use frame_support::traits::Hooks;
+	use sp_consensus_aura::digests::CompatibleDigestItem;
+	use sp_consensus_slots::Slot;
+	use sp_runtime::SaturatedConversion;
+
+	pallet_timestamp::Pallet::<T>::set_timestamp(time);
+	let slot_duration = pallet_aura::Pallet::<T>::slot_duration();
+	let timestamp_slot = time / slot_duration;
+	let timestamp_slot = Slot::from(timestamp_slot.saturated_into::<u64>());
+	let log = <DigestItem as CompatibleDigestItem<()>>::aura_pre_digest(timestamp_slot);
+	<frame_system::Pallet<T>>::deposit_log(log);
+	pallet_aura::Pallet::<T>::on_initialize(T::BlockNumber::zero()); // block number doesn't matter
 }
