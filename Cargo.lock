@@ -2146,7 +2146,7 @@ dependencies = [
  "parity-scale-codec",
  "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
  "sp-std 5.0.0",
- "sp-timestamp",
+ "sp-timestamp 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
 ]
 
 [[package]]
@@ -7313,8 +7313,10 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-assets",
+ "pallet-aura",
  "pallet-balances",
  "pallet-ibc-ping",
+ "pallet-membership",
  "pallet-timestamp",
  "parachain-info",
  "parity-scale-codec",
@@ -7324,6 +7326,8 @@ dependencies = [
  "serde_json",
  "sha2 0.10.6",
  "simple-iavl",
+ "sp-consensus-aura",
+ "sp-consensus-slots",
  "sp-core 7.0.0",
  "sp-finality-grandpa 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
  "sp-io 7.0.0",
@@ -7802,7 +7806,7 @@ dependencies = [
  "sp-io 7.0.0",
  "sp-runtime 7.0.0",
  "sp-std 5.0.0",
- "sp-timestamp",
+ "sp-timestamp 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
 ]
 
 [[package]]
@@ -8045,7 +8049,7 @@ dependencies = [
  "sp-offchain 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
  "sp-runtime 7.0.0",
  "sp-session 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
- "sp-timestamp",
+ "sp-timestamp 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
  "sp-transaction-pool 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
  "substrate-build-script-utils",
  "substrate-frame-rpc-system",
@@ -8573,7 +8577,7 @@ dependencies = [
  "sp-runtime 7.0.0",
  "sp-session 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
  "sp-storage 7.0.0",
- "sp-timestamp",
+ "sp-timestamp 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
  "sp-transaction-pool 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
 ]
 
@@ -9529,7 +9533,7 @@ dependencies = [
  "sp-session 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
  "sp-state-machine 0.13.0",
  "sp-storage 7.0.0",
- "sp-timestamp",
+ "sp-timestamp 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
  "sp-transaction-pool 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
  "sp-trie 7.0.0",
  "substrate-prometheus-endpoint 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
@@ -13271,19 +13275,19 @@ dependencies = [
 [[package]]
 name = "sp-consensus-aura"
 version = "0.10.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
 dependencies = [
  "async-trait",
  "parity-scale-codec",
  "scale-info",
  "sp-api",
  "sp-application-crypto 7.0.0",
- "sp-consensus 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
+ "sp-consensus 0.10.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.38)",
  "sp-consensus-slots",
- "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
+ "sp-inherents 4.0.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.38)",
  "sp-runtime 7.0.0",
  "sp-std 5.0.0",
- "sp-timestamp",
+ "sp-timestamp 4.0.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.38)",
 ]
 
 [[package]]
@@ -13306,19 +13310,19 @@ dependencies = [
  "sp-keystore 0.13.0",
  "sp-runtime 7.0.0",
  "sp-std 5.0.0",
- "sp-timestamp",
+ "sp-timestamp 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
 ]
 
 [[package]]
 name = "sp-consensus-slots"
 version = "0.10.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
  "sp-std 5.0.0",
- "sp-timestamp",
+ "sp-timestamp 4.0.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.38)",
 ]
 
 [[package]]
@@ -14079,6 +14083,21 @@ dependencies = [
  "serde",
  "sp-debug-derive 6.0.0",
  "sp-std 6.0.0",
+]
+
+[[package]]
+name = "sp-timestamp"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+dependencies = [
+ "async-trait",
+ "futures-timer",
+ "log",
+ "parity-scale-codec",
+ "sp-inherents 4.0.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.38)",
+ "sp-runtime 7.0.0",
+ "sp-std 5.0.0",
+ "thiserror",
 ]
 
 [[package]]
@@ -17168,6 +17187,16 @@ source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bc
 [[patch.unused]]
 name = "sp-arithmetic"
 version = "6.0.0"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+
+[[patch.unused]]
+name = "sp-consensus-aura"
+version = "0.10.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+
+[[patch.unused]]
+name = "sp-consensus-slots"
+version = "0.10.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
 
 [[patch.unused]]
