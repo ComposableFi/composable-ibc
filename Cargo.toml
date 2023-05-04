@@ -61,6 +61,8 @@ sp-application-crypto = { git = "https://github.com/paritytech/substrate", branc
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 sp-core-hashing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-consensus-slots = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-debug-derive = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 sp-externalities = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
@@ -91,6 +93,8 @@ sp-application-crypto = { git = "https://github.com/paritytech//substrate.git", 
 sp-arithmetic = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.39" }
 sp-core = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.39" }
 sp-core-hashing = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.39" }
+sp-consensus-slots = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.38" }
+sp-consensus-aura = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.38" }
 sp-debug-derive = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.39" }
 sp-externalities = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.39" }
 sp-io = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.39" }

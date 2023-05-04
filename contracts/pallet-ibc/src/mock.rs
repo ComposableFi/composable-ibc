@@ -1,7 +1,7 @@
 use crate::{self as pallet_ibc, ics20_fee::FlatFeeConverter, routing::ModuleRouter};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
-	pallet_prelude::ConstU32,
+	pallet_prelude::{ConstU32, StorageValue, ValueQuery},
 	parameter_types,
 	traits::{
 		fungibles::{metadata::Mutate, Create, InspectMetadata},
@@ -13,6 +13,8 @@ use frame_system::EnsureSigned;
 use ibc_primitives::{runtime_interface::ss58_to_account_id_32, IbcAccount};
 use light_client_common::RelayChain;
 use orml_traits::parameter_type_with_key;
+use pallet_membership::Instance2;
+use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{
 	offchain::{testing::TestOffchainExt, OffchainDbExt, OffchainWorkerExt},
 	H256,
@@ -53,6 +55,39 @@ impl From<MockHostBlock> for AnyConsensusState {
 	}
 }
 
+impl pallet_aura::Config for Test {
+	type AuthorityId = AuraId;
+	type MaxAuthorities = MaxAuthorities;
+	type DisabledValidators = ();
+}
+
+impl pallet_membership::Config<Instance2> for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type AddOrigin = EnsureRoot<AccountId>;
+	type RemoveOrigin = EnsureRoot<AccountId>;
+	type SwapOrigin = EnsureRoot<AccountId>;
+	type ResetOrigin = EnsureRoot<AccountId>;
+	type PrimeOrigin = EnsureRoot<AccountId>;
+	type MembershipInitialized = ();
+	type MembershipChanged = ();
+	type MaxMembers = MaxAuthorities;
+	type WeightInfo = ();
+}
+
+pub struct _GeneratedPrefixForStorageCurrentSlot<T>(PhantomData<(T,)>);
+impl<T: Config> frame_support::traits::StorageInstance
+	for _GeneratedPrefixForStorageCurrentSlot<T>
+{
+	fn pallet_prefix() -> &'static str {
+		<<T as frame_system::Config>::PalletInfo as frame_support::traits::PalletInfo>::name::<pallet_aura::Pallet<T>>().expect("No name found for the pallet in the runtime! This usually means that the pallet wasn't added to `construct_runtime!`.")
+	}
+	const STORAGE_PREFIX: &'static str = "CurrentSlot";
+}
+
+#[allow(type_alias_bounds)]
+pub type AuraCurrentSlot<T: Config> =
+	StorageValue<_GeneratedPrefixForStorageCurrentSlot<T>, String, ValueQuery>;
+
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -68,6 +103,8 @@ frame_support::construct_runtime!(
 		IbcPing: pallet_ibc_ping,
 		Ics20Fee: crate::ics20_fee,
 		Ibc: pallet_ibc,
+		Aura: pallet_aura,
+		Membership: pallet_membership::<Instance2>,
 	}
 );
 
@@ -76,6 +113,7 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 49;
 	pub const ExpectedBlockTime: u64 = 1000;
 	pub const ExistentialDeposit: u128 = 10000;
+	pub const MaxAuthorities: u32 = 100_000;
 }
 
 impl system::Config for Test {
