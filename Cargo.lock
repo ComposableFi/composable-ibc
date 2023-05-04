@@ -1886,7 +1886,7 @@ dependencies = [
  "sp-block-builder 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-blockchain 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-consensus 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
- "sp-consensus-aura",
+ "sp-consensus-aura 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-core 7.0.0",
  "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-keystore 0.13.0",
@@ -2012,7 +2012,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-application-crypto 7.0.0",
- "sp-consensus-aura",
+ "sp-consensus-aura 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-runtime 7.0.0",
  "sp-std 5.0.0",
 ]
@@ -6976,7 +6976,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-application-crypto 7.0.0",
- "sp-consensus-aura",
+ "sp-consensus-aura 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-runtime 7.0.0",
  "sp-std 5.0.0",
 ]
@@ -7356,8 +7356,8 @@ dependencies = [
  "serde_json",
  "sha2 0.10.6",
  "simple-iavl",
- "sp-consensus-aura",
- "sp-consensus-slots",
+ "sp-consensus-aura 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
+ "sp-consensus-slots 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-core 7.0.0",
  "sp-finality-grandpa 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-io 7.0.0",
@@ -8083,7 +8083,7 @@ dependencies = [
  "sp-block-builder 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-blockchain 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-consensus 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
- "sp-consensus-aura",
+ "sp-consensus-aura 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-core 7.0.0",
  "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-keystore 0.13.0",
@@ -8149,7 +8149,7 @@ dependencies = [
  "smallvec",
  "sp-api",
  "sp-block-builder 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
- "sp-consensus-aura",
+ "sp-consensus-aura 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-core 7.0.0",
  "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-io 7.0.0",
@@ -8780,7 +8780,7 @@ dependencies = [
  "schnorrkel",
  "sp-application-crypto 7.0.0",
  "sp-consensus 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
- "sp-consensus-slots",
+ "sp-consensus-slots 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-runtime 7.0.0",
  "thiserror",
  "tracing-gum",
@@ -9235,7 +9235,7 @@ dependencies = [
  "sp-application-crypto 7.0.0",
  "sp-arithmetic 6.0.0",
  "sp-authority-discovery",
- "sp-consensus-slots",
+ "sp-consensus-slots 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-core 7.0.0",
  "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-io 7.0.0",
@@ -11152,8 +11152,8 @@ dependencies = [
  "sp-block-builder 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-blockchain 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-consensus 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
- "sp-consensus-aura",
- "sp-consensus-slots",
+ "sp-consensus-aura 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
+ "sp-consensus-slots 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-core 7.0.0",
  "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-keystore 0.13.0",
@@ -11191,7 +11191,7 @@ dependencies = [
  "sp-blockchain 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-consensus 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-consensus-babe 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
- "sp-consensus-slots",
+ "sp-consensus-slots 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-consensus-vrf 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-core 7.0.0",
  "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
@@ -11252,7 +11252,7 @@ dependencies = [
  "sp-arithmetic 6.0.0",
  "sp-blockchain 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-consensus 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
- "sp-consensus-slots",
+ "sp-consensus-slots 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-core 7.0.0",
  "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-runtime 7.0.0",
@@ -13395,11 +13395,29 @@ dependencies = [
  "sp-api",
  "sp-application-crypto 7.0.0",
  "sp-consensus 0.10.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.39)",
- "sp-consensus-slots",
+ "sp-consensus-slots 0.10.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.39)",
  "sp-inherents 4.0.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.39)",
  "sp-runtime 7.0.0",
  "sp-std 5.0.0",
  "sp-timestamp 4.0.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.39)",
+]
+
+[[package]]
+name = "sp-consensus-aura"
+version = "0.10.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39#8c4b84520cee2d7de53cc33cb67605ce4efefba8"
+dependencies = [
+ "async-trait",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-application-crypto 7.0.0",
+ "sp-consensus 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
+ "sp-consensus-slots 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
+ "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
+ "sp-runtime 7.0.0",
+ "sp-std 5.0.0",
+ "sp-timestamp 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
 ]
 
 [[package]]
@@ -13415,7 +13433,7 @@ dependencies = [
  "sp-api",
  "sp-application-crypto 7.0.0",
  "sp-consensus 0.10.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.39)",
- "sp-consensus-slots",
+ "sp-consensus-slots 0.10.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.39)",
  "sp-consensus-vrf 0.10.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.39)",
  "sp-core 7.0.0",
  "sp-inherents 4.0.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.39)",
@@ -13438,7 +13456,7 @@ dependencies = [
  "sp-api",
  "sp-application-crypto 7.0.0",
  "sp-consensus 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
- "sp-consensus-slots",
+ "sp-consensus-slots 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-consensus-vrf 0.10.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
  "sp-core 7.0.0",
  "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
@@ -13458,6 +13476,18 @@ dependencies = [
  "serde",
  "sp-std 5.0.0",
  "sp-timestamp 4.0.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.39)",
+]
+
+[[package]]
+name = "sp-consensus-slots"
+version = "0.10.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39#8c4b84520cee2d7de53cc33cb67605ce4efefba8"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-std 5.0.0",
+ "sp-timestamp 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39)",
 ]
 
 [[package]]
@@ -15749,7 +15779,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sp-api",
- "sp-consensus-aura",
+ "sp-consensus-aura 0.10.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.39)",
  "sp-consensus-babe 0.10.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.39)",
  "sp-core 7.0.0",
  "sp-debug-derive 5.0.0",
@@ -17337,16 +17367,6 @@ source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39#8c
 [[patch.unused]]
 name = "sp-arithmetic"
 version = "6.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39#8c4b84520cee2d7de53cc33cb67605ce4efefba8"
-
-[[patch.unused]]
-name = "sp-consensus-aura"
-version = "0.10.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39#8c4b84520cee2d7de53cc33cb67605ce4efefba8"
-
-[[patch.unused]]
-name = "sp-consensus-slots"
-version = "0.10.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.39#8c4b84520cee2d7de53cc33cb67605ce4efefba8"
 
 [[patch.unused]]
