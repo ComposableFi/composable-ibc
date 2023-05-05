@@ -301,9 +301,27 @@ where
 		// Send full amount to receiver using the default ics20 logic
 		// We only take the fee charge if the acknowledgement is not an error
 		if ack.as_ref() == Ics20Ack::success().to_string().as_bytes() {
+
+			let mut prefixed_coin = if is_receiver_chain_source(
+				packet.source_port.clone(),
+				packet.source_channel,
+				&packet_data.token.denom,
+			) {
+				let prefix = TracePrefix::new(packet.source_port.clone(), packet.source_channel);
+				let mut c = packet_data.token.clone();
+				c.denom.remove_trace_prefix(&prefix);
+				c
+			} else {
+				let prefix =
+					TracePrefix::new(packet.destination_port.clone(), packet.destination_channel);
+				let mut c = packet_data.token.clone();
+				c.denom.add_trace_prefix(prefix);
+				c
+			};
+
 			let asset_id =
 				<T as crate::Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
-					&packet_data.token.denom.to_string(),
+					&prefixed_coin.denom.to_string(),
 				);
 			let amount = packet_data.token.amount.as_u256().low_u128();
 			let mut fee = match asset_id {
@@ -331,22 +349,6 @@ where
 					.map_err(|_| {
 					Ics04Error::implementation_specific("Failed to receiver account".to_string())
 				})?;
-			let mut prefixed_coin = if is_receiver_chain_source(
-				packet.source_port.clone(),
-				packet.source_channel,
-				&packet_data.token.denom,
-			) {
-				let prefix = TracePrefix::new(packet.source_port.clone(), packet.source_channel);
-				let mut c = packet_data.token.clone();
-				c.denom.remove_trace_prefix(&prefix);
-				c
-			} else {
-				let prefix =
-					TracePrefix::new(packet.destination_port.clone(), packet.destination_channel);
-				let mut c = packet_data.token.clone();
-				c.denom.add_trace_prefix(prefix);
-				c
-			};
 			prefixed_coin.amount = fee.into();
 			// Now we proceed to send the service fee from the receiver's account to the pallet
 			// account
