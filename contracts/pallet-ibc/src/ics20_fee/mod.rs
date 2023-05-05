@@ -1,6 +1,6 @@
 use crate::{routing::Context, DenomToAssetId};
 use alloc::{format, string::ToString};
-use core::fmt::Debug;
+use core::{fmt::Debug, marker::PhantomData};
 use ibc::{
 	applications::transfer::{
 		acknowledgement::Acknowledgement as Ics20Ack, context::BankKeeper,
@@ -103,6 +103,21 @@ pub trait FlatFeeConverter {
 		fee_asset_id: Self::AssetId,
 		fee_asset_amount: Self::Balance,
 	) -> Option<u128>;
+}
+
+pub struct NonFlatFeeConverter<T>(PhantomData<T>);
+
+impl<T: Config> FlatFeeConverter for NonFlatFeeConverter<T> {
+	type AssetId = T::AssetId;
+	type Balance = T::Balance;
+
+	fn get_flat_fee(
+		_asset_id: Self::AssetId,
+		_fee_asset_id: Self::AssetId,
+		_fee_asset_amount: Self::Balance,
+	) -> Option<u128> {
+		None
+	}
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -286,33 +301,6 @@ where
 		// Send full amount to receiver using the default ics20 logic
 		// We only take the fee charge if the acknowledgement is not an error
 		if ack.as_ref() == Ics20Ack::success().to_string().as_bytes() {
-			let asset_id =
-				<T as crate::Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
-					&packet_data.token.denom.to_string(),
-				);
-			let fee = match asset_id {
-				Ok(a) => {
-					let fee_asset_id = T::FlatFeeAssetId::get();
-					let fee_asset_amount = T::FlatFeeAmount::get();
-					let flat_fee =
-						T::FlatFeeConverter::get_flat_fee(a, fee_asset_id, fee_asset_amount)
-							.unwrap_or_else(|| {
-								// We have ensured that token amounts larger than the max value for
-								// a u128 are rejected in the ics20 on_recv_packet callback so we
-								// can multiply safely. Percent does Non-Overflowing multiplication
-								// so this is infallible
-								percent * packet_data.token.amount.as_u256().low_u128()
-							});
-					flat_fee
-				},
-				Err(_) => percent * packet_data.token.amount.as_u256().low_u128(),
-			};
-
-			let receiver =
-				<T as crate::Config>::AccountIdConversion::try_from(packet_data.receiver.clone())
-					.map_err(|_| {
-					Ics04Error::implementation_specific("Failed to receiver account".to_string())
-				})?;
 			let mut prefixed_coin = if is_receiver_chain_source(
 				packet.source_port.clone(),
 				packet.source_channel,
@@ -329,6 +317,37 @@ where
 				c.denom.add_trace_prefix(prefix);
 				c
 			};
+
+			let asset_id =
+				<T as crate::Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
+					&prefixed_coin.denom.to_string(),
+				);
+			let amount = packet_data.token.amount.as_u256().low_u128();
+			let mut fee = match asset_id {
+				Ok(a) => {
+					let fee_asset_id = T::FlatFeeAssetId::get();
+					let fee_asset_amount = T::FlatFeeAmount::get();
+					let flat_fee =
+						T::FlatFeeConverter::get_flat_fee(a, fee_asset_id, fee_asset_amount)
+							.unwrap_or_else(|| {
+								// We have ensured that token amounts larger than the max value for
+								// a u128 are rejected in the ics20 on_recv_packet callback so we
+								// can multiply safely. Percent does Non-Overflowing multiplication
+								// so this is infallible
+								percent * amount
+							});
+					flat_fee
+				},
+				Err(_) => percent * amount,
+			};
+
+			fee = fee.min(amount);
+
+			let receiver =
+				<T as crate::Config>::AccountIdConversion::try_from(packet_data.receiver.clone())
+					.map_err(|_| {
+					Ics04Error::implementation_specific("Failed to receiver account".to_string())
+				})?;
 			prefixed_coin.amount = fee.into();
 			// Now we proceed to send the service fee from the receiver's account to the pallet
 			// account
