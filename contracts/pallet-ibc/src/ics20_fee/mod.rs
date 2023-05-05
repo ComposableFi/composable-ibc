@@ -1,6 +1,6 @@
 use crate::{routing::Context, DenomToAssetId};
 use alloc::{format, string::ToString};
-use core::fmt::Debug;
+use core::{fmt::Debug, marker::PhantomData};
 use ibc::{
 	applications::transfer::{
 		acknowledgement::Acknowledgement as Ics20Ack, context::BankKeeper,
