@@ -7439,6 +7439,7 @@ dependencies = [
  "chrono",
  "cumulus-primitives-core",
  "derive_more",
+ "env_logger 0.10.0",
  "finality-grandpa",
  "frame-benchmarking",
  "frame-support",
