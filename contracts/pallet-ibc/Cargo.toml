@@ -98,6 +98,7 @@ balances = { package = "pallet-balances", git = "https://github.com/paritytech/s
 pallet-assets = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 pallet-ibc-ping = { path = "ping", default-features = false }
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38"}
+env_logger = "0.10.0"
 
 [dev-dependencies.ibc]
 path = "../../ibc/modules"
