@@ -301,7 +301,6 @@ where
 		// Send full amount to receiver using the default ics20 logic
 		// We only take the fee charge if the acknowledgement is not an error
 		if ack.as_ref() == Ics20Ack::success().to_string().as_bytes() {
-
 			let mut prefixed_coin = if is_receiver_chain_source(
 				packet.source_port.clone(),
 				packet.source_channel,
