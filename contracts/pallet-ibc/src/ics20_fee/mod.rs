@@ -105,6 +105,21 @@ pub trait FlatFeeConverter {
 	) -> Option<u128>;
 }
 
+pub struct NonFlatFeeConverter<T>(PhantomData<T>);
+
+impl<T: Config> FlatFeeConverter for NonFlatFeeConverter<T> {
+	type AssetId = T::AssetId;
+	type Balance = T::Balance;
+
+	fn get_flat_fee(
+		_asset_id: Self::AssetId,
+		_fee_asset_id: Self::AssetId,
+		_fee_asset_amount: Self::Balance,
+	) -> Option<u128> {
+		None
+	}
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Ics20ServiceCharge<T: Config, S: Module + Clone + Default + PartialEq + Eq + Debug> {
 	inner: S,
@@ -290,7 +305,8 @@ where
 				<T as crate::Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
 					&packet_data.token.denom.to_string(),
 				);
-			let fee = match asset_id {
+			let amount = packet_data.token.amount.as_u256().low_u128();
+			let mut fee = match asset_id {
 				Ok(a) => {
 					let fee_asset_id = T::FlatFeeAssetId::get();
 					let fee_asset_amount = T::FlatFeeAmount::get();
@@ -301,12 +317,14 @@ where
 								// a u128 are rejected in the ics20 on_recv_packet callback so we
 								// can multiply safely. Percent does Non-Overflowing multiplication
 								// so this is infallible
-								percent * packet_data.token.amount.as_u256().low_u128()
+								percent * amount
 							});
 					flat_fee
 				},
-				Err(_) => percent * packet_data.token.amount.as_u256().low_u128(),
+				Err(_) => percent * amount,
 			};
+
+			fee = fee.min(amount);
 
 			let receiver =
 				<T as crate::Config>::AccountIdConversion::try_from(packet_data.receiver.clone())

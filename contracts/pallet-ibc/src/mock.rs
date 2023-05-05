@@ -225,8 +225,8 @@ impl<T: Config> FlatFeeConverter for FlatFeeConverterDummy<T> {
 	type Balance = u128;
 	fn get_flat_fee(
 		asset_id: Self::AssetId,
-		fee_asset_id: Self::AssetId,
-		fee_asset_amount: Self::Balance,
+		_fee_asset_id: Self::AssetId,
+		_fee_asset_amount: Self::Balance,
 	) -> Option<u128> {
 		if asset_id == 3 {
 			return Some(1000)
