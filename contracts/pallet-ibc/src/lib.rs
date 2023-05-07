@@ -158,9 +158,10 @@ pub mod pallet {
 	};
 	use ibc::{
 		applications::transfer::{
-			is_sender_chain_source, msgs::transfer::MsgTransfer, Amount, PrefixedCoin,
-			PrefixedDenom,
+			context::BankKeeper, is_sender_chain_source, msgs::transfer::MsgTransfer, Amount,
+			PrefixedCoin, PrefixedDenom,
 		},
+		bigint::U256,
 		core::{
 			ics02_client::context::{ClientKeeper, ClientReader},
 			ics04_channel::context::ChannelReader,
@@ -176,7 +177,7 @@ pub mod pallet {
 		AccountId32, BoundedBTreeSet,
 	};
 	#[cfg(feature = "std")]
-	use sp_runtime::{Deserialize, Serialize};
+	use sp_runtime::{Deserialize, Perbill, Serialize};
 	use sp_std::collections::btree_set::BTreeSet;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
@@ -266,6 +267,9 @@ pub mod pallet {
 		type IsReceiveEnabled: Get<bool>;
 
 		type FeeAccount: Get<Self::AccountIdConversion>;
+
+		#[pallet::constant]
+		type ServiceCharge: Get<Perbill>;
 	}
 
 	#[pallet::pallet]
@@ -286,6 +290,9 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
+	pub type ServiceCharge<T: Config> = StorageValue<_, Perbill, OptionQuery>;
+
+	#[pallet::storage]
 	/// client_id , Height => Timestamp
 	pub type ClientUpdateTime<T: Config> =
 		StorageDoubleMap<_, Blake2_128Concat, Vec<u8>, Blake2_128Concat, Vec<u8>, u64, OptionQuery>;
@@ -303,6 +310,11 @@ pub mod pallet {
 	/// connection_identifier => Vec<(port_id, channel_id)>
 	pub type ChannelsConnection<T: Config> =
 		StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<(Vec<u8>, Vec<u8>)>, ValueQuery>;
+
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	pub type WhitelistChannelIds<T: Config> =
+		StorageMap<_, Blake2_128Concat, (u64, u64), (), ValueQuery>;
 
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
@@ -661,7 +673,7 @@ pub mod pallet {
 				PrefixedDenom::from_str(&denom).map_err(|_| Error::<T>::PrefixedDenomParse)?;
 			let ibc_amount = Amount::from_str(&format!("{:?}", amount))
 				.map_err(|_| Error::<T>::InvalidAmount)?;
-			let coin = PrefixedCoin { denom, amount: ibc_amount };
+			let mut coin = PrefixedCoin { denom, amount: ibc_amount };
 			let source_channel = ChannelId::new(params.source_channel);
 			let source_port = PortId::transfer();
 			let (latest_height, latest_timestamp) =
@@ -696,6 +708,50 @@ pub mod pallet {
 			if timeout_height.is_zero() && timeout_timestamp.nanoseconds() == 0 {
 				return Err(Error::<T>::InvalidTimestamp.into())
 			}
+
+			let mut ctx = Context::<T>::default();
+			let channel_end = ctx
+				.channel_end(&(PortId::transfer(), source_channel))
+				.map_err(|_| Error::<T>::ChannelNotFound)?;
+
+			let destination_channel = channel_end
+				.counterparty()
+				.channel_id
+				.ok_or_else(|| Error::<T>::ChannelNotFound)?;
+
+			let whitelisted = <WhitelistChannelIds<T>>::contains_key((
+				source_channel.sequence(),
+				destination_channel.sequence(),
+			));
+			if !whitelisted {
+				let percent = ServiceCharge::<T>::get().unwrap_or(T::ServiceCharge::get());
+				// Now we proceed to send the service fee from the receiver's account to the pallet
+				// account
+				let fee_account = T::FeeAccount::get();
+
+				//TODO check the validity of the statment fee_coin.
+				let mut fee_coin = coin.clone();
+				let fee = percent * fee_coin.amount.as_u256().low_u128();
+				fee_coin.amount = U256::from(fee).into();
+
+				use core::str::FromStr;
+				//todo recalciate Signer from AccountId32
+				let s = <Signer as FromStr>::from_str("TODO").unwrap();
+				let xxx = <T as Config>::AccountIdConversion::try_from(s);
+				let Ok(x) = xxx else {
+					// return Error::<T>::ProcessingError;
+					todo!();
+				};
+
+				let result_send = ctx.send_coins(&x, &fee_account, &fee_coin);
+				match result_send {
+					_ => {},
+				};
+
+				// We modify the packet data to remove the fee so any other middleware has access to
+				// the correct amount deposited in the receiver's account
+				coin.amount = (coin.amount.as_u256() - U256::from(fee)).into();
+			};
 
 			let msg = MsgTransfer {
 				source_port,
@@ -761,10 +817,6 @@ pub mod pallet {
 					Other { .. } => Error::<T>::TransferOther,
 				}
 			})?;
-			let ctx = Context::<T>::default();
-			let channel_end = ctx
-				.channel_end(&(PortId::transfer(), source_channel))
-				.map_err(|_| Error::<T>::ChannelNotFound)?;
 
 			Self::deposit_event(Event::<T>::TokenTransferInitiated {
 				from: from.as_bytes().to_vec(),
