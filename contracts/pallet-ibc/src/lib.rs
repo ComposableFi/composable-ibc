@@ -131,7 +131,10 @@ pub mod weight;
 
 pub use weight::WeightInfo;
 
-use crate::ics20::{FlowType, Ics20RateLimiter};
+use crate::{
+	ics20::{FlowType, Ics20RateLimiter},
+	ics20_fee::FlatFeeConverter,
+};
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -270,6 +273,16 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type ServiceCharge: Get<Perbill>;
+
+		type FlatFeeConverter: FlatFeeConverter<
+			AssetId = <Self as crate::Config>::AssetId,
+			Balance = <Self as crate::Config>::Balance,
+		>;
+
+		//Asset Id for fee that will charged. for example  USDT
+		type FlatFeeAssetId: Get<Self::AssetId>;
+		//Asset amount that will be charged. for example 10 (USDT)
+		type FlatFeeAmount: Get<Self::Balance>;
 	}
 
 	#[pallet::pallet]
@@ -313,11 +326,15 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
+	/// storage map. key is tuple of (source_channel.sequence(), destination_channel.sequence()) and
+	/// value () that means that this group of channels is whitelisted
 	pub type WhitelistChannelIds<T: Config> =
 		StorageMap<_, Blake2_128Concat, (u64, u64), (), ValueQuery>;
 
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
+	/// storage map where key is transfer sequence number and value calculated fee for that sequence
+	/// number
 	pub type SequenceFee<T: Config> = StorageMap<_, Blake2_128Concat, u64, u128, ValueQuery>;
 
 	#[pallet::storage]
@@ -431,7 +448,9 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Events emitted by the ibc subsystem
-		Events { events: Vec<Result<events::IbcEvent, errors::IbcError>> },
+		Events {
+			events: Vec<Result<events::IbcEvent, errors::IbcError>>,
+		},
 		/// An Ibc token transfer has been started
 		TokenTransferInitiated {
 			from: Vec<u8>,
@@ -444,9 +463,15 @@ pub mod pallet {
 			destination_channel: Vec<u8>,
 		},
 		/// A channel has been opened
-		ChannelOpened { channel_id: Vec<u8>, port_id: Vec<u8> },
+		ChannelOpened {
+			channel_id: Vec<u8>,
+			port_id: Vec<u8>,
+		},
 		/// Pallet params updated
-		ParamsUpdated { send_enabled: bool, receive_enabled: bool },
+		ParamsUpdated {
+			send_enabled: bool,
+			receive_enabled: bool,
+		},
 		/// An outgoing Ibc token transfer has been completed and burnt
 		TokenTransferCompleted {
 			from: Signer,
@@ -493,13 +518,30 @@ pub mod pallet {
 			destination_channel: Vec<u8>,
 		},
 		/// On recv packet was not processed successfully processes
-		OnRecvPacketError { msg: Vec<u8> },
+		OnRecvPacketError {
+			msg: Vec<u8>,
+		},
 		/// Client upgrade path has been set
 		ClientUpgradeSet,
 		/// Client has been frozen
-		ClientFrozen { client_id: Vec<u8>, height: u64, revision_number: u64 },
+		ClientFrozen {
+			client_id: Vec<u8>,
+			height: u64,
+			revision_number: u64,
+		},
 		/// Asset Admin Account Updated
-		AssetAdminUpdated { admin_account: <T as frame_system::Config>::AccountId },
+		AssetAdminUpdated {
+			admin_account: <T as frame_system::Config>::AccountId,
+		},
+
+		ChannelsFeeWhitelistAdded {
+			source_channel: u64,
+			destination_channel: u64,
+		},
+		ChannelsFeeWhitelistRemoved {
+			source_channel: u64,
+			destination_channel: u64,
+		},
 	}
 
 	/// Errors inform users that something went wrong.
@@ -738,14 +780,35 @@ pub mod pallet {
 				// FeeAccount
 				let fee_account = T::FeeAccount::get();
 
-				//TODO check the validity of the statment fee_coin.
 				let mut fee_coin = coin.clone();
-				//the actual fee. TODO integrate the flat fee also via FlatFeeConverter
-				let fee = percent * fee_coin.amount.as_u256().low_u128();
+				let asset_id =
+					<T as crate::Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
+						&fee_coin.denom.to_string(),
+					);
+				let amt = coin.amount.as_u256().low_u128();
+				let mut fee = match asset_id {
+					Ok(a) => {
+						let fee_asset_id = T::FlatFeeAssetId::get();
+						let fee_asset_amount = T::FlatFeeAmount::get();
+						let flat_fee =
+							T::FlatFeeConverter::get_flat_fee(a, fee_asset_id, fee_asset_amount)
+								.unwrap_or_else(|| {
+									// We have ensured that token amounts larger than the max value
+									// for a u128 are rejected in the ics20 on_recv_packet callback
+									// so we can multiply safely. Percent does Non-Overflowing
+									// multiplication so this is infallible
+									percent * amt
+								});
+						flat_fee
+					},
+					Err(_) => percent * amt,
+				};
+
+				fee = fee.min(amt);
 				fee_coin.amount = U256::from(fee).into();
 
-				let singer_from = Signer::from_str(&from).map_err(|_| Error::<T>::Utf8Error)?;
-				let account_id_from = <T as Config>::AccountIdConversion::try_from(singer_from)
+				let signer_from = Signer::from_str(&from).map_err(|_| Error::<T>::Utf8Error)?;
+				let account_id_from = <T as Config>::AccountIdConversion::try_from(signer_from)
 					.map_err(|_| Error::<T>::OriginAddress)?;
 
 				ctx.send_coins(&account_id_from, &fee_account, &fee_coin).map_err(|e| {
@@ -954,6 +1017,44 @@ pub mod pallet {
 				PacketReceiptCounter::<T>::set(PacketReceiptCounter::<T>::get() + 1);
 				Ok(())
 			}
+		}
+
+		#[pallet::call_index(6)]
+		#[pallet::weight(0)]
+		#[frame_support::transactional]
+		pub fn add_channels_to_free_fee_whitelist(
+			origin: OriginFor<T>,
+			source_channel: u64,
+			destination_channel: u64,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			<WhitelistChannelIds<T>>::insert((source_channel, destination_channel), ());
+			Self::deposit_event(Event::<T>::ChannelsFeeWhitelistAdded {
+				source_channel,
+				destination_channel,
+			});
+
+			Ok(())
+		}
+
+		#[pallet::call_index(7)]
+		#[pallet::weight(0)]
+		#[frame_support::transactional]
+		pub fn remove_channels_from_free_fee_whitelist(
+			origin: OriginFor<T>,
+			source_channel: u64,
+			destination_channel: u64,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			<WhitelistChannelIds<T>>::remove((source_channel, destination_channel));
+			Self::deposit_event(Event::<T>::ChannelsFeeWhitelistRemoved {
+				source_channel,
+				destination_channel,
+			});
+
+			Ok(())
 		}
 	}
 }
