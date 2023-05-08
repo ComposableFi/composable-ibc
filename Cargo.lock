@@ -4749,13 +4749,10 @@ dependencies = [
 name = "ics07-tendermint-cw"
 version = "0.1.0"
 dependencies = [
- "blake2-rfc",
  "byteorder",
  "cosmwasm-schema",
  "cosmwasm-std",
- "cosmwasm-storage",
  "cw-multi-test",
- "cw-storage-plus",
  "derive_more",
  "digest 0.10.6",
  "ed25519",
@@ -4781,7 +4778,6 @@ dependencies = [
  "tendermint-light-client-verifier",
  "tendermint-proto",
  "thiserror",
- "twox-hash",
 ]
 
 [[package]]
@@ -4845,7 +4841,6 @@ dependencies = [
  "byteorder",
  "cosmwasm-schema",
  "cosmwasm-std",
- "cosmwasm-storage",
  "cw-multi-test",
  "cw-storage-plus",
  "derive_more",
