@@ -330,7 +330,6 @@ where
 				if <Pallet<T> as Store>::SequenceFee::contains_key(sequence) {
 					<Pallet<T> as Store>::SequenceFee::remove(sequence);
 				}
-				// <Pallet<T> as Store>::SequenceFee::try_mutate_exists
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
 					from: packet_data.sender,
 					to: packet_data.receiver,
