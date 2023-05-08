@@ -28,7 +28,6 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use super::FlatFeeConverter;
 	use frame_support::{pallet_prelude::*, PalletId};
 	use frame_system::pallet_prelude::OriginFor;
 	use ibc_primitives::IbcAccount;
@@ -46,15 +45,15 @@ pub mod pallet {
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 
-		type FlatFeeConverter: FlatFeeConverter<
-			AssetId = <Self as crate::Config>::AssetId,
-			Balance = <Self as crate::Config>::Balance,
-		>;
+		// type FlatFeeConverter: FlatFeeConverter<
+		// 	AssetId = <Self as crate::Config>::AssetId,
+		// 	Balance = <Self as crate::Config>::Balance,
+		// >;
 
-		//Asset Id for fee that will charged. for example  USDT
-		type FlatFeeAssetId: Get<<Self as crate::Config>::AssetId>;
-		//Asset amount that will be charged. for example 10 (USDT)
-		type FlatFeeAmount: Get<<Self as crate::Config>::Balance>;
+		// //Asset Id for fee that will charged. for example  USDT
+		// type FlatFeeAssetId: Get<<Self as crate::Config>::AssetId>;
+		// //Asset amount that will be charged. for example 10 (USDT)
+		// type FlatFeeAmount: Get<<Self as crate::Config>::Balance>;
 	}
 
 	#[pallet::pallet]
