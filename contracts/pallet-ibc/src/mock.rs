@@ -179,6 +179,7 @@ parameter_types! {
 	pub const FlatFeeAssetId: AssetId = 130;
 	pub const FlatFeeAmount: AssetId = 10_000_000;
 	pub FeeAccount: <Test as Config>::AccountIdConversion = create_alice_key();
+	pub const CleanUpPacketsPeriod: u32 = 10;
 }
 
 fn create_alice_key() -> <Test as Config>::AccountIdConversion {
@@ -217,6 +218,7 @@ impl Config for Test {
 	type IsSendEnabled = sp_core::ConstBool<true>;
 	type Ics20RateLimiter = Everything;
 	type FeeAccount = FeeAccount;
+	type CleanUpPacketsPeriod = CleanUpPacketsPeriod;
 }
 #[derive(Debug, Clone)]
 pub struct FlatFeeConverterDummy<T: Config>(PhantomData<T>);
