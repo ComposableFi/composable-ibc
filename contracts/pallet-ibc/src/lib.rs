@@ -574,6 +574,8 @@ pub mod pallet {
 		/// Access denied
 		AccessDenied,
 		RateLimiter,
+		//Fee errors
+		FailedSendFeeToAccount,
 	}
 
 	#[pallet::hooks]
@@ -745,11 +747,10 @@ pub mod pallet {
 					todo!();
 				};
 
-				let result_send = ctx.send_coins(&account_id_from, &fee_account, &fee_coin);
-				if let Err(e) = result_send {
-					//return error.
-					todo!();
-				};
+				ctx.send_coins(&account_id_from, &fee_account, &fee_coin).map_err(|e| {
+					log::debug!(target: "pallet_ibc", "[transfer]: error: {:?}", &e);
+					Error::<T>::FailedSendFeeToAccount
+				})?;
 
 				// We modify the packet data to remove the fee so any other middleware has access to
 				// the correct amount deposited in the receiver's account
