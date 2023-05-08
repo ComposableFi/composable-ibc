@@ -318,6 +318,10 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
+	pub type SequenceFee<T: Config> = StorageMap<_, Blake2_128Concat, u64, u128, ValueQuery>;
+
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
 	/// counter for clients
 	pub type ClientCounter<T: Config> = StorageValue<_, u32, ValueQuery>;
 
@@ -726,31 +730,40 @@ pub mod pallet {
 			if !whitelisted {
 				let percent = ServiceCharge::<T>::get().unwrap_or(T::ServiceCharge::get());
 				// Now we proceed to send the service fee from the receiver's account to the pallet
-				// account
+				// FeeAccount
 				let fee_account = T::FeeAccount::get();
 
 				//TODO check the validity of the statment fee_coin.
 				let mut fee_coin = coin.clone();
+				//the actual fee. TODO integrate the flat fee also via FlatFeeConverter
 				let fee = percent * fee_coin.amount.as_u256().low_u128();
 				fee_coin.amount = U256::from(fee).into();
 
-				use core::str::FromStr;
-				//todo recalciate Signer from AccountId32
-				let s = <Signer as FromStr>::from_str("TODO").unwrap();
-				let xxx = <T as Config>::AccountIdConversion::try_from(s);
-				let Ok(x) = xxx else {
+				let singer_from = Signer::from_str(&from).map_err(|_| Error::<T>::Utf8Error)?;
+				let Ok(account_id_from) = <T as Config>::AccountIdConversion::try_from(singer_from) else {
 					// return Error::<T>::ProcessingError;
 					todo!();
 				};
 
-				let result_send = ctx.send_coins(&x, &fee_account, &fee_coin);
-				match result_send {
-					_ => {},
+				let result_send = ctx.send_coins(&account_id_from, &fee_account, &fee_coin);
+				if let Err(e) = result_send {
+					//return error.
+					todo!();
 				};
 
 				// We modify the packet data to remove the fee so any other middleware has access to
 				// the correct amount deposited in the receiver's account
 				coin.amount = (coin.amount.as_u256() - U256::from(fee)).into();
+				//found sequence that will used in Pallet::<T>::send_transfer function.
+				let sequence = ctx
+					.get_next_sequence_send(&(source_port.clone(), source_channel.clone()))
+					.map_err(|_| Error::<T>::ChannelNotFound)?;
+				//use this sequence as a key in storage map where sequence is key and fee is value
+				let s: u64 = sequence.into();
+				//we need this data in storage map because on_timeout_packet and
+				// on_acknowledgement_packet use this data to refund fee in case of falure or clean
+				// un in case of on_acknowledgement_packet success.
+				SequenceFee::<T>::insert(s, fee);
 			};
 
 			let msg = MsgTransfer {
