@@ -1,19 +1,18 @@
 use crate::{
-	ics20_fee::FlatFeeConverter,
-	impls::{OFFCHAIN_RECV_PACKET_SEQS, OFFCHAIN_SEND_PACKET_SEQS},
 	light_clients::{AnyClientState, AnyConsensusState},
 	mock::*,
 	routing::Context,
-	Any, Config, ConsensusHeights, DenomToAssetId, MultiAddress, Pallet, Timeout, TransferParams,
-	MODULE_ID,
+	Any, Config, ConsensusHeights, DenomToAssetId, MultiAddress, Pallet, PendingRecvPacketSeqs,
+	PendingSendPacketSeqs, Timeout, TransferParams, MODULE_ID,
 };
 use core::time::Duration;
 use frame_support::{
 	assert_ok,
 	traits::{
 		fungibles::{Inspect, Mutate},
-		Len,
+		Hooks, Len,
 	},
+	weights::Weight,
 };
 use ibc::{
 	applications::transfer::{packet::PacketData, Coin, PrefixedDenom, VERSION},
@@ -50,11 +49,11 @@ use ibc::{
 };
 use ibc_primitives::{get_channel_escrow_address, HandlerMessage, IbcHandler};
 use sp_core::Pair;
-use sp_runtime::{offchain::storage::StorageValueRef, traits::IdentifyAccount, AccountId32};
-use std::{
-	collections::{BTreeMap, BTreeSet},
-	str::FromStr,
+use sp_runtime::{
+	traits::{Bounded, IdentifyAccount},
+	AccountId32,
 };
+use std::str::FromStr;
 use tendermint_proto::Protobuf;
 
 fn setup_client_and_consensus_state(port_id: PortId) {
@@ -746,6 +745,7 @@ fn should_cleanup_offchain_packets_correctly() {
 	let mut ext = new_test_ext();
 	let channel_id = ChannelId::new(0);
 	let port_id = PortId::transfer();
+	let cleanup_period = CleanUpPacketsPeriod::get();
 
 	ext.execute_with(|| {
 		// Add some packets offchain
@@ -812,34 +812,41 @@ fn should_cleanup_offchain_packets_correctly() {
 		}
 	});
 
-	ext.persist_offchain_overlay();
-
 	ext.execute_with(|| {
-		Pallet::<Test>::packet_cleanup().unwrap();
+		// should not cleanup withing the period
+		for i in 1..cleanup_period {
+			Pallet::<Test>::on_idle(i, Weight::max_value());
+		}
 	});
 
-	ext.persist_offchain_overlay();
-
 	ext.execute_with(|| {
-		let pending_send_packet_seqs = StorageValueRef::persistent(OFFCHAIN_SEND_PACKET_SEQS);
-		let pending_recv_packet_seqs = StorageValueRef::persistent(OFFCHAIN_RECV_PACKET_SEQS);
-		let pending_send_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
-			pending_send_packet_seqs.get::<_>().ok().flatten().unwrap();
-		let pending_recv_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
-			pending_recv_packet_seqs.get::<_>().ok().flatten().unwrap();
-
 		let channel_id_bytes = channel_id.to_string().as_bytes().to_vec();
 		let port_id_bytes = port_id.as_bytes().to_vec();
 
-		let (send_seq_set, last_removed_send) = pending_send_sequences
-			.get(&(port_id_bytes.clone(), channel_id_bytes.clone()))
-			.map(|set| set.clone())
-			.unwrap();
+		let (send_seq_set, _) =
+			PendingSendPacketSeqs::<Test>::get(&(port_id_bytes.clone(), channel_id_bytes.clone()));
 
-		let (recv_seq_set, last_removed_ack) = pending_recv_sequences
-			.get(&(port_id_bytes, channel_id_bytes))
-			.map(|set| set.clone())
-			.unwrap();
+		let (recv_seq_set, _) =
+			PendingRecvPacketSeqs::<Test>::get(&(port_id_bytes, channel_id_bytes));
+
+		assert_eq!(send_seq_set, Default::default());
+
+		assert_eq!(recv_seq_set, Default::default());
+	});
+
+	ext.execute_with(|| {
+		Pallet::<Test>::on_idle(cleanup_period, Weight::max_value());
+	});
+
+	ext.execute_with(|| {
+		let channel_id_bytes = channel_id.to_string().as_bytes().to_vec();
+		let port_id_bytes = port_id.as_bytes().to_vec();
+
+		let (send_seq_set, last_removed_send) =
+			PendingSendPacketSeqs::<Test>::get(&(port_id_bytes.clone(), channel_id_bytes.clone()));
+
+		let (recv_seq_set, last_removed_ack) =
+			PendingRecvPacketSeqs::<Test>::get(&(port_id_bytes, channel_id_bytes));
 
 		assert_eq!(send_seq_set, vec![2, 4, 6, 8, 10].into_iter().collect());
 
@@ -860,34 +867,19 @@ fn should_cleanup_offchain_packets_correctly() {
 		}
 	});
 
-	ext.persist_offchain_overlay();
-
 	ext.execute_with(|| {
-		Pallet::<Test>::packet_cleanup().unwrap();
+		Pallet::<Test>::on_idle(cleanup_period, Weight::max_value());
 	});
 
-	ext.persist_offchain_overlay();
-
 	ext.execute_with(|| {
-		let pending_send_packet_seqs = StorageValueRef::persistent(OFFCHAIN_SEND_PACKET_SEQS);
-		let pending_recv_packet_seqs = StorageValueRef::persistent(OFFCHAIN_RECV_PACKET_SEQS);
-		let pending_send_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
-			pending_send_packet_seqs.get::<_>().ok().flatten().unwrap();
-		let pending_recv_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
-			pending_recv_packet_seqs.get::<_>().ok().flatten().unwrap();
-
 		let channel_id_bytes = channel_id.to_string().as_bytes().to_vec();
 		let port_id_bytes = port_id.as_bytes().to_vec();
 
-		let (send_seq_set, last_removed_send) = pending_send_sequences
-			.get(&(port_id_bytes.clone(), channel_id_bytes.clone()))
-			.map(|set| set.clone())
-			.unwrap();
+		let (send_seq_set, last_removed_send) =
+			PendingSendPacketSeqs::<Test>::get(&(port_id_bytes.clone(), channel_id_bytes.clone()));
 
-		let (recv_seq_set, last_removed_ack) = pending_recv_sequences
-			.get(&(port_id_bytes, channel_id_bytes))
-			.map(|set| set.clone())
-			.unwrap();
+		let (recv_seq_set, last_removed_ack) =
+			PendingRecvPacketSeqs::<Test>::get(&(port_id_bytes, channel_id_bytes));
 
 		println!("{send_seq_set:?}");
 
