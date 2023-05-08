@@ -731,6 +731,7 @@ pub mod pallet {
 				source_channel.sequence(),
 				destination_channel.sequence(),
 			));
+
 			if !whitelisted {
 				let percent = ServiceCharge::<T>::get().unwrap_or(T::ServiceCharge::get());
 				// Now we proceed to send the service fee from the receiver's account to the pallet

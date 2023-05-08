@@ -1,7 +1,9 @@
 pub mod context;
 pub mod memo;
 
-use crate::{routing::Context, ChannelIds, Config, DenomToAssetId, Event, Pallet, WeightInfo};
+use crate::{
+	routing::Context, ChannelIds, Config, DenomToAssetId, Event, Pallet, Store, WeightInfo,
+};
 use alloc::{
 	format,
 	str::FromStr,
@@ -323,28 +325,61 @@ where
 		process_ack_packet(&mut ctx, packet, &packet_data, &ack)
 			.map_err(|e| Ics04Error::implementation_specific(e.to_string()))?;
 		match ack.into_result() {
-			Ok(_) => Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
-				from: packet_data.sender,
-				to: packet_data.receiver,
-				ibc_denom: packet_data.token.denom.to_string().as_bytes().to_vec(),
-				local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
-					&packet_data.token.denom.to_string(),
-				)
-				.ok(),
-				amount: packet_data.token.amount.as_u256().as_u128().into(),
-				is_sender_source: is_sender_chain_source(
-					packet.source_port.clone(),
-					packet.source_channel.clone(),
-					&packet_data.token.denom,
-				),
-				source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
-				destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
-			}),
+			Ok(_) => {
+				let sequence: u64 = packet.sequence.into();
+				if <Pallet<T> as Store>::SequenceFee::contains_key(sequence) {
+					<Pallet<T> as Store>::SequenceFee::remove(sequence);
+				}
+				// <Pallet<T> as Store>::SequenceFee::try_mutate_exists
+				Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
+					from: packet_data.sender,
+					to: packet_data.receiver,
+					ibc_denom: packet_data.token.denom.to_string().as_bytes().to_vec(),
+					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
+						&packet_data.token.denom.to_string(),
+					)
+					.ok(),
+					amount: packet_data.token.amount.as_u256().as_u128().into(),
+					is_sender_source: is_sender_chain_source(
+						packet.source_port.clone(),
+						packet.source_channel.clone(),
+						&packet_data.token.denom,
+					),
+					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
+					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
+				})
+			},
 			Err(e) => {
+				use ibc::{applications::transfer::context::BankKeeper, bigint::U256};
+				use sp_core::Get;
+
 				log::trace!(
 					target: "pallet_ibc::transfer",
 					"error: acknowledgement error: {e}",
 				);
+				let sequence: u64 = packet.sequence.into();
+				if <Pallet<T> as Store>::SequenceFee::contains_key(sequence) {
+					let fee = <Pallet<T> as Store>::SequenceFee::get(sequence);
+
+					let fee_account = T::FeeAccount::get();
+
+					let mut ctx = Context::<T>::default();
+					let mut fee_coin = packet_data.token.clone();
+
+					fee_coin.amount = U256::from(fee).into();
+
+					let singer_from = packet_data.sender.clone();
+					let Ok(account_id_from) = <T as Config>::AccountIdConversion::try_from(singer_from) else{
+					todo!();
+				};
+
+					let _ =
+						ctx.send_coins(&fee_account, &account_id_from, &fee_coin).map_err(|e| {
+							log::debug!(target: "pallet_ibc", "[transfer]: error: {:?}", &e);
+							// Error::<T>::FailedSendFeeToAccount
+							//todo ask what todo if we are not able to refunc fee back
+						});
+				}
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferFailed {
 					from: packet_data.sender,
 					to: packet_data.receiver,
