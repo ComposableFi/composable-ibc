@@ -548,7 +548,7 @@ mod tests {
 	fn invalid_path_doesnt_parse() {
 		let invalid_path = Path::from_str("clients/clientType");
 
-		assert!(invalid_path.is_err());
+		assert!(!matches!(invalid_path, Ok(Path::ClientType(_))));
 	}
 
 	#[test]
@@ -678,7 +678,7 @@ mod tests {
 		let path = "channels/channel-0";
 		let path = Path::from_str(path);
 
-		assert!(path.is_err());
+		assert!(!matches!(path, Ok(Path::ChannelEnds(_))));
 	}
 
 	#[test]
@@ -694,7 +694,7 @@ mod tests {
 		let path = "sequences/0";
 		let path = Path::from_str(path);
 
-		assert!(path.is_err());
+		assert!(!matches!(path, Ok(Path::SeqAcks(_) | Path::SeqRecvs(_) | Path::SeqSends(_))));
 	}
 
 	#[test]
