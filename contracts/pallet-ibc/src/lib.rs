@@ -576,6 +576,8 @@ pub mod pallet {
 		RateLimiter,
 		//Fee errors
 		FailedSendFeeToAccount,
+		//Failed to derive origin sender address.
+		OriginAddress,
 	}
 
 	#[pallet::hooks]
@@ -742,10 +744,8 @@ pub mod pallet {
 				fee_coin.amount = U256::from(fee).into();
 
 				let singer_from = Signer::from_str(&from).map_err(|_| Error::<T>::Utf8Error)?;
-				let Ok(account_id_from) = <T as Config>::AccountIdConversion::try_from(singer_from) else {
-					// return Error::<T>::ProcessingError;
-					todo!();
-				};
+				let account_id_from = <T as Config>::AccountIdConversion::try_from(singer_from)
+					.map_err(|_| Error::<T>::OriginAddress)?;
 
 				ctx.send_coins(&account_id_from, &fee_account, &fee_coin).map_err(|e| {
 					log::debug!(target: "pallet_ibc", "[transfer]: error: {:?}", &e);
