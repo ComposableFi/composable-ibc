@@ -136,7 +136,12 @@ where
 				log::trace!(target: "hyperspace_cosmos", "Parsing events at height {:?}", height);
 				let client = self.clone();
 				join_set.spawn(async move {
-					Ok((height, client.parse_ibc_events_at(latest_revision, height).await?))
+					let xs = tokio::time::timeout(
+						Duration::from_secs(30),
+						client.parse_ibc_events_at(latest_revision, height),
+					)
+					.await??;
+					Ok((height, xs))
 				});
 			}
 			while let Some(res) = join_set.join_next().await {
@@ -894,11 +899,9 @@ where
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
 		let request = tonic::Request::new(QueryClientStatesRequest { pagination: None });
-		let grpc_client = ibc_proto::ibc::core::client::v1::query_client::QueryClient::connect(
-			self.grpc_url.clone().to_string(),
-		)
-		.await
-		.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		let grpc_client = ibc_proto::ibc::core::client::v1::query_client::QueryClient::new(
+			self.grpc_client.clone(),
+		);
 		let response = grpc_client
 			.clone()
 			.client_states(request)

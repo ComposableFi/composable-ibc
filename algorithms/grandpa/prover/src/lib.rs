@@ -305,12 +305,11 @@ where
 		let mut unknown_headers = vec![];
 		let mut unknown_headers_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 		let heights = (previous_finalized_height..=latest_finalized_height).collect::<Vec<_>>();
-		let prover = Arc::new(self.clone());
 		for heights in heights.chunks(PROCESS_BLOCKS_BATCH_SIZE) {
 			for height in heights.to_owned() {
 				log::trace!(target: "hyperspace", "Processing height: {height}");
 
-				let prover = prover.clone();
+				let prover = self.clone();
 				let to = self.rpc_call_delay.as_millis();
 				let duration = Duration::from_millis(rand::thread_rng().gen_range(1..to) as u64);
 				unknown_headers_join_set.spawn(async move {
@@ -369,13 +368,13 @@ where
 			for change in clone_storage_change_sets::<T>(changes) {
 				let header_numbers = header_numbers.clone();
 				let keys = vec![para_storage_key.clone()];
-				let prover = prover.clone();
+				let client = self.clone();
 				let to = self.rpc_call_delay.as_millis();
 				let duration1 = Duration::from_millis(rand::thread_rng().gen_range(1..to) as u64);
 				let latest_para_height = latest_para_height.clone();
 				change_set_join_set.spawn(async move {
 					sleep(duration1).await;
-					let header = prover
+					let header = client
 						.relay_client
 						.rpc()
 						.header(Some(change.block))
@@ -383,7 +382,7 @@ where
 						.ok_or_else(|| anyhow!("block not found {:?}", change.block))?;
 
 					let parachain_header_bytes = {
-						let key = T::Storage::paras_heads(prover.para_id);
+						let key = T::Storage::paras_heads(client.para_id);
 						let data = client
 							.relay_client
 							.storage()
@@ -404,7 +403,7 @@ where
 						return Ok(None)
 					}
 
-					let state_proof = prover
+					let state_proof = client
 						.relay_client
 						.rpc()
 						.read_proof(keys.iter().map(AsRef::as_ref), Some(header.hash()))
@@ -416,7 +415,7 @@ where
 
 					let TimeStampExtWithProof { ext: extrinsic, proof: extrinsic_proof } =
 						fetch_timestamp_extrinsic_with_proof(
-							&prover.para_client,
+							&client.para_client,
 							Some(para_header.hash()),
 						)
 						.await

@@ -336,6 +336,8 @@ where
 		} else {
 			error.to_string()
 		};
+		log::debug!(target: "hyperspace", "Handling error: {err_str}");
+
 		if err_str.contains("MaxSlotsExceeded") {
 			self.rpc_call_delay = self.rpc_call_delay * 2;
 		} else if err_str.contains("RestartNeeded") || err_str.contains("restart required") {

@@ -240,7 +240,27 @@ where
 		block_height.increment()
 	}
 
-	async fn handle_error(&mut self, _error: &anyhow::Error) -> Result<(), anyhow::Error> {
+	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error> {
+		let err_str = if let Some(rpc_err) = error.downcast_ref::<Error>() {
+			match rpc_err {
+				Error::RpcError(s) => s.clone(),
+				_ => "".to_string(),
+			}
+		} else {
+			error.to_string()
+		};
+		log::debug!(target: "hyperspace_cosmos", "Handling error: {err_str}");
+
+		if err_str.contains("dispatch task is gone") {
+			let (rpc_client, ws_driver) = WebSocketClient::new(self.rpc_url.clone())
+				.await
+				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+			tokio::spawn(ws_driver.run());
+			log::info!(target: "hyperspace_cosmos", "Reconnected to cosmos chain");
+			self.rpc_client = rpc_client;
+			// self.rpc_call_delay = self.rpc_call_delay * 2;
+		}
+
 		Ok(())
 	}
 

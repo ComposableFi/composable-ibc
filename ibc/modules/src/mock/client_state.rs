@@ -140,6 +140,10 @@ impl ClientState for MockClientState {
 		self.latest_height()
 	}
 
+	fn frozen_height(&self) -> Option<Height> {
+		todo!()
+	}
+
 	fn upgrade(self, _upgrade_height: Height, _upgrade_options: (), _chain_id: ChainId) -> Self {
 		self.upgrade(_upgrade_height, _upgrade_options, _chain_id)
 	}

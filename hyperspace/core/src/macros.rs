@@ -54,6 +54,10 @@ macro_rules! process_finality_event {
 							$source.name(),
 							err
 						);
+						match $sink.handle_error(&err).and_then(|_| $source.handle_error(&err)).await {
+							Ok(_) => {},
+							Err(e) => log::error!("Failed to handle error for {} {:?}", $sink.name(), e),
+						}
 						continue
 					},
 				};
@@ -85,7 +89,7 @@ macro_rules! process_finality_event {
 								continue
 							},
 					};
-					log::trace!(target: "hyperspace", "Received messages count: {}, timeouts count: {}, has undelivered packets: {}", messages.len(), timeout_msgs.len(), $source.has_undelivered_sequences());
+					log::trace!(target: "hyperspace", "Received messages count: {}, timeouts count: {}, is the update optional: {}, has undelivered packets: {}", messages.len(), timeout_msgs.len(), update_type.is_optional(), $source.has_undelivered_sequences());
 
 					// We want to send client update if packet messages exist but where not sent due
 					// to a connection delay even if client update message is optional
