@@ -17,7 +17,7 @@ use ibc::{
 		acknowledgement::{Acknowledgement as Ics20Acknowledgement, ACK_ERR_STR},
 		context::{
 			on_chan_close_confirm, on_chan_close_init, on_chan_open_ack, on_chan_open_confirm,
-			on_chan_open_init, on_chan_open_try,
+			on_chan_open_init, on_chan_open_try, BankKeeper,
 		},
 		is_receiver_chain_source, is_sender_chain_source,
 		packet::PacketData,
@@ -349,40 +349,12 @@ where
 				})
 			},
 			Err(e) => {
-				use ibc::{applications::transfer::context::BankKeeper, bigint::U256};
-				use sp_core::Get;
-
 				log::trace!(
 					target: "pallet_ibc::transfer",
 					"error: acknowledgement error: {e}",
 				);
-				let sequence: u64 = packet.sequence.into();
-				if <Pallet<T> as Store>::SequenceFee::contains_key(sequence) {
-					let fee = <Pallet<T> as Store>::SequenceFee::get(sequence);
+				Self::refund_fee(packet, &packet_data, "on_acknowledgement_packet")?;
 
-					let fee_account = T::FeeAccount::get();
-
-					let mut ctx = Context::<T>::default();
-					let mut fee_coin = packet_data.token.clone();
-
-					fee_coin.amount = U256::from(fee).into();
-
-					let singer_from = packet_data.sender.clone();
-					let refund_to_account_id = <T as Config>::AccountIdConversion::try_from(
-						singer_from.clone(),
-					)
-					.map_err(|_| {
-						Ics04Error::implementation_specific(format!(
-							"Failed to parse receiver account {:?}",
-							singer_from
-						))
-					})?;
-
-					let _ =
-						ctx.send_coins(&fee_account, &refund_to_account_id, &fee_coin).map_err(|e| {
-							log::debug!(target: "pallet_ibc", "[on_acknowledgement_packet]: error when refund the fee: {:?}", &e);
-						});
-				}
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferFailed {
 					from: packet_data.sender,
 					to: packet_data.receiver,
@@ -418,6 +390,9 @@ where
 			.map_err(|e| Ics04Error::app_module(format!("Failed to decode packet data {:?}", e)))?;
 		process_timeout_packet(&mut ctx, packet, &packet_data)
 			.map_err(|e| Ics04Error::app_module(e.to_string()))?;
+
+		Self::refund_fee(packet, &packet_data, "on_timeout_packet")?;
+
 		Pallet::<T>::deposit_event(Event::<T>::TokenTransferTimeout {
 			from: packet_data.sender,
 			to: packet_data.receiver,
@@ -436,6 +411,48 @@ where
 			destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
 		});
 		Ok(())
+	}
+}
+
+impl<T> IbcModule<T>
+where
+	T: Config + Send + Sync,
+	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
+{
+	fn refund_fee(
+		packet: &Packet,
+		packet_data: &PacketData,
+		callback_name: &str,
+	) -> Result<(), Ics04Error> {
+		use ibc::bigint::U256;
+		use sp_core::Get;
+		let sequence: u64 = packet.sequence.into();
+		Ok(if <Pallet<T> as Store>::SequenceFee::contains_key(sequence) {
+			let fee = <Pallet<T> as Store>::SequenceFee::get(sequence);
+
+			let fee_account = T::FeeAccount::get();
+
+			let mut ctx = Context::<T>::default();
+			let mut fee_coin = packet_data.token.clone();
+
+			fee_coin.amount = U256::from(fee).into();
+
+			let singer_from = packet_data.sender.clone();
+			let refund_to_account_id = <T as Config>::AccountIdConversion::try_from(
+				singer_from.clone(),
+			)
+			.map_err(|_| {
+				Ics04Error::implementation_specific(format!(
+					"Failed to parse receiver account {:?}",
+					singer_from
+				))
+			})?;
+
+			let _ = ctx.send_coins(&fee_account, &refund_to_account_id, &fee_coin).map_err(|e| {
+				log::debug!(target: "pallet_ibc", "[{}]: error when refund the fee: {:?}", callback_name, &e);
+			});
+		})
 	}
 }
 
