@@ -744,8 +744,8 @@ pub mod pallet {
 				let fee = percent * fee_coin.amount.as_u256().low_u128();
 				fee_coin.amount = U256::from(fee).into();
 
-				let singer_from = Signer::from_str(&from).map_err(|_| Error::<T>::Utf8Error)?;
-				let account_id_from = <T as Config>::AccountIdConversion::try_from(singer_from)
+				let signer_from = Signer::from_str(&from).map_err(|_| Error::<T>::Utf8Error)?;
+				let account_id_from = <T as Config>::AccountIdConversion::try_from(signer_from)
 					.map_err(|_| Error::<T>::OriginAddress)?;
 
 				ctx.send_coins(&account_id_from, &fee_account, &fee_coin).map_err(|e| {

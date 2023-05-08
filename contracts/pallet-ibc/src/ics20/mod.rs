@@ -368,15 +368,19 @@ where
 					fee_coin.amount = U256::from(fee).into();
 
 					let singer_from = packet_data.sender.clone();
-					let Ok(account_id_from) = <T as Config>::AccountIdConversion::try_from(singer_from) else{
-					todo!();
-				};
+					let refund_to_account_id = <T as Config>::AccountIdConversion::try_from(
+						singer_from.clone(),
+					)
+					.map_err(|_| {
+						Ics04Error::implementation_specific(format!(
+							"Failed to parse receiver account {:?}",
+							singer_from
+						))
+					})?;
 
 					let _ =
-						ctx.send_coins(&fee_account, &account_id_from, &fee_coin).map_err(|e| {
-							log::debug!(target: "pallet_ibc", "[transfer]: error: {:?}", &e);
-							// Error::<T>::FailedSendFeeToAccount
-							//todo ask what todo if we are not able to refunc fee back
+						ctx.send_coins(&fee_account, &refund_to_account_id, &fee_coin).map_err(|e| {
+							log::debug!(target: "pallet_ibc", "[on_acknowledgement_packet]: error when refund the fee: {:?}", &e);
 						});
 				}
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferFailed {
