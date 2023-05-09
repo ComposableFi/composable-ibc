@@ -68,16 +68,16 @@ pub mod pallet {
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
 	/// storage map. key is tuple of (source_channel.sequence(), destination_channel.sequence()) and
-	/// value () that means that this group of channels is whitelisted
-	pub type WhitelistChannelIds<T: Config> =
+	/// value () that means that this group of channels is feeless
+	pub type FeeLessChannelIds<T: Config> =
 		StorageMap<_, Blake2_128Concat, (u64, u64), (), ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		IbcTransferFeeCollected { amount: T::Balance },
-		ChannelsFeeWhitelistAdded { source_channel: u64, destination_channel: u64 },
-		ChannelsFeeWhitelistRemoved { source_channel: u64, destination_channel: u64 },
+		FeeLessChannelIdsAdded { source_channel: u64, destination_channel: u64 },
+		FeeLessChannelIdsRemoved { source_channel: u64, destination_channel: u64 },
 	}
 
 	#[pallet::call]
@@ -86,22 +86,22 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn set_charge(origin: OriginFor<T>, charge: Perbill) -> DispatchResult {
 			<T as crate::Config>::AdminOrigin::ensure_origin(origin)?;
-			<ServiceChargeIn<T>>::put(charge);
+			ServiceChargeIn::<T>::put(charge);
 			Ok(())
 		}
 
-		#[pallet::call_index(6)]
+		#[pallet::call_index(1)]
 		#[pallet::weight(0)]
 		#[frame_support::transactional]
-		pub fn add_channels_to_free_fee_whitelist(
+		pub fn add_channels_to_feeless_channel_list(
 			origin: OriginFor<T>,
 			source_channel: u64,
 			destination_channel: u64,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			<WhitelistChannelIds<T>>::insert((source_channel, destination_channel), ());
-			Self::deposit_event(Event::<T>::ChannelsFeeWhitelistAdded {
+			FeeLessChannelIds::<T>::insert((source_channel, destination_channel), ());
+			Self::deposit_event(Event::<T>::FeeLessChannelIdsAdded {
 				source_channel,
 				destination_channel,
 			});
@@ -109,18 +109,18 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(7)]
+		#[pallet::call_index(2)]
 		#[pallet::weight(0)]
 		#[frame_support::transactional]
-		pub fn remove_channels_from_free_fee_whitelist(
+		pub fn remove_channels_from_feeless_channel_list(
 			origin: OriginFor<T>,
 			source_channel: u64,
 			destination_channel: u64,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			<WhitelistChannelIds<T>>::remove((source_channel, destination_channel));
-			Self::deposit_event(Event::<T>::ChannelsFeeWhitelistRemoved {
+			FeeLessChannelIds::<T>::remove((source_channel, destination_channel));
+			Self::deposit_event(Event::<T>::FeeLessChannelIdsRemoved {
 				source_channel,
 				destination_channel,
 			});
@@ -345,7 +345,7 @@ where
 				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
 			})?;
 
-		let is_whitelisted = <WhitelistChannelIds<T>>::contains_key((
+		let is_whitelisted = <FeeLessChannelIds<T>>::contains_key((
 			packet.source_channel.sequence(),
 			packet.destination_channel.sequence(),
 		));

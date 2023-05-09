@@ -2,8 +2,7 @@ pub mod context;
 pub mod memo;
 
 use crate::{
-	routing::Context, ChannelIds, Config, DenomToAssetId, Event, Pallet, SequenceFee,
-	WeightInfo,
+	routing::Context, ChannelIds, Config, DenomToAssetId, Event, Pallet, SequenceFee, WeightInfo,
 };
 use alloc::{
 	format,

@@ -262,7 +262,7 @@ fn send_transfer() {
 }
 
 #[test]
-fn send_transfer_no_fee_whitelisted_channels() {
+fn send_transfer_no_fee_feeless_channels() {
 	let mut ext = new_test_ext();
 	let balance = 100000 * MILLIS;
 	ext.execute_with(|| {
@@ -286,13 +286,13 @@ fn send_transfer_no_fee_whitelisted_channels() {
 			.channel_end(&(PortId::transfer(), ChannelId::new(0)))
 			.expect("expect source_channel unwrap");
 		let destination_channel = channel_end.counterparty().channel_id.unwrap();
-		//whitelist channels
-		let _ = Ibc::add_channels_to_free_fee_whitelist(
+		//feeless channels
+		let _ = Ibc::add_channels_to_feeless_channel_list(
 			RuntimeOrigin::root(),
 			0,
 			destination_channel.sequence(),
 		)
-		.expect("expect add channels to whitelist");
+		.expect("expect add channels to feeless list");
 
 		Ibc::transfer(
 			RuntimeOrigin::signed(AccountId32::new([0; 32])),

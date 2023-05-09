@@ -340,8 +340,8 @@ pub mod pallet {
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
 	/// storage map. key is tuple of (source_channel.sequence(), destination_channel.sequence()) and
-	/// value () that means that this group of channels is whitelisted
-	pub type WhitelistChannelIds<T: Config> =
+	/// value () that means that this group of channels is feeless
+	pub type FeeLessChannelIds<T: Config> =
 		StorageMap<_, Blake2_128Concat, (u64, u64), (), ValueQuery>;
 
 	#[pallet::storage]
@@ -559,11 +559,11 @@ pub mod pallet {
 			admin_account: <T as frame_system::Config>::AccountId,
 		},
 
-		ChannelsFeeWhitelistAdded {
+		FeeLessChannelIdsAdded {
 			source_channel: u64,
 			destination_channel: u64,
 		},
-		ChannelsFeeWhitelistRemoved {
+		FeeLessChannelIdsRemoved {
 			source_channel: u64,
 			destination_channel: u64,
 		},
@@ -827,12 +827,12 @@ pub mod pallet {
 				.channel_id
 				.ok_or_else(|| Error::<T>::ChannelNotFound)?;
 
-			let whitelisted = <WhitelistChannelIds<T>>::contains_key((
+			let is_feeless_channel_ids = <FeeLessChannelIds<T>>::contains_key((
 				source_channel.sequence(),
 				destination_channel.sequence(),
 			));
 
-			if !whitelisted {
+			if !is_feeless_channel_ids {
 				let percent = ServiceChargeOut::<T>::get().unwrap_or(T::ServiceChargeOut::get());
 				// Now we proceed to send the service fee from the receiver's account to the pallet
 				// FeeAccount
@@ -1091,15 +1091,15 @@ pub mod pallet {
 		#[pallet::call_index(6)]
 		#[pallet::weight(0)]
 		#[frame_support::transactional]
-		pub fn add_channels_to_free_fee_whitelist(
+		pub fn add_channels_to_feeless_channel_list(
 			origin: OriginFor<T>,
 			source_channel: u64,
 			destination_channel: u64,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			<WhitelistChannelIds<T>>::insert((source_channel, destination_channel), ());
-			Self::deposit_event(Event::<T>::ChannelsFeeWhitelistAdded {
+			FeeLessChannelIds::<T>::insert((source_channel, destination_channel), ());
+			Self::deposit_event(Event::<T>::FeeLessChannelIdsAdded {
 				source_channel,
 				destination_channel,
 			});
@@ -1110,15 +1110,15 @@ pub mod pallet {
 		#[pallet::call_index(7)]
 		#[pallet::weight(0)]
 		#[frame_support::transactional]
-		pub fn remove_channels_from_free_fee_whitelist(
+		pub fn remove_channels_from_feeless_channel_list(
 			origin: OriginFor<T>,
 			source_channel: u64,
 			destination_channel: u64,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			<WhitelistChannelIds<T>>::remove((source_channel, destination_channel));
-			Self::deposit_event(Event::<T>::ChannelsFeeWhitelistRemoved {
+			FeeLessChannelIds::<T>::remove((source_channel, destination_channel));
+			Self::deposit_event(Event::<T>::FeeLessChannelIdsRemoved {
 				source_channel,
 				destination_channel,
 			});
