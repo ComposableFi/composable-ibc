@@ -256,7 +256,7 @@ fn send_transfer() {
 
 		let packet_data: PacketData = serde_json::from_slice(packet_info.data.as_slice()).unwrap();
 		let send_amount = packet_data.token.amount.as_u256().as_u128();
-		let fee = <Test as crate::ics20_fee::Config>::ServiceCharge::get() * balance;
+		let fee = <Test as crate::ics20_fee::Config>::ServiceChargeIn::get() * balance;
 		assert_eq!(send_amount, balance - fee);
 	})
 }
@@ -422,7 +422,7 @@ fn on_deliver_ics20_recv_packet() {
 			asset_id,
 			&<Test as crate::Config>::FeeAccount::get().into_account(),
 		);
-		let fee = <Test as crate::ics20_fee::Config>::ServiceCharge::get() * amt;
+		let fee = <Test as crate::ics20_fee::Config>::ServiceChargeIn::get() * amt;
 		assert_eq!(balance, amt - fee);
 		assert_eq!(pallet_balance, fee)
 	})
