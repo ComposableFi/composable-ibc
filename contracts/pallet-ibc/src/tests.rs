@@ -2,8 +2,8 @@ use crate::{
 	light_clients::{AnyClientState, AnyConsensusState},
 	mock::*,
 	routing::Context,
-	Any, Config, ConsensusHeights, DenomToAssetId, MultiAddress, Pallet, PendingRecvPacketSeqs,
-	PendingSendPacketSeqs, Timeout, TransferParams, MODULE_ID,
+	Any, Config, ConsensusHeights, DenomToAssetId, FlatFeeConverter, MultiAddress, Pallet,
+	PendingRecvPacketSeqs, PendingSendPacketSeqs, Timeout, TransferParams, MODULE_ID,
 };
 use core::time::Duration;
 use frame_support::{
@@ -446,13 +446,10 @@ fn on_deliver_ics20_recv_packet_with_flat_fee() {
 			asset_id,
 			&<Test as crate::Config>::FeeAccount::get().into_account(),
 		);
-		let fee_asset_id = <Test as crate::ics20_fee::Config>::FlatFeeAssetId::get();
-		let fee = <Test as crate::ics20_fee::Config>::FlatFeeConverter::get_flat_fee(
-			asset_id,
-			fee_asset_id,
-			amt,
-		)
-		.unwrap_or_default();
+		let fee_asset_id = <Test as crate::Config>::FlatFeeAssetId::get();
+		let fee =
+			<Test as crate::Config>::FlatFeeConverter::get_flat_fee(asset_id, fee_asset_id, amt)
+				.unwrap_or_default();
 		assert_eq!(balance, amt - fee);
 		assert_eq!(pallet_balance, fee)
 	})
@@ -497,8 +494,8 @@ fn on_deliver_ics20_recv_packet_transfered_amount_less_then_flat_fee() {
 
 		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
 		let usdt_fee_amount = 1000 * MILLIS;
-		let fee_asset_id = <Test as crate::ics20_fee::Config>::FlatFeeAssetId::get();
-		let amt = <Test as crate::ics20_fee::Config>::FlatFeeConverter::get_flat_fee(
+		let fee_asset_id = <Test as crate::Config>::FlatFeeAssetId::get();
+		let amt = <Test as crate::Config>::FlatFeeConverter::get_flat_fee(
 			asset_id,
 			fee_asset_id,
 			usdt_fee_amount,
@@ -557,7 +554,7 @@ fn on_deliver_ics20_recv_packet_transfered_amount_less_then_flat_fee() {
 			asset_id,
 			&<Test as crate::Config>::FeeAccount::get().into_account(),
 		);
-		let fee = <Test as crate::ics20_fee::Config>::FlatFeeConverter::get_flat_fee(
+		let fee = <Test as crate::Config>::FlatFeeConverter::get_flat_fee(
 			asset_id,
 			fee_asset_id,
 			usdt_fee_amount,
