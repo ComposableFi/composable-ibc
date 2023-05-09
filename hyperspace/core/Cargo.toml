@@ -28,7 +28,7 @@ hex = "0.4.3"
 tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread", "fs"] }
 codec = { version = "3.0.0", package = "parity-scale-codec" }
 clap = { version = "3.2.22", features = ["derive"] }
-toml = "0.5.9"
+toml = "0.7.3"
 serde = "1.0.144"
 thiserror = "1.0.31"
 derive_more = { version = "0.99.17", features = ["from"] }

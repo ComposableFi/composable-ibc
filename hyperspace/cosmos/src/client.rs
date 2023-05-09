@@ -58,12 +58,6 @@ fn default_fee_amount() -> String {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum KeyBaseConfig {
-	ConfigKeyEntry(ConfigKeyEntry),
-	Mnemonic(String),
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ConfigKeyEntry {
 	pub public_key: String,
 	pub private_key: String,
@@ -233,7 +227,7 @@ pub struct CosmosClientConfig {
 	/// Whitelisted channels
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 	/// The key that signs transactions
-	pub keybase: KeyBaseConfig,
+	pub mnemonic: String,
 }
 
 impl<H> CosmosClient<H>
@@ -258,17 +252,11 @@ where
 		let commitment_prefix = CommitmentPrefix::try_from(config.store_prefix.as_bytes().to_vec())
 			.map_err(|e| Error::from(format!("Invalid store prefix {:?}", e)))?;
 
-		let keybase: KeyEntry;
-		match config.keybase {
-			KeyBaseConfig::ConfigKeyEntry(config_key) =>
-				keybase = KeyEntry::try_from(config_key).map_err(|e| e.to_string())?,
-			KeyBaseConfig::Mnemonic(mnemonic) =>
-				keybase = KeyEntry::try_from(MnemonicEntry {
-					mnemonic,
-					prefix: config.account_prefix.clone(),
-				})
-				.map_err(|e| e.to_string())?,
-		}
+		let keybase: KeyEntry = KeyEntry::try_from(MnemonicEntry {
+			mnemonic: config.mnemonic,
+			prefix: config.account_prefix.clone(),
+		})
+		.map_err(|e| e.to_string())?;
 
 		Ok(Self {
 			name: config.name,
