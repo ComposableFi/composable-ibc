@@ -329,6 +329,7 @@ where
 				let sequence: u64 = packet.sequence.into();
 				if <Pallet<T> as Store>::SequenceFee::contains_key(sequence) {
 					<Pallet<T> as Store>::SequenceFee::remove(sequence);
+					Pallet::<T>::deposit_event(Event::<T>::ChargingFeeConfirmed { sequence });
 				}
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
 					from: packet_data.sender,
@@ -452,6 +453,13 @@ where
 			let _ = ctx.send_coins(&fee_account, &refund_to_account_id, &fee_coin).map_err(|e| {
 				log::debug!(target: "pallet_ibc", "[{}]: error when refund the fee: {:?}", callback_name, &e);
 			});
+			let event;
+			if callback_name == "on_acknowledgement_packet" {
+				event = Event::<T>::ChargingFeeFailedAcknowledgement { sequence };
+			} else {
+				event = Event::<T>::ChargingFeeTimeout { sequence };
+			}
+			Pallet::<T>::deposit_event(event);
 		})
 	}
 }

@@ -567,6 +567,15 @@ pub mod pallet {
 			source_channel: Vec<u8>,
 			destination_channel: Vec<u8>,
 		},
+		ChargingFeeConfirmed {
+			sequence: u64,
+		},
+		ChargingFeeTimeout {
+			sequence: u64,
+		},
+		ChargingFeeFailedAcknowledgement {
+			sequence: u64,
+		},
 	}
 
 	/// Errors inform users that something went wrong.
