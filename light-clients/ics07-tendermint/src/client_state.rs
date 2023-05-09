@@ -545,7 +545,7 @@ mod tests {
 					current_time: (now + Duration::from_nanos(1200)).unwrap(),
 					current_height: Height::new(0, 5),
 					processed_time: (now + Duration::from_nanos(1000)).unwrap(),
-					processed_height: Height::new(0, 3),
+					processed_height: Height::new(0, 4),
 					delay_period_time: Duration::from_nanos(500),
 					delay_period_blocks: 2,
 				},
