@@ -185,7 +185,6 @@ where
 					))?
 				}
 
-				// first_justification.round
 				let first_valid = first_justification
 					.verify::<H>(client_state.current_set_id, &client_state.current_authorities)
 					.is_ok();

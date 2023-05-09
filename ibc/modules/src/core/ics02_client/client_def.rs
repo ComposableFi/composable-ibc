@@ -240,6 +240,4 @@ pub trait ClientDef: Clone {
 		channel_id: &ChannelId,
 		sequence: Sequence,
 	) -> Result<(), Error>;
-
-	// fn status(&self)
 }

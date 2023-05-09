@@ -258,7 +258,6 @@ where
 			tokio::spawn(ws_driver.run());
 			log::info!(target: "hyperspace_cosmos", "Reconnected to cosmos chain");
 			self.rpc_client = rpc_client;
-			// self.rpc_call_delay = self.rpc_call_delay * 2;
 		}
 
 		Ok(())
