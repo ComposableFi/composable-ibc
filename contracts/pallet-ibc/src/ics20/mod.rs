@@ -2,7 +2,8 @@ pub mod context;
 pub mod memo;
 
 use crate::{
-	routing::Context, ChannelIds, Config, DenomToAssetId, Event, Pallet, Store, WeightInfo,
+	routing::Context, ChannelIds, Config, DenomToAssetId, Event, Pallet, SequenceFee,
+	WeightInfo,
 };
 use alloc::{
 	format,
@@ -327,8 +328,8 @@ where
 			.map_err(|e| Ics04Error::implementation_specific(e.to_string()))?;
 		match ack.into_result() {
 			Ok(_) => {
-				if crate::SequenceFee::<T>::contains_key(sequence) {
-					<Pallet<T> as Store>::SequenceFee::remove(sequence);
+				if SequenceFee::<T>::contains_key(sequence) {
+					SequenceFee::<T>::remove(sequence);
 					Pallet::<T>::deposit_event(Event::<T>::ChargingFeeConfirmed { sequence });
 				}
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
@@ -450,10 +451,10 @@ where
 		use ibc::bigint::U256;
 		use sp_core::Get;
 		let sequence: u64 = packet.sequence.into();
-		if !<Pallet<T> as Store>::SequenceFee::contains_key(sequence) {
+		if !SequenceFee::<T>::contains_key(sequence) {
 			return Ok(()) //there is nothing to refund.
 		}
-		let fee = <Pallet<T> as Store>::SequenceFee::take(sequence);
+		let fee = SequenceFee::<T>::take(sequence);
 
 		let fee_account = T::FeeAccount::get();
 
