@@ -556,6 +556,16 @@ pub mod pallet {
 			source_channel: u64,
 			destination_channel: u64,
 		},
+		ChargingFeeOnTransferInitiated {
+			sequence: u64,
+			from: Vec<u8>,
+			to: Vec<u8>,
+			ibc_denom: Vec<u8>,
+			local_asset_id: Option<T::AssetId>,
+			amount: T::Balance,
+			source_channel: Vec<u8>,
+			destination_channel: Vec<u8>,
+		},
 	}
 
 	/// Errors inform users that something went wrong.
@@ -851,11 +861,24 @@ pub mod pallet {
 					.get_next_sequence_send(&(source_port.clone(), source_channel.clone()))
 					.map_err(|_| Error::<T>::ChannelNotFound)?;
 				//use this sequence as a key in storage map where sequence is key and fee is value
-				let s: u64 = sequence.into();
+				let sequence: u64 = sequence.into();
 				//we need this data in storage map because on_timeout_packet and
 				// on_acknowledgement_packet use this data to refund fee in case of falure or clean
 				// un in case of on_acknowledgement_packet success.
-				SequenceFee::<T>::insert(s, fee);
+				SequenceFee::<T>::insert(sequence, fee);
+				Self::deposit_event(Event::<T>::ChargingFeeOnTransferInitiated {
+					sequence,
+					from: from.clone().into(),
+					to: to.clone().into(),
+					amount: fee.into(),
+					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
+						&coin.denom.to_string(),
+					)
+					.ok(),
+					ibc_denom: coin.denom.to_string().as_bytes().to_vec(),
+					source_channel: source_channel.to_string().as_bytes().to_vec(),
+					destination_channel: destination_channel.to_string().as_bytes().to_vec(),
+				});
 			};
 
 			let msg = MsgTransfer {
@@ -934,13 +957,7 @@ pub mod pallet {
 				ibc_denom: coin.denom.to_string().as_bytes().to_vec(),
 				is_sender_source,
 				source_channel: source_channel.to_string().as_bytes().to_vec(),
-				destination_channel: channel_end
-					.counterparty()
-					.channel_id
-					.ok_or_else(|| Error::<T>::ChannelNotFound)?
-					.to_string()
-					.as_bytes()
-					.to_vec(),
+				destination_channel: destination_channel.to_string().as_bytes().to_vec(),
 			});
 			Ok(())
 		}
