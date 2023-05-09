@@ -463,12 +463,12 @@ where
 
 		fee_coin.amount = U256::from(fee).into();
 
-		let singer_from = packet_data.sender.clone();
+		let signer_from = packet_data.sender.clone();
 		let refund_to_account_id =
-			<T as Config>::AccountIdConversion::try_from(singer_from.clone()).map_err(|_| {
+			<T as Config>::AccountIdConversion::try_from(signer_from.clone()).map_err(|_| {
 				Ics04Error::implementation_specific(format!(
 					"Failed to parse receiver account {:?}",
-					singer_from
+					signer_from
 				))
 			})?;
 
@@ -476,7 +476,7 @@ where
 				log::debug!(target: "pallet_ibc", "[{}]: error when refund the fee : {:?} for sequence {}", &e, fee, sequence);
 				Ics04Error::implementation_specific(format!(
 					"Failed to refund fee to sender account {:?}, fee : {} , sequence : {} ",
-					singer_from, fee, sequence
+					signer_from, fee, sequence
 				))
 			})?;
 		Ok(())
