@@ -345,7 +345,7 @@ where
 				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
 			})?;
 
-		let is_whitelisted = <FeeLessChannelIds<T>>::contains_key((
+		let is_whitelisted = FeeLessChannelIds::<T>::contains_key((
 			packet.source_channel.sequence(),
 			packet.destination_channel.sequence(),
 		));

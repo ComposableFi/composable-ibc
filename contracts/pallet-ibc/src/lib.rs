@@ -827,7 +827,7 @@ pub mod pallet {
 				.channel_id
 				.ok_or_else(|| Error::<T>::ChannelNotFound)?;
 
-			let is_feeless_channel_ids = <FeeLessChannelIds<T>>::contains_key((
+			let is_feeless_channel_ids = FeeLessChannelIds::<T>::contains_key((
 				source_channel.sequence(),
 				destination_channel.sequence(),
 			));
