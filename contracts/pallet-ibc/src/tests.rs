@@ -207,12 +207,12 @@ const MILLIS: u128 = 1000000;
 #[test]
 fn send_transfer() {
 	let mut ext = new_test_ext();
+	let balance = 100000 * MILLIS;
 	ext.execute_with(|| {
 		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
 		let raw_user = ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
 		let ss58_address = String::from_utf8(raw_user).unwrap();
 		setup_client_and_consensus_state(PortId::transfer());
-		let balance = 100000 * MILLIS;
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
 				&"PICA".to_string(),
@@ -252,7 +252,12 @@ fn send_transfer() {
 		.get(0)
 		.unwrap()
 		.clone();
-		assert!(!packet_info.data.is_empty())
+		assert!(!packet_info.data.is_empty());
+
+		let packet_data: PacketData = serde_json::from_slice(packet_info.data.as_slice()).unwrap();
+		let send_amount = packet_data.token.amount.as_u256().as_u128();
+		let fee = <Test as crate::ics20_fee::Config>::ServiceCharge::get() * balance;
+		assert_eq!(send_amount, balance - fee);
 	})
 }
 
