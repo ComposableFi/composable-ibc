@@ -29,7 +29,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::{pallet_prelude::*, PalletId};
-	use frame_system::pallet_prelude::OriginFor;
+	use frame_system::{ensure_root, pallet_prelude::OriginFor};
 	use ibc_primitives::IbcAccount;
 	use sp_runtime::{
 		traits::{AccountIdConversion, Get},
@@ -44,16 +44,6 @@ pub mod pallet {
 		type ServiceCharge: Get<Perbill>;
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
-
-		// type FlatFeeConverter: FlatFeeConverter<
-		// 	AssetId = <Self as crate::Config>::AssetId,
-		// 	Balance = <Self as crate::Config>::Balance,
-		// >;
-
-		// //Asset Id for fee that will charged. for example  USDT
-		// type FlatFeeAssetId: Get<<Self as crate::Config>::AssetId>;
-		// //Asset amount that will be charged. for example 10 (USDT)
-		// type FlatFeeAmount: Get<<Self as crate::Config>::Balance>;
 	}
 
 	#[pallet::pallet]
@@ -64,10 +54,19 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type ServiceCharge<T: Config> = StorageValue<_, Perbill, OptionQuery>;
 
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// storage map. key is tuple of (source_channel.sequence(), destination_channel.sequence()) and
+	/// value () that means that this group of channels is whitelisted
+	pub type WhitelistChannelIds<T: Config> =
+		StorageMap<_, Blake2_128Concat, (u64, u64), (), ValueQuery>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		IbcTransferFeeCollected { amount: T::Balance },
+		ChannelsFeeWhitelistAdded { source_channel: u64, destination_channel: u64 },
+		ChannelsFeeWhitelistRemoved { source_channel: u64, destination_channel: u64 },
 	}
 
 	#[pallet::call]
@@ -77,6 +76,44 @@ pub mod pallet {
 		pub fn set_charge(origin: OriginFor<T>, charge: Perbill) -> DispatchResult {
 			<T as crate::Config>::AdminOrigin::ensure_origin(origin)?;
 			<ServiceCharge<T>>::put(charge);
+			Ok(())
+		}
+
+		#[pallet::call_index(6)]
+		#[pallet::weight(0)]
+		#[frame_support::transactional]
+		pub fn add_channels_to_free_fee_whitelist(
+			origin: OriginFor<T>,
+			source_channel: u64,
+			destination_channel: u64,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			<WhitelistChannelIds<T>>::insert((source_channel, destination_channel), ());
+			Self::deposit_event(Event::<T>::ChannelsFeeWhitelistAdded {
+				source_channel,
+				destination_channel,
+			});
+
+			Ok(())
+		}
+
+		#[pallet::call_index(7)]
+		#[pallet::weight(0)]
+		#[frame_support::transactional]
+		pub fn remove_channels_from_free_fee_whitelist(
+			origin: OriginFor<T>,
+			source_channel: u64,
+			destination_channel: u64,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			<WhitelistChannelIds<T>>::remove((source_channel, destination_channel));
+			Self::deposit_event(Event::<T>::ChannelsFeeWhitelistRemoved {
+				source_channel,
+				destination_channel,
+			});
+
 			Ok(())
 		}
 	}
@@ -296,6 +333,16 @@ where
 			.map_err(|e| {
 				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
 			})?;
+
+		let is_whitelisted = <WhitelistChannelIds<T>>::contains_key((
+			packet.source_channel.sequence(),
+			packet.destination_channel.sequence(),
+		));
+
+		if is_whitelisted {
+			return Ok(())
+		}
+
 		let percent =
 			ServiceCharge::<T>::get().unwrap_or(<T as pallet::Config>::ServiceCharge::get());
 		// Send full amount to receiver using the default ics20 logic
