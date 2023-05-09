@@ -274,6 +274,17 @@ pub mod pallet {
 		type CleanUpPacketsPeriod: Get<Self::BlockNumber>;
 
 		#[pallet::constant]
+		/// `ServiceChargeOut` represents the service charge rate applied to assets that will be
+		/// sent via IBC.
+		///
+		/// The charge is applied before assets are transffered from the sender side, during
+		/// transfer extrinsic (before to burn or send assets to escrow account) before the packet
+		/// send via IBC Inter-Blockchain Communication (IBC) protocol.
+		///
+		/// For example, if the service charge rate for incoming assets is 0.04%, `ServiceChargeIn`
+		/// will be configured in rutime as
+		/// parameter_types! { pub IbcIcs20ServiceChargeOut: Perbill = Perbill::from_rational(4_u32,
+		/// 1000_u32 ) };
 		type ServiceChargeOut: Get<Perbill>;
 
 		type FlatFeeConverter: FlatFeeConverter<

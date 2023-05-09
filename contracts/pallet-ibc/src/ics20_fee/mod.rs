@@ -41,6 +41,17 @@ pub mod pallet {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		#[pallet::constant]
+		/// `ServiceChargeIn` represents the service charge rate applied to assets upon receipt via
+		/// IBC.
+		///
+		/// The charge is applied when assets are delivered to the receiving side, on
+		/// deliver(before to mint, send assets to destination account) extrinsic using the
+		/// Inter-Blockchain Communication (IBC) protocol.
+		///
+		/// For example, if the service charge rate for incoming assets is 0.04%, `ServiceChargeIn`
+		/// will be configured in rutime as
+		/// parameter_types! { pub IbcIcs20ServiceChargeIn: Perbill = Perbill::from_rational(4_u32,
+		/// 1000_u32 ) };
 		type ServiceChargeIn: Get<Perbill>;
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
