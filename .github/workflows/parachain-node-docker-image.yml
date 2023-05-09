@@ -15,7 +15,7 @@ jobs:
   build-and-publish:
     runs-on:
       - self-hosted
-      - x64-monster
+      - x64-cute
     concurrency:
       group: parachain-node-docker-image-${{ github.ref }}
       cancel-in-progress: true

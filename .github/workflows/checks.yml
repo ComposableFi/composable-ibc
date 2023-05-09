@@ -18,7 +18,7 @@ jobs:
       image: paritytech/ci-linux:production
     runs-on:
       - self-hosted
-      - x64-monster
+      - x64-tiny
     steps:
     - uses: actions/checkout@v2
 
