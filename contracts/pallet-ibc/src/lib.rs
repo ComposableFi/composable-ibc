@@ -563,6 +563,7 @@ pub mod pallet {
 			ibc_denom: Vec<u8>,
 			local_asset_id: Option<T::AssetId>,
 			amount: T::Balance,
+			is_flat_fee: bool,
 			source_channel: Vec<u8>,
 			destination_channel: Vec<u8>,
 		},
@@ -823,10 +824,12 @@ pub mod pallet {
 						&fee_coin.denom.to_string(),
 					);
 				let amt = coin.amount.as_u256().low_u128();
+				let mut is_flat_fee = false;
 				let mut fee = match asset_id {
 					Ok(a) => {
 						let fee_asset_id = T::FlatFeeAssetId::get();
 						let fee_asset_amount = T::FlatFeeAmount::get();
+						is_flat_fee = true;
 						let flat_fee =
 							T::FlatFeeConverter::get_flat_fee(a, fee_asset_id, fee_asset_amount)
 								.unwrap_or_else(|| {
@@ -834,6 +837,7 @@ pub mod pallet {
 									// for a u128 are rejected in the ics20 on_recv_packet callback
 									// so we can multiply safely. Percent does Non-Overflowing
 									// multiplication so this is infallible
+									is_flat_fee = false;
 									percent * amt
 								});
 						flat_fee
@@ -871,6 +875,7 @@ pub mod pallet {
 					from: from.clone().into(),
 					to: to.clone().into(),
 					amount: fee.into(),
+					is_flat_fee,
 					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
 						&coin.denom.to_string(),
 					)
