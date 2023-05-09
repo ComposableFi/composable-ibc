@@ -274,7 +274,7 @@ pub mod pallet {
 		type CleanUpPacketsPeriod: Get<Self::BlockNumber>;
 
 		#[pallet::constant]
-		type ServiceCharge: Get<Perbill>;
+		type ServiceChargeOut: Get<Perbill>;
 
 		type FlatFeeConverter: FlatFeeConverter<
 			AssetId = <Self as crate::Config>::AssetId,
@@ -305,7 +305,7 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	pub type ServiceCharge<T: Config> = StorageValue<_, Perbill, OptionQuery>;
+	pub type ServiceChargeOut<T: Config> = StorageValue<_, Perbill, OptionQuery>;
 
 	#[pallet::storage]
 	/// client_id , Height => Timestamp
@@ -822,7 +822,7 @@ pub mod pallet {
 			));
 
 			if !whitelisted {
-				let percent = ServiceCharge::<T>::get().unwrap_or(T::ServiceCharge::get());
+				let percent = ServiceChargeOut::<T>::get().unwrap_or(T::ServiceChargeOut::get());
 				// Now we proceed to send the service fee from the receiver's account to the pallet
 				// FeeAccount
 				let fee_account = T::FeeAccount::get();

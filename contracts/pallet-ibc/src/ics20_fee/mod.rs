@@ -41,7 +41,7 @@ pub mod pallet {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		#[pallet::constant]
-		type ServiceCharge: Get<Perbill>;
+		type ServiceChargeIn: Get<Perbill>;
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 	}
@@ -52,7 +52,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::storage]
-	pub type ServiceCharge<T: Config> = StorageValue<_, Perbill, OptionQuery>;
+	pub type ServiceChargeIn<T: Config> = StorageValue<_, Perbill, OptionQuery>;
 
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
@@ -75,7 +75,7 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn set_charge(origin: OriginFor<T>, charge: Perbill) -> DispatchResult {
 			<T as crate::Config>::AdminOrigin::ensure_origin(origin)?;
-			<ServiceCharge<T>>::put(charge);
+			<ServiceChargeIn<T>>::put(charge);
 			Ok(())
 		}
 
@@ -343,8 +343,7 @@ where
 			return Ok(())
 		}
 
-		let percent =
-			ServiceCharge::<T>::get().unwrap_or(<T as pallet::Config>::ServiceCharge::get());
+		let percent = ServiceChargeIn::<T>::get().unwrap_or(T::ServiceChargeIn::get());
 		// Send full amount to receiver using the default ics20 logic
 		// We only take the fee charge if the acknowledgement is not an error
 		if ack.as_ref() == Ics20Ack::success().to_string().as_bytes() {
