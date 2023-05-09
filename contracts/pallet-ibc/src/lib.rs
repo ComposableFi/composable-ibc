@@ -177,10 +177,10 @@ pub mod pallet {
 	use light_clients::AnyClientState;
 	use sp_runtime::{
 		traits::{IdentifyAccount, Saturating, Zero},
-		AccountId32, BoundedBTreeSet,
+		AccountId32, BoundedBTreeSet, Perbill,
 	};
 	#[cfg(feature = "std")]
-	use sp_runtime::{Deserialize, Perbill, Serialize};
+	use sp_runtime::{Deserialize, Serialize};
 	use sp_std::collections::btree_set::BTreeSet;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
