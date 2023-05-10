@@ -36,11 +36,8 @@ use serde::{Deserialize, Serialize};
 use tendermint::{block::signed_header::SignedHeader, validator::Set as ValidatorSet};
 use tendermint_proto::Protobuf;
 
-// FIXME: rename ibc.lightclients.grandpa to ibc.lightclients.tendermint. This cannot be renamed
-// at the moment, because this value is used on Picasso's pallet-ibc version, so we need to
-// do it just before a runtime upgrade.
-pub const TENDERMINT_HEADER_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.Header";
-pub const TENDERMINT_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.Misbehaviour";
+pub const TENDERMINT_HEADER_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.Header";
+pub const TENDERMINT_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.Misbehaviour";
 pub const TENDERMINT_CLIENT_MESSAGE_TYPE_URL: &str =
 	"/ibc.lightclients.tendermint.v1.ClientMessage";
 
