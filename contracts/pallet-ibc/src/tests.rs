@@ -3,7 +3,7 @@ use crate::{
 	light_clients::{AnyClientState, AnyConsensusState},
 	mock::*,
 	routing::Context,
-	Any, Config, ConsensusHeights, DenomToAssetId, FlatFeeConverter, MultiAddress, Pallet,
+	Any, Config, ConsensusHeights, DenomToAssetId, MultiAddress, Pallet,
 	PendingRecvPacketSeqs, PendingSendPacketSeqs, Timeout, TransferParams, MODULE_ID,
 };
 use core::time::Duration;
