@@ -6,7 +6,7 @@ use grandpa_client_primitives::{
 	justification::GrandpaJustification, parachain_header_storage_key, Commit, FinalityProof,
 	ParachainHeaderProofs,
 };
-use ibc::timestamp::Timestamp;
+use ibc::{timestamp::Timestamp, Height};
 use ics10_grandpa::{
 	client_message::{ClientMessage, Header as GrandpaHeader, RelayChainHeader},
 	client_state::ClientState,
@@ -141,7 +141,11 @@ pub fn generate_finality_proof(
 		);
 	}
 
-	let grandpa_header = GrandpaHeader { finality_proof, parachain_headers };
+	let grandpa_header = GrandpaHeader {
+		finality_proof,
+		parachain_headers,
+		height: Height::new(para_id.into(), parachain_header.number.into()),
+	};
 	let client_message = AnyClientMessage::Grandpa(ClientMessage::Header(grandpa_header));
 
 	let client_state = ClientState {

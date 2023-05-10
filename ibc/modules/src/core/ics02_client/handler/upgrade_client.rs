@@ -56,7 +56,7 @@ where
 	// Read client state from the host chain store.
 	let client_state = ctx.client_state(&client_id)?;
 
-	if client_state.is_frozen() {
+	if client_state.is_frozen(ctx, &client_id) {
 		return Err(Error::client_frozen(client_id))
 	}
 

@@ -28,7 +28,7 @@ hex = "0.4.3"
 tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread", "fs"] }
 codec = { version = "3.0.0", package = "parity-scale-codec" }
 clap = { version = "3.2.22", features = ["derive"] }
-toml = "0.5.9"
+toml = "0.7.3"
 serde = "1.0.144"
 thiserror = "1.0.31"
 derive_more = { version = "0.99.17", features = ["from"] }
@@ -46,6 +46,7 @@ ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 
 ics11-beefy = { path = "../../light-clients/ics11-beefy" }
 #ics13-near = { path = "../../light-clients/ics13-near" }
+ics08-wasm = { path = "../../light-clients/ics08-wasm", features = ["std"] }
 light-client-common = { path = "../../light-clients/common" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 pallet-ibc-ping = { path = "../../contracts/pallet-ibc/ping" }
@@ -58,6 +59,7 @@ subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f
 subxt-generated = { path = "../../utils/subxt/generated" }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
+prost = { version = "0.11", default-features = false }
 
 [dev-dependencies]
 derive_more = "0.99.17"

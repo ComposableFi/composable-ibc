@@ -57,10 +57,11 @@ use ibc_rpc::PacketInfo;
 use ics07_tendermint::{
 	client_message::ClientMessage, client_state::ClientState, consensus_state::ConsensusState,
 };
+use ics08_wasm::msg::MsgPushNewWasmCode;
 use pallet_ibc::light_clients::{
 	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
 };
-use primitives::{mock::LocalClientTypes, Chain, IbcProvider, UpdateType};
+use primitives::{mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType};
 use prost::Message;
 use std::{pin::Pin, str::FromStr, time::Duration};
 use tendermint::block::Height as TmHeight;
@@ -71,7 +72,7 @@ use tendermint_rpc::{
 	query::{EventType, Query},
 	Client, Error as RpcError, Order, SubscriptionClient, WebSocketClient,
 };
-use tokio::time::sleep;
+use tokio::{task::JoinSet, time::sleep};
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
@@ -127,16 +128,36 @@ where
 		let update_headers =
 			self.msg_update_client_header(from, to, client_state.latest_height).await?;
 		let mut block_events = Vec::new();
-		for height in from.value()..to.value() {
-			let ibc_events = self.parse_ibc_events_at(latest_revision, height).await?;
-			block_events.push(ibc_events);
+		block_events.push((0, Vec::new()));
+		let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+		let range = (from.value()..to.value()).collect::<Vec<_>>();
+		for heights in range.chunks(100) {
+			for height in heights.to_owned() {
+				log::trace!(target: "hyperspace_cosmos", "Parsing events at height {:?}", height);
+				let client = self.clone();
+				join_set.spawn(async move {
+					let xs = tokio::time::timeout(
+						Duration::from_secs(30),
+						client.parse_ibc_events_at(latest_revision, height),
+					)
+					.await??;
+					Ok((height, xs))
+				});
+			}
+			while let Some(res) = join_set.join_next().await {
+				let out = res??;
+				block_events.push(out);
+			}
 		}
+
 		// we don't submit events for the last block, because we don't have a proof for it
-		block_events.push(Vec::new());
 		assert_eq!(block_events.len(), update_headers.len(), "block events and updates must match");
+		block_events.sort_by_key(|(height, _)| *height);
 
 		let mut updates = Vec::new();
-		for (events, (update_header, update_type)) in block_events.into_iter().zip(update_headers) {
+		for (events, (update_header, update_type)) in
+			block_events.into_iter().map(|(_, events)| events).zip(update_headers)
+		{
 			log::info!(target: "hyperspace_cosmos", "Fetching block {}", update_header.height().revision_height);
 			let update_client_header = {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
@@ -210,6 +231,7 @@ where
 						for abci_event in &tx_result.result.events {
 							if let Ok(ibc_event) = ibc_event_try_from_abci_event(abci_event, height)
 							{
+								log::debug!(target: "hyperspace_cosmos", "Retrieved event: {}, query: {}, parsed: {:?}", abci_event.kind, query, ibc_event);
 								if query == Query::eq("message.module", "ibc_client").to_string() &&
 									event_is_type_client(&ibc_event)
 								{
@@ -229,6 +251,8 @@ where
 								{
 									events_with_height
 										.push(IbcEventWithHeight::new(ibc_event, height));
+								} else {
+									log::debug!(target: "hyperspace_cosmos", "The event is unknown");
 								}
 							} else {
 								log::debug!(target: "hyperspace_cosmos", "Failed to parse event {:?}", abci_event);
@@ -551,6 +575,15 @@ where
 		Ok(commitment_sequences)
 	}
 
+	async fn on_undelivered_sequences(&self, seqs: &[u64]) -> Result<(), Self::Error> {
+		*self.maybe_has_undelivered_packets.lock().unwrap() = !seqs.is_empty();
+		Ok(())
+	}
+
+	fn has_undelivered_sequences(&self) -> bool {
+		*self.maybe_has_undelivered_packets.lock().unwrap()
+	}
+
 	async fn query_unreceived_acknowledgements(
 		&self,
 		_at: Height,
@@ -661,7 +694,7 @@ where
 										"failed to convert packet info from IbcPacketInfo",
 									))
 								})?;
-							info.height = p.height.revision_height;
+							info.height = Some(p.height.revision_height);
 							block_events.push(info)
 						},
 						_ => (),
@@ -716,7 +749,7 @@ where
 									))
 								})?;
 							info.ack = Some(p.ack);
-							info.height = p.height.revision_height;
+							info.height = Some(p.height.revision_height);
 							block_events.push(info)
 						},
 						_ => (),
@@ -778,7 +811,7 @@ where
 
 	async fn query_host_consensus_state_proof(
 		&self,
-		_height: Height,
+		_client_state: &AnyClientState,
 	) -> Result<Option<Vec<u8>>, Self::Error> {
 		unimplemented!()
 	}
@@ -866,11 +899,9 @@ where
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
 		let request = tonic::Request::new(QueryClientStatesRequest { pagination: None });
-		let grpc_client = ibc_proto::ibc::core::client::v1::query_client::QueryClient::connect(
-			self.grpc_url.clone().to_string(),
-		)
-		.await
-		.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		let grpc_client = ibc_proto::ibc::core::client::v1::query_client::QueryClient::new(
+			self.grpc_client.clone(),
+		);
 		let response = grpc_client
 			.clone()
 			.client_states(request)
@@ -957,7 +988,8 @@ where
 		_latest_height: u64,
 		_latest_client_height_on_counterparty: u64,
 	) -> Result<bool, Self::Error> {
-		// TODO: Implement is_update_required
+		// we never need to use LightClientSync trait in this case, because
+		// all the events will be eventually submitted via `finality_notifications`
 		Ok(false)
 	}
 
@@ -1057,16 +1089,181 @@ where
 
 	async fn query_connection_id_from_tx_hash(
 		&self,
-		_tx_id: Self::TransactionId,
+		tx_id: Self::TransactionId,
 	) -> Result<ConnectionId, Self::Error> {
-		todo!()
+		const WAIT_BACKOFF: Duration = Duration::from_millis(300);
+		const TIME_OUT: Duration = Duration::from_millis(30000);
+		let start_time = std::time::Instant::now();
+
+		let response: Response = loop {
+			let response = self
+				.rpc_client
+				.tx_search(
+					Query::eq("tx.hash", tx_id.hash.to_string()),
+					false,
+					1,
+					1, // get only the first Tx matching the query
+					Order::Ascending,
+				)
+				.await
+				.map_err(|e| Error::from(format!("Failed to query tx hash: {}", e)))?;
+			match response.txs.into_iter().next() {
+				None => {
+					let elapsed = start_time.elapsed();
+					if &elapsed > &TIME_OUT {
+						return Err(Error::from(format!(
+							"Timeout waiting for tx {:?} to be included in a block",
+							tx_id.hash
+						)))
+					} else {
+						std::thread::sleep(WAIT_BACKOFF);
+					}
+				},
+				Some(resp) => break resp,
+			}
+		};
+
+		let height = Height::new(
+			ChainId::chain_version(self.chain_id.to_string().as_str()),
+			response.height.value(),
+		);
+		let deliver_tx_result = response.tx_result;
+		if deliver_tx_result.code.is_err() {
+			Err(Error::from(format!(
+				"Transaction failed with code {:?} and log {:?}",
+				deliver_tx_result.code, deliver_tx_result.log
+			)))
+		} else {
+			let result = deliver_tx_result
+				.events
+				.iter()
+				.flat_map(|e| ibc_event_try_from_abci_event(e, height).ok().into_iter())
+				.filter(|e| matches!(e, IbcEvent::OpenInitConnection(_)))
+				.collect::<Vec<_>>();
+			if result.clone().len() != 1 {
+				Err(Error::from(format!(
+					"Expected exactly one CreateClient event, found {}",
+					result.len()
+				)))
+			} else {
+				Ok(match result[0] {
+					IbcEvent::OpenInitConnection(ref e) =>
+						e.connection_id().expect("Connection id wasn't found").clone(),
+					_ => unreachable!(),
+				})
+			}
+		}
 	}
 
 	async fn query_channel_id_from_tx_hash(
 		&self,
-		_tx_id: Self::TransactionId,
+		tx_id: Self::TransactionId,
 	) -> Result<(ChannelId, PortId), Self::Error> {
-		todo!()
+		const WAIT_BACKOFF: Duration = Duration::from_millis(300);
+		const TIME_OUT: Duration = Duration::from_millis(30000);
+		let start_time = std::time::Instant::now();
+
+		let response: Response = loop {
+			let response = self
+				.rpc_client
+				.tx_search(
+					Query::eq("tx.hash", tx_id.hash.to_string()),
+					false,
+					1,
+					1, // get only the first Tx matching the query
+					Order::Ascending,
+				)
+				.await
+				.map_err(|e| Error::from(format!("Failed to query tx hash: {}", e)))?;
+			match response.txs.into_iter().next() {
+				None => {
+					let elapsed = start_time.elapsed();
+					if &elapsed > &TIME_OUT {
+						return Err(Error::from(format!(
+							"Timeout waiting for tx {:?} to be included in a block",
+							tx_id.hash
+						)))
+					} else {
+						std::thread::sleep(WAIT_BACKOFF);
+					}
+				},
+				Some(resp) => break resp,
+			}
+		};
+
+		let height = Height::new(
+			ChainId::chain_version(self.chain_id.to_string().as_str()),
+			response.height.value(),
+		);
+		let deliver_tx_result = response.tx_result;
+		if deliver_tx_result.code.is_err() {
+			Err(Error::from(format!(
+				"Transaction failed with code {:?} and log {:?}",
+				deliver_tx_result.code, deliver_tx_result.log
+			)))
+		} else {
+			let result = deliver_tx_result
+				.events
+				.iter()
+				.flat_map(|e| ibc_event_try_from_abci_event(e, height).ok().into_iter())
+				.filter(|e| matches!(e, IbcEvent::OpenInitChannel(_)))
+				.collect::<Vec<_>>();
+			if result.clone().len() != 1 {
+				Err(Error::from(format!(
+					"Expected exactly one CreateClient event, found {}",
+					result.len()
+				)))
+			} else {
+				Ok(match result[0] {
+					IbcEvent::OpenInitChannel(ref e) => (
+						e.channel_id().expect("Channel id wasn't found").clone(),
+						e.port_id().clone(),
+					),
+					_ => unreachable!(),
+				})
+			}
+		}
+	}
+
+	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
+		let msg = MsgPushNewWasmCode { signer: self.account_id(), code: wasm };
+		let hash = self.submit(vec![msg.into()]).await?;
+		let resp = self.wait_for_tx_result(hash).await?;
+		let height = Height::new(
+			ChainId::chain_version(self.chain_id.to_string().as_str()),
+			resp.height.value(),
+		);
+		let deliver_tx_result = resp.tx_result;
+		let mut result = deliver_tx_result
+			.events
+			.iter()
+			.flat_map(|e| ibc_event_try_from_abci_event(e, height).ok().into_iter())
+			.filter(|e| matches!(e, IbcEvent::PushWasmCode(_)))
+			.collect::<Vec<_>>();
+		let code_id = if result.clone().len() != 1 {
+			return Err(Error::from(format!(
+				"Expected exactly one PushWasmCode event, found {}",
+				result.len()
+			)))
+		} else {
+			match result.pop().unwrap() {
+				IbcEvent::PushWasmCode(ev) => ev.0,
+				_ => unreachable!(),
+			}
+		};
+		// let resp = MsgClient::connect(
+		// 	Endpoint::try_from(self.grpc_url.to_string())
+		// 		.map_err(|e| Error::from(format!("Failed to parse grpc url: {:?}", e)))?,
+		// )
+		// .await
+		// .map_err(|e| Error::from(format!("Failed to connect to grpc endpoint: {:?}", e)))?
+		// .push_new_wasm_code(msg)
+		// .await
+		// .map_err(|e| {
+		// 	Error::from(format!("Failed to upload wasm code to grpc endpoint: {:?}", e))
+		// })?;
+
+		Ok(code_id)
 	}
 }
 
@@ -1075,7 +1272,7 @@ where
 	H: 'static + Clone + Send + Sync,
 {
 	async fn parse_ibc_events_at(
-		&mut self,
+		&self,
 		latest_revision: u64,
 		height: u64,
 	) -> Result<Vec<IbcEvent>, <Self as IbcProvider>::Error> {

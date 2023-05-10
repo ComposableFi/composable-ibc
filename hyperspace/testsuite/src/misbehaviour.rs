@@ -6,7 +6,9 @@ use grandpa_client_primitives::{
 };
 use hyperspace_primitives::{mock::LocalClientTypes, TestProvider};
 use ibc::{
-	core::ics02_client::msgs::update_client::MsgUpdateAnyClient, events::IbcEvent, tx_msg::Msg,
+	core::ics02_client::{height::Height, msgs::update_client::MsgUpdateAnyClient},
+	events::IbcEvent,
+	tx_msg::Msg,
 };
 use ibc_proto::google::protobuf::Any;
 use ics10_grandpa::client_message::{ClientMessage, Header as GrandpaHeader, RelayChainHeader};
@@ -56,10 +58,9 @@ where
 	let client_id = chain_b.client_id();
 	let latest_height = chain_a.latest_height_and_timestamp().await.unwrap().0;
 	let response = chain_a.query_client_state(latest_height, client_id).await.unwrap();
-	let client_state = match AnyClientState::try_from(response.client_state.unwrap()).unwrap() {
-		AnyClientState::Grandpa(cs) => cs,
-		_ => panic!("unexpected client state"),
-	};
+	let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(response.client_state.unwrap(), |cs| {
+		matches!(cs, AnyClientState::Grandpa(_))
+	}).unwrap() else { unreachable!() };
 
 	let finality_event =
 		chain_b.finality_notifications().await.unwrap().next().await.expect("no event");
@@ -194,7 +195,11 @@ where
 		);
 	}
 
-	let grandpa_header = GrandpaHeader { finality_proof, parachain_headers };
+	let grandpa_header = GrandpaHeader {
+		finality_proof,
+		parachain_headers,
+		height: Height::new(client_state.para_id as u64, parachain_header.number as u64),
+	};
 	let client_message = AnyClientMessage::Grandpa(ClientMessage::Header(grandpa_header));
 
 	let msg =
@@ -221,5 +226,7 @@ where
 		.expect("timeout")
 		.expect("failed to receive misbehaviour event");
 
-	handle.abort()
+	tokio::time::sleep(Duration::from_secs(120)).await;
+
+	handle.abort();
 }

@@ -119,6 +119,12 @@ pub struct ParachainClient<T: light_client_common::config::Config> {
 	/// Delay between parallel RPC calls to be friendly with the node and avoid MaxSlotsExceeded
 	/// error
 	pub rpc_call_delay: Duration,
+	/// Used to determine whether client updates should be forced to send
+	/// even if it's optional. It's required, because some timeout packets
+	/// should use proof of the client states.
+	///
+	/// Set inside `on_undelivered_sequences`.
+	pub maybe_has_undelivered_packets: Arc<Mutex<bool>>,
 }
 
 enum KeyType {
@@ -180,6 +186,9 @@ pub struct ParachainClientConfig {
 	pub finality_protocol: FinalityProtocol,
 	/// Digital signature scheme
 	pub key_type: String,
+	/// All the client states and headers will be wrapped in WASM ones using the WASM code ID.
+	#[serde(default)]
+	pub wasm_code_id: Option<String>,
 }
 
 impl<T> ParachainClient<T>
@@ -263,6 +272,7 @@ where
 			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist)),
 			finality_protocol: config.finality_protocol,
 			rpc_call_delay: DEFAULT_RPC_CALL_DELAY,
+			maybe_has_undelivered_packets: Default::default(),
 		})
 	}
 }

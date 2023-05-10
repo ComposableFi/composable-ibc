@@ -28,6 +28,7 @@ use ibc::{
 	core::ics02_client::{client_state::ClientState as _, msgs::update_client::MsgUpdateAnyClient},
 	events::IbcEvent,
 	tx_msg::Msg,
+	Height,
 };
 use ibc_proto::google::protobuf::Any;
 use ibc_rpc::{BlockNumberOrHash, IbcApiClient};
@@ -163,8 +164,9 @@ where
 	let client_state = response.client_state.ok_or_else(|| {
 		Error::Custom("Received an empty client state from counterparty".to_string())
 	})?;
-	let client_state = AnyClientState::try_from(client_state)
-		.map_err(|_| Error::Custom("Failed to decode client state".to_string()))?;
+	let client_state =
+		AnyClientState::decode_recursive(client_state, |c| matches!(c, AnyClientState::Beefy(_)))
+			.ok_or_else(|| Error::Custom(format!("Failed to decode client state")))?;
 	let beefy_client_state = match &client_state {
 		AnyClientState::Beefy(client_state) => BeefyPrimitivesClientState {
 			latest_beefy_height: client_state.latest_beefy_height,
@@ -425,6 +427,7 @@ pub fn filter_events_by_ids(
 			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
 		IbcEvent::CloseConfirmChannel(e) =>
 			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::PushWasmCode(_) => true,
 		IbcEvent::NewBlock(_) |
 		IbcEvent::AppModule(_) |
 		IbcEvent::Empty(_) |
@@ -471,20 +474,12 @@ where
 	let client_id = source.client_id();
 	let latest_height = counterparty.latest_height_and_timestamp().await?.0;
 	let response = counterparty.query_client_state(latest_height, client_id).await?;
-	let client_state = response.client_state.ok_or_else(|| {
+	let any_client_state = response.client_state.ok_or_else(|| {
 		Error::Custom("Received an empty client state from counterparty".to_string())
 	})?;
 
-	let client_state = AnyClientState::try_from(client_state)
-		.map_err(|_| Error::Custom("Failed to decode client state".to_string()))?;
-
-	let client_state = match client_state {
-		AnyClientState::Grandpa(client_state) => client_state,
-		c => Err(Error::ClientStateRehydration(format!(
-			"Expected AnyClientState::Grandpa found: {:?}",
-			c
-		)))?,
-	};
+	let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
+		.ok_or_else(|| Error::Custom(format!("Could not decode client state")))? else { unreachable!() };
 
 	let prover = source.grandpa_prover();
 	// prove_finality will always give us the highest block finalized by the authority set for the
@@ -521,9 +516,9 @@ where
 		.await?;
 
 	// notice the inclusive range
-	let finalized_blocks = ((client_state.latest_para_height + 1)..=
-		u32::from(finalized_para_header.number()))
-		.collect::<Vec<_>>();
+	let finalized_para_height = u32::from(finalized_para_header.number());
+	let finalized_blocks =
+		((client_state.latest_para_height + 1)..=finalized_para_height).collect::<Vec<_>>();
 
 	if !finalized_blocks.is_empty() {
 		log::info!(
@@ -616,11 +611,11 @@ where
 		.await?;
 
 	// We ensure we advance the finalized latest parachain height
-	if client_state.latest_para_height < u32::from(finalized_para_header.number()) {
+	if client_state.latest_para_height < finalized_para_height {
 		headers_with_events.insert(finalized_para_header.number());
 	}
 
-	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
+	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers, .. } = prover
 		.query_finalized_parachain_headers_with_proof::<T::Header>(
 			client_state.latest_relay_height,
 			justification.commit.target_number,
@@ -653,6 +648,7 @@ where
 		finality_proof: codec::Decode::decode(&mut &*finality_proof.encode())
 			.expect("Same struct from different crates,decode should not fail"),
 		parachain_headers: parachain_headers.into(),
+		height: Height::new(source.para_id as u64, finalized_para_height as u64),
 	};
 
 	let update_header = {

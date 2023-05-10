@@ -37,7 +37,10 @@ use sp_finality_grandpa::{AuthorityId, AuthoritySignature};
 use sp_runtime::traits::{One, Zero};
 use std::{
 	collections::{BTreeMap, BTreeSet},
-	sync::Arc,
+	sync::{
+		atomic::{AtomicU32, Ordering},
+		Arc,
+	},
 	time::Duration,
 };
 use subxt::{config::Header, rpc::types::StorageChangeSet, Config, OnlineClient};
@@ -360,7 +363,7 @@ where
 				})
 				.collect()
 		}
-
+		let latest_para_height = Arc::new(AtomicU32::new(0u32));
 		for changes in change_set.chunks(PROCESS_CHANGES_SET_BATCH_SIZE) {
 			for change in clone_storage_change_sets::<T>(changes) {
 				let header_numbers = header_numbers.clone();
@@ -368,6 +371,7 @@ where
 				let client = self.clone();
 				let to = self.rpc_call_delay.as_millis();
 				let duration1 = Duration::from_millis(rand::thread_rng().gen_range(1..to) as u64);
+				let latest_para_height = latest_para_height.clone();
 				change_set_join_set.spawn(async move {
 					sleep(duration1).await;
 					let header = client
@@ -417,6 +421,7 @@ where
 						.await
 						.map_err(|err| anyhow!("Error fetching timestamp with proof: {err:?}"))?;
 					let proofs = ParachainHeaderProofs { state_proof, extrinsic, extrinsic_proof };
+					latest_para_height.fetch_max(u32::from(para_block_number), Ordering::SeqCst);
 					Ok(Some((H256::from(header.hash()), proofs)))
 				});
 			}
@@ -435,6 +440,7 @@ where
 		Ok(ParachainHeadersWithFinalityProof {
 			finality_proof,
 			parachain_headers: parachain_headers_with_proof,
+			latest_para_height: latest_para_height.load(Ordering::SeqCst),
 		})
 	}
 
