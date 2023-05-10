@@ -154,7 +154,7 @@ pub trait FlatFeeConverter {
 
 pub struct NonFlatFeeConverter<T>(PhantomData<T>);
 
-impl<T: Config> FlatFeeConverter for NonFlatFeeConverter<T> {
+impl<T: crate::Config> FlatFeeConverter for NonFlatFeeConverter<T> {
 	type AssetId = T::AssetId;
 	type Balance = T::Balance;
 
@@ -345,12 +345,12 @@ where
 				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
 			})?;
 
-		let is_whitelisted = FeeLessChannelIds::<T>::contains_key((
+		let is_feeless_channels = FeeLessChannelIds::<T>::contains_key((
 			packet.source_channel.sequence(),
 			packet.destination_channel.sequence(),
 		));
 
-		if is_whitelisted {
+		if is_feeless_channels {
 			return Ok(())
 		}
 
