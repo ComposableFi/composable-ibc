@@ -34,6 +34,9 @@ pub const CLIENT_TYPE_ATTRIBUTE_KEY: &str = "client_type";
 /// The content of the `key` field for the attribute containing the height.
 pub const CONSENSUS_HEIGHT_ATTRIBUTE_KEY: &str = "consensus_height";
 
+/// The content of the `key` field for the attribute containing WASM code ID.
+pub const WASM_CODE_ID_ATTRIBUTE_KEY: &str = "wasm_code_id";
+
 /// NewBlock event signals the committing & execution of a new block.
 // TODO - find a better place for NewBlock
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
@@ -108,7 +111,11 @@ impl From<Attributes> for Vec<EventAttribute> {
 
 impl core::fmt::Display for Attributes {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
-		write!(f, "h: {}, cs_h: {}({})", self.height, self.client_id, self.consensus_height)
+		write!(
+			f,
+			"height: {}, client_id: {}, consensus_height: {}, client_type: {}",
+			self.height, self.client_id, self.consensus_height, self.client_type
+		)
 	}
 }
 
@@ -248,5 +255,23 @@ impl UpgradeClient {
 impl From<Attributes> for UpgradeClient {
 	fn from(attrs: Attributes) -> Self {
 		UpgradeClient(attrs)
+	}
+}
+
+impl From<UpgradeClient> for IbcEvent {
+	fn from(v: UpgradeClient) -> Self {
+		IbcEvent::UpgradeClient(v)
+	}
+}
+
+pub type CodeId = Vec<u8>;
+
+/// Signals a recent pushed WASM code to the chain.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+pub struct PushWasmCode(pub CodeId);
+
+impl From<PushWasmCode> for IbcEvent {
+	fn from(v: PushWasmCode) -> Self {
+		IbcEvent::PushWasmCode(v)
 	}
 }

@@ -21,11 +21,12 @@ use core::{
 	marker::PhantomData,
 	time::Duration,
 };
+use ibc_proto::{
+	google::protobuf::Any, ibc::lightclients::tendermint::v1::ClientState as RawClientState,
+};
 use serde::{Deserialize, Serialize};
 use tendermint_light_client_verifier::options::Options;
 use tendermint_proto::Protobuf;
-
-use ibc_proto::ibc::lightclients::tendermint::v1::ClientState as RawClientState;
 
 use crate::{
 	client_def::TendermintClient, client_message::Header, error::Error, HostFunctionsProvider,
@@ -38,10 +39,11 @@ use ibc::{
 		ics23_commitment::specs::ProofSpecs,
 		ics24_host::identifier::ChainId,
 	},
-	timestamp::{Timestamp, ZERO_DURATION},
+	timestamp::Timestamp,
 	Height,
 };
 
+pub const TENDERMINT_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.ClientState";
 #[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
 pub struct ClientState<H> {
 	pub chain_id: ChainId,
@@ -57,6 +59,15 @@ pub struct ClientState<H> {
 }
 
 impl<H: Clone> Protobuf<RawClientState> for ClientState<H> {}
+
+impl<H: Clone> ClientState<H> {
+	pub fn to_any(&self) -> Any {
+		Any {
+			type_url: TENDERMINT_CLIENT_STATE_TYPE_URL.to_string(),
+			value: self.encode_vec().unwrap(),
+		}
+	}
+}
 
 impl<H> ClientState<H> {
 	#[allow(clippy::too_many_arguments)]
@@ -170,22 +181,14 @@ impl<H> ClientState<H> {
 		upgrade_options: UpgradeOptions,
 		chain_id: ChainId,
 	) -> Self {
-		// Reset custom fields to zero values
-		self.reset();
-
 		// Upgrade the client state
 		self.latest_height = upgrade_height;
 		self.unbonding_period = upgrade_options.unbonding_period;
 		self.chain_id = chain_id;
+		self.proof_specs = upgrade_options.proof_specs;
+		self.upgrade_path = upgrade_options.upgrade_path;
 
 		self
-	}
-
-	fn reset(&mut self) {
-		self.trusting_period = ZERO_DURATION;
-		self.trust_level = TrustThreshold::ZERO;
-		self.frozen_height = None;
-		self.max_clock_drift = ZERO_DURATION;
 	}
 
 	/// Check if the state is expired when `elapsed` time has passed since the latest consensus
@@ -211,19 +214,20 @@ impl<H> ClientState<H> {
 	pub fn verify_delay_passed(
 		current_time: Timestamp,
 		current_height: Height,
-		processed_time: Timestamp,
-		processed_height: Height,
-		delay_period_time: Duration,
+		processed_time: u64,
+		processed_height: u64,
+		delay_period_time: u64,
 		delay_period_blocks: u64,
 	) -> Result<(), Error> {
-		let earliest_time =
-			(processed_time + delay_period_time).map_err(Error::timestamp_overflow)?;
-		if !(current_time == earliest_time || current_time.after(&earliest_time)) {
+		let earliest_time = processed_time + delay_period_time;
+		// NOTE: delay time period is inclusive, so if current_time is earliest_time, then we
+		// return no error https://github.com/cosmos/ibc-go/blob/9ebc2f81049869bc40c443ffb72d9f3e47afb4fc/modules/light-clients/07-tendermint/client_state.go#L306
+		if current_time.nanoseconds() < earliest_time {
 			return Err(Error::not_enough_time_elapsed(current_time, earliest_time))
 		}
 
-		let earliest_height = processed_height.add(delay_period_blocks);
-		if current_height < earliest_height {
+		let earliest_height = processed_height + delay_period_blocks;
+		if current_height.revision_height < earliest_height {
 			return Err(Error::not_enough_blocks_elapsed(current_height, earliest_height))
 		}
 
@@ -247,6 +251,8 @@ impl<H> ClientState<H> {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UpgradeOptions {
 	pub unbonding_period: Duration,
+	pub proof_specs: ProofSpecs,
+	pub upgrade_path: Vec<String>,
 }
 
 impl<H> ibc::core::ics02_client::client_state::ClientState for ClientState<H>
@@ -539,7 +545,7 @@ mod tests {
 					current_time: (now + Duration::from_nanos(1200)).unwrap(),
 					current_height: Height::new(0, 5),
 					processed_time: (now + Duration::from_nanos(1000)).unwrap(),
-					processed_height: Height::new(0, 3),
+					processed_height: Height::new(0, 4),
 					delay_period_time: Duration::from_nanos(500),
 					delay_period_blocks: 2,
 				},
@@ -563,9 +569,9 @@ mod tests {
 			let res = ClientState::<Crypto>::verify_delay_passed(
 				test.params.current_time,
 				test.params.current_height,
-				test.params.processed_time,
-				test.params.processed_height,
-				test.params.delay_period_time,
+				test.params.processed_time.nanoseconds(),
+				test.params.processed_height.revision_height,
+				test.params.delay_period_time.as_secs(),
 				test.params.delay_period_blocks,
 			);
 

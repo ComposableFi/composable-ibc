@@ -47,7 +47,7 @@ rand = "0.8.5"
 
 [dev-dependencies]
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
-hyperspace-core = { path = "../core", features = ["testing", "build-metadata-from-ws"] }
+hyperspace-core = { path = "../core", features = ["testing", ] }
 hyperspace-parachain = { path = "../parachain", features = ["testing"] }
 hyperspace-cosmos = { path = "../cosmos", features = [] }
 

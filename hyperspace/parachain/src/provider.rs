@@ -22,7 +22,7 @@ use grandpa_light_client_primitives::ParachainHeaderProofs;
 use ibc::{
 	applications::transfer::{Amount, PrefixedCoin, PrefixedDenom},
 	core::{
-		ics02_client::client_state::ClientType,
+		ics02_client::client_state::{ClientState, ClientType},
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
@@ -408,6 +408,15 @@ where
 		Ok(res)
 	}
 
+	async fn on_undelivered_sequences(&self, seqs: &[u64]) -> Result<(), Self::Error> {
+		*self.maybe_has_undelivered_packets.lock().unwrap() = !seqs.is_empty();
+		Ok(())
+	}
+
+	fn has_undelivered_sequences(&self) -> bool {
+		*self.maybe_has_undelivered_packets.lock().unwrap()
+	}
+
 	async fn query_unreceived_acknowledgements(
 		&self,
 		at: Height,
@@ -524,9 +533,13 @@ where
 
 	async fn query_host_consensus_state_proof(
 		&self,
-		height: Height,
+		client_state: &AnyClientState,
 	) -> Result<Option<Vec<u8>>, Self::Error> {
-		let hash = self.para_client.rpc().block_hash(Some(height.revision_height.into())).await?;
+		let hash = self
+			.para_client
+			.rpc()
+			.block_hash(Some(client_state.latest_height().revision_height.into()))
+			.await?;
 		let header = self
 			.para_client
 			.rpc()
@@ -537,11 +550,16 @@ where
 			fetch_timestamp_extrinsic_with_proof(&self.para_client, Some(header.hash()))
 				.await
 				.map_err(Error::BeefyProver)?;
-
+		let code_id = if let AnyClientState::Wasm(client_state) = &client_state {
+			Some(client_state.code_id.clone())
+		} else {
+			None
+		};
 		let host_consensus_proof = HostConsensusProof {
 			header: header.encode(),
 			extrinsic: extrinsic_with_proof.ext,
 			extrinsic_proof: extrinsic_with_proof.proof,
+			code_id,
 		};
 		Ok(Some(host_consensus_proof.encode()))
 	}
@@ -780,5 +798,9 @@ where
 
 	fn set_connection_id(&mut self, connection_id: ConnectionId) {
 		*self.connection_id.lock().unwrap() = Some(connection_id);
+	}
+
+	async fn upload_wasm(&self, _wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
+		Err(Error::Custom("Uploading WASM to parachain is not supported".to_string()))
 	}
 }

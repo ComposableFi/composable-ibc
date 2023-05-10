@@ -28,6 +28,7 @@ use ics07_tendermint::{
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use primitives::{IbcProvider, KeyProvider, UpdateType};
 use prost::Message;
+use quick_cache::sync::Cache;
 use ripemd::Ripemd160;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -36,7 +37,9 @@ use std::{
 };
 use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
-use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient, Url};
+use tendermint_light_client_verifier::types::{LightBlock, ValidatorSet};
+use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, Url, WebSocketClient};
+use tokio::task::JoinSet;
 
 const DEFAULT_FEE_DENOM: &str = "stake";
 const DEFAULT_FEE_AMOUNT: &str = "4000";
@@ -52,12 +55,6 @@ fn default_fee_denom() -> String {
 
 fn default_fee_amount() -> String {
 	DEFAULT_FEE_AMOUNT.to_string()
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum KeyBaseConfig {
-	ConfigKeyEntry(ConfigKeyEntry),
-	Mnemonic(String),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -124,7 +121,11 @@ pub struct CosmosClient<H> {
 	/// Chain name
 	pub name: String,
 	/// Chain rpc client
-	pub rpc_client: HttpClient,
+	pub rpc_client: WebSocketClient,
+	/// Reusable GRPC client
+	pub grpc_client: tonic::transport::Channel,
+	/// Chain rpc address
+	pub rpc_url: Url,
 	/// Chain grpc address
 	pub grpc_url: Url,
 	/// Websocket chain ws client
@@ -158,6 +159,14 @@ pub struct CosmosClient<H> {
 	/// Mutex used to sequentially send transactions. This is necessary because
 	/// account sequence numbers are not updated until the transaction is processed.
 	pub tx_mutex: Arc<tokio::sync::Mutex<()>>,
+	/// Used to determine whether client updates should be forced to send
+	/// even if it's optional. It's required, because some timeout packets
+	/// should use proof of the client states.
+	///
+	/// Set inside `on_undelivered_sequences`.
+	pub maybe_has_undelivered_packets: Arc<Mutex<bool>>,
+	/// Light-client blocks cache
+	pub light_block_cache: Arc<Cache<TmHeight, LightBlock>>,
 }
 
 /// config options for [`ParachainClient`]
@@ -215,10 +224,10 @@ pub struct CosmosClientConfig {
 	pub address_type: AddressType,			    // TODO: Type = cosmos
 	pub extension_options: Vec<ExtensionOption>,// TODO: Could be set to None
 	*/
-	/// The key that signs transactions
-	pub keybase: KeyBaseConfig,
 	/// Whitelisted channels
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
+	/// The key that signs transactions
+	pub mnemonic: String,
 }
 
 impl<H> CosmosClient<H>
@@ -228,29 +237,33 @@ where
 {
 	/// Initializes a [`CosmosClient`] given a [`CosmosClientConfig`]
 	pub async fn new(config: CosmosClientConfig) -> Result<Self, Error> {
-		let rpc_client = HttpClient::new(config.rpc_url.clone())
+		let (rpc_client, rpc_driver) = WebSocketClient::new(config.websocket_url.clone())
+			.await
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		tokio::spawn(rpc_driver.run());
+		let grpc_client = tonic::transport::Endpoint::new(config.grpc_url.to_string())
+			.map_err(|e| Error::RpcError(format!("{:?}", e)))?
+			.connect()
+			.await
+			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+
 		let chain_id = ChainId::from(config.chain_id);
 		let light_client = LightClient::init_light_client(config.rpc_url.clone()).await?;
 		let commitment_prefix = CommitmentPrefix::try_from(config.store_prefix.as_bytes().to_vec())
 			.map_err(|e| Error::from(format!("Invalid store prefix {:?}", e)))?;
 
-		let keybase: KeyEntry;
-		match config.keybase {
-			KeyBaseConfig::ConfigKeyEntry(config_key) =>
-				keybase = KeyEntry::try_from(config_key).map_err(|e| e.to_string())?,
-			KeyBaseConfig::Mnemonic(mnemonic) =>
-				keybase = KeyEntry::try_from(MnemonicEntry {
-					mnemonic,
-					prefix: config.account_prefix.clone(),
-				})
-				.map_err(|e| e.to_string())?,
-		}
+		let keybase: KeyEntry = KeyEntry::try_from(MnemonicEntry {
+			mnemonic: config.mnemonic,
+			prefix: config.account_prefix.clone(),
+		})
+		.map_err(|e| e.to_string())?;
 
 		Ok(Self {
 			name: config.name,
 			chain_id,
 			rpc_client,
+			grpc_client,
+			rpc_url: config.rpc_url,
 			grpc_url: config.grpc_url,
 			websocket_url: config.websocket_url,
 			client_id: Arc::new(Mutex::new(config.client_id)),
@@ -266,6 +279,8 @@ where
 			keybase,
 			_phantom: std::marker::PhantomData,
 			tx_mutex: Default::default(),
+			maybe_has_undelivered_packets: Default::default(),
+			light_block_cache: Arc::new(Cache::new(100000)),
 		})
 	}
 
@@ -335,6 +350,22 @@ where
 		confirm_tx(&self.rpc_client, hash).await
 	}
 
+	pub async fn fetch_light_block_with_cache(
+		&self,
+		height: TmHeight,
+	) -> Result<LightBlock, Error> {
+		self.light_block_cache
+			.get_or_insert_async(&height, async move {
+				self.light_client.io.fetch_light_block(AtHeight::At(height)).map_err(|e| {
+					Error::from(format!(
+						"Failed to fetch light block for chain {:?} with error {:?}",
+						self.name, e
+					))
+				})
+			})
+			.await
+	}
+
 	pub async fn msg_update_client_header(
 		&self,
 		from: TmHeight,
@@ -342,49 +373,50 @@ where
 		trusted_height: Height,
 	) -> Result<Vec<(Header, UpdateType)>, Error> {
 		let mut xs = Vec::new();
-		for height in from.value()..=to.value() {
-			let latest_light_block = self
-				.light_client
-				.io
-				.fetch_light_block(AtHeight::At(height.try_into()?))
-				.map_err(|e| {
-					Error::from(format!(
-						"Failed to fetch light block for chain {:?} with error {:?}",
-						self.name, e
-					))
-				})?;
-			let height = TmHeight::try_from(trusted_height.revision_height).map_err(|e| {
-				Error::from(format!(
-					"Failed to convert height for chain {:?} with error {:?}",
-					self.name, e
-				))
-			})?;
-			let trusted_light_block = self
-				.light_client
-				.io
-				.fetch_light_block(AtHeight::At(height.increment()))
-				.map_err(|e| {
-					Error::from(format!(
-						"Failed to fetch light block for chain {:?} with error {:?}",
-						self.name, e
-					))
-				})?;
+		let heightss = (from.value()..=to.value()).collect::<Vec<_>>();
+		let client = Arc::new(self.clone());
+		for heights in heightss.chunks(5) {
+			let mut join_set = JoinSet::<Result<_, Error>>::new();
+			for height in heights.to_owned() {
+				let client = client.clone();
+				join_set.spawn(async move {
+					log::trace!(target: "hyperspace_cosmos", "Fetching header at height {:?}", height);
+					let latest_light_block =
+						client.fetch_light_block_with_cache(height.try_into()?).await?;
 
-			let update_type =
-				match latest_light_block.validators == latest_light_block.next_validators {
-					true => UpdateType::Mandatory,
-					false => UpdateType::Mandatory,
-				};
-			xs.push((
-				Header {
-					signed_header: latest_light_block.signed_header,
-					validator_set: latest_light_block.validators,
-					trusted_height,
-					trusted_validator_set: trusted_light_block.validators,
-				},
-				update_type,
-			));
+					let height =
+						TmHeight::try_from(trusted_height.revision_height).map_err(|e| {
+							Error::from(format!(
+								"Failed to convert height for chain {:?} with error {:?}",
+								client.name, e
+							))
+						})?;
+					let trusted_light_block =
+						client.fetch_light_block_with_cache(height.increment()).await?;
+
+					let update_type = match is_validators_equal(
+						&latest_light_block.validators,
+						&latest_light_block.next_validators,
+					) {
+						true => UpdateType::Optional,
+						false => UpdateType::Mandatory,
+					};
+					Ok((
+						Header {
+							signed_header: latest_light_block.signed_header,
+							validator_set: latest_light_block.validators,
+							trusted_height,
+							trusted_validator_set: trusted_light_block.validators,
+						},
+						update_type,
+					))
+				});
+			}
+			while let Some(res) = join_set.join_next().await {
+				xs.push(res.map_err(|e| Error::Custom(e.to_string()))??);
+			}
 		}
+		xs.sort_by_key(|(h, _)| h.trusted_height.revision_height);
 		Ok(xs)
 	}
 
@@ -461,6 +493,12 @@ where
 			.map_err(|err| Error::Custom(format!("bad client state proof: {}", err)))?;
 		Ok((response, proof.into()))
 	}
+}
+
+/// Checks that the two validator sets are equal. The default implementation
+/// of `Eq` cannot be used, because the `proposer` should be ignored.
+fn is_validators_equal(set_a: &ValidatorSet, set_b: &ValidatorSet) -> bool {
+	set_a.hash() == set_b.hash()
 }
 
 #[cfg(test)]

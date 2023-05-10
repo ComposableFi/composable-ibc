@@ -59,6 +59,13 @@ pub enum Path {
 	Acks(AcksPath),
 	Receipts(ReceiptsPath),
 	Upgrade(ClientUpgradePath),
+	Outside(OutsidePath),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Display)]
+#[display(fmt = "{}", path)]
+pub struct OutsidePath {
+	pub path: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Display)]
@@ -188,8 +195,13 @@ impl FromStr for Path {
 			.or_else(|| parse_acks(&components))
 			.or_else(|| parse_receipts(&components))
 			.or_else(|| parse_upgrades(&components))
+			.or_else(|| parse_outside_paths(&components))
 			.ok_or_else(|| PathError::parse_failure(s.to_string()))
 	}
+}
+
+fn parse_outside_paths(components: &[&str]) -> Option<Path> {
+	Some(OutsidePath { path: components.join("/").to_string() }.into())
 }
 
 fn parse_client_paths(components: &[&str]) -> Option<Path> {
@@ -536,7 +548,7 @@ mod tests {
 	fn invalid_path_doesnt_parse() {
 		let invalid_path = Path::from_str("clients/clientType");
 
-		assert!(invalid_path.is_err());
+		assert!(!matches!(invalid_path, Ok(Path::ClientType(_))));
 	}
 
 	#[test]
@@ -666,7 +678,7 @@ mod tests {
 		let path = "channels/channel-0";
 		let path = Path::from_str(path);
 
-		assert!(path.is_err());
+		assert!(!matches!(path, Ok(Path::ChannelEnds(_))));
 	}
 
 	#[test]
@@ -682,7 +694,7 @@ mod tests {
 		let path = "sequences/0";
 		let path = Path::from_str(path);
 
-		assert!(path.is_err());
+		assert!(!matches!(path, Ok(Path::SeqAcks(_) | Path::SeqRecvs(_) | Path::SeqSends(_))));
 	}
 
 	#[test]

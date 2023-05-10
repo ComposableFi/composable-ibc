@@ -157,9 +157,11 @@ where
 		From<SendPingParams>,
 {
 	async fn send_transfer(&self, transfer: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
-		let account_id = AccountId32::from_ss58check(transfer.receiver.as_ref()).unwrap();
+		let account_id = AccountId32::from_ss58check(transfer.receiver.as_ref())
+			.map(MultiAddress::Id)
+			.unwrap_or_else(|_| MultiAddress::Raw(transfer.receiver.to_string().into_bytes()));
 		let params = TransferParams {
-			to: MultiAddress::Id(account_id),
+			to: account_id,
 			source_channel: transfer.source_channel.sequence(),
 			timeout: Timeout::Absolute {
 				timestamp: Some(transfer.timeout_timestamp.nanoseconds()),
@@ -167,8 +169,14 @@ where
 			},
 		};
 		let amount = str::parse::<u128>(&transfer.token.amount.to_string()).expect("Infallible!");
-		dbg!(&amount);
-		self.transfer_tokens(params, 1, amount).await?;
+		// TODO: get asset_id by denom
+		let string = transfer.token.denom.to_string();
+		let asset_id = if string == *r#""UNIT""# || string == "UNIT" { 1 } else { 2 };
+		log::info!(
+			"Sending transfer: {:?}, asset id: {asset_id}, amount: {amount}",
+			transfer.token.denom
+		);
+		self.transfer_tokens(params, asset_id, amount).await?;
 
 		Ok(())
 	}

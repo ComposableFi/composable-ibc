@@ -27,6 +27,7 @@
 
 //! Pallet IBC
 //! Implements the ibc protocol for substrate runtimes.
+#[macro_use]
 extern crate alloc;
 
 use codec::{Decode, Encode};
@@ -872,6 +873,7 @@ pub mod pallet {
 							.map_err(|_| Error::<T>::ClientFreezeFailed)?,
 					)
 				},
+				AnyClientState::Wasm(_) => return Err(Error::<T>::ClientFreezeFailed.into()),
 				#[cfg(test)]
 				AnyClientState::Mock(mut ms) => {
 					ms.frozen_height =

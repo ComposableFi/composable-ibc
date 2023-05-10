@@ -24,12 +24,15 @@ use alloc::{collections::BTreeMap, vec::Vec};
 use anyhow::anyhow;
 use codec::{Decode, Encode};
 use grandpa_client_primitives::{FinalityProof, ParachainHeaderProofs};
+use ibc::Height;
 use sp_core::H256;
 use sp_runtime::traits::BlakeTwo256;
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA header
 pub const GRANDPA_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.ClientMessage";
+pub const GRANDPA_HEADER_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.Header";
+pub const GRANDPA_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.Misbehaviour";
 
 /// Relay chain substrate header type
 pub type RelayChainHeader = sp_runtime::generic::Header<u32, BlakeTwo256>;
@@ -44,6 +47,14 @@ pub struct Header {
 	/// finalzed at the relay chain height. We check for this parachain header finalization
 	/// via state proofs. Also contains extrinsic proof for timestamp.
 	pub parachain_headers: BTreeMap<H256, ParachainHeaderProofs>,
+	/// Lazily initialized height
+	pub height: Height,
+}
+
+impl Header {
+	pub fn height(&self) -> Height {
+		self.height
+	}
 }
 
 /// Misbehaviour type for GRANDPA. If both first and second proofs are valid
@@ -82,7 +93,7 @@ impl TryFrom<RawHeader> for Header {
 			.finality_proof
 			.ok_or_else(|| anyhow!("Grandpa finality proof is required!"))?;
 		let block = if finality_proof.block.len() == 32 {
-			sp_core::H256::from_slice(&*finality_proof.block)
+			H256::from_slice(&*finality_proof.block)
 		} else {
 			Err(anyhow!("Invalid hash type with length: {}", finality_proof.block.len()))?
 		};
@@ -122,6 +133,7 @@ impl TryFrom<RawHeader> for Header {
 				unknown_headers,
 			},
 			parachain_headers,
+			height: Height::new(raw_header.para_id as u64, raw_header.para_height as u64),
 		})
 	}
 }
@@ -151,7 +163,12 @@ impl From<Header> for RawHeader {
 				.collect(),
 		};
 
-		RawHeader { finality_proof: Some(finality_proof), parachain_headers }
+		RawHeader {
+			finality_proof: Some(finality_proof),
+			parachain_headers,
+			para_id: header.height.revision_number as u32,
+			para_height: header.height.revision_height as u32,
+		}
 	}
 }
 

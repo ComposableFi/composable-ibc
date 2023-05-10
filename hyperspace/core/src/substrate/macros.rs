@@ -159,7 +159,8 @@ macro_rules! define_any_wrapper {
 macro_rules! define_ibc_event_wrapper {
 	(
 		$name: ident,
-		$meta_ibc_event_type: ty
+		$meta_ibc_event_type: ty,
+		$($additional:tt)*
 	) => {
 		/// Allows to implement traits for the subxt generated code
 		pub struct $name(pub $meta_ibc_event_type);
@@ -486,6 +487,7 @@ macro_rules! define_ibc_event_wrapper {
 						RawIbcEvent::AppModule { kind, module_id },
 					MetadataIbcEvent::Empty => RawIbcEvent::Empty,
 					MetadataIbcEvent::ChainError => RawIbcEvent::ChainError,
+					$($additional)*
 				}
 			}
 		}

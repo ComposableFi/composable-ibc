@@ -23,9 +23,17 @@ use alloc::{format, string::ToString, vec::Vec};
 use anyhow::anyhow;
 use core::{marker::PhantomData, time::Duration};
 use ibc::{
-	core::{ics02_client::client_state::ClientType, ics24_host::identifier::ChainId},
+	core::{
+		ics02_client::{
+			client_consensus::ConsensusState,
+			client_state::{ClientType, Status},
+		},
+		ics24_host::identifier::{ChainId, ClientId},
+		ics26_routing::context::ReaderContext,
+	},
 	Height,
 };
+use ibc_proto::google::protobuf::Any;
 use light_client_common::RelayChain;
 use serde::{Deserialize, Serialize};
 use sp_core::{ed25519::Public, H256};
@@ -91,6 +99,13 @@ impl<H: Clone> ClientState<H> {
 			Some(frozen_height) if frozen_height <= height =>
 				Err(Error::Custom(format!("Client has been frozen at height {frozen_height}"))),
 			_ => Ok(()),
+		}
+	}
+
+	pub fn to_any(&self) -> Any {
+		Any {
+			type_url: GRANDPA_CLIENT_STATE_TYPE_URL.to_string(),
+			value: self.encode_vec().unwrap(),
 		}
 	}
 }
@@ -162,6 +177,33 @@ where
 
 	fn latest_height(&self) -> Height {
 		self.latest_height()
+	}
+
+	fn status<Ctx: ReaderContext>(&self, ctx: &Ctx, client_id: &ClientId) -> Status {
+		if self.frozen_height.is_some() {
+			return Status::Frozen
+		}
+
+		// get latest consensus state from clientStore to check for expiry
+		let consensus_state = match ctx.consensus_state(client_id, self.latest_height()) {
+			Ok(consensus_state) => consensus_state,
+			Err(_) => {
+				// if the client state does not have an associated consensus state for its latest
+				// height then it must be expired
+				return Status::Expired
+			},
+		};
+
+		let elapsed = ctx
+			.host_timestamp()
+			.duration_since(&consensus_state.timestamp())
+			.unwrap_or_else(|| Duration::from_secs(0));
+
+		if self.expired(elapsed) {
+			return Status::Expired
+		}
+
+		Status::Active
 	}
 
 	fn frozen_height(&self) -> Option<Height> {

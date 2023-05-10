@@ -7,7 +7,8 @@ edition = "2021"
 all-features = true
 
 [features]
-default = ["std"]
+default = ["std", "rust-crypto"]
+rust-crypto = ["sha2"]
 std = []
 
 [dependencies]
@@ -25,6 +26,7 @@ flex-error = { version = "0.4.4", default-features = false }
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 tendermint-light-client-verifier = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+sha2 = { version = "0.10", optional = true, default-features = false }
 
 [dev-dependencies]
 ibc = { path = "../../ibc/modules", features = ["mocks"] }

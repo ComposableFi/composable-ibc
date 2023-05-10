@@ -288,7 +288,7 @@ async fn test_continuous_update_of_beefy_client() {
 				match result {
 					Update(upd_res) => {
 						assert_eq!(upd_res.client_id, client_id);
-						assert!(!upd_res.client_state.is_frozen());
+						assert!(!upd_res.client_state.is_frozen(&ctx, &client_id));
 						assert_eq!(
 							upd_res.client_state,
 							ctx.latest_client_states(&client_id).clone()

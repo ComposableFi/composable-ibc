@@ -57,7 +57,8 @@ pub fn event_is_type_client(ev: &IbcEvent) -> bool {
 		IbcEvent::CreateClient(_) |
 			IbcEvent::UpdateClient(_) |
 			IbcEvent::UpgradeClient(_) |
-			IbcEvent::ClientMisbehaviour(_)
+			IbcEvent::ClientMisbehaviour(_) |
+			IbcEvent::PushWasmCode(_)
 	)
 }
 
@@ -100,17 +101,21 @@ pub fn ibc_event_try_from_abci_event(
 ) -> Result<IbcEvent, IbcEventError> {
 	match &abci_event.kind.parse() {
 		Ok(IbcEventType::CreateClient) => Ok(IbcEvent::CreateClient(
-			create_client_try_from_abci_event(abci_event).map_err(IbcEventError::client)?,
+			create_client_try_from_abci_event(abci_event, height).map_err(IbcEventError::client)?,
 		)),
 		Ok(IbcEventType::UpdateClient) => Ok(IbcEvent::UpdateClient(
-			update_client_try_from_abci_event(abci_event).map_err(IbcEventError::client)?,
+			update_client_try_from_abci_event(abci_event, height).map_err(IbcEventError::client)?,
 		)),
 		Ok(IbcEventType::UpgradeClient) => Ok(IbcEvent::UpgradeClient(
-			upgrade_client_try_from_abci_event(abci_event).map_err(IbcEventError::client)?,
+			upgrade_client_try_from_abci_event(abci_event, height)
+				.map_err(IbcEventError::client)?,
 		)),
 		Ok(IbcEventType::ClientMisbehaviour) => Ok(IbcEvent::ClientMisbehaviour(
-			client_misbehaviour_try_from_abci_event(abci_event).map_err(IbcEventError::client)?,
+			client_misbehaviour_try_from_abci_event(abci_event, height)
+				.map_err(IbcEventError::client)?,
 		)),
+		Ok(IbcEventType::PushWasmCode) =>
+			Ok(IbcEvent::PushWasmCode(push_wasm_code_try_from_abci_event(abci_event)?)),
 		Ok(IbcEventType::OpenInitConnection) => Ok(IbcEvent::OpenInitConnection(
 			connection_open_init_try_from_abci_event(abci_event)
 				.map_err(IbcEventError::connection)?,
@@ -170,31 +175,56 @@ pub fn ibc_event_try_from_abci_event(
 
 pub fn create_client_try_from_abci_event(
 	abci_event: &AbciEvent,
+	height: Height,
 ) -> Result<client_events::CreateClient, ClientError> {
-	client_extract_attributes_from_tx(abci_event).map(client_events::CreateClient)
+	client_extract_attributes_from_tx(abci_event, height).map(client_events::CreateClient)
 }
 
 pub fn update_client_try_from_abci_event(
 	abci_event: &AbciEvent,
+	height: Height,
 ) -> Result<client_events::UpdateClient, ClientError> {
-	client_extract_attributes_from_tx(abci_event).map(|attributes| client_events::UpdateClient {
-		common: attributes,
-		header: extract_header_from_tx(abci_event)
-			.ok()
-			.map(|h| h.encode_vec().expect("header should encode")),
+	client_extract_attributes_from_tx(abci_event, height).map(|attributes| {
+		client_events::UpdateClient {
+			common: attributes,
+			header: extract_header_from_tx(abci_event)
+				.ok()
+				.map(|h| h.encode_vec().expect("header should encode")),
+		}
 	})
 }
 
 pub fn upgrade_client_try_from_abci_event(
 	abci_event: &AbciEvent,
+	height: Height,
 ) -> Result<client_events::UpgradeClient, ClientError> {
-	client_extract_attributes_from_tx(abci_event).map(client_events::UpgradeClient)
+	client_extract_attributes_from_tx(abci_event, height).map(client_events::UpgradeClient)
 }
 
 pub fn client_misbehaviour_try_from_abci_event(
 	abci_event: &AbciEvent,
+	height: Height,
 ) -> Result<client_events::ClientMisbehaviour, ClientError> {
-	client_extract_attributes_from_tx(abci_event).map(client_events::ClientMisbehaviour)
+	client_extract_attributes_from_tx(abci_event, height).map(client_events::ClientMisbehaviour)
+}
+
+pub fn push_wasm_code_try_from_abci_event(
+	abci_event: &AbciEvent,
+) -> Result<client_events::PushWasmCode, IbcEventError> {
+	let mut code_id = None;
+	for tag in &abci_event.attributes {
+		let key = tag.key.as_str();
+		let value = tag.value.as_str();
+		match key {
+			client_events::WASM_CODE_ID_ATTRIBUTE_KEY =>
+				code_id = Some(hex::decode(value).map_err(IbcEventError::from_hex_error)?),
+			_ => {},
+		}
+	}
+
+	Ok(client_events::PushWasmCode(code_id.ok_or_else(|| {
+		IbcEventError::missing_key(client_events::WASM_CODE_ID_ATTRIBUTE_KEY.to_owned())
+	})?))
 }
 
 pub fn connection_open_init_try_from_abci_event(
@@ -298,6 +328,7 @@ pub fn recv_packet_try_from_abci_event(
 	abci_event: &AbciEvent,
 	height: Height,
 ) -> Result<channel_events::ReceivePacket, ChannelError> {
+	log::debug!("recv_packet_try_from_abci_event: {:?}", abci_event);
 	extract_packet_and_write_ack_from_tx(abci_event)
 		.map(|(packet, write_ack)| {
 			// This event should not have a write ack.
@@ -348,6 +379,7 @@ pub fn timeout_packet_try_from_abci_event(
 
 pub fn client_extract_attributes_from_tx(
 	event: &AbciEvent,
+	height: Height,
 ) -> Result<ClientAttributes, ClientError> {
 	let mut attr = ClientAttributes::default();
 
@@ -374,6 +406,10 @@ pub fn client_extract_attributes_from_tx(
 				})?,
 			_ => {},
 		}
+	}
+
+	if attr.height == Height::default() {
+		attr.height = height;
 	}
 
 	Ok(attr)

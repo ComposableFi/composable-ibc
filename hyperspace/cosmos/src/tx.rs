@@ -21,7 +21,7 @@ use ibc_proto::{
 use prost::Message;
 use tendermint::Hash;
 use tendermint_rpc::{
-	endpoint::tx::Response as TxResponse, query::Query, Client, HttpClient, Order, Url,
+	endpoint::tx::Response as TxResponse, query::Query, Client, Order, Url, WebSocketClient,
 };
 
 pub fn sign_tx(
@@ -82,7 +82,7 @@ pub async fn simulate_tx(
 	Ok(response)
 }
 
-pub async fn broadcast_tx(rpc_client: &HttpClient, tx_bytes: Vec<u8>) -> Result<Hash, Error> {
+pub async fn broadcast_tx(rpc_client: &WebSocketClient, tx_bytes: Vec<u8>) -> Result<Hash, Error> {
 	let response = rpc_client
 		.broadcast_tx_sync(tx_bytes)
 		.await
@@ -90,7 +90,7 @@ pub async fn broadcast_tx(rpc_client: &HttpClient, tx_bytes: Vec<u8>) -> Result<
 	Ok(response.hash)
 }
 
-pub async fn confirm_tx(rpc_client: &HttpClient, tx_hash: Hash) -> Result<Hash, Error> {
+pub async fn confirm_tx(rpc_client: &WebSocketClient, tx_hash: Hash) -> Result<Hash, Error> {
 	let start_time = tokio::time::Instant::now();
 	let timeout = Duration::from_millis(30000);
 	const WAIT_BACKOFF: Duration = Duration::from_millis(300);

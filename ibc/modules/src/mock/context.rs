@@ -1058,6 +1058,7 @@ where
 		&self,
 		height: Height,
 		_proof: Option<Vec<u8>>,
+		_client_state: &C::AnyClientState,
 	) -> Result<C::AnyConsensusState, Ics02Error> {
 		match self.host_block(height) {
 			Some(block_ref) => Ok(block_ref.clone().into()),
