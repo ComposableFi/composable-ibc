@@ -894,7 +894,7 @@ benchmarks! {
 		let balance = 100000 * MILLIS;
 		Pallet::<T>::handle_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
 		let channel_id = ChannelId::new(0);
-		let denom = "transfer/channel-15/uatom".to_string();
+		let denom = "transfer/channel-15/PICA".to_string();
 		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
 		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
 			asset_id,
