@@ -121,7 +121,7 @@ pub enum LightClientProtocol {
 pub(crate) mod benchmarks;
 
 #[cfg(test)]
-pub mod mock;
+mod mock;
 
 #[cfg(test)]
 mod tests;
@@ -287,10 +287,6 @@ pub mod pallet {
 		Vec<u8>,
 		OptionQuery,
 	>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn current_slot)]
-	pub(super) type CurrentSlot<T: Config> = StorageValue<_, String, ValueQuery>;
 
 	#[pallet::storage]
 	/// client_id , Height => Timestamp

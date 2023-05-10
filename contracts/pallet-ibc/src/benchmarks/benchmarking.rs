@@ -82,7 +82,7 @@ use tendermint_proto::Protobuf;
 
 const MILLIS: u128 = 1_000_000;
 
-fn relayer_origin<T: pallet_membership::Config<Instance2>>(
+fn relayer_origin<T: pallet_membership::Config<Instance2> + frame_system::Config>(
 ) -> <T as frame_system::Config>::AccountId {
 	pallet_membership::pallet::Members::<T, Instance2>::get()
 		.get(0)
@@ -660,9 +660,7 @@ benchmarks! {
 	// ack_packet
 	ack_packet_tendermint {
 		let i in 1..1000u32;
-		// let j in 1..1000u32;
 		let data = vec![0u8;i.try_into().unwrap()];
-		// let ack = vec![0u8;j.try_into().unwrap()];
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
 		set_timestamp::<T>(now);
@@ -707,41 +705,21 @@ benchmarks! {
 		ctx.store_next_sequence_recv((port_id.clone(), ChannelId::new(0)), 1u64.into()).unwrap();
 		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 
-		// let balance = 100000 * MILLIS;
-		// let denom = "transfer/channel-1/PICA".to_string();
-		// let channel_escrow_address = get_channel_escrow_address(&port_id, ChannelId::new(0)).unwrap();
-		// let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
-		// let channel_escrow_address: <T as frame_system::Config>::AccountId = channel_escrow_address.into_account();
-		// let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		// <<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
-		// 	asset_id,
-		// 	&channel_escrow_address,
-		// 	balance.into(),
-		// ).unwrap();
-		//
-		// let raw_user: AccountId32 =  caller.clone().into();
-		// let raw_user: &[u8] = raw_user.as_ref();
-		// let mut hex_string = hex::encode_upper(raw_user.to_vec());
-		// hex_string.insert_str(0, "0x");
-		// let prefixed_denom = PrefixedDenom::from_str(&denom).unwrap();
-		// let amt = 1000 * MILLIS;
-		// let coin = Coin {
-		// 	denom: prefixed_denom,
-		// 	amount: Amount::from_str(&format!("{:?}", amt)).unwrap()
-		// };
-		// let packet_data = PacketData {
-		// 	token: coin,
-		// 	sender: Signer::from_str("alice").unwrap(),
-		// 	receiver: Signer::from_str(&hex_string).unwrap(),
-		// 	memo: "".to_string()
-		// };
-		//
-		// let data = serde_json::to_vec(&packet_data).unwrap();
-
-		//
-//
-		let data = r#"{"denom":"transfer/channel-0/1","amount":"300000000000","sender":"0x34029544b0269352f20212699bf21d5896db39dd7aa2feb0a5ae36da2f8c8d28","receiver":"0x34029544b0269352f20212699bf21d5896db39dd7aa2feb0a5ae36da2f8c8d28","memo":""}"#.as_bytes().to_vec();
-		let ack = r#"{"result":"AQ=="}"#.as_bytes().to_vec();
+		let denom = "transfer/channel-1/PICA".to_string();
+		let prefixed_denom = PrefixedDenom::from_str(&denom).unwrap();
+		let amt = 1000 * MILLIS;
+		let coin = Coin {
+			denom: prefixed_denom,
+			amount: Amount::from_str(&format!("{:?}", amt)).unwrap()
+		};
+		let packet_data = PacketData {
+			token: coin,
+			sender: Signer::from_str("alice").unwrap(),
+			receiver: Signer::from_str("bob").unwrap(),
+			memo: "".to_string()
+		};
+		let data = serde_json::to_vec(&packet_data).unwrap();
+		let ack = TransferAck::success().to_string().into_bytes();
 		let (cs_state, value) = create_ack_packet::<T>(data, ack);
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
 		let msg = Any {
@@ -804,7 +782,21 @@ benchmarks! {
 		ctx.store_next_sequence_recv((port_id.clone(), ChannelId::new(0)), 1u64.into()).unwrap();
 		ctx.store_next_sequence_send((port_id.clone(), ChannelId::new(0)), 1u64.into()).unwrap();
 
-		let data = r#"{"denom":"transfer/channel-0/1","amount":"49800000000","sender":"0x582ad31f609b3c75d026958ca31ad064358a86bf8c800584c758a3745b8e5d12","receiver":"0x582ad31f609b3c75d026958ca31ad064358a86bf8c800584c758a3745b8e5d12","memo":""}"#.as_bytes().to_vec();
+		let denom = "transfer/channel-0/1".to_string();
+		let prefixed_denom = PrefixedDenom::from_str(&denom).unwrap();
+		let amt = 1000 * MILLIS;
+		let coin = Coin {
+			denom: prefixed_denom,
+			amount: Amount::from_str(&format!("{:?}", amt)).unwrap()
+		};
+		let packet_data = PacketData {
+			token: coin,
+			sender: Signer::from_str("alice").unwrap(),
+			receiver: Signer::from_str("bob").unwrap(),
+			memo: "".to_string()
+		};
+		let data = serde_json::to_vec(&packet_data).unwrap();
+
 		let (cs_state, value) = create_timeout_packet::<T>(data);
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
 		let msg = Any {
@@ -1271,7 +1263,9 @@ benchmarks! {
 	}
 }
 
-fn set_timestamp<T: pallet_timestamp::Config + pallet_aura::Config>(time: T::Moment) {
+fn set_timestamp<T: pallet_timestamp::Config + pallet_aura::Config>(
+	time: <T as pallet_timestamp::Config>::Moment,
+) {
 	use frame_benchmarking::Zero;
 	use frame_support::traits::Hooks;
 	use sp_consensus_aura::digests::CompatibleDigestItem;

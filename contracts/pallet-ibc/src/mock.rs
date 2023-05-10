@@ -1,7 +1,7 @@
 use crate::{self as pallet_ibc, ics20_fee::FlatFeeConverter, routing::ModuleRouter};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
-	pallet_prelude::{ConstU32, StorageValue, ValueQuery},
+	pallet_prelude::ConstU32,
 	parameter_types,
 	traits::{
 		fungibles::{metadata::Mutate, Create, InspectMetadata},
@@ -73,20 +73,6 @@ impl pallet_membership::Config<Instance2> for Test {
 	type MaxMembers = MaxAuthorities;
 	type WeightInfo = ();
 }
-
-pub struct _GeneratedPrefixForStorageCurrentSlot<T>(PhantomData<(T,)>);
-impl<T: Config> frame_support::traits::StorageInstance
-	for _GeneratedPrefixForStorageCurrentSlot<T>
-{
-	fn pallet_prefix() -> &'static str {
-		<<T as frame_system::Config>::PalletInfo as frame_support::traits::PalletInfo>::name::<pallet_aura::Pallet<T>>().expect("No name found for the pallet in the runtime! This usually means that the pallet wasn't added to `construct_runtime!`.")
-	}
-	const STORAGE_PREFIX: &'static str = "CurrentSlot";
-}
-
-#[allow(type_alias_bounds)]
-pub type AuraCurrentSlot<T: Config> =
-	StorageValue<_GeneratedPrefixForStorageCurrentSlot<T>, String, ValueQuery>;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
