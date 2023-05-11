@@ -398,7 +398,7 @@ where
 						&latest_light_block.validators,
 						&latest_light_block.next_validators,
 					) {
-						true => UpdateType::Optional,
+						true => UpdateType::Mandatory,
 						false => UpdateType::Mandatory,
 					};
 					Ok((
