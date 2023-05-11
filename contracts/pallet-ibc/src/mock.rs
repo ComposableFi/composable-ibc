@@ -219,6 +219,10 @@ impl Config for Test {
 	type Ics20RateLimiter = Everything;
 	type FeeAccount = FeeAccount;
 	type CleanUpPacketsPeriod = CleanUpPacketsPeriod;
+	type ServiceChargeOut = ServiceCharge;
+	type FlatFeeConverter = FlatFeeConverterDummy<Test>;
+	type FlatFeeAssetId = FlatFeeAssetId;
+	type FlatFeeAmount = FlatFeeAmount;
 }
 #[derive(Debug, Clone)]
 pub struct FlatFeeConverterDummy<T: Config>(PhantomData<T>);
@@ -238,11 +242,8 @@ impl<T: Config> FlatFeeConverter for FlatFeeConverterDummy<T> {
 }
 impl crate::ics20_fee::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type ServiceCharge = ServiceCharge;
+	type ServiceChargeIn = ServiceCharge;
 	type PalletId = PalletId;
-	type FlatFeeConverter = FlatFeeConverterDummy<Test>;
-	type FlatFeeAssetId = FlatFeeAssetId;
-	type FlatFeeAmount = FlatFeeAmount;
 }
 
 #[derive(
