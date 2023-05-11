@@ -37,7 +37,9 @@ use ibc::core::{
 };
 use ibc_primitives::{runtime_interface::ss58_to_account_id_32, IbcAccount};
 use orml_traits::asset_registry::AssetProcessor;
-use pallet_ibc::{light_client_common::RelayChain, LightClientProtocol};
+use pallet_ibc::{
+	ics20_fee::NonFlatFeeConverter, light_client_common::RelayChain, LightClientProtocol,
+};
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -703,6 +705,9 @@ parameter_types! {
 	pub const IbcTriePrefix : &'static [u8] = b"ibc/";
 	pub FeeAccount: <Runtime as pallet_ibc::Config>::AccountIdConversion = create_alice_key();
 	pub const CleanUpPacketsPeriod: BlockNumber = 100;
+	pub AssetIdUSDT: AssetId = 0;
+	pub FlatFeeUSDTAmount: Balance = 0;
+	pub IbcIcs20ServiceCharge: Perbill = Perbill::from_rational(0_u32, 1000_u32 );
 }
 
 fn create_alice_key() -> <Runtime as pallet_ibc::Config>::AccountIdConversion {
@@ -742,6 +747,10 @@ impl pallet_ibc::Config for Runtime {
 	type Ics20RateLimiter = Everything;
 	type FeeAccount = FeeAccount;
 	type CleanUpPacketsPeriod = CleanUpPacketsPeriod;
+	type ServiceChargeOut = IbcIcs20ServiceCharge;
+	type FlatFeeConverter = NonFlatFeeConverter<Runtime>;
+	type FlatFeeAssetId = AssetIdUSDT;
+	type FlatFeeAmount = FlatFeeUSDTAmount;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

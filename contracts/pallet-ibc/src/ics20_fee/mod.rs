@@ -28,9 +28,8 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use super::FlatFeeConverter;
 	use frame_support::{pallet_prelude::*, PalletId};
-	use frame_system::pallet_prelude::OriginFor;
+	use frame_system::{ensure_root, pallet_prelude::OriginFor};
 	use ibc_primitives::IbcAccount;
 	use sp_runtime::{
 		traits::{AccountIdConversion, Get},
@@ -42,19 +41,20 @@ pub mod pallet {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		#[pallet::constant]
-		type ServiceCharge: Get<Perbill>;
+		/// `ServiceChargeIn` represents the service charge rate applied to assets upon receipt via
+		/// IBC.
+		///
+		/// The charge is applied when assets are delivered to the receiving side, on
+		/// deliver(before to mint, send assets to destination account) extrinsic using the
+		/// Inter-Blockchain Communication (IBC) protocol.
+		///
+		/// For example, if the service charge rate for incoming assets is 0.04%, `ServiceChargeIn`
+		/// will be configured in rutime as
+		/// parameter_types! { pub IbcIcs20ServiceChargeIn: Perbill = Perbill::from_rational(4_u32,
+		/// 1000_u32 ) };
+		type ServiceChargeIn: Get<Perbill>;
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
-
-		type FlatFeeConverter: FlatFeeConverter<
-			AssetId = <Self as crate::Config>::AssetId,
-			Balance = <Self as crate::Config>::Balance,
-		>;
-
-		//Asset Id for fee that will charged. for example  USDT
-		type FlatFeeAssetId: Get<<Self as crate::Config>::AssetId>;
-		//Asset amount that will be charged. for example 10 (USDT)
-		type FlatFeeAmount: Get<<Self as crate::Config>::Balance>;
 	}
 
 	#[pallet::pallet]
@@ -63,12 +63,21 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::storage]
-	pub type ServiceCharge<T: Config> = StorageValue<_, Perbill, OptionQuery>;
+	pub type ServiceChargeIn<T: Config> = StorageValue<_, Perbill, OptionQuery>;
+
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// storage map. key is tuple of (source_channel.sequence(), destination_channel.sequence()) and
+	/// value () that means that this group of channels is feeless
+	pub type FeeLessChannelIds<T: Config> =
+		StorageMap<_, Blake2_128Concat, (u64, u64), (), ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		IbcTransferFeeCollected { amount: T::Balance },
+		FeeLessChannelIdsAdded { source_channel: u64, destination_channel: u64 },
+		FeeLessChannelIdsRemoved { source_channel: u64, destination_channel: u64 },
 	}
 
 	#[pallet::call]
@@ -77,7 +86,45 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn set_charge(origin: OriginFor<T>, charge: Perbill) -> DispatchResult {
 			<T as crate::Config>::AdminOrigin::ensure_origin(origin)?;
-			<ServiceCharge<T>>::put(charge);
+			ServiceChargeIn::<T>::put(charge);
+			Ok(())
+		}
+
+		#[pallet::call_index(1)]
+		#[pallet::weight(0)]
+		#[frame_support::transactional]
+		pub fn add_channels_to_feeless_channel_list(
+			origin: OriginFor<T>,
+			source_channel: u64,
+			destination_channel: u64,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			FeeLessChannelIds::<T>::insert((source_channel, destination_channel), ());
+			Self::deposit_event(Event::<T>::FeeLessChannelIdsAdded {
+				source_channel,
+				destination_channel,
+			});
+
+			Ok(())
+		}
+
+		#[pallet::call_index(2)]
+		#[pallet::weight(0)]
+		#[frame_support::transactional]
+		pub fn remove_channels_from_feeless_channel_list(
+			origin: OriginFor<T>,
+			source_channel: u64,
+			destination_channel: u64,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			FeeLessChannelIds::<T>::remove((source_channel, destination_channel));
+			Self::deposit_event(Event::<T>::FeeLessChannelIdsRemoved {
+				source_channel,
+				destination_channel,
+			});
+
 			Ok(())
 		}
 	}
@@ -107,7 +154,7 @@ pub trait FlatFeeConverter {
 
 pub struct NonFlatFeeConverter<T>(PhantomData<T>);
 
-impl<T: Config> FlatFeeConverter for NonFlatFeeConverter<T> {
+impl<T: crate::Config> FlatFeeConverter for NonFlatFeeConverter<T> {
 	type AssetId = T::AssetId;
 	type Balance = T::Balance;
 
@@ -297,7 +344,17 @@ where
 			.map_err(|e| {
 				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
 			})?;
-		let percent = ServiceCharge::<T>::get().unwrap_or(T::ServiceCharge::get());
+
+		let is_feeless_channels = FeeLessChannelIds::<T>::contains_key((
+			packet.source_channel.sequence(),
+			packet.destination_channel.sequence(),
+		));
+
+		if is_feeless_channels {
+			return Ok(())
+		}
+
+		let percent = ServiceChargeIn::<T>::get().unwrap_or(T::ServiceChargeIn::get());
 		// Send full amount to receiver using the default ics20 logic
 		// We only take the fee charge if the acknowledgement is not an error
 		if ack.as_ref() == Ics20Ack::success().to_string().as_bytes() {

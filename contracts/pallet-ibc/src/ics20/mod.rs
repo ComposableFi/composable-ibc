@@ -1,7 +1,9 @@
 pub mod context;
 pub mod memo;
 
-use crate::{routing::Context, ChannelIds, Config, DenomToAssetId, Event, Pallet, WeightInfo};
+use crate::{
+	routing::Context, ChannelIds, Config, DenomToAssetId, Event, Pallet, SequenceFee, WeightInfo,
+};
 use alloc::{
 	format,
 	str::FromStr,
@@ -15,7 +17,7 @@ use ibc::{
 		acknowledgement::{Acknowledgement as Ics20Acknowledgement, ACK_ERR_STR},
 		context::{
 			on_chan_close_confirm, on_chan_close_init, on_chan_open_ack, on_chan_open_confirm,
-			on_chan_open_init, on_chan_open_try,
+			on_chan_open_init, on_chan_open_try, BankKeeper,
 		},
 		is_receiver_chain_source, is_sender_chain_source,
 		packet::PacketData,
@@ -320,31 +322,43 @@ where
 					e
 				))
 			})?;
+		let sequence: u64 = packet.sequence.into();
 		process_ack_packet(&mut ctx, packet, &packet_data, &ack)
 			.map_err(|e| Ics04Error::implementation_specific(e.to_string()))?;
 		match ack.into_result() {
-			Ok(_) => Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
-				from: packet_data.sender,
-				to: packet_data.receiver,
-				ibc_denom: packet_data.token.denom.to_string().as_bytes().to_vec(),
-				local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
-					&packet_data.token.denom.to_string(),
-				)
-				.ok(),
-				amount: packet_data.token.amount.as_u256().as_u128().into(),
-				is_sender_source: is_sender_chain_source(
-					packet.source_port.clone(),
-					packet.source_channel.clone(),
-					&packet_data.token.denom,
-				),
-				source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
-				destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
-			}),
+			Ok(_) => {
+				if SequenceFee::<T>::contains_key(sequence) {
+					SequenceFee::<T>::remove(sequence);
+					Pallet::<T>::deposit_event(Event::<T>::ChargingFeeConfirmed { sequence });
+				}
+				Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
+					from: packet_data.sender,
+					to: packet_data.receiver,
+					ibc_denom: packet_data.token.denom.to_string().as_bytes().to_vec(),
+					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
+						&packet_data.token.denom.to_string(),
+					)
+					.ok(),
+					amount: packet_data.token.amount.as_u256().as_u128().into(),
+					is_sender_source: is_sender_chain_source(
+						packet.source_port.clone(),
+						packet.source_channel.clone(),
+						&packet_data.token.denom,
+					),
+					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
+					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
+				})
+			},
 			Err(e) => {
 				log::trace!(
 					target: "pallet_ibc::transfer",
 					"error: acknowledgement error: {e}",
 				);
+				Self::refund_fee(packet, &packet_data)?;
+				Pallet::<T>::deposit_event(Event::<T>::ChargingFeeFailedAcknowledgement {
+					sequence,
+				});
+
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferFailed {
 					from: packet_data.sender,
 					to: packet_data.receiver,
@@ -380,6 +394,10 @@ where
 			.map_err(|e| Ics04Error::app_module(format!("Failed to decode packet data {:?}", e)))?;
 		process_timeout_packet(&mut ctx, packet, &packet_data)
 			.map_err(|e| Ics04Error::app_module(e.to_string()))?;
+		let sequence: u64 = packet.sequence.into();
+		Self::refund_fee(packet, &packet_data)?;
+		Pallet::<T>::deposit_event(Event::<T>::ChargingFeeTimeout { sequence });
+
 		Pallet::<T>::deposit_event(Event::<T>::TokenTransferTimeout {
 			from: packet_data.sender,
 			to: packet_data.receiver,
@@ -397,6 +415,69 @@ where
 			source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
 			destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
 		});
+		Ok(())
+	}
+}
+
+impl<T> IbcModule<T>
+where
+	T: Config + Send + Sync,
+	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
+{
+	/// Refunds the fee from the FeeAccount to the sender of the packet.
+	///
+	/// This function is called on `on_timeout_packet` and `on_acknowledgement_packet` in case of
+	/// failure when an IBC packet did not get delivered to the destination chain.
+	///
+	/// # Parameters
+	///
+	/// - `packet`: The packet that failed to be delivered.
+	/// - `packet_data`: The data associated with the packet.
+	///
+	/// # Returns
+	///
+	/// Returns `Ok(())` if the fee refund is successful or there is no fee to refund, otherwise
+	/// returns `Ics04Error` with a specific error message.
+	///
+	/// # Errors
+	///
+	/// This function will return an error if:
+	///
+	/// - The fee cannot be refunded to the sender's account. ctx.send_coins failed.
+	/// - The sender's account cannot be parsed from the packet data.
+	fn refund_fee(packet: &Packet, packet_data: &PacketData) -> Result<(), Ics04Error> {
+		use ibc::bigint::U256;
+		use sp_core::Get;
+		let sequence: u64 = packet.sequence.into();
+		if !SequenceFee::<T>::contains_key(sequence) {
+			return Ok(()) //there is nothing to refund.
+		}
+		let fee = SequenceFee::<T>::take(sequence);
+
+		let fee_account = T::FeeAccount::get();
+
+		let mut ctx = Context::<T>::default();
+		let mut fee_coin = packet_data.token.clone();
+
+		fee_coin.amount = U256::from(fee).into();
+
+		let signer_from = packet_data.sender.clone();
+		let refund_to_account_id =
+			<T as Config>::AccountIdConversion::try_from(signer_from.clone()).map_err(|_| {
+				Ics04Error::implementation_specific(format!(
+					"Failed to parse receiver account {:?}",
+					signer_from
+				))
+			})?;
+
+		ctx.send_coins(&fee_account, &refund_to_account_id, &fee_coin).map_err(|e| {
+				log::debug!(target: "pallet_ibc", "[{}]: error when refund the fee : {:?} for sequence {}", &e, fee, sequence);
+				Ics04Error::implementation_specific(format!(
+					"Failed to refund fee to sender account {:?}, fee : {} , sequence : {} ",
+					signer_from, fee, sequence
+				))
+			})?;
 		Ok(())
 	}
 }
