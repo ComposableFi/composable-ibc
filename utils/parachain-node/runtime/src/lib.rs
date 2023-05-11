@@ -707,7 +707,7 @@ parameter_types! {
 	pub const CleanUpPacketsPeriod: BlockNumber = 100;
 	pub AssetIdUSDT: AssetId = 0;
 	pub FlatFeeUSDTAmount: Balance = 0;
-	pub IbcIcs20ServiceCharge: Perbill = Perbill::from_rational(4_u32, 1000_u32 );
+	pub IbcIcs20ServiceCharge: Perbill = Perbill::from_rational(0_u32, 1000_u32 );
 }
 
 fn create_alice_key() -> <Runtime as pallet_ibc::Config>::AccountIdConversion {
