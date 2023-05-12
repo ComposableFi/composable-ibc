@@ -1,18 +1,26 @@
+use std::{str::FromStr, sync::Arc};
+
 use ethers::{
-	abi::ParseError,
-	providers::{Http, Provider, ProviderError, ProviderExt, Ws},
+	abi::{ParseError, Token},
+	providers::{Http, Middleware, Provider, ProviderError, ProviderExt, Ws},
+	signers::{coins_bip39::English, MnemonicBuilder, Signer},
+	types::{EIP1186ProofResponse, H256, Block, BlockId, NameOrAddress},
 };
 
+use futures::TryFutureExt;
 use thiserror::Error;
 
 use crate::config::Config;
 
-pub(crate) type HttpEth = Provider<Http>;
+pub(crate) type EthRpcClient = ethers::prelude::SignerMiddleware<
+	ethers::providers::Provider<Http>,
+	ethers::signers::Wallet<ethers::prelude::k256::ecdsa::SigningKey>,
+>;
 pub(crate) type WsEth = Provider<Ws>;
 
 #[derive(Debug, Clone)]
 pub struct Client {
-	pub(crate) http_rpc: HttpEth,
+	pub http_rpc: Arc<EthRpcClient>,
 	pub(crate) ws_uri: http::Uri,
 	pub(crate) config: Config,
 }
@@ -35,10 +43,48 @@ impl From<String> for ClientError {
 
 impl Client {
 	pub async fn new(config: Config) -> Result<Self, ClientError> {
-		let http_rpc = HttpEth::try_from(config.rpc_url.to_string())
+		let client = Provider::<Http>::try_from(config.rpc_url.to_string())
 			.map_err(|_| ClientError::UriParseError(config.rpc_url.clone()))?;
 
-		Ok(Self { http_rpc, ws_uri: config.ws_url.clone(), config })
+		let chain_id = client.get_chainid().await.unwrap();
+
+		let wallet = MnemonicBuilder::<English>::default()
+			.phrase(&*config.mnemonic)
+			.build()
+			.unwrap()
+			.with_chain_id(chain_id.as_u64());
+
+		let client = ethers::middleware::SignerMiddleware::new(client, wallet);
+
+		Ok(Self { http_rpc: Arc::new(client), ws_uri: config.ws_url.clone(), config })
+	}
+
+	pub fn eth_query_proof(
+		&self,
+		key: &str,
+		block_height: Option<u64>,
+	) -> impl std::future::Future<Output = Result<EIP1186ProofResponse, ClientError>> {
+		let key = ethers::utils::keccak256(
+			&ethers::abi::encode_packed(&[Token::String(key.into())]).unwrap(),
+		);
+
+		let key = hex::encode(key);
+
+		let ix = 0;
+
+		let index =
+			cast::SimpleCast::index("bytes32", &format!("0x{key}", key = &key), &format!("{ix}"))
+				.unwrap();
+
+		let client = self.http_rpc.clone();
+		let address = self.config.address.clone().parse().unwrap();
+
+		async move {
+			client
+				.get_proof(NameOrAddress::Address(address), vec![H256::from_str(&index).unwrap()], block_height.map(|i| BlockId::from(i)))
+				.map_err(|err| panic!("{err}"))
+				.await
+		}
 	}
 }
 
