@@ -134,7 +134,11 @@ define_runtime_transactions!(
 	|| unimplemented("ibc_increase_counters is not implemented")
 );
 
-define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent,);
+define_ibc_event_wrapper!(
+	IbcEventWrapper,
+	MetadataIbcEvent,
+	MetadataIbcEvent::PushWasmCode { wasm_code_id } => RawIbcEvent::PushWasmCode { wasm_code_id },
+);
 
 define_event_record!(
 	PicassoEventRecord,
