@@ -1,4 +1,13 @@
-use ethers::types::H256;
+use std::sync::Arc;
+
+use ethers::{abi::Abi, middleware::contract::Contract, providers::Middleware, types::H256};
+use ibc::core::{
+	ics04_channel::packet::Sequence,
+	ics24_host::{
+		path::{AcksPath, CommitmentsPath, SeqRecvsPath},
+		Path,
+	},
+};
 use primitives::IbcProvider;
 
 use futures::Stream;
@@ -149,48 +158,53 @@ impl IbcProvider for Client {
 		todo!()
 	}
 
-	fn query_proof<'life0, 'async_trait>(
-		&'life0 self,
+	async fn query_proof(
+		&self,
 		at: ibc::Height,
 		keys: Vec<Vec<u8>>,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<Vec<u8>, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
-		todo!()
+	) -> Result<Vec<u8>, Self::Error> {
+		use ibc::core::ics23_commitment::{error::Error, merkle::MerkleProof};
+		use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
+
+		let rpc = self.http_rpc.clone();
+
+		let key = String::from_utf8(keys[0].clone()).unwrap();
+
+		let proof_result = self.eth_query_proof(&key, Some(at.revision_height)).await?;
+
+		let bytes = proof_result
+			.storage_proof
+			.first()
+			.map(|p| p.proof.first())
+			.flatten()
+			.map(|b| b.to_vec())
+			.unwrap_or_default();
+
+		Ok(bytes)
 	}
 
-	fn query_packet_commitment<'life0, 'life1, 'life2, 'async_trait>(
-		&'life0 self,
+	async fn query_packet_commitment(
+		&self,
 		at: ibc::Height,
-		port_id: &'life1 ibc::core::ics24_host::identifier::PortId,
-		channel_id: &'life2 ibc::core::ics24_host::identifier::ChannelId,
+		port_id: &ibc::core::ics24_host::identifier::PortId,
+		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		seq: u64,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = Result<
-						ibc_proto::ibc::core::channel::v1::QueryPacketCommitmentResponse,
-						Self::Error,
-					>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		'life1: 'async_trait,
-		'life2: 'async_trait,
-		Self: 'async_trait,
-	{
-		todo!()
+	) -> Result<ibc_proto::ibc::core::channel::v1::QueryPacketCommitmentResponse, Self::Error> {
+		let path = Path::Commitments(CommitmentsPath {
+			port_id: port_id.clone(),
+			channel_id: channel_id.clone(),
+			sequence: Sequence::from(seq),
+		})
+		.to_string();
+
+		let proof = self.eth_query_proof(&path, Some(at.revision_height)).await?;
+		let storage = proof.storage_proof.first().unwrap();
+
+		Ok(ibc_proto::ibc::core::channel::v1::QueryPacketCommitmentResponse {
+			commitment: storage.value.as_u128().to_be_bytes().to_vec(),
+			proof: storage.proof.last().map(|p| p.to_vec()).unwrap_or_default(),
+			proof_height: Some(at.into()),
+		})
 	}
 
 	fn query_packet_acknowledgement<'life0, 'life1, 'life2, 'async_trait>(
