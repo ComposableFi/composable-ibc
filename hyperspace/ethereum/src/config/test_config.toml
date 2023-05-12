@@ -1,4 +1,6 @@
 name = "mainnet"
 rpc_url = "http://localhost:7890"
-chain_id = "1337"
+ws_url = "ws://localhost:1234"
+mnemonic = "1337"
 channel_whitelist = []
+address = "0xdeadbeef"

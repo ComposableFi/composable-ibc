@@ -42,10 +42,12 @@ pub struct Config {
 	/// Websocket URL for RPC
 	#[serde(deserialize_with = "uri_de", serialize_with = "uri_se")]
 	pub ws_url: http::uri::Uri,
+	/// address of the contract
+	pub address: String,
+	/// mnemonic for the wallet
+	pub mnemonic: String,
 	/// Name of the chain
 	pub name: String,
-	/// Cosmos chain Id
-	pub chain_id: String,
 	/// Light client id on counterparty chain
 	pub client_id: Option<ClientId>,
 	/// Connection Id
