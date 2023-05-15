@@ -137,7 +137,6 @@ define_runtime_transactions!(
 define_ibc_event_wrapper!(
 	IbcEventWrapper,
 	MetadataIbcEvent,
-	MetadataIbcEvent::PushWasmCode { wasm_code_id } => RawIbcEvent::PushWasmCode { wasm_code_id },
 );
 
 define_event_record!(
