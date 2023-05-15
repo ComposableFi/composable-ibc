@@ -35,7 +35,7 @@ ed25519-consensus = { version = "2", optional = true, default-features = false }
 ibc = { path = "../../ibc/modules", default-features = false }
 ibc-derive = { path = "../../ibc/derive", default-features = false }
 ibc-proto = { path = "../../ibc/proto", default-features = false, features = ["json-schema"] }
-ics23 = { git = "https://github.com/confio/ics23", rev = "a4daeb4c24ce1be827829c0841446abc690c4f11", default-features = false }
+ics23 = { git = "https://github.com/cosmos/ics23", rev = "74ce807b7be39a7e0afb4e2efb8e28a57965f57b", default-features = false }
 ics07-tendermint = { path = "../ics07-tendermint", default-features = false }
 ics08-wasm = { path = "../ics08-wasm", default-features = false, features = ["cosmwasm"] }
 prost = { version = "0.11", default-features = false }
