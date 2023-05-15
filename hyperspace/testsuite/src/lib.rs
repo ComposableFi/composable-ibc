@@ -671,7 +671,7 @@ where
 	B::Error: From<A::Error>,
 {
 	// Wait for some sessions to pass while task is asleep, clients will go out of sync
-	tokio::time::sleep(Duration::from_secs(60 * 20)).await;
+	tokio::time::sleep(Duration::from_secs(60 * 5)).await;
 	// if clients synced correctly then channel and connection setup should succeed
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
