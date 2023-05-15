@@ -16,7 +16,8 @@ use tendermint::hash::Hash;
 
 use crate::avl::{
 	node::{as_node_ref, NodeRef},
-	AsBytes, LEAF_PREFIX,
+	proof::LEAF_PREFIX,
+	AsBytes,
 };
 
 /// An AVL Tree that supports `get` and `insert` operation and can be used to prove existence of a

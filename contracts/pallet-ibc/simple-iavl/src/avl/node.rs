@@ -4,7 +4,7 @@ use core::{borrow::Borrow, mem};
 use sha2::{Digest, Sha256};
 use tendermint::hash::Hash;
 
-use crate::avl::{as_bytes::AsBytes, HASH_ALGO, LEAF_PREFIX};
+use crate::avl::{as_bytes::AsBytes, proof::LEAF_PREFIX, HASH_ALGO};
 
 pub type NodeRef<T, V> = Option<Box<AvlNode<T, V>>>;
 

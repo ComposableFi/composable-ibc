@@ -15,16 +15,16 @@
 use tendermint::hash::Algorithm;
 
 pub use as_bytes::{AsBytes, ByteSlice};
-pub use ics23::tendermint_spec;
 pub use node::AvlNode;
+pub use proof::get_proof_spec;
 pub use tree::AvlTree;
 
 mod as_bytes;
 mod node;
+mod proof;
 mod tree;
 
 #[cfg(test)]
 mod tests;
 
 const HASH_ALGO: Algorithm = Algorithm::Sha256;
-pub const LEAF_PREFIX: [u8; 64] = [0; 64]; // 64 bytes of zeroes.
