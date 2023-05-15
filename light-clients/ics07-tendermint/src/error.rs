@@ -18,8 +18,9 @@ use flex_error::{define_error, TraceError};
 
 use ibc::{
 	core::{
-		ics02_client::error::Error as Ics02Error, ics23_commitment::error::Error as Ics23Error,
-		ics24_host::error::ValidationError,
+		ics02_client::error::Error as Ics02Error,
+		ics23_commitment::error::Error as Ics23Error,
+		ics24_host::{error::ValidationError, identifier::ClientId},
 	},
 	timestamp::{Timestamp, TimestampOverflowError},
 };
@@ -174,7 +175,7 @@ define_error! {
 		NotEnoughTimeElapsed
 			{
 				current_time: Timestamp,
-				earliest_time: u64,
+				earliest_time: Timestamp,
 			}
 			| e | {
 				format_args!("not enough time elapsed, current timestamp {0} is still less than earliest acceptable timestamp {1}", e.current_time, e.earliest_time)
@@ -183,7 +184,7 @@ define_error! {
 		NotEnoughBlocksElapsed
 			{
 				current_height: Height,
-				earliest_height: u64,
+				earliest_height: Height,
 			}
 			| e | {
 				format_args!("not enough blocks elapsed, current height {0} is still less than earliest acceptable height {1}", e.current_height, e.earliest_height)
@@ -245,22 +246,24 @@ define_error! {
 
 		ProcessedTimeNotFound
 			{
+				client_id: ClientId,
 				height: Height,
 			}
 			| e | {
 				format_args!(
-					"Processed time for the client at height {0} not found",
-					e.height)
+					"Processed time for the client {0} at height {1} not found",
+					e.client_id, e.height)
 			},
 
 		ProcessedHeightNotFound
 			{
+				client_id: ClientId,
 				height: Height,
 			}
 			| e | {
 				format_args!(
-					"Processed height for the client at height {0} not found",
-					e.height)
+					"Processed height for the client {0} at height {1} not found",
+					e.client_id, e.height)
 			},
 
 		Ics23Error

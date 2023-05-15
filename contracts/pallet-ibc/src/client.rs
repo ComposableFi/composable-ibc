@@ -30,7 +30,6 @@ pub struct HostConsensusProof {
 	pub header: Vec<u8>,
 	pub extrinsic: Vec<u8>,
 	pub extrinsic_proof: Vec<Vec<u8>>,
-	pub code_id: Option<Vec<u8>>,
 }
 
 impl<T: Config + Send + Sync> ClientReader for Context<T>
@@ -158,7 +157,6 @@ where
 		&self,
 		_height: Height,
 		_proof: Option<Vec<u8>>,
-		_client_state: &AnyClientState,
 	) -> Result<AnyConsensusState, ICS02Error> {
 		let timestamp = Timestamp::from_nanoseconds(1).unwrap();
 		let timestamp = timestamp.into_tm_time().unwrap();
@@ -183,9 +181,8 @@ where
 		&self,
 		height: Height,
 		proof: Option<Vec<u8>>,
-		client_state: &AnyClientState,
 	) -> Result<AnyConsensusState, ICS02Error> {
-		log::trace!(target: "pallet_ibc", "in client: [host_consensus_state] height = {:?}", height);
+		log::trace!(target: "pallet_ibc", "in client: [host_consensus_state]");
 		use codec::Compact;
 		use sp_core::H256;
 		use sp_runtime::traits::{BlakeTwo256, Header};
@@ -287,21 +284,7 @@ where
 					timestamp,
 					root: header.state_root().as_ref().to_vec().into(),
 				};
-				let cs = AnyConsensusState::Grandpa(cs_state);
-
-				match &client_state {
-					AnyClientState::Wasm(_wasm) => {
-						log::trace!(target: "pallet_ibc", "in client : [host_consensus_state] >> using wasm code id" );
-						AnyConsensusState::wasm(cs).map_err(ICS02Error::encode)?
-					},
-					_ =>
-						if let Some(_) = connection_proof.code_id {
-							log::trace!(target: "pallet_ibc", "in client : [host_consensus_state] >> using wasm code id");
-							AnyConsensusState::wasm(cs).map_err(ICS02Error::encode)?
-						} else {
-							cs
-						},
-				}
+				AnyConsensusState::Grandpa(cs_state)
 			},
 		};
 		Ok(consensus_state)
@@ -431,17 +414,16 @@ where
 	}
 
 	fn validate_self_client(&self, client_state: &AnyClientState) -> Result<(), ICS02Error> {
-		let unpacked = client_state.unpack_recursive();
-		let (relay_chain, para_id, latest_para_height) = match unpacked {
+		let (relay_chain, para_id, latest_para_height) = match client_state {
 			AnyClientState::Beefy(client_state) => {
-				if client_state.frozen_height.is_some() {
+				if client_state.is_frozen() {
 					Err(ICS02Error::implementation_specific(format!("client state is frozen")))?
 				}
 
 				(client_state.relay_chain, client_state.para_id, client_state.latest_para_height)
 			},
 			AnyClientState::Grandpa(client_state) => {
-				if client_state.frozen_height.is_some() {
+				if client_state.is_frozen() {
 					Err(ICS02Error::implementation_specific(format!("client state is frozen")))?
 				}
 

@@ -1,5 +1,4 @@
 use crate::{
-	ics20_fee::FlatFeeConverter,
 	light_clients::{AnyClientState, AnyConsensusState},
 	mock::*,
 	routing::Context,

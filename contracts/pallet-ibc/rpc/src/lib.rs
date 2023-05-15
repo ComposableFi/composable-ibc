@@ -37,7 +37,6 @@ use ibc_runtime_api::IbcRuntimeApi;
 use jsonrpsee::{
 	core::{Error as RpcError, RpcResult as Result},
 	proc_macros::rpc,
-	tracing::log,
 	types::{error::CallError, ErrorObject},
 };
 use pallet_ibc::{
@@ -113,7 +112,7 @@ pub struct Proof {
 #[derive(Clone, Eq, PartialEq, Serialize, Deserialize, Debug)]
 pub struct PacketInfo {
 	/// Minimal height at which packet proof is available
-	pub height: Option<u64>,
+	pub height: u64,
 	/// Packet sequence
 	pub sequence: u64,
 	/// Source port
@@ -140,9 +139,8 @@ impl TryFrom<RawPacketInfo> for PacketInfo {
 	type Error = ();
 
 	fn try_from(info: RawPacketInfo) -> core::result::Result<Self, ()> {
-		log::info!("RawPacketInfo: {:?}", info);
 		Ok(Self {
-			height: info.height,
+			height: info.height.ok_or_else(|| ())?,
 			sequence: info.sequence,
 			source_port: String::from_utf8(info.source_port).map_err(|_| ())?,
 			source_channel: String::from_utf8(info.source_channel).map_err(|_| ())?,
@@ -531,7 +529,9 @@ where
 						revision_height: packet.timeout_height.1,
 					},
 					timeout_timestamp: packet.timeout_timestamp,
-					height: packet.height,
+					height: packet.height.ok_or_else(|| {
+						runtime_error_into_rpc_error("Packet info should have a valid height")
+					})?,
 					channel_order: {
 						Order::from_i32(packet.channel_order as i32)
 							.map_err(|_| {
@@ -584,12 +584,14 @@ where
 						|_| runtime_error_into_rpc_error("Failed to decode destination channel"),
 					)?,
 					data: packet.data,
-					timeout_height: Height {
+					timeout_height: ibc_proto::ibc::core::client::v1::Height {
 						revision_number: packet.timeout_height.0,
 						revision_height: packet.timeout_height.1,
 					},
 					timeout_timestamp: packet.timeout_timestamp,
-					height: packet.height,
+					height: packet.height.ok_or_else(|| {
+						runtime_error_into_rpc_error("Packet info should have a valid height")
+					})?,
 					channel_order: {
 						Order::from_i32(packet.channel_order as i32)
 							.map_err(|_| {

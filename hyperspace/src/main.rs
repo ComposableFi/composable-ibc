@@ -11,7 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::Result;
+use std::path::PathBuf;
+
+use anyhow::{anyhow, Result};
 use clap::Parser;
 use hyperspace_core::{
 	command::{Cli, Subcommand},
@@ -25,21 +27,26 @@ async fn main() -> Result<()> {
 
 	match &cli.subcommand {
 		Subcommand::Relay(cmd) => cmd.run().await,
-		Subcommand::UploadWasm(cmd) => {
-			let new_config = cmd.run().await?;
-			cmd.save_config(&new_config).await
-		},
 		Subcommand::CreateClients(cmd) => {
 			let new_config = cmd.create_clients().await?;
-			cmd.save_config(&new_config).await
+			let config = cmd.new_config.as_ref().cloned().unwrap_or_else(|| cmd.config.clone());
+			tokio::fs::write(config.parse::<PathBuf>()?, toml::to_string(&new_config)?)
+				.await
+				.map_err(|e| anyhow!(e))
 		},
 		Subcommand::CreateConnection(cmd) => {
 			let new_config = cmd.create_connection().await?;
-			cmd.save_config(&new_config).await
+			let config = cmd.new_config.as_ref().cloned().unwrap_or_else(|| cmd.config.clone());
+			tokio::fs::write(config.parse::<PathBuf>()?, toml::to_string(&new_config)?)
+				.await
+				.map_err(|e| anyhow!(e))
 		},
 		Subcommand::CreateChannel(cmd) => {
 			let new_config = cmd.create_channel().await?;
-			cmd.save_config(&new_config).await
+			let config = cmd.new_config.as_ref().cloned().unwrap_or_else(|| cmd.config.clone());
+			tokio::fs::write(config.parse::<PathBuf>()?, toml::to_string(&new_config)?)
+				.await
+				.map_err(|e| anyhow!(e))
 		},
 		Subcommand::Fish(cmd) => cmd.fish().await,
 	}
