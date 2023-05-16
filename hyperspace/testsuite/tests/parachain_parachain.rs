@@ -144,26 +144,30 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 	// let mut c1 = chain_a.clone();
 	// let mut c2 = chain_b.clone();
 	// join_set.spawn(async move { 
-		ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b, asset_id, asset_id).await;
+		let result = ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b, asset_id, asset_id).await;
 	// });
 	// let mut c1 = chain_a.clone();
 	// let mut c2 = chain_b.clone();
 	// join_set.spawn(async move { 
-		ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b, asset_id).await;
+		//ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b, asset_id).await;
 	// });
 	// let mut c1 = chain_a.clone();
 	// let mut c2 = chain_b.clone();
 	// join_set.spawn(async move { 
-		ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-			&mut chain_a,
-			&mut chain_b,
-			asset_id).await;
+		// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+		// 	&mut chain_a,
+		// 	&mut chain_b,
+		// 	asset_id).await;
 	// });
 
 	// log::info!(target: "hyperspace", "🚀🚀 Waiting for the 3 feature.");
 	// while let Some(res) = join_set.join_next().await {
     //     res.unwrap();
     // }
+
+	for i in result.iter(){
+		log::info!(target: "hyperspace", "what {:#?}, ⏰ time : {:#?} ", i.0, i.1);
+	}
 
 	let current_time2 = SystemTime::now();
 

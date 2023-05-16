@@ -35,7 +35,7 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use pallet_ibc::Timeout;
-use std::{str::FromStr, time::Duration};
+use std::{str::FromStr, time::{Duration, Instant}};
 use tendermint_proto::Protobuf;
 use tokio::task::JoinHandle;
 
@@ -356,7 +356,8 @@ async fn send_packet_with_connection_delay<A, B>(
 	channel_id_b: ChannelId,
 	asset_a: A::AssetId,
 	asset_b: B::AssetId,
-) where
+) -> Vec<(&'static str, Duration)>
+where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
 	A::Error: From<B::Error>,
@@ -364,16 +365,38 @@ async fn send_packet_with_connection_delay<A, B>(
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
+	let mut ret_vec = vec![];
 	log::info!(target: "hyperspace", "Sending transfer from {}", chain_a.name());
+	
+	let st = Instant::now();
 	let (previous_balance, ..) =
 		send_transfer(chain_a, chain_b, asset_a.clone(), channel_id_a, None).await;
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ send_transfer1", e));
+	log::info!(target: "hyperspace_parachain", "⏰ send_transfer1 {:#?}", e);
+
+	let st = Instant::now();
 	assert_send_transfer(chain_a, asset_a, previous_balance, 120).await;
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ assert_send_transfer1", e));
+	log::info!(target: "hyperspace_parachain", "⏰ assert_send_transfer1 {:#?}", e);
+
 	log::info!(target: "hyperspace", "Sending transfer from {}", chain_b.name());
+	let st = Instant::now();
 	let (previous_balance, ..) =
 		send_transfer(chain_b, chain_a, asset_b.clone(), channel_id_b, None).await;
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ send_transfer2", e));
+	log::info!(target: "hyperspace_parachain", "⏰ send_transfer2 {:#?}", e);
+
+	let st = Instant::now();
 	assert_send_transfer(chain_b, asset_b, previous_balance, 120).await;
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ assert_send_transfer", e));
+	log::info!(target: "hyperspace_parachain", "⏰ assert_send_transfer {:#?}", e);
 	// now send from chain b.
 	log::info!(target: "hyperspace", "🚀🚀 Token Transfer successful with connection delay");
+	return ret_vec;
 }
 
 /// Close a channel
@@ -557,7 +580,8 @@ pub async fn ibc_messaging_with_connection_delay<A, B>(
 	chain_b: &mut B,
 	asset_a: A::AssetId,
 	asset_b: B::AssetId,
-) where
+) -> Vec<(&'static str, Duration)>
+ where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
 	A::Error: From<B::Error>,
@@ -565,12 +589,23 @@ pub async fn ibc_messaging_with_connection_delay<A, B>(
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
+	let mut ret_vec = vec![];
+	let st = Instant::now();
 	let (handle, channel_id_a, channel_id_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(60 * 2)).await;
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ setup_connection_and_channel", e));
+	log::info!(target: "hyperspace_parachain", "⏰ setup_connection_and_channel {:#?}", e);
+
+	let st = Instant::now();
 	handle.abort();
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("setup_connection_and_channel", e));
+	log::info!(target: "hyperspace_parachain", "⏰ handle.abort(); {:#?}", e);
 
 	log::info!(target: "hyperspace_parachain", "Connection IDs: {}, {}", connection_id_a, connection_id_b);
 
+	let st = Instant::now();
 	// Set connections and channel whitelist and restart relayer loop
 	chain_a.set_connection_id(connection_id_a);
 	chain_b.set_connection_id(connection_id_b);
@@ -584,7 +619,12 @@ pub async fn ibc_messaging_with_connection_delay<A, B>(
 			.await
 			.unwrap()
 	});
-	send_packet_with_connection_delay(
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ banch of hyperspace_core::relay", e));
+	log::info!(target: "hyperspace_parachain", "⏰ banch of hyperspace_core::relay {:#?}", e);
+
+	let st = Instant::now();
+	let mut list = send_packet_with_connection_delay(
 		chain_a,
 		chain_b,
 		channel_id_a,
@@ -593,7 +633,18 @@ pub async fn ibc_messaging_with_connection_delay<A, B>(
 		asset_b,
 	)
 	.await;
-	handle.abort()
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ send_packet_with_connection_delay", e));
+	log::info!(target: "hyperspace_parachain", "⏰ send_packet_with_connection_delay {:#?}", e);
+
+	ret_vec.append(&mut list);
+
+	let st = Instant::now();
+	handle.abort();
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ setup_connection_and_channel", e));
+	log::info!(target: "hyperspace_parachain", "⏰ handle.abort(); {:#?}", e);
+	return ret_vec;
 }
 
 ///
