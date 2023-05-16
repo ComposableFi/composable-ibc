@@ -54,6 +54,16 @@ pub struct Config {
 	pub connection_id: Option<ConnectionId>,
 	/// Whitelisted channels
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
+	/// Commitment prefix
+	pub commitment_prefix: String,
+}
+
+impl Config {
+	/// ICS-23 compatible commitment prefix
+	#[track_caller]
+	pub fn commitment_prefix(&self) -> Vec<u8> {
+		hex::decode(self.commitment_prefix.clone()).expect("bad commitment prefix hex")
+	}
 }
 
 #[cfg(test)]

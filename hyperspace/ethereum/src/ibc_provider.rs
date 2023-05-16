@@ -5,8 +5,8 @@ use ibc::core::{
 	ics04_channel::packet::Sequence,
 	ics24_host::{
 		path::{AcksPath, CommitmentsPath, ReceiptsPath, SeqRecvsPath},
-		Path,
-	},
+		Path, identifier::{ClientId, ConnectionId},
+	}, ics23_commitment::commitment::CommitmentPrefix,
 };
 use primitives::IbcProvider;
 
@@ -71,7 +71,7 @@ impl IbcProvider for Client {
 	fn query_client_consensus<'life0, 'async_trait>(
 		&'life0 self,
 		at: ibc::Height,
-		client_id: ibc::core::ics24_host::identifier::ClientId,
+		client_id: ClientId,
 		consensus_height: ibc::Height,
 	) -> core::pin::Pin<
 		Box<
@@ -94,7 +94,7 @@ impl IbcProvider for Client {
 	fn query_client_state<'life0, 'async_trait>(
 		&'life0 self,
 		at: ibc::Height,
-		client_id: ibc::core::ics24_host::identifier::ClientId,
+		client_id: ClientId,
 	) -> core::pin::Pin<
 		Box<
 			dyn core::future::Future<
@@ -116,7 +116,7 @@ impl IbcProvider for Client {
 	fn query_connection_end<'life0, 'async_trait>(
 		&'life0 self,
 		at: ibc::Height,
-		connection_id: ibc::core::ics24_host::identifier::ConnectionId,
+		connection_id: ConnectionId,
 	) -> core::pin::Pin<
 		Box<
 			dyn core::future::Future<
@@ -392,7 +392,7 @@ impl IbcProvider for Client {
 	fn query_connection_channels<'life0, 'life1, 'async_trait>(
 		&'life0 self,
 		at: ibc::Height,
-		connection_id: &'life1 ibc::core::ics24_host::identifier::ConnectionId,
+		connection_id: &'life1 ConnectionId,
 	) -> core::pin::Pin<
 		Box<
 			dyn core::future::Future<
@@ -456,7 +456,7 @@ impl IbcProvider for Client {
 
 	fn query_client_update_time_and_height<'life0, 'async_trait>(
 		&'life0 self,
-		client_id: ibc::core::ics24_host::identifier::ClientId,
+		client_id: ClientId,
 		client_height: ibc::Height,
 	) -> core::pin::Pin<
 		Box<
@@ -508,19 +508,19 @@ impl IbcProvider for Client {
 		todo!()
 	}
 
-	fn connection_prefix(&self) -> ibc::core::ics23_commitment::commitment::CommitmentPrefix {
+	fn connection_prefix(&self) -> CommitmentPrefix {
+		CommitmentPrefix::try_from(self.config.commitment_prefix()).unwrap()
+	}
+
+	fn client_id(&self) -> ClientId {
 		todo!()
 	}
 
-	fn client_id(&self) -> ibc::core::ics24_host::identifier::ClientId {
+	fn set_client_id(&mut self, client_id: ClientId) {
 		todo!()
 	}
 
-	fn set_client_id(&mut self, client_id: ibc::core::ics24_host::identifier::ClientId) {
-		todo!()
-	}
-
-	fn connection_id(&self) -> Option<ibc::core::ics24_host::identifier::ConnectionId> {
+	fn connection_id(&self) -> Option<ConnectionId> {
 		todo!()
 	}
 
@@ -546,7 +546,7 @@ impl IbcProvider for Client {
 
 	fn set_connection_id(
 		&mut self,
-		connection_id: ibc::core::ics24_host::identifier::ConnectionId,
+		connection_id: ConnectionId,
 	) {
 		todo!()
 	}
@@ -577,7 +577,7 @@ impl IbcProvider for Client {
 	) -> core::pin::Pin<
 		Box<
 			dyn core::future::Future<
-					Output = Result<Vec<ibc::core::ics24_host::identifier::ClientId>, Self::Error>,
+					Output = Result<Vec<ClientId>, Self::Error>,
 				> + core::marker::Send
 				+ 'async_trait,
 		>,
@@ -681,7 +681,7 @@ impl IbcProvider for Client {
 	) -> core::pin::Pin<
 		Box<
 			dyn core::future::Future<
-					Output = Result<ibc::core::ics24_host::identifier::ClientId, Self::Error>,
+					Output = Result<ClientId, Self::Error>,
 				> + core::marker::Send
 				+ 'async_trait,
 		>,
@@ -699,7 +699,7 @@ impl IbcProvider for Client {
 	) -> core::pin::Pin<
 		Box<
 			dyn core::future::Future<
-					Output = Result<ibc::core::ics24_host::identifier::ConnectionId, Self::Error>,
+					Output = Result<ConnectionId, Self::Error>,
 				> + core::marker::Send
 				+ 'async_trait,
 		>,
