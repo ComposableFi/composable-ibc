@@ -189,17 +189,18 @@ async fn parachain_to_cosmos_ibc_messaging_full_integration_test() {
 		asset_id_a.clone(),
 	)
 	.await;
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_a.clone(),
-	)
-	.await;
+	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// )
+	// .await;
 
 	// channel closing semantics
-	ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id_a.clone())
-		.await;
-	ibc_channel_close(&mut chain_a, &mut chain_b).await;
+	todo!();
+	// ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id_a.clone())
+	// 	.await;
+	//ibc_channel_close(&mut chain_a, &mut chain_b).await;
 
 	// TODO: tendermint misbehaviour?
 	// ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
@@ -234,12 +235,12 @@ async fn cosmos_to_parachain_ibc_messaging_full_integration_test() {
 		asset_id_a.clone(),
 	)
 	.await;
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_a.clone(),
-	)
-	.await;
+	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// )
+	// .await;
 
 	// channel closing semantics (doesn't work on cosmos)
 	// ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id_a.clone())

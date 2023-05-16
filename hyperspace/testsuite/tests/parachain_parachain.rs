@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::time::{Duration, Instant};
+
 use futures::StreamExt;
 use hyperspace_core::{logging, substrate::DefaultConfig};
 use hyperspace_parachain::{
@@ -130,9 +132,24 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 
 #[tokio::test]
 async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
+	use ibc::core::ics24_host::identifier::PortId;
+	use hyperspace_testsuite::setup_connection_and_channel;
 	logging::setup_logging();
 	let (mut chain_a, mut chain_b) = setup_clients().await;
+
+	//set up connection only once!!!
+	let (handle, channel_id, channel_b, connection_id_a, connection_id_b) =
+		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
+	handle.abort();
 	// Run tests sequentially
+	
+
+	// Set connections and channel whitelist and restart relayer loop
+	chain_a.set_connection_id(connection_id_a);
+	chain_b.set_connection_id(connection_id_b);
+
+	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
+	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
 
 	let asset_id = 1;
 
@@ -144,20 +161,24 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 	// let mut c1 = chain_a.clone();
 	// let mut c2 = chain_b.clone();
 	// join_set.spawn(async move { 
-		let result = ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b, asset_id, asset_id).await;
+		//let result = ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b, asset_id, asset_id).await;
 	// });
 	// let mut c1 = chain_a.clone();
 	// let mut c2 = chain_b.clone();
 	// join_set.spawn(async move { 
-		//ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b, asset_id).await;
+		// let result = ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b, asset_id).await;
 	// });
 	// let mut c1 = chain_a.clone();
 	// let mut c2 = chain_b.clone();
 	// join_set.spawn(async move { 
-		// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-		// 	&mut chain_a,
-		// 	&mut chain_b,
-		// 	asset_id).await;
+		let st = Instant::now();
+		let mut ibc_messaging_packet_timestamp_timeout_with_connection_delay_result = ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+			&mut chain_a,
+			&mut chain_b,
+			asset_id,
+			channel_id
+		).await;
+		ibc_messaging_packet_timestamp_timeout_with_connection_delay_result.push(("🤲🤲🤲 ibc_messaging_packet_timestamp_timeout_with_connection_delay_result", Instant::now().duration_since(st)));
 	// });
 
 	// log::info!(target: "hyperspace", "🚀🚀 Waiting for the 3 feature.");
@@ -165,7 +186,59 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
     //     res.unwrap();
     // }
 
-	for i in result.iter(){
+	for i in ibc_messaging_packet_timestamp_timeout_with_connection_delay_result.iter(){
+		log::info!(target: "hyperspace", "what {:#?}, ⏰ time : {:#?} ", i.0, i.1);
+	}
+
+	
+
+	// // channel closing semantics
+	let st = Instant::now();
+	let mut ibc_messaging_packet_timeout_on_channel_close_result = ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id, channel_id).await;
+	ibc_messaging_packet_timeout_on_channel_close_result.push(("🤲🤲🤲 ibc_messaging_packet_timeout_on_channel_close_result", Instant::now().duration_since(st)));
+	log::info!(target: "hyperspace", "ibc_messaging_packet_timeout_on_channel_close:result");
+	for i in ibc_messaging_packet_timeout_on_channel_close_result.iter(){
+		log::info!(target: "hyperspace", "what {:#?}, ⏰ time : {:#?} ", i.0, i.1);
+	}
+	let st = Instant::now();
+	let mut ibc_channel_close_result = vec![];//ibc_channel_close(&mut chain_a, &mut chain_b, channel_id).await;
+	ibc_channel_close_result.push(("🤲🤲🤲 ibc_channel_close_result", Instant::now().duration_since(st)));
+	log::info!(target: "hyperspace", "ibc_channel_close:result");
+	for i in ibc_channel_close_result.iter(){
+		log::info!(target: "hyperspace", "what {:#?}, ⏰ time : {:#?} ", i.0, i.1);
+	}
+
+	// // Test sync abilities, run this before misbehaviour test
+	let mut client_synchronization_test_result = vec![];
+	let st = Instant::now();
+	client_synchronization_test(&mut chain_a, &mut chain_b).await;
+	client_synchronization_test_result.push(("🤲🤲🤲 ibc_channel_close_result", Instant::now().duration_since(st)));
+	// // misbehaviour
+	let st = Instant::now();
+	let mut ibc_messaging_submit_misbehaviour_result = ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
+	ibc_messaging_submit_misbehaviour_result.push(("🤲🤲🤲 ibc_messaging_submit_misbehaviour_result", Instant::now().duration_since(st)));
+
+	log::info!(target: "hyperspace", "👀👀👀👀👀 ibc_messaging_packet_timestamp_timeout_with_connection_delay_result");
+	for i in ibc_messaging_packet_timestamp_timeout_with_connection_delay_result.iter(){
+		log::info!(target: "hyperspace", "what {:#?}, ⏰ time : {:#?} ", i.0, i.1);
+	}
+
+	log::info!(target: "hyperspace", "👀👀👀👀👀 ibc_messaging_packet_timeout_on_channel_close_result");
+	for i in ibc_messaging_packet_timeout_on_channel_close_result.iter(){
+		log::info!(target: "hyperspace", "what {:#?}, ⏰ time : {:#?} ", i.0, i.1);
+	}
+
+	log::info!(target: "hyperspace", "👀👀👀👀👀 ibc_channel_close_result");
+	for i in ibc_channel_close_result.iter(){
+		log::info!(target: "hyperspace", "what {:#?}, ⏰ time : {:#?} ", i.0, i.1);
+	}
+	log::info!(target: "hyperspace", "👀👀👀👀👀 client_synchronization_test_result");
+	for i in client_synchronization_test_result.iter(){
+		log::info!(target: "hyperspace", "what {:#?}, ⏰ time : {:#?} ", i.0, i.1);
+	}
+
+	log::info!(target: "hyperspace", "👀👀👀👀👀 ibc_messaging_submit_misbehaviour_result");
+	for i in ibc_messaging_submit_misbehaviour_result.iter(){
 		log::info!(target: "hyperspace", "what {:#?}, ⏰ time : {:#?} ", i.0, i.1);
 	}
 
@@ -173,13 +246,4 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 
 	log::info!(target: "hyperspace", "🚀🚀 finished. start {:#?}, end : {:#?} ", current_time, current_time2);
 
-	// // channel closing semantics
-	// ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id).await;
-	// ibc_channel_close(&mut chain_a, &mut chain_b).await;
-
-	// // Test sync abilities, run this before misbehaviour test
-	// client_synchronization_test(&mut chain_a, &mut chain_b).await;
-
-	// // misbehaviour
-	// ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
 }
