@@ -45,7 +45,7 @@ mod utils;
 
 /// This will set up a connection and ics20 channel in-between the two chains.
 /// `connection_delay` should be in seconds.
-async fn setup_connection_and_channel<A, B>(
+pub async fn setup_connection_and_channel<A, B>(
 	chain_a: &mut A,
 	chain_b: &mut B,
 	connection_delay: Duration,
@@ -315,7 +315,8 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 	chain_b: &B,
 	asset_a: A::AssetId,
 	channel_id: ChannelId,
-) where
+) -> Vec<(&'static str, Duration)>
+where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
 	A::Error: From<B::Error>,
@@ -323,6 +324,8 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
+	let mut ret_vec = vec![];
+	let st = Instant::now();
 	log::info!(target: "hyperspace", "Suspending send packet relay");
 	set_relay_status(false);
 
@@ -334,7 +337,9 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 		Some(Timeout::Offset { timestamp: Some(60 * 2), height: Some(400) }),
 	)
 	.await;
+	ret_vec.push(("⏰ send_transfer", Instant::now().duration_since(st)));
 
+	let st = Instant::now();
 	// Wait for timeout timestamp to elapse then resume packet relay
 	let future = chain_b
 		.subscribe_blocks()
@@ -357,12 +362,17 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 		format!("Timeout timestamp was not reached on {}", chain_b.name()),
 	)
 	.await;
+	ret_vec.push(("⏰ timeout_future", Instant::now().duration_since(st)));
 
+	let st = Instant::now();
 	log::info!(target: "hyperspace", "Resuming send packet relay");
 	set_relay_status(true);
 
 	assert_timeout_packet(chain_a, 400).await;
+	ret_vec.push(("⏰ assert_timeout_packet", Instant::now().duration_since(st)));
+
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for timeout timestamp");
+	return ret_vec;
 }
 
 /// Simply send a packet and check that it was acknowledged after the connection delay.
@@ -421,7 +431,8 @@ async fn send_channel_close_init_and_assert_channel_close_confirm<A, B>(
 	chain_a: &A,
 	chain_b: &B,
 	channel_id: ChannelId,
-) where
+) -> Vec<(&'static str, Duration)>
+where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
 	A::Error: From<B::Error>,
@@ -429,6 +440,8 @@ async fn send_channel_close_init_and_assert_channel_close_confirm<A, B>(
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
+	let mut ret_vec = vec![];
+	let st = Instant::now();
 	let msg = MsgChannelCloseInit {
 		port_id: PortId::transfer(),
 		channel_id,
@@ -438,8 +451,10 @@ async fn send_channel_close_init_and_assert_channel_close_confirm<A, B>(
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 
 	chain_a.submit(vec![msg]).await.unwrap();
+	ret_vec.push(("⏰⏰⏰⏰⏰ send_channel_close_init_and_assert_channel_close_confirm:MsgChannelCloseInit", Instant::now().duration_since(st)));
 
 	// wait channel close confirmation on chain b
+	let st = Instant::now();
 	let future = chain_b
 		.ibc_events()
 		.await
@@ -455,6 +470,8 @@ async fn send_channel_close_init_and_assert_channel_close_confirm<A, B>(
 	.await;
 
 	log::info!(target: "hyperspace", "🚀🚀 Channel successfully closed on both chains");
+	ret_vec.push(("⏰⏰⏰⏰⏰ send_channel_close_init_and_assert_channel_close_confirm:timeout_after", Instant::now().duration_since(st)));
+	return ret_vec;
 }
 
 /// Send a packet and assert timeout on channel close
@@ -463,7 +480,8 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 	chain_b: &B,
 	asset_a: A::AssetId,
 	channel_id: ChannelId,
-) where
+) -> Vec<(&'static str, Duration)>
+where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
 	A::Error: From<B::Error>,
@@ -471,9 +489,11 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
+	let mut ret_vec = vec![];
 	log::info!(target: "hyperspace", "Suspending send packet relay");
 	set_relay_status(false);
 
+	let st = Instant::now();
 	let (.., msg_transfer) = send_transfer(
 		chain_a,
 		chain_b,
@@ -482,7 +502,9 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 		Some(Timeout::Offset { timestamp: Some(60 * 2), height: Some(400) }),
 	)
 	.await;
+	ret_vec.push(("⏰ send_packet_and_assert_timeout_on_channel_close:send_transfer", Instant::now().duration_since(st)));
 
+	let st = Instant::now();
 	let msg = MsgChannelCloseInit {
 		port_id: PortId::transfer(),
 		channel_id,
@@ -492,7 +514,9 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 
 	chain_a.submit(vec![msg]).await.unwrap();
+	ret_vec.push(("⏰ send_packet_and_assert_timeout_on_channel_close:MsgChannelCloseInit", Instant::now().duration_since(st)));
 
+	let st = Instant::now();
 	// Wait timeout timestamp to elapse, then
 	let future = chain_b
 		.subscribe_blocks()
@@ -515,11 +539,15 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 	)
 	.await;
 	log::info!(target: "hyperspace", "Packet timeout has elapsed on counterparty");
+	ret_vec.push(("⏰ send_packet_and_assert_timeout_on_channel_close:timeout_future", Instant::now().duration_since(st)));
 
+	let st = Instant::now();
 	set_relay_status(true);
 
 	assert_timeout_packet(chain_a, 100).await;
+	ret_vec.push(("⏰ send_packet_and_assert_timeout_on_channel_close:assert_timeout_packet", Instant::now().duration_since(st)));
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for channel close");
+	return ret_vec;
 }
 
 ///
@@ -579,24 +607,32 @@ pub async fn ibc_messaging_packet_timestamp_timeout_with_connection_delay<A, B>(
 	chain_a: &mut A,
 	chain_b: &mut B,
 	asset_a: A::AssetId,
-) where
+	channel_id : ChannelId
+) -> Vec<(&'static str, Duration)>
+where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
 	A::Error: From<B::Error>,
 	B: TestProvider,
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
-{
-	let (handle, channel_id, channel_b, connection_id_a, connection_id_b) =
-		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(60 * 2)).await;
-	handle.abort();
+{	
+	let mut ret_vec = vec![];
+	let st = Instant::now();
+	// let (handle, channel_id, channel_b, connection_id_a, connection_id_b) =
+	// 	setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(60 * 2)).await;
+	// handle.abort();
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ setup_connection_and_channel", e));
+	log::info!(target: "hyperspace_parachain", "⏰ setup_connection_and_channel {:#?}", e);
 
+	let st = Instant::now();
 	// Set connections and channel whitelist and restart relayer loop
-	chain_a.set_connection_id(connection_id_a);
-	chain_b.set_connection_id(connection_id_b);
+	// chain_a.set_connection_id(connection_id_a);
+	// chain_b.set_connection_id(connection_id_b);
 
-	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
-	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
+	// chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
+	// chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
@@ -604,8 +640,17 @@ pub async fn ibc_messaging_packet_timestamp_timeout_with_connection_delay<A, B>(
 			.await
 			.unwrap()
 	});
-	send_packet_and_assert_timestamp_timeout(chain_a, chain_b, asset_a, channel_id).await;
-	handle.abort()
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ hyperspace_core::relay", e));
+	log::info!(target: "hyperspace_parachain", "⏰ hyperspace_core::relay {:#?}", e);
+	let st = Instant::now();
+	let mut list = send_packet_and_assert_timestamp_timeout(chain_a, chain_b, asset_a, channel_id).await;
+	ret_vec.append(&mut list);
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ send_packet_and_assert_timestamp_timeout", e));
+	log::info!(target: "hyperspace_parachain", "⏰ send_packet_and_assert_timestamp_timeout {:#?}", e);
+	handle.abort();
+	return ret_vec;
 }
 
 /// Send a packet over a connection with a connection delay and assert the sending chain only sees
@@ -683,7 +728,7 @@ pub async fn ibc_messaging_with_connection_delay<A, B>(
 }
 
 ///
-pub async fn ibc_channel_close<A, B>(chain_a: &mut A, chain_b: &mut B)
+pub async fn ibc_channel_close<A, B>(chain_a: &mut A, chain_b: &mut B, channel_id : ChannelId) -> Vec<(&'static str, Duration)>
 where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -692,16 +737,18 @@ where
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
-	let (handle, channel_id, channel_b, connection_id_a, connection_id_b) =
-		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(60 * 2)).await;
-	handle.abort();
+	let mut ret_vec = vec![];
+	// let (handle, channel_id, channel_b, connection_id_a, connection_id_b) =
+	// 	setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(60 * 2)).await;
+	// handle.abort();
 
-	// Set connections and channel whitelist and restart relayer loop
-	chain_a.set_connection_id(connection_id_a);
-	chain_b.set_connection_id(connection_id_b);
+	// // Set connections and channel whitelist and restart relayer loop
+	// chain_a.set_connection_id(connection_id_a);
+	// chain_b.set_connection_id(connection_id_b);
 
-	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
-	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
+	// chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
+	// chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
+	let st = Instant::now();
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
@@ -709,8 +756,11 @@ where
 			.await
 			.unwrap()
 	});
-	send_channel_close_init_and_assert_channel_close_confirm(chain_a, chain_b, channel_id).await;
-	handle.abort()
+	let mut list = send_channel_close_init_and_assert_channel_close_confirm(chain_a, chain_b, channel_id).await;
+	handle.abort();
+	ret_vec.append(&mut list);
+	ret_vec.push(("⏰⏰⏰⏰⏰ ibc_channel_close", Instant::now().duration_since(st)));
+	return ret_vec;
 }
 
 ///
@@ -718,7 +768,9 @@ pub async fn ibc_messaging_packet_timeout_on_channel_close<A, B>(
 	chain_a: &mut A,
 	chain_b: &mut B,
 	asset_a: A::AssetId,
-) where
+	channel_id: ChannelId
+) -> Vec<(&'static str, Duration)>
+where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
 	A::Error: From<B::Error>,
@@ -726,16 +778,19 @@ pub async fn ibc_messaging_packet_timeout_on_channel_close<A, B>(
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
-	let (handle, channel_id, channel_b, connection_id_a, connection_id_b) =
-		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(60 * 2)).await;
-	handle.abort();
+	// let (handle, channel_id, channel_b, connection_id_a, connection_id_b) =
+	// 	setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(60 * 2)).await;
+	// handle.abort();
 
-	// Set connections and channel whitelist and restart relayer loop
-	chain_a.set_connection_id(connection_id_a);
-	chain_b.set_connection_id(connection_id_b);
+	// // Set connections and channel whitelist and restart relayer loop
+	// chain_a.set_connection_id(connection_id_a);
+	// chain_b.set_connection_id(connection_id_b);
 
-	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
-	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
+	// chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
+	// chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
+	let mut ret_vec = vec![];
+	
+	let st = Instant::now();
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
@@ -743,8 +798,11 @@ pub async fn ibc_messaging_packet_timeout_on_channel_close<A, B>(
 			.await
 			.unwrap()
 	});
-	send_packet_and_assert_timeout_on_channel_close(chain_a, chain_b, asset_a, channel_id).await;
-	handle.abort()
+	let mut list = send_packet_and_assert_timeout_on_channel_close(chain_a, chain_b, asset_a, channel_id).await;
+	ret_vec.append(&mut list);
+	ret_vec.push(("⏰⏰⏰⏰⏰ ibc_messaging_packet_timeout_on_channel_close", Instant::now().duration_since(st)));
+	handle.abort();
+	return ret_vec;
 }
 
 pub async fn client_synchronization_test<A, B>(chain_a: &mut A, chain_b: &mut B)

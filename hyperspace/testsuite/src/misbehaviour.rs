@@ -23,13 +23,13 @@ use sp_state_machine::{prove_read_on_trie_backend, TrieBackendBuilder};
 use sp_trie::{generate_trie_proof, LayoutV0, MemoryDB, TrieDBMutBuilder, TrieMut};
 use std::{
 	collections::BTreeMap,
-	time::{Duration, SystemTime, UNIX_EPOCH},
+	time::{Duration, SystemTime, UNIX_EPOCH, Instant},
 };
 use tendermint_proto::Protobuf;
 use tokio::time::timeout;
 
 /// Submits a misbehaviour message of client B on chain A.
-pub async fn ibc_messaging_submit_misbehaviour<A, B>(chain_a: &mut A, chain_b: &mut B)
+pub async fn ibc_messaging_submit_misbehaviour<A, B>(chain_a: &mut A, chain_b: &mut B) -> Vec<(&'static str, Duration)>
 where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -38,11 +38,16 @@ where
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
+	let mut ret_vec = vec![];
+	let st = Instant::now();
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
 		hyperspace_core::fish(client_a_clone, client_b_clone).await.unwrap()
 	});
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ hyperspace_core::fish", e));
+	let st = Instant::now();
 	info!("Waiting for the next block...");
 
 	let relaychain_authorities = [
@@ -62,8 +67,15 @@ where
 		matches!(cs, AnyClientState::Grandpa(_))
 	}).unwrap() else { unreachable!() };
 
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ latest_height_and_timestamp + query_client_state", e));
+	let st = Instant::now();
+
 	let finality_event =
 		chain_b.finality_notifications().await.unwrap().next().await.expect("no event");
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ finality_notifications", e));
+	let st = Instant::now();
 	let set_id = client_state.current_set_id;
 
 	// construct an extrinsic proof with the mandatory timestamp extrinsic
@@ -89,6 +101,9 @@ where
 		vec![&key],
 	)
 	.unwrap();
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ 3", e));
+	let st = Instant::now();
 
 	// construct a state root from the parachain header
 	let parachain_header = Header {
@@ -106,6 +121,9 @@ where
 		trie.insert(key.as_ref(), &parachain_header.encode().encode()).unwrap();
 		*trie.root()
 	};
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ 4", e));
+	let st = Instant::now();
 
 	// build a chain of relaychain blocks
 	let mut prev_hash = client_state.latest_relay_hash;
@@ -125,6 +143,9 @@ where
 	let header_hash = header.hash();
 	let precommit = Precommit { target_hash: header_hash, target_number: header.number };
 	let message = finality_grandpa::Message::Precommit(precommit.clone());
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ 5", e));
+	let st = Instant::now();
 
 	let (update_client_msg, _, _) = chain_b
 		.query_latest_ibc_events(finality_event, chain_a)
@@ -147,6 +168,9 @@ where
 		},
 		_ => panic!("unexpected client message"),
 	};
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ 6", e));
+	let st = Instant::now();
 
 	// sign pre-commits by the authorities to vote for the highest block in the chain
 	let precommits = relaychain_authorities
@@ -174,6 +198,9 @@ where
 		justification: justification.encode(),
 		unknown_headers: headers.clone(),
 	};
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ 7", e));
+	let st = Instant::now();
 	let mut parachain_headers = BTreeMap::default();
 	let state_proof = prove_read_on_trie_backend(
 		&TrieBackendBuilder::new(para_db.clone(), root).build(),
@@ -194,6 +221,9 @@ where
 			},
 		);
 	}
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ 8", e));
+	let st = Instant::now();
 
 	let grandpa_header = GrandpaHeader {
 		finality_proof,
@@ -215,18 +245,34 @@ where
 			}
 		}
 	});
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ 9", e));
+	let st = Instant::now();
 
 	chain_a
 		.submit(vec![Any { value: msg.encode_vec().unwrap(), type_url: msg.type_url() }])
 		.await
 		.expect("failed to submit message");
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ 10", e));
+	let st = Instant::now();
 
 	timeout(Duration::from_secs(12 * 60), misbehavour_event_handle)
 		.await
 		.expect("timeout")
 		.expect("failed to receive misbehaviour event");
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ 11", e));
+	let st = Instant::now();
 
 	tokio::time::sleep(Duration::from_secs(120)).await;
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ 12", e));
+	let st = Instant::now();
 
 	handle.abort();
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ 13", e));
+	let st = Instant::now();
+	return ret_vec;
 }
