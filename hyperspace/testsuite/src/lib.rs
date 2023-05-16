@@ -246,7 +246,8 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	chain_b: &B,
 	asset_a: A::AssetId,
 	channel_id: ChannelId,
-) where
+) -> Vec<(&'static str, Duration)>
+where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
 	A::Error: From<B::Error>,
@@ -254,9 +255,13 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
+	let mut ret_vec = vec![];
 	log::info!(target: "hyperspace", "Suspending send packet relay");
+
+	
 	set_relay_status(false);
 
+	let st = Instant::now();
 	let (.., msg) = send_transfer(
 		chain_a,
 		chain_b,
@@ -265,7 +270,11 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 		Some(Timeout::Offset { timestamp: Some(60 * 60), height: Some(20) }),
 	)
 	.await;
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ batch send_transfer", e));
+	log::info!(target: "hyperspace_parachain", "⏰ send_transfer {:#?}", e);
 
+	let st = Instant::now();
 	// Wait for timeout height to elapse then resume packet relay
 	let future = chain_b
 		.subscribe_blocks()
@@ -283,12 +292,20 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 		format!("Timeout height was not reached on {}", chain_b.name()),
 	)
 	.await;
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ batch timeout_future", e));
+	log::info!(target: "hyperspace_parachain", "⏰ timeout_future {:#?}", e);
 
 	log::info!(target: "hyperspace", "Resuming send packet relay");
 	set_relay_status(true);
 
+	let st = Instant::now();
 	assert_timeout_packet(chain_a, 75).await;
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ batch assert_timeout_packet", e));
+	log::info!(target: "hyperspace_parachain", "⏰ assert_timeout_packet {:#?}", e);
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for height timeout");
+	ret_vec
 }
 
 /// Send a packet using a timestamp timeout that has already passed
@@ -510,7 +527,8 @@ pub async fn ibc_messaging_packet_height_timeout_with_connection_delay<A, B>(
 	chain_a: &mut A,
 	chain_b: &mut B,
 	asset_a: A::AssetId,
-) where
+) -> Vec<(&'static str, Duration)>
+where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
 	A::Error: From<B::Error>,
@@ -518,10 +536,16 @@ pub async fn ibc_messaging_packet_height_timeout_with_connection_delay<A, B>(
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
+	let mut ret_vec = vec![];
+	let st = Instant::now();
 	let (handle, channel_id, channel_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(60 * 2)).await;
 	handle.abort();
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ setup_connection_and_channel", e));
+	log::info!(target: "hyperspace_parachain", "⏰ setup_connection_and_channel {:#?}", e);
 
+	let st = Instant::now();
 	// Set connections and channel whitelist and restart relayer loop
 	chain_a.set_connection_id(connection_id_a);
 	chain_b.set_connection_id(connection_id_b);
@@ -535,8 +559,19 @@ pub async fn ibc_messaging_packet_height_timeout_with_connection_delay<A, B>(
 			.await
 			.unwrap()
 	});
-	send_packet_and_assert_height_timeout(chain_a, chain_b, asset_a, channel_id).await;
-	handle.abort()
+
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ batch hyperspace_core::relay", e));
+	log::info!(target: "hyperspace_parachain", "⏰ hyperspace_core::relay {:#?}", e);
+	
+	let st = Instant::now();
+	let mut list = send_packet_and_assert_height_timeout(chain_a, chain_b, asset_a, channel_id).await;
+	ret_vec.append(&mut list);
+	handle.abort();
+	let e = Instant::now().duration_since(st);
+	ret_vec.push(("⏰ batch send_packet_and_assert_height_timeout", e));
+	log::info!(target: "hyperspace_parachain", "⏰ send_packet_and_assert_height_timeout {:#?}", e);
+	return ret_vec;
 }
 
 ///
