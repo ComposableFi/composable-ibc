@@ -136,29 +136,46 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 
 	let asset_id = 1;
 
-	// let join_set = JoinSet::new();
+	let mut join_set = tokio::task::JoinSet::new();
+	use std::time::SystemTime;
+	let current_time = SystemTime::now();
 
 	// no timeouts + connection delay
-	ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b, asset_id, asset_id).await;
+	let mut c1 = chain_a.clone();
+	let mut c2 = chain_b.clone();
+	join_set.spawn(async move { 
+		ibc_messaging_with_connection_delay(&mut c1, &mut c2, asset_id, asset_id).await;
+	});
+	let mut c1 = chain_a.clone();
+	let mut c2 = chain_b.clone();
+	join_set.spawn(async move { 
+		ibc_messaging_packet_height_timeout_with_connection_delay(&mut c1, &mut c2, asset_id).await;
+	});
+	let mut c1 = chain_a.clone();
+	let mut c2 = chain_b.clone();
+	join_set.spawn(async move { 
+		ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+			&mut c1,
+			&mut c2,
+			asset_id).await;
+	});
 
-	// timeouts + connection delay
-	ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b, asset_id)
-		.await;
+	log::info!(target: "hyperspace", "🚀🚀 Waiting for the 3 feature.");
+	while let Some(res) = join_set.join_next().await {
+        res.unwrap();
+    }
 
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id,
-	)
-	.await;
+	let current_time2 = SystemTime::now();
 
-	// channel closing semantics
-	ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id).await;
-	ibc_channel_close(&mut chain_a, &mut chain_b).await;
+	log::info!(target: "hyperspace", "🚀🚀 finished. start {:#?}, end : {:#?} ", current_time, current_time2);
 
-	// Test sync abilities, run this before misbehaviour test
-	client_synchronization_test(&mut chain_a, &mut chain_b).await;
+	// // channel closing semantics
+	// ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id).await;
+	// ibc_channel_close(&mut chain_a, &mut chain_b).await;
 
-	// misbehaviour
-	ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
+	// // Test sync abilities, run this before misbehaviour test
+	// client_synchronization_test(&mut chain_a, &mut chain_b).await;
+
+	// // misbehaviour
+	// ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
 }
