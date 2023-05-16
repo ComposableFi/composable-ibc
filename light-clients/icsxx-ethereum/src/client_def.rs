@@ -270,7 +270,7 @@ where
 		commitment: PacketCommitment,
 	) -> Result<(), Ics02Error> {
 		// client_state.verify_height(height)?;
-		// verify_delay_passed::<H, _>(ctx, height, connection_end).map_err(Error::Anyhow)?;
+		verify_delay_passed::<H, _>(ctx, height, connection_end).map_err(Error::Anyhow)?;
 		//
 		// let commitment_path =
 		// 	CommitmentsPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };

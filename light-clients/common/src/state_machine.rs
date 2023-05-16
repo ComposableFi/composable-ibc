@@ -23,13 +23,9 @@ use sp_storage::ChildInfo;
 use sp_trie::{KeySpacedDB, LayoutV0, StorageProof, Trie, TrieDBBuilder};
 
 #[derive(Debug, derive_more::From, derive_more::Display)]
-pub enum Error<H>
-where
-	H: Hasher,
-	H::Out: Debug,
-{
+pub enum Error {
 	#[display(fmt = "Trie Error: {:?}", _0)]
-	Trie(Box<sp_trie::TrieError<LayoutV0<H>>>),
+	Trie(String),
 	#[display(fmt = "Error verifying key: {key:?}, Expected: {expected:?}, Got: {got:?}")]
 	ValueMismatch { key: Option<String>, expected: Option<Vec<u8>>, got: Option<Vec<u8>> },
 	#[display(fmt = "Couldn't find child root in proof")]
@@ -44,7 +40,7 @@ pub fn read_child_proof_check<H, I>(
 	proof: StorageProof,
 	child_info: ChildInfo,
 	items: I,
-) -> Result<(), Error<H>>
+) -> Result<(), Error>
 where
 	H: Hasher,
 	H::Out: Debug,
@@ -84,13 +80,13 @@ where
 
 /// Lifted directly from [`sp_state_machine::read_proof_check`](https://github.com/paritytech/substrate/blob/b27c470eaff379f512d1dec052aff5d551ed3b03/primitives/state-machine/src/lib.rs#L1075-L1094)
 pub fn read_proof_check<H, I>(
-	root: &H::Out,
+	root: &<H as Hasher>::Out,
 	proof: StorageProof,
 	keys: I,
-) -> Result<BTreeMap<Vec<u8>, Option<Vec<u8>>>, Error<H>>
+) -> Result<BTreeMap<Vec<u8>, Option<Vec<u8>>>, Error>
 where
-	H: Hasher,
-	H::Out: Debug,
+	H: Hasher + sp_core::Hasher,
+	<H as Hasher>::Out: Debug,
 	I: IntoIterator,
 	I::Item: AsRef<[u8]>,
 {
