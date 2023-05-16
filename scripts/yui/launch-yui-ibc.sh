@@ -8,8 +8,8 @@ echo "ROOT: $ROOT"
 
 # check if the MNEMONIC environment variable is set
 if [ -z ${MNEMONIC+x} ]; then
-    echo "MNEMONIC is unset"
-    exit 1
+    echo "MNEMONIC is unset, using default test-junk mnemonic"
+    export MNEMONIC="test test test test test test test test test test test junk"
 else
     echo "MNEMONIC is set to '$MNEMONIC'"
 fi
@@ -33,6 +33,7 @@ if [ ! -d "/tmp/yui-ibc-solidity" ]; then
 fi
 
 cd /tmp/yui-ibc-solidity
+git checkout bfd4c30 # v0.3.5
 
 yarn
 
