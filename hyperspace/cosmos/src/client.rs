@@ -9,6 +9,7 @@ use bech32::ToBase32;
 use bip32::{DerivationPath, ExtendedPrivateKey, XPrv, XPub as ExtendedPublicKey};
 use core::convert::{From, Into, TryFrom};
 use digest::Digest;
+use futures::FutureExt;
 use ibc::core::{
 	ics02_client::height::Height,
 	ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
@@ -34,6 +35,7 @@ use serde::{Deserialize, Serialize};
 use std::{
 	str::FromStr,
 	sync::{Arc, Mutex},
+	time::Duration,
 };
 use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
@@ -354,8 +356,8 @@ where
 		&self,
 		height: TmHeight,
 	) -> Result<LightBlock, Error> {
-		self.light_block_cache
-			.get_or_insert_async(&height, async move {
+		let fut = async move {
+			tokio::time::timeout(Duration::from_secs(30), async move {
 				self.light_client.io.fetch_light_block(AtHeight::At(height)).map_err(|e| {
 					Error::from(format!(
 						"Failed to fetch light block for chain {:?} with error {:?}",
@@ -364,6 +366,9 @@ where
 				})
 			})
 			.await
+			.map_err(|e| Error::Custom("failed to fetch light block: timeout".to_string()))?
+		};
+		self.light_block_cache.get_or_insert_async(&height, fut).await
 	}
 
 	pub async fn msg_update_client_header(
@@ -416,7 +421,10 @@ where
 				xs.push(res.map_err(|e| Error::Custom(e.to_string()))??);
 			}
 		}
-		xs.sort_by_key(|(h, _)| h.trusted_height.revision_height);
+		xs.sort_by_key(|(h, _)| h.signed_header.header.height.value());
+		for (x, _) in &xs {
+			log::debug!(target: "hyperspace_cosmos", "Sorted: {:?}, {:?}", x.trusted_height, x.signed_header);
+		}
 		Ok(xs)
 	}
 

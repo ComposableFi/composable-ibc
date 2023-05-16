@@ -90,11 +90,11 @@ where
 			// The total length the message adds to the encoding includes the
 			// field tag (small varint) and the length delimiter.
 			let tagged_len = 1 + prost::length_delimiter_len(message_len) + message_len;
-			if current_count >= 30 ||
-				tx_len(envelope_len, current_len + tagged_len) > self.max_tx_size
-			{
-				return Err(Error::Custom("Too many messages".to_string()))
-			}
+			// if current_count >= 30 ||
+			// 	tx_len(envelope_len, current_len + tagged_len) > self.max_tx_size
+			// {
+			// 	return Err(Error::Custom("Too many messages".to_string()))
+			// }
 			current_count += 1;
 			current_len += tagged_len;
 		}
