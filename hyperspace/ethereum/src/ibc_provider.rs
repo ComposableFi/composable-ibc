@@ -4,7 +4,7 @@ use ethers::{abi::Abi, middleware::contract::Contract, providers::Middleware, ty
 use ibc::core::{
 	ics04_channel::packet::Sequence,
 	ics24_host::{
-		path::{AcksPath, CommitmentsPath, SeqRecvsPath},
+		path::{AcksPath, CommitmentsPath, ReceiptsPath, SeqRecvsPath},
 		Path,
 	},
 };
@@ -207,30 +207,29 @@ impl IbcProvider for Client {
 		})
 	}
 
-	fn query_packet_acknowledgement<'life0, 'life1, 'life2, 'async_trait>(
-		&'life0 self,
+	async fn query_packet_acknowledgement(
+		&self,
 		at: ibc::Height,
-		port_id: &'life1 ibc::core::ics24_host::identifier::PortId,
-		channel_id: &'life2 ibc::core::ics24_host::identifier::ChannelId,
+		port_id: &ibc::core::ics24_host::identifier::PortId,
+		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		seq: u64,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = Result<
-						ibc_proto::ibc::core::channel::v1::QueryPacketAcknowledgementResponse,
-						Self::Error,
-					>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		'life1: 'async_trait,
-		'life2: 'async_trait,
-		Self: 'async_trait,
+	) -> Result<ibc_proto::ibc::core::channel::v1::QueryPacketAcknowledgementResponse, Self::Error>
 	{
-		todo!()
+		let path = Path::Acks(AcksPath {
+			port_id: port_id.clone(),
+			channel_id: channel_id.clone(),
+			sequence: Sequence::from(seq),
+		})
+		.to_string();
+
+		let proof = self.eth_query_proof(&path, Some(at.revision_height)).await?;
+		let storage = proof.storage_proof.first().unwrap();
+
+		Ok(ibc_proto::ibc::core::channel::v1::QueryPacketAcknowledgementResponse {
+			acknowledgement: storage.value.as_u128().to_be_bytes().to_vec(),
+			proof: storage.proof.last().map(|p| p.to_vec()).unwrap_or_default(),
+			proof_height: Some(at.into()),
+		})
 	}
 
 	fn query_next_sequence_recv<'life0, 'life1, 'life2, 'async_trait>(
@@ -258,30 +257,32 @@ impl IbcProvider for Client {
 		todo!()
 	}
 
-	fn query_packet_receipt<'life0, 'life1, 'life2, 'async_trait>(
-		&'life0 self,
+	async fn query_packet_receipt(
+		&self,
 		at: ibc::Height,
-		port_id: &'life1 ibc::core::ics24_host::identifier::PortId,
-		channel_id: &'life2 ibc::core::ics24_host::identifier::ChannelId,
-		seq: u64,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = Result<
-						ibc_proto::ibc::core::channel::v1::QueryPacketReceiptResponse,
-						Self::Error,
-					>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		'life1: 'async_trait,
-		'life2: 'async_trait,
-		Self: 'async_trait,
-	{
-		todo!()
+		port_id: &ibc::core::ics24_host::identifier::PortId,
+		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
+		sequence: u64,
+	) -> Result<ibc_proto::ibc::core::channel::v1::QueryPacketReceiptResponse, Self::Error> {
+		let path = Path::Receipts(ReceiptsPath {
+			port_id: port_id.clone(),
+			channel_id: channel_id.clone(),
+			sequence: Sequence::from(sequence),
+		})
+		.to_string();
+
+		let proof = self.eth_query_proof(&path, Some(at.revision_height)).await?;
+		let storage = proof.storage_proof.first().unwrap();
+
+		let received = self
+			.has_packet_receipt(port_id.as_str().to_owned(), format!("{channel_id}"), sequence)
+			.await?;
+
+		Ok(ibc_proto::ibc::core::channel::v1::QueryPacketReceiptResponse {
+			received,
+			proof: storage.proof.last().map(|p| p.to_vec()).unwrap_or_default(),
+			proof_height: Some(at.into()),
+		})
 	}
 
 	fn latest_height_and_timestamp<'life0, 'async_trait>(
@@ -385,7 +386,7 @@ impl IbcProvider for Client {
 		ibc::core::ics24_host::identifier::ChannelId,
 		ibc::core::ics24_host::identifier::PortId,
 	)> {
-		todo!()
+		self.config.channel_whitelist.clone()
 	}
 
 	fn query_connection_channels<'life0, 'life1, 'async_trait>(
@@ -530,7 +531,7 @@ impl IbcProvider for Client {
 			ibc::core::ics24_host::identifier::PortId,
 		)>,
 	) {
-		todo!()
+		self.config.channel_whitelist = channel_whitelist;
 	}
 
 	fn add_channel_to_whitelist(
@@ -540,7 +541,7 @@ impl IbcProvider for Client {
 			ibc::core::ics24_host::identifier::PortId,
 		),
 	) {
-		todo!()
+		self.config.channel_whitelist.push(channel)
 	}
 
 	fn set_connection_id(

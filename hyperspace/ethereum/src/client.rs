@@ -4,7 +4,7 @@ use ethers::{
 	abi::{ParseError, Token},
 	providers::{Http, Middleware, Provider, ProviderError, ProviderExt, Ws},
 	signers::{coins_bip39::English, MnemonicBuilder, Signer},
-	types::{EIP1186ProofResponse, H256, Block, BlockId, NameOrAddress},
+	types::{Block, BlockId, EIP1186ProofResponse, NameOrAddress, H256},
 };
 
 use futures::TryFutureExt;
@@ -81,9 +81,38 @@ impl Client {
 
 		async move {
 			client
-				.get_proof(NameOrAddress::Address(address), vec![H256::from_str(&index).unwrap()], block_height.map(|i| BlockId::from(i)))
+				.get_proof(
+					NameOrAddress::Address(address),
+					vec![H256::from_str(&index).unwrap()],
+					block_height.map(|i| BlockId::from(i)),
+				)
 				.map_err(|err| panic!("{err}"))
 				.await
+		}
+	}
+
+	#[track_caller]
+	pub fn has_packet_receipt(
+		&self,
+		port_id: String,
+		channel_id: String,
+		sequence: u64,
+	) -> impl std::future::Future<Output = Result<bool, ClientError>> {
+		let client = self.http_rpc.clone();
+		let address = self.config.address.clone().parse().unwrap();
+
+		let contract = crate::contract::contract(address, Arc::clone(&client));
+
+		async move {
+			let binding = contract
+				.method("hasPacketReceipt", (port_id, channel_id, sequence))
+				.expect("contract is missing hasPacketReceipt");
+
+			let receipt_fut = binding.call();
+
+			let receipt: bool = receipt_fut.await.map_err(|err| todo!()).unwrap();
+
+			Ok(receipt)
 		}
 	}
 }
