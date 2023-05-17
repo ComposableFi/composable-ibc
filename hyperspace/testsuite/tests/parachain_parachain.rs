@@ -172,11 +172,6 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 			&mut c1, &mut c2, asset_id, channel_a, channel_b,
 		)
 		.await;
-	});
-
-	let mut c1 = chain_a.clone();
-	let mut c2 = chain_b.clone();
-	join_set.spawn(async move {
 		ibc_messaging_packet_timestamp_timeout_with_connection_delay(
 			&mut c1, &mut c2, asset_id, channel_a, channel_b,
 		)

@@ -226,7 +226,5 @@ where
 		.expect("timeout")
 		.expect("failed to receive misbehaviour event");
 
-	tokio::time::sleep(Duration::from_secs(120)).await;
-
 	handle.abort();
 }
