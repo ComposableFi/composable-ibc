@@ -738,16 +738,16 @@ where
 	B::Error: From<A::Error>,
 {
 	let mut ret_vec = vec![];
-	// let (handle, channel_id, channel_b, connection_id_a, connection_id_b) =
-	// 	setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(60 * 2)).await;
-	// handle.abort();
+	let (handle, channel_id, channel_b, connection_id_a, connection_id_b) =
+		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(60 * 2)).await;
+	handle.abort();
 
-	// // Set connections and channel whitelist and restart relayer loop
-	// chain_a.set_connection_id(connection_id_a);
-	// chain_b.set_connection_id(connection_id_b);
+	// Set connections and channel whitelist and restart relayer loop
+	chain_a.set_connection_id(connection_id_a);
+	chain_b.set_connection_id(connection_id_b);
 
-	// chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
-	// chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
+	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
+	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
 	let st = Instant::now();
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
