@@ -33,6 +33,7 @@ use quick_cache::sync::Cache;
 use ripemd::Ripemd160;
 use serde::{Deserialize, Serialize};
 use std::{
+	collections::{HashMap, HashSet},
 	str::FromStr,
 	sync::{Arc, Mutex},
 	time::Duration,
@@ -139,7 +140,7 @@ pub struct CosmosClient<H> {
 	/// Connection Id
 	pub connection_id: Arc<Mutex<Option<ConnectionId>>>,
 	/// Channels cleared for packet relay
-	pub channel_whitelist: Arc<Mutex<Vec<(ChannelId, PortId)>>>,
+	pub channel_whitelist: Arc<Mutex<HashSet<(ChannelId, PortId)>>>,
 	/// Light Client instance
 	pub light_client: LightClient,
 	/// The key that signs transactions
@@ -270,7 +271,7 @@ where
 			websocket_url: config.websocket_url,
 			client_id: Arc::new(Mutex::new(config.client_id)),
 			connection_id: Arc::new(Mutex::new(config.connection_id)),
-			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist)),
+			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist.into_iter().collect())),
 			light_client,
 			account_prefix: config.account_prefix,
 			commitment_prefix,

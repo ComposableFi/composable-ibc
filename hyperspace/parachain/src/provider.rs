@@ -57,7 +57,13 @@ use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
-use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr, time::Duration};
+use std::{
+	collections::{BTreeMap, HashSet},
+	fmt::Display,
+	pin::Pin,
+	str::FromStr,
+	time::Duration,
+};
 use subxt::config::{
 	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT, Header,
 };
@@ -444,8 +450,8 @@ where
 		Ok(res)
 	}
 
-	fn channel_whitelist(&self) -> Vec<(ChannelId, PortId)> {
-		self.channel_whitelist.lock().unwrap().clone()
+	fn channel_whitelist(&self) -> HashSet<(ChannelId, PortId)> {
+		self.channel_whitelist.lock().unwrap().iter().cloned().collect()
 	}
 
 	async fn query_connection_channels(
@@ -788,12 +794,12 @@ where
 	}
 
 	/// Set the channel whitelist for the relayer task.
-	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
+	fn set_channel_whitelist(&mut self, channel_whitelist: HashSet<(ChannelId, PortId)>) {
 		*self.channel_whitelist.lock().unwrap() = channel_whitelist;
 	}
 
 	fn add_channel_to_whitelist(&mut self, channel: (ChannelId, PortId)) {
-		self.channel_whitelist.lock().unwrap().push(channel);
+		self.channel_whitelist.lock().unwrap().insert(channel);
 	}
 
 	fn set_connection_id(&mut self, connection_id: ConnectionId) {
