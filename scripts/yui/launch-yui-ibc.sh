@@ -22,7 +22,7 @@ node --version
 jq --version
 
 
-if [[ lsof -t -i :8545 ]]; then
+if [ lsof -t -i :8545 ]; then
     echo "port 8545 is already in use"
     exit 1
 fi
