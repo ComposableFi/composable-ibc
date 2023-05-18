@@ -4,7 +4,7 @@ use core::{borrow::Borrow, mem};
 use sha2::{Digest, Sha256};
 use tendermint::hash::Hash;
 
-use crate::avl::{as_bytes::AsBytes, proof, HASH_ALGO};
+use crate::avl::{as_bytes::AsBytes, proof::LEAF_PREFIX, HASH_ALGO};
 
 pub type NodeRef<T, V> = Option<Box<AvlNode<T, V>>>;
 
@@ -35,7 +35,7 @@ where
 {
 	fn new(key: K, value: V) -> Self {
 		let mut sha = Sha256::new();
-		sha.update(proof::LEAF_PREFIX);
+		sha.update(LEAF_PREFIX);
 		sha.update(key.as_bytes().as_ref());
 		sha.update(value.borrow());
 		let hash = sha.finalize();
@@ -65,7 +65,7 @@ where
 	/// Compute the local hash for a given key and value.
 	fn local_hash(key: &K, value: &V) -> Hash {
 		let mut sha = Sha256::new();
-		sha.update(proof::LEAF_PREFIX);
+		sha.update(LEAF_PREFIX);
 		sha.update(key.as_bytes());
 		sha.update(value.borrow());
 		let hash = sha.finalize();

@@ -16,7 +16,8 @@ use tendermint::hash::Hash;
 
 use crate::avl::{
 	node::{as_node_ref, NodeRef},
-	proof, AsBytes,
+	proof::LEAF_PREFIX,
+	AsBytes,
 };
 
 /// An AVL Tree that supports `get` and `insert` operation and can be used to prove existence of a
@@ -123,7 +124,7 @@ where
 						prehash_key: HashOp::NoHash.into(),
 						prehash_value: HashOp::NoHash.into(),
 						length: LengthOp::NoPrefix.into(),
-						prefix: proof::LEAF_PREFIX.to_vec(),
+						prefix: LEAF_PREFIX.to_vec(),
 					});
 					let proof = ExistenceProof {
 						key: node.key.as_bytes().as_ref().to_owned(),

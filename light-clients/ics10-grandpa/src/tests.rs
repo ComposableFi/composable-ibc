@@ -199,7 +199,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		)
 		.await
 		.expect("Failed to subscribe to grandpa justifications");
-	let mut subscription = subscription.take(100);
+	let mut subscription = subscription.take((2 * session_length).try_into().unwrap());
 
 	while let Some(Ok(JustificationNotification(sp_core::Bytes(_)))) = subscription.next().await {
 		let client_state: ClientState<HostFunctionsManager> =
