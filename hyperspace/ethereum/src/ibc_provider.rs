@@ -6,21 +6,25 @@ use ethers::{
 	providers::Middleware,
 	types::H256,
 };
-use ibc::core::{
-	ics02_client::client_state::ClientType,
-	ics04_channel::packet::Sequence,
-	ics23_commitment::commitment::CommitmentPrefix,
-	ics24_host::{
-		identifier::{ClientId, ConnectionId},
-		path::{AcksPath, CommitmentsPath, ReceiptsPath, SeqRecvsPath},
-		Path,
+use ibc::{
+	core::{
+		ics02_client::client_state::ClientType,
+		ics04_channel::packet::Sequence,
+		ics23_commitment::commitment::CommitmentPrefix,
+		ics24_host::{
+			identifier::{ChannelId, ClientId, ConnectionId, PortId},
+			path::{AcksPath, CommitmentsPath, ReceiptsPath, SeqRecvsPath},
+			Path,
+		},
 	},
+	Height,
 };
 use ibc_proto::{
 	google,
 	ibc::core::{
+		channel::v1::{QueryNextSequenceReceiveResponse, QueryPacketReceiptResponse, QueryChannelResponse},
 		client::v1::{QueryClientStateResponse, QueryConsensusStateResponse},
-		connection::v1::{QueryConnectionResponse, ConnectionEnd, Counterparty, Version},
+		connection::v1::{ConnectionEnd, Counterparty, QueryConnectionResponse, Version},
 	},
 };
 use primitives::IbcProvider;
@@ -89,9 +93,9 @@ impl IbcProvider for Client {
 
 	async fn query_client_consensus(
 		&self,
-		at: ibc::Height,
+		at: Height,
 		client_id: ClientId,
-		consensus_height: ibc::Height,
+		consensus_height: Height,
 	) -> Result<QueryConsensusStateResponse, Self::Error> {
 		let fut = self.eth_query_proof(
 			client_id.as_str(),
@@ -134,7 +138,7 @@ impl IbcProvider for Client {
 
 	async fn query_client_state(
 		&self,
-		at: ibc::Height,
+		at: Height,
 		client_id: ClientId,
 	) -> Result<QueryClientStateResponse, Self::Error> {
 		let fut = self.eth_query_proof(
@@ -175,7 +179,7 @@ impl IbcProvider for Client {
 
 	async fn query_connection_end(
 		&self,
-		at: ibc::Height,
+		at: Height,
 		connection_id: ConnectionId,
 	) -> Result<QueryConnectionResponse, Self::Error> {
 		let fut = self.eth_query_proof(
@@ -258,11 +262,7 @@ impl IbcProvider for Client {
 		todo!()
 	}
 
-	async fn query_proof(
-		&self,
-		at: ibc::Height,
-		keys: Vec<Vec<u8>>,
-	) -> Result<Vec<u8>, Self::Error> {
+	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
 		use ibc::core::ics23_commitment::{error::Error, merkle::MerkleProof};
 		use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
 
@@ -287,9 +287,9 @@ impl IbcProvider for Client {
 
 	async fn query_packet_commitment(
 		&self,
-		at: ibc::Height,
-		port_id: &ibc::core::ics24_host::identifier::PortId,
-		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
+		at: Height,
+		port_id: &PortId,
+		channel_id: &ChannelId,
 		seq: u64,
 	) -> Result<ibc_proto::ibc::core::channel::v1::QueryPacketCommitmentResponse, Self::Error> {
 		let path = Path::Commitments(CommitmentsPath {
@@ -313,9 +313,9 @@ impl IbcProvider for Client {
 
 	async fn query_packet_acknowledgement(
 		&self,
-		at: ibc::Height,
-		port_id: &ibc::core::ics24_host::identifier::PortId,
-		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
+		at: Height,
+		port_id: &PortId,
+		channel_id: &ChannelId,
 		seq: u64,
 	) -> Result<ibc_proto::ibc::core::channel::v1::QueryPacketAcknowledgementResponse, Self::Error>
 	{
@@ -338,38 +338,22 @@ impl IbcProvider for Client {
 		})
 	}
 
-	fn query_next_sequence_recv<'life0, 'life1, 'life2, 'async_trait>(
-		&'life0 self,
-		at: ibc::Height,
-		port_id: &'life1 ibc::core::ics24_host::identifier::PortId,
-		channel_id: &'life2 ibc::core::ics24_host::identifier::ChannelId,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = Result<
-						ibc_proto::ibc::core::channel::v1::QueryNextSequenceReceiveResponse,
-						Self::Error,
-					>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		'life1: 'async_trait,
-		'life2: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn query_next_sequence_recv(
+		&self,
+		at: Height,
+		port_id: &PortId,
+		channel_id: &ChannelId,
+	) -> Result<QueryNextSequenceReceiveResponse, Self::Error> {
 		todo!()
 	}
 
 	async fn query_packet_receipt(
 		&self,
-		at: ibc::Height,
-		port_id: &ibc::core::ics24_host::identifier::PortId,
-		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
+		at: Height,
+		port_id: &PortId,
+		channel_id: &ChannelId,
 		sequence: u64,
-	) -> Result<ibc_proto::ibc::core::channel::v1::QueryPacketReceiptResponse, Self::Error> {
+	) -> Result<QueryPacketReceiptResponse, Self::Error> {
 		let path = Path::Receipts(ReceiptsPath {
 			port_id: port_id.clone(),
 			channel_id: channel_id.clone(),
@@ -386,7 +370,7 @@ impl IbcProvider for Client {
 			.has_packet_receipt(port_id.as_str().to_owned(), format!("{channel_id}"), sequence)
 			.await?;
 
-		Ok(ibc_proto::ibc::core::channel::v1::QueryPacketReceiptResponse {
+		Ok(QueryPacketReceiptResponse {
 			received,
 			proof: storage.proof.last().map(|p| p.to_vec()).unwrap_or_default(),
 			proof_height: Some(at.into()),
@@ -398,7 +382,7 @@ impl IbcProvider for Client {
 	) -> core::pin::Pin<
 		Box<
 			dyn core::future::Future<
-					Output = Result<(ibc::Height, ibc::timestamp::Timestamp), Self::Error>,
+					Output = Result<(Height, ibc::timestamp::Timestamp), Self::Error>,
 				> + core::marker::Send
 				+ 'async_trait,
 		>,
@@ -412,9 +396,9 @@ impl IbcProvider for Client {
 
 	fn query_packet_commitments<'life0, 'async_trait>(
 		&'life0 self,
-		at: ibc::Height,
-		channel_id: ibc::core::ics24_host::identifier::ChannelId,
-		port_id: ibc::core::ics24_host::identifier::PortId,
+		at: Height,
+		channel_id: ChannelId,
+		port_id: PortId,
 	) -> core::pin::Pin<
 		Box<
 			dyn core::future::Future<Output = Result<Vec<u64>, Self::Error>>
@@ -431,9 +415,9 @@ impl IbcProvider for Client {
 
 	fn query_packet_acknowledgements<'life0, 'async_trait>(
 		&'life0 self,
-		at: ibc::Height,
-		channel_id: ibc::core::ics24_host::identifier::ChannelId,
-		port_id: ibc::core::ics24_host::identifier::PortId,
+		at: Height,
+		channel_id: ChannelId,
+		port_id: PortId,
 	) -> core::pin::Pin<
 		Box<
 			dyn core::future::Future<Output = Result<Vec<u64>, Self::Error>>
@@ -450,9 +434,9 @@ impl IbcProvider for Client {
 
 	fn query_unreceived_packets<'life0, 'async_trait>(
 		&'life0 self,
-		at: ibc::Height,
-		channel_id: ibc::core::ics24_host::identifier::ChannelId,
-		port_id: ibc::core::ics24_host::identifier::PortId,
+		at: Height,
+		channel_id: ChannelId,
+		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> core::pin::Pin<
 		Box<
@@ -470,9 +454,9 @@ impl IbcProvider for Client {
 
 	fn query_unreceived_acknowledgements<'life0, 'async_trait>(
 		&'life0 self,
-		at: ibc::Height,
-		channel_id: ibc::core::ics24_host::identifier::ChannelId,
-		port_id: ibc::core::ics24_host::identifier::PortId,
+		at: Height,
+		channel_id: ChannelId,
+		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> core::pin::Pin<
 		Box<
@@ -488,18 +472,13 @@ impl IbcProvider for Client {
 		todo!()
 	}
 
-	fn channel_whitelist(
-		&self,
-	) -> Vec<(
-		ibc::core::ics24_host::identifier::ChannelId,
-		ibc::core::ics24_host::identifier::PortId,
-	)> {
+	fn channel_whitelist(&self) -> Vec<(ChannelId, PortId)> {
 		self.config.channel_whitelist.clone()
 	}
 
 	fn query_connection_channels<'life0, 'life1, 'async_trait>(
 		&'life0 self,
-		at: ibc::Height,
+		at: Height,
 		connection_id: &'life1 ConnectionId,
 	) -> core::pin::Pin<
 		Box<
@@ -522,8 +501,8 @@ impl IbcProvider for Client {
 
 	fn query_send_packets<'life0, 'async_trait>(
 		&'life0 self,
-		channel_id: ibc::core::ics24_host::identifier::ChannelId,
-		port_id: ibc::core::ics24_host::identifier::PortId,
+		channel_id: ChannelId,
+		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> core::pin::Pin<
 		Box<
@@ -541,8 +520,8 @@ impl IbcProvider for Client {
 
 	fn query_recv_packets<'life0, 'async_trait>(
 		&'life0 self,
-		channel_id: ibc::core::ics24_host::identifier::ChannelId,
-		port_id: ibc::core::ics24_host::identifier::PortId,
+		channel_id: ChannelId,
+		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> core::pin::Pin<
 		Box<
@@ -565,11 +544,11 @@ impl IbcProvider for Client {
 	fn query_client_update_time_and_height<'life0, 'async_trait>(
 		&'life0 self,
 		client_id: ClientId,
-		client_height: ibc::Height,
+		client_height: Height,
 	) -> core::pin::Pin<
 		Box<
 			dyn core::future::Future<
-					Output = Result<(ibc::Height, ibc::timestamp::Timestamp), Self::Error>,
+					Output = Result<(Height, ibc::timestamp::Timestamp), Self::Error>,
 				> + core::marker::Send
 				+ 'async_trait,
 		>,
@@ -583,7 +562,7 @@ impl IbcProvider for Client {
 
 	fn query_host_consensus_state_proof<'life0, 'async_trait>(
 		&'life0 self,
-		height: ibc::Height,
+		height: Height,
 	) -> core::pin::Pin<
 		Box<
 			dyn core::future::Future<Output = Result<Option<Vec<u8>>, Self::Error>>
@@ -633,23 +612,11 @@ impl IbcProvider for Client {
 		self.config.connection_id.clone()
 	}
 
-	fn set_channel_whitelist(
-		&mut self,
-		channel_whitelist: Vec<(
-			ibc::core::ics24_host::identifier::ChannelId,
-			ibc::core::ics24_host::identifier::PortId,
-		)>,
-	) {
+	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
 		self.config.channel_whitelist = channel_whitelist;
 	}
 
-	fn add_channel_to_whitelist(
-		&mut self,
-		channel: (
-			ibc::core::ics24_host::identifier::ChannelId,
-			ibc::core::ics24_host::identifier::PortId,
-		),
-	) {
+	fn add_channel_to_whitelist(&mut self, channel: (ChannelId, PortId)) {
 		self.config.channel_whitelist.push(channel)
 	}
 
@@ -698,15 +665,8 @@ impl IbcProvider for Client {
 		&'life0 self,
 	) -> core::pin::Pin<
 		Box<
-			dyn core::future::Future<
-					Output = Result<
-						Vec<(
-							ibc::core::ics24_host::identifier::ChannelId,
-							ibc::core::ics24_host::identifier::PortId,
-						)>,
-						Self::Error,
-					>,
-				> + core::marker::Send
+			dyn core::future::Future<Output = Result<Vec<(ChannelId, PortId)>, Self::Error>>
+				+ core::marker::Send
 				+ 'async_trait,
 		>,
 	>
@@ -739,22 +699,13 @@ impl IbcProvider for Client {
 		todo!()
 	}
 
-	fn is_update_required<'life0, 'async_trait>(
-		&'life0 self,
+	async fn is_update_required(
+		&self,
 		latest_height: u64,
 		latest_client_height_on_counterparty: u64,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<bool, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
-		todo!()
+	) -> Result<bool, Self::Error> {
+		// not implemented for the moment.
+		Ok(false)
 	}
 
 	fn initialize_client_state<'life0, 'async_trait>(
@@ -819,15 +770,8 @@ impl IbcProvider for Client {
 		tx_id: Self::TransactionId,
 	) -> core::pin::Pin<
 		Box<
-			dyn core::future::Future<
-					Output = Result<
-						(
-							ibc::core::ics24_host::identifier::ChannelId,
-							ibc::core::ics24_host::identifier::PortId,
-						),
-						Self::Error,
-					>,
-				> + core::marker::Send
+			dyn core::future::Future<Output = Result<(ChannelId, PortId), Self::Error>>
+				+ core::marker::Send
 				+ 'async_trait,
 		>,
 	>
