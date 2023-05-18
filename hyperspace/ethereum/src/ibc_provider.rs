@@ -199,10 +199,10 @@ impl IbcProvider for Client {
 
 				let binding = contract
 					.method::<_, crate::contract::ConnectionEnd>(
-						"ConnectionEnd.Data",
+						"getConnectionEnd",
 						(connection_id.as_str().to_owned(),),
 					)
-					.expect("contract is missing ConnectionEnd.Data");
+					.expect("contract is missing getConnectionEnd");
 
 				let connection_end = binding.call().await.unwrap();
 
@@ -220,12 +220,14 @@ impl IbcProvider for Client {
 								key_prefix: connection_end.counterparty.prefix,
 							}),
 						}),
-						versions: connection_end.versions.into_iter().map(|v| {
-							ibc_proto::ibc::core::connection::v1::Version {
+						versions: connection_end
+							.versions
+							.into_iter()
+							.map(|v| ibc_proto::ibc::core::connection::v1::Version {
 								identifier: v.identifier,
 								features: v.features,
-							}
-						}).collect(),
+							})
+							.collect(),
 						delay_period: connection_end.delay_period,
 					}),
 					proof,
