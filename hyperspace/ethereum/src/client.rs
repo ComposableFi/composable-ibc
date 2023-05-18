@@ -96,6 +96,46 @@ impl Client {
 		}
 	}
 
+	pub fn eth_query_proof_2d(
+		&self,
+		key1: &str,
+		key2: &str,
+		block_height: Option<u64>,
+		storage_index: u32,
+	) -> impl Future<Output = Result<EIP1186ProofResponse, ClientError>> {
+		let key1 = ethers::utils::keccak256(
+			&ethers::abi::encode_packed(&[Token::String(key1.into())]).unwrap(),
+		);
+
+		let combined_key1 = [key1.as_slice(), storage_index.to_be_bytes().as_ref()].concat();
+		let key1_hashed = ethers::utils::keccak256(&combined_key1);
+		let key1_hashed_hex = hex::encode(&key1_hashed);
+
+		let key2 = ethers::utils::keccak256(
+			&ethers::abi::encode_packed(&[Token::String(key2.into())]).unwrap(),
+		);
+
+		let combined_key2 = [key2.as_slice(), key1_hashed_hex.as_bytes()].concat();
+		let key2_hashed = ethers::utils::keccak256(&combined_key2);
+		let key2_hashed_hex = hex::encode(&key2_hashed);
+
+		let index = cast::SimpleCast::index("bytes32", &key2_hashed_hex, &key2_hashed_hex).unwrap();
+
+		let client = self.http_rpc.clone();
+		let address = self.config.address.clone().parse().unwrap();
+
+		async move {
+			client
+				.get_proof(
+					NameOrAddress::Address(address),
+					vec![H256::from_str(&index).unwrap()],
+					block_height.map(|i| BlockId::from(i)),
+				)
+				.map_err(|err| panic!("{err}"))
+				.await
+		}
+	}
+
 	pub fn query_client_impl_address(
 		&self,
 		client_id: ClientId,
