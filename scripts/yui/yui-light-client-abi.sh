@@ -14,4 +14,4 @@ cd /tmp/yui-ibc-solidity
 git checkout bfd4c30 # v0.3.5
 
 forge install > /dev/null 2>&1
-forge inspect OwnableIBCHandler abi
+forge inspect ILightClient abi
