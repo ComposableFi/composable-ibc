@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc};
+use std::{future::Future, str::FromStr, sync::Arc};
 
 use ethers::{
 	abi::{ParseError, Token},
@@ -8,6 +8,7 @@ use ethers::{
 };
 
 use futures::TryFutureExt;
+use ibc::core::ics24_host::identifier::ClientId;
 use thiserror::Error;
 
 use crate::config::Config;
@@ -17,6 +18,11 @@ pub(crate) type EthRpcClient = ethers::prelude::SignerMiddleware<
 	ethers::signers::Wallet<ethers::prelude::k256::ecdsa::SigningKey>,
 >;
 pub(crate) type WsEth = Provider<Ws>;
+
+// TODO: generate this from the contract automatically
+pub const COMMITMENTS_STORAGE_INDEX: u32 = 0;
+pub const CLIENT_IMPLS_STORAGE_INDEX: u32 = 3;
+pub const CONNECTIONS_STORAGE_INDEX: u32 = 4;
 
 #[derive(Debug, Clone)]
 pub struct Client {
@@ -63,18 +69,17 @@ impl Client {
 		&self,
 		key: &str,
 		block_height: Option<u64>,
-	) -> impl std::future::Future<Output = Result<EIP1186ProofResponse, ClientError>> {
+		storage_index: u32,
+	) -> impl Future<Output = Result<EIP1186ProofResponse, ClientError>> {
 		let key = ethers::utils::keccak256(
 			&ethers::abi::encode_packed(&[Token::String(key.into())]).unwrap(),
 		);
 
 		let key = hex::encode(key);
 
-		let ix = 0;
-
-		let index =
-			cast::SimpleCast::index("bytes32", &format!("0x{key}", key = &key), &format!("{ix}"))
-				.unwrap();
+		let var_name = format!("0x{key}", key = &key);
+		let var_name = format!("{storage_index}");
+		let index = cast::SimpleCast::index("bytes32", &var_name, &var_name).unwrap();
 
 		let client = self.http_rpc.clone();
 		let address = self.config.address.clone().parse().unwrap();
@@ -91,13 +96,52 @@ impl Client {
 		}
 	}
 
+	pub fn query_client_impl_address(
+		&self,
+		client_id: ClientId,
+		at: ibc::Height,
+	) -> impl Future<Output = Result<(Vec<u8>, bool), ClientError>> {
+		let fut = self.eth_query_proof(
+			client_id.as_str(),
+			Some(at.revision_height),
+			CLIENT_IMPLS_STORAGE_INDEX,
+		);
+
+		let contract = crate::contract::light_client_contract(
+			self.config.address.clone().parse().unwrap(),
+			Arc::clone(&self.http_rpc),
+		);
+
+		async move {
+			let proof = fut.await?;
+
+			if let Some(storage_proof) = proof.storage_proof.first() {
+				if !storage_proof.value.is_zero() {
+					let binding = contract
+						.method("getClientState", (client_id.as_str().to_owned(),))
+						.expect("contract is missing getClientState");
+
+					let get_client_state_fut = binding.call();
+					let client_state: (Vec<u8>, bool) =
+						get_client_state_fut.await.map_err(|err| todo!()).unwrap();
+
+					Ok(client_state)
+				} else {
+					todo!("error: client address is zero")
+				}
+			} else {
+				todo!("error: no storage proof")
+			}
+		}
+	}
+
 	#[track_caller]
 	pub fn has_packet_receipt(
 		&self,
 		port_id: String,
 		channel_id: String,
 		sequence: u64,
-	) -> impl std::future::Future<Output = Result<bool, ClientError>> {
+	) -> impl Future<Output = Result<bool, ClientError>> {
 		let client = self.http_rpc.clone();
 		let address = self.config.address.clone().parse().unwrap();
 
