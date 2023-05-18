@@ -103,6 +103,6 @@ To run the integration tests between two parachain nodes:
    - `yarn install`
    - `yarn dev`
 5. optional: regenerate subxt types [`more detailed instruction`](../../utils/subxt/codegen/README.md)
-   `cargo run --release -p codegen --bin codegen -- --path ./utils/subxt/generated/src/default`
+   `cargo run --bin codegen -- --path ./utils/subxt/generated/src/default`
 6. run the test
-   `cargo +nightly test -p hyperspace-testsuite --locked --release`
+   `cargo test -p hyperspace-testsuite`
