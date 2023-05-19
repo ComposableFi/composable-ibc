@@ -59,7 +59,7 @@ use ics11_beefy::{
 	client_state::ClientState as BeefyClientState,
 	consensus_state::ConsensusState as BeefyConsensusState,
 };
-use primitives::KeyProvider;
+use primitives::{KeyProvider, UndeliveredType};
 
 use crate::{finality_protocol::FinalityProtocol, signer::ExtrinsicSigner};
 use grandpa_light_client_primitives::ParachainHeaderProofs;
@@ -124,7 +124,7 @@ pub struct ParachainClient<T: light_client_common::config::Config> {
 	/// should use proof of the client states.
 	///
 	/// Set inside `on_undelivered_sequences`.
-	pub maybe_has_undelivered_packets: Arc<Mutex<bool>>,
+	pub maybe_has_undelivered_packets: Arc<Mutex<HashMap<UndeliveredType, bool>>>,
 }
 
 enum KeyType {

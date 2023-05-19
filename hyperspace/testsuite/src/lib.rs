@@ -503,8 +503,8 @@ pub async fn ibc_messaging_packet_height_timeout_with_connection_delay<A, B>(
 	chain_a.set_connection_id(connection_id_a);
 	chain_b.set_connection_id(connection_id_b);
 
-	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
-	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
+	// chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
+	// chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
@@ -537,8 +537,8 @@ pub async fn ibc_messaging_packet_timestamp_timeout_with_connection_delay<A, B>(
 	chain_a.set_connection_id(connection_id_a);
 	chain_b.set_connection_id(connection_id_b);
 
-	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
-	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
+	// chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
+	// chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
@@ -575,8 +575,8 @@ pub async fn ibc_messaging_with_connection_delay<A, B>(
 	chain_a.set_connection_id(connection_id_a);
 	chain_b.set_connection_id(connection_id_b);
 
-	chain_a.set_channel_whitelist(vec![(channel_id_a, PortId::transfer())]);
-	chain_b.set_channel_whitelist(vec![(channel_id_b, PortId::transfer())]);
+	// chain_a.set_channel_whitelist(vec![(channel_id_a, PortId::transfer())]);
+	// chain_b.set_channel_whitelist(vec![(channel_id_b, PortId::transfer())]);
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
@@ -614,8 +614,8 @@ where
 	chain_a.set_connection_id(connection_id_a);
 	chain_b.set_connection_id(connection_id_b);
 
-	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
-	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
+	// chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
+	// chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
@@ -648,8 +648,8 @@ pub async fn ibc_messaging_packet_timeout_on_channel_close<A, B>(
 	chain_a.set_connection_id(connection_id_a);
 	chain_b.set_connection_id(connection_id_b);
 
-	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
-	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
+	// chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
+	// chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {

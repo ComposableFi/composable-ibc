@@ -93,6 +93,13 @@ pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: impl Into<Vec<u8>>) ->
 	commitment_prefix
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum UndeliveredType {
+	Sequences,
+	Acks,
+	Timeouts,
+}
+
 /// Provides an interface for accessing new events and Ibc data on the chain which must be
 /// relayed to the counterparty chain.
 #[async_trait::async_trait]
@@ -114,7 +121,7 @@ pub trait IbcProvider {
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &T,
-	) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+	) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		T: Chain;
 
@@ -225,9 +232,13 @@ pub trait IbcProvider {
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error>;
 
-	async fn on_undelivered_sequences(&self, seqs: &[u64]) -> Result<(), Self::Error>;
+	async fn on_undelivered_sequences(
+		&self,
+		seqs: &[u64],
+		kind: UndeliveredType,
+	) -> Result<(), Self::Error>;
 
-	fn has_undelivered_sequences(&self) -> bool;
+	fn has_undelivered_sequences(&self, kind: UndeliveredType) -> bool;
 
 	/// Given a list of packet acknowledgements sequences from the sink chain
 	/// return a list of acknowledgement sequences that have not been received on the source chain
@@ -482,6 +493,7 @@ pub async fn query_undelivered_sequences(
 	let seqs = source
 		.query_packet_commitments(source_height, channel_id, port_id.clone())
 		.await?;
+	log::trace!(target: "hyperspace", "Seqs: {:?}", seqs);
 	let counterparty_channel_id = channel_end
 		.counterparty()
 		.channel_id
@@ -504,7 +516,9 @@ pub async fn query_undelivered_sequences(
 		seqs.into_iter().filter(|seq| *seq > next_seq_recv).collect()
 	};
 
-	source.on_undelivered_sequences(&undelivered_sequences).await?;
+	source
+		.on_undelivered_sequences(&undelivered_sequences, UndeliveredType::Sequences)
+		.await?;
 
 	Ok(undelivered_sequences)
 }
@@ -556,6 +570,10 @@ pub async fn query_undelivered_acks(
 		undelivered_acks.len(), sink.name()
 	);
 
+	source
+		.on_undelivered_sequences(&undelivered_acks, UndeliveredType::Acks)
+		.await?;
+
 	Ok(undelivered_acks)
 }
 
@@ -586,6 +604,11 @@ pub async fn find_suitable_proof_height_for_client(
 	timestamp_to_match: Option<Timestamp>,
 	latest_client_height: Height,
 ) -> Option<Height> {
+	log::trace!(
+		target: "hyperspace",
+		"Searching for suitable proof height for client {} ({}) starting at {}, {:?}, latest_client_height={}",
+		client_id, chain.name(), start_height, timestamp_to_match, latest_client_height
+	);
 	// If searching for existence of just a height we use a pure linear search because there's no
 	// valid comparison to be made and there might be missing values  for some heights
 	if timestamp_to_match.is_none() {
@@ -596,6 +619,15 @@ pub async fn find_suitable_proof_height_for_client(
 			if consensus_state.is_none() {
 				continue
 			}
+			let proof_height = chain.get_proof_height(temp_height).await;
+			if proof_height != temp_height {
+				let consensus_state_with_proof =
+					chain.query_client_consensus(at, client_id.clone(), proof_height).await.ok();
+				if consensus_state_with_proof.is_none() {
+					continue
+				}
+			}
+
 			return Some(temp_height)
 		}
 	} else {
@@ -614,6 +646,15 @@ pub async fn find_suitable_proof_height_for_client(
 			if consensus_state.is_none() {
 				start += 1;
 				continue
+			}
+			let proof_height = chain.get_proof_height(temp_height).await;
+			if proof_height != temp_height {
+				let consensus_state_with_proof =
+					chain.query_client_consensus(at, client_id.clone(), proof_height).await.ok();
+				if consensus_state_with_proof.is_none() {
+					start += 1;
+					continue
+				}
 			}
 
 			let consensus_state =
@@ -634,7 +675,16 @@ pub async fn find_suitable_proof_height_for_client(
 			let consensus_state =
 				AnyConsensusState::try_from(consensus_state.consensus_state?).ok()?;
 			if consensus_state.timestamp().nanoseconds() >= timestamp_to_match.nanoseconds() {
-				return Some(start_height)
+				let proof_height = chain.get_proof_height(start_height).await;
+				if proof_height != start_height {
+					let consensus_state_with_proof = chain
+						.query_client_consensus(at, client_id.clone(), proof_height)
+						.await
+						.ok();
+					if consensus_state_with_proof.is_some() {
+						return Some(start_height)
+					}
+				}
 			}
 		}
 

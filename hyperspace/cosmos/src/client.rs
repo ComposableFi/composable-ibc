@@ -27,7 +27,7 @@ use ics07_tendermint::{
 	merkle::convert_tm_to_ics_merkle_proof,
 };
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
-use primitives::{IbcProvider, KeyProvider, UpdateType};
+use primitives::{IbcProvider, KeyProvider, UndeliveredType, UpdateType};
 use prost::Message;
 use quick_cache::sync::Cache;
 use ripemd::Ripemd160;
@@ -42,7 +42,7 @@ use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
 use tendermint_light_client_verifier::types::{LightBlock, ValidatorSet};
 use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, Url, WebSocketClient};
-use tokio::task::JoinSet;
+use tokio::{task::JoinSet, time::error::Elapsed};
 
 const DEFAULT_FEE_DENOM: &str = "stake";
 const DEFAULT_FEE_AMOUNT: &str = "4000";
@@ -167,7 +167,7 @@ pub struct CosmosClient<H> {
 	/// should use proof of the client states.
 	///
 	/// Set inside `on_undelivered_sequences`.
-	pub maybe_has_undelivered_packets: Arc<Mutex<bool>>,
+	pub maybe_has_undelivered_packets: Arc<Mutex<HashMap<UndeliveredType, bool>>>,
 	/// Light-client blocks cache
 	pub light_block_cache: Arc<Cache<TmHeight, LightBlock>>,
 }
@@ -358,16 +358,12 @@ where
 		height: TmHeight,
 	) -> Result<LightBlock, Error> {
 		let fut = async move {
-			tokio::time::timeout(Duration::from_secs(30), async move {
-				self.light_client.io.fetch_light_block(AtHeight::At(height)).map_err(|e| {
-					Error::from(format!(
-						"Failed to fetch light block for chain {:?} with error {:?}",
-						self.name, e
-					))
-				})
+			self.light_client.io.fetch_light_block(AtHeight::At(height)).map_err(|e| {
+				Error::from(format!(
+					"Failed to fetch light block for chain {:?} with error {:?}",
+					self.name, e
+				))
 			})
-			.await
-			.map_err(|e| Error::Custom("failed to fetch light block: timeout".to_string()))?
 		};
 		self.light_block_cache.get_or_insert_async(&height, fut).await
 	}
@@ -382,13 +378,14 @@ where
 		let heightss = (from.value()..=to.value()).collect::<Vec<_>>();
 		let client = Arc::new(self.clone());
 		for heights in heightss.chunks(5) {
-			let mut join_set = JoinSet::<Result<_, Error>>::new();
+			let mut join_set = JoinSet::<Result<Result<_, Error>, Elapsed>>::new();
 			for height in heights.to_owned() {
 				let client = client.clone();
-				join_set.spawn(async move {
-					log::trace!(target: "hyperspace_cosmos", "Fetching header at height {:?}", height);
+				let fut = async move {
+					log::trace!(target: "hyperspace_cosmos", "Fetching header at height {:?} {:?}", height, tokio::task::id());
 					let latest_light_block =
 						client.fetch_light_block_with_cache(height.try_into()?).await?;
+					log::trace!(target: "hyperspace_cosmos", "end Fetching header {:?}", tokio::task::id());
 
 					let height =
 						TmHeight::try_from(trusted_height.revision_height).map_err(|e| {
@@ -397,16 +394,44 @@ where
 								client.name, e
 							))
 						})?;
+					log::trace!(target: "hyperspace_cosmos", "end Fetching header 2 {:?}", tokio::task::id());
+
 					let trusted_light_block =
 						client.fetch_light_block_with_cache(height.increment()).await?;
+					log::trace!(target: "hyperspace_cosmos", "end Fetching header 3 {:?}", tokio::task::id());
 
 					let update_type = match is_validators_equal(
 						&latest_light_block.validators,
 						&latest_light_block.next_validators,
 					) {
-						true => UpdateType::Mandatory,
+						true => UpdateType::Optional,
 						false => UpdateType::Mandatory,
 					};
+					log::trace!(target: "hyperspace_cosmos", "end Fetching header 4 {:?}", tokio::task::id());
+
+					/*
+					Fetching header at height 1509 Id(15197)
+					Fetching header at height 1508 Id(15196)
+					Fetching header at height 1510 Id(15198)
+					Fetching header at height 1511 Id(15199)
+					Fetching header at height 1512 Id(15200)
+					end Fetching header Id(15196)
+					end Fetching header 2 Id(15196)
+					end Fetching header Id(15200)
+					end Fetching header Id(15197)
+					end Fetching header 2 Id(15197)
+					end Fetching header 3 Id(15197)
+					end Fetching header 4 Id(15197)
+					end Fetching header 3 Id(15196)
+					end Fetching header Id(15198)
+					end Fetching header 2 Id(15198)
+					end Fetching header 4 Id(15196)
+					end Fetching header 3 Id(15198)
+					end Fetching header 4 Id(15198)
+					end Fetching header 2 Id(15200)
+					end Fetching header 3 Id(15200)
+					end Fetching header 4 Id(15200)
+										 */
 					Ok((
 						Header {
 							signed_header: latest_light_block.signed_header,
@@ -416,16 +441,16 @@ where
 						},
 						update_type,
 					))
-				});
+				};
+				join_set.spawn(tokio::time::timeout(Duration::from_secs(30), fut));
 			}
 			while let Some(res) = join_set.join_next().await {
-				xs.push(res.map_err(|e| Error::Custom(e.to_string()))??);
+				xs.push(res.map_err(|e| Error::Custom(e.to_string()))?.map_err(|e| {
+					Error::Custom("failed to fetch light block: timeout".to_string())
+				})??);
 			}
 		}
 		xs.sort_by_key(|(h, _)| h.signed_header.header.height.value());
-		for (x, _) in &xs {
-			log::debug!(target: "hyperspace_cosmos", "Sorted: {:?}, {:?}", x.trusted_height, x.signed_header);
-		}
 		Ok(xs)
 	}
 
@@ -512,8 +537,15 @@ fn is_validators_equal(set_a: &ValidatorSet, set_b: &ValidatorSet) -> bool {
 
 #[cfg(test)]
 pub mod tests {
-
 	use crate::key_provider::KeyEntry;
+	use futures::TryFutureExt;
+	use itertools::Itertools;
+	use quick_cache::sync::Cache;
+	use std::{sync::Arc, time::Duration};
+	use tokio::{
+		task::JoinSet,
+		time::{sleep, timeout},
+	};
 
 	use super::MnemonicEntry;
 
@@ -565,5 +597,47 @@ pub mod tests {
 				Err(_) => panic!("Try from mnemonic failed"),
 			}
 		}
+	}
+
+	#[tokio::test]
+	async fn test_cache() {
+		/*
+		for 0..1000 from cosmos
+		query_block(i)
+		> 100 -> RPC error
+		 */
+		let cache: Arc<Cache<u32, u32>> = Arc::new(Cache::new(100));
+		let mut join_set = JoinSet::<Result<_, ()>>::new();
+
+		for i in 0..10000 {
+			let fut = async move {
+				timeout(Duration::from_secs(5), async move {
+					sleep(Duration::from_secs(100000000)).await;
+					Result::<_, ()>::Ok(0u32)
+				})
+				.await
+				.map_err(|e| ())
+				.map(|r| r.unwrap())
+			};
+			let cache = cache.clone();
+			join_set.spawn(async move { cache.get_or_insert_async(&i, fut).await });
+		}
+		while let Some(res) = join_set.join_next().await {}
+
+		// for i in 0..10000 {
+		// 	let fut = async move {
+		// 		sleep(Duration::from_secs(100)).await;
+		// 		Result::<_, ()>::Ok(0u32)
+		// 	};
+		// 	let cache = cache.clone();
+		// 	join_set.spawn(
+		// 		timeout(
+		// 			Duration::from_secs(5),
+		// 			async move { cache.get_or_insert_async(&i, fut).await },
+		// 		)
+		// 		.map_err(|e| ()),
+		// 	);
+		// }
+		// while let Some(res) = join_set.join_next().await {}
 	}
 }

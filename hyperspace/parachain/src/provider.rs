@@ -51,7 +51,7 @@ use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
 	HostConsensusProof,
 };
-use primitives::{apply_prefix, Chain, IbcProvider, KeyProvider, UpdateType};
+use primitives::{apply_prefix, Chain, IbcProvider, KeyProvider, UndeliveredType, UpdateType};
 use sp_core::H256;
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
@@ -109,7 +109,7 @@ where
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &C,
-	) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+	) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		C: Chain,
 	{
@@ -414,13 +414,31 @@ where
 		Ok(res)
 	}
 
-	async fn on_undelivered_sequences(&self, seqs: &[u64]) -> Result<(), Self::Error> {
-		*self.maybe_has_undelivered_packets.lock().unwrap() = !seqs.is_empty();
+	async fn on_undelivered_sequences(
+		&self,
+		seqs: &[u64],
+		kind: UndeliveredType,
+	) -> Result<(), Self::Error> {
+		log::trace!(
+			target: "hyperspace_parachain",
+			"on_undelivered_sequences: {:?}, type: {kind:?}",
+			seqs
+		);
+		self.maybe_has_undelivered_packets
+			.lock()
+			.unwrap()
+			.insert(kind, !seqs.is_empty());
 		Ok(())
 	}
 
-	fn has_undelivered_sequences(&self) -> bool {
-		*self.maybe_has_undelivered_packets.lock().unwrap()
+	fn has_undelivered_sequences(&self, kind: UndeliveredType) -> bool {
+		self.maybe_has_undelivered_packets
+			.lock()
+			.unwrap()
+			.get(&kind)
+			.as_deref()
+			.cloned()
+			.unwrap_or_default()
 	}
 
 	async fn query_unreceived_acknowledgements(

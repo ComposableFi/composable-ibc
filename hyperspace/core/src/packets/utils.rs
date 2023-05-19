@@ -52,6 +52,8 @@ pub async fn get_timeout_proof_height(
 	packet_creation_height: u64,
 ) -> Option<Height> {
 	let timeout_variant = Packet::timeout_variant(&packet, &sink_timestamp, sink_height).unwrap();
+	log::trace!(target: "hyperspace", "get_timeout_proof_height: {}->{}, timeout_variant={:?}, source_height={}, sink_height={}, sink_timestamp={}, latest_client_height_on_source={}, packet_creation_height={}, packet={:?}",
+		source.name(), sink.name(), timeout_variant, source_height, sink_height, sink_timestamp, latest_client_height_on_source, packet_creation_height, packet);
 
 	match timeout_variant {
 		TimeoutVariant::Height =>
@@ -69,13 +71,13 @@ pub async fn get_timeout_proof_height(
 			// bound for where to start our search
 			// We offset the sink height when this packet was created with the approximate number of
 			// blocks contained in the difference in timestamp at packet creation until timeout
-			let sink_client_state = source
-				.query_client_state(
-					Height::new(source_height.revision_number, packet_creation_height),
-					sink.client_id(),
-				)
-				.await
-				.ok()?;
+			let height = Height::new(source_height.revision_number, packet_creation_height);
+			log::trace!(
+				target: "hyperspace",
+				"Querying client state at {height}"
+			);
+			let sink_client_state =
+				source.query_client_state(height, sink.client_id()).await.ok()?;
 			let sink_client_state =
 				AnyClientState::try_from(sink_client_state.client_state?).ok()?;
 			let height = sink_client_state.latest_height();
@@ -331,8 +333,8 @@ pub fn get_key_path(key_path_type: KeyPathType, packet: &Packet) -> String {
 			format!(
 				"{}",
 				AcksPath {
-					port_id: packet.source_port.clone(),
-					channel_id: packet.source_channel.clone(),
+					port_id: packet.destination_port.clone(),
+					channel_id: packet.destination_channel.clone(),
 					sequence: packet.sequence.clone()
 				}
 			)

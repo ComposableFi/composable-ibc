@@ -69,7 +69,35 @@ macro_rules! process_finality_event {
 
 				let mut msgs = Vec::new();
 
-				for (msg_update_client, events, update_type) in updates {
+				let mut maybe_required_to_submit_proof_at: Option<ibc::Height> = None;
+				let mut source_has_undelivered_acks =
+					$source.has_undelivered_sequences(UndeliveredType::Acks) ||
+					$source.has_undelivered_sequences(UndeliveredType::Sequences) ||
+					$source.has_undelivered_sequences(UndeliveredType::Timeouts);
+				let block_proof_height_difference = proof_height - height;
+
+				// let mut source_has_undelivered_seqs = $source.has_undelivered_sequences(UndeliveredType::Sequences);
+				// let mut maybe_required_to_submit_proof_at: Option<ibc::Height> = None;
+				log::trace!(
+					target: "hyperspace",
+					"has undelivered seqs: [{}:{}, {}:{}], has undelivered acks: [{}:{}, {}:{}]",
+					$source.name(), $source.has_undelivered_sequences(UndeliveredType::Sequences), $sink.name(), $sink.has_undelivered_sequences(UndeliveredType::Sequences),
+					$source.name(), $source.has_undelivered_sequences(UndeliveredType::Acks), $sink.name(), $sink.has_undelivered_sequences(UndeliveredType::Acks),
+				);
+
+				let mut mandatory_updates_for_undelivered_seqs = Vec::new();
+				if source_has_undelivered_acks && !updates.is_empty() {
+					let needed_updates_num = if block_proof_height_difference > 0 { 2 } else { 1 };
+					let (last_update, height, ..) = update.last().unwrap().clone();
+					// mandatory_updates_for_undelivered_seqs.
+					for (msg_update_client, height, ..) in updates.iter().rev() {
+						if mandatory_updates_for_undelivered_seqs.len() == needed_updates_num {
+							break;
+						}
+					}
+				}
+
+				for (msg_update_client, height, events, update_type) in updates {
 					if let Some(metrics) = $metrics.as_mut() {
 						if let Err(e) = metrics.handle_events(events.as_slice()).await {
 							log::error!("Failed to handle metrics for {} {:?}", $source.name(), e);
@@ -88,8 +116,12 @@ macro_rules! process_finality_event {
 								had_error = true;
 								continue
 							},
-					};
-					log::trace!(target: "hyperspace", "Received messages count: {}, timeouts count: {}, is the update optional: {}, has undelivered packets: {}", messages.len(), timeout_msgs.len(), update_type.is_optional(), $source.has_undelivered_sequences());
+						};
+					log::trace!(
+						target: "hyperspace",
+						"Received messages count: {}, timeouts count: {}, is the update optional: {}",
+						messages.len(), timeout_msgs.len(), update_type.is_optional(),
+					);
 
 					// We want to send client update if packet messages exist but where not sent due
 					// to a connection delay even if client update message is optional
@@ -98,16 +130,34 @@ macro_rules! process_finality_event {
 						// not when we have *any* undelivered packets. But this requires rewriting
 						// `find_suitable_proof_height_for_client` function, that uses binary
 						// search, which won't work in this case
-						update_type.is_optional() && !$source.has_undelivered_sequences(),
+						update_type.is_optional(), //  && !$source.has_undelivered_sequences(UndeliveredType::Sequences),
+						source_has_undelivered_acks || maybe_required_to_submit_proof_at == Some(height),
 						has_packet_events(&event_types),
 						messages.is_empty(),
 					) {
-						(true, false, true) => {
+						(true, true, ..) => {
+							// if source_has_undelivered_seqs {
+							// 	source_has_undelivered_seqs = false;
+							// }
+							if source_has_undelivered_acks {
+								source_has_undelivered_acks = false;
+							}
+							if maybe_required_to_submit_proof_at.is_none() {
+								let proof_height = $source.get_proof_height(height).await;
+								if proof_height != height {
+									maybe_required_to_submit_proof_at = Some(proof_height);
+								}
+							} else {
+								maybe_required_to_submit_proof_at = None;
+							}
+							log::info!("Sending one optional update because source ({}) chain has undelivered sequences", $sink.name());
+						}
+						(true, false, false, true) => {
 							// skip sending ibc messages if no new events
 							log::info!("Skipping finality notification for {}", $sink.name());
 							continue
 						},
-						(false, _, true) => log::info!(
+						(false, _, _, true) => log::info!(
 							"Sending mandatory client update message for {}",
 							$sink.name()
 						),
@@ -118,6 +168,21 @@ macro_rules! process_finality_event {
 					};
 					msgs.push(msg_update_client);
 					msgs.append(&mut messages);
+				}
+				if source_has_undelivered_acks && !updates.is_empty() {
+					let mut updates = updates;
+					let (msg_update_client, height, ..) = updates.pop().unwrap();
+					let proof_height = $source.get_proof_height(height).await;
+					let is_two_updates_required = proof_height != height;
+					if is_two_updates_required {
+						if updates.len() < 2 {
+							log::debug!("Failed to send client update message for {} because it is required to send two updates but only one is available", $sink.name());
+						} else {
+							msgs.push(msg_update_client);
+						}
+					} else {
+						msgs.push(msg_update_client);
+					}
 				}
 				msgs.extend(ready_packets);
 
@@ -262,7 +327,7 @@ macro_rules! chains {
 				&mut self,
 				finality_event: Self::FinalityEvent,
 				counterparty: &T,
-			) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+			) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 			where
 				T: Chain,
 			{
@@ -818,23 +883,23 @@ macro_rules! chains {
 				}
 			}
 
-			async fn on_undelivered_sequences(&self, seqs: &[u64]) -> Result<(), Self::Error> {
+			async fn on_undelivered_sequences(&self, seqs: &[u64], kind: primitives::UndeliveredType) -> Result<(), Self::Error> {
 				match self {
 					$(
 						$(#[$($meta)*])*
-						Self::$name(chain) => chain.on_undelivered_sequences(seqs).await.map_err(AnyError::$name),
+						Self::$name(chain) => chain.on_undelivered_sequences(seqs, kind).await.map_err(AnyError::$name),
 					)*
-					Self::Wasm(c) => c.inner.on_undelivered_sequences(seqs).await,
+					Self::Wasm(c) => c.inner.on_undelivered_sequences(seqs, kind).await,
 				}
 			}
 
-			fn has_undelivered_sequences(&self) -> bool {
+			fn has_undelivered_sequences(&self, kind: primitives::UndeliveredType) -> bool {
 				match self {
 					$(
 						$(#[$($meta)*])*
-						Self::$name(chain) => chain.has_undelivered_sequences(),
+						Self::$name(chain) => chain.has_undelivered_sequences(kind),
 					)*
-					Self::Wasm(c) => c.inner.has_undelivered_sequences(),
+					Self::Wasm(c) => c.inner.has_undelivered_sequences(kind),
 				}
 			}
 

@@ -251,7 +251,9 @@ where
 		};
 		log::debug!(target: "hyperspace_cosmos", "Handling error: {err_str}");
 
-		if err_str.contains("dispatch task is gone") {
+		if err_str.contains("dispatch task is gone") ||
+			err_str.contains("failed to send message to internal channel")
+		{
 			let (rpc_client, ws_driver) = WebSocketClient::new(self.rpc_url.clone())
 				.await
 				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;

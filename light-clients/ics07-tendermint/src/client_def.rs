@@ -556,7 +556,16 @@ where
 	P: Into<Path>,
 	H: ics23::HostFunctionsProvider,
 {
-	let merkle_path = apply_prefix(prefix, vec![path.into().to_string()]);
+	let path = path.into().to_string();
+	log::debug!(
+		target: "pallet_ibc", "verify_membership:\nprefix={}\nproof={}\nroot={}\npath={}\nvalue={}",
+		hex::encode(prefix.as_bytes()),
+		hex::encode(proof.as_bytes()),
+		hex::encode(&root.bytes),
+		path,
+		hex::encode(&value)
+	);
+	let merkle_path = apply_prefix(prefix, vec![path]);
 	let merkle_proof: MerkleProof<H> = RawMerkleProof::try_from(proof.clone())
 		.map_err(Ics02Error::invalid_commitment_proof)?
 		.into();

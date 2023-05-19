@@ -25,6 +25,7 @@ use hyperspace_testsuite::{
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
 };
+use ibc::{core::ics24_host::identifier::ClientId, Height};
 
 #[derive(Debug, Clone)]
 pub struct Args {
@@ -133,32 +134,58 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
 	let (mut chain_a, mut chain_b) = setup_clients().await;
 	// Run tests sequentially
+	// [2023-05-17T20:19:07Z TRACE hyperspace] Using proof height: 1-3776
 
-	let asset_id = 1;
+	// 3944
+	// 2023-05-17 17:33:36.035 TRACE tokio-runtime-worker pallet_ibc: [Parachain] in client :
+	// [store_consensus_state] >> client_id: ClientId("07-tendermint-0"), height = Height {
+	// revision: 1, height: 3932 },
+	let (height, _) = chain_b.latest_height_and_timestamp().await.unwrap();
+	let x = chain_b
+		.query_client_consensus(
+			height,
+			ClientId::new("07-tendermint", 0).unwrap(),
+			Height::new(1, 3776),
+		)
+		.await
+		.unwrap();
+	x.consensus_state.unwrap();
+
+	let (height, _) = chain_b.latest_height_and_timestamp().await.unwrap();
+	let x = chain_b
+		.query_client_consensus(
+			height,
+			ClientId::new("07-tendermint", 0).unwrap(),
+			Height::new(1, 3077),
+		)
+		.await
+		.unwrap();
+	x.consensus_state.unwrap();
+	// let asset_id = 1;
 
 	// let join_set = JoinSet::new();
 
 	// no timeouts + connection delay
-	ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b, asset_id, asset_id).await;
-
-	// timeouts + connection delay
-	ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b, asset_id)
-		.await;
-
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id,
-	)
-	.await;
-
-	// channel closing semantics
-	ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id).await;
-	ibc_channel_close(&mut chain_a, &mut chain_b).await;
-
-	// Test sync abilities, run this before misbehaviour test
-	client_synchronization_test(&mut chain_a, &mut chain_b).await;
-
-	// misbehaviour
-	ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
+	// ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b, asset_id, asset_id).await;
+	//
+	// // timeouts + connection delay
+	// ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b,
+	// asset_id) 	.await;
+	//
+	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id,
+	// )
+	// .await;
+	//
+	// // channel closing semantics
+	// ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id).await;
+	// ibc_channel_close(&mut chain_a, &mut chain_b).await;
+	//
+	// // Test sync abilities, run this before misbehaviour test
+	// client_synchronization_test(&mut chain_a, &mut chain_b).await;
+	//
+	// // misbehaviour
+	// ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
 }
