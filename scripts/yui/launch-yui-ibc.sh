@@ -27,15 +27,8 @@ if [ lsof -t -i :8545 ]; then
     exit 1
 fi
 
-# if the /tmp/yui-ibc-solidity directory does not exist, clone the repo
-if [ ! -d "/tmp/yui-ibc-solidity" ]; then
-    git clone https://github.com/hyperledger-labs/yui-ibc-solidity /tmp/yui-ibc-solidity
-fi
-
-cd /tmp/yui-ibc-solidity
-git checkout bfd4c30 # v0.3.5
-
-yarn
+source $ROOT/scripts/yui/yui-clone.sh
+yui_clone;
 
 # start local ethereum node using anvil
 anvil --mnemonic "$MNEMONIC" --host 0.0.0.0 --port 8545 &
