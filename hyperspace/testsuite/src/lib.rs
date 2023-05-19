@@ -581,8 +581,8 @@ where
 	chain_a.set_connection_id(connection_id_a);
 	chain_b.set_connection_id(connection_id_b);
 
-	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
-	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
+	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())].into_iter().collect());
+	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
