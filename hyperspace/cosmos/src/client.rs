@@ -381,7 +381,7 @@ where
 			for height in heights.to_owned() {
 				let client = client.clone();
 				let fut = async move {
-					log::trace!(target: "hyperspace_cosmos", "Fetching header at height {:?} {:?}", height, tokio::task::id());
+					log::trace!(target: "hyperspace_cosmos", "Fetching header at height {:?}", height);
 					let latest_light_block =
 						client.fetch_light_block_with_cache(height.try_into()?).await?;
 
