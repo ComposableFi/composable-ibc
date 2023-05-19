@@ -539,7 +539,7 @@ macro_rules! chains {
 				}
 			}
 
-			fn channel_whitelist(&self) -> Vec<(ChannelId, PortId)> {
+			fn channel_whitelist(&self) -> std::collections::HashSet<(ChannelId, PortId)> {
 				match self {
 					$(
 						$(#[$($meta)*])*
@@ -876,7 +876,7 @@ macro_rules! chains {
 				}
 			}
 
-			fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
+			fn set_channel_whitelist(&mut self, channel_whitelist: std::collections::HashSet<(ChannelId, PortId)>) {
 				match self {
 					$(
 						$(#[$($meta)*])*

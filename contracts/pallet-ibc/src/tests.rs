@@ -32,7 +32,7 @@ use ibc::{
 		},
 		ics04_channel::{
 			channel::{ChannelEnd, Counterparty as ChanCounterParty, Order, State},
-			context::ChannelKeeper,
+			context::{ChannelKeeper, ChannelReader},
 			msgs::recv_packet::MsgRecvPacket,
 			packet::Packet,
 			Version as ChanVersion,
@@ -208,12 +208,12 @@ const MILLIS: u128 = 1000000;
 #[test]
 fn send_transfer() {
 	let mut ext = new_test_ext();
+	let balance = 100000 * MILLIS;
 	ext.execute_with(|| {
 		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
 		let raw_user = ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
 		let ss58_address = String::from_utf8(raw_user).unwrap();
 		setup_client_and_consensus_state(PortId::transfer());
-		let balance = 100000 * MILLIS;
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
 				&"PICA".to_string(),
@@ -253,7 +253,81 @@ fn send_transfer() {
 		.get(0)
 		.unwrap()
 		.clone();
-		assert!(!packet_info.data.is_empty())
+		assert!(!packet_info.data.is_empty());
+
+		let packet_data: PacketData = serde_json::from_slice(packet_info.data.as_slice()).unwrap();
+		let send_amount = packet_data.token.amount.as_u256().as_u128();
+		let fee = <Test as crate::ics20_fee::Config>::ServiceChargeIn::get() * balance;
+		assert_eq!(send_amount, balance - fee);
+	})
+}
+
+#[test]
+fn send_transfer_no_fee_feeless_channels() {
+	let mut ext = new_test_ext();
+	let balance = 100000 * MILLIS;
+	ext.execute_with(|| {
+		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
+		let raw_user = ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
+		let ss58_address = String::from_utf8(raw_user).unwrap();
+		setup_client_and_consensus_state(PortId::transfer());
+		let asset_id =
+			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
+				&"PICA".to_string(),
+			)
+			.unwrap();
+		<<Test as Config>::Fungibles as Mutate<
+			<Test as frame_system::Config>::AccountId,
+		>>::mint_into(asset_id, &AccountId32::new([0; 32]), balance).unwrap();
+
+		let timeout = Timeout::Offset { timestamp: Some(1000), height: Some(5) };
+
+		let ctx = Context::<Test>::default();
+		let channel_end = ctx
+			.channel_end(&(PortId::transfer(), ChannelId::new(0)))
+			.expect("expect source_channel unwrap");
+		let destination_channel = channel_end.counterparty().channel_id.unwrap();
+		//feeless channels
+		let _ = Ibc::add_channels_to_feeless_channel_list(
+			RuntimeOrigin::root(),
+			0,
+			destination_channel.sequence(),
+		)
+		.expect("expect add channels to feeless list");
+
+		Ibc::transfer(
+			RuntimeOrigin::signed(AccountId32::new([0; 32])),
+			TransferParams {
+				to: MultiAddress::Raw(ss58_address.as_bytes().to_vec()),
+				source_channel: 0,
+				timeout,
+			},
+			asset_id,
+			balance,
+			None,
+		)
+		.unwrap();
+	});
+
+	ext.persist_offchain_overlay();
+
+	ext.execute_with(|| {
+		let channel_id = ChannelId::new(0);
+		let port_id = PortId::transfer();
+		let packet_info = Pallet::<Test>::get_send_packet_info(
+			channel_id.to_string().as_bytes().to_vec(),
+			port_id.as_bytes().to_vec(),
+			vec![1],
+		)
+		.unwrap()
+		.get(0)
+		.unwrap()
+		.clone();
+		assert!(!packet_info.data.is_empty());
+
+		let packet_data: PacketData = serde_json::from_slice(packet_info.data.as_slice()).unwrap();
+		let send_amount = packet_data.token.amount.as_u256().as_u128();
+		assert_eq!(send_amount, balance);
 	})
 }
 
@@ -349,7 +423,7 @@ fn on_deliver_ics20_recv_packet() {
 			asset_id,
 			&<Test as crate::Config>::FeeAccount::get().into_account(),
 		);
-		let fee = <Test as crate::ics20_fee::Config>::ServiceCharge::get() * amt;
+		let fee = <Test as crate::ics20_fee::Config>::ServiceChargeIn::get() * amt;
 		assert_eq!(balance, amt - fee);
 		assert_eq!(pallet_balance, fee)
 	})
@@ -447,13 +521,10 @@ fn on_deliver_ics20_recv_packet_with_flat_fee() {
 			asset_id,
 			&<Test as crate::Config>::FeeAccount::get().into_account(),
 		);
-		let fee_asset_id = <Test as crate::ics20_fee::Config>::FlatFeeAssetId::get();
-		let fee = <Test as crate::ics20_fee::Config>::FlatFeeConverter::get_flat_fee(
-			asset_id,
-			fee_asset_id,
-			amt,
-		)
-		.unwrap_or_default();
+		let fee_asset_id = <Test as crate::Config>::FlatFeeAssetId::get();
+		let fee =
+			<Test as crate::Config>::FlatFeeConverter::get_flat_fee(asset_id, fee_asset_id, amt)
+				.unwrap_or_default();
 		assert_eq!(balance, amt - fee);
 		assert_eq!(pallet_balance, fee)
 	})
@@ -498,8 +569,8 @@ fn on_deliver_ics20_recv_packet_transfered_amount_less_then_flat_fee() {
 
 		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
 		let usdt_fee_amount = 1000 * MILLIS;
-		let fee_asset_id = <Test as crate::ics20_fee::Config>::FlatFeeAssetId::get();
-		let amt = <Test as crate::ics20_fee::Config>::FlatFeeConverter::get_flat_fee(
+		let fee_asset_id = <Test as crate::Config>::FlatFeeAssetId::get();
+		let amt = <Test as crate::Config>::FlatFeeConverter::get_flat_fee(
 			asset_id,
 			fee_asset_id,
 			usdt_fee_amount,
@@ -558,7 +629,7 @@ fn on_deliver_ics20_recv_packet_transfered_amount_less_then_flat_fee() {
 			asset_id,
 			&<Test as crate::Config>::FeeAccount::get().into_account(),
 		);
-		let fee = <Test as crate::ics20_fee::Config>::FlatFeeConverter::get_flat_fee(
+		let fee = <Test as crate::Config>::FlatFeeConverter::get_flat_fee(
 			asset_id,
 			fee_asset_id,
 			usdt_fee_amount,

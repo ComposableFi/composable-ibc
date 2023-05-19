@@ -84,7 +84,7 @@ async fn follow_grandpa_justifications() {
 		)
 		.await
 		.unwrap()
-		.take(100);
+		.take((2 * session_length).try_into().unwrap());
 
 	let mut client_state = prover.initialize_client_state().await.unwrap();
 	println!("Grandpa proofs are now available");

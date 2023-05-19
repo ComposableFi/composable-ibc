@@ -169,6 +169,7 @@ pub async fn verify_delay_passed(
 					block_delay,
 				)
 			} else {
+				log::trace!(target: "hyperspace", "Failed to get client update time and height for source client for height {}", actual_proof_height);
 				Ok(false)
 			}
 		},
@@ -189,6 +190,7 @@ pub async fn verify_delay_passed(
 					block_delay,
 				)
 			} else {
+				log::trace!(target: "hyperspace", "Failed to get client update time and height for sink client for height {}", actual_proof_height);
 				Ok(false)
 			}
 		},

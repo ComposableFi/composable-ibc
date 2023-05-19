@@ -63,7 +63,7 @@ use pallet_ibc::light_clients::{
 };
 use primitives::{mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType};
 use prost::Message;
-use std::{pin::Pin, str::FromStr, time::Duration};
+use std::{collections::HashSet, pin::Pin, str::FromStr, time::Duration};
 use tendermint::block::Height as TmHeight;
 pub use tendermint::Hash;
 use tendermint_rpc::{
@@ -616,7 +616,7 @@ where
 		Ok(commitment_sequences)
 	}
 
-	fn channel_whitelist(&self) -> Vec<(ChannelId, PortId)> {
+	fn channel_whitelist(&self) -> HashSet<(ChannelId, PortId)> {
 		self.channel_whitelist.lock().unwrap().clone()
 	}
 
@@ -869,12 +869,12 @@ where
 	}
 
 	/// Set the channel whitelist for the relayer task.
-	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
+	fn set_channel_whitelist(&mut self, channel_whitelist: HashSet<(ChannelId, PortId)>) {
 		*self.channel_whitelist.lock().unwrap() = channel_whitelist;
 	}
 
 	fn add_channel_to_whitelist(&mut self, channel: (ChannelId, PortId)) {
-		self.channel_whitelist.lock().unwrap().push(channel);
+		self.channel_whitelist.lock().unwrap().insert(channel);
 	}
 
 	fn set_connection_id(&mut self, connection_id: ConnectionId) {
