@@ -9,7 +9,6 @@ use bech32::ToBase32;
 use bip32::{DerivationPath, ExtendedPrivateKey, XPrv, XPub as ExtendedPublicKey};
 use core::convert::{From, Into, TryFrom};
 use digest::Digest;
-use futures::FutureExt;
 use ibc::core::{
 	ics02_client::height::Height,
 	ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
@@ -33,7 +32,7 @@ use quick_cache::sync::Cache;
 use ripemd::Ripemd160;
 use serde::{Deserialize, Serialize};
 use std::{
-	collections::{HashMap, HashSet},
+	collections::HashSet,
 	str::FromStr,
 	sync::{Arc, Mutex},
 	time::Duration,
@@ -42,7 +41,7 @@ use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
 use tendermint_light_client_verifier::types::{LightBlock, ValidatorSet};
 use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, Url, WebSocketClient};
-use tokio::task::JoinSet;
+use tokio::{task::JoinSet, time::error::Elapsed};
 
 const DEFAULT_FEE_DENOM: &str = "stake";
 const DEFAULT_FEE_AMOUNT: &str = "4000";
@@ -358,16 +357,12 @@ where
 		height: TmHeight,
 	) -> Result<LightBlock, Error> {
 		let fut = async move {
-			tokio::time::timeout(Duration::from_secs(30), async move {
-				self.light_client.io.fetch_light_block(AtHeight::At(height)).map_err(|e| {
-					Error::from(format!(
-						"Failed to fetch light block for chain {:?} with error {:?}",
-						self.name, e
-					))
-				})
+			self.light_client.io.fetch_light_block(AtHeight::At(height)).map_err(|e| {
+				Error::from(format!(
+					"Failed to fetch light block for chain {:?} with error {:?}",
+					self.name, e
+				))
 			})
-			.await
-			.map_err(|e| Error::Custom("failed to fetch light block: timeout".to_string()))?
 		};
 		self.light_block_cache.get_or_insert_async(&height, fut).await
 	}
@@ -382,11 +377,11 @@ where
 		let heightss = (from.value()..=to.value()).collect::<Vec<_>>();
 		let client = Arc::new(self.clone());
 		for heights in heightss.chunks(5) {
-			let mut join_set = JoinSet::<Result<_, Error>>::new();
+			let mut join_set = JoinSet::<Result<Result<_, Error>, Elapsed>>::new();
 			for height in heights.to_owned() {
 				let client = client.clone();
-				join_set.spawn(async move {
-					log::trace!(target: "hyperspace_cosmos", "Fetching header at height {:?}", height);
+				let fut = async move {
+					log::trace!(target: "hyperspace_cosmos", "Fetching header at height {:?} {:?}", height, tokio::task::id());
 					let latest_light_block =
 						client.fetch_light_block_with_cache(height.try_into()?).await?;
 
@@ -416,10 +411,13 @@ where
 						},
 						update_type,
 					))
-				});
+				};
+				join_set.spawn(tokio::time::timeout(Duration::from_secs(30), fut));
 			}
 			while let Some(res) = join_set.join_next().await {
-				xs.push(res.map_err(|e| Error::Custom(e.to_string()))??);
+				xs.push(res.map_err(|e| Error::Custom(e.to_string()))?.map_err(|_| {
+					Error::Custom("failed to fetch light block: timeout".to_string())
+				})??);
 			}
 		}
 		xs.sort_by_key(|(h, _)| h.signed_header.header.height.value());

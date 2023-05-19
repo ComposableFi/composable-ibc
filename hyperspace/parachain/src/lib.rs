@@ -15,7 +15,7 @@
 #![allow(clippy::all)]
 
 use std::{
-	collections::{BTreeMap, HashMap, HashSet},
+	collections::{BTreeMap, HashSet},
 	str::FromStr,
 	sync::{Arc, Mutex},
 	time::Duration,
