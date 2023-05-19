@@ -248,8 +248,8 @@ pub async fn ibc_messaging_ordered_packet_with_connection_delay<A, B>(
 	.await;
 	handle.abort();
 	// Set channel whitelist and restart relayer loop
-	chain_a.set_channel_whitelist(vec![(channel_id, port_id.clone())]);
-	chain_b.set_channel_whitelist(vec![(channel_b, port_id)]);
+	chain_a.set_channel_whitelist(vec![(channel_id, port_id.clone())].into_iter().collect());
+	chain_b.set_channel_whitelist(vec![(channel_b, port_id)].into_iter().collect());
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
@@ -285,8 +285,8 @@ pub async fn ibc_messaging_ordered_packet_timeout<A, B>(
 	.await;
 	// Set channel whitelist and restart relayer loop
 	handle.abort();
-	chain_a.set_channel_whitelist(vec![(channel_id, port_id.clone())]);
-	chain_b.set_channel_whitelist(vec![(channel_b, port_id)]);
+	chain_a.set_channel_whitelist(vec![(channel_id, port_id.clone())].into_iter().collect());
+	chain_b.set_channel_whitelist(vec![(channel_b, port_id)].into_iter().collect());
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
