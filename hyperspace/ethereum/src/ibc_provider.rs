@@ -1,10 +1,11 @@
-use std::sync::Arc;
+use std::{future::Future, sync::Arc};
 
+use cast::executor::Output;
 use ethers::{
 	abi::{Abi, Detokenize},
 	middleware::contract::Contract,
 	providers::Middleware,
-	types::H256,
+	types::{EIP1186ProofResponse, StorageProof, H256},
 };
 use ibc::{
 	core::{
@@ -22,7 +23,9 @@ use ibc::{
 use ibc_proto::{
 	google,
 	ibc::core::{
-		channel::v1::{QueryNextSequenceReceiveResponse, QueryPacketReceiptResponse, QueryChannelResponse},
+		channel::v1::{
+			QueryChannelResponse, QueryNextSequenceReceiveResponse, QueryPacketReceiptResponse,
+		},
 		client::v1::{QueryClientStateResponse, QueryConsensusStateResponse},
 		connection::v1::{ConnectionEnd, Counterparty, QueryConnectionResponse, Version},
 	},
@@ -39,11 +42,26 @@ use crate::client::{
 };
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
-pub struct Height(pub(crate) ethers::types::BlockNumber);
+pub struct BlockHeight(pub(crate) ethers::types::BlockNumber);
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum FinalityEvent {
 	Ethereum { hash: H256 },
+}
+
+async fn query_proof_then<Fut, F, T, Fut2>(query_proof: Fut, f: F) -> Result<T, ClientError>
+where
+	F: FnOnce(StorageProof) -> Fut2,
+	Fut2: Future<Output = Result<T, ClientError>>,
+	Fut: Future<Output = Result<EIP1186ProofResponse, ClientError>>,
+{
+	let proof = query_proof.await?;
+
+	if let Some(storage_proof) = proof.storage_proof.last() {
+		f(storage_proof.clone()).await
+	} else {
+		todo!("error: no storage proof")
+	}
 }
 
 #[async_trait::async_trait]
@@ -108,32 +126,25 @@ impl IbcProvider for Client {
 			Arc::clone(&self.http_rpc),
 		);
 
-		let proof = fut.await?;
+		query_proof_then(fut, move |storage_proof| async move {
+			let binding = contract
+				.method(
+					"getConsensusState",
+					(client_id.as_str().to_owned(), (at.revision_number, at.revision_height)),
+				)
+				.expect("contract is missing getConsensusState");
 
-		if let Some(storage_proof) = proof.storage_proof.last() {
-			if !storage_proof.value.is_zero() {
-				let binding = contract
-					.method(
-						"getConsensusState",
-						(client_id.as_str().to_owned(), (at.revision_number, at.revision_height)),
-					)
-					.expect("contract is missing getConsensusState");
+			let get_consensus_state_fut = binding.call();
+			let (consensus_state, _): (Vec<u8>, bool) =
+				get_consensus_state_fut.await.map_err(|err| todo!()).unwrap();
 
-				let get_consensus_state_fut = binding.call();
-				let (consensus_state, _): (Vec<u8>, bool) =
-					get_consensus_state_fut.await.map_err(|err| todo!()).unwrap();
+			let proof_height = Some(at.into());
+			let consensus_state = google::protobuf::Any::decode(&*consensus_state).ok();
+			let proof = storage_proof.proof.first().map(|b| b.to_vec()).unwrap_or_default();
 
-				let proof_height = Some(at.into());
-				let consensus_state = google::protobuf::Any::decode(&*consensus_state).ok();
-				let proof = storage_proof.proof.first().map(|b| b.to_vec()).unwrap_or_default();
-
-				Ok(QueryConsensusStateResponse { consensus_state, proof, proof_height })
-			} else {
-				todo!("error: client address is zero")
-			}
-		} else {
-			todo!("error: no storage proof")
-		}
+			Ok(QueryConsensusStateResponse { consensus_state, proof, proof_height })
+		})
+		.await
 	}
 
 	async fn query_client_state(
@@ -152,9 +163,7 @@ impl IbcProvider for Client {
 			Arc::clone(&self.http_rpc),
 		);
 
-		let proof = fut.await?;
-
-		if let Some(storage_proof) = proof.storage_proof.last() {
+		query_proof_then(fut, move |storage_proof| async move {
 			if !storage_proof.value.is_zero() {
 				let binding = contract
 					.method("getClientState", (client_id.as_str().to_owned(),))
@@ -172,9 +181,8 @@ impl IbcProvider for Client {
 			} else {
 				todo!("error: client address is zero")
 			}
-		} else {
-			todo!("error: no storage proof")
-		}
+		})
+		.await
 	}
 
 	async fn query_connection_end(
@@ -188,9 +196,7 @@ impl IbcProvider for Client {
 			CONNECTIONS_STORAGE_INDEX,
 		);
 
-		let proof = fut.await?;
-
-		if let Some(storage_proof) = proof.storage_proof.last() {
+		query_proof_then(fut, move |storage_proof| async move {
 			if !storage_proof.value.is_zero() {
 				let contract = crate::contract::contract(
 					self.config.address.clone().parse().unwrap(),
@@ -198,13 +204,10 @@ impl IbcProvider for Client {
 				);
 
 				let binding = contract
-					.method::<_, crate::contract::ConnectionEnd>(
-						"getConnectionEnd",
-						(connection_id.as_str().to_owned(),),
-					)
+					.method("getConnectionEnd", (connection_id.as_str().to_owned(),))
 					.expect("contract is missing getConnectionEnd");
 
-				let connection_end = binding.call().await.unwrap();
+				let connection_end: crate::contract::ConnectionEnd = binding.call().await.unwrap();
 
 				let proof_height = Some(at.into());
 				let proof = storage_proof.proof.first().map(|b| b.to_vec()).unwrap_or_default();
@@ -236,32 +239,31 @@ impl IbcProvider for Client {
 			} else {
 				todo!("error: client address is zero")
 			}
-		} else {
-			todo!("error: no storage proof")
-		}
+		})
+		.await
 	}
 
-	fn query_channel_end<'life0, 'async_trait>(
-		&'life0 self,
-		at: ibc::Height,
-		channel_id: ibc::core::ics24_host::identifier::ChannelId,
-		port_id: ibc::core::ics24_host::identifier::PortId,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = Result<
-						ibc_proto::ibc::core::channel::v1::QueryChannelResponse,
-						Self::Error,
-					>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
-		todo!()
+	async fn query_channel_end(
+		&self,
+		at: Height,
+		channel_id: ChannelId,
+		port_id: PortId,
+	) -> Result<QueryChannelResponse, Self::Error> {
+		let contract = crate::contract::contract(
+			self.config.address.clone().parse().unwrap(),
+			Arc::clone(&self.http_rpc),
+		);
+
+		let binding = contract
+			.method::<_, crate::contract::ChannelEnd>(
+				"getChannel",
+				(channel_id.to_string(), port_id.as_str().to_owned()),
+			)
+			.expect("contract is missing getChannel");
+
+		let channel_data = binding.call().await.unwrap();
+
+		Ok(QueryChannelResponse { channel: None, proof: todo!(), proof_height: todo!() })
 	}
 
 	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
@@ -346,7 +348,25 @@ impl IbcProvider for Client {
 		port_id: &PortId,
 		channel_id: &ChannelId,
 	) -> Result<QueryNextSequenceReceiveResponse, Self::Error> {
-		todo!()
+		let contract = crate::contract::contract(
+			self.config.address.clone().parse().unwrap(),
+			Arc::clone(&self.http_rpc),
+		);
+
+		let binding = contract
+			.method::<_, u64>(
+				"getNextSequenceRecv",
+				(channel_id.to_string(), port_id.as_str().to_owned()),
+			)
+			.expect("contract is missing getNextSequenceRecv");
+
+		let channel_data = binding.call().await.unwrap();
+
+		Ok(QueryNextSequenceReceiveResponse {
+			next_sequence_receive: todo!(),
+			proof: todo!(),
+			proof_height: todo!(),
+		})
 	}
 
 	async fn query_packet_receipt(
@@ -379,39 +399,18 @@ impl IbcProvider for Client {
 		})
 	}
 
-	fn latest_height_and_timestamp<'life0, 'async_trait>(
-		&'life0 self,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = Result<(Height, ibc::timestamp::Timestamp), Self::Error>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn latest_height_and_timestamp(
+		&self,
+	) -> Result<(Height, ibc::timestamp::Timestamp), Self::Error> {
 		todo!()
 	}
 
-	fn query_packet_commitments<'life0, 'async_trait>(
-		&'life0 self,
+	async fn query_packet_commitments(
+		&self,
 		at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<Vec<u64>, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	) -> Result<Vec<u64>, Self::Error> {
 		todo!()
 	}
 

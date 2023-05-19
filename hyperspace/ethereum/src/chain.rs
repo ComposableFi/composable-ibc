@@ -4,7 +4,7 @@ use ethers::providers::Middleware;
 use futures::{Stream, StreamExt};
 use primitives::{Chain, LightClientSync, MisbehaviourHandler};
 
-use crate::{client::Client, ibc_provider::Height};
+use crate::{client::Client, ibc_provider::BlockHeight};
 
 impl MisbehaviourHandler for Client {
 	fn check_for_misbehaviour<'life0, 'life1, 'async_trait, C>(

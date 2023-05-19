@@ -36,6 +36,48 @@ pub mod contract {
 		pub(crate) features: Vec<String>,
 	}
 
+	pub struct ChannelEnd {
+		pub(crate) state: u32,
+		pub(crate) ordering: u32,
+		pub(crate) counterparty: Counterparty,
+		pub(crate) connection_hops: Vec<String>,
+		pub(crate) version: String,
+	}
+
+	impl Detokenize for ChannelEnd {
+		fn from_tokens(
+			tokens: Vec<ethers::abi::Token>,
+		) -> Result<Self, ethers::abi::InvalidOutputType>
+		where
+			Self: Sized,
+		{
+			let vec = tokens[3].clone().into_array().unwrap();
+
+			let connection_hops = {
+				let mut it = vec.into_iter();
+				let mut v = vec![];
+
+				while let Some(connection_id) = it.next() {
+					v.push(connection_id.into_string().unwrap())
+				}
+
+				v
+			};
+
+			Ok(ChannelEnd {
+				state: tokens[0].clone().into_uint().unwrap().as_u32(),
+				ordering: tokens[1].clone().into_uint().unwrap().as_u32(),
+				counterparty: Counterparty {
+					client_id: tokens[2].clone().into_string().unwrap(),
+					connection_id: tokens[3].clone().into_string().unwrap(),
+					prefix: tokens[4].clone().into_bytes().unwrap(),
+				},
+				connection_hops,
+				version: tokens[5].clone().into_string().unwrap(),
+			})
+		}
+	}
+
 	pub struct ConnectionEnd {
 		pub(crate) client_id: String,
 		pub(crate) versions: Vec<Version>,
