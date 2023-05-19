@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use core::time::Duration;
 use futures::StreamExt;
 use hyperspace_core::{
 	chain::{AnyAssetId, AnyChain, AnyConfig},
@@ -26,7 +27,9 @@ use hyperspace_testsuite::{
 	ibc_messaging_packet_timeout_on_channel_close,
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
+	setup_connection_and_channel,
 };
+use ibc::core::ics24_host::identifier::PortId;
 use sp_core::hashing::sha2_256;
 
 #[derive(Debug, Clone)]
@@ -170,15 +173,28 @@ async fn parachain_to_cosmos_ibc_messaging_full_integration_test() {
 		"ibc/47B97D8FF01DA03FCB2F4B1FFEC931645F254E21EF465FA95CBA6888CB964DC4".to_string(),
 	);
 	let (mut chain_a, mut chain_b) = setup_clients().await;
+	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
+		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
+	handle.abort();
+
+	// Set connections and channel whitelist
+	chain_a.set_connection_id(connection_id_a);
+	chain_b.set_connection_id(connection_id_b);
+
+	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())]);
+	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
 
 	// Run tests sequentially
 
 	// no timeouts + connection delay
+
 	ibc_messaging_with_connection_delay(
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_a.clone(),
 		asset_id_b.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 
@@ -187,18 +203,27 @@ async fn parachain_to_cosmos_ibc_messaging_full_integration_test() {
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_a.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_a.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 
 	// channel closing semantics
-	ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id_a.clone())
-		.await;
+	ibc_messaging_packet_timeout_on_channel_close(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		channel_a,
+	)
+	.await;
 	ibc_channel_close(&mut chain_a, &mut chain_b).await;
 
 	// TODO: tendermint misbehaviour?
@@ -213,6 +238,17 @@ async fn cosmos_to_parachain_ibc_messaging_full_integration_test() {
 	let (chain_a, chain_b) = setup_clients().await;
 	let (mut chain_b, mut chain_a) = (chain_a, chain_b);
 
+	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
+		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
+	handle.abort();
+
+	// Set connections and channel whitelist
+	chain_a.set_connection_id(connection_id_a);
+	chain_b.set_connection_id(connection_id_b);
+
+	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())]);
+	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
+
 	let asset_id_a = AnyAssetId::Cosmos("stake".to_string());
 	let asset_id_b = AnyAssetId::Parachain(2);
 
@@ -224,6 +260,8 @@ async fn cosmos_to_parachain_ibc_messaging_full_integration_test() {
 		&mut chain_b,
 		asset_id_a.clone(),
 		asset_id_b.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 
@@ -232,12 +270,16 @@ async fn cosmos_to_parachain_ibc_messaging_full_integration_test() {
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_a.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_a.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 
