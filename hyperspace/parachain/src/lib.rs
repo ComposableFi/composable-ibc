@@ -15,7 +15,7 @@
 #![allow(clippy::all)]
 
 use std::{
-	collections::BTreeMap,
+	collections::{BTreeMap, HashSet},
 	str::FromStr,
 	sync::{Arc, Mutex},
 	time::Duration,
@@ -101,7 +101,7 @@ pub struct ParachainClient<T: light_client_common::config::Config> {
 	/// Connection Id
 	pub connection_id: Arc<Mutex<Option<ConnectionId>>>,
 	/// Channels cleared for packet relay
-	pub channel_whitelist: Arc<Mutex<Vec<(ChannelId, PortId)>>>,
+	pub channel_whitelist: Arc<Mutex<HashSet<(ChannelId, PortId)>>>,
 	/// ICS-23 provable store commitment prefix
 	pub commitment_prefix: Vec<u8>,
 	/// Public key for relayer on chain
@@ -269,7 +269,7 @@ where
 			para_ws_client,
 			relay_ws_client,
 			ss58_version: Ss58AddressFormat::from(config.ss58_version),
-			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist)),
+			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist.into_iter().collect())),
 			finality_protocol: config.finality_protocol,
 			rpc_call_delay: DEFAULT_RPC_CALL_DELAY,
 			maybe_has_undelivered_packets: Default::default(),

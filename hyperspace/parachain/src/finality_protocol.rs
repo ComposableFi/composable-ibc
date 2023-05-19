@@ -48,7 +48,7 @@ use sp_runtime::{
 	MultiSignature, MultiSigner,
 };
 use std::{
-	collections::{BTreeMap, BTreeSet, HashMap},
+	collections::{BTreeMap, BTreeSet, HashMap, HashSet},
 	fmt::{Debug, Display},
 };
 
@@ -360,7 +360,7 @@ pub fn filter_events_by_ids(
 	ev: &IbcEvent,
 	client_ids: &[ClientId],
 	connection_ids: &[ConnectionId],
-	channel_and_port_ids: &[(ChannelId, PortId)],
+	channel_and_port_ids: &HashSet<(ChannelId, PortId)>,
 ) -> bool {
 	use ibc::core::{
 		ics02_client::events::Attributes as ClientAttributes,
