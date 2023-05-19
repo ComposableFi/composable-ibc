@@ -164,6 +164,13 @@ on:
 ./target/release/hyperspace
 ```
 
+## NB: Prepare for Ethereum
+
+hyperspace-ethereum uses yui-ibc-solidity as the IBC implementation for contracts.
+
+You must run `make generate-ethereum-json` from the `/hyperspace` directory to generate
+the required json files for the contract storage-layout, ABI, and light-client ABI.
+
 ### Running Hyperspace - CLI Interface
 
 The CLI interface can be used to start the relayer from a config file and also perform the IBC setup on both chains. It assumes that `hyperspace` was already built.
@@ -184,7 +191,7 @@ A template configuration file (which is needed to run the CLI) can be found
   This command takes a path to a config file, a port id and a version, it attempts to complete the channel handshake  
   between both chains.
   The config file must have a valid client and connection id.
-    
+
 
 ### Metrics
 
