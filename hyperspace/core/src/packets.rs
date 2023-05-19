@@ -63,6 +63,7 @@ pub async fn query_ready_and_timed_out_packets(
 			.await
 		{
 			Ok(response) => response,
+			// this can happen in case the channel is not yet created
 			Err(e) => {
 				log::warn!(target: "hyperspace", "Failed to query channel end for chain {}, channel {}/{}: {:?}", source.name(), channel_id, port_id, e);
 				continue
@@ -111,6 +112,7 @@ pub async fn query_ready_and_timed_out_packets(
 		{
 			Ok(response) => response,
 			Err(e) => {
+				// this can happen in case the channel is not yet created
 				log::warn!(target: "hyperspace", "Failed to query channel end for chain {}, channel {}/{}: {:?}", sink.name(), channel_id, port_id, e);
 				continue
 			},
