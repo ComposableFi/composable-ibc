@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - vmarkushin/branch-that-includes-fee
 
 jobs:
   build-and-publish:
