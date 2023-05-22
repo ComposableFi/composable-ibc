@@ -181,8 +181,8 @@ async fn parachain_to_cosmos_ibc_messaging_full_integration_test() {
 	chain_a.set_connection_id(connection_id_a);
 	chain_b.set_connection_id(connection_id_b);
 
-	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())]);
-	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
+	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
+	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
 
 	// Run tests sequentially
 
@@ -246,8 +246,8 @@ async fn cosmos_to_parachain_ibc_messaging_full_integration_test() {
 	chain_a.set_connection_id(connection_id_a);
 	chain_b.set_connection_id(connection_id_b);
 
-	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())]);
-	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
+	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
+	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
 
 	let asset_id_a = AnyAssetId::Cosmos("stake".to_string());
 	let asset_id_b = AnyAssetId::Parachain(2);
