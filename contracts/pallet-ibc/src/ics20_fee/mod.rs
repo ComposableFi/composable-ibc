@@ -75,7 +75,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		IbcTransferFeeCollected { amount: T::Balance },
+		IbcTransferFeeCollected { amount: T::Balance, asset_id: T::AssetId },
 		FeeLessChannelIdsAdded { source_channel: u64, destination_channel: u64 },
 		FeeLessChannelIdsRemoved { source_channel: u64, destination_channel: u64 },
 	}
@@ -418,7 +418,10 @@ where
 			packet.data = serde_json::to_vec(&packet_data).map_err(|_| {
 				Ics04Error::implementation_specific("Failed to receiver account".to_string())
 			})?;
-			Pallet::<T>::deposit_event(Event::<T>::IbcTransferFeeCollected { amount: fee.into() })
+			Pallet::<T>::deposit_event(Event::<T>::IbcTransferFeeCollected {
+				amount: fee.into(),
+				asset_id,
+			})
 		}
 		Ok(())
 	}
