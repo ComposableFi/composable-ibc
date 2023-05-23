@@ -190,7 +190,7 @@ pub trait IbcProvider {
 		seq: u64,
 	) -> Result<QueryPacketReceiptResponse, Self::Error>;
 
-	/// Return latest finalized height and timestamp
+	/// Return latest finalized height and timestamp specifically for the chain.
 	async fn latest_height_and_timestamp(&self) -> Result<(Height, Timestamp), Self::Error>;
 
 	async fn query_packet_commitments(

@@ -1,4 +1,4 @@
-use std::{future::Future, sync::Arc};
+use std::{future::Future, sync::Arc, time::Duration};
 
 use cast::executor::Output;
 use ethers::{
@@ -18,7 +18,7 @@ use ibc::{
 			Path,
 		},
 	},
-	Height,
+	Height, timestamp::Timestamp,
 };
 use ibc_proto::{
 	google,
@@ -401,8 +401,18 @@ impl IbcProvider for Client {
 
 	async fn latest_height_and_timestamp(
 		&self,
-	) -> Result<(Height, ibc::timestamp::Timestamp), Self::Error> {
-		todo!()
+	) -> Result<(Height, Timestamp), Self::Error> {
+		let latest_block = self.http_rpc.get_block_number().await
+			.map_err(|err| ClientError::Boxed(Box::new(err)))?;
+
+		let block = self.http_rpc.get_block(latest_block).await
+			.map_err(|err| ClientError::Boxed(Box::new(err)))?
+			.ok_or_else(|| ClientError::Boxed(todo!()))?;
+
+		let nanoseconds = Duration::from_secs(block.timestamp.as_u64()).as_nanos() as u64;
+		let timestamp = Timestamp::from_nanoseconds(nanoseconds).expect("timestamp error");
+
+		Ok((Height::new(0, latest_block.as_u64()), timestamp))
 	}
 
 	async fn query_packet_commitments(
@@ -411,46 +421,74 @@ impl IbcProvider for Client {
 		channel_id: ChannelId,
 		port_id: PortId,
 	) -> Result<Vec<u64>, Self::Error> {
-		todo!()
+		let contract = crate::contract::contract(
+			self.config.address.clone().parse().unwrap(),
+			Arc::clone(&self.http_rpc),
+		);
+
+		let binding = contract
+			.method("getPacketSequences", (port_id.as_str().to_owned(), channel_id.to_string(),))
+			.expect("contract is missing getConnectionEnd");
+
+		let (next_send, next_recv, next_ack): (u64, u64, u64) = binding.call().await.unwrap();
+
+		// next_send is the sequence number used when sending packets.
+		// the value of next_send is the sequence number of the next packet to be sent yet.
+		// aka the last send packet was next_send - 1.
+
+		// this function is called to calculate which packets have not yet been
+		// relayed from this chain to the counterparty chain.
+		Ok((0..next_send).collect())
 	}
 
-	fn query_packet_acknowledgements<'life0, 'async_trait>(
-		&'life0 self,
+	async fn query_packet_acknowledgements(
+		&self,
 		at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<Vec<u64>, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
+	) -> Result<Vec<u64>, Self::Error>
 	{
-		todo!()
+		let contract = crate::contract::contract(
+			self.config.address.clone().parse().unwrap(),
+			Arc::clone(&self.http_rpc),
+		);
+
+		let binding = contract
+			.method("getPacketSequences", (port_id.as_str().to_owned(), channel_id.to_string(),))
+			.expect("contract is missing getConnectionEnd");
+
+		let (next_send, next_recv, next_ack): (u64, u64, u64) = binding.call().await.unwrap();
+
+		// next_ack is the sequence number used when acknowledging packets.
+		// the value of next_ack is the sequence number of the next packet to be acknowledged yet.
+		// aka the last acknowledged packet was next_ack - 1.
+
+		// this function is called to calculate which acknowledgements have not yet been
+		// relayed from this chain to the counterparty chain.
+		Ok((0..next_ack).collect())
 	}
 
-	fn query_unreceived_packets<'life0, 'async_trait>(
-		&'life0 self,
+	async fn query_unreceived_packets(
+		&self,
 		at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
 		seqs: Vec<u64>,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<Vec<u64>, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
+	) -> Result<Vec<u64>, Self::Error>
 	{
-		todo!()
+		let mut pending = vec![];
+
+		for seq in seqs {
+			let received = self
+				.has_packet_receipt(port_id.as_str().to_owned(), format!("{channel_id}"), seq)
+				.await?;
+
+			if !received {
+				pending.push(seq);
+			}
+		}
+
+		Ok(pending)
 	}
 
 	fn query_unreceived_acknowledgements<'life0, 'async_trait>(
@@ -549,7 +587,7 @@ impl IbcProvider for Client {
 	) -> core::pin::Pin<
 		Box<
 			dyn core::future::Future<
-					Output = Result<(Height, ibc::timestamp::Timestamp), Self::Error>,
+					Output = Result<(Height, Timestamp), Self::Error>,
 				> + core::marker::Send
 				+ 'async_trait,
 		>,

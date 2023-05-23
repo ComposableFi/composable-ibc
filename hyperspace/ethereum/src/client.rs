@@ -39,6 +39,8 @@ pub enum ClientError {
 	ProviderError(http::Uri, ProviderError),
 	#[error("Ethereum error: {0}")]
 	Ethers(#[from] ethers::providers::ProviderError),
+	#[error("{0}")]
+	Boxed(Box<dyn std::error::Error + Send + Sync>),
 }
 
 impl From<String> for ClientError {
