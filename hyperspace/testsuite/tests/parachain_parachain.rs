@@ -125,6 +125,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 
 	log::info!(target: "hyperspace_parachain", "Client IDs: {client_a}, {client_b}");
 	chain_a.set_client_id(client_a);
+	chain_a.set_client_id(client_a);
 	chain_b.set_client_id(client_b);
 	(chain_a, chain_b)
 }
