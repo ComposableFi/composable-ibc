@@ -54,7 +54,7 @@ members = [
 jsonrpsee = { version = "0.16.2" }
 
 [patch.crates-io]
-sc-executor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+#sc-executor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 sp-api-proc-macro = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 sp-application-crypto = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
@@ -82,7 +82,7 @@ sp-weights = { git = "https://github.com/paritytech/substrate", branch = "polkad
 try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 
 [patch."https://github.com/paritytech/substrate"]
-sc-executor = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.39" }
+#sc-executor = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.39" }
 sc-executor-common = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.39" }
 sc-executor-wasmtime = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.39" }
 sp-api = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.39" }
