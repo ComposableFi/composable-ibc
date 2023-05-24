@@ -1,5 +1,5 @@
 diff --git a/contracts/core/24-host/IBCStore.sol b/contracts/core/24-host/IBCStore.sol
-index 5c72aec..35f50c7 100644
+index 5c72aec..1db79b0 100644
 --- a/contracts/core/24-host/IBCStore.sol
 +++ b/contracts/core/24-host/IBCStore.sol
 @@ -19,7 +19,8 @@ abstract contract IBCStore {
@@ -12,8 +12,13 @@ index 5c72aec..35f50c7 100644
      mapping(bytes => address[]) internal capabilities;
  
      // Host parameters
-@@ -32,7 +33,9 @@ abstract contract IBCStore {
+@@ -30,9 +31,14 @@ abstract contract IBCStore {
+     uint64 internal nextConnectionSequence;
+     uint64 internal nextChannelSequence;
  
++    // array of client-ids that have been created
++    string[] internal clientIds;
++
      // Storage accessors
  
 -    function checkAndGetClient(string memory clientId) internal view returns (ILightClient) {
@@ -24,7 +29,7 @@ index 5c72aec..35f50c7 100644
          require(clientImpl != address(0));
          return ILightClient(clientImpl);
 diff --git a/contracts/core/25-handler/IBCQuerier.sol b/contracts/core/25-handler/IBCQuerier.sol
-index f6a73c3..2eef1ae 100644
+index f6a73c3..6ec33a0 100644
 --- a/contracts/core/25-handler/IBCQuerier.sol
 +++ b/contracts/core/25-handler/IBCQuerier.sol
 @@ -10,38 +10,51 @@ import "../24-host/IBCCommitment.sol";
@@ -99,7 +104,7 @@ index f6a73c3..2eef1ae 100644
          return (commitment, commitment != bytes32(0));
      }
  
-@@ -50,23 +63,46 @@ abstract contract IBCQuerier is IBCStore {
+@@ -50,23 +63,57 @@ abstract contract IBCQuerier is IBCStore {
          string calldata channelId,
          uint64 sequence
      ) external view returns (bytes32, bool) {
@@ -149,6 +154,17 @@ index f6a73c3..2eef1ae 100644
 +        string calldata connectionId
 +    ) external view returns (ConnectionEnd.Data memory) {
 +        return connections[connectionId];
++    }
++
++    function getPacketSequences(
++        string calldata portId,
++        string calldata channelId
++    ) external view returns (uint64, uint64, uint64) {
++        return (
++            nextSequenceSends[portId][channelId],
++            nextSequenceRecvs[portId][channelId],
++            nextSequenceAcks[portId][channelId]
++        );
 +    }
 +
      function getExpectedTimePerBlock() external view returns (uint64) {

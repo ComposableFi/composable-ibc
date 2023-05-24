@@ -18,16 +18,18 @@ use ibc::{
 			Path,
 		},
 	},
-	Height, timestamp::Timestamp,
+	timestamp::Timestamp,
+	Height,
 };
 use ibc_proto::{
 	google,
 	ibc::core::{
 		channel::v1::{
-			QueryChannelResponse, QueryNextSequenceReceiveResponse, QueryPacketReceiptResponse,
+			QueryChannelResponse, QueryChannelsResponse, QueryNextSequenceReceiveResponse,
+			QueryPacketReceiptResponse,
 		},
 		client::v1::{QueryClientStateResponse, QueryConsensusStateResponse},
-		connection::v1::{ConnectionEnd, Counterparty, QueryConnectionResponse, Version},
+		connection::v1::{ConnectionEnd, Counterparty, QueryConnectionResponse, Version, IdentifiedConnection},
 	},
 };
 use primitives::IbcProvider;
@@ -399,13 +401,17 @@ impl IbcProvider for Client {
 		})
 	}
 
-	async fn latest_height_and_timestamp(
-		&self,
-	) -> Result<(Height, Timestamp), Self::Error> {
-		let latest_block = self.http_rpc.get_block_number().await
+	async fn latest_height_and_timestamp(&self) -> Result<(Height, Timestamp), Self::Error> {
+		let latest_block = self
+			.http_rpc
+			.get_block_number()
+			.await
 			.map_err(|err| ClientError::Boxed(Box::new(err)))?;
 
-		let block = self.http_rpc.get_block(latest_block).await
+		let block = self
+			.http_rpc
+			.get_block(latest_block)
+			.await
 			.map_err(|err| ClientError::Boxed(Box::new(err)))?
 			.ok_or_else(|| ClientError::Boxed(todo!()))?;
 
@@ -427,7 +433,7 @@ impl IbcProvider for Client {
 		);
 
 		let binding = contract
-			.method("getPacketSequences", (port_id.as_str().to_owned(), channel_id.to_string(),))
+			.method("getPacketSequences", (port_id.as_str().to_owned(), channel_id.to_string()))
 			.expect("contract is missing getConnectionEnd");
 
 		let (next_send, next_recv, next_ack): (u64, u64, u64) = binding.call().await.unwrap();
@@ -446,15 +452,14 @@ impl IbcProvider for Client {
 		at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
-	) -> Result<Vec<u64>, Self::Error>
-	{
+	) -> Result<Vec<u64>, Self::Error> {
 		let contract = crate::contract::contract(
 			self.config.address.clone().parse().unwrap(),
 			Arc::clone(&self.http_rpc),
 		);
 
 		let binding = contract
-			.method("getPacketSequences", (port_id.as_str().to_owned(), channel_id.to_string(),))
+			.method("getPacketSequences", (port_id.as_str().to_owned(), channel_id.to_string()))
 			.expect("contract is missing getConnectionEnd");
 
 		let (next_send, next_recv, next_ack): (u64, u64, u64) = binding.call().await.unwrap();
@@ -474,8 +479,7 @@ impl IbcProvider for Client {
 		channel_id: ChannelId,
 		port_id: PortId,
 		seqs: Vec<u64>,
-	) -> Result<Vec<u64>, Self::Error>
-	{
+	) -> Result<Vec<u64>, Self::Error> {
 		let mut pending = vec![];
 
 		for seq in seqs {
@@ -491,23 +495,13 @@ impl IbcProvider for Client {
 		Ok(pending)
 	}
 
-	fn query_unreceived_acknowledgements<'life0, 'async_trait>(
-		&'life0 self,
+	async fn query_unreceived_acknowledgements(
+		&self,
 		at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
 		seqs: Vec<u64>,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<Vec<u64>, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	) -> Result<Vec<u64>, Self::Error> {
 		todo!()
 	}
 
@@ -515,26 +509,11 @@ impl IbcProvider for Client {
 		self.config.channel_whitelist.clone()
 	}
 
-	fn query_connection_channels<'life0, 'life1, 'async_trait>(
-		&'life0 self,
+	async fn query_connection_channels(
+		&self,
 		at: Height,
-		connection_id: &'life1 ConnectionId,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = Result<
-						ibc_proto::ibc::core::channel::v1::QueryChannelsResponse,
-						Self::Error,
-					>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		'life1: 'async_trait,
-		Self: 'async_trait,
-	{
+		connection_id: &ConnectionId,
+	) -> Result<QueryChannelsResponse, Self::Error> {
 		todo!()
 	}
 
@@ -586,9 +565,8 @@ impl IbcProvider for Client {
 		client_height: Height,
 	) -> core::pin::Pin<
 		Box<
-			dyn core::future::Future<
-					Output = Result<(Height, Timestamp), Self::Error>,
-				> + core::marker::Send
+			dyn core::future::Future<Output = Result<(Height, Timestamp), Self::Error>>
+				+ core::marker::Send
 				+ 'async_trait,
 		>,
 	>
@@ -716,25 +694,11 @@ impl IbcProvider for Client {
 		todo!()
 	}
 
-	fn query_connection_using_client<'life0, 'async_trait>(
-		&'life0 self,
+	async fn query_connection_using_client(
+		&self,
 		height: u32,
 		client_id: String,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = Result<
-						Vec<ibc_proto::ibc::core::connection::v1::IdentifiedConnection>,
-						Self::Error,
-					>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	) -> Result<Vec<IdentifiedConnection>, Self::Error> {
 		todo!()
 	}
 

@@ -4,10 +4,10 @@ use ethers::{
 	abi::{ParseError, Token},
 	providers::{Http, Middleware, Provider, ProviderError, ProviderExt, Ws},
 	signers::{coins_bip39::English, MnemonicBuilder, Signer},
-	types::{Block, BlockId, EIP1186ProofResponse, NameOrAddress, H256},
+	types::{Log, Block, BlockId, BlockNumber, EIP1186ProofResponse, Filter, NameOrAddress, H160, H256},
 };
 
-use futures::TryFutureExt;
+use futures::{Stream, TryFutureExt};
 use ibc::core::ics24_host::identifier::ClientId;
 use thiserror::Error;
 
@@ -65,6 +65,25 @@ impl Client {
 		let client = ethers::middleware::SignerMiddleware::new(client, wallet);
 
 		Ok(Self { http_rpc: Arc::new(client), ws_uri: config.ws_url.clone(), config })
+	}
+
+	/// produce a stream of events emitted from the contract address for the given block range
+	pub fn query_events(
+		&self,
+		event_name: &str,
+		from: BlockNumber,
+		to: BlockNumber,
+	) -> impl Stream<Item = Log> {
+		let address: H160 = self.config.address.clone().parse().unwrap();
+		let filter = Filter::new().from_block(from).to_block(to).address(address).event(event_name);
+		let client = self.http_rpc.clone();
+
+		async_stream::stream! {
+			let logs = client.get_logs(&filter).await.unwrap();
+			for log in logs {
+				yield log;
+			}
+		}
 	}
 
 	pub fn eth_query_proof(
