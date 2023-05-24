@@ -223,6 +223,7 @@ where
 		_relayer: &Signer,
 	) -> Result<Acknowledgement, Ics04Error> {
 		let mut ctx = Context::<T>::default();
+
 		let result = serde_json::from_slice(packet.data.as_slice())
 			.map_err(|e| {
 				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
@@ -231,13 +232,23 @@ where
 				// We need to reject transaction amounts that are larger than u128 since we expect
 				// the balance type of the runtime to be a u128; For a U256 to be converted to a
 				// u128 without truncating, the last two words should be zero
+
+				// in order to properly calculate rate limits, we need to adjust the full denom,
+				// which wan not included as part of the token in the packet data.
+
+				let mut token = packet_data.token.clone();
+				let denom = full_ibc_denom(&packet, packet_data.token.clone());
+				token.denom = PrefixedDenom::from_str(&denom).map_err(|_| {
+					Ics04Error::implementation_specific("Failed to parse token denom".to_string())
+				})?;
+
 				let msg = Ics20TransferMsg {
 					source_port: packet.source_port.clone(),
 					memo: packet_data.memo.clone(),
 					sender: packet_data.sender.clone(),
 					receiver: packet_data.receiver.clone(),
 					source_channel: packet.source_channel.clone(),
-					token: packet_data.token.clone(),
+					token,
 					timeout_height: packet.timeout_height,
 					timeout_timestamp: packet.timeout_timestamp,
 				};
