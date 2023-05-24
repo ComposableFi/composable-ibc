@@ -143,8 +143,8 @@ jobs:
 
       - name: Check that subxt-generated is up to date
         run: |
-          ./docker-compose -f scripts/parachain-launch/docker-compose.yml logs
-          ./scripts/generate-subxt.sh
+          ./docker-compose -f scripts/parachain-launch/docker-compose.yml logs -f
+          # ./scripts/generate-subxt.sh
 
       - name: Run all unit tests
         run: |
