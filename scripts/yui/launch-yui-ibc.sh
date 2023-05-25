@@ -30,9 +30,10 @@ fi
 source $ROOT/scripts/yui/yui-clone.sh
 yui_clone;
 
+forge install
+
 # start local ethereum node using anvil
 anvil --mnemonic "$MNEMONIC" --host 0.0.0.0 --port 8545 &
-netstat -an | grep 8545
 
 # deploy the IBC contracts
 forge create -r http://localhost:8545 --mnemonic "$MNEMONIC" IBCClient --json > ibc-client.json
