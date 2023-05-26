@@ -1,7 +1,7 @@
 use super::*;
 use crate::{light_clients::AnyClientMessage, routing::Context};
 use core::marker::PhantomData;
-use frame_support::pallet_prelude::Weight;
+use frame_support::{pallet_prelude::Weight, weights::constants::WEIGHT_REF_TIME_PER_MILLIS};
 use grandpa_client_primitives::justification::GrandpaJustification;
 use ibc::core::{
 	ics02_client::msgs::ClientMsg,
