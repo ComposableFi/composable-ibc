@@ -54,8 +54,8 @@ impl WeightInfo for () {
 		Weight::from_ref_time(0)
 	}
 
-	fn update_tendermint_client(_i: u32) -> Weight {
-		Weight::from_ref_time(0)
+	fn update_tendermint_client(i: u32) -> Weight {
+		Weight::from_ref_time(3 * i as u64 * WEIGHT_REF_TIME_PER_MILLIS)
 	}
 
 	fn conn_try_open_tendermint() -> Weight {
