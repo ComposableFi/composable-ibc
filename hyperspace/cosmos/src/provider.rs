@@ -63,6 +63,7 @@ use pallet_ibc::light_clients::{
 };
 use primitives::{mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType};
 use prost::Message;
+use rand::Rng;
 use std::{collections::HashSet, pin::Pin, str::FromStr, time::Duration};
 use tendermint::block::Height as TmHeight;
 pub use tendermint::Hash;
@@ -131,11 +132,14 @@ where
 		block_events.push((0, Vec::new()));
 		let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 		let range = (from.value()..to.value()).collect::<Vec<_>>();
+		let to = self.rpc_call_delay().as_millis();
 		for heights in range.chunks(100) {
 			for height in heights.to_owned() {
 				log::trace!(target: "hyperspace_cosmos", "Parsing events at height {:?}", height);
 				let client = self.clone();
+				let duration = Duration::from_millis(rand::thread_rng().gen_range(0..to) as u64);
 				join_set.spawn(async move {
+					sleep(duration).await;
 					let xs = tokio::time::timeout(
 						Duration::from_secs(30),
 						client.parse_ibc_events_at(latest_revision, height),
