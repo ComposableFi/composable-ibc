@@ -41,16 +41,17 @@ pub fn verify_connection_proof<Ctx: ReaderContext>(
 	proof: &CommitmentProofBytes,
 ) -> Result<(), Error> {
 	// Fetch the client state (IBC client on the local/host chain).
-	let client_state = ctx.client_state(connection_end.client_id()).map_err(Error::ics02_client)?;
+	let client_id = connection_end.client_id();
+	let client_state = ctx.client_state(client_id).map_err(Error::ics02_client)?;
 
 	// The client must not be frozen.
-	if client_state.is_frozen() {
-		return Err(Error::frozen_client(connection_end.client_id().clone()))
+	if client_state.is_frozen(ctx, client_id) {
+		return Err(Error::frozen_client(client_id.clone()))
 	}
 
 	// The client must have the consensus state for the height where this proof was created.
 	let consensus_state = ctx
-		.consensus_state(connection_end.client_id(), proof_height)
+		.consensus_state(client_id, proof_height)
 		.map_err(|e| Error::consensus_state_verification_failure(proof_height, e))?;
 
 	// A counterparty connection id of None causes `unwrap()` below and indicates an internal
@@ -66,7 +67,7 @@ pub fn verify_connection_proof<Ctx: ReaderContext>(
 	client_def
 		.verify_connection_state(
 			ctx,
-			connection_end.client_id(),
+			client_id,
 			&client_state,
 			height,
 			connection_end.counterparty().prefix(),
@@ -89,19 +90,20 @@ pub fn verify_client_proof<Ctx: ReaderContext>(
 	ctx: &Ctx,
 	height: Height,
 	connection_end: &ConnectionEnd,
-	expected_client_state: Ctx::AnyClientState,
+	expected_client_state: &Ctx::AnyClientState,
 	proof_height: Height,
 	proof: &CommitmentProofBytes,
 ) -> Result<(), Error> {
 	// Fetch the local client state (IBC client running on the host chain).
-	let client_state = ctx.client_state(connection_end.client_id()).map_err(Error::ics02_client)?;
+	let client_id = connection_end.client_id();
+	let client_state = ctx.client_state(client_id).map_err(Error::ics02_client)?;
 
-	if client_state.is_frozen() {
-		return Err(Error::frozen_client(connection_end.client_id().clone()))
+	if client_state.is_frozen(ctx, client_id) {
+		return Err(Error::frozen_client(client_id.clone()))
 	}
 
 	let consensus_state = ctx
-		.consensus_state(connection_end.client_id(), proof_height)
+		.consensus_state(client_id, proof_height)
 		.map_err(|e| Error::consensus_state_verification_failure(proof_height, e))?;
 
 	let client_def = client_state.client_def();
@@ -117,9 +119,7 @@ pub fn verify_client_proof<Ctx: ReaderContext>(
 			connection_end.counterparty().client_id(),
 			&expected_client_state,
 		)
-		.map_err(|e| {
-			Error::client_state_verification_failure(connection_end.client_id().clone(), e)
-		})
+		.map_err(|e| Error::client_state_verification_failure(client_id.clone(), e))
 }
 
 pub fn verify_consensus_proof<Ctx: ReaderContext>(
@@ -130,14 +130,15 @@ pub fn verify_consensus_proof<Ctx: ReaderContext>(
 	host_consensus_state_proof: Vec<u8>,
 ) -> Result<(), Error> {
 	// Fetch the client state (IBC client on the local chain).
-	let client_state = ctx.client_state(connection_end.client_id()).map_err(Error::ics02_client)?;
+	let client_id = connection_end.client_id();
+	let client_state = ctx.client_state(client_id).map_err(Error::ics02_client)?;
 
-	if client_state.is_frozen() {
-		return Err(Error::frozen_client(connection_end.client_id().clone()))
+	if client_state.is_frozen(ctx, client_id) {
+		return Err(Error::frozen_client(client_id.clone()))
 	}
 
 	let consensus_state = ctx
-		.consensus_state(connection_end.client_id(), height)
+		.consensus_state(client_id, height)
 		.map_err(|e| Error::consensus_state_verification_failure(height, e))?;
 
 	let client = client_state.client_def();
@@ -145,11 +146,11 @@ pub fn verify_consensus_proof<Ctx: ReaderContext>(
 	let expected_consensus = if !host_consensus_state_proof.is_empty() {
 		// Fetch the expected consensus state from the historical (local) header data.
 		let expected_consensus = ctx
-			.host_consensus_state(proof.height(), Some(host_consensus_state_proof))
+			.host_consensus_state(proof.height(), Some(host_consensus_state_proof), &client_state)
 			.map_err(|e| Error::consensus_state_verification_failure(proof.height(), e))?;
 		expected_consensus
 	} else {
-		ctx.host_consensus_state(proof.height(), None)
+		ctx.host_consensus_state(proof.height(), None, &client_state)
 			.map_err(|e| Error::consensus_state_verification_failure(proof.height(), e))?
 	};
 

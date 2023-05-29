@@ -115,11 +115,8 @@ pub async fn create_connection(
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
 
 	let tx_id = chain_a.submit(vec![msg]).await?;
-	#[cfg(feature = "testing")]
-	{
-		let connection_id_a = chain_a.query_connection_id_from_tx_hash(tx_id).await?;
-		chain_a.set_connection_id(connection_id_a.clone());
-	}
+	let connection_id_a = chain_a.query_connection_id_from_tx_hash(tx_id).await?;
+	chain_a.set_connection_id(connection_id_a.clone());
 
 	log::info!(target: "hyperspace", "============= Wait till both chains have completed connection handshake =============");
 
@@ -175,11 +172,8 @@ pub async fn create_channel(
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
 
 	let tx_id = chain_a.submit(vec![msg]).await?;
-	#[cfg(feature = "testing")]
-	{
-		let channel_id_a = chain_a.query_channel_id_from_tx_hash(tx_id).await?;
-		chain_a.add_channel_to_whitelist(channel_id_a);
-	}
+	let channel_id_a = chain_a.query_channel_id_from_tx_hash(tx_id).await?;
+	chain_a.add_channel_to_whitelist(channel_id_a);
 
 	log::info!(target: "hyperspace", "============= Wait till both chains have completed channel handshake =============");
 
@@ -192,7 +186,7 @@ pub async fn create_channel(
 
 	let mut events = timeout_future(
 		future,
-		15 * 60,
+		30 * 60,
 		format!("Didn't see OpenConfirmChannel on {}", chain_b.name()),
 	)
 	.await;

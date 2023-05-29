@@ -29,7 +29,14 @@ use ibc::applications::transfer::msgs::transfer::MsgTransfer;
 use ibc::{
 	applications::transfer::PrefixedCoin,
 	core::{
-		ics02_client::{client_state::ClientType, events::UpdateClient},
+		ics02_client::{
+			client_state::ClientType,
+			events::{CodeId, UpdateClient},
+			msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient},
+		},
+		ics03_connection::msgs::{
+			conn_open_ack::MsgConnectionOpenAck, conn_open_try::MsgConnectionOpenTry,
+		},
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
@@ -37,6 +44,7 @@ use ibc::{
 	events::IbcEvent,
 	signer::Signer,
 	timestamp::Timestamp,
+	tx_msg::Msg,
 	Height,
 };
 use ibc_proto::{
@@ -51,15 +59,18 @@ use ibc_proto::{
 		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
 	},
 };
+use ics08_wasm::Bytes;
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 #[cfg(any(test, feature = "testing"))]
 use pallet_ibc::Timeout;
 use parachain::{ParachainClient, ParachainClientConfig};
 use primitives::{
-	Chain, IbcProvider, KeyProvider, LightClientSync, MisbehaviourHandler, UpdateType,
+	mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, LightClientSync, MisbehaviourHandler,
+	UpdateType,
 };
 use serde::{Deserialize, Serialize};
 use std::{pin::Pin, time::Duration};
+use tendermint_proto::Protobuf;
 use thiserror::Error;
 
 #[derive(Serialize, Deserialize)]
@@ -88,4 +99,53 @@ chains! {
 	PicassoKusama(ParachainClientConfig, ParachainClient<PicassoKusamaConfig>),
 	#[cfg(feature = "cosmos")]
 	Cosmos(CosmosClientConfig, CosmosClient<DefaultConfig>),
+}
+
+fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error> {
+	// TODO: consider rewriting with Ics26Envelope
+	use ibc::core::{
+		ics02_client::msgs::{
+			create_client::TYPE_URL as CREATE_CLIENT_TYPE_URL,
+			update_client::TYPE_URL as UPDATE_CLIENT_TYPE_URL,
+		},
+		ics03_connection::msgs::{
+			conn_open_ack::TYPE_URL as CONN_OPEN_ACK_TYPE_URL,
+			conn_open_try::TYPE_URL as CONN_OPEN_TRY_TYPE_URL,
+		},
+	};
+
+	let msg = match msg.type_url.as_str() {
+		CREATE_CLIENT_TYPE_URL => {
+			let mut msg_decoded =
+				MsgCreateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+			msg_decoded.consensus_state = AnyConsensusState::wasm(msg_decoded.consensus_state)?;
+			msg_decoded.client_state = AnyClientState::wasm(msg_decoded.client_state, code_id)?;
+			msg_decoded.to_any()
+		},
+		CONN_OPEN_TRY_TYPE_URL => {
+			let msg_decoded =
+				MsgConnectionOpenTry::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+			msg_decoded.to_any()
+		},
+		CONN_OPEN_ACK_TYPE_URL => {
+			let msg_decoded =
+				MsgConnectionOpenAck::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+			msg_decoded.to_any()
+		},
+		UPDATE_CLIENT_TYPE_URL => {
+			let mut msg_decoded =
+				MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+			msg_decoded.client_message = AnyClientMessage::wasm(msg_decoded.client_message)?;
+			let any = msg_decoded.to_any();
+			any
+		},
+		_ => msg,
+	};
+	Ok(msg)
+}
+
+#[derive(Clone)]
+pub struct WasmChain {
+	pub inner: Box<AnyChain>,
+	pub code_id: Bytes,
 }

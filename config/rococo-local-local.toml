@@ -1,0 +1,13 @@
+type = "parachain"
+name = "rococo_local"
+para_id = 2000
+parachain_rpc_url = "ws://127.0.0.1:9188"
+relay_chain_rpc_url = "ws://127.0.0.1:9944"
+client_id = "08-wasm-0"
+connection_id = "connection-0"
+commitment_prefix = "0x6962632f"
+private_key = "//Alice"
+ss58_version = 49
+channel_whitelist = [["channel-0", "transfer"], ["channel-0", "transfer"], ["channel-0", "transfer"], ["channel-0", "transfer"], ["channel-0", "transfer"], ["channel-0", "transfer"]]
+finality_protocol = "Grandpa"
+key_type = "sr25519"

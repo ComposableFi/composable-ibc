@@ -65,13 +65,7 @@ where
 		let (_, tx_raw, _) =
 			sign_tx(self.keybase.clone(), self.chain_id.clone(), &account_info, vec![], fee)?;
 
-		let total_len = tx_raw.encoded_len();
 		let body_bytes_len = tx_raw.body_bytes.len();
-		let envelope_len = if body_bytes_len == 0 {
-			total_len
-		} else {
-			total_len - 1 - prost::length_delimiter_len(body_bytes_len) - body_bytes_len
-		};
 		// Full length of the transaction can then be derived from the length of the invariable
 		// envelope and the length of the body field, taking into account the varint encoding
 		// of the body field's length delimiter.
@@ -81,7 +75,6 @@ where
 			envelope_len + 1 + prost::length_delimiter_len(body_len) + body_len
 		}
 
-		let mut current_count = 0;
 		let mut current_len = body_bytes_len;
 
 		for message in messages {
@@ -90,12 +83,6 @@ where
 			// The total length the message adds to the encoding includes the
 			// field tag (small varint) and the length delimiter.
 			let tagged_len = 1 + prost::length_delimiter_len(message_len) + message_len;
-			if current_count >= 30 ||
-				tx_len(envelope_len, current_len + tagged_len) > self.max_tx_size
-			{
-				return Err(Error::Custom("Too many messages".to_string()))
-			}
-			current_count += 1;
 			current_len += tagged_len;
 		}
 		Ok(current_len as u64)
@@ -181,16 +168,12 @@ where
 			.map_err(|e| Error::from(e.to_string()))?
 			.into_inner();
 		let mut idx = None;
-		'l: for l in resp
-			.tx_responses
-			.pop()
-			.ok_or_else(|| {
-				Error::from(format!("Failed to find tx for update client: {:?}", update))
-			})?
-			.logs
-		{
-			for ev in l.events {
-				let e = AbciEvent {
+		let tx_response = resp.tx_responses.pop().ok_or_else(|| {
+			Error::from(format!("Failed to find tx for update client: {:?}", update))
+		})?;
+		'l: for log in tx_response.logs {
+			for ev in log.events {
+				let event = AbciEvent {
 					kind: ev.r#type,
 					attributes: ev
 						.attributes
@@ -202,14 +185,16 @@ where
 						})
 						.collect(),
 				};
-				let attr = client_extract_attributes_from_tx(&e).map_err(|e| {
-					Error::from(format!("Failed to extract attributes from tx: {}", e))
-				})?;
+				let attr = client_extract_attributes_from_tx(
+					&event,
+					Height::new(self.id().version(), tx_response.height as u64),
+				)
+				.map_err(|e| Error::from(format!("Failed to extract attributes from tx: {}", e)))?;
 				if attr.client_id == *update.client_id() &&
 					attr.client_type == update.client_type() &&
 					attr.consensus_height == update.consensus_height()
 				{
-					idx = Some(l.msg_index);
+					idx = Some(log.msg_index);
 					break 'l
 				}
 			}
@@ -242,7 +227,26 @@ where
 		block_height.increment()
 	}
 
-	async fn handle_error(&mut self, _error: &anyhow::Error) -> Result<(), anyhow::Error> {
+	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error> {
+		let err_str = if let Some(rpc_err) = error.downcast_ref::<Error>() {
+			match rpc_err {
+				Error::RpcError(s) => s.clone(),
+				_ => "".to_string(),
+			}
+		} else {
+			error.to_string()
+		};
+		log::debug!(target: "hyperspace_cosmos", "Handling error: {err_str}");
+
+		if err_str.contains("dispatch task is gone") {
+			let (rpc_client, ws_driver) = WebSocketClient::new(self.rpc_url.clone())
+				.await
+				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+			tokio::spawn(ws_driver.run());
+			log::info!(target: "hyperspace_cosmos", "Reconnected to cosmos chain");
+			self.rpc_client = rpc_client;
+		}
+
 		Ok(())
 	}
 

@@ -27,6 +27,7 @@
 
 //! Pallet IBC
 //! Implements the ibc protocol for substrate runtimes.
+#[macro_use]
 extern crate alloc;
 
 use codec::{Decode, Encode};
@@ -131,7 +132,10 @@ pub mod weight;
 
 pub use weight::WeightInfo;
 
-use crate::ics20::{FlowType, Ics20RateLimiter};
+use crate::{
+	ics20::{FlowType, Ics20RateLimiter},
+	ics20_fee::FlatFeeConverter,
+};
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -158,9 +162,10 @@ pub mod pallet {
 	};
 	use ibc::{
 		applications::transfer::{
-			is_sender_chain_source, msgs::transfer::MsgTransfer, Amount, PrefixedCoin,
-			PrefixedDenom,
+			context::BankKeeper, is_sender_chain_source, msgs::transfer::MsgTransfer, Amount,
+			PrefixedCoin, PrefixedDenom,
 		},
+		bigint::U256,
 		core::{
 			ics02_client::context::{ClientKeeper, ClientReader},
 			ics04_channel::context::ChannelReader,
@@ -172,8 +177,8 @@ pub mod pallet {
 	use ibc_primitives::{client_id_from_bytes, get_channel_escrow_address, IbcHandler};
 	use light_clients::AnyClientState;
 	use sp_runtime::{
-		traits::{IdentifyAccount, Saturating},
-		AccountId32, BoundedBTreeSet,
+		traits::{IdentifyAccount, Saturating, Zero},
+		AccountId32, BoundedBTreeSet, Perbill,
 	};
 	#[cfg(feature = "std")]
 	use sp_runtime::{Deserialize, Serialize};
@@ -264,8 +269,34 @@ pub mod pallet {
 
 		type IsSendEnabled: Get<bool>;
 		type IsReceiveEnabled: Get<bool>;
-
 		type FeeAccount: Get<Self::AccountIdConversion>;
+		/// Cleanup packets period (in blocks)
+		#[pallet::constant]
+		type CleanUpPacketsPeriod: Get<Self::BlockNumber>;
+
+		#[pallet::constant]
+		/// `ServiceChargeOut` represents the service charge rate applied to assets that will be
+		/// sent via IBC.
+		///
+		/// The charge is applied before assets are transffered from the sender side, during
+		/// transfer extrinsic (before to burn or send assets to escrow account) before the packet
+		/// send via IBC Inter-Blockchain Communication (IBC) protocol.
+		///
+		/// For example, if the service charge rate for incoming assets is 0.04%, `ServiceChargeIn`
+		/// will be configured in rutime as
+		/// parameter_types! { pub IbcIcs20ServiceChargeOut: Perbill = Perbill::from_rational(4_u32,
+		/// 1000_u32 ) };
+		type ServiceChargeOut: Get<Perbill>;
+
+		type FlatFeeConverter: FlatFeeConverter<
+			AssetId = <Self as crate::Config>::AssetId,
+			Balance = <Self as crate::Config>::Balance,
+		>;
+
+		//Asset Id for fee that will charged. for example  USDT
+		type FlatFeeAssetId: Get<Self::AssetId>;
+		//Asset amount that will be charged. for example 10 (USDT)
+		type FlatFeeAmount: Get<Self::Balance>;
 	}
 
 	#[pallet::pallet]
@@ -286,8 +317,7 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn current_slot)]
-	pub(super) type CurrentSlot<T: Config> = StorageValue<_, String, ValueQuery>;
+	pub type ServiceChargeOut<T: Config> = StorageValue<_, Perbill, OptionQuery>;
 
 	#[pallet::storage]
 	/// client_id , Height => Timestamp
@@ -307,6 +337,19 @@ pub mod pallet {
 	/// connection_identifier => Vec<(port_id, channel_id)>
 	pub type ChannelsConnection<T: Config> =
 		StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<(Vec<u8>, Vec<u8>)>, ValueQuery>;
+
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// storage map. key is tuple of (source_channel.sequence(), destination_channel.sequence()) and
+	/// value () that means that this group of channels is feeless
+	pub type FeeLessChannelIds<T: Config> =
+		StorageMap<_, Blake2_128Concat, (u64, u64), (), ValueQuery>;
+
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// storage map where key is transfer sequence number and value calculated fee for that sequence
+	/// number
+	pub type SequenceFee<T: Config> = StorageMap<_, Blake2_128Concat, u64, u128, ValueQuery>;
 
 	#[pallet::storage]
 	#[allow(clippy::disallowed_types)]
@@ -386,6 +429,18 @@ pub mod pallet {
 	/// Acks info
 	pub type Acks<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<u8>, OptionQuery>;
 
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// Pending send packet sequences. Used in `packet_cleanup` procedure.
+	pub type PendingSendPacketSeqs<T: Config> =
+		StorageMap<_, Blake2_128Concat, (Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64), ValueQuery>;
+
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// Pending recv packet sequences. Used in `packet_cleanup` procedure.
+	pub type PendingRecvPacketSeqs<T: Config> =
+		StorageMap<_, Blake2_128Concat, (Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64), ValueQuery>;
+
 	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 	pub struct AssetConfig<AssetId> {
 		pub id: AssetId,
@@ -419,7 +474,9 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Events emitted by the ibc subsystem
-		Events { events: Vec<Result<events::IbcEvent, errors::IbcError>> },
+		Events {
+			events: Vec<Result<events::IbcEvent, errors::IbcError>>,
+		},
 		/// An Ibc token transfer has been started
 		TokenTransferInitiated {
 			from: Vec<u8>,
@@ -432,9 +489,15 @@ pub mod pallet {
 			destination_channel: Vec<u8>,
 		},
 		/// A channel has been opened
-		ChannelOpened { channel_id: Vec<u8>, port_id: Vec<u8> },
+		ChannelOpened {
+			channel_id: Vec<u8>,
+			port_id: Vec<u8>,
+		},
 		/// Pallet params updated
-		ParamsUpdated { send_enabled: bool, receive_enabled: bool },
+		ParamsUpdated {
+			send_enabled: bool,
+			receive_enabled: bool,
+		},
 		/// An outgoing Ibc token transfer has been completed and burnt
 		TokenTransferCompleted {
 			from: Signer,
@@ -481,13 +544,50 @@ pub mod pallet {
 			destination_channel: Vec<u8>,
 		},
 		/// On recv packet was not processed successfully processes
-		OnRecvPacketError { msg: Vec<u8> },
+		OnRecvPacketError {
+			msg: Vec<u8>,
+		},
 		/// Client upgrade path has been set
 		ClientUpgradeSet,
 		/// Client has been frozen
-		ClientFrozen { client_id: Vec<u8>, height: u64, revision_number: u64 },
+		ClientFrozen {
+			client_id: Vec<u8>,
+			height: u64,
+			revision_number: u64,
+		},
 		/// Asset Admin Account Updated
-		AssetAdminUpdated { admin_account: <T as frame_system::Config>::AccountId },
+		AssetAdminUpdated {
+			admin_account: <T as frame_system::Config>::AccountId,
+		},
+
+		FeeLessChannelIdsAdded {
+			source_channel: u64,
+			destination_channel: u64,
+		},
+		FeeLessChannelIdsRemoved {
+			source_channel: u64,
+			destination_channel: u64,
+		},
+		ChargingFeeOnTransferInitiated {
+			sequence: u64,
+			from: Vec<u8>,
+			to: Vec<u8>,
+			ibc_denom: Vec<u8>,
+			local_asset_id: Option<T::AssetId>,
+			amount: T::Balance,
+			is_flat_fee: bool,
+			source_channel: Vec<u8>,
+			destination_channel: Vec<u8>,
+		},
+		ChargingFeeConfirmed {
+			sequence: u64,
+		},
+		ChargingFeeTimeout {
+			sequence: u64,
+		},
+		ChargingFeeFailedAcknowledgement {
+			sequence: u64,
+		},
 	}
 
 	/// Errors inform users that something went wrong.
@@ -562,6 +662,10 @@ pub mod pallet {
 		/// Access denied
 		AccessDenied,
 		RateLimiter,
+		//Fee errors
+		FailedSendFeeToAccount,
+		//Failed to derive origin sender address.
+		OriginAddress,
 	}
 
 	#[pallet::hooks]
@@ -571,9 +675,22 @@ pub mod pallet {
 		T: Send + Sync,
 		AccountId32: From<<T as frame_system::Config>::AccountId>,
 	{
-		fn offchain_worker(_n: BlockNumberFor<T>) {
-			let _ = Pallet::<T>::packet_cleanup();
+		fn on_idle(n: BlockNumberFor<T>, remaining_weight: Weight) -> Weight {
+			if n % T::CleanUpPacketsPeriod::get() != T::BlockNumber::zero() {
+				return remaining_weight
+			}
+			log::trace!(target: "pallet_ibc", "Cleaning up packets");
+			let removed_packets_count = Pallet::<T>::packet_cleanup()
+				.map_err(|(e, n)| {
+					log::warn!(target: "pallet_ibc", "Error cleaning up packets: {:?}", e);
+					n
+				})
+				.unwrap_or_else(|n| n) as u64;
+			remaining_weight
+				.saturating_sub(T::WeightInfo::one_packet_cleanup() * removed_packets_count)
 		}
+
+		fn offchain_worker(_n: BlockNumberFor<T>) {}
 	}
 
 	// Dispatch able functions allows users to interact with the pallet and invoke state changes.
@@ -665,7 +782,7 @@ pub mod pallet {
 				PrefixedDenom::from_str(&denom).map_err(|_| Error::<T>::PrefixedDenomParse)?;
 			let ibc_amount = Amount::from_str(&format!("{:?}", amount))
 				.map_err(|_| Error::<T>::InvalidAmount)?;
-			let coin = PrefixedCoin { denom, amount: ibc_amount };
+			let mut coin = PrefixedCoin { denom, amount: ibc_amount };
 			let source_channel = ChannelId::new(params.source_channel);
 			let source_port = PortId::transfer();
 			let (latest_height, latest_timestamp) =
@@ -700,6 +817,95 @@ pub mod pallet {
 			if timeout_height.is_zero() && timeout_timestamp.nanoseconds() == 0 {
 				return Err(Error::<T>::InvalidTimestamp.into())
 			}
+
+			let mut ctx = Context::<T>::default();
+			let channel_end = ctx
+				.channel_end(&(PortId::transfer(), source_channel))
+				.map_err(|_| Error::<T>::ChannelNotFound)?;
+
+			let destination_channel = channel_end
+				.counterparty()
+				.channel_id
+				.ok_or_else(|| Error::<T>::ChannelNotFound)?;
+
+			let is_feeless_channel_ids = FeeLessChannelIds::<T>::contains_key((
+				source_channel.sequence(),
+				destination_channel.sequence(),
+			));
+
+			if !is_feeless_channel_ids {
+				let percent = ServiceChargeOut::<T>::get().unwrap_or(T::ServiceChargeOut::get());
+				// Now we proceed to send the service fee from the receiver's account to the pallet
+				// FeeAccount
+				let fee_account = T::FeeAccount::get();
+
+				let mut fee_coin = coin.clone();
+				let asset_id =
+					<T as crate::Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
+						&fee_coin.denom.to_string(),
+					);
+				let amt = coin.amount.as_u256().low_u128();
+				let mut is_flat_fee = false;
+				let mut fee = match asset_id {
+					Ok(a) => {
+						let fee_asset_id = T::FlatFeeAssetId::get();
+						let fee_asset_amount = T::FlatFeeAmount::get();
+						is_flat_fee = true;
+						let flat_fee =
+							T::FlatFeeConverter::get_flat_fee(a, fee_asset_id, fee_asset_amount)
+								.unwrap_or_else(|| {
+									// We have ensured that token amounts larger than the max value
+									// for a u128 are rejected in the ics20 on_recv_packet callback
+									// so we can multiply safely. Percent does Non-Overflowing
+									// multiplication so this is infallible
+									is_flat_fee = false;
+									percent * amt
+								});
+						flat_fee
+					},
+					Err(_) => percent * amt,
+				};
+
+				fee = fee.min(amt);
+				fee_coin.amount = U256::from(fee).into();
+
+				let signer_from = Signer::from_str(&from).map_err(|_| Error::<T>::Utf8Error)?;
+				let account_id_from = <T as Config>::AccountIdConversion::try_from(signer_from)
+					.map_err(|_| Error::<T>::OriginAddress)?;
+
+				ctx.send_coins(&account_id_from, &fee_account, &fee_coin).map_err(|e| {
+					log::debug!(target: "pallet_ibc", "[transfer]: error: {:?}", &e);
+					Error::<T>::FailedSendFeeToAccount
+				})?;
+
+				// We modify the packet data to remove the fee so any other middleware has access to
+				// the correct amount deposited in the receiver's account
+				coin.amount = (coin.amount.as_u256() - U256::from(fee)).into();
+				//found sequence that will used in Pallet::<T>::send_transfer function.
+				let sequence = ctx
+					.get_next_sequence_send(&(source_port.clone(), source_channel.clone()))
+					.map_err(|_| Error::<T>::ChannelNotFound)?;
+				//use this sequence as a key in storage map where sequence is key and fee is value
+				let sequence: u64 = sequence.into();
+				//we need this data in storage map because on_timeout_packet and
+				// on_acknowledgement_packet use this data to refund fee in case of falure or clean
+				// un in case of on_acknowledgement_packet success.
+				SequenceFee::<T>::insert(sequence, fee);
+				Self::deposit_event(Event::<T>::ChargingFeeOnTransferInitiated {
+					sequence,
+					from: from.clone().into(),
+					to: to.clone().into(),
+					amount: fee.into(),
+					is_flat_fee,
+					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
+						&coin.denom.to_string(),
+					)
+					.ok(),
+					ibc_denom: coin.denom.to_string().as_bytes().to_vec(),
+					source_channel: source_channel.to_string().as_bytes().to_vec(),
+					destination_channel: destination_channel.to_string().as_bytes().to_vec(),
+				});
+			};
 
 			let msg = MsgTransfer {
 				source_port,
@@ -765,10 +971,6 @@ pub mod pallet {
 					Other { .. } => Error::<T>::TransferOther,
 				}
 			})?;
-			let ctx = Context::<T>::default();
-			let channel_end = ctx
-				.channel_end(&(PortId::transfer(), source_channel))
-				.map_err(|_| Error::<T>::ChannelNotFound)?;
 
 			Self::deposit_event(Event::<T>::TokenTransferInitiated {
 				from: from.as_bytes().to_vec(),
@@ -781,13 +983,7 @@ pub mod pallet {
 				ibc_denom: coin.denom.to_string().as_bytes().to_vec(),
 				is_sender_source,
 				source_channel: source_channel.to_string().as_bytes().to_vec(),
-				destination_channel: channel_end
-					.counterparty()
-					.channel_id
-					.ok_or_else(|| Error::<T>::ChannelNotFound)?
-					.to_string()
-					.as_bytes()
-					.to_vec(),
+				destination_channel: destination_channel.to_string().as_bytes().to_vec(),
 			});
 			Ok(())
 		}
@@ -849,6 +1045,7 @@ pub mod pallet {
 							.map_err(|_| Error::<T>::ClientFreezeFailed)?,
 					)
 				},
+				AnyClientState::Wasm(_) => return Err(Error::<T>::ClientFreezeFailed.into()),
 				#[cfg(test)]
 				AnyClientState::Mock(mut ms) => {
 					ms.frozen_height =
@@ -891,6 +1088,44 @@ pub mod pallet {
 				PacketReceiptCounter::<T>::set(PacketReceiptCounter::<T>::get() + 1);
 				Ok(())
 			}
+		}
+
+		#[pallet::call_index(6)]
+		#[pallet::weight(0)]
+		#[frame_support::transactional]
+		pub fn add_channels_to_feeless_channel_list(
+			origin: OriginFor<T>,
+			source_channel: u64,
+			destination_channel: u64,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			FeeLessChannelIds::<T>::insert((source_channel, destination_channel), ());
+			Self::deposit_event(Event::<T>::FeeLessChannelIdsAdded {
+				source_channel,
+				destination_channel,
+			});
+
+			Ok(())
+		}
+
+		#[pallet::call_index(7)]
+		#[pallet::weight(0)]
+		#[frame_support::transactional]
+		pub fn remove_channels_from_feeless_channel_list(
+			origin: OriginFor<T>,
+			source_channel: u64,
+			destination_channel: u64,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			FeeLessChannelIds::<T>::remove((source_channel, destination_channel));
+			Self::deposit_event(Event::<T>::FeeLessChannelIdsRemoved {
+				source_channel,
+				destination_channel,
+			});
+
+			Ok(())
 		}
 	}
 }

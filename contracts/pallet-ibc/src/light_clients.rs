@@ -1,17 +1,42 @@
-use alloc::{borrow::ToOwned, format, string::ToString, vec::Vec};
+use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, vec::Vec};
 use frame_support::{
 	pallet_prelude::{StorageValue, ValueQuery},
 	traits::StorageInstance,
 };
-use ibc::core::{
-	ics02_client,
-	ics02_client::{client_consensus::ConsensusState, client_state::ClientState},
+use ibc::{
+	core::{
+		ics02_client,
+		ics02_client::{
+			client_consensus::ConsensusState, client_message::ClientMessage,
+			client_state::ClientState,
+		},
+	},
+	Height,
 };
 use ibc_derive::{ClientDef, ClientMessage, ClientState, ConsensusState, Protobuf};
 use ibc_primitives::runtime_interface;
 use ibc_proto::google::protobuf::Any;
+use ics07_tendermint::{
+	client_message::{
+		TENDERMINT_CLIENT_MESSAGE_TYPE_URL, TENDERMINT_HEADER_TYPE_URL,
+		TENDERMINT_MISBEHAVIOUR_TYPE_URL,
+	},
+	client_state::TENDERMINT_CLIENT_STATE_TYPE_URL,
+	consensus_state::TENDERMINT_CONSENSUS_STATE_TYPE_URL,
+};
+use ics08_wasm::{
+	client_message::{
+		WASM_CLIENT_MESSAGE_TYPE_URL, WASM_HEADER_TYPE_URL, WASM_MISBEHAVIOUR_TYPE_URL,
+	},
+	client_state::WASM_CLIENT_STATE_TYPE_URL,
+	consensus_state::WASM_CONSENSUS_STATE_TYPE_URL,
+	Bytes,
+};
 use ics10_grandpa::{
-	client_message::{RelayChainHeader, GRANDPA_CLIENT_MESSAGE_TYPE_URL},
+	client_message::{
+		RelayChainHeader, GRANDPA_CLIENT_MESSAGE_TYPE_URL, GRANDPA_HEADER_TYPE_URL,
+		GRANDPA_MISBEHAVIOUR_TYPE_URL,
+	},
 	client_state::GRANDPA_CLIENT_STATE_TYPE_URL,
 	consensus_state::GRANDPA_CONSENSUS_STATE_TYPE_URL,
 };
@@ -19,6 +44,7 @@ use ics11_beefy::{
 	client_message::BEEFY_CLIENT_MESSAGE_TYPE_URL, client_state::BEEFY_CLIENT_STATE_TYPE_URL,
 	consensus_state::BEEFY_CONSENSUS_STATE_TYPE_URL,
 };
+use prost::Message;
 use sp_core::{crypto::ByteArray, ed25519, H256};
 use sp_runtime::{
 	app_crypto::RuntimePublic,
@@ -34,12 +60,6 @@ use tendermint::{
 	PublicKey, Signature,
 };
 use tendermint_proto::Protobuf;
-
-pub const TENDERMINT_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.ClientState";
-pub const TENDERMINT_CLIENT_MESSAGE_TYPE_URL: &str =
-	"/ibc.lightclients.tendermint.v1.ClientMessage";
-pub const TENDERMINT_CONSENSUS_STATE_TYPE_URL: &str =
-	"/ibc.lightclients.tendermint.v1.ConsensusState";
 
 #[derive(Clone, Default, PartialEq, Debug, Eq)]
 pub struct HostFunctionsManager;
@@ -197,6 +217,7 @@ pub enum AnyClient {
 	Grandpa(ics10_grandpa::client_def::GrandpaClient<HostFunctionsManager>),
 	Beefy(ics11_beefy::client_def::BeefyClient<HostFunctionsManager>),
 	Tendermint(ics07_tendermint::client_def::TendermintClient<HostFunctionsManager>),
+	Wasm(ics08_wasm::client_def::WasmClient<AnyClient, AnyClientState, AnyConsensusState>),
 	#[cfg(test)]
 	Mock(ibc::mock::client_def::MockClient),
 }
@@ -206,6 +227,7 @@ pub enum AnyUpgradeOptions {
 	Grandpa(ics10_grandpa::client_state::UpgradeOptions),
 	Beefy(ics11_beefy::client_state::UpgradeOptions),
 	Tendermint(ics07_tendermint::client_state::UpgradeOptions),
+	Wasm(Box<Self>),
 	#[cfg(test)]
 	Mock(()),
 }
@@ -218,9 +240,56 @@ pub enum AnyClientState {
 	Beefy(ics11_beefy::client_state::ClientState<HostFunctionsManager>),
 	#[ibc(proto_url = "TENDERMINT_CLIENT_STATE_TYPE_URL")]
 	Tendermint(ics07_tendermint::client_state::ClientState<HostFunctionsManager>),
+	#[ibc(proto_url = "WASM_CLIENT_STATE_TYPE_URL")]
+	Wasm(ics08_wasm::client_state::ClientState<AnyClient, Self, AnyConsensusState>),
 	#[cfg(test)]
 	#[ibc(proto_url = "MOCK_CLIENT_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockClientState),
+}
+
+impl AnyClientState {
+	/// Recursively decode the client state from the given `Any` type, until it
+	/// matches the given predicate `f`. Only `Wasm` variant may be unpacked recursively.
+	pub fn decode_recursive<F>(mut any: Any, f: F) -> Option<Self>
+	where
+		F: Fn(&Self) -> bool,
+	{
+		loop {
+			let client_state = AnyClientState::try_from(any).ok()?;
+
+			match client_state {
+				AnyClientState::Wasm(wasm_client_state) =>
+					any = Any::decode(&*wasm_client_state.data).ok()?,
+				c =>
+					if f(&c) {
+						break Some(c)
+					} else {
+						return None
+					},
+			};
+		}
+	}
+
+	pub fn unpack_recursive(&self) -> &Self {
+		match self {
+			AnyClientState::Wasm(wasm_state) => wasm_state.inner.unpack_recursive(),
+			c => c,
+		}
+	}
+}
+
+impl AnyClientState {
+	pub fn wasm(inner: Self, code_id: Bytes) -> Result<Self, tendermint_proto::Error> {
+		Ok(Self::Wasm(
+			ics08_wasm::client_state::ClientState::<AnyClient, Self, AnyConsensusState> {
+				data: inner.encode_to_vec()?,
+				latest_height: inner.latest_height(),
+				inner: Box::new(inner),
+				code_id,
+				_phantom: Default::default(),
+			},
+		))
+	}
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, ConsensusState, Protobuf)]
@@ -231,9 +300,21 @@ pub enum AnyConsensusState {
 	Beefy(ics11_beefy::consensus_state::ConsensusState),
 	#[ibc(proto_url = "TENDERMINT_CONSENSUS_STATE_TYPE_URL")]
 	Tendermint(ics07_tendermint::consensus_state::ConsensusState),
+	#[ibc(proto_url = "WASM_CONSENSUS_STATE_TYPE_URL")]
+	Wasm(ics08_wasm::consensus_state::ConsensusState<Self>),
 	#[cfg(test)]
 	#[ibc(proto_url = "MOCK_CONSENSUS_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockConsensusState),
+}
+
+impl AnyConsensusState {
+	pub fn wasm(inner: Self) -> Result<Self, tendermint_proto::Error> {
+		Ok(Self::Wasm(ics08_wasm::consensus_state::ConsensusState {
+			timestamp: inner.timestamp().nanoseconds(),
+			data: inner.encode_to_vec()?,
+			inner: Box::new(inner),
+		}))
+	}
 }
 
 #[derive(Clone, Debug, ClientMessage)]
@@ -245,9 +326,80 @@ pub enum AnyClientMessage {
 	Beefy(ics11_beefy::client_message::ClientMessage),
 	#[ibc(proto_url = "TENDERMINT_CLIENT_MESSAGE_TYPE_URL")]
 	Tendermint(ics07_tendermint::client_message::ClientMessage),
+	#[ibc(proto_url = "WASM_CLIENT_MESSAGE_TYPE_URL")]
+	Wasm(ics08_wasm::client_message::ClientMessage<Self>),
 	#[cfg(test)]
 	#[ibc(proto_url = "MOCK_CLIENT_MESSAGE_TYPE_URL")]
 	Mock(ibc::mock::header::MockClientMessage),
+}
+
+impl AnyClientMessage {
+	pub fn maybe_header_height(&self) -> Option<Height> {
+		match self {
+			Self::Tendermint(inner) => match inner {
+				ics07_tendermint::client_message::ClientMessage::Header(h) => Some(h.height()),
+				ics07_tendermint::client_message::ClientMessage::Misbehaviour(_) => None,
+			},
+			Self::Beefy(inner) => match inner {
+				ics11_beefy::client_message::ClientMessage::Header(_) =>
+					unimplemented!("beefy header height"),
+				ics11_beefy::client_message::ClientMessage::Misbehaviour(_) => None,
+			},
+			Self::Grandpa(inner) => match inner {
+				ics10_grandpa::client_message::ClientMessage::Header(h) => Some(h.height()),
+				ics10_grandpa::client_message::ClientMessage::Misbehaviour(_) => None,
+			},
+			Self::Wasm(inner) => match inner {
+				ics08_wasm::client_message::ClientMessage::Header(h) =>
+					h.inner.maybe_header_height(),
+				ics08_wasm::client_message::ClientMessage::Misbehaviour(_) => None,
+			},
+			#[cfg(test)]
+			Self::Mock(inner) => match inner {
+				ibc::mock::header::MockClientMessage::Header(h) => Some(h.height()),
+				ibc::mock::header::MockClientMessage::Misbehaviour(_) => None,
+			},
+		}
+	}
+
+	pub fn wasm(inner: Self) -> Result<Self, tendermint_proto::Error> {
+		let maybe_height = inner.maybe_header_height();
+		Ok(match maybe_height {
+			Some(height) => Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(
+				ics08_wasm::client_message::Header {
+					data: inner.encode_to_vec()?,
+					height,
+					inner: Box::new(inner),
+				},
+			)),
+			None => Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(
+				ics08_wasm::client_message::Misbehaviour {
+					data: inner.encode_to_vec()?,
+					inner: Box::new(inner),
+				},
+			)),
+		})
+	}
+
+	pub fn unpack_recursive(&self) -> &Self {
+		match self {
+			Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(h)) =>
+				h.inner.unpack_recursive(),
+			Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(m)) =>
+				m.inner.unpack_recursive(),
+			_ => self,
+		}
+	}
+
+	pub fn unpack_recursive_into(self) -> Self {
+		match self {
+			Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(h)) =>
+				h.inner.unpack_recursive_into(),
+			Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(m)) =>
+				m.inner.unpack_recursive_into(),
+			_ => self,
+		}
+	}
 }
 
 impl Protobuf<Any> for AnyClientMessage {}
@@ -261,6 +413,17 @@ impl TryFrom<Any> for AnyClientMessage {
 				ics10_grandpa::client_message::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			)),
+			GRANDPA_HEADER_TYPE_URL =>
+				Ok(Self::Grandpa(ics10_grandpa::client_message::ClientMessage::Header(
+					ics10_grandpa::client_message::Header::decode_vec(&value.value)
+						.map_err(ics02_client::error::Error::decode_raw_header)?,
+				))),
+			GRANDPA_MISBEHAVIOUR_TYPE_URL =>
+				Ok(Self::Grandpa(ics10_grandpa::client_message::ClientMessage::Misbehaviour(
+					ics10_grandpa::client_message::Misbehaviour::decode_vec(&value.value)
+						.map_err(ics02_client::error::Error::decode_raw_header)?,
+				))),
+			// TODO: beefy header, misbehaviour impl From<Any>
 			BEEFY_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Beefy(
 				ics11_beefy::client_message::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
@@ -269,6 +432,30 @@ impl TryFrom<Any> for AnyClientMessage {
 				ics07_tendermint::client_message::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			)),
+			TENDERMINT_HEADER_TYPE_URL =>
+				Ok(Self::Tendermint(ics07_tendermint::client_message::ClientMessage::Header(
+					ics07_tendermint::client_message::Header::decode_vec(&value.value)
+						.map_err(ics02_client::error::Error::decode_raw_header)?,
+				))),
+			TENDERMINT_MISBEHAVIOUR_TYPE_URL =>
+				Ok(Self::Tendermint(ics07_tendermint::client_message::ClientMessage::Misbehaviour(
+					ics07_tendermint::client_message::Misbehaviour::decode_vec(&value.value)
+						.map_err(ics02_client::error::Error::decode_raw_header)?,
+				))),
+			WASM_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Wasm(
+				ics08_wasm::client_message::ClientMessage::decode_vec(&value.value)
+					.map_err(ics02_client::error::Error::decode_raw_header)?,
+			)),
+			WASM_HEADER_TYPE_URL =>
+				Ok(Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(
+					ics08_wasm::client_message::Header::decode_vec(&value.value)
+						.map_err(ics02_client::error::Error::decode_raw_header)?,
+				))),
+			WASM_MISBEHAVIOUR_TYPE_URL =>
+				Ok(Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(
+					ics08_wasm::client_message::Misbehaviour::decode_vec(&value.value)
+						.map_err(ics02_client::error::Error::decode_raw_header)?,
+				))),
 			_ => Err(ics02_client::error::Error::unknown_consensus_state_type(value.type_url)),
 		}
 	}
@@ -277,18 +464,35 @@ impl TryFrom<Any> for AnyClientMessage {
 impl From<AnyClientMessage> for Any {
 	fn from(client_msg: AnyClientMessage) -> Self {
 		match client_msg {
-			AnyClientMessage::Grandpa(msg) => Any {
-				type_url: GRANDPA_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec().expect("Grandpa client message is always serializable"),
+			AnyClientMessage::Wasm(msg) => match msg {
+				ics08_wasm::client_message::ClientMessage::Header(h) => Any {
+					type_url: WASM_HEADER_TYPE_URL.to_string(),
+					value: h.encode_vec().expect("encode_vec failed"),
+				},
+				ics08_wasm::client_message::ClientMessage::Misbehaviour(m) => Any {
+					type_url: WASM_MISBEHAVIOUR_TYPE_URL.to_string(),
+					value: m.encode_vec().expect("encode_vec failed"),
+				},
+			},
+			AnyClientMessage::Grandpa(msg) => match msg {
+				ics10_grandpa::client_message::ClientMessage::Header(h) => Any {
+					type_url: GRANDPA_HEADER_TYPE_URL.to_string(),
+					value: h.encode_vec().expect("encode_vec failed"),
+				},
+				ics10_grandpa::client_message::ClientMessage::Misbehaviour(m) => Any {
+					type_url: GRANDPA_MISBEHAVIOUR_TYPE_URL.to_string(),
+					value: m.encode_vec().expect("encode_vec failed"),
+				},
 			},
 			AnyClientMessage::Beefy(msg) => Any {
 				type_url: BEEFY_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec().expect("Beefy client message is always serializable"),
+				value: msg.encode_vec().expect("encode_vec failed"),
 			},
 			AnyClientMessage::Tendermint(msg) => Any {
 				type_url: TENDERMINT_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec().expect("Tendermint client message is always serializable"),
+				value: msg.encode_vec().expect("encode_vec failed"),
 			},
+
 			#[cfg(test)]
 			AnyClientMessage::Mock(_msg) => panic!("MockHeader can't be serialized"),
 		}

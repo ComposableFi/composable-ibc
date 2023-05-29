@@ -132,7 +132,7 @@ define_runtime_transactions!(
 	|| super::unimplemented("ibc_increase_counters is not implemented")
 );
 
-define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);
+define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent,);
 
 define_event_record!(
 	PicassoEventRecord,

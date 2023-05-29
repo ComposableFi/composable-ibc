@@ -1,0 +1,22 @@
+type = "cosmos"
+name = "cosmos_local"
+rpc_url = "http://127.0.0.1:26657/"
+grpc_url = "http://127.0.0.1:9090/"
+websocket_url = "ws://127.0.0.1:26657/websocket"
+chain_id = "ibcgo-1"
+client_id = "07-tendermint-0"
+connection_id = "connection-0"
+account_prefix = "cosmos"
+fee_denom = "stake"
+fee_amount = "4000"
+gas_limit = 9223372036854775806
+store_prefix = "ibc"
+max_tx_size = 200000
+wasm_code_id = "cfd2199578332b5fd859f3b76cb0b29757c6b52c5df79566cdc3598039dbe43e"
+channel_whitelist = []
+
+[keybase]
+public_key = "spub4W7TSjsuqcUE17mSB2ajhZsbwkefsHWKsXCbERimu3z2QLN9EFgqqpppiBn4tTNPFoNVTo1b3BgCZAaFJuUgTZeFhzJjUHkK8X7kSC5c7yn"
+private_key = "sprv8H873EM21Euvndgy513jLRvsPipBTpnUWJGzS3KALiT3XY2zgiNbJ2WLrvPzRhg7GuAoujHd5d6cpBe887vTbJghja8kmRdkHoNgamx6WWr"
+account = "cosmos1nnypkcfrvu3e9dhzeggpn4kh622l4cq7wwwrn0"
+address = [156, 200, 27, 97, 35, 103, 35, 146, 182, 226, 202, 16, 25, 214, 215, 210, 149, 250, 224, 30]

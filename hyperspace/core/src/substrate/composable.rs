@@ -173,7 +173,7 @@ define_runtime_transactions!(
 	|| unimplemented("ibc_increase_counters is not implemented")
 );
 
-define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent);
+define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent,);
 
 define_event_record!(
 	ComposableEventRecord,
@@ -210,7 +210,7 @@ impl light_client_common::config::Config for ComposableConfig {
 	type EventRecord = ComposableEventRecord;
 	type Storage = ComposableRuntimeStorage;
 	type Tx = ComposableRuntimeTransactions;
-	type SignedExtra = (Era, CheckNonce, Compact<Balance>);
+	type SignedExtra = (Era, CheckNonce, Compact<Balance>, Option<Self::AssetId>);
 
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,

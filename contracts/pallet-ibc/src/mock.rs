@@ -202,6 +202,7 @@ parameter_types! {
 	pub const FlatFeeAssetId: AssetId = 130;
 	pub const FlatFeeAmount: AssetId = 10_000_000;
 	pub FeeAccount: <Test as Config>::AccountIdConversion = create_alice_key();
+	pub const CleanUpPacketsPeriod: u32 = 10;
 }
 
 fn create_alice_key() -> <Test as Config>::AccountIdConversion {
@@ -240,6 +241,11 @@ impl Config for Test {
 	type IsSendEnabled = sp_core::ConstBool<true>;
 	type Ics20RateLimiter = Everything;
 	type FeeAccount = FeeAccount;
+	type CleanUpPacketsPeriod = CleanUpPacketsPeriod;
+	type ServiceChargeOut = ServiceCharge;
+	type FlatFeeConverter = FlatFeeConverterDummy<Test>;
+	type FlatFeeAssetId = FlatFeeAssetId;
+	type FlatFeeAmount = FlatFeeAmount;
 }
 #[derive(Debug, Clone)]
 pub struct FlatFeeConverterDummy<T: Config>(PhantomData<T>);
@@ -248,8 +254,8 @@ impl<T: Config> FlatFeeConverter for FlatFeeConverterDummy<T> {
 	type Balance = u128;
 	fn get_flat_fee(
 		asset_id: Self::AssetId,
-		fee_asset_id: Self::AssetId,
-		fee_asset_amount: Self::Balance,
+		_fee_asset_id: Self::AssetId,
+		_fee_asset_amount: Self::Balance,
 	) -> Option<u128> {
 		if asset_id == 3 {
 			return Some(1000)
@@ -259,11 +265,8 @@ impl<T: Config> FlatFeeConverter for FlatFeeConverterDummy<T> {
 }
 impl crate::ics20_fee::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type ServiceCharge = ServiceCharge;
+	type ServiceChargeIn = ServiceCharge;
 	type PalletId = PalletId;
-	type FlatFeeConverter = FlatFeeConverterDummy<Test>;
-	type FlatFeeAssetId = FlatFeeAssetId;
-	type FlatFeeAmount = FlatFeeAmount;
 }
 
 #[derive(

@@ -1,7 +1,7 @@
 use super::*;
 use crate::{light_clients::AnyClientMessage, routing::Context};
 use core::marker::PhantomData;
-use frame_support::pallet_prelude::Weight;
+use frame_support::{pallet_prelude::Weight, weights::constants::WEIGHT_REF_TIME_PER_MILLIS};
 use grandpa_client_primitives::justification::GrandpaJustification;
 use ibc::core::{
 	ics02_client::msgs::ClientMsg,
@@ -42,6 +42,7 @@ pub trait WeightInfo {
 	fn on_acknowledgement_packet() -> Weight;
 	fn on_timeout_packet() -> Weight;
 	fn update_grandpa_client(i: u32) -> Weight;
+	fn one_packet_cleanup() -> Weight;
 }
 
 impl WeightInfo for () {
@@ -53,8 +54,8 @@ impl WeightInfo for () {
 		Weight::from_ref_time(0)
 	}
 
-	fn update_tendermint_client(_i: u32) -> Weight {
-		Weight::from_ref_time(0)
+	fn update_tendermint_client(i: u32) -> Weight {
+		Weight::from_ref_time(3 * i as u64 * WEIGHT_REF_TIME_PER_MILLIS)
 	}
 
 	fn conn_try_open_tendermint() -> Weight {
@@ -150,6 +151,10 @@ impl WeightInfo for () {
 	}
 
 	fn update_grandpa_client(_i: u32) -> Weight {
+		Weight::from_ref_time(0)
+	}
+
+	fn one_packet_cleanup() -> Weight {
 		Weight::from_ref_time(0)
 	}
 }

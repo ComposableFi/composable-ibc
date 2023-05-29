@@ -199,7 +199,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		)
 		.await
 		.expect("Failed to subscribe to grandpa justifications");
-	let mut subscription = subscription.take(100);
+	let mut subscription = subscription.take((2 * session_length).try_into().unwrap());
 
 	while let Some(Ok(JustificationNotification(sp_core::Bytes(_)))) = subscription.next().await {
 		let client_state: ClientState<HostFunctionsManager> =
@@ -261,6 +261,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		let header = Header {
 			finality_proof: proof.finality_proof,
 			parachain_headers: proof.parachain_headers.clone(),
+			height: Height::new(prover.para_id as u64, finalized_para_header.number as u64),
 		};
 		let msg = MsgUpdateAnyClient {
 			client_id: client_id.clone(),
@@ -285,7 +286,7 @@ async fn test_continuous_update_of_grandpa_client() {
 				match result {
 					Update(upd_res) => {
 						assert_eq!(upd_res.client_id, client_id);
-						assert!(!upd_res.client_state.is_frozen());
+						assert!(!upd_res.client_state.is_frozen(&ctx, &client_id));
 						assert_eq!(
 							upd_res.client_state,
 							ctx.latest_client_states(&client_id).clone()

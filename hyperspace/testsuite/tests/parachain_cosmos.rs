@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use core::time::Duration;
 use futures::StreamExt;
 use hyperspace_core::{
 	chain::{AnyAssetId, AnyChain, AnyConfig},
@@ -26,7 +27,10 @@ use hyperspace_testsuite::{
 	ibc_messaging_packet_timeout_on_channel_close,
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
+	setup_connection_and_channel,
 };
+use ibc::core::ics24_host::identifier::PortId;
+use sp_core::hashing::sha2_256;
 
 #[derive(Debug, Clone)]
 pub struct Args {
@@ -82,9 +86,10 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		finality_protocol: FinalityProtocol::Grandpa,
 		private_key: "//Alice".to_string(),
 		key_type: "sr25519".to_string(),
+		wasm_code_id: None,
 	};
 
-	let config_b = CosmosClientConfig {
+	let mut config_b = CosmosClientConfig {
 		name: "cosmos".to_string(),
 		rpc_url: args.chain_b.clone().parse().unwrap(),
 		grpc_url: args.cosmos_grpc.clone().parse().unwrap(),
@@ -98,22 +103,16 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		gas_limit: (i64::MAX - 1) as u64,
 		store_prefix: args.connection_prefix_b,
 		max_tx_size: 200000,
-		keybase: hyperspace_cosmos::client::KeyBaseConfig::ConfigKeyEntry (
-			ConfigKeyEntry {
-			public_key: "spub4W7TSjsuqcUE17mSB2ajhZsbwkefsHWKsXCbERimu3z2QLN9EFgqqpppiBn4tTNPFoNVTo1b3BgCZAaFJuUgTZeFhzJjUHkK8X7kSC5c7yn".to_string(),
-			private_key: "sprv8H873EM21Euvndgy513jLRvsPipBTpnUWJGzS3KALiT3XY2zgiNbJ2WLrvPzRhg7GuAoujHd5d6cpBe887vTbJghja8kmRdkHoNgamx6WWr".to_string(),
-			account: "cosmos1nnypkcfrvu3e9dhzeggpn4kh622l4cq7wwwrn0".to_string(),
-			address: vec![156, 200, 27, 97, 35, 103, 35, 146, 182, 226, 202, 16, 25, 214, 215, 210, 149, 250, 224, 30],
-		}),
+		mnemonic:
+			"oxygen fall sure lava energy veteran enroll frown question detail include maximum"
+				.to_string(),
 		wasm_code_id: None,
 		channel_whitelist: vec![],
 	};
-	// cfd2199578332b5fd859f3b76cb0b29757c6b52c5df79566cdc3598039dbe43e
 
-	let _chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.unwrap();
+	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.unwrap();
 
-	let _wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
-	/* TODO: uncomment when wasm crate is merged
+	let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
 	let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
 		Ok(code_id) => code_id,
 		Err(e) => {
@@ -126,7 +125,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	};
 	let code_id_str = hex::encode(code_id);
 	config_b.wasm_code_id = Some(code_id_str);
-	 */
+
 	let mut chain_a_wrapped = AnyConfig::Parachain(config_a).into_client().await.unwrap();
 	let mut chain_b_wrapped = AnyConfig::Cosmos(config_b).into_client().await.unwrap();
 
@@ -154,7 +153,6 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
 		chain_a_wrapped.set_client_id(clients_on_b[0].clone());
 		chain_b_wrapped.set_client_id(clients_on_a[0].clone());
-		// return (chain_b_wrapped, chain_a_wrapped)
 		return (chain_a_wrapped, chain_b_wrapped)
 	}
 
@@ -162,7 +160,6 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		create_clients(&mut chain_b_wrapped, &mut chain_a_wrapped).await.unwrap();
 	chain_a_wrapped.set_client_id(client_a);
 	chain_b_wrapped.set_client_id(client_b);
-	// (chain_b_wrapped, chain_a_wrapped)
 	(chain_a_wrapped, chain_b_wrapped)
 }
 
@@ -176,15 +173,28 @@ async fn parachain_to_cosmos_ibc_messaging_full_integration_test() {
 		"ibc/47B97D8FF01DA03FCB2F4B1FFEC931645F254E21EF465FA95CBA6888CB964DC4".to_string(),
 	);
 	let (mut chain_a, mut chain_b) = setup_clients().await;
+	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
+		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
+	handle.abort();
+
+	// Set connections and channel whitelist
+	chain_a.set_connection_id(connection_id_a);
+	chain_b.set_connection_id(connection_id_b);
+
+	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
+	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
 
 	// Run tests sequentially
 
 	// no timeouts + connection delay
+
 	ibc_messaging_with_connection_delay(
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_a.clone(),
 		asset_id_b.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 
@@ -193,18 +203,27 @@ async fn parachain_to_cosmos_ibc_messaging_full_integration_test() {
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_a.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_a.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 
 	// channel closing semantics
-	ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id_a.clone())
-		.await;
+	ibc_messaging_packet_timeout_on_channel_close(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		channel_a,
+	)
+	.await;
 	ibc_channel_close(&mut chain_a, &mut chain_b).await;
 
 	// TODO: tendermint misbehaviour?
@@ -219,6 +238,17 @@ async fn cosmos_to_parachain_ibc_messaging_full_integration_test() {
 	let (chain_a, chain_b) = setup_clients().await;
 	let (mut chain_b, mut chain_a) = (chain_a, chain_b);
 
+	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
+		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
+	handle.abort();
+
+	// Set connections and channel whitelist
+	chain_a.set_connection_id(connection_id_a);
+	chain_b.set_connection_id(connection_id_b);
+
+	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
+	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
+
 	let asset_id_a = AnyAssetId::Cosmos("stake".to_string());
 	let asset_id_b = AnyAssetId::Parachain(2);
 
@@ -230,6 +260,8 @@ async fn cosmos_to_parachain_ibc_messaging_full_integration_test() {
 		&mut chain_b,
 		asset_id_a.clone(),
 		asset_id_b.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 
@@ -238,12 +270,16 @@ async fn cosmos_to_parachain_ibc_messaging_full_integration_test() {
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_a.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_a.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 

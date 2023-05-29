@@ -14,7 +14,7 @@
 
 #[cfg(feature = "testing")]
 use crate::send_packet_relay::packet_relay_status;
-use crate::{packets::query_ready_and_timed_out_packets, Mode};
+use crate::Mode;
 use codec::Encode;
 use ibc::{
 	core::{
@@ -63,7 +63,7 @@ pub async fn parse_events(
 	sink: &mut impl Chain,
 	events: Vec<IbcEvent>,
 	mode: Option<Mode>,
-) -> Result<(Vec<Any>, Vec<Any>), anyhow::Error> {
+) -> Result<Vec<Any>, anyhow::Error> {
 	let mut messages = vec![];
 	// 1. translate events to messages
 	for event in events {
@@ -574,15 +574,10 @@ pub async fn parse_events(
 
 	// In light mode do not try to query channel state
 	if let Some(Mode::Light) = mode {
-		return Ok((messages, vec![]))
+		return Ok(messages)
 	}
 
-	// 2. query packets that can now be sent, at this sink height because of connection delay.
-	let (ready_packets, timed_out_packets) =
-		query_ready_and_timed_out_packets(source, sink).await?;
-	messages.extend(ready_packets);
-
-	Ok((messages, timed_out_packets))
+	Ok(messages)
 }
 
 /// Fetch the consensus state proof for the sink chain.
@@ -592,7 +587,7 @@ async fn query_host_consensus_state_proof(
 ) -> Result<Vec<u8>, anyhow::Error> {
 	let client_type = sink.client_type();
 	let host_consensus_state_proof = if !client_type.contains("tendermint") {
-		sink.query_host_consensus_state_proof(client_state.latest_height())
+		sink.query_host_consensus_state_proof(&client_state)
 			.await?
 			.expect("Host chain requires consensus state proof; qed")
 	} else {
