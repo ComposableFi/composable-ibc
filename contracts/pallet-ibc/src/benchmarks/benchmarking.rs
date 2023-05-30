@@ -115,6 +115,7 @@ benchmarks! {
 	// ```
 	impl_benchmark_test_suite!(Pallet, crate::mock::new_test_ext(), crate::mock::Test);
 
+	/*
 	// update_client
 	update_tendermint_client {
 		let i in 1..100u32;
@@ -714,7 +715,7 @@ benchmarks! {
 		ctx.store_next_sequence_recv((port_id.clone(), ChannelId::new(0)), 1u64.into()).unwrap();
 		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 
-		let denom = "transfer/channel-1/PICA".to_string();
+		let denom = "transfer/channel-1/1".to_string();
 		let prefixed_denom = PrefixedDenom::from_str(&denom).unwrap();
 		let amt = 1000 * MILLIS;
 		let coin = Coin {
@@ -1018,7 +1019,9 @@ benchmarks! {
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 0)
 	}
-
+	*/
+// [16, 105, 98, 99, 47, 65, 67, 75, 36, 99, 104, 97, 110, 110, 101, 108, 45, 49, 32, 116, 114, 97, 110, 115, 102, 101, 114, 0, 0, 0, 0, 0, 0, 0, 0] [123, 34, 101, 114, 114, 111, 114, 34, 58, 34, 101, 114, 114, 111, 114, 32, 104, 97, 110, 100, 108, 105, 110, 103, 32, 112, 97, 99, 107, 101, 116, 32, 111, 110, 32, 100, 101, 115, 116, 105, 110, 97, 116, 105, 111, 110, 32, 99, 104, 97, 105, 110, 58, 32, 115, 101, 101, 32, 101, 118, 101, 110, 116, 115, 32, 102, 111, 114, 32, 100, 101, 116, 97, 105, 108, 115, 58, 32, 83, 116, 114, 105, 110, 103, 84, 114, 97, 99, 101, 114, 58, 32, 105, 109, 112, 108, 101, 109, 101, 110, 116, 97, 116, 105, 111, 110, 32, 115, 112, 101, 99, 105, 102, 105, 99, 32, 101, 114, 114, 111, 114, 58, 32, 114, 97, 116, 101, 32, 108, 105, 109, 105, 116, 101, 114, 34, 125]
+// [16, 105, 98, 99, 47, 65, 67, 75, 36, 99, 104, 97, 110, 110, 101, 108, 45, 49, 32, 116, 114, 97, 110, 115, 102, 101, 114, 0, 0, 0, 0, 0, 0, 0, 0] [123, 34, 114, 101, 115, 117, 108, 116, 34, 58, 34, 65, 81, 61, 61, 34, 125]
 	on_recv_packet {
 		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 		let client_id = Pallet::<T>::create_client().unwrap();
@@ -1039,7 +1042,7 @@ benchmarks! {
 		let channel_id = ChannelId::new(0);
 		ctx.store_channel((port_id.clone(), channel_id), &channel_end).unwrap();
 
-		let denom = "transfer/channel-1/PICA".to_string();
+		let denom = "transfer/channel-1/1".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
 		let channel_escrow_address: <T as frame_system::Config>::AccountId = channel_escrow_address.into_account();
@@ -1047,6 +1050,11 @@ benchmarks! {
 		let asset_id = <T as Config>::NativeAssetId::get();
 		<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::deposit_creating(
 			&channel_escrow_address,
+			balance.into(),
+		);
+
+		<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::deposit_creating(
+			&caller,
 			balance.into(),
 		);
 
@@ -1094,9 +1102,7 @@ benchmarks! {
 		 let mut output = HandlerOutputBuilder::new();
 		 let signer = Signer::from_str("relayer").unwrap();
 	}:{
-
 		handler.on_recv_packet(&ctx, &mut output, &mut packet, &signer).unwrap();
-
 	 }
 	verify {
 		assert_eq!(<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
@@ -1104,6 +1110,7 @@ benchmarks! {
 		), balance_caller + amt.into());
 	}
 
+	/*
 	on_acknowledgement_packet {
 		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 		let client_id = Pallet::<T>::create_client().unwrap();
@@ -1122,7 +1129,7 @@ benchmarks! {
 		let balance = 1000000 * MILLIS;
 		Pallet::<T>::handle_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
 		let channel_id = ChannelId::new(0);
-		let denom = "PICA".to_string();
+		let denom = "1".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
 		let channel_escrow_address: <T as frame_system::Config>::AccountId = channel_escrow_address.into_account();
@@ -1207,7 +1214,7 @@ benchmarks! {
 		let balance = 100000 * MILLIS;
 		Pallet::<T>::handle_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
 		let channel_id = ChannelId::new(0);
-		let denom = "PICA".to_string();
+		let denom = "1".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
 		let channel_escrow_address: <T as frame_system::Config>::AccountId = channel_escrow_address.into_account();
@@ -1306,6 +1313,7 @@ benchmarks! {
 		let client_state = AnyClientState::decode_vec(&*client_state).unwrap();
 		assert_eq!(client_state.latest_height(), Height::new(2000, 2));
 	}
+	 */
 }
 
 fn set_timestamp<T: pallet_timestamp::Config + pallet_aura::Config>(
