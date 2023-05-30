@@ -1233,11 +1233,11 @@ fn set_timestamp<T: pallet_timestamp::Config + pallet_aura::Config>(time: T::Mom
 	use sp_consensus_slots::Slot;
 	use sp_runtime::SaturatedConversion;
 
-	pallet_timestamp::Pallet::<T>::set_timestamp(time);
 	let slot_duration = pallet_aura::Pallet::<T>::slot_duration();
 	let timestamp_slot = time / slot_duration;
 	let timestamp_slot = Slot::from(timestamp_slot.saturated_into::<u64>());
 	let log = <DigestItem as CompatibleDigestItem<()>>::aura_pre_digest(timestamp_slot);
 	<frame_system::Pallet<T>>::deposit_log(log);
 	pallet_aura::Pallet::<T>::on_initialize(T::BlockNumber::zero()); // block number doesn't matter
+	pallet_timestamp::Pallet::<T>::set_timestamp(time);
 }
