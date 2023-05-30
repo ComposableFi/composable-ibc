@@ -7463,6 +7463,7 @@ dependencies = [
  "pallet-aura",
  "pallet-balances",
  "pallet-ibc-ping",
+ "pallet-membership",
  "pallet-timestamp",
  "parachain-info",
  "parity-scale-codec",
