@@ -28,7 +28,7 @@ use ibc_proto::{
 	},
 };
 use rand::Rng;
-use std::{fmt::Debug, pin::Pin, str::FromStr, time::Duration};
+use std::{collections::HashSet, fmt::Debug, pin::Pin, str::FromStr, time::Duration};
 use tokio::{task::JoinSet, time::sleep};
 
 use crate::error::Error;
@@ -240,7 +240,7 @@ pub trait IbcProvider {
 	) -> Result<Vec<u64>, Self::Error>;
 
 	/// Channel whitelist
-	fn channel_whitelist(&self) -> Vec<(ChannelId, PortId)>;
+	fn channel_whitelist(&self) -> HashSet<(ChannelId, PortId)>;
 
 	/// Query all channels for a connection
 	async fn query_connection_channels(
@@ -305,7 +305,7 @@ pub trait IbcProvider {
 	fn connection_id(&self) -> Option<ConnectionId>;
 
 	/// Set the channel whitelist for the relayer task.
-	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>);
+	fn set_channel_whitelist(&mut self, channel_whitelist: HashSet<(ChannelId, PortId)>);
 
 	/// Set the channel whitelist for the relayer task.
 	fn add_channel_to_whitelist(&mut self, channel: (ChannelId, PortId));
@@ -552,7 +552,7 @@ pub async fn query_undelivered_acks(
 		.await?;
 	log::trace!(
 		target: "hyperspace",
-		"Found {} undelivered packet acks from {} chain",
+		"Found {} undelivered packet acks for {} chain",
 		undelivered_acks.len(), sink.name()
 	);
 

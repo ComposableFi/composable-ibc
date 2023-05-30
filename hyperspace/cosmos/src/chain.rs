@@ -65,13 +65,7 @@ where
 		let (_, tx_raw, _) =
 			sign_tx(self.keybase.clone(), self.chain_id.clone(), &account_info, vec![], fee)?;
 
-		let total_len = tx_raw.encoded_len();
 		let body_bytes_len = tx_raw.body_bytes.len();
-		let envelope_len = if body_bytes_len == 0 {
-			total_len
-		} else {
-			total_len - 1 - prost::length_delimiter_len(body_bytes_len) - body_bytes_len
-		};
 		// Full length of the transaction can then be derived from the length of the invariable
 		// envelope and the length of the body field, taking into account the varint encoding
 		// of the body field's length delimiter.
@@ -81,7 +75,6 @@ where
 			envelope_len + 1 + prost::length_delimiter_len(body_len) + body_len
 		}
 
-		let mut current_count = 0;
 		let mut current_len = body_bytes_len;
 
 		for message in messages {
@@ -90,12 +83,6 @@ where
 			// The total length the message adds to the encoding includes the
 			// field tag (small varint) and the length delimiter.
 			let tagged_len = 1 + prost::length_delimiter_len(message_len) + message_len;
-			if current_count >= 30 ||
-				tx_len(envelope_len, current_len + tagged_len) > self.max_tx_size
-			{
-				return Err(Error::Custom("Too many messages".to_string()))
-			}
-			current_count += 1;
 			current_len += tagged_len;
 		}
 		Ok(current_len as u64)

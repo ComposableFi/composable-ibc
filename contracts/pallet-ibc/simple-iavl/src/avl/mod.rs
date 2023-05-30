@@ -4,7 +4,7 @@
 //! `insert` instructions (no delete yet, it's not needed as the on-chain store is supposed to be
 //! immutable).
 //!
-//! Proof of existence are supported using [ICS23](https://github.com/confio/ics23), but proof of
+//! Proof of existence are supported using [ICS23](https://github.com/cosmos/ics23), but proof of
 //! non-existence are not yet implemented.
 //!
 //! Keys needs to implement `Ord` and `AsBytes` (see `as_bytes` module), while values are required

@@ -208,10 +208,10 @@ impl Cmd {
 				.unwrap();
 		});
 
-		let (connection_id_b, connection_id_a) =
+		let (connection_id_a, connection_id_b) =
 			create_connection(&mut chain_a, &mut chain_b, delay).await?;
-		log::info!("ConnectionId on Chain {}: {}", chain_b.name(), connection_id_b);
 		log::info!("ConnectionId on Chain {}: {}", chain_a.name(), connection_id_a);
+		log::info!("ConnectionId on Chain {}: {}", chain_b.name(), connection_id_b);
 		handle.abort();
 
 		config.chain_a.set_connection_id(connection_id_a);
