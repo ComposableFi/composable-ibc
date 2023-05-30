@@ -10,14 +10,16 @@ use crate::{
 	ics20::IbcModule,
 	ics23::client_states::ClientStates,
 	light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState},
+	routing::Context,
 	Any, Config,
 };
-
-use crate::routing::Context;
 use codec::EncodeLike;
 use core::str::FromStr;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
-use frame_support::traits::fungibles::{Inspect, Mutate};
+use frame_support::traits::{
+	fungibles::{metadata::Mutate as MetadataMutate, Create, Inspect, Mutate},
+	Currency,
+};
 use frame_system::RawOrigin;
 use ibc::{
 	applications::transfer::{
@@ -94,9 +96,16 @@ benchmarks! {
 	where_clause {
 		where u32: From<<T as frame_system::Config>::BlockNumber>,
 				<T as frame_system::Config>::BlockNumber: From<u32>,
-				T: Send + Sync + pallet_timestamp::Config<Moment = u64> + parachain_info::Config + Config + pallet_aura::Config + pallet_membership::Config<Instance2>,
+				T: Send + Sync +
+					pallet_timestamp::Config<Moment = u64> +
+					parachain_info::Config +
+					Config +
+					pallet_aura::Config +
+					balances::Config +
+					pallet_membership::Config<Instance2>,
 		AccountId32: From<<T as frame_system::Config>::AccountId>,
-		T::AssetId: From<u128>,
+		<T as Config>::AssetId: From<u128>,
+		// <T as pallet_assets::Config>::AssetIdParameter: From<<T as Config>::AssetId>,
 		<T as frame_system::pallet::Config>::AccountId: EncodeLike
 	}
 
@@ -877,6 +886,7 @@ benchmarks! {
 
 
 	transfer {
+		// let _ = env_logger::try_init();
 		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 		let client_id = Pallet::<T>::create_client().unwrap();
 		let connection_id = ConnectionId::new(0);
@@ -891,16 +901,20 @@ benchmarks! {
 			Version::new(VERSION.to_string()),
 		);
 
-		let balance = 100000 * MILLIS;
+		let balance = 1000000 * MILLIS;
 		Pallet::<T>::handle_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
 		let channel_id = ChannelId::new(0);
-		let denom = "transfer/channel-15/PICA".to_string();
-		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
-			asset_id,
+
+		let asset_id = <T as Config>::NativeAssetId::get();
+
+		<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::deposit_creating(
 			&caller,
 			balance.into(),
-		).unwrap();
+		);
+
+		let balance_caller = <<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
+			&caller
+		);
 
 		let timeout = Timeout::Offset { timestamp: Some(1690894363), height: Some(2000) };
 
@@ -910,14 +924,14 @@ benchmarks! {
 			timeout,
 		};
 
-		let amt = 1000 * MILLIS;
+		let amt = 10000 * MILLIS;
 
 	}:_(RawOrigin::Signed(caller.clone()), transfer_params, asset_id.into(), amt.into(), None)
 	verify {
-		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
-			asset_id.into(),
+		assert_eq!(<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
+			// asset_id.into(),
 			&caller
-		), (balance - amt).into());
+		), (balance_caller - amt.into()).into());
 	}
 
 	on_chan_open_init {
@@ -1029,12 +1043,23 @@ benchmarks! {
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
 		let channel_escrow_address: <T as frame_system::Config>::AccountId = channel_escrow_address.into_account();
-		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
-			asset_id,
+
+		let asset_id = <T as Config>::NativeAssetId::get();
+		<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::deposit_creating(
 			&channel_escrow_address,
 			balance.into(),
-		).unwrap();
+		);
+
+		let balance_caller = <<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
+			&caller
+		);
+
+		// let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
+		// <<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
+		// 	asset_id,
+		// 	&channel_escrow_address,
+		// 	balance.into(),
+		// ).unwrap();
 
 		let raw_user: AccountId32 =  caller.clone().into();
 		let raw_user: &[u8] = raw_user.as_ref();
@@ -1074,10 +1099,9 @@ benchmarks! {
 
 	 }
 	verify {
-		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
-			asset_id,
+		assert_eq!(<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
 			&caller
-		), amt.into());
+		), balance_caller + amt.into());
 	}
 
 	on_acknowledgement_packet {
@@ -1095,27 +1119,38 @@ benchmarks! {
 			Version::new(VERSION.to_string()),
 		);
 
-
-		let balance = 100000 * MILLIS;
+		let balance = 1000000 * MILLIS;
 		Pallet::<T>::handle_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
 		let channel_id = ChannelId::new(0);
 		let denom = "PICA".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
 		let channel_escrow_address: <T as frame_system::Config>::AccountId = channel_escrow_address.into_account();
-		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
-			asset_id,
+
+		let asset_id = <T as Config>::NativeAssetId::get();
+
+		<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::deposit_creating(
 			&channel_escrow_address,
 			balance.into(),
-		).unwrap();
+		);
+
+		let balance_caller = <<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
+			&caller
+		);
+
+		// let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
+		// <<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
+		// 	asset_id,
+		// 	&channel_escrow_address,
+		// 	balance.into(),
+		// ).unwrap();
 
 		let raw_user: AccountId32 =  caller.clone().into();
 		let raw_user: &[u8] = raw_user.as_ref();
 		let mut hex_string = hex::encode_upper(raw_user.to_vec());
 		hex_string.insert_str(0, "0x");
 		let prefixed_denom = PrefixedDenom::from_str(&denom).unwrap();
-		let amt = 1000 * MILLIS;
+		let amt = 10000 * MILLIS;
 		let coin = Coin {
 			denom: prefixed_denom,
 			amount: Amount::from_str(&format!("{:?}", amt)).unwrap()
@@ -1145,13 +1180,12 @@ benchmarks! {
 		 let ack: Acknowledgement = TransferAck::Error(ACK_ERR_STR.to_string()).to_string().into_bytes().into();
 	}:{
 		let ctx = routing::Context::<T>::new();
-	   handler.on_acknowledgement_packet(&ctx, &mut output, &mut packet, &ack, &signer).unwrap();
+		handler.on_acknowledgement_packet(&ctx, &mut output, &mut packet, &ack, &signer).unwrap();
 	}
 	verify {
-		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
-			asset_id,
+		assert_eq!(<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
 			&caller
-		), amt.into());
+		), balance_caller + amt.into());
 	}
 
 	on_timeout_packet {
@@ -1177,12 +1211,23 @@ benchmarks! {
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
 		let channel_escrow_address: <T as frame_system::Config>::AccountId = channel_escrow_address.into_account();
-		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
-			asset_id,
+		let asset_id = <T as Config>::NativeAssetId::get();
+
+		<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::deposit_creating(
 			&channel_escrow_address,
 			balance.into(),
-		).unwrap();
+		);
+
+		let balance_caller = <<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
+			&caller
+		);
+
+		// let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
+		// <<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
+		// 	asset_id,
+		// 	&channel_escrow_address,
+		// 	balance.into(),
+		// ).unwrap();
 
 		let raw_user: AccountId32 =  caller.clone().into();
 		let raw_user: &[u8] = raw_user.as_ref();
@@ -1221,22 +1266,22 @@ benchmarks! {
 		handler.on_timeout_packet(&ctx, &mut output, &mut packet, &signer).unwrap();
 	}
 	verify {
-		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
-			asset_id,
+		assert_eq!(<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
 			&caller
-		), amt.into());
+		), balance_caller + amt.into());
 	}
 
 	// update_grandpa_client
 	update_grandpa_client {
 		let i in 1..100u32;
+		let j in 1..100u32;
 		let mut ctx = routing::Context::<T>::new();
 		// Set timestamp to the same timestamp used in generating tendermint header, because there
 		// will be a comparison between the local timestamp and the timestamp existing in the header
 		// after factoring in the trusting period for the light client.
 		let now: <T as pallet_timestamp::Config>::Moment = GRANDPA_UPDATE_TIMESTAMP.saturating_mul(1000);
 		set_timestamp::<T>(now);
-		let (mock_client_state, mock_cs_state, client_message) = generate_finality_proof(i);
+		let (mock_client_state, mock_cs_state, client_message) = generate_finality_proof(i, j);
 		let mock_client_state = AnyClientState::Grandpa(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Grandpa(mock_cs_state);
 		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();

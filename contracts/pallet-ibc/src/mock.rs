@@ -316,9 +316,12 @@ where
 	T::AssetId: From<u128>,
 {
 	type Error = ();
-	fn from_denom_to_asset_id(_denom: &String) -> Result<T::AssetId, Self::Error> {
+	fn from_denom_to_asset_id(denom: &String) -> Result<T::AssetId, Self::Error> {
 		let mut id = 2u128;
-		if _denom.contains("FLATFEE") {
+		if denom == "PICA" {
+			id = 1;
+		}
+		if denom.contains("FLATFEE") {
 			id = 3;
 		}
 		if <<Test as Config>::Fungibles as InspectMetadata<AccountId>>::decimals(&id) == 0 {
@@ -342,7 +345,13 @@ where
 		Ok(id.into())
 	}
 
-	fn from_asset_id_to_denom(_id: T::AssetId) -> Option<String> {
+	fn from_asset_id_to_denom(id: T::AssetId) -> Option<String> {
+		if id == 1u128.into() {
+			return Some("PICA".to_string())
+		}
+		if id == 3u128.into() {
+			return Some("PICAFLATFEE".to_string())
+		}
 		Some("PICA".to_string())
 	}
 
