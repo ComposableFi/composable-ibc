@@ -514,6 +514,12 @@ pub fn get_channel_escrow_address(
 #[derive(Clone)]
 pub struct IbcAccount<AccountId>(pub AccountId);
 
+impl<AccountId: AsRef<[u8]>> AsRef<[u8]> for IbcAccount<AccountId> {
+	fn as_ref(&self) -> &[u8] {
+		self.0.as_ref()
+	}
+}
+
 impl<AccountId> IdentifyAccount for IbcAccount<AccountId> {
 	type AccountId = AccountId;
 	fn into_account(self) -> Self::AccountId {
@@ -529,7 +535,7 @@ where
 
 	/// Convert a signer to an IBC account.
 	fn try_from(signer: ibc::signer::Signer) -> Result<Self, Self::Error> {
-		let acc_str = signer.as_ref();
+		let acc_str: &str = signer.as_ref();
 		if acc_str.starts_with("0x") {
 			match acc_str.strip_prefix("0x") {
 				Some(hex_string) => TryInto::<[u8; 32]>::try_into(

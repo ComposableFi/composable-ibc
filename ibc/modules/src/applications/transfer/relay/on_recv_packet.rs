@@ -52,6 +52,7 @@ pub fn process_recv_packet<Ctx: 'static + Ics20Context>(
 
 		let escrow_address =
 			ctx.get_channel_escrow_address(&packet.destination_port, packet.destination_channel)?;
+		log::trace!(target:"pallet_ibc", "escrow_address={:?}, coin={:?}", escrow_address.as_ref(), coin);
 
 		ctx.send_coins(&escrow_address, &receiver_account, &coin)
 	} else {

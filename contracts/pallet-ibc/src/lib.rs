@@ -140,6 +140,7 @@ use crate::{
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use core::fmt::Display;
 
 	use core::time::Duration;
 
@@ -198,7 +199,7 @@ pub mod pallet {
 		/// Runtime balance type
 		type Balance: Balance + From<u128>;
 		/// AssetId type
-		type AssetId: AssetId + MaybeSerializeDeserialize;
+		type AssetId: AssetId + MaybeSerializeDeserialize + Display;
 		/// The native asset id, this will use the `NativeCurrency` for all operations.
 		#[pallet::constant]
 		type NativeAssetId: Get<Self::AssetId>;
@@ -215,7 +216,8 @@ pub mod pallet {
 		/// Account Id Conversion from SS58 string or hex string
 		type AccountIdConversion: TryFrom<Signer>
 			+ IdentifyAccount<AccountId = <Self as frame_system::Config>::AccountId>
-			+ Clone;
+			+ Clone
+			+ AsRef<[u8]>;
 		/// Set of traits needed to handle fungible assets
 		type Fungibles: Transfer<
 				<Self as frame_system::Config>::AccountId,
