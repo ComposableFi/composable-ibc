@@ -517,21 +517,12 @@ impl IbcProvider for Client {
 		todo!()
 	}
 
-	fn query_send_packets<'life0, 'async_trait>(
-		&'life0 self,
+	async fn query_send_packets(
+		&self,
 		channel_id: ChannelId,
 		port_id: PortId,
 		seqs: Vec<u64>,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<Vec<ibc_rpc::PacketInfo>, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
+	) -> Result<Vec<ibc_rpc::PacketInfo>, Self::Error>
 	{
 		todo!()
 	}

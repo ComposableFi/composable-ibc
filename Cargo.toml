@@ -2,49 +2,49 @@
 resolver = "2"
 members = [
     # core ibc implementation
-    "ibc/derive",
-    "ibc/modules",
-    "ibc/proto",
-    "ibc/proto-compiler",
+    # "ibc/derive",
+    # "ibc/modules",
+    # "ibc/proto",
+    # "ibc/proto-compiler",
 
     # ibc contracts for different blockchain runtimes
-    "contracts/pallet-ibc/ping",
-    "contracts/pallet-ibc/primitives",
-    "contracts/pallet-ibc/rpc",
-    "contracts/pallet-ibc/runtime-api",
-    "contracts/pallet-ibc",
-    "contracts/pallet-ibc/simple-iavl",
+    # "contracts/pallet-ibc/ping",
+    # "contracts/pallet-ibc/primitives",
+    # "contracts/pallet-ibc/rpc",
+    # "contracts/pallet-ibc/runtime-api",
+    # "contracts/pallet-ibc",
+    # "contracts/pallet-ibc/simple-iavl",
 
     # algorithms
-    "algorithms/beefy/verifier",
-    "algorithms/beefy/prover",
-    "algorithms/beefy/primitives",
-    "algorithms/grandpa/verifier",
-    "algorithms/grandpa/prover",
-    "algorithms/grandpa/primitives",
+    # "algorithms/beefy/verifier",
+    # "algorithms/beefy/prover",
+    # "algorithms/beefy/primitives",
+    # "algorithms/grandpa/verifier",
+    # "algorithms/grandpa/prover",
+    # "algorithms/grandpa/primitives",
 
     # ibc light clients
-    "light-clients/common",
-    "light-clients/ics07-tendermint",
-    "light-clients/ics10-grandpa",
-    "light-clients/ics11-beefy",
-    "light-clients/ics13-near",
+    # "light-clients/common",
+    # "light-clients/ics07-tendermint",
+    # "light-clients/ics10-grandpa",
+    # "light-clients/ics11-beefy",
+    # "light-clients/ics13-near",
 
     # hyperspace
     "hyperspace",
     "hyperspace/core",
     "hyperspace/primitives",
-    "hyperspace/parachain",
-    "hyperspace/cosmos",
-    "hyperspace/testsuite",
-    "hyperspace/metrics",
+    # "hyperspace/parachain",
+    # "hyperspace/cosmos",
+    # "hyperspace/testsuite",
+    # "hyperspace/metrics",
     "hyperspace/ethereum",
 
     # utilities
-    "utils/subxt/codegen",
-    "utils/subxt/generated",
-    "utils/parachain-node",
-    "utils/parachain-node/runtime",
+    # "utils/subxt/codegen",
+    # "utils/subxt/generated",
+    # "utils/parachain-node",
+    # "utils/parachain-node/runtime",
     #     "utils/simnode"
 ]
 
