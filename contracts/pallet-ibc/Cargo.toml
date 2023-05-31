@@ -61,6 +61,7 @@ simple-iavl = { path = "simple-iavl", default-features = false, optional = true 
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
 finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-features = false, optional = true }
 serde = { version = "1.0", default-features = false }
+env_logger = "0.10.0"
 
 [dependencies.ibc]
 path = "../../ibc/modules"
@@ -102,6 +103,7 @@ balances = { package = "pallet-balances", git = "https://github.com/paritytech/s
 pallet-assets = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 pallet-ibc-ping = { path = "ping", default-features = false }
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
+env_logger = "0.10.0"
 
 [dev-dependencies.ibc]
 path = "../../ibc/modules"
@@ -124,6 +126,7 @@ std = [
   "sp-std/std",
   "sp-io/std",
   "sp-trie/std",
+  "balances/std",
   "cumulus-primitives-core/std",
   "pallet-assets/std",
   "ibc/std",
