@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use ethers::types::Address;
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 
@@ -34,16 +35,50 @@ where
 	ser.serialize_str(&format!("{uri}"))
 }
 
+fn address_de<'de, D>(de: D) -> Result<Address, D::Error> where D: Deserializer<'de> {
+	struct FromStr;
+
+	impl Visitor<'_> for FromStr {
+		type Value = Address;
+
+		fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+			write!(formatter, "a string that can parse into an address")
+		}
+
+		fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+		where
+			E: serde::de::Error,
+		{
+			Address::from_str(&v).map_err(serde::de::Error::custom)
+		}
+	}
+
+	de.deserialize_str(FromStr)
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Config {
 	/// HTTP URL for RPC
 	#[serde(deserialize_with = "uri_de", serialize_with = "uri_se")]
-	pub rpc_url: http::uri::Uri,
+	pub http_rpc_url: http::uri::Uri,
 	/// Websocket URL for RPC
 	#[serde(deserialize_with = "uri_de", serialize_with = "uri_se")]
-	pub ws_url: http::uri::Uri,
-	/// address of the contract
-	pub address: String,
+	pub ws_rpc_url: http::uri::Uri,
+	/// address of the OwnableIBCHandler contract.
+	#[serde(deserialize_with = "address_de")]
+	pub ibc_handler_address: Address,
+	/// address of the IBCPacket contract.
+	#[serde(deserialize_with = "address_de")]
+	pub ibc_packet_address: Address,
+	/// address of the IBCClient contract.
+	#[serde(deserialize_with = "address_de")]
+	pub ibc_client_address: Address,
+	/// address of the IBCConnection contract.
+	#[serde(deserialize_with = "address_de")]
+	pub ibc_connection_address: Address,
+	/// address of the IBCChannelHandshake contract.
+	#[serde(deserialize_with = "address_de")]
+	pub ibc_channel_handshake_address: Address,
 	/// mnemonic for the wallet
 	pub mnemonic: String,
 	/// Name of the chain

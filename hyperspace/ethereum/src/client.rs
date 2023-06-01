@@ -51,8 +51,8 @@ impl From<String> for ClientError {
 
 impl Client {
 	pub async fn new(config: Config) -> Result<Self, ClientError> {
-		let client = Provider::<Http>::try_from(config.rpc_url.to_string())
-			.map_err(|_| ClientError::UriParseError(config.rpc_url.clone()))?;
+		let client = Provider::<Http>::try_from(config.http_rpc_url.to_string())
+			.map_err(|_| ClientError::UriParseError(config.http_rpc_url.clone()))?;
 
 		let chain_id = client.get_chainid().await.unwrap();
 
@@ -64,7 +64,7 @@ impl Client {
 
 		let client = ethers::middleware::SignerMiddleware::new(client, wallet);
 
-		Ok(Self { http_rpc: Arc::new(client), ws_uri: config.ws_url.clone(), config })
+		Ok(Self { http_rpc: Arc::new(client), ws_uri: config.ws_rpc_url.clone(), config })
 	}
 
 	/// produce a stream of events emitted from the contract address for the given block range
@@ -74,8 +74,7 @@ impl Client {
 		from: BlockNumber,
 		to: BlockNumber,
 	) -> impl Stream<Item = Log> {
-		let address: H160 = self.config.address.clone().parse().unwrap();
-		let filter = Filter::new().from_block(from).to_block(to).address(address).event(event_name);
+		let filter = Filter::new().from_block(from).to_block(to).address(self.config.ibc_handler_address).event(event_name);
 		let client = self.http_rpc.clone();
 
 		async_stream::stream! {
@@ -103,7 +102,7 @@ impl Client {
 		let index = cast::SimpleCast::index("bytes32", &var_name, &var_name).unwrap();
 
 		let client = self.http_rpc.clone();
-		let address = self.config.address.clone().parse().unwrap();
+		let address = self.config.ibc_handler_address.clone();
 
 		async move {
 			client
@@ -143,7 +142,7 @@ impl Client {
 		let index = cast::SimpleCast::index("bytes32", &key2_hashed_hex, &key2_hashed_hex).unwrap();
 
 		let client = self.http_rpc.clone();
-		let address = self.config.address.clone().parse().unwrap();
+		let address = self.config.ibc_handler_address.clone();
 
 		async move {
 			client
@@ -169,7 +168,7 @@ impl Client {
 		);
 
 		let contract = crate::contract::light_client_contract(
-			self.config.address.clone().parse().unwrap(),
+			self.config.ibc_handler_address.clone(),
 			Arc::clone(&self.http_rpc),
 		);
 
@@ -204,7 +203,7 @@ impl Client {
 		sequence: u64,
 	) -> impl Future<Output = Result<bool, ClientError>> {
 		let client = self.http_rpc.clone();
-		let address = self.config.address.clone().parse().unwrap();
+		let address = self.config.ibc_handler_address.clone();
 
 		let contract = crate::contract::contract(address, Arc::clone(&client));
 

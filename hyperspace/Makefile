@@ -47,6 +47,10 @@ tests-hyperspace:
 # use the scripts in ../scripts/yui to clone and generate storage-layout, contract-abi, and light-client abi
 # json files to live in ethereum/src/
 generate-ethereum-json:
-	../scripts/yui/yui-abi.sh > ./ethereum/src/contract-abi.json
+	../scripts/yui/yui-abi.sh OwnableIBCHandler > ./ethereum/src/abi/ibc-handler-abi.json
+	../scripts/yui/yui-abi.sh IBCPacket > ./ethereum/src/abi/ibc-packet-abi.json
+	../scripts/yui/yui-abi.sh IBCClient > ./ethereum/src/abi/ibc-client-abi.json
+	../scripts/yui/yui-abi.sh IBCConnection > ./ethereum/src/abi/ibc-connection-abi.json
+	../scripts/yui/yui-abi.sh IBCChannelHandshake > ./ethereum/src/abi/ibc-channel-handshake-abi.json
+	../scripts/yui/yui-abi.sh ILightClient > ./ethereum/src/abi/light-client-abi.json
 	../scripts/yui/yui-storage.sh > ./ethereum/src/contract-storage-layout.json
-	../scripts/yui/yui-light-client-abi.sh > ./ethereum/src/light-client-abi.json

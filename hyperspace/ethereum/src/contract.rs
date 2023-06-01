@@ -6,7 +6,7 @@ use std::sync::Arc;
 		providers::Middleware,
 	};
 
-	pub const ABI_JSON: &str = include_str!("./contract-abi.json");
+	pub const IBC_HANDLER_ABI: &str = include_str!("./abi/ibc-handler-abi.json");
 
 	/// Create a new contract instance from the given address and ABI.
 	#[track_caller]
@@ -14,7 +14,7 @@ use std::sync::Arc;
 	where
 		M: Middleware,
 	{
-		let abi: Abi = serde_json::from_str(ABI_JSON).unwrap();
+		let abi: Abi = serde_json::from_str(IBC_HANDLER_ABI).unwrap();
 		Contract::new(address, abi, client)
 	}
 
@@ -121,7 +121,7 @@ use std::sync::Arc;
 		}
 	}
 
-	pub const LIGHT_CLIENT_ABI_JSON: &str = include_str!("./light-client-abi.json");
+	pub const LIGHT_CLIENT_ABI_JSON: &str = include_str!("./abi/light-client-abi.json");
 
 	/// Create a new contract instance from the given address and ABI.
 	#[track_caller]
