@@ -186,7 +186,7 @@ pub async fn create_channel(
 
 	let mut events = timeout_future(
 		future,
-		15 * 60,
+		30 * 60,
 		format!("Didn't see OpenConfirmChannel on {}", chain_b.name()),
 	)
 	.await;
