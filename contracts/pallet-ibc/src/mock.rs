@@ -74,25 +74,17 @@ impl pallet_membership::Config<Instance2> for Test {
 	type WeightInfo = ();
 }
 
-// Configure a mock runtime to test the pallet.
-frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Timestamp: pallet_timestamp,
-		ParachainInfo: parachain_info,
-		Tokens: orml_tokens,
-		Assets: pallet_assets,
-		IbcPing: pallet_ibc_ping,
-		Ics20Fee: crate::ics20_fee,
-		Ibc: pallet_ibc,
-		Aura: pallet_aura,
-		Membership: pallet_membership::<Instance2>,
-	}
-);
+impl balances::Config for Test {
+	type Balance = Balance;
+	type DustRemoval = ();
+	type RuntimeEvent = RuntimeEvent;
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type WeightInfo = ();
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = [u8; 8];
+}
 
 parameter_types! {
 	pub const BlockHashCount: u32 = 250;
@@ -120,7 +112,7 @@ impl system::Config for Test {
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = orml_tokens::AccountData<Balance>;
+	type AccountData = balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
@@ -318,7 +310,7 @@ where
 	type Error = ();
 	fn from_denom_to_asset_id(denom: &String) -> Result<T::AssetId, Self::Error> {
 		let mut id = 2u128;
-		if denom == "PICA" {
+		if denom == "PICA" || denom == "1" {
 			id = 1;
 		}
 		if denom.contains("FLATFEE") {
@@ -407,3 +399,24 @@ impl ModuleRouter for Router {
 		}
 	}
 }
+
+// Configure a mock runtime to test the pallet.
+frame_support::construct_runtime!(
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Timestamp: pallet_timestamp,
+		ParachainInfo: parachain_info,
+		Tokens: orml_tokens,
+		Assets: pallet_assets,
+		PalletBalances: balances,
+		IbcPing: pallet_ibc_ping,
+		Ics20Fee: crate::ics20_fee,
+		Ibc: pallet_ibc,
+		Aura: pallet_aura,
+		Membership: pallet_membership::<Instance2>,
+	}
+);

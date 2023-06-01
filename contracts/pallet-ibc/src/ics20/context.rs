@@ -83,10 +83,8 @@ where
 		// Token should be registered already if sending an ibc asset
 		let asset_id = T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
 			.map_err(|_| Ics20Error::invalid_token())?;
-		log::debug!(target: "pallet_ibc", "asset_id = {:?}, denom = {denom}", asset_id);
 
 		if asset_id == T::NativeAssetId::get() {
-			let balance = T::NativeCurrency::free_balance(&from.clone().into_account());
 			<T::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::transfer(
 				&from.clone().into_account(),
 				&to.clone().into_account(),
@@ -94,7 +92,7 @@ where
 				frame_support::traits::ExistenceRequirement::AllowDeath,
 			)
 			.map_err(|e| {
-				log::debug!(target: "pallet_ibc", "Failed to transfer ibc tokens (1): {:?}, balance was: {balance:?}, amount: {amount:?}", e);
+				log::debug!(target: "pallet_ibc", "Failed to transfer ibc asset: {asset_id:?}, denom: {denom}, error: {e:?}");
 				Ics20Error::invalid_token()
 			})?;
 		} else {
@@ -106,7 +104,7 @@ where
 				false,
 			)
 			.map_err(|e| {
-				log::debug!(target: "pallet_ibc", "Failed to transfer ibc tokens (2): {:?}", e);
+				log::debug!(target: "pallet_ibc", "Failed to transfer ibc asset: {asset_id:?}, denom: {denom}, error: {e:?}");
 				Ics20Error::token_balance_change()
 			})?;
 		}

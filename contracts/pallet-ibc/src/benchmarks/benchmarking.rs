@@ -16,10 +16,7 @@ use crate::{
 use codec::EncodeLike;
 use core::str::FromStr;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
-use frame_support::traits::{
-	fungibles::{metadata::Mutate as MetadataMutate, Create, Inspect, Mutate},
-	Currency,
-};
+use frame_support::traits::Currency;
 use frame_system::RawOrigin;
 use ibc::{
 	applications::transfer::{
@@ -105,7 +102,6 @@ benchmarks! {
 					pallet_membership::Config<Instance2>,
 		AccountId32: From<<T as frame_system::Config>::AccountId>,
 		<T as Config>::AssetId: From<u128>,
-		// <T as pallet_assets::Config>::AssetIdParameter: From<<T as Config>::AssetId>,
 		<T as frame_system::pallet::Config>::AccountId: EncodeLike
 	}
 
@@ -828,7 +824,6 @@ benchmarks! {
 		 */
 	}
 
-
 	conn_open_init {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
@@ -886,7 +881,6 @@ benchmarks! {
 
 
 	transfer {
-		// let _ = env_logger::try_init();
 		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 		let client_id = Pallet::<T>::create_client().unwrap();
 		let connection_id = ConnectionId::new(0);
@@ -929,7 +923,6 @@ benchmarks! {
 	}:_(RawOrigin::Signed(caller.clone()), transfer_params, asset_id.into(), amt.into(), None)
 	verify {
 		assert_eq!(<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
-			// asset_id.into(),
 			&caller
 		), (balance_caller - amt.into()).into());
 	}
@@ -1018,8 +1011,7 @@ benchmarks! {
 	verify {
 		assert_eq!(ChannelIds::<T>::get().len(), 0)
 	}
-// [16, 105, 98, 99, 47, 65, 67, 75, 36, 99, 104, 97, 110, 110, 101, 108, 45, 49, 32, 116, 114, 97, 110, 115, 102, 101, 114, 0, 0, 0, 0, 0, 0, 0, 0] [123, 34, 101, 114, 114, 111, 114, 34, 58, 34, 101, 114, 114, 111, 114, 32, 104, 97, 110, 100, 108, 105, 110, 103, 32, 112, 97, 99, 107, 101, 116, 32, 111, 110, 32, 100, 101, 115, 116, 105, 110, 97, 116, 105, 111, 110, 32, 99, 104, 97, 105, 110, 58, 32, 115, 101, 101, 32, 101, 118, 101, 110, 116, 115, 32, 102, 111, 114, 32, 100, 101, 116, 97, 105, 108, 115, 58, 32, 83, 116, 114, 105, 110, 103, 84, 114, 97, 99, 101, 114, 58, 32, 105, 109, 112, 108, 101, 109, 101, 110, 116, 97, 116, 105, 111, 110, 32, 115, 112, 101, 99, 105, 102, 105, 99, 32, 101, 114, 114, 111, 114, 58, 32, 114, 97, 116, 101, 32, 108, 105, 109, 105, 116, 101, 114, 34, 125]
-// [16, 105, 98, 99, 47, 65, 67, 75, 36, 99, 104, 97, 110, 110, 101, 108, 45, 49, 32, 116, 114, 97, 110, 115, 102, 101, 114, 0, 0, 0, 0, 0, 0, 0, 0] [123, 34, 114, 101, 115, 117, 108, 116, 34, 58, 34, 65, 81, 61, 61, 34, 125]
+
 	on_recv_packet {
 		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 		let client_id = Pallet::<T>::create_client().unwrap();
@@ -1047,7 +1039,7 @@ benchmarks! {
 		log::trace!(target:"pallet_ibc", "acc={:?}", channel_escrow_address.encode());
 		let asset_id = <T as Config>::NativeAssetId::get();
 		let denom = format!("transfer/channel-1/{asset_id}");
-		// let denom = "transfer/channel-1/1".to_string();
+
 		<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::deposit_creating(
 			&channel_escrow_address,
 			balance.into(),
@@ -1061,13 +1053,6 @@ benchmarks! {
 		let balance_caller = <<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
 			&caller
 		);
-
-		// let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		// <<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
-		// 	asset_id,
-		// 	&channel_escrow_address,
-		// 	balance.into(),
-		// ).unwrap();
 
 		let raw_user: AccountId32 =  caller.clone().into();
 		let raw_user: &[u8] = raw_user.as_ref();
@@ -1143,13 +1128,6 @@ benchmarks! {
 			&caller
 		);
 
-		// let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		// <<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
-		// 	asset_id,
-		// 	&channel_escrow_address,
-		// 	balance.into(),
-		// ).unwrap();
-
 		let raw_user: AccountId32 =  caller.clone().into();
 		let raw_user: &[u8] = raw_user.as_ref();
 		let mut hex_string = hex::encode_upper(raw_user.to_vec());
@@ -1208,7 +1186,6 @@ benchmarks! {
 			Version::new(VERSION.to_string()),
 		);
 
-
 		let balance = 100000 * MILLIS;
 		Pallet::<T>::handle_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
 		let channel_id = ChannelId::new(0);
@@ -1226,13 +1203,6 @@ benchmarks! {
 		let balance_caller = <<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
 			&caller
 		);
-
-		// let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		// <<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
-		// 	asset_id,
-		// 	&channel_escrow_address,
-		// 	balance.into(),
-		// ).unwrap();
 
 		let raw_user: AccountId32 =  caller.clone().into();
 		let raw_user: &[u8] = raw_user.as_ref();
@@ -1310,6 +1280,100 @@ benchmarks! {
 		let client_state = ClientStates::<T>::get(&client_id).unwrap();
 		let client_state = AnyClientState::decode_vec(&*client_state).unwrap();
 		assert_eq!(client_state.latest_height(), Height::new(2000, 2));
+	}
+
+	cleanup_packets {
+		let i in 1..100u32;
+		let i = i as u64;
+		let data = vec![0u8;i.try_into().unwrap()];
+		let mut ctx = routing::Context::<T>::new();
+		let channel_id = ChannelId::new(0);
+		let port_id = PortId::transfer();
+		let channel_end = ChannelEnd::default();
+		ctx.store_channel((port_id.clone(), channel_id.clone()), &channel_end).unwrap();
+		ctx.store_next_sequence_send((port_id.clone(), channel_id.clone()), (i + 1).into())
+			.unwrap();
+		ctx.store_next_sequence_recv((port_id.clone(), channel_id.clone()), (i + 1).into())
+			.unwrap();
+
+		for i in 1..=i {
+			let packet = Packet {
+				sequence: i.into(),
+				source_port: port_id.clone(),
+				source_channel: channel_id,
+				destination_port: port_id.clone(),
+				destination_channel: channel_id,
+				data: "hello".as_bytes().to_vec(),
+				timeout_height: Default::default(),
+				timeout_timestamp: Default::default(),
+			};
+			ctx.store_send_packet((port_id.clone(), channel_id.clone(), i.into()), packet)
+				.unwrap();
+
+			// Store commitment for even numbers
+			if i % 2 == 0 {
+				ctx.store_packet_commitment(
+					(port_id.clone(), channel_id.clone(), i.into()),
+					"commitment".as_bytes().to_vec().into(),
+				)
+				.unwrap();
+			}
+		}
+
+		// Store packet acknowledgements
+		for i in 1..=i {
+			let packet = Packet {
+				sequence: i.into(),
+				source_port: port_id.clone(),
+				source_channel: channel_id,
+				destination_port: port_id.clone(),
+				destination_channel: channel_id,
+				data: "hello".as_bytes().to_vec(),
+				timeout_height: Default::default(),
+				timeout_timestamp: Default::default(),
+			};
+			ctx.store_recv_packet((port_id.clone(), channel_id.clone(), i.into()), packet)
+				.unwrap();
+			// Store ack for odd numbers
+			if i % 2 != 0 {
+				ctx.store_packet_acknowledgement(
+					(port_id.clone(), channel_id.clone(), i.into()),
+					"commitment".as_bytes().to_vec().into(),
+				)
+				.unwrap();
+				Pallet::<T>::store_raw_acknowledgement(
+					(port_id.clone(), channel_id.clone(), i.into()),
+					"acknowledgement".as_bytes().to_vec(),
+				)
+				.unwrap();
+			}
+		}
+
+		let channel_id_bytes = channel_id.to_string().as_bytes().to_vec();
+		let port_id_bytes = port_id.as_bytes().to_vec();
+
+		let (send_seq_set, _) =
+			PendingSendPacketSeqs::<T>::get(&(port_id_bytes.clone(), channel_id_bytes.clone()));
+
+		let (recv_seq_set, _) =
+			PendingRecvPacketSeqs::<T>::get(&(port_id_bytes.clone(), channel_id_bytes.clone()));
+
+		assert_eq!(send_seq_set, Default::default());
+		assert_eq!(recv_seq_set, Default::default());
+	}: { Pallet::<T>::packet_cleanup() }
+	verify {
+		let (send_seq_set, last_removed_send) =
+			PendingSendPacketSeqs::<T>::get(&(port_id_bytes.clone(), channel_id_bytes.clone()));
+
+		let (recv_seq_set, last_removed_ack) =
+			PendingRecvPacketSeqs::<T>::get(&(port_id_bytes, channel_id_bytes));
+		if i % 2 == 0 {
+			assert_eq!(last_removed_send, i - 1);
+			assert_eq!(last_removed_ack, i);
+		} else {
+			assert_eq!(last_removed_send, i);
+			assert_eq!(last_removed_ack, i - 1);
+		}
 	}
 }
 

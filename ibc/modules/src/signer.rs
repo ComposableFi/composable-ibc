@@ -46,12 +46,6 @@ define_error! {
 )]
 pub struct Signer(String);
 
-impl AsRef<[u8]> for Signer {
-	fn as_ref(&self) -> &[u8] {
-		self.0.as_bytes()
-	}
-}
-
 impl FromStr for Signer {
 	type Err = SignerError;
 

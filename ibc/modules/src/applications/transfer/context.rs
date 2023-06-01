@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::fmt::Debug;
 use subtle_encoding::hex;
 
 use super::error::Error as Ics20Error;
@@ -135,7 +134,7 @@ pub trait Ics20Context:
 	+ Ics20Reader<AccountId = <Self as Ics20Context>::AccountId>
 	+ ReaderContext
 {
-	type AccountId: TryFrom<Signer> + AsRef<[u8]>;
+	type AccountId: TryFrom<Signer>;
 }
 
 fn validate_transfer_channel_params(

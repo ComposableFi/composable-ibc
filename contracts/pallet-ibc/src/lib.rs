@@ -33,6 +33,7 @@ extern crate alloc;
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use cumulus_primitives_core::ParaId;
+use frame_support::weights::Weight;
 pub use pallet::*;
 use scale_info::{
 	prelude::{
@@ -687,9 +688,8 @@ pub mod pallet {
 					log::warn!(target: "pallet_ibc", "Error cleaning up packets: {:?}", e);
 					n
 				})
-				.unwrap_or_else(|n| n) as u64;
-			remaining_weight
-				.saturating_sub(T::WeightInfo::one_packet_cleanup() * removed_packets_count)
+				.unwrap_or_else(|n| n) as u32;
+			remaining_weight.saturating_sub(T::WeightInfo::packet_cleanup(removed_packets_count))
 		}
 
 		fn offchain_worker(_n: BlockNumberFor<T>) {}

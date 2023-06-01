@@ -219,13 +219,9 @@ fn send_transfer() {
 				&"PICA".to_string(),
 			)
 			.unwrap();
-		// <<Test as Config>::Fungibles as Mutate<
-		// 	<Test as frame_system::Config>::AccountId,
-		// >>::mint_into(asset_id, &AccountId32::new([0; 32]), balance).unwrap();
-		<<Test as Config>::NativeCurrency as Currency<<Test as frame_system::Config>::AccountId>>::deposit_creating(
-			&AccountId32::new([0; 32]),
-			balance.into(),
-		);
+		let _ = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::deposit_creating(&AccountId32::new([0; 32]), balance.into());
 
 		let timeout = Timeout::Offset { timestamp: Some(1000), height: Some(5) };
 
@@ -280,13 +276,9 @@ fn send_transfer_no_fee_feeless_channels() {
 				&"PICA".to_string(),
 			)
 			.unwrap();
-		// <<Test as Config>::Fungibles as Mutate<
-		// 	<Test as frame_system::Config>::AccountId,
-		// >>::mint_into(asset_id, &AccountId32::new([0; 32]), balance).unwrap();
-		<<Test as Config>::NativeCurrency as Currency<<Test as frame_system::Config>::AccountId>>::deposit_creating(
-			&AccountId32::new([0; 32]),
-			balance.into(),
-		);
+		let _ = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::deposit_creating(&AccountId32::new([0; 32]), balance.into());
 
 		let timeout = Timeout::Offset { timestamp: Some(1000), height: Some(5) };
 
@@ -341,7 +333,6 @@ fn send_transfer_no_fee_feeless_channels() {
 
 #[test]
 fn on_deliver_ics20_recv_packet() {
-	env_logger::try_init();
 	let mut ext = new_test_ext();
 	ext.execute_with(|| {
 		// Create  a new account
@@ -372,14 +363,9 @@ fn on_deliver_ics20_recv_packet() {
 		let channel_escrow_address = channel_escrow_address.into_account();
 
 		// Endow escrow address with tokens
-		// <<Test as Config>::Fungibles as Mutate<
-		// 	<Test as frame_system::Config>::AccountId,
-		// >>::mint_into(asset_id, &channel_escrow_address, balance)
-		// .unwrap();
-		<<Test as Config>::NativeCurrency as Currency<<Test as frame_system::Config>::AccountId>>::deposit_creating(
-			&channel_escrow_address,
-			balance,
-		);
+		let _ = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::deposit_creating(&channel_escrow_address, balance);
 
 		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
 		let amt = 1000 * MILLIS;
@@ -430,19 +416,14 @@ fn on_deliver_ics20_recv_packet() {
 		assert_eq!(account_data, 0);
 		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
 
-		// let balance =
-		// 	<Assets as Inspect<AccountId>>::balance(asset_id, &AccountId32::new(pair.public().0));
-		let balance = <<Test as Config>::NativeCurrency as Currency<<Test as frame_system::Config>::AccountId>>::free_balance(
-			&AccountId32::new(pair.public().0)
-		);
+		let balance = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::free_balance(&AccountId32::new(pair.public().0));
 
-		// let pallet_balance = <Assets as Inspect<AccountId>>::balance(
-		// 	asset_id,
-		// 	&<Test as crate::Config>::FeeAccount::get().into_account(),
-		// );
-		let pallet_balance = <<Test as Config>::NativeCurrency as Currency<<Test as frame_system::Config>::AccountId>>::free_balance(
-			&<Test as crate::Config>::FeeAccount::get().into_account()
-		);
+		let pallet_balance =
+			<<Test as Config>::NativeCurrency as Currency<
+				<Test as frame_system::Config>::AccountId,
+			>>::free_balance(&<Test as crate::Config>::FeeAccount::get().into_account());
 		let fee = <Test as crate::ics20_fee::Config>::ServiceChargeIn::get() * amt;
 		assert_eq!(balance, amt - fee);
 		assert_eq!(pallet_balance, fee)
@@ -672,11 +653,6 @@ fn on_deliver_ics20_recv_packet_should_not_double_spend() {
 			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
 		let ss58_address = String::from_utf8(ss58_address_bytes).unwrap();
 		frame_system::Pallet::<Test>::set_block_number(1u32);
-		let asset_id =
-			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
-				&"PICA".to_string(),
-			)
-			.unwrap();
 		setup_client_and_consensus_state(PortId::transfer());
 
 		let channel_id = ChannelId::new(0);
@@ -694,14 +670,9 @@ fn on_deliver_ics20_recv_packet_should_not_double_spend() {
 		let channel_escrow_address = channel_escrow_address.into_account();
 
 		// Endow escrow address with tokens
-		// <<Test as Config>::Fungibles as Mutate<
-		// 	<Test as frame_system::Config>::AccountId,
-		// >>::mint_into(asset_id, &channel_escrow_address, balance)
-		// .unwrap();
-		<<Test as Config>::NativeCurrency as Currency<<Test as frame_system::Config>::AccountId>>::deposit_creating(
-			&channel_escrow_address,
-			balance,
-		);
+		let _ = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::deposit_creating(&channel_escrow_address, balance);
 
 		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
 		let amt = MILLIS / 100;
@@ -746,58 +717,51 @@ fn on_deliver_ics20_recv_packet_should_not_double_spend() {
 		};
 
 		let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
-		let fee_asset_id = <Test as crate::Config>::FlatFeeAssetId::get();
-		let fee_amt = <Test as crate::Config>::FlatFeeConverter::get_flat_fee(
-			asset_id,
-			fee_asset_id,
-			amt,
-		)
-		.unwrap_or_default();
-		println!("{fee_amt}");
+		let fee_amt = <Test as crate::ics20_fee::Config>::ServiceChargeIn::get() * amt;
 
-		// let account_data = Assets::balance(asset_id, AccountId32::new(pair.public().0));
-		let account_balance = <<Test as Config>::NativeCurrency as Currency<<Test as frame_system::Config>::AccountId>>::free_balance(&AccountId32::new(pair.public().0));
+		let account_balance = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::free_balance(&AccountId32::new(pair.public().0));
 		// Assert account balance before transfer
 		assert_eq!(account_balance, 0);
 		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg.clone()]).unwrap();
 
-		// let account_data = Assets::balance(asset_id, AccountId32::new(pair.public().0));
-		let account_balance = <<Test as Config>::NativeCurrency as Currency<<Test as frame_system::Config>::AccountId>>::free_balance(&AccountId32::new(pair.public().0));
+		let account_balance = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::free_balance(&AccountId32::new(pair.public().0));
 		// Assert account balance after transfer
-		assert_eq!(account_balance, amt);
+		assert_eq!(account_balance, amt - fee_amt);
 
-		// let balance =
-		// 	<Assets as Inspect<AccountId>>::balance(asset_id, &AccountId32::new(pair.public().0));
-		let balance = <<Test as Config>::NativeCurrency as Currency<<Test as frame_system::Config>::AccountId>>::free_balance(&AccountId32::new(pair.public().0));
-		// let pallet_balance = <Assets as Inspect<AccountId>>::balance(
-		// 	asset_id,
-		// 	&<Test as crate::Config>::FeeAccount::get().into_account(),
-		// );
-		let pallet_balance = <<Test as Config>::NativeCurrency as Currency<<Test as frame_system::Config>::AccountId>>::free_balance(&<Test as crate::Config>::FeeAccount::get().into_account());
+		let balance = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::free_balance(&AccountId32::new(pair.public().0));
+		let pallet_balance =
+			<<Test as Config>::NativeCurrency as Currency<
+				<Test as frame_system::Config>::AccountId,
+			>>::free_balance(&<Test as crate::Config>::FeeAccount::get().into_account());
 		// fee is less than ExistentialDeposit, so it is not deducted
-		let fee = 0;
-		assert_eq!(balance, amt);
-		assert_eq!(pallet_balance, fee);
+		assert_eq!(balance, amt - fee_amt);
+		assert_eq!(pallet_balance, fee_amt);
 
 		// try sending the same packet again
 		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
 
-		let account_data = Assets::balance(asset_id, AccountId32::new(pair.public().0));
+		let account_data = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::free_balance(&AccountId32::new(pair.public().0));
 		// Assert account balance after transfer
-		assert_eq!(account_data, amt);
+		assert_eq!(account_data, amt - fee_amt);
 
-		// let balance =
-		// 	<Assets as Inspect<AccountId>>::balance(asset_id, &AccountId32::new(pair.public().0));
-		let balance = <<Test as Config>::NativeCurrency as Currency<<Test as frame_system::Config>::AccountId>>::free_balance(&AccountId32::new(pair.public().0));
-		// let pallet_balance = <Assets as Inspect<AccountId>>::balance(
-		// 	asset_id,
-		// 	&<Test as crate::Config>::FeeAccount::get().into_account(),
-		// );
-		let pallet_balance = <<Test as Config>::NativeCurrency as Currency<<Test as frame_system::Config>::AccountId>>::free_balance(&<Test as crate::Config>::FeeAccount::get().into_account());
+		let balance = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::free_balance(&AccountId32::new(pair.public().0));
+		let pallet_balance =
+			<<Test as Config>::NativeCurrency as Currency<
+				<Test as frame_system::Config>::AccountId,
+			>>::free_balance(&<Test as crate::Config>::FeeAccount::get().into_account());
 		// fee is less than ExistentialDeposit, so it is not deducted
-		let fee = 0;
-		assert_eq!(balance, amt);
-		assert_eq!(pallet_balance, fee);
+		assert_eq!(balance, amt - fee_amt);
+		assert_eq!(pallet_balance, fee_amt);
 	})
 }
 
@@ -892,7 +856,6 @@ fn should_cleanup_offchain_packets_correctly() {
 		}
 
 		// Store packet acknowledgements
-
 		for i in 1..=10u64 {
 			let packet = Packet {
 				sequence: i.into(),

@@ -42,7 +42,7 @@ pub trait WeightInfo {
 	fn on_acknowledgement_packet() -> Weight;
 	fn on_timeout_packet() -> Weight;
 	fn update_grandpa_client(i: u32) -> Weight;
-	fn one_packet_cleanup() -> Weight;
+	fn packet_cleanup(i: u32) -> Weight;
 }
 
 impl WeightInfo for () {
@@ -154,7 +154,7 @@ impl WeightInfo for () {
 		Weight::from_ref_time(0)
 	}
 
-	fn one_packet_cleanup() -> Weight {
+	fn packet_cleanup(_i: u32) -> Weight {
 		Weight::from_ref_time(0)
 	}
 }
