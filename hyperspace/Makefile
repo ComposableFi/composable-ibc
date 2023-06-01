@@ -53,4 +53,4 @@ generate-ethereum-json:
 	../scripts/yui/yui-abi.sh IBCConnection > ./ethereum/src/abi/ibc-connection-abi.json
 	../scripts/yui/yui-abi.sh IBCChannelHandshake > ./ethereum/src/abi/ibc-channel-handshake-abi.json
 	../scripts/yui/yui-abi.sh ILightClient > ./ethereum/src/abi/light-client-abi.json
-	../scripts/yui/yui-storage.sh > ./ethereum/src/contract-storage-layout.json
+
