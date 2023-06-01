@@ -40,7 +40,7 @@ pub trait WeightInfo {
 	fn on_chan_close_confirm() -> Weight;
 	fn on_acknowledgement_packet() -> Weight;
 	fn on_timeout_packet() -> Weight;
-	fn update_grandpa_client(i: u32) -> Weight;
+	fn update_grandpa_client(i: u32, j: u32) -> Weight;
 	fn packet_cleanup(i: u32) -> Weight;
 }
 
@@ -145,7 +145,7 @@ impl WeightInfo for () {
 		Weight::from_ref_time(0)
 	}
 
-	fn update_grandpa_client(_i: u32) -> Weight {
+	fn update_grandpa_client(_i: u32, _j: u32) -> Weight {
 		Weight::from_ref_time(0)
 	}
 
@@ -227,6 +227,7 @@ where
 											.expect("Justification should be valid");
 										<T as Config>::WeightInfo::update_grandpa_client(
 											justification.commit.precommits.len() as u32,
+											header.finality_proof.unknown_headers.len() as u32,
 										)
 									},
 									ClientMessage::Misbehaviour(misbehaviour) => {
@@ -244,8 +245,10 @@ where
 
 										<T as Config>::WeightInfo::update_grandpa_client(
 											justification_a.commit.precommits.len() as u32,
+											misbehaviour.first_finality_proof.unknown_headers.len() as u32,
 										).saturating_add(<T as Config>::WeightInfo::update_grandpa_client(
 											justification_b.commit.precommits.len() as u32,
+											misbehaviour.second_finality_proof.unknown_headers.len() as u32,
 										))
 									},
 								},
