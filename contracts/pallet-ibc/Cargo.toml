@@ -9,7 +9,7 @@ authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <wizdave97@gmai
 targets = ["x86_64-unknown-linux-gnu"]
 
 [package.metadata.cargo-udeps.ignore]
-normal = ["frame-benchmarking", "pallet-ibc-ping"]
+normal = ["frame-benchmarking", "pallet-ibc-ping", "balances", "pallet-assets"]
 
 [dependencies]
 # crates.io
@@ -98,8 +98,6 @@ serde = { version = "1.0" }
 simple-iavl = { path = "simple-iavl" }
 sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
-balances = { package = "pallet-balances", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
-pallet-assets = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 pallet-ibc-ping = { path = "ping", default-features = false }
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
 env_logger = "0.10.0"
