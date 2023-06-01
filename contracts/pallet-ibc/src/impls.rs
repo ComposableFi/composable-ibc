@@ -513,7 +513,8 @@ where
 
 		let key = Pallet::<T>::ack_key(channel_id, port_id, seq);
 		Acks::<T>::insert(key.clone(), ack.clone());
-		log::trace!(target: "pallet_ibc", "in channel: [store_raw_acknowledgement] >> writing acknowledgement {:?} {:?}", key, ack);
+		let ack_str = String::from_utf8_lossy(&ack);
+		log::trace!(target: "pallet_ibc", "in channel: [store_raw_acknowledgement] >> writing acknowledgement: {}, key: 0x{}", ack_str, hex::encode(&key));
 		Ok(())
 	}
 
