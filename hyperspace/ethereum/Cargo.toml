@@ -33,6 +33,7 @@ thiserror = "1.0.31"
 tokio = { version = "1.19.2", features = ["full"] }
 tracing = "0.1.36"
 tracing-subscriber = "0.3.17"
+elliptic-curve = { features = ["pem"], version = "0.13.5" }
 
 [dev-dependencies]
 toml = "0.7.3"

@@ -80,7 +80,9 @@ pub struct Config {
 	#[serde(deserialize_with = "address_de")]
 	pub ibc_channel_handshake_address: Address,
 	/// mnemonic for the wallet
-	pub mnemonic: String,
+	pub mnemonic: Option<String>,
+	/// private key for the wallet
+	pub private_key: Option<String>,
 	/// Name of the chain
 	pub name: String,
 	/// Light client id on counterparty chain

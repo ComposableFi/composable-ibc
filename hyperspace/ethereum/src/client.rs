@@ -3,7 +3,7 @@ use std::{future::Future, str::FromStr, sync::Arc};
 use ethers::{
 	abi::{ParseError, Token},
 	providers::{Http, Middleware, Provider, ProviderError, ProviderExt, Ws},
-	signers::{coins_bip39::English, MnemonicBuilder, Signer},
+	signers::{coins_bip39::English, MnemonicBuilder, Signer, LocalWallet},
 	types::{Log, Block, BlockId, BlockNumber, EIP1186ProofResponse, Filter, NameOrAddress, H160, H256},
 };
 
@@ -56,11 +56,20 @@ impl Client {
 
 		let chain_id = client.get_chainid().await.unwrap();
 
-		let wallet = MnemonicBuilder::<English>::default()
-			.phrase(&*config.mnemonic)
+		let wallet: LocalWallet = if let Some(mnemonic) = &config.mnemonic {
+			MnemonicBuilder::<English>::default()
+			.phrase(mnemonic.as_str())
 			.build()
 			.unwrap()
-			.with_chain_id(chain_id.as_u64());
+			.with_chain_id(chain_id.as_u64())
+		} else if let Some(private_key) = &config.private_key {
+			let key = elliptic_curve::SecretKey::<ethers::prelude::k256::Secp256k1>::from_sec1_pem(private_key.as_str()).unwrap();
+			key.into()
+		} else {
+			panic!("no private key or mnemonic provided")
+		};
+
+	
 
 		let client = ethers::middleware::SignerMiddleware::new(client, wallet);
 
@@ -205,7 +214,7 @@ impl Client {
 		let client = self.http_rpc.clone();
 		let address = self.config.ibc_handler_address.clone();
 
-		let contract = crate::contract::contract(address, Arc::clone(&client));
+		let contract = crate::contract::ibc_handler(address, Arc::clone(&client));
 
 		async move {
 			let binding = contract

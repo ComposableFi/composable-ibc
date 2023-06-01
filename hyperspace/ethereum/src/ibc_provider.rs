@@ -200,7 +200,7 @@ impl IbcProvider for Client {
 
 		query_proof_then(fut, move |storage_proof| async move {
 			if !storage_proof.value.is_zero() {
-				let contract = crate::contract::contract(
+				let contract = crate::contract::ibc_handler(
 					self.config.ibc_handler_address.clone(),
 					Arc::clone(&self.http_rpc),
 				);
@@ -251,7 +251,7 @@ impl IbcProvider for Client {
 		channel_id: ChannelId,
 		port_id: PortId,
 	) -> Result<QueryChannelResponse, Self::Error> {
-		let contract = crate::contract::contract(
+		let contract = crate::contract::ibc_handler(
 			self.config.ibc_handler_address.clone(),
 			Arc::clone(&self.http_rpc),
 		);
@@ -350,7 +350,7 @@ impl IbcProvider for Client {
 		port_id: &PortId,
 		channel_id: &ChannelId,
 	) -> Result<QueryNextSequenceReceiveResponse, Self::Error> {
-		let contract = crate::contract::contract(
+		let contract = crate::contract::ibc_handler(
 			self.config.ibc_handler_address.clone(),
 			Arc::clone(&self.http_rpc),
 		);
@@ -427,7 +427,7 @@ impl IbcProvider for Client {
 		channel_id: ChannelId,
 		port_id: PortId,
 	) -> Result<Vec<u64>, Self::Error> {
-		let contract = crate::contract::contract(
+		let contract = crate::contract::ibc_handler(
 			self.config.ibc_handler_address.clone(),
 			Arc::clone(&self.http_rpc),
 		);
@@ -453,7 +453,7 @@ impl IbcProvider for Client {
 		channel_id: ChannelId,
 		port_id: PortId,
 	) -> Result<Vec<u64>, Self::Error> {
-		let contract = crate::contract::contract(
+		let contract = crate::contract::ibc_handler(
 			self.config.ibc_handler_address.clone(),
 			Arc::clone(&self.http_rpc),
 		);
