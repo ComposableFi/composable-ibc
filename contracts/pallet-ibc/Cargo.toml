@@ -61,7 +61,6 @@ simple-iavl = { path = "simple-iavl", default-features = false, optional = true 
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
 finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-features = false, optional = true }
 serde = { version = "1.0", default-features = false }
-env_logger = "0.10.0"
 
 [dependencies.ibc]
 path = "../../ibc/modules"

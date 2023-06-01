@@ -665,6 +665,8 @@ benchmarks! {
 	// ack_packet
 	ack_packet_tendermint {
 		let i in 1..1000u32;
+		let j in 1..1000u32; // TODO: bind this to ack length
+		let _ = j;
 		let data = vec![0u8;i.try_into().unwrap()];
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
@@ -724,7 +726,7 @@ benchmarks! {
 			memo: "".to_string()
 		};
 		let data = serde_json::to_vec(&packet_data).unwrap();
-		let ack = TransferAck::success().to_string().into_bytes();
+		let mut ack = TransferAck::success().to_string().into_bytes();
 		let (cs_state, value) = create_ack_packet::<T>(data, ack);
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
 		let msg = Any {

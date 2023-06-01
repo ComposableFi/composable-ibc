@@ -514,12 +514,6 @@ pub fn get_channel_escrow_address(
 #[derive(Clone)]
 pub struct IbcAccount<AccountId>(pub AccountId);
 
-impl<AccountId: AsRef<[u8]>> AsRef<[u8]> for IbcAccount<AccountId> {
-	fn as_ref(&self) -> &[u8] {
-		self.0.as_ref()
-	}
-}
-
 impl<AccountId> IdentifyAccount for IbcAccount<AccountId> {
 	type AccountId = AccountId;
 	fn into_account(self) -> Self::AccountId {

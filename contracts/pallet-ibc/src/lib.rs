@@ -217,8 +217,7 @@ pub mod pallet {
 		/// Account Id Conversion from SS58 string or hex string
 		type AccountIdConversion: TryFrom<Signer>
 			+ IdentifyAccount<AccountId = <Self as frame_system::Config>::AccountId>
-			+ Clone
-			+ AsRef<[u8]>;
+			+ Clone;
 		/// Set of traits needed to handle fungible assets
 		type Fungibles: Transfer<
 				<Self as frame_system::Config>::AccountId,
