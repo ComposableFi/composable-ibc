@@ -83,6 +83,8 @@ pub struct Config {
 	pub mnemonic: Option<String>,
 	/// private key for the wallet
 	pub private_key: Option<String>,
+	/// maximum block weight
+	pub max_block_weight: u64,
 	/// Name of the chain
 	pub name: String,
 	/// Light client id on counterparty chain

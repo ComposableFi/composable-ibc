@@ -26,7 +26,7 @@ use ibc_proto::{
 	ibc::core::{
 		channel::v1::{
 			QueryChannelResponse, QueryChannelsResponse, QueryNextSequenceReceiveResponse,
-			QueryPacketReceiptResponse,
+			QueryPacketReceiptResponse, QueryPacketCommitmentResponse,
 		},
 		client::v1::{QueryClientStateResponse, QueryConsensusStateResponse},
 		connection::v1::{ConnectionEnd, Counterparty, QueryConnectionResponse, Version, IdentifiedConnection},
@@ -297,7 +297,7 @@ impl IbcProvider for Client {
 		port_id: &PortId,
 		channel_id: &ChannelId,
 		seq: u64,
-	) -> Result<ibc_proto::ibc::core::channel::v1::QueryPacketCommitmentResponse, Self::Error> {
+	) -> Result<QueryPacketCommitmentResponse, Self::Error> {
 		let path = Path::Commitments(CommitmentsPath {
 			port_id: port_id.clone(),
 			channel_id: channel_id.clone(),
@@ -310,7 +310,7 @@ impl IbcProvider for Client {
 			.await?;
 		let storage = proof.storage_proof.first().unwrap();
 
-		Ok(ibc_proto::ibc::core::channel::v1::QueryPacketCommitmentResponse {
+		Ok(QueryPacketCommitmentResponse {
 			commitment: storage.value.as_u128().to_be_bytes().to_vec(),
 			proof: storage.proof.last().map(|p| p.to_vec()).unwrap_or_default(),
 			proof_height: Some(at.into()),

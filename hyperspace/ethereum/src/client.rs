@@ -76,6 +76,16 @@ impl Client {
 		Ok(Self { http_rpc: Arc::new(client), ws_uri: config.ws_rpc_url.clone(), config })
 	}
 
+	pub fn query_packet_commitment(
+		&self,
+		client_id: ClientId,
+		sequence: u64,
+	) -> impl Future<Output = Result<Option<H256>, ClientError>> {
+		async move {
+			todo!()
+		}
+	}
+
 	/// produce a stream of events emitted from the contract address for the given block range
 	pub fn query_events(
 		&self,

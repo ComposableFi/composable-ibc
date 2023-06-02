@@ -30,12 +30,14 @@ impl MisbehaviourHandler for Client {
 
 #[async_trait::async_trait]
 impl Chain for Client {
+	#[inline]
 	fn name(&self) -> &str {
 		&self.config.name
 	}
 
+	#[inline]
 	fn block_max_weight(&self) -> u64 {
-		todo!()
+		self.config.max_block_weight
 	}
 
 	fn estimate_weight<'life0, 'async_trait>(
@@ -75,19 +77,10 @@ impl Chain for Client {
 		Ok(stream.boxed())
 	}
 
-	fn submit<'life0, 'async_trait>(
-		&'life0 self,
+	async fn submit(
+		&self,
 		messages: Vec<ibc_proto::google::protobuf::Any>,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<Self::TransactionId, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
+	) -> Result<Self::TransactionId, Self::Error>
 	{
 		todo!()
 	}

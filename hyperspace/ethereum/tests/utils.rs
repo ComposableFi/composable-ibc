@@ -50,15 +50,7 @@ pub fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http>, Loc
 }
 
 #[track_caller]
-pub fn compile_yui(path_to_yui: &Path) -> ProjectCompileOutput {
-    assert!(path_to_yui.exists(), "path to yui-ibc-solidity does not exist: {}", path_to_yui.display());
-
-	let project_paths = ProjectPathsConfig::builder()
-		.root(&path_to_yui)
-		.sources(path_to_yui.join("contracts/core"))
-		.build()
-		.unwrap();
-
+pub fn compile_solc(project_paths: ProjectPathsConfig) -> ProjectCompileOutput {
 	// custom solc config to solve Yul-relatated compilation errors
 	let solc_config = SolcConfig {
 		settings: Settings {
@@ -66,7 +58,7 @@ pub fn compile_yui(path_to_yui: &Path) -> ProjectCompileOutput {
 			remappings: vec![],
 			optimizer: Optimizer {
 				enabled: Some(true),
-				runs: Some(2),
+				runs: Some(20),
 				details: Some(OptimizerDetails {
 					peephole: Some(true),
 					inliner: Some(true),
@@ -109,16 +101,70 @@ pub fn compile_yui(path_to_yui: &Path) -> ProjectCompileOutput {
 	return project_output
 }
 
+/// Uses solc to compile the yui-ibc-solidity contracts.
+///
+/// first argument is the path to the yui-ibc-solidity repo.
+/// the second argument is the path to the solidity sources, relative to the first argument.
+///
+/// so if you have the yui-ibc-solidity as the path to yui then sources should be "contracts/core"
+/// for IBCHandler or "contracts/clients" for the clients.
+#[track_caller]
+pub fn compile_yui(path_to_yui: &Path, sources: &str) -> ProjectCompileOutput {
+	assert!(
+		path_to_yui.exists(),
+		"path to yui-ibc-solidity does not exist: {}",
+		path_to_yui.display()
+	);
+
+	let project_paths = ProjectPathsConfig::builder()
+		.root(&path_to_yui)
+		.sources(path_to_yui.join(sources))
+		.build()
+		.unwrap();
+
+	compile_solc(project_paths)
+}
+
+pub async fn deploy_contract<M, T>(
+	contract: &ConfigurableContractArtifact,
+	constructor_args: T,
+	client: Arc<M>,
+) -> ContractInstance<Arc<M>, M>
+where
+	M: Middleware,
+	T: abi::Tokenize,
+{
+	let (abi, bytecode, _) = contract.clone().into_parts();
+	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
+	factory.deploy(constructor_args).unwrap().send().await.unwrap()
+}
+
+#[derive(Debug)]
 pub struct DeployYuiIbc<B, M> {
 	pub ibc_client: ContractInstance<B, M>,
 	pub ibc_connection: ContractInstance<B, M>,
 	pub ibc_channel_handshake: ContractInstance<B, M>,
 	pub ibc_packet: ContractInstance<B, M>,
-	pub ownable_ibc_handler: ContractInstance<B, M>,
+	pub ibc_handler: ContractInstance<B, M>,
+}
+
+impl<B: Clone, M: Clone> Clone for DeployYuiIbc<B, M>
+where
+	B: Clone + std::borrow::Borrow<M>,
+{
+	fn clone(&self) -> Self {
+		Self {
+			ibc_client: self.ibc_client.clone(),
+			ibc_connection: self.ibc_connection.clone(),
+			ibc_channel_handshake: self.ibc_channel_handshake.clone(),
+			ibc_packet: self.ibc_packet.clone(),
+			ibc_handler: self.ibc_handler.clone(),
+		}
+	}
 }
 
 pub async fn deploy_yui_ibc<M>(
-	project_output: ProjectCompileOutput,
+	project_output: &ProjectCompileOutput,
 	client: Arc<M>,
 ) -> DeployYuiIbc<Arc<M>, M>
 where
@@ -147,7 +193,7 @@ where
 	let contract = project_output.find_first("OwnableIBCHandler").unwrap();
 	let (abi, bytecode, _) = contract.clone().into_parts();
 	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
-	let ownable_ibc_handler = factory
+	let ibc_handler = factory
 		.deploy((
 			Token::Address(ibc_client.address()),
 			Token::Address(ibc_connection.address()),
@@ -159,11 +205,5 @@ where
 		.await
 		.expect("failed to deploy OwnableIBCHandler");
 
-	DeployYuiIbc {
-		ibc_client,
-		ibc_connection,
-		ibc_channel_handshake,
-		ibc_packet,
-		ownable_ibc_handler,
-	}
+	DeployYuiIbc { ibc_client, ibc_connection, ibc_channel_handshake, ibc_packet, ibc_handler }
 }
