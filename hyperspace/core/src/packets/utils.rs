@@ -111,7 +111,10 @@ pub async fn get_timeout_proof_height(
 			let height = sink_client_state.latest_height();
 			let timestamp_at_creation =
 				sink.query_timestamp_at(height.revision_height).await.ok()?;
-			let period = packet.timeout_timestamp.nanoseconds() - timestamp_at_creation;
+			// may underflow if the user have chosen timeout less than the block timestamp at which
+			// the packet was created, so we use `saturating_sub`
+			let period =
+				packet.timeout_timestamp.nanoseconds().saturating_sub(timestamp_at_creation);
 			let period = Duration::from_nanos(period);
 			let start_height = height.revision_height +
 				calculate_block_delay(period, sink.expected_block_time()).saturating_sub(1);

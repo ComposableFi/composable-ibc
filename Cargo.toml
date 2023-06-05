@@ -227,3 +227,6 @@ substrate-frame-rpc-system = { git = "https://github.com/paritytech//substrate.g
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.39" }
 substrate-state-trie-migration-rpc = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.39" }
 substrate-wasm-builder = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.39" }
+
+[profile.release]
+overflow-checks = true

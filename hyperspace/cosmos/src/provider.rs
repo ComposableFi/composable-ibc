@@ -575,8 +575,8 @@ where
 		Ok(commitment_sequences)
 	}
 
-	async fn on_undelivered_sequences(&self, seqs: &[u64]) -> Result<(), Self::Error> {
-		*self.maybe_has_undelivered_packets.lock().unwrap() = !seqs.is_empty();
+	async fn on_undelivered_sequences(&self, is_empty: bool) -> Result<(), Self::Error> {
+		*self.maybe_has_undelivered_packets.lock().unwrap() = !is_empty;
 		Ok(())
 	}
 
