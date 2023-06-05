@@ -529,7 +529,7 @@ where
 
 	/// Convert a signer to an IBC account.
 	fn try_from(signer: ibc::signer::Signer) -> Result<Self, Self::Error> {
-		let acc_str = signer.as_ref();
+		let acc_str: &str = signer.as_ref();
 		if acc_str.starts_with("0x") {
 			match acc_str.strip_prefix("0x") {
 				Some(hex_string) => TryInto::<[u8; 32]>::try_into(

@@ -30,7 +30,6 @@ pub trait WeightInfo {
 	fn recv_packet_tendermint(i: u32) -> Weight;
 	fn ack_packet_tendermint(i: u32, j: u32) -> Weight;
 	fn timeout_packet_tendermint(i: u32) -> Weight;
-	fn set_params() -> Weight;
 	fn transfer() -> Weight;
 	fn on_chan_open_init() -> Weight;
 	fn on_chan_open_try() -> Weight;
@@ -41,8 +40,8 @@ pub trait WeightInfo {
 	fn on_chan_close_confirm() -> Weight;
 	fn on_acknowledgement_packet() -> Weight;
 	fn on_timeout_packet() -> Weight;
-	fn update_grandpa_client(i: u32) -> Weight;
-	fn one_packet_cleanup() -> Weight;
+	fn update_grandpa_client(i: u32, j: u32) -> Weight;
+	fn packet_cleanup(i: u32) -> Weight;
 }
 
 impl WeightInfo for () {
@@ -106,10 +105,6 @@ impl WeightInfo for () {
 		Weight::from_ref_time(0)
 	}
 
-	fn set_params() -> Weight {
-		Weight::from_ref_time(0)
-	}
-
 	fn transfer() -> Weight {
 		Weight::from_ref_time(0)
 	}
@@ -150,11 +145,11 @@ impl WeightInfo for () {
 		Weight::from_ref_time(0)
 	}
 
-	fn update_grandpa_client(_i: u32) -> Weight {
+	fn update_grandpa_client(_i: u32, _j: u32) -> Weight {
 		Weight::from_ref_time(0)
 	}
 
-	fn one_packet_cleanup() -> Weight {
+	fn packet_cleanup(_i: u32) -> Weight {
 		Weight::from_ref_time(0)
 	}
 }
@@ -232,6 +227,7 @@ where
 											.expect("Justification should be valid");
 										<T as Config>::WeightInfo::update_grandpa_client(
 											justification.commit.precommits.len() as u32,
+											header.finality_proof.unknown_headers.len() as u32,
 										)
 									},
 									ClientMessage::Misbehaviour(misbehaviour) => {
@@ -249,8 +245,10 @@ where
 
 										<T as Config>::WeightInfo::update_grandpa_client(
 											justification_a.commit.precommits.len() as u32,
+											misbehaviour.first_finality_proof.unknown_headers.len() as u32,
 										).saturating_add(<T as Config>::WeightInfo::update_grandpa_client(
 											justification_b.commit.precommits.len() as u32,
+											misbehaviour.second_finality_proof.unknown_headers.len() as u32,
 										))
 									},
 								},

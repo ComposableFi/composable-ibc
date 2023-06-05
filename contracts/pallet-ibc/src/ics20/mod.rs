@@ -260,13 +260,14 @@ where
 				process_recv_packet(&mut ctx, output, packet, packet_data.clone())
 					.map(|_| packet_data)
 					.map_err(|e| {
-						log::trace!(target: "pallet_ibc", "[on_recv_packet]: {:?}", e);
+						log::trace!(target: "pallet_ibc", "[on_recv_packet]: token: {}, error: {:?}", denom, e);
 						Ics04Error::implementation_specific(e.to_string())
 					})
 			});
 
 		let ack = match result {
 			Err(err) => {
+				log::trace!(target: "pallet_ibc", "Acknowledgement error: {:?}", err);
 				let ack = Ics20Acknowledgement::Error(format!("{}: {:?}", ACK_ERR_STR, err))
 					.to_string()
 					.into_bytes();
