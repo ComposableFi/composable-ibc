@@ -69,6 +69,7 @@ where
 		// Full length of the transaction can then be derived from the length of the invariable
 		// envelope and the length of the body field, taking into account the varint encoding
 		// of the body field's length delimiter.
+		#[allow(unused)]
 		fn tx_len(envelope_len: usize, body_len: usize) -> usize {
 			// The caller has at least one message field length added to the body's
 			debug_assert!(body_len != 0);
