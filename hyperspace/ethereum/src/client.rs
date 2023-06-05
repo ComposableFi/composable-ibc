@@ -1,10 +1,12 @@
 use std::{future::Future, str::FromStr, sync::Arc};
 
 use ethers::{
-	abi::{ParseError, Token},
+	abi::{Address, ParseError, Token},
 	providers::{Http, Middleware, Provider, ProviderError, ProviderExt, Ws},
-	signers::{coins_bip39::English, MnemonicBuilder, Signer, LocalWallet},
-	types::{Log, Block, BlockId, BlockNumber, EIP1186ProofResponse, Filter, NameOrAddress, H160, H256},
+	signers::{coins_bip39::English, LocalWallet, MnemonicBuilder, Signer},
+	types::{
+		Block, BlockId, BlockNumber, EIP1186ProofResponse, Filter, Log, NameOrAddress, H160, H256,
+	},
 };
 
 use futures::{Stream, TryFutureExt};
@@ -58,22 +60,32 @@ impl Client {
 
 		let wallet: LocalWallet = if let Some(mnemonic) = &config.mnemonic {
 			MnemonicBuilder::<English>::default()
-			.phrase(mnemonic.as_str())
-			.build()
-			.unwrap()
-			.with_chain_id(chain_id.as_u64())
+				.phrase(mnemonic.as_str())
+				.build()
+				.unwrap()
+				.with_chain_id(chain_id.as_u64())
 		} else if let Some(private_key) = &config.private_key {
-			let key = elliptic_curve::SecretKey::<ethers::prelude::k256::Secp256k1>::from_sec1_pem(private_key.as_str()).unwrap();
+			let key = elliptic_curve::SecretKey::<ethers::prelude::k256::Secp256k1>::from_sec1_pem(
+				private_key.as_str(),
+			)
+			.unwrap();
 			key.into()
 		} else {
 			panic!("no private key or mnemonic provided")
 		};
 
-	
-
 		let client = ethers::middleware::SignerMiddleware::new(client, wallet);
 
 		Ok(Self { http_rpc: Arc::new(client), ws_uri: config.ws_rpc_url.clone(), config })
+	}
+
+	pub async fn address_of_client_id(&self, client_id: &str) -> Address {
+		let proof = self.eth_query_proof(dbg!(client_id), None, 3).await.unwrap();
+
+		match proof.storage_proof.last() {
+			Some(proof) => todo!("{:?}", proof.value),
+			None => Address::zero(),
+		}
 	}
 
 	pub fn query_packet_commitment(
@@ -81,9 +93,7 @@ impl Client {
 		client_id: ClientId,
 		sequence: u64,
 	) -> impl Future<Output = Result<Option<H256>, ClientError>> {
-		async move {
-			todo!()
-		}
+		async move { todo!() }
 	}
 
 	/// produce a stream of events emitted from the contract address for the given block range
@@ -93,7 +103,11 @@ impl Client {
 		from: BlockNumber,
 		to: BlockNumber,
 	) -> impl Stream<Item = Log> {
-		let filter = Filter::new().from_block(from).to_block(to).address(self.config.ibc_handler_address).event(event_name);
+		let filter = Filter::new()
+			.from_block(from)
+			.to_block(to)
+			.address(self.config.ibc_handler_address)
+			.event(event_name);
 		let client = self.http_rpc.clone();
 
 		async_stream::stream! {
@@ -117,8 +131,8 @@ impl Client {
 		let key = hex::encode(key);
 
 		let var_name = format!("0x{key}", key = &key);
-		let var_name = format!("{storage_index}");
-		let index = cast::SimpleCast::index("bytes32", &var_name, &var_name).unwrap();
+		let storage_index = format!("{storage_index}");
+		let index = cast::SimpleCast::index("bytes32", dbg!(&var_name), dbg!(&storage_index)).unwrap();
 
 		let client = self.http_rpc.clone();
 		let address = self.config.ibc_handler_address.clone();

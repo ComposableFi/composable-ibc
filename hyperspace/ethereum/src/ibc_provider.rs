@@ -26,10 +26,12 @@ use ibc_proto::{
 	ibc::core::{
 		channel::v1::{
 			QueryChannelResponse, QueryChannelsResponse, QueryNextSequenceReceiveResponse,
-			QueryPacketReceiptResponse, QueryPacketCommitmentResponse,
+			QueryPacketCommitmentResponse, QueryPacketReceiptResponse,
 		},
 		client::v1::{QueryClientStateResponse, QueryConsensusStateResponse},
-		connection::v1::{ConnectionEnd, Counterparty, QueryConnectionResponse, Version, IdentifiedConnection},
+		connection::v1::{
+			ConnectionEnd, Counterparty, IdentifiedConnection, QueryConnectionResponse, Version,
+		},
 	},
 };
 use primitives::IbcProvider;
@@ -154,37 +156,23 @@ impl IbcProvider for Client {
 		at: Height,
 		client_id: ClientId,
 	) -> Result<QueryClientStateResponse, Self::Error> {
-		let fut = self.eth_query_proof(
-			client_id.as_str(),
-			Some(at.revision_height),
-			CLIENT_IMPLS_STORAGE_INDEX,
-		);
-
-		let contract = crate::contract::light_client_contract(
+		let contract = crate::contract::ibc_handler(
 			self.config.ibc_handler_address.clone(),
 			Arc::clone(&self.http_rpc),
 		);
 
-		query_proof_then(fut, move |storage_proof| async move {
-			if !storage_proof.value.is_zero() {
-				let binding = contract
-					.method("getClientState", (client_id.as_str().to_owned(),))
-					.expect("contract is missing getClientState");
+		let binding = contract
+			.method("getClientState", (client_id.as_str().to_owned(),))
+			.expect("contract is missing getClientState");
 
-				let get_client_state_fut = binding.call();
-				let (client_state, _): (Vec<u8>, bool) =
-					get_client_state_fut.await.map_err(|err| todo!()).unwrap();
+		let get_client_state_fut = binding.call();
+		let (client_state, _): (Vec<u8>, bool) =
+			get_client_state_fut.await.map_err(|err| todo!()).unwrap();
 
-				let proof_height = Some(at.into());
-				let client_state = google::protobuf::Any::decode(&*client_state).ok();
-				let proof = storage_proof.proof.first().map(|b| b.to_vec()).unwrap_or_default();
+		let proof_height = Some(at.into());
+		let client_state = google::protobuf::Any::decode(&*client_state).ok();
 
-				Ok(QueryClientStateResponse { client_state, proof, proof_height })
-			} else {
-				todo!("error: client address is zero")
-			}
-		})
-		.await
+		Ok(QueryClientStateResponse { client_state, proof: vec![], proof_height })
 	}
 
 	async fn query_connection_end(
@@ -522,8 +510,7 @@ impl IbcProvider for Client {
 		channel_id: ChannelId,
 		port_id: PortId,
 		seqs: Vec<u64>,
-	) -> Result<Vec<ibc_rpc::PacketInfo>, Self::Error>
-	{
+	) -> Result<Vec<ibc_rpc::PacketInfo>, Self::Error> {
 		todo!()
 	}
 
@@ -550,22 +537,15 @@ impl IbcProvider for Client {
 		todo!()
 	}
 
-	fn query_client_update_time_and_height<'life0, 'async_trait>(
-		&'life0 self,
+	async fn query_client_update_time_and_height(
+		&self,
 		client_id: ClientId,
 		client_height: Height,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<(Height, Timestamp), Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
-		todo!()
+	) -> Result<(Height, Timestamp), Self::Error> {
+		let ibc_handler =
+			crate::contract::ibc_handler(self.config.ibc_client_address, self.http_rpc.clone());
+
+		todo!();
 	}
 
 	fn query_host_consensus_state_proof<'life0, 'async_trait>(

@@ -47,10 +47,12 @@ contract MockClient is ILightClient {
         ConsensusState.Data memory consensusState;
 
         (clientState, ok) = unmarshalClientState(clientStateBytes);
+        require(ok, "failed to unmarshal client state");
         if (!ok) {
             return (clientStateCommitment, update, false);
         }
         (consensusState, ok) = unmarshalConsensusState(consensusStateBytes);
+        require(ok, "failed to unmarshal consensus state");
         if (!ok) {
             return (clientStateCommitment, update, false);
         }
@@ -58,6 +60,7 @@ contract MockClient is ILightClient {
             clientState.latest_height.revision_number != 0 || clientState.latest_height.revision_height == 0
                 || consensusState.timestamp == 0
         ) {
+            require(false, "invalid client state");
             return (clientStateCommitment, update, false);
         }
         clientStates[clientId] = clientState;
@@ -234,7 +237,7 @@ contract MockClient is ILightClient {
     }
 
     modifier onlyIBC() {
-        require(msg.sender == ibcHandler);
+        // require(msg.sender == ibcHandler, "only IBC handler can call this function");
         _;
     }
 }

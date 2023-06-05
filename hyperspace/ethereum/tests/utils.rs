@@ -1,18 +1,19 @@
+#![allow(dead_code)]
+
 use std::{
 	path::{Path, PathBuf},
 	sync::Arc,
 	time::Duration,
 };
 
-use ethers::{abi::Token, signers::LocalWallet};
-
 use ethers::{
+	abi::{ParamType, Token},
 	contract::ContractFactory,
 	core::utils::Anvil,
 	middleware::SignerMiddleware,
-	prelude::*,
-	providers::{Http, Provider},
-	signers::Signer,
+	prelude::{ContractError, ContractInstance, *},
+	providers::{Http, Middleware, Provider},
+	signers::{LocalWallet, Signer},
 	solc::{
 		artifacts::{
 			output_selection::OutputSelection, Libraries, Optimizer, OptimizerDetails, Settings,
@@ -125,6 +126,7 @@ pub fn compile_yui(path_to_yui: &Path, sources: &str) -> ProjectCompileOutput {
 	compile_solc(project_paths)
 }
 
+#[allow(dead_code)]
 pub async fn deploy_contract<M, T>(
 	contract: &ConfigurableContractArtifact,
 	constructor_args: T,
@@ -139,6 +141,49 @@ where
 	factory.deploy(constructor_args).unwrap().send().await.unwrap()
 }
 
+pub mod mock {
+	use ethers::abi::Token;
+	use prost::Message;
+
+	#[derive(Clone, PartialEq, ::prost::Message)]
+	pub struct ClientState {
+		#[prost(message, required, tag = "1")]
+		pub height: ibc_proto::ibc::core::client::v1::Height,
+	}
+
+	#[derive(Clone, PartialEq, ::prost::Message)]
+	pub struct ConsensusState {
+		#[prost(uint64, tag = "1")]
+		pub timestamp: u64,
+	}
+
+	pub fn create_client_msg() -> Token {
+		let client_state_bytes = ibc_proto::google::protobuf::Any {
+			type_url: "/ibc.lightclients.mock.v1.ClientState".into(),
+			value: ClientState {
+				height: ibc_proto::ibc::core::client::v1::Height {
+					revision_number: 0,
+					revision_height: 1,
+				},
+			}
+			.encode_to_vec(),
+		}
+		.encode_to_vec();
+
+		let consensus_state_bytes = ibc_proto::google::protobuf::Any {
+			type_url: "/ibc.lightclients.mock.v1.ConsensusState".into(),
+			value: ConsensusState { timestamp: 1 }.encode_to_vec(),
+		}
+		.encode_to_vec();
+
+		Token::Tuple(vec![
+			Token::String("mock-client".into()),
+			Token::Bytes(client_state_bytes),
+			Token::Bytes(consensus_state_bytes),
+		])
+	}
+}
+
 #[derive(Debug)]
 pub struct DeployYuiIbc<B, M> {
 	pub ibc_client: ContractInstance<B, M>,
@@ -146,6 +191,36 @@ pub struct DeployYuiIbc<B, M> {
 	pub ibc_channel_handshake: ContractInstance<B, M>,
 	pub ibc_packet: ContractInstance<B, M>,
 	pub ibc_handler: ContractInstance<B, M>,
+}
+
+impl<B, M> DeployYuiIbc<B, M>
+where
+	B: Clone + std::borrow::Borrow<M>,
+	M: Middleware,
+{
+	pub async fn register_client(&self, kind: &str, address: Address) {
+		let method = self
+			.ibc_handler
+			.method::<_, ()>(
+				"registerClient",
+				(Token::String(kind.into()), Token::Address(address)),
+			)
+			.unwrap();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+	}
+
+	pub async fn create_client(&self, msg: Token) -> String {
+		let method = self.ibc_handler.method::<_, String>("createClient", (msg,)).unwrap();
+
+		let client_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+
+		client_id
+	}
 }
 
 impl<B: Clone, M: Clone> Clone for DeployYuiIbc<B, M>
@@ -206,4 +281,30 @@ where
 		.expect("failed to deploy OwnableIBCHandler");
 
 	DeployYuiIbc { ibc_client, ibc_connection, ibc_channel_handshake, ibc_packet, ibc_handler }
+}
+
+pub trait UnwrapContractError<T> {
+	fn unwrap_contract_error(self) -> T;
+}
+
+impl<T, M> UnwrapContractError<T> for Result<T, ContractError<M>>
+where
+	M: Middleware,
+{
+	#[track_caller]
+	fn unwrap_contract_error(self) -> T {
+		match self {
+			Ok(t) => t,
+			Err(ContractError::Revert(bytes)) => {
+				// abi decode the bytes after the first 4 bytes (the error selector)
+				if bytes.len() < 4 {
+					panic!("contract-error: {:?}", bytes);
+				}
+				let bytes = &bytes[4..];
+				let tokens = ethers::abi::decode(&[ParamType::String], bytes).unwrap();
+				panic!("contract-error: {tokens:#?}")
+			},
+			Err(e) => panic!("contract-error: {:?}", e),
+		}
+	}
 }

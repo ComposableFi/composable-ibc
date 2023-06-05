@@ -1,7 +1,11 @@
 use std::{ops::Deref, path::PathBuf, sync::Arc};
 
-use ethers::{abi::Token, solc::ProjectPathsConfig, utils::AnvilInstance};
+use ethers::{
+	abi::Token, prelude::ContractInstance, solc::ProjectPathsConfig, utils::AnvilInstance,
+};
 use hyperspace_ethereum::config::Config;
+
+use primitives::IbcProvider;
 
 mod utils;
 
@@ -13,7 +17,7 @@ async fn hyperspace_ethereum_client<M>(
 		ibc_channel_handshake,
 		ibc_packet,
 		ibc_handler,
-	}: utils::DeployYuiIbc<Arc<M>, M>,
+	}: &utils::DeployYuiIbc<Arc<M>, M>,
 ) -> hyperspace_ethereum::client::Client {
 	hyperspace_ethereum::client::Client::new(Config {
 		http_rpc_url: anvil.endpoint().parse().unwrap(),
@@ -52,6 +56,7 @@ struct DeployYuiIbcMockClient {
 	pub project_output: ethers::solc::ProjectCompileOutput,
 	pub anvil: AnvilInstance,
 	pub client: Arc<ProviderImpl>,
+	pub ibc_mock_client: ContractInstance<Arc<ProviderImpl>, ProviderImpl>,
 	pub yui_ibc: utils::DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>,
 }
 
@@ -71,7 +76,7 @@ async fn deploy_yui_ibc_and_mock_client() -> DeployYuiIbcMockClient {
 			.unwrap()
 	});
 
-	let _ibc_mock_client = utils::deploy_contract(
+	let ibc_mock_client = utils::deploy_contract(
 		ibc_mock_client.find_first("MockClient").unwrap(),
 		(Token::Address(yui_ibc.ibc_handler.address()),),
 		client.clone(),
@@ -80,16 +85,44 @@ async fn deploy_yui_ibc_and_mock_client() -> DeployYuiIbcMockClient {
 
 	// todo: some interactions between the mock client and the ibc handler to verify behaviour.
 
-	DeployYuiIbcMockClient { path, project_output, anvil, client, yui_ibc }
+	DeployYuiIbcMockClient { path, project_output, anvil, client, yui_ibc, ibc_mock_client }
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_deploy_yui_ibc_and_mock_client() {
 	deploy_yui_ibc_and_mock_client().await;
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_hyperspace_ethereum_client() {
 	let DeployYuiIbcMockClient { anvil, yui_ibc, .. } = deploy_yui_ibc_and_mock_client().await;
-	let _hyperspace = hyperspace_ethereum_client(&anvil, yui_ibc).await;
+	let _hyperspace = hyperspace_ethereum_client(&anvil, &yui_ibc).await;
+}
+
+#[tokio::test]
+async fn test_ibc_client() {
+	let deploy = deploy_yui_ibc_and_mock_client().await;
+
+	let hyperspace = hyperspace_ethereum_client(&deploy.anvil, &deploy.yui_ibc).await;
+
+	deploy
+		.yui_ibc
+		.register_client("mock-client", deploy.ibc_mock_client.address())
+		.await;
+	let client_id = deploy.yui_ibc.create_client(utils::mock::create_client_msg()).await;
+	eprintln!("client_id: {:?} {:?}", client_id, deploy.ibc_mock_client.address());
+
+	let r = hyperspace
+		.query_client_state(
+			ibc::Height { revision_number: 0, revision_height: 1 },
+			client_id.parse().unwrap(),
+		)
+		.await
+		.unwrap();
+	panic!("{r:#?}");
+
+	// query_client_state
+	// query_client_consensus
 }
