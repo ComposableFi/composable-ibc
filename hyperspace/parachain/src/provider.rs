@@ -416,7 +416,7 @@ where
 
 	async fn on_undelivered_sequences(
 		&self,
-		seqs: &[u64],
+		is_empty: bool,
 		kind: UndeliveredType,
 	) -> Result<(), Self::Error> {
 		log::trace!(
@@ -424,10 +424,7 @@ where
 			"on_undelivered_sequences: {:?}, type: {kind:?}",
 			seqs
 		);
-		self.maybe_has_undelivered_packets
-			.lock()
-			.unwrap()
-			.insert(kind, !seqs.is_empty());
+		self.maybe_has_undelivered_packets.lock().unwrap().insert(kind, !is_empty);
 		Ok(())
 	}
 
@@ -503,6 +500,9 @@ where
 			)
 			.await
 			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
+
+		self.on_undelivered_sequences(response.is_empty()).await?;
+
 		Ok(response)
 	}
 

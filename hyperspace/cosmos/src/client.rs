@@ -445,7 +445,7 @@ where
 				join_set.spawn(tokio::time::timeout(Duration::from_secs(30), fut));
 			}
 			while let Some(res) = join_set.join_next().await {
-				xs.push(res.map_err(|e| Error::Custom(e.to_string()))?.map_err(|e| {
+				xs.push(res.map_err(|e| Error::Custom(e.to_string()))?.map_err(|_| {
 					Error::Custom("failed to fetch light block: timeout".to_string())
 				})??);
 			}

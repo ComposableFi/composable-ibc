@@ -234,7 +234,7 @@ pub trait IbcProvider {
 
 	async fn on_undelivered_sequences(
 		&self,
-		seqs: &[u64],
+		is_empty: bool,
 		kind: UndeliveredType,
 	) -> Result<(), Self::Error>;
 
@@ -515,10 +515,6 @@ pub async fn query_undelivered_sequences(
 			.next_sequence_receive;
 		seqs.into_iter().filter(|seq| *seq > next_seq_recv).collect()
 	};
-
-	source
-		.on_undelivered_sequences(&undelivered_sequences, UndeliveredType::Sequences)
-		.await?;
 
 	Ok(undelivered_sequences)
 }

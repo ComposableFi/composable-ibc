@@ -9,7 +9,7 @@ authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <wizdave97@gmai
 targets = ["x86_64-unknown-linux-gnu"]
 
 [package.metadata.cargo-udeps.ignore]
-normal = ["frame-benchmarking", "pallet-ibc-ping"]
+normal = ["frame-benchmarking", "pallet-ibc-ping", "balances", "pallet-assets"]
 
 [dependencies]
 # crates.io
@@ -51,6 +51,12 @@ prost = { version = "0.11", default-features = false }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
 pallet-ibc-ping = { path = "ping", default-features = false, optional = true }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
+pallet-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
+pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
+pallet-assets = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
+balances = { package = "pallet-balances", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
+sp-consensus-slots = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
+sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
 simple-iavl = { path = "simple-iavl", default-features = false, optional = true }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, optional = true }
 finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-features = false, optional = true }
@@ -82,15 +88,19 @@ hex-literal = { version = "0.3.4" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.39" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.39" }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+pallet-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-consensus-slots = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 prost = { version = "0.11" }
 serde = { version = "1.0" }
 simple-iavl = { path = "simple-iavl" }
 sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
-balances = { package = "pallet-balances", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
-pallet-assets = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 pallet-ibc-ping = { path = "ping", default-features = false }
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
+env_logger = "0.10.0"
 
 [dev-dependencies.ibc]
 path = "../../ibc/modules"
@@ -113,6 +123,7 @@ std = [
   "sp-std/std",
   "sp-io/std",
   "sp-trie/std",
+  "balances/std",
   "cumulus-primitives-core/std",
   "pallet-assets/std",
   "ibc/std",
@@ -140,6 +151,12 @@ runtime-benchmarks = [
   "hex-literal",
   "pallet-timestamp",
   "pallet-timestamp/runtime-benchmarks",
+  "pallet-aura",
+  "pallet-membership",
+  "pallet-assets",
+  "balances",
+  "sp-consensus-slots",
+  "sp-consensus-aura",
   "simple-iavl",
   "ibc-primitives/runtime-benchmarks",
   "sp-finality-grandpa",

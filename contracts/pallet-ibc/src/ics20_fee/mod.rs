@@ -75,7 +75,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		IbcTransferFeeCollected { amount: T::Balance },
+		IbcTransferFeeCollected { amount: T::Balance, asset_id: T::AssetId },
 		FeeLessChannelIdsAdded { source_channel: u64, destination_channel: u64 },
 		FeeLessChannelIdsRemoved { source_channel: u64, destination_channel: u64 },
 	}
@@ -375,27 +375,29 @@ where
 				c
 			};
 
+			// At this point the asset SHOULD exist
 			let asset_id =
 				<T as crate::Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
 					&prefixed_coin.denom.to_string(),
-				);
+				)
+				.map_err(|_| {
+					log::warn!(target: "pallet_ibc", "Asset does not exist for denom: {}", prefixed_coin.denom.to_string());
+					Ics04Error::implementation_specific("asset does not exist".to_string())
+				})?;
 			let amount = packet_data.token.amount.as_u256().low_u128();
-			let mut fee = match asset_id {
-				Ok(a) => {
-					let fee_asset_id = T::FlatFeeAssetId::get();
-					let fee_asset_amount = T::FlatFeeAmount::get();
-					let flat_fee =
-						T::FlatFeeConverter::get_flat_fee(a, fee_asset_id, fee_asset_amount)
-							.unwrap_or_else(|| {
-								// We have ensured that token amounts larger than the max value for
-								// a u128 are rejected in the ics20 on_recv_packet callback so we
-								// can multiply safely. Percent does Non-Overflowing multiplication
-								// so this is infallible
-								percent * amount
-							});
-					flat_fee
-				},
-				Err(_) => percent * amount,
+			let mut fee = {
+				let fee_asset_id = T::FlatFeeAssetId::get();
+				let fee_asset_amount = T::FlatFeeAmount::get();
+				let flat_fee =
+					T::FlatFeeConverter::get_flat_fee(asset_id, fee_asset_id, fee_asset_amount)
+						.unwrap_or_else(|| {
+							// We have ensured that token amounts larger than the max value for
+							// a u128 are rejected in the ics20 on_recv_packet callback so we
+							// can multiply safely. Percent does Non-Overflowing multiplication
+							// so this is infallible
+							percent * amount
+						});
+				flat_fee
 			};
 
 			fee = fee.min(amount);
@@ -418,7 +420,10 @@ where
 			packet.data = serde_json::to_vec(&packet_data).map_err(|_| {
 				Ics04Error::implementation_specific("Failed to receiver account".to_string())
 			})?;
-			Pallet::<T>::deposit_event(Event::<T>::IbcTransferFeeCollected { amount: fee.into() })
+			Pallet::<T>::deposit_event(Event::<T>::IbcTransferFeeCollected {
+				amount: fee.into(),
+				asset_id,
+			})
 		}
 		Ok(())
 	}

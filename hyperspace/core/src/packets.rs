@@ -69,6 +69,7 @@ pub async fn query_ready_and_timed_out_packets(
 			.await
 		{
 			Ok(response) => response,
+			// this can happen in case the channel is not yet created
 			Err(e) => {
 				log::warn!(target: "hyperspace", "Failed to query channel end for chain {}, channel {}/{}: {:?}", source.name(), channel_id, port_id, e);
 				continue
@@ -117,6 +118,7 @@ pub async fn query_ready_and_timed_out_packets(
 		{
 			Ok(response) => response,
 			Err(e) => {
+				// this can happen in case the channel is not yet created
 				log::warn!(target: "hyperspace", "Failed to query channel end for chain {}, channel {}/{}: {:?}", sink.name(), channel_id, port_id, e);
 				continue
 			},
@@ -188,9 +190,10 @@ pub async fn query_ready_and_timed_out_packets(
 		.take(MAX_PACKETS_TO_PROCESS)
 		.collect::<Vec<_>>();
 
-		log::trace!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?}", seqs.len(), channel_id, port_id.clone());
+		log::trace!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?} for {seqs:?}", seqs.len(), channel_id, port_id.clone());
 
 		let send_packets = source.query_send_packets(channel_id, port_id.clone(), seqs).await?;
+		log::trace!(target: "hyperspace", "SendPackets count: {}", send_packets.len());
 		let mut timeout_packets_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 		let source = Arc::new(source.clone());
 		let sink = Arc::new(sink.clone());

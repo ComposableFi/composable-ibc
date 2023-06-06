@@ -883,13 +883,13 @@ macro_rules! chains {
 				}
 			}
 
-			async fn on_undelivered_sequences(&self, seqs: &[u64], kind: primitives::UndeliveredType) -> Result<(), Self::Error> {
+			async fn on_undelivered_sequences(&self, is_empty: bool, kind: primitives::UndeliveredType) -> Result<(), Self::Error> {
 				match self {
 					$(
 						$(#[$($meta)*])*
-						Self::$name(chain) => chain.on_undelivered_sequences(seqs, kind).await.map_err(AnyError::$name),
+						Self::$name(chain) => chain.on_undelivered_sequences(is_empty, kind).await.map_err(AnyError::$name),
 					)*
-					Self::Wasm(c) => c.inner.on_undelivered_sequences(seqs, kind).await,
+					Self::Wasm(c) => c.inner.on_undelivered_sequences(is_empty, kind).await,
 				}
 			}
 
