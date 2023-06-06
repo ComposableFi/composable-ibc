@@ -160,6 +160,10 @@ pub mod pallet {
 
 	use crate::{
 		ics20::HandleMemo,
+		ics23::{
+			next_seq_ack::NextSequenceAck, next_seq_recv::NextSequenceRecv,
+			next_seq_send::NextSequenceSend,
+		},
 		routing::{Context, ModuleRouter},
 	};
 	use ibc::{
@@ -1087,6 +1091,23 @@ pub mod pallet {
 				ConnectionCounter::<T>::set(ConnectionCounter::<T>::get() + 1);
 				AcknowledgementCounter::<T>::set(AcknowledgementCounter::<T>::get() + 1);
 				PacketReceiptCounter::<T>::set(PacketReceiptCounter::<T>::get() + 1);
+				let port_id = PortId::transfer();
+				let channel_id = ChannelId::new(ChannelCounter::<T>::get() as _);
+				NextSequenceAck::<T>::insert(
+					port_id.clone(),
+					channel_id,
+					NextSequenceAck::<T>::get(port_id.clone(), channel_id).unwrap_or_default() + 1,
+				);
+				NextSequenceRecv::<T>::insert(
+					port_id.clone(),
+					channel_id,
+					NextSequenceRecv::<T>::get(port_id.clone(), channel_id).unwrap_or_default() + 1,
+				);
+				NextSequenceSend::<T>::insert(
+					port_id.clone(),
+					channel_id,
+					NextSequenceSend::<T>::get(port_id.clone(), channel_id).unwrap_or_default() + 1,
+				);
 				Ok(())
 			}
 		}
