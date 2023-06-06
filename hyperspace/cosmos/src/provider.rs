@@ -722,10 +722,9 @@ where
 		let mut block_events = vec![];
 
 		for seq in seqs {
-			let query_str =
-				Query::eq(format!("{}.packet_src_channel", "recv_packet"), channel_id.to_string())
-					.and_eq(format!("{}.packet_src_port", "recv_packet"), port_id.to_string())
-					.and_eq(format!("{}.packet_sequence", "recv_packet"), seq.to_string());
+			let query_str = Query::eq("recv_packet.packet_dst_channel", channel_id.to_string())
+				.and_eq("recv_packet.packet_dst_port", port_id.to_string())
+				.and_eq("recv_packet.packet_sequence", seq.to_string());
 
 			let response = self
 				.rpc_client
