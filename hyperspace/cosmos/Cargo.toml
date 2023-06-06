@@ -34,6 +34,7 @@ sha2 = "0.10.6"
 ripemd = "0.1.3"
 digest = "0.10.6"
 quick_cache = "0.3.0"
+rand = "0.8.5"
 
 # composable
 ibc = { path = "../../ibc/modules", features = [] }

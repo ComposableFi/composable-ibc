@@ -4394,6 +4394,7 @@ dependencies = [
  "parity-scale-codec",
  "prost 0.11.6",
  "quick_cache",
+ "rand 0.8.5",
  "ripemd",
  "rs_merkle",
  "serde",

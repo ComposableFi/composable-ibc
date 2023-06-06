@@ -26,9 +26,10 @@ use ics07_tendermint::{
 	merkle::convert_tm_to_ics_merkle_proof,
 };
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
-use primitives::{IbcProvider, KeyProvider, UpdateType};
+use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
 use prost::Message;
 use quick_cache::sync::Cache;
+use rand::Rng;
 use ripemd::Ripemd160;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -41,7 +42,10 @@ use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
 use tendermint_light_client_verifier::types::{LightBlock, ValidatorSet};
 use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, Url, WebSocketClient};
-use tokio::{task::JoinSet, time::error::Elapsed};
+use tokio::{
+	task::JoinSet,
+	time::{error::Elapsed, sleep, timeout},
+};
 
 const DEFAULT_FEE_DENOM: &str = "stake";
 const DEFAULT_FEE_AMOUNT: &str = "4000";
@@ -161,6 +165,9 @@ pub struct CosmosClient<H> {
 	/// Mutex used to sequentially send transactions. This is necessary because
 	/// account sequence numbers are not updated until the transaction is processed.
 	pub tx_mutex: Arc<tokio::sync::Mutex<()>>,
+	/// Delay between parallel RPC calls to be friendly with the node and avoid MaxSlotsExceeded
+	/// error
+	pub rpc_call_delay: Duration,
 	/// Used to determine whether client updates should be forced to send
 	/// even if it's optional. It's required, because some timeout packets
 	/// should use proof of the client states.
@@ -281,6 +288,7 @@ where
 			keybase,
 			_phantom: std::marker::PhantomData,
 			tx_mutex: Default::default(),
+			rpc_call_delay: Duration::from_millis(1000),
 			maybe_has_undelivered_packets: Default::default(),
 			light_block_cache: Arc::new(Cache::new(100000)),
 		})
@@ -376,12 +384,15 @@ where
 		let mut xs = Vec::new();
 		let heightss = (from.value()..=to.value()).collect::<Vec<_>>();
 		let client = Arc::new(self.clone());
+		let to = self.rpc_call_delay().as_millis();
 		for heights in heightss.chunks(5) {
 			let mut join_set = JoinSet::<Result<Result<_, Error>, Elapsed>>::new();
 			for height in heights.to_owned() {
 				let client = client.clone();
+				let duration = Duration::from_millis(rand::thread_rng().gen_range(0..to) as u64);
 				let fut = async move {
 					log::trace!(target: "hyperspace_cosmos", "Fetching header at height {:?}", height);
+					sleep(duration).await;
 					let latest_light_block =
 						client.fetch_light_block_with_cache(height.try_into()?).await?;
 
@@ -412,7 +423,7 @@ where
 						update_type,
 					))
 				};
-				join_set.spawn(tokio::time::timeout(Duration::from_secs(30), fut));
+				join_set.spawn(timeout(Duration::from_secs(30), fut));
 			}
 			while let Some(res) = join_set.join_next().await {
 				xs.push(res.map_err(|e| Error::Custom(e.to_string()))?.map_err(|_| {

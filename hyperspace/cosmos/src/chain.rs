@@ -69,6 +69,7 @@ where
 		// Full length of the transaction can then be derived from the length of the invariable
 		// envelope and the length of the body field, taking into account the varint encoding
 		// of the body field's length delimiter.
+		#[allow(unused)]
 		fn tx_len(envelope_len: usize, body_len: usize) -> usize {
 			// The caller has at least one message field length added to the body's
 			debug_assert!(body_len != 0);
@@ -237,7 +238,6 @@ where
 			error.to_string()
 		};
 		log::debug!(target: "hyperspace_cosmos", "Handling error: {err_str}");
-
 		if err_str.contains("dispatch task is gone") {
 			let (rpc_client, ws_driver) = WebSocketClient::new(self.rpc_url.clone())
 				.await
@@ -245,16 +245,19 @@ where
 			tokio::spawn(ws_driver.run());
 			log::info!(target: "hyperspace_cosmos", "Reconnected to cosmos chain");
 			self.rpc_client = rpc_client;
+			self.rpc_call_delay = self.rpc_call_delay * 2;
 		}
 
 		Ok(())
 	}
 
 	fn rpc_call_delay(&self) -> Duration {
-		Duration::from_millis(100)
+		self.rpc_call_delay
 	}
 
-	fn set_rpc_call_delay(&mut self, _delay: Duration) {}
+	fn set_rpc_call_delay(&mut self, delay: Duration) {
+		self.rpc_call_delay = delay;
+	}
 }
 
 impl<H> CosmosClient<H>
