@@ -158,17 +158,7 @@ pub mod mock {
 	}
 
 	pub fn create_client_msg() -> Token {
-		let client_state_bytes = ibc_proto::google::protobuf::Any {
-			type_url: "/ibc.lightclients.mock.v1.ClientState".into(),
-			value: ClientState {
-				height: ibc_proto::ibc::core::client::v1::Height {
-					revision_number: 0,
-					revision_height: 1,
-				},
-			}
-			.encode_to_vec(),
-		}
-		.encode_to_vec();
+		let client_state_bytes = client_state_bytes();
 
 		let consensus_state_bytes = ibc_proto::google::protobuf::Any {
 			type_url: "/ibc.lightclients.mock.v1.ConsensusState".into(),
@@ -181,6 +171,20 @@ pub mod mock {
 			Token::Bytes(client_state_bytes),
 			Token::Bytes(consensus_state_bytes),
 		])
+	}
+
+	pub fn client_state_bytes() -> Vec<u8> {
+		ibc_proto::google::protobuf::Any {
+			type_url: "/ibc.lightclients.mock.v1.ClientState".into(),
+			value: ClientState {
+				height: ibc_proto::ibc::core::client::v1::Height {
+					revision_number: 0,
+					revision_height: 1,
+				},
+			}
+			.encode_to_vec(),
+		}
+		.encode_to_vec()
 	}
 }
 
