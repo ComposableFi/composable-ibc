@@ -158,12 +158,13 @@ pub mod pallet {
 	pub use ibc::signer::Signer;
 	use sp_core::crypto::ByteArray;
 
+	#[cfg(feature = "testing")]
+	use crate::ics23::{
+		next_seq_ack::NextSequenceAck, next_seq_recv::NextSequenceRecv,
+		next_seq_send::NextSequenceSend,
+	};
 	use crate::{
 		ics20::HandleMemo,
-		ics23::{
-			next_seq_ack::NextSequenceAck, next_seq_recv::NextSequenceRecv,
-			next_seq_send::NextSequenceSend,
-		},
 		routing::{Context, ModuleRouter},
 	};
 	use ibc::{
