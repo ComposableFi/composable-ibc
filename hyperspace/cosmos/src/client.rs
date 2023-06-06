@@ -364,8 +364,10 @@ where
 	pub async fn fetch_light_block_with_cache(
 		&self,
 		height: TmHeight,
+		sleep_duration: Duration,
 	) -> Result<LightBlock, Error> {
 		let fut = async move {
+			sleep(sleep_duration).await;
 			self.light_client.io.fetch_light_block(AtHeight::At(height)).map_err(|e| {
 				Error::from(format!(
 					"Failed to fetch light block for chain {:?} with error {:?}",
@@ -393,9 +395,8 @@ where
 				let duration = Duration::from_millis(rand::thread_rng().gen_range(0..to) as u64);
 				let fut = async move {
 					log::trace!(target: "hyperspace_cosmos", "Fetching header at height {:?} {:?}", height, tokio::task::id());
-					sleep(duration).await;
 					let latest_light_block =
-						client.fetch_light_block_with_cache(height.try_into()?).await?;
+						client.fetch_light_block_with_cache(height.try_into()?, duration).await?;
 					log::trace!(target: "hyperspace_cosmos", "end Fetching header {:?}", tokio::task::id());
 
 					let height =
@@ -408,7 +409,7 @@ where
 					log::trace!(target: "hyperspace_cosmos", "end Fetching header 2 {:?}", tokio::task::id());
 
 					let trusted_light_block =
-						client.fetch_light_block_with_cache(height.increment()).await?;
+						client.fetch_light_block_with_cache(height.increment(), duration).await?;
 					log::trace!(target: "hyperspace_cosmos", "end Fetching header 3 {:?}", tokio::task::id());
 
 					let update_type = match is_validators_equal(
