@@ -334,8 +334,8 @@ pub fn get_key_path(key_path_type: KeyPathType, packet: &Packet) -> String {
 			format!(
 				"{}",
 				AcksPath {
-					port_id: packet.source_port.clone(),
-					channel_id: packet.source_channel.clone(),
+					port_id: packet.destination_port.clone(),
+					channel_id: packet.destination_channel.clone(),
 					sequence: packet.sequence.clone()
 				}
 			)
