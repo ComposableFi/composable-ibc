@@ -492,12 +492,12 @@ where
 					if !detected_misbehaviour {
 						if unknown_header_hash != header.hash().into() {
 							detected_misbehaviour = true;
+							let _guard = self.client_id.lock().unwrap();
+							let client_id =
+								_guard.as_ref().map(|x| x.as_str()).unwrap_or_else(|| "{unknown}");
 							log::warn!(
 								"Found misbehaviour on client {}: {:?} != {:?}",
-								self.client_id
-									.as_ref()
-									.map(|x| x.as_str().to_owned())
-									.unwrap_or_else(|| "{unknown}".to_owned()),
+								client_id,
 								base_header_hash,
 								trusted_base_header_hash
 							);

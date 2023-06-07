@@ -61,8 +61,6 @@ pub enum IbcEvent {
 		consensus_height: u64,
 		consensus_revision_number: u64,
 	},
-	/// Push WASM Code
-	PushWasmCode { wasm_code_id: CodeId },
 	/// Connection open init
 	OpenInitConnection {
 		revision_height: u64,

@@ -504,8 +504,6 @@ pub async fn query_undelivered_sequences(
 		seqs.into_iter().filter(|seq| *seq > next_seq_recv).collect()
 	};
 
-	source.on_undelivered_sequences(&undelivered_sequences).await?;
-
 	Ok(undelivered_sequences)
 }
 

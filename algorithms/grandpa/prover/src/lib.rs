@@ -432,7 +432,6 @@ where
 
 			while let Some(res) = change_set_join_set.join_next().await {
 				if let Some((hash, proofs)) = res?? {
-					latest_para_height = latest_para_height.max(u32::from(para_block_number));
 					parachain_headers_with_proof.insert(hash, proofs);
 				}
 			}
