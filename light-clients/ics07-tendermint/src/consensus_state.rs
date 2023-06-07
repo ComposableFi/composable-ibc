@@ -28,7 +28,7 @@ use ibc_proto::{
 
 /// Protobuf type url for TENDERMINT Consensus State
 pub const TENDERMINT_CONSENSUS_STATE_TYPE_URL: &str =
-	"/ibc.lightclients.tendermint.v1.ConsensusState";
+	"/tendermint.types.ConsensusState";
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConsensusState {

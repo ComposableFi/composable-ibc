@@ -25,6 +25,7 @@ extern crate serde;
 extern crate ibc_derive;
 extern crate alloc;
 
+
 use core::fmt::Debug;
 use tendermint::{
 	crypto::{signature::Verifier, Sha256},
@@ -81,7 +82,8 @@ mod tests {
 		ClientState,
 	};
 
-	use crate::{
+	use crate::consensus_state;
+use crate::{
 		client_message::test_util::{get_dummy_ics07_header, get_dummy_tendermint_header},
 		mock::{AnyClientState, AnyConsensusState, MockClientTypes},
 	};
@@ -108,7 +110,11 @@ mod tests {
 		Height,
 	};
 	use ibc_proto::ibc::core::client::v1::{MsgCreateClient, MsgUpdateClient};
-	use std::time::Duration;
+use tendermint::Hash;
+use tendermint_proto::Protobuf;
+use tendermint_proto::google::protobuf::Timestamp;
+	use std::fs::File;
+use std::time::Duration;
 	use test_log::test;
 
 	#[test]
@@ -135,6 +141,7 @@ mod tests {
 
 	#[test]
 	fn test_tm_create_client_ok() {
+		use std::io::Write;
 		let signer = get_dummy_account_id();
 
 		let ctx = MockContext::default();
@@ -154,13 +161,47 @@ mod tests {
 			)
 			.unwrap(),
 		);
+		let consensusStateX : consensus_state::ConsensusState = tm_header.clone().try_into().unwrap();
+		let v = consensusStateX.root.bytes;
+		// let v = [0;32].t;
+		let t : Timestamp = Timestamp::from(consensusStateX.timestamp);
+		dbg!(&t);
+		dbg!(&v);
+		let mut file = File::create("root_bytes.bin").unwrap();
+		file.write_all(&v).unwrap();
 
+		let v = match consensusStateX.next_validators_hash{
+			Hash::Sha256(i) => i.to_vec(),
+			_ => vec![]
+		};
+		let mut file = File::create("next_validators_hash.bin").unwrap();
+		file.write_all(&v).unwrap();
+		
+
+		return;
+		
+		let consensus_state = AnyConsensusState::Tendermint(tm_header.try_into().unwrap());
 		let msg = MsgCreateAnyClient::<MockContext<MockClientTypes>>::new(
-			tm_client_state,
-			AnyConsensusState::Tendermint(tm_header.try_into().unwrap()),
+			tm_client_state.clone(),
+			consensus_state.clone(),
 			signer,
 		)
 		.unwrap();
+
+		let mut vec_buffer: Vec<u8> = Vec::new();
+		tm_client_state.encode(&mut vec_buffer).unwrap();
+
+		let mut file = File::create("tm_client_state.bin").unwrap();
+		
+		file.write_all(&vec_buffer).unwrap();
+
+		let mut vec_buffer2: Vec<u8> = Vec::new();
+		consensus_state.encode(&mut vec_buffer2).unwrap();
+
+		let mut file = File::create("consensus_state.bin").unwrap();
+		file.write_all(&vec_buffer2).unwrap();
+
+
 
 		let output = dispatch(&ctx, ClientMsg::CreateClient(msg.clone()));
 
