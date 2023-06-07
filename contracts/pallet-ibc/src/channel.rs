@@ -279,7 +279,7 @@ where
 		key: (PortId, ChannelId, Sequence),
 		commitment: PacketCommitmentType,
 	) -> Result<(), ICS04Error> {
-		log::trace!(target: "pallet_ibc", "in channel : [store_packet_commitment] >> packet_commitment = {:#?}", commitment);
+		log::trace!(target: "pallet_ibc", "in channel : [store_packet_commitment] >> packet_commitment {key:?} = {:#?}", commitment);
 		<PacketCommitment<T>>::insert((key.0.clone(), key.1, key.2), commitment);
 		if let Some(val) = PacketCounter::<T>::get().checked_add(1) {
 			PacketCounter::<T>::put(val);
@@ -298,13 +298,13 @@ where
 		let port_id = key.0.as_bytes().to_vec();
 		let seq = u64::from(key.2);
 		let channel_end = ChannelReader::channel_end(self, &(key.0, key.1))?;
-		let key = Pallet::<T>::offchain_send_packet_key(channel_id, port_id, seq);
+		let key = Pallet::<T>::send_packet_key(channel_id, port_id, seq);
 
 		let mut packet_info: PacketInfo = packet.into();
 		packet_info.height = Some(host_height::<T>());
 		packet_info.channel_order = channel_end.ordering as u8;
 
-		sp_io::offchain_index::set(&key, packet_info.encode().as_slice());
+		SendPackets::<T>::insert(&key, packet_info.encode());
 		log::trace!(target: "pallet_ibc", "in channel: [store_send_packet] >> writing packet {:?} {:?}", key, packet_info);
 		Ok(())
 	}
@@ -319,11 +319,11 @@ where
 		let port_id = key.0.as_bytes().to_vec();
 		let seq = u64::from(key.2);
 		let channel_end = ChannelReader::channel_end(self, &(key.0, key.1))?;
-		let key = Pallet::<T>::offchain_recv_packet_key(channel_id, port_id, seq);
+		let key = Pallet::<T>::recv_packet_key(channel_id, port_id, seq);
 		let mut packet_info: PacketInfo = packet.into();
 		packet_info.height = Some(host_height::<T>());
 		packet_info.channel_order = channel_end.ordering as u8;
-		sp_io::offchain_index::set(&key, packet_info.encode().as_slice());
+		RecvPackets::<T>::insert(&key, packet_info.encode());
 		log::trace!(target: "pallet_ibc", "in channel: [store_recv_packet] >> writing packet {:?} {:?}", key, packet_info);
 		Ok(())
 	}

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 pub mod composable;
-pub mod dali;
+// pub mod dali;
 pub mod default;
 pub mod picasso_kusama;
 pub mod picasso_rococo;

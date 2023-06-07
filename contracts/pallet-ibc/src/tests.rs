@@ -1,18 +1,19 @@
 use crate::{
-	impls::{OFFCHAIN_RECV_PACKET_SEQS, OFFCHAIN_SEND_PACKET_SEQS},
+	ics20_fee::FlatFeeConverter,
 	light_clients::{AnyClientState, AnyConsensusState},
 	mock::*,
 	routing::Context,
-	Any, Config, ConsensusHeights, DenomToAssetId, MultiAddress, Pallet, Timeout, TransferParams,
-	MODULE_ID,
+	Any, Config, ConsensusHeights, DenomToAssetId, MultiAddress, Pallet, PendingRecvPacketSeqs,
+	PendingSendPacketSeqs, Timeout, TransferParams, MODULE_ID,
 };
 use core::time::Duration;
 use frame_support::{
 	assert_ok,
 	traits::{
 		fungibles::{Inspect, Mutate},
-		Len,
+		Currency, Hooks, Len,
 	},
+	weights::Weight,
 };
 use ibc::{
 	applications::transfer::{packet::PacketData, Coin, PrefixedDenom, VERSION},
@@ -31,7 +32,7 @@ use ibc::{
 		},
 		ics04_channel::{
 			channel::{ChannelEnd, Counterparty as ChanCounterParty, Order, State},
-			context::ChannelKeeper,
+			context::{ChannelKeeper, ChannelReader},
 			msgs::recv_packet::MsgRecvPacket,
 			packet::Packet,
 			Version as ChanVersion,
@@ -50,14 +51,10 @@ use ibc::{
 use ibc_primitives::{get_channel_escrow_address, HandlerMessage, IbcHandler};
 use sp_core::Pair;
 use sp_runtime::{
-	offchain::storage::StorageValueRef,
-	traits::{AccountIdConversion, IdentifyAccount},
+	traits::{Bounded, IdentifyAccount},
 	AccountId32,
 };
-use std::{
-	collections::{BTreeMap, BTreeSet},
-	str::FromStr,
-};
+use std::str::FromStr;
 use tendermint_proto::Protobuf;
 
 fn setup_client_and_consensus_state(port_id: PortId) {
@@ -211,20 +208,20 @@ const MILLIS: u128 = 1000000;
 #[test]
 fn send_transfer() {
 	let mut ext = new_test_ext();
+	let balance = 100000 * MILLIS;
 	ext.execute_with(|| {
 		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
 		let raw_user = ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
 		let ss58_address = String::from_utf8(raw_user).unwrap();
 		setup_client_and_consensus_state(PortId::transfer());
-		let balance = 100000 * MILLIS;
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
 				&"PICA".to_string(),
 			)
 			.unwrap();
-		<<Test as Config>::Fungibles as Mutate<
+		let _ = <<Test as Config>::NativeCurrency as Currency<
 			<Test as frame_system::Config>::AccountId,
-		>>::mint_into(asset_id, &AccountId32::new([0; 32]), balance).unwrap();
+		>>::deposit_creating(&AccountId32::new([0; 32]), balance.into());
 
 		let timeout = Timeout::Offset { timestamp: Some(1000), height: Some(5) };
 
@@ -256,7 +253,81 @@ fn send_transfer() {
 		.get(0)
 		.unwrap()
 		.clone();
-		assert!(!packet_info.data.is_empty())
+		assert!(!packet_info.data.is_empty());
+
+		let packet_data: PacketData = serde_json::from_slice(packet_info.data.as_slice()).unwrap();
+		let send_amount = packet_data.token.amount.as_u256().as_u128();
+		let fee = <Test as crate::ics20_fee::Config>::ServiceChargeIn::get() * balance;
+		assert_eq!(send_amount, balance - fee);
+	})
+}
+
+#[test]
+fn send_transfer_no_fee_feeless_channels() {
+	let mut ext = new_test_ext();
+	let balance = 100000 * MILLIS;
+	ext.execute_with(|| {
+		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
+		let raw_user = ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
+		let ss58_address = String::from_utf8(raw_user).unwrap();
+		setup_client_and_consensus_state(PortId::transfer());
+		let asset_id =
+			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
+				&"PICA".to_string(),
+			)
+			.unwrap();
+		let _ = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::deposit_creating(&AccountId32::new([0; 32]), balance.into());
+
+		let timeout = Timeout::Offset { timestamp: Some(1000), height: Some(5) };
+
+		let ctx = Context::<Test>::default();
+		let channel_end = ctx
+			.channel_end(&(PortId::transfer(), ChannelId::new(0)))
+			.expect("expect source_channel unwrap");
+		let destination_channel = channel_end.counterparty().channel_id.unwrap();
+		//feeless channels
+		let _ = Ibc::add_channels_to_feeless_channel_list(
+			RuntimeOrigin::root(),
+			0,
+			destination_channel.sequence(),
+		)
+		.expect("expect add channels to feeless list");
+
+		Ibc::transfer(
+			RuntimeOrigin::signed(AccountId32::new([0; 32])),
+			TransferParams {
+				to: MultiAddress::Raw(ss58_address.as_bytes().to_vec()),
+				source_channel: 0,
+				timeout,
+			},
+			asset_id,
+			balance,
+			None,
+		)
+		.unwrap();
+	});
+
+	ext.persist_offchain_overlay();
+
+	ext.execute_with(|| {
+		let channel_id = ChannelId::new(0);
+		let port_id = PortId::transfer();
+		let packet_info = Pallet::<Test>::get_send_packet_info(
+			channel_id.to_string().as_bytes().to_vec(),
+			port_id.as_bytes().to_vec(),
+			vec![1],
+		)
+		.unwrap()
+		.get(0)
+		.unwrap()
+		.clone();
+		assert!(!packet_info.data.is_empty());
+
+		let packet_data: PacketData = serde_json::from_slice(packet_info.data.as_slice()).unwrap();
+		let send_amount = packet_data.token.amount.as_u256().as_u128();
+		assert_eq!(send_amount, balance);
 	})
 }
 
@@ -283,6 +354,105 @@ fn on_deliver_ics20_recv_packet() {
 		// We are simulating a transfer back to the source chain
 
 		let denom = "transfer/channel-1/PICA";
+		let channel_escrow_address =
+			get_channel_escrow_address(&PortId::transfer(), channel_id).unwrap();
+		let channel_escrow_address =
+			<Test as Config>::AccountIdConversion::try_from(channel_escrow_address)
+				.map_err(|_| ())
+				.unwrap();
+		let channel_escrow_address = channel_escrow_address.into_account();
+
+		// Endow escrow address with tokens
+		let _ = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::deposit_creating(&channel_escrow_address, balance);
+
+		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
+		let amt = 1000 * MILLIS;
+		println!("Transferred Amount {}", amt);
+		let coin = Coin {
+			denom: prefixed_denom,
+			amount: ibc::applications::transfer::Amount::from_str(&format!("{:?}", amt)).unwrap(),
+		};
+		let packet_data = PacketData {
+			token: coin,
+			sender: Signer::from_str("alice").unwrap(),
+			receiver: Signer::from_str(&ss58_address).unwrap(),
+			memo: "".to_string(),
+		};
+
+		let data = serde_json::to_vec(&packet_data).unwrap();
+		let packet = Packet {
+			sequence: 1u64.into(),
+			source_port: PortId::transfer(),
+			source_channel: ChannelId::new(1),
+			destination_port: PortId::transfer(),
+			destination_channel: ChannelId::new(0),
+			data,
+			timeout_height: Height::new(2000, 5),
+			timeout_timestamp: ibc::timestamp::Timestamp::from_nanoseconds(
+				1690894363u64.saturating_mul(1000000000),
+			)
+			.unwrap(),
+		};
+
+		let msg = MsgRecvPacket {
+			packet,
+			proofs: Proofs::new(
+				vec![0u8; 32].try_into().unwrap(),
+				None,
+				None,
+				None,
+				Height::new(0, 1),
+			)
+			.unwrap(),
+			signer: Signer::from_str(MODULE_ID).unwrap(),
+		};
+
+		let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+
+		let account_data = Assets::balance(asset_id, AccountId32::new(pair.public().0));
+		// Assert account balance before transfer
+		assert_eq!(account_data, 0);
+		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
+
+		let balance = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::free_balance(&AccountId32::new(pair.public().0));
+
+		let pallet_balance =
+			<<Test as Config>::NativeCurrency as Currency<
+				<Test as frame_system::Config>::AccountId,
+			>>::free_balance(&<Test as crate::Config>::FeeAccount::get().into_account());
+		let fee = <Test as crate::ics20_fee::Config>::ServiceChargeIn::get() * amt;
+		assert_eq!(balance, amt - fee);
+		assert_eq!(pallet_balance, fee)
+	})
+}
+
+#[test]
+fn on_deliver_ics20_recv_packet_with_flat_fee() {
+	let mut ext = new_test_ext();
+	ext.execute_with(|| {
+		// Create  a new account
+		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
+		let ss58_address_bytes =
+			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
+		let ss58_address = String::from_utf8(ss58_address_bytes).unwrap();
+		frame_system::Pallet::<Test>::set_block_number(1u32);
+		let asset_id =
+			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
+				&"PICAFLATFEE".to_string(),
+			)
+			.unwrap();
+		setup_client_and_consensus_state(PortId::transfer());
+
+		let channel_id = ChannelId::new(0);
+		let balance = 100000 * MILLIS;
+
+		// We are simulating a transfer back to the source chain
+
+		let denom = "transfer/channel-1/PICAFLATFEE";
 		let channel_escrow_address =
 			get_channel_escrow_address(&PortId::transfer(), channel_id).unwrap();
 		let channel_escrow_address =
@@ -341,20 +511,257 @@ fn on_deliver_ics20_recv_packet() {
 
 		let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 
-		let account_data = Assets::balance(2u128, AccountId32::new(pair.public().0));
+		let account_data = Assets::balance(asset_id, AccountId32::new(pair.public().0));
 		// Assert account balance before transfer
 		assert_eq!(account_data, 0);
 		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
 
 		let balance =
-			<Assets as Inspect<AccountId>>::balance(2, &AccountId32::new(pair.public().0));
+			<Assets as Inspect<AccountId>>::balance(asset_id, &AccountId32::new(pair.public().0));
 		let pallet_balance = <Assets as Inspect<AccountId>>::balance(
-			2,
-			&<Test as crate::ics20_fee::Config>::PalletId::get().into_account_truncating(),
+			asset_id,
+			&<Test as crate::Config>::FeeAccount::get().into_account(),
 		);
-		let fee = <Test as crate::ics20_fee::Config>::ServiceCharge::get() * amt;
+		let fee_asset_id = <Test as crate::Config>::FlatFeeAssetId::get();
+		let fee =
+			<Test as crate::Config>::FlatFeeConverter::get_flat_fee(asset_id, fee_asset_id, amt)
+				.unwrap_or_default();
 		assert_eq!(balance, amt - fee);
 		assert_eq!(pallet_balance, fee)
+	})
+}
+
+#[test]
+fn on_deliver_ics20_recv_packet_transfered_amount_less_then_flat_fee() {
+	let mut ext = new_test_ext();
+	ext.execute_with(|| {
+		// Create  a new account
+		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
+		let ss58_address_bytes =
+			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
+		let ss58_address = String::from_utf8(ss58_address_bytes).unwrap();
+		frame_system::Pallet::<Test>::set_block_number(1u32);
+		let asset_id =
+			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
+				&"PICAFLATFEE".to_string(),
+			)
+			.unwrap();
+		setup_client_and_consensus_state(PortId::transfer());
+
+		let channel_id = ChannelId::new(0);
+		let balance = 100000 * MILLIS;
+
+		// We are simulating a transfer back to the source chain
+
+		let denom = "transfer/channel-1/PICAFLATFEE";
+		let channel_escrow_address =
+			get_channel_escrow_address(&PortId::transfer(), channel_id).unwrap();
+		let channel_escrow_address =
+			<Test as Config>::AccountIdConversion::try_from(channel_escrow_address)
+				.map_err(|_| ())
+				.unwrap();
+		let channel_escrow_address = channel_escrow_address.into_account();
+
+		// Endow escrow address with tokens
+		<<Test as Config>::Fungibles as Mutate<
+			<Test as frame_system::Config>::AccountId,
+		>>::mint_into(asset_id, &channel_escrow_address, balance)
+		.unwrap();
+
+		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
+		let usdt_fee_amount = 1000 * MILLIS;
+		let fee_asset_id = <Test as crate::Config>::FlatFeeAssetId::get();
+		let amt = <Test as crate::Config>::FlatFeeConverter::get_flat_fee(
+			asset_id,
+			fee_asset_id,
+			usdt_fee_amount,
+		)
+		.unwrap_or_default();
+		println!("Transferred Amount {}", amt);
+		let coin = Coin {
+			denom: prefixed_denom,
+			amount: ibc::applications::transfer::Amount::from_str(&format!("{:?}", amt)).unwrap(),
+		};
+		let packet_data = PacketData {
+			token: coin,
+			sender: Signer::from_str("alice").unwrap(),
+			receiver: Signer::from_str(&ss58_address).unwrap(),
+			memo: "".to_string(),
+		};
+
+		let data = serde_json::to_vec(&packet_data).unwrap();
+		let packet = Packet {
+			sequence: 1u64.into(),
+			source_port: PortId::transfer(),
+			source_channel: ChannelId::new(1),
+			destination_port: PortId::transfer(),
+			destination_channel: ChannelId::new(0),
+			data,
+			timeout_height: Height::new(2000, 5),
+			timeout_timestamp: ibc::timestamp::Timestamp::from_nanoseconds(
+				1690894363u64.saturating_mul(1000000000),
+			)
+			.unwrap(),
+		};
+
+		let msg = MsgRecvPacket {
+			packet,
+			proofs: Proofs::new(
+				vec![0u8; 32].try_into().unwrap(),
+				None,
+				None,
+				None,
+				Height::new(0, 1),
+			)
+			.unwrap(),
+			signer: Signer::from_str(MODULE_ID).unwrap(),
+		};
+
+		let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+
+		let account_data = Assets::balance(asset_id, AccountId32::new(pair.public().0));
+		// Assert account balance before transfer
+		assert_eq!(account_data, 0);
+		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
+
+		let balance =
+			<Assets as Inspect<AccountId>>::balance(asset_id, &AccountId32::new(pair.public().0));
+		let pallet_balance = <Assets as Inspect<AccountId>>::balance(
+			asset_id,
+			&<Test as crate::Config>::FeeAccount::get().into_account(),
+		);
+		let fee = <Test as crate::Config>::FlatFeeConverter::get_flat_fee(
+			asset_id,
+			fee_asset_id,
+			usdt_fee_amount,
+		)
+		.unwrap_or_default();
+		let actual_fee = fee.min(amt);
+		assert_eq!(balance, 0);
+		assert_eq!(balance, amt - actual_fee);
+		assert_eq!(pallet_balance, actual_fee);
+	})
+}
+
+#[test]
+fn on_deliver_ics20_recv_packet_should_not_double_spend() {
+	let mut ext = new_test_ext();
+	ext.execute_with(|| {
+		// Create  a new account
+		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
+		let ss58_address_bytes =
+			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
+		let ss58_address = String::from_utf8(ss58_address_bytes).unwrap();
+		frame_system::Pallet::<Test>::set_block_number(1u32);
+		setup_client_and_consensus_state(PortId::transfer());
+
+		let channel_id = ChannelId::new(0);
+		let balance = 100000 * MILLIS;
+
+		// We are simulating a transfer back to the source chain
+
+		let denom = "transfer/channel-1/PICA";
+		let channel_escrow_address =
+			get_channel_escrow_address(&PortId::transfer(), channel_id).unwrap();
+		let channel_escrow_address =
+			<Test as Config>::AccountIdConversion::try_from(channel_escrow_address)
+				.map_err(|_| ())
+				.unwrap();
+		let channel_escrow_address = channel_escrow_address.into_account();
+
+		// Endow escrow address with tokens
+		let _ = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::deposit_creating(&channel_escrow_address, balance);
+
+		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
+		let amt = MILLIS / 100;
+		println!("Transferred Amount {}", amt);
+		let coin = Coin {
+			denom: prefixed_denom,
+			amount: ibc::applications::transfer::Amount::from_str(&format!("{:?}", amt)).unwrap(),
+		};
+		let packet_data = PacketData {
+			token: coin,
+			sender: Signer::from_str("alice").unwrap(),
+			receiver: Signer::from_str(&ss58_address).unwrap(),
+			memo: "".to_string(),
+		};
+
+		let data = serde_json::to_vec(&packet_data).unwrap();
+		let packet = Packet {
+			sequence: 1u64.into(),
+			source_port: PortId::transfer(),
+			source_channel: ChannelId::new(1),
+			destination_port: PortId::transfer(),
+			destination_channel: ChannelId::new(0),
+			data,
+			timeout_height: Height::new(2000, 5),
+			timeout_timestamp: ibc::timestamp::Timestamp::from_nanoseconds(
+				1690894363u64.saturating_mul(1000000000),
+			)
+			.unwrap(),
+		};
+
+		let msg = MsgRecvPacket {
+			packet,
+			proofs: Proofs::new(
+				vec![0u8; 32].try_into().unwrap(),
+				None,
+				None,
+				None,
+				Height::new(0, 1),
+			)
+			.unwrap(),
+			signer: Signer::from_str(MODULE_ID).unwrap(),
+		};
+
+		let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+		let fee_amt = <Test as crate::ics20_fee::Config>::ServiceChargeIn::get() * amt;
+
+		let account_balance = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::free_balance(&AccountId32::new(pair.public().0));
+		// Assert account balance before transfer
+		assert_eq!(account_balance, 0);
+		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg.clone()]).unwrap();
+
+		let account_balance = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::free_balance(&AccountId32::new(pair.public().0));
+		// Assert account balance after transfer
+		assert_eq!(account_balance, amt - fee_amt);
+
+		let balance = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::free_balance(&AccountId32::new(pair.public().0));
+		let pallet_balance =
+			<<Test as Config>::NativeCurrency as Currency<
+				<Test as frame_system::Config>::AccountId,
+			>>::free_balance(&<Test as crate::Config>::FeeAccount::get().into_account());
+		// fee is less than ExistentialDeposit, so it is not deducted
+		assert_eq!(balance, amt - fee_amt);
+		assert_eq!(pallet_balance, fee_amt);
+
+		// try sending the same packet again
+		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
+
+		let account_data = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::free_balance(&AccountId32::new(pair.public().0));
+		// Assert account balance after transfer
+		assert_eq!(account_data, amt - fee_amt);
+
+		let balance = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::free_balance(&AccountId32::new(pair.public().0));
+		let pallet_balance =
+			<<Test as Config>::NativeCurrency as Currency<
+				<Test as frame_system::Config>::AccountId,
+			>>::free_balance(&<Test as crate::Config>::FeeAccount::get().into_account());
+		// fee is less than ExistentialDeposit, so it is not deducted
+		assert_eq!(balance, amt - fee_amt);
+		assert_eq!(pallet_balance, fee_amt);
 	})
 }
 
@@ -412,6 +819,7 @@ fn should_cleanup_offchain_packets_correctly() {
 	let mut ext = new_test_ext();
 	let channel_id = ChannelId::new(0);
 	let port_id = PortId::transfer();
+	let cleanup_period = CleanUpPacketsPeriod::get();
 
 	ext.execute_with(|| {
 		// Add some packets offchain
@@ -448,7 +856,6 @@ fn should_cleanup_offchain_packets_correctly() {
 		}
 
 		// Store packet acknowledgements
-
 		for i in 1..=10u64 {
 			let packet = Packet {
 				sequence: i.into(),
@@ -478,34 +885,41 @@ fn should_cleanup_offchain_packets_correctly() {
 		}
 	});
 
-	ext.persist_offchain_overlay();
-
 	ext.execute_with(|| {
-		Pallet::<Test>::packet_cleanup().unwrap();
+		// should not cleanup withing the period
+		for i in 1..cleanup_period {
+			Pallet::<Test>::on_idle(i, Weight::max_value());
+		}
 	});
 
-	ext.persist_offchain_overlay();
-
 	ext.execute_with(|| {
-		let pending_send_packet_seqs = StorageValueRef::persistent(OFFCHAIN_SEND_PACKET_SEQS);
-		let pending_recv_packet_seqs = StorageValueRef::persistent(OFFCHAIN_RECV_PACKET_SEQS);
-		let pending_send_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
-			pending_send_packet_seqs.get::<_>().ok().flatten().unwrap();
-		let pending_recv_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
-			pending_recv_packet_seqs.get::<_>().ok().flatten().unwrap();
-
 		let channel_id_bytes = channel_id.to_string().as_bytes().to_vec();
 		let port_id_bytes = port_id.as_bytes().to_vec();
 
-		let (send_seq_set, last_removed_send) = pending_send_sequences
-			.get(&(port_id_bytes.clone(), channel_id_bytes.clone()))
-			.map(|set| set.clone())
-			.unwrap();
+		let (send_seq_set, _) =
+			PendingSendPacketSeqs::<Test>::get(&(port_id_bytes.clone(), channel_id_bytes.clone()));
 
-		let (recv_seq_set, last_removed_ack) = pending_recv_sequences
-			.get(&(port_id_bytes, channel_id_bytes))
-			.map(|set| set.clone())
-			.unwrap();
+		let (recv_seq_set, _) =
+			PendingRecvPacketSeqs::<Test>::get(&(port_id_bytes, channel_id_bytes));
+
+		assert_eq!(send_seq_set, Default::default());
+
+		assert_eq!(recv_seq_set, Default::default());
+	});
+
+	ext.execute_with(|| {
+		Pallet::<Test>::on_idle(cleanup_period, Weight::max_value());
+	});
+
+	ext.execute_with(|| {
+		let channel_id_bytes = channel_id.to_string().as_bytes().to_vec();
+		let port_id_bytes = port_id.as_bytes().to_vec();
+
+		let (send_seq_set, last_removed_send) =
+			PendingSendPacketSeqs::<Test>::get(&(port_id_bytes.clone(), channel_id_bytes.clone()));
+
+		let (recv_seq_set, last_removed_ack) =
+			PendingRecvPacketSeqs::<Test>::get(&(port_id_bytes, channel_id_bytes));
 
 		assert_eq!(send_seq_set, vec![2, 4, 6, 8, 10].into_iter().collect());
 
@@ -526,34 +940,19 @@ fn should_cleanup_offchain_packets_correctly() {
 		}
 	});
 
-	ext.persist_offchain_overlay();
-
 	ext.execute_with(|| {
-		Pallet::<Test>::packet_cleanup().unwrap();
+		Pallet::<Test>::on_idle(cleanup_period, Weight::max_value());
 	});
 
-	ext.persist_offchain_overlay();
-
 	ext.execute_with(|| {
-		let pending_send_packet_seqs = StorageValueRef::persistent(OFFCHAIN_SEND_PACKET_SEQS);
-		let pending_recv_packet_seqs = StorageValueRef::persistent(OFFCHAIN_RECV_PACKET_SEQS);
-		let pending_send_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
-			pending_send_packet_seqs.get::<_>().ok().flatten().unwrap();
-		let pending_recv_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
-			pending_recv_packet_seqs.get::<_>().ok().flatten().unwrap();
-
 		let channel_id_bytes = channel_id.to_string().as_bytes().to_vec();
 		let port_id_bytes = port_id.as_bytes().to_vec();
 
-		let (send_seq_set, last_removed_send) = pending_send_sequences
-			.get(&(port_id_bytes.clone(), channel_id_bytes.clone()))
-			.map(|set| set.clone())
-			.unwrap();
+		let (send_seq_set, last_removed_send) =
+			PendingSendPacketSeqs::<Test>::get(&(port_id_bytes.clone(), channel_id_bytes.clone()));
 
-		let (recv_seq_set, last_removed_ack) = pending_recv_sequences
-			.get(&(port_id_bytes, channel_id_bytes))
-			.map(|set| set.clone())
-			.unwrap();
+		let (recv_seq_set, last_removed_ack) =
+			PendingRecvPacketSeqs::<Test>::get(&(port_id_bytes, channel_id_bytes));
 
 		println!("{send_seq_set:?}");
 

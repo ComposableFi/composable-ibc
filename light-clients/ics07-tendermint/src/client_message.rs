@@ -36,8 +36,10 @@ use serde::{Deserialize, Serialize};
 use tendermint::{block::signed_header::SignedHeader, validator::Set as ValidatorSet};
 use tendermint_proto::Protobuf;
 
-pub const TENDERMINT_HEADER_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.Header";
-pub const TENDERMINT_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.Misbehaviour";
+pub const TENDERMINT_HEADER_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.Header";
+pub const TENDERMINT_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.Misbehaviour";
+pub const TENDERMINT_CLIENT_MESSAGE_TYPE_URL: &str =
+	"/ibc.lightclients.tendermint.v1.ClientMessage";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Misbehaviour {
@@ -220,13 +222,6 @@ impl TryFrom<RawHeader> for Header {
 				.try_into()
 				.map_err(Error::invalid_raw_header)?,
 		};
-
-		if header.height().revision_number != header.trusted_height.revision_number {
-			return Err(Error::mismatched_revisions(
-				header.trusted_height.revision_number,
-				header.height().revision_number,
-			))
-		}
 
 		Ok(header)
 	}

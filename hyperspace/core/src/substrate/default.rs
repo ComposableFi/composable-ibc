@@ -19,8 +19,8 @@ use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
 use ibc_proto::google::protobuf::Any;
 use light_client_common::config::{
-	BeefyAuthoritySetT, EventRecordT, IbcEventsT, LocalStaticStorageAddress, ParaLifecycleT,
-	RuntimeCall, RuntimeStorage, RuntimeTransactions,
+	BeefyAuthoritySetT, EventRecordT, IbcEventsT, LocalAddress, ParaLifecycleT, RuntimeCall,
+	RuntimeStorage, RuntimeTransactions,
 };
 use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;
@@ -38,10 +38,12 @@ use subxt::{
 		},
 		ExtrinsicParams,
 	},
-	events::{Phase, StaticEvent},
-	metadata::DecodeStaticType,
-	storage::{address::Yes, StaticStorageAddress},
-	tx::StaticTxPayload,
+	events::Phase,
+	storage::{
+		address::{StaticStorageMapKey, Yes},
+		Address,
+	},
+	tx::Payload,
 	Error, OnlineClient,
 };
 
@@ -121,17 +123,19 @@ define_runtime_transactions!(
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, y, z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),
-	|x| parachain_subxt::api::tx().ibc_ping().send_ping(x)
+	|x| parachain_subxt::api::tx().ibc_ping().send_ping(x),
+	|| DefaultParaRuntimeCall(
+		parachain_subxt::api::runtime_types::parachain_runtime::RuntimeCall::Ibc(
+			parachain_subxt::api::runtime_types::pallet_ibc::pallet::Call::increase_counters {}
+		)
+	)
 );
 
-define_ibc_event_wrapper!(
-	IbcEventWrapper, MetadataIbcEvent,
-	MetadataIbcEvent::PushWasmCode { wasm_code_id } => RawIbcEvent::PushWasmCode { wasm_code_id },
-);
+define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent,);
 
 define_event_record!(
 	DefaultEventRecord,
-	EventRecord<<DefaultConfig as light_client_common::config::Config>::ParaRuntimeEvent, H256>,
+	EventRecord<<<DefaultConfig as light_client_common::config::Config>::ParaRuntimeEvent as AsInner>::Inner, H256>,
 	IbcEventWrapper,
 	parachain_subxt::api::runtime_types::frame_system::Phase,
 	parachain_subxt::api::runtime_types::pallet_ibc::pallet::Event,
@@ -180,15 +184,12 @@ impl light_client_common::config::Config for DefaultConfig {
 
 impl subxt::Config for DefaultConfig {
 	type Index = u32;
-	type BlockNumber = u32;
 	type Hash = H256;
 	type Hasher = subxt::config::substrate::BlakeTwo256;
 	type AccountId = AccountId32;
 	type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
-	type Header = subxt::config::substrate::SubstrateHeader<
-		Self::BlockNumber,
-		subxt::config::substrate::BlakeTwo256,
-	>;
+	type Header =
+		subxt::config::substrate::SubstrateHeader<u32, subxt::config::substrate::BlakeTwo256>;
 	type Signature = sp_runtime::MultiSignature;
 	type ExtrinsicParams = ParachainExtrinsicParams<Self>;
 }

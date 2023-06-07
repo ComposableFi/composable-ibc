@@ -18,7 +18,7 @@ use cumulus_client_service::{
 };
 use cumulus_primitives_core::ParaId;
 use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
-use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayChainResult};
+use cumulus_relay_chain_interface::{RelayChainInterface, RelayChainResult};
 use cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node;
 
 // Substrate Imports
@@ -186,10 +186,7 @@ async fn start_node_impl(
 		hwbench.clone(),
 	)
 	.await
-	.map_err(|e| match e {
-		RelayChainError::ServiceError(polkadot_service::Error::Sub(x)) => x,
-		s => s.to_string().into(),
-	})?;
+	.map_err(|e| e.to_string())?;
 
 	let block_announce_validator = BlockAnnounceValidator::new(relay_chain_interface.clone(), id);
 	let block_announce_validator_builder = move |_| Box::new(block_announce_validator) as Box<_>;
@@ -206,7 +203,7 @@ async fn start_node_impl(
 			spawn_handle: task_manager.spawn_handle(),
 			import_queue: params.import_queue,
 			block_announce_validator_builder: Some(Box::new(block_announce_validator_builder)),
-			warp_sync: None,
+			warp_sync_params: None,
 		})?;
 
 	if parachain_config.offchain_worker.enabled {
@@ -269,6 +266,10 @@ async fn start_node_impl(
 
 	let relay_chain_slot_duration = Duration::from_secs(6);
 
+	let overseer_handle = relay_chain_interface
+		.overseer_handle()
+		.map_err(|e| sc_service::Error::Application(Box::new(e)))?;
+
 	if validator {
 		let parachain_consensus = build_consensus(
 			client.clone(),
@@ -297,6 +298,7 @@ async fn start_node_impl(
 			import_queue: import_queue_service,
 			collator_key: collator_key.expect("Command line arguments do not allow this. qed"),
 			relay_chain_slot_duration,
+			recovery_handle: Box::new(overseer_handle),
 		};
 
 		start_collator(params).await?;
@@ -309,6 +311,7 @@ async fn start_node_impl(
 			relay_chain_interface,
 			relay_chain_slot_duration,
 			import_queue: import_queue_service,
+			recovery_handle: Box::new(overseer_handle),
 		};
 
 		start_full_node(params)?;

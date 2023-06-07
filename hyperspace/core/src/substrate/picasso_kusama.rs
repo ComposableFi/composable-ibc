@@ -6,6 +6,7 @@ use self::parachain_subxt::api::{
 	},
 	sudo::calls::Sudo,
 };
+use super::{unimplemented, DummyBeefyAuthoritySet};
 use crate::{
 	define_any_wrapper, define_asset_id, define_event_record, define_events, define_head_data,
 	define_ibc_event_wrapper, define_id, define_para_lifecycle, define_runtime_call,
@@ -16,8 +17,8 @@ use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
 use ibc_proto::google::protobuf::Any;
 use light_client_common::config::{
-	BeefyAuthoritySetT, EventRecordT, IbcEventsT, LocalStaticStorageAddress, ParaLifecycleT,
-	RuntimeCall, RuntimeStorage, RuntimeTransactions,
+	EventRecordT, IbcEventsT, LocalAddress, ParaLifecycleT, RuntimeCall, RuntimeStorage,
+	RuntimeTransactions,
 };
 use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;
@@ -34,10 +35,12 @@ use subxt::{
 		},
 		ExtrinsicParams,
 	},
-	events::{Phase, StaticEvent},
-	metadata::DecodeStaticType,
-	storage::{address::Yes, StaticStorageAddress},
-	tx::StaticTxPayload,
+	events::Phase,
+	storage::{
+		address::{StaticStorageMapKey, Yes},
+		Address,
+	},
+	tx::Payload,
 	Error, OnlineClient,
 };
 use subxt_generated::picasso_kusama::parachain::api::runtime_types::{
@@ -54,9 +57,13 @@ pub mod relaychain {
 
 pub type Balance = u128;
 
-#[derive(Encode)]
+#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 pub struct DummySendPingParamsWrapper<T>(T);
-#[derive(Encode)]
+#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 pub struct FakeSendPingParams;
 
 impl From<SendPingParams> for FakeSendPingParams {
@@ -77,39 +84,22 @@ define_head_data!(
 
 define_para_lifecycle!(PicassoParaLifecycle, ParaLifecycle);
 
-#[derive(Decode, Encode)]
-pub struct PicassoBeefyAuthoritySet;
-
-impl BeefyAuthoritySetT for PicassoBeefyAuthoritySet {
-	fn root(&self) -> H256 {
-		unimplemented!()
-	}
-
-	fn len(&self) -> u32 {
-		unimplemented!()
-	}
-}
-
-fn unimplemented<T>(s: &'static str) -> T {
-	unimplemented!("{s}")
-}
-
 define_runtime_storage!(
 	PicassoRuntimeStorage,
 	PicassoHeadData,
 	PicassoId,
 	PicassoParaLifecycle,
-	PicassoBeefyAuthoritySet,
+	DummyBeefyAuthoritySet,
 	parachain_subxt::api::storage().timestamp().now(),
 	|x| relaychain::api::storage().paras().heads(x),
 	|x| relaychain::api::storage().paras().para_lifecycles(x),
 	relaychain::api::storage().paras().parachains(),
 	relaychain::api::storage().grandpa().current_set_id(),
 	unimplemented("relaychain::api::storage().beefy().validator_set_id()"),
-	unimplemented::<StaticStorageAddress<DecodeStaticType<()>, Yes, Yes, ()>>(
+	unimplemented::<Address<StaticStorageMapKey, (), Yes, Yes, ()>>(
 		"relaychain::api::storage().beefy().authorities()"
 	),
-	unimplemented::<StaticStorageAddress<DecodeStaticType<()>, Yes, Yes, ()>>(
+	unimplemented::<Address<StaticStorageMapKey, (), Yes, Yes, ()>>(
 		"relaychain::api::storage().mmr_leaf().beefy_next_authorities()"
 	),
 	relaychain::api::storage().babe().epoch_start()
@@ -140,14 +130,15 @@ define_runtime_transactions!(
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, CurrencyId(y), z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),
-	|_: DummySendPingParamsWrapper<FakeSendPingParams>| unimplemented!("ping is not implemented")
+	|_: DummySendPingParamsWrapper<FakeSendPingParams>| unimplemented("ping is not implemented"),
+	|| unimplemented("ibc_increase_counters is not implemented")
 );
 
 define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent,);
 
 define_event_record!(
 	PicassoEventRecord,
-	EventRecord<< PicassoKusamaConfig as light_client_common::config::Config>::ParaRuntimeEvent, H256>,
+	EventRecord<<<PicassoKusamaConfig as light_client_common::config::Config>::ParaRuntimeEvent as AsInner>::Inner, H256>,
 	IbcEventWrapper,
 	parachain_subxt::api::runtime_types::frame_system::Phase,
 	parachain_subxt::api::runtime_types::pallet_ibc::pallet::Event,
@@ -198,15 +189,12 @@ impl light_client_common::config::Config for PicassoKusamaConfig {
 
 impl subxt::Config for PicassoKusamaConfig {
 	type Index = u32;
-	type BlockNumber = u32;
 	type Hash = H256;
 	type Hasher = subxt::config::substrate::BlakeTwo256;
 	type AccountId = AccountId32;
 	type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
-	type Header = subxt::config::substrate::SubstrateHeader<
-		Self::BlockNumber,
-		subxt::config::substrate::BlakeTwo256,
-	>;
+	type Header =
+		subxt::config::substrate::SubstrateHeader<u32, subxt::config::substrate::BlakeTwo256>;
 	type Signature = sp_runtime::MultiSignature;
 	type ExtrinsicParams = ParachainExtrinsicParams<Self>;
 }

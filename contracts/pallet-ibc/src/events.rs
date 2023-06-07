@@ -219,6 +219,8 @@ pub enum IbcEvent {
 	ChainError,
 	/// App module
 	AppModule { kind: Vec<u8>, module_id: Vec<u8> },
+	/// Push WASM Code
+	PushWasmCode { wasm_code_id: CodeId },
 }
 
 impl From<RawIbcEvent> for IbcEvent {

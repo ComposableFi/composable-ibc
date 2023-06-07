@@ -153,18 +153,11 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 		relayer: &Signer,
 	) -> Result<Acknowledgement, Error> {
 		let ack = self.inner.on_recv_packet(ctx, output, packet, relayer)?;
-		let packet_data: PacketData =
-			serde_json::from_slice(packet.data.as_slice()).map_err(|e| {
-				Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
-			})?;
-		let receiver = <T as Config>::AccountIdConversion::try_from(packet_data.receiver.clone())
-			.map_err(|_| {
-				Error::implementation_specific(format!("Failed to parse receiver account"))
-			})?
-			.into_account();
-		<T as Config>::HandleMemo::execute_memo(&packet_data, receiver).map_err(|e| {
-			Error::implementation_specific(format!("Failed to execute memo {:?}", e))
-		})?;
+		// We want the whole chain of calls to fail only if the ics20 transfer fails, because
+		// the other modules are not part of ics-20 standard
+		let _ = Self::process_memo(packet).map_err(|e| {
+			log::error!(target: "pallet_ibc", "Error while handling memo: {:?}", e);
+		});
 		Ok(ack)
 	}
 
@@ -188,5 +181,23 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 		relayer: &Signer,
 	) -> Result<(), Error> {
 		self.inner.on_timeout_packet(ctx, output, packet, relayer)
+	}
+}
+
+impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Memo<T, S> {
+	fn process_memo(packet: &mut Packet) -> Result<(), Error> {
+		let packet_data: PacketData =
+			serde_json::from_slice(packet.data.as_slice()).map_err(|e| {
+				Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
+			})?;
+		let receiver = <T as Config>::AccountIdConversion::try_from(packet_data.receiver.clone())
+			.map_err(|_| {
+				Error::implementation_specific(format!("Failed to parse receiver account"))
+			})?
+			.into_account();
+		<T as Config>::HandleMemo::execute_memo(&packet_data, receiver).map_err(|e| {
+			Error::implementation_specific(format!("Failed to execute memo {:?}", e))
+		})?;
+		Ok(())
 	}
 }

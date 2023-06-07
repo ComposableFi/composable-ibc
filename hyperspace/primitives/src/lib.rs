@@ -14,8 +14,6 @@
 
 #![allow(clippy::all)]
 
-use std::{fmt::Debug, pin::Pin, str::FromStr, time::Duration};
-
 use futures::Stream;
 use ibc_proto::{
 	google::protobuf::Any,
@@ -29,6 +27,9 @@ use ibc_proto::{
 		connection::v1::QueryConnectionResponse,
 	},
 };
+use rand::Rng;
+use std::{collections::HashSet, fmt::Debug, pin::Pin, str::FromStr, time::Duration};
+use tokio::{task::JoinSet, time::sleep};
 
 use crate::error::Error;
 #[cfg(any(feature = "testing", test))]
@@ -69,6 +70,7 @@ pub enum UpdateMessage {
 	Batch(Vec<Any>),
 }
 
+#[derive(Debug)]
 pub enum UpdateType {
 	// contains an authority set change.
 	Mandatory,
@@ -96,7 +98,7 @@ pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: impl Into<Vec<u8>>) ->
 #[async_trait::async_trait]
 pub trait IbcProvider {
 	/// Finality event type, passed on to [`Chain::query_latest_ibc_events`]
-	type FinalityEvent;
+	type FinalityEvent: Debug;
 	/// A representation of the transaction id for the chain
 	type TransactionId: Debug;
 	/// Asset Id
@@ -223,7 +225,7 @@ pub trait IbcProvider {
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error>;
 
-	async fn on_undelivered_sequences(&self, seqs: &[u64]) -> Result<(), Self::Error>;
+	async fn on_undelivered_sequences(&self, is_empty: bool) -> Result<(), Self::Error>;
 
 	fn has_undelivered_sequences(&self) -> bool;
 
@@ -238,7 +240,7 @@ pub trait IbcProvider {
 	) -> Result<Vec<u64>, Self::Error>;
 
 	/// Channel whitelist
-	fn channel_whitelist(&self) -> Vec<(ChannelId, PortId)>;
+	fn channel_whitelist(&self) -> HashSet<(ChannelId, PortId)>;
 
 	/// Query all channels for a connection
 	async fn query_connection_channels(
@@ -296,8 +298,20 @@ pub trait IbcProvider {
 	/// Return the host chain's light client id on counterparty chain
 	fn client_id(&self) -> ClientId;
 
+	/// Set the client id for the relayer task.
+	fn set_client_id(&mut self, client_id: ClientId);
+
 	/// Return the connection id on this chain
-	fn connection_id(&self) -> ConnectionId;
+	fn connection_id(&self) -> Option<ConnectionId>;
+
+	/// Set the channel whitelist for the relayer task.
+	fn set_channel_whitelist(&mut self, channel_whitelist: HashSet<(ChannelId, PortId)>);
+
+	/// Set the channel whitelist for the relayer task.
+	fn add_channel_to_whitelist(&mut self, channel: (ChannelId, PortId));
+
+	/// Set the connection id for the relayer task.
+	fn set_connection_id(&mut self, connection_id: ConnectionId);
 
 	/// Returns the client type of this chain.
 	fn client_type(&self) -> ClientType;
@@ -337,6 +351,18 @@ pub trait IbcProvider {
 		tx_id: Self::TransactionId,
 	) -> Result<ClientId, Self::Error>;
 
+	/// Should find connection id that was created in this transaction
+	async fn query_connection_id_from_tx_hash(
+		&self,
+		tx_id: Self::TransactionId,
+	) -> Result<ConnectionId, Self::Error>;
+
+	/// Should find channel and port id that was created in this transaction
+	async fn query_channel_id_from_tx_hash(
+		&self,
+		tx_id: Self::TransactionId,
+	) -> Result<(ChannelId, PortId), Self::Error>;
+
 	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error>;
 }
 
@@ -358,8 +384,8 @@ pub trait TestProvider: Chain + Clone + 'static {
 	/// Returns a stream that yields chain Block number
 	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>>;
 
-	/// Set the channel whitelist for the relayer task.
-	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>);
+	/// Increases IBC counters by 1 to check that relayer uses proper values for source/sink chains.
+	async fn increase_counters(&mut self) -> Result<(), Self::Error>;
 }
 
 /// Provides an interface for managing key management for signing.
@@ -397,7 +423,7 @@ pub trait LightClientSync {
 /// finality notifications
 #[async_trait::async_trait]
 pub trait Chain:
-	IbcProvider + LightClientSync + MisbehaviourHandler + KeyProvider + Send + Sync
+	IbcProvider + LightClientSync + MisbehaviourHandler + KeyProvider + Clone + Send + Sync + 'static
 {
 	/// Name of this chain, used in logs.
 	fn name(&self) -> &str;
@@ -411,7 +437,7 @@ pub trait Chain:
 	/// Return a stream that yields when new [`IbcEvents`] are ready to be queried.
 	async fn finality_notifications(
 		&self,
-	) -> Pin<Box<dyn Stream<Item = Self::FinalityEvent> + Send + Sync>>;
+	) -> Result<Pin<Box<dyn Stream<Item = Self::FinalityEvent> + Send + Sync>>, Self::Error>;
 
 	/// This should be used to submit new messages [`Vec<Any>`] from a counterparty chain to this
 	/// chain.
@@ -425,6 +451,12 @@ pub trait Chain:
 	) -> Result<AnyClientMessage, Self::Error>;
 
 	async fn get_proof_height(&self, block_height: Height) -> Height;
+
+	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error>;
+
+	fn rpc_call_delay(&self) -> Duration;
+
+	fn set_rpc_call_delay(&mut self, delay: Duration);
 }
 
 /// Returns undelivered packet sequences that have been sent out from
@@ -520,7 +552,7 @@ pub async fn query_undelivered_acks(
 		.await?;
 	log::trace!(
 		target: "hyperspace",
-		"Found {} undelivered packet acks from {} chain",
+		"Found {} undelivered packet acks for {} chain",
 		undelivered_acks.len(), sink.name()
 	);
 
@@ -615,9 +647,9 @@ pub async fn query_maximum_height_for_timeout_proofs(
 	source: &impl Chain,
 	sink: &impl Chain,
 ) -> Option<u64> {
-	let mut min_timeout_height = None;
 	let (source_height, ..) = source.latest_height_and_timestamp().await.ok()?;
 	let (sink_height, ..) = sink.latest_height_and_timestamp().await.ok()?;
+	let mut join_set: JoinSet<Option<_>> = JoinSet::new();
 	for (channel, port_id) in source.channel_whitelist() {
 		let undelivered_sequences = query_undelivered_sequences(
 			source_height,
@@ -632,37 +664,47 @@ pub async fn query_maximum_height_for_timeout_proofs(
 		let send_packets =
 			source.query_send_packets(channel, port_id, undelivered_sequences).await.ok()?;
 		for send_packet in send_packets {
-			let revision_height = send_packet.height.expect("expected height for packet");
-			let sink_client_state = source
-				.query_client_state(
-					Height::new(source_height.revision_number, revision_height),
-					sink.client_id(),
-				)
-				.await
-				.ok()?;
-			let sink_client_state =
-				AnyClientState::try_from(sink_client_state.client_state?).ok()?;
-			let height = sink_client_state.latest_height();
-			let timestamp_at_creation =
-				sink.query_timestamp_at(height.revision_height).await.ok()?;
-			let period = send_packet.timeout_timestamp.saturating_sub(timestamp_at_creation);
-			if period == 0 {
-				min_timeout_height =
-					min_timeout_height.max(Some(send_packet.timeout_height.revision_height));
-				continue
-			}
-			let period = Duration::from_nanos(period);
-			let period =
-				calculate_block_delay(period, sink.expected_block_time()).saturating_add(1);
-			let approx_height = revision_height + period;
-			let timeout_height = if send_packet.timeout_height.revision_height < approx_height {
-				send_packet.timeout_height.revision_height
-			} else {
-				approx_height
-			};
+			let source = source.clone();
+			let sink = sink.clone();
+			let duration = Duration::from_millis(
+				rand::thread_rng().gen_range(1..source.rpc_call_delay().as_millis()) as u64,
+			);
+			join_set.spawn(async move {
+				sleep(duration).await;
+				let revision_height = send_packet.height.expect("expected height for packet");
+				let sink_client_state = source
+					.query_client_state(
+						Height::new(source_height.revision_number, revision_height),
+						sink.client_id(),
+					)
+					.await
+					.ok()?;
+				let sink_client_state =
+					AnyClientState::try_from(sink_client_state.client_state?).ok()?;
+				let height = sink_client_state.latest_height();
+				let timestamp_at_creation =
+					sink.query_timestamp_at(height.revision_height).await.ok()?;
+				let period = send_packet.timeout_timestamp.saturating_sub(timestamp_at_creation);
+				if period == 0 {
+					return Some(send_packet.timeout_height.revision_height)
+				}
+				let period = Duration::from_nanos(period);
+				let period =
+					calculate_block_delay(period, sink.expected_block_time()).saturating_add(1);
+				let approx_height = revision_height + period;
+				let timeout_height = if send_packet.timeout_height.revision_height < approx_height {
+					send_packet.timeout_height.revision_height
+				} else {
+					approx_height
+				};
 
-			min_timeout_height = min_timeout_height.max(Some(timeout_height))
+				Some(timeout_height)
+			});
 		}
+	}
+	let mut min_timeout_height = None;
+	while let Some(timeout_height) = join_set.join_next().await {
+		min_timeout_height = min_timeout_height.max(timeout_height.ok()?)
 	}
 	min_timeout_height
 }

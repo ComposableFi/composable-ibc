@@ -14,13 +14,38 @@
 
 #[macro_export]
 macro_rules! process_finality_event {
-	($source:ident, $sink:ident, $metrics:expr, $mode:ident, $result:ident) => {
+	($source:ident, $sink:ident, $metrics:expr, $mode:ident, $result:ident, $stream_source:ident, $stream_sink:ident) => {
 		match $result {
 			// stream closed
-			None => break,
+			None => {
+				log::warn!("Stream closed for {}", $source.name());
+				$stream_source = loop {
+					match $source.finality_notifications().await {
+						Ok(stream) => break stream,
+						Err(e) => {
+							log::error!("Failed to get finality notifications for {} {:?}. Trying again in 30 seconds...", $source.name(), e);
+							tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+						},
+					};
+				};
+				$stream_sink = loop {
+					match $sink.finality_notifications().await {
+						Ok(stream) => break stream,
+						Err(e) => {
+							log::error!("Failed to get finality notifications for {} {:?}. Trying again in 30 seconds...", $sink.name(), e);
+							tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+						},
+					};
+				};
+			},
 			Some(finality_event) => {
 				log::info!("=======================================================");
 				log::info!("Received finality notification from {}", $source.name());
+				let sink_initial_rpc_call_delay = $sink.rpc_call_delay();
+				let source_initial_rpc_call_delay = $source.rpc_call_delay();
+				// TODO: make better error handling
+				let mut had_error = false;
+
 				let updates = match $source.query_latest_ibc_events(finality_event, &$sink).await {
 					Ok(resp) => resp,
 					Err(err) => {
@@ -29,16 +54,21 @@ macro_rules! process_finality_event {
 							$source.name(),
 							err
 						);
+						match $sink.handle_error(&err).and_then(|_| $source.handle_error(&err)).await {
+							Ok(_) => {},
+							Err(e) => log::error!("Failed to handle error for {} {:?}", $sink.name(), e),
+						}
 						continue
 					},
 				};
-
+				log::trace!(target: "hyperspace", "Received updates count: {}", updates.len());
 				// query packets that can now be sent, at this sink height because of connection
 				// delay.
 				let (ready_packets, timeout_msgs) =
 					crate::packets::query_ready_and_timed_out_packets(&$source, &$sink).await?;
 
 				let mut msgs = Vec::new();
+
 				for (msg_update_client, events, update_type) in updates {
 					if let Some(metrics) = $metrics.as_mut() {
 						if let Err(e) = metrics.handle_events(events.as_slice()).await {
@@ -47,12 +77,20 @@ macro_rules! process_finality_event {
 					}
 					let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
 					let mut messages =
-						parse_events(&mut $source, &mut $sink, events, $mode).await?;
-					log::debug!(
-						"Has packets {}: {}",
-						$source.name(),
-						$source.has_undelivered_sequences()
-					);
+						match parse_events(&mut $source, &mut $sink, events, $mode).await {
+							Ok(msgs) => msgs,
+							Err(e) => {
+								log::error!("Failed to parse events for {} {:?}", $source.name(), e);
+								match $sink.handle_error(&e).and_then(|_| $source.handle_error(&e)).await {
+									Ok(_) => {},
+									Err(e) => log::error!("Failed to handle error for {} {:?}", $sink.name(), e),
+								}
+								had_error = true;
+								continue
+							},
+					};
+					log::trace!(target: "hyperspace", "Received messages count: {}, timeouts count: {}, is the update optional: {}, has undelivered packets: {}", messages.len(), timeout_msgs.len(), update_type.is_optional(), $source.has_undelivered_sequences());
+
 					// We want to send client update if packet messages exist but where not sent due
 					// to a connection delay even if client update message is optional
 					match (
@@ -90,7 +128,24 @@ macro_rules! process_finality_event {
 					let type_urls =
 						msgs.iter().map(|msg| msg.type_url.as_str()).collect::<Vec<_>>();
 					log::info!("Submitting messages to {}: {type_urls:#?}", $sink.name());
-					queue::flush_message_batch(msgs, $metrics.as_ref(), &$sink).await?;
+					match queue::flush_message_batch(msgs, $metrics.as_ref(), &$sink).await {
+						Ok(_) => {
+							log::trace!(target: "hyperspace", "Successfully submitted messages to {}", $sink.name());
+						},
+						Err(e) => {
+							log::error!(
+								target:"hyperspace",
+								"Failed to submit messages to {} {:?}",
+								$sink.name(),
+								e
+							);
+							match $sink.handle_error(&e).and_then(|_| $source.handle_error(&e)).await {
+								Ok(_) => {},
+								Err(e) => log::error!("Failed to handle error for {} {:?}", $sink.name(), e),
+							}
+							had_error = true;
+						},
+					}
 				}
 
 				if !timeout_msgs.is_empty() {
@@ -99,8 +154,32 @@ macro_rules! process_finality_event {
 					}
 					let type_urls =
 						timeout_msgs.iter().map(|msg| msg.type_url.as_str()).collect::<Vec<_>>();
-					log::info!("Submitting timeout messages to {}: {type_urls:#?}", $source.name());
-					queue::flush_message_batch(timeout_msgs, $metrics.as_ref(), &$source).await?;
+					log::info!(
+						"Submitting timeout messages to {}: {type_urls:#?}",
+						$source.name()
+					);
+					match queue::flush_message_batch(timeout_msgs, $metrics.as_ref(), &$source).await {
+						Ok(_) => {
+							log::trace!(target: "hyperspace", "Successfully submitted timeout messages to {}", $source.name());
+						},
+						Err(e) => {
+							log::error!(
+								target:"hyperspace",
+								"Failed to submit timeout messages to {} {:?}",
+								$source.name(),
+								e
+							);
+							match $sink.handle_error(&e).and_then(|_| $source.handle_error(&e)).await {
+								Ok(_) => {},
+								Err(e) => log::error!("Failed to handle error for {} {:?}", $sink.name(), e),
+							}
+							had_error = true;
+						},
+					}
+				}
+				if !had_error {
+					$sink.set_rpc_call_delay(sink_initial_rpc_call_delay);
+					$source.set_rpc_call_delay(source_initial_rpc_call_delay);
 				}
 			},
 		}
@@ -131,6 +210,7 @@ macro_rules! chains {
 			Wasm(WasmChain),
 		}
 
+		#[derive(Debug)]
 		pub enum AnyFinalityEvent {
 			$(
 				$(#[$($meta)*])*
@@ -459,7 +539,7 @@ macro_rules! chains {
 				}
 			}
 
-			fn channel_whitelist(&self) -> Vec<(ChannelId, PortId)> {
+			fn channel_whitelist(&self) -> std::collections::HashSet<(ChannelId, PortId)> {
 				match self {
 					$(
 						$(#[$($meta)*])*
@@ -601,7 +681,17 @@ macro_rules! chains {
 				}
 			}
 
-			fn connection_id(&self) -> ConnectionId {
+			fn set_client_id(&mut self, client_id: ClientId) {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.set_client_id(client_id),
+					)*
+					Self::Wasm(c) => c.inner.set_client_id(client_id),
+				}
+			}
+
+			fn connection_id(&self) -> Option<ConnectionId> {
 				match self {
 					$(
 						$(#[$($meta)*])*
@@ -728,13 +818,13 @@ macro_rules! chains {
 				}
 			}
 
-			async fn on_undelivered_sequences(&self, seqs: &[u64]) -> Result<(), Self::Error> {
+			async fn on_undelivered_sequences(&self, is_empty: bool) -> Result<(), Self::Error> {
 				match self {
 					$(
 						$(#[$($meta)*])*
-						Self::$name(chain) => chain.on_undelivered_sequences(seqs).await.map_err(AnyError::$name),
+						Self::$name(chain) => chain.on_undelivered_sequences(is_empty).await.map_err(AnyError::$name),
 					)*
-					Self::Wasm(c) => c.inner.on_undelivered_sequences(seqs).await,
+					Self::Wasm(c) => c.inner.on_undelivered_sequences(is_empty).await,
 				}
 			}
 
@@ -745,6 +835,74 @@ macro_rules! chains {
 						Self::$name(chain) => chain.has_undelivered_sequences(),
 					)*
 					Self::Wasm(c) => c.inner.has_undelivered_sequences(),
+				}
+			}
+
+			async fn query_connection_id_from_tx_hash(
+				&self,
+				tx_id: Self::TransactionId,
+			) -> Result<ConnectionId, Self::Error> {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain
+							.query_connection_id_from_tx_hash(
+								downcast!(tx_id => AnyTransactionId::$name)
+									.expect("Should be $name transaction id"),
+							)
+							.await
+							.map_err(AnyError::$name),
+					)*
+					Self::Wasm(c) => c.inner.query_connection_id_from_tx_hash(tx_id).await,
+				}
+			}
+
+			async fn query_channel_id_from_tx_hash(
+				&self,
+				tx_id: Self::TransactionId,
+			) -> Result<(ChannelId, PortId), Self::Error> {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain
+							.query_channel_id_from_tx_hash(
+								downcast!(tx_id => AnyTransactionId::$name)
+									.expect("Should be $name transaction id"),
+							)
+							.await
+							.map_err(AnyError::$name),
+					)*
+					Self::Wasm(c) => c.inner.query_channel_id_from_tx_hash(tx_id).await,
+				}
+			}
+
+			fn set_channel_whitelist(&mut self, channel_whitelist: std::collections::HashSet<(ChannelId, PortId)>) {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.set_channel_whitelist(channel_whitelist),
+					)*
+					Self::Wasm(c) => c.inner.set_channel_whitelist(channel_whitelist),
+				}
+			}
+
+			fn add_channel_to_whitelist(&mut self, channel: (ChannelId, PortId)) {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.add_channel_to_whitelist(channel),
+					)*
+					Self::Wasm(c) => c.inner.add_channel_to_whitelist(channel),
+				}
+			}
+
+			fn set_connection_id(&mut self, connection_id: ConnectionId) {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.set_connection_id(connection_id),
+					)*
+					Self::Wasm(c) => c.inner.set_connection_id(connection_id),
 				}
 			}
 		}
@@ -814,13 +972,17 @@ macro_rules! chains {
 
 			async fn finality_notifications(
 				&self,
-			) -> Pin<Box<dyn Stream<Item = Self::FinalityEvent> + Send + Sync>> {
+			) -> Result<Pin<Box<dyn Stream<Item = Self::FinalityEvent> + Send + Sync>>, Self::Error> {
 				match self {
 					$(
 						$(#[$($meta)*])*
 						Self::$name(chain) => {
 							use futures::StreamExt;
-							Box::pin(chain.finality_notifications().await.map(AnyFinalityEvent::$name))
+							Ok(
+								Box::pin(chain.finality_notifications().await
+									.map_err(AnyError::$name)?
+									.map(AnyFinalityEvent::$name))
+							)
 						},
 					)*
 					Self::Wasm(c) => c.inner.finality_notifications().await,
@@ -867,6 +1029,36 @@ macro_rules! chains {
 						Self::$name(chain) => chain.get_proof_height(block_height).await,
 					)*
 					Self::Wasm(c) => c.inner.get_proof_height(block_height).await,
+				}
+			}
+
+			async fn handle_error(&mut self, e: &anyhow::Error) -> std::result::Result<(), anyhow::Error> {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.handle_error(e).await,
+					)*
+					Self::Wasm(c) => c.inner.handle_error(e).await,
+				}
+			}
+
+			fn rpc_call_delay(&self) -> std::time::Duration {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.rpc_call_delay(),
+					)*
+					Self::Wasm(c) => c.inner.rpc_call_delay(),
+				}
+			}
+
+			fn set_rpc_call_delay(&mut self, d: std::time::Duration) {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.set_rpc_call_delay(d),
+					)*
+					Self::Wasm(c) => c.inner.set_rpc_call_delay(d),
 				}
 			}
 		}
@@ -948,25 +1140,31 @@ macro_rules! chains {
 				}
 			}
 
-			fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
+			async fn increase_counters(&mut self) -> Result<(), Self::Error> {
 				match self {
 					$(
 						$(#[$($meta)*])*
-						Self::$name(chain) => chain.set_channel_whitelist(channel_whitelist),
+						Self::$name(chain) => chain.increase_counters().await.map_err(AnyError::$name),
 					)*
-					Self::Wasm(c) => c.inner.set_channel_whitelist(channel_whitelist),
+					Self::Wasm(c) => c.inner.increase_counters().await,
 				}
 			}
 		}
 
 		impl AnyConfig {
 			pub async fn into_client(self) -> anyhow::Result<AnyChain> {
-				Ok(match self {
+				let maybe_wasm_code_id = self.wasm_code_id();
+				let chain = match self {
 					$(
 						$(#[$($meta)*])*
 						AnyConfig::$name(config) => AnyChain::$name(<$client>::new(config).await?),
 					)*
-				})
+				};
+				if let Some(code_id) = maybe_wasm_code_id {
+					Ok(AnyChain::Wasm(WasmChain { inner: Box::new(chain), code_id }))
+				} else {
+					Ok(chain)
+				}
 			}
 
 			pub fn set_client_id(&mut self, client_id: ClientId) {

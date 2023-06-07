@@ -22,7 +22,7 @@ use primitives::{
 	mock::LocalClientTypes, Chain, IbcProvider, LightClientSync, MisbehaviourHandler,
 };
 use prost::Message;
-use std::pin::Pin;
+use std::{pin::Pin, time::Duration};
 use tendermint_rpc::{
 	event::{Event, EventData},
 	query::{EventType, Query},
@@ -65,23 +65,17 @@ where
 		let (_, tx_raw, _) =
 			sign_tx(self.keybase.clone(), self.chain_id.clone(), &account_info, vec![], fee)?;
 
-		let total_len = tx_raw.encoded_len();
 		let body_bytes_len = tx_raw.body_bytes.len();
-		let envelope_len = if body_bytes_len == 0 {
-			total_len
-		} else {
-			total_len - 1 - prost::length_delimiter_len(body_bytes_len) - body_bytes_len
-		};
 		// Full length of the transaction can then be derived from the length of the invariable
 		// envelope and the length of the body field, taking into account the varint encoding
 		// of the body field's length delimiter.
+		#[allow(unused)]
 		fn tx_len(envelope_len: usize, body_len: usize) -> usize {
 			// The caller has at least one message field length added to the body's
 			debug_assert!(body_len != 0);
 			envelope_len + 1 + prost::length_delimiter_len(body_len) + body_len
 		}
 
-		let mut current_count = 0;
 		let mut current_len = body_bytes_len;
 
 		for message in messages {
@@ -90,12 +84,6 @@ where
 			// The total length the message adds to the encoding includes the
 			// field tag (small varint) and the length delimiter.
 			let tagged_len = 1 + prost::length_delimiter_len(message_len) + message_len;
-			if current_count >= 30 ||
-				tx_len(envelope_len, current_len + tagged_len) > self.max_tx_size
-			{
-				return Err(Error::Custom("Too many messages".to_string()))
-			}
-			current_count += 1;
 			current_len += tagged_len;
 		}
 		Ok(current_len as u64)
@@ -103,17 +91,18 @@ where
 
 	async fn finality_notifications(
 		&self,
-	) -> Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>> {
+	) -> Result<
+		Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>>,
+		Error,
+	> {
 		let (ws_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
 			.await
-			.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))
-			.unwrap();
+			.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))?;
 		tokio::spawn(ws_driver.run());
 		let subscription = ws_client
 			.subscribe(Query::from(EventType::NewBlock))
 			.await
-			.map_err(|e| Error::from(format!("failed to subscribe to new blocks {:?}", e)))
-			.unwrap()
+			.map_err(|e| Error::from(format!("failed to subscribe to new blocks {:?}", e)))?
 			.chunks(6);
 		log::info!(target: "hyperspace_cosmos", "🛰️ Subscribed to {} listening to finality notifications", self.name);
 		let stream = subscription.filter_map(|events| {
@@ -141,7 +130,7 @@ where
 			}))
 		});
 
-		Box::pin(stream)
+		Ok(Box::pin(stream))
 	}
 
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
@@ -237,6 +226,37 @@ where
 
 	async fn get_proof_height(&self, block_height: Height) -> Height {
 		block_height.increment()
+	}
+
+	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error> {
+		let err_str = if let Some(rpc_err) = error.downcast_ref::<Error>() {
+			match rpc_err {
+				Error::RpcError(s) => s.clone(),
+				_ => "".to_string(),
+			}
+		} else {
+			error.to_string()
+		};
+		log::debug!(target: "hyperspace_cosmos", "Handling error: {err_str}");
+		if err_str.contains("dispatch task is gone") {
+			let (rpc_client, ws_driver) = WebSocketClient::new(self.rpc_url.clone())
+				.await
+				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+			tokio::spawn(ws_driver.run());
+			log::info!(target: "hyperspace_cosmos", "Reconnected to cosmos chain");
+			self.rpc_client = rpc_client;
+			self.rpc_call_delay = self.rpc_call_delay * 2;
+		}
+
+		Ok(())
+	}
+
+	fn rpc_call_delay(&self) -> Duration {
+		self.rpc_call_delay
+	}
+
+	fn set_rpc_call_delay(&mut self, delay: Duration) {
+		self.rpc_call_delay = delay;
 	}
 }
 

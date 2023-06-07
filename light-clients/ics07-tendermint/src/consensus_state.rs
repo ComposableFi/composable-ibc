@@ -16,15 +16,21 @@ use ibc::prelude::*;
 
 use core::{convert::Infallible, fmt::Debug};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tendermint::{hash::Algorithm, time::Time, Hash};
 use tendermint_proto::{google::protobuf as tpb, Protobuf};
 
 use crate::{client_message::Header, error::Error};
 use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp};
-use ibc_proto::ibc::lightclients::tendermint::v1::ConsensusState as RawConsensusState;
+use ibc_proto::{
+	google::protobuf::Any, ibc::lightclients::tendermint::v1::ConsensusState as RawConsensusState,
+};
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+/// Protobuf type url for TENDERMINT Consensus State
+pub const TENDERMINT_CONSENSUS_STATE_TYPE_URL: &str =
+	"/ibc.lightclients.tendermint.v1.ConsensusState";
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConsensusState {
 	pub timestamp: Time,
 	pub root: CommitmentRoot,
@@ -34,6 +40,13 @@ pub struct ConsensusState {
 impl ConsensusState {
 	pub fn new(root: CommitmentRoot, timestamp: Time, next_validators_hash: Hash) -> Self {
 		Self { timestamp, root, next_validators_hash }
+	}
+
+	pub fn to_any(&self) -> Any {
+		Any {
+			type_url: TENDERMINT_CONSENSUS_STATE_TYPE_URL.to_string(),
+			value: self.encode_vec().expect("encode ConsensusState"),
+		}
 	}
 }
 

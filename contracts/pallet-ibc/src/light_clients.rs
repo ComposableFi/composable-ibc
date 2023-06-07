@@ -1,6 +1,4 @@
-use alloc::{
-	borrow::ToOwned, boxed::Box, collections::BTreeSet, format, string::ToString, vec::Vec,
-};
+use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, vec::Vec};
 use frame_support::{
 	pallet_prelude::{StorageValue, ValueQuery},
 	traits::StorageInstance,
@@ -18,6 +16,14 @@ use ibc::{
 use ibc_derive::{ClientDef, ClientMessage, ClientState, ConsensusState, Protobuf};
 use ibc_primitives::runtime_interface;
 use ibc_proto::google::protobuf::Any;
+use ics07_tendermint::{
+	client_message::{
+		TENDERMINT_CLIENT_MESSAGE_TYPE_URL, TENDERMINT_HEADER_TYPE_URL,
+		TENDERMINT_MISBEHAVIOUR_TYPE_URL,
+	},
+	client_state::TENDERMINT_CLIENT_STATE_TYPE_URL,
+	consensus_state::TENDERMINT_CONSENSUS_STATE_TYPE_URL,
+};
 use ics08_wasm::{
 	client_message::{
 		WASM_CLIENT_MESSAGE_TYPE_URL, WASM_HEADER_TYPE_URL, WASM_MISBEHAVIOUR_TYPE_URL,
@@ -53,14 +59,6 @@ use tendermint::{
 	PublicKey, Signature,
 };
 use tendermint_proto::Protobuf;
-
-pub const TENDERMINT_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.ClientState";
-pub const TENDERMINT_CLIENT_MESSAGE_TYPE_URL: &str =
-	"/ibc.lightclients.tendermint.v1.ClientMessage";
-pub const TENDERMINT_CONSENSUS_STATE_TYPE_URL: &str =
-	"/ibc.lightclients.tendermint.v1.ConsensusState";
-pub const TENDERMINT_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.Misbehaviour";
-pub const TENDERMINT_HEADER_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.Header";
 
 #[derive(Clone, Default, PartialEq, Debug, Eq)]
 pub struct HostFunctionsManager;

@@ -1,9 +1,4 @@
-use alloc::{
-	collections::{BTreeMap, BTreeSet},
-	format,
-	str::FromStr,
-	string::String,
-};
+use alloc::{format, str::FromStr, string::String};
 use core::time::Duration;
 
 use crate::{
@@ -14,10 +9,10 @@ use crate::{
 		receipts::PacketReceipt,
 	},
 	light_clients::AnyClientState,
-	routing,
 	routing::Context,
-	ChannelsConnection, Config, ConnectionClient, DenomToAssetId, Error, EscrowAddresses,
-	IbcAssets, Pallet, MODULE_ID,
+	Acks, ChannelsConnection, Config, ConnectionClient, DenomToAssetId, Error, EscrowAddresses,
+	IbcAssets, Pallet, PendingRecvPacketSeqs, PendingSendPacketSeqs, RecvPackets, SendPackets,
+	MODULE_ID,
 };
 use codec::{Decode, Encode};
 use frame_support::traits::{fungibles::Inspect, Currency};
@@ -64,17 +59,14 @@ use ibc_primitives::{
 	Timeout,
 };
 use scale_info::prelude::string::ToString;
-use sp_core::{crypto::AccountId32, offchain::StorageKind};
+use sp_core::crypto::AccountId32;
 use sp_runtime::{
-	offchain::storage::StorageValueRef,
 	traits::{Get, IdentifyAccount},
 	Either,
 };
 use sp_std::prelude::*;
 use tendermint_proto::Protobuf;
 
-pub const OFFCHAIN_SEND_PACKET_SEQS: &[u8] = b"pallet_ibc:pending_send_packet_sequences";
-pub const OFFCHAIN_RECV_PACKET_SEQS: &[u8] = b"pallet_ibc:pending_recv_packet_sequences";
 const PACKET_CLEANUP_PER_CYCLE: u64 = 1001;
 
 impl<T: Config> Pallet<T>
@@ -103,7 +95,6 @@ where
 			});
 
 		log::trace!(target: "pallet_ibc", "logs: {:#?}", logs);
-		// todo: consolidate into one.
 		if !events.is_empty() {
 			Self::deposit_event(events.into())
 		};
@@ -497,17 +488,17 @@ where
 		}
 	}
 
-	pub fn offchain_send_packet_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
+	pub fn send_packet_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
 		let pair = (T::PalletPrefix::get().to_vec(), b"SEND_PACKET", channel_id, port_id, seq);
 		pair.encode()
 	}
 
-	pub fn offchain_recv_packet_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
+	pub fn recv_packet_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
 		let pair = (T::PalletPrefix::get().to_vec(), b"RECV_PACKET", channel_id, port_id, seq);
 		pair.encode()
 	}
 
-	pub fn offchain_ack_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
+	pub fn ack_key(channel_id: Vec<u8>, port_id: Vec<u8>, seq: u64) -> Vec<u8> {
 		let pair = (T::PalletPrefix::get().to_vec(), b"ACK", channel_id, port_id, seq);
 		pair.encode()
 	}
@@ -520,44 +511,40 @@ where
 		let port_id = key.0.as_bytes().to_vec();
 		let seq = u64::from(key.2);
 
-		let key = Pallet::<T>::offchain_ack_key(channel_id, port_id, seq);
-		sp_io::offchain_index::set(&key, &ack);
-		log::trace!(target: "pallet_ibc", "in channel: [store_raw_acknowledgement] >> writing acknowledgement {:?} {:?}", key, ack);
+		let key = Pallet::<T>::ack_key(channel_id, port_id, seq);
+		Acks::<T>::insert(key.clone(), ack.clone());
+		let ack_str = String::from_utf8_lossy(&ack);
+		log::trace!(target: "pallet_ibc", "in channel: [store_raw_acknowledgement] >> writing acknowledgement: {}, key: 0x{}", ack_str, hex::encode(&key));
 		Ok(())
 	}
 
-	pub(crate) fn packet_cleanup() -> Result<(), Error<T>> {
-		let pending_send_packet_seqs = StorageValueRef::persistent(OFFCHAIN_SEND_PACKET_SEQS);
-		let pending_recv_packet_seqs = StorageValueRef::persistent(OFFCHAIN_RECV_PACKET_SEQS);
-		let mut pending_send_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
-			pending_send_packet_seqs.get::<_>().ok().flatten().unwrap_or_default();
-		let mut pending_recv_sequences: BTreeMap<(Vec<u8>, Vec<u8>), (BTreeSet<u64>, u64)> =
-			pending_recv_packet_seqs.get::<_>().ok().flatten().unwrap_or_default();
-		let ctx = routing::Context::<T>::default();
+	pub(crate) fn packet_cleanup() -> Result<usize, (Error<T>, usize)> {
+		let ctx = Context::<T>::default();
 
+		let mut removed_count = 0;
 		for (port_id_bytes, channel_id_bytes, _) in Channels::<T>::iter() {
 			let channel_id = channel_id_from_bytes(channel_id_bytes.clone())
-				.map_err(|_| Error::<T>::DecodingError)?;
-			let port_id =
-				port_id_from_bytes(port_id_bytes.clone()).map_err(|_| Error::<T>::DecodingError)?;
+				.map_err(|_| (Error::<T>::DecodingError, removed_count))?;
+			let port_id = port_id_from_bytes(port_id_bytes.clone())
+				.map_err(|_| (Error::<T>::DecodingError, removed_count))?;
 
-			let (mut send_seq_set, mut last_removed_send) = pending_send_sequences
-				.get(&(port_id_bytes.clone(), channel_id_bytes.clone()))
-				.map(|set| set.clone())
-				.unwrap_or_default();
+			let (mut send_seq_set, mut last_removed_send) =
+				PendingSendPacketSeqs::<T>::get(&(port_id_bytes.clone(), channel_id_bytes.clone()));
+
 			let last_removed_send_copy = last_removed_send;
 
 			// We first try to remove sequences that were skipped in a previous cycle
 			for seq in send_seq_set.clone() {
 				if !PacketCommitment::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
-					let offchain_key = Pallet::<T>::offchain_send_packet_key(
+					let key = Pallet::<T>::send_packet_key(
 						channel_id_bytes.clone(),
 						port_id_bytes.clone(),
 						seq,
 					);
-					sp_io::offchain_index::clear(&offchain_key);
+					SendPackets::<T>::remove(key.clone());
 					send_seq_set.remove(&seq);
-					last_removed_send = seq
+					last_removed_send = seq;
+					removed_count += 1;
 				}
 			}
 			// Try removing at most 1000 sequences in this cycle starting from the last sequence
@@ -566,22 +553,21 @@ where
 				.get_next_sequence_send(&(port_id.clone(), channel_id.clone()))
 				.map_err(|_| {
 					log::trace!(target: "pallet_ibc", "Failed to run packet clean up");
-					Error::<T>::Other
+					(Error::<T>::Other, removed_count)
 				})?;
 			let range = (last_removed_send + 1)..
 				(last_removed_send + PACKET_CLEANUP_PER_CYCLE).min(next_seq_send.into());
 			for seq in range {
 				if !PacketCommitment::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
-					let offchain_key = Pallet::<T>::offchain_send_packet_key(
+					let key = Pallet::<T>::send_packet_key(
 						channel_id_bytes.clone(),
 						port_id_bytes.clone(),
 						seq,
 					);
-					if sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, &offchain_key)
-						.is_some()
-					{
-						sp_io::offchain_index::clear(&offchain_key);
+					if SendPackets::<T>::contains_key(key.clone()) {
+						SendPackets::<T>::remove(key.clone());
 						last_removed_send = seq;
+						removed_count += 1;
 					}
 				} else {
 					// Add sequence to pending removal list
@@ -589,35 +575,30 @@ where
 				}
 			}
 
-			pending_send_sequences.insert(
+			PendingSendPacketSeqs::<T>::insert(
 				(port_id_bytes.clone(), channel_id_bytes.clone()),
 				(send_seq_set, last_removed_send.max(last_removed_send_copy)),
 			);
-			pending_send_packet_seqs.set(&pending_send_sequences);
 
-			let (mut recv_seq_set, mut last_removed_ack) = pending_recv_sequences
-				.get(&(port_id_bytes.clone(), channel_id_bytes.clone()))
-				.map(|set| set.clone())
-				.unwrap_or_default();
+			let (mut recv_seq_set, mut last_removed_ack) =
+				PendingRecvPacketSeqs::<T>::get(&(port_id_bytes.clone(), channel_id_bytes.clone()));
 			let last_removed_ack_copy = last_removed_ack;
 
 			// We first try to remove sequences that were skipped in a previous cycle
 			for seq in recv_seq_set.clone() {
 				if !Acknowledgements::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
-					let offchain_key = Pallet::<T>::offchain_recv_packet_key(
+					let key = Pallet::<T>::recv_packet_key(
 						channel_id_bytes.clone(),
 						port_id_bytes.clone(),
 						seq,
 					);
-					let ack_key = Pallet::<T>::offchain_ack_key(
-						channel_id_bytes.clone(),
-						port_id_bytes.clone(),
-						seq,
-					);
-					sp_io::offchain_index::clear(&offchain_key);
-					sp_io::offchain_index::clear(&ack_key);
+					let ack_key =
+						Pallet::<T>::ack_key(channel_id_bytes.clone(), port_id_bytes.clone(), seq);
+					RecvPackets::<T>::remove(key.clone());
+					Acks::<T>::remove(ack_key.clone());
 					recv_seq_set.remove(&seq);
 					last_removed_ack = seq;
+					removed_count += 1;
 				}
 			}
 			// Try removing at most 1000 sequences in this cycle from the last sequence removed
@@ -625,43 +606,37 @@ where
 				.get_next_sequence_recv(&(port_id.clone(), channel_id.clone()))
 				.map_err(|_| {
 					log::trace!(target: "pallet_ibc", "Failed to run packet clean up");
-					Error::<T>::Other
+					(Error::<T>::Other, removed_count)
 				})?;
 			let range = (last_removed_ack + 1)..
 				(last_removed_ack + PACKET_CLEANUP_PER_CYCLE).min(next_seq_recv.into());
 			for seq in range {
 				if !Acknowledgements::<T>::contains_key((port_id.clone(), channel_id, seq.into())) {
-					let offchain_key = Pallet::<T>::offchain_recv_packet_key(
+					let key = Pallet::<T>::recv_packet_key(
 						channel_id_bytes.clone(),
 						port_id_bytes.clone(),
 						seq,
 					);
 
-					let ack_key = Pallet::<T>::offchain_ack_key(
-						channel_id_bytes.clone(),
-						port_id_bytes.clone(),
-						seq,
-					);
-					if sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, &offchain_key)
-						.is_some()
-					{
-						sp_io::offchain_index::clear(&offchain_key);
-						sp_io::offchain_index::clear(&ack_key);
+					let ack_key =
+						Pallet::<T>::ack_key(channel_id_bytes.clone(), port_id_bytes.clone(), seq);
+					if RecvPackets::<T>::contains_key(key.clone()) {
+						RecvPackets::<T>::remove(key.clone());
+						Acks::<T>::remove(ack_key.clone());
 						last_removed_ack = seq;
+						removed_count += 1;
 					}
 				} else {
 					// Add sequence to pending removal list
 					recv_seq_set.insert(seq);
 				}
 			}
-			pending_recv_sequences.insert(
+			PendingRecvPacketSeqs::<T>::insert(
 				(port_id_bytes.clone(), channel_id_bytes.clone()),
 				(recv_seq_set, last_removed_ack.max(last_removed_ack_copy)),
 			);
-
-			pending_recv_packet_seqs.set(&pending_recv_sequences);
 		}
-		Ok(())
+		Ok(removed_count)
 	}
 
 	pub fn get_send_packet_info(
@@ -673,13 +648,11 @@ where
 			.clone()
 			.into_iter()
 			.filter_map(|seq| {
-				let key =
-					Pallet::<T>::offchain_send_packet_key(channel_id.clone(), port_id.clone(), seq);
-				sp_io::offchain::local_storage_get(sp_core::offchain::StorageKind::PERSISTENT, &key)
-					.and_then(|v| PacketInfo::decode(&mut &*v).ok())
+				let key = Pallet::<T>::send_packet_key(channel_id.clone(), port_id.clone(), seq);
+				SendPackets::<T>::get(key.clone()).and_then(|v| PacketInfo::decode(&mut &*v).ok())
 			})
 			.collect();
-		log::trace!(target: "pallet_ibc", "offchain_send_packets: {:?}, {:?}", sequences, packets);
+		log::trace!(target: "pallet_ibc", "get_send_packet_info: {:?}, {:?}", sequences, packets);
 		Ok(packets)
 	}
 
@@ -692,26 +665,18 @@ where
 			.clone()
 			.into_iter()
 			.filter_map(|seq| {
-				let key =
-					Pallet::<T>::offchain_recv_packet_key(channel_id.clone(), port_id.clone(), seq);
-				let ack_key =
-					Pallet::<T>::offchain_ack_key(channel_id.clone(), port_id.clone(), seq);
-				let packet_info = sp_io::offchain::local_storage_get(
-					sp_core::offchain::StorageKind::PERSISTENT,
-					&key,
-				)
-				.and_then(|v| PacketInfo::decode(&mut &*v).ok());
-				let ack = sp_io::offchain::local_storage_get(
-					sp_core::offchain::StorageKind::PERSISTENT,
-					&ack_key,
-				);
+				let key = Pallet::<T>::recv_packet_key(channel_id.clone(), port_id.clone(), seq);
+				let ack_key = Pallet::<T>::ack_key(channel_id.clone(), port_id.clone(), seq);
+				let packet_info = RecvPackets::<T>::get(key.clone())
+					.and_then(|v| PacketInfo::decode(&mut &*v).ok());
+				let ack = Acks::<T>::get(ack_key.clone());
 				packet_info.map(|mut packet_info| {
 					packet_info.ack = ack;
 					packet_info
 				})
 			})
 			.collect();
-		log::trace!(target: "pallet_ibc", "offchain_recv_packets: {:?}, {:?}", sequences, packets);
+		log::trace!(target: "pallet_ibc", "get_recv_packet_info: {:?}, {:?}", sequences, packets);
 		Ok(packets)
 	}
 

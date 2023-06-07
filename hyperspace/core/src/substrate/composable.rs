@@ -8,21 +8,21 @@ use self::parachain_subxt::api::{
 	sudo::calls::Sudo,
 };
 use crate::{
-	define_any_wrapper, define_beefy_authority_set, define_event_record, define_events,
-	define_head_data, define_ibc_event_wrapper, define_id, define_para_lifecycle,
-	define_runtime_call, define_runtime_event, define_runtime_storage, define_runtime_transactions,
+	define_any_wrapper, define_event_record, define_events, define_head_data,
+	define_ibc_event_wrapper, define_id, define_para_lifecycle, define_runtime_call,
+	define_runtime_event, define_runtime_storage, define_runtime_transactions,
 	define_transfer_params,
-	substrate::composable::{
-		parachain_subxt::api::runtime_types::primitives::currency::CurrencyId,
-		relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
+	substrate::{
+		composable::parachain_subxt::api::runtime_types::primitives::currency::CurrencyId,
+		unimplemented,
 	},
 };
 use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
 use ibc_proto::google::protobuf::Any;
 use light_client_common::config::{
-	BeefyAuthoritySetT, EventRecordT, IbcEventsT, LocalStaticStorageAddress, ParaLifecycleT,
-	RuntimeCall, RuntimeStorage, RuntimeTransactions,
+	EventRecordT, IbcEventsT, LocalAddress, ParaLifecycleT, RuntimeCall, RuntimeStorage,
+	RuntimeTransactions,
 };
 use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;
@@ -32,18 +32,30 @@ use sp_core::{crypto::AccountId32, H256};
 use subxt::{
 	config::{
 		extrinsic_params::Era,
-		polkadot::{
-			PlainTip as Tip, PolkadotExtrinsicParams as ParachainExtrinsicParams,
-			PolkadotExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
+		substrate::{
+			AssetTip as Tip, SubstrateExtrinsicParams as ParachainExtrinsicParams,
+			SubstrateExtrinsicParamsBuilder as ParachainExtrinsicsParamsBuilder,
 		},
 		ExtrinsicParams,
 	},
-	events::{Phase, StaticEvent},
-	metadata::DecodeStaticType,
-	storage::{address::Yes, StaticStorageAddress},
-	tx::StaticTxPayload,
+	events::Phase,
+	storage::{
+		address::{StaticStorageMapKey, Yes},
+		Address,
+	},
+	tx::Payload,
 	Error, OnlineClient,
 };
+
+#[cfg(feature = "composable-beefy")]
+use {
+	crate::define_beefy_authority_set,
+	crate::substrate::composable::relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
+	light_client_common::config::BeefyAuthoritySetT,
+};
+
+#[cfg(not(feature = "composable-beefy"))]
+use super::DummyBeefyAuthoritySet;
 
 pub mod parachain_subxt {
 	pub use subxt_generated::composable::parachain::*;
@@ -55,9 +67,13 @@ pub mod relaychain {
 
 pub type Balance = u128;
 
-#[derive(Encode)]
+#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 pub struct DummySendPingParamsWrapper<T>(T);
-#[derive(Encode)]
+#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 pub struct FakeSendPingParams;
 
 impl From<SendPingParams> for FakeSendPingParams {
@@ -78,22 +94,53 @@ define_head_data!(
 
 define_para_lifecycle!(ComposableParaLifecycle, ParaLifecycle);
 
-define_beefy_authority_set!(ComposableBeefyAuthoritySet, BeefyAuthoritySet<T>);
+// #[cfg(feature = "composable-beefy")]
+// define_beefy_authority_set!(ComposableBeefyAuthoritySet, BeefyAuthoritySet<T>);
+
+// #[cfg(feature = "composable-beefy")]
+// type ComposableBeefyAuthoritySetToUse = ComposableBeefyAuthoritySet<H256>;
+#[cfg(not(feature = "composable-beefy"))]
+type ComposableBeefyAuthoritySetToUse = DummyBeefyAuthoritySet;
 
 define_runtime_storage!(
 	ComposableRuntimeStorage,
 	ComposableHeadData,
 	ComposableId,
 	ComposableParaLifecycle,
-	ComposableBeefyAuthoritySet<H256>,
+	ComposableBeefyAuthoritySetToUse,
 	parachain_subxt::api::storage().timestamp().now(),
 	|x| relaychain::api::storage().paras().heads(x),
 	|x| relaychain::api::storage().paras().para_lifecycles(x),
 	relaychain::api::storage().paras().parachains(),
 	relaychain::api::storage().grandpa().current_set_id(),
-	relaychain::api::storage().beefy().validator_set_id(),
-	relaychain::api::storage().beefy().authorities(),
-	relaychain::api::storage().mmr_leaf().beefy_next_authorities(),
+	{
+		#[cfg(feature = "composable-beefy")]
+		{
+			relaychain::api::storage().beefy().validator_set_id()
+		}
+		#[cfg(not(feature = "composable-beefy"))]
+		unimplemented("relaychain::api::storage().beefy().validator_set_id()")
+	},
+	{
+		#[cfg(feature = "composable-beefy")]
+		{
+			relaychain::api::storage().beefy().authorities()
+		}
+		#[cfg(not(feature = "composable-beefy"))]
+		unimplemented::<Address<StaticStorageMapKey, (), Yes, Yes, ()>>(
+			"relaychain::api::storage().beefy().authorities()",
+		)
+	},
+	{
+		#[cfg(feature = "composable-beefy")]
+		{
+			relaychain::api::storage().mmr_leaf().beefy_next_authorities()
+		}
+		#[cfg(not(feature = "composable-beefy"))]
+		unimplemented::<Address<StaticStorageMapKey, (), Yes, Yes, ()>>(
+			"relaychain::api::storage().mmr_leaf().beefy_next_authorities()",
+		)
+	},
 	relaychain::api::storage().babe().epoch_start()
 );
 
@@ -122,14 +169,15 @@ define_runtime_transactions!(
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, CurrencyId(y), z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),
-	|_: DummySendPingParamsWrapper<FakeSendPingParams>| unimplemented!("ping is not implemented")
+	|_: DummySendPingParamsWrapper<FakeSendPingParams>| unimplemented("ping is not implemented"),
+	|| unimplemented("ibc_increase_counters is not implemented")
 );
 
 define_ibc_event_wrapper!(IbcEventWrapper, MetadataIbcEvent,);
 
 define_event_record!(
 	ComposableEventRecord,
-	EventRecord<<ComposableConfig as light_client_common::config::Config>::ParaRuntimeEvent, H256>,
+	EventRecord<<<ComposableConfig as light_client_common::config::Config>::ParaRuntimeEvent as AsInner>::Inner, H256>,
 	IbcEventWrapper,
 	parachain_subxt::api::runtime_types::frame_system::Phase,
 	parachain_subxt::api::runtime_types::pallet_ibc::pallet::Event,
@@ -162,7 +210,7 @@ impl light_client_common::config::Config for ComposableConfig {
 	type EventRecord = ComposableEventRecord;
 	type Storage = ComposableRuntimeStorage;
 	type Tx = ComposableRuntimeTransactions;
-	type SignedExtra = (Era, CheckNonce, Compact<Balance>);
+	type SignedExtra = (Era, CheckNonce, Compact<Balance>, Option<Self::AssetId>);
 
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,
@@ -178,15 +226,12 @@ impl light_client_common::config::Config for ComposableConfig {
 
 impl subxt::Config for ComposableConfig {
 	type Index = u32;
-	type BlockNumber = u32;
 	type Hash = H256;
 	type Hasher = subxt::config::substrate::BlakeTwo256;
 	type AccountId = AccountId32;
 	type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
-	type Header = subxt::config::substrate::SubstrateHeader<
-		Self::BlockNumber,
-		subxt::config::substrate::BlakeTwo256,
-	>;
+	type Header =
+		subxt::config::substrate::SubstrateHeader<u32, subxt::config::substrate::BlakeTwo256>;
 	type Signature = sp_runtime::MultiSignature;
 	type ExtrinsicParams = ParachainExtrinsicParams<Self>;
 }

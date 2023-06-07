@@ -30503,6 +30503,8 @@ pub mod api {
 						kind: ::std::vec::Vec<::core::primitive::u8>,
 						module_id: ::std::vec::Vec<::core::primitive::u8>,
 					},
+					#[codec(index = 24)]
+					PushWasmCode { wasm_code_id: ::std::vec::Vec<::core::primitive::u8> },
 				}
 			}
 			pub mod pallet {

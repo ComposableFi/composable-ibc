@@ -48,14 +48,18 @@ use sp_runtime::{
 	MultiSignature, MultiSigner,
 };
 use std::{
-	collections::{BTreeMap, BTreeSet, HashMap},
-	fmt::Display,
+	collections::{BTreeMap, BTreeSet, HashMap, HashSet},
+	fmt::{Debug, Display},
 };
 
 use beefy_prover::helpers::unsafe_arc_cast;
 use grandpa_prover::{GrandpaJustification, JustificationNotification};
+use ibc::core::{
+	ics04_channel::packet::Packet,
+	ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
+};
 use subxt::config::{
-	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT,
+	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT, Header,
 };
 use tendermint_proto::Protobuf;
 
@@ -66,7 +70,7 @@ pub enum FinalityProtocol {
 }
 
 /// Finality event for parachains
-#[derive(Decode, Encode)]
+#[derive(Decode, Encode, Debug)]
 pub enum FinalityEvent {
 	Grandpa(
 		grandpa_light_client_primitives::justification::GrandpaJustification<
@@ -87,7 +91,7 @@ impl FinalityProtocol {
 		T: light_client_common::config::Config + Send + Sync,
 		C: Chain,
 		u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-		u32: From<<T as subxt::Config>::BlockNumber>,
+		u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 		ParachainClient<T>: Chain,
 		ParachainClient<T>: KeyProvider,
 		<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
@@ -95,7 +99,15 @@ impl FinalityProtocol {
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 		<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-		T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+		<<T as subxt::Config>::Header as Header>::Number: BlockNumberOps
+			+ From<u32>
+			+ Display
+			+ Ord
+			+ sp_runtime::traits::Zero
+			+ One
+			+ Send
+			+ Sync,
+		<T as subxt::Config>::Header: Decode + Send + Sync,
 		T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 		sp_core::H256: From<T::Hash>,
 		BTreeMap<H256, ParachainHeaderProofs>:
@@ -126,13 +138,15 @@ where
 	T: light_client_common::config::Config + Send + Sync,
 	C: Chain,
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
-		+ From<<T as subxt::Config>::BlockNumber>,
+		+ From<<<T as subxt::Config>::Header as Header>::Number>,
 	ParachainClient<T>: Chain + KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		From<u32> + Debug + Display + Ord + sp_runtime::traits::Zero + One,
+	<T as subxt::Config>::Header: Decode,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	T::Hash: From<sp_core::H256>,
@@ -262,23 +276,44 @@ where
 			if events.is_empty() {
 				None
 			} else {
-				str::parse::<u32>(&*num).ok().map(T::BlockNumber::from)
+				str::parse::<u32>(&*num)
+					.ok()
+					.map(<<T as subxt::Config>::Header as Header>::Number::from)
 			}
 		})
 		.collect::<BTreeSet<_>>();
 
-	let events: Vec<IbcEvent> = events.into_values().flatten().collect();
+	let events: Vec<IbcEvent> = events
+		.into_values()
+		.flatten()
+		.filter(|e| {
+			let mut channel_and_port_ids = source.channel_whitelist();
+			channel_and_port_ids.extend(counterparty.channel_whitelist());
+			filter_events_by_ids(
+				e,
+				&[source.client_id(), counterparty.client_id()],
+				&[source.connection_id(), counterparty.connection_id()]
+					.into_iter()
+					.flatten()
+					.collect::<Vec<_>>(),
+				&channel_and_port_ids,
+			)
+		})
+		.collect();
 
 	if timeout_update_required {
 		let max_height_for_timeouts = max_height_for_timeouts.unwrap();
 		if max_height_for_timeouts > client_state.latest_height().revision_height {
-			let max_timeout_height = T::BlockNumber::from(max_height_for_timeouts as u32);
+			let max_timeout_height = <<T as subxt::Config>::Header as Header>::Number::from(
+				max_height_for_timeouts as u32,
+			);
 			headers_with_events.insert(max_timeout_height);
 		}
 	}
 
 	if is_update_required {
-		headers_with_events.insert(T::BlockNumber::from(latest_finalized_block));
+		headers_with_events
+			.insert(<<T as subxt::Config>::Header as Header>::Number::from(latest_finalized_block));
 	}
 
 	// only query proofs for headers that actually have events or are mandatory
@@ -321,6 +356,89 @@ where
 	Ok(vec![(update_header, events, update_type)])
 }
 
+pub fn filter_events_by_ids(
+	ev: &IbcEvent,
+	client_ids: &[ClientId],
+	connection_ids: &[ConnectionId],
+	channel_and_port_ids: &HashSet<(ChannelId, PortId)>,
+) -> bool {
+	use ibc::core::{
+		ics02_client::events::Attributes as ClientAttributes,
+		ics03_connection::events::Attributes as ConnectionAttributes,
+		ics04_channel::events::Attributes as ChannelAttributes,
+	};
+	let channel_ids = channel_and_port_ids
+		.iter()
+		.map(|(channel_id, _)| channel_id)
+		.collect::<Vec<_>>();
+
+	let filter_packet = |packet: &Packet| {
+		channel_and_port_ids.contains(&(packet.source_channel.clone(), packet.source_port.clone())) ||
+			channel_and_port_ids
+				.contains(&(packet.destination_channel.clone(), packet.destination_port.clone()))
+	};
+	let filter_client_attributes =
+		|packet: &ClientAttributes| client_ids.contains(&packet.client_id);
+	let filter_connection_attributes = |packet: &ConnectionAttributes| {
+		packet
+			.connection_id
+			.as_ref()
+			.map(|id| connection_ids.contains(&id))
+			.unwrap_or(false) ||
+			packet
+				.counterparty_connection_id
+				.as_ref()
+				.map(|id| connection_ids.contains(&id))
+				.unwrap_or(false)
+	};
+	let filter_channel_attributes = |packet: &ChannelAttributes| {
+		packet.channel_id.as_ref().map(|id| channel_ids.contains(&id)).unwrap_or(false) ||
+			packet
+				.counterparty_channel_id
+				.as_ref()
+				.map(|id| channel_ids.contains(&id))
+				.unwrap_or(false)
+	};
+
+	let v = match ev {
+		IbcEvent::SendPacket(e) => filter_packet(&e.packet),
+		IbcEvent::WriteAcknowledgement(e) => filter_packet(&e.packet),
+		IbcEvent::TimeoutPacket(e) => filter_packet(&e.packet),
+		IbcEvent::ReceivePacket(e) => filter_packet(&e.packet),
+		IbcEvent::AcknowledgePacket(e) => filter_packet(&e.packet),
+		IbcEvent::TimeoutOnClosePacket(e) => filter_packet(&e.packet),
+		IbcEvent::CreateClient(e) => filter_client_attributes(&e.0),
+		IbcEvent::UpdateClient(e) => filter_client_attributes(&e.common),
+		IbcEvent::UpgradeClient(e) => filter_client_attributes(&e.0),
+		IbcEvent::ClientMisbehaviour(e) => filter_client_attributes(&e.0),
+		IbcEvent::OpenInitConnection(e) => filter_connection_attributes(&e.0),
+		IbcEvent::OpenTryConnection(e) => filter_connection_attributes(&e.0),
+		IbcEvent::OpenAckConnection(e) => filter_connection_attributes(&e.0),
+		IbcEvent::OpenConfirmConnection(e) => filter_connection_attributes(&e.0),
+		IbcEvent::OpenInitChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::OpenTryChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::OpenAckChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::OpenConfirmChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::CloseInitChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::CloseConfirmChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::PushWasmCode(_) => true,
+		IbcEvent::NewBlock(_) |
+		IbcEvent::AppModule(_) |
+		IbcEvent::Empty(_) |
+		IbcEvent::ChainError(_) => true,
+	};
+	if !v {
+		log::debug!(target: "hyperspace_parachain", "Filtered out event: {:?}", ev);
+	}
+	v
+}
+
 /// Query the latest events that have been finalized by the GRANDPA finality protocol.
 pub async fn query_latest_ibc_events_with_grandpa<T, C>(
 	source: &mut ParachainClient<T>,
@@ -331,19 +449,21 @@ where
 	T: light_client_common::config::Config + Send + Sync,
 	C: Chain,
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
-		+ From<<T as subxt::Config>::BlockNumber>,
+		+ From<<<T as subxt::Config>::Header as Header>::Number>,
 	ParachainClient<T>: Chain + KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
@@ -443,17 +563,39 @@ where
 			if events.is_empty() {
 				None
 			} else {
-				str::parse::<u32>(&*num).ok().map(T::BlockNumber::from)
+				str::parse::<u32>(&*num)
+					.ok()
+					.map(<<T as subxt::Config>::Header as Header>::Number::from)
 			}
 		})
 		.collect::<BTreeSet<_>>();
 
-	let events: Vec<IbcEvent> = events.into_values().flatten().collect();
+	let events: Vec<IbcEvent> = events
+		.into_values()
+		.flatten()
+		.filter(|e| {
+			let mut channel_and_port_ids = source.channel_whitelist();
+			channel_and_port_ids.extend(counterparty.channel_whitelist());
+			let f = filter_events_by_ids(
+				e,
+				&[source.client_id(), counterparty.client_id()],
+				&[source.connection_id(), counterparty.connection_id()]
+					.into_iter()
+					.flatten()
+					.collect::<Vec<_>>(),
+				&channel_and_port_ids,
+			);
+			log::trace!(target: "hyperspace", "Filtering event: {:?}: {f}", e.event_type());
+			f
+		})
+		.collect();
 
 	if timeout_update_required {
 		let max_height_for_timeouts = max_height_for_timeouts.unwrap();
 		if max_height_for_timeouts > client_state.latest_height().revision_height {
-			let max_timeout_height = T::BlockNumber::from(max_height_for_timeouts as u32);
+			let max_timeout_height = <<T as subxt::Config>::Header as Header>::Number::from(
+				max_height_for_timeouts as u32,
+			);
 			headers_with_events.insert(max_timeout_height);
 		}
 	}
@@ -518,6 +660,8 @@ where
 		let value = msg.encode_vec()?;
 		Any { value, type_url: msg.type_url() }
 	};
+
+	log::trace!(target: "hyperspace", "Sending update header with type {:?} to {}", update_type, source.name());
 
 	Ok(vec![(update_header, events, update_type)])
 }

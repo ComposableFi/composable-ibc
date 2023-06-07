@@ -62,7 +62,8 @@ where
 		matches!(cs, AnyClientState::Grandpa(_))
 	}).unwrap() else { unreachable!() };
 
-	let finality_event = chain_b.finality_notifications().await.next().await.expect("no event");
+	let finality_event =
+		chain_b.finality_notifications().await.unwrap().next().await.expect("no event");
 	let set_id = client_state.current_set_id;
 
 	// construct an extrinsic proof with the mandatory timestamp extrinsic
