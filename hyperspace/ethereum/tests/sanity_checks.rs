@@ -1,4 +1,4 @@
-use std::{ops::Deref, path::PathBuf, sync::Arc};
+use std::{future::Future, ops::Deref, path::PathBuf, sync::Arc};
 
 use ethers::{
 	abi::Token, prelude::ContractInstance, solc::ProjectPathsConfig, utils::AnvilInstance,
@@ -6,10 +6,11 @@ use ethers::{
 use hyperspace_ethereum::config::Config;
 
 use primitives::IbcProvider;
+use prost::Message;
 
 mod utils;
 
-async fn hyperspace_ethereum_client<M>(
+async fn hyperspace_ethereum_client_fixture<M>(
 	anvil: &ethers::utils::AnvilInstance,
 	utils::DeployYuiIbc {
 		ibc_client,
@@ -51,6 +52,7 @@ type ProviderImpl = ethers::prelude::SignerMiddleware<
 	ethers::signers::LocalWallet,
 >;
 
+#[allow(dead_code)]
 struct DeployYuiIbcMockClient {
 	pub path: PathBuf,
 	pub project_output: ethers::solc::ProjectCompileOutput,
@@ -60,7 +62,7 @@ struct DeployYuiIbcMockClient {
 	pub yui_ibc: utils::DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>,
 }
 
-async fn deploy_yui_ibc_and_mock_client() -> DeployYuiIbcMockClient {
+async fn deploy_yui_ibc_and_mock_client_fixture() -> DeployYuiIbcMockClient {
 	let path = utils::yui_ibc_solidity_path();
 	let project_output = utils::compile_yui(&path, "contracts/core");
 	let (anvil, client) = utils::spawn_anvil();
@@ -88,31 +90,31 @@ async fn deploy_yui_ibc_and_mock_client() -> DeployYuiIbcMockClient {
 	DeployYuiIbcMockClient { path, project_output, anvil, client, yui_ibc, ibc_mock_client }
 }
 
-#[tokio::test]
-#[ignore]
-async fn test_deploy_yui_ibc_and_mock_client() {
-	deploy_yui_ibc_and_mock_client().await;
-}
-
-#[tokio::test]
-#[ignore]
-async fn test_hyperspace_ethereum_client() {
-	let DeployYuiIbcMockClient { anvil, yui_ibc, .. } = deploy_yui_ibc_and_mock_client().await;
-	let _hyperspace = hyperspace_ethereum_client(&anvil, &yui_ibc).await;
-}
-
-#[tokio::test]
-async fn test_ibc_client() {
-	let deploy = deploy_yui_ibc_and_mock_client().await;
-
-	let hyperspace = hyperspace_ethereum_client(&deploy.anvil, &deploy.yui_ibc).await;
-
+async fn deploy_mock_client_fixture(deploy: &DeployYuiIbcMockClient) -> String {
 	deploy
 		.yui_ibc
 		.register_client("mock-client", deploy.ibc_mock_client.address())
 		.await;
-	let client_id = deploy.yui_ibc.create_client(utils::mock::create_client_msg()).await;
-	eprintln!("client_id: {:?} {:?}", client_id, deploy.ibc_mock_client.address());
+
+	deploy.yui_ibc.create_client(utils::mock::create_client_msg()).await
+}
+#[tokio::test]
+async fn test_deploy_yui_ibc_and_mock_client() {
+	deploy_yui_ibc_and_mock_client_fixture().await;
+}
+
+#[tokio::test]
+async fn test_hyperspace_ethereum_client() {
+	let DeployYuiIbcMockClient { anvil, yui_ibc, .. } =
+		deploy_yui_ibc_and_mock_client_fixture().await;
+	let _hyperspace = hyperspace_ethereum_client_fixture(&anvil, &yui_ibc).await;
+}
+
+#[tokio::test]
+async fn test_ibc_client() {
+	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
+	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc).await;
+	let client_id = deploy_mock_client_fixture(&deploy).await;
 
 	let r = hyperspace
 		.query_client_state(
@@ -121,7 +123,38 @@ async fn test_ibc_client() {
 		)
 		.await
 		.unwrap();
-	panic!("{r:#?}");
+
+	assert_eq!(
+		r.client_state,
+		Some(ibc_proto::google::protobuf::Any {
+			type_url: "/ibc.lightclients.mock.v1.ClientState".into(),
+			value: utils::mock::ClientState {
+				height: ibc_proto::ibc::core::client::v1::Height {
+					revision_number: 0,
+					revision_height: 1,
+				},
+			}
+			.encode_to_vec(),
+		})
+	);
+
+	let r = hyperspace
+		.query_client_consensus(
+			ibc::Height { revision_number: 0, revision_height: 1 },
+			client_id.parse().unwrap(),
+			ibc::Height { revision_number: 0, revision_height: 1 },
+		)
+		.await
+		.unwrap();
+
+	assert_eq!(
+		r.consensus_state,
+		Some(ibc_proto::google::protobuf::Any {
+			type_url: "/ibc.lightclients.mock.v1.ConsensusState".into(),
+			value: utils::mock::ConsensusState { timestamp: 1 }.encode_to_vec(),
+		})
+	);
+}
 
 	// query_client_state
 	// query_client_consensus
