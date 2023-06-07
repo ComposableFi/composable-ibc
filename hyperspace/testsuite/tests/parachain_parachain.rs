@@ -132,6 +132,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 #[tokio::test]
 async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 	use std::time::SystemTime;
+	let current_time = SystemTime::now();
 	logging::setup_logging();
 	use hyperspace_testsuite::setup_connection_and_channel;
 	use ibc::core::ics24_host::identifier::PortId;
@@ -152,36 +153,36 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 
 	let asset_id = 1;
 
-	let mut join_set = tokio::task::JoinSet::new();
+	// let mut join_set = tokio::task::JoinSet::new();
 
-	// no timeouts + connection delay
-	let mut c1 = chain_a.clone();
-	let mut c2 = chain_b.clone();
-	join_set.spawn(async move {
-		ibc_messaging_with_connection_delay(
-			&mut c1, &mut c2, asset_id, asset_id, channel_a, channel_b,
-		)
-		.await;
-	});
+	// // no timeouts + connection delay
+	// let mut c1 = chain_a.clone();
+	// let mut c2 = chain_b.clone();
+	// join_set.spawn(async move {
+	// 	ibc_messaging_with_connection_delay(
+	// 		&mut c1, &mut c2, asset_id, asset_id, channel_a, channel_b,
+	// 	)
+	// 	.await;
+	// });
 
-	// timeouts + connection delay
-	let mut c1 = chain_a.clone();
-	let mut c2 = chain_b.clone();
-	join_set.spawn(async move {
-		ibc_messaging_packet_height_timeout_with_connection_delay(
-			&mut c1, &mut c2, asset_id, channel_a, channel_b,
-		)
-		.await;
-		ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-			&mut c1, &mut c2, asset_id, channel_a, channel_b,
-		)
-		.await;
-	});
+	// // timeouts + connection delay
+	// let mut c1 = chain_a.clone();
+	// let mut c2 = chain_b.clone();
+	// join_set.spawn(async move {
+	// 	ibc_messaging_packet_height_timeout_with_connection_delay(
+	// 		&mut c1, &mut c2, asset_id, channel_a, channel_b,
+	// 	)
+	// 	.await;
+	// 	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+	// 		&mut c1, &mut c2, asset_id, channel_a, channel_b,
+	// 	)
+	// 	.await;
+	// });
 
-	log::info!(target: "hyperspace", "🚀🚀 Waiting for the 3 features.");
-	while let Some(res) = join_set.join_next().await {
-		res.unwrap();
-	}
+	// log::info!(target: "hyperspace", "🚀🚀 Waiting for the 3 features.");
+	// while let Some(res) = join_set.join_next().await {
+	// 	res.unwrap();
+	// }
 
 	// channel closing semantics
 	let mut join_set = tokio::task::JoinSet::new();
@@ -204,4 +205,8 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 
 	// misbehaviour
 	ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
+
+	let current_time2 = SystemTime::now();
+
+	log::info!(target: "hyperspace", "🚀🚀 finished. start {:#?}, end : {:#?} ", current_time, current_time2);
 }

@@ -49,10 +49,6 @@ parachains:
           - --alice
         relaychainFlags: # additional CLI flags for relaychain part
           - --name=relaychain-alice
-      - flags:
-          - --bob
-      - flags:
-          - --charlie
   # Config for second parachain
   - image: parachain-node:latest
     chain: # this could be a string like `dev` or a config object

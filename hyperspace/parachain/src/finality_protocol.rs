@@ -467,10 +467,11 @@ where
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
-	let _justification = match finality_event {
+	let justification = match finality_event {
 		FinalityEvent::Grandpa(justification) => justification,
 		_ => panic!("Expected grandpa finality event"),
 	};
+	log::info!("justification #0 {}", justification.commit.target_number); // number finalized block
 	let client_id = source.client_id();
 	let latest_height = counterparty.latest_height_and_timestamp().await?.0;
 	let response = counterparty.query_client_state(latest_height, client_id).await?;
@@ -510,6 +511,8 @@ where
 	let justification =
 		GrandpaJustification::<T::Header>::decode(&mut &finality_proof.justification[..])?;
 
+	log::info!("justification #1 {}", justification.commit.target_number); // number finalized block
+
 	// fetch the latest finalized parachain header
 	let finalized_para_header = prover
 		.query_latest_finalized_parachain_header(justification.commit.target_number)
@@ -519,6 +522,9 @@ where
 	let finalized_para_height = u32::from(finalized_para_header.number());
 	let finalized_blocks =
 		((client_state.latest_para_height + 1)..=finalized_para_height).collect::<Vec<_>>();
+
+	log::info!("finalized_para_height : {}", finalized_para_height); // number finalized block
+	
 
 	if !finalized_blocks.is_empty() {
 		log::info!(

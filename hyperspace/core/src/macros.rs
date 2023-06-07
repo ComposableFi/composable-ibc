@@ -127,6 +127,7 @@ macro_rules! process_finality_event {
 					}
 					let type_urls =
 						msgs.iter().map(|msg| msg.type_url.as_str()).collect::<Vec<_>>();
+					let type_urls_c = msgs.iter().map(|msg| msg.type_url.clone()).collect::<Vec<_>>();
 					log::info!("Submitting messages to {}: {type_urls:#?}", $sink.name());
 					match queue::flush_message_batch(msgs, $metrics.as_ref(), &$sink).await {
 						Ok(_) => {
@@ -135,7 +136,7 @@ macro_rules! process_finality_event {
 						Err(e) => {
 							log::error!(
 								target:"hyperspace",
-								"Failed to submit messages to {} {:?}",
+								"Failed to submit messages to {} {:?} {type_urls_c:#?}",
 								$sink.name(),
 								e
 							);

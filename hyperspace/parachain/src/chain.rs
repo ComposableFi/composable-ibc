@@ -154,7 +154,7 @@ where
 						&*self.relay_ws_client,
 					)
 						.await?
-						.chunks(3)
+						.chunks(12)
 						.map(|mut notifs| notifs.remove(notifs.len() - 1)); // skip every 3 finality notifications
 
 				let stream = subscription.filter_map(|justification_notif| {
