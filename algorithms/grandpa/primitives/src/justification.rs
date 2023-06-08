@@ -77,13 +77,12 @@ where
 		let ancestry_chain = AncestryChain::<H>::new(&self.votes_ancestries);
 
 		match finality_grandpa::validate_commit(&self.commit, voters, &ancestry_chain) {
+			Ok(ref result) if !result.is_valid() =>
+				Err(anyhow!("invalid commit in grandpa justification: {result:?}"))?,
 			Ok(ref result) if result.is_valid() => {
-				if result.num_duplicated_precommits() > 0 ||
-					result.num_invalid_voters() > 0 ||
-					result.num_equivocations() > 0
-				{
-					Err(anyhow!("Invalid commit, found one of `duplicate precommits`, `invalid voters`, or `equivocations` {result:?}"))?
-				}
+				// TODO handle equivocations
+				// > The equivocations or other misbehaviors detected in the justifications must be
+				// >handled too but not rejecting the proof.
 			},
 			err => {
 				let result = err.map_err(|_| {
