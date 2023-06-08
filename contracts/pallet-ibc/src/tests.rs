@@ -211,8 +211,8 @@ fn send_transfer() {
 	let balance = 100000 * MILLIS;
 	ext.execute_with(|| {
 		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
-		let raw_user = ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
-		let ss58_address = String::from_utf8(raw_user).unwrap();
+		let ss58_address =
+			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
 		setup_client_and_consensus_state(PortId::transfer());
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
@@ -268,8 +268,8 @@ fn send_transfer_no_fee_feeless_channels() {
 	let balance = 100000 * MILLIS;
 	ext.execute_with(|| {
 		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
-		let raw_user = ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
-		let ss58_address = String::from_utf8(raw_user).unwrap();
+		let ss58_address =
+			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
 		setup_client_and_consensus_state(PortId::transfer());
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
@@ -337,9 +337,8 @@ fn on_deliver_ics20_recv_packet() {
 	ext.execute_with(|| {
 		// Create  a new account
 		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
-		let ss58_address_bytes =
+		let ss58_address =
 			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
-		let ss58_address = String::from_utf8(ss58_address_bytes).unwrap();
 		frame_system::Pallet::<Test>::set_block_number(1u32);
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
@@ -436,9 +435,8 @@ fn on_deliver_ics20_recv_packet_with_flat_fee() {
 	ext.execute_with(|| {
 		// Create  a new account
 		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
-		let ss58_address_bytes =
+		let ss58_address =
 			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
-		let ss58_address = String::from_utf8(ss58_address_bytes).unwrap();
 		frame_system::Pallet::<Test>::set_block_number(1u32);
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
@@ -537,9 +535,8 @@ fn on_deliver_ics20_recv_packet_transfered_amount_less_then_flat_fee() {
 	ext.execute_with(|| {
 		// Create  a new account
 		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
-		let ss58_address_bytes =
+		let ss58_address =
 			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
-		let ss58_address = String::from_utf8(ss58_address_bytes).unwrap();
 		frame_system::Pallet::<Test>::set_block_number(1u32);
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
@@ -649,9 +646,8 @@ fn on_deliver_ics20_recv_packet_should_not_double_spend() {
 	ext.execute_with(|| {
 		// Create  a new account
 		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
-		let ss58_address_bytes =
+		let ss58_address =
 			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
-		let ss58_address = String::from_utf8(ss58_address_bytes).unwrap();
 		frame_system::Pallet::<Test>::set_block_number(1u32);
 		setup_client_and_consensus_state(PortId::transfer());
 
