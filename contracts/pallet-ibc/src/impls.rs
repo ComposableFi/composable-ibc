@@ -987,9 +987,6 @@ where
 			account_id_32.into(),
 			<T as frame_system::Config>::SS58Prefix::get(),
 		);
-		let from = String::from_utf8(from).map_err(|_| IbcHandlerError::SendTransferError {
-			msg: Some("Account Id conversion failed".to_string()),
-		})?;
 		let (latest_height, latest_timestamp) =
 			Pallet::<T>::latest_height_and_timestamp(&PortId::transfer(), &channel_id).map_err(
 				|_| IbcHandlerError::TimestampOrHeightNotFound {
