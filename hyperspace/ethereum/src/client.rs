@@ -10,7 +10,7 @@ use ethers::{
 };
 
 use futures::{Stream, TryFutureExt};
-use ibc::core::ics24_host::identifier::ClientId;
+use ibc::{core::ics24_host::identifier::{ClientId, ChannelId, PortId}, Height};
 use thiserror::Error;
 
 use crate::config::Config;
@@ -88,11 +88,13 @@ impl Client {
 		}
 	}
 
-	pub fn query_packet_commitment(
+	pub fn _query_packet_commitment(
 		&self,
-		client_id: ClientId,
-		sequence: u64,
-	) -> impl Future<Output = Result<Option<H256>, ClientError>> {
+		at: Height,
+		port_id: &PortId,
+		channel_id: &ChannelId,
+		seq: u64,
+	) -> impl Future<Output = Result<ibc_proto::ibc::core::channel::v1::QueryPacketCommitmentResponse, ClientError>> {
 		async move { todo!() }
 	}
 
