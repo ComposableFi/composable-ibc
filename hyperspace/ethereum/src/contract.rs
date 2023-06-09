@@ -1,10 +1,39 @@
 use std::sync::Arc;
 
 use ethers::{
-	abi::{Abi, Address, Detokenize},
+	abi::{Abi, Address, Detokenize, Token},
 	prelude::Contract,
 	providers::Middleware,
 };
+
+/// Unwraps a contract error, decoding the revert reason if possible
+pub trait UnwrapContractError<T> {
+	fn unwrap_contract_error(self) -> T;
+}
+
+impl<T, M> UnwrapContractError<T> for Result<T, ethers::prelude::ContractError<M>>
+where
+	M: Middleware,
+{
+	/// Unwraps a contract error, decoding the revert reason if possible
+	#[track_caller]
+	fn unwrap_contract_error(self) -> T {
+		match self {
+			Ok(t) => t,
+			Err(ethers::prelude::ContractError::Revert(bytes)) => {
+				// abi decode the bytes after the first 4 bytes (the error selector)
+				if bytes.len() < 4 {
+					panic!("contract-error: {:?}", bytes);
+				}
+				let bytes = &bytes[4..];
+				let tokens = ethers::abi::decode(&[ethers::abi::ParamType::String], bytes).unwrap();
+				panic!("contract-error: {tokens:#?}")
+			},
+			Err(e) => panic!("contract-error: {:?}", e),
+		}
+	}
+}
+
 
 pub const IBC_HANDLER_ABI: &str = include_str!("./abi/ibc-handler-abi.json");
 

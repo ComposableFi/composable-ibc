@@ -286,29 +286,3 @@ where
 
 	DeployYuiIbc { ibc_client, ibc_connection, ibc_channel_handshake, ibc_packet, ibc_handler }
 }
-
-pub trait UnwrapContractError<T> {
-	fn unwrap_contract_error(self) -> T;
-}
-
-impl<T, M> UnwrapContractError<T> for Result<T, ContractError<M>>
-where
-	M: Middleware,
-{
-	#[track_caller]
-	fn unwrap_contract_error(self) -> T {
-		match self {
-			Ok(t) => t,
-			Err(ContractError::Revert(bytes)) => {
-				// abi decode the bytes after the first 4 bytes (the error selector)
-				if bytes.len() < 4 {
-					panic!("contract-error: {:?}", bytes);
-				}
-				let bytes = &bytes[4..];
-				let tokens = ethers::abi::decode(&[ParamType::String], bytes).unwrap();
-				panic!("contract-error: {tokens:#?}")
-			},
-			Err(e) => panic!("contract-error: {:?}", e),
-		}
-	}
-}
