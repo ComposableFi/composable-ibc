@@ -86,7 +86,7 @@ impl ics23::HostFunctionsProvider for HostFunctions {
 
 impl TendermintSha256 for HostFunctions {
 	fn digest(data: impl AsRef<[u8]>) -> [u8; HASH_SIZE] {
-		<Sha256 as tendermint::crypto::Sha256>::digest(&data).into()
+		<Self as ics23::HostFunctionsProvider>::sha2_256(data.as_ref())
 	}
 }
 
@@ -152,12 +152,7 @@ pub fn execute(
 	let client = TendermintClient::<HostFunctions>::default();
 	let mut ctx = Context::<HostFunctions>::new(deps, env);
 	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
-	let result = process_message(msg, client, &mut ctx, client_id.clone());
-	let data = match result {
-		Ok(res) => res,
-		Err(ContractError::Tendermint(e)) => to_binary(&ContractResult::error(e))?,
-		Err(e) => return Err(e),
-	};
+	let data = process_message(msg, client, &mut ctx, client_id.clone())?;
 	let mut response = Response::default();
 	response.data = Some(data);
 	Ok(response)
