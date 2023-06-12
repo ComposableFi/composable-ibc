@@ -21,7 +21,7 @@ use crate::{
 	error::Error,
 	proto::{
 		Authority as RawAuthority, AuthorityChange as RawAuthorityChange,
-		ClientStateV1 as RawClientStateV1, ClientStateV2 as RawClientStateV2,
+		ClientState as RawClientState,
 	},
 };
 use alloc::{format, string::ToString, vec::Vec};
@@ -47,8 +47,6 @@ use sp_finality_grandpa::{AuthorityList, SetId};
 use tendermint::Time;
 use tendermint_proto::Protobuf;
 use vec1::Vec1;
-
-type RawClientState = RawClientStateV2;
 
 /// Protobuf type url for GRANDPA ClientState
 pub const GRANDPA_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.ClientState";
@@ -159,9 +157,9 @@ impl<H: Clone> From<ClientState<H>> for grandpa_client_primitives::ClientState {
 	}
 }
 
-impl<H: Clone> Protobuf<RawClientStateV2> for ClientState<H> {}
+impl<H: Clone> Protobuf<RawClientState> for ClientState<H> {}
 
-impl<H: Clone> Protobuf<RawClientStateV1> for ClientStateV1<H> {}
+impl<H: Clone> Protobuf<RawClientState> for ClientStateV1<H> {}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UpgradeOptions {
@@ -368,10 +366,10 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 	}
 }
 
-impl<H> TryFrom<RawClientStateV1> for ClientStateV1<H> {
+impl<H> TryFrom<RawClientState> for ClientStateV1<H> {
 	type Error = Error;
 
-	fn try_from(raw: RawClientStateV1) -> Result<Self, Self::Error> {
+	fn try_from(raw: RawClientState) -> Result<Self, Self::Error> {
 		let current_authorities = raw
 			.current_authorities
 			.into_iter()
@@ -416,6 +414,7 @@ impl<H> From<ClientState<H>> for RawClientState {
 			relay_chain: client_state.relay_chain as i32,
 			para_id: client_state.para_id,
 			latest_para_height: client_state.latest_para_height,
+			current_authorities: vec![],
 			authorities_changes: client_state
 				.authorities_changes
 				.into_iter()
@@ -425,9 +424,9 @@ impl<H> From<ClientState<H>> for RawClientState {
 	}
 }
 
-impl<H> From<ClientStateV1<H>> for RawClientStateV1 {
+impl<H> From<ClientStateV1<H>> for RawClientState {
 	fn from(client_state: ClientStateV1<H>) -> Self {
-		RawClientStateV1 {
+		RawClientState {
 			latest_relay_height: client_state.latest_relay_height,
 			latest_relay_hash: client_state.latest_relay_hash.as_bytes().to_vec(),
 			current_set_id: client_state.current_set_id,
