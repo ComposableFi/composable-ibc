@@ -4,7 +4,7 @@
 #![allow(clippy::useless_format)]
 #![allow(non_camel_case_types)]
 #![deny(
-	unused_imports,
+	// unused_imports,
 	clippy::useless_conversion,
 	bad_style,
 	bare_trait_objects,
@@ -30,10 +30,26 @@
 #[macro_use]
 extern crate alloc;
 
+mod channel;
+mod client;
+mod connection;
+pub mod errors;
+pub mod events;
+pub mod ics20;
+mod ics23;
+pub mod light_clients;
+mod port;
+pub mod routing;
+
+pub use client::HostConsensusProof;
+pub use ibc_primitives::Timeout;
+pub use light_client_common;
+
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use cumulus_primitives_core::ParaId;
 use frame_support::weights::Weight;
+use ics08_wasm::client_state::ClientState as WasmClientState;
 pub use pallet::*;
 use scale_info::{
 	prelude::{
@@ -45,20 +61,6 @@ use scale_info::{
 };
 use sp_runtime::{Either, RuntimeDebug};
 use sp_std::{marker::PhantomData, prelude::*, str::FromStr};
-
-mod channel;
-mod client;
-mod connection;
-pub mod errors;
-pub mod events;
-pub mod ics20;
-mod ics23;
-pub mod light_clients;
-mod port;
-pub mod routing;
-pub use client::HostConsensusProof;
-pub use ibc_primitives::Timeout;
-pub use light_client_common;
 
 pub const MODULE_ID: &str = "pallet_ibc";
 
@@ -165,6 +167,8 @@ pub mod pallet {
 	};
 	use crate::{
 		ics20::HandleMemo,
+		ics23::client_states::ClientStates,
+		light_clients::AnyClientStateV1,
 		routing::{Context, ModuleRouter},
 	};
 	use ibc::{
@@ -174,14 +178,18 @@ pub mod pallet {
 		},
 		bigint::U256,
 		core::{
-			ics02_client::context::{ClientKeeper, ClientReader},
+			ics02_client::{
+				client_state::ClientState,
+				context::{ClientKeeper, ClientReader},
+			},
 			ics04_channel::context::ChannelReader,
-			ics24_host::identifier::{ChannelId, PortId},
+			ics24_host::identifier::{ChannelId, ClientId, PortId},
 		},
 		timestamp::Timestamp,
 		Height,
 	};
 	use ibc_primitives::{client_id_from_bytes, get_channel_escrow_address, IbcHandler};
+	use ics08_wasm::Bytes;
 	use light_clients::AnyClientState;
 	use sp_runtime::{
 		traits::{IdentifyAccount, Saturating, Zero},
@@ -190,6 +198,7 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	use sp_runtime::{Deserialize, Serialize};
 	use sp_std::collections::btree_set::BTreeSet;
+	use tendermint_proto::Protobuf;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -696,6 +705,19 @@ pub mod pallet {
 			remaining_weight.saturating_sub(T::WeightInfo::packet_cleanup(removed_packets_count))
 		}
 
+		fn on_runtime_upgrade() -> Weight {
+			let mut count = 0;
+			for (client_id, client_state) in <ClientStates<T>>::iter() {
+				if let Err(e) =
+					Pallet::<T>::upgrade_grandpa_consensus_state(client_id, client_state)
+				{
+					log::warn!(target: "pallet_ibc", "Error upgrading grandpa consensus state: {:?}", e);
+				}
+				count += 1;
+			}
+			T::DbWeight::get().reads_writes(count, count)
+		}
+
 		fn offchain_worker(_n: BlockNumberFor<T>) {}
 	}
 
@@ -1148,6 +1170,63 @@ pub mod pallet {
 				destination_channel,
 			});
 
+			Ok(())
+		}
+	}
+
+	impl<T: Config> Pallet<T>
+	where
+		T: Send + Sync,
+		AccountId32: From<<T as frame_system::Config>::AccountId>,
+		u32: From<<T as frame_system::Config>::BlockNumber>,
+	{
+		fn upgrade_grandpa_consensus_state(
+			client_id: ClientId,
+			client_state: Bytes,
+		) -> Result<(), String> {
+			if client_id.as_str().contains("grandpa") || client_id.as_str().contains("wasm") {
+				let decoded = AnyClientStateV1::decode_vec(&mut client_state.as_slice())
+					.map_err(|e| e.to_string())?;
+				// decoded.unpack_recursive()
+				let mut wasm_code_id = None;
+				let old_state = match decoded {
+					AnyClientStateV1::Grandpa(state) => state,
+					AnyClientStateV1::Wasm(WasmClientState { inner, code_id, .. }) =>
+						match *inner {
+							AnyClientStateV1::Grandpa(state) => {
+								wasm_code_id = Some(code_id);
+								state
+							},
+							_ => {
+								log::trace!(
+									target: "pallet_ibc",
+									"Skipping client state upgrade for client {:?}",
+									client_id
+								);
+								return Ok(())
+							},
+						},
+					_ => {
+						log::trace!(
+							target: "pallet_ibc",
+							"Skipping client state upgrade for client {:?}",
+							client_id
+						);
+						return Ok(())
+					},
+				};
+				let new_state = old_state.into();
+				let any_state = if let Some(code_id) = wasm_code_id {
+					AnyClientState::wasm(AnyClientState::Grandpa(new_state), code_id)
+						.map_err(|e| e.to_string())?
+				} else {
+					AnyClientState::Grandpa(new_state)
+				};
+				<ClientStates<T>>::insert(
+					&client_id,
+					any_state.encode_to_vec().map_err(|e| e.to_string())?,
+				);
+			}
 			Ok(())
 		}
 	}

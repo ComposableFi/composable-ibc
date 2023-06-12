@@ -633,7 +633,7 @@ where
 				set_id: light_client_state.current_set_id,
 				authorities: light_client_state.current_authorities,
 			});
-			client_state.current_set_id = light_client_state.current_set_id;
+			// client_state.current_set_id = light_client_state.current_set_id;
 			client_state.latest_relay_hash = light_client_state.latest_relay_hash.into();
 			client_state.frozen_height = None;
 			client_state.latest_para_height = block_number;

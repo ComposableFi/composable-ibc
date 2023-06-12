@@ -29,7 +29,7 @@ use hash_db::Hasher;
 use light_client_common::state_machine;
 use primitives::{
 	error,
-	justification::{find_scheduled_change, validate_chain, AncestryChain, GrandpaJustification},
+	justification::{find_scheduled_change, AncestryChain, GrandpaJustification},
 	parachain_header_storage_key, ClientState, HostFunctions, ParachainHeaderProofs,
 	ParachainHeadersWithFinalityProof,
 };
@@ -58,11 +58,6 @@ where
 		proof;
 
 	// 1. First validate unknown headers.
-	// let (base, target) = validate_chain(
-	// 	client_state.latest_relay_hash,
-	// 	client_state.latest_relay_height,
-	// 	&finality_proof.unknown_headers,
-	// )?;
 	let headers = AncestryChain::new(&finality_proof.unknown_headers);
 
 	let target = finality_proof

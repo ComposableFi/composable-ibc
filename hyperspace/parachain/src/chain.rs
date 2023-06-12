@@ -460,25 +460,12 @@ where
 					.ok_or_else(|| anyhow!("No hash found for block: {:?}", from_block))?;
 
 				let base_header_hash = base_header.hash();
-				// if base_header_hash != trusted_base_header_hash.into() {
-				// log::warn!(
-				// 	"Found misbehaviour on client {}: {:?} != {:?}",
-				// 	self.client_id
-				// 		.lock()
-				// 		.unwrap()
-				// 		.as_ref()
-				// 		.map(|x| x.as_str().to_owned())
-				// 		.unwrap_or_else(|| "{unknown}".to_owned()),
-				// 	base_header_hash,
-				// 	trusted_base_header_hash
-				// );
 
 				trusted_finality_proof.unknown_headers.clear();
 				let mut detected_misbehaviour = false;
 				// TODO: parallelize this
 				for header in &header.finality_proof.unknown_headers {
 					let i = header.number;
-					// for i in from_block..=to_block {
 					let unknown_header_hash =
 						self.relay_client.rpc().block_hash(Some(i.into())).await?.ok_or_else(
 							|| {

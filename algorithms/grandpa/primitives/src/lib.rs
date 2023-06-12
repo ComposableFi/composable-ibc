@@ -24,7 +24,7 @@ extern crate alloc;
 use alloc::collections::BTreeMap;
 use codec::{Decode, Encode};
 use core::fmt::Debug;
-use sp_core::{ed25519, offchain::Timestamp, sp_std, H256};
+use sp_core::{ed25519, sp_std, H256};
 use sp_finality_grandpa::{AuthorityId, AuthorityList, AuthoritySignature};
 use sp_runtime::traits::Header;
 use sp_std::prelude::*;
@@ -72,9 +72,6 @@ pub struct ClientState {
 	pub latest_relay_hash: Hash,
 	/// para_id of associated parachain
 	pub para_id: u32,
-	/// Maximum number of finalized headers per update. This is needed to prevent eclipse attacks,
-	/// since we don't store all the previously received headers in the light client.
-	pub max_finalized_headers: usize,
 }
 
 /// Holds relavant parachain proofs for both header and timestamp extrinsic.

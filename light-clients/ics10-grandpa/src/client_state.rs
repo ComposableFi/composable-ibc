@@ -13,25 +13,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![allow(deprecated)]
+
 use crate::{
 	client_def::GrandpaClient,
 	client_message::RelayChainHeader,
 	error::Error,
 	proto::{
 		Authority as RawAuthority, AuthorityChange as RawAuthorityChange,
-		ClientState as RawClientState,
+		ClientStateV1 as RawClientStateV1, ClientStateV2 as RawClientStateV2,
 	},
 };
 use alloc::{format, string::ToString, vec::Vec};
 use anyhow::anyhow;
-use core::{marker::PhantomData, time::Duration};
+use core::{
+	convert::{identity, Infallible},
+	fmt::Debug,
+	marker::PhantomData,
+	time::Duration,
+};
 use ibc::{
 	core::{
 		ics02_client::{
 			client_consensus::ConsensusState,
+			client_def::{ClientDef, ConsensusUpdateResult},
+			client_message::ClientMessage,
 			client_state::{ClientType, Status},
 		},
-		ics24_host::identifier::{ChainId, ClientId},
+		ics03_connection::connection::ConnectionEnd,
+		ics04_channel::{
+			channel::ChannelEnd,
+			commitment::{AcknowledgementCommitment, PacketCommitment},
+			packet::Sequence,
+		},
+		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
+		ics24_host::identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 		ics26_routing::context::ReaderContext,
 	},
 	timestamp::Timestamp,
@@ -45,6 +61,8 @@ use sp_finality_grandpa::{AuthorityList, SetId};
 use tendermint::Time;
 use tendermint_proto::Protobuf;
 use vec1::Vec1;
+
+type RawClientState = RawClientStateV2;
 
 /// Protobuf type url for GRANDPA ClientState
 pub const GRANDPA_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.ClientState";
@@ -76,7 +94,7 @@ pub struct AuthoritiesChange {
 }
 
 #[derive(PartialEq, Clone, Debug, Default, Eq)]
-pub struct ClientState<H> {
+pub struct ClientStateV1<H> {
 	/// Relay chain
 	pub relay_chain: RelayChain,
 	// Latest relay chain height
@@ -91,31 +109,73 @@ pub struct ClientState<H> {
 	pub para_id: u32,
 	/// Id of the current authority set.
 	pub current_set_id: u64,
-	/// authorities for the current round
-	// pub current_authorities: AuthorityList,
-	/// Maximum number of finalized headers per update. This is needed to prevent eclipse attacks,
-	/// since we don't store all the previously received headers in the light client.
-	pub max_finalized_headers: usize,
+	/// Authorities for the current round.
+	pub current_authorities: AuthorityList,
+	pub _phantom: PhantomData<H>,
+}
+
+#[derive(PartialEq, Clone, Debug, Default, Eq)]
+pub struct ClientStateV2<H> {
+	/// Relay chain
+	pub relay_chain: RelayChain,
+	// Latest relay chain height
+	pub latest_relay_height: u32,
+	/// Latest relay chain block hash
+	pub latest_relay_hash: H256,
+	/// Block height when the client was frozen due to a misbehaviour
+	pub frozen_height: Option<Height>,
+	/// latest parachain height
+	pub latest_para_height: u32,
+	/// ParaId of associated parachain
+	pub para_id: u32,
+	// Id of the current authority set.
+	// pub current_set_id: u64,
+	/// Authorities changes history. More than one authorities change is needed to
+	/// properly verify misbehaviour.
 	pub authorities_changes: Vec1<AuthoritiesChange>,
 	/// phantom type.
 	pub _phantom: PhantomData<H>,
+}
+
+pub type ClientState<H> = ClientStateV2<H>;
+
+impl<H> From<ClientStateV1<H>> for ClientStateV2<H> {
+	fn from(value: ClientStateV1<H>) -> Self {
+		ClientStateV2 {
+			relay_chain: value.relay_chain,
+			latest_relay_height: value.latest_relay_height,
+			latest_relay_hash: value.latest_relay_hash,
+			frozen_height: value.frozen_height,
+			latest_para_height: value.latest_para_height,
+			para_id: value.para_id,
+			// current_set_id: value.current_set_id,
+			authorities_changes: Vec1::new(AuthoritiesChange {
+				height: 0,
+				timestamp: Default::default(),
+				set_id: value.current_set_id,
+				authorities: value.current_authorities,
+			}),
+			_phantom: Default::default(),
+		}
+	}
 }
 
 impl<H: Clone> From<ClientState<H>> for grandpa_client_primitives::ClientState {
 	fn from(client_state: ClientState<H>) -> grandpa_client_primitives::ClientState {
 		grandpa_client_primitives::ClientState {
 			current_authorities: client_state.current_authorities().clone(),
-			current_set_id: client_state.current_set_id,
+			current_set_id: *client_state.current_set_id(),
 			latest_relay_hash: client_state.latest_relay_hash,
 			latest_relay_height: client_state.latest_relay_height,
 			latest_para_height: client_state.latest_para_height,
 			para_id: client_state.para_id,
-			max_finalized_headers: client_state.max_finalized_headers,
 		}
 	}
 }
 
-impl<H: Clone> Protobuf<RawClientState> for ClientState<H> {}
+impl<H: Clone> Protobuf<RawClientStateV2> for ClientState<H> {}
+
+impl<H: Clone> Protobuf<RawClientStateV1> for ClientStateV1<H> {}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UpgradeOptions {
@@ -150,11 +210,26 @@ impl<H: Clone> ClientState<H> {
 		let key = self
 			.authorities_changes
 			.binary_search_by_key(&self.latest_relay_height, |x| x.height)
-			.unwrap_or_else(|i| i);
+			.unwrap_or_else(identity);
 		match self.authorities_changes.get(key) {
 			Some(change) => &change.authorities,
 			_ => &self.authorities_changes.last().authorities,
 		}
+	}
+
+	pub fn current_set_id(&self) -> &SetId {
+		let key = self
+			.authorities_changes
+			.binary_search_by_key(&self.latest_relay_height, |x| x.height)
+			.unwrap_or_else(identity);
+		match self.authorities_changes.get(key) {
+			Some(change) => &change.set_id,
+			_ => &self.authorities_changes.last().set_id,
+		}
+	}
+
+	pub fn last_set_id(&self) -> &SetId {
+		&self.authorities_changes.last().set_id
 	}
 }
 
@@ -303,8 +378,7 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 			relay_chain,
 			latest_para_height: raw.latest_para_height,
 			para_id: raw.para_id,
-			current_set_id: raw.current_set_id,
-			max_finalized_headers: raw.max_finalized_headers as usize,
+			// current_set_id: raw.current_set_id,
 			authorities_changes: Vec1::try_from(
 				raw.authorities_changes
 					.into_iter()
@@ -312,7 +386,42 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 					.collect::<Result<Vec<_>, _>>()?,
 			)
 			.map_err(|e| Error::Custom(e.to_string()))?,
-			// current_authorities,
+			latest_relay_hash,
+			latest_relay_height: raw.latest_relay_height,
+			_phantom: Default::default(),
+		})
+	}
+}
+
+impl<H> TryFrom<RawClientStateV1> for ClientStateV1<H> {
+	type Error = Error;
+
+	fn try_from(raw: RawClientStateV1) -> Result<Self, Self::Error> {
+		let current_authorities = raw
+			.current_authorities
+			.into_iter()
+			.map(|set| {
+				let id = Public::try_from(&*set.public_key)
+					.map_err(|_| anyhow!("Invalid ed25519 public key"))?;
+				Ok((id.into(), set.weight))
+			})
+			.collect::<Result<_, Error>>()?;
+
+		let relay_chain = RelayChain::from_i32(raw.relay_chain)?;
+		if raw.latest_relay_hash.len() != 32 {
+			Err(anyhow!("Invalid ed25519 public key lenght: {}", raw.latest_relay_hash.len()))?
+		}
+		let mut fixed_bytes = [0u8; 32];
+		fixed_bytes.copy_from_slice(&*raw.latest_relay_hash);
+		let latest_relay_hash = H256::from(fixed_bytes);
+
+		Ok(Self {
+			frozen_height: raw.frozen_height.map(|height| Height::new(raw.para_id.into(), height)),
+			relay_chain,
+			latest_para_height: raw.latest_para_height,
+			para_id: raw.para_id,
+			current_set_id: raw.current_set_id,
+			current_authorities,
 			latest_relay_hash,
 			latest_relay_height: raw.latest_relay_height,
 			_phantom: Default::default(),
@@ -325,7 +434,7 @@ impl<H> From<ClientState<H>> for RawClientState {
 		RawClientState {
 			latest_relay_height: client_state.latest_relay_height,
 			latest_relay_hash: client_state.latest_relay_hash.as_bytes().to_vec(),
-			current_set_id: client_state.current_set_id,
+			current_set_id: client_state.authorities_changes.last().set_id,
 			frozen_height: client_state
 				.frozen_height
 				.map(|frozen_height| frozen_height.revision_height),
@@ -337,7 +446,32 @@ impl<H> From<ClientState<H>> for RawClientState {
 				.into_iter()
 				.map(Into::into)
 				.collect(),
-			max_finalized_headers: client_state.max_finalized_headers as u32,
+		}
+	}
+}
+
+impl<H> From<ClientStateV1<H>> for RawClientStateV1 {
+	fn from(client_state: ClientStateV1<H>) -> Self {
+		RawClientStateV1 {
+			latest_relay_height: client_state.latest_relay_height,
+			latest_relay_hash: client_state.latest_relay_hash.as_bytes().to_vec(),
+			current_set_id: client_state.current_set_id,
+			frozen_height: client_state
+				.frozen_height
+				.map(|frozen_height| frozen_height.revision_height),
+			relay_chain: client_state.relay_chain as i32,
+			para_id: client_state.para_id,
+			latest_para_height: client_state.latest_para_height,
+			current_authorities: client_state
+				.current_authorities
+				.into_iter()
+				.map(|(id, weight)| RawAuthority {
+					public_key: <sp_finality_grandpa::AuthorityId as AsRef<[u8]>>::as_ref(&id)
+						.to_vec(),
+					weight,
+				})
+				.collect(),
+			authorities_changes: vec![],
 		}
 	}
 }

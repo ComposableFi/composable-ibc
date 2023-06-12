@@ -15,7 +15,7 @@
 
 use crate::{
 	client_message::{ClientMessage, Header, RelayChainHeader},
-	client_state::ClientState,
+	client_state::{AuthoritiesChange, ClientState},
 	consensus_state::ConsensusState,
 	mock::{
 		AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager, MockClientTypes,
@@ -148,10 +148,8 @@ async fn test_continuous_update_of_grandpa_client() {
 			latest_para_height: decoded_para_head.number,
 			para_id: prover.para_id,
 			current_set_id: client_state.current_set_id,
-			max_finalized_headers: client_state.max_finalized_headers,
-			// current_authorities: client_state.current_authorities,
 			_phantom: Default::default(),
-			authorities_changes: Vec1::new((
+			authorities_changes: Vec1::new(AuthoritiesChange::new(
 				latest_relay_header.number,
 				client_state.current_set_id,
 				client_state.current_authorities,

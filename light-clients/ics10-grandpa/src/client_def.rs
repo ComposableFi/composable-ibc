@@ -22,7 +22,6 @@ use crate::{
 	client_message::{ClientMessage, RelayChainHeader},
 	client_state::{
 		AuthoritiesChange, AUTHORITIES_CHANGE_ITEM_LIFETIME, AUTHORITIES_CHANGE_ITEM_MIN_COUNT,
-		SESSION_LENGTH,
 	},
 };
 use alloc::{format, string::ToString, vec, vec::Vec};
@@ -64,6 +63,7 @@ use light_client_common::{
 use sp_core::H256;
 use sp_runtime::traits::Header;
 use sp_trie::StorageProof;
+use std::convert::identity;
 use tendermint_proto::Protobuf;
 use vec1::Vec1;
 
@@ -199,7 +199,15 @@ where
 					))?
 				}
 
-				for base_number in [first_base.number, second_base.number] {
+				// we don't know which of the number is canonical, so we will try to verify both
+				// if the two bases are not equal
+				let base_numbers = if first_base.number == second_base.number {
+					vec![first_base.number]
+				} else {
+					vec![first_base.number, second_base.number]
+				};
+				for base_number in base_numbers {
+					// we can't trust block numbers, because they may be changed arbitrary
 					let first_height = base_number + first_finalized.len() as u32 - 1;
 					let second_height = base_number + second_finalized.len() as u32 - 1;
 
@@ -207,7 +215,7 @@ where
 						let key = client_state
 							.authorities_changes
 							.binary_search_by_key(&height, |x| x.height)
-							.unwrap_or_else(|x| x);
+							.unwrap_or_else(identity);
 						client_state
 							.authorities_changes
 							.get(key)
@@ -265,6 +273,7 @@ where
 		let finalized = ancestry
 			.ancestry(from, header.finality_proof.block)
 			.map_err(|_| Error::Custom(format!("[update_state] Invalid ancestry!")))?;
+
 		let mut finalized_sorted = finalized.clone();
 		finalized_sorted.sort();
 
@@ -300,6 +309,12 @@ where
 			.header(&header.finality_proof.block)
 			.expect("target header has already been checked in verify_client_message; qed");
 
+		// check that the block number is correct, because it wil be used later for
+		// finding the authorities set
+		if client_state.latest_relay_height + finalized.len() as u32 != target.number {
+			return Err(Error::Custom(format!("[update_state] Invalid finalized chain!")))?
+		}
+
 		// can't try to rewind relay chain
 		if target.number <= client_state.latest_relay_height {
 			Err(Ics02Error::implementation_specific(format!(
@@ -331,10 +346,9 @@ where
 		client_state.latest_relay_height = target.number;
 
 		if let Some(scheduled_change) = find_scheduled_change(target) {
-			client_state.current_set_id += 1;
-			// client_state.current_authorities = scheduled_change.next_authorities.clone();
 			let now = ctx.host_timestamp();
 			let len = client_state.authorities_changes.len();
+			let next_set_id = client_state.last_set_id() + 1;
 			let mut xs = client_state
 				.authorities_changes
 				.into_iter()
@@ -358,11 +372,12 @@ where
 				height: target.number + scheduled_change.delay + 1, /* we start using the set id
 				                                                     * at the next block + delay */
 				timestamp: now,
-				set_id: client_state.current_set_id,
+				set_id: next_set_id,
 				authorities: scheduled_change.next_authorities,
 			});
 			xs.sort_by_key(|change| change.height);
-			client_state.authorities_changes = Vec1::try_from_vec(xs).expect("should never fail");
+			client_state.authorities_changes =
+				Vec1::try_from_vec(xs).expect("we've just added one item to the vector above; qed");
 		}
 
 		let now = ctx.host_timestamp();
@@ -400,14 +415,6 @@ where
 		};
 		let ancestry =
 			AncestryChain::<RelayChainHeader>::new(&header.finality_proof.unknown_headers);
-
-		let finalized = ancestry
-			.ancestry(client_state.latest_relay_hash, header.finality_proof.block)
-			.map_err(|_| Ics02Error::implementation_specific("Invalid ancestry".to_string()))?;
-
-		if finalized.len() > client_state.max_finalized_headers {
-			return Ok(true)
-		}
 
 		for (relay_hash, parachain_header_proof) in header.parachain_headers {
 			let header = ancestry.header(&relay_hash).ok_or_else(|| {
