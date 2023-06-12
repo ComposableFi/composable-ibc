@@ -77,6 +77,17 @@ pub struct AuthoritiesChange {
 	pub authorities: AuthorityList,
 }
 
+impl AuthoritiesChange {
+	pub fn new(
+		height: u32,
+		timestamp: Timestamp,
+		set_id: SetId,
+		authorities: AuthorityList,
+	) -> Self {
+		Self { height, timestamp, set_id, authorities }
+	}
+}
+
 #[derive(PartialEq, Clone, Debug, Default, Eq)]
 pub struct ClientStateV1<H> {
 	/// Relay chain

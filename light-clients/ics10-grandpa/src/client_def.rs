@@ -311,7 +311,7 @@ where
 		// check that the block number is correct, because it wil be used later for
 		// finding the authorities set
 		if client_state.latest_relay_height + finalized.len() as u32 != target.number {
-			return Err(Error::Custom(format!("[update_state] Invalid finalized chain!")))?
+			return Err(Error::Custom(format!("[update_state] unexpected block number")))?
 		}
 
 		// can't try to rewind relay chain

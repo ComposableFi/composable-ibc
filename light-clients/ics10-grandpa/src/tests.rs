@@ -49,6 +49,7 @@ use ibc::{
 	handler::HandlerOutput,
 	mock::{context::MockContext, host::MockHostType},
 	test_utils::get_dummy_account_id,
+	timestamp::Timestamp,
 	Height,
 };
 use light_client_common::config::RuntimeStorage;
@@ -147,10 +148,10 @@ async fn test_continuous_update_of_grandpa_client() {
 			frozen_height: None,
 			latest_para_height: decoded_para_head.number,
 			para_id: prover.para_id,
-			current_set_id: client_state.current_set_id,
 			_phantom: Default::default(),
 			authorities_changes: Vec1::new(AuthoritiesChange::new(
 				latest_relay_header.number,
+				Timestamp::from_nanoseconds(1).unwrap(),
 				client_state.current_set_id,
 				client_state.current_authorities,
 			)),
@@ -257,7 +258,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		let proof =
 			ParachainHeadersWithFinalityProof::<RelayChainHeader>::decode(&mut &*proof).unwrap();
 		println!("========= New Justification =========");
-		println!("current_set_id: {}", client_state.current_set_id);
+		println!("current_set_id: {}", client_state.current_set_id());
 		println!(
 			"For relay chain header: Hash({:?}), Number({})",
 			justification.commit.target_hash, justification.commit.target_number
