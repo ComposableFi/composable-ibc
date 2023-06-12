@@ -318,7 +318,7 @@ pub(crate) fn create_mock_grandpa_client_state() -> (
 		latest_para_height: 0,
 		para_id: 2087,
 		current_set_id: 0,
-		current_authorities: vec![],
+		current_authorities: Vec::new(),
 		_phantom: Default::default(),
 	};
 

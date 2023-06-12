@@ -26,7 +26,7 @@ use crate::{
 };
 use alloc::{format, string::ToString, vec, vec::Vec};
 use codec::Decode;
-use core::marker::PhantomData;
+use core::{convert::identity, marker::PhantomData};
 use finality_grandpa::Chain;
 use grandpa_client_primitives::{
 	justification::{find_scheduled_change, AncestryChain, GrandpaJustification},
@@ -63,7 +63,6 @@ use light_client_common::{
 use sp_core::H256;
 use sp_runtime::traits::Header;
 use sp_trie::StorageProof;
-use std::convert::identity;
 use tendermint_proto::Protobuf;
 use vec1::Vec1;
 

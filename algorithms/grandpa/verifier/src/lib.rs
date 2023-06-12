@@ -87,7 +87,7 @@ where
 		.min_by_key(|h| *h.number())
 		.ok_or_else(|| anyhow!("Unknown headers can't be empty!"))?;
 
-	if base.number() <= &client_state.latest_relay_height {
+	if base.number() < &client_state.latest_relay_height {
 		headers.ancestry(base.hash(), client_state.latest_relay_hash).map_err(|_| {
 			anyhow!(
 				"[verify_parachain_headers_with_grandpa_finality_proof] Invalid ancestry (base -> latest relay block)!"

@@ -1,4 +1,5 @@
 use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, vec::Vec};
+use core::convert::identity;
 use frame_support::{
 	pallet_prelude::{Blake2_256, StorageMap, StorageValue, ValueQuery},
 	traits::StorageInstance,
@@ -50,7 +51,6 @@ use sp_runtime::{
 	app_crypto::RuntimePublic,
 	traits::{BlakeTwo256, Header},
 };
-use std::convert::identity;
 use tendermint::{
 	crypto::{
 		signature::{Error as TendermintCryptoError, Verifier},

@@ -414,7 +414,7 @@ impl<H> From<ClientState<H>> for RawClientState {
 			relay_chain: client_state.relay_chain as i32,
 			para_id: client_state.para_id,
 			latest_para_height: client_state.latest_para_height,
-			current_authorities: vec![],
+			current_authorities: Vec::new(),
 			authorities_changes: client_state
 				.authorities_changes
 				.into_iter()
@@ -445,7 +445,7 @@ impl<H> From<ClientStateV1<H>> for RawClientState {
 					weight,
 				})
 				.collect(),
-			authorities_changes: vec![],
+			authorities_changes: Vec::new(),
 		}
 	}
 }
