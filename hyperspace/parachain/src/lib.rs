@@ -622,18 +622,12 @@ where
 			let mut client_state = GrandpaClientState::<HostFunctionsManager>::default();
 
 			client_state.relay_chain = Default::default();
-			// client_state.authorities_changes = Vec1::new((
-			// 	light_client_state.latest_relay_height,
-			// 	light_client_state.current_set_id,
-			// 	light_client_state.current_authorities,
-			// ));
 			client_state.authorities_changes = Vec1::new(AuthoritiesChange {
 				height: light_client_state.latest_relay_height,
 				timestamp: Timestamp::now(),
 				set_id: light_client_state.current_set_id,
 				authorities: light_client_state.current_authorities,
 			});
-			// client_state.current_set_id = light_client_state.current_set_id;
 			client_state.latest_relay_hash = light_client_state.latest_relay_hash.into();
 			client_state.frozen_height = None;
 			client_state.latest_para_height = block_number;

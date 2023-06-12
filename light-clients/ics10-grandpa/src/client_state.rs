@@ -26,28 +26,14 @@ use crate::{
 };
 use alloc::{format, string::ToString, vec::Vec};
 use anyhow::anyhow;
-use core::{
-	convert::{identity, Infallible},
-	fmt::Debug,
-	marker::PhantomData,
-	time::Duration,
-};
+use core::{convert::identity, fmt::Debug, marker::PhantomData, time::Duration};
 use ibc::{
 	core::{
 		ics02_client::{
 			client_consensus::ConsensusState,
-			client_def::{ClientDef, ConsensusUpdateResult},
-			client_message::ClientMessage,
 			client_state::{ClientType, Status},
 		},
-		ics03_connection::connection::ConnectionEnd,
-		ics04_channel::{
-			channel::ChannelEnd,
-			commitment::{AcknowledgementCommitment, PacketCommitment},
-			packet::Sequence,
-		},
-		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
-		ics24_host::identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
+		ics24_host::identifier::{ChainId, ClientId},
 		ics26_routing::context::ReaderContext,
 	},
 	timestamp::Timestamp,
@@ -151,7 +137,7 @@ impl<H> From<ClientStateV1<H>> for ClientStateV2<H> {
 			// current_set_id: value.current_set_id,
 			authorities_changes: Vec1::new(AuthoritiesChange {
 				height: 0,
-				timestamp: Default::default(),
+				timestamp: Timestamp::from_nanoseconds(1).unwrap(),
 				set_id: value.current_set_id,
 				authorities: value.current_authorities,
 			}),
@@ -355,16 +341,6 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 	type Error = Error;
 
 	fn try_from(raw: RawClientState) -> Result<Self, Self::Error> {
-		// let current_authorities = raw
-		// 	.current_authorities
-		// 	.into_iter()
-		// 	.map(|set| {
-		// 		let id = Public::try_from(&*set.public_key)
-		// 			.map_err(|_| anyhow!("Invalid ed25519 public key"))?;
-		// 		Ok((id.into(), set.weight))
-		// 	})
-		// 	.collect::<Result<_, Error>>()?;
-
 		let relay_chain = RelayChain::from_i32(raw.relay_chain)?;
 		if raw.latest_relay_hash.len() != 32 {
 			Err(anyhow!("Invalid ed25519 public key lenght: {}", raw.latest_relay_hash.len()))?
@@ -378,7 +354,6 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 			relay_chain,
 			latest_para_height: raw.latest_para_height,
 			para_id: raw.para_id,
-			// current_set_id: raw.current_set_id,
 			authorities_changes: Vec1::try_from(
 				raw.authorities_changes
 					.into_iter()
@@ -511,7 +486,6 @@ impl TryFrom<RawAuthorityChange> for AuthoritiesChange {
 				Ok((id.into(), authority.weight))
 			})
 			.collect::<Result<_, Error>>()?;
-		// Ok((raw.height, raw.set_id, authorities))
 		let prost_types::Timestamp { seconds, nanos } =
 			raw.timestamp.ok_or_else(|| Error::Custom(format!("missing timestamp")))?;
 		let proto_timestamp = tendermint_proto::google::protobuf::Timestamp { seconds, nanos };

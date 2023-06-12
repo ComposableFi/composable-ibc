@@ -158,27 +158,23 @@ impl grandpa_client_primitives::HostFunctions for HostFunctionsManager {
 			return
 		}
 
-		// GrandpaHeaderHashesSetStorage::mutate(|hashes_set| {
 		GrandpaHeaderHashesStorage::mutate(|hashes| {
 			hashes.reserve(new_hashes.len());
 			for hash in new_hashes {
 				hashes.push((now_ms, *hash));
 				GrandpaHeaderHashesSetStorage::insert(*hash, ());
-				// hashes_set.insert(*hash);
-				// keep at least HEADER_ITEM_MIN_COUNT items if possible
 			}
 			let expired = now_ms.saturating_sub(HEADER_ITEM_LIFETIME.as_millis() as u64);
 			let key = hashes.binary_search_by_key(&expired, |(t, _)| *t).unwrap_or_else(identity);
 			let len = hashes.len();
+			// keep at least HEADER_ITEM_MIN_COUNT items if possible
 			let remove_up_to_index = key.min(len.saturating_sub(HEADER_ITEM_MIN_COUNT));
 			if remove_up_to_index < len {
 				for hash in hashes.drain(..remove_up_to_index).map(|(_, hash)| hash) {
 					GrandpaHeaderHashesSetStorage::remove(&hash);
-					// hashes_set.remove(&hash);
 				}
 			}
 		});
-		// });
 	}
 
 	fn contains_relay_header_hash(hash: <Self::Header as Header>::Hash) -> bool {
@@ -253,8 +249,18 @@ mod v1 {
 	}
 
 	impl From<AnyClientState> for Any {
-		fn from(_value: AnyClientState) -> Self {
-			unimplemented!()
+		fn from(value: AnyClientState) -> Self {
+			match value {
+				AnyClientState::Grandpa(value) => Any {
+					type_url: GRANDPA_CLIENT_STATE_TYPE_URL.to_string(),
+					value: value.encode_vec().unwrap(),
+				},
+				AnyClientState::Wasm(value) => Any {
+					type_url: WASM_CLIENT_STATE_TYPE_URL.to_string(),
+					value: value.encode_vec().unwrap(),
+				},
+				_ => unreachable!(),
+			}
 		}
 	}
 }

@@ -78,7 +78,6 @@ pub const GRANDPA_HEADER_HASHES_SET_STORAGE: Map<Vec<u8>, ()> =
 	Map::new("grandpa_header_hashes_set");
 
 pub const GRANDPA_BLOCK_HASHES_CACHE_SIZE: usize = 5000;
-// Limit unknown_headers by 100
 
 #[derive(Clone, Copy, Debug, PartialEq, Default, Eq)]
 pub struct HostFunctions;

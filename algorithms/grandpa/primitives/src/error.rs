@@ -22,6 +22,4 @@ pub enum Error {
 	Anyhow(anyhow::Error),
 	/// scale codec error
 	Codec(codec::Error),
-	/// The client was frozen due to potential misbehaviour
-	Frozen,
 }

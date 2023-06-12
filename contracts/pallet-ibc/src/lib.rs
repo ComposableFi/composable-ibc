@@ -4,7 +4,7 @@
 #![allow(clippy::useless_format)]
 #![allow(non_camel_case_types)]
 #![deny(
-	// unused_imports,
+	unused_imports,
 	clippy::useless_conversion,
 	bad_style,
 	bare_trait_objects,
@@ -1187,7 +1187,6 @@ pub mod pallet {
 			if client_id.as_str().contains("grandpa") || client_id.as_str().contains("wasm") {
 				let decoded = AnyClientStateV1::decode_vec(&mut client_state.as_slice())
 					.map_err(|e| e.to_string())?;
-				// decoded.unpack_recursive()
 				let mut wasm_code_id = None;
 				let old_state = match decoded {
 					AnyClientStateV1::Grandpa(state) => state,
