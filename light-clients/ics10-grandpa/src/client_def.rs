@@ -310,8 +310,12 @@ where
 
 		// check that the block number is correct, because it wil be used later for
 		// finding the authorities set
-		if client_state.latest_relay_height + finalized.len() as u32 != target.number {
-			return Err(Error::Custom(format!("[update_state] unexpected block number")))?
+		let expected_target_height = client_state.latest_relay_height + finalized.len() as u32 - 1;
+		if expected_target_height != target.number {
+			return Err(Error::Custom(format!(
+				"[update_state] unexpected block number: {expected_target_height} != {}",
+				target.number
+			)))?
 		}
 
 		// can't try to rewind relay chain
