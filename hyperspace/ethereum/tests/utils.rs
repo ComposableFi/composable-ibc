@@ -7,11 +7,11 @@ use std::{
 };
 
 use ethers::{
-	abi::{ParamType, Token},
+	abi::Token,
 	contract::ContractFactory,
 	core::utils::Anvil,
 	middleware::SignerMiddleware,
-	prelude::{ContractError, ContractInstance, *},
+	prelude::{ContractInstance, *},
 	providers::{Http, Middleware, Provider},
 	signers::{LocalWallet, Signer},
 	solc::{
@@ -22,6 +22,7 @@ use ethers::{
 	},
 	utils::AnvilInstance,
 };
+use hyperspace_ethereum::contract::UnwrapContractError;
 
 #[track_caller]
 pub fn yui_ibc_solidity_path() -> PathBuf {
@@ -58,8 +59,8 @@ pub fn compile_solc(project_paths: ProjectPathsConfig) -> ProjectCompileOutput {
 			stop_after: None,
 			remappings: vec![],
 			optimizer: Optimizer {
-				enabled: Some(true),
-				runs: Some(20),
+				enabled: Some(false),
+				runs: Some(1),
 				details: Some(OptimizerDetails {
 					peephole: Some(true),
 					inliner: Some(true),

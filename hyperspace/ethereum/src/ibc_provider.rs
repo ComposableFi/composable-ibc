@@ -2,7 +2,7 @@ use std::{future::Future, sync::Arc, time::Duration};
 
 use cast::executor::Output;
 use ethers::{
-	abi::{Abi, Detokenize},
+	abi::{Abi, Detokenize, Token},
 	middleware::contract::Contract,
 	providers::Middleware,
 	types::{EIP1186ProofResponse, StorageProof, H256},
@@ -119,36 +119,32 @@ impl IbcProvider for Client {
 		client_id: ClientId,
 		consensus_height: Height,
 	) -> Result<QueryConsensusStateResponse, Self::Error> {
-		let fut = self.eth_query_proof(
-			client_id.as_str(),
-			Some(at.revision_height),
-			CLIENT_IMPLS_STORAGE_INDEX,
-		);
-
-		let contract = crate::contract::light_client_contract(
+		let contract = crate::contract::ibc_handler(
 			self.config.ibc_handler_address.clone(),
 			Arc::clone(&self.http_rpc),
 		);
 
-		query_proof_then(fut, move |storage_proof| async move {
-			let binding = contract
-				.method(
-					"getConsensusState",
-					(client_id.as_str().to_owned(), (at.revision_number, at.revision_height)),
-				)
-				.expect("contract is missing getConsensusState");
+		let binding = contract
+			.method(
+				"getConsensusState",
+				(
+					Token::String(client_id.as_str().to_owned()),
+					Token::Tuple(vec![
+						Token::Uint(consensus_height.revision_number.into()),
+						Token::Uint(consensus_height.revision_height.into()),
+					]),
+				),
+			)
+			.expect("contract is missing getConsensusState");
 
-			let get_consensus_state_fut = binding.call();
-			let (consensus_state, _): (Vec<u8>, bool) =
-				get_consensus_state_fut.await.map_err(|err| todo!()).unwrap();
+		let get_client_cons_fut = binding.call();
+		let (client_cons, _): (Vec<u8>, bool) =
+			get_client_cons_fut.await.map_err(|err| todo!()).unwrap();
 
-			let proof_height = Some(at.into());
-			let consensus_state = google::protobuf::Any::decode(&*consensus_state).ok();
-			let proof = storage_proof.proof.first().map(|b| b.to_vec()).unwrap_or_default();
+		let proof_height = Some(at.into());
+		let consensus_state = google::protobuf::Any::decode(&*client_cons).ok();
 
-			Ok(QueryConsensusStateResponse { consensus_state, proof, proof_height })
-		})
-		.await
+		Ok(QueryConsensusStateResponse { consensus_state, proof: vec![], proof_height })
 	}
 
 	async fn query_client_state(
@@ -167,7 +163,7 @@ impl IbcProvider for Client {
 
 		let get_client_state_fut = binding.call();
 		let (client_state, _): (Vec<u8>, bool) =
-			get_client_state_fut.await.map_err(|err| todo!()).unwrap();
+			get_client_state_fut.await.map_err(|err| todo!("query-client-state: error: {err:?}")).unwrap();
 
 		let proof_height = Some(at.into());
 		let client_state = google::protobuf::Any::decode(&*client_state).ok();
