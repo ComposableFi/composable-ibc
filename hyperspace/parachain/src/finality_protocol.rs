@@ -510,6 +510,13 @@ where
 	let justification =
 		GrandpaJustification::<T::Header>::decode(&mut &finality_proof.justification[..])?;
 
+	log::info!(
+		"Latest relay height on {} for is {}; got next finality event for: {}",
+		source.name(),
+		client_state.latest_relay_height,
+		justification.commit.target_number,
+	);
+
 	// fetch the latest finalized parachain header
 	let finalized_para_header = prover
 		.query_latest_finalized_parachain_header(justification.commit.target_number)
@@ -612,7 +619,7 @@ where
 
 	// We ensure we advance the finalized latest parachain height
 	if client_state.latest_para_height < finalized_para_height {
-		headers_with_events.insert(finalized_para_header.number());
+		headers_with_events.insert(finalized_para_height);
 	}
 
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers, .. } = prover
