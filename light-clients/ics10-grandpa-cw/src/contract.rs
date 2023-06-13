@@ -243,7 +243,6 @@ fn process_message(
 
 			let finalized_headers = match &msg.client_message {
 				ClientMessage::Header(header) => {
-					// header.finality_proof.
 					use finality_grandpa::Chain;
 					let ancestry = AncestryChain::<RelayChainHeader>::new(
 						&header.finality_proof.unknown_headers,

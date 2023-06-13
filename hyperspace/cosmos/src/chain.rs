@@ -19,7 +19,7 @@ use ibc_proto::{
 };
 use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::{
-	mock::LocalClientTypes, Chain, IbcProvider, LightClientSync, MisbehaviourHandler,
+	mock::LocalClientTypes, Chain, IbcProvider, LightClientSync, MisbehaviourHandler, RelayerState,
 };
 use prost::Message;
 use std::{pin::Pin, time::Duration};
@@ -257,6 +257,14 @@ where
 
 	fn set_rpc_call_delay(&mut self, delay: Duration) {
 		self.rpc_call_delay = delay;
+	}
+
+	fn relayer_state(&self) -> &RelayerState {
+		todo!()
+	}
+
+	fn relayer_state_mut(&mut self) -> &mut RelayerState {
+		todo!()
 	}
 }
 

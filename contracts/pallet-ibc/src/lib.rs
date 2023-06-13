@@ -708,9 +708,7 @@ pub mod pallet {
 		fn on_runtime_upgrade() -> Weight {
 			let mut count = 0;
 			for (client_id, client_state) in <ClientStates<T>>::iter() {
-				if let Err(e) =
-					Pallet::<T>::upgrade_grandpa_consensus_state(client_id, client_state)
-				{
+				if let Err(e) = Pallet::<T>::upgrade_grandpa_client_state(client_id, client_state) {
 					log::warn!(target: "pallet_ibc", "Error upgrading grandpa consensus state: {:?}", e);
 				}
 				count += 1;
@@ -1180,7 +1178,7 @@ pub mod pallet {
 		AccountId32: From<<T as frame_system::Config>::AccountId>,
 		u32: From<<T as frame_system::Config>::BlockNumber>,
 	{
-		fn upgrade_grandpa_consensus_state(
+		fn upgrade_grandpa_client_state(
 			client_id: ClientId,
 			client_state: Bytes,
 		) -> Result<(), String> {

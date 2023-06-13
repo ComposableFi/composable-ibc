@@ -278,7 +278,7 @@ pub fn validate_chain<H: HeaderT>(
 		if header.parent_hash() != &current_hash {
 			return Err(anyhow!("Invalid block hash in the chain"))
 		}
-		base_header_hash = current_hash;
+		base_header_hash = header.hash();
 		base_header_number = *header.number();
 	}
 	Ok(headers.first().zip(headers.last()).expect("headers are not empty; qed"))

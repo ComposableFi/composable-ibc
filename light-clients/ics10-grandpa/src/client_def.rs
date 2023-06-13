@@ -219,16 +219,14 @@ where
 							.authorities_changes
 							.get(key)
 							.map(|change| (change.set_id, &change.authorities))
-							.ok_or_else(|| {
-								Error::Custom(
-									"Could not find authorities set for the given block"
-										.to_string(),
-								)
+							.unwrap_or_else(|| {
+								let change = client_state.authorities_changes.last();
+								(change.set_id, &change.authorities)
 							})
 					};
-					let (first_set_id, first_current_authorities) = get_authorities(first_height)?;
+					let (first_set_id, first_current_authorities) = get_authorities(first_height);
 					let (second_set_id, second_current_authorities) =
-						get_authorities(second_height)?;
+						get_authorities(second_height);
 
 					let first_valid = first_justification
 						.verify::<H>(first_set_id, first_current_authorities)

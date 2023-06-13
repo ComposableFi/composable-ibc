@@ -28,8 +28,8 @@ use ibc_proto::{
 	},
 };
 use rand::Rng;
-use std::{collections::HashSet, fmt::Debug, pin::Pin, str::FromStr, time::Duration};
-use tokio::{task::JoinSet, time::sleep};
+use std::{collections::HashSet, fmt::Debug, pin::Pin, str::FromStr, sync::Arc, time::Duration};
+use tokio::{sync::Mutex, task::JoinSet, time::sleep};
 
 use crate::error::Error;
 #[cfg(any(feature = "testing", test))]
@@ -85,6 +85,12 @@ impl UpdateType {
 			UpdateType::Optional => true,
 		}
 	}
+}
+
+/// A common data that all clients should keep.
+#[derive(Debug, Clone, Default)]
+pub struct RelayerState {
+	pub misbehaviour_client_msg_queue: Arc<Mutex<Vec<AnyClientMessage>>>,
 }
 
 pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: impl Into<Vec<u8>>) -> Vec<u8> {
@@ -457,6 +463,10 @@ pub trait Chain:
 	fn rpc_call_delay(&self) -> Duration;
 
 	fn set_rpc_call_delay(&mut self, delay: Duration);
+
+	fn relayer_state(&self) -> &RelayerState;
+
+	fn relayer_state_mut(&mut self) -> &mut RelayerState;
 }
 
 /// Returns undelivered packet sequences that have been sent out from

@@ -192,6 +192,8 @@ macro_rules! chains {
         $(#[$($meta:meta)*])*
 		$name:ident($config:path, $client:path),
 	)*) => {
+		use primitives::RelayerState;
+
 		#[derive(Debug, Serialize, Deserialize, Clone)]
 		#[serde(tag = "type", rename_all = "snake_case")]
 		pub enum AnyConfig {
@@ -1059,6 +1061,26 @@ macro_rules! chains {
 						Self::$name(chain) => chain.set_rpc_call_delay(d),
 					)*
 					Self::Wasm(c) => c.inner.set_rpc_call_delay(d),
+				}
+			}
+
+			fn relayer_state(&self) -> &RelayerState {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.relayer_state(),
+					)*
+					Self::Wasm(c) => c.inner.relayer_state(),
+				}
+			}
+
+			fn relayer_state_mut(&mut self) -> &mut RelayerState {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.relayer_state_mut(),
+					)*
+					Self::Wasm(c) => c.inner.relayer_state_mut(),
 				}
 			}
 		}
