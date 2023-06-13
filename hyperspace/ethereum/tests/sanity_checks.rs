@@ -98,6 +98,28 @@ async fn deploy_mock_client_fixture(deploy: &DeployYuiIbcMockClient) -> String {
 
 	deploy.yui_ibc.create_client(utils::mock::create_client_msg()).await
 }
+
+#[track_caller]
+fn deploy_mock_module_fixture(
+	deploy: &DeployYuiIbcMockClient,
+) -> impl Future<Output = ContractInstance<Arc<ProviderImpl>, ProviderImpl>> + '_ {
+	async move {
+		let clients = utils::compile_solc({
+			let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+			ProjectPathsConfig::builder()
+				.root(manifest_dir.join("tests/contracts"))
+				.sources(manifest_dir.join("tests/contracts/clients"))
+				.build()
+				.unwrap()
+		});
+
+		let contract = clients.find_first("MockModule").expect("no MockModule in project output");
+		let constructor_args = (Token::Address(deploy.yui_ibc.ibc_handler.address()),);
+		utils::deploy_contract(contract, constructor_args, deploy.client.clone()).await
+	}
+}
+
 #[tokio::test]
 async fn test_deploy_yui_ibc_and_mock_client() {
 	deploy_yui_ibc_and_mock_client_fixture().await;
