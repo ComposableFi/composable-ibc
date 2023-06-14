@@ -598,6 +598,11 @@ pub mod pallet {
 		ChargingFeeFailedAcknowledgement {
 			sequence: u64,
 		},
+		ChildStateUpdated,
+		ClientStateSubstituted {
+			client_id: String,
+			height: Height,
+		},
 	}
 
 	/// Errors inform users that something went wrong.
@@ -1166,6 +1171,7 @@ pub mod pallet {
 
 			let concat_key = [T::PalletPrefix::get(), &key].concat();
 			child::put(&ChildInfo::new_default(T::PalletPrefix::get()), &concat_key, &value);
+			Self::deposit_event(Event::<T>::ChildStateUpdated);
 
 			Ok(())
 		}
@@ -1195,8 +1201,13 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::Other)?;
 			ctx.store_update_time(client_id.clone(), height, ctx.host_timestamp())
 				.map_err(|_| Error::<T>::Other)?;
-			ctx.store_update_height(client_id, height, ctx.host_height())
+			ctx.store_update_height(client_id.clone(), height, ctx.host_height())
 				.map_err(|_| Error::<T>::Other)?;
+
+			Self::deposit_event(Event::<T>::ClientStateSubstituted {
+				client_id: client_id.to_string(),
+				height,
+			});
 
 			Ok(())
 		}
