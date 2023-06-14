@@ -487,23 +487,55 @@ where
 	// will always be finalized.
 	let next_relay_height = client_state.latest_relay_height + 1;
 
-	let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
-		// we cast between the same type but different crate versions.
-		&*unsafe {
-			unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(prover.relay_ws_client.clone())
-		},
-		next_relay_height,
-	)
-	.await
-	.map_err(|_| {
-		Error::Custom(
-		format!("Next relay block {} has not been finalized, previous finalized height on counterparty {}",
-				next_relay_height, client_state.latest_relay_height
-		)
-	)
-	})?
-	.ok_or_else(|| anyhow!("No justification found for block: {:?}", next_relay_height))?
-	.0;
+	let mut i = next_relay_height;
+	let encoded = loop {
+		// let client = &*unsafe {
+		// 			unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(prover.relay_ws_client.clone())
+		// 		};
+
+		let hash = source
+			.relay_client
+			.rpc()
+			.block_hash(Some(i.into()))
+			.await
+			.unwrap()
+			.ok_or_else(|| anyhow!("Header not found for number: {i}"))
+			.unwrap();
+		let block = source
+			.relay_client
+			.rpc()
+			.block(Some(hash))
+			.await
+			.unwrap()
+			.ok_or_else(|| anyhow!("Block not found for hash: {hash:?}"))
+			.unwrap();
+		if let Some(js) = block.justifications {
+			if let Some(first) = js.first() {
+				let (j_id, j) = js.first().unwrap();
+				log::warn!("Justification at {i}: {:?}", j_id);
+				break j.clone()
+			}
+		}
+		i += 1;
+		continue
+		// let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
+		// 	// we cast between the same type but different crate versions.
+		// 	&*unsafe {
+		// 		unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(prover.relay_ws_client.clone())
+		// 	},
+		// 	next_relay_height,
+		// )
+		// 	.await
+		// 	.map_err(|_| {
+		// 		Error::Custom(
+		// 			format!("Next relay block {} has not been finalized, previous finalized height on
+		// counterparty {}", 					next_relay_height, client_state.latest_relay_height
+		// 			)
+		// 		)
+		// 	})?
+		// 	.ok_or_else(|| anyhow!("No justification found for block: {:?}", next_relay_height))?
+		// 	.0;
+	};
 
 	let finality_proof = FinalityProof::<T::Header>::decode(&mut &encoded[..])?;
 
@@ -619,7 +651,7 @@ where
 
 	// We ensure we advance the finalized latest parachain height
 	if client_state.latest_para_height < finalized_para_height {
-		headers_with_events.insert(finalized_para_height);
+		headers_with_events.insert(finalized_para_height.into());
 	}
 
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers, .. } = prover
