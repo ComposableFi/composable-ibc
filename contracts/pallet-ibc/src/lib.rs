@@ -1167,7 +1167,7 @@ pub mod pallet {
 			key: Vec<u8>,
 			value: Vec<u8>,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			<T as Config>::AdminOrigin::ensure_origin(origin)?;
 
 			let concat_key = [T::PalletPrefix::get(), &key].concat();
 			child::put(&ChildInfo::new_default(T::PalletPrefix::get()), &concat_key, &value);
@@ -1186,7 +1186,7 @@ pub mod pallet {
 			client_state_bytes: Vec<u8>,
 			consensus_state_bytes: Vec<u8>,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			<T as Config>::AdminOrigin::ensure_origin(origin)?;
 
 			let client_id = ClientId::from_str(&client_id).map_err(|_| Error::<T>::Other)?;
 			let client_state = AnyClientState::decode_vec(&client_state_bytes[..])
