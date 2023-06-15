@@ -37,6 +37,142 @@ where
 
 pub const IBC_HANDLER_ABI: &str = include_str!("./abi/ibc-handler-abi.json");
 
+/// A wrapper around the IBC handler contract instance
+pub struct IbcHandler<M> {
+	pub(crate) contract: Contract<M>,
+}
+
+impl<M> IbcHandler<M>
+where
+	M: Middleware,
+{
+	pub async fn bind_port(&self, port_id: &str, address: Address) {
+		let bind_port = self
+			.contract
+			.method::<_, ()>("bindPort", (Token::String(port_id.into()), Token::Address(address)))
+			.unwrap();
+		let () = bind_port.call().await.unwrap_contract_error();
+		let tx_recp = bind_port.send().await.unwrap_contract_error().await.unwrap().unwrap();
+		assert_eq!(tx_recp.status, Some(1.into()));
+	}
+
+	pub async fn connection_open_init(&self, client_id: &str) -> String {
+		let connection_open_init = self
+			.contract
+			.method::<_, String>(
+				"connectionOpenInit",
+				(Token::Tuple(vec![
+					Token::String(client_id.into()),
+					Token::Tuple(vec![
+						Token::String(client_id.into()),
+						Token::String("port-0".into()),
+						Token::Tuple(vec![Token::Bytes(vec![])]),
+					]),
+					Token::Uint(0.into()),
+				]),),
+			)
+			.unwrap();
+		let connection_id = connection_open_init.call().await.unwrap_contract_error();
+		let tx_recp = connection_open_init
+			.send()
+			.await
+			.unwrap_contract_error()
+			.await
+			.unwrap()
+			.unwrap();
+		assert_eq!(tx_recp.status, Some(1.into()));
+		connection_id
+	}
+
+	pub async fn connection_open_ack(&self, connection_id: &str, client_state_bytes: Vec<u8>) {
+		let connection_open_ack = self
+			.contract
+			.method::<_, ()>(
+				"connectionOpenAck",
+				(Token::Tuple(vec![
+					Token::String(connection_id.to_string()),
+					Token::Bytes(client_state_bytes), // clientStateBytes
+					Token::Tuple(vec![
+						Token::String("counterparty-version".into()),
+						Token::Array(vec![]),
+					]), // Version.Data
+					Token::String("counterparty-connection-id".into()), // counterpartyConnectionID
+					Token::Bytes(vec![]),             // proofTry
+					Token::Bytes(vec![]),             // proofClient
+					Token::Bytes(vec![]),             // proofConsensus
+					Token::Tuple(vec![Token::Uint(0.into()), Token::Uint(1.into())]), // proofHeight
+					Token::Tuple(vec![Token::Uint(0.into()), Token::Uint(1.into())]), // consesusHeight
+				]),),
+			)
+			.unwrap();
+
+		let () = connection_open_ack.call().await.unwrap_contract_error();
+		let tx_recp =
+			connection_open_ack.send().await.unwrap_contract_error().await.unwrap().unwrap();
+		assert_eq!(tx_recp.status, Some(1.into()));
+	}
+
+	pub async fn channel_open_try(&self, connection_id: &str, port_id: &str) -> String {
+		let channel_open_try = self
+			.contract
+			.method::<_, String>(
+				"channelOpenTry",
+				(Token::Tuple(vec![
+					Token::String(port_id.into()), // port-id
+					Token::Tuple(vec![
+						// Channel.Data
+						Token::Uint(2.into()), //  state, 1: TryOpen
+						Token::Uint(1.into()), //  ordering, 1: Unordered
+						Token::Tuple(vec![
+							//  ChannelCounterparty.Data
+							Token::String(Default::default()), // port-id
+							Token::String(Default::default()), // channel-id
+						]),
+						Token::Array(vec![Token::String(connection_id.into())]), // connectionHops
+						Token::String("1".into()),                               // version
+					]),
+					Token::String("1".into()), // counterpartyVersion
+					Token::Bytes(vec![]),      // proofInit
+					Token::Tuple(vec![
+						// proofHeight
+						Token::Uint(0.into()), //  revisionNumber
+						Token::Uint(1.into()), //  revisionHeight
+					]),
+				]),),
+			)
+			.unwrap();
+
+		let channel_id = channel_open_try.call().await.unwrap_contract_error();
+		let tx_recp = channel_open_try.send().await.unwrap_contract_error().await.unwrap().unwrap();
+		assert_eq!(tx_recp.status, Some(1.into()));
+		channel_id
+	}
+
+	pub async fn register_client(&self, kind: &str, address: Address) {
+		let method = self
+			.contract
+			.method::<_, ()>(
+				"registerClient",
+				(Token::String(kind.into()), Token::Address(address)),
+			)
+			.unwrap();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+	}
+
+	pub async fn create_client(&self, msg: Token) -> String {
+		let method = self.contract.method::<_, String>("createClient", (msg,)).unwrap();
+
+		let client_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+
+		client_id
+	}
+}
+
 /// Create a new contract instance from the given address and ABI.
 #[track_caller]
 pub fn ibc_handler<M>(address: Address, client: Arc<M>) -> Contract<M>

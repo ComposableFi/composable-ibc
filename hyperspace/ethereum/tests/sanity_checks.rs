@@ -178,6 +178,71 @@ async fn test_ibc_client() {
 	);
 }
 
-	// query_client_state
-	// query_client_consensus
+#[tokio::test]
+async fn test_ibc_connection() {
+	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
+	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc).await;
+	let client_id = deploy_mock_client_fixture(&deploy).await;
+
+	let connection_id = deploy.yui_ibc.connection_open_init(&client_id).await;
+	let () = deploy
+		.yui_ibc
+		.connection_open_ack(&connection_id, utils::mock::client_state_bytes())
+		.await;
+
+	// hyperspace.query_connection_channels(at, connection_id)
+	// hyperspace.query_connection_end(at, connection_id)
+}
+
+#[tokio::test]
+async fn test_ibc_channel() {
+	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
+	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc).await;
+	let client_id = deploy_mock_client_fixture(&deploy).await;
+
+	let connection_id = deploy.yui_ibc.connection_open_init(&client_id).await;
+	let () = deploy
+		.yui_ibc
+		.connection_open_ack(&connection_id, utils::mock::client_state_bytes())
+		.await;
+
+	let mock_module = deploy_mock_module_fixture(&deploy).await;
+
+	deploy.yui_ibc.bind_port("port-0", mock_module.address()).await;
+
+	let channel_id = deploy.yui_ibc.channel_open_init("port-0", &connection_id).await;
+
+	deploy.yui_ibc.channel_open_ack(&channel_id, "port-0").await;
+
+	// hyperspace.query_connection_channels(at, connection_id)
+	// hyperspace.query_connection_end(at, connection_id)
+}
+
+#[tokio::test]
+async fn test_ibc_packet() {
+	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
+	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc).await;
+	let client_id = deploy_mock_client_fixture(&deploy).await;
+
+	let connection_id = deploy.yui_ibc.connection_open_init(&client_id).await;
+	let () = deploy
+		.yui_ibc
+		.connection_open_ack(&connection_id, utils::mock::client_state_bytes())
+		.await;
+
+	let mock_module = deploy_mock_module_fixture(&deploy).await;
+
+	deploy.yui_ibc.bind_port("port-0", mock_module.address()).await;
+
+	let channel_id = deploy.yui_ibc.channel_open_init("port-0", &connection_id).await;
+
+	deploy.yui_ibc.channel_open_ack(&channel_id, "port-0").await;
+
+	// query_packet_acknowledgement
+	// query_packet_commitment
+	// query_packet_commitments
+	// query_packet_receipt
+	// query_packet_acknowledgements
+	// query_unreceived_packets
+	// query_unreceived_acknowledgements
 }
