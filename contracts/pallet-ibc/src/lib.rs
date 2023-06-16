@@ -33,6 +33,7 @@ extern crate alloc;
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use cumulus_primitives_core::ParaId;
+use frame_support::weights::Weight;
 pub use pallet::*;
 use scale_info::{
 	prelude::{
@@ -140,12 +141,14 @@ use crate::{
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use core::fmt::Display;
 
 	use core::time::Duration;
 
 	use frame_support::{
 		dispatch::DispatchResult,
 		pallet_prelude::*,
+		storage::child,
 		traits::{
 			fungibles::{Inspect, Mutate, Transfer},
 			tokens::{AssetId, Balance},
@@ -154,10 +157,16 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	pub use ibc::signer::Signer;
-	use sp_core::crypto::ByteArray;
+	use sp_core::{crypto::ByteArray, storage::ChildInfo};
 
+	#[cfg(feature = "testing")]
+	use crate::ics23::{
+		next_seq_ack::NextSequenceAck, next_seq_recv::NextSequenceRecv,
+		next_seq_send::NextSequenceSend,
+	};
 	use crate::{
 		ics20::HandleMemo,
+		light_clients::AnyConsensusState,
 		routing::{Context, ModuleRouter},
 	};
 	use ibc::{
@@ -169,7 +178,7 @@ pub mod pallet {
 		core::{
 			ics02_client::context::{ClientKeeper, ClientReader},
 			ics04_channel::context::ChannelReader,
-			ics24_host::identifier::{ChannelId, PortId},
+			ics24_host::identifier::{ChannelId, ClientId, PortId},
 		},
 		timestamp::Timestamp,
 		Height,
@@ -183,6 +192,7 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	use sp_runtime::{Deserialize, Serialize};
 	use sp_std::collections::btree_set::BTreeSet;
+	use tendermint_proto::Protobuf;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -198,7 +208,7 @@ pub mod pallet {
 		/// Runtime balance type
 		type Balance: Balance + From<u128>;
 		/// AssetId type
-		type AssetId: AssetId + MaybeSerializeDeserialize;
+		type AssetId: AssetId + MaybeSerializeDeserialize + Display;
 		/// The native asset id, this will use the `NativeCurrency` for all operations.
 		#[pallet::constant]
 		type NativeAssetId: Get<Self::AssetId>;
@@ -588,6 +598,11 @@ pub mod pallet {
 		ChargingFeeFailedAcknowledgement {
 			sequence: u64,
 		},
+		ChildStateUpdated,
+		ClientStateSubstituted {
+			client_id: String,
+			height: Height,
+		},
 	}
 
 	/// Errors inform users that something went wrong.
@@ -685,9 +700,8 @@ pub mod pallet {
 					log::warn!(target: "pallet_ibc", "Error cleaning up packets: {:?}", e);
 					n
 				})
-				.unwrap_or_else(|n| n) as u64;
-			remaining_weight
-				.saturating_sub(T::WeightInfo::one_packet_cleanup() * removed_packets_count)
+				.unwrap_or_else(|n| n) as u32;
+			remaining_weight.saturating_sub(T::WeightInfo::packet_cleanup(removed_packets_count))
 		}
 
 		fn offchain_worker(_n: BlockNumberFor<T>) {}
@@ -1086,6 +1100,23 @@ pub mod pallet {
 				ConnectionCounter::<T>::set(ConnectionCounter::<T>::get() + 1);
 				AcknowledgementCounter::<T>::set(AcknowledgementCounter::<T>::get() + 1);
 				PacketReceiptCounter::<T>::set(PacketReceiptCounter::<T>::get() + 1);
+				let port_id = PortId::transfer();
+				let channel_id = ChannelId::new(ChannelCounter::<T>::get() as _);
+				NextSequenceAck::<T>::insert(
+					port_id.clone(),
+					channel_id,
+					NextSequenceAck::<T>::get(port_id.clone(), channel_id).unwrap_or_default() + 1,
+				);
+				NextSequenceRecv::<T>::insert(
+					port_id.clone(),
+					channel_id,
+					NextSequenceRecv::<T>::get(port_id.clone(), channel_id).unwrap_or_default() + 1,
+				);
+				NextSequenceSend::<T>::insert(
+					port_id.clone(),
+					channel_id,
+					NextSequenceSend::<T>::get(port_id.clone(), channel_id).unwrap_or_default() + 1,
+				);
 				Ok(())
 			}
 		}
@@ -1123,6 +1154,59 @@ pub mod pallet {
 			Self::deposit_event(Event::<T>::FeeLessChannelIdsRemoved {
 				source_channel,
 				destination_channel,
+			});
+
+			Ok(())
+		}
+
+		#[pallet::call_index(8)]
+		#[pallet::weight(0)]
+		#[frame_support::transactional]
+		pub fn set_child_storage(
+			origin: OriginFor<T>,
+			key: Vec<u8>,
+			value: Vec<u8>,
+		) -> DispatchResult {
+			<T as Config>::AdminOrigin::ensure_origin(origin)?;
+
+			let concat_key = [T::PalletPrefix::get(), &key].concat();
+			child::put(&ChildInfo::new_default(T::PalletPrefix::get()), &concat_key, &value);
+			Self::deposit_event(Event::<T>::ChildStateUpdated);
+
+			Ok(())
+		}
+
+		#[pallet::call_index(9)]
+		#[pallet::weight(0)]
+		#[frame_support::transactional]
+		pub fn substitute_client_state(
+			origin: OriginFor<T>,
+			client_id: String,
+			height: Height,
+			client_state_bytes: Vec<u8>,
+			consensus_state_bytes: Vec<u8>,
+		) -> DispatchResult {
+			<T as Config>::AdminOrigin::ensure_origin(origin)?;
+
+			let client_id = ClientId::from_str(&client_id).map_err(|_| Error::<T>::Other)?;
+			let client_state = AnyClientState::decode_vec(&client_state_bytes[..])
+				.map_err(|_| Error::<T>::Other)?;
+			let consensus_state = AnyConsensusState::decode_vec(&consensus_state_bytes[..])
+				.map_err(|_| Error::<T>::Other)?;
+
+			let mut ctx = Context::<T>::new();
+			ctx.store_client_state(client_id.clone(), client_state)
+				.map_err(|_| Error::<T>::Other)?;
+			ctx.store_consensus_state(client_id.clone(), height, consensus_state)
+				.map_err(|_| Error::<T>::Other)?;
+			ctx.store_update_time(client_id.clone(), height, ctx.host_timestamp())
+				.map_err(|_| Error::<T>::Other)?;
+			ctx.store_update_height(client_id.clone(), height, ctx.host_height())
+				.map_err(|_| Error::<T>::Other)?;
+
+			Self::deposit_event(Event::<T>::ClientStateSubstituted {
+				client_id: client_id.to_string(),
+				height,
 			});
 
 			Ok(())

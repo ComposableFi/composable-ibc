@@ -134,12 +134,7 @@ pub fn execute(
 	let client = GrandpaClient::<HostFunctions>::default();
 	let mut ctx = Context::<HostFunctions>::new(deps, env);
 	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
-	let result = process_message(msg, client, &mut ctx, client_id.clone());
-	let data = match result {
-		Ok(res) => res,
-		Err(ContractError::Grandpa(e)) => to_binary(&ContractResult::error(e))?,
-		Err(e) => return Err(e),
-	};
+	let data = process_message(msg, client, &mut ctx, client_id.clone())?;
 	let mut response = Response::default();
 	response.data = Some(data);
 	Ok(response)

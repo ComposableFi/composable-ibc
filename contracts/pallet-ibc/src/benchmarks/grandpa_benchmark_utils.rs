@@ -22,6 +22,7 @@ pub const GRANDPA_UPDATE_TIMESTAMP: u64 = 1650894363;
 /// Builds a grandpa client message that that contains the requested number of precommits
 pub fn generate_finality_proof(
 	pre_commits: u32,
+	unknown_headers: u32,
 ) -> (ClientState<HostFunctionsManager>, ConsensusState, AnyClientMessage) {
 	let para_id = 2000u32;
 	let latest_para_height = 1u32;
@@ -75,7 +76,7 @@ pub fn generate_finality_proof(
 
 	let mut prev_hash = relay_chain_hash;
 	let mut headers = vec![];
-	for i in 0..3 {
+	for i in 0..unknown_headers {
 		let header = RelayChainHeader {
 			parent_hash: prev_hash,
 			number: latest_relay_height + 1 + i,

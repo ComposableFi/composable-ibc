@@ -818,13 +818,13 @@ macro_rules! chains {
 				}
 			}
 
-			async fn on_undelivered_sequences(&self, seqs: &[u64]) -> Result<(), Self::Error> {
+			async fn on_undelivered_sequences(&self, is_empty: bool) -> Result<(), Self::Error> {
 				match self {
 					$(
 						$(#[$($meta)*])*
-						Self::$name(chain) => chain.on_undelivered_sequences(seqs).await.map_err(AnyError::$name),
+						Self::$name(chain) => chain.on_undelivered_sequences(is_empty).await.map_err(AnyError::$name),
 					)*
-					Self::Wasm(c) => c.inner.on_undelivered_sequences(seqs).await,
+					Self::Wasm(c) => c.inner.on_undelivered_sequences(is_empty).await,
 				}
 			}
 

@@ -513,7 +513,8 @@ where
 
 		let key = Pallet::<T>::ack_key(channel_id, port_id, seq);
 		Acks::<T>::insert(key.clone(), ack.clone());
-		log::trace!(target: "pallet_ibc", "in channel: [store_raw_acknowledgement] >> writing acknowledgement {:?} {:?}", key, ack);
+		let ack_str = String::from_utf8_lossy(&ack);
+		log::trace!(target: "pallet_ibc", "in channel: [store_raw_acknowledgement] >> writing acknowledgement: {}, key: 0x{}", ack_str, hex::encode(&key));
 		Ok(())
 	}
 
@@ -986,9 +987,6 @@ where
 			account_id_32.into(),
 			<T as frame_system::Config>::SS58Prefix::get(),
 		);
-		let from = String::from_utf8(from).map_err(|_| IbcHandlerError::SendTransferError {
-			msg: Some("Account Id conversion failed".to_string()),
-		})?;
 		let (latest_height, latest_timestamp) =
 			Pallet::<T>::latest_height_and_timestamp(&PortId::transfer(), &channel_id).map_err(
 				|_| IbcHandlerError::TimestampOrHeightNotFound {

@@ -13,6 +13,8 @@ use frame_system::EnsureSigned;
 use ibc_primitives::{runtime_interface::ss58_to_account_id_32, IbcAccount};
 use light_client_common::RelayChain;
 use orml_traits::parameter_type_with_key;
+use pallet_membership::Instance2;
+use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{
 	offchain::{testing::TestOffchainExt, OffchainDbExt, OffchainWorkerExt},
 	H256,
@@ -53,29 +55,43 @@ impl From<MockHostBlock> for AnyConsensusState {
 	}
 }
 
-// Configure a mock runtime to test the pallet.
-frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Timestamp: pallet_timestamp,
-		ParachainInfo: parachain_info,
-		Tokens: orml_tokens,
-		Assets: pallet_assets,
-		IbcPing: pallet_ibc_ping,
-		Ics20Fee: crate::ics20_fee,
-		Ibc: pallet_ibc,
-	}
-);
+impl pallet_aura::Config for Test {
+	type AuthorityId = AuraId;
+	type MaxAuthorities = MaxAuthorities;
+	type DisabledValidators = ();
+}
+
+impl pallet_membership::Config<Instance2> for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type AddOrigin = EnsureRoot<AccountId>;
+	type RemoveOrigin = EnsureRoot<AccountId>;
+	type SwapOrigin = EnsureRoot<AccountId>;
+	type ResetOrigin = EnsureRoot<AccountId>;
+	type PrimeOrigin = EnsureRoot<AccountId>;
+	type MembershipInitialized = ();
+	type MembershipChanged = ();
+	type MaxMembers = MaxAuthorities;
+	type WeightInfo = ();
+}
+
+impl balances::Config for Test {
+	type Balance = Balance;
+	type DustRemoval = ();
+	type RuntimeEvent = RuntimeEvent;
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type WeightInfo = ();
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = [u8; 8];
+}
 
 parameter_types! {
 	pub const BlockHashCount: u32 = 250;
 	pub const SS58Prefix: u8 = 49;
 	pub const ExpectedBlockTime: u64 = 1000;
 	pub const ExistentialDeposit: u128 = 10000;
+	pub const MaxAuthorities: u32 = 100_000;
 }
 
 impl system::Config for Test {
@@ -96,7 +112,7 @@ impl system::Config for Test {
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = orml_tokens::AccountData<Balance>;
+	type AccountData = balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
@@ -292,9 +308,12 @@ where
 	T::AssetId: From<u128>,
 {
 	type Error = ();
-	fn from_denom_to_asset_id(_denom: &String) -> Result<T::AssetId, Self::Error> {
+	fn from_denom_to_asset_id(denom: &String) -> Result<T::AssetId, Self::Error> {
 		let mut id = 2u128;
-		if _denom.contains("FLATFEE") {
+		if denom == "PICA" || denom == "1" {
+			id = 1;
+		}
+		if denom.contains("FLATFEE") {
 			id = 3;
 		}
 		if <<Test as Config>::Fungibles as InspectMetadata<AccountId>>::decimals(&id) == 0 {
@@ -318,7 +337,13 @@ where
 		Ok(id.into())
 	}
 
-	fn from_asset_id_to_denom(_id: T::AssetId) -> Option<String> {
+	fn from_asset_id_to_denom(id: T::AssetId) -> Option<String> {
+		if id == 1u128.into() {
+			return Some("PICA".to_string())
+		}
+		if id == 3u128.into() {
+			return Some("PICAFLATFEE".to_string())
+		}
 		Some("PICA".to_string())
 	}
 
@@ -374,3 +399,24 @@ impl ModuleRouter for Router {
 		}
 	}
 }
+
+// Configure a mock runtime to test the pallet.
+frame_support::construct_runtime!(
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Timestamp: pallet_timestamp,
+		ParachainInfo: parachain_info,
+		Tokens: orml_tokens,
+		Assets: pallet_assets,
+		PalletBalances: balances,
+		IbcPing: pallet_ibc_ping,
+		Ics20Fee: crate::ics20_fee,
+		Ibc: pallet_ibc,
+		Aura: pallet_aura,
+		Membership: pallet_membership::<Instance2>,
+	}
+);

@@ -1,6 +1,6 @@
 ## Benchmarking implementation
 
-For `transfer`, `set_params` and `upgrade_client` extrinsics we have pretty familiar substrate benchmarks, but for the `deliver` extrinsic
+For `transfer` and `upgrade_client` extrinsics we have pretty familiar substrate benchmarks, but for the `deliver` extrinsic
 we implement a non-trivial benchmark for different light clients.  
 To effectively benchmark the `deliver` extrinsic, we need to individually benchmark the processing of eachIBCmessage type using all available light clients,
 this is because different light clients have different header and proof verification algorithms that would execute in the runtime with distinct speeds.

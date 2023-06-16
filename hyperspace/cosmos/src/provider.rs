@@ -63,6 +63,7 @@ use pallet_ibc::light_clients::{
 };
 use primitives::{mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType};
 use prost::Message;
+use rand::Rng;
 use std::{collections::HashSet, pin::Pin, str::FromStr, time::Duration};
 use tendermint::block::Height as TmHeight;
 pub use tendermint::Hash;
@@ -131,11 +132,14 @@ where
 		block_events.push((0, Vec::new()));
 		let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 		let range = (from.value()..to.value()).collect::<Vec<_>>();
+		let to = self.rpc_call_delay().as_millis();
 		for heights in range.chunks(100) {
 			for height in heights.to_owned() {
 				log::trace!(target: "hyperspace_cosmos", "Parsing events at height {:?}", height);
 				let client = self.clone();
+				let duration = Duration::from_millis(rand::thread_rng().gen_range(0..to) as u64);
 				join_set.spawn(async move {
+					sleep(duration).await;
 					let xs = tokio::time::timeout(
 						Duration::from_secs(30),
 						client.parse_ibc_events_at(latest_revision, height),
@@ -575,8 +579,8 @@ where
 		Ok(commitment_sequences)
 	}
 
-	async fn on_undelivered_sequences(&self, seqs: &[u64]) -> Result<(), Self::Error> {
-		*self.maybe_has_undelivered_packets.lock().unwrap() = !seqs.is_empty();
+	async fn on_undelivered_sequences(&self, is_empty: bool) -> Result<(), Self::Error> {
+		*self.maybe_has_undelivered_packets.lock().unwrap() = !is_empty;
 		Ok(())
 	}
 
@@ -718,10 +722,9 @@ where
 		let mut block_events = vec![];
 
 		for seq in seqs {
-			let query_str =
-				Query::eq(format!("{}.packet_src_channel", "recv_packet"), channel_id.to_string())
-					.and_eq(format!("{}.packet_src_port", "recv_packet"), port_id.to_string())
-					.and_eq(format!("{}.packet_sequence", "recv_packet"), seq.to_string());
+			let query_str = Query::eq("recv_packet.packet_dst_channel", channel_id.to_string())
+				.and_eq("recv_packet.packet_dst_port", port_id.to_string())
+				.and_eq("recv_packet.packet_sequence", seq.to_string());
 
 			let response = self
 				.rpc_client
