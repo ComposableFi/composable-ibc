@@ -328,9 +328,7 @@ where
 			_ => unreachable!("We've checked for misbehavior in line 180; qed"),
 		};
 		//forced authority set change is handled as a misbehaviour
-		if find_forced_change(&header).is_some(){
-			return Ok(true)
-		}
+		
 		let ancestry =
 			AncestryChain::<RelayChainHeader>::new(&header.finality_proof.unknown_headers);
 
@@ -338,6 +336,10 @@ where
 			let header = ancestry.header(&relay_hash).ok_or_else(|| {
 				Error::Custom(format!("No relay chain header found for hash: {relay_hash:?}"))
 			})?;
+
+			if find_forced_change(header).is_some(){
+				return Ok(true)
+			}
 
 			let (height, consensus_state) = ConsensusState::from_header::<H>(
 				parachain_header_proof,
