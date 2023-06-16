@@ -2,6 +2,7 @@ use std::{future::Future, str::FromStr, sync::Arc};
 
 use ethers::{
 	abi::{Address, ParamType, ParseError, Token},
+	prelude::signer::SignerMiddlewareError,
 	providers::{Http, Middleware, Provider, ProviderError, ProviderExt, Ws},
 	signers::{coins_bip39::English, LocalWallet, MnemonicBuilder, Signer},
 	types::{
@@ -36,6 +37,11 @@ pub struct Client {
 	pub(crate) config: Config,
 }
 
+pub type MiddlewareErrorType = SignerMiddlewareError<
+	Provider<Http>,
+	ethers::signers::Wallet<ethers::prelude::k256::ecdsa::SigningKey>,
+>;
+
 #[derive(Debug, Error)]
 pub enum ClientError {
 	#[error("uri-parse-error: {0} {0}")]
@@ -44,14 +50,26 @@ pub enum ClientError {
 	ProviderError(http::Uri, ProviderError),
 	#[error("Ethereum error: {0}")]
 	Ethers(#[from] ethers::providers::ProviderError),
-	#[error("{0}")]
-	Boxed(Box<dyn std::error::Error + Send + Sync>),
+	#[error("middleware-error: {0}")]
+	MiddlewareError(MiddlewareErrorType),
 }
 
 impl From<String> for ClientError {
 	fn from(value: String) -> Self {
 		todo!()
 	}
+}
+
+pub struct AckPacket {
+	pub sequence: u64,
+	pub source_port: String,
+	pub source_channel: String,
+	pub dest_port: String,
+	pub dest_channel: String,
+	pub data: Vec<u8>,
+	pub timeout_height: (u64, u64),
+	pub timeout_timestamp: u64,
+	pub acknowledgement: Vec<u8>,
 }
 
 impl Client {
@@ -141,6 +159,77 @@ impl Client {
 					.next()
 					.unwrap()
 					.to_string()
+			})
+			.collect()
+	}
+
+	pub async fn acknowledge_packets(&self, from_block: BlockNumber) -> Vec<AckPacket> {
+		let filter = Filter::new()
+			.from_block(from_block)
+			.to_block(BlockNumber::Latest)
+			.address(self.config.ibc_handler_address)
+			.event("AcknowledgePacket((uint64,string,string,string,string,bytes,(uint64,uint64),uint64),bytes)");
+
+		let logs = self.http_rpc.get_logs(&filter).await.unwrap();
+
+		logs.into_iter()
+			.map(|log| {
+				let decoded = ethers::abi::decode(
+					&[
+						ParamType::Tuple(vec![
+							ParamType::Uint(64),
+							ParamType::String,
+							ParamType::String,
+							ParamType::String,
+							ParamType::String,
+							ParamType::Bytes,
+							ParamType::Tuple(vec![ParamType::Uint(64), ParamType::Uint(64)]),
+							ParamType::Uint(64),
+						]),
+						ParamType::Bytes,
+					],
+					&log.data.0,
+				)
+				.unwrap();
+
+				let Token::Tuple(packet) = decoded[0].clone() else {
+					panic!("expected tuple, got {:?}", decoded[0])
+				};
+
+				// use a match statement to destructure the `packet` into the fields
+				// for the `AckPacket` struct
+				let (sequence, source_port, source_channel, dest_port, dest_channel, data, timeout_height, timeout_timestamp) = match packet.as_slice() {
+					[Token::Uint(sequence),
+					Token::String(source_port), Token::String(source_channel), Token::String(dest_port), Token::String(dest_channel), Token::Bytes(data), Token::Tuple(timeout_height), Token::Uint(timeout_timestamp)] => {
+						let [Token::Uint(rev), Token::Uint(height)] = timeout_height.as_slice() else {
+							panic!("need timeout height to be a tuple of two uints, revision and height");
+						};
+
+						(sequence.as_u64(), source_port.clone(), source_channel.clone(), dest_port.clone(), dest_channel.clone(), data.clone(), (
+							rev.as_u64(),
+							height.as_u64(),
+						), timeout_timestamp.as_u64())
+					},
+					_ => panic!("expected tuple, got {:?}", packet),
+				};
+
+				let Token::Bytes(acknowledgement) = decoded[1].clone() else {
+					panic!("expected bytes, got {:?}", decoded[1])
+				};
+
+				let packet = AckPacket {
+					sequence,
+					source_port,
+					source_channel,
+					dest_port,
+					dest_channel,
+					data,
+					timeout_height,
+					timeout_timestamp,
+					acknowledgement,
+				};
+
+				packet
 			})
 			.collect()
 	}

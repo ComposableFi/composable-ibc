@@ -162,8 +162,10 @@ impl IbcProvider for Client {
 			.expect("contract is missing getClientState");
 
 		let get_client_state_fut = binding.call();
-		let (client_state, _): (Vec<u8>, bool) =
-			get_client_state_fut.await.map_err(|err| todo!("query-client-state: error: {err:?}")).unwrap();
+		let (client_state, _): (Vec<u8>, bool) = get_client_state_fut
+			.await
+			.map_err(|err| todo!("query-client-state: error: {err:?}"))
+			.unwrap();
 
 		let proof_height = Some(at.into());
 		let client_state = google::protobuf::Any::decode(&*client_state).ok();
@@ -390,14 +392,14 @@ impl IbcProvider for Client {
 			.http_rpc
 			.get_block_number()
 			.await
-			.map_err(|err| ClientError::Boxed(Box::new(err)))?;
+			.map_err(|err| ClientError::MiddlewareError(err))?;
 
 		let block = self
 			.http_rpc
 			.get_block(latest_block)
 			.await
-			.map_err(|err| ClientError::Boxed(Box::new(err)))?
-			.ok_or_else(|| ClientError::Boxed(todo!()))?;
+			.map_err(|err| ClientError::MiddlewareError(err))?
+			.ok_or_else(|| ClientError::MiddlewareError(todo!()))?;
 
 		let nanoseconds = Duration::from_secs(block.timestamp.as_u64()).as_nanos() as u64;
 		let timestamp = Timestamp::from_nanoseconds(nanoseconds).expect("timestamp error");

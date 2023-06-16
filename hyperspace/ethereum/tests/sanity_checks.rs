@@ -98,9 +98,17 @@ async fn deploy_yui_ibc_and_mock_client_fixture() -> DeployYuiIbcMockClient {
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ClientId(pub String);
 
+impl Deref for ClientId {
+	type Target = String;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+
 impl ClientId {
 	pub async fn open_connection(&self, deploy: &DeployYuiIbcMockClient) -> String {
-		let connection_id = deploy.yui_ibc.connection_open_init(&client_id).await;
+		let connection_id = deploy.yui_ibc.connection_open_init(&self.0).await;
 		let () = deploy
 			.yui_ibc
 			.connection_open_ack(&connection_id, utils::mock::client_state_bytes())
