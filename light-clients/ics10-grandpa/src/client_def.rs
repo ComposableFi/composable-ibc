@@ -24,7 +24,9 @@ use codec::Decode;
 use core::marker::PhantomData;
 use finality_grandpa::Chain;
 use grandpa_client_primitives::{
-	justification::{find_scheduled_change, find_forced_change, AncestryChain, GrandpaJustification},
+	justification::{
+		find_forced_change, find_scheduled_change, AncestryChain, GrandpaJustification,
+	},
 	ParachainHeadersWithFinalityProof,
 };
 use ibc::{
@@ -328,7 +330,7 @@ where
 			_ => unreachable!("We've checked for misbehavior in line 180; qed"),
 		};
 		//forced authority set change is handled as a misbehaviour
-		
+
 		let ancestry =
 			AncestryChain::<RelayChainHeader>::new(&header.finality_proof.unknown_headers);
 
@@ -337,7 +339,7 @@ where
 				Error::Custom(format!("No relay chain header found for hash: {relay_hash:?}"))
 			})?;
 
-			if find_forced_change(header).is_some(){
+			if find_forced_change(header).is_some() {
 				return Ok(true)
 			}
 
