@@ -141,15 +141,21 @@ impl MetricsHandler {
 			match message.type_url.as_str() {
 				"/ibc.core.channel.v1.MsgAcknowledgement" => {
 					self.metrics.number_of_sent_acknowledgments.inc();
-					self.metrics.number_of_undelivered_acknowledgements.set(
-						self.metrics.number_of_sent_acknowledgments.get() -
+					// The counters may be out of sync (e.g. when relayer was restarted), so we use
+					// saturating sub
+					let number_of_undelivered_acknowledgements =
+						self.metrics.number_of_sent_acknowledgments.get().saturating_sub(
 							self.metrics.counterparty_number_of_received_acknowledgments().get(),
-					);
+						);
+					self.metrics
+						.number_of_undelivered_acknowledgements
+						.set(number_of_undelivered_acknowledgements);
 				},
 				"/ibc.core.channel.v1.MsgRecvPacket" => {
 					self.metrics.number_of_undelivered_packets.set(
-						self.metrics.number_of_sent_packets.get() -
+						self.metrics.number_of_sent_packets.get().saturating_sub(
 							self.metrics.counterparty_number_of_received_packets().get(),
+						),
 					);
 					self.metrics.number_of_sent_packets.inc();
 				},
