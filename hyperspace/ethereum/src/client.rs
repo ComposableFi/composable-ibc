@@ -1,7 +1,7 @@
 use std::{future::Future, str::FromStr, sync::Arc};
 
 use ethers::{
-	abi::{Address, ParseError, Token},
+	abi::{Address, ParamType, ParseError, Token},
 	providers::{Http, Middleware, Provider, ProviderError, ProviderExt, Ws},
 	signers::{coins_bip39::English, LocalWallet, MnemonicBuilder, Signer},
 	types::{
@@ -10,7 +10,10 @@ use ethers::{
 };
 
 use futures::{Stream, TryFutureExt};
-use ibc::{core::ics24_host::identifier::{ClientId, ChannelId, PortId}, Height};
+use ibc::{
+	core::ics24_host::identifier::{ChannelId, ClientId, PortId},
+	Height,
+};
 use thiserror::Error;
 
 use crate::config::Config;
@@ -79,6 +82,69 @@ impl Client {
 		Ok(Self { http_rpc: Arc::new(client), ws_uri: config.ws_rpc_url.clone(), config })
 	}
 
+	pub async fn generated_channel_identifiers(&self, from_block: BlockNumber) -> Vec<String> {
+		let filter = Filter::new()
+			.from_block(from_block)
+			.to_block(BlockNumber::Latest)
+			.address(self.config.ibc_handler_address)
+			.event("GeneratedChannelIdentifier(string)");
+
+		let logs = self.http_rpc.get_logs(&filter).await.unwrap();
+
+		logs.into_iter()
+			.map(|log| {
+				ethers::abi::decode(&[ParamType::String], &log.data.0)
+					.unwrap()
+					.into_iter()
+					.next()
+					.unwrap()
+					.to_string()
+			})
+			.collect()
+	}
+
+	pub async fn generated_client_identifiers(&self, from_block: BlockNumber) -> Vec<String> {
+		let filter = Filter::new()
+			.from_block(from_block)
+			.to_block(BlockNumber::Latest)
+			.address(self.config.ibc_handler_address)
+			.event("GeneratedClientIdentifier(string)");
+
+		let logs = self.http_rpc.get_logs(&filter).await.unwrap();
+
+		logs.into_iter()
+			.map(|log| {
+				ethers::abi::decode(&[ParamType::String], &log.data.0)
+					.unwrap()
+					.into_iter()
+					.next()
+					.unwrap()
+					.to_string()
+			})
+			.collect()
+	}
+
+	pub async fn generated_connection_identifiers(&self, from_block: BlockNumber) -> Vec<String> {
+		let filter = Filter::new()
+			.from_block(from_block)
+			.to_block(BlockNumber::Latest)
+			.address(self.config.ibc_handler_address)
+			.event("GeneratedConnectionIdentifier(string)");
+
+		let logs = self.http_rpc.get_logs(&filter).await.unwrap();
+
+		logs.into_iter()
+			.map(|log| {
+				ethers::abi::decode(&[ParamType::String], &log.data.0)
+					.unwrap()
+					.into_iter()
+					.next()
+					.unwrap()
+					.to_string()
+			})
+			.collect()
+	}
+
 	pub async fn address_of_client_id(&self, client_id: &str) -> Address {
 		let proof = self.eth_query_proof(dbg!(client_id), None, 3).await.unwrap();
 
@@ -94,7 +160,12 @@ impl Client {
 		port_id: &PortId,
 		channel_id: &ChannelId,
 		seq: u64,
-	) -> impl Future<Output = Result<ibc_proto::ibc::core::channel::v1::QueryPacketCommitmentResponse, ClientError>> {
+	) -> impl Future<
+		Output = Result<
+			ibc_proto::ibc::core::channel::v1::QueryPacketCommitmentResponse,
+			ClientError,
+		>,
+	> {
 		async move { todo!() }
 	}
 
@@ -134,7 +205,8 @@ impl Client {
 
 		let var_name = format!("0x{key}", key = &key);
 		let storage_index = format!("{storage_index}");
-		let index = cast::SimpleCast::index("bytes32", dbg!(&var_name), dbg!(&storage_index)).unwrap();
+		let index =
+			cast::SimpleCast::index("bytes32", dbg!(&var_name), dbg!(&storage_index)).unwrap();
 
 		let client = self.http_rpc.clone();
 		let address = self.config.ibc_handler_address.clone();

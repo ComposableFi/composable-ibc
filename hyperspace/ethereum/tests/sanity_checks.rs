@@ -1,7 +1,12 @@
 use std::{future::Future, ops::Deref, path::PathBuf, sync::Arc};
 
 use ethers::{
-	abi::Token, prelude::ContractInstance, solc::ProjectPathsConfig, utils::AnvilInstance,
+	abi::Token,
+	prelude::ContractInstance,
+	providers::{FilterKind, Middleware},
+	solc::ProjectPathsConfig,
+	types::Filter,
+	utils::AnvilInstance,
 };
 use hyperspace_ethereum::config::Config;
 
@@ -90,13 +95,32 @@ async fn deploy_yui_ibc_and_mock_client_fixture() -> DeployYuiIbcMockClient {
 	DeployYuiIbcMockClient { path, project_output, anvil, client, yui_ibc, ibc_mock_client }
 }
 
-async fn deploy_mock_client_fixture(deploy: &DeployYuiIbcMockClient) -> String {
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ClientId(pub String);
+
+impl ClientId {
+	pub async fn open_connection(&self, deploy: &DeployYuiIbcMockClient) -> String {
+		let connection_id = deploy.yui_ibc.connection_open_init(&client_id).await;
+		let () = deploy
+			.yui_ibc
+			.connection_open_ack(&connection_id, utils::mock::client_state_bytes())
+			.await;
+		connection_id
+	}
+}
+
+async fn deploy_mock_client_fixture(deploy: &DeployYuiIbcMockClient) -> ClientId {
 	deploy
 		.yui_ibc
 		.register_client("mock-client", deploy.ibc_mock_client.address())
 		.await;
 
-	deploy.yui_ibc.create_client(utils::mock::create_client_msg()).await
+	ClientId(
+		deploy
+			.yui_ibc
+			.create_client(utils::mock::create_client_msg("mock-client"))
+			.await,
+	)
 }
 
 #[track_caller]
@@ -200,22 +224,15 @@ async fn test_ibc_channel() {
 	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc).await;
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 
-	let connection_id = deploy.yui_ibc.connection_open_init(&client_id).await;
-	let () = deploy
-		.yui_ibc
-		.connection_open_ack(&connection_id, utils::mock::client_state_bytes())
-		.await;
-
 	let mock_module = deploy_mock_module_fixture(&deploy).await;
-
 	deploy.yui_ibc.bind_port("port-0", mock_module.address()).await;
 
+	let connection_id = client_id.open_connection(&deploy).await;
 	let channel_id = deploy.yui_ibc.channel_open_init("port-0", &connection_id).await;
-
 	deploy.yui_ibc.channel_open_ack(&channel_id, "port-0").await;
 
-	// hyperspace.query_connection_channels(at, connection_id)
-	// hyperspace.query_connection_end(at, connection_id)
+	// hyperspace.query_channel(at, channel_id)
+	// hyperspace.query_channel_end(at, channel_id)
 }
 
 #[tokio::test]
@@ -224,18 +241,11 @@ async fn test_ibc_packet() {
 	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc).await;
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 
-	let connection_id = deploy.yui_ibc.connection_open_init(&client_id).await;
-	let () = deploy
-		.yui_ibc
-		.connection_open_ack(&connection_id, utils::mock::client_state_bytes())
-		.await;
-
 	let mock_module = deploy_mock_module_fixture(&deploy).await;
-
 	deploy.yui_ibc.bind_port("port-0", mock_module.address()).await;
 
+	let connection_id = client_id.open_connection(&deploy).await;
 	let channel_id = deploy.yui_ibc.channel_open_init("port-0", &connection_id).await;
-
 	deploy.yui_ibc.channel_open_ack(&channel_id, "port-0").await;
 
 	// query_packet_acknowledgement

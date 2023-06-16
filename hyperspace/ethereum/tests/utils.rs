@@ -158,7 +158,7 @@ pub mod mock {
 		pub timestamp: u64,
 	}
 
-	pub fn create_client_msg() -> Token {
+	pub fn create_client_msg(kind: &str) -> Token {
 		let client_state_bytes = client_state_bytes();
 
 		let consensus_state_bytes = ibc_proto::google::protobuf::Any {
@@ -168,7 +168,7 @@ pub mod mock {
 		.encode_to_vec();
 
 		Token::Tuple(vec![
-			Token::String("mock-client".into()),
+			Token::String(kind.into()),
 			Token::Bytes(client_state_bytes),
 			Token::Bytes(consensus_state_bytes),
 		])
@@ -330,6 +330,8 @@ where
 				(Token::String(kind.into()), Token::Address(address)),
 			)
 			.unwrap();
+
+		let _ = method.call().await.unwrap_contract_error();
 
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
 		assert_eq!(receipt.status, Some(1.into()));
