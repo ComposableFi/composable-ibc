@@ -157,7 +157,15 @@ where
 		}
 
 		// we don't submit events for the last block, because we don't have a proof for it
-		assert_eq!(block_events.len(), update_headers.len(), "block events and updates must match");
+		// assert_eq!(block_events.len(), update_headers.len(), "block events and updates must
+		// match"); just return this error and not panic
+		if block_events.len() != update_headers.len() {
+			return Err(anyhow::anyhow!(
+				"block events and updates must match, got {} and {}",
+				block_events.len(),
+				update_headers.len()
+			))
+		}
 		block_events.sort_by_key(|(height, _)| *height);
 
 		let mut updates = Vec::new();
