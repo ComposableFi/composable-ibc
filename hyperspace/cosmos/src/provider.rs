@@ -590,7 +590,7 @@ where
 		log::trace!(
 			target: "hyperspace_cosmos",
 			"on_undelivered_sequences: {:?}, type: {kind:?}",
-			seqs
+			is_empty
 		);
 		self.maybe_has_undelivered_packets.lock().unwrap().insert(kind, !is_empty);
 		Ok(())

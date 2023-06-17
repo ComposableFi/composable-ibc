@@ -422,7 +422,7 @@ where
 		log::trace!(
 			target: "hyperspace_parachain",
 			"on_undelivered_sequences: {:?}, type: {kind:?}",
-			seqs
+			is_empty
 		);
 		self.maybe_has_undelivered_packets.lock().unwrap().insert(kind, !is_empty);
 		Ok(())
@@ -501,7 +501,8 @@ where
 			.await
 			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
 
-		self.on_undelivered_sequences(response.is_empty()).await?;
+		self.on_undelivered_sequences(response.is_empty(), UndeliveredType::Acks)
+			.await?;
 
 		Ok(response)
 	}

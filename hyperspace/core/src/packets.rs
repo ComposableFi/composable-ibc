@@ -198,6 +198,7 @@ pub async fn query_ready_and_timed_out_packets(
 		let source = Arc::new(source.clone());
 		let sink = Arc::new(sink.clone());
 		let mut timeout_packets_count = Arc::new(AtomicUsize::new(0));
+		let mut send_packets_count = Arc::new(AtomicUsize::new(0));
 		for send_packets in send_packets.chunks(PROCESS_PACKETS_BATCH_SIZE) {
 			for send_packet in send_packets.to_owned() {
 				let source_connection_end = source_connection_end.clone();
@@ -208,6 +209,8 @@ pub async fn query_ready_and_timed_out_packets(
 				let duration = Duration::from_millis(
 					rand::thread_rng().gen_range(1..source.rpc_call_delay().as_millis() as u64),
 				);
+				let timeout_packets_count = timeout_packets_count.clone();
+				let send_packets_count = send_packets_count.clone();
 				timeout_packets_join_set.spawn(async move {
 					sleep(duration).await;
 					let source = &source;
@@ -296,10 +299,12 @@ pub async fn query_ready_and_timed_out_packets(
 					if packet_height > latest_source_height_on_sink.revision_height {
 						// Sink does not have client update required to prove recv packet message
 						log::debug!(target: "hyperspace", "Skipping packet {:?} as sink does not have client update required to prove recv packet message", packet);
+						send_packets_count.fetch_add(1, Ordering::SeqCst);
 						return Ok(None)
 					}
 
 					let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(
+						&**source,
 						&**sink,
 						sink_height,
 						source.client_id(),
@@ -353,8 +358,13 @@ pub async fn query_ready_and_timed_out_packets(
 
 		let timeouts_count = timeout_packets_count.load(Ordering::SeqCst);
 		log::debug!(target: "hyperspace", "Found {timeouts_count} packets that have timed out");
-		let xs = if timeouts_count > 0 { &[timeouts_count as u64][..] } else { &[][..] };
-		source.on_undelivered_sequences(xs, UndeliveredType::Timeouts);
+		source
+			.on_undelivered_sequences(timeouts_count == 0, UndeliveredType::Timeouts)
+			.await?;
+
+		let sends_count = send_packets_count.load(Ordering::SeqCst);
+		log::debug!(target: "hyperspace", "Found {sends_count} sent packets");
+		sink.on_undelivered_sequences(sends_count == 0, UndeliveredType::Sends).await?;
 
 		// Get acknowledgement messages
 		if source_channel_end.state == State::Closed {
@@ -396,6 +406,8 @@ pub async fn query_ready_and_timed_out_packets(
 		let acknowledgements = source.query_recv_packets(channel_id, port_id.clone(), acks).await?;
 		log::trace!(target: "hyperspace", "Got acknowledgements for channel {:?}: {:?}", channel_id, acknowledgements);
 		let mut acknowledgements_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+		sink.on_undelivered_sequences(acknowledgements.is_empty(), UndeliveredType::Acks)
+			.await?;
 		for acknowledgements in acknowledgements.chunks(PROCESS_PACKETS_BATCH_SIZE) {
 			for acknowledgement in acknowledgements.to_owned() {
 				let source_connection_end = source_connection_end.clone();
@@ -488,6 +500,7 @@ value=08f7557ed51826fe18d84512bf24ec75001edbaf2123a477df72a0a9f3640a7c
 
 					 */
 					let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(
+						&**source,
 						&**sink,
 						sink_height,
 						source.client_id(),

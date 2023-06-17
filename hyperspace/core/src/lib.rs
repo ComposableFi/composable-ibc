@@ -31,6 +31,7 @@ use futures::TryFutureExt;
 use ibc::events::IbcEvent;
 use metrics::handler::MetricsHandler;
 use primitives::UndeliveredType;
+use std::collections::HashSet;
 
 #[derive(Copy, Debug, Clone)]
 pub enum Mode {

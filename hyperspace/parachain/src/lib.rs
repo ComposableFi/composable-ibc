@@ -59,7 +59,7 @@ use ics11_beefy::{
 	client_state::ClientState as BeefyClientState,
 	consensus_state::ConsensusState as BeefyConsensusState,
 };
-use primitives::{KeyProvider, UndeliveredType};
+use primitives::{KeyProvider, RelayerState, UndeliveredType};
 
 use crate::{finality_protocol::FinalityProtocol, signer::ExtrinsicSigner};
 use grandpa_light_client_primitives::ParachainHeaderProofs;
@@ -125,6 +125,8 @@ pub struct ParachainClient<T: light_client_common::config::Config> {
 	///
 	/// Set inside `on_undelivered_sequences`.
 	pub maybe_has_undelivered_packets: Arc<Mutex<HashMap<UndeliveredType, bool>>>,
+	/// Relayer data
+	pub relayer_state: RelayerState,
 }
 
 enum KeyType {
@@ -273,6 +275,7 @@ where
 			finality_protocol: config.finality_protocol,
 			rpc_call_delay: DEFAULT_RPC_CALL_DELAY,
 			maybe_has_undelivered_packets: Default::default(),
+			relayer_state: Default::default(),
 		})
 	}
 }

@@ -58,6 +58,7 @@ pub async fn get_timeout_proof_height(
 	match timeout_variant {
 		TimeoutVariant::Height =>
 			find_suitable_proof_height_for_client(
+				sink,
 				source,
 				source_height,
 				sink.client_id(),
@@ -92,6 +93,7 @@ pub async fn get_timeout_proof_height(
 				calculate_block_delay(period, sink.expected_block_time()).saturating_sub(1);
 			let start_height = Height::new(sink_height.revision_number, start_height);
 			find_suitable_proof_height_for_client(
+				sink,
 				source,
 				source_height,
 				sink.client_id(),
@@ -129,6 +131,7 @@ pub async fn get_timeout_proof_height(
 				Height::new(packet.timeout_height.revision_number, start_height)
 			};
 			find_suitable_proof_height_for_client(
+				sink,
 				source,
 				source_height,
 				sink.client_id(),
@@ -183,6 +186,23 @@ pub async fn verify_delay_passed(
 		},
 		VerifyDelayOn::Sink => {
 			let actual_proof_height = source.get_proof_height(proof_height).await;
+			log::info!(
+				"Checking proof height on {} as {}:{}",
+				sink.name(),
+				proof_height,
+				actual_proof_height
+			);
+			let _cs = sink
+				.query_client_consensus(sink_height, source.client_id(), actual_proof_height)
+				// .query_client_consensus(actual_proof_height, source.client_id())
+				.await
+				.unwrap()
+				.consensus_state
+				.expect(&format!(
+					"query_client_consensus for {} at height {} is not found",
+					source.client_id(),
+					actual_proof_height
+				));
 			if let Ok((sink_client_update_height, sink_client_update_time)) = sink
 				.query_client_update_time_and_height(source.client_id(), actual_proof_height)
 				.await

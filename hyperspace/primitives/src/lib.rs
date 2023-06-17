@@ -87,6 +87,18 @@ impl UpdateType {
 	}
 }
 
+/// A common data that all clients should keep.
+#[derive(Debug, Clone)]
+pub struct RelayerState {
+	pub skip_optional_client_updates: bool,
+}
+
+impl Default for RelayerState {
+	fn default() -> Self {
+		Self { skip_optional_client_updates: true }
+	}
+}
+
 pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: impl Into<Vec<u8>>) -> Vec<u8> {
 	let path = path.into();
 	commitment_prefix.extend_from_slice(&path);
@@ -97,6 +109,7 @@ pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: impl Into<Vec<u8>>) ->
 pub enum UndeliveredType {
 	Sequences,
 	Acks,
+	Sends,
 	Timeouts,
 }
 
@@ -468,6 +481,10 @@ pub trait Chain:
 	fn rpc_call_delay(&self) -> Duration;
 
 	fn set_rpc_call_delay(&mut self, delay: Duration);
+
+	fn relayer_state(&self) -> &RelayerState;
+
+	fn relayer_state_mut(&mut self) -> &mut RelayerState;
 }
 
 /// Returns undelivered packet sequences that have been sent out from
@@ -566,10 +583,6 @@ pub async fn query_undelivered_acks(
 		undelivered_acks.len(), sink.name()
 	);
 
-	source
-		.on_undelivered_sequences(&undelivered_acks, UndeliveredType::Acks)
-		.await?;
-
 	Ok(undelivered_acks)
 }
 
@@ -593,7 +606,8 @@ pub fn packet_info_to_packet(packet_info: &PacketInfo) -> Packet {
 /// Should return the first client consensus height with a consensus state timestamp that
 /// is equal to or greater than the values provided
 pub async fn find_suitable_proof_height_for_client(
-	chain: &impl Chain,
+	source: &impl Chain,
+	sink: &impl Chain,
 	at: Height,
 	client_id: ClientId,
 	start_height: Height,
@@ -603,7 +617,7 @@ pub async fn find_suitable_proof_height_for_client(
 	log::trace!(
 		target: "hyperspace",
 		"Searching for suitable proof height for client {} ({}) starting at {}, {:?}, latest_client_height={}",
-		client_id, chain.name(), start_height, timestamp_to_match, latest_client_height
+		client_id, sink.name(), start_height, timestamp_to_match, latest_client_height
 	);
 	// If searching for existence of just a height we use a pure linear search because there's no
 	// valid comparison to be made and there might be missing values  for some heights
@@ -611,19 +625,23 @@ pub async fn find_suitable_proof_height_for_client(
 		for height in start_height.revision_height..=latest_client_height.revision_height {
 			let temp_height = Height::new(start_height.revision_number, height);
 			let consensus_state =
-				chain.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
+				sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
 			if consensus_state.is_none() {
 				continue
 			}
-			let proof_height = chain.get_proof_height(temp_height).await;
+			let proof_height = source.get_proof_height(temp_height).await;
 			if proof_height != temp_height {
-				let consensus_state_with_proof =
-					chain.query_client_consensus(at, client_id.clone(), proof_height).await.ok();
-				if consensus_state_with_proof.is_none() {
+				let has_consensus_state_with_proof = sink
+					.query_client_consensus(at, client_id.clone(), proof_height)
+					.await
+					.ok()
+					.map(|x| x.consensus_state.is_some())
+					.unwrap_or_default();
+				if !has_consensus_state_with_proof {
 					continue
 				}
 			}
-
+			log::info!("Found proof height on {} as {}:{}", sink.name(), temp_height, proof_height);
 			return Some(temp_height)
 		}
 	} else {
@@ -638,16 +656,20 @@ pub async fn find_suitable_proof_height_for_client(
 			let mid = (end + start) / 2;
 			let temp_height = Height::new(start_height.revision_number, mid);
 			let consensus_state =
-				chain.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
+				sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
 			if consensus_state.is_none() {
 				start += 1;
 				continue
 			}
-			let proof_height = chain.get_proof_height(temp_height).await;
+			let proof_height = source.get_proof_height(temp_height).await;
 			if proof_height != temp_height {
-				let consensus_state_with_proof =
-					chain.query_client_consensus(at, client_id.clone(), proof_height).await.ok();
-				if consensus_state_with_proof.is_none() {
+				let has_consensus_state_with_proof = sink
+					.query_client_consensus(at, client_id.clone(), proof_height)
+					.await
+					.ok()
+					.map(|x| x.consensus_state.is_some())
+					.unwrap_or_default();
+				if !has_consensus_state_with_proof {
 					start += 1;
 					continue
 				}
@@ -666,18 +688,20 @@ pub async fn find_suitable_proof_height_for_client(
 		let start_height = Height::new(start_height.revision_number, start);
 
 		let consensus_state =
-			chain.query_client_consensus(at, client_id.clone(), start_height).await.ok();
+			sink.query_client_consensus(at, client_id.clone(), start_height).await.ok();
 		if let Some(consensus_state) = consensus_state {
 			let consensus_state =
 				AnyConsensusState::try_from(consensus_state.consensus_state?).ok()?;
 			if consensus_state.timestamp().nanoseconds() >= timestamp_to_match.nanoseconds() {
-				let proof_height = chain.get_proof_height(start_height).await;
+				let proof_height = source.get_proof_height(start_height).await;
 				if proof_height != start_height {
-					let consensus_state_with_proof = chain
+					let has_consensus_state_with_proof = sink
 						.query_client_consensus(at, client_id.clone(), proof_height)
 						.await
-						.ok();
-					if consensus_state_with_proof.is_some() {
+						.ok()
+						.map(|x| x.consensus_state.is_some())
+						.unwrap_or_default();
+					if has_consensus_state_with_proof {
 						return Some(start_height)
 					}
 				}

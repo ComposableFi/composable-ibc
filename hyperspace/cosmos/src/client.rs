@@ -27,7 +27,7 @@ use ics07_tendermint::{
 	merkle::convert_tm_to_ics_merkle_proof,
 };
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
-use primitives::{Chain, IbcProvider, KeyProvider, UndeliveredType, UpdateType};
+use primitives::{Chain, IbcProvider, KeyProvider, RelayerState, UndeliveredType, UpdateType};
 use prost::Message;
 use quick_cache::sync::Cache;
 use rand::Rng;
@@ -62,6 +62,10 @@ fn default_fee_denom() -> String {
 
 fn default_fee_amount() -> String {
 	DEFAULT_FEE_AMOUNT.to_string()
+}
+
+fn default_skip_optional_client_updates() -> bool {
+	true
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -177,6 +181,8 @@ pub struct CosmosClient<H> {
 	pub maybe_has_undelivered_packets: Arc<Mutex<HashMap<UndeliveredType, bool>>>,
 	/// Light-client blocks cache
 	pub light_block_cache: Arc<Cache<TmHeight, LightBlock>>,
+	/// Relayer data
+	pub relayer_state: RelayerState,
 }
 
 /// config options for [`ParachainClient`]
@@ -238,6 +244,9 @@ pub struct CosmosClientConfig {
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 	/// The key that signs transactions
 	pub mnemonic: String,
+	/// Skip optional client updates
+	#[serde(default = "default_skip_optional_client_updates")]
+	pub skip_optional_client_updates: bool,
 }
 
 impl<H> CosmosClient<H>
@@ -292,6 +301,9 @@ where
 			rpc_call_delay: Duration::from_millis(1000),
 			maybe_has_undelivered_packets: Default::default(),
 			light_block_cache: Arc::new(Cache::new(100000)),
+			relayer_state: RelayerState {
+				skip_optional_client_updates: config.skip_optional_client_updates,
+			},
 		})
 	}
 
@@ -394,10 +406,10 @@ where
 				let client = client.clone();
 				let duration = Duration::from_millis(rand::thread_rng().gen_range(0..to) as u64);
 				let fut = async move {
-					log::trace!(target: "hyperspace_cosmos", "Fetching header at height {:?} {:?}", height, tokio::task::id());
+					log::trace!(target: "hyperspace_cosmos", "Fetching header at height {:?}", height);
 					let latest_light_block =
 						client.fetch_light_block_with_cache(height.try_into()?, duration).await?;
-					log::trace!(target: "hyperspace_cosmos", "end Fetching header {:?}", tokio::task::id());
+					// log::trace!(target: "hyperspace_cosmos", "end Fetching header");
 
 					let height =
 						TmHeight::try_from(trusted_height.revision_height).map_err(|e| {
@@ -406,11 +418,12 @@ where
 								client.name, e
 							))
 						})?;
-					log::trace!(target: "hyperspace_cosmos", "end Fetching header 2 {:?}", tokio::task::id());
+					// log::trace!(target: "hyperspace_cosmos", "end Fetching header 2");
 
 					let trusted_light_block =
 						client.fetch_light_block_with_cache(height.increment(), duration).await?;
-					log::trace!(target: "hyperspace_cosmos", "end Fetching header 3 {:?}", tokio::task::id());
+					// log::trace!(target: "hyperspace_cosmos", "end Fetching header 3 {:?}",
+					// tokio::task::id());
 
 					let update_type = match is_validators_equal(
 						&latest_light_block.validators,
@@ -419,7 +432,8 @@ where
 						true => UpdateType::Optional,
 						false => UpdateType::Mandatory,
 					};
-					log::trace!(target: "hyperspace_cosmos", "end Fetching header 4 {:?}", tokio::task::id());
+					// log::trace!(target: "hyperspace_cosmos", "end Fetching header 4 {:?}",
+					// tokio::task::id());
 
 					/*
 					Fetching header at height 1509 Id(15197)

@@ -66,7 +66,7 @@ use pallet_ibc::Timeout;
 use parachain::{ParachainClient, ParachainClientConfig};
 use primitives::{
 	mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, LightClientSync, MisbehaviourHandler,
-	UpdateType,
+	RelayerState, UpdateType,
 };
 use serde::{Deserialize, Serialize};
 use std::{pin::Pin, time::Duration};

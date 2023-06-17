@@ -638,6 +638,7 @@ where
 		.expect("Should not panic, same struct from different crates");
 
 	let authority_set_changed_scheduled = find_scheduled_change(&target).is_some();
+	log::info!(target: "hyperspace_parachain", "authority_set_changed_scheduled = {authority_set_changed_scheduled}, timeout_update_required = {timeout_update_required}, is_update_required = {is_update_required}");
 	// if validator set has changed this is a mandatory update
 	let update_type =
 		match authority_set_changed_scheduled || timeout_update_required || is_update_required {

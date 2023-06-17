@@ -39,7 +39,7 @@ use itertools::Itertools;
 use jsonrpsee_ws_client::WsClientBuilder;
 use light_client_common::config::{EventRecordT, RuntimeCall, RuntimeTransactions};
 use pallet_ibc::light_clients::AnyClientMessage;
-use primitives::{mock::LocalClientTypes, Chain, IbcProvider, MisbehaviourHandler};
+use primitives::{mock::LocalClientTypes, Chain, IbcProvider, MisbehaviourHandler, RelayerState};
 use sp_core::{twox_128, H256};
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
@@ -381,6 +381,14 @@ where
 
 	fn set_rpc_call_delay(&mut self, delay: Duration) {
 		self.rpc_call_delay = delay;
+	}
+
+	fn relayer_state(&self) -> &RelayerState {
+		&self.relayer_state
+	}
+
+	fn relayer_state_mut(&mut self) -> &mut RelayerState {
+		&mut self.relayer_state
 	}
 }
 

@@ -71,31 +71,59 @@ macro_rules! process_finality_event {
 
 				let mut maybe_required_to_submit_proof_at: Option<ibc::Height> = None;
 				let mut source_has_undelivered_acks =
-					$source.has_undelivered_sequences(UndeliveredType::Acks) ||
+					// $source.has_undelivered_sequences(UndeliveredType::Acks) ||
 					$source.has_undelivered_sequences(UndeliveredType::Sequences) ||
-					$source.has_undelivered_sequences(UndeliveredType::Timeouts);
-				let block_proof_height_difference = proof_height - height;
+					$source.has_undelivered_sequences(UndeliveredType::Sends) ;
+				let mut sink_has_undelivered_acks = $sink.has_undelivered_sequences(UndeliveredType::Acks) ||
+					$sink.has_undelivered_sequences(UndeliveredType::Timeouts);
 
 				// let mut source_has_undelivered_seqs = $source.has_undelivered_sequences(UndeliveredType::Sequences);
 				// let mut maybe_required_to_submit_proof_at: Option<ibc::Height> = None;
 				log::trace!(
 					target: "hyperspace",
-					"has undelivered seqs: [{}:{}, {}:{}], has undelivered acks: [{}:{}, {}:{}]",
-					$source.name(), $source.has_undelivered_sequences(UndeliveredType::Sequences), $sink.name(), $sink.has_undelivered_sequences(UndeliveredType::Sequences),
-					$source.name(), $source.has_undelivered_sequences(UndeliveredType::Acks), $sink.name(), $sink.has_undelivered_sequences(UndeliveredType::Acks),
+					"{} has undelivered seqs: [{:?}:{}, {:?}:{}, {:?}:{}, {:?}:{}]",
+					$source.name(), UndeliveredType::Sequences, $source.has_undelivered_sequences(UndeliveredType::Sequences),
+					UndeliveredType::Acks, $source.has_undelivered_sequences(UndeliveredType::Acks),
+					UndeliveredType::Timeouts, $source.has_undelivered_sequences(UndeliveredType::Timeouts),
+					UndeliveredType::Sends, $source.has_undelivered_sequences(UndeliveredType::Sends),
 				);
 
-				let mut mandatory_updates_for_undelivered_seqs = Vec::new();
-				if source_has_undelivered_acks && !updates.is_empty() {
+
+				log::trace!(
+					target: "hyperspace",
+					"{} has undelivered seqs: [{:?}:{}, {:?}:{}, {:?}:{}, {:?}:{}]",
+					$sink.name(), UndeliveredType::Sequences, $sink.has_undelivered_sequences(UndeliveredType::Sequences),
+					UndeliveredType::Acks, $sink.has_undelivered_sequences(UndeliveredType::Acks),
+					UndeliveredType::Timeouts, $sink.has_undelivered_sequences(UndeliveredType::Timeouts),
+					UndeliveredType::Sends, $sink.has_undelivered_sequences(UndeliveredType::Sends),
+				);
+
+				let mut mandatory_updates_for_undelivered_seqs = HashSet::new();
+				let update_heights = updates.iter().map(|(_, height, ..)| height.revision_height).collect::<HashSet<_>>();
+				if (sink_has_undelivered_acks || source_has_undelivered_acks) && !updates.is_empty() {
+					// let max_height = update_heights.iter().max().unwrap();
+					let (_, height, ..) = updates.first().unwrap().clone();
+					let proof_height = $source.get_proof_height(*height).await;
+					let block_proof_height_difference = proof_height.revision_height - height.revision_height;
+					log::info!("block_proof_height_difference = {block_proof_height_difference}");
+					// if block_proof_height_difference > 1 {
+					// 	panic!("Chains with more than 1 block difference for proofs are not supported yet")
+					// }
 					let needed_updates_num = if block_proof_height_difference > 0 { 2 } else { 1 };
-					let (last_update, height, ..) = update.last().unwrap().clone();
-					// mandatory_updates_for_undelivered_seqs.
-					for (msg_update_client, height, ..) in updates.iter().rev() {
+					for (_, height, ..) in updates.iter().rev() {
+						if let Some(prev_height) = height.revision_height.checked_sub(block_proof_height_difference) {
+							if update_heights.contains(&prev_height) {
+								mandatory_updates_for_undelivered_seqs.insert(height.revision_height);
+								mandatory_updates_for_undelivered_seqs.insert(prev_height);
+							}
+						}
 						if mandatory_updates_for_undelivered_seqs.len() == needed_updates_num {
 							break;
 						}
 					}
 				}
+				log::info!("mandatory_updates_for_undelivered_seqs = {mandatory_updates_for_undelivered_seqs:?}");
+				log::info!("update_heights = {update_heights:?}");
 
 				for (msg_update_client, height, events, update_type) in updates {
 					if let Some(metrics) = $metrics.as_mut() {
@@ -123,44 +151,36 @@ macro_rules! process_finality_event {
 						messages.len(), timeout_msgs.len(), update_type.is_optional(),
 					);
 
+					let need_to_send_proofs_for_sequences = (sink_has_undelivered_acks || source_has_undelivered_acks) && mandatory_updates_for_undelivered_seqs.contains(&height.revision_height);
+					let relayer_state = $source.relayer_state();
+					let skip_optional_updates = relayer_state.skip_optional_client_updates;
+
 					// We want to send client update if packet messages exist but where not sent due
 					// to a connection delay even if client update message is optional
 					match (
-						// TODO: we actually man send only when timeout of some packet has reached,
+						// TODO: we actually may send only when timeout of some packet has reached,
 						// not when we have *any* undelivered packets. But this requires rewriting
 						// `find_suitable_proof_height_for_client` function, that uses binary
 						// search, which won't work in this case
-						update_type.is_optional(), //  && !$source.has_undelivered_sequences(UndeliveredType::Sequences),
-						source_has_undelivered_acks || maybe_required_to_submit_proof_at == Some(height),
+						skip_optional_updates && update_type.is_optional() && !need_to_send_proofs_for_sequences,
 						has_packet_events(&event_types),
 						messages.is_empty(),
 					) {
-						(true, true, ..) => {
-							// if source_has_undelivered_seqs {
-							// 	source_has_undelivered_seqs = false;
-							// }
-							if source_has_undelivered_acks {
-								source_has_undelivered_acks = false;
-							}
-							if maybe_required_to_submit_proof_at.is_none() {
-								let proof_height = $source.get_proof_height(height).await;
-								if proof_height != height {
-									maybe_required_to_submit_proof_at = Some(proof_height);
-								}
-							} else {
-								maybe_required_to_submit_proof_at = None;
-							}
-							log::info!("Sending one optional update because source ({}) chain has undelivered sequences", $sink.name());
-						}
-						(true, false, false, true) => {
+						(true, false, true) => {
 							// skip sending ibc messages if no new events
 							log::info!("Skipping finality notification for {}", $sink.name());
 							continue
 						},
-						(false, _, _, true) => log::info!(
-							"Sending mandatory client update message for {}",
-							$sink.name()
-						),
+						(false, _, true) => {
+							if update_type.is_optional() && need_to_send_proofs_for_sequences {
+								log::info!("Sending an optional update because source ({}) chain has undelivered sequences", $sink.name());
+							} else {
+								log::info!(
+									"Sending mandatory client update message for {}",
+									$sink.name()
+								)
+							}
+						},
 						_ => log::info!(
 							"Received finalized events from: {} {event_types:#?}",
 							$source.name()
@@ -169,21 +189,21 @@ macro_rules! process_finality_event {
 					msgs.push(msg_update_client);
 					msgs.append(&mut messages);
 				}
-				if source_has_undelivered_acks && !updates.is_empty() {
-					let mut updates = updates;
-					let (msg_update_client, height, ..) = updates.pop().unwrap();
-					let proof_height = $source.get_proof_height(height).await;
-					let is_two_updates_required = proof_height != height;
-					if is_two_updates_required {
-						if updates.len() < 2 {
-							log::debug!("Failed to send client update message for {} because it is required to send two updates but only one is available", $sink.name());
-						} else {
-							msgs.push(msg_update_client);
-						}
-					} else {
-						msgs.push(msg_update_client);
-					}
-				}
+				// if source_has_undelivered_acks && !updates.is_empty() {
+				// 	let mut updates = updates;
+				// 	let (msg_update_client, height, ..) = updates.pop().unwrap();
+				// 	let proof_height = $source.get_proof_height(height).await;
+				// 	let is_two_updates_required = proof_height != height;
+				// 	if is_two_updates_required {
+				// 		if updates.len() < 2 {
+				// 			log::debug!("Failed to send client update message for {} because it is required to send two updates but only one is available", $sink.name());
+				// 		} else {
+				// 			msgs.push(msg_update_client);
+				// 		}
+				// 	} else {
+				// 		msgs.push(msg_update_client);
+				// 	}
+				// }
 				msgs.extend(ready_packets);
 
 				if !msgs.is_empty() {
@@ -1124,6 +1144,26 @@ macro_rules! chains {
 						Self::$name(chain) => chain.set_rpc_call_delay(d),
 					)*
 					Self::Wasm(c) => c.inner.set_rpc_call_delay(d),
+				}
+			}
+
+			fn relayer_state(&self) -> &RelayerState {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.relayer_state(),
+					)*
+					Self::Wasm(c) => c.inner.relayer_state(),
+				}
+			}
+
+			fn relayer_state_mut(&mut self) -> &mut RelayerState {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.relayer_state_mut(),
+					)*
+					Self::Wasm(c) => c.inner.relayer_state_mut(),
 				}
 			}
 		}
