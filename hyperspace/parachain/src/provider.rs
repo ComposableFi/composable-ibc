@@ -501,9 +501,6 @@ where
 			.await
 			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
 
-		self.on_undelivered_sequences(response.is_empty(), UndeliveredType::Acks)
-			.await?;
-
 		Ok(response)
 	}
 

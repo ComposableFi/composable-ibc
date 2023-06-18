@@ -14,7 +14,7 @@
 
 #![warn(unused_variables)]
 
-use futures::{future::ready, StreamExt};
+use futures::{future::ready, StreamExt, TryStream};
 use primitives::Chain;
 
 pub mod chain;
@@ -55,16 +55,25 @@ where
 	let (mut chain_a_finality, mut chain_b_finality) =
 		(chain_a.finality_notifications().await?, chain_b.finality_notifications().await?);
 
+	// Introduce altering between branches so that each branch gets a chance to execute first after
+	// another one
+	let mut first_executed = false;
+
 	// loop forever
 	loop {
 		tokio::select! {
 			// new finality event from chain A
-			result = chain_a_finality.next() => {
+			result = chain_a_finality.next(), if !first_executed => {
+				first_executed = true;
 				process_finality_event!(chain_a, chain_b, chain_a_metrics, mode, result, chain_a_finality, chain_b_finality)
 			}
 			// new finality event from chain B
 			result = chain_b_finality.next() => {
+				first_executed = false;
 				process_finality_event!(chain_b, chain_a, chain_b_metrics, mode, result, chain_b_finality, chain_a_finality)
+			}
+			else => {
+				first_executed = false;
 			}
 		}
 	}

@@ -70,11 +70,9 @@ macro_rules! process_finality_event {
 				let mut msgs = Vec::new();
 
 				let mut maybe_required_to_submit_proof_at: Option<ibc::Height> = None;
-				let mut source_has_undelivered_acks =
-					// $source.has_undelivered_sequences(UndeliveredType::Acks) ||
-					$source.has_undelivered_sequences(UndeliveredType::Sequences) ||
-					$source.has_undelivered_sequences(UndeliveredType::Sends) ;
-				let mut sink_has_undelivered_acks = $sink.has_undelivered_sequences(UndeliveredType::Acks) ||
+				let mut sink_has_undelivered_acks =
+					$sink.has_undelivered_sequences(UndeliveredType::Recvs) ||
+					$sink.has_undelivered_sequences(UndeliveredType::Acks) ||
 					$sink.has_undelivered_sequences(UndeliveredType::Timeouts);
 
 				// let mut source_has_undelivered_seqs = $source.has_undelivered_sequences(UndeliveredType::Sequences);
@@ -85,9 +83,8 @@ macro_rules! process_finality_event {
 					$source.name(), UndeliveredType::Sequences, $source.has_undelivered_sequences(UndeliveredType::Sequences),
 					UndeliveredType::Acks, $source.has_undelivered_sequences(UndeliveredType::Acks),
 					UndeliveredType::Timeouts, $source.has_undelivered_sequences(UndeliveredType::Timeouts),
-					UndeliveredType::Sends, $source.has_undelivered_sequences(UndeliveredType::Sends),
+					UndeliveredType::Recvs, $source.has_undelivered_sequences(UndeliveredType::Recvs),
 				);
-
 
 				log::trace!(
 					target: "hyperspace",
@@ -95,12 +92,12 @@ macro_rules! process_finality_event {
 					$sink.name(), UndeliveredType::Sequences, $sink.has_undelivered_sequences(UndeliveredType::Sequences),
 					UndeliveredType::Acks, $sink.has_undelivered_sequences(UndeliveredType::Acks),
 					UndeliveredType::Timeouts, $sink.has_undelivered_sequences(UndeliveredType::Timeouts),
-					UndeliveredType::Sends, $sink.has_undelivered_sequences(UndeliveredType::Sends),
+					UndeliveredType::Recvs, $sink.has_undelivered_sequences(UndeliveredType::Recvs),
 				);
 
 				let mut mandatory_updates_for_undelivered_seqs = HashSet::new();
 				let update_heights = updates.iter().map(|(_, height, ..)| height.revision_height).collect::<HashSet<_>>();
-				if (sink_has_undelivered_acks || source_has_undelivered_acks) && !updates.is_empty() {
+				if (sink_has_undelivered_acks /*|| source_has_undelivered_acks*/) && !updates.is_empty() {
 					// let max_height = update_heights.iter().max().unwrap();
 					let (_, height, ..) = updates.first().unwrap().clone();
 					let proof_height = $source.get_proof_height(*height).await;
@@ -151,7 +148,7 @@ macro_rules! process_finality_event {
 						messages.len(), timeout_msgs.len(), update_type.is_optional(),
 					);
 
-					let need_to_send_proofs_for_sequences = (sink_has_undelivered_acks || source_has_undelivered_acks) && mandatory_updates_for_undelivered_seqs.contains(&height.revision_height);
+					let need_to_send_proofs_for_sequences = (sink_has_undelivered_acks /*|| source_has_undelivered_acks*/) && mandatory_updates_for_undelivered_seqs.contains(&height.revision_height);
 					let relayer_state = $source.relayer_state();
 					let skip_optional_updates = relayer_state.skip_optional_client_updates;
 

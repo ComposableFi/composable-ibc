@@ -107,9 +107,8 @@ pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: impl Into<Vec<u8>>) ->
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum UndeliveredType {
-	Sequences,
 	Acks,
-	Sends,
+	Recvs,
 	Timeouts,
 }
 
@@ -622,7 +621,9 @@ pub async fn find_suitable_proof_height_for_client(
 	// If searching for existence of just a height we use a pure linear search because there's no
 	// valid comparison to be made and there might be missing values  for some heights
 	if timestamp_to_match.is_none() {
-		for height in start_height.revision_height..=latest_client_height.revision_height {
+		// try to find latest states first, because relayer's strategy is to submit the most
+		// recent ones
+		for height in (start_height.revision_height..=latest_client_height.revision_height).rev() {
 			let temp_height = Height::new(start_height.revision_number, height);
 			let consensus_state =
 				sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
@@ -652,6 +653,46 @@ pub async fn find_suitable_proof_height_for_client(
 		if start > end {
 			return None
 		}
+
+		let proof_height = source.get_proof_height(latest_client_height).await;
+		let proof_diff = proof_height.revision_height - latest_client_height.revision_height;
+		let temp_height =
+			Height::new(latest_client_height.revision_number, end.saturating_sub(proof_diff));
+		let consensus_state =
+			sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
+		if let Some(consensus_state) = consensus_state {
+			let consensus_state =
+				AnyConsensusState::try_from(consensus_state.consensus_state?).ok()?;
+			if consensus_state.timestamp().nanoseconds() >= timestamp_to_match.nanoseconds() {
+				if proof_height != latest_client_height {
+					let has_consensus_state_with_proof = sink
+						.query_client_consensus(at, client_id.clone(), latest_client_height)
+						.await
+						.ok()
+						.map(|x| x.consensus_state.is_some())
+						.unwrap_or_default();
+					if has_consensus_state_with_proof {
+						log::debug!(
+							target: "hyperspace",
+							"Fast found proof height on {} as {}:{}", sink.name(), temp_height, latest_client_height
+						);
+						return Some(temp_height)
+					}
+				} else {
+					log::debug!(
+						target: "hyperspace",
+						"Fast found proof height on {} as {}:{}", sink.name(), temp_height, latest_client_height
+					);
+					return Some(temp_height)
+				}
+			}
+		}
+
+		// TODO: do we really need this part with binary search?
+		log::debug!(
+			target: "hyperspace",
+			"Entered binary search for proof height on {} for client {} starting at {}", sink.name(), client_id, start_height
+		);
 		while end - start > 1 {
 			let mid = (end + start) / 2;
 			let temp_height = Height::new(start_height.revision_number, mid);
@@ -704,6 +745,8 @@ pub async fn find_suitable_proof_height_for_client(
 					if has_consensus_state_with_proof {
 						return Some(start_height)
 					}
+				} else {
+					return Some(start_height)
 				}
 			}
 		}

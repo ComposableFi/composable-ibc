@@ -194,7 +194,7 @@ pub async fn query_ready_and_timed_out_packets(
 
 		let send_packets = source.query_send_packets(channel_id, port_id.clone(), seqs).await?;
 		log::trace!(target: "hyperspace", "SendPackets count: {}", send_packets.len());
-		let mut timeout_packets_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+		let mut recv_packets_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 		let source = Arc::new(source.clone());
 		let sink = Arc::new(sink.clone());
 		let mut timeout_packets_count = Arc::new(AtomicUsize::new(0));
@@ -210,8 +210,8 @@ pub async fn query_ready_and_timed_out_packets(
 					rand::thread_rng().gen_range(1..source.rpc_call_delay().as_millis() as u64),
 				);
 				let timeout_packets_count = timeout_packets_count.clone();
-				let send_packets_count = send_packets_count.clone();
-				timeout_packets_join_set.spawn(async move {
+				let recv_packets_count = send_packets_count.clone();
+				recv_packets_join_set.spawn(async move {
 					sleep(duration).await;
 					let source = &source;
 					let sink = &sink;
@@ -299,7 +299,7 @@ pub async fn query_ready_and_timed_out_packets(
 					if packet_height > latest_source_height_on_sink.revision_height {
 						// Sink does not have client update required to prove recv packet message
 						log::debug!(target: "hyperspace", "Skipping packet {:?} as sink does not have client update required to prove recv packet message", packet);
-						send_packets_count.fetch_add(1, Ordering::SeqCst);
+						recv_packets_count.fetch_add(1, Ordering::SeqCst);
 						return Ok(None)
 					}
 
@@ -348,7 +348,7 @@ pub async fn query_ready_and_timed_out_packets(
 			}
 		}
 
-		while let Some(result) = timeout_packets_join_set.join_next().await {
+		while let Some(result) = recv_packets_join_set.join_next().await {
 			let Some(either) = result?? else { continue };
 			match either {
 				Left(msg) => timeout_messages.push(msg),
@@ -364,7 +364,7 @@ pub async fn query_ready_and_timed_out_packets(
 
 		let sends_count = send_packets_count.load(Ordering::SeqCst);
 		log::debug!(target: "hyperspace", "Found {sends_count} sent packets");
-		sink.on_undelivered_sequences(sends_count == 0, UndeliveredType::Sends).await?;
+		sink.on_undelivered_sequences(sends_count == 0, UndeliveredType::Recvs).await?;
 
 		// Get acknowledgement messages
 		if source_channel_end.state == State::Closed {
