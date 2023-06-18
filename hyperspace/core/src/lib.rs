@@ -14,8 +14,8 @@
 
 #![warn(unused_variables)]
 
-use futures::{future::ready, StreamExt, TryStream};
-use primitives::Chain;
+use futures::{future::ready, Stream, StreamExt, TryStream};
+use primitives::{Chain, IbcProvider};
 
 pub mod chain;
 pub mod command;
@@ -25,7 +25,9 @@ mod macros;
 pub mod packets;
 pub mod queue;
 pub mod substrate;
+mod utils;
 
+use crate::utils::RecentStream;
 use events::{has_packet_events, parse_events};
 use futures::TryFutureExt;
 use ibc::events::IbcEvent;
@@ -52,8 +54,9 @@ where
 	A: Chain,
 	B: Chain,
 {
-	let (mut chain_a_finality, mut chain_b_finality) =
-		(chain_a.finality_notifications().await?, chain_b.finality_notifications().await?);
+	let stream_a = RecentStream::new(chain_a.finality_notifications().await?);
+	let stream_b = RecentStream::new(chain_b.finality_notifications().await?);
+	let (mut chain_a_finality, mut chain_b_finality) = (stream_a, stream_b);
 
 	// Introduce altering between branches so that each branch gets a chance to execute first after
 	// another one
