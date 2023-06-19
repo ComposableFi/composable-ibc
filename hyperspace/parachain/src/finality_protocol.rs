@@ -53,6 +53,7 @@ use std::{
 };
 
 use beefy_prover::helpers::unsafe_arc_cast;
+use grandpa_light_client_primitives::justification::find_forced_change;
 use grandpa_prover::{GrandpaJustification, JustificationNotification};
 use ibc::core::{
 	ics04_channel::packet::Packet,
@@ -636,7 +637,8 @@ where
 	let target = sp_runtime::generic::Header::<u32, BlakeTwo256>::decode(&mut &*target)
 		.expect("Should not panic, same struct from different crates");
 
-	let authority_set_changed_scheduled = find_scheduled_change(&target).is_some();
+	let authority_set_changed_scheduled =
+		find_scheduled_change(&target).is_some() || find_forced_change(&target).is_some();
 	// if validator set has changed this is a mandatory update
 	let update_type =
 		match authority_set_changed_scheduled || timeout_update_required || is_update_required {
