@@ -26,14 +26,16 @@ use ics07_tendermint::{
 	merkle::convert_tm_to_ics_merkle_proof,
 };
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
-use primitives::{Chain, IbcProvider, KeyProvider, RelayerState, UndeliveredType, UpdateType};
+use primitives::{
+	Chain, CommonClientConfig, CommonClientState, IbcProvider, KeyProvider, UpdateType,
+};
 use prost::Message;
 use quick_cache::sync::Cache;
 use rand::Rng;
 use ripemd::Ripemd160;
 use serde::{Deserialize, Serialize};
 use std::{
-	collections::{HashMap, HashSet},
+	collections::HashSet,
 	str::FromStr,
 	sync::{Arc, Mutex},
 	time::Duration,
@@ -61,10 +63,6 @@ fn default_fee_denom() -> String {
 
 fn default_fee_amount() -> String {
 	DEFAULT_FEE_AMOUNT.to_string()
-}
-
-fn default_skip_optional_client_updates() -> bool {
-	true
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -169,19 +167,10 @@ pub struct CosmosClient<H> {
 	/// Mutex used to sequentially send transactions. This is necessary because
 	/// account sequence numbers are not updated until the transaction is processed.
 	pub tx_mutex: Arc<tokio::sync::Mutex<()>>,
-	/// Delay between parallel RPC calls to be friendly with the node and avoid MaxSlotsExceeded
-	/// error
-	pub rpc_call_delay: Duration,
-	/// Used to determine whether client updates should be forced to send
-	/// even if it's optional. It's required, because some timeout packets
-	/// should use proof of the client states.
-	///
-	/// Set inside `on_undelivered_sequences`.
-	pub maybe_has_undelivered_packets: Arc<Mutex<HashMap<UndeliveredType, bool>>>,
 	/// Light-client blocks cache
 	pub light_block_cache: Arc<Cache<TmHeight, LightBlock>>,
 	/// Relayer data
-	pub relayer_state: RelayerState,
+	pub common_state: CommonClientState,
 }
 
 /// config options for [`ParachainClient`]
@@ -243,9 +232,9 @@ pub struct CosmosClientConfig {
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 	/// The key that signs transactions
 	pub mnemonic: String,
-	/// Skip optional client updates
-	#[serde(default = "default_skip_optional_client_updates")]
-	pub skip_optional_client_updates: bool,
+	/// Common client config
+	#[serde(flatten)]
+	pub common: CommonClientConfig,
 }
 
 impl<H> CosmosClient<H>
@@ -298,11 +287,11 @@ where
 			keybase,
 			_phantom: std::marker::PhantomData,
 			tx_mutex: Default::default(),
-			rpc_call_delay: Duration::from_millis(1000),
-			maybe_has_undelivered_packets: Default::default(),
 			light_block_cache: Arc::new(Cache::new(100000)),
-			relayer_state: RelayerState {
-				skip_optional_client_updates: config.skip_optional_client_updates,
+			common_state: CommonClientState {
+				skip_optional_client_updates: config.common.skip_optional_client_updates,
+				maybe_has_undelivered_packets: Default::default(),
+				rpc_call_delay: Duration::from_millis(1000),
 			},
 		})
 	}

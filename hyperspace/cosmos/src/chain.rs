@@ -19,7 +19,8 @@ use ibc_proto::{
 };
 use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::{
-	mock::LocalClientTypes, Chain, IbcProvider, LightClientSync, MisbehaviourHandler, RelayerState,
+	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, LightClientSync,
+	MisbehaviourHandler,
 };
 use prost::Message;
 use std::{pin::Pin, time::Duration};
@@ -247,26 +248,26 @@ where
 			tokio::spawn(ws_driver.run());
 			log::info!(target: "hyperspace_cosmos", "Reconnected to cosmos chain");
 			self.rpc_client = rpc_client;
-			self.rpc_call_delay = self.rpc_call_delay * 2;
+			self.common_state.rpc_call_delay = self.common_state.rpc_call_delay * 2;
 		}
 
 		Ok(())
 	}
 
 	fn rpc_call_delay(&self) -> Duration {
-		self.rpc_call_delay
+		self.common_state.rpc_call_delay
 	}
 
 	fn set_rpc_call_delay(&mut self, delay: Duration) {
-		self.rpc_call_delay = delay;
+		self.common_state.rpc_call_delay = delay;
 	}
 
-	fn relayer_state(&self) -> &RelayerState {
-		&self.relayer_state
+	fn common_state(&self) -> &CommonClientState {
+		&self.common_state
 	}
 
-	fn relayer_state_mut(&mut self) -> &mut RelayerState {
-		&mut self.relayer_state
+	fn common_state_mut(&mut self) -> &mut CommonClientState {
+		&mut self.common_state
 	}
 }
 

@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "rm -rf /tmp/polkadot-launch && polkadot-launch dev.json --verbose",
-    "dev-picasso": "rm -rf /tmp/polkadot-launch && polkadot-launch dev-picasso.json --verbose"
+    "dev": "rm -rf /tmp/polkadot-launch && polkadot-launch dev.json --verbose"
   },
   "keywords": [],
   "author": "",

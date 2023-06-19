@@ -15,7 +15,7 @@
 #![allow(clippy::all)]
 
 use std::{
-	collections::{BTreeMap, HashMap, HashSet},
+	collections::{BTreeMap, HashSet},
 	str::FromStr,
 	sync::{Arc, Mutex},
 	time::Duration,
@@ -59,7 +59,7 @@ use ics11_beefy::{
 	client_state::ClientState as BeefyClientState,
 	consensus_state::ConsensusState as BeefyConsensusState,
 };
-use primitives::{KeyProvider, RelayerState, UndeliveredType};
+use primitives::{CommonClientState, KeyProvider};
 
 use crate::{finality_protocol::FinalityProtocol, signer::ExtrinsicSigner};
 use grandpa_light_client_primitives::ParachainHeaderProofs;
@@ -116,17 +116,8 @@ pub struct ParachainClient<T: light_client_common::config::Config> {
 	pub max_extrinsic_weight: u64,
 	/// Finality protocol to use, eg Beefy, Grandpa
 	pub finality_protocol: FinalityProtocol,
-	/// Delay between parallel RPC calls to be friendly with the node and avoid MaxSlotsExceeded
-	/// error
-	pub rpc_call_delay: Duration,
-	/// Used to determine whether client updates should be forced to send
-	/// even if it's optional. It's required, because some timeout packets
-	/// should use proof of the client states.
-	///
-	/// Set inside `on_undelivered_sequences`.
-	pub maybe_has_undelivered_packets: Arc<Mutex<HashMap<UndeliveredType, bool>>>,
-	/// Relayer data
-	pub relayer_state: RelayerState,
+	/// Common relayer data
+	pub common_state: CommonClientState,
 }
 
 enum KeyType {
@@ -273,9 +264,11 @@ where
 			ss58_version: Ss58AddressFormat::from(config.ss58_version),
 			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist.into_iter().collect())),
 			finality_protocol: config.finality_protocol,
-			rpc_call_delay: DEFAULT_RPC_CALL_DELAY,
-			maybe_has_undelivered_packets: Default::default(),
-			relayer_state: Default::default(),
+			common_state: CommonClientState {
+				skip_optional_client_updates: true,
+				maybe_has_undelivered_packets: Arc::new(Mutex::new(Default::default())),
+				rpc_call_delay: DEFAULT_RPC_CALL_DELAY,
+			},
 		})
 	}
 }
@@ -305,7 +298,7 @@ where
 			para_client: self.para_client.clone(),
 			para_ws_client,
 			para_id: self.para_id,
-			rpc_call_delay: self.rpc_call_delay,
+			rpc_call_delay: self.common_state.rpc_call_delay,
 		}
 	}
 
@@ -589,7 +582,7 @@ where
 			para_client: self.para_client.clone(),
 			para_ws_client,
 			para_id: self.para_id,
-			rpc_call_delay: self.rpc_call_delay,
+			rpc_call_delay: self.common_state.rpc_call_delay,
 		};
 		let api = self.relay_client.storage();
 		let para_client_api = self.para_client.storage();

@@ -151,32 +151,7 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
 	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
 
-	// 3944
-	// 2023-05-17 17:33:36.035 TRACE tokio-runtime-worker pallet_ibc: [Parachain] in client :
-	// [store_consensus_state] >> client_id: ClientId("07-tendermint-0"), height = Height {
-	// revision: 1, height: 3932 },
-	let (height, _) = chain_b.latest_height_and_timestamp().await.unwrap();
-	let x = chain_b
-		.query_client_consensus(
-			height,
-			ClientId::new("07-tendermint", 0).unwrap(),
-			Height::new(1, 3776),
-		)
-		.await
-		.unwrap();
-	x.consensus_state.unwrap();
-
-	let (height, _) = chain_b.latest_height_and_timestamp().await.unwrap();
-	let x = chain_b
-		.query_client_consensus(
-			height,
-			ClientId::new("07-tendermint", 0).unwrap(),
-			Height::new(1, 3077),
-		)
-		.await
-		.unwrap();
-	x.consensus_state.unwrap();
-	// let asset_id = 1;
+	let asset_id = 1;
 
 	let mut join_set = tokio::task::JoinSet::new();
 

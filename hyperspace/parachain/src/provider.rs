@@ -51,7 +51,7 @@ use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
 	HostConsensusProof,
 };
-use primitives::{apply_prefix, Chain, IbcProvider, KeyProvider, UndeliveredType, UpdateType};
+use primitives::{apply_prefix, Chain, IbcProvider, KeyProvider, UpdateType};
 use sp_core::H256;
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
@@ -412,30 +412,6 @@ where
 			.await
 			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
 		Ok(res)
-	}
-
-	async fn on_undelivered_sequences(
-		&self,
-		is_empty: bool,
-		kind: UndeliveredType,
-	) -> Result<(), Self::Error> {
-		log::trace!(
-			target: "hyperspace_parachain",
-			"on_undelivered_sequences: {:?}, type: {kind:?}",
-			is_empty
-		);
-		self.maybe_has_undelivered_packets.lock().unwrap().insert(kind, !is_empty);
-		Ok(())
-	}
-
-	fn has_undelivered_sequences(&self, kind: UndeliveredType) -> bool {
-		self.maybe_has_undelivered_packets
-			.lock()
-			.unwrap()
-			.get(&kind)
-			.as_deref()
-			.cloned()
-			.unwrap_or_default()
 	}
 
 	async fn query_unreceived_acknowledgements(

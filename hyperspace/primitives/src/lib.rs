@@ -28,7 +28,15 @@ use ibc_proto::{
 	},
 };
 use rand::Rng;
-use std::{collections::HashSet, fmt::Debug, pin::Pin, str::FromStr, time::Duration};
+use serde::{Deserialize, Serialize};
+use std::{
+	collections::{HashMap, HashSet},
+	fmt::Debug,
+	pin::Pin,
+	str::FromStr,
+	sync::{Arc, Mutex},
+	time::Duration,
+};
 use tokio::{task::JoinSet, time::sleep};
 
 use crate::error::Error;
@@ -87,15 +95,71 @@ impl UpdateType {
 	}
 }
 
-/// A common data that all clients should keep.
-#[derive(Debug, Clone)]
-pub struct RelayerState {
+fn default_skip_optional_client_updates() -> bool {
+	true
+}
+
+// TODO: move other fields like `client_id`, `connection_id`, etc. here
+/// Common relayer parameters
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CommonClientConfig {
+	/// Skip optional client updates
+	#[serde(default = "default_skip_optional_client_updates")]
 	pub skip_optional_client_updates: bool,
 }
 
-impl Default for RelayerState {
+/// A common data that all clients should keep.
+#[derive(Debug, Clone)]
+pub struct CommonClientState {
+	/// Enable skipping client updates when possible.
+	pub skip_optional_client_updates: bool,
+	/// Used to determine whether client updates should be forced to send
+	/// even if it's optional. It's required, because some timeout packets
+	/// should use proof of the client states.
+	///
+	/// Set inside `on_undelivered_sequences`.
+	pub maybe_has_undelivered_packets: Arc<Mutex<HashMap<UndeliveredType, bool>>>,
+	/// Delay between parallel RPC calls to be friendly with the node and avoid MaxSlotsExceeded
+	/// error
+	pub rpc_call_delay: Duration,
+}
+
+impl Default for CommonClientState {
 	fn default() -> Self {
-		Self { skip_optional_client_updates: true }
+		Self {
+			skip_optional_client_updates: true,
+			maybe_has_undelivered_packets: Default::default(),
+			rpc_call_delay: Default::default(),
+		}
+	}
+}
+
+impl CommonClientState {
+	pub async fn on_undelivered_sequences(&self, is_empty: bool, kind: UndeliveredType) {
+		log::trace!(
+			target: "hyperspace",
+			"on_undelivered_sequences: {:?}, type: {kind:?}",
+			is_empty
+		);
+		self.maybe_has_undelivered_packets.lock().unwrap().insert(kind, !is_empty);
+	}
+
+	pub fn has_undelivered_sequences(&self, kind: UndeliveredType) -> bool {
+		self.maybe_has_undelivered_packets
+			.lock()
+			.unwrap()
+			.get(&kind)
+			.as_deref()
+			.cloned()
+			.unwrap_or_default()
+	}
+
+	pub fn rpc_call_delay(&self) -> Duration {
+		self.rpc_call_delay
+	}
+
+	pub fn set_rpc_call_delay(&mut self, delay: Duration) {
+		self.rpc_call_delay = delay;
 	}
 }
 
@@ -105,6 +169,10 @@ pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: impl Into<Vec<u8>>) ->
 	commitment_prefix
 }
 
+/// A type of undelivered sequences (packets). Can be:
+/// - acknowledgement packet (`Acks`),
+/// - receive packet (`Recvs`)
+/// - timeout packet (`Timeouts`)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum UndeliveredType {
 	Acks,
@@ -243,14 +311,6 @@ pub trait IbcProvider {
 		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error>;
-
-	async fn on_undelivered_sequences(
-		&self,
-		is_empty: bool,
-		kind: UndeliveredType,
-	) -> Result<(), Self::Error>;
-
-	fn has_undelivered_sequences(&self, kind: UndeliveredType) -> bool;
 
 	/// Given a list of packet acknowledgements sequences from the sink chain
 	/// return a list of acknowledgement sequences that have not been received on the source chain
@@ -477,13 +537,25 @@ pub trait Chain:
 
 	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error>;
 
-	fn rpc_call_delay(&self) -> Duration;
+	fn common_state(&self) -> &CommonClientState;
 
-	fn set_rpc_call_delay(&mut self, delay: Duration);
+	fn common_state_mut(&mut self) -> &mut CommonClientState;
 
-	fn relayer_state(&self) -> &RelayerState;
+	async fn on_undelivered_sequences(&self, is_empty: bool, kind: UndeliveredType) {
+		self.common_state().on_undelivered_sequences(is_empty, kind).await
+	}
 
-	fn relayer_state_mut(&mut self) -> &mut RelayerState;
+	fn has_undelivered_sequences(&self, kind: UndeliveredType) -> bool {
+		self.common_state().has_undelivered_sequences(kind)
+	}
+
+	fn rpc_call_delay(&self) -> Duration {
+		self.common_state().rpc_call_delay()
+	}
+
+	fn set_rpc_call_delay(&mut self, delay: Duration) {
+		self.common_state_mut().set_rpc_call_delay(delay)
+	}
 }
 
 /// Returns undelivered packet sequences that have been sent out from

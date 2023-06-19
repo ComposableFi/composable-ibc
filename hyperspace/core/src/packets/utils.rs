@@ -194,7 +194,6 @@ pub async fn verify_delay_passed(
 			);
 			let _cs = sink
 				.query_client_consensus(sink_height, source.client_id(), actual_proof_height)
-				// .query_client_consensus(actual_proof_height, source.client_id())
 				.await
 				.unwrap()
 				.consensus_state

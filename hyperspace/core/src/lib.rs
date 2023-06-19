@@ -296,8 +296,8 @@ async fn process_updates<A: Chain, B: Chain>(
 		let need_to_send_proofs_for_sequences = (sink_has_undelivered_acks ||
 			source_has_undelivered_acks) &&
 			mandatory_heights_for_undelivered_seqs.contains(&height.revision_height);
-		let relayer_state = source.relayer_state();
-		let skip_optional_updates = relayer_state.skip_optional_client_updates;
+		let common_state = source.common_state();
+		let skip_optional_updates = common_state.skip_optional_client_updates;
 
 		// We want to send client update if packet messages exist but where not sent due
 		// to a connection delay even if client update message is optional
@@ -381,7 +381,10 @@ async fn find_mandatory_heights_for_undelivered_sequences<A: Chain>(
 		.collect::<HashSet<_>>();
 	let (_, height, ..) = updates.first().unwrap().clone();
 	let proof_height = source.get_proof_height(*height).await;
-	let block_proof_height_difference = proof_height.revision_height - height.revision_height;
+	let block_proof_height_difference = proof_height
+		.revision_height
+		.checked_sub(height.revision_height)
+		.expect("proof height is less than update height");
 	let needed_updates_num = if block_proof_height_difference > 0 { 2 } else { 1 };
 	for (_, height, ..) in updates.iter().rev() {
 		if let Some(prev_height) = height.revision_height.checked_sub(block_proof_height_difference)

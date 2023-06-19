@@ -644,26 +644,6 @@ macro_rules! chains {
 				}
 			}
 
-			async fn on_undelivered_sequences(&self, is_empty: bool, kind: primitives::UndeliveredType) -> Result<(), Self::Error> {
-				match self {
-					$(
-						$(#[$($meta)*])*
-						Self::$name(chain) => chain.on_undelivered_sequences(is_empty, kind).await.map_err(AnyError::$name),
-					)*
-					Self::Wasm(c) => c.inner.on_undelivered_sequences(is_empty, kind).await,
-				}
-			}
-
-			fn has_undelivered_sequences(&self, kind: primitives::UndeliveredType) -> bool {
-				match self {
-					$(
-						$(#[$($meta)*])*
-						Self::$name(chain) => chain.has_undelivered_sequences(kind),
-					)*
-					Self::Wasm(c) => c.inner.has_undelivered_sequences(kind),
-				}
-			}
-
 			async fn query_connection_id_from_tx_hash(
 				&self,
 				tx_id: Self::TransactionId,
@@ -888,23 +868,23 @@ macro_rules! chains {
 				}
 			}
 
-			fn relayer_state(&self) -> &RelayerState {
+			fn common_state(&self) -> &CommonClientState {
 				match self {
 					$(
 						$(#[$($meta)*])*
-						Self::$name(chain) => chain.relayer_state(),
+						Self::$name(chain) => chain.common_state(),
 					)*
-					Self::Wasm(c) => c.inner.relayer_state(),
+					Self::Wasm(c) => c.inner.common_state(),
 				}
 			}
 
-			fn relayer_state_mut(&mut self) -> &mut RelayerState {
+			fn common_state_mut(&mut self) -> &mut CommonClientState {
 				match self {
 					$(
 						$(#[$($meta)*])*
-						Self::$name(chain) => chain.relayer_state_mut(),
+						Self::$name(chain) => chain.common_state_mut(),
 					)*
-					Self::Wasm(c) => c.inner.relayer_state_mut(),
+					Self::Wasm(c) => c.inner.common_state_mut(),
 				}
 			}
 		}

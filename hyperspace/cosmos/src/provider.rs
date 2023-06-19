@@ -61,9 +61,7 @@ use ics08_wasm::msg::MsgPushNewWasmCode;
 use pallet_ibc::light_clients::{
 	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
 };
-use primitives::{
-	mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UndeliveredType, UpdateType,
-};
+use primitives::{mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType};
 use prost::Message;
 use rand::Rng;
 use std::{collections::HashSet, pin::Pin, str::FromStr, time::Duration};
@@ -156,9 +154,6 @@ where
 			}
 		}
 
-		// we don't submit events for the last block, because we don't have a proof for it
-		// assert_eq!(block_events.len(), update_headers.len(), "block events and updates must
-		// match"); just return this error and not panic
 		if block_events.len() != update_headers.len() {
 			return Err(anyhow::anyhow!(
 				"block events and updates must match, got {} and {}",
@@ -590,29 +585,6 @@ where
 		Ok(commitment_sequences)
 	}
 
-	async fn on_undelivered_sequences(
-		&self,
-		is_empty: bool,
-		kind: UndeliveredType,
-	) -> Result<(), Self::Error> {
-		log::trace!(
-			target: "hyperspace_cosmos",
-			"on_undelivered_sequences: {:?}, type: {kind:?}",
-			is_empty
-		);
-		self.maybe_has_undelivered_packets.lock().unwrap().insert(kind, !is_empty);
-		Ok(())
-	}
-
-	fn has_undelivered_sequences(&self, kind: UndeliveredType) -> bool {
-		self.maybe_has_undelivered_packets
-			.lock()
-			.unwrap()
-			.get(&kind)
-			.cloned()
-			.unwrap_or_default()
-	}
-
 	async fn query_unreceived_acknowledgements(
 		&self,
 		_at: Height,
@@ -744,40 +716,7 @@ where
 			target: "hyperspace_cosmos",
 			"query_recv_packets: channel_id: {}, port_id: {}, seqs: {:?}", channel_id, port_id, seqs
 		);
-		/*
-		1146
 
-		message: Ics04ChannelSubdetail { source: PacketVerificationFailed(PacketVerificationFailedSubdetail { sequence: Sequence(1), source: ClientError(ClientErrorSubdetail { client_type: 07-tendermint, inner: StringTracer: ics23 commitment error: invalid merkle proof }) }) }
-
-		in channel : [channel_end] >> port_id = PortId("transfer"), channel_id = ChannelId("channel-0")
-		in channel : [channel_end] >> channel_end = ChannelEnd { state: Open, ordering: Unordered, remote: Counterparty { port_id: PortId("transfer"), channel_id: Some(ChannelId("channel-2")) }, connection_hops: [ConnectionId("connection-3")], version: Version("ics20-1") }
-		in connection : [connection_end] >> connection_id = ConnectionId("connection-3")
-		in connection : [connection_end] >>  connection_end = ConnectionEnd { state: Open, client_id: ClientId("07-tendermint-3"), counterparty: Counterparty { client_id: ClientId("08-wasm-5"), connection_id: Some(ConnectionId("connection-6")), prefix: ibc }, versions: [Version { identifier: "1", features: ["ORDER_ORDERED", "ORDER_UNORDERED"] }], delay_period: 10s }
-		in channel : [get_packet_commitment] >> packet_commitment = [239, 247, 250, 84, 32, 161, 169, 102, 170, 213, 103, 40, 54, 113, 139, 228, 206, 185, 63, 222, 40, 105, 32, 165, 241, 226, 145, 20, 13, 126, 13, 16]
-		in client : [client_state] >> client_id = ClientId("07-tendermint-3")
-		in client : [client_state] >> any client_state: Tendermint(ClientState { chain_id: ChainId { id: "banksy-testnet-1", version: 1 }, trust_level: TrustThreshold { numerator: 1, denominator: 3 }, trusting_period: 64000s, unbonding_period: 1814400s, max_clock_drift: 15s, latest_height: Height { revision: 1, height: 23902 }, proof_specs: ProofSpecs([ProofSpec(ProofSpec { leaf_spec: Some(LeafOp { hash: Sha256, prehash_key: NoHash, prehash_value: Sha256, length: VarProto, prefix: [0] }), inner_spec: Some(InnerSpec { child_order: [0, 1], child_size: 33, min_prefix_length: 4, max_prefix_length: 12, empty_child: [], hash: Sha256 }), max_depth: 0, min_depth: 0 }), ProofSpec(ProofSpec { leaf_spec: Some(LeafOp { hash: Sha256, prehash_key: NoHash, prehash_value: Sha256, length: VarProto, prefix: [0] }), inner_spec: Some(InnerSpec { child_order: [0, 1], child_size: 32, min_prefix_length: 1, max_prefix_length: 1, empty_child: [], hash: Sha256 }), max_depth: 0, min_depth: 0 })]), upgrade_path: ["upgrade", "upgradedIBCState"], frozen_height: None, _phantom: PhantomData<pallet_ibc::light_clients::HostFunctionsManager> })
-		in client : [consensus_state] >> client_id = ClientId("07-tendermint-3"), height = Height { revision: 1, height: 23668 }
-		in client : [consensus_state] >> any consensus state = Tendermint(ConsensusState { timestamp: Time(2023-05-16 21:42:32.452536), root: CommitmentRoot("40BBD7CF7D1B1304362E2976F9B458B11C9A2BB82ABFCBDF0AB52FAA5F0AD273"), next_validators_hash: Hash::Sha256(3392D6F825A32F9D566AF2339001C83CE846F61BD87CB1E92A9D7F4C31CADB84) })
-		in client: [host_height]
-		in channel: [client_update_time] >> height = Height { revision: 1, height: 23668 }, timestamp = 1684273464050000000
-		in channel: [client_update_height] >> height = Height { revision: 1, height: 23668 }, host height [8, 167, 16, 16, 242, 4]
-		execution error: StringTracer: ICS04 channel error: Verification fails for the packet with the sequence number 2: client '07-tendermint' error: StringTracer: ics23 commitment error: invalid merkle proof
-
-		in channel : [channel_end] >> port_id = PortId("transfer"), channel_id = ChannelId("channel-0")
-		in channel : [channel_end] >> channel_end = ChannelEnd { state: Open, ordering: Unordered, remote: Counterparty { port_id: PortId("transfer"), channel_id: Some(ChannelId("channel-2")) }, connection_hops: [ConnectionId("connection-3")], version: Version("ics20-1") }
-		in connection : [connection_end] >> connection_id = ConnectionId("connection-3")
-		in connection : [connection_end] >>  connection_end = ConnectionEnd { state: Open, client_id: ClientId("07-tendermint-3"), counterparty: Counterparty { client_id: ClientId("08-wasm-5"), connection_id: Some(ConnectionId("connection-6")), prefix: ibc }, versions: [Version { identifier: "1", features: ["ORDER_ORDERED", "ORDER_UNORDERED"] }], delay_period: 10s }
-		in channel : [get_packet_commitment] >> packet_commitment = [239, 247, 250, 84, 32, 161, 169, 102, 170, 213, 103, 40, 54, 113, 139, 228, 206, 185, 63, 222, 40, 105, 32, 165, 241, 226, 145, 20, 13, 126, 13, 16]
-		in client : [client_state] >> client_id = ClientId("07-tendermint-3")
-		in client : [client_state] >> any client_state: Tendermint(ClientState { chain_id: ChainId { id: "banksy-testnet-1", version: 1 }, trust_level: TrustThreshold { numerator: 1, denominator: 3 }, trusting_period: 64000s, unbonding_period: 1814400s, max_clock_drift: 15s, latest_height: Height { revision: 1, height: 23968 }, proof_specs: ProofSpecs([ProofSpec(ProofSpec { leaf_spec: Some(LeafOp { hash: Sha256, prehash_key: NoHash, prehash_value: Sha256, length: VarProto, prefix: [0] }), inner_spec: Some(InnerSpec { child_order: [0, 1], child_size: 33, min_prefix_length: 4, max_prefix_length: 12, empty_child: [], hash: Sha256 }), max_depth: 0, min_depth: 0 }), ProofSpec(ProofSpec { leaf_spec: Some(LeafOp { hash: Sha256, prehash_key: NoHash, prehash_value: Sha256, length: VarProto, prefix: [0] }), inner_spec: Some(InnerSpec { child_order: [0, 1], child_size: 32, min_prefix_length: 1, max_prefix_length: 1, empty_child: [], hash: Sha256 }), max_depth: 0, min_depth: 0 })]), upgrade_path: ["upgrade", "upgradedIBCState"], frozen_height: None, _phantom: PhantomData<pallet_ibc::light_clients::HostFunctionsManager> })
-		in client : [consensus_state] >> client_id = ClientId("07-tendermint-3"), height = Height { revision: 1, height: 23668 }
-		in client : [consensus_state] >> any consensus state = Tendermint(ConsensusState { timestamp: Time(2023-05-16 21:42:32.452536), root: CommitmentRoot("40BBD7CF7D1B1304362E2976F9B458B11C9A2BB82ABFCBDF0AB52FAA5F0AD273"), next_validators_hash: Hash::Sha256(3392D6F825A32F9D566AF2339001C83CE846F61BD87CB1E92A9D7F4C31CADB84) })
-		in client: [host_height]
-		in channel: [client_update_time] >> height = Height { revision: 1, height: 23668 }, timestamp = 1684273464050000000
-		in channel: [client_update_height] >> height = Height { revision: 1, height: 23668 }, host height [8, 167, 16, 16, 242, 4]
-		execution error: StringTracer: ICS04 channel error: Verification fails for the packet with the sequence number 2: client '07-tendermint' error: StringTracer: ics23 commitment error: invalid merkle proof
-
-		*/
 		let mut block_events = vec![];
 
 		for seq in seqs {
