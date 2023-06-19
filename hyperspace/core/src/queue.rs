@@ -22,9 +22,6 @@ pub async fn flush_message_batch(
 	metrics: Option<&MetricsHandler>,
 	sink: &impl Chain,
 ) -> Result<(), anyhow::Error> {
-	for m in &msgs {
-		log::debug!(target: "hyperspace", "Outgoing message: {}", hex::encode(&m.value));
-	}
 	let block_max_weight = sink.block_max_weight();
 	let batch_weight = sink.estimate_weight(msgs.clone()).await?;
 
