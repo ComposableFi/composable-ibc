@@ -197,8 +197,8 @@ pub async fn query_ready_and_timed_out_packets(
 		let mut recv_packets_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 		let source = Arc::new(source.clone());
 		let sink = Arc::new(sink.clone());
-		let mut timeout_packets_count = Arc::new(AtomicUsize::new(0));
-		let mut send_packets_count = Arc::new(AtomicUsize::new(0));
+		let timeout_packets_count = Arc::new(AtomicUsize::new(0));
+		let send_packets_count = Arc::new(AtomicUsize::new(0));
 		for send_packets in send_packets.chunks(PROCESS_PACKETS_BATCH_SIZE) {
 			for send_packet in send_packets.to_owned() {
 				let source_connection_end = source_connection_end.clone();

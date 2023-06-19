@@ -10,12 +10,6 @@ use ibc::{
 			client_consensus::ConsensusState, client_message::ClientMessage,
 			client_state::ClientState,
 		},
-		ics04_channel::packet::Packet,
-		ics23_commitment::{
-			commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
-			merkle::{apply_prefix, MerkleProof},
-			specs::ProofSpecs,
-		},
 	},
 	Height,
 };
@@ -50,7 +44,6 @@ use ics11_beefy::{
 	client_message::BEEFY_CLIENT_MESSAGE_TYPE_URL, client_state::BEEFY_CLIENT_STATE_TYPE_URL,
 	consensus_state::BEEFY_CONSENSUS_STATE_TYPE_URL,
 };
-use ics23::HostFunctionsProvider;
 use prost::Message;
 use sp_core::{crypto::ByteArray, ed25519, H256};
 use sp_runtime::{

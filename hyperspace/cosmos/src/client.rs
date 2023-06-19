@@ -9,7 +9,6 @@ use bech32::ToBase32;
 use bip32::{DerivationPath, ExtendedPrivateKey, XPrv, XPub as ExtendedPublicKey};
 use core::convert::{From, Into, TryFrom};
 use digest::Digest;
-use futures::FutureExt;
 use ibc::core::{
 	ics02_client::height::Height,
 	ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
@@ -267,7 +266,8 @@ where
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 
 		let chain_id = ChainId::from(config.chain_id);
-		let light_client = LightClient::init_light_client(config.rpc_url.clone()).await?;
+		let light_client =
+			LightClient::init_light_client(config.rpc_url.clone(), Duration::from_secs(10)).await?;
 		let commitment_prefix = CommitmentPrefix::try_from(config.store_prefix.as_bytes().to_vec())
 			.map_err(|e| Error::from(format!("Invalid store prefix {:?}", e)))?;
 
@@ -411,7 +411,6 @@ where
 					log::trace!(target: "hyperspace_cosmos", "Fetching header at height {:?}", height);
 					let latest_light_block =
 						client.fetch_light_block_with_cache(height.try_into()?, duration).await?;
-					// log::trace!(target: "hyperspace_cosmos", "end Fetching header");
 
 					let height =
 						TmHeight::try_from(trusted_height.revision_height).map_err(|e| {
@@ -420,12 +419,9 @@ where
 								client.name, e
 							))
 						})?;
-					// log::trace!(target: "hyperspace_cosmos", "end Fetching header 2");
 
 					let trusted_light_block =
 						client.fetch_light_block_with_cache(height.increment(), duration).await?;
-					// log::trace!(target: "hyperspace_cosmos", "end Fetching header 3 {:?}",
-					// tokio::task::id());
 
 					let update_type = match is_validators_equal(
 						&latest_light_block.validators,
@@ -434,32 +430,7 @@ where
 						true => UpdateType::Optional,
 						false => UpdateType::Mandatory,
 					};
-					// log::trace!(target: "hyperspace_cosmos", "end Fetching header 4 {:?}",
-					// tokio::task::id());
 
-					/*
-					Fetching header at height 1509 Id(15197)
-					Fetching header at height 1508 Id(15196)
-					Fetching header at height 1510 Id(15198)
-					Fetching header at height 1511 Id(15199)
-					Fetching header at height 1512 Id(15200)
-					end Fetching header Id(15196)
-					end Fetching header 2 Id(15196)
-					end Fetching header Id(15200)
-					end Fetching header Id(15197)
-					end Fetching header 2 Id(15197)
-					end Fetching header 3 Id(15197)
-					end Fetching header 4 Id(15197)
-					end Fetching header 3 Id(15196)
-					end Fetching header Id(15198)
-					end Fetching header 2 Id(15198)
-					end Fetching header 4 Id(15196)
-					end Fetching header 3 Id(15198)
-					end Fetching header 4 Id(15198)
-					end Fetching header 2 Id(15200)
-					end Fetching header 3 Id(15200)
-					end Fetching header 4 Id(15200)
-										 */
 					Ok((
 						Header {
 							signed_header: latest_light_block.signed_header,
@@ -625,47 +596,5 @@ pub mod tests {
 				Err(_) => panic!("Try from mnemonic failed"),
 			}
 		}
-	}
-
-	#[tokio::test]
-	async fn test_cache() {
-		/*
-		for 0..1000 from cosmos
-		query_block(i)
-		> 100 -> RPC error
-		 */
-		let cache: Arc<Cache<u32, u32>> = Arc::new(Cache::new(100));
-		let mut join_set = JoinSet::<Result<_, ()>>::new();
-
-		for i in 0..10000 {
-			let fut = async move {
-				timeout(Duration::from_secs(5), async move {
-					sleep(Duration::from_secs(100000000)).await;
-					Result::<_, ()>::Ok(0u32)
-				})
-				.await
-				.map_err(|e| ())
-				.map(|r| r.unwrap())
-			};
-			let cache = cache.clone();
-			join_set.spawn(async move { cache.get_or_insert_async(&i, fut).await });
-		}
-		while let Some(res) = join_set.join_next().await {}
-
-		// for i in 0..10000 {
-		// 	let fut = async move {
-		// 		sleep(Duration::from_secs(100)).await;
-		// 		Result::<_, ()>::Ok(0u32)
-		// 	};
-		// 	let cache = cache.clone();
-		// 	join_set.spawn(
-		// 		timeout(
-		// 			Duration::from_secs(5),
-		// 			async move { cache.get_or_insert_async(&i, fut).await },
-		// 		)
-		// 		.map_err(|e| ()),
-		// 	);
-		// }
-		// while let Some(res) = join_set.join_next().await {}
 	}
 }

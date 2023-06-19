@@ -170,7 +170,7 @@ where
 
 		let mut updates = Vec::new();
 		for (events, (update_header, update_type)) in
-			block_events.into_iter().map(|(h, events)| events).zip(update_headers)
+			block_events.into_iter().map(|(_, events)| events).zip(update_headers)
 		{
 			log::debug!(target: "hyperspace_cosmos", "header n: {}", update_header.signed_header.header.height.value());
 			let height = update_header.height();

@@ -1,11 +1,7 @@
 use futures::{Stream, StreamExt};
 use std::{
-	fmt::Debug,
 	pin::Pin,
-	sync::{
-		atomic::{AtomicBool, Ordering},
-		Arc, Mutex,
-	},
+	sync::{Arc, Mutex},
 	task::Poll,
 };
 
