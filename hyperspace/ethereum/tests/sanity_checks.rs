@@ -1,4 +1,4 @@
-use std::{future::Future, ops::Deref, path::PathBuf, sync::Arc};
+use std::{future::Future, ops::Deref, path::PathBuf, str::FromStr, sync::Arc};
 
 use ethers::{
 	abi::Token,
@@ -10,6 +10,7 @@ use ethers::{
 };
 use hyperspace_ethereum::config::Config;
 
+use ibc::core::ics24_host::identifier::{ChannelId, PortId};
 use primitives::IbcProvider;
 use prost::Message;
 
@@ -223,7 +224,44 @@ async fn test_ibc_connection() {
 		.await;
 
 	// hyperspace.query_connection_channels(at, connection_id)
+	let channels = hyperspace
+		.query_connection_channels(
+			ibc::Height { revision_number: 0, revision_height: 1 },
+			&connection_id.parse().unwrap(),
+		)
+		.await
+		.unwrap();
+
+	assert!(channels.channels.is_empty());
+
 	// hyperspace.query_connection_end(at, connection_id)
+	let connection_end = hyperspace
+		.query_connection_end(
+			ibc::Height { revision_number: 0, revision_height: 1 },
+			connection_id.parse().unwrap(),
+		)
+		.await
+		.unwrap();
+
+	assert_eq!(
+		connection_end.connection,
+		Some(ibc_proto::ibc::core::connection::v1::ConnectionEnd {
+			client_id: client_id.parse().unwrap(),
+			counterparty: Some(ibc_proto::ibc::core::connection::v1::Counterparty {
+				client_id: client_id.parse().unwrap(),
+				connection_id: connection_id.parse().unwrap(),
+				prefix: Some(ibc_proto::ibc::core::commitment::v1::MerklePrefix {
+					key_prefix: vec![],
+				}),
+			}),
+			state: ibc_proto::ibc::core::connection::v1::State::Init as i32,
+			delay_period: 0,
+			versions: vec![ibc_proto::ibc::core::connection::v1::Version {
+				identifier: "1".into(),
+				features: vec![],
+			}],
+		})
+	);
 }
 
 #[tokio::test]
@@ -239,8 +277,35 @@ async fn test_ibc_channel() {
 	let channel_id = deploy.yui_ibc.channel_open_init("port-0", &connection_id).await;
 	deploy.yui_ibc.channel_open_ack(&channel_id, "port-0").await;
 
-	// hyperspace.query_channel(at, channel_id)
+	// hyperspace.query_channels(at, channel_id)
+	let channels = hyperspace.query_channels().await.unwrap();
+
+	assert!(!channels.is_empty());
+	assert_eq!(channels[0].0, channel_id.parse().unwrap());
+
 	// hyperspace.query_channel_end(at, channel_id)
+	let channel_end = hyperspace
+		.query_channel_end(
+			ibc::Height { revision_number: 0, revision_height: 1 },
+			channel_id.parse().unwrap(),
+			"port-0".parse().unwrap(),
+		)
+		.await
+		.unwrap();
+
+	assert_eq!(
+		channel_end.channel,
+		Some(ibc_proto::ibc::core::channel::v1::Channel {
+			state: ibc_proto::ibc::core::channel::v1::State::Init as i32,
+			ordering: ibc_proto::ibc::core::channel::v1::Order::Unordered as i32,
+			counterparty: Some(ibc_proto::ibc::core::channel::v1::Counterparty {
+				port_id: "port-0".into(),
+				channel_id: channel_id.parse().unwrap(),
+			}),
+			connection_hops: vec![connection_id.parse().unwrap()],
+			version: "1".into(),
+		})
+	);
 }
 
 #[tokio::test]
@@ -257,10 +322,78 @@ async fn test_ibc_packet() {
 	deploy.yui_ibc.channel_open_ack(&channel_id, "port-0").await;
 
 	// query_packet_acknowledgement
+	let ack = hyperspace
+		.query_packet_acknowledgement(
+			ibc::Height { revision_number: 0, revision_height: 1 },
+			&PortId::from_str("port-0").unwrap(),
+			&ChannelId::from_str("channel-0").unwrap(),
+			1, // sequence
+		)
+		.await
+		.unwrap();
+
+	assert_eq!(ack.acknowledgement, Vec::<u8>::new());
+
 	// query_packet_commitment
+	let commitment = hyperspace
+		.query_packet_commitments(
+			ibc::Height { revision_number: 0, revision_height: 1 },
+			ChannelId::from_str("channel-0").unwrap(),
+			PortId::from_str("port-0").unwrap(),
+		)
+		.await
+		.unwrap();
+
 	// query_packet_commitments
+	let commitments = hyperspace
+		.query_packet_commitments(
+			ibc::Height { revision_number: 0, revision_height: 1 },
+			ChannelId::from_str("channel-0").unwrap(),
+			PortId::from_str("port-0").unwrap(),
+		)
+		.await
+		.unwrap();
+
 	// query_packet_receipt
+	let receipt = hyperspace
+		.query_packet_receipt(
+			ibc::Height { revision_number: 0, revision_height: 1 },
+			&PortId::from_str("port-0").unwrap(),
+			&ChannelId::from_str("channel-0").unwrap(),
+			1, // sequence
+		)
+		.await
+		.unwrap();
+
 	// query_packet_acknowledgements
+	let acks = hyperspace
+		.query_packet_acknowledgements(
+			ibc::Height { revision_number: 0, revision_height: 1 },
+			ChannelId::from_str("channel-0").unwrap(),
+			PortId::from_str("port-0").unwrap(),
+		)
+		.await
+		.unwrap();
+
 	// query_unreceived_packets
+	let unreceived = hyperspace
+		.query_unreceived_packets(
+			ibc::Height { revision_number: 0, revision_height: 1 },
+			ChannelId::from_str("channel-0").unwrap(),
+			PortId::from_str("port-0").unwrap(),
+			vec![],
+		)
+		.await
+		.unwrap();
+
 	// query_unreceived_acknowledgements
+	let unreceived = hyperspace
+		.query_unreceived_acknowledgements(
+			ibc::Height { revision_number: 0, revision_height: 1 },
+			ChannelId::from_str("channel-0").unwrap(),
+			PortId::from_str("port-0").unwrap(),
+			vec![],
+		)
+		.await
+		.unwrap();
 }

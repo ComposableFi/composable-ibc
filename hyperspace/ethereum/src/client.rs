@@ -100,7 +100,10 @@ impl Client {
 		Ok(Self { http_rpc: Arc::new(client), ws_uri: config.ws_rpc_url.clone(), config })
 	}
 
-	pub async fn generated_channel_identifiers(&self, from_block: BlockNumber) -> Vec<String> {
+	pub async fn generated_channel_identifiers(
+		&self,
+		from_block: BlockNumber,
+	) -> Result<Vec<String>, ClientError> {
 		let filter = Filter::new()
 			.from_block(from_block)
 			.to_block(BlockNumber::Latest)
@@ -109,7 +112,8 @@ impl Client {
 
 		let logs = self.http_rpc.get_logs(&filter).await.unwrap();
 
-		logs.into_iter()
+		let v = logs
+			.into_iter()
 			.map(|log| {
 				ethers::abi::decode(&[ParamType::String], &log.data.0)
 					.unwrap()
@@ -118,7 +122,9 @@ impl Client {
 					.unwrap()
 					.to_string()
 			})
-			.collect()
+			.collect();
+
+		Ok(v)
 	}
 
 	pub async fn generated_client_identifiers(&self, from_block: BlockNumber) -> Vec<String> {

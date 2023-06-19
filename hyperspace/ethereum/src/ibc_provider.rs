@@ -647,20 +647,10 @@ impl IbcProvider for Client {
 		todo!()
 	}
 
-	fn query_channels<'life0, 'async_trait>(
-		&'life0 self,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<Vec<(ChannelId, PortId)>, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
-		todo!()
+	async fn query_channels(&self) -> Result<Vec<(ChannelId, PortId)>, Self::Error> {
+		let ids = self.generated_channel_identifiers(0.into()).await?;
+
+		Ok(todo!())
 	}
 
 	async fn query_connection_using_client(
