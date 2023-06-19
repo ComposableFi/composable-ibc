@@ -22,7 +22,7 @@ use hyperspace_core::{
 };
 use hyperspace_cosmos::client::{ConfigKeyEntry, CosmosClient, CosmosClientConfig};
 use hyperspace_parachain::{finality_protocol::FinalityProtocol, ParachainClientConfig};
-use hyperspace_primitives::{utils::create_clients, IbcProvider};
+use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
 	ibc_messaging_packet_timeout_on_channel_close,
@@ -112,6 +112,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 				.to_string(),
 		wasm_code_id: None,
 		channel_whitelist: vec![],
+		common: CommonClientConfig { skip_optional_client_updates: true },
 	};
 
 	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.unwrap();

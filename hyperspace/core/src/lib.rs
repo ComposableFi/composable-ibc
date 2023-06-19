@@ -192,7 +192,7 @@ async fn process_finality_event<A: Chain, B: Chain>(
 					match sink.handle_error(&e).and_then(|_| source.handle_error(&e)).await {
 						Ok(_) => (),
 						Err(e) => {
-							log::error!("Failed to handle error for {:?}", e)
+							log::error!("Failed to handle error {:?}", e)
 						},
 					}
 				},
