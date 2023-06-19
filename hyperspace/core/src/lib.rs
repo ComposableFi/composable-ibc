@@ -16,6 +16,7 @@
 
 use futures::{future::ready, StreamExt};
 use primitives::Chain;
+use std::convert::Infallible;
 
 pub mod chain;
 pub mod command;
@@ -30,6 +31,7 @@ use events::{has_packet_events, parse_events};
 use futures::TryFutureExt;
 use ibc::events::IbcEvent;
 use metrics::handler::MetricsHandler;
+use tokio::task::JoinHandle;
 
 #[derive(Copy, Debug, Clone)]
 pub enum Mode {
@@ -53,19 +55,40 @@ where
 	let (mut chain_a_finality, mut chain_b_finality) =
 		(chain_a.finality_notifications().await?, chain_b.finality_notifications().await?);
 
-	// loop forever
-	loop {
-		tokio::select! {
-			// new finality event from chain A
-			result = chain_a_finality.next() => {
-				process_finality_event!(chain_a, chain_b, chain_a_metrics, mode, result, chain_a_finality, chain_b_finality)
-			}
-			// new finality event from chain B
-			result = chain_b_finality.next() => {
-				process_finality_event!(chain_b, chain_a, chain_b_metrics, mode, result, chain_b_finality, chain_a_finality)
-			}
+	let mut chain_a_cl = chain_a.clone();
+	let mut chain_b_cl = chain_b.clone();
+
+	let jh1: JoinHandle<anyhow::Result<Infallible>> = tokio::spawn(async move {
+		loop {
+			let result = chain_a_finality.next().await;
+			process_finality_event!(
+				chain_a_cl,
+				chain_b_cl,
+				chain_a_metrics,
+				mode,
+				result,
+				chain_a_finality
+			)
 		}
-	}
+	});
+
+	let jh2: JoinHandle<anyhow::Result<Infallible>> = tokio::spawn(async move {
+		loop {
+			let result = chain_b_finality.next().await;
+			process_finality_event!(
+				chain_b,
+				chain_a,
+				chain_b_metrics,
+				mode,
+				result,
+				chain_b_finality
+			)
+		}
+	});
+
+	jh1.await??;
+	jh2.await??;
+	Ok(())
 }
 
 pub async fn fish<A, B>(chain_a: A, chain_b: B) -> Result<(), anyhow::Error>
