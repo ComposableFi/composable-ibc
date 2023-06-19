@@ -70,6 +70,7 @@ macro_rules! process_finality_event {
 				let mut msgs = Vec::new();
 
 				let mut maybe_required_to_submit_proof_at: Option<ibc::Height> = None;
+				// for timeouts we need both chains to be up to date
 				let mut sink_has_undelivered_acks =
 					$sink.has_undelivered_sequences(UndeliveredType::Recvs) ||
 					$sink.has_undelivered_sequences(UndeliveredType::Acks) ||
@@ -77,8 +78,6 @@ macro_rules! process_finality_event {
 				let mut source_has_undelivered_acks =
 					$source.has_undelivered_sequences(UndeliveredType::Timeouts);
 
-				// let mut source_has_undelivered_seqs = $source.has_undelivered_sequences(UndeliveredType::Sequences);
-				// let mut maybe_required_to_submit_proof_at: Option<ibc::Height> = None;
 				log::trace!(
 					target: "hyperspace",
 					"{} has undelivered seqs: [{:?}:{}, {:?}:{}, {:?}:{}]", $source.name(),

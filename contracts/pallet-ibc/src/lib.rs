@@ -4,7 +4,7 @@
 #![allow(clippy::useless_format)]
 #![allow(non_camel_case_types)]
 #![deny(
-	// unused_imports,
+	unused_imports,
 	clippy::useless_conversion,
 	bad_style,
 	bare_trait_objects,
