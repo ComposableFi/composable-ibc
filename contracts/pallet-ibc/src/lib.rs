@@ -710,6 +710,8 @@ pub mod pallet {
 			for (client_id, client_state) in <ClientStates<T>>::iter() {
 				if let Err(e) = Pallet::<T>::upgrade_grandpa_client_state(client_id, client_state) {
 					log::warn!(target: "pallet_ibc", "Error upgrading grandpa consensus state: {:?}", e);
+				} else {
+					log::info!(target: "pallet_ibc", "Upgraded grandpa consensus state for {client_id}");
 				}
 				count += 1;
 			}
@@ -1222,6 +1224,12 @@ pub mod pallet {
 				<ClientStates<T>>::insert(
 					&client_id,
 					any_state.encode_to_vec().map_err(|e| e.to_string())?,
+				);
+			} else {
+				log::trace!(
+					target: "pallet_ibc",
+					"Ignoring upgrade for client {:?}",
+					client_id
 				);
 			}
 			Ok(())

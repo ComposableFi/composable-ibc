@@ -51,7 +51,7 @@ message ClientState {
   uint32 latest_relay_height = 2;
 
   // current grandpa authority set id
-  // DEPRECATED: use `current_authorities` instead
+  // DEPRECATED: use `authorities_changes` instead
   uint64 current_set_id = 3 [deprecated = true];
 
   // Block height when the client was frozen due to a misbehaviour

@@ -306,7 +306,7 @@ where
 			.header(&header.finality_proof.block)
 			.expect("target header has already been checked in verify_client_message; qed");
 
-		// check that the block number is correct, because it wil be used later for
+		// check that the block number is correct, because it will be used later for
 		// finding the authorities set
 		let expected_target_height = client_state.latest_relay_height + finalized.len() as u32 - 1;
 		if expected_target_height != target.number {
