@@ -39,7 +39,7 @@ use itertools::Itertools;
 use jsonrpsee_ws_client::WsClientBuilder;
 use light_client_common::config::{EventRecordT, RuntimeCall, RuntimeTransactions};
 use pallet_ibc::light_clients::AnyClientMessage;
-use primitives::{mock::LocalClientTypes, Chain, IbcProvider, MisbehaviourHandler};
+use primitives::{mock::LocalClientTypes, Chain, IbcProvider, MisbehaviourHandler, RelayerState};
 use sp_core::{twox_128, H256};
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
@@ -382,6 +382,14 @@ where
 	fn set_rpc_call_delay(&mut self, delay: Duration) {
 		self.rpc_call_delay = delay;
 	}
+
+	fn relayer_state(&self) -> &RelayerState {
+		&self.relayer_state
+	}
+
+	fn relayer_state_mut(&mut self) -> &mut RelayerState {
+		&mut self.relayer_state
+	}
 }
 
 #[async_trait::async_trait]
@@ -413,7 +421,7 @@ where
 	) -> Result<(), anyhow::Error> {
 		let client_message = client_message.unpack_recursive_into();
 		match client_message {
-			AnyClientMessage::Grandpa(ClientMessage::Header(header)) => {
+			AnyClientMessage::Grandpa(ClientMessage::Header(mut header)) => {
 				let base_header = header
 					.finality_proof
 					.unknown_headers
@@ -431,59 +439,68 @@ where
 					})?;
 
 				let common_ancestor_block_number = u32::from(common_ancestor_header.number());
-				let encoded =
-					GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
-						&*self.relay_ws_client,
-						common_ancestor_block_number + 1,
-					)
-					.await?
-					.ok_or_else(|| {
-						anyhow!(
-							"No justification found for block: {:?}",
-							header.finality_proof.block
+
+				let mut detected_misbehaviour_at = None;
+				// TODO: parallelize this
+				for header in &header.finality_proof.unknown_headers {
+					let i = header.number;
+					let unknown_header_hash =
+						self.relay_client.rpc().block_hash(Some(i.into())).await?.ok_or_else(
+							|| {
+								anyhow!(
+									"No block hash found for block number: {:?}",
+									common_ancestor_block_number
+								)
+							},
+						)?;
+
+					// if detected_misbehaviour.is_none() {
+					let header_hash = header.hash();
+					if unknown_header_hash != header_hash.into() {
+						detected_misbehaviour_at = Some(i);
+						let _guard = self.client_id.lock().unwrap();
+						let client_id =
+							_guard.as_ref().map(|x| x.as_str()).unwrap_or_else(|| "{unknown}");
+						log::warn!(
+							"Found misbehaviour on client {}: {:?} != {:?} at {i}",
+							client_id,
+							unknown_header_hash,
+							header_hash
+						);
+						break
+					}
+				}
+
+				if let Some(height) = detected_misbehaviour_at {
+					let encoded =
+						GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
+							&*self.relay_ws_client,
+							height,
 						)
-					})?
-					.0;
+						.await?
+						.ok_or_else(|| {
+							anyhow!(
+								"No justification found for block: {:?}",
+								header.finality_proof.block
+							)
+						})?
+						.0;
 
-				let mut trusted_finality_proof =
-					FinalityProof::<RelayChainHeader>::decode(&mut &encoded[..])?;
-				let trusted_justification =
-					GrandpaJustification::decode(&mut &*trusted_finality_proof.justification)?;
-				let to_block = trusted_justification.commit.target_number;
-				let from_block = (common_ancestor_block_number + 1).min(to_block);
+					let mut trusted_finality_proof =
+						FinalityProof::<RelayChainHeader>::decode(&mut &encoded[..])?;
+					let trusted_justification =
+						GrandpaJustification::decode(&mut &*trusted_finality_proof.justification)?;
+					let to_block = trusted_finality_proof
+						.unknown_headers
+						.first()
+						.map(|x| x.number.saturating_sub(1))
+						.unwrap_or(trusted_justification.commit.target_number);
+					let from_block = height.min(to_block);
 
-				let trusted_base_header_hash = self
-					.relay_client
-					.rpc()
-					.block_hash(Some(from_block.into()))
-					.await?
-					.ok_or_else(|| anyhow!("No hash found for block: {:?}", from_block))?;
-
-				let base_header_hash = base_header.hash();
-				if base_header_hash != trusted_base_header_hash.into() {
-					log::warn!(
-						"Found misbehaviour on client {}: {:?} != {:?}",
-						self.client_id
-							.lock()
-							.unwrap()
-							.as_ref()
-							.map(|x| x.as_str().to_owned())
-							.unwrap_or_else(|| "{unknown}".to_owned()),
-						base_header_hash,
-						trusted_base_header_hash
-					);
-
-					trusted_finality_proof.unknown_headers.clear();
-					// TODO: parallelize this
-					for i in from_block..=to_block {
+					for h in (from_block..=to_block).rev() {
 						let unknown_header_hash =
-							self.relay_client.rpc().block_hash(Some(i.into())).await?.ok_or_else(
-								|| {
-									anyhow!(
-										"No block hash found for block number: {:?}",
-										common_ancestor_block_number
-									)
-								},
+							self.relay_client.rpc().block_hash(Some(h.into())).await?.ok_or_else(
+								|| anyhow!("No block hash found for block number: {:?}", h),
 							)?;
 						let unknown_header = self
 							.relay_client
@@ -495,10 +512,13 @@ where
 							})?;
 						trusted_finality_proof
 							.unknown_headers
-							.push(codec::Decode::decode(&mut &*unknown_header.encode()).expect(
+							.insert(0, codec::Decode::decode(&mut &*unknown_header.encode()).expect(
 							"Same header struct defined in different crates, decoding cannot panic",
 						));
 					}
+
+					let remove_up_to = (height - base_header.number) as usize;
+					header.finality_proof.unknown_headers.drain(..remove_up_to).for_each(|_| ());
 
 					let misbehaviour = ClientMessage::Misbehaviour(Misbehaviour {
 						first_finality_proof: header.finality_proof,

@@ -257,6 +257,33 @@ where
 	Ok(())
 }
 
+/// The function checks if the given chain is canonical:
+/// - the chain is not empty
+/// - all the header hashes from `base_header` to `header.last()` form a chain
+/// - height of the blocks increase sequentially by 1
+/// And returns the first and last hashes of the chain
+pub fn validate_chain<H: HeaderT>(
+	mut base_header_hash: H::Hash,
+	mut base_header_number: H::Number,
+	headers: &[H],
+) -> Result<(&H, &H), anyhow::Error> {
+	if headers.is_empty() {
+		return Err(anyhow!("Empty chain"))
+	}
+	for header in headers {
+		if base_header_number + 1u32.into() != *header.number() {
+			return Err(anyhow!("Invalid block number in the chain"))
+		}
+		let current_hash = base_header_hash;
+		if header.parent_hash() != &current_hash {
+			return Err(anyhow!("Invalid block hash in the chain"))
+		}
+		base_header_hash = header.hash();
+		base_header_number = *header.number();
+	}
+	Ok(headers.first().zip(headers.last()).expect("headers are not empty; qed"))
+}
+
 /// Verifies the equivocation proof by making sure that both votes target
 /// different blocks and that its signatures are valid.
 pub fn check_equivocation_proof<Host, H, N>(

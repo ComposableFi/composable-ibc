@@ -15,7 +15,7 @@
 
 use crate::{
 	client_message::{ClientMessage, Header, RelayChainHeader},
-	client_state::ClientState,
+	client_state::{AuthoritiesChange, ClientState},
 	consensus_state::ConsensusState,
 	mock::{
 		AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager, MockClientTypes,
@@ -49,12 +49,14 @@ use ibc::{
 	handler::HandlerOutput,
 	mock::{context::MockContext, host::MockHostType},
 	test_utils::get_dummy_account_id,
+	timestamp::Timestamp,
 	Height,
 };
 use light_client_common::config::RuntimeStorage;
 use sp_core::{hexdisplay::AsBytesRef, H256};
 use std::time::Duration;
 use subxt::config::substrate::{BlakeTwo256, SubstrateHeader};
+use vec1::Vec1;
 
 #[tokio::test]
 async fn test_continuous_update_of_grandpa_client() {
@@ -146,9 +148,13 @@ async fn test_continuous_update_of_grandpa_client() {
 			frozen_height: None,
 			latest_para_height: decoded_para_head.number,
 			para_id: prover.para_id,
-			current_set_id: client_state.current_set_id,
-			current_authorities: client_state.current_authorities,
 			_phantom: Default::default(),
+			authorities_changes: Vec1::new(AuthoritiesChange::new(
+				latest_relay_header.number,
+				Timestamp::from_nanoseconds(1).unwrap(),
+				client_state.current_set_id,
+				client_state.current_authorities,
+			)),
 		};
 		let subxt_block_number: subxt::rpc::types::BlockNumber = decoded_para_head.number.into();
 		let block_hash =
@@ -252,7 +258,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		let proof =
 			ParachainHeadersWithFinalityProof::<RelayChainHeader>::decode(&mut &*proof).unwrap();
 		println!("========= New Justification =========");
-		println!("current_set_id: {}", client_state.current_set_id);
+		println!("current_set_id: {}", client_state.current_set_id());
 		println!(
 			"For relay chain header: Hash({:?}), Number({})",
 			justification.commit.target_hash, justification.commit.target_number

@@ -64,7 +64,7 @@ where
 
 	let finality_event =
 		chain_b.finality_notifications().await.unwrap().next().await.expect("no event");
-	let set_id = client_state.current_set_id;
+	let set_id = client_state.current_set_id();
 
 	// construct an extrinsic proof with the mandatory timestamp extrinsic
 	let mut para_db = MemoryDB::<BlakeTwo256>::default();
@@ -153,7 +153,7 @@ where
 		.iter()
 		.map(|id| {
 			let key = id.pair();
-			let encoded = sp_finality_grandpa::localized_payload(round, set_id, &message);
+			let encoded = sp_finality_grandpa::localized_payload(round, *set_id, &message);
 			let signature = AuthoritySignature::from(key.sign(&encoded));
 			SignedPrecommit {
 				precommit: precommit.clone(),

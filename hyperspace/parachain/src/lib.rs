@@ -59,19 +59,20 @@ use ics11_beefy::{
 	client_state::ClientState as BeefyClientState,
 	consensus_state::ConsensusState as BeefyConsensusState,
 };
-use primitives::KeyProvider;
+use primitives::{KeyProvider, RelayerState};
 
 use crate::{finality_protocol::FinalityProtocol, signer::ExtrinsicSigner};
 use grandpa_light_client_primitives::ParachainHeaderProofs;
 use grandpa_prover::GrandpaProver;
 use ibc::timestamp::Timestamp;
-use ics10_grandpa::client_state::ClientState as GrandpaClientState;
+use ics10_grandpa::client_state::{AuthoritiesChange, ClientState as GrandpaClientState};
 use jsonrpsee_ws_client::WsClientBuilder;
 use light_client_common::config::{AsInner, RuntimeStorage};
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use sp_keystore::testing::KeyStore;
 use sp_runtime::traits::One;
 use subxt::tx::TxPayload;
+use vec1::Vec1;
 
 /// Implements the [`crate::Chain`] trait for parachains.
 /// This is responsible for:
@@ -125,6 +126,8 @@ pub struct ParachainClient<T: light_client_common::config::Config> {
 	///
 	/// Set inside `on_undelivered_sequences`.
 	pub maybe_has_undelivered_packets: Arc<Mutex<bool>>,
+	/// Relayer data
+	pub relayer_state: RelayerState,
 }
 
 enum KeyType {
@@ -273,6 +276,7 @@ where
 			finality_protocol: config.finality_protocol,
 			rpc_call_delay: DEFAULT_RPC_CALL_DELAY,
 			maybe_has_undelivered_packets: Default::default(),
+			relayer_state: Default::default(),
 		})
 	}
 }
@@ -621,8 +625,12 @@ where
 			let mut client_state = GrandpaClientState::<HostFunctionsManager>::default();
 
 			client_state.relay_chain = Default::default();
-			client_state.current_authorities = light_client_state.current_authorities;
-			client_state.current_set_id = light_client_state.current_set_id;
+			client_state.authorities_changes = Vec1::new(AuthoritiesChange {
+				height: light_client_state.latest_relay_height,
+				timestamp: Timestamp::now(),
+				set_id: light_client_state.current_set_id,
+				authorities: light_client_state.current_authorities,
+			});
 			client_state.latest_relay_hash = light_client_state.latest_relay_hash.into();
 			client_state.frozen_height = None;
 			client_state.latest_para_height = block_number;
