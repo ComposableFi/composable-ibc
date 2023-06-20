@@ -52,6 +52,8 @@ pub enum ClientError {
 	Ethers(#[from] ethers::providers::ProviderError),
 	#[error("middleware-error: {0}")]
 	MiddlewareError(MiddlewareErrorType),
+	#[error("no-storage-proof: there was no storage proof for the given storage index")]
+	NoStorageProof,
 }
 
 impl From<String> for ClientError {
@@ -98,6 +100,12 @@ impl Client {
 		let client = ethers::middleware::SignerMiddleware::new(client, wallet);
 
 		Ok(Self { http_rpc: Arc::new(client), ws_uri: config.ws_rpc_url.clone(), config })
+	}
+
+	pub async fn websocket_provider(&self) -> Result<Provider<Ws>, ClientError> {
+		Provider::<Ws>::connect(self.ws_uri.to_string())
+			.await
+			.map_err(|e| ClientError::ProviderError(self.ws_uri.clone(), ProviderError::from(e)))
 	}
 
 	pub async fn generated_channel_identifiers(

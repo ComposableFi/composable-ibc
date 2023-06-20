@@ -6,25 +6,15 @@ use primitives::{Chain, LightClientSync, MisbehaviourHandler};
 
 use crate::{client::Client, ibc_provider::BlockHeight};
 
+#[async_trait::async_trait]
 impl MisbehaviourHandler for Client {
-	fn check_for_misbehaviour<'life0, 'life1, 'async_trait, C>(
-		&'life0 self,
-		counterparty: &'life1 C,
+	async fn check_for_misbehaviour<C>(
+		&self,
+		counterparty: &C,
 		client_message: pallet_ibc::light_clients::AnyClientMessage,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<(), anyhow::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		C: 'async_trait + Chain,
-		'life0: 'async_trait,
-		'life1: 'async_trait,
-		Self: 'async_trait,
-	{
-		todo!()
+	) -> Result<(), anyhow::Error> {
+		// assume no misbehaviour occurs for now.
+		Ok(())
 	}
 }
 
@@ -40,21 +30,11 @@ impl Chain for Client {
 		self.config.max_block_weight
 	}
 
-	fn estimate_weight<'life0, 'async_trait>(
-		&'life0 self,
+	async fn estimate_weight(
+		&self,
 		msg: Vec<ibc_proto::google::protobuf::Any>,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<u64, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
-		todo!()
+	) -> Result<u64, Self::Error> {
+		Ok(1)
 	}
 
 	async fn finality_notifications(
@@ -80,8 +60,7 @@ impl Chain for Client {
 	async fn submit(
 		&self,
 		messages: Vec<ibc_proto::google::protobuf::Any>,
-	) -> Result<Self::TransactionId, Self::Error>
-	{
+	) -> Result<Self::TransactionId, Self::Error> {
 		todo!()
 	}
 

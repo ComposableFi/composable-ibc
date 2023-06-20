@@ -1,15 +1,18 @@
-use std::{future::Future, sync::Arc, time::Duration};
+use std::{future::Future, pin::Pin, str::FromStr, sync::Arc, time::Duration};
 
 use cast::executor::Output;
 use ethers::{
-	abi::{Abi, Detokenize, Token},
+	abi::{Abi, Detokenize, ParamType, Token},
 	middleware::contract::Contract,
 	providers::Middleware,
-	types::{EIP1186ProofResponse, StorageProof, H256},
+	types::{BlockNumber, EIP1186ProofResponse, Filter, StorageProof, H256},
 };
 use ibc::{
 	core::{
-		ics02_client::client_state::ClientType,
+		ics02_client::{
+			client_state::ClientType,
+			events::{Attributes, CreateClient},
+		},
 		ics04_channel::packet::Sequence,
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::{
@@ -37,7 +40,7 @@ use ibc_proto::{
 use primitives::IbcProvider;
 use prost::Message;
 
-use futures::{FutureExt, Stream};
+use futures::{FutureExt, Stream, StreamExt};
 use thiserror::Error;
 
 use crate::client::{
@@ -64,7 +67,7 @@ where
 	if let Some(storage_proof) = proof.storage_proof.last() {
 		f(storage_proof.clone()).await
 	} else {
-		todo!("error: no storage proof")
+		Err(ClientError::NoStorageProof)
 	}
 }
 
@@ -94,23 +97,104 @@ impl IbcProvider for Client {
 		Ok(vec![])
 	}
 
-	fn ibc_events<'life0, 'async_trait>(
-		&'life0 self,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = std::pin::Pin<
-						Box<dyn Stream<Item = ibc::events::IbcEvent> + Send + 'static>,
-					>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
-		todo!()
+	async fn ibc_events(
+		&self,
+	) -> Pin<Box<dyn Stream<Item = ibc::events::IbcEvent> + Send + 'static>> {
+		fn decode_string(bytes: &[u8]) -> String {
+			ethers::abi::decode(&[ParamType::String], &bytes)
+				.unwrap()
+				.into_iter()
+				.next()
+				.unwrap()
+				.to_string()
+		}
+
+		fn decode_client_id_log(log: ethers::types::Log) -> ibc::events::IbcEvent {
+			let client_id = decode_string(&log.data.0);
+			ibc::events::IbcEvent::CreateClient(CreateClient(Attributes {
+				height: Height::default(),
+				client_id: ClientId::from_str(&client_id).unwrap(),
+				client_type: "00-uninitialized".to_owned(),
+				consensus_height: Height::default(),
+			}))
+		}
+
+		let ibc_handler_address = self.config.ibc_handler_address;
+
+		match self.websocket_provider().await {
+			Ok(ws) => async_stream::stream! {
+				let channel_id_stream = ws
+					.subscribe_logs(
+						&Filter::new()
+							.from_block(BlockNumber::Latest)
+							.address(ibc_handler_address)
+							.event("GeneratedChannelIdentifier(string)"),
+					)
+					.await
+					.expect("failed to subscribe to GeneratedChannelIdentifier event")
+					.map(decode_client_id_log);
+
+				let client_id_stream = ws
+					.subscribe_logs(
+						&Filter::new()
+							.from_block(BlockNumber::Latest)
+							.address(ibc_handler_address)
+							.event("GeneratedClientIdentifier(string)"),
+					)
+					.await
+					.expect("failed to subscribe to GeneratedClientId event")
+					.map(decode_client_id_log);
+
+				let connection_id_stream = ws
+					.subscribe_logs(
+						&Filter::new()
+							.from_block(BlockNumber::Latest)
+							.address(ibc_handler_address)
+							.event("GeneratedConnectionIdentifier(string)"),
+					)
+					.await
+					.expect("failed to subscribe to GeneratedConnectionIdentifier event")
+					.map(decode_client_id_log);
+
+				let recv_packet_stream = ws
+					.subscribe_logs(
+						&Filter::new()
+							.from_block(BlockNumber::Latest)
+							.address(ibc_handler_address)
+							.event("RecvPacket((uint64,string,string,string,string,bytes,(uint64,uint64),uint64))"),
+					)
+					.await
+					.expect("failed to subscribe to RecvPacket event")
+					.map(decode_client_id_log);
+
+				let send_packet_stream = ws
+					.subscribe_logs(
+						&Filter::new()
+							.from_block(BlockNumber::Latest)
+							.address(ibc_handler_address)
+							.event("SendPacket(uint64,string,string,(uint64,uint64),uint64,bytes)"),
+					)
+					.await
+					.expect("failed to subscribe to SendPacket event")
+					.map(decode_client_id_log);
+
+				let inner = futures::stream::select_all([
+					channel_id_stream,
+					client_id_stream,
+					connection_id_stream,
+					recv_packet_stream,
+					send_packet_stream
+				]);
+				futures::pin_mut!(inner);
+
+				while let Some(ev) = inner.next().await {
+					yield ev
+				}
+			}
+			.left_stream(),
+			Err(_) => futures::stream::empty().right_stream(),
+		}
+		.boxed()
 	}
 
 	async fn query_client_consensus(

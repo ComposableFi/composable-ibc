@@ -1,18 +1,13 @@
 use std::{future::Future, ops::Deref, path::PathBuf, str::FromStr, sync::Arc};
 
 use ethers::{
-	abi::Token,
-	prelude::ContractInstance,
-	providers::{FilterKind, Middleware},
-	solc::ProjectPathsConfig,
-	types::Filter,
-	utils::AnvilInstance,
+	abi::Token, prelude::ContractInstance, solc::ProjectPathsConfig, utils::AnvilInstance,
 };
-use hyperspace_ethereum::config::Config;
-
 use ibc::core::ics24_host::identifier::{ChannelId, PortId};
 use primitives::IbcProvider;
 use prost::Message;
+
+use hyperspace_ethereum::config::Config;
 
 mod utils;
 
@@ -43,7 +38,7 @@ async fn hyperspace_ethereum_client_fixture<M>(
 				.deref()
 				.clone(),
 		),
-		name: "foo".into(),
+		name: "mock-ethereum-client".into(),
 		client_id: None,
 		connection_id: None,
 		channel_whitelist: vec![],
@@ -335,7 +330,7 @@ async fn test_ibc_packet() {
 	assert_eq!(ack.acknowledgement, Vec::<u8>::new());
 
 	// query_packet_commitment
-	let commitment = hyperspace
+	let _commitment = hyperspace
 		.query_packet_commitments(
 			ibc::Height { revision_number: 0, revision_height: 1 },
 			ChannelId::from_str("channel-0").unwrap(),
@@ -345,7 +340,7 @@ async fn test_ibc_packet() {
 		.unwrap();
 
 	// query_packet_commitments
-	let commitments = hyperspace
+	let _commitments = hyperspace
 		.query_packet_commitments(
 			ibc::Height { revision_number: 0, revision_height: 1 },
 			ChannelId::from_str("channel-0").unwrap(),
@@ -355,7 +350,7 @@ async fn test_ibc_packet() {
 		.unwrap();
 
 	// query_packet_receipt
-	let receipt = hyperspace
+	let _receipt = hyperspace
 		.query_packet_receipt(
 			ibc::Height { revision_number: 0, revision_height: 1 },
 			&PortId::from_str("port-0").unwrap(),
@@ -366,7 +361,7 @@ async fn test_ibc_packet() {
 		.unwrap();
 
 	// query_packet_acknowledgements
-	let acks = hyperspace
+	let _acks = hyperspace
 		.query_packet_acknowledgements(
 			ibc::Height { revision_number: 0, revision_height: 1 },
 			ChannelId::from_str("channel-0").unwrap(),
@@ -376,7 +371,7 @@ async fn test_ibc_packet() {
 		.unwrap();
 
 	// query_unreceived_packets
-	let unreceived = hyperspace
+	let _unreceived = hyperspace
 		.query_unreceived_packets(
 			ibc::Height { revision_number: 0, revision_height: 1 },
 			ChannelId::from_str("channel-0").unwrap(),
@@ -387,7 +382,7 @@ async fn test_ibc_packet() {
 		.unwrap();
 
 	// query_unreceived_acknowledgements
-	let unreceived = hyperspace
+	let _unreceived = hyperspace
 		.query_unreceived_acknowledgements(
 			ibc::Height { revision_number: 0, revision_height: 1 },
 			ChannelId::from_str("channel-0").unwrap(),
