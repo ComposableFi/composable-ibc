@@ -282,7 +282,7 @@ pub async fn query_ready_and_timed_out_packets(
 							.await?;
 						return Ok(Some(Left(msg)))
 					} else {
-						log::trace!(target: "hyperspace", "Skipping packet as it has not timed out: {:?}", packet);
+						log::trace!(target: "hyperspace", "The packet has not timed out yet: {:?}", packet);
 					}
 
 					// If packet has not timed out but channel is closed on sink we skip
@@ -366,12 +366,12 @@ pub async fn query_ready_and_timed_out_packets(
 		let timeouts_count = timeout_packets_count.load(Ordering::SeqCst);
 		log::debug!(target: "hyperspace", "Found {timeouts_count} packets that have timed out");
 		source
-			.on_undelivered_sequences(timeouts_count == 0, UndeliveredType::Timeouts)
+			.on_undelivered_sequences(timeouts_count != 0, UndeliveredType::Timeouts)
 			.await;
 
 		let sends_count = send_packets_count.load(Ordering::SeqCst);
 		log::debug!(target: "hyperspace", "Found {sends_count} sent packets");
-		sink.on_undelivered_sequences(sends_count == 0, UndeliveredType::Recvs).await;
+		sink.on_undelivered_sequences(sends_count != 0, UndeliveredType::Recvs).await;
 
 		// Get acknowledgement messages
 		if source_channel_end.state == State::Closed {
@@ -396,7 +396,7 @@ pub async fn query_ready_and_timed_out_packets(
 		let acknowledgements = source.query_recv_packets(channel_id, port_id.clone(), acks).await?;
 		log::trace!(target: "hyperspace", "Got acknowledgements for channel {:?}: {:?}", channel_id, acknowledgements);
 		let mut acknowledgements_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
-		sink.on_undelivered_sequences(acknowledgements.is_empty(), UndeliveredType::Acks)
+		sink.on_undelivered_sequences(!acknowledgements.is_empty(), UndeliveredType::Acks)
 			.await;
 		for acknowledgements in acknowledgements.chunks(PROCESS_PACKETS_BATCH_SIZE) {
 			for acknowledgement in acknowledgements.to_owned() {

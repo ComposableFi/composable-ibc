@@ -135,13 +135,13 @@ impl Default for CommonClientState {
 }
 
 impl CommonClientState {
-	pub async fn on_undelivered_sequences(&self, is_empty: bool, kind: UndeliveredType) {
+	pub async fn on_undelivered_sequences(&self, has: bool, kind: UndeliveredType) {
 		log::trace!(
 			target: "hyperspace",
 			"on_undelivered_sequences: {:?}, type: {kind:?}",
-			is_empty
+			has
 		);
-		self.maybe_has_undelivered_packets.lock().unwrap().insert(kind, !is_empty);
+		self.maybe_has_undelivered_packets.lock().unwrap().insert(kind, has);
 	}
 
 	pub fn has_undelivered_sequences(&self, kind: UndeliveredType) -> bool {
@@ -541,8 +541,8 @@ pub trait Chain:
 
 	fn common_state_mut(&mut self) -> &mut CommonClientState;
 
-	async fn on_undelivered_sequences(&self, is_empty: bool, kind: UndeliveredType) {
-		self.common_state().on_undelivered_sequences(is_empty, kind).await
+	async fn on_undelivered_sequences(&self, has: bool, kind: UndeliveredType) {
+		self.common_state().on_undelivered_sequences(has, kind).await
 	}
 
 	fn has_undelivered_sequences(&self, kind: UndeliveredType) -> bool {
@@ -695,7 +695,7 @@ pub async fn find_suitable_proof_height_for_client(
 	if timestamp_to_match.is_none() {
 		// try to find latest states first, because relayer's strategy is to submit the most
 		// recent ones
-		for height in (start_height.revision_height..=latest_client_height.revision_height).rev() {
+		for height in start_height.revision_height..=latest_client_height.revision_height {
 			let temp_height = Height::new(start_height.revision_number, height);
 			let consensus_state =
 				sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
@@ -726,41 +726,6 @@ pub async fn find_suitable_proof_height_for_client(
 			return None
 		}
 
-		let proof_height = source.get_proof_height(latest_client_height).await;
-		let proof_diff = proof_height.revision_height - latest_client_height.revision_height;
-		let temp_height =
-			Height::new(latest_client_height.revision_number, end.saturating_sub(proof_diff));
-		let consensus_state =
-			sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
-		if let Some(consensus_state) = consensus_state {
-			let consensus_state =
-				AnyConsensusState::try_from(consensus_state.consensus_state?).ok()?;
-			if consensus_state.timestamp().nanoseconds() >= timestamp_to_match.nanoseconds() {
-				if proof_height != latest_client_height {
-					let has_consensus_state_with_proof = sink
-						.query_client_consensus(at, client_id.clone(), latest_client_height)
-						.await
-						.ok()
-						.map(|x| x.consensus_state.is_some())
-						.unwrap_or_default();
-					if has_consensus_state_with_proof {
-						log::debug!(
-							target: "hyperspace",
-							"Fast found proof height on {} as {}:{}", sink.name(), temp_height, latest_client_height
-						);
-						return Some(temp_height)
-					}
-				} else {
-					log::debug!(
-						target: "hyperspace",
-						"Fast found proof height on {} as {}:{}", sink.name(), temp_height, latest_client_height
-					);
-					return Some(temp_height)
-				}
-			}
-		}
-
-		// TODO: do we really need this part with binary search?
 		log::debug!(
 			target: "hyperspace",
 			"Entered binary search for proof height on {} for client {} starting at {}", sink.name(), client_id, start_height
