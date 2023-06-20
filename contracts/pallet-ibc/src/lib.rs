@@ -150,6 +150,7 @@ pub mod pallet {
 	use frame_support::{
 		dispatch::DispatchResult,
 		pallet_prelude::*,
+		storage::child,
 		traits::{
 			fungibles::{Inspect, Mutate, Transfer},
 			tokens::{AssetId, Balance},
@@ -158,7 +159,7 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	pub use ibc::signer::Signer;
-	use sp_core::crypto::ByteArray;
+	use sp_core::{crypto::ByteArray, storage::ChildInfo};
 
 	#[cfg(feature = "testing")]
 	use crate::ics23::{
@@ -168,7 +169,7 @@ pub mod pallet {
 	use crate::{
 		ics20::HandleMemo,
 		ics23::client_states::ClientStates,
-		light_clients::AnyClientStateV1,
+		light_clients::{AnyClientStateV1, AnyConsensusState},
 		routing::{Context, ModuleRouter},
 	};
 	use ibc::{
@@ -603,6 +604,11 @@ pub mod pallet {
 		},
 		ChargingFeeFailedAcknowledgement {
 			sequence: u64,
+		},
+		ChildStateUpdated,
+		ClientStateSubstituted {
+			client_id: String,
+			height: Height,
 		},
 	}
 
@@ -1168,6 +1174,59 @@ pub mod pallet {
 			Self::deposit_event(Event::<T>::FeeLessChannelIdsRemoved {
 				source_channel,
 				destination_channel,
+			});
+
+			Ok(())
+		}
+
+		#[pallet::call_index(8)]
+		#[pallet::weight(0)]
+		#[frame_support::transactional]
+		pub fn set_child_storage(
+			origin: OriginFor<T>,
+			key: Vec<u8>,
+			value: Vec<u8>,
+		) -> DispatchResult {
+			<T as Config>::AdminOrigin::ensure_origin(origin)?;
+
+			let concat_key = [T::PalletPrefix::get(), &key].concat();
+			child::put(&ChildInfo::new_default(T::PalletPrefix::get()), &concat_key, &value);
+			Self::deposit_event(Event::<T>::ChildStateUpdated);
+
+			Ok(())
+		}
+
+		#[pallet::call_index(9)]
+		#[pallet::weight(0)]
+		#[frame_support::transactional]
+		pub fn substitute_client_state(
+			origin: OriginFor<T>,
+			client_id: String,
+			height: Height,
+			client_state_bytes: Vec<u8>,
+			consensus_state_bytes: Vec<u8>,
+		) -> DispatchResult {
+			<T as Config>::AdminOrigin::ensure_origin(origin)?;
+
+			let client_id = ClientId::from_str(&client_id).map_err(|_| Error::<T>::Other)?;
+			let client_state = AnyClientState::decode_vec(&client_state_bytes[..])
+				.map_err(|_| Error::<T>::Other)?;
+			let consensus_state = AnyConsensusState::decode_vec(&consensus_state_bytes[..])
+				.map_err(|_| Error::<T>::Other)?;
+
+			let mut ctx = Context::<T>::new();
+			ctx.store_client_state(client_id.clone(), client_state)
+				.map_err(|_| Error::<T>::Other)?;
+			ctx.store_consensus_state(client_id.clone(), height, consensus_state)
+				.map_err(|_| Error::<T>::Other)?;
+			ctx.store_update_time(client_id.clone(), height, ctx.host_timestamp())
+				.map_err(|_| Error::<T>::Other)?;
+			ctx.store_update_height(client_id.clone(), height, ctx.host_height())
+				.map_err(|_| Error::<T>::Other)?;
+
+			Self::deposit_event(Event::<T>::ClientStateSubstituted {
+				client_id: client_id.to_string(),
+				height,
 			});
 
 			Ok(())
