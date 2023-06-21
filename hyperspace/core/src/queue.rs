@@ -15,6 +15,7 @@
 use ibc_proto::google::protobuf::Any;
 use metrics::handler::MetricsHandler;
 use primitives::Chain;
+use tokio::task::JoinHandle;
 
 /// This sends messages to the sink chain in a gas-aware manner.
 pub async fn flush_message_batch(
@@ -32,7 +33,11 @@ pub async fn flush_message_batch(
 	log::debug!(target: "hyperspace", "Outgoing messages weight: {} block max weight: {}", batch_weight, block_max_weight);
 	let ratio = (batch_weight / block_max_weight) as usize;
 	if ratio == 0 {
-		sink.submit(msgs).await?;
+		let sink = sink.clone();
+		let _join_handler: JoinHandle<Result<_, anyhow::Error>> = tokio::spawn(async move {
+			sink.submit(msgs).await?;
+			Ok(())
+		});
 		return Ok(())
 	}
 
@@ -51,10 +56,14 @@ pub async fn flush_message_batch(
 	);
 	let chunk_size = (msgs.len() / chunk).max(1);
 	// TODO: return number of failed messages and record it to metrics
-	for batch in msgs.chunks(chunk_size) {
-		// send out batches.
-		sink.submit(batch.to_vec()).await?;
-	}
+	let sink = sink.clone();
+	let _join_handler: JoinHandle<Result<_, anyhow::Error>> = tokio::spawn(async move {
+		for batch in msgs.chunks(chunk_size) {
+			// send out batches.
+			sink.submit(batch.to_vec()).await?;
+		}
+		Ok(())
+	});
 
 	Ok(())
 }

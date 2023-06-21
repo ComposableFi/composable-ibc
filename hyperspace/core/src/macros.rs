@@ -14,25 +14,16 @@
 
 #[macro_export]
 macro_rules! process_finality_event {
-	($source:ident, $sink:ident, $metrics:expr, $mode:ident, $result:ident, $stream_source:ident, $stream_sink:ident) => {
+	($source:ident, $sink:ident, $metrics:expr, $mode:ident, $result:ident, $stream:ident) => {
 		match $result {
 			// stream closed
 			None => {
 				log::warn!("Stream closed for {}", $source.name());
-				$stream_source = loop {
+				$stream = loop {
 					match $source.finality_notifications().await {
 						Ok(stream) => break stream,
 						Err(e) => {
 							log::error!("Failed to get finality notifications for {} {:?}. Trying again in 30 seconds...", $source.name(), e);
-							tokio::time::sleep(std::time::Duration::from_secs(30)).await;
-						},
-					};
-				};
-				$stream_sink = loop {
-					match $sink.finality_notifications().await {
-						Ok(stream) => break stream,
-						Err(e) => {
-							log::error!("Failed to get finality notifications for {} {:?}. Trying again in 30 seconds...", $sink.name(), e);
 							tokio::time::sleep(std::time::Duration::from_secs(30)).await;
 						},
 					};
