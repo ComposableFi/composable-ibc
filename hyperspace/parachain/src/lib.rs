@@ -53,7 +53,7 @@ use ibc::{
 	timestamp::Timestamp,
 };
 use ics10_grandpa::{
-	client_state::{AuthoritiesChange, ClientState as GrandpaClientState},
+	client_state::ClientState as GrandpaClientState,
 	consensus_state::ConsensusState as GrandpaConsensusState,
 };
 use ics11_beefy::{
@@ -77,7 +77,6 @@ use subxt::{
 	tx::TxPayload,
 };
 use tokio::sync::Mutex as AsyncMutex;
-use vec1::Vec1;
 
 /// Implements the [`crate::Chain`] trait for parachains.
 /// This is responsible for:
