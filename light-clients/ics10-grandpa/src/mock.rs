@@ -66,7 +66,7 @@ impl grandpa_client_primitives::HostFunctions for HostFunctionsManager {
 		pub_key.verify(&msg, sig)
 	}
 
-	fn insert_relay_header_hashes(_now_ms: u64, headers: &[<Self::Header as Header>::Hash]) {
+	fn insert_relay_header_hashes(headers: &[<Self::Header as Header>::Hash]) {
 		HEADER_HASHES.with(|set| {
 			let mut set_mut = set.borrow_mut();
 			for hash in headers {

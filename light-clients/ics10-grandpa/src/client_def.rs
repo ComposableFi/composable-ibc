@@ -18,15 +18,10 @@ use ibc::core::ics02_client::{
 	client_consensus::ConsensusState as _, client_state::ClientState as _,
 };
 
-use crate::{
-	client_message::{ClientMessage, RelayChainHeader},
-	client_state::{
-		AuthoritiesChange, AUTHORITIES_CHANGE_ITEM_LIFETIME, AUTHORITIES_CHANGE_ITEM_MIN_COUNT,
-	},
-};
+use crate::client_message::{ClientMessage, RelayChainHeader};
 use alloc::{format, string::ToString, vec, vec::Vec};
 use codec::Decode;
-use core::{convert::identity, marker::PhantomData};
+use core::marker::PhantomData;
 use finality_grandpa::Chain;
 use grandpa_client_primitives::{
 	justification::{
@@ -56,7 +51,6 @@ use ibc::{
 		},
 		ics26_routing::context::ReaderContext,
 	},
-	timestamp::Expiry,
 	Height,
 };
 use light_client_common::{
@@ -66,7 +60,6 @@ use sp_core::H256;
 use sp_runtime::traits::Header;
 use sp_trie::StorageProof;
 use tendermint_proto::Protobuf;
-use vec1::Vec1;
 
 const CLIENT_STATE_UPGRADE_PATH: &[u8] = b"client-state-upgrade-path";
 const CONSENSUS_STATE_UPGRADE_PATH: &[u8] = b"consensus-state-upgrade-path";
@@ -147,7 +140,7 @@ where
 					first_proof.unknown_headers.iter().min_by_key(|h| *h.number()).ok_or_else(
 						|| Error::Custom("Unknown headers can't be empty!".to_string()),
 					)?;
-				let first_finalized = first_headers
+				first_headers
 					.ancestry(first_base.hash(), first_target.hash())
 					.map_err(|_| Error::Custom("Invalid ancestry!".to_string()))?;
 
@@ -155,7 +148,7 @@ where
 					second_proof.unknown_headers.iter().min_by_key(|h| *h.number()).ok_or_else(
 						|| Error::Custom("Unknown headers can't be empty!".to_string()),
 					)?;
-				let second_finalized = second_headers
+				second_headers
 					.ancestry(second_base.hash(), second_target.hash())
 					.map_err(|_| Error::Custom("Invalid ancestry!".to_string()))?;
 
@@ -167,12 +160,6 @@ where
 						"Misbehaviour proofs are not for the same ancestor".into(),
 					)
 					.into())
-				}
-
-				let chain_diverges =
-					first_finalized.iter().zip(&second_finalized).any(|(a, b)| a != b);
-				if !chain_diverges {
-					return Err(Error::Custom("Chains should diverge".into()).into())
 				}
 
 				// TODO: should we handle genesis block here somehow?
@@ -200,50 +187,18 @@ where
 					))?
 				}
 
-				// we don't know which of the number is canonical, so we will try to verify both
-				// if the two bases are not equal
-				let base_numbers = if first_base.number == second_base.number {
-					vec![first_base.number]
-				} else {
-					vec![first_base.number, second_base.number]
-				};
-				for base_number in base_numbers {
-					// we can't trust block numbers, because they may be changed arbitrary
-					let first_height = base_number + first_finalized.len() as u32 - 1;
-					let second_height = base_number + second_finalized.len() as u32 - 1;
+				let first_valid = first_justification
+					.verify::<H>(client_state.current_set_id, &client_state.current_authorities)
+					.is_ok();
+				let second_valid = second_justification
+					.verify::<H>(client_state.current_set_id, &client_state.current_authorities)
+					.is_ok();
 
-					let get_authorities = |height| {
-						let key = client_state
-							.authorities_changes
-							.binary_search_by_key(&height, |x| x.height)
-							.unwrap_or_else(identity);
-						client_state
-							.authorities_changes
-							.get(key)
-							.map(|change| (change.set_id, &change.authorities))
-							.unwrap_or_else(|| {
-								let change = client_state.authorities_changes.last();
-								(change.set_id, &change.authorities)
-							})
-					};
-					let (first_set_id, first_current_authorities) = get_authorities(first_height);
-					let (second_set_id, second_current_authorities) =
-						get_authorities(second_height);
-
-					let first_valid = first_justification
-						.verify::<H>(first_set_id, first_current_authorities)
-						.is_ok();
-					let second_valid = second_justification
-						.verify::<H>(second_set_id, second_current_authorities)
-						.is_ok();
-
-					// whoops equivocation is valid.
-					if first_valid && second_valid {
-						return Ok(())
-					}
+				if !first_valid || !second_valid {
+					Err(Error::Custom("Invalid justification".to_string()))?
 				}
 
-				return Err(Error::Custom("Invalid justification".to_string()).into())
+				// whoops equivocation is valid.
 			},
 		}
 
@@ -272,7 +227,6 @@ where
 		let finalized = ancestry
 			.ancestry(from, header.finality_proof.block)
 			.map_err(|_| Error::Custom(format!("[update_state] Invalid ancestry!")))?;
-
 		let mut finalized_sorted = finalized.clone();
 		finalized_sorted.sort();
 
@@ -308,16 +262,6 @@ where
 			.header(&header.finality_proof.block)
 			.expect("target header has already been checked in verify_client_message; qed");
 
-		// check that the block number is correct, because it will be used later for
-		// finding the authorities set
-		let expected_target_height = client_state.latest_relay_height + finalized.len() as u32 - 1;
-		if expected_target_height != target.number {
-			return Err(Error::Custom(format!(
-				"[update_state] unexpected block number: {expected_target_height} != {}",
-				target.number
-			)))?
-		}
-
 		// can't try to rewind relay chain
 		if target.number <= client_state.latest_relay_height {
 			Err(Ics02Error::implementation_specific(format!(
@@ -349,43 +293,12 @@ where
 		client_state.latest_relay_height = target.number;
 
 		if let Some(scheduled_change) = find_scheduled_change(target) {
-			let now = ctx.host_timestamp();
-			let len = client_state.authorities_changes.len();
-			let next_set_id = client_state.last_set_id() + 1;
-			let mut xs = client_state
-				.authorities_changes
-				.into_iter()
-				.enumerate()
-				.filter(|(i, x)| {
-					// we keep at least AUTHORITIES_CHANGE_ITEM_MIN_COUNT changes
-					if len - i < AUTHORITIES_CHANGE_ITEM_MIN_COUNT {
-						return true
-					}
-					// prune expired changes
-					!matches!(
-						now.check_expiry(
-							&(x.timestamp + AUTHORITIES_CHANGE_ITEM_LIFETIME).unwrap()
-						),
-						Expiry::Expired
-					)
-				})
-				.map(|(_, x)| x)
-				.collect::<Vec<_>>();
-			xs.push(AuthoritiesChange {
-				height: target.number + scheduled_change.delay + 1, /* we start using the set id
-				                                                     * at the next block + delay */
-				timestamp: now,
-				set_id: next_set_id,
-				authorities: scheduled_change.next_authorities,
-			});
-			xs.sort_by_key(|change| change.height);
-			client_state.authorities_changes =
-				Vec1::try_from_vec(xs).expect("we've just added one item to the vector above; qed");
+			client_state.current_set_id += 1;
+			client_state.current_authorities = scheduled_change.next_authorities;
 		}
 
-		let now = ctx.host_timestamp();
-		let now_ms = now.nanoseconds() / 1_000_000;
-		H::insert_relay_header_hashes(now_ms, &finalized);
+		H::insert_relay_header_hashes(&finalized);
+
 		Ok((client_state, ConsensusUpdateResult::Batch(consensus_states)))
 	}
 

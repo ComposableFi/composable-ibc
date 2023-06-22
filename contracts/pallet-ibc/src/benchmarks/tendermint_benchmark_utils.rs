@@ -49,7 +49,6 @@ use ibc_proto::{cosmos::ics23::v1::CommitmentProof, ibc::core::commitment::v1::M
 use ics07_tendermint::{
 	client_state::ClientState as TendermintClientState, consensus_state::ConsensusState,
 };
-use ics10_grandpa::client_state::AuthoritiesChange;
 use ics11_beefy::{
 	client_state::ClientState as BeefyClientState,
 	consensus_state::ConsensusState as BeefyConsensusState,
@@ -69,7 +68,6 @@ use tendermint::{
 };
 use tendermint_light_client_verifier::types::Validator;
 use tendermint_proto::Protobuf;
-use vec1::vec1;
 
 pub const TENDERMINT_TIMESTAMP: u64 = 1650894363;
 
@@ -319,12 +317,8 @@ pub(crate) fn create_mock_grandpa_client_state() -> (
 		frozen_height: None,
 		latest_para_height: 0,
 		para_id: 2087,
-		authorities_changes: vec1![AuthoritiesChange {
-			height: 0,
-			timestamp: Timestamp::from_nanoseconds(1).unwrap(),
-			set_id: 0,
-			authorities: vec![],
-		}],
+		current_set_id: 0,
+		current_authorities: vec![],
 		_phantom: Default::default(),
 	};
 
