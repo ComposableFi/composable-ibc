@@ -37,7 +37,7 @@ use std::{
 	sync::{Arc, Mutex},
 	time::Duration,
 };
-use tokio::{task::JoinSet, time::sleep};
+use tokio::{sync::Mutex as AsyncMutex, task::JoinSet, time::sleep};
 
 use crate::error::Error;
 #[cfg(any(feature = "testing", test))]
@@ -122,7 +122,7 @@ pub struct CommonClientState {
 	/// Delay between parallel RPC calls to be friendly with the node and avoid MaxSlotsExceeded
 	/// error
 	pub rpc_call_delay: Duration,
-	pub misbehaviour_client_msg_queue: Arc<Mutex<Vec<AnyClientMessage>>>,
+	pub misbehaviour_client_msg_queue: Arc<AsyncMutex<Vec<AnyClientMessage>>>,
 }
 
 impl Default for CommonClientState {
@@ -131,6 +131,7 @@ impl Default for CommonClientState {
 			skip_optional_client_updates: true,
 			maybe_has_undelivered_packets: Default::default(),
 			rpc_call_delay: Default::default(),
+			misbehaviour_client_msg_queue: Arc::new(Default::default()),
 		}
 	}
 }

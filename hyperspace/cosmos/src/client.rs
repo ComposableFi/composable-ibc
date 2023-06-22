@@ -45,6 +45,7 @@ use tendermint_light_client::components::io::{AtHeight, Io};
 use tendermint_light_client_verifier::types::{LightBlock, ValidatorSet};
 use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, Url, WebSocketClient};
 use tokio::{
+	sync::Mutex as AsyncMutex,
 	task::JoinSet,
 	time::{error::Elapsed, sleep, timeout},
 };
@@ -292,6 +293,7 @@ where
 				skip_optional_client_updates: config.common.skip_optional_client_updates,
 				maybe_has_undelivered_packets: Default::default(),
 				rpc_call_delay: Duration::from_millis(1000),
+				misbehaviour_client_msg_queue: Arc::new(AsyncMutex::new(vec![])),
 			},
 		})
 	}
@@ -525,17 +527,8 @@ fn is_validators_equal(set_a: &ValidatorSet, set_b: &ValidatorSet) -> bool {
 
 #[cfg(test)]
 pub mod tests {
-	use crate::key_provider::KeyEntry;
-	use futures::TryFutureExt;
-	use itertools::Itertools;
-	use quick_cache::sync::Cache;
-	use std::{sync::Arc, time::Duration};
-	use tokio::{
-		task::JoinSet,
-		time::{sleep, timeout},
-	};
-
 	use super::MnemonicEntry;
+	use crate::key_provider::KeyEntry;
 
 	struct TestVector {
 		mnemonic: &'static str,

@@ -38,40 +38,45 @@ use error::Error;
 use frame_support::Serialize;
 use serde::Deserialize;
 
+use crate::{
+	finality_protocol::FinalityProtocol,
+	signer::ExtrinsicSigner,
+	utils::{fetch_max_extrinsic_weight, unsafe_cast_to_jsonrpsee_client},
+};
 use beefy_light_client_primitives::{ClientState, MmrUpdateProof};
 use beefy_prover::Prover;
-use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
-use ics11_beefy::client_message::ParachainHeader;
-use pallet_mmr_primitives::Proof;
-use sp_core::{ecdsa, ed25519, sr25519, Bytes, Pair, H256};
-use sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
-use sp_runtime::{
-	traits::{IdentifyAccount, Verify},
-	KeyTypeId, MultiSignature, MultiSigner,
-};
-use ss58_registry::Ss58AddressFormat;
-use subxt::config::{Header as HeaderT, Header};
-
-use crate::utils::{fetch_max_extrinsic_weight, unsafe_cast_to_jsonrpsee_client};
 use codec::Decode;
-use ics10_grandpa::consensus_state::ConsensusState as GrandpaConsensusState;
-use ics11_beefy::{
-	client_state::ClientState as BeefyClientState,
-	consensus_state::ConsensusState as BeefyConsensusState,
-};
-use primitives::{CommonClientState, KeyProvider, RelayerState};
-
-use crate::{finality_protocol::FinalityProtocol, signer::ExtrinsicSigner};
 use grandpa_light_client_primitives::ParachainHeaderProofs;
 use grandpa_prover::GrandpaProver;
-use ibc::timestamp::Timestamp;
-use ics10_grandpa::client_state::{AuthoritiesChange, ClientState as GrandpaClientState};
+use ibc::{
+	core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
+	timestamp::Timestamp,
+};
+use ics10_grandpa::{
+	client_state::{AuthoritiesChange, ClientState as GrandpaClientState},
+	consensus_state::ConsensusState as GrandpaConsensusState,
+};
+use ics11_beefy::{
+	client_message::ParachainHeader, client_state::ClientState as BeefyClientState,
+	consensus_state::ConsensusState as BeefyConsensusState,
+};
 use jsonrpsee_ws_client::WsClientBuilder;
 use light_client_common::config::{AsInner, RuntimeStorage};
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
-use sp_keystore::testing::KeyStore;
-use sp_runtime::traits::One;
-use subxt::tx::TxPayload;
+use pallet_mmr_primitives::Proof;
+use primitives::{CommonClientState, KeyProvider};
+use sp_core::{ecdsa, ed25519, sr25519, Bytes, Pair, H256};
+use sp_keystore::{testing::KeyStore, SyncCryptoStore, SyncCryptoStorePtr};
+use sp_runtime::{
+	traits::{IdentifyAccount, One, Verify},
+	KeyTypeId, MultiSignature, MultiSigner,
+};
+use ss58_registry::Ss58AddressFormat;
+use subxt::{
+	config::{Header as HeaderT, Header},
+	tx::TxPayload,
+};
+use tokio::sync::Mutex as AsyncMutex;
 use vec1::Vec1;
 
 /// Implements the [`crate::Chain`] trait for parachains.
@@ -119,8 +124,6 @@ pub struct ParachainClient<T: light_client_common::config::Config> {
 	pub finality_protocol: FinalityProtocol,
 	/// Common relayer data
 	pub common_state: CommonClientState,
-	/// Relayer data
-	pub relayer_state: RelayerState,
 }
 
 enum KeyType {
@@ -271,8 +274,8 @@ where
 				skip_optional_client_updates: true,
 				maybe_has_undelivered_packets: Arc::new(Mutex::new(Default::default())),
 				rpc_call_delay: DEFAULT_RPC_CALL_DELAY,
+				misbehaviour_client_msg_queue: Arc::new(AsyncMutex::new(vec![])),
 			},
-			relayer_state: Default::default(),
 		})
 	}
 }

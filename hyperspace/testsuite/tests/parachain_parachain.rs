@@ -25,7 +25,6 @@ use hyperspace_testsuite::{
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
 };
-use ibc::{core::ics24_host::identifier::ClientId, Height};
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
