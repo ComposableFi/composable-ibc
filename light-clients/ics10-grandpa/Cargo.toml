@@ -45,6 +45,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 anyhow = { version = "1.0.65", default-features = false }
 derive_more = { version = "0.99.17", default-features = false, features = ["from"] }
 serde = { version = "1.0.144", default-features = false, features = ["derive"] }
+vec1 = { version = "1.10.1", default-features = false }
 
 # substrate deps
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }

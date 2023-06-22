@@ -1,6 +1,7 @@
 use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, vec::Vec};
+use core::convert::identity;
 use frame_support::{
-	pallet_prelude::{StorageValue, ValueQuery},
+	pallet_prelude::{Blake2_256, StorageMap, StorageValue, ValueQuery},
 	traits::StorageInstance,
 };
 use ibc::{
@@ -37,7 +38,7 @@ use ics10_grandpa::{
 		RelayChainHeader, GRANDPA_CLIENT_MESSAGE_TYPE_URL, GRANDPA_HEADER_TYPE_URL,
 		GRANDPA_MISBEHAVIOUR_TYPE_URL,
 	},
-	client_state::GRANDPA_CLIENT_STATE_TYPE_URL,
+	client_state::{GRANDPA_CLIENT_STATE_TYPE_URL, HEADER_ITEM_LIFETIME, HEADER_ITEM_MIN_COUNT},
 	consensus_state::GRANDPA_CONSENSUS_STATE_TYPE_URL,
 };
 use ics11_beefy::{
@@ -48,8 +49,7 @@ use prost::Message;
 use sp_core::{crypto::ByteArray, ed25519, H256};
 use sp_runtime::{
 	app_crypto::RuntimePublic,
-	traits::{BlakeTwo256, ConstU32, Header},
-	BoundedBTreeSet, BoundedVec,
+	traits::{BlakeTwo256, Header},
 };
 use tendermint::{
 	crypto::{
@@ -130,13 +130,10 @@ impl StorageInstance for GrandpaHeaderHashesStorageInstance {
 		"ibc.lightclients.grandpa"
 	}
 
-	const STORAGE_PREFIX: &'static str = "HeaderHashes";
+	const STORAGE_PREFIX: &'static str = "HeaderHashesV2";
 }
-pub type GrandpaHeaderHashesStorage = StorageValue<
-	GrandpaHeaderHashesStorageInstance,
-	BoundedVec<H256, ConstU32<GRANDPA_BLOCK_HASHES_CACHE_SIZE>>,
-	ValueQuery,
->;
+pub type GrandpaHeaderHashesStorage =
+	StorageValue<GrandpaHeaderHashesStorageInstance, Vec<(u64, H256)>, ValueQuery>;
 
 pub struct GrandpaHeaderHashesSetStorageInstance;
 impl StorageInstance for GrandpaHeaderHashesSetStorageInstance {
@@ -144,16 +141,10 @@ impl StorageInstance for GrandpaHeaderHashesSetStorageInstance {
 		"ibc.lightclients.grandpa"
 	}
 
-	const STORAGE_PREFIX: &'static str = "HeaderHashesSet";
+	const STORAGE_PREFIX: &'static str = "HeaderHashesSetV2";
 }
-pub type GrandpaHeaderHashesSetStorage = StorageValue<
-	GrandpaHeaderHashesSetStorageInstance,
-	BoundedBTreeSet<H256, ConstU32<GRANDPA_BLOCK_HASHES_CACHE_SIZE>>,
-	ValueQuery,
->;
-
-/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
-const GRANDPA_BLOCK_HASHES_CACHE_SIZE: u32 = 500;
+pub type GrandpaHeaderHashesSetStorage =
+	StorageMap<GrandpaHeaderHashesSetStorageInstance, Blake2_256, H256, (), ValueQuery>;
 
 impl grandpa_client_primitives::HostFunctions for HostFunctionsManager {
 	type Header = RelayChainHeader;
@@ -162,37 +153,32 @@ impl grandpa_client_primitives::HostFunctions for HostFunctionsManager {
 		pub_key.verify(&msg, sig)
 	}
 
-	fn insert_relay_header_hashes(new_hashes: &[<Self::Header as Header>::Hash]) {
+	fn insert_relay_header_hashes(now_ms: u64, new_hashes: &[<Self::Header as Header>::Hash]) {
 		if new_hashes.is_empty() {
 			return
 		}
 
-		GrandpaHeaderHashesSetStorage::mutate(|hashes_set| {
-			GrandpaHeaderHashesStorage::mutate(|hashes| {
-				for hash in new_hashes {
-					match hashes.try_push(*hash) {
-						Ok(_) => {},
-						Err(_) => {
-							let old_hash = hashes.remove(0);
-							hashes_set.remove(&old_hash);
-							hashes.try_push(*hash).expect(
-								"we just removed an element, so there is space for this one; qed",
-							);
-						},
-					}
-					match hashes_set.try_insert(*hash) {
-						Ok(_) => {},
-						Err(_) => {
-							log::warn!("duplicated value in GrandpaHeaderHashesStorage or the storage is corrupted");
-						},
-					}
+		GrandpaHeaderHashesStorage::mutate(|hashes| {
+			hashes.reserve(new_hashes.len());
+			for hash in new_hashes {
+				hashes.push((now_ms, *hash));
+				GrandpaHeaderHashesSetStorage::insert(*hash, ());
+			}
+			let expired = now_ms.saturating_sub(HEADER_ITEM_LIFETIME.as_millis() as u64);
+			let key = hashes.binary_search_by_key(&expired, |(t, _)| *t).unwrap_or_else(identity);
+			let len = hashes.len();
+			// keep at least HEADER_ITEM_MIN_COUNT items if possible
+			let remove_up_to_index = key.min(len.saturating_sub(HEADER_ITEM_MIN_COUNT));
+			if remove_up_to_index < len {
+				for hash in hashes.drain(..remove_up_to_index).map(|(_, hash)| hash) {
+					GrandpaHeaderHashesSetStorage::remove(&hash);
 				}
-			});
+			}
 		});
 	}
 
 	fn contains_relay_header_hash(hash: <Self::Header as Header>::Hash) -> bool {
-		GrandpaHeaderHashesSetStorage::get().contains(&hash)
+		GrandpaHeaderHashesSetStorage::contains_key(&hash)
 	}
 }
 
@@ -232,20 +218,76 @@ pub enum AnyUpgradeOptions {
 	Mock(()),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, ClientState, Protobuf)]
-pub enum AnyClientState {
-	#[ibc(proto_url = "GRANDPA_CLIENT_STATE_TYPE_URL")]
-	Grandpa(ics10_grandpa::client_state::ClientState<HostFunctionsManager>),
-	#[ibc(proto_url = "BEEFY_CLIENT_STATE_TYPE_URL")]
-	Beefy(ics11_beefy::client_state::ClientState<HostFunctionsManager>),
-	#[ibc(proto_url = "TENDERMINT_CLIENT_STATE_TYPE_URL")]
-	Tendermint(ics07_tendermint::client_state::ClientState<HostFunctionsManager>),
-	#[ibc(proto_url = "WASM_CLIENT_STATE_TYPE_URL")]
-	Wasm(ics08_wasm::client_state::ClientState<AnyClient, Self, AnyConsensusState>),
-	#[cfg(test)]
-	#[ibc(proto_url = "MOCK_CLIENT_STATE_TYPE_URL")]
-	Mock(ibc::mock::client_state::MockClientState),
+mod v1 {
+	use super::*;
+
+	#[derive(Clone, Debug, PartialEq, Eq)]
+	pub enum AnyClientState {
+		Grandpa(ics10_grandpa::client_state::ClientStateV1<HostFunctionsManager>),
+		Beefy(ics11_beefy::client_state::ClientState<HostFunctionsManager>),
+		Tendermint(ics07_tendermint::client_state::ClientState<HostFunctionsManager>),
+		Wasm(ics08_wasm::client_state::ClientState<AnyClient, Self, AnyConsensusState>),
+		#[cfg(test)]
+		Mock(ibc::mock::client_state::MockClientState),
+	}
+
+	impl ibc::protobuf::Protobuf<Any> for AnyClientState {}
+
+	impl TryFrom<Any> for AnyClientState {
+		type Error = ics02_client::error::Error;
+		fn try_from(value: Any) -> Result<Self, Self::Error> {
+			match value.type_url.as_str() {
+				"" => Err(ics02_client::error::Error::empty_consensus_state_response()),
+				GRANDPA_CLIENT_STATE_TYPE_URL => Ok(Self::Grandpa(<ics10_grandpa::client_state::ClientStateV1<HostFunctionsManager>>::decode_vec(&value.value).map_err(::ibc::core::ics02_client::error::Error::decode_raw_client_state)?)),
+				BEEFY_CLIENT_STATE_TYPE_URL => Ok(Self::Beefy(<ics11_beefy::client_state::ClientState<HostFunctionsManager>>::decode_vec(&value.value).map_err(::ibc::core::ics02_client::error::Error::decode_raw_client_state)?)),
+				TENDERMINT_CLIENT_STATE_TYPE_URL => Ok(Self::Tendermint(<ics07_tendermint::client_state::ClientState<HostFunctionsManager>>::decode_vec(&value.value).map_err(::ibc::core::ics02_client::error::Error::decode_raw_client_state)?)),
+				WASM_CLIENT_STATE_TYPE_URL => Ok(Self::Wasm(<ics08_wasm::client_state::ClientState<AnyClient, Self, AnyConsensusState>>::decode_vec(&value.value).map_err(::ibc::core::ics02_client::error::Error::decode_raw_client_state)?)),
+				#[cfg(test)] MOCK_CLIENT_STATE_TYPE_URL => Ok(Self::Mock(<ibc::mock::client_state::MockClientState>::decode_vec(&value.value).map_err(::ibc::core::ics02_client::error::Error::decode_raw_client_state)?)),
+				_ => Err(ics02_client::error::Error::unknown_consensus_state_type(value.type_url)),
+			}
+		}
+	}
+
+	impl From<AnyClientState> for Any {
+		fn from(value: AnyClientState) -> Self {
+			match value {
+				AnyClientState::Grandpa(value) => Any {
+					type_url: GRANDPA_CLIENT_STATE_TYPE_URL.to_string(),
+					value: value.encode_vec().unwrap(),
+				},
+				AnyClientState::Wasm(value) => Any {
+					type_url: WASM_CLIENT_STATE_TYPE_URL.to_string(),
+					value: value.encode_vec().unwrap(),
+				},
+				_ => unreachable!(),
+			}
+		}
+	}
 }
+
+mod v2 {
+	use super::*;
+
+	#[derive(Clone, Debug, PartialEq, Eq, ClientState, Protobuf)]
+	pub enum AnyClientState {
+		#[ibc(proto_url = "GRANDPA_CLIENT_STATE_TYPE_URL")]
+		Grandpa(ics10_grandpa::client_state::ClientStateV2<HostFunctionsManager>),
+		#[ibc(proto_url = "BEEFY_CLIENT_STATE_TYPE_URL")]
+		Beefy(ics11_beefy::client_state::ClientState<HostFunctionsManager>),
+		#[ibc(proto_url = "TENDERMINT_CLIENT_STATE_TYPE_URL")]
+		Tendermint(ics07_tendermint::client_state::ClientState<HostFunctionsManager>),
+		#[ibc(proto_url = "WASM_CLIENT_STATE_TYPE_URL")]
+		Wasm(ics08_wasm::client_state::ClientState<AnyClient, Self, AnyConsensusState>),
+		#[cfg(test)]
+		#[ibc(proto_url = "MOCK_CLIENT_STATE_TYPE_URL")]
+		Mock(ibc::mock::client_state::MockClientState),
+	}
+}
+
+pub use v1::AnyClientState as AnyClientStateV1;
+pub use v2::AnyClientState as AnyClientStateV2;
+
+pub type AnyClientState = AnyClientStateV2;
 
 impl AnyClientState {
 	/// Recursively decode the client state from the given `Any` type, until it

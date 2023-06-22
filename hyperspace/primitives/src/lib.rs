@@ -122,6 +122,7 @@ pub struct CommonClientState {
 	/// Delay between parallel RPC calls to be friendly with the node and avoid MaxSlotsExceeded
 	/// error
 	pub rpc_call_delay: Duration,
+	pub misbehaviour_client_msg_queue: Arc<Mutex<Vec<AnyClientMessage>>>,
 }
 
 impl Default for CommonClientState {

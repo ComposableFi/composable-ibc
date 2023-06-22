@@ -9,7 +9,7 @@ use grandpa_client_primitives::{
 use ibc::{timestamp::Timestamp, Height};
 use ics10_grandpa::{
 	client_message::{ClientMessage, Header as GrandpaHeader, RelayChainHeader},
-	client_state::ClientState,
+	client_state::{AuthoritiesChange, ClientState},
 	consensus_state::ConsensusState,
 };
 use sp_core::H256;
@@ -17,6 +17,7 @@ use sp_finality_grandpa::{AuthorityId, AuthoritySignature, KEY_TYPE};
 use sp_runtime::{traits::BlakeTwo256, SaturatedConversion};
 use sp_std::prelude::*;
 use sp_trie::{generate_trie_proof, LayoutV0, MemoryDB, StorageProof, TrieDBMutBuilder, TrieMut};
+use vec1::vec1;
 
 pub const GRANDPA_UPDATE_TIMESTAMP: u64 = 1650894363;
 /// Builds a grandpa client message that that contains the requested number of precommits
@@ -156,8 +157,12 @@ pub fn generate_finality_proof(
 		frozen_height: None,
 		latest_para_height,
 		para_id,
-		current_set_id: set_id,
-		current_authorities: authorities.into_iter().map(|authority| (authority, 100)).collect(),
+		authorities_changes: vec1![AuthoritiesChange {
+			set_id,
+			authorities: authorities.into_iter().map(|authority| (authority, 100)).collect(),
+			height: 0,
+			timestamp: Timestamp::from_nanoseconds(1).unwrap(),
+		}],
 		_phantom: Default::default(),
 	};
 

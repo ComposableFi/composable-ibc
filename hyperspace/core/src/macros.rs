@@ -18,6 +18,8 @@ macro_rules! chains {
         $(#[$($meta:meta)*])*
 		$name:ident($config:path, $client:path),
 	)*) => {
+		use primitives::RelayerState;
+
 		#[derive(Debug, Serialize, Deserialize, Clone)]
 		#[serde(tag = "type", rename_all = "snake_case")]
 		pub enum AnyConfig {

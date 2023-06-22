@@ -20,7 +20,7 @@ use ibc_proto::{
 use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::{
 	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, LightClientSync,
-	MisbehaviourHandler,
+	MisbehaviourHandler, RelayerState,
 };
 use prost::Message;
 use std::{pin::Pin, time::Duration};
@@ -268,6 +268,14 @@ where
 
 	fn common_state_mut(&mut self) -> &mut CommonClientState {
 		&mut self.common_state
+	}
+
+	fn relayer_state(&self) -> &RelayerState {
+		todo!()
+	}
+
+	fn relayer_state_mut(&mut self) -> &mut RelayerState {
+		todo!()
 	}
 }
 
