@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - vmarkushin/cosmos-skip-client-updates
 
 jobs:
   build-and-publish:
