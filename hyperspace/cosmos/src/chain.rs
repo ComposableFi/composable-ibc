@@ -242,7 +242,7 @@ where
 		if err_str.contains("dispatch task is gone") ||
 			err_str.contains("failed to send message to internal channel")
 		{
-			let (rpc_client, ws_driver) = WebSocketClient::new(self.rpc_url.clone())
+			let (rpc_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
 				.await
 				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 			tokio::spawn(ws_driver.run());
