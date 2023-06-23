@@ -11,7 +11,7 @@ use primitives::TestProvider;
 use tendermint_rpc::{
 	event::{Event, EventData},
 	query::{EventType, Query},
-	SubscriptionClient, WebSocketClient,
+	SubscriptionClient,
 };
 
 #[async_trait::async_trait]

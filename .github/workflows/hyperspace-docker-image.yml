@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-      - remove-grandpa-updates
+      - main
 
 jobs:
   build-and-publish:

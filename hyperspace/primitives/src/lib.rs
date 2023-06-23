@@ -73,8 +73,6 @@ pub mod error;
 pub mod mock;
 pub mod utils;
 
-const MAX_PACKETS_TO_PROCESS: usize = 50;
-
 pub enum UpdateMessage {
 	Single(Any),
 	Batch(Vec<Any>),
@@ -125,6 +123,7 @@ pub struct CommonClientState {
 	/// error
 	pub rpc_call_delay: Duration,
 	pub misbehaviour_client_msg_queue: Arc<AsyncMutex<Vec<AnyClientMessage>>>,
+	pub max_packets_to_process: usize,
 }
 
 impl Default for CommonClientState {
@@ -134,6 +133,7 @@ impl Default for CommonClientState {
 			maybe_has_undelivered_packets: Default::default(),
 			rpc_call_delay: Default::default(),
 			misbehaviour_client_msg_queue: Arc::new(Default::default()),
+			max_packets_to_process: 1000,
 		}
 	}
 }
@@ -586,7 +586,7 @@ pub async fn query_undelivered_sequences(
 		.query_packet_commitments(source_height, channel_id, port_id.clone())
 		.await?
 		.into_iter()
-		.take(MAX_PACKETS_TO_PROCESS)
+		.take(source.common_state().max_packets_to_process)
 		.collect::<Vec<_>>();
 	log::trace!(target: "hyperspace", "Seqs: {:?}", seqs);
 	let counterparty_channel_id = channel_end
@@ -820,7 +820,10 @@ pub async fn query_maximum_height_for_timeout_proofs(
 		)
 		.await
 		.ok()?;
-		let undelivered_sequences = undelivered_sequences.into_iter().take(5).collect();
+		let undelivered_sequences = undelivered_sequences
+			.into_iter()
+			.take(source.common_state().max_packets_to_process)
+			.collect();
 		let send_packets =
 			source.query_send_packets(channel, port_id, undelivered_sequences).await.ok()?;
 		for send_packet in send_packets {

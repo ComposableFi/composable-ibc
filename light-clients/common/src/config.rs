@@ -194,13 +194,14 @@ pub trait RuntimeTransactions {
 
 	type SendPingParams;
 	type TransferParams;
+	type MemoMessage;
 
 	fn ibc_deliver(messages: Vec<Any>) -> Payload<Self::Deliver>;
 	fn ibc_transfer(
 		params: Self::TransferParams,
 		asset_id: u128,
 		amount: u128,
-		memo: Option<()>,
+		memo: Option<Self::MemoMessage>,
 	) -> Payload<Self::Transfer>;
 	fn sudo_sudo(call: Self::ParaRuntimeCall) -> Payload<Self::Sudo>;
 	fn ibc_ping_send_ping(params: Self::SendPingParams) -> Payload<Self::SendPing>;

@@ -172,7 +172,8 @@ pub struct CosmosClient<H> {
 	pub light_block_cache: Arc<Cache<TmHeight, LightBlock>>,
 	/// Relayer data
 	pub common_state: CommonClientState,
-	pub jhs: Arc<TokioMutex<Vec<JoinHandle<Result<(), tendermint_rpc::Error>>>>>,
+	/// Join handles for spawned tasks
+	pub join_handles: Arc<TokioMutex<Vec<JoinHandle<Result<(), tendermint_rpc::Error>>>>>,
 }
 
 /// config options for [`ParachainClient`]
@@ -249,7 +250,7 @@ where
 		let (rpc_client, rpc_driver) = WebSocketClient::new(config.websocket_url.clone())
 			.await
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
-		let jh = tokio::spawn(rpc_driver.run());
+		let ws_driver_jh = tokio::spawn(rpc_driver.run());
 		let grpc_client = tonic::transport::Endpoint::new(config.grpc_url.to_string())
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?
 			.connect()
@@ -295,8 +296,9 @@ where
 				maybe_has_undelivered_packets: Default::default(),
 				rpc_call_delay: Duration::from_millis(1000),
 				misbehaviour_client_msg_queue: Arc::new(AsyncMutex::new(vec![])),
+				max_packets_to_process: 10,
 			},
-			jhs: Arc::new(TokioMutex::new(vec![jh])),
+			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh])),
 		})
 	}
 

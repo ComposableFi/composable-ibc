@@ -166,6 +166,7 @@ define_runtime_transactions!(
 	TransferParamsWrapper,
 	DummySendPingParamsWrapper,
 	parachain_subxt::api::runtime_types::pallet_ibc::Any,
+	MemoMessage,
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, CurrencyId(y), z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),

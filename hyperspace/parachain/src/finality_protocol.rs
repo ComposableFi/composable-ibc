@@ -52,7 +52,6 @@ use sp_runtime::{
 use std::{
 	collections::{BTreeMap, BTreeSet, HashMap, HashSet},
 	fmt::{Debug, Display},
-	sync::{Arc, Mutex},
 	time::Duration,
 };
 
@@ -64,11 +63,8 @@ use ibc::core::{
 	ics04_channel::packet::Packet,
 	ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 };
-use subxt::{
-	config::{
-		extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT, Header,
-	},
-	rpc::types::BlockNumber,
+use subxt::config::{
+	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT, Header,
 };
 use tendermint_proto::Protobuf;
 use tokio::task::JoinSet;
@@ -454,7 +450,7 @@ async fn find_next_justification<T>(
 	prover: &GrandpaProver<T>,
 	from: u32,
 	to: u32,
-) -> anyhow::Result<Option<FinalityProof<T::Header>>>
+) -> anyhow::Result<Option<GrandpaJustification<T::Header>>>
 where
 	T: light_client_common::config::Config + Send + Sync,
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
@@ -476,17 +472,14 @@ where
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
-	let mut unknown_headers = Arc::new(Mutex::new(Vec::new()));
 	let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 	let heights = (from..to).collect::<Vec<_>>();
-	let mut finality_proof = None;
-	'outer: for heights in heights.chunks(PROCESS_BLOCKS_BATCH_SIZE) {
+	for heights in heights.chunks(PROCESS_BLOCKS_BATCH_SIZE) {
 		for height in heights.to_owned() {
 			log::debug!(target: "hyperspace", "Looking for a closer proof {height}/{to}...");
 			let relay_client = prover.relay_client.clone();
 			let delay = prover.rpc_call_delay.as_millis();
 			let duration = Duration::from_millis(rand::thread_rng().gen_range(1..delay) as u64);
-			let mut unknown_headers = unknown_headers.clone();
 			join_set.spawn(async move {
 				tokio::time::sleep(duration).await;
 				let Some(hash) = relay_client.rpc().block_hash(Some(height.into())).await? else {
@@ -495,10 +488,6 @@ where
 				let Some(block) = relay_client.rpc().block(Some(hash)).await? else {
 					return Ok(None)
 				};
-				let Some(header) = relay_client.rpc().header(Some(hash)).await? else {
-					return Ok(None)
-				};
-				unknown_headers.lock().unwrap().push(header);
 				let Some(justifications) = block.justifications else {
 					return Ok(None)
 				};
@@ -507,78 +496,22 @@ where
 					if id == GRANDPA_ENGINE_ID {
 						let decoded_justification =
 							GrandpaJustification::<T::Header>::decode(&mut &justification[..])?;
-
-						let finality_proof = FinalityProof {
-							block: decoded_justification.commit.target_hash,
-							justification,
-							unknown_headers: vec![],
-						};
-						return Ok(Some((finality_proof, decoded_justification)))
+						return Ok(Some(decoded_justification))
 					}
 				}
 				return Ok(None)
 			});
 		}
 		while let Some(res) = join_set.join_next().await {
-			let proof = res??;
-			if finality_proof.is_none() && proof.is_some() {
-				finality_proof = proof;
-				break 'outer
+			let justification = res??;
+			if justification.is_some() {
+				join_set.abort_all();
+				return Ok(justification)
 			}
 		}
 	}
-	join_set.abort_all();
 
-	let Some((mut finality_proof, justification)) = finality_proof else {
-		return Ok(None)
-	};
-	let finalized_height = justification.commit.target_number.into();
-
-	let (mut unknown_headers, missing_heights) = {
-		let guard = unknown_headers.lock().unwrap();
-		let heights = guard.iter().map(|h| u32::from(h.number())).collect::<HashSet<_>>();
-		let missing_heights =
-			(from..=finalized_height).filter(|h| !heights.contains(h)).collect::<Vec<_>>();
-		((*guard).clone(), missing_heights)
-	};
-
-	let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
-	for heights in missing_heights.chunks(PROCESS_BLOCKS_BATCH_SIZE) {
-		for height in heights.to_owned() {
-			log::debug!(target: "hyperspace", "Querying missing block at {height}");
-			let relay_client = prover.relay_client.clone();
-			let to = prover.rpc_call_delay.as_millis();
-			let duration = Duration::from_millis(rand::thread_rng().gen_range(1..to) as u64);
-			join_set.spawn(async move {
-				tokio::time::sleep(duration).await;
-				let hash = relay_client
-					.rpc()
-					.block_hash(Some(height.into()))
-					.await?
-					.ok_or_else(|| anyhow::anyhow!("Block hash not found"))?;
-				let header = relay_client
-					.rpc()
-					.header(Some(hash))
-					.await?
-					.ok_or_else(|| anyhow::anyhow!("Block header not found"))?;
-				Ok(header)
-			});
-		}
-		while let Some(res) = join_set.join_next().await {
-			let header = res??;
-			unknown_headers.push(header);
-		}
-	}
-
-	unknown_headers.sort_by_key(|x| x.number());
-	unknown_headers = unknown_headers
-		.into_iter()
-		.take((finalized_height - from + 1) as usize)
-		.collect();
-
-	finality_proof.unknown_headers = unknown_headers;
-
-	Ok(Some(finality_proof))
+	Ok(None)
 }
 
 /// Query the latest events that have been finalized by the GRANDPA finality protocol.
@@ -647,7 +580,7 @@ where
 	.ok_or_else(|| anyhow!("No justification found for block: {:?}", next_relay_height))?
 	.0;
 
-	let mut finality_proof = FinalityProof::<T::Header>::decode(&mut &encoded[..])?;
+	let finality_proof = FinalityProof::<T::Header>::decode(&mut &encoded[..])?;
 
 	let mut justification =
 		GrandpaJustification::<T::Header>::decode(&mut &finality_proof.justification[..])?;
@@ -657,21 +590,19 @@ where
 		.target_number
 		.saturating_sub(client_state.latest_relay_height);
 	if diff > 100 {
-		if let Some(new_fin_proof) = find_next_justification(
+		// try to find a closer justification
+		if let Some(new_justification) = find_next_justification(
 			&prover,
 			client_state.latest_relay_height + 1,
 			justification.commit.target_number,
 		)
 		.await?
 		{
-			finality_proof.justification = new_fin_proof.justification;
-			justification =
-				GrandpaJustification::<T::Header>::decode(&mut &finality_proof.justification[..])?;
+			justification = new_justification;
 		}
 	}
 
 	let justification = justification;
-	let finality_proof = finality_proof;
 
 	// fetch the latest finalized parachain header
 	let finalized_para_header = prover

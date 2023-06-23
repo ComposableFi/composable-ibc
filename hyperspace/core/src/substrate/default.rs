@@ -120,6 +120,7 @@ define_runtime_transactions!(
 	TransferParamsWrapper,
 	SendPingParamsWrapper,
 	parachain_subxt::api::runtime_types::pallet_ibc::Any,
+	MemoMessage,
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, y, z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),
@@ -168,7 +169,7 @@ impl light_client_common::config::Config for DefaultConfig {
 	type EventRecord = DefaultEventRecord;
 	type Storage = DefaultRuntimeStorage;
 	type Tx = DefaultRuntimeTransactions;
-	type SignedExtra = (Era, CheckNonce, Compact<Balance>, Option<Self::AssetId>);
+	type SignedExtra = (Era, CheckNonce, Compact<Balance>);
 
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,

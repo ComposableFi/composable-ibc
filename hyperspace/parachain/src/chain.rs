@@ -59,7 +59,6 @@ use subxt::{
 		ExtrinsicParams, Header as HeaderT, Header,
 	},
 	events::Phase,
-	tx::Signer,
 };
 use tokio::time::sleep;
 use transaction_payment_rpc::TransactionPaymentApiClient;

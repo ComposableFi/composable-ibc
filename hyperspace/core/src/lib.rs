@@ -27,12 +27,12 @@ mod utils;
 use crate::utils::RecentStream;
 use anyhow::anyhow;
 use events::{has_packet_events, parse_events};
-use futures::{future::ready, Stream, StreamExt, TryFutureExt};
+use futures::{future::ready, StreamExt, TryFutureExt};
 use ibc::{events::IbcEvent, Height};
 use ibc_proto::google::protobuf::Any;
 use metrics::handler::MetricsHandler;
 use primitives::{Chain, IbcProvider, UndeliveredType, UpdateType};
-use std::{collections::HashSet, pin::Pin};
+use std::collections::HashSet;
 
 #[derive(Copy, Debug, Clone)]
 pub enum Mode {
@@ -175,12 +175,7 @@ async fn process_finality_event<A: Chain, B: Chain>(
 		},
 		Some(finality_event) => {
 			log::info!("=======================================================");
-			log::info!(
-				"Received finality notification from {}, {}, {}",
-				source.name(),
-				source.account_id(),
-				sink.account_id()
-			);
+			log::info!("Received finality notification from {}", source.name(),);
 			let sink_initial_rpc_call_delay = sink.rpc_call_delay();
 			let source_initial_rpc_call_delay = source.rpc_call_delay();
 

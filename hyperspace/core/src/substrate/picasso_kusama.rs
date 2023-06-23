@@ -12,7 +12,6 @@ use crate::{
 	define_ibc_event_wrapper, define_id, define_para_lifecycle, define_runtime_call,
 	define_runtime_event, define_runtime_storage, define_runtime_transactions,
 	define_transfer_params,
-	substrate::{ComposableConfig, DefaultConfig, PicassoRococoConfig},
 };
 use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
@@ -23,7 +22,6 @@ use light_client_common::config::{
 };
 use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;
-use parachain::parachain::UncheckedExtrinsic;
 use parachain_subxt::api::runtime_types::ibc_primitives::Timeout as RawTimeout;
 use relaychain::api::runtime_types::polkadot_runtime_parachains::paras::ParaLifecycle;
 use serde::{Serialize, Serializer};
@@ -127,6 +125,7 @@ define_runtime_transactions!(
 	TransferParamsWrapper,
 	DummySendPingParamsWrapper,
 	parachain_subxt::api::runtime_types::pallet_ibc::Any,
+	String,
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, CurrencyId(y), z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),

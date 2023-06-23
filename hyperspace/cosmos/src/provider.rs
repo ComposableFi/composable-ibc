@@ -71,7 +71,7 @@ use tendermint_rpc::{
 	endpoint::tx::Response,
 	event::{Event, EventData},
 	query::{EventType, Query},
-	Client, Error as RpcError, Order, SubscriptionClient, WebSocketClient,
+	Client, Error as RpcError, Order, SubscriptionClient,
 };
 use tokio::{task::JoinSet, time::sleep};
 
