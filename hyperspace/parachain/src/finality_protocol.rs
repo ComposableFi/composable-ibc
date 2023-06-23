@@ -41,6 +41,7 @@ use primitives::{
 	mock::LocalClientTypes, query_maximum_height_for_timeout_proofs, Chain, IbcProvider,
 	KeyProvider, UpdateType,
 };
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
 use sp_finality_grandpa::GRANDPA_ENGINE_ID;
@@ -51,10 +52,14 @@ use sp_runtime::{
 use std::{
 	collections::{BTreeMap, BTreeSet, HashMap, HashSet},
 	fmt::{Debug, Display},
+	sync::{Arc, Mutex},
+	time::Duration,
 };
 
 use beefy_prover::helpers::unsafe_arc_cast;
-use grandpa_prover::{GrandpaJustification, JustificationNotification};
+use grandpa_prover::{
+	GrandpaJustification, GrandpaProver, JustificationNotification, PROCESS_BLOCKS_BATCH_SIZE,
+};
 use ibc::core::{
 	ics04_channel::packet::Packet,
 	ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
@@ -66,6 +71,7 @@ use subxt::{
 	rpc::types::BlockNumber,
 };
 use tendermint_proto::Protobuf;
+use tokio::task::JoinSet;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum FinalityProtocol {
@@ -111,7 +117,7 @@ impl FinalityProtocol {
 			+ One
 			+ Send
 			+ Sync,
-		<T as subxt::Config>::Header: Decode + Send + Sync,
+		<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 		T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 		sp_core::H256: From<T::Hash>,
 		BTreeMap<H256, ParachainHeaderProofs>:
@@ -445,7 +451,7 @@ pub fn filter_events_by_ids(
 }
 
 async fn find_next_justification<T>(
-	relay_client: subxt::OnlineClient<T>,
+	prover: &GrandpaProver<T>,
 	from: u32,
 	to: u32,
 ) -> anyhow::Result<Option<FinalityProof<T::Header>>>
@@ -466,43 +472,113 @@ where
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
-	<T as subxt::Config>::Header: Decode + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
-	let mut unknown_headers = Vec::new();
-	for h in from..to {
-		log::debug!(target: "hyperspace", "Looking for a closer proof {h}/{to}...");
-
-		let Some(hash) = relay_client.rpc().block_hash(Some(h.into())).await? else {
-			return Ok(None)
-		};
-		let Some(block) = relay_client.rpc().block(Some(hash)).await? else {
-			return Ok(None)
-		};
-		let Some(header) = relay_client.rpc().header(Some(hash)).await? else {
-			return Ok(None)
-		};
-		unknown_headers.push(header);
-		let Some(justifications) = block.justifications else {
-			continue
-		};
-		for (id, justification) in justifications {
-			log::info!(target: "hyperspace", "Found closer justification at {h} (suggested {to})");
-			if id == GRANDPA_ENGINE_ID {
-				let decoded_justification =
-					GrandpaJustification::<T::Header>::decode(&mut &justification[..])?;
-
-				let finality_proof = FinalityProof {
-					block: decoded_justification.commit.target_hash,
-					justification,
-					unknown_headers,
+	let mut unknown_headers = Arc::new(Mutex::new(Vec::new()));
+	let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+	let heights = (from..to).collect::<Vec<_>>();
+	let mut finality_proof = None;
+	'outer: for heights in heights.chunks(PROCESS_BLOCKS_BATCH_SIZE) {
+		for height in heights.to_owned() {
+			log::debug!(target: "hyperspace", "Looking for a closer proof {height}/{to}...");
+			let relay_client = prover.relay_client.clone();
+			let delay = prover.rpc_call_delay.as_millis();
+			let duration = Duration::from_millis(rand::thread_rng().gen_range(1..delay) as u64);
+			let mut unknown_headers = unknown_headers.clone();
+			join_set.spawn(async move {
+				tokio::time::sleep(duration).await;
+				let Some(hash) = relay_client.rpc().block_hash(Some(height.into())).await? else {
+					return Ok(None)
 				};
-				return Ok(Some(finality_proof))
+				let Some(block) = relay_client.rpc().block(Some(hash)).await? else {
+					return Ok(None)
+				};
+				let Some(header) = relay_client.rpc().header(Some(hash)).await? else {
+					return Ok(None)
+				};
+				unknown_headers.lock().unwrap().push(header);
+				let Some(justifications) = block.justifications else {
+					return Ok(None)
+				};
+				for (id, justification) in justifications {
+					log::info!(target: "hyperspace", "Found closer justification at {height} (suggested {to})");
+					if id == GRANDPA_ENGINE_ID {
+						let decoded_justification =
+							GrandpaJustification::<T::Header>::decode(&mut &justification[..])?;
+
+						let finality_proof = FinalityProof {
+							block: decoded_justification.commit.target_hash,
+							justification,
+							unknown_headers: vec![],
+						};
+						return Ok(Some((finality_proof, decoded_justification)))
+					}
+				}
+				return Ok(None)
+			});
+		}
+		while let Some(res) = join_set.join_next().await {
+			let proof = res??;
+			if finality_proof.is_none() && proof.is_some() {
+				finality_proof = proof;
+				break 'outer
 			}
 		}
 	}
-	Ok(None)
+	join_set.abort_all();
+
+	let Some((mut finality_proof, justification)) = finality_proof else {
+		return Ok(None)
+	};
+	let finalized_height = justification.commit.target_number.into();
+
+	let (mut unknown_headers, missing_heights) = {
+		let guard = unknown_headers.lock().unwrap();
+		let heights = guard.iter().map(|h| u32::from(h.number())).collect::<HashSet<_>>();
+		let missing_heights =
+			(from..=finalized_height).filter(|h| !heights.contains(h)).collect::<Vec<_>>();
+		((*guard).clone(), missing_heights)
+	};
+
+	let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+	for heights in missing_heights.chunks(PROCESS_BLOCKS_BATCH_SIZE) {
+		for height in heights.to_owned() {
+			log::debug!(target: "hyperspace", "Querying missing block at {height}");
+			let relay_client = prover.relay_client.clone();
+			let to = prover.rpc_call_delay.as_millis();
+			let duration = Duration::from_millis(rand::thread_rng().gen_range(1..to) as u64);
+			join_set.spawn(async move {
+				tokio::time::sleep(duration).await;
+				let hash = relay_client
+					.rpc()
+					.block_hash(Some(height.into()))
+					.await?
+					.ok_or_else(|| anyhow::anyhow!("Block hash not found"))?;
+				let header = relay_client
+					.rpc()
+					.header(Some(hash))
+					.await?
+					.ok_or_else(|| anyhow::anyhow!("Block header not found"))?;
+				Ok(header)
+			});
+		}
+		while let Some(res) = join_set.join_next().await {
+			let header = res??;
+			unknown_headers.push(header);
+		}
+	}
+
+	unknown_headers.sort_by_key(|x| x.number());
+	unknown_headers = unknown_headers
+		.into_iter()
+		.take((finalized_height - from + 1) as usize)
+		.collect();
+
+	finality_proof.unknown_headers = unknown_headers;
+
+	Ok(Some(finality_proof))
 }
 
 /// Query the latest events that have been finalized by the GRANDPA finality protocol.
@@ -529,7 +605,7 @@ where
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
-	<T as subxt::Config>::Header: Decode + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
@@ -582,7 +658,7 @@ where
 		.saturating_sub(client_state.latest_relay_height);
 	if diff > 100 {
 		if let Some(new_fin_proof) = find_next_justification(
-			prover.relay_client.clone(),
+			&prover,
 			client_state.latest_relay_height + 1,
 			justification.commit.target_number,
 		)

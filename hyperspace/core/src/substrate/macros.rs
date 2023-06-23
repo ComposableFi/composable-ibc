@@ -710,12 +710,8 @@ macro_rules! define_runtime_transactions {
 				amount: u128,
 				memo: Option<()>,
 			) -> Payload<Self::Transfer> {
-				$ibc_transfer(
-					$transfer_wrapper(params).into(),
-					asset_id,
-					amount,
-					memo.map(|_| MemoMessage),
-				)
+				todo!()
+				// $ibc_transfer($transfer_wrapper(params).into(), asset_id, amount, memo)
 			}
 
 			fn sudo_sudo(call: Self::ParaRuntimeCall) -> Payload<Self::Sudo> {
@@ -849,8 +845,7 @@ macro_rules! define_runtime_call {
 #[macro_export]
 macro_rules! define_asset_id {
 	($name:ident, $ty:ty) => {
-		#[derive(Decode, Encode)]
-
+		#[derive(Decode, Encode, Debug)]
 		pub struct $name(pub $ty);
 
 		impl From<u128> for $name {

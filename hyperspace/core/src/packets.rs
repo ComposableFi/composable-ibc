@@ -48,7 +48,8 @@ pub mod connection_delay;
 pub mod utils;
 
 pub const PROCESS_PACKETS_BATCH_SIZE: usize = 100;
-pub const MAX_PACKETS_TO_PROCESS: usize = 1000;
+pub const MAX_PACKETS_TO_PROCESS: usize = 10;
+// pub const MAX_PACKETS_TO_PROCESS: usize = 1000;
 
 /// Returns a tuple of messages, with the first item being packets that are ready to be sent to the
 /// sink chain. And the second item being packet timeouts that should be sent to the source.
@@ -199,8 +200,11 @@ pub async fn query_ready_and_timed_out_packets(
 
 		log::trace!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?} for {seqs:?}", seqs.len(), channel_id, port_id.clone());
 
-		let send_packets = source.query_send_packets(channel_id, port_id.clone(), seqs).await?;
+		let mut send_packets = source.query_send_packets(channel_id, port_id.clone(), seqs).await?;
 		log::trace!(target: "hyperspace", "SendPackets count: {}", send_packets.len());
+		send_packets.sort();
+		send_packets.dedup();
+		log::trace!(target: "hyperspace", "SendPackets count': {}", send_packets.len());
 		let mut recv_packets_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 		let source = Arc::new(source.clone());
 		let sink = Arc::new(sink.clone());

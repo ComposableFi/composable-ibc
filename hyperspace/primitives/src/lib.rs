@@ -73,6 +73,8 @@ pub mod error;
 pub mod mock;
 pub mod utils;
 
+const MAX_PACKETS_TO_PROCESS: usize = 50;
+
 pub enum UpdateMessage {
 	Single(Any),
 	Batch(Vec<Any>),
@@ -582,7 +584,10 @@ pub async fn query_undelivered_sequences(
 	// First we fetch all packet commitments from source
 	let seqs = source
 		.query_packet_commitments(source_height, channel_id, port_id.clone())
-		.await?;
+		.await?
+		.into_iter()
+		.take(MAX_PACKETS_TO_PROCESS)
+		.collect::<Vec<_>>();
 	log::trace!(target: "hyperspace", "Seqs: {:?}", seqs);
 	let counterparty_channel_id = channel_end
 		.counterparty()
@@ -642,7 +647,7 @@ pub async fn query_undelivered_acks(
 		.ok_or_else(|| Error::Custom("Expected counterparty channel id".to_string()))?;
 	let counterparty_port_id = channel_end.counterparty().port_id.clone();
 
-	let undelivered_acks = sink
+	let mut undelivered_acks = sink
 		.query_unreceived_acknowledgements(
 			sink_height,
 			counterparty_channel_id,
@@ -655,6 +660,8 @@ pub async fn query_undelivered_acks(
 		"Found {} undelivered packet acks for {} chain",
 		undelivered_acks.len(), sink.name()
 	);
+	undelivered_acks.sort();
+	undelivered_acks.dedup();
 
 	Ok(undelivered_acks)
 }

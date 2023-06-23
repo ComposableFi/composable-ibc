@@ -59,6 +59,7 @@ use subxt::{
 		ExtrinsicParams, Header as HeaderT, Header,
 	},
 	events::Phase,
+	tx::Signer,
 };
 use tokio::time::sleep;
 use transaction_payment_rpc::TransactionPaymentApiClient;
@@ -88,7 +89,7 @@ where
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	<<T as subxt::Config>::Header as Header>::Number:
 		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
-	<T as subxt::Config>::Header: Decode + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,

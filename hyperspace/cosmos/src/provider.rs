@@ -75,6 +75,8 @@ use tendermint_rpc::{
 };
 use tokio::{task::JoinSet, time::sleep};
 
+pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 250;
+
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
 	Tendermint { from: TmHeight, to: TmHeight },
@@ -121,8 +123,10 @@ where
 		let latest_revision = latest_height.revision_number;
 
 		let from = TmHeight::try_from(latest_cp_client_height).unwrap();
-		let to = finality_event_height
-			.min(TmHeight::try_from(latest_cp_client_height + 100).expect("overflow"));
+		let to = finality_event_height.min(
+			TmHeight::try_from(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER)
+				.expect("should not overflow"),
+		);
 		log::info!(target: "hyperspace_cosmos", "Getting blocks {}..{}", from, to);
 
 		// query (exclusively) up to `to`, because the proof for the event at `to - 1` will be
@@ -661,7 +665,7 @@ where
 		);
 		let mut block_events = vec![];
 
-		for seq in seqs {
+		for seq in seqs.iter().cloned() {
 			let query_str =
 				Query::eq(format!("{}.packet_src_channel", "send_packet"), channel_id.to_string())
 					.and_eq(format!("{}.packet_src_port", "send_packet"), port_id.to_string())
@@ -686,7 +690,7 @@ where
 						ibc_event_try_from_abci_event(ev, Height::new(self.id().version(), height));
 
 					match ev {
-						Ok(IbcEvent::SendPacket(p)) => {
+						Ok(IbcEvent::SendPacket(p)) if seqs.contains(&p.packet.sequence.0) => {
 							let mut info = PacketInfo::try_from(IbcPacketInfo::from(p.packet))
 								.map_err(|_| {
 									Error::from(format!(
@@ -717,7 +721,7 @@ where
 
 		let mut block_events = vec![];
 
-		for seq in seqs {
+		for seq in seqs.iter().cloned() {
 			let query_str = Query::eq("recv_packet.packet_dst_channel", channel_id.to_string())
 				.and_eq("recv_packet.packet_dst_port", port_id.to_string())
 				.and_eq("recv_packet.packet_sequence", seq.to_string());
@@ -740,7 +744,9 @@ where
 					let ev =
 						ibc_event_try_from_abci_event(ev, Height::new(self.id().version(), height));
 					match ev {
-						Ok(IbcEvent::WriteAcknowledgement(p)) => {
+						Ok(IbcEvent::WriteAcknowledgement(p))
+							if seqs.contains(&p.packet.sequence.0) =>
+						{
 							let mut info = PacketInfo::try_from(IbcPacketInfo::from(p.packet))
 								.map_err(|_| {
 									Error::from(format!(

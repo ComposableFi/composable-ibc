@@ -4470,6 +4470,7 @@ dependencies = [
  "parity-scale-codec",
  "polkadot-core-primitives",
  "prost 0.11.6",
+ "rand 0.8.5",
  "rs_merkle",
  "sc-finality-grandpa-rpc",
  "serde",
