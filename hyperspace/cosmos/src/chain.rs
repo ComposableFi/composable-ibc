@@ -96,10 +96,7 @@ where
 		Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>>,
 		Error,
 	> {
-		let (ws_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
-			.await
-			.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))?;
-		tokio::spawn(ws_driver.run());
+		let ws_client = self.rpc_client.clone();
 		let subscription = ws_client
 			.subscribe(Query::from(EventType::NewBlock))
 			.await

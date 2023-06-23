@@ -43,6 +43,7 @@ use primitives::{
 };
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
+use sp_finality_grandpa::GRANDPA_ENGINE_ID;
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
@@ -58,8 +59,11 @@ use ibc::core::{
 	ics04_channel::packet::Packet,
 	ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 };
-use subxt::config::{
-	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT, Header,
+use subxt::{
+	config::{
+		extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT, Header,
+	},
+	rpc::types::BlockNumber,
 };
 use tendermint_proto::Protobuf;
 
@@ -440,6 +444,67 @@ pub fn filter_events_by_ids(
 	v
 }
 
+async fn find_next_justification<T>(
+	relay_client: subxt::OnlineClient<T>,
+	from: u32,
+	to: u32,
+) -> anyhow::Result<Option<FinalityProof<T::Header>>>
+where
+	T: light_client_common::config::Config + Send + Sync,
+	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
+		+ From<<<T as subxt::Config>::Header as Header>::Number>,
+	ParachainClient<T>: Chain + KeyProvider,
+	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
+	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
+	sp_core::H256: From<T::Hash>,
+	BTreeMap<H256, ParachainHeaderProofs>:
+		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
+	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
+{
+	let mut unknown_headers = Vec::new();
+	for h in from..to {
+		log::debug!(target: "hyperspace", "Looking for a closer proof {h}/{to}...");
+
+		let Some(hash) = relay_client.rpc().block_hash(Some(h.into())).await? else {
+			return Ok(None)
+		};
+		let Some(block) = relay_client.rpc().block(Some(hash)).await? else {
+			return Ok(None)
+		};
+		let Some(header) = relay_client.rpc().header(Some(hash)).await? else {
+			return Ok(None)
+		};
+		unknown_headers.push(header);
+		let Some(justifications) = block.justifications else {
+			continue
+		};
+		for (id, justification) in justifications {
+			log::info!(target: "hyperspace", "Found closer justification at {h} (suggested {to})");
+			if id == GRANDPA_ENGINE_ID {
+				let decoded_justification =
+					GrandpaJustification::<T::Header>::decode(&mut &justification[..])?;
+
+				let finality_proof = FinalityProof {
+					block: decoded_justification.commit.target_hash,
+					justification,
+					unknown_headers,
+				};
+				return Ok(Some(finality_proof))
+			}
+		}
+	}
+	Ok(None)
+}
+
 /// Query the latest events that have been finalized by the GRANDPA finality protocol.
 pub async fn query_latest_ibc_events_with_grandpa<T, C>(
 	source: &mut ParachainClient<T>,
@@ -506,10 +571,31 @@ where
 	.ok_or_else(|| anyhow!("No justification found for block: {:?}", next_relay_height))?
 	.0;
 
-	let finality_proof = FinalityProof::<T::Header>::decode(&mut &encoded[..])?;
+	let mut finality_proof = FinalityProof::<T::Header>::decode(&mut &encoded[..])?;
 
-	let justification =
+	let mut justification =
 		GrandpaJustification::<T::Header>::decode(&mut &finality_proof.justification[..])?;
+
+	let diff = justification
+		.commit
+		.target_number
+		.saturating_sub(client_state.latest_relay_height);
+	if diff > 100 {
+		if let Some(new_fin_proof) = find_next_justification(
+			prover.relay_client.clone(),
+			client_state.latest_relay_height + 1,
+			justification.commit.target_number,
+		)
+		.await?
+		{
+			finality_proof.justification = new_fin_proof.justification;
+			justification =
+				GrandpaJustification::<T::Header>::decode(&mut &finality_proof.justification[..])?;
+		}
+	}
+
+	let justification = justification;
+	let finality_proof = finality_proof;
 
 	// fetch the latest finalized parachain header
 	let finalized_para_header = prover
@@ -662,8 +748,6 @@ where
 		let value = msg.encode_vec()?;
 		Any { value, type_url: msg.type_url() }
 	};
-
-	log::trace!(target: "hyperspace", "Sending update header with type {:?} to {}", update_type, source.name());
 
 	Ok(vec![(update_header, height, events, update_type)])
 }

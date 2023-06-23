@@ -45,8 +45,8 @@ use tendermint_light_client::components::io::{AtHeight, Io};
 use tendermint_light_client_verifier::types::{LightBlock, ValidatorSet};
 use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, Url, WebSocketClient};
 use tokio::{
-	sync::Mutex as AsyncMutex,
-	task::JoinSet,
+	sync::{Mutex as TokioMutex, Mutex as AsyncMutex},
+	task::{JoinHandle, JoinSet},
 	time::{error::Elapsed, sleep, timeout},
 };
 
@@ -172,6 +172,7 @@ pub struct CosmosClient<H> {
 	pub light_block_cache: Arc<Cache<TmHeight, LightBlock>>,
 	/// Relayer data
 	pub common_state: CommonClientState,
+	pub jhs: Arc<TokioMutex<Vec<JoinHandle<Result<(), tendermint_rpc::Error>>>>>,
 }
 
 /// config options for [`ParachainClient`]
@@ -248,7 +249,7 @@ where
 		let (rpc_client, rpc_driver) = WebSocketClient::new(config.websocket_url.clone())
 			.await
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
-		tokio::spawn(rpc_driver.run());
+		let jh = tokio::spawn(rpc_driver.run());
 		let grpc_client = tonic::transport::Endpoint::new(config.grpc_url.to_string())
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?
 			.connect()
@@ -295,6 +296,7 @@ where
 				rpc_call_delay: Duration::from_millis(1000),
 				misbehaviour_client_msg_queue: Arc::new(AsyncMutex::new(vec![])),
 			},
+			jhs: Arc::new(TokioMutex::new(vec![jh])),
 		})
 	}
 

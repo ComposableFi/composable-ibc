@@ -121,7 +121,8 @@ where
 		let latest_revision = latest_height.revision_number;
 
 		let from = TmHeight::try_from(latest_cp_client_height).unwrap();
-		let to = finality_event_height;
+		let to = finality_event_height
+			.min(TmHeight::try_from(latest_cp_client_height + 100).expect("overflow"));
 		log::info!(target: "hyperspace_cosmos", "Getting blocks {}..{}", from, to);
 
 		// query (exclusively) up to `to`, because the proof for the event at `to - 1` will be
@@ -191,11 +192,8 @@ where
 	// necessary height field, as `height` is removed from `Attribute` from ibc-rs v0.22.0
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
 		// Create websocket client. Like what `EventMonitor::subscribe()` does in `hermes`
-		let (ws_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
-			.await
-			.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))
-			.unwrap();
-		tokio::spawn(ws_driver.run());
+		let ws_client = self.rpc_client.clone();
+
 		let query_all = vec![
 			Query::from(EventType::NewBlock),
 			Query::eq("message.module", "ibc_client"),

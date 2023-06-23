@@ -27,12 +27,12 @@ mod utils;
 use crate::utils::RecentStream;
 use anyhow::anyhow;
 use events::{has_packet_events, parse_events};
-use futures::{future::ready, StreamExt, TryFutureExt};
+use futures::{future::ready, Stream, StreamExt, TryFutureExt};
 use ibc::{events::IbcEvent, Height};
 use ibc_proto::google::protobuf::Any;
 use metrics::handler::MetricsHandler;
 use primitives::{Chain, IbcProvider, UndeliveredType, UpdateType};
-use std::collections::HashSet;
+use std::{collections::HashSet, pin::Pin};
 
 #[derive(Copy, Debug, Clone)]
 pub enum Mode {

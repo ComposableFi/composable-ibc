@@ -813,6 +813,7 @@ pub async fn query_maximum_height_for_timeout_proofs(
 		)
 		.await
 		.ok()?;
+		let undelivered_sequences = undelivered_sequences.into_iter().take(5).collect();
 		let send_packets =
 			source.query_send_packets(channel, port_id, undelivered_sequences).await.ok()?;
 		for send_packet in send_packets {
