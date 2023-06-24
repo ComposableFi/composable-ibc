@@ -195,6 +195,7 @@ pub async fn query_ready_and_timed_out_packets(
 		)
 		.await?
 		.into_iter()
+		.rev()
 		.take(max_packets_to_process)
 		.collect::<Vec<_>>();
 
@@ -394,6 +395,7 @@ pub async fn query_ready_and_timed_out_packets(
 		)
 		.await?
 		.into_iter()
+		.rev()
 		.take(max_packets_to_process)
 		.collect::<Vec<_>>();
 

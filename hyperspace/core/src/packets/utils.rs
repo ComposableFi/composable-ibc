@@ -41,6 +41,22 @@ use primitives::{find_suitable_proof_height_for_client, Chain};
 use std::time::Duration;
 use tendermint_proto::Protobuf;
 
+/*
+[2023-06-24T00:25:03Z TRACE hyperspace] get_timeout_proof_height:
+centauri_mainnet->picasso, timeout_variant=Both, source_height=1-270103,
+sink_height=2087-2686237, sink_timestamp=Timestamp(2023-06-24T00:24:36.344Z),
+latest_client_height_on_source=2087-2686225, packet_creation_height=249155,
+packet=Packet {
+	sequence: Sequence(10),
+	source_port: PortId("transfer"),
+	source_channel: ChannelId("channel-2"),
+	destination_port: PortId("transfer"),
+	destination_channel: ChannelId("channel-17"),
+	data: [123, 34, 97, 109, 111, 117, 110, 116, 34, 58, 34, 49, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 34, 44, 34, 100, 101, 110, 111, 109, 34, 58, 34, 116, 114, 97, 110, 115, 102, 101, 114, 47, 99, 104, 97, 110, 110, 101, 108, 45, 50, 47, 49, 34, 44, 34, 114, 101, 99, 101, 105, 118, 101, 114, 34, 58, 34, 53, 121, 66, 113, 120, 53, 74, 117, 49, 109, 112, 119, 111, 109, 84, 88, 106, 120, 81, 107, 77, 105, 118, 118, 110, 85, 118, 76, 118, 80, 116, 99, 115, 101, 119, 66, 65, 72, 67, 90, 107, 51, 56, 101, 121, 111, 121, 77, 34, 44, 34, 115, 101, 110, 100, 101, 114, 34, 58, 34, 99, 101, 110, 116, 97, 117, 114, 105, 49, 115, 57, 104, 118, 108, 53, 116, 120, 112, 104, 110, 117, 97, 104, 119, 108, 107, 51, 100, 99, 50, 53, 99, 108, 122, 115, 55, 50, 108, 120, 119, 120, 107, 107, 107, 110, 50, 114, 34, 125],
+	timeout_height: Height { revision: 2087, height: 2677740 },
+	timeout_timestamp: Timestamp { time: Some(Time(2023-06-22 15:13:05.897165453)) }
+}
+ */
 pub async fn get_timeout_proof_height(
 	source: &impl Chain,
 	sink: &impl Chain,

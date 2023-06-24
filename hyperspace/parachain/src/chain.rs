@@ -343,36 +343,42 @@ where
 		if err_str.contains("MaxSlotsExceeded") {
 			self.common_state.rpc_call_delay = self.common_state.rpc_call_delay * 2;
 		} else if err_str.contains("RestartNeeded") || err_str.contains("restart required") {
-			let relay_ws_client = Arc::new(
-				WsClientBuilder::default()
-					.build(&self.relay_chain_rpc_url)
-					.await
-					.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
-			);
-			let para_ws_client = Arc::new(
-				WsClientBuilder::default()
-					.build(&self.parachain_rpc_url)
-					.await
-					.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
-			);
-
-			let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
-				unsafe_cast_to_jsonrpsee_client(&para_ws_client)
-			})
-			.await?;
-			let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
-				unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
-			})
-			.await?;
-
-			log::info!(target: "hyperspace", "Reconnected to relay chain and parachain");
-
-			self.relay_ws_client = relay_ws_client;
-			self.para_ws_client = para_ws_client;
-			self.relay_client = relay_client;
-			self.para_client = para_client;
+			self.reconnect().await?;
 			self.common_state.rpc_call_delay = self.common_state.rpc_call_delay * 2;
 		}
+
+		Ok(())
+	}
+
+	async fn reconnect(&mut self) -> anyhow::Result<()> {
+		let relay_ws_client = Arc::new(
+			WsClientBuilder::default()
+				.build(&self.relay_chain_rpc_url)
+				.await
+				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
+		);
+		let para_ws_client = Arc::new(
+			WsClientBuilder::default()
+				.build(&self.parachain_rpc_url)
+				.await
+				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
+		);
+
+		let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
+			unsafe_cast_to_jsonrpsee_client(&para_ws_client)
+		})
+		.await?;
+		let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
+			unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
+		})
+		.await?;
+
+		self.relay_ws_client = relay_ws_client;
+		self.para_ws_client = para_ws_client;
+		self.relay_client = relay_client;
+		self.para_client = para_client;
+
+		log::info!(target: "hyperspace", "Reconnected to relay chain and parachain");
 
 		Ok(())
 	}

@@ -28,10 +28,12 @@ use ibc_rpc::{BlockNumberOrHash, IbcApiClient};
 use ics10_grandpa::client_message::{ClientMessage, Header as GrandpaHeader};
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState};
 
-use primitives::{mock::LocalClientTypes, Chain, KeyProvider, LightClientSync};
+use primitives::{
+	filter_events_by_ids, mock::LocalClientTypes, Chain, KeyProvider, LightClientSync,
+};
 
 use super::{error::Error, ParachainClient};
-use crate::finality_protocol::{filter_events_by_ids, FinalityProtocol};
+use crate::finality_protocol::FinalityProtocol;
 
 const MAX_HEADERS_PER_ITERATION: usize = 100;
 

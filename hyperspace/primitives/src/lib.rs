@@ -14,7 +14,7 @@
 
 #![allow(clippy::all)]
 
-use futures::Stream;
+use futures::{FutureExt, Stream};
 use ibc_proto::{
 	google::protobuf::Any,
 	ibc::core::{
@@ -133,7 +133,7 @@ impl Default for CommonClientState {
 			maybe_has_undelivered_packets: Default::default(),
 			rpc_call_delay: Default::default(),
 			misbehaviour_client_msg_queue: Arc::new(Default::default()),
-			max_packets_to_process: 1000,
+			max_packets_to_process: 100,
 		}
 	}
 }
@@ -560,6 +560,8 @@ pub trait Chain:
 	fn set_rpc_call_delay(&mut self, delay: Duration) {
 		self.common_state_mut().set_rpc_call_delay(delay)
 	}
+
+	async fn reconnect(&mut self) -> anyhow::Result<()>;
 }
 
 /// Returns undelivered packet sequences that have been sent out from
@@ -708,7 +710,10 @@ pub async fn find_suitable_proof_height_for_client(
 			let temp_height = Height::new(start_height.revision_number, height);
 			let consensus_state =
 				sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
-			if consensus_state.is_none() {
+			let decoded = consensus_state
+				.map(|x| x.consensus_state.map(AnyConsensusState::try_from))
+				.flatten();
+			if !matches!(decoded, Some(Ok(_))) {
 				continue
 			}
 			let proof_height = source.get_proof_height(temp_height).await;
@@ -732,6 +737,10 @@ pub async fn find_suitable_proof_height_for_client(
 		let mut end = latest_client_height.revision_height;
 		let mut last_known_valid_height = None;
 		if start > end {
+			// log::debug!(
+			// target: "hyperspace",
+			// "start height {} is greater than end height {} for client {} on {}", start, end,
+			// client_id, sink.name() );
 			return None
 		}
 
@@ -744,10 +753,14 @@ pub async fn find_suitable_proof_height_for_client(
 			let temp_height = Height::new(start_height.revision_number, mid);
 			let consensus_state =
 				sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
-			if consensus_state.is_none() {
+			let Some(Ok(consensus_state)) = consensus_state.map(|x| x.consensus_state.map(AnyConsensusState::try_from)).flatten() else {
 				start += 1;
+				// log::debug!(
+				// 	target: "hyperspace",
+				// 	"Client {} on {} does not have a consensus state at {}. start' = {start}", client_id, sink.name(), temp_height
+				// );
 				continue
-			}
+			};
 			let proof_height = source.get_proof_height(temp_height).await;
 			if proof_height != temp_height {
 				let has_consensus_state_with_proof = sink
@@ -757,28 +770,48 @@ pub async fn find_suitable_proof_height_for_client(
 					.map(|x| x.consensus_state.is_some())
 					.unwrap_or_default();
 				if !has_consensus_state_with_proof {
+					// log::debug!(
+					// 	target: "hyperspace",
+					// 	"Client {} on {} does not have a proof consensus state at {}", client_id,
+					// sink.name(), proof_height );
 					start += 1;
 					continue
 				}
 			}
 
-			let consensus_state =
-				AnyConsensusState::try_from(consensus_state.unwrap().consensus_state?).ok()?;
-			if consensus_state.timestamp().nanoseconds() < timestamp_to_match.nanoseconds() {
+			// let consensus_state =
+			// 	AnyConsensusState::try_from(consensus_state.unwrap().consensus_state.unwrap())
+			// 		.unwrap();
+			// convert the code above to the one that will continue instead of panicking, without
+			// returning an error
+
+			let t1 = consensus_state.timestamp().nanoseconds();
+			let t2 = timestamp_to_match.nanoseconds();
+			if t1 < t2 {
 				start = mid + 1;
+				// log::debug!(
+				// 	target: "hyperspace",
+				// 	"Client {} on {} has a consensus state at {} but it is too old. Start' = {start},
+				// {t1} < {t2}", client_id, sink.name(), temp_height );
 				continue
 			} else {
 				last_known_valid_height = Some(temp_height);
 				end = mid;
+				// log::debug!(
+				// 	target: "hyperspace",
+				// 	"Client {} on {} has a consensus state at {} but it is too old. end' = {end},
+				// last_known_valid_height = {last_known_valid_height:?}, {t1} >= {t2}", client_id,
+				// sink.name(), temp_height );
 			}
 		}
 		let start_height = Height::new(start_height.revision_number, start);
 
 		let consensus_state =
 			sink.query_client_consensus(at, client_id.clone(), start_height).await.ok();
-		if let Some(consensus_state) = consensus_state {
-			let consensus_state =
-				AnyConsensusState::try_from(consensus_state.consensus_state?).ok()?;
+		if let Some(Ok(consensus_state)) = consensus_state
+			.map(|x| x.consensus_state.map(AnyConsensusState::try_from))
+			.flatten()
+		{
 			if consensus_state.timestamp().nanoseconds() >= timestamp_to_match.nanoseconds() {
 				let proof_height = source.get_proof_height(start_height).await;
 				if proof_height != start_height {
@@ -789,16 +822,26 @@ pub async fn find_suitable_proof_height_for_client(
 						.map(|x| x.consensus_state.is_some())
 						.unwrap_or_default();
 					if has_consensus_state_with_proof {
+						// panic!("wtf1");
 						return Some(start_height)
 					}
 				} else {
+					// panic!("wtf2");
 					return Some(start_height)
 				}
 			}
 		}
 
+		// log::debug!(
+		// 	target: "hyperspace",
+		// 	"returning last_known_valid_height = {last_known_valid_height:?}"
+		// );
 		return last_known_valid_height
 	}
+	// log::debug!(
+	// 	target: "hyperspace",
+	// 	"returning None"
+	// );
 	None
 }
 
@@ -822,6 +865,7 @@ pub async fn query_maximum_height_for_timeout_proofs(
 		.ok()?;
 		let undelivered_sequences = undelivered_sequences
 			.into_iter()
+			.rev()
 			.take(source.common_state().max_packets_to_process)
 			.collect();
 		let send_packets =
@@ -870,4 +914,87 @@ pub async fn query_maximum_height_for_timeout_proofs(
 		min_timeout_height = min_timeout_height.max(timeout_height.ok()?)
 	}
 	min_timeout_height
+}
+
+pub fn filter_events_by_ids(
+	ev: &IbcEvent,
+	client_ids: &[ClientId],
+	connection_ids: &[ConnectionId],
+	channel_and_port_ids: &HashSet<(ChannelId, PortId)>,
+) -> bool {
+	use ibc::core::{
+		ics02_client::events::Attributes as ClientAttributes,
+		ics03_connection::events::Attributes as ConnectionAttributes,
+		ics04_channel::events::Attributes as ChannelAttributes,
+	};
+	let channel_ids = channel_and_port_ids
+		.iter()
+		.map(|(channel_id, _)| channel_id)
+		.collect::<Vec<_>>();
+
+	let filter_packet = |packet: &Packet| {
+		channel_and_port_ids.contains(&(packet.source_channel.clone(), packet.source_port.clone())) ||
+			channel_and_port_ids
+				.contains(&(packet.destination_channel.clone(), packet.destination_port.clone()))
+	};
+	let filter_client_attributes =
+		|packet: &ClientAttributes| client_ids.contains(&packet.client_id);
+	let filter_connection_attributes = |packet: &ConnectionAttributes| {
+		packet
+			.connection_id
+			.as_ref()
+			.map(|id| connection_ids.contains(&id))
+			.unwrap_or(false) ||
+			packet
+				.counterparty_connection_id
+				.as_ref()
+				.map(|id| connection_ids.contains(&id))
+				.unwrap_or(false)
+	};
+	let filter_channel_attributes = |packet: &ChannelAttributes| {
+		packet.channel_id.as_ref().map(|id| channel_ids.contains(&id)).unwrap_or(false) ||
+			packet
+				.counterparty_channel_id
+				.as_ref()
+				.map(|id| channel_ids.contains(&id))
+				.unwrap_or(false)
+	};
+
+	let v = match ev {
+		IbcEvent::SendPacket(e) => filter_packet(&e.packet),
+		IbcEvent::WriteAcknowledgement(e) => filter_packet(&e.packet),
+		IbcEvent::TimeoutPacket(e) => filter_packet(&e.packet),
+		IbcEvent::ReceivePacket(e) => filter_packet(&e.packet),
+		IbcEvent::AcknowledgePacket(e) => filter_packet(&e.packet),
+		IbcEvent::TimeoutOnClosePacket(e) => filter_packet(&e.packet),
+		IbcEvent::CreateClient(e) => filter_client_attributes(&e.0),
+		IbcEvent::UpdateClient(e) => filter_client_attributes(&e.common),
+		IbcEvent::UpgradeClient(e) => filter_client_attributes(&e.0),
+		IbcEvent::ClientMisbehaviour(e) => filter_client_attributes(&e.0),
+		IbcEvent::OpenInitConnection(e) => filter_connection_attributes(&e.0),
+		IbcEvent::OpenTryConnection(e) => filter_connection_attributes(&e.0),
+		IbcEvent::OpenAckConnection(e) => filter_connection_attributes(&e.0),
+		IbcEvent::OpenConfirmConnection(e) => filter_connection_attributes(&e.0),
+		IbcEvent::OpenInitChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::OpenTryChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::OpenAckChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::OpenConfirmChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::CloseInitChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::CloseConfirmChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::PushWasmCode(_) => true,
+		IbcEvent::NewBlock(_) |
+		IbcEvent::AppModule(_) |
+		IbcEvent::Empty(_) |
+		IbcEvent::ChainError(_) => true,
+	};
+	if !v {
+		log::debug!(target: "hyperspace_parachain", "Filtered out event: {:?}", ev);
+	}
+	v
 }

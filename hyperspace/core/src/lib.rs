@@ -160,6 +160,7 @@ async fn process_finality_event<A: Chain, B: Chain>(
 					Err(e) => {
 						log::error!("Failed to get finality notifications for {} {:?}. Trying again in 30 seconds...", source.name(), e);
 						tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+						let _ = source.reconnect().await;
 					},
 				};
 			};
@@ -169,6 +170,7 @@ async fn process_finality_event<A: Chain, B: Chain>(
 					Err(e) => {
 						log::error!("Failed to get finality notifications for {} {:?}. Trying again in 30 seconds...", sink.name(), e);
 						tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+						let _ = sink.reconnect().await;
 					},
 				};
 			};

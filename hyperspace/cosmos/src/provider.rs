@@ -61,7 +61,9 @@ use ics08_wasm::msg::MsgPushNewWasmCode;
 use pallet_ibc::light_clients::{
 	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
 };
-use primitives::{mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType};
+use primitives::{
+	filter_events_by_ids, mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType,
+};
 use prost::Message;
 use rand::Rng;
 use std::{collections::HashSet, pin::Pin, str::FromStr, time::Duration};
@@ -143,11 +145,12 @@ where
 				log::trace!(target: "hyperspace_cosmos", "Parsing events at height {:?}", height);
 				let client = self.clone();
 				let duration = Duration::from_millis(rand::thread_rng().gen_range(0..to) as u64);
+				let counterparty = counterparty.clone();
 				join_set.spawn(async move {
 					sleep(duration).await;
 					let xs = tokio::time::timeout(
 						Duration::from_secs(30),
-						client.parse_ibc_events_at(latest_revision, height),
+						client.parse_ibc_events_at(&counterparty, latest_revision, height),
 					)
 					.await??;
 					Ok((height, xs))
@@ -666,10 +669,9 @@ where
 		let mut block_events = vec![];
 
 		for seq in seqs.iter().cloned() {
-			let query_str =
-				Query::eq(format!("{}.packet_src_channel", "send_packet"), channel_id.to_string())
-					.and_eq(format!("{}.packet_src_port", "send_packet"), port_id.to_string())
-					.and_eq(format!("{}.packet_sequence", "send_packet"), seq.to_string());
+			let query_str = Query::eq("send_packet.packet_src_channel", channel_id.to_string())
+				.and_eq("send_packet.packet_src_port", port_id.to_string())
+				.and_eq("send_packet.packet_sequence", seq.to_string());
 
 			let response = self
 				.rpc_client
@@ -1276,8 +1278,9 @@ impl<H> CosmosClient<H>
 where
 	H: 'static + Clone + Send + Sync,
 {
-	async fn parse_ibc_events_at(
+	async fn parse_ibc_events_at<C: Chain>(
 		&self,
+		counterparty: &C,
 		latest_revision: u64,
 		height: u64,
 	) -> Result<Vec<IbcEvent>, <Self as IbcProvider>::Error> {
@@ -1302,15 +1305,43 @@ where
 
 		let ibc_height = Height::new(latest_revision, height);
 		for event in events {
+			let mut channel_and_port_ids = self.channel_whitelist();
+			channel_and_port_ids.extend(counterparty.channel_whitelist());
+
 			let ibc_event = ibc_event_try_from_abci_event(&event, ibc_height).ok();
 			match ibc_event {
 				Some(mut ev) => {
-					ev.set_height(ibc_height);
-					log::debug!(target: "hyperspace_cosmos", "Encountered event at {height}: {:?}", event.kind);
-					ibc_events.push(ev);
+					let is_filtered = filter_events_by_ids(
+						&ev,
+						&[self.client_id(), counterparty.client_id()],
+						&[self.connection_id(), counterparty.connection_id()]
+							.into_iter()
+							.flatten()
+							.collect::<Vec<_>>(),
+						&channel_and_port_ids,
+					);
+
+					if is_filtered {
+						ev.set_height(ibc_height);
+						log::debug!(target: "hyperspace_cosmos", "Encountered event at {height}: {:?}", event.kind);
+						ibc_events.push(ev);
+					} else {
+						log::debug!(target: "hyperspace_cosmos", "Filtered out event: {:?}", event.kind);
+					}
 				},
 				None => {
-					log::debug!(target: "hyperspace_cosmos", "Skipped event: {:?}", event.kind);
+					let ignored_events = [
+						"commission",
+						"rewards",
+						"transfer",
+						"mint",
+						"withdraw_rewards",
+						"coin_spent",
+						"coin_received",
+					];
+					if !ignored_events.contains(&event.kind.as_str()) {
+						log::debug!(target: "hyperspace_cosmos", "Skipped event: {:?}", event.kind);
+					}
 					continue
 				},
 			}
