@@ -692,7 +692,11 @@ where
 						ibc_event_try_from_abci_event(ev, Height::new(self.id().version(), height));
 
 					match ev {
-						Ok(IbcEvent::SendPacket(p)) if seqs.contains(&p.packet.sequence.0) => {
+						Ok(IbcEvent::SendPacket(p))
+							if seqs.contains(&p.packet.sequence.0) &&
+								p.packet.source_port == port_id && p.packet.source_channel ==
+								channel_id =>
+						{
 							let mut info = PacketInfo::try_from(IbcPacketInfo::from(p.packet))
 								.map_err(|_| {
 									Error::from(format!(
@@ -747,7 +751,9 @@ where
 						ibc_event_try_from_abci_event(ev, Height::new(self.id().version(), height));
 					match ev {
 						Ok(IbcEvent::WriteAcknowledgement(p))
-							if seqs.contains(&p.packet.sequence.0) =>
+							if seqs.contains(&p.packet.sequence.0) &&
+								p.packet.source_port == port_id && p.packet.source_channel ==
+								channel_id =>
 						{
 							let mut info = PacketInfo::try_from(IbcPacketInfo::from(p.packet))
 								.map_err(|_| {
@@ -803,7 +809,7 @@ where
 					ibc_event_try_from_abci_event(ev, Height::new(self.id().version(), height));
 				let timestamp = self.query_timestamp_at(height).await?;
 				match ev {
-					Ok(IbcEvent::UpdateClient(_)) =>
+					Ok(IbcEvent::UpdateClient(e)) if e.client_id() == &client_id =>
 						return Ok((
 							Height::new(self.chain_id.version(), height),
 							Timestamp::from_nanoseconds(timestamp)?,
