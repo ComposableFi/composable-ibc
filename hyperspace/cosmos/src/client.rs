@@ -399,8 +399,6 @@ where
 			let mut join_set = JoinSet::<Result<Result<_, Error>, Elapsed>>::new();
 			for height in heights.to_owned() {
 				let client = client.clone();
-				log::trace!(target: "hyperspace_cosmos", "Max delay: {to}");
-
 				let duration = Duration::from_millis(rand::thread_rng().gen_range(0..to) as u64);
 				let fut = async move {
 					log::trace!(target: "hyperspace_cosmos", "Fetching header at height {:?}", height);

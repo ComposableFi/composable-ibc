@@ -588,7 +588,6 @@ pub async fn query_undelivered_sequences(
 		.query_packet_commitments(source_height, channel_id, port_id.clone())
 		.await?
 		.into_iter()
-		.take(source.common_state().max_packets_to_process)
 		.collect::<Vec<_>>();
 	log::trace!(target: "hyperspace", "Seqs: {:?}", seqs);
 	let counterparty_channel_id = channel_end

@@ -35,7 +35,7 @@ use ibc::{
 };
 use ibc_primitives::PacketInfo as IbcPacketInfo;
 use ibc_proto::{
-	cosmos::bank::v1beta1::QueryBalanceRequest,
+	cosmos::{bank::v1beta1::QueryBalanceRequest, base::query::v1beta1::PageRequest},
 	google::protobuf::Any,
 	ibc::core::{
 		channel::v1::{
@@ -175,7 +175,6 @@ where
 		for (events, (update_header, update_type)) in
 			block_events.into_iter().map(|(_, events)| events).zip(update_headers)
 		{
-			log::debug!(target: "hyperspace_cosmos", "header n: {}", update_header.signed_header.header.height.value());
 			let height = update_header.height();
 			let update_client_header = {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
@@ -505,7 +504,7 @@ where
 		let request = QueryPacketCommitmentsRequest {
 			port_id: port_id.to_string(),
 			channel_id: channel_id.to_string(),
-			pagination: None,
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
 		};
 		let request = tonic::Request::new(request);
 		let response = grpc_client
@@ -543,7 +542,7 @@ where
 			port_id: port_id.to_string(),
 			channel_id: channel_id.to_string(),
 			packet_commitment_sequences: vec![],
-			pagination: None,
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
 		};
 		let request = tonic::Request::new(request);
 		let response = grpc_client
@@ -639,7 +638,7 @@ where
 			.map_err(|e| Error::from(format!("{:?}", e)))?;
 		let request = tonic::Request::new(QueryConnectionChannelsRequest {
 			connection: connection_id.to_string(),
-			pagination: None,
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
 		});
 
 		let response = grpc_client
@@ -759,12 +758,13 @@ where
 					let height = tx.height.value();
 					let ev =
 						ibc_event_try_from_abci_event(ev, Height::new(self.id().version(), height));
+
 					match ev {
 						Ok(IbcEvent::WriteAcknowledgement(p))
 							if !added_seqs.contains(&p.packet.sequence.0) &&
 								seqs.contains(&p.packet.sequence.0) &&
-								p.packet.source_port == port_id && p.packet.source_channel ==
-								channel_id =>
+								p.packet.destination_port == port_id &&
+								p.packet.destination_channel == channel_id =>
 						{
 							added_seqs.insert(p.packet.sequence.0);
 							let mut info = PacketInfo::try_from(IbcPacketInfo::from(p.packet))
@@ -923,7 +923,9 @@ where
 	}
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
-		let request = tonic::Request::new(QueryClientStatesRequest { pagination: None });
+		let request = tonic::Request::new(QueryClientStatesRequest {
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
+		});
 		let grpc_client = ibc_proto::ibc::core::client::v1::query_client::QueryClient::new(
 			self.grpc_client.clone(),
 		);
@@ -949,7 +951,9 @@ where
 	}
 
 	async fn query_channels(&self) -> Result<Vec<(ChannelId, PortId)>, Self::Error> {
-		let request = tonic::Request::new(QueryChannelsRequest { pagination: None });
+		let request = tonic::Request::new(QueryChannelsRequest {
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
+		});
 		let mut grpc_client =
 			ibc_proto::ibc::core::channel::v1::query_client::QueryClient::connect(
 				self.grpc_url.clone().to_string(),
@@ -984,7 +988,9 @@ where
 			.await
 			.map_err(|e| Error::from(format!("{:?}", e)))?;
 
-		let request = tonic::Request::new(QueryConnectionsRequest { pagination: None });
+		let request = tonic::Request::new(QueryConnectionsRequest {
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
+		});
 
 		let response = grpc_client
 			.connections(request)
@@ -1356,6 +1362,10 @@ where
 						"withdraw_rewards",
 						"coin_spent",
 						"coin_received",
+						"withdraw_commission",
+						"message",
+						"liveness",
+						"tx",
 					];
 					if !ignored_events.contains(&event.kind.as_str()) {
 						log::debug!(target: "hyperspace_cosmos", "Skipped event: {:?}", event.kind);

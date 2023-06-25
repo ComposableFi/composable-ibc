@@ -348,7 +348,7 @@ async fn process_messages<B: Chain>(
 		queue::flush_message_batch(msgs, metrics.as_ref(), &*sink)
 			.await
 			.map_err(|e| anyhow!("Failed to submit messages: {:?}", e))?;
-		log::trace!(target: "hyperspace", "Successfully submitted messages to {}", sink.name());
+		log::debug!(target: "hyperspace", "Successfully submitted messages to {}", sink.name());
 	}
 	Ok(())
 }
@@ -367,7 +367,7 @@ async fn process_timeouts<A: Chain>(
 		queue::flush_message_batch(timeout_msgs, metrics.as_ref(), &*source)
 			.await
 			.map_err(|e| anyhow!("Failed to submit timeout messages: {:?}", e))?;
-		log::trace!(target: "hyperspace", "Successfully submitted timeout messages to {}", source.name());
+		log::debug!(target: "hyperspace", "Successfully submitted timeout messages to {}", source.name());
 	}
 	Ok(())
 }

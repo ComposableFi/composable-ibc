@@ -195,11 +195,9 @@ pub async fn query_ready_and_timed_out_packets(
 		)
 		.await?
 		.into_iter()
-		.rev()
-		.take(max_packets_to_process)
 		.collect::<Vec<_>>();
 
-		log::trace!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?} for {seqs:?}", seqs.len(), channel_id, port_id.clone());
+		log::debug!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?} for {seqs:?}", seqs.len(), channel_id, port_id.clone());
 
 		let mut send_packets = source.query_send_packets(channel_id, port_id.clone(), seqs).await?;
 		log::trace!(target: "hyperspace", "SendPackets count: {}", send_packets.len());
@@ -395,8 +393,6 @@ pub async fn query_ready_and_timed_out_packets(
 		)
 		.await?
 		.into_iter()
-		.rev()
-		.take(max_packets_to_process)
 		.collect::<Vec<_>>();
 
 		let acknowledgements = source.query_recv_packets(channel_id, port_id.clone(), acks).await?;

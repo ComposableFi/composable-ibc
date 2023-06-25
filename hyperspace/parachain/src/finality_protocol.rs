@@ -385,11 +385,14 @@ where
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
+	log::debug!(target: "hyperspace", "Trying to find next justification in blocks {from}..{to}");
 	let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 	let heights = (from..to).collect::<Vec<_>>();
 	for heights in heights.chunks(PROCESS_BLOCKS_BATCH_SIZE) {
 		for height in heights.to_owned() {
-			log::debug!(target: "hyperspace", "Looking for a closer proof {height}/{to}...");
+			if height % 100 == 0 {
+				log::debug!(target: "hyperspace", "Looking for a closer proof {height}/{to}...");
+			}
 			let relay_client = prover.relay_client.clone();
 			let delay = prover.rpc_call_delay.as_millis();
 			let duration = Duration::from_millis(rand::thread_rng().gen_range(1..delay) as u64);
