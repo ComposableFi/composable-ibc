@@ -668,7 +668,11 @@ where
 		);
 		let mut block_events = vec![];
 
+		let mut added_seqs = HashSet::new();
 		for seq in seqs.iter().cloned() {
+			if added_seqs.contains(&seq) {
+				continue
+			}
 			let query_str = Query::eq("send_packet.packet_src_channel", channel_id.to_string())
 				.and_eq("send_packet.packet_src_port", port_id.to_string())
 				.and_eq("send_packet.packet_sequence", seq.to_string());
@@ -693,10 +697,12 @@ where
 
 					match ev {
 						Ok(IbcEvent::SendPacket(p))
-							if seqs.contains(&p.packet.sequence.0) &&
+							if !added_seqs.contains(&p.packet.sequence.0) &&
+								seqs.contains(&p.packet.sequence.0) &&
 								p.packet.source_port == port_id && p.packet.source_channel ==
 								channel_id =>
 						{
+							added_seqs.insert(p.packet.sequence.0);
 							let mut info = PacketInfo::try_from(IbcPacketInfo::from(p.packet))
 								.map_err(|_| {
 									Error::from(format!(
@@ -727,7 +733,11 @@ where
 
 		let mut block_events = vec![];
 
+		let mut added_seqs = HashSet::new();
 		for seq in seqs.iter().cloned() {
+			if added_seqs.contains(&seq) {
+				continue
+			}
 			let query_str = Query::eq("recv_packet.packet_dst_channel", channel_id.to_string())
 				.and_eq("recv_packet.packet_dst_port", port_id.to_string())
 				.and_eq("recv_packet.packet_sequence", seq.to_string());
@@ -751,10 +761,12 @@ where
 						ibc_event_try_from_abci_event(ev, Height::new(self.id().version(), height));
 					match ev {
 						Ok(IbcEvent::WriteAcknowledgement(p))
-							if seqs.contains(&p.packet.sequence.0) &&
+							if !added_seqs.contains(&p.packet.sequence.0) &&
+								seqs.contains(&p.packet.sequence.0) &&
 								p.packet.source_port == port_id && p.packet.source_channel ==
 								channel_id =>
 						{
+							added_seqs.insert(p.packet.sequence.0);
 							let mut info = PacketInfo::try_from(IbcPacketInfo::from(p.packet))
 								.map_err(|_| {
 									Error::from(format!(
