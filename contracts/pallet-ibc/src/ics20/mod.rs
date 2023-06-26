@@ -646,7 +646,8 @@ where
 		let origin = RawOrigin::Signed(receiver.clone());
 		let params = crate::TransferParams::<<T as frame_system::Config>::AccountId> {
 			to: account_id,
-			source_channel: 1,
+			// source_channel: packet.source_channel.sequence(), //TODO source? should it be destination channel id from memo?
+			source_channel: memo.channel.parse().expect("Failed to parse channel ID"), //TODO replace expect
 			timeout: ibc_primitives::Timeout::Offset {
 				// timestamp: next_chain_info.timestamp,
 				// height: next_chain_info.height,
