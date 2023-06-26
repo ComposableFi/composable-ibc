@@ -925,6 +925,7 @@ pub async fn query_maximum_height_for_timeout_proofs(
 	min_timeout_height
 }
 
+/// A wrapper around a type that can be either a single value or a pair of values.
 #[derive(Clone)]
 pub struct SingleOrPair<T> {
 	inner: Either<T, (T, T)>,
@@ -948,6 +949,12 @@ impl<T> SingleOrPair<T> {
 		}
 	}
 
+	/// This is a function that checks if two SingleOrPair objects intersect with each other.
+	///
+	/// If both objects are Single values, the function checks if they are
+	/// equal. If one object is a Single value and the other is a Pair, the function checks if the
+	/// Single value is equal to either value in the Pair. If both objects are Pairs, the function
+	/// checks if they have the same values in any order.
 	pub fn intersects(&self, other: &SingleOrPair<T>) -> bool
 	where
 		T: PartialEq,
