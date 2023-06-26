@@ -590,7 +590,6 @@ pub async fn query_undelivered_sequences(
 		.into_iter()
 		.collect::<Vec<_>>();
 	log::trace!(target: "hyperspace", "Seqs: {:?}", seqs);
-	log::trace!(target: "hyperspace", "Seqs: {:?}", seqs);
 	let counterparty_channel_id = channel_end
 		.counterparty()
 		.channel_id
@@ -737,10 +736,6 @@ pub async fn find_suitable_proof_height_for_client(
 		let mut end = latest_client_height.revision_height;
 		let mut last_known_valid_height = None;
 		if start > end {
-			// log::debug!(
-			// target: "hyperspace",
-			// "start height {} is greater than end height {} for client {} on {}", start, end,
-			// client_id, sink.name() );
 			return None
 		}
 
@@ -755,10 +750,6 @@ pub async fn find_suitable_proof_height_for_client(
 				sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
 			let Some(Ok(consensus_state)) = consensus_state.map(|x| x.consensus_state.map(AnyConsensusState::try_from)).flatten() else {
 				start += 1;
-				// log::debug!(
-				// 	target: "hyperspace",
-				// 	"Client {} on {} does not have a consensus state at {}. start' = {start}", client_id, sink.name(), temp_height
-				// );
 				continue
 			};
 			let proof_height = source.get_proof_height(temp_height).await;
@@ -770,51 +761,19 @@ pub async fn find_suitable_proof_height_for_client(
 					.map(|x| x.consensus_state.is_some())
 					.unwrap_or_default();
 				if !has_consensus_state_with_proof {
-					// log::debug!(
-					// 	target: "hyperspace",
-					// 	"Client {} on {} does not have a proof consensus state at {}", client_id,
-					// sink.name(), proof_height );
 					start += 1;
 					continue
 				}
 			}
-			let proof_height = source.get_proof_height(temp_height).await;
-			if proof_height != temp_height {
-				let has_consensus_state_with_proof = sink
-					.query_client_consensus(at, client_id.clone(), proof_height)
-					.await
-					.ok()
-					.map(|x| x.consensus_state.is_some())
-					.unwrap_or_default();
-				if !has_consensus_state_with_proof {
-					start += 1;
-					continue
-				}
-			}
-
-			// let consensus_state =
-			// 	AnyConsensusState::try_from(consensus_state.unwrap().consensus_state.unwrap())
-			// 		.unwrap();
-			// convert the code above to the one that will continue instead of panicking, without
-			// returning an error
 
 			let t1 = consensus_state.timestamp().nanoseconds();
 			let t2 = timestamp_to_match.nanoseconds();
 			if t1 < t2 {
 				start = mid + 1;
-				// log::debug!(
-				// 	target: "hyperspace",
-				// 	"Client {} on {} has a consensus state at {} but it is too old. Start' = {start},
-				// {t1} < {t2}", client_id, sink.name(), temp_height );
 				continue
 			} else {
 				last_known_valid_height = Some(temp_height);
 				end = mid;
-				// log::debug!(
-				// 	target: "hyperspace",
-				// 	"Client {} on {} has a consensus state at {} but it is too old. end' = {end},
-				// last_known_valid_height = {last_known_valid_height:?}, {t1} >= {t2}", client_id,
-				// sink.name(), temp_height );
 			}
 		}
 		let start_height = Height::new(start_height.revision_number, start);
@@ -843,16 +802,8 @@ pub async fn find_suitable_proof_height_for_client(
 			}
 		}
 
-		// log::debug!(
-		// 	target: "hyperspace",
-		// 	"returning last_known_valid_height = {last_known_valid_height:?}"
-		// );
 		return last_known_valid_height
 	}
-	// log::debug!(
-	// 	target: "hyperspace",
-	// 	"returning None"
-	// );
 	None
 }
 
