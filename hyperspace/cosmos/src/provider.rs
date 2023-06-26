@@ -99,7 +99,7 @@ where
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &C,
-	) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+	) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		C: Chain,
 	{
@@ -154,15 +154,21 @@ where
 			}
 		}
 
-		// we don't submit events for the last block, because we don't have a proof for it
-		assert_eq!(block_events.len(), update_headers.len(), "block events and updates must match");
+		if block_events.len() != update_headers.len() {
+			return Err(anyhow::anyhow!(
+				"block events and updates must match, got {} and {}",
+				block_events.len(),
+				update_headers.len()
+			))
+		}
 		block_events.sort_by_key(|(height, _)| *height);
 
 		let mut updates = Vec::new();
 		for (events, (update_header, update_type)) in
 			block_events.into_iter().map(|(_, events)| events).zip(update_headers)
 		{
-			log::info!(target: "hyperspace_cosmos", "Fetching block {}", update_header.height().revision_height);
+			log::debug!(target: "hyperspace_cosmos", "header n: {}", update_header.signed_header.header.height.value());
+			let height = update_header.height();
 			let update_client_header = {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 					client_id: client_id.clone(),
@@ -176,7 +182,7 @@ where
 				})?;
 				Any { value, type_url: msg.type_url() }
 			};
-			updates.push((update_client_header, events, update_type));
+			updates.push((update_client_header, height, events, update_type));
 		}
 		Ok(updates)
 	}
@@ -579,15 +585,6 @@ where
 		Ok(commitment_sequences)
 	}
 
-	async fn on_undelivered_sequences(&self, is_empty: bool) -> Result<(), Self::Error> {
-		*self.maybe_has_undelivered_packets.lock().unwrap() = !is_empty;
-		Ok(())
-	}
-
-	fn has_undelivered_sequences(&self) -> bool {
-		*self.maybe_has_undelivered_packets.lock().unwrap()
-	}
-
 	async fn query_unreceived_acknowledgements(
 		&self,
 		_at: Height,
@@ -719,6 +716,7 @@ where
 			target: "hyperspace_cosmos",
 			"query_recv_packets: channel_id: {}, port_id: {}, seqs: {:?}", channel_id, port_id, seqs
 		);
+
 		let mut block_events = vec![];
 
 		for seq in seqs {

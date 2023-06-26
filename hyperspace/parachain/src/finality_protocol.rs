@@ -86,7 +86,7 @@ impl FinalityProtocol {
 		source: &mut ParachainClient<T>,
 		finality_event: FinalityEvent,
 		counterparty: &C,
-	) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+	) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		T: light_client_common::config::Config + Send + Sync,
 		C: Chain,
@@ -133,7 +133,7 @@ pub async fn query_latest_ibc_events_with_beefy<T, C>(
 	source: &mut ParachainClient<T>,
 	finality_event: FinalityEvent,
 	counterparty: &C,
-) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 where
 	T: light_client_common::config::Config + Send + Sync,
 	C: Chain,
@@ -353,7 +353,8 @@ where
 		Any { value, type_url: msg.type_url() }
 	};
 
-	Ok(vec![(update_header, events, update_type)])
+	// FIXME: use height from the beefy header
+	Ok(vec![(update_header, Height::new(0, 0), events, update_type)])
 }
 
 pub fn filter_events_by_ids(
@@ -444,7 +445,7 @@ pub async fn query_latest_ibc_events_with_grandpa<T, C>(
 	source: &mut ParachainClient<T>,
 	finality_event: FinalityEvent,
 	counterparty: &C,
-) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 where
 	T: light_client_common::config::Config + Send + Sync,
 	C: Chain,
@@ -637,6 +638,7 @@ where
 		.expect("Should not panic, same struct from different crates");
 
 	let authority_set_changed_scheduled = find_scheduled_change(&target).is_some();
+	log::info!(target: "hyperspace_parachain", "authority_set_changed_scheduled = {authority_set_changed_scheduled}, timeout_update_required = {timeout_update_required}, is_update_required = {is_update_required}");
 	// if validator set has changed this is a mandatory update
 	let update_type =
 		match authority_set_changed_scheduled || timeout_update_required || is_update_required {
@@ -650,7 +652,7 @@ where
 		parachain_headers: parachain_headers.into(),
 		height: Height::new(source.para_id as u64, finalized_para_height as u64),
 	};
-
+	let height = grandpa_header.height();
 	let update_header = {
 		let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 			client_id: source.client_id(),
@@ -663,5 +665,5 @@ where
 
 	log::trace!(target: "hyperspace", "Sending update header with type {:?} to {}", update_type, source.name());
 
-	Ok(vec![(update_header, events, update_type)])
+	Ok(vec![(update_header, height, events, update_type)])
 }

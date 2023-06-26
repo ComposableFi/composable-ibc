@@ -39,7 +39,9 @@ use itertools::Itertools;
 use jsonrpsee_ws_client::WsClientBuilder;
 use light_client_common::config::{EventRecordT, RuntimeCall, RuntimeTransactions};
 use pallet_ibc::light_clients::AnyClientMessage;
-use primitives::{mock::LocalClientTypes, Chain, IbcProvider, MisbehaviourHandler, RelayerState};
+use primitives::{
+	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, MisbehaviourHandler,
+};
 use sp_core::{twox_128, H256};
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
@@ -339,7 +341,7 @@ where
 		log::debug!(target: "hyperspace", "Handling error: {err_str}");
 
 		if err_str.contains("MaxSlotsExceeded") {
-			self.rpc_call_delay = self.rpc_call_delay * 2;
+			self.common_state.rpc_call_delay = self.common_state.rpc_call_delay * 2;
 		} else if err_str.contains("RestartNeeded") || err_str.contains("restart required") {
 			let relay_ws_client = Arc::new(
 				WsClientBuilder::default()
@@ -369,26 +371,18 @@ where
 			self.para_ws_client = para_ws_client;
 			self.relay_client = relay_client;
 			self.para_client = para_client;
-			self.rpc_call_delay = self.rpc_call_delay * 2;
+			self.common_state.rpc_call_delay = self.common_state.rpc_call_delay * 2;
 		}
 
 		Ok(())
 	}
 
-	fn rpc_call_delay(&self) -> Duration {
-		self.rpc_call_delay
+	fn common_state(&self) -> &CommonClientState {
+		&self.common_state
 	}
 
-	fn set_rpc_call_delay(&mut self, delay: Duration) {
-		self.rpc_call_delay = delay;
-	}
-
-	fn relayer_state(&self) -> &RelayerState {
-		&self.relayer_state
-	}
-
-	fn relayer_state_mut(&mut self) -> &mut RelayerState {
-		&mut self.relayer_state
+	fn common_state_mut(&mut self) -> &mut CommonClientState {
+		&mut self.common_state
 	}
 }
 

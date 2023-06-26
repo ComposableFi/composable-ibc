@@ -109,7 +109,7 @@ where
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &C,
-	) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+	) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		C: Chain,
 	{
@@ -414,15 +414,6 @@ where
 		Ok(res)
 	}
 
-	async fn on_undelivered_sequences(&self, is_empty: bool) -> Result<(), Self::Error> {
-		*self.maybe_has_undelivered_packets.lock().unwrap() = !is_empty;
-		Ok(())
-	}
-
-	fn has_undelivered_sequences(&self) -> bool {
-		*self.maybe_has_undelivered_packets.lock().unwrap()
-	}
-
 	async fn query_unreceived_acknowledgements(
 		&self,
 		at: Height,
@@ -485,8 +476,6 @@ where
 			)
 			.await
 			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
-
-		self.on_undelivered_sequences(response.is_empty()).await?;
 
 		Ok(response)
 	}

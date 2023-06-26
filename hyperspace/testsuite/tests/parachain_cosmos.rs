@@ -17,11 +17,12 @@ use futures::StreamExt;
 use hyperspace_core::{
 	chain::{AnyAssetId, AnyChain, AnyConfig},
 	logging,
+	packets::utils::get_key_path,
 	substrate::DefaultConfig,
 };
 use hyperspace_cosmos::client::{ConfigKeyEntry, CosmosClient, CosmosClientConfig};
 use hyperspace_parachain::{finality_protocol::FinalityProtocol, ParachainClientConfig};
-use hyperspace_primitives::{utils::create_clients, IbcProvider};
+use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
 	ibc_messaging_packet_timeout_on_channel_close,
@@ -29,7 +30,10 @@ use hyperspace_testsuite::{
 	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
 	setup_connection_and_channel,
 };
-use ibc::core::ics24_host::identifier::PortId;
+use ibc::{
+	core::{ics23_commitment::commitment::CommitmentPrefix, ics24_host::identifier::PortId},
+	Height,
+};
 use sp_core::hashing::sha2_256;
 
 #[derive(Debug, Clone)]
@@ -108,6 +112,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 				.to_string(),
 		wasm_code_id: None,
 		channel_whitelist: vec![],
+		common: CommonClientConfig { skip_optional_client_updates: true },
 	};
 
 	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.unwrap();

@@ -38,40 +38,45 @@ use error::Error;
 use frame_support::Serialize;
 use serde::Deserialize;
 
+use crate::{
+	finality_protocol::FinalityProtocol,
+	signer::ExtrinsicSigner,
+	utils::{fetch_max_extrinsic_weight, unsafe_cast_to_jsonrpsee_client},
+};
 use beefy_light_client_primitives::{ClientState, MmrUpdateProof};
 use beefy_prover::Prover;
-use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
-use ics11_beefy::client_message::ParachainHeader;
-use pallet_mmr_primitives::Proof;
-use sp_core::{ecdsa, ed25519, sr25519, Bytes, Pair, H256};
-use sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
-use sp_runtime::{
-	traits::{IdentifyAccount, Verify},
-	KeyTypeId, MultiSignature, MultiSigner,
-};
-use ss58_registry::Ss58AddressFormat;
-use subxt::config::{Header as HeaderT, Header};
-
-use crate::utils::{fetch_max_extrinsic_weight, unsafe_cast_to_jsonrpsee_client};
 use codec::Decode;
-use ics10_grandpa::consensus_state::ConsensusState as GrandpaConsensusState;
-use ics11_beefy::{
-	client_state::ClientState as BeefyClientState,
-	consensus_state::ConsensusState as BeefyConsensusState,
-};
-use primitives::{KeyProvider, RelayerState};
-
-use crate::{finality_protocol::FinalityProtocol, signer::ExtrinsicSigner};
 use grandpa_light_client_primitives::ParachainHeaderProofs;
 use grandpa_prover::GrandpaProver;
-use ibc::timestamp::Timestamp;
-use ics10_grandpa::client_state::{AuthoritiesChange, ClientState as GrandpaClientState};
+use ibc::{
+	core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
+	timestamp::Timestamp,
+};
+use ics10_grandpa::{
+	client_state::{AuthoritiesChange, ClientState as GrandpaClientState},
+	consensus_state::ConsensusState as GrandpaConsensusState,
+};
+use ics11_beefy::{
+	client_message::ParachainHeader, client_state::ClientState as BeefyClientState,
+	consensus_state::ConsensusState as BeefyConsensusState,
+};
 use jsonrpsee_ws_client::WsClientBuilder;
 use light_client_common::config::{AsInner, RuntimeStorage};
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
-use sp_keystore::testing::KeyStore;
-use sp_runtime::traits::One;
-use subxt::tx::TxPayload;
+use pallet_mmr_primitives::Proof;
+use primitives::{CommonClientState, KeyProvider};
+use sp_core::{ecdsa, ed25519, sr25519, Bytes, Pair, H256};
+use sp_keystore::{testing::KeyStore, SyncCryptoStore, SyncCryptoStorePtr};
+use sp_runtime::{
+	traits::{IdentifyAccount, One, Verify},
+	KeyTypeId, MultiSignature, MultiSigner,
+};
+use ss58_registry::Ss58AddressFormat;
+use subxt::{
+	config::{Header as HeaderT, Header},
+	tx::TxPayload,
+};
+use tokio::sync::Mutex as AsyncMutex;
 use vec1::Vec1;
 
 /// Implements the [`crate::Chain`] trait for parachains.
@@ -117,17 +122,8 @@ pub struct ParachainClient<T: light_client_common::config::Config> {
 	pub max_extrinsic_weight: u64,
 	/// Finality protocol to use, eg Beefy, Grandpa
 	pub finality_protocol: FinalityProtocol,
-	/// Delay between parallel RPC calls to be friendly with the node and avoid MaxSlotsExceeded
-	/// error
-	pub rpc_call_delay: Duration,
-	/// Used to determine whether client updates should be forced to send
-	/// even if it's optional. It's required, because some timeout packets
-	/// should use proof of the client states.
-	///
-	/// Set inside `on_undelivered_sequences`.
-	pub maybe_has_undelivered_packets: Arc<Mutex<bool>>,
-	/// Relayer data
-	pub relayer_state: RelayerState,
+	/// Common relayer data
+	pub common_state: CommonClientState,
 }
 
 enum KeyType {
@@ -274,9 +270,12 @@ where
 			ss58_version: Ss58AddressFormat::from(config.ss58_version),
 			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist.into_iter().collect())),
 			finality_protocol: config.finality_protocol,
-			rpc_call_delay: DEFAULT_RPC_CALL_DELAY,
-			maybe_has_undelivered_packets: Default::default(),
-			relayer_state: Default::default(),
+			common_state: CommonClientState {
+				skip_optional_client_updates: true,
+				maybe_has_undelivered_packets: Arc::new(Mutex::new(Default::default())),
+				rpc_call_delay: DEFAULT_RPC_CALL_DELAY,
+				misbehaviour_client_msg_queue: Arc::new(AsyncMutex::new(vec![])),
+			},
 		})
 	}
 }
@@ -306,7 +305,7 @@ where
 			para_client: self.para_client.clone(),
 			para_ws_client,
 			para_id: self.para_id,
-			rpc_call_delay: self.rpc_call_delay,
+			rpc_call_delay: self.common_state.rpc_call_delay,
 		}
 	}
 
@@ -590,7 +589,7 @@ where
 			para_client: self.para_client.clone(),
 			para_ws_client,
 			para_id: self.para_id,
-			rpc_call_delay: self.rpc_call_delay,
+			rpc_call_delay: self.common_state.rpc_call_delay,
 		};
 		let api = self.relay_client.storage();
 		let para_client_api = self.para_client.storage();

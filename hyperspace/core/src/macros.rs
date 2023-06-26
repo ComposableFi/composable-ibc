@@ -13,187 +13,11 @@
 // limitations under the License.
 
 #[macro_export]
-macro_rules! process_finality_event {
-	($source:ident, $sink:ident, $metrics:expr, $mode:ident, $result:ident, $stream_source:ident, $stream_sink:ident) => {
-		match $result {
-			// stream closed
-			None => {
-				log::warn!("Stream closed for {}", $source.name());
-				$stream_source = loop {
-					match $source.finality_notifications().await {
-						Ok(stream) => break stream,
-						Err(e) => {
-							log::error!("Failed to get finality notifications for {} {:?}. Trying again in 30 seconds...", $source.name(), e);
-							tokio::time::sleep(std::time::Duration::from_secs(30)).await;
-						},
-					};
-				};
-				$stream_sink = loop {
-					match $sink.finality_notifications().await {
-						Ok(stream) => break stream,
-						Err(e) => {
-							log::error!("Failed to get finality notifications for {} {:?}. Trying again in 30 seconds...", $sink.name(), e);
-							tokio::time::sleep(std::time::Duration::from_secs(30)).await;
-						},
-					};
-				};
-			},
-			Some(finality_event) => {
-				log::info!("=======================================================");
-				log::info!("Received finality notification from {}", $source.name());
-				let sink_initial_rpc_call_delay = $sink.rpc_call_delay();
-				let source_initial_rpc_call_delay = $source.rpc_call_delay();
-				// TODO: make better error handling
-				let mut had_error = false;
-
-				let updates = match $source.query_latest_ibc_events(finality_event, &$sink).await {
-					Ok(resp) => resp,
-					Err(err) => {
-						log::error!(
-							"Failed to fetch IBC events for finality event for {} {:?}",
-							$source.name(),
-							err
-						);
-						match $sink.handle_error(&err).and_then(|_| $source.handle_error(&err)).await {
-							Ok(_) => {},
-							Err(e) => log::error!("Failed to handle error for {} {:?}", $sink.name(), e),
-						}
-						continue
-					},
-				};
-				log::trace!(target: "hyperspace", "Received updates count: {}", updates.len());
-				// query packets that can now be sent, at this sink height because of connection
-				// delay.
-				let (ready_packets, timeout_msgs) =
-					crate::packets::query_ready_and_timed_out_packets(&$source, &$sink).await?;
-
-				let mut msgs = Vec::new();
-
-				for (msg_update_client, events, update_type) in updates {
-					if let Some(metrics) = $metrics.as_mut() {
-						if let Err(e) = metrics.handle_events(events.as_slice()).await {
-							log::error!("Failed to handle metrics for {} {:?}", $source.name(), e);
-						}
-					}
-					let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
-					let mut messages =
-						match parse_events(&mut $source, &mut $sink, events, $mode).await {
-							Ok(msgs) => msgs,
-							Err(e) => {
-								log::error!("Failed to parse events for {} {:?}", $source.name(), e);
-								match $sink.handle_error(&e).and_then(|_| $source.handle_error(&e)).await {
-									Ok(_) => {},
-									Err(e) => log::error!("Failed to handle error for {} {:?}", $sink.name(), e),
-								}
-								had_error = true;
-								continue
-							},
-					};
-					log::trace!(target: "hyperspace", "Received messages count: {}, timeouts count: {}, is the update optional: {}, has undelivered packets: {}", messages.len(), timeout_msgs.len(), update_type.is_optional(), $source.has_undelivered_sequences());
-
-					// We want to send client update if packet messages exist but where not sent due
-					// to a connection delay even if client update message is optional
-					match (
-						// TODO: we actually man send only when timeout of some packet has reached,
-						// not when we have *any* undelivered packets. But this requires rewriting
-						// `find_suitable_proof_height_for_client` function, that uses binary
-						// search, which won't work in this case
-						update_type.is_optional() && !$source.has_undelivered_sequences(),
-						has_packet_events(&event_types),
-						messages.is_empty(),
-					) {
-						(true, false, true) => {
-							// skip sending ibc messages if no new events
-							log::info!("Skipping finality notification for {}", $sink.name());
-							continue
-						},
-						(false, _, true) => log::info!(
-							"Sending mandatory client update message for {}",
-							$sink.name()
-						),
-						_ => log::info!(
-							"Received finalized events from: {} {event_types:#?}",
-							$source.name()
-						),
-					};
-					msgs.push(msg_update_client);
-					msgs.append(&mut messages);
-				}
-				msgs.extend(ready_packets);
-
-				if !msgs.is_empty() {
-					if let Some(metrics) = $metrics.as_ref() {
-						metrics.handle_messages(msgs.as_slice()).await;
-					}
-					let type_urls =
-						msgs.iter().map(|msg| msg.type_url.as_str()).collect::<Vec<_>>();
-					log::info!("Submitting messages to {}: {type_urls:#?}", $sink.name());
-					match queue::flush_message_batch(msgs, $metrics.as_ref(), &$sink).await {
-						Ok(_) => {
-							log::trace!(target: "hyperspace", "Successfully submitted messages to {}", $sink.name());
-						},
-						Err(e) => {
-							log::error!(
-								target:"hyperspace",
-								"Failed to submit messages to {} {:?}",
-								$sink.name(),
-								e
-							);
-							match $sink.handle_error(&e).and_then(|_| $source.handle_error(&e)).await {
-								Ok(_) => {},
-								Err(e) => log::error!("Failed to handle error for {} {:?}", $sink.name(), e),
-							}
-							had_error = true;
-						},
-					}
-				}
-
-				if !timeout_msgs.is_empty() {
-					if let Some(metrics) = $metrics.as_ref() {
-						metrics.handle_timeouts(timeout_msgs.as_slice()).await;
-					}
-					let type_urls =
-						timeout_msgs.iter().map(|msg| msg.type_url.as_str()).collect::<Vec<_>>();
-					log::info!(
-						"Submitting timeout messages to {}: {type_urls:#?}",
-						$source.name()
-					);
-					match queue::flush_message_batch(timeout_msgs, $metrics.as_ref(), &$source).await {
-						Ok(_) => {
-							log::trace!(target: "hyperspace", "Successfully submitted timeout messages to {}", $source.name());
-						},
-						Err(e) => {
-							log::error!(
-								target:"hyperspace",
-								"Failed to submit timeout messages to {} {:?}",
-								$source.name(),
-								e
-							);
-							match $sink.handle_error(&e).and_then(|_| $source.handle_error(&e)).await {
-								Ok(_) => {},
-								Err(e) => log::error!("Failed to handle error for {} {:?}", $sink.name(), e),
-							}
-							had_error = true;
-						},
-					}
-				}
-				if !had_error {
-					$sink.set_rpc_call_delay(sink_initial_rpc_call_delay);
-					$source.set_rpc_call_delay(source_initial_rpc_call_delay);
-				}
-			},
-		}
-	};
-}
-
-#[macro_export]
 macro_rules! chains {
 	($(
         $(#[$($meta:meta)*])*
 		$name:ident($config:path, $client:path),
 	)*) => {
-		use primitives::RelayerState;
-
 		#[derive(Debug, Serialize, Deserialize, Clone)]
 		#[serde(tag = "type", rename_all = "snake_case")]
 		pub enum AnyConfig {
@@ -264,7 +88,7 @@ macro_rules! chains {
 				&mut self,
 				finality_event: Self::FinalityEvent,
 				counterparty: &T,
-			) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+			) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 			where
 				T: Chain,
 			{
@@ -820,26 +644,6 @@ macro_rules! chains {
 				}
 			}
 
-			async fn on_undelivered_sequences(&self, is_empty: bool) -> Result<(), Self::Error> {
-				match self {
-					$(
-						$(#[$($meta)*])*
-						Self::$name(chain) => chain.on_undelivered_sequences(is_empty).await.map_err(AnyError::$name),
-					)*
-					Self::Wasm(c) => c.inner.on_undelivered_sequences(is_empty).await,
-				}
-			}
-
-			fn has_undelivered_sequences(&self) -> bool {
-				match self {
-					$(
-						$(#[$($meta)*])*
-						Self::$name(chain) => chain.has_undelivered_sequences(),
-					)*
-					Self::Wasm(c) => c.inner.has_undelivered_sequences(),
-				}
-			}
-
 			async fn query_connection_id_from_tx_hash(
 				&self,
 				tx_id: Self::TransactionId,
@@ -1064,23 +868,23 @@ macro_rules! chains {
 				}
 			}
 
-			fn relayer_state(&self) -> &RelayerState {
+			fn common_state(&self) -> &CommonClientState {
 				match self {
 					$(
 						$(#[$($meta)*])*
-						Self::$name(chain) => chain.relayer_state(),
+						Self::$name(chain) => chain.common_state(),
 					)*
-					Self::Wasm(c) => c.inner.relayer_state(),
+					Self::Wasm(c) => c.inner.common_state(),
 				}
 			}
 
-			fn relayer_state_mut(&mut self) -> &mut RelayerState {
+			fn common_state_mut(&mut self) -> &mut CommonClientState {
 				match self {
 					$(
 						$(#[$($meta)*])*
-						Self::$name(chain) => chain.relayer_state_mut(),
+						Self::$name(chain) => chain.common_state_mut(),
 					)*
-					Self::Wasm(c) => c.inner.relayer_state_mut(),
+					Self::Wasm(c) => c.inner.common_state_mut(),
 				}
 			}
 		}

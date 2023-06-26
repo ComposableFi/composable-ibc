@@ -16,7 +16,13 @@
 use crate::send_packet_relay::packet_relay_status;
 use rand::Rng;
 use sp_runtime::Either::{Left, Right};
-use std::{sync::Arc, time::Duration};
+use std::{
+	sync::{
+		atomic::{AtomicUsize, Ordering},
+		Arc,
+	},
+	time::Duration,
+};
 use tokio::{task::JoinSet, time::sleep};
 
 use crate::packets::utils::{
@@ -35,7 +41,7 @@ use ibc_proto::google::protobuf::Any;
 use pallet_ibc::light_clients::AnyClientState;
 use primitives::{
 	error::Error, find_suitable_proof_height_for_client, packet_info_to_packet,
-	query_undelivered_acks, query_undelivered_sequences, Chain,
+	query_undelivered_acks, query_undelivered_sequences, Chain, UndeliveredType,
 };
 
 pub mod connection_delay;
@@ -46,6 +52,13 @@ pub const MAX_PACKETS_TO_PROCESS: usize = 1000;
 
 /// Returns a tuple of messages, with the first item being packets that are ready to be sent to the
 /// sink chain. And the second item being packet timeouts that should be sent to the source.
+///
+/// The function also flags the packets/timeouts that are ready to be sent. The idea is the
+/// following, basically:
+/// source -> recv_packet    -> sink   => sink has undelivered recvs
+/// source -> ack_packet     -> sink   => sink has undelivered acks
+/// source -> timeout_packet -> source => source & sink has undelivered timeouts (since timeouts
+/// need both clients to be up to date)
 pub async fn query_ready_and_timed_out_packets(
 	source: &impl Chain,
 	sink: &impl Chain,
@@ -188,9 +201,11 @@ pub async fn query_ready_and_timed_out_packets(
 
 		let send_packets = source.query_send_packets(channel_id, port_id.clone(), seqs).await?;
 		log::trace!(target: "hyperspace", "SendPackets count: {}", send_packets.len());
-		let mut timeout_packets_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+		let mut recv_packets_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 		let source = Arc::new(source.clone());
 		let sink = Arc::new(sink.clone());
+		let timeout_packets_count = Arc::new(AtomicUsize::new(0));
+		let send_packets_count = Arc::new(AtomicUsize::new(0));
 		for send_packets in send_packets.chunks(PROCESS_PACKETS_BATCH_SIZE) {
 			for send_packet in send_packets.to_owned() {
 				let source_connection_end = source_connection_end.clone();
@@ -201,7 +216,9 @@ pub async fn query_ready_and_timed_out_packets(
 				let duration = Duration::from_millis(
 					rand::thread_rng().gen_range(1..source.rpc_call_delay().as_millis() as u64),
 				);
-				timeout_packets_join_set.spawn(async move {
+				let timeout_packets_count = timeout_packets_count.clone();
+				let recv_packets_count = send_packets_count.clone();
+				recv_packets_join_set.spawn(async move {
 					sleep(duration).await;
 					let source = &source;
 					let sink = &sink;
@@ -212,6 +229,7 @@ pub async fn query_ready_and_timed_out_packets(
 					})?;
 
 					if packet.timed_out(&sink_timestamp, sink_height) {
+						timeout_packets_count.fetch_add(1, Ordering::SeqCst);
 						// so we know this packet has timed out on the sink, we need to find the maximum
 						// consensus state height at which we can generate a non-membership proof of the
 						// packet for the sink's client on the source.
@@ -264,7 +282,7 @@ pub async fn query_ready_and_timed_out_packets(
 							.await?;
 						return Ok(Some(Left(msg)))
 					} else {
-						log::trace!(target: "hyperspace", "Skipping packet as it has not timed out: {:?}", packet);
+						log::trace!(target: "hyperspace", "The packet has not timed out yet: {:?}", packet);
 					}
 
 					// If packet has not timed out but channel is closed on sink we skip
@@ -288,10 +306,12 @@ pub async fn query_ready_and_timed_out_packets(
 					if packet_height > latest_source_height_on_sink.revision_height {
 						// Sink does not have client update required to prove recv packet message
 						log::debug!(target: "hyperspace", "Skipping packet {:?} as sink does not have client update required to prove recv packet message", packet);
+						recv_packets_count.fetch_add(1, Ordering::SeqCst);
 						return Ok(None)
 					}
 
 					let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(
+						&**source,
 						&**sink,
 						sink_height,
 						source.client_id(),
@@ -335,13 +355,23 @@ pub async fn query_ready_and_timed_out_packets(
 			}
 		}
 
-		while let Some(result) = timeout_packets_join_set.join_next().await {
+		while let Some(result) = recv_packets_join_set.join_next().await {
 			let Some(either) = result?? else { continue };
 			match either {
 				Left(msg) => timeout_messages.push(msg),
 				Right(msg) => messages.push(msg),
 			}
 		}
+
+		let timeouts_count = timeout_packets_count.load(Ordering::SeqCst);
+		log::debug!(target: "hyperspace", "Found {timeouts_count} packets that have timed out");
+		source
+			.on_undelivered_sequences(timeouts_count != 0, UndeliveredType::Timeouts)
+			.await;
+
+		let sends_count = send_packets_count.load(Ordering::SeqCst);
+		log::debug!(target: "hyperspace", "Found {sends_count} sent packets");
+		sink.on_undelivered_sequences(sends_count != 0, UndeliveredType::Recvs).await;
 
 		// Get acknowledgement messages
 		if source_channel_end.state == State::Closed {
@@ -364,7 +394,10 @@ pub async fn query_ready_and_timed_out_packets(
 		.collect::<Vec<_>>();
 
 		let acknowledgements = source.query_recv_packets(channel_id, port_id.clone(), acks).await?;
+		log::trace!(target: "hyperspace", "Got acknowledgements for channel {:?}: {:?}", channel_id, acknowledgements);
 		let mut acknowledgements_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+		sink.on_undelivered_sequences(!acknowledgements.is_empty(), UndeliveredType::Acks)
+			.await;
 		for acknowledgements in acknowledgements.chunks(PROCESS_PACKETS_BATCH_SIZE) {
 			for acknowledgement in acknowledgements.to_owned() {
 				let source_connection_end = source_connection_end.clone();
@@ -402,6 +435,7 @@ pub async fn query_ready_and_timed_out_packets(
 					log::trace!(target: "hyperspace", "sink_height: {:?}, latest_source_height_on_sink: {:?}, acknowledgement.height: {}", sink_height, latest_source_height_on_sink, ack_height);
 
 					let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(
+						&**source,
 						&**sink,
 						sink_height,
 						source.client_id(),
