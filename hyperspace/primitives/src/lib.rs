@@ -766,9 +766,7 @@ pub async fn find_suitable_proof_height_for_client(
 				}
 			}
 
-			let t1 = consensus_state.timestamp().nanoseconds();
-			let t2 = timestamp_to_match.nanoseconds();
-			if t1 < t2 {
+			if consensus_state.timestamp().nanoseconds() < timestamp_to_match.nanoseconds() {
 				start = mid + 1;
 				continue
 			} else {

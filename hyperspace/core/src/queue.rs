@@ -22,7 +22,7 @@ pub async fn flush_message_batch(
 	metrics: Option<&MetricsHandler>,
 	sink: &impl Chain,
 ) -> Result<(), anyhow::Error> {
-	let block_max_weight = sink.block_max_weight() / 2;
+	let block_max_weight = sink.block_max_weight();
 	let batch_weight = sink.estimate_weight(msgs.clone()).await?;
 
 	if let Some(metrics) = metrics {
