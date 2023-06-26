@@ -124,27 +124,47 @@ pub async fn create_connection(
 	let future = chain_b
 		.ibc_events()
 		.await
-		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmConnection(_))))
+		.skip_while(|ev| {
+			future::ready(!matches!(ev, IbcEvent::OpenTryConnection(e) if
+					e.0.counterparty_connection_id == connection_id_a
+			))
+		})
 		.take(1)
 		.collect::<Vec<_>>();
 
 	let mut events = timeout_future(
 		future,
-		15 * 60,
-		format!("Didn't see OpenConfirmConnection on {}", chain_b.name()),
+		5 * 60,
+		format!("Didn't see OpenTryConnection on {}", chain_b.name()),
 	)
 	.await;
 
-	let (connection_id_b, connection_id_a) = match events.pop() {
-		Some(IbcEvent::OpenConfirmConnection(conn)) => (
-			conn.connection_id().unwrap().clone(),
-			conn.attributes()
-				.counterparty_connection_id
-				.clone()
-				.expect("Failed to create connection"),
-		),
-		got => panic!("Last event should be OpenConfirmConnection: {got:?}"),
+	let connection_id_b = match events.pop() {
+		Some(IbcEvent::OpenTryConnection(conn)) => (conn.connection_id().unwrap().clone()),
+		got => panic!("Last event should be OpenTryConnection: {got:?}"),
 	};
+	chain_b.set_connection_id(connection_id_b.clone());
+
+	// wait till both chains have completed connection handshake
+	let future = chain_b
+		.ibc_events()
+		.await
+		.skip_while(|ev| {
+			future::ready(!matches!(ev,
+				IbcEvent::OpenConfirmConnection(e) if
+					e.0.connection_id == connection_id_b &&
+					e.0.counterparty_connection_id == connection_id_a
+			))
+		})
+		.take(1)
+		.collect::<Vec<_>>();
+
+	let mut _events = timeout_future(
+		future,
+		10 * 60,
+		format!("Didn't see OpenConfirmConnection on {}", chain_b.name()),
+	)
+	.await;
 
 	Ok((connection_id_a, connection_id_b))
 }
@@ -172,30 +192,54 @@ pub async fn create_channel(
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
 
 	let tx_id = chain_a.submit(vec![msg]).await?;
-	let channel_id_a = chain_a.query_channel_id_from_tx_hash(tx_id).await?;
-	chain_a.add_channel_to_whitelist(channel_id_a);
+	let channel_and_port_id_a = chain_a.query_channel_id_from_tx_hash(tx_id).await?;
+	chain_a.add_channel_to_whitelist(channel_and_port_id_a.clone());
+
+	let (channel_id_a, port_id_a) = channel_and_port_id_a;
 
 	log::info!(target: "hyperspace", "============= Wait till both chains have completed channel handshake =============");
 
 	let future = chain_b
 		.ibc_events()
 		.await
-		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::OpenConfirmChannel(_))))
+		.skip_while(|ev| {
+			future::ready(!matches!(ev, IbcEvent::OpenTryChannel(e) if
+			e.counterparty_channel_id == channel_id_a && e.counterparty_port_id == port_id_a))
+		})
 		.take(1)
 		.collect::<Vec<_>>();
 
-	let mut events = timeout_future(
+	let mut events =
+		timeout_future(future, 10 * 60, format!("Didn't see OpenTryChannel on {}", chain_b.name()))
+			.await;
+
+	let channel_and_port_id_b = match events.pop() {
+		Some(IbcEvent::OpenTryChannel(chan)) =>
+			(chan.channel_id().unwrap().clone(), chan.port_id().clone()),
+		got => panic!("Last event should be OpenTryChannel: {got:?}"),
+	};
+	chain_b.add_channel_to_whitelist(channel_and_port_id_b.clone());
+
+	let (channel_id_b, port_id_b) = channel_and_port_id_b;
+
+	let future = chain_b
+		.ibc_events()
+		.await
+		.skip_while(|ev| {
+			future::ready(!matches!(ev, IbcEvent::OpenConfirmChannel(e) if
+				e.channel_id == channel_id_b && e.port_id == port_id_b &&
+				e.counterparty_channel_id == channel_id_a && e.counterparty_port_id == port_id_a
+			))
+		})
+		.take(1)
+		.collect::<Vec<_>>();
+
+	let mut _events = timeout_future(
 		future,
-		30 * 60,
+		20 * 60,
 		format!("Didn't see OpenConfirmChannel on {}", chain_b.name()),
 	)
 	.await;
-
-	let (channel_id_a, channel_id_b) = match events.pop() {
-		Some(IbcEvent::OpenConfirmChannel(chan)) =>
-			(chan.counterparty_channel_id.unwrap(), chan.channel_id().unwrap().clone()),
-		got => panic!("Last event should be OpenConfirmChannel: {got:?}"),
-	};
 
 	Ok((channel_id_a, channel_id_b))
 }

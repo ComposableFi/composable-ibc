@@ -38,7 +38,7 @@ use ics11_beefy::client_message::{
 };
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState};
 use primitives::{
-	filter_events_by_ids, mock::LocalClientTypes, query_maximum_height_for_timeout_proofs, Chain,
+	filter_events, mock::LocalClientTypes, query_maximum_height_for_timeout_proofs, Chain,
 	IbcProvider, KeyProvider, UpdateType,
 };
 use rand::Rng;
@@ -285,23 +285,7 @@ where
 		})
 		.collect::<BTreeSet<_>>();
 
-	let events: Vec<IbcEvent> = events
-		.into_values()
-		.flatten()
-		.filter(|e| {
-			let mut channel_and_port_ids = source.channel_whitelist();
-			channel_and_port_ids.extend(counterparty.channel_whitelist());
-			filter_events_by_ids(
-				e,
-				&[source.client_id(), counterparty.client_id()],
-				&[source.connection_id(), counterparty.connection_id()]
-					.into_iter()
-					.flatten()
-					.collect::<Vec<_>>(),
-				&channel_and_port_ids,
-			)
-		})
-		.collect();
+	let events: Vec<IbcEvent> = filter_events(events.into_values().flatten(), source, counterparty);
 
 	if timeout_update_required {
 		let max_height_for_timeouts = max_height_for_timeouts.unwrap();
@@ -464,7 +448,7 @@ where
 	};
 	let client_id = source.client_id();
 	let latest_height = counterparty.latest_height_and_timestamp().await?.0;
-	let response = counterparty.query_client_state(latest_height, client_id).await?;
+	let response = counterparty.query_client_state(latest_height, client_id.clone()).await?;
 	let any_client_state = response.client_state.ok_or_else(|| {
 		Error::Custom("Received an empty client state from counterparty".to_string())
 	})?;
@@ -580,25 +564,7 @@ where
 		})
 		.collect::<BTreeSet<_>>();
 
-	let events: Vec<IbcEvent> = events
-		.into_values()
-		.flatten()
-		.filter(|e| {
-			let mut channel_and_port_ids = source.channel_whitelist();
-			channel_and_port_ids.extend(counterparty.channel_whitelist());
-			let f = filter_events_by_ids(
-				e,
-				&[source.client_id(), counterparty.client_id()],
-				&[source.connection_id(), counterparty.connection_id()]
-					.into_iter()
-					.flatten()
-					.collect::<Vec<_>>(),
-				&channel_and_port_ids,
-			);
-			log::trace!(target: "hyperspace", "Filtering event: {:?}: {f}", e.event_type());
-			f
-		})
-		.collect();
+	let events: Vec<IbcEvent> = filter_events(events.into_values().flatten(), source, counterparty);
 
 	if timeout_update_required {
 		let max_height_for_timeouts = max_height_for_timeouts.unwrap();
@@ -664,7 +630,7 @@ where
 	let height = grandpa_header.height();
 	let update_header = {
 		let msg = MsgUpdateAnyClient::<LocalClientTypes> {
-			client_id: source.client_id(),
+			client_id: client_id.clone(),
 			client_message: AnyClientMessage::Grandpa(ClientMessage::Header(grandpa_header)),
 			signer: counterparty.account_id(),
 		};
