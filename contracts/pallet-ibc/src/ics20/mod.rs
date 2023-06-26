@@ -561,11 +561,124 @@ pub fn full_ibc_denom(packet: &Packet, mut token: PrefixedCoin) -> String {
 use ibc::applications::transfer::error::Error as Ics20Error;
 
 pub trait HandleMemo<T: Config> {
-	fn execute_memo(packet_data: &PacketData, receiver: T::AccountId) -> Result<(), Ics20Error>;
+	fn execute_memo(
+		packet: &Packet,
+		packet_data: &PacketData,
+		receiver: T::AccountId,
+	) -> Result<(), Ics20Error>;
 }
 
 impl<T: Config> HandleMemo<T> for () {
-	fn execute_memo(_packet_data: &PacketData, _receiver: T::AccountId) -> Result<(), Ics20Error> {
+	fn execute_memo(
+		_packet: &Packet,
+		_packet_data: &PacketData,
+		_receiver: T::AccountId,
+	) -> Result<(), Ics20Error> {
+		Ok(())
+	}
+}
+
+use frame_system::RawOrigin;
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+struct MemoForward {
+	receiver: String,
+	port: String,
+	channel: String,
+	timeout: String,
+	retries: u64,
+	next: Option<Box<MemoForward>>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+struct MemoData {
+	forward: MemoForward,
+}
+
+impl<T> HandleMemo<T> for IbcModule<T>
+where
+	T: Config + Send + Sync,
+	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
+{
+	fn execute_memo(
+		packet: &Packet,
+		packet_data: &PacketData,
+		receiver: T::AccountId,
+	) -> Result<(), Ics20Error> {
+		//Handle only memo with IBC forward.
+		//Need to add logic to handle MEMO with xcm instrucntion as well.
+		let memo: MemoForward = serde_json::from_str(&packet_data.memo).unwrap();
+
+		let prefixed_coin = if is_receiver_chain_source(
+			packet.source_port.clone(),
+			packet.source_channel,
+			&packet_data.token.denom,
+		) {
+			let prefix = TracePrefix::new(packet.source_port.clone(), packet.source_channel);
+			let mut c = packet_data.token.clone();
+			c.denom.remove_trace_prefix(&prefix);
+			c
+		} else {
+			let prefix =
+				TracePrefix::new(packet.destination_port.clone(), packet.destination_channel);
+			let mut c = packet_data.token.clone();
+			c.denom.add_trace_prefix(prefix);
+			c
+		};
+
+		// At this point the asset SHOULD exist
+		let asset_id =
+			<T as crate::Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
+				&prefixed_coin.denom.to_string(),
+			)
+			.map_err(|_| {
+				log::warn!(target: "pallet_ibc", "Asset does not exist for denom: {}", prefixed_coin.denom.to_string());
+				Ics20Error::implementation_specific("asset does not exist".to_string())
+			})?;
+
+		let amount = packet_data.token.amount.as_u256().low_u128();
+
+		let raw_bytes = memo.receiver.as_bytes().to_vec();
+
+		let account_id =
+			crate::MultiAddress::<<T as frame_system::Config>::AccountId>::Raw(raw_bytes);
+		let origin = RawOrigin::Signed(receiver.clone());
+		let params = crate::TransferParams::<<T as frame_system::Config>::AccountId> {
+			to: account_id,
+			source_channel: 1,
+			timeout: ibc_primitives::Timeout::Offset {
+				// timestamp: next_chain_info.timestamp,
+				// height: next_chain_info.height,
+				timestamp: Some(1), //TODO ? what timestamp
+				height: Some(1),    //TODO ? what height
+			},
+		};
+
+		//todo replace unwrap
+		//important .next should exists. because we requried memo to pass message forward!
+		let memo = *memo.next.unwrap();
+		let memo_str = serde_json::to_string(&memo).map_err(|_| {
+			Ics20Error::implementation_specific("failed to serialize memo".to_string())
+		})?;
+		let memo_result = <T as crate::Config>::MemoMessage::from_str(&memo_str).map_err(|_| {
+			Ics20Error::implementation_specific(
+				"failed to convert string to Config::MemoMessage".to_string(),
+			)
+		})?;
+
+		crate::Pallet::<T>::transfer(
+			origin.into(),
+			params,
+			asset_id,
+			amount.into(),
+			Some(memo_result),
+		)
+		.map_err(|_| {
+			Ics20Error::implementation_specific(
+				"Pallet ibc transfer failed to send message".to_string(),
+			)
+		})?;
 		Ok(())
 	}
 }

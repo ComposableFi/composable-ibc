@@ -195,7 +195,7 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 				Error::implementation_specific(format!("Failed to parse receiver account"))
 			})?
 			.into_account();
-		<T as Config>::HandleMemo::execute_memo(&packet_data, receiver).map_err(|e| {
+		<T as Config>::HandleMemo::execute_memo(packet, &packet_data, receiver).map_err(|e| {
 			Error::implementation_specific(format!("Failed to execute memo {:?}", e))
 		})?;
 		Ok(())
