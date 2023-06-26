@@ -62,7 +62,7 @@ use pallet_ibc::light_clients::{
 	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
 };
 use primitives::{
-	filter_events_by_ids, mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType,
+	filter_events, mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType,
 };
 use prost::Message;
 use rand::Rng;
@@ -1335,23 +1335,8 @@ where
 			let ibc_event = ibc_event_try_from_abci_event(&event, ibc_height).ok();
 			match ibc_event {
 				Some(mut ev) => {
-					let is_filtered = filter_events_by_ids(
-						&ev,
-						&[self.client_id(), counterparty.client_id()],
-						&[self.connection_id(), counterparty.connection_id()]
-							.into_iter()
-							.flatten()
-							.collect::<Vec<_>>(),
-						&channel_and_port_ids,
-					);
-
-					if is_filtered {
-						ev.set_height(ibc_height);
-						log::debug!(target: "hyperspace_cosmos", "Encountered event at {height}: {:?}", event.kind);
-						ibc_events.push(ev);
-					} else {
-						log::debug!(target: "hyperspace_cosmos", "Filtered out event: {:?}", event.kind);
-					}
+					ev.set_height(ibc_height);
+					ibc_events.push(ev);
 				},
 				None => {
 					let ignored_events = [
@@ -1374,7 +1359,10 @@ where
 				},
 			}
 		}
-		Ok(ibc_events)
+
+		let filtered_events = filter_events(ibc_events, self, counterparty);
+
+		Ok(filtered_events)
 	}
 }
 

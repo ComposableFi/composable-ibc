@@ -371,7 +371,7 @@ impl IbcEvent {
 			IbcEvent::AcknowledgePacket(ev) => ev.height(),
 			IbcEvent::TimeoutPacket(ev) => ev.height(),
 			IbcEvent::TimeoutOnClosePacket(ev) => ev.height(),
-			_ => unimplemented!(),
+			e => unimplemented!("can't get height for {e:?}"),
 		}
 	}
 
@@ -398,7 +398,7 @@ impl IbcEvent {
 			IbcEvent::AcknowledgePacket(ev) => ev.set_height(height),
 			IbcEvent::TimeoutPacket(ev) => ev.set_height(height),
 			IbcEvent::PushWasmCode(_ev) => (),
-			_ => unimplemented!(),
+			_ => (),
 		}
 	}
 

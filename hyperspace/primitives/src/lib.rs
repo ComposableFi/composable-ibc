@@ -31,13 +31,23 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::{HashMap, HashSet},
+	convert::identity,
 	fmt::Debug,
+	iter,
 	pin::Pin,
 	str::FromStr,
 	sync::{Arc, Mutex},
 	time::Duration,
 };
-use tokio::{sync::Mutex as AsyncMutex, task::JoinSet, time::sleep};
+use subxt::ext::sp_runtime::{
+	Either,
+	Either::{Left, Right},
+};
+use tokio::{
+	sync::{Mutex as AsyncMutex, RwLock},
+	task::JoinSet,
+	time::sleep,
+};
 
 use crate::error::Error;
 #[cfg(any(feature = "testing", test))]
@@ -915,48 +925,90 @@ pub async fn query_maximum_height_for_timeout_proofs(
 	min_timeout_height
 }
 
+#[derive(Clone)]
+pub struct SingleOrPair<T> {
+	inner: Either<T, (T, T)>,
+}
+
+impl<T> SingleOrPair<T> {
+	pub fn single(inner: T) -> Self {
+		Self { inner: Left(inner) }
+	}
+
+	pub fn pair(first: T, second: T) -> Self {
+		Self { inner: Right((first, second)) }
+	}
+
+	pub fn from_option(first: Option<T>, second: Option<T>) -> Option<Self> {
+		match (first, second) {
+			(Some(a), Some(b)) => Some(Self { inner: Right((a, b)) }),
+			(Some(a), None) => Some(Self { inner: Left(a) }),
+			(None, Some(b)) => Some(Self { inner: Left(b) }),
+			(None, None) => None,
+		}
+	}
+
+	pub fn intersects(&self, other: &SingleOrPair<T>) -> bool
+	where
+		T: PartialEq,
+	{
+		match (&self.inner, &other.inner) {
+			(Left(a), Left(b)) => a == b,
+			(Left(a), Right((b, c))) => a == b || a == c,
+			(Right((a, b)), Left(c)) => a == c || b == c,
+			(Right((a, b)), Right((c, d))) => (a == c) && (b == d) || (a == d) && (b == c),
+		}
+	}
+
+	pub fn intersects_any(&self, others: &[SingleOrPair<T>]) -> bool
+	where
+		T: PartialEq,
+	{
+		others.iter().any(|other| self.intersects(other))
+	}
+}
+
 pub fn filter_events_by_ids(
 	ev: &IbcEvent,
-	client_ids: &[ClientId],
-	connection_ids: &[ConnectionId],
-	channel_and_port_ids: &HashSet<(ChannelId, PortId)>,
+	client_ids: &[SingleOrPair<ClientId>],
+	connection_ids: &[SingleOrPair<ConnectionId>],
+	channel_and_port_ids: &[SingleOrPair<(ChannelId, PortId)>],
 ) -> bool {
 	use ibc::core::{
 		ics02_client::events::Attributes as ClientAttributes,
 		ics03_connection::events::Attributes as ConnectionAttributes,
 		ics04_channel::events::Attributes as ChannelAttributes,
 	};
-	let channel_ids = channel_and_port_ids
-		.iter()
-		.map(|(channel_id, _)| channel_id)
-		.collect::<Vec<_>>();
 
 	let filter_packet = |packet: &Packet| {
-		channel_and_port_ids.contains(&(packet.source_channel.clone(), packet.source_port.clone())) ||
-			channel_and_port_ids
-				.contains(&(packet.destination_channel.clone(), packet.destination_port.clone()))
+		let channel = SingleOrPair::pair(
+			(packet.source_channel.clone(), packet.source_port.clone()),
+			(packet.destination_channel.clone(), packet.destination_port.clone()),
+		);
+		channel.intersects_any(channel_and_port_ids)
 	};
-	let filter_client_attributes =
-		|packet: &ClientAttributes| client_ids.contains(&packet.client_id);
+	let filter_client_attributes = |packet: &ClientAttributes| {
+		SingleOrPair::single(packet.client_id.clone()).intersects_any(client_ids)
+	};
 	let filter_connection_attributes = |packet: &ConnectionAttributes| {
-		packet
-			.connection_id
-			.as_ref()
-			.map(|id| connection_ids.contains(&id))
-			.unwrap_or(false) ||
-			packet
-				.counterparty_connection_id
-				.as_ref()
-				.map(|id| connection_ids.contains(&id))
-				.unwrap_or(false)
+		SingleOrPair::single(packet.client_id.clone()).intersects_any(client_ids) &&
+			SingleOrPair::from_option(
+				packet.connection_id.clone(),
+				packet.counterparty_connection_id.clone(),
+			)
+			.expect("connection id or counterparty connection id must be present")
+			.intersects_any(connection_ids)
 	};
 	let filter_channel_attributes = |packet: &ChannelAttributes| {
-		packet.channel_id.as_ref().map(|id| channel_ids.contains(&id)).unwrap_or(false) ||
+		let channel = SingleOrPair::from_option(
+			packet.channel_id.clone().map(|x| (x, packet.port_id.clone())),
 			packet
 				.counterparty_channel_id
-				.as_ref()
-				.map(|id| channel_ids.contains(&id))
-				.unwrap_or(false)
+				.clone()
+				.map(|x| (x, packet.counterparty_port_id.clone())),
+		)
+		.expect("channel id or counterparty channel id must be present");
+		channel.intersects_any(channel_and_port_ids)
 	};
 
 	let v = match ev {
@@ -996,4 +1048,44 @@ pub fn filter_events_by_ids(
 		log::debug!(target: "hyperspace_parachain", "Filtered out event: {:?}", ev);
 	}
 	v
+}
+
+pub fn filter_events<A: Chain, B: Chain>(
+	events: impl IntoIterator<Item = IbcEvent>,
+	chain_a: &A,
+	chain_b: &B,
+) -> Vec<IbcEvent> {
+	events
+		.into_iter()
+		.filter(|e| {
+			let clients = [SingleOrPair::pair(chain_a.client_id(), chain_b.client_id())];
+			let connections = iter::once(SingleOrPair::from_option(
+				chain_a.connection_id(),
+				chain_b.connection_id(),
+			))
+			.filter_map(identity)
+			.collect::<Vec<_>>();
+
+			let channels_a = chain_a.channel_whitelist();
+			let channels_b = chain_b.channel_whitelist();
+
+			assert!(channels_a.len() <= 1, "Only one channel is supported for now");
+			assert!(channels_b.len() <= 1, "Only one channel is supported for now");
+
+			let channel_a = channels_a.iter().next().cloned();
+			let channel_b = channels_b.iter().next().cloned();
+			let channels = iter::once(SingleOrPair::from_option(channel_a, channel_b))
+				.filter_map(identity)
+				.collect::<Vec<_>>();
+
+			let is_filtered = filter_events_by_ids(e, &clients, &connections, &channels);
+			if is_filtered {
+				let height = e.height();
+				log::debug!(target: "hyperspace", "Encountered event at {height}: {:?}", e.event_type());
+			} else {
+				log::debug!(target: "hyperspace", "Filtered out event: {:?}", e.event_type());
+			}
+			is_filtered
+		})
+		.collect()
 }

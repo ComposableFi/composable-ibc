@@ -195,6 +195,11 @@ where
 {
 	/// Initializes a [`ParachainClient`] given a [`ParachainConfig`]
 	pub async fn new(config: ParachainClientConfig) -> Result<Self, Error> {
+		assert!(
+			config.channel_whitelist.len() <= 1,
+			"Only one channel is supported. Please remove all but one channel from the config."
+		);
+
 		let relay_ws_client = Arc::new(
 			WsClientBuilder::default()
 				.build(&config.relay_chain_rpc_url)

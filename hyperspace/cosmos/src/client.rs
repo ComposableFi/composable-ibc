@@ -247,6 +247,11 @@ where
 {
 	/// Initializes a [`CosmosClient`] given a [`CosmosClientConfig`]
 	pub async fn new(config: CosmosClientConfig) -> Result<Self, Error> {
+		assert!(
+			config.channel_whitelist.len() <= 1,
+			"Only one channel is supported. Please remove all but one channel from the config."
+		);
+
 		let (rpc_client, rpc_driver) = WebSocketClient::new(config.websocket_url.clone())
 			.await
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
