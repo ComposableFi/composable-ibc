@@ -228,11 +228,7 @@ where
 	type Error = Error;
 
 	fn try_from(value: ConsensusStateWithHeight) -> Result<Self, Self::Error> {
-		let state = value
-			.consensus_state
-			.map(C::AnyConsensusState::try_from)
-			.transpose()?
-			.ok_or_else(Error::empty_consensus_state_response)?;
+		let state = value.consensus_state.map(C::AnyConsensusState::try_from).unwrap().unwrap();
 
 		Ok(AnyConsensusStateWithHeight {
 			height: value.height.ok_or_else(Error::missing_height)?.into(),

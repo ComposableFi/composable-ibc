@@ -120,12 +120,7 @@ where
 					tokio::time::sleep(chain_a.expected_block_time()).await;
 				}
 				let message = chain_a.query_client_message(update).await.map_err(|e| { log::info!("error: {}", e); e })?;
-				let state = chain_b.common_state();
-				let mut queue = state.misbehaviour_client_msg_queue.lock().await;
-				queue.push(message);
-				let next_message = queue.first().unwrap().clone();
-				chain_b.check_for_misbehaviour(&chain_a, next_message).await.map_err(|e| { log::info!("error: {}", e); e })?;
-				queue.remove(0);
+				chain_b.check_for_misbehaviour(&chain_a, message).await.map_err(|e| { log::info!("error: {}", e); e })?;
 			}
 			// new finality event from chain B
 			update = chain_b_client_updates.next() => {
@@ -138,12 +133,7 @@ where
 					tokio::time::sleep(chain_a.expected_block_time()).await;
 				}
 				let message = chain_b.query_client_message(update).await.map_err(|e| { log::info!("error: {}", e); e })?;
-				let state = chain_a.common_state();
-				let mut queue = state.misbehaviour_client_msg_queue.lock().await;
-				queue.push(message);
-				let next_message = queue.first().unwrap().clone();
-				chain_a.check_for_misbehaviour(&chain_b, next_message).await.map_err(|e| { log::info!("error: {}", e); e })?;
-				queue.remove(0);
+				chain_a.check_for_misbehaviour(&chain_b, message).await.map_err(|e| { log::info!("error: {}", e); e })?;
 			}
 		}
 	}
@@ -170,6 +160,7 @@ async fn process_finality_event<A: Chain, B: Chain>(
 					Err(e) => {
 						log::error!("Failed to get finality notifications for {} {:?}. Trying again in 30 seconds...", source.name(), e);
 						tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+						let _ = source.reconnect().await;
 					},
 				};
 			};
@@ -179,13 +170,14 @@ async fn process_finality_event<A: Chain, B: Chain>(
 					Err(e) => {
 						log::error!("Failed to get finality notifications for {} {:?}. Trying again in 30 seconds...", sink.name(), e);
 						tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+						let _ = sink.reconnect().await;
 					},
 				};
 			};
 		},
 		Some(finality_event) => {
 			log::info!("=======================================================");
-			log::info!("Received finality notification from {}", source.name());
+			log::info!("Received finality notification from {}", source.name(),);
 			let sink_initial_rpc_call_delay = sink.rpc_call_delay();
 			let source_initial_rpc_call_delay = source.rpc_call_delay();
 
@@ -356,7 +348,7 @@ async fn process_messages<B: Chain>(
 		queue::flush_message_batch(msgs, metrics.as_ref(), &*sink)
 			.await
 			.map_err(|e| anyhow!("Failed to submit messages: {:?}", e))?;
-		log::trace!(target: "hyperspace", "Successfully submitted messages to {}", sink.name());
+		log::debug!(target: "hyperspace", "Successfully submitted messages to {}", sink.name());
 	}
 	Ok(())
 }
@@ -375,7 +367,7 @@ async fn process_timeouts<A: Chain>(
 		queue::flush_message_batch(timeout_msgs, metrics.as_ref(), &*source)
 			.await
 			.map_err(|e| anyhow!("Failed to submit timeout messages: {:?}", e))?;
-		log::trace!(target: "hyperspace", "Successfully submitted timeout messages to {}", source.name());
+		log::debug!(target: "hyperspace", "Successfully submitted timeout messages to {}", source.name());
 	}
 	Ok(())
 }

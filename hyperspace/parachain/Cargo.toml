@@ -28,7 +28,7 @@ jsonrpsee = "0.16.2"
 jsonrpsee-ws-client = "0.16.2"
 finality-grandpa = "0.16.0"
 prost = { version = "0.11" }
-vec1 = "1.10.1"
+rand = "0.8.5"
 
 # substrate
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", features = ["full_crypto"] }

@@ -53,7 +53,7 @@ use ibc::{
 	timestamp::Timestamp,
 };
 use ics10_grandpa::{
-	client_state::{AuthoritiesChange, ClientState as GrandpaClientState},
+	client_state::ClientState as GrandpaClientState,
 	consensus_state::ConsensusState as GrandpaConsensusState,
 };
 use ics11_beefy::{
@@ -77,7 +77,6 @@ use subxt::{
 	tx::TxPayload,
 };
 use tokio::sync::Mutex as AsyncMutex;
-use vec1::Vec1;
 
 /// Implements the [`crate::Chain`] trait for parachains.
 /// This is responsible for:
@@ -275,6 +274,7 @@ where
 				maybe_has_undelivered_packets: Arc::new(Mutex::new(Default::default())),
 				rpc_call_delay: DEFAULT_RPC_CALL_DELAY,
 				misbehaviour_client_msg_queue: Arc::new(AsyncMutex::new(vec![])),
+				..Default::default()
 			},
 		})
 	}
@@ -624,12 +624,8 @@ where
 			let mut client_state = GrandpaClientState::<HostFunctionsManager>::default();
 
 			client_state.relay_chain = Default::default();
-			client_state.authorities_changes = Vec1::new(AuthoritiesChange {
-				height: light_client_state.latest_relay_height,
-				timestamp: Timestamp::now(),
-				set_id: light_client_state.current_set_id,
-				authorities: light_client_state.current_authorities,
-			});
+			client_state.current_authorities = light_client_state.current_authorities;
+			client_state.current_set_id = light_client_state.current_set_id;
 			client_state.latest_relay_hash = light_client_state.latest_relay_hash.into();
 			client_state.frozen_height = None;
 			client_state.latest_para_height = block_number;

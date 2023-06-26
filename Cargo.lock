@@ -4311,7 +4311,7 @@ dependencies = [
  "clap 3.2.23",
  "hyperspace-core",
  "tokio",
- "toml 0.7.3",
+ "toml 0.7.4",
 ]
 
 [[package]]
@@ -4363,7 +4363,7 @@ dependencies = [
  "tendermint-proto",
  "thiserror",
  "tokio",
- "toml 0.7.3",
+ "toml 0.7.4",
 ]
 
 [[package]]
@@ -4470,6 +4470,7 @@ dependencies = [
  "parity-scale-codec",
  "polkadot-core-primitives",
  "prost 0.11.6",
+ "rand 0.8.5",
  "rs_merkle",
  "sc-finality-grandpa-rpc",
  "serde",
@@ -4490,7 +4491,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-stream",
- "vec1",
 ]
 
 [[package]]
@@ -4551,6 +4551,7 @@ dependencies = [
  "subxt",
  "tendermint-proto",
  "tokio",
+ "toml 0.7.4",
 ]
 
 [[package]]
@@ -4827,7 +4828,6 @@ dependencies = [
  "tendermint",
  "tendermint-proto",
  "tokio",
- "vec1",
 ]
 
 [[package]]
@@ -7484,7 +7484,6 @@ dependencies = [
  "tendermint",
  "tendermint-light-client-verifier",
  "tendermint-proto",
- "vec1",
 ]
 
 [[package]]
@@ -12328,9 +12327,9 @@ dependencies = [
 
 [[package]]
 name = "serde_spanned"
-version = "0.6.1"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0efd8caf556a6cebd3b285caf480045fcc1ac04f6bd786b09a6f11af30c4fcf4"
+checksum = "93107647184f6027e3b7dcb2e11034cf95ffa1e3a682c67951963ac69c1c007d"
 dependencies = [
  "serde",
 ]
@@ -14551,14 +14550,14 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b403acf6f2bb0859c93c7f0d967cb4a75a7ac552100f9322faf64dc047669b21"
+checksum = "d6135d499e69981f9ff0ef2167955a5333c35e36f6937d382974566b3d5b94ec"
 dependencies = [
  "serde",
  "serde_spanned",
- "toml_datetime 0.6.1",
- "toml_edit 0.19.8",
+ "toml_datetime 0.6.2",
+ "toml_edit 0.19.10",
 ]
 
 [[package]]
@@ -14569,9 +14568,9 @@ checksum = "4553f467ac8e3d374bc9a177a26801e5d0f9b211aa1673fb137a403afd1c9cf5"
 
 [[package]]
 name = "toml_datetime"
-version = "0.6.1"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ab8ed2edee10b50132aed5f331333428b011c99402b5a534154ed15746f9622"
+checksum = "5a76a9312f5ba4c2dec6b9161fdf25d87ad8a09256ccea5a556fef03c706a10f"
 dependencies = [
  "serde",
 ]
@@ -14589,14 +14588,14 @@ dependencies = [
 
 [[package]]
 name = "toml_edit"
-version = "0.19.8"
+version = "0.19.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "239410c8609e8125456927e6707163a3b1fdb40561e4b803bc041f466ccfdc13"
+checksum = "2380d56e8670370eee6566b0bfd4265f65b3f432e8c6d85623f728d4fa31f739"
 dependencies = [
  "indexmap",
  "serde",
  "serde_spanned",
- "toml_datetime 0.6.1",
+ "toml_datetime 0.6.2",
  "winnow",
 ]
 
@@ -15187,12 +15186,6 @@ name = "vcpkg"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
-
-[[package]]
-name = "vec1"
-version = "1.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bda7c41ca331fe9a1c278a9e7ee055f4be7f5eb1c2b72f079b4ff8b5fce9d5c"
 
 [[package]]
 name = "version_check"

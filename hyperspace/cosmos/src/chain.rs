@@ -96,10 +96,7 @@ where
 		Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>>,
 		Error,
 	> {
-		let (ws_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
-			.await
-			.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))?;
-		tokio::spawn(ws_driver.run());
+		let ws_client = self.rpc_client.clone();
 		let subscription = ws_client
 			.subscribe(Query::from(EventType::NewBlock))
 			.await
@@ -242,12 +239,7 @@ where
 		if err_str.contains("dispatch task is gone") ||
 			err_str.contains("failed to send message to internal channel")
 		{
-			let (rpc_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
-				.await
-				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
-			tokio::spawn(ws_driver.run());
-			log::info!(target: "hyperspace_cosmos", "Reconnected to cosmos chain");
-			self.rpc_client = rpc_client;
+			self.reconnect().await?;
 			self.common_state.rpc_call_delay = self.common_state.rpc_call_delay * 2;
 		}
 
@@ -268,6 +260,16 @@ where
 
 	fn common_state_mut(&mut self) -> &mut CommonClientState {
 		&mut self.common_state
+	}
+
+	async fn reconnect(&mut self) -> anyhow::Result<()> {
+		let (rpc_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
+			.await
+			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		self.join_handles.lock().await.push(tokio::spawn(ws_driver.run()));
+		self.rpc_client = rpc_client;
+		log::info!(target: "hyperspace_cosmos", "Reconnected to cosmos chain");
+		Ok(())
 	}
 }
 

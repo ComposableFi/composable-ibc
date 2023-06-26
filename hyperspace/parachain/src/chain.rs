@@ -88,7 +88,7 @@ where
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	<<T as subxt::Config>::Header as Header>::Number:
 		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
-	<T as subxt::Config>::Header: Decode + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
@@ -343,36 +343,42 @@ where
 		if err_str.contains("MaxSlotsExceeded") {
 			self.common_state.rpc_call_delay = self.common_state.rpc_call_delay * 2;
 		} else if err_str.contains("RestartNeeded") || err_str.contains("restart required") {
-			let relay_ws_client = Arc::new(
-				WsClientBuilder::default()
-					.build(&self.relay_chain_rpc_url)
-					.await
-					.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
-			);
-			let para_ws_client = Arc::new(
-				WsClientBuilder::default()
-					.build(&self.parachain_rpc_url)
-					.await
-					.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
-			);
-
-			let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
-				unsafe_cast_to_jsonrpsee_client(&para_ws_client)
-			})
-			.await?;
-			let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
-				unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
-			})
-			.await?;
-
-			log::info!(target: "hyperspace", "Reconnected to relay chain and parachain");
-
-			self.relay_ws_client = relay_ws_client;
-			self.para_ws_client = para_ws_client;
-			self.relay_client = relay_client;
-			self.para_client = para_client;
+			self.reconnect().await?;
 			self.common_state.rpc_call_delay = self.common_state.rpc_call_delay * 2;
 		}
+
+		Ok(())
+	}
+
+	async fn reconnect(&mut self) -> anyhow::Result<()> {
+		let relay_ws_client = Arc::new(
+			WsClientBuilder::default()
+				.build(&self.relay_chain_rpc_url)
+				.await
+				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
+		);
+		let para_ws_client = Arc::new(
+			WsClientBuilder::default()
+				.build(&self.parachain_rpc_url)
+				.await
+				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
+		);
+
+		let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
+			unsafe_cast_to_jsonrpsee_client(&para_ws_client)
+		})
+		.await?;
+		let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
+			unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
+		})
+		.await?;
+
+		self.relay_ws_client = relay_ws_client;
+		self.para_ws_client = para_ws_client;
+		self.relay_client = relay_client;
+		self.para_client = para_client;
+
+		log::info!(target: "hyperspace", "Reconnected to relay chain and parachain");
 
 		Ok(())
 	}
@@ -415,7 +421,7 @@ where
 	) -> Result<(), anyhow::Error> {
 		let client_message = client_message.unpack_recursive_into();
 		match client_message {
-			AnyClientMessage::Grandpa(ClientMessage::Header(mut header)) => {
+			AnyClientMessage::Grandpa(ClientMessage::Header(header)) => {
 				let base_header = header
 					.finality_proof
 					.unknown_headers
@@ -433,68 +439,59 @@ where
 					})?;
 
 				let common_ancestor_block_number = u32::from(common_ancestor_header.number());
-
-				let mut detected_misbehaviour_at = None;
-				// TODO: parallelize this
-				for header in &header.finality_proof.unknown_headers {
-					let i = header.number;
-					let unknown_header_hash =
-						self.relay_client.rpc().block_hash(Some(i.into())).await?.ok_or_else(
-							|| {
-								anyhow!(
-									"No block hash found for block number: {:?}",
-									common_ancestor_block_number
-								)
-							},
-						)?;
-
-					// if detected_misbehaviour.is_none() {
-					let header_hash = header.hash();
-					if unknown_header_hash != header_hash.into() {
-						detected_misbehaviour_at = Some(i);
-						let _guard = self.client_id.lock().unwrap();
-						let client_id =
-							_guard.as_ref().map(|x| x.as_str()).unwrap_or_else(|| "{unknown}");
-						log::warn!(
-							"Found misbehaviour on client {}: {:?} != {:?} at {i}",
-							client_id,
-							unknown_header_hash,
-							header_hash
-						);
-						break
-					}
-				}
-
-				if let Some(height) = detected_misbehaviour_at {
-					let encoded =
-						GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
-							&*self.relay_ws_client,
-							height,
+				let encoded =
+					GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
+						&*self.relay_ws_client,
+						common_ancestor_block_number + 1,
+					)
+					.await?
+					.ok_or_else(|| {
+						anyhow!(
+							"No justification found for block: {:?}",
+							header.finality_proof.block
 						)
-						.await?
-						.ok_or_else(|| {
-							anyhow!(
-								"No justification found for block: {:?}",
-								header.finality_proof.block
-							)
-						})?
-						.0;
+					})?
+					.0;
 
-					let mut trusted_finality_proof =
-						FinalityProof::<RelayChainHeader>::decode(&mut &encoded[..])?;
-					let trusted_justification =
-						GrandpaJustification::decode(&mut &*trusted_finality_proof.justification)?;
-					let to_block = trusted_finality_proof
-						.unknown_headers
-						.first()
-						.map(|x| x.number.saturating_sub(1))
-						.unwrap_or(trusted_justification.commit.target_number);
-					let from_block = height.min(to_block);
+				let mut trusted_finality_proof =
+					FinalityProof::<RelayChainHeader>::decode(&mut &encoded[..])?;
+				let trusted_justification =
+					GrandpaJustification::decode(&mut &*trusted_finality_proof.justification)?;
+				let to_block = trusted_justification.commit.target_number;
+				let from_block = (common_ancestor_block_number + 1).min(to_block);
 
-					for h in (from_block..=to_block).rev() {
+				let trusted_base_header_hash = self
+					.relay_client
+					.rpc()
+					.block_hash(Some(from_block.into()))
+					.await?
+					.ok_or_else(|| anyhow!("No hash found for block: {:?}", from_block))?;
+
+				let base_header_hash = base_header.hash();
+				if base_header_hash != trusted_base_header_hash.into() {
+					log::warn!(
+						"Found misbehaviour on client {}: {:?} != {:?}",
+						self.client_id
+							.lock()
+							.unwrap()
+							.as_ref()
+							.map(|x| x.as_str().to_owned())
+							.unwrap_or_else(|| "{unknown}".to_owned()),
+						base_header_hash,
+						trusted_base_header_hash
+					);
+
+					trusted_finality_proof.unknown_headers.clear();
+					// TODO: parallelize this
+					for i in from_block..=to_block {
 						let unknown_header_hash =
-							self.relay_client.rpc().block_hash(Some(h.into())).await?.ok_or_else(
-								|| anyhow!("No block hash found for block number: {:?}", h),
+							self.relay_client.rpc().block_hash(Some(i.into())).await?.ok_or_else(
+								|| {
+									anyhow!(
+										"No block hash found for block number: {:?}",
+										common_ancestor_block_number
+									)
+								},
 							)?;
 						let unknown_header = self
 							.relay_client
@@ -506,13 +503,10 @@ where
 							})?;
 						trusted_finality_proof
 							.unknown_headers
-							.insert(0, codec::Decode::decode(&mut &*unknown_header.encode()).expect(
+							.push(codec::Decode::decode(&mut &*unknown_header.encode()).expect(
 							"Same header struct defined in different crates, decoding cannot panic",
 						));
 					}
-
-					let remove_up_to = (height - base_header.number) as usize;
-					header.finality_proof.unknown_headers.drain(..remove_up_to).for_each(|_| ());
 
 					let misbehaviour = ClientMessage::Misbehaviour(Misbehaviour {
 						first_finality_proof: header.finality_proof,

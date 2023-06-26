@@ -43,9 +43,7 @@ use subxt::{
 	tx::Payload,
 	Error, OnlineClient,
 };
-use subxt_generated::picasso_kusama::parachain::api::runtime_types::{
-	picasso_runtime::ibc::MemoMessage, primitives::currency::CurrencyId,
-};
+use subxt_generated::picasso_kusama::parachain::api::runtime_types::primitives::currency::CurrencyId;
 
 pub mod parachain_subxt {
 	pub use subxt_generated::picasso_kusama::parachain::*;
@@ -127,6 +125,7 @@ define_runtime_transactions!(
 	TransferParamsWrapper,
 	DummySendPingParamsWrapper,
 	parachain_subxt::api::runtime_types::pallet_ibc::Any,
+	String,
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, CurrencyId(y), z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),

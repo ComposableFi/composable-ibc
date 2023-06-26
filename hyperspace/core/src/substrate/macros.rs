@@ -676,6 +676,7 @@ macro_rules! define_runtime_transactions {
 		$transfer_wrapper:expr,
 		$send_ping_params_wrapper:expr,
 		$any: path,
+		$memo_message:ty,
 		$ibc_deliver: expr,
 		$ibc_transfer: expr,
 		$sudo_sudo: expr,
@@ -693,6 +694,7 @@ macro_rules! define_runtime_transactions {
 			type ParaRuntimeCall = $para_runtime_call;
 			type SendPingParams = $send_ping_params;
 			type TransferParams = $transfer_params;
+			type MemoMessage = $memo_message;
 
 			fn ibc_deliver(messages: Vec<Any>) -> Payload<Self::Deliver> {
 				use $any as Any;
@@ -708,14 +710,9 @@ macro_rules! define_runtime_transactions {
 				params: Self::TransferParams,
 				asset_id: u128,
 				amount: u128,
-				memo: Option<()>,
+				memo: Option<Self::MemoMessage>,
 			) -> Payload<Self::Transfer> {
-				$ibc_transfer(
-					$transfer_wrapper(params).into(),
-					asset_id,
-					amount,
-					memo.map(|_| MemoMessage),
-				)
+				$ibc_transfer($transfer_wrapper(params).into(), asset_id, amount, memo)
 			}
 
 			fn sudo_sudo(call: Self::ParaRuntimeCall) -> Payload<Self::Sudo> {
@@ -849,8 +846,7 @@ macro_rules! define_runtime_call {
 #[macro_export]
 macro_rules! define_asset_id {
 	($name:ident, $ty:ty) => {
-		#[derive(Decode, Encode)]
-
+		#[derive(Decode, Encode, Debug)]
 		pub struct $name(pub $ty);
 
 		impl From<u128> for $name {

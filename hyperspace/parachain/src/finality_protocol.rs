@@ -38,30 +38,32 @@ use ics11_beefy::client_message::{
 };
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState};
 use primitives::{
-	mock::LocalClientTypes, query_maximum_height_for_timeout_proofs, Chain, IbcProvider,
-	KeyProvider, UpdateType,
+	filter_events_by_ids, mock::LocalClientTypes, query_maximum_height_for_timeout_proofs, Chain,
+	IbcProvider, KeyProvider, UpdateType,
 };
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
+use sp_finality_grandpa::GRANDPA_ENGINE_ID;
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
 use std::{
-	collections::{BTreeMap, BTreeSet, HashMap, HashSet},
+	collections::{BTreeMap, BTreeSet, HashMap},
 	fmt::{Debug, Display},
+	time::Duration,
 };
 
 use beefy_prover::helpers::unsafe_arc_cast;
-use grandpa_prover::{GrandpaJustification, JustificationNotification};
-use ibc::core::{
-	ics04_channel::packet::Packet,
-	ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
+use grandpa_prover::{
+	GrandpaJustification, GrandpaProver, JustificationNotification, PROCESS_BLOCKS_BATCH_SIZE,
 };
 use subxt::config::{
 	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT, Header,
 };
 use tendermint_proto::Protobuf;
+use tokio::task::JoinSet;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum FinalityProtocol {
@@ -107,7 +109,7 @@ impl FinalityProtocol {
 			+ One
 			+ Send
 			+ Sync,
-		<T as subxt::Config>::Header: Decode + Send + Sync,
+		<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 		T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 		sp_core::H256: From<T::Hash>,
 		BTreeMap<H256, ParachainHeaderProofs>:
@@ -357,87 +359,75 @@ where
 	Ok(vec![(update_header, Height::new(0, 0), events, update_type)])
 }
 
-pub fn filter_events_by_ids(
-	ev: &IbcEvent,
-	client_ids: &[ClientId],
-	connection_ids: &[ConnectionId],
-	channel_and_port_ids: &HashSet<(ChannelId, PortId)>,
-) -> bool {
-	use ibc::core::{
-		ics02_client::events::Attributes as ClientAttributes,
-		ics03_connection::events::Attributes as ConnectionAttributes,
-		ics04_channel::events::Attributes as ChannelAttributes,
-	};
-	let channel_ids = channel_and_port_ids
-		.iter()
-		.map(|(channel_id, _)| channel_id)
-		.collect::<Vec<_>>();
-
-	let filter_packet = |packet: &Packet| {
-		channel_and_port_ids.contains(&(packet.source_channel.clone(), packet.source_port.clone())) ||
-			channel_and_port_ids
-				.contains(&(packet.destination_channel.clone(), packet.destination_port.clone()))
-	};
-	let filter_client_attributes =
-		|packet: &ClientAttributes| client_ids.contains(&packet.client_id);
-	let filter_connection_attributes = |packet: &ConnectionAttributes| {
-		packet
-			.connection_id
-			.as_ref()
-			.map(|id| connection_ids.contains(&id))
-			.unwrap_or(false) ||
-			packet
-				.counterparty_connection_id
-				.as_ref()
-				.map(|id| connection_ids.contains(&id))
-				.unwrap_or(false)
-	};
-	let filter_channel_attributes = |packet: &ChannelAttributes| {
-		packet.channel_id.as_ref().map(|id| channel_ids.contains(&id)).unwrap_or(false) ||
-			packet
-				.counterparty_channel_id
-				.as_ref()
-				.map(|id| channel_ids.contains(&id))
-				.unwrap_or(false)
-	};
-
-	let v = match ev {
-		IbcEvent::SendPacket(e) => filter_packet(&e.packet),
-		IbcEvent::WriteAcknowledgement(e) => filter_packet(&e.packet),
-		IbcEvent::TimeoutPacket(e) => filter_packet(&e.packet),
-		IbcEvent::ReceivePacket(e) => filter_packet(&e.packet),
-		IbcEvent::AcknowledgePacket(e) => filter_packet(&e.packet),
-		IbcEvent::TimeoutOnClosePacket(e) => filter_packet(&e.packet),
-		IbcEvent::CreateClient(e) => filter_client_attributes(&e.0),
-		IbcEvent::UpdateClient(e) => filter_client_attributes(&e.common),
-		IbcEvent::UpgradeClient(e) => filter_client_attributes(&e.0),
-		IbcEvent::ClientMisbehaviour(e) => filter_client_attributes(&e.0),
-		IbcEvent::OpenInitConnection(e) => filter_connection_attributes(&e.0),
-		IbcEvent::OpenTryConnection(e) => filter_connection_attributes(&e.0),
-		IbcEvent::OpenAckConnection(e) => filter_connection_attributes(&e.0),
-		IbcEvent::OpenConfirmConnection(e) => filter_connection_attributes(&e.0),
-		IbcEvent::OpenInitChannel(e) =>
-			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
-		IbcEvent::OpenTryChannel(e) =>
-			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
-		IbcEvent::OpenAckChannel(e) =>
-			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
-		IbcEvent::OpenConfirmChannel(e) =>
-			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
-		IbcEvent::CloseInitChannel(e) =>
-			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
-		IbcEvent::CloseConfirmChannel(e) =>
-			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
-		IbcEvent::PushWasmCode(_) => true,
-		IbcEvent::NewBlock(_) |
-		IbcEvent::AppModule(_) |
-		IbcEvent::Empty(_) |
-		IbcEvent::ChainError(_) => true,
-	};
-	if !v {
-		log::debug!(target: "hyperspace_parachain", "Filtered out event: {:?}", ev);
+async fn find_next_justification<T>(
+	prover: &GrandpaProver<T>,
+	from: u32,
+	to: u32,
+) -> anyhow::Result<Option<GrandpaJustification<T::Header>>>
+where
+	T: light_client_common::config::Config + Send + Sync,
+	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
+		+ From<<<T as subxt::Config>::Header as Header>::Number>,
+	ParachainClient<T>: Chain + KeyProvider,
+	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
+	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
+	sp_core::H256: From<T::Hash>,
+	BTreeMap<H256, ParachainHeaderProofs>:
+		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
+	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
+{
+	log::debug!(target: "hyperspace", "Trying to find next justification in blocks {from}..{to}");
+	let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+	let heights = (from..to).collect::<Vec<_>>();
+	for heights in heights.chunks(PROCESS_BLOCKS_BATCH_SIZE) {
+		for height in heights.to_owned() {
+			if height % 100 == 0 {
+				log::debug!(target: "hyperspace", "Looking for a closer proof {height}/{to}...");
+			}
+			let relay_client = prover.relay_client.clone();
+			let delay = prover.rpc_call_delay.as_millis();
+			let duration = Duration::from_millis(rand::thread_rng().gen_range(1..delay) as u64);
+			join_set.spawn(async move {
+				tokio::time::sleep(duration).await;
+				let Some(hash) = relay_client.rpc().block_hash(Some(height.into())).await? else {
+					return Ok(None)
+				};
+				let Some(block) = relay_client.rpc().block(Some(hash)).await? else {
+					return Ok(None)
+				};
+				let Some(justifications) = block.justifications else {
+					return Ok(None)
+				};
+				for (id, justification) in justifications {
+					log::info!(target: "hyperspace", "Found closer justification at {height} (suggested {to})");
+					if id == GRANDPA_ENGINE_ID {
+						let decoded_justification =
+							GrandpaJustification::<T::Header>::decode(&mut &justification[..])?;
+						return Ok(Some(decoded_justification))
+					}
+				}
+				return Ok(None)
+			});
+		}
+		while let Some(res) = join_set.join_next().await {
+			let justification = res??;
+			if justification.is_some() {
+				join_set.abort_all();
+				return Ok(justification)
+			}
+		}
 	}
-	v
+
+	Ok(None)
 }
 
 /// Query the latest events that have been finalized by the GRANDPA finality protocol.
@@ -464,7 +454,7 @@ where
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
-	<T as subxt::Config>::Header: Decode + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
@@ -508,8 +498,27 @@ where
 
 	let finality_proof = FinalityProof::<T::Header>::decode(&mut &encoded[..])?;
 
-	let justification =
+	let mut justification =
 		GrandpaJustification::<T::Header>::decode(&mut &finality_proof.justification[..])?;
+
+	let diff = justification
+		.commit
+		.target_number
+		.saturating_sub(client_state.latest_relay_height);
+	if diff > 100 {
+		// try to find a closer justification
+		if let Some(new_justification) = find_next_justification(
+			&prover,
+			client_state.latest_relay_height + 1,
+			justification.commit.target_number,
+		)
+		.await?
+		{
+			justification = new_justification;
+		}
+	}
+
+	let justification = justification;
 
 	// fetch the latest finalized parachain header
 	let finalized_para_header = prover
@@ -662,8 +671,6 @@ where
 		let value = msg.encode_vec()?;
 		Any { value, type_url: msg.type_url() }
 	};
-
-	log::trace!(target: "hyperspace", "Sending update header with type {:?} to {}", update_type, source.name());
 
 	Ok(vec![(update_header, height, events, update_type)])
 }

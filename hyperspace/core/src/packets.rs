@@ -48,7 +48,6 @@ pub mod connection_delay;
 pub mod utils;
 
 pub const PROCESS_PACKETS_BATCH_SIZE: usize = 100;
-pub const MAX_PACKETS_TO_PROCESS: usize = 1000;
 
 /// Returns a tuple of messages, with the first item being packets that are ready to be sent to the
 /// sink chain. And the second item being packet timeouts that should be sent to the source.
@@ -183,6 +182,8 @@ pub async fn query_ready_and_timed_out_packets(
 		let latest_sink_height_on_source = sink_client_state_on_source.latest_height();
 		let latest_source_height_on_sink = source_client_state_on_sink.latest_height();
 
+		let max_packets_to_process = source.common_state().max_packets_to_process;
+
 		// query packets that are waiting for connection delay.
 		let seqs = query_undelivered_sequences(
 			source_height,
@@ -194,13 +195,16 @@ pub async fn query_ready_and_timed_out_packets(
 		)
 		.await?
 		.into_iter()
-		.take(MAX_PACKETS_TO_PROCESS)
+		.take(max_packets_to_process)
 		.collect::<Vec<_>>();
 
-		log::trace!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?} for {seqs:?}", seqs.len(), channel_id, port_id.clone());
+		log::debug!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?} for {seqs:?}", seqs.len(), channel_id, port_id.clone());
 
-		let send_packets = source.query_send_packets(channel_id, port_id.clone(), seqs).await?;
-		log::trace!(target: "hyperspace", "SendPackets count: {}", send_packets.len());
+		let mut send_packets = source.query_send_packets(channel_id, port_id.clone(), seqs).await?;
+		log::trace!(target: "hyperspace", "SendPackets count before deduplication: {}", send_packets.len());
+		send_packets.sort();
+		send_packets.dedup();
+		log::trace!(target: "hyperspace", "SendPackets count after deduplication: {}", send_packets.len());
 		let mut recv_packets_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 		let source = Arc::new(source.clone());
 		let sink = Arc::new(sink.clone());
@@ -390,7 +394,6 @@ pub async fn query_ready_and_timed_out_packets(
 		)
 		.await?
 		.into_iter()
-		.take(MAX_PACKETS_TO_PROCESS)
 		.collect::<Vec<_>>();
 
 		let acknowledgements = source.query_recv_packets(channel_id, port_id.clone(), acks).await?;

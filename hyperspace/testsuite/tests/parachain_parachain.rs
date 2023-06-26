@@ -131,6 +131,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 
 #[tokio::test]
 async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
+	use std::time::SystemTime;
 	logging::setup_logging();
 	use hyperspace_testsuite::setup_connection_and_channel;
 	use ibc::core::ics24_host::identifier::PortId;

@@ -35,7 +35,7 @@ use ibc::{
 };
 use ibc_primitives::PacketInfo as IbcPacketInfo;
 use ibc_proto::{
-	cosmos::bank::v1beta1::QueryBalanceRequest,
+	cosmos::{bank::v1beta1::QueryBalanceRequest, base::query::v1beta1::PageRequest},
 	google::protobuf::Any,
 	ibc::core::{
 		channel::v1::{
@@ -61,7 +61,9 @@ use ics08_wasm::msg::MsgPushNewWasmCode;
 use pallet_ibc::light_clients::{
 	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
 };
-use primitives::{mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType};
+use primitives::{
+	filter_events_by_ids, mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType,
+};
 use prost::Message;
 use rand::Rng;
 use std::{collections::HashSet, pin::Pin, str::FromStr, time::Duration};
@@ -71,9 +73,11 @@ use tendermint_rpc::{
 	endpoint::tx::Response,
 	event::{Event, EventData},
 	query::{EventType, Query},
-	Client, Error as RpcError, Order, SubscriptionClient, WebSocketClient,
+	Client, Error as RpcError, Order, SubscriptionClient,
 };
 use tokio::{task::JoinSet, time::sleep};
+
+pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 250;
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
@@ -121,7 +125,10 @@ where
 		let latest_revision = latest_height.revision_number;
 
 		let from = TmHeight::try_from(latest_cp_client_height).unwrap();
-		let to = finality_event_height;
+		let to = finality_event_height.min(
+			TmHeight::try_from(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER)
+				.expect("should not overflow"),
+		);
 		log::info!(target: "hyperspace_cosmos", "Getting blocks {}..{}", from, to);
 
 		// query (exclusively) up to `to`, because the proof for the event at `to - 1` will be
@@ -138,11 +145,12 @@ where
 				log::trace!(target: "hyperspace_cosmos", "Parsing events at height {:?}", height);
 				let client = self.clone();
 				let duration = Duration::from_millis(rand::thread_rng().gen_range(0..to) as u64);
+				let counterparty = counterparty.clone();
 				join_set.spawn(async move {
 					sleep(duration).await;
 					let xs = tokio::time::timeout(
 						Duration::from_secs(30),
-						client.parse_ibc_events_at(latest_revision, height),
+						client.parse_ibc_events_at(&counterparty, latest_revision, height),
 					)
 					.await??;
 					Ok((height, xs))
@@ -167,7 +175,6 @@ where
 		for (events, (update_header, update_type)) in
 			block_events.into_iter().map(|(_, events)| events).zip(update_headers)
 		{
-			log::debug!(target: "hyperspace_cosmos", "header n: {}", update_header.signed_header.header.height.value());
 			let height = update_header.height();
 			let update_client_header = {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
@@ -191,11 +198,8 @@ where
 	// necessary height field, as `height` is removed from `Attribute` from ibc-rs v0.22.0
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
 		// Create websocket client. Like what `EventMonitor::subscribe()` does in `hermes`
-		let (ws_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
-			.await
-			.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))
-			.unwrap();
-		tokio::spawn(ws_driver.run());
+		let ws_client = self.rpc_client.clone();
+
 		let query_all = vec![
 			Query::from(EventType::NewBlock),
 			Query::eq("message.module", "ibc_client"),
@@ -500,7 +504,7 @@ where
 		let request = QueryPacketCommitmentsRequest {
 			port_id: port_id.to_string(),
 			channel_id: channel_id.to_string(),
-			pagination: None,
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
 		};
 		let request = tonic::Request::new(request);
 		let response = grpc_client
@@ -538,7 +542,7 @@ where
 			port_id: port_id.to_string(),
 			channel_id: channel_id.to_string(),
 			packet_commitment_sequences: vec![],
-			pagination: None,
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
 		};
 		let request = tonic::Request::new(request);
 		let response = grpc_client
@@ -634,7 +638,7 @@ where
 			.map_err(|e| Error::from(format!("{:?}", e)))?;
 		let request = tonic::Request::new(QueryConnectionChannelsRequest {
 			connection: connection_id.to_string(),
-			pagination: None,
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
 		});
 
 		let response = grpc_client
@@ -663,11 +667,14 @@ where
 		);
 		let mut block_events = vec![];
 
-		for seq in seqs {
-			let query_str =
-				Query::eq(format!("{}.packet_src_channel", "send_packet"), channel_id.to_string())
-					.and_eq(format!("{}.packet_src_port", "send_packet"), port_id.to_string())
-					.and_eq(format!("{}.packet_sequence", "send_packet"), seq.to_string());
+		let mut added_seqs = HashSet::new();
+		for seq in seqs.iter().cloned() {
+			if added_seqs.contains(&seq) {
+				continue
+			}
+			let query_str = Query::eq("send_packet.packet_src_channel", channel_id.to_string())
+				.and_eq("send_packet.packet_src_port", port_id.to_string())
+				.and_eq("send_packet.packet_sequence", seq.to_string());
 
 			let response = self
 				.rpc_client
@@ -688,7 +695,13 @@ where
 						ibc_event_try_from_abci_event(ev, Height::new(self.id().version(), height));
 
 					match ev {
-						Ok(IbcEvent::SendPacket(p)) => {
+						Ok(IbcEvent::SendPacket(p))
+							if !added_seqs.contains(&p.packet.sequence.0) &&
+								seqs.contains(&p.packet.sequence.0) &&
+								p.packet.source_port == port_id && p.packet.source_channel ==
+								channel_id =>
+						{
+							added_seqs.insert(p.packet.sequence.0);
 							let mut info = PacketInfo::try_from(IbcPacketInfo::from(p.packet))
 								.map_err(|_| {
 									Error::from(format!(
@@ -719,7 +732,11 @@ where
 
 		let mut block_events = vec![];
 
-		for seq in seqs {
+		let mut added_seqs = HashSet::new();
+		for seq in seqs.iter().cloned() {
+			if added_seqs.contains(&seq) {
+				continue
+			}
 			let query_str = Query::eq("recv_packet.packet_dst_channel", channel_id.to_string())
 				.and_eq("recv_packet.packet_dst_port", port_id.to_string())
 				.and_eq("recv_packet.packet_sequence", seq.to_string());
@@ -741,8 +758,15 @@ where
 					let height = tx.height.value();
 					let ev =
 						ibc_event_try_from_abci_event(ev, Height::new(self.id().version(), height));
+
 					match ev {
-						Ok(IbcEvent::WriteAcknowledgement(p)) => {
+						Ok(IbcEvent::WriteAcknowledgement(p))
+							if !added_seqs.contains(&p.packet.sequence.0) &&
+								seqs.contains(&p.packet.sequence.0) &&
+								p.packet.destination_port == port_id &&
+								p.packet.destination_channel == channel_id =>
+						{
+							added_seqs.insert(p.packet.sequence.0);
 							let mut info = PacketInfo::try_from(IbcPacketInfo::from(p.packet))
 								.map_err(|_| {
 									Error::from(format!(
@@ -797,7 +821,7 @@ where
 					ibc_event_try_from_abci_event(ev, Height::new(self.id().version(), height));
 				let timestamp = self.query_timestamp_at(height).await?;
 				match ev {
-					Ok(IbcEvent::UpdateClient(_)) =>
+					Ok(IbcEvent::UpdateClient(e)) if e.client_id() == &client_id =>
 						return Ok((
 							Height::new(self.chain_id.version(), height),
 							Timestamp::from_nanoseconds(timestamp)?,
@@ -899,7 +923,9 @@ where
 	}
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
-		let request = tonic::Request::new(QueryClientStatesRequest { pagination: None });
+		let request = tonic::Request::new(QueryClientStatesRequest {
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
+		});
 		let grpc_client = ibc_proto::ibc::core::client::v1::query_client::QueryClient::new(
 			self.grpc_client.clone(),
 		);
@@ -925,7 +951,9 @@ where
 	}
 
 	async fn query_channels(&self) -> Result<Vec<(ChannelId, PortId)>, Self::Error> {
-		let request = tonic::Request::new(QueryChannelsRequest { pagination: None });
+		let request = tonic::Request::new(QueryChannelsRequest {
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
+		});
 		let mut grpc_client =
 			ibc_proto::ibc::core::channel::v1::query_client::QueryClient::connect(
 				self.grpc_url.clone().to_string(),
@@ -960,7 +988,9 @@ where
 			.await
 			.map_err(|e| Error::from(format!("{:?}", e)))?;
 
-		let request = tonic::Request::new(QueryConnectionsRequest { pagination: None });
+		let request = tonic::Request::new(QueryConnectionsRequest {
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
+		});
 
 		let response = grpc_client
 			.connections(request)
@@ -1272,8 +1302,9 @@ impl<H> CosmosClient<H>
 where
 	H: 'static + Clone + Send + Sync,
 {
-	async fn parse_ibc_events_at(
+	async fn parse_ibc_events_at<C: Chain>(
 		&self,
+		counterparty: &C,
 		latest_revision: u64,
 		height: u64,
 	) -> Result<Vec<IbcEvent>, <Self as IbcProvider>::Error> {
@@ -1298,15 +1329,47 @@ where
 
 		let ibc_height = Height::new(latest_revision, height);
 		for event in events {
+			let mut channel_and_port_ids = self.channel_whitelist();
+			channel_and_port_ids.extend(counterparty.channel_whitelist());
+
 			let ibc_event = ibc_event_try_from_abci_event(&event, ibc_height).ok();
 			match ibc_event {
 				Some(mut ev) => {
-					ev.set_height(ibc_height);
-					log::debug!(target: "hyperspace_cosmos", "Encountered event at {height}: {:?}", event.kind);
-					ibc_events.push(ev);
+					let is_filtered = filter_events_by_ids(
+						&ev,
+						&[self.client_id(), counterparty.client_id()],
+						&[self.connection_id(), counterparty.connection_id()]
+							.into_iter()
+							.flatten()
+							.collect::<Vec<_>>(),
+						&channel_and_port_ids,
+					);
+
+					if is_filtered {
+						ev.set_height(ibc_height);
+						log::debug!(target: "hyperspace_cosmos", "Encountered event at {height}: {:?}", event.kind);
+						ibc_events.push(ev);
+					} else {
+						log::debug!(target: "hyperspace_cosmos", "Filtered out event: {:?}", event.kind);
+					}
 				},
 				None => {
-					log::debug!(target: "hyperspace_cosmos", "Skipped event: {:?}", event.kind);
+					let ignored_events = [
+						"commission",
+						"rewards",
+						"transfer",
+						"mint",
+						"withdraw_rewards",
+						"coin_spent",
+						"coin_received",
+						"withdraw_commission",
+						"message",
+						"liveness",
+						"tx",
+					];
+					if !ignored_events.contains(&event.kind.as_str()) {
+						log::debug!(target: "hyperspace_cosmos", "Skipped event: {:?}", event.kind);
+					}
 					continue
 				},
 			}

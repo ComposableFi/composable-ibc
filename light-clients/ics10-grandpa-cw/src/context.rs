@@ -14,7 +14,10 @@
 // limitations under the License.
 
 use crate::{
-	contract::{GRANDPA_HEADER_HASHES_SET_STORAGE, GRANDPA_HEADER_HASHES_STORAGE},
+	contract::{
+		GRANDPA_BLOCK_HASHES_CACHE_SIZE, GRANDPA_HEADER_HASHES_SET_STORAGE,
+		GRANDPA_HEADER_HASHES_STORAGE,
+	},
 	ics23::{ClientStates, ConsensusStates, ReadonlyClientStates, ReadonlyConsensusStates},
 	ContractError,
 };
@@ -22,12 +25,10 @@ use cosmwasm_std::{DepsMut, Env, Storage};
 use grandpa_light_client_primitives::HostFunctions;
 use ibc::{core::ics26_routing::context::ReaderContext, Height};
 use ics10_grandpa::{
-	client_message::RelayChainHeader,
-	client_state::{ClientState, HEADER_ITEM_LIFETIME, HEADER_ITEM_MIN_COUNT},
-	consensus_state::ConsensusState,
+	client_message::RelayChainHeader, client_state::ClientState, consensus_state::ConsensusState,
 };
 use sp_core::H256;
-use std::{convert::identity, fmt, fmt::Debug, marker::PhantomData};
+use std::{fmt, fmt::Debug, marker::PhantomData};
 
 pub struct Context<'a, H> {
 	pub deps: DepsMut<'a>,
@@ -72,38 +73,37 @@ impl<'a, H> Context<'a, H> {
 		self.deps.storage
 	}
 
-	pub fn insert_relay_header_hashes(&mut self, now_ms: u64, headers: &[H256]) {
+	pub fn insert_relay_header_hashes(&mut self, headers: &[H256]) {
 		if headers.is_empty() {
 			return
 		}
 
-		let mut hashes = GRANDPA_HEADER_HASHES_STORAGE.load(self.storage()).unwrap_or_default();
-		hashes.reserve(headers.len());
+		let mut xs = GRANDPA_HEADER_HASHES_STORAGE.load(self.storage()).unwrap_or_default();
+		xs.reserve(headers.len());
 		for header in headers {
-			hashes.push((now_ms, *header));
+			xs.push(*header);
 			let _ = GRANDPA_HEADER_HASHES_SET_STORAGE
 				.save(self.storage_mut(), header.0.to_vec(), &())
 				.map_err(|e| {
 					self.log(&format!("error saving hash to set: {:?}", e));
 				});
 		}
-		let expired = now_ms.saturating_sub(HEADER_ITEM_LIFETIME.as_millis() as u64);
-		let key = hashes.binary_search_by_key(&expired, |(t, _)| *t).unwrap_or_else(identity);
-		let len = hashes.len();
-		let remove_up_to_index = key.min(len.saturating_sub(HEADER_ITEM_MIN_COUNT));
-		if remove_up_to_index < len {
-			let drained = hashes.drain(..remove_up_to_index).map(|(_, hash)| hash);
+		if xs.len() > GRANDPA_BLOCK_HASHES_CACHE_SIZE {
+			let drained = xs.drain(0..xs.len() - GRANDPA_BLOCK_HASHES_CACHE_SIZE);
 			for hash in drained {
 				GRANDPA_HEADER_HASHES_SET_STORAGE.remove(self.storage_mut(), hash.0.to_vec());
 			}
 		}
 		GRANDPA_HEADER_HASHES_STORAGE
-			.save(self.storage_mut(), &hashes)
+			.save(self.storage_mut(), &xs)
 			.expect("error saving header hashes");
 	}
 
 	pub fn contains_relay_header_hash(&self, hash: H256) -> bool {
-		GRANDPA_HEADER_HASHES_SET_STORAGE.has(self.storage(), hash.0.to_vec())
+		GRANDPA_HEADER_HASHES_STORAGE
+			.load(self.storage())
+			.unwrap_or_default()
+			.contains(&hash)
 	}
 }
 

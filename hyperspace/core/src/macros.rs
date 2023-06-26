@@ -745,7 +745,6 @@ macro_rules! chains {
 
 		#[async_trait]
 		impl Chain for AnyChain {
-
 			fn name(&self) -> &str {
 				match self {
 					$(
@@ -885,6 +884,16 @@ macro_rules! chains {
 						Self::$name(chain) => chain.common_state_mut(),
 					)*
 					Self::Wasm(c) => c.inner.common_state_mut(),
+				}
+			}
+
+			async fn reconnect(&mut self) -> anyhow::Result<()> {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.reconnect().await,
+					)*
+					Self::Wasm(c) => c.inner.reconnect().await,
 				}
 			}
 		}

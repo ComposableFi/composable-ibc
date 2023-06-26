@@ -19,7 +19,6 @@
 //! ICS-10: Grandpa IBC light client protocol implementation
 
 extern crate alloc;
-extern crate core;
 
 pub mod client_def;
 pub mod client_message;

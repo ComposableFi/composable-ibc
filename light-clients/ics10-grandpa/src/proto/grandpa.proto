@@ -32,16 +32,6 @@ message Authority {
   uint64 weight = 2;
 }
 
-message AuthorityChange {
-    // Block height at which the authority set is started to be active
-    uint32 height = 1;
-    google.protobuf.Timestamp timestamp = 2;
-    // new authority set id
-    uint64 set_id = 3;
-    // new authority set
-    repeated Authority authorities = 4;
-}
-
 // ClientState for the grandpa client
 message ClientState {
   // Latest relay chain block hash
@@ -51,8 +41,7 @@ message ClientState {
   uint32 latest_relay_height = 2;
 
   // current grandpa authority set id
-  // DEPRECATED: use `authorities_changes` instead
-  uint64 current_set_id = 3 [deprecated = true];
+  uint64 current_set_id = 3;
 
   // Block height when the client was frozen due to a misbehaviour
   optional uint64 frozen_height = 4;
@@ -67,11 +56,7 @@ message ClientState {
   uint32 latest_para_height = 7;
 
   // Current grandpa authorities
-  // DEPRECATED: use `authorities_changes` instead
-  repeated Authority current_authorities = 8 [deprecated = true];
-
-  // Current grandpa authorities
-  repeated AuthorityChange authorities_changes = 9;
+  repeated Authority current_authorities = 8;
 }
 
 message ParachainHeaderWithRelayHash {

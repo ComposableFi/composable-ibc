@@ -28,10 +28,12 @@ use ibc_rpc::{BlockNumberOrHash, IbcApiClient};
 use ics10_grandpa::client_message::{ClientMessage, Header as GrandpaHeader};
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState};
 
-use primitives::{mock::LocalClientTypes, Chain, KeyProvider, LightClientSync};
+use primitives::{
+	filter_events_by_ids, mock::LocalClientTypes, Chain, KeyProvider, LightClientSync,
+};
 
 use super::{error::Error, ParachainClient};
-use crate::finality_protocol::{filter_events_by_ids, FinalityProtocol};
+use crate::finality_protocol::FinalityProtocol;
 
 const MAX_HEADERS_PER_ITERATION: usize = 100;
 
@@ -49,7 +51,7 @@ where
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	<<T as subxt::Config>::Header as Header>::Number:
 		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
-	<T as subxt::Config>::Header: Decode + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
@@ -174,7 +176,7 @@ where
 		<T as subxt::Config>::Hash: From<H256>,
 		<T as subxt::Config>::Hash: From<[u8; 32]>,
 		<T as light_client_common::config::Config>::AssetId: Clone,
-		<T as subxt::Config>::Header: Decode + Send + Sync,
+		<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 		<<T as subxt::Config>::Header as HeaderT>::Number: Send + Sync,
 	{
 		let prover = self.grandpa_prover();
@@ -241,7 +243,7 @@ where
 		+ From<<<T as subxt::Config>::Header as Header>::Number>,
 	<<T as subxt::Config>::Header as Header>::Number:
 		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
-	<T as subxt::Config>::Header: Decode + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
