@@ -590,6 +590,7 @@ pub async fn query_undelivered_sequences(
 		.into_iter()
 		.collect::<Vec<_>>();
 	log::trace!(target: "hyperspace", "Seqs: {:?}", seqs);
+	log::trace!(target: "hyperspace", "Seqs: {:?}", seqs);
 	let counterparty_channel_id = channel_end
 		.counterparty()
 		.channel_id
@@ -777,6 +778,19 @@ pub async fn find_suitable_proof_height_for_client(
 					continue
 				}
 			}
+			let proof_height = source.get_proof_height(temp_height).await;
+			if proof_height != temp_height {
+				let has_consensus_state_with_proof = sink
+					.query_client_consensus(at, client_id.clone(), proof_height)
+					.await
+					.ok()
+					.map(|x| x.consensus_state.is_some())
+					.unwrap_or_default();
+				if !has_consensus_state_with_proof {
+					start += 1;
+					continue
+				}
+			}
 
 			// let consensus_state =
 			// 	AnyConsensusState::try_from(consensus_state.unwrap().consensus_state.unwrap())
@@ -821,11 +835,9 @@ pub async fn find_suitable_proof_height_for_client(
 						.map(|x| x.consensus_state.is_some())
 						.unwrap_or_default();
 					if has_consensus_state_with_proof {
-						// panic!("wtf1");
 						return Some(start_height)
 					}
 				} else {
-					// panic!("wtf2");
 					return Some(start_height)
 				}
 			}
