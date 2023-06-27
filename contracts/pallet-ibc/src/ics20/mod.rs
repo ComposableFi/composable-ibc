@@ -607,7 +607,7 @@ where
 		receiver: T::AccountId,
 	) -> Result<(), Ics20Error> {
 		//Handle only memo with IBC forward.
-		//Need to add logic to handle MEMO with xcm instrucntion as well.
+		//TODO XCM memo unwrap. Need to add logic to handle MEMO with xcm instrucntion as well.
 		let memo: MemoForward = serde_json::from_str(&packet_data.memo).unwrap();
 
 		let prefixed_coin = if is_receiver_chain_source(
@@ -644,10 +644,14 @@ where
 		let account_id =
 			crate::MultiAddress::<<T as frame_system::Config>::AccountId>::Raw(raw_bytes);
 		let origin = RawOrigin::Signed(receiver.clone());
+		let channel_id = memo.channel.parse().map_err(|_| {
+			Ics20Error::implementation_specific("Failed to parse channel ID".to_string())
+		})?;
 		let params = crate::TransferParams::<<T as frame_system::Config>::AccountId> {
 			to: account_id,
-			// source_channel: packet.source_channel.sequence(), //TODO source? should it be destination channel id from memo?
-			source_channel: memo.channel.parse().expect("Failed to parse channel ID"), //TODO replace expect
+			// source_channel: packet.source_channel.sequence(), //TODO source? should it be
+			// destination channel id from memo?
+			source_channel: channel_id, /* TODO replace expect */
 			timeout: ibc_primitives::Timeout::Offset {
 				// timestamp: next_chain_info.timestamp,
 				// height: next_chain_info.height,
@@ -656,30 +660,31 @@ where
 			},
 		};
 
-		//todo replace unwrap
-		//important .next should exists. because we requried memo to pass message forward!
-		let memo = *memo.next.unwrap();
-		let memo_str = serde_json::to_string(&memo).map_err(|_| {
-			Ics20Error::implementation_specific("failed to serialize memo".to_string())
-		})?;
-		let memo_result = <T as crate::Config>::MemoMessage::from_str(&memo_str).map_err(|_| {
-			Ics20Error::implementation_specific(
-				"failed to convert string to Config::MemoMessage".to_string(),
-			)
-		})?;
+		let memo = match memo.next {
+			Some(e) => Some(*e),
+			None => None,
+		};
 
-		crate::Pallet::<T>::transfer(
-			origin.into(),
-			params,
-			asset_id,
-			amount.into(),
-			Some(memo_result),
-		)
-		.map_err(|_| {
-			Ics20Error::implementation_specific(
-				"Pallet ibc transfer failed to send message".to_string(),
-			)
-		})?;
+		let mut next_memo: Option<T::MemoMessage> = None;
+		if let Some(memo) = memo {
+			let memo_str = serde_json::to_string(&memo).map_err(|_| {
+				Ics20Error::implementation_specific("failed to serialize memo".to_string())
+			})?;
+			let memo_result =
+				<T as crate::Config>::MemoMessage::from_str(&memo_str).map_err(|_| {
+					Ics20Error::implementation_specific(
+						"failed to convert string to Config::MemoMessage".to_string(),
+					)
+				})?;
+			next_memo = Some(memo_result);
+		}
+
+		crate::Pallet::<T>::transfer(origin.into(), params, asset_id, amount.into(), next_memo)
+			.map_err(|_| {
+				Ics20Error::implementation_specific(
+					"Pallet ibc transfer failed to send message".to_string(),
+				)
+			})?;
 		Ok(())
 	}
 }
