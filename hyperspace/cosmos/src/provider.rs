@@ -788,7 +788,8 @@ where
 	}
 
 	fn expected_block_time(&self) -> Duration {
-		Duration::from_secs(30)
+		// cosmos chain block time is roughly 6-7 seconds
+		Duration::from_secs(7)
 	}
 
 	async fn query_client_update_time_and_height(
@@ -1369,6 +1370,7 @@ where
 						"message",
 						"liveness",
 						"tx",
+						"fungible_token_packet",
 					];
 					if !ignored_events.contains(&event.kind.as_str()) {
 						log::debug!(target: "hyperspace_cosmos", "Skipped event: {:?}", event.kind);
