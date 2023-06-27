@@ -597,7 +597,7 @@ struct MemoData {
 
 impl<T> HandleMemo<T> for IbcModule<T>
 where
-	T: Config + Send + Sync,
+	T: Config + Send + Sync + pallet_timestamp::Config,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
@@ -659,16 +659,19 @@ where
 			Self::emit_memo_execution_failed_event(receiver.clone(), packet_data.memo.clone(), 2);
 			Ics20Error::implementation_specific("Failed to parse channel ID".to_string())
 		})?;
+
+		//timestamp that current timestamp + 30 minutes
+		let timestamp = <pallet_timestamp::Pallet<T> as frame_support::traits::UnixTime>::now()
+			.as_secs() + 1800;
+
 		let params = crate::TransferParams::<<T as frame_system::Config>::AccountId> {
 			to: account_id,
-			// source_channel: packet.source_channel.sequence(), //TODO source? should it be
-			// destination channel id from memo?
-			source_channel: channel_id, /* TODO replace expect */
+			source_channel: channel_id, /* TODO source? should it be destination channel id from
+			                             * memo? */
 			timeout: ibc_primitives::Timeout::Offset {
-				// timestamp: next_chain_info.timestamp,
-				// height: next_chain_info.height,
-				timestamp: Some(1), //TODO ? what timestamp
-				height: Some(1),    //TODO ? what height
+				timestamp: Some(timestamp), /* TODO ? what timestamp to use. now is current + 30
+				                             * minutes */
+				height: None, //TODO ? what height
 			},
 		};
 

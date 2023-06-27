@@ -141,6 +141,7 @@ std = [
   "finality-grandpa/std",
 #  "serde",
   "hex/std",
+  "pallet-timestamp/std"
 ]
 
 runtime-benchmarks = [
