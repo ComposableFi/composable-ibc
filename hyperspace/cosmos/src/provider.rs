@@ -1311,13 +1311,13 @@ where
 	) -> Result<Vec<IbcEvent>, <Self as IbcProvider>::Error> {
 		let mut ibc_events = Vec::new();
 
-		let block_results =
-			self.rpc_client.block_results(TmHeight::try_from(height)?).await.map_err(|e| {
-				Error::from(format!(
-					"Failed to query block result for height {:?}: {:?}",
-					height, e
-				))
-			})?;
+		let block_results = self
+			.rpc_http_client
+			.block_results(TmHeight::try_from(height)?)
+			.await
+			.map_err(|e| {
+			Error::from(format!("Failed to query block result for height {:?}: {:?}", height, e))
+		})?;
 
 		let tx_events = block_results
 			.txs_results
@@ -1391,7 +1391,7 @@ impl<H: Clone + Send + Sync + 'static> CosmosClient<H> {
 
 		let response: Response = loop {
 			let response = self
-				.rpc_client
+				.rpc_http_client
 				.tx_search(
 					Query::eq("tx.hash", tx_id.hash.to_string()),
 					false,
