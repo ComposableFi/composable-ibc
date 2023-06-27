@@ -394,6 +394,7 @@ pub async fn query_ready_and_timed_out_packets(
 		)
 		.await?
 		.into_iter()
+		.take(max_packets_to_process)
 		.collect::<Vec<_>>();
 
 		let acknowledgements =
