@@ -396,7 +396,8 @@ pub async fn query_ready_and_timed_out_packets(
 		.into_iter()
 		.collect::<Vec<_>>();
 
-		let acknowledgements = source.query_recv_packets(channel_id, port_id.clone(), acks).await?;
+		let acknowledgements =
+			source.query_received_packets(channel_id, port_id.clone(), acks).await?;
 		log::trace!(target: "hyperspace", "Got acknowledgements for channel {:?}: {:?}", channel_id, acknowledgements);
 		let mut acknowledgements_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 		sink.on_undelivered_sequences(!acknowledgements.is_empty(), UndeliveredType::Acks)

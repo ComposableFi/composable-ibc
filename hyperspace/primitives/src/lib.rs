@@ -348,7 +348,7 @@ pub trait IbcProvider {
 	/// Query received packets with their acknowledgement
 	/// This represents packets for which the `ReceivePacket` and `WriteAcknowledgement` events were
 	/// emitted.
-	async fn query_recv_packets(
+	async fn query_received_packets(
 		&self,
 		channel_id: ChannelId,
 		port_id: PortId,
