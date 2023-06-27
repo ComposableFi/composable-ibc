@@ -677,7 +677,7 @@ where
 				.and_eq("send_packet.packet_sequence", seq.to_string());
 
 			let response = self
-				.rpc_client
+				.rpc_http_client
 				.tx_search(
 					query_str,
 					true,
@@ -742,7 +742,7 @@ where
 				.and_eq("recv_packet.packet_sequence", seq.to_string());
 
 			let response = self
-				.rpc_client
+				.rpc_http_client
 				.tx_search(
 					query_str,
 					true,
@@ -800,10 +800,11 @@ where
 			client_id,
 			client_height
 		);
-		let query_str = Query::eq("update_client.client_id", client_id.to_string());
+		let query_str = Query::eq("update_client.client_id", client_id.to_string())
+			.and_eq("update_client.consensus_height", client_height.to_string());
 
 		let response = self
-			.rpc_client
+			.rpc_http_client
 			.tx_search(
 				query_str,
 				true,
