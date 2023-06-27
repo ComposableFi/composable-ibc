@@ -603,6 +603,19 @@ pub mod pallet {
 			client_id: String,
 			height: Height,
 		},
+		ExecuteMemoIbcTokenTransferInitiated {
+			from: Vec<u8>,
+			to: Vec<u8>,
+			asset_id: T::AssetId,
+			amount: T::Balance,
+			channel: u64,
+			next_memo: Option<T::MemoMessage>,
+		},
+		ExecuteMemoIbcTokenTransferFailed {
+			from: Vec<u8>,
+			memo: String,
+			reason: u8,
+		},
 	}
 
 	/// Errors inform users that something went wrong.
