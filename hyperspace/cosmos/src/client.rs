@@ -43,7 +43,7 @@ use std::{
 use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
 use tendermint_light_client_verifier::types::{LightBlock, ValidatorSet};
-use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, Url, WebSocketClient};
+use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient, Url, WebSocketClient};
 use tokio::{
 	sync::{Mutex as TokioMutex, Mutex as AsyncMutex},
 	task::{JoinHandle, JoinSet},
