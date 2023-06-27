@@ -604,7 +604,7 @@ pub mod pallet {
 			height: Height,
 		},
 		ExecuteMemoIbcTokenTransferInitiated {
-			from: Vec<u8>,
+			from: T::AccountId,
 			to: Vec<u8>,
 			asset_id: T::AssetId,
 			amount: T::Balance,
@@ -612,7 +612,7 @@ pub mod pallet {
 			next_memo: Option<T::MemoMessage>,
 		},
 		ExecuteMemoIbcTokenTransferFailed {
-			from: Vec<u8>,
+			from: T::AccountId,
 			memo: String,
 			reason: u8,
 		},

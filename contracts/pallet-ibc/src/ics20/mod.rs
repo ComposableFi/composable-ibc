@@ -579,7 +579,7 @@ impl<T: Config> HandleMemo<T> for () {
 }
 
 use frame_system::RawOrigin;
-
+use scale_info::prelude::boxed::Box;
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 struct MemoForward {
 	receiver: String,
@@ -719,7 +719,7 @@ where
 		})?;
 
 		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoIbcTokenTransferInitiated {
-			from: receiver.to_string().as_bytes().to_vec(),
+			from: receiver,
 			to: raw_bytes,
 			asset_id,
 			amount: amount.into(),
@@ -739,7 +739,7 @@ where
 	//function that takes account and memo and emit event that memo execution failed
 	fn emit_memo_execution_failed_event(account: T::AccountId, memo: String, reason: u8) {
 		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoIbcTokenTransferFailed {
-			from: account.to_string().as_bytes().to_vec(),
+			from: account,
 			memo,
 			reason,
 		});
