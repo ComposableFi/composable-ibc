@@ -301,7 +301,7 @@ where
 				maybe_has_undelivered_packets: Default::default(),
 				rpc_call_delay: Duration::from_millis(1000),
 				misbehaviour_client_msg_queue: Arc::new(AsyncMutex::new(vec![])),
-				max_packets_to_process: 50,
+				max_packets_to_process: config.common.max_packets_to_process as usize,
 			},
 			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh])),
 		})

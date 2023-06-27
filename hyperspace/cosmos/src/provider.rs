@@ -737,9 +737,11 @@ where
 			if added_seqs.contains(&seq) {
 				continue
 			}
-			let query_str = Query::eq("recv_packet.packet_dst_channel", channel_id.to_string())
-				.and_eq("recv_packet.packet_dst_port", port_id.to_string())
-				.and_eq("recv_packet.packet_sequence", seq.to_string());
+
+			let query_str =
+				Query::eq("write_acknowledgement.packet_dst_channel", channel_id.to_string())
+					.and_eq("write_acknowledgement.packet_dst_port", port_id.to_string())
+					.and_eq("write_acknowledgement.packet_sequence", seq.to_string());
 
 			let response = self
 				.rpc_http_client

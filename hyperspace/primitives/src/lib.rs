@@ -99,6 +99,10 @@ fn default_skip_optional_client_updates() -> bool {
 	true
 }
 
+fn max_packets_to_process() -> u32 {
+	50
+}
+
 // TODO: move other fields like `client_id`, `connection_id`, etc. here
 /// Common relayer parameters
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -106,6 +110,8 @@ pub struct CommonClientConfig {
 	/// Skip optional client updates
 	#[serde(default = "default_skip_optional_client_updates")]
 	pub skip_optional_client_updates: bool,
+	#[serde(default = "max_packets_to_process")]
+	pub max_packets_to_process: u32,
 }
 
 /// A common data that all clients should keep.
