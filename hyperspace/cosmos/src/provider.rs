@@ -677,7 +677,7 @@ where
 				.and_eq("send_packet.packet_sequence", seq.to_string());
 
 			let response = self
-				.rpc_client
+				.rpc_http_client
 				.tx_search(
 					query_str,
 					true,
@@ -719,7 +719,7 @@ where
 		Ok(block_events)
 	}
 
-	async fn query_recv_packets(
+	async fn query_received_packets(
 		&self,
 		channel_id: ChannelId,
 		port_id: PortId,
@@ -737,12 +737,14 @@ where
 			if added_seqs.contains(&seq) {
 				continue
 			}
-			let query_str = Query::eq("recv_packet.packet_dst_channel", channel_id.to_string())
-				.and_eq("recv_packet.packet_dst_port", port_id.to_string())
-				.and_eq("recv_packet.packet_sequence", seq.to_string());
+
+			let query_str =
+				Query::eq("write_acknowledgement.packet_dst_channel", channel_id.to_string())
+					.and_eq("write_acknowledgement.packet_dst_port", port_id.to_string())
+					.and_eq("write_acknowledgement.packet_sequence", seq.to_string());
 
 			let response = self
-				.rpc_client
+				.rpc_http_client
 				.tx_search(
 					query_str,
 					true,
@@ -786,7 +788,8 @@ where
 	}
 
 	fn expected_block_time(&self) -> Duration {
-		Duration::from_secs(30)
+		// cosmos chain block time is roughly 6-7 seconds
+		Duration::from_secs(7)
 	}
 
 	async fn query_client_update_time_and_height(
@@ -800,10 +803,11 @@ where
 			client_id,
 			client_height
 		);
-		let query_str = Query::eq("update_client.client_id", client_id.to_string());
+		let query_str = Query::eq("update_client.client_id", client_id.to_string())
+			.and_eq("update_client.consensus_height", client_height.to_string());
 
 		let response = self
-			.rpc_client
+			.rpc_http_client
 			.tx_search(
 				query_str,
 				true,
@@ -1310,13 +1314,13 @@ where
 	) -> Result<Vec<IbcEvent>, <Self as IbcProvider>::Error> {
 		let mut ibc_events = Vec::new();
 
-		let block_results =
-			self.rpc_client.block_results(TmHeight::try_from(height)?).await.map_err(|e| {
-				Error::from(format!(
-					"Failed to query block result for height {:?}: {:?}",
-					height, e
-				))
-			})?;
+		let block_results = self
+			.rpc_http_client
+			.block_results(TmHeight::try_from(height)?)
+			.await
+			.map_err(|e| {
+			Error::from(format!("Failed to query block result for height {:?}: {:?}", height, e))
+		})?;
 
 		let tx_events = block_results
 			.txs_results
@@ -1366,6 +1370,7 @@ where
 						"message",
 						"liveness",
 						"tx",
+						"fungible_token_packet",
 					];
 					if !ignored_events.contains(&event.kind.as_str()) {
 						log::debug!(target: "hyperspace_cosmos", "Skipped event: {:?}", event.kind);
@@ -1390,7 +1395,7 @@ impl<H: Clone + Send + Sync + 'static> CosmosClient<H> {
 
 		let response: Response = loop {
 			let response = self
-				.rpc_client
+				.rpc_http_client
 				.tx_search(
 					Query::eq("tx.hash", tx_id.hash.to_string()),
 					false,

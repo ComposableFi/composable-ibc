@@ -43,7 +43,7 @@ use std::{
 use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
 use tendermint_light_client_verifier::types::{LightBlock, ValidatorSet};
-use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, Url, WebSocketClient};
+use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient, Url, WebSocketClient};
 use tokio::{
 	sync::{Mutex as TokioMutex, Mutex as AsyncMutex},
 	task::{JoinHandle, JoinSet},
@@ -131,6 +131,8 @@ pub struct CosmosClient<H> {
 	pub name: String,
 	/// Chain rpc client
 	pub rpc_client: WebSocketClient,
+	/// Chain http rpc client
+	pub rpc_http_client: HttpClient,
 	/// Reusable GRPC client
 	pub grpc_client: tonic::transport::Channel,
 	/// Chain rpc address
@@ -250,6 +252,8 @@ where
 		let (rpc_client, rpc_driver) = WebSocketClient::new(config.websocket_url.clone())
 			.await
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		let rpc_http_client = HttpClient::new(config.rpc_url.clone())
+			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 		let ws_driver_jh = tokio::spawn(rpc_driver.run());
 		let grpc_client = tonic::transport::Endpoint::new(config.grpc_url.to_string())
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?
@@ -273,6 +277,7 @@ where
 			name: config.name,
 			chain_id,
 			rpc_client,
+			rpc_http_client,
 			grpc_client,
 			rpc_url: config.rpc_url,
 			grpc_url: config.grpc_url,
@@ -296,7 +301,7 @@ where
 				maybe_has_undelivered_packets: Default::default(),
 				rpc_call_delay: Duration::from_millis(1000),
 				misbehaviour_client_msg_queue: Arc::new(AsyncMutex::new(vec![])),
-				max_packets_to_process: 50,
+				max_packets_to_process: config.common.max_packets_to_process as usize,
 			},
 			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh])),
 		})
@@ -485,8 +490,8 @@ where
 
 		// Use the Tendermint-rs RPC client to do the query.
 		let response = self
-			.rpc_client
-			.abci_query(Some(path.to_owned()), data, height, prove)
+			.rpc_http_client
+			.abci_query(Some(path.to_owned()), data.clone(), height, prove)
 			.await
 			.map_err(|e| {
 				Error::from(format!("Failed to query chain {} with error {:?}", self.name, e))

@@ -99,6 +99,10 @@ fn default_skip_optional_client_updates() -> bool {
 	true
 }
 
+fn max_packets_to_process() -> u32 {
+	50
+}
+
 // TODO: move other fields like `client_id`, `connection_id`, etc. here
 /// Common relayer parameters
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -106,6 +110,8 @@ pub struct CommonClientConfig {
 	/// Skip optional client updates
 	#[serde(default = "default_skip_optional_client_updates")]
 	pub skip_optional_client_updates: bool,
+	#[serde(default = "max_packets_to_process")]
+	pub max_packets_to_process: u32,
 }
 
 /// A common data that all clients should keep.
@@ -348,7 +354,7 @@ pub trait IbcProvider {
 	/// Query received packets with their acknowledgement
 	/// This represents packets for which the `ReceivePacket` and `WriteAcknowledgement` events were
 	/// emitted.
-	async fn query_recv_packets(
+	async fn query_received_packets(
 		&self,
 		channel_id: ChannelId,
 		port_id: PortId,
@@ -716,16 +722,13 @@ pub async fn find_suitable_proof_height_for_client(
 				continue
 			}
 			let proof_height = source.get_proof_height(temp_height).await;
-			if proof_height != temp_height {
-				let has_consensus_state_with_proof = sink
-					.query_client_consensus(at, client_id.clone(), proof_height)
-					.await
-					.ok()
-					.map(|x| x.consensus_state.is_some())
-					.unwrap_or_default();
-				if !has_consensus_state_with_proof {
-					continue
-				}
+			let has_client_state = sink
+				.query_client_update_time_and_height(client_id.clone(), proof_height)
+				.await
+				.ok()
+				.is_some();
+			if !has_client_state {
+				continue
 			}
 			log::info!("Found proof height on {} as {}:{}", sink.name(), temp_height, proof_height);
 			return Some(temp_height)
@@ -753,17 +756,14 @@ pub async fn find_suitable_proof_height_for_client(
 				continue
 			};
 			let proof_height = source.get_proof_height(temp_height).await;
-			if proof_height != temp_height {
-				let has_consensus_state_with_proof = sink
-					.query_client_consensus(at, client_id.clone(), proof_height)
-					.await
-					.ok()
-					.map(|x| x.consensus_state.is_some())
-					.unwrap_or_default();
-				if !has_consensus_state_with_proof {
-					start += 1;
-					continue
-				}
+			let has_client_state = sink
+				.query_client_update_time_and_height(client_id.clone(), proof_height)
+				.await
+				.ok()
+				.is_some();
+			if !has_client_state {
+				start += 1;
+				continue
 			}
 
 			if consensus_state.timestamp().nanoseconds() < timestamp_to_match.nanoseconds() {
@@ -784,17 +784,12 @@ pub async fn find_suitable_proof_height_for_client(
 		{
 			if consensus_state.timestamp().nanoseconds() >= timestamp_to_match.nanoseconds() {
 				let proof_height = source.get_proof_height(start_height).await;
-				if proof_height != start_height {
-					let has_consensus_state_with_proof = sink
-						.query_client_consensus(at, client_id.clone(), proof_height)
-						.await
-						.ok()
-						.map(|x| x.consensus_state.is_some())
-						.unwrap_or_default();
-					if has_consensus_state_with_proof {
-						return Some(start_height)
-					}
-				} else {
+				let has_client_state = sink
+					.query_client_update_time_and_height(client_id.clone(), proof_height)
+					.await
+					.ok()
+					.is_some();
+				if has_client_state {
 					return Some(start_height)
 				}
 			}
