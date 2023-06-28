@@ -799,12 +799,13 @@ pub mod pallet {
 			let mut coin = PrefixedCoin { denom, amount: ibc_amount };
 			let source_channel = ChannelId::new(params.source_channel);
 			let source_port = PortId::transfer();
-			let (latest_height, latest_timestamp) =
+			let (latest_height, _) =
 				Pallet::<T>::latest_height_and_timestamp(&source_port, &source_channel)
 					.map_err(|_| Error::<T>::TimestampAndHeightNotFound)?;
 
 			let (timeout_height, timeout_timestamp) = match params.timeout {
 				Timeout::Offset { timestamp, height } => {
+					let latest_timestamp = T::TimeProvider::now();
 					let timestamp = timestamp
 						.map(|offset| (latest_timestamp + Duration::from_secs(offset)))
 						.transpose()
