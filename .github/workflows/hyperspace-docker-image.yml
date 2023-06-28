@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - vmarkushin/optimize-queries
 
 jobs:
   build-and-publish:
