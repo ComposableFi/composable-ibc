@@ -658,7 +658,7 @@ impl Forward {
 	}
 }
 
-use codec::Decode;
+// use codec::Decode;
 impl<T> HandleMemo<T> for IbcModule<T>
 where
 	T: Config + Send + Sync + pallet_timestamp::Config,
@@ -723,7 +723,9 @@ where
 			return Err(Ics20Error::implementation_specific("Does not support XCM multihop yet.".to_string()));
 		};
 
-		let raw_bytes = memo_forward.receiver.as_bytes().to_vec();
+		// let raw_bytes = memo_forward.receiver.as_bytes().to_vec();
+		let raw_bytes = memo_forward.receiver.into_bytes();
+
 
 		//convert string into T::AccountId
 
@@ -732,15 +734,22 @@ where
 
 		//check to get substrate account from string. if it is file then the next chain is
 		// substrate need to use
-		if let Ok(acc) = AccountId32::from_str(&memo_forward.receiver) {
-			let mut acc: &[u8] = sp_runtime::AccountId32::as_ref(&acc);
-			let substrate_account_id = <T as frame_system::Config>::AccountId::decode(&mut acc);
-			if let Ok(substrate_account_id) = substrate_account_id {
-				transfer_ibc_account_to = crate::MultiAddress::<
-					<T as frame_system::Config>::AccountId,
-				>::Id(substrate_account_id);
-			}
-		}
+		// if let Some(s) = memo_forward.receiver.strip_prefix("0x") {
+		// 	let r = hex::decode(s).unwrap();
+		// 	let acc_id = T::AccountId::decode(&mut &*r);
+		// }
+
+		// if let Ok(acc) = AccountId32::from_str(&memo_forward.receiver) {
+		// 	let mut acc: &[u8] = sp_runtime::AccountId32::as_ref(&acc);
+		// 	let substrate_account_id = <T as frame_system::Config>::AccountId::decode(&mut acc);
+		// 	if let Ok(substrate_account_id) = substrate_account_id {
+		// 		transfer_ibc_account_to = crate::MultiAddress::<
+		// 			<T as frame_system::Config>::AccountId,
+		// 		>::Id(substrate_account_id);
+		// 	}
+		// }
+		// "cosmos1asdsadasdasdasd";
+		// "0xsdasdasdasdas"
 
 		let origin = RawOrigin::Signed(receiver.clone());
 		let channel_id = memo_forward
