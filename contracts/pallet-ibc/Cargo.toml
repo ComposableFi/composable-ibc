@@ -138,7 +138,6 @@ std = [
   "sp-finality-grandpa/std",
   "sp-finality-grandpa/std",
   "finality-grandpa/std",
-  # "serde",
   "hex/std",
   "pallet-timestamp/std"
 ]

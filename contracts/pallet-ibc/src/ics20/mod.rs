@@ -238,6 +238,7 @@ where
 
 				let mut token = packet_data.token.clone();
 				let denom = full_ibc_denom(&packet, packet_data.token.clone());
+
 				token.denom = PrefixedDenom::from_str(&denom).map_err(|_| {
 					Ics04Error::implementation_specific("Failed to parse token denom".to_string())
 				})?;
@@ -581,20 +582,83 @@ impl<T: Config> HandleMemo<T> for () {
 use frame_system::RawOrigin;
 use scale_info::prelude::boxed::Box;
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-struct MemoForward {
-	receiver: String,
-	port: String,
-	channel: String,
-	timeout: String,
-	retries: u64,
-	next: Option<Box<MemoForward>>,
+pub struct Forward {
+	pub receiver: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub port: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub channel: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub timeout: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub retries: Option<u64>,
+
+	/// since other parachain does not support ibc memo
+	/// there is only two option: send to parachain or send to relay-chain
+	// #[serde(skip_serializing_if = "Option::is_none")]
+	/// we do not need parrent id. if para id is none, it means send to relay-chain
+	// pub parent: Option<u32>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub para_id: Option<u32>, //if para id is none, it means send to relay-chain
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub substrate: Option<bool>,
+	///
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub next: Option<Box<MemoData>>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-struct MemoData {
-	forward: MemoForward,
+pub struct MemoData {
+	pub forward: Forward,
 }
 
+pub struct MemoIbc {
+	pub receiver: String,
+	pub port: String,
+	pub channel: String,
+	pub timeout: String,
+	pub retries: u64,
+}
+
+pub struct MemoXcm {
+	pub receiver: String,
+	pub para_id: Option<u32>, //if para id is none, it means send to relay-chain
+}
+
+pub enum MemoType {
+	IBC(MemoIbc),
+	XCM(MemoXcm),
+}
+
+impl Forward {
+	pub fn get_memo(&self) -> Result<MemoType, Ics20Error> {
+		let forward = self.substrate;
+		if forward.is_none() {
+			let xcm = MemoXcm { receiver: self.receiver.clone(), para_id: self.para_id.clone() };
+			return Ok(MemoType::XCM(xcm))
+		}
+		let ibc =
+			MemoIbc {
+				receiver: self.receiver.clone(),
+				port: self
+					.port
+					.clone()
+					.ok_or(Ics20Error::implementation_specific("Failed to get port".to_string()))?,
+				channel: self.channel.clone().ok_or(Ics20Error::implementation_specific(
+					"Failed to get channel".to_string(),
+				))?,
+				timeout: self.timeout.clone().ok_or(Ics20Error::implementation_specific(
+					"Failed to get timeout".to_string(),
+				))?,
+				retries: self.retries.clone().ok_or(Ics20Error::implementation_specific(
+					"Failed to get retries".to_string(),
+				))?,
+			};
+		return Ok(MemoType::IBC(ibc))
+	}
+}
+
+use codec::Decode;
 impl<T> HandleMemo<T> for IbcModule<T>
 where
 	T: Config + Send + Sync + pallet_timestamp::Config,
@@ -612,7 +676,7 @@ where
 		if packet_data.memo.is_empty() {
 			return Ok(())
 		}
-		let memo: MemoForward = serde_json::from_str(&packet_data.memo).map_err(|_| {
+		let memo: MemoData = serde_json::from_str(&packet_data.memo).map_err(|_| {
 			Self::emit_memo_execution_failed_event(receiver.clone(), packet_data.memo.clone(), 0);
 			Ics20Error::implementation_specific(format!(
 				"Failed to parse memo : {:?} ",
@@ -650,35 +714,67 @@ where
 
 		let amount = packet_data.token.amount.as_u256().low_u128();
 
-		let raw_bytes = memo.receiver.as_bytes().to_vec();
-
-		let account_id =
-			crate::MultiAddress::<<T as frame_system::Config>::AccountId>::Raw(raw_bytes.clone());
-		let origin = RawOrigin::Signed(receiver.clone());
-		let channel_id = memo.channel.parse().map_err(|_| {
+		let memo_forward = memo.forward.get_memo().map_err(|_| {
 			Self::emit_memo_execution_failed_event(receiver.clone(), packet_data.memo.clone(), 2);
-			Ics20Error::implementation_specific("Failed to parse channel ID".to_string())
+			Ics20Error::implementation_specific("Failed to get memo".to_string())
 		})?;
+		let MemoType::IBC(memo_forward) = memo_forward else{
+			Self::emit_memo_execution_failed_event(receiver.clone(), packet_data.memo.clone(), 3);
+			return Err(Ics20Error::implementation_specific("Does not support XCM multihop yet.".to_string()));
+		};
+
+		let raw_bytes = memo_forward.receiver.as_bytes().to_vec();
+
+		//convert string into T::AccountId
+
+		let mut transfer_ibc_account_to =
+			crate::MultiAddress::<<T as frame_system::Config>::AccountId>::Raw(raw_bytes.clone());
+
+		//check to get substrate account from string. if it is file then the next chain is
+		// substrate need to use
+		if let Ok(acc) = AccountId32::from_str(&memo_forward.receiver) {
+			let mut acc: &[u8] = sp_runtime::AccountId32::as_ref(&acc);
+			let substrate_account_id = <T as frame_system::Config>::AccountId::decode(&mut acc);
+			if let Ok(substrate_account_id) = substrate_account_id {
+				transfer_ibc_account_to = crate::MultiAddress::<
+					<T as frame_system::Config>::AccountId,
+				>::Id(substrate_account_id);
+			}
+		}
+
+		let origin = RawOrigin::Signed(receiver.clone());
+		let channel_id = memo_forward
+			.channel
+			.split('-')
+			.last()
+			.ok_or(Ics20Error::implementation_specific(format!(
+				"Failed to extract channel number from channel ID: {:?}",
+				memo_forward.channel
+			)))?
+			.parse()
+			.map_err(|_| {
+				Self::emit_memo_execution_failed_event(
+					receiver.clone(),
+					packet_data.memo.clone(),
+					4,
+				);
+				Ics20Error::implementation_specific("Failed to parse channel ID".to_string())
+			})?;
 
 		//timestamp that current timestamp + 30 minutes
 		let timestamp = <pallet_timestamp::Pallet<T> as frame_support::traits::UnixTime>::now()
 			.as_secs() + 1800;
 
 		let params = crate::TransferParams::<<T as frame_system::Config>::AccountId> {
-			to: account_id,
-			source_channel: channel_id, /* TODO source? should it be destination channel id from
-			                             * memo? */
-			timeout: ibc_primitives::Timeout::Offset {
-				timestamp: Some(timestamp), /* TODO ? what timestamp to use. now is current + 30
-				                             * minutes */
-				height: None, //TODO ? what height
-			},
+			to: transfer_ibc_account_to,
+			source_channel: channel_id,
+			// timeout: ibc_primitives::Timeout::Offset { timestamp: Some(timestamp), height: None
+			// }, timestamp: Some(600), height: Some(600) is working 100% so it is better to test
+			// this first before to complicate
+			timeout: ibc_primitives::Timeout::Offset { timestamp: Some(600), height: Some(600) },
 		};
 
-		let memo = match memo.next {
-			Some(e) => Some(*e),
-			None => None,
-		};
+		let memo = memo.forward.next.as_deref();
 
 		let mut next_memo: Option<T::MemoMessage> = None;
 		if let Some(memo) = memo {
@@ -686,7 +782,7 @@ where
 				Self::emit_memo_execution_failed_event(
 					receiver.clone(),
 					packet_data.memo.clone(),
-					3,
+					5,
 				);
 				Ics20Error::implementation_specific("failed to serialize memo".to_string())
 			})?;
@@ -695,7 +791,7 @@ where
 					Self::emit_memo_execution_failed_event(
 						receiver.clone(),
 						packet_data.memo.clone(),
-						4,
+						6,
 					);
 					Ics20Error::implementation_specific(
 						"failed to convert string to Config::MemoMessage".to_string(),
@@ -712,7 +808,14 @@ where
 			next_memo.clone(),
 		)
 		.map_err(|_| {
-			Self::emit_memo_execution_failed_event(receiver.clone(), packet_data.memo.clone(), 5);
+			crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoIbcTokenTransferFailed {
+				from: receiver.clone(),
+				to: raw_bytes.clone(),
+				asset_id,
+				amount: amount.into(),
+				channel: channel_id,
+				next_memo: next_memo.clone(),
+			});
 			Ics20Error::implementation_specific(
 				"Pallet ibc transfer failed to send message".to_string(),
 			)
@@ -738,10 +841,8 @@ where
 {
 	//function that takes account and memo and emit event that memo execution failed
 	fn emit_memo_execution_failed_event(account: T::AccountId, memo: String, reason: u8) {
-		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoIbcTokenTransferFailed {
-			from: account,
-			memo,
-			reason,
-		});
+		crate::Pallet::<T>::deposit_event(
+			Event::<T>::ExecuteMemoIbcTokenTransferFailedWithReason { from: account, memo, reason },
+		);
 	}
 }
