@@ -673,6 +673,10 @@ where
 		//Handle only memo with IBC forward.
 		//TODO XCM memo unwrap. Need to add logic to handle MEMO with xcm instrucntion as well.
 
+		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoInitiated {
+			memo: packet_data.memo.clone(),
+		});
+
 		if packet_data.memo.is_empty() {
 			return Ok(())
 		}
@@ -725,7 +729,6 @@ where
 
 		// let raw_bytes = memo_forward.receiver.as_bytes().to_vec();
 		let raw_bytes = memo_forward.receiver.into_bytes();
-
 
 		//convert string into T::AccountId
 

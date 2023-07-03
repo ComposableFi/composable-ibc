@@ -624,6 +624,9 @@ pub mod pallet {
 			memo: String,
 			reason: u8,
 		},
+		ExecuteMemoInitiated {
+			memo: String,
+		},
 	}
 
 	/// Errors inform users that something went wrong.

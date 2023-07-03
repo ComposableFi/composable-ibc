@@ -186,6 +186,11 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 
 impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Memo<T, S> {
 	fn process_memo(packet: &mut Packet) -> Result<(), Error> {
+
+		crate::Pallet::<T>::deposit_event(crate::Event::<T>::ExecuteMemoInitiated {
+			memo: "process_memo".to_string(),
+		});
+
 		let packet_data: PacketData =
 			serde_json::from_slice(packet.data.as_slice()).map_err(|e| {
 				Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
