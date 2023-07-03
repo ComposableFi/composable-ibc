@@ -674,7 +674,7 @@ where
 		//TODO XCM memo unwrap. Need to add logic to handle MEMO with xcm instrucntion as well.
 
 		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoInitiated {
-			memo: packet_data.memo.clone(),
+			memo: Some(packet_data.memo.clone()),
 		});
 
 		if packet_data.memo.is_empty() {

@@ -188,7 +188,7 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 	fn process_memo(packet: &mut Packet) -> Result<(), Error> {
 
 		crate::Pallet::<T>::deposit_event(crate::Event::<T>::ExecuteMemoInitiated {
-			memo: "process_memo".to_string(),
+			memo: None,
 		});
 
 		let packet_data: PacketData =
