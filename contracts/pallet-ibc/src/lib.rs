@@ -613,6 +613,14 @@ pub mod pallet {
 		},
 		ExecuteMemoIbcTokenTransferFailed {
 			from: T::AccountId,
+			to: Vec<u8>,
+			asset_id: T::AssetId,
+			amount: T::Balance,
+			channel: u64,
+			next_memo: Option<T::MemoMessage>,
+		},
+		ExecuteMemoIbcTokenTransferFailedWithReason {
+			from: T::AccountId,
 			memo: String,
 			reason: u8,
 		},
