@@ -629,11 +629,11 @@ pub enum MemoType {
 	IBC(MemoIbc),
 	XCM(MemoXcm),
 }
+// {"forward":{"receiver":"0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d","substrate":true}}
 
 impl Forward {
 	pub fn get_memo(&self) -> Result<MemoType, Ics20Error> {
-		let forward = self.substrate;
-		if forward.is_none() {
+		if !self.substrate.is_none() {
 			let xcm = MemoXcm { receiver: self.receiver.clone(), para_id: self.para_id.clone() };
 			return Ok(MemoType::XCM(xcm))
 		}
@@ -675,7 +675,7 @@ where
 
 		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoInitiated {
 			state: 250,
-			memo: Some(packet_data.memo.clone()),
+			memo: Some(packet_data.memo.clone().as_bytes().to_vec()),
 		});
 
 		if packet_data.memo.is_empty() {
@@ -684,7 +684,7 @@ where
 
 		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoInitiated {
 			state: 251,
-			memo: Some(packet_data.memo.clone()),
+			memo: Some(packet_data.memo.clone().as_bytes().to_vec()),
 		});
 		
 		let memo: MemoData = serde_json::from_str(&packet_data.memo).map_err(|_| {

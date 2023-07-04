@@ -626,7 +626,7 @@ pub mod pallet {
 		},
 		ExecuteMemoInitiated {
 			state: u8,
-			memo: Option<String>,
+			memo: Option<Vec<u8>>,
 		},
 	}
 
