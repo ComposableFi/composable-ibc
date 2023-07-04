@@ -157,6 +157,11 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 			state: 1,
 			memo: None,
 		});
+		
+		crate::Pallet::<T>::deposit_event(crate::Event::<T>::ExecuteMemoInitiated {
+			state: 111,
+			memo: None,
+		});
 
 		let ack = self.inner.on_recv_packet(ctx, output, packet, relayer)?;
 		crate::Pallet::<T>::deposit_event(crate::Event::<T>::ExecuteMemoInitiated {
