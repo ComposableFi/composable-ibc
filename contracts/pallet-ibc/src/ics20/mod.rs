@@ -674,12 +674,19 @@ where
 		//TODO XCM memo unwrap. Need to add logic to handle MEMO with xcm instrucntion as well.
 
 		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoInitiated {
+			state: 250,
 			memo: Some(packet_data.memo.clone()),
 		});
 
 		if packet_data.memo.is_empty() {
 			return Ok(())
 		}
+
+		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoInitiated {
+			state: 251,
+			memo: Some(packet_data.memo.clone()),
+		});
+		
 		let memo: MemoData = serde_json::from_str(&packet_data.memo).map_err(|_| {
 			Self::emit_memo_execution_failed_event(receiver.clone(), packet_data.memo.clone(), 0);
 			Ics20Error::implementation_specific(format!(

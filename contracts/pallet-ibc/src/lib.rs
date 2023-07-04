@@ -625,6 +625,7 @@ pub mod pallet {
 			reason: u8,
 		},
 		ExecuteMemoInitiated {
+			state: u8,
 			memo: Option<String>,
 		},
 	}
