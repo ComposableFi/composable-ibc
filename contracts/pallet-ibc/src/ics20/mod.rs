@@ -675,7 +675,7 @@ where
 
 		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoInitiated {
 			state: 250,
-			memo: Some(packet_data.memo.clone().as_bytes().to_vec()),
+			memo: Some(packet_data.memo.clone()),
 		});
 
 		if packet_data.memo.is_empty() {
@@ -684,7 +684,7 @@ where
 
 		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoInitiated {
 			state: 251,
-			memo: Some(packet_data.memo.clone().as_bytes().to_vec()),
+			memo: Some(packet_data.memo.clone()),
 		});
 		
 		let memo: MemoData = serde_json::from_str(&packet_data.memo).map_err(|_| {
