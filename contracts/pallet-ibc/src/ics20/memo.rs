@@ -152,12 +152,11 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 		packet: &mut Packet,
 		relayer: &Signer,
 	) -> Result<Acknowledgement, Error> {
-
 		crate::Pallet::<T>::deposit_event(crate::Event::<T>::ExecuteMemoInitiated {
 			state: 1,
 			memo: None,
 		});
-		
+
 		crate::Pallet::<T>::deposit_event(crate::Event::<T>::ExecuteMemoInitiated {
 			state: 111,
 			memo: None,
@@ -205,7 +204,6 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 
 impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Memo<T, S> {
 	fn process_memo(packet: &mut Packet) -> Result<(), Error> {
-
 		crate::Pallet::<T>::deposit_event(crate::Event::<T>::ExecuteMemoInitiated {
 			state: 20,
 			memo: None,
