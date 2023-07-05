@@ -165,7 +165,7 @@ pub mod pallet {
 		next_seq_send::NextSequenceSend,
 	};
 	use crate::{
-		ics20::HandleMemo,
+		ics20::{HandleMemo, SubstrateMultihopXcmHandler},
 		light_clients::AnyConsensusState,
 		routing::{Context, ModuleRouter},
 	};
@@ -276,6 +276,8 @@ pub mod pallet {
 			+ scale_info::TypeInfo
 			+ Clone
 			+ Eq;
+
+		type SubstrateMultihopXcmHandler: SubstrateMultihopXcmHandler<AccountId = Self::AccountId>;
 
 		type IsSendEnabled: Get<bool>;
 		type IsReceiveEnabled: Get<bool>;
@@ -623,6 +625,13 @@ pub mod pallet {
 			from: T::AccountId,
 			memo: String,
 			reason: u8,
+		},
+		ExecuteMemoXcmSuccess {
+			from: T::AccountId,
+			to: T::AccountId,
+			amount: u128,
+			asset_id: T::AssetId,
+			para_id: Option<u32>,
 		},
 		ExecuteMemoInitiated {
 			state: u8,
