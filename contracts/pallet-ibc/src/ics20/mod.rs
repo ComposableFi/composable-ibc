@@ -579,6 +579,33 @@ impl<T: Config> HandleMemo<T> for () {
 	}
 }
 
+pub trait SubstrateMultihopXcmHandler {
+	type AccountId;
+
+	fn transfer_xcm(
+		from: Self::AccountId,
+		to: Self::AccountId,
+		para_id: Option<u32>,
+		amount: u128,
+		currency: u128,
+	) -> Option<()>;
+}
+
+pub struct SubstrateMultihopXcmHandlerNone<T>(PhantomData<T>);
+
+impl<T: Config> SubstrateMultihopXcmHandler for SubstrateMultihopXcmHandlerNone<T> {
+	type AccountId = T::AccountId;
+	fn transfer_xcm(
+		_: Self::AccountId,
+		_: Self::AccountId,
+		_: Option<u32>,
+		_: u128,
+		_: u128,
+	) -> Option<()> {
+		None
+	}
+}
+
 use frame_system::RawOrigin;
 use scale_info::prelude::boxed::Box;
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -629,11 +656,12 @@ pub enum MemoType {
 	IBC(MemoIbc),
 	XCM(MemoXcm),
 }
+// {"forward":{"receiver":"0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d","
+// substrate":true}}
 
 impl Forward {
 	pub fn get_memo(&self) -> Result<MemoType, Ics20Error> {
-		let forward = self.substrate;
-		if forward.is_none() {
+		if !self.substrate.is_none() {
 			let xcm = MemoXcm { receiver: self.receiver.clone(), para_id: self.para_id.clone() };
 			return Ok(MemoType::XCM(xcm))
 		}
@@ -658,12 +686,13 @@ impl Forward {
 	}
 }
 
-// use codec::Decode;
+use codec::Decode;
 impl<T> HandleMemo<T> for IbcModule<T>
 where
 	T: Config + Send + Sync + pallet_timestamp::Config,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
+	u128: From<T::AssetId>,
 {
 	fn execute_memo(
 		packet: &Packet,
@@ -673,9 +702,20 @@ where
 		//Handle only memo with IBC forward.
 		//TODO XCM memo unwrap. Need to add logic to handle MEMO with xcm instrucntion as well.
 
+		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoInitiated {
+			state: 250,
+			memo: Some(packet_data.memo.clone()),
+		});
+
 		if packet_data.memo.is_empty() {
 			return Ok(())
 		}
+
+		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoInitiated {
+			state: 251,
+			memo: Some(packet_data.memo.clone()),
+		});
+
 		let memo: MemoData = serde_json::from_str(&packet_data.memo).map_err(|_| {
 			Self::emit_memo_execution_failed_event(receiver.clone(), packet_data.memo.clone(), 0);
 			Ics20Error::implementation_specific(format!(
@@ -718,18 +758,73 @@ where
 			Self::emit_memo_execution_failed_event(receiver.clone(), packet_data.memo.clone(), 2);
 			Ics20Error::implementation_specific("Failed to get memo".to_string())
 		})?;
-		let MemoType::IBC(memo_forward) = memo_forward else{
-			Self::emit_memo_execution_failed_event(receiver.clone(), packet_data.memo.clone(), 3);
-			return Err(Ics20Error::implementation_specific("Does not support XCM multihop yet.".to_string()));
+
+		let memo_forward = match memo_forward {
+			MemoType::IBC(memo_forward) => memo_forward,
+			MemoType::XCM(memo_forward) => {
+				let s = memo_forward.receiver.strip_prefix("0x").ok_or_else(|| {
+					Self::emit_memo_execution_failed_event(
+						receiver.clone(),
+						packet_data.memo.clone(),
+						31,
+					);
+					Ics20Error::implementation_specific("failed strip_prefix.".to_string())
+				})?;
+
+				let decoded_accout = hex::decode(s).map_err(|_| {
+					Self::emit_memo_execution_failed_event(
+						receiver.clone(),
+						packet_data.memo.clone(),
+						32,
+					);
+					Ics20Error::implementation_specific("hex::decode".to_string())
+				})?;
+
+				let account_to = T::AccountId::decode(&mut &*decoded_accout).map_err(|_| {
+					Self::emit_memo_execution_failed_event(
+						receiver.clone(),
+						packet_data.memo.clone(),
+						33,
+					);
+					Ics20Error::implementation_specific("T::AccountId::decode".to_string())
+				})?;
+
+				T::SubstrateMultihopXcmHandler::transfer_xcm(
+					receiver.clone(),
+					account_to.clone(),
+					memo_forward.para_id,
+					amount,
+					asset_id.into(),
+				)
+				.ok_or_else(|| {
+					Self::emit_memo_execution_failed_event(
+						receiver.clone(),
+						packet_data.memo.clone(),
+						3,
+					);
+					Ics20Error::implementation_specific(
+						"Faield to execute SubstrateMultihopXcmHandler::transfer_xcm.".to_string(),
+					)
+				})?;
+
+				crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoXcmSuccess {
+					from: receiver.clone(),
+					to: account_to.clone(),
+					para_id: memo_forward.para_id,
+					amount,
+					asset_id: asset_id.into(),
+				});
+
+				return Ok(())
+			},
 		};
 
 		// let raw_bytes = memo_forward.receiver.as_bytes().to_vec();
 		let raw_bytes = memo_forward.receiver.into_bytes();
 
-
 		//convert string into T::AccountId
 
-		let mut transfer_ibc_account_to =
+		let transfer_ibc_account_to =
 			crate::MultiAddress::<<T as frame_system::Config>::AccountId>::Raw(raw_bytes.clone());
 
 		//check to get substrate account from string. if it is file then the next chain is
