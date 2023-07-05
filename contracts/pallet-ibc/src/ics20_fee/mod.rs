@@ -152,6 +152,19 @@ pub trait FlatFeeConverter {
 	) -> Option<u128>;
 }
 
+pub trait SubstrateMultihopXcmHandler {
+	type AccountId;
+
+	fn transfer_xcm(from: Self::AccountId, to: Self::AccountId, para_id: Option<u128>, amount: u128, currency: u128) -> Option<()>;
+}
+
+impl SubstrateMultihopXcmHandler for (){
+	type AccountId = ();
+	fn transfer_xcm(_: Self::AccountId, _: Self::AccountId, _: Option<u128>, _: u128, _: u128) -> Option<()> {
+		None
+	}
+}
+
 pub struct NonFlatFeeConverter<T>(PhantomData<T>);
 
 impl<T: crate::Config> FlatFeeConverter for NonFlatFeeConverter<T> {
