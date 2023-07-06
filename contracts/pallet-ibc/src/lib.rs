@@ -605,6 +605,10 @@ pub mod pallet {
 			client_id: String,
 			height: Height,
 		},
+		ExecuteMemoStarted {
+			account_id: T::AccountId,
+			memo: Option<String>,
+		},
 		ExecuteMemoIbcTokenTransferSuccess {
 			from: T::AccountId,
 			to: Vec<u8>,

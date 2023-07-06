@@ -702,6 +702,11 @@ where
 			return Ok(())
 		}
 
+		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoStarted {
+			account_id: receiver.clone(),
+			memo: Some(packet_data.memo.clone()),
+		});
+
 		let memo: MemoData = serde_json::from_str(&packet_data.memo).map_err(|_| {
 			Self::emit_memo_execution_failed_event(receiver.clone(), packet_data.memo.clone(), 0);
 			Ics20Error::implementation_specific(format!(
