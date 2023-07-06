@@ -656,8 +656,6 @@ pub enum MemoType {
 	IBC(MemoIbc),
 	XCM(MemoXcm),
 }
-// {"forward":{"receiver":"0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d","
-// substrate":true}}
 
 impl Forward {
 	pub fn get_memo(&self) -> Result<MemoType, Ics20Error> {
@@ -700,19 +698,12 @@ where
 		receiver: T::AccountId,
 	) -> Result<(), Ics20Error> {
 		//Handle only memo with IBC forward.
-		//TODO XCM memo unwrap. Need to add logic to handle MEMO with xcm instrucntion as well.
-
-		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoInitiated {
-			state: 250,
-			memo: Some(packet_data.memo.clone()),
-		});
-
 		if packet_data.memo.is_empty() {
 			return Ok(())
 		}
 
-		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoInitiated {
-			state: 251,
+		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoStarted {
+			account_id: receiver.clone(),
 			memo: Some(packet_data.memo.clone()),
 		});
 
@@ -766,7 +757,7 @@ where
 					Self::emit_memo_execution_failed_event(
 						receiver.clone(),
 						packet_data.memo.clone(),
-						31,
+						11,
 					);
 					Ics20Error::implementation_specific("failed strip_prefix.".to_string())
 				})?;
@@ -775,7 +766,7 @@ where
 					Self::emit_memo_execution_failed_event(
 						receiver.clone(),
 						packet_data.memo.clone(),
-						32,
+						12,
 					);
 					Ics20Error::implementation_specific("hex::decode".to_string())
 				})?;
@@ -784,7 +775,7 @@ where
 					Self::emit_memo_execution_failed_event(
 						receiver.clone(),
 						packet_data.memo.clone(),
-						33,
+						13,
 					);
 					Ics20Error::implementation_specific("T::AccountId::decode".to_string())
 				})?;
@@ -797,11 +788,13 @@ where
 					asset_id.into(),
 				)
 				.ok_or_else(|| {
-					Self::emit_memo_execution_failed_event(
-						receiver.clone(),
-						packet_data.memo.clone(),
-						3,
-					);
+					crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoXcmFailed {
+						from: receiver.clone(),
+						to: account_to.clone(),
+						para_id: memo_forward.para_id,
+						amount,
+						asset_id: asset_id.into(),
+					});
 					Ics20Error::implementation_specific(
 						"Faield to execute SubstrateMultihopXcmHandler::transfer_xcm.".to_string(),
 					)
@@ -827,34 +820,22 @@ where
 		let transfer_ibc_account_to =
 			crate::MultiAddress::<<T as frame_system::Config>::AccountId>::Raw(raw_bytes.clone());
 
-		//check to get substrate account from string. if it is file then the next chain is
-		// substrate need to use
-		// if let Some(s) = memo_forward.receiver.strip_prefix("0x") {
-		// 	let r = hex::decode(s).unwrap();
-		// 	let acc_id = T::AccountId::decode(&mut &*r);
-		// }
-
-		// if let Ok(acc) = AccountId32::from_str(&memo_forward.receiver) {
-		// 	let mut acc: &[u8] = sp_runtime::AccountId32::as_ref(&acc);
-		// 	let substrate_account_id = <T as frame_system::Config>::AccountId::decode(&mut acc);
-		// 	if let Ok(substrate_account_id) = substrate_account_id {
-		// 		transfer_ibc_account_to = crate::MultiAddress::<
-		// 			<T as frame_system::Config>::AccountId,
-		// 		>::Id(substrate_account_id);
-		// 	}
-		// }
-		// "cosmos1asdsadasdasdasd";
-		// "0xsdasdasdasdas"
-
 		let origin = RawOrigin::Signed(receiver.clone());
 		let channel_id = memo_forward
 			.channel
 			.split('-')
 			.last()
-			.ok_or(Ics20Error::implementation_specific(format!(
-				"Failed to extract channel number from channel ID: {:?}",
-				memo_forward.channel
-			)))?
+			.ok_or_else(|| {
+				Self::emit_memo_execution_failed_event(
+					receiver.clone(),
+					packet_data.memo.clone(),
+					3,
+				);
+				Ics20Error::implementation_specific(format!(
+					"Failed to extract channel number from channel ID: {:?}",
+					memo_forward.channel
+				))
+			})?
 			.parse()
 			.map_err(|_| {
 				Self::emit_memo_execution_failed_event(
@@ -866,7 +847,7 @@ where
 			})?;
 
 		//timestamp that current timestamp + 30 minutes
-		let timestamp = <pallet_timestamp::Pallet<T> as frame_support::traits::UnixTime>::now()
+		let _timestamp = <pallet_timestamp::Pallet<T> as frame_support::traits::UnixTime>::now()
 			.as_secs() + 1800;
 
 		let params = crate::TransferParams::<<T as frame_system::Config>::AccountId> {
@@ -925,7 +906,7 @@ where
 			)
 		})?;
 
-		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoIbcTokenTransferInitiated {
+		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoIbcTokenTransferSuccess {
 			from: receiver,
 			to: raw_bytes,
 			asset_id,

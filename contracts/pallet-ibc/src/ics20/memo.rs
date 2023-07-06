@@ -152,29 +152,11 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 		packet: &mut Packet,
 		relayer: &Signer,
 	) -> Result<Acknowledgement, Error> {
-		crate::Pallet::<T>::deposit_event(crate::Event::<T>::ExecuteMemoInitiated {
-			state: 1,
-			memo: None,
-		});
-
-		crate::Pallet::<T>::deposit_event(crate::Event::<T>::ExecuteMemoInitiated {
-			state: 111,
-			memo: None,
-		});
-
 		let ack = self.inner.on_recv_packet(ctx, output, packet, relayer)?;
-		crate::Pallet::<T>::deposit_event(crate::Event::<T>::ExecuteMemoInitiated {
-			state: 2,
-			memo: None,
-		});
 		// We want the whole chain of calls to fail only if the ics20 transfer fails, because
 		// the other modules are not part of ics-20 standard
 		let _ = Self::process_memo(packet).map_err(|e| {
 			log::error!(target: "pallet_ibc", "Error while handling memo: {:?}", e);
-		});
-		crate::Pallet::<T>::deposit_event(crate::Event::<T>::ExecuteMemoInitiated {
-			state: 255,
-			memo: None,
 		});
 		Ok(ack)
 	}
@@ -204,11 +186,6 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 
 impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Memo<T, S> {
 	fn process_memo(packet: &mut Packet) -> Result<(), Error> {
-		crate::Pallet::<T>::deposit_event(crate::Event::<T>::ExecuteMemoInitiated {
-			state: 20,
-			memo: None,
-		});
-
 		let packet_data: PacketData =
 			serde_json::from_slice(packet.data.as_slice()).map_err(|e| {
 				Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
@@ -218,17 +195,9 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 				Error::implementation_specific(format!("Failed to parse receiver account"))
 			})?
 			.into_account();
-		crate::Pallet::<T>::deposit_event(crate::Event::<T>::ExecuteMemoInitiated {
-			state: 21,
-			memo: None,
-		});
 		<T as Config>::HandleMemo::execute_memo(packet, &packet_data, receiver).map_err(|e| {
 			Error::implementation_specific(format!("Failed to execute memo {:?}", e))
 		})?;
-		crate::Pallet::<T>::deposit_event(crate::Event::<T>::ExecuteMemoInitiated {
-			state: 22,
-			memo: None,
-		});
 		Ok(())
 	}
 }

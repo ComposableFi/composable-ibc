@@ -605,15 +605,11 @@ pub mod pallet {
 			client_id: String,
 			height: Height,
 		},
-		ExecuteMemoIbcTokenTransferInitiated {
-			from: T::AccountId,
-			to: Vec<u8>,
-			asset_id: T::AssetId,
-			amount: T::Balance,
-			channel: u64,
-			next_memo: Option<T::MemoMessage>,
+		ExecuteMemoStarted {
+			account_id: T::AccountId,
+			memo: Option<String>,
 		},
-		ExecuteMemoIbcTokenTransferFailed {
+		ExecuteMemoIbcTokenTransferSuccess {
 			from: T::AccountId,
 			to: Vec<u8>,
 			asset_id: T::AssetId,
@@ -626,6 +622,14 @@ pub mod pallet {
 			memo: String,
 			reason: u8,
 		},
+		ExecuteMemoIbcTokenTransferFailed {
+			from: T::AccountId,
+			to: Vec<u8>,
+			asset_id: T::AssetId,
+			amount: T::Balance,
+			channel: u64,
+			next_memo: Option<T::MemoMessage>,
+		},
 		ExecuteMemoXcmSuccess {
 			from: T::AccountId,
 			to: T::AccountId,
@@ -633,9 +637,12 @@ pub mod pallet {
 			asset_id: T::AssetId,
 			para_id: Option<u32>,
 		},
-		ExecuteMemoInitiated {
-			state: u8,
-			memo: Option<String>,
+		ExecuteMemoXcmFailed {
+			from: T::AccountId,
+			to: T::AccountId,
+			amount: u128,
+			asset_id: T::AssetId,
+			para_id: Option<u32>,
 		},
 	}
 
