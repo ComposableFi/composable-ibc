@@ -298,7 +298,7 @@ where
 		let mut ctx = Context::<T>::default();
 		// We want the whole chain of calls to fail only if the ics20 transfer fails, because
 		// the other modules are not part of ics-20 standard
-		let ack = self.inner.on_recv_packet(&mut ctx, output, packet, relayer)?;
+		let ack = self.inner.on_recv_packet(&ctx, output, packet, relayer)?;
 		let _ = Self::process_fee(&mut ctx, packet, &ack).map_err(|e| {
 			log::error!(target: "pallet_ibc", "Error processing fee: {:?}", e);
 		});
@@ -342,7 +342,7 @@ where
 	) -> Result<(), Ics04Error> {
 		let mut packet_data = serde_json::from_slice::<PacketData>(packet.data.as_slice())
 			.map_err(|e| {
-				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
+				Ics04Error::implementation_specific(format!("Failed to decode packet data {e:?}"))
 			})?;
 
 		let is_feeless_channels = FeeLessChannelIds::<T>::contains_key((
@@ -388,16 +388,15 @@ where
 			let mut fee = {
 				let fee_asset_id = T::FlatFeeAssetId::get();
 				let fee_asset_amount = T::FlatFeeAmount::get();
-				let flat_fee =
-					T::FlatFeeConverter::get_flat_fee(asset_id, fee_asset_id, fee_asset_amount)
-						.unwrap_or_else(|| {
-							// We have ensured that token amounts larger than the max value for
-							// a u128 are rejected in the ics20 on_recv_packet callback so we
-							// can multiply safely. Percent does Non-Overflowing multiplication
-							// so this is infallible
-							percent * amount
-						});
-				flat_fee
+
+				T::FlatFeeConverter::get_flat_fee(asset_id, fee_asset_id, fee_asset_amount)
+					.unwrap_or_else(|| {
+						// We have ensured that token amounts larger than the max value for
+						// a u128 are rejected in the ics20 on_recv_packet callback so we
+						// can multiply safely. Percent does Non-Overflowing multiplication
+						// so this is infallible
+						percent * amount
+					})
 			};
 
 			fee = fee.min(amount);

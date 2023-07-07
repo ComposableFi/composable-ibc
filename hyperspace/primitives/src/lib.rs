@@ -14,7 +14,7 @@
 
 #![allow(clippy::all)]
 
-use futures::{FutureExt, Stream};
+use futures::Stream;
 use ibc_proto::{
 	google::protobuf::Any,
 	ibc::core::{

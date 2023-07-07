@@ -103,20 +103,15 @@ pub async fn query_ready_and_timed_out_packets(
 		let source_connection_end =
 			ConnectionEnd::try_from(connection_response.connection.ok_or_else(|| {
 				Error::Custom(format!(
-					"[query_ready_and_timed_out_packets] ConnectionEnd not found for {:?}",
-					connection_id
+					"[query_ready_and_timed_out_packets] ConnectionEnd not found for {connection_id:?}"
 				))
 			})?)?;
 
-		let sink_channel_id = source_channel_end
-			.counterparty()
-			.channel_id
-			.ok_or_else(|| {
-				Error::Custom(
-					" An Open Channel End should have a valid counterparty channel id".to_string(),
-				)
-			})?
-			.clone();
+		let sink_channel_id = source_channel_end.counterparty().channel_id.ok_or_else(|| {
+			Error::Custom(
+				" An Open Channel End should have a valid counterparty channel id".to_string(),
+			)
+		})?;
 		let sink_port_id = source_channel_end.counterparty().port_id.clone();
 		let sink_channel_response = match sink
 			.query_channel_end(sink_height, sink_channel_id, sink_port_id.clone())
@@ -211,7 +206,7 @@ pub async fn query_ready_and_timed_out_packets(
 		let timeout_packets_count = Arc::new(AtomicUsize::new(0));
 		let send_packets_count = Arc::new(AtomicUsize::new(0));
 		for send_packets in send_packets.chunks(PROCESS_PACKETS_BATCH_SIZE) {
-			for send_packet in send_packets.to_owned() {
+			for send_packet in send_packets.iter().cloned() {
 				let source_connection_end = source_connection_end.clone();
 				let sink_channel_end = sink_channel_end.clone();
 				let source_connection_end = source_connection_end.clone();
@@ -229,7 +224,7 @@ pub async fn query_ready_and_timed_out_packets(
 					let packet = packet_info_to_packet(&send_packet);
 					// Check if packet has timed out
 					let packet_height = send_packet.height.ok_or_else(|| {
-						Error::Custom(format!("Packet height not found for packet {:?}", packet))
+						Error::Custom(format!("Packet height not found for packet {packet:?}"))
 					})?;
 
 					if packet.timed_out(&sink_timestamp, sink_height) {
@@ -404,7 +399,7 @@ pub async fn query_ready_and_timed_out_packets(
 		sink.on_undelivered_sequences(!acknowledgements.is_empty(), UndeliveredType::Acks)
 			.await;
 		for acknowledgements in acknowledgements.chunks(PROCESS_PACKETS_BATCH_SIZE) {
-			for acknowledgement in acknowledgements.to_owned() {
+			for acknowledgement in acknowledgements.iter().cloned() {
 				let source_connection_end = source_connection_end.clone();
 				let source = source.clone();
 				let sink = sink.clone();
@@ -429,7 +424,7 @@ pub async fn query_ready_and_timed_out_packets(
 					// creation height, we can't send it yet packet_info.height should represent the
 					// acknowledgement creation height on source chain
 					let ack_height = acknowledgement.height.ok_or_else(|| {
-						Error::Custom(format!("Packet height not found for packet {:?}", packet))
+						Error::Custom(format!("Packet height not found for packet {packet:?}"))
 					})?;
 					if ack_height > latest_source_height_on_sink.revision_height {
 						// Sink does not have client update required to prove acknowledgement packet message

@@ -374,14 +374,14 @@ async fn process_timeouts<A: Chain>(
 
 async fn find_mandatory_heights_for_undelivered_sequences<A: Chain>(
 	source: &mut A,
-	updates: &Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>,
+	updates: &[(Any, Height, Vec<IbcEvent>, UpdateType)],
 ) -> HashSet<u64> {
 	let mut mandatory_updates_for_undelivered_seqs = HashSet::new();
 	let update_heights = updates
 		.iter()
 		.map(|(_, height, ..)| height.revision_height)
 		.collect::<HashSet<_>>();
-	let (_, height, ..) = updates.first().unwrap().clone();
+	let (_, height, ..) = updates.first().unwrap();
 	let proof_height = source.get_proof_height(*height).await;
 	let block_proof_height_difference = proof_height
 		.revision_height

@@ -166,7 +166,7 @@ where
 						inner: Box::new(client_state),
 						data: old_client_state.data.clone(),
 						code_id: old_client_state.code_id.clone(),
-						latest_height: old_client_state.latest_height.clone(),
+						latest_height: old_client_state.latest_height,
 						_phantom: Default::default(),
 					},
 					result,
@@ -224,7 +224,6 @@ where
 				consensus_height,
 				expected_consensus_state,
 			)
-			.map_err(|e| e.into())
 	}
 
 	fn verify_connection_state<Ctx: ReaderContext>(
@@ -251,7 +250,6 @@ where
 				connection_id,
 				expected_connection_end,
 			)
-			.map_err(|e| e.into())
 	}
 
 	fn verify_channel_state<Ctx: ReaderContext>(
@@ -280,7 +278,6 @@ where
 				channel_id,
 				expected_channel_end,
 			)
-			.map_err(|e| e.into())
 	}
 
 	fn verify_client_full_state<Ctx: ReaderContext>(
@@ -305,7 +302,6 @@ where
 				client_id,
 				expected_client_state,
 			)
-			.map_err(|e| e.into())
 	}
 
 	fn verify_packet_data<Ctx: ReaderContext>(
@@ -336,7 +332,6 @@ where
 				sequence,
 				commitment,
 			)
-			.map_err(|e| e.into())
 	}
 
 	fn verify_packet_acknowledgement<Ctx: ReaderContext>(
@@ -367,7 +362,6 @@ where
 				sequence,
 				ack,
 			)
-			.map_err(|e| e.into())
 	}
 
 	fn verify_next_sequence_recv<Ctx: ReaderContext>(
@@ -396,7 +390,6 @@ where
 				channel_id,
 				sequence,
 			)
-			.map_err(|e| e.into())
 	}
 
 	fn verify_packet_receipt_absence<Ctx: ReaderContext>(
@@ -425,6 +418,5 @@ where
 				channel_id,
 				sequence,
 			)
-			.map_err(|e| e.into())
 	}
 }

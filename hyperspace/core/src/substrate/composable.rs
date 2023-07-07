@@ -221,7 +221,7 @@ impl light_client_common::config::Config for ComposableConfig {
 	> {
 		let params =
 			ParachainExtrinsicsParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
-		Ok(params.into())
+		Ok(params)
 	}
 }
 

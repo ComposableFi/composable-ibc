@@ -53,7 +53,7 @@ where
 	H: Clone + Send + Sync + 'static,
 {
 	fn name(&self) -> &str {
-		&*self.name
+		&self.name
 	}
 
 	fn block_max_weight(&self) -> u64 {
@@ -100,14 +100,14 @@ where
 		let subscription = ws_client
 			.subscribe(Query::from(EventType::NewBlock))
 			.await
-			.map_err(|e| Error::from(format!("failed to subscribe to new blocks {:?}", e)))?
+			.map_err(|e| Error::from(format!("failed to subscribe to new blocks {e:?}")))?
 			.chunks(6);
 		log::info!(target: "hyperspace_cosmos", "🛰️ Subscribed to {} listening to finality notifications", self.name);
 		let stream = subscription.filter_map(|events| {
 			let events = events
 				.into_iter()
 				.collect::<Result<Vec<_>, _>>()
-				.map_err(|e| Error::from(format!("failed to get event {:?}", e)))
+				.map_err(|e| Error::from(format!("failed to get event {e:?}")))
 				.unwrap();
 			let get_height = |event: &Event| {
 				let Event { data, events: _, query: _ } = &event;
@@ -168,7 +168,7 @@ where
 			.into_inner();
 		let mut idx = None;
 		let tx_response = resp.tx_responses.pop().ok_or_else(|| {
-			Error::from(format!("Failed to find tx for update client: {:?}", update))
+			Error::from(format!("Failed to find tx for update client: {update:?}"))
 		})?;
 		'l: for log in tx_response.logs {
 			for ev in log.events {
@@ -188,7 +188,7 @@ where
 					&event,
 					Height::new(self.id().version(), tx_response.height as u64),
 				)
-				.map_err(|e| Error::from(format!("Failed to extract attributes from tx: {}", e)))?;
+				.map_err(|e| Error::from(format!("Failed to extract attributes from tx: {e}")))?;
 				if attr.client_id == *update.client_id() &&
 					attr.client_type == update.client_type() &&
 					attr.consensus_height == update.consensus_height()
@@ -204,19 +204,17 @@ where
 			.txs
 			.pop()
 			.ok_or_else(|| {
-				Error::from(format!("Failed to find tx for update client in `txs`: {:?}", update))
+				Error::from(format!("Failed to find tx for update client in `txs`: {update:?}"))
 			})?
 			.body
 			.ok_or_else(|| {
-				Error::from(format!("Failed to find tx for update client in `body`: {:?}", update))
+				Error::from(format!("Failed to find tx for update client in `body`: {update:?}"))
 			})?
 			.messages
 			.remove(idx as usize);
 		let envelope = Ics26Envelope::<LocalClientTypes>::try_from(x);
-		match envelope {
-			Ok(Ics26Envelope::Ics2Msg(ClientMsg::UpdateClient(update_msg))) =>
-				return Ok(update_msg.client_message),
-			_ => (),
+		if let Ok(Ics26Envelope::Ics2Msg(ClientMsg::UpdateClient(update_msg))) = envelope {
+			return Ok(update_msg.client_message)
 		}
 
 		Err(Error::from("Failed to find matching update client event".to_string()))
@@ -240,7 +238,7 @@ where
 			err_str.contains("failed to send message to internal channel")
 		{
 			self.reconnect().await?;
-			self.common_state.rpc_call_delay = self.common_state.rpc_call_delay * 2;
+			self.common_state.rpc_call_delay *= 2;
 		}
 
 		Ok(())
@@ -265,7 +263,7 @@ where
 	async fn reconnect(&mut self) -> anyhow::Result<()> {
 		let (rpc_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
 			.await
-			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+			.map_err(|e| Error::RpcError(format!("{e:?}")))?;
 		self.join_handles.lock().await.push(tokio::spawn(ws_driver.run()));
 		self.rpc_client = rpc_client;
 		log::info!(target: "hyperspace_cosmos", "Reconnected to cosmos chain");

@@ -76,7 +76,7 @@ where
 
 	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
-	module.merge(IbcRpcHandler::new(client.clone(), chain_props).into_rpc())?;
+	module.merge(IbcRpcHandler::new(client, chain_props).into_rpc())?;
 
 	Ok(module)
 }
