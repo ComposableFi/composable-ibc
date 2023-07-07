@@ -14,7 +14,7 @@
 
 #![allow(clippy::all)]
 
-use futures::{FutureExt, Stream};
+use futures::Stream;
 use ibc_proto::{
 	google::protobuf::Any,
 	ibc::core::{
@@ -128,16 +128,20 @@ pub struct CommonClientState {
 	/// Delay between parallel RPC calls to be friendly with the node and avoid MaxSlotsExceeded
 	/// error
 	pub rpc_call_delay: Duration,
+	/// Initial value for the [`rpc_call_delay`] to reset it after a successful RPC call
+	pub initial_rpc_call_delay: Duration,
 	pub misbehaviour_client_msg_queue: Arc<AsyncMutex<Vec<AnyClientMessage>>>,
 	pub max_packets_to_process: usize,
 }
 
 impl Default for CommonClientState {
 	fn default() -> Self {
+		let rpc_call_delay = Duration::from_millis(100);
 		Self {
 			skip_optional_client_updates: true,
 			maybe_has_undelivered_packets: Default::default(),
-			rpc_call_delay: Default::default(),
+			rpc_call_delay,
+			initial_rpc_call_delay: rpc_call_delay,
 			misbehaviour_client_msg_queue: Arc::new(Default::default()),
 			max_packets_to_process: 100,
 		}
@@ -561,6 +565,10 @@ pub trait Chain:
 
 	fn rpc_call_delay(&self) -> Duration {
 		self.common_state().rpc_call_delay()
+	}
+
+	fn initial_rpc_call_delay(&self) -> Duration {
+		self.common_state().initial_rpc_call_delay
 	}
 
 	fn set_rpc_call_delay(&mut self, delay: Duration) {
