@@ -410,7 +410,7 @@ macro_rules! chains {
 				}
 			}
 
-			async fn query_recv_packets(
+			async fn query_received_packets(
 				&self,
 				channel_id: ChannelId,
 				port_id: PortId,
@@ -420,11 +420,11 @@ macro_rules! chains {
 					$(
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain
-							.query_recv_packets(channel_id, port_id, seqs)
+							.query_received_packets(channel_id, port_id, seqs)
 							.await
 							.map_err(AnyError::$name),
 					)*
-					Self::Wasm(c) => c.inner.query_recv_packets(channel_id, port_id, seqs).await,
+					Self::Wasm(c) => c.inner.query_received_packets(channel_id, port_id, seqs).await,
 				}
 			}
 

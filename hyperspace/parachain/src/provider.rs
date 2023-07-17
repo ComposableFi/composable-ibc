@@ -487,7 +487,7 @@ where
 		Ok(response)
 	}
 
-	async fn query_recv_packets(
+	async fn query_received_packets(
 		&self,
 		channel_id: ChannelId,
 		port_id: PortId,

@@ -178,14 +178,14 @@ async fn process_finality_event<A: Chain, B: Chain>(
 		Some(finality_event) => {
 			log::info!("=======================================================");
 			log::info!("Received finality notification from {}", source.name(),);
-			let sink_initial_rpc_call_delay = sink.rpc_call_delay();
-			let source_initial_rpc_call_delay = source.rpc_call_delay();
 
 			let result =
 				process_some_finality_event(source, sink, metrics, mode, finality_event).await;
 
 			match result {
 				Ok(()) => {
+					let sink_initial_rpc_call_delay = sink.initial_rpc_call_delay();
+					let source_initial_rpc_call_delay = source.initial_rpc_call_delay();
 					sink.set_rpc_call_delay(sink_initial_rpc_call_delay);
 					source.set_rpc_call_delay(source_initial_rpc_call_delay);
 				},

@@ -104,7 +104,7 @@ where
 	}
 
 	fn block_max_weight(&self) -> u64 {
-		self.max_extrinsic_weight
+		self.max_extrinsic_weight * 100 / 80
 	}
 
 	async fn estimate_weight(&self, messages: Vec<Any>) -> Result<u64, Self::Error> {

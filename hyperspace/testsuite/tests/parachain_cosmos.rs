@@ -112,7 +112,10 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 				.to_string(),
 		wasm_code_id: None,
 		channel_whitelist: vec![],
-		common: CommonClientConfig { skip_optional_client_updates: true },
+		common: CommonClientConfig {
+			skip_optional_client_updates: true,
+			max_packets_to_process: 200,
+		},
 	};
 
 	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.unwrap();
