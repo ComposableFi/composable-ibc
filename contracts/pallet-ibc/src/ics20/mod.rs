@@ -42,6 +42,7 @@ use ibc::{
 };
 use ibc_primitives::{CallbackWeight, HandlerMessage, IbcHandler};
 use sp_core::crypto::AccountId32;
+use sp_runtime::traits::IdentifyAccount;
 use sp_std::marker::PhantomData;
 
 pub type Ics20TransferMsg = ibc::applications::transfer::msgs::transfer::MsgTransfer<
@@ -562,19 +563,11 @@ pub fn full_ibc_denom(packet: &Packet, mut token: PrefixedCoin) -> String {
 use ibc::applications::transfer::error::Error as Ics20Error;
 
 pub trait HandleMemo<T: Config> {
-	fn execute_memo(
-		packet: &Packet,
-		packet_data: &PacketData,
-		receiver: T::AccountId,
-	) -> Result<(), Ics20Error>;
+	fn execute_memo(packet: &Packet) -> Result<(), Ics20Error>;
 }
 
 impl<T: Config> HandleMemo<T> for () {
-	fn execute_memo(
-		_packet: &Packet,
-		_packet_data: &PacketData,
-		_receiver: T::AccountId,
-	) -> Result<(), Ics20Error> {
+	fn execute_memo(_packet: &Packet) -> Result<(), Ics20Error> {
 		Ok(())
 	}
 }
@@ -692,11 +685,17 @@ where
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 	u128: From<T::AssetId>,
 {
-	fn execute_memo(
-		packet: &Packet,
-		packet_data: &PacketData,
-		receiver: T::AccountId,
-	) -> Result<(), Ics20Error> {
+	fn execute_memo(packet: &Packet) -> Result<(), Ics20Error> {
+		let packet_data: PacketData =
+			serde_json::from_slice(packet.data.as_slice()).map_err(|e| {
+				Ics20Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
+			})?;
+		let receiver = <T as Config>::AccountIdConversion::try_from(packet_data.receiver.clone())
+			.map_err(|_| {
+				Ics20Error::implementation_specific(format!("Failed to parse receiver account"))
+			})?
+			.into_account();
+
 		//Handle only memo with IBC forward.
 		if packet_data.memo.is_empty() {
 			return Ok(())
