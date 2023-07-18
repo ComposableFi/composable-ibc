@@ -613,11 +613,16 @@ pub struct Forward {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub retries: Option<u64>,
 
-	/// since other parachain does not support ibc memo
-	/// there is only two option: send to parachain or send to relay-chain
-	// #[serde(skip_serializing_if = "Option::is_none")]
-	/// we do not need parrent id. if para id is none, it means send to relay-chain
-	// pub parent: Option<u32>,
+	/// Determines the destination for message routing based on IBC capabilities.
+	///
+	/// Since other parachains do not support IBC memo, there are only two options:
+	/// sending the message to a specific parachain or sending it to the relay-chain.
+	///
+	/// If the para ID is `None`, it indicates that the message should be sent to the relay-chain.
+	///
+	/// # Arguments
+	///
+	/// * `para_id` - The identifier of the target parachain (if applicable).
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub para_id: Option<u32>, //if para id is none, it means send to relay-chain
 	#[serde(skip_serializing_if = "Option::is_none")]
@@ -811,10 +816,7 @@ where
 			},
 		};
 
-		// let raw_bytes = memo_forward.receiver.as_bytes().to_vec();
 		let raw_bytes = memo_forward.receiver.into_bytes();
-
-		//convert string into T::AccountId
 
 		let transfer_ibc_account_to =
 			crate::MultiAddress::<<T as frame_system::Config>::AccountId>::Raw(raw_bytes.clone());
@@ -845,16 +847,9 @@ where
 				Ics20Error::implementation_specific("Failed to parse channel ID".to_string())
 			})?;
 
-		//timestamp that current timestamp + 30 minutes
-		let _timestamp = <pallet_timestamp::Pallet<T> as frame_support::traits::UnixTime>::now()
-			.as_secs() + 1800;
-
 		let params = crate::TransferParams::<<T as frame_system::Config>::AccountId> {
 			to: transfer_ibc_account_to,
 			source_channel: channel_id,
-			// timeout: ibc_primitives::Timeout::Offset { timestamp: Some(timestamp), height: None
-			// }, timestamp: Some(600), height: Some(600) is working 100% so it is better to test
-			// this first before to complicate
 			timeout: ibc_primitives::Timeout::Offset { timestamp: Some(600), height: Some(600) },
 		};
 
