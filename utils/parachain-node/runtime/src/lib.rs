@@ -38,7 +38,7 @@ use ibc::core::{
 use ibc_primitives::{runtime_interface::ss58_to_account_id_32, IbcAccount};
 use orml_traits::asset_registry::AssetProcessor;
 use pallet_ibc::{
-	ics20_fee::NonFlatFeeConverter, light_client_common::RelayChain, LightClientProtocol,
+	ics20_fee::NonFlatFeeConverter, light_client_common::RelayChain, LightClientProtocol, ics20::SubstrateMultihopXcmHandlerNone,
 };
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
@@ -751,6 +751,7 @@ impl pallet_ibc::Config for Runtime {
 	type FlatFeeConverter = NonFlatFeeConverter<Runtime>;
 	type FlatFeeAssetId = AssetIdUSDT;
 	type FlatFeeAmount = FlatFeeUSDTAmount;
+	type SubstrateMultihopXcmHandler = SubstrateMultihopXcmHandlerNone<Runtime>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
