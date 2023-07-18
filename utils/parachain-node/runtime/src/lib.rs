@@ -38,7 +38,8 @@ use ibc::core::{
 use ibc_primitives::{runtime_interface::ss58_to_account_id_32, IbcAccount};
 use orml_traits::asset_registry::AssetProcessor;
 use pallet_ibc::{
-	ics20_fee::NonFlatFeeConverter, light_client_common::RelayChain, LightClientProtocol, ics20::SubstrateMultihopXcmHandlerNone,
+	ics20::SubstrateMultihopXcmHandlerNone, ics20_fee::NonFlatFeeConverter,
+	light_client_common::RelayChain, LightClientProtocol,
 };
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
