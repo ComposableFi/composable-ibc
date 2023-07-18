@@ -184,15 +184,6 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 
 impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Memo<T, S> {
 	fn process_memo(packet: &mut Packet) -> Result<(), Error> {
-		// let packet_data: PacketData =
-		// 	serde_json::from_slice(packet.data.as_slice()).map_err(|e| {
-		// 		Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
-		// 	})?;
-		// let receiver = <T as Config>::AccountIdConversion::try_from(packet_data.receiver.clone())
-		// 	.map_err(|_| {
-		// 		Error::implementation_specific(format!("Failed to parse receiver account"))
-		// 	})?
-		// 	.into_account();
 		<T as Config>::HandleMemo::execute_memo(packet).map_err(|e| {
 			Error::implementation_specific(format!("Failed to execute memo {:?}", e))
 		})?;
