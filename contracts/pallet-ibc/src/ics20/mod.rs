@@ -853,29 +853,11 @@ where
 			timeout: ibc_primitives::Timeout::Offset { timestamp: Some(600), height: Some(600) },
 		};
 
-		let memo = memo.forward.next.as_deref();
+		let memo = memo.forward.next;
 
 		let mut next_memo: Option<T::MemoMessage> = None;
 		if let Some(memo) = memo {
-			let memo_str = serde_json::to_string(&memo).map_err(|_| {
-				Self::emit_memo_execution_failed_event(
-					receiver.clone(),
-					packet_data.memo.clone(),
-					5,
-				);
-				Ics20Error::implementation_specific("failed to serialize memo".to_string())
-			})?;
-			let memo_result =
-				<T as crate::Config>::MemoMessage::from_str(&memo_str).map_err(|_| {
-					Self::emit_memo_execution_failed_event(
-						receiver.clone(),
-						packet_data.memo.clone(),
-						6,
-					);
-					Ics20Error::implementation_specific(
-						"failed to convert string to Config::MemoMessage".to_string(),
-					)
-				})?;
+			let memo_result = <T as crate::Config>::MemoMessage::from(*memo);
 			next_memo = Some(memo_result);
 		}
 

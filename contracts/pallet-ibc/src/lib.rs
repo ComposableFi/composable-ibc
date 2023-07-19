@@ -275,7 +275,8 @@ pub mod pallet {
 			+ Debug
 			+ scale_info::TypeInfo
 			+ Clone
-			+ Eq;
+			+ Eq
+			+ From<crate::ics20::MemoData>;
 
 		type SubstrateMultihopXcmHandler: SubstrateMultihopXcmHandler<AccountId = Self::AccountId>;
 
