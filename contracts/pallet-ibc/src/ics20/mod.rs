@@ -637,13 +637,6 @@ pub struct MemoData {
 	pub forward: Forward,
 }
 
-// impl FromStr for MemoData {
-// 	type Err = ();
-// 	fn from_str(s: &str) -> Result<Self, Self::Err> {
-// 		serde_json::from_str(s).map_err(|_| ())
-// 	}
-// }
-
 impl TryFrom<MemoData> for String {
 	type Error = ();
 	fn try_from(value: MemoData) -> Result<Self, Self::Error> {
