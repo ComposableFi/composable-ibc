@@ -1,5 +1,7 @@
 use crate::{
-	self as pallet_ibc, ics20::SubstrateMultihopXcmHandlerNone, ics20_fee::FlatFeeConverter,
+	self as pallet_ibc,
+	ics20::{IbcModule, SubstrateMultihopXcmHandlerNone},
+	ics20_fee::FlatFeeConverter,
 	routing::ModuleRouter,
 };
 use cumulus_primitives_core::ParaId;
@@ -231,7 +233,7 @@ impl Config for Test {
 	type IbcAccountId = Self::AccountId;
 	type TransferOrigin = EnsureSigned<Self::IbcAccountId>;
 	type RelayerOrigin = EnsureSigned<Self::AccountId>;
-	type HandleMemo = ();
+	type HandleMemo = IbcModule<Test>;
 	type MemoMessage = alloc::string::String;
 	type IsReceiveEnabled = sp_core::ConstBool<true>;
 	type IsSendEnabled = sp_core::ConstBool<true>;
