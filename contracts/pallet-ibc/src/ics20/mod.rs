@@ -637,6 +637,27 @@ pub struct MemoData {
 	pub forward: Forward,
 }
 
+// impl FromStr for MemoData {
+// 	type Err = ();
+// 	fn from_str(s: &str) -> Result<Self, Self::Err> {
+// 		serde_json::from_str(s).map_err(|_| ())
+// 	}
+// }
+
+impl TryFrom<MemoData> for String {
+	type Error = ();
+	fn try_from(value: MemoData) -> Result<Self, Self::Error> {
+		serde_json::to_string(&value).map_err(|_| ())
+	}
+}
+
+impl TryFrom<String> for MemoData {
+	type Error = ();
+	fn try_from(string: String) -> Result<Self, Self::Error> {
+		serde_json::from_str(&string).map_err(|_| ())
+	}
+}
+
 pub struct MemoIbc {
 	pub receiver: String,
 	pub port: String,
@@ -853,29 +874,17 @@ where
 			timeout: ibc_primitives::Timeout::Offset { timestamp: Some(600), height: Some(600) },
 		};
 
-		let memo = memo.forward.next.as_deref();
-
 		let mut next_memo: Option<T::MemoMessage> = None;
-		if let Some(memo) = memo {
-			let memo_str = serde_json::to_string(&memo).map_err(|_| {
+		if let Some(memo) = memo.forward.next {
+			let memo_result = <T as crate::Config>::MemoMessage::try_from(*memo).map_err(|_| {
 				Self::emit_memo_execution_failed_event(
 					receiver.clone(),
 					packet_data.memo.clone(),
 					5,
 				);
-				Ics20Error::implementation_specific("failed to serialize memo".to_string())
+				Ics20Error::implementation_specific("failed to try_from memo".to_string())
 			})?;
-			let memo_result =
-				<T as crate::Config>::MemoMessage::from_str(&memo_str).map_err(|_| {
-					Self::emit_memo_execution_failed_event(
-						receiver.clone(),
-						packet_data.memo.clone(),
-						6,
-					);
-					Ics20Error::implementation_specific(
-						"failed to convert string to Config::MemoMessage".to_string(),
-					)
-				})?;
+
 			next_memo = Some(memo_result);
 		}
 

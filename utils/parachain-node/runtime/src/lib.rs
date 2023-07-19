@@ -738,7 +738,7 @@ impl pallet_ibc::Config for Runtime {
 	type SpamProtectionDeposit = SpamProtectionDeposit;
 	type TransferOrigin = EnsureSigned<Self::IbcAccountId>;
 	type RelayerOrigin = EnsureSigned<Self::AccountId>;
-	type MemoMessage = MemoMessage;
+	type MemoMessage = alloc::string::String;
 	type IsReceiveEnabled = sp_core::ConstBool<true>;
 	type IsSendEnabled = sp_core::ConstBool<true>;
 	type HandleMemo = ();
