@@ -7859,7 +7859,7 @@ pub mod api {
 				pub params: runtime_types::pallet_ibc::TransferParams<::subxt::utils::AccountId32>,
 				pub asset_id: ::core::primitive::u128,
 				pub amount: ::core::primitive::u128,
-				pub memo: ::core::option::Option<String>,
+				pub memo: ::core::option::Option<runtime_types::parachain_runtime::MemoMessage>,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode,
@@ -7919,7 +7919,7 @@ pub mod api {
 					params: runtime_types::pallet_ibc::TransferParams<::subxt::utils::AccountId32>,
 					asset_id: ::core::primitive::u128,
 					amount: ::core::primitive::u128,
-					memo: ::core::option::Option<String>,
+					memo: ::core::option::Option<runtime_types::parachain_runtime::MemoMessage>,
 				) -> ::subxt::tx::Payload<Transfer> {
 					::subxt::tx::Payload::new_static(
 						"Ibc",
@@ -11032,7 +11032,7 @@ pub mod api {
 							runtime_types::pallet_ibc::TransferParams<::subxt::utils::AccountId32>,
 						asset_id: ::core::primitive::u128,
 						amount: ::core::primitive::u128,
-						memo: ::core::option::Option<String>,
+						memo: ::core::option::Option<runtime_types::parachain_runtime::MemoMessage>,
 					},
 					#[codec(index = 3)]
 					upgrade_client { params: runtime_types::pallet_ibc::UpgradeParams },

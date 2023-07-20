@@ -21933,7 +21933,7 @@ pub mod api {
 				pub params: runtime_types::pallet_ibc::TransferParams<::subxt::utils::AccountId32>,
 				pub asset_id: runtime_types::primitives::currency::CurrencyId,
 				pub amount: ::core::primitive::u128,
-				pub memo: ::core::option::Option<String>,
+				pub memo: ::core::option::Option<runtime_types::picasso_runtime::ibc::MemoMessage>,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode,
@@ -22019,7 +22019,7 @@ pub mod api {
 					params: runtime_types::pallet_ibc::TransferParams<::subxt::utils::AccountId32>,
 					asset_id: runtime_types::primitives::currency::CurrencyId,
 					amount: ::core::primitive::u128,
-					memo: ::core::option::Option<String>,
+					memo: ::core::option::Option<runtime_types::picasso_runtime::ibc::MemoMessage>,
 				) -> ::subxt::tx::Payload<Transfer> {
 					::subxt::tx::Payload::new_static(
 						"Ibc",
@@ -28098,7 +28098,7 @@ pub mod api {
 						asset_id: runtime_types::primitives::currency::CurrencyId,
 						amount: ::core::primitive::u128,
 						memo: ::core::option::Option<
-							String,
+							runtime_types::picasso_runtime::ibc::MemoMessage,
 						>,
 					},
 					#[codec(index = 3)]
