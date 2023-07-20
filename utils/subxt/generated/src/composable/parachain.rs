@@ -17110,7 +17110,7 @@ pub mod api {
 				pub asset_id: runtime_types::primitives::currency::CurrencyId,
 				pub amount: ::core::primitive::u128,
 				pub memo:
-					::core::option::Option<runtime_types::composable_runtime::ibc::MemoMessage>,
+					::core::option::Option<String>,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode,
@@ -17197,7 +17197,7 @@ pub mod api {
 					asset_id: runtime_types::primitives::currency::CurrencyId,
 					amount: ::core::primitive::u128,
 					memo: ::core::option::Option<
-						runtime_types::composable_runtime::ibc::MemoMessage,
+						String,
 					>,
 				) -> ::subxt::tx::Payload<Transfer> {
 					::subxt::tx::Payload::new_static(
@@ -22823,7 +22823,7 @@ pub mod api {
 						asset_id: runtime_types::primitives::currency::CurrencyId,
 						amount: ::core::primitive::u128,
 						memo: ::core::option::Option<
-							runtime_types::composable_runtime::ibc::MemoMessage,
+							String,
 						>,
 					},
 					#[codec(index = 3)]

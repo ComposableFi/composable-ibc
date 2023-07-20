@@ -44,7 +44,7 @@ use subxt::{
 	Error, OnlineClient,
 };
 use subxt_generated::picasso_rococo::parachain::api::runtime_types::{
-	picasso_runtime::ibc::MemoMessage, primitives::currency::CurrencyId,
+	primitives::currency::CurrencyId,
 };
 
 pub mod parachain_subxt {
