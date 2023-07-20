@@ -202,3 +202,17 @@ where
 	AnyClient: Clone,
 {
 }
+
+impl<AnyClient, AnyClientState: Default, AnyConsensusState> Default
+	for ClientState<AnyClient, AnyClientState, AnyConsensusState>
+{
+	fn default() -> Self {
+		ClientState {
+			data: vec![],
+			code_id: vec![],
+			latest_height: Default::default(),
+			inner: Box::new(AnyClientState::default()),
+			_phantom: Default::default(),
+		}
+	}
+}

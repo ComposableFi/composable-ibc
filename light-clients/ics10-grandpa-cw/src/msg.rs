@@ -116,9 +116,6 @@ pub struct InitializeState {
 }
 
 #[cw_serde]
-pub struct InstantiateMsg {}
-
-#[cw_serde]
 pub struct ClientCreateRequest {
 	client_create_request: WasmConsensusState<FakeInner>,
 }

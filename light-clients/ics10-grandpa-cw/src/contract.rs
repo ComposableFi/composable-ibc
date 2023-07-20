@@ -16,13 +16,13 @@
 use crate::{
 	context::Context,
 	error::ContractError,
+	ics23::FakeInner,
 	log,
 	msg::{
 		CheckForMisbehaviourMsg, CheckSubstituteAndUpdateStateMsg, ClientStateCallResponse,
-		ContractResult, ExecuteMsg, ExportMetadataMsg, InitializeState, InstantiateMsg, QueryMsg,
-		QueryResponse, StatusMsg, UpdateStateMsg, UpdateStateOnMisbehaviourMsg,
-		VerifyClientMessage, VerifyMembershipMsg, VerifyNonMembershipMsg,
-		VerifyUpgradeAndUpdateStateMsg,
+		ContractResult, ExecuteMsg, ExportMetadataMsg, InitializeState, QueryMsg, QueryResponse,
+		StatusMsg, UpdateStateMsg, UpdateStateOnMisbehaviourMsg, VerifyClientMessage,
+		VerifyMembershipMsg, VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
 	},
 	state::{get_client_state, get_consensus_state},
 	Bytes,
@@ -43,7 +43,8 @@ use ibc::core::{
 	},
 	ics24_host::identifier::ClientId,
 };
-use ics08_wasm::{SUBJECT_PREFIX, SUBSTITUTE_PREFIX};
+use ibc_proto::google::protobuf::Any;
+use ics08_wasm::{instantiate::InstantiateMessage, SUBJECT_PREFIX, SUBSTITUTE_PREFIX};
 use ics10_grandpa::{
 	client_def::GrandpaClient,
 	client_message::{ClientMessage, RelayChainHeader},
@@ -51,10 +52,12 @@ use ics10_grandpa::{
 	consensus_state::ConsensusState,
 };
 use light_client_common::{verify_membership, verify_non_membership};
+use prost::Message;
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Header};
 use sp_runtime_interface::unpack_ptr_and_len;
 use std::{collections::BTreeSet, str::FromStr};
+use tendermint_proto::Protobuf;
 /*
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ics10-grandpa-cw";
@@ -114,14 +117,39 @@ impl grandpa_light_client_primitives::HostFunctions for HostFunctions {
 	}
 }
 
+fn process_instantiate_msg(
+	msg: InstantiateMessage<FakeInner, FakeInner, FakeInner>,
+	ctx: &mut Context<HostFunctions>,
+	client_id: ClientId,
+) -> Result<Binary, ContractError> {
+	let any = Any::decode(&mut msg.client_state.data.as_slice())?;
+	let client_state = ClientState::decode_vec(&any.value)?;
+	let any = Any::decode(&mut msg.consensus_state.data.as_slice())?;
+	let consensus_state = ConsensusState::decode_vec(&any.value)?;
+
+	let height = client_state.latest_height();
+	ctx.code_id = Some(msg.client_state.code_id);
+	ctx.store_client_state(client_id.clone(), client_state)
+		.map_err(|e| ContractError::Grandpa(e.to_string()))?;
+	ctx.store_consensus_state(client_id, height, consensus_state)
+		.map_err(|e| ContractError::Grandpa(e.to_string()))?;
+	Ok(to_binary(&ContractResult::success())?)
+}
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-	_deps: DepsMut,
-	_env: Env,
+	deps: DepsMut,
+	env: Env,
 	_info: MessageInfo,
-	_msg: InstantiateMsg,
+	msg: InstantiateMessage<FakeInner, FakeInner, FakeInner>,
 ) -> Result<Response, ContractError> {
-	Ok(Response::default())
+	let mut ctx = Context::<HostFunctions>::new(deps, env);
+	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
+	let data = process_instantiate_msg(msg, &mut ctx, client_id.clone())?;
+
+	let mut response = Response::default();
+	response.data = Some(data);
+	Ok(response)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

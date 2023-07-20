@@ -122,3 +122,9 @@ where
 	<AnyConsensusState as TryFrom<Any>>::Error: Display,
 {
 }
+
+impl<AnyConsensusState: Default> Default for ConsensusState<AnyConsensusState> {
+	fn default() -> Self {
+		ConsensusState { data: vec![], timestamp: 0, inner: Box::new(AnyConsensusState::default()) }
+	}
+}

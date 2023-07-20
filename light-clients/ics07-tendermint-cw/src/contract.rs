@@ -20,10 +20,10 @@ use crate::{
 		check_substitute_and_update_state, prune_oldest_consensus_state, verify_delay_passed,
 		verify_upgrade_and_update_state,
 	},
-	ics23::ReadonlyProcessedStates,
+	ics23::{FakeInner, ReadonlyProcessedStates},
 	msg::{
-		CheckForMisbehaviourMsg, ContractResult, ExecuteMsg, ExportMetadataMsg, InstantiateMsg,
-		QueryMsg, QueryResponse, StatusMsg, UpdateStateMsg, UpdateStateOnMisbehaviourMsg,
+		CheckForMisbehaviourMsg, ContractResult, ExecuteMsg, ExportMetadataMsg, QueryMsg,
+		QueryResponse, StatusMsg, UpdateStateMsg, UpdateStateOnMisbehaviourMsg,
 		VerifyClientMessage, VerifyMembershipMsg, VerifyNonMembershipMsg,
 		VerifyUpgradeAndUpdateStateMsg,
 	},
@@ -40,11 +40,15 @@ use ibc::core::{
 	},
 	ics24_host::identifier::ClientId,
 };
+use ibc_proto::google::protobuf::Any;
 use ics07_tendermint::{
 	client_def::{verify_membership, verify_non_membership, TendermintClient},
+	client_state::ClientState,
+	consensus_state::ConsensusState,
 	HostFunctionsProvider,
 };
-use ics08_wasm::SUBJECT_PREFIX;
+use ics08_wasm::{instantiate::InstantiateMessage, SUBJECT_PREFIX};
+use prost::Message;
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
 use tendermint::{
@@ -56,6 +60,7 @@ use tendermint::{
 	PublicKey, Signature,
 };
 use tendermint_light_client_verifier::operations::CommitValidator;
+use tendermint_proto::Protobuf;
 
 #[derive(Clone, Copy, Debug, PartialEq, Default, Eq)]
 pub struct HostFunctions;
@@ -121,25 +126,44 @@ impl Verifier for HostFunctions {
 impl CommitValidator for HostFunctions {}
 impl HostFunctionsProvider for HostFunctions {}
 
+fn process_instantiate_msg(
+	msg: InstantiateMessage<FakeInner, FakeInner, FakeInner>,
+	ctx: &mut Context<HostFunctions>,
+	client_id: ClientId,
+) -> Result<Binary, ContractError> {
+	let any = Any::decode(&mut msg.client_state.data.as_slice())?;
+	let client_state = ClientState::decode_vec(&any.value)?;
+	let any = Any::decode(&mut msg.consensus_state.data.as_slice())?;
+	let consensus_state = ConsensusState::decode_vec(&any.value)?;
+
+	ctx.code_id = Some(msg.client_state.code_id);
+	let height = client_state.latest_height();
+	ctx.store_client_state(client_id.clone(), client_state)
+		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+	ctx.store_consensus_state(client_id.clone(), height, consensus_state)
+		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+
+	ctx.store_update_height(client_id.clone(), height, ctx.host_height())
+		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+	ctx.store_update_time(client_id, height, ctx.host_timestamp())
+		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+
+	Ok(to_binary(&ContractResult::success())?)
+}
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
 	deps: DepsMut,
 	env: Env,
 	_info: MessageInfo,
-	_msg: InstantiateMsg,
+	msg: InstantiateMessage<FakeInner, FakeInner, FakeInner>,
 ) -> Result<Response, ContractError> {
-	let _client = TendermintClient::<HostFunctions>::default();
 	let mut ctx = Context::<HostFunctions>::new(deps, env);
 	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
-	let client_state = ctx
-		.client_state(&client_id.clone())
-		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-	ctx.store_update_height(client_id.clone(), client_state.latest_height, ctx.host_height())
-		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-	ctx.store_update_time(client_id.clone(), client_state.latest_height, ctx.host_timestamp())
-		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-
-	Ok(Response::default())
+	let data = process_instantiate_msg(msg, &mut ctx, client_id.clone())?;
+	let mut response = Response::default();
+	response.data = Some(data);
+	Ok(response)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

@@ -102,9 +102,6 @@ impl ContractResult {
 }
 
 #[cw_serde]
-pub struct InstantiateMsg {}
-
-#[cw_serde]
 pub enum ExecuteMsg {
 	VerifyMembership(VerifyMembershipMsgRaw),
 	VerifyNonMembership(VerifyNonMembershipMsgRaw),
