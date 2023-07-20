@@ -42,6 +42,7 @@ use ibc::{
 };
 use ibc_primitives::{CallbackWeight, HandlerMessage, IbcHandler};
 use sp_core::crypto::AccountId32;
+use sp_runtime::traits::IdentifyAccount;
 use sp_std::marker::PhantomData;
 
 pub type Ics20TransferMsg = ibc::applications::transfer::msgs::transfer::MsgTransfer<
@@ -238,6 +239,7 @@ where
 
 				let mut token = packet_data.token.clone();
 				let denom = full_ibc_denom(&packet, packet_data.token.clone());
+
 				token.denom = PrefixedDenom::from_str(&denom).map_err(|_| {
 					Ics04Error::implementation_specific("Failed to parse token denom".to_string())
 				})?;
@@ -561,11 +563,367 @@ pub fn full_ibc_denom(packet: &Packet, mut token: PrefixedCoin) -> String {
 use ibc::applications::transfer::error::Error as Ics20Error;
 
 pub trait HandleMemo<T: Config> {
-	fn execute_memo(packet_data: &PacketData, receiver: T::AccountId) -> Result<(), Ics20Error>;
+	fn execute_memo(packet: &Packet) -> Result<(), Ics20Error>;
 }
 
 impl<T: Config> HandleMemo<T> for () {
-	fn execute_memo(_packet_data: &PacketData, _receiver: T::AccountId) -> Result<(), Ics20Error> {
+	fn execute_memo(_packet: &Packet) -> Result<(), Ics20Error> {
 		Ok(())
+	}
+}
+
+pub trait SubstrateMultihopXcmHandler {
+	type AccountId;
+
+	fn transfer_xcm(
+		from: Self::AccountId,
+		to: Self::AccountId,
+		para_id: Option<u32>,
+		amount: u128,
+		currency: u128,
+	) -> Option<()>;
+}
+
+pub struct SubstrateMultihopXcmHandlerNone<T>(PhantomData<T>);
+
+impl<T: Config> SubstrateMultihopXcmHandler for SubstrateMultihopXcmHandlerNone<T> {
+	type AccountId = T::AccountId;
+	fn transfer_xcm(
+		_: Self::AccountId,
+		_: Self::AccountId,
+		_: Option<u32>,
+		_: u128,
+		_: u128,
+	) -> Option<()> {
+		None
+	}
+}
+
+use frame_system::RawOrigin;
+use scale_info::prelude::boxed::Box;
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct Forward {
+	pub receiver: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub port: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub channel: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub timeout: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub retries: Option<u64>,
+
+	/// Determines the destination for message routing based on IBC capabilities.
+	///
+	/// Since other parachains do not support IBC memo, there are only two options:
+	/// sending the message to a specific parachain or sending it to the relay-chain.
+	///
+	/// If the para ID is `None`, it indicates that the message should be sent to the relay-chain.
+	///
+	/// # Arguments
+	///
+	/// * `para_id` - The identifier of the target parachain (if applicable).
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub para_id: Option<u32>, //if para id is none, it means send to relay-chain
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub substrate: Option<bool>,
+	///
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub next: Option<Box<MemoData>>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct MemoData {
+	pub forward: Forward,
+}
+
+impl TryFrom<MemoData> for String {
+	type Error = ();
+	fn try_from(value: MemoData) -> Result<Self, Self::Error> {
+		serde_json::to_string(&value).map_err(|_| ())
+	}
+}
+
+impl TryFrom<String> for MemoData {
+	type Error = ();
+	fn try_from(string: String) -> Result<Self, Self::Error> {
+		serde_json::from_str(&string).map_err(|_| ())
+	}
+}
+
+pub struct MemoIbc {
+	pub receiver: String,
+	pub port: String,
+	pub channel: String,
+	pub timeout: String,
+	pub retries: u64,
+}
+
+pub struct MemoXcm {
+	pub receiver: String,
+	pub para_id: Option<u32>, //if para id is none, it means send to relay-chain
+}
+
+pub enum MemoType {
+	IBC(MemoIbc),
+	XCM(MemoXcm),
+}
+
+impl Forward {
+	pub fn get_memo(&self) -> Result<MemoType, Ics20Error> {
+		if !self.substrate.is_none() {
+			let xcm = MemoXcm { receiver: self.receiver.clone(), para_id: self.para_id.clone() };
+			return Ok(MemoType::XCM(xcm))
+		}
+		let ibc =
+			MemoIbc {
+				receiver: self.receiver.clone(),
+				port: self
+					.port
+					.clone()
+					.ok_or(Ics20Error::implementation_specific("Failed to get port".to_string()))?,
+				channel: self.channel.clone().ok_or(Ics20Error::implementation_specific(
+					"Failed to get channel".to_string(),
+				))?,
+				timeout: self.timeout.clone().ok_or(Ics20Error::implementation_specific(
+					"Failed to get timeout".to_string(),
+				))?,
+				retries: self.retries.clone().ok_or(Ics20Error::implementation_specific(
+					"Failed to get retries".to_string(),
+				))?,
+			};
+		return Ok(MemoType::IBC(ibc))
+	}
+}
+
+use codec::Decode;
+impl<T> HandleMemo<T> for IbcModule<T>
+where
+	T: Config + Send + Sync + pallet_timestamp::Config,
+	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
+	u128: From<T::AssetId>,
+{
+	fn execute_memo(packet: &Packet) -> Result<(), Ics20Error> {
+		let packet_data: PacketData =
+			serde_json::from_slice(packet.data.as_slice()).map_err(|e| {
+				Ics20Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
+			})?;
+		let receiver = <T as Config>::AccountIdConversion::try_from(packet_data.receiver.clone())
+			.map_err(|_| {
+				Ics20Error::implementation_specific(format!("Failed to parse receiver account"))
+			})?
+			.into_account();
+
+		//Handle only memo with IBC forward.
+		if packet_data.memo.is_empty() {
+			return Ok(())
+		}
+
+		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoStarted {
+			account_id: receiver.clone(),
+			memo: Some(packet_data.memo.clone()),
+		});
+
+		let memo: MemoData = serde_json::from_str(&packet_data.memo).map_err(|_| {
+			Self::emit_memo_execution_failed_event(receiver.clone(), packet_data.memo.clone(), 0);
+			Ics20Error::implementation_specific(format!(
+				"Failed to parse memo : {:?} ",
+				packet_data.memo
+			))
+		})?;
+
+		let prefixed_coin = if is_receiver_chain_source(
+			packet.source_port.clone(),
+			packet.source_channel,
+			&packet_data.token.denom,
+		) {
+			let prefix = TracePrefix::new(packet.source_port.clone(), packet.source_channel);
+			let mut c = packet_data.token.clone();
+			c.denom.remove_trace_prefix(&prefix);
+			c
+		} else {
+			let prefix =
+				TracePrefix::new(packet.destination_port.clone(), packet.destination_channel);
+			let mut c = packet_data.token.clone();
+			c.denom.add_trace_prefix(prefix);
+			c
+		};
+
+		// At this point the asset SHOULD exist
+		let asset_id =
+			<T as crate::Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
+				&prefixed_coin.denom.to_string(),
+			)
+			.map_err(|_| {
+				log::warn!(target: "pallet_ibc", "Asset does not exist for denom: {}", prefixed_coin.denom.to_string());
+				Self::emit_memo_execution_failed_event(receiver.clone(), packet_data.memo.clone(), 1);
+				Ics20Error::implementation_specific("asset does not exist".to_string())
+			})?;
+
+		let amount = packet_data.token.amount.as_u256().low_u128();
+
+		let memo_forward = memo.forward.get_memo().map_err(|_| {
+			Self::emit_memo_execution_failed_event(receiver.clone(), packet_data.memo.clone(), 2);
+			Ics20Error::implementation_specific("Failed to get memo".to_string())
+		})?;
+
+		let memo_forward = match memo_forward {
+			MemoType::IBC(memo_forward) => memo_forward,
+			MemoType::XCM(memo_forward) => {
+				let s = memo_forward.receiver.strip_prefix("0x").ok_or_else(|| {
+					Self::emit_memo_execution_failed_event(
+						receiver.clone(),
+						packet_data.memo.clone(),
+						11,
+					);
+					Ics20Error::implementation_specific("failed strip_prefix.".to_string())
+				})?;
+
+				let decoded_accout = hex::decode(s).map_err(|_| {
+					Self::emit_memo_execution_failed_event(
+						receiver.clone(),
+						packet_data.memo.clone(),
+						12,
+					);
+					Ics20Error::implementation_specific("hex::decode".to_string())
+				})?;
+
+				let account_to = T::AccountId::decode(&mut &*decoded_accout).map_err(|_| {
+					Self::emit_memo_execution_failed_event(
+						receiver.clone(),
+						packet_data.memo.clone(),
+						13,
+					);
+					Ics20Error::implementation_specific("T::AccountId::decode".to_string())
+				})?;
+
+				T::SubstrateMultihopXcmHandler::transfer_xcm(
+					receiver.clone(),
+					account_to.clone(),
+					memo_forward.para_id,
+					amount,
+					asset_id.into(),
+				)
+				.ok_or_else(|| {
+					crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoXcmFailed {
+						from: receiver.clone(),
+						to: account_to.clone(),
+						para_id: memo_forward.para_id,
+						amount,
+						asset_id: asset_id.into(),
+					});
+					Ics20Error::implementation_specific(
+						"Faield to execute SubstrateMultihopXcmHandler::transfer_xcm.".to_string(),
+					)
+				})?;
+
+				crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoXcmSuccess {
+					from: receiver.clone(),
+					to: account_to.clone(),
+					para_id: memo_forward.para_id,
+					amount,
+					asset_id: asset_id.into(),
+				});
+
+				return Ok(())
+			},
+		};
+
+		let raw_bytes = memo_forward.receiver.into_bytes();
+
+		let transfer_ibc_account_to =
+			crate::MultiAddress::<<T as frame_system::Config>::AccountId>::Raw(raw_bytes.clone());
+
+		let origin = RawOrigin::Signed(receiver.clone());
+		let channel_id = memo_forward
+			.channel
+			.split('-')
+			.last()
+			.ok_or_else(|| {
+				Self::emit_memo_execution_failed_event(
+					receiver.clone(),
+					packet_data.memo.clone(),
+					3,
+				);
+				Ics20Error::implementation_specific(format!(
+					"Failed to extract channel number from channel ID: {:?}",
+					memo_forward.channel
+				))
+			})?
+			.parse()
+			.map_err(|_| {
+				Self::emit_memo_execution_failed_event(
+					receiver.clone(),
+					packet_data.memo.clone(),
+					4,
+				);
+				Ics20Error::implementation_specific("Failed to parse channel ID".to_string())
+			})?;
+
+		let params = crate::TransferParams::<<T as frame_system::Config>::AccountId> {
+			to: transfer_ibc_account_to,
+			source_channel: channel_id,
+			timeout: ibc_primitives::Timeout::Offset { timestamp: Some(600), height: Some(600) },
+		};
+
+		let mut next_memo: Option<T::MemoMessage> = None;
+		if let Some(memo) = memo.forward.next {
+			let memo_result = <T as crate::Config>::MemoMessage::try_from(*memo).map_err(|_| {
+				Self::emit_memo_execution_failed_event(
+					receiver.clone(),
+					packet_data.memo.clone(),
+					5,
+				);
+				Ics20Error::implementation_specific("failed to try_from memo".to_string())
+			})?;
+
+			next_memo = Some(memo_result);
+		}
+
+		crate::Pallet::<T>::transfer(
+			origin.into(),
+			params,
+			asset_id,
+			amount.into(),
+			next_memo.clone(),
+		)
+		.map_err(|_| {
+			crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoIbcTokenTransferFailed {
+				from: receiver.clone(),
+				to: raw_bytes.clone(),
+				asset_id,
+				amount: amount.into(),
+				channel: channel_id,
+				next_memo: next_memo.clone(),
+			});
+			Ics20Error::implementation_specific(
+				"Pallet ibc transfer failed to send message".to_string(),
+			)
+		})?;
+
+		crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoIbcTokenTransferSuccess {
+			from: receiver,
+			to: raw_bytes,
+			asset_id,
+			amount: amount.into(),
+			channel: channel_id,
+			next_memo,
+		});
+		Ok(())
+	}
+}
+
+impl<T> IbcModule<T>
+where
+	T: Config + Send + Sync,
+	u32: From<<T as frame_system::Config>::BlockNumber>,
+	AccountId32: From<<T as frame_system::Config>::AccountId>,
+{
+	//function that takes account and memo and emit event that memo execution failed
+	fn emit_memo_execution_failed_event(account: T::AccountId, memo: String, reason: u8) {
+		crate::Pallet::<T>::deposit_event(
+			Event::<T>::ExecuteMemoIbcTokenTransferFailedWithReason { from: account, memo, reason },
+		);
 	}
 }

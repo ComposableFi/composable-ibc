@@ -165,7 +165,7 @@ pub mod pallet {
 		next_seq_send::NextSequenceSend,
 	};
 	use crate::{
-		ics20::HandleMemo,
+		ics20::{HandleMemo, SubstrateMultihopXcmHandler},
 		light_clients::AnyConsensusState,
 		routing::{Context, ModuleRouter},
 	};
@@ -275,7 +275,11 @@ pub mod pallet {
 			+ Debug
 			+ scale_info::TypeInfo
 			+ Clone
-			+ Eq;
+			+ Eq
+			+ TryFrom<crate::ics20::MemoData>
+			+ TryInto<crate::ics20::MemoData>;
+
+		type SubstrateMultihopXcmHandler: SubstrateMultihopXcmHandler<AccountId = Self::AccountId>;
 
 		type IsSendEnabled: Get<bool>;
 		type IsReceiveEnabled: Get<bool>;
@@ -602,6 +606,45 @@ pub mod pallet {
 		ClientStateSubstituted {
 			client_id: String,
 			height: Height,
+		},
+		ExecuteMemoStarted {
+			account_id: T::AccountId,
+			memo: Option<String>,
+		},
+		ExecuteMemoIbcTokenTransferSuccess {
+			from: T::AccountId,
+			to: Vec<u8>,
+			asset_id: T::AssetId,
+			amount: T::Balance,
+			channel: u64,
+			next_memo: Option<T::MemoMessage>,
+		},
+		ExecuteMemoIbcTokenTransferFailedWithReason {
+			from: T::AccountId,
+			memo: String,
+			reason: u8,
+		},
+		ExecuteMemoIbcTokenTransferFailed {
+			from: T::AccountId,
+			to: Vec<u8>,
+			asset_id: T::AssetId,
+			amount: T::Balance,
+			channel: u64,
+			next_memo: Option<T::MemoMessage>,
+		},
+		ExecuteMemoXcmSuccess {
+			from: T::AccountId,
+			to: T::AccountId,
+			amount: u128,
+			asset_id: T::AssetId,
+			para_id: Option<u32>,
+		},
+		ExecuteMemoXcmFailed {
+			from: T::AccountId,
+			to: T::AccountId,
+			amount: u128,
+			asset_id: T::AssetId,
+			para_id: Option<u32>,
 		},
 	}
 
