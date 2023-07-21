@@ -1,4 +1,4 @@
-FROM paritytech/ci-linux:production as builder
+FROM paritytech/ci-unified:latest as builder
 
 WORKDIR /code
 
