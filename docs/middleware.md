@@ -15,7 +15,7 @@ of your app (for example, a possibility for double-spending).
 
 ### Implementing `Module` trait and adding to runtime
 As an example, we'll take a look at the existing module for taking fees on transfers, `ics20_fee` (`contracts/pallet-ibc/src/ics20_fee`).
-First, we need to create a struct, that contains field `inner`, which is of type of the next module in the chain, so we can
+First, we need to create a struct, that contains an `inner` field, which is of type of the next module in the chain, so we can
 call it before/after our module execution is finished.
 ```rust
 pub struct Ics20ServiceCharge<S: Module> {
@@ -23,16 +23,16 @@ pub struct Ics20ServiceCharge<S: Module> {
 }
 ```
 The `Module` contains various amount of callback methods that we can use, but probably the most important ones are 
-`on_recv_packet` and `on_acknowledgement_packet`. In our case, we want to take fee from the user when the packet is arrived
+`on_recv_packet` and `on_acknowledgement_packet`. In our case, we want to take fee from the user when the packet arrives
 and the transfer already happened, so the implementation will look something like this:
 ```rust
 impl<S: Module> Module for Ics20ServiceCharge<S> {
-	fn on_recv_packet(
-		&self,
-		_ctx: &dyn ModuleCallbackContext,
-		output: &mut ModuleOutputBuilder,
-		packet: &mut Packet,
-		relayer: &Signer,
+    fn on_recv_packet(
+        &self,
+        _ctx: &dyn ModuleCallbackContext,
+        output: &mut ModuleOutputBuilder,
+        packet: &mut Packet,
+        relayer: &Signer,
 	) -> Result<Acknowledgement, Error> {
         let mut ctx = Context::<T>::default();
         let ack = self.inner.on_recv_packet(&mut ctx, output, packet, relayer)?;
@@ -45,7 +45,7 @@ impl<S: Module> Module for Ics20ServiceCharge<S> {
     // ...
 }
 ```
-As you can see, here we're first propagating the call to the inner module (which will be `ics20` app, eventually), and only
+As you can see, here we're first propagating the call to the inner module (which will be the `ics20` app, eventually), and only
 then taking the fee. We could do it the other way around, but it would require additional checks to be made 
 (like, the token should exist, the amount should be correct, etc.). You may also notice, that the error from `process_fee`
 function is ignored. This is because we don't want to fail the whole chain of calls if the fee is not taken, because it may
@@ -73,7 +73,7 @@ The final step is to add the module to the runtime. In the pallet's Config, you 
 in a concrete implementation may look like
 ```rust
 pub struct Router {
-	ics20: ics20::memo::Memo<ics20_fee::Ics20ServiceCharge<ics20::IbcModule>>,
+    ics20: ics20::memo::Memo<ics20_fee::Ics20ServiceCharge<ics20::IbcModule>>,
 }
 ```
 The modules here are nested in each other, forming a chain. In this case (assuming that the Memo module is executed after the inner),
@@ -88,7 +88,7 @@ will not be acknowledged, but the transfer will still happen. This means that th
 the recipient will still receive them. This is why it's important to make sure that the middleware is not failing
 the execution of the inner module.
 
-In the example above, we're ignoring the error from `process_fee` function, because we don't want the packet to fail when
+    In the example above, we're ignoring the error from `process_fee` function, because we don't want the packet to fail when
 the transfer already happened.
 
 2. Another important thing to note is that the middleware should not change the packet data, because it may lead to
