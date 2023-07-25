@@ -15,11 +15,9 @@ of your app (for example, a possibility for double-spending).
 
 ### Implementing `Module` trait and adding to runtime
 
-As an example, we'll take a look at the existing module for taking fees on
-transfers, `ics20_fee` (`contracts/pallet-ibc/src/ics20_fee`).
+As an example, we'll take a look at the existing module for taking fees on transfers, `ics20_fee` (`contracts/pallet-ibc/src/ics20_fee`).
 First, we need to create a struct, that contains an `inner` field, which is of type of the next module in the chain, so
-we can
-call it before/after our module execution is finished.
+we can call it before/after our module execution is finished.
 
 ```rust
 pub struct Ics20ServiceCharge<S: Module> {
@@ -28,8 +26,8 @@ pub struct Ics20ServiceCharge<S: Module> {
 ```
 
 The `Module` contains various amount of callback methods that we can use, but probably the most important ones are
-`on_recv_packet` and `on_acknowledgement_packet`. In our case, we want to take fee from the user when the packet arrives
-and the transfer already happened, so the implementation will look something like this:
+`on_recv_packet`, `on_acknowledgement_packet` and `on_timeout_packet`. In our case, we want to take fee from the user 
+when the packet arrives and the transfer already happened, so the implementation will look something like this:
 
 ```rust
 impl<S: Module> Module for Ics20ServiceCharge<S> {
@@ -53,13 +51,10 @@ impl<S: Module> Module for Ics20ServiceCharge<S> {
 ```
 
 As you can see, here we're first propagating the call to the inner module (which will be the `ics20` app, eventually),
-and only
-then taking the fee. We could do it the other way around, but it would require additional checks to be made
-(like, the token should exist, the amount should be correct, etc.). You may also notice, that the error
-from `process_fee`
+and only then taking the fee. We could do it the other way around, but it would require additional checks to be made
+(like, the token should exist, the amount should be correct, etc.). You may also notice, that the error from `process_fee`
 function is ignored. This is because we don't want to fail the whole chain of calls if the fee is not taken, because it
-may
-lead to critical problems (more in [Potential issues](#potential-issues) section).
+may lead to critical problems (more in [Potential issues](#potential-issues) section).
 
 The other methods should just call the inner module, like this:
 
