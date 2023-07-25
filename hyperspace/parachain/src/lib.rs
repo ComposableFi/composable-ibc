@@ -273,6 +273,7 @@ where
 				skip_optional_client_updates: true,
 				maybe_has_undelivered_packets: Arc::new(Mutex::new(Default::default())),
 				rpc_call_delay: DEFAULT_RPC_CALL_DELAY,
+				initial_rpc_call_delay: DEFAULT_RPC_CALL_DELAY,
 				misbehaviour_client_msg_queue: Arc::new(AsyncMutex::new(vec![])),
 				..Default::default()
 			},

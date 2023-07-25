@@ -1,4 +1,9 @@
-use crate::{self as pallet_ibc, ics20_fee::FlatFeeConverter, routing::ModuleRouter};
+use crate::{
+	self as pallet_ibc,
+	ics20::{IbcModule, SubstrateMultihopXcmHandlerNone},
+	ics20_fee::FlatFeeConverter,
+	routing::ModuleRouter,
+};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::ConstU32,
@@ -228,8 +233,8 @@ impl Config for Test {
 	type IbcAccountId = Self::AccountId;
 	type TransferOrigin = EnsureSigned<Self::IbcAccountId>;
 	type RelayerOrigin = EnsureSigned<Self::AccountId>;
-	type HandleMemo = ();
-	type MemoMessage = MemoMessage;
+	type HandleMemo = IbcModule<Test>;
+	type MemoMessage = alloc::string::String;
 	type IsReceiveEnabled = sp_core::ConstBool<true>;
 	type IsSendEnabled = sp_core::ConstBool<true>;
 	type Ics20RateLimiter = Everything;
@@ -239,7 +244,9 @@ impl Config for Test {
 	type FlatFeeConverter = FlatFeeConverterDummy<Test>;
 	type FlatFeeAssetId = FlatFeeAssetId;
 	type FlatFeeAmount = FlatFeeAmount;
+	type SubstrateMultihopXcmHandler = SubstrateMultihopXcmHandlerNone<Test>;
 }
+
 #[derive(Debug, Clone)]
 pub struct FlatFeeConverterDummy<T: Config>(PhantomData<T>);
 impl<T: Config> FlatFeeConverter for FlatFeeConverterDummy<T> {

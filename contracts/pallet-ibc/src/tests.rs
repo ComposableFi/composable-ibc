@@ -3,8 +3,8 @@ use crate::{
 	light_clients::{AnyClientState, AnyConsensusState},
 	mock::*,
 	routing::Context,
-	Any, Config, ConsensusHeights, DenomToAssetId, MultiAddress, Pallet, PendingRecvPacketSeqs,
-	PendingSendPacketSeqs, Timeout, TransferParams, MODULE_ID,
+	Any, Config, ConsensusHeights, DenomToAssetId, Event, MultiAddress, Pallet,
+	PendingRecvPacketSeqs, PendingSendPacketSeqs, Timeout, TransferParams, MODULE_ID,
 };
 use core::time::Duration;
 use frame_support::{
@@ -426,6 +426,142 @@ fn on_deliver_ics20_recv_packet() {
 		let fee = <Test as crate::ics20_fee::Config>::ServiceChargeIn::get() * amt;
 		assert_eq!(balance, amt - fee);
 		assert_eq!(pallet_balance, fee)
+	})
+}
+
+#[test]
+fn on_deliver_ics20_recv_packet_incorrect_memo() {
+	let mut ext = new_test_ext();
+	ext.execute_with(|| {
+		let incorrect_memo = "Incorrect memo".to_string();
+		// Create  a new account
+		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
+		let reciever = AccountId32::new(pair.public().0);
+		let ss58_address =
+			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
+		frame_system::Pallet::<Test>::set_block_number(1u32);
+		let asset_id =
+			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
+				&"PICA".to_string(),
+			)
+			.unwrap();
+		setup_client_and_consensus_state(PortId::transfer());
+
+		let channel_id = ChannelId::new(0);
+		let balance = 100000 * MILLIS;
+
+		// We are simulating a transfer back to the source chain
+
+		let denom = "transfer/channel-1/PICA";
+		let channel_escrow_address =
+			get_channel_escrow_address(&PortId::transfer(), channel_id).unwrap();
+		let channel_escrow_address =
+			<Test as Config>::AccountIdConversion::try_from(channel_escrow_address)
+				.map_err(|_| ())
+				.unwrap();
+		let channel_escrow_address = channel_escrow_address.into_account();
+
+		// Endow escrow address with tokens
+		let _ = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::deposit_creating(&channel_escrow_address, balance);
+
+		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
+		let amt = 1000 * MILLIS;
+		println!("Transferred Amount {}", amt);
+		let coin = Coin {
+			denom: prefixed_denom,
+			amount: ibc::applications::transfer::Amount::from_str(&format!("{:?}", amt)).unwrap(),
+		};
+		let packet_data = PacketData {
+			token: coin,
+			sender: Signer::from_str("alice").unwrap(),
+			receiver: Signer::from_str(&ss58_address).unwrap(),
+			memo: incorrect_memo.clone(),
+		};
+
+		let data = serde_json::to_vec(&packet_data).unwrap();
+		let packet = Packet {
+			sequence: 1u64.into(),
+			source_port: PortId::transfer(),
+			source_channel: ChannelId::new(1),
+			destination_port: PortId::transfer(),
+			destination_channel: ChannelId::new(0),
+			data,
+			timeout_height: Height::new(2000, 5),
+			timeout_timestamp: ibc::timestamp::Timestamp::from_nanoseconds(
+				1690894363u64.saturating_mul(1000000000),
+			)
+			.unwrap(),
+		};
+
+		let msg = MsgRecvPacket {
+			packet,
+			proofs: Proofs::new(
+				vec![0u8; 32].try_into().unwrap(),
+				None,
+				None,
+				None,
+				Height::new(0, 1),
+			)
+			.unwrap(),
+			signer: Signer::from_str(MODULE_ID).unwrap(),
+		};
+
+		let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+
+		let account_data = Assets::balance(asset_id, AccountId32::new(pair.public().0));
+		// Assert account balance before transfer
+		assert_eq!(account_data, 0);
+		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
+
+		let balance = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::free_balance(&reciever);
+
+		let pallet_balance =
+			<<Test as Config>::NativeCurrency as Currency<
+				<Test as frame_system::Config>::AccountId,
+			>>::free_balance(&<Test as crate::Config>::FeeAccount::get().into_account());
+		let fee = <Test as crate::ics20_fee::Config>::ServiceChargeIn::get() * amt;
+		assert_eq!(balance, amt - fee);
+		assert_eq!(pallet_balance, fee);
+
+		// let test_event = TestEvent::PalletIbc($event);
+		assert_eq!(
+			System::events()
+				.iter()
+				.filter(|a| {
+					if let RuntimeEvent::Ibc(ibc_event) = &a.event {
+						if let Event::<Test>::ExecuteMemoStarted { memo, .. } = ibc_event {
+							return memo.as_ref().map_or(false, |m| m == &incorrect_memo)
+						}
+					}
+					false
+				})
+				.count(),
+			1
+		);
+
+		assert_eq!(
+			System::events()
+				.iter()
+				.filter(|a| {
+					if let RuntimeEvent::Ibc(ibc_event) = &a.event {
+						if let Event::<Test>::ExecuteMemoIbcTokenTransferFailedWithReason {
+							memo,
+							reason,
+							from,
+						} = ibc_event
+						{
+							return memo == &incorrect_memo && *reason == 0 && from == &reciever
+						}
+					}
+					false
+				})
+				.count(),
+			1
+		);
 	})
 }
 
