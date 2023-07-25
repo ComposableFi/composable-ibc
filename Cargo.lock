@@ -1446,6 +1446,7 @@ dependencies = [
  "clap 3.2.25",
  "frame-metadata",
  "hex",
+ "http",
  "jsonrpsee",
  "parity-scale-codec",
  "serde_json",
