@@ -1,7 +1,7 @@
 use self::parachain_subxt::api::{
 	ibc::calls::{Deliver, Transfer},
 	runtime_types::{
-		// composable_runtime::ibc::MemoMessage,
+		composable_runtime::ibc::MemoMessage,
 		frame_system::{extensions::check_nonce::CheckNonce, EventRecord},
 		pallet_ibc::{events::IbcEvent as MetadataIbcEvent, TransferParams as RawTransferParams},
 	},
@@ -166,7 +166,7 @@ define_runtime_transactions!(
 	TransferParamsWrapper,
 	DummySendPingParamsWrapper,
 	parachain_subxt::api::runtime_types::pallet_ibc::Any,
-	String,
+	MemoMessage,
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, CurrencyId(y), z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),
