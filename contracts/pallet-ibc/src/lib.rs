@@ -850,7 +850,11 @@ pub mod pallet {
 				Timeout::Offset { timestamp, height } => {
 					let latest_timestamp = T::TimeProvider::now();
 					let timestamp = timestamp
-						.map(|offset| (latest_timestamp + Duration::from_secs(offset)))
+						.map(|offset| {
+							Timestamp::from_nanoseconds(
+								(latest_timestamp + Duration::from_secs(offset)).as_nanos() as u64,
+							)
+						})
 						.transpose()
 						.map_err(|_| Error::<T>::InvalidTimestamp)?
 						.unwrap_or_default();
