@@ -49,7 +49,7 @@ async fn main() -> Result<(), anyhow::Error> {
 			let testbed = WasmTestBed::new(&source).expect("wasm file should be loaded");
 			let metadata = testbed.runtime_metadata_prefixed().encode();
 			let code = codegen(&mut &metadata[..])?;
-			let path = cli.path.join(format!("{}.rs", runtime));
+			let path = cli.path.join(format!("{runtime}.rs"));
 			tokio::fs::write(&path, &code).await?;
 		}
 	} else {
@@ -67,7 +67,7 @@ async fn main() -> Result<(), anyhow::Error> {
 		for (url, runtime) in runtimes {
 			let metadata = fetch_metadata_ws(&url).await?;
 			let code = codegen(&mut &metadata[..])?;
-			let path = cli.path.join(format!("{}.rs", runtime));
+			let path = cli.path.join(format!("{runtime}.rs"));
 			tokio::fs::write(&path, &code).await?;
 		}
 	}

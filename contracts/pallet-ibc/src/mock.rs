@@ -315,7 +315,7 @@ where
 	T::AssetId: From<u128>,
 {
 	type Error = ();
-	fn from_denom_to_asset_id(denom: &String) -> Result<T::AssetId, Self::Error> {
+	fn from_denom_to_asset_id(denom: &str) -> Result<T::AssetId, Self::Error> {
 		let mut id = 2u128;
 		if denom == "PICA" || denom == "1" {
 			id = 1;
@@ -325,15 +325,15 @@ where
 		}
 		if <<Test as Config>::Fungibles as InspectMetadata<AccountId>>::decimals(&id) == 0 {
 			<<Test as Config>::Fungibles as Create<AccountId>>::create(
-				id.into(),
+				id,
 				AccountId::new([0; 32]),
 				true,
-				1000u128.into(),
+				1000u128,
 			)
 			.unwrap();
 
 			<<Test as Config>::Fungibles as Mutate<AccountId>>::set(
-				id.into(),
+				id,
 				&AccountId::new([0; 32]),
 				vec![0; 32],
 				vec![0; 32],

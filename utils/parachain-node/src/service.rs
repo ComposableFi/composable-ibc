@@ -1,5 +1,7 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
+#![allow(clippy::type_complexity)]
+
 // std
 use std::{sync::Arc, time::Duration};
 
@@ -360,6 +362,7 @@ fn build_import_queue(
 	.map_err(Into::into)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_consensus(
 	client: Arc<ParachainClient>,
 	block_import: ParachainBlockImport,

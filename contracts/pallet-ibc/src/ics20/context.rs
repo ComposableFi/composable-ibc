@@ -88,7 +88,7 @@ where
 			<T::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::transfer(
 				&from.clone().into_account(),
 				&to.clone().into_account(),
-				amount.into(),
+				amount,
 				frame_support::traits::ExistenceRequirement::AllowDeath,
 			)
 			.map_err(|e| {
@@ -97,7 +97,7 @@ where
 			})?;
 		} else {
 			<<T as Config>::Fungibles as Transfer<<T as frame_system::Config>::AccountId>>::transfer(
-				asset_id.into(),
+				asset_id,
 				&from.clone().into_account(),
 				&to.clone().into_account(),
 				amount,
@@ -124,7 +124,7 @@ where
 			.map_err(|_err| Ics20Error::invalid_token())?;
 
 		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
-			asset_id.into(),
+			asset_id,
 			&account.clone().into_account(),
 			amount,
 		)
@@ -146,7 +146,7 @@ where
 		let asset_id = T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
 			.map_err(|_| Ics20Error::invalid_token())?;
 		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::burn_from(
-			asset_id.into(),
+			asset_id,
 			&account.clone().into_account(),
 			amount,
 		)

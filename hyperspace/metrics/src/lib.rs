@@ -108,7 +108,5 @@ async fn init_prometheus_with_listener(
 
 	let server = Server::builder(listener).serve(service);
 
-	let result = server.await.map_err(Into::into);
-
-	result
+	server.await.map_err(Into::into)
 }

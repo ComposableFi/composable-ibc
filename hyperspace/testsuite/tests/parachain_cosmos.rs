@@ -17,10 +17,9 @@ use futures::StreamExt;
 use hyperspace_core::{
 	chain::{AnyAssetId, AnyChain, AnyConfig},
 	logging,
-	packets::utils::get_key_path,
 	substrate::DefaultConfig,
 };
-use hyperspace_cosmos::client::{ConfigKeyEntry, CosmosClient, CosmosClientConfig};
+use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_parachain::{finality_protocol::FinalityProtocol, ParachainClientConfig};
 use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider};
 use hyperspace_testsuite::{
@@ -30,10 +29,7 @@ use hyperspace_testsuite::{
 	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
 	setup_connection_and_channel,
 };
-use ibc::{
-	core::{ics23_commitment::commitment::CommitmentPrefix, ics24_host::identifier::PortId},
-	Height,
-};
+use ibc::core::ics24_host::identifier::PortId;
 use sp_core::hashing::sha2_256;
 
 #[derive(Debug, Clone)]
@@ -78,7 +74,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 
 	// Create client configurations
 	let config_a = ParachainClientConfig {
-		name: format!("parachain"),
+		name: "parachain".to_string(),
 		para_id: args.para_id,
 		parachain_rpc_url: args.chain_a,
 		relay_chain_rpc_url: args.relay_chain.clone(),
@@ -124,9 +120,9 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
 		Ok(code_id) => code_id,
 		Err(e) => {
-			let e_str = format!("{:?}", e);
+			let e_str = format!("{e:?}");
 			if !e_str.contains("wasm code already exists") {
-				panic!("Failed to upload wasm: {}", e_str);
+				panic!("Failed to upload wasm: {e_str}");
 			}
 			sha2_256(&wasm_data).to_vec()
 		},

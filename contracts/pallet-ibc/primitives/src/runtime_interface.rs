@@ -173,7 +173,7 @@ mod tests {
 		// make sure that decode(encode(address)) = address
 		let alice = "5yNZjX24n2eg7W6EVamaTXNQbWCwchhThEaSWB7V3GRjtHeL";
 		let account_id = ss58_to_account_id_32(alice).unwrap();
-		let ss58_account = account_id_to_ss58(account_id.into(), 49);
+		let ss58_account = account_id_to_ss58(account_id, 49);
 		assert_eq!(alice, ss58_account);
 	}
 

@@ -23,28 +23,28 @@ impl<T: Config> Acknowledgements<T> {
 		ack: AcknowledgementCommitment,
 	) {
 		let ack_path = AcksPath { port_id, channel_id, sequence };
-		let ack_path = format!("{}", ack_path);
+		let ack_path = format!("{ack_path}");
 		let ack_key = apply_prefix(T::PalletPrefix::get(), vec![ack_path]);
 		child::put(&ChildInfo::new_default(T::PalletPrefix::get()), &ack_key, &ack.into_vec())
 	}
 
 	pub fn get((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) -> Option<Vec<u8>> {
 		let ack_path = AcksPath { port_id, channel_id, sequence };
-		let ack_path = format!("{}", ack_path);
+		let ack_path = format!("{ack_path}");
 		let ack_key = apply_prefix(T::PalletPrefix::get(), vec![ack_path]);
 		child::get(&ChildInfo::new_default(T::PalletPrefix::get()), &ack_key)
 	}
 
 	pub fn remove((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) {
 		let ack_path = AcksPath { port_id, channel_id, sequence };
-		let ack_path = format!("{}", ack_path);
+		let ack_path = format!("{ack_path}");
 		let ack_key = apply_prefix(T::PalletPrefix::get(), vec![ack_path]);
 		child::kill(&ChildInfo::new_default(T::PalletPrefix::get()), &ack_key)
 	}
 
 	pub fn contains_key((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) -> bool {
 		let ack_path = AcksPath { port_id, channel_id, sequence };
-		let ack_path = format!("{}", ack_path);
+		let ack_path = format!("{ack_path}");
 		let ack_key = apply_prefix(T::PalletPrefix::get(), vec![ack_path]);
 		child::exists(&ChildInfo::new_default(T::PalletPrefix::get()), &ack_key)
 	}

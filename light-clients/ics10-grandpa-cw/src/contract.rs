@@ -134,7 +134,7 @@ pub fn execute(
 	let client = GrandpaClient::<HostFunctions>::default();
 	let mut ctx = Context::<HostFunctions>::new(deps, env);
 	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
-	let data = process_message(msg, client, &mut ctx, client_id.clone())?;
+	let data = process_message(msg, client, &mut ctx, client_id)?;
 	let mut response = Response::default();
 	response.data = Some(data);
 	Ok(response)
@@ -184,31 +184,24 @@ fn process_message(
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 			let msg = VerifyClientMessage::try_from(msg)?;
 
-			match &msg.client_message {
-				ClientMessage::Misbehaviour(misbehavior) => {
-					let first_proof = &misbehavior.first_finality_proof;
-					let first_base = first_proof
-						.unknown_headers
-						.iter()
-						.min_by_key(|h| *h.number())
-						.ok_or_else(|| {
-							ContractError::Grandpa("Unknown headers can't be empty!".to_string())
-						})?;
-					let first_parent = first_base.parent_hash;
-					if !ctx.contains_relay_header_hash(first_parent) {
-						Err(ContractError::Grandpa(
-							"Could not find the known header for first finality proof".to_string(),
-						))?
-					}
-				},
-				_ => {},
+			if let ClientMessage::Misbehaviour(misbehavior) = &msg.client_message {
+				let first_proof = &misbehavior.first_finality_proof;
+				let first_base =
+					first_proof.unknown_headers.iter().min_by_key(|h| *h.number()).ok_or_else(
+						|| ContractError::Grandpa("Unknown headers can't be empty!".to_string()),
+					)?;
+				let first_parent = first_base.parent_hash;
+				if !ctx.contains_relay_header_hash(first_parent) {
+					Err(ContractError::Grandpa(
+						"Could not find the known header for first finality proof".to_string(),
+					))?
+				}
 			}
 
-			let f = client
+			client
 				.verify_client_message(ctx, client_id, client_state, msg.client_message)
 				.map_err(|e| ContractError::Grandpa(format!("{e:?}")))
-				.map(|_| to_binary(&ContractResult::success()));
-			f
+				.map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::CheckForMisbehaviour(msg) => {
 			let client_state = ctx
@@ -249,7 +242,7 @@ fn process_message(
 					let from = client_state.latest_relay_hash;
 					let mut finalized =
 						ancestry.ancestry(from, header.finality_proof.block).map_err(|_| {
-							ContractError::Grandpa(format!("[update_state] Invalid ancestry!"))
+							ContractError::Grandpa("[update_state] Invalid ancestry!".to_string())
 						})?;
 					finalized.reverse();
 					finalized
@@ -327,7 +320,7 @@ fn process_message(
 		},
 		ExecuteMsg::InitializeState(InitializeState { client_state, consensus_state }) => {
 			let state_call_response = ClientStateCallResponse {
-				new_consensus_state: consensus_state.clone(),
+				new_consensus_state: consensus_state,
 				new_client_state: client_state.clone(),
 				client_state,
 				result: ContractResult::success(),
