@@ -30,7 +30,10 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 	MultiSignature, Perbill,
 };
-use std::sync::Arc;
+use std::{
+	sync::Arc,
+	time::{SystemTime, UNIX_EPOCH},
+};
 use system::EnsureRoot;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -307,6 +310,13 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
 	register_offchain_ext(&mut ext);
 	ext.register_extension(KeystoreExt(Arc::new(KeyStore::new())));
+
+	ext.execute_with(|| {
+		Timestamp::set_timestamp(
+			SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64
+		);
+	});
+
 	ext
 }
 
