@@ -61,7 +61,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 
 	// Create client configurations
 	let config_a = ParachainClientConfig {
-		name: format!("9988"),
+		name: "9988".to_string(),
 		para_id: args.para_id_a,
 		parachain_rpc_url: args.chain_a,
 		relay_chain_rpc_url: args.relay_chain.clone(),
@@ -76,7 +76,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 		wasm_code_id: None,
 	};
 	let config_b = ParachainClientConfig {
-		name: format!("9188"),
+		name: "9188".to_string(),
 		para_id: args.para_id_b,
 		parachain_rpc_url: args.chain_b,
 		relay_chain_rpc_url: args.relay_chain,

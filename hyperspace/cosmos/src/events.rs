@@ -215,10 +215,8 @@ pub fn push_wasm_code_try_from_abci_event(
 	for tag in &abci_event.attributes {
 		let key = tag.key.as_str();
 		let value = tag.value.as_str();
-		match key {
-			client_events::WASM_CODE_ID_ATTRIBUTE_KEY =>
-				code_id = Some(hex::decode(value).map_err(IbcEventError::from_hex_error)?),
-			_ => {},
+		if let client_events::WASM_CODE_ID_ATTRIBUTE_KEY = key {
+			code_id = Some(hex::decode(value).map_err(IbcEventError::from_hex_error)?)
 		}
 	}
 
@@ -519,7 +517,7 @@ fn extract_packet_and_write_ack_from_tx(
 					.into(),
 			channel_events::PKT_TIMEOUT_HEIGHT_ATTRIBUTE_KEY => {
 				packet.timeout_height =
-					parse_timeout_height(value)?.ok_or_else(|| ChannelError::missing_height())?;
+					parse_timeout_height(value)?.ok_or_else(ChannelError::missing_height)?;
 			},
 			channel_events::PKT_TIMEOUT_TIMESTAMP_ATTRIBUTE_KEY => {
 				packet.timeout_timestamp =

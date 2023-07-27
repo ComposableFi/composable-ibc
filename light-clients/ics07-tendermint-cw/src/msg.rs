@@ -359,7 +359,7 @@ impl TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUpdateStateM
 		if upgrade_client_state.trust_level != TrustThreshold::ZERO ||
 			upgrade_client_state.trusting_period != Duration::ZERO ||
 			upgrade_client_state.max_clock_drift != Duration::ZERO ||
-			upgrade_client_state.frozen_height != None
+			upgrade_client_state.frozen_height.is_some()
 		{
 			return ibc::prelude::Err(ContractError::Tendermint(
 				"Upgrade client state not zeroed".to_string(),

@@ -166,7 +166,7 @@ where
 						inner: Box::new(client_state),
 						data: old_client_state.data.clone(),
 						code_id: old_client_state.code_id.clone(),
-						latest_height: old_client_state.latest_height.clone(),
+						latest_height: old_client_state.latest_height,
 						_phantom: Default::default(),
 					},
 					result,
@@ -212,19 +212,17 @@ where
 		consensus_height: Height,
 		expected_consensus_state: &Ctx::AnyConsensusState,
 	) -> Result<(), Error> {
-		self.inner
-			.verify_client_consensus_state(
-				ctx,
-				&client_state.inner,
-				height,
-				prefix,
-				proof,
-				root,
-				client_id,
-				consensus_height,
-				expected_consensus_state,
-			)
-			.map_err(|e| e.into())
+		self.inner.verify_client_consensus_state(
+			ctx,
+			&client_state.inner,
+			height,
+			prefix,
+			proof,
+			root,
+			client_id,
+			consensus_height,
+			expected_consensus_state,
+		)
 	}
 
 	fn verify_connection_state<Ctx: ReaderContext>(
@@ -239,19 +237,17 @@ where
 		connection_id: &ConnectionId,
 		expected_connection_end: &ConnectionEnd,
 	) -> Result<(), Error> {
-		self.inner
-			.verify_connection_state(
-				ctx,
-				client_id,
-				&client_state.inner,
-				height,
-				prefix,
-				proof,
-				root,
-				connection_id,
-				expected_connection_end,
-			)
-			.map_err(|e| e.into())
+		self.inner.verify_connection_state(
+			ctx,
+			client_id,
+			&client_state.inner,
+			height,
+			prefix,
+			proof,
+			root,
+			connection_id,
+			expected_connection_end,
+		)
 	}
 
 	fn verify_channel_state<Ctx: ReaderContext>(
@@ -267,20 +263,18 @@ where
 		channel_id: &ChannelId,
 		expected_channel_end: &ChannelEnd,
 	) -> Result<(), Error> {
-		self.inner
-			.verify_channel_state(
-				ctx,
-				client_id,
-				&client_state.inner,
-				height,
-				prefix,
-				proof,
-				root,
-				port_id,
-				channel_id,
-				expected_channel_end,
-			)
-			.map_err(|e| e.into())
+		self.inner.verify_channel_state(
+			ctx,
+			client_id,
+			&client_state.inner,
+			height,
+			prefix,
+			proof,
+			root,
+			port_id,
+			channel_id,
+			expected_channel_end,
+		)
 	}
 
 	fn verify_client_full_state<Ctx: ReaderContext>(
@@ -294,18 +288,16 @@ where
 		client_id: &ClientId,
 		expected_client_state: &Ctx::AnyClientState,
 	) -> Result<(), Error> {
-		self.inner
-			.verify_client_full_state(
-				ctx,
-				&client_state.inner,
-				height,
-				prefix,
-				proof,
-				root,
-				client_id,
-				expected_client_state,
-			)
-			.map_err(|e| e.into())
+		self.inner.verify_client_full_state(
+			ctx,
+			&client_state.inner,
+			height,
+			prefix,
+			proof,
+			root,
+			client_id,
+			expected_client_state,
+		)
 	}
 
 	fn verify_packet_data<Ctx: ReaderContext>(
@@ -322,21 +314,19 @@ where
 		sequence: Sequence,
 		commitment: PacketCommitment,
 	) -> Result<(), Error> {
-		self.inner
-			.verify_packet_data(
-				ctx,
-				client_id,
-				&client_state.inner,
-				height,
-				connection_end,
-				proof,
-				root,
-				port_id,
-				channel_id,
-				sequence,
-				commitment,
-			)
-			.map_err(|e| e.into())
+		self.inner.verify_packet_data(
+			ctx,
+			client_id,
+			&client_state.inner,
+			height,
+			connection_end,
+			proof,
+			root,
+			port_id,
+			channel_id,
+			sequence,
+			commitment,
+		)
 	}
 
 	fn verify_packet_acknowledgement<Ctx: ReaderContext>(
@@ -353,21 +343,19 @@ where
 		sequence: Sequence,
 		ack: AcknowledgementCommitment,
 	) -> Result<(), Error> {
-		self.inner
-			.verify_packet_acknowledgement(
-				ctx,
-				client_id,
-				&client_state.inner,
-				height,
-				connection_end,
-				proof,
-				root,
-				port_id,
-				channel_id,
-				sequence,
-				ack,
-			)
-			.map_err(|e| e.into())
+		self.inner.verify_packet_acknowledgement(
+			ctx,
+			client_id,
+			&client_state.inner,
+			height,
+			connection_end,
+			proof,
+			root,
+			port_id,
+			channel_id,
+			sequence,
+			ack,
+		)
 	}
 
 	fn verify_next_sequence_recv<Ctx: ReaderContext>(
@@ -383,20 +371,18 @@ where
 		channel_id: &ChannelId,
 		sequence: Sequence,
 	) -> Result<(), Error> {
-		self.inner
-			.verify_next_sequence_recv(
-				ctx,
-				client_id,
-				&client_state.inner,
-				height,
-				connection_end,
-				proof,
-				root,
-				port_id,
-				channel_id,
-				sequence,
-			)
-			.map_err(|e| e.into())
+		self.inner.verify_next_sequence_recv(
+			ctx,
+			client_id,
+			&client_state.inner,
+			height,
+			connection_end,
+			proof,
+			root,
+			port_id,
+			channel_id,
+			sequence,
+		)
 	}
 
 	fn verify_packet_receipt_absence<Ctx: ReaderContext>(
@@ -412,19 +398,17 @@ where
 		channel_id: &ChannelId,
 		sequence: Sequence,
 	) -> Result<(), Error> {
-		self.inner
-			.verify_packet_receipt_absence(
-				ctx,
-				client_id,
-				&client_state.inner,
-				height,
-				connection_end,
-				proof,
-				root,
-				port_id,
-				channel_id,
-				sequence,
-			)
-			.map_err(|e| e.into())
+		self.inner.verify_packet_receipt_absence(
+			ctx,
+			client_id,
+			&client_state.inner,
+			height,
+			connection_end,
+			proof,
+			root,
+			port_id,
+			channel_id,
+			sequence,
+		)
 	}
 }

@@ -775,7 +775,7 @@ pub mod pallet {
 			let mut reserve_count = 0u128;
 			let messages = messages
 				.into_iter()
-				.filter_map(|message| {
+				.map(|message| {
 					if matches!(
 						message.type_url.as_str(),
 						create_client::TYPE_URL |
@@ -785,18 +785,18 @@ pub mod pallet {
 						reserve_count += 1;
 					}
 
-					Some(Ok(ibc_proto::google::protobuf::Any {
+					ibc_proto::google::protobuf::Any {
 						type_url: message.type_url,
 						value: message.value,
-					}))
+					}
 				})
-				.collect::<Result<Vec<ibc_proto::google::protobuf::Any>, Error<T>>>()?;
+				.collect::<Vec<_>>();
 			let reserve_amt = T::SpamProtectionDeposit::get().saturating_mul(reserve_count.into());
 
 			if reserve_amt >= T::SpamProtectionDeposit::get() {
 				<T::NativeCurrency as ReservableCurrency<
 					<T as frame_system::Config>::AccountId,
-				>>::reserve(&sender, reserve_amt.into())?;
+				>>::reserve(&sender, reserve_amt)?;
 			}
 			Self::execute_ibc_messages(&mut ctx, messages);
 
@@ -813,10 +813,9 @@ pub mod pallet {
 			amount: T::Balance,
 			memo: Option<T::MemoMessage>,
 		) -> DispatchResult {
-			let origin = T::TransferOrigin::ensure_origin(origin)?.into();
+			let account_id_32 = T::TransferOrigin::ensure_origin(origin)?.into();
 			let denom = T::IbcDenomToAssetIdConversion::from_asset_id_to_denom(asset_id)
-				.ok_or_else(|| Error::<T>::InvalidAssetId)?;
-			let account_id_32: AccountId32 = origin.into();
+				.ok_or(Error::<T>::InvalidAssetId)?;
 			let from = {
 				let mut hex_string = hex::encode(account_id_32.to_raw_vec());
 				hex_string.insert_str(0, "0x");
@@ -837,8 +836,8 @@ pub mod pallet {
 			};
 			let denom =
 				PrefixedDenom::from_str(&denom).map_err(|_| Error::<T>::PrefixedDenomParse)?;
-			let ibc_amount = Amount::from_str(&format!("{:?}", amount))
-				.map_err(|_| Error::<T>::InvalidAmount)?;
+			let ibc_amount =
+				Amount::from_str(&format!("{amount:?}")).map_err(|_| Error::<T>::InvalidAmount)?;
 			let mut coin = PrefixedCoin { denom, amount: ibc_amount };
 			let source_channel = ChannelId::new(params.source_channel);
 			let source_port = PortId::transfer();
@@ -880,10 +879,8 @@ pub mod pallet {
 				.channel_end(&(PortId::transfer(), source_channel))
 				.map_err(|_| Error::<T>::ChannelNotFound)?;
 
-			let destination_channel = channel_end
-				.counterparty()
-				.channel_id
-				.ok_or_else(|| Error::<T>::ChannelNotFound)?;
+			let destination_channel =
+				channel_end.counterparty().channel_id.ok_or(Error::<T>::ChannelNotFound)?;
 
 			let is_feeless_channel_ids = FeeLessChannelIds::<T>::contains_key((
 				source_channel.sequence(),
@@ -908,17 +905,16 @@ pub mod pallet {
 						let fee_asset_id = T::FlatFeeAssetId::get();
 						let fee_asset_amount = T::FlatFeeAmount::get();
 						is_flat_fee = true;
-						let flat_fee =
-							T::FlatFeeConverter::get_flat_fee(a, fee_asset_id, fee_asset_amount)
-								.unwrap_or_else(|| {
-									// We have ensured that token amounts larger than the max value
-									// for a u128 are rejected in the ics20 on_recv_packet callback
-									// so we can multiply safely. Percent does Non-Overflowing
-									// multiplication so this is infallible
-									is_flat_fee = false;
-									percent * amt
-								});
-						flat_fee
+
+						T::FlatFeeConverter::get_flat_fee(a, fee_asset_id, fee_asset_amount)
+							.unwrap_or_else(|| {
+								// We have ensured that token amounts larger than the max value
+								// for a u128 are rejected in the ics20 on_recv_packet callback
+								// so we can multiply safely. Percent does Non-Overflowing
+								// multiplication so this is infallible
+								is_flat_fee = false;
+								percent * amt
+							})
 					},
 					Err(_) => percent * amt,
 				};
@@ -940,7 +936,7 @@ pub mod pallet {
 				coin.amount = (coin.amount.as_u256() - U256::from(fee)).into();
 				//found sequence that will used in Pallet::<T>::send_transfer function.
 				let sequence = ctx
-					.get_next_sequence_send(&(source_port.clone(), source_channel.clone()))
+					.get_next_sequence_send(&(source_port.clone(), source_channel))
 					.map_err(|_| Error::<T>::ChannelNotFound)?;
 				//use this sequence as a key in storage map where sequence is key and fee is value
 				let sequence: u64 = sequence.into();
@@ -966,7 +962,7 @@ pub mod pallet {
 
 			let msg = MsgTransfer {
 				source_port,
-				source_channel: source_channel.clone(),
+				source_channel,
 				token: coin.clone(),
 				sender: Signer::from_str(&from).map_err(|_| Error::<T>::Utf8Error)?,
 				receiver: Signer::from_str(&to).map_err(|_| Error::<T>::Utf8Error)?,
@@ -1058,7 +1054,7 @@ pub mod pallet {
 			sp_io::storage::set(CLIENT_STATE_UPGRADE_PATH, &params.client_state);
 			sp_io::storage::set(CONSENSUS_STATE_UPGRADE_PATH, &params.consensus_state);
 
-			Self::deposit_event(Event::<T>::ClientUpgradeSet.into());
+			Self::deposit_event(Event::<T>::ClientUpgradeSet);
 
 			Ok(())
 		}
@@ -1110,7 +1106,7 @@ pub mod pallet {
 					AnyClientState::wrap(&ms)
 				},
 			}
-			.ok_or_else(|| Error::<T>::ClientFreezeFailed)?;
+			.ok_or(Error::<T>::ClientFreezeFailed)?;
 			let revision_number = frozen_state.latest_height().revision_number;
 			ctx.store_client_state(client_id.clone(), frozen_state)
 				.map_err(|_| Error::<T>::ClientFreezeFailed)?;
@@ -1133,7 +1129,7 @@ pub mod pallet {
 			ensure_root(origin)?;
 			#[cfg(not(feature = "testing"))]
 			{
-				return Err(Error::<T>::AccessDenied.into())
+				Err(Error::<T>::AccessDenied.into())
 			}
 			#[cfg(feature = "testing")]
 			{
@@ -1274,7 +1270,7 @@ pub trait DenomToAssetId<T: Config> {
 	/// **Note**
 	/// This function should create and register an asset with a valid metadata
 	/// if an asset does not exist for this denom
-	fn from_denom_to_asset_id(denom: &String) -> Result<T::AssetId, Self::Error>;
+	fn from_denom_to_asset_id(denom: &str) -> Result<T::AssetId, Self::Error>;
 
 	/// Return full denom for given asset id
 	fn from_asset_id_to_denom(id: T::AssetId) -> Option<String>;

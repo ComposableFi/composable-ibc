@@ -216,12 +216,12 @@ fn send_transfer() {
 		setup_client_and_consensus_state(PortId::transfer());
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
-				&"PICA".to_string(),
+				"PICA",
 			)
 			.unwrap();
 		let _ = <<Test as Config>::NativeCurrency as Currency<
 			<Test as frame_system::Config>::AccountId,
-		>>::deposit_creating(&AccountId32::new([0; 32]), balance.into());
+		>>::deposit_creating(&AccountId32::new([0; 32]), balance);
 
 		let timeout = Timeout::Offset { timestamp: Some(1000), height: Some(5) };
 
@@ -273,12 +273,12 @@ fn send_transfer_no_fee_feeless_channels() {
 		setup_client_and_consensus_state(PortId::transfer());
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
-				&"PICA".to_string(),
+				"PICA",
 			)
 			.unwrap();
 		let _ = <<Test as Config>::NativeCurrency as Currency<
 			<Test as frame_system::Config>::AccountId,
-		>>::deposit_creating(&AccountId32::new([0; 32]), balance.into());
+		>>::deposit_creating(&AccountId32::new([0; 32]), balance);
 
 		let timeout = Timeout::Offset { timestamp: Some(1000), height: Some(5) };
 
@@ -288,7 +288,7 @@ fn send_transfer_no_fee_feeless_channels() {
 			.expect("expect source_channel unwrap");
 		let destination_channel = channel_end.counterparty().channel_id.unwrap();
 		//feeless channels
-		let _ = Ibc::add_channels_to_feeless_channel_list(
+		Ibc::add_channels_to_feeless_channel_list(
 			RuntimeOrigin::root(),
 			0,
 			destination_channel.sequence(),
@@ -342,7 +342,7 @@ fn on_deliver_ics20_recv_packet() {
 		frame_system::Pallet::<Test>::set_block_number(1u32);
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
-				&"PICA".to_string(),
+				"PICA",
 			)
 			.unwrap();
 		setup_client_and_consensus_state(PortId::transfer());
@@ -368,10 +368,10 @@ fn on_deliver_ics20_recv_packet() {
 
 		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
 		let amt = 1000 * MILLIS;
-		println!("Transferred Amount {}", amt);
+		println!("Transferred Amount {amt}");
 		let coin = Coin {
 			denom: prefixed_denom,
-			amount: ibc::applications::transfer::Amount::from_str(&format!("{:?}", amt)).unwrap(),
+			amount: ibc::applications::transfer::Amount::from_str(&format!("{amt:?}")).unwrap(),
 		};
 		let packet_data = PacketData {
 			token: coin,
@@ -576,7 +576,7 @@ fn on_deliver_ics20_recv_packet_with_flat_fee() {
 		frame_system::Pallet::<Test>::set_block_number(1u32);
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
-				&"PICAFLATFEE".to_string(),
+				"PICAFLATFEE",
 			)
 			.unwrap();
 		setup_client_and_consensus_state(PortId::transfer());
@@ -603,10 +603,10 @@ fn on_deliver_ics20_recv_packet_with_flat_fee() {
 
 		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
 		let amt = 1000 * MILLIS;
-		println!("Transferred Amount {}", amt);
+		println!("Transferred Amount {amt}");
 		let coin = Coin {
 			denom: prefixed_denom,
-			amount: ibc::applications::transfer::Amount::from_str(&format!("{:?}", amt)).unwrap(),
+			amount: ibc::applications::transfer::Amount::from_str(&format!("{amt:?}")).unwrap(),
 		};
 		let packet_data = PacketData {
 			token: coin,
@@ -676,7 +676,7 @@ fn on_deliver_ics20_recv_packet_transfered_amount_less_then_flat_fee() {
 		frame_system::Pallet::<Test>::set_block_number(1u32);
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
-				&"PICAFLATFEE".to_string(),
+				"PICAFLATFEE",
 			)
 			.unwrap();
 		setup_client_and_consensus_state(PortId::transfer());
@@ -710,10 +710,10 @@ fn on_deliver_ics20_recv_packet_transfered_amount_less_then_flat_fee() {
 			usdt_fee_amount,
 		)
 		.unwrap_or_default();
-		println!("Transferred Amount {}", amt);
+		println!("Transferred Amount {amt}");
 		let coin = Coin {
 			denom: prefixed_denom,
-			amount: ibc::applications::transfer::Amount::from_str(&format!("{:?}", amt)).unwrap(),
+			amount: ibc::applications::transfer::Amount::from_str(&format!("{amt:?}")).unwrap(),
 		};
 		let packet_data = PacketData {
 			token: coin,
@@ -808,10 +808,10 @@ fn on_deliver_ics20_recv_packet_should_not_double_spend() {
 
 		let prefixed_denom = PrefixedDenom::from_str(denom).unwrap();
 		let amt = MILLIS / 100;
-		println!("Transferred Amount {}", amt);
+		println!("Transferred Amount {amt}");
 		let coin = Coin {
 			denom: prefixed_denom,
-			amount: ibc::applications::transfer::Amount::from_str(&format!("{:?}", amt)).unwrap(),
+			amount: ibc::applications::transfer::Amount::from_str(&format!("{amt:?}")).unwrap(),
 		};
 		let packet_data = PacketData {
 			token: coin,
@@ -907,8 +907,7 @@ fn should_fetch_recv_packet_with_acknowledgement() {
 
 		let mut ctx = Context::<Test>::default();
 
-		let mut channel_end = ChannelEnd::default();
-		channel_end.state = State::Open;
+		let channel_end = ChannelEnd { state: State::Open, ..Default::default() };
 		ctx.store_channel((port_id.clone(), channel_id), &channel_end).unwrap();
 		let packet = Packet {
 			sequence: 1u64.into(),
@@ -921,7 +920,7 @@ fn should_fetch_recv_packet_with_acknowledgement() {
 			timeout_timestamp: Default::default(),
 		};
 
-		ctx.store_recv_packet((port_id.clone(), channel_id, packet.sequence), packet.clone())
+		ctx.store_recv_packet((port_id, channel_id, packet.sequence), packet.clone())
 			.unwrap();
 		let ack = "success".as_bytes().to_vec();
 		Pallet::<Test>::handle_message(HandlerMessage::WriteAck { packet, ack }).unwrap();
@@ -957,11 +956,9 @@ fn should_cleanup_offchain_packets_correctly() {
 		// Add some packets offchain
 		let channel_end = ChannelEnd::default();
 		let mut ctx = Context::<Test>::default();
-		ctx.store_channel((port_id.clone(), channel_id.clone()), &channel_end).unwrap();
-		ctx.store_next_sequence_send((port_id.clone(), channel_id.clone()), 11.into())
-			.unwrap();
-		ctx.store_next_sequence_recv((port_id.clone(), channel_id.clone()), 11.into())
-			.unwrap();
+		ctx.store_channel((port_id.clone(), channel_id), &channel_end).unwrap();
+		ctx.store_next_sequence_send((port_id.clone(), channel_id), 11.into()).unwrap();
+		ctx.store_next_sequence_recv((port_id.clone(), channel_id), 11.into()).unwrap();
 		// Store packets and commitments
 		for i in 1..=10u64 {
 			let packet = Packet {
@@ -974,13 +971,12 @@ fn should_cleanup_offchain_packets_correctly() {
 				timeout_height: Default::default(),
 				timeout_timestamp: Default::default(),
 			};
-			ctx.store_send_packet((port_id.clone(), channel_id.clone(), i.into()), packet)
-				.unwrap();
+			ctx.store_send_packet((port_id.clone(), channel_id, i.into()), packet).unwrap();
 
 			// Store commitment for even numbers
 			if i % 2 == 0 {
 				ctx.store_packet_commitment(
-					(port_id.clone(), channel_id.clone(), i.into()),
+					(port_id.clone(), channel_id, i.into()),
 					"commitment".as_bytes().to_vec().into(),
 				)
 				.unwrap();
@@ -999,17 +995,16 @@ fn should_cleanup_offchain_packets_correctly() {
 				timeout_height: Default::default(),
 				timeout_timestamp: Default::default(),
 			};
-			ctx.store_recv_packet((port_id.clone(), channel_id.clone(), i.into()), packet)
-				.unwrap();
+			ctx.store_recv_packet((port_id.clone(), channel_id, i.into()), packet).unwrap();
 			// Store ack for odd numbers
 			if i % 2 != 0 {
 				ctx.store_packet_acknowledgement(
-					(port_id.clone(), channel_id.clone(), i.into()),
+					(port_id.clone(), channel_id, i.into()),
 					"commitment".as_bytes().to_vec().into(),
 				)
 				.unwrap();
 				Pallet::<Test>::store_raw_acknowledgement(
-					(port_id.clone(), channel_id.clone(), i.into()),
+					(port_id.clone(), channel_id, i.into()),
 					"acknowledgement".as_bytes().to_vec(),
 				)
 				.unwrap();
@@ -1062,12 +1057,11 @@ fn should_cleanup_offchain_packets_correctly() {
 		// Now let's prepare to remove pending sequences
 		let mut ctx = Context::<Test>::default();
 		for i in send_seq_set {
-			ctx.delete_packet_commitment((port_id.clone(), channel_id.clone(), i.into()))
-				.unwrap();
+			ctx.delete_packet_commitment((port_id.clone(), channel_id, i.into())).unwrap();
 		}
 
 		for i in recv_seq_set {
-			ctx.delete_packet_acknowledgement((port_id.clone(), channel_id.clone(), i.into()))
+			ctx.delete_packet_acknowledgement((port_id.clone(), channel_id, i.into()))
 				.unwrap();
 		}
 	});
@@ -1121,7 +1115,7 @@ fn test_next_and_previous_consensus_state_for_beefy_and_grandpa_clients() {
 		ctx.store_consensus_state(
 			client_id_grandpa.clone(),
 			Height::new(0, 10),
-			AnyConsensusState::Mock(mock_cs_state.clone()),
+			AnyConsensusState::Mock(mock_cs_state),
 		)
 		.unwrap();
 		assert!(ctx

@@ -114,7 +114,7 @@ pub fn verify_upgrade_and_update_state<H: HostFunctionsProvider + 'static>(
 		))
 	}
 
-	let consensus_state = ctx.consensus_state(&client_id.clone(), latest_height)?;
+	let consensus_state = ctx.consensus_state(&client_id, latest_height)?;
 
 	let mut upgrade_path = old_client_state.upgrade_path.clone();
 	let last_key = upgrade_path.remove(upgrade_path.len() - 1);
@@ -164,14 +164,14 @@ pub fn verify_upgrade_and_update_state<H: HostFunctionsProvider + 'static>(
 
 	let any = Any::decode(&mut upgrade_client_state.data.as_slice()).unwrap();
 	let upgrade_client_state_inner = ClientState::<H>::decode_vec(&any.value).unwrap();
-	let new_client_state = old_client_state.clone().upgrade(
-		upgrade_client_state_inner.latest_height.clone(),
+	let new_client_state = old_client_state.upgrade(
+		upgrade_client_state_inner.latest_height,
 		UpgradeOptions {
-			unbonding_period: upgrade_client_state_inner.unbonding_period.clone(),
+			unbonding_period: upgrade_client_state_inner.unbonding_period,
 			proof_specs: upgrade_client_state_inner.proof_specs.clone(),
 			upgrade_path: upgrade_client_state_inner.upgrade_path.clone(),
 		},
-		upgrade_client_state_inner.chain_id.clone(),
+		upgrade_client_state_inner.chain_id,
 	);
 
 	let any = Any::decode(&mut upgrade_consensus_state.data.as_slice()).unwrap();
@@ -206,26 +206,25 @@ pub fn check_substitute_and_update_state<H: HostFunctionsProvider + 'static>(
 
 	let mut process_states = ProcessedStates::new(ctx.storage_mut());
 	let substitute_processed_time = process_states
-		.get_processed_time(height, &mut SUBSTITUTE_PREFIX.clone().to_vec())
+		.get_processed_time(height, &mut SUBSTITUTE_PREFIX.to_vec())
 		.unwrap();
 	let substitute_processed_height = process_states
-		.get_processed_height(height, &mut SUBSTITUTE_PREFIX.clone().to_vec())
+		.get_processed_height(height, &mut SUBSTITUTE_PREFIX.to_vec())
 		.unwrap();
 	let substitute_iteration_key = process_states
-		.get_iteration_key(height, &mut SUBSTITUTE_PREFIX.clone().to_vec())
+		.get_iteration_key(height, &mut SUBSTITUTE_PREFIX.to_vec())
 		.unwrap();
 	process_states.set_processed_time(
 		height,
 		substitute_processed_time,
-		&mut SUBJECT_PREFIX.clone().to_vec(),
+		&mut SUBJECT_PREFIX.to_vec(),
 	);
 	process_states.set_processed_height(
 		height,
 		substitute_processed_height,
-		&mut SUBJECT_PREFIX.clone().to_vec(),
+		&mut SUBJECT_PREFIX.to_vec(),
 	);
-	process_states
-		.set_iteration_key(substitute_iteration_key, &mut SUBJECT_PREFIX.clone().to_vec());
+	process_states.set_iteration_key(substitute_iteration_key, &mut SUBJECT_PREFIX.to_vec());
 
 	subject_client_state.latest_height = substitute_client_state.latest_height;
 	subject_client_state.chain_id = substitute_client_state.chain_id;
@@ -241,17 +240,15 @@ pub fn prune_oldest_consensus_state<H: HostFunctionsProvider + 'static>(
 	current_time: u64,
 ) {
 	let mut processed_states = ProcessedStates::new(ctx.storage_mut());
-	match processed_states.get_earliest_height(client_state.latest_height.clone()) {
-		Some(earliest_height) => {
-			let processed_time =
-				processed_states.get_processed_time(earliest_height, &mut Vec::new()).unwrap();
-			let elapsed = Duration::from_nanos(current_time - processed_time);
-			if client_state.expired(elapsed) {
-				processed_states.remove_states_at_height(earliest_height);
-				let mut consensus_states = ConsensusStates::new(ctx.storage_mut());
-				consensus_states.remove(earliest_height);
-			}
-		},
-		None => {},
+	if let Some(earliest_height) = processed_states.get_earliest_height(client_state.latest_height)
+	{
+		let processed_time =
+			processed_states.get_processed_time(earliest_height, &mut Vec::new()).unwrap();
+		let elapsed = Duration::from_nanos(current_time - processed_time);
+		if client_state.expired(elapsed) {
+			processed_states.remove_states_at_height(earliest_height);
+			let mut consensus_states = ConsensusStates::new(ctx.storage_mut());
+			consensus_states.remove(earliest_height);
+		}
 	}
 }
