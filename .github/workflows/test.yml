@@ -62,6 +62,7 @@ jobs:
           $HOME/.cargo/bin/rustup toolchain install nightly
           $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain nightly
           $HOME/.cargo/bin/rustup component add rustfmt --toolchain nightly
+          $HOME/.cargo/bin/rustup component add rustfmt
           $HOME/.cargo/bin/rustup default nightly
 
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
