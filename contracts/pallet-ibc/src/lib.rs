@@ -1007,7 +1007,7 @@ pub mod pallet {
 			}
 
 			Pallet::<T>::send_transfer(msg).map_err(|e| {
-				println!("[transfer]: error: {:?}", &e);
+				log::warn!(target: "pallet_ibc", "[transfer]: error: {:?}", &e);
 				use ibc_primitives::Error::*;
 				match e {
 					SendPacketError { .. } => Error::<T>::TransferSend,
