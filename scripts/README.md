@@ -17,7 +17,7 @@ In the same folder run `yarn dev`
 
 Clone `composable` to the parent directory of `centauri`. Build node binary: `scripts/build-composable.sh`
 
-In the same folder run `yarn picasso-composable.json`
+In the same folder run `yarn picasso.json` or `yarn composable.json`. It's also possible to launch the networks together.
 
 You can freely change the script and the JSON file to adjust the network configuration.
 
