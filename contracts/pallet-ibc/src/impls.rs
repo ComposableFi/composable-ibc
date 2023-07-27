@@ -549,9 +549,8 @@ where
 			}
 			// Try removing at most 1000 sequences in this cycle starting from the last sequence
 			// removed
-			let next_seq_send = ctx
-				.get_next_sequence_send(&(port_id.clone(), channel_id))
-				.map_err(|_| {
+			let next_seq_send =
+				ctx.get_next_sequence_send(&(port_id.clone(), channel_id)).map_err(|_| {
 					log::trace!(target: "pallet_ibc", "Failed to run packet clean up");
 					(Error::<T>::Other, removed_count)
 				})?;
@@ -602,9 +601,8 @@ where
 				}
 			}
 			// Try removing at most 1000 sequences in this cycle from the last sequence removed
-			let next_seq_recv = ctx
-				.get_next_sequence_recv(&(port_id.clone(), channel_id))
-				.map_err(|_| {
+			let next_seq_recv =
+				ctx.get_next_sequence_recv(&(port_id.clone(), channel_id)).map_err(|_| {
 					log::trace!(target: "pallet_ibc", "Failed to run packet clean up");
 					(Error::<T>::Other, removed_count)
 				})?;
@@ -667,8 +665,8 @@ where
 			.filter_map(|seq| {
 				let key = Pallet::<T>::recv_packet_key(channel_id.clone(), port_id.clone(), seq);
 				let ack_key = Pallet::<T>::ack_key(channel_id.clone(), port_id.clone(), seq);
-				let packet_info = RecvPackets::<T>::get(key)
-					.and_then(|v| PacketInfo::decode(&mut &*v).ok());
+				let packet_info =
+					RecvPackets::<T>::get(key).and_then(|v| PacketInfo::decode(&mut &*v).ok());
 				let ack = Acks::<T>::get(ack_key);
 				packet_info.map(|mut packet_info| {
 					packet_info.ack = ack;

@@ -455,7 +455,10 @@ pub async fn parse_events(
 					.await?;
 				let channel_end =
 					ChannelEnd::try_from(channel_response.channel.ok_or_else(|| {
-						Error::Custom("Failed to convert to concrete channel end from raw channel end".to_string())
+						Error::Custom(
+							"Failed to convert to concrete channel end from raw channel end"
+								.to_string(),
+						)
 					})?)?;
 				let connection_id = channel_end
 					.connection_hops
@@ -519,7 +522,10 @@ pub async fn parse_events(
 					.await?;
 				let channel_end =
 					ChannelEnd::try_from(channel_response.channel.ok_or_else(|| {
-						Error::Custom("Failed to convert to concrete channel end from raw channel end".to_string())
+						Error::Custom(
+							"Failed to convert to concrete channel end from raw channel end"
+								.to_string(),
+						)
 					})?)?;
 				let connection_id = channel_end
 					.connection_hops

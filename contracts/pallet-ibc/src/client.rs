@@ -109,7 +109,8 @@ where
 	) -> Result<Option<AnyConsensusState>, ICS02Error> {
 		let consensus_heights = ConsensusHeights::<T>::get(client_id.as_bytes().to_vec());
 		let cs_state = consensus_heights
-			.into_iter().find(|next_height| next_height > &height)
+			.into_iter()
+			.find(|next_height| next_height > &height)
 			.and_then(|next_height| self.consensus_state(client_id, next_height).ok());
 
 		Ok(cs_state)
@@ -367,10 +368,8 @@ where
 		{
 			let mut stored_heights = ConsensusHeights::<T>::get(client_id.as_bytes().to_vec());
 			if let Err(val) = stored_heights.try_insert(height) {
-				let first = *stored_heights
-					.iter()
-					.next()
-					.expect("Cannot fail as a value always exists");
+				let first =
+					*stored_heights.iter().next().expect("Cannot fail as a value always exists");
 				stored_heights.remove(&first);
 				stored_heights
 					.try_insert(val)

@@ -29,9 +29,7 @@ use hyperspace_testsuite::{
 	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
 	setup_connection_and_channel,
 };
-use ibc::{
-	core::{ics24_host::identifier::PortId},
-};
+use ibc::core::ics24_host::identifier::PortId;
 use sp_core::hashing::sha2_256;
 
 #[derive(Debug, Clone)]

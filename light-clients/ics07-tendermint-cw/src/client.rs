@@ -118,8 +118,7 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientReader for Context<'a, H> {
 	) -> Result<Option<ConsensusState>, Error> {
 		let processed_state = ReadonlyProcessedStates::new(self.storage());
 		match processed_state.get_next_height(height) {
-			Some(next_height) => self
-				.consensus_state(&client_id.clone(), next_height).map(Some),
+			Some(next_height) => self.consensus_state(&client_id.clone(), next_height).map(Some),
 			None => Ok(None),
 		}
 	}
@@ -131,8 +130,7 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientReader for Context<'a, H> {
 	) -> Result<Option<ConsensusState>, Error> {
 		let processed_state = ReadonlyProcessedStates::new(self.storage());
 		match processed_state.get_prev_height(height) {
-			Some(prev_height) => self
-				.consensus_state(&client_id.clone(), prev_height).map(Some),
+			Some(prev_height) => self.consensus_state(&client_id.clone(), prev_height).map(Some),
 			None => Ok(None),
 		}
 	}

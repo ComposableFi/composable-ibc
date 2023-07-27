@@ -162,16 +162,17 @@ where
 	fn try_from(raw: RawHeader) -> Result<Self, Self::Error> {
 		let any = Any::decode(&mut &raw.data[..])
 			.map_err(|e| format!("failed to decode raw header into Any: {e}"))?;
-		let inner = AnyClientMessage::try_from(any).map_err(|e| {
-			format!("failed to decode raw header into AnyClientMessage: {e}")
-		})?;
+		let inner = AnyClientMessage::try_from(any)
+			.map_err(|e| format!("failed to decode raw header into AnyClientMessage: {e}"))?;
 
 		let header = Self {
 			inner: Box::new(inner),
 			data: raw.data,
 			height: raw
 				.height
-				.ok_or_else(|| "failed to decode raw header into Header: missing height".to_string())?
+				.ok_or_else(|| {
+					"failed to decode raw header into Header: missing height".to_string()
+				})?
 				.into(),
 		};
 		Ok(header)

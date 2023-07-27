@@ -247,8 +247,7 @@ impl Cmd {
 		});
 
 		let order = Order::from_str(order).expect("Expected one of 'ordered' or 'unordered'");
-		let connection_id =
-			chain_a.connection_id().expect("Connection id should be defined");
+		let connection_id = chain_a.connection_id().expect("Connection id should be defined");
 		let (channel_id_a, channel_id_b) = create_channel(
 			&mut chain_a,
 			&mut chain_b,

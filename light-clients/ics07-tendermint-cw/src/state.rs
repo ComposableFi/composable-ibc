@@ -75,8 +75,8 @@ fn deserialize_consensus_state(consensus_state: Vec<u8>) -> Result<ConsensusStat
 			},
 		)?;
 	let any = Any::decode(&*wasm_consensus_state.data).map_err(Error::decode)?;
-	let consensus = ConsensusState::decode_vec(&any.value)
-		.map_err(Error::invalid_any_consensus_state)?;
+	let consensus =
+		ConsensusState::decode_vec(&any.value).map_err(Error::invalid_any_consensus_state)?;
 	Ok(consensus)
 }
 

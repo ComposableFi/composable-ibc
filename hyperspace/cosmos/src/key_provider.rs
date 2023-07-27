@@ -39,7 +39,7 @@ impl<H> KeyProvider for CosmosClient<H> {
 			bech32::encode(self.account_prefix.as_str(), account.to_base32(), Variant::Bech32)
 				.map_err(|e| Error::from(format!("Could not encode account id {e}")))
 				.unwrap();
-		
+
 		bech32
 			.parse()
 			.map_err(|e| Error::from(format!("Could not parse account id {e}")))
