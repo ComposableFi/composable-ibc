@@ -16,7 +16,7 @@ use ibc::{
 			Version,
 		},
 		ics24_host::identifier::{ChannelId, ConnectionId, PortId},
-		ics26_routing::context::{Module, ModuleCallbackContext, ModuleOutputBuilder},
+		ics26_routing::context::{Module as IbcModule, ModuleCallbackContext, ModuleOutputBuilder},
 	},
 	signer::Signer,
 };
@@ -168,12 +168,12 @@ impl<T: crate::Config> FlatFeeConverter for NonFlatFeeConverter<T> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Ics20ServiceCharge<T: Config, S: Module + Clone + Default + PartialEq + Eq + Debug> {
+pub struct Ics20ServiceCharge<T: Config, S: IbcModule + Clone + Default + PartialEq + Eq + Debug> {
 	inner: S,
 	_phantom: core::marker::PhantomData<T>,
 }
 
-impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Default
+impl<T: Config + Send + Sync, S: IbcModule + Clone + Default + PartialEq + Eq + Debug> Default
 	for Ics20ServiceCharge<T, S>
 {
 	fn default() -> Self {
@@ -181,7 +181,7 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 	}
 }
 
-impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Module
+impl<T: Config + Send + Sync, S: IbcModule + Clone + Default + PartialEq + Eq + Debug> IbcModule
 	for Ics20ServiceCharge<T, S>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
@@ -328,7 +328,7 @@ where
 	}
 }
 
-impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug>
+impl<T: Config + Send + Sync, S: IbcModule + Clone + Default + PartialEq + Eq + Debug>
 	Ics20ServiceCharge<T, S>
 where
 	<T as crate::Config>::AccountIdConversion: From<IbcAccount<T::AccountId>>,
