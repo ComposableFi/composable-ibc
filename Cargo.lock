@@ -4573,6 +4573,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-stream",
+ "vec1",
 ]
 
 [[package]]
@@ -4614,6 +4615,7 @@ dependencies = [
  "hyperspace-primitives",
  "ibc",
  "ibc-proto",
+ "ics08-wasm",
  "ics10-grandpa",
  "light-client-common",
  "log",
@@ -4634,6 +4636,7 @@ dependencies = [
  "tendermint-proto",
  "tokio",
  "toml 0.7.6",
+ "vec1",
 ]
 
 [[package]]
@@ -4909,6 +4912,7 @@ dependencies = [
  "tendermint",
  "tendermint-proto",
  "tokio",
+ "vec1",
 ]
 
 [[package]]
@@ -4925,7 +4929,9 @@ dependencies = [
  "digest 0.10.7",
  "ed25519-zebra",
  "finality-grandpa",
+ "frame-support",
  "grandpa-light-client-primitives",
+ "hash-db 0.15.2",
  "hex",
  "hyperspace-primitives",
  "ibc",
@@ -4948,6 +4954,8 @@ dependencies = [
  "sp-runtime 7.0.0",
  "sp-runtime-interface 7.0.0",
  "sp-std 5.0.0",
+ "sp-trie 7.0.0",
+ "tendermint",
  "tendermint-proto",
  "thiserror",
  "twox-hash",
@@ -6226,6 +6234,7 @@ dependencies = [
  "async-trait",
  "derive_more",
  "hash-db 0.15.2",
+ "hex",
  "ibc",
  "ibc-proto",
  "parity-scale-codec",
@@ -7654,6 +7663,7 @@ dependencies = [
  "tendermint",
  "tendermint-light-client-verifier",
  "tendermint-proto",
+ "vec1",
 ]
 
 [[package]]
@@ -15451,6 +15461,12 @@ name = "vcpkg"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
+
+[[package]]
+name = "vec1"
+version = "1.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bda7c41ca331fe9a1c278a9e7ee055f4be7f5eb1c2b72f079b4ff8b5fce9d5c"
 
 [[package]]
 name = "version_check"

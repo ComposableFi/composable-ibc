@@ -32,7 +32,10 @@ use ibc::{
 		ics02_client::{
 			client_state::ClientType,
 			events::{CodeId, UpdateClient},
-			msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient},
+			msgs::{
+				create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient,
+				upgrade_client::MsgUpgradeAnyClient,
+			},
 		},
 		ics03_connection::msgs::{
 			conn_open_ack::MsgConnectionOpenAck, conn_open_try::MsgConnectionOpenTry,
@@ -107,6 +110,7 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error
 		ics02_client::msgs::{
 			create_client::TYPE_URL as CREATE_CLIENT_TYPE_URL,
 			update_client::TYPE_URL as UPDATE_CLIENT_TYPE_URL,
+			upgrade_client::TYPE_URL as UPGRADE_CLIENT_TYPE_URL,
 		},
 		ics03_connection::msgs::{
 			conn_open_ack::TYPE_URL as CONN_OPEN_ACK_TYPE_URL,
@@ -138,6 +142,14 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error
 			msg_decoded.client_message = AnyClientMessage::wasm(msg_decoded.client_message)?;
 
 			msg_decoded.to_any()
+		},
+		UPGRADE_CLIENT_TYPE_URL => {
+			let mut msg_decoded =
+				MsgUpgradeAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+			msg_decoded.client_state = AnyClientState::wasm(msg_decoded.client_state, code_id)?;
+			msg_decoded.consensus_state = AnyConsensusState::wasm(msg_decoded.consensus_state)?;
+			let any = msg_decoded.to_any();
+			any
 		},
 		_ => msg,
 	};

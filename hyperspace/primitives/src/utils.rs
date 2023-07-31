@@ -18,7 +18,9 @@ use crate::{mock::LocalClientTypes, Chain};
 use futures::{future, StreamExt};
 use ibc::{
 	core::{
-		ics02_client::msgs::create_client::MsgCreateAnyClient,
+		ics02_client::msgs::{
+			create_client::MsgCreateAnyClient, upgrade_client::MsgUpgradeAnyClient,
+		},
 		ics03_connection::{connection::Counterparty, msgs::conn_open_init::MsgConnectionOpenInit},
 		ics04_channel,
 		ics04_channel::{
@@ -198,4 +200,25 @@ pub async fn create_channel(
 	};
 
 	Ok((channel_id_a, channel_id_b))
+}
+
+pub async fn upgrade_client(
+	chain_a: &mut impl Chain,
+	chain_b: &mut impl Chain,
+) -> Result<(), anyhow::Error> {
+	let (client_state, consensus_state, proof_upgrade_client, proof_upgrade_consensus_state) =
+		chain_b.query_upgrade_proposal(chain_a).await?;
+	let client_id = chain_b.client_id();
+	log::info!(target: "hyperspace", "Upgrading client {client_id}");
+	let upgrade_msg = MsgUpgradeAnyClient::<LocalClientTypes> {
+		client_id,
+		client_state,
+		consensus_state,
+		proof_upgrade_client,
+		proof_upgrade_consensus_state,
+		signer: chain_a.account_id(),
+	};
+	let any = upgrade_msg.to_any();
+	chain_a.submit(vec![any]).await?;
+	Ok(())
 }

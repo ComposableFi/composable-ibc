@@ -32,6 +32,7 @@ prost-build = "0.11.1"
 # ibc deps
 ibc = { path = "../../ibc/modules", default-features = false }
 ibc-proto = { path = "../../ibc/proto", default-features = false }
+hex = { version = "0.4.3", default-features = false }
 
 # local deps
 grandpa-client = { package = "grandpa-light-client-verifier", path = "../../algorithms/grandpa/verifier",  default-features = false }
@@ -45,6 +46,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 anyhow = { version = "1.0.65", default-features = false }
 derive_more = { version = "0.99.17", default-features = false, features = ["from"] }
 serde = { version = "1.0.144", default-features = false, features = ["derive"] }
+vec1 = { version = "1.10.1", default-features = false }
 
 # substrate deps
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }

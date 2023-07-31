@@ -18,6 +18,7 @@ use core::str::FromStr;
 use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::{
+		ics02_client::events::CodeId,
 		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
 		ics24_host::Path,
 	},
@@ -33,6 +34,7 @@ use ics10_grandpa::{
 	client_message::{ClientMessage, Header, Misbehaviour},
 	client_state::ClientState,
 	consensus_state::ConsensusState,
+	proto::ClientState as RawClientState,
 };
 use prost::Message;
 use serde::{Deserializer, Serializer};
@@ -367,14 +369,17 @@ pub struct VerifyUpgradeAndUpdateStateMsg<H> {
 	pub upgrade_consensus_state: ConsensusState,
 	pub proof_upgrade_client: Vec<u8>,
 	pub proof_upgrade_consensus_state: Vec<u8>,
+	pub code_id: CodeId,
 }
 
 impl<H: Clone> TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUpdateStateMsg<H> {
 	type Error = ContractError;
 
 	fn try_from(raw: VerifyUpgradeAndUpdateStateMsgRaw) -> Result<Self, Self::Error> {
+		let code_id = raw.upgrade_client_state.code_id.clone();
 		let any = Any::decode(&mut raw.upgrade_client_state.data.as_slice())?;
-		let upgrade_client_state = ClientState::decode_vec(&any.value)?;
+		let upgrade_client_state =
+			<ClientState<H> as Protobuf<RawClientState>>::decode_vec(&any.value)?;
 		let any = Any::decode(&mut raw.upgrade_consensus_state.data.as_slice())?;
 		let upgrade_consensus_state = ConsensusState::decode_vec(&any.value)?;
 		Ok(VerifyUpgradeAndUpdateStateMsg {
@@ -382,6 +387,7 @@ impl<H: Clone> TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUp
 			upgrade_consensus_state,
 			proof_upgrade_client: raw.proof_upgrade_client,
 			proof_upgrade_consensus_state: raw.proof_upgrade_consensus_state,
+			code_id,
 		})
 	}
 }

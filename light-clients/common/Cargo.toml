@@ -25,6 +25,7 @@ serde = { version = "1.0.144", default-features = false, features = ["derive"] }
 derive_more = { version = "0.99.17", default-features = false, features = ["from"] }
 hash-db = { version = "0.15.2", default-features = false }
 async-trait = { version = "0.1.53", default-features = false }
+hex = { version = "0.4.3", default-features = false }
 
 # substrate
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }

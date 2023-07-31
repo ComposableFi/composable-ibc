@@ -22,7 +22,10 @@ use grandpa_light_client_primitives::ParachainHeaderProofs;
 use ibc::{
 	applications::transfer::{Amount, PrefixedCoin, PrefixedDenom},
 	core::{
-		ics02_client::client_state::{ClientState, ClientType},
+		ics02_client::{
+			client_consensus::ConsensusState,
+			client_state::{ClientState, ClientType},
+		},
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
@@ -45,8 +48,12 @@ use ibc_proto::{
 	},
 };
 use ibc_rpc::{IbcApiClient, PacketInfo};
+use ics10_grandpa::client_def::{CLIENT_STATE_UPGRADE_PATH, CONSENSUS_STATE_UPGRADE_PATH};
 use ics11_beefy::client_state::ClientState as BeefyClientState;
-use light_client_common::config::{AsInnerEvent, IbcEventsT, RuntimeStorage};
+use light_client_common::{
+	config::{AsInnerEvent, IbcEventsT, RuntimeStorage},
+	state_machine::read_proof_check,
+};
 use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
 	HostConsensusProof,
@@ -54,9 +61,10 @@ use pallet_ibc::{
 use primitives::{apply_prefix, Chain, IbcProvider, KeyProvider, UpdateType};
 use sp_core::H256;
 use sp_runtime::{
-	traits::{IdentifyAccount, One, Verify},
+	traits::{BlakeTwo256, IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
+use sp_trie::StorageProof;
 use std::{
 	collections::{BTreeMap, HashSet},
 	fmt::Display,
@@ -67,6 +75,7 @@ use std::{
 use subxt::config::{
 	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT, Header,
 };
+use tendermint_proto::Protobuf;
 use tokio_stream::wrappers::ReceiverStream;
 
 #[derive(Debug)]
@@ -807,5 +816,138 @@ where
 
 	async fn upload_wasm(&self, _wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
 		Err(Error::Custom("Uploading WASM to parachain is not supported".to_string()))
+	}
+
+	async fn query_upgrade_proposal<C: Chain>(
+		&self,
+		counterparty: &C,
+	) -> Result<(AnyClientState, AnyConsensusState, Vec<u8>, Vec<u8>), Self::Error> {
+		let client_id = self.client_id();
+		let latest_cp_height = counterparty
+			.latest_height_and_timestamp()
+			.await
+			.map_err(|e| Error::Custom(e.to_string()))
+			.unwrap()
+			.0;
+		let latest_cp_client_state = counterparty
+			.query_client_state(latest_cp_height, client_id.clone())
+			.await
+			.map_err(|e| Error::Custom(e.to_string()))
+			.unwrap();
+		let client_state_response = latest_cp_client_state
+			.client_state
+			.ok_or_else(|| Error::Custom("counterparty returned empty client state".to_string()))?;
+		let client_state = AnyClientState::try_from(client_state_response)
+			.map_err(|e| Error::Custom(format!("failed to decode client state response {e}")))?;
+
+		let latest_cp_consensus_state = counterparty
+			.query_client_consensus(
+				latest_cp_height,
+				client_id.clone(),
+				client_state.latest_height(),
+			)
+			.await
+			.map_err(|e| Error::Custom(e.to_string()))
+			.unwrap();
+		let consensus_state_response =
+			latest_cp_consensus_state.consensus_state.ok_or_else(|| {
+				Error::Custom("counterparty returned empty consensus state".to_string())
+			})?;
+		let consensus_state =
+			AnyConsensusState::try_from(consensus_state_response).map_err(|e| {
+				Error::Custom(format!("failed to decode client consensus response {e}"))
+			})?;
+
+		let latest_cp_client_height = client_state.latest_height().revision_height;
+
+		log::info!(target: "hyperspace", "Using height {latest_cp_client_height} for client state upgrade");
+
+		let hash = self
+			.para_client
+			.rpc()
+			.block_hash(Some(dbg!(latest_cp_client_height).into()))
+			.await
+			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?
+			.ok_or_else(|| Error::Custom("No block hash found".to_string()))?;
+		let mut vec = self
+			.para_client
+			.rpc()
+			.query_storage([CLIENT_STATE_UPGRADE_PATH], hash, None)
+			.await?;
+		let client_state = vec.remove(0).changes.remove(0).1.unwrap().0;
+		let any_client_state = AnyClientState::decode_vec(&client_state)
+			.map_err(|e| Error::from(format!("Decode Error {:?}", e)))
+			.unwrap();
+		let mut vec = self
+			.para_client
+			.rpc()
+			.query_storage([CONSENSUS_STATE_UPGRADE_PATH], hash, None)
+			.await?;
+		let consensus_state_raw = vec.remove(0).changes.remove(0).1.unwrap().0;
+		let any_consensus_state = AnyConsensusState::decode_vec(&consensus_state_raw)
+			.map_err(|e| Error::from(format!("Decode Error 2 {:?}", e)))
+			.unwrap();
+		let root = H256::from_slice(consensus_state.root().as_bytes());
+
+		let client_proof = self
+			.para_client
+			.rpc()
+			.read_proof([CLIENT_STATE_UPGRADE_PATH], Some(hash))
+			.await
+			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
+		let expected_header: sp_runtime::generic::Header<u32, BlakeTwo256> = Decode::decode(
+			&mut &*self.para_client.rpc().header(Some(hash)).await.unwrap().unwrap().encode(),
+		)
+		.unwrap();
+		let client_state_proof = client_proof.proof.into_iter().map(|x| x.0).collect::<Vec<_>>();
+		let mut map = read_proof_check::<BlakeTwo256, _>(
+			&root,
+			StorageProof::new(client_state_proof.clone()),
+			&[CLIENT_STATE_UPGRADE_PATH],
+		)
+		.unwrap();
+		let option = map.remove(CLIENT_STATE_UPGRADE_PATH).flatten();
+		let value = option.unwrap();
+		let encoded = any_client_state.encode_vec().unwrap();
+
+		if value != encoded {
+			return Err(Error::Custom(
+				"Invalid proof for client state upgrade: values are not equal".to_string(),
+			))
+		}
+
+		let expected_root = expected_header.state_root;
+		assert_eq!(expected_root, root);
+
+		let consensus_proof = self
+			.para_client
+			.rpc()
+			.read_proof([CONSENSUS_STATE_UPGRADE_PATH], Some(hash))
+			.await
+			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
+
+		let proof = consensus_proof.proof.into_iter().map(|x| x.0).collect::<Vec<_>>();
+		let mut map = read_proof_check::<BlakeTwo256, _>(
+			&root,
+			StorageProof::new(proof.clone()),
+			&[CONSENSUS_STATE_UPGRADE_PATH],
+		)
+		.unwrap();
+		let option = map.remove(CONSENSUS_STATE_UPGRADE_PATH).flatten();
+		let value = option.unwrap();
+		let encoded = any_consensus_state.encode_vec().unwrap();
+
+		if value != encoded {
+			return Err(Error::Custom(
+				"Invalid proof for consensus state upgrade: values are not equal".to_string(),
+			))
+		}
+
+		Ok((
+			any_client_state,
+			any_consensus_state,
+			Encode::encode(&client_state_proof),
+			Encode::encode(&proof),
+		))
 	}
 }

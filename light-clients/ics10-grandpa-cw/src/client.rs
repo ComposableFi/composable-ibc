@@ -30,6 +30,7 @@ use ibc::{
 			client_state::ClientType,
 			context::{ClientKeeper, ClientReader, ClientTypes},
 			error::Error,
+			events::CodeId,
 		},
 		ics24_host::identifier::ClientId,
 	},
@@ -43,6 +44,7 @@ use ics10_grandpa::{
 	client_message::{ClientMessage, RelayChainHeader},
 	client_state::ClientState,
 	consensus_state::ConsensusState,
+	proto::ClientState as RawClientState,
 };
 use prost::Message;
 use std::str::FromStr;
@@ -197,7 +199,7 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientKeeper for Context<'
 		log!(self, "in client : [store_client_state]");
 		let client_states = ReadonlyClientStates::new(self.storage());
 		let data = client_states.get().ok_or_else(|| Error::client_not_found(client_id.clone()))?;
-		let vec1 = Self::encode_client_state(client_state, data)?;
+		let vec1 = Self::encode_client_state(client_state, data, self.code_id.clone())?;
 		log!(self, "in cliden : [store_client_state] >> wasm client state (raw)");
 		let mut client_state_storage = ClientStates::new(self.storage_mut());
 		client_state_storage.insert(vec1);
@@ -268,8 +270,8 @@ impl<'a, H: Clone> Context<'a, H> {
 				))
 			})?;
 		let any = Any::decode(&*wasm_state.data).map_err(Error::decode)?;
-		let state =
-			ClientState::<H>::decode_vec(&any.value).map_err(Error::invalid_any_client_state)?;
+		let state = <ClientState<H> as Protobuf<RawClientState>>::decode_vec(&any.value)
+			.map_err(Error::invalid_any_client_state)?;
 		Ok(state)
 	}
 
@@ -287,6 +289,7 @@ impl<'a, H: Clone> Context<'a, H> {
 	pub fn encode_client_state(
 		client_state: ClientState<H>,
 		encoded_wasm_client_state: Vec<u8>,
+		code_id: Option<CodeId>,
 	) -> Result<Vec<u8>, Error> {
 		let any = Any::decode(&*encoded_wasm_client_state).map_err(Error::decode)?;
 		let mut wasm_client_state =
@@ -300,6 +303,9 @@ impl<'a, H: Clone> Context<'a, H> {
 			})?;
 		wasm_client_state.data = client_state.to_any().encode_to_vec();
 		wasm_client_state.latest_height = client_state.latest_height();
+		if let Some(code_id) = code_id {
+			wasm_client_state.code_id = code_id;
+		}
 		let vec1 = wasm_client_state.to_any().encode_to_vec();
 		Ok(vec1)
 	}

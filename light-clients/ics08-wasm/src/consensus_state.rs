@@ -64,7 +64,7 @@ where
 	type Error = Infallible;
 
 	fn root(&self) -> &CommitmentRoot {
-		unimplemented!()
+		self.inner.root()
 	}
 
 	fn timestamp(&self) -> Timestamp {

@@ -21,7 +21,7 @@ use clap::Parser;
 use ibc::core::{ics04_channel::channel::Order, ics24_host::identifier::PortId};
 use metrics::{data::Metrics, handler::MetricsHandler, init_prometheus};
 use primitives::{
-	utils::{create_channel, create_clients, create_connection},
+	utils::{create_channel, create_clients, create_connection, upgrade_client},
 	Chain, IbcProvider,
 };
 use prometheus::Registry;
@@ -264,6 +264,15 @@ impl Cmd {
 		config.chain_a.set_channel_whitelist(channel_id_a, port_id.clone());
 		config.chain_b.set_channel_whitelist(channel_id_b, port_id);
 
+		Ok(config)
+	}
+
+	pub async fn upgrade_client(&self) -> Result<Config> {
+		let config = self.parse_config().await?;
+		let mut chain_a = config.chain_a.clone().into_client().await?;
+		let mut chain_b = config.chain_b.clone().into_client().await?;
+
+		upgrade_client(&mut chain_a, &mut chain_b).await?;
 		Ok(config)
 	}
 
