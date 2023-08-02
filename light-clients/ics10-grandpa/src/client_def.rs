@@ -467,10 +467,13 @@ where
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
 		use prost::Message;
 
-		let height = Height::new(
-			old_client_state.para_id as u64,
-			old_client_state.latest_para_height as u64,
-		);
+		let height = old_client_state.latest_height();
+
+		if upgrade_client_state.latest_height() <= height {
+			return Err(Ics02Error::implementation_specific(format!(
+				"Upgrade client state height must be greater than current client state height: {} <= {height}", upgrade_client_state.latest_height()
+			)))
+		}
 
 		let consenus_state = ctx.consensus_state(&client_id, height)?
 			.downcast::<Self::ConsensusState>()
@@ -542,19 +545,19 @@ where
 			}
 		}
 
-		let mixed_upgrade_client_state = ClientState {
+		let mixed_upgrade_client_state = ClientState::<H> {
 			relay_chain: old_client_state.relay_chain,
-			latest_relay_height: old_client_state.latest_relay_height,
-			latest_relay_hash: Default::default(),
+			latest_relay_height: upgrade_client_state.latest_relay_height,
+			latest_relay_hash: upgrade_client_state.latest_relay_hash,
 			frozen_height: None,
-			latest_para_height: 0,
-			para_id: 0,
-			authorities_changes: Default::default(),
+			latest_para_height: upgrade_client_state.latest_para_height,
+			para_id: upgrade_client_state.para_id,
+			authorities_changes: upgrade_client_state.authorities_changes.clone(),
 			_phantom: Default::default(),
 		};
 
 		Ok((
-			upgrade_client_state.clone(),
+			mixed_upgrade_client_state,
 			ConsensusUpdateResult::Single(
 				Ctx::AnyConsensusState::wrap(upgrade_consensus_state)
 					.expect("AnyConsensusState is type-checked; qed"),
