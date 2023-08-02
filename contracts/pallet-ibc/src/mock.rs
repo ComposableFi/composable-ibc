@@ -439,8 +439,8 @@ frame_support::construct_runtime!(
 	}
 );
 
-impl Default for Test {
+impl<H: Default, T> Default for XcvmMemoHandler<H, T> {
 	fn default() -> Self {
-		todo!();
+		Self { inner: H::default(), _phantom: PhantomData }
 	}
 }
