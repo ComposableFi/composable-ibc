@@ -693,6 +693,7 @@ impl Forward {
 	}
 }
 
+#[derive(Default)]
 pub struct XcvmMemoHandler<H, T> {
 	pub inner: H,
 	pub _phantom: PhantomData<T>,
@@ -713,6 +714,7 @@ where
 	}
 }
 
+#[derive(Default)]
 pub struct IbcMemoHandler<H, T> {
 	pub inner: H,
 	pub _phantom: PhantomData<T>,
