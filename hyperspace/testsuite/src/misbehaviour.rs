@@ -126,7 +126,7 @@ where
 	let precommit = Precommit { target_hash: header_hash, target_number: header.number };
 	let message = finality_grandpa::Message::Precommit(precommit.clone());
 
-	let (update_client_msg, _, _) = chain_b
+	let (update_client_msg, _, _, _) = chain_b
 		.query_latest_ibc_events(finality_event, chain_a)
 		.await
 		.expect("no event")

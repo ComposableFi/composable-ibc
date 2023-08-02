@@ -26,7 +26,7 @@ impl<'a> Clients<'a> {
 	}
 
 	pub fn key(_client_id: ClientId) -> Vec<u8> {
-		let client_type_path = format!("clientType");
+		let client_type_path = "clientType".to_string();
 		client_type_path.into_bytes()
 	}
 

@@ -61,7 +61,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 
 	// Create client configurations
 	let config_a = ParachainClientConfig {
-		name: format!("9988"),
+		name: "9988".to_string(),
 		para_id: args.para_id_a,
 		parachain_rpc_url: args.chain_a,
 		relay_chain_rpc_url: args.relay_chain.clone(),
@@ -76,7 +76,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 		wasm_code_id: None,
 	};
 	let config_b = ParachainClientConfig {
-		name: format!("9188"),
+		name: "9188".to_string(),
 		para_id: args.para_id_b,
 		parachain_rpc_url: args.chain_b,
 		relay_chain_rpc_url: args.relay_chain,
@@ -131,7 +131,6 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 
 #[tokio::test]
 async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
-	use std::time::SystemTime;
 	logging::setup_logging();
 	use hyperspace_testsuite::setup_connection_and_channel;
 	use ibc::core::ics24_host::identifier::PortId;
@@ -162,6 +161,7 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 			&mut c1, &mut c2, asset_id, asset_id, channel_a, channel_b,
 		)
 		.await;
+		log::info!(target: "hyperspace", "🚀🚀 finished connection delay");
 	});
 
 	// timeouts + connection delay
@@ -172,13 +172,16 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 			&mut c1, &mut c2, asset_id, channel_a, channel_b,
 		)
 		.await;
+		log::info!(target: "hyperspace", "🚀🚀 finished packet height timeout");
+
 		ibc_messaging_packet_timestamp_timeout_with_connection_delay(
 			&mut c1, &mut c2, asset_id, channel_a, channel_b,
 		)
 		.await;
+		log::info!(target: "hyperspace", "🚀🚀 finished packet timestamp timeout");
 	});
 
-	log::info!(target: "hyperspace", "🚀🚀 Waiting for the 3 features.");
+	log::info!(target: "hyperspace", "🚀🚀 Waiting for connection delay and timeout checks to finish");
 	while let Some(res) = join_set.join_next().await {
 		res.unwrap();
 	}
@@ -189,12 +192,14 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 	let mut c2 = chain_b.clone();
 	join_set.spawn(async move {
 		ibc_messaging_packet_timeout_on_channel_close(&mut c1, &mut c2, asset_id, channel_a).await;
+		log::info!(target: "hyperspace", "🚀🚀 finished packet timeout on channel close");
 	});
 	join_set.spawn(async move {
 		ibc_channel_close(&mut chain_aa, &mut chain_bb).await;
+		log::info!(target: "hyperspace", "🚀🚀 finished channel close");
 	});
 
-	log::info!(target: "hyperspace", "🚀🚀 Waiting for the 2 features.");
+	log::info!(target: "hyperspace", "🚀🚀 Waiting for channel close semantics to finish");
 	while let Some(res) = join_set.join_next().await {
 		res.unwrap();
 	}
@@ -204,4 +209,5 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 
 	// misbehaviour
 	ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
+	log::info!(target: "hyperspace", "🚀🚀 Waiting for misbehaviour to be submitted");
 }

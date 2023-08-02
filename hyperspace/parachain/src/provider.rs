@@ -87,9 +87,16 @@ where
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	<<T as subxt::Config>::Header as Header>::Number:
-		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
-	<T as subxt::Config>::Header: Decode + Send + Sync,
+	<<T as subxt::Config>::Header as Header>::Number: BlockNumberOps
+		+ From<u32>
+		+ Display
+		+ Ord
+		+ sp_runtime::traits::Zero
+		+ One
+		+ Send
+		+ Sync
+		+ Clone,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
@@ -109,7 +116,7 @@ where
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &C,
-	) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+	) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		C: Chain,
 	{
@@ -414,15 +421,6 @@ where
 		Ok(res)
 	}
 
-	async fn on_undelivered_sequences(&self, is_empty: bool) -> Result<(), Self::Error> {
-		*self.maybe_has_undelivered_packets.lock().unwrap() = !is_empty;
-		Ok(())
-	}
-
-	fn has_undelivered_sequences(&self) -> bool {
-		*self.maybe_has_undelivered_packets.lock().unwrap()
-	}
-
 	async fn query_unreceived_acknowledgements(
 		&self,
 		at: Height,
@@ -486,12 +484,10 @@ where
 			.await
 			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
 
-		self.on_undelivered_sequences(response.is_empty()).await?;
-
 		Ok(response)
 	}
 
-	async fn query_recv_packets(
+	async fn query_received_packets(
 		&self,
 		channel_id: ChannelId,
 		port_id: PortId,

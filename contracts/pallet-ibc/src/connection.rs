@@ -40,7 +40,7 @@ where
 		let mut temp = frame_system::BlockHash::<T>::iter().collect::<Vec<_>>();
 		temp.sort_by(|(a, ..), (b, ..)| a.cmp(b));
 		let (block_number, ..) = temp.get(0).cloned().unwrap_or_default();
-		let block_number = format!("{:?}", block_number);
+		let block_number = format!("{block_number:?}");
 		let height = block_number.parse().unwrap_or_default();
 		let para_id: u32 = parachain_info::Pallet::<T>::parachain_id().into();
 		log::trace!(target: "pallet_ibc",

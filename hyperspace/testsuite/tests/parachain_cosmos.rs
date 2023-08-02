@@ -19,9 +19,9 @@ use hyperspace_core::{
 	logging,
 	substrate::DefaultConfig,
 };
-use hyperspace_cosmos::client::{ConfigKeyEntry, CosmosClient, CosmosClientConfig};
+use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_parachain::{finality_protocol::FinalityProtocol, ParachainClientConfig};
-use hyperspace_primitives::{utils::create_clients, IbcProvider};
+use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
 	ibc_messaging_packet_timeout_on_channel_close,
@@ -74,7 +74,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 
 	// Create client configurations
 	let config_a = ParachainClientConfig {
-		name: format!("parachain"),
+		name: "parachain".to_string(),
 		para_id: args.para_id,
 		parachain_rpc_url: args.chain_a,
 		relay_chain_rpc_url: args.relay_chain.clone(),
@@ -108,6 +108,10 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 				.to_string(),
 		wasm_code_id: None,
 		channel_whitelist: vec![],
+		common: CommonClientConfig {
+			skip_optional_client_updates: true,
+			max_packets_to_process: 200,
+		},
 	};
 
 	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.unwrap();
@@ -116,9 +120,9 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
 		Ok(code_id) => code_id,
 		Err(e) => {
-			let e_str = format!("{:?}", e);
+			let e_str = format!("{e:?}");
 			if !e_str.contains("wasm code already exists") {
-				panic!("Failed to upload wasm: {}", e_str);
+				panic!("Failed to upload wasm: {e_str}");
 			}
 			sha2_256(&wasm_data).to_vec()
 		},

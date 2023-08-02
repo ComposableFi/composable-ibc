@@ -1,4 +1,9 @@
-use crate::{self as pallet_ibc, ics20_fee::FlatFeeConverter, routing::ModuleRouter};
+use crate::{
+	self as pallet_ibc,
+	ics20::{IbcModule, SubstrateMultihopXcmHandlerNone},
+	ics20_fee::FlatFeeConverter,
+	routing::ModuleRouter,
+};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::ConstU32,
@@ -25,7 +30,10 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 	MultiSignature, Perbill,
 };
-use std::sync::Arc;
+use std::{
+	sync::Arc,
+	time::{SystemTime, UNIX_EPOCH},
+};
 use system::EnsureRoot;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -228,8 +236,8 @@ impl Config for Test {
 	type IbcAccountId = Self::AccountId;
 	type TransferOrigin = EnsureSigned<Self::IbcAccountId>;
 	type RelayerOrigin = EnsureSigned<Self::AccountId>;
-	type HandleMemo = ();
-	type MemoMessage = MemoMessage;
+	type HandleMemo = IbcModule<Test>;
+	type MemoMessage = alloc::string::String;
 	type IsReceiveEnabled = sp_core::ConstBool<true>;
 	type IsSendEnabled = sp_core::ConstBool<true>;
 	type Ics20RateLimiter = Everything;
@@ -239,7 +247,9 @@ impl Config for Test {
 	type FlatFeeConverter = FlatFeeConverterDummy<Test>;
 	type FlatFeeAssetId = FlatFeeAssetId;
 	type FlatFeeAmount = FlatFeeAmount;
+	type SubstrateMultihopXcmHandler = SubstrateMultihopXcmHandlerNone<Test>;
 }
+
 #[derive(Debug, Clone)]
 pub struct FlatFeeConverterDummy<T: Config>(PhantomData<T>);
 impl<T: Config> FlatFeeConverter for FlatFeeConverterDummy<T> {
@@ -300,6 +310,13 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
 	register_offchain_ext(&mut ext);
 	ext.register_extension(KeystoreExt(Arc::new(KeyStore::new())));
+
+	ext.execute_with(|| {
+		Timestamp::set_timestamp(
+			SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64
+		);
+	});
+
 	ext
 }
 
@@ -308,7 +325,7 @@ where
 	T::AssetId: From<u128>,
 {
 	type Error = ();
-	fn from_denom_to_asset_id(denom: &String) -> Result<T::AssetId, Self::Error> {
+	fn from_denom_to_asset_id(denom: &str) -> Result<T::AssetId, Self::Error> {
 		let mut id = 2u128;
 		if denom == "PICA" || denom == "1" {
 			id = 1;
@@ -318,15 +335,15 @@ where
 		}
 		if <<Test as Config>::Fungibles as InspectMetadata<AccountId>>::decimals(&id) == 0 {
 			<<Test as Config>::Fungibles as Create<AccountId>>::create(
-				id.into(),
+				id,
 				AccountId::new([0; 32]),
 				true,
-				1000u128.into(),
+				1000u128,
 			)
 			.unwrap();
 
 			<<Test as Config>::Fungibles as Mutate<AccountId>>::set(
-				id.into(),
+				id,
 				&AccountId::new([0; 32]),
 				vec![0; 32],
 				vec![0; 32],

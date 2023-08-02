@@ -2,7 +2,6 @@ use crate::{ics20::HandleMemo, Config};
 use alloc::format;
 use core::fmt::Debug;
 use ibc::{
-	applications::transfer::packet::PacketData,
 	core::{
 		ics04_channel::{
 			channel::{Counterparty, Order},
@@ -16,7 +15,6 @@ use ibc::{
 	},
 	signer::Signer,
 };
-use sp_runtime::traits::IdentifyAccount;
 
 /// This middleware should be used to wrap ics20 to execute memo
 /// We chose to use this as a middleware so that we can easily choose
@@ -24,12 +22,15 @@ use sp_runtime::traits::IdentifyAccount;
 /// For example ics20 fees are meant to be collected before memo is executed, so
 /// this allows an ics20 fee middleware to be executed before the memo is executed
 /// USAGE:
+/// ```rust
+/// # #[cfg(any())] // This is just to make the doc test compile
 /// pub struct Router {
-/// 	ics20: crate::ics20::memo::Memo<
-/// 		Runtime,
-/// 		crate::ics20_fee::Ics20ServiceCharge<Runtime, crate::ics20::IbcModule<Runtime>>,
-/// 	>,
+///     ics20: crate::ics20::memo::Memo<
+///         Runtime,
+///         crate::ics20_fee::Ics20ServiceCharge<Runtime, crate::ics20::IbcModule<Runtime>>,
+///     >,
 /// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Memo<T: Config, S: Module + Clone + Default + PartialEq + Eq + Debug> {
 	inner: S,
@@ -186,16 +187,7 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 
 impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Memo<T, S> {
 	fn process_memo(packet: &mut Packet) -> Result<(), Error> {
-		let packet_data: PacketData =
-			serde_json::from_slice(packet.data.as_slice()).map_err(|e| {
-				Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
-			})?;
-		let receiver = <T as Config>::AccountIdConversion::try_from(packet_data.receiver.clone())
-			.map_err(|_| {
-				Error::implementation_specific(format!("Failed to parse receiver account"))
-			})?
-			.into_account();
-		<T as Config>::HandleMemo::execute_memo(&packet_data, receiver).map_err(|e| {
+		<T as Config>::HandleMemo::execute_memo(packet).map_err(|e| {
 			Error::implementation_specific(format!("Failed to execute memo {:?}", e))
 		})?;
 		Ok(())

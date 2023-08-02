@@ -64,27 +64,23 @@ where
 			for item in port_and_channel_id {
 				let port_id = String::from_utf8(item.0).map_err(|e| {
 					ICS04Error::implementation_specific(format!(
-						"[connection_channels]: error decoding port_id: {}",
-						e
+						"[connection_channels]: error decoding port_id: {e}"
 					))
 				})?;
 				let port_id = PortId::from_str(port_id.as_str()).map_err(|e| {
 					ICS04Error::implementation_specific(format!(
-						"[connection_channels]: invalid port id string: {}",
-						e
+						"[connection_channels]: invalid port id string: {e}"
 					))
 				})?;
 
 				let channel_id = String::from_utf8(item.1).map_err(|e| {
 					ICS04Error::implementation_specific(format!(
-						"[connection_channels]: error decoding channel_id: {}",
-						e
+						"[connection_channels]: error decoding channel_id: {e}"
 					))
 				})?;
 				let channel_id = ChannelId::from_str(channel_id.as_str()).map_err(|e| {
 					ICS04Error::implementation_specific(format!(
-						"[connection_channels]: error decoding channel_id: {}",
-						e
+						"[connection_channels]: error decoding channel_id: {e}"
 					))
 				})?;
 
@@ -160,8 +156,7 @@ where
 				.ok_or_else(|| ICS04Error::packet_receipt_not_found(key.2))?;
 			let data = String::from_utf8(data).map_err(|e| {
 				ICS04Error::implementation_specific(format!(
-					"[get_packet_receipt]: error decoding packet receipt: {}",
-					e
+					"[get_packet_receipt]: error decoding packet receipt: {e}"
 				))
 			})?;
 			let data = match data.as_ref() {
@@ -211,18 +206,16 @@ where
 			.map_err(|e| ICS04Error::ics02_client(ICS02Error::encode(e)))?;
 		let client_id_bytes = client_id.as_bytes().to_vec();
 		let timestamp =
-			ClientUpdateTime::<T>::get(&client_id_bytes, &encoded_height).ok_or_else(|| {
+			ClientUpdateTime::<T>::get(client_id_bytes, encoded_height).ok_or_else(|| {
 				ICS04Error::implementation_specific(format!(
-					"[client_update_time]:  client update timestamp not found for {} at height: {}",
-					client_id, height
+					"[client_update_time]:  client update timestamp not found for {client_id} at height: {height}"
 				))
 			})?;
 
 		log::trace!(target: "pallet_ibc", "in channel: [client_update_time] >> height = {:?}, timestamp = {:?}", height,  timestamp);
 		Timestamp::from_nanoseconds(timestamp).map_err(|e| {
 			ICS04Error::implementation_specific(format!(
-				"[client_update_time]:  error decoding timestamp from nano seconds: {}",
-				e
+				"[client_update_time]:  error decoding timestamp from nano seconds: {e}"
 			))
 		})
 	}
@@ -236,19 +229,17 @@ where
 			.encode_vec()
 			.map_err(|e| ICS04Error::ics02_client(ICS02Error::encode(e)))?;
 		let client_id_bytes = client_id.as_bytes().to_vec();
-		let host_height = ClientUpdateHeight::<T>::get(&client_id_bytes, &encoded_height)
+		let host_height = ClientUpdateHeight::<T>::get(client_id_bytes, encoded_height)
 			.ok_or_else(|| {
 				ICS04Error::implementation_specific(format!(
-					"[client_update_time]:  client update height not found for {} at height: {}",
-					client_id, height
+					"[client_update_time]:  client update height not found for {client_id} at height: {height}"
 				))
 			})?;
 
 		log::trace!(target: "pallet_ibc", "in channel: [client_update_height] >> height = {:?}, host height {:?}", height,  host_height);
 		Height::decode_vec(&host_height).map_err(|e| {
 			ICS04Error::implementation_specific(format!(
-				"[client_update_height]: error decoding height: {}",
-				e
+				"[client_update_height]: error decoding height: {e}"
 			))
 		})
 	}

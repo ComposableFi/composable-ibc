@@ -27,7 +27,7 @@ use prost::Message;
 /// Retrieves raw bytes from storage and deserializes them into [`ClientState`]
 pub fn get_client_state<H: Clone>(deps: Deps) -> Result<ClientState<H>, Error> {
 	deps.storage
-		.get(&format!("clientState").into_bytes())
+		.get(&"clientState".to_string().into_bytes())
 		.ok_or_else(|| Error::unknown_client_state_type("08-wasm-0".to_string()))
 		.and_then(deserialize_client_state)
 }
@@ -40,13 +40,12 @@ fn deserialize_client_state<H: Clone>(client_state: Vec<u8>) -> Result<ClientSta
 		)
 		.map_err(|e| {
 			Error::implementation_specific(format!(
-				"[client_state]: error decoding client state bytes to WasmClientState {}",
-				e
+				"[client_state]: error decoding client state bytes to WasmClientState {e}"
 			))
 		})?;
-	let any = Any::decode(&*wasm_state.data).map_err(|e| Error::decode(e))?;
+	let any = Any::decode(&*wasm_state.data).map_err(Error::decode)?;
 	let state =
-		ClientState::<H>::decode_vec(&*any.value).map_err(Error::invalid_any_client_state)?;
+		ClientState::<H>::decode_vec(&any.value).map_err(Error::invalid_any_client_state)?;
 	Ok(state)
 }
 
@@ -61,5 +60,5 @@ pub fn get_consensus_state(
 }
 
 pub fn get_consensus_state_key(height: Height) -> Vec<u8> {
-	[format!("consensusStates/").into_bytes(), format!("{}", height).into_bytes()].concat()
+	["consensusStates/".to_string().into_bytes(), format!("{height}").into_bytes()].concat()
 }

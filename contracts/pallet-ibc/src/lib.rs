@@ -148,6 +148,7 @@ pub mod pallet {
 	use frame_support::{
 		dispatch::DispatchResult,
 		pallet_prelude::*,
+		storage::child,
 		traits::{
 			fungibles::{Inspect, Mutate, Transfer},
 			tokens::{AssetId, Balance},
@@ -156,7 +157,7 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	pub use ibc::signer::Signer;
-	use sp_core::crypto::ByteArray;
+	use sp_core::{crypto::ByteArray, storage::ChildInfo};
 
 	#[cfg(feature = "testing")]
 	use crate::ics23::{
@@ -164,7 +165,8 @@ pub mod pallet {
 		next_seq_send::NextSequenceSend,
 	};
 	use crate::{
-		ics20::HandleMemo,
+		ics20::{HandleMemo, SubstrateMultihopXcmHandler},
+		light_clients::AnyConsensusState,
 		routing::{Context, ModuleRouter},
 	};
 	use ibc::{
@@ -176,7 +178,7 @@ pub mod pallet {
 		core::{
 			ics02_client::context::{ClientKeeper, ClientReader},
 			ics04_channel::context::ChannelReader,
-			ics24_host::identifier::{ChannelId, PortId},
+			ics24_host::identifier::{ChannelId, ClientId, PortId},
 		},
 		timestamp::Timestamp,
 		Height,
@@ -190,6 +192,7 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	use sp_runtime::{Deserialize, Serialize};
 	use sp_std::collections::btree_set::BTreeSet;
+	use tendermint_proto::Protobuf;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -272,7 +275,11 @@ pub mod pallet {
 			+ Debug
 			+ scale_info::TypeInfo
 			+ Clone
-			+ Eq;
+			+ Eq
+			+ TryFrom<crate::ics20::MemoData>
+			+ TryInto<crate::ics20::MemoData>;
+
+		type SubstrateMultihopXcmHandler: SubstrateMultihopXcmHandler<AccountId = Self::AccountId>;
 
 		type IsSendEnabled: Get<bool>;
 		type IsReceiveEnabled: Get<bool>;
@@ -595,6 +602,50 @@ pub mod pallet {
 		ChargingFeeFailedAcknowledgement {
 			sequence: u64,
 		},
+		ChildStateUpdated,
+		ClientStateSubstituted {
+			client_id: String,
+			height: Height,
+		},
+		ExecuteMemoStarted {
+			account_id: T::AccountId,
+			memo: Option<String>,
+		},
+		ExecuteMemoIbcTokenTransferSuccess {
+			from: T::AccountId,
+			to: Vec<u8>,
+			asset_id: T::AssetId,
+			amount: T::Balance,
+			channel: u64,
+			next_memo: Option<T::MemoMessage>,
+		},
+		ExecuteMemoIbcTokenTransferFailedWithReason {
+			from: T::AccountId,
+			memo: String,
+			reason: u8,
+		},
+		ExecuteMemoIbcTokenTransferFailed {
+			from: T::AccountId,
+			to: Vec<u8>,
+			asset_id: T::AssetId,
+			amount: T::Balance,
+			channel: u64,
+			next_memo: Option<T::MemoMessage>,
+		},
+		ExecuteMemoXcmSuccess {
+			from: T::AccountId,
+			to: T::AccountId,
+			amount: u128,
+			asset_id: T::AssetId,
+			para_id: Option<u32>,
+		},
+		ExecuteMemoXcmFailed {
+			from: T::AccountId,
+			to: T::AccountId,
+			amount: u128,
+			asset_id: T::AssetId,
+			para_id: Option<u32>,
+		},
 	}
 
 	/// Errors inform users that something went wrong.
@@ -724,7 +775,7 @@ pub mod pallet {
 			let mut reserve_count = 0u128;
 			let messages = messages
 				.into_iter()
-				.filter_map(|message| {
+				.map(|message| {
 					if matches!(
 						message.type_url.as_str(),
 						create_client::TYPE_URL |
@@ -734,18 +785,18 @@ pub mod pallet {
 						reserve_count += 1;
 					}
 
-					Some(Ok(ibc_proto::google::protobuf::Any {
+					ibc_proto::google::protobuf::Any {
 						type_url: message.type_url,
 						value: message.value,
-					}))
+					}
 				})
-				.collect::<Result<Vec<ibc_proto::google::protobuf::Any>, Error<T>>>()?;
+				.collect::<Vec<_>>();
 			let reserve_amt = T::SpamProtectionDeposit::get().saturating_mul(reserve_count.into());
 
 			if reserve_amt >= T::SpamProtectionDeposit::get() {
 				<T::NativeCurrency as ReservableCurrency<
 					<T as frame_system::Config>::AccountId,
-				>>::reserve(&sender, reserve_amt.into())?;
+				>>::reserve(&sender, reserve_amt)?;
 			}
 			Self::execute_ibc_messages(&mut ctx, messages);
 
@@ -762,10 +813,9 @@ pub mod pallet {
 			amount: T::Balance,
 			memo: Option<T::MemoMessage>,
 		) -> DispatchResult {
-			let origin = T::TransferOrigin::ensure_origin(origin)?.into();
+			let account_id_32 = T::TransferOrigin::ensure_origin(origin)?.into();
 			let denom = T::IbcDenomToAssetIdConversion::from_asset_id_to_denom(asset_id)
-				.ok_or_else(|| Error::<T>::InvalidAssetId)?;
-			let account_id_32: AccountId32 = origin.into();
+				.ok_or(Error::<T>::InvalidAssetId)?;
 			let from = {
 				let mut hex_string = hex::encode(account_id_32.to_raw_vec());
 				hex_string.insert_str(0, "0x");
@@ -786,19 +836,24 @@ pub mod pallet {
 			};
 			let denom =
 				PrefixedDenom::from_str(&denom).map_err(|_| Error::<T>::PrefixedDenomParse)?;
-			let ibc_amount = Amount::from_str(&format!("{:?}", amount))
-				.map_err(|_| Error::<T>::InvalidAmount)?;
+			let ibc_amount =
+				Amount::from_str(&format!("{amount:?}")).map_err(|_| Error::<T>::InvalidAmount)?;
 			let mut coin = PrefixedCoin { denom, amount: ibc_amount };
 			let source_channel = ChannelId::new(params.source_channel);
 			let source_port = PortId::transfer();
-			let (latest_height, latest_timestamp) =
+			let (latest_height, _) =
 				Pallet::<T>::latest_height_and_timestamp(&source_port, &source_channel)
 					.map_err(|_| Error::<T>::TimestampAndHeightNotFound)?;
 
 			let (timeout_height, timeout_timestamp) = match params.timeout {
 				Timeout::Offset { timestamp, height } => {
+					let latest_timestamp = T::TimeProvider::now();
 					let timestamp = timestamp
-						.map(|offset| (latest_timestamp + Duration::from_secs(offset)))
+						.map(|offset| {
+							Timestamp::from_nanoseconds(
+								(latest_timestamp + Duration::from_secs(offset)).as_nanos() as u64,
+							)
+						})
 						.transpose()
 						.map_err(|_| Error::<T>::InvalidTimestamp)?
 						.unwrap_or_default();
@@ -829,10 +884,8 @@ pub mod pallet {
 				.channel_end(&(PortId::transfer(), source_channel))
 				.map_err(|_| Error::<T>::ChannelNotFound)?;
 
-			let destination_channel = channel_end
-				.counterparty()
-				.channel_id
-				.ok_or_else(|| Error::<T>::ChannelNotFound)?;
+			let destination_channel =
+				channel_end.counterparty().channel_id.ok_or(Error::<T>::ChannelNotFound)?;
 
 			let is_feeless_channel_ids = FeeLessChannelIds::<T>::contains_key((
 				source_channel.sequence(),
@@ -857,17 +910,16 @@ pub mod pallet {
 						let fee_asset_id = T::FlatFeeAssetId::get();
 						let fee_asset_amount = T::FlatFeeAmount::get();
 						is_flat_fee = true;
-						let flat_fee =
-							T::FlatFeeConverter::get_flat_fee(a, fee_asset_id, fee_asset_amount)
-								.unwrap_or_else(|| {
-									// We have ensured that token amounts larger than the max value
-									// for a u128 are rejected in the ics20 on_recv_packet callback
-									// so we can multiply safely. Percent does Non-Overflowing
-									// multiplication so this is infallible
-									is_flat_fee = false;
-									percent * amt
-								});
-						flat_fee
+
+						T::FlatFeeConverter::get_flat_fee(a, fee_asset_id, fee_asset_amount)
+							.unwrap_or_else(|| {
+								// We have ensured that token amounts larger than the max value
+								// for a u128 are rejected in the ics20 on_recv_packet callback
+								// so we can multiply safely. Percent does Non-Overflowing
+								// multiplication so this is infallible
+								is_flat_fee = false;
+								percent * amt
+							})
 					},
 					Err(_) => percent * amt,
 				};
@@ -889,7 +941,7 @@ pub mod pallet {
 				coin.amount = (coin.amount.as_u256() - U256::from(fee)).into();
 				//found sequence that will used in Pallet::<T>::send_transfer function.
 				let sequence = ctx
-					.get_next_sequence_send(&(source_port.clone(), source_channel.clone()))
+					.get_next_sequence_send(&(source_port.clone(), source_channel))
 					.map_err(|_| Error::<T>::ChannelNotFound)?;
 				//use this sequence as a key in storage map where sequence is key and fee is value
 				let sequence: u64 = sequence.into();
@@ -915,7 +967,7 @@ pub mod pallet {
 
 			let msg = MsgTransfer {
 				source_port,
-				source_channel: source_channel.clone(),
+				source_channel,
 				token: coin.clone(),
 				sender: Signer::from_str(&from).map_err(|_| Error::<T>::Utf8Error)?,
 				receiver: Signer::from_str(&to).map_err(|_| Error::<T>::Utf8Error)?,
@@ -951,7 +1003,7 @@ pub mod pallet {
 			}
 
 			Pallet::<T>::send_transfer(msg).map_err(|e| {
-				log::debug!(target: "pallet_ibc", "[transfer]: error: {:?}", &e);
+				log::warn!(target: "pallet_ibc", "[transfer]: error: {:?}", &e);
 				use ibc_primitives::Error::*;
 				match e {
 					SendPacketError { .. } => Error::<T>::TransferSend,
@@ -1007,7 +1059,7 @@ pub mod pallet {
 			sp_io::storage::set(CLIENT_STATE_UPGRADE_PATH, &params.client_state);
 			sp_io::storage::set(CONSENSUS_STATE_UPGRADE_PATH, &params.consensus_state);
 
-			Self::deposit_event(Event::<T>::ClientUpgradeSet.into());
+			Self::deposit_event(Event::<T>::ClientUpgradeSet);
 
 			Ok(())
 		}
@@ -1059,7 +1111,7 @@ pub mod pallet {
 					AnyClientState::wrap(&ms)
 				},
 			}
-			.ok_or_else(|| Error::<T>::ClientFreezeFailed)?;
+			.ok_or(Error::<T>::ClientFreezeFailed)?;
 			let revision_number = frozen_state.latest_height().revision_number;
 			ctx.store_client_state(client_id.clone(), frozen_state)
 				.map_err(|_| Error::<T>::ClientFreezeFailed)?;
@@ -1082,7 +1134,7 @@ pub mod pallet {
 			ensure_root(origin)?;
 			#[cfg(not(feature = "testing"))]
 			{
-				return Err(Error::<T>::AccessDenied.into())
+				Err(Error::<T>::AccessDenied.into())
 			}
 			#[cfg(feature = "testing")]
 			{
@@ -1150,6 +1202,59 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		#[pallet::call_index(8)]
+		#[pallet::weight(0)]
+		#[frame_support::transactional]
+		pub fn set_child_storage(
+			origin: OriginFor<T>,
+			key: Vec<u8>,
+			value: Vec<u8>,
+		) -> DispatchResult {
+			<T as Config>::AdminOrigin::ensure_origin(origin)?;
+
+			let concat_key = [T::PalletPrefix::get(), &key].concat();
+			child::put(&ChildInfo::new_default(T::PalletPrefix::get()), &concat_key, &value);
+			Self::deposit_event(Event::<T>::ChildStateUpdated);
+
+			Ok(())
+		}
+
+		#[pallet::call_index(9)]
+		#[pallet::weight(0)]
+		#[frame_support::transactional]
+		pub fn substitute_client_state(
+			origin: OriginFor<T>,
+			client_id: String,
+			height: Height,
+			client_state_bytes: Vec<u8>,
+			consensus_state_bytes: Vec<u8>,
+		) -> DispatchResult {
+			<T as Config>::AdminOrigin::ensure_origin(origin)?;
+
+			let client_id = ClientId::from_str(&client_id).map_err(|_| Error::<T>::Other)?;
+			let client_state = AnyClientState::decode_vec(&client_state_bytes[..])
+				.map_err(|_| Error::<T>::Other)?;
+			let consensus_state = AnyConsensusState::decode_vec(&consensus_state_bytes[..])
+				.map_err(|_| Error::<T>::Other)?;
+
+			let mut ctx = Context::<T>::new();
+			ctx.store_client_state(client_id.clone(), client_state)
+				.map_err(|_| Error::<T>::Other)?;
+			ctx.store_consensus_state(client_id.clone(), height, consensus_state)
+				.map_err(|_| Error::<T>::Other)?;
+			ctx.store_update_time(client_id.clone(), height, ctx.host_timestamp())
+				.map_err(|_| Error::<T>::Other)?;
+			ctx.store_update_height(client_id.clone(), height, ctx.host_height())
+				.map_err(|_| Error::<T>::Other)?;
+
+			Self::deposit_event(Event::<T>::ClientStateSubstituted {
+				client_id: client_id.to_string(),
+				height,
+			});
+
+			Ok(())
+		}
 	}
 }
 
@@ -1170,7 +1275,7 @@ pub trait DenomToAssetId<T: Config> {
 	/// **Note**
 	/// This function should create and register an asset with a valid metadata
 	/// if an asset does not exist for this denom
-	fn from_denom_to_asset_id(denom: &String) -> Result<T::AssetId, Self::Error>;
+	fn from_denom_to_asset_id(denom: &str) -> Result<T::AssetId, Self::Error>;
 
 	/// Return full denom for given asset id
 	fn from_asset_id_to_denom(id: T::AssetId) -> Option<String>;
