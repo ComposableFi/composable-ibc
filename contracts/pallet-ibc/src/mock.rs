@@ -438,9 +438,3 @@ frame_support::construct_runtime!(
 		Membership: pallet_membership::<Instance2>,
 	}
 );
-
-impl<H: Default, T> Default for XcvmMemoHandler<H, T> {
-	fn default() -> Self {
-		Self { inner: H::default(), _phantom: PhantomData }
-	}
-}

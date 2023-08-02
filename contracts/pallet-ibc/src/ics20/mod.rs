@@ -693,7 +693,12 @@ impl Forward {
 	}
 }
 
-#[derive(Default)]
+impl<H: Default, T> Default for IbcMemoHandler<H, T> {
+	fn default() -> Self {
+		Self { inner: H::default(), _phantom: PhantomData }
+	}
+}
+
 pub struct IbcMemoHandler<H, T> {
 	pub inner: H,
 	pub _phantom: PhantomData<T>,
