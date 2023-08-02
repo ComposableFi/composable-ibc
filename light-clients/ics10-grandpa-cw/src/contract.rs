@@ -18,11 +18,10 @@ use crate::{
 	error::ContractError,
 	log,
 	msg::{
-		CheckForMisbehaviourMsg, CheckSubstituteAndUpdateStateMsg, ClientStateCallResponse,
-		ContractResult, ExecuteMsg, ExportMetadataMsg, InitializeState, InstantiateMsg, QueryMsg,
-		QueryResponse, StatusMsg, UpdateStateMsg, UpdateStateOnMisbehaviourMsg,
-		VerifyClientMessage, VerifyMembershipMsg, VerifyNonMembershipMsg,
-		VerifyUpgradeAndUpdateStateMsg,
+		CheckForMisbehaviourMsg, CheckSubstituteAndUpdateStateMsg, ContractResult, ExecuteMsg,
+		ExportMetadataMsg, InstantiateMsg, QueryMsg, QueryResponse, StatusMsg, UpdateStateMsg,
+		UpdateStateOnMisbehaviourMsg, VerifyClientMessage, VerifyMembershipMsg,
+		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
 	},
 	state::{get_client_state, get_consensus_state},
 	Bytes,
@@ -318,17 +317,6 @@ fn process_message(
 					store_client_and_consensus_states(ctx, client_id.clone(), cs, cu)
 				})
 		},
-		ExecuteMsg::InitializeState(InitializeState { client_state, consensus_state }) => {
-			let state_call_response = ClientStateCallResponse {
-				new_consensus_state: consensus_state,
-				new_client_state: client_state.clone(),
-				client_state,
-				result: ContractResult::success(),
-			};
-			let response = to_binary(&state_call_response);
-			Ok(response)
-		},
-		ExecuteMsg::ClientCreateRequest(_) => Ok(to_binary(&ContractResult::success())),
 	};
 	Ok(result??)
 }
