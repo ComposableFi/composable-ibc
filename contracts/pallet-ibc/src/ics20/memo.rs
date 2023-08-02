@@ -209,7 +209,7 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 
 impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Memo<T, S> {
 	fn process_memo(packet: &mut Packet) -> Result<(), Error> {
-		<T as Config>::HandleMemo::execute_memo(packet).map_err(|e| {
+		<T as Config>::HandleMemo::default().execute_memo(packet).map_err(|e| {
 			Error::implementation_specific(format!("Failed to execute memo {:?}", e))
 		})?;
 		Ok(())

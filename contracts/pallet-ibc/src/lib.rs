@@ -267,7 +267,7 @@ pub mod pallet {
 		type RelayerOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = Self::AccountId>;
 		type Ics20RateLimiter: Ics20RateLimiter;
 		/// Handle Ics20 Memo
-		type HandleMemo: HandleMemo<Self>;
+		type HandleMemo: HandleMemo<Self> + Default;
 		/// Memo Message types supported by the runtime
 		type MemoMessage: codec::Codec
 			+ FromStr
