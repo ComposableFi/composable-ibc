@@ -542,6 +542,17 @@ where
 			}
 		}
 
+		let mixed_upgrade_client_state = ClientState {
+			relay_chain: old_client_state.relay_chain,
+			latest_relay_height: old_client_state.latest_relay_height,
+			latest_relay_hash: Default::default(),
+			frozen_height: None,
+			latest_para_height: 0,
+			para_id: 0,
+			authorities_changes: Default::default(),
+			_phantom: Default::default(),
+		};
+
 		Ok((
 			upgrade_client_state.clone(),
 			ConsensusUpdateResult::Single(
