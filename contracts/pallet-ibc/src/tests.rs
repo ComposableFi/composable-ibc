@@ -54,7 +54,10 @@ use sp_runtime::{
 	traits::{Bounded, IdentifyAccount},
 	AccountId32,
 };
-use std::str::FromStr;
+use std::{
+	str::FromStr,
+	time::{SystemTime, UNIX_EPOCH},
+};
 use tendermint_proto::Protobuf;
 
 fn setup_client_and_consensus_state(port_id: PortId) {
@@ -381,6 +384,7 @@ fn on_deliver_ics20_recv_packet() {
 		};
 
 		let data = serde_json::to_vec(&packet_data).unwrap();
+		let time_now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
 		let packet = Packet {
 			sequence: 1u64.into(),
 			source_port: PortId::transfer(),
@@ -390,7 +394,7 @@ fn on_deliver_ics20_recv_packet() {
 			data,
 			timeout_height: Height::new(2000, 5),
 			timeout_timestamp: ibc::timestamp::Timestamp::from_nanoseconds(
-				1690894363u64.saturating_mul(1000000000),
+				time_now as u64 + 10000000,
 			)
 			.unwrap(),
 		};
@@ -480,6 +484,8 @@ fn on_deliver_ics20_recv_packet_incorrect_memo() {
 			memo: incorrect_memo.clone(),
 		};
 
+		let time_now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+
 		let data = serde_json::to_vec(&packet_data).unwrap();
 		let packet = Packet {
 			sequence: 1u64.into(),
@@ -490,7 +496,7 @@ fn on_deliver_ics20_recv_packet_incorrect_memo() {
 			data,
 			timeout_height: Height::new(2000, 5),
 			timeout_timestamp: ibc::timestamp::Timestamp::from_nanoseconds(
-				1690894363u64.saturating_mul(1000000000),
+				time_now as u64 + 10000000,
 			)
 			.unwrap(),
 		};
@@ -615,6 +621,7 @@ fn on_deliver_ics20_recv_packet_with_flat_fee() {
 			memo: "".to_string(),
 		};
 
+		let time_now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
 		let data = serde_json::to_vec(&packet_data).unwrap();
 		let packet = Packet {
 			sequence: 1u64.into(),
@@ -625,7 +632,7 @@ fn on_deliver_ics20_recv_packet_with_flat_fee() {
 			data,
 			timeout_height: Height::new(2000, 5),
 			timeout_timestamp: ibc::timestamp::Timestamp::from_nanoseconds(
-				1690894363u64.saturating_mul(1000000000),
+				time_now as u64 + 10000000,
 			)
 			.unwrap(),
 		};
@@ -722,6 +729,7 @@ fn on_deliver_ics20_recv_packet_transfered_amount_less_then_flat_fee() {
 			memo: "".to_string(),
 		};
 
+		let time_now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
 		let data = serde_json::to_vec(&packet_data).unwrap();
 		let packet = Packet {
 			sequence: 1u64.into(),
@@ -732,7 +740,7 @@ fn on_deliver_ics20_recv_packet_transfered_amount_less_then_flat_fee() {
 			data,
 			timeout_height: Height::new(2000, 5),
 			timeout_timestamp: ibc::timestamp::Timestamp::from_nanoseconds(
-				1690894363u64.saturating_mul(1000000000),
+				time_now as u64 + 10000000,
 			)
 			.unwrap(),
 		};
@@ -820,6 +828,7 @@ fn on_deliver_ics20_recv_packet_should_not_double_spend() {
 			memo: "".to_string(),
 		};
 
+		let time_now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
 		let data = serde_json::to_vec(&packet_data).unwrap();
 		let packet = Packet {
 			sequence: 1u64.into(),
@@ -830,7 +839,7 @@ fn on_deliver_ics20_recv_packet_should_not_double_spend() {
 			data,
 			timeout_height: Height::new(2000, 5),
 			timeout_timestamp: ibc::timestamp::Timestamp::from_nanoseconds(
-				1690894363u64.saturating_mul(1000000000),
+				time_now as u64 + 10000000,
 			)
 			.unwrap(),
 		};

@@ -160,12 +160,12 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 		relayer: &Signer,
 	) -> Result<Acknowledgement, Error> {
 		let ack = self.inner.on_recv_packet(ctx, output, packet, relayer)?;
-
 		let ics20_ack = Ics20Acknowledgement::from_str(&String::from_utf8_lossy(ack.as_ref()))
 			.map_err(|_| Error::invalid_acknowledgement())?;
 
 		// we need to ensure that the previous hasn't failed. We do this, by ensuring that the ACK
 		// does not contain an error
+
 		if !ics20_ack.is_successful() {
 			return Ok(ack)
 		}
