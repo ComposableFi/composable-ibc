@@ -694,27 +694,6 @@ impl Forward {
 }
 
 #[derive(Default)]
-pub struct XcvmMemoHandler<H, T> {
-	pub inner: H,
-	pub _phantom: PhantomData<T>,
-}
-
-impl<T, H: HandleMemo<T>> HandleMemo<T> for XcvmMemoHandler<H, T>
-where
-	T: Config + Send + Sync + pallet_timestamp::Config,
-	u32: From<<T as frame_system::Config>::BlockNumber>,
-	AccountId32: From<<T as frame_system::Config>::AccountId>,
-	u128: From<T::AssetId>,
-{
-	fn execute_memo(&self, packet: &Packet) -> Result<(), Ics20Error> {
-		self.inner.execute_memo(packet)?;
-
-		// TODO: handle XCVM
-		Ok(())
-	}
-}
-
-#[derive(Default)]
 pub struct IbcMemoHandler<H, T> {
 	pub inner: H,
 	pub _phantom: PhantomData<T>,

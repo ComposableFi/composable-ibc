@@ -1,7 +1,5 @@
 use crate::{
-	self as pallet_ibc,
-	ics20::{IbcModule, SubstrateMultihopXcmHandlerNone},
-	ics20_fee::FlatFeeConverter,
+	self as pallet_ibc, ics20::SubstrateMultihopXcmHandlerNone, ics20_fee::FlatFeeConverter,
 	routing::ModuleRouter,
 };
 use cumulus_primitives_core::ParaId;
@@ -47,7 +45,7 @@ pub type Balance = u128;
 pub type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
 use super::*;
 use crate::{
-	ics20::{IbcMemoHandler, XcvmMemoHandler},
+	ics20::IbcMemoHandler,
 	light_clients::{AnyClientMessage, AnyConsensusState},
 };
 use ibc::mock::{client_state::MockConsensusState, header::MockClientMessage, host::MockHostBlock};
@@ -239,7 +237,7 @@ impl Config for Test {
 	type IbcAccountId = Self::AccountId;
 	type TransferOrigin = EnsureSigned<Self::IbcAccountId>;
 	type RelayerOrigin = EnsureSigned<Self::AccountId>;
-	type HandleMemo = IbcMemoHandler<XcvmMemoHandler<(), Test>, Test>;
+	type HandleMemo = IbcMemoHandler<(), Test>;
 	type MemoMessage = alloc::string::String;
 	type IsReceiveEnabled = sp_core::ConstBool<true>;
 	type IsSendEnabled = sp_core::ConstBool<true>;
@@ -440,3 +438,9 @@ frame_support::construct_runtime!(
 		Membership: pallet_membership::<Instance2>,
 	}
 );
+
+impl Default for Test {
+	fn default() -> Self {
+		todo!();
+	}
+}
