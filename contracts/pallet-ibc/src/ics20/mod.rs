@@ -560,11 +560,11 @@ pub fn full_ibc_denom(packet: &Packet, mut token: PrefixedCoin) -> String {
 use ibc::applications::transfer::error::Error as Ics20Error;
 
 pub trait HandleMemo<T: Config> {
-	fn execute_memo(packet: &Packet) -> Result<(), Ics20Error>;
+	fn execute_memo(&self, packet: &Packet) -> Result<(), Ics20Error>;
 }
 
 impl<T: Config> HandleMemo<T> for () {
-	fn execute_memo(_packet: &Packet) -> Result<(), Ics20Error> {
+	fn execute_memo(&self, _packet: &Packet) -> Result<(), Ics20Error> {
 		Ok(())
 	}
 }
@@ -693,15 +693,28 @@ impl Forward {
 	}
 }
 
+impl<H: Default, T> Default for IbcMemoHandler<H, T> {
+	fn default() -> Self {
+		Self { inner: H::default(), _phantom: PhantomData }
+	}
+}
+
+pub struct IbcMemoHandler<H, T> {
+	pub inner: H,
+	pub _phantom: PhantomData<T>,
+}
+
 use codec::Decode;
-impl<T> HandleMemo<T> for IbcModule<T>
+impl<T, H: HandleMemo<T>> HandleMemo<T> for IbcMemoHandler<H, T>
 where
 	T: Config + Send + Sync + pallet_timestamp::Config,
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 	u128: From<T::AssetId>,
 {
-	fn execute_memo(packet: &Packet) -> Result<(), Ics20Error> {
+	fn execute_memo(&self, packet: &Packet) -> Result<(), Ics20Error> {
+		self.inner.execute_memo(packet)?;
+
 		let packet_data: PacketData =
 			serde_json::from_slice(packet.data.as_slice()).map_err(|e| {
 				Ics20Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
@@ -723,7 +736,11 @@ where
 		});
 
 		let memo: MemoData = serde_json::from_str(&packet_data.memo).map_err(|_| {
-			Self::emit_memo_execution_failed_event(receiver.clone(), packet_data.memo.clone(), 0);
+			IbcModule::<T>::emit_memo_execution_failed_event(
+				receiver.clone(),
+				packet_data.memo.clone(),
+				0,
+			);
 			Ics20Error::implementation_specific(format!(
 				"Failed to parse memo : {:?} ",
 				packet_data.memo
@@ -754,14 +771,18 @@ where
 			)
 			.map_err(|_| {
 				log::warn!(target: "pallet_ibc", "Asset does not exist for denom: {}", prefixed_coin.denom.to_string());
-				Self::emit_memo_execution_failed_event(receiver.clone(), packet_data.memo.clone(), 1);
+				IbcModule::<T>::emit_memo_execution_failed_event(receiver.clone(), packet_data.memo.clone(), 1);
 				Ics20Error::implementation_specific("asset does not exist".to_string())
 			})?;
 
 		let amount = packet_data.token.amount.as_u256().low_u128();
 
 		let memo_forward = memo.forward.get_memo().map_err(|_| {
-			Self::emit_memo_execution_failed_event(receiver.clone(), packet_data.memo.clone(), 2);
+			IbcModule::<T>::emit_memo_execution_failed_event(
+				receiver.clone(),
+				packet_data.memo.clone(),
+				2,
+			);
 			Ics20Error::implementation_specific("Failed to get memo".to_string())
 		})?;
 
@@ -769,7 +790,7 @@ where
 			MemoType::IBC(memo_forward) => memo_forward,
 			MemoType::XCM(memo_forward) => {
 				let s = memo_forward.receiver.strip_prefix("0x").ok_or_else(|| {
-					Self::emit_memo_execution_failed_event(
+					IbcModule::<T>::emit_memo_execution_failed_event(
 						receiver.clone(),
 						packet_data.memo.clone(),
 						11,
@@ -778,7 +799,7 @@ where
 				})?;
 
 				let decoded_accout = hex::decode(s).map_err(|_| {
-					Self::emit_memo_execution_failed_event(
+					IbcModule::<T>::emit_memo_execution_failed_event(
 						receiver.clone(),
 						packet_data.memo.clone(),
 						12,
@@ -787,7 +808,7 @@ where
 				})?;
 
 				let account_to = T::AccountId::decode(&mut &*decoded_accout).map_err(|_| {
-					Self::emit_memo_execution_failed_event(
+					IbcModule::<T>::emit_memo_execution_failed_event(
 						receiver.clone(),
 						packet_data.memo.clone(),
 						13,
@@ -838,7 +859,7 @@ where
 			.split('-')
 			.last()
 			.ok_or_else(|| {
-				Self::emit_memo_execution_failed_event(
+				IbcModule::<T>::emit_memo_execution_failed_event(
 					receiver.clone(),
 					packet_data.memo.clone(),
 					3,
@@ -850,7 +871,7 @@ where
 			})?
 			.parse()
 			.map_err(|_| {
-				Self::emit_memo_execution_failed_event(
+				IbcModule::<T>::emit_memo_execution_failed_event(
 					receiver.clone(),
 					packet_data.memo.clone(),
 					4,
@@ -867,7 +888,7 @@ where
 		let mut next_memo: Option<T::MemoMessage> = None;
 		if let Some(memo) = memo.forward.next {
 			let memo_result = <T as crate::Config>::MemoMessage::try_from(*memo).map_err(|_| {
-				Self::emit_memo_execution_failed_event(
+				IbcModule::<T>::emit_memo_execution_failed_event(
 					receiver.clone(),
 					packet_data.memo.clone(),
 					5,
