@@ -1,7 +1,13 @@
 use crate::{ics20::HandleMemo, Config};
-use alloc::format;
-use core::fmt::Debug;
+use alloc::{
+	format,
+	string::{String, ToString},
+};
+use core::{fmt::Debug, str::FromStr};
 use ibc::{
+	applications::transfer::{
+		acknowledgement::Acknowledgement as Ics20Acknowledgement, error::Error as Ics20Error,
+	},
 	core::{
 		ics04_channel::{
 			channel::{Counterparty, Order},
@@ -154,12 +160,31 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 		relayer: &Signer,
 	) -> Result<Acknowledgement, Error> {
 		let ack = self.inner.on_recv_packet(ctx, output, packet, relayer)?;
+		let ics20_ack = Ics20Acknowledgement::from_str(&String::from_utf8_lossy(ack.as_ref()))
+			.map_err(|_| Error::invalid_acknowledgement())?;
+
+		// we need to ensure that the previous hasn't failed. We do this, by ensuring that the ACK
+		// does not contain an error
+
+		if !ics20_ack.is_successful() {
+			return Ok(ack)
+		}
+
 		// We want the whole chain of calls to fail only if the ics20 transfer fails, because
 		// the other modules are not part of ics-20 standard
-		let _ = Self::process_memo(packet).map_err(|e| {
-			log::error!(target: "pallet_ibc", "Error while handling memo: {:?}", e);
-		});
-		Ok(ack)
+		match Self::process_memo(packet) {
+			Ok(_) => Ok(ack),
+			Err(err) => {
+				log::error!(target: "pallet_ibc", "Error while handling memo: {:?}", err);
+				Ok(Acknowledgement::from_bytes(
+					Ics20Acknowledgement::from_error(Ics20Error::implementation_specific(
+						err.to_string(),
+					))
+					.to_string()
+					.into_bytes(),
+				))
+			},
+		}
 	}
 
 	fn on_acknowledgement_packet(
@@ -187,7 +212,7 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 
 impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Memo<T, S> {
 	fn process_memo(packet: &mut Packet) -> Result<(), Error> {
-		<T as Config>::HandleMemo::execute_memo(packet).map_err(|e| {
+		<T as Config>::HandleMemo::default().execute_memo(packet).map_err(|e| {
 			Error::implementation_specific(format!("Failed to execute memo {:?}", e))
 		})?;
 		Ok(())
