@@ -110,23 +110,10 @@ pub struct ClientStateCallResponse {
 }
 
 #[cw_serde]
-pub struct InitializeState {
-	pub client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
-	pub consensus_state: WasmConsensusState<FakeInner>,
-}
-
-#[cw_serde]
 pub struct InstantiateMsg {}
 
 #[cw_serde]
-pub struct ClientCreateRequest {
-	client_create_request: WasmConsensusState<FakeInner>,
-}
-
-#[cw_serde]
 pub enum ExecuteMsg {
-	InitializeState(InitializeState),
-	ClientCreateRequest(WasmClientState<FakeInner, FakeInner, FakeInner>),
 	VerifyMembership(VerifyMembershipMsgRaw),
 	VerifyNonMembership(VerifyNonMembershipMsgRaw),
 	VerifyClientMessage(VerifyClientMessageRaw),
