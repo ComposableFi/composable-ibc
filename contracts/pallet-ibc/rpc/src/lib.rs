@@ -1588,6 +1588,29 @@ where
 	) -> Result<IdentifiedClientState> {
 		let (block, event) = self.ibc_event_by_tx_id(block_hash, ext_hash)?;
 		let api = self.client.runtime_api();
+		let block = self.client.block(block_hash).ok().flatten().ok_or_else(|| {
+			runtime_error_into_rpc_error("[ibc_rpc]: failed to find block with provided hash")
+		})?;
+		let extrinsics = block.block.extrinsics();
+		let (ext_index, ..) = extrinsics
+			.iter()
+			.enumerate()
+			.find(|(_, ext)| ext_hash.as_ref() == blake2_256(ext.encode().as_slice()).as_ref())
+			.ok_or_else(|| {
+				runtime_error_into_rpc_error(
+					"[ibc_rpc]: failed to find extrinsic with provided hash",
+				)
+			})?;
+
+		let events = api
+			.block_events(&BlockId::Number(*block.block.header().number()), Some(ext_index as _))
+			.map_err(|_| runtime_error_into_rpc_error("[ibc_rpc]: failed to read block events"))?;
+
+		// There should be only one ibc event in this list in this case
+		let event = events
+			.get(0)
+			.ok_or_else(|| runtime_error_into_rpc_error("[ibc_rpc]: Could not find any ibc event"))?
+			.clone();
 
 		match event {
 			Ok(IbcEvent::CreateClient { client_id, .. }) => {

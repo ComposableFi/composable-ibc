@@ -60,7 +60,7 @@ pub struct Cmd {
 	port_id: Option<String>,
 	/// Connection delay period in seconds
 	#[clap(long)]
-	delay_period: Option<std::num::NonZeroU32>,
+	delay_period_seconds: std::num::NonZeroU32,
 	/// Channel order
 	#[clap(long)]
 	order: Option<String>,
@@ -138,9 +138,7 @@ impl Cmd {
 	}
 
 	pub async fn create_connection(&self) -> Result<Config> {
-		let delay_period_seconds: NonZeroU64 = self
-			.delay_period
-			.expect("delay_period should be provided when creating a connection")
+		let delay_period_seconds: NonZeroU64 = self.delay_period_seconds.into()
 			.into();
 		let delay = Duration::from_secs(delay_period_seconds.into());
 		let path: PathBuf = self.config.parse()?;

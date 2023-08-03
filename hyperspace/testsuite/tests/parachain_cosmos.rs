@@ -13,13 +13,13 @@
 // limitations under the License.
 
 use futures::StreamExt;
+use hyperspace::parachain::{finality_protocol::FinalityProtocol, ParachainClientConfig};
 use hyperspace_core::{
 	chain::{AnyAssetId, AnyChain, AnyConfig},
 	logging,
 	substrate::DefaultConfig,
 };
 use hyperspace_cosmos::client::{ConfigKeyEntry, CosmosClient, CosmosClientConfig};
-use hyperspace_parachain::{finality_protocol::FinalityProtocol, ParachainClientConfig};
 use hyperspace_primitives::{utils::create_clients, IbcProvider};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
