@@ -54,11 +54,13 @@ pub enum ClientError {
 	MiddlewareError(MiddlewareErrorType),
 	#[error("no-storage-proof: there was no storage proof for the given storage index")]
 	NoStorageProof,
+	#[error("{0}")]
+	Other(String),
 }
 
 impl From<String> for ClientError {
 	fn from(value: String) -> Self {
-		todo!()
+		Self::Other(value)
 	}
 }
 

@@ -1,48 +1,17 @@
+use anyhow::Error;
+use ibc::events::IbcEvent;
+use ibc_proto::google::protobuf::Any;
 use primitives::{Chain, LightClientSync};
 
 use crate::client::Client;
 
 #[async_trait::async_trait]
 impl LightClientSync for Client {
-	fn is_synced<'life0, 'life1, 'async_trait, C>(
-		&'life0 self,
-		counterparty: &'life1 C,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<bool, anyhow::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		C: 'async_trait + Chain,
-		'life0: 'async_trait,
-		'life1: 'async_trait,
-		Self: 'async_trait,
-	{
-		todo!()
+	async fn is_synced<C: Chain>(&self, counterparty: &C) -> Result<bool, Error> {
+		Ok(true)
 	}
 
-	fn fetch_mandatory_updates<'life0, 'life1, 'async_trait, C>(
-		&'life0 self,
-		counterparty: &'life1 C,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = Result<
-						(Vec<ibc_proto::google::protobuf::Any>, Vec<ibc::events::IbcEvent>),
-						anyhow::Error,
-					>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		C: 'async_trait + Chain,
-		'life0: 'async_trait,
-		'life1: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn fetch_mandatory_updates<C: Chain>(&self, counterparty: &C) -> Result<(Vec<Any>, Vec<IbcEvent>), Error> {
 		todo!()
 	}
 }

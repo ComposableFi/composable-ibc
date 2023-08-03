@@ -2,6 +2,9 @@ use std::time::Duration;
 
 use ethers::providers::Middleware;
 use futures::{Stream, StreamExt};
+use ibc::core::ics02_client::events::UpdateClient;
+use ibc::Height;
+use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::{Chain, LightClientSync, MisbehaviourHandler};
 
 use crate::{client::Client, ibc_provider::BlockHeight};
@@ -34,6 +37,7 @@ impl Chain for Client {
 		&self,
 		msg: Vec<ibc_proto::google::protobuf::Any>,
 	) -> Result<u64, Self::Error> {
+		// TODO: estimate gas for the tx. Convert any to another type (see `wrap_any_msg_into_wasm` for an example)
 		Ok(1)
 	}
 
@@ -45,6 +49,9 @@ impl Chain for Client {
 			.map_err(|err| crate::client::ClientError::ProviderError(self.ws_uri.clone(), err))?;
 
 		let stream = async_stream::stream! {
+			// TODO: is it really finalized blocks stream?
+			// - PoW: probabilistic finality (wait for ~30 blocks)
+			// - PoS: finality is deterministic
 			let mut stream = ws.subscribe_blocks().await.expect("fuck");
 
 			while let Some(block) = stream.next().await {
@@ -61,39 +68,17 @@ impl Chain for Client {
 		&self,
 		messages: Vec<ibc_proto::google::protobuf::Any>,
 	) -> Result<Self::TransactionId, Self::Error> {
-		todo!()
+		todo!("submit to ethereum")
 	}
 
-	fn query_client_message<'life0, 'async_trait>(
-		&'life0 self,
-		update: ibc::core::ics02_client::events::UpdateClient,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = Result<pallet_ibc::light_clients::AnyClientMessage, Self::Error>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
-		todo!()
+	async fn query_client_message(&self, update: UpdateClient) -> Result<AnyClientMessage, Self::Error> {
+		todo!("used for misbehaviour; skip for now")
 	}
 
-	fn get_proof_height<'life0, 'async_trait>(
-		&'life0 self,
-		block_height: ibc::Height,
-	) -> core::pin::Pin<
-		Box<dyn core::future::Future<Output = ibc::Height> + core::marker::Send + 'async_trait>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
-		todo!()
+	async fn get_proof_height(&self, block_height: Height) -> Height {
+		block_height
 	}
+
 
 	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error> {
 		tracing::error!(?error, "handle-error");
