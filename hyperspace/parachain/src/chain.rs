@@ -458,9 +458,9 @@ where
 					let header_hash = header.hash();
 					if unknown_header_hash != header_hash.into() {
 						detected_misbehaviour_at = Some(i);
-						let _guard = self.client_id.lock().unwrap();
+						let guard = self.client_id.lock().unwrap();
 						let client_id =
-							_guard.as_ref().map(|x| x.as_str()).unwrap_or_else(|| "{unknown}");
+							guard.as_ref().map(|x| x.as_str()).unwrap_or_else(|| "{unknown}");
 						log::warn!(
 							"Found misbehaviour on client {}: {:?} != {:?} at {i}",
 							client_id,

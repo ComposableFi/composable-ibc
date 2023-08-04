@@ -127,7 +127,7 @@ where
 		.remove(key.as_ref())
 		.flatten()
 		.ok_or_else(|| anyhow!("Invalid proof, parachain header not found"))?;
-		let parachain_header = H::decode(&mut &header[..]).expect("Joon: FUCK");
+		let parachain_header = H::decode(&mut &header[..])?;
 		para_heights.push(parachain_header.number().clone().into());
 		// Timestamp extrinsic should be the first inherent and hence the first extrinsic
 		// https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
