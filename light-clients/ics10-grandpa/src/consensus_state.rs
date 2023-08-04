@@ -71,7 +71,7 @@ impl ConsensusState {
 		.map_err(anyhow::Error::msg)?
 		.remove(key.as_ref())
 		.flatten()
-		.and_then(|data| Vec::decode(&mut &data[..]).ok())
+		// .and_then(|data| Vec::decode(&mut &data[..]).ok())
 		.ok_or_else(|| anyhow!("Invalid state proof for parachain header"))?;
 
 		let parachain_header =
