@@ -826,14 +826,12 @@ where
 		let latest_cp_height = counterparty
 			.latest_height_and_timestamp()
 			.await
-			.map_err(|e| Error::Custom(e.to_string()))
-			.unwrap()
+			.map_err(|e| Error::Custom(e.to_string()))?
 			.0;
 		let latest_cp_client_state = counterparty
 			.query_client_state(latest_cp_height, client_id.clone())
 			.await
-			.map_err(|e| Error::Custom(e.to_string()))
-			.unwrap();
+			.map_err(|e| Error::Custom(e.to_string()))?;
 		let client_state_response = latest_cp_client_state
 			.client_state
 			.ok_or_else(|| Error::Custom("counterparty returned empty client state".to_string()))?;
@@ -847,8 +845,7 @@ where
 				client_state.latest_height(),
 			)
 			.await
-			.map_err(|e| Error::Custom(e.to_string()))
-			.unwrap();
+			.map_err(|e| Error::Custom(e.to_string()))?;
 		let consensus_state_response =
 			latest_cp_consensus_state.consensus_state.ok_or_else(|| {
 				Error::Custom("counterparty returned empty consensus state".to_string())
@@ -874,19 +871,29 @@ where
 			.rpc()
 			.query_storage([CLIENT_STATE_UPGRADE_PATH], hash, None)
 			.await?;
-		let client_state = vec.remove(0).changes.remove(0).1.unwrap().0;
+		let client_state = vec
+			.remove(0)
+			.changes
+			.remove(0)
+			.1
+			.ok_or_else(|| Error::Custom("No client state found".to_string()))?
+			.0;
 		let any_client_state = AnyClientState::decode_vec(&client_state)
-			.map_err(|e| Error::from(format!("Decode Error {:?}", e)))
-			.unwrap();
+			.map_err(|e| Error::from(format!("Decode Error {:?}", e)))?;
 		let mut vec = self
 			.para_client
 			.rpc()
 			.query_storage([CONSENSUS_STATE_UPGRADE_PATH], hash, None)
 			.await?;
-		let consensus_state_raw = vec.remove(0).changes.remove(0).1.unwrap().0;
+		let consensus_state_raw = vec
+			.remove(0)
+			.changes
+			.remove(0)
+			.1
+			.ok_or_else(|| Error::Custom("No consensus state found".to_string()))?
+			.0;
 		let any_consensus_state = AnyConsensusState::decode_vec(&consensus_state_raw)
-			.map_err(|e| Error::from(format!("Decode Error 2 {:?}", e)))
-			.unwrap();
+			.map_err(|e| Error::from(format!("Decode Error 2 {:?}", e)))?;
 		let root = H256::from_slice(consensus_state.root().as_bytes());
 
 		let client_proof = self
@@ -896,19 +903,28 @@ where
 			.await
 			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
 		let expected_header: sp_runtime::generic::Header<u32, BlakeTwo256> = Decode::decode(
-			&mut &*self.para_client.rpc().header(Some(hash)).await.unwrap().unwrap().encode(),
-		)
-		.unwrap();
+			&mut &*self
+				.para_client
+				.rpc()
+				.header(Some(hash))
+				.await?
+				.ok_or_else(|| Error::Custom("No block header found".to_string()))?
+				.encode(),
+		)?;
 		let client_state_proof = client_proof.proof.into_iter().map(|x| x.0).collect::<Vec<_>>();
 		let mut map = read_proof_check::<BlakeTwo256, _>(
 			&root,
 			StorageProof::new(client_state_proof.clone()),
 			&[CLIENT_STATE_UPGRADE_PATH],
 		)
-		.unwrap();
+		.map_err(|e| Error::from(format!("Invalid proof for client state upgrade: {:?}", e)))?;
 		let option = map.remove(CLIENT_STATE_UPGRADE_PATH).flatten();
-		let value = option.unwrap();
-		let encoded = any_client_state.encode_vec().unwrap();
+		let value = option.ok_or_else(|| {
+			Error::Custom("Invalid proof for client state upgrade: value not found".to_string())
+		})?;
+		let encoded = any_client_state
+			.encode_vec()
+			.map_err(|e| Error::from(format!("Encode Error {:?}", e)))?;
 
 		if value != encoded {
 			return Err(Error::Custom(
@@ -932,10 +948,15 @@ where
 			StorageProof::new(proof.clone()),
 			&[CONSENSUS_STATE_UPGRADE_PATH],
 		)
-		.unwrap();
+		.map_err(|e| {
+			Error::Custom(format!("failed to check proof for consensus state upgrade: {e}"))
+		})?;
 		let option = map.remove(CONSENSUS_STATE_UPGRADE_PATH).flatten();
-		let value = option.unwrap();
-		let encoded = any_consensus_state.encode_vec().unwrap();
+		let value =
+			option.ok_or_else(|| Error::Custom("proof value does not exist".to_string()))?;
+		let encoded = any_consensus_state
+			.encode_vec()
+			.map_err(|e| Error::Custom(format!("failed to encode consensus state: {e}")))?;
 
 		if value != encoded {
 			return Err(Error::Custom(

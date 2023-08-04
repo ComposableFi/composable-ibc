@@ -354,18 +354,15 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 		let mut fixed_bytes = [0u8; 32];
 		fixed_bytes.copy_from_slice(&*raw.latest_relay_hash);
 		let latest_relay_hash = H256::from(fixed_bytes);
-		Ok(Self {
-			frozen_height: raw.frozen_height.map(|height| Height::new(raw.para_id.into(), height)),
-			relay_chain,
-			latest_para_height: raw.latest_para_height,
-			para_id: raw.para_id,
-			authorities_changes: Vec1::try_from(
-				raw.authorities_changes
-					.into_iter()
-					.map(TryInto::try_into)
-					.collect::<Result<Vec<_>, _>>()?,
-			)
-			.unwrap_or_else(|_| {
+		let maybe_authorities_changes = Vec1::try_from(
+			raw.authorities_changes
+				.into_iter()
+				.map(TryInto::try_into)
+				.collect::<Result<Vec<_>, _>>()?,
+		);
+		let authorities_changes = match maybe_authorities_changes {
+			Ok(authorities_changes) => authorities_changes,
+			Err(_) => {
 				let current_authorities = raw
 					.current_authorities
 					.into_iter()
@@ -374,8 +371,7 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 							.map_err(|_| anyhow!("Invalid ed25519 public key"))?;
 						Ok((id.into(), set.weight))
 					})
-					.collect::<Result<_, Error>>()
-					.unwrap();
+					.collect::<Result<_, Error>>()?;
 
 				Vec1::new(AuthoritiesChange {
 					height: 1,
@@ -383,7 +379,14 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 					set_id: raw.current_set_id,
 					authorities: current_authorities,
 				})
-			}),
+			},
+		};
+		Ok(Self {
+			frozen_height: raw.frozen_height.map(|height| Height::new(raw.para_id.into(), height)),
+			relay_chain,
+			latest_para_height: raw.latest_para_height,
+			para_id: raw.para_id,
+			authorities_changes,
 			latest_relay_hash,
 			latest_relay_height: raw.latest_relay_height,
 			_phantom: Default::default(),

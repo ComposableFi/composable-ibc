@@ -35,7 +35,6 @@ use primitives::{
 };
 use sp_core::H256;
 use sp_runtime::traits::Header;
-use sp_std::vec::Vec;
 use sp_trie::{LayoutV0, StorageProof};
 
 #[cfg(test)]

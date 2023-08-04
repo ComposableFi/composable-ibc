@@ -56,7 +56,7 @@ use ibc::{
 		},
 		ics26_routing::context::ReaderContext,
 	},
-	timestamp::Expiry,
+	timestamp::{Expiry, Timestamp},
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
@@ -365,7 +365,8 @@ where
 					// prune expired changes
 					!matches!(
 						now.check_expiry(
-							&(x.timestamp + AUTHORITIES_CHANGE_ITEM_LIFETIME).unwrap()
+							&(x.timestamp + AUTHORITIES_CHANGE_ITEM_LIFETIME)
+								.unwrap_or_else(|_| Timestamp::from_nanoseconds(1).unwrap()) // do not remove the entry on overflow, because it's a sign that something went wrong
 						),
 						Expiry::Expired
 					)
@@ -503,7 +504,11 @@ where
 			.remove(CLIENT_STATE_UPGRADE_PATH)
 			.flatten()
 			.ok_or_else(|| Error::Custom(format!("Invalid proof for client state upgrade")))?;
-			let value = Any::decode(&mut &value[..]).unwrap().value;
+			let value = Any::decode(&mut &value[..])
+				.map_err(|e| {
+					Error::Custom(format!("Invalid proof for consensus state upgrade: {e}"))
+				})?
+				.value;
 
 			let value_s = hex::encode(&value);
 			let encoded_s = hex::encode(&encoded);
@@ -535,7 +540,11 @@ where
 			.remove(CONSENSUS_STATE_UPGRADE_PATH)
 			.flatten()
 			.ok_or_else(|| Error::Custom(format!("Invalid proof for consensus state upgrade")))?;
-			let value = Any::decode(&mut &value[..]).unwrap().value;
+			let value = Any::decode(&mut &value[..])
+				.map_err(|e| {
+					Error::Custom(format!("Invalid proof for consensus state upgrade: {e}"))
+				})?
+				.value;
 
 			let value_s = hex::encode(&value);
 			let encoded_s = hex::encode(&encoded);
