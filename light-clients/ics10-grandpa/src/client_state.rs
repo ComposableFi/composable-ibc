@@ -380,7 +380,7 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 				Vec1::new(AuthoritiesChange {
 					height: 1,
 					timestamp: Timestamp::from_nanoseconds(1).unwrap(),
-					set_id: 0,
+					set_id: raw.current_set_id,
 					authorities: current_authorities,
 				})
 			}),

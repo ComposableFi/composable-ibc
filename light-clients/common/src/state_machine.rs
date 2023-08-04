@@ -16,7 +16,6 @@
 //! State verification functions
 
 use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
-use codec::Decode;
 use core::fmt::Debug;
 use hash_db::{HashDB, Hasher, EMPTY_PREFIX};
 use sp_storage::ChildInfo;
@@ -68,8 +67,7 @@ where
 	let child_trie = TrieDBBuilder::<LayoutV0<H>>::new(&child_db, &child_root).build();
 
 	for (key, value) in items {
-		// let recovered = child_trie.get(&key)?.map(|val| val.to_vec());
-		let recovered = child_trie.get(&key)?.and_then(|val| Decode::decode(&mut &val[..]).ok());
+		let recovered = child_trie.get(&key)?;
 
 		if recovered != value {
 			Err(Error::ValueMismatch {
@@ -105,8 +103,7 @@ where
 	let mut result = BTreeMap::new();
 
 	for key in keys.into_iter() {
-		// let value = trie.get(key.as_ref())?.map(|val| val.as_slice().to_vec());
-		let value = trie.get(key.as_ref())?.and_then(|val| Decode::decode(&mut &val[..]).ok());
+		let value = trie.get(key.as_ref())?;
 		result.insert(key.as_ref().to_vec(), value);
 	}
 
