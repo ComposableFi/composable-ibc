@@ -668,7 +668,7 @@ pub enum MemoType {
 
 impl Forward {
 	pub fn get_memo(&self) -> Result<MemoType, Ics20Error> {
-		if !self.substrate.is_none() {
+		if self.substrate.unwrap_or_default() {
 			let xcm = MemoXcm { receiver: self.receiver.clone(), para_id: self.para_id.clone() };
 			return Ok(MemoType::XCM(xcm))
 		}
