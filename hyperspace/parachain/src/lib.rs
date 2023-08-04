@@ -76,7 +76,7 @@ use subxt::{
 	config::{Header as HeaderT, Header},
 	tx::TxPayload,
 };
-use tokio::sync::Mutex as AsyncMutex;
+use tokio::{sync::Mutex as AsyncMutex, time::sleep};
 use vec1::Vec1;
 
 /// Implements the [`crate::Chain`] trait for parachains.
@@ -620,6 +620,7 @@ where
 			let block_number = decoded_para_head.number;
 			// we can't use the genesis block to construct the initial state.
 			if block_number == 0 {
+				sleep(Duration::from_secs(1)).await;
 				continue
 			}
 
