@@ -35,7 +35,7 @@ pub const CLIENT_TYPE_ATTRIBUTE_KEY: &str = "client_type";
 pub const CONSENSUS_HEIGHT_ATTRIBUTE_KEY: &str = "consensus_height";
 
 /// The content of the `key` field for the attribute containing WASM code ID.
-pub const WASM_CODE_ID_ATTRIBUTE_KEY: &str = "wasm_code_id";
+pub const WASM_CODE_HASH_ATTRIBUTE_KEY: &str = "wasm_code_hash";
 
 /// NewBlock event signals the committing & execution of a new block.
 // TODO - find a better place for NewBlock
@@ -264,11 +264,11 @@ impl From<UpgradeClient> for IbcEvent {
 	}
 }
 
-pub type CodeId = Vec<u8>;
+pub type CodeHash = Vec<u8>;
 
 /// Signals a recent pushed WASM code to the chain.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
-pub struct PushWasmCode(pub CodeId);
+pub struct PushWasmCode(pub CodeHash);
 
 impl From<PushWasmCode> for IbcEvent {
 	fn from(v: PushWasmCode) -> Self {

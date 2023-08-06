@@ -30,7 +30,7 @@ pub struct HostConsensusProof {
 	pub header: Vec<u8>,
 	pub extrinsic: Vec<u8>,
 	pub extrinsic_proof: Vec<Vec<u8>>,
-	pub code_id: Option<Vec<u8>>,
+	pub code_hash: Option<Vec<u8>>,
 }
 
 impl<T: Config + Send + Sync> ClientReader for Context<T>
@@ -295,7 +295,7 @@ where
 						AnyConsensusState::wasm(cs).map_err(ICS02Error::encode)?
 					},
 					_ =>
-						if let Some(_) = connection_proof.code_id {
+						if let Some(_) = connection_proof.code_hash {
 							log::trace!(target: "pallet_ibc", "in client : [host_consensus_state] >> using wasm code id");
 							AnyConsensusState::wasm(cs).map_err(ICS02Error::encode)?
 						} else {

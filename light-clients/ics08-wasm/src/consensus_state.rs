@@ -70,7 +70,7 @@ where
 	}
 
 	fn timestamp(&self) -> Timestamp {
-		self.inner.timestamp()
+		unimplemented!()
 	}
 
 	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
@@ -128,6 +128,6 @@ where
 
 impl<AnyConsensusState: Default> Default for ConsensusState<AnyConsensusState> {
 	fn default() -> Self {
-		ConsensusState { data: vec![], timestamp: 0, inner: Box::new(AnyConsensusState::default()) }
+		ConsensusState { data: vec![], inner: Box::new(AnyConsensusState::default()) }
 	}
 }

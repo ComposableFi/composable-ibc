@@ -1275,7 +1275,7 @@ where
 			.flat_map(|e| ibc_event_try_from_abci_event(e, height).ok().into_iter())
 			.filter(|e| matches!(e, IbcEvent::PushWasmCode(_)))
 			.collect::<Vec<_>>();
-		let code_id = if result.clone().len() != 1 {
+		let code_hash = if result.clone().len() != 1 {
 			return Err(Error::from(format!(
 				"Expected exactly one PushWasmCode event, found {}",
 				result.len()
@@ -1298,7 +1298,7 @@ where
 		// 	Error::from(format!("Failed to upload wasm code to grpc endpoint: {:?}", e))
 		// })?;
 
-		Ok(code_id)
+		Ok(code_hash)
 	}
 }
 

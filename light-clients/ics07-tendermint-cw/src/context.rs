@@ -23,7 +23,7 @@ use crate::{
 use cosmwasm_std::{DepsMut, Env, Storage};
 use ibc::{
 	core::{
-		ics02_client::{error::Error, events::CodeId},
+		ics02_client::{error::Error, events::CodeHash},
 		ics24_host::identifier::ClientId,
 		ics26_routing::context::ReaderContext,
 	},
@@ -38,7 +38,7 @@ use std::{fmt, fmt::Debug, marker::PhantomData};
 pub struct Context<'a, H> {
 	pub deps: DepsMut<'a>,
 	pub env: Env,
-	pub code_id: Option<CodeId>,
+	pub code_hash: Option<CodeHash>,
 	_phantom: PhantomData<H>,
 }
 
@@ -64,7 +64,7 @@ impl<'a, H> Clone for Context<'a, H> {
 
 impl<'a, H> Context<'a, H> {
 	pub fn new(deps: DepsMut<'a>, env: Env) -> Self {
-		Self { deps, _phantom: Default::default(), env, code_id: None }
+		Self { deps, _phantom: Default::default(), env, code_hash: None }
 	}
 
 	pub fn log(&self, msg: &str) {
@@ -153,7 +153,7 @@ where
 		// let data = client_states.get_prefixed(prefix).ok_or_else(|| {
 		// 	ContractError::Tendermint("no client state found for prefix".to_string())
 		// })?;
-		let code_id = match self.code_id.clone() {
+		let code_hash = match self.code_hash.clone() {
 			None => {
 				let encoded_wasm_client_state = client_states.get().ok_or_else(|| {
 					ContractError::Tendermint(
@@ -177,12 +177,12 @@ where
 						.to_string(),
 					)
 				})?;
-				wasm_client_state.code_id
+				wasm_client_state.code_hash
 			},
 			Some(x) => x,
 		};
 
-		let encoded = Context::<H>::encode_client_state(client_state, code_id).map_err(|e| {
+		let encoded = Context::<H>::encode_client_state(client_state, code_hash).map_err(|e| {
 			ContractError::Tendermint(format!("error encoding client state: {:?}", e))
 		})?;
 		let mut client_states = ClientStates::new(self.storage_mut());

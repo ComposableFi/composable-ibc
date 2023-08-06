@@ -100,7 +100,7 @@ where
 		)?;
 		let client_state = ClientState {
 			data: client_state.data.clone(),
-			code_id: client_state.code_id.clone(),
+			code_hash: client_state.code_hash.clone(),
 			inner: Box::new(inner_client_state),
 			latest_height: client_state.latest_height,
 			_phantom: PhantomData,
@@ -118,7 +118,7 @@ where
 			.update_state_on_misbehaviour(*client_state.inner, client_msg.into_inner())?;
 		Ok(ClientState {
 			data: client_state.data.clone(),
-			code_id: client_state.code_id.clone(),
+			code_hash: client_state.code_hash.clone(),
 			inner: Box::new(inner_client_state),
 			latest_height: client_state.latest_height,
 			_phantom: PhantomData,
@@ -165,7 +165,7 @@ where
 					ClientState {
 						inner: Box::new(client_state),
 						data: old_client_state.data.clone(),
-						code_id: old_client_state.code_id.clone(),
+						code_hash: old_client_state.code_hash.clone(),
 						latest_height: old_client_state.latest_height.clone(),
 						_phantom: Default::default(),
 					},
@@ -192,7 +192,7 @@ where
 			)?;
 		let client_state = ClientState {
 			data: old_client_state.data.clone(),
-			code_id: old_client_state.code_id.clone(),
+			code_hash: old_client_state.code_hash.clone(),
 			inner: Box::new(inner_client_state),
 			latest_height: old_client_state.latest_height,
 			_phantom: PhantomData,

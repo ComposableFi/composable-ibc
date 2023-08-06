@@ -30,7 +30,7 @@ use ibc::{
 			client_state::ClientType,
 			context::{ClientKeeper, ClientReader, ClientTypes},
 			error::Error,
-			events::CodeId,
+			events::CodeHash,
 		},
 		ics24_host::identifier::ClientId,
 	},
@@ -201,7 +201,7 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientKeeper for Context<'
 		let client_states = ReadonlyClientStates::new(self.storage());
 		// let data = client_states.get().ok_or_else(||
 		// Error::client_not_found(client_id.clone()))?;
-		let code_id = match self.code_id.clone() {
+		let code_hash = match self.code_hash.clone() {
 			None => {
 				let encoded_wasm_client_state = client_states
 					.get()
@@ -218,12 +218,12 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientKeeper for Context<'
 							e
 						))
 				})?;
-				wasm_client_state.code_id
+				wasm_client_state.code_hash
 			},
 			Some(x) => x,
 		};
 
-		let vec1 = Self::encode_client_state(client_state, code_id)?;
+		let vec1 = Self::encode_client_state(client_state, code_hash)?;
 		log!(self, "in cliden : [store_client_state] >> wasm client state (raw)");
 		let mut client_state_storage = ClientStates::new(self.storage_mut());
 		client_state_storage.insert(vec1);
@@ -313,7 +313,7 @@ impl<'a, H: Clone> Context<'a, H> {
 
 	pub fn encode_client_state(
 		client_state: ClientState<H>,
-		code_id: CodeId,
+		code_hash: CodeHash,
 		// encoded_wasm_client_state: Vec<u8>,
 	) -> Result<Vec<u8>, Error> {
 		// let any = Any::decode(&*encoded_wasm_client_state).map_err(Error::decode)?;
@@ -329,7 +329,7 @@ impl<'a, H: Clone> Context<'a, H> {
 		// 	})?;
 		let mut wasm_client_state =
 			ics08_wasm::client_state::ClientState::<FakeInner, FakeInner, FakeInner>::default();
-		wasm_client_state.code_id = code_id;
+		wasm_client_state.code_hash = code_hash;
 		wasm_client_state.data = client_state.to_any().encode_to_vec();
 		wasm_client_state.latest_height = client_state.latest_height().into();
 		let vec1 = wasm_client_state.to_any().encode_to_vec();

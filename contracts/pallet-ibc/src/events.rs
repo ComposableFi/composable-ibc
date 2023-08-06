@@ -4,7 +4,7 @@ use ibc::{
 	core::{
 		ics02_client::{
 			events as ClientEvents,
-			events::{CodeId, NewBlock},
+			events::{CodeHash, NewBlock},
 		},
 		ics03_connection::events as ConnectionEvents,
 		ics04_channel::{events as ChannelEvents, packet::Packet},
@@ -218,7 +218,7 @@ pub enum IbcEvent {
 	/// App module
 	AppModule { kind: Vec<u8>, module_id: Vec<u8> },
 	/// Push WASM Code
-	PushWasmCode { wasm_code_id: CodeId },
+	PushWasmCode { wasm_code_hash: CodeHash },
 }
 
 impl From<RawIbcEvent> for IbcEvent {
@@ -439,8 +439,8 @@ impl From<RawIbcEvent> for IbcEvent {
 				module_id: ev.module_name.to_string().as_bytes().to_vec(),
 			},
 			RawIbcEvent::PushWasmCode(ev) => {
-				let wasm_code_id = ev.0;
-				IbcEvent::PushWasmCode { wasm_code_id }
+				let wasm_code_hash = ev.0;
+				IbcEvent::PushWasmCode { wasm_code_hash }
 			},
 		}
 	}
@@ -545,8 +545,8 @@ impl TryFrom<IbcEvent> for RawIbcEvent {
 					consensus_height: Height::new(consensus_revision_number, consensus_height),
 				},
 			))),
-			IbcEvent::PushWasmCode { wasm_code_id } =>
-				Ok(RawIbcEvent::PushWasmCode(ClientEvents::PushWasmCode(wasm_code_id))),
+			IbcEvent::PushWasmCode { wasm_code_hash } =>
+				Ok(RawIbcEvent::PushWasmCode(ClientEvents::PushWasmCode(wasm_code_hash))),
 			IbcEvent::OpenInitConnection {
 				revision_height,
 				revision_number,

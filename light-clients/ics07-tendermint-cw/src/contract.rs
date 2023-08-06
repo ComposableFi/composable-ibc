@@ -136,7 +136,7 @@ fn process_instantiate_msg(
 	let any = Any::decode(&mut msg.consensus_state.data.as_slice())?;
 	let consensus_state = ConsensusState::decode_vec(&any.value)?;
 
-	ctx.code_id = Some(msg.client_state.code_id);
+	ctx.code_hash = Some(msg.client_state.code_hash);
 	let height = client_state.latest_height();
 	ctx.store_client_state(client_id.clone(), client_state)
 		.map_err(|e| ContractError::Tendermint(e.to_string()))?;

@@ -211,19 +211,19 @@ pub fn client_misbehaviour_try_from_abci_event(
 pub fn push_wasm_code_try_from_abci_event(
 	abci_event: &AbciEvent,
 ) -> Result<client_events::PushWasmCode, IbcEventError> {
-	let mut code_id = None;
+	let mut code_hash = None;
 	for tag in &abci_event.attributes {
 		let key = tag.key.as_str();
 		let value = tag.value.as_str();
 		match key {
-			client_events::WASM_CODE_ID_ATTRIBUTE_KEY =>
-				code_id = Some(hex::decode(value).map_err(IbcEventError::from_hex_error)?),
+			client_events::WASM_CODE_HASH_ATTRIBUTE_KEY =>
+				code_hash = Some(hex::decode(value).map_err(IbcEventError::from_hex_error)?),
 			_ => {},
 		}
 	}
 
-	Ok(client_events::PushWasmCode(code_id.ok_or_else(|| {
-		IbcEventError::missing_key(client_events::WASM_CODE_ID_ATTRIBUTE_KEY.to_owned())
+	Ok(client_events::PushWasmCode(code_hash.ok_or_else(|| {
+		IbcEventError::missing_key(client_events::WASM_CODE_HASH_ATTRIBUTE_KEY.to_owned())
 	})?))
 }
 

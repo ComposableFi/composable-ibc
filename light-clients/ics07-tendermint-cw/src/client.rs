@@ -27,7 +27,7 @@ use ibc::{
 			client_state::ClientType,
 			context::{ClientKeeper, ClientReader, ClientTypes},
 			error::Error,
-			events::CodeId,
+			events::CodeHash,
 		},
 		ics24_host::identifier::ClientId,
 	},
@@ -190,7 +190,7 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientKeeper for Context<'a, H> {
 		client_state: Self::AnyClientState,
 	) -> Result<(), Error> {
 		let client_states = ReadonlyClientStates::new(self.storage());
-		let code_id = match self.code_id.clone() {
+		let code_hash = match self.code_hash.clone() {
 			None => {
 				let encoded_wasm_client_state = client_states
 					.get()
@@ -207,12 +207,12 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientKeeper for Context<'a, H> {
 							e
 						))
 				})?;
-				wasm_client_state.code_id
+				wasm_client_state.code_hash
 			},
 			Some(x) => x,
 		};
 
-		let encoded = Self::encode_client_state(client_state, code_id)?;
+		let encoded = Self::encode_client_state(client_state, code_hash)?;
 		let mut client_state_storage = ClientStates::new(self.storage_mut());
 		client_state_storage.insert(encoded);
 		Ok(())
@@ -299,7 +299,7 @@ impl<'a, H: Clone> Context<'a, H> {
 
 	pub fn encode_client_state(
 		client_state: ClientState<H>,
-		code_id: CodeId,
+		code_hash: CodeHash,
 		// encoded_wasm_client_state: Vec<u8>,
 	) -> Result<Vec<u8>, Error> {
 		// let any = Any::decode(&*encoded_wasm_client_state).map_err(Error::decode)?;
@@ -315,7 +315,7 @@ impl<'a, H: Clone> Context<'a, H> {
 		// 	})?;
 		let mut wasm_client_state =
 			ics08_wasm::client_state::ClientState::<FakeInner, FakeInner, FakeInner>::default();
-		wasm_client_state.code_id = code_id;
+		wasm_client_state.code_hash = code_hash;
 		wasm_client_state.data = client_state.to_any().encode_to_vec();
 		wasm_client_state.latest_height = client_state.latest_height().into();
 		let vec1 = wasm_client_state.to_any().encode_to_vec();
@@ -325,7 +325,6 @@ impl<'a, H: Clone> Context<'a, H> {
 	pub fn encode_consensus_state(consensus_state: ConsensusState) -> Vec<u8> {
 		let wasm_consensus_state = ics08_wasm::consensus_state::ConsensusState {
 			data: consensus_state.to_any().encode_to_vec(),
-			timestamp: consensus_state.timestamp().nanoseconds(),
 			inner: Box::new(FakeInner),
 		};
 		wasm_consensus_state.to_any().encode_to_vec()

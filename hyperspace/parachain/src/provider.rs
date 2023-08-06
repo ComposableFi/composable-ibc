@@ -555,8 +555,8 @@ where
 			fetch_timestamp_extrinsic_with_proof(&self.para_client, Some(header.hash()))
 				.await
 				.map_err(Error::BeefyProver)?;
-		let code_id = if let AnyClientState::Wasm(client_state) = &client_state {
-			Some(client_state.code_id.clone())
+		let code_hash = if let AnyClientState::Wasm(client_state) = &client_state {
+			Some(client_state.code_hash.clone())
 		} else {
 			None
 		};
@@ -564,7 +564,7 @@ where
 			header: header.encode(),
 			extrinsic: extrinsic_with_proof.ext,
 			extrinsic_proof: extrinsic_with_proof.proof,
-			code_id,
+			code_hash,
 		};
 		Ok(Some(host_consensus_proof.encode()))
 	}
