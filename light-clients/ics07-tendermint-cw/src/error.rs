@@ -55,3 +55,9 @@ impl From<TendermintError> for ContractError {
 		ContractError::Tendermint(e.to_string())
 	}
 }
+
+impl From<ContractError> for StdError {
+	fn from(e: ContractError) -> Self {
+		StdError::GenericErr { msg: e.to_string() }
+	}
+}
