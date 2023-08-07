@@ -18,10 +18,7 @@ use core::{str::FromStr, time::Duration};
 use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::{
-		ics02_client::{
-			trust_threshold::TrustThreshold,
-			error::Error,
-		},
+		ics02_client::trust_threshold::TrustThreshold,
 		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
 		ics24_host::Path,
 	},
@@ -34,7 +31,7 @@ use ics07_tendermint::{
 	client_state::ClientState,
 };
 use ics08_wasm::{
-	client_message::ClientMessage as WasmClientMessage, client_state::ClientState as WasmClientState,
+	client_state::ClientState as WasmClientState,
 	consensus_state::ConsensusState as WasmConsensusState,
 };
 use prost::Message;

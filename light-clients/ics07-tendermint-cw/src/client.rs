@@ -23,7 +23,6 @@ use crate::{
 use ibc::{
 	core::{
 		ics02_client::{
-			client_consensus::ConsensusState as _,
 			client_state::ClientType,
 			context::{ClientKeeper, ClientReader, ClientTypes},
 			error::Error,

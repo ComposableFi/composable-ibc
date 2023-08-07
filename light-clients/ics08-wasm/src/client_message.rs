@@ -14,26 +14,19 @@
 // limitations under the License.
 
 #[cfg(feature = "cosmwasm")]
-use crate::msg::Base64;
 use crate::Bytes;
 use alloc::{
 	boxed::Box,
-	string::{String, ToString},
+	string::ToString,
 	vec::Vec,
 };
 use core::fmt::Display;
 #[cfg(feature = "cosmwasm")]
-use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::ics02_client::{client_message::ClientMessage as IbcClientMessage, error::Error},
 	protobuf::Protobuf,
-	Height,
 };
-use ibc_proto::{
-	google::protobuf::Any,
-	ibc::lightclients::wasm::v1::ClientMessage as RawClientMessage,
-};
-use prost::Message;
+use ibc_proto::google::protobuf::Any;
 
 pub const WASM_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.ClientMessage";
 

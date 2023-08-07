@@ -13,9 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{
-	context::Context,
-};
+use crate::context::Context;
 use ibc::{
 	core::{
 		ics03_connection::{connection::ConnectionEnd, context::ConnectionReader, error::Error},
