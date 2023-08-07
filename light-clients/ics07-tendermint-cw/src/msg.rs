@@ -18,7 +18,10 @@ use core::{str::FromStr, time::Duration};
 use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::{
-		ics02_client::trust_threshold::TrustThreshold,
+		ics02_client::{
+			trust_threshold::TrustThreshold,
+			error::Error,
+		},
 		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
 		ics24_host::Path,
 	},
@@ -27,11 +30,11 @@ use ibc::{
 };
 use ibc_proto::{google::protobuf::Any, ibc::core::client::v1::Height as HeightRaw};
 use ics07_tendermint::{
-	client_message::{ClientMessage, Header, Misbehaviour},
+	client_message::{ClientMessage, Header, Misbehaviour, TENDERMINT_HEADER_TYPE_URL, TENDERMINT_MISBEHAVIOUR_TYPE_URL},
 	client_state::ClientState,
 };
 use ics08_wasm::{
-	client_message::Header as WasmHeader, client_state::ClientState as WasmClientState,
+	client_message::ClientMessage as WasmClientMessage, client_state::ClientState as WasmClientState,
 	consensus_state::ConsensusState as WasmConsensusState,
 };
 use prost::Message;
@@ -246,16 +249,10 @@ impl TryFrom<VerifyNonMembershipMsgRaw> for VerifyNonMembershipMsg {
 }
 
 #[cw_serde]
-pub struct WasmMisbehaviour {
+pub struct ClientMessageRaw {
 	#[schemars(with = "String")]
 	#[serde(with = "Base64", default)]
 	pub data: Bytes,
-}
-
-#[cw_serde]
-pub enum ClientMessageRaw {
-	Header(WasmHeader<FakeInner>),
-	Misbehaviour(WasmMisbehaviour),
 }
 
 #[cw_serde]
@@ -278,15 +275,11 @@ impl TryFrom<VerifyClientMessageRaw> for VerifyClientMessage {
 
 impl VerifyClientMessage {
 	fn decode_client_message(raw: ClientMessageRaw) -> Result<ClientMessage, ContractError> {
-		let client_message = match raw {
-			ClientMessageRaw::Header(header) => {
-				let any = Any::decode(&mut header.data.as_slice())?;
-				ClientMessage::Header(Header::decode_vec(&any.value)?)
-			},
-			ClientMessageRaw::Misbehaviour(misbehaviour) => {
-				let any = Any::decode(&mut misbehaviour.data.as_slice())?;
-				ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value)?)
-			},
+		let any = Any::decode(raw.data.as_slice())?;
+		let client_message = match &*any.type_url {
+			TENDERMINT_HEADER_TYPE_URL => ClientMessage::Header(Header::decode_vec(&any.value)?),
+			TENDERMINT_MISBEHAVIOUR_TYPE_URL => ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value)?),
+			_ => return Err(ContractError::Tendermint("unknown client message type".to_string())),
 		};
 		Ok(client_message)
 	}

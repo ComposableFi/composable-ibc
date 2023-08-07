@@ -490,19 +490,10 @@ pub struct ConsensusState {
 	// #[prost(uint64, tag = "2")]
 	// pub timestamp: u64,
 }
-/// Wasm light client Header
+/// Wasm light client Client Message
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Header {
-	#[prost(bytes = "vec", tag = "1")]
-	pub data: ::prost::alloc::vec::Vec<u8>,
-	#[prost(message, optional, tag = "2")]
-	pub height: ::core::option::Option<super::super::super::core::client::v1::Height>,
-}
-/// Wasm light client Misbehaviour
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Misbehaviour {
+pub struct ClientMessage {
 	#[prost(bytes = "vec", tag = "1")]
 	pub data: ::prost::alloc::vec::Vec<u8>,
 }
