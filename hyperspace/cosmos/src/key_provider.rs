@@ -31,18 +31,18 @@ impl KeyEntry {
 impl<H> KeyProvider for CosmosClient<H> {
 	fn account_id(&self) -> ibc::signer::Signer {
 		let key_entry = self.keybase.clone();
-		let address = hex::encode(&key_entry.address);
+		let address = hex::encode(key_entry.address);
 		let account = AccountId::from_str(address.as_str())
-			.map_err(|e| Error::from(format!("Could not parse account id {}", e)))
+			.map_err(|e| Error::from(format!("Could not parse account id {e}")))
 			.unwrap();
 		let bech32 =
 			bech32::encode(self.account_prefix.as_str(), account.to_base32(), Variant::Bech32)
-				.map_err(|e| Error::from(format!("Could not encode account id {}", e)))
+				.map_err(|e| Error::from(format!("Could not encode account id {e}")))
 				.unwrap();
-		let signer = bech32
+
+		bech32
 			.parse()
-			.map_err(|e| Error::from(format!("Could not parse account id {}", e)))
-			.unwrap();
-		signer
+			.map_err(|e| Error::from(format!("Could not parse account id {e}")))
+			.unwrap()
 	}
 }

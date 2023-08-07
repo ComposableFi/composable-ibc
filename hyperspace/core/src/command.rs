@@ -106,15 +106,15 @@ impl UploadWasmCmd {
 		let client = config.clone().into_client().await?;
 		let wasm = tokio::fs::read(&self.wasm_path).await?;
 		let code_id = client.upload_wasm(wasm).await?;
-		let code_id_str = hex::encode(&code_id);
-		println!("{}", code_id_str);
+		let code_id_str = hex::encode(code_id);
+		println!("{code_id_str}");
 		config.set_wasm_code_id(code_id_str);
 		Ok(config)
 	}
 
 	pub async fn save_config(&self, new_config: &AnyConfig) -> Result<()> {
 		let path = self.out_config.as_ref().cloned().unwrap_or_else(|| self.config.clone());
-		write_config(path, &new_config).await
+		write_config(path, new_config).await
 	}
 }
 
@@ -149,7 +149,7 @@ impl Cmd {
 		let mut metrics_handler_b = MetricsHandler::new(registry.clone(), metrics_b);
 		metrics_handler_a.link_with_counterparty(&mut metrics_handler_b);
 
-		if let Some(addr) = config.core.prometheus_endpoint.map(|s| s.parse().ok()).flatten() {
+		if let Some(addr) = config.core.prometheus_endpoint.and_then(|s| s.parse().ok()) {
 			tokio::spawn(init_prometheus(addr, registry.clone()));
 		}
 
@@ -247,8 +247,7 @@ impl Cmd {
 		});
 
 		let order = Order::from_str(order).expect("Expected one of 'ordered' or 'unordered'");
-		let connection_id =
-			chain_a.connection_id().expect("Connection id should be defined").clone();
+		let connection_id = chain_a.connection_id().expect("Connection id should be defined");
 		let (channel_id_a, channel_id_b) = create_channel(
 			&mut chain_a,
 			&mut chain_b,

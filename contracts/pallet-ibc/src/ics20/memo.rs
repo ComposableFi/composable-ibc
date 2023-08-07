@@ -22,12 +22,15 @@ use ibc::{
 /// For example ics20 fees are meant to be collected before memo is executed, so
 /// this allows an ics20 fee middleware to be executed before the memo is executed
 /// USAGE:
+/// ```rust
+/// # #[cfg(any())] // This is just to make the doc test compile
 /// pub struct Router {
-/// 	ics20: crate::ics20::memo::Memo<
-/// 		Runtime,
-/// 		crate::ics20_fee::Ics20ServiceCharge<Runtime, crate::ics20::IbcModule<Runtime>>,
-/// 	>,
+///     ics20: crate::ics20::memo::Memo<
+///         Runtime,
+///         crate::ics20_fee::Ics20ServiceCharge<Runtime, crate::ics20::IbcModule<Runtime>>,
+///     >,
 /// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Memo<T: Config, S: Module + Clone + Default + PartialEq + Eq + Debug> {
 	inner: S,

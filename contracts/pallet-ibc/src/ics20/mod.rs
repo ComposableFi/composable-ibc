@@ -56,6 +56,7 @@ pub enum FlowType {
 }
 
 pub trait Ics20RateLimiter {
+	#[allow(clippy::result_unit_err)]
 	fn allow(msg: &Ics20TransferMsg, flow_type: FlowType) -> Result<(), ()>;
 }
 
@@ -227,7 +228,7 @@ where
 
 		let result = serde_json::from_slice(packet.data.as_slice())
 			.map_err(|e| {
-				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
+				Ics04Error::implementation_specific(format!("Failed to decode packet data {e:?}"))
 			})
 			.and_then(|packet_data: PacketData| {
 				// We need to reject transaction amounts that are larger than u128 since we expect
@@ -238,8 +239,7 @@ where
 				// which wan not included as part of the token in the packet data.
 
 				let mut token = packet_data.token.clone();
-				let denom = full_ibc_denom(&packet, packet_data.token.clone());
-
+				let denom = full_ibc_denom(packet, packet_data.token.clone());
 				token.denom = PrefixedDenom::from_str(&denom).map_err(|_| {
 					Ics04Error::implementation_specific("Failed to parse token denom".to_string())
 				})?;
@@ -249,7 +249,7 @@ where
 					memo: packet_data.memo.clone(),
 					sender: packet_data.sender.clone(),
 					receiver: packet_data.receiver.clone(),
-					source_channel: packet.source_channel.clone(),
+					source_channel: packet.source_channel,
 					token,
 					timeout_height: packet.timeout_height,
 					timeout_timestamp: packet.timeout_timestamp,
@@ -258,7 +258,7 @@ where
 					.map_err(|_| Ics04Error::implementation_specific("rate limiter".to_string()))?;
 				let amount = packet_data.token.amount.as_u256();
 				u128::try_from(amount)
-					.map_err(|e| Ics04Error::implementation_specific(format!("{:?}", e)))?;
+					.map_err(|e| Ics04Error::implementation_specific(format!("{e:?}")))?;
 				process_recv_packet(&mut ctx, output, packet, packet_data.clone())
 					.map(|_| packet_data)
 					.map_err(|e| {
@@ -270,7 +270,7 @@ where
 		let ack = match result {
 			Err(err) => {
 				log::trace!(target: "pallet_ibc", "Acknowledgement error: {:?}", err);
-				let ack = Ics20Acknowledgement::Error(format!("{}: {:?}", ACK_ERR_STR, err))
+				let ack = Ics20Acknowledgement::Error(format!("{ACK_ERR_STR}: {err:?}"))
 					.to_string()
 					.into_bytes();
 				Pallet::<T>::handle_message(HandlerMessage::WriteAck {
@@ -278,7 +278,7 @@ where
 					ack: ack.clone(),
 				})
 				.map_err(|e| {
-					Ics04Error::implementation_specific(format!("[on_recv_packet] {:#?}", e))
+					Ics04Error::implementation_specific(format!("[on_recv_packet] {e:#?}"))
 				})?;
 				ack
 			},
@@ -296,7 +296,7 @@ where
 					amount: packet_data.token.amount.as_u256().as_u128().into(),
 					is_receiver_source: is_receiver_chain_source(
 						packet.source_port.clone(),
-						packet.source_channel.clone(),
+						packet.source_channel,
 						&prefixed_denom,
 					),
 					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
@@ -308,7 +308,7 @@ where
 					ack: Ics20Acknowledgement::success().to_string().into_bytes(),
 				})
 				.map_err(|e| {
-					Ics04Error::implementation_specific(format!("[on_recv_packet] {:#?}", e))
+					Ics04Error::implementation_specific(format!("[on_recv_packet] {e:#?}"))
 				})?;
 				Ics20Acknowledgement::success().to_string().into_bytes()
 			},
@@ -327,13 +327,12 @@ where
 		let mut ctx = Context::<T>::default();
 		let packet_data: PacketData =
 			serde_json::from_slice(packet.data.as_slice()).map_err(|e| {
-				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
+				Ics04Error::implementation_specific(format!("Failed to decode packet data {e:?}"))
 			})?;
-		let ack = serde_json::from_slice::<Ics20Acknowledgement>(&acknowledgement.as_ref())
+		let ack = serde_json::from_slice::<Ics20Acknowledgement>(acknowledgement.as_ref())
 			.map_err(|e| {
 				Ics04Error::implementation_specific(format!(
-					"Failed to decode acknowledgement data {:?}",
-					e
+					"Failed to decode acknowledgement data {e:?}"
 				))
 			})?;
 		let sequence: u64 = packet.sequence.into();
@@ -356,7 +355,7 @@ where
 					amount: packet_data.token.amount.as_u256().as_u128().into(),
 					is_sender_source: is_sender_chain_source(
 						packet.source_port.clone(),
-						packet.source_channel.clone(),
+						packet.source_channel,
 						&packet_data.token.denom,
 					),
 					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
@@ -384,7 +383,7 @@ where
 					amount: packet_data.token.amount.as_u256().as_u128().into(),
 					is_sender_source: is_sender_chain_source(
 						packet.source_port.clone(),
-						packet.source_channel.clone(),
+						packet.source_channel,
 						&packet_data.token.denom,
 					),
 					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
@@ -405,7 +404,7 @@ where
 	) -> Result<(), Ics04Error> {
 		let mut ctx = Context::<T>::default();
 		let packet_data: PacketData = serde_json::from_slice(packet.data.as_slice())
-			.map_err(|e| Ics04Error::app_module(format!("Failed to decode packet data {:?}", e)))?;
+			.map_err(|e| Ics04Error::app_module(format!("Failed to decode packet data {e:?}")))?;
 		process_timeout_packet(&mut ctx, packet, &packet_data)
 			.map_err(|e| Ics04Error::app_module(e.to_string()))?;
 		let sequence: u64 = packet.sequence.into();
@@ -423,7 +422,7 @@ where
 			amount: packet_data.token.amount.as_u256().as_u128().into(),
 			is_sender_source: is_sender_chain_source(
 				packet.source_port.clone(),
-				packet.source_channel.clone(),
+				packet.source_channel,
 				&packet_data.token.denom,
 			),
 			source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
@@ -480,16 +479,14 @@ where
 		let refund_to_account_id =
 			<T as Config>::AccountIdConversion::try_from(signer_from.clone()).map_err(|_| {
 				Ics04Error::implementation_specific(format!(
-					"Failed to parse receiver account {:?}",
-					signer_from
+					"Failed to parse receiver account {signer_from:?}"
 				))
 			})?;
 
 		ctx.send_coins(&fee_account, &refund_to_account_id, &fee_coin).map_err(|e| {
 				log::debug!(target: "pallet_ibc", "[{}]: error when refund the fee : {:?} for sequence {}", &e, fee, sequence);
 				Ics04Error::implementation_specific(format!(
-					"Failed to refund fee to sender account {:?}, fee : {} , sequence : {} ",
-					signer_from, fee, sequence
+					"Failed to refund fee to sender account {signer_from:?}, fee : {fee} , sequence : {sequence} "
 				))
 			})?;
 		Ok(())

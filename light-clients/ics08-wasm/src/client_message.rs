@@ -91,7 +91,7 @@ where
 	fn try_from(any: Any) -> Result<Self, Self::Error> {
 		let msg = match &*any.type_url {
 			WASM_HEADER_TYPE_URL =>
-				Self::Header(Header::decode(&*any.value).map_err(|e| Error::decode_raw_header(e))?),
+				Self::Header(Header::decode(&*any.value).map_err(Error::decode_raw_header)?),
 			WASM_MISBEHAVIOUR_TYPE_URL => Self::Misbehaviour(
 				Misbehaviour::decode(&*any.value).map_err(Error::decode_raw_misbehaviour)?,
 			),
@@ -161,17 +161,18 @@ where
 
 	fn try_from(raw: RawHeader) -> Result<Self, Self::Error> {
 		let any = Any::decode(&mut &raw.data[..])
-			.map_err(|e| format!("failed to decode raw header into Any: {}", e.to_string()))?;
-		let inner = AnyClientMessage::try_from(any).map_err(|e| {
-			format!("failed to decode raw header into AnyClientMessage: {}", e.to_string())
-		})?;
+			.map_err(|e| format!("failed to decode raw header into Any: {e}"))?;
+		let inner = AnyClientMessage::try_from(any)
+			.map_err(|e| format!("failed to decode raw header into AnyClientMessage: {e}"))?;
 
 		let header = Self {
 			inner: Box::new(inner),
 			data: raw.data,
 			height: raw
 				.height
-				.ok_or_else(|| format!("failed to decode raw header into Header: missing height",))?
+				.ok_or_else(|| {
+					"failed to decode raw header into Header: missing height".to_string()
+				})?
 				.into(),
 		};
 		Ok(header)

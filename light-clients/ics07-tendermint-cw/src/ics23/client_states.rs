@@ -25,7 +25,7 @@ impl<'a> ClientStates<'a> {
 	}
 
 	pub fn key() -> Vec<u8> {
-		let client_state_path = format!("clientState");
+		let client_state_path = "clientState".to_string();
 		client_state_path.into_bytes()
 	}
 

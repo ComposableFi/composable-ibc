@@ -94,8 +94,8 @@ pub struct HeightAndTimestamp {
 impl<Hash: std::fmt::Debug> Display for BlockNumberOrHash<Hash> {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			BlockNumberOrHash::Hash(hash) => write!(f, "{:?}", hash),
-			BlockNumberOrHash::Number(block_num) => write!(f, "{}", block_num),
+			BlockNumberOrHash::Hash(hash) => write!(f, "{hash:?}"),
+			BlockNumberOrHash::Number(block_num) => write!(f, "{block_num}"),
 		}
 	}
 }
@@ -456,7 +456,7 @@ fn runtime_error_into_rpc_error(e: impl std::fmt::Display) -> RpcError {
 	RpcError::Call(CallError::Custom(ErrorObject::owned(
 		9876, // no real reason for this value
 		"Something wrong",
-		Some(format!("{}", e)),
+		Some(format!("{e}")),
 	)))
 }
 
@@ -676,7 +676,7 @@ where
 		let denom = String::from_utf8(
 			api.denom_trace(at, asset_id)
 				.map_err(|e| {
-					runtime_error_into_rpc_error(format!("failed to get denom trace: {}", e))
+					runtime_error_into_rpc_error(format!("failed to get denom trace: {e}"))
 				})?
 				.ok_or_else(|| runtime_error_into_rpc_error("denom trace not found"))?
 				.denom,
@@ -727,7 +727,7 @@ where
 			.collect::<Vec<_>>()
 			.encode();
 		let client_state = AnyClientState::decode_vec(&result.client_state).map_err(|e| {
-			runtime_error_into_rpc_error(format!("Error querying client state: {:?}", e))
+			runtime_error_into_rpc_error(format!("Error querying client state: {e:?}"))
 		})?;
 		Ok(QueryClientStateResponse {
 			client_state: Some(client_state.into()),
@@ -1716,7 +1716,7 @@ where
 				})?;
 				let channels: QueryChannelsResponse = self.query_connection_channels(
 					height,
-					String::from_utf8(connection_id.clone()).map_err(|_| {
+					String::from_utf8(connection_id).map_err(|_| {
 						runtime_error_into_rpc_error("connection id should be valid utf8")
 					})?,
 				)?;
