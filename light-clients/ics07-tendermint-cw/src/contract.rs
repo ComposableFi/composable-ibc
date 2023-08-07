@@ -34,12 +34,15 @@ use crate::{
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use ed25519_consensus::VerificationKey;
-use ibc::core::{
-	ics02_client::{
-		client_def::{ClientDef, ConsensusUpdateResult},
-		context::{ClientKeeper, ClientReader},
+use ibc::{
+	core::{
+		ics02_client::{
+			client_def::{ClientDef, ConsensusUpdateResult},
+			context::{ClientKeeper, ClientReader},
+		},
+		ics24_host::identifier::ClientId,
 	},
-	ics24_host::identifier::ClientId,
+	Height,
 };
 use ibc_proto::google::protobuf::Any;
 use ics07_tendermint::{
@@ -215,13 +218,16 @@ fn process_message(
 				.map_err(|e| ContractError::Tendermint(e.to_string()))
 				.and_then(|(cs, cu)| {
 					let height = cs.latest_height();
+					let mut heights: Vec<Height> = vec![];
 					match cu {
 						ConsensusUpdateResult::Single(cs) => {
+							heights.push(height);
 							ctx.store_consensus_state(client_id.clone(), height, cs)
 								.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 						},
 						ConsensusUpdateResult::Batch(css) =>
 							for (height, cs) in css {
+								heights.push(height);
 								ctx.store_consensus_state(client_id.clone(), height, cs)
 									.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 							},
@@ -230,7 +236,7 @@ fn process_message(
 						ctx.store_client_state(client_id, cs)
 							.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 					}
-					Ok(to_binary(&ContractResult::success()))
+					Ok(to_binary(&ContractResult::success().heights(heights)))
 				})
 		},
 		SudoMsg::CheckSubstituteAndUpdateState(_msg) =>

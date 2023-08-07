@@ -103,19 +103,26 @@ pub struct ContractResult {
 	pub error_msg: String,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub data: Option<Vec<u8>>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub heights: Option<Vec<Height>>,
 }
 
 impl ContractResult {
 	pub fn success() -> Self {
-		Self { is_valid: true, error_msg: "".to_string(), data: None }
+		Self { is_valid: true, error_msg: "".to_string(), data: None, heights: None }
 	}
 
 	pub fn error(msg: String) -> Self {
-		Self { is_valid: false, error_msg: msg, data: None }
+		Self { is_valid: false, error_msg: msg, data: None, heights: None }
 	}
 
 	pub fn data(mut self, data: Vec<u8>) -> Self {
 		self.data = Some(data);
+		self
+	}
+
+	pub fn heights(mut self, heights: Vec<Height>) -> Self {
+		self.heights = Some(heights);
 		self
 	}
 }
