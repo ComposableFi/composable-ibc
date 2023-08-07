@@ -15,7 +15,7 @@ jobs:
       group: lint-${{ github.ref }}
       cancel-in-progress: true
     container:
-      image: paritytech/ci-unified:latest
+      image: paritytech/ci-unified:bullseye-1.71.0
     runs-on:
       - self-hosted
       - x64-monster

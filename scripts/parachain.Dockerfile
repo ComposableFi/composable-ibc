@@ -1,4 +1,4 @@
-FROM paritytech/ci-unified:latest as build
+FROM paritytech/ci-unified:bullseye-1.71.0 as build
 
 WORKDIR /code
 
