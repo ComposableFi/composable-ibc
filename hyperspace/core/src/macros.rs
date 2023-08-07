@@ -13,91 +13,6 @@
 // limitations under the License.
 
 #[macro_export]
-macro_rules! process_finality_event {
-	($source:ident, $sink:ident, $metrics:expr, $mode:ident, $result:ident) => {
-		match $result {
-			// stream closed
-			None => break,
-			Some(finality_event) => {
-				log::info!("=======================================================");
-				log::info!("Received finality notification from {}", $source.name());
-				let updates = match $source.query_latest_ibc_events(finality_event, &$sink).await {
-					Ok(resp) => resp,
-					Err(err) => {
-						log::error!(
-							"Failed to fetch IBC events for finality event for {} {:?}",
-							$source.name(),
-							err
-						);
-						continue
-					},
-				};
-				for (msg_update_client, events, update_type) in updates {
-					let mut msgs_update_client = vec![msg_update_client];
-					if let Some(metrics) = $metrics.as_mut() {
-						if let Err(e) = metrics.handle_events(events.as_slice()).await {
-							log::error!("Failed to handle metrics for {} {:?}", $source.name(), e);
-						}
-					}
-					let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
-					let (mut messages, timeouts) =
-						parse_events(&mut $source, &mut $sink, events, $mode).await?;
-					if !timeouts.is_empty() {
-						if let Some(metrics) = $metrics.as_ref() {
-							metrics.handle_timeouts(timeouts.as_slice()).await;
-						}
-						let type_urls =
-							timeouts.iter().map(|msg| msg.type_url.as_str()).collect::<Vec<_>>();
-						log::info!(
-							"Submitting timeout messages to {}: {type_urls:#?}",
-							$source.name()
-						);
-						queue::flush_message_batch(timeouts, $metrics.as_ref(), &$source).await?;
-					}
-					// We want to send client update if packet messages exist but where not sent due
-					// to a connection delay even if client update message is optional
-					match (
-						update_type.is_optional(),
-						has_packet_events(&event_types),
-						messages.is_empty(),
-					) {
-						(true, false, true) => {
-							// skip sending ibc messages if no new events
-							log::info!(
-								"Skipping finality notification for {}, No new events",
-								$source.name()
-							);
-							continue
-						},
-						(false, _, true) => log::info!(
-							"Sending mandatory client update message for {}",
-							$source.name()
-						),
-						_ => log::info!(
-							"Received finalized events from: {} {event_types:#?}",
-							$source.name()
-						),
-					};
-					// todo: we should be able skip update clients that are optional even when
-					// messages is not empty. insert client update at first position.
-					msgs_update_client.append(&mut messages);
-					if let Some(metrics) = $metrics.as_ref() {
-						metrics.handle_messages(msgs_update_client.as_slice()).await;
-					}
-					let type_urls = msgs_update_client
-						.iter()
-						.map(|msg| msg.type_url.as_str())
-						.collect::<Vec<_>>();
-					log::info!("Submitting messages to {}: {type_urls:#?}", $sink.name());
-					queue::flush_message_batch(msgs_update_client, $metrics.as_ref(), &$sink)
-						.await?;
-				}
-			},
-		}
-	};
-}
-
-#[macro_export]
 macro_rules! chains {
 	($(
         $(#[$($meta:meta)*])*
@@ -105,6 +20,7 @@ macro_rules! chains {
 	)*) => {
 		#[derive(Debug, Serialize, Deserialize, Clone)]
 		#[serde(tag = "type", rename_all = "snake_case")]
+		#[allow(clippy::large_enum_variant)]
 		pub enum AnyConfig {
 			$(
 				$(#[$($meta)*])*
@@ -118,8 +34,10 @@ macro_rules! chains {
 				$(#[$($meta)*])*
 				$name($client),
 			)*
+			Wasm(WasmChain),
 		}
 
+		#[derive(Debug)]
 		pub enum AnyFinalityEvent {
 			$(
 				$(#[$($meta)*])*
@@ -154,6 +72,12 @@ macro_rules! chains {
 			Other(String),
 		}
 
+		impl From<anyhow::Error> for AnyError {
+			fn from(e: anyhow::Error) -> Self {
+				Self::Other(e.to_string())
+			}
+		}
+
 		#[async_trait]
 		impl IbcProvider for AnyChain {
 			type FinalityEvent = AnyFinalityEvent;
@@ -165,7 +89,7 @@ macro_rules! chains {
 				&mut self,
 				finality_event: Self::FinalityEvent,
 				counterparty: &T,
-			) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+			) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 			where
 				T: Chain,
 			{
@@ -178,6 +102,8 @@ macro_rules! chains {
 							chain.query_latest_ibc_events(finality_event, counterparty).await
 						}
 					)*
+					AnyChain::Wasm(c) =>
+						c.inner.query_latest_ibc_events(finality_event, counterparty).await,
 				}
 			}
 
@@ -187,6 +113,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.ibc_events().await,
 					)*
+					Self::Wasm(c) => c.inner.ibc_events().await,
 				}
 			}
 
@@ -204,6 +131,8 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					AnyChain::Wasm(c) =>
+						c.inner.query_client_consensus(at, client_id, consensus_height).await,
 				}
 			}
 
@@ -220,6 +149,7 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					AnyChain::Wasm(c) => c.inner.query_client_state(at, client_id).await,
 				}
 			}
 
@@ -236,6 +166,7 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					AnyChain::Wasm(c) => c.inner.query_connection_end(at, connection_id).await,
 				}
 			}
 
@@ -253,6 +184,7 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					AnyChain::Wasm(c) => c.inner.query_channel_end(at, channel_id, port_id).await,
 				}
 			}
 
@@ -265,6 +197,7 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					AnyChain::Wasm(c) => c.inner.query_proof(at, keys).await,
 				}
 			}
 
@@ -283,6 +216,8 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					AnyChain::Wasm(c) =>
+						c.inner.query_packet_commitment(at, port_id, channel_id, seq).await,
 				}
 			}
 
@@ -301,6 +236,8 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					AnyChain::Wasm(c) =>
+						c.inner.query_packet_acknowledgement(at, port_id, channel_id, seq).await,
 				}
 			}
 
@@ -318,6 +255,7 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					AnyChain::Wasm(c) => c.inner.query_next_sequence_recv(at, port_id, channel_id).await,
 				}
 			}
 
@@ -336,6 +274,7 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					AnyChain::Wasm(c) => c.inner.query_packet_receipt(at, port_id, channel_id, seq).await,
 				}
 			}
 
@@ -348,6 +287,7 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					AnyChain::Wasm(c) => c.inner.latest_height_and_timestamp().await,
 				}
 			}
 
@@ -365,6 +305,7 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.query_packet_commitments(at, channel_id, port_id).await,
 				}
 			}
 
@@ -382,6 +323,7 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.query_packet_acknowledgements(at, channel_id, port_id).await,
 				}
 			}
 
@@ -400,6 +342,7 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.query_unreceived_packets(at, channel_id, port_id, seqs).await,
 				}
 			}
 
@@ -418,15 +361,18 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) =>
+						c.inner.query_unreceived_acknowledgements(at, channel_id, port_id, seqs).await,
 				}
 			}
 
-			fn channel_whitelist(&self) -> Vec<(ChannelId, PortId)> {
+			fn channel_whitelist(&self) -> std::collections::HashSet<(ChannelId, PortId)> {
 				match self {
 					$(
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.channel_whitelist(),
 					)*
+					Self::Wasm(c) => c.inner.channel_whitelist(),
 				}
 			}
 
@@ -443,6 +389,7 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.query_connection_channels(at, connection_id).await,
 				}
 			}
 
@@ -460,10 +407,11 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.query_send_packets(channel_id, port_id, seqs).await,
 				}
 			}
 
-			async fn query_recv_packets(
+			async fn query_received_packets(
 				&self,
 				channel_id: ChannelId,
 				port_id: PortId,
@@ -473,10 +421,11 @@ macro_rules! chains {
 					$(
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain
-							.query_recv_packets(channel_id, port_id, seqs)
+							.query_received_packets(channel_id, port_id, seqs)
 							.await
 							.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.query_received_packets(channel_id, port_id, seqs).await,
 				}
 			}
 
@@ -486,6 +435,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.expected_block_time(),
 					)*
+					Self::Wasm(c) => c.inner.expected_block_time(),
 				}
 			}
 
@@ -502,21 +452,24 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) =>
+						c.inner.query_client_update_time_and_height(client_id, client_height).await,
 				}
 			}
 
 			async fn query_host_consensus_state_proof(
 				&self,
-				height: Height,
+				client_state: &AnyClientState,
 			) -> Result<Option<Vec<u8>>, Self::Error> {
 				match self {
 					$(
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain
-							.query_host_consensus_state_proof(height)
+							.query_host_consensus_state_proof(client_state)
 							.await
 							.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.query_host_consensus_state_proof(client_state).await,
 				}
 			}
 
@@ -530,6 +483,7 @@ macro_rules! chains {
 						(Self::$name(chain), AnyAssetId::$name(asset_id)) =>
 							chain.query_ibc_balance(asset_id.into()).await.map_err(AnyError::$name),
 					)*
+					(Self::Wasm(c), asset_id) => c.inner.query_ibc_balance(asset_id).await,
 					(chain, _) => panic!("query_ibc_balance is not implemented for {}", chain.name()),
 				}
 			}
@@ -540,6 +494,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.connection_prefix(),
 					)*
+					AnyChain::Wasm(c) => c.inner.connection_prefix(),
 				}
 			}
 
@@ -549,15 +504,27 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.client_id(),
 					)*
+					AnyChain::Wasm(c) => c.inner.client_id(),
 				}
 			}
 
-			fn connection_id(&self) -> ConnectionId {
+			fn set_client_id(&mut self, client_id: ClientId) {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.set_client_id(client_id),
+					)*
+					Self::Wasm(c) => c.inner.set_client_id(client_id),
+				}
+			}
+
+			fn connection_id(&self) -> Option<ConnectionId> {
 				match self {
 					$(
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.connection_id(),
 					)*
+					AnyChain::Wasm(c) => c.inner.connection_id(),
 				}
 			}
 
@@ -567,6 +534,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.client_type(),
 					)*
+					AnyChain::Wasm(c) => c.inner.client_type(),
 				}
 			}
 
@@ -576,6 +544,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.query_timestamp_at(block_number).await.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.query_timestamp_at(block_number).await,
 				}
 			}
 
@@ -585,6 +554,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.query_clients().await.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.query_clients().await,
 				}
 			}
 
@@ -594,6 +564,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.query_channels().await.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.query_channels().await,
 				}
 			}
 
@@ -608,6 +579,7 @@ macro_rules! chains {
 						Self::$name(chain) =>
 							chain.query_connection_using_client(height, client_id).await.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.query_connection_using_client(height, client_id).await,
 				}
 			}
 
@@ -624,6 +596,11 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c
+						.inner
+						.is_update_required(latest_height, latest_client_height_on_counterparty)
+						.await
+						.map_err(Into::into),
 				}
 			}
 
@@ -635,6 +612,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.initialize_client_state().await.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.initialize_client_state().await,
 				}
 			}
 
@@ -653,6 +631,85 @@ macro_rules! chains {
 							.await
 							.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.query_client_id_from_tx_hash(tx_id).await,
+				}
+			}
+
+			async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.upload_wasm(wasm).await.map_err(AnyError::$name),
+					)*
+					Self::Wasm(c) => c.inner.upload_wasm(wasm).await,
+				}
+			}
+
+			async fn query_connection_id_from_tx_hash(
+				&self,
+				tx_id: Self::TransactionId,
+			) -> Result<ConnectionId, Self::Error> {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain
+							.query_connection_id_from_tx_hash(
+								downcast!(tx_id => AnyTransactionId::$name)
+									.expect("Should be $name transaction id"),
+							)
+							.await
+							.map_err(AnyError::$name),
+					)*
+					Self::Wasm(c) => c.inner.query_connection_id_from_tx_hash(tx_id).await,
+				}
+			}
+
+			async fn query_channel_id_from_tx_hash(
+				&self,
+				tx_id: Self::TransactionId,
+			) -> Result<(ChannelId, PortId), Self::Error> {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain
+							.query_channel_id_from_tx_hash(
+								downcast!(tx_id => AnyTransactionId::$name)
+									.expect("Should be $name transaction id"),
+							)
+							.await
+							.map_err(AnyError::$name),
+					)*
+					Self::Wasm(c) => c.inner.query_channel_id_from_tx_hash(tx_id).await,
+				}
+			}
+
+			fn set_channel_whitelist(&mut self, channel_whitelist: std::collections::HashSet<(ChannelId, PortId)>) {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.set_channel_whitelist(channel_whitelist),
+					)*
+					Self::Wasm(c) => c.inner.set_channel_whitelist(channel_whitelist),
+				}
+			}
+
+			fn add_channel_to_whitelist(&mut self, channel: (ChannelId, PortId)) {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.add_channel_to_whitelist(channel),
+					)*
+					Self::Wasm(c) => c.inner.add_channel_to_whitelist(channel),
+				}
+			}
+
+			fn set_connection_id(&mut self, connection_id: ConnectionId) {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.set_connection_id(connection_id),
+					)*
+					Self::Wasm(c) => c.inner.set_connection_id(connection_id),
 				}
 			}
 		}
@@ -670,6 +727,7 @@ macro_rules! chains {
 						Self::$name(chain) =>
 							chain.check_for_misbehaviour(counterparty, client_message).await,
 					)*
+					AnyChain::Wasm(c) => c.inner.check_for_misbehaviour(counterparty, client_message).await,
 				}
 			}
 		}
@@ -681,19 +739,20 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.account_id(),
 					)*
+					AnyChain::Wasm(c) => c.inner.account_id(),
 				}
 			}
 		}
 
 		#[async_trait]
 		impl Chain for AnyChain {
-
 			fn name(&self) -> &str {
 				match self {
 					$(
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.name(),
 					)*
+					Self::Wasm(c) => c.inner.name(),
 				}
 			}
 
@@ -703,6 +762,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.block_max_weight(),
 					)*
+					Self::Wasm(c) => c.inner.block_max_weight(),
 				}
 			}
 
@@ -712,20 +772,26 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.estimate_weight(msg).await.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.estimate_weight(msg).await,
 				}
 			}
 
 			async fn finality_notifications(
 				&self,
-			) -> Pin<Box<dyn Stream<Item = Self::FinalityEvent> + Send + Sync>> {
+			) -> Result<Pin<Box<dyn Stream<Item = Self::FinalityEvent> + Send + Sync>>, Self::Error> {
 				match self {
 					$(
 						$(#[$($meta)*])*
 						Self::$name(chain) => {
 							use futures::StreamExt;
-							Box::pin(chain.finality_notifications().await.map(AnyFinalityEvent::$name))
+							Ok(
+								Box::pin(chain.finality_notifications().await
+									.map_err(AnyError::$name)?
+									.map(AnyFinalityEvent::$name))
+							)
 						},
 					)*
+					Self::Wasm(c) => c.inner.finality_notifications().await,
 				}
 			}
 
@@ -739,6 +805,13 @@ macro_rules! chains {
 							.map_err(AnyError::$name)
 							.map(|id| AnyTransactionId::$name(id)),
 					)*
+					Self::Wasm(chain) => {
+						let messages = messages
+							.into_iter()
+							.map(|msg| wrap_any_msg_into_wasm(msg, chain.code_id.clone()))
+							.collect::<Result<Vec<_>, _>>()?;
+						chain.inner.submit(messages).await.map_err(AnyError::into)
+					},
 				}
 			}
 
@@ -751,6 +824,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.query_client_message(update).await.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.query_client_message(update).await,
 				}
 			}
 
@@ -760,6 +834,67 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.get_proof_height(block_height).await,
 					)*
+					Self::Wasm(c) => c.inner.get_proof_height(block_height).await,
+				}
+			}
+
+			async fn handle_error(&mut self, e: &anyhow::Error) -> std::result::Result<(), anyhow::Error> {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.handle_error(e).await,
+					)*
+					Self::Wasm(c) => c.inner.handle_error(e).await,
+				}
+			}
+
+			fn rpc_call_delay(&self) -> std::time::Duration {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.rpc_call_delay(),
+					)*
+					Self::Wasm(c) => c.inner.rpc_call_delay(),
+				}
+			}
+
+			fn set_rpc_call_delay(&mut self, d: std::time::Duration) {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.set_rpc_call_delay(d),
+					)*
+					Self::Wasm(c) => c.inner.set_rpc_call_delay(d),
+				}
+			}
+
+			fn common_state(&self) -> &CommonClientState {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.common_state(),
+					)*
+					Self::Wasm(c) => c.inner.common_state(),
+				}
+			}
+
+			fn common_state_mut(&mut self) -> &mut CommonClientState {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.common_state_mut(),
+					)*
+					Self::Wasm(c) => c.inner.common_state_mut(),
+				}
+			}
+
+			async fn reconnect(&mut self) -> anyhow::Result<()> {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.reconnect().await,
+					)*
+					Self::Wasm(c) => c.inner.reconnect().await,
 				}
 			}
 		}
@@ -772,6 +907,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.is_synced(counterparty).await.map_err(Into::into),
 					)*
+					Self::Wasm(c) => c.inner.is_synced(counterparty).await,
 				}
 			}
 
@@ -785,6 +921,7 @@ macro_rules! chains {
 						Self::$name(chain) =>
 							chain.fetch_mandatory_updates(counterparty).await.map_err(Into::into),
 					)*
+					Self::Wasm(c) => c.inner.fetch_mandatory_updates(counterparty).await,
 				}
 			}
 		}
@@ -797,6 +934,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.set_client_id(client_id),
 					)*
+					Self::Wasm(chain) => chain.inner.set_client_id(client_id),
 				}
 			}
 		}
@@ -810,6 +948,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.send_transfer(params).await.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.send_transfer(params).await,
 				}
 			}
 
@@ -823,6 +962,7 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.send_ordered_packet(channel_id, timeout).await.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.send_ordered_packet(channel_id, timeout).await,
 				}
 			}
 
@@ -832,27 +972,35 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain.subscribe_blocks().await,
 					)*
+					Self::Wasm(c) => c.inner.subscribe_blocks().await,
 				}
 			}
 
-			fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
+			async fn increase_counters(&mut self) -> Result<(), Self::Error> {
 				match self {
 					$(
 						$(#[$($meta)*])*
-						Self::$name(chain) => chain.set_channel_whitelist(channel_whitelist),
+						Self::$name(chain) => chain.increase_counters().await.map_err(AnyError::$name),
 					)*
+					Self::Wasm(c) => c.inner.increase_counters().await,
 				}
 			}
 		}
 
 		impl AnyConfig {
 			pub async fn into_client(self) -> anyhow::Result<AnyChain> {
-				Ok(match self {
+				let maybe_wasm_code_id = self.wasm_code_id();
+				let chain = match self {
 					$(
 						$(#[$($meta)*])*
 						AnyConfig::$name(config) => AnyChain::$name(<$client>::new(config).await?),
 					)*
-				})
+				};
+				if let Some(code_id) = maybe_wasm_code_id {
+					Ok(AnyChain::Wasm(WasmChain { inner: Box::new(chain), code_id }))
+				} else {
+					Ok(chain)
+				}
 			}
 
 			pub fn set_client_id(&mut self, client_id: ClientId) {
@@ -883,6 +1031,30 @@ macro_rules! chains {
 						$(#[$($meta)*])*
 						Self::$name(chain) => {
 							chain.channel_whitelist.push((channel_id, port_id));
+						},
+					)*
+				}
+			}
+
+			pub fn wasm_code_id(&self) -> Option<CodeId> {
+				let maybe_code_id = match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.wasm_code_id.as_ref(),
+					)*
+				};
+				let maybe_code_id =
+					maybe_code_id.map(|s| hex::decode(s).expect("Wasm code id is hex-encoded"));
+
+				maybe_code_id
+			}
+
+			pub fn set_wasm_code_id(&mut self, code_id: String) {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => {
+							chain.wasm_code_id = Some(code_id);
 						},
 					)*
 				}

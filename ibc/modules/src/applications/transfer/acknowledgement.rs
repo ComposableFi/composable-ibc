@@ -14,7 +14,10 @@
 
 use super::error::Error;
 use crate::prelude::*;
-use core::fmt::{Display, Formatter};
+use core::{
+	fmt::{Display, Formatter},
+	str::FromStr,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -57,5 +60,14 @@ impl Display for Acknowledgement {
 		serde_json::to_string(self)
 			.map_err(|_| core::fmt::Error)
 			.and_then(|s| write!(f, "{}", s))
+	}
+}
+
+impl FromStr for Acknowledgement {
+	type Err = Error;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		serde_json::from_str(s)
+			.map_err(|_e| Error::implementation_specific("could not parse acknowledgement".into()))
 	}
 }

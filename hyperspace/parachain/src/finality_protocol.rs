@@ -28,6 +28,7 @@ use ibc::{
 	core::ics02_client::{client_state::ClientState as _, msgs::update_client::MsgUpdateAnyClient},
 	events::IbcEvent,
 	tx_msg::Msg,
+	Height,
 };
 use ibc_proto::google::protobuf::Any;
 use ibc_rpc::{BlockNumberOrHash, IbcApiClient};
@@ -37,26 +38,32 @@ use ics11_beefy::client_message::{
 };
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState};
 use primitives::{
-	mock::LocalClientTypes, query_maximum_height_for_timeout_proofs, Chain, IbcProvider,
-	KeyProvider, UpdateType,
+	filter_events_by_ids, mock::LocalClientTypes, query_maximum_height_for_timeout_proofs, Chain,
+	IbcProvider, KeyProvider, UpdateType,
 };
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
+use sp_finality_grandpa::GRANDPA_ENGINE_ID;
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
 use std::{
 	collections::{BTreeMap, BTreeSet, HashMap},
-	fmt::Display,
+	fmt::{Debug, Display},
+	time::Duration,
 };
 
 use beefy_prover::helpers::unsafe_arc_cast;
-use grandpa_prover::{GrandpaJustification, JustificationNotification};
+use grandpa_prover::{
+	GrandpaJustification, GrandpaProver, JustificationNotification, PROCESS_BLOCKS_BATCH_SIZE,
+};
 use subxt::config::{
-	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT,
+	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT, Header,
 };
 use tendermint_proto::Protobuf;
+use tokio::task::JoinSet;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum FinalityProtocol {
@@ -65,7 +72,7 @@ pub enum FinalityProtocol {
 }
 
 /// Finality event for parachains
-#[derive(Decode, Encode)]
+#[derive(Decode, Encode, Debug)]
 pub enum FinalityEvent {
 	Grandpa(
 		grandpa_light_client_primitives::justification::GrandpaJustification<
@@ -81,12 +88,12 @@ impl FinalityProtocol {
 		source: &mut ParachainClient<T>,
 		finality_event: FinalityEvent,
 		counterparty: &C,
-	) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+	) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		T: light_client_common::config::Config + Send + Sync,
 		C: Chain,
 		u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-		u32: From<<T as subxt::Config>::BlockNumber>,
+		u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 		ParachainClient<T>: Chain,
 		ParachainClient<T>: KeyProvider,
 		<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
@@ -94,7 +101,15 @@ impl FinalityProtocol {
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 		<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-		T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+		<<T as subxt::Config>::Header as Header>::Number: BlockNumberOps
+			+ From<u32>
+			+ Display
+			+ Ord
+			+ sp_runtime::traits::Zero
+			+ One
+			+ Send
+			+ Sync,
+		<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 		T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 		sp_core::H256: From<T::Hash>,
 		BTreeMap<H256, ParachainHeaderProofs>:
@@ -120,18 +135,20 @@ pub async fn query_latest_ibc_events_with_beefy<T, C>(
 	source: &mut ParachainClient<T>,
 	finality_event: FinalityEvent,
 	counterparty: &C,
-) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 where
 	T: light_client_common::config::Config + Send + Sync,
 	C: Chain,
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
-		+ From<<T as subxt::Config>::BlockNumber>,
+		+ From<<<T as subxt::Config>::Header as Header>::Number>,
 	ParachainClient<T>: Chain + KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		From<u32> + Debug + Display + Ord + sp_runtime::traits::Zero + One,
+	<T as subxt::Config>::Header: Decode,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	T::Hash: From<sp_core::H256>,
@@ -149,8 +166,9 @@ where
 	let client_state = response.client_state.ok_or_else(|| {
 		Error::Custom("Received an empty client state from counterparty".to_string())
 	})?;
-	let client_state = AnyClientState::try_from(client_state)
-		.map_err(|_| Error::Custom("Failed to decode client state".to_string()))?;
+	let client_state =
+		AnyClientState::decode_recursive(client_state, |c| matches!(c, AnyClientState::Beefy(_)))
+			.ok_or_else(|| Error::Custom(format!("Failed to decode client state")))?;
 	let beefy_client_state = match &client_state {
 		AnyClientState::Beefy(client_state) => BeefyPrimitivesClientState {
 			latest_beefy_height: client_state.latest_beefy_height,
@@ -260,23 +278,44 @@ where
 			if events.is_empty() {
 				None
 			} else {
-				str::parse::<u32>(&*num).ok().map(T::BlockNumber::from)
+				str::parse::<u32>(&*num)
+					.ok()
+					.map(<<T as subxt::Config>::Header as Header>::Number::from)
 			}
 		})
 		.collect::<BTreeSet<_>>();
 
-	let events: Vec<IbcEvent> = events.into_values().flatten().collect();
+	let events: Vec<IbcEvent> = events
+		.into_values()
+		.flatten()
+		.filter(|e| {
+			let mut channel_and_port_ids = source.channel_whitelist();
+			channel_and_port_ids.extend(counterparty.channel_whitelist());
+			filter_events_by_ids(
+				e,
+				&[source.client_id(), counterparty.client_id()],
+				&[source.connection_id(), counterparty.connection_id()]
+					.into_iter()
+					.flatten()
+					.collect::<Vec<_>>(),
+				&channel_and_port_ids,
+			)
+		})
+		.collect();
 
 	if timeout_update_required {
 		let max_height_for_timeouts = max_height_for_timeouts.unwrap();
 		if max_height_for_timeouts > client_state.latest_height().revision_height {
-			let max_timeout_height = T::BlockNumber::from(max_height_for_timeouts as u32);
+			let max_timeout_height = <<T as subxt::Config>::Header as Header>::Number::from(
+				max_height_for_timeouts as u32,
+			);
 			headers_with_events.insert(max_timeout_height);
 		}
 	}
 
 	if is_update_required {
-		headers_with_events.insert(T::BlockNumber::from(latest_finalized_block));
+		headers_with_events
+			.insert(<<T as subxt::Config>::Header as Header>::Number::from(latest_finalized_block));
 	}
 
 	// only query proofs for headers that actually have events or are mandatory
@@ -316,7 +355,79 @@ where
 		Any { value, type_url: msg.type_url() }
 	};
 
-	Ok(vec![(update_header, events, update_type)])
+	// FIXME: use height from the beefy header
+	Ok(vec![(update_header, Height::new(0, 0), events, update_type)])
+}
+
+async fn find_next_justification<T>(
+	prover: &GrandpaProver<T>,
+	from: u32,
+	to: u32,
+) -> anyhow::Result<Option<GrandpaJustification<T::Header>>>
+where
+	T: light_client_common::config::Config + Send + Sync,
+	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
+		+ From<<<T as subxt::Config>::Header as Header>::Number>,
+	ParachainClient<T>: Chain + KeyProvider,
+	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
+		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
+	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
+	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
+	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
+	sp_core::H256: From<T::Hash>,
+	BTreeMap<H256, ParachainHeaderProofs>:
+		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
+	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
+	<T as subxt::Config>::AccountId: Send + Sync,
+	<T as subxt::Config>::Address: Send + Sync,
+{
+	log::debug!(target: "hyperspace", "Trying to find next justification in blocks {from}..{to}");
+	let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+	let heights = (from..to).collect::<Vec<_>>();
+	for heights in heights.chunks(PROCESS_BLOCKS_BATCH_SIZE) {
+		for height in heights.to_owned() {
+			if height % 100 == 0 {
+				log::debug!(target: "hyperspace", "Looking for a closer proof {height}/{to}...");
+			}
+			let relay_client = prover.relay_client.clone();
+			let delay = prover.rpc_call_delay.as_millis();
+			let duration = Duration::from_millis(rand::thread_rng().gen_range(1..delay) as u64);
+			join_set.spawn(async move {
+				tokio::time::sleep(duration).await;
+				let Some(hash) = relay_client.rpc().block_hash(Some(height.into())).await? else {
+					return Ok(None)
+				};
+				let Some(block) = relay_client.rpc().block(Some(hash)).await? else {
+					return Ok(None)
+				};
+				let Some(justifications) = block.justifications else {
+					return Ok(None)
+				};
+				for (id, justification) in justifications {
+					log::info!(target: "hyperspace", "Found closer justification at {height} (suggested {to})");
+					if id == GRANDPA_ENGINE_ID {
+						let decoded_justification =
+							GrandpaJustification::<T::Header>::decode(&mut &justification[..])?;
+						return Ok(Some(decoded_justification))
+					}
+				}
+				return Ok(None)
+			});
+		}
+		while let Some(res) = join_set.join_next().await {
+			let justification = res??;
+			if justification.is_some() {
+				join_set.abort_all();
+				return Ok(justification)
+			}
+		}
+	}
+
+	Ok(None)
 }
 
 /// Query the latest events that have been finalized by the GRANDPA finality protocol.
@@ -324,24 +435,26 @@ pub async fn query_latest_ibc_events_with_grandpa<T, C>(
 	source: &mut ParachainClient<T>,
 	finality_event: FinalityEvent,
 	counterparty: &C,
-) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 where
 	T: light_client_common::config::Config + Send + Sync,
 	C: Chain,
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
-		+ From<<T as subxt::Config>::BlockNumber>,
+		+ From<<<T as subxt::Config>::Header as Header>::Number>,
 	ParachainClient<T>: Chain + KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
@@ -352,20 +465,12 @@ where
 	let client_id = source.client_id();
 	let latest_height = counterparty.latest_height_and_timestamp().await?.0;
 	let response = counterparty.query_client_state(latest_height, client_id).await?;
-	let client_state = response.client_state.ok_or_else(|| {
+	let any_client_state = response.client_state.ok_or_else(|| {
 		Error::Custom("Received an empty client state from counterparty".to_string())
 	})?;
 
-	let client_state = AnyClientState::try_from(client_state)
-		.map_err(|_| Error::Custom("Failed to decode client state".to_string()))?;
-
-	let client_state = match client_state {
-		AnyClientState::Grandpa(client_state) => client_state,
-		c => Err(Error::ClientStateRehydration(format!(
-			"Expected AnyClientState::Grandpa found: {:?}",
-			c
-		)))?,
-	};
+	let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
+		.ok_or_else(|| Error::Custom(format!("Could not decode client state")))? else { unreachable!() };
 
 	let prover = source.grandpa_prover();
 	// prove_finality will always give us the highest block finalized by the authority set for the
@@ -393,8 +498,27 @@ where
 
 	let finality_proof = FinalityProof::<T::Header>::decode(&mut &encoded[..])?;
 
-	let justification =
+	let mut justification =
 		GrandpaJustification::<T::Header>::decode(&mut &finality_proof.justification[..])?;
+
+	let diff = justification
+		.commit
+		.target_number
+		.saturating_sub(client_state.latest_relay_height);
+	if diff > 100 {
+		// try to find a closer justification
+		if let Some(new_justification) = find_next_justification(
+			&prover,
+			client_state.latest_relay_height + 1,
+			justification.commit.target_number,
+		)
+		.await?
+		{
+			justification = new_justification;
+		}
+	}
+
+	let justification = justification;
 
 	// fetch the latest finalized parachain header
 	let finalized_para_header = prover
@@ -402,9 +526,9 @@ where
 		.await?;
 
 	// notice the inclusive range
-	let finalized_blocks = ((client_state.latest_para_height + 1)..=
-		u32::from(finalized_para_header.number()))
-		.collect::<Vec<_>>();
+	let finalized_para_height = u32::from(finalized_para_header.number());
+	let finalized_blocks =
+		((client_state.latest_para_height + 1)..=finalized_para_height).collect::<Vec<_>>();
 
 	if !finalized_blocks.is_empty() {
 		log::info!(
@@ -449,17 +573,39 @@ where
 			if events.is_empty() {
 				None
 			} else {
-				str::parse::<u32>(&*num).ok().map(T::BlockNumber::from)
+				str::parse::<u32>(&*num)
+					.ok()
+					.map(<<T as subxt::Config>::Header as Header>::Number::from)
 			}
 		})
 		.collect::<BTreeSet<_>>();
 
-	let events: Vec<IbcEvent> = events.into_values().flatten().collect();
+	let events: Vec<IbcEvent> = events
+		.into_values()
+		.flatten()
+		.filter(|e| {
+			let mut channel_and_port_ids = source.channel_whitelist();
+			channel_and_port_ids.extend(counterparty.channel_whitelist());
+			let f = filter_events_by_ids(
+				e,
+				&[source.client_id(), counterparty.client_id()],
+				&[source.connection_id(), counterparty.connection_id()]
+					.into_iter()
+					.flatten()
+					.collect::<Vec<_>>(),
+				&channel_and_port_ids,
+			);
+			log::trace!(target: "hyperspace", "Filtering event: {:?}: {f}", e.event_type());
+			f
+		})
+		.collect();
 
 	if timeout_update_required {
 		let max_height_for_timeouts = max_height_for_timeouts.unwrap();
 		if max_height_for_timeouts > client_state.latest_height().revision_height {
-			let max_timeout_height = T::BlockNumber::from(max_height_for_timeouts as u32);
+			let max_timeout_height = <<T as subxt::Config>::Header as Header>::Number::from(
+				max_height_for_timeouts as u32,
+			);
 			headers_with_events.insert(max_timeout_height);
 		}
 	}
@@ -475,11 +621,11 @@ where
 		.await?;
 
 	// We ensure we advance the finalized latest parachain height
-	if client_state.latest_para_height < u32::from(finalized_para_header.number()) {
+	if client_state.latest_para_height < finalized_para_height {
 		headers_with_events.insert(finalized_para_header.number());
 	}
 
-	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
+	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers, .. } = prover
 		.query_finalized_parachain_headers_with_proof::<T::Header>(
 			client_state.latest_relay_height,
 			justification.commit.target_number,
@@ -501,6 +647,7 @@ where
 		.expect("Should not panic, same struct from different crates");
 
 	let authority_set_changed_scheduled = find_scheduled_change(&target).is_some();
+	log::info!(target: "hyperspace_parachain", "authority_set_changed_scheduled = {authority_set_changed_scheduled}, timeout_update_required = {timeout_update_required}, is_update_required = {is_update_required}");
 	// if validator set has changed this is a mandatory update
 	let update_type =
 		match authority_set_changed_scheduled || timeout_update_required || is_update_required {
@@ -512,8 +659,9 @@ where
 		finality_proof: codec::Decode::decode(&mut &*finality_proof.encode())
 			.expect("Same struct from different crates,decode should not fail"),
 		parachain_headers: parachain_headers.into(),
+		height: Height::new(source.para_id as u64, finalized_para_height as u64),
 	};
-
+	let height = grandpa_header.height();
 	let update_header = {
 		let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 			client_id: source.client_id(),
@@ -524,5 +672,5 @@ where
 		Any { value, type_url: msg.type_url() }
 	};
 
-	Ok(vec![(update_header, events, update_type)])
+	Ok(vec![(update_header, height, events, update_type)])
 }

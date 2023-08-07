@@ -19,10 +19,11 @@ use ibc_proto::{
 };
 use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::{
-	mock::LocalClientTypes, Chain, IbcProvider, LightClientSync, MisbehaviourHandler,
+	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, LightClientSync,
+	MisbehaviourHandler,
 };
 use prost::Message;
-use std::pin::Pin;
+use std::{pin::Pin, time::Duration};
 use tendermint_rpc::{
 	event::{Event, EventData},
 	query::{EventType, Query},
@@ -52,7 +53,7 @@ where
 	H: Clone + Send + Sync + 'static,
 {
 	fn name(&self) -> &str {
-		&*self.name
+		&self.name
 	}
 
 	fn block_max_weight(&self) -> u64 {
@@ -65,23 +66,17 @@ where
 		let (_, tx_raw, _) =
 			sign_tx(self.keybase.clone(), self.chain_id.clone(), &account_info, vec![], fee)?;
 
-		let total_len = tx_raw.encoded_len();
 		let body_bytes_len = tx_raw.body_bytes.len();
-		let envelope_len = if body_bytes_len == 0 {
-			total_len
-		} else {
-			total_len - 1 - prost::length_delimiter_len(body_bytes_len) - body_bytes_len
-		};
 		// Full length of the transaction can then be derived from the length of the invariable
 		// envelope and the length of the body field, taking into account the varint encoding
 		// of the body field's length delimiter.
+		#[allow(unused)]
 		fn tx_len(envelope_len: usize, body_len: usize) -> usize {
 			// The caller has at least one message field length added to the body's
 			debug_assert!(body_len != 0);
 			envelope_len + 1 + prost::length_delimiter_len(body_len) + body_len
 		}
 
-		let mut current_count = 0;
 		let mut current_len = body_bytes_len;
 
 		for message in messages {
@@ -90,12 +85,6 @@ where
 			// The total length the message adds to the encoding includes the
 			// field tag (small varint) and the length delimiter.
 			let tagged_len = 1 + prost::length_delimiter_len(message_len) + message_len;
-			if current_count >= 30 ||
-				tx_len(envelope_len, current_len + tagged_len) > self.max_tx_size
-			{
-				return Err(Error::Custom("Too many messages".to_string()))
-			}
-			current_count += 1;
 			current_len += tagged_len;
 		}
 		Ok(current_len as u64)
@@ -103,24 +92,22 @@ where
 
 	async fn finality_notifications(
 		&self,
-	) -> Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>> {
-		let (ws_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
-			.await
-			.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))
-			.unwrap();
-		tokio::spawn(ws_driver.run());
+	) -> Result<
+		Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>>,
+		Error,
+	> {
+		let ws_client = self.rpc_client.clone();
 		let subscription = ws_client
 			.subscribe(Query::from(EventType::NewBlock))
 			.await
-			.map_err(|e| Error::from(format!("failed to subscribe to new blocks {:?}", e)))
-			.unwrap()
+			.map_err(|e| Error::from(format!("failed to subscribe to new blocks {e:?}")))?
 			.chunks(6);
 		log::info!(target: "hyperspace_cosmos", "🛰️ Subscribed to {} listening to finality notifications", self.name);
 		let stream = subscription.filter_map(|events| {
 			let events = events
 				.into_iter()
 				.collect::<Result<Vec<_>, _>>()
-				.map_err(|e| Error::from(format!("failed to get event {:?}", e)))
+				.map_err(|e| Error::from(format!("failed to get event {e:?}")))
 				.unwrap();
 			let get_height = |event: &Event| {
 				let Event { data, events: _, query: _ } = &event;
@@ -141,7 +128,7 @@ where
 			}))
 		});
 
-		Box::pin(stream)
+		Ok(Box::pin(stream))
 	}
 
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
@@ -180,16 +167,12 @@ where
 			.map_err(|e| Error::from(e.to_string()))?
 			.into_inner();
 		let mut idx = None;
-		'l: for l in resp
-			.tx_responses
-			.pop()
-			.ok_or_else(|| {
-				Error::from(format!("Failed to find tx for update client: {:?}", update))
-			})?
-			.logs
-		{
-			for ev in l.events {
-				let e = AbciEvent {
+		let tx_response = resp.tx_responses.pop().ok_or_else(|| {
+			Error::from(format!("Failed to find tx for update client: {update:?}"))
+		})?;
+		'l: for log in tx_response.logs {
+			for ev in log.events {
+				let event = AbciEvent {
 					kind: ev.r#type,
 					attributes: ev
 						.attributes
@@ -201,14 +184,16 @@ where
 						})
 						.collect(),
 				};
-				let attr = client_extract_attributes_from_tx(&e).map_err(|e| {
-					Error::from(format!("Failed to extract attributes from tx: {}", e))
-				})?;
+				let attr = client_extract_attributes_from_tx(
+					&event,
+					Height::new(self.id().version(), tx_response.height as u64),
+				)
+				.map_err(|e| Error::from(format!("Failed to extract attributes from tx: {e}")))?;
 				if attr.client_id == *update.client_id() &&
 					attr.client_type == update.client_type() &&
 					attr.consensus_height == update.consensus_height()
 				{
-					idx = Some(l.msg_index);
+					idx = Some(log.msg_index);
 					break 'l
 				}
 			}
@@ -219,19 +204,17 @@ where
 			.txs
 			.pop()
 			.ok_or_else(|| {
-				Error::from(format!("Failed to find tx for update client in `txs`: {:?}", update))
+				Error::from(format!("Failed to find tx for update client in `txs`: {update:?}"))
 			})?
 			.body
 			.ok_or_else(|| {
-				Error::from(format!("Failed to find tx for update client in `body`: {:?}", update))
+				Error::from(format!("Failed to find tx for update client in `body`: {update:?}"))
 			})?
 			.messages
 			.remove(idx as usize);
 		let envelope = Ics26Envelope::<LocalClientTypes>::try_from(x);
-		match envelope {
-			Ok(Ics26Envelope::Ics2Msg(ClientMsg::UpdateClient(update_msg))) =>
-				return Ok(update_msg.client_message),
-			_ => (),
+		if let Ok(Ics26Envelope::Ics2Msg(ClientMsg::UpdateClient(update_msg))) = envelope {
+			return Ok(update_msg.client_message)
 		}
 
 		Err(Error::from("Failed to find matching update client event".to_string()))
@@ -239,6 +222,52 @@ where
 
 	async fn get_proof_height(&self, block_height: Height) -> Height {
 		block_height.increment()
+	}
+
+	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error> {
+		let err_str = if let Some(rpc_err) = error.downcast_ref::<Error>() {
+			match rpc_err {
+				Error::RpcError(s) => s.clone(),
+				_ => "".to_string(),
+			}
+		} else {
+			error.to_string()
+		};
+		log::debug!(target: "hyperspace_cosmos", "Handling error: {err_str}");
+		if err_str.contains("dispatch task is gone") ||
+			err_str.contains("failed to send message to internal channel")
+		{
+			self.reconnect().await?;
+			self.common_state.rpc_call_delay *= 2;
+		}
+
+		Ok(())
+	}
+
+	fn rpc_call_delay(&self) -> Duration {
+		self.common_state.rpc_call_delay
+	}
+
+	fn set_rpc_call_delay(&mut self, delay: Duration) {
+		self.common_state.rpc_call_delay = delay;
+	}
+
+	fn common_state(&self) -> &CommonClientState {
+		&self.common_state
+	}
+
+	fn common_state_mut(&mut self) -> &mut CommonClientState {
+		&mut self.common_state
+	}
+
+	async fn reconnect(&mut self) -> anyhow::Result<()> {
+		let (rpc_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
+			.await
+			.map_err(|e| Error::RpcError(format!("{e:?}")))?;
+		self.join_handles.lock().await.push(tokio::spawn(ws_driver.run()));
+		self.rpc_client = rpc_client;
+		log::info!(target: "hyperspace_cosmos", "Reconnected to cosmos chain");
+		Ok(())
 	}
 }
 

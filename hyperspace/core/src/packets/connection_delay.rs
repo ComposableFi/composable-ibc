@@ -25,6 +25,10 @@ pub fn has_delay_elapsed(
 	delay_period_time: Duration,
 	delay_period_blocks: u64,
 ) -> Result<bool, anyhow::Error> {
+	log::trace!(target: "hyperspace",
+		"Checking if delay has elapsed: current_time: {}, current_height: {}, client_update_time: {}, client_update_height: {}, delay_period_time: {:?}, delay_period_blocks: {}",
+		current_time, current_height, client_update_time, client_update_height, delay_period_time, delay_period_blocks
+	);
 	let earliest_time = (client_update_time + delay_period_time)
 		.map_err(|_| Error::Custom("Timestamp overflow".to_string()))?;
 	if !(current_time == earliest_time || current_time.after(&earliest_time)) {

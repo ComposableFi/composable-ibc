@@ -14,7 +14,7 @@
 
 #[cfg(feature = "testing")]
 use crate::send_packet_relay::packet_relay_status;
-use crate::{packets::query_ready_and_timed_out_packets, Mode};
+use crate::Mode;
 use codec::Encode;
 use ibc::{
 	core::{
@@ -35,6 +35,7 @@ use ibc::{
 			},
 		},
 		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
+		ics24_host::identifier::ConnectionId,
 	},
 	events::{IbcEvent, IbcEventType},
 	proofs::{ConsensusProof, Proofs},
@@ -44,6 +45,7 @@ use ibc::{
 use ibc_proto::google::protobuf::Any;
 use pallet_ibc::light_clients::AnyClientState;
 use primitives::{error::Error, mock::LocalClientTypes, Chain};
+use std::str::FromStr;
 use tendermint_proto::Protobuf;
 
 /// Connection proof type
@@ -61,7 +63,7 @@ pub async fn parse_events(
 	sink: &mut impl Chain,
 	events: Vec<IbcEvent>,
 	mode: Option<Mode>,
-) -> Result<(Vec<Any>, Vec<Any>), anyhow::Error> {
+) -> Result<Vec<Any>, anyhow::Error> {
 	let mut messages = vec![];
 	// 1. translate events to messages
 	for event in events {
@@ -93,7 +95,7 @@ pub async fn parse_events(
 						)
 						.await?;
 
-					let proof_height = connection_response.proof_height.ok_or_else(|| Error::Custom(format!("[get_messages_for_events - open_conn_init] Proof height not found in response")))?;
+					let proof_height = connection_response.proof_height.ok_or_else(|| Error::Custom("[get_messages_for_events - open_conn_init] Proof height not found in response".to_string()))?;
 					let proof_height =
 						Height::new(proof_height.revision_number, proof_height.revision_height);
 					let client_state_proof =
@@ -102,7 +104,7 @@ pub async fn parse_events(
 					let client_state = client_state_response
 						.client_state
 						.map(AnyClientState::try_from)
-						.ok_or_else(|| Error::Custom(format!("Client state is empty")))??;
+						.ok_or_else(|| Error::Custom("Client state is empty".to_string()))??;
 					let consensus_proof = source
 						.query_client_consensus(
 							open_init.height(),
@@ -170,7 +172,7 @@ pub async fn parse_events(
 						)
 						.await?;
 
-					let proof_height = connection_response.proof_height.ok_or_else(|| Error::Custom(format!("[get_messages_for_events - open_conn_try] Proof height not found in response")))?;
+					let proof_height = connection_response.proof_height.ok_or_else(|| Error::Custom("[get_messages_for_events - open_conn_try] Proof height not found in response".to_string()))?;
 					let proof_height =
 						Height::new(proof_height.revision_number, proof_height.revision_height);
 					let client_state_proof =
@@ -178,7 +180,7 @@ pub async fn parse_events(
 					let client_state = client_state_response
 						.client_state
 						.map(AnyClientState::try_from)
-						.ok_or_else(|| Error::Custom(format!("Client state is empty")))??;
+						.ok_or_else(|| Error::Custom("Client state is empty".to_string()))??;
 					let consensus_proof = source
 						.query_client_consensus(
 							open_try.height(),
@@ -193,7 +195,7 @@ pub async fn parse_events(
 						connection_id: counterparty
 							.connection_id()
 							.ok_or_else(|| {
-								Error::Custom(format!("[get_messages_for_events - open_conn_try] Connection Id not found"))
+								Error::Custom("[get_messages_for_events - open_conn_try] Connection Id not found".to_string())
 							})?
 							.clone(),
 						counterparty_connection_id: connection_id,
@@ -248,7 +250,7 @@ pub async fn parse_events(
 						CommitmentProofBytes::try_from(connection_response.proof)?;
 
 					let proof_height = connection_response.proof_height.ok_or_else(|| {
-						Error::Custom(format!("[get_messages_for_events - open_conn_ack] Proof height not found in response"))
+						Error::Custom("[get_messages_for_events - open_conn_ack] Proof height not found in response".to_string())
 					})?;
 					let proof_height =
 						Height::new(proof_height.revision_number, proof_height.revision_height);
@@ -258,7 +260,7 @@ pub async fn parse_events(
 						connection_id: counterparty
 							.connection_id()
 							.ok_or_else(|| {
-								Error::Custom(format!("[get_messages_for_events - open_conn_ack] Connection Id not found"))
+								Error::Custom("[get_messages_for_events - open_conn_ack] Connection Id not found".to_string())
 							})?
 							.clone(),
 						proofs: Proofs::new(connection_proof, None, None, None, proof_height)?,
@@ -289,13 +291,30 @@ pub async fn parse_events(
 						})?)
 						.expect("Channel end decoding should not fail");
 					let counterparty = channel_end.counterparty();
+
+					let connection_response = source
+						.query_connection_end(open_init.height(), open_init.connection_id.clone())
+						.await?;
+					let connection_end = connection_response.connection.ok_or_else(|| {
+						Error::Custom(format!(
+							"[get_messages_for_events - open_chan_init] Connection end not found for {:?}",
+							open_init.connection_id.clone()
+						))
+					})?;
+					let counterparty_connection = connection_end.counterparty.ok_or_else(|| {
+						Error::Custom(format!(
+							"[get_messages_for_events - open_chan_init] Connection counterparty not found for {:?}",
+							open_init.connection_id.clone()
+						))
+					})?;
+
 					// Construct the channel end as we expect it to be constructed on the
 					// receiving chain
 					let channel = ChannelEnd::new(
 						State::TryOpen,
 						channel_end.ordering,
 						ChannelCounterparty::new(open_init.port_id, Some(channel_id)),
-						channel_end.connection_hops.clone(),
+						vec![ConnectionId::from_str(&counterparty_connection.connection_id)?],
 						channel_end.version.clone(),
 					);
 
@@ -430,15 +449,16 @@ pub async fn parse_events(
 				// 2. if none, send message immediately
 				// 3. otherwise skip.
 				let port_id = send_packet.packet.source_port.clone();
-				let channel_id = send_packet.packet.source_channel.clone();
+				let channel_id = send_packet.packet.source_channel;
 				let channel_response = source
 					.query_channel_end(send_packet.height, channel_id, port_id.clone())
 					.await?;
 				let channel_end =
 					ChannelEnd::try_from(channel_response.channel.ok_or_else(|| {
-						Error::Custom(format!(
-							"Failed to convert to concrete channel end from raw channel end",
-						))
+						Error::Custom(
+							"Failed to convert to concrete channel end from raw channel end"
+								.to_string(),
+						)
 					})?)?;
 				let connection_id = channel_end
 					.connection_hops
@@ -449,7 +469,7 @@ pub async fn parse_events(
 					source.query_connection_end(send_packet.height, connection_id.clone()).await?;
 				let connection_end =
 					ConnectionEnd::try_from(connection_response.connection.ok_or_else(|| {
-						Error::Custom(format!("ConnectionEnd not found for {:?}", connection_id))
+						Error::Custom(format!("ConnectionEnd not found for {connection_id:?}"))
 					})?)?;
 				if !connection_end.delay_period().is_zero() {
 					// We can't send this packet immediately because of connection delays
@@ -462,6 +482,16 @@ pub async fn parse_events(
 				}
 				let seq = u64::from(send_packet.packet.sequence);
 				let packet = send_packet.packet;
+
+				if packet.timeout_height.is_zero() && packet.timeout_timestamp.nanoseconds() == 0 {
+					log::warn!(
+						target: "hyperspace",
+						"Skipping packet relay because packet timeout is zero: {}",
+						packet.sequence
+					);
+					continue
+				}
+
 				let packet_commitment_response = source
 					.query_packet_commitment(send_packet.height, &port_id, &channel_id, seq)
 					.await?;
@@ -485,16 +515,17 @@ pub async fn parse_events(
 				log::debug!(target: "hyperspace", "Sending packet {:?}", packet);
 			},
 			IbcEvent::WriteAcknowledgement(write_ack) => {
-				let port_id = &write_ack.packet.source_port.clone();
-				let channel_id = &write_ack.packet.source_channel.clone();
+				let port_id = &write_ack.packet.destination_port.clone();
+				let channel_id = &write_ack.packet.destination_channel.clone();
 				let channel_response = source
-					.query_channel_end(write_ack.height, channel_id.clone(), port_id.clone())
+					.query_channel_end(write_ack.height, *channel_id, port_id.clone())
 					.await?;
 				let channel_end =
 					ChannelEnd::try_from(channel_response.channel.ok_or_else(|| {
-						Error::Custom(format!(
-							"Failed to convert to concrete channel end from raw channel end",
-						))
+						Error::Custom(
+							"Failed to convert to concrete channel end from raw channel end"
+								.to_string(),
+						)
 					})?)?;
 				let connection_id = channel_end
 					.connection_hops
@@ -505,7 +536,7 @@ pub async fn parse_events(
 					source.query_connection_end(write_ack.height, connection_id.clone()).await?;
 				let connection_end =
 					ConnectionEnd::try_from(connection_response.connection.ok_or_else(|| {
-						Error::Custom(format!("ConnectionEnd not found for {:?}", connection_id))
+						Error::Custom(format!("ConnectionEnd not found for {connection_id:?}"))
 					})?)?;
 				if !connection_end.delay_period().is_zero() {
 					log::debug!(target: "hyperspace", "Skipping write acknowledgement because of connection delay {:?}",
@@ -516,7 +547,7 @@ pub async fn parse_events(
 				let seq = u64::from(write_ack.packet.sequence);
 				let packet = write_ack.packet;
 				let packet_acknowledgement_response = source
-					.query_packet_acknowledgement(write_ack.height, &port_id, &channel_id, seq)
+					.query_packet_acknowledgement(write_ack.height, port_id, channel_id, seq)
 					.await?;
 				let acknowledgement = write_ack.ack;
 				let commitment_proof =
@@ -545,15 +576,10 @@ pub async fn parse_events(
 
 	// In light mode do not try to query channel state
 	if let Some(Mode::Light) = mode {
-		return Ok((messages, vec![]))
+		return Ok(messages)
 	}
 
-	// 2. query packets that can now be sent, at this sink height because of connection delay.
-	let (ready_packets, timed_out_packets) =
-		query_ready_and_timed_out_packets(source, sink).await?;
-	messages.extend(ready_packets);
-
-	Ok((messages, timed_out_packets))
+	Ok(messages)
 }
 
 /// Fetch the consensus state proof for the sink chain.
@@ -563,7 +589,7 @@ async fn query_host_consensus_state_proof(
 ) -> Result<Vec<u8>, anyhow::Error> {
 	let client_type = sink.client_type();
 	let host_consensus_state_proof = if !client_type.contains("tendermint") {
-		sink.query_host_consensus_state_proof(client_state.latest_height())
+		sink.query_host_consensus_state_proof(&client_state)
 			.await?
 			.expect("Host chain requires consensus state proof; qed")
 	} else {
@@ -575,6 +601,6 @@ async fn query_host_consensus_state_proof(
 
 pub fn has_packet_events(event_types: &[IbcEventType]) -> bool {
 	event_types
-		.into_iter()
+		.iter()
 		.any(|event_type| matches!(event_type, &IbcEventType::SendPacket | &IbcEventType::WriteAck))
 }

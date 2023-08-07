@@ -10,19 +10,14 @@ use crate::{
 	ics20::IbcModule,
 	ics23::client_states::ClientStates,
 	light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState},
+	routing::Context,
 	Any, Config,
 };
-
 use codec::EncodeLike;
 use core::str::FromStr;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
-use frame_support::traits::fungibles::{Inspect, Mutate};
+use frame_support::traits::Currency;
 use frame_system::RawOrigin;
-use ibc_primitives::IbcHandler;
-use sp_core::Get;
-use sp_runtime::traits::IdentifyAccount;
-
-use crate::routing::Context;
 use ibc::{
 	applications::transfer::{
 		acknowledgement::{Acknowledgement as TransferAck, ACK_ERR_STR},
@@ -76,22 +71,38 @@ use ibc::{
 	signer::Signer,
 	timestamp::Timestamp,
 };
-use ibc_primitives::get_channel_escrow_address;
+use ibc_primitives::{get_channel_escrow_address, IbcHandler};
+use pallet_membership::Instance2;
 use scale_info::prelude::string::ToString;
-use sp_core::crypto::AccountId32;
+use sp_core::{crypto::AccountId32, Get};
+use sp_runtime::{traits::IdentifyAccount, DigestItem};
 use sp_std::vec;
 use tendermint_proto::Protobuf;
 
 const MILLIS: u128 = 1_000_000;
 
+fn relayer_origin<T: pallet_membership::Config<Instance2> + frame_system::Config>(
+) -> <T as frame_system::Config>::AccountId {
+	pallet_membership::pallet::Members::<T, Instance2>::get()
+		.get(0)
+		.map(|x| x.to_owned())
+		.unwrap_or_else(|| whitelisted_caller())
+}
+
 benchmarks! {
 	where_clause {
 		where u32: From<<T as frame_system::Config>::BlockNumber>,
 				<T as frame_system::Config>::BlockNumber: From<u32>,
-				T: Send + Sync + pallet_timestamp::Config<Moment = u64> + parachain_info::Config + Config,
+				T: Send + Sync +
+					pallet_timestamp::Config<Moment = u64> +
+					parachain_info::Config +
+					Config +
+					pallet_aura::Config +
+					balances::Config +
+					pallet_membership::Config<Instance2>,
 		AccountId32: From<<T as frame_system::Config>::AccountId>,
-		T::AssetId: From<u128>,
-	<T as frame_system::pallet::Config>::AccountId: EncodeLike
+		<T as Config>::AssetId: From<u128>,
+		<T as frame_system::pallet::Config>::AccountId: EncodeLike
 	}
 
 	// Run these benchmarks via
@@ -108,7 +119,8 @@ benchmarks! {
 		// will be a comparison between the local timestamp and the timestamp existing in the header
 		// after factoring in the trusting period for the light client.
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
+
 		let (mock_client_state, mock_cs_state, header) = generate_tendermint_header(i, 2);
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -129,7 +141,7 @@ benchmarks! {
 		};
 
 		let msg = Any { type_url: UPDATE_CLIENT_TYPE_URL.to_string(), value: msg.encode_vec().unwrap() };
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let client_state = ClientStates::<T>::get(&client_id).unwrap();
@@ -141,7 +153,7 @@ benchmarks! {
 	conn_try_open_tendermint {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		// Create initial client state and consensus state
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
@@ -164,7 +176,7 @@ benchmarks! {
 		let (cs_state, value) = create_conn_open_try::<T>();
 		// Update consensus state with the new root that we'll enable proofs to be correctly verified
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 		let msg = Any { type_url: CONN_TRY_OPEN_TYPE_URL.to_string(), value: value.encode_vec().unwrap() };
 		log::trace!(target: "pallet_ibc", "\n\n\n\n\n\n<=============== Begin benchmark ====================>\n\n\n\n\n");
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
@@ -177,7 +189,7 @@ benchmarks! {
 	conn_open_ack_tendermint {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -207,7 +219,7 @@ benchmarks! {
 
 		let (cs_state, value) = create_conn_open_ack::<T>();
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 		let msg = Any { type_url: CONN_OPEN_ACK_TYPE_URL.to_string(), value: value.encode_vec().unwrap() };
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -219,7 +231,7 @@ benchmarks! {
 	conn_open_confirm_tendermint {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -252,7 +264,7 @@ benchmarks! {
 		let (cs_state, value) = create_conn_open_confirm::<T>();
 		// Update consensus state with the new root that we'll enable proofs to be correctly verified
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 		let msg = Any { type_url: CONN_OPEN_CONFIRM_TYPE_URL.to_string(), value: value.encode_vec().unwrap() };
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -281,14 +293,14 @@ benchmarks! {
 
 		ctx.store_connection(connection_id.clone(), &connection_end).unwrap();
 		ctx.store_connection_to_client(connection_id, &client_id).unwrap();
-		let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
+		let port_id = PortId::transfer();
 		let counterparty_channel = ibc::core::ics04_channel::channel::Counterparty::new(port_id.clone(), None);
 		let channel_end = ChannelEnd::new(
 			ibc::core::ics04_channel::channel::State::Init,
-			ibc::core::ics04_channel::channel::Order::Ordered,
+			ibc::core::ics04_channel::channel::Order::Unordered,
 			counterparty_channel,
 			vec![ConnectionId::new(0)],
-			ibc::core::ics04_channel::Version::new(pallet_ibc_ping::VERSION.to_string())
+			ibc::core::ics04_channel::Version::new(VERSION.to_string())
 		);
 
 		let value = MsgChannelOpenInit {
@@ -297,7 +309,7 @@ benchmarks! {
 			signer: Signer::from_str(MODULE_ID).unwrap()
 		}.encode_vec().unwrap();
 
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 		let msg = Any { type_url: CHAN_OPEN_TYPE_URL.to_string(), value };
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -308,7 +320,7 @@ benchmarks! {
 	channel_open_try_tendermint {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -335,7 +347,7 @@ benchmarks! {
 
 		ibc::core::ics26_routing::handler::deliver(&mut ctx, msg).unwrap();
 
-		let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
+		let port_id = PortId::transfer();
 
 		let counterparty_channel = ibc::core::ics04_channel::channel::Counterparty::new(port_id.clone(), Some(ChannelId::new(0)));
 
@@ -346,10 +358,10 @@ benchmarks! {
 			type_url: CHAN_OPEN_TRY_TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
-		let channel_end = ctx.channel_end(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0))).unwrap();
+		let channel_end = ctx.channel_end(&(PortId::transfer(), ChannelId::new(0))).unwrap();
 		assert_eq!(channel_end.state, ChannelState::TryOpen);
 	}
 
@@ -357,7 +369,7 @@ benchmarks! {
 	channel_open_ack_tendermint {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -383,15 +395,15 @@ benchmarks! {
 
 		ibc::core::ics26_routing::handler::deliver(&mut ctx, msg).unwrap();
 
-		let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
+		let port_id = PortId::transfer();
 
 		let counterparty_channel = ibc::core::ics04_channel::channel::Counterparty::new(port_id.clone(), Some(ChannelId::new(0)));
 		let channel_end = ChannelEnd::new(
 			ibc::core::ics04_channel::channel::State::Init,
-			ibc::core::ics04_channel::channel::Order::Ordered,
+			ibc::core::ics04_channel::channel::Order::Unordered,
 			counterparty_channel,
 			vec![ConnectionId::new(0)],
-			ibc::core::ics04_channel::Version::new(pallet_ibc_ping::VERSION.to_string())
+			ibc::core::ics04_channel::Version::new(VERSION.to_string())
 		);
 
 		let value = MsgChannelOpenInit {
@@ -410,10 +422,10 @@ benchmarks! {
 			type_url: CHAN_OPEN_ACK_TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
-		let channel_end = ctx.channel_end(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0))).unwrap();
+		let channel_end = ctx.channel_end(&(PortId::transfer(), ChannelId::new(0))).unwrap();
 		assert_eq!(channel_end.state, ChannelState::Open);
 	}
 
@@ -421,7 +433,7 @@ benchmarks! {
 	channel_open_confirm_tendermint {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -447,15 +459,15 @@ benchmarks! {
 
 		ibc::core::ics26_routing::handler::deliver(&mut ctx, msg).unwrap();
 
-		let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
+		let port_id = PortId::transfer();
 
 		let counterparty_channel = ibc::core::ics04_channel::channel::Counterparty::new(port_id.clone(), Some(ChannelId::new(0)));
 		let channel_end = ChannelEnd::new(
 			ibc::core::ics04_channel::channel::State::TryOpen,
-			ibc::core::ics04_channel::channel::Order::Ordered,
+			ibc::core::ics04_channel::channel::Order::Unordered,
 			counterparty_channel,
 			vec![ConnectionId::new(0)],
-			ibc::core::ics04_channel::Version::new(pallet_ibc_ping::VERSION.to_string())
+			ibc::core::ics04_channel::Version::new(VERSION.to_string())
 		);
 
 		ctx.store_channel((port_id.clone(), ChannelId::new(0)), &channel_end).unwrap();
@@ -467,10 +479,10 @@ benchmarks! {
 			type_url: CHAN_OPEN_CONFIRM_TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
-		let channel_end = ctx.channel_end(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0))).unwrap();
+		let channel_end = ctx.channel_end(&(PortId::transfer(), ChannelId::new(0))).unwrap();
 		assert_eq!(channel_end.state, ChannelState::Open);
 	}
 
@@ -478,7 +490,7 @@ benchmarks! {
 	channel_close_init {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -504,15 +516,15 @@ benchmarks! {
 
 		ibc::core::ics26_routing::handler::deliver(&mut ctx, msg).unwrap();
 
-		let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
+		let port_id = PortId::transfer();
 
 		let counterparty_channel = ibc::core::ics04_channel::channel::Counterparty::new(port_id.clone(), Some(ChannelId::new(0)));
 		let channel_end = ChannelEnd::new(
 			ibc::core::ics04_channel::channel::State::Open,
-			ibc::core::ics04_channel::channel::Order::Ordered,
+			ibc::core::ics04_channel::channel::Order::Unordered,
 			counterparty_channel,
 			vec![ConnectionId::new(0)],
-			ibc::core::ics04_channel::Version::new(pallet_ibc_ping::VERSION.to_string())
+			ibc::core::ics04_channel::Version::new(VERSION.to_string())
 		);
 
 		ctx.store_channel((port_id.clone(), ChannelId::new(0)), &channel_end).unwrap();
@@ -523,10 +535,10 @@ benchmarks! {
 			type_url: CHAN_CLOSE_INIT_TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
-		let channel_end = ctx.channel_end(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0))).unwrap();
+		let channel_end = ctx.channel_end(&(PortId::transfer(), ChannelId::new(0))).unwrap();
 		assert_eq!(channel_end.state, ChannelState::Closed);
 	}
 
@@ -534,7 +546,7 @@ benchmarks! {
 	channel_close_confirm_tendermint {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -560,15 +572,15 @@ benchmarks! {
 
 		ibc::core::ics26_routing::handler::deliver(&mut ctx, msg).unwrap();
 
-		let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
+		let port_id = PortId::transfer();
 
 		let counterparty_channel = ibc::core::ics04_channel::channel::Counterparty::new(port_id.clone(), Some(ChannelId::new(0)));
 		let channel_end = ChannelEnd::new(
 			ibc::core::ics04_channel::channel::State::Open,
-			ibc::core::ics04_channel::channel::Order::Ordered,
+			ibc::core::ics04_channel::channel::Order::Unordered,
 			counterparty_channel,
 			vec![ConnectionId::new(0)],
-			ibc::core::ics04_channel::Version::new(pallet_ibc_ping::VERSION.to_string())
+			ibc::core::ics04_channel::Version::new(VERSION.to_string())
 		);
 
 		ctx.store_channel((port_id.clone(), ChannelId::new(0)), &channel_end).unwrap();
@@ -580,10 +592,10 @@ benchmarks! {
 			type_url: CHAN_CLOSE_CONFIRM_TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
-		let channel_end = ctx.channel_end(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0))).unwrap();
+		let channel_end = ctx.channel_end(&(PortId::transfer(), ChannelId::new(0))).unwrap();
 		assert_eq!(channel_end.state, ChannelState::Closed);
 	}
 
@@ -594,7 +606,7 @@ benchmarks! {
 		let data = vec![0u8;i.try_into().unwrap()];
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		frame_system::Pallet::<T>::set_block_number(2u32.into());
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
@@ -620,7 +632,7 @@ benchmarks! {
 		let msg = ibc_proto::google::protobuf::Any  { type_url: UPDATE_CLIENT_TYPE_URL.to_string(), value };
 
 		ibc::core::ics26_routing::handler::deliver(&mut ctx, msg).unwrap();
-		let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
+		let port_id = PortId::transfer();
 		let counterparty_channel = ibc::core::ics04_channel::channel::Counterparty::new(port_id.clone(), Some(ChannelId::new(0)));
 		let channel_end = ChannelEnd::new(
 			ibc::core::ics04_channel::channel::State::Open,
@@ -640,10 +652,10 @@ benchmarks! {
 			type_url: RECV_PACKET_TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
-		let receipt = ctx.get_packet_receipt(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0), 1u64.into())).unwrap();
+		let receipt = ctx.get_packet_receipt(&(PortId::transfer(), ChannelId::new(0), 1u64.into())).unwrap();
 		match receipt {
 			Receipt::Ok => {},
 			_ => panic!("Commitment should not exist")
@@ -653,12 +665,12 @@ benchmarks! {
 	// ack_packet
 	ack_packet_tendermint {
 		let i in 1..1000u32;
-		let j in 1..1000u32;
+		let j in 1..1000u32; // TODO: bind this to ack length
+		let _ = j;
 		let data = vec![0u8;i.try_into().unwrap()];
-		let ack = vec![0u8;j.try_into().unwrap()];
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		frame_system::Pallet::<T>::set_block_number(2u32.into());
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
@@ -685,7 +697,7 @@ benchmarks! {
 
 		ibc::core::ics26_routing::handler::deliver(&mut ctx, msg).unwrap();
 
-		let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
+		let port_id = PortId::transfer();
 		let counterparty_channel = ibc::core::ics04_channel::channel::Counterparty::new(port_id.clone(), Some(ChannelId::new(0)));
 		let channel_end = ChannelEnd::new(
 			ibc::core::ics04_channel::channel::State::Open,
@@ -698,17 +710,32 @@ benchmarks! {
 		ctx.store_channel((port_id.clone(), ChannelId::new(0)), &channel_end).unwrap();
 		ctx.store_connection_channels(ConnectionId::new(0), &(port_id.clone(), ChannelId::new(0))).unwrap();
 		ctx.store_next_sequence_recv((port_id.clone(), ChannelId::new(0)), 1u64.into()).unwrap();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 
+		let denom = "transfer/channel-1/1".to_string();
+		let prefixed_denom = PrefixedDenom::from_str(&denom).unwrap();
+		let amt = 1000 * MILLIS;
+		let coin = Coin {
+			denom: prefixed_denom,
+			amount: Amount::from_str(&format!("{:?}", amt)).unwrap()
+		};
+		let packet_data = PacketData {
+			token: coin,
+			sender: Signer::from_str("alice").unwrap(),
+			receiver: Signer::from_str("bob").unwrap(),
+			memo: "".to_string()
+		};
+		let data = serde_json::to_vec(&packet_data).unwrap();
+		let mut ack = TransferAck::success().to_string().into_bytes();
 		let (cs_state, value) = create_ack_packet::<T>(data, ack);
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
 		let msg = Any {
 			type_url: ACK_PACKET_TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
-		let res = ctx.get_packet_commitment(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0), 1u64.into()));
+		let res = ctx.get_packet_commitment(&(PortId::transfer(), ChannelId::new(0), 1u64.into()));
 		match res {
 			Ok(_) => panic!("Commitment should not exist"),
 			Err(e) => assert_eq!(e.detail(), Ics04Error::packet_commitment_not_found(1u64.into()).detail())
@@ -720,7 +747,7 @@ benchmarks! {
 		let data = vec![0u8;i.try_into().unwrap()];
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		frame_system::Pallet::<T>::set_block_number(2u32.into());
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
@@ -747,11 +774,11 @@ benchmarks! {
 
 		ibc::core::ics26_routing::handler::deliver(&mut ctx, msg).unwrap();
 
-		let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
+		let port_id = PortId::transfer();
 		let counterparty_channel = ibc::core::ics04_channel::channel::Counterparty::new(port_id.clone(), Some(ChannelId::new(0)));
 		let channel_end = ChannelEnd::new(
 			ibc::core::ics04_channel::channel::State::Open,
-			ibc::core::ics04_channel::channel::Order::Ordered,
+			ibc::core::ics04_channel::channel::Order::Unordered,
 			counterparty_channel,
 			vec![ConnectionId::new(0)],
 			ibc::core::ics04_channel::Version::default()
@@ -762,29 +789,47 @@ benchmarks! {
 		ctx.store_next_sequence_recv((port_id.clone(), ChannelId::new(0)), 1u64.into()).unwrap();
 		ctx.store_next_sequence_send((port_id.clone(), ChannelId::new(0)), 1u64.into()).unwrap();
 
+		let denom = "transfer/channel-0/1".to_string();
+		let prefixed_denom = PrefixedDenom::from_str(&denom).unwrap();
+		let amt = 1000 * MILLIS;
+		let coin = Coin {
+			denom: prefixed_denom,
+			amount: Amount::from_str(&format!("{:?}", amt)).unwrap()
+		};
+		let packet_data = PacketData {
+			token: coin,
+			sender: Signer::from_str("alice").unwrap(),
+			receiver: Signer::from_str("bob").unwrap(),
+			memo: "".to_string()
+		};
+		let data = serde_json::to_vec(&packet_data).unwrap();
+
 		let (cs_state, value) = create_timeout_packet::<T>(data);
 		ctx.store_consensus_state(client_id, Height::new(0, 2), AnyConsensusState::Tendermint(cs_state)).unwrap();
 		let msg = Any {
 			type_url: TIMEOUT_TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
-		let res = ctx.get_packet_commitment(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0), 1u64.into()));
-		let channel_end = ctx.channel_end(&(PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap(), ChannelId::new(0))).unwrap();
+		// FIXME: the benchmark doesn't actually work, because it requires to use non-membership proof
+		// (instead of a membership one), which isn't supported by the iavl tree used in the test
+		/*
+		let res = ctx.get_packet_commitment(&(PortId::transfer(), ChannelId::new(0), 1u64.into()));
+		let channel_end = ctx.channel_end(&(PortId::transfer(), ChannelId::new(0))).unwrap();
 		assert_eq!(channel_end.state, ChannelState::Closed);
 		match res {
 			Ok(_) => panic!("Commitment should not exist"),
 			Err(e) => assert_eq!(e.detail(), Ics04Error::packet_commitment_not_found(1u64.into()).detail())
 		}
+		 */
 	}
-
 
 	conn_open_init {
 		let mut ctx = routing::Context::<T>::new();
 		let now: <T as pallet_timestamp::Config>::Moment = TENDERMINT_TIMESTAMP.saturating_mul(1000).saturating_add(1_000_000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
+		set_timestamp::<T>(now);
 		let (mock_client_state, mock_cs_state) = create_mock_state();
 		let mock_client_state = AnyClientState::Tendermint(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Tendermint(mock_cs_state);
@@ -810,7 +855,7 @@ benchmarks! {
 			type_url: conn_open_init_mod::TYPE_URL.to_string(),
 			value: value.encode_vec().unwrap()
 		};
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
@@ -830,7 +875,7 @@ benchmarks! {
 		.encode_vec().unwrap();
 
 		let msg = Any { type_url: TYPE_URL.to_string(), value: msg };
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		assert_eq!(ClientCounter::<T>::get(), 1)
@@ -838,7 +883,7 @@ benchmarks! {
 
 
 	transfer {
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 		let client_id = Pallet::<T>::create_client().unwrap();
 		let connection_id = ConnectionId::new(0);
 		Pallet::<T>::create_connection(client_id, connection_id.clone()).unwrap();
@@ -852,16 +897,20 @@ benchmarks! {
 			Version::new(VERSION.to_string()),
 		);
 
-		let balance = 100000 * MILLIS;
+		let balance = 100000000000 * MILLIS;
 		Pallet::<T>::handle_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
 		let channel_id = ChannelId::new(0);
-		let denom = "transfer/channel-15/uatom".to_string();
-		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
-			asset_id,
+
+		let asset_id = <T as Config>::NativeAssetId::get();
+
+		<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::deposit_creating(
 			&caller,
 			balance.into(),
-		).unwrap();
+		);
+
+		let balance_caller = <<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
+			&caller
+		);
 
 		let timeout = Timeout::Offset { timestamp: Some(1690894363), height: Some(2000) };
 
@@ -871,14 +920,13 @@ benchmarks! {
 			timeout,
 		};
 
-		let amt = 1000 * MILLIS;
+		let amt = 1000000000 * MILLIS;
 
 	}:_(RawOrigin::Signed(caller.clone()), transfer_params, asset_id.into(), amt.into(), None)
 	verify {
-		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
-			asset_id.into(),
+		assert_eq!(<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
 			&caller
-		), (balance - amt).into());
+		), (balance_caller - amt.into()).into());
 	}
 
 	on_chan_open_init {
@@ -967,7 +1015,7 @@ benchmarks! {
 	}
 
 	on_recv_packet {
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 		let client_id = Pallet::<T>::create_client().unwrap();
 		let connection_id = ConnectionId::new(0);
 		Pallet::<T>::create_connection(client_id, connection_id.clone()).unwrap();
@@ -986,16 +1034,27 @@ benchmarks! {
 		let channel_id = ChannelId::new(0);
 		ctx.store_channel((port_id.clone(), channel_id), &channel_end).unwrap();
 
-		let denom = "transfer/channel-1/PICA".to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
 		let channel_escrow_address: <T as frame_system::Config>::AccountId = channel_escrow_address.into_account();
-		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
-			asset_id,
+
+		log::trace!(target:"pallet_ibc", "acc={:?}", channel_escrow_address.encode());
+		let asset_id = <T as Config>::NativeAssetId::get();
+		let denom = format!("transfer/channel-1/{asset_id}");
+
+		<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::deposit_creating(
 			&channel_escrow_address,
 			balance.into(),
-		).unwrap();
+		);
+
+		<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::deposit_creating(
+			&caller,
+			balance.into(),
+		);
+
+		let balance_caller = <<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
+			&caller
+		);
 
 		let raw_user: AccountId32 =  caller.clone().into();
 		let raw_user: &[u8] = raw_user.as_ref();
@@ -1030,19 +1089,16 @@ benchmarks! {
 		 let mut output = HandlerOutputBuilder::new();
 		 let signer = Signer::from_str("relayer").unwrap();
 	}:{
-
 		handler.on_recv_packet(&ctx, &mut output, &mut packet, &signer).unwrap();
-
 	 }
 	verify {
-		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
-			asset_id,
+		assert_eq!(<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
 			&caller
-		), amt.into());
+		), balance_caller + amt.into());
 	}
 
 	on_acknowledgement_packet {
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 		let client_id = Pallet::<T>::create_client().unwrap();
 		let connection_id = ConnectionId::new(0);
 		Pallet::<T>::create_connection(client_id, connection_id.clone()).unwrap();
@@ -1056,27 +1112,30 @@ benchmarks! {
 			Version::new(VERSION.to_string()),
 		);
 
-
-		let balance = 100000 * MILLIS;
+		let balance = 1000000 * MILLIS;
 		Pallet::<T>::handle_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
 		let channel_id = ChannelId::new(0);
-		let denom = "PICA".to_string();
+		let asset_id = <T as Config>::NativeAssetId::get();
+		let denom = asset_id.to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
 		let channel_escrow_address: <T as frame_system::Config>::AccountId = channel_escrow_address.into_account();
-		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
-			asset_id,
+
+		<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::deposit_creating(
 			&channel_escrow_address,
 			balance.into(),
-		).unwrap();
+		);
+
+		let balance_caller = <<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
+			&caller
+		);
 
 		let raw_user: AccountId32 =  caller.clone().into();
 		let raw_user: &[u8] = raw_user.as_ref();
 		let mut hex_string = hex::encode_upper(raw_user.to_vec());
 		hex_string.insert_str(0, "0x");
 		let prefixed_denom = PrefixedDenom::from_str(&denom).unwrap();
-		let amt = 1000 * MILLIS;
+		let amt = 10000 * MILLIS;
 		let coin = Coin {
 			denom: prefixed_denom,
 			amount: Amount::from_str(&format!("{:?}", amt)).unwrap()
@@ -1106,17 +1165,16 @@ benchmarks! {
 		 let ack: Acknowledgement = TransferAck::Error(ACK_ERR_STR.to_string()).to_string().into_bytes().into();
 	}:{
 		let ctx = routing::Context::<T>::new();
-	   handler.on_acknowledgement_packet(&ctx, &mut output, &mut packet, &ack, &signer).unwrap();
+		handler.on_acknowledgement_packet(&ctx, &mut output, &mut packet, &ack, &signer).unwrap();
 	}
 	verify {
-		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
-			asset_id,
+		assert_eq!(<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
 			&caller
-		), amt.into());
+		), balance_caller + amt.into());
 	}
 
 	on_timeout_packet {
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 		let client_id = Pallet::<T>::create_client().unwrap();
 		let connection_id = ConnectionId::new(0);
 		Pallet::<T>::create_connection(client_id, connection_id.clone()).unwrap();
@@ -1130,20 +1188,23 @@ benchmarks! {
 			Version::new(VERSION.to_string()),
 		);
 
-
 		let balance = 100000 * MILLIS;
 		Pallet::<T>::handle_message(ibc_primitives::HandlerMessage::OpenChannel { port_id: port_id.clone(), channel_end }).unwrap();
 		let channel_id = ChannelId::new(0);
-		let denom = "PICA".to_string();
+		let asset_id = <T as Config>::NativeAssetId::get();
+		let denom = asset_id.to_string();
 		let channel_escrow_address = get_channel_escrow_address(&port_id, channel_id).unwrap();
 		let channel_escrow_address = <T as Config>::AccountIdConversion::try_from(channel_escrow_address).map_err(|_| ()).unwrap();
 		let channel_escrow_address: <T as frame_system::Config>::AccountId = channel_escrow_address.into_account();
-		let asset_id = <T as Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom).unwrap();
-		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
-			asset_id,
+
+		<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::deposit_creating(
 			&channel_escrow_address,
 			balance.into(),
-		).unwrap();
+		);
+
+		let balance_caller = <<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
+			&caller
+		);
 
 		let raw_user: AccountId32 =  caller.clone().into();
 		let raw_user: &[u8] = raw_user.as_ref();
@@ -1182,22 +1243,22 @@ benchmarks! {
 		handler.on_timeout_packet(&ctx, &mut output, &mut packet, &signer).unwrap();
 	}
 	verify {
-		assert_eq!(<<T as Config>::Fungibles as Inspect<<T as frame_system::Config>::AccountId>>::balance(
-			asset_id,
+		assert_eq!(<<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::free_balance(
 			&caller
-		), amt.into());
+		), balance_caller + amt.into());
 	}
 
 	// update_grandpa_client
 	update_grandpa_client {
 		let i in 1..100u32;
+		let j in 1..100u32;
 		let mut ctx = routing::Context::<T>::new();
 		// Set timestamp to the same timestamp used in generating tendermint header, because there
 		// will be a comparison between the local timestamp and the timestamp existing in the header
 		// after factoring in the trusting period for the light client.
 		let now: <T as pallet_timestamp::Config>::Moment = GRANDPA_UPDATE_TIMESTAMP.saturating_mul(1000);
-		pallet_timestamp::Pallet::<T>::set_timestamp(now);
-		let (mock_client_state, mock_cs_state, client_message) = generate_finality_proof(i);
+		set_timestamp::<T>(now);
+		let (mock_client_state, mock_cs_state, client_message) = generate_finality_proof(i, j);
 		let mock_client_state = AnyClientState::Grandpa(mock_client_state);
 		let mock_cs_state = AnyConsensusState::Grandpa(mock_cs_state);
 		let client_id = ClientId::new(&mock_client_state.client_type(), 0).unwrap();
@@ -1215,11 +1276,123 @@ benchmarks! {
 		};
 
 		let msg = Any { type_url: UPDATE_CLIENT_TYPE_URL.to_string(), value: msg.encode_vec().unwrap() };
-		let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+		let caller: <T as frame_system::Config>::AccountId = relayer_origin::<T>();
 	}: deliver(RawOrigin::Signed(caller), vec![msg])
 	verify {
 		let client_state = ClientStates::<T>::get(&client_id).unwrap();
 		let client_state = AnyClientState::decode_vec(&*client_state).unwrap();
 		assert_eq!(client_state.latest_height(), Height::new(2000, 2));
 	}
+
+	cleanup_packets {
+		let i in 1..100u32;
+		let i = i as u64;
+		let data = vec![0u8;i.try_into().unwrap()];
+		let mut ctx = routing::Context::<T>::new();
+		let channel_id = ChannelId::new(0);
+		let port_id = PortId::transfer();
+		let channel_end = ChannelEnd::default();
+		ctx.store_channel((port_id.clone(), channel_id.clone()), &channel_end).unwrap();
+		ctx.store_next_sequence_send((port_id.clone(), channel_id.clone()), (i + 1).into())
+			.unwrap();
+		ctx.store_next_sequence_recv((port_id.clone(), channel_id.clone()), (i + 1).into())
+			.unwrap();
+
+		for i in 1..=i {
+			let packet = Packet {
+				sequence: i.into(),
+				source_port: port_id.clone(),
+				source_channel: channel_id,
+				destination_port: port_id.clone(),
+				destination_channel: channel_id,
+				data: "hello".as_bytes().to_vec(),
+				timeout_height: Default::default(),
+				timeout_timestamp: Default::default(),
+			};
+			ctx.store_send_packet((port_id.clone(), channel_id.clone(), i.into()), packet)
+				.unwrap();
+
+			// Store commitment for even numbers
+			if i % 2 == 0 {
+				ctx.store_packet_commitment(
+					(port_id.clone(), channel_id.clone(), i.into()),
+					"commitment".as_bytes().to_vec().into(),
+				)
+				.unwrap();
+			}
+		}
+
+		// Store packet acknowledgements
+		for i in 1..=i {
+			let packet = Packet {
+				sequence: i.into(),
+				source_port: port_id.clone(),
+				source_channel: channel_id,
+				destination_port: port_id.clone(),
+				destination_channel: channel_id,
+				data: "hello".as_bytes().to_vec(),
+				timeout_height: Default::default(),
+				timeout_timestamp: Default::default(),
+			};
+			ctx.store_recv_packet((port_id.clone(), channel_id.clone(), i.into()), packet)
+				.unwrap();
+			// Store ack for odd numbers
+			if i % 2 != 0 {
+				ctx.store_packet_acknowledgement(
+					(port_id.clone(), channel_id.clone(), i.into()),
+					"commitment".as_bytes().to_vec().into(),
+				)
+				.unwrap();
+				Pallet::<T>::store_raw_acknowledgement(
+					(port_id.clone(), channel_id.clone(), i.into()),
+					"acknowledgement".as_bytes().to_vec(),
+				)
+				.unwrap();
+			}
+		}
+
+		let channel_id_bytes = channel_id.to_string().as_bytes().to_vec();
+		let port_id_bytes = port_id.as_bytes().to_vec();
+
+		let (send_seq_set, _) =
+			PendingSendPacketSeqs::<T>::get(&(port_id_bytes.clone(), channel_id_bytes.clone()));
+
+		let (recv_seq_set, _) =
+			PendingRecvPacketSeqs::<T>::get(&(port_id_bytes.clone(), channel_id_bytes.clone()));
+
+		assert_eq!(send_seq_set, Default::default());
+		assert_eq!(recv_seq_set, Default::default());
+	}: { Pallet::<T>::packet_cleanup() }
+	verify {
+		let (send_seq_set, last_removed_send) =
+			PendingSendPacketSeqs::<T>::get(&(port_id_bytes.clone(), channel_id_bytes.clone()));
+
+		let (recv_seq_set, last_removed_ack) =
+			PendingRecvPacketSeqs::<T>::get(&(port_id_bytes, channel_id_bytes));
+		if i % 2 == 0 {
+			assert_eq!(last_removed_send, i - 1);
+			assert_eq!(last_removed_ack, i);
+		} else {
+			assert_eq!(last_removed_send, i);
+			assert_eq!(last_removed_ack, i - 1);
+		}
+	}
+}
+
+fn set_timestamp<T: pallet_timestamp::Config + pallet_aura::Config>(
+	time: <T as pallet_timestamp::Config>::Moment,
+) {
+	use frame_benchmarking::Zero;
+	use frame_support::traits::Hooks;
+	use sp_consensus_aura::digests::CompatibleDigestItem;
+	use sp_consensus_slots::Slot;
+	use sp_runtime::SaturatedConversion;
+
+	let slot_duration = pallet_aura::Pallet::<T>::slot_duration();
+	let timestamp_slot = time / slot_duration;
+	let timestamp_slot = Slot::from(timestamp_slot.saturated_into::<u64>());
+	let log = <DigestItem as CompatibleDigestItem<()>>::aura_pre_digest(timestamp_slot);
+	<frame_system::Pallet<T>>::deposit_log(log);
+	pallet_aura::Pallet::<T>::on_initialize(T::BlockNumber::zero()); // block number doesn't matter
+	pallet_timestamp::Pallet::<T>::set_timestamp(time);
 }

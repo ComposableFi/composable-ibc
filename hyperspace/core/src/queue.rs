@@ -29,6 +29,7 @@ pub async fn flush_message_batch(
 		metrics.handle_transaction_costs(batch_weight, &msgs).await;
 	}
 
+	log::debug!(target: "hyperspace", "Outgoing messages weight: {} block max weight: {}", batch_weight, block_max_weight);
 	let ratio = (batch_weight / block_max_weight) as usize;
 	if ratio == 0 {
 		sink.submit(msgs).await?;
@@ -48,8 +49,9 @@ pub async fn flush_message_batch(
 		"Outgoing messages weight: {} exceeds the block max weight: {}. Chunking {} messages into {} chunks",
         batch_weight, block_max_weight, msgs.len(), chunk,
 	);
+	let chunk_size = (msgs.len() / chunk).max(1);
 	// TODO: return number of failed messages and record it to metrics
-	for batch in msgs.chunks(chunk) {
+	for batch in msgs.chunks(chunk_size) {
 		// send out batches.
 		sink.submit(batch.to_vec()).await?;
 	}

@@ -50,7 +50,7 @@ where
 	let client_state = ctx.client_state(&client_id).map_err(Error::ics02_client)?;
 
 	// The client must not be frozen.
-	if client_state.is_frozen() {
+	if client_state.is_frozen(ctx, &client_id) {
 		return Err(Error::frozen_client(client_id))
 	}
 
@@ -93,7 +93,7 @@ pub fn verify_packet_recv_proofs<Ctx: ReaderContext>(
 	let client_state = ctx.client_state(client_id).map_err(Error::ics02_client)?;
 
 	// The client must not be frozen.
-	if client_state.is_frozen() {
+	if client_state.is_frozen(ctx, client_id) {
 		return Err(Error::frozen_client(client_id.clone()))
 	}
 
@@ -139,7 +139,7 @@ pub fn verify_packet_acknowledgement_proofs<Ctx: ReaderContext>(
 	let client_state = ctx.client_state(client_id).map_err(Error::ics02_client)?;
 
 	// The client must not be frozen.
-	if client_state.is_frozen() {
+	if client_state.is_frozen(ctx, client_id) {
 		return Err(Error::frozen_client(client_id.clone()))
 	}
 
@@ -187,7 +187,7 @@ where
 	let client_state = ctx.client_state(client_id).map_err(Error::ics02_client)?;
 
 	// The client must not be frozen.
-	if client_state.is_frozen() {
+	if client_state.is_frozen(ctx, client_id) {
 		return Err(Error::frozen_client(client_id.clone()))
 	}
 
@@ -230,7 +230,7 @@ where
 	let client_state = ctx.client_state(client_id).map_err(Error::ics02_client)?;
 
 	// The client must not be frozen.
-	if client_state.is_frozen() {
+	if client_state.is_frozen(ctx, client_id) {
 		return Err(Error::frozen_client(client_id.clone()))
 	}
 

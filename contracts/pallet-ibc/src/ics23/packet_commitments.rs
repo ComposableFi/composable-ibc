@@ -23,7 +23,7 @@ impl<T: Config> PacketCommitment<T> {
 		commitment: PacketCommitmentType,
 	) {
 		let commitment_path = CommitmentsPath { port_id, channel_id, sequence };
-		let commitment_path = format!("{}", commitment_path);
+		let commitment_path = format!("{commitment_path}");
 		let commitment_key = apply_prefix(T::PalletPrefix::get(), vec![commitment_path]);
 		child::put(
 			&ChildInfo::new_default(T::PalletPrefix::get()),
@@ -34,21 +34,21 @@ impl<T: Config> PacketCommitment<T> {
 
 	pub fn get((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) -> Option<Vec<u8>> {
 		let commitment_path = CommitmentsPath { port_id, channel_id, sequence };
-		let commitment_path = format!("{}", commitment_path);
+		let commitment_path = format!("{commitment_path}");
 		let commitment_key = apply_prefix(T::PalletPrefix::get(), vec![commitment_path]);
 		child::get(&ChildInfo::new_default(T::PalletPrefix::get()), &commitment_key)
 	}
 
 	pub fn remove((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) {
 		let commitment_path = CommitmentsPath { port_id, channel_id, sequence };
-		let commitment_path = format!("{}", commitment_path);
+		let commitment_path = format!("{commitment_path}");
 		let commitment_key = apply_prefix(T::PalletPrefix::get(), vec![commitment_path]);
 		child::kill(&ChildInfo::new_default(T::PalletPrefix::get()), &commitment_key)
 	}
 
 	pub fn contains_key((port_id, channel_id, sequence): (PortId, ChannelId, Sequence)) -> bool {
 		let commitment_path = CommitmentsPath { port_id, channel_id, sequence };
-		let commitment_path = format!("{}", commitment_path);
+		let commitment_path = format!("{commitment_path}");
 		let commitment_key = apply_prefix(T::PalletPrefix::get(), vec![commitment_path]);
 		child::exists(&ChildInfo::new_default(T::PalletPrefix::get()), &commitment_key)
 	}

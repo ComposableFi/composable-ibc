@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use anyhow::anyhow;
 use codec::{Decode, Input};
 use frame_metadata::RuntimeMetadataPrefixed;
 use jsonrpsee::{
@@ -53,8 +54,10 @@ pub fn codegen<I: Input>(encoded: &mut I) -> anyhow::Result<String> {
 	derives.extend_for_all(p.into_iter());
 	let type_subsitutes = TypeSubstitutes::new(&crate_path);
 
-	let runtime_api = generator.generate_runtime(item_mod, derives, type_subsitutes, crate_path);
-	Ok(format!("{}", runtime_api))
+	let runtime_api = generator
+		.generate_runtime(item_mod, derives, type_subsitutes, crate_path, false)
+		.map_err(|e| anyhow!("{}", e))?;
+	Ok(format!("{runtime_api}"))
 }
 
 /// This will generate the relevant subxt code for the given rpc url and write it to
@@ -64,6 +67,6 @@ pub async fn build_script(url: &'static str, file_name: &'static str) -> anyhow:
 	let code = codegen(&mut &metadata[..])?;
 	let out_dir = env::var_os("OUT_DIR").unwrap();
 	let dest_path = Path::new(&out_dir).join(format!("{file_name}.rs"));
-	fs::write(&dest_path, &code)?;
+	fs::write(dest_path, code)?;
 	Ok(())
 }

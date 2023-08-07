@@ -122,6 +122,7 @@ impl<H: HostFunctionsProvider> MerkleProof<H> {
 				Some(Proof::Exist(existence_proof)) => {
 					subroot = calculate_existence_root::<H>(existence_proof)
 						.map_err(|_| Error::invalid_merkle_proof())?;
+
 					if !verify_membership::<H>(proof, spec, &subroot, key.as_bytes(), &value) {
 						return Err(Error::verification_failure())
 					}

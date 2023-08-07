@@ -1,5 +1,7 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
+#![allow(clippy::type_complexity)]
+
 // std
 use std::{sync::Arc, time::Duration};
 
@@ -203,7 +205,7 @@ async fn start_node_impl(
 			spawn_handle: task_manager.spawn_handle(),
 			import_queue: params.import_queue,
 			block_announce_validator_builder: Some(Box::new(block_announce_validator_builder)),
-			warp_sync: None,
+			warp_sync_params: None,
 		})?;
 
 	if parachain_config.offchain_worker.enabled {
@@ -266,6 +268,10 @@ async fn start_node_impl(
 
 	let relay_chain_slot_duration = Duration::from_secs(6);
 
+	let overseer_handle = relay_chain_interface
+		.overseer_handle()
+		.map_err(|e| sc_service::Error::Application(Box::new(e)))?;
+
 	if validator {
 		let parachain_consensus = build_consensus(
 			client.clone(),
@@ -294,6 +300,7 @@ async fn start_node_impl(
 			import_queue: import_queue_service,
 			collator_key: collator_key.expect("Command line arguments do not allow this. qed"),
 			relay_chain_slot_duration,
+			recovery_handle: Box::new(overseer_handle),
 		};
 
 		start_collator(params).await?;
@@ -306,6 +313,7 @@ async fn start_node_impl(
 			relay_chain_interface,
 			relay_chain_slot_duration,
 			import_queue: import_queue_service,
+			recovery_handle: Box::new(overseer_handle),
 		};
 
 		start_full_node(params)?;
@@ -354,6 +362,7 @@ fn build_import_queue(
 	.map_err(Into::into)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_consensus(
 	client: Arc<ParachainClient>,
 	block_import: ParachainBlockImport,

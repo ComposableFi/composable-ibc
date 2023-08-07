@@ -115,7 +115,7 @@ impl CompileCmd {
 		// List available proto files
 		let mut protos: Vec<PathBuf> = vec![];
 		for proto_path in &proto_paths {
-			println!("Looking for proto files in {:?}", proto_path);
+			println!("Looking for proto files in {proto_path:?}");
 			protos.append(
 				&mut WalkDir::new(proto_path)
 					.into_iter()
@@ -133,7 +133,7 @@ impl CompileCmd {
 		println!("Found the following protos:");
 		// Show which protos will be compiled
 		for proto in &protos {
-			println!("\t-> {:?}", proto);
+			println!("\t-> {proto:?}");
 		}
 		println!("[info ] Compiling..");
 
@@ -241,7 +241,7 @@ impl CompileCmd {
 
 		// Paths
 		let proto_paths = vec![
-			format!("{}/../proto/definitions/mock", root),
+			format!("{root}/../proto/definitions/mock"),
 			format!("{}/proto/cosmos/auth", sdk_dir.display()),
 			format!("{}/proto/cosmos/gov", sdk_dir.display()),
 			format!("{}/proto/cosmos/tx", sdk_dir.display()),
@@ -256,7 +256,7 @@ impl CompileCmd {
 			format!("{}", google.display()),
 			format!("{}/proto", cosmos_proto.display()),
 			format!("{}/proto", ics23.display()),
-			format!("{}/../proto", root),
+			format!("{root}/../proto"),
 			format!("{}/proto", sdk_dir.display()),
 			format!("{}/third_party/proto", sdk_dir.display()),
 			format!("{}/proto", ibc_dir.display()),
@@ -265,7 +265,7 @@ impl CompileCmd {
 		// List available proto files
 		let mut protos: Vec<PathBuf> = vec![];
 		for proto_path in &proto_paths {
-			println!("Looking for proto files in {:?}", proto_path);
+			println!("Looking for proto files in {proto_path:?}");
 			protos.append(
 				&mut WalkDir::new(proto_path)
 					.into_iter()
@@ -283,7 +283,7 @@ impl CompileCmd {
 		println!("Found the following protos:");
 		// Show which protos will be compiled
 		for proto in &protos {
-			println!("\t-> {:?}", proto);
+			println!("\t-> {proto:?}");
 		}
 		println!("[info ] Compiling..");
 
@@ -320,8 +320,8 @@ impl CompileCmd {
 		println!("[info ] Copying generated files into '{}'...", to_dir.display());
 
 		// Remove old compiled files
-		remove_dir_all(&to_dir).unwrap_or_default();
-		create_dir_all(&to_dir).unwrap();
+		remove_dir_all(to_dir).unwrap_or_default();
+		create_dir_all(to_dir).unwrap();
 
 		// Copy new compiled files (prost does not use folder structures)
 		// Copy the SDK files first
@@ -344,7 +344,7 @@ impl CompileCmd {
 
 		if !errors_sdk.is_empty() {
 			for e in errors_sdk {
-				println!("[error] Error while copying SDK-compiled file: {}", e);
+				println!("[error] Error while copying SDK-compiled file: {e}");
 			}
 
 			panic!("[error] Aborted.");
@@ -389,7 +389,7 @@ impl CompileCmd {
 
 			if !errors_ibc.is_empty() {
 				for e in errors_ibc {
-					println!("[error] Error while copying IBC-go compiled file: {}", e);
+					println!("[error] Error while copying IBC-go compiled file: {e}");
 				}
 
 				panic!("[error] Aborted.");

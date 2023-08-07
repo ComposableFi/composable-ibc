@@ -35,23 +35,28 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use ics10_grandpa::client_message::{ClientMessage, Misbehaviour, RelayChainHeader};
+use itertools::Itertools;
+use jsonrpsee_ws_client::WsClientBuilder;
 use light_client_common::config::{EventRecordT, RuntimeCall, RuntimeTransactions};
 use pallet_ibc::light_clients::AnyClientMessage;
-use primitives::{mock::LocalClientTypes, Chain, IbcProvider, MisbehaviourHandler};
+use primitives::{
+	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, MisbehaviourHandler,
+};
 use sp_core::{twox_128, H256};
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
-use std::{collections::BTreeMap, fmt::Display, pin::Pin, time::Duration};
+use std::{collections::BTreeMap, fmt::Display, pin::Pin, sync::Arc, time::Duration};
 // #[cfg(not(feature = "dali"))]
 // use subxt::config::polkadot::PlainTip as Tip;
 // #[cfg(feature = "dali")]
 // use subxt::config::substrate::AssetTip as Tip;
+use crate::utils::unsafe_cast_to_jsonrpsee_client;
 use subxt::{
 	config::{
 		extrinsic_params::{BaseExtrinsicParamsBuilder, Era},
-		ExtrinsicParams, Header as HeaderT,
+		ExtrinsicParams, Header as HeaderT, Header,
 	},
 	events::Phase,
 };
@@ -71,16 +76,19 @@ type BeefyJustification =
 struct JustificationNotification(sp_core::Bytes);
 
 #[async_trait::async_trait]
-impl<T: light_client_common::config::Config + Send + Sync> Chain for ParachainClient<T>
+impl<T: light_client_common::config::Config + Send + Sync + Clone + 'static> Chain
+	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<T as subxt::Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
@@ -96,7 +104,7 @@ where
 	}
 
 	fn block_max_weight(&self) -> u64 {
-		self.max_extrinsic_weight
+		self.max_extrinsic_weight * 100 / 80
 	}
 
 	async fn estimate_weight(&self, messages: Vec<Any>) -> Result<u64, Self::Error> {
@@ -137,15 +145,17 @@ where
 
 	async fn finality_notifications(
 		&self,
-	) -> Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>> {
+	) -> Result<
+		Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>>,
+		Error,
+	> {
 		match self.finality_protocol {
 			FinalityProtocol::Grandpa => {
 				let subscription =
 					GrandpaApiClient::<JustificationNotification, sp_core::H256, u32>::subscribe_justifications(
 						&*self.relay_ws_client,
 					)
-						.await
-						.expect("Failed to subscribe to grandpa justifications")
+						.await?
 						.chunks(3)
 						.map(|mut notifs| notifs.remove(notifs.len() - 1)); // skip every 3 finality notifications
 
@@ -170,7 +180,7 @@ where
 					futures::future::ready(Some(Self::FinalityEvent::Grandpa(justification)))
 				});
 
-				Box::pin(Box::new(stream))
+				Ok(Box::pin(Box::new(stream)))
 			},
 			FinalityProtocol::Beefy => {
 				let subscription =
@@ -200,7 +210,7 @@ where
 					futures::future::ready(Some(Self::FinalityEvent::Beefy(signed_commitment)))
 				});
 
-				Box::pin(Box::new(stream))
+				Ok(Box::pin(Box::new(stream)))
 			},
 		}
 	}
@@ -210,6 +220,8 @@ where
 			.into_iter()
 			.map(|msg| Any { type_url: msg.type_url.clone(), value: msg.value })
 			.collect::<Vec<_>>();
+		let messages_urls = messages.iter().map(|msg| msg.type_url.clone()).join(", ");
+		log::debug!(target: "hyperspace_parachain", "Sending message: {messages_urls}");
 
 		let call = T::Tx::ibc_deliver(messages);
 		let (ext_hash, block_hash) = self.submit_call(call).await?;
@@ -316,6 +328,68 @@ where
 	async fn get_proof_height(&self, block_height: Height) -> Height {
 		block_height
 	}
+
+	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error> {
+		let err_str = if let Some(rpc_err) = error.downcast_ref::<Error>() {
+			match rpc_err {
+				Error::RpcError(s) => s.clone(),
+				_ => "".to_string(),
+			}
+		} else {
+			error.to_string()
+		};
+		log::debug!(target: "hyperspace", "Handling error: {err_str}");
+
+		if err_str.contains("MaxSlotsExceeded") {
+			self.common_state.rpc_call_delay = self.common_state.rpc_call_delay * 2;
+		} else if err_str.contains("RestartNeeded") || err_str.contains("restart required") {
+			self.reconnect().await?;
+			self.common_state.rpc_call_delay = self.common_state.rpc_call_delay * 2;
+		}
+
+		Ok(())
+	}
+
+	async fn reconnect(&mut self) -> anyhow::Result<()> {
+		let relay_ws_client = Arc::new(
+			WsClientBuilder::default()
+				.build(&self.relay_chain_rpc_url)
+				.await
+				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
+		);
+		let para_ws_client = Arc::new(
+			WsClientBuilder::default()
+				.build(&self.parachain_rpc_url)
+				.await
+				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
+		);
+
+		let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
+			unsafe_cast_to_jsonrpsee_client(&para_ws_client)
+		})
+		.await?;
+		let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
+			unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
+		})
+		.await?;
+
+		self.relay_ws_client = relay_ws_client;
+		self.para_ws_client = para_ws_client;
+		self.relay_client = relay_client;
+		self.para_client = para_client;
+
+		log::info!(target: "hyperspace", "Reconnected to relay chain and parachain");
+
+		Ok(())
+	}
+
+	fn common_state(&self) -> &CommonClientState {
+		&self.common_state
+	}
+
+	fn common_state_mut(&mut self) -> &mut CommonClientState {
+		&mut self.common_state
+	}
 }
 
 #[async_trait::async_trait]
@@ -323,13 +397,14 @@ impl<T: light_client_common::config::Config + Send + Sync> MisbehaviourHandler
 	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<T as subxt::Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
@@ -344,6 +419,7 @@ where
 		counterparty: &C,
 		client_message: AnyClientMessage,
 	) -> Result<(), anyhow::Error> {
+		let client_message = client_message.unpack_recursive_into();
 		match client_message {
 			AnyClientMessage::Grandpa(ClientMessage::Header(header)) => {
 				let base_header = header
@@ -396,6 +472,8 @@ where
 					log::warn!(
 						"Found misbehaviour on client {}: {:?} != {:?}",
 						self.client_id
+							.lock()
+							.unwrap()
 							.as_ref()
 							.map(|x| x.as_str().to_owned())
 							.unwrap_or_else(|| "{unknown}".to_owned()),
@@ -404,6 +482,7 @@ where
 					);
 
 					trusted_finality_proof.unknown_headers.clear();
+					// TODO: parallelize this
 					for i in from_block..=to_block {
 						let unknown_header_hash =
 							self.relay_client.rpc().block_hash(Some(i.into())).await?.ok_or_else(

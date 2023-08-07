@@ -24,7 +24,9 @@ use codec::Decode;
 use core::marker::PhantomData;
 use finality_grandpa::Chain;
 use grandpa_client_primitives::{
-	justification::{find_scheduled_change, AncestryChain, GrandpaJustification},
+	justification::{
+		find_forced_change, find_scheduled_change, AncestryChain, GrandpaJustification,
+	},
 	ParachainHeadersWithFinalityProof,
 };
 use ibc::{
@@ -82,9 +84,17 @@ where
 	) -> Result<(), Ics02Error> {
 		match client_message {
 			ClientMessage::Header(header) => {
+				if client_state.para_id as u64 != header.height.revision_number {
+					return Err(Error::Custom(format!(
+						"Para id mismatch: expected {}, got {}",
+						client_state.para_id, header.height.revision_number
+					))
+					.into())
+				}
 				let headers_with_finality_proof = ParachainHeadersWithFinalityProof {
 					finality_proof: header.finality_proof,
 					parachain_headers: header.parachain_headers,
+					latest_para_height: header.height.revision_height as u32,
 				};
 
 				grandpa_client::verify_parachain_headers_with_grandpa_finality_proof::<
@@ -319,6 +329,8 @@ where
 			ClientMessage::Header(header) => header,
 			_ => unreachable!("We've checked for misbehavior in line 180; qed"),
 		};
+		//forced authority set change is handled as a misbehaviour
+
 		let ancestry =
 			AncestryChain::<RelayChainHeader>::new(&header.finality_proof.unknown_headers);
 
@@ -326,6 +338,10 @@ where
 			let header = ancestry.header(&relay_hash).ok_or_else(|| {
 				Error::Custom(format!("No relay chain header found for hash: {relay_hash:?}"))
 			})?;
+
+			if find_forced_change(header).is_some() {
+				return Ok(true)
+			}
 
 			let (height, consensus_state) = ConsensusState::from_header::<H>(
 				parachain_header_proof,
@@ -435,6 +451,24 @@ where
 					.expect("AnyConsensusState is type-checked; qed"),
 			),
 		))
+	}
+
+	/// Will try to update the client with the state of the substitute.
+	///
+	/// The following must always be true:
+	///   - The substitute client is the same type as the subject client
+	///   - The subject and substitute client states match in all parameters (expect `relay_chain`,
+	/// `para_id`, `latest_para_height`, `latest_relay_height`, `latest_relay_hash`,
+	/// `frozen_height`, `latest_para_height`, `current_set_id` and `current_authorities`).
+	fn check_substitute_and_update_state<Ctx: ReaderContext>(
+		&self,
+		_ctx: &Ctx,
+		_subject_client_id: ClientId,
+		_substitute_client_id: ClientId,
+		_old_client_state: Self::ClientState,
+		_substitute_client_state: Self::ClientState,
+	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
+		unimplemented!("check_substitute_and_update_state not implemented for Grandpa client")
 	}
 
 	fn verify_client_consensus_state<Ctx: ReaderContext>(

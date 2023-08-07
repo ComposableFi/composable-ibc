@@ -95,6 +95,7 @@ pub trait ClientReader: ClientKeeper {
 		&self,
 		height: Height,
 		proof: Option<Vec<u8>>,
+		client_state: &Self::AnyClientState,
 	) -> Result<Self::AnyConsensusState, Error>;
 
 	/// Returns a natural number, counting how many clients have been created thus far.

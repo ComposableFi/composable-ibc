@@ -45,11 +45,11 @@ mod utils;
 
 /// This will set up a connection and ics20 channel in-between the two chains.
 /// `connection_delay` should be in seconds.
-async fn setup_connection_and_channel<A, B>(
-	chain_a: &A,
-	chain_b: &B,
+pub async fn setup_connection_and_channel<A, B>(
+	chain_a: &mut A,
+	chain_b: &mut B,
 	connection_delay: Duration,
-) -> (JoinHandle<()>, ChannelId, ChannelId, ConnectionId)
+) -> (JoinHandle<()>, ChannelId, ChannelId, ConnectionId, ConnectionId)
 where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -113,20 +113,22 @@ where
 					channel_id,
 					channel_end.counterparty().channel_id.unwrap().clone(),
 					channel_end.connection_hops[0].clone(),
+					connection_id,
 				)
 			}
 		}
 	}
 
-	let (connection_id, ..) = create_connection(chain_a, chain_b, connection_delay).await.unwrap();
+	let (connection_id_a, connection_id_b) =
+		create_connection(chain_a, chain_b, connection_delay).await.unwrap();
 
-	log::info!(target: "hyperspace", "============ Connection handshake completed: ConnectionId({connection_id}) ============");
+	log::info!(target: "hyperspace", "============ Connection handshake completed: ConnectionId({connection_id_a}), ConnectionId({connection_id_b}) ============");
 	log::info!(target: "hyperspace", "=========================== Starting channel handshake ===========================");
 
 	let (channel_id_a, channel_id_b) = create_channel(
 		chain_a,
 		chain_b,
-		connection_id.clone(),
+		connection_id_a.clone(),
 		PortId::transfer(),
 		VERSION.to_string(),
 		Order::Unordered,
@@ -136,7 +138,7 @@ where
 	// channel handshake completed
 	log::info!(target: "hyperspace", "============ Channel handshake completed: ChannelId({channel_id_a}) ============");
 
-	(handle, channel_id_a, channel_id_b, connection_id)
+	(handle, channel_id_a, channel_id_b, connection_id_a, connection_id_b)
 }
 
 /// Attempts to send 20% of funds of chain_a's signer to chain b's signer.
@@ -197,6 +199,7 @@ where
 		timeout_timestamp,
 		memo: "".to_string(),
 	};
+	// chain_a.query_seq_from_tx_hash();
 	chain_a.send_transfer(msg.clone()).await.expect("Failed to send transfer: ");
 	(amount, msg)
 }
@@ -284,7 +287,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	log::info!(target: "hyperspace", "Resuming send packet relay");
 	set_relay_status(true);
 
-	assert_timeout_packet(chain_a, 35).await;
+	assert_timeout_packet(chain_a, 75).await;
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for height timeout");
 }
 
@@ -341,7 +344,7 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 	log::info!(target: "hyperspace", "Resuming send packet relay");
 	set_relay_status(true);
 
-	assert_timeout_packet(chain_a, 200).await;
+	assert_timeout_packet(chain_a, 400).await;
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for timeout timestamp");
 }
 
@@ -349,7 +352,8 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 async fn send_packet_with_connection_delay<A, B>(
 	chain_a: &A,
 	chain_b: &B,
-	channel_id: ChannelId,
+	channel_id_a: ChannelId,
+	channel_id_b: ChannelId,
 	asset_a: A::AssetId,
 	asset_b: B::AssetId,
 ) where
@@ -362,11 +366,11 @@ async fn send_packet_with_connection_delay<A, B>(
 {
 	log::info!(target: "hyperspace", "Sending transfer from {}", chain_a.name());
 	let (previous_balance, ..) =
-		send_transfer(chain_a, chain_b, asset_a.clone(), channel_id, None).await;
+		send_transfer(chain_a, chain_b, asset_a.clone(), channel_id_a, None).await;
 	assert_send_transfer(chain_a, asset_a, previous_balance, 120).await;
 	log::info!(target: "hyperspace", "Sending transfer from {}", chain_b.name());
 	let (previous_balance, ..) =
-		send_transfer(chain_b, chain_a, asset_b.clone(), channel_id, None).await;
+		send_transfer(chain_b, chain_a, asset_b.clone(), channel_id_b, None).await;
 	assert_send_transfer(chain_b, asset_b, previous_balance, 120).await;
 	// now send from chain b.
 	log::info!(target: "hyperspace", "🚀🚀 Token Transfer successful with connection delay");
@@ -474,7 +478,7 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 
 	set_relay_status(true);
 
-	assert_timeout_packet(chain_a, 50).await;
+	assert_timeout_packet(chain_a, 100).await;
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for channel close");
 }
 
@@ -483,6 +487,8 @@ pub async fn ibc_messaging_packet_height_timeout_with_connection_delay<A, B>(
 	chain_a: &mut A,
 	chain_b: &mut B,
 	asset_a: A::AssetId,
+	channel_a: ChannelId,
+	_channel_b: ChannelId,
 ) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -491,12 +497,6 @@ pub async fn ibc_messaging_packet_height_timeout_with_connection_delay<A, B>(
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
-	let (handle, channel_id, channel_b, _connection_id) =
-		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(60 * 2)).await;
-	handle.abort();
-	// Set channel whitelist and restart relayer loop
-	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
-	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
@@ -504,7 +504,7 @@ pub async fn ibc_messaging_packet_height_timeout_with_connection_delay<A, B>(
 			.await
 			.unwrap()
 	});
-	send_packet_and_assert_height_timeout(chain_a, chain_b, asset_a, channel_id).await;
+	send_packet_and_assert_height_timeout(chain_a, chain_b, asset_a, channel_a).await;
 	handle.abort()
 }
 
@@ -513,6 +513,8 @@ pub async fn ibc_messaging_packet_timestamp_timeout_with_connection_delay<A, B>(
 	chain_a: &mut A,
 	chain_b: &mut B,
 	asset_a: A::AssetId,
+	channel_a: ChannelId,
+	_channel_b: ChannelId,
 ) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -521,12 +523,6 @@ pub async fn ibc_messaging_packet_timestamp_timeout_with_connection_delay<A, B>(
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
-	let (handle, channel_id, channel_b, _connection_id) =
-		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(60 * 2)).await;
-	// Set channel whitelist and restart relayer loop
-	handle.abort();
-	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
-	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
@@ -534,7 +530,7 @@ pub async fn ibc_messaging_packet_timestamp_timeout_with_connection_delay<A, B>(
 			.await
 			.unwrap()
 	});
-	send_packet_and_assert_timestamp_timeout(chain_a, chain_b, asset_a, channel_id).await;
+	send_packet_and_assert_timestamp_timeout(chain_a, chain_b, asset_a, channel_a).await;
 	handle.abort()
 }
 
@@ -545,6 +541,8 @@ pub async fn ibc_messaging_with_connection_delay<A, B>(
 	chain_b: &mut B,
 	asset_a: A::AssetId,
 	asset_b: B::AssetId,
+	channel_a: ChannelId,
+	channel_b: ChannelId,
 ) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -553,12 +551,6 @@ pub async fn ibc_messaging_with_connection_delay<A, B>(
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
-	let (handle, channel_id, channel_b, _connection_id) =
-		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(30)).await; // 5 mins
-	handle.abort();
-	// Set channel whitelist and restart relayer loop
-	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
-	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
@@ -566,7 +558,8 @@ pub async fn ibc_messaging_with_connection_delay<A, B>(
 			.await
 			.unwrap()
 	});
-	send_packet_with_connection_delay(chain_a, chain_b, channel_id, asset_a, asset_b).await;
+	send_packet_with_connection_delay(chain_a, chain_b, channel_a, channel_b, asset_a, asset_b)
+		.await;
 	handle.abort()
 }
 
@@ -580,12 +573,16 @@ where
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
-	let (handle, channel_id, channel_b, _connection_id) =
+	let (handle, channel_id, channel_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(60 * 2)).await;
 	handle.abort();
-	// Set channel whitelist and restart relayer loop
-	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
-	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
+
+	// Set connections and channel whitelist and restart relayer loop
+	chain_a.set_connection_id(connection_id_a);
+	chain_b.set_connection_id(connection_id_b);
+
+	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())].into_iter().collect());
+	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
@@ -602,6 +599,7 @@ pub async fn ibc_messaging_packet_timeout_on_channel_close<A, B>(
 	chain_a: &mut A,
 	chain_b: &mut B,
 	asset_a: A::AssetId,
+	channel_a: ChannelId,
 ) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -610,12 +608,6 @@ pub async fn ibc_messaging_packet_timeout_on_channel_close<A, B>(
 	B::FinalityEvent: Send + Sync,
 	B::Error: From<A::Error>,
 {
-	let (handle, channel_id, channel_b, _connection_id) =
-		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(0)).await;
-	handle.abort();
-	// Set channel whitelist and restart relayer loop
-	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())]);
-	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())]);
 	let client_a_clone = chain_a.clone();
 	let client_b_clone = chain_b.clone();
 	let handle = tokio::task::spawn(async move {
@@ -623,11 +615,11 @@ pub async fn ibc_messaging_packet_timeout_on_channel_close<A, B>(
 			.await
 			.unwrap()
 	});
-	send_packet_and_assert_timeout_on_channel_close(chain_a, chain_b, asset_a, channel_id).await;
+	send_packet_and_assert_timeout_on_channel_close(chain_a, chain_b, asset_a, channel_a).await;
 	handle.abort()
 }
 
-pub async fn client_synchronization_test<A, B>(chain_a: &A, chain_b: &B)
+pub async fn client_synchronization_test<A, B>(chain_a: &mut A, chain_b: &mut B)
 where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -637,9 +629,15 @@ where
 	B::Error: From<A::Error>,
 {
 	// Wait for some sessions to pass while task is asleep, clients will go out of sync
-	tokio::time::sleep(Duration::from_secs(60 * 20)).await;
+	tokio::time::sleep(Duration::from_secs(60 * 5)).await;
 	// if clients synced correctly then channel and connection setup should succeed
-	let (handle, ..) = setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(0)).await;
+	let client_a_clone = chain_a.clone();
+	let client_b_clone = chain_b.clone();
+	let handle = tokio::task::spawn(async move {
+		hyperspace_core::relay(client_a_clone, client_b_clone, None, None, None)
+			.await
+			.unwrap()
+	});
 	log::info!(target: "hyperspace", "🚀🚀 Clients were successfully synced");
 	handle.abort();
 }

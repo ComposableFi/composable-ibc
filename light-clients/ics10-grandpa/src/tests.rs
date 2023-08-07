@@ -81,9 +81,14 @@ async fn test_continuous_update_of_grandpa_client() {
 	let relay_ws_url = format!("ws://{relay}:9944");
 	let para_ws_url = format!("ws://{para}:9188");
 
-	let prover = GrandpaProver::<PolkadotConfig>::new(&relay_ws_url, &para_ws_url, 2000)
-		.await
-		.unwrap();
+	let prover = GrandpaProver::<PolkadotConfig>::new(
+		&relay_ws_url,
+		&para_ws_url,
+		2000,
+		Duration::from_millis(100),
+	)
+	.await
+	.unwrap();
 
 	println!("Waiting for grandpa proofs to become available");
 	let session_length = prover.session_length().await.unwrap();
@@ -119,9 +124,7 @@ async fn test_continuous_update_of_grandpa_client() {
 			prover
 				.relay_client
 				.storage()
-				.at(Some(client_state.latest_relay_hash))
-				.await
-				.expect("Storage client")
+				.at(client_state.latest_relay_hash)
 				.fetch(&key)
 				.await
 				.unwrap()
@@ -130,7 +133,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		let decoded_para_head = frame_support::sp_runtime::generic::Header::<
 			u32,
 			sp_runtime::traits::BlakeTwo256,
-		>::decode(&mut &*head_data.0 .0)
+		>::decode(&mut &*head_data.0)
 		.expect("Failed to decode parachain header");
 		// we can't use the genesis block to construct the initial state.
 		if decoded_para_head.number == 0 {
@@ -196,7 +199,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		)
 		.await
 		.expect("Failed to subscribe to grandpa justifications");
-	let mut subscription = subscription.take(100);
+	let mut subscription = subscription.take((2 * session_length).try_into().unwrap());
 
 	while let Some(Ok(JustificationNotification(sp_core::Bytes(_)))) = subscription.next().await {
 		let client_state: ClientState<HostFunctionsManager> =
@@ -258,6 +261,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		let header = Header {
 			finality_proof: proof.finality_proof,
 			parachain_headers: proof.parachain_headers.clone(),
+			height: Height::new(prover.para_id as u64, finalized_para_header.number as u64),
 		};
 		let msg = MsgUpdateAnyClient {
 			client_id: client_id.clone(),
@@ -282,7 +286,7 @@ async fn test_continuous_update_of_grandpa_client() {
 				match result {
 					Update(upd_res) => {
 						assert_eq!(upd_res.client_id, client_id);
-						assert!(!upd_res.client_state.is_frozen());
+						assert!(!upd_res.client_state.is_frozen(&ctx, &client_id));
 						assert_eq!(
 							upd_res.client_state,
 							ctx.latest_client_states(&client_id).clone()

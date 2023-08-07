@@ -75,7 +75,7 @@ impl core::fmt::Display for PacketMsgType {
 #[derive(
 	Copy, Clone, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Deserialize, Serialize,
 )]
-pub struct Sequence(u64);
+pub struct Sequence(pub u64);
 
 impl FromStr for Sequence {
 	type Err = Error;
@@ -172,6 +172,7 @@ impl core::fmt::Debug for Packet {
 	}
 }
 
+#[derive(Debug)]
 pub enum TimeoutVariant {
 	Height,
 	Timestamp,
@@ -246,9 +247,6 @@ impl TryFrom<RawPacket> for Packet {
 		let packet_timeout_height: Height =
 			raw_pkt.timeout_height.ok_or_else(Error::missing_height)?.into();
 
-		if packet_timeout_height.is_zero() && raw_pkt.timeout_timestamp == 0 {
-			return Err(Error::zero_packet_timeout())
-		}
 		if raw_pkt.data.is_empty() {
 			return Err(Error::zero_packet_data())
 		}

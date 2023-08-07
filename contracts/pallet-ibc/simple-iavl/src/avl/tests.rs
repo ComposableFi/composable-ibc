@@ -113,7 +113,7 @@ fn proof() {
 	let inner_a = &proof.path[1];
 	let mut sha = Sha256::new();
 	sha.update(&inner_a.prefix);
-	sha.update(&inner_hash_b);
+	sha.update(inner_hash_b);
 	sha.update(&inner_a.suffix);
 	let inner_hash_a = sha.finalize();
 	assert_eq!(inner_hash_a.as_slice(), node_a.merkle_hash.as_bytes());
