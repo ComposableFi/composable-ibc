@@ -19,7 +19,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-	context_read_only::ContextReadOnly,
 	context::Context,
 	ics23::{ConsensusStates, FakeInner, ProcessedStates},
 	msg::SudoMsg,
@@ -69,7 +68,7 @@ impl CwTemplateContract {
 }
 
 pub fn verify_delay_passed<H: HostFunctionsProvider + 'static>(
-	ctx: &ContextReadOnly<H>,
+	ctx: &Context<H>,
 	height: Height,
 	delay_period_time: u64,
 	delay_period_height: u64,

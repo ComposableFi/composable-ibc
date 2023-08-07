@@ -15,7 +15,6 @@
 
 use crate::{
 	context::Context,
-	context_read_only::ContextReadOnly,
 	error::ContractError,
 	helpers::{
 		check_substitute_and_update_state, prune_oldest_consensus_state, verify_delay_passed,
@@ -281,10 +280,9 @@ fn process_message(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
-	//deps.api.debug("In query");
 	match msg {
 		QueryMsg::CheckForMisbehaviour(msg) => {
-			let ctx = ContextReadOnly::<HostFunctions>::new(deps, env);
+			let ctx = Context::<HostFunctions>::new_ro(deps, env);
 			let client = TendermintClient::<HostFunctions>::default();
 			let client_state = ctx
 				.client_state(&client_id)
@@ -326,14 +324,14 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 			}
 		},
 		QueryMsg::TimestampAtHeight(msg) => {
-			let ctx = ContextReadOnly::<HostFunctions>::new(deps, env);
+			let ctx = Context::<HostFunctions>::new_ro(deps, env);
 			let consensus_state = ctx
 				.consensus_state(&client_id, msg.height)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 			to_binary(&QueryResponse::success().timestamp(consensus_state.timestamp.unix_timestamp().unsigned_abs()))
 		},
 		QueryMsg::VerifyClientMessage(msg) => {
-			let ctx = ContextReadOnly::<HostFunctions>::new(deps, env);
+			let ctx = Context::<HostFunctions>::new_ro(deps, env);
 			let client = TendermintClient::<HostFunctions>::default();
 			let client_state = ctx
 				.client_state(&client_id)
@@ -345,7 +343,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 				.map(|_| to_binary(&QueryResponse::success()))?
 		},
 		QueryMsg::VerifyMembership(msg) => {
-			let ctx = ContextReadOnly::<HostFunctions>::new(deps, env);
+			let ctx = Context::<HostFunctions>::new_ro(deps, env);
 			let client_state = ctx
 				.client_state(&client_id)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
@@ -367,7 +365,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 			to_binary(&QueryResponse::success())
 		},
 		QueryMsg::VerifyNonMembership(msg) => {
-			let ctx = ContextReadOnly::<HostFunctions>::new(deps, env);
+			let ctx = Context::<HostFunctions>::new_ro(deps, env);
 			let client_state = ctx
 				.client_state(&client_id)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;

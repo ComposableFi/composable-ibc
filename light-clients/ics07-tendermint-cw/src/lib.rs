@@ -19,7 +19,6 @@ extern crate core;
 mod channel;
 mod client;
 mod connection;
-mod context_read_only;
 mod context;
 pub mod contract;
 mod error;

@@ -20,7 +20,7 @@ use crate::{
 	},
 	ContractError,
 };
-use cosmwasm_std::{DepsMut, Env, Storage};
+use cosmwasm_std::{Deps, DepsMut, Env, Storage};
 use ibc::{
 	core::{
 		ics02_client::{error::Error, events::CodeHash},
@@ -36,7 +36,8 @@ use ics07_tendermint::{
 use std::{fmt, fmt::Debug, marker::PhantomData};
 
 pub struct Context<'a, H> {
-	pub deps: DepsMut<'a>,
+	pub deps_mut: Option<DepsMut<'a>>,
+	pub deps: Option<Deps<'a>>,
 	pub env: Env,
 	pub code_hash: Option<CodeHash>,
 	_phantom: PhantomData<H>,
@@ -64,19 +65,35 @@ impl<'a, H> Clone for Context<'a, H> {
 
 impl<'a, H> Context<'a, H> {
 	pub fn new(deps: DepsMut<'a>, env: Env) -> Self {
-		Self { deps, _phantom: Default::default(), env, code_hash: None }
+		Self { deps_mut: Some(deps), deps: None, _phantom: Default::default(), env, code_hash: None }
+	}
+
+	pub fn new_ro(deps: Deps<'a>, env: Env) -> Self {
+		Self { deps_mut: None, deps: Some(deps), _phantom: Default::default(), env, code_hash: None }
 	}
 
 	pub fn log(&self, msg: &str) {
-		self.deps.api.debug(msg)
+		match &self.deps_mut {
+			Some(deps_mut) => deps_mut.api.debug(msg),
+			None => unimplemented!()
+		}
 	}
 
 	pub fn storage(&self) -> &dyn Storage {
-		self.deps.storage
+		match &self.deps_mut {
+			Some(deps_mut) => deps_mut.storage,
+			None => match &self.deps {
+				Some(deps) => deps.storage,
+				None => unimplemented!()
+			}
+		}
 	}
 
 	pub fn storage_mut(&mut self) -> &mut dyn Storage {
-		self.deps.storage
+		match &mut self.deps_mut {
+			Some(deps_mut) => deps_mut.storage,
+			None => unimplemented!()
+		}
 	}
 }
 
