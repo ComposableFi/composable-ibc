@@ -13,12 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Contains subxt generated types for the relay chain
-
-#![allow(missing_docs)]
-
-#[cfg(feature = "build-metadata-from-ws")]
-include!(concat!(env!("OUT_DIR"), "/polkadot.rs"));
-
-#[cfg(not(feature = "build-metadata-from-ws"))]
-pub use subxt_generated::relaychain::*;
+#[macro_export]
+macro_rules! log {
+    ($self:expr, $($tt:tt)*) => {
+        $self.log(&format!($($tt)*))
+    };
+}

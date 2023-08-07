@@ -32,7 +32,7 @@ use ibc::core::{
 		merkle::{apply_prefix, MerkleProof},
 	},
 	ics24_host::{
-		identifier::{ChannelId, ClientId, ConnectionId, PortId},
+		identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 		path::{
 			AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath, CommitmentsPath,
 			ConnectionsPath, ReceiptsPath, SeqRecvsPath,
@@ -56,7 +56,7 @@ use crate::{
 	error::Error,
 	HostFunctionsProvider, ProdVerifier,
 };
-use ibc::{prelude::*, timestamp::Timestamp, Height};
+use ibc::{prelude::*, Height};
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct TendermintClient<H>(PhantomData<H>);
@@ -92,10 +92,21 @@ where
 					))
 				}
 
+				if header.height().revision_number != header.trusted_height.revision_number {
+					return Err(Ics02Error::client_error(
+						client_state.client_type().to_owned(),
+						Error::mismatched_revisions(
+							header.trusted_height.revision_number,
+							header.height().revision_number,
+						)
+						.to_string(),
+					))
+				}
+
 				// Check if a consensus state is already installed; if so skip
 				let header_consensus_state = <ConsensusState as From<Header>>::from(header.clone());
 
-				let _ = match ctx.maybe_consensus_state(&client_id, header.height())? {
+				let _ = match ctx.maybe_consensus_state(&client_id.clone(), header.height())? {
 					Some(cs) => {
 						let cs: ConsensusState =
 							cs.downcast().ok_or(Ics02Error::client_args_type_mismatch(
@@ -114,11 +125,20 @@ where
 				};
 
 				let trusted_consensus_state: Self::ConsensusState = ctx
-					.consensus_state(&client_id, header.trusted_height)?
+					.consensus_state(&client_id.clone(), header.trusted_height)?
 					.downcast()
 					.ok_or(Ics02Error::client_args_type_mismatch(
 						ClientState::<H>::client_type().to_owned(),
 					))?;
+
+				if trusted_consensus_state
+					.next_validators_hash
+					.ne(&header.trusted_validator_set.hash_with::<H>())
+				{
+					return Err(Ics02Error::header_verification_failure(
+						"next val set mismatch".to_string(),
+					))
+				}
 
 				let trusted_state = TrustedBlockState {
 					// TODO: make sure it's correct
@@ -167,15 +187,15 @@ where
 				}
 			},
 			ClientMessage::Misbehaviour(misbehaviour) => {
-				self.verify_client_message(
+				verify_misbehaviour_header(
 					ctx,
 					client_id.clone(),
 					client_state.clone(),
 					ClientMessage::Header(misbehaviour.header1),
 				)?;
-				self.verify_client_message(
+				verify_misbehaviour_header(
 					ctx,
-					client_id,
+					client_id.clone(),
 					client_state,
 					ClientMessage::Header(misbehaviour.header2),
 				)?;
@@ -223,7 +243,7 @@ where
 		&self,
 		ctx: &Ctx,
 		client_id: ClientId,
-		client_state: Self::ClientState,
+		_client_state: Self::ClientState,
 		message: Self::ClientMessage,
 	) -> Result<bool, Ics02Error> {
 		match message {
@@ -242,7 +262,7 @@ where
 							)?;
 							// If this consensus state matches, skip verification
 							// (optimization)
-							if header_consensus_state == cs {
+							if header_consensus_state.eq(&cs) {
 								// Header is already installed and matches the incoming
 								// header (already verified)
 								return Ok(false)
@@ -256,66 +276,46 @@ where
 				// differs from the existing consensus state for that height, freeze the
 				// client and return the installed consensus state.
 				if let Some(cs) = existing_consensus_state {
-					if cs != header_consensus_state {
+					if cs.ne(&header_consensus_state) {
 						return Ok(true)
 					}
 				}
 
-				// Monotonicity checks for timestamps for in-the-middle updates
-				// (cs-new, cs-next, cs-latest)
-				if header.height() < client_state.latest_height() {
-					let maybe_next_cs = ctx
-						.next_consensus_state(&client_id, header.height())?
-						.map(|cs| {
-							cs.downcast::<ConsensusState>().ok_or(
-								Ics02Error::client_args_type_mismatch(
-									ClientState::<H>::client_type().to_owned(),
-								),
-							)
-						})
-						.transpose()?;
-
+				if let Ok(maybe_next_cs) = ctx.next_consensus_state(&client_id, header.height()) {
 					if let Some(next_cs) = maybe_next_cs {
-						// New (untrusted) header timestamp cannot occur after next
-						// consensus state's height
-						if Timestamp::from(header.signed_header.header().time).nanoseconds() >
-							next_cs.timestamp().nanoseconds()
-						{
-							return Err(Error::header_timestamp_too_high(
-								header.signed_header.header().time.to_string(),
-								next_cs.timestamp().to_string(),
-							)
-							.into())
+						if next_cs.timestamp().nanoseconds() < header.timestamp().nanoseconds() {
+							return Ok(true)
 						}
 					}
 				}
-				// (cs-trusted, cs-prev, cs-new)
-				if header.trusted_height < header.height() {
-					let maybe_prev_cs = ctx
-						.prev_consensus_state(&client_id, header.height())?
-						.map(|cs| {
-							cs.downcast::<ConsensusState>().ok_or(
-								Ics02Error::client_args_type_mismatch(
-									ClientState::<()>::client_type().to_owned(),
-								),
-							)
-						})
-						.transpose()?;
 
-					if let Some(prev_cs) = maybe_prev_cs {
-						// New (untrusted) header timestamp cannot occur before the
-						// previous consensus state's height
-						if header.signed_header.header().time < prev_cs.timestamp {
-							return Err(Error::header_timestamp_too_low(
-								header.signed_header.header().time.to_string(),
-								prev_cs.timestamp.to_string(),
-							)
-							.into())
+				match ctx.prev_consensus_state(&client_id, header.height())? {
+					Some(prev_cs) => {
+						if prev_cs.timestamp().nanoseconds() > header.timestamp().nanoseconds() {
+							return Ok(true)
 						}
+					},
+					None => {},
+				};
+			},
+			ClientMessage::Misbehaviour(misbehaviour) => {
+				if misbehaviour.header1.height().revision_height ==
+					misbehaviour.header2.height().revision_height
+				{
+					let block_id1 = misbehaviour.header1.signed_header.commit.block_id;
+					let block_id2 = misbehaviour.header2.signed_header.commit.block_id;
+					if block_id1.hash.ne(&block_id2.hash) {
+						return Ok(true)
 					}
+				} else if misbehaviour.header1.signed_header.header.time.le(&misbehaviour
+					.header2
+					.signed_header
+					.header
+					.time)
+				{
+					return Ok(true)
 				}
 			},
-			ClientMessage::Misbehaviour(_misbehaviour) => return Ok(true),
 		};
 
 		Ok(false)
@@ -331,7 +331,19 @@ where
 		_proof_upgrade_client: Vec<u8>,
 		_proof_upgrade_consensus_state: Vec<u8>,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
-		// TODO:
+		// TODO: tendermint verify_upgrade_and_update_state
+		Err(Ics02Error::implementation_specific("Not implemented".to_string()))
+	}
+
+	fn check_substitute_and_update_state<Ctx: ReaderContext>(
+		&self,
+		_ctx: &Ctx,
+		_subject_client_id: ClientId,
+		_substitute_client_id: ClientId,
+		_old_client_state: Self::ClientState,
+		_substitute_client_state: Self::ClientState,
+	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
+		// TODO: tendermint check_substitute_and_update_state
 		Err(Ics02Error::implementation_specific("Not implemented".to_string()))
 	}
 
@@ -532,7 +544,7 @@ where
 	}
 }
 
-fn verify_membership<H, P>(
+pub fn verify_membership<H, P>(
 	client_state: &ClientState<H>,
 	prefix: &CommitmentPrefix,
 	proof: &CommitmentProofBytes,
@@ -554,7 +566,7 @@ where
 		.map_err(|e| Error::ics23_error(e).into())
 }
 
-fn verify_non_membership<H, P>(
+pub fn verify_non_membership<H, P>(
 	client_state: &ClientState<H>,
 	prefix: &CommitmentPrefix,
 	proof: &CommitmentProofBytes,
@@ -586,21 +598,164 @@ fn verify_delay_passed<Ctx: ReaderContext>(
 	let client_id = connection_end.client_id();
 	let processed_time = ctx
 		.client_update_time(client_id, height)
-		.map_err(|_| Error::processed_time_not_found(client_id.clone(), height))?;
+		.map_err(|_| Error::processed_time_not_found(height))?;
 	let processed_height = ctx
 		.client_update_height(client_id, height)
-		.map_err(|_| Error::processed_height_not_found(client_id.clone(), height))?;
+		.map_err(|_| Error::processed_height_not_found(height))?;
 
 	let delay_period_time = connection_end.delay_period();
 	let delay_period_height = ctx.block_delay(delay_period_time);
+	let delay_period_time_u64 = u64::try_from(delay_period_time.as_nanos()).unwrap();
 
 	ClientState::<()>::verify_delay_passed(
 		current_timestamp,
 		current_height,
-		processed_time,
-		processed_height,
-		delay_period_time,
+		processed_time.nanoseconds(),
+		processed_height.revision_height,
+		delay_period_time_u64,
 		delay_period_height,
 	)
 	.map_err(|e| e.into())
+}
+
+fn verify_misbehaviour_header<Ctx: ReaderContext, H: HostFunctionsProvider>(
+	ctx: &Ctx,
+	client_id: ClientId,
+	client_state: ClientState<H>,
+	message: ClientMessage,
+) -> Result<(), Ics02Error> {
+	match message {
+		ClientMessage::Header(header) => {
+			// Check if a consensus state is already installed; if so skip
+			let header_consensus_state = <ConsensusState as From<Header>>::from(header.clone());
+
+			let _ = match ctx.maybe_consensus_state(&client_id.clone(), header.height())? {
+				Some(cs) => {
+					let cs: ConsensusState =
+						cs.downcast().ok_or(Ics02Error::client_args_type_mismatch(
+							client_state.client_type().to_owned(),
+						))?;
+					// If this consensus state matches, skip verification
+					// (optimization)
+					if cs == header_consensus_state {
+						// Header is already installed and matches the incoming
+						// header (already verified)
+						return Ok(())
+					}
+					Some(cs)
+				},
+				None => None,
+			};
+
+			let trusted_consensus_state: ConsensusState = ctx
+				.consensus_state(&client_id.clone(), header.trusted_height)?
+				.downcast()
+				.ok_or(Ics02Error::client_args_type_mismatch(
+					ClientState::<H>::client_type().to_owned(),
+				))?;
+
+			if trusted_consensus_state
+				.next_validators_hash
+				.ne(&header.trusted_validator_set.hash_with::<H>())
+			{
+				return Err(Ics02Error::header_verification_failure(
+					"next val set mismatch".to_string(),
+				))
+			}
+
+			let chain_id = client_state.chain_id();
+			if !ChainId::is_epoch_format(chain_id.as_str()) {
+				return Err(Ics02Error::header_verification_failure(
+					"client state chain id not in epoch format".to_string(),
+				))
+			}
+
+			let split: Vec<_> = chain_id.as_str().split('-').collect();
+			let chain_name = split.first().expect("get name from chain_id").parse().unwrap();
+			let chain_id = ChainId::new(chain_name, header.height().revision_number);
+			let tm_chain_id = tendermint::chain::Id::from_str(chain_id.as_str()).unwrap();
+			if tm_chain_id != header.signed_header.header.chain_id {
+				return Err(Ics02Error::header_verification_failure("chain id mismatch".to_string()))
+			}
+
+			let trusted_state = TrustedBlockState {
+				chain_id: &tm_chain_id,
+				header_time: trusted_consensus_state.timestamp().into_tm_time().unwrap(),
+				height: header.trusted_height.revision_height.try_into().map_err(|_| {
+					Ics02Error::client_error(
+						client_state.client_type().to_owned(),
+						Error::invalid_header_height(header.trusted_height).to_string(),
+					)
+				})?,
+				next_validators: &header.trusted_validator_set,
+				next_validators_hash: trusted_consensus_state.next_validators_hash,
+			};
+
+			let untrusted_state = UntrustedBlockState {
+				signed_header: &header.signed_header,
+				validators: &header.validator_set,
+				// NB: This will skip the
+				// VerificationPredicates::next_validators_match check for the
+				// untrusted state.
+				next_validators: None,
+			};
+
+			let options = client_state.as_light_client_options()?;
+
+			let verifier = ProdVerifier::<H>::default();
+
+			let verdict = verifier.verify_validator_sets(&untrusted_state);
+
+			match verdict {
+				Verdict::Success => {},
+				Verdict::NotEnoughTrust(voting_power_tally) =>
+					return Err(Error::not_enough_trusted_vals_signed(format!(
+						"voting power tally: {}",
+						voting_power_tally
+					))
+					.into()),
+				Verdict::Invalid(detail) => return Err(Error::verification_error(detail).into()),
+			}
+
+			let verdict =
+				verifier.verify_commit_against_trusted(&untrusted_state, &trusted_state, &options);
+
+			match verdict {
+				Verdict::Success => {},
+				Verdict::NotEnoughTrust(voting_power_tally) =>
+					return Err(Error::not_enough_trusted_vals_signed(format!(
+						"voting power tally: {}",
+						voting_power_tally
+					))
+					.into()),
+				Verdict::Invalid(detail) => return Err(Error::verification_error(detail).into()),
+			}
+
+			let verdict = verifier.verify_commit(&untrusted_state);
+
+			match verdict {
+				Verdict::Success => {},
+				Verdict::NotEnoughTrust(voting_power_tally) =>
+					return Err(Error::not_enough_trusted_vals_signed(format!(
+						"voting power tally: {}",
+						voting_power_tally
+					))
+					.into()),
+				Verdict::Invalid(detail) => return Err(Error::verification_error(detail).into()),
+			}
+
+			if let Ok(expires_at) = trusted_state.header_time + options.trusting_period {
+				if expires_at < ctx.host_timestamp().into_tm_time().unwrap() {
+					return Err(Ics02Error::header_verification_failure("Expired".to_string()))
+				}
+			} else {
+				return Err(Ics02Error::header_verification_failure(
+					"Can't get expire time".to_string(),
+				))
+			}
+		},
+		ClientMessage::Misbehaviour(_misbehaviour) => {},
+	};
+
+	Ok(())
 }

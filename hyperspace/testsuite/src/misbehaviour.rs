@@ -62,7 +62,8 @@ where
 		matches!(cs, AnyClientState::Grandpa(_))
 	}).unwrap() else { unreachable!() };
 
-	let finality_event = chain_b.finality_notifications().await.next().await.expect("no event");
+	let finality_event =
+		chain_b.finality_notifications().await.unwrap().next().await.expect("no event");
 	let set_id = client_state.current_set_id;
 
 	// construct an extrinsic proof with the mandatory timestamp extrinsic
@@ -125,7 +126,7 @@ where
 	let precommit = Precommit { target_hash: header_hash, target_number: header.number };
 	let message = finality_grandpa::Message::Precommit(precommit.clone());
 
-	let (update_client_msg, _, _) = chain_b
+	let (update_client_msg, _, _, _) = chain_b
 		.query_latest_ibc_events(finality_event, chain_a)
 		.await
 		.expect("no event")
@@ -224,8 +225,6 @@ where
 		.await
 		.expect("timeout")
 		.expect("failed to receive misbehaviour event");
-
-	tokio::time::sleep(Duration::from_secs(120)).await;
 
 	handle.abort();
 }

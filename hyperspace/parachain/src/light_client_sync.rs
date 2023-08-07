@@ -1,4 +1,4 @@
-use codec::Encode;
+use codec::{Decode, Encode};
 use std::{
 	collections::{BTreeMap, BTreeSet, HashMap},
 	fmt::Display,
@@ -12,17 +12,13 @@ use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
-#[cfg(feature = "dali")]
-use subxt::config::substrate::AssetTip as Tip;
 use subxt::config::{
 	extrinsic_params::{BaseExtrinsicParamsBuilder, ExtrinsicParams},
-	Header as HeaderT,
+	Header as HeaderT, Header,
 };
 
 use grandpa_prover::GrandpaProver;
 use ibc::core::ics02_client::msgs::update_client::MsgUpdateAnyClient;
-#[cfg(not(feature = "dali"))]
-use subxt::config::polkadot::PlainTip as Tip;
 use tendermint_proto::Protobuf;
 
 use ibc::{
@@ -32,29 +28,37 @@ use ibc_rpc::{BlockNumberOrHash, IbcApiClient};
 use ics10_grandpa::client_message::{ClientMessage, Header as GrandpaHeader};
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState};
 
-use primitives::{mock::LocalClientTypes, Chain, KeyProvider, LightClientSync};
+use primitives::{
+	filter_events_by_ids, mock::LocalClientTypes, Chain, KeyProvider, LightClientSync,
+};
 
 use super::{error::Error, ParachainClient};
-use crate::{config, finality_protocol::FinalityProtocol};
+use crate::finality_protocol::FinalityProtocol;
+
+const MAX_HEADERS_PER_ITERATION: usize = 100;
 
 #[async_trait::async_trait]
-impl<T: config::Config + Send + Sync> LightClientSync for ParachainClient<T>
+impl<T: light_client_common::config::Config + Send + Sync + Clone> LightClientSync
+	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<T as subxt::Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	Self: KeyProvider,
-	<<T as config::Config>::Signature as Verify>::Signer:
+	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
+	<T as light_client_common::config::Config>::AssetId: Clone,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
@@ -103,7 +107,6 @@ where
 
 		let (messages, events) = match self.finality_protocol {
 			FinalityProtocol::Grandpa => {
-				let prover = self.grandpa_prover();
 				let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
 					.ok_or_else(|| Error::Custom(format!("Could not decode client state")))? else { unreachable!() };
 				let latest_hash = self.relay_client.rpc().finalized_head().await?;
@@ -112,28 +115,17 @@ where
 						Error::Custom(format!("Expected finalized header, found None"))
 					})?;
 				let latest_finalized_height = u32::from(finalized_head.number());
-				let (mut messages, mut events, previous_para_height, previous_finalized_height) =
-					self.query_missed_grandpa_updates(
+				let (messages, events) = self
+					.query_missed_grandpa_updates(
+						counterparty,
 						client_state.latest_para_height,
 						client_state.latest_relay_height,
 						latest_finalized_height,
 						self.client_id(),
 						counterparty.account_id(),
+						MAX_HEADERS_PER_ITERATION,
 					)
 					.await?;
-				let (latest_message, evs, ..) = get_message(
-					prover,
-					previous_para_height,
-					previous_finalized_height,
-					latest_finalized_height,
-					self.client_id(),
-					counterparty.account_id(),
-					&self.name,
-					self.para_id,
-				)
-				.await?;
-				messages.push(latest_message);
-				events.extend(evs);
 				(messages, events)
 			},
 			// Current implementation of Beefy needs to be revised
@@ -144,11 +136,11 @@ where
 	}
 }
 
-impl<T: config::Config + Send + Sync> ParachainClient<T>
+impl<T: light_client_common::config::Config + Send + Sync + Clone> ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	Self: KeyProvider,
-	<<T as config::Config>::Signature as Verify>::Signer:
+	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
@@ -156,7 +148,8 @@ where
 	H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
@@ -165,12 +158,27 @@ where
 	/// in the list and latest parachain block finalized by the last message in the list
 	pub async fn query_missed_grandpa_updates(
 		&self,
+		counterparty: &impl Chain,
 		mut previous_finalized_para_height: u32,
 		mut previous_finalized_height: u32,
 		latest_finalized_height: u32,
 		client_id: ClientId,
 		signer: Signer,
-	) -> Result<(Vec<Any>, Vec<IbcEvent>, u32, u32), anyhow::Error> {
+		limit: usize,
+	) -> Result<(Vec<Any>, Vec<IbcEvent>), anyhow::Error>
+	where
+		<<T as subxt::Config>::ExtrinsicParams as ExtrinsicParams<
+			<T as subxt::Config>::Index,
+			<T as subxt::Config>::Hash,
+		>>::OtherParams: Sync
+			+ Send
+			+ From<BaseExtrinsicParamsBuilder<T, <T as light_client_common::config::Config>::Tip>>,
+		<T as subxt::Config>::Hash: From<H256>,
+		<T as subxt::Config>::Hash: From<[u8; 32]>,
+		<T as light_client_common::config::Config>::AssetId: Clone,
+		<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
+		<<T as subxt::Config>::Header as HeaderT>::Number: Send + Sync,
+	{
 		let prover = self.grandpa_prover();
 		let session_length = prover.session_length().await?;
 		let mut session_end_block = {
@@ -186,9 +194,17 @@ where
 		// finalized height
 		let mut messages = vec![];
 		let mut events = vec![];
-		while session_end_block < latest_finalized_height {
+		let mut count = 0;
+		while session_end_block <= latest_finalized_height && count < limit {
+			log::debug!(
+				target: "hyperspace",
+				"Getting message for session end block: #{} (finalized #{}) ({}/{})",
+				session_end_block, latest_finalized_height, count + 1, limit
+			);
 			let (msg, evs, previous_para_height, ..) = get_message(
-				self.grandpa_prover(),
+				self,
+				counterparty,
+				&prover,
 				previous_finalized_para_height,
 				previous_finalized_height,
 				session_end_block,
@@ -203,14 +219,17 @@ where
 			previous_finalized_height = session_end_block;
 			previous_finalized_para_height = previous_para_height;
 			session_end_block += session_length;
+			count += 1;
 		}
-		Ok((messages, events, previous_finalized_para_height, previous_finalized_height))
+		Ok((messages, events))
 	}
 }
 
 /// Return a single client update message
-async fn get_message<T: crate::config::Config>(
-	prover: GrandpaProver<T>,
+async fn get_message<T: light_client_common::config::Config + Send + Sync>(
+	source: &impl Chain,
+	counterparty: &impl Chain,
+	prover: &GrandpaProver<T>,
 	previous_finalized_para_height: u32,
 	previous_finalized_height: u32,
 	latest_finalized_height: u32,
@@ -221,8 +240,10 @@ async fn get_message<T: crate::config::Config>(
 ) -> Result<(Any, Vec<IbcEvent>, u32, u32), anyhow::Error>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
-		+ From<<T as subxt::Config>::BlockNumber>,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+		+ From<<<T as subxt::Config>::Header as Header>::Number>,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
@@ -250,12 +271,16 @@ where
 		.collect::<Vec<_>>();
 
 	// block_number => events
-	let events: HashMap<String, Vec<IbcEvent>> =
-		IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_events(
-			&*prover.para_ws_client,
-			finalized_block_numbers,
-		)
-		.await?;
+	let events: HashMap<String, Vec<IbcEvent>> = IbcApiClient::<
+		u32,
+		H256,
+		<T as light_client_common::config::Config>::AssetId,
+	>::query_events(
+		&*prover.para_ws_client, finalized_block_numbers
+	)
+	.await?;
+
+	log::trace!(target: "hyperspace_parachain", "Received events count: {}", events.len());
 
 	// header number is serialized to string
 	let mut headers_with_events = events
@@ -264,7 +289,9 @@ where
 			if events.is_empty() {
 				None
 			} else {
-				str::parse::<u32>(&*num).ok().map(T::BlockNumber::from)
+				str::parse::<u32>(&*num)
+					.ok()
+					.map(<<T as subxt::Config>::Header as Header>::Number::from)
 			}
 		})
 		.collect::<BTreeSet<_>>();
@@ -274,7 +301,23 @@ where
 		headers_with_events.insert(finalized_para_header.number());
 	}
 
-	let events: Vec<IbcEvent> = events.into_values().flatten().collect();
+	let events: Vec<IbcEvent> = events
+		.into_values()
+		.flatten()
+		.filter(|e| {
+			let mut channel_and_port_ids = source.channel_whitelist();
+			channel_and_port_ids.extend(counterparty.channel_whitelist());
+			filter_events_by_ids(
+				e,
+				&[source.client_id(), counterparty.client_id()],
+				&[source.connection_id(), counterparty.connection_id()]
+					.into_iter()
+					.flatten()
+					.collect::<Vec<_>>(),
+				&channel_and_port_ids,
+			)
+		})
+		.collect();
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers, .. } = prover
 		.query_finalized_parachain_headers_with_proof::<T::Header>(
 			previous_finalized_height,

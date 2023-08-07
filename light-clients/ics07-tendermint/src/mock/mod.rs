@@ -34,7 +34,12 @@ use tendermint::{
 };
 use tendermint_light_client_verifier::operations::CommitValidator;
 
-use crate::{client_message::ClientMessage, mock::host::MockHostBlock};
+use crate::{
+	client_message::{ClientMessage, TENDERMINT_CLIENT_MESSAGE_TYPE_URL},
+	client_state::TENDERMINT_CLIENT_STATE_TYPE_URL,
+	consensus_state::TENDERMINT_CONSENSUS_STATE_TYPE_URL,
+	mock::host::MockHostBlock,
+};
 use ibc::{
 	core::{
 		ics02_client,
@@ -57,12 +62,6 @@ use tendermint_proto::Protobuf;
 pub const MOCK_CLIENT_STATE_TYPE_URL: &str = "/ibc.mock.ClientState";
 pub const MOCK_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.mock.ClientMessage";
 pub const MOCK_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.mock.ConsensusState";
-
-pub const TENDERMINT_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.ClientState";
-pub const TENDERMINT_CLIENT_MESSAGE_TYPE_URL: &str =
-	"/ibc.lightclients.tendermint.v1.ClientMessage";
-pub const TENDERMINT_CONSENSUS_STATE_TYPE_URL: &str =
-	"/ibc.lightclients.tendermint.v1.ConsensusState";
 
 #[derive(Clone, Debug, PartialEq, Eq, ClientDef)]
 pub enum AnyClient {

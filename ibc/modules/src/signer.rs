@@ -16,6 +16,7 @@ use core::str::FromStr;
 
 use crate::prelude::*;
 
+use codec::{Decode, Encode};
 use derive_more::Display;
 use flex_error::define_error;
 use serde::{Deserialize, Serialize};
@@ -28,7 +29,21 @@ define_error! {
 	}
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Display)]
+#[derive(
+	Clone,
+	Debug,
+	PartialEq,
+	Eq,
+	PartialOrd,
+	Ord,
+	Hash,
+	Serialize,
+	Deserialize,
+	Display,
+	Encode,
+	Decode,
+	scale_info::TypeInfo,
+)]
 pub struct Signer(String);
 
 impl FromStr for Signer {

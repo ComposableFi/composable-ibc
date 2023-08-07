@@ -30,7 +30,6 @@ use core::{
 	str::FromStr,
 	time::Duration,
 };
-use ethereum_verification::ethereum_trie::verify_proof;
 use ibc::{
 	core::{
 		ics03_connection::connection::ConnectionEnd,
@@ -45,9 +44,8 @@ use sp_core::H256;
 use sp_storage::ChildInfo;
 use sp_trie::StorageProof;
 
-use crate::ethereum_verification::ethereum_trie::{EIP1186Layout, KeccakHasher};
-
-mod ethereum_verification;
+#[cfg(feature = "enable-subxt")]
+pub mod config;
 pub mod state_machine;
 
 /// Host functions that allow the light client perform cryptographic operations in native.
@@ -56,7 +54,6 @@ pub trait HostFunctions: Clone + Send + Sync + Eq + Debug + Default {
 	type BlakeTwo256: hash_db::Hasher<Out = H256> + Debug + 'static;
 }
 
-#[cfg(not(feature = "ethereum"))]
 /// Membership proof verification via child trie host function
 pub fn verify_membership<H, P>(
 	prefix: &CommitmentPrefix,
@@ -87,52 +84,6 @@ where
 		child_info,
 		vec![(key, Some(value))],
 	)
-	.map_err(|err| anyhow!("Failed to verify proof for path: {path}, error: {err:#?}"))?;
-	Ok(())
-}
-
-/// Membership proof verification via child trie host function
-pub fn verify_membership_ethereum<H, P>(
-	prefix: &CommitmentPrefix,
-	proof: &CommitmentProofBytes,
-	root: &CommitmentRoot,
-	path: P,
-	value: Vec<u8>,
-) -> Result<(), anyhow::Error>
-where
-	P: Into<Path>,
-	H: hash_db::Hasher<Out = H256> + Debug + 'static,
-{
-	use sp_core::keccak_256;
-
-	if root.as_bytes().len() != 32 {
-		return Err(anyhow!("invalid commitment root length: {}", root.as_bytes().len()))
-	}
-	let path: Path = path.into();
-	let path = path.to_string();
-	let mut key = prefix.as_bytes().to_vec();
-	key.extend(path.as_bytes());
-
-	let trie_proof: Vec<Vec<u8>> = codec::Decode::decode(&mut &*proof.as_bytes())
-		.map_err(|err| anyhow!("Failed to decode proof nodes for path: {path}: {err:#?}"))?;
-	let key = keccak_256(&key);
-	let proof = StorageProof::new(trie_proof);
-	let root = H256::from_slice(root.as_bytes());
-	let child_info = ChildInfo::new_default(prefix.as_bytes());
-	let expected_value = Some(value);
-
-	verify_proof::<EIP1186Layout<KeccakHasher>>(
-		&root,
-		&trie_proof,
-		&key,
-		expected_value.as_deref(),
-	)
-	// ethereum_verification::read_child_proof_check::<H, _>(
-	// 	root.into(),
-	// 	proof,
-	// 	child_info,
-	// 	vec![(key, Some(value))],
-	// )
 	.map_err(|err| anyhow!("Failed to verify proof for path: {path}, error: {err:#?}"))?;
 	Ok(())
 }

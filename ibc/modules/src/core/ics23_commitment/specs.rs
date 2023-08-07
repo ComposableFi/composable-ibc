@@ -84,6 +84,7 @@ impl From<Ics23ProofSpec> for ProofSpec {
 			inner_spec: spec.inner_spec.map(|ispec| InnerSpec::from(ispec).0),
 			max_depth: spec.max_depth,
 			min_depth: spec.min_depth,
+			prehash_key_before_comparison: spec.prehash_key_before_comparison,
 		})
 	}
 }
@@ -96,6 +97,7 @@ impl From<ProofSpec> for Ics23ProofSpec {
 			inner_spec: spec.inner_spec.map(|ispec| InnerSpec(ispec).into()),
 			max_depth: spec.max_depth,
 			min_depth: spec.min_depth,
+			prehash_key_before_comparison: spec.prehash_key_before_comparison,
 		}
 	}
 }

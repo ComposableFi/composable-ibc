@@ -93,5 +93,16 @@ Using the testsuite is straight forward and the following pseudocode describes t
 ## Running parachain tests
 
 To run the integration tests between two parachain nodes:
-1. Spawn the parachain and relay chain cluster by running [`docker-compose.yml`](/scripts/parachain-launch/docker-compose.yml`)
-2. Run the tests with `cargo test -p hyperspace-testsuite`.  
+
+1. clone polkadot (branch release-v0.9.x) clone into the parent folder for centauri
+   `git clone https://github.com/paritytech/polkadot`
+2. Build branch release-v0.9.x `cargo build -r --bin polkadot`
+3. build parachain-node in release `cargo build -r --bin parachain-node`
+4. run script:
+   - navigate to scripts folder in centauri repo: `cd scripts/polkadot-launch`
+   - `yarn install`
+   - `yarn dev`
+5. optional: regenerate subxt types [`more detailed instruction`](../../utils/subxt/codegen/README.md)
+   `cargo run --bin codegen -- --path ./utils/subxt/generated/src/default`
+6. run the test
+   `cargo test -p hyperspace-testsuite`

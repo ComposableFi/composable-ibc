@@ -274,7 +274,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 		log::info!("Received Packet Sequence {:?}, Packet Data {:?}", packet.sequence, data);
 		let packet = packet.clone();
 		T::IbcHandler::handle_message(HandlerMessage::WriteAck { packet, ack: success.clone() })
-			.map_err(|e| Ics04Error::implementation_specific(format!("{:?}", e)))?;
+			.map_err(|e| Ics04Error::implementation_specific(format!("{e:?}")))?;
 		Ok(success.into())
 	}
 

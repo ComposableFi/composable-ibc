@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use async_trait::async_trait;
 use futures::StreamExt;
-use hyperspace_core::logging;
+use hyperspace_core::{logging, substrate::DefaultConfig};
 use hyperspace_parachain::{
-	config, config::CustomExtrinsicParams, finality_protocol::FinalityProtocol, ParachainClient,
-	ParachainClientConfig,
+	finality_protocol::FinalityProtocol, ParachainClient, ParachainClientConfig,
 };
-use hyperspace_primitives::{utils::create_clients, IbcProvider};
+use hyperspace_primitives::{utils::create_clients, IbcProvider, TestProvider};
 use hyperspace_testsuite::{
 	client_synchronization_test, ibc_channel_close,
 	ibc_messaging_packet_height_timeout_with_connection_delay,
@@ -27,13 +25,7 @@ use hyperspace_testsuite::{
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
 };
-use subxt::{
-	config::{
-		extrinsic_params::Era,
-		polkadot::{PolkadotExtrinsicParams, PolkadotExtrinsicParamsBuilder},
-	},
-	Error, OnlineClient,
-};
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct Args {
@@ -63,46 +55,13 @@ impl Default for Args {
 	}
 }
 
-#[derive(Debug, Clone)]
-pub enum DefaultConfig {}
-
-#[async_trait]
-impl config::Config for DefaultConfig {
-	type AssetId = u128;
-	type Signature = <Self as subxt::Config>::Signature;
-	type Address = <Self as subxt::Config>::Address;
-
-	async fn custom_extrinsic_params(
-		client: &OnlineClient<Self>,
-	) -> Result<CustomExtrinsicParams<Self>, Error> {
-		let params =
-			PolkadotExtrinsicParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
-		Ok(params.into())
-	}
-}
-
-impl subxt::Config for DefaultConfig {
-	type Index = u32;
-	type BlockNumber = u32;
-	type Hash = sp_core::H256;
-	type AccountId = sp_runtime::AccountId32;
-	type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
-	type Header = subxt::config::substrate::SubstrateHeader<
-		Self::BlockNumber,
-		subxt::config::substrate::BlakeTwo256,
-	>;
-	type Signature = sp_runtime::MultiSignature;
-	type ExtrinsicParams = PolkadotExtrinsicParams<Self>;
-	type Hasher = subxt::config::substrate::BlakeTwo256;
-}
-
 async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<DefaultConfig>) {
 	log::info!(target: "hyperspace", "=========================== Starting Test ===========================");
 	let args = Args::default();
 
 	// Create client configurations
 	let config_a = ParachainClientConfig {
-		name: format!("9988"),
+		name: "9988".to_string(),
 		para_id: args.para_id_a,
 		parachain_rpc_url: args.chain_a,
 		relay_chain_rpc_url: args.relay_chain.clone(),
@@ -117,7 +76,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 		wasm_code_id: None,
 	};
 	let config_b = ParachainClientConfig {
-		name: format!("9188"),
+		name: "9188".to_string(),
 		para_id: args.para_id_b,
 		parachain_rpc_url: args.chain_b,
 		relay_chain_rpc_url: args.relay_chain,
@@ -151,16 +110,20 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 		.await;
 	log::info!(target: "hyperspace", "Parachains have started block production");
 
+	// We need to make difference between the chains' counters to ensure that
+	// proper values are used for source/sink client, connection, channel (etc.) ids.
+	chain_a.increase_counters().await.unwrap();
+
 	let clients_on_a = chain_a.query_clients().await.unwrap();
 	let clients_on_b = chain_b.query_clients().await.unwrap();
 
-	if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
-		chain_a.set_client_id(clients_on_b[0].clone());
-		chain_b.set_client_id(clients_on_b[0].clone());
-		return (chain_a, chain_b)
-	}
+	let (client_a, client_b) = if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
+		(clients_on_b[0].clone(), clients_on_b[0].clone())
+	} else {
+		create_clients(&mut chain_a, &mut chain_b).await.unwrap()
+	};
 
-	let (client_a, client_b) = create_clients(&chain_a, &chain_b).await.unwrap();
+	log::info!(target: "hyperspace_parachain", "Client IDs: {client_a}, {client_b}");
 	chain_a.set_client_id(client_a);
 	chain_b.set_client_id(client_b);
 	(chain_a, chain_b)
@@ -169,31 +132,82 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 #[tokio::test]
 async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
+	use hyperspace_testsuite::setup_connection_and_channel;
+	use ibc::core::ics24_host::identifier::PortId;
 	let (mut chain_a, mut chain_b) = setup_clients().await;
-	// Run tests sequentially
+	let mut chain_aa = chain_a.clone();
+	let mut chain_bb = chain_b.clone();
+	//set up connection only once!!!
+	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
+		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
+	handle.abort();
+
+	// Set connections and channel whitelist
+	chain_a.set_connection_id(connection_id_a);
+	chain_b.set_connection_id(connection_id_b);
+
+	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
+	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
 
 	let asset_id = 1;
 
+	let mut join_set = tokio::task::JoinSet::new();
+
 	// no timeouts + connection delay
-	ibc_messaging_with_connection_delay(&mut chain_a, &mut chain_b, asset_id, asset_id).await;
+	let mut c1 = chain_a.clone();
+	let mut c2 = chain_b.clone();
+	join_set.spawn(async move {
+		ibc_messaging_with_connection_delay(
+			&mut c1, &mut c2, asset_id, asset_id, channel_a, channel_b,
+		)
+		.await;
+		log::info!(target: "hyperspace", "🚀🚀 finished connection delay");
+	});
 
 	// timeouts + connection delay
-	ibc_messaging_packet_height_timeout_with_connection_delay(&mut chain_a, &mut chain_b, asset_id)
+	let mut c1 = chain_a.clone();
+	let mut c2 = chain_b.clone();
+	join_set.spawn(async move {
+		ibc_messaging_packet_height_timeout_with_connection_delay(
+			&mut c1, &mut c2, asset_id, channel_a, channel_b,
+		)
 		.await;
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id,
-	)
-	.await;
+		log::info!(target: "hyperspace", "🚀🚀 finished packet height timeout");
+
+		ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+			&mut c1, &mut c2, asset_id, channel_a, channel_b,
+		)
+		.await;
+		log::info!(target: "hyperspace", "🚀🚀 finished packet timestamp timeout");
+	});
+
+	log::info!(target: "hyperspace", "🚀🚀 Waiting for connection delay and timeout checks to finish");
+	while let Some(res) = join_set.join_next().await {
+		res.unwrap();
+	}
 
 	// channel closing semantics
-	ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id).await;
-	ibc_channel_close(&mut chain_a, &mut chain_b).await;
+	let mut join_set = tokio::task::JoinSet::new();
+	let mut c1 = chain_a.clone();
+	let mut c2 = chain_b.clone();
+	join_set.spawn(async move {
+		ibc_messaging_packet_timeout_on_channel_close(&mut c1, &mut c2, asset_id, channel_a).await;
+		log::info!(target: "hyperspace", "🚀🚀 finished packet timeout on channel close");
+	});
+	join_set.spawn(async move {
+		ibc_channel_close(&mut chain_aa, &mut chain_bb).await;
+		log::info!(target: "hyperspace", "🚀🚀 finished channel close");
+	});
+
+	log::info!(target: "hyperspace", "🚀🚀 Waiting for channel close semantics to finish");
+	while let Some(res) = join_set.join_next().await {
+		res.unwrap();
+	}
 
 	// Test sync abilities, run this before misbehaviour test
-	client_synchronization_test(&chain_a, &chain_b).await;
+	client_synchronization_test(&mut chain_a, &mut chain_b).await;
 
 	// misbehaviour
 	ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
+	log::info!(target: "hyperspace", "🚀🚀 Waiting for misbehaviour to be submitted");
 }

@@ -31,7 +31,8 @@ use grandpa_client_primitives::{
 	justification::GrandpaJustification, parachain_header_storage_key, FinalityProof,
 	ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
 };
-use grandpa_prover::{polkadot, GrandpaProver, JustificationNotification};
+use grandpa_prover::{GrandpaProver, JustificationNotification};
+use hyperspace_core::substrate::DefaultConfig as PolkadotConfig;
 use ibc::{
 	core::{
 		ics02_client::{
@@ -50,12 +51,10 @@ use ibc::{
 	test_utils::get_dummy_account_id,
 	Height,
 };
+use light_client_common::config::RuntimeStorage;
 use sp_core::{hexdisplay::AsBytesRef, H256};
 use std::time::Duration;
-use subxt::{
-	config::substrate::{BlakeTwo256, SubstrateHeader},
-	PolkadotConfig,
-};
+use subxt::config::substrate::{BlakeTwo256, SubstrateHeader};
 
 #[tokio::test]
 async fn test_continuous_update_of_grandpa_client() {
@@ -82,9 +81,14 @@ async fn test_continuous_update_of_grandpa_client() {
 	let relay_ws_url = format!("ws://{relay}:9944");
 	let para_ws_url = format!("ws://{para}:9188");
 
-	let prover = GrandpaProver::<PolkadotConfig>::new(&relay_ws_url, &para_ws_url, 2000)
-		.await
-		.unwrap();
+	let prover = GrandpaProver::<PolkadotConfig>::new(
+		&relay_ws_url,
+		&para_ws_url,
+		2000,
+		Duration::from_millis(100),
+	)
+	.await
+	.unwrap();
 
 	println!("Waiting for grandpa proofs to become available");
 	let session_length = prover.session_length().await.unwrap();
@@ -114,15 +118,13 @@ async fn test_continuous_update_of_grandpa_client() {
 			.expect("Failed to fetch finalized header");
 
 		let head_data = {
-			let key = polkadot::api::storage().paras().heads(
-				&polkadot::api::runtime_types::polkadot_parachain::primitives::Id(prover.para_id),
+			let key = <<PolkadotConfig as light_client_common::config::Config>::Storage as RuntimeStorage>::paras_heads(
+				prover.para_id,
 			);
 			prover
 				.relay_client
 				.storage()
-				.at(Some(client_state.latest_relay_hash))
-				.await
-				.expect("Storage client")
+				.at(client_state.latest_relay_hash)
 				.fetch(&key)
 				.await
 				.unwrap()
@@ -197,7 +199,7 @@ async fn test_continuous_update_of_grandpa_client() {
 		)
 		.await
 		.expect("Failed to subscribe to grandpa justifications");
-	let mut subscription = subscription.take(100);
+	let mut subscription = subscription.take((2 * session_length).try_into().unwrap());
 
 	while let Some(Ok(JustificationNotification(sp_core::Bytes(_)))) = subscription.next().await {
 		let client_state: ClientState<HostFunctionsManager> =
@@ -284,7 +286,7 @@ async fn test_continuous_update_of_grandpa_client() {
 				match result {
 					Update(upd_res) => {
 						assert_eq!(upd_res.client_id, client_id);
-						assert!(!upd_res.client_state.is_frozen());
+						assert!(!upd_res.client_state.is_frozen(&ctx, &client_id));
 						assert_eq!(
 							upd_res.client_state,
 							ctx.latest_client_states(&client_id).clone()

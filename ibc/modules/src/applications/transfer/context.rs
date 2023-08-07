@@ -252,6 +252,7 @@ pub fn on_recv_packet<Ctx: 'static + Ics20Context>(
 		Err(_) => return Acknowledgement::from_error(Ics20Error::packet_data_deserialization()),
 	};
 
+	log::debug!(target: "ics::transfer", "dispatch {:?}",&data);
 	let ack = match process_recv_packet(ctx, output, packet, data.clone()) {
 		Ok(_) => Acknowledgement::success(),
 		Err(e) => Acknowledgement::from_error(e),

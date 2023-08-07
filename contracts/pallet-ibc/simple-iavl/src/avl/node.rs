@@ -4,7 +4,7 @@ use core::{borrow::Borrow, mem};
 use sha2::{Digest, Sha256};
 use tendermint::hash::Hash;
 
-use crate::avl::{as_bytes::AsBytes, proof, HASH_ALGO};
+use crate::avl::{as_bytes::AsBytes, proof::LEAF_PREFIX, HASH_ALGO};
 
 pub type NodeRef<T, V> = Option<Box<AvlNode<T, V>>>;
 
@@ -35,11 +35,11 @@ where
 {
 	fn new(key: K, value: V) -> Self {
 		let mut sha = Sha256::new();
-		sha.update(proof::LEAF_PREFIX);
+		sha.update(LEAF_PREFIX);
 		sha.update(key.as_bytes().as_ref());
 		sha.update(value.borrow());
 		let hash = sha.finalize();
-		let merkle_hash = Hash::from_bytes(HASH_ALGO, &Sha256::digest(&hash)).unwrap();
+		let merkle_hash = Hash::from_bytes(HASH_ALGO, &Sha256::digest(hash)).unwrap();
 		let hash = Hash::from_bytes(HASH_ALGO, &hash).unwrap();
 
 		AvlNode { key, value, hash, merkle_hash, height: 0, left: None, right: None }
@@ -65,7 +65,7 @@ where
 	/// Compute the local hash for a given key and value.
 	fn local_hash(key: &K, value: &V) -> Hash {
 		let mut sha = Sha256::new();
-		sha.update(proof::LEAF_PREFIX);
+		sha.update(LEAF_PREFIX);
 		sha.update(key.as_bytes());
 		sha.update(value.borrow());
 		let hash = sha.finalize();
@@ -102,9 +102,9 @@ where
 	fn update_hashes(&mut self) {
 		let mut sha = Sha256::new();
 		if let Some(left) = &self.left {
-			sha.update(&left.merkle_hash.as_bytes());
+			sha.update(left.merkle_hash.as_bytes());
 		}
-		sha.update(&self.hash.as_bytes());
+		sha.update(self.hash.as_bytes());
 		if let Some(right) = &self.right {
 			sha.update(right.merkle_hash.as_bytes())
 		}

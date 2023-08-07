@@ -13,23 +13,22 @@
 // limitations under the License.
 
 use crate::{
-	config, parachain::api, signer::ExtrinsicSigner, utils::unsafe_cast_to_jsonrpsee_client, Error,
-	ParachainClient,
+	signer::ExtrinsicSigner, utils::unsafe_cast_to_jsonrpsee_client, Error, ParachainClient,
 };
-#[cfg(feature = "dali")]
-use api::runtime_types::dali_runtime::RuntimeCall;
-#[cfg(not(feature = "dali"))]
-use api::runtime_types::parachain_runtime::RuntimeCall;
+use codec::Decode;
 use finality_grandpa::BlockNumberOps;
 use futures::{Stream, StreamExt};
 use grandpa_light_client_primitives::ParachainHeaderProofs;
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
-	core::ics24_host::identifier::{ChannelId, ClientId, PortId},
+	core::ics24_host::identifier::{ChannelId, ClientId},
 };
+use ibc_proto::google::protobuf::Any;
 use ibc_rpc::IbcApiClient;
 use jsonrpsee::{core::client::SubscriptionClientT, rpc_params};
+use light_client_common::config::RuntimeTransactions;
 use pallet_ibc::{MultiAddress, Timeout, TransferParams};
+use pallet_ibc_ping::SendPingParams;
 use primitives::{KeyProvider, TestProvider};
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
@@ -40,55 +39,51 @@ use sp_runtime::{
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr};
-#[cfg(not(feature = "dali"))]
-use subxt::config::polkadot::PlainTip as Tip;
 use subxt::config::{
-	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT,
+	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT, Header,
 };
-#[cfg(feature = "dali")]
-use subxt::tx::AssetTip as Tip;
 
-impl<T: config::Config + Send + Sync> ParachainClient<T>
+impl<T: light_client_common::config::Config + Send + Sync> ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
 	Self: KeyProvider,
-	<<T as config::Config>::Signature as Verify>::Signer:
+	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	H256: From<T::Hash>,
 
-	T::BlockNumber: Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number: Ord + sp_runtime::traits::Zero + One,
 	T::Header: HeaderT,
 	<<T::Header as HeaderT>::Hasher as subxt::config::Hasher>::Output: From<T::Hash>,
-	T::BlockNumber: From<u32>,
+	<<T as subxt::Config>::Header as Header>::Number: From<u32>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-	T::BlockNumber: Ord + sp_runtime::traits::Zero,
+	<<T as subxt::Config>::Header as Header>::Number: Ord + sp_runtime::traits::Zero,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
+	<<T as light_client_common::config::Config>::Tx as RuntimeTransactions>::TransferParams:
+		From<TransferParams<AccountId32>>,
 {
 	pub fn set_client_id(&mut self, client_id: ClientId) {
-		self.client_id = Some(client_id)
+		*self.client_id.lock().unwrap() = Some(client_id)
 	}
 
-	pub async fn submit_create_client_msg(&self, msg: pallet_ibc::Any) -> Result<ClientId, Error> {
-		let call = api::tx().ibc().deliver(vec![api::runtime_types::pallet_ibc::Any {
-			type_url: msg.type_url,
-			value: msg.value,
-		}]);
+	pub async fn submit_create_client_msg(&self, msg: Any) -> Result<ClientId, Error> {
+		let call = T::Tx::ibc_deliver(vec![msg]);
 		let (ext_hash, block_hash) = self.submit_call(call).await?;
 
 		// Query newly created client Id
-		let identified_client_state =
-			IbcApiClient::<u32, H256, <T as config::Config>::AssetId>::query_newly_created_client(
-				&*self.para_ws_client,
-				block_hash.into(),
-				ext_hash.into(),
-			)
-			.await
-			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
+		let identified_client_state = IbcApiClient::<
+			u32,
+			H256,
+			<T as light_client_common::config::Config>::AssetId,
+		>::query_newly_created_client(
+			&*self.para_ws_client, block_hash.into(), ext_hash.into()
+		)
+		.await
+		.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
 
 		let client_id = ClientId::from_str(&identified_client_state.client_id)
 			.expect("Should have a valid client id");
@@ -101,43 +96,20 @@ where
 		asset_id: u128,
 		amount: u128,
 	) -> Result<(), Error> {
-		let params = api::runtime_types::pallet_ibc::TransferParams {
-			to: match params.to {
-				MultiAddress::Id(id) => {
-					let id: [u8; 32] = id.into();
-					api::runtime_types::pallet_ibc::MultiAddress::Id(id.into())
-				},
-				MultiAddress::Raw(raw) => api::runtime_types::pallet_ibc::MultiAddress::Raw(raw),
-			},
-
-			source_channel: params.source_channel,
-			timeout: match params.timeout {
-				Timeout::Offset { timestamp, height } =>
-					api::runtime_types::ibc_primitives::Timeout::Offset { timestamp, height },
-				Timeout::Absolute { timestamp, height } =>
-					api::runtime_types::ibc_primitives::Timeout::Absolute { timestamp, height },
-			},
-		};
-
-		#[cfg(feature = "dali")]
-		let asset_id = api::runtime_types::primitives::currency::CurrencyId(asset_id);
-
 		// Submit extrinsic to parachain node
-		let call = api::tx().ibc().transfer(params, asset_id, amount.into(), None);
-
+		let call = T::Tx::ibc_transfer(params.into(), asset_id, amount, None);
 		self.submit_call(call).await?;
-
 		Ok(())
 	}
 
-	pub async fn submit_sudo_call(&self, call: RuntimeCall) -> Result<(), Error> {
+	pub async fn submit_sudo_call(&self, call: T::ParaRuntimeCall) -> Result<(), Error> {
 		let signer = ExtrinsicSigner::<T, Self>::new(
 			self.key_store.clone(),
 			self.key_type_id.clone(),
 			self.public_key.clone(),
 		);
 
-		let ext = api::tx().sudo().sudo(call);
+		let ext = T::Tx::sudo_sudo(call);
 		// Submit extrinsic to parachain node
 
 		let other_params = T::custom_extrinsic_params(&self.para_client).await?;
@@ -159,24 +131,30 @@ where
 #[async_trait::async_trait]
 impl<T> TestProvider for ParachainClient<T>
 where
-	T: config::Config + Send + Sync + Clone,
+	T: light_client_common::config::Config + Send + Sync + Clone,
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<T as subxt::Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	Self: KeyProvider,
-	<<T as config::Config>::Signature as Verify>::Signer:
+	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	H256: From<T::Hash>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
-	<T as config::Config>::AssetId: Clone,
+	<T as light_client_common::config::Config>::AssetId: Clone,
+	<<T as light_client_common::config::Config>::Tx as RuntimeTransactions>::TransferParams:
+		From<TransferParams<AccountId32>>,
+	<<T as light_client_common::config::Config>::Tx as RuntimeTransactions>::SendPingParams:
+		From<SendPingParams>,
 {
 	async fn send_transfer(&self, transfer: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
 		let account_id = AccountId32::from_ss58check(transfer.receiver.as_ref())
@@ -213,14 +191,14 @@ where
 			_ => panic!("Only offset timeouts allowed"),
 		};
 
-		let params = api::runtime_types::pallet_ibc_ping::SendPingParams {
+		let params = SendPingParams {
 			data: "ping".as_bytes().to_vec(),
 			timeout_height_offset: timeout_height,
 			timeout_timestamp_offset: timestamp,
 			channel_id: channel_id.sequence(),
 		};
 
-		let call = api::tx().ibc_ping().send_ping(params);
+		let call = T::Tx::ibc_ping_send_ping(params.into());
 
 		self.submit_call(call).await.map(|_| ())
 	}
@@ -244,7 +222,8 @@ where
 		Box::pin(Box::new(stream))
 	}
 
-	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
-		self.channel_whitelist = channel_whitelist;
+	async fn increase_counters(&mut self) -> Result<(), Self::Error> {
+		let call = T::Tx::ibc_increase_counters();
+		self.submit_sudo_call(call).await.map(|_| ())
 	}
 }

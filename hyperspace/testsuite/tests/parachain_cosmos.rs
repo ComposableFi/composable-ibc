@@ -12,32 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use async_trait::async_trait;
+use core::time::Duration;
 use futures::StreamExt;
 use hyperspace_core::{
 	chain::{AnyAssetId, AnyChain, AnyConfig},
 	logging,
+	substrate::DefaultConfig,
 };
-use hyperspace_cosmos::client::{ConfigKeyEntry, CosmosClient, CosmosClientConfig};
-use hyperspace_parachain::{
-	config, config::CustomExtrinsicParams, finality_protocol::FinalityProtocol,
-	ParachainClientConfig,
-};
-use hyperspace_primitives::{utils::create_clients, IbcProvider};
+use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
+use hyperspace_parachain::{finality_protocol::FinalityProtocol, ParachainClientConfig};
+use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
 	ibc_messaging_packet_timeout_on_channel_close,
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
+	setup_connection_and_channel,
 };
+use ibc::core::ics24_host::identifier::PortId;
 use sp_core::hashing::sha2_256;
-use subxt::{
-	config::{
-		extrinsic_params::Era,
-		polkadot::{PolkadotExtrinsicParams, PolkadotExtrinsicParamsBuilder},
-	},
-	Error, OnlineClient,
-};
 
 #[derive(Debug, Clone)]
 pub struct Args {
@@ -75,46 +68,13 @@ impl Default for Args {
 	}
 }
 
-#[derive(Debug, Clone)]
-pub enum DefaultConfig {}
-
-#[async_trait]
-impl config::Config for DefaultConfig {
-	type AssetId = u128;
-	type Signature = <Self as subxt::Config>::Signature;
-	type Address = <Self as subxt::Config>::Address;
-
-	async fn custom_extrinsic_params(
-		client: &OnlineClient<Self>,
-	) -> Result<CustomExtrinsicParams<Self>, Error> {
-		let params =
-			PolkadotExtrinsicParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
-		Ok(params.into())
-	}
-}
-
-impl subxt::Config for DefaultConfig {
-	type Index = u32;
-	type BlockNumber = u32;
-	type Hash = sp_core::H256;
-	type AccountId = sp_runtime::AccountId32;
-	type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
-	type Header = subxt::config::substrate::SubstrateHeader<
-		Self::BlockNumber,
-		subxt::config::substrate::BlakeTwo256,
-	>;
-	type Signature = sp_runtime::MultiSignature;
-	type ExtrinsicParams = PolkadotExtrinsicParams<Self>;
-	type Hasher = subxt::config::substrate::BlakeTwo256;
-}
-
 async fn setup_clients() -> (AnyChain, AnyChain) {
 	log::info!(target: "hyperspace", "=========================== Starting Test ===========================");
 	let args = Args::default();
 
 	// Create client configurations
 	let config_a = ParachainClientConfig {
-		name: format!("parachain"),
+		name: "parachain".to_string(),
 		para_id: args.para_id,
 		parachain_rpc_url: args.chain_a,
 		relay_chain_rpc_url: args.relay_chain.clone(),
@@ -143,14 +103,15 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		gas_limit: (i64::MAX - 1) as u64,
 		store_prefix: args.connection_prefix_b,
 		max_tx_size: 200000,
-		keybase: ConfigKeyEntry {
-			public_key: "spub4W7TSjsuqcUE17mSB2ajhZsbwkefsHWKsXCbERimu3z2QLN9EFgqqpppiBn4tTNPFoNVTo1b3BgCZAaFJuUgTZeFhzJjUHkK8X7kSC5c7yn".to_string(),
-			private_key: "sprv8H873EM21Euvndgy513jLRvsPipBTpnUWJGzS3KALiT3XY2zgiNbJ2WLrvPzRhg7GuAoujHd5d6cpBe887vTbJghja8kmRdkHoNgamx6WWr".to_string(),
-			account: "cosmos1nnypkcfrvu3e9dhzeggpn4kh622l4cq7wwwrn0".to_string(),
-			address: vec![156, 200, 27, 97, 35, 103, 35, 146, 182, 226, 202, 16, 25, 214, 215, 210, 149, 250, 224, 30],
-		},
+		mnemonic:
+			"oxygen fall sure lava energy veteran enroll frown question detail include maximum"
+				.to_string(),
 		wasm_code_id: None,
 		channel_whitelist: vec![],
+		common: CommonClientConfig {
+			skip_optional_client_updates: true,
+			max_packets_to_process: 200,
+		},
 	};
 
 	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.unwrap();
@@ -159,9 +120,9 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
 		Ok(code_id) => code_id,
 		Err(e) => {
-			let e_str = format!("{:?}", e);
+			let e_str = format!("{e:?}");
 			if !e_str.contains("wasm code already exists") {
-				panic!("Failed to upload wasm: {}", e_str);
+				panic!("Failed to upload wasm: {e_str}");
 			}
 			sha2_256(&wasm_data).to_vec()
 		},
@@ -199,7 +160,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		return (chain_a_wrapped, chain_b_wrapped)
 	}
 
-	let (client_b, client_a) = create_clients(&chain_b_wrapped, &chain_a_wrapped).await.unwrap();
+	let (client_b, client_a) =
+		create_clients(&mut chain_b_wrapped, &mut chain_a_wrapped).await.unwrap();
 	chain_a_wrapped.set_client_id(client_a);
 	chain_b_wrapped.set_client_id(client_b);
 	(chain_a_wrapped, chain_b_wrapped)
@@ -215,15 +177,28 @@ async fn parachain_to_cosmos_ibc_messaging_full_integration_test() {
 		"ibc/47B97D8FF01DA03FCB2F4B1FFEC931645F254E21EF465FA95CBA6888CB964DC4".to_string(),
 	);
 	let (mut chain_a, mut chain_b) = setup_clients().await;
+	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
+		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
+	handle.abort();
+
+	// Set connections and channel whitelist
+	chain_a.set_connection_id(connection_id_a);
+	chain_b.set_connection_id(connection_id_b);
+
+	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
+	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
 
 	// Run tests sequentially
 
 	// no timeouts + connection delay
+
 	ibc_messaging_with_connection_delay(
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_a.clone(),
 		asset_id_b.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 
@@ -232,18 +207,27 @@ async fn parachain_to_cosmos_ibc_messaging_full_integration_test() {
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_a.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_a.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 
 	// channel closing semantics
-	ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id_a.clone())
-		.await;
+	ibc_messaging_packet_timeout_on_channel_close(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		channel_a,
+	)
+	.await;
 	ibc_channel_close(&mut chain_a, &mut chain_b).await;
 
 	// TODO: tendermint misbehaviour?
@@ -258,6 +242,17 @@ async fn cosmos_to_parachain_ibc_messaging_full_integration_test() {
 	let (chain_a, chain_b) = setup_clients().await;
 	let (mut chain_b, mut chain_a) = (chain_a, chain_b);
 
+	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
+		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
+	handle.abort();
+
+	// Set connections and channel whitelist
+	chain_a.set_connection_id(connection_id_a);
+	chain_b.set_connection_id(connection_id_b);
+
+	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
+	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
+
 	let asset_id_a = AnyAssetId::Cosmos("stake".to_string());
 	let asset_id_b = AnyAssetId::Parachain(2);
 
@@ -269,6 +264,8 @@ async fn cosmos_to_parachain_ibc_messaging_full_integration_test() {
 		&mut chain_b,
 		asset_id_a.clone(),
 		asset_id_b.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 
@@ -277,12 +274,16 @@ async fn cosmos_to_parachain_ibc_messaging_full_integration_test() {
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_a.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_a.clone(),
+		channel_a,
+		channel_b,
 	)
 	.await;
 

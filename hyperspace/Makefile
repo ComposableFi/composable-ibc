@@ -1,7 +1,10 @@
 module-hyperspace=hyperspace
-composable_centauri_image="composablefi/composable-centauri"
-composable_centauri_image_latest="composablefi/composable-centauri:latest"
-composable_centauri_image_with_commit_hash = "${composable_centauri_image}:${GITHUB_SHA}"
+composable_centauri_image=composablefi/composable-centauri
+composable_centauri_image_latest=composablefi/composable-centauri:latest
+ifndef GITHUB_SHA
+GITHUB_SHA=$(shell git rev-parse HEAD)
+endif
+composable_centauri_image_with_commit_hash="${composable_centauri_image}:${GITHUB_SHA}"
 hyperspace_image="composablefi/hyperspace:latest"
 
 .PHONY: run-setup-hyperspace stop-setup-hyperspace build-release-hyperspace tests-hyperspace
@@ -26,8 +29,8 @@ build-release-hyperspace:
 	cargo b -p $(module-hyperspace) --release
 
 build-docker-image-hyperspace:
-	docker build -f scripts/hyperspace.Dockerfile -t "${composable_centauri_image_with_commit_hash}" .
-	docker tag "${composable_centauri_image_with_commit_hash}" "${composable_centauri_image_latest}"
+	docker build -f scripts/hyperspace.Dockerfile -t ${composable_centauri_image_with_commit_hash} .
+	docker tag ${composable_centauri_image_with_commit_hash} ${composable_centauri_image_latest}
 
 publish-docker-image-hyperspace:
 	docker push "${composable_centauri_image_with_commit_hash}"
@@ -40,3 +43,4 @@ tests-hyperspace:
 	./scripts/wait_for_polkadot_launch_container.sh
 	cargo t -p $(module-hyperspace) --all-features
 	docker stop composable_centauri
+

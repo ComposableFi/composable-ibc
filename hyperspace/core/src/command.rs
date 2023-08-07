@@ -25,7 +25,7 @@ use primitives::{
 	Chain, IbcProvider,
 };
 use prometheus::Registry;
-use std::{path::PathBuf, str::FromStr, time::Duration};
+use std::{num::NonZeroU64, path::PathBuf, str::FromStr, time::Duration};
 
 #[derive(Debug, Parser)]
 pub struct Cli {
@@ -69,7 +69,7 @@ pub struct Cmd {
 	port_id: Option<String>,
 	/// Connection delay period in seconds
 	#[clap(long)]
-	delay_period: Option<u32>,
+	delay_period: Option<std::num::NonZeroU32>,
 	/// Channel order
 	#[clap(long)]
 	order: Option<String>,
@@ -106,15 +106,15 @@ impl UploadWasmCmd {
 		let client = config.clone().into_client().await?;
 		let wasm = tokio::fs::read(&self.wasm_path).await?;
 		let code_id = client.upload_wasm(wasm).await?;
-		let code_id_str = hex::encode(&code_id);
-		println!("{}", code_id_str);
+		let code_id_str = hex::encode(code_id);
+		println!("{code_id_str}");
 		config.set_wasm_code_id(code_id_str);
 		Ok(config)
 	}
 
 	pub async fn save_config(&self, new_config: &AnyConfig) -> Result<()> {
 		let path = self.out_config.as_ref().cloned().unwrap_or_else(|| self.config.clone());
-		write_config(path, &new_config).await
+		write_config(path, new_config).await
 	}
 }
 
@@ -149,7 +149,7 @@ impl Cmd {
 		let mut metrics_handler_b = MetricsHandler::new(registry.clone(), metrics_b);
 		metrics_handler_a.link_with_counterparty(&mut metrics_handler_b);
 
-		if let Some(addr) = config.core.prometheus_endpoint.map(|s| s.parse().ok()).flatten() {
+		if let Some(addr) = config.core.prometheus_endpoint.and_then(|s| s.parse().ok()) {
 			tokio::spawn(init_prometheus(addr, registry.clone()));
 		}
 
@@ -167,10 +167,11 @@ impl Cmd {
 
 	pub async fn create_clients(&self) -> Result<Config> {
 		let mut config = self.parse_config().await?;
-		let chain_a = config.chain_a.clone().into_client().await?;
-		let chain_b = config.chain_b.clone().into_client().await?;
+		let mut chain_a = config.chain_a.clone().into_client().await?;
+		let mut chain_b = config.chain_b.clone().into_client().await?;
 
-		let (client_id_a_on_b, client_id_b_on_a) = create_clients(&chain_a, &chain_b).await?;
+		let (client_id_a_on_b, client_id_b_on_a) =
+			create_clients(&mut chain_a, &mut chain_b).await?;
 		log::info!(
 			"ClientId for Chain {} on Chain {}: {}",
 			chain_b.name(),
@@ -190,13 +191,14 @@ impl Cmd {
 	}
 
 	pub async fn create_connection(&self) -> Result<Config> {
-		let delay = self
+		let delay_period_seconds: NonZeroU64 = self
 			.delay_period
-			.expect("delay_period should be provided when creating a connection");
-		let delay = Duration::from_secs(delay.into());
+			.expect("delay_period should be provided when creating a connection")
+			.into();
+		let delay = Duration::from_secs(delay_period_seconds.into());
 		let mut config = self.parse_config().await?;
-		let chain_a = config.chain_a.clone().into_client().await?;
-		let chain_b = config.chain_b.clone().into_client().await?;
+		let mut chain_a = config.chain_a.clone().into_client().await?;
+		let mut chain_b = config.chain_b.clone().into_client().await?;
 
 		let chain_a_clone = chain_a.clone();
 		let chain_b_clone = chain_b.clone();
@@ -206,10 +208,10 @@ impl Cmd {
 				.unwrap();
 		});
 
-		let (connection_id_b, connection_id_a) =
-			create_connection(&chain_a, &chain_b, delay).await?;
-		log::info!("ConnectionId on Chain {}: {}", chain_b.name(), connection_id_b);
+		let (connection_id_a, connection_id_b) =
+			create_connection(&mut chain_a, &mut chain_b, delay).await?;
 		log::info!("ConnectionId on Chain {}: {}", chain_a.name(), connection_id_a);
+		log::info!("ConnectionId on Chain {}: {}", chain_b.name(), connection_id_b);
 		handle.abort();
 
 		config.chain_a.set_connection_id(connection_id_a);
@@ -233,8 +235,8 @@ impl Cmd {
 			.clone();
 		let order = self.order.as_ref().expect("order must be specified when creating a channel, expected one of 'ordered' or 'unordered'").as_str();
 		let mut config = self.parse_config().await?;
-		let chain_a = config.chain_a.clone().into_client().await?;
-		let chain_b = config.chain_b.clone().into_client().await?;
+		let mut chain_a = config.chain_a.clone().into_client().await?;
+		let mut chain_b = config.chain_b.clone().into_client().await?;
 
 		let chain_a_clone = chain_a.clone();
 		let chain_b_clone = chain_b.clone();
@@ -245,10 +247,11 @@ impl Cmd {
 		});
 
 		let order = Order::from_str(order).expect("Expected one of 'ordered' or 'unordered'");
+		let connection_id = chain_a.connection_id().expect("Connection id should be defined");
 		let (channel_id_a, channel_id_b) = create_channel(
-			&chain_a,
-			&chain_b,
-			chain_a.connection_id(),
+			&mut chain_a,
+			&mut chain_b,
+			connection_id,
 			port_id.clone(),
 			version,
 			order,

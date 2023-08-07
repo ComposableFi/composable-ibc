@@ -1,3 +1,18 @@
+// Copyright (C) 2022 ComposableFi.
+// SPDX-License-Identifier: Apache-2.0
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #[cfg(feature = "cosmwasm")]
 use crate::msg::Base64;
 use crate::{client_def::WasmClient, Bytes};
@@ -108,6 +123,33 @@ where
 
 	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
 		self.encode_vec()
+	}
+}
+
+impl<AnyClient, AnyClientState, AnyConsensusState>
+	ClientState<AnyClient, AnyClientState, AnyConsensusState>
+where
+	AnyClientState: TryFrom<Any>,
+	<AnyClientState as TryFrom<Any>>::Error: Display,
+	AnyConsensusState: IbcConsensusState + Eq,
+	AnyConsensusState: TryFrom<Any>,
+	<AnyConsensusState as TryFrom<Any>>::Error: Display,
+	AnyClient: ClientDef<ClientState = AnyClientState, ConsensusState = AnyConsensusState>
+		+ Debug
+		+ Send
+		+ Sync
+		+ Eq,
+	AnyClientState: IbcClientState<ClientDef = AnyClient> + Eq,
+	AnyClient::ClientMessage: TryFrom<Any>,
+	<AnyClient::ClientMessage as TryFrom<Any>>::Error: Display,
+{
+	pub fn to_any(&self) -> Any {
+		Any {
+			type_url: WASM_CLIENT_STATE_TYPE_URL.to_string(),
+			value: self
+				.encode_to_vec()
+				.expect("ClientState<AnyClientState> is always valid and can be encoded to Any"),
+		}
 	}
 }
 

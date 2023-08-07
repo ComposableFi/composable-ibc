@@ -35,8 +35,12 @@ use ibc::core::{
 	ics24_host::identifier::PortId,
 	ics26_routing::context::{Module, ModuleId},
 };
+use ibc_primitives::{runtime_interface::ss58_to_account_id_32, IbcAccount};
 use orml_traits::asset_registry::AssetProcessor;
-use pallet_ibc::{light_client_common::RelayChain, LightClientProtocol};
+use pallet_ibc::{
+	ics20::SubstrateMultihopXcmHandlerNone, ics20_fee::NonFlatFeeConverter,
+	light_client_common::RelayChain, LightClientProtocol,
+};
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -168,7 +172,7 @@ impl WeightToFeePolynomial for WeightToFee {
 		// in Rococo, extrinsic base weight (smallest non-zero weight) is mapped to 1 MILLIUNIT:
 		// in our template, we map to 1/10 of that, or 1/10 MILLIUNIT
 		let p = MILLIUNIT / 10;
-		let q = 100 * Balance::from(ExtrinsicBaseWeight::get().ref_time() as u128);
+		let q = 100 * (ExtrinsicBaseWeight::get().ref_time() as u128);
 		smallvec![WeightToFeeCoefficient {
 			degree: 1,
 			negative: false,
@@ -249,7 +253,7 @@ const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 /// We allow for 0.5 of a second of compute with a 12 second average block time.
 const MAXIMUM_BLOCK_WEIGHT: Weight =
 	Weight::from_ref_time(WEIGHT_REF_TIME_PER_SECOND.saturating_div(2))
-		.set_proof_size(cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64);
+		.set_proof_size(cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64);
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -357,8 +361,6 @@ parameter_types! {
 
 impl pallet_authorship::Config for Runtime {
 	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
-	type UncleGenerations = UncleGenerations;
-	type FilterUncle = ();
 	type EventHandler = (CollatorSelection,);
 }
 
@@ -426,6 +428,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 	type ControllerOrigin = EnsureRoot<AccountId>;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+	type PriceForSiblingDelivery = ();
 	type WeightInfo = ();
 }
 
@@ -526,6 +529,7 @@ impl pallet_assets::Config for Runtime {
 	type WeightInfo = ();
 	type RemoveItemsLimit = sp_core::ConstU32<128>;
 	type AssetIdParameter = Self::AssetId;
+	type CallbackHandle = ();
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -534,7 +538,7 @@ impl pallet_sudo::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ExpectedBlockTime: u64 = MILLISECS_PER_BLOCK as u64;
+	pub const ExpectedBlockTime: u64 = MILLISECS_PER_BLOCK;
 	pub const RelayChainId: RelayChain = RelayChain::Rococo;
 	pub const SpamProtectionDeposit: Balance = 1_000_000_000_000;
 	pub const NativeAssetId: AssetId = 1;
@@ -614,7 +618,7 @@ fn generate_asset_id() -> Result<AssetId, DispatchError> {
 impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 	type Error = DispatchError;
 
-	fn from_denom_to_asset_id(denom: &String) -> Result<AssetId, Self::Error> {
+	fn from_denom_to_asset_id(denom: &str) -> Result<AssetId, Self::Error> {
 		use frame_support::traits::fungibles::{metadata::Mutate, Create};
 
 		let denom_bytes = denom.as_bytes().to_vec();
@@ -625,9 +629,9 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 		let pallet_id: AccountId = PalletId(*b"pall-ibc").into_account_truncating();
 
 		let symbol = denom
-			.split("/")
+			.split('/')
 			.last()
-			.ok_or_else(|| DispatchError::Other("denom missing a name"))?
+			.ok_or(DispatchError::Other("denom missing a name"))?
 			.as_bytes()
 			.to_vec();
 		let asset_id = generate_asset_id()?;
@@ -700,6 +704,17 @@ impl core::str::FromStr for MemoMessage {
 parameter_types! {
 	pub const GRANDPA: LightClientProtocol = LightClientProtocol::Grandpa;
 	pub const IbcTriePrefix : &'static [u8] = b"ibc/";
+	pub FeeAccount: <Runtime as pallet_ibc::Config>::AccountIdConversion = create_alice_key();
+	pub const CleanUpPacketsPeriod: BlockNumber = 100;
+	pub AssetIdUSDT: AssetId = 0;
+	pub FlatFeeUSDTAmount: Balance = 0;
+	pub IbcIcs20ServiceCharge: Perbill = Perbill::from_rational(0_u32, 1000_u32 );
+}
+
+fn create_alice_key() -> <Runtime as pallet_ibc::Config>::AccountIdConversion {
+	let alice = "5yNZjX24n2eg7W6EVamaTXNQbWCwchhThEaSWB7V3GRjtHeL";
+	let account_id_32 = ss58_to_account_id_32(alice).unwrap().into();
+	IbcAccount(account_id_32)
 }
 
 impl pallet_ibc::Config for Runtime {
@@ -723,7 +738,7 @@ impl pallet_ibc::Config for Runtime {
 	type SpamProtectionDeposit = SpamProtectionDeposit;
 	type TransferOrigin = EnsureSigned<Self::IbcAccountId>;
 	type RelayerOrigin = EnsureSigned<Self::AccountId>;
-	type MemoMessage = MemoMessage;
+	type MemoMessage = alloc::string::String;
 	type IsReceiveEnabled = sp_core::ConstBool<true>;
 	type IsSendEnabled = sp_core::ConstBool<true>;
 	type HandleMemo = ();
@@ -731,6 +746,13 @@ impl pallet_ibc::Config for Runtime {
 	type LightClientProtocol = GRANDPA;
 	type IbcAccountId = Self::AccountId;
 	type Ics20RateLimiter = Everything;
+	type FeeAccount = FeeAccount;
+	type CleanUpPacketsPeriod = CleanUpPacketsPeriod;
+	type ServiceChargeOut = IbcIcs20ServiceCharge;
+	type FlatFeeConverter = NonFlatFeeConverter<Runtime>;
+	type FlatFeeAssetId = AssetIdUSDT;
+	type FlatFeeAmount = FlatFeeUSDTAmount;
+	type SubstrateMultihopXcmHandler = SubstrateMultihopXcmHandlerNone<Runtime>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -888,6 +910,12 @@ impl_runtime_apis! {
 		) -> pallet_transaction_payment::FeeDetails<Balance> {
 			TransactionPayment::query_fee_details(uxt, len)
 		}
+		fn query_weight_to_fee(w: Weight) -> Balance {
+			TransactionPayment::weight_to_fee(w)
+		}
+		fn query_length_to_fee(l: u32) -> Balance {
+			TransactionPayment::length_to_fee(l)
+		}
 	}
 
 	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
@@ -1002,12 +1030,12 @@ impl_runtime_apis! {
 		}
 
 		fn denom_traces(key: Option<AssetId>, offset: Option<u32>, limit: u64, count_total: bool) -> ibc_primitives::QueryDenomTracesResponse {
-			let key = key.map(|k| Either::Left(k)).or_else(|| offset.map(|o| Either::Right(o)));
+			let key = key.map(Either::Left).or_else(|| offset.map(Either::Right));
 			Ibc::get_denom_traces(key, limit, count_total)
 		}
 
 		fn block_events(extrinsic_index: Option<u32>) -> Vec<Result<pallet_ibc::events::IbcEvent, pallet_ibc::errors::IbcError>> {
-			let mut raw_events = frame_system::Pallet::<Self>::read_events_no_consensus().into_iter();
+			let mut raw_events = frame_system::Pallet::<Self>::read_events_no_consensus();
 			if let Some(idx) = extrinsic_index {
 				raw_events.find_map(|e| {
 					let frame_system::EventRecord{ event, phase, ..} = *e;
@@ -1036,6 +1064,7 @@ impl_runtime_apis! {
 		where
 			RuntimeCall: codec::Codec,
 			AccountId: codec::Codec + codec::EncodeLike<sp_runtime::AccountId32> + Into<sp_runtime::AccountId32> + Clone+ PartialEq + scale_info::TypeInfo + core::fmt::Debug,
+			Block: sp_runtime::traits::Block
 	{
 		fn create_transaction(call: RuntimeCall, signer: AccountId) -> Vec<u8> {
 			use sp_runtime::{

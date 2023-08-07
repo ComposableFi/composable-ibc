@@ -1,7 +1,7 @@
 use super::*;
 use crate::{light_clients::AnyClientMessage, routing::Context};
 use core::marker::PhantomData;
-use frame_support::pallet_prelude::Weight;
+use frame_support::{pallet_prelude::Weight, weights::constants::WEIGHT_REF_TIME_PER_MILLIS};
 use grandpa_client_primitives::justification::GrandpaJustification;
 use ibc::core::{
 	ics02_client::msgs::ClientMsg,
@@ -30,7 +30,6 @@ pub trait WeightInfo {
 	fn recv_packet_tendermint(i: u32) -> Weight;
 	fn ack_packet_tendermint(i: u32, j: u32) -> Weight;
 	fn timeout_packet_tendermint(i: u32) -> Weight;
-	fn set_params() -> Weight;
 	fn transfer() -> Weight;
 	fn on_chan_open_init() -> Weight;
 	fn on_chan_open_try() -> Weight;
@@ -41,7 +40,8 @@ pub trait WeightInfo {
 	fn on_chan_close_confirm() -> Weight;
 	fn on_acknowledgement_packet() -> Weight;
 	fn on_timeout_packet() -> Weight;
-	fn update_grandpa_client(i: u32) -> Weight;
+	fn update_grandpa_client(i: u32, j: u32) -> Weight;
+	fn packet_cleanup(i: u32) -> Weight;
 }
 
 impl WeightInfo for () {
@@ -53,8 +53,8 @@ impl WeightInfo for () {
 		Weight::from_ref_time(0)
 	}
 
-	fn update_tendermint_client(_i: u32) -> Weight {
-		Weight::from_ref_time(0)
+	fn update_tendermint_client(i: u32) -> Weight {
+		Weight::from_ref_time(3 * i as u64 * WEIGHT_REF_TIME_PER_MILLIS)
 	}
 
 	fn conn_try_open_tendermint() -> Weight {
@@ -105,10 +105,6 @@ impl WeightInfo for () {
 		Weight::from_ref_time(0)
 	}
 
-	fn set_params() -> Weight {
-		Weight::from_ref_time(0)
-	}
-
 	fn transfer() -> Weight {
 		Weight::from_ref_time(0)
 	}
@@ -149,7 +145,11 @@ impl WeightInfo for () {
 		Weight::from_ref_time(0)
 	}
 
-	fn update_grandpa_client(_i: u32) -> Weight {
+	fn update_grandpa_client(_i: u32, _j: u32) -> Weight {
+		Weight::from_ref_time(0)
+	}
+
+	fn packet_cleanup(_i: u32) -> Weight {
 		Weight::from_ref_time(0)
 	}
 }
@@ -159,8 +159,8 @@ pub struct WeightRouter<T: Config>(PhantomData<T>);
 impl<T: Config> WeightRouter<T> {
 	pub fn get_weight(port_id: &str) -> Option<Box<dyn CallbackWeight>> {
 		match port_id {
-			ibc::applications::transfer::PORT_ID_STR =>
-				Some(Box::new(ics20::WeightHandler::<T>::default())),
+			#[allow(clippy::box_default)]
+			ibc::applications::transfer::PORT_ID_STR => Some(Box::new(ics20::WeightHandler::<T>::default())),
 			_ => None,
 		}
 	}
@@ -186,7 +186,7 @@ where
 {
 	msgs.iter()
 		.filter_map(|msg| {
-			let type_url = String::from_utf8(msg.type_url.clone()).unwrap_or_default();
+			let type_url = msg.type_url.clone();
 			let msg = ibc_proto::google::protobuf::Any { type_url, value: msg.value.clone() };
 			let msg: Option<Ics26Envelope<Context<T>>> = msg.try_into().ok();
 			msg
@@ -227,6 +227,7 @@ where
 											.expect("Justification should be valid");
 										<T as Config>::WeightInfo::update_grandpa_client(
 											justification.commit.precommits.len() as u32,
+											header.finality_proof.unknown_headers.len() as u32,
 										)
 									},
 									ClientMessage::Misbehaviour(misbehaviour) => {
@@ -244,8 +245,10 @@ where
 
 										<T as Config>::WeightInfo::update_grandpa_client(
 											justification_a.commit.precommits.len() as u32,
+											misbehaviour.first_finality_proof.unknown_headers.len() as u32,
 										).saturating_add(<T as Config>::WeightInfo::update_grandpa_client(
 											justification_b.commit.precommits.len() as u32,
+											misbehaviour.second_finality_proof.unknown_headers.len() as u32,
 										))
 									},
 								},

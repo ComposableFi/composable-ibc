@@ -4,14 +4,14 @@ use core::pin::Pin;
 use futures::{Stream, StreamExt};
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
-	core::ics24_host::identifier::{ChannelId, PortId},
+	core::ics24_host::identifier::ChannelId,
 	tx_msg::Msg,
 };
 use primitives::TestProvider;
 use tendermint_rpc::{
 	event::{Event, EventData},
 	query::{EventType, Query},
-	SubscriptionClient, WebSocketClient,
+	SubscriptionClient,
 };
 
 #[async_trait::async_trait]
@@ -37,9 +37,8 @@ where
 
 	/// Returns a stream that yields chain Block number
 	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
-		let (ws_client, ws_driver) =
-			WebSocketClient::new(self.websocket_url.clone()).await.unwrap();
-		tokio::spawn(ws_driver.run());
+		let ws_client = self.rpc_client.clone();
+
 		let subscription = ws_client.subscribe(Query::from(EventType::NewBlock)).await.unwrap();
 		log::info!(target: "hyperspace_cosmos", "🛰️ Subscribed to {} listening to finality notifications", self.name);
 		let stream = subscription.filter_map(|event| {
@@ -58,8 +57,7 @@ where
 		Box::pin(stream)
 	}
 
-	/// Set the channel whitelist for the relayer task.
-	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
-		self.channel_whitelist = channel_whitelist;
+	async fn increase_counters(&mut self) -> Result<(), Self::Error> {
+		unimplemented!()
 	}
 }

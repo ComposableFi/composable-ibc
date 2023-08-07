@@ -21,7 +21,7 @@ use ibc_proto::{
 use prost::Message;
 use tendermint::Hash;
 use tendermint_rpc::{
-	endpoint::tx::Response as TxResponse, query::Query, Client, HttpClient, Order, Url,
+	endpoint::tx::Response as TxResponse, query::Query, Client, Order, Url, WebSocketClient,
 };
 
 pub fn sign_tx(
@@ -42,10 +42,10 @@ pub fn sign_tx(
 
 	// Create and Encode TxRaw
 	let signature_bytes = encode_sign_doc(
-		key.clone(),
+		key,
 		body_bytes.clone(),
 		auth_info_bytes.clone(),
-		chain_id.clone(),
+		chain_id,
 		account_info.account_number,
 	)?;
 
@@ -82,15 +82,15 @@ pub async fn simulate_tx(
 	Ok(response)
 }
 
-pub async fn broadcast_tx(rpc_client: &HttpClient, tx_bytes: Vec<u8>) -> Result<Hash, Error> {
+pub async fn broadcast_tx(rpc_client: &WebSocketClient, tx_bytes: Vec<u8>) -> Result<Hash, Error> {
 	let response = rpc_client
 		.broadcast_tx_sync(tx_bytes)
 		.await
-		.map_err(|e| Error::from(format!("failed to broadcast transaction {:?}", e)))?;
+		.map_err(|e| Error::from(format!("failed to broadcast transaction {e:?}")))?;
 	Ok(response.hash)
 }
 
-pub async fn confirm_tx(rpc_client: &HttpClient, tx_hash: Hash) -> Result<Hash, Error> {
+pub async fn confirm_tx(rpc_client: &WebSocketClient, tx_hash: Hash) -> Result<Hash, Error> {
 	let start_time = tokio::time::Instant::now();
 	let timeout = Duration::from_millis(30000);
 	const WAIT_BACKOFF: Duration = Duration::from_millis(300);
@@ -104,11 +104,11 @@ pub async fn confirm_tx(rpc_client: &HttpClient, tx_hash: Hash) -> Result<Hash, 
 				Order::Ascending,
 			)
 			.await
-			.map_err(|e| Error::from(format!("failed to search for transaction {:?}", e)))?;
+			.map_err(|e| Error::from(format!("failed to search for transaction {e:?}")))?;
 		match response.txs.into_iter().next() {
 			None => {
 				let elapsed = start_time.elapsed();
-				if &elapsed > &timeout {
+				if elapsed > timeout {
 					return Err(Error::from(format!(
 						"transaction {} not found after {} seconds",
 						tx_hash,
@@ -124,10 +124,7 @@ pub async fn confirm_tx(rpc_client: &HttpClient, tx_hash: Hash) -> Result<Hash, 
 
 	let response_code = response.tx_result.code;
 	if response_code.is_err() {
-		return Err(Error::from(format!(
-			"transaction {} failed with code {:?}",
-			tx_hash, response_code
-		)))
+		return Err(Error::from(format!("transaction {tx_hash} failed with code {response_code:?}")))
 	}
 	Ok(response.hash)
 }

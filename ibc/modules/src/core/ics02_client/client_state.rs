@@ -13,7 +13,11 @@
 // limitations under the License.
 
 use crate::{
-	core::{ics02_client::client_def::ClientDef, ics24_host::identifier::ChainId},
+	core::{
+		ics02_client::client_def::ClientDef,
+		ics24_host::identifier::{ChainId, ClientId},
+		ics26_routing::context::ReaderContext,
+	},
 	prelude::*,
 	Height,
 };
@@ -23,6 +27,15 @@ use core::{
 	marker::{Send, Sync},
 	time::Duration,
 };
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Status {
+	Active,
+	Frozen,
+	Expired,
+	Unknown,
+	Unauthorized,
+}
 
 pub trait ClientState: Clone + Debug + Send + Sync {
 	/// Client-specific options for upgrading the client
@@ -44,9 +57,18 @@ pub trait ClientState: Clone + Debug + Send + Sync {
 	/// Latest height of consensus state
 	fn latest_height(&self) -> Height;
 
+	/// Status of the client
+	fn status<Ctx: ReaderContext>(&self, _ctx: &Ctx, _client_id: &ClientId) -> Status {
+		if self.frozen_height().is_some() {
+			Status::Frozen
+		} else {
+			Status::Active
+		}
+	}
+
 	/// Freeze status of the client
-	fn is_frozen(&self) -> bool {
-		self.frozen_height().is_some()
+	fn is_frozen<Ctx: ReaderContext>(&self, ctx: &Ctx, client_id: &ClientId) -> bool {
+		self.status(ctx, client_id) == Status::Frozen
 	}
 
 	/// Frozen height of the client

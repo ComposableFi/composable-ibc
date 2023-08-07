@@ -498,7 +498,7 @@ pub fn get_channel_escrow_address(
 	port_id: &PortId,
 	channel_id: ChannelId,
 ) -> Result<Signer, Ics20Error> {
-	let contents = format!("{}/{}", port_id, channel_id);
+	let contents = format!("{port_id}/{channel_id}");
 	let mut data = VERSION.as_bytes().to_vec();
 	data.extend_from_slice(&[0]);
 	data.extend_from_slice(contents.as_bytes());
@@ -529,7 +529,7 @@ where
 
 	/// Convert a signer to an IBC account.
 	fn try_from(signer: ibc::signer::Signer) -> Result<Self, Self::Error> {
-		let acc_str = signer.as_ref();
+		let acc_str: &str = signer.as_ref();
 		if acc_str.starts_with("0x") {
 			match acc_str.strip_prefix("0x") {
 				Some(hex_string) => TryInto::<[u8; 32]>::try_into(

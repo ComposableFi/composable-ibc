@@ -13,12 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Contains subxt generated types for the parachain
+mod client_states;
+mod clients;
+mod consensus_states;
+mod processed_states;
 
-#![allow(missing_docs)]
-
-#[cfg(feature = "build-metadata-from-ws")]
-include!(concat!(env!("OUT_DIR"), "/parachain.rs"));
-
-#[cfg(not(feature = "build-metadata-from-ws"))]
-pub use subxt_generated::parachain::*;
+pub use self::{
+	client_states::{ClientStates, ReadonlyClientStates},
+	clients::{Clients, ReadonlyClients},
+	consensus_states::{ConsensusStates, FakeInner, ReadonlyConsensusStates},
+	processed_states::{ProcessedStates, ReadonlyProcessedStates},
+};

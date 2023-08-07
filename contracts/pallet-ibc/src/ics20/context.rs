@@ -83,27 +83,28 @@ where
 		// Token should be registered already if sending an ibc asset
 		let asset_id = T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
 			.map_err(|_| Ics20Error::invalid_token())?;
+
 		if asset_id == T::NativeAssetId::get() {
 			<T::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::transfer(
 				&from.clone().into_account(),
 				&to.clone().into_account(),
-				amount.into(),
+				amount,
 				frame_support::traits::ExistenceRequirement::AllowDeath,
 			)
 			.map_err(|e| {
-				log::debug!(target: "pallet_ibc", "Failed to transfer ibc tokens: {:?}", e);
+				log::debug!(target: "pallet_ibc", "Failed to transfer ibc asset: {asset_id:?}, denom: {denom}, error: {e:?}");
 				Ics20Error::invalid_token()
 			})?;
 		} else {
 			<<T as Config>::Fungibles as Transfer<<T as frame_system::Config>::AccountId>>::transfer(
-				asset_id.into(),
+				asset_id,
 				&from.clone().into_account(),
 				&to.clone().into_account(),
 				amount,
 				false,
 			)
 			.map_err(|e| {
-				log::debug!(target: "pallet_ibc", "Failed to transfer ibc tokens: {:?}", e);
+				log::debug!(target: "pallet_ibc", "Failed to transfer ibc asset: {asset_id:?}, denom: {denom}, error: {e:?}");
 				Ics20Error::token_balance_change()
 			})?;
 		}
@@ -123,7 +124,7 @@ where
 			.map_err(|_err| Ics20Error::invalid_token())?;
 
 		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::mint_into(
-			asset_id.into(),
+			asset_id,
 			&account.clone().into_account(),
 			amount,
 		)
@@ -145,7 +146,7 @@ where
 		let asset_id = T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(&denom)
 			.map_err(|_| Ics20Error::invalid_token())?;
 		<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::burn_from(
-			asset_id.into(),
+			asset_id,
 			&account.clone().into_account(),
 			amount,
 		)

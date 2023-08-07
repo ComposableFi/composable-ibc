@@ -12,44 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use super::{error::Error, signer::ExtrinsicSigner, ParachainClient};
+use crate::{parachain::UncheckedExtrinsic, provider::TransactionId, FinalityProtocol};
 use anyhow::anyhow;
-use codec::{Decode, Encode};
-use std::{collections::BTreeMap, fmt::Display, pin::Pin, time::Duration};
-
 use beefy_gadget_rpc::BeefyApiClient;
+use codec::{Decode, Encode};
 use finality_grandpa::BlockNumberOps;
+use finality_grandpa_rpc::GrandpaApiClient;
 use futures::{Stream, StreamExt, TryFutureExt};
 use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
-use ibc_proto::google::protobuf::Any;
-use sp_runtime::{
-	traits::{IdentifyAccount, One, Verify},
-	MultiSignature, MultiSigner,
-};
-#[cfg(feature = "dali")]
-use subxt::config::substrate::AssetTip as Tip;
-use subxt::config::{extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams};
-
-#[cfg(not(feature = "dali"))]
-use subxt::config::polkadot::PlainTip as Tip;
-
-use transaction_payment_rpc::TransactionPaymentApiClient;
-use transaction_payment_runtime_api::RuntimeDispatchInfo;
-
-use primitives::{Chain, IbcProvider, MisbehaviourHandler};
-
-use super::{error::Error, signer::ExtrinsicSigner, ParachainClient};
-use crate::{
-	config,
-	parachain::{
-		api,
-		api::runtime_types::{frame_system::Phase, pallet_ibc::Any as RawAny},
-		UncheckedExtrinsic,
-	},
-	provider::TransactionId,
-	utils::MetadataIbcEventWrapper,
-	FinalityProtocol,
-};
-use finality_grandpa_rpc::GrandpaApiClient;
 use ibc::{
 	core::{
 		ics02_client::{
@@ -62,12 +33,36 @@ use ibc::{
 	tx_msg::Msg,
 	Height,
 };
+use ibc_proto::google::protobuf::Any;
 use ics10_grandpa::client_message::{ClientMessage, Misbehaviour, RelayChainHeader};
+use itertools::Itertools;
+use jsonrpsee_ws_client::WsClientBuilder;
+use light_client_common::config::{EventRecordT, RuntimeCall, RuntimeTransactions};
 use pallet_ibc::light_clients::AnyClientMessage;
-use primitives::mock::LocalClientTypes;
+use primitives::{
+	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, MisbehaviourHandler,
+};
 use sp_core::{twox_128, H256};
-use subxt::config::{extrinsic_params::Era, Header as HeaderT};
+use sp_runtime::{
+	traits::{IdentifyAccount, One, Verify},
+	MultiSignature, MultiSigner,
+};
+use std::{collections::BTreeMap, fmt::Display, pin::Pin, sync::Arc, time::Duration};
+// #[cfg(not(feature = "dali"))]
+// use subxt::config::polkadot::PlainTip as Tip;
+// #[cfg(feature = "dali")]
+// use subxt::config::substrate::AssetTip as Tip;
+use crate::utils::unsafe_cast_to_jsonrpsee_client;
+use subxt::{
+	config::{
+		extrinsic_params::{BaseExtrinsicParamsBuilder, Era},
+		ExtrinsicParams, Header as HeaderT, Header,
+	},
+	events::Phase,
+};
 use tokio::time::sleep;
+use transaction_payment_rpc::TransactionPaymentApiClient;
+use transaction_payment_runtime_api::RuntimeDispatchInfo;
 
 type GrandpaJustification = grandpa_light_client_primitives::justification::GrandpaJustification<
 	polkadot_core_primitives::Header,
@@ -81,32 +76,35 @@ type BeefyJustification =
 struct JustificationNotification(sp_core::Bytes);
 
 #[async_trait::async_trait]
-impl<T: config::Config + Send + Sync> Chain for ParachainClient<T>
+impl<T: light_client_common::config::Config + Send + Sync + Clone + 'static> Chain
+	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<T as subxt::Config>::BlockNumber>,
-	<<T as config::Config>::Signature as Verify>::Signer:
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
+	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	sp_core::H256: From<T::Hash>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
-	<T as config::Config>::AssetId: Clone,
+	<T as light_client_common::config::Config>::AssetId: Clone,
 {
 	fn name(&self) -> &str {
 		&*self.name
 	}
 
 	fn block_max_weight(&self) -> u64 {
-		self.max_extrinsic_weight
+		self.max_extrinsic_weight * 100 / 80
 	}
 
 	async fn estimate_weight(&self, messages: Vec<Any>) -> Result<u64, Self::Error> {
@@ -120,13 +118,13 @@ where
 
 			let messages = messages
 				.into_iter()
-				.map(|msg| RawAny { type_url: msg.type_url.as_bytes().to_vec(), value: msg.value })
+				.map(|msg| Any { type_url: msg.type_url.clone(), value: msg.value })
 				.collect::<Vec<_>>();
 
 			let tx_params = BaseExtrinsicParamsBuilder::new()
-				.tip(Tip::new(100_000))
+				.tip(T::Tip::from(100_000u128))
 				.era(Era::Immortal, self.para_client.genesis_hash());
-			let call = api::tx().ibc().deliver(messages);
+			let call = T::Tx::ibc_deliver(messages);
 			self.para_client
 				.tx()
 				.create_signed(&call, &signer, tx_params.into())
@@ -134,26 +132,30 @@ where
 				.encoded()
 				.to_vec()
 		};
-		let dispatch_info = TransactionPaymentApiClient::<
-			sp_core::H256,
-			RuntimeDispatchInfo<u128, u64>,
-		>::query_info(&*self.para_ws_client, extrinsic.into(), None)
-		.await
-		.map_err(|e| Error::from(format!("Rpc Error From Estimating weight {:?}", e)))?;
+		let dispatch_info =
+			TransactionPaymentApiClient::<H256, RuntimeDispatchInfo<u128, u64>>::query_info(
+				&*self.para_ws_client,
+				extrinsic.into(),
+				None,
+			)
+			.await
+			.map_err(|e| Error::from(format!("Rpc Error From Estimating weight {:?}", e)))?;
 		Ok(dispatch_info.weight)
 	}
 
 	async fn finality_notifications(
 		&self,
-	) -> Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>> {
+	) -> Result<
+		Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>>,
+		Error,
+	> {
 		match self.finality_protocol {
 			FinalityProtocol::Grandpa => {
 				let subscription =
 					GrandpaApiClient::<JustificationNotification, sp_core::H256, u32>::subscribe_justifications(
 						&*self.relay_ws_client,
 					)
-						.await
-						.expect("Failed to subscribe to grandpa justifications")
+						.await?
 						.chunks(3)
 						.map(|mut notifs| notifs.remove(notifs.len() - 1)); // skip every 3 finality notifications
 
@@ -178,7 +180,7 @@ where
 					futures::future::ready(Some(Self::FinalityEvent::Grandpa(justification)))
 				});
 
-				Box::pin(Box::new(stream))
+				Ok(Box::pin(Box::new(stream)))
 			},
 			FinalityProtocol::Beefy => {
 				let subscription =
@@ -208,7 +210,7 @@ where
 					futures::future::ready(Some(Self::FinalityEvent::Beefy(signed_commitment)))
 				});
 
-				Box::pin(Box::new(stream))
+				Ok(Box::pin(Box::new(stream)))
 			},
 		}
 	}
@@ -216,29 +218,20 @@ where
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
 		let messages = messages
 			.into_iter()
-			.map(|msg| RawAny { type_url: msg.type_url.as_bytes().to_vec(), value: msg.value })
+			.map(|msg| Any { type_url: msg.type_url.clone(), value: msg.value })
 			.collect::<Vec<_>>();
+		let messages_urls = messages.iter().map(|msg| msg.type_url.clone()).join(", ");
+		log::debug!(target: "hyperspace_parachain", "Sending message: {messages_urls}");
 
-		let call = api::tx().ibc().deliver(messages);
+		let call = T::Tx::ibc_deliver(messages);
 		let (ext_hash, block_hash) = self.submit_call(call).await?;
 
-		log::debug!(target: "hyperspace_parachain", "Submitted extrinsic (hash: {:?}) to block {:?}", ext_hash, block_hash);
+		log::debug!(target: "hyperspace::parachain", "Submitted extrinsic (hash: {:?}) to block {:?}", ext_hash, block_hash);
 
 		Ok(TransactionId { ext_hash, block_hash })
 	}
 
 	async fn query_client_message(&self, update: UpdateClient) -> Result<AnyClientMessage, Error> {
-		use api::runtime_types::{
-			frame_system::EventRecord,
-			pallet_ibc::pallet::{Call as IbcCall, Event as PalletEvent},
-		};
-
-		#[cfg(feature = "dali")]
-		use api::runtime_types::dali_runtime::{RuntimeCall, RuntimeEvent};
-		#[cfg(not(feature = "dali"))]
-		use api::runtime_types::parachain_runtime::{RuntimeCall, RuntimeEvent};
-		use pallet_ibc::events::IbcEvent as RawIbcEvent;
-
 		let host_height = update.height();
 
 		let now = std::time::Instant::now();
@@ -269,31 +262,28 @@ where
 			.await?
 			.map(|e| e.0)
 			.ok_or_else(|| Error::from("No events found".to_owned()))?;
-		let events: Vec<EventRecord<RuntimeEvent, H256>> = Decode::decode(&mut &*event_bytes)
+		let events: Vec<T::EventRecord> = Decode::decode(&mut &*event_bytes)
 			.map_err(|e| Error::from(format!("Failed to decode events: {:?}", e)))?;
 		let (transaction_index, event_index) = events
 			.into_iter()
 			.find_map(|pallet_event| {
-				let tx_index = match pallet_event.phase {
+				let tx_index = match pallet_event.phase() {
 					Phase::ApplyExtrinsic(i) => i as usize,
 					other => {
 						log::error!("Unexpected event phase: {:?}", other);
 						return None
 					},
 				};
-				if let RuntimeEvent::Ibc(PalletEvent::Events { events }) = pallet_event.event {
-					events.into_iter().enumerate().find_map(|(i, event)| match event {
-						Ok(ibc_event) => IbcEvent::try_from(RawIbcEvent::from(
-							MetadataIbcEventWrapper(ibc_event),
-						))
-						.map(|event| match event {
-							IbcEvent::UpdateClient(ev_update) if ev_update == update =>
-								Some((tx_index, i)),
-							_ => None,
-						})
-						.ok()
-						.flatten(),
-						_ => None,
+				if let Some(events) = pallet_event.ibc_events() {
+					events.into_iter().enumerate().find_map(|(i, event)| {
+						TryInto::<IbcEvent>::try_into(event)
+							.map(|event| match event {
+								IbcEvent::UpdateClient(ev_update) if ev_update == update =>
+									Some((tx_index, i)),
+								_ => None,
+							})
+							.ok()
+							.flatten()
 					})
 				} else {
 					None
@@ -310,27 +300,25 @@ where
 
 		let extrinsic_opaque =
 			block.block.extrinsics.get(transaction_index).expect("Extrinsic not found");
+
 		let unchecked_extrinsic =
 			UncheckedExtrinsic::<T>::decode(&mut &*extrinsic_opaque.0.encode())
 				.map_err(|e| Error::from(format!("Extrinsic decode error: {}", e)))?;
 
-		match unchecked_extrinsic.function {
-			RuntimeCall::Ibc(IbcCall::deliver { messages }) => {
-				let message = messages.get(event_index).ok_or_else(|| {
-					Error::from(format!("Message index {} out of bounds", event_index))
-				})?;
-				let envelope = Ics26Envelope::<LocalClientTypes>::try_from(Any {
-					type_url: String::from_utf8(message.type_url.clone()).map_err(|_| {
-						Error::from("failed to create String from utf-8".to_string())
-					})?,
-					value: message.value.clone(),
-				});
-				match envelope {
-					Ok(Ics26Envelope::Ics2Msg(ClientMsg::UpdateClient(update_msg))) =>
-						return Ok(update_msg.client_message),
-					_ => (),
-				}
-			},
+		let messages = unchecked_extrinsic
+			.function
+			.extract_ibc_deliver_messages()
+			.ok_or_else(|| Error::Custom("failed to extract deliver messages".to_string()))?;
+		let message = messages
+			.get(event_index)
+			.ok_or_else(|| Error::from(format!("Message index {} out of bounds", event_index)))?;
+		let envelope = Ics26Envelope::<LocalClientTypes>::try_from(Any {
+			type_url: message.type_url.clone(),
+			value: message.value.clone(),
+		});
+		match envelope {
+			Ok(Ics26Envelope::Ics2Msg(ClientMsg::UpdateClient(update_msg))) =>
+				return Ok(update_msg.client_message),
 			_ => (),
 		}
 
@@ -340,25 +328,89 @@ where
 	async fn get_proof_height(&self, block_height: Height) -> Height {
 		block_height
 	}
+
+	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error> {
+		let err_str = if let Some(rpc_err) = error.downcast_ref::<Error>() {
+			match rpc_err {
+				Error::RpcError(s) => s.clone(),
+				_ => "".to_string(),
+			}
+		} else {
+			error.to_string()
+		};
+		log::debug!(target: "hyperspace", "Handling error: {err_str}");
+
+		if err_str.contains("MaxSlotsExceeded") {
+			self.common_state.rpc_call_delay = self.common_state.rpc_call_delay * 2;
+		} else if err_str.contains("RestartNeeded") || err_str.contains("restart required") {
+			self.reconnect().await?;
+			self.common_state.rpc_call_delay = self.common_state.rpc_call_delay * 2;
+		}
+
+		Ok(())
+	}
+
+	async fn reconnect(&mut self) -> anyhow::Result<()> {
+		let relay_ws_client = Arc::new(
+			WsClientBuilder::default()
+				.build(&self.relay_chain_rpc_url)
+				.await
+				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
+		);
+		let para_ws_client = Arc::new(
+			WsClientBuilder::default()
+				.build(&self.parachain_rpc_url)
+				.await
+				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
+		);
+
+		let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
+			unsafe_cast_to_jsonrpsee_client(&para_ws_client)
+		})
+		.await?;
+		let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
+			unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
+		})
+		.await?;
+
+		self.relay_ws_client = relay_ws_client;
+		self.para_ws_client = para_ws_client;
+		self.relay_client = relay_client;
+		self.para_client = para_client;
+
+		log::info!(target: "hyperspace", "Reconnected to relay chain and parachain");
+
+		Ok(())
+	}
+
+	fn common_state(&self) -> &CommonClientState {
+		&self.common_state
+	}
+
+	fn common_state_mut(&mut self) -> &mut CommonClientState {
+		&mut self.common_state
+	}
 }
 
 #[async_trait::async_trait]
-impl<T: config::Config + Send + Sync> MisbehaviourHandler for ParachainClient<T>
+impl<T: light_client_common::config::Config + Send + Sync> MisbehaviourHandler
+	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<T as subxt::Config>::BlockNumber>,
-	<<T as config::Config>::Signature as Verify>::Signer:
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
+	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	sp_core::H256: From<T::Hash>,
 	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
-		From<BaseExtrinsicParamsBuilder<T, Tip>> + Send + Sync,
+		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
@@ -420,6 +472,8 @@ where
 					log::warn!(
 						"Found misbehaviour on client {}: {:?} != {:?}",
 						self.client_id
+							.lock()
+							.unwrap()
 							.as_ref()
 							.map(|x| x.as_str().to_owned())
 							.unwrap_or_else(|| "{unknown}".to_owned()),
@@ -428,6 +482,7 @@ where
 					);
 
 					trusted_finality_proof.unknown_headers.clear();
+					// TODO: parallelize this
 					for i in from_block..=to_block {
 						let unknown_header_hash =
 							self.relay_client.rpc().block_hash(Some(i.into())).await?.ok_or_else(

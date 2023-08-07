@@ -1,3 +1,18 @@
+// Copyright (C) 2022 ComposableFi.
+// SPDX-License-Identifier: Apache-2.0
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #[cfg(feature = "cosmwasm")]
 use crate::msg::Base64;
 use crate::Bytes;
@@ -10,10 +25,7 @@ use core::fmt::Display;
 #[cfg(feature = "cosmwasm")]
 use cosmwasm_schema::cw_serde;
 use ibc::{
-	core::{
-		ics02_client::{client_message::ClientMessage as IbcClientMessage, error::Error},
-		ics24_host::identifier::ClientId,
-	},
+	core::ics02_client::{client_message::ClientMessage as IbcClientMessage, error::Error},
 	protobuf::Protobuf,
 	Height,
 };
@@ -79,7 +91,7 @@ where
 	fn try_from(any: Any) -> Result<Self, Self::Error> {
 		let msg = match &*any.type_url {
 			WASM_HEADER_TYPE_URL =>
-				Self::Header(Header::decode(&*any.value).map_err(|e| Error::decode_raw_header(e))?),
+				Self::Header(Header::decode(&*any.value).map_err(Error::decode_raw_header)?),
 			WASM_MISBEHAVIOUR_TYPE_URL => Self::Misbehaviour(
 				Misbehaviour::decode(&*any.value).map_err(Error::decode_raw_misbehaviour)?,
 			),
@@ -128,14 +140,7 @@ where
 	fn try_from(raw: RawMisbehaviour) -> Result<Self, Self::Error> {
 		let any = Any::decode(&mut &raw.data[..]).map_err(|e| e.to_string())?;
 		let inner = AnyClientMessage::try_from(any).map_err(|e| e.to_string())?;
-		Ok(Self {
-			inner: Box::new(inner),
-			data: raw.data,
-			client_id: raw
-				.client_id
-				.parse()
-				.map_err(|e| format!("failed to parse client id from raw misbehaviour: {}", e))?,
-		})
+		Ok(Self { inner: Box::new(inner), data: raw.data })
 	}
 }
 
@@ -156,17 +161,18 @@ where
 
 	fn try_from(raw: RawHeader) -> Result<Self, Self::Error> {
 		let any = Any::decode(&mut &raw.data[..])
-			.map_err(|e| format!("failed to decode raw header into Any: {}", e.to_string()))?;
-		let inner = AnyClientMessage::try_from(any).map_err(|e| {
-			format!("failed to decode raw header into AnyClientMessage: {}", e.to_string())
-		})?;
+			.map_err(|e| format!("failed to decode raw header into Any: {e}"))?;
+		let inner = AnyClientMessage::try_from(any)
+			.map_err(|e| format!("failed to decode raw header into AnyClientMessage: {e}"))?;
 
 		let header = Self {
 			inner: Box::new(inner),
 			data: raw.data,
 			height: raw
 				.height
-				.ok_or_else(|| format!("failed to decode raw header into Header: missing height",))?
+				.ok_or_else(|| {
+					"failed to decode raw header into Header: missing height".to_string()
+				})?
 				.into(),
 		};
 		Ok(header)
@@ -192,12 +198,11 @@ pub struct Misbehaviour<AnyClientMessage> {
 	// #[serde(with = "Base64", default)]
 	pub inner: Box<AnyClientMessage>,
 	pub data: Bytes,
-	pub client_id: ClientId,
 }
 
 impl<AnyClientMessage> From<Misbehaviour<AnyClientMessage>> for RawMisbehaviour {
 	fn from(value: Misbehaviour<AnyClientMessage>) -> Self {
-		RawMisbehaviour { client_id: value.client_id.to_string(), data: value.data }
+		RawMisbehaviour { data: value.data }
 	}
 }
 

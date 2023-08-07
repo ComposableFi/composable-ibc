@@ -85,6 +85,7 @@ pub fn dispatch<Ctx>(ctx: &mut Ctx, msg: Ics26Envelope<Ctx>) -> Result<HandlerOu
 where
 	Ctx: Ics26Context + ClientKeeper,
 {
+	log::debug!(target: "ics::routing", "dispatch {:?}",&msg);
 	let output = match msg {
 		Ics2Msg(msg) => {
 			let handler_output =

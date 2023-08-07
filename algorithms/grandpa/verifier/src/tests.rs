@@ -19,15 +19,17 @@ use futures::StreamExt;
 use grandpa_prover::{
 	beefy_prover::helpers::unsafe_arc_cast, host_functions::HostFunctionsProvider, GrandpaProver,
 };
+use hyperspace_core::substrate::DefaultConfig as PolkadotConfig;
 use polkadot_core_primitives::Header;
 use primitives::{
 	justification::GrandpaJustification, FinalityProof, ParachainHeadersWithFinalityProof,
 };
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
+use std::time::Duration;
 use subxt::{
 	config::substrate::{BlakeTwo256, SubstrateHeader},
-	rpc_params, PolkadotConfig,
+	rpc_params,
 };
 
 pub type Justification = GrandpaJustification<Header>;
@@ -49,9 +51,14 @@ async fn follow_grandpa_justifications() {
 	let relay_ws_url = format!("ws://{relay}:9944");
 	let para_ws_url = format!("ws://{para}:9188");
 
-	let prover = GrandpaProver::<PolkadotConfig>::new(&relay_ws_url, &para_ws_url, 2000)
-		.await
-		.unwrap();
+	let prover = GrandpaProver::<PolkadotConfig>::new(
+		&relay_ws_url,
+		&para_ws_url,
+		2000,
+		Duration::from_millis(100),
+	)
+	.await
+	.unwrap();
 
 	println!("Waiting for grandpa proofs to become available");
 	let session_length = prover.session_length().await.unwrap();
@@ -77,7 +84,7 @@ async fn follow_grandpa_justifications() {
 		)
 		.await
 		.unwrap()
-		.take(100);
+		.take((2 * session_length).try_into().unwrap());
 
 	let mut client_state = prover.initialize_client_state().await.unwrap();
 	println!("Grandpa proofs are now available");

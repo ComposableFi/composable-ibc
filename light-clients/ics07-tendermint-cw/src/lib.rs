@@ -13,12 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Contains subxt generated types for the relay chain
+extern crate alloc;
+extern crate core;
 
-#![allow(missing_docs)]
+mod channel;
+mod client;
+mod connection;
+mod context;
+pub mod contract;
+mod error;
+pub mod helpers;
+pub mod ics23;
+mod macros;
+pub mod msg;
+pub mod state;
+mod types;
 
-#[cfg(feature = "build-metadata-from-ws")]
-include!(concat!(env!("OUT_DIR"), "/polkadot.rs"));
+pub use crate::error::ContractError;
 
-#[cfg(not(feature = "build-metadata-from-ws"))]
-pub use subxt_generated::relaychain::*;
+pub const CLIENT_STATE: &[u8] = b"client_state";
+pub const STORAGE_PREFIX: &[u8] = b"";
+
+pub type Bytes = Vec<u8>;

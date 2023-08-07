@@ -1,8 +1,24 @@
+// Copyright (C) 2022 ComposableFi.
+// SPDX-License-Identifier: Apache-2.0
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use crate::{
 	context::Context,
-	contract::{code_id, CLIENT_COUNTER, CONSENSUS_STATES_HEIGHTS, HOST_CONSENSUS_STATE},
+	contract::{CLIENT_COUNTER, CONSENSUS_STATES_HEIGHTS, HOST_CONSENSUS_STATE},
 	ics23::{
-		ConsensusStates, FakeInner, ReadonlyClientStates, ReadonlyClients, ReadonlyConsensusStates,
+		ClientStates, ConsensusStates, FakeInner, ReadonlyClientStates, ReadonlyClients,
+		ReadonlyConsensusStates,
 	},
 	log,
 };
@@ -15,7 +31,6 @@ use ibc::{
 			context::{ClientKeeper, ClientReader, ClientTypes},
 			error::Error,
 		},
-		ics23_commitment::commitment::CommitmentRoot,
 		ics24_host::identifier::ClientId,
 	},
 	protobuf::Protobuf,
@@ -54,8 +69,7 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'
 			.ok_or_else(|| Error::client_not_found(client_id.clone()))?;
 		let data = String::from_utf8(data).map_err(|e| {
 			Error::implementation_specific(format!(
-				"[client_type]: error decoding client type bytes to string {}",
-				e
+				"[client_type]: error decoding client type bytes to string {e}"
 			))
 		})?;
 		match ClientType::from_str(&data) {
@@ -70,23 +84,8 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'
 	fn client_state(&self, client_id: &ClientId) -> Result<ClientState<H>, Error> {
 		log!(self, "in client : [client_state] >> client_id = {:?}", client_id);
 		let client_states = ReadonlyClientStates::new(self.storage());
-		let data = client_states
-			.get(client_id)
-			.ok_or_else(|| Error::client_not_found(client_id.clone()))?;
-		let any = Any::decode(&*data).map_err(Error::decode)?;
-		let wasm_state =
-			ics08_wasm::client_state::ClientState::<FakeInner, FakeInner, FakeInner>::decode_vec(
-				&any.value,
-			)
-			.map_err(|e| {
-				Error::implementation_specific(format!(
-					"[client_state]: error decoding client state bytes to WasmConsensusState {}",
-					e
-				))
-			})?;
-		let any = Any::decode(&*wasm_state.data).map_err(|e| Error::decode(e))?;
-		let state =
-			ClientState::<H>::decode_vec(&*any.value).map_err(Error::invalid_any_client_state)?;
+		let data = client_states.get().ok_or_else(|| Error::client_not_found(client_id.clone()))?;
+		let state = Self::decode_client_state(&data)?;
 		log!(self, "in client : [client_state] >> any client_state: {:?}", state);
 		Ok(state)
 	}
@@ -96,29 +95,18 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<ConsensusState, Error> {
-		log!(
-			self,
-			"in client : [consensus_state] >> client_id = {:?}, height = {:?}",
-			client_id,
-			height
-		);
+		log!(self, "in client : [consensus_state] >> height = {:?}", height);
 
 		let consensus_states = ReadonlyConsensusStates::new(self.storage());
 		let value = consensus_states
-			.get(client_id, height)
+			.get(height)
 			.ok_or_else(|| Error::consensus_state_not_found(client_id.clone(), height))?;
 		log!(
 			self,
 			"in client : [consensus_state] >> consensus_state (raw): {}",
 			hex::encode(&value)
 		);
-		let any = Any::decode(&mut &value[..]).map_err(Error::decode)?;
-		let wasm_consensus_state =
-			ics08_wasm::consensus_state::ConsensusState::<FakeInner>::decode_vec(&*any.value)
-				.map_err(Error::invalid_any_consensus_state)?;
-		let any = Any::decode(&mut &wasm_consensus_state.data[..]).map_err(Error::decode)?;
-		let any_consensus_state =
-			ConsensusState::decode_vec(&*any.value).map_err(Error::invalid_any_consensus_state)?;
+		let any_consensus_state = Self::decode_consensus_state(&value)?;
 		log!(
 			self,
 			"in client : [consensus_state] >> any consensus state = {:?}",
@@ -141,7 +129,7 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'
 			.unwrap_or_default()
 			.range(height..)
 			.next()
-			.map(|height| self.consensus_state(client_id, Height::from(*height)))
+			.map(|height| self.consensus_state(client_id, *height))
 			.transpose()
 	}
 
@@ -156,7 +144,7 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'
 			.range(..height)
 			.rev()
 			.next()
-			.map(|height| self.consensus_state(client_id, Height::from(*height)))
+			.map(|height| self.consensus_state(client_id, *height))
 			.transpose()
 	}
 
@@ -179,8 +167,7 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'
 		let consensus_state =
 			HOST_CONSENSUS_STATE.load(self.storage(), height.revision_height).map_err(|_| {
 				Error::implementation_specific(format!(
-					"[host_consensus_state]: consensus state not found for host at height {}",
-					height
+					"[host_consensus_state]: consensus state not found for host at height {height}"
 				))
 			})?;
 		Ok(consensus_state)
@@ -204,10 +191,17 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientKeeper for Context<'
 
 	fn store_client_state(
 		&mut self,
-		_client_id: ClientId,
-		_client_state: Self::AnyClientState,
+		client_id: ClientId,
+		client_state: Self::AnyClientState,
 	) -> Result<(), Error> {
-		unimplemented!()
+		log!(self, "in client : [store_client_state]");
+		let client_states = ReadonlyClientStates::new(self.storage());
+		let data = client_states.get().ok_or_else(|| Error::client_not_found(client_id.clone()))?;
+		let vec1 = Self::encode_client_state(client_state, data)?;
+		log!(self, "in cliden : [store_client_state] >> wasm client state (raw)");
+		let mut client_state_storage = ClientStates::new(self.storage_mut());
+		client_state_storage.insert(vec1);
+		Ok(())
 	}
 
 	fn store_consensus_state(
@@ -223,21 +217,14 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientKeeper for Context<'
 			height,
 		);
 
-		let wasm_consensus_state = ics08_wasm::consensus_state::ConsensusState {
-			data: consensus_state.to_any().encode_to_vec(),
-			code_id: code_id(self.deps.storage),
-			timestamp: consensus_state.timestamp().nanoseconds(),
-			root: CommitmentRoot::from_bytes(&vec![1; 32]),
-			inner: Box::new(FakeInner),
-		};
-		let vec1 = wasm_consensus_state.to_any().encode_to_vec();
+		let encoded = Self::encode_consensus_state(consensus_state);
 		log!(
 			self,
 			"in client : [store_consensus_state] >> wasm consensus state (raw) = {}",
-			hex::encode(&vec1)
+			hex::encode(&encoded)
 		);
 		let mut consensus_states = ConsensusStates::new(self.storage_mut());
-		consensus_states.insert(client_id, height, vec1);
+		consensus_states.insert(height, encoded);
 		Ok(())
 	}
 
@@ -265,5 +252,64 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientKeeper for Context<'
 
 	fn validate_self_client(&self, _client_state: &Self::AnyClientState) -> Result<(), Error> {
 		unimplemented!()
+	}
+}
+
+impl<'a, H: Clone> Context<'a, H> {
+	pub fn decode_client_state(data: &[u8]) -> Result<ClientState<H>, Error> {
+		let any = Any::decode(data).map_err(Error::decode)?;
+		let wasm_state =
+			ics08_wasm::client_state::ClientState::<FakeInner, FakeInner, FakeInner>::decode_vec(
+				&any.value,
+			)
+			.map_err(|e| {
+				Error::implementation_specific(format!(
+					"[client_state]: error decoding client state bytes to WasmConsensusState {e}"
+				))
+			})?;
+		let any = Any::decode(&*wasm_state.data).map_err(Error::decode)?;
+		let state =
+			ClientState::<H>::decode_vec(&any.value).map_err(Error::invalid_any_client_state)?;
+		Ok(state)
+	}
+
+	pub fn decode_consensus_state(value: &[u8]) -> Result<ConsensusState, Error> {
+		let any = Any::decode(&mut &*value).map_err(Error::decode)?;
+		let wasm_consensus_state =
+			ics08_wasm::consensus_state::ConsensusState::<FakeInner>::decode_vec(&any.value)
+				.map_err(Error::invalid_any_consensus_state)?;
+		let any = Any::decode(&mut &wasm_consensus_state.data[..]).map_err(Error::decode)?;
+		let any_consensus_state =
+			ConsensusState::decode_vec(&any.value).map_err(Error::invalid_any_consensus_state)?;
+		Ok(any_consensus_state)
+	}
+
+	pub fn encode_client_state(
+		client_state: ClientState<H>,
+		encoded_wasm_client_state: Vec<u8>,
+	) -> Result<Vec<u8>, Error> {
+		let any = Any::decode(&*encoded_wasm_client_state).map_err(Error::decode)?;
+		let mut wasm_client_state =
+			ics08_wasm::client_state::ClientState::<FakeInner, FakeInner, FakeInner>::decode_vec(
+				&any.value,
+			)
+			.map_err(|e| {
+				Error::implementation_specific(format!(
+					"[client_state]: error decoding client state bytes to WasmConsensusState {e}"
+				))
+			})?;
+		wasm_client_state.data = client_state.to_any().encode_to_vec();
+		wasm_client_state.latest_height = client_state.latest_height();
+		let vec1 = wasm_client_state.to_any().encode_to_vec();
+		Ok(vec1)
+	}
+
+	pub fn encode_consensus_state(consensus_state: ConsensusState) -> Vec<u8> {
+		let wasm_consensus_state = ics08_wasm::consensus_state::ConsensusState {
+			data: consensus_state.to_any().encode_to_vec(),
+			timestamp: consensus_state.timestamp().nanoseconds(),
+			inner: Box::new(FakeInner),
+		};
+		wasm_consensus_state.to_any().encode_to_vec()
 	}
 }

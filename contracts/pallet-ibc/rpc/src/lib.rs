@@ -51,13 +51,15 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_core::{blake2_256, storage::ChildInfo};
 use sp_runtime::{
-	generic::BlockId,
+	generic::{BlockId, SignedBlock},
 	traits::{Block as BlockT, Header as HeaderT},
 };
 use std::{collections::HashMap, fmt::Display, str::FromStr, sync::Arc};
 use tendermint_proto::Protobuf;
 pub mod events;
 use events::filter_map_pallet_event;
+use ibc_proto::ibc::core::channel::v1::IdentifiedChannel;
+use pallet_ibc::errors::IbcError;
 
 /// Connection handshake proof
 #[derive(Serialize, Deserialize)]
@@ -92,8 +94,8 @@ pub struct HeightAndTimestamp {
 impl<Hash: std::fmt::Debug> Display for BlockNumberOrHash<Hash> {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			BlockNumberOrHash::Hash(hash) => write!(f, "{:?}", hash),
-			BlockNumberOrHash::Number(block_num) => write!(f, "{}", block_num),
+			BlockNumberOrHash::Hash(hash) => write!(f, "{hash:?}"),
+			BlockNumberOrHash::Number(block_num) => write!(f, "{block_num}"),
 		}
 	}
 }
@@ -108,7 +110,7 @@ pub struct Proof {
 }
 
 /// Packet info
-#[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Serialize, Deserialize, Debug, PartialOrd, Ord)]
 pub struct PacketInfo {
 	/// Minimal height at which packet proof is available
 	pub height: Option<u64>,
@@ -424,6 +426,22 @@ where
 		ext_hash: Hash,
 	) -> Result<IdentifiedClientState>;
 
+	/// Query newly created connection in block and extrinsic
+	#[method(name = "ibc_queryNewlyCreatedConnection")]
+	fn query_newly_created_connection(
+		&self,
+		block_hash: Hash,
+		ext_hash: Hash,
+	) -> Result<IdentifiedConnection>;
+
+	/// Query newly created channel in block and extrinsic
+	#[method(name = "ibc_queryNewlyCreatedChannel")]
+	fn query_newly_created_channel(
+		&self,
+		block_hash: Hash,
+		ext_hash: Hash,
+	) -> Result<IdentifiedChannel>;
+
 	/// Query Ibc Events that were deposited in a series of blocks
 	/// Using String keys because HashMap fails to deserialize when key is not a String
 	#[method(name = "ibc_queryEvents")]
@@ -438,19 +456,19 @@ fn runtime_error_into_rpc_error(e: impl std::fmt::Display) -> RpcError {
 	RpcError::Call(CallError::Custom(ErrorObject::owned(
 		9876, // no real reason for this value
 		"Something wrong",
-		Some(format!("{}", e)),
+		Some(format!("{e}")),
 	)))
 }
 
 /// An implementation of IBC specific RPC methods.
-pub struct IbcRpcHandler<C, B> {
+pub struct IbcRpcHandler<C, B, AssetId> {
 	client: Arc<C>,
 	/// A copy of the chain properties.
 	pub chain_props: Properties,
-	_marker: std::marker::PhantomData<B>,
+	_marker: std::marker::PhantomData<(B, AssetId)>,
 }
 
-impl<C, B> IbcRpcHandler<C, B> {
+impl<C, B, AssetId> IbcRpcHandler<C, B, AssetId> {
 	/// Create new `IbcRpcHandler` with the given reference to the client.
 	pub fn new(client: Arc<C>, chain_props: Properties) -> Self {
 		Self { client, chain_props, _marker: Default::default() }
@@ -459,7 +477,7 @@ impl<C, B> IbcRpcHandler<C, B> {
 
 impl<C, Block, AssetId>
 	IbcApiServer<<<Block as BlockT>::Header as HeaderT>::Number, Block::Hash, AssetId>
-	for IbcRpcHandler<C, Block>
+	for IbcRpcHandler<C, Block, AssetId>
 where
 	Block: BlockT,
 	C: Send
@@ -470,7 +488,7 @@ where
 		+ ProofProvider<Block>
 		+ BlockBackend<Block>,
 	C::Api: IbcRuntimeApi<Block, AssetId>,
-	AssetId: codec::Codec + Copy,
+	AssetId: codec::Codec + Copy + Send + Sync + 'static,
 {
 	fn query_send_packets(
 		&self,
@@ -479,10 +497,9 @@ where
 		seqs: Vec<u64>,
 	) -> Result<Vec<PacketInfo>> {
 		let api = self.client.runtime_api();
-		let at = BlockId::Hash(self.client.info().best_hash);
 		let packets: Vec<ibc_primitives::PacketInfo> = api
 			.query_send_packet_info(
-				&at,
+				self.client.info().best_hash,
 				channel_id.as_bytes().to_vec(),
 				port_id.as_bytes().to_vec(),
 				seqs,
@@ -537,10 +554,10 @@ where
 		seqs: Vec<u64>,
 	) -> Result<Vec<PacketInfo>> {
 		let api = self.client.runtime_api();
-		let at = BlockId::Hash(self.client.info().best_hash);
+		let at = self.client.info().best_hash;
 		let packets: Vec<ibc_primitives::PacketInfo> = api
 			.query_recv_packet_info(
-				&at,
+				at,
 				channel_id.as_bytes().to_vec(),
 				port_id.as_bytes().to_vec(),
 				seqs,
@@ -595,13 +612,13 @@ where
 		revision_height: u64,
 	) -> Result<HeightAndTimestamp> {
 		let api = self.client.runtime_api();
-		let at = BlockId::Hash(self.client.info().best_hash);
+		let at = self.client.info().best_hash;
 		let para_id = api
-			.para_id(&at)
+			.para_id(at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
 		let (update_height, update_time) = api
 			.client_update_time_and_height(
-				&at,
+				at,
 				client_id.as_bytes().to_vec(),
 				revision_number,
 				revision_height,
@@ -626,10 +643,10 @@ where
 			.map_err(|_| RpcError::Custom("Unknown block".into()))?
 			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
-			.para_id(&at)
+			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
 		let child_trie_key = api
-			.child_trie_key(&at)
+			.child_trie_key(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Failed to get child trie key"))?;
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
@@ -655,11 +672,11 @@ where
 
 	fn query_balance_with_address(&self, addr: String, asset_id: AssetId) -> Result<Coin> {
 		let api = self.client.runtime_api();
-		let at = BlockId::Hash(self.client.info().best_hash);
+		let at = self.client.info().best_hash;
 		let denom = String::from_utf8(
-			api.denom_trace(&at, asset_id)
+			api.denom_trace(at, asset_id)
 				.map_err(|e| {
-					runtime_error_into_rpc_error(format!("failed to get denom trace: {}", e))
+					runtime_error_into_rpc_error(format!("failed to get denom trace: {e}"))
 				})?
 				.ok_or_else(|| runtime_error_into_rpc_error("denom trace not found"))?
 				.denom,
@@ -667,7 +684,7 @@ where
 		.map_err(|_| runtime_error_into_rpc_error("failed to convert denom to string"))?;
 
 		match api
-			.query_balance_with_address(&at, addr.as_bytes().to_vec(), asset_id)
+			.query_balance_with_address(at, addr.as_bytes().to_vec(), asset_id)
 			.ok()
 			.flatten()
 		{
@@ -690,16 +707,16 @@ where
 			.map_err(|_| RpcError::Custom("Unknown block".into()))?
 			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
-			.para_id(&at)
+			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
 		let result: ibc_primitives::QueryClientStateResponse = api
-			.client_state(&at, client_id.as_bytes().to_vec())
+			.client_state(hash_at, client_id.as_bytes().to_vec())
 			.ok()
 			.flatten()
 			.ok_or_else(|| runtime_error_into_rpc_error("[API] Error querying client state"))?;
 		let mut keys = vec![result.trie_key];
 		let child_trie_key = api
-			.child_trie_key(&at)
+			.child_trie_key(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Failed to get child trie key"))?;
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
@@ -710,7 +727,7 @@ where
 			.collect::<Vec<_>>()
 			.encode();
 		let client_state = AnyClientState::decode_vec(&result.client_state).map_err(|e| {
-			runtime_error_into_rpc_error(format!("Error querying client state: {:?}", e))
+			runtime_error_into_rpc_error(format!("Error querying client state: {e:?}"))
 		})?;
 		Ok(QueryClientStateResponse {
 			client_state: Some(client_state.into()),
@@ -742,11 +759,11 @@ where
 			.map_err(|_| RpcError::Custom("Unknown block".into()))?
 			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
-			.para_id(&at)
+			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
 		let result: ibc_primitives::QueryConsensusStateResponse = api
 			.client_consensus_state(
-				&at,
+				hash_at,
 				client_id.as_bytes().to_vec(),
 				revision_number,
 				revision_height,
@@ -759,7 +776,7 @@ where
 			.map_err(|_| runtime_error_into_rpc_error("Error querying client consensus state"))?;
 		let mut keys = vec![result.trie_key];
 		let child_trie_key = api
-			.child_trie_key(&at)
+			.child_trie_key(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Failed to get child trie key"))?;
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
@@ -789,9 +806,9 @@ where
 
 	fn query_clients(&self) -> Result<Vec<IdentifiedClientState>> {
 		let api = self.client.runtime_api();
-		let at = BlockId::Hash(self.client.info().best_hash);
 
-		let client_states: Option<Vec<(Vec<u8>, Vec<u8>)>> = api.clients(&at).ok().flatten();
+		let client_states: Option<Vec<(Vec<u8>, Vec<u8>)>> =
+			api.clients(self.client.info().best_hash).ok().flatten();
 		match client_states {
 			Some(client_states) => client_states
 				.into_iter()
@@ -825,10 +842,10 @@ where
 			.map_err(|_| RpcError::Custom("Unknown block".into()))?
 			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
-			.para_id(&at)
+			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
 		let result: ibc_primitives::QueryConnectionResponse = api
-			.connection(&at, connection_id.as_bytes().to_vec())
+			.connection(hash_at, connection_id.as_bytes().to_vec())
 			.ok()
 			.flatten()
 			.ok_or_else(|| runtime_error_into_rpc_error("Failed to fetch connection state"))?;
@@ -837,7 +854,7 @@ where
 				.map_err(|_| runtime_error_into_rpc_error("Failed to decode connection end"))?;
 		let mut keys = vec![result.trie_key];
 		let child_trie_key = api
-			.child_trie_key(&at)
+			.child_trie_key(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Failed to get child trie key"))?;
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
@@ -861,13 +878,18 @@ where
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Hash(self.client.info().best_hash);
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let result: ibc_primitives::QueryConnectionsResponse = api
-			.connections(&at)
+			.connections(hash_at)
 			.ok()
 			.flatten()
 			.ok_or_else(|| runtime_error_into_rpc_error("Failed to fetch connections"))?;
 		let para_id = api
-			.para_id(&at)
+			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
 		let connections = result
 			.connections
@@ -908,8 +930,13 @@ where
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let result: Vec<ibc_primitives::IdentifiedConnection> = api
-			.connection_using_client(&at, client_id.as_bytes().to_vec())
+			.connection_using_client(hash_at, client_id.as_bytes().to_vec())
 			.ok()
 			.flatten()
 			.ok_or_else(|| runtime_error_into_rpc_error("Failed to fetch connections"))?;
@@ -948,15 +975,19 @@ where
 			.map_err(|_| RpcError::Custom("Unknown block".into()))?
 			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
-			.para_id(&at)
+			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
 		let mut result: ibc_primitives::ConnectionHandshake = api
-			.connection_handshake(&at, client_id.as_bytes().to_vec(), conn_id.as_bytes().to_vec())
+			.connection_handshake(
+				hash_at,
+				client_id.as_bytes().to_vec(),
+				conn_id.as_bytes().to_vec(),
+			)
 			.ok()
 			.flatten()
 			.ok_or_else(|| runtime_error_into_rpc_error("Error getting trie inputs"))?;
 		let child_trie_key = api
-			.child_trie_key(&at)
+			.child_trie_key(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Failed to get child trie key"))?;
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
@@ -1001,10 +1032,10 @@ where
 			.map_err(|_| RpcError::Custom("Unknown block".into()))?
 			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
-			.para_id(&at)
+			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
 		let result: ibc_primitives::QueryChannelResponse = api
-			.channel(&at, channel_id.as_bytes().to_vec(), port_id.as_bytes().to_vec())
+			.channel(hash_at, channel_id.as_bytes().to_vec(), port_id.as_bytes().to_vec())
 			.ok()
 			.flatten()
 			.ok_or_else(|| runtime_error_into_rpc_error("Failed to fetch channel state"))?;
@@ -1012,7 +1043,7 @@ where
 			.map_err(|_| runtime_error_into_rpc_error("Failed to decode channel state"))?;
 		let mut keys = vec![result.trie_key];
 		let child_trie_key = api
-			.child_trie_key(&at)
+			.child_trie_key(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Failed to get child trie key"))?;
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
@@ -1041,8 +1072,13 @@ where
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let result: ibc_primitives::IdentifiedClientState = api
-			.channel_client(&at, channel_id.as_bytes().to_vec(), port_id.as_bytes().to_vec())
+			.channel_client(hash_at, channel_id.as_bytes().to_vec(), port_id.as_bytes().to_vec())
 			.ok()
 			.flatten()
 			.ok_or_else(|| runtime_error_into_rpc_error("Failed to Client state for channel"))?;
@@ -1064,11 +1100,16 @@ where
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
-			.para_id(&at)
+			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
 		let result: ibc_primitives::QueryChannelsResponse = api
-			.connection_channels(&at, connection_id.as_bytes().to_vec())
+			.connection_channels(hash_at, connection_id.as_bytes().to_vec())
 			.ok()
 			.flatten()
 			.ok_or_else(|| {
@@ -1111,11 +1152,16 @@ where
 	fn query_channels(&self) -> Result<QueryChannelsResponse> {
 		let api = self.client.runtime_api();
 		let at = BlockId::Hash(self.client.info().best_hash);
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
-			.para_id(&at)
+			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
 		let result: ibc_primitives::QueryChannelsResponse = api
-			.channels(&at)
+			.channels(hash_at)
 			.ok()
 			.flatten()
 			.ok_or_else(|| runtime_error_into_rpc_error("Failed to fetch channels"))?;
@@ -1162,11 +1208,20 @@ where
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
-			.para_id(&at)
+			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
 		let result: ibc_primitives::QueryPacketCommitmentsResponse = api
-			.packet_commitments(&at, channel_id.as_bytes().to_vec(), port_id.as_bytes().to_vec())
+			.packet_commitments(
+				hash_at,
+				channel_id.as_bytes().to_vec(),
+				port_id.as_bytes().to_vec(),
+			)
 			.ok()
 			.flatten()
 			.ok_or_else(|| runtime_error_into_rpc_error("Failed to fetch commitments"))?;
@@ -1205,12 +1260,18 @@ where
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+
 		let para_id = api
-			.para_id(&at)
+			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
 		let result: ibc_primitives::QueryPacketAcknowledgementsResponse = api
 			.packet_acknowledgements(
-				&at,
+				hash_at,
 				channel_id.as_bytes().to_vec(),
 				port_id.as_bytes().to_vec(),
 			)
@@ -1252,9 +1313,14 @@ where
 	) -> Result<Vec<u64>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::Number(height.into());
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 
 		api.unreceived_packets(
-			&at,
+			hash_at,
 			channel_id.as_bytes().to_vec(),
 			port_id.as_bytes().to_vec(),
 			seqs,
@@ -1273,9 +1339,14 @@ where
 	) -> Result<Vec<u64>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::Number(height.into());
+		let hash_at = self
+			.client
+			.block_hash_from_id(&at)
+			.map_err(|_| RpcError::Custom("Unknown block".into()))?
+			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 
 		api.unreceived_acknowledgements(
-			&at,
+			hash_at,
 			channel_id.as_bytes().to_vec(),
 			port_id.as_bytes().to_vec(),
 			seqs,
@@ -1300,16 +1371,16 @@ where
 			.map_err(|_| RpcError::Custom("Unknown block".into()))?
 			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
-			.para_id(&at)
+			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
 		let result: ibc_primitives::QueryNextSequenceReceiveResponse = api
-			.next_seq_recv(&at, channel_id.as_bytes().to_vec(), port_id.as_bytes().to_vec())
+			.next_seq_recv(hash_at, channel_id.as_bytes().to_vec(), port_id.as_bytes().to_vec())
 			.ok()
 			.flatten()
 			.ok_or_else(|| runtime_error_into_rpc_error("Error fetching next sequence recv"))?;
 		let mut keys = vec![result.trie_key];
 		let child_trie_key = api
-			.child_trie_key(&at)
+			.child_trie_key(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Failed to get child trie key"))?;
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
@@ -1345,11 +1416,11 @@ where
 			.map_err(|_| RpcError::Custom("Unknown block".into()))?
 			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
-			.para_id(&at)
+			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
 		let result: ibc_primitives::QueryPacketCommitmentResponse = api
 			.packet_commitment(
-				&at,
+				hash_at,
 				channel_id.as_bytes().to_vec(),
 				port_id.as_bytes().to_vec(),
 				seq,
@@ -1359,7 +1430,7 @@ where
 			.ok_or_else(|| runtime_error_into_rpc_error("Error fetching packet commitment"))?;
 		let mut keys = vec![result.trie_key];
 		let child_trie_key = api
-			.child_trie_key(&at)
+			.child_trie_key(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Failed to get child trie key"))?;
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
@@ -1395,11 +1466,11 @@ where
 			.map_err(|_| RpcError::Custom("Unknown block".into()))?
 			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
-			.para_id(&at)
+			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
 		let result: ibc_primitives::QueryPacketAcknowledgementResponse = api
 			.packet_acknowledgement(
-				&at,
+				hash_at,
 				channel_id.as_bytes().to_vec(),
 				port_id.as_bytes().to_vec(),
 				seq,
@@ -1409,7 +1480,7 @@ where
 			.ok_or_else(|| runtime_error_into_rpc_error("Error fetching packet acknowledgement"))?;
 		let mut keys = vec![result.trie_key];
 		let child_trie_key = api
-			.child_trie_key(&at)
+			.child_trie_key(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Failed to get child trie key"))?;
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
@@ -1445,16 +1516,21 @@ where
 			.map_err(|_| RpcError::Custom("Unknown block".into()))?
 			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 		let para_id = api
-			.para_id(&at)
+			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
 		let result: ibc_primitives::QueryPacketReceiptResponse = api
-			.packet_receipt(&at, channel_id.as_bytes().to_vec(), port_id.as_bytes().to_vec(), seq)
+			.packet_receipt(
+				hash_at,
+				channel_id.as_bytes().to_vec(),
+				port_id.as_bytes().to_vec(),
+				seq,
+			)
 			.ok()
 			.flatten()
 			.ok_or_else(|| runtime_error_into_rpc_error("Error fetching packet receipt"))?;
 		let mut keys = vec![result.trie_key];
 		let child_trie_key = api
-			.child_trie_key(&at)
+			.child_trie_key(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Failed to get child trie key"))?;
 		let child_info = ChildInfo::new_default(&child_trie_key);
 		let proof = self
@@ -1478,13 +1554,12 @@ where
 		let api = self.client.runtime_api();
 		let block_hash = self.client.info().best_hash;
 
-		let at = BlockId::Hash(block_hash);
-
-		let denom_trace = api.denom_trace(&at, asset_id).ok().flatten().ok_or_else(|| {
-			runtime_error_into_rpc_error(
-				"[ibc_rpc]: Could not find a denom trace for asset id provided",
-			)
-		})?;
+		let denom_trace =
+			api.denom_trace(block_hash, asset_id).ok().flatten().ok_or_else(|| {
+				runtime_error_into_rpc_error(
+					"[ibc_rpc]: Could not find a denom trace for asset id provided",
+				)
+			})?;
 
 		let denom_str = String::from_utf8(denom_trace.denom).map_err(|_| {
 			runtime_error_into_rpc_error(
@@ -1517,11 +1592,11 @@ where
 		let api = self.client.runtime_api();
 		let block_hash = self.client.info().best_hash;
 
-		let at = BlockId::Hash(block_hash);
+		let at = block_hash;
 		// Set default limit to 20 items
 		let limit = limit.unwrap_or(20);
 		let result =
-			api.denom_traces(&at, key, offset, limit, count_total).ok().ok_or_else(|| {
+			api.denom_traces(at, key, offset, limit, count_total).ok().ok_or_else(|| {
 				runtime_error_into_rpc_error(
 					"[ibc_rpc]: Could not find a denom trace for asset id provided",
 				)
@@ -1566,36 +1641,13 @@ where
 		block_hash: Block::Hash,
 		ext_hash: Block::Hash,
 	) -> Result<IdentifiedClientState> {
+		let (block, event) = self.ibc_event_by_tx_id(block_hash, ext_hash)?;
 		let api = self.client.runtime_api();
-		let at = BlockId::Hash(block_hash);
-		let block = self.client.block(&at).ok().flatten().ok_or_else(|| {
-			runtime_error_into_rpc_error("[ibc_rpc]: failed to find block with provided hash")
-		})?;
-		let extrinsics = block.block.extrinsics();
-		let (ext_index, ..) = extrinsics
-			.iter()
-			.enumerate()
-			.find(|(_, ext)| ext_hash.as_ref() == blake2_256(ext.encode().as_slice()).as_ref())
-			.ok_or_else(|| {
-				runtime_error_into_rpc_error(
-					"[ibc_rpc]: failed to find extrinsic with provided hash",
-				)
-			})?;
-
-		let events = api
-			.block_events(&at, Some(ext_index as u32))
-			.map_err(|_| runtime_error_into_rpc_error("[ibc_rpc]: failed to read block events"))?;
-
-		// There should be only one ibc event in this list in this case
-		let event = events
-			.get(0)
-			.ok_or_else(|| runtime_error_into_rpc_error("[ibc_rpc]: Could not find any ibc event"))?
-			.clone();
 
 		match event {
 			Ok(IbcEvent::CreateClient { client_id, .. }) => {
 				let result: ibc_primitives::QueryClientStateResponse = api
-					.client_state(&at, client_id.clone())
+					.client_state(block.block.header().hash(), client_id.clone())
 					.ok()
 					.flatten()
 					.ok_or_else(|| runtime_error_into_rpc_error("client state to exist"))?;
@@ -1614,6 +1666,76 @@ where
 		}
 	}
 
+	fn query_newly_created_connection(
+		&self,
+		block_hash: Block::Hash,
+		ext_hash: Block::Hash,
+	) -> Result<IdentifiedConnection> {
+		let (block, event) = self.ibc_event_by_tx_id(block_hash, ext_hash)?;
+
+		match event {
+			Ok(IbcEvent::OpenInitConnection { connection_id, client_id, .. }) => {
+				let connection_id =
+					connection_id.expect("connection id should exist after its creation");
+
+				let height = (*block.block.header().number()).try_into().map_err(|_| {
+					runtime_error_into_rpc_error("block number should be valid u64")
+				})?;
+				let connections: Vec<IdentifiedConnection> = self.query_connection_using_client(
+					height,
+					String::from_utf8(client_id).map_err(|_| {
+						runtime_error_into_rpc_error("client id should be valid utf8")
+					})?,
+				)?;
+				let connection = connections
+					.into_iter()
+					.find(|connection| connection.id.as_bytes() == connection_id)
+					.ok_or_else(|| {
+						runtime_error_into_rpc_error("connection should exist after its creation")
+					})?;
+				Ok(connection)
+			},
+			_ =>
+				Err(runtime_error_into_rpc_error("[ibc_rpc]: Could not find client creation event")),
+		}
+	}
+
+	fn query_newly_created_channel(
+		&self,
+		block_hash: Block::Hash,
+		ext_hash: Block::Hash,
+	) -> Result<IdentifiedChannel> {
+		let (block, event) = self.ibc_event_by_tx_id(block_hash, ext_hash)?;
+
+		match event {
+			Ok(IbcEvent::OpenInitChannel { channel_id, port_id, connection_id, .. }) => {
+				let channel_id = channel_id.expect("channel should exist after its creation");
+
+				let height = (*block.block.header().number()).try_into().map_err(|_| {
+					runtime_error_into_rpc_error("block number should be valid u64")
+				})?;
+				let channels: QueryChannelsResponse = self.query_connection_channels(
+					height,
+					String::from_utf8(connection_id).map_err(|_| {
+						runtime_error_into_rpc_error("connection id should be valid utf8")
+					})?,
+				)?;
+				let channel = channels
+					.channels
+					.into_iter()
+					.find(|ch| {
+						ch.channel_id.as_bytes() == channel_id && ch.port_id.as_bytes() == port_id
+					})
+					.ok_or_else(|| {
+						runtime_error_into_rpc_error("connection should exist after its creation")
+					})?;
+				Ok(channel)
+			},
+			_ =>
+				Err(runtime_error_into_rpc_error("[ibc_rpc]: Could not find client creation event")),
+		}
+	}
+
 	fn query_events(
 		&self,
 		block_numbers: Vec<BlockNumberOrHash<Block::Hash>>,
@@ -1625,18 +1747,69 @@ where
 				BlockNumberOrHash::Hash(block_hash) => BlockId::Hash(block_hash),
 				BlockNumberOrHash::Number(block_number) => BlockId::Number(block_number.into()),
 			};
+			let hash_at = self
+				.client
+				.block_hash_from_id(&at)
+				.map_err(|_| RpcError::Custom("Unknown block".into()))?
+				.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
 
-			let temp = api.block_events(&at, None).map_err(|_| {
+			let temp = api.block_events(hash_at, None).map_err(|_| {
 				runtime_error_into_rpc_error("[ibc_rpc]: failed to read block events")
 			})?;
 			let temp = temp
 				.into_iter()
 				.filter_map(|event| {
-					filter_map_pallet_event::<C, Block, AssetId>(&at, &api, event.ok()?)
+					filter_map_pallet_event::<C, Block, AssetId>(hash_at, &api, event.ok()?)
 				})
 				.collect();
 			events.insert(block_number_or_hash.to_string(), temp);
 		}
 		Ok(events)
+	}
+}
+
+impl<C, Block, AssetId> IbcRpcHandler<C, Block, AssetId>
+where
+	Block: BlockT,
+	C: 'static
+		+ BlockBackend<Block>
+		+ HeaderBackend<Block>
+		+ ProofProvider<Block>
+		+ ProvideRuntimeApi<Block>
+		+ Send
+		+ Sync,
+	C::Api: IbcRuntimeApi<Block, AssetId>,
+	AssetId: codec::Codec + Copy,
+{
+	fn ibc_event_by_tx_id(
+		&self,
+		block_hash: <Block as BlockT>::Hash,
+		ext_hash: <Block as BlockT>::Hash,
+	) -> Result<(SignedBlock<Block>, core::result::Result<IbcEvent, IbcError>)> {
+		let api = self.client.runtime_api();
+		let block = self.client.block(block_hash).ok().flatten().ok_or_else(|| {
+			runtime_error_into_rpc_error("[ibc_rpc]: failed to find block with provided hash")
+		})?;
+		let extrinsics = block.block.extrinsics();
+		let (ext_index, ..) = extrinsics
+			.iter()
+			.enumerate()
+			.find(|(_, ext)| ext_hash.as_ref() == blake2_256(ext.encode().as_slice()).as_ref())
+			.ok_or_else(|| {
+				runtime_error_into_rpc_error(
+					"[ibc_rpc]: failed to find extrinsic with provided hash",
+				)
+			})?;
+
+		let events = api
+			.block_events(block.block.header().hash(), Some(ext_index as _))
+			.map_err(|_| runtime_error_into_rpc_error("[ibc_rpc]: failed to read block events"))?;
+
+		// There should be only one ibc event in this list in this case
+		let event = events
+			.get(0)
+			.ok_or_else(|| runtime_error_into_rpc_error("[ibc_rpc]: Could not find any ibc event"))?
+			.clone();
+		Ok((block, event))
 	}
 }

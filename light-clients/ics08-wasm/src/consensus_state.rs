@@ -1,3 +1,18 @@
+// Copyright (C) 2022 ComposableFi.
+// SPDX-License-Identifier: Apache-2.0
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #[cfg(feature = "cosmwasm")]
 use crate::msg::Base64;
 use crate::Bytes;
@@ -30,26 +45,11 @@ pub const WASM_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.Conse
 #[cfg_attr(feature = "cosmwasm", cw_serde)]
 #[cfg_attr(not(feature = "cosmwasm"), derive(Clone, Debug, PartialEq))]
 #[derive(Eq)]
-#[cfg_attr(feature = "cosmwasm", serde(remote = "CommitmentRoot"))]
-pub struct CommitmentRootBase64 {
-	#[cfg_attr(feature = "cosmwasm", schemars(with = "String"))]
-	#[cfg_attr(feature = "cosmwasm", serde(with = "Base64"))]
-	pub bytes: Vec<u8>,
-}
-
-#[cfg_attr(feature = "cosmwasm", cw_serde)]
-#[cfg_attr(not(feature = "cosmwasm"), derive(Clone, Debug, PartialEq))]
-#[derive(Eq)]
 pub struct ConsensusState<AnyConsensusState> {
 	#[cfg_attr(feature = "cosmwasm", schemars(with = "String"))]
 	#[cfg_attr(feature = "cosmwasm", serde(with = "Base64", default))]
 	pub data: Bytes,
-	#[cfg_attr(feature = "cosmwasm", schemars(with = "String"))]
-	#[cfg_attr(feature = "cosmwasm", serde(with = "Base64", default))]
-	pub code_id: Bytes,
 	pub timestamp: u64,
-	#[cfg_attr(feature = "cosmwasm", serde(with = "CommitmentRootBase64"))]
-	pub root: CommitmentRoot,
 	#[cfg_attr(feature = "cosmwasm", serde(skip))]
 	#[cfg_attr(feature = "cosmwasm", schemars(skip))]
 	pub inner: Box<AnyConsensusState>,
@@ -64,7 +64,7 @@ where
 	type Error = Infallible;
 
 	fn root(&self) -> &CommitmentRoot {
-		&self.root
+		unimplemented!()
 	}
 
 	fn timestamp(&self) -> Timestamp {
@@ -101,30 +101,17 @@ where
 
 	fn try_from(raw: RawConsensusState) -> Result<Self, Self::Error> {
 		let any = Any::decode(&mut &raw.data[..])
-			.map_err(|e| format!("failed to decode ConsensusState::data into Any: {}", e))?;
+			.map_err(|e| format!("failed to decode ConsensusState::data into Any: {e}"))?;
 		let inner = AnyConsensusState::try_from(any).map_err(|e| {
-			format!("failed to decode ConsensusState::data into ConsensusState: {}", e)
+			format!("failed to decode ConsensusState::data into ConsensusState: {e}")
 		})?;
-		Ok(Self {
-			data: raw.data,
-			code_id: raw.code_id,
-			timestamp: raw.timestamp,
-			root: CommitmentRoot::from_bytes(
-				&raw.root.ok_or_else(|| "root is None".to_string())?.hash,
-			),
-			inner: Box::new(inner),
-		})
+		Ok(Self { data: raw.data, timestamp: raw.timestamp, inner: Box::new(inner) })
 	}
 }
 
 impl<AnyConsensusState> From<ConsensusState<AnyConsensusState>> for RawConsensusState {
 	fn from(value: ConsensusState<AnyConsensusState>) -> Self {
-		Self {
-			data: value.data,
-			code_id: value.code_id,
-			timestamp: value.timestamp,
-			root: Some(value.root.into()),
-		}
+		Self { data: value.data, timestamp: value.timestamp }
 	}
 }
 

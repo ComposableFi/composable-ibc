@@ -1,4 +1,4 @@
-FROM paritytech/ci-linux:production as builder
+FROM paritytech/ci-unified:bullseye-1.71.0-v20230727 as builder
 
 WORKDIR /code
 
@@ -19,6 +19,10 @@ FROM debian:buster-slim
 RUN useradd -m -u 1000 -U -s /bin/sh -d /centauri centauri
 
 COPY --from=builder /code/target/release/hyperspace /usr/local/bin
+
+# add ca certificates so that it works with ssl endpoints
+RUN apt update && \
+	apt install -y ca-certificates
 
 # checks
 RUN ldd /usr/local/bin/hyperspace && \

@@ -13,17 +13,6 @@ exclude = [
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[profile.release]
-opt-level = 3
-debug = false
-rpath = false
-lto = true
-debug-assertions = false
-codegen-units = 1
-panic = 'abort'
-incremental = false
-overflow-checks = true
-
 [package.metadata.scripts]
 optimize = """docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
@@ -34,10 +23,7 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 [dependencies]
 cosmwasm-schema = "1.1.3"
 cosmwasm-std = "1.1.3"
-cosmwasm-storage = "1.1.3"
-#cosmwasm-crypto = { version = "1.1.3", default-features = false }
 cw-storage-plus = "0.15.1"
-cw2 = "0.15.1"
 schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
@@ -48,7 +34,7 @@ derive_more = "0.99.17"
 ibc = { path = "../../ibc/modules", default-features = false }
 ibc-derive = { path = "../../ibc/derive", default-features = false }
 ibc-proto = { path = "../../ibc/proto", default-features = false, features = ["json-schema"] }
-ics23 = { git = "https://github.com/confio/ics23", rev = "a4daeb4c24ce1be827829c0841446abc690c4f11", default-features = false }
+ics23 = { git = "https://github.com/cosmos/ics23", rev = "74ce807b7be39a7e0afb4e2efb8e28a57965f57b", default-features = false }
 ics10-grandpa = { path = "../ics10-grandpa", default-features = false }
 grandpa-light-client-primitives = { path = "../../algorithms/grandpa/primitives", default-features = false }
 light-client-common = { path = "../../light-clients/common", default-features = false  }

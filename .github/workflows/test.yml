@@ -21,6 +21,7 @@ jobs:
       image: ubuntu:jammy
       env:
         BUILD_DIR: /home/ghr/_work/_temp
+        RUST_LOG: hyperspace=trace,hyperspace_parachain=trace
       volumes:
         - /home/ghr/_work/_temp:/home/ghr/_work/_temp
     runs-on:
@@ -60,6 +61,9 @@ jobs:
           curl https://sh.rustup.rs -sSf | bash -s -- -y
           $HOME/.cargo/bin/rustup toolchain install nightly
           $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain nightly
+          $HOME/.cargo/bin/rustup component add rustfmt --toolchain nightly
+          $HOME/.cargo/bin/rustup component add rustfmt
+          $HOME/.cargo/bin/rustup default nightly
 
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
@@ -142,7 +146,7 @@ jobs:
 
       - name: Check that subxt-generated is up to date
         run: |
-          ./scripts/generate-subxt.sh
+          RELAY_HOST=ws://$GATEWAY_IP:9944 PARA_HOST=ws://$GATEWAY_IP:9188 ./scripts/generate-subxt.sh
 
       - name: Run all unit tests
         run: |
@@ -159,7 +163,7 @@ jobs:
       - name: Terminate local parachain cluster
         run: |
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml down -v
-    
+
   test-solidity:
     runs-on:
       - self-hosted
@@ -176,6 +180,6 @@ jobs:
         with:
           node-version: 16
       - name: Install dependencies
-        run: npm install 
-      - name: run unit test 
+        run: npm install
+      - name: run unit test
         run: npm run test

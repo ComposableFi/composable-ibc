@@ -1,5 +1,4 @@
 use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, vec::Vec};
-use core::str::FromStr;
 use frame_support::{
 	pallet_prelude::{StorageValue, ValueQuery},
 	traits::StorageInstance,
@@ -11,14 +10,20 @@ use ibc::{
 			client_consensus::ConsensusState, client_message::ClientMessage,
 			client_state::ClientState,
 		},
-		ics23_commitment::commitment::CommitmentRoot,
-		ics24_host::identifier::ClientId,
 	},
 	Height,
 };
 use ibc_derive::{ClientDef, ClientMessage, ClientState, ConsensusState, Protobuf};
 use ibc_primitives::runtime_interface;
 use ibc_proto::google::protobuf::Any;
+use ics07_tendermint::{
+	client_message::{
+		TENDERMINT_CLIENT_MESSAGE_TYPE_URL, TENDERMINT_HEADER_TYPE_URL,
+		TENDERMINT_MISBEHAVIOUR_TYPE_URL,
+	},
+	client_state::TENDERMINT_CLIENT_STATE_TYPE_URL,
+	consensus_state::TENDERMINT_CONSENSUS_STATE_TYPE_URL,
+};
 use ics08_wasm::{
 	client_message::{
 		WASM_CLIENT_MESSAGE_TYPE_URL, WASM_HEADER_TYPE_URL, WASM_MISBEHAVIOUR_TYPE_URL,
@@ -55,14 +60,6 @@ use tendermint::{
 	PublicKey, Signature,
 };
 use tendermint_proto::Protobuf;
-
-pub const TENDERMINT_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.ClientState";
-pub const TENDERMINT_CLIENT_MESSAGE_TYPE_URL: &str =
-	"/ibc.lightclients.tendermint.v1.ClientMessage";
-pub const TENDERMINT_CONSENSUS_STATE_TYPE_URL: &str =
-	"/ibc.lightclients.tendermint.v1.ConsensusState";
-pub const TENDERMINT_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.Misbehaviour";
-pub const TENDERMINT_HEADER_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.Header";
 
 #[derive(Clone, Default, PartialEq, Debug, Eq)]
 pub struct HostFunctionsManager;
@@ -116,12 +113,12 @@ impl Verifier for HostFunctionsManager {
 		signature: &Signature,
 	) -> Result<(), TendermintCryptoError> {
 		let signature = sp_core::ed25519::Signature::from_slice(signature.as_bytes())
-			.ok_or_else(|| TendermintCryptoError::MalformedSignature)?;
+			.ok_or(TendermintCryptoError::MalformedSignature)?;
 		let public_key = sp_core::ed25519::Public::from_slice(pubkey.to_bytes().as_slice())
 			.map_err(|_| TendermintCryptoError::MalformedPublicKey)?;
 		sp_io::crypto::ed25519_verify(&signature, msg, &public_key)
-			.then(|| ())
-			.ok_or_else(|| TendermintCryptoError::VerificationFailed)
+			.then_some(())
+			.ok_or(TendermintCryptoError::VerificationFailed)
 	}
 }
 
@@ -311,12 +308,10 @@ pub enum AnyConsensusState {
 }
 
 impl AnyConsensusState {
-	pub fn wasm(inner: Self, code_id: Bytes) -> Result<Self, tendermint_proto::Error> {
+	pub fn wasm(inner: Self) -> Result<Self, tendermint_proto::Error> {
 		Ok(Self::Wasm(ics08_wasm::consensus_state::ConsensusState {
 			timestamp: inner.timestamp().nanoseconds(),
 			data: inner.encode_to_vec()?,
-			code_id,
-			root: CommitmentRoot::from_bytes(&vec![1; 32]),
 			inner: Box::new(inner),
 		}))
 	}
@@ -380,7 +375,6 @@ impl AnyClientMessage {
 			None => Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(
 				ics08_wasm::client_message::Misbehaviour {
 					data: inner.encode_to_vec()?,
-					client_id: ClientId::from_str("00-unused-0").expect("valid client id"),
 					inner: Box::new(inner),
 				},
 			)),
