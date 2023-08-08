@@ -30,9 +30,9 @@ use sync_committee_verifier::LightClientUpdate;
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA header
-pub const GRANDPA_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.ClientMessage";
-pub const GRANDPA_HEADER_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.Header";
-pub const GRANDPA_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.Misbehaviour";
+pub const ETHEREUM_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.ClientMessage";
+pub const ETHEREUM_HEADER_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.Header";
+pub const ETHEREUM_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.Misbehaviour";
 
 pub type Header = LightClientUpdate;
 

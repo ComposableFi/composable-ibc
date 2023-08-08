@@ -29,10 +29,11 @@ async fn test_prover() {
 	let sync_committee_prover = SyncCommitteeProver::new(NODE_URL.to_string());
 	let block_id = "head";
 	let block_header = sync_committee_prover.fetch_header(&block_id).await.unwrap();
-	println!("block_header: {:?}", block_header);
+	// println!("block_header: {:?}", block_header);
 	let state = sync_committee_prover
 		.fetch_beacon_state(&block_header.slot.to_string())
 		.await
 		.unwrap();
-	println!("state: {:?}", state);
+	// println!("state: {:?}", state);
+	// println!("state: {:?}", state.validators);
 }

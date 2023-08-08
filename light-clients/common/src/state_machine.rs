@@ -49,22 +49,21 @@ where
 	let memory_db = proof.into_memory_db::<H>();
 	let trie = TrieDBBuilder::<LayoutV0<H>>::new(&memory_db, &root).build();
 	let child_root = trie
-		.get(child_info.prefixed_storage_key().as_slice())?
+		.get(child_info.prefixed_storage_key().as_slice()).map_err(|e| Error::Trie(format!("{e}")))?
 		.map(|r| {
 			let mut hash = H::Out::default();
 
 			// root is fetched from DB, not writable by runtime, so it's always valid.
 			hash.as_mut().copy_from_slice(&r[..]);
-
 			hash
 		})
-		.ok_or(Error::<H>::ChildRootNotFound)?;
+		.ok_or_else(|| Error::Trie("ChildRootNotFound".to_string()))?;
 
 	let child_db = KeySpacedDB::new(&memory_db, child_info.keyspace());
 	let child_trie = TrieDBBuilder::<LayoutV0<H>>::new(&child_db, &child_root).build();
 
 	for (key, value) in items {
-		let recovered = child_trie.get(&key)?.and_then(|val| Decode::decode(&mut &val[..]).ok());
+		let recovered = child_trie.get(&key).map_err(|e| Error::Trie(format!("{e}")))?.and_then(|val| Decode::decode(&mut &val[..]).ok());
 
 		if recovered != value {
 			Err(Error::ValueMismatch {
@@ -100,7 +99,7 @@ where
 	let mut result = BTreeMap::new();
 
 	for key in keys.into_iter() {
-		let value = trie.get(key.as_ref())?.and_then(|val| Decode::decode(&mut &val[..]).ok());
+		let value = trie.get(key.as_ref()).map_err(|e| Error::Trie(format!("{e}")))?.and_then(|val| Decode::decode(&mut &val[..]).ok());
 		result.insert(key.as_ref().to_vec(), value);
 	}
 

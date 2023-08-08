@@ -1,10 +1,10 @@
-module-grandpa=ics10-grandpa
+module=icsxx-ethereum
 
-check-ics10-grandpa:
-	cargo +nightly check -p $(module-grandpa) --no-default-features --target=wasm32-unknown-unknown
+check-icsxx-ethereum:
+	cargo check -p $(module) --no-default-features --target=wasm32-unknown-unknown
 
-build-ics10-grandpa:
-	cargo +nightly build -p $(module-grandpa) --no-default-features --target=wasm32-unknown-unknown
+build-icsxx-ethereum:
+	cargo build -p $(module) --no-default-features --target=wasm32-unknown-unknown
 
-test-ics10-grandpa:
-	cargo +nightly t -p $(module-grandpa)
+test-icsxx-ethereum:
+	cargo t -p $(module)

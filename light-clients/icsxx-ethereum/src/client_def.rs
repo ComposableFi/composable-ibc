@@ -107,7 +107,7 @@ where
 			.iter()
 			.map(|b| {
 				let height = Height::new(
-					header.finality_proof.epoch, // TODO: check this
+					2, // TODO: check this
 					b.execution_payload.block_number as u64,
 				);
 				let cs = Ctx::AnyConsensusState::wrap(&ConsensusState::new(
@@ -119,7 +119,7 @@ where
 			})
 			.collect::<Vec<_>>();
 		let height = Height::new(
-			header.finality_proof.epoch, // TODO: check this
+			2, // TODO: check this
 			header.execution_payload.block_number as u64,
 		);
 		let cs = Ctx::AnyConsensusState::wrap(&ConsensusState::new(
@@ -169,6 +169,10 @@ where
 		proof_upgrade_consensus_state: Vec<u8>,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
 		unimplemented!()
+	}
+
+	fn check_substitute_and_update_state<Ctx: ReaderContext>(&self, ctx: &Ctx, subject_client_id: ClientId, substitute_client_id: ClientId, old_client_state: Self::ClientState, substitute_client_state: Self::ClientState) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
+		todo!("check_substitute_and_update_state")
 	}
 
 	fn verify_client_consensus_state<Ctx: ReaderContext>(

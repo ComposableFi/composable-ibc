@@ -26,7 +26,7 @@ use tendermint::time::Time;
 use tendermint_proto::{google::protobuf as tpb, Protobuf};
 
 /// Protobuf type url for GRANDPA Consensus State
-pub const GRANDPA_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.ConsensusState";
+pub const ETHEREUM_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.ConsensusState";
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConsensusState {
@@ -46,7 +46,7 @@ impl ConsensusState {
 
 	pub fn to_any(&self) -> Any {
 		Any {
-			type_url: GRANDPA_CONSENSUS_STATE_TYPE_URL.to_string(),
+			type_url: ETHEREUM_CONSENSUS_STATE_TYPE_URL.to_string(),
 			value: self.encode_vec().expect("encode ConsensusState"),
 		}
 	}

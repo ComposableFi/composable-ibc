@@ -4,20 +4,6 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Vladislav Markushin <negigic@gmail.com>"]
 
-[features]
-default = ["std"]
-std = [
-    "ibc/std",
-    "ibc-proto/std",
-    "light-client-common/std",
-    "prost/std",
-    "prost-types/std",
-    "anyhow/std",
-    "serde/std",
-    "sync-committee-verifier/std",
-    "sync-committee-primitives/std",
-]
-
 [build-dependencies]
 prost-build = "0.11.1"
 
@@ -27,11 +13,13 @@ ibc = { path = "../../ibc/modules", default-features = false }
 ibc-proto = { path = "../../ibc/proto", default-features = false }
 
 # local deps
-sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "a326f56595fe51a8756cc6d7021a89564b8dc61f", default-features = false }
-sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "a326f56595fe51a8756cc6d7021a89564b8dc61f", default-features = false }
+sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "4e45ae9797198a617abfcbff098253cedc8a1f2e", default-features = false }
+sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "4e45ae9797198a617abfcbff098253cedc8a1f2e", default-features = false }
 light-client-common = { path = "../common", default-features = false }
-ethereum-consensus = { git = "https://github.com/polytope-labs/ethereum-consensus", rev = "d3fe0ad76613b52cdfbdea7c317ecdc35f271e4f", default-features = false }
-ssz-rs = { git = "https://github.com/polytope-labs/ssz-rs",rev = "2e28a8800787392045fb3f8f1eaef6c65a8600d7", default-features = false }
+#ethereum-consensus = { git = "https://github.com/polytope-labs/ethereum-consensus", rev = "48335b5c8074d63553ee4681993e294eba947f88", default-features = false }
+#ssz-rs = { git = "https://github.com/polytope-labs/ssz-rs", rev = "96f9a89ccc56ab2abb4c3a83eaedb415034ada49", default-features = false }
+ethereum-consensus = { git = "https://github.com/polytope-labs/ethereum-consensus", branch = "main", default-features = false }
+ssz-rs = { git = "https://github.com/polytope-labs/ssz-rs", branch = "main" , default-features = false }
 
 # crates.io
 prost = { version = "0.11", default-features = false }
@@ -57,7 +45,24 @@ tokio = { version = "1.21.1", features = ["macros"] }
 json = { package = "serde_json", version = "1.0.85" }
 jsonrpsee-ws-client = "0.16.2"
 actix-rt = "2.3.0"
-sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "a326f56595fe51a8756cc6d7021a89564b8dc61f", features = ["testing"] }
-sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "a326f56595fe51a8756cc6d7021a89564b8dc61f", features = ["testing"] }
-sync-committee-prover = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "a326f56595fe51a8756cc6d7021a89564b8dc61f" }
+sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "4e45ae9797198a617abfcbff098253cedc8a1f2e", features = ["testing"] }
+sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "4e45ae9797198a617abfcbff098253cedc8a1f2e", features = ["testing"] }
+sync-committee-prover = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "4e45ae9797198a617abfcbff098253cedc8a1f2e" }
 
+[features]
+#default = ["std"]
+default = ["std"]
+std = [
+    "ibc/std",
+    "ibc-proto/std",
+    "light-client-common/std",
+    "prost/std",
+    "prost-types/std",
+    "anyhow/std",
+    "serde/std",
+    "sync-committee-verifier/std",
+    "sync-committee-primitives/std",
+    "ethereum-consensus/std",
+    "ssz-rs/std",
+    "tendermint/std",
+]

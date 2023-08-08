@@ -33,7 +33,7 @@ use sync_committee_verifier::LightClientState;
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA ClientState
-pub const GRANDPA_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.ClientState";
+pub const ETHEREUM_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.ClientState";
 
 #[derive(PartialEq, Clone, Debug, Default, Eq)]
 pub struct ClientState<H> {
@@ -69,7 +69,7 @@ impl<H: Clone> ClientState<H> {
 
 	pub fn to_any(&self) -> Any {
 		Any {
-			type_url: GRANDPA_CLIENT_STATE_TYPE_URL.to_string(),
+			type_url: ETHEREUM_CLIENT_STATE_TYPE_URL.to_string(),
 			value: self.encode_vec().unwrap(),
 		}
 	}
