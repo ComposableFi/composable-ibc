@@ -191,9 +191,7 @@ impl Cmd {
 	}
 
 	pub async fn create_connection(&self) -> Result<Config> {
-		let delay_period_seconds: NonZeroU64 = self
-			.delay_period
-			.expect("delay_period should be provided when creating a connection")
+		let delay_period_seconds: NonZeroU64 = self.delay_period_seconds.into()
 			.into();
 		let delay = Duration::from_secs(delay_period_seconds.into());
 		let mut config = self.parse_config().await?;

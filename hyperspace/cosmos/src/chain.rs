@@ -92,10 +92,7 @@ where
 
 	async fn finality_notifications(
 		&self,
-	) -> Result<
-		Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>>,
-		Error,
-	> {
+	) -> Result<Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send>>, Error> {
 		let ws_client = self.rpc_client.clone();
 		let subscription = ws_client
 			.subscribe(Query::from(EventType::NewBlock))

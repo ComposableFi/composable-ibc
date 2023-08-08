@@ -291,7 +291,7 @@ pub trait IbcProvider {
 		seq: u64,
 	) -> Result<QueryPacketReceiptResponse, Self::Error>;
 
-	/// Return latest finalized height and timestamp
+	/// Return latest finalized height and timestamp specifically for the chain.
 	async fn latest_height_and_timestamp(&self) -> Result<(Height, Timestamp), Self::Error>;
 
 	async fn query_packet_commitments(
@@ -534,7 +534,7 @@ pub trait Chain:
 	/// Return a stream that yields when new [`IbcEvents`] are ready to be queried.
 	async fn finality_notifications(
 		&self,
-	) -> Result<Pin<Box<dyn Stream<Item = Self::FinalityEvent> + Send + Sync>>, Self::Error>;
+	) -> Result<Pin<Box<dyn Stream<Item = Self::FinalityEvent> + Send>>, Self::Error>;
 
 	/// This should be used to submit new messages [`Vec<Any>`] from a counterparty chain to this
 	/// chain.
