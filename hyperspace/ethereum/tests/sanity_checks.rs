@@ -1,11 +1,14 @@
 use std::{future::Future, ops::Deref, path::PathBuf, str::FromStr, sync::Arc};
 
 use ethers::{
-	abi::Token, prelude::ContractInstance, solc::ProjectPathsConfig, utils::AnvilInstance,
+	abi::Token, prelude::ContractInstance, utils::AnvilInstance,
 };
+use ethers::utils::Anvil;
+use ethers_solc::{ProjectPathsConfig, ProjectCompileOutput};
 use ibc::core::ics24_host::identifier::{ChannelId, PortId};
 use primitives::IbcProvider;
 use prost::Message;
+use tracing::log;
 
 use hyperspace_ethereum::config::Config;
 
@@ -20,8 +23,8 @@ async fn hyperspace_ethereum_client_fixture<M>(
 		ibc_packet,
 		ibc_handler,
 	}: &utils::DeployYuiIbc<Arc<M>, M>,
-) -> hyperspace_ethereum::client::Client {
-	hyperspace_ethereum::client::Client::new(Config {
+) -> hyperspace_ethereum::client::EthereumClient {
+	hyperspace_ethereum::client::EthereumClient::new(Config {
 		http_rpc_url: anvil.endpoint().parse().unwrap(),
 		ws_rpc_url: Default::default(),
 		ibc_handler_address: ibc_handler.address(),
@@ -56,7 +59,8 @@ type ProviderImpl = ethers::prelude::SignerMiddleware<
 #[allow(dead_code)]
 struct DeployYuiIbcMockClient {
 	pub path: PathBuf,
-	pub project_output: ethers::solc::ProjectCompileOutput,
+	pub project_output: ProjectCompileOutput,
+	// pub project_output: ethers::solc::ProjectCompileOutput,
 	pub anvil: AnvilInstance,
 	pub client: Arc<ProviderImpl>,
 	pub ibc_mock_client: ContractInstance<Arc<ProviderImpl>, ProviderImpl>,
@@ -67,6 +71,7 @@ async fn deploy_yui_ibc_and_mock_client_fixture() -> DeployYuiIbcMockClient {
 	let path = utils::yui_ibc_solidity_path();
 	let project_output = utils::compile_yui(&path, "contracts/core");
 	let (anvil, client) = utils::spawn_anvil();
+	log::warn!("{}", anvil.endpoint());
 	let yui_ibc = utils::deploy_yui_ibc(&project_output, client.clone()).await;
 
 	let ibc_mock_client = utils::compile_solc({
@@ -119,11 +124,15 @@ async fn deploy_mock_client_fixture(deploy: &DeployYuiIbcMockClient) -> ClientId
 		.register_client("mock-client", deploy.ibc_mock_client.address())
 		.await;
 
+	let string = deploy
+		.yui_ibc
+		.create_client(utils::mock::create_client_msg("mock-client"))
+		.await;
+	println!("client id: {}", string);
+	println!("ibc_handler contract addr: {:?}", deploy
+		.yui_ibc.ibc_handler.address());
 	ClientId(
-		deploy
-			.yui_ibc
-			.create_client(utils::mock::create_client_msg("mock-client"))
-			.await,
+		string,
 	)
 }
 
@@ -305,12 +314,15 @@ async fn test_ibc_channel() {
 
 #[tokio::test]
 async fn test_ibc_packet() {
+	let _ = env_logger::try_init();
 	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
 	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc).await;
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 
 	let mock_module = deploy_mock_module_fixture(&deploy).await;
 	deploy.yui_ibc.bind_port("port-0", mock_module.address()).await;
+
+	tokio::time::sleep(std::time::Duration::from_secs(1000)).await;
 
 	let connection_id = client_id.open_connection(&deploy).await;
 	let channel_id = deploy.yui_ibc.channel_open_init("port-0", &connection_id).await;

@@ -1,4 +1,6 @@
 use std::{future::Future, str::FromStr, sync::Arc};
+use std::pin::Pin;
+use async_trait::async_trait;
 
 use ethers::{
 	abi::{Address, ParamType, ParseError, Token},
@@ -16,6 +18,10 @@ use ibc::{
 	Height,
 };
 use thiserror::Error;
+use ibc::applications::transfer::msgs::transfer::MsgTransfer;
+use ibc::applications::transfer::PrefixedCoin;
+use ibc_primitives::Timeout;
+use primitives::CommonClientState;
 
 use crate::config::Config;
 
@@ -31,10 +37,12 @@ pub const CLIENT_IMPLS_STORAGE_INDEX: u32 = 3;
 pub const CONNECTIONS_STORAGE_INDEX: u32 = 4;
 
 #[derive(Debug, Clone)]
-pub struct Client {
+pub struct EthereumClient {
 	pub http_rpc: Arc<EthRpcClient>,
 	pub(crate) ws_uri: http::Uri,
 	pub(crate) config: Config,
+	/// Common relayer data
+	pub common_state: CommonClientState,
 }
 
 pub type MiddlewareErrorType = SignerMiddlewareError<
@@ -76,7 +84,7 @@ pub struct AckPacket {
 	pub acknowledgement: Vec<u8>,
 }
 
-impl Client {
+impl EthereumClient {
 	pub async fn new(config: Config) -> Result<Self, ClientError> {
 		let client = Provider::<Http>::try_from(config.http_rpc_url.to_string())
 			.map_err(|_| ClientError::UriParseError(config.http_rpc_url.clone()))?;
@@ -101,7 +109,7 @@ impl Client {
 
 		let client = ethers::middleware::SignerMiddleware::new(client, wallet);
 
-		Ok(Self { http_rpc: Arc::new(client), ws_uri: config.ws_rpc_url.clone(), config })
+		Ok(Self { http_rpc: Arc::new(client), ws_uri: config.ws_rpc_url.clone(), config, common_state: Default::default() })
 	}
 
 	pub async fn websocket_provider(&self) -> Result<Provider<Ws>, ClientError> {
@@ -316,15 +324,18 @@ impl Client {
 		let client = self.http_rpc.clone();
 		let address = self.config.ibc_handler_address.clone();
 
+		dbg!(&address);
+		dbg!(&H256::from_str(&index).unwrap());
+		dbg!(&block_height);
+
 		async move {
-			client
+			Ok(client
 				.get_proof(
 					NameOrAddress::Address(address),
 					vec![H256::from_str(&index).unwrap()],
 					block_height.map(|i| BlockId::from(i)),
 				)
-				.map_err(|err| panic!("{err}"))
-				.await
+				.await.unwrap())
 		}
 	}
 
@@ -434,74 +445,21 @@ impl Client {
 }
 
 // #[cfg(any(test, feature = "testing"))]
-impl primitives::TestProvider for Client {
-	fn send_transfer<'life0, 'async_trait>(
-		&'life0 self,
-		params: ibc::applications::transfer::msgs::transfer::MsgTransfer<
-			ibc::applications::transfer::PrefixedCoin,
-		>,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<(), Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+#[async_trait]
+impl primitives::TestProvider for EthereumClient {
+	async fn send_transfer(&self, params: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
 		todo!()
 	}
 
-	fn send_ordered_packet<'life0, 'async_trait>(
-		&'life0 self,
-		channel_id: ibc::core::ics24_host::identifier::ChannelId,
-		timeout: pallet_ibc::Timeout,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<(), Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn send_ordered_packet(&self, channel_id: ChannelId, timeout: Timeout) -> Result<(), Self::Error> {
 		todo!()
 	}
 
-	fn subscribe_blocks<'life0, 'async_trait>(
-		&'life0 self,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = std::pin::Pin<Box<dyn futures::Stream<Item = u64> + Send + Sync>>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item=u64> + Send + Sync>> {
 		todo!()
 	}
 
-	fn increase_counters<'life0, 'async_trait>(
-		&'life0 mut self,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<(), Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn increase_counters(&mut self) -> Result<(), Self::Error> {
 		todo!()
 	}
 }

@@ -28,5 +28,5 @@ async fn main() {
     println!("ibc_handler: {:?}", ibc_handler.address());
 
     let _ = tokio::signal::ctrl_c().await;
-    std::mem::drop(anvil);
+    drop(anvil);
 }

@@ -1,4 +1,5 @@
 use std::{future::Future, pin::Pin, str::FromStr, sync::Arc, time::Duration};
+use std::collections::HashSet;
 
 use cast::executor::Output;
 use ethers::{
@@ -37,15 +38,20 @@ use ibc_proto::{
 		},
 	},
 };
-use primitives::IbcProvider;
+use primitives::{IbcProvider, UpdateType};
 use prost::Message;
 
 use futures::{FutureExt, Stream, StreamExt};
 use thiserror::Error;
+use ibc::applications::transfer::PrefixedCoin;
+use ibc::events::IbcEvent;
+use ibc_proto::google::protobuf::Any;
+use ibc_rpc::PacketInfo;
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 
 use crate::client::{
-	Client, ClientError, CLIENT_IMPLS_STORAGE_INDEX, COMMITMENTS_STORAGE_INDEX,
-	CONNECTIONS_STORAGE_INDEX,
+    EthereumClient, ClientError, CLIENT_IMPLS_STORAGE_INDEX, COMMITMENTS_STORAGE_INDEX,
+    CONNECTIONS_STORAGE_INDEX,
 };
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
@@ -72,7 +78,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl IbcProvider for Client {
+impl IbcProvider for EthereumClient {
 	type FinalityEvent = FinalityEvent;
 
 	type TransactionId = ();
@@ -85,10 +91,7 @@ impl IbcProvider for Client {
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &T,
-	) -> Result<
-		Vec<(google::protobuf::Any, Vec<ibc::events::IbcEvent>, primitives::UpdateType)>,
-		anyhow::Error,
-	>
+	) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		T: primitives::Chain,
 	{
@@ -207,12 +210,14 @@ impl IbcProvider for Client {
 			self.config.ibc_handler_address.clone(),
 			Arc::clone(&self.http_rpc),
 		);
+		println!("the address again: {:?}, {client_id}", self.config.ibc_handler_address);
 
 		let binding = contract
 			.method(
 				"getConsensusState",
 				(
 					Token::String(client_id.as_str().to_owned()),
+					// Token::Uint(consensus_height.revision_height.into()),
 					Token::Tuple(vec![
 						Token::Uint(consensus_height.revision_number.into()),
 						Token::Uint(consensus_height.revision_height.into()),
@@ -223,7 +228,7 @@ impl IbcProvider for Client {
 
 		let get_client_cons_fut = binding.call();
 		let (client_cons, _): (Vec<u8>, bool) =
-			get_client_cons_fut.await.map_err(|err| todo!()).unwrap();
+			get_client_cons_fut.await.map_err(|err| { eprintln!("{err}"); err }).unwrap();
 
 		let proof_height = Some(at.into());
 		let consensus_state = google::protobuf::Any::decode(&*client_cons).ok();
@@ -575,8 +580,8 @@ impl IbcProvider for Client {
 		todo!()
 	}
 
-	fn channel_whitelist(&self) -> Vec<(ChannelId, PortId)> {
-		self.config.channel_whitelist.clone()
+	fn channel_whitelist(&self) -> HashSet<(ChannelId, PortId)> {
+		self.config.channel_whitelist.clone().into_iter().collect()
 	}
 
 	async fn query_connection_channels(
@@ -584,7 +589,7 @@ impl IbcProvider for Client {
 		at: Height,
 		connection_id: &ConnectionId,
 	) -> Result<QueryChannelsResponse, Self::Error> {
-		todo!()
+		todo!("query_connection_channels")
 	}
 
 	async fn query_send_packets(
@@ -596,22 +601,7 @@ impl IbcProvider for Client {
 		todo!()
 	}
 
-	fn query_recv_packets<'life0, 'async_trait>(
-		&'life0 self,
-		channel_id: ChannelId,
-		port_id: PortId,
-		seqs: Vec<u64>,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<Vec<ibc_rpc::PacketInfo>, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn query_received_packets(&self, channel_id: ChannelId, port_id: PortId, seqs: Vec<u64>) -> Result<Vec<PacketInfo>, Self::Error> {
 		todo!()
 	}
 
@@ -630,38 +620,11 @@ impl IbcProvider for Client {
 		todo!();
 	}
 
-	fn query_host_consensus_state_proof<'life0, 'async_trait>(
-		&'life0 self,
-		height: Height,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<Option<Vec<u8>>, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn query_host_consensus_state_proof(&self, client_state: &AnyClientState) -> Result<Option<Vec<u8>>, Self::Error> {
 		todo!()
 	}
 
-	fn query_ibc_balance<'life0, 'async_trait>(
-		&'life0 self,
-		asset_id: Self::AssetId,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = Result<Vec<ibc::applications::transfer::PrefixedCoin>, Self::Error>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn query_ibc_balance(&self, asset_id: Self::AssetId) -> Result<Vec<PrefixedCoin>, Self::Error> {
 		todo!()
 	}
 
@@ -682,8 +645,8 @@ impl IbcProvider for Client {
 		self.config.connection_id.clone()
 	}
 
-	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
-		self.config.channel_whitelist = channel_whitelist;
+	fn set_channel_whitelist(&mut self, channel_whitelist: HashSet<(ChannelId, PortId)>) {
+		self.config.channel_whitelist = channel_whitelist.into_iter().collect();
 	}
 
 	fn add_channel_to_whitelist(&mut self, channel: (ChannelId, PortId)) {
@@ -698,43 +661,18 @@ impl IbcProvider for Client {
 		todo!()
 	}
 
-	fn query_timestamp_at<'life0, 'async_trait>(
-		&'life0 self,
-		block_number: u64,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<u64, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error> {
 		todo!()
 	}
 
-	fn query_clients<'life0, 'async_trait>(
-		&'life0 self,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<Vec<ClientId>, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
 		todo!()
 	}
 
 	async fn query_channels(&self) -> Result<Vec<(ChannelId, PortId)>, Self::Error> {
 		let ids = self.generated_channel_identifiers(0.into()).await?;
 
-		Ok(todo!())
+		todo!("query_channels")
 	}
 
 	async fn query_connection_using_client(
@@ -754,77 +692,23 @@ impl IbcProvider for Client {
 		Ok(false)
 	}
 
-	fn initialize_client_state<'life0, 'async_trait>(
-		&'life0 self,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = Result<
-						(
-							pallet_ibc::light_clients::AnyClientState,
-							pallet_ibc::light_clients::AnyConsensusState,
-						),
-						Self::Error,
-					>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn initialize_client_state(&self) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
 		todo!()
 	}
 
-	fn query_client_id_from_tx_hash<'life0, 'async_trait>(
-		&'life0 self,
-		tx_id: Self::TransactionId,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<ClientId, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn query_client_id_from_tx_hash(&self, tx_id: Self::TransactionId) -> Result<ClientId, Self::Error> {
 		todo!()
 	}
 
-	fn query_connection_id_from_tx_hash<'life0, 'async_trait>(
-		&'life0 self,
-		tx_id: Self::TransactionId,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<ConnectionId, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn query_connection_id_from_tx_hash(&self, tx_id: Self::TransactionId) -> Result<ConnectionId, Self::Error> {
 		todo!()
 	}
 
-	fn query_channel_id_from_tx_hash<'life0, 'async_trait>(
-		&'life0 self,
-		tx_id: Self::TransactionId,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<(ChannelId, PortId), Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn query_channel_id_from_tx_hash(&self, tx_id: Self::TransactionId) -> Result<(ChannelId, PortId), Self::Error> {
+		todo!()
+	}
+
+	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
 		todo!()
 	}
 }

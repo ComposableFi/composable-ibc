@@ -15,7 +15,7 @@
 
 //! State verification functions
 
-use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
+use alloc::{ collections::BTreeMap, string::String, vec::Vec};
 use codec::Decode;
 use core::fmt::Debug;
 use hash_db::{HashDB, Hasher, EMPTY_PREFIX};

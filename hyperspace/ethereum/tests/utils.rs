@@ -14,20 +14,18 @@ use ethers::{
 	prelude::{ContractInstance, *},
 	providers::{Http, Middleware, Provider},
 	signers::{LocalWallet, Signer},
-	solc::{
-		artifacts::{
-			output_selection::OutputSelection, Libraries, Optimizer, OptimizerDetails, Settings,
-		},
-		Artifact, Project, ProjectPathsConfig,
-	},
+
 	utils::AnvilInstance,
 };
+use ethers_solc::{artifacts::{
+	output_selection::OutputSelection, Libraries, Optimizer, OptimizerDetails, Settings,
+}, Artifact, Project, ProjectPathsConfig, ProjectCompileOutput, SolcConfig, ConfigurableContractArtifact};
 use hyperspace_ethereum::contract::UnwrapContractError;
 
 #[track_caller]
 pub fn yui_ibc_solidity_path() -> PathBuf {
 	let base = env!("CARGO_MANIFEST_DIR");
-	let default = PathBuf::from(base).join("yui-ibc-solidity-private");
+	let default = PathBuf::from(base).join("yui-ibc-solidity");
 
 	if let Ok(path) = std::env::var("YUI_IBC_SOLIDITY_PATH") {
 		path.into()
@@ -41,7 +39,9 @@ pub fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http>, Loc
 	let anvil = Anvil::new().spawn();
 	let wallet: LocalWallet = anvil.keys()[0].clone().into();
 
-	let provider = Provider::<Http>::try_from(anvil.endpoint())
+	const USE_GETH: bool = false;
+	let endpoint = if USE_GETH { "http://localhost:8545".to_string() } else { anvil.endpoint() };
+	let provider = Provider::<Http>::try_from(endpoint)
 		.unwrap()
 		.interval(Duration::from_millis(10u64));
 
@@ -138,7 +138,7 @@ where
 	T: abi::Tokenize,
 {
 	let (abi, bytecode, _) = contract.clone().into_parts();
-	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
+	let mut factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
 	factory.deploy(constructor_args).unwrap().send().await.unwrap()
 }
 

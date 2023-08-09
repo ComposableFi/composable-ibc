@@ -5,16 +5,16 @@ use futures::{Stream, StreamExt};
 use ibc::core::ics02_client::events::UpdateClient;
 use ibc::Height;
 use pallet_ibc::light_clients::AnyClientMessage;
-use primitives::{Chain, LightClientSync, MisbehaviourHandler};
+use primitives::{Chain, CommonClientState, LightClientSync, MisbehaviourHandler};
 
-use crate::{client::Client, ibc_provider::BlockHeight};
+use crate::{client::EthereumClient, ibc_provider::BlockHeight};
 
 #[async_trait::async_trait]
-impl MisbehaviourHandler for Client {
+impl MisbehaviourHandler for EthereumClient {
 	async fn check_for_misbehaviour<C>(
 		&self,
 		counterparty: &C,
-		client_message: pallet_ibc::light_clients::AnyClientMessage,
+		client_message: AnyClientMessage,
 	) -> Result<(), anyhow::Error> {
 		// assume no misbehaviour occurs for now.
 		Ok(())
@@ -22,7 +22,7 @@ impl MisbehaviourHandler for Client {
 }
 
 #[async_trait::async_trait]
-impl Chain for Client {
+impl Chain for EthereumClient {
 	#[inline]
 	fn name(&self) -> &str {
 		&self.config.name
@@ -85,9 +85,22 @@ impl Chain for Client {
 		Ok(())
 	}
 
-	fn rpc_call_delay(&self) -> std::time::Duration {
+	fn common_state(&self) -> &CommonClientState {
+		&self.common_state
+	}
+
+	fn common_state_mut(&mut self) -> &mut CommonClientState {
+		&mut self.common_state
+	}
+
+	fn rpc_call_delay(&self) -> Duration {
 		Duration::from_millis(100)
 	}
 
-	fn set_rpc_call_delay(&mut self, delay: std::time::Duration) {}
+	fn set_rpc_call_delay(&mut self, delay: Duration) {}
+
+	async fn reconnect(&mut self) -> anyhow::Result<()> {
+		// TODO: reconnection logic
+		Ok(())
+	}
 }
