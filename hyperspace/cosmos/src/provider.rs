@@ -304,6 +304,7 @@ where
 		at: Height,
 		client_id: ClientId,
 	) -> Result<QueryClientStateResponse, Self::Error> {
+		log::info!(target: "hyperspace", "client_id {client_id}");
 		let path_bytes =
 			Path::ClientState(ClientStatePath(client_id.clone())).to_string().into_bytes();
 		let (q, proof) = self.query_path(path_bytes.clone(), at, true).await?;
@@ -1285,6 +1286,13 @@ where
 		// })?;
 
 		Ok(code_id)
+	}
+
+	async fn query_upgrade_proposal<C: Chain>(
+		&self,
+		_counterparty: &C,
+	) -> Result<(AnyClientState, AnyConsensusState, Vec<u8>, Vec<u8>), Self::Error> {
+		unimplemented!("[cosmos] query_upgrade_proposal")
 	}
 }
 

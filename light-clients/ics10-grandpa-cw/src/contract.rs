@@ -42,6 +42,7 @@ use ibc::core::{
 	},
 	ics24_host::identifier::ClientId,
 };
+
 use ics08_wasm::{SUBJECT_PREFIX, SUBSTITUTE_PREFIX};
 use ics10_grandpa::{
 	client_def::GrandpaClient,
@@ -54,6 +55,7 @@ use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Header};
 use sp_runtime_interface::unpack_ptr_and_len;
 use std::{collections::BTreeSet, str::FromStr};
+
 /*
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ics10-grandpa-cw";
@@ -71,11 +73,12 @@ pub const CLIENT_COUNTER: Item<u32> = Item::new("client_counter");
 pub const HOST_CONSENSUS_STATE: Map<u64, ConsensusState> = Map::new("host_consensus_state");
 pub const CONSENSUS_STATES_HEIGHTS: Map<Bytes, BTreeSet<Height>> =
 	Map::new("consensus_states_heights");
-pub const GRANDPA_HEADER_HASHES_STORAGE: Item<Vec<H256>> = Item::new("grandpa_header_hashes");
+pub const GRANDPA_HEADER_HASHES_STORAGE: Item<Vec<(u64, H256)>> =
+	Item::new("grandpa_header_hashes");
 pub const GRANDPA_HEADER_HASHES_SET_STORAGE: Map<Vec<u8>, ()> =
 	Map::new("grandpa_header_hashes_set");
 
-pub const GRANDPA_BLOCK_HASHES_CACHE_SIZE: usize = 500;
+pub const GRANDPA_BLOCK_HASHES_CACHE_SIZE: usize = 5000;
 
 #[derive(Clone, Copy, Debug, PartialEq, Default, Eq)]
 pub struct HostFunctions;
@@ -103,7 +106,7 @@ impl grandpa_light_client_primitives::HostFunctions for HostFunctions {
 		pub_key.verify(&sig, msg).is_ok()
 	}
 
-	fn insert_relay_header_hashes(_headers: &[<Self::Header as Header>::Hash]) {
+	fn insert_relay_header_hashes(_now_ms: u64, _headers: &[<Self::Header as Header>::Hash]) {
 		// implementation of this method is in `Context`
 	}
 
@@ -253,7 +256,9 @@ fn process_message(
 				.update_state(ctx, client_id.clone(), client_state, msg.client_message)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
 				.and_then(|(cs, cu)| {
-					ctx.insert_relay_header_hashes(&finalized_headers);
+					let now = ctx.host_timestamp();
+					let now_ms = now.nanoseconds() / 1_000_000;
+					ctx.insert_relay_header_hashes(now_ms, &finalized_headers);
 					store_client_and_consensus_states(ctx, client_id.clone(), cs, cu)
 				})
 		},
@@ -276,9 +281,8 @@ fn process_message(
 			old_client_state.latest_para_height = substitute_client_state.latest_para_height;
 			old_client_state.latest_relay_height = substitute_client_state.latest_relay_height;
 			old_client_state.frozen_height = substitute_client_state.frozen_height;
-			old_client_state.current_authorities =
-				substitute_client_state.current_authorities.clone();
-			old_client_state.current_set_id = substitute_client_state.current_set_id;
+			old_client_state.authorities_changes =
+				substitute_client_state.authorities_changes.clone();
 
 			if old_client_state != substitute_client_state {
 				return Err(ContractError::Grandpa(
@@ -314,6 +318,7 @@ fn process_message(
 				)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
 				.and_then(|(cs, cu)| {
+					ctx.code_id = Some(msg.code_id);
 					store_client_and_consensus_states(ctx, client_id.clone(), cs, cu)
 				})
 		},

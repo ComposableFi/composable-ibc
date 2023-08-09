@@ -120,7 +120,12 @@ where
 					tokio::time::sleep(chain_a.expected_block_time()).await;
 				}
 				let message = chain_a.query_client_message(update).await.map_err(|e| { log::info!("error: {}", e); e })?;
-				chain_b.check_for_misbehaviour(&chain_a, message).await.map_err(|e| { log::info!("error: {}", e); e })?;
+				let state = chain_b.common_state();
+				let mut queue = state.misbehaviour_client_msg_queue.lock().await;
+				queue.push(message);
+				let next_message = queue.first().unwrap().clone();
+				chain_b.check_for_misbehaviour(&chain_a, next_message).await.map_err(|e| { log::info!("error: {}", e); e })?;
+				queue.remove(0);
 			}
 			// new finality event from chain B
 			update = chain_b_client_updates.next() => {
@@ -133,7 +138,12 @@ where
 					tokio::time::sleep(chain_a.expected_block_time()).await;
 				}
 				let message = chain_b.query_client_message(update).await.map_err(|e| { log::info!("error: {}", e); e })?;
-				chain_a.check_for_misbehaviour(&chain_b, message).await.map_err(|e| { log::info!("error: {}", e); e })?;
+				let state = chain_a.common_state();
+				let mut queue = state.misbehaviour_client_msg_queue.lock().await;
+				queue.push(message);
+				let next_message = queue.first().unwrap().clone();
+				chain_a.check_for_misbehaviour(&chain_b, next_message).await.map_err(|e| { log::info!("error: {}", e); e })?;
+				queue.remove(0);
 			}
 		}
 	}

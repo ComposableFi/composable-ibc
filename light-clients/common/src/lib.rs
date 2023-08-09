@@ -23,7 +23,7 @@ extern crate core;
 
 use alloc::{string::ToString, vec, vec::Vec};
 use anyhow::anyhow;
-use codec::Compact;
+use codec::{Compact, Encode};
 use core::{
 	fmt,
 	fmt::{Debug, Display, Formatter},
@@ -82,7 +82,7 @@ where
 		root.into(),
 		proof,
 		child_info,
-		vec![(key, Some(value))],
+		vec![(key, Some(value.encode()))],
 	)
 	.map_err(|err| anyhow!("Failed to verify proof for path: {path}, error: {err:#?}"))?;
 	Ok(())

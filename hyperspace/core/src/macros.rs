@@ -712,6 +712,19 @@ macro_rules! chains {
 					Self::Wasm(c) => c.inner.set_connection_id(connection_id),
 				}
 			}
+
+			async fn query_upgrade_proposal<C: Chain>(
+				&self,
+				counterparty: &C,
+			) -> Result<(AnyClientState, AnyConsensusState, Vec<u8>, Vec<u8>), Self::Error> {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.query_upgrade_proposal(counterparty).await.map_err(AnyError::$name),
+					)*
+					Self::Wasm(c) => c.inner.query_upgrade_proposal(counterparty).await,
+				}
+			}
 		}
 
 		#[async_trait]

@@ -36,7 +36,7 @@ impl HostFunctions for HostFunctionsProvider {
 		pubkey.verify(&msg, sig)
 	}
 
-	fn insert_relay_header_hashes(_headers: &[<Self::Header as Header>::Hash]) {
+	fn insert_relay_header_hashes(_now: u64, _headers: &[<Self::Header as Header>::Hash]) {
 		unimplemented!()
 	}
 

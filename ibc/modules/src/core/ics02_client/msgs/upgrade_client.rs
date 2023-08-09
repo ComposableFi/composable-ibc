@@ -32,7 +32,7 @@ use crate::{
 	tx_msg::Msg,
 };
 
-pub(crate) const TYPE_URL: &str = "/ibc.core.client.v1.MsgUpgradeClient";
+pub const TYPE_URL: &str = "/ibc.core.client.v1.MsgUpgradeClient";
 
 /// A type of message that triggers the upgrade of an on-chain (IBC) client.
 #[derive(Clone, Debug, PartialEq)]
@@ -44,6 +44,7 @@ pub struct MsgUpgradeAnyClient<C: ClientTypes> {
 	pub proof_upgrade_consensus_state: Vec<u8>,
 	pub signer: Signer,
 }
+
 impl<C: ClientTypes> MsgUpgradeAnyClient<C> {
 	pub fn new(
 		client_id: ClientId,

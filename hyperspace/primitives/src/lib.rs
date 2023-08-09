@@ -461,6 +461,11 @@ pub trait IbcProvider {
 	) -> Result<(ChannelId, PortId), Self::Error>;
 
 	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error>;
+
+	async fn query_upgrade_proposal<C: Chain>(
+		&self,
+		counterparty: &C,
+	) -> Result<(AnyClientState, AnyConsensusState, Vec<u8>, Vec<u8>), Self::Error>;
 }
 
 /// Provides an interface that allows us run the hyperspace-testsuite

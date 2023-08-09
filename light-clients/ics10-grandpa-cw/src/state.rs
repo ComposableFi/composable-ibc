@@ -21,7 +21,7 @@ use ibc::{
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
-use ics10_grandpa::client_state::ClientState;
+use ics10_grandpa::{client_state::ClientState, proto::ClientState as RawClientState};
 use prost::Message;
 
 /// Retrieves raw bytes from storage and deserializes them into [`ClientState`]
@@ -44,8 +44,8 @@ fn deserialize_client_state<H: Clone>(client_state: Vec<u8>) -> Result<ClientSta
 			))
 		})?;
 	let any = Any::decode(&*wasm_state.data).map_err(Error::decode)?;
-	let state =
-		ClientState::<H>::decode_vec(&any.value).map_err(Error::invalid_any_client_state)?;
+	let state = <ClientState<H> as Protobuf<RawClientState>>::decode_vec(&any.value)
+		.map_err(Error::invalid_any_client_state)?;
 	Ok(state)
 }
 

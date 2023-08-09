@@ -106,8 +106,9 @@ pub trait HostFunctions: light_client_common::HostFunctions + 'static {
 
 	/// Verify an ed25519 signature
 	fn ed25519_verify(sig: &ed25519::Signature, msg: &[u8], pub_key: &ed25519::Public) -> bool;
-	/// Stores the given list of RelayChain header hashes in the light client's storage.
-	fn insert_relay_header_hashes(headers: &[<Self::Header as Header>::Hash]);
+	/// Stores the given list of RelayChain header hashes in the light client's storage with
+	/// the given timestamp.
+	fn insert_relay_header_hashes(now_ms: u64, headers: &[<Self::Header as Header>::Hash]);
 	/// Checks if a RelayChain header hash exists in the light client's storage.
 	fn contains_relay_header_hash(hash: <Self::Header as Header>::Hash) -> bool;
 }
