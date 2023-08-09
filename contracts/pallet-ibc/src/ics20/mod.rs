@@ -882,7 +882,10 @@ where
 		let params = crate::TransferParams::<<T as frame_system::Config>::AccountId> {
 			to: transfer_ibc_account_to,
 			source_channel: channel_id,
-			timeout: ibc_primitives::Timeout::Offset { timestamp: Some(memo_forward.timeout), height: Some(1000) },
+			timeout: ibc_primitives::Timeout::Offset {
+				timestamp: Some(memo_forward.timeout),
+				height: Some(1000),
+			},
 		};
 
 		let mut next_memo: Option<T::MemoMessage> = None;
