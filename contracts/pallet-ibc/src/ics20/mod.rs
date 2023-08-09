@@ -606,7 +606,7 @@ pub struct Forward {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub channel: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub timeout: Option<String>,
+	pub timeout: Option<u64>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub retries: Option<u64>,
 
@@ -652,7 +652,7 @@ pub struct MemoIbc {
 	pub receiver: String,
 	pub port: String,
 	pub channel: String,
-	pub timeout: String,
+	pub timeout: u64,
 	pub retries: u64,
 }
 
