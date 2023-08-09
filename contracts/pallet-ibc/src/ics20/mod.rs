@@ -606,7 +606,7 @@ pub struct Forward {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub channel: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub timeout: Option<String>,
+	pub timeout: Option<u64>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub retries: Option<u64>,
 
@@ -652,7 +652,7 @@ pub struct MemoIbc {
 	pub receiver: String,
 	pub port: String,
 	pub channel: String,
-	pub timeout: String,
+	pub timeout: u64,
 	pub retries: u64,
 }
 
@@ -882,7 +882,10 @@ where
 		let params = crate::TransferParams::<<T as frame_system::Config>::AccountId> {
 			to: transfer_ibc_account_to,
 			source_channel: channel_id,
-			timeout: ibc_primitives::Timeout::Offset { timestamp: Some(600), height: Some(600) },
+			timeout: ibc_primitives::Timeout::Offset {
+				timestamp: Some(memo_forward.timeout),
+				height: Some(1000),
+			},
 		};
 
 		let mut next_memo: Option<T::MemoMessage> = None;
