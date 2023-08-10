@@ -18,6 +18,8 @@ FROM debian:buster-slim
 
 RUN useradd -m -u 1000 -U -s /bin/sh -d /centauri centauri
 
+RUN mkdir /centauri/data
+
 COPY --from=builder /code/target/release/hyperspace /usr/local/bin
 
 # add ca certificates so that it works with ssl endpoints
@@ -34,7 +36,6 @@ RUN rm -rf /usr/lib/python* && \
 
 USER centauri
 
-RUN mkdir /centauri/data
 
 VOLUME ["/centauri/data"]
 
