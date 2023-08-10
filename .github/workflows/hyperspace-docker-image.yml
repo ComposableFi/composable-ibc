@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - fix-hyperspace-builds
 
 jobs:
   build-and-publish:
