@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - fix-docker-build
 
 jobs:
   build-and-publish:
