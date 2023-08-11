@@ -44,6 +44,7 @@ light-client-common = { path = "../../light-clients/common" }
 grandpa-light-client = { path = "../../algorithms/grandpa/verifier", package = "grandpa-light-client-verifier" }
 hex = "0.4.3"
 rand = "0.8.5"
+toml = "0.7.4"
 
 [dev-dependencies]
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }

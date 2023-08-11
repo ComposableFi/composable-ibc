@@ -27,7 +27,7 @@ use prost::Message;
 /// Retrieves raw bytes from storage and deserializes them into [`ClientState`]
 pub fn get_client_state<H: Clone>(deps: Deps) -> Result<ClientState<H>, Error> {
 	deps.storage
-		.get(&format!("clientState").into_bytes())
+		.get(&"clientState".to_string().into_bytes())
 		.ok_or_else(|| Error::unknown_client_state_type("08-wasm-0".to_string()))
 		.and_then(|client_state| deserialize_client_state(client_state, deps))
 }
@@ -44,13 +44,12 @@ fn deserialize_client_state<H: Clone>(
 		)
 		.map_err(|e| {
 			Error::implementation_specific(format!(
-				"[client_state]: error decoding client state bytes to WasmClientState {}",
-				e
+				"[client_state]: error decoding client state bytes to WasmClientState {e}"
 			))
 		})?;
-	let any = Any::decode(&*wasm_state.data).map_err(|e| Error::decode(e))?;
+	let any = Any::decode(&*wasm_state.data).map_err(Error::decode)?;
 	let state =
-		ClientState::<H>::decode_vec(&*any.value).map_err(Error::invalid_any_client_state)?;
+		ClientState::<H>::decode_vec(&any.value).map_err(Error::invalid_any_client_state)?;
 	Ok(state)
 }
 
@@ -62,7 +61,7 @@ pub fn get_consensus_state(
 	deps.storage
 		.get(&get_consensus_state_key(height))
 		.ok_or_else(|| Error::consensus_state_not_found(client_id.clone(), height))
-		.and_then(|consensus_state| deserialize_consensus_state(consensus_state))
+		.and_then(deserialize_consensus_state)
 }
 
 fn deserialize_consensus_state(consensus_state: Vec<u8>) -> Result<ConsensusState, Error> {
@@ -71,17 +70,16 @@ fn deserialize_consensus_state(consensus_state: Vec<u8>) -> Result<ConsensusStat
 		ics08_wasm::consensus_state::ConsensusState::<FakeInner>::decode_vec(&any.value).map_err(
 			|e| {
 				Error::implementation_specific(format!(
-				"[consensus_state]: error decoding consensus state bytes to WasmConsensusState {}",
-				e
+				"[consensus_state]: error decoding consensus state bytes to WasmConsensusState {e}"
 			))
 			},
 		)?;
-	let any = Any::decode(&*wasm_consensus_state.data).map_err(|e| Error::decode(e))?;
-	let consensus = ConsensusState::decode_vec(&*any.value)
-		.map_err(|e| Error::invalid_any_consensus_state(e))?;
+	let any = Any::decode(&*wasm_consensus_state.data).map_err(Error::decode)?;
+	let consensus =
+		ConsensusState::decode_vec(&any.value).map_err(Error::invalid_any_consensus_state)?;
 	Ok(consensus)
 }
 
 pub fn get_consensus_state_key(height: Height) -> Vec<u8> {
-	[format!("consensusStates/").into_bytes(), format!("{}", height).into_bytes()].concat()
+	["consensusStates/".to_string().into_bytes(), format!("{height}").into_bytes()].concat()
 }

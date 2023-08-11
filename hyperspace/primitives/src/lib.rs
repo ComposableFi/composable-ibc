@@ -28,8 +28,16 @@ use ibc_proto::{
 	},
 };
 use rand::Rng;
-use std::{collections::HashSet, fmt::Debug, pin::Pin, str::FromStr, time::Duration};
-use tokio::{task::JoinSet, time::sleep};
+use serde::{Deserialize, Serialize};
+use std::{
+	collections::{HashMap, HashSet},
+	fmt::Debug,
+	pin::Pin,
+	str::FromStr,
+	sync::{Arc, Mutex},
+	time::Duration,
+};
+use tokio::{sync::Mutex as AsyncMutex, task::JoinSet, time::sleep};
 
 use crate::error::Error;
 #[cfg(any(feature = "testing", test))]
@@ -87,10 +95,103 @@ impl UpdateType {
 	}
 }
 
+fn default_skip_optional_client_updates() -> bool {
+	true
+}
+
+fn max_packets_to_process() -> u32 {
+	50
+}
+
+// TODO: move other fields like `client_id`, `connection_id`, etc. here
+/// Common relayer parameters
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CommonClientConfig {
+	/// Skip optional client updates
+	#[serde(default = "default_skip_optional_client_updates")]
+	pub skip_optional_client_updates: bool,
+	#[serde(default = "max_packets_to_process")]
+	pub max_packets_to_process: u32,
+}
+
+/// A common data that all clients should keep.
+#[derive(Debug, Clone)]
+pub struct CommonClientState {
+	/// Enable skipping client updates when possible.
+	pub skip_optional_client_updates: bool,
+	/// Used to determine whether client updates should be forced to send
+	/// even if it's optional. It's required, because some timeout packets
+	/// should use proof of the client states.
+	///
+	/// Set inside `on_undelivered_sequences`.
+	pub maybe_has_undelivered_packets: Arc<Mutex<HashMap<UndeliveredType, bool>>>,
+	/// Delay between parallel RPC calls to be friendly with the node and avoid MaxSlotsExceeded
+	/// error
+	pub rpc_call_delay: Duration,
+	/// Initial value for the [`rpc_call_delay`] to reset it after a successful RPC call
+	pub initial_rpc_call_delay: Duration,
+	pub misbehaviour_client_msg_queue: Arc<AsyncMutex<Vec<AnyClientMessage>>>,
+	pub max_packets_to_process: usize,
+}
+
+impl Default for CommonClientState {
+	fn default() -> Self {
+		let rpc_call_delay = Duration::from_millis(100);
+		Self {
+			skip_optional_client_updates: true,
+			maybe_has_undelivered_packets: Default::default(),
+			rpc_call_delay,
+			initial_rpc_call_delay: rpc_call_delay,
+			misbehaviour_client_msg_queue: Arc::new(Default::default()),
+			max_packets_to_process: 100,
+		}
+	}
+}
+
+impl CommonClientState {
+	pub async fn on_undelivered_sequences(&self, has: bool, kind: UndeliveredType) {
+		log::trace!(
+			target: "hyperspace",
+			"on_undelivered_sequences: {:?}, type: {kind:?}",
+			has
+		);
+		self.maybe_has_undelivered_packets.lock().unwrap().insert(kind, has);
+	}
+
+	pub fn has_undelivered_sequences(&self, kind: UndeliveredType) -> bool {
+		self.maybe_has_undelivered_packets
+			.lock()
+			.unwrap()
+			.get(&kind)
+			.as_deref()
+			.cloned()
+			.unwrap_or_default()
+	}
+
+	pub fn rpc_call_delay(&self) -> Duration {
+		self.rpc_call_delay
+	}
+
+	pub fn set_rpc_call_delay(&mut self, delay: Duration) {
+		self.rpc_call_delay = delay;
+	}
+}
+
 pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: impl Into<Vec<u8>>) -> Vec<u8> {
 	let path = path.into();
 	commitment_prefix.extend_from_slice(&path);
 	commitment_prefix
+}
+
+/// A type of undelivered sequences (packets). Can be:
+/// - acknowledgement packet (`Acks`),
+/// - receive packet (`Recvs`)
+/// - timeout packet (`Timeouts`)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum UndeliveredType {
+	Acks,
+	Recvs,
+	Timeouts,
 }
 
 /// Provides an interface for accessing new events and Ibc data on the chain which must be
@@ -98,7 +199,7 @@ pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: impl Into<Vec<u8>>) ->
 #[async_trait::async_trait]
 pub trait IbcProvider {
 	/// Finality event type, passed on to [`Chain::query_latest_ibc_events`]
-	type FinalityEvent: Debug;
+	type FinalityEvent: Debug + Send + 'static;
 	/// A representation of the transaction id for the chain
 	type TransactionId: Debug;
 	/// Asset Id
@@ -114,7 +215,7 @@ pub trait IbcProvider {
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &T,
-	) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+	) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		T: Chain;
 
@@ -225,10 +326,6 @@ pub trait IbcProvider {
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error>;
 
-	async fn on_undelivered_sequences(&self, is_empty: bool) -> Result<(), Self::Error>;
-
-	fn has_undelivered_sequences(&self) -> bool;
-
 	/// Given a list of packet acknowledgements sequences from the sink chain
 	/// return a list of acknowledgement sequences that have not been received on the source chain
 	async fn query_unreceived_acknowledgements(
@@ -261,7 +358,7 @@ pub trait IbcProvider {
 	/// Query received packets with their acknowledgement
 	/// This represents packets for which the `ReceivePacket` and `WriteAcknowledgement` events were
 	/// emitted.
-	async fn query_recv_packets(
+	async fn query_received_packets(
 		&self,
 		channel_id: ChannelId,
 		port_id: PortId,
@@ -454,9 +551,31 @@ pub trait Chain:
 
 	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error>;
 
-	fn rpc_call_delay(&self) -> Duration;
+	fn common_state(&self) -> &CommonClientState;
 
-	fn set_rpc_call_delay(&mut self, delay: Duration);
+	fn common_state_mut(&mut self) -> &mut CommonClientState;
+
+	async fn on_undelivered_sequences(&self, has: bool, kind: UndeliveredType) {
+		self.common_state().on_undelivered_sequences(has, kind).await
+	}
+
+	fn has_undelivered_sequences(&self, kind: UndeliveredType) -> bool {
+		self.common_state().has_undelivered_sequences(kind)
+	}
+
+	fn rpc_call_delay(&self) -> Duration {
+		self.common_state().rpc_call_delay()
+	}
+
+	fn initial_rpc_call_delay(&self) -> Duration {
+		self.common_state().initial_rpc_call_delay
+	}
+
+	fn set_rpc_call_delay(&mut self, delay: Duration) {
+		self.common_state_mut().set_rpc_call_delay(delay)
+	}
+
+	async fn reconnect(&mut self) -> anyhow::Result<()>;
 }
 
 /// Returns undelivered packet sequences that have been sent out from
@@ -481,7 +600,10 @@ pub async fn query_undelivered_sequences(
 	// First we fetch all packet commitments from source
 	let seqs = source
 		.query_packet_commitments(source_height, channel_id, port_id.clone())
-		.await?;
+		.await?
+		.into_iter()
+		.collect::<Vec<_>>();
+	log::trace!(target: "hyperspace", "Seqs: {:?}", seqs);
 	let counterparty_channel_id = channel_end
 		.counterparty()
 		.channel_id
@@ -540,7 +662,7 @@ pub async fn query_undelivered_acks(
 		.ok_or_else(|| Error::Custom("Expected counterparty channel id".to_string()))?;
 	let counterparty_port_id = channel_end.counterparty().port_id.clone();
 
-	let undelivered_acks = sink
+	let mut undelivered_acks = sink
 		.query_unreceived_acknowledgements(
 			sink_height,
 			counterparty_channel_id,
@@ -553,6 +675,8 @@ pub async fn query_undelivered_acks(
 		"Found {} undelivered packet acks for {} chain",
 		undelivered_acks.len(), sink.name()
 	);
+	undelivered_acks.sort();
+	undelivered_acks.dedup();
 
 	Ok(undelivered_acks)
 }
@@ -577,23 +701,44 @@ pub fn packet_info_to_packet(packet_info: &PacketInfo) -> Packet {
 /// Should return the first client consensus height with a consensus state timestamp that
 /// is equal to or greater than the values provided
 pub async fn find_suitable_proof_height_for_client(
-	chain: &impl Chain,
+	source: &impl Chain,
+	sink: &impl Chain,
 	at: Height,
 	client_id: ClientId,
 	start_height: Height,
 	timestamp_to_match: Option<Timestamp>,
 	latest_client_height: Height,
 ) -> Option<Height> {
+	log::trace!(
+		target: "hyperspace",
+		"Searching for suitable proof height for client {} ({}) starting at {}, {:?}, latest_client_height={}",
+		client_id, sink.name(), start_height, timestamp_to_match, latest_client_height
+	);
 	// If searching for existence of just a height we use a pure linear search because there's no
 	// valid comparison to be made and there might be missing values  for some heights
 	if timestamp_to_match.is_none() {
+		// try to find latest states first, because relayer's strategy is to submit the most
+		// recent ones
 		for height in start_height.revision_height..=latest_client_height.revision_height {
 			let temp_height = Height::new(start_height.revision_number, height);
 			let consensus_state =
-				chain.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
-			if consensus_state.is_none() {
+				sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
+			let decoded = consensus_state
+				.map(|x| x.consensus_state.map(AnyConsensusState::try_from))
+				.flatten();
+			if !matches!(decoded, Some(Ok(_))) {
 				continue
 			}
+			let proof_height = source.get_proof_height(temp_height).await;
+			let has_client_state = sink
+				.query_client_update_time_and_height(client_id.clone(), proof_height)
+				.await
+				.ok()
+				.is_some();
+			if !has_client_state {
+				continue
+			}
+			log::info!("Found proof height on {} as {}:{}", sink.name(), temp_height, proof_height);
 			return Some(temp_height)
 		}
 	} else {
@@ -604,18 +749,31 @@ pub async fn find_suitable_proof_height_for_client(
 		if start > end {
 			return None
 		}
+
+		log::debug!(
+			target: "hyperspace",
+			"Entered binary search for proof height on {} for client {} starting at {}", sink.name(), client_id, start_height
+		);
 		while end - start > 1 {
 			let mid = (end + start) / 2;
 			let temp_height = Height::new(start_height.revision_number, mid);
 			let consensus_state =
-				chain.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
-			if consensus_state.is_none() {
+				sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
+			let Some(Ok(consensus_state)) = consensus_state.map(|x| x.consensus_state.map(AnyConsensusState::try_from)).flatten() else {
+				start += 1;
+				continue
+			};
+			let proof_height = source.get_proof_height(temp_height).await;
+			let has_client_state = sink
+				.query_client_update_time_and_height(client_id.clone(), proof_height)
+				.await
+				.ok()
+				.is_some();
+			if !has_client_state {
 				start += 1;
 				continue
 			}
 
-			let consensus_state =
-				AnyConsensusState::try_from(consensus_state.unwrap().consensus_state?).ok()?;
 			if consensus_state.timestamp().nanoseconds() < timestamp_to_match.nanoseconds() {
 				start = mid + 1;
 				continue
@@ -627,12 +785,21 @@ pub async fn find_suitable_proof_height_for_client(
 		let start_height = Height::new(start_height.revision_number, start);
 
 		let consensus_state =
-			chain.query_client_consensus(at, client_id.clone(), start_height).await.ok();
-		if let Some(consensus_state) = consensus_state {
-			let consensus_state =
-				AnyConsensusState::try_from(consensus_state.consensus_state?).ok()?;
+			sink.query_client_consensus(at, client_id.clone(), start_height).await.ok();
+		if let Some(Ok(consensus_state)) = consensus_state
+			.map(|x| x.consensus_state.map(AnyConsensusState::try_from))
+			.flatten()
+		{
 			if consensus_state.timestamp().nanoseconds() >= timestamp_to_match.nanoseconds() {
-				return Some(start_height)
+				let proof_height = source.get_proof_height(start_height).await;
+				let has_client_state = sink
+					.query_client_update_time_and_height(client_id.clone(), proof_height)
+					.await
+					.ok()
+					.is_some();
+				if has_client_state {
+					return Some(start_height)
+				}
 			}
 		}
 
@@ -659,6 +826,11 @@ pub async fn query_maximum_height_for_timeout_proofs(
 		)
 		.await
 		.ok()?;
+		let undelivered_sequences = undelivered_sequences
+			.into_iter()
+			.rev()
+			.take(source.common_state().max_packets_to_process)
+			.collect();
 		let send_packets =
 			source.query_send_packets(channel, port_id, undelivered_sequences).await.ok()?;
 		for send_packet in send_packets {
@@ -705,4 +877,87 @@ pub async fn query_maximum_height_for_timeout_proofs(
 		min_timeout_height = min_timeout_height.max(timeout_height.ok()?)
 	}
 	min_timeout_height
+}
+
+pub fn filter_events_by_ids(
+	ev: &IbcEvent,
+	client_ids: &[ClientId],
+	connection_ids: &[ConnectionId],
+	channel_and_port_ids: &HashSet<(ChannelId, PortId)>,
+) -> bool {
+	use ibc::core::{
+		ics02_client::events::Attributes as ClientAttributes,
+		ics03_connection::events::Attributes as ConnectionAttributes,
+		ics04_channel::events::Attributes as ChannelAttributes,
+	};
+	let channel_ids = channel_and_port_ids
+		.iter()
+		.map(|(channel_id, _)| channel_id)
+		.collect::<Vec<_>>();
+
+	let filter_packet = |packet: &Packet| {
+		channel_and_port_ids.contains(&(packet.source_channel.clone(), packet.source_port.clone())) ||
+			channel_and_port_ids
+				.contains(&(packet.destination_channel.clone(), packet.destination_port.clone()))
+	};
+	let filter_client_attributes =
+		|packet: &ClientAttributes| client_ids.contains(&packet.client_id);
+	let filter_connection_attributes = |packet: &ConnectionAttributes| {
+		packet
+			.connection_id
+			.as_ref()
+			.map(|id| connection_ids.contains(&id))
+			.unwrap_or(false) ||
+			packet
+				.counterparty_connection_id
+				.as_ref()
+				.map(|id| connection_ids.contains(&id))
+				.unwrap_or(false)
+	};
+	let filter_channel_attributes = |packet: &ChannelAttributes| {
+		packet.channel_id.as_ref().map(|id| channel_ids.contains(&id)).unwrap_or(false) ||
+			packet
+				.counterparty_channel_id
+				.as_ref()
+				.map(|id| channel_ids.contains(&id))
+				.unwrap_or(false)
+	};
+
+	let v = match ev {
+		IbcEvent::SendPacket(e) => filter_packet(&e.packet),
+		IbcEvent::WriteAcknowledgement(e) => filter_packet(&e.packet),
+		IbcEvent::TimeoutPacket(e) => filter_packet(&e.packet),
+		IbcEvent::ReceivePacket(e) => filter_packet(&e.packet),
+		IbcEvent::AcknowledgePacket(e) => filter_packet(&e.packet),
+		IbcEvent::TimeoutOnClosePacket(e) => filter_packet(&e.packet),
+		IbcEvent::CreateClient(e) => filter_client_attributes(&e.0),
+		IbcEvent::UpdateClient(e) => filter_client_attributes(&e.common),
+		IbcEvent::UpgradeClient(e) => filter_client_attributes(&e.0),
+		IbcEvent::ClientMisbehaviour(e) => filter_client_attributes(&e.0),
+		IbcEvent::OpenInitConnection(e) => filter_connection_attributes(&e.0),
+		IbcEvent::OpenTryConnection(e) => filter_connection_attributes(&e.0),
+		IbcEvent::OpenAckConnection(e) => filter_connection_attributes(&e.0),
+		IbcEvent::OpenConfirmConnection(e) => filter_connection_attributes(&e.0),
+		IbcEvent::OpenInitChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::OpenTryChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::OpenAckChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::OpenConfirmChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::CloseInitChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::CloseConfirmChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::PushWasmCode(_) => true,
+		IbcEvent::NewBlock(_) |
+		IbcEvent::AppModule(_) |
+		IbcEvent::Empty(_) |
+		IbcEvent::ChainError(_) => true,
+	};
+	if !v {
+		log::debug!(target: "hyperspace_parachain", "Filtered out event: {:?}", ev);
+	}
+	v
 }

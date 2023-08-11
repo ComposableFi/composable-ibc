@@ -3,6 +3,7 @@ use crate::error::Error;
 use ibc::Height;
 use ics07_tendermint::{client_state::ClientState, ProdVerifier};
 use pallet_ibc::light_clients::HostFunctionsManager;
+use std::time::Duration;
 use tendermint::trust_threshold::TrustThresholdFraction;
 use tendermint_light_client::{
 	components::{
@@ -27,14 +28,14 @@ pub struct LightClient {
 }
 
 impl LightClient {
-	pub async fn init_light_client(rpc_url: Url) -> Result<Self, Error> {
+	pub async fn init_light_client(rpc_url: Url, timeout: Duration) -> Result<Self, Error> {
 		let rpc_client = HttpClient::new(rpc_url).map_err(|e| Error::from(e.to_string()))?;
 		let peer_id: PeerId = rpc_client
 			.status()
 			.await
 			.map(|s| s.node_info.id)
 			.map_err(|e| Error::from(e.to_string()))?;
-		let io = ProdIo::new(peer_id, rpc_client, None);
+		let io = ProdIo::new(peer_id, rpc_client, Some(timeout));
 		Ok(Self { peer_id, io })
 	}
 

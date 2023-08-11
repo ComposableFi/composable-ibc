@@ -70,14 +70,14 @@ impl CloneCmd {
 			println!("[info ] Found Cosmos SDK source at '{}'", sdk_path.display());
 
 			Repository::open(&sdk_path).unwrap_or_else(|e| {
-				println!("[error] Failed to open repository: {}", e);
+				println!("[error] Failed to open repository: {e}");
 				process::exit(1)
 			})
 		} else {
 			println!("[info ] Cloning cosmos/cosmos-sdk repository...");
 
 			let repo = Repository::clone(COSMOS_SDK_URL, &sdk_path).unwrap_or_else(|e| {
-				println!("[error] Failed to clone the SDK repository: {}", e);
+				println!("[error] Failed to clone the SDK repository: {e}");
 				process::exit(1)
 			});
 
@@ -88,12 +88,12 @@ impl CloneCmd {
 
 		if let Some(ref rev) = self.sdk_commit {
 			checkout_commit(&sdk_repo, rev).unwrap_or_else(|e| {
-				println!("[error] Failed to checkout SDK commit {}: {}", rev, e);
+				println!("[error] Failed to checkout SDK commit {rev}: {e}");
 				process::exit(1)
 			});
 		} else if let Some(ref tag) = self.sdk_tag {
 			checkout_tag(&sdk_repo, tag).unwrap_or_else(|e| {
-				println!("[error] Failed to checkout SDK tag {}: {}", tag, e);
+				println!("[error] Failed to checkout SDK tag {tag}: {e}");
 				process::exit(1)
 			});
 		}
@@ -107,19 +107,19 @@ impl CloneCmd {
 					println!("[info ] Found IBC Go source at '{}'", ibc_path.display());
 
 					Repository::open(&ibc_path).unwrap_or_else(|e| {
-						println!("[error] Failed to open repository: {}", e);
+						println!("[error] Failed to open repository: {e}");
 						process::exit(1)
 					})
 				} else {
 					Repository::clone(IBC_GO_URL, &ibc_path).unwrap_or_else(|e| {
-						println!("[error] Failed to clone the IBC Go repository: {}", e);
+						println!("[error] Failed to clone the IBC Go repository: {e}");
 						process::exit(1)
 					})
 				};
 
 				println!("[info ] Cloned at '{}'", ibc_path.display());
 				checkout_commit(&ibc_repo, ibc_go_commit).unwrap_or_else(|e| {
-					println!("[error] Failed to checkout IBC Go commit {}: {}", ibc_go_commit, e);
+					println!("[error] Failed to checkout IBC Go commit {ibc_go_commit}: {e}");
 					process::exit(1)
 				});
 			},
@@ -140,12 +140,12 @@ fn checkout_commit(repo: &Repository, rev: &str) -> Result<(), git2::Error> {
 	repo.branch(rev, &commit, true)?;
 
 	// Checkout the newly created branch
-	let treeish = format!("refs/heads/{}", rev);
+	let treeish = format!("refs/heads/{rev}");
 	let object = repo.revparse_single(&treeish)?;
 	repo.checkout_tree(&object, None)?;
 	repo.set_head(&treeish)?;
 
-	println!("[info ] Checked out commit {}", rev);
+	println!("[info ] Checked out commit {rev}");
 
 	Ok(())
 }
@@ -154,7 +154,6 @@ fn checkout_tag(repo: &Repository, tag_name: &str) -> Result<(), git2::Error> {
 	// Find a tag with name `tag_name`
 	let tag = repo
 		.references()?
-		.into_iter()
 		.flatten()
 		.filter(|r| r.is_tag())
 		.flat_map(|r| r.peel_to_tag())
@@ -169,14 +168,14 @@ fn checkout_tag(repo: &Repository, tag_name: &str) -> Result<(), git2::Error> {
 		repo.branch(tag_name, &commit, true)?;
 
 		// Checkout the newly created branch
-		let rev = format!("refs/heads/{}", tag_name);
+		let rev = format!("refs/heads/{tag_name}");
 		let obj = repo.revparse_single(&rev)?;
 		repo.checkout_tree(&obj, None)?;
 		repo.set_head(&rev)?;
 
-		println!("[info ] Checked out tag {}", tag_name);
+		println!("[info ] Checked out tag {tag_name}");
 	} else {
-		println!("[error] Could not find tag {}", tag_name);
+		println!("[error] Could not find tag {tag_name}");
 		process::exit(1);
 	}
 

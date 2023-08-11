@@ -41,6 +41,7 @@ use primitives::{find_suitable_proof_height_for_client, Chain};
 use std::time::Duration;
 use tendermint_proto::Protobuf;
 
+#[allow(clippy::too_many_arguments)]
 pub async fn get_timeout_proof_height(
 	source: &impl Chain,
 	sink: &impl Chain,
@@ -51,11 +52,14 @@ pub async fn get_timeout_proof_height(
 	packet: &Packet,
 	packet_creation_height: u64,
 ) -> Option<Height> {
-	let timeout_variant = Packet::timeout_variant(&packet, &sink_timestamp, sink_height).unwrap();
+	let timeout_variant = Packet::timeout_variant(packet, &sink_timestamp, sink_height).unwrap();
+	log::trace!(target: "hyperspace", "get_timeout_proof_height: {}->{}, timeout_variant={:?}, source_height={}, sink_height={}, sink_timestamp={}, latest_client_height_on_source={}, packet_creation_height={}, packet={:?}",
+		source.name(), sink.name(), timeout_variant, source_height, sink_height, sink_timestamp, latest_client_height_on_source, packet_creation_height, packet);
 
 	match timeout_variant {
 		TimeoutVariant::Height =>
 			find_suitable_proof_height_for_client(
+				sink,
 				source,
 				source_height,
 				sink.client_id(),
@@ -69,24 +73,28 @@ pub async fn get_timeout_proof_height(
 			// bound for where to start our search
 			// We offset the sink height when this packet was created with the approximate number of
 			// blocks contained in the difference in timestamp at packet creation until timeout
-			let sink_client_state = source
-				.query_client_state(
-					Height::new(source_height.revision_number, packet_creation_height),
-					sink.client_id(),
-				)
-				.await
-				.ok()?;
+			let height = Height::new(source_height.revision_number, packet_creation_height);
+			log::trace!(
+				target: "hyperspace",
+				"Querying client state at {height}"
+			);
+			let sink_client_state =
+				source.query_client_state(height, sink.client_id()).await.ok()?;
 			let sink_client_state =
 				AnyClientState::try_from(sink_client_state.client_state?).ok()?;
 			let height = sink_client_state.latest_height();
 			let timestamp_at_creation =
 				sink.query_timestamp_at(height.revision_height).await.ok()?;
-			let period = packet.timeout_timestamp.nanoseconds() - timestamp_at_creation;
+			// may underflow if the user have chosen timeout less than the block timestamp at which
+			// the packet was created, so we use `saturating_sub`
+			let period =
+				packet.timeout_timestamp.nanoseconds().saturating_sub(timestamp_at_creation);
 			let period = Duration::from_nanos(period);
 			let start_height = height.revision_height +
 				calculate_block_delay(period, sink.expected_block_time()).saturating_sub(1);
 			let start_height = Height::new(sink_height.revision_number, start_height);
 			find_suitable_proof_height_for_client(
+				sink,
 				source,
 				source_height,
 				sink.client_id(),
@@ -124,6 +132,7 @@ pub async fn get_timeout_proof_height(
 				Height::new(packet.timeout_height.revision_number, start_height)
 			};
 			find_suitable_proof_height_for_client(
+				sink,
 				source,
 				source_height,
 				sink.client_id(),
@@ -142,6 +151,7 @@ pub enum VerifyDelayOn {
 	Sink,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn verify_delay_passed(
 	source: &impl Chain,
 	sink: &impl Chain,
@@ -178,6 +188,24 @@ pub async fn verify_delay_passed(
 		},
 		VerifyDelayOn::Sink => {
 			let actual_proof_height = source.get_proof_height(proof_height).await;
+			log::info!(
+				"Checking proof height on {} as {}:{}",
+				sink.name(),
+				proof_height,
+				actual_proof_height
+			);
+			let _cs = sink
+				.query_client_consensus(sink_height, source.client_id(), actual_proof_height)
+				.await
+				.unwrap()
+				.consensus_state
+				.unwrap_or_else(|| {
+					panic!(
+						"query_client_consensus for {} at height {} is not found",
+						source.client_id(),
+						actual_proof_height
+					)
+				});
 			if let Ok((sink_client_update_height, sink_client_update_time)) = sink
 				.query_client_update_time_and_height(source.client_id(), actual_proof_height)
 				.await
@@ -305,18 +333,15 @@ pub enum KeyPathType {
 pub fn get_key_path(key_path_type: KeyPathType, packet: &Packet) -> String {
 	match key_path_type {
 		KeyPathType::SeqRecv => {
-			format!(
-				"{}",
-				SeqRecvsPath(packet.destination_port.clone(), packet.destination_channel.clone())
-			)
+			format!("{}", SeqRecvsPath(packet.destination_port.clone(), packet.destination_channel))
 		},
 		KeyPathType::ReceiptPath => {
 			format!(
 				"{}",
 				ReceiptsPath {
 					port_id: packet.destination_port.clone(),
-					channel_id: packet.destination_channel.clone(),
-					sequence: packet.sequence.clone()
+					channel_id: packet.destination_channel,
+					sequence: packet.sequence
 				}
 			)
 		},
@@ -325,8 +350,8 @@ pub fn get_key_path(key_path_type: KeyPathType, packet: &Packet) -> String {
 				"{}",
 				CommitmentsPath {
 					port_id: packet.source_port.clone(),
-					channel_id: packet.source_channel.clone(),
-					sequence: packet.sequence.clone()
+					channel_id: packet.source_channel,
+					sequence: packet.sequence
 				}
 			)
 		},
@@ -335,18 +360,15 @@ pub fn get_key_path(key_path_type: KeyPathType, packet: &Packet) -> String {
 				"{}",
 				AcksPath {
 					port_id: packet.destination_port.clone(),
-					channel_id: packet.destination_channel.clone(),
-					sequence: packet.sequence.clone()
+					channel_id: packet.destination_channel,
+					sequence: packet.sequence
 				}
 			)
 		},
 		KeyPathType::ChannelPath => {
 			format!(
 				"{}",
-				ChannelEndsPath(
-					packet.destination_port.clone(),
-					packet.destination_channel.clone()
-				)
+				ChannelEndsPath(packet.destination_port.clone(), packet.destination_channel)
 			)
 		},
 	}

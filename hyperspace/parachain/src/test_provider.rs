@@ -141,7 +141,7 @@ where
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	<<T as subxt::Config>::Header as Header>::Number:
 		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
-	<T as subxt::Config>::Header: Decode + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	H256: From<T::Hash>,
 	BTreeMap<H256, ParachainHeaderProofs>:

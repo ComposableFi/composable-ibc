@@ -183,7 +183,7 @@ where
 			height: height.revision_height,
 		};
 
-		let path = format!("{}", consensus_path);
+		let path = format!("{consensus_path}");
 		let key = apply_prefix(T::PalletPrefix::get(), vec![path]);
 
 		Ok(QueryConsensusStateResponse {
@@ -458,7 +458,7 @@ where
 			height: height.revision_height,
 		};
 		let client_state_path = format!("{}", ClientStatePath(client_id));
-		let consensus_path = format!("{}", consensus_path);
+		let consensus_path = format!("{consensus_path}");
 		let client_state_key = apply_prefix(prefix, vec![client_state_path]);
 		let connection_key = apply_prefix(prefix, vec![connection_path]);
 		let consensus_key = apply_prefix(prefix, vec![consensus_path]);
@@ -549,9 +549,8 @@ where
 			}
 			// Try removing at most 1000 sequences in this cycle starting from the last sequence
 			// removed
-			let next_seq_send = ctx
-				.get_next_sequence_send(&(port_id.clone(), channel_id.clone()))
-				.map_err(|_| {
+			let next_seq_send =
+				ctx.get_next_sequence_send(&(port_id.clone(), channel_id)).map_err(|_| {
 					log::trace!(target: "pallet_ibc", "Failed to run packet clean up");
 					(Error::<T>::Other, removed_count)
 				})?;
@@ -602,9 +601,8 @@ where
 				}
 			}
 			// Try removing at most 1000 sequences in this cycle from the last sequence removed
-			let next_seq_recv = ctx
-				.get_next_sequence_recv(&(port_id.clone(), channel_id.clone()))
-				.map_err(|_| {
+			let next_seq_recv =
+				ctx.get_next_sequence_recv(&(port_id.clone(), channel_id)).map_err(|_| {
 					log::trace!(target: "pallet_ibc", "Failed to run packet clean up");
 					(Error::<T>::Other, removed_count)
 				})?;
@@ -649,7 +647,7 @@ where
 			.into_iter()
 			.filter_map(|seq| {
 				let key = Pallet::<T>::send_packet_key(channel_id.clone(), port_id.clone(), seq);
-				SendPackets::<T>::get(key.clone()).and_then(|v| PacketInfo::decode(&mut &*v).ok())
+				SendPackets::<T>::get(key).and_then(|v| PacketInfo::decode(&mut &*v).ok())
 			})
 			.collect();
 		log::trace!(target: "pallet_ibc", "get_send_packet_info: {:?}, {:?}", sequences, packets);
@@ -667,9 +665,9 @@ where
 			.filter_map(|seq| {
 				let key = Pallet::<T>::recv_packet_key(channel_id.clone(), port_id.clone(), seq);
 				let ack_key = Pallet::<T>::ack_key(channel_id.clone(), port_id.clone(), seq);
-				let packet_info = RecvPackets::<T>::get(key.clone())
-					.and_then(|v| PacketInfo::decode(&mut &*v).ok());
-				let ack = Acks::<T>::get(ack_key.clone());
+				let packet_info =
+					RecvPackets::<T>::get(key).and_then(|v| PacketInfo::decode(&mut &*v).ok());
+				let ack = Acks::<T>::get(ack_key);
 				packet_info.map(|mut packet_info| {
 					packet_info.ack = ack;
 					packet_info
@@ -748,7 +746,7 @@ impl<T: Config> Pallet<T> {
 			T::IbcDenomToAssetIdConversion::ibc_assets(key, limit);
 		ibc_primitives::QueryDenomTracesResponse {
 			denoms,
-			total: count_total.then(|| total_count),
+			total: count_total.then_some(total_count),
 			next_key: next_id.map(|key| key.encode()),
 		}
 	}
@@ -855,8 +853,7 @@ where
 			ctx.channel_end(&(source_port.clone(), source_channel)).map_err(|_| {
 				IbcHandlerError::ChannelOrPortError {
 					msg: Some(format!(
-						"Failed to fetch Channel end for channel {} from storage",
-						source_channel
+						"Failed to fetch Channel end for channel {source_channel} from storage"
 					)),
 				}
 			})?;
@@ -864,7 +861,7 @@ where
 		let sequence =
 			ctx.get_next_sequence_send(&(source_port.clone(), source_channel))
 				.map_err(|_| IbcHandlerError::SendPacketError {
-					msg: Some(format!("Failed to get next_sequence_send for {}", source_channel)),
+					msg: Some(format!("Failed to get next_sequence_send for {source_channel}")),
 				})?;
 
 		let destination_port = source_channel_end.counterparty().port_id().clone();
@@ -963,7 +960,7 @@ where
 	fn write_acknowledgement(packet: Packet, ack: Vec<u8>) -> Result<(), IbcHandlerError> {
 		let mut ctx = Context::<T>::default();
 		let error = |action, err| {
-			let msg = Some(format!("Failed to {} acknowledgement{:?}", action, err));
+			let msg = Some(format!("Failed to {action} acknowledgement{err:?}"));
 			IbcHandlerError::AcknowledgementError { msg }
 		};
 		let result =
@@ -1085,20 +1082,19 @@ where
 			ctx.channel_end(&(port_id.clone(), *channel_id)).map_err(|_| {
 				IbcHandlerError::ChannelOrPortError {
 					msg: Some(format!(
-						"Failed to fetch Channel end for channel {} from storage",
-						channel_id
+						"Failed to fetch Channel end for channel {channel_id} from storage"
 					)),
 				}
 			})?;
 		let client_id = Self::channel_client_id(&source_channel_end).map_err(|_| {
 			IbcHandlerError::ClientIdError {
-				msg: Some(format!("Could not find client id for {:?}/{:?}", port_id, channel_id)),
+				msg: Some(format!("Could not find client id for {port_id:?}/{channel_id:?}")),
 			}
 		})?;
 
 		let client_state =
 			ctx.client_state(&client_id).map_err(|_| IbcHandlerError::ClientStateError {
-				msg: Some(format!("CLient state not found for {:?}", client_id)),
+				msg: Some(format!("CLient state not found for {client_id:?}")),
 			})?;
 		let consensus_state = ctx
 			.consensus_state(&client_id, client_state.latest_height())

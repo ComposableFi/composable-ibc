@@ -27,6 +27,8 @@ tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 tendermint-light-client-verifier = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 sha2 = { version = "0.10", optional = true, default-features = false }
+hex = { version = "0.4.3", default-features = false }
+log = { version = "0.4", default-features = false }
 
 [dev-dependencies]
 ibc = { path = "../../ibc/modules", features = ["mocks"] }

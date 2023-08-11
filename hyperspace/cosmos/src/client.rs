@@ -26,7 +26,9 @@ use ics07_tendermint::{
 	merkle::convert_tm_to_ics_merkle_proof,
 };
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
-use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
+use primitives::{
+	Chain, CommonClientConfig, CommonClientState, IbcProvider, KeyProvider, UpdateType,
+};
 use prost::Message;
 use quick_cache::sync::Cache;
 use rand::Rng;
@@ -41,9 +43,10 @@ use std::{
 use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
 use tendermint_light_client_verifier::types::{LightBlock, ValidatorSet};
-use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, Url, WebSocketClient};
+use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient, Url, WebSocketClient};
 use tokio::{
-	task::JoinSet,
+	sync::{Mutex as TokioMutex, Mutex as AsyncMutex},
+	task::{JoinHandle, JoinSet},
 	time::{error::Elapsed, sleep, timeout},
 };
 
@@ -128,6 +131,8 @@ pub struct CosmosClient<H> {
 	pub name: String,
 	/// Chain rpc client
 	pub rpc_client: WebSocketClient,
+	/// Chain http rpc client
+	pub rpc_http_client: HttpClient,
 	/// Reusable GRPC client
 	pub grpc_client: tonic::transport::Channel,
 	/// Chain rpc address
@@ -165,17 +170,12 @@ pub struct CosmosClient<H> {
 	/// Mutex used to sequentially send transactions. This is necessary because
 	/// account sequence numbers are not updated until the transaction is processed.
 	pub tx_mutex: Arc<tokio::sync::Mutex<()>>,
-	/// Delay between parallel RPC calls to be friendly with the node and avoid MaxSlotsExceeded
-	/// error
-	pub rpc_call_delay: Duration,
-	/// Used to determine whether client updates should be forced to send
-	/// even if it's optional. It's required, because some timeout packets
-	/// should use proof of the client states.
-	///
-	/// Set inside `on_undelivered_sequences`.
-	pub maybe_has_undelivered_packets: Arc<Mutex<bool>>,
 	/// Light-client blocks cache
 	pub light_block_cache: Arc<Cache<TmHeight, LightBlock>>,
+	/// Relayer data
+	pub common_state: CommonClientState,
+	/// Join handles for spawned tasks
+	pub join_handles: Arc<TokioMutex<Vec<JoinHandle<Result<(), tendermint_rpc::Error>>>>>,
 }
 
 /// config options for [`ParachainClient`]
@@ -237,6 +237,9 @@ pub struct CosmosClientConfig {
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 	/// The key that signs transactions
 	pub mnemonic: String,
+	/// Common client config
+	#[serde(flatten)]
+	pub common: CommonClientConfig,
 }
 
 impl<H> CosmosClient<H>
@@ -249,7 +252,9 @@ where
 		let (rpc_client, rpc_driver) = WebSocketClient::new(config.websocket_url.clone())
 			.await
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
-		tokio::spawn(rpc_driver.run());
+		let rpc_http_client = HttpClient::new(config.rpc_url.clone())
+			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		let ws_driver_jh = tokio::spawn(rpc_driver.run());
 		let grpc_client = tonic::transport::Endpoint::new(config.grpc_url.to_string())
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?
 			.connect()
@@ -257,7 +262,8 @@ where
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 
 		let chain_id = ChainId::from(config.chain_id);
-		let light_client = LightClient::init_light_client(config.rpc_url.clone()).await?;
+		let light_client =
+			LightClient::init_light_client(config.rpc_url.clone(), Duration::from_secs(10)).await?;
 		let commitment_prefix = CommitmentPrefix::try_from(config.store_prefix.as_bytes().to_vec())
 			.map_err(|e| Error::from(format!("Invalid store prefix {:?}", e)))?;
 
@@ -267,10 +273,12 @@ where
 		})
 		.map_err(|e| e.to_string())?;
 
+		let rpc_call_delay = Duration::from_millis(1000);
 		Ok(Self {
 			name: config.name,
 			chain_id,
 			rpc_client,
+			rpc_http_client,
 			grpc_client,
 			rpc_url: config.rpc_url,
 			grpc_url: config.grpc_url,
@@ -288,9 +296,16 @@ where
 			keybase,
 			_phantom: std::marker::PhantomData,
 			tx_mutex: Default::default(),
-			rpc_call_delay: Duration::from_millis(1000),
-			maybe_has_undelivered_packets: Default::default(),
 			light_block_cache: Arc::new(Cache::new(100000)),
+			common_state: CommonClientState {
+				skip_optional_client_updates: config.common.skip_optional_client_updates,
+				maybe_has_undelivered_packets: Default::default(),
+				rpc_call_delay,
+				initial_rpc_call_delay: rpc_call_delay,
+				misbehaviour_client_msg_queue: Arc::new(AsyncMutex::new(vec![])),
+				max_packets_to_process: config.common.max_packets_to_process as usize,
+			},
+			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh])),
 		})
 	}
 
@@ -404,6 +419,7 @@ where
 								client.name, e
 							))
 						})?;
+
 					let trusted_light_block =
 						client.fetch_light_block_with_cache(height.increment(), duration).await?;
 
@@ -411,9 +427,10 @@ where
 						&latest_light_block.validators,
 						&latest_light_block.next_validators,
 					) {
-						true => UpdateType::Mandatory,
+						true => UpdateType::Optional,
 						false => UpdateType::Mandatory,
 					};
+
 					Ok((
 						Header {
 							signed_header: latest_light_block.signed_header,
@@ -433,9 +450,6 @@ where
 			}
 		}
 		xs.sort_by_key(|(h, _)| h.signed_header.header.height.value());
-		for (x, _) in &xs {
-			log::debug!(target: "hyperspace_cosmos", "Sorted: {:?}, {:?}", x.trusted_height, x.signed_header);
-		}
 		Ok(xs)
 	}
 
@@ -478,8 +492,8 @@ where
 
 		// Use the Tendermint-rs RPC client to do the query.
 		let response = self
-			.rpc_client
-			.abci_query(Some(path.to_owned()), data, height, prove)
+			.rpc_http_client
+			.abci_query(Some(path.to_owned()), data.clone(), height, prove)
 			.await
 			.map_err(|e| {
 				Error::from(format!("Failed to query chain {} with error {:?}", self.name, e))
@@ -522,10 +536,8 @@ fn is_validators_equal(set_a: &ValidatorSet, set_b: &ValidatorSet) -> bool {
 
 #[cfg(test)]
 pub mod tests {
-
-	use crate::key_provider::KeyEntry;
-
 	use super::MnemonicEntry;
+	use crate::key_provider::KeyEntry;
 
 	struct TestVector {
 		mnemonic: &'static str,
