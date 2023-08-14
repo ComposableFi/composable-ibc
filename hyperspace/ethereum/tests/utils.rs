@@ -34,6 +34,8 @@ use ibc::{
 	Height,
 };
 
+pub const USE_GETH: bool = true;
+
 #[track_caller]
 pub fn yui_ibc_solidity_path() -> PathBuf {
 	let base = env!("CARGO_MANIFEST_DIR");
@@ -45,8 +47,6 @@ pub fn yui_ibc_solidity_path() -> PathBuf {
 		default
 	}
 }
-
-pub const USE_GETH: bool = true;
 
 #[track_caller]
 pub fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http>, LocalWallet>>) {
