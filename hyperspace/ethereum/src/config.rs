@@ -1,3 +1,4 @@
+use ethers::signers::LocalWallet;
 use std::str::FromStr;
 
 use ethers::types::Address;
@@ -35,7 +36,10 @@ where
 	ser.serialize_str(&format!("{uri}"))
 }
 
-fn address_de<'de, D>(de: D) -> Result<Address, D::Error> where D: Deserializer<'de> {
+fn address_de<'de, D>(de: D) -> Result<Address, D::Error>
+where
+	D: Deserializer<'de>,
+{
 	struct FromStr;
 
 	impl Visitor<'_> for FromStr {
@@ -83,6 +87,7 @@ pub struct Config {
 	pub mnemonic: Option<String>,
 	/// private key for the wallet
 	pub private_key: Option<String>,
+	pub private_key_path: Option<String>,
 	/// maximum block weight
 	pub max_block_weight: u64,
 	/// Name of the chain

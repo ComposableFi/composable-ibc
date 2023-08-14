@@ -1,6 +1,5 @@
-use std::{future::Future, str::FromStr, sync::Arc};
-use std::pin::Pin;
 use async_trait::async_trait;
+use std::{future::Future, pin::Pin, str::FromStr, sync::Arc};
 
 use ethers::{
 	abi::{Address, ParamType, ParseError, Token},
@@ -14,14 +13,13 @@ use ethers::{
 
 use futures::{Stream, TryFutureExt};
 use ibc::{
+	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
 	core::ics24_host::identifier::{ChannelId, ClientId, PortId},
 	Height,
 };
-use thiserror::Error;
-use ibc::applications::transfer::msgs::transfer::MsgTransfer;
-use ibc::applications::transfer::PrefixedCoin;
 use ibc_primitives::Timeout;
 use primitives::CommonClientState;
+use thiserror::Error;
 
 use crate::config::Config;
 
@@ -85,7 +83,7 @@ pub struct AckPacket {
 }
 
 impl EthereumClient {
-	pub async fn new(config: Config) -> Result<Self, ClientError> {
+	pub async fn new(mut config: Config) -> Result<Self, ClientError> {
 		let client = Provider::<Http>::try_from(config.http_rpc_url.to_string())
 			.map_err(|_| ClientError::UriParseError(config.http_rpc_url.clone()))?;
 
@@ -97,7 +95,9 @@ impl EthereumClient {
 				.build()
 				.unwrap()
 				.with_chain_id(chain_id.as_u64())
-		} else if let Some(private_key) = &config.private_key {
+		} else if let Some(path) = config.private_key_path.take() {
+			LocalWallet::decrypt_keystore(path, env!("KEY_PASS")).unwrap().into()
+		} else if let Some(private_key) = config.private_key.take() {
 			let key = elliptic_curve::SecretKey::<ethers::prelude::k256::Secp256k1>::from_sec1_pem(
 				private_key.as_str(),
 			)
@@ -109,7 +109,12 @@ impl EthereumClient {
 
 		let client = ethers::middleware::SignerMiddleware::new(client, wallet);
 
-		Ok(Self { http_rpc: Arc::new(client), ws_uri: config.ws_rpc_url.clone(), config, common_state: Default::default() })
+		Ok(Self {
+			http_rpc: Arc::new(client),
+			ws_uri: config.ws_rpc_url.clone(),
+			config,
+			common_state: Default::default(),
+		})
 	}
 
 	pub async fn websocket_provider(&self) -> Result<Provider<Ws>, ClientError> {
@@ -310,13 +315,11 @@ impl EthereumClient {
 		block_height: Option<u64>,
 		storage_index: u32,
 	) -> impl Future<Output = Result<EIP1186ProofResponse, ClientError>> {
-		let key = ethers::utils::keccak256(
-			&ethers::abi::encode_packed(&[Token::String(key.into())]).unwrap(),
-		);
+		let key = ethers::utils::keccak256(key.as_bytes());
 
 		let key = hex::encode(key);
 
-		let var_name = format!("0x{key}", key = &key);
+		let var_name = format!("0x{key}");
 		let storage_index = format!("{storage_index}");
 		let index =
 			cast::SimpleCast::index("bytes32", dbg!(&var_name), dbg!(&storage_index)).unwrap();
@@ -335,7 +338,42 @@ impl EthereumClient {
 					vec![H256::from_str(&index).unwrap()],
 					block_height.map(|i| BlockId::from(i)),
 				)
-				.await.unwrap())
+				.await
+				.unwrap())
+		}
+	}
+
+	pub fn eth_query_proof_tokens(
+		&self,
+		tokens: &[Token],
+		block_height: Option<u64>,
+		storage_index: u32,
+	) -> impl Future<Output = Result<EIP1186ProofResponse, ClientError>> {
+		let vec1 = ethers::abi::encode_packed(tokens).unwrap();
+		let key = ethers::utils::keccak256(&vec1);
+		let key = hex::encode(key);
+
+		let var_name = format!("0x{key}");
+		let storage_index = format!("{storage_index}");
+		let index =
+			cast::SimpleCast::index("bytes32", dbg!(&var_name), dbg!(&storage_index)).unwrap();
+
+		let client = self.http_rpc.clone();
+		let address = self.config.ibc_handler_address.clone();
+
+		dbg!(&address);
+		dbg!(&H256::from_str(&index).unwrap());
+		dbg!(&block_height);
+
+		async move {
+			Ok(client
+				.get_proof(
+					NameOrAddress::Address(address),
+					vec![H256::from_str(&index).unwrap()],
+					block_height.map(|i| BlockId::from(i)),
+				)
+				.await
+				.unwrap())
 		}
 	}
 
@@ -421,6 +459,7 @@ impl EthereumClient {
 	#[track_caller]
 	pub fn has_packet_receipt(
 		&self,
+		at: Height,
 		port_id: String,
 		channel_id: String,
 		sequence: u64,
@@ -435,9 +474,42 @@ impl EthereumClient {
 				.method("hasPacketReceipt", (port_id, channel_id, sequence))
 				.expect("contract is missing hasPacketReceipt");
 
-			let receipt_fut = binding.call();
+			let receipt: bool = binding
+				.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+				.call()
+				.await
+				.map_err(|err| todo!())
+				.unwrap();
 
-			let receipt: bool = receipt_fut.await.map_err(|err| todo!()).unwrap();
+			Ok(receipt)
+		}
+	}
+
+	#[track_caller]
+	pub fn has_acknowledgement(
+		&self,
+		at: Height,
+		port_id: String,
+		channel_id: String,
+		sequence: u64,
+	) -> impl Future<Output = Result<bool, ClientError>> {
+		let client = self.http_rpc.clone();
+		let address = self.config.ibc_handler_address.clone();
+
+		let contract = crate::contract::ibc_handler(address, Arc::clone(&client));
+
+		async move {
+			let binding = contract
+				.method("hasAcknowledgement", (port_id, channel_id, sequence))
+				.expect("contract is missing hasAcknowledgement");
+
+			// let receipt_fut = ;
+			let receipt: bool = binding
+				.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+				.call()
+				.await
+				.map_err(|err| todo!())
+				.unwrap();
 
 			Ok(receipt)
 		}
@@ -451,11 +523,15 @@ impl primitives::TestProvider for EthereumClient {
 		todo!()
 	}
 
-	async fn send_ordered_packet(&self, channel_id: ChannelId, timeout: Timeout) -> Result<(), Self::Error> {
+	async fn send_ordered_packet(
+		&self,
+		channel_id: ChannelId,
+		timeout: Timeout,
+	) -> Result<(), Self::Error> {
 		todo!()
 	}
 
-	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item=u64> + Send + Sync>> {
+	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
 		todo!()
 	}
 

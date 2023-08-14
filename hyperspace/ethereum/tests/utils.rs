@@ -9,18 +9,30 @@ use std::{
 use ethers::{
 	abi::Token,
 	contract::ContractFactory,
-	core::utils::Anvil,
+	core::{rand::rngs::ThreadRng, utils::Anvil},
 	middleware::SignerMiddleware,
 	prelude::{ContractInstance, *},
 	providers::{Http, Middleware, Provider},
 	signers::{LocalWallet, Signer},
-
 	utils::AnvilInstance,
 };
-use ethers_solc::{artifacts::{
-	output_selection::OutputSelection, Libraries, Optimizer, OptimizerDetails, Settings,
-}, Artifact, Project, ProjectPathsConfig, ProjectCompileOutput, SolcConfig, ConfigurableContractArtifact};
+use ethers_solc::{
+	artifacts::{
+		output_selection::OutputSelection, DebuggingSettings, Libraries, Optimizer,
+		OptimizerDetails, RevertStrings, Settings, SettingsMetadata,
+	},
+	Artifact, ConfigurableContractArtifact, EvmVersion, Project, ProjectCompileOutput,
+	ProjectPathsConfig, SolcConfig,
+};
 use hyperspace_ethereum::contract::UnwrapContractError;
+use ibc::{
+	core::{
+		ics04_channel::packet::Packet,
+		ics24_host::identifier::{ChannelId, PortId},
+	},
+	timestamp::Timestamp,
+	Height,
+};
 
 #[track_caller]
 pub fn yui_ibc_solidity_path() -> PathBuf {
@@ -34,18 +46,28 @@ pub fn yui_ibc_solidity_path() -> PathBuf {
 	}
 }
 
+pub const USE_GETH: bool = true;
+
 #[track_caller]
 pub fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http>, LocalWallet>>) {
 	let anvil = Anvil::new().spawn();
-	let wallet: LocalWallet = anvil.keys()[0].clone().into();
+	let wallet: LocalWallet = if USE_GETH {
+		LocalWallet::decrypt_keystore(
+			"keys/0x73db010c3275eb7a92e5c38770316248f4c644ee",
+			env!("KEY_PASS"),
+		)
+		.unwrap()
+		.into()
+	} else {
+		anvil.keys()[0].clone().into()
+	};
 
-	const USE_GETH: bool = false;
-	let endpoint = if USE_GETH { "http://localhost:8545".to_string() } else { anvil.endpoint() };
+	let endpoint = if USE_GETH { "http://localhost:6001".to_string() } else { anvil.endpoint() };
 	let provider = Provider::<Http>::try_from(endpoint)
 		.unwrap()
 		.interval(Duration::from_millis(10u64));
-
-	let client = SignerMiddleware::new(provider, wallet.with_chain_id(anvil.chain_id()));
+	let chain_id = if USE_GETH { 4242u64 } else { anvil.chain_id() };
+	let client = SignerMiddleware::new(provider, wallet.with_chain_id(chain_id));
 	let client = Arc::new(client);
 
 	(anvil, client)
@@ -60,7 +82,7 @@ pub fn compile_solc(project_paths: ProjectPathsConfig) -> ProjectCompileOutput {
 			remappings: vec![],
 			optimizer: Optimizer {
 				enabled: Some(false),
-				runs: Some(1),
+				runs: Some(256),
 				details: Some(OptimizerDetails {
 					peephole: Some(true),
 					inliner: Some(true),
@@ -76,9 +98,12 @@ pub fn compile_solc(project_paths: ProjectPathsConfig) -> ProjectCompileOutput {
 			model_checker: None,
 			metadata: None,
 			output_selection: OutputSelection::default_output_selection(),
-			evm_version: None,
+			evm_version: Some(EvmVersion::Paris),
 			via_ir: Some(false),
-			debug: None,
+			debug: Some(DebuggingSettings {
+				revert_strings: Some(RevertStrings::Debug),
+				debug_info: vec!["location".to_string()],
+			}),
 			libraries: Libraries { libs: Default::default() },
 		},
 	};
@@ -279,7 +304,7 @@ where
 					Token::Tuple(vec![
 						// Channel.Data
 						Token::Uint(1.into()), // State, Init
-						Token::Uint(0.into()), // Ordering
+						Token::Uint(1.into()), // Ordering
 						Token::Tuple(vec![
 							Token::String("port-0".into()),
 							Token::String("channel-0".into()),
@@ -320,6 +345,63 @@ where
 		let () = fut.call().await.unwrap_contract_error();
 		let tx = fut.send().await.unwrap_contract_error().await.unwrap().unwrap();
 		assert_eq!(tx.status, Some(1.into()));
+	}
+
+	pub async fn recv_packet(&self, packet: Packet) -> TransactionReceipt {
+		let fut = self
+			.ibc_handler
+			.method::<_, ()>(
+				"recvPacket",
+				(Token::Tuple(vec![
+					Token::Tuple(vec![
+						Token::Uint(packet.sequence.0.into()),              // sequence
+						Token::String(packet.source_port.to_string()),      // port-id
+						Token::String(packet.source_channel.to_string()),   // channel-id
+						Token::String(packet.destination_port.to_string()), // port-id
+						Token::String(packet.destination_channel.to_string()), // channel-id
+						Token::Bytes(packet.data),                          // data
+						Token::Tuple(vec![
+							// timeout-height
+							Token::Uint(packet.timeout_height.revision_number.into()),
+							Token::Uint(packet.timeout_height.revision_height.into()),
+						]),
+						Token::Uint(
+							packet
+								.timeout_timestamp
+								.into_tm_time()
+								.map(|x| x.unix_timestamp_nanos() as u64)
+								.unwrap_or(0u64)
+								.into(),
+						), /* timeout-timestamp */
+					]),
+					Token::Bytes(vec![]), /* proof */
+					Token::Tuple(vec![
+						// proof-height
+						Token::Uint(0.into()),
+						Token::Uint(1.into()),
+					]),
+				]),),
+			)
+			.unwrap();
+
+		let () = fut.call().await.unwrap_contract_error();
+		// let trace = self
+		// 	.ibc_handler
+		// 	.client()
+		// 	.borrow()
+		// 	.debug_trace_call(fut.tx.clone(), None, GethDebugTracingCallOptions::default())
+		// 	.await
+		// 	.unwrap();
+		// std::fs::write("trace.txt", format!("{:#?}", trace)).unwrap();
+		// println!("trace: {:?}", trace);
+		let tx = fut.send().await.unwrap_contract_error().await.unwrap().unwrap();
+		// dbg!(tx.logs);
+		let status = tx.status.expect("status not found");
+
+		if status == 0.into() {
+			panic!("status is 0");
+		}
+		tx
 	}
 
 	pub async fn register_client(&self, kind: &str, address: Address) {
@@ -371,10 +453,23 @@ pub async fn deploy_yui_ibc<M>(
 where
 	M: Middleware,
 {
+	let contract = project_output.find_first("OwnableIBCHandler").unwrap();
+	let (abi, bytecode, _) = contract.clone().into_parts();
+	let handler_bytecode = bytecode.unwrap();
+	let handler_abi = abi.unwrap();
+	dbg!(&handler_bytecode.len() / 1);
+
+	if handler_bytecode.len() > dbg!(24 * 1024) {
+		panic!("handler bytecode too large");
+	}
+
 	let contract = project_output.find_first("IBCClient").unwrap();
 	let (abi, bytecode, _) = contract.clone().into_parts();
 	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
-	let ibc_client = factory.deploy(()).unwrap().send().await.unwrap();
+	let deployer1 = factory.deploy(()).unwrap();
+	let acc = deployer1.client().default_sender().unwrap();
+	dbg!(client.get_balance(acc, None).await.unwrap());
+	let ibc_client = deployer1.send().await.unwrap();
 
 	let contract = project_output.find_first("IBCConnection").unwrap();
 	let (abi, bytecode, _) = contract.clone().into_parts();
@@ -391,20 +486,21 @@ where
 	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
 	let ibc_packet = factory.deploy(()).unwrap().send().await.unwrap();
 
-	let contract = project_output.find_first("OwnableIBCHandler").unwrap();
-	let (abi, bytecode, _) = contract.clone().into_parts();
-	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
-	let ibc_handler = factory
+	let factory = ContractFactory::new(handler_abi, handler_bytecode, client.clone());
+	let mut deployer = factory
 		.deploy((
 			Token::Address(ibc_client.address()),
 			Token::Address(ibc_connection.address()),
 			Token::Address(ibc_channel_handshake.address()),
 			Token::Address(ibc_packet.address()),
 		))
-		.unwrap()
-		.send()
-		.await
-		.expect("failed to deploy OwnableIBCHandler");
+		.unwrap();
+	// let estimated_gas = client.estimate_gas(&deployer.tx, None).await.unwrap();
+	// dbg!(estimated_gas);
+	dbg!(client.get_balance(acc, None).await.unwrap());
+	let ibc_handler = deployer.clone().send().await.expect("failed to deploy OwnableIBCHandler");
+
+	println!("IBC Handler address: {:?}", ibc_handler.address());
 
 	DeployYuiIbc { ibc_client, ibc_connection, ibc_channel_handshake, ibc_packet, ibc_handler }
 }

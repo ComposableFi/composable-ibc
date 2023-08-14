@@ -34,7 +34,6 @@ where
 	}
 }
 
-
 pub const IBC_HANDLER_ABI: &str = include_str!("./abi/ibc-handler-abi.json");
 
 /// A wrapper around the IBC handler contract instance
