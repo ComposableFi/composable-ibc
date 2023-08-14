@@ -96,7 +96,12 @@ impl EthereumClient {
 				.unwrap()
 				.with_chain_id(chain_id.as_u64())
 		} else if let Some(path) = config.private_key_path.take() {
-			LocalWallet::decrypt_keystore(path, env!("KEY_PASS")).unwrap().into()
+			LocalWallet::decrypt_keystore(
+				path,
+				option_env!("KEY_PASS").expect("KEY_PASS is not set"),
+			)
+			.unwrap()
+			.into()
 		} else if let Some(private_key) = config.private_key.take() {
 			let key = elliptic_curve::SecretKey::<ethers::prelude::k256::Secp256k1>::from_sec1_pem(
 				private_key.as_str(),
