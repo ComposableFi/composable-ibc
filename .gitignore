@@ -76,3 +76,5 @@ typechain-types/
 # foundry
 cache/
 out/
+
+hyperspace/ethereum/yui-ibc-solidity
