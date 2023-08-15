@@ -53,7 +53,6 @@ pub fn yui_ibc_solidity_path() -> PathBuf {
 pub fn yui_ibc_solidity_path_test() -> PathBuf {
 	let base = env!("CARGO_MANIFEST_DIR");
 	let default = PathBuf::from(base).join("yui-ibc-solidity-private");
-	let default = PathBuf::from("/Users/mykyta/development/composable/yui-ibc-solidity-private-2");
 
 	if let Ok(path) = std::env::var("YUI_IBC_SOLIDITY_PATH") {
 		path.into()
