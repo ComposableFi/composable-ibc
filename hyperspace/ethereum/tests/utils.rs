@@ -1,5 +1,4 @@
-
-pub mod sanity_checks;
+#![allow(dead_code)]
 
 use std::{
 	path::{Path, PathBuf},
@@ -25,7 +24,7 @@ use ethers_solc::{
 	Artifact, ConfigurableContractArtifact, EvmVersion, Project, ProjectCompileOutput,
 	ProjectPathsConfig, SolcConfig,
 };
-use crate::contract::UnwrapContractError;
+use hyperspace_ethereum::contract::UnwrapContractError;
 use ibc::{
 	core::{
 		ics04_channel::packet::Packet,
@@ -41,18 +40,6 @@ pub const USE_GETH: bool = true;
 pub fn yui_ibc_solidity_path() -> PathBuf {
 	let base = env!("CARGO_MANIFEST_DIR");
 	let default = PathBuf::from(base).join("yui-ibc-solidity");
-
-	if let Ok(path) = std::env::var("YUI_IBC_SOLIDITY_PATH") {
-		path.into()
-	} else {
-		default
-	}
-}
-
-#[track_caller]
-pub fn yui_ibc_solidity_path_test() -> PathBuf {
-	let base = env!("CARGO_MANIFEST_DIR");
-	let default = PathBuf::from(base).join("yui-ibc-solidity-private");
 
 	if let Ok(path) = std::env::var("YUI_IBC_SOLIDITY_PATH") {
 		path.into()
@@ -159,24 +146,6 @@ pub fn compile_yui(path_to_yui: &Path, sources: &str) -> ProjectCompileOutput {
 	let project_paths = ProjectPathsConfig::builder()
 		.root(&path_to_yui)
 		.sources(path_to_yui.join(sources))
-		.build()
-		.unwrap();
-
-	compile_solc(project_paths)
-}
-
-#[track_caller]
-pub fn compile_yui_test(path_to_yui: &Path, sources: Option<&str>) -> ProjectCompileOutput {
-	assert!(
-		path_to_yui.exists(),
-		"path to yui-ibc-solidity does not exist: {}",
-		path_to_yui.display()
-	);
-
-	let s = sources.unwrap_or("contracts/core");
-	let project_paths = ProjectPathsConfig::builder()
-		.root(&path_to_yui)
-		.sources(path_to_yui.join(s))
 		.build()
 		.unwrap();
 

@@ -9,12 +9,10 @@ use ethers::{
 	utils::{keccak256, Anvil, AnvilInstance},
 };
 use ethers_solc::{ProjectCompileOutput, ProjectPathsConfig};
-use crate::{
+use hyperspace_ethereum::{
 	config::Config,
 	contract::{ibc_handler, UnwrapContractError},
 };
-
-use crate::utils as utils;
 use ibc::{
 	core::{
 		ics02_client::height::Height,
@@ -27,6 +25,8 @@ use primitives::IbcProvider;
 use prost::Message;
 use tracing::log;
 
+mod utils;
+
 async fn hyperspace_ethereum_client_fixture<M>(
 	anvil: &ethers::utils::AnvilInstance,
 	utils::DeployYuiIbc {
@@ -36,7 +36,7 @@ async fn hyperspace_ethereum_client_fixture<M>(
 		ibc_packet,
 		ibc_handler,
 	}: &utils::DeployYuiIbc<Arc<M>, M>,
-) -> crate::client::EthereumClient {
+) -> hyperspace_ethereum::client::EthereumClient {
 	let endpoint = if USE_GETH { "http://localhost:6001".to_string() } else { anvil.endpoint() };
 	let wallet_path = if USE_GETH {
 		Some("keys/0x73db010c3275eb7a92e5c38770316248f4c644ee".to_string())
@@ -45,7 +45,7 @@ async fn hyperspace_ethereum_client_fixture<M>(
 	};
 	let wallet = if !USE_GETH { Some(anvil.endpoint().parse().unwrap()) } else { None };
 
-	crate::client::EthereumClient::new(Config {
+	hyperspace_ethereum::client::EthereumClient::new(Config {
 		http_rpc_url: endpoint.parse().unwrap(),
 		ws_rpc_url: Default::default(),
 		ibc_handler_address: ibc_handler.address(),
@@ -224,14 +224,6 @@ fn deploy_mock_module_fixture(
 		let constructor_args = (Token::Address(deploy.yui_ibc.ibc_handler.address()),);
 		utils::deploy_contract(contract, constructor_args, deploy.client.clone()).await
 	}
-}
-
-fn u64_to_token(x: u64) -> Token {
-	let n = U256::from(x);
-	let mut buf = [0; 32];
-	n.to_big_endian(&mut buf);
-	let start = (32 - u64::BITS / 8) as usize;
-	Token::Bytes(buf[start..32].to_vec())
 }
 
 #[tokio::test]
@@ -534,4 +526,10 @@ async fn test_ibc_packet() {
 	assert_eq!(unreceived, vec![1, 2]);
 }
 
-
+fn u64_to_token(x: u64) -> Token {
+	let n = U256::from(x);
+	let mut buf = [0; 32];
+	n.to_big_endian(&mut buf);
+	let start = (32 - u64::BITS / 8) as usize;
+	Token::Bytes(buf[start..32].to_vec())
+}

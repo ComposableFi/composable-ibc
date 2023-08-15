@@ -44,7 +44,6 @@ members = [
     # "hyperspace/testsuite",
     # "hyperspace/metrics",
     "hyperspace/ethereum",
-    "hyperspace/testsuite",
 
     # utilities
     # "utils/subxt/codegen",

@@ -1,6 +1,7 @@
 
-#[path = "../utils/mod.rs"]
+#[path = "../../tests/utils.rs"]
 mod utils;
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
