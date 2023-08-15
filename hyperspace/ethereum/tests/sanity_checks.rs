@@ -133,7 +133,7 @@ impl DeployYuiIbcMockClient {
 
 async fn deploy_yui_ibc_and_mock_client_fixture() -> DeployYuiIbcMockClient {
 	let path = utils::yui_ibc_solidity_path();
-	let project_output = utils::compile_yui(&path, "contracts/core");
+	let project_output: ProjectCompileOutput = utils::compile_yui(&path, "contracts/core");
 	let (anvil, client) = utils::spawn_anvil();
 	log::warn!("{}", anvil.endpoint());
 	let yui_ibc = utils::deploy_yui_ibc(&project_output, client.clone()).await;
@@ -224,6 +224,22 @@ fn deploy_mock_module_fixture(
 		let constructor_args = (Token::Address(deploy.yui_ibc.ibc_handler.address()),);
 		utils::deploy_contract(contract, constructor_args, deploy.client.clone()).await
 	}
+}
+
+#[tokio::test]
+async fn test_deploy_yui_ibc_and_create_eth_client() {
+	let path = utils::yui_ibc_solidity_path();
+	let project_output = utils::compile_yui(&path, "contracts/core");
+	let project_output1 = utils::compile_yui(&path, "contracts/clients");
+
+	let (anvil, client) = utils::spawn_anvil();
+	let utils::DeployYuiIbc {
+		ibc_client,
+		ibc_connection,
+		ibc_channel_handshake,
+		ibc_packet,
+		ibc_handler,
+	} = utils::deploy_yui_ibc(&project_output, client.clone()).await;
 }
 
 #[tokio::test]

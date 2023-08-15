@@ -34,7 +34,7 @@ use ibc::{
 	Height,
 };
 
-pub const USE_GETH: bool = true;
+pub const USE_GETH: bool = false;
 
 #[track_caller]
 pub fn yui_ibc_solidity_path() -> PathBuf {
