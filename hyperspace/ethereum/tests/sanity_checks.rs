@@ -1,6 +1,7 @@
 use std::{future::Future, ops::Deref, path::PathBuf, str::FromStr, sync::Arc, time::Duration};
 
 use crate::utils::USE_GETH;
+use elliptic_curve::pkcs8::der::pem;
 use ethers::{
 	abi::{encode_packed, Token},
 	core::k256::sha2::{Digest, Sha256},
@@ -43,7 +44,8 @@ async fn hyperspace_ethereum_client_fixture<M>(
 	} else {
 		None
 	};
-	let wallet = if !USE_GETH { Some(anvil.endpoint().parse().unwrap()) } else { None };
+
+	let wallet = if !USE_GETH { Some(anvil.keys()[0].clone().to_sec1_pem(pem::LineEnding::CR).unwrap().as_str().to_owned().to_string()) } else { None };
 
 	hyperspace_ethereum::client::EthereumClient::new(Config {
 		http_rpc_url: endpoint.parse().unwrap(),
@@ -233,13 +235,10 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	let project_output1 = utils::compile_yui(&path, "contracts/clients");
 
 	let (anvil, client) = utils::spawn_anvil();
-	let utils::DeployYuiIbc {
-		ibc_client,
-		ibc_connection,
-		ibc_channel_handshake,
-		ibc_packet,
-		ibc_handler,
-	} = utils::deploy_yui_ibc(&project_output, client.clone()).await;
+
+	let yui_ibc = utils::deploy_yui_ibc(&project_output, client.clone()).await;
+
+	let _hyperspace = hyperspace_ethereum_client_fixture(&anvil, &yui_ibc).await;
 }
 
 #[tokio::test]
