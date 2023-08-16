@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use cast::revm::db;
 use std::{future::Future, pin::Pin, str::FromStr, sync::Arc};
 
 use ethers::{
@@ -23,7 +24,7 @@ use thiserror::Error;
 
 use crate::config::Config;
 
-pub(crate) type EthRpcClient = ethers::prelude::SignerMiddleware<
+pub type EthRpcClient = ethers::prelude::SignerMiddleware<
 	ethers::providers::Provider<Http>,
 	ethers::signers::Wallet<ethers::prelude::k256::ecdsa::SigningKey>,
 >;

@@ -12,7 +12,7 @@ use ethers::{
 use ethers_solc::{ProjectCompileOutput, ProjectPathsConfig, Artifact};
 use hyperspace_ethereum::{
 	config::Config,
-	contract::{ibc_handler, UnwrapContractError},
+	contract::{ibc_handler, UnwrapContractError}, client::EthRpcClient,
 };
 use ibc::{
 	core::{
@@ -38,6 +38,7 @@ async fn hyperspace_ethereum_client_fixture<M>(
 		ibc_handler,
 		tendermint_client
 	}: &utils::DeployYuiIbc<Arc<M>, M>,
+	client: Option<Arc<EthRpcClient>>,
 ) -> hyperspace_ethereum::client::EthereumClient {
 	let endpoint = if USE_GETH { "http://localhost:6001".to_string() } else { anvil.endpoint() };
 	let wallet_path = if USE_GETH {
@@ -46,9 +47,14 @@ async fn hyperspace_ethereum_client_fixture<M>(
 		None
 	};
 
+	dbg!("hyperspace_ethereum_client_fixture");
+	dbg!(anvil.endpoint());
+	dbg!(anvil.chain_id());
+	dbg!("hyperspace_ethereum_client_fixture");
+
 	let wallet = if !USE_GETH { Some(anvil.keys()[0].clone().to_sec1_pem(pem::LineEnding::CR).unwrap().as_str().to_owned().to_string()) } else { None };
 
-	hyperspace_ethereum::client::EthereumClient::new(Config {
+	let mut ret = hyperspace_ethereum::client::EthereumClient::new(Config {
 		http_rpc_url: endpoint.parse().unwrap(),
 		ws_rpc_url: Default::default(),
 		ibc_handler_address: ibc_handler.address(),
@@ -68,7 +74,11 @@ async fn hyperspace_ethereum_client_fixture<M>(
 		commitment_prefix: "".into(),
 	})
 	.await
-	.unwrap()
+	.unwrap();
+	if let Some(client) = client{
+		ret.http_rpc = client;
+	}
+	ret
 }
 
 type ProviderImpl = ethers::prelude::SignerMiddleware<
@@ -240,7 +250,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 
 	let yui_ibc = utils::deploy_yui_ibc(&project_output, client.clone()).await;
 
-	let mut hyperspace = hyperspace_ethereum_client_fixture(&anvil, &yui_ibc).await;
+	let mut hyperspace = hyperspace_ethereum_client_fixture(&anvil, &yui_ibc, Some(client.clone())).await;
 
 	let upd = project_output1.find_first("DelegateTendermintUpdate").unwrap();
 	let (abi, bytecode, _) = upd.clone().into_parts();
@@ -274,13 +284,13 @@ async fn test_deploy_yui_ibc_and_mock_client() {
 async fn test_hyperspace_ethereum_client() {
 	let DeployYuiIbcMockClient { anvil, yui_ibc, .. } =
 		deploy_yui_ibc_and_mock_client_fixture().await;
-	let _hyperspace = hyperspace_ethereum_client_fixture(&anvil, &yui_ibc).await;
+	let _hyperspace = hyperspace_ethereum_client_fixture(&anvil, &yui_ibc, None).await;
 }
 
 #[tokio::test]
 async fn test_ibc_client() {
 	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
-	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc).await;
+	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc, None).await;
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 
 	let r = hyperspace
@@ -326,7 +336,7 @@ async fn test_ibc_client() {
 #[tokio::test]
 async fn test_ibc_connection() {
 	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
-	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc).await;
+	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc, None).await;
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 
 	let connection_id = deploy.yui_ibc.connection_open_init(&client_id).await;
@@ -379,7 +389,7 @@ async fn test_ibc_connection() {
 #[tokio::test]
 async fn test_ibc_channel() {
 	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
-	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc).await;
+	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc, None).await;
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 
 	let mock_module = deploy_mock_module_fixture(&deploy).await;
@@ -424,7 +434,7 @@ async fn test_ibc_channel() {
 async fn test_ibc_packet() {
 	let _ = env_logger::try_init();
 	let mut deploy = deploy_yui_ibc_and_mock_client_fixture().await;
-	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc).await;
+	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc, None).await;
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 
 	let mock_module = deploy_mock_module_fixture(&deploy).await;
