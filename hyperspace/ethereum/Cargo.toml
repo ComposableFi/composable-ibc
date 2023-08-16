@@ -16,6 +16,7 @@ ibc-proto = { path = "../../ibc/proto" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
+hyperspace-cosmos = { path = "../cosmos" }
 
 cast = { git = "https://github.com/foundry-rs/foundry", version = "0.2.0" }
 

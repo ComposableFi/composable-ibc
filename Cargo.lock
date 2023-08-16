@@ -4861,6 +4861,7 @@ dependencies = [
  "git2",
  "hex",
  "http",
+ "hyperspace-cosmos",
  "hyperspace-primitives",
  "ibc",
  "ibc-primitives",
