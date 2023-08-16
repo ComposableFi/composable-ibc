@@ -19,6 +19,7 @@ async fn main() {
         ibc_channel_handshake,
         ibc_packet,
         ibc_handler,
+        tendermint_client
     } = utils::deploy_yui_ibc(&project_output, client).await;
 
     println!("ibc_client: {:?}", ibc_client.address());

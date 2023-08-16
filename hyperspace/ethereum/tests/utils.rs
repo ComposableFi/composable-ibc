@@ -221,6 +221,7 @@ pub struct DeployYuiIbc<B, M> {
 	pub ibc_channel_handshake: ContractInstance<B, M>,
 	pub ibc_packet: ContractInstance<B, M>,
 	pub ibc_handler: ContractInstance<B, M>,
+	pub tendermint_client: ContractInstance<B, M>,
 }
 
 impl<B, M> DeployYuiIbc<B, M>
@@ -442,6 +443,7 @@ where
 			ibc_channel_handshake: self.ibc_channel_handshake.clone(),
 			ibc_packet: self.ibc_packet.clone(),
 			ibc_handler: self.ibc_handler.clone(),
+			tendermint_client: self.tendermint_client.clone(),
 		}
 	}
 }
@@ -486,6 +488,13 @@ where
 	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
 	let ibc_packet = factory.deploy(()).unwrap().send().await.unwrap();
 
+	//TODO deploy tendermint client as well
+	//TODO
+	let contract = project_output.find_first("IBCPacket").unwrap();
+	let (abi, bytecode, _) = contract.clone().into_parts();
+	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
+	let tendermint_client = factory.deploy(()).unwrap().send().await.unwrap();
+
 	let factory = ContractFactory::new(handler_abi, handler_bytecode, client.clone());
 	let mut deployer = factory
 		.deploy((
@@ -502,5 +511,5 @@ where
 
 	println!("IBC Handler address: {:?}", ibc_handler.address());
 
-	DeployYuiIbc { ibc_client, ibc_connection, ibc_channel_handshake, ibc_packet, ibc_handler }
+	DeployYuiIbc { ibc_client, ibc_connection, ibc_channel_handshake, ibc_packet, ibc_handler, tendermint_client }
 }

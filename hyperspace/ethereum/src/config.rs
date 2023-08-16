@@ -83,6 +83,9 @@ pub struct Config {
 	/// address of the IBCChannelHandshake contract.
 	#[serde(deserialize_with = "address_de")]
 	pub ibc_channel_handshake_address: Address,
+	/// address of the IBCChannelHandshake contract.
+	#[serde(deserialize_with = "address_de")]
+	pub tendermint_client_address: Address,
 	/// mnemonic for the wallet
 	pub mnemonic: Option<String>,
 	/// private key for the wallet

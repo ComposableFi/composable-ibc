@@ -36,6 +36,7 @@ async fn hyperspace_ethereum_client_fixture<M>(
 		ibc_channel_handshake,
 		ibc_packet,
 		ibc_handler,
+		tendermint_client
 	}: &utils::DeployYuiIbc<Arc<M>, M>,
 ) -> hyperspace_ethereum::client::EthereumClient {
 	let endpoint = if USE_GETH { "http://localhost:6001".to_string() } else { anvil.endpoint() };
@@ -55,6 +56,7 @@ async fn hyperspace_ethereum_client_fixture<M>(
 		ibc_client_address: ibc_client.address(),
 		ibc_connection_address: ibc_connection.address(),
 		ibc_channel_handshake_address: ibc_channel_handshake.address(),
+		tendermint_client_address: tendermint_client.address(),
 		mnemonic: None,
 		max_block_weight: 1,
 		private_key: wallet,
