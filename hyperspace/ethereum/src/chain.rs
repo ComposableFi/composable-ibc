@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{time::Duration, sync::Arc};
 
 use ethers::providers::Middleware;
 use futures::{Stream, StreamExt};
@@ -68,6 +68,15 @@ impl Chain for EthereumClient {
 		&self,
 		messages: Vec<ibc_proto::google::protobuf::Any>,
 	) -> Result<Self::TransactionId, Self::Error> {
+
+		//get tendermint client via address and contract name in yui project
+		let contract = crate::contract::get_contract_from_name(
+			self.config.tendermint_client_address.clone(),
+			Arc::clone(&self.http_rpc),
+			"TendermintLightClientSimple"
+		);
+		// println!("the address again: {:?}, {client_id}", self.config.ibc_handler_address);
+
 		todo!("submit to ethereum")
 	}
 

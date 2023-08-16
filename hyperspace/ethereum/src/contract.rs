@@ -1,10 +1,11 @@
-use std::sync::Arc;
+use std::{sync::Arc, path::{Path, PathBuf}};
 
 use ethers::{
 	abi::{Abi, Address, Detokenize, Token},
 	prelude::Contract,
 	providers::Middleware,
 };
+use ethers_solc::{ProjectCompileOutput, ProjectPathsConfig, SolcConfig, artifacts::{Settings, Optimizer, OptimizerDetails, output_selection::OutputSelection, DebuggingSettings, RevertStrings, Libraries}, EvmVersion, Project, Artifact};
 
 /// Unwraps a contract error, decoding the revert reason if possible
 pub trait UnwrapContractError<T> {
@@ -170,6 +171,105 @@ where
 
 		client_id
 	}
+}
+
+#[track_caller]
+pub fn get_contract_from_name<M>(address: Address, client: Arc<M>, s: impl AsRef<str>) -> Contract<M>
+where
+	M: Middleware,
+{
+	//todo: use the artifact instead of compiling!!!
+	//but for now it is more dynamic to compile then to use the artifact
+	let path = yui_ibc_solidity_path();
+	let project = compile_yui(&path, "contracts/clients");
+	let contract = project.find_first(s).unwrap();
+	let r = contract.clone();
+	let (abi, _, _) = r.into_parts();
+	Contract::new(address, abi.unwrap(), client)
+}
+
+#[track_caller]
+pub fn yui_ibc_solidity_path() -> PathBuf {
+	let base = env!("CARGO_MANIFEST_DIR");
+	let default = PathBuf::from(base).join("yui-ibc-solidity");
+
+	if let Ok(path) = std::env::var("YUI_IBC_SOLIDITY_PATH") {
+		path.into()
+	} else {
+		default
+	}
+}
+
+#[track_caller]
+pub fn compile_yui(path_to_yui: &Path, sources: &str) -> ProjectCompileOutput {
+	assert!(
+		path_to_yui.exists(),
+		"path to yui-ibc-solidity does not exist: {}",
+		path_to_yui.display()
+	);
+
+	let project_paths = ProjectPathsConfig::builder()
+		.root(&path_to_yui)
+		.sources(path_to_yui.join(sources))
+		.build()
+		.unwrap();
+
+	compile_solc(project_paths)
+}
+
+#[track_caller]
+pub fn compile_solc(project_paths: ProjectPathsConfig) -> ProjectCompileOutput {
+	// custom solc config to solve Yul-relatated compilation errors
+	let solc_config = SolcConfig {
+		settings: Settings {
+			stop_after: None,
+			remappings: vec![],
+			optimizer: Optimizer {
+				enabled: Some(false),
+				runs: Some(256),
+				details: Some(OptimizerDetails {
+					peephole: Some(true),
+					inliner: Some(true),
+					jumpdest_remover: Some(true),
+					order_literals: Some(true),
+					deduplicate: Some(true),
+					cse: Some(true),
+					constant_optimizer: Some(true),
+					yul: Some(false),
+					yul_details: None,
+				}),
+			},
+			model_checker: None,
+			metadata: None,
+			output_selection: OutputSelection::default_output_selection(),
+			evm_version: Some(EvmVersion::Paris),
+			via_ir: Some(false),
+			debug: Some(DebuggingSettings {
+				revert_strings: Some(RevertStrings::Debug),
+				debug_info: vec!["location".to_string()],
+			}),
+			libraries: Libraries { libs: Default::default() },
+		},
+	};
+
+	let project = Project::builder()
+		.paths(project_paths)
+		.ephemeral()
+		.no_artifacts()
+		.solc_config(solc_config)
+		.build()
+		.expect("project build failed");
+
+	let project_output = project.compile().expect("compilation failed");
+
+	if project_output.has_compiler_errors() {
+		for err in project_output.output().errors {
+			eprintln!("{}", err);
+		}
+		panic!("compiler errors");
+	}
+
+	return project_output
 }
 
 /// Create a new contract instance from the given address and ABI.

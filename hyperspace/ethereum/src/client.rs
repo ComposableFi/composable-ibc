@@ -38,7 +38,7 @@ pub const CONNECTIONS_STORAGE_INDEX: u32 = 4;
 pub struct EthereumClient {
 	pub http_rpc: Arc<EthRpcClient>,
 	pub(crate) ws_uri: http::Uri,
-	pub(crate) config: Config,
+	pub config: Config,
 	/// Common relayer data
 	pub common_state: CommonClientState,
 }

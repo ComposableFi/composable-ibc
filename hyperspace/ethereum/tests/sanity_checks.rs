@@ -5,11 +5,11 @@ use elliptic_curve::pkcs8::der::pem;
 use ethers::{
 	abi::{encode_packed, Token},
 	core::k256::sha2::{Digest, Sha256},
-	prelude::{ContractInstance, LocalWallet, TransactionReceipt},
+	prelude::{ContractInstance, LocalWallet, TransactionReceipt, ContractFactory},
 	types::{H256, U256},
 	utils::{keccak256, Anvil, AnvilInstance},
 };
-use ethers_solc::{ProjectCompileOutput, ProjectPathsConfig};
+use ethers_solc::{ProjectCompileOutput, ProjectPathsConfig, Artifact};
 use hyperspace_ethereum::{
 	config::Config,
 	contract::{ibc_handler, UnwrapContractError},
@@ -22,7 +22,7 @@ use ibc::{
 	},
 	timestamp::Timestamp,
 };
-use primitives::IbcProvider;
+use primitives::{IbcProvider, Chain};
 use prost::Message;
 use tracing::log;
 
@@ -240,7 +240,29 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 
 	let yui_ibc = utils::deploy_yui_ibc(&project_output, client.clone()).await;
 
-	let _hyperspace = hyperspace_ethereum_client_fixture(&anvil, &yui_ibc).await;
+	let mut hyperspace = hyperspace_ethereum_client_fixture(&anvil, &yui_ibc).await;
+
+	let upd = project_output1.find_first("DelegateTendermintUpdate").unwrap();
+	let (abi, bytecode, _) = upd.clone().into_parts();
+	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
+	let update_client_delegate_contract = factory.deploy(()).unwrap().send().await.unwrap();
+
+	let contract = project_output1.find_first("TendermintLightClientSimple").unwrap();
+	// dbg!(&contract);
+	let r = contract.clone();
+	let (abi, bytecode, _) = r.into_parts();
+
+	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
+	let tendermint_light_client = factory.deploy(
+		(Token::Address(yui_ibc.ibc_handler.address()), Token::Address(update_client_delegate_contract.address()))
+	).unwrap().send().await.unwrap();
+
+	//replace the tendermint client address in hyperspace config with a real one
+	hyperspace.config.tendermint_client_address = tendermint_light_client.address();
+
+	let result = hyperspace.submit(vec![]).await.unwrap();
+
+	//call submit to create a new client
 }
 
 #[tokio::test]
