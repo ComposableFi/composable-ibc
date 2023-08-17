@@ -36,8 +36,8 @@ use ibc::{
 use ibc_proto::google::protobuf::Any;
 use light_client_common::RelayChain;
 use serde::{Deserialize, Serialize};
+use sp_consensus_grandpa::AuthorityList;
 use sp_core::{ed25519::Public, H256};
-use sp_finality_grandpa::AuthorityList;
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA ClientState
@@ -280,7 +280,7 @@ impl<H> From<ClientState<H>> for RawClientState {
 				.current_authorities
 				.into_iter()
 				.map(|(id, weight)| RawAuthority {
-					public_key: <sp_finality_grandpa::AuthorityId as AsRef<[u8]>>::as_ref(&id)
+					public_key: <sp_consensus_grandpa::AuthorityId as AsRef<[u8]>>::as_ref(&id)
 						.to_vec(),
 					weight,
 				})

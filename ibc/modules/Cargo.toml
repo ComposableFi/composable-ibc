@@ -18,15 +18,30 @@ all-features = true
 [features]
 default = ["std"]
 std = [
-    "flex-error/std",
-    "flex-error/eyre_tracer",
-    "ibc-proto/std",
-    "ics23/std",
-    "clock",
-    "sp-std/std",
-    "codec/std",
-    "scale-info/std",
-    "log/std"
+	"flex-error/std",
+	"flex-error/eyre_tracer",
+	"ibc-proto/std",
+	"ics23/std",
+	"clock",
+	"sp-std/std",
+	"codec/std",
+	"scale-info/std",
+	"log/std",
+	"hex/std",
+	"num-traits/std",
+	"primitive-types/std",
+	"prost/std",
+	"serde/std",
+	"serde_json/std",
+	"sha2?/std",
+	"sha3/std",
+	"sp-core/std",
+	"subtle-encoding/std",
+	"tendermint/std",
+	"time/std",
+	"tracing/std",
+	"tracing-subscriber/std",
+	"uint/std"
 ]
 clock = ["tendermint/clock", "time/std"]
 cosmwasm = ["cosmwasm-schema"]
@@ -68,8 +83,8 @@ tracing-subscriber = { version = "0.3.11", features = ["fmt", "env-filter", "jso
 test-log = { version = "0.2.10", features = ["trace"] }
 modelator = "0.4.2"
 sha2 = { version = "0.10.2" }
-tokio = { version = "1.17.0", features = ["full"] }
+tokio = { version = "1.32.0", features = ["full"] }
 serde_json = "1.0.74"
 sha3 = { version = "0.10.1" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }

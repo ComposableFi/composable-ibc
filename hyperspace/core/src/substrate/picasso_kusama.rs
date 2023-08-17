@@ -1,10 +1,10 @@
 use self::parachain_subxt::api::{
-	ibc::calls::{Deliver, Transfer},
+	ibc::calls::types::{Deliver, Transfer},
 	runtime_types::{
 		frame_system::{extensions::check_nonce::CheckNonce, EventRecord},
 		pallet_ibc::{events::IbcEvent as MetadataIbcEvent, TransferParams as RawTransferParams},
 	},
-	sudo::calls::Sudo,
+	sudo::calls::types::Sudo,
 };
 use super::{unimplemented, DummyBeefyAuthoritySet};
 use crate::{
@@ -24,6 +24,7 @@ use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, Transfe
 use pallet_ibc_ping::SendPingParams;
 use parachain_subxt::api::runtime_types::ibc_primitives::Timeout as RawTimeout;
 use relaychain::api::runtime_types::polkadot_runtime_parachains::paras::ParaLifecycle;
+use scale_decode::PortableField;
 use serde::{Serialize, Serializer};
 use sp_core::{crypto::AccountId32, H256};
 use subxt::{
@@ -55,11 +56,23 @@ pub mod relaychain {
 
 pub type Balance = u128;
 
-#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+#[derive(
+	:: subxt :: ext :: codec :: Decode,
+	:: subxt :: ext :: codec :: Encode,
+	:: subxt :: ext :: scale_decode :: DecodeAsType,
+	:: subxt :: ext :: scale_encode :: EncodeAsType,
+)]
+# [codec (crate = :: subxt :: ext :: codec)]
 #[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
 #[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 pub struct DummySendPingParamsWrapper<T>(T);
-#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+#[derive(
+	:: subxt :: ext :: codec :: Decode,
+	:: subxt :: ext :: codec :: Encode,
+	:: subxt :: ext :: scale_decode :: DecodeAsType,
+	:: subxt :: ext :: scale_encode :: EncodeAsType,
+)]
+# [codec (crate = :: subxt :: ext :: codec)]
 #[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
 #[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 pub struct FakeSendPingParams;
@@ -176,10 +189,7 @@ impl light_client_common::config::Config for PicassoKusamaConfig {
 
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,
-	) -> Result<
-		<Self::ExtrinsicParams as ExtrinsicParams<Self::Index, Self::Hash>>::OtherParams,
-		Error,
-	> {
+	) -> Result<<Self::ExtrinsicParams as ExtrinsicParams<Self::Hash>>::OtherParams, Error> {
 		let params =
 			ParachainExtrinsicsParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
 		Ok(params)
@@ -187,7 +197,6 @@ impl light_client_common::config::Config for PicassoKusamaConfig {
 }
 
 impl subxt::Config for PicassoKusamaConfig {
-	type Index = u32;
 	type Hash = H256;
 	type Hasher = subxt::config::substrate::BlakeTwo256;
 	type AccountId = AccountId32;
