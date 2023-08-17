@@ -227,16 +227,6 @@ where
 					Ics04Error::implementation_specific("Failed to parse token denom".to_string())
 				})?;
 
-				let msg = Ics20TransferMsg {
-					source_port: packet.source_port.clone(),
-					memo: packet_data.memo.clone(),
-					sender: packet_data.sender.clone(),
-					receiver: packet_data.receiver.clone(),
-					source_channel: packet.source_channel,
-					token,
-					timeout_height: packet.timeout_height,
-					timeout_timestamp: packet.timeout_timestamp,
-				};
 				let amount = packet_data.token.amount.as_u256();
 				u128::try_from(amount)
 					.map_err(|e| Ics04Error::implementation_specific(format!("{e:?}")))?;
