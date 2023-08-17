@@ -56,7 +56,7 @@ where
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+	<T::ExtrinsicParams as ExtrinsicParams<T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as light_client_common::config::Config>::AssetId: Clone,
 	<T as subxt::Config>::AccountId: Send + Sync,
@@ -72,8 +72,14 @@ where
 		match self.finality_protocol {
 			FinalityProtocol::Grandpa => {
 				let prover = self.grandpa_prover();
-				let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
-					.ok_or_else(|| Error::Custom(format!("Could not decode client state")))? else { unreachable!() };
+				let AnyClientState::Grandpa(client_state) =
+					AnyClientState::decode_recursive(any_client_state, |c| {
+						matches!(c, AnyClientState::Grandpa(_))
+					})
+					.ok_or_else(|| Error::Custom(format!("Could not decode client state")))?
+				else {
+					unreachable!()
+				};
 
 				let latest_hash = self.relay_client.rpc().finalized_head().await?;
 				let finalized_head =
@@ -107,8 +113,14 @@ where
 
 		let (messages, events) = match self.finality_protocol {
 			FinalityProtocol::Grandpa => {
-				let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
-					.ok_or_else(|| Error::Custom(format!("Could not decode client state")))? else { unreachable!() };
+				let AnyClientState::Grandpa(client_state) =
+					AnyClientState::decode_recursive(any_client_state, |c| {
+						matches!(c, AnyClientState::Grandpa(_))
+					})
+					.ok_or_else(|| Error::Custom(format!("Could not decode client state")))?
+				else {
+					unreachable!()
+				};
 				let latest_hash = self.relay_client.rpc().finalized_head().await?;
 				let finalized_head =
 					self.relay_client.rpc().header(Some(latest_hash)).await?.ok_or_else(|| {
@@ -168,7 +180,6 @@ where
 	) -> Result<(Vec<Any>, Vec<IbcEvent>), anyhow::Error>
 	where
 		<<T as subxt::Config>::ExtrinsicParams as ExtrinsicParams<
-			<T as subxt::Config>::Index,
 			<T as subxt::Config>::Hash,
 		>>::OtherParams: Sync
 			+ Send

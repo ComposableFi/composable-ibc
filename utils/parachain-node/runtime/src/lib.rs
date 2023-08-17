@@ -57,7 +57,7 @@ use frame_support::{
 	construct_runtime,
 	dispatch::DispatchClass,
 	parameter_types,
-	traits::{fungibles::InspectMetadata, AsEnsureOriginWithArg, Everything},
+	traits::{fungibles::metadata::Inspect as InspectMetadata, AsEnsureOriginWithArg, Everything},
 	weights::{
 		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
 		WeightToFeeCoefficients, WeightToFeePolynomial,
@@ -382,6 +382,11 @@ impl pallet_balances::Config for Runtime {
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
+
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ();
+	type MaxFreezes = ();
 }
 
 parameter_types! {
@@ -535,6 +540,7 @@ impl pallet_assets::Config for Runtime {
 impl pallet_sudo::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -658,7 +664,7 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 	}
 
 	fn from_asset_id_to_denom(id: AssetId) -> Option<String> {
-		let name = <pallet_assets::Pallet<Runtime> as InspectMetadata<AccountId>>::name(&id);
+		let name = <pallet_assets::Pallet<Runtime> as InspectMetadata<AccountId>>::name(id);
 		String::from_utf8(name).ok()
 	}
 
@@ -745,7 +751,6 @@ impl pallet_ibc::Config for Runtime {
 	type PalletPrefix = IbcTriePrefix;
 	type LightClientProtocol = GRANDPA;
 	type IbcAccountId = Self::AccountId;
-	type Ics20RateLimiter = Everything;
 	type FeeAccount = FeeAccount;
 	type CleanUpPacketsPeriod = CleanUpPacketsPeriod;
 	type ServiceChargeOut = IbcIcs20ServiceCharge;
@@ -840,6 +845,15 @@ impl_runtime_apis! {
 		fn metadata() -> OpaqueMetadata {
 			OpaqueMetadata::new(Runtime::metadata().into())
 		}
+
+		fn metadata_at_version(_: u32) -> Option<OpaqueMetadata> {
+			Some(OpaqueMetadata::new(Runtime::metadata().into()))
+		}
+
+		fn metadata_versions() -> frame_benchmarking::Vec<u32> {
+			frame_benchmarking::Vec::from([Runtime::metadata().1.version()])
+		}
+
 	}
 
 	impl sp_block_builder::BlockBuilder<Block> for Runtime {

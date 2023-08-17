@@ -18,7 +18,7 @@ use super::{
 use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
-	traits::{Everything, Nothing},
+	traits::{Everything, Nothing, ProcessMessageError},
 };
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
@@ -119,7 +119,7 @@ where
 		message: &mut [Instruction<RuntimeCall>],
 		max_weight: XCMWeight,
 		weight_credit: &mut XCMWeight,
-	) -> Result<(), ()> {
+	) -> Result<(), ProcessMessageError> {
 		Deny::should_execute(origin, message, max_weight, weight_credit)?;
 		Allow::should_execute(origin, message, max_weight, weight_credit)
 	}
@@ -134,7 +134,7 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 		message: &mut [Instruction<RuntimeCall>],
 		_max_weight: XCMWeight,
 		_weight_credit: &mut XCMWeight,
-	) -> Result<(), ()> {
+	) -> Result<(), ProcessMessageError> {
 		if message.iter().any(|inst| {
 			matches!(
 				inst,
@@ -148,7 +148,7 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 					}
 			)
 		}) {
-			return Err(()) // Deny
+			return Err(ProcessMessageError::Unsupported) // Deny
 		}
 
 		// An unexpected reserve transfer has arrived from the Relay Chain. Generally, `IsReserve`
@@ -247,6 +247,10 @@ impl pallet_xcm::Config for Runtime {
 	type SovereignAccountOf = ();
 	type MaxLockers = ();
 	type WeightInfo = pallet_xcm::TestWeightInfo;
+
+	type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+	type MaxRemoteLockConsumers = ();
+	type RemoteLockConsumerIdentifier = ();
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {

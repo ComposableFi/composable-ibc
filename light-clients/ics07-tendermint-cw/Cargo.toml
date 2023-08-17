@@ -63,7 +63,26 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 default = ["rust-crypto"]
 rust-crypto = ["ed25519-consensus"]
-std = []
+std = [
+	"byteorder/std",
+	"digest/std",
+	"ed25519/std",
+	"ed25519-consensus?/std",
+	"ed25519-zebra/std",
+	"hex/std",
+	"ibc/std",
+	"ibc-proto/std",
+	"ics07-tendermint/std",
+	"ics08-wasm/std",
+	"ics23/std",
+	"pallet-ibc/std",
+	"prost/std",
+	"serde/std",
+	"serde_json/std",
+	"sha2/std",
+	"sha3/std",
+	"tendermint/std"
+]
 test = [
   "std"
 ]

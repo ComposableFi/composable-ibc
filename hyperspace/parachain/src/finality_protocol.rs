@@ -43,8 +43,8 @@ use primitives::{
 };
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use sp_consensus_grandpa::GRANDPA_ENGINE_ID;
 use sp_core::H256;
-use sp_finality_grandpa::GRANDPA_ENGINE_ID;
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
@@ -114,7 +114,7 @@ impl FinalityProtocol {
 		sp_core::H256: From<T::Hash>,
 		BTreeMap<H256, ParachainHeaderProofs>:
 			From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-		<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+		<T::ExtrinsicParams as ExtrinsicParams<T::Hash>>::OtherParams:
 			From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 		<T as subxt::Config>::AccountId: Send + Sync,
 		<T as subxt::Config>::Address: Send + Sync,
@@ -149,7 +149,7 @@ where
 	<<T as subxt::Config>::Header as Header>::Number:
 		From<u32> + Debug + Display + Ord + sp_runtime::traits::Zero + One,
 	<T as subxt::Config>::Header: Decode,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+	<T::ExtrinsicParams as ExtrinsicParams<T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	T::Hash: From<sp_core::H256>,
 	sp_core::H256: From<T::Hash>,
@@ -379,7 +379,7 @@ where
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+	<T::ExtrinsicParams as ExtrinsicParams<T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	<T as subxt::Config>::AccountId: Send + Sync,
@@ -404,9 +404,7 @@ where
 				let Some(block) = relay_client.rpc().block(Some(hash)).await? else {
 					return Ok(None)
 				};
-				let Some(justifications) = block.justifications else {
-					return Ok(None)
-				};
+				let Some(justifications) = block.justifications else { return Ok(None) };
 				for (id, justification) in justifications {
 					log::info!(target: "hyperspace", "Found closer justification at {height} (suggested {to})");
 					if id == GRANDPA_ENGINE_ID {
@@ -452,7 +450,7 @@ where
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+	<T::ExtrinsicParams as ExtrinsicParams<T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	<T as subxt::Config>::AccountId: Send + Sync,
@@ -469,8 +467,14 @@ where
 		Error::Custom("Received an empty client state from counterparty".to_string())
 	})?;
 
-	let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
-		.ok_or_else(|| Error::Custom(format!("Could not decode client state")))? else { unreachable!() };
+	let AnyClientState::Grandpa(client_state) =
+		AnyClientState::decode_recursive(any_client_state, |c| {
+			matches!(c, AnyClientState::Grandpa(_))
+		})
+		.ok_or_else(|| Error::Custom(format!("Could not decode client state")))?
+	else {
+		unreachable!()
+	};
 
 	let prover = source.grandpa_prover();
 	// prove_finality will always give us the highest block finalized by the authority set for the
@@ -516,6 +520,24 @@ where
 		{
 			justification = new_justification;
 		}
+	}
+
+	// Sometimes the returned justification doesn't contain the header for the target block
+	// in the votes ancestry, so we need to fetch it manually
+	if !justification.votes_ancestries.is_empty() &&
+		!justification
+			.votes_ancestries
+			.iter()
+			.any(|h| h.number().into() == justification.commit.target_number as u64)
+	{
+		let header = prover
+			.relay_client
+			.rpc()
+			.header(Some(justification.commit.target_hash.into()))
+			.await
+			.unwrap()
+			.unwrap();
+		justification.votes_ancestries.push(header);
 	}
 
 	let justification = justification;

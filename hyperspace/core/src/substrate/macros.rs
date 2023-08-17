@@ -638,8 +638,13 @@ macro_rules! define_runtime_storage {
 				$beefy_validator_set_id
 			}
 
-			fn beefy_authorities(
-			) -> LocalAddress<StaticStorageMapKey, Vec<sp_beefy::crypto::Public>, Yes, Yes, ()> {
+			fn beefy_authorities() -> LocalAddress<
+				StaticStorageMapKey,
+				Vec<sp_consensus_beefy::crypto::Public>,
+				Yes,
+				Yes,
+				(),
+			> {
 				let storage = $beefy_authorities;
 				LocalAddress::new(storage)
 			}

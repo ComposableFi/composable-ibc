@@ -759,7 +759,10 @@ pub async fn find_suitable_proof_height_for_client(
 			let temp_height = Height::new(start_height.revision_number, mid);
 			let consensus_state =
 				sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
-			let Some(Ok(consensus_state)) = consensus_state.map(|x| x.consensus_state.map(AnyConsensusState::try_from)).flatten() else {
+			let Some(Ok(consensus_state)) = consensus_state
+				.map(|x| x.consensus_state.map(AnyConsensusState::try_from))
+				.flatten()
+			else {
 				start += 1;
 				continue
 			};

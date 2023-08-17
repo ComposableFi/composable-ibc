@@ -19,7 +19,7 @@ use anyhow::anyhow;
 use codec::{Decode, Encode};
 use finality_grandpa::voter_set::VoterSet;
 use frame_support::log;
-use sp_finality_grandpa::{
+use sp_consensus_grandpa::{
 	AuthorityId, AuthorityList, AuthoritySignature, ConsensusLog, Equivocation, RoundNumber,
 	ScheduledChange, SetId, GRANDPA_ENGINE_ID,
 };

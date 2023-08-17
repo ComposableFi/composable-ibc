@@ -14,7 +14,6 @@
 
 use anyhow::anyhow;
 use codec::{Decode, Input};
-use frame_metadata::RuntimeMetadataPrefixed;
 use jsonrpsee::{
 	async_client::ClientBuilder,
 	client_transport::ws::{Uri, WsTransportClientBuilder},
@@ -23,6 +22,8 @@ use jsonrpsee::{
 };
 use std::{env, fs, path::Path};
 use subxt_codegen::{CratePath, DerivesRegistry, TypeSubstitutes};
+
+use subxt_metadata::Metadata;
 
 pub async fn fetch_metadata_ws(url: &str) -> anyhow::Result<Vec<u8>> {
 	let (sender, receiver) = WsTransportClientBuilder::default()
@@ -39,7 +40,7 @@ pub async fn fetch_metadata_ws(url: &str) -> anyhow::Result<Vec<u8>> {
 }
 
 pub fn codegen<I: Input>(encoded: &mut I) -> anyhow::Result<String> {
-	let metadata = <RuntimeMetadataPrefixed as Decode>::decode(encoded)?;
+	let metadata = <Metadata as Decode>::decode(encoded)?;
 	let generator = subxt_codegen::RuntimeGenerator::new(metadata);
 	let item_mod = syn::parse_quote!(
 		pub mod api {}
@@ -50,9 +51,10 @@ pub fn codegen<I: Input>(encoded: &mut I) -> anyhow::Result<String> {
 		.iter()
 		.map(|raw| syn::parse_str(raw))
 		.collect::<Result<Vec<_>, _>>()?;
-	let mut derives = DerivesRegistry::new(&crate_path);
-	derives.extend_for_all(p.into_iter());
-	let type_subsitutes = TypeSubstitutes::new(&crate_path);
+	// let mut derives = DerivesRegistry::new();
+	let mut derives = DerivesRegistry::with_default_derives(&crate_path);
+	derives.extend_for_all(p.into_iter(), []);
+	let type_subsitutes = TypeSubstitutes::with_default_substitutes(&crate_path);
 
 	let runtime_api = generator
 		.generate_runtime(item_mod, derives, type_subsitutes, crate_path, false)

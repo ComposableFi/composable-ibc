@@ -25,8 +25,10 @@ ics23 = { git = "https://github.com/cosmos/ics23", rev = "74ce807b7be39a7e0afb4e
 [features]
 default = ['std']
 std = [
-    "bytes/std",
-    "ics23/std",
-    "sha2/std",
-    "tendermint/std"
+	"bytes/std",
+	"ics23/std",
+	"sha2/std",
+	"tendermint/std",
+	"proptest/std",
+	"rand/std"
 ]

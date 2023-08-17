@@ -241,7 +241,6 @@ impl Config for Test {
 	type MemoMessage = alloc::string::String;
 	type IsReceiveEnabled = sp_core::ConstBool<true>;
 	type IsSendEnabled = sp_core::ConstBool<true>;
-	type Ics20RateLimiter = Everything;
 	type FeeAccount = FeeAccount;
 	type CleanUpPacketsPeriod = CleanUpPacketsPeriod;
 	type ServiceChargeOut = ServiceCharge;
