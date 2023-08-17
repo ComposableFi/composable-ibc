@@ -1,0 +1,13 @@
+type = "picasso_kusama"
+name = "picasso"
+para_id = 2087
+parachain_rpc_url = "wss://picasso-unrpc-lb.composablenodes.tech:443"
+relay_chain_rpc_url = "wss://picasso-unrpc-lb.composablenodes.tech:443/relay"
+client_id = "08-wasm-5"
+connection_id = "connection-26"
+commitment_prefix = "0x6962632f"
+private_key = "//Alice"
+ss58_version = 49
+channel_whitelist = [["channel-17", "transfer"]]
+finality_protocol = "Grandpa"
+key_type = "sr25519"
