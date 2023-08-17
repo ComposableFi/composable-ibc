@@ -26,7 +26,6 @@ use grandpa_light_client_primitives::HostFunctions;
 use ibc::{
 	core::{
 		ics02_client::{
-			client_consensus::ConsensusState as _,
 			client_state::ClientType,
 			context::{ClientKeeper, ClientReader, ClientTypes},
 			error::Error,
