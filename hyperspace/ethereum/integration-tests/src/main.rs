@@ -53,9 +53,11 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 
 	let c = hyperspace_core::command::Cmd{ config_a: "../../config-a.toml".to_string(), config_b: "../../config-b.toml".to_string(), config_core: "../../config-core.toml".to_string(), port_id: None, delay_period: None, order: None, version: None, out_config_a: None, out_config_b: None };
 	let config = c.parse_config().await.unwrap();
-	let chain_a = config.chain_b.into_client().await.unwrap();
+	let mut chain_a = config.chain_b.into_client().await.unwrap();
 	let mut f = chain_a.finality_notifications().await.unwrap();
 	let n = f.next().await.unwrap();
+
+	
 
 
 	let path = utils::yui_ibc_solidity_path();
@@ -67,6 +69,8 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	let yui_ibc = utils::deploy_yui_ibc(&project_output, client.clone()).await;
 
 	let mut hyperspace = utils::hyperspace_ethereum_client_fixture(&anvil, &yui_ibc, Some(client.clone())).await;
+
+	let result = chain_a.query_latest_ibc_events(n, &mut hyperspace).await.unwrap();
 
 	let upd = project_output1.find_first("DelegateTendermintUpdate").unwrap();
 	let (abi, bytecode, _) = upd.clone().into_parts();

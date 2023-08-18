@@ -273,33 +273,33 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 
 	let result = hyperspace.submit(vec![]).await.unwrap();
 
-	let mut config_b = CosmosClientConfig {
-		name: "cosmos".to_string(),
-		rpc_url: "https://rpc-composable-ia.cosmosia.notional.ventures".to_string().parse().unwrap(),
-		grpc_url: "https://grpc-composable-ia.cosmosia.notional.ventures".to_string().parse().unwrap(),
-		websocket_url: "ws://rpc-composable-ia.cosmosia.notional.ventures/websocket".to_string().parse().unwrap(),
-		chain_id: "centauri-1".to_string(),
-		client_id: Some(ibc::core::ics24_host::identifier::ClientId::new("07-tendermint", 30).unwrap()),
-		connection_id: Some(ConnectionId::new(2)),
-		account_prefix: "centauri".to_string(),
-		fee_denom: "ppica".to_string(),
-		fee_amount: "1500000".to_string(),
-		gas_limit: 10000000000 as u64,
-		store_prefix: "ibc".to_string(),
-		max_tx_size: 20000000,
-		mnemonic:
-			"bottom loan skill merry east cradle onion journey palm apology verb edit desert impose absurd oil bubble sweet glove shallow size build burst effort"
-				.to_string(),
-		wasm_code_id: None,
-		channel_whitelist: vec![(ChannelId::new(1), PortId::transfer())],
-		common: CommonClientConfig {
-			skip_optional_client_updates: false,
-			max_packets_to_process: 200,
-		},
-	};
+	// let mut config_b = CosmosClientConfig {
+	// 	name: "cosmos".to_string(),
+	// 	rpc_url: "https://rpc-composable-ia.cosmosia.notional.ventures".to_string().parse().unwrap(),
+	// 	grpc_url: "https://grpc-composable-ia.cosmosia.notional.ventures".to_string().parse().unwrap(),
+	// 	websocket_url: "ws://rpc-composable-ia.cosmosia.notional.ventures/websocket".to_string().parse().unwrap(),
+	// 	chain_id: "centauri-1".to_string(),
+	// 	client_id: Some(ibc::core::ics24_host::identifier::ClientId::new("07-tendermint", 30).unwrap()),
+	// 	connection_id: Some(ConnectionId::new(2)),
+	// 	account_prefix: "centauri".to_string(),
+	// 	fee_denom: "ppica".to_string(),
+	// 	fee_amount: "1500000".to_string(),
+	// 	gas_limit: 10000000000 as u64,
+	// 	store_prefix: "ibc".to_string(),
+	// 	max_tx_size: 20000000,
+	// 	mnemonic:
+	// 		"bottom loan skill merry east cradle onion journey palm apology verb edit desert impose absurd oil bubble sweet glove shallow size build burst effort"
+	// 			.to_string(),
+	// 	wasm_code_id: None,
+	// 	channel_whitelist: vec![(ChannelId::new(1), PortId::transfer())],
+	// 	common: CommonClientConfig {
+	// 		skip_optional_client_updates: false,
+	// 		max_packets_to_process: 200,
+	// 	},
+	// };
 
-	let chain_b = CosmosClient::<()>::new(config_b.clone()).await.unwrap();
-	let chain_state = chain_b.initialize_client_state().await.unwrap();
+	// let chain_b = CosmosClient::<()>::new(config_b.clone()).await.unwrap();
+	// let chain_state = chain_b.initialize_client_state().await.unwrap();
 
 	//call submit to create a new client
 }
