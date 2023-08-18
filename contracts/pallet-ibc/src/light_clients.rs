@@ -25,9 +25,7 @@ use ics07_tendermint::{
 	consensus_state::TENDERMINT_CONSENSUS_STATE_TYPE_URL,
 };
 use ics08_wasm::{
-	client_message::{
-		WASM_CLIENT_MESSAGE_TYPE_URL, WASM_HEADER_TYPE_URL, WASM_MISBEHAVIOUR_TYPE_URL,
-	},
+	client_message::WASM_CLIENT_MESSAGE_TYPE_URL,
 	client_state::WASM_CLIENT_STATE_TYPE_URL,
 	consensus_state::WASM_CONSENSUS_STATE_TYPE_URL,
 	Bytes,
@@ -348,11 +346,8 @@ impl AnyClientMessage {
 				ics10_grandpa::client_message::ClientMessage::Header(h) => Some(h.height()),
 				ics10_grandpa::client_message::ClientMessage::Misbehaviour(_) => None,
 			},
-			Self::Wasm(inner) => match inner {
-				ics08_wasm::client_message::ClientMessage::Header(h) =>
-					h.inner.maybe_header_height(),
-				ics08_wasm::client_message::ClientMessage::Misbehaviour(_) => None,
-			},
+			Self::Wasm(inner) => 
+				inner.inner.maybe_header_height(),
 			#[cfg(test)]
 			Self::Mock(inner) => match inner {
 				ibc::mock::header::MockClientMessage::Header(h) => Some(h.height()),
@@ -362,40 +357,26 @@ impl AnyClientMessage {
 	}
 
 	pub fn wasm(inner: Self) -> Result<Self, tendermint_proto::Error> {
-		let maybe_height = inner.maybe_header_height();
-		Ok(match maybe_height {
-			Some(height) => Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(
-				ics08_wasm::client_message::Header {
-					data: inner.encode_to_vec()?,
-					height,
-					inner: Box::new(inner),
-				},
-			)),
-			None => Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(
-				ics08_wasm::client_message::Misbehaviour {
-					data: inner.encode_to_vec()?,
-					inner: Box::new(inner),
-				},
-			)),
-		})
+		Ok(Self::Wasm(
+			ics08_wasm::client_message::ClientMessage {
+				data: inner.encode_to_vec()?,
+				inner: Box::new(inner),
+			}
+		))
 	}
 
 	pub fn unpack_recursive(&self) -> &Self {
 		match self {
-			Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(h)) =>
-				h.inner.unpack_recursive(),
-			Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(m)) =>
-				m.inner.unpack_recursive(),
+			Self::Wasm(ics08_wasm::client_message::ClientMessage{inner, data}) =>
+				inner.unpack_recursive(),
 			_ => self,
 		}
 	}
 
 	pub fn unpack_recursive_into(self) -> Self {
 		match self {
-			Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(h)) =>
-				h.inner.unpack_recursive_into(),
-			Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(m)) =>
-				m.inner.unpack_recursive_into(),
+			Self::Wasm(ics08_wasm::client_message::ClientMessage{inner, data}) =>
+				inner.unpack_recursive_into(),
 			_ => self,
 		}
 	}
@@ -445,16 +426,6 @@ impl TryFrom<Any> for AnyClientMessage {
 				ics08_wasm::client_message::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			)),
-			WASM_HEADER_TYPE_URL =>
-				Ok(Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(
-					ics08_wasm::client_message::Header::decode_vec(&value.value)
-						.map_err(ics02_client::error::Error::decode_raw_header)?,
-				))),
-			WASM_MISBEHAVIOUR_TYPE_URL =>
-				Ok(Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(
-					ics08_wasm::client_message::Misbehaviour::decode_vec(&value.value)
-						.map_err(ics02_client::error::Error::decode_raw_header)?,
-				))),
 			_ => Err(ics02_client::error::Error::unknown_consensus_state_type(value.type_url)),
 		}
 	}
@@ -463,15 +434,9 @@ impl TryFrom<Any> for AnyClientMessage {
 impl From<AnyClientMessage> for Any {
 	fn from(client_msg: AnyClientMessage) -> Self {
 		match client_msg {
-			AnyClientMessage::Wasm(msg) => match msg {
-				ics08_wasm::client_message::ClientMessage::Header(h) => Any {
-					type_url: WASM_HEADER_TYPE_URL.to_string(),
-					value: h.encode_vec().expect("encode_vec failed"),
-				},
-				ics08_wasm::client_message::ClientMessage::Misbehaviour(m) => Any {
-					type_url: WASM_MISBEHAVIOUR_TYPE_URL.to_string(),
-					value: m.encode_vec().expect("encode_vec failed"),
-				},
+			AnyClientMessage::Wasm(msg) => Any {
+				type_url: WASM_CLIENT_MESSAGE_TYPE_URL.to_string(),
+				value: msg.encode_vec().expect("encode_vec failed")
 			},
 			AnyClientMessage::Grandpa(msg) => match msg {
 				ics10_grandpa::client_message::ClientMessage::Header(h) => Any {
