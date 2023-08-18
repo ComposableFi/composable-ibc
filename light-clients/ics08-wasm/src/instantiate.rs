@@ -1,5 +1,6 @@
 use super::client_state::ClientState;
 use crate::consensus_state::ConsensusState;
+#[cfg(feature = "cosmwasm")]
 use cosmwasm_schema::cw_serde;
 
 #[cfg_attr(feature = "cosmwasm", cw_serde)]

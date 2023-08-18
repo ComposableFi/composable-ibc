@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(feature = "cosmwasm")]
 use crate::Bytes;
 use alloc::{
 	boxed::Box,
@@ -21,7 +20,6 @@ use alloc::{
 	vec::Vec,
 };
 use core::fmt::Display;
-#[cfg(feature = "cosmwasm")]
 use ibc::{
 	core::ics02_client::{client_message::ClientMessage as IbcClientMessage, error::Error},
 	protobuf::Protobuf,

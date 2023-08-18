@@ -55,3 +55,9 @@ impl From<GrandpaError> for ContractError {
 		ContractError::Grandpa(e.to_string())
 	}
 }
+
+impl From<ContractError> for StdError {
+	fn from(e: ContractError) -> Self {
+		StdError::GenericErr { msg: e.to_string() }
+	}
+}
