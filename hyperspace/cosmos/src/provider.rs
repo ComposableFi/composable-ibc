@@ -678,7 +678,9 @@ where
 					true,
 					1,
 					1, // get only the first Tx matching the query
-					Order::Descending,
+					Order::Descending, /* query the most recent event, there is possibility that the same
+					    * sequence number is used twice in send_packet event (in case of an
+					    * error during the message processing) */
 				)
 				.await
 				.map_err(|e| Error::RpcError(format!("{e:?}")))?;
@@ -754,7 +756,9 @@ where
 					true,
 					1,
 					1, // get only the first Tx matching the query
-					Order::Descending,
+					Order::Descending, /* query the most recent event, there is possibility that the same
+					    * sequence number is used twice in write_acknowledgement event (in case
+					    * of an error during the message processing) */
 				)
 				.await
 				.map_err(|e| Error::RpcError(format!("{e:?}")))?;
