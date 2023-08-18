@@ -4872,6 +4872,7 @@ dependencies = [
  "prost 0.11.6",
  "serde",
  "serde_json",
+ "tendermint",
  "thiserror",
  "tokio",
  "toml 0.7.6",

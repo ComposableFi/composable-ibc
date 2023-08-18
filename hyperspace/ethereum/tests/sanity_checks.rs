@@ -1,6 +1,7 @@
 use std::{future::Future, ops::Deref, path::PathBuf, str::FromStr, sync::Arc, time::Duration};
 
 use crate::utils::USE_GETH;
+use cast::revm::new;
 use elliptic_curve::pkcs8::der::pem;
 use ethers::{
 	abi::{encode_packed, Token},
@@ -17,13 +18,16 @@ use hyperspace_ethereum::{
 };
 use ibc::{
 	core::{
-		ics02_client::height::Height,
+		ics02_client::{height::Height, trust_threshold::TrustThreshold, msgs::create_client::MsgCreateAnyClient},
 		ics04_channel::packet::{Packet, Sequence},
-		ics24_host::identifier::{ChannelId, PortId, ConnectionId},
+		ics24_host::identifier::{ChannelId, PortId, ConnectionId, ChainId},
 	},
-	timestamp::Timestamp,
+	timestamp::Timestamp, protobuf::types::SignedHeader,
 };
-use primitives::{IbcProvider, Chain, CommonClientConfig};
+use ibc_proto::google::protobuf::Any;
+use ics07_tendermint::{client_state::{ClientState}};
+use pallet_ibc::{light_clients::{HostFunctionsManager, AnyConsensusState, AnyClientState}, Signer};
+use primitives::{IbcProvider, Chain, CommonClientConfig, mock::LocalClientTypes};
 use prost::Message;
 use tracing::log;
 
@@ -69,7 +73,7 @@ async fn hyperspace_ethereum_client_fixture<M>(
 		private_key: wallet,
 		private_key_path: wallet_path,
 		name: "mock-ethereum-client".into(),
-		client_id: None,
+		client_id: Some(ibc::core::ics24_host::identifier::ClientId::new("07-tendermint", 0).unwrap()),
 		connection_id: None,
 		channel_whitelist: vec![],
 		commitment_prefix: "".into(),
@@ -271,7 +275,39 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	//replace the tendermint client address in hyperspace config with a real one
 	hyperspace.config.tendermint_client_address = tendermint_light_client.address();
 
-	let result = hyperspace.submit(vec![]).await.unwrap();
+	let signer = Signer::from_str("0CDA3F47EF3C4906693B170EF650EB968C5F4B2C").unwrap();
+
+	let tm_header = serde_json::from_str::<tendermint::block::signed_header::SignedHeader>(include_str!("/Users/mykyta/development/composable/centauri-private-latest/light-clients/ics07-tendermint/src/mock/signed_header.json"))
+			.unwrap()
+			.header;
+	
+	let client_state = ClientState::<HostFunctionsManager>::new(
+		ChainId::from(tm_header.chain_id.clone()),
+		Default::default(),
+		Duration::from_secs(64000),
+		Duration::from_secs(128000),
+		Duration::from_millis(3000),
+		Height::new(
+			ChainId::chain_version(tm_header.chain_id.as_str()),
+			u64::from(tm_header.height),
+		),
+		Default::default(),
+		vec!["".to_string()],
+	)
+	.unwrap();
+
+	let msg = MsgCreateAnyClient::<LocalClientTypes>::new(
+		AnyClientState::Tendermint(client_state),
+		AnyConsensusState::Tendermint(tm_header.try_into().unwrap()),
+		signer,
+	)
+	.unwrap();
+
+	use ibc::tx_msg::Msg;
+	use ibc::protobuf::Protobuf;
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	
+	let result = hyperspace.submit(vec![msg]).await.unwrap();
 
 	// let mut config_b = CosmosClientConfig {
 	// 	name: "cosmos".to_string(),
