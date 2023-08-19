@@ -299,7 +299,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	.unwrap();
 
 	let msg = MsgCreateAnyClient::<LocalClientTypes>::new(
-		AnyClientState::Tendermint(client_state),
+		AnyClientState::Tendermint(client_state.clone()),
 		AnyConsensusState::Tendermint(tm_header.try_into().unwrap()),
 		signer.clone(),
 	)
@@ -315,16 +315,22 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	let header = ics07_tendermint::client_message::Header {
 		signed_header:	tm,
 		validator_set: tendermint::validator::Set::new(set.clone(), None),
-		trusted_height: Height::new(0, 0),
+		trusted_height: Height::new(client_state.latest_height.revision_number, client_state.latest_height.revision_height),
 		trusted_validator_set: tendermint::validator::Set::new(set, None),
 	};
 	let msg = MsgUpdateAnyClient::<LocalClientTypes> {
-		client_id: hyperspace.config.client_id.unwrap(),
+		client_id: hyperspace.config.clone().client_id.unwrap(),
 		client_message: pallet_ibc::light_clients::AnyClientMessage::Tendermint(ics07_tendermint::client_message::ClientMessage::Header(
-			header
+			header.clone()
 		)),
 		signer: signer,
 	};
+
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	
+	//before to call update you need to be sure that the prev revision_height was stored on the chain
+	assert_eq!(client_state.latest_height.revision_height, header.trusted_height.revision_height);
+	let result = hyperspace.submit(vec![msg]).await.unwrap();
 
 	// let mut config_b = CosmosClientConfig {
 	// 	name: "cosmos".to_string(),
