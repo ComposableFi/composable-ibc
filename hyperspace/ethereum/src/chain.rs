@@ -292,6 +292,12 @@ impl Chain for EthereumClient {
 				
 				dbg!(&commit_sig_data_vec.len());
 				dbg!(&consensus_state_data_vec.len());
+
+				//update mutex
+				let mut update_mutex = self.prev_state.lock().unwrap();	
+				*update_mutex = (commit_sig_data_vec, consensus_state_data_vec);
+
+				
 				return Ok(());
 			}
 
@@ -311,11 +317,13 @@ impl Chain for EthereumClient {
 				let tm_header_bytes = ethers_encode(&[tm_header_abi_token]);
 
 				//todo replace empty vec for prev state clint with an actual client state
+				let client_state = self.prev_state.lock().unwrap().0.clone();
 
 				let contract_call_final = 
 				contract.method::<_, bool>
-				("updateClientSimple", (Token::String("client-id-1".to_string()) ,Token::Bytes(tm_header_bytes), Token::Bytes(vec![]))).unwrap();
+				("updateClientSimple", (Token::String(self.config.client_id.clone().unwrap().as_str().to_string()) ,Token::Bytes(tm_header_bytes), Token::Bytes(client_state))).unwrap();
 				let gas_estimate_abi_encode_no_storage_final = contract_call_final.estimate_gas().await.unwrap();
+				dbg!(&gas_estimate_abi_encode_no_storage_final);
 				let gas_estimate_abi_encode_no_storage_final = contract_call_final.call().await.unwrap();
 				dbg!(&gas_estimate_abi_encode_no_storage_final);
 			}

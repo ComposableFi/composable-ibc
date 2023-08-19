@@ -42,6 +42,7 @@ pub struct EthereumClient {
 	pub config: Config,
 	/// Common relayer data
 	pub common_state: CommonClientState,
+	pub prev_state: Arc<std::sync::Mutex<(Vec<u8>, Vec<u8>)>>
 }
 
 pub type MiddlewareErrorType = SignerMiddlewareError<
@@ -120,6 +121,7 @@ impl EthereumClient {
 			ws_uri: config.ws_rpc_url.clone(),
 			config,
 			common_state: Default::default(),
+			prev_state: Arc::new(std::sync::Mutex::new((vec![], vec![])))
 		})
 	}
 
