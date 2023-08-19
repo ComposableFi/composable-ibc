@@ -18,7 +18,7 @@ use hyperspace_ethereum::{
 };
 use ibc::{
 	core::{
-		ics02_client::{height::Height, trust_threshold::TrustThreshold, msgs::create_client::MsgCreateAnyClient},
+		ics02_client::{height::Height, trust_threshold::TrustThreshold, msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient}},
 		ics04_channel::packet::{Packet, Sequence},
 		ics24_host::identifier::{ChannelId, PortId, ConnectionId, ChainId},
 	},
@@ -277,9 +277,11 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 
 	let signer = Signer::from_str("0CDA3F47EF3C4906693B170EF650EB968C5F4B2C").unwrap();
 
-	let tm_header = serde_json::from_str::<tendermint::block::signed_header::SignedHeader>(include_str!("/Users/mykyta/development/composable/centauri-private-latest/light-clients/ics07-tendermint/src/mock/signed_header.json"))
-			.unwrap()
-			.header;
+	let tm = serde_json::from_str::<tendermint::block::signed_header::SignedHeader>(include_str!("/Users/mykyta/development/composable/centauri-private-latest/light-clients/ics07-tendermint/src/mock/signed_header.json"))
+			.unwrap();
+
+	let tm_header = tm.header.clone();
+			
 	
 	let client_state = ClientState::<HostFunctionsManager>::new(
 		ChainId::from(tm_header.chain_id.clone()),
@@ -299,7 +301,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	let msg = MsgCreateAnyClient::<LocalClientTypes>::new(
 		AnyClientState::Tendermint(client_state),
 		AnyConsensusState::Tendermint(tm_header.try_into().unwrap()),
-		signer,
+		signer.clone(),
 	)
 	.unwrap();
 
@@ -308,6 +310,21 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 	
 	let result = hyperspace.submit(vec![msg]).await.unwrap();
+
+	let mut set = vec![];
+	let header = ics07_tendermint::client_message::Header {
+		signed_header:	tm,
+		validator_set: tendermint::validator::Set::new(set.clone(), None),
+		trusted_height: Height::new(0, 0),
+		trusted_validator_set: tendermint::validator::Set::new(set, None),
+	};
+	let msg = MsgUpdateAnyClient::<LocalClientTypes> {
+		client_id: hyperspace.config.client_id.unwrap(),
+		client_message: pallet_ibc::light_clients::AnyClientMessage::Tendermint(ics07_tendermint::client_message::ClientMessage::Header(
+			header
+		)),
+		signer: signer,
+	};
 
 	// let mut config_b = CosmosClientConfig {
 	// 	name: "cosmos".to_string(),

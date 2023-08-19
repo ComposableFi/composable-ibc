@@ -257,6 +257,7 @@ impl Chain for EthereumClient {
 		let msg = messages.iter().next();
 		if let Some(msg) = msg {
 			if msg.type_url == ibc::core::ics02_client::msgs::create_client::TYPE_URL{
+				dbg!(&msg.value.len());
 				let msg = MsgCreateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
 				let AnyClientState::Tendermint(client_state) = msg.client_state else{
 					//TODO return error support only tendermint client state
@@ -288,6 +289,9 @@ impl Chain for EthereumClient {
 
 				//TODO: wait for the transaction to be mined instead of thread sleep
 				std::thread::sleep(std::time::Duration::from_secs(20));
+				
+				dbg!(&commit_sig_data_vec.len());
+				dbg!(&consensus_state_data_vec.len());
 				return Ok(());
 			}
 
