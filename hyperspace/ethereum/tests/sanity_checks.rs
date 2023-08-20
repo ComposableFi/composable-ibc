@@ -253,7 +253,9 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 
 	let (anvil, client) = utils::spawn_anvil();
 
-	let yui_ibc = utils::deploy_yui_ibc(&project_output, client.clone()).await;
+	let mut yui_ibc = utils::deploy_yui_ibc(&project_output, client.clone()).await;
+
+	
 
 	let mut hyperspace = hyperspace_ethereum_client_fixture(&anvil, &yui_ibc, Some(client.clone())).await;
 
@@ -274,6 +276,9 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 
 	//replace the tendermint client address in hyperspace config with a real one
 	hyperspace.config.tendermint_client_address = tendermint_light_client.address();
+	yui_ibc.tendermint_client = tendermint_light_client;
+
+	let _ = yui_ibc.register_client("tendermint-0007", hyperspace.config.tendermint_client_address).await;
 
 	let signer = Signer::from_str("0CDA3F47EF3C4906693B170EF650EB968C5F4B2C").unwrap();
 
@@ -310,6 +315,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 	
 	let result = hyperspace.submit(vec![msg]).await.unwrap();
+	// return;
 
 	let mut set = vec![];
 	let header = ics07_tendermint::client_message::Header {
