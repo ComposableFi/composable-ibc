@@ -45,7 +45,11 @@ pub struct IbcHandler<M> {
 impl<M> IbcHandler<M>
 where
 	M: Middleware,
-{
+{	
+	pub fn new(contract: Contract<M>) -> Self {
+		IbcHandler { contract }
+	}
+
 	pub async fn bind_port(&self, port_id: &str, address: Address) {
 		let bind_port = self
 			.contract
@@ -174,14 +178,14 @@ where
 }
 
 #[track_caller]
-pub fn get_contract_from_name<M>(address: Address, client: Arc<M>, s: impl AsRef<str>) -> Contract<M>
+pub fn get_contract_from_name<M>(address: Address, client: Arc<M>, source: impl AsRef<str>, s: impl AsRef<str>) -> Contract<M>
 where
 	M: Middleware,
 {
 	//todo: use the artifact instead of compiling!!!
 	//but for now it is more dynamic to compile then to use the artifact
 	let path = yui_ibc_solidity_path();
-	let project = compile_yui(&path, "contracts/clients");
+	let project = compile_yui(&path, source.as_ref());
 	let contract = project.find_first(s).unwrap();
 	let r = contract.clone();
 	let (abi, _, _) = r.into_parts();

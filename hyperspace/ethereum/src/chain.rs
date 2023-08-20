@@ -16,6 +16,7 @@ use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusSt
 use primitives::mock::LocalClientTypes;
 use primitives::{Chain, CommonClientState, LightClientSync, MisbehaviourHandler};
 
+use crate::contract::IbcHandler;
 use crate::{client::EthereumClient, ibc_provider::BlockHeight};
 
 #[async_trait::async_trait]
@@ -244,13 +245,14 @@ impl Chain for EthereumClient {
 		messages: Vec<ibc_proto::google::protobuf::Any>,
 	) -> Result<Self::TransactionId, Self::Error> {
 
-		#[derive(EthAbiType)]
-		struct X;
+		// #[derive(EthAbiType)]
+		// struct X;
 
 		//get tendermint client via address and contract name in yui project
 		let contract = crate::contract::get_contract_from_name(
 			self.config.tendermint_client_address.clone(),
 			Arc::clone(&self.http_rpc),
+			"contracts/clients",
 			"TendermintLightClientSimple"
 		);
 
@@ -288,14 +290,49 @@ impl Chain for EthereumClient {
 				dbg!(&gas_estimate_abi_encode_no_storage_final);
 
 				//TODO: wait for the transaction to be mined instead of thread sleep
+				//TODO uncomment this
 				std::thread::sleep(std::time::Duration::from_secs(20));
 				
 				dbg!(&commit_sig_data_vec.len());
 				dbg!(&consensus_state_data_vec.len());
 
+
+				
+
+				let contract = crate::contract::get_contract_from_name(
+					self.config.ibc_handler_address.clone(),
+					Arc::clone(&self.http_rpc),
+					"contracts/core",
+					"OwnableIBCHandler"
+				);
+
+				let ibc_handler = IbcHandler::new(contract);
+
+				let token = EthersToken::Tuple(
+					vec![
+						//should be the same that we use to register client 
+						//client type
+						EthersToken::String("tendermint-0007".to_string()),
+						//height
+						// EthersToken::Uint(0.into()),
+						//clientStateBytes
+						EthersToken::Bytes(commit_sig_data_vec.clone()),
+						//consensusStateBytes
+						EthersToken::Bytes(consensus_state_data_vec.clone()),
+					]
+				);
+
+				ibc_handler.create_client(token).await;
+
+
+
+
 				//update mutex
 				let mut update_mutex = self.prev_state.lock().unwrap();	
-				*update_mutex = (commit_sig_data_vec, consensus_state_data_vec);
+				*update_mutex = (commit_sig_data_vec.clone(), consensus_state_data_vec.clone());
+
+				
+				
 
 				
 				return Ok(());
