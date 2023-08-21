@@ -518,6 +518,24 @@ where
 		}
 	}
 
+	// Sometimes the returned justification doesn't contain the header for the target block
+	// in the votes ancestry, so we need to fetch it manually
+	if !justification.votes_ancestries.is_empty() &&
+		!justification
+			.votes_ancestries
+			.iter()
+			.any(|h| h.number().into() == justification.commit.target_number as u64)
+	{
+		let header = prover
+			.relay_client
+			.rpc()
+			.header(Some(justification.commit.target_hash.into()))
+			.await
+			.unwrap()
+			.unwrap();
+		justification.votes_ancestries.push(header);
+	}
+
 	let justification = justification;
 
 	// fetch the latest finalized parachain header
