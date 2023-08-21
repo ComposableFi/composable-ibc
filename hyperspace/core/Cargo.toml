@@ -3,7 +3,10 @@ name = "hyperspace-core"
 version = "0.1.0"
 edition = "2021"
 description = "Hyperspace core exports the relayer and fisherman tasks, and a Cli interface for common tasks."
-authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <wizdave97@gmail.com>"]
+authors = [
+    "Seun Lanlege <seunlanlege@gmail.com>",
+    "David Salami <wizdave97@gmail.com>",
+]
 
 [build-dependencies]
 anyhow = "1.0.65"
@@ -51,37 +54,41 @@ light-client-common = { path = "../../light-clients/common" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 pallet-ibc-ping = { path = "../../contracts/pallet-ibc/ping" }
 ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
-sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
-sp-beefy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
-subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+sp-consensus-beefy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+subxt = { git = "https://github.com/paritytech/subxt", rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = [
+    "substrate-compat",
+] }
 subxt-generated = { path = "../../utils/subxt/generated" }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 prost = { version = "0.11", default-features = false }
 
 [dev-dependencies]
 derive_more = "0.99.17"
 prost = "0.11"
-parachain = { path = "../parachain", package = "hyperspace-parachain", features = ["testing"] }
-cosmos = { path = "../cosmos", package = "hyperspace-cosmos", features = ["testing"] }
+parachain = { path = "../parachain", package = "hyperspace-parachain", features = [
+    "testing",
+] }
+cosmos = { path = "../cosmos", package = "hyperspace-cosmos", features = [
+    "testing",
+] }
 
 # substrate
-subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
-state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
-sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+subxt = { git = "https://github.com/paritytech/subxt", rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = [
+    "substrate-compat",
+] }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 
 [features]
 build-metadata-from-ws = []
 #near = ["dep:near"]
 cosmos = ["dep:cosmos"]
-testing = [
-    "primitives/testing",
-    "parachain/testing",
-    "cosmos/testing",
-]
+testing = ["primitives/testing", "parachain/testing", "cosmos/testing"]
 default = ["cosmos"]
 composable-beefy = []

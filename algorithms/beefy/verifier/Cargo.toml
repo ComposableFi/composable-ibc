@@ -2,29 +2,36 @@
 name = "beefy-light-client"
 version = "0.1.0"
 edition = "2021"
-authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <wizdave97@gmail.com>"]
+authors = [
+    "Seun Lanlege <seunlanlege@gmail.com>",
+    "David Salami <wizdave97@gmail.com>",
+]
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 # crates.io
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
+    "derive",
+] }
 rs_merkle = { version = "1.2.0", default-features = false }
-mmr-lib= { package = "ckb-merkle-mountain-range", version = "0.3.2", default-features = false }
-derive_more = { version = "0.99.17", default-features = false, features = ["from"]  }
+mmr-lib = { package = "ckb-merkle-mountain-range", version = "0.3.2", default-features = false }
+derive_more = { version = "0.99.17", default-features = false, features = [
+    "from",
+] }
 
 # substrate
-sp-std = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
-sp-core = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
-sp-core-hashing = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
-beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
-pallet-mmr = { package = "pallet-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
-pallet-mmr-primitives = { package = "sp-mmr-primitives", default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
-beefy-primitives = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", package = "sp-beefy" }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
+sp-std = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+sp-core = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+sp-core-hashing = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+pallet-mmr = { package = "pallet-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+pallet-mmr-primitives = { package = "sp-mmr-primitives", default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+beefy-primitives = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", package = "sp-consensus-beefy" }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 
 # local
 beefy-light-client-primitives = { path = "../primitives", default-features = false }
@@ -32,18 +39,22 @@ light-client-common = { path = "../../../light-clients/common", default-features
 
 [dev-dependencies]
 tokio = { version = "1.17.0", features = ["full"] }
-subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/paritytech/subxt", rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = [
+    "substrate-compat",
+] }
 hex-literal = "0.3.4"
 serde_json = "1.0.74"
-pallet-mmr-rpc = { package = "mmr-gadget", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+pallet-mmr-rpc = { package = "mmr-gadget", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 beefy-prover = { path = "../prover" }
 hex = "0.4.3"
 futures = "0.3.21"
-beefy-gadget = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
-hyperspace-core = { path = "../../../hyperspace/core", features = ["testing", "build-metadata-from-ws"] }
+hyperspace-core = { path = "../../../hyperspace/core", features = [
+    "testing",
+    "build-metadata-from-ws",
+] }
 
 
 [features]

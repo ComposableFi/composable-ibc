@@ -64,7 +64,8 @@ pub fn verify_membership<H, P>(
 ) -> Result<(), anyhow::Error>
 where
 	P: Into<Path>,
-	H: hash_db::Hasher<Out = H256> + Debug + 'static,
+	H: hash_db::Hasher<Out = H256> + sp_core::Hasher + Debug + 'static,
+	<H as sp_core::Hasher>::Out: From<H256>,
 {
 	if root.as_bytes().len() != 32 {
 		return Err(anyhow!("invalid commitment root length: {}", root.as_bytes().len()))
@@ -97,7 +98,8 @@ pub fn verify_non_membership<H, P>(
 ) -> Result<(), anyhow::Error>
 where
 	P: Into<Path>,
-	H: hash_db::Hasher<Out = H256> + Debug + 'static,
+	H: hash_db::Hasher<Out = H256> + sp_core::Hasher + Debug + 'static,
+	<H as hash_db::Hasher>::Out: core::fmt::Debug,
 {
 	if root.as_bytes().len() != 32 {
 		return Err(anyhow!("invalid commitment root length: {}", root.as_bytes().len()))
@@ -111,8 +113,13 @@ where
 	let proof = StorageProof::new(trie_proof);
 	let root = H256::from_slice(root.as_bytes());
 	let child_info = ChildInfo::new_default(prefix.as_bytes());
-	state_machine::read_child_proof_check::<H, _>(root, proof, child_info, vec![(key, None)])
-		.map_err(anyhow::Error::msg)?;
+	state_machine::read_child_proof_check::<H, _>(
+		<H as sp_core::Hasher>::hash(root.as_bytes()),
+		proof,
+		child_info,
+		vec![(key, None)],
+	)
+	.map_err(anyhow::Error::msg)?;
 	Ok(())
 }
 

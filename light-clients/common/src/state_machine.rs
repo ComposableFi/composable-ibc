@@ -18,15 +18,15 @@
 use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
 use codec::Decode;
 use core::fmt::Debug;
-use hash_db::{HashDB, Hasher, EMPTY_PREFIX};
+use hash_db::{Hasher, EMPTY_PREFIX};
 use sp_storage::ChildInfo;
 use sp_trie::{KeySpacedDB, LayoutV0, StorageProof, Trie, TrieDBBuilder};
 
 #[derive(Debug, derive_more::From, derive_more::Display)]
 pub enum Error<H>
 where
-	H: Hasher,
-	H::Out: Debug,
+	H: Hasher + sp_core::Hasher,
+	<H as Hasher>::Out: Debug,
 {
 	#[display(fmt = "Trie Error: {:?}", _0)]
 	Trie(Box<sp_trie::TrieError<LayoutV0<H>>>),
@@ -40,14 +40,14 @@ where
 
 /// Lifted directly from [`sp-state-machine::read_child_proof_check`](https://github.com/paritytech/substrate/blob/b27c470eaff379f512d1dec052aff5d551ed3b03/primitives/state-machine/src/lib.rs#L1138-L1161)
 pub fn read_child_proof_check<H, I>(
-	root: H::Out,
+	root: <H as sp_core::Hasher>::Out,
 	proof: StorageProof,
 	child_info: ChildInfo,
 	items: I,
 ) -> Result<(), Error<H>>
 where
-	H: Hasher,
-	H::Out: Debug,
+	H: Hasher + sp_core::Hasher,
+	<H as Hasher>::Out: Debug,
 	I: IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
 {
 	let memory_db = proof.into_memory_db::<H>();
@@ -55,7 +55,7 @@ where
 	let child_root = trie
 		.get(child_info.prefixed_storage_key().as_slice())?
 		.map(|r| {
-			let mut hash = H::Out::default();
+			let mut hash = <H as sp_core::Hasher>::Out::default();
 
 			// root is fetched from DB, not writable by runtime, so it's always valid.
 			hash.as_mut().copy_from_slice(&r[..]);
@@ -84,15 +84,17 @@ where
 
 /// Lifted directly from [`sp_state_machine::read_proof_check`](https://github.com/paritytech/substrate/blob/b27c470eaff379f512d1dec052aff5d551ed3b03/primitives/state-machine/src/lib.rs#L1075-L1094)
 pub fn read_proof_check<H, I>(
-	root: &H::Out,
+	root: &<H as sp_core::Hasher>::Out,
 	proof: StorageProof,
 	keys: I,
 ) -> Result<BTreeMap<Vec<u8>, Option<Vec<u8>>>, Error<H>>
 where
-	H: Hasher,
-	H::Out: Debug,
+	H: Hasher + sp_core::Hasher,
+	<H as sp_core::Hasher>::Out: Debug,
 	I: IntoIterator,
 	I::Item: AsRef<[u8]>,
+	<H as hash_db::Hasher>::Out: core::fmt::Debug,
+	<H as sp_core::Hasher>::Out: core::fmt::Debug,
 {
 	let db = proof.into_memory_db();
 

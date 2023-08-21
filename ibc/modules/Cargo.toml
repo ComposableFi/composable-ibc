@@ -1,13 +1,17 @@
 [package]
-name         = "ibc"
-version      = "0.15.0"
-edition      = "2021"
-license      = "Apache-2.0"
-readme       = "README.md"
-keywords     = ["blockchain", "consensus", "cosmos", "ibc", "tendermint"]
-repository   = "https://github.com/composableFi/composable"
-authors      = ["Informal Systems <hello@informal.systems>", "Seun Lanlege <seun@composable.finance>", "David Salami <david@composable.finance>"]
-description  = """
+name = "ibc"
+version = "0.15.0"
+edition = "2021"
+license = "Apache-2.0"
+readme = "README.md"
+keywords = ["blockchain", "consensus", "cosmos", "ibc", "tendermint"]
+repository = "https://github.com/composableFi/composable"
+authors = [
+    "Informal Systems <hello@informal.systems>",
+    "Seun Lanlege <seun@composable.finance>",
+    "David Salami <david@composable.finance>",
+]
+description = """
     Implementation of the Inter-Blockchain Communication Protocol (IBC).
     This crate comprises the main data structures and on-chain logic.
 """
@@ -26,7 +30,7 @@ std = [
     "sp-std/std",
     "codec/std",
     "scale-info/std",
-    "log/std"
+    "log/std",
 ]
 clock = ["tendermint/clock", "time/std"]
 cosmwasm = ["cosmwasm-schema"]
@@ -50,26 +54,40 @@ safe-regex = { version = "0.2.5", default-features = false }
 subtle-encoding = { version = "0.5", default-features = false }
 flex-error = { version = "0.4.4", default-features = false }
 num-traits = { version = "0.2.15", default-features = false }
-derive_more = { version = "0.99.17", default-features = false, features = ["from", "into", "display"] }
+derive_more = { version = "0.99.17", default-features = false, features = [
+    "from",
+    "into",
+    "display",
+] }
 uint = { version = "0.9", default-features = false }
 hex = { version = "0.4.3", default-features = false }
-primitive-types = { version = "0.12.0", default-features = false, features = ["serde_no_std"] }
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+primitive-types = { version = "0.12.0", default-features = false, features = [
+    "serde_no_std",
+] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
+    "derive",
+] }
 sha2 = { version = "0.10.2", optional = true }
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+scale-info = { version = "2.1.1", default-features = false, features = [
+    "derive",
+] }
 log = { version = "0.4.0", default-features = false }
 cosmwasm-schema = { version = "1.1.3", default-features = false, optional = true }
 
 [dev-dependencies]
 env_logger = "0.9.0"
-tracing-subscriber = { version = "0.3.11", features = ["fmt", "env-filter", "json"]}
+tracing-subscriber = { version = "0.3.11", features = [
+    "fmt",
+    "env-filter",
+    "json",
+] }
 test-log = { version = "0.2.10", features = ["trace"] }
 modelator = "0.4.2"
 sha2 = { version = "0.10.2" }
 tokio = { version = "1.17.0", features = ["full"] }
 serde_json = "1.0.74"
 sha3 = { version = "0.10.1" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39"}
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }

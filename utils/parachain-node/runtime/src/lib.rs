@@ -1059,7 +1059,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl<RuntimeCall, AccountId> simnode_apis::CreateTransactionApi<Block, AccountId, RuntimeCall> for Runtime
+	impl<RuntimeCall, AccountId> simnode_api::CreateTransactionApi<Block, AccountId, RuntimeCall> for Runtime
 		where
 			RuntimeCall: codec::Codec,
 			AccountId: codec::Codec + codec::EncodeLike<sp_runtime::AccountId32> + Into<sp_runtime::AccountId32> + Clone+ PartialEq + scale_info::TypeInfo + core::fmt::Debug,
