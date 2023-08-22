@@ -1,3 +1,4 @@
+use std::thread;
 use std::{time::Duration, sync::Arc};
 
 use ethers::abi::Token;
@@ -245,8 +246,8 @@ impl Chain for EthereumClient {
 		messages: Vec<ibc_proto::google::protobuf::Any>,
 	) -> Result<Self::TransactionId, Self::Error> {
 
-		// #[derive(EthAbiType)]
-		// struct X;
+		use ethers::abi::encode as ethers_encode;
+		use ethers::abi::Token as EthersToken;
 
 		//get tendermint client via address and contract name in yui project
 		let contract = crate::contract::get_contract_from_name(
@@ -272,32 +273,11 @@ impl Chain for EthereumClient {
 				let client_state_abi_token = client_state_abi_token(client_state);
 				let consensus_state_abi_token = consensus_state_abi_token(client_consensus);
 
-				let commit_sig_data = &[client_state_abi_token];
-				let commit_sig_data_vec = ethers_encode(commit_sig_data);
-			
-				let consensus_state_data = &[consensus_state_abi_token];
-				let consensus_state_data_vec = ethers_encode(consensus_state_data);
-
-				//todo replace and call IbcHandler instead of calling directly the tendermint client contract
-				let contract_call_final = contract.method::<_, bool>
-				("createClientSimple2", (EthersToken::String(self.config.client_id.clone().unwrap().as_str().to_string()) ,
-				EthersToken::Bytes(commit_sig_data_vec.clone()), 
-				EthersToken::Bytes(consensus_state_data_vec.clone()))).unwrap();
-
-				let gas_estimate_abi_encode_no_storage_final = contract_call_final.estimate_gas().await.unwrap();
-				dbg!(&gas_estimate_abi_encode_no_storage_final);
-				let gas_estimate_abi_encode_no_storage_final = contract_call_final.send().await.unwrap();
-				dbg!(&gas_estimate_abi_encode_no_storage_final);
-
-				//TODO: wait for the transaction to be mined instead of thread sleep
-				//TODO uncomment this
-				std::thread::sleep(std::time::Duration::from_secs(20));
+				let client_state_data_vec = ethers_encode(&[client_state_abi_token]);
+				let consensus_state_data_vec = ethers_encode(&[consensus_state_abi_token]);
 				
-				dbg!(&commit_sig_data_vec.len());
+				dbg!(&client_state_data_vec.len());
 				dbg!(&consensus_state_data_vec.len());
-
-
-				
 
 				let contract = crate::contract::get_contract_from_name(
 					self.config.ibc_handler_address.clone(),
@@ -313,10 +293,8 @@ impl Chain for EthereumClient {
 						//should be the same that we use to register client 
 						//client type
 						EthersToken::String(self.config.client_type.clone()),
-						//height
-						// EthersToken::Uint(0.into()),
 						//clientStateBytes
-						EthersToken::Bytes(commit_sig_data_vec.clone()),
+						EthersToken::Bytes(client_state_data_vec.clone()),
 						//consensusStateBytes
 						EthersToken::Bytes(consensus_state_data_vec.clone()),
 					]
@@ -324,20 +302,23 @@ impl Chain for EthereumClient {
 
 				let client_id = ibc_handler.create_client(token).await;
 				dbg!(&client_id);
-				dbg!(&client_id);
-				dbg!(&client_id);
 
+				/*
+					.confirmations(6) is used to wait for 6 blocks to be mined
+					but with anvil it is just wait for infinte time
+					just sleep for 10 seconds instead of waiting for 6 blocks
+					let receipt = method.send().await.unwrap();
+					let receipt = receipt.confirmations(6).await.unwrap().unwrap();
+				 */
+
+				thread::sleep(Duration::from_secs(20));
 
 
 
 				//update mutex
 				let mut update_mutex = self.prev_state.lock().unwrap();	
-				*update_mutex = (commit_sig_data_vec.clone(), consensus_state_data_vec.clone());
+				*update_mutex = (client_state_data_vec.clone(), consensus_state_data_vec.clone());
 
-				
-				
-
-				
 				return Ok(());
 			}
 
@@ -353,19 +334,10 @@ impl Chain for EthereumClient {
 
 				//get abi token to update client
 				let tm_header_abi_token = tm_header_abi_token(header);
-
 				let tm_header_bytes = ethers_encode(&[tm_header_abi_token]);
 
 				//todo replace empty vec for prev state clint with an actual client state
 				let client_state = self.prev_state.lock().unwrap().0.clone();
-
-				let contract_call_final = 
-				contract.method::<_, bool>
-				("updateClientSimple", (Token::String(self.config.client_id.clone().unwrap().as_str().to_string()) ,Token::Bytes(tm_header_bytes.clone()), Token::Bytes(client_state.clone()))).unwrap();
-				let gas_estimate_abi_encode_no_storage_final = contract_call_final.estimate_gas().await.unwrap();
-				dbg!(&gas_estimate_abi_encode_no_storage_final);
-				let gas_estimate_abi_encode_no_storage_final = contract_call_final.call().await.unwrap();
-				dbg!(&gas_estimate_abi_encode_no_storage_final);
 
 
 				let contract = crate::contract::get_contract_from_name(
@@ -390,92 +362,14 @@ impl Chain for EthereumClient {
 						EthersToken::Bytes(client_state),
 					]
 				);
-
 				let _ = ibc_handler.update_client(token).await;
 
+				thread::sleep(Duration::from_secs(20));
 			}
+			return Ok(())
 		};
 
-		use ethers::abi::encode as ethers_encode;
-		use ethers::abi::Token as EthersToken;
-
-		let client_state_data = EthersToken::Tuple(
-			[
-				//chain_id
-				EthersToken::String("cosmos-chain-id".to_string()),
-				//trust_level
-				EthersToken::Tuple(
-					[
-						//numerator
-						EthersToken::Uint(1.into()),
-						//denominator
-						EthersToken::Uint(2.into()),
-					].to_vec()),
-				//trusting_period
-				EthersToken::Tuple(
-				[
-					EthersToken::Int(1.into()),
-					EthersToken::Int(2.into()),
-				].to_vec()),
-				//unbonding_period
-				EthersToken::Tuple(
-					[
-						EthersToken::Int(1.into()),
-						EthersToken::Int(2.into()),
-					].to_vec()),
-				//max_clock_drift	
-				EthersToken::Tuple(
-					[
-						EthersToken::Int(1.into()),
-						EthersToken::Int(2.into()),
-					].to_vec()),
-				//frozen_height
-				EthersToken::Int(10.into()),
-				//latest_height
-				EthersToken::Int(100.into()),
-				//allow_update_after_expiry
-				EthersToken::Bool(true),
-				//allow_update_after_misbehaviour
-				EthersToken::Bool(true),
-			].to_vec());
-
-		let consensus_state_data = EthersToken::Tuple(
-			[
-				//timestamp	
-				EthersToken::Tuple(
-					[
-						EthersToken::Int(1.into()),
-						EthersToken::Int(2.into()),
-					].to_vec()),
-				//root
-				EthersToken::Tuple(
-					[
-						EthersToken::Bytes(vec![1,2,3,4,5,6,7,8,9,10]),
-					].to_vec()),
-				//next_validators_hash
-				EthersToken::Bytes(vec![1,2,3,4,5,6,7,8,9,10]),
-			].to_vec());
-	
-	
-		let commit_sig_data = &[client_state_data];
-		let commit_sig_data_vec = ethers_encode(commit_sig_data);
-	
-		let consensus_state_data = &[consensus_state_data];
-		let consensus_state_data_vec = ethers_encode(consensus_state_data);
-
-		let contract_call_final = contract.method::<_, bool>
-		("createClientSimple2", (EthersToken::String("client-id-1".to_string()) ,EthersToken::Bytes(commit_sig_data_vec.clone()), EthersToken::Bytes(consensus_state_data_vec.clone()))).unwrap();
-		let gas_estimate_abi_encode_no_storage_final = contract_call_final.estimate_gas().await.unwrap();
-		dbg!(&gas_estimate_abi_encode_no_storage_final);
-		let gas_estimate_abi_encode_no_storage_final = contract_call_final.send().await.unwrap();
-		dbg!(&gas_estimate_abi_encode_no_storage_final);
-
-		std::thread::sleep(std::time::Duration::from_secs(20));
-
-		// println!("the address again: {:?}, {client_id}", self.config.ibc_handler_address);
-
-		Ok(())
-		// todo!("submit to ethereum")
+		unimplemented!("client create and client update is implemented only for now");
 	}
 
 	async fn query_client_message(&self, update: UpdateClient) -> Result<AnyClientMessage, Self::Error> {
