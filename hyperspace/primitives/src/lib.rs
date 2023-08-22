@@ -100,7 +100,7 @@ fn default_skip_optional_client_updates() -> bool {
 }
 
 fn max_packets_to_process() -> u32 {
-	50
+	150
 }
 
 // TODO: move other fields like `client_id`, `connection_id`, etc. here

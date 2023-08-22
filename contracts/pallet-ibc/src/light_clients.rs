@@ -3,15 +3,12 @@ use frame_support::{
 	pallet_prelude::{StorageValue, ValueQuery},
 	traits::StorageInstance,
 };
-use ibc::{
-	core::{
-		ics02_client,
-		ics02_client::{
-			client_consensus::ConsensusState, client_message::ClientMessage,
-			client_state::ClientState,
-		},
+use ibc::core::{
+	ics02_client,
+	ics02_client::{
+		client_consensus::ConsensusState, client_message::ClientMessage,
+		client_state::ClientState,
 	},
-	Height,
 };
 use ibc_derive::{ClientDef, ClientMessage, ClientState, ConsensusState, Protobuf};
 use ibc_primitives::runtime_interface;
@@ -331,31 +328,6 @@ pub enum AnyClientMessage {
 }
 
 impl AnyClientMessage {
-	pub fn maybe_header_height(&self) -> Option<Height> {
-		match self {
-			Self::Tendermint(inner) => match inner {
-				ics07_tendermint::client_message::ClientMessage::Header(h) => Some(h.height()),
-				ics07_tendermint::client_message::ClientMessage::Misbehaviour(_) => None,
-			},
-			Self::Beefy(inner) => match inner {
-				ics11_beefy::client_message::ClientMessage::Header(_) =>
-					unimplemented!("beefy header height"),
-				ics11_beefy::client_message::ClientMessage::Misbehaviour(_) => None,
-			},
-			Self::Grandpa(inner) => match inner {
-				ics10_grandpa::client_message::ClientMessage::Header(h) => Some(h.height()),
-				ics10_grandpa::client_message::ClientMessage::Misbehaviour(_) => None,
-			},
-			Self::Wasm(inner) => 
-				inner.inner.maybe_header_height(),
-			#[cfg(test)]
-			Self::Mock(inner) => match inner {
-				ibc::mock::header::MockClientMessage::Header(h) => Some(h.height()),
-				ibc::mock::header::MockClientMessage::Misbehaviour(_) => None,
-			},
-		}
-	}
-
 	pub fn wasm(inner: Self) -> Result<Self, tendermint_proto::Error> {
 		Ok(Self::Wasm(
 			ics08_wasm::client_message::ClientMessage {
@@ -368,7 +340,7 @@ impl AnyClientMessage {
 	pub fn unpack_recursive(&self) -> &Self {
 		match self {
 			Self::Wasm(ics08_wasm::client_message::ClientMessage{inner, data}) =>
-				inner.unpack_recursive(),
+				&**inner,
 			_ => self,
 		}
 	}
@@ -376,7 +348,7 @@ impl AnyClientMessage {
 	pub fn unpack_recursive_into(self) -> Self {
 		match self {
 			Self::Wasm(ics08_wasm::client_message::ClientMessage{inner, data}) =>
-				inner.unpack_recursive_into(),
+				*inner,
 			_ => self,
 		}
 	}
