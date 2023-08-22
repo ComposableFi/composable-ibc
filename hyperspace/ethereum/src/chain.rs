@@ -312,7 +312,7 @@ impl Chain for EthereumClient {
 					vec![
 						//should be the same that we use to register client 
 						//client type
-						EthersToken::String("tendermint-0007".to_string()),
+						EthersToken::String(self.config.client_type.clone()),
 						//height
 						// EthersToken::Uint(0.into()),
 						//clientStateBytes
@@ -322,7 +322,10 @@ impl Chain for EthereumClient {
 					]
 				);
 
-				ibc_handler.create_client(token).await;
+				let client_id = ibc_handler.create_client(token).await;
+				dbg!(&client_id);
+				dbg!(&client_id);
+				dbg!(&client_id);
 
 
 
@@ -358,11 +361,38 @@ impl Chain for EthereumClient {
 
 				let contract_call_final = 
 				contract.method::<_, bool>
-				("updateClientSimple", (Token::String(self.config.client_id.clone().unwrap().as_str().to_string()) ,Token::Bytes(tm_header_bytes), Token::Bytes(client_state))).unwrap();
+				("updateClientSimple", (Token::String(self.config.client_id.clone().unwrap().as_str().to_string()) ,Token::Bytes(tm_header_bytes.clone()), Token::Bytes(client_state.clone()))).unwrap();
 				let gas_estimate_abi_encode_no_storage_final = contract_call_final.estimate_gas().await.unwrap();
 				dbg!(&gas_estimate_abi_encode_no_storage_final);
 				let gas_estimate_abi_encode_no_storage_final = contract_call_final.call().await.unwrap();
 				dbg!(&gas_estimate_abi_encode_no_storage_final);
+
+
+				let contract = crate::contract::get_contract_from_name(
+					self.config.ibc_handler_address.clone(),
+					Arc::clone(&self.http_rpc),
+					"contracts/core",
+					"OwnableIBCHandler"
+				);
+
+				let ibc_handler = IbcHandler::new(contract);
+				//TODO replace client id. it was genereated when we created the client. use 0 for testing
+				let client_id = format!("{}-0", self.config.client_type.clone());
+
+				let token = EthersToken::Tuple(
+					vec![
+						//should be the same that we use to create client 
+						//client id
+						EthersToken::String(client_id),
+						//tm header
+						EthersToken::Bytes(tm_header_bytes),
+						//tm header
+						EthersToken::Bytes(client_state),
+					]
+				);
+
+				let _ = ibc_handler.update_client(token).await;
+
 			}
 		};
 

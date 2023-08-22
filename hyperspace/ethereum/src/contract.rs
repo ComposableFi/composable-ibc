@@ -175,6 +175,15 @@ where
 
 		client_id
 	}
+
+	pub async fn update_client(&self, msg: Token) {
+		let method = self.contract.method::<_, ()>("updateClient", (msg,)).unwrap();
+
+		let client_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+	}
 }
 
 #[track_caller]

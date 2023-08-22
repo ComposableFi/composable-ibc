@@ -77,6 +77,7 @@ async fn hyperspace_ethereum_client_fixture<M>(
 		connection_id: None,
 		channel_whitelist: vec![],
 		commitment_prefix: "".into(),
+		client_type: "07-tendermint".into(),
 	})
 	.await
 	.unwrap();
@@ -278,7 +279,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	hyperspace.config.tendermint_client_address = tendermint_light_client.address();
 	yui_ibc.tendermint_client = tendermint_light_client;
 
-	let _ = yui_ibc.register_client("tendermint-0007", hyperspace.config.tendermint_client_address).await;
+	let _ = yui_ibc.register_client(&hyperspace.config.client_type, hyperspace.config.tendermint_client_address).await;
 
 	let signer = Signer::from_str("0CDA3F47EF3C4906693B170EF650EB968C5F4B2C").unwrap();
 

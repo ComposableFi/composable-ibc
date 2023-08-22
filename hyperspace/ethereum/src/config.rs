@@ -103,6 +103,8 @@ pub struct Config {
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 	/// Commitment prefix
 	pub commitment_prefix: String,
+
+	pub client_type: String,
 }
 
 impl Config {
