@@ -179,6 +179,8 @@ where
 	pub async fn update_client(&self, msg: Token) {
 		let method = self.contract.method::<_, ()>("updateClient", (msg,)).unwrap();
 
+		let gas_estimate_update_client = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_update_client);
 		let client_id = method.call().await.unwrap_contract_error();
 
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
