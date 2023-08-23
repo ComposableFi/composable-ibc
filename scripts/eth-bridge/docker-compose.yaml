@@ -108,3 +108,12 @@ services:
         condition: service_started
     volumes:
       - ./consensus:/consensus
+  centauri:
+    image: "composable-centauri:latest"
+    command: sh testnode.sh
+    volumes:
+      - "./centauri-testnode.sh:/centauri/testnode.sh"
+    ports:
+      - 1317:1317 # rest
+      - 26656:26656 # p2p
+      - 26657:26657 # rpc
