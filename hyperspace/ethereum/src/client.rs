@@ -33,6 +33,7 @@ pub(crate) type WsEth = Provider<Ws>;
 pub const COMMITMENTS_STORAGE_INDEX: u32 = 0;
 pub const CLIENT_IMPLS_STORAGE_INDEX: u32 = 3;
 pub const CONNECTIONS_STORAGE_INDEX: u32 = 4;
+pub const CHANNELS_STORAGE_INDEX: u32 = 5;
 
 #[derive(Debug, Clone)]
 pub struct EthereumClient {
@@ -389,17 +390,13 @@ impl EthereumClient {
 		block_height: Option<u64>,
 		storage_index: u32,
 	) -> impl Future<Output = Result<EIP1186ProofResponse, ClientError>> {
-		let key1 = ethers::utils::keccak256(
-			&ethers::abi::encode_packed(&[Token::String(key1.into())]).unwrap(),
-		);
+		let key1 = ethers::utils::keccak256(key1.as_bytes());
 
 		let combined_key1 = [key1.as_slice(), storage_index.to_be_bytes().as_ref()].concat();
 		let key1_hashed = ethers::utils::keccak256(&combined_key1);
 		let key1_hashed_hex = hex::encode(&key1_hashed);
 
-		let key2 = ethers::utils::keccak256(
-			&ethers::abi::encode_packed(&[Token::String(key2.into())]).unwrap(),
-		);
+		let key2 = ethers::utils::keccak256(key2.as_bytes());
 
 		let combined_key2 = [key2.as_slice(), key1_hashed_hex.as_bytes()].concat();
 		let key2_hashed = ethers::utils::keccak256(&combined_key2);

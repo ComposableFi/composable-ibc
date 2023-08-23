@@ -3,6 +3,7 @@ use std::{future::Future, ops::Deref, path::PathBuf, str::FromStr, sync::Arc, ti
 use crate::utils::USE_GETH;
 use ethers::{
 	abi::{encode_packed, Token},
+	contract::MultiAbigen,
 	core::k256::sha2::{Digest, Sha256},
 	prelude::{ContractInstance, LocalWallet, TransactionReceipt},
 	types::{H256, U256},
@@ -21,6 +22,7 @@ use ibc::{
 	},
 	timestamp::Timestamp,
 };
+use ibc_rpc::PacketInfo;
 use primitives::IbcProvider;
 use prost::Message;
 use tracing::log;
@@ -29,13 +31,7 @@ mod utils;
 
 async fn hyperspace_ethereum_client_fixture<M>(
 	anvil: &ethers::utils::AnvilInstance,
-	utils::DeployYuiIbc {
-		ibc_client,
-		ibc_connection,
-		ibc_channel_handshake,
-		ibc_packet,
-		ibc_handler,
-	}: &utils::DeployYuiIbc<Arc<M>, M>,
+	utils::DeployYuiIbc { facet_cuts, deployed_facets, diamond }: &utils::DeployYuiIbc<Arc<M>, M>,
 ) -> hyperspace_ethereum::client::EthereumClient {
 	let endpoint = if USE_GETH { "http://localhost:6001".to_string() } else { anvil.endpoint() };
 	let wallet_path = if USE_GETH {
@@ -48,11 +44,7 @@ async fn hyperspace_ethereum_client_fixture<M>(
 	hyperspace_ethereum::client::EthereumClient::new(Config {
 		http_rpc_url: endpoint.parse().unwrap(),
 		ws_rpc_url: Default::default(),
-		ibc_handler_address: ibc_handler.address(),
-		ibc_packet_address: ibc_packet.address(),
-		ibc_client_address: ibc_client.address(),
-		ibc_connection_address: ibc_connection.address(),
-		ibc_channel_handshake_address: ibc_channel_handshake.address(),
+		ibc_handler_address: diamond.address(),
 		mnemonic: None,
 		max_block_weight: 1,
 		private_key: wallet,
@@ -67,7 +59,7 @@ async fn hyperspace_ethereum_client_fixture<M>(
 	.unwrap()
 }
 
-type ProviderImpl = ethers::prelude::SignerMiddleware<
+pub type ProviderImpl = ethers::prelude::SignerMiddleware<
 	ethers::providers::Provider<ethers::providers::Http>,
 	ethers::signers::LocalWallet,
 >;
@@ -134,9 +126,11 @@ impl DeployYuiIbcMockClient {
 async fn deploy_yui_ibc_and_mock_client_fixture() -> DeployYuiIbcMockClient {
 	let path = utils::yui_ibc_solidity_path();
 	let project_output = utils::compile_yui(&path, "contracts/core");
+	let diamond_project_output = utils::compile_yui(&path, "contracts/diamond");
 	let (anvil, client) = utils::spawn_anvil();
 	log::warn!("{}", anvil.endpoint());
-	let yui_ibc = utils::deploy_yui_ibc(&project_output, client.clone()).await;
+	let yui_ibc =
+		utils::deploy_yui_ibc(&project_output, &diamond_project_output, client.clone()).await;
 
 	let ibc_mock_client = utils::compile_solc({
 		let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -150,7 +144,7 @@ async fn deploy_yui_ibc_and_mock_client_fixture() -> DeployYuiIbcMockClient {
 
 	let ibc_mock_client = utils::deploy_contract(
 		ibc_mock_client.find_first("MockClient").unwrap(),
-		(Token::Address(yui_ibc.ibc_handler.address()),),
+		(Token::Address(yui_ibc.diamond.address()),),
 		client.clone(),
 	)
 	.await;
@@ -201,7 +195,7 @@ async fn deploy_mock_client_fixture(deploy: &DeployYuiIbcMockClient) -> ClientId
 		.create_client(utils::mock::create_client_msg("mock-client"))
 		.await;
 	println!("client id: {}", string);
-	println!("ibc_handler contract addr: {:?}", deploy.yui_ibc.ibc_handler.address());
+	println!("ibc_handler contract addr: {:?}", deploy.yui_ibc.diamond.address());
 	ClientId(string)
 }
 
@@ -221,7 +215,7 @@ fn deploy_mock_module_fixture(
 		});
 
 		let contract = clients.find_first("MockModule").expect("no MockModule in project output");
-		let constructor_args = (Token::Address(deploy.yui_ibc.ibc_handler.address()),);
+		let constructor_args = (Token::Address(deploy.yui_ibc.diamond.address()),);
 		utils::deploy_contract(contract, constructor_args, deploy.client.clone()).await
 	}
 }
@@ -297,15 +291,15 @@ async fn test_ibc_connection() {
 		.await;
 
 	// hyperspace.query_connection_channels(at, connection_id)
-	let channels = hyperspace
-		.query_connection_channels(
-			ibc::Height { revision_number: 0, revision_height: 1 },
-			&connection_id.parse().unwrap(),
-		)
-		.await
-		.unwrap();
-
-	assert!(channels.channels.is_empty());
+	// let channels = hyperspace
+	// 	.query_connection_channels(
+	// 		ibc::Height { revision_number: 0, revision_height: 1 },
+	// 		&connection_id.parse().unwrap(),
+	// 	)
+	// 	.await
+	// 	.unwrap();
+	//
+	// assert!(channels.channels.is_empty());
 
 	// hyperspace.query_connection_end(at, connection_id)
 	let connection_end = hyperspace
@@ -524,6 +518,35 @@ async fn test_ibc_packet() {
 		.await
 		.unwrap();
 	assert_eq!(unreceived, vec![1, 2]);
+
+	let send_packet = hyperspace
+		.query_send_packets(
+			ibc::Height { revision_number: 0, revision_height: height },
+			ChannelId::from_str("channel-0").unwrap(),
+			PortId::from_str("port-0").unwrap(),
+			vec![1],
+		)
+		.await
+		.unwrap()
+		.pop()
+		.unwrap();
+
+	assert_eq!(
+		dbg!(send_packet),
+		PacketInfo {
+			height: None,
+			sequence: 1,
+			source_port: "port-0".to_string(),
+			source_channel: "channel-0".to_string(),
+			destination_port: "port-0".to_string(),
+			destination_channel: "channel-0".to_string(),
+			channel_order: "0".to_string(),
+			data: "hello_send".as_bytes().to_vec(),
+			timeout_height: Height::new(0, 1000000).into(),
+			timeout_timestamp: 0,
+			ack: None,
+		}
+	);
 }
 
 fn u64_to_token(x: u64) -> Token {

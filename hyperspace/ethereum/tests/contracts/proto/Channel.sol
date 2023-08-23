@@ -163,7 +163,6 @@ library Packet {
     uint64 timeout_timestamp;
   }
 }
-//library Packet
 
 library PacketState {
 
@@ -176,4 +175,3 @@ library PacketState {
     bytes data;
   }
 }
-//library PacketState

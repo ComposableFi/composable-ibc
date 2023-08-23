@@ -395,6 +395,7 @@ macro_rules! chains {
 
 			async fn query_send_packets(
 				&self,
+				at: Height,
 				channel_id: ChannelId,
 				port_id: PortId,
 				seqs: Vec<u64>,

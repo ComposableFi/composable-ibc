@@ -736,4 +736,3 @@ library IbcLightclientsMockV1Header {
     }
   }
 }
-//library IbcLightclientsMockV1Header

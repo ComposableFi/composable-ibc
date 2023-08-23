@@ -473,19 +473,19 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "uint64",
         "name": "sequence",
         "type": "uint64"
       },
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "string",
         "name": "sourcePort",
         "type": "string"
       },
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "string",
         "name": "sourceChannel",
         "type": "string"

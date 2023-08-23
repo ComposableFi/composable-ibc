@@ -1,13 +1,15 @@
 #![allow(dead_code)]
 
+use cast::hashbrown::HashSet;
 use std::{
+	collections::HashMap,
 	path::{Path, PathBuf},
 	sync::Arc,
 	time::Duration,
 };
 
 use ethers::{
-	abi::Token,
+	abi::{Detokenize, Token, Tokenize},
 	contract::ContractFactory,
 	core::{rand::rngs::ThreadRng, utils::Anvil},
 	middleware::SignerMiddleware,
@@ -24,6 +26,7 @@ use ethers_solc::{
 	Artifact, ConfigurableContractArtifact, EvmVersion, Project, ProjectCompileOutput,
 	ProjectPathsConfig, SolcConfig,
 };
+use futures::SinkExt;
 use hyperspace_ethereum::contract::UnwrapContractError;
 use ibc::{
 	core::{
@@ -33,6 +36,7 @@ use ibc::{
 	timestamp::Timestamp,
 	Height,
 };
+use tracing::log;
 
 pub const USE_GETH: bool = true;
 
@@ -81,7 +85,7 @@ pub fn compile_solc(project_paths: ProjectPathsConfig) -> ProjectCompileOutput {
 			stop_after: None,
 			remappings: vec![],
 			optimizer: Optimizer {
-				enabled: Some(false),
+				enabled: Some(true),
 				runs: Some(256),
 				details: Some(OptimizerDetails {
 					peephole: Some(true),
@@ -100,10 +104,11 @@ pub fn compile_solc(project_paths: ProjectPathsConfig) -> ProjectCompileOutput {
 			output_selection: OutputSelection::default_output_selection(),
 			evm_version: Some(EvmVersion::Paris),
 			via_ir: Some(false),
-			debug: Some(DebuggingSettings {
-				revert_strings: Some(RevertStrings::Debug),
-				debug_info: vec!["location".to_string()],
-			}),
+			// debug: Some(DebuggingSettings {
+			// 	revert_strings: Some(RevertStrings::Debug),
+			// 	debug_info: vec!["location".to_string()],
+			// }),
+			debug: None,
 			libraries: Libraries { libs: Default::default() },
 		},
 	};
@@ -216,11 +221,14 @@ pub mod mock {
 
 #[derive(Debug)]
 pub struct DeployYuiIbc<B, M> {
-	pub ibc_client: ContractInstance<B, M>,
-	pub ibc_connection: ContractInstance<B, M>,
-	pub ibc_channel_handshake: ContractInstance<B, M>,
-	pub ibc_packet: ContractInstance<B, M>,
-	pub ibc_handler: ContractInstance<B, M>,
+	// pub ibc_client: ContractInstance<B, M>,
+	// pub ibc_connection: ContractInstance<B, M>,
+	// pub ibc_channel_handshake: ContractInstance<B, M>,
+	// pub ibc_packet: ContractInstance<B, M>,
+	// pub ibc_handler: ContractInstance<B, M>,
+	pub facet_cuts: Vec<FacetCut>,
+	pub deployed_facets: Vec<ContractInstance<B, M>>,
+	pub diamond: ContractInstance<B, M>,
 }
 
 impl<B, M> DeployYuiIbc<B, M>
@@ -230,7 +238,6 @@ where
 {
 	pub async fn bind_port(&self, port_id: &str, address: Address) {
 		let bind_port = self
-			.ibc_handler
 			.method::<_, ()>("bindPort", (Token::String(port_id.into()), Token::Address(address)))
 			.unwrap();
 		let () = bind_port.call().await.unwrap_contract_error();
@@ -240,7 +247,6 @@ where
 
 	pub async fn connection_open_init(&self, client_id: &str) -> String {
 		let connection_open_init = self
-			.ibc_handler
 			.method::<_, String>(
 				"connectionOpenInit",
 				(Token::Tuple(vec![
@@ -268,7 +274,6 @@ where
 
 	pub async fn connection_open_ack(&self, connection_id: &str, client_state_bytes: Vec<u8>) {
 		let connection_open_ack = self
-			.ibc_handler
 			.method::<_, ()>(
 				"connectionOpenAck",
 				(Token::Tuple(vec![
@@ -296,7 +301,6 @@ where
 
 	pub async fn channel_open_init(&self, port_id: &str, connection_id: &str) -> String {
 		let fut = self
-			.ibc_handler
 			.method::<_, String>(
 				"channelOpenInit",
 				(Token::Tuple(vec![
@@ -324,7 +328,6 @@ where
 
 	pub async fn channel_open_ack(&self, channel_id: &str, port_id: &str) {
 		let fut = self
-			.ibc_handler
 			.method::<_, ()>(
 				"channelOpenAck",
 				(Token::Tuple(vec![
@@ -349,7 +352,6 @@ where
 
 	pub async fn recv_packet(&self, packet: Packet) -> TransactionReceipt {
 		let fut = self
-			.ibc_handler
 			.method::<_, ()>(
 				"recvPacket",
 				(Token::Tuple(vec![
@@ -404,9 +406,36 @@ where
 		tx
 	}
 
+	pub fn method<T: Tokenize, D: Detokenize>(
+		&self,
+		name: &str,
+		args: T,
+	) -> Result<FunctionCall<B, M, D>, AbiError> {
+		let mut contract: Option<&ContractInstance<B, M>> = None;
+
+		let lookup_contracts = self.deployed_facets.iter().chain(std::iter::once(&self.diamond));
+
+		for lookup_contract in lookup_contracts {
+			if lookup_contract.abi().function(name).is_ok() {
+				if contract.is_some() {
+					panic!("ambiguous method name: {}", name);
+				}
+				contract = Some(lookup_contract);
+			}
+		}
+		let contract = contract.take().ok_or_else(|| AbiError::WrongSelector)?;
+
+		let mut f = contract.method(name, args);
+
+		if let Ok(f) = &mut f {
+			f.tx.set_to(self.diamond.address());
+		}
+
+		f
+	}
+
 	pub async fn register_client(&self, kind: &str, address: Address) {
 		let method = self
-			.ibc_handler
 			.method::<_, ()>(
 				"registerClient",
 				(Token::String(kind.into()), Token::Address(address)),
@@ -420,7 +449,7 @@ where
 	}
 
 	pub async fn create_client(&self, msg: Token) -> String {
-		let method = self.ibc_handler.method::<_, String>("createClient", (msg,)).unwrap();
+		let method = self.method::<_, String>("createClient", (msg,)).unwrap();
 
 		let client_id = method.call().await.unwrap_contract_error();
 
@@ -437,70 +466,149 @@ where
 {
 	fn clone(&self) -> Self {
 		Self {
-			ibc_client: self.ibc_client.clone(),
-			ibc_connection: self.ibc_connection.clone(),
-			ibc_channel_handshake: self.ibc_channel_handshake.clone(),
-			ibc_packet: self.ibc_packet.clone(),
-			ibc_handler: self.ibc_handler.clone(),
+			// ibc_client: self.ibc_client.clone(),
+			// ibc_connection: self.ibc_connection.clone(),
+			// ibc_channel_handshake: self.ibc_channel_handshake.clone(),
+			// ibc_packet: self.ibc_packet.clone(),
+			facet_cuts: self.facet_cuts.clone(),
+			deployed_facets: self.deployed_facets.clone(),
+			diamond: self.diamond.clone(),
 		}
 	}
 }
 
+#[repr(u32)]
+#[derive(Clone, Copy, Debug)]
+pub enum FacetCutAction {
+	Add = 0,
+	Replace = 1,
+	Remove = 2,
+}
+
+#[derive(Clone, Debug)]
+pub struct FacetCut {
+	address: Address,
+	action: FacetCutAction,
+	selectors: Vec<(String, [u8; 4])>,
+}
+
+impl FacetCut {
+	pub fn into_token(self) -> Token {
+		Token::Tuple(vec![
+			Token::Address(self.address),
+			Token::Uint((FacetCutAction::Add as u32).into()),
+			Token::Array(
+				self.selectors.into_iter().map(|(_, x)| Token::FixedBytes(x.to_vec())).collect(),
+			),
+		])
+	}
+}
+
+fn get_selectors<M>(contract: &ContractInstance<Arc<M>, M>) -> Vec<(String, [u8; 4])>
+where
+	M: Middleware,
+{
+	let signatures = contract.abi().functions.keys().cloned().collect::<Vec<_>>();
+	signatures
+		.into_iter()
+		.inspect(|x| {
+			dbg!(x);
+		})
+		.filter(|val| val != "init(bytes)")
+		.map(|val| (val.clone(), contract.abi().function(&val).unwrap().short_signature()))
+		.collect()
+}
+
 pub async fn deploy_yui_ibc<M>(
 	project_output: &ProjectCompileOutput,
+	diamond_project_output: &ProjectCompileOutput,
 	client: Arc<M>,
 ) -> DeployYuiIbc<Arc<M>, M>
 where
 	M: Middleware,
 {
-	let contract = project_output.find_first("OwnableIBCHandler").unwrap();
-	let (abi, bytecode, _) = contract.clone().into_parts();
-	let handler_bytecode = bytecode.unwrap();
-	let handler_abi = abi.unwrap();
-	dbg!(&handler_bytecode.len() / 1);
+	let facet_names = [
+		"IBCClient",
+		"IBCConnection",
+		"IBCChannelHandshake",
+		"IBCPacket",
+		"IBCQuerier",
+		"DiamondCutFacet",
+		"DiamondLoupeFacet",
+		"OwnershipFacet",
+	];
 
-	if handler_bytecode.len() > dbg!(24 * 1024) {
-		panic!("handler bytecode too large");
+	project_output.artifacts().for_each(|(name, artifact)| {
+		let size = artifact.bytecode.as_ref().unwrap().object.as_bytes().unwrap().len();
+		let max = 24 * 1024;
+		if size > max {
+			panic!("{} size is too big: {}/{}", name, size, max);
+		}
+		log::info!("{} size: {}/{}", name, size, max);
+	});
+	diamond_project_output.artifacts().for_each(|(name, artifact)| {
+		let size = artifact.bytecode.as_ref().unwrap().object.as_bytes().unwrap().len();
+		let max = 24 * 1024;
+		if size > max {
+			panic!("{} size is too big: {}/{}", name, size, max);
+		}
+		log::info!("{} size: {}/{}", name, size, max);
+	});
+
+	let acc = client.default_sender().unwrap();
+
+	let contract = diamond_project_output.find_first("DiamondInit").unwrap();
+	let (abi, bytecode, _) = contract.clone().into_parts();
+	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
+	let diamond_init = factory.deploy(()).unwrap().send().await.unwrap();
+
+	let mut sigs = HashMap::<[u8; 4], (String, String)>::new();
+	let mut facet_cuts = vec![];
+	let mut deployed_facets = vec![];
+	for facet_name in facet_names {
+		let contract = project_output
+			.find_first(facet_name)
+			.or_else(|| diamond_project_output.find_first(facet_name))
+			.unwrap();
+		let (abi, bytecode, _) = contract.clone().into_parts();
+		let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
+		let facet = factory.deploy(()).unwrap().send().await.unwrap();
+		let facet_address = facet.address();
+		deployed_facets.push(facet.clone());
+		let selectors = get_selectors(&facet);
+
+		for (name, selector) in &selectors {
+			if sigs.contains_key(selector) {
+				let (contract_name, fn_name) = &sigs[selector];
+				panic!(
+					"duplicate selector: {}:{} and {}:{}",
+					contract_name, fn_name, facet_name, name
+				);
+			}
+			sigs.insert(*selector, (facet_name.to_owned(), name.clone()));
+		}
+
+		let facet_cut = FacetCut { address: facet_address, action: FacetCutAction::Add, selectors };
+		facet_cuts.push(facet_cut);
 	}
+	let init_calldata = diamond_init.method::<_, ()>("init", ()).unwrap().calldata().unwrap();
 
-	let contract = project_output.find_first("IBCClient").unwrap();
+	let contract = diamond_project_output.find_first("Diamond").unwrap();
 	let (abi, bytecode, _) = contract.clone().into_parts();
 	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
-	let deployer1 = factory.deploy(()).unwrap();
-	let acc = deployer1.client().default_sender().unwrap();
-	dbg!(client.get_balance(acc, None).await.unwrap());
-	let ibc_client = deployer1.send().await.unwrap();
-
-	let contract = project_output.find_first("IBCConnection").unwrap();
-	let (abi, bytecode, _) = contract.clone().into_parts();
-	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
-	let ibc_connection = factory.deploy(()).unwrap().send().await.unwrap();
-
-	let contract = project_output.find_first("IBCChannelHandshake").unwrap();
-	let (abi, bytecode, _) = contract.clone().into_parts();
-	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
-	let ibc_channel_handshake = factory.deploy(()).unwrap().send().await.unwrap();
-
-	let contract = project_output.find_first("IBCPacket").unwrap();
-	let (abi, bytecode, _) = contract.clone().into_parts();
-	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
-	let ibc_packet = factory.deploy(()).unwrap().send().await.unwrap();
-
-	let factory = ContractFactory::new(handler_abi, handler_bytecode, client.clone());
-	let mut deployer = factory
-		.deploy((
-			Token::Address(ibc_client.address()),
-			Token::Address(ibc_connection.address()),
-			Token::Address(ibc_channel_handshake.address()),
-			Token::Address(ibc_packet.address()),
-		))
+	let diamond = factory
+		.deploy(Token::Tuple(vec![
+			Token::Array(facet_cuts.clone().into_iter().map(|x| x.into_token()).collect()),
+			Token::Tuple(vec![
+				Token::Address(acc),
+				Token::Address(diamond_init.address()),
+				Token::Bytes(init_calldata.0.into()),
+			]),
+		]))
+		.unwrap()
+		.send()
+		.await
 		.unwrap();
-	// let estimated_gas = client.estimate_gas(&deployer.tx, None).await.unwrap();
-	// dbg!(estimated_gas);
-	dbg!(client.get_balance(acc, None).await.unwrap());
-	let ibc_handler = deployer.clone().send().await.expect("failed to deploy OwnableIBCHandler");
 
-	println!("IBC Handler address: {:?}", ibc_handler.address());
-
-	DeployYuiIbc { ibc_client, ibc_connection, ibc_channel_handshake, ibc_packet, ibc_handler }
+	DeployYuiIbc { diamond, facet_cuts, deployed_facets }
 }

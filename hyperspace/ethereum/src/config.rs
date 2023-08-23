@@ -71,18 +71,18 @@ pub struct Config {
 	/// address of the OwnableIBCHandler contract.
 	#[serde(deserialize_with = "address_de")]
 	pub ibc_handler_address: Address,
-	/// address of the IBCPacket contract.
-	#[serde(deserialize_with = "address_de")]
-	pub ibc_packet_address: Address,
-	/// address of the IBCClient contract.
-	#[serde(deserialize_with = "address_de")]
-	pub ibc_client_address: Address,
-	/// address of the IBCConnection contract.
-	#[serde(deserialize_with = "address_de")]
-	pub ibc_connection_address: Address,
-	/// address of the IBCChannelHandshake contract.
-	#[serde(deserialize_with = "address_de")]
-	pub ibc_channel_handshake_address: Address,
+	// /// address of the IBCPacket contract.
+	// #[serde(deserialize_with = "address_de")]
+	// pub ibc_packet_address: Address,
+	// /// address of the IBCClient contract.
+	// #[serde(deserialize_with = "address_de")]
+	// pub ibc_client_address: Address,
+	// /// address of the IBCConnection contract.
+	// #[serde(deserialize_with = "address_de")]
+	// pub ibc_connection_address: Address,
+	// /// address of the IBCChannelHandshake contract.
+	// #[serde(deserialize_with = "address_de")]
+	// pub ibc_channel_handshake_address: Address,
 	/// mnemonic for the wallet
 	pub mnemonic: Option<String>,
 	/// private key for the wallet
