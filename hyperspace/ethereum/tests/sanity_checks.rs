@@ -20,7 +20,7 @@ use ibc::{
 	core::{
 		ics02_client::{height::Height, trust_threshold::TrustThreshold, msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient}},
 		ics04_channel::packet::{Packet, Sequence},
-		ics24_host::identifier::{ChannelId, PortId, ConnectionId, ChainId},
+		ics24_host::identifier::{ChannelId, PortId, ConnectionId, ChainId}, ics03_connection::{connection::Counterparty, msgs::conn_open_init::MsgConnectionOpenInit}, ics23_commitment::commitment::CommitmentPrefix,
 	},
 	timestamp::Timestamp, protobuf::types::SignedHeader,
 };
@@ -248,6 +248,7 @@ fn deploy_mock_module_fixture(
 
 #[tokio::test]
 async fn test_deploy_yui_ibc_and_create_eth_client() {
+	let start = std::time::Instant::now();
 	let path = utils::yui_ibc_solidity_path();
 	let project_output = utils::compile_yui(&path, "contracts/core");
 	let project_output1 = utils::compile_yui(&path, "contracts/clients");
@@ -338,6 +339,24 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	//before to call update you need to be sure that the prev revision_height was stored on the chain
 	assert_eq!(client_state.latest_height.revision_height, header.trusted_height.revision_height);
 	let result = hyperspace.submit(vec![msg]).await.unwrap();
+
+
+
+	//create conenction:
+	let msg = MsgConnectionOpenInit {
+		client_id: ibc::core::ics24_host::identifier::ClientId::new("07-tendermint", 0).unwrap(),
+		counterparty: Counterparty::new(ibc::core::ics24_host::identifier::ClientId::new("07-ethereum", 0).unwrap(), None, CommitmentPrefix::try_from(vec![1,2,3]).unwrap()),
+		version: Some(Default::default()), // not nessesary
+		delay_period: Duration::from_secs(1000000),
+		signer: Signer::from_str("s").unwrap(), //not nessesary
+	};
+
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let result = hyperspace.submit(vec![msg]).await.unwrap();
+
+	let duration = std::time::Instant::now().duration_since(start);
+	println!("Time elapsed: {:.2} seconds", duration.as_secs());
+	
 
 	// let mut config_b = CosmosClientConfig {
 	// 	name: "cosmos".to_string(),

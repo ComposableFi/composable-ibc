@@ -60,31 +60,15 @@ where
 		assert_eq!(tx_recp.status, Some(1.into()));
 	}
 
-	pub async fn connection_open_init(&self, client_id: &str) -> String {
-		let connection_open_init = self
-			.contract
-			.method::<_, String>(
-				"connectionOpenInit",
-				(Token::Tuple(vec![
-					Token::String(client_id.into()),
-					Token::Tuple(vec![
-						Token::String(client_id.into()),
-						Token::String("port-0".into()),
-						Token::Tuple(vec![Token::Bytes(vec![])]),
-					]),
-					Token::Uint(0.into()),
-				]),),
-			)
-			.unwrap();
-		let connection_id = connection_open_init.call().await.unwrap_contract_error();
-		let tx_recp = connection_open_init
-			.send()
-			.await
-			.unwrap_contract_error()
-			.await
-			.unwrap()
-			.unwrap();
-		assert_eq!(tx_recp.status, Some(1.into()));
+	pub async fn connection_open_init(&self, msg: Token) -> String {
+		let method = self.contract.method::<_, String>("connectionOpenInit", (msg,)).unwrap();
+
+		let gas_estimate_connection_id = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_id);
+		let connection_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
 		connection_id
 	}
 
