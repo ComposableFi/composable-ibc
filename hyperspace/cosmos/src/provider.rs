@@ -35,7 +35,7 @@ use ibc::{
 };
 use ibc_primitives::PacketInfo as IbcPacketInfo;
 use ibc_proto::{
-	cosmos::bank::v1beta1::QueryBalanceRequest,
+	cosmos::{bank::v1beta1::QueryBalanceRequest, base::query::v1beta1::PageRequest},
 	google::protobuf::Any,
 	ibc::core::{
 		channel::v1::{
@@ -57,21 +57,27 @@ use ibc_rpc::PacketInfo;
 use ics07_tendermint::{
 	client_message::ClientMessage, client_state::ClientState, consensus_state::ConsensusState,
 };
+use ics08_wasm::msg::MsgPushNewWasmCode;
 use pallet_ibc::light_clients::{
 	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
 };
-use primitives::{mock::LocalClientTypes, Chain, IbcProvider, UpdateType};
+use primitives::{
+	filter_events_by_ids, mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType,
+};
 use prost::Message;
-use std::{pin::Pin, str::FromStr, time::Duration};
+use rand::Rng;
+use std::{collections::HashSet, pin::Pin, str::FromStr, time::Duration};
 use tendermint::block::Height as TmHeight;
 pub use tendermint::Hash;
 use tendermint_rpc::{
 	endpoint::tx::Response,
 	event::{Event, EventData},
 	query::{EventType, Query},
-	Client, Error as RpcError, Order, SubscriptionClient, WebSocketClient,
+	Client, Error as RpcError, Order, SubscriptionClient,
 };
-use tokio::time::sleep;
+use tokio::{task::JoinSet, time::sleep};
+
+pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 250;
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
@@ -97,7 +103,7 @@ where
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &C,
-	) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+	) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		C: Chain,
 	{
@@ -119,7 +125,10 @@ where
 		let latest_revision = latest_height.revision_number;
 
 		let from = TmHeight::try_from(latest_cp_client_height).unwrap();
-		let to = finality_event_height;
+		let to = finality_event_height.min(
+			TmHeight::try_from(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER)
+				.expect("should not overflow"),
+		);
 		log::info!(target: "hyperspace_cosmos", "Getting blocks {}..{}", from, to);
 
 		// query (exclusively) up to `to`, because the proof for the event at `to - 1` will be
@@ -127,17 +136,46 @@ where
 		let update_headers =
 			self.msg_update_client_header(from, to, client_state.latest_height).await?;
 		let mut block_events = Vec::new();
-		for height in from.value()..to.value() {
-			let ibc_events = self.parse_ibc_events_at(latest_revision, height).await?;
-			block_events.push(ibc_events);
+		block_events.push((0, Vec::new()));
+		let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+		let range = (from.value()..to.value()).collect::<Vec<_>>();
+		let to = self.rpc_call_delay().as_millis();
+		for heights in range.chunks(100) {
+			for height in heights.iter().copied() {
+				log::trace!(target: "hyperspace_cosmos", "Parsing events at height {:?}", height);
+				let client = self.clone();
+				let duration = Duration::from_millis(rand::thread_rng().gen_range(0..to) as u64);
+				let counterparty = counterparty.clone();
+				join_set.spawn(async move {
+					sleep(duration).await;
+					let xs = tokio::time::timeout(
+						Duration::from_secs(30),
+						client.parse_ibc_events_at(&counterparty, latest_revision, height),
+					)
+					.await??;
+					Ok((height, xs))
+				});
+			}
+			while let Some(res) = join_set.join_next().await {
+				let out = res??;
+				block_events.push(out);
+			}
 		}
-		// we don't submit events for the last block, because we don't have a proof for it
-		block_events.push(Vec::new());
-		assert_eq!(block_events.len(), update_headers.len(), "block events and updates must match");
+
+		if block_events.len() != update_headers.len() {
+			return Err(anyhow::anyhow!(
+				"block events and updates must match, got {} and {}",
+				block_events.len(),
+				update_headers.len()
+			))
+		}
+		block_events.sort_by_key(|(height, _)| *height);
 
 		let mut updates = Vec::new();
-		for (events, (update_header, update_type)) in block_events.into_iter().zip(update_headers) {
-			log::info!(target: "hyperspace_cosmos", "Fetching block {}", update_header.height().revision_height);
+		for (events, (update_header, update_type)) in
+			block_events.into_iter().map(|(_, events)| events).zip(update_headers)
+		{
+			let height = update_header.height();
 			let update_client_header = {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 					client_id: client_id.clone(),
@@ -147,11 +185,11 @@ where
 					signer: counterparty.account_id(),
 				};
 				let value = msg.encode_vec().map_err(|e| {
-					Error::from(format!("Failed to encode MsgUpdateClient {:?}: {:?}", msg, e))
+					Error::from(format!("Failed to encode MsgUpdateClient {msg:?}: {e:?}"))
 				})?;
 				Any { value, type_url: msg.type_url() }
 			};
-			updates.push((update_client_header, events, update_type));
+			updates.push((update_client_header, height, events, update_type));
 		}
 		Ok(updates)
 	}
@@ -160,11 +198,8 @@ where
 	// necessary height field, as `height` is removed from `Attribute` from ibc-rs v0.22.0
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
 		// Create websocket client. Like what `EventMonitor::subscribe()` does in `hermes`
-		let (ws_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
-			.await
-			.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))
-			.unwrap();
-		tokio::spawn(ws_driver.run());
+		let ws_client = self.rpc_client.clone();
+
 		let query_all = vec![
 			Query::from(EventType::NewBlock),
 			Query::eq("message.module", "ibc_client"),
@@ -176,7 +211,7 @@ where
 			let subscription = ws_client
 				.subscribe(query.clone())
 				.await
-				.map_err(|e| Error::from(format!("Web Socket Client Error {:?}", e)))
+				.map_err(|e| Error::from(format!("Web Socket Client Error {e:?}")))
 				.unwrap();
 			subscriptions.push(subscription);
 		}
@@ -210,25 +245,22 @@ where
 						for abci_event in &tx_result.result.events {
 							if let Ok(ibc_event) = ibc_event_try_from_abci_event(abci_event, height)
 							{
-								if query == Query::eq("message.module", "ibc_client").to_string() &&
-									event_is_type_client(&ibc_event)
-								{
-									events_with_height
-										.push(IbcEventWithHeight::new(ibc_event, height));
-								} else if (query ==
+								log::debug!(target: "hyperspace_cosmos", "Retrieved event: {}, query: {}, parsed: {:?}", abci_event.kind, query, ibc_event);
+								let is_client_event = query == Query::eq("message.module", "ibc_client").to_string() &&
+									event_is_type_client(&ibc_event);
+								let is_connection_event = (query ==
 									Query::eq("message.module", "ibc_connection").to_string() ||
 									query ==
 										Query::eq("message.module", "ibc_client").to_string()) &&
-									event_is_type_connection(&ibc_event)
-								{
-									events_with_height
-										.push(IbcEventWithHeight::new(ibc_event, height));
-								} else if query ==
+									event_is_type_connection(&ibc_event);
+								let is_channel_event = query ==
 									Query::eq("message.module", "ibc_channel").to_string() &&
-									event_is_type_channel(&ibc_event)
-								{
+									event_is_type_channel(&ibc_event);
+								if is_client_event || is_connection_event || is_channel_event {
 									events_with_height
 										.push(IbcEventWithHeight::new(ibc_event, height));
+								} else {
+									log::debug!(target: "hyperspace_cosmos", "The event is unknown");
 								}
 							} else {
 								log::debug!(target: "hyperspace_cosmos", "Failed to parse event {:?}", abci_event);
@@ -306,7 +338,7 @@ where
 		channel_id: ChannelId,
 		port_id: PortId,
 	) -> Result<QueryChannelResponse, Self::Error> {
-		let path_bytes = Path::ChannelEnds(ChannelEndsPath(port_id.clone(), channel_id.clone()))
+		let path_bytes = Path::ChannelEnds(ChannelEndsPath(port_id.clone(), channel_id))
 			.to_string()
 			.into_bytes();
 		let (q, proof) = self.query_path(path_bytes.clone(), at, true).await?;
@@ -332,7 +364,7 @@ where
 	) -> Result<QueryPacketCommitmentResponse, Self::Error> {
 		let path_bytes = Path::Commitments(CommitmentsPath {
 			port_id: port_id.clone(),
-			channel_id: channel_id.clone(),
+			channel_id: *channel_id,
 			sequence: Sequence::from(seq),
 		})
 		.to_string()
@@ -354,7 +386,7 @@ where
 	) -> Result<QueryPacketAcknowledgementResponse, Self::Error> {
 		let path_bytes = Path::Acks(AcksPath {
 			port_id: port_id.clone(),
-			channel_id: channel_id.clone(),
+			channel_id: *channel_id,
 			sequence: Sequence::from(seq),
 		})
 		.to_string()
@@ -373,7 +405,7 @@ where
 		port_id: &PortId,
 		channel_id: &ChannelId,
 	) -> Result<QueryNextSequenceReceiveResponse, Self::Error> {
-		let path_bytes = Path::SeqRecvs(SeqRecvsPath(port_id.clone(), channel_id.clone()))
+		let path_bytes = Path::SeqRecvs(SeqRecvsPath(port_id.clone(), *channel_id))
 			.to_string()
 			.into_bytes();
 		let (query_result, proof) = self.query_path(path_bytes.clone(), at, true).await?;
@@ -399,7 +431,7 @@ where
 	) -> Result<QueryPacketReceiptResponse, Self::Error> {
 		let path_bytes = Path::Receipts(ReceiptsPath {
 			port_id: port_id.clone(),
-			channel_id: channel_id.clone(),
+			channel_id: *channel_id,
 			sequence: Sequence::from(seq),
 		})
 		.to_string()
@@ -421,7 +453,7 @@ where
 			.rpc_client
 			.abci_info()
 			.await
-			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+			.map_err(|e| Error::RpcError(format!("{e:?}")))?;
 
 		// Query `/blockchain` endpoint to pull the block metadata corresponding to
 		// the latest block that the application committed.
@@ -433,8 +465,7 @@ where
 			.await
 			.map_err(|e| {
 				Error::RpcError(format!(
-					"failed to query /blockchain endpoint for latest app. block: {:?}",
-					e
+					"failed to query /blockchain endpoint for latest app. block: {e:?}"
 				))
 			})?;
 
@@ -466,7 +497,7 @@ where
 		let request = QueryPacketCommitmentsRequest {
 			port_id: port_id.to_string(),
 			channel_id: channel_id.to_string(),
-			pagination: None,
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
 		};
 		let request = tonic::Request::new(request);
 		let response = grpc_client
@@ -476,7 +507,7 @@ where
 			.into_inner();
 
 		let commitment_sequences: Vec<u64> =
-			response.commitments.into_iter().map(|v| v.sequence.into()).collect();
+			response.commitments.into_iter().map(|v| v.sequence).collect();
 
 		Ok(commitment_sequences)
 	}
@@ -504,7 +535,7 @@ where
 			port_id: port_id.to_string(),
 			channel_id: channel_id.to_string(),
 			packet_commitment_sequences: vec![],
-			pagination: None,
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
 		};
 		let request = tonic::Request::new(request);
 		let response = grpc_client
@@ -514,7 +545,7 @@ where
 			.into_inner();
 
 		let commitment_sequences: Vec<u64> =
-			response.acknowledgements.into_iter().map(|v| v.sequence.into()).collect();
+			response.acknowledgements.into_iter().map(|v| v.sequence).collect();
 
 		Ok(commitment_sequences)
 	}
@@ -536,7 +567,7 @@ where
 		let request = QueryUnreceivedPacketsRequest {
 			port_id: port_id.to_string(),
 			channel_id: channel_id.to_string(),
-			packet_commitment_sequences: seqs.into(),
+			packet_commitment_sequences: seqs,
 		};
 		let request = tonic::Request::new(request);
 		let response = grpc_client
@@ -545,8 +576,7 @@ where
 			.map_err(|e| Error::from(e.to_string()))?
 			.into_inner();
 
-		let commitment_sequences: Vec<u64> =
-			response.sequences.into_iter().map(|v| v.into()).collect();
+		let commitment_sequences: Vec<u64> = response.sequences.into_iter().collect();
 
 		Ok(commitment_sequences)
 	}
@@ -568,7 +598,7 @@ where
 		let request = QueryUnreceivedAcksRequest {
 			port_id: port_id.to_string(),
 			channel_id: channel_id.to_string(),
-			packet_ack_sequences: seqs.into(),
+			packet_ack_sequences: seqs,
 		};
 		let request = tonic::Request::new(request);
 		let response = grpc_client
@@ -577,13 +607,12 @@ where
 			.map_err(|e| Error::from(e.to_string()))?
 			.into_inner();
 
-		let commitment_sequences: Vec<u64> =
-			response.sequences.into_iter().map(|v| v.into()).collect();
+		let commitment_sequences: Vec<u64> = response.sequences.into_iter().collect();
 
 		Ok(commitment_sequences)
 	}
 
-	fn channel_whitelist(&self) -> Vec<(ChannelId, PortId)> {
+	fn channel_whitelist(&self) -> HashSet<(ChannelId, PortId)> {
 		self.channel_whitelist.lock().unwrap().clone()
 	}
 
@@ -597,16 +626,16 @@ where
 				self.grpc_url.clone().to_string(),
 			)
 			.await
-			.map_err(|e| Error::from(format!("{:?}", e)))?;
+			.map_err(|e| Error::from(format!("{e:?}")))?;
 		let request = tonic::Request::new(QueryConnectionChannelsRequest {
 			connection: connection_id.to_string(),
-			pagination: None,
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
 		});
 
 		let response = grpc_client
 			.connection_channels(request)
 			.await
-			.map_err(|e| Error::from(format!("{:?}", e)))?
+			.map_err(|e| Error::from(format!("{e:?}")))?
 			.into_inner();
 		let channels = QueryChannelsResponse {
 			channels: response.channels,
@@ -629,14 +658,17 @@ where
 		);
 		let mut block_events = vec![];
 
-		for seq in seqs {
-			let query_str =
-				Query::eq(format!("{}.packet_src_channel", "send_packet"), channel_id.to_string())
-					.and_eq(format!("{}.packet_src_port", "send_packet"), port_id.to_string())
-					.and_eq(format!("{}.packet_sequence", "send_packet"), seq.to_string());
+		let mut added_seqs = HashSet::new();
+		for seq in seqs.iter() {
+			if added_seqs.contains(seq) {
+				continue
+			}
+			let query_str = Query::eq("send_packet.packet_src_channel", channel_id.to_string())
+				.and_eq("send_packet.packet_src_port", port_id.to_string())
+				.and_eq("send_packet.packet_sequence", seq.to_string());
 
 			let response = self
-				.rpc_client
+				.rpc_http_client
 				.tx_search(
 					query_str,
 					true,
@@ -645,7 +677,7 @@ where
 					Order::Ascending,
 				)
 				.await
-				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+				.map_err(|e| Error::RpcError(format!("{e:?}")))?;
 
 			for tx in response.txs {
 				for ev in &tx.tx_result.events {
@@ -654,14 +686,21 @@ where
 						ibc_event_try_from_abci_event(ev, Height::new(self.id().version(), height));
 
 					match ev {
-						Ok(IbcEvent::SendPacket(p)) => {
+						Ok(IbcEvent::SendPacket(p))
+							if !added_seqs.contains(&p.packet.sequence.0) &&
+								seqs.contains(&p.packet.sequence.0) &&
+								p.packet.source_port == port_id && p.packet.source_channel ==
+								channel_id =>
+						{
+							added_seqs.insert(p.packet.sequence.0);
 							let mut info = PacketInfo::try_from(IbcPacketInfo::from(p.packet))
 								.map_err(|_| {
-									Error::from(format!(
-										"failed to convert packet info from IbcPacketInfo",
-									))
+									Error::from(
+										"failed to convert packet info from IbcPacketInfo"
+											.to_string(),
+									)
 								})?;
-							info.height = p.height.revision_height;
+							info.height = Some(p.height.revision_height);
 							block_events.push(info)
 						},
 						_ => (),
@@ -672,7 +711,7 @@ where
 		Ok(block_events)
 	}
 
-	async fn query_recv_packets(
+	async fn query_received_packets(
 		&self,
 		channel_id: ChannelId,
 		port_id: PortId,
@@ -682,16 +721,22 @@ where
 			target: "hyperspace_cosmos",
 			"query_recv_packets: channel_id: {}, port_id: {}, seqs: {:?}", channel_id, port_id, seqs
 		);
+
 		let mut block_events = vec![];
 
-		for seq in seqs {
+		let mut added_seqs = HashSet::new();
+		for seq in seqs.iter() {
+			if added_seqs.contains(seq) {
+				continue
+			}
+
 			let query_str =
-				Query::eq(format!("{}.packet_src_channel", "recv_packet"), channel_id.to_string())
-					.and_eq(format!("{}.packet_src_port", "recv_packet"), port_id.to_string())
-					.and_eq(format!("{}.packet_sequence", "recv_packet"), seq.to_string());
+				Query::eq("write_acknowledgement.packet_dst_channel", channel_id.to_string())
+					.and_eq("write_acknowledgement.packet_dst_port", port_id.to_string())
+					.and_eq("write_acknowledgement.packet_sequence", seq.to_string());
 
 			let response = self
-				.rpc_client
+				.rpc_http_client
 				.tx_search(
 					query_str,
 					true,
@@ -700,23 +745,31 @@ where
 					Order::Ascending,
 				)
 				.await
-				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+				.map_err(|e| Error::RpcError(format!("{e:?}")))?;
 
 			for tx in response.txs {
 				for ev in &tx.tx_result.events {
 					let height = tx.height.value();
 					let ev =
 						ibc_event_try_from_abci_event(ev, Height::new(self.id().version(), height));
+
 					match ev {
-						Ok(IbcEvent::WriteAcknowledgement(p)) => {
+						Ok(IbcEvent::WriteAcknowledgement(p))
+							if !added_seqs.contains(&p.packet.sequence.0) &&
+								seqs.contains(&p.packet.sequence.0) &&
+								p.packet.destination_port == port_id &&
+								p.packet.destination_channel == channel_id =>
+						{
+							added_seqs.insert(p.packet.sequence.0);
 							let mut info = PacketInfo::try_from(IbcPacketInfo::from(p.packet))
 								.map_err(|_| {
-									Error::from(format!(
-										"failed to convert packet info from IbcPacketInfo",
-									))
+									Error::from(
+										"failed to convert packet info from IbcPacketInfo"
+											.to_string(),
+									)
 								})?;
 							info.ack = Some(p.ack);
-							info.height = p.height.revision_height;
+							info.height = Some(p.height.revision_height);
 							block_events.push(info)
 						},
 						_ => (),
@@ -728,7 +781,8 @@ where
 	}
 
 	fn expected_block_time(&self) -> Duration {
-		Duration::from_secs(30)
+		// cosmos chain block time is roughly 6-7 seconds
+		Duration::from_secs(7)
 	}
 
 	async fn query_client_update_time_and_height(
@@ -742,10 +796,11 @@ where
 			client_id,
 			client_height
 		);
-		let query_str = Query::eq("update_client.client_id", client_id.to_string());
+		let query_str = Query::eq("update_client.client_id", client_id.to_string())
+			.and_eq("update_client.consensus_height", client_height.to_string());
 
 		let response = self
-			.rpc_client
+			.rpc_http_client
 			.tx_search(
 				query_str,
 				true,
@@ -754,7 +809,7 @@ where
 				Order::Ascending,
 			)
 			.await
-			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+			.map_err(|e| Error::RpcError(format!("{e:?}")))?;
 
 		for tx in response.txs {
 			for ev in &tx.tx_result.events {
@@ -763,7 +818,7 @@ where
 					ibc_event_try_from_abci_event(ev, Height::new(self.id().version(), height));
 				let timestamp = self.query_timestamp_at(height).await?;
 				match ev {
-					Ok(IbcEvent::UpdateClient(_)) =>
+					Ok(IbcEvent::UpdateClient(e)) if e.client_id() == &client_id =>
 						return Ok((
 							Height::new(self.chain_id.version(), height),
 							Timestamp::from_nanoseconds(timestamp)?,
@@ -778,7 +833,7 @@ where
 
 	async fn query_host_consensus_state_proof(
 		&self,
-		_height: Height,
+		_client_state: &AnyClientState,
 	) -> Result<Option<Vec<u8>>, Self::Error> {
 		unimplemented!()
 	}
@@ -792,7 +847,7 @@ where
 			self.grpc_url.clone().to_string(),
 		)
 		.await
-		.map_err(|e| Error::from(format!("{:?}", e)))?;
+		.map_err(|e| Error::from(format!("{e:?}")))?;
 
 		let request = tonic::Request::new(QueryBalanceRequest {
 			address: self.keybase.clone().account,
@@ -803,12 +858,12 @@ where
 			.balance(request)
 			.await
 			.map(|r| r.into_inner())
-			.map_err(|e| Error::from(format!("{:?}", e)))?;
+			.map_err(|e| Error::from(format!("{e:?}")))?;
 
 		// Querying for a balance might fail, i.e. if the account doesn't actually exist
 		let balance = response
 			.balance
-			.ok_or_else(|| Error::from(format!("No balance for denom {}", denom)))?;
+			.ok_or_else(|| Error::from(format!("No balance for denom {denom}")))?;
 
 		Ok(vec![PrefixedCoin {
 			denom: PrefixedDenom {
@@ -820,7 +875,7 @@ where
 	}
 
 	fn connection_prefix(&self) -> CommitmentPrefix {
-		CommitmentPrefix::try_from(self.commitment_prefix.clone()).expect("Should not fail")
+		self.commitment_prefix.clone()
 	}
 
 	fn client_id(&self) -> ClientId {
@@ -836,12 +891,12 @@ where
 	}
 
 	/// Set the channel whitelist for the relayer task.
-	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
+	fn set_channel_whitelist(&mut self, channel_whitelist: HashSet<(ChannelId, PortId)>) {
 		*self.channel_whitelist.lock().unwrap() = channel_whitelist;
 	}
 
 	fn add_channel_to_whitelist(&mut self, channel: (ChannelId, PortId)) {
-		self.channel_whitelist.lock().unwrap().push(channel);
+		self.channel_whitelist.lock().unwrap().insert(channel);
 	}
 
 	fn set_connection_id(&mut self, connection_id: ConnectionId) {
@@ -854,7 +909,7 @@ where
 
 	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error> {
 		let height = TmHeight::try_from(block_number)
-			.map_err(|e| Error::from(format!("Invalid block number: {}", e)))?;
+			.map_err(|e| Error::from(format!("Invalid block number: {e}")))?;
 		let response = self
 			.rpc_client
 			.block(height)
@@ -865,18 +920,18 @@ where
 	}
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
-		let request = tonic::Request::new(QueryClientStatesRequest { pagination: None });
-		let grpc_client = ibc_proto::ibc::core::client::v1::query_client::QueryClient::connect(
-			self.grpc_url.clone().to_string(),
-		)
-		.await
-		.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		let request = tonic::Request::new(QueryClientStatesRequest {
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
+		});
+		let grpc_client = ibc_proto::ibc::core::client::v1::query_client::QueryClient::new(
+			self.grpc_client.clone(),
+		);
 		let response = grpc_client
 			.clone()
 			.client_states(request)
 			.await
 			.map_err(|e| {
-				Error::from(format!("Failed to query client states from grpc client: {:?}", e))
+				Error::from(format!("Failed to query client states from grpc client: {e:?}"))
 			})?
 			.into_inner();
 
@@ -893,17 +948,19 @@ where
 	}
 
 	async fn query_channels(&self) -> Result<Vec<(ChannelId, PortId)>, Self::Error> {
-		let request = tonic::Request::new(QueryChannelsRequest { pagination: None });
+		let request = tonic::Request::new(QueryChannelsRequest {
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
+		});
 		let mut grpc_client =
 			ibc_proto::ibc::core::channel::v1::query_client::QueryClient::connect(
 				self.grpc_url.clone().to_string(),
 			)
 			.await
-			.map_err(|e| Error::from(format!("{:?}", e)))?;
+			.map_err(|e| Error::from(format!("{e:?}")))?;
 		let response = grpc_client
 			.channels(request)
 			.await
-			.map_err(|e| Error::from(format!("{:?}", e)))?
+			.map_err(|e| Error::from(format!("{e:?}")))?
 			.into_inner()
 			.channels
 			.into_iter()
@@ -926,24 +983,21 @@ where
 				self.grpc_url.clone().to_string(),
 			)
 			.await
-			.map_err(|e| Error::from(format!("{:?}", e)))?;
+			.map_err(|e| Error::from(format!("{e:?}")))?;
 
-		let request = tonic::Request::new(QueryConnectionsRequest { pagination: None });
+		let request = tonic::Request::new(QueryConnectionsRequest {
+			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
+		});
 
 		let response = grpc_client
 			.connections(request)
 			.await
-			.map_err(|e| Error::from(format!("{:?}", e)))?
+			.map_err(|e| Error::from(format!("{e:?}")))?
 			.into_inner();
 
 		let connections = response
 			.connections
 			.into_iter()
-			.filter_map(|co| {
-				IdentifiedConnection::try_from(co.clone())
-					.map_err(|e| Error::from(format!("Failed to convert connection end: {:?}", e)))
-					.ok()
-			})
 			.filter(|conn| {
 				conn.client_id == client_id ||
 					conn.counterparty.as_ref().map(|x| x.client_id == client_id).unwrap_or(false)
@@ -957,7 +1011,8 @@ where
 		_latest_height: u64,
 		_latest_client_height_on_counterparty: u64,
 	) -> Result<bool, Self::Error> {
-		// TODO: Implement is_update_required
+		// we never need to use LightClientSync trait in this case, because
+		// all the events will be eventually submitted via `finality_notifications`
 		Ok(false)
 	}
 
@@ -975,13 +1030,13 @@ where
 			ProofSpecs::default(),
 			vec!["upgrade".to_string(), "upgradedIBCState".to_string()],
 		)
-		.map_err(|e| Error::from(format!("Invalid client state {}", e)))?;
+		.map_err(|e| Error::from(format!("Invalid client state {e}")))?;
 		let light_block = self
 			.light_client
 			.verify(latest_height_timestamp.0, latest_height_timestamp.0, &client_state)
 			.await
-			.map_err(|e| Error::from(format!("Invalid light block {}", e)))?;
-		let consensus_state = ConsensusState::from(light_block.clone().signed_header.header);
+			.map_err(|e| Error::from(format!("Invalid light block {e}")))?;
+		let consensus_state = ConsensusState::from(light_block.signed_header.header);
 		Ok((
 			AnyClientState::Tendermint(client_state),
 			AnyConsensusState::Tendermint(consensus_state),
@@ -1007,11 +1062,11 @@ where
 					Order::Ascending,
 				)
 				.await
-				.map_err(|e| Error::from(format!("Failed to query tx hash: {}", e)))?;
+				.map_err(|e| Error::from(format!("Failed to query tx hash: {e}")))?;
 			match response.txs.into_iter().next() {
 				None => {
 					let elapsed = start_time.elapsed();
-					if &elapsed > &TIME_OUT {
+					if elapsed > TIME_OUT {
 						return Err(Error::from(format!(
 							"Timeout waiting for tx {:?} to be included in a block",
 							tx_id.hash
@@ -1041,7 +1096,7 @@ where
 				.flat_map(|e| ibc_event_try_from_abci_event(e, height).ok().into_iter())
 				.filter(|e| matches!(e, IbcEvent::CreateClient(_)))
 				.collect::<Vec<_>>();
-			if result.clone().len() != 1 {
+			if result.len() != 1 {
 				Err(Error::from(format!(
 					"Expected exactly one CreateClient event, found {}",
 					result.len()
@@ -1057,16 +1112,179 @@ where
 
 	async fn query_connection_id_from_tx_hash(
 		&self,
-		_tx_id: Self::TransactionId,
+		tx_id: Self::TransactionId,
 	) -> Result<ConnectionId, Self::Error> {
-		todo!()
+		const WAIT_BACKOFF: Duration = Duration::from_millis(300);
+		const TIME_OUT: Duration = Duration::from_millis(30000);
+		let start_time = std::time::Instant::now();
+
+		let response: Response = loop {
+			let response = self
+				.rpc_client
+				.tx_search(
+					Query::eq("tx.hash", tx_id.hash.to_string()),
+					false,
+					1,
+					1, // get only the first Tx matching the query
+					Order::Ascending,
+				)
+				.await
+				.map_err(|e| Error::from(format!("Failed to query tx hash: {e}")))?;
+			match response.txs.into_iter().next() {
+				None => {
+					let elapsed = start_time.elapsed();
+					if elapsed > TIME_OUT {
+						return Err(Error::from(format!(
+							"Timeout waiting for tx {:?} to be included in a block",
+							tx_id.hash
+						)))
+					} else {
+						std::thread::sleep(WAIT_BACKOFF);
+					}
+				},
+				Some(resp) => break resp,
+			}
+		};
+
+		let height = Height::new(
+			ChainId::chain_version(self.chain_id.to_string().as_str()),
+			response.height.value(),
+		);
+		let deliver_tx_result = response.tx_result;
+		if deliver_tx_result.code.is_err() {
+			Err(Error::from(format!(
+				"Transaction failed with code {:?} and log {:?}",
+				deliver_tx_result.code, deliver_tx_result.log
+			)))
+		} else {
+			let result = deliver_tx_result
+				.events
+				.iter()
+				.flat_map(|e| ibc_event_try_from_abci_event(e, height).ok().into_iter())
+				.filter(|e| matches!(e, IbcEvent::OpenInitConnection(_)))
+				.collect::<Vec<_>>();
+			if result.len() != 1 {
+				Err(Error::from(format!(
+					"Expected exactly one CreateClient event, found {}",
+					result.len()
+				)))
+			} else {
+				Ok(match result[0] {
+					IbcEvent::OpenInitConnection(ref e) =>
+						e.connection_id().expect("Connection id wasn't found").clone(),
+					_ => unreachable!(),
+				})
+			}
+		}
 	}
 
 	async fn query_channel_id_from_tx_hash(
 		&self,
-		_tx_id: Self::TransactionId,
+		tx_id: Self::TransactionId,
 	) -> Result<(ChannelId, PortId), Self::Error> {
-		todo!()
+		const WAIT_BACKOFF: Duration = Duration::from_millis(300);
+		const TIME_OUT: Duration = Duration::from_millis(30000);
+		let start_time = std::time::Instant::now();
+
+		let response: Response = loop {
+			let response = self
+				.rpc_client
+				.tx_search(
+					Query::eq("tx.hash", tx_id.hash.to_string()),
+					false,
+					1,
+					1, // get only the first Tx matching the query
+					Order::Ascending,
+				)
+				.await
+				.map_err(|e| Error::from(format!("Failed to query tx hash: {e}")))?;
+			match response.txs.into_iter().next() {
+				None => {
+					let elapsed = start_time.elapsed();
+					if elapsed > TIME_OUT {
+						return Err(Error::from(format!(
+							"Timeout waiting for tx {:?} to be included in a block",
+							tx_id.hash
+						)))
+					} else {
+						std::thread::sleep(WAIT_BACKOFF);
+					}
+				},
+				Some(resp) => break resp,
+			}
+		};
+
+		let height = Height::new(
+			ChainId::chain_version(self.chain_id.to_string().as_str()),
+			response.height.value(),
+		);
+		let deliver_tx_result = response.tx_result;
+		if deliver_tx_result.code.is_err() {
+			Err(Error::from(format!(
+				"Transaction failed with code {:?} and log {:?}",
+				deliver_tx_result.code, deliver_tx_result.log
+			)))
+		} else {
+			let result = deliver_tx_result
+				.events
+				.iter()
+				.flat_map(|e| ibc_event_try_from_abci_event(e, height).ok().into_iter())
+				.filter(|e| matches!(e, IbcEvent::OpenInitChannel(_)))
+				.collect::<Vec<_>>();
+			if result.len() != 1 {
+				Err(Error::from(format!(
+					"Expected exactly one CreateClient event, found {}",
+					result.len()
+				)))
+			} else {
+				Ok(match result[0] {
+					IbcEvent::OpenInitChannel(ref e) =>
+						(*e.channel_id().expect("Channel id wasn't found"), e.port_id().clone()),
+					_ => unreachable!(),
+				})
+			}
+		}
+	}
+
+	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
+		let msg = MsgPushNewWasmCode { signer: self.account_id(), code: wasm };
+		let hash = self.submit(vec![msg.into()]).await?;
+		let resp = self.wait_for_tx_result(hash).await?;
+		let height = Height::new(
+			ChainId::chain_version(self.chain_id.to_string().as_str()),
+			resp.height.value(),
+		);
+		let deliver_tx_result = resp.tx_result;
+		let mut result = deliver_tx_result
+			.events
+			.iter()
+			.flat_map(|e| ibc_event_try_from_abci_event(e, height).ok().into_iter())
+			.filter(|e| matches!(e, IbcEvent::PushWasmCode(_)))
+			.collect::<Vec<_>>();
+		let code_id = if result.len() != 1 {
+			return Err(Error::from(format!(
+				"Expected exactly one PushWasmCode event, found {}",
+				result.len()
+			)))
+		} else {
+			match result.pop().unwrap() {
+				IbcEvent::PushWasmCode(ev) => ev.0,
+				_ => unreachable!(),
+			}
+		};
+		// let resp = MsgClient::connect(
+		// 	Endpoint::try_from(self.grpc_url.to_string())
+		// 		.map_err(|e| Error::from(format!("Failed to parse grpc url: {:?}", e)))?,
+		// )
+		// .await
+		// .map_err(|e| Error::from(format!("Failed to connect to grpc endpoint: {:?}", e)))?
+		// .push_new_wasm_code(msg)
+		// .await
+		// .map_err(|e| {
+		// 	Error::from(format!("Failed to upload wasm code to grpc endpoint: {:?}", e))
+		// })?;
+
+		Ok(code_id)
 	}
 }
 
@@ -1074,20 +1292,21 @@ impl<H> CosmosClient<H>
 where
 	H: 'static + Clone + Send + Sync,
 {
-	async fn parse_ibc_events_at(
-		&mut self,
+	async fn parse_ibc_events_at<C: Chain>(
+		&self,
+		counterparty: &C,
 		latest_revision: u64,
 		height: u64,
 	) -> Result<Vec<IbcEvent>, <Self as IbcProvider>::Error> {
 		let mut ibc_events = Vec::new();
 
-		let block_results =
-			self.rpc_client.block_results(TmHeight::try_from(height)?).await.map_err(|e| {
-				Error::from(format!(
-					"Failed to query block result for height {:?}: {:?}",
-					height, e
-				))
-			})?;
+		let block_results = self
+			.rpc_http_client
+			.block_results(TmHeight::try_from(height)?)
+			.await
+			.map_err(|e| {
+			Error::from(format!("Failed to query block result for height {height:?}: {e:?}"))
+		})?;
 
 		let tx_events = block_results
 			.txs_results
@@ -1100,15 +1319,48 @@ where
 
 		let ibc_height = Height::new(latest_revision, height);
 		for event in events {
+			let mut channel_and_port_ids = self.channel_whitelist();
+			channel_and_port_ids.extend(counterparty.channel_whitelist());
+
 			let ibc_event = ibc_event_try_from_abci_event(&event, ibc_height).ok();
 			match ibc_event {
 				Some(mut ev) => {
-					ev.set_height(ibc_height);
-					log::debug!(target: "hyperspace_cosmos", "Encountered event at {height}: {:?}", event.kind);
-					ibc_events.push(ev);
+					let is_filtered = filter_events_by_ids(
+						&ev,
+						&[self.client_id(), counterparty.client_id()],
+						&[self.connection_id(), counterparty.connection_id()]
+							.into_iter()
+							.flatten()
+							.collect::<Vec<_>>(),
+						&channel_and_port_ids,
+					);
+
+					if is_filtered {
+						ev.set_height(ibc_height);
+						log::debug!(target: "hyperspace_cosmos", "Encountered event at {height}: {:?}", event.kind);
+						ibc_events.push(ev);
+					} else {
+						log::debug!(target: "hyperspace_cosmos", "Filtered out event: {:?}", event.kind);
+					}
 				},
 				None => {
-					log::debug!(target: "hyperspace_cosmos", "Skipped event: {:?}", event.kind);
+					let ignored_events = [
+						"commission",
+						"rewards",
+						"transfer",
+						"mint",
+						"withdraw_rewards",
+						"coin_spent",
+						"coin_received",
+						"withdraw_commission",
+						"message",
+						"liveness",
+						"tx",
+						"fungible_token_packet",
+					];
+					if !ignored_events.contains(&event.kind.as_str()) {
+						log::debug!(target: "hyperspace_cosmos", "Skipped event: {:?}", event.kind);
+					}
 					continue
 				},
 			}
@@ -1129,7 +1381,7 @@ impl<H: Clone + Send + Sync + 'static> CosmosClient<H> {
 
 		let response: Response = loop {
 			let response = self
-				.rpc_client
+				.rpc_http_client
 				.tx_search(
 					Query::eq("tx.hash", tx_id.hash.to_string()),
 					false,
@@ -1138,11 +1390,11 @@ impl<H: Clone + Send + Sync + 'static> CosmosClient<H> {
 					Order::Ascending,
 				)
 				.await
-				.map_err(|e| Error::from(format!("Failed to query tx hash: {}", e)))?;
+				.map_err(|e| Error::from(format!("Failed to query tx hash: {e}")))?;
 			match response.txs.into_iter().next() {
 				None => {
 					let elapsed = start_time.elapsed();
-					if &elapsed > &TIME_OUT {
+					if elapsed > TIME_OUT {
 						return Err(Error::from(format!(
 							"Timeout waiting for tx {:?} to be included in a block",
 							tx_id.hash
@@ -1170,11 +1422,8 @@ impl<H: Clone + Send + Sync + 'static> CosmosClient<H> {
 fn increment_proof_height(
 	height: Option<ibc_proto::ibc::core::client::v1::Height>,
 ) -> Option<ibc_proto::ibc::core::client::v1::Height> {
-	match height {
-		Some(height) => Some(ibc_proto::ibc::core::client::v1::Height {
-			revision_height: height.revision_height + 1,
-			..height
-		}),
-		None => None,
-	}
+	height.map(|height| ibc_proto::ibc::core::client::v1::Height {
+		revision_height: height.revision_height + 1,
+		..height
+	})
 }

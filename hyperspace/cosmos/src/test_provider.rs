@@ -11,7 +11,7 @@ use primitives::TestProvider;
 use tendermint_rpc::{
 	event::{Event, EventData},
 	query::{EventType, Query},
-	SubscriptionClient, WebSocketClient,
+	SubscriptionClient,
 };
 
 #[async_trait::async_trait]
@@ -37,9 +37,8 @@ where
 
 	/// Returns a stream that yields chain Block number
 	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
-		let (ws_client, ws_driver) =
-			WebSocketClient::new(self.websocket_url.clone()).await.unwrap();
-		tokio::spawn(ws_driver.run());
+		let ws_client = self.rpc_client.clone();
+
 		let subscription = ws_client.subscribe(Query::from(EventType::NewBlock)).await.unwrap();
 		log::info!(target: "hyperspace_cosmos", "🛰️ Subscribed to {} listening to finality notifications", self.name);
 		let stream = subscription.filter_map(|event| {

@@ -67,7 +67,7 @@ where
 
 	let client_def = client_state.client_def();
 
-	if client_state.is_frozen() {
+	if client_state.is_frozen(ctx, &client_id) {
 		return Err(Error::client_frozen(client_id))
 	}
 

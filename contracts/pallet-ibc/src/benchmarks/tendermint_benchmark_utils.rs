@@ -5,6 +5,7 @@ use crate::{
 };
 use core::{str::FromStr, time::Duration};
 use ibc::{
+	applications::transfer::VERSION,
 	core::{
 		ics02_client::{msgs::update_client::MsgUpdateAnyClient, trust_threshold::TrustThreshold},
 		ics03_connection::{
@@ -670,14 +671,14 @@ pub(crate) fn create_conn_open_confirm<T: Config>() -> (ConsensusState, MsgConne
 }
 
 pub(crate) fn create_chan_open_try() -> (ConsensusState, MsgChannelOpenTry) {
-	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
+	let port_id = PortId::transfer();
 	let counterparty = ChannelCounterParty::new(port_id.clone(), None);
 	let channel_end = ChannelEnd::new(
 		ChannelState::Init,
-		ChannelOrder::Ordered,
+		ChannelOrder::Unordered,
 		counterparty.clone(),
 		vec![ConnectionId::new(1)],
-		ChannelVersion::new(pallet_ibc_ping::VERSION.to_string()),
+		ChannelVersion::new(VERSION.to_string()),
 	);
 	let mut avl_tree = create_avl();
 	let path = format!("{}", ChannelEndsPath(port_id.clone(), ChannelId::new(0)))
@@ -712,10 +713,10 @@ pub(crate) fn create_chan_open_try() -> (ConsensusState, MsgChannelOpenTry) {
 	};
 	let mut channel_end = ChannelEnd::new(
 		ChannelState::Init,
-		ChannelOrder::Ordered,
+		ChannelOrder::Unordered,
 		counterparty,
 		vec![ConnectionId::new(0)],
-		ChannelVersion::new(pallet_ibc_ping::VERSION.to_string()),
+		ChannelVersion::new(VERSION.to_string()),
 	);
 	channel_end.set_counterparty_channel_id(ChannelId::new(0));
 	(
@@ -723,7 +724,7 @@ pub(crate) fn create_chan_open_try() -> (ConsensusState, MsgChannelOpenTry) {
 		MsgChannelOpenTry {
 			port_id,
 			channel: channel_end,
-			counterparty_version: ChannelVersion::new(pallet_ibc_ping::VERSION.to_string()),
+			counterparty_version: ChannelVersion::new(VERSION.to_string()),
 			proofs: Proofs::new(buf.try_into().unwrap(), None, None, None, Height::new(0, 2))
 				.unwrap(),
 			signer: Signer::from_str(MODULE_ID).unwrap(),
@@ -732,14 +733,14 @@ pub(crate) fn create_chan_open_try() -> (ConsensusState, MsgChannelOpenTry) {
 }
 
 pub(crate) fn create_chan_open_ack() -> (ConsensusState, MsgChannelOpenAck) {
-	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
+	let port_id = PortId::transfer();
 	let counterparty = ChannelCounterParty::new(port_id.clone(), Some(ChannelId::new(0)));
 	let channel_end = ChannelEnd::new(
 		ChannelState::TryOpen,
-		ChannelOrder::Ordered,
+		ChannelOrder::Unordered,
 		counterparty,
 		vec![ConnectionId::new(1)],
-		ChannelVersion::new(pallet_ibc_ping::VERSION.to_string()),
+		ChannelVersion::new(VERSION.to_string()),
 	);
 	let mut avl_tree = create_avl();
 	let path = format!("{}", ChannelEndsPath(port_id.clone(), ChannelId::new(0)))
@@ -779,7 +780,7 @@ pub(crate) fn create_chan_open_ack() -> (ConsensusState, MsgChannelOpenAck) {
 			port_id,
 			channel_id: ChannelId::new(0),
 			counterparty_channel_id: ChannelId::new(0),
-			counterparty_version: ChannelVersion::new(pallet_ibc_ping::VERSION.to_string()),
+			counterparty_version: ChannelVersion::new(VERSION.to_string()),
 			proofs: Proofs::new(buf.try_into().unwrap(), None, None, None, Height::new(0, 2))
 				.unwrap(),
 			signer: Signer::from_str(MODULE_ID).unwrap(),
@@ -788,14 +789,14 @@ pub(crate) fn create_chan_open_ack() -> (ConsensusState, MsgChannelOpenAck) {
 }
 
 pub(crate) fn create_chan_open_confirm() -> (ConsensusState, MsgChannelOpenConfirm) {
-	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
+	let port_id = PortId::transfer();
 	let counterparty = ChannelCounterParty::new(port_id.clone(), Some(ChannelId::new(0)));
 	let channel_end = ChannelEnd::new(
 		ChannelState::Open,
-		ChannelOrder::Ordered,
+		ChannelOrder::Unordered,
 		counterparty,
 		vec![ConnectionId::new(1)],
-		ChannelVersion::new(pallet_ibc_ping::VERSION.to_string()),
+		ChannelVersion::new(VERSION.to_string()),
 	);
 	let mut avl_tree = create_avl();
 	let path = format!("{}", ChannelEndsPath(port_id.clone(), ChannelId::new(0)))
@@ -842,7 +843,7 @@ pub(crate) fn create_chan_open_confirm() -> (ConsensusState, MsgChannelOpenConfi
 }
 
 pub(crate) fn create_chan_close_init() -> MsgChannelCloseInit {
-	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
+	let port_id = PortId::transfer();
 	MsgChannelCloseInit {
 		port_id,
 		channel_id: ChannelId::new(0),
@@ -851,14 +852,14 @@ pub(crate) fn create_chan_close_init() -> MsgChannelCloseInit {
 }
 
 pub(crate) fn create_chan_close_confirm() -> (ConsensusState, MsgChannelCloseConfirm) {
-	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
+	let port_id = PortId::transfer();
 	let counterparty = ChannelCounterParty::new(port_id.clone(), Some(ChannelId::new(0)));
 	let channel_end = ChannelEnd::new(
 		ChannelState::Closed,
-		ChannelOrder::Ordered,
+		ChannelOrder::Unordered,
 		counterparty,
 		vec![ConnectionId::new(1)],
-		ChannelVersion::new(pallet_ibc_ping::VERSION.to_string()),
+		ChannelVersion::new(VERSION.to_string()),
 	);
 	let mut avl_tree = create_avl();
 	let path = format!("{}", ChannelEndsPath(port_id.clone(), ChannelId::new(0)))
@@ -911,7 +912,7 @@ where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
-	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
+	let port_id = PortId::transfer();
 	let packet = Packet {
 		sequence: 1u64.into(),
 		source_port: port_id.clone(),
@@ -980,7 +981,7 @@ where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
-	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
+	let port_id = PortId::transfer();
 	let packet = Packet {
 		sequence: 1u64.into(),
 		source_port: port_id.clone(),
@@ -1050,7 +1051,7 @@ where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
-	let port_id = PortId::from_str(pallet_ibc_ping::PORT_ID).unwrap();
+	let port_id = PortId::transfer();
 	let packet = Packet {
 		sequence: 1u64.into(),
 		source_port: port_id.clone(),

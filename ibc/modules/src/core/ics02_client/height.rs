@@ -14,6 +14,8 @@
 
 use crate::{core::ics02_client::error::Error, prelude::*};
 use core::{cmp::Ordering, num::ParseIntError, str::FromStr};
+#[cfg(feature = "cosmwasm")]
+use cosmwasm_schema::schemars::{self, JsonSchema};
 use flex_error::{define_error, TraceError};
 use ibc_proto::ibc::core::client::v1::Height as RawHeight;
 use serde_derive::{Deserialize, Serialize};
@@ -31,6 +33,7 @@ use tendermint_proto::Protobuf;
 	codec::Decode,
 	scale_info::TypeInfo,
 )]
+#[cfg_attr(feature = "cosmwasm", derive(JsonSchema))]
 pub struct Height {
 	/// Previously known as "epoch"
 	pub revision_number: u64,

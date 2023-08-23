@@ -141,7 +141,7 @@ impl ClientState for MockClientState {
 	}
 
 	fn frozen_height(&self) -> Option<Height> {
-		self.frozen_height()
+		self.frozen_height
 	}
 
 	fn upgrade(self, _upgrade_height: Height, _upgrade_options: (), _chain_id: ChainId) -> Self {
@@ -228,11 +228,7 @@ where
 	type Error = Error;
 
 	fn try_from(value: ConsensusStateWithHeight) -> Result<Self, Self::Error> {
-		let state = value
-			.consensus_state
-			.map(C::AnyConsensusState::try_from)
-			.transpose()?
-			.ok_or_else(Error::empty_consensus_state_response)?;
+		let state = value.consensus_state.map(C::AnyConsensusState::try_from).unwrap().unwrap();
 
 		Ok(AnyConsensusStateWithHeight {
 			height: value.height.ok_or_else(Error::missing_height)?.into(),

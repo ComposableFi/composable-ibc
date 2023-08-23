@@ -16,15 +16,17 @@ tokio = { version = "1.19.2", features = ["macros", "sync", "time"] }
 thiserror = "1.0.31"
 log = "0.4.17"
 rand = "0.8.5"
+serde = "1.0.163"
 
 # substrate
-subxt = { git = "https://github.com/paritytech/subxt",  rev = "d92352ad739836a4100e1ef1db607acc82ed8c5a", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
 
 # ibc
 ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
+ics08-wasm = { path = "../../light-clients/ics08-wasm" }
 
 [features]
 testing = []

@@ -75,7 +75,7 @@ impl core::fmt::Display for PacketMsgType {
 #[derive(
 	Copy, Clone, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Deserialize, Serialize,
 )]
-pub struct Sequence(u64);
+pub struct Sequence(pub u64);
 
 impl FromStr for Sequence {
 	type Err = Error;
@@ -172,6 +172,7 @@ impl core::fmt::Debug for Packet {
 	}
 }
 
+#[derive(Debug)]
 pub enum TimeoutVariant {
 	Height,
 	Timestamp,

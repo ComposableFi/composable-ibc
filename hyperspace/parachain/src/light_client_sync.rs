@@ -1,4 +1,4 @@
-use codec::Encode;
+use codec::{Decode, Encode};
 use std::{
 	collections::{BTreeMap, BTreeSet, HashMap},
 	fmt::Display,
@@ -14,22 +14,26 @@ use sp_runtime::{
 };
 use subxt::config::{
 	extrinsic_params::{BaseExtrinsicParamsBuilder, ExtrinsicParams},
-	Header as HeaderT,
+	Header as HeaderT, Header,
 };
 
 use grandpa_prover::GrandpaProver;
 use ibc::core::ics02_client::msgs::update_client::MsgUpdateAnyClient;
 use tendermint_proto::Protobuf;
 
-use ibc::{core::ics24_host::identifier::ClientId, events::IbcEvent, signer::Signer, tx_msg::Msg};
+use ibc::{
+	core::ics24_host::identifier::ClientId, events::IbcEvent, signer::Signer, tx_msg::Msg, Height,
+};
 use ibc_rpc::{BlockNumberOrHash, IbcApiClient};
 use ics10_grandpa::client_message::{ClientMessage, Header as GrandpaHeader};
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState};
 
-use primitives::{mock::LocalClientTypes, Chain, KeyProvider, LightClientSync};
+use primitives::{
+	filter_events_by_ids, mock::LocalClientTypes, Chain, KeyProvider, LightClientSync,
+};
 
 use super::{error::Error, ParachainClient};
-use crate::finality_protocol::{filter_events_by_ids, FinalityProtocol};
+use crate::finality_protocol::FinalityProtocol;
 
 const MAX_HEADERS_PER_ITERATION: usize = 100;
 
@@ -38,14 +42,16 @@ impl<T: light_client_common::config::Config + Send + Sync + Clone> LightClientSy
 	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<T as subxt::Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
@@ -59,22 +65,16 @@ where
 	async fn is_synced<C: Chain>(&self, counterparty: &C) -> Result<bool, anyhow::Error> {
 		let latest_height = counterparty.latest_height_and_timestamp().await?.0;
 		let response = counterparty.query_client_state(latest_height, self.client_id()).await?;
-		let client_state = response.client_state.ok_or_else(|| {
+		let any_client_state = response.client_state.ok_or_else(|| {
 			Error::Custom("Received an empty client state from counterparty".to_string())
 		})?;
 
-		let client_state = AnyClientState::try_from(client_state)
-			.map_err(|_| Error::Custom("Failed to decode client state".to_string()))?;
 		match self.finality_protocol {
 			FinalityProtocol::Grandpa => {
 				let prover = self.grandpa_prover();
-				let client_state = match client_state {
-					AnyClientState::Grandpa(client_state) => client_state,
-					c => Err(Error::Custom(format!(
-						"Expected AnyClientState::Grandpa found: {:?}",
-						c
-					)))?,
-				};
+				let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
+					.ok_or_else(|| Error::Custom(format!("Could not decode client state")))? else { unreachable!() };
+
 				let latest_hash = self.relay_client.rpc().finalized_head().await?;
 				let finalized_head =
 					self.relay_client.rpc().header(Some(latest_hash)).await?.ok_or_else(|| {
@@ -101,21 +101,14 @@ where
 	) -> Result<(Vec<Any>, Vec<IbcEvent>), anyhow::Error> {
 		let latest_height = counterparty.latest_height_and_timestamp().await?.0;
 		let response = counterparty.query_client_state(latest_height, self.client_id()).await?;
-		let client_state = response.client_state.ok_or_else(|| {
+		let any_client_state = response.client_state.ok_or_else(|| {
 			Error::Custom("Received an empty client state from counterparty".to_string())
 		})?;
 
-		let client_state = AnyClientState::try_from(client_state)
-			.map_err(|_| Error::Custom("Failed to decode client state".to_string()))?;
 		let (messages, events) = match self.finality_protocol {
 			FinalityProtocol::Grandpa => {
-				let client_state = match client_state {
-					AnyClientState::Grandpa(client_state) => client_state,
-					c => Err(Error::Custom(format!(
-						"Expected AnyClientState::Grandpa found: {:?}",
-						c
-					)))?,
-				};
+				let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
+					.ok_or_else(|| Error::Custom(format!("Could not decode client state")))? else { unreachable!() };
 				let latest_hash = self.relay_client.rpc().finalized_head().await?;
 				let finalized_head =
 					self.relay_client.rpc().header(Some(latest_hash)).await?.ok_or_else(|| {
@@ -155,7 +148,8 @@ where
 	H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
@@ -182,6 +176,8 @@ where
 		<T as subxt::Config>::Hash: From<H256>,
 		<T as subxt::Config>::Hash: From<[u8; 32]>,
 		<T as light_client_common::config::Config>::AssetId: Clone,
+		<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
+		<<T as subxt::Config>::Header as HeaderT>::Number: Send + Sync,
 	{
 		let prover = self.grandpa_prover();
 		let session_length = prover.session_length().await?;
@@ -215,6 +211,7 @@ where
 				client_id.clone(),
 				signer.clone(),
 				&self.name,
+				self.para_id,
 			)
 			.await?;
 			messages.push(msg);
@@ -239,11 +236,14 @@ async fn get_message<T: light_client_common::config::Config + Send + Sync>(
 	client_id: ClientId,
 	signer: Signer,
 	name: &str,
+	para_id: u32,
 ) -> Result<(Any, Vec<IbcEvent>, u32, u32), anyhow::Error>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>
-		+ From<<T as subxt::Config>::BlockNumber>,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+		+ From<<<T as subxt::Config>::Header as Header>::Number>,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
@@ -251,7 +251,8 @@ where
 	// fetch the latest finalized parachain header
 	let finalized_para_header =
 		prover.query_latest_finalized_parachain_header(latest_finalized_height).await?;
-	let latest_finalized_para_height = u32::from(finalized_para_header.number());
+	let finalized_para_height = u32::from(finalized_para_header.number());
+	let latest_finalized_para_height = finalized_para_height;
 	let finalized_blocks =
 		((previous_finalized_para_height + 1)..=latest_finalized_para_height).collect::<Vec<_>>();
 
@@ -288,13 +289,15 @@ where
 			if events.is_empty() {
 				None
 			} else {
-				str::parse::<u32>(&*num).ok().map(T::BlockNumber::from)
+				str::parse::<u32>(&*num)
+					.ok()
+					.map(<<T as subxt::Config>::Header as Header>::Number::from)
 			}
 		})
 		.collect::<BTreeSet<_>>();
 
 	// We ensure we advance the finalized latest parachain height
-	if previous_finalized_para_height < u32::from(finalized_para_header.number()) {
+	if previous_finalized_para_height < finalized_para_height {
 		headers_with_events.insert(finalized_para_header.number());
 	}
 
@@ -315,7 +318,7 @@ where
 			)
 		})
 		.collect();
-	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = prover
+	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers, .. } = prover
 		.query_finalized_parachain_headers_with_proof::<T::Header>(
 			previous_finalized_height,
 			latest_finalized_height,
@@ -328,6 +331,7 @@ where
 		finality_proof: codec::Decode::decode(&mut &*finality_proof.encode())
 			.expect("Same struct from different crates,decode should not fail"),
 		parachain_headers: parachain_headers.into(),
+		height: Height::new(para_id as u64, finalized_para_height as u64),
 	};
 
 	let msg = MsgUpdateAnyClient::<LocalClientTypes> {

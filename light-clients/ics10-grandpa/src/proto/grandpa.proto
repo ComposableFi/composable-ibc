@@ -99,6 +99,8 @@ message Header {
   FinalityProof finality_proof = 1;
   // new parachain headers finalized by the GRANDPA finality proof
   repeated ParachainHeaderWithRelayHash parachain_headers = 2;
+  uint32 para_id = 3;
+  uint32 para_height = 4;
 }
 
 // GRANDPA misbehaviour type

@@ -15,7 +15,7 @@
 #![allow(clippy::all)]
 
 use std::{
-	collections::BTreeMap,
+	collections::{BTreeMap, HashSet},
 	str::FromStr,
 	sync::{Arc, Mutex},
 	time::Duration,
@@ -38,40 +38,45 @@ use error::Error;
 use frame_support::Serialize;
 use serde::Deserialize;
 
+use crate::{
+	finality_protocol::FinalityProtocol,
+	signer::ExtrinsicSigner,
+	utils::{fetch_max_extrinsic_weight, unsafe_cast_to_jsonrpsee_client},
+};
 use beefy_light_client_primitives::{ClientState, MmrUpdateProof};
 use beefy_prover::Prover;
-use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
-use ics11_beefy::client_message::ParachainHeader;
+use codec::Decode;
+use grandpa_light_client_primitives::ParachainHeaderProofs;
+use grandpa_prover::GrandpaProver;
+use ibc::{
+	core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
+	timestamp::Timestamp,
+};
+use ics10_grandpa::{
+	client_state::ClientState as GrandpaClientState,
+	consensus_state::ConsensusState as GrandpaConsensusState,
+};
+use ics11_beefy::{
+	client_message::ParachainHeader, client_state::ClientState as BeefyClientState,
+	consensus_state::ConsensusState as BeefyConsensusState,
+};
+use jsonrpsee_ws_client::WsClientBuilder;
+use light_client_common::config::{AsInner, RuntimeStorage};
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use pallet_mmr_primitives::Proof;
+use primitives::{CommonClientState, KeyProvider};
 use sp_core::{ecdsa, ed25519, sr25519, Bytes, Pair, H256};
-use sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
+use sp_keystore::{testing::KeyStore, SyncCryptoStore, SyncCryptoStorePtr};
 use sp_runtime::{
-	traits::{IdentifyAccount, Verify},
+	traits::{IdentifyAccount, One, Verify},
 	KeyTypeId, MultiSignature, MultiSigner,
 };
 use ss58_registry::Ss58AddressFormat;
-use subxt::config::Header as HeaderT;
-
-use crate::utils::{fetch_max_extrinsic_weight, unsafe_cast_to_jsonrpsee_client};
-use codec::Decode;
-use ics10_grandpa::consensus_state::ConsensusState as GrandpaConsensusState;
-use ics11_beefy::{
-	client_state::ClientState as BeefyClientState,
-	consensus_state::ConsensusState as BeefyConsensusState,
+use subxt::{
+	config::{Header as HeaderT, Header},
+	tx::TxPayload,
 };
-use primitives::KeyProvider;
-
-use crate::{finality_protocol::FinalityProtocol, signer::ExtrinsicSigner};
-use grandpa_light_client_primitives::ParachainHeaderProofs;
-use grandpa_prover::GrandpaProver;
-use ibc::timestamp::Timestamp;
-use ics10_grandpa::client_state::ClientState as GrandpaClientState;
-use jsonrpsee_ws_client::WsClientBuilder;
-use light_client_common::config::RuntimeStorage;
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
-use sp_keystore::testing::KeyStore;
-use sp_runtime::traits::One;
-use subxt::tx::TxPayload;
+use tokio::sync::Mutex as AsyncMutex;
 
 /// Implements the [`crate::Chain`] trait for parachains.
 /// This is responsible for:
@@ -101,7 +106,7 @@ pub struct ParachainClient<T: light_client_common::config::Config> {
 	/// Connection Id
 	pub connection_id: Arc<Mutex<Option<ConnectionId>>>,
 	/// Channels cleared for packet relay
-	pub channel_whitelist: Arc<Mutex<Vec<(ChannelId, PortId)>>>,
+	pub channel_whitelist: Arc<Mutex<HashSet<(ChannelId, PortId)>>>,
 	/// ICS-23 provable store commitment prefix
 	pub commitment_prefix: Vec<u8>,
 	/// Public key for relayer on chain
@@ -116,9 +121,8 @@ pub struct ParachainClient<T: light_client_common::config::Config> {
 	pub max_extrinsic_weight: u64,
 	/// Finality protocol to use, eg Beefy, Grandpa
 	pub finality_protocol: FinalityProtocol,
-	/// Delay between parallel RPC calls to be friendly with the node and avoid MaxSlotsExceeded
-	/// error
-	pub rpc_call_delay: Duration,
+	/// Common relayer data
+	pub common_state: CommonClientState,
 }
 
 enum KeyType {
@@ -180,6 +184,9 @@ pub struct ParachainClientConfig {
 	pub finality_protocol: FinalityProtocol,
 	/// Digital signature scheme
 	pub key_type: String,
+	/// All the client states and headers will be wrapped in WASM ones using the WASM code ID.
+	#[serde(default)]
+	pub wasm_code_id: Option<String>,
 }
 
 impl<T> ParachainClient<T>
@@ -260,9 +267,16 @@ where
 			para_ws_client,
 			relay_ws_client,
 			ss58_version: Ss58AddressFormat::from(config.ss58_version),
-			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist)),
+			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist.into_iter().collect())),
 			finality_protocol: config.finality_protocol,
-			rpc_call_delay: DEFAULT_RPC_CALL_DELAY,
+			common_state: CommonClientState {
+				skip_optional_client_updates: true,
+				maybe_has_undelivered_packets: Arc::new(Mutex::new(Default::default())),
+				rpc_call_delay: DEFAULT_RPC_CALL_DELAY,
+				initial_rpc_call_delay: DEFAULT_RPC_CALL_DELAY,
+				misbehaviour_client_msg_queue: Arc::new(AsyncMutex::new(vec![])),
+				..Default::default()
+			},
 		})
 	}
 }
@@ -277,7 +291,8 @@ where
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	H256: From<T::Hash>,
-	T::BlockNumber: From<u32> + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		From<u32> + Ord + sp_runtime::traits::Zero + One,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
@@ -291,7 +306,7 @@ where
 			para_client: self.para_client.clone(),
 			para_ws_client,
 			para_id: self.para_id,
-			rpc_call_delay: self.rpc_call_delay,
+			rpc_call_delay: self.common_state.rpc_call_delay,
 		}
 	}
 
@@ -303,8 +318,9 @@ where
 		client_state: &ClientState,
 	) -> Result<Vec<T::Header>, Error>
 	where
-		u32: From<T::BlockNumber>,
-		T::BlockNumber: From<u32>,
+		u32: From<<<T as subxt::Config>::Header as Header>::Number>,
+		<<T as subxt::Config>::Header as Header>::Number: From<u32>,
+		<T as subxt::Config>::Header: Decode,
 	{
 		let client_wrapper = Prover {
 			relay_client: self.relay_client.clone(),
@@ -331,10 +347,11 @@ where
 		&self,
 		commitment_block_number: u32,
 		client_state: &ClientState,
-		headers: Vec<T::BlockNumber>,
+		headers: Vec<<<T as subxt::Config>::Header as Header>::Number>,
 	) -> Result<(Vec<ParachainHeader>, Proof<H256>), Error>
 	where
-		T::BlockNumber: Ord + sp_runtime::traits::Zero,
+		<<T as subxt::Config>::Header as Header>::Number: Ord + sp_runtime::traits::Zero,
+		<T as subxt::Config>::Header: Decode,
 	{
 		let client_wrapper = Prover {
 			relay_client: self.relay_client.clone(),
@@ -457,10 +474,10 @@ where
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	H256: From<T::Hash>,
-	T::BlockNumber: Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number: Ord + sp_runtime::traits::Zero + One,
 	T::Header: HeaderT,
 	<<T::Header as HeaderT>::Hasher as subxt::config::Hasher>::Output: From<T::Hash>,
-	T::BlockNumber: From<u32>,
+	<<T as subxt::Config>::Header as Header>::Number: From<u32>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	<T as subxt::Config>::AccountId: Send + Sync,
@@ -476,7 +493,7 @@ where
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-		u32: From<<T as subxt::Config>::BlockNumber>,
+		u32: From<<<T as subxt::Config>::Header as subxt::config::Header>::Number>,
 	{
 		use ibc::core::ics24_host::identifier::ChainId;
 		let api = self.relay_client.storage();
@@ -493,20 +510,19 @@ where
 
 			let subxt_block_number: subxt::rpc::types::BlockNumber =
 				beefy_state.latest_beefy_height.into();
-			let block_hash = self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?;
+			let block_hash =
+				self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
+					|| Error::Custom(format!("Couldn't find block hash for relay block",)),
+				)?;
 			let heads_addr = T::Storage::paras_heads(self.para_id);
-			let head_data = api
-				.at(block_hash)
-				.await
-				.expect("Storage client")
-				.fetch(&heads_addr)
-				.await?
-				.ok_or_else(|| {
+			let head_data = <T::Storage as RuntimeStorage>::HeadData::from_inner(
+				api.at(block_hash).fetch(&heads_addr).await?.ok_or_else(|| {
 					Error::Custom(format!(
 						"Couldn't find header for ParaId({}) at relay block {:?}",
 						self.para_id, block_hash
 					))
-				})?;
+				})?,
+			);
 			let decoded_para_head = sp_runtime::generic::Header::<
 				u32,
 				sp_runtime::traits::BlakeTwo256,
@@ -530,12 +546,12 @@ where
 			}
 			let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
 			let block_hash =
-				self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
+				self.para_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
+					|| Error::Custom(format!("Couldn't find block hash for para block",)),
+				)?;
 			let timestamp_addr = T::Storage::timestamp_now();
 			let unix_timestamp_millis = para_client_api
 				.at(block_hash)
-				.await
-				.expect("Storage client")
 				.fetch(&timestamp_addr)
 				.await?
 				.expect("Timestamp should exist");
@@ -562,8 +578,9 @@ where
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-		u32: From<<T as subxt::Config>::BlockNumber>,
+		u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 		<T as subxt::Config>::Hash: From<H256>,
+		<T as subxt::Config>::Header: Decode,
 	{
 		let relay_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.relay_ws_client) };
 		let para_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.para_ws_client) };
@@ -573,7 +590,7 @@ where
 			para_client: self.para_client.clone(),
 			para_ws_client,
 			para_id: self.para_id,
-			rpc_call_delay: self.rpc_call_delay,
+			rpc_call_delay: self.common_state.rpc_call_delay,
 		};
 		let api = self.relay_client.storage();
 		let para_client_api = self.para_client.storage();
@@ -584,18 +601,17 @@ where
 				.map_err(|e| Error::from(format!("Error constructing client state: {e}")))?;
 
 			let heads_addr = T::Storage::paras_heads(self.para_id);
-			let head_data = api
-				.at(Some(light_client_state.latest_relay_hash.into()))
-				.await
-				.expect("Storage client")
-				.fetch(&heads_addr)
-				.await?
-				.ok_or_else(|| {
-					Error::Custom(format!(
-						"Couldn't find header for ParaId({}) at relay block {:?}",
-						self.para_id, light_client_state.latest_relay_hash
-					))
-				})?;
+			let head_data = <T::Storage as RuntimeStorage>::HeadData::from_inner(
+				api.at(light_client_state.latest_relay_hash.into())
+					.fetch(&heads_addr)
+					.await?
+					.ok_or_else(|| {
+						Error::Custom(format!(
+							"Couldn't find header for ParaId({}) at relay block {:?}",
+							self.para_id, light_client_state.latest_relay_hash
+						))
+					})?,
+			);
 			let decoded_para_head = sp_runtime::generic::Header::<
 				u32,
 				sp_runtime::traits::BlakeTwo256,
@@ -619,12 +635,17 @@ where
 
 			let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
 			let block_hash =
-				self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
+				self.para_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
+					|| {
+						Error::Custom(format!(
+							"Couldn't find block hash for ParaId({}) at block number {}",
+							self.para_id, block_number
+						))
+					},
+				)?;
 			let timestamp_addr = T::Storage::timestamp_now();
 			let unix_timestamp_millis = para_client_api
 				.at(block_hash)
-				.await
-				.expect("Storage client")
 				.fetch(&timestamp_addr)
 				.await?
 				.expect("Timestamp should exist");

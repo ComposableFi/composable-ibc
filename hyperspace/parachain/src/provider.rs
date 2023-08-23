@@ -15,14 +15,14 @@
 use super::{error::Error, ParachainClient};
 use crate::{finality_protocol::FinalityEvent, FinalityProtocol, GrandpaClientState};
 use beefy_prover::helpers::fetch_timestamp_extrinsic_with_proof;
-use codec::Encode;
+use codec::{Decode, Encode};
 use finality_grandpa::BlockNumberOps;
 use futures::Stream;
 use grandpa_light_client_primitives::ParachainHeaderProofs;
 use ibc::{
 	applications::transfer::{Amount, PrefixedCoin, PrefixedDenom},
 	core::{
-		ics02_client::client_state::ClientType,
+		ics02_client::client_state::{ClientState, ClientType},
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
@@ -46,7 +46,7 @@ use ibc_proto::{
 };
 use ibc_rpc::{IbcApiClient, PacketInfo};
 use ics11_beefy::client_state::ClientState as BeefyClientState;
-use light_client_common::config::{IbcEventsT, RuntimeStorage};
+use light_client_common::config::{AsInnerEvent, IbcEventsT, RuntimeStorage};
 use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
 	HostConsensusProof,
@@ -57,9 +57,15 @@ use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
-use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr, time::Duration};
+use std::{
+	collections::{BTreeMap, HashSet},
+	fmt::Display,
+	pin::Pin,
+	str::FromStr,
+	time::Duration,
+};
 use subxt::config::{
-	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT,
+	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT, Header,
 };
 use tokio_stream::wrappers::ReceiverStream;
 
@@ -74,14 +80,23 @@ impl<T: light_client_common::config::Config + Send + Sync + Clone> IbcProvider
 	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<T as subxt::Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number: BlockNumberOps
+		+ From<u32>
+		+ Display
+		+ Ord
+		+ sp_runtime::traits::Zero
+		+ One
+		+ Send
+		+ Sync
+		+ Clone,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
@@ -101,7 +116,7 @@ where
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &C,
-	) -> Result<Vec<(Any, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+	) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		C: Chain,
 	{
@@ -125,11 +140,11 @@ where
 				.expect("should susbcribe to blocks")
 				.filter_map(|block| async {
 					let block = block.ok()?;
-					let events = event.at(Some(block.hash())).await.ok()?;
+					let events = event.at(block.hash()).await.ok()?;
 					let result = events
-						.find::<T::Events>()
+						.find::<<T::Events as AsInnerEvent>::Inner>()
 						.filter_map(|ev| {
-							let ev = ev.ok()?.events();
+							let ev = <T::Events as AsInnerEvent>::from_inner(ev.ok()?).events();
 							ev.into_iter()
 								.map(|ev| TryInto::<IbcEvent>::try_into(ev))
 								.collect::<Result<Vec<_>, _>>()
@@ -330,14 +345,15 @@ where
 		let height = Height::new(self.para_id.into(), latest_height.into());
 
 		let subxt_block_number: subxt::rpc::types::BlockNumber = latest_height.into();
-		let block_hash = self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
+		let block_hash =
+			self.para_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
+				|| Error::Custom("Latest block hash query returned None".to_string()),
+			)?;
 		let timestamp_addr = T::Storage::timestamp_now();
 		let unix_timestamp_millis = self
 			.para_client
 			.storage()
 			.at(block_hash)
-			.await
-			.expect("Storage client")
 			.fetch(&timestamp_addr)
 			.await?
 			.ok_or_else(|| Error::from("Timestamp should exist".to_string()))?;
@@ -432,8 +448,8 @@ where
 		Ok(res)
 	}
 
-	fn channel_whitelist(&self) -> Vec<(ChannelId, PortId)> {
-		self.channel_whitelist.lock().unwrap().clone()
+	fn channel_whitelist(&self) -> HashSet<(ChannelId, PortId)> {
+		self.channel_whitelist.lock().unwrap().iter().cloned().collect()
 	}
 
 	async fn query_connection_channels(
@@ -467,10 +483,11 @@ where
 			)
 			.await
 			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
+
 		Ok(response)
 	}
 
-	async fn query_recv_packets(
+	async fn query_received_packets(
 		&self,
 		channel_id: ChannelId,
 		port_id: PortId,
@@ -521,9 +538,13 @@ where
 
 	async fn query_host_consensus_state_proof(
 		&self,
-		height: Height,
+		client_state: &AnyClientState,
 	) -> Result<Option<Vec<u8>>, Self::Error> {
-		let hash = self.para_client.rpc().block_hash(Some(height.revision_height.into())).await?;
+		let hash = self
+			.para_client
+			.rpc()
+			.block_hash(Some(client_state.latest_height().revision_height.into()))
+			.await?;
 		let header = self
 			.para_client
 			.rpc()
@@ -534,11 +555,16 @@ where
 			fetch_timestamp_extrinsic_with_proof(&self.para_client, Some(header.hash()))
 				.await
 				.map_err(Error::BeefyProver)?;
-
+		let code_id = if let AnyClientState::Wasm(client_state) = &client_state {
+			Some(client_state.code_id.clone())
+		} else {
+			None
+		};
 		let host_consensus_proof = HostConsensusProof {
 			header: header.encode(),
 			extrinsic: extrinsic_with_proof.ext,
 			extrinsic_proof: extrinsic_with_proof.proof,
+			code_id,
 		};
 		Ok(Some(host_consensus_proof.encode()))
 	}
@@ -593,14 +619,15 @@ where
 
 	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error> {
 		let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
-		let block_hash = self.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
+		let block_hash =
+			self.para_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
+				|| Error::Custom("Block hash not found for block number".to_string()),
+			)?;
 		let timestamp_addr = T::Storage::timestamp_now();
 		let unix_timestamp_millis = self
 			.para_client
 			.storage()
 			.at(block_hash)
-			.await
-			.expect("Storage client")
 			.fetch(&timestamp_addr)
 			.await?
 			.expect("Timestamp should exist");
@@ -766,15 +793,19 @@ where
 	}
 
 	/// Set the channel whitelist for the relayer task.
-	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
+	fn set_channel_whitelist(&mut self, channel_whitelist: HashSet<(ChannelId, PortId)>) {
 		*self.channel_whitelist.lock().unwrap() = channel_whitelist;
 	}
 
 	fn add_channel_to_whitelist(&mut self, channel: (ChannelId, PortId)) {
-		self.channel_whitelist.lock().unwrap().push(channel);
+		self.channel_whitelist.lock().unwrap().insert(channel);
 	}
 
 	fn set_connection_id(&mut self, connection_id: ConnectionId) {
 		*self.connection_id.lock().unwrap() = Some(connection_id);
+	}
+
+	async fn upload_wasm(&self, _wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
+		Err(Error::Custom("Uploading WASM to parachain is not supported".to_string()))
 	}
 }

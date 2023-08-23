@@ -37,7 +37,10 @@ use ibc::core::{
 };
 use ibc_primitives::{runtime_interface::ss58_to_account_id_32, IbcAccount};
 use orml_traits::asset_registry::AssetProcessor;
-use pallet_ibc::{light_client_common::RelayChain, LightClientProtocol};
+use pallet_ibc::{
+	ics20::SubstrateMultihopXcmHandlerNone, ics20_fee::NonFlatFeeConverter,
+	light_client_common::RelayChain, LightClientProtocol,
+};
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -169,7 +172,7 @@ impl WeightToFeePolynomial for WeightToFee {
 		// in Rococo, extrinsic base weight (smallest non-zero weight) is mapped to 1 MILLIUNIT:
 		// in our template, we map to 1/10 of that, or 1/10 MILLIUNIT
 		let p = MILLIUNIT / 10;
-		let q = 100 * Balance::from(ExtrinsicBaseWeight::get().ref_time() as u128);
+		let q = 100 * (ExtrinsicBaseWeight::get().ref_time() as u128);
 		smallvec![WeightToFeeCoefficient {
 			degree: 1,
 			negative: false,
@@ -535,7 +538,7 @@ impl pallet_sudo::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ExpectedBlockTime: u64 = MILLISECS_PER_BLOCK as u64;
+	pub const ExpectedBlockTime: u64 = MILLISECS_PER_BLOCK;
 	pub const RelayChainId: RelayChain = RelayChain::Rococo;
 	pub const SpamProtectionDeposit: Balance = 1_000_000_000_000;
 	pub const NativeAssetId: AssetId = 1;
@@ -615,7 +618,7 @@ fn generate_asset_id() -> Result<AssetId, DispatchError> {
 impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 	type Error = DispatchError;
 
-	fn from_denom_to_asset_id(denom: &String) -> Result<AssetId, Self::Error> {
+	fn from_denom_to_asset_id(denom: &str) -> Result<AssetId, Self::Error> {
 		use frame_support::traits::fungibles::{metadata::Mutate, Create};
 
 		let denom_bytes = denom.as_bytes().to_vec();
@@ -626,9 +629,9 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 		let pallet_id: AccountId = PalletId(*b"pall-ibc").into_account_truncating();
 
 		let symbol = denom
-			.split("/")
+			.split('/')
 			.last()
-			.ok_or_else(|| DispatchError::Other("denom missing a name"))?
+			.ok_or(DispatchError::Other("denom missing a name"))?
 			.as_bytes()
 			.to_vec();
 		let asset_id = generate_asset_id()?;
@@ -702,6 +705,10 @@ parameter_types! {
 	pub const GRANDPA: LightClientProtocol = LightClientProtocol::Grandpa;
 	pub const IbcTriePrefix : &'static [u8] = b"ibc/";
 	pub FeeAccount: <Runtime as pallet_ibc::Config>::AccountIdConversion = create_alice_key();
+	pub const CleanUpPacketsPeriod: BlockNumber = 100;
+	pub AssetIdUSDT: AssetId = 0;
+	pub FlatFeeUSDTAmount: Balance = 0;
+	pub IbcIcs20ServiceCharge: Perbill = Perbill::from_rational(0_u32, 1000_u32 );
 }
 
 fn create_alice_key() -> <Runtime as pallet_ibc::Config>::AccountIdConversion {
@@ -731,7 +738,7 @@ impl pallet_ibc::Config for Runtime {
 	type SpamProtectionDeposit = SpamProtectionDeposit;
 	type TransferOrigin = EnsureSigned<Self::IbcAccountId>;
 	type RelayerOrigin = EnsureSigned<Self::AccountId>;
-	type MemoMessage = MemoMessage;
+	type MemoMessage = alloc::string::String;
 	type IsReceiveEnabled = sp_core::ConstBool<true>;
 	type IsSendEnabled = sp_core::ConstBool<true>;
 	type HandleMemo = ();
@@ -740,6 +747,12 @@ impl pallet_ibc::Config for Runtime {
 	type IbcAccountId = Self::AccountId;
 	type Ics20RateLimiter = Everything;
 	type FeeAccount = FeeAccount;
+	type CleanUpPacketsPeriod = CleanUpPacketsPeriod;
+	type ServiceChargeOut = IbcIcs20ServiceCharge;
+	type FlatFeeConverter = NonFlatFeeConverter<Runtime>;
+	type FlatFeeAssetId = AssetIdUSDT;
+	type FlatFeeAmount = FlatFeeUSDTAmount;
+	type SubstrateMultihopXcmHandler = SubstrateMultihopXcmHandlerNone<Runtime>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -1017,12 +1030,12 @@ impl_runtime_apis! {
 		}
 
 		fn denom_traces(key: Option<AssetId>, offset: Option<u32>, limit: u64, count_total: bool) -> ibc_primitives::QueryDenomTracesResponse {
-			let key = key.map(|k| Either::Left(k)).or_else(|| offset.map(|o| Either::Right(o)));
+			let key = key.map(Either::Left).or_else(|| offset.map(Either::Right));
 			Ibc::get_denom_traces(key, limit, count_total)
 		}
 
 		fn block_events(extrinsic_index: Option<u32>) -> Vec<Result<pallet_ibc::events::IbcEvent, pallet_ibc::errors::IbcError>> {
-			let mut raw_events = frame_system::Pallet::<Self>::read_events_no_consensus().into_iter();
+			let mut raw_events = frame_system::Pallet::<Self>::read_events_no_consensus();
 			if let Some(idx) = extrinsic_index {
 				raw_events.find_map(|e| {
 					let frame_system::EventRecord{ event, phase, ..} = *e;

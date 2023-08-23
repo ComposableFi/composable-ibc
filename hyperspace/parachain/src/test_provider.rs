@@ -15,6 +15,7 @@
 use crate::{
 	signer::ExtrinsicSigner, utils::unsafe_cast_to_jsonrpsee_client, Error, ParachainClient,
 };
+use codec::Decode;
 use finality_grandpa::BlockNumberOps;
 use futures::{Stream, StreamExt};
 use grandpa_light_client_primitives::ParachainHeaderProofs;
@@ -39,7 +40,7 @@ use sp_runtime::{
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr};
 use subxt::config::{
-	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT,
+	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT, Header,
 };
 
 impl<T: light_client_common::config::Config + Send + Sync> ParachainClient<T>
@@ -53,13 +54,13 @@ where
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	H256: From<T::Hash>,
 
-	T::BlockNumber: Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number: Ord + sp_runtime::traits::Zero + One,
 	T::Header: HeaderT,
 	<<T::Header as HeaderT>::Hasher as subxt::config::Hasher>::Output: From<T::Hash>,
-	T::BlockNumber: From<u32>,
+	<<T as subxt::Config>::Header as Header>::Number: From<u32>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-	T::BlockNumber: Ord + sp_runtime::traits::Zero,
+	<<T as subxt::Config>::Header as Header>::Number: Ord + sp_runtime::traits::Zero,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 	<<T as light_client_common::config::Config>::Tx as RuntimeTransactions>::TransferParams:
@@ -132,13 +133,15 @@ impl<T> TestProvider for ParachainClient<T>
 where
 	T: light_client_common::config::Config + Send + Sync + Clone,
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<T as subxt::Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	H256: From<T::Hash>,
 	BTreeMap<H256, ParachainHeaderProofs>:
@@ -154,9 +157,11 @@ where
 		From<SendPingParams>,
 {
 	async fn send_transfer(&self, transfer: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
-		let account_id = AccountId32::from_ss58check(transfer.receiver.as_ref()).unwrap();
+		let account_id = AccountId32::from_ss58check(transfer.receiver.as_ref())
+			.map(MultiAddress::Id)
+			.unwrap_or_else(|_| MultiAddress::Raw(transfer.receiver.to_string().into_bytes()));
 		let params = TransferParams {
-			to: MultiAddress::Id(account_id),
+			to: account_id,
 			source_channel: transfer.source_channel.sequence(),
 			timeout: Timeout::Absolute {
 				timestamp: Some(transfer.timeout_timestamp.nanoseconds()),
@@ -164,8 +169,14 @@ where
 			},
 		};
 		let amount = str::parse::<u128>(&transfer.token.amount.to_string()).expect("Infallible!");
-		dbg!(&amount);
-		self.transfer_tokens(params, 1, amount).await?;
+		// TODO: get asset_id by denom
+		let string = transfer.token.denom.to_string();
+		let asset_id = if string == *r#""UNIT""# || string == "UNIT" { 1 } else { 2 };
+		log::info!(
+			"Sending transfer: {:?}, asset id: {asset_id}, amount: {amount}",
+			transfer.token.denom
+		);
+		self.transfer_tokens(params, asset_id, amount).await?;
 
 		Ok(())
 	}

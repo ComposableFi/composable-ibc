@@ -75,7 +75,7 @@ pub fn send_packet<Ctx: ReaderContext>(
 		.map_err(|e| Error::implementation_specific(e.to_string()))?;
 
 	// prevent accidental sends with clients that cannot be updated
-	if client_state.is_frozen() {
+	if client_state.is_frozen(ctx, &client_id) {
 		return Err(Error::frozen_client(connection_end.client_id().clone()))
 	}
 

@@ -54,7 +54,8 @@ where
 	Host: HostFunctions,
 	Host::BlakeTwo256: Hasher<Out = H256>,
 {
-	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = proof;
+	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers, latest_para_height } =
+		proof;
 
 	// 1. First validate unknown headers.
 	let headers = AncestryChain::<H>::new(&finality_proof.unknown_headers);
@@ -141,6 +142,9 @@ where
 	client_state.latest_relay_hash = target.hash();
 	client_state.latest_relay_height = (*target.number()).into();
 	if let Some(max_height) = para_heights.into_iter().max() {
+		if max_height != latest_para_height {
+			Err(anyhow!("Latest parachain header height doesn't match the one in the proof"))?;
+		}
 		client_state.latest_para_height = max_height;
 	}
 	if let Some(scheduled_change) = find_scheduled_change::<H>(&target) {

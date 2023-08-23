@@ -1,6 +1,6 @@
-use crate::routing::Context;
+use crate::{routing::Context, DenomToAssetId};
 use alloc::{format, string::ToString};
-use core::fmt::Debug;
+use core::{fmt::Debug, marker::PhantomData};
 use ibc::{
 	applications::transfer::{
 		acknowledgement::Acknowledgement as Ics20Ack, context::BankKeeper,
@@ -16,7 +16,7 @@ use ibc::{
 			Version,
 		},
 		ics24_host::identifier::{ChannelId, ConnectionId, PortId},
-		ics26_routing::context::{Module, ModuleCallbackContext, ModuleOutputBuilder},
+		ics26_routing::context::{Module as IbcModule, ModuleCallbackContext, ModuleOutputBuilder},
 	},
 	signer::Signer,
 };
@@ -29,7 +29,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::{pallet_prelude::*, PalletId};
-	use frame_system::pallet_prelude::OriginFor;
+	use frame_system::{ensure_root, pallet_prelude::OriginFor};
 	use ibc_primitives::IbcAccount;
 	use sp_runtime::{
 		traits::{AccountIdConversion, Get},
@@ -41,7 +41,18 @@ pub mod pallet {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		#[pallet::constant]
-		type ServiceCharge: Get<Perbill>;
+		/// `ServiceChargeIn` represents the service charge rate applied to assets upon receipt via
+		/// IBC.
+		///
+		/// The charge is applied when assets are delivered to the receiving side, on
+		/// deliver(before to mint, send assets to destination account) extrinsic using the
+		/// Inter-Blockchain Communication (IBC) protocol.
+		///
+		/// For example, if the service charge rate for incoming assets is 0.04%, `ServiceChargeIn`
+		/// will be configured in rutime as
+		/// parameter_types! { pub IbcIcs20ServiceChargeIn: Perbill = Perbill::from_rational(4_u32,
+		/// 1000_u32 ) };
+		type ServiceChargeIn: Get<Perbill>;
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 	}
@@ -52,12 +63,21 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::storage]
-	pub type ServiceCharge<T: Config> = StorageValue<_, Perbill, OptionQuery>;
+	pub type ServiceChargeIn<T: Config> = StorageValue<_, Perbill, OptionQuery>;
+
+	#[pallet::storage]
+	#[allow(clippy::disallowed_types)]
+	/// storage map. key is tuple of (source_channel.sequence(), destination_channel.sequence()) and
+	/// value () that means that this group of channels is feeless
+	pub type FeeLessChannelIds<T: Config> =
+		StorageMap<_, Blake2_128Concat, (u64, u64), (), ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		IbcTransferFeeCollected { amount: T::Balance },
+		IbcTransferFeeCollected { amount: T::Balance, asset_id: T::AssetId },
+		FeeLessChannelIdsAdded { source_channel: u64, destination_channel: u64 },
+		FeeLessChannelIdsRemoved { source_channel: u64, destination_channel: u64 },
 	}
 
 	#[pallet::call]
@@ -66,7 +86,45 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn set_charge(origin: OriginFor<T>, charge: Perbill) -> DispatchResult {
 			<T as crate::Config>::AdminOrigin::ensure_origin(origin)?;
-			<ServiceCharge<T>>::put(charge);
+			ServiceChargeIn::<T>::put(charge);
+			Ok(())
+		}
+
+		#[pallet::call_index(1)]
+		#[pallet::weight(0)]
+		#[frame_support::transactional]
+		pub fn add_channels_to_feeless_channel_list(
+			origin: OriginFor<T>,
+			source_channel: u64,
+			destination_channel: u64,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			FeeLessChannelIds::<T>::insert((source_channel, destination_channel), ());
+			Self::deposit_event(Event::<T>::FeeLessChannelIdsAdded {
+				source_channel,
+				destination_channel,
+			});
+
+			Ok(())
+		}
+
+		#[pallet::call_index(2)]
+		#[pallet::weight(0)]
+		#[frame_support::transactional]
+		pub fn remove_channels_from_feeless_channel_list(
+			origin: OriginFor<T>,
+			source_channel: u64,
+			destination_channel: u64,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			FeeLessChannelIds::<T>::remove((source_channel, destination_channel));
+			Self::deposit_event(Event::<T>::FeeLessChannelIdsRemoved {
+				source_channel,
+				destination_channel,
+			});
+
 			Ok(())
 		}
 	}
@@ -81,13 +139,41 @@ pub mod pallet {
 	}
 }
 
+pub trait FlatFeeConverter {
+	type AssetId;
+	type Balance;
+
+	/// Return some value if there is pool or
+	/// graph of pools to convert asset id into fee asset id
+	fn get_flat_fee(
+		asset_id: Self::AssetId,
+		fee_asset_id: Self::AssetId,
+		fee_asset_amount: Self::Balance,
+	) -> Option<u128>;
+}
+
+pub struct NonFlatFeeConverter<T>(PhantomData<T>);
+
+impl<T: crate::Config> FlatFeeConverter for NonFlatFeeConverter<T> {
+	type AssetId = T::AssetId;
+	type Balance = T::Balance;
+
+	fn get_flat_fee(
+		_asset_id: Self::AssetId,
+		_fee_asset_id: Self::AssetId,
+		_fee_asset_amount: Self::Balance,
+	) -> Option<u128> {
+		None
+	}
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Ics20ServiceCharge<T: Config, S: Module + Clone + Default + PartialEq + Eq + Debug> {
+pub struct Ics20ServiceCharge<T: Config, S: IbcModule + Clone + Default + PartialEq + Eq + Debug> {
 	inner: S,
 	_phantom: core::marker::PhantomData<T>,
 }
 
-impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Default
+impl<T: Config + Send + Sync, S: IbcModule + Clone + Default + PartialEq + Eq + Debug> Default
 	for Ics20ServiceCharge<T, S>
 {
 	fn default() -> Self {
@@ -95,7 +181,7 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 	}
 }
 
-impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Module
+impl<T: Config + Send + Sync, S: IbcModule + Clone + Default + PartialEq + Eq + Debug> IbcModule
 	for Ics20ServiceCharge<T, S>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
@@ -212,7 +298,7 @@ where
 		let mut ctx = Context::<T>::default();
 		// We want the whole chain of calls to fail only if the ics20 transfer fails, because
 		// the other modules are not part of ics-20 standard
-		let ack = self.inner.on_recv_packet(&mut ctx, output, packet, relayer)?;
+		let ack = self.inner.on_recv_packet(&ctx, output, packet, relayer)?;
 		let _ = Self::process_fee(&mut ctx, packet, &ack).map_err(|e| {
 			log::error!(target: "pallet_ibc", "Error processing fee: {:?}", e);
 		});
@@ -242,7 +328,7 @@ where
 	}
 }
 
-impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug>
+impl<T: Config + Send + Sync, S: IbcModule + Clone + Default + PartialEq + Eq + Debug>
 	Ics20ServiceCharge<T, S>
 where
 	<T as crate::Config>::AccountIdConversion: From<IbcAccount<T::AccountId>>,
@@ -256,21 +342,22 @@ where
 	) -> Result<(), Ics04Error> {
 		let mut packet_data = serde_json::from_slice::<PacketData>(packet.data.as_slice())
 			.map_err(|e| {
-				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
+				Ics04Error::implementation_specific(format!("Failed to decode packet data {e:?}"))
 			})?;
-		let percent = ServiceCharge::<T>::get().unwrap_or(T::ServiceCharge::get());
+
+		let is_feeless_channels = FeeLessChannelIds::<T>::contains_key((
+			packet.source_channel.sequence(),
+			packet.destination_channel.sequence(),
+		));
+
+		if is_feeless_channels {
+			return Ok(())
+		}
+
+		let percent = ServiceChargeIn::<T>::get().unwrap_or(T::ServiceChargeIn::get());
 		// Send full amount to receiver using the default ics20 logic
 		// We only take the fee charge if the acknowledgement is not an error
 		if ack.as_ref() == Ics20Ack::success().to_string().as_bytes() {
-			// We have ensured that token amounts larger than the max value for a u128 are rejected
-			// in the ics20 on_recv_packet callback so we can multiply safely.
-			// Percent does Non-Overflowing multiplication so this is infallible
-			let fee = percent * packet_data.token.amount.as_u256().low_u128();
-			let receiver =
-				<T as crate::Config>::AccountIdConversion::try_from(packet_data.receiver.clone())
-					.map_err(|_| {
-					Ics04Error::implementation_specific("Failed to receiver account".to_string())
-				})?;
 			let mut prefixed_coin = if is_receiver_chain_source(
 				packet.source_port.clone(),
 				packet.source_channel,
@@ -287,6 +374,38 @@ where
 				c.denom.add_trace_prefix(prefix);
 				c
 			};
+
+			// At this point the asset SHOULD exist
+			let asset_id =
+				<T as crate::Config>::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
+					&prefixed_coin.denom.to_string(),
+				)
+				.map_err(|_| {
+					log::warn!(target: "pallet_ibc", "Asset does not exist for denom: {}", prefixed_coin.denom.to_string());
+					Ics04Error::implementation_specific("asset does not exist".to_string())
+				})?;
+			let amount = packet_data.token.amount.as_u256().low_u128();
+			let mut fee = {
+				let fee_asset_id = T::FlatFeeAssetId::get();
+				let fee_asset_amount = T::FlatFeeAmount::get();
+
+				T::FlatFeeConverter::get_flat_fee(asset_id, fee_asset_id, fee_asset_amount)
+					.unwrap_or_else(|| {
+						// We have ensured that token amounts larger than the max value for
+						// a u128 are rejected in the ics20 on_recv_packet callback so we
+						// can multiply safely. Percent does Non-Overflowing multiplication
+						// so this is infallible
+						percent * amount
+					})
+			};
+
+			fee = fee.min(amount);
+
+			let receiver =
+				<T as crate::Config>::AccountIdConversion::try_from(packet_data.receiver.clone())
+					.map_err(|_| {
+					Ics04Error::implementation_specific("Failed to receiver account".to_string())
+				})?;
 			prefixed_coin.amount = fee.into();
 			// Now we proceed to send the service fee from the receiver's account to the pallet
 			// account
@@ -300,7 +419,10 @@ where
 			packet.data = serde_json::to_vec(&packet_data).map_err(|_| {
 				Ics04Error::implementation_specific("Failed to receiver account".to_string())
 			})?;
-			Pallet::<T>::deposit_event(Event::<T>::IbcTransferFeeCollected { amount: fee.into() })
+			Pallet::<T>::deposit_event(Event::<T>::IbcTransferFeeCollected {
+				amount: fee.into(),
+				asset_id,
+			})
 		}
 		Ok(())
 	}

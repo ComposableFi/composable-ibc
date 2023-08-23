@@ -39,7 +39,9 @@ use itertools::Itertools;
 use jsonrpsee_ws_client::WsClientBuilder;
 use light_client_common::config::{EventRecordT, RuntimeCall, RuntimeTransactions};
 use pallet_ibc::light_clients::AnyClientMessage;
-use primitives::{mock::LocalClientTypes, Chain, IbcProvider, MisbehaviourHandler};
+use primitives::{
+	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, MisbehaviourHandler,
+};
 use sp_core::{twox_128, H256};
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
@@ -54,7 +56,7 @@ use crate::utils::unsafe_cast_to_jsonrpsee_client;
 use subxt::{
 	config::{
 		extrinsic_params::{BaseExtrinsicParamsBuilder, Era},
-		ExtrinsicParams, Header as HeaderT,
+		ExtrinsicParams, Header as HeaderT, Header,
 	},
 	events::Phase,
 };
@@ -78,13 +80,15 @@ impl<T: light_client_common::config::Config + Send + Sync + Clone + 'static> Cha
 	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<T as subxt::Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
+	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
@@ -100,7 +104,7 @@ where
 	}
 
 	fn block_max_weight(&self) -> u64 {
-		self.max_extrinsic_weight
+		self.max_extrinsic_weight * 100 / 80
 	}
 
 	async fn estimate_weight(&self, messages: Vec<Any>) -> Result<u64, Self::Error> {
@@ -331,49 +335,57 @@ where
 		} else {
 			error.to_string()
 		};
+		log::debug!(target: "hyperspace", "Handling error: {err_str}");
+
 		if err_str.contains("MaxSlotsExceeded") {
-			self.rpc_call_delay = self.rpc_call_delay * 2;
+			self.common_state.rpc_call_delay = self.common_state.rpc_call_delay * 2;
 		} else if err_str.contains("RestartNeeded") || err_str.contains("restart required") {
-			let relay_ws_client = Arc::new(
-				WsClientBuilder::default()
-					.build(&self.relay_chain_rpc_url)
-					.await
-					.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
-			);
-			let para_ws_client = Arc::new(
-				WsClientBuilder::default()
-					.build(&self.parachain_rpc_url)
-					.await
-					.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
-			);
-
-			let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
-				unsafe_cast_to_jsonrpsee_client(&para_ws_client)
-			})
-			.await?;
-			let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
-				unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
-			})
-			.await?;
-
-			log::info!(target: "hyperspace", "Reconnected to relay chain and parachain");
-
-			self.relay_ws_client = relay_ws_client;
-			self.para_ws_client = para_ws_client;
-			self.relay_client = relay_client;
-			self.para_client = para_client;
-			self.rpc_call_delay = self.rpc_call_delay * 2;
+			self.reconnect().await?;
+			self.common_state.rpc_call_delay = self.common_state.rpc_call_delay * 2;
 		}
 
 		Ok(())
 	}
 
-	fn rpc_call_delay(&self) -> Duration {
-		self.rpc_call_delay
+	async fn reconnect(&mut self) -> anyhow::Result<()> {
+		let relay_ws_client = Arc::new(
+			WsClientBuilder::default()
+				.build(&self.relay_chain_rpc_url)
+				.await
+				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
+		);
+		let para_ws_client = Arc::new(
+			WsClientBuilder::default()
+				.build(&self.parachain_rpc_url)
+				.await
+				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
+		);
+
+		let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
+			unsafe_cast_to_jsonrpsee_client(&para_ws_client)
+		})
+		.await?;
+		let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
+			unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
+		})
+		.await?;
+
+		self.relay_ws_client = relay_ws_client;
+		self.para_ws_client = para_ws_client;
+		self.relay_client = relay_client;
+		self.para_client = para_client;
+
+		log::info!(target: "hyperspace", "Reconnected to relay chain and parachain");
+
+		Ok(())
 	}
 
-	fn set_rpc_call_delay(&mut self, delay: Duration) {
-		self.rpc_call_delay = delay;
+	fn common_state(&self) -> &CommonClientState {
+		&self.common_state
+	}
+
+	fn common_state_mut(&mut self) -> &mut CommonClientState {
+		&mut self.common_state
 	}
 }
 
@@ -382,13 +394,14 @@ impl<T: light_client_common::config::Config + Send + Sync> MisbehaviourHandler
 	for ParachainClient<T>
 where
 	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<T as subxt::Config>::BlockNumber>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	T::BlockNumber: BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
+	<<T as subxt::Config>::Header as Header>::Number:
+		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One,
 	T::Hash: From<sp_core::H256> + From<[u8; 32]>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
@@ -403,6 +416,7 @@ where
 		counterparty: &C,
 		client_message: AnyClientMessage,
 	) -> Result<(), anyhow::Error> {
+		let client_message = client_message.unpack_recursive_into();
 		match client_message {
 			AnyClientMessage::Grandpa(ClientMessage::Header(header)) => {
 				let base_header = header
