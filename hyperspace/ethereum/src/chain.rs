@@ -8,6 +8,7 @@ use futures::{Stream, StreamExt};
 use ibc::core::ics02_client::msgs::update_client::MsgUpdateAnyClient;
 use ibc::core::ics02_client::{events::UpdateClient, msgs::create_client::MsgCreateAnyClient};
 use ibc::Height;
+use ibc::core::ics03_connection::msgs::conn_open_init::MsgConnectionOpenInit;
 use ibc::protobuf::Protobuf;
 use ibc::protobuf::google::protobuf::Timestamp;
 use ics07_tendermint::client_message::{ClientMessage, Header};
@@ -16,6 +17,7 @@ use ics07_tendermint::consensus_state::ConsensusState;
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 use primitives::mock::LocalClientTypes;
 use primitives::{Chain, CommonClientState, LightClientSync, MisbehaviourHandler};
+use serde::__private::de;
 
 use crate::contract::IbcHandler;
 use crate::{client::EthereumClient, ibc_provider::BlockHeight};
@@ -198,6 +200,37 @@ fn tm_header_abi_token(header: Header) -> Token{
 	
 }
 
+fn msg_connection_open_init_token(x: MsgConnectionOpenInit) -> Token{
+	use ethers::abi::encode as ethers_encode;
+	use ethers::abi::Token as EthersToken;
+
+	let consensus_state_data = EthersToken::Tuple(
+		[
+			// client id
+			EthersToken::String(x.client_id.as_str().to_owned()),
+			// counterparty
+			EthersToken::Tuple(
+				[
+					// client id
+					EthersToken::String(x.counterparty.client_id().as_str().to_owned()),
+					// connection id
+					EthersToken::String(x.counterparty.connection_id()
+					.map(|connection_id| connection_id.as_str().to_owned())
+					.unwrap_or(String::new())),
+					// prefix
+					EthersToken::Tuple(
+						[
+							// key prefix
+							EthersToken::Bytes(x.counterparty.prefix().as_bytes().into()),
+						].to_vec()),
+				].to_vec()),
+			// delay_period
+			EthersToken::Uint(x.delay_period.as_secs().into()),
+		].to_vec());
+	consensus_state_data
+
+}
+
 #[async_trait::async_trait]
 impl Chain for EthereumClient {
 	#[inline]
@@ -311,7 +344,7 @@ impl Chain for EthereumClient {
 					let receipt = receipt.confirmations(6).await.unwrap().unwrap();
 				 */
 
-				thread::sleep(Duration::from_secs(20));
+				thread::sleep(Duration::from_secs(5));
 
 
 
@@ -321,8 +354,7 @@ impl Chain for EthereumClient {
 
 				return Ok(());
 			}
-
-			if msg.type_url == ibc::core::ics02_client::msgs::update_client::TYPE_URL{
+			else if msg.type_url == ibc::core::ics02_client::msgs::update_client::TYPE_URL{
 				let msg = MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
 				let AnyClientMessage::Tendermint(client_state) = msg.client_message else{
 					//TODO return error support only tendermint client state
@@ -364,7 +396,43 @@ impl Chain for EthereumClient {
 				);
 				let _ = ibc_handler.update_client(token).await;
 
-				thread::sleep(Duration::from_secs(20));
+				thread::sleep(Duration::from_secs(5));
+			}
+			else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_init::TYPE_URL{
+
+				let contract = crate::contract::get_contract_from_name(
+					self.config.ibc_handler_address.clone(),
+					Arc::clone(&self.http_rpc),
+					"contracts/core",
+					"OwnableIBCHandler"
+				);
+
+				let ibc_handler = IbcHandler::new(contract);
+
+				let msg = MsgConnectionOpenInit::decode_vec(&msg.value).unwrap();
+				let token = msg_connection_open_init_token(msg);
+				let connection_id = ibc_handler.connection_open_init(token).await;
+				dbg!(connection_id);
+
+				//there is no ignore field for EthAbiType so it is hard to reuse old struct and to create a tons of new one for each msg type is not a good idea
+				// #[derive(EthAbiType)]
+				// pub struct X{
+				// 	a: String,
+				// 	b: R,
+				// }
+
+				// #[derive(EthAbiType)]
+				// pub struct R{
+				// 	a: String,
+				// 	b: String,
+				// };
+
+				// use ethers::abi::Detokenize;
+				// use ethers::abi::Tokenize;
+				// let r = X::into_tokens(X{a: "hello".to_string(), b : R{ a: "hello".to_string(), b: "hello".to_string()}});
+
+
+				
 			}
 			return Ok(())
 		};
