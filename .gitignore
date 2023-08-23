@@ -73,3 +73,12 @@ typechain-types/
 # foundry
 cache/
 out/
+
+
+# eth-bridge
+scripts/eth-bridge/execution/geth
+scripts/eth-bridge/execution/keystore
+scripts/eth-bridge/execution/geth.ipc
+scripts/eth-bridge/consensus/genesis.ssz
+scripts/eth-bridge/consensus/beacondata
+scripts/eth-bridge/consensus/validatordata
