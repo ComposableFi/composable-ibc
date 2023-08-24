@@ -95,6 +95,18 @@ where
 		id
 	}
 
+	pub async fn connection_open_confirm(&self, msg: Token) {
+		let method = self.contract.method::<_, ()>("connectionOpenConfirm", (msg,)).unwrap();
+
+		let gas_estimate_connection_open_confirm = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open_confirm);
+		let _ = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		
+	}
+
 
 	pub async fn register_client(&self, kind: &str, address: Address) {
 		let method = self
