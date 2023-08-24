@@ -84,7 +84,7 @@ where
 	}
 
 	pub async fn connection_open_try(&self, msg: Token) -> String {
-		let method = self.contract.method::<_, String>("channelOpenTry", (msg,)).unwrap();
+		let method = self.contract.method::<_, String>("connectionOpenTry", (msg,)).unwrap();
 
 		let gas_estimate_connection_open_try = method.estimate_gas().await.unwrap();
 		dbg!(gas_estimate_connection_open_try);
