@@ -83,41 +83,18 @@ where
 		assert_eq!(receipt.status, Some(1.into()));
 	}
 
-	pub async fn channel_open_try(&self, connection_id: &str, port_id: &str) -> String {
-		let channel_open_try = self
-			.contract
-			.method::<_, String>(
-				"channelOpenTry",
-				(Token::Tuple(vec![
-					Token::String(port_id.into()), // port-id
-					Token::Tuple(vec![
-						// Channel.Data
-						Token::Uint(2.into()), //  state, 1: TryOpen
-						Token::Uint(1.into()), //  ordering, 1: Unordered
-						Token::Tuple(vec![
-							//  ChannelCounterparty.Data
-							Token::String(Default::default()), // port-id
-							Token::String(Default::default()), // channel-id
-						]),
-						Token::Array(vec![Token::String(connection_id.into())]), // connectionHops
-						Token::String("1".into()),                               // version
-					]),
-					Token::String("1".into()), // counterpartyVersion
-					Token::Bytes(vec![]),      // proofInit
-					Token::Tuple(vec![
-						// proofHeight
-						Token::Uint(0.into()), //  revisionNumber
-						Token::Uint(1.into()), //  revisionHeight
-					]),
-				]),),
-			)
-			.unwrap();
+	pub async fn connection_open_try(&self, msg: Token) -> String {
+		let method = self.contract.method::<_, String>("channelOpenTry", (msg,)).unwrap();
 
-		let channel_id = channel_open_try.call().await.unwrap_contract_error();
-		let tx_recp = channel_open_try.send().await.unwrap_contract_error().await.unwrap().unwrap();
-		assert_eq!(tx_recp.status, Some(1.into()));
-		channel_id
+		let gas_estimate_connection_open_try = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open_try);
+		let id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		id
 	}
+
 
 	pub async fn register_client(&self, kind: &str, address: Address) {
 		let method = self

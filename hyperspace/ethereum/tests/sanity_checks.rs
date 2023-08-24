@@ -14,7 +14,7 @@ use ethers_solc::{ProjectCompileOutput, ProjectPathsConfig, Artifact};
 use hyperspace_cosmos::client::{CosmosClientConfig, CosmosClient};
 use hyperspace_ethereum::{
 	config::Config,
-	contract::{ibc_handler, UnwrapContractError}, client::EthRpcClient,
+	contract::{ibc_handler, UnwrapContractError, IbcHandler}, client::EthRpcClient,
 };
 use ibc::{
 	core::{
@@ -379,8 +379,50 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	};
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 
-	//connectionOpenAck
+	//connectionOpenAck test
 	let result = hyperspace.submit(vec![msg]).await.unwrap();
+
+
+
+	//open try
+	let contract = hyperspace_ethereum::contract::get_contract_from_name(
+		hyperspace.config.ibc_handler_address.clone(),
+		Arc::clone(&hyperspace.http_rpc),
+		"contracts/core",
+		"OwnableIBCHandler"
+	);
+	let ibc_handler = IbcHandler::new(contract);
+
+	use hyperspace_ethereum::yui_types::ics03_connection::conn_open_try::*;
+	let yui_conn_try = YuiMsgConnectionOpenTry{
+		counterparty: YuiCounterparty{
+			client_id: "07-tendermint-0".to_string(),
+			connection_id: "0".to_string(),
+			prefix: YuiCommitmentPrefix{
+				key_prefix: vec![1,2,3],
+			}
+		},
+		delay_period: 1000000,
+		client_id: "07-tendermint-0".to_string(),
+		client_state_bytes: vec![1,2,3],
+		counterparty_versions: vec![YuiVersion{
+			identifier: "07-tendermint-0".to_string(),
+			features: vec![],
+		}],
+		proof_init: get_dummy_proof(),
+		proof_client: get_dummy_proof(),
+		proof_consensus: get_dummy_proof(),
+		proof_height: YuiHeight{
+			revision_number: 1,
+			revision_height: 1,
+		},
+		consensus_height: YuiHeight{
+			revision_number: 1,
+			revision_height: 1,
+		}
+	};
+
+	// ibc_handler.connection_open_try(yui_conn_try.token()).await;
 
 
 

@@ -10,6 +10,7 @@ use ibc::core::ics02_client::{events::UpdateClient, msgs::create_client::MsgCrea
 use ibc::Height;
 use ibc::core::ics03_connection::msgs::conn_open_ack::MsgConnectionOpenAck;
 use ibc::core::ics03_connection::msgs::conn_open_init::MsgConnectionOpenInit;
+use ibc::core::ics03_connection::msgs::conn_open_try::MsgConnectionOpenTry;
 use ibc::protobuf::Protobuf;
 use ibc::protobuf::google::protobuf::Timestamp;
 use ics07_tendermint::client_message::{ClientMessage, Header};
@@ -232,8 +233,7 @@ fn msg_connection_open_init_token(x: MsgConnectionOpenInit) -> Token{
 }
 
 
-//TODO check it again
-fn msg_connection_open_ack_token<H>(x: MsgConnectionOpenAck::<LocalClientTypes>, client_state: ClientState<H>) -> Token{
+fn msg_connection_open_ack_token<H>(msg: MsgConnectionOpenAck::<LocalClientTypes>, client_state: ClientState<H>) -> Token{
 	use ethers::abi::encode as ethers_encode;
 	use ethers::abi::Token as EthersToken;
 
@@ -243,49 +243,54 @@ fn msg_connection_open_ack_token<H>(x: MsgConnectionOpenAck::<LocalClientTypes>,
 	let consensus_state_data = EthersToken::Tuple(
 		[
 			// connectionId
-			EthersToken::String(x.connection_id.as_str().to_owned()),
+			EthersToken::String(msg.connection_id.as_str().to_owned()),
 			//clientStateBytes
 			EthersToken::Bytes(client_state_data_vec),
 			// //version
 			EthersToken::Tuple(
 				[
 					//identifier
-					EthersToken::String(x.version.identifier().clone()),
+					EthersToken::String(msg.version.identifier().clone()),
 					//features
 					EthersToken::Array(
-							x.version.features().clone()
+							msg.version.features().clone()
 							.iter()
 							.map(|feature| EthersToken::String(feature.to_string()))
 							.collect()
 						),
 				].to_vec()),
 			//counterpartyConnectionID
-			EthersToken::String(x.counterparty_connection_id.as_str().to_owned()),
+			EthersToken::String(msg.counterparty_connection_id.as_str().to_owned()),
 			//proofTry
-			EthersToken::Bytes(x.proofs.object_proof().clone().into()),
+			EthersToken::Bytes(msg.proofs.object_proof().clone().into()),
 			//proofClient
-			EthersToken::Bytes(x.proofs.client_proof().clone().map_or_else(Vec::new, |v| v.into())),
+			EthersToken::Bytes(msg.proofs.client_proof().clone().map_or_else(Vec::new, |v| v.into())),
 			//proofConsensus
-			EthersToken::Bytes(x.proofs.consensus_proof().map_or_else(Vec::new, |v| v.proof().clone().into())),
+			EthersToken::Bytes(msg.proofs.consensus_proof().map_or_else(Vec::new, |v| v.proof().clone().into())),
 			//proofHeight tuple
 			EthersToken::Tuple(
 				[
 					//revisionNumber
-					EthersToken::Uint(x.proofs.height().revision_number.into()),
+					EthersToken::Uint(msg.proofs.height().revision_number.into()),
 					//revisionHeight
-					EthersToken::Uint(x.proofs.height().revision_height.into()),
+					EthersToken::Uint(msg.proofs.height().revision_height.into()),
 				].to_vec()),
 			//consensusHeight
 			EthersToken::Tuple(
 				[
 					//revisionNumber
-					EthersToken::Uint(x.proofs.consensus_proof().unwrap().height().revision_number.into()),
+					EthersToken::Uint(msg.proofs.consensus_proof().unwrap().height().revision_number.into()),
 					//revisionHeight
-					EthersToken::Uint(x.proofs.consensus_proof().unwrap().height().revision_number.into()),
+					EthersToken::Uint(msg.proofs.consensus_proof().unwrap().height().revision_number.into()),
 				].to_vec()),
 		].to_vec());
 	consensus_state_data
 }
+
+fn msg_connection_open_try_token<H>(msg: MsgConnectionOpenTry::<LocalClientTypes>, client_state: ClientState<H>) -> Token{
+	todo!();
+}
+
 
 #[async_trait::async_trait]
 impl Chain for EthereumClient {
@@ -338,13 +343,14 @@ impl Chain for EthereumClient {
 		use ethers::abi::encode as ethers_encode;
 		use ethers::abi::Token as EthersToken;
 
-		//get tendermint client via address and contract name in yui project
 		let contract = crate::contract::get_contract_from_name(
-			self.config.tendermint_client_address.clone(),
+			self.config.ibc_handler_address.clone(),
 			Arc::clone(&self.http_rpc),
-			"contracts/clients",
-			"TendermintLightClientSimple"
+			"contracts/core",
+			"OwnableIBCHandler"
 		);
+
+		let ibc_handler = IbcHandler::new(contract);
 
 		let msg = messages.iter().next();
 		if let Some(msg) = msg {
@@ -367,15 +373,6 @@ impl Chain for EthereumClient {
 				
 				dbg!(&client_state_data_vec.len());
 				dbg!(&consensus_state_data_vec.len());
-
-				let contract = crate::contract::get_contract_from_name(
-					self.config.ibc_handler_address.clone(),
-					Arc::clone(&self.http_rpc),
-					"contracts/core",
-					"OwnableIBCHandler"
-				);
-
-				let ibc_handler = IbcHandler::new(contract);
 
 				let token = EthersToken::Tuple(
 					vec![
@@ -427,15 +424,6 @@ impl Chain for EthereumClient {
 				//todo replace empty vec for prev state clint with an actual client state
 				let client_state = self.prev_state.lock().unwrap().0.clone();
 
-
-				let contract = crate::contract::get_contract_from_name(
-					self.config.ibc_handler_address.clone(),
-					Arc::clone(&self.http_rpc),
-					"contracts/core",
-					"OwnableIBCHandler"
-				);
-
-				let ibc_handler = IbcHandler::new(contract);
 				//TODO replace client id. it was genereated when we created the client. use 0 for testing
 				let client_id = format!("{}-0", self.config.client_type.clone());
 
@@ -457,15 +445,6 @@ impl Chain for EthereumClient {
 				return Ok(());
 			}
 			else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_init::TYPE_URL{
-
-				let contract = crate::contract::get_contract_from_name(
-					self.config.ibc_handler_address.clone(),
-					Arc::clone(&self.http_rpc),
-					"contracts/core",
-					"OwnableIBCHandler"
-				);
-
-				let ibc_handler = IbcHandler::new(contract);
 
 				let msg = MsgConnectionOpenInit::decode_vec(&msg.value).unwrap();
 				let token = msg_connection_open_init_token(msg);
@@ -508,22 +487,33 @@ impl Chain for EthereumClient {
 					}
 				};
 				
-
-				//check it again
 				let token = msg_connection_open_ack_token(msg, client_state);
-
-				let contract = crate::contract::get_contract_from_name(
-					self.config.ibc_handler_address.clone(),
-					Arc::clone(&self.http_rpc),
-					"contracts/core",
-					"OwnableIBCHandler"
-				);
-
-				let ibc_handler = IbcHandler::new(contract);
 				ibc_handler.connection_open_ack(token).await;
 
+				return Ok(());
 			}
-			return Ok(())
+			else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_try::TYPE_URL{
+				let msg = MsgConnectionOpenTry::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+				let client_state = match msg.client_state.clone(){
+					Some(m) => {
+						let AnyClientState::Tendermint(client_state) = m else{
+							//TODO return error support only tendermint client state
+							panic!("only tendermint client state is supported for now");
+						};
+						client_state
+					}
+					None => {
+						//TODO return error support only tendermint client state
+						panic!("only tendermint client state is supported for now");
+					}
+				};
+
+				let token = msg_connection_open_try_token(msg, client_state);
+				ibc_handler.connection_open_try(token).await;
+				
+				return Ok(());
+			}
+			unimplemented!("does not support this msg type for now");
 		};
 
 		unimplemented!("client create and client update is implemented only for now");
