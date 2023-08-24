@@ -1,12 +1,18 @@
 use ethers::abi::Bytes;
 use ethers::abi::Token;
 use ethers::prelude::EthAbiType;
+use ibc::core::ics02_client::height::Height;
+use ibc::core::ics03_connection::connection::Counterparty;
 use ibc::core::ics03_connection::msgs::conn_open_try::MsgConnectionOpenTry;
+use ibc::core::ics03_connection::version::Version;
+use ibc::core::ics23_commitment::commitment::CommitmentPrefix;
 use primitives::mock::LocalClientTypes;
 use ethers::abi::Detokenize;
 use ethers::abi::Tokenize;
 
-
+/// EthAbiType attribute -> Token::Tuple(Self::into_tokens(self)) does not work because of bytes type.
+/// failed to decode on yui solidity side
+/// so construct manually token from the struct
 #[derive(Clone, Debug, PartialEq, Eq, EthAbiType)]
 pub struct YuiMsgConnectionOpenTry {
 	pub counterparty: YuiCounterparty,
@@ -20,19 +26,10 @@ pub struct YuiMsgConnectionOpenTry {
 	pub proof_height: YuiHeight, 				// height at which relayer constructs proof of A storing connectionEnd in state
 	pub consensus_height: YuiHeight, 			// latest height of chain B which chain A has stored in its chain B client
 }
-// , client_state: ClientState<H>
-impl From<MsgConnectionOpenTry::<LocalClientTypes>> for YuiMsgConnectionOpenTry{
-    fn from(value: MsgConnectionOpenTry::<LocalClientTypes>) -> Self {
-        unimplemented!();
-    }
-}
 
 impl YuiMsgConnectionOpenTry{
-    pub fn new() -> Self{
-        unimplemented!();
-    }
-
-    pub fn token(self) -> Token{
+    
+    pub fn into_token(self) -> Token{
         
         //by some reason the decode is failing in case there is bytes in the struct
         //this is the reason why we are using the manual token construction
@@ -104,9 +101,33 @@ pub struct YuiCounterparty {
 	pub prefix: YuiCommitmentPrefix,
 }
 
+
+
+impl From<Counterparty> for YuiCounterparty{
+    fn from(value: Counterparty) -> Self {
+        let connection_id = match value.connection_id() {
+            Some(connection_id) => connection_id.as_str().to_owned(),
+            None => "".to_owned(),
+        };
+        YuiCounterparty{
+            client_id: value.client_id().as_str().to_owned(),
+            connection_id: connection_id,
+            prefix: value.prefix().clone().into(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, EthAbiType)]
 pub struct YuiCommitmentPrefix {
 	pub key_prefix: Vec<u8>,
+}
+
+impl From<CommitmentPrefix> for YuiCommitmentPrefix{
+    fn from(value: CommitmentPrefix) -> Self {
+        YuiCommitmentPrefix{
+            key_prefix: value.into_vec().to_vec(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, EthAbiType)]
@@ -115,9 +136,29 @@ pub struct YuiHeight {
 	pub revision_height: u64,
 }
 
+impl From<Height> for YuiHeight{
+    fn from(value: Height) -> Self {
+        YuiHeight{
+            revision_number: value.revision_number.into(),
+            revision_height: value.revision_height.into(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, EthAbiType)]
 pub struct YuiVersion {
 	pub identifier: String,
 	pub features: Vec<String>,
 }
+
+
+impl From<Version> for YuiVersion{
+    fn from(value: Version) -> Self {
+        YuiVersion{
+            identifier: value.identifier().clone(),
+            features: value.features().clone(),
+        }
+    }
+}
+
 

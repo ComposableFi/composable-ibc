@@ -441,7 +441,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 			"failed to verify clientState"
 		);
 	*/
-	ibc_handler.connection_open_try(yui_conn_try.token()).await;
+	ibc_handler.connection_open_try(yui_conn_try.into_token()).await;
 
 
 
