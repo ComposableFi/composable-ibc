@@ -8,6 +8,7 @@ use futures::{Stream, StreamExt};
 use ibc::core::ics02_client::msgs::update_client::MsgUpdateAnyClient;
 use ibc::core::ics02_client::{events::UpdateClient, msgs::create_client::MsgCreateAnyClient};
 use ibc::Height;
+use ibc::core::ics03_connection::msgs::conn_open_ack::MsgConnectionOpenAck;
 use ibc::core::ics03_connection::msgs::conn_open_init::MsgConnectionOpenInit;
 use ibc::protobuf::Protobuf;
 use ibc::protobuf::google::protobuf::Timestamp;
@@ -228,7 +229,62 @@ fn msg_connection_open_init_token(x: MsgConnectionOpenInit) -> Token{
 			EthersToken::Uint(x.delay_period.as_secs().into()),
 		].to_vec());
 	consensus_state_data
+}
 
+
+//TODO check it again
+fn msg_connection_open_ack_token<H>(x: MsgConnectionOpenAck::<LocalClientTypes>, client_state: ClientState<H>) -> Token{
+	use ethers::abi::encode as ethers_encode;
+	use ethers::abi::Token as EthersToken;
+
+	let client_state = client_state_abi_token(client_state);
+	let client_state_data_vec = ethers_encode(&[client_state]);
+
+	let consensus_state_data = EthersToken::Tuple(
+		[
+			// connectionId
+			EthersToken::String(x.connection_id.as_str().to_owned()),
+			//clientStateBytes
+			EthersToken::Bytes(client_state_data_vec),
+			// //version
+			EthersToken::Tuple(
+				[
+					//identifier
+					EthersToken::String(x.version.identifier().clone()),
+					//features
+					EthersToken::Array(
+							x.version.features().clone()
+							.iter()
+							.map(|feature| EthersToken::String(feature.to_string()))
+							.collect()
+						),
+				].to_vec()),
+			//counterpartyConnectionID
+			EthersToken::String(x.counterparty_connection_id.as_str().to_owned()),
+			//proofTry
+			EthersToken::Bytes(x.proofs.object_proof().clone().into()),
+			//proofClient
+			EthersToken::Bytes(x.proofs.client_proof().clone().map_or_else(Vec::new, |v| v.into())),
+			//proofConsensus
+			EthersToken::Bytes(x.proofs.consensus_proof().map_or_else(Vec::new, |v| v.proof().clone().into())),
+			//proofHeight tuple
+			EthersToken::Tuple(
+				[
+					//revisionNumber
+					EthersToken::Uint(x.proofs.height().revision_number.into()),
+					//revisionHeight
+					EthersToken::Uint(x.proofs.height().revision_height.into()),
+				].to_vec()),
+			//consensusHeight
+			EthersToken::Tuple(
+				[
+					//revisionNumber
+					EthersToken::Uint(x.proofs.consensus_proof().unwrap().height().revision_number.into()),
+					//revisionHeight
+					EthersToken::Uint(x.proofs.consensus_proof().unwrap().height().revision_number.into()),
+				].to_vec()),
+		].to_vec());
+	consensus_state_data
 }
 
 #[async_trait::async_trait]
@@ -397,6 +453,8 @@ impl Chain for EthereumClient {
 				let _ = ibc_handler.update_client(token).await;
 
 				thread::sleep(Duration::from_secs(5));
+
+				return Ok(());
 			}
 			else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_init::TYPE_URL{
 
@@ -414,6 +472,8 @@ impl Chain for EthereumClient {
 				let connection_id = ibc_handler.connection_open_init(token).await;
 				dbg!(connection_id);
 
+				return Ok(());
+
 				//there is no ignore field for EthAbiType so it is hard to reuse old struct and to create a tons of new one for each msg type is not a good idea
 				// #[derive(EthAbiType)]
 				// pub struct X{
@@ -430,9 +490,38 @@ impl Chain for EthereumClient {
 				// use ethers::abi::Detokenize;
 				// use ethers::abi::Tokenize;
 				// let r = X::into_tokens(X{a: "hello".to_string(), b : R{ a: "hello".to_string(), b: "hello".to_string()}});
+			}
+			else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_ack::TYPE_URL{
+				let msg = MsgConnectionOpenAck::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
 
-
+				let client_state = match msg.client_state.clone(){
+					Some(m) => {
+						let AnyClientState::Tendermint(client_state) = m else{
+							//TODO return error support only tendermint client state
+							panic!("only tendermint client state is supported for now");
+						};
+						client_state
+					}
+					None => {
+						//TODO return error support only tendermint client state
+						panic!("only tendermint client state is supported for now");
+					}
+				};
 				
+
+				//check it again
+				let token = msg_connection_open_ack_token(msg, client_state);
+
+				let contract = crate::contract::get_contract_from_name(
+					self.config.ibc_handler_address.clone(),
+					Arc::clone(&self.http_rpc),
+					"contracts/core",
+					"OwnableIBCHandler"
+				);
+
+				let ibc_handler = IbcHandler::new(contract);
+				ibc_handler.connection_open_ack(token).await;
+
 			}
 			return Ok(())
 		};

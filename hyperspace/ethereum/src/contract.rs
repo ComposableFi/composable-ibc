@@ -72,32 +72,15 @@ where
 		connection_id
 	}
 
-	pub async fn connection_open_ack(&self, connection_id: &str, client_state_bytes: Vec<u8>) {
-		let connection_open_ack = self
-			.contract
-			.method::<_, ()>(
-				"connectionOpenAck",
-				(Token::Tuple(vec![
-					Token::String(connection_id.to_string()),
-					Token::Bytes(client_state_bytes), // clientStateBytes
-					Token::Tuple(vec![
-						Token::String("counterparty-version".into()),
-						Token::Array(vec![]),
-					]), // Version.Data
-					Token::String("counterparty-connection-id".into()), // counterpartyConnectionID
-					Token::Bytes(vec![]),             // proofTry
-					Token::Bytes(vec![]),             // proofClient
-					Token::Bytes(vec![]),             // proofConsensus
-					Token::Tuple(vec![Token::Uint(0.into()), Token::Uint(1.into())]), // proofHeight
-					Token::Tuple(vec![Token::Uint(0.into()), Token::Uint(1.into())]), // consesusHeight
-				]),),
-			)
-			.unwrap();
+	pub async fn connection_open_ack(&self, msg: Token) {
+		let method = self.contract.method::<_, ()>("connectionOpenAck", (msg,)).unwrap();
 
-		let () = connection_open_ack.call().await.unwrap_contract_error();
-		let tx_recp =
-			connection_open_ack.send().await.unwrap_contract_error().await.unwrap().unwrap();
-		assert_eq!(tx_recp.status, Some(1.into()));
+		let gas_estimate_connection_open = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open);
+		let _ = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
 	}
 
 	pub async fn channel_open_try(&self, connection_id: &str, port_id: &str) -> String {

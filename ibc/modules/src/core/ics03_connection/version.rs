@@ -36,6 +36,14 @@ impl Version {
 	pub fn is_supported_feature(&self, feature: String) -> bool {
 		self.features.contains(&feature)
 	}
+
+	pub fn identifier(&self) -> &String {
+		&self.identifier
+	}
+
+	pub fn features(&self) -> &Vec<String> {
+		&self.features
+	}
 }
 
 impl Protobuf<RawVersion> for Version {}
