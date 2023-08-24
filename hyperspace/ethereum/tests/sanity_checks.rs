@@ -20,7 +20,7 @@ use ibc::{
 	core::{
 		ics02_client::{height::Height, trust_threshold::TrustThreshold, msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient}},
 		ics04_channel::packet::{Packet, Sequence},
-		ics24_host::identifier::{ChannelId, PortId, ConnectionId, ChainId}, ics03_connection::{connection::Counterparty, msgs::{conn_open_init::MsgConnectionOpenInit, conn_open_ack::MsgConnectionOpenAck}}, ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
+		ics24_host::identifier::{ChannelId, PortId, ConnectionId, ChainId}, ics03_connection::{connection::Counterparty, msgs::{conn_open_init::MsgConnectionOpenInit, conn_open_ack::MsgConnectionOpenAck, conn_open_confirm::MsgConnectionOpenConfirm}}, ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
 	},
 	timestamp::Timestamp, protobuf::types::SignedHeader, proofs::{Proofs, ConsensusProof},
 };
@@ -372,7 +372,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 		connection_id: ConnectionId::new(0),
 		counterparty_connection_id: ConnectionId::new(0),
 		client_state: Some(AnyClientState::Tendermint(client_state.clone())),
-		proofs: proofs,
+		proofs: proofs.clone(),
 		host_consensus_state_proof: get_dummy_proof(),
 		version: ibc::core::ics03_connection::version::Version::default(),
 		signer: Signer::from_str("s").unwrap(),
@@ -443,11 +443,20 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	*/
 	ibc_handler.connection_open_try(yui_conn_try.into_token()).await;
 
+	
 
+	//open confirm
+	let msg = MsgConnectionOpenConfirm {
+		connection_id: ConnectionId::new(0),
+		proofs: proofs,
+		signer: Signer::from_str("s").unwrap(),
+	};
 
-
-
-
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	//connectionOpenConfirm test works only in that case when connection is "connection state is TRYOPEN status"
+	//before to uncomment next line be sure that you call open try before
+	// let result = hyperspace.submit(vec![msg]).await.unwrap();
+	
 
 	let duration = std::time::Instant::now().duration_since(start);
 	println!("Time elapsed: {:.2} seconds", duration.as_secs());

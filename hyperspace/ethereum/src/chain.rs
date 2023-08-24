@@ -9,6 +9,7 @@ use ibc::core::ics02_client::msgs::update_client::MsgUpdateAnyClient;
 use ibc::core::ics02_client::{events::UpdateClient, msgs::create_client::MsgCreateAnyClient};
 use ibc::Height;
 use ibc::core::ics03_connection::msgs::conn_open_ack::MsgConnectionOpenAck;
+use ibc::core::ics03_connection::msgs::conn_open_confirm::MsgConnectionOpenConfirm;
 use ibc::core::ics03_connection::msgs::conn_open_init::MsgConnectionOpenInit;
 use ibc::core::ics03_connection::msgs::conn_open_try::MsgConnectionOpenTry;
 use ibc::protobuf::Protobuf;
@@ -309,6 +310,28 @@ fn msg_connection_open_try_token<H>(msg: MsgConnectionOpenTry::<LocalClientTypes
 	conn_open_try_token
 }
 
+fn msg_connection_open_confirm_token(msg: MsgConnectionOpenConfirm) -> Token{
+	use ethers::abi::encode as ethers_encode;
+	use ethers::abi::Token as EthersToken;
+
+	let confirm = EthersToken::Tuple(
+		[
+			// connectionId
+			EthersToken::String(msg.connection_id.as_str().to_owned()),
+			// proofAck
+			EthersToken::Bytes(msg.proofs.object_proof().clone().into()),
+			//proofHeight tuple
+			EthersToken::Tuple(
+				[
+					//revisionNumber
+					EthersToken::Uint(msg.proofs.height().revision_number.into()),
+					//revisionHeight
+					EthersToken::Uint(msg.proofs.height().revision_height.into()),
+				].to_vec()),
+		].to_vec());
+	confirm
+}
+
 
 #[async_trait::async_trait]
 impl Chain for EthereumClient {
@@ -529,6 +552,12 @@ impl Chain for EthereumClient {
 				let token = msg_connection_open_try_token(msg, client_state);
 				ibc_handler.connection_open_try(token).await;
 				
+				return Ok(());
+			}
+			else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_confirm::TYPE_URL{
+				let msg = MsgConnectionOpenConfirm::decode_vec(&msg.value).unwrap();
+				let token = msg_connection_open_confirm_token(msg);
+				ibc_handler.connection_open_confirm(token).await;
 				return Ok(());
 			}
 			unimplemented!("does not support this msg type for now");
