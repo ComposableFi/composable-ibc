@@ -22,6 +22,7 @@ use primitives::{Chain, CommonClientState, LightClientSync, MisbehaviourHandler}
 use serde::__private::de;
 
 use crate::contract::IbcHandler;
+use crate::yui_types::ics03_connection::conn_open_try::YuiMsgConnectionOpenTry;
 use crate::{client::EthereumClient, ibc_provider::BlockHeight};
 
 #[async_trait::async_trait]
@@ -288,7 +289,24 @@ fn msg_connection_open_ack_token<H>(msg: MsgConnectionOpenAck::<LocalClientTypes
 }
 
 fn msg_connection_open_try_token<H>(msg: MsgConnectionOpenTry::<LocalClientTypes>, client_state: ClientState<H>) -> Token{
-	todo!();
+	use ethers::abi::encode as ethers_encode;
+	use ethers::abi::Token as EthersToken;
+	let client_state = client_state_abi_token(client_state);
+	let client_state_data_vec = ethers_encode(&[client_state]);
+	let conn_open_try = YuiMsgConnectionOpenTry{
+		counterparty: msg.counterparty.into(),
+		delay_period: msg.delay_period.as_secs(),
+		client_id: msg.client_id.as_str().to_owned(),
+		client_state_bytes: client_state_data_vec,
+		counterparty_versions: msg.counterparty_versions.into_iter().map(|version| version.into()).collect(),
+		proof_init: msg.proofs.object_proof().clone().into(),
+		proof_client: msg.proofs.client_proof().clone().map_or_else(Vec::new, |v| v.into()),
+		proof_consensus: msg.proofs.consensus_proof().map_or_else(Vec::new, |v| v.proof().clone().into()),
+		proof_height: msg.proofs.height().into(),
+		consensus_height: msg.proofs.consensus_proof().unwrap().height().into(),
+	};
+	let conn_open_try_token = conn_open_try.into_token();
+	conn_open_try_token
 }
 
 

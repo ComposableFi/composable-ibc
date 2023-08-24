@@ -422,7 +422,26 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 		}
 	};
 
-	// ibc_handler.connection_open_try(yui_conn_try.token()).await;
+	//this test will pass only when this functions on yui solidity side return true
+	/* 
+		require(
+			verifyConnectionState(
+				connection, msg_.proofHeight, msg_.proofTry, msg_.counterpartyConnectionID, expectedConnection
+			),
+			"failed to verify connection state"
+		);
+		require(
+			verifyClientState(
+				connection,
+				msg_.proofHeight,
+				IBCCommitment.clientStatePath(connection.counterparty.client_id),
+				msg_.proofClient,
+				msg_.clientStateBytes
+			),
+			"failed to verify clientState"
+		);
+	*/
+	ibc_handler.connection_open_try(yui_conn_try.into_token()).await;
 
 
 
