@@ -20,9 +20,9 @@ use ibc::{
 	core::{
 		ics02_client::{height::Height, trust_threshold::TrustThreshold, msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient}},
 		ics04_channel::packet::{Packet, Sequence},
-		ics24_host::identifier::{ChannelId, PortId, ConnectionId, ChainId}, ics03_connection::{connection::Counterparty, msgs::conn_open_init::MsgConnectionOpenInit}, ics23_commitment::commitment::CommitmentPrefix,
+		ics24_host::identifier::{ChannelId, PortId, ConnectionId, ChainId}, ics03_connection::{connection::Counterparty, msgs::{conn_open_init::MsgConnectionOpenInit, conn_open_ack::MsgConnectionOpenAck}}, ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
 	},
-	timestamp::Timestamp, protobuf::types::SignedHeader,
+	timestamp::Timestamp, protobuf::types::SignedHeader, proofs::{Proofs, ConsensusProof},
 };
 use ibc_proto::google::protobuf::Any;
 use ics07_tendermint::{client_state::{ClientState}};
@@ -353,6 +353,40 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 	let result = hyperspace.submit(vec![msg]).await.unwrap();
+
+	pub fn get_dummy_proof() -> Vec<u8> {
+		"Y29uc2Vuc3VzU3RhdGUvaWJjb25lY2xpZW50LzIy".as_bytes().to_vec()
+	}
+	
+	//open ack
+	let x = CommitmentProofBytes::try_from(get_dummy_proof()).unwrap();
+	let proofs = Proofs::new(
+		x.clone(),
+		Some(x.clone()),
+		Some(ConsensusProof::new(x.clone(), Height { revision_number: 1, revision_height: 1 }).unwrap()),
+		Some(x.clone()),
+		Height::new(1, 1),
+	).unwrap();
+	//
+	let msg = MsgConnectionOpenAck::<LocalClientTypes> {
+		connection_id: ConnectionId::new(0),
+		counterparty_connection_id: ConnectionId::new(0),
+		client_state: Some(AnyClientState::Tendermint(client_state.clone())),
+		proofs: proofs,
+		host_consensus_state_proof: get_dummy_proof(),
+		version: ibc::core::ics03_connection::version::Version::default(),
+		signer: Signer::from_str("s").unwrap(),
+	};
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+
+	//connectionOpenAck
+	let result = hyperspace.submit(vec![msg]).await.unwrap();
+
+
+
+
+
+
 
 	let duration = std::time::Instant::now().duration_since(start);
 	println!("Time elapsed: {:.2} seconds", duration.as_secs());
