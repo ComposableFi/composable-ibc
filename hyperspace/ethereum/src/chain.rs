@@ -22,7 +22,21 @@ use primitives::mock::LocalClientTypes;
 use primitives::{Chain, CommonClientState, LightClientSync, MisbehaviourHandler};
 use serde::__private::de;
 
+use ibc::core::ics04_channel::msgs as channel_msgs;
+use channel_msgs::chan_close_confirm::MsgChannelCloseConfirm;
+use channel_msgs::timeout_on_close::MsgTimeoutOnClose;
+use channel_msgs::timeout::MsgTimeout;
+use channel_msgs::acknowledgement::MsgAcknowledgement;
+use channel_msgs::recv_packet::MsgRecvPacket;
+use channel_msgs::chan_close_init::MsgChannelCloseInit;
+use channel_msgs::chan_open_confirm::MsgChannelOpenConfirm;
+use channel_msgs::chan_open_ack::MsgChannelOpenAck;
+use channel_msgs::chan_open_try::MsgChannelOpenTry;
+use channel_msgs::chan_open_init::MsgChannelOpenInit;
+
+
 use crate::contract::IbcHandler;
+use crate::yui_types::IntoToken;
 use crate::yui_types::ics03_connection::conn_open_try::YuiMsgConnectionOpenTry;
 use crate::{client::EthereumClient, ibc_provider::BlockHeight};
 
@@ -560,6 +574,43 @@ impl Chain for EthereumClient {
 				ibc_handler.connection_open_confirm(token).await;
 				return Ok(());
 			}
+			
+			else if msg.type_url == channel_msgs::chan_open_init::TYPE_URL{
+				let msg = MsgChannelOpenInit::decode_vec(&msg.value).unwrap();
+				let token = msg.into_token();
+				let channel_id = ibc_handler.send::<String>(token, "channelOpenInit").await;
+				return Ok(());
+			}
+			else if msg.type_url == channel_msgs::chan_open_try::TYPE_URL{
+				let msg = MsgChannelOpenTry::decode_vec(&msg.value).unwrap();
+			}
+			else if msg.type_url == channel_msgs::chan_open_ack::TYPE_URL{	
+				let msg = MsgChannelOpenAck::decode_vec(&msg.value).unwrap();
+			}
+			else if msg.type_url == channel_msgs::chan_open_confirm::TYPE_URL{
+				let msg = MsgChannelOpenConfirm::decode_vec(&msg.value).unwrap();
+			}
+			else if msg.type_url == channel_msgs::chan_close_init::TYPE_URL{
+				let msg = MsgChannelCloseInit::decode_vec(&msg.value).unwrap();
+			}
+			else if msg.type_url == channel_msgs::chan_close_confirm::TYPE_URL{
+				let msg = MsgChannelCloseConfirm::decode_vec(&msg.value).unwrap();
+			}
+			else if msg.type_url == channel_msgs::timeout_on_close::TYPE_URL{
+				let msg = MsgTimeoutOnClose::decode_vec(&msg.value).unwrap();
+			}
+			else if msg.type_url == channel_msgs::timeout::TYPE_URL{
+				let msg = MsgTimeout::decode_vec(&msg.value).unwrap();
+			}
+			else if msg.type_url == channel_msgs::acknowledgement::TYPE_URL{
+				let msg = MsgAcknowledgement::decode_vec(&msg.value).unwrap();
+			}
+			else if msg.type_url == channel_msgs::recv_packet::TYPE_URL{
+				let msg = MsgRecvPacket::decode_vec(&msg.value).unwrap();
+			}
+			
+
+
 			unimplemented!("does not support this msg type for now");
 		};
 

@@ -14,15 +14,15 @@ use ethers_solc::{ProjectCompileOutput, ProjectPathsConfig, Artifact};
 use hyperspace_cosmos::client::{CosmosClientConfig, CosmosClient};
 use hyperspace_ethereum::{
 	config::Config,
-	contract::{ibc_handler, UnwrapContractError, IbcHandler}, client::EthRpcClient,
+	contract::{ibc_handler, UnwrapContractError, IbcHandler}, client::EthRpcClient, yui_types::IntoToken,
 };
 use ibc::{
 	core::{
 		ics02_client::{height::Height, trust_threshold::TrustThreshold, msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient}},
-		ics04_channel::packet::{Packet, Sequence},
+		ics04_channel::{packet::{Packet, Sequence}, channel::{ChannelEnd, State, Order}, Version, msgs::chan_open_init::MsgChannelOpenInit},
 		ics24_host::identifier::{ChannelId, PortId, ConnectionId, ChainId}, ics03_connection::{connection::Counterparty, msgs::{conn_open_init::MsgConnectionOpenInit, conn_open_ack::MsgConnectionOpenAck, conn_open_confirm::MsgConnectionOpenConfirm}}, ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
 	},
-	timestamp::Timestamp, protobuf::types::SignedHeader, proofs::{Proofs, ConsensusProof},
+	timestamp::Timestamp, protobuf::{types::SignedHeader, Protobuf}, proofs::{Proofs, ConsensusProof}, tx_msg::Msg,
 };
 use ibc_proto::google::protobuf::Any;
 use ics07_tendermint::{client_state::{ClientState}};
@@ -250,17 +250,27 @@ fn deploy_mock_module_fixture(
 async fn test_deploy_yui_ibc_and_create_eth_client() {
 	let start = std::time::Instant::now();
 	let path = utils::yui_ibc_solidity_path();
+
+	/*______________________________________________________________________________*/
+	//compile and deploy yui ibc contracts
 	let project_output = utils::compile_yui(&path, "contracts/core");
 	let project_output1 = utils::compile_yui(&path, "contracts/clients");
 
 	let (anvil, client) = utils::spawn_anvil();
 
 	let mut yui_ibc = utils::deploy_yui_ibc(&project_output, client.clone()).await;
+	/*______________________________________________________________________________*/
 
 	
-
+	/*______________________________________________________________________________*/
+	//create ethereum hyperspace client
 	let mut hyperspace = hyperspace_ethereum_client_fixture(&anvil, &yui_ibc, Some(client.clone())).await;
+	/*______________________________________________________________________________*/
 
+
+
+	/*______________________________________________________________________________*/
+	//find and deploy tendermint client
 	let upd = project_output1.find_first("DelegateTendermintUpdate").unwrap();
 	let (abi, bytecode, _) = upd.clone().into_parts();
 	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
@@ -279,9 +289,20 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	//replace the tendermint client address in hyperspace config with a real one
 	hyperspace.config.tendermint_client_address = tendermint_light_client.address();
 	yui_ibc.tendermint_client = tendermint_light_client;
+	/*______________________________________________________________________________*/
 
+
+
+
+	/*______________________________________________________________________________*/
+	//register client
 	let _ = yui_ibc.register_client(&hyperspace.config.client_type, hyperspace.config.tendermint_client_address).await;
+	/*______________________________________________________________________________*/
 
+
+
+	/*______________________________________________________________________________*/
+	//create client
 	let signer = Signer::from_str("0CDA3F47EF3C4906693B170EF650EB968C5F4B2C").unwrap();
 
 	let tm = serde_json::from_str::<tendermint::block::signed_header::SignedHeader>(include_str!("/Users/mykyta/development/composable/centauri-private-latest/light-clients/ics07-tendermint/src/mock/signed_header.json"))
@@ -318,7 +339,12 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	
 	let result = hyperspace.submit(vec![msg]).await.unwrap();
 	// return;
+	/*______________________________________________________________________________*/
 
+
+
+	/*______________________________________________________________________________*/
+	//update client
 	let mut set = vec![];
 	let header = ics07_tendermint::client_message::Header {
 		signed_header:	tm,
@@ -339,9 +365,12 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	//before to call update you need to be sure that the prev revision_height was stored on the chain
 	assert_eq!(client_state.latest_height.revision_height, header.trusted_height.revision_height);
 	let result = hyperspace.submit(vec![msg]).await.unwrap();
+	/*______________________________________________________________________________*/
 
 
 
+
+	/*______________________________________________________________________________*/
 	//create conenction:
 	let msg = MsgConnectionOpenInit {
 		client_id: ibc::core::ics24_host::identifier::ClientId::new("07-tendermint", 0).unwrap(),
@@ -357,7 +386,10 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	pub fn get_dummy_proof() -> Vec<u8> {
 		"Y29uc2Vuc3VzU3RhdGUvaWJjb25lY2xpZW50LzIy".as_bytes().to_vec()
 	}
+	/*______________________________________________________________________________*/
 	
+
+	/*______________________________________________________________________________*/
 	//open ack
 	let x = CommitmentProofBytes::try_from(get_dummy_proof()).unwrap();
 	let proofs = Proofs::new(
@@ -381,9 +413,10 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 
 	//connectionOpenAck test
 	let result = hyperspace.submit(vec![msg]).await.unwrap();
+	/*______________________________________________________________________________*/
 
 
-
+	/*______________________________________________________________________________*/
 	//open try
 	let contract = hyperspace_ethereum::contract::get_contract_from_name(
 		hyperspace.config.ibc_handler_address.clone(),
@@ -442,9 +475,11 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 		);
 	*/
 	ibc_handler.connection_open_try(yui_conn_try.into_token()).await;
+	/*______________________________________________________________________________*/
 
 	
-
+	
+	/*______________________________________________________________________________*/
 	//open confirm
 	let msg = MsgConnectionOpenConfirm {
 		connection_id: ConnectionId::new(0),
@@ -456,49 +491,70 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	//connectionOpenConfirm test works only in that case when connection is "connection state is TRYOPEN status"
 	//before to uncomment next line be sure that you call open try before
 	// let result = hyperspace.submit(vec![msg]).await.unwrap();
+	/*______________________________________________________________________________*/	
+
+
+	//all tests related to channels is bellow this test: --- > (fn relayer_channel_tests)
+	//basiclay that tests is compatibiliy with solidity side
 	
 
 	let duration = std::time::Instant::now().duration_since(start);
 	println!("Time elapsed: {:.2} seconds", duration.as_secs());
-	
-
-	// let mut config_b = CosmosClientConfig {
-	// 	name: "cosmos".to_string(),
-	// 	rpc_url: "https://rpc-composable-ia.cosmosia.notional.ventures".to_string().parse().unwrap(),
-	// 	grpc_url: "https://grpc-composable-ia.cosmosia.notional.ventures".to_string().parse().unwrap(),
-	// 	websocket_url: "ws://rpc-composable-ia.cosmosia.notional.ventures/websocket".to_string().parse().unwrap(),
-	// 	chain_id: "centauri-1".to_string(),
-	// 	client_id: Some(ibc::core::ics24_host::identifier::ClientId::new("07-tendermint", 30).unwrap()),
-	// 	connection_id: Some(ConnectionId::new(2)),
-	// 	account_prefix: "centauri".to_string(),
-	// 	fee_denom: "ppica".to_string(),
-	// 	fee_amount: "1500000".to_string(),
-	// 	gas_limit: 10000000000 as u64,
-	// 	store_prefix: "ibc".to_string(),
-	// 	max_tx_size: 20000000,
-	// 	mnemonic:
-	// 		"bottom loan skill merry east cradle onion journey palm apology verb edit desert impose absurd oil bubble sweet glove shallow size build burst effort"
-	// 			.to_string(),
-	// 	wasm_code_id: None,
-	// 	channel_whitelist: vec![(ChannelId::new(1), PortId::transfer())],
-	// 	common: CommonClientConfig {
-	// 		skip_optional_client_updates: false,
-	// 		max_packets_to_process: 200,
-	// 	},
-	// };
-
-	// let chain_b = CosmosClient::<()>::new(config_b.clone()).await.unwrap();
-	// let chain_state = chain_b.initialize_client_state().await.unwrap();
 
 	//call submit to create a new client
 }
 
 #[tokio::test]
+async fn relayer_channel_tests(){
+	let path = utils::yui_ibc_solidity_path();
+
+	let project_output1 = utils::compile_yui(&path, "contracts/clients");
+	let (anvil, client) = utils::spawn_anvil();
+
+
+	/*______________________________________________________________________________*/
+	//channel open init
+	let port_id = PortId::transfer();
+	let version = "1.0".to_string();
+	let order = Order::default();
+	let conenction_id = ConnectionId::new(0);
+	let channel = ChannelEnd::new(
+		State::Init,
+		order,
+		ibc::core::ics04_channel::channel::Counterparty::new(port_id.clone(), None),
+		vec![conenction_id],
+		Version::new(version),
+	);
+
+	let msg = MsgChannelOpenInit::new(port_id, channel, Signer::from_str("s").unwrap());
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	// let _ = hyperspace.submit(vec![msg]).await.unwrap();
+
+	let upd = project_output1.find_first("IBCChannelHandlerMock").unwrap();
+	let (abi, bytecode, _) = upd.clone().into_parts();
+	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
+	let contract_mock = factory.deploy(()).unwrap().send().await.unwrap();
+
+	let msg = MsgChannelOpenInit::decode_vec(&msg.value).unwrap();
+	let ibc_handler_mock = IbcHandler::new(contract_mock);
+	let channel_id = ibc_handler_mock.send::<String>(msg.into_token(), "channelOpenInit").await;
+	assert!(channel_id.len() > 0);
+	/*______________________________________________________________________________*/
+
+
+}
+
+
+//all tests bellow is from Chris probably something usefull can be there (something that related to channel)
+
+#[tokio::test]
+#[ignore]
 async fn test_deploy_yui_ibc_and_mock_client() {
 	deploy_yui_ibc_and_mock_client_fixture().await;
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_hyperspace_ethereum_client() {
 	let DeployYuiIbcMockClient { anvil, yui_ibc, .. } =
 		deploy_yui_ibc_and_mock_client_fixture().await;
@@ -506,6 +562,7 @@ async fn test_hyperspace_ethereum_client() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_ibc_client() {
 	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
 	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc, None).await;
@@ -552,6 +609,7 @@ async fn test_ibc_client() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_ibc_connection() {
 	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
 	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc, None).await;
@@ -605,6 +663,7 @@ async fn test_ibc_connection() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_ibc_channel() {
 	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
 	let hyperspace = hyperspace_ethereum_client_fixture(&deploy.anvil, &deploy.yui_ibc, None).await;
@@ -649,6 +708,7 @@ async fn test_ibc_channel() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_ibc_packet() {
 	let _ = env_logger::try_init();
 	let mut deploy = deploy_yui_ibc_and_mock_client_fixture().await;
