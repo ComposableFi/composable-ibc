@@ -220,7 +220,7 @@ fn deploy_mock_module_fixture(
 		let constructor_args = (Token::Address(deploy.yui_ibc.diamond.address()),);
 		let contract =
 			utils::deploy_contract(contract, constructor_args, deploy.client.clone()).await;
-		println!("Mock module address: {:?}", x.address());
+		println!("Mock module address: {:?}", contract.address());
 		contract
 	}
 }
