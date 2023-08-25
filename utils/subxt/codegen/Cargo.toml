@@ -20,4 +20,4 @@ frame-metadata = { version = "15.0.0", features = ["v14", "std"] }
 syn = "1.0.98"
 codec = { package = "parity-scale-codec", version = "3.0.0" }
 hex = "0.4.3"
-wasm-testbed = { git = "https://github.com/chevdor/subwasm", rev = "f3cfa4b75eca99172425c6a249cc61a6f6520cce" }
+wasm-testbed = { git = "https://github.com/chevdor/subwasm", release = "v0.20" }

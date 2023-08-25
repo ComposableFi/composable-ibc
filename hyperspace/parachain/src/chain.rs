@@ -15,7 +15,7 @@
 use super::{error::Error, signer::ExtrinsicSigner, ParachainClient};
 use crate::{parachain::UncheckedExtrinsic, provider::TransactionId, FinalityProtocol};
 use anyhow::anyhow;
-use beefy_gadget_rpc::BeefyApiClient;
+use sc_consensus_beefy_rpc::BeefyApiClient;
 use codec::{Decode, Encode};
 use finality_grandpa::BlockNumberOps;
 use finality_grandpa_rpc::GrandpaApiClient;

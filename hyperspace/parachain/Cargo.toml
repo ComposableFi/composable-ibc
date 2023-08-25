@@ -74,6 +74,8 @@ ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
 finality-grandpa-rpc = { package = "sc-consensus-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43" }
 sp-consensus-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+sc-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+sp-authority-discovery = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 
 [dev-dependencies]
 derive_more = "0.99.17"

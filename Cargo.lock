@@ -148,6 +148,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "affix"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "50e7ea84d3fa2009f355f8429a0b418a96849135a4188fadf384f59127d5d4bc"
+dependencies = [
+ "convert_case 0.5.0",
+]
+
+[[package]]
 name = "ahash"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -509,7 +518,7 @@ dependencies = [
  "rustls-native-certs 0.6.2",
  "tokio",
  "tokio-rustls 0.23.4",
- "tungstenite",
+ "tungstenite 0.17.3",
 ]
 
 [[package]]
@@ -1402,7 +1411,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap 3.2.23",
- "frame-metadata",
+ "frame-metadata 15.1.0",
  "hex",
  "http",
  "jsonrpsee",
@@ -1497,6 +1506,12 @@ name = "convert_case"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
+
+[[package]]
+name = "convert_case"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb4a24b1aaf0fd0ce8b45161144d6f42cd91677fd5940fd431183eb023b3a2b8"
 
 [[package]]
 name = "convert_case"
@@ -3597,6 +3612,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "frame-metadata"
+version = "16.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87cf1549fba25a6fcac22785b61698317d958e96cac72a59102ea45b9ae64692"
+dependencies = [
+ "cfg-if 1.0.0",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+]
+
+[[package]]
+name = "frame-metadata"
+version = "16.0.0"
+source = "git+https://github.com/paritytech/frame-metadata?branch=main#31e40963d0db77cfa14b7c0cd06a78ab8fc27836"
+dependencies = [
+ "cfg-if 1.0.0",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+]
+
+[[package]]
 name = "frame-remote-externalities"
 version = "0.10.0-dev"
 source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
@@ -3624,7 +3662,7 @@ source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.
 dependencies = [
  "bitflags 1.3.2",
  "environmental",
- "frame-metadata",
+ "frame-metadata 15.1.0",
  "frame-support-procedural",
  "impl-trait-for-tuples",
  "k256 0.13.1",
@@ -3885,10 +3923,6 @@ name = "futures-timer"
 version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e64b03909df88034c26dc1547e8970b91f98bdb65165d6a4e9110d94263dbb2c"
-dependencies = [
- "gloo-timers",
- "send_wrapper",
-]
 
 [[package]]
 name = "futures-util"
@@ -4044,51 +4078,6 @@ dependencies = [
  "fnv",
  "log",
  "regex",
-]
-
-[[package]]
-name = "gloo-net"
-version = "0.2.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9902a044653b26b99f7e3693a42f171312d9be8b26b5697bd1e43ad1f8a35e10"
-dependencies = [
- "futures-channel",
- "futures-core",
- "futures-sink",
- "gloo-utils",
- "js-sys",
- "pin-project",
- "serde",
- "serde_json",
- "thiserror",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
-
-[[package]]
-name = "gloo-timers"
-version = "0.2.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b995a66bb87bebce9a0f4a95aed01daca4872c050bfcb21653361c03bc35e5c"
-dependencies = [
- "futures-channel",
- "futures-core",
- "js-sys",
- "wasm-bindgen",
-]
-
-[[package]]
-name = "gloo-utils"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8e8fc851e9c7b9852508bc6e3f690f452f474417e8545ec9857b7f7377036b5"
-dependencies = [
- "js-sys",
- "serde",
- "serde_json",
- "wasm-bindgen",
- "web-sys",
 ]
 
 [[package]]
@@ -4756,8 +4745,10 @@ dependencies = [
  "rs_merkle",
  "sc-consensus-beefy-rpc",
  "sc-consensus-grandpa-rpc",
+ "sc-keystore",
  "serde",
  "serde_json",
+ "sp-authority-discovery",
  "sp-consensus-beefy",
  "sp-consensus-grandpa",
  "sp-core 7.0.0",
@@ -5520,7 +5511,6 @@ dependencies = [
  "jsonrpsee-proc-macros",
  "jsonrpsee-server",
  "jsonrpsee-types",
- "jsonrpsee-wasm-client",
  "jsonrpsee-ws-client",
  "tracing",
 ]
@@ -5531,11 +5521,7 @@ version = "0.16.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8b3815d9f5d5de348e5f162b316dc9cdf4548305ebb15b4eb9328e66cf27d7a"
 dependencies = [
- "anyhow",
- "futures-channel",
- "futures-timer",
  "futures-util",
- "gloo-net",
  "http",
  "jsonrpsee-core",
  "jsonrpsee-types",
@@ -5576,7 +5562,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
- "wasm-bindgen-futures",
 ]
 
 [[package]]
@@ -5645,17 +5630,6 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tracing",
-]
-
-[[package]]
-name = "jsonrpsee-wasm-client"
-version = "0.16.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18e5df77c8f625d36e4cfb583c5a674eccebe32403fcfe42f7ceff7fac9324dd"
-dependencies = [
- "jsonrpsee-client-transport",
- "jsonrpsee-core",
- "jsonrpsee-types",
 ]
 
 [[package]]
@@ -6899,6 +6873,16 @@ dependencies = [
  "digest 0.10.6",
  "multihash-derive",
  "sha2 0.10.6",
+ "unsigned-varint",
+]
+
+[[package]]
+name = "multihash"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2fd59dcc2bbe70baabeac52cd22ae52c55eefe6c38ff11a9439f16a350a939f2"
+dependencies = [
+ "core2",
  "unsigned-varint",
 ]
 
@@ -12581,7 +12565,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11f549769261561e6764218f847e500588f9a79a289de49ce92f9e26642a3574"
 dependencies = [
  "either",
- "frame-metadata",
+ "frame-metadata 15.1.0",
  "parity-scale-codec",
  "scale-bits",
  "scale-decode",
@@ -12799,12 +12783,6 @@ name = "semver-parser"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
-
-[[package]]
-name = "send_wrapper"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f638d531eccd6e23b980caf34876660d38e265409d8e99b397ab71eb3612fad0"
 
 [[package]]
 name = "serde"
@@ -13711,7 +13689,7 @@ name = "sp-metadata-ir"
 version = "0.1.0"
 source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
 dependencies = [
- "frame-metadata",
+ "frame-metadata 15.1.0",
  "parity-scale-codec",
  "scale-info",
  "sp-std 5.0.0",
@@ -14406,6 +14384,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "subrpcer"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92660ce1320c3b4351b025ffc2932c3d410c71625be049922acefe1cae81c2e9"
+dependencies = [
+ "affix",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "substrate-bip39"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -14472,16 +14461,18 @@ dependencies = [
 
 [[package]]
 name = "substrate-runtime-proposal-hash"
-version = "0.18.0"
-source = "git+https://github.com/chevdor/subwasm?rev=f3cfa4b75eca99172425c6a249cc61a6f6520cce#f3cfa4b75eca99172425c6a249cc61a6f6520cce"
+version = "0.20.0"
+source = "git+https://github.com/chevdor/subwasm#dd1aff10a3004316dbb648775fea669e2a8dc73d"
 dependencies = [
  "blake2",
+ "frame-metadata 16.0.0 (git+https://github.com/paritytech/frame-metadata?branch=main)",
  "hex",
  "parity-scale-codec",
  "sp-core 7.0.0",
  "sp-io 7.0.0",
  "sp-runtime 7.0.0",
  "sp-wasm-interface 7.0.0",
+ "thiserror",
 ]
 
 [[package]]
@@ -14559,7 +14550,7 @@ dependencies = [
  "blake2",
  "derivative",
  "either",
- "frame-metadata",
+ "frame-metadata 15.1.0",
  "futures",
  "getrandom 0.2.8",
  "hex",
@@ -14590,7 +14581,7 @@ version = "0.28.0"
 source = "git+https://github.com/paritytech/subxt?rev=2a4da618a033bb82f768e4ef67b093b371f8b492#2a4da618a033bb82f768e4ef67b093b371f8b492"
 dependencies = [
  "darling",
- "frame-metadata",
+ "frame-metadata 15.1.0",
  "heck",
  "hex",
  "jsonrpsee",
@@ -14628,7 +14619,7 @@ name = "subxt-metadata"
 version = "0.28.0"
 source = "git+https://github.com/paritytech/subxt?rev=2a4da618a033bb82f768e4ef67b093b371f8b492#2a4da618a033bb82f768e4ef67b093b371f8b492"
 dependencies = [
- "frame-metadata",
+ "frame-metadata 15.1.0",
  "parity-scale-codec",
  "scale-info",
  "sp-core-hashing 8.0.0",
@@ -15605,6 +15596,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "tungstenite"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e862a1c4128df0112ab625f55cd5c934bcb4312ba80b39ae4b4835a3fd58e649"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "data-encoding",
+ "http",
+ "httparse",
+ "log",
+ "rand 0.8.5",
+ "rustls 0.21.6",
+ "rustls-native-certs 0.6.2",
+ "sha1",
+ "thiserror",
+ "url",
+ "utf-8",
+]
+
+[[package]]
 name = "turn"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -15753,6 +15765,8 @@ dependencies = [
  "log",
  "once_cell",
  "rustls 0.20.8",
+ "serde",
+ "serde_json",
  "url",
  "webpki 0.22.0",
  "webpki-roots 0.22.6",
@@ -15960,15 +15974,21 @@ dependencies = [
 
 [[package]]
 name = "wasm-loader"
-version = "0.18.0"
-source = "git+https://github.com/chevdor/subwasm?rev=f3cfa4b75eca99172425c6a249cc61a6f6520cce#f3cfa4b75eca99172425c6a249cc61a6f6520cce"
+version = "0.20.0"
+source = "git+https://github.com/chevdor/subwasm#dd1aff10a3004316dbb648775fea669e2a8dc73d"
 dependencies = [
- "hex",
- "jsonrpsee",
+ "array-bytes 6.1.0",
  "log",
+ "multibase",
+ "multihash 0.19.0",
  "serde",
+ "serde_json",
  "sp-maybe-compressed-blob",
- "tokio",
+ "subrpcer",
+ "thiserror",
+ "tungstenite 0.20.0",
+ "ureq",
+ "url",
 ]
 
 [[package]]
@@ -16013,15 +16033,16 @@ dependencies = [
 
 [[package]]
 name = "wasm-testbed"
-version = "0.18.0"
-source = "git+https://github.com/chevdor/subwasm?rev=f3cfa4b75eca99172425c6a249cc61a6f6520cce#f3cfa4b75eca99172425c6a249cc61a6f6520cce"
+version = "0.20.0"
+source = "git+https://github.com/chevdor/subwasm#dd1aff10a3004316dbb648775fea669e2a8dc73d"
 dependencies = [
- "frame-metadata",
+ "frame-metadata 16.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex",
  "log",
  "parity-scale-codec",
  "sc-executor",
  "sc-executor-common",
+ "scale-info",
  "sp-core 7.0.0",
  "sp-io 7.0.0",
  "sp-runtime 7.0.0",
@@ -16029,6 +16050,7 @@ dependencies = [
  "sp-version",
  "sp-wasm-interface 7.0.0",
  "substrate-runtime-proposal-hash",
+ "thiserror",
  "wasm-loader",
 ]
 

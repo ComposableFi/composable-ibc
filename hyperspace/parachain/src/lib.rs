@@ -66,7 +66,8 @@ use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctions
 use pallet_mmr_primitives::Proof;
 use primitives::{CommonClientState, KeyProvider};
 use sp_core::{ecdsa, ed25519, sr25519, Bytes, Pair, H256};
-use sp_keystore::{testing::KeyStore, SyncCryptoStore, SyncCryptoStorePtr};
+use sp_keystore::{Keystore, KeystorePtr};
+use sc_keystore::LocalKeystore;
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
 	KeyTypeId, MultiSignature, MultiSigner,
@@ -112,7 +113,7 @@ pub struct ParachainClient<T: light_client_common::config::Config> {
 	/// Public key for relayer on chain
 	pub public_key: MultiSigner,
 	/// Reference to keystore
-	pub key_store: SyncCryptoStorePtr,
+	pub key_store: KeystorePtr,
 	/// Key type Id
 	pub key_type_id: KeyTypeId,
 	/// used for encoding relayer address.
@@ -220,7 +221,7 @@ where
 
 		let max_extrinsic_weight = fetch_max_extrinsic_weight(&para_client).await?;
 
-		let key_store: SyncCryptoStorePtr = Arc::new(KeyStore::new());
+		let key_store: KeystorePtr = Arc::new(LocalKeystore::in_memory());
 		let key_type = KeyType::from_str(&config.key_type)?;
 		let key_type_id = key_type.to_key_type_id();
 
@@ -242,7 +243,7 @@ where
 				.into(),
 		};
 
-		SyncCryptoStore::insert_unknown(
+		Keystore::insert(
 			&*key_store,
 			key_type_id,
 			&*config.private_key,

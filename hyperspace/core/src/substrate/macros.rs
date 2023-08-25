@@ -639,7 +639,7 @@ macro_rules! define_runtime_storage {
 			}
 
 			fn beefy_authorities(
-			) -> LocalAddress<StaticStorageMapKey, Vec<sp_beefy::crypto::Public>, Yes, Yes, ()> {
+			) -> LocalAddress<StaticStorageMapKey, Vec<sp_consensus_beefy::crypto::Public>, Yes, Yes, ()> {
 				let storage = $beefy_authorities;
 				LocalAddress::new(storage)
 			}
