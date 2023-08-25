@@ -752,7 +752,7 @@ name = "binary-merkle-tree"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
 dependencies = [
- "hash-db 0.16.0",
+ "hash-db",
  "log",
 ]
 
@@ -4099,7 +4099,7 @@ dependencies = [
  "derive_more",
  "finality-grandpa",
  "frame-support",
- "hash-db 0.15.2",
+ "hash-db",
  "light-client-common",
  "log",
  "parity-scale-codec",
@@ -4123,7 +4123,7 @@ dependencies = [
  "futures",
  "grandpa-light-client-primitives",
  "grandpa-prover",
- "hash-db 0.15.2",
+ "hash-db",
  "hex",
  "hex-literal 0.3.4",
  "hyperspace-core",
@@ -4253,12 +4253,6 @@ dependencies = [
  "serde_json",
  "thiserror",
 ]
-
-[[package]]
-name = "hash-db"
-version = "0.15.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d23bd4e7b5eda0d0f3a307e8b381fdc8ba9000f26fbe912250c0a4cc3956364a"
 
 [[package]]
 name = "hash-db"
@@ -6426,7 +6420,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "derive_more",
- "hash-db 0.15.2",
+ "hash-db",
  "ibc",
  "ibc-proto",
  "parity-scale-codec",
@@ -6691,7 +6685,7 @@ version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "808b50db46293432a45e63bc15ea51e0ab4c0a1647b8eb114e31a3e698dd6fbe"
 dependencies = [
- "hash-db 0.16.0",
+ "hash-db",
 ]
 
 [[package]]
@@ -11537,7 +11531,7 @@ name = "sc-client-db"
 version = "0.10.0-dev"
 source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
 dependencies = [
- "hash-db 0.16.0",
+ "hash-db",
  "kvdb",
  "kvdb-memorydb",
  "kvdb-rocksdb",
@@ -13171,7 +13165,7 @@ name = "sp-api"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
 dependencies = [
- "hash-db 0.16.0",
+ "hash-db",
  "log",
  "parity-scale-codec",
  "scale-info",
@@ -13415,7 +13409,7 @@ dependencies = [
  "dyn-clonable",
  "ed25519-zebra",
  "futures",
- "hash-db 0.16.0",
+ "hash-db",
  "hash256-std-hasher",
  "impl-serde 0.4.0",
  "lazy_static",
@@ -13460,7 +13454,7 @@ dependencies = [
  "dyn-clonable",
  "ed25519-zebra",
  "futures",
- "hash-db 0.16.0",
+ "hash-db",
  "hash256-std-hasher",
  "impl-serde 0.4.0",
  "lazy_static",
@@ -13935,7 +13929,7 @@ name = "sp-state-machine"
 version = "0.13.0"
 source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
 dependencies = [
- "hash-db 0.16.0",
+ "hash-db",
  "log",
  "parity-scale-codec",
  "parking_lot 0.12.1",
@@ -13956,7 +13950,7 @@ version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1e49c3bfcc8c832c34552cd8194180cc60508c6d3d9b0b9615d6b7c3e275019"
 dependencies = [
- "hash-db 0.16.0",
+ "hash-db",
  "log",
  "parity-scale-codec",
  "parking_lot 0.12.1",
@@ -14118,7 +14112,7 @@ version = "7.0.0"
 source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
 dependencies = [
  "ahash 0.8.3",
- "hash-db 0.16.0",
+ "hash-db",
  "hashbrown 0.13.2",
  "lazy_static",
  "memory-db",
@@ -14142,7 +14136,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "58401c53c08b6ecad83acd7e14534c8bbcb3fa73e81e26685e0ac70e51b00c56"
 dependencies = [
  "ahash 0.8.3",
- "hash-db 0.16.0",
+ "hash-db",
  "hashbrown 0.13.2",
  "lazy_static",
  "memory-db",
@@ -15479,7 +15473,7 @@ version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "767abe6ffed88a1889671a102c2861ae742726f52e0a5a425b92c9fbfa7e9c85"
 dependencies = [
- "hash-db 0.16.0",
+ "hash-db",
  "hashbrown 0.13.2",
  "log",
  "rustc-hex",
@@ -15492,7 +15486,7 @@ version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4ed310ef5ab98f5fa467900ed906cb9232dd5376597e00fd4cba2a449d06c0b"
 dependencies = [
- "hash-db 0.16.0",
+ "hash-db",
 ]
 
 [[package]]
