@@ -4609,6 +4609,7 @@ dependencies = [
  "ibc-proto",
  "ibc-rpc",
  "ics07-tendermint",
+ "once_cell",
  "pallet-ibc",
  "prost",
  "serde",

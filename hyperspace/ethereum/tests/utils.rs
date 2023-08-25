@@ -511,9 +511,6 @@ where
 	let signatures = contract.abi().functions.keys().cloned().collect::<Vec<_>>();
 	signatures
 		.into_iter()
-		.inspect(|x| {
-			dbg!(x);
-		})
 		.filter(|val| val != "init(bytes)")
 		.map(|val| (val.clone(), contract.abi().function(&val).unwrap().short_signature()))
 		.collect()
@@ -557,10 +554,13 @@ where
 
 	let acc = client.default_sender().unwrap();
 
+	println!("Sender account: {acc:?}");
+
 	let contract = diamond_project_output.find_first("DiamondInit").unwrap();
 	let (abi, bytecode, _) = contract.clone().into_parts();
 	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
 	let diamond_init = factory.deploy(()).unwrap().send().await.unwrap();
+	println!("Diamond init address: {:?}", diamond_init.address());
 
 	let mut sigs = HashMap::<[u8; 4], (String, String)>::new();
 	let mut facet_cuts = vec![];
@@ -574,6 +574,7 @@ where
 		let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
 		let facet = factory.deploy(()).unwrap().send().await.unwrap();
 		let facet_address = facet.address();
+		println!("Deployed {facet_name} on {facet_address:?}");
 		deployed_facets.push(facet.clone());
 		let selectors = get_selectors(&facet);
 

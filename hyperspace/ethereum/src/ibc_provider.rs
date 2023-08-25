@@ -504,6 +504,7 @@ impl IbcProvider for EthereumClient {
 			Arc::clone(&self.http_rpc),
 		);
 
+		// channels[portId][channelId]
 		let binding = contract
 			.method::<_, (ChannelData, bool)>(
 				"getChannel",

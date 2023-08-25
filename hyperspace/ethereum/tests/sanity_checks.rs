@@ -149,6 +149,8 @@ async fn deploy_yui_ibc_and_mock_client_fixture() -> DeployYuiIbcMockClient {
 	)
 	.await;
 
+	println!("Mock client address: {:?}", ibc_mock_client.address());
+
 	// todo: some interactions between the mock client and the ibc handler to verify behaviour.
 
 	DeployYuiIbcMockClient {
@@ -195,7 +197,7 @@ async fn deploy_mock_client_fixture(deploy: &DeployYuiIbcMockClient) -> ClientId
 		.create_client(utils::mock::create_client_msg("mock-client"))
 		.await;
 	println!("client id: {}", string);
-	println!("ibc_handler contract addr: {:?}", deploy.yui_ibc.diamond.address());
+	println!("Diamond contract addr: {:?}", deploy.yui_ibc.diamond.address());
 	ClientId(string)
 }
 
@@ -216,7 +218,10 @@ fn deploy_mock_module_fixture(
 
 		let contract = clients.find_first("MockModule").expect("no MockModule in project output");
 		let constructor_args = (Token::Address(deploy.yui_ibc.diamond.address()),);
-		utils::deploy_contract(contract, constructor_args, deploy.client.clone()).await
+		let contract =
+			utils::deploy_contract(contract, constructor_args, deploy.client.clone()).await;
+		println!("Mock module address: {:?}", x.address());
+		contract
 	}
 }
 
