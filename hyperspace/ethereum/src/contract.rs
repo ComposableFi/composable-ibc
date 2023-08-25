@@ -1,7 +1,7 @@
 use std::{sync::Arc, path::{Path, PathBuf}};
 
 use ethers::{
-	abi::{Abi, Address, Detokenize, Token},
+	abi::{Abi, Address, Detokenize, Token, Tokenizable},
 	prelude::Contract,
 	providers::Middleware,
 };
@@ -107,6 +107,17 @@ where
 		
 	}
 
+	pub async fn send<T: Tokenizable>(&self, msg: Token, method_name: impl AsRef<str>) -> T {
+		let method = self.contract.method::<_, T>(method_name.as_ref(), (msg,)).unwrap();
+
+		let gas_estimate = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate);
+		let ret = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		ret
+	}
 
 	pub async fn register_client(&self, kind: &str, address: Address) {
 		let method = self
