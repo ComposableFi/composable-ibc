@@ -32,8 +32,8 @@ use primitives::{
 };
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use sp_consensus_grandpa::{AuthorityId, AuthoritySignature};
 use sp_core::H256;
-use sp_finality_grandpa::{AuthorityId, AuthoritySignature};
 use sp_runtime::traits::{One, Zero};
 use std::{
 	collections::{BTreeMap, BTreeSet},
@@ -138,7 +138,7 @@ where
 	where
 		<T as subxt::Config>::Header: Decode,
 	{
-		use sp_finality_grandpa::AuthorityList;
+		use sp_consensus_grandpa::AuthorityList;
 		let latest_relay_hash = self.relay_client.rpc().finalized_head().await.unwrap();
 		log::debug!(target: "hyperspace", "Latest relay hash: {:?}", latest_relay_hash);
 		let header = self

@@ -43,8 +43,8 @@ use primitives::{
 };
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use sp_consensus_grandpa::GRANDPA_ENGINE_ID;
 use sp_core::H256;
-use sp_finality_grandpa::GRANDPA_ENGINE_ID;
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
