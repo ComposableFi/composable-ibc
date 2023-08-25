@@ -11,7 +11,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 anyhow = "1.0.66"
 once_cell = "1.16.0"
 subxt-codegen = { package = "codegen", path = "../../../utils/subxt/codegen" }
-tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.32.0", features = ["macros", "rt-multi-thread"] }
 
 [dependencies]
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
@@ -31,7 +31,7 @@ light-client-common = { path = "../../../light-clients/common", features = ["ena
 jsonrpsee-core = { version = "0.16.2", features = ["async-client"] }
 
 # Optional deps
-subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/paritytech/subxt",  tag = "v0.31.0", features = ["substrate-compat"] }
 hex-literal = { version = "0.3.4" }
 serde_json = { version = "1.0.74" }
 pallet-mmr-rpc = { package = "mmr-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }

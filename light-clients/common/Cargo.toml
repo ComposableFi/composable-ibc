@@ -38,4 +38,4 @@ sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 sp-consensus-beefy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
-subxt = { git = "https://github.com/paritytech/subxt", rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"], optional = true }
+subxt = { git = "https://github.com/paritytech/subxt", tag = "v0.31.0", features = ["substrate-compat"], optional = true }
