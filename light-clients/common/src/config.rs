@@ -114,71 +114,71 @@ where
 		&self.entry_name
 	}
 
-	fn append_entry_bytes(&self, metadata: &Metadata, bytes: &mut Vec<u8>) -> Result<(), Error> {
-		let pallet = metadata.pallet(&self.pallet_name)?;
-		let storage = pallet.storage(&self.entry_name)?;
+	// fn append_entry_bytes(&self, metadata: &Metadata, bytes: &mut Vec<u8>) -> Result<(), Error> {
+	// 	let pallet = metadata.pallet(&self.pallet_name)?;
+	// 	let storage = pallet.storage(&self.entry_name)?;
 
-		match &storage.ty {
-			StorageEntryType::Plain(_) =>
-				if !self.storage_entry_keys.is_empty() {
-					Err(StorageAddressError::WrongNumberOfKeys {
-						expected: 0,
-						actual: self.storage_entry_keys.len(),
-					}
-					.into())
-				} else {
-					Ok(())
-				},
-			StorageEntryType::Map { hashers, key, .. } => {
-				let ty = metadata
-					.resolve_type(key.id)
-					.ok_or(StorageAddressError::MapTypeMustBeTuple)?;
+	// 	match &storage.ty {
+	// 		StorageEntryType::Plain(_) =>
+	// 			if !self.storage_entry_keys.is_empty() {
+	// 				Err(StorageAddressError::WrongNumberOfKeys {
+	// 					expected: 0,
+	// 					actual: self.storage_entry_keys.len(),
+	// 				}
+	// 				.into())
+	// 			} else {
+	// 				Ok(())
+	// 			},
+	// 		StorageEntryType::Map { hashers, key, .. } => {
+	// 			let ty = metadata
+	// 				.resolve_type(key.id)
+	// 				.ok_or(StorageAddressError::MapTypeMustBeTuple)?;
 
-				// If the key is a tuple, we encode each value to the corresponding tuple type.
-				// If the key is not a tuple, encode a single value to the key type.
-				let type_ids = match &ty.type_def {
-					TypeDef::Tuple(tuple) => Either::Left(tuple.fields.iter().map(|f| f.id)),
-					_other => Either::Right(std::iter::once(key.id)),
-				};
+	// 			// If the key is a tuple, we encode each value to the corresponding tuple type.
+	// 			// If the key is not a tuple, encode a single value to the key type.
+	// 			let type_ids = match &ty.type_def {
+	// 				TypeDef::Tuple(tuple) => Either::Left(tuple.fields.iter().map(|f| f.id)),
+	// 				_other => Either::Right(std::iter::once(key.id)),
+	// 			};
 
-				if type_ids.len() != self.storage_entry_keys.len() {
-					return Err(StorageAddressError::WrongNumberOfKeys {
-						expected: type_ids.len(),
-						actual: self.storage_entry_keys.len(),
-					}
-					.into())
-				}
+	// 			if type_ids.len() != self.storage_entry_keys.len() {
+	// 				return Err(StorageAddressError::WrongNumberOfKeys {
+	// 					expected: type_ids.len(),
+	// 					actual: self.storage_entry_keys.len(),
+	// 				}
+	// 				.into())
+	// 			}
 
-				if hashers.len() == 1 {
-					// One hasher; hash a tuple of all SCALE encoded bytes with the one hash
-					// function.
-					let mut input = Vec::new();
-					let iter = self.storage_entry_keys.iter().zip(type_ids);
-					for (key, type_id) in iter {
-						key.encode_with_metadata(type_id, metadata, &mut input)?;
-					}
-					hash_bytes(&input, &hashers[0], bytes);
-					Ok(())
-				} else if hashers.len() == type_ids.len() {
-					let iter = self.storage_entry_keys.iter().zip(type_ids).zip(hashers);
-					// A hasher per field; encode and hash each field independently.
-					for ((key, type_id), hasher) in iter {
-						let mut input = Vec::new();
-						key.encode_with_metadata(type_id, metadata, &mut input)?;
-						hash_bytes(&input, hasher, bytes);
-					}
-					Ok(())
-				} else {
-					// Mismatch; wrong number of hashers/fields.
-					Err(StorageAddressError::WrongNumberOfHashers {
-						hashers: hashers.len(),
-						fields: type_ids.len(),
-					}
-					.into())
-				}
-			},
-		}
-	}
+	// 			if hashers.len() == 1 {
+	// 				// One hasher; hash a tuple of all SCALE encoded bytes with the one hash
+	// 				// function.
+	// 				let mut input = Vec::new();
+	// 				let iter = self.storage_entry_keys.iter().zip(type_ids);
+	// 				for (key, type_id) in iter {
+	// 					key.encode_with_metadata(type_id, metadata, &mut input)?;
+	// 				}
+	// 				hash_bytes(&input, &hashers[0], bytes);
+	// 				Ok(())
+	// 			} else if hashers.len() == type_ids.len() {
+	// 				let iter = self.storage_entry_keys.iter().zip(type_ids).zip(hashers);
+	// 				// A hasher per field; encode and hash each field independently.
+	// 				for ((key, type_id), hasher) in iter {
+	// 					let mut input = Vec::new();
+	// 					key.encode_with_metadata(type_id, metadata, &mut input)?;
+	// 					hash_bytes(&input, hasher, bytes);
+	// 				}
+	// 				Ok(())
+	// 			} else {
+	// 				// Mismatch; wrong number of hashers/fields.
+	// 				Err(StorageAddressError::WrongNumberOfHashers {
+	// 					hashers: hashers.len(),
+	// 					fields: type_ids.len(),
+	// 				}
+	// 				.into())
+	// 			}
+	// 		},
+	// 	}
+	// }
 
 	fn validation_hash(&self) -> Option<[u8; 32]> {
 		self.validation_hash
