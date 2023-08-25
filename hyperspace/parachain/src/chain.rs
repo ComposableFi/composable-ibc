@@ -15,7 +15,6 @@
 use super::{error::Error, signer::ExtrinsicSigner, ParachainClient};
 use crate::{parachain::UncheckedExtrinsic, provider::TransactionId, FinalityProtocol};
 use anyhow::anyhow;
-use sc_consensus_beefy_rpc::BeefyApiClient;
 use codec::{Decode, Encode};
 use finality_grandpa::BlockNumberOps;
 use finality_grandpa_rpc::GrandpaApiClient;
@@ -42,6 +41,7 @@ use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::{
 	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, MisbehaviourHandler,
 };
+use sc_consensus_beefy_rpc::BeefyApiClient;
 use sp_core::{twox_128, H256};
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},

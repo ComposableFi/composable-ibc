@@ -58,9 +58,14 @@ where
 	let client_id = chain_b.client_id();
 	let latest_height = chain_a.latest_height_and_timestamp().await.unwrap().0;
 	let response = chain_a.query_client_state(latest_height, client_id).await.unwrap();
-	let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(response.client_state.unwrap(), |cs| {
-		matches!(cs, AnyClientState::Grandpa(_))
-	}).unwrap() else { unreachable!() };
+	let AnyClientState::Grandpa(client_state) =
+		AnyClientState::decode_recursive(response.client_state.unwrap(), |cs| {
+			matches!(cs, AnyClientState::Grandpa(_))
+		})
+		.unwrap()
+	else {
+		unreachable!()
+	};
 
 	let finality_event =
 		chain_b.finality_notifications().await.unwrap().next().await.expect("no event");
