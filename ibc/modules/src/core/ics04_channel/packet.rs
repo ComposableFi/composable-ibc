@@ -143,8 +143,7 @@ impl<'a> core::fmt::Debug for PacketData<'a> {
 impl core::fmt::Debug for Packet {
 	fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
 		// Remember: if you alter the definition of `Packet`,
-		// 1. update the formatter debug struct builder calls (return object of
-		//    this function)
+		// 1. update the formatter debug struct builder calls (return object of this function)
 		// 2. update this destructuring assignment accordingly
 		let Packet {
 			sequence: _,

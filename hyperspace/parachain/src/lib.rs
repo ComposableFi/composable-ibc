@@ -65,9 +65,9 @@ use light_client_common::config::{AsInner, RuntimeStorage};
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use pallet_mmr_primitives::Proof;
 use primitives::{CommonClientState, KeyProvider};
+use sc_keystore::LocalKeystore;
 use sp_core::{ecdsa, ed25519, sr25519, Bytes, Pair, H256};
 use sp_keystore::{Keystore, KeystorePtr};
-use sc_keystore::LocalKeystore;
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
 	KeyTypeId, MultiSignature, MultiSigner,
@@ -243,13 +243,8 @@ where
 				.into(),
 		};
 
-		Keystore::insert(
-			&*key_store,
-			key_type_id,
-			&*config.private_key,
-			public_key.as_ref(),
-		)
-		.unwrap();
+		Keystore::insert(&*key_store, key_type_id, &*config.private_key, public_key.as_ref())
+			.unwrap();
 
 		Ok(Self {
 			name: config.name,
