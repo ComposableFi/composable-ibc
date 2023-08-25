@@ -8,7 +8,7 @@ authors = ["Seun Lanlege <seunlanlege@gmail.com>"]
 hex = "0.4.3"
 anyhow = "1.0.64"
 serde = "1.0.144"
-subxt = { git = "https://github.com/paritytech/subxt", rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/paritytech/subxt", tag = "v0.31.0", features = ["substrate-compat"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 derive_more = "0.99.17"
 downcast-rs = "1.2.0"
@@ -27,4 +27,4 @@ sp-consensus-grandpa = { git = "https://github.com/paritytech/substrate", branch
 beefy-prover = { path = "../../beefy/prover" }
 primitives = { package = "grandpa-light-client-primitives", path = "../primitives" }
 light-client-common = { path = "../../../light-clients/common" }
-tokio = "1.27.0"
+tokio = "1.32.0"
