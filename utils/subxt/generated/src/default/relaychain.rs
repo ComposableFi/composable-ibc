@@ -4033,7 +4033,7 @@ pub mod api {
 			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 			pub struct ReportEquivocation {
 				pub equivocation_proof: ::std::boxed::Box<
-					runtime_types::sp_finality_grandpa::EquivocationProof<
+					runtime_types::sp_consensus_grandpa::EquivocationProof<
 						::subxt::utils::H256,
 						::core::primitive::u32,
 					>,
@@ -4051,7 +4051,7 @@ pub mod api {
 			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 			pub struct ReportEquivocationUnsigned {
 				pub equivocation_proof: ::std::boxed::Box<
-					runtime_types::sp_finality_grandpa::EquivocationProof<
+					runtime_types::sp_consensus_grandpa::EquivocationProof<
 						::subxt::utils::H256,
 						::core::primitive::u32,
 					>,
@@ -4075,7 +4075,7 @@ pub mod api {
 			impl TransactionApi {
 				pub fn report_equivocation(
 					&self,
-					equivocation_proof: runtime_types::sp_finality_grandpa::EquivocationProof<
+					equivocation_proof: runtime_types::sp_consensus_grandpa::EquivocationProof<
 						::subxt::utils::H256,
 						::core::primitive::u32,
 					>,
@@ -4097,7 +4097,7 @@ pub mod api {
 				}
 				pub fn report_equivocation_unsigned(
 					&self,
-					equivocation_proof: runtime_types::sp_finality_grandpa::EquivocationProof<
+					equivocation_proof: runtime_types::sp_consensus_grandpa::EquivocationProof<
 						::subxt::utils::H256,
 						::core::primitive::u32,
 					>,
@@ -4151,7 +4151,7 @@ pub mod api {
 			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 			pub struct NewAuthorities {
 				pub authority_set: ::std::vec::Vec<(
-					runtime_types::sp_finality_grandpa::app::Public,
+					runtime_types::sp_consensus_grandpa::app::Public,
 					::core::primitive::u64,
 				)>,
 			}
@@ -28490,7 +28490,7 @@ pub mod api {
 					#[codec(index = 0)]
 					report_equivocation {
 						equivocation_proof: ::std::boxed::Box<
-							runtime_types::sp_finality_grandpa::EquivocationProof<
+							runtime_types::sp_consensus_grandpa::EquivocationProof<
 								::subxt::utils::H256,
 								::core::primitive::u32,
 							>,
@@ -28500,7 +28500,7 @@ pub mod api {
 					#[codec(index = 1)]
 					report_equivocation_unsigned {
 						equivocation_proof: ::std::boxed::Box<
-							runtime_types::sp_finality_grandpa::EquivocationProof<
+							runtime_types::sp_consensus_grandpa::EquivocationProof<
 								::subxt::utils::H256,
 								::core::primitive::u32,
 							>,
@@ -28551,7 +28551,7 @@ pub mod api {
 					#[codec(index = 0)]
 					NewAuthorities {
 						authority_set: ::std::vec::Vec<(
-							runtime_types::sp_finality_grandpa::app::Public,
+							runtime_types::sp_consensus_grandpa::app::Public,
 							::core::primitive::u64,
 						)>,
 					},
@@ -28575,7 +28575,7 @@ pub mod api {
 				pub delay: _0,
 				pub next_authorities:
 					runtime_types::bounded_collections::weak_bounded_vec::WeakBoundedVec<(
-						runtime_types::sp_finality_grandpa::app::Public,
+						runtime_types::sp_consensus_grandpa::app::Public,
 						::core::primitive::u64,
 					)>,
 				pub forced: ::core::option::Option<_0>,
@@ -34670,7 +34670,7 @@ pub mod api {
 			#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
 			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 			pub struct SessionKeys {
-				pub grandpa: runtime_types::sp_finality_grandpa::app::Public,
+				pub grandpa: runtime_types::sp_consensus_grandpa::app::Public,
 				pub babe: runtime_types::sp_consensus_babe::app::Public,
 				pub im_online: runtime_types::pallet_im_online::sr25519::app_sr25519::Public,
 				pub para_validator: runtime_types::polkadot_primitives::v2::validator_app::Public,
@@ -35158,7 +35158,7 @@ pub mod api {
 			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 			pub enum Void {}
 		}
-		pub mod sp_finality_grandpa {
+		pub mod sp_consensus_grandpa {
 			use super::runtime_types;
 			pub mod app {
 				use super::runtime_types;
@@ -35196,17 +35196,17 @@ pub mod api {
 				#[codec(index = 0)]
 				Prevote(
 					runtime_types::finality_grandpa::Equivocation<
-						runtime_types::sp_finality_grandpa::app::Public,
+						runtime_types::sp_consensus_grandpa::app::Public,
 						runtime_types::finality_grandpa::Prevote<_0, _1>,
-						runtime_types::sp_finality_grandpa::app::Signature,
+						runtime_types::sp_consensus_grandpa::app::Signature,
 					>,
 				),
 				#[codec(index = 1)]
 				Precommit(
 					runtime_types::finality_grandpa::Equivocation<
-						runtime_types::sp_finality_grandpa::app::Public,
+						runtime_types::sp_consensus_grandpa::app::Public,
 						runtime_types::finality_grandpa::Precommit<_0, _1>,
-						runtime_types::sp_finality_grandpa::app::Signature,
+						runtime_types::sp_consensus_grandpa::app::Signature,
 					>,
 				),
 			}
@@ -35221,7 +35221,7 @@ pub mod api {
 			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 			pub struct EquivocationProof<_0, _1> {
 				pub set_id: ::core::primitive::u64,
-				pub equivocation: runtime_types::sp_finality_grandpa::Equivocation<_0, _1>,
+				pub equivocation: runtime_types::sp_consensus_grandpa::Equivocation<_0, _1>,
 			}
 		}
 		pub mod sp_runtime {

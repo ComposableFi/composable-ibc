@@ -54,8 +54,8 @@ use ics11_beefy::{
 	consensus_state::ConsensusState as BeefyConsensusState,
 };
 use scale_info::prelude::{format, string::ToString};
+use sp_consensus_grandpa::{AuthoritySignature, KEY_TYPE};
 use sp_core::crypto::{AccountId32, ByteArray};
-use sp_finality_grandpa::{AuthoritySignature, KEY_TYPE};
 use sp_std::prelude::*;
 use tendermint::{
 	account,
