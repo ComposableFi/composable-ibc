@@ -25,7 +25,7 @@ use subxt::{
 	error::{Error, StorageAddressError},
 	events::{Phase, StaticEvent},
 	ext::{
-		frame_metadata::{StorageEntryType, StorageHasher},
+		frame_metadata::v14::{StorageEntryType, StorageHasher},
 		scale_decode::DecodeAsType,
 		scale_encode::{EncodeAsFields, EncodeAsType},
 		sp_runtime::{scale_info::TypeDef, Either},
@@ -132,7 +132,7 @@ where
 			StorageEntryType::Map { hashers, key, .. } => {
 				let ty = metadata
 					.resolve_type(key.id)
-					.ok_or(StorageAddressError::TypeNotFound(key.id))?;
+					.ok_or(StorageAddressError::MapTypeMustBeTuple)?;
 
 				// If the key is a tuple, we encode each value to the corresponding tuple type.
 				// If the key is not a tuple, encode a single value to the key type.
@@ -312,6 +312,6 @@ pub trait Config: subxt::Config + Sized {
 }
 
 pub type CustomExtrinsicParams<T> = <<T as subxt::Config>::ExtrinsicParams as ExtrinsicParams<
-	<T as subxt::Config>::Index,
+	// <T as subxt::Config>::Index,
 	<T as subxt::Config>::Hash,
 >>::OtherParams;
