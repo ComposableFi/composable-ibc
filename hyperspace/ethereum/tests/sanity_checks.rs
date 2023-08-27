@@ -19,7 +19,7 @@ use hyperspace_ethereum::{
 use ibc::{
 	core::{
 		ics02_client::{height::Height, trust_threshold::TrustThreshold, msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient}},
-		ics04_channel::{packet::{Packet, Sequence}, channel::{ChannelEnd, State, Order}, Version, msgs::chan_open_init::MsgChannelOpenInit},
+		ics04_channel::{packet::{Packet, Sequence}, channel::{ChannelEnd, State, Order}, Version, msgs::chan_open_init::MsgChannelOpenInit, msgs::chan_open_try::MsgChannelOpenTry},
 		ics24_host::identifier::{ChannelId, PortId, ConnectionId, ChainId}, ics03_connection::{connection::Counterparty, msgs::{conn_open_init::MsgConnectionOpenInit, conn_open_ack::MsgConnectionOpenAck, conn_open_confirm::MsgConnectionOpenConfirm}}, ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
 	},
 	timestamp::Timestamp, protobuf::{types::SignedHeader, Protobuf}, proofs::{Proofs, ConsensusProof}, tx_msg::Msg,
@@ -246,6 +246,10 @@ fn deploy_mock_module_fixture(
 	}
 }
 
+pub fn get_dummy_proof() -> Vec<u8> {
+	"Y29uc2Vuc3VzU3RhdGUvaWJjb25lY2xpZW50LzIy".as_bytes().to_vec()
+}
+
 #[tokio::test]
 async fn test_deploy_yui_ibc_and_create_eth_client() {
 	let start = std::time::Instant::now();
@@ -383,9 +387,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 	let result = hyperspace.submit(vec![msg]).await.unwrap();
 
-	pub fn get_dummy_proof() -> Vec<u8> {
-		"Y29uc2Vuc3VzU3RhdGUvaWJjb25lY2xpZW50LzIy".as_bytes().to_vec()
-	}
+	
 	/*______________________________________________________________________________*/
 	
 
@@ -511,22 +513,22 @@ async fn relayer_channel_tests(){
 	let project_output1 = utils::compile_yui(&path, "contracts/clients");
 	let (anvil, client) = utils::spawn_anvil();
 
-
+	let signer = Signer::from_str("0CDA3F47EF3C4906693B170EF650EB968C5F4B2C").unwrap();
 	/*______________________________________________________________________________*/
 	//channel open init
 	let port_id = PortId::transfer();
 	let version = "1.0".to_string();
 	let order = Order::default();
 	let conenction_id = ConnectionId::new(0);
-	let channel = ChannelEnd::new(
+	let mut channel = ChannelEnd::new(
 		State::Init,
 		order,
 		ibc::core::ics04_channel::channel::Counterparty::new(port_id.clone(), None),
 		vec![conenction_id],
-		Version::new(version),
+		Version::new(version.clone()),
 	);
 
-	let msg = MsgChannelOpenInit::new(port_id, channel, Signer::from_str("s").unwrap());
+	let msg = MsgChannelOpenInit::new(port_id.clone(), channel.clone(), Signer::from_str("s").unwrap());
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 	// let _ = hyperspace.submit(vec![msg]).await.unwrap();
 
@@ -538,6 +540,25 @@ async fn relayer_channel_tests(){
 	let msg = MsgChannelOpenInit::decode_vec(&msg.value).unwrap();
 	let ibc_handler_mock = IbcHandler::new(contract_mock);
 	let channel_id = ibc_handler_mock.send::<String>(msg.into_token(), "channelOpenInit").await;
+	assert!(channel_id.len() > 0);
+	/*______________________________________________________________________________*/
+
+
+	/*______________________________________________________________________________*/
+	//MsgChannelOpenTry
+	channel.remote.channel_id = Some(ChannelId::new(27));
+	let x = CommitmentProofBytes::try_from(get_dummy_proof()).unwrap();
+	let proofs = Proofs::new(
+		x.clone(),
+		Some(x.clone()),
+		Some(ConsensusProof::new(x.clone(), Height { revision_number: 1, revision_height: 1 }).unwrap()),
+		Some(x.clone()),
+		Height::new(1, 1),
+	).unwrap();
+	let msg = MsgChannelOpenTry::new(port_id, channel, Version::new(version), proofs, signer);
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let msg = MsgChannelOpenTry::decode_vec(&msg.value).unwrap();
+	let channel_id = ibc_handler_mock.send::<String>(msg.into_token(), "channelOpenTry").await;
 	assert!(channel_id.len() > 0);
 	/*______________________________________________________________________________*/
 
