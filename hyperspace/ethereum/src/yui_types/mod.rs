@@ -19,3 +19,9 @@ impl IntoToken for &str{
         Token::String(self.to_string())
     }
 }
+
+impl IntoToken for &[u8]{
+    fn into_token(self) -> Token {
+        Token::Bytes(self.to_vec())
+    }
+}
