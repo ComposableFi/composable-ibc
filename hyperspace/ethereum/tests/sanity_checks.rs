@@ -19,7 +19,7 @@ use hyperspace_ethereum::{
 use ibc::{
 	core::{
 		ics02_client::{height::Height, trust_threshold::TrustThreshold, msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient}},
-		ics04_channel::{packet::{Packet, Sequence}, channel::{ChannelEnd, State, Order}, Version, msgs::chan_open_init::MsgChannelOpenInit, msgs::chan_open_try::MsgChannelOpenTry, msgs::chan_open_ack::MsgChannelOpenAck},
+		ics04_channel::{packet::{Packet, Sequence}, channel::{ChannelEnd, State, Order}, Version, msgs::{chan_open_init::MsgChannelOpenInit, chan_open_confirm::MsgChannelOpenConfirm}, msgs::{chan_open_try::MsgChannelOpenTry, chan_close_confirm::MsgChannelCloseConfirm}, msgs::{chan_open_ack::MsgChannelOpenAck, chan_close_init::MsgChannelCloseInit}},
 		ics24_host::identifier::{ChannelId, PortId, ConnectionId, ChainId}, ics03_connection::{connection::Counterparty, msgs::{conn_open_init::MsgConnectionOpenInit, conn_open_ack::MsgConnectionOpenAck, conn_open_confirm::MsgConnectionOpenConfirm}}, ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
 	},
 	timestamp::Timestamp, protobuf::{types::SignedHeader, Protobuf}, proofs::{Proofs, ConsensusProof}, tx_msg::Msg,
@@ -564,12 +564,40 @@ async fn relayer_channel_tests(){
 
 	/*______________________________________________________________________________*/
 	//MsgChannelOpenAck 
-	let msg = MsgChannelOpenAck::new(port_id, ChannelId::new(27), ChannelId::new(27), Version::new(version.clone()), proofs, signer);
+	let msg = MsgChannelOpenAck::new(port_id.clone(), ChannelId::new(0), ChannelId::new(27), Version::new(version.clone()), proofs.clone(), signer.clone());
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 	let msg = MsgChannelOpenAck::decode_vec(&msg.value).unwrap();
 	let _ = ibc_handler_mock.send_and_get_tuple(msg.into_token(), "channelOpenAck").await;
 
 	/*______________________________________________________________________________*/
+
+	/*______________________________________________________________________________*/
+	//channelOpenConfirm 
+	let msg = MsgChannelOpenConfirm::new(port_id.clone(), ChannelId::new(0), proofs.clone(), signer.clone());
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let msg = MsgChannelOpenConfirm::decode_vec(&msg.value).unwrap();
+	let _ = ibc_handler_mock.send_and_get_tuple(msg.into_token(), "channelOpenConfirm").await;
+
+	/*______________________________________________________________________________*/
+
+	/*______________________________________________________________________________*/
+	//channelCloseInit 
+	let msg = MsgChannelCloseInit::new(port_id.clone(), ChannelId::new(0), signer.clone());
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let msg = MsgChannelCloseInit::decode_vec(&msg.value).unwrap();
+	let _ = ibc_handler_mock.send_and_get_tuple(msg.into_token(), "channelCloseInit").await;
+
+	/*______________________________________________________________________________*/
+
+	/*______________________________________________________________________________*/
+	//channelCloseConfirm
+	let msg = MsgChannelCloseConfirm::new(port_id.clone(), ChannelId::new(0), proofs, signer.clone());
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let msg = MsgChannelCloseConfirm::decode_vec(&msg.value).unwrap();
+	let _ = ibc_handler_mock.send_and_get_tuple(msg.into_token(), "channelCloseConfirm").await;
+	/*______________________________________________________________________________*/
+
+
 }
 
 
