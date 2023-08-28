@@ -60,97 +60,97 @@ pub mod api {
 	];
 	#[derive(:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug)]
 	pub enum Event {
-		#[codec::codec(index = 0)]
+		#[codec(index = 0)]
 		System(system::Event),
-		#[codec::codec(index = 2)]
+		#[codec(index = 2)]
 		Sudo(sudo::Event),
-		#[codec::codec(index = 4)]
+		#[codec(index = 4)]
 		TransactionPayment(transaction_payment::Event),
-		#[codec::codec(index = 5)]
+		#[codec(index = 5)]
 		Indices(indices::Event),
-		#[codec::codec(index = 6)]
+		#[codec(index = 6)]
 		Balances(balances::Event),
-		#[codec::codec(index = 7)]
+		#[codec(index = 7)]
 		Identity(identity::Event),
-		#[codec::codec(index = 8)]
+		#[codec(index = 8)]
 		Multisig(multisig::Event),
-		#[codec::codec(index = 10)]
+		#[codec(index = 10)]
 		ParachainSystem(parachain_system::Event),
-		#[codec::codec(index = 21)]
+		#[codec(index = 21)]
 		CollatorSelection(collator_selection::Event),
-		#[codec::codec(index = 22)]
+		#[codec(index = 22)]
 		Session(session::Event),
-		#[codec::codec(index = 30)]
+		#[codec(index = 30)]
 		Council(council::Event),
-		#[codec::codec(index = 31)]
+		#[codec(index = 31)]
 		CouncilMembership(council_membership::Event),
-		#[codec::codec(index = 32)]
+		#[codec(index = 32)]
 		Treasury(treasury::Event),
-		#[codec::codec(index = 33)]
+		#[codec(index = 33)]
 		Democracy(democracy::Event),
-		#[codec::codec(index = 70)]
+		#[codec(index = 70)]
 		TechnicalCommittee(technical_committee::Event),
-		#[codec::codec(index = 71)]
+		#[codec(index = 71)]
 		TechnicalCommitteeMembership(technical_committee_membership::Event),
-		#[codec::codec(index = 34)]
+		#[codec(index = 34)]
 		Scheduler(scheduler::Event),
-		#[codec::codec(index = 35)]
+		#[codec(index = 35)]
 		Utility(utility::Event),
-		#[codec::codec(index = 36)]
+		#[codec(index = 36)]
 		Preimage(preimage::Event),
-		#[codec::codec(index = 37)]
+		#[codec(index = 37)]
 		Proxy(proxy::Event),
-		#[codec::codec(index = 40)]
+		#[codec(index = 40)]
 		XcmpQueue(xcmp_queue::Event),
-		#[codec::codec(index = 41)]
+		#[codec(index = 41)]
 		RelayerXcm(relayer_xcm::Event),
-		#[codec::codec(index = 42)]
+		#[codec(index = 42)]
 		CumulusXcm(cumulus_xcm::Event),
-		#[codec::codec(index = 43)]
+		#[codec(index = 43)]
 		DmpQueue(dmp_queue::Event),
-		#[codec::codec(index = 44)]
+		#[codec(index = 44)]
 		XTokens(x_tokens::Event),
-		#[codec::codec(index = 45)]
+		#[codec(index = 45)]
 		UnknownTokens(unknown_tokens::Event),
-		#[codec::codec(index = 51)]
+		#[codec(index = 51)]
 		Tokens(tokens::Event),
-		#[codec::codec(index = 52)]
+		#[codec(index = 52)]
 		Oracle(oracle::Event),
-		#[codec::codec(index = 53)]
+		#[codec(index = 53)]
 		CurrencyFactory(currency_factory::Event),
-		#[codec::codec(index = 54)]
+		#[codec(index = 54)]
 		Vault(vault::Event),
-		#[codec::codec(index = 55)]
+		#[codec(index = 55)]
 		AssetsRegistry(assets_registry::Event),
-		#[codec::codec(index = 56)]
+		#[codec(index = 56)]
 		GovernanceRegistry(governance_registry::Event),
-		#[codec::codec(index = 58)]
+		#[codec(index = 58)]
 		CrowdloanRewards(crowdloan_rewards::Event),
-		#[codec::codec(index = 59)]
+		#[codec(index = 59)]
 		Vesting(vesting::Event),
-		#[codec::codec(index = 60)]
+		#[codec(index = 60)]
 		BondedFinance(bonded_finance::Event),
-		#[codec::codec(index = 61)]
+		#[codec(index = 61)]
 		DutchAuction(dutch_auction::Event),
-		#[codec::codec(index = 63)]
+		#[codec(index = 63)]
 		Liquidations(liquidations::Event),
-		#[codec::codec(index = 64)]
+		#[codec(index = 64)]
 		Lending(lending::Event),
-		#[codec::codec(index = 65)]
+		#[codec(index = 65)]
 		Pablo(pablo::Event),
-		#[codec::codec(index = 66)]
+		#[codec(index = 66)]
 		DexRouter(dex_router::Event),
-		#[codec::codec(index = 67)]
+		#[codec(index = 67)]
 		Fnft(fnft::Event),
-		#[codec::codec(index = 68)]
+		#[codec(index = 68)]
 		StakingRewards(staking_rewards::Event),
-		#[codec::codec(index = 140)]
+		#[codec(index = 140)]
 		CallFilter(call_filter::Event),
-		#[codec::codec(index = 180)]
+		#[codec(index = 180)]
 		Cosmwasm(cosmwasm::Event),
-		#[codec::codec(index = 190)]
+		#[codec(index = 190)]
 		Ibc(ibc::Event),
-		#[codec::codec(index = 191)]
+		#[codec(index = 191)]
 		IbcPing(ibc_ping::Event),
 	}
 	pub mod system {
@@ -1061,7 +1061,7 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct Set {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub now: ::core::primitive::u64,
 			}
 			pub struct TransactionApi;
@@ -2042,7 +2042,7 @@ pub mod api {
 					::subxt::utils::AccountId32,
 					::core::primitive::u32,
 				>,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub value: ::core::primitive::u128,
 			}
 			#[derive(
@@ -2053,9 +2053,9 @@ pub mod api {
 					::subxt::utils::AccountId32,
 					::core::primitive::u32,
 				>,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub new_free: ::core::primitive::u128,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub new_reserved: ::core::primitive::u128,
 			}
 			#[derive(
@@ -2070,7 +2070,7 @@ pub mod api {
 					::subxt::utils::AccountId32,
 					::core::primitive::u32,
 				>,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub value: ::core::primitive::u128,
 			}
 			#[derive(
@@ -2081,7 +2081,7 @@ pub mod api {
 					::subxt::utils::AccountId32,
 					::core::primitive::u32,
 				>,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub value: ::core::primitive::u128,
 			}
 			#[derive(
@@ -2777,9 +2777,9 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct RequestJudgement {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub reg_index: ::core::primitive::u32,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub max_fee: ::core::primitive::u128,
 			}
 			#[derive(
@@ -2795,16 +2795,16 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct SetFee {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub index: ::core::primitive::u32,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub fee: ::core::primitive::u128,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct SetAccountId {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub index: ::core::primitive::u32,
 				pub new: ::subxt::utils::MultiAddress<
 					::subxt::utils::AccountId32,
@@ -2815,7 +2815,7 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct SetFields {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub index: ::core::primitive::u32,
 				pub fields: runtime_types::pallet_identity::types::BitFlags<
 					runtime_types::pallet_identity::types::IdentityField,
@@ -2825,7 +2825,7 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct ProvideJudgement {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub reg_index: ::core::primitive::u32,
 				pub target: ::subxt::utils::MultiAddress<
 					::subxt::utils::AccountId32,
@@ -5913,17 +5913,17 @@ pub mod api {
 			)]
 			pub struct Execute {
 				pub proposal: ::std::boxed::Box<runtime_types::dali_runtime::RuntimeCall>,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub length_bound: ::core::primitive::u32,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct Propose {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub threshold: ::core::primitive::u32,
 				pub proposal: ::std::boxed::Box<runtime_types::dali_runtime::RuntimeCall>,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub length_bound: ::core::primitive::u32,
 			}
 			#[derive(
@@ -5931,7 +5931,7 @@ pub mod api {
 			)]
 			pub struct Vote {
 				pub proposal: ::subxt::utils::H256,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub index: ::core::primitive::u32,
 				pub approve: ::core::primitive::bool,
 			}
@@ -5940,11 +5940,11 @@ pub mod api {
 			)]
 			pub struct CloseOldWeight {
 				pub proposal_hash: ::subxt::utils::H256,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub index: ::core::primitive::u32,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub proposal_weight_bound: runtime_types::sp_weights::OldWeight,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub length_bound: ::core::primitive::u32,
 			}
 			#[derive(
@@ -5958,10 +5958,10 @@ pub mod api {
 			)]
 			pub struct Close {
 				pub proposal_hash: ::subxt::utils::H256,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub index: ::core::primitive::u32,
 				pub proposal_weight_bound: runtime_types::sp_weights::weight_v2::Weight,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub length_bound: ::core::primitive::u32,
 			}
 			pub struct TransactionApi;
@@ -6894,7 +6894,7 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct ProposeSpend {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub value: ::core::primitive::u128,
 				pub beneficiary: ::subxt::utils::MultiAddress<
 					::subxt::utils::AccountId32,
@@ -6905,21 +6905,21 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct RejectProposal {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub proposal_id: ::core::primitive::u32,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct ApproveProposal {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub proposal_id: ::core::primitive::u32,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct Spend {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub amount: ::core::primitive::u128,
 				pub beneficiary: ::subxt::utils::MultiAddress<
 					::subxt::utils::AccountId32,
@@ -6930,7 +6930,7 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct RemoveApproval {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub proposal_id: ::core::primitive::u32,
 			}
 			pub struct TransactionApi;
@@ -7455,21 +7455,21 @@ pub mod api {
 				pub proposal: runtime_types::frame_support::traits::preimages::Bounded<
 					runtime_types::dali_runtime::RuntimeCall,
 				>,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub value: ::core::primitive::u128,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct Second {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub proposal: ::core::primitive::u32,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct Vote {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub ref_index: ::core::primitive::u32,
 				pub vote:
 					runtime_types::pallet_democracy::vote::AccountVote<::core::primitive::u128>,
@@ -7525,7 +7525,7 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct CancelReferendum {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub ref_index: ::core::primitive::u32,
 			}
 			#[derive(
@@ -7586,7 +7586,7 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct CancelProposal {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub prop_index: ::core::primitive::u32,
 			}
 			pub struct TransactionApi;
@@ -8950,17 +8950,17 @@ pub mod api {
 			)]
 			pub struct Execute {
 				pub proposal: ::std::boxed::Box<runtime_types::dali_runtime::RuntimeCall>,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub length_bound: ::core::primitive::u32,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct Propose {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub threshold: ::core::primitive::u32,
 				pub proposal: ::std::boxed::Box<runtime_types::dali_runtime::RuntimeCall>,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub length_bound: ::core::primitive::u32,
 			}
 			#[derive(
@@ -8968,7 +8968,7 @@ pub mod api {
 			)]
 			pub struct Vote {
 				pub proposal: ::subxt::utils::H256,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub index: ::core::primitive::u32,
 				pub approve: ::core::primitive::bool,
 			}
@@ -8977,11 +8977,11 @@ pub mod api {
 			)]
 			pub struct CloseOldWeight {
 				pub proposal_hash: ::subxt::utils::H256,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub index: ::core::primitive::u32,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub proposal_weight_bound: runtime_types::sp_weights::OldWeight,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub length_bound: ::core::primitive::u32,
 			}
 			#[derive(
@@ -8995,10 +8995,10 @@ pub mod api {
 			)]
 			pub struct Close {
 				pub proposal_hash: ::subxt::utils::H256,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub index: ::core::primitive::u32,
 				pub proposal_weight_bound: runtime_types::sp_weights::weight_v2::Weight,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub length_bound: ::core::primitive::u32,
 			}
 			pub struct TransactionApi;
@@ -11057,9 +11057,9 @@ pub mod api {
 				>,
 				pub proxy_type: runtime_types::composable_traits::account_proxy::ProxyType,
 				pub index: ::core::primitive::u16,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub height: ::core::primitive::u32,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub ext_index: ::core::primitive::u32,
 			}
 			#[derive(
@@ -14350,7 +14350,7 @@ pub mod api {
 					::core::primitive::u32,
 				>,
 				pub currency_id: runtime_types::primitives::currency::CurrencyId,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub amount: ::core::primitive::u128,
 			}
 			#[derive(
@@ -14373,7 +14373,7 @@ pub mod api {
 					::core::primitive::u32,
 				>,
 				pub currency_id: runtime_types::primitives::currency::CurrencyId,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub amount: ::core::primitive::u128,
 			}
 			#[derive(
@@ -14389,7 +14389,7 @@ pub mod api {
 					::core::primitive::u32,
 				>,
 				pub currency_id: runtime_types::primitives::currency::CurrencyId,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub amount: ::core::primitive::u128,
 			}
 			#[derive(
@@ -14401,9 +14401,9 @@ pub mod api {
 					::core::primitive::u32,
 				>,
 				pub currency_id: runtime_types::primitives::currency::CurrencyId,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub new_free: ::core::primitive::u128,
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub new_reserved: ::core::primitive::u128,
 			}
 			pub struct TransactionApi;
@@ -25251,13 +25251,13 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum ProxyType {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Any,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Governance,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					CancelProxy,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					Bridge,
 				}
 			}
@@ -25282,9 +25282,9 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum BondDuration<_0> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Finite { return_in: _0 },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Infinite,
 				}
 				#[derive(
@@ -25337,7 +25337,7 @@ pub mod api {
 				pub struct Sell<_0, _1> {
 					pub pair: runtime_types::composable_traits::defi::CurrencyPair<_0>,
 					pub take: runtime_types::composable_traits::defi::Take<_0>,
-					#[codec::codec(skip)]
+					#[codec(skip)]
 					pub __subxt_unused_type_params: ::core::marker::PhantomData<_1>,
 				}
 				#[derive(
@@ -25374,7 +25374,7 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum DexRoute<_0, _1> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Direct(runtime_types::sp_core::bounded::bounded_vec::BoundedVec<_0>),
 					__Ignore(::core::marker::PhantomData<_1>),
 				}
@@ -25403,9 +25403,9 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum SignedRawOrigin<_0> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Root,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Signed(_0),
 				}
 			}
@@ -25456,7 +25456,7 @@ pub mod api {
 						Debug,
 					)]
 					pub enum InterestRateModel {
-						# [codec::codec (index = 0)] Jump (runtime_types :: composable_traits :: lending :: math :: JumpModel ,) , # [codec::codec (index = 1)] Curve (runtime_types :: composable_traits :: lending :: math :: CurveModel ,) , # [codec::codec (index = 2)] DynamicPIDController (runtime_types :: composable_traits :: lending :: math :: DynamicPIDControllerModel ,) , # [codec::codec (index = 3)] DoubleExponent (runtime_types :: composable_traits :: lending :: math :: DoubleExponentModel ,) , }
+						# [codec (index = 0)] Jump (runtime_types :: composable_traits :: lending :: math :: JumpModel ,) , # [codec (index = 1)] Curve (runtime_types :: composable_traits :: lending :: math :: CurveModel ,) , # [codec (index = 2)] DynamicPIDController (runtime_types :: composable_traits :: lending :: math :: DynamicPIDControllerModel ,) , # [codec (index = 3)] DoubleExponent (runtime_types :: composable_traits :: lending :: math :: DoubleExponentModel ,) , }
 					#[derive(
 						:: subxt :: ext :: codec :: Decode,
 						:: subxt :: ext :: codec :: Encode,
@@ -25478,7 +25478,7 @@ pub mod api {
 					pub reserved_factor: runtime_types::sp_arithmetic::per_things::Perquintill,
 					pub interest_rate_model:
 						runtime_types::composable_traits::lending::math::InterestRateModel,
-					#[codec::codec(skip)]
+					#[codec(skip)]
 					pub __subxt_unused_type_params: ::core::marker::PhantomData<_2>,
 				}
 				#[derive(
@@ -25495,16 +25495,16 @@ pub mod api {
 					pub under_collateralized_warn_percent:
 						runtime_types::sp_arithmetic::per_things::Percent,
 					pub liquidators: ::std::vec::Vec<_3>,
-					#[codec::codec(skip)]
+					#[codec(skip)]
 					pub __subxt_unused_type_params: ::core::marker::PhantomData<_4>,
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum RepayStrategy<_0> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					TotalDebt,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					PartialAmount(_0),
 				}
 				#[derive(
@@ -25516,7 +25516,7 @@ pub mod api {
 						runtime_types::sp_arithmetic::per_things::Percent,
 					pub liquidators: ::std::vec::Vec<_0>,
 					pub max_price_age: _0,
-					#[codec::codec(skip)]
+					#[codec(skip)]
 					pub __subxt_unused_type_params: ::core::marker::PhantomData<_1>,
 				}
 			}
@@ -25550,7 +25550,7 @@ pub mod api {
 						Debug,
 					)]
 					pub enum DurationMultipliers {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Presets(
 							runtime_types::sp_core::bounded::bounded_btree_map::BoundedBTreeMap<
 								::core::primitive::u64,
@@ -25615,7 +25615,7 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum RewardPoolConfiguration<_0, _1, _2, _3> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					RewardRateBasedIncentive {
 						owner: _0,
 						asset_id: _1,
@@ -25640,7 +25640,7 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum RewardRatePeriod {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					PerSecond,
 				}
 				#[derive(
@@ -25659,7 +25659,7 @@ pub mod api {
 					pub reductions:
 						runtime_types::sp_core::bounded::bounded_btree_map::BoundedBTreeMap<_0, _2>,
 					pub lock: runtime_types::composable_traits::staking::lock::Lock,
-					#[codec::codec(skip)]
+					#[codec(skip)]
 					pub __subxt_unused_type_params: ::core::marker::PhantomData<_1>,
 				}
 			}
@@ -25669,9 +25669,9 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum UpdateValue<_0> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Ignore,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Set(_0),
 				}
 			}
@@ -25697,9 +25697,9 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum TimeReleaseFunction {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					LinearDecrease(runtime_types::composable_traits::time::LinearDecrease),
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					StairstepExponentialDecrease(
 						runtime_types::composable_traits::time::StairstepExponentialDecrease,
 					),
@@ -25711,9 +25711,9 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum Deposit<_0, _1> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Existential,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Rent { amount: _0, at: _1 },
 				}
 				#[derive(
@@ -25738,21 +25738,21 @@ pub mod api {
 					pub vesting_schedule_id: _0,
 					pub window: runtime_types::composable_traits::vesting::VestingWindow<_1, _2>,
 					pub period_count: _1,
-					#[codec::codec(compact)]
+					#[codec(compact)]
 					pub per_period: _0,
 					pub already_claimed: _0,
-					#[codec::codec(skip)]
+					#[codec(skip)]
 					pub __subxt_unused_type_params: ::core::marker::PhantomData<_3>,
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum VestingScheduleIdSet<_0> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					All,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					One(_0),
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					Many(runtime_types::sp_core::bounded::bounded_vec::BoundedVec<_0>),
 				}
 				#[derive(
@@ -25761,16 +25761,16 @@ pub mod api {
 				pub struct VestingScheduleInfo<_0, _1, _2> {
 					pub window: runtime_types::composable_traits::vesting::VestingWindow<_0, _1>,
 					pub period_count: _0,
-					#[codec::codec(compact)]
+					#[codec(compact)]
 					pub per_period: _2,
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum VestingWindow<_0, _1> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					MomentBased { start: _1, period: _1 },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					BlockNumberBased { start: _0, period: _0 },
 				}
 			}
@@ -25832,7 +25832,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Service a single overweight message."]
 					#[doc = ""]
 					#[doc = "- `origin`: Must pass `ExecuteOverweightOrigin`."]
@@ -25855,10 +25855,10 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "The message index given is unknown."]
 					Unknown,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "The amount of weight given is possibly not enough for executing the message."]
 					OverLimit,
 				}
@@ -25867,33 +25867,33 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Downward message is invalid XCM."]
 					InvalidFormat { message_id: [::core::primitive::u8; 32usize] },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Downward message is unsupported version of XCM."]
 					UnsupportedVersion { message_id: [::core::primitive::u8; 32usize] },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Downward message executed with the given outcome."]
 					ExecutedDownward {
 						message_id: [::core::primitive::u8; 32usize],
 						outcome: runtime_types::xcm::v2::traits::Outcome,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "The weight limit for handling downward messages was reached."]
 					WeightExhausted {
 						message_id: [::core::primitive::u8; 32usize],
 						remaining_weight: runtime_types::sp_weights::weight_v2::Weight,
 						required_weight: runtime_types::sp_weights::weight_v2::Weight,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Downward message is overweight and was placed in the overweight queue."]
 					OverweightEnqueued {
 						message_id: [::core::primitive::u8; 32usize],
 						overweight_index: ::core::primitive::u64,
 						required_weight: runtime_types::sp_weights::weight_v2::Weight,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Downward message from the overweight queue was executed."]
 					OverweightServiced {
 						overweight_index: ::core::primitive::u64,
@@ -25925,35 +25925,35 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					# [codec::codec (index = 0)] # [doc = "Set the current validation data."] # [doc = ""] # [doc = "This should be invoked exactly once per block. It will panic at the finalization"] # [doc = "phase if the call was not invoked."] # [doc = ""] # [doc = "The dispatch origin for this call must be `Inherent`"] # [doc = ""] # [doc = "As a side effect, this function upgrades the current validation function"] # [doc = "if the appropriate time has come."] set_validation_data { data : runtime_types :: cumulus_primitives_parachain_inherent :: ParachainInherentData , } , # [codec::codec (index = 1)] sudo_send_upward_message { message : :: std :: vec :: Vec < :: core :: primitive :: u8 > , } , # [codec::codec (index = 2)] authorize_upgrade { code_hash : :: subxt :: utils :: H256 , } , # [codec::codec (index = 3)] enact_authorized_upgrade { code : :: std :: vec :: Vec < :: core :: primitive :: u8 > , } , }
+					# [codec (index = 0)] # [doc = "Set the current validation data."] # [doc = ""] # [doc = "This should be invoked exactly once per block. It will panic at the finalization"] # [doc = "phase if the call was not invoked."] # [doc = ""] # [doc = "The dispatch origin for this call must be `Inherent`"] # [doc = ""] # [doc = "As a side effect, this function upgrades the current validation function"] # [doc = "if the appropriate time has come."] set_validation_data { data : runtime_types :: cumulus_primitives_parachain_inherent :: ParachainInherentData , } , # [codec (index = 1)] sudo_send_upward_message { message : :: std :: vec :: Vec < :: core :: primitive :: u8 > , } , # [codec (index = 2)] authorize_upgrade { code_hash : :: subxt :: utils :: H256 , } , # [codec (index = 3)] enact_authorized_upgrade { code : :: std :: vec :: Vec < :: core :: primitive :: u8 > , } , }
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Attempt to upgrade validation function while existing upgrade pending"]
 					OverlappingUpgrades,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Polkadot currently prohibits this parachain from upgrading its validation function"]
 					ProhibitedByPolkadot,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "The supplied validation function has compiled into a blob larger than Polkadot is"]
 					#[doc = "willing to run"]
 					TooBig,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "The inherent which supplies the validation data did not run this block"]
 					ValidationDataNotAvailable,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "The inherent which supplies the host configuration did not run this block"]
 					HostConfigurationNotAvailable,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "No validation function upgrade is currently scheduled."]
 					NotScheduled,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "No code upgrade has been authorized."]
 					NothingAuthorized,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "The given code upgrade has not been authorized."]
 					Unauthorized,
 				}
@@ -25962,22 +25962,22 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "The validation function has been scheduled to apply."]
 					ValidationFunctionStored,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "The validation function was applied as of the contained relay chain block number."]
 					ValidationFunctionApplied { relay_chain_block_num: ::core::primitive::u32 },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "The relay-chain aborted the upgrade process."]
 					ValidationFunctionDiscarded,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "An upgrade has been authorized."]
 					UpgradeAuthorized { code_hash: ::subxt::utils::H256 },
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Some downward messages have been received and will be processed."]
 					DownwardMessagesReceived { count: ::core::primitive::u32 },
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Downward messages were processed using the given weight."]
 					DownwardMessagesProcessed {
 						weight_used: runtime_types::sp_weights::weight_v2::Weight,
@@ -26023,15 +26023,15 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Downward message is invalid XCM."]
 					#[doc = "\\[ id \\]"]
 					InvalidFormat([::core::primitive::u8; 8usize]),
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Downward message is unsupported version of XCM."]
 					#[doc = "\\[ id \\]"]
 					UnsupportedVersion([::core::primitive::u8; 8usize]),
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Downward message executed with the given outcome."]
 					#[doc = "\\[ id, outcome \\]"]
 					ExecutedDownward(
@@ -26043,9 +26043,9 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum Origin {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Relay,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					SiblingParachain(runtime_types::polkadot_parachain::primitives::Id),
 				}
 			}
@@ -26059,7 +26059,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Services a single overweight XCM."]
 					#[doc = ""]
 					#[doc = "- `origin`: Must pass `ExecuteOverweightOrigin`."]
@@ -26077,53 +26077,53 @@ pub mod api {
 						index: ::core::primitive::u64,
 						weight_limit: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Suspends all XCM executions for the XCMP queue, regardless of the sender's origin."]
 					#[doc = ""]
 					#[doc = "- `origin`: Must pass `ControllerOrigin`."]
 					suspend_xcm_execution,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Resumes all XCM executions for the XCMP queue."]
 					#[doc = ""]
 					#[doc = "Note that this function doesn't change the status of the in/out bound channels."]
 					#[doc = ""]
 					#[doc = "- `origin`: Must pass `ControllerOrigin`."]
 					resume_xcm_execution,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Overwrites the number of pages of messages which must be in the queue for the other side to be told to"]
 					#[doc = "suspend their sending."]
 					#[doc = ""]
 					#[doc = "- `origin`: Must pass `Root`."]
 					#[doc = "- `new`: Desired value for `QueueConfigData.suspend_value`"]
 					update_suspend_threshold { new: ::core::primitive::u32 },
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Overwrites the number of pages of messages which must be in the queue after which we drop any further"]
 					#[doc = "messages from the channel."]
 					#[doc = ""]
 					#[doc = "- `origin`: Must pass `Root`."]
 					#[doc = "- `new`: Desired value for `QueueConfigData.drop_threshold`"]
 					update_drop_threshold { new: ::core::primitive::u32 },
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Overwrites the number of pages of messages which the queue must be reduced to before it signals that"]
 					#[doc = "message sending may recommence after it has been suspended."]
 					#[doc = ""]
 					#[doc = "- `origin`: Must pass `Root`."]
 					#[doc = "- `new`: Desired value for `QueueConfigData.resume_threshold`"]
 					update_resume_threshold { new: ::core::primitive::u32 },
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Overwrites the amount of remaining weight under which we stop processing messages."]
 					#[doc = ""]
 					#[doc = "- `origin`: Must pass `Root`."]
 					#[doc = "- `new`: Desired value for `QueueConfigData.threshold_weight`"]
 					update_threshold_weight { new: ::core::primitive::u64 },
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Overwrites the speed to which the available weight approaches the maximum weight."]
 					#[doc = "A lower number results in a faster progression. A value of 1 makes the entire weight available initially."]
 					#[doc = ""]
 					#[doc = "- `origin`: Must pass `Root`."]
 					#[doc = "- `new`: Desired value for `QueueConfigData.weight_restrict_decay`."]
 					update_weight_restrict_decay { new: ::core::primitive::u64 },
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Overwrite the maximum amount of weight any individual message may consume."]
 					#[doc = "Messages above this weight go into the overweight queue and may only be serviced explicitly."]
 					#[doc = ""]
@@ -26136,19 +26136,19 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Failed to send XCM message."]
 					FailedToSend,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Bad XCM origin."]
 					BadXcmOrigin,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Bad XCM data."]
 					BadXcm,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Bad overweight index."]
 					BadOverweightIndex,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Provided weight is possibly not enough to execute the message."]
 					WeightOverLimit,
 				}
@@ -26157,32 +26157,32 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Some XCM was executed ok."]
 					Success {
 						message_hash: ::core::option::Option<::subxt::utils::H256>,
 						weight: runtime_types::sp_weights::weight_v2::Weight,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Some XCM failed."]
 					Fail {
 						message_hash: ::core::option::Option<::subxt::utils::H256>,
 						error: runtime_types::xcm::v2::traits::Error,
 						weight: runtime_types::sp_weights::weight_v2::Weight,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Bad XCM version used."]
 					BadVersion { message_hash: ::core::option::Option<::subxt::utils::H256> },
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Bad XCM format used."]
 					BadFormat { message_hash: ::core::option::Option<::subxt::utils::H256> },
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "An upward message was sent to the relay chain."]
 					UpwardMessageSent { message_hash: ::core::option::Option<::subxt::utils::H256> },
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "An HRMP message was sent to a sibling parachain."]
 					XcmpMessageSent { message_hash: ::core::option::Option<::subxt::utils::H256> },
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "An XCM exceeded the individual message weight budget."]
 					OverweightEnqueued {
 						sender: runtime_types::polkadot_parachain::primitives::Id,
@@ -26190,7 +26190,7 @@ pub mod api {
 						index: ::core::primitive::u64,
 						required: runtime_types::sp_weights::weight_v2::Weight,
 					},
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "An XCM from the overweight queue was executed with the given actual weight used."]
 					OverweightServiced {
 						index: ::core::primitive::u64,
@@ -26213,9 +26213,9 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum InboundState {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				Ok,
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				Suspended,
 			}
 			#[derive(
@@ -26232,9 +26232,9 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum OutboundState {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				Ok,
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				Suspended,
 			}
 			#[derive(
@@ -26303,21 +26303,21 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum OriginCaller {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				system(
 					runtime_types::frame_support::dispatch::RawOrigin<::subxt::utils::AccountId32>,
 				),
-				#[codec::codec(index = 30)]
+				#[codec(index = 30)]
 				Council(runtime_types::pallet_collective::RawOrigin<::subxt::utils::AccountId32>),
-				#[codec::codec(index = 70)]
+				#[codec(index = 70)]
 				TechnicalCommittee(
 					runtime_types::pallet_collective::RawOrigin<::subxt::utils::AccountId32>,
 				),
-				#[codec::codec(index = 41)]
+				#[codec(index = 41)]
 				RelayerXcm(runtime_types::pallet_xcm::pallet::Origin),
-				#[codec::codec(index = 42)]
+				#[codec(index = 42)]
 				CumulusXcm(runtime_types::cumulus_pallet_xcm::pallet::Origin),
-				#[codec::codec(index = 5)]
+				#[codec(index = 5)]
 				Void(runtime_types::sp_core::Void),
 			}
 			#[derive(
@@ -26328,204 +26328,204 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum RuntimeCall {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				System(runtime_types::frame_system::pallet::Call),
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				Timestamp(runtime_types::pallet_timestamp::pallet::Call),
-				#[codec::codec(index = 2)]
+				#[codec(index = 2)]
 				Sudo(runtime_types::pallet_sudo::pallet::Call),
-				#[codec::codec(index = 12)]
+				#[codec(index = 12)]
 				AssetTxPayment(runtime_types::pallet_asset_tx_payment::pallet::Call),
-				#[codec::codec(index = 5)]
+				#[codec(index = 5)]
 				Indices(runtime_types::pallet_indices::pallet::Call),
-				#[codec::codec(index = 6)]
+				#[codec(index = 6)]
 				Balances(runtime_types::pallet_balances::pallet::Call),
-				#[codec::codec(index = 7)]
+				#[codec(index = 7)]
 				Identity(runtime_types::pallet_identity::pallet::Call),
-				#[codec::codec(index = 8)]
+				#[codec(index = 8)]
 				Multisig(runtime_types::pallet_multisig::pallet::Call),
-				#[codec::codec(index = 10)]
+				#[codec(index = 10)]
 				ParachainSystem(runtime_types::cumulus_pallet_parachain_system::pallet::Call),
-				#[codec::codec(index = 11)]
+				#[codec(index = 11)]
 				ParachainInfo(runtime_types::parachain_info::pallet::Call),
-				#[codec::codec(index = 20)]
+				#[codec(index = 20)]
 				Authorship(runtime_types::pallet_authorship::pallet::Call),
-				#[codec::codec(index = 21)]
+				#[codec(index = 21)]
 				CollatorSelection(runtime_types::pallet_collator_selection::pallet::Call),
-				#[codec::codec(index = 22)]
+				#[codec(index = 22)]
 				Session(runtime_types::pallet_session::pallet::Call),
-				#[codec::codec(index = 30)]
+				#[codec(index = 30)]
 				Council(runtime_types::pallet_collective::pallet::Call),
-				#[codec::codec(index = 31)]
+				#[codec(index = 31)]
 				CouncilMembership(runtime_types::pallet_membership::pallet::Call),
-				#[codec::codec(index = 32)]
+				#[codec(index = 32)]
 				Treasury(runtime_types::pallet_treasury::pallet::Call),
-				#[codec::codec(index = 33)]
+				#[codec(index = 33)]
 				Democracy(runtime_types::pallet_democracy::pallet::Call),
-				#[codec::codec(index = 70)]
+				#[codec(index = 70)]
 				TechnicalCommittee(runtime_types::pallet_collective::pallet::Call),
-				#[codec::codec(index = 71)]
+				#[codec(index = 71)]
 				TechnicalCommitteeMembership(runtime_types::pallet_membership::pallet::Call),
-				#[codec::codec(index = 34)]
+				#[codec(index = 34)]
 				Scheduler(runtime_types::pallet_scheduler::pallet::Call),
-				#[codec::codec(index = 35)]
+				#[codec(index = 35)]
 				Utility(runtime_types::pallet_utility::pallet::Call),
-				#[codec::codec(index = 36)]
+				#[codec(index = 36)]
 				Preimage(runtime_types::pallet_preimage::pallet::Call),
-				#[codec::codec(index = 37)]
+				#[codec(index = 37)]
 				Proxy(runtime_types::pallet_proxy::pallet::Call),
-				#[codec::codec(index = 40)]
+				#[codec(index = 40)]
 				XcmpQueue(runtime_types::cumulus_pallet_xcmp_queue::pallet::Call),
-				#[codec::codec(index = 41)]
+				#[codec(index = 41)]
 				RelayerXcm(runtime_types::pallet_xcm::pallet::Call),
-				#[codec::codec(index = 42)]
+				#[codec(index = 42)]
 				CumulusXcm(runtime_types::cumulus_pallet_xcm::pallet::Call),
-				#[codec::codec(index = 43)]
+				#[codec(index = 43)]
 				DmpQueue(runtime_types::cumulus_pallet_dmp_queue::pallet::Call),
-				#[codec::codec(index = 44)]
+				#[codec(index = 44)]
 				XTokens(runtime_types::orml_xtokens::module::Call),
-				#[codec::codec(index = 45)]
+				#[codec(index = 45)]
 				UnknownTokens(runtime_types::orml_unknown_tokens::module::Call),
-				#[codec::codec(index = 51)]
+				#[codec(index = 51)]
 				Tokens(runtime_types::orml_tokens::module::Call),
-				#[codec::codec(index = 52)]
+				#[codec(index = 52)]
 				Oracle(runtime_types::pallet_oracle::pallet::Call),
-				#[codec::codec(index = 53)]
+				#[codec(index = 53)]
 				CurrencyFactory(runtime_types::pallet_currency_factory::pallet::Call),
-				#[codec::codec(index = 54)]
+				#[codec(index = 54)]
 				Vault(runtime_types::pallet_vault::pallet::Call),
-				#[codec::codec(index = 55)]
+				#[codec(index = 55)]
 				AssetsRegistry(runtime_types::pallet_assets_registry::pallet::Call),
-				#[codec::codec(index = 56)]
+				#[codec(index = 56)]
 				GovernanceRegistry(runtime_types::pallet_governance_registry::pallet::Call),
-				#[codec::codec(index = 58)]
+				#[codec(index = 58)]
 				CrowdloanRewards(runtime_types::pallet_crowdloan_rewards::pallet::Call),
-				#[codec::codec(index = 59)]
+				#[codec(index = 59)]
 				Vesting(runtime_types::pallet_vesting::module::Call),
-				#[codec::codec(index = 60)]
+				#[codec(index = 60)]
 				BondedFinance(runtime_types::pallet_bonded_finance::pallet::Call),
-				#[codec::codec(index = 61)]
+				#[codec(index = 61)]
 				DutchAuction(runtime_types::pallet_dutch_auction::pallet::Call),
-				#[codec::codec(index = 63)]
+				#[codec(index = 63)]
 				Liquidations(runtime_types::pallet_liquidations::pallet::Call),
-				#[codec::codec(index = 64)]
+				#[codec(index = 64)]
 				Lending(runtime_types::pallet_lending::pallet::Call),
-				#[codec::codec(index = 65)]
+				#[codec(index = 65)]
 				Pablo(runtime_types::pallet_pablo::pallet::Call),
-				#[codec::codec(index = 66)]
+				#[codec(index = 66)]
 				DexRouter(runtime_types::pallet_dex_router::pallet::Call),
-				#[codec::codec(index = 67)]
+				#[codec(index = 67)]
 				Fnft(runtime_types::pallet_fnft::pallet::Call),
-				#[codec::codec(index = 68)]
+				#[codec(index = 68)]
 				StakingRewards(runtime_types::pallet_staking_rewards::pallet::Call),
-				#[codec::codec(index = 69)]
+				#[codec(index = 69)]
 				AssetsTransactorRouter(
 					runtime_types::pallet_assets_transactor_router::pallet::Call,
 				),
-				#[codec::codec(index = 140)]
+				#[codec(index = 140)]
 				CallFilter(runtime_types::pallet_call_filter::pallet::Call),
-				#[codec::codec(index = 180)]
+				#[codec(index = 180)]
 				Cosmwasm(runtime_types::pallet_cosmwasm::pallet::Call),
-				#[codec::codec(index = 190)]
+				#[codec(index = 190)]
 				Ibc(runtime_types::pallet_ibc::pallet::Call),
-				#[codec::codec(index = 191)]
+				#[codec(index = 191)]
 				IbcPing(runtime_types::pallet_ibc_ping::pallet::Call),
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum RuntimeEvent {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				System(runtime_types::frame_system::pallet::Event),
-				#[codec::codec(index = 2)]
+				#[codec(index = 2)]
 				Sudo(runtime_types::pallet_sudo::pallet::Event),
-				#[codec::codec(index = 4)]
+				#[codec(index = 4)]
 				TransactionPayment(runtime_types::pallet_transaction_payment::pallet::Event),
-				#[codec::codec(index = 5)]
+				#[codec(index = 5)]
 				Indices(runtime_types::pallet_indices::pallet::Event),
-				#[codec::codec(index = 6)]
+				#[codec(index = 6)]
 				Balances(runtime_types::pallet_balances::pallet::Event),
-				#[codec::codec(index = 7)]
+				#[codec(index = 7)]
 				Identity(runtime_types::pallet_identity::pallet::Event),
-				#[codec::codec(index = 8)]
+				#[codec(index = 8)]
 				Multisig(runtime_types::pallet_multisig::pallet::Event),
-				#[codec::codec(index = 10)]
+				#[codec(index = 10)]
 				ParachainSystem(runtime_types::cumulus_pallet_parachain_system::pallet::Event),
-				#[codec::codec(index = 21)]
+				#[codec(index = 21)]
 				CollatorSelection(runtime_types::pallet_collator_selection::pallet::Event),
-				#[codec::codec(index = 22)]
+				#[codec(index = 22)]
 				Session(runtime_types::pallet_session::pallet::Event),
-				#[codec::codec(index = 30)]
+				#[codec(index = 30)]
 				Council(runtime_types::pallet_collective::pallet::Event),
-				#[codec::codec(index = 31)]
+				#[codec(index = 31)]
 				CouncilMembership(runtime_types::pallet_membership::pallet::Event),
-				#[codec::codec(index = 32)]
+				#[codec(index = 32)]
 				Treasury(runtime_types::pallet_treasury::pallet::Event),
-				#[codec::codec(index = 33)]
+				#[codec(index = 33)]
 				Democracy(runtime_types::pallet_democracy::pallet::Event),
-				#[codec::codec(index = 70)]
+				#[codec(index = 70)]
 				TechnicalCommittee(runtime_types::pallet_collective::pallet::Event),
-				#[codec::codec(index = 71)]
+				#[codec(index = 71)]
 				TechnicalCommitteeMembership(runtime_types::pallet_membership::pallet::Event),
-				#[codec::codec(index = 34)]
+				#[codec(index = 34)]
 				Scheduler(runtime_types::pallet_scheduler::pallet::Event),
-				#[codec::codec(index = 35)]
+				#[codec(index = 35)]
 				Utility(runtime_types::pallet_utility::pallet::Event),
-				#[codec::codec(index = 36)]
+				#[codec(index = 36)]
 				Preimage(runtime_types::pallet_preimage::pallet::Event),
-				#[codec::codec(index = 37)]
+				#[codec(index = 37)]
 				Proxy(runtime_types::pallet_proxy::pallet::Event),
-				#[codec::codec(index = 40)]
+				#[codec(index = 40)]
 				XcmpQueue(runtime_types::cumulus_pallet_xcmp_queue::pallet::Event),
-				#[codec::codec(index = 41)]
+				#[codec(index = 41)]
 				RelayerXcm(runtime_types::pallet_xcm::pallet::Event),
-				#[codec::codec(index = 42)]
+				#[codec(index = 42)]
 				CumulusXcm(runtime_types::cumulus_pallet_xcm::pallet::Event),
-				#[codec::codec(index = 43)]
+				#[codec(index = 43)]
 				DmpQueue(runtime_types::cumulus_pallet_dmp_queue::pallet::Event),
-				#[codec::codec(index = 44)]
+				#[codec(index = 44)]
 				XTokens(runtime_types::orml_xtokens::module::Event),
-				#[codec::codec(index = 45)]
+				#[codec(index = 45)]
 				UnknownTokens(runtime_types::orml_unknown_tokens::module::Event),
-				#[codec::codec(index = 51)]
+				#[codec(index = 51)]
 				Tokens(runtime_types::orml_tokens::module::Event),
-				#[codec::codec(index = 52)]
+				#[codec(index = 52)]
 				Oracle(runtime_types::pallet_oracle::pallet::Event),
-				#[codec::codec(index = 53)]
+				#[codec(index = 53)]
 				CurrencyFactory(runtime_types::pallet_currency_factory::pallet::Event),
-				#[codec::codec(index = 54)]
+				#[codec(index = 54)]
 				Vault(runtime_types::pallet_vault::pallet::Event),
-				#[codec::codec(index = 55)]
+				#[codec(index = 55)]
 				AssetsRegistry(runtime_types::pallet_assets_registry::pallet::Event),
-				#[codec::codec(index = 56)]
+				#[codec(index = 56)]
 				GovernanceRegistry(runtime_types::pallet_governance_registry::pallet::Event),
-				#[codec::codec(index = 58)]
+				#[codec(index = 58)]
 				CrowdloanRewards(runtime_types::pallet_crowdloan_rewards::pallet::Event),
-				#[codec::codec(index = 59)]
+				#[codec(index = 59)]
 				Vesting(runtime_types::pallet_vesting::module::Event),
-				#[codec::codec(index = 60)]
+				#[codec(index = 60)]
 				BondedFinance(runtime_types::pallet_bonded_finance::pallet::Event),
-				#[codec::codec(index = 61)]
+				#[codec(index = 61)]
 				DutchAuction(runtime_types::pallet_dutch_auction::pallet::Event),
-				#[codec::codec(index = 63)]
+				#[codec(index = 63)]
 				Liquidations(runtime_types::pallet_liquidations::pallet::Event),
-				#[codec::codec(index = 64)]
+				#[codec(index = 64)]
 				Lending(runtime_types::pallet_lending::pallet::Event),
-				#[codec::codec(index = 65)]
+				#[codec(index = 65)]
 				Pablo(runtime_types::pallet_pablo::pallet::Event),
-				#[codec::codec(index = 66)]
+				#[codec(index = 66)]
 				DexRouter(runtime_types::pallet_dex_router::pallet::Event),
-				#[codec::codec(index = 67)]
+				#[codec(index = 67)]
 				Fnft(runtime_types::pallet_fnft::pallet::Event),
-				#[codec::codec(index = 68)]
+				#[codec(index = 68)]
 				StakingRewards(runtime_types::pallet_staking_rewards::pallet::Event),
-				#[codec::codec(index = 140)]
+				#[codec(index = 140)]
 				CallFilter(runtime_types::pallet_call_filter::pallet::Event),
-				#[codec::codec(index = 180)]
+				#[codec(index = 180)]
 				Cosmwasm(runtime_types::pallet_cosmwasm::pallet::Event),
-				#[codec::codec(index = 190)]
+				#[codec(index = 190)]
 				Ibc(runtime_types::pallet_ibc::pallet::Event),
-				#[codec::codec(index = 191)]
+				#[codec(index = 191)]
 				IbcPing(runtime_types::pallet_ibc_ping::pallet::Event),
 			}
 		}
@@ -26537,11 +26537,11 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum DispatchClass {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Normal,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Operational,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					Mandatory,
 				}
 				#[derive(
@@ -26556,9 +26556,9 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum Pays {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Yes,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					No,
 				}
 				#[derive(
@@ -26573,11 +26573,11 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum RawOrigin<_0> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Root,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Signed(_0),
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					None,
 				}
 			}
@@ -26591,17 +26591,17 @@ pub mod api {
 						Debug,
 					)]
 					pub enum Bounded<_0> {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Legacy {
 							hash: ::subxt::utils::H256,
 						},
-						#[codec::codec(index = 1)]
+						#[codec(index = 1)]
 						Inline(
 							runtime_types::sp_core::bounded::bounded_vec::BoundedVec<
 								::core::primitive::u8,
 							>,
 						),
-						#[codec::codec(index = 2)]
+						#[codec(index = 2)]
 						Lookup {
 							hash: ::subxt::utils::H256,
 							len: ::core::primitive::u32,
@@ -26619,9 +26619,9 @@ pub mod api {
 							Debug,
 						)]
 						pub enum BalanceStatus {
-							#[codec::codec(index = 0)]
+							#[codec(index = 0)]
 							Free,
-							#[codec::codec(index = 1)]
+							#[codec(index = 1)]
 							Reserved,
 						}
 					}
@@ -26670,7 +26670,7 @@ pub mod api {
 						:: subxt :: ext :: codec :: Encode,
 						Debug,
 					)]
-					pub struct CheckNonce(#[codec::codec(compact)] pub ::core::primitive::u32);
+					pub struct CheckNonce(#[codec(compact)] pub ::core::primitive::u32);
 				}
 				pub mod check_spec_version {
 					use super::runtime_types;
@@ -26740,17 +26740,17 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Make some on-chain remark."]
 					#[doc = ""]
 					#[doc = "# <weight>"]
 					#[doc = "- `O(1)`"]
 					#[doc = "# </weight>"]
 					remark { remark: ::std::vec::Vec<::core::primitive::u8> },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Set the number of pages in the WebAssembly environment's heap."]
 					set_heap_pages { pages: ::core::primitive::u64 },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Set the new runtime code."]
 					#[doc = ""]
 					#[doc = "# <weight>"]
@@ -26764,7 +26764,7 @@ pub mod api {
 					#[doc = "expensive. We will treat this as a full block."]
 					#[doc = "# </weight>"]
 					set_code { code: ::std::vec::Vec<::core::primitive::u8> },
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Set the new runtime code without doing any checks of the given `code`."]
 					#[doc = ""]
 					#[doc = "# <weight>"]
@@ -26775,7 +26775,7 @@ pub mod api {
 					#[doc = "The weight of this function is dependent on the runtime. We will treat this as a full"]
 					#[doc = "block. # </weight>"]
 					set_code_without_checks { code: ::std::vec::Vec<::core::primitive::u8> },
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Set some items of storage."]
 					set_storage {
 						items: ::std::vec::Vec<(
@@ -26783,10 +26783,10 @@ pub mod api {
 							::std::vec::Vec<::core::primitive::u8>,
 						)>,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Kill some items from storage."]
 					kill_storage { keys: ::std::vec::Vec<::std::vec::Vec<::core::primitive::u8>> },
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Kill all storage items with a key that starts with the given prefix."]
 					#[doc = ""]
 					#[doc = "**NOTE:** We rely on the Root origin to provide us the number of subkeys under"]
@@ -26795,7 +26795,7 @@ pub mod api {
 						prefix: ::std::vec::Vec<::core::primitive::u8>,
 						subkeys: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Make some on-chain remark and emit event."]
 					remark_with_event { remark: ::std::vec::Vec<::core::primitive::u8> },
 				}
@@ -26804,26 +26804,26 @@ pub mod api {
 				)]
 				#[doc = "Error for the System pallet"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "The name of specification does not match between the current runtime"]
 					#[doc = "and the new runtime."]
 					InvalidSpecName,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "The specification version is not allowed to decrease between the current runtime"]
 					#[doc = "and the new runtime."]
 					SpecVersionNeedsToIncrease,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Failed to extract the runtime version from the new runtime."]
 					#[doc = ""]
 					#[doc = "Either calling `Core_version` or decoding `RuntimeVersion` failed."]
 					FailedToExtractRuntimeVersion,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Suicide called when the account has non-default composite data."]
 					NonDefaultComposite,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "There is a non-zero reference count preventing the account from being purged."]
 					NonZeroRefCount,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "The origin filter prevent the call to be dispatched."]
 					CallFiltered,
 				}
@@ -26832,27 +26832,27 @@ pub mod api {
 				)]
 				#[doc = "Event for the System pallet."]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "An extrinsic completed successfully."]
 					ExtrinsicSuccess {
 						dispatch_info: runtime_types::frame_support::dispatch::DispatchInfo,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "An extrinsic failed."]
 					ExtrinsicFailed {
 						dispatch_error: runtime_types::sp_runtime::DispatchError,
 						dispatch_info: runtime_types::frame_support::dispatch::DispatchInfo,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "`:code` was updated."]
 					CodeUpdated,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "A new account was created."]
 					NewAccount { account: ::subxt::utils::AccountId32 },
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "An account was reaped."]
 					KilledAccount { account: ::subxt::utils::AccountId32 },
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "On on-chain remark happened."]
 					Remarked { sender: ::subxt::utils::AccountId32, hash: ::subxt::utils::H256 },
 				}
@@ -26879,7 +26879,7 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct LastRuntimeUpgradeInfo {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub spec_version: ::core::primitive::u32,
 				pub spec_name: ::std::string::String,
 			}
@@ -26887,11 +26887,11 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum Phase {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				ApplyExtrinsic(::core::primitive::u32),
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				Finalization,
-				#[codec::codec(index = 2)]
+				#[codec(index = 2)]
 				Initialization,
 			}
 		}
@@ -26922,12 +26922,12 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum Timeout {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				Offset {
 					timestamp: ::core::option::Option<::core::primitive::u64>,
 					height: ::core::option::Option<::core::primitive::u64>,
 				},
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				Absolute {
 					timestamp: ::core::option::Option<::core::primitive::u64>,
 					height: ::core::option::Option<::core::primitive::u64>,
@@ -26943,7 +26943,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Transfer some liquid free balance to another account."]
 					#[doc = ""]
 					#[doc = "`transfer` will set the `FreeBalance` of the sender and receiver."]
@@ -26963,10 +26963,10 @@ pub mod api {
 							::core::primitive::u32,
 						>,
 						currency_id: runtime_types::primitives::currency::CurrencyId,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Transfer all remaining balance to the given account."]
 					#[doc = ""]
 					#[doc = "NOTE: This function only attempts to transfer _transferable_"]
@@ -26994,7 +26994,7 @@ pub mod api {
 						currency_id: runtime_types::primitives::currency::CurrencyId,
 						keep_alive: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Same as the [`transfer`] call, but with a check that the transfer"]
 					#[doc = "will not kill the origin account."]
 					#[doc = ""]
@@ -27012,10 +27012,10 @@ pub mod api {
 							::core::primitive::u32,
 						>,
 						currency_id: runtime_types::primitives::currency::CurrencyId,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Exactly as `transfer`, except the origin must be root and the source"]
 					#[doc = "account may be specified."]
 					#[doc = ""]
@@ -27035,10 +27035,10 @@ pub mod api {
 							::core::primitive::u32,
 						>,
 						currency_id: runtime_types::primitives::currency::CurrencyId,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Set the balances of a given account."]
 					#[doc = ""]
 					#[doc = "This will alter `FreeBalance` and `ReservedBalance` in storage. it"]
@@ -27053,9 +27053,9 @@ pub mod api {
 							::core::primitive::u32,
 						>,
 						currency_id: runtime_types::primitives::currency::CurrencyId,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						new_free: ::core::primitive::u128,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						new_reserved: ::core::primitive::u128,
 					},
 				}
@@ -27064,28 +27064,28 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "The balance is too low"]
 					BalanceTooLow,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Cannot convert Amount into Balance type"]
 					AmountIntoBalanceFailed,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Failed because liquidity restrictions due to locking"]
 					LiquidityRestrictions,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Failed because the maximum locks was exceeded"]
 					MaxLocksExceeded,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Transfer/payment would kill account"]
 					KeepAlive,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Value too low to create account due to existential deposit"]
 					ExistentialDeposit,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Beneficiary account must pre-exist"]
 					DeadAccount,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					TooManyReserves,
 				}
 				#[derive(
@@ -27093,14 +27093,14 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "An account was created with some free balance."]
 					Endowed {
 						currency_id: runtime_types::primitives::currency::CurrencyId,
 						who: ::subxt::utils::AccountId32,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "An account was removed whose balance was non-zero but below"]
 					#[doc = "ExistentialDeposit, resulting in an outright loss."]
 					DustLost {
@@ -27108,7 +27108,7 @@ pub mod api {
 						who: ::subxt::utils::AccountId32,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Transfer succeeded."]
 					Transfer {
 						currency_id: runtime_types::primitives::currency::CurrencyId,
@@ -27116,21 +27116,21 @@ pub mod api {
 						to: ::subxt::utils::AccountId32,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Some balance was reserved (moved from free to reserved)."]
 					Reserved {
 						currency_id: runtime_types::primitives::currency::CurrencyId,
 						who: ::subxt::utils::AccountId32,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Some balance was unreserved (moved from reserved to free)."]
 					Unreserved {
 						currency_id: runtime_types::primitives::currency::CurrencyId,
 						who: ::subxt::utils::AccountId32,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Some reserved balance was repatriated (moved from reserved to"]
 					#[doc = "another account)."]
 					ReserveRepatriated {
@@ -27140,7 +27140,7 @@ pub mod api {
 						amount: ::core::primitive::u128,
 						status: runtime_types::frame_support::traits::tokens::misc::BalanceStatus,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "A balance was set by root."]
 					BalanceSet {
 						currency_id: runtime_types::primitives::currency::CurrencyId,
@@ -27148,20 +27148,20 @@ pub mod api {
 						free: ::core::primitive::u128,
 						reserved: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "The total issuance of an currency has been set"]
 					TotalIssuanceSet {
 						currency_id: runtime_types::primitives::currency::CurrencyId,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Some balances were withdrawn (e.g. pay for transaction fee)"]
 					Withdrawn {
 						currency_id: runtime_types::primitives::currency::CurrencyId,
 						who: ::subxt::utils::AccountId32,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "Some balances were slashed (e.g. due to mis-behavior)"]
 					Slashed {
 						currency_id: runtime_types::primitives::currency::CurrencyId,
@@ -27169,14 +27169,14 @@ pub mod api {
 						free_amount: ::core::primitive::u128,
 						reserved_amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "Deposited some balance into an account"]
 					Deposited {
 						currency_id: runtime_types::primitives::currency::CurrencyId,
 						who: ::subxt::utils::AccountId32,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					#[doc = "Some funds are locked"]
 					LockSet {
 						lock_id: [::core::primitive::u8; 8usize],
@@ -27184,7 +27184,7 @@ pub mod api {
 						who: ::subxt::utils::AccountId32,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					#[doc = "Some locked funds were unlocked"]
 					LockRemoved {
 						lock_id: [::core::primitive::u8; 8usize],
@@ -27230,13 +27230,13 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "The balance is too low."]
 					BalanceTooLow,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "The operation will cause balance to overflow."]
 					BalanceOverflow,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Unhandled asset."]
 					UnhandledAsset,
 				}
@@ -27245,13 +27245,13 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Deposit success."]
 					Deposited {
 						asset: runtime_types::xcm::v1::multiasset::MultiAsset,
 						who: runtime_types::xcm::v1::multilocation::MultiLocation,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Withdraw success."]
 					Withdrawn {
 						asset: runtime_types::xcm::v1::multiasset::MultiAsset,
@@ -27269,7 +27269,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Transfer native currencies."]
 					#[doc = ""]
 					#[doc = "`dest_weight_limit` is the weight for XCM execution on the dest"]
@@ -27288,7 +27288,7 @@ pub mod api {
 						dest: ::std::boxed::Box<runtime_types::xcm::VersionedMultiLocation>,
 						dest_weight_limit: runtime_types::xcm::v2::WeightLimit,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Transfer `MultiAsset`."]
 					#[doc = ""]
 					#[doc = "`dest_weight_limit` is the weight for XCM execution on the dest"]
@@ -27306,7 +27306,7 @@ pub mod api {
 						dest: ::std::boxed::Box<runtime_types::xcm::VersionedMultiLocation>,
 						dest_weight_limit: runtime_types::xcm::v2::WeightLimit,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Transfer native currencies specifying the fee and amount as"]
 					#[doc = "separate."]
 					#[doc = ""]
@@ -27335,7 +27335,7 @@ pub mod api {
 						dest: ::std::boxed::Box<runtime_types::xcm::VersionedMultiLocation>,
 						dest_weight_limit: runtime_types::xcm::v2::WeightLimit,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Transfer `MultiAsset` specifying the fee and amount as separate."]
 					#[doc = ""]
 					#[doc = "`dest_weight_limit` is the weight for XCM execution on the dest"]
@@ -27363,7 +27363,7 @@ pub mod api {
 						dest: ::std::boxed::Box<runtime_types::xcm::VersionedMultiLocation>,
 						dest_weight_limit: runtime_types::xcm::v2::WeightLimit,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Transfer several currencies specifying the item to be used as fee"]
 					#[doc = ""]
 					#[doc = "`dest_weight_limit` is the weight for XCM execution on the dest"]
@@ -27388,7 +27388,7 @@ pub mod api {
 						dest: ::std::boxed::Box<runtime_types::xcm::VersionedMultiLocation>,
 						dest_weight_limit: runtime_types::xcm::v2::WeightLimit,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Transfer several `MultiAsset` specifying the item to be used as fee"]
 					#[doc = ""]
 					#[doc = "`dest_weight_limit` is the weight for XCM execution on the dest"]
@@ -27416,64 +27416,64 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Asset has no reserve location."]
 					AssetHasNoReserve,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Not cross-chain transfer."]
 					NotCrossChainTransfer,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Invalid transfer destination."]
 					InvalidDest,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Currency is not cross-chain transferable."]
 					NotCrossChainTransferableCurrency,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "The message's weight could not be determined."]
 					UnweighableMessage,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "XCM execution failed."]
 					XcmExecutionFailed,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Could not re-anchor the assets to declare the fees for the"]
 					#[doc = "destination chain."]
 					CannotReanchor,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Could not get ancestry of asset reserve location."]
 					InvalidAncestry,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "The MultiAsset is invalid."]
 					InvalidAsset,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "The destination `MultiLocation` provided cannot be inverted."]
 					DestinationNotInvertible,
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "The version of the `Versioned` value used is not able to be"]
 					#[doc = "interpreted."]
 					BadVersion,
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					#[doc = "We tried sending distinct asset and fee but they have different"]
 					#[doc = "reserve chains."]
 					DistinctReserveForAssetAndFee,
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					#[doc = "The fee is zero."]
 					ZeroFee,
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					#[doc = "The transfering asset amount is zero."]
 					ZeroAmount,
-					#[codec::codec(index = 14)]
+					#[codec(index = 14)]
 					#[doc = "The number of assets to be sent is over the maximum."]
 					TooManyAssetsBeingSent,
-					#[codec::codec(index = 15)]
+					#[codec(index = 15)]
 					#[doc = "The specified index does not exist in a MultiAssets struct."]
 					AssetIndexNonExistent,
-					#[codec::codec(index = 16)]
+					#[codec(index = 16)]
 					#[doc = "Fee is not enough."]
 					FeeNotEnough,
-					#[codec::codec(index = 17)]
+					#[codec(index = 17)]
 					#[doc = "Not supported MultiLocation"]
 					NotSupportedMultiLocation,
-					#[codec::codec(index = 18)]
+					#[codec(index = 18)]
 					#[doc = "MinXcmFee not registered for certain reserve location"]
 					MinXcmFeeNotDefined,
 				}
@@ -27482,7 +27482,7 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Transferred `MultiAsset` with fee."]
 					TransferredMultiAssets {
 						sender: ::subxt::utils::AccountId32,
@@ -27502,7 +27502,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Sets or resets payment asset."]
 					#[doc = ""]
 					#[doc = "If `asset_id` is `None`, then native asset is used."]
@@ -27518,7 +27518,7 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub struct ChargeAssetTxPayment {
-				#[codec::codec(compact)]
+				#[codec(compact)]
 				pub tip: ::core::primitive::u128,
 				pub asset_id:
 					::core::option::Option<runtime_types::primitives::currency::CurrencyId>,
@@ -27533,7 +27533,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Creates an asset."]
 					#[doc = ""]
 					#[doc = "# Parameters:"]
@@ -27554,7 +27554,7 @@ pub mod api {
 							::core::primitive::u128,
 						>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Update stored asset information."]
 					#[doc = ""]
 					#[doc = "Emits:"]
@@ -27565,7 +27565,7 @@ pub mod api {
 							::core::primitive::u128,
 						>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Minimal amount of `foreign_asset_id` required to send message to other network."]
 					#[doc = "Target network may or may not accept payment `amount`."]
 					#[doc = "Assumed this is maintained up to date by technical team."]
@@ -27587,11 +27587,11 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					AssetNotFound,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					AssetAlreadyRegistered,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					StringExceedsMaxLength,
 				}
 				#[derive(
@@ -27599,7 +27599,7 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					AssetRegistered {
 						asset_id: runtime_types::primitives::currency::CurrencyId,
 						location: ::core::option::Option<
@@ -27609,19 +27609,19 @@ pub mod api {
 							::core::primitive::u128,
 						>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					AssetUpdated {
 						asset_id: runtime_types::primitives::currency::CurrencyId,
 						asset_info: runtime_types::composable_traits::assets::AssetInfoUpdate<
 							::core::primitive::u128,
 						>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					AssetLocationUpdated {
 						asset_id: runtime_types::primitives::currency::CurrencyId,
 						location: runtime_types::composable_traits::xcm::assets::XcmAssetLocation,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					MinFeeUpdated {
 						target_parachain_id: runtime_types::polkadot_parachain::primitives::Id,
 						foreign_asset_id:
@@ -27640,7 +27640,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Transfer `amount` of `asset` from `origin` to `dest`."]
 					#[doc = ""]
 					#[doc = "# Errors"]
@@ -27657,7 +27657,7 @@ pub mod api {
 						amount: ::core::primitive::u128,
 						keep_alive: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Transfer `amount` of the native asset from `origin` to `dest`. This is slightly"]
 					#[doc = "cheaper to call, as it avoids an asset lookup."]
 					#[doc = ""]
@@ -27674,7 +27674,7 @@ pub mod api {
 						value: ::core::primitive::u128,
 						keep_alive: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Transfer `amount` of the `asset` from `origin` to `dest`. This requires root."]
 					#[doc = ""]
 					#[doc = "# Errors"]
@@ -27695,7 +27695,7 @@ pub mod api {
 						value: ::core::primitive::u128,
 						keep_alive: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Transfer `amount` of the the native asset from `origin` to `dest`. This requires root."]
 					#[doc = ""]
 					#[doc = "# Errors"]
@@ -27715,7 +27715,7 @@ pub mod api {
 						value: ::core::primitive::u128,
 						keep_alive: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Transfer all free balance of the `asset` from `origin` to `dest`."]
 					#[doc = ""]
 					#[doc = "# Errors"]
@@ -27729,7 +27729,7 @@ pub mod api {
 						>,
 						keep_alive: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Transfer all free balance of the native asset from `origin` to `dest`."]
 					#[doc = ""]
 					#[doc = "# Errors"]
@@ -27742,7 +27742,7 @@ pub mod api {
 						>,
 						keep_alive: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Mints `amount` of `asset_id` into the `dest` account."]
 					mint_into {
 						asset_id: runtime_types::primitives::currency::CurrencyId,
@@ -27752,7 +27752,7 @@ pub mod api {
 						>,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Burns `amount` of `asset_id` into the `dest` account."]
 					burn_from {
 						asset_id: runtime_types::primitives::currency::CurrencyId,
@@ -27768,9 +27768,9 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					CannotSetNewCurrencyToRegistry,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					InvalidCurrency,
 				}
 			}
@@ -27784,7 +27784,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Provide a set of uncles."]
 					set_uncles {
 						new_uncles: ::std::vec::Vec<
@@ -27800,25 +27800,25 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "The uncle parent not in the chain."]
 					InvalidUncleParent,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Uncles already set in the block."]
 					UnclesAlreadySet,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Too many uncles."]
 					TooManyUncles,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "The uncle is genesis."]
 					GenesisUncle,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "The uncle is too high in chain."]
 					TooHighUncle,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "The uncle is already included."]
 					UncleAlreadyIncluded,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "The uncle isn't recent enough to be included."]
 					OldUncle,
 				}
@@ -27827,9 +27827,9 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum UncleEntryItem<_0, _1, _2> {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				InclusionHeight(_0),
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				Uncle(_1, ::core::option::Option<_2>),
 			}
 		}
@@ -27842,7 +27842,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Transfer some liquid free balance to another account."]
 					#[doc = ""]
 					#[doc = "`transfer` will set the `FreeBalance` of the sender and receiver."]
@@ -27873,10 +27873,10 @@ pub mod api {
 							::subxt::utils::AccountId32,
 							::core::primitive::u32,
 						>,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						value: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Set the balances of a given account."]
 					#[doc = ""]
 					#[doc = "This will alter `FreeBalance` and `ReservedBalance` in storage. it will"]
@@ -27890,12 +27890,12 @@ pub mod api {
 							::subxt::utils::AccountId32,
 							::core::primitive::u32,
 						>,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						new_free: ::core::primitive::u128,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						new_reserved: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Exactly as `transfer`, except the origin must be root and the source account may be"]
 					#[doc = "specified."]
 					#[doc = "# <weight>"]
@@ -27911,10 +27911,10 @@ pub mod api {
 							::subxt::utils::AccountId32,
 							::core::primitive::u32,
 						>,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						value: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Same as the [`transfer`] call, but with a check that the transfer will not kill the"]
 					#[doc = "origin account."]
 					#[doc = ""]
@@ -27926,10 +27926,10 @@ pub mod api {
 							::subxt::utils::AccountId32,
 							::core::primitive::u32,
 						>,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						value: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Transfer the entire transferable balance from the caller account."]
 					#[doc = ""]
 					#[doc = "NOTE: This function only attempts to transfer _transferable_ balances. This means that"]
@@ -27954,7 +27954,7 @@ pub mod api {
 						>,
 						keep_alive: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Unreserve some balance from a user by force."]
 					#[doc = ""]
 					#[doc = "Can only be called by ROOT."]
@@ -27971,28 +27971,28 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Vesting balance too high to send value"]
 					VestingBalance,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Account liquidity restrictions prevent withdrawal"]
 					LiquidityRestrictions,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Balance too low to send value."]
 					InsufficientBalance,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Value too low to create account due to existential deposit"]
 					ExistentialDeposit,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Transfer/payment would kill account"]
 					KeepAlive,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "A vesting schedule already exists for this account"]
 					ExistingVestingSchedule,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Beneficiary account must pre-exist"]
 					DeadAccount,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Number of named reserves exceed MaxReserves"]
 					TooManyReserves,
 				}
@@ -28001,40 +28001,40 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "An account was created with some free balance."]
 					Endowed {
 						account: ::subxt::utils::AccountId32,
 						free_balance: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "An account was removed whose balance was non-zero but below ExistentialDeposit,"]
 					#[doc = "resulting in an outright loss."]
 					DustLost {
 						account: ::subxt::utils::AccountId32,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Transfer succeeded."]
 					Transfer {
 						from: ::subxt::utils::AccountId32,
 						to: ::subxt::utils::AccountId32,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "A balance was set by root."]
 					BalanceSet {
 						who: ::subxt::utils::AccountId32,
 						free: ::core::primitive::u128,
 						reserved: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Some balance was reserved (moved from free to reserved)."]
 					Reserved { who: ::subxt::utils::AccountId32, amount: ::core::primitive::u128 },
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Some balance was unreserved (moved from reserved to free)."]
 					Unreserved { who: ::subxt::utils::AccountId32, amount: ::core::primitive::u128 },
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Some balance was moved from the reserve of the first account to the second account."]
 					#[doc = "Final argument indicates the destination balance type."]
 					ReserveRepatriated {
@@ -28044,13 +28044,13 @@ pub mod api {
 						destination_status:
 							runtime_types::frame_support::traits::tokens::misc::BalanceStatus,
 					},
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Some amount was deposited (e.g. for transaction fees)."]
 					Deposit { who: ::subxt::utils::AccountId32, amount: ::core::primitive::u128 },
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Some amount was withdrawn from the account (e.g. for transaction fees)."]
 					Withdraw { who: ::subxt::utils::AccountId32, amount: ::core::primitive::u128 },
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "Some amount was removed from the account (e.g. for misbehavior)."]
 					Slashed { who: ::subxt::utils::AccountId32, amount: ::core::primitive::u128 },
 				}
@@ -28076,11 +28076,11 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum Reasons {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				Fee,
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				Misc,
-				#[codec::codec(index = 2)]
+				#[codec(index = 2)]
 				All,
 			}
 			#[derive(
@@ -28100,7 +28100,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Create a new bond offer. To be `bond` to later."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Signed_ and the sender must have the"]
@@ -28119,7 +28119,7 @@ pub mod api {
 						>,
 						keep_alive: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Bond to an offer."]
 					#[doc = ""]
 					#[doc = "The issuer should provide the number of contracts they are willing to buy."]
@@ -28139,7 +28139,7 @@ pub mod api {
 						nb_of_bonds: ::core::primitive::u128,
 						keep_alive: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Cancel a running offer."]
 					#[doc = ""]
 					#[doc = "Blocking further bonds but not cancelling the currently vested rewards. The `stake` put"]
@@ -28155,16 +28155,16 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "The offer could not be found."]
 					BondOfferNotFound,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Someone tried  to submit an invalid offer."]
 					InvalidBondOffer,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Someone tried to bond an already completed offer."]
 					OfferCompleted,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Someone tried to bond with an invalid number of nb_of_bonds."]
 					InvalidNumberOfBonds,
 				}
@@ -28173,23 +28173,23 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "A new offer has been created."]
 					NewOffer {
 						offer_id: ::core::primitive::u128,
 						beneficiary: ::subxt::utils::AccountId32,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "A new bond has been registered."]
 					NewBond {
 						offer_id: ::core::primitive::u128,
 						who: ::subxt::utils::AccountId32,
 						nb_of_bonds: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "An offer has been cancelled by the `AdminOrigin`."]
 					OfferCancelled { offer_id: ::core::primitive::u128 },
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "An offer has been completed."]
 					OfferCompleted { offer_id: ::core::primitive::u128 },
 				}
@@ -28204,7 +28204,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Disable a pallet function."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Signed_ and the sender must be"]
@@ -28216,7 +28216,7 @@ pub mod api {
 							runtime_types::common::MaxStringSize,
 						>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Enable a previously disabled pallet function."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Signed_ and the sender must be"]
@@ -28234,10 +28234,10 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "We tried to disable an extrinsic that cannot be disabled."]
 					CannotDisable,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "The pallet name is not a valid UTF8 string."]
 					InvalidString,
 				}
@@ -28246,14 +28246,14 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Paused transaction"]
 					Disabled {
 						entry: runtime_types::pallet_call_filter::types::CallFilterEntry<
 							runtime_types::common::MaxStringSize,
 						>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Unpaused transaction"]
 					Enabled {
 						entry: runtime_types::pallet_call_filter::types::CallFilterEntry<
@@ -28274,7 +28274,7 @@ pub mod api {
 					pub function_name: runtime_types::sp_core::bounded::bounded_vec::BoundedVec<
 						::core::primitive::u8,
 					>,
-					#[codec::codec(skip)]
+					#[codec(skip)]
 					pub __subxt_unused_type_params: ::core::marker::PhantomData<_0>,
 				}
 			}
@@ -28288,24 +28288,24 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Set the list of invulnerable (fixed) collators."]
 					set_invulnerables { new: ::std::vec::Vec<::subxt::utils::AccountId32> },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Set the ideal number of collators (not including the invulnerables)."]
 					#[doc = "If lowering this number, then the number of running collators could be higher than this figure."]
 					#[doc = "Aside from that edge case, there should be no other way to have more collators than the desired number."]
 					set_desired_candidates { max: ::core::primitive::u32 },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Set the candidacy bond amount."]
 					set_candidacy_bond { bond: ::core::primitive::u128 },
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Register this account as a collator candidate. The account must (a) already have"]
 					#[doc = "registered session keys and (b) be able to reserve the `CandidacyBond`."]
 					#[doc = ""]
 					#[doc = "This call is not available to `Invulnerable` collators."]
 					register_as_candidate,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Deregister `origin` as a collator candidate. Note that the collator can only leave on"]
 					#[doc = "session change. The `CandidacyBond` will be unreserved immediately."]
 					#[doc = ""]
@@ -28326,34 +28326,34 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Too many candidates"]
 					TooManyCandidates,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Too few candidates"]
 					TooFewCandidates,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Unknown error"]
 					Unknown,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Permission issue"]
 					Permission,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "User is already a candidate"]
 					AlreadyCandidate,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "User is not a candidate"]
 					NotCandidate,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Too many invulnerables"]
 					TooManyInvulnerables,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "User is already an Invulnerable"]
 					AlreadyInvulnerable,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Account has no associated validator ID"]
 					NoAssociatedValidatorId,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "Validator ID is not yet registered"]
 					ValidatorNotRegistered,
 				}
@@ -28362,18 +28362,18 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					NewInvulnerables { invulnerables: ::std::vec::Vec<::subxt::utils::AccountId32> },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					NewDesiredCandidates { desired_candidates: ::core::primitive::u32 },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					NewCandidacyBond { bond_amount: ::core::primitive::u128 },
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					CandidateAdded {
 						account_id: ::subxt::utils::AccountId32,
 						deposit: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					CandidateRemoved { account_id: ::subxt::utils::AccountId32 },
 				}
 			}
@@ -28387,7 +28387,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Set the collective's membership."]
 					#[doc = ""]
 					#[doc = "- `new_members`: The new member list. Be nice to the chain and provide it sorted."]
@@ -28425,7 +28425,7 @@ pub mod api {
 						prime: ::core::option::Option<::subxt::utils::AccountId32>,
 						old_count: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Dispatch a proposal from a member using the `Member` origin."]
 					#[doc = ""]
 					#[doc = "Origin must be a member of the collective."]
@@ -28439,10 +28439,10 @@ pub mod api {
 					#[doc = "# </weight>"]
 					execute {
 						proposal: ::std::boxed::Box<runtime_types::dali_runtime::RuntimeCall>,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						length_bound: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Add a new proposal to either be voted on or executed directly."]
 					#[doc = ""]
 					#[doc = "Requires the sender to be member."]
@@ -28471,13 +28471,13 @@ pub mod api {
 					#[doc = "  - 1 event"]
 					#[doc = "# </weight>"]
 					propose {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						threshold: ::core::primitive::u32,
 						proposal: ::std::boxed::Box<runtime_types::dali_runtime::RuntimeCall>,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						length_bound: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Add an aye or nay vote for the sender to the given proposal."]
 					#[doc = ""]
 					#[doc = "Requires the sender to be a member."]
@@ -28495,11 +28495,11 @@ pub mod api {
 					#[doc = "# </weight>"]
 					vote {
 						proposal: ::subxt::utils::H256,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						index: ::core::primitive::u32,
 						approve: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Close a vote that is either approved, disapproved or whose voting period has ended."]
 					#[doc = ""]
 					#[doc = "May be called by any signed account in order to finish voting and close the proposal."]
@@ -28534,14 +28534,14 @@ pub mod api {
 					#[doc = "# </weight>"]
 					close_old_weight {
 						proposal_hash: ::subxt::utils::H256,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						index: ::core::primitive::u32,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						proposal_weight_bound: runtime_types::sp_weights::OldWeight,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						length_bound: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Disapprove a proposal, close, and remove it from the system, regardless of its current"]
 					#[doc = "state."]
 					#[doc = ""]
@@ -28557,7 +28557,7 @@ pub mod api {
 					#[doc = "* Writes: Voting, Proposals, ProposalOf"]
 					#[doc = "# </weight>"]
 					disapprove_proposal { proposal_hash: ::subxt::utils::H256 },
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Close a vote that is either approved, disapproved or whose voting period has ended."]
 					#[doc = ""]
 					#[doc = "May be called by any signed account in order to finish voting and close the proposal."]
@@ -28592,10 +28592,10 @@ pub mod api {
 					#[doc = "# </weight>"]
 					close {
 						proposal_hash: ::subxt::utils::H256,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						index: ::core::primitive::u32,
 						proposal_weight_bound: runtime_types::sp_weights::weight_v2::Weight,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						length_bound: ::core::primitive::u32,
 					},
 				}
@@ -28604,34 +28604,34 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Account is not a member"]
 					NotMember,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Duplicate proposals not allowed"]
 					DuplicateProposal,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Proposal must exist"]
 					ProposalMissing,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Mismatched index"]
 					WrongIndex,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Duplicate vote ignored"]
 					DuplicateVote,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Members are already initialized!"]
 					AlreadyInitialized,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "The close call was made too early, before the end of the voting."]
 					TooEarly,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "There can only be a maximum of `MaxProposals` active proposals."]
 					TooManyProposals,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "The given weight bound for the proposal was too low."]
 					WrongProposalWeight,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "The given length bound for the proposal was too low."]
 					WrongProposalLength,
 				}
@@ -28640,7 +28640,7 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "A motion (given hash) has been proposed (by given account) with a threshold (given"]
 					#[doc = "`MemberCount`)."]
 					Proposed {
@@ -28649,7 +28649,7 @@ pub mod api {
 						proposal_hash: ::subxt::utils::H256,
 						threshold: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "A motion (given hash) has been voted on by given account, leaving"]
 					#[doc = "a tally (yes votes and no votes given respectively as `MemberCount`)."]
 					Voted {
@@ -28659,27 +28659,27 @@ pub mod api {
 						yes: ::core::primitive::u32,
 						no: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "A motion was approved by the required threshold."]
 					Approved { proposal_hash: ::subxt::utils::H256 },
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "A motion was not approved by the required threshold."]
 					Disapproved { proposal_hash: ::subxt::utils::H256 },
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "A motion was executed; result will be `Ok` if it returned without error."]
 					Executed {
 						proposal_hash: ::subxt::utils::H256,
 						result:
 							::core::result::Result<(), runtime_types::sp_runtime::DispatchError>,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "A single member did some action; result will be `Ok` if it returned without error."]
 					MemberExecuted {
 						proposal_hash: ::subxt::utils::H256,
 						result:
 							::core::result::Result<(), runtime_types::sp_runtime::DispatchError>,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "A proposal was closed because its threshold was reached or after its duration was up."]
 					Closed {
 						proposal_hash: ::subxt::utils::H256,
@@ -28692,11 +28692,11 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum RawOrigin<_0> {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				Members(::core::primitive::u32, ::core::primitive::u32),
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				Member(_0),
-				#[codec::codec(index = 2)]
+				#[codec(index = 2)]
 				_Phantom,
 			}
 			#[derive(
@@ -28794,7 +28794,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Upload a CosmWasm contract."]
 					#[doc = "The function will ensure that the wasm module is well formed and that it fits the"]
 					#[doc = "according limits. The module exports are going to be checked against the expected"]
@@ -28811,7 +28811,7 @@ pub mod api {
 							::core::primitive::u8,
 						>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Instantiate a previously uploaded code resulting in a new contract being generated."]
 					#[doc = ""]
 					#[doc = "* Emits an `Instantiated` event on success."]
@@ -28845,7 +28845,7 @@ pub mod api {
 							::core::primitive::u8,
 						>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Execute a previously instantiated contract."]
 					#[doc = ""]
 					#[doc = "* Emits an `Executed` event."]
@@ -28870,7 +28870,7 @@ pub mod api {
 							::core::primitive::u8,
 						>,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Migrate a previously instantiated contract."]
 					#[doc = ""]
 					#[doc = "* Emits a `Migrated` event on success."]
@@ -28892,7 +28892,7 @@ pub mod api {
 							::core::primitive::u8,
 						>,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Update the admin of a contract."]
 					#[doc = ""]
 					#[doc = "* Emits a `AdminUpdated` event on success."]
@@ -28914,69 +28914,69 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Instrumentation,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					VmCreation,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					ContractTrapped,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					ContractHasNoInfo,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					CodeDecoding,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					CodeValidation,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					CodeEncoding,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					CodeInstrumentation,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					InstrumentedCodeIsTooBig,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					CodeAlreadyExists,
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					CodeNotFound,
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					ContractAlreadyExists,
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					ContractNotFound,
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					TransferFailed,
-					#[codec::codec(index = 14)]
+					#[codec(index = 14)]
 					LabelTooBig,
-					#[codec::codec(index = 15)]
+					#[codec(index = 15)]
 					UnknownDenom,
-					#[codec::codec(index = 16)]
+					#[codec(index = 16)]
 					StackOverflow,
-					#[codec::codec(index = 17)]
+					#[codec(index = 17)]
 					NotEnoughFundsForUpload,
-					#[codec::codec(index = 18)]
+					#[codec(index = 18)]
 					NonceOverflow,
-					#[codec::codec(index = 19)]
+					#[codec(index = 19)]
 					RefcountOverflow,
-					#[codec::codec(index = 20)]
+					#[codec(index = 20)]
 					VMDepthOverflow,
-					#[codec::codec(index = 21)]
+					#[codec(index = 21)]
 					SignatureVerificationError,
-					#[codec::codec(index = 22)]
+					#[codec(index = 22)]
 					IteratorIdOverflow,
-					#[codec::codec(index = 23)]
+					#[codec(index = 23)]
 					IteratorNotFound,
-					#[codec::codec(index = 24)]
+					#[codec(index = 24)]
 					IteratorValueNotFound,
-					#[codec::codec(index = 25)]
+					#[codec(index = 25)]
 					NotAuthorized,
-					#[codec::codec(index = 26)]
+					#[codec(index = 26)]
 					Unsupported,
-					#[codec::codec(index = 27)]
+					#[codec(index = 27)]
 					Ibc,
-					#[codec::codec(index = 28)]
+					#[codec(index = 28)]
 					FailedToSerialize,
-					#[codec::codec(index = 29)]
+					#[codec(index = 29)]
 					OutOfGas,
-					#[codec::codec(index = 30)]
+					#[codec(index = 30)]
 					InvalidSalt,
-					#[codec::codec(index = 31)]
+					#[codec(index = 31)]
 					InvalidAccount,
 				}
 				#[derive(
@@ -28984,12 +28984,12 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Uploaded {
 						code_hash: [::core::primitive::u8; 32usize],
 						code_id: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Instantiated {
 						contract: ::subxt::utils::AccountId32,
 						info: runtime_types::pallet_cosmwasm::types::ContractInfo<
@@ -29002,19 +29002,19 @@ pub mod api {
 							>,
 						>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					Executed {
 						contract: ::subxt::utils::AccountId32,
 						entrypoint: runtime_types::pallet_cosmwasm::types::EntryPoint,
 						data: ::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					ExecutionFailed {
 						contract: ::subxt::utils::AccountId32,
 						entrypoint: runtime_types::pallet_cosmwasm::types::EntryPoint,
 						error: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					Emitted {
 						contract: ::subxt::utils::AccountId32,
 						ty: ::std::vec::Vec<::core::primitive::u8>,
@@ -29023,9 +29023,9 @@ pub mod api {
 							::std::vec::Vec<::core::primitive::u8>,
 						)>,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					Migrated { contract: ::subxt::utils::AccountId32, to: ::core::primitive::u64 },
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					AdminUpdated {
 						contract: ::subxt::utils::AccountId32,
 						new_admin: ::core::option::Option<::subxt::utils::AccountId32>,
@@ -29038,9 +29038,9 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum CodeIdentifier {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					CodeId(::core::primitive::u64),
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					CodeHash([::core::primitive::u8; 32usize]),
 				}
 				#[derive(
@@ -29067,25 +29067,25 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum EntryPoint {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Instantiate,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Execute,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					Migrate,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					Reply,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					IbcChannelOpen,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					IbcChannelConnect,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					IbcChannelClose,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					IbcPacketTimeout,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					IbcPacketReceive,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					IbcPacketAck,
 				}
 			}
@@ -29098,18 +29098,18 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum Proof<_0> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					RelayChain(_0, runtime_types::sp_runtime::MultiSignature),
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Ethereum(runtime_types::composable_support::types::EcdsaSignature),
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum RemoteAccount<_0> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					RelayChain(_0),
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Ethereum(runtime_types::composable_support::types::EthereumAddress),
 				}
 				#[derive(
@@ -29128,13 +29128,13 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Initialize the pallet at the current timestamp."]
 					initialize,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Initialize the pallet at the given timestamp."]
 					initialize_at { at: ::core::primitive::u64 },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Populate pallet by adding more rewards."]
 					#[doc = ""]
 					#[doc = "Each index in the rewards vector should contain: `remote_account`, `reward_account`,"]
@@ -29153,7 +29153,7 @@ pub mod api {
 							::core::primitive::u64,
 						)>,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Associate a reward account. A valid proof has to be provided."]
 					#[doc = "This call also claim the first reward (a.k.a. the first payment, which is a % of the"]
 					#[doc = "vested reward)."]
@@ -29169,16 +29169,16 @@ pub mod api {
 							::subxt::utils::AccountId32,
 						>,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Claim a reward from the associated reward account."]
 					#[doc = "A previous call to `associate` should have been made."]
 					#[doc = "If logic gate pass, no fees are applied."]
 					claim,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					unlock_rewards_for {
 						reward_accounts: ::std::vec::Vec<::subxt::utils::AccountId32>,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Adds all accounts in the `additions` vector. Add may be called even if the pallet has"]
 					#[doc = "been initialized."]
 					add {
@@ -29196,27 +29196,27 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					NotInitialized,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					AlreadyInitialized,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					BackToTheFuture,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					RewardsNotFunded,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					InvalidProof,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					InvalidClaim,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					NothingToClaim,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					NotAssociated,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					AlreadyAssociated,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					NotClaimableYet,
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "Returned by `delete` if the provided expected reward mismatches the actual reward."]
 					UnexpectedRewardAmount,
 				}
@@ -29225,10 +29225,10 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "The crowdloan has been initialized or set to initialize at some time."]
 					Initialized { at: ::core::primitive::u64 },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "A claim has been made."]
 					Claimed {
 						remote_account:
@@ -29238,7 +29238,7 @@ pub mod api {
 						reward_account: ::subxt::utils::AccountId32,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "A remote account has been associated with a reward account."]
 					Associated {
 						remote_account:
@@ -29247,14 +29247,14 @@ pub mod api {
 							>,
 						reward_account: ::subxt::utils::AccountId32,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "The crowdloan was successfully initialized, but with excess funds that won't be"]
 					#[doc = "claimed."]
 					OverFunded { excess_funds: ::core::primitive::u128 },
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "A portion of rewards have been unlocked and future claims will not have locks"]
 					RewardsUnlocked { at: ::core::primitive::u64 },
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Called after rewards have been added through the `add` extrinsic."]
 					RewardsAdded {
 						additions: ::std::vec::Vec<(
@@ -29265,7 +29265,7 @@ pub mod api {
 							::core::primitive::u64,
 						)>,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Called after rewards have been deleted through the `delete` extrinsic."]
 					RewardsDeleted {
 						deletions: ::std::vec::Vec<
@@ -29286,9 +29286,9 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					add_range { length: ::core::primitive::u64 },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Sets metadata"]
 					set_metadata {
 						asset_id: runtime_types::primitives::currency::CurrencyId,
@@ -29300,7 +29300,7 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					AssetNotFound,
 				}
 				#[derive(
@@ -29308,7 +29308,7 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					RangeCreated {
 						range: runtime_types::pallet_currency_factory::ranges::Range<
 							runtime_types::primitives::currency::CurrencyId,
@@ -29343,19 +29343,19 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum Conviction {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					None,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Locked1x,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					Locked2x,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					Locked3x,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					Locked4x,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					Locked5x,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					Locked6x,
 				}
 			}
@@ -29366,7 +29366,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Propose a sensitive action to be taken."]
 					#[doc = ""]
 					#[doc = "The dispatch origin of this call must be _Signed_ and the sender must"]
@@ -29380,10 +29380,10 @@ pub mod api {
 						proposal: runtime_types::frame_support::traits::preimages::Bounded<
 							runtime_types::dali_runtime::RuntimeCall,
 						>,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						value: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Signals agreement with a particular proposal."]
 					#[doc = ""]
 					#[doc = "The dispatch origin of this call must be _Signed_ and the sender"]
@@ -29391,10 +29391,10 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "- `proposal`: The index of the proposal to second."]
 					second {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						proposal: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Vote in a referendum. If `vote.is_aye()`, the vote is to enact the proposal;"]
 					#[doc = "otherwise it is a vote to keep the status quo."]
 					#[doc = ""]
@@ -29403,13 +29403,13 @@ pub mod api {
 					#[doc = "- `ref_index`: The index of the referendum to vote for."]
 					#[doc = "- `vote`: The vote configuration."]
 					vote {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						ref_index: ::core::primitive::u32,
 						vote: runtime_types::pallet_democracy::vote::AccountVote<
 							::core::primitive::u128,
 						>,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Schedule an emergency cancellation of a referendum. Cannot happen twice to the same"]
 					#[doc = "referendum."]
 					#[doc = ""]
@@ -29419,7 +29419,7 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`."]
 					emergency_cancel { ref_index: ::core::primitive::u32 },
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Schedule a referendum to be tabled once it is legal to schedule an external"]
 					#[doc = "referendum."]
 					#[doc = ""]
@@ -29431,7 +29431,7 @@ pub mod api {
 							runtime_types::dali_runtime::RuntimeCall,
 						>,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Schedule a majority-carries referendum to be tabled next once it is legal to schedule"]
 					#[doc = "an external referendum."]
 					#[doc = ""]
@@ -29448,7 +29448,7 @@ pub mod api {
 							runtime_types::dali_runtime::RuntimeCall,
 						>,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Schedule a negative-turnout-bias referendum to be tabled next once it is legal to"]
 					#[doc = "schedule an external referendum."]
 					#[doc = ""]
@@ -29465,7 +29465,7 @@ pub mod api {
 							runtime_types::dali_runtime::RuntimeCall,
 						>,
 					},
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Schedule the currently externally-proposed majority-carries referendum to be tabled"]
 					#[doc = "immediately. If there is no externally-proposed referendum currently, or if there is one"]
 					#[doc = "but it is not a majority-carries referendum then it fails."]
@@ -29487,7 +29487,7 @@ pub mod api {
 						voting_period: ::core::primitive::u32,
 						delay: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Veto and blacklist the external proposal hash."]
 					#[doc = ""]
 					#[doc = "The dispatch origin of this call must be `VetoOrigin`."]
@@ -29498,7 +29498,7 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "Weight: `O(V + log(V))` where V is number of `existing vetoers`"]
 					veto_external { proposal_hash: ::subxt::utils::H256 },
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "Remove a referendum."]
 					#[doc = ""]
 					#[doc = "The dispatch origin of this call must be _Root_."]
@@ -29507,10 +29507,10 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "# Weight: `O(1)`."]
 					cancel_referendum {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						ref_index: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "Delegate the voting power (with some given conviction) of the sending account."]
 					#[doc = ""]
 					#[doc = "The balance delegated is locked for as long as it's delegated, and thereafter for the"]
@@ -29539,7 +29539,7 @@ pub mod api {
 						conviction: runtime_types::pallet_democracy::conviction::Conviction,
 						balance: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					#[doc = "Undelegate the voting power of the sending account."]
 					#[doc = ""]
 					#[doc = "Tokens may be unlocked following once an amount of time consistent with the lock period"]
@@ -29553,14 +29553,14 @@ pub mod api {
 					#[doc = "Weight: `O(R)` where R is the number of referendums the voter delegating to has"]
 					#[doc = "  voted on. Weight is charged as if maximum votes."]
 					undelegate,
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					#[doc = "Clears all public proposals."]
 					#[doc = ""]
 					#[doc = "The dispatch origin of this call must be _Root_."]
 					#[doc = ""]
 					#[doc = "Weight: `O(1)`."]
 					clear_public_proposals,
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					#[doc = "Unlock tokens that have an expired lock."]
 					#[doc = ""]
 					#[doc = "The dispatch origin of this call must be _Signed_."]
@@ -29574,7 +29574,7 @@ pub mod api {
 							::core::primitive::u32,
 						>,
 					},
-					#[codec::codec(index = 14)]
+					#[codec(index = 14)]
 					#[doc = "Remove a vote for a referendum."]
 					#[doc = ""]
 					#[doc = "If:"]
@@ -29603,7 +29603,7 @@ pub mod api {
 					#[doc = "Weight: `O(R + log R)` where R is the number of referenda that `target` has voted on."]
 					#[doc = "  Weight is calculated for the maximum number of vote."]
 					remove_vote { index: ::core::primitive::u32 },
-					#[codec::codec(index = 15)]
+					#[codec(index = 15)]
 					#[doc = "Remove a vote for a referendum."]
 					#[doc = ""]
 					#[doc = "If the `target` is equal to the signer, then this function is exactly equivalent to"]
@@ -29626,7 +29626,7 @@ pub mod api {
 						>,
 						index: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 16)]
+					#[codec(index = 16)]
 					#[doc = "Permanently place a proposal into the blacklist. This prevents it from ever being"]
 					#[doc = "proposed again."]
 					#[doc = ""]
@@ -29646,7 +29646,7 @@ pub mod api {
 						proposal_hash: ::subxt::utils::H256,
 						maybe_ref_index: ::core::option::Option<::core::primitive::u32>,
 					},
-					#[codec::codec(index = 17)]
+					#[codec(index = 17)]
 					#[doc = "Remove a proposal."]
 					#[doc = ""]
 					#[doc = "The dispatch origin of this call must be `CancelProposalOrigin`."]
@@ -29655,7 +29655,7 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "Weight: `O(p)` where `p = PublicProps::<T>::decode_len()`"]
 					cancel_proposal {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						prop_index: ::core::primitive::u32,
 					},
 				}
@@ -29664,74 +29664,74 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Value too low"]
 					ValueLow,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Proposal does not exist"]
 					ProposalMissing,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Cannot cancel the same proposal twice"]
 					AlreadyCanceled,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Proposal already made"]
 					DuplicateProposal,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Proposal still blacklisted"]
 					ProposalBlacklisted,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Next external proposal not simple majority"]
 					NotSimpleMajority,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Invalid hash"]
 					InvalidHash,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "No external proposal"]
 					NoProposal,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Identity may not veto a proposal twice"]
 					AlreadyVetoed,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "Vote given for invalid referendum"]
 					ReferendumInvalid,
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "No proposals waiting"]
 					NoneWaiting,
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					#[doc = "The given account did not vote on the referendum."]
 					NotVoter,
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					#[doc = "The actor has no permission to conduct the action."]
 					NoPermission,
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					#[doc = "The account is already delegating."]
 					AlreadyDelegating,
-					#[codec::codec(index = 14)]
+					#[codec(index = 14)]
 					#[doc = "Too high a balance was provided that the account cannot afford."]
 					InsufficientFunds,
-					#[codec::codec(index = 15)]
+					#[codec(index = 15)]
 					#[doc = "The account is not currently delegating."]
 					NotDelegating,
-					#[codec::codec(index = 16)]
+					#[codec(index = 16)]
 					#[doc = "The account currently has votes attached to it and the operation cannot succeed until"]
 					#[doc = "these are removed, either through `unvote` or `reap_vote`."]
 					VotesExist,
-					#[codec::codec(index = 17)]
+					#[codec(index = 17)]
 					#[doc = "The instant referendum origin is currently disallowed."]
 					InstantNotAllowed,
-					#[codec::codec(index = 18)]
+					#[codec(index = 18)]
 					#[doc = "Delegation to oneself makes no sense."]
 					Nonsense,
-					#[codec::codec(index = 19)]
+					#[codec(index = 19)]
 					#[doc = "Invalid upper bound."]
 					WrongUpperBound,
-					#[codec::codec(index = 20)]
+					#[codec(index = 20)]
 					#[doc = "Maximum number of votes reached."]
 					MaxVotesReached,
-					#[codec::codec(index = 21)]
+					#[codec(index = 21)]
 					#[doc = "Maximum number of items reached."]
 					TooMany,
-					#[codec::codec(index = 22)]
+					#[codec(index = 22)]
 					#[doc = "Voting period too low"]
 					VotingPeriodLow,
 				}
@@ -29740,56 +29740,56 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "A motion has been proposed by a public account."]
 					Proposed {
 						proposal_index: ::core::primitive::u32,
 						deposit: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "A public proposal has been tabled for referendum vote."]
 					Tabled {
 						proposal_index: ::core::primitive::u32,
 						deposit: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "An external proposal has been tabled."]
 					ExternalTabled,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "A referendum has begun."]
 					Started {
 						ref_index: ::core::primitive::u32,
 						threshold: runtime_types::pallet_democracy::vote_threshold::VoteThreshold,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "A proposal has been approved by referendum."]
 					Passed { ref_index: ::core::primitive::u32 },
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "A proposal has been rejected by referendum."]
 					NotPassed { ref_index: ::core::primitive::u32 },
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "A referendum has been cancelled."]
 					Cancelled { ref_index: ::core::primitive::u32 },
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "An account has delegated their vote to another account."]
 					Delegated {
 						who: ::subxt::utils::AccountId32,
 						target: ::subxt::utils::AccountId32,
 					},
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "An account has cancelled a previous delegation operation."]
 					Undelegated { account: ::subxt::utils::AccountId32 },
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "An external proposal has been vetoed."]
 					Vetoed {
 						who: ::subxt::utils::AccountId32,
 						proposal_hash: ::subxt::utils::H256,
 						until: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "A proposal_hash has been blacklisted permanently."]
 					Blacklisted { proposal_hash: ::subxt::utils::H256 },
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					#[doc = "An account has voted in a referendum"]
 					Voted {
 						voter: ::subxt::utils::AccountId32,
@@ -29798,13 +29798,13 @@ pub mod api {
 							::core::primitive::u128,
 						>,
 					},
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					#[doc = "An account has secconded a proposal"]
 					Seconded {
 						seconder: ::subxt::utils::AccountId32,
 						prop_index: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					#[doc = "A proposal got canceled."]
 					ProposalCanceled { prop_index: ::core::primitive::u32 },
 				}
@@ -29822,9 +29822,9 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum ReferendumInfo<_0, _1, _2> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Ongoing(runtime_types::pallet_democracy::types::ReferendumStatus<_0, _1, _2>),
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Finished { approved: ::core::primitive::bool, end: _0 },
 				}
 				#[derive(
@@ -29852,9 +29852,9 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum AccountVote<_0> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Standard { vote: runtime_types::pallet_democracy::vote::Vote, balance: _0 },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Split { aye: _0, nay: _0 },
 				}
 				#[derive(
@@ -29872,7 +29872,7 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum Voting<_0, _1, _2> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Direct {
 						votes: runtime_types::sp_core::bounded::bounded_vec::BoundedVec<(
 							_2,
@@ -29881,7 +29881,7 @@ pub mod api {
 						delegations: runtime_types::pallet_democracy::types::Delegations<_0>,
 						prior: runtime_types::pallet_democracy::vote::PriorLock<_2, _0>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Delegating {
 						balance: _0,
 						target: _1,
@@ -29897,11 +29897,11 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum VoteThreshold {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					SuperMajorityApprove,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					SuperMajorityAgainst,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					SimpleMajority,
 				}
 			}
@@ -29915,7 +29915,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Create, update or remove route."]
 					#[doc = "On successful emits one of `RouteAdded`, `RouteUpdated` or `RouteDeleted`."]
 					update_route {
@@ -29928,7 +29928,7 @@ pub mod api {
 							>,
 						>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Exchange `amount` of quote asset for `asset_pair` via route found in router."]
 					#[doc = "On successful underlying DEX pallets will emit appropriate event"]
 					swap {
@@ -29941,7 +29941,7 @@ pub mod api {
 							::core::primitive::u128,
 						>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Buy `amount` of quote asset for `asset_pair` via route found in router."]
 					#[doc = "On successful underlying DEX pallets will emit appropriate event."]
 					buy {
@@ -29951,7 +29951,7 @@ pub mod api {
 							::core::primitive::u128,
 						>,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Add liquidity to the underlying pablo pool."]
 					#[doc = "Works only for single pool route."]
 					add_liquidity {
@@ -29962,7 +29962,7 @@ pub mod api {
 						min_mint_amount: ::core::primitive::u128,
 						keep_alive: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Remove liquidity from the underlying pablo pool."]
 					#[doc = "Works only for single pool route."]
 					remove_liquidity {
@@ -29978,25 +29978,25 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Number of hops in route exceeded maximum limit."]
 					MaxHopsExceeded,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "For given asset pair no route found."]
 					NoRouteFound,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Unexpected node found while route validation."]
 					UnexpectedNodeFoundWhileValidation,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Can not respect minimum amount requested."]
 					CanNotRespectMinAmountRequested,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Unsupported operation."]
 					UnsupportedOperation,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Route with possible loop is not allowed."]
 					LoopSuspectedInRouteUpdate,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Only dual asset pools supported"]
 					OnlyDualAssetPoolsSupported,
 				}
@@ -30005,19 +30005,19 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					RouteAdded {
 						x_asset_id: runtime_types::primitives::currency::CurrencyId,
 						y_asset_id: runtime_types::primitives::currency::CurrencyId,
 						route: ::std::vec::Vec<::core::primitive::u128>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					RouteDeleted {
 						x_asset_id: runtime_types::primitives::currency::CurrencyId,
 						y_asset_id: runtime_types::primitives::currency::CurrencyId,
 						route: ::std::vec::Vec<::core::primitive::u128>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					RouteUpdated {
 						x_asset_id: runtime_types::primitives::currency::CurrencyId,
 						y_asset_id: runtime_types::primitives::currency::CurrencyId,
@@ -30036,14 +30036,14 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Inserts or replaces auction configuration."]
 					#[doc = "Already running auctions are not updated."]
 					add_configuration {
 						configuration_id: ::core::primitive::u128,
 						configuration: runtime_types::composable_traits::time::TimeReleaseFunction,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "sell `order` in auction with `configuration`"]
 					#[doc = "some deposit is taken for storing sell order"]
 					ask {
@@ -30053,16 +30053,16 @@ pub mod api {
 						>,
 						configuration: runtime_types::composable_traits::time::TimeReleaseFunction,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "adds take to list, does not execute take immediately"]
 					take {
 						order_id: ::core::primitive::u128,
 						take: runtime_types::composable_traits::defi::Take<::core::primitive::u128>,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "allows to remove `order_id` from storage"]
 					liquidate { order_id: ::core::primitive::u128 },
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					xcm_sell { request: runtime_types::composable_traits::xcm::XcmSellRequest },
 				}
 				#[derive(
@@ -30070,26 +30070,26 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					RequestedOrderDoesNotExists,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					OrderParametersIsInvalid,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					TakeParametersIsInvalid,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					TakeLimitDoesNotSatisfyOrder,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					OrderNotFound,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					TakeOrderDidNotHappen,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					NotEnoughNativeCurrencyToPayForAuction,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "errors trying to decode and parse XCM input"]
 					XcmCannotDecodeRemoteParametersToLocalRepresentations,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					XcmCannotFindLocalIdentifiersAsDecodedFromRemote,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					XcmNotFoundConfigurationById,
 				}
 				#[derive(
@@ -30097,7 +30097,7 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					OrderAdded {
 						order_id: ::core::primitive::u128,
 						order: runtime_types::pallet_dutch_auction::types::SellOrder<
@@ -30110,12 +30110,12 @@ pub mod api {
 							runtime_types::composable_traits::time::TimeReleaseFunction,
 						>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "raised when part or whole order was taken with mentioned balance"]
 					OrderTaken { order_id: ::core::primitive::u128, taken: ::core::primitive::u128 },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					OrderRemoved { order_id: ::core::primitive::u128 },
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					ConfigurationAdded {
 						configuration_id: ::core::primitive::u128,
 						configuration: runtime_types::composable_traits::time::TimeReleaseFunction,
@@ -30159,7 +30159,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "transfer fnft to a new owner"]
 					transfer {
 						collection: runtime_types::primitives::currency::CurrencyId,
@@ -30172,15 +30172,15 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					CollectionAlreadyExists,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					InstanceAlreadyExists,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					CollectionNotFound,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					InstanceNotFound,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					MustBeOwner,
 				}
 				#[derive(
@@ -30188,23 +30188,23 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					FinancialNftCollectionCreated {
 						collection_id: runtime_types::primitives::currency::CurrencyId,
 						who: ::subxt::utils::AccountId32,
 						admin: ::subxt::utils::AccountId32,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					FinancialNftCreated {
 						collection_id: runtime_types::primitives::currency::CurrencyId,
 						instance_id: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					FinancialNftBurned {
 						collection_id: runtime_types::primitives::currency::CurrencyId,
 						instance_id: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					FinancialNftTransferred {
 						collection_id: runtime_types::primitives::currency::CurrencyId,
 						instance_id: ::core::primitive::u64,
@@ -30222,16 +30222,16 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Sets the value of an `asset_id` to the signed account id. Only callable by root."]
 					set {
 						asset_id: runtime_types::primitives::currency::CurrencyId,
 						value: ::subxt::utils::AccountId32,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Sets the value of an `asset_id` to root. Only callable by root."]
 					grant_root { asset_id: runtime_types::primitives::currency::CurrencyId },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Removes mapping of an `asset_id`. Only callable by root."]
 					remove { asset_id: runtime_types::primitives::currency::CurrencyId },
 				}
@@ -30240,7 +30240,7 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Not found"]
 					NoneError,
 				}
@@ -30249,14 +30249,14 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Set {
 						asset_id: runtime_types::primitives::currency::CurrencyId,
 						value: ::subxt::utils::AccountId32,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					GrantRoot { asset_id: runtime_types::primitives::currency::CurrencyId },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					Remove { asset_id: runtime_types::primitives::currency::CurrencyId },
 				}
 			}
@@ -30269,17 +30269,17 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum IbcError {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Ics02Client { message: ::std::vec::Vec<::core::primitive::u8> },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Ics03Connection { message: ::std::vec::Vec<::core::primitive::u8> },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					Ics04Channel { message: ::std::vec::Vec<::core::primitive::u8> },
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					Ics20FungibleTokenTransfer { message: ::std::vec::Vec<::core::primitive::u8> },
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					UnknownMessageTypeUrl { message: ::std::vec::Vec<::core::primitive::u8> },
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					MalformedMessageBytes { message: ::std::vec::Vec<::core::primitive::u8> },
 				}
 			}
@@ -30289,12 +30289,12 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum IbcEvent {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					NewBlock {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					CreateClient {
 						client_id: ::std::vec::Vec<::core::primitive::u8>,
 						client_type: ::std::vec::Vec<::core::primitive::u8>,
@@ -30303,7 +30303,7 @@ pub mod api {
 						consensus_height: ::core::primitive::u64,
 						consensus_revision_number: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					UpdateClient {
 						client_id: ::std::vec::Vec<::core::primitive::u8>,
 						client_type: ::std::vec::Vec<::core::primitive::u8>,
@@ -30312,7 +30312,7 @@ pub mod api {
 						consensus_height: ::core::primitive::u64,
 						consensus_revision_number: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					UpgradeClient {
 						client_id: ::std::vec::Vec<::core::primitive::u8>,
 						client_type: ::std::vec::Vec<::core::primitive::u8>,
@@ -30321,7 +30321,7 @@ pub mod api {
 						consensus_height: ::core::primitive::u64,
 						consensus_revision_number: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					ClientMisbehaviour {
 						client_id: ::std::vec::Vec<::core::primitive::u8>,
 						client_type: ::std::vec::Vec<::core::primitive::u8>,
@@ -30330,7 +30330,7 @@ pub mod api {
 						consensus_height: ::core::primitive::u64,
 						consensus_revision_number: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					OpenInitConnection {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -30341,7 +30341,7 @@ pub mod api {
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 						counterparty_client_id: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					OpenConfirmConnection {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -30352,7 +30352,7 @@ pub mod api {
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 						counterparty_client_id: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					OpenTryConnection {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -30363,7 +30363,7 @@ pub mod api {
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 						counterparty_client_id: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					OpenAckConnection {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -30374,7 +30374,7 @@ pub mod api {
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 						counterparty_client_id: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					OpenInitChannel {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -30385,7 +30385,7 @@ pub mod api {
 						counterparty_channel_id:
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 					},
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					OpenConfirmChannel {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -30396,7 +30396,7 @@ pub mod api {
 						counterparty_channel_id:
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 					},
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					OpenTryChannel {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -30407,7 +30407,7 @@ pub mod api {
 						counterparty_channel_id:
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 					},
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					OpenAckChannel {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -30418,7 +30418,7 @@ pub mod api {
 						counterparty_channel_id:
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 					},
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					CloseInitChannel {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -30429,7 +30429,7 @@ pub mod api {
 						counterparty_channel_id:
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 					},
-					#[codec::codec(index = 14)]
+					#[codec(index = 14)]
 					CloseConfirmChannel {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -30440,7 +30440,7 @@ pub mod api {
 						counterparty_channel_id:
 							::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 					},
-					#[codec::codec(index = 15)]
+					#[codec(index = 15)]
 					ReceivePacket {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -30450,7 +30450,7 @@ pub mod api {
 						dest_channel: ::std::vec::Vec<::core::primitive::u8>,
 						sequence: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 16)]
+					#[codec(index = 16)]
 					SendPacket {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -30460,7 +30460,7 @@ pub mod api {
 						dest_channel: ::std::vec::Vec<::core::primitive::u8>,
 						sequence: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 17)]
+					#[codec(index = 17)]
 					AcknowledgePacket {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -30468,7 +30468,7 @@ pub mod api {
 						channel_id: ::std::vec::Vec<::core::primitive::u8>,
 						sequence: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 18)]
+					#[codec(index = 18)]
 					WriteAcknowledgement {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -30478,7 +30478,7 @@ pub mod api {
 						dest_channel: ::std::vec::Vec<::core::primitive::u8>,
 						sequence: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 19)]
+					#[codec(index = 19)]
 					TimeoutPacket {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -30486,7 +30486,7 @@ pub mod api {
 						channel_id: ::std::vec::Vec<::core::primitive::u8>,
 						sequence: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 20)]
+					#[codec(index = 20)]
 					TimeoutOnClosePacket {
 						revision_height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
@@ -30494,16 +30494,16 @@ pub mod api {
 						channel_id: ::std::vec::Vec<::core::primitive::u8>,
 						sequence: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 21)]
+					#[codec(index = 21)]
 					Empty,
-					#[codec::codec(index = 22)]
+					#[codec(index = 22)]
 					ChainError,
-					#[codec::codec(index = 23)]
+					#[codec(index = 23)]
 					AppModule {
 						kind: ::std::vec::Vec<::core::primitive::u8>,
 						module_id: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec::codec(index = 24)]
+					#[codec(index = 24)]
 					PushWasmCode { wasm_code_id: ::std::vec::Vec<::core::primitive::u8> },
 				}
 			}
@@ -30514,9 +30514,9 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					deliver { messages: ::std::vec::Vec<runtime_types::pallet_ibc::Any> },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					transfer {
 						params:
 							runtime_types::pallet_ibc::TransferParams<::subxt::utils::AccountId32>,
@@ -30524,14 +30524,14 @@ pub mod api {
 						amount: ::core::primitive::u128,
 						memo: ::core::option::Option<runtime_types::dali_runtime::MemoMessage>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					set_params { params: runtime_types::pallet_ibc::PalletParams },
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "We write the consensus & client state under these predefined paths so that"]
 					#[doc = "we can produce state proofs of the values to connected chains"]
 					#[doc = "in order to execute client upgrades."]
 					upgrade_client { params: runtime_types::pallet_ibc::UpgradeParams },
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Freeze a client at a specific height"]
 					freeze_client {
 						client_id: ::std::vec::Vec<::core::primitive::u8>,
@@ -30543,103 +30543,103 @@ pub mod api {
 				)]
 				#[doc = "Errors inform users that something went wrong."]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Error processing ibc messages"]
 					ProcessingError,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Error decoding some type"]
 					DecodingError,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Error encoding some type"]
 					EncodingError,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Error generating trie proof"]
 					ProofGenerationError,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Client consensus state not found for height"]
 					ConsensusStateNotFound,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Channel not found"]
 					ChannelNotFound,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Client state not found"]
 					ClientStateNotFound,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Connection not found"]
 					ConnectionNotFound,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Packet commitment wasn't found"]
 					PacketCommitmentNotFound,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "Packet receipt wasn't found"]
 					PacketReceiptNotFound,
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "Packet Acknowledgment wasn't found"]
 					PacketAcknowledgmentNotFound,
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					#[doc = "Error constructing packet"]
 					SendPacketError,
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					#[doc = "Invalid channel id"]
 					InvalidChannelId,
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					#[doc = "Invalid port id"]
 					InvalidPortId,
-					#[codec::codec(index = 14)]
+					#[codec(index = 14)]
 					#[doc = "Other forms of errors"]
 					Other,
-					#[codec::codec(index = 15)]
+					#[codec(index = 15)]
 					#[doc = "Invalid route"]
 					InvalidRoute,
-					#[codec::codec(index = 16)]
+					#[codec(index = 16)]
 					#[doc = "Invalid message for extrinsic"]
 					InvalidMessageType,
-					#[codec::codec(index = 17)]
+					#[codec(index = 17)]
 					#[doc = "The interchain token transfer was not successfully initiated"]
 					TransferFailed,
-					#[codec::codec(index = 18)]
+					#[codec(index = 18)]
 					#[doc = "Error Decoding utf8 bytes"]
 					Utf8Error,
-					#[codec::codec(index = 19)]
+					#[codec(index = 19)]
 					#[doc = "Invalid asset id"]
 					InvalidAssetId,
-					#[codec::codec(index = 20)]
+					#[codec(index = 20)]
 					#[doc = "Invalid Ibc denom"]
 					InvalidIbcDenom,
-					#[codec::codec(index = 21)]
+					#[codec(index = 21)]
 					#[doc = "Invalid amount"]
 					InvalidAmount,
-					#[codec::codec(index = 22)]
+					#[codec(index = 22)]
 					#[doc = "Invalid timestamp"]
 					InvalidTimestamp,
-					#[codec::codec(index = 23)]
+					#[codec(index = 23)]
 					#[doc = "Unable to get client revision number"]
 					FailedToGetRevisionNumber,
-					#[codec::codec(index = 24)]
+					#[codec(index = 24)]
 					#[doc = "Invalid params passed"]
 					InvalidParams,
-					#[codec::codec(index = 25)]
+					#[codec(index = 25)]
 					#[doc = "Error opening channel"]
 					ChannelInitError,
-					#[codec::codec(index = 26)]
+					#[codec(index = 26)]
 					#[doc = "Latest height and timestamp for a client not found"]
 					TimestampAndHeightNotFound,
-					#[codec::codec(index = 27)]
+					#[codec(index = 27)]
 					#[doc = "Failed to derive channel escrow address"]
 					ChannelEscrowAddress,
-					#[codec::codec(index = 28)]
+					#[codec(index = 28)]
 					#[doc = "Error writing acknowledgement to storage"]
 					WriteAckError,
-					#[codec::codec(index = 29)]
+					#[codec(index = 29)]
 					#[doc = "Client update time and height not found"]
 					ClientUpdateNotFound,
-					#[codec::codec(index = 30)]
+					#[codec(index = 30)]
 					#[doc = "Error Freezing client"]
 					ClientFreezeFailed,
-					#[codec::codec(index = 31)]
+					#[codec(index = 31)]
 					#[doc = "Access denied"]
 					AccessDenied,
-					#[codec::codec(index = 32)]
+					#[codec(index = 32)]
 					RateLimiter,
 				}
 				#[derive(
@@ -30647,7 +30647,7 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Events emitted by the ibc subsystem"]
 					Events {
 						events: ::std::vec::Vec<
@@ -30657,7 +30657,7 @@ pub mod api {
 							>,
 						>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "An Ibc token transfer has been started"]
 					TokenTransferInitiated {
 						from: ::std::vec::Vec<::core::primitive::u8>,
@@ -30670,19 +30670,19 @@ pub mod api {
 						source_channel: ::std::vec::Vec<::core::primitive::u8>,
 						destination_channel: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "A channel has been opened"]
 					ChannelOpened {
 						channel_id: ::std::vec::Vec<::core::primitive::u8>,
 						port_id: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Pallet params updated"]
 					ParamsUpdated {
 						send_enabled: ::core::primitive::bool,
 						receive_enabled: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "An outgoing Ibc token transfer has been completed and burnt"]
 					TokenTransferCompleted {
 						from: ::std::vec::Vec<::core::primitive::u8>,
@@ -30695,7 +30695,7 @@ pub mod api {
 						source_channel: ::std::vec::Vec<::core::primitive::u8>,
 						destination_channel: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Ibc tokens have been received and minted"]
 					TokenReceived {
 						from: ::std::vec::Vec<::core::primitive::u8>,
@@ -30708,7 +30708,7 @@ pub mod api {
 						source_channel: ::std::vec::Vec<::core::primitive::u8>,
 						destination_channel: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Ibc transfer failed, received an acknowledgement error, tokens have been refunded"]
 					TokenTransferFailed {
 						from: ::std::vec::Vec<::core::primitive::u8>,
@@ -30721,20 +30721,20 @@ pub mod api {
 						source_channel: ::std::vec::Vec<::core::primitive::u8>,
 						destination_channel: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "On recv packet was not processed successfully processes"]
 					OnRecvPacketError { msg: ::std::vec::Vec<::core::primitive::u8> },
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Client upgrade path has been set"]
 					ClientUpgradeSet,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "Client has been frozen"]
 					ClientFrozen {
 						client_id: ::std::vec::Vec<::core::primitive::u8>,
 						height: ::core::primitive::u64,
 						revision_number: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "Asset Admin Account Updated"]
 					AssetAdminUpdated { admin_account: ::subxt::utils::AccountId32 },
 				}
@@ -30750,18 +30750,18 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum LightClientProtocol {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				Beefy,
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				Grandpa,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum MultiAddress<_0> {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				Id(_0),
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				Raw(::std::vec::Vec<::core::primitive::u8>),
 			}
 			#[derive(
@@ -30796,7 +30796,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					send_ping { params: runtime_types::pallet_ibc_ping::SendPingParams },
 				}
 				#[derive(
@@ -30804,13 +30804,13 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Invalid params passed"]
 					InvalidParams,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Error opening channel"]
 					ChannelInitError,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Error registering packet"]
 					PacketSendError,
 				}
@@ -30819,10 +30819,10 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "A send packet has been registered"]
 					PacketSent,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "A channel has been opened"]
 					ChannelOpened {
 						channel_id: ::std::vec::Vec<::core::primitive::u8>,
@@ -30849,7 +30849,7 @@ pub mod api {
 				)]
 				#[doc = "Identity pallet declaration."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Add a registrar to the system."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be `T::RegistrarOrigin`."]
@@ -30869,7 +30869,7 @@ pub mod api {
 							::core::primitive::u32,
 						>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Set an account's identity information and reserve the appropriate deposit."]
 					#[doc = ""]
 					#[doc = "If the account already has identity information, the deposit is taken as part payment"]
@@ -30893,7 +30893,7 @@ pub mod api {
 						info:
 							::std::boxed::Box<runtime_types::pallet_identity::types::IdentityInfo>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Set the sub-accounts of the sender."]
 					#[doc = ""]
 					#[doc = "Payment: Any aggregate balance reserved by previous `set_subs` calls will be returned"]
@@ -30921,7 +30921,7 @@ pub mod api {
 							runtime_types::pallet_identity::types::Data,
 						)>,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Clear an account's identity info and all sub-accounts and return all deposits."]
 					#[doc = ""]
 					#[doc = "Payment: All reserved balances on the account are returned."]
@@ -30941,7 +30941,7 @@ pub mod api {
 					#[doc = "- One event."]
 					#[doc = "# </weight>"]
 					clear_identity,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Request a judgement from a registrar."]
 					#[doc = ""]
 					#[doc = "Payment: At most `max_fee` will be reserved for payment to the registrar if judgement"]
@@ -30966,12 +30966,12 @@ pub mod api {
 					#[doc = "- One event."]
 					#[doc = "# </weight>"]
 					request_judgement {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						reg_index: ::core::primitive::u32,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						max_fee: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Cancel a previous request."]
 					#[doc = ""]
 					#[doc = "Payment: A previously reserved deposit is returned on success."]
@@ -30990,7 +30990,7 @@ pub mod api {
 					#[doc = "- One event"]
 					#[doc = "# </weight>"]
 					cancel_request { reg_index: ::core::primitive::u32 },
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Set the fee required for a judgement to be requested from a registrar."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Signed_ and the sender must be the account"]
@@ -31005,12 +31005,12 @@ pub mod api {
 					#[doc = "- Benchmark: 7.315 + R * 0.329 µs (min squares analysis)"]
 					#[doc = "# </weight>"]
 					set_fee {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						index: ::core::primitive::u32,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						fee: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Change the account associated with a registrar."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Signed_ and the sender must be the account"]
@@ -31025,14 +31025,14 @@ pub mod api {
 					#[doc = "- Benchmark: 8.823 + R * 0.32 µs (min squares analysis)"]
 					#[doc = "# </weight>"]
 					set_account_id {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						index: ::core::primitive::u32,
 						new: ::subxt::utils::MultiAddress<
 							::subxt::utils::AccountId32,
 							::core::primitive::u32,
 						>,
 					},
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Set the field information for a registrar."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Signed_ and the sender must be the account"]
@@ -31047,13 +31047,13 @@ pub mod api {
 					#[doc = "- Benchmark: 7.464 + R * 0.325 µs (min squares analysis)"]
 					#[doc = "# </weight>"]
 					set_fields {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						index: ::core::primitive::u32,
 						fields: runtime_types::pallet_identity::types::BitFlags<
 							runtime_types::pallet_identity::types::IdentityField,
 						>,
 					},
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "Provide a judgement for an account's identity."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Signed_ and the sender must be the account"]
@@ -31075,7 +31075,7 @@ pub mod api {
 					#[doc = "- One event."]
 					#[doc = "# </weight>"]
 					provide_judgement {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						reg_index: ::core::primitive::u32,
 						target: ::subxt::utils::MultiAddress<
 							::subxt::utils::AccountId32,
@@ -31086,7 +31086,7 @@ pub mod api {
 						>,
 						identity: ::subxt::utils::H256,
 					},
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "Remove an account's identity and sub-account information and slash the deposits."]
 					#[doc = ""]
 					#[doc = "Payment: Reserved balances from `set_subs` and `set_identity` are slashed and handled by"]
@@ -31112,7 +31112,7 @@ pub mod api {
 							::core::primitive::u32,
 						>,
 					},
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					#[doc = "Add the given account to the sender's subs."]
 					#[doc = ""]
 					#[doc = "Payment: Balance reserved by a previous `set_subs` call for one sub will be repatriated"]
@@ -31127,7 +31127,7 @@ pub mod api {
 						>,
 						data: runtime_types::pallet_identity::types::Data,
 					},
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					#[doc = "Alter the associated name of the given sub-account."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Signed_ and the sender must have a registered"]
@@ -31139,7 +31139,7 @@ pub mod api {
 						>,
 						data: runtime_types::pallet_identity::types::Data,
 					},
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					#[doc = "Remove the given account from the sender's subs."]
 					#[doc = ""]
 					#[doc = "Payment: Balance reserved by a previous `set_subs` call for one sub will be repatriated"]
@@ -31153,7 +31153,7 @@ pub mod api {
 							::core::primitive::u32,
 						>,
 					},
-					#[codec::codec(index = 14)]
+					#[codec(index = 14)]
 					#[doc = "Remove the sender as a sub-account."]
 					#[doc = ""]
 					#[doc = "Payment: Balance reserved by a previous `set_subs` call for one sub will be repatriated"]
@@ -31171,58 +31171,58 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Too many subs-accounts."]
 					TooManySubAccounts,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Account isn't found."]
 					NotFound,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Account isn't named."]
 					NotNamed,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Empty index."]
 					EmptyIndex,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Fee is changed."]
 					FeeChanged,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "No identity found."]
 					NoIdentity,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Sticky judgement."]
 					StickyJudgement,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Judgement given."]
 					JudgementGiven,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Invalid judgement."]
 					InvalidJudgement,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "The index is invalid."]
 					InvalidIndex,
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "The target is invalid."]
 					InvalidTarget,
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					#[doc = "Too many additional fields."]
 					TooManyFields,
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					#[doc = "Maximum amount of registrars reached. Cannot add any more."]
 					TooManyRegistrars,
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					#[doc = "Account ID is already named."]
 					AlreadyClaimed,
-					#[codec::codec(index = 14)]
+					#[codec(index = 14)]
 					#[doc = "Sender is not a sub-account."]
 					NotSub,
-					#[codec::codec(index = 15)]
+					#[codec(index = 15)]
 					#[doc = "Sub-account isn't owned by sender."]
 					NotOwned,
-					#[codec::codec(index = 16)]
+					#[codec(index = 16)]
 					#[doc = "The provided judgement was for a different identity."]
 					JudgementForDifferentIdentity,
-					#[codec::codec(index = 17)]
+					#[codec(index = 17)]
 					#[doc = "Error that occurs when there is an issue paying for judgement."]
 					JudgementPaymentFailed,
 				}
@@ -31231,57 +31231,57 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "A name was set or reset (which will remove all judgements)."]
 					IdentitySet { who: ::subxt::utils::AccountId32 },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "A name was cleared, and the given balance returned."]
 					IdentityCleared {
 						who: ::subxt::utils::AccountId32,
 						deposit: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "A name was removed and the given balance slashed."]
 					IdentityKilled {
 						who: ::subxt::utils::AccountId32,
 						deposit: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "A judgement was asked from a registrar."]
 					JudgementRequested {
 						who: ::subxt::utils::AccountId32,
 						registrar_index: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "A judgement request was retracted."]
 					JudgementUnrequested {
 						who: ::subxt::utils::AccountId32,
 						registrar_index: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "A judgement was given by a registrar."]
 					JudgementGiven {
 						target: ::subxt::utils::AccountId32,
 						registrar_index: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "A registrar was added."]
 					RegistrarAdded { registrar_index: ::core::primitive::u32 },
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "A sub-identity was added to an identity and the deposit paid."]
 					SubIdentityAdded {
 						sub: ::subxt::utils::AccountId32,
 						main: ::subxt::utils::AccountId32,
 						deposit: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "A sub-identity was removed from an identity and the deposit freed."]
 					SubIdentityRemoved {
 						sub: ::subxt::utils::AccountId32,
 						main: ::subxt::utils::AccountId32,
 						deposit: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "A sub-identity was cleared, and the given deposit repatriated from the"]
 					#[doc = "main identity account to the sub-identity account."]
 					SubIdentityRevoked {
@@ -31301,108 +31301,108 @@ pub mod api {
 				)]
 				pub struct BitFlags<_0>(
 					pub ::core::primitive::u64,
-					#[codec::codec(skip)] pub ::core::marker::PhantomData<_0>,
+					#[codec(skip)] pub ::core::marker::PhantomData<_0>,
 				);
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum Data {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					None,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Raw0([::core::primitive::u8; 0usize]),
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					Raw1([::core::primitive::u8; 1usize]),
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					Raw2([::core::primitive::u8; 2usize]),
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					Raw3([::core::primitive::u8; 3usize]),
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					Raw4([::core::primitive::u8; 4usize]),
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					Raw5([::core::primitive::u8; 5usize]),
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					Raw6([::core::primitive::u8; 6usize]),
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					Raw7([::core::primitive::u8; 7usize]),
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					Raw8([::core::primitive::u8; 8usize]),
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					Raw9([::core::primitive::u8; 9usize]),
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					Raw10([::core::primitive::u8; 10usize]),
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					Raw11([::core::primitive::u8; 11usize]),
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					Raw12([::core::primitive::u8; 12usize]),
-					#[codec::codec(index = 14)]
+					#[codec(index = 14)]
 					Raw13([::core::primitive::u8; 13usize]),
-					#[codec::codec(index = 15)]
+					#[codec(index = 15)]
 					Raw14([::core::primitive::u8; 14usize]),
-					#[codec::codec(index = 16)]
+					#[codec(index = 16)]
 					Raw15([::core::primitive::u8; 15usize]),
-					#[codec::codec(index = 17)]
+					#[codec(index = 17)]
 					Raw16([::core::primitive::u8; 16usize]),
-					#[codec::codec(index = 18)]
+					#[codec(index = 18)]
 					Raw17([::core::primitive::u8; 17usize]),
-					#[codec::codec(index = 19)]
+					#[codec(index = 19)]
 					Raw18([::core::primitive::u8; 18usize]),
-					#[codec::codec(index = 20)]
+					#[codec(index = 20)]
 					Raw19([::core::primitive::u8; 19usize]),
-					#[codec::codec(index = 21)]
+					#[codec(index = 21)]
 					Raw20([::core::primitive::u8; 20usize]),
-					#[codec::codec(index = 22)]
+					#[codec(index = 22)]
 					Raw21([::core::primitive::u8; 21usize]),
-					#[codec::codec(index = 23)]
+					#[codec(index = 23)]
 					Raw22([::core::primitive::u8; 22usize]),
-					#[codec::codec(index = 24)]
+					#[codec(index = 24)]
 					Raw23([::core::primitive::u8; 23usize]),
-					#[codec::codec(index = 25)]
+					#[codec(index = 25)]
 					Raw24([::core::primitive::u8; 24usize]),
-					#[codec::codec(index = 26)]
+					#[codec(index = 26)]
 					Raw25([::core::primitive::u8; 25usize]),
-					#[codec::codec(index = 27)]
+					#[codec(index = 27)]
 					Raw26([::core::primitive::u8; 26usize]),
-					#[codec::codec(index = 28)]
+					#[codec(index = 28)]
 					Raw27([::core::primitive::u8; 27usize]),
-					#[codec::codec(index = 29)]
+					#[codec(index = 29)]
 					Raw28([::core::primitive::u8; 28usize]),
-					#[codec::codec(index = 30)]
+					#[codec(index = 30)]
 					Raw29([::core::primitive::u8; 29usize]),
-					#[codec::codec(index = 31)]
+					#[codec(index = 31)]
 					Raw30([::core::primitive::u8; 30usize]),
-					#[codec::codec(index = 32)]
+					#[codec(index = 32)]
 					Raw31([::core::primitive::u8; 31usize]),
-					#[codec::codec(index = 33)]
+					#[codec(index = 33)]
 					Raw32([::core::primitive::u8; 32usize]),
-					#[codec::codec(index = 34)]
+					#[codec(index = 34)]
 					BlakeTwo256([::core::primitive::u8; 32usize]),
-					#[codec::codec(index = 35)]
+					#[codec(index = 35)]
 					Sha256([::core::primitive::u8; 32usize]),
-					#[codec::codec(index = 36)]
+					#[codec(index = 36)]
 					Keccak256([::core::primitive::u8; 32usize]),
-					#[codec::codec(index = 37)]
+					#[codec(index = 37)]
 					ShaThree256([::core::primitive::u8; 32usize]),
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum IdentityField {
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Display,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					Legal,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					Web,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					Riot,
-					#[codec::codec(index = 16)]
+					#[codec(index = 16)]
 					Email,
-					#[codec::codec(index = 32)]
+					#[codec(index = 32)]
 					PgpFingerprint,
-					#[codec::codec(index = 64)]
+					#[codec(index = 64)]
 					Image,
-					#[codec::codec(index = 128)]
+					#[codec(index = 128)]
 					Twitter,
 				}
 				#[derive(
@@ -31426,19 +31426,19 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum Judgement<_0> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Unknown,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					FeePaid(_0),
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					Reasonable,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					KnownGood,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					OutOfDate,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					LowQuality,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					Erroneous,
 				}
 				#[derive(
@@ -31473,7 +31473,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Assign an previously unassigned index."]
 					#[doc = ""]
 					#[doc = "Payment: `Deposit` is reserved from the sender account."]
@@ -31493,7 +31493,7 @@ pub mod api {
 					#[doc = "- DB Weight: 1 Read/Write (Accounts)"]
 					#[doc = "# </weight>"]
 					claim { index: ::core::primitive::u32 },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Assign an index already owned by the sender to another account. The balance reservation"]
 					#[doc = "is effectively transferred to the new account."]
 					#[doc = ""]
@@ -31521,7 +31521,7 @@ pub mod api {
 						>,
 						index: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Free up an index owned by the sender."]
 					#[doc = ""]
 					#[doc = "Payment: Any previous deposit placed for the index is unreserved in the sender account."]
@@ -31541,7 +31541,7 @@ pub mod api {
 					#[doc = "- DB Weight: 1 Read/Write (Accounts)"]
 					#[doc = "# </weight>"]
 					free { index: ::core::primitive::u32 },
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Force an index to an account. This doesn't require a deposit. If the index is already"]
 					#[doc = "held, then any deposit is reimbursed to its current owner."]
 					#[doc = ""]
@@ -31571,7 +31571,7 @@ pub mod api {
 						index: ::core::primitive::u32,
 						freeze: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Freeze an index so it will always point to the sender account. This consumes the"]
 					#[doc = "deposit."]
 					#[doc = ""]
@@ -31597,19 +31597,19 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "The index was not already assigned."]
 					NotAssigned,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "The index is assigned to another account."]
 					NotOwner,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "The index was not available."]
 					InUse,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "The source and destination accounts are identical."]
 					NotTransfer,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "The index is permanent and may not be freed/changed."]
 					Permanent,
 				}
@@ -31618,16 +31618,16 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "A account index was assigned."]
 					IndexAssigned {
 						who: ::subxt::utils::AccountId32,
 						index: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "A account index has been freed up (unassigned)."]
 					IndexFreed { index: ::core::primitive::u32 },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "A account index has been frozen to its current account ID."]
 					IndexFrozen { index: ::core::primitive::u32, who: ::subxt::utils::AccountId32 },
 				}
@@ -31642,7 +31642,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Create a new lending market."]
 					#[doc = "- `origin` : Sender of this extrinsic. Manager for new market to be created. Can pause"]
 					#[doc = "  borrow operations."]
@@ -31657,7 +31657,7 @@ pub mod api {
 						>,
 						keep_alive: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "owner must be very careful calling this"]
 					update_market {
 						market_id: runtime_types::pallet_lending::types::MarketId,
@@ -31666,7 +31666,7 @@ pub mod api {
 							::core::primitive::u32,
 						>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "lender deposits assets to market."]
 					#[doc = "- `origin` : Sender of this extrinsic."]
 					#[doc = "- `market_id` : Market index to which asset will be deposited."]
@@ -31675,7 +31675,7 @@ pub mod api {
 						market_id: runtime_types::pallet_lending::types::MarketId,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "lender withdraws assets to market."]
 					#[doc = "- `origin` : Sender of this extrinsic."]
 					#[doc = "- `market_id` : Market index to which asset will be withdrawn."]
@@ -31684,7 +31684,7 @@ pub mod api {
 						market_id: runtime_types::pallet_lending::types::MarketId,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Deposit collateral to market."]
 					#[doc = "- `origin` : Sender of this extrinsic."]
 					#[doc = "- `market` : Market index to which collateral will be deposited."]
@@ -31694,7 +31694,7 @@ pub mod api {
 						amount: ::core::primitive::u128,
 						keep_alive: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Withdraw collateral from market."]
 					#[doc = "- `origin` : Sender of this extrinsic."]
 					#[doc = "- `market_id` : Market index from which collateral will be withdraw."]
@@ -31703,7 +31703,7 @@ pub mod api {
 						market_id: runtime_types::pallet_lending::types::MarketId,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Borrow asset against deposited collateral."]
 					#[doc = "- `origin` : Sender of this extrinsic. (Also the user who wants to borrow from market.)"]
 					#[doc = "- `market_id` : Market index from which user wants to borrow."]
@@ -31712,7 +31712,7 @@ pub mod api {
 						market_id: runtime_types::pallet_lending::types::MarketId,
 						amount_to_borrow: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Repay part or all of the borrow in the given market."]
 					#[doc = ""]
 					#[doc = "# Parameters"]
@@ -31731,7 +31731,7 @@ pub mod api {
 						>,
 						keep_alive: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Check if borrows for the `borrowers` accounts are required to be liquidated, initiate"]
 					#[doc = "liquidation."]
 					#[doc = "- `origin` : Sender of this extrinsic."]
@@ -31749,71 +31749,71 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "The market could not be found."]
 					MarketDoesNotExist,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Account did not deposit any collateral to particular market."]
 					AccountCollateralAbsent,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Invalid collateral factor was provided."]
 					#[doc = "Collateral factor value must be more than one."]
 					InvalidCollateralFactor,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					MarketIsClosing,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					InvalidTimestampOnBorrowRequest,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "When user try to withdraw money beyond what is available."]
 					NotEnoughCollateralToWithdraw,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "The market would go under collateralized if the requested amount of collateral was"]
 					#[doc = "withdrawn."]
 					WouldGoUnderCollateralized,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "User has provided not sufficient amount of collateral."]
 					NotEnoughCollateralToBorrow,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Borrow rate can not be calculated."]
 					CannotCalculateBorrowRate,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "Borrow and repay in the same block are not allowed."]
 					#[doc = "Flashloans are not supported by the pallet."]
 					BorrowAndRepayInSameBlockIsNotSupported,
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "User tried to repay non-existent loan."]
 					BorrowDoesNotExist,
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					#[doc = "Market can not be created since"]
 					#[doc = "allowed number of markets was exceeded."]
 					ExceedLendingCount,
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					#[doc = "Borrow limit for particular borrower was not calculated"]
 					#[doc = "due to arithmetic error."]
 					BorrowLimitCalculationFailed,
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					#[doc = "Attempted to update a market owned by someone else."]
 					Unauthorized,
-					#[codec::codec(index = 14)]
+					#[codec(index = 14)]
 					#[doc = "Market manager has to deposit initial amount of borrow asset into the market account."]
 					#[doc = "Initial amount is denominated in normalized currency and calculated based on data"]
 					#[doc = "from Oracle. The error is emitted if calculated amount is incorrect."]
 					InitialMarketVolumeIncorrect,
-					#[codec::codec(index = 15)]
+					#[codec(index = 15)]
 					#[doc = "A market with a borrow balance of `0` was attempted to be repaid."]
 					CannotRepayZeroBalance,
-					#[codec::codec(index = 16)]
+					#[codec(index = 16)]
 					#[doc = "Cannot repay more than total amount of debt when partially repaying."]
 					CannotRepayMoreThanTotalDebt,
-					#[codec::codec(index = 17)]
+					#[codec(index = 17)]
 					#[doc = "Account did not pay any rent to particular market."]
 					BorrowRentDoesNotExist,
-					#[codec::codec(index = 18)]
+					#[codec(index = 18)]
 					#[doc = "Block number of provided price is out of allowed tolerance."]
 					PriceTooOld,
-					#[codec::codec(index = 19)]
+					#[codec(index = 19)]
 					CannotIncreaseCollateralFactorOfOpenMarket,
-					#[codec::codec(index = 20)]
+					#[codec(index = 20)]
 					CannotBorrowFromMarketWithUnbalancedVault,
 				}
 				#[derive(
@@ -31821,7 +31821,7 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Event emitted when new lending market is created."]
 					MarketCreated {
 						market_id: runtime_types::pallet_lending::types::MarketId,
@@ -31831,7 +31831,7 @@ pub mod api {
 							runtime_types::primitives::currency::CurrencyId,
 						>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					MarketUpdated {
 						market_id: runtime_types::pallet_lending::types::MarketId,
 						input: runtime_types::composable_traits::lending::UpdateInput<
@@ -31839,42 +31839,42 @@ pub mod api {
 							::core::primitive::u32,
 						>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Event emitted when asset is deposited by lender."]
 					AssetDeposited {
 						sender: ::subxt::utils::AccountId32,
 						market_id: runtime_types::pallet_lending::types::MarketId,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Event emitted when asset is withdrawn by lender."]
 					AssetWithdrawn {
 						sender: ::subxt::utils::AccountId32,
 						market_id: runtime_types::pallet_lending::types::MarketId,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Event emitted when collateral is deposited."]
 					CollateralDeposited {
 						sender: ::subxt::utils::AccountId32,
 						market_id: runtime_types::pallet_lending::types::MarketId,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Event emitted when collateral is withdrawn."]
 					CollateralWithdrawn {
 						sender: ::subxt::utils::AccountId32,
 						market_id: runtime_types::pallet_lending::types::MarketId,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Event emitted when user borrows from given market."]
 					Borrowed {
 						sender: ::subxt::utils::AccountId32,
 						market_id: runtime_types::pallet_lending::types::MarketId,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Event emitted when user repays borrow of beneficiary in given market."]
 					BorrowRepaid {
 						sender: ::subxt::utils::AccountId32,
@@ -31882,13 +31882,13 @@ pub mod api {
 						beneficiary: ::subxt::utils::AccountId32,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Event emitted when a liquidation is initiated for a loan."]
 					LiquidationInitiated {
 						market_id: runtime_types::pallet_lending::types::MarketId,
 						borrowers: ::std::vec::Vec<::subxt::utils::AccountId32>,
 					},
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "Event emitted to warn that loan may go under collateralize soon."]
 					MayGoUnderCollateralizedSoon {
 						market_id: runtime_types::pallet_lending::types::MarketId,
@@ -31916,17 +31916,17 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					# [codec::codec (index = 0)] add_liquidation_strategy { configuration : runtime_types :: pallet_liquidations :: pallet :: LiquidationStrategyConfiguration , } , # [codec::codec (index = 1)] sell { order : runtime_types :: composable_traits :: defi :: Sell < runtime_types :: primitives :: currency :: CurrencyId , :: core :: primitive :: u128 > , configuration : :: std :: vec :: Vec < :: core :: primitive :: u32 > , } , }
+					# [codec (index = 0)] add_liquidation_strategy { configuration : runtime_types :: pallet_liquidations :: pallet :: LiquidationStrategyConfiguration , } , # [codec (index = 1)] sell { order : runtime_types :: composable_traits :: defi :: Sell < runtime_types :: primitives :: currency :: CurrencyId , :: core :: primitive :: u128 > , configuration : :: std :: vec :: Vec < :: core :: primitive :: u32 > , } , }
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					NoLiquidationEngineFound,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					InvalidLiquidationStrategiesVector,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					OnlyDutchAuctionStrategyIsImplemented,
 				}
 				#[derive(
@@ -31934,18 +31934,18 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					PositionWasSentToLiquidation,
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum LiquidationStrategyConfiguration {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					DutchAuction(runtime_types::composable_traits::time::TimeReleaseFunction),
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Pablo { slippage: runtime_types::sp_arithmetic::per_things::Perquintill },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					Xcm(runtime_types::composable_traits::xcm::XcmSellRequestTransactConfiguration),
 				}
 			}
@@ -31959,7 +31959,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Add a member `who` to the set."]
 					#[doc = ""]
 					#[doc = "May only be called from `T::AddOrigin`."]
@@ -31969,7 +31969,7 @@ pub mod api {
 							::core::primitive::u32,
 						>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Remove a member `who` from the set."]
 					#[doc = ""]
 					#[doc = "May only be called from `T::RemoveOrigin`."]
@@ -31979,7 +31979,7 @@ pub mod api {
 							::core::primitive::u32,
 						>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Swap out one member `remove` for another `add`."]
 					#[doc = ""]
 					#[doc = "May only be called from `T::SwapOrigin`."]
@@ -31995,13 +31995,13 @@ pub mod api {
 							::core::primitive::u32,
 						>,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Change the membership to a new set, disregarding the existing membership. Be nice and"]
 					#[doc = "pass `members` pre-sorted."]
 					#[doc = ""]
 					#[doc = "May only be called from `T::ResetOrigin`."]
 					reset_members { members: ::std::vec::Vec<::subxt::utils::AccountId32> },
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Swap out the sending member for some other key `new`."]
 					#[doc = ""]
 					#[doc = "May only be called from `Signed` origin of a current member."]
@@ -32013,7 +32013,7 @@ pub mod api {
 							::core::primitive::u32,
 						>,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Set the prime member. Must be a current member."]
 					#[doc = ""]
 					#[doc = "May only be called from `T::PrimeOrigin`."]
@@ -32023,7 +32023,7 @@ pub mod api {
 							::core::primitive::u32,
 						>,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Remove the prime member if it exists."]
 					#[doc = ""]
 					#[doc = "May only be called from `T::PrimeOrigin`."]
@@ -32034,13 +32034,13 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Already a member."]
 					AlreadyMember,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Not a member."]
 					NotMember,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Too many members."]
 					TooManyMembers,
 				}
@@ -32049,22 +32049,22 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "The given member was added; see the transaction for who."]
 					MemberAdded,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "The given member was removed; see the transaction for who."]
 					MemberRemoved,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Two members were swapped; see the transaction for who."]
 					MembersSwapped,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "The membership was reset; see the transaction for who the new set is."]
 					MembersReset,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "One of the members' keys changed."]
 					KeyChanged,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Phantom member, never used."]
 					Dummy,
 				}
@@ -32079,7 +32079,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Immediately dispatch a multi-signature call using a single approval from the caller."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Signed_."]
@@ -32100,7 +32100,7 @@ pub mod api {
 						other_signatories: ::std::vec::Vec<::subxt::utils::AccountId32>,
 						call: ::std::boxed::Box<runtime_types::dali_runtime::RuntimeCall>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Register approval for a dispatch to be made from a deterministic composite account if"]
 					#[doc = "approved by a total of `threshold - 1` of `other_signatories`."]
 					#[doc = ""]
@@ -32155,7 +32155,7 @@ pub mod api {
 						call: ::std::boxed::Box<runtime_types::dali_runtime::RuntimeCall>,
 						max_weight: runtime_types::sp_weights::weight_v2::Weight,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Register approval for a dispatch to be made from a deterministic composite account if"]
 					#[doc = "approved by a total of `threshold - 1` of `other_signatories`."]
 					#[doc = ""]
@@ -32200,7 +32200,7 @@ pub mod api {
 						call_hash: [::core::primitive::u8; 32usize],
 						max_weight: runtime_types::sp_weights::weight_v2::Weight,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Cancel a pre-existing, on-going multisig transaction. Any deposit reserved previously"]
 					#[doc = "for this operation will be unreserved on success."]
 					#[doc = ""]
@@ -32240,46 +32240,46 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Threshold must be 2 or greater."]
 					MinimumThreshold,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Call is already approved by this signatory."]
 					AlreadyApproved,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Call doesn't need any (more) approvals."]
 					NoApprovalsNeeded,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "There are too few signatories in the list."]
 					TooFewSignatories,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "There are too many signatories in the list."]
 					TooManySignatories,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "The signatories were provided out of order; they should be ordered."]
 					SignatoriesOutOfOrder,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "The sender was contained in the other signatories; it shouldn't be."]
 					SenderInSignatories,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Multisig operation not found when attempting to cancel."]
 					NotFound,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Only the account that originally created the multisig is able to cancel it."]
 					NotOwner,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "No timepoint was given, yet the multisig operation is already underway."]
 					NoTimepoint,
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "A different timepoint was given to the multisig operation that is underway."]
 					WrongTimepoint,
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					#[doc = "A timepoint was given, yet no multisig operation is underway."]
 					UnexpectedTimepoint,
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					#[doc = "The maximum weight information provided was too low."]
 					MaxWeightTooLow,
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					#[doc = "The data to be stored is already stored."]
 					AlreadyStored,
 				}
@@ -32288,14 +32288,14 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "A new multisig operation has begun."]
 					NewMultisig {
 						approving: ::subxt::utils::AccountId32,
 						multisig: ::subxt::utils::AccountId32,
 						call_hash: [::core::primitive::u8; 32usize],
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "A multisig operation has been approved by someone."]
 					MultisigApproval {
 						approving: ::subxt::utils::AccountId32,
@@ -32304,7 +32304,7 @@ pub mod api {
 						multisig: ::subxt::utils::AccountId32,
 						call_hash: [::core::primitive::u8; 32usize],
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "A multisig operation has been executed."]
 					MultisigExecuted {
 						approving: ::subxt::utils::AccountId32,
@@ -32315,7 +32315,7 @@ pub mod api {
 						result:
 							::core::result::Result<(), runtime_types::sp_runtime::DispatchError>,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "A multisig operation has been cancelled."]
 					MultisigCancelled {
 						cancelling: ::subxt::utils::AccountId32,
@@ -32364,7 +32364,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Permissioned call to add an asset"]
 					#[doc = ""]
 					#[doc = "- `asset_id`: Id for the asset"]
@@ -32387,14 +32387,14 @@ pub mod api {
 						slash: ::core::primitive::u128,
 						emit_price_changes: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Call for a signer to be set, called from controller, adds stake."]
 					#[doc = ""]
 					#[doc = "- `signer`: signer to tie controller to"]
 					#[doc = ""]
 					#[doc = "Emits `SignerSet` and `StakeAdded` events when successful."]
 					set_signer { signer: ::subxt::utils::AccountId32 },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Call to start rewarding Oracles."]
 					#[doc = "- `annual_cost_per_oracle`: Annual cost of an Oracle."]
 					#[doc = "- `num_ideal_oracles`: Number of ideal Oracles. This in fact should be higher than the"]
@@ -32405,24 +32405,24 @@ pub mod api {
 						annual_cost_per_oracle: ::core::primitive::u128,
 						num_ideal_oracles: ::core::primitive::u8,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "call to add more stake from a controller"]
 					#[doc = ""]
 					#[doc = "- `stake`: amount to add to stake"]
 					#[doc = ""]
 					#[doc = "Emits `StakeAdded` event when successful."]
 					add_stake { stake: ::core::primitive::u128 },
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Call to put in a claim to remove stake, called from controller"]
 					#[doc = ""]
 					#[doc = "Emits `StakeRemoved` event when successful."]
 					remove_stake,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Call to reclaim stake after proper time has passed, called from controller"]
 					#[doc = ""]
 					#[doc = "Emits `StakeReclaimed` event when successful."]
 					reclaim_stake,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Call to submit a price, gas is returned if extrinsic is successful."]
 					#[doc = "Should be called from offchain worker but can be called manually too."]
 					#[doc = ""]
@@ -32442,96 +32442,96 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Unknown"]
 					Unknown,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "No Permission"]
 					NoPermission,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "No stake for oracle"]
 					NoStake,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Stake is locked try again later"]
 					StakeLocked,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Not enough oracle stake for action"]
 					NotEnoughStake,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Not Enough Funds to complete action"]
 					NotEnoughFunds,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Invalid asset id"]
 					InvalidAssetId,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Price already submitted"]
 					AlreadySubmitted,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Max prices already reached"]
 					MaxPrices,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "Price has not been requested"]
 					PriceNotRequested,
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "Signer has not been set"]
 					UnsetSigner,
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					#[doc = "Signer has already been set"]
 					AlreadySet,
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					#[doc = "No controller has been set"]
 					UnsetController,
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					#[doc = "This controller is already in use"]
 					ControllerUsed,
-					#[codec::codec(index = 14)]
+					#[codec(index = 14)]
 					#[doc = "This signer is already in use"]
 					SignerUsed,
-					#[codec::codec(index = 15)]
+					#[codec(index = 15)]
 					#[doc = "Error avoids a panic"]
 					AvoidPanic,
-					#[codec::codec(index = 16)]
+					#[codec(index = 16)]
 					#[doc = "Max answers have been exceeded"]
 					ExceedMaxAnswers,
-					#[codec::codec(index = 17)]
+					#[codec(index = 17)]
 					#[doc = "Invalid min answers"]
 					InvalidMinAnswers,
-					#[codec::codec(index = 18)]
+					#[codec(index = 18)]
 					MaxAnswersLessThanMinAnswers,
-					#[codec::codec(index = 19)]
+					#[codec(index = 19)]
 					#[doc = "Threshold exceeded"]
 					ExceedThreshold,
-					#[codec::codec(index = 20)]
+					#[codec(index = 20)]
 					#[doc = "Asset count exceeded"]
 					ExceedAssetsCount,
-					#[codec::codec(index = 21)]
+					#[codec(index = 21)]
 					#[doc = "Price not found"]
 					PriceNotFound,
-					#[codec::codec(index = 22)]
+					#[codec(index = 22)]
 					#[doc = "Stake exceeded"]
 					ExceedStake,
-					#[codec::codec(index = 23)]
+					#[codec(index = 23)]
 					#[doc = "Price weight must sum to 100"]
 					MustSumTo100,
-					#[codec::codec(index = 24)]
+					#[codec(index = 24)]
 					#[doc = "Too many weighted averages requested"]
 					DepthTooLarge,
-					#[codec::codec(index = 25)]
+					#[codec(index = 25)]
 					ArithmeticError,
-					#[codec::codec(index = 26)]
+					#[codec(index = 26)]
 					#[doc = "Block interval is less then stale price"]
 					BlockIntervalLength,
-					#[codec::codec(index = 27)]
+					#[codec(index = 27)]
 					#[doc = "There was an error transferring"]
 					TransferError,
-					#[codec::codec(index = 28)]
+					#[codec(index = 28)]
 					MaxHistory,
-					#[codec::codec(index = 29)]
+					#[codec(index = 29)]
 					MaxPrePrices,
-					#[codec::codec(index = 30)]
+					#[codec(index = 30)]
 					#[doc = "Rewarding has not started"]
 					NoRewardTrackerSet,
-					#[codec::codec(index = 31)]
+					#[codec(index = 31)]
 					#[doc = "Annual rewarding cost too high"]
 					AnnualRewardLessThanAlreadyRewarded,
 				}
@@ -32540,7 +32540,7 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Asset info created or changed. \\[asset_id, threshold, min_answers, max_answers,"]
 					#[doc = "block_interval, reward, slash\\]"]
 					AssetInfoChange(
@@ -32552,54 +32552,54 @@ pub mod api {
 						::core::primitive::u128,
 						::core::primitive::u128,
 					),
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Signer was set. \\[signer, controller\\]"]
 					SignerSet(::subxt::utils::AccountId32, ::subxt::utils::AccountId32),
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Stake was added. \\[added_by, amount_added, total_amount\\]"]
 					StakeAdded(
 						::subxt::utils::AccountId32,
 						::core::primitive::u128,
 						::core::primitive::u128,
 					),
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Stake removed. \\[removed_by, amount, block_number\\]"]
 					StakeRemoved(
 						::subxt::utils::AccountId32,
 						::core::primitive::u128,
 						::core::primitive::u32,
 					),
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Stake reclaimed. \\[reclaimed_by, amount\\]"]
 					StakeReclaimed(::subxt::utils::AccountId32, ::core::primitive::u128),
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Price submitted by oracle. \\[oracle_address, asset_id, price\\]"]
 					PriceSubmitted(
 						::subxt::utils::AccountId32,
 						runtime_types::primitives::currency::CurrencyId,
 						::core::primitive::u128,
 					),
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Oracle slashed. \\[oracle_address, asset_id, amount\\]"]
 					UserSlashed(
 						::subxt::utils::AccountId32,
 						runtime_types::primitives::currency::CurrencyId,
 						::core::primitive::u128,
 					),
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Oracle rewarded. \\[oracle_address, asset_id, price\\]"]
 					OracleRewarded(
 						::subxt::utils::AccountId32,
 						runtime_types::primitives::currency::CurrencyId,
 						::core::primitive::u128,
 					),
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Rewarding Started \\[rewarding start timestamp]"]
 					RewardingAdjustment(::core::primitive::u64),
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "Answer from oracle removed for staleness. \\[oracle_address, price\\]"]
 					AnswerPruned(::subxt::utils::AccountId32, ::core::primitive::u128),
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "Price changed by oracle \\[asset_id, price\\]"]
 					PriceChanged(
 						runtime_types::primitives::currency::CurrencyId,
@@ -32632,7 +32632,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Create a new pool. Note that this extrinsic does NOT validate if a pool with the same"]
 					#[doc = "assets already exists in the runtime."]
 					#[doc = ""]
@@ -32643,7 +32643,7 @@ pub mod api {
 							runtime_types::primitives::currency::CurrencyId,
 						>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Execute a buy order on pool."]
 					#[doc = ""]
 					#[doc = "Emits `Swapped` event when successful."]
@@ -32656,7 +32656,7 @@ pub mod api {
 						>,
 						keep_alive: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Execute a specific swap operation."]
 					#[doc = ""]
 					#[doc = "The `quote_amount` is always the quote asset amount (A/B => B), (B/A => A)."]
@@ -32674,7 +32674,7 @@ pub mod api {
 						>,
 						keep_alive: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Add liquidity to the given pool."]
 					#[doc = ""]
 					#[doc = "Emits `LiquidityAdded` event when successful."]
@@ -32687,7 +32687,7 @@ pub mod api {
 						min_mint_amount: ::core::primitive::u128,
 						keep_alive: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Remove liquidity from the given pool."]
 					#[doc = ""]
 					#[doc = "Emits `LiquidityRemoved` event when successful."]
@@ -32699,7 +32699,7 @@ pub mod api {
 							::core::primitive::u128,
 						>,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					enable_twap { pool_id: ::core::primitive::u128 },
 				}
 				#[derive(
@@ -32707,68 +32707,68 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					PoolNotFound,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					NotEnoughLiquidity,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					NotEnoughLpToken,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					PairMismatch,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					AssetNotFound,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					MustBeOwner,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					InvalidSaleState,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					InvalidAmount,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					InvalidAsset,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					CannotRespectMinimumRequested,
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					AssetAmountMustBePositiveNumber,
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					InvalidPair,
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					InvalidFees,
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					AmpFactorMustBeGreaterThanZero,
-					#[codec::codec(index = 14)]
+					#[codec(index = 14)]
 					MissingAmount,
-					#[codec::codec(index = 15)]
+					#[codec(index = 15)]
 					MissingMinExpectedAmount,
-					#[codec::codec(index = 16)]
+					#[codec(index = 16)]
 					MoreThanTwoAssetsNotYetSupported,
-					#[codec::codec(index = 17)]
+					#[codec(index = 17)]
 					NoLpTokenForLbp,
-					#[codec::codec(index = 18)]
+					#[codec(index = 18)]
 					NoXTokenForLbp,
-					#[codec::codec(index = 19)]
+					#[codec(index = 19)]
 					WeightsMustBeNonZero,
-					#[codec::codec(index = 20)]
+					#[codec(index = 20)]
 					WeightsMustSumToOne,
-					#[codec::codec(index = 21)]
+					#[codec(index = 21)]
 					StakingPoolConfigError,
-					#[codec::codec(index = 22)]
+					#[codec(index = 22)]
 					IncorrectAssetAmounts,
-					#[codec::codec(index = 23)]
+					#[codec(index = 23)]
 					UnsupportedOperation,
-					#[codec::codec(index = 24)]
+					#[codec(index = 24)]
 					InitialDepositCannotBeZero,
-					#[codec::codec(index = 25)]
+					#[codec(index = 25)]
 					InitialDepositMustContainAllAssets,
-					#[codec::codec(index = 26)]
+					#[codec(index = 26)]
 					#[doc = "The `min_amounts` map passed to `remove_liquidity` must contain at least one asset."]
 					MinAmountsMustContainAtLeastOneAsset,
-					#[codec::codec(index = 27)]
+					#[codec(index = 27)]
 					#[doc = "The `assets` map passed to `add_liquidity` must contain at least one asset."]
 					MustDepositMinimumOneAsset,
-					#[codec::codec(index = 28)]
+					#[codec(index = 28)]
 					#[doc = "Cannot swap an asset with itself."]
 					CannotSwapSameAsset,
-					#[codec::codec(index = 29)]
+					#[codec(index = 29)]
 					#[doc = "Cannot buy an asset with itself."]
 					CannotBuyAssetWithItself,
 				}
@@ -32777,7 +32777,7 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Pool with specified id `T::PoolId` was created successfully by `T::AccountId`."]
 					PoolCreated {
 						pool_id: ::core::primitive::u128,
@@ -32788,7 +32788,7 @@ pub mod api {
 						>,
 						lp_token_id: runtime_types::primitives::currency::CurrencyId,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Liquidity added into the pool `T::PoolId`."]
 					LiquidityAdded {
 						who: ::subxt::utils::AccountId32,
@@ -32799,7 +32799,7 @@ pub mod api {
 						>,
 						minted_lp: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Liquidity removed from pool `T::PoolId` by `T::AccountId` in balanced way."]
 					LiquidityRemoved {
 						who: ::subxt::utils::AccountId32,
@@ -32809,7 +32809,7 @@ pub mod api {
 							::core::primitive::u128,
 						>,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Token exchange happened."]
 					Swapped {
 						pool_id: ::core::primitive::u128,
@@ -32823,7 +32823,7 @@ pub mod api {
 							::core::primitive::u128,
 						>,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "TWAP updated."]
 					TwapUpdated {
 						pool_id: ::core::primitive::u128,
@@ -32838,7 +32838,7 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum PoolConfiguration<_0, _1> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					DualAssetConstantProduct(
 						runtime_types::composable_traits::dex::BasicPoolInfo<_0, _1>,
 					),
@@ -32847,7 +32847,7 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum PoolInitConfiguration<_0, _1> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					DualAssetConstantProduct {
 						owner: _0,
 						assets_weights:
@@ -32890,13 +32890,13 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Register a preimage on-chain."]
 					#[doc = ""]
 					#[doc = "If the preimage was previously requested, no fees or deposits are taken for providing"]
 					#[doc = "the preimage. Otherwise, a deposit is taken proportional to the size of the preimage."]
 					note_preimage { bytes: ::std::vec::Vec<::core::primitive::u8> },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Clear an unrequested preimage from the runtime storage."]
 					#[doc = ""]
 					#[doc = "If `len` is provided, then it will be a much cheaper operation."]
@@ -32904,13 +32904,13 @@ pub mod api {
 					#[doc = "- `hash`: The hash of the preimage to be removed from the store."]
 					#[doc = "- `len`: The length of the preimage of `hash`."]
 					unnote_preimage { hash: ::subxt::utils::H256 },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Request a preimage be uploaded to the chain without paying any fees or deposits."]
 					#[doc = ""]
 					#[doc = "If the preimage requests has already been provided on-chain, we unreserve any deposit"]
 					#[doc = "a user may have paid, and take the control of the preimage out of their hands."]
 					request_preimage { hash: ::subxt::utils::H256 },
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Clear a previously made request for a preimage."]
 					#[doc = ""]
 					#[doc = "NOTE: THIS MUST NOT BE CALLED ON `hash` MORE TIMES THAN `request_preimage`."]
@@ -32921,22 +32921,22 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Preimage is too large to store on-chain."]
 					TooBig,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Preimage has already been noted on-chain."]
 					AlreadyNoted,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "The user is not authorized to perform this action."]
 					NotAuthorized,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "The preimage cannot be removed since it has not yet been noted."]
 					NotNoted,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "A preimage may not be removed when there are outstanding requests."]
 					Requested,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "The preimage request cannot be removed since no outstanding requests exist."]
 					NotRequested,
 				}
@@ -32945,13 +32945,13 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "A preimage has been noted."]
 					Noted { hash: ::subxt::utils::H256 },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "A preimage has been requested."]
 					Requested { hash: ::subxt::utils::H256 },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "A preimage has ben cleared."]
 					Cleared { hash: ::subxt::utils::H256 },
 				}
@@ -32960,9 +32960,9 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum RequestStatus<_0, _1> {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				Unrequested { deposit: (_0, _1), len: ::core::primitive::u32 },
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				Requested {
 					deposit: ::core::option::Option<(_0, _1)>,
 					count: ::core::primitive::u32,
@@ -32979,7 +32979,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Dispatch the given `call` from an account that the sender is authorised for through"]
 					#[doc = "`add_proxy`."]
 					#[doc = ""]
@@ -33001,7 +33001,7 @@ pub mod api {
 						>,
 						call: ::std::boxed::Box<runtime_types::dali_runtime::RuntimeCall>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Register a proxy account for the sender that is able to make calls on its behalf."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Signed_."]
@@ -33019,7 +33019,7 @@ pub mod api {
 						proxy_type: runtime_types::composable_traits::account_proxy::ProxyType,
 						delay: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Unregister a proxy account for the sender."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Signed_."]
@@ -33035,7 +33035,7 @@ pub mod api {
 						proxy_type: runtime_types::composable_traits::account_proxy::ProxyType,
 						delay: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Unregister all proxy accounts for the sender."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Signed_."]
@@ -33043,7 +33043,7 @@ pub mod api {
 					#[doc = "WARNING: This may be called on accounts created by `pure`, however if done, then"]
 					#[doc = "the unreserved fees will be inaccessible. **All access to this account will be lost.**"]
 					remove_proxies,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Spawn a fresh new account that is guaranteed to be otherwise inaccessible, and"]
 					#[doc = "initialize it with a proxy of `proxy_type` for `origin` sender."]
 					#[doc = ""]
@@ -33067,7 +33067,7 @@ pub mod api {
 						delay: ::core::primitive::u32,
 						index: ::core::primitive::u16,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Removes a previously spawned pure proxy."]
 					#[doc = ""]
 					#[doc = "WARNING: **All access to this account will be lost.** Any funds held in it will be"]
@@ -33091,12 +33091,12 @@ pub mod api {
 						>,
 						proxy_type: runtime_types::composable_traits::account_proxy::ProxyType,
 						index: ::core::primitive::u16,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						height: ::core::primitive::u32,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						ext_index: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Publish the hash of a proxy-call that will be made in the future."]
 					#[doc = ""]
 					#[doc = "This must be called some number of blocks before the corresponding `proxy` is attempted"]
@@ -33119,7 +33119,7 @@ pub mod api {
 						>,
 						call_hash: ::subxt::utils::H256,
 					},
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Remove a given announcement."]
 					#[doc = ""]
 					#[doc = "May be called by a proxy account to remove a call they previously announced and return"]
@@ -33137,7 +33137,7 @@ pub mod api {
 						>,
 						call_hash: ::subxt::utils::H256,
 					},
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Remove the given announcement of a delegate."]
 					#[doc = ""]
 					#[doc = "May be called by a target (proxied) account to remove a call that one of their delegates"]
@@ -33155,7 +33155,7 @@ pub mod api {
 						>,
 						call_hash: ::subxt::utils::H256,
 					},
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "Dispatch the given `call` from an account that the sender is authorized for through"]
 					#[doc = "`add_proxy`."]
 					#[doc = ""]
@@ -33187,28 +33187,28 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "There are too many proxies registered or too many announcements pending."]
 					TooMany,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Proxy registration not found."]
 					NotFound,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Sender is not a proxy of the account to be proxied."]
 					NotProxy,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "A call which is incompatible with the proxy type's filter was attempted."]
 					Unproxyable,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Account is already a proxy."]
 					Duplicate,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Call may not be made by proxy because it may escalate its privileges."]
 					NoPermission,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Announcement, if made at all, was made too recently."]
 					Unannounced,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Cannot add self as proxy."]
 					NoSelfProxy,
 				}
@@ -33217,13 +33217,13 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "A proxy was executed correctly, with the given."]
 					ProxyExecuted {
 						result:
 							::core::result::Result<(), runtime_types::sp_runtime::DispatchError>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "A pure account has been created by new proxy with given"]
 					#[doc = "disambiguation index and proxy type."]
 					PureCreated {
@@ -33232,14 +33232,14 @@ pub mod api {
 						proxy_type: runtime_types::composable_traits::account_proxy::ProxyType,
 						disambiguation_index: ::core::primitive::u16,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "An announcement was placed to make a call in the future."]
 					Announced {
 						real: ::subxt::utils::AccountId32,
 						proxy: ::subxt::utils::AccountId32,
 						call_hash: ::subxt::utils::H256,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "A proxy was added."]
 					ProxyAdded {
 						delegator: ::subxt::utils::AccountId32,
@@ -33247,7 +33247,7 @@ pub mod api {
 						proxy_type: runtime_types::composable_traits::account_proxy::ProxyType,
 						delay: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "A proxy was removed."]
 					ProxyRemoved {
 						delegator: ::subxt::utils::AccountId32,
@@ -33283,7 +33283,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Anonymously schedule a task."]
 					schedule {
 						when: ::core::primitive::u32,
@@ -33294,10 +33294,10 @@ pub mod api {
 						priority: ::core::primitive::u8,
 						call: ::std::boxed::Box<runtime_types::dali_runtime::RuntimeCall>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Cancel an anonymously scheduled task."]
 					cancel { when: ::core::primitive::u32, index: ::core::primitive::u32 },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Schedule a named task."]
 					schedule_named {
 						id: [::core::primitive::u8; 32usize],
@@ -33309,10 +33309,10 @@ pub mod api {
 						priority: ::core::primitive::u8,
 						call: ::std::boxed::Box<runtime_types::dali_runtime::RuntimeCall>,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Cancel a named scheduled task."]
 					cancel_named { id: [::core::primitive::u8; 32usize] },
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Anonymously schedule a task after a delay."]
 					#[doc = ""]
 					#[doc = "# <weight>"]
@@ -33327,7 +33327,7 @@ pub mod api {
 						priority: ::core::primitive::u8,
 						call: ::std::boxed::Box<runtime_types::dali_runtime::RuntimeCall>,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Schedule a named task after a delay."]
 					#[doc = ""]
 					#[doc = "# <weight>"]
@@ -33349,19 +33349,19 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Failed to schedule a call"]
 					FailedToSchedule,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Cannot find the scheduled call."]
 					NotFound,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Given target block number is in the past."]
 					TargetBlockNumberInPast,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Reschedule failed because it does not change scheduled time."]
 					RescheduleNoChange,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Attempt to use a non-named function on a named task."]
 					Named,
 				}
@@ -33370,13 +33370,13 @@ pub mod api {
 				)]
 				#[doc = "Events type."]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Scheduled some task."]
 					Scheduled { when: ::core::primitive::u32, index: ::core::primitive::u32 },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Canceled some task."]
 					Canceled { when: ::core::primitive::u32, index: ::core::primitive::u32 },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Dispatched some task."]
 					Dispatched {
 						task: (::core::primitive::u32, ::core::primitive::u32),
@@ -33384,19 +33384,19 @@ pub mod api {
 						result:
 							::core::result::Result<(), runtime_types::sp_runtime::DispatchError>,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "The call for the provided hash was not found so the task has been aborted."]
 					CallUnavailable {
 						task: (::core::primitive::u32, ::core::primitive::u32),
 						id: ::core::option::Option<[::core::primitive::u8; 32usize]>,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "The given task was unable to be renewed since the agenda is full at that block."]
 					PeriodicFailed {
 						task: (::core::primitive::u32, ::core::primitive::u32),
 						id: ::core::option::Option<[::core::primitive::u8; 32usize]>,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "The given task can never be executed since it is overweight."]
 					PermanentlyOverweight {
 						task: (::core::primitive::u32, ::core::primitive::u32),
@@ -33413,7 +33413,7 @@ pub mod api {
 				pub call: _1,
 				pub maybe_periodic: ::core::option::Option<(_2, _2)>,
 				pub origin: _3,
-				#[codec::codec(skip)]
+				#[codec(skip)]
 				pub __subxt_unused_type_params: ::core::marker::PhantomData<_4>,
 			}
 		}
@@ -33426,7 +33426,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Sets the session key(s) of the function caller to `keys`."]
 					#[doc = "Allows an account to set its session key prior to becoming a validator."]
 					#[doc = "This doesn't take effect until the next session."]
@@ -33445,7 +33445,7 @@ pub mod api {
 						keys: runtime_types::dali_runtime::opaque::SessionKeys,
 						proof: ::std::vec::Vec<::core::primitive::u8>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Removes any session key(s) of the function caller."]
 					#[doc = ""]
 					#[doc = "This doesn't take effect until the next session."]
@@ -33469,19 +33469,19 @@ pub mod api {
 				)]
 				#[doc = "Error for the session pallet."]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Invalid ownership proof."]
 					InvalidProof,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "No associated validator ID for account."]
 					NoAssociatedValidatorId,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Registered duplicate key."]
 					DuplicatedKey,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "No keys are associated with this account."]
 					NoKeys,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Key setting account is not live, so it's impossible to associate keys."]
 					NoAccount,
 				}
@@ -33490,7 +33490,7 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "New session has happened. Note that the argument is the session index, not the"]
 					#[doc = "block number as the type might suggest."]
 					NewSession { session_index: ::core::primitive::u32 },
@@ -33506,7 +33506,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Create a new reward pool based on the config."]
 					#[doc = ""]
 					#[doc = "Emits `RewardPoolCreated` event when successful."]
@@ -33519,7 +33519,7 @@ pub mod api {
 								::core::primitive::u32,
 							>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Create a new stake."]
 					#[doc = ""]
 					#[doc = "Emits `Staked` when successful."]
@@ -33528,7 +33528,7 @@ pub mod api {
 						amount: ::core::primitive::u128,
 						duration_preset: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Extend an existing stake."]
 					#[doc = ""]
 					#[doc = "Emits `StakeExtended` when successful."]
@@ -33537,7 +33537,7 @@ pub mod api {
 						fnft_instance_id: ::core::primitive::u64,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Remove a stake."]
 					#[doc = ""]
 					#[doc = "Emits `Unstaked` when successful."]
@@ -33545,7 +33545,7 @@ pub mod api {
 						fnft_collection_id: runtime_types::primitives::currency::CurrencyId,
 						fnft_instance_id: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Split a stake into two parts, by a ratio."]
 					#[doc = ""]
 					#[doc = "Emits `SplitPosition` when successful."]
@@ -33554,7 +33554,7 @@ pub mod api {
 						fnft_instance_id: ::core::primitive::u64,
 						ratio: runtime_types::sp_arithmetic::per_things::Permill,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Updates the reward pool configuration."]
 					#[doc = ""]
 					#[doc = "Emits `RewardPoolUpdated` when successful."]
@@ -33568,7 +33568,7 @@ pub mod api {
 								>,
 							>,
 					},
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Claim a current reward for some position."]
 					#[doc = ""]
 					#[doc = "Emits `Claimed` when successful."]
@@ -33576,7 +33576,7 @@ pub mod api {
 						fnft_collection_id: runtime_types::primitives::currency::CurrencyId,
 						fnft_instance_id: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Add funds to the reward pool's rewards pot for the specified asset."]
 					#[doc = ""]
 					#[doc = "Emits `RewardsPotIncreased` when successful."]
@@ -33592,74 +33592,74 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Error when creating reward configs."]
 					RewardConfigProblem,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "AssetId is invalid, asset IDs must be greater than 0"]
 					InvalidAssetId,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Reward pool already exists"]
 					RewardsPoolAlreadyExists,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "The duration provided was not valid for the pool."]
 					DurationPresetNotFound,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Too many rewarded asset types per pool violating the storage allowed."]
 					TooManyRewardAssetTypes,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Invalid start block number provided for creating a pool."]
 					StartBlockMustBeAfterCurrentBlock,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Unimplemented reward pool type."]
 					UnimplementedRewardPoolConfiguration,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Rewards pool not found."]
 					RewardsPoolNotFound,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Rewards pool has not started."]
 					RewardsPoolHasNotStarted,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "Error when creating reduction configs."]
 					ReductionConfigProblem,
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "Not enough assets for a stake."]
 					NotEnoughAssets,
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					#[doc = "No stake found for given id."]
 					StakeNotFound,
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					#[doc = "Reward's max limit reached."]
 					MaxRewardLimitReached,
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					#[doc = "only the owner of stake can unstake it"]
 					OnlyStakeOwnerCanInteractWithStake,
-					#[codec::codec(index = 14)]
+					#[codec(index = 14)]
 					#[doc = "Reward asset not found in reward pool."]
 					RewardAssetNotFound,
-					#[codec::codec(index = 15)]
+					#[codec(index = 15)]
 					BackToTheFuture,
-					#[codec::codec(index = 16)]
+					#[codec(index = 16)]
 					#[doc = "The rewards pot for this pool is empty."]
 					RewardsPotEmpty,
-					#[codec::codec(index = 17)]
+					#[codec(index = 17)]
 					FnftNotFound,
-					#[codec::codec(index = 18)]
+					#[codec(index = 18)]
 					#[doc = "No duration presets were provided upon pool creation."]
 					NoDurationPresetsProvided,
-					#[codec::codec(index = 19)]
+					#[codec(index = 19)]
 					#[doc = "Slashed amount of minimum reward is less than existential deposit"]
 					SlashedAmountTooLow,
-					#[codec::codec(index = 20)]
+					#[codec(index = 20)]
 					#[doc = "Slashed amount of minimum staking amount is less than existential deposit"]
 					SlashedMinimumStakingAmountTooLow,
-					#[codec::codec(index = 21)]
+					#[codec(index = 21)]
 					#[doc = "Staked amount is less than the minimum staking amount for the pool."]
 					StakedAmountTooLow,
-					#[codec::codec(index = 22)]
+					#[codec(index = 22)]
 					#[doc = "Staked amount after split is less than the minimum staking amount for the pool."]
 					StakedAmountTooLowAfterSplit,
-					#[codec::codec(index = 23)]
+					#[codec(index = 23)]
 					#[doc = "Some operation resulted in an arithmetic overflow."]
 					ArithmeticError,
 				}
@@ -33668,14 +33668,14 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					# [codec::codec (index = 0)] # [doc = "Pool with specified id `T::AssetId` was created successfully by `T::AccountId`."] RewardPoolCreated { pool_id : runtime_types :: primitives :: currency :: CurrencyId , owner : :: subxt :: utils :: AccountId32 , pool_config : runtime_types :: composable_traits :: staking :: RewardPoolConfiguration < :: subxt :: utils :: AccountId32 , runtime_types :: primitives :: currency :: CurrencyId , :: core :: primitive :: u128 , :: core :: primitive :: u32 > , } , # [codec::codec (index = 1)] # [doc = "Pool with specified id `T::AssetId` has started accumulating rewards."] RewardPoolStarted { pool_id : runtime_types :: primitives :: currency :: CurrencyId , } , # [codec::codec (index = 2)] Staked { pool_id : runtime_types :: primitives :: currency :: CurrencyId , owner : :: subxt :: utils :: AccountId32 , amount : :: core :: primitive :: u128 , duration_preset : :: core :: primitive :: u64 , fnft_collection_id : runtime_types :: primitives :: currency :: CurrencyId , fnft_instance_id : :: core :: primitive :: u64 , reward_multiplier : runtime_types :: sp_arithmetic :: fixed_point :: FixedU64 , keep_alive : :: core :: primitive :: bool , } , # [codec::codec (index = 3)] Claimed { owner : :: subxt :: utils :: AccountId32 , fnft_collection_id : runtime_types :: primitives :: currency :: CurrencyId , fnft_instance_id : :: core :: primitive :: u64 , claimed_amounts : :: subxt :: utils :: KeyedVec < runtime_types :: primitives :: currency :: CurrencyId , :: core :: primitive :: u128 > , } , # [codec::codec (index = 4)] StakeAmountExtended { fnft_collection_id : runtime_types :: primitives :: currency :: CurrencyId , fnft_instance_id : :: core :: primitive :: u64 , amount : :: core :: primitive :: u128 , } , # [codec::codec (index = 5)] Unstaked { owner : :: subxt :: utils :: AccountId32 , fnft_collection_id : runtime_types :: primitives :: currency :: CurrencyId , fnft_instance_id : :: core :: primitive :: u64 , slash : :: core :: option :: Option < :: core :: primitive :: u128 > , } , # [codec::codec (index = 6)] # [doc = "A staking position was split."] SplitPosition { positions : :: std :: vec :: Vec < (runtime_types :: primitives :: currency :: CurrencyId , :: core :: primitive :: u64 , :: core :: primitive :: u128 ,) > , } , # [codec::codec (index = 7)] # [doc = "Reward transfer event."] RewardTransferred { from : :: subxt :: utils :: AccountId32 , pool_id : runtime_types :: primitives :: currency :: CurrencyId , reward_currency : runtime_types :: primitives :: currency :: CurrencyId , reward_increment : :: core :: primitive :: u128 , } , # [codec::codec (index = 8)] RewardAccumulationHookError { pool_id : runtime_types :: primitives :: currency :: CurrencyId , asset_id : runtime_types :: primitives :: currency :: CurrencyId , error : runtime_types :: pallet_staking_rewards :: pallet :: RewardAccumulationHookError , } , # [codec::codec (index = 9)] RewardPoolUpdated { pool_id : runtime_types :: primitives :: currency :: CurrencyId , reward_updates : :: subxt :: utils :: KeyedVec < runtime_types :: primitives :: currency :: CurrencyId , runtime_types :: composable_traits :: staking :: RewardUpdate < :: core :: primitive :: u128 > > , } , # [codec::codec (index = 10)] RewardsPotIncreased { pool_id : runtime_types :: primitives :: currency :: CurrencyId , asset_id : runtime_types :: primitives :: currency :: CurrencyId , amount : :: core :: primitive :: u128 , } , # [codec::codec (index = 11)] RewardPoolPaused { pool_id : runtime_types :: primitives :: currency :: CurrencyId , asset_id : runtime_types :: primitives :: currency :: CurrencyId , } , # [codec::codec (index = 12)] RewardPoolResumed { pool_id : runtime_types :: primitives :: currency :: CurrencyId , asset_id : runtime_types :: primitives :: currency :: CurrencyId , } , }
+					# [codec (index = 0)] # [doc = "Pool with specified id `T::AssetId` was created successfully by `T::AccountId`."] RewardPoolCreated { pool_id : runtime_types :: primitives :: currency :: CurrencyId , owner : :: subxt :: utils :: AccountId32 , pool_config : runtime_types :: composable_traits :: staking :: RewardPoolConfiguration < :: subxt :: utils :: AccountId32 , runtime_types :: primitives :: currency :: CurrencyId , :: core :: primitive :: u128 , :: core :: primitive :: u32 > , } , # [codec (index = 1)] # [doc = "Pool with specified id `T::AssetId` has started accumulating rewards."] RewardPoolStarted { pool_id : runtime_types :: primitives :: currency :: CurrencyId , } , # [codec (index = 2)] Staked { pool_id : runtime_types :: primitives :: currency :: CurrencyId , owner : :: subxt :: utils :: AccountId32 , amount : :: core :: primitive :: u128 , duration_preset : :: core :: primitive :: u64 , fnft_collection_id : runtime_types :: primitives :: currency :: CurrencyId , fnft_instance_id : :: core :: primitive :: u64 , reward_multiplier : runtime_types :: sp_arithmetic :: fixed_point :: FixedU64 , keep_alive : :: core :: primitive :: bool , } , # [codec (index = 3)] Claimed { owner : :: subxt :: utils :: AccountId32 , fnft_collection_id : runtime_types :: primitives :: currency :: CurrencyId , fnft_instance_id : :: core :: primitive :: u64 , claimed_amounts : :: subxt :: utils :: KeyedVec < runtime_types :: primitives :: currency :: CurrencyId , :: core :: primitive :: u128 > , } , # [codec (index = 4)] StakeAmountExtended { fnft_collection_id : runtime_types :: primitives :: currency :: CurrencyId , fnft_instance_id : :: core :: primitive :: u64 , amount : :: core :: primitive :: u128 , } , # [codec (index = 5)] Unstaked { owner : :: subxt :: utils :: AccountId32 , fnft_collection_id : runtime_types :: primitives :: currency :: CurrencyId , fnft_instance_id : :: core :: primitive :: u64 , slash : :: core :: option :: Option < :: core :: primitive :: u128 > , } , # [codec (index = 6)] # [doc = "A staking position was split."] SplitPosition { positions : :: std :: vec :: Vec < (runtime_types :: primitives :: currency :: CurrencyId , :: core :: primitive :: u64 , :: core :: primitive :: u128 ,) > , } , # [codec (index = 7)] # [doc = "Reward transfer event."] RewardTransferred { from : :: subxt :: utils :: AccountId32 , pool_id : runtime_types :: primitives :: currency :: CurrencyId , reward_currency : runtime_types :: primitives :: currency :: CurrencyId , reward_increment : :: core :: primitive :: u128 , } , # [codec (index = 8)] RewardAccumulationHookError { pool_id : runtime_types :: primitives :: currency :: CurrencyId , asset_id : runtime_types :: primitives :: currency :: CurrencyId , error : runtime_types :: pallet_staking_rewards :: pallet :: RewardAccumulationHookError , } , # [codec (index = 9)] RewardPoolUpdated { pool_id : runtime_types :: primitives :: currency :: CurrencyId , reward_updates : :: subxt :: utils :: KeyedVec < runtime_types :: primitives :: currency :: CurrencyId , runtime_types :: composable_traits :: staking :: RewardUpdate < :: core :: primitive :: u128 > > , } , # [codec (index = 10)] RewardsPotIncreased { pool_id : runtime_types :: primitives :: currency :: CurrencyId , asset_id : runtime_types :: primitives :: currency :: CurrencyId , amount : :: core :: primitive :: u128 , } , # [codec (index = 11)] RewardPoolPaused { pool_id : runtime_types :: primitives :: currency :: CurrencyId , asset_id : runtime_types :: primitives :: currency :: CurrencyId , } , # [codec (index = 12)] RewardPoolResumed { pool_id : runtime_types :: primitives :: currency :: CurrencyId , asset_id : runtime_types :: primitives :: currency :: CurrencyId , } , }
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum RewardAccumulationHookError {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					BackToTheFuture,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Overflow,
 				}
 			}
@@ -33689,7 +33689,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Authenticates the sudo key and dispatches a function call with `Root` origin."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Signed_."]
@@ -33701,7 +33701,7 @@ pub mod api {
 					#[doc = "- Weight of derivative `call` execution + 10,000."]
 					#[doc = "# </weight>"]
 					sudo { call: ::std::boxed::Box<runtime_types::dali_runtime::RuntimeCall> },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Authenticates the sudo key and dispatches a function call with `Root` origin."]
 					#[doc = "This function does not check the weight of the call, and instead allows the"]
 					#[doc = "Sudo user to specify the weight of the call."]
@@ -33716,7 +33716,7 @@ pub mod api {
 						call: ::std::boxed::Box<runtime_types::dali_runtime::RuntimeCall>,
 						weight: runtime_types::sp_weights::weight_v2::Weight,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Authenticates the current sudo key and sets the given AccountId (`new`) as the new sudo"]
 					#[doc = "key."]
 					#[doc = ""]
@@ -33733,7 +33733,7 @@ pub mod api {
 							::core::primitive::u32,
 						>,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Authenticates the sudo key and dispatches a function call with `Signed` origin from"]
 					#[doc = "a given account."]
 					#[doc = ""]
@@ -33758,7 +33758,7 @@ pub mod api {
 				)]
 				#[doc = "Error for the Sudo pallet"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Sender must be the Sudo account"]
 					RequireSudo,
 				}
@@ -33767,16 +33767,16 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "A sudo just took place. \\[result\\]"]
 					Sudid {
 						sudo_result:
 							::core::result::Result<(), runtime_types::sp_runtime::DispatchError>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "The \\[sudoer\\] just switched identity; the old key is supplied if one existed."]
 					KeyChanged { old_sudoer: ::core::option::Option<::subxt::utils::AccountId32> },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "A sudo just took place. \\[result\\]"]
 					SudoAsDone {
 						sudo_result:
@@ -33794,7 +33794,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Set the current time."]
 					#[doc = ""]
 					#[doc = "This call should be invoked exactly once per block. It will panic at the finalization"]
@@ -33812,7 +33812,7 @@ pub mod api {
 					#[doc = "- 1 event handler `on_timestamp_set`. Must be `O(1)`."]
 					#[doc = "# </weight>"]
 					set {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						now: ::core::primitive::u64,
 					},
 				}
@@ -33827,7 +33827,7 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "A transaction fee `actual_fee`, of which `tip` was added to the minimum inclusion fee,"]
 					#[doc = "has been paid by `who`."]
 					TransactionFeePaid {
@@ -33841,9 +33841,9 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum Releases {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				V1Ancient,
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				V2,
 			}
 		}
@@ -33856,7 +33856,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Put forward a suggestion for spending. A deposit proportional to the value"]
 					#[doc = "is reserved and slashed if the proposal is rejected. It is returned once the"]
 					#[doc = "proposal is awarded."]
@@ -33867,14 +33867,14 @@ pub mod api {
 					#[doc = "- DbWrites: `ProposalCount`, `Proposals`, `origin account`"]
 					#[doc = "# </weight>"]
 					propose_spend {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						value: ::core::primitive::u128,
 						beneficiary: ::subxt::utils::MultiAddress<
 							::subxt::utils::AccountId32,
 							::core::primitive::u32,
 						>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Reject a proposed spend. The original deposit will be slashed."]
 					#[doc = ""]
 					#[doc = "May only be called from `T::RejectOrigin`."]
@@ -33885,10 +33885,10 @@ pub mod api {
 					#[doc = "- DbWrites: `Proposals`, `rejected proposer account`"]
 					#[doc = "# </weight>"]
 					reject_proposal {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						proposal_id: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Approve a proposal. At a later time, the proposal will be allocated to the beneficiary"]
 					#[doc = "and the original deposit will be returned."]
 					#[doc = ""]
@@ -33900,10 +33900,10 @@ pub mod api {
 					#[doc = "- DbWrite: `Approvals`"]
 					#[doc = "# </weight>"]
 					approve_proposal {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						proposal_id: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Propose and approve a spend of treasury funds."]
 					#[doc = ""]
 					#[doc = "- `origin`: Must be `SpendOrigin` with the `Success` value being at least `amount`."]
@@ -33913,14 +33913,14 @@ pub mod api {
 					#[doc = "NOTE: For record-keeping purposes, the proposer is deemed to be equivalent to the"]
 					#[doc = "beneficiary."]
 					spend {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						amount: ::core::primitive::u128,
 						beneficiary: ::subxt::utils::MultiAddress<
 							::subxt::utils::AccountId32,
 							::core::primitive::u32,
 						>,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Force a previously approved proposal to be removed from the approval queue."]
 					#[doc = "The original deposit will no longer be returned."]
 					#[doc = ""]
@@ -33937,7 +33937,7 @@ pub mod api {
 					#[doc = "i.e., the proposal has not been approved. This could also mean the proposal does not"]
 					#[doc = "exist altogether, thus there is no way it would have been approved in the first place."]
 					remove_approval {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						proposal_id: ::core::primitive::u32,
 					},
 				}
@@ -33946,20 +33946,20 @@ pub mod api {
 				)]
 				#[doc = "Error for the treasury pallet."]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Proposer's balance is too low."]
 					InsufficientProposersBalance,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "No proposal or bounty at that index."]
 					InvalidIndex,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Too many approvals in the queue."]
 					TooManyApprovals,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "The spend origin is valid but the amount it is allowed to spend is lower than the"]
 					#[doc = "amount to be spent."]
 					InsufficientPermission,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Proposal has not been approved."]
 					ProposalNotApproved,
 				}
@@ -33968,35 +33968,35 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "New proposal."]
 					Proposed { proposal_index: ::core::primitive::u32 },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "We have ended a spend period and will now allocate funds."]
 					Spending { budget_remaining: ::core::primitive::u128 },
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Some funds have been allocated."]
 					Awarded {
 						proposal_index: ::core::primitive::u32,
 						award: ::core::primitive::u128,
 						account: ::subxt::utils::AccountId32,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "A proposal was rejected; funds were slashed."]
 					Rejected {
 						proposal_index: ::core::primitive::u32,
 						slashed: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Some of our funds have been burnt."]
 					Burnt { burnt_funds: ::core::primitive::u128 },
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Spending has finished; this is the amount that rolls over until next spend."]
 					Rollover { rollover_balance: ::core::primitive::u128 },
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Some funds have been deposited."]
 					Deposit { value: ::core::primitive::u128 },
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "A new spend proposal has been approved."]
 					SpendApproved {
 						proposal_index: ::core::primitive::u32,
@@ -34024,7 +34024,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Send a batch of dispatch calls."]
 					#[doc = ""]
 					#[doc = "May be called from any origin except `None`."]
@@ -34045,7 +34045,7 @@ pub mod api {
 					#[doc = "and the error of the failed call. If all were successful, then the `BatchCompleted`"]
 					#[doc = "event is deposited."]
 					batch { calls: ::std::vec::Vec<runtime_types::dali_runtime::RuntimeCall> },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Send a call through an indexed pseudonym of the sender."]
 					#[doc = ""]
 					#[doc = "Filter from origin are passed along. The call will be dispatched with an origin which"]
@@ -34063,7 +34063,7 @@ pub mod api {
 						index: ::core::primitive::u16,
 						call: ::std::boxed::Box<runtime_types::dali_runtime::RuntimeCall>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Send a batch of dispatch calls and atomically execute them."]
 					#[doc = "The whole transaction will rollback and fail if any of the calls failed."]
 					#[doc = ""]
@@ -34079,7 +34079,7 @@ pub mod api {
 					#[doc = "- Complexity: O(C) where C is the number of calls to be batched."]
 					#[doc = "# </weight>"]
 					batch_all { calls: ::std::vec::Vec<runtime_types::dali_runtime::RuntimeCall> },
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Dispatches a function call with a provided origin."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Root_."]
@@ -34094,7 +34094,7 @@ pub mod api {
 						as_origin: ::std::boxed::Box<runtime_types::dali_runtime::OriginCaller>,
 						call: ::std::boxed::Box<runtime_types::dali_runtime::RuntimeCall>,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Send a batch of dispatch calls."]
 					#[doc = "Unlike `batch`, it allows errors and won't interrupt."]
 					#[doc = ""]
@@ -34110,7 +34110,7 @@ pub mod api {
 					#[doc = "- Complexity: O(C) where C is the number of calls to be batched."]
 					#[doc = "# </weight>"]
 					force_batch { calls: ::std::vec::Vec<runtime_types::dali_runtime::RuntimeCall> },
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Dispatch a function call with a specified weight."]
 					#[doc = ""]
 					#[doc = "This function does not check the weight of the call, and instead allows the"]
@@ -34127,7 +34127,7 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Too many calls batched."]
 					TooManyCalls,
 				}
@@ -34136,26 +34136,26 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Batch of dispatches did not complete fully. Index of first failing dispatch given, as"]
 					#[doc = "well as the error."]
 					BatchInterrupted {
 						index: ::core::primitive::u32,
 						error: runtime_types::sp_runtime::DispatchError,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Batch of dispatches completed fully with no error."]
 					BatchCompleted,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Batch of dispatches completed but has errors."]
 					BatchCompletedWithErrors,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "A single item within a Batch of dispatches has completed with no error."]
 					ItemCompleted,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "A single item within a Batch of dispatches has completed with error."]
 					ItemFailed { error: runtime_types::sp_runtime::DispatchError },
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "A call was dispatched."]
 					DispatchedAs {
 						result:
@@ -34207,7 +34207,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Creates a new vault, locking up the deposit. If the deposit is greater than the"]
 					#[doc = "`ExistentialDeposit` + `CreationDeposit`, the vault will remain alive forever, else it"]
 					#[doc = "can be `tombstoned` after `deposit / RentPerBlock `. Accounts may deposit more funds to"]
@@ -34227,7 +34227,7 @@ pub mod api {
 						>,
 						deposit_amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Subtracts rent from a vault, rewarding the caller if successful with a small fee and"]
 					#[doc = "possibly tombstoning the vault."]
 					#[doc = ""]
@@ -34237,14 +34237,14 @@ pub mod api {
 						dest: ::core::primitive::u64,
 						address: ::core::option::Option<::subxt::utils::AccountId32>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					add_surcharge { dest: ::core::primitive::u64, amount: ::core::primitive::u128 },
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					delete_tombstoned {
 						dest: ::core::primitive::u64,
 						address: ::core::option::Option<::subxt::utils::AccountId32>,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Deposit funds in the vault and receive LP tokens in return."]
 					#[doc = "# Emits"]
 					#[doc = " - Event::Deposited"]
@@ -34253,7 +34253,7 @@ pub mod api {
 					#[doc = " - When the origin is not signed."]
 					#[doc = " - When `deposit < MinimumDeposit`."]
 					deposit { vault: ::core::primitive::u64, asset_amount: ::core::primitive::u128 },
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Withdraw funds"]
 					#[doc = ""]
 					#[doc = "# Emits"]
@@ -34264,7 +34264,7 @@ pub mod api {
 					#[doc = " - When `lp_amount < MinimumWithdrawal`."]
 					#[doc = " - When the vault has insufficient amounts reserved."]
 					withdraw { vault: ::core::primitive::u64, lp_amount: ::core::primitive::u128 },
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Stops a vault. To be used in case of severe protocol flaws."]
 					#[doc = ""]
 					#[doc = "# Emits"]
@@ -34274,7 +34274,7 @@ pub mod api {
 					#[doc = " - When the origin is not root."]
 					#[doc = " - When `vault` does not exist."]
 					emergency_shutdown { vault: ::core::primitive::u64 },
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "(Re)starts a vault after emergency shutdown."]
 					#[doc = ""]
 					#[doc = "# Emits"]
@@ -34284,7 +34284,7 @@ pub mod api {
 					#[doc = " - When the origin is not root."]
 					#[doc = " - When `vault` does not exist."]
 					start { vault: ::core::primitive::u64 },
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Turns an existent strategy account `strategy_account` of a vault determined by"]
 					#[doc = "`vault_idx` into a liquidation state where withdrawn funds should be returned as soon"]
 					#[doc = "as possible."]
@@ -34303,82 +34303,82 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "It is not possible to perform a privileged action using an ordinary account"]
 					AccountIsNotManager,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Failures in creating LP tokens during vault creation result in `CannotCreateAsset`."]
 					CannotCreateAsset,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Failures to transfer funds from the vault to users or vice- versa result in"]
 					#[doc = "`TransferFromFailed`."]
 					TransferFromFailed,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Minting failures result in `MintFailed`. In general this should never occur."]
 					MintFailed,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Requesting withdrawals for more LP tokens than available to the user result in"]
 					#[doc = "`InsufficientLpTokens`"]
 					InsufficientLpTokens,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Querying/operating on invalid vault id's result in `VaultDoesNotExist`."]
 					VaultDoesNotExist,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "If the vault contains too many assets (close to the `Balance::MAX`), it is considered"]
 					#[doc = "full as arithmetic starts overflowing."]
 					NoFreeVaultAllocation,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Vaults must allocate the proper ratio between reserved and strategies, so that the"]
 					#[doc = "ratio sums up to one."]
 					AllocationMustSumToOne,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Vaults may have up to [`MaxStrategies`](Config::MaxStrategies) strategies."]
 					TooManyStrategies,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "Vaults may have insufficient funds for withdrawals, as well as users wishing to deposit"]
 					#[doc = "an incorrect amount."]
 					InsufficientFunds,
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "Deposit amounts not exceeding [`MinimumDeposit`](Config::MinimumDeposit) are declined"]
 					#[doc = "and result in `AmountMustGteMinimumDeposit`."]
 					AmountMustGteMinimumDeposit,
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					#[doc = "Withdrawal amounts not exceeding [`MinimumWithdrawal`](Config::MinimumWithdrawal) are"]
 					#[doc = "declined and result in `AmountMustGteMinimumWithdrawal`."]
 					AmountMustGteMinimumWithdrawal,
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					#[doc = "When trying to withdraw too much from the vault, `NotEnoughLiquidity` is returned."]
 					NotEnoughLiquidity,
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					#[doc = "Creating vaults with invalid creation deposits results in"]
 					#[doc = "`InsufficientCreationDeposit`."]
 					InsufficientCreationDeposit,
-					#[codec::codec(index = 14)]
+					#[codec(index = 14)]
 					#[doc = "Attempting to tombstone a vault which has rent remaining results in"]
 					#[doc = "`InvalidSurchargeClaim`."]
 					InvalidSurchargeClaim,
-					#[codec::codec(index = 15)]
+					#[codec(index = 15)]
 					#[doc = "Not all vaults have an associated LP token. Attempting to perform LP token related"]
 					#[doc = "operations result in `NotVaultLpToken`."]
 					NotVaultLpToken,
-					#[codec::codec(index = 16)]
+					#[codec(index = 16)]
 					#[doc = "The vault has deposits halted, see [Capabilities](crate::capabilities::Capabilities)."]
 					DepositsHalted,
-					#[codec::codec(index = 17)]
+					#[codec(index = 17)]
 					#[doc = "The vault has withdrawals halted, see"]
 					#[doc = "[Capabilities](crate::capabilities::Capabilities)."]
 					WithdrawalsHalted,
-					#[codec::codec(index = 18)]
+					#[codec(index = 18)]
 					OnlyManagerCanDoThisOperation,
-					#[codec::codec(index = 19)]
+					#[codec(index = 19)]
 					InvalidDeletionClaim,
-					#[codec::codec(index = 20)]
+					#[codec(index = 20)]
 					#[doc = "The vault could not be deleted, as it was not yet tombstoned."]
 					VaultNotTombstoned,
-					#[codec::codec(index = 21)]
+					#[codec(index = 21)]
 					#[doc = "The vault could not be deleted, as it was not tombstoned for long enough."]
 					TombstoneDurationNotExceeded,
-					#[codec::codec(index = 22)]
+					#[codec(index = 22)]
 					#[doc = "Existentially funded vaults do not require extra funds."]
 					InvalidAddSurcharge,
 				}
@@ -34387,32 +34387,32 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Emitted after a vault has been successfully created."]
 					VaultCreated { id: ::core::primitive::u64 },
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Emitted after a user deposits funds into the vault."]
 					Deposited {
 						account: ::subxt::utils::AccountId32,
 						asset_amount: ::core::primitive::u128,
 						lp_amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					LiquidateStrategy {
 						account: ::subxt::utils::AccountId32,
 						amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Emitted after a user exchanges LP tokens back for underlying assets"]
 					Withdrawn {
 						account: ::subxt::utils::AccountId32,
 						lp_amount: ::core::primitive::u128,
 						asset_amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Emitted after a successful emergency shutdown."]
 					EmergencyShutdown { vault: ::core::primitive::u64 },
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Emitted after a vault is restarted."]
 					VaultStarted { vault: ::core::primitive::u64 },
 				}
@@ -34427,7 +34427,7 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Unlock any vested funds of the origin account."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Signed_ and the sender must have funds still"]
@@ -34444,7 +34444,7 @@ pub mod api {
 								::core::primitive::u128,
 							>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Create a vested transfer."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Root_ or Democracy."]
@@ -34474,7 +34474,7 @@ pub mod api {
 								::core::primitive::u128,
 							>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Update vesting schedules"]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Root_ or democracy."]
@@ -34498,7 +34498,7 @@ pub mod api {
 							>,
 						>,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Unlock any vested funds of a `target` account."]
 					#[doc = ""]
 					#[doc = "The dispatch origin for this call must be _Signed_."]
@@ -34526,28 +34526,28 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Vesting period is zero"]
 					ZeroVestingPeriod,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Number of vests is zero"]
 					ZeroVestingPeriodCount,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Insufficient amount of balance to lock"]
 					InsufficientBalanceToLock,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "This account have too many vesting schedules"]
 					TooManyVestingSchedules,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "The vested transfer amount is too low"]
 					AmountLow,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Failed because the maximum vesting schedules was exceeded"]
 					MaxVestingSchedulesExceeded,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Trying to vest to ourselves"]
 					TryingToSelfVest,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "There is no vesting schedule with a given id"]
 					VestingScheduleNotFound,
 				}
@@ -34556,7 +34556,7 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Added new vesting schedule."]
 					VestingScheduleAdded {
 						from: ::subxt::utils::AccountId32,
@@ -34571,7 +34571,7 @@ pub mod api {
 						>,
 						schedule_amount: ::core::primitive::u128,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Claimed vesting."]
 					Claimed {
 						who: ::subxt::utils::AccountId32,
@@ -34587,7 +34587,7 @@ pub mod api {
 								::core::primitive::u128,
 							>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Updated vesting schedules."]
 					VestingSchedulesUpdated { who: ::subxt::utils::AccountId32 },
 				}
@@ -34602,12 +34602,12 @@ pub mod api {
 				)]
 				#[doc = "Contains one variant per dispatchable that can be called by an extrinsic."]
 				pub enum Call {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					send {
 						dest: ::std::boxed::Box<runtime_types::xcm::VersionedMultiLocation>,
 						message: ::std::boxed::Box<runtime_types::xcm::VersionedXcm>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "Teleport some assets from the local chain to some destination chain."]
 					#[doc = ""]
 					#[doc = "Fee payment on the destination side is made from the asset in the `assets` vector of"]
@@ -34629,7 +34629,7 @@ pub mod api {
 						assets: ::std::boxed::Box<runtime_types::xcm::VersionedMultiAssets>,
 						fee_asset_item: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Transfer some assets from the local chain to the sovereign account of a destination"]
 					#[doc = "chain and forward a notification XCM."]
 					#[doc = ""]
@@ -34652,7 +34652,7 @@ pub mod api {
 						assets: ::std::boxed::Box<runtime_types::xcm::VersionedMultiAssets>,
 						fee_asset_item: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Execute an XCM message from a local, signed, origin."]
 					#[doc = ""]
 					#[doc = "An event is deposited indicating whether `msg` could be executed completely or only"]
@@ -34668,7 +34668,7 @@ pub mod api {
 						message: ::std::boxed::Box<runtime_types::xcm::VersionedXcm>,
 						max_weight: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Extoll that a particular destination can be communicated with through a particular"]
 					#[doc = "version of XCM."]
 					#[doc = ""]
@@ -34680,7 +34680,7 @@ pub mod api {
 							::std::boxed::Box<runtime_types::xcm::v1::multilocation::MultiLocation>,
 						xcm_version: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Set a safe XCM version (the version that XCM should be encoded with if the most recent"]
 					#[doc = "version a destination can accept is unknown)."]
 					#[doc = ""]
@@ -34689,7 +34689,7 @@ pub mod api {
 					force_default_xcm_version {
 						maybe_xcm_version: ::core::option::Option<::core::primitive::u32>,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Ask a location to notify us regarding their XCM version and any changes to it."]
 					#[doc = ""]
 					#[doc = "- `origin`: Must be Root."]
@@ -34697,7 +34697,7 @@ pub mod api {
 					force_subscribe_version_notify {
 						location: ::std::boxed::Box<runtime_types::xcm::VersionedMultiLocation>,
 					},
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Require that a particular destination should no longer notify us regarding any XCM"]
 					#[doc = "version changes."]
 					#[doc = ""]
@@ -34707,7 +34707,7 @@ pub mod api {
 					force_unsubscribe_version_notify {
 						location: ::std::boxed::Box<runtime_types::xcm::VersionedMultiLocation>,
 					},
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Transfer some assets from the local chain to the sovereign account of a destination"]
 					#[doc = "chain and forward a notification XCM."]
 					#[doc = ""]
@@ -34733,7 +34733,7 @@ pub mod api {
 						fee_asset_item: ::core::primitive::u32,
 						weight_limit: runtime_types::xcm::v2::WeightLimit,
 					},
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "Teleport some assets from the local chain to some destination chain."]
 					#[doc = ""]
 					#[doc = "Fee payment on the destination side is made from the asset in the `assets` vector of"]
@@ -34764,46 +34764,46 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]
 				pub enum Error {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "The desired destination was unreachable, generally because there is a no way of routing"]
 					#[doc = "to it."]
 					Unreachable,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "There was some other issue (i.e. not to do with routing) in sending the message. Perhaps"]
 					#[doc = "a lack of space for buffering the message."]
 					SendFailure,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "The message execution fails the filter."]
 					Filtered,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "The message's weight could not be determined."]
 					UnweighableMessage,
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "The destination `MultiLocation` provided cannot be inverted."]
 					DestinationNotInvertible,
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "The assets to be sent are empty."]
 					Empty,
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Could not re-anchor the assets to declare the fees for the destination chain."]
 					CannotReanchor,
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Too many assets have been attempted for transfer."]
 					TooManyAssets,
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Origin is invalid for sending."]
 					InvalidOrigin,
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "The version of the `Versioned` value used is not able to be interpreted."]
 					BadVersion,
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "The given location could not be used (e.g. because it cannot be expressed in the"]
 					#[doc = "desired version of XCM)."]
 					BadLocation,
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					#[doc = "The referenced subscription could not be found."]
 					NoSubscription,
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					#[doc = "The location is invalid since it already has a subscription from us."]
 					AlreadySubscribed,
 				}
@@ -34812,12 +34812,12 @@ pub mod api {
 				)]
 				#[doc = "\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]
 				pub enum Event {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					#[doc = "Execution of an XCM message was attempted."]
 					#[doc = ""]
 					#[doc = "\\[ outcome \\]"]
 					Attempted(runtime_types::xcm::v2::traits::Outcome),
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					#[doc = "A XCM message was sent."]
 					#[doc = ""]
 					#[doc = "\\[ origin, destination, message \\]"]
@@ -34826,7 +34826,7 @@ pub mod api {
 						runtime_types::xcm::v1::multilocation::MultiLocation,
 						runtime_types::xcm::v2::Xcm,
 					),
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					#[doc = "Query response received which does not match a registered query. This may be because a"]
 					#[doc = "matching query was never registered, it may be because it is a duplicate response, or"]
 					#[doc = "because the query timed out."]
@@ -34836,19 +34836,19 @@ pub mod api {
 						runtime_types::xcm::v1::multilocation::MultiLocation,
 						::core::primitive::u64,
 					),
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					#[doc = "Query response has been received and is ready for taking with `take_response`. There is"]
 					#[doc = "no registered notification call."]
 					#[doc = ""]
 					#[doc = "\\[ id, response \\]"]
 					ResponseReady(::core::primitive::u64, runtime_types::xcm::v2::Response),
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					#[doc = "Query response has been received and query is removed. The registered notification has"]
 					#[doc = "been dispatched and executed successfully."]
 					#[doc = ""]
 					#[doc = "\\[ id, pallet index, call index \\]"]
 					Notified(::core::primitive::u64, ::core::primitive::u8, ::core::primitive::u8),
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					#[doc = "Query response has been received and query is removed. The registered notification could"]
 					#[doc = "not be dispatched because the dispatch weight is greater than the maximum weight"]
 					#[doc = "originally budgeted by this runtime for the query result."]
@@ -34861,7 +34861,7 @@ pub mod api {
 						runtime_types::sp_weights::weight_v2::Weight,
 						runtime_types::sp_weights::weight_v2::Weight,
 					),
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					#[doc = "Query response has been received and query is removed. There was a general error with"]
 					#[doc = "dispatching the notification call."]
 					#[doc = ""]
@@ -34871,7 +34871,7 @@ pub mod api {
 						::core::primitive::u8,
 						::core::primitive::u8,
 					),
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					#[doc = "Query response has been received and query is removed. The dispatch was unable to be"]
 					#[doc = "decoded into a `Call`; this might be due to dispatch function having a signature which"]
 					#[doc = "is not `(origin, QueryId, Response)`."]
@@ -34882,7 +34882,7 @@ pub mod api {
 						::core::primitive::u8,
 						::core::primitive::u8,
 					),
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					#[doc = "Expected query response has been received but the origin location of the response does"]
 					#[doc = "not match that expected. The query remains registered for a later, valid, response to"]
 					#[doc = "be received and acted upon."]
@@ -34895,7 +34895,7 @@ pub mod api {
 							runtime_types::xcm::v1::multilocation::MultiLocation,
 						>,
 					),
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					#[doc = "Expected query response has been received but the expected origin location placed in"]
 					#[doc = "storage by this runtime previously cannot be decoded. The query remains registered."]
 					#[doc = ""]
@@ -34909,12 +34909,12 @@ pub mod api {
 						runtime_types::xcm::v1::multilocation::MultiLocation,
 						::core::primitive::u64,
 					),
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					#[doc = "Received query response has been read and removed."]
 					#[doc = ""]
 					#[doc = "\\[ id \\]"]
 					ResponseTaken(::core::primitive::u64),
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					#[doc = "Some assets have been placed in an asset trap."]
 					#[doc = ""]
 					#[doc = "\\[ hash, origin, assets \\]"]
@@ -34923,7 +34923,7 @@ pub mod api {
 						runtime_types::xcm::v1::multilocation::MultiLocation,
 						runtime_types::xcm::VersionedMultiAssets,
 					),
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					#[doc = "An XCM version change notification message has been attempted to be sent."]
 					#[doc = ""]
 					#[doc = "\\[ destination, result \\]"]
@@ -34931,7 +34931,7 @@ pub mod api {
 						runtime_types::xcm::v1::multilocation::MultiLocation,
 						::core::primitive::u32,
 					),
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					#[doc = "The supported version of a location has been changed. This might be through an"]
 					#[doc = "automatic notification or a manual intervention."]
 					#[doc = ""]
@@ -34940,7 +34940,7 @@ pub mod api {
 						runtime_types::xcm::v1::multilocation::MultiLocation,
 						::core::primitive::u32,
 					),
-					#[codec::codec(index = 14)]
+					#[codec(index = 14)]
 					#[doc = "A given location which had a version change subscription was dropped owing to an error"]
 					#[doc = "sending the notification to it."]
 					#[doc = ""]
@@ -34950,7 +34950,7 @@ pub mod api {
 						::core::primitive::u64,
 						runtime_types::xcm::v2::traits::Error,
 					),
-					#[codec::codec(index = 15)]
+					#[codec(index = 15)]
 					#[doc = "A given location which had a version change subscription was dropped owing to an error"]
 					#[doc = "migrating the location to our new XCM format."]
 					#[doc = ""]
@@ -34959,7 +34959,7 @@ pub mod api {
 						runtime_types::xcm::VersionedMultiLocation,
 						::core::primitive::u64,
 					),
-					#[codec::codec(index = 16)]
+					#[codec(index = 16)]
 					#[doc = "Some assets have been claimed from an asset trap"]
 					#[doc = ""]
 					#[doc = "\\[ hash, origin, assets \\]"]
@@ -34973,43 +34973,43 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum Origin {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Xcm(runtime_types::xcm::v1::multilocation::MultiLocation),
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Response(runtime_types::xcm::v1::multilocation::MultiLocation),
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum QueryStatus<_0> {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Pending {
 						responder: runtime_types::xcm::VersionedMultiLocation,
 						maybe_notify:
 							::core::option::Option<(::core::primitive::u8, ::core::primitive::u8)>,
 						timeout: _0,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					VersionNotifier {
 						origin: runtime_types::xcm::VersionedMultiLocation,
 						is_active: ::core::primitive::bool,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					Ready { response: runtime_types::xcm::VersionedResponse, at: _0 },
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum VersionMigrationStage {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					MigrateSupportedVersion,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					MigrateVersionNotifiers,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					NotifyCurrentTargets(
 						::core::option::Option<::std::vec::Vec<::core::primitive::u8>>,
 					),
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					MigrateAndNotifyOldTargets,
 				}
 			}
@@ -35068,11 +35068,11 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum XcmpMessageFormat {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					ConcatenatedVersionedXcm,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					ConcatenatedEncodedBlob,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					Signals,
 				}
 			}
@@ -35119,7 +35119,7 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum UpgradeRestriction {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Present,
 				}
 			}
@@ -35316,24 +35316,24 @@ pub mod api {
 						Debug,
 					)]
 					pub enum DigestItem {
-						#[codec::codec(index = 6)]
+						#[codec(index = 6)]
 						PreRuntime(
 							[::core::primitive::u8; 4usize],
 							::std::vec::Vec<::core::primitive::u8>,
 						),
-						#[codec::codec(index = 4)]
+						#[codec(index = 4)]
 						Consensus(
 							[::core::primitive::u8; 4usize],
 							::std::vec::Vec<::core::primitive::u8>,
 						),
-						#[codec::codec(index = 5)]
+						#[codec(index = 5)]
 						Seal(
 							[::core::primitive::u8; 4usize],
 							::std::vec::Vec<::core::primitive::u8>,
 						),
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Other(::std::vec::Vec<::core::primitive::u8>),
-						#[codec::codec(index = 8)]
+						#[codec(index = 8)]
 						RuntimeEnvironmentUpdated,
 					}
 				}
@@ -35345,517 +35345,517 @@ pub mod api {
 						Debug,
 					)]
 					pub enum Era {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Immortal,
-						#[codec::codec(index = 1)]
+						#[codec(index = 1)]
 						Mortal1(::core::primitive::u8),
-						#[codec::codec(index = 2)]
+						#[codec(index = 2)]
 						Mortal2(::core::primitive::u8),
-						#[codec::codec(index = 3)]
+						#[codec(index = 3)]
 						Mortal3(::core::primitive::u8),
-						#[codec::codec(index = 4)]
+						#[codec(index = 4)]
 						Mortal4(::core::primitive::u8),
-						#[codec::codec(index = 5)]
+						#[codec(index = 5)]
 						Mortal5(::core::primitive::u8),
-						#[codec::codec(index = 6)]
+						#[codec(index = 6)]
 						Mortal6(::core::primitive::u8),
-						#[codec::codec(index = 7)]
+						#[codec(index = 7)]
 						Mortal7(::core::primitive::u8),
-						#[codec::codec(index = 8)]
+						#[codec(index = 8)]
 						Mortal8(::core::primitive::u8),
-						#[codec::codec(index = 9)]
+						#[codec(index = 9)]
 						Mortal9(::core::primitive::u8),
-						#[codec::codec(index = 10)]
+						#[codec(index = 10)]
 						Mortal10(::core::primitive::u8),
-						#[codec::codec(index = 11)]
+						#[codec(index = 11)]
 						Mortal11(::core::primitive::u8),
-						#[codec::codec(index = 12)]
+						#[codec(index = 12)]
 						Mortal12(::core::primitive::u8),
-						#[codec::codec(index = 13)]
+						#[codec(index = 13)]
 						Mortal13(::core::primitive::u8),
-						#[codec::codec(index = 14)]
+						#[codec(index = 14)]
 						Mortal14(::core::primitive::u8),
-						#[codec::codec(index = 15)]
+						#[codec(index = 15)]
 						Mortal15(::core::primitive::u8),
-						#[codec::codec(index = 16)]
+						#[codec(index = 16)]
 						Mortal16(::core::primitive::u8),
-						#[codec::codec(index = 17)]
+						#[codec(index = 17)]
 						Mortal17(::core::primitive::u8),
-						#[codec::codec(index = 18)]
+						#[codec(index = 18)]
 						Mortal18(::core::primitive::u8),
-						#[codec::codec(index = 19)]
+						#[codec(index = 19)]
 						Mortal19(::core::primitive::u8),
-						#[codec::codec(index = 20)]
+						#[codec(index = 20)]
 						Mortal20(::core::primitive::u8),
-						#[codec::codec(index = 21)]
+						#[codec(index = 21)]
 						Mortal21(::core::primitive::u8),
-						#[codec::codec(index = 22)]
+						#[codec(index = 22)]
 						Mortal22(::core::primitive::u8),
-						#[codec::codec(index = 23)]
+						#[codec(index = 23)]
 						Mortal23(::core::primitive::u8),
-						#[codec::codec(index = 24)]
+						#[codec(index = 24)]
 						Mortal24(::core::primitive::u8),
-						#[codec::codec(index = 25)]
+						#[codec(index = 25)]
 						Mortal25(::core::primitive::u8),
-						#[codec::codec(index = 26)]
+						#[codec(index = 26)]
 						Mortal26(::core::primitive::u8),
-						#[codec::codec(index = 27)]
+						#[codec(index = 27)]
 						Mortal27(::core::primitive::u8),
-						#[codec::codec(index = 28)]
+						#[codec(index = 28)]
 						Mortal28(::core::primitive::u8),
-						#[codec::codec(index = 29)]
+						#[codec(index = 29)]
 						Mortal29(::core::primitive::u8),
-						#[codec::codec(index = 30)]
+						#[codec(index = 30)]
 						Mortal30(::core::primitive::u8),
-						#[codec::codec(index = 31)]
+						#[codec(index = 31)]
 						Mortal31(::core::primitive::u8),
-						#[codec::codec(index = 32)]
+						#[codec(index = 32)]
 						Mortal32(::core::primitive::u8),
-						#[codec::codec(index = 33)]
+						#[codec(index = 33)]
 						Mortal33(::core::primitive::u8),
-						#[codec::codec(index = 34)]
+						#[codec(index = 34)]
 						Mortal34(::core::primitive::u8),
-						#[codec::codec(index = 35)]
+						#[codec(index = 35)]
 						Mortal35(::core::primitive::u8),
-						#[codec::codec(index = 36)]
+						#[codec(index = 36)]
 						Mortal36(::core::primitive::u8),
-						#[codec::codec(index = 37)]
+						#[codec(index = 37)]
 						Mortal37(::core::primitive::u8),
-						#[codec::codec(index = 38)]
+						#[codec(index = 38)]
 						Mortal38(::core::primitive::u8),
-						#[codec::codec(index = 39)]
+						#[codec(index = 39)]
 						Mortal39(::core::primitive::u8),
-						#[codec::codec(index = 40)]
+						#[codec(index = 40)]
 						Mortal40(::core::primitive::u8),
-						#[codec::codec(index = 41)]
+						#[codec(index = 41)]
 						Mortal41(::core::primitive::u8),
-						#[codec::codec(index = 42)]
+						#[codec(index = 42)]
 						Mortal42(::core::primitive::u8),
-						#[codec::codec(index = 43)]
+						#[codec(index = 43)]
 						Mortal43(::core::primitive::u8),
-						#[codec::codec(index = 44)]
+						#[codec(index = 44)]
 						Mortal44(::core::primitive::u8),
-						#[codec::codec(index = 45)]
+						#[codec(index = 45)]
 						Mortal45(::core::primitive::u8),
-						#[codec::codec(index = 46)]
+						#[codec(index = 46)]
 						Mortal46(::core::primitive::u8),
-						#[codec::codec(index = 47)]
+						#[codec(index = 47)]
 						Mortal47(::core::primitive::u8),
-						#[codec::codec(index = 48)]
+						#[codec(index = 48)]
 						Mortal48(::core::primitive::u8),
-						#[codec::codec(index = 49)]
+						#[codec(index = 49)]
 						Mortal49(::core::primitive::u8),
-						#[codec::codec(index = 50)]
+						#[codec(index = 50)]
 						Mortal50(::core::primitive::u8),
-						#[codec::codec(index = 51)]
+						#[codec(index = 51)]
 						Mortal51(::core::primitive::u8),
-						#[codec::codec(index = 52)]
+						#[codec(index = 52)]
 						Mortal52(::core::primitive::u8),
-						#[codec::codec(index = 53)]
+						#[codec(index = 53)]
 						Mortal53(::core::primitive::u8),
-						#[codec::codec(index = 54)]
+						#[codec(index = 54)]
 						Mortal54(::core::primitive::u8),
-						#[codec::codec(index = 55)]
+						#[codec(index = 55)]
 						Mortal55(::core::primitive::u8),
-						#[codec::codec(index = 56)]
+						#[codec(index = 56)]
 						Mortal56(::core::primitive::u8),
-						#[codec::codec(index = 57)]
+						#[codec(index = 57)]
 						Mortal57(::core::primitive::u8),
-						#[codec::codec(index = 58)]
+						#[codec(index = 58)]
 						Mortal58(::core::primitive::u8),
-						#[codec::codec(index = 59)]
+						#[codec(index = 59)]
 						Mortal59(::core::primitive::u8),
-						#[codec::codec(index = 60)]
+						#[codec(index = 60)]
 						Mortal60(::core::primitive::u8),
-						#[codec::codec(index = 61)]
+						#[codec(index = 61)]
 						Mortal61(::core::primitive::u8),
-						#[codec::codec(index = 62)]
+						#[codec(index = 62)]
 						Mortal62(::core::primitive::u8),
-						#[codec::codec(index = 63)]
+						#[codec(index = 63)]
 						Mortal63(::core::primitive::u8),
-						#[codec::codec(index = 64)]
+						#[codec(index = 64)]
 						Mortal64(::core::primitive::u8),
-						#[codec::codec(index = 65)]
+						#[codec(index = 65)]
 						Mortal65(::core::primitive::u8),
-						#[codec::codec(index = 66)]
+						#[codec(index = 66)]
 						Mortal66(::core::primitive::u8),
-						#[codec::codec(index = 67)]
+						#[codec(index = 67)]
 						Mortal67(::core::primitive::u8),
-						#[codec::codec(index = 68)]
+						#[codec(index = 68)]
 						Mortal68(::core::primitive::u8),
-						#[codec::codec(index = 69)]
+						#[codec(index = 69)]
 						Mortal69(::core::primitive::u8),
-						#[codec::codec(index = 70)]
+						#[codec(index = 70)]
 						Mortal70(::core::primitive::u8),
-						#[codec::codec(index = 71)]
+						#[codec(index = 71)]
 						Mortal71(::core::primitive::u8),
-						#[codec::codec(index = 72)]
+						#[codec(index = 72)]
 						Mortal72(::core::primitive::u8),
-						#[codec::codec(index = 73)]
+						#[codec(index = 73)]
 						Mortal73(::core::primitive::u8),
-						#[codec::codec(index = 74)]
+						#[codec(index = 74)]
 						Mortal74(::core::primitive::u8),
-						#[codec::codec(index = 75)]
+						#[codec(index = 75)]
 						Mortal75(::core::primitive::u8),
-						#[codec::codec(index = 76)]
+						#[codec(index = 76)]
 						Mortal76(::core::primitive::u8),
-						#[codec::codec(index = 77)]
+						#[codec(index = 77)]
 						Mortal77(::core::primitive::u8),
-						#[codec::codec(index = 78)]
+						#[codec(index = 78)]
 						Mortal78(::core::primitive::u8),
-						#[codec::codec(index = 79)]
+						#[codec(index = 79)]
 						Mortal79(::core::primitive::u8),
-						#[codec::codec(index = 80)]
+						#[codec(index = 80)]
 						Mortal80(::core::primitive::u8),
-						#[codec::codec(index = 81)]
+						#[codec(index = 81)]
 						Mortal81(::core::primitive::u8),
-						#[codec::codec(index = 82)]
+						#[codec(index = 82)]
 						Mortal82(::core::primitive::u8),
-						#[codec::codec(index = 83)]
+						#[codec(index = 83)]
 						Mortal83(::core::primitive::u8),
-						#[codec::codec(index = 84)]
+						#[codec(index = 84)]
 						Mortal84(::core::primitive::u8),
-						#[codec::codec(index = 85)]
+						#[codec(index = 85)]
 						Mortal85(::core::primitive::u8),
-						#[codec::codec(index = 86)]
+						#[codec(index = 86)]
 						Mortal86(::core::primitive::u8),
-						#[codec::codec(index = 87)]
+						#[codec(index = 87)]
 						Mortal87(::core::primitive::u8),
-						#[codec::codec(index = 88)]
+						#[codec(index = 88)]
 						Mortal88(::core::primitive::u8),
-						#[codec::codec(index = 89)]
+						#[codec(index = 89)]
 						Mortal89(::core::primitive::u8),
-						#[codec::codec(index = 90)]
+						#[codec(index = 90)]
 						Mortal90(::core::primitive::u8),
-						#[codec::codec(index = 91)]
+						#[codec(index = 91)]
 						Mortal91(::core::primitive::u8),
-						#[codec::codec(index = 92)]
+						#[codec(index = 92)]
 						Mortal92(::core::primitive::u8),
-						#[codec::codec(index = 93)]
+						#[codec(index = 93)]
 						Mortal93(::core::primitive::u8),
-						#[codec::codec(index = 94)]
+						#[codec(index = 94)]
 						Mortal94(::core::primitive::u8),
-						#[codec::codec(index = 95)]
+						#[codec(index = 95)]
 						Mortal95(::core::primitive::u8),
-						#[codec::codec(index = 96)]
+						#[codec(index = 96)]
 						Mortal96(::core::primitive::u8),
-						#[codec::codec(index = 97)]
+						#[codec(index = 97)]
 						Mortal97(::core::primitive::u8),
-						#[codec::codec(index = 98)]
+						#[codec(index = 98)]
 						Mortal98(::core::primitive::u8),
-						#[codec::codec(index = 99)]
+						#[codec(index = 99)]
 						Mortal99(::core::primitive::u8),
-						#[codec::codec(index = 100)]
+						#[codec(index = 100)]
 						Mortal100(::core::primitive::u8),
-						#[codec::codec(index = 101)]
+						#[codec(index = 101)]
 						Mortal101(::core::primitive::u8),
-						#[codec::codec(index = 102)]
+						#[codec(index = 102)]
 						Mortal102(::core::primitive::u8),
-						#[codec::codec(index = 103)]
+						#[codec(index = 103)]
 						Mortal103(::core::primitive::u8),
-						#[codec::codec(index = 104)]
+						#[codec(index = 104)]
 						Mortal104(::core::primitive::u8),
-						#[codec::codec(index = 105)]
+						#[codec(index = 105)]
 						Mortal105(::core::primitive::u8),
-						#[codec::codec(index = 106)]
+						#[codec(index = 106)]
 						Mortal106(::core::primitive::u8),
-						#[codec::codec(index = 107)]
+						#[codec(index = 107)]
 						Mortal107(::core::primitive::u8),
-						#[codec::codec(index = 108)]
+						#[codec(index = 108)]
 						Mortal108(::core::primitive::u8),
-						#[codec::codec(index = 109)]
+						#[codec(index = 109)]
 						Mortal109(::core::primitive::u8),
-						#[codec::codec(index = 110)]
+						#[codec(index = 110)]
 						Mortal110(::core::primitive::u8),
-						#[codec::codec(index = 111)]
+						#[codec(index = 111)]
 						Mortal111(::core::primitive::u8),
-						#[codec::codec(index = 112)]
+						#[codec(index = 112)]
 						Mortal112(::core::primitive::u8),
-						#[codec::codec(index = 113)]
+						#[codec(index = 113)]
 						Mortal113(::core::primitive::u8),
-						#[codec::codec(index = 114)]
+						#[codec(index = 114)]
 						Mortal114(::core::primitive::u8),
-						#[codec::codec(index = 115)]
+						#[codec(index = 115)]
 						Mortal115(::core::primitive::u8),
-						#[codec::codec(index = 116)]
+						#[codec(index = 116)]
 						Mortal116(::core::primitive::u8),
-						#[codec::codec(index = 117)]
+						#[codec(index = 117)]
 						Mortal117(::core::primitive::u8),
-						#[codec::codec(index = 118)]
+						#[codec(index = 118)]
 						Mortal118(::core::primitive::u8),
-						#[codec::codec(index = 119)]
+						#[codec(index = 119)]
 						Mortal119(::core::primitive::u8),
-						#[codec::codec(index = 120)]
+						#[codec(index = 120)]
 						Mortal120(::core::primitive::u8),
-						#[codec::codec(index = 121)]
+						#[codec(index = 121)]
 						Mortal121(::core::primitive::u8),
-						#[codec::codec(index = 122)]
+						#[codec(index = 122)]
 						Mortal122(::core::primitive::u8),
-						#[codec::codec(index = 123)]
+						#[codec(index = 123)]
 						Mortal123(::core::primitive::u8),
-						#[codec::codec(index = 124)]
+						#[codec(index = 124)]
 						Mortal124(::core::primitive::u8),
-						#[codec::codec(index = 125)]
+						#[codec(index = 125)]
 						Mortal125(::core::primitive::u8),
-						#[codec::codec(index = 126)]
+						#[codec(index = 126)]
 						Mortal126(::core::primitive::u8),
-						#[codec::codec(index = 127)]
+						#[codec(index = 127)]
 						Mortal127(::core::primitive::u8),
-						#[codec::codec(index = 128)]
+						#[codec(index = 128)]
 						Mortal128(::core::primitive::u8),
-						#[codec::codec(index = 129)]
+						#[codec(index = 129)]
 						Mortal129(::core::primitive::u8),
-						#[codec::codec(index = 130)]
+						#[codec(index = 130)]
 						Mortal130(::core::primitive::u8),
-						#[codec::codec(index = 131)]
+						#[codec(index = 131)]
 						Mortal131(::core::primitive::u8),
-						#[codec::codec(index = 132)]
+						#[codec(index = 132)]
 						Mortal132(::core::primitive::u8),
-						#[codec::codec(index = 133)]
+						#[codec(index = 133)]
 						Mortal133(::core::primitive::u8),
-						#[codec::codec(index = 134)]
+						#[codec(index = 134)]
 						Mortal134(::core::primitive::u8),
-						#[codec::codec(index = 135)]
+						#[codec(index = 135)]
 						Mortal135(::core::primitive::u8),
-						#[codec::codec(index = 136)]
+						#[codec(index = 136)]
 						Mortal136(::core::primitive::u8),
-						#[codec::codec(index = 137)]
+						#[codec(index = 137)]
 						Mortal137(::core::primitive::u8),
-						#[codec::codec(index = 138)]
+						#[codec(index = 138)]
 						Mortal138(::core::primitive::u8),
-						#[codec::codec(index = 139)]
+						#[codec(index = 139)]
 						Mortal139(::core::primitive::u8),
-						#[codec::codec(index = 140)]
+						#[codec(index = 140)]
 						Mortal140(::core::primitive::u8),
-						#[codec::codec(index = 141)]
+						#[codec(index = 141)]
 						Mortal141(::core::primitive::u8),
-						#[codec::codec(index = 142)]
+						#[codec(index = 142)]
 						Mortal142(::core::primitive::u8),
-						#[codec::codec(index = 143)]
+						#[codec(index = 143)]
 						Mortal143(::core::primitive::u8),
-						#[codec::codec(index = 144)]
+						#[codec(index = 144)]
 						Mortal144(::core::primitive::u8),
-						#[codec::codec(index = 145)]
+						#[codec(index = 145)]
 						Mortal145(::core::primitive::u8),
-						#[codec::codec(index = 146)]
+						#[codec(index = 146)]
 						Mortal146(::core::primitive::u8),
-						#[codec::codec(index = 147)]
+						#[codec(index = 147)]
 						Mortal147(::core::primitive::u8),
-						#[codec::codec(index = 148)]
+						#[codec(index = 148)]
 						Mortal148(::core::primitive::u8),
-						#[codec::codec(index = 149)]
+						#[codec(index = 149)]
 						Mortal149(::core::primitive::u8),
-						#[codec::codec(index = 150)]
+						#[codec(index = 150)]
 						Mortal150(::core::primitive::u8),
-						#[codec::codec(index = 151)]
+						#[codec(index = 151)]
 						Mortal151(::core::primitive::u8),
-						#[codec::codec(index = 152)]
+						#[codec(index = 152)]
 						Mortal152(::core::primitive::u8),
-						#[codec::codec(index = 153)]
+						#[codec(index = 153)]
 						Mortal153(::core::primitive::u8),
-						#[codec::codec(index = 154)]
+						#[codec(index = 154)]
 						Mortal154(::core::primitive::u8),
-						#[codec::codec(index = 155)]
+						#[codec(index = 155)]
 						Mortal155(::core::primitive::u8),
-						#[codec::codec(index = 156)]
+						#[codec(index = 156)]
 						Mortal156(::core::primitive::u8),
-						#[codec::codec(index = 157)]
+						#[codec(index = 157)]
 						Mortal157(::core::primitive::u8),
-						#[codec::codec(index = 158)]
+						#[codec(index = 158)]
 						Mortal158(::core::primitive::u8),
-						#[codec::codec(index = 159)]
+						#[codec(index = 159)]
 						Mortal159(::core::primitive::u8),
-						#[codec::codec(index = 160)]
+						#[codec(index = 160)]
 						Mortal160(::core::primitive::u8),
-						#[codec::codec(index = 161)]
+						#[codec(index = 161)]
 						Mortal161(::core::primitive::u8),
-						#[codec::codec(index = 162)]
+						#[codec(index = 162)]
 						Mortal162(::core::primitive::u8),
-						#[codec::codec(index = 163)]
+						#[codec(index = 163)]
 						Mortal163(::core::primitive::u8),
-						#[codec::codec(index = 164)]
+						#[codec(index = 164)]
 						Mortal164(::core::primitive::u8),
-						#[codec::codec(index = 165)]
+						#[codec(index = 165)]
 						Mortal165(::core::primitive::u8),
-						#[codec::codec(index = 166)]
+						#[codec(index = 166)]
 						Mortal166(::core::primitive::u8),
-						#[codec::codec(index = 167)]
+						#[codec(index = 167)]
 						Mortal167(::core::primitive::u8),
-						#[codec::codec(index = 168)]
+						#[codec(index = 168)]
 						Mortal168(::core::primitive::u8),
-						#[codec::codec(index = 169)]
+						#[codec(index = 169)]
 						Mortal169(::core::primitive::u8),
-						#[codec::codec(index = 170)]
+						#[codec(index = 170)]
 						Mortal170(::core::primitive::u8),
-						#[codec::codec(index = 171)]
+						#[codec(index = 171)]
 						Mortal171(::core::primitive::u8),
-						#[codec::codec(index = 172)]
+						#[codec(index = 172)]
 						Mortal172(::core::primitive::u8),
-						#[codec::codec(index = 173)]
+						#[codec(index = 173)]
 						Mortal173(::core::primitive::u8),
-						#[codec::codec(index = 174)]
+						#[codec(index = 174)]
 						Mortal174(::core::primitive::u8),
-						#[codec::codec(index = 175)]
+						#[codec(index = 175)]
 						Mortal175(::core::primitive::u8),
-						#[codec::codec(index = 176)]
+						#[codec(index = 176)]
 						Mortal176(::core::primitive::u8),
-						#[codec::codec(index = 177)]
+						#[codec(index = 177)]
 						Mortal177(::core::primitive::u8),
-						#[codec::codec(index = 178)]
+						#[codec(index = 178)]
 						Mortal178(::core::primitive::u8),
-						#[codec::codec(index = 179)]
+						#[codec(index = 179)]
 						Mortal179(::core::primitive::u8),
-						#[codec::codec(index = 180)]
+						#[codec(index = 180)]
 						Mortal180(::core::primitive::u8),
-						#[codec::codec(index = 181)]
+						#[codec(index = 181)]
 						Mortal181(::core::primitive::u8),
-						#[codec::codec(index = 182)]
+						#[codec(index = 182)]
 						Mortal182(::core::primitive::u8),
-						#[codec::codec(index = 183)]
+						#[codec(index = 183)]
 						Mortal183(::core::primitive::u8),
-						#[codec::codec(index = 184)]
+						#[codec(index = 184)]
 						Mortal184(::core::primitive::u8),
-						#[codec::codec(index = 185)]
+						#[codec(index = 185)]
 						Mortal185(::core::primitive::u8),
-						#[codec::codec(index = 186)]
+						#[codec(index = 186)]
 						Mortal186(::core::primitive::u8),
-						#[codec::codec(index = 187)]
+						#[codec(index = 187)]
 						Mortal187(::core::primitive::u8),
-						#[codec::codec(index = 188)]
+						#[codec(index = 188)]
 						Mortal188(::core::primitive::u8),
-						#[codec::codec(index = 189)]
+						#[codec(index = 189)]
 						Mortal189(::core::primitive::u8),
-						#[codec::codec(index = 190)]
+						#[codec(index = 190)]
 						Mortal190(::core::primitive::u8),
-						#[codec::codec(index = 191)]
+						#[codec(index = 191)]
 						Mortal191(::core::primitive::u8),
-						#[codec::codec(index = 192)]
+						#[codec(index = 192)]
 						Mortal192(::core::primitive::u8),
-						#[codec::codec(index = 193)]
+						#[codec(index = 193)]
 						Mortal193(::core::primitive::u8),
-						#[codec::codec(index = 194)]
+						#[codec(index = 194)]
 						Mortal194(::core::primitive::u8),
-						#[codec::codec(index = 195)]
+						#[codec(index = 195)]
 						Mortal195(::core::primitive::u8),
-						#[codec::codec(index = 196)]
+						#[codec(index = 196)]
 						Mortal196(::core::primitive::u8),
-						#[codec::codec(index = 197)]
+						#[codec(index = 197)]
 						Mortal197(::core::primitive::u8),
-						#[codec::codec(index = 198)]
+						#[codec(index = 198)]
 						Mortal198(::core::primitive::u8),
-						#[codec::codec(index = 199)]
+						#[codec(index = 199)]
 						Mortal199(::core::primitive::u8),
-						#[codec::codec(index = 200)]
+						#[codec(index = 200)]
 						Mortal200(::core::primitive::u8),
-						#[codec::codec(index = 201)]
+						#[codec(index = 201)]
 						Mortal201(::core::primitive::u8),
-						#[codec::codec(index = 202)]
+						#[codec(index = 202)]
 						Mortal202(::core::primitive::u8),
-						#[codec::codec(index = 203)]
+						#[codec(index = 203)]
 						Mortal203(::core::primitive::u8),
-						#[codec::codec(index = 204)]
+						#[codec(index = 204)]
 						Mortal204(::core::primitive::u8),
-						#[codec::codec(index = 205)]
+						#[codec(index = 205)]
 						Mortal205(::core::primitive::u8),
-						#[codec::codec(index = 206)]
+						#[codec(index = 206)]
 						Mortal206(::core::primitive::u8),
-						#[codec::codec(index = 207)]
+						#[codec(index = 207)]
 						Mortal207(::core::primitive::u8),
-						#[codec::codec(index = 208)]
+						#[codec(index = 208)]
 						Mortal208(::core::primitive::u8),
-						#[codec::codec(index = 209)]
+						#[codec(index = 209)]
 						Mortal209(::core::primitive::u8),
-						#[codec::codec(index = 210)]
+						#[codec(index = 210)]
 						Mortal210(::core::primitive::u8),
-						#[codec::codec(index = 211)]
+						#[codec(index = 211)]
 						Mortal211(::core::primitive::u8),
-						#[codec::codec(index = 212)]
+						#[codec(index = 212)]
 						Mortal212(::core::primitive::u8),
-						#[codec::codec(index = 213)]
+						#[codec(index = 213)]
 						Mortal213(::core::primitive::u8),
-						#[codec::codec(index = 214)]
+						#[codec(index = 214)]
 						Mortal214(::core::primitive::u8),
-						#[codec::codec(index = 215)]
+						#[codec(index = 215)]
 						Mortal215(::core::primitive::u8),
-						#[codec::codec(index = 216)]
+						#[codec(index = 216)]
 						Mortal216(::core::primitive::u8),
-						#[codec::codec(index = 217)]
+						#[codec(index = 217)]
 						Mortal217(::core::primitive::u8),
-						#[codec::codec(index = 218)]
+						#[codec(index = 218)]
 						Mortal218(::core::primitive::u8),
-						#[codec::codec(index = 219)]
+						#[codec(index = 219)]
 						Mortal219(::core::primitive::u8),
-						#[codec::codec(index = 220)]
+						#[codec(index = 220)]
 						Mortal220(::core::primitive::u8),
-						#[codec::codec(index = 221)]
+						#[codec(index = 221)]
 						Mortal221(::core::primitive::u8),
-						#[codec::codec(index = 222)]
+						#[codec(index = 222)]
 						Mortal222(::core::primitive::u8),
-						#[codec::codec(index = 223)]
+						#[codec(index = 223)]
 						Mortal223(::core::primitive::u8),
-						#[codec::codec(index = 224)]
+						#[codec(index = 224)]
 						Mortal224(::core::primitive::u8),
-						#[codec::codec(index = 225)]
+						#[codec(index = 225)]
 						Mortal225(::core::primitive::u8),
-						#[codec::codec(index = 226)]
+						#[codec(index = 226)]
 						Mortal226(::core::primitive::u8),
-						#[codec::codec(index = 227)]
+						#[codec(index = 227)]
 						Mortal227(::core::primitive::u8),
-						#[codec::codec(index = 228)]
+						#[codec(index = 228)]
 						Mortal228(::core::primitive::u8),
-						#[codec::codec(index = 229)]
+						#[codec(index = 229)]
 						Mortal229(::core::primitive::u8),
-						#[codec::codec(index = 230)]
+						#[codec(index = 230)]
 						Mortal230(::core::primitive::u8),
-						#[codec::codec(index = 231)]
+						#[codec(index = 231)]
 						Mortal231(::core::primitive::u8),
-						#[codec::codec(index = 232)]
+						#[codec(index = 232)]
 						Mortal232(::core::primitive::u8),
-						#[codec::codec(index = 233)]
+						#[codec(index = 233)]
 						Mortal233(::core::primitive::u8),
-						#[codec::codec(index = 234)]
+						#[codec(index = 234)]
 						Mortal234(::core::primitive::u8),
-						#[codec::codec(index = 235)]
+						#[codec(index = 235)]
 						Mortal235(::core::primitive::u8),
-						#[codec::codec(index = 236)]
+						#[codec(index = 236)]
 						Mortal236(::core::primitive::u8),
-						#[codec::codec(index = 237)]
+						#[codec(index = 237)]
 						Mortal237(::core::primitive::u8),
-						#[codec::codec(index = 238)]
+						#[codec(index = 238)]
 						Mortal238(::core::primitive::u8),
-						#[codec::codec(index = 239)]
+						#[codec(index = 239)]
 						Mortal239(::core::primitive::u8),
-						#[codec::codec(index = 240)]
+						#[codec(index = 240)]
 						Mortal240(::core::primitive::u8),
-						#[codec::codec(index = 241)]
+						#[codec(index = 241)]
 						Mortal241(::core::primitive::u8),
-						#[codec::codec(index = 242)]
+						#[codec(index = 242)]
 						Mortal242(::core::primitive::u8),
-						#[codec::codec(index = 243)]
+						#[codec(index = 243)]
 						Mortal243(::core::primitive::u8),
-						#[codec::codec(index = 244)]
+						#[codec(index = 244)]
 						Mortal244(::core::primitive::u8),
-						#[codec::codec(index = 245)]
+						#[codec(index = 245)]
 						Mortal245(::core::primitive::u8),
-						#[codec::codec(index = 246)]
+						#[codec(index = 246)]
 						Mortal246(::core::primitive::u8),
-						#[codec::codec(index = 247)]
+						#[codec(index = 247)]
 						Mortal247(::core::primitive::u8),
-						#[codec::codec(index = 248)]
+						#[codec(index = 248)]
 						Mortal248(::core::primitive::u8),
-						#[codec::codec(index = 249)]
+						#[codec(index = 249)]
 						Mortal249(::core::primitive::u8),
-						#[codec::codec(index = 250)]
+						#[codec(index = 250)]
 						Mortal250(::core::primitive::u8),
-						#[codec::codec(index = 251)]
+						#[codec(index = 251)]
 						Mortal251(::core::primitive::u8),
-						#[codec::codec(index = 252)]
+						#[codec(index = 252)]
 						Mortal252(::core::primitive::u8),
-						#[codec::codec(index = 253)]
+						#[codec(index = 253)]
 						Mortal253(::core::primitive::u8),
-						#[codec::codec(index = 254)]
+						#[codec(index = 254)]
 						Mortal254(::core::primitive::u8),
-						#[codec::codec(index = 255)]
+						#[codec(index = 255)]
 						Mortal255(::core::primitive::u8),
 					}
 				}
@@ -35868,12 +35868,12 @@ pub mod api {
 					)]
 					pub struct Header<_0, _1> {
 						pub parent_hash: ::subxt::utils::H256,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						pub number: _0,
 						pub state_root: ::subxt::utils::H256,
 						pub extrinsics_root: ::subxt::utils::H256,
 						pub digest: runtime_types::sp_runtime::generic::digest::Digest,
-						#[codec::codec(skip)]
+						#[codec(skip)]
 						pub __subxt_unused_type_params: ::core::marker::PhantomData<_1>,
 					}
 				}
@@ -35886,7 +35886,7 @@ pub mod api {
 					)]
 					pub struct UncheckedExtrinsic<_0, _1, _2, _3>(
 						pub ::std::vec::Vec<::core::primitive::u8>,
-						#[codec::codec(skip)] pub ::core::marker::PhantomData<(_1, _0, _2, _3)>,
+						#[codec(skip)] pub ::core::marker::PhantomData<(_1, _0, _2, _3)>,
 					);
 				}
 			}
@@ -35901,42 +35901,42 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum ArithmeticError {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				Underflow,
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				Overflow,
-				#[codec::codec(index = 2)]
+				#[codec(index = 2)]
 				DivisionByZero,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum DispatchError {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				Other,
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				CannotLookup,
-				#[codec::codec(index = 2)]
+				#[codec(index = 2)]
 				BadOrigin,
-				#[codec::codec(index = 3)]
+				#[codec(index = 3)]
 				Module(runtime_types::sp_runtime::ModuleError),
-				#[codec::codec(index = 4)]
+				#[codec(index = 4)]
 				ConsumerRemaining,
-				#[codec::codec(index = 5)]
+				#[codec(index = 5)]
 				NoProviders,
-				#[codec::codec(index = 6)]
+				#[codec(index = 6)]
 				TooManyConsumers,
-				#[codec::codec(index = 7)]
+				#[codec(index = 7)]
 				Token(runtime_types::sp_runtime::TokenError),
-				#[codec::codec(index = 8)]
+				#[codec(index = 8)]
 				Arithmetic(runtime_types::sp_runtime::ArithmeticError),
-				#[codec::codec(index = 9)]
+				#[codec(index = 9)]
 				Transactional(runtime_types::sp_runtime::TransactionalError),
-				#[codec::codec(index = 10)]
+				#[codec(index = 10)]
 				Exhausted,
-				#[codec::codec(index = 11)]
+				#[codec(index = 11)]
 				Corruption,
-				#[codec::codec(index = 12)]
+				#[codec(index = 12)]
 				Unavailable,
 			}
 			#[derive(
@@ -35950,39 +35950,39 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum MultiSignature {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				Ed25519(runtime_types::sp_core::ed25519::Signature),
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				Sr25519(runtime_types::sp_core::sr25519::Signature),
-				#[codec::codec(index = 2)]
+				#[codec(index = 2)]
 				Ecdsa(runtime_types::sp_core::ecdsa::Signature),
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum TokenError {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				NoFunds,
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				WouldDie,
-				#[codec::codec(index = 2)]
+				#[codec(index = 2)]
 				BelowMinimum,
-				#[codec::codec(index = 3)]
+				#[codec(index = 3)]
 				CannotCreate,
-				#[codec::codec(index = 4)]
+				#[codec(index = 4)]
 				UnknownAsset,
-				#[codec::codec(index = 5)]
+				#[codec(index = 5)]
 				Frozen,
-				#[codec::codec(index = 6)]
+				#[codec(index = 6)]
 				Unsupported,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum TransactionalError {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				LimitReached,
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				NoLayer,
 			}
 		}
@@ -36023,9 +36023,9 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub struct Weight {
-					#[codec::codec(compact)]
+					#[codec(compact)]
 					pub ref_time: ::core::primitive::u64,
-					#[codec::codec(compact)]
+					#[codec(compact)]
 					pub proof_size: ::core::primitive::u64,
 				}
 			}
@@ -36065,23 +36065,23 @@ pub mod api {
 						Debug,
 					)]
 					pub enum BodyId {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Unit,
-						#[codec::codec(index = 1)]
+						#[codec(index = 1)]
 						Named(
 							runtime_types::sp_core::bounded::weak_bounded_vec::WeakBoundedVec<
 								::core::primitive::u8,
 							>,
 						),
-						#[codec::codec(index = 2)]
-						Index(#[codec::codec(compact)] ::core::primitive::u32),
-						#[codec::codec(index = 3)]
+						#[codec(index = 2)]
+						Index(#[codec(compact)] ::core::primitive::u32),
+						#[codec(index = 3)]
 						Executive,
-						#[codec::codec(index = 4)]
+						#[codec(index = 4)]
 						Technical,
-						#[codec::codec(index = 5)]
+						#[codec(index = 5)]
 						Legislative,
-						#[codec::codec(index = 6)]
+						#[codec(index = 6)]
 						Judicial,
 					}
 					#[derive(
@@ -36090,32 +36090,32 @@ pub mod api {
 						Debug,
 					)]
 					pub enum BodyPart {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Voice,
-						#[codec::codec(index = 1)]
+						#[codec(index = 1)]
 						Members {
-							#[codec::codec(compact)]
+							#[codec(compact)]
 							count: ::core::primitive::u32,
 						},
-						#[codec::codec(index = 2)]
+						#[codec(index = 2)]
 						Fraction {
-							#[codec::codec(compact)]
+							#[codec(compact)]
 							nom: ::core::primitive::u32,
-							#[codec::codec(compact)]
+							#[codec(compact)]
 							denom: ::core::primitive::u32,
 						},
-						#[codec::codec(index = 3)]
+						#[codec(index = 3)]
 						AtLeastProportion {
-							#[codec::codec(compact)]
+							#[codec(compact)]
 							nom: ::core::primitive::u32,
-							#[codec::codec(compact)]
+							#[codec(compact)]
 							denom: ::core::primitive::u32,
 						},
-						#[codec::codec(index = 4)]
+						#[codec(index = 4)]
 						MoreThanProportion {
-							#[codec::codec(compact)]
+							#[codec(compact)]
 							nom: ::core::primitive::u32,
-							#[codec::codec(compact)]
+							#[codec(compact)]
 							denom: ::core::primitive::u32,
 						},
 					}
@@ -36125,39 +36125,39 @@ pub mod api {
 						Debug,
 					)]
 					pub enum Junction {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Parent,
-						#[codec::codec(index = 1)]
-						Parachain(#[codec::codec(compact)] ::core::primitive::u32),
-						#[codec::codec(index = 2)]
+						#[codec(index = 1)]
+						Parachain(#[codec(compact)] ::core::primitive::u32),
+						#[codec(index = 2)]
 						AccountId32 {
 							network: runtime_types::xcm::v0::junction::NetworkId,
 							id: [::core::primitive::u8; 32usize],
 						},
-						#[codec::codec(index = 3)]
+						#[codec(index = 3)]
 						AccountIndex64 {
 							network: runtime_types::xcm::v0::junction::NetworkId,
-							#[codec::codec(compact)]
+							#[codec(compact)]
 							index: ::core::primitive::u64,
 						},
-						#[codec::codec(index = 4)]
+						#[codec(index = 4)]
 						AccountKey20 {
 							network: runtime_types::xcm::v0::junction::NetworkId,
 							key: [::core::primitive::u8; 20usize],
 						},
-						#[codec::codec(index = 5)]
+						#[codec(index = 5)]
 						PalletInstance(::core::primitive::u8),
-						#[codec::codec(index = 6)]
-						GeneralIndex(#[codec::codec(compact)] ::core::primitive::u128),
-						#[codec::codec(index = 7)]
+						#[codec(index = 6)]
+						GeneralIndex(#[codec(compact)] ::core::primitive::u128),
+						#[codec(index = 7)]
 						GeneralKey(
 							runtime_types::sp_core::bounded::weak_bounded_vec::WeakBoundedVec<
 								::core::primitive::u8,
 							>,
 						),
-						#[codec::codec(index = 8)]
+						#[codec(index = 8)]
 						OnlyChild,
-						#[codec::codec(index = 9)]
+						#[codec(index = 9)]
 						Plurality {
 							id: runtime_types::xcm::v0::junction::BodyId,
 							part: runtime_types::xcm::v0::junction::BodyPart,
@@ -36169,17 +36169,17 @@ pub mod api {
 						Debug,
 					)]
 					pub enum NetworkId {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Any,
-						#[codec::codec(index = 1)]
+						#[codec(index = 1)]
 						Named(
 							runtime_types::sp_core::bounded::weak_bounded_vec::WeakBoundedVec<
 								::core::primitive::u8,
 							>,
 						),
-						#[codec::codec(index = 2)]
+						#[codec(index = 2)]
 						Polkadot,
-						#[codec::codec(index = 3)]
+						#[codec(index = 3)]
 						Kusama,
 					}
 				}
@@ -36191,44 +36191,44 @@ pub mod api {
 						Debug,
 					)]
 					pub enum MultiAsset {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						None,
-						#[codec::codec(index = 1)]
+						#[codec(index = 1)]
 						All,
-						#[codec::codec(index = 2)]
+						#[codec(index = 2)]
 						AllFungible,
-						#[codec::codec(index = 3)]
+						#[codec(index = 3)]
 						AllNonFungible,
-						#[codec::codec(index = 4)]
+						#[codec(index = 4)]
 						AllAbstractFungible { id: ::std::vec::Vec<::core::primitive::u8> },
-						#[codec::codec(index = 5)]
+						#[codec(index = 5)]
 						AllAbstractNonFungible { class: ::std::vec::Vec<::core::primitive::u8> },
-						#[codec::codec(index = 6)]
+						#[codec(index = 6)]
 						AllConcreteFungible {
 							id: runtime_types::xcm::v0::multi_location::MultiLocation,
 						},
-						#[codec::codec(index = 7)]
+						#[codec(index = 7)]
 						AllConcreteNonFungible {
 							class: runtime_types::xcm::v0::multi_location::MultiLocation,
 						},
-						#[codec::codec(index = 8)]
+						#[codec(index = 8)]
 						AbstractFungible {
 							id: ::std::vec::Vec<::core::primitive::u8>,
-							#[codec::codec(compact)]
+							#[codec(compact)]
 							amount: ::core::primitive::u128,
 						},
-						#[codec::codec(index = 9)]
+						#[codec(index = 9)]
 						AbstractNonFungible {
 							class: ::std::vec::Vec<::core::primitive::u8>,
 							instance: runtime_types::xcm::v1::multiasset::AssetInstance,
 						},
-						#[codec::codec(index = 10)]
+						#[codec(index = 10)]
 						ConcreteFungible {
 							id: runtime_types::xcm::v0::multi_location::MultiLocation,
-							#[codec::codec(compact)]
+							#[codec(compact)]
 							amount: ::core::primitive::u128,
 						},
-						#[codec::codec(index = 11)]
+						#[codec(index = 11)]
 						ConcreteNonFungible {
 							class: runtime_types::xcm::v0::multi_location::MultiLocation,
 							instance: runtime_types::xcm::v1::multiasset::AssetInstance,
@@ -36243,29 +36243,29 @@ pub mod api {
 						Debug,
 					)]
 					pub enum MultiLocation {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Null,
-						#[codec::codec(index = 1)]
+						#[codec(index = 1)]
 						X1(runtime_types::xcm::v0::junction::Junction),
-						#[codec::codec(index = 2)]
+						#[codec(index = 2)]
 						X2(
 							runtime_types::xcm::v0::junction::Junction,
 							runtime_types::xcm::v0::junction::Junction,
 						),
-						#[codec::codec(index = 3)]
+						#[codec(index = 3)]
 						X3(
 							runtime_types::xcm::v0::junction::Junction,
 							runtime_types::xcm::v0::junction::Junction,
 							runtime_types::xcm::v0::junction::Junction,
 						),
-						#[codec::codec(index = 4)]
+						#[codec(index = 4)]
 						X4(
 							runtime_types::xcm::v0::junction::Junction,
 							runtime_types::xcm::v0::junction::Junction,
 							runtime_types::xcm::v0::junction::Junction,
 							runtime_types::xcm::v0::junction::Junction,
 						),
-						#[codec::codec(index = 5)]
+						#[codec(index = 5)]
 						X5(
 							runtime_types::xcm::v0::junction::Junction,
 							runtime_types::xcm::v0::junction::Junction,
@@ -36273,7 +36273,7 @@ pub mod api {
 							runtime_types::xcm::v0::junction::Junction,
 							runtime_types::xcm::v0::junction::Junction,
 						),
-						#[codec::codec(index = 6)]
+						#[codec(index = 6)]
 						X6(
 							runtime_types::xcm::v0::junction::Junction,
 							runtime_types::xcm::v0::junction::Junction,
@@ -36282,7 +36282,7 @@ pub mod api {
 							runtime_types::xcm::v0::junction::Junction,
 							runtime_types::xcm::v0::junction::Junction,
 						),
-						#[codec::codec(index = 7)]
+						#[codec(index = 7)]
 						X7(
 							runtime_types::xcm::v0::junction::Junction,
 							runtime_types::xcm::v0::junction::Junction,
@@ -36292,7 +36292,7 @@ pub mod api {
 							runtime_types::xcm::v0::junction::Junction,
 							runtime_types::xcm::v0::junction::Junction,
 						),
-						#[codec::codec(index = 8)]
+						#[codec(index = 8)]
 						X8(
 							runtime_types::xcm::v0::junction::Junction,
 							runtime_types::xcm::v0::junction::Junction,
@@ -36313,50 +36313,50 @@ pub mod api {
 						Debug,
 					)]
 					pub enum Order {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Null,
-						#[codec::codec(index = 1)]
+						#[codec(index = 1)]
 						DepositAsset {
 							assets:
 								::std::vec::Vec<runtime_types::xcm::v0::multi_asset::MultiAsset>,
 							dest: runtime_types::xcm::v0::multi_location::MultiLocation,
 						},
-						#[codec::codec(index = 2)]
+						#[codec(index = 2)]
 						DepositReserveAsset {
 							assets:
 								::std::vec::Vec<runtime_types::xcm::v0::multi_asset::MultiAsset>,
 							dest: runtime_types::xcm::v0::multi_location::MultiLocation,
 							effects: ::std::vec::Vec<runtime_types::xcm::v0::order::Order>,
 						},
-						#[codec::codec(index = 3)]
+						#[codec(index = 3)]
 						ExchangeAsset {
 							give: ::std::vec::Vec<runtime_types::xcm::v0::multi_asset::MultiAsset>,
 							receive:
 								::std::vec::Vec<runtime_types::xcm::v0::multi_asset::MultiAsset>,
 						},
-						#[codec::codec(index = 4)]
+						#[codec(index = 4)]
 						InitiateReserveWithdraw {
 							assets:
 								::std::vec::Vec<runtime_types::xcm::v0::multi_asset::MultiAsset>,
 							reserve: runtime_types::xcm::v0::multi_location::MultiLocation,
 							effects: ::std::vec::Vec<runtime_types::xcm::v0::order::Order>,
 						},
-						#[codec::codec(index = 5)]
+						#[codec(index = 5)]
 						InitiateTeleport {
 							assets:
 								::std::vec::Vec<runtime_types::xcm::v0::multi_asset::MultiAsset>,
 							dest: runtime_types::xcm::v0::multi_location::MultiLocation,
 							effects: ::std::vec::Vec<runtime_types::xcm::v0::order::Order>,
 						},
-						#[codec::codec(index = 6)]
+						#[codec(index = 6)]
 						QueryHolding {
-							#[codec::codec(compact)]
+							#[codec(compact)]
 							query_id: ::core::primitive::u64,
 							dest: runtime_types::xcm::v0::multi_location::MultiLocation,
 							assets:
 								::std::vec::Vec<runtime_types::xcm::v0::multi_asset::MultiAsset>,
 						},
-						#[codec::codec(index = 7)]
+						#[codec(index = 7)]
 						BuyExecution {
 							fees: runtime_types::xcm::v0::multi_asset::MultiAsset,
 							weight: ::core::primitive::u64,
@@ -36370,88 +36370,88 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum OriginKind {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Native,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					SovereignAccount,
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					Superuser,
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					Xcm,
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum Response {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Assets(::std::vec::Vec<runtime_types::xcm::v0::multi_asset::MultiAsset>),
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum Xcm {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					WithdrawAsset {
 						assets: ::std::vec::Vec<runtime_types::xcm::v0::multi_asset::MultiAsset>,
 						effects: ::std::vec::Vec<runtime_types::xcm::v0::order::Order>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					ReserveAssetDeposit {
 						assets: ::std::vec::Vec<runtime_types::xcm::v0::multi_asset::MultiAsset>,
 						effects: ::std::vec::Vec<runtime_types::xcm::v0::order::Order>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					TeleportAsset {
 						assets: ::std::vec::Vec<runtime_types::xcm::v0::multi_asset::MultiAsset>,
 						effects: ::std::vec::Vec<runtime_types::xcm::v0::order::Order>,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					QueryResponse {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						query_id: ::core::primitive::u64,
 						response: runtime_types::xcm::v0::Response,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					TransferAsset {
 						assets: ::std::vec::Vec<runtime_types::xcm::v0::multi_asset::MultiAsset>,
 						dest: runtime_types::xcm::v0::multi_location::MultiLocation,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					TransferReserveAsset {
 						assets: ::std::vec::Vec<runtime_types::xcm::v0::multi_asset::MultiAsset>,
 						dest: runtime_types::xcm::v0::multi_location::MultiLocation,
 						effects: ::std::vec::Vec<runtime_types::xcm::v0::order::Order>,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					Transact {
 						origin_type: runtime_types::xcm::v0::OriginKind,
 						require_weight_at_most: ::core::primitive::u64,
 						call: runtime_types::xcm::double_encoded::DoubleEncoded,
 					},
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					HrmpNewChannelOpenRequest {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						sender: ::core::primitive::u32,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						max_message_size: ::core::primitive::u32,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						max_capacity: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					HrmpChannelAccepted {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						recipient: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					HrmpChannelClosing {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						initiator: ::core::primitive::u32,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						sender: ::core::primitive::u32,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						recipient: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					RelayedFrom {
 						who: runtime_types::xcm::v0::multi_location::MultiLocation,
 						message: ::std::boxed::Box<runtime_types::xcm::v0::Xcm>,
@@ -36468,37 +36468,37 @@ pub mod api {
 						Debug,
 					)]
 					pub enum Junction {
-						#[codec::codec(index = 0)]
-						Parachain(#[codec::codec(compact)] ::core::primitive::u32),
-						#[codec::codec(index = 1)]
+						#[codec(index = 0)]
+						Parachain(#[codec(compact)] ::core::primitive::u32),
+						#[codec(index = 1)]
 						AccountId32 {
 							network: runtime_types::xcm::v0::junction::NetworkId,
 							id: [::core::primitive::u8; 32usize],
 						},
-						#[codec::codec(index = 2)]
+						#[codec(index = 2)]
 						AccountIndex64 {
 							network: runtime_types::xcm::v0::junction::NetworkId,
-							#[codec::codec(compact)]
+							#[codec(compact)]
 							index: ::core::primitive::u64,
 						},
-						#[codec::codec(index = 3)]
+						#[codec(index = 3)]
 						AccountKey20 {
 							network: runtime_types::xcm::v0::junction::NetworkId,
 							key: [::core::primitive::u8; 20usize],
 						},
-						#[codec::codec(index = 4)]
+						#[codec(index = 4)]
 						PalletInstance(::core::primitive::u8),
-						#[codec::codec(index = 5)]
-						GeneralIndex(#[codec::codec(compact)] ::core::primitive::u128),
-						#[codec::codec(index = 6)]
+						#[codec(index = 5)]
+						GeneralIndex(#[codec(compact)] ::core::primitive::u128),
+						#[codec(index = 6)]
 						GeneralKey(
 							runtime_types::sp_core::bounded::weak_bounded_vec::WeakBoundedVec<
 								::core::primitive::u8,
 							>,
 						),
-						#[codec::codec(index = 7)]
+						#[codec(index = 7)]
 						OnlyChild,
-						#[codec::codec(index = 8)]
+						#[codec(index = 8)]
 						Plurality {
 							id: runtime_types::xcm::v0::junction::BodyId,
 							part: runtime_types::xcm::v0::junction::BodyPart,
@@ -36513,9 +36513,9 @@ pub mod api {
 						Debug,
 					)]
 					pub enum AssetId {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Concrete(runtime_types::xcm::v1::multilocation::MultiLocation),
-						#[codec::codec(index = 1)]
+						#[codec(index = 1)]
 						Abstract(::std::vec::Vec<::core::primitive::u8>),
 					}
 					#[derive(
@@ -36524,19 +36524,19 @@ pub mod api {
 						Debug,
 					)]
 					pub enum AssetInstance {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Undefined,
-						#[codec::codec(index = 1)]
-						Index(#[codec::codec(compact)] ::core::primitive::u128),
-						#[codec::codec(index = 2)]
+						#[codec(index = 1)]
+						Index(#[codec(compact)] ::core::primitive::u128),
+						#[codec(index = 2)]
 						Array4([::core::primitive::u8; 4usize]),
-						#[codec::codec(index = 3)]
+						#[codec(index = 3)]
 						Array8([::core::primitive::u8; 8usize]),
-						#[codec::codec(index = 4)]
+						#[codec(index = 4)]
 						Array16([::core::primitive::u8; 16usize]),
-						#[codec::codec(index = 5)]
+						#[codec(index = 5)]
 						Array32([::core::primitive::u8; 32usize]),
-						#[codec::codec(index = 6)]
+						#[codec(index = 6)]
 						Blob(::std::vec::Vec<::core::primitive::u8>),
 					}
 					#[derive(
@@ -36545,9 +36545,9 @@ pub mod api {
 						Debug,
 					)]
 					pub enum Fungibility {
-						#[codec::codec(index = 0)]
-						Fungible(#[codec::codec(compact)] ::core::primitive::u128),
-						#[codec::codec(index = 1)]
+						#[codec(index = 0)]
+						Fungible(#[codec(compact)] ::core::primitive::u128),
+						#[codec(index = 1)]
 						NonFungible(runtime_types::xcm::v1::multiasset::AssetInstance),
 					}
 					#[derive(
@@ -36565,9 +36565,9 @@ pub mod api {
 						Debug,
 					)]
 					pub enum MultiAssetFilter {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Definite(runtime_types::xcm::v1::multiasset::MultiAssets),
-						#[codec::codec(index = 1)]
+						#[codec(index = 1)]
 						Wild(runtime_types::xcm::v1::multiasset::WildMultiAsset),
 					}
 					#[derive(
@@ -36584,9 +36584,9 @@ pub mod api {
 						Debug,
 					)]
 					pub enum WildFungibility {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Fungible,
-						#[codec::codec(index = 1)]
+						#[codec(index = 1)]
 						NonFungible,
 					}
 					#[derive(
@@ -36595,9 +36595,9 @@ pub mod api {
 						Debug,
 					)]
 					pub enum WildMultiAsset {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						All,
-						#[codec::codec(index = 1)]
+						#[codec(index = 1)]
 						AllOf {
 							id: runtime_types::xcm::v1::multiasset::AssetId,
 							fun: runtime_types::xcm::v1::multiasset::WildFungibility,
@@ -36612,29 +36612,29 @@ pub mod api {
 						Debug,
 					)]
 					pub enum Junctions {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Here,
-						#[codec::codec(index = 1)]
+						#[codec(index = 1)]
 						X1(runtime_types::xcm::v1::junction::Junction),
-						#[codec::codec(index = 2)]
+						#[codec(index = 2)]
 						X2(
 							runtime_types::xcm::v1::junction::Junction,
 							runtime_types::xcm::v1::junction::Junction,
 						),
-						#[codec::codec(index = 3)]
+						#[codec(index = 3)]
 						X3(
 							runtime_types::xcm::v1::junction::Junction,
 							runtime_types::xcm::v1::junction::Junction,
 							runtime_types::xcm::v1::junction::Junction,
 						),
-						#[codec::codec(index = 4)]
+						#[codec(index = 4)]
 						X4(
 							runtime_types::xcm::v1::junction::Junction,
 							runtime_types::xcm::v1::junction::Junction,
 							runtime_types::xcm::v1::junction::Junction,
 							runtime_types::xcm::v1::junction::Junction,
 						),
-						#[codec::codec(index = 5)]
+						#[codec(index = 5)]
 						X5(
 							runtime_types::xcm::v1::junction::Junction,
 							runtime_types::xcm::v1::junction::Junction,
@@ -36642,7 +36642,7 @@ pub mod api {
 							runtime_types::xcm::v1::junction::Junction,
 							runtime_types::xcm::v1::junction::Junction,
 						),
-						#[codec::codec(index = 6)]
+						#[codec(index = 6)]
 						X6(
 							runtime_types::xcm::v1::junction::Junction,
 							runtime_types::xcm::v1::junction::Junction,
@@ -36651,7 +36651,7 @@ pub mod api {
 							runtime_types::xcm::v1::junction::Junction,
 							runtime_types::xcm::v1::junction::Junction,
 						),
-						#[codec::codec(index = 7)]
+						#[codec(index = 7)]
 						X7(
 							runtime_types::xcm::v1::junction::Junction,
 							runtime_types::xcm::v1::junction::Junction,
@@ -36661,7 +36661,7 @@ pub mod api {
 							runtime_types::xcm::v1::junction::Junction,
 							runtime_types::xcm::v1::junction::Junction,
 						),
-						#[codec::codec(index = 8)]
+						#[codec(index = 8)]
 						X8(
 							runtime_types::xcm::v1::junction::Junction,
 							runtime_types::xcm::v1::junction::Junction,
@@ -36691,46 +36691,46 @@ pub mod api {
 						Debug,
 					)]
 					pub enum Order {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Noop,
-						#[codec::codec(index = 1)]
+						#[codec(index = 1)]
 						DepositAsset {
 							assets: runtime_types::xcm::v1::multiasset::MultiAssetFilter,
 							max_assets: ::core::primitive::u32,
 							beneficiary: runtime_types::xcm::v1::multilocation::MultiLocation,
 						},
-						#[codec::codec(index = 2)]
+						#[codec(index = 2)]
 						DepositReserveAsset {
 							assets: runtime_types::xcm::v1::multiasset::MultiAssetFilter,
 							max_assets: ::core::primitive::u32,
 							dest: runtime_types::xcm::v1::multilocation::MultiLocation,
 							effects: ::std::vec::Vec<runtime_types::xcm::v1::order::Order>,
 						},
-						#[codec::codec(index = 3)]
+						#[codec(index = 3)]
 						ExchangeAsset {
 							give: runtime_types::xcm::v1::multiasset::MultiAssetFilter,
 							receive: runtime_types::xcm::v1::multiasset::MultiAssets,
 						},
-						#[codec::codec(index = 4)]
+						#[codec(index = 4)]
 						InitiateReserveWithdraw {
 							assets: runtime_types::xcm::v1::multiasset::MultiAssetFilter,
 							reserve: runtime_types::xcm::v1::multilocation::MultiLocation,
 							effects: ::std::vec::Vec<runtime_types::xcm::v1::order::Order>,
 						},
-						#[codec::codec(index = 5)]
+						#[codec(index = 5)]
 						InitiateTeleport {
 							assets: runtime_types::xcm::v1::multiasset::MultiAssetFilter,
 							dest: runtime_types::xcm::v1::multilocation::MultiLocation,
 							effects: ::std::vec::Vec<runtime_types::xcm::v1::order::Order>,
 						},
-						#[codec::codec(index = 6)]
+						#[codec(index = 6)]
 						QueryHolding {
-							#[codec::codec(compact)]
+							#[codec(compact)]
 							query_id: ::core::primitive::u64,
 							dest: runtime_types::xcm::v1::multilocation::MultiLocation,
 							assets: runtime_types::xcm::v1::multiasset::MultiAssetFilter,
 						},
-						#[codec::codec(index = 7)]
+						#[codec(index = 7)]
 						BuyExecution {
 							fees: runtime_types::xcm::v1::multiasset::MultiAsset,
 							weight: ::core::primitive::u64,
@@ -36744,89 +36744,89 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum Response {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Assets(runtime_types::xcm::v1::multiasset::MultiAssets),
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Version(::core::primitive::u32),
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum Xcm {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					WithdrawAsset {
 						assets: runtime_types::xcm::v1::multiasset::MultiAssets,
 						effects: ::std::vec::Vec<runtime_types::xcm::v1::order::Order>,
 					},
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					ReserveAssetDeposited {
 						assets: runtime_types::xcm::v1::multiasset::MultiAssets,
 						effects: ::std::vec::Vec<runtime_types::xcm::v1::order::Order>,
 					},
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					ReceiveTeleportedAsset {
 						assets: runtime_types::xcm::v1::multiasset::MultiAssets,
 						effects: ::std::vec::Vec<runtime_types::xcm::v1::order::Order>,
 					},
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					QueryResponse {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						query_id: ::core::primitive::u64,
 						response: runtime_types::xcm::v1::Response,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					TransferAsset {
 						assets: runtime_types::xcm::v1::multiasset::MultiAssets,
 						beneficiary: runtime_types::xcm::v1::multilocation::MultiLocation,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					TransferReserveAsset {
 						assets: runtime_types::xcm::v1::multiasset::MultiAssets,
 						dest: runtime_types::xcm::v1::multilocation::MultiLocation,
 						effects: ::std::vec::Vec<runtime_types::xcm::v1::order::Order>,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					Transact {
 						origin_type: runtime_types::xcm::v0::OriginKind,
 						require_weight_at_most: ::core::primitive::u64,
 						call: runtime_types::xcm::double_encoded::DoubleEncoded,
 					},
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					HrmpNewChannelOpenRequest {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						sender: ::core::primitive::u32,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						max_message_size: ::core::primitive::u32,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						max_capacity: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					HrmpChannelAccepted {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						recipient: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					HrmpChannelClosing {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						initiator: ::core::primitive::u32,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						sender: ::core::primitive::u32,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						recipient: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					RelayedFrom {
 						who: runtime_types::xcm::v1::multilocation::Junctions,
 						message: ::std::boxed::Box<runtime_types::xcm::v1::Xcm>,
 					},
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					SubscribeVersion {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						query_id: ::core::primitive::u64,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						max_response_weight: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					UnsubscribeVersion,
 				}
 			}
@@ -36840,57 +36840,57 @@ pub mod api {
 						Debug,
 					)]
 					pub enum Error {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Overflow,
-						#[codec::codec(index = 1)]
+						#[codec(index = 1)]
 						Unimplemented,
-						#[codec::codec(index = 2)]
+						#[codec(index = 2)]
 						UntrustedReserveLocation,
-						#[codec::codec(index = 3)]
+						#[codec(index = 3)]
 						UntrustedTeleportLocation,
-						#[codec::codec(index = 4)]
+						#[codec(index = 4)]
 						MultiLocationFull,
-						#[codec::codec(index = 5)]
+						#[codec(index = 5)]
 						MultiLocationNotInvertible,
-						#[codec::codec(index = 6)]
+						#[codec(index = 6)]
 						BadOrigin,
-						#[codec::codec(index = 7)]
+						#[codec(index = 7)]
 						InvalidLocation,
-						#[codec::codec(index = 8)]
+						#[codec(index = 8)]
 						AssetNotFound,
-						#[codec::codec(index = 9)]
+						#[codec(index = 9)]
 						FailedToTransactAsset,
-						#[codec::codec(index = 10)]
+						#[codec(index = 10)]
 						NotWithdrawable,
-						#[codec::codec(index = 11)]
+						#[codec(index = 11)]
 						LocationCannotHold,
-						#[codec::codec(index = 12)]
+						#[codec(index = 12)]
 						ExceedsMaxMessageSize,
-						#[codec::codec(index = 13)]
+						#[codec(index = 13)]
 						DestinationUnsupported,
-						#[codec::codec(index = 14)]
+						#[codec(index = 14)]
 						Transport,
-						#[codec::codec(index = 15)]
+						#[codec(index = 15)]
 						Unroutable,
-						#[codec::codec(index = 16)]
+						#[codec(index = 16)]
 						UnknownClaim,
-						#[codec::codec(index = 17)]
+						#[codec(index = 17)]
 						FailedToDecode,
-						#[codec::codec(index = 18)]
+						#[codec(index = 18)]
 						MaxWeightInvalid,
-						#[codec::codec(index = 19)]
+						#[codec(index = 19)]
 						NotHoldingFees,
-						#[codec::codec(index = 20)]
+						#[codec(index = 20)]
 						TooExpensive,
-						#[codec::codec(index = 21)]
+						#[codec(index = 21)]
 						Trap(::core::primitive::u64),
-						#[codec::codec(index = 22)]
+						#[codec(index = 22)]
 						UnhandledXcmVersion,
-						#[codec::codec(index = 23)]
+						#[codec(index = 23)]
 						WeightLimitReached(::core::primitive::u64),
-						#[codec::codec(index = 24)]
+						#[codec(index = 24)]
 						Barrier,
-						#[codec::codec(index = 25)]
+						#[codec(index = 25)]
 						WeightNotComputable,
 					}
 					#[derive(
@@ -36899,11 +36899,11 @@ pub mod api {
 						Debug,
 					)]
 					pub enum Outcome {
-						#[codec::codec(index = 0)]
+						#[codec(index = 0)]
 						Complete(::core::primitive::u64),
-						#[codec::codec(index = 1)]
+						#[codec(index = 1)]
 						Incomplete(::core::primitive::u64, runtime_types::xcm::v2::traits::Error),
-						#[codec::codec(index = 2)]
+						#[codec(index = 2)]
 						Error(runtime_types::xcm::v2::traits::Error),
 					}
 				}
@@ -36911,170 +36911,170 @@ pub mod api {
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum Instruction {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					WithdrawAsset(runtime_types::xcm::v1::multiasset::MultiAssets),
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					ReserveAssetDeposited(runtime_types::xcm::v1::multiasset::MultiAssets),
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					ReceiveTeleportedAsset(runtime_types::xcm::v1::multiasset::MultiAssets),
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					QueryResponse {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						query_id: ::core::primitive::u64,
 						response: runtime_types::xcm::v2::Response,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						max_weight: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 4)]
+					#[codec(index = 4)]
 					TransferAsset {
 						assets: runtime_types::xcm::v1::multiasset::MultiAssets,
 						beneficiary: runtime_types::xcm::v1::multilocation::MultiLocation,
 					},
-					#[codec::codec(index = 5)]
+					#[codec(index = 5)]
 					TransferReserveAsset {
 						assets: runtime_types::xcm::v1::multiasset::MultiAssets,
 						dest: runtime_types::xcm::v1::multilocation::MultiLocation,
 						xcm: runtime_types::xcm::v2::Xcm,
 					},
-					#[codec::codec(index = 6)]
+					#[codec(index = 6)]
 					Transact {
 						origin_type: runtime_types::xcm::v0::OriginKind,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						require_weight_at_most: ::core::primitive::u64,
 						call: runtime_types::xcm::double_encoded::DoubleEncoded,
 					},
-					#[codec::codec(index = 7)]
+					#[codec(index = 7)]
 					HrmpNewChannelOpenRequest {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						sender: ::core::primitive::u32,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						max_message_size: ::core::primitive::u32,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						max_capacity: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 8)]
+					#[codec(index = 8)]
 					HrmpChannelAccepted {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						recipient: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 9)]
+					#[codec(index = 9)]
 					HrmpChannelClosing {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						initiator: ::core::primitive::u32,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						sender: ::core::primitive::u32,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						recipient: ::core::primitive::u32,
 					},
-					#[codec::codec(index = 10)]
+					#[codec(index = 10)]
 					ClearOrigin,
-					#[codec::codec(index = 11)]
+					#[codec(index = 11)]
 					DescendOrigin(runtime_types::xcm::v1::multilocation::Junctions),
-					#[codec::codec(index = 12)]
+					#[codec(index = 12)]
 					ReportError {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						query_id: ::core::primitive::u64,
 						dest: runtime_types::xcm::v1::multilocation::MultiLocation,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						max_response_weight: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 13)]
+					#[codec(index = 13)]
 					DepositAsset {
 						assets: runtime_types::xcm::v1::multiasset::MultiAssetFilter,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						max_assets: ::core::primitive::u32,
 						beneficiary: runtime_types::xcm::v1::multilocation::MultiLocation,
 					},
-					#[codec::codec(index = 14)]
+					#[codec(index = 14)]
 					DepositReserveAsset {
 						assets: runtime_types::xcm::v1::multiasset::MultiAssetFilter,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						max_assets: ::core::primitive::u32,
 						dest: runtime_types::xcm::v1::multilocation::MultiLocation,
 						xcm: runtime_types::xcm::v2::Xcm,
 					},
-					#[codec::codec(index = 15)]
+					#[codec(index = 15)]
 					ExchangeAsset {
 						give: runtime_types::xcm::v1::multiasset::MultiAssetFilter,
 						receive: runtime_types::xcm::v1::multiasset::MultiAssets,
 					},
-					#[codec::codec(index = 16)]
+					#[codec(index = 16)]
 					InitiateReserveWithdraw {
 						assets: runtime_types::xcm::v1::multiasset::MultiAssetFilter,
 						reserve: runtime_types::xcm::v1::multilocation::MultiLocation,
 						xcm: runtime_types::xcm::v2::Xcm,
 					},
-					#[codec::codec(index = 17)]
+					#[codec(index = 17)]
 					InitiateTeleport {
 						assets: runtime_types::xcm::v1::multiasset::MultiAssetFilter,
 						dest: runtime_types::xcm::v1::multilocation::MultiLocation,
 						xcm: runtime_types::xcm::v2::Xcm,
 					},
-					#[codec::codec(index = 18)]
+					#[codec(index = 18)]
 					QueryHolding {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						query_id: ::core::primitive::u64,
 						dest: runtime_types::xcm::v1::multilocation::MultiLocation,
 						assets: runtime_types::xcm::v1::multiasset::MultiAssetFilter,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						max_response_weight: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 19)]
+					#[codec(index = 19)]
 					BuyExecution {
 						fees: runtime_types::xcm::v1::multiasset::MultiAsset,
 						weight_limit: runtime_types::xcm::v2::WeightLimit,
 					},
-					#[codec::codec(index = 20)]
+					#[codec(index = 20)]
 					RefundSurplus,
-					#[codec::codec(index = 21)]
+					#[codec(index = 21)]
 					SetErrorHandler(runtime_types::xcm::v2::Xcm),
-					#[codec::codec(index = 22)]
+					#[codec(index = 22)]
 					SetAppendix(runtime_types::xcm::v2::Xcm),
-					#[codec::codec(index = 23)]
+					#[codec(index = 23)]
 					ClearError,
-					#[codec::codec(index = 24)]
+					#[codec(index = 24)]
 					ClaimAsset {
 						assets: runtime_types::xcm::v1::multiasset::MultiAssets,
 						ticket: runtime_types::xcm::v1::multilocation::MultiLocation,
 					},
-					#[codec::codec(index = 25)]
-					Trap(#[codec::codec(compact)] ::core::primitive::u64),
-					#[codec::codec(index = 26)]
+					#[codec(index = 25)]
+					Trap(#[codec(compact)] ::core::primitive::u64),
+					#[codec(index = 26)]
 					SubscribeVersion {
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						query_id: ::core::primitive::u64,
-						#[codec::codec(compact)]
+						#[codec(compact)]
 						max_response_weight: ::core::primitive::u64,
 					},
-					#[codec::codec(index = 27)]
+					#[codec(index = 27)]
 					UnsubscribeVersion,
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum Response {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Null,
-					#[codec::codec(index = 1)]
+					#[codec(index = 1)]
 					Assets(runtime_types::xcm::v1::multiasset::MultiAssets),
-					#[codec::codec(index = 2)]
+					#[codec(index = 2)]
 					ExecutionResult(
 						::core::option::Option<(
 							::core::primitive::u32,
 							runtime_types::xcm::v2::traits::Error,
 						)>,
 					),
-					#[codec::codec(index = 3)]
+					#[codec(index = 3)]
 					Version(::core::primitive::u32),
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 				)]
 				pub enum WeightLimit {
-					#[codec::codec(index = 0)]
+					#[codec(index = 0)]
 					Unlimited,
-					#[codec::codec(index = 1)]
-					Limited(#[codec::codec(compact)] ::core::primitive::u64),
+					#[codec(index = 1)]
+					Limited(#[codec(compact)] ::core::primitive::u64),
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
@@ -37085,49 +37085,49 @@ pub mod api {
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum VersionedMultiAsset {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				V0(runtime_types::xcm::v0::multi_asset::MultiAsset),
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				V1(runtime_types::xcm::v1::multiasset::MultiAsset),
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum VersionedMultiAssets {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				V0(::std::vec::Vec<runtime_types::xcm::v0::multi_asset::MultiAsset>),
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				V1(runtime_types::xcm::v1::multiasset::MultiAssets),
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum VersionedMultiLocation {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				V0(runtime_types::xcm::v0::multi_location::MultiLocation),
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				V1(runtime_types::xcm::v1::multilocation::MultiLocation),
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum VersionedResponse {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				V0(runtime_types::xcm::v0::Response),
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				V1(runtime_types::xcm::v1::Response),
-				#[codec::codec(index = 2)]
+				#[codec(index = 2)]
 				V2(runtime_types::xcm::v2::Response),
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode, :: subxt :: ext :: codec :: Encode, Debug,
 			)]
 			pub enum VersionedXcm {
-				#[codec::codec(index = 0)]
+				#[codec(index = 0)]
 				V0(runtime_types::xcm::v0::Xcm),
-				#[codec::codec(index = 1)]
+				#[codec(index = 1)]
 				V1(runtime_types::xcm::v1::Xcm),
-				#[codec::codec(index = 2)]
+				#[codec(index = 2)]
 				V2(runtime_types::xcm::v2::Xcm),
 			}
 		}
