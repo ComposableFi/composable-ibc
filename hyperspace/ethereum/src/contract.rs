@@ -119,6 +119,18 @@ where
 		ret
 	}
 
+	pub async fn send_and_get_tuple(&self, msg: Token, method_name: impl AsRef<str>) -> () {
+		let method = self.contract.method::<_, ()>(method_name.as_ref(), (msg,)).unwrap();
+
+		let gas_estimate = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate);
+		let ret = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		ret
+	}
+
 	pub async fn register_client(&self, kind: &str, address: Address) {
 		let method = self
 			.contract
