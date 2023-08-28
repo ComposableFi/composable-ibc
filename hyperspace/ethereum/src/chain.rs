@@ -589,6 +589,9 @@ impl Chain for EthereumClient {
 			}
 			else if msg.type_url == channel_msgs::chan_open_ack::TYPE_URL{	
 				let msg = MsgChannelOpenAck::decode_vec(&msg.value).unwrap();
+				let token = msg.into_token();
+				let _ = ibc_handler.send_and_get_tuple(token, "channelOpenAck").await;
+				return Ok(());
 			}
 			else if msg.type_url == channel_msgs::chan_open_confirm::TYPE_URL{
 				let msg = MsgChannelOpenConfirm::decode_vec(&msg.value).unwrap();

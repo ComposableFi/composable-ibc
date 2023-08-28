@@ -19,7 +19,7 @@ use hyperspace_ethereum::{
 use ibc::{
 	core::{
 		ics02_client::{height::Height, trust_threshold::TrustThreshold, msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient}},
-		ics04_channel::{packet::{Packet, Sequence}, channel::{ChannelEnd, State, Order}, Version, msgs::chan_open_init::MsgChannelOpenInit, msgs::chan_open_try::MsgChannelOpenTry},
+		ics04_channel::{packet::{Packet, Sequence}, channel::{ChannelEnd, State, Order}, Version, msgs::chan_open_init::MsgChannelOpenInit, msgs::chan_open_try::MsgChannelOpenTry, msgs::chan_open_ack::MsgChannelOpenAck},
 		ics24_host::identifier::{ChannelId, PortId, ConnectionId, ChainId}, ics03_connection::{connection::Counterparty, msgs::{conn_open_init::MsgConnectionOpenInit, conn_open_ack::MsgConnectionOpenAck, conn_open_confirm::MsgConnectionOpenConfirm}}, ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
 	},
 	timestamp::Timestamp, protobuf::{types::SignedHeader, Protobuf}, proofs::{Proofs, ConsensusProof}, tx_msg::Msg,
@@ -555,14 +555,21 @@ async fn relayer_channel_tests(){
 		Some(x.clone()),
 		Height::new(1, 1),
 	).unwrap();
-	let msg = MsgChannelOpenTry::new(port_id, channel, Version::new(version), proofs, signer);
+	let msg = MsgChannelOpenTry::new(port_id.clone(), channel, Version::new(version.clone()), proofs.clone(), signer.clone());
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 	let msg = MsgChannelOpenTry::decode_vec(&msg.value).unwrap();
 	let channel_id = ibc_handler_mock.send::<String>(msg.into_token(), "channelOpenTry").await;
 	assert!(channel_id.len() > 0);
 	/*______________________________________________________________________________*/
 
+	/*______________________________________________________________________________*/
+	//MsgChannelOpenAck 
+	let msg = MsgChannelOpenAck::new(port_id, ChannelId::new(27), ChannelId::new(27), Version::new(version.clone()), proofs, signer);
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let msg = MsgChannelOpenAck::decode_vec(&msg.value).unwrap();
+	let _ = ibc_handler_mock.send_and_get_tuple(msg.into_token(), "channelOpenAck").await;
 
+	/*______________________________________________________________________________*/
 }
 
 
