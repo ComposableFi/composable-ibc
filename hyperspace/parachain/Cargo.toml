@@ -3,10 +3,15 @@ name = "hyperspace-parachain"
 version = "0.1.0"
 edition = "2021"
 description = "Hyperspace relayer interface for Parachains"
-authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <wizdave97@gmail.com>"]
+authors = [
+	"Seun Lanlege <seunlanlege@gmail.com>",
+	"David Salami <wizdave97@gmail.com>",
+]
 
 [dependencies]
-primitives = { path = "../primitives", package = "hyperspace-primitives", features = ["testing"] }
+primitives = { path = "../primitives", package = "hyperspace-primitives", features = [
+	"testing",
+] }
 
 # crates.io
 anyhow = "1.0.65"
@@ -16,12 +21,15 @@ log = "0.4.17"
 hex = "0.4.3"
 tokio = { version = "1.32.0", features = ["macros", "sync"] }
 rs_merkle = "1.2.0"
-codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false, features = [
+	"derive",
+	"max-encoded-len",
+] }
 hex-literal = "0.3.4"
 serde_json = "1.0.74"
-derive_more = { version = "0.99", features = ["from"]  }
-serde = {version="1.0.137", features = ["derive"]}
-tokio-stream = { version = "0.1.9", features = ["sync"]}
+derive_more = { version = "0.99", features = ["from"] }
+serde = { version = "1.0.137", features = ["derive"] }
+tokio-stream = { version = "0.1.9", features = ["sync"] }
 thiserror = "1.0.31"
 itertools = "0.10.3"
 jsonrpsee = "0.16.2"
@@ -31,14 +39,18 @@ prost = { version = "0.11" }
 rand = "0.8.5"
 
 # substrate
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", features = ["full_crypto"] }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", features = [
+	"full_crypto",
+] }
 ss58-registry = "1.28.0"
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 
 # subxt
-subxt = { git = "https://github.com/paritytech/subxt",  tag = "v0.31.0", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/paritytech/subxt", tag = "v0.31.0", features = [
+	"substrate-compat",
+] }
 
-beefy-primitives = {  git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", package = "sp-consensus-beefy" }
+beefy-primitives = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", package = "sp-consensus-beefy" }
 beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 pallet-mmr = { package = "pallet-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 pallet-mmr-primitives = { package = "sp-mmr-primitives", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
@@ -63,7 +75,7 @@ ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
 # Beefy
 beefy-prover = { path = "../../algorithms/beefy/prover" }
 beefy-light-client = { path = "../../algorithms/beefy/verifier" }
-beefy-light-client-primitives = {  path = "../../algorithms/beefy/primitives" }
+beefy-light-client-primitives = { path = "../../algorithms/beefy/primitives" }
 ics11-beefy = { path = "../../light-clients/ics11-beefy" }
 sc-consensus-beefy-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 
@@ -79,10 +91,12 @@ sp-authority-discovery = { git = "https://github.com/paritytech/substrate", bran
 
 [dev-dependencies]
 derive_more = "0.99.17"
-clap = {version = "3.2.0", features = ["derive"]}
+clap = { version = "3.2.0", features = ["derive"] }
 state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 prost = "0.11"
-primitives = { path = "../primitives", package = "hyperspace-primitives", features = ["testing"] }
+primitives = { path = "../primitives", package = "hyperspace-primitives", features = [
+	"testing",
+] }
 subxt-generated = { path = "../../utils/subxt/generated" }
 
 [features]
@@ -128,5 +142,5 @@ std = [
 	"sp-runtime/std",
 	"state-machine/std",
 	"sp-trie/std",
-	"ss58-registry/std"
+	"ss58-registry/std",
 ]
