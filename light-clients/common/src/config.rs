@@ -22,15 +22,15 @@ use sp_core::H256;
 use subxt::{
 	client::OnlineClient,
 	config::ExtrinsicParams,
-	error::{Error, StorageAddressError},
+	error::{Error, MetadataError, StorageAddressError},
 	events::{Phase, StaticEvent},
 	ext::{
-		frame_metadata::v14::{StorageEntryType, StorageHasher},
 		scale_decode::DecodeAsType,
 		scale_encode::{EncodeAsFields, EncodeAsType},
 		sp_runtime::{scale_info::TypeDef, Either},
 	},
 	metadata::{DecodeWithMetadata, EncodeWithMetadata, Metadata},
+	rpc::types::StorageEntryType,
 	storage::{
 		address::{StaticStorageMapKey, Yes},
 		Address, StorageAddress,
@@ -38,6 +38,7 @@ use subxt::{
 	tx::Payload,
 	utils::Static,
 };
+use subxt_metadata::StorageHasher;
 
 /// This represents a statically generated storage lookup address.
 pub struct LocalAddress<StorageKey, ReturnTy, Fetchable, Defaultable, Iterable> {
@@ -114,71 +115,78 @@ where
 		&self.entry_name
 	}
 
-	// fn append_entry_bytes(&self, metadata: &Metadata, bytes: &mut Vec<u8>) -> Result<(), Error> {
-	// 	let pallet = metadata.pallet(&self.pallet_name)?;
-	// 	let storage = pallet.storage(&self.entry_name)?;
+	fn append_entry_bytes(&self, metadata: &Metadata, bytes: &mut Vec<u8>) -> Result<(), Error> {
+		let pallet = metadata.pallet_by_name_err(self.pallet_name())?;
+		let storage = pallet
+			.storage()
+			.ok_or_else(|| MetadataError::StorageNotFoundInPallet(self.pallet_name().to_owned()))?;
+		let entry = storage
+			.entry_by_name(self.entry_name())
+			.ok_or_else(|| MetadataError::StorageEntryNotFound(self.entry_name().to_owned()))?;
 
-	// 	match &storage.ty {
-	// 		StorageEntryType::Plain(_) =>
-	// 			if !self.storage_entry_keys.is_empty() {
-	// 				Err(StorageAddressError::WrongNumberOfKeys {
-	// 					expected: 0,
-	// 					actual: self.storage_entry_keys.len(),
-	// 				}
-	// 				.into())
-	// 			} else {
-	// 				Ok(())
-	// 			},
-	// 		StorageEntryType::Map { hashers, key, .. } => {
-	// 			let ty = metadata
-	// 				.resolve_type(key.id)
-	// 				.ok_or(StorageAddressError::MapTypeMustBeTuple)?;
+		match entry.entry_type() {
+			StorageEntryType::Plain(_) =>
+				if !self.storage_entry_keys.is_empty() {
+					Err(StorageAddressError::WrongNumberOfKeys {
+						expected: 0,
+						actual: self.storage_entry_keys.len(),
+					}
+					.into())
+				} else {
+					Ok(())
+				},
+			StorageEntryType::Map { hashers, key_ty, .. } => {
+				let ty = metadata
+					.types()
+					.resolve(*key_ty)
+					.ok_or(MetadataError::TypeNotFound(*key_ty))?;
 
-	// 			// If the key is a tuple, we encode each value to the corresponding tuple type.
-	// 			// If the key is not a tuple, encode a single value to the key type.
-	// 			let type_ids = match &ty.type_def {
-	// 				TypeDef::Tuple(tuple) => Either::Left(tuple.fields.iter().map(|f| f.id)),
-	// 				_other => Either::Right(std::iter::once(key.id)),
-	// 			};
+				// If the key is a tuple, we encode each value to the corresponding tuple type.
+				// If the key is not a tuple, encode a single value to the key type.
+				let type_ids = match &ty.type_def {
+					TypeDef::Tuple(tuple) =>
+						sp_runtime::Either::Left(tuple.fields.iter().map(|f| f.id)),
+					_other => sp_runtime::Either::Right(std::iter::once(*key_ty)),
+				};
 
-	// 			if type_ids.len() != self.storage_entry_keys.len() {
-	// 				return Err(StorageAddressError::WrongNumberOfKeys {
-	// 					expected: type_ids.len(),
-	// 					actual: self.storage_entry_keys.len(),
-	// 				}
-	// 				.into())
-	// 			}
+				if type_ids.len() != self.storage_entry_keys.len() {
+					return Err(StorageAddressError::WrongNumberOfKeys {
+						expected: type_ids.len(),
+						actual: self.storage_entry_keys.len(),
+					}
+					.into())
+				}
 
-	// 			if hashers.len() == 1 {
-	// 				// One hasher; hash a tuple of all SCALE encoded bytes with the one hash
-	// 				// function.
-	// 				let mut input = Vec::new();
-	// 				let iter = self.storage_entry_keys.iter().zip(type_ids);
-	// 				for (key, type_id) in iter {
-	// 					key.encode_with_metadata(type_id, metadata, &mut input)?;
-	// 				}
-	// 				hash_bytes(&input, &hashers[0], bytes);
-	// 				Ok(())
-	// 			} else if hashers.len() == type_ids.len() {
-	// 				let iter = self.storage_entry_keys.iter().zip(type_ids).zip(hashers);
-	// 				// A hasher per field; encode and hash each field independently.
-	// 				for ((key, type_id), hasher) in iter {
-	// 					let mut input = Vec::new();
-	// 					key.encode_with_metadata(type_id, metadata, &mut input)?;
-	// 					hash_bytes(&input, hasher, bytes);
-	// 				}
-	// 				Ok(())
-	// 			} else {
-	// 				// Mismatch; wrong number of hashers/fields.
-	// 				Err(StorageAddressError::WrongNumberOfHashers {
-	// 					hashers: hashers.len(),
-	// 					fields: type_ids.len(),
-	// 				}
-	// 				.into())
-	// 			}
-	// 		},
-	// 	}
-	// }
+				if hashers.len() == 1 {
+					// One hasher; hash a tuple of all SCALE encoded bytes with the one hash
+					// function.
+					let mut input = Vec::new();
+					let iter = self.storage_entry_keys.iter().zip(type_ids);
+					for (key, type_id) in iter {
+						key.encode_with_metadata(type_id, metadata, &mut input)?;
+					}
+					hash_bytes(&input, &hashers[0], bytes);
+					Ok(())
+				} else if hashers.len() == type_ids.len() {
+					let iter = self.storage_entry_keys.iter().zip(type_ids).zip(hashers);
+					// A hasher per field; encode and hash each field independently.
+					for ((key, type_id), hasher) in iter {
+						let mut input = Vec::new();
+						key.encode_with_metadata(type_id, metadata, &mut input)?;
+						hash_bytes(&input, hasher, bytes);
+					}
+					Ok(())
+				} else {
+					// Mismatch; wrong number of hashers/fields.
+					Err(StorageAddressError::WrongNumberOfHashers {
+						hashers: hashers.len(),
+						fields: type_ids.len(),
+					}
+					.into())
+				}
+			},
+		}
+	}
 
 	fn validation_hash(&self) -> Option<[u8; 32]> {
 		self.validation_hash

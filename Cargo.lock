@@ -1515,6 +1515,7 @@ dependencies = [
  "parity-scale-codec",
  "serde_json",
  "subxt-codegen",
+ "subxt-metadata",
  "syn 1.0.109",
  "tokio",
  "wasm-testbed",
