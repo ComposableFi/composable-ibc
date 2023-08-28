@@ -8671,6 +8671,7 @@ dependencies = [
  "sc-keystore",
  "sc-network",
  "sc-network-common",
+ "sc-network-sync",
  "sc-rpc",
  "sc-rpc-api",
  "sc-service",

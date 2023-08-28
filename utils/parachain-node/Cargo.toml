@@ -34,13 +34,13 @@ sc-chain-spec = { git = "https://github.com/paritytech/substrate", branch = "pol
 sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sc-consensus = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-sc-executor = { git = "https://github.com/paritytech/substrate",  branch = "polkadot-v0.9.43" }
+sc-executor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sc-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sc-network = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sc-network-common = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sc-rpc-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-sc-service = { git = "https://github.com/paritytech/substrate" , branch = "polkadot-v0.9.43" }
+sc-service = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sc-sysinfo = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sc-telemetry = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sc-tracing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
@@ -62,6 +62,7 @@ sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch 
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", optional = true }
+sc-network-sync = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.43" }
 
 # Polkadot
 polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43" }
@@ -90,9 +91,7 @@ substrate-build-script-utils = { git = "https://github.com/paritytech/substrate"
 default = []
 runtime-benchmarks = [
 	"parachain-runtime/runtime-benchmarks",
-	"polkadot-cli/runtime-benchmarks"
+	"polkadot-cli/runtime-benchmarks",
 ]
 try-runtime = ["parachain-runtime/try-runtime", "try-runtime-cli"]
-testing = [
-	"parachain-runtime/testing",
-]
+testing = ["parachain-runtime/testing"]

@@ -26,10 +26,8 @@ use cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node;
 // Substrate Imports
 use sc_consensus::ImportQueue;
 use sc_executor::{NativeElseWasmExecutor, WasmExecutor};
-use sc_network::{
-	config::{FullNetworkConfiguration, NetworkConfiguration, NodeKeyConfig, Secret},
-	NetworkService,
-};
+use sc_network::config::{FullNetworkConfiguration, NetworkConfiguration, NodeKeyConfig, Secret};
+use sc_network_sync::SyncingService;
 use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use substrate_prometheus_endpoint::Registry;
@@ -294,7 +292,7 @@ async fn start_node_impl(
 			&task_manager,
 			relay_chain_interface.clone(),
 			transaction_pool,
-			network,
+			sync_service.clone(),
 			params.keystore_container.keystore(),
 			force_authoring,
 			id,
@@ -386,10 +384,10 @@ fn build_consensus(
 	task_manager: &TaskManager,
 	relay_chain_interface: Arc<dyn RelayChainInterface>,
 	transaction_pool: Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
-	sync_oracle: Arc<NetworkService<Block, Hash>>,
+	sync_oracle: Arc<SyncingService<Block>>,
 	keystore: KeystorePtr,
 	force_authoring: bool,
-	id: ParaId,
+	para_id: ParaId,
 ) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error> {
 	let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
 
@@ -411,16 +409,16 @@ fn build_consensus(
 						relay_parent,
 						&relay_chain_interface,
 						&validation_data,
-						id,
+						para_id,
 					)
 					.await;
 				let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
 				let slot =
-					sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
-						*timestamp,
-						slot_duration,
-					);
+						sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+							*timestamp,
+							slot_duration,
+						);
 
 				let parachain_inherent = parachain_inherent.ok_or_else(|| {
 					Box::<dyn std::error::Error + Send + Sync>::from(
@@ -446,6 +444,74 @@ fn build_consensus(
 
 	Ok(AuraConsensus::build::<sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _>(params))
 }
+// fn build_consensus(
+// 	client: Arc<ParachainClient>,
+// 	block_import: ParachainBlockImport,
+// 	prometheus_registry: Option<&Registry>,
+// 	telemetry: Option<TelemetryHandle>,
+// 	task_manager: &TaskManager,
+// 	relay_chain_interface: Arc<dyn RelayChainInterface>,
+// 	transaction_pool: Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
+// 	sync_oracle: Arc<NetworkService<Block, Hash>>,
+// 	keystore: KeystorePtr,
+// 	force_authoring: bool,
+// 	id: ParaId,
+// ) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error> {
+// 	let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
+
+// 	let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
+// 		task_manager.spawn_handle(),
+// 		client.clone(),
+// 		transaction_pool,
+// 		prometheus_registry,
+// 		telemetry.clone(),
+// 	);
+
+// 	let params = BuildAuraConsensusParams {
+// 		proposer_factory,
+// 		create_inherent_data_providers: move |_, (relay_parent, validation_data)| {
+// 			let relay_chain_interface = relay_chain_interface.clone();
+// 			async move {
+// 				let parachain_inherent =
+// 					cumulus_primitives_parachain_inherent::ParachainInherentData::create_at(
+// 						relay_parent,
+// 						&relay_chain_interface,
+// 						&validation_data,
+// 						id,
+// 					)
+// 					.await;
+// 				let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+
+// 				let slot =
+// 					sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+// 						*timestamp,
+// 						slot_duration,
+// 					);
+
+// 				let parachain_inherent = parachain_inherent.ok_or_else(|| {
+// 					Box::<dyn std::error::Error + Send + Sync>::from(
+// 						"Failed to create parachain inherent",
+// 					)
+// 				})?;
+// 				Ok((slot, timestamp, parachain_inherent))
+// 			}
+// 		},
+// 		block_import,
+// 		para_client: client,
+// 		backoff_authoring_blocks: Option::<()>::None,
+// 		sync_oracle,
+// 		keystore,
+// 		force_authoring,
+// 		slot_duration,
+// 		// We got around 500ms for proposing
+// 		block_proposal_slot_portion: SlotProportion::new(1f32 / 24f32),
+// 		// And a maximum of 750ms if slots are skipped
+// 		max_block_proposal_slot_portion: Some(SlotProportion::new(1f32 / 16f32)),
+// 		telemetry,
+// 	};
+
+// 	Ok(AuraConsensus::build::<_, _, _, _, _, _, _>(params))
+// }
 
 /// Start a parachain node.
 pub async fn start_parachain_node(
