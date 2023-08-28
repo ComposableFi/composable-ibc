@@ -1,5 +1,5 @@
 use ethers::abi::Token;
-use ibc::core::{ics04_channel::{channel::{State, Order, Counterparty, ChannelEnd}, Version, msgs::{chan_open_init::MsgChannelOpenInit, chan_open_try::MsgChannelOpenTry, chan_open_ack::MsgChannelOpenAck}}, ics24_host::identifier::{ChannelId, PortId}};
+use ibc::core::{ics04_channel::{channel::{State, Order, Counterparty, ChannelEnd}, Version, msgs::{chan_open_init::MsgChannelOpenInit, chan_open_try::MsgChannelOpenTry, chan_open_ack::MsgChannelOpenAck, chan_open_confirm::MsgChannelOpenConfirm, chan_close_init::MsgChannelCloseInit, chan_close_confirm::MsgChannelCloseConfirm}}, ics24_host::identifier::{ChannelId, PortId}};
 
 
 use super::IntoToken;
@@ -98,5 +98,35 @@ impl IntoToken for MsgChannelOpenAck{
             self.proofs.height().into_token()
         ])
     }
+}
 
+impl IntoToken for MsgChannelOpenConfirm{
+    fn into_token(self) -> Token {
+        Token::Tuple(vec![
+            self.port_id.into_token(),
+            self.channel_id.into_token(),
+            self.proofs.object_proof().as_bytes().into_token(),
+            self.proofs.height().into_token()
+        ])
+    }
+}
+
+impl IntoToken for MsgChannelCloseInit{
+    fn into_token(self) -> Token {
+        Token::Tuple(vec![
+            self.port_id.into_token(),
+            self.channel_id.into_token(),
+        ])
+    }
+}
+
+impl IntoToken for MsgChannelCloseConfirm{
+    fn into_token(self) -> Token {
+        Token::Tuple(vec![
+            self.port_id.into_token(),
+            self.channel_id.into_token(),
+            self.proofs.object_proof().as_bytes().into_token(),
+            self.proofs.height().into_token()
+        ])
+    }
 }

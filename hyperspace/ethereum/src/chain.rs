@@ -595,12 +595,21 @@ impl Chain for EthereumClient {
 			}
 			else if msg.type_url == channel_msgs::chan_open_confirm::TYPE_URL{
 				let msg = MsgChannelOpenConfirm::decode_vec(&msg.value).unwrap();
+				let token = msg.into_token();
+				let _ = ibc_handler.send_and_get_tuple(token, "channelOpenConfirm").await;
+				return Ok(());
 			}
 			else if msg.type_url == channel_msgs::chan_close_init::TYPE_URL{
 				let msg = MsgChannelCloseInit::decode_vec(&msg.value).unwrap();
+				let token = msg.into_token();
+				let _ = ibc_handler.send_and_get_tuple(token, "channelCloseInit").await;
+				return Ok(());
 			}
 			else if msg.type_url == channel_msgs::chan_close_confirm::TYPE_URL{
 				let msg = MsgChannelCloseConfirm::decode_vec(&msg.value).unwrap();
+				let token = msg.into_token();
+				let _ = ibc_handler.send_and_get_tuple(token, "channelCloseConfirm").await;
+				return Ok(());
 			}
 			else if msg.type_url == channel_msgs::timeout_on_close::TYPE_URL{
 				let msg = MsgTimeoutOnClose::decode_vec(&msg.value).unwrap();
