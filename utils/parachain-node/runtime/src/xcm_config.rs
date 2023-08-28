@@ -18,7 +18,7 @@ use super::{
 use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
-	traits::{Everything, Nothing},
+	traits::{Everything, Nothing, ProcessMessageError},
 };
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
@@ -32,7 +32,6 @@ use xcm_builder::{
 	UsingComponents,
 };
 use xcm_executor::{traits::ShouldExecute, XcmExecutor};
-use frame_support::traits::ProcessMessageError;
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
