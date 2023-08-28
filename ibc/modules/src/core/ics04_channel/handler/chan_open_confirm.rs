@@ -80,7 +80,7 @@ where
 		expected_connection_hops,
 		channel_end.version().clone(),
 	);
-	//2. Verify proofs
+	// 2. Verify proofs
 	verify_channel_proofs::<Ctx>(
 		ctx,
 		msg.proofs.height(),

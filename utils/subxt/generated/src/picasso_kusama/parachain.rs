@@ -5,7 +5,7 @@ pub mod api {
 	mod root_mod {
 		pub use super::*;
 	}
-	pub static PALLETS: [&str; 51usize] = [
+	pub static PALLETS: [&str; 50usize] = [
 		"System",
 		"Timestamp",
 		"Sudo",
@@ -42,7 +42,6 @@ pub mod api {
 		"UnknownTokens",
 		"Tokens",
 		"CurrencyFactory",
-		"GovernanceRegistry",
 		"CrowdloanRewards",
 		"Vesting",
 		"BondedFinance",
@@ -130,8 +129,6 @@ pub mod api {
 		Tokens(tokens::Event),
 		#[codec(index = 53)]
 		CurrencyFactory(currency_factory::Event),
-		#[codec(index = 54)]
-		GovernanceRegistry(governance_registry::Event),
 		#[codec(index = 55)]
 		CrowdloanRewards(crowdloan_rewards::Event),
 		#[codec(index = 56)]
@@ -388,15 +385,6 @@ pub mod api {
 					pallet_ty,
 					metadata,
 				)?))
-			}
-			if pallet_name == "GovernanceRegistry" {
-				return Ok(Event::GovernanceRegistry(
-					governance_registry::Event::decode_with_metadata(
-						&mut &*pallet_bytes,
-						pallet_ty,
-						metadata,
-					)?,
-				))
 			}
 			if pallet_name == "CrowdloanRewards" {
 				return Ok(Event::CrowdloanRewards(crowdloan_rewards::Event::decode_with_metadata(
@@ -702,9 +690,6 @@ pub mod api {
 		pub fn currency_factory(&self) -> currency_factory::storage::StorageApi {
 			currency_factory::storage::StorageApi
 		}
-		pub fn governance_registry(&self) -> governance_registry::storage::StorageApi {
-			governance_registry::storage::StorageApi
-		}
 		pub fn crowdloan_rewards(&self) -> crowdloan_rewards::storage::StorageApi {
 			crowdloan_rewards::storage::StorageApi
 		}
@@ -845,9 +830,6 @@ pub mod api {
 		pub fn currency_factory(&self) -> currency_factory::calls::TransactionApi {
 			currency_factory::calls::TransactionApi
 		}
-		pub fn governance_registry(&self) -> governance_registry::calls::TransactionApi {
-			governance_registry::calls::TransactionApi
-		}
 		pub fn crowdloan_rewards(&self) -> crowdloan_rewards::calls::TransactionApi {
 			crowdloan_rewards::calls::TransactionApi
 		}
@@ -898,9 +880,9 @@ pub mod api {
 		let runtime_metadata_hash = client.metadata().metadata_hash(&PALLETS);
 		if runtime_metadata_hash !=
 			[
-				55u8, 46u8, 43u8, 1u8, 56u8, 86u8, 17u8, 117u8, 162u8, 233u8, 232u8, 202u8, 82u8,
-				251u8, 47u8, 223u8, 93u8, 42u8, 224u8, 160u8, 219u8, 145u8, 94u8, 249u8, 65u8,
-				149u8, 113u8, 218u8, 60u8, 123u8, 95u8, 173u8,
+				56u8, 56u8, 69u8, 100u8, 3u8, 201u8, 76u8, 29u8, 52u8, 48u8, 125u8, 80u8, 84u8,
+				223u8, 33u8, 178u8, 74u8, 204u8, 226u8, 122u8, 89u8, 217u8, 143u8, 230u8, 52u8,
+				138u8, 185u8, 78u8, 192u8, 205u8, 243u8, 219u8,
 			] {
 			Err(::subxt::error::MetadataError::IncompatibleMetadata)
 		} else {
@@ -1523,10 +1505,9 @@ pub mod api {
 						"Events",
 						vec![],
 						[
-							65u8, 27u8, 1u8, 58u8, 176u8, 249u8, 162u8, 204u8, 140u8, 33u8, 55u8,
-							33u8, 253u8, 27u8, 168u8, 171u8, 116u8, 18u8, 118u8, 124u8, 54u8,
-							157u8, 140u8, 40u8, 88u8, 232u8, 217u8, 117u8, 203u8, 237u8, 124u8,
-							76u8,
+							11u8, 70u8, 38u8, 131u8, 180u8, 8u8, 242u8, 201u8, 27u8, 187u8, 186u8,
+							16u8, 121u8, 187u8, 38u8, 144u8, 72u8, 136u8, 71u8, 98u8, 116u8, 4u8,
+							221u8, 123u8, 158u8, 83u8, 119u8, 88u8, 19u8, 201u8, 186u8, 48u8,
 						],
 					)
 				}
@@ -1939,9 +1920,9 @@ pub mod api {
 						"sudo",
 						Sudo { call: ::std::boxed::Box::new(call) },
 						[
-							165u8, 91u8, 49u8, 169u8, 55u8, 100u8, 135u8, 18u8, 78u8, 195u8, 64u8,
-							169u8, 229u8, 118u8, 59u8, 97u8, 236u8, 53u8, 49u8, 67u8, 186u8, 231u8,
-							41u8, 34u8, 181u8, 37u8, 37u8, 199u8, 116u8, 47u8, 246u8, 6u8,
+							68u8, 197u8, 242u8, 144u8, 55u8, 161u8, 14u8, 116u8, 171u8, 241u8,
+							63u8, 177u8, 97u8, 3u8, 154u8, 86u8, 187u8, 65u8, 163u8, 140u8, 100u8,
+							68u8, 70u8, 16u8, 4u8, 240u8, 37u8, 105u8, 78u8, 173u8, 102u8, 166u8,
 						],
 					)
 				}
@@ -1955,9 +1936,10 @@ pub mod api {
 						"sudo_unchecked_weight",
 						SudoUncheckedWeight { call: ::std::boxed::Box::new(call), weight },
 						[
-							219u8, 50u8, 224u8, 197u8, 38u8, 207u8, 215u8, 52u8, 7u8, 239u8, 182u8,
-							7u8, 39u8, 128u8, 26u8, 29u8, 159u8, 12u8, 87u8, 146u8, 21u8, 5u8,
-							181u8, 136u8, 117u8, 188u8, 226u8, 127u8, 62u8, 254u8, 174u8, 251u8,
+							103u8, 157u8, 105u8, 144u8, 230u8, 224u8, 161u8, 84u8, 70u8, 13u8,
+							173u8, 203u8, 88u8, 69u8, 14u8, 161u8, 148u8, 183u8, 179u8, 63u8, 5u8,
+							201u8, 233u8, 229u8, 141u8, 132u8, 80u8, 13u8, 204u8, 59u8, 185u8,
+							184u8,
 						],
 					)
 				}
@@ -1992,9 +1974,9 @@ pub mod api {
 						"sudo_as",
 						SudoAs { who, call: ::std::boxed::Box::new(call) },
 						[
-							22u8, 157u8, 100u8, 150u8, 170u8, 232u8, 176u8, 70u8, 69u8, 141u8,
-							13u8, 228u8, 74u8, 191u8, 95u8, 120u8, 33u8, 112u8, 161u8, 68u8, 81u8,
-							19u8, 111u8, 33u8, 76u8, 94u8, 253u8, 95u8, 65u8, 140u8, 51u8, 181u8,
+							106u8, 155u8, 42u8, 202u8, 77u8, 112u8, 156u8, 133u8, 62u8, 57u8, 90u8,
+							14u8, 175u8, 231u8, 207u8, 230u8, 145u8, 119u8, 241u8, 85u8, 139u8,
+							85u8, 16u8, 169u8, 160u8, 62u8, 0u8, 150u8, 243u8, 31u8, 41u8, 181u8,
 						],
 					)
 				}
@@ -4214,10 +4196,9 @@ pub mod api {
 						"as_multi_threshold_1",
 						AsMultiThreshold1 { other_signatories, call: ::std::boxed::Box::new(call) },
 						[
-							43u8, 202u8, 102u8, 164u8, 126u8, 60u8, 49u8, 0u8, 67u8, 139u8, 251u8,
-							171u8, 218u8, 60u8, 120u8, 254u8, 11u8, 158u8, 252u8, 126u8, 8u8,
-							196u8, 255u8, 58u8, 96u8, 152u8, 228u8, 64u8, 214u8, 227u8, 178u8,
-							91u8,
+							197u8, 106u8, 88u8, 62u8, 213u8, 35u8, 50u8, 129u8, 66u8, 188u8, 214u8,
+							2u8, 219u8, 50u8, 40u8, 58u8, 15u8, 196u8, 188u8, 159u8, 92u8, 116u8,
+							231u8, 89u8, 34u8, 217u8, 151u8, 176u8, 114u8, 119u8, 245u8, 5u8,
 						],
 					)
 				}
@@ -4242,9 +4223,10 @@ pub mod api {
 							max_weight,
 						},
 						[
-							57u8, 8u8, 205u8, 210u8, 67u8, 252u8, 17u8, 146u8, 54u8, 42u8, 158u8,
-							171u8, 206u8, 30u8, 23u8, 122u8, 51u8, 99u8, 90u8, 102u8, 150u8, 54u8,
-							127u8, 165u8, 84u8, 151u8, 138u8, 196u8, 183u8, 13u8, 121u8, 61u8,
+							238u8, 36u8, 55u8, 236u8, 240u8, 20u8, 93u8, 182u8, 102u8, 51u8, 171u8,
+							196u8, 31u8, 241u8, 241u8, 208u8, 67u8, 218u8, 26u8, 55u8, 243u8,
+							204u8, 20u8, 199u8, 108u8, 193u8, 152u8, 156u8, 103u8, 227u8, 179u8,
+							243u8,
 						],
 					)
 				}
@@ -6090,9 +6072,9 @@ pub mod api {
 						"execute",
 						Execute { proposal: ::std::boxed::Box::new(proposal), length_bound },
 						[
-							26u8, 39u8, 175u8, 74u8, 129u8, 243u8, 113u8, 90u8, 120u8, 214u8, 32u8,
-							222u8, 155u8, 33u8, 167u8, 236u8, 194u8, 252u8, 131u8, 32u8, 147u8,
-							72u8, 225u8, 207u8, 54u8, 183u8, 245u8, 103u8, 46u8, 32u8, 73u8, 189u8,
+							30u8, 158u8, 130u8, 175u8, 104u8, 135u8, 104u8, 167u8, 107u8, 77u8,
+							137u8, 169u8, 165u8, 34u8, 61u8, 229u8, 222u8, 80u8, 199u8, 136u8, 8u8,
+							174u8, 130u8, 34u8, 205u8, 222u8, 55u8, 7u8, 2u8, 205u8, 175u8, 216u8,
 						],
 					)
 				}
@@ -6111,9 +6093,10 @@ pub mod api {
 							length_bound,
 						},
 						[
-							9u8, 115u8, 59u8, 113u8, 78u8, 226u8, 96u8, 136u8, 148u8, 54u8, 89u8,
-							34u8, 100u8, 218u8, 11u8, 128u8, 16u8, 16u8, 166u8, 80u8, 51u8, 44u8,
-							131u8, 161u8, 170u8, 209u8, 229u8, 229u8, 208u8, 221u8, 77u8, 21u8,
+							238u8, 126u8, 239u8, 203u8, 62u8, 215u8, 222u8, 47u8, 14u8, 210u8,
+							116u8, 93u8, 161u8, 51u8, 115u8, 224u8, 152u8, 134u8, 120u8, 124u8,
+							200u8, 98u8, 217u8, 100u8, 228u8, 10u8, 180u8, 225u8, 18u8, 204u8,
+							73u8, 64u8,
 						],
 					)
 				}
@@ -6361,9 +6344,9 @@ pub mod api {
 						"ProposalOf",
 						vec![::subxt::storage::address::make_static_storage_map_key(_0.borrow())],
 						[
-							181u8, 165u8, 63u8, 50u8, 185u8, 42u8, 59u8, 241u8, 146u8, 180u8, 76u8,
-							101u8, 128u8, 21u8, 231u8, 30u8, 35u8, 93u8, 17u8, 207u8, 112u8, 236u8,
-							181u8, 81u8, 77u8, 166u8, 116u8, 201u8, 233u8, 191u8, 90u8, 60u8,
+							24u8, 65u8, 156u8, 21u8, 44u8, 29u8, 130u8, 65u8, 53u8, 213u8, 228u8,
+							131u8, 93u8, 228u8, 176u8, 68u8, 111u8, 38u8, 113u8, 99u8, 11u8, 186u8,
+							254u8, 154u8, 124u8, 111u8, 26u8, 142u8, 44u8, 168u8, 233u8, 85u8,
 						],
 					)
 				}
@@ -6381,9 +6364,9 @@ pub mod api {
 						"ProposalOf",
 						Vec::new(),
 						[
-							181u8, 165u8, 63u8, 50u8, 185u8, 42u8, 59u8, 241u8, 146u8, 180u8, 76u8,
-							101u8, 128u8, 21u8, 231u8, 30u8, 35u8, 93u8, 17u8, 207u8, 112u8, 236u8,
-							181u8, 81u8, 77u8, 166u8, 116u8, 201u8, 233u8, 191u8, 90u8, 60u8,
+							24u8, 65u8, 156u8, 21u8, 44u8, 29u8, 130u8, 65u8, 53u8, 213u8, 228u8,
+							131u8, 93u8, 228u8, 176u8, 68u8, 111u8, 38u8, 113u8, 99u8, 11u8, 186u8,
+							254u8, 154u8, 124u8, 111u8, 26u8, 142u8, 44u8, 168u8, 233u8, 85u8,
 						],
 					)
 				}
@@ -9030,9 +9013,9 @@ pub mod api {
 						"execute",
 						Execute { proposal: ::std::boxed::Box::new(proposal), length_bound },
 						[
-							26u8, 39u8, 175u8, 74u8, 129u8, 243u8, 113u8, 90u8, 120u8, 214u8, 32u8,
-							222u8, 155u8, 33u8, 167u8, 236u8, 194u8, 252u8, 131u8, 32u8, 147u8,
-							72u8, 225u8, 207u8, 54u8, 183u8, 245u8, 103u8, 46u8, 32u8, 73u8, 189u8,
+							30u8, 158u8, 130u8, 175u8, 104u8, 135u8, 104u8, 167u8, 107u8, 77u8,
+							137u8, 169u8, 165u8, 34u8, 61u8, 229u8, 222u8, 80u8, 199u8, 136u8, 8u8,
+							174u8, 130u8, 34u8, 205u8, 222u8, 55u8, 7u8, 2u8, 205u8, 175u8, 216u8,
 						],
 					)
 				}
@@ -9051,9 +9034,10 @@ pub mod api {
 							length_bound,
 						},
 						[
-							9u8, 115u8, 59u8, 113u8, 78u8, 226u8, 96u8, 136u8, 148u8, 54u8, 89u8,
-							34u8, 100u8, 218u8, 11u8, 128u8, 16u8, 16u8, 166u8, 80u8, 51u8, 44u8,
-							131u8, 161u8, 170u8, 209u8, 229u8, 229u8, 208u8, 221u8, 77u8, 21u8,
+							238u8, 126u8, 239u8, 203u8, 62u8, 215u8, 222u8, 47u8, 14u8, 210u8,
+							116u8, 93u8, 161u8, 51u8, 115u8, 224u8, 152u8, 134u8, 120u8, 124u8,
+							200u8, 98u8, 217u8, 100u8, 228u8, 10u8, 180u8, 225u8, 18u8, 204u8,
+							73u8, 64u8,
 						],
 					)
 				}
@@ -9301,9 +9285,9 @@ pub mod api {
 						"ProposalOf",
 						vec![::subxt::storage::address::make_static_storage_map_key(_0.borrow())],
 						[
-							181u8, 165u8, 63u8, 50u8, 185u8, 42u8, 59u8, 241u8, 146u8, 180u8, 76u8,
-							101u8, 128u8, 21u8, 231u8, 30u8, 35u8, 93u8, 17u8, 207u8, 112u8, 236u8,
-							181u8, 81u8, 77u8, 166u8, 116u8, 201u8, 233u8, 191u8, 90u8, 60u8,
+							24u8, 65u8, 156u8, 21u8, 44u8, 29u8, 130u8, 65u8, 53u8, 213u8, 228u8,
+							131u8, 93u8, 228u8, 176u8, 68u8, 111u8, 38u8, 113u8, 99u8, 11u8, 186u8,
+							254u8, 154u8, 124u8, 111u8, 26u8, 142u8, 44u8, 168u8, 233u8, 85u8,
 						],
 					)
 				}
@@ -9321,9 +9305,9 @@ pub mod api {
 						"ProposalOf",
 						Vec::new(),
 						[
-							181u8, 165u8, 63u8, 50u8, 185u8, 42u8, 59u8, 241u8, 146u8, 180u8, 76u8,
-							101u8, 128u8, 21u8, 231u8, 30u8, 35u8, 93u8, 17u8, 207u8, 112u8, 236u8,
-							181u8, 81u8, 77u8, 166u8, 116u8, 201u8, 233u8, 191u8, 90u8, 60u8,
+							24u8, 65u8, 156u8, 21u8, 44u8, 29u8, 130u8, 65u8, 53u8, 213u8, 228u8,
+							131u8, 93u8, 228u8, 176u8, 68u8, 111u8, 38u8, 113u8, 99u8, 11u8, 186u8,
+							254u8, 154u8, 124u8, 111u8, 26u8, 142u8, 44u8, 168u8, 233u8, 85u8,
 						],
 					)
 				}
@@ -9954,9 +9938,9 @@ pub mod api {
 						"execute",
 						Execute { proposal: ::std::boxed::Box::new(proposal), length_bound },
 						[
-							26u8, 39u8, 175u8, 74u8, 129u8, 243u8, 113u8, 90u8, 120u8, 214u8, 32u8,
-							222u8, 155u8, 33u8, 167u8, 236u8, 194u8, 252u8, 131u8, 32u8, 147u8,
-							72u8, 225u8, 207u8, 54u8, 183u8, 245u8, 103u8, 46u8, 32u8, 73u8, 189u8,
+							30u8, 158u8, 130u8, 175u8, 104u8, 135u8, 104u8, 167u8, 107u8, 77u8,
+							137u8, 169u8, 165u8, 34u8, 61u8, 229u8, 222u8, 80u8, 199u8, 136u8, 8u8,
+							174u8, 130u8, 34u8, 205u8, 222u8, 55u8, 7u8, 2u8, 205u8, 175u8, 216u8,
 						],
 					)
 				}
@@ -9975,9 +9959,10 @@ pub mod api {
 							length_bound,
 						},
 						[
-							9u8, 115u8, 59u8, 113u8, 78u8, 226u8, 96u8, 136u8, 148u8, 54u8, 89u8,
-							34u8, 100u8, 218u8, 11u8, 128u8, 16u8, 16u8, 166u8, 80u8, 51u8, 44u8,
-							131u8, 161u8, 170u8, 209u8, 229u8, 229u8, 208u8, 221u8, 77u8, 21u8,
+							238u8, 126u8, 239u8, 203u8, 62u8, 215u8, 222u8, 47u8, 14u8, 210u8,
+							116u8, 93u8, 161u8, 51u8, 115u8, 224u8, 152u8, 134u8, 120u8, 124u8,
+							200u8, 98u8, 217u8, 100u8, 228u8, 10u8, 180u8, 225u8, 18u8, 204u8,
+							73u8, 64u8,
 						],
 					)
 				}
@@ -10225,9 +10210,9 @@ pub mod api {
 						"ProposalOf",
 						vec![::subxt::storage::address::make_static_storage_map_key(_0.borrow())],
 						[
-							181u8, 165u8, 63u8, 50u8, 185u8, 42u8, 59u8, 241u8, 146u8, 180u8, 76u8,
-							101u8, 128u8, 21u8, 231u8, 30u8, 35u8, 93u8, 17u8, 207u8, 112u8, 236u8,
-							181u8, 81u8, 77u8, 166u8, 116u8, 201u8, 233u8, 191u8, 90u8, 60u8,
+							24u8, 65u8, 156u8, 21u8, 44u8, 29u8, 130u8, 65u8, 53u8, 213u8, 228u8,
+							131u8, 93u8, 228u8, 176u8, 68u8, 111u8, 38u8, 113u8, 99u8, 11u8, 186u8,
+							254u8, 154u8, 124u8, 111u8, 26u8, 142u8, 44u8, 168u8, 233u8, 85u8,
 						],
 					)
 				}
@@ -10245,9 +10230,9 @@ pub mod api {
 						"ProposalOf",
 						Vec::new(),
 						[
-							181u8, 165u8, 63u8, 50u8, 185u8, 42u8, 59u8, 241u8, 146u8, 180u8, 76u8,
-							101u8, 128u8, 21u8, 231u8, 30u8, 35u8, 93u8, 17u8, 207u8, 112u8, 236u8,
-							181u8, 81u8, 77u8, 166u8, 116u8, 201u8, 233u8, 191u8, 90u8, 60u8,
+							24u8, 65u8, 156u8, 21u8, 44u8, 29u8, 130u8, 65u8, 53u8, 213u8, 228u8,
+							131u8, 93u8, 228u8, 176u8, 68u8, 111u8, 38u8, 113u8, 99u8, 11u8, 186u8,
+							254u8, 154u8, 124u8, 111u8, 26u8, 142u8, 44u8, 168u8, 233u8, 85u8,
 						],
 					)
 				}
@@ -10855,9 +10840,10 @@ pub mod api {
 							call: ::std::boxed::Box::new(call),
 						},
 						[
-							175u8, 120u8, 78u8, 168u8, 97u8, 212u8, 49u8, 70u8, 106u8, 32u8, 211u8,
-							29u8, 214u8, 126u8, 173u8, 114u8, 60u8, 67u8, 226u8, 16u8, 65u8, 247u8,
-							14u8, 167u8, 95u8, 136u8, 80u8, 65u8, 5u8, 112u8, 218u8, 209u8,
+							198u8, 48u8, 118u8, 209u8, 148u8, 131u8, 128u8, 100u8, 9u8, 53u8,
+							154u8, 145u8, 202u8, 144u8, 169u8, 34u8, 209u8, 182u8, 199u8, 116u8,
+							130u8, 193u8, 12u8, 204u8, 6u8, 102u8, 247u8, 118u8, 157u8, 107u8,
+							145u8, 165u8,
 						],
 					)
 				}
@@ -10899,10 +10885,9 @@ pub mod api {
 							call: ::std::boxed::Box::new(call),
 						},
 						[
-							163u8, 109u8, 95u8, 109u8, 18u8, 175u8, 22u8, 247u8, 168u8, 213u8,
-							213u8, 79u8, 136u8, 233u8, 255u8, 24u8, 6u8, 114u8, 228u8, 238u8,
-							208u8, 231u8, 66u8, 3u8, 212u8, 232u8, 157u8, 169u8, 247u8, 198u8,
-							204u8, 96u8,
+							153u8, 5u8, 47u8, 37u8, 44u8, 255u8, 52u8, 197u8, 137u8, 94u8, 2u8,
+							194u8, 174u8, 96u8, 55u8, 150u8, 44u8, 76u8, 162u8, 55u8, 209u8, 54u8,
+							203u8, 7u8, 10u8, 255u8, 8u8, 79u8, 209u8, 146u8, 241u8, 66u8,
 						],
 					)
 				}
@@ -10941,9 +10926,9 @@ pub mod api {
 							call: ::std::boxed::Box::new(call),
 						},
 						[
-							255u8, 239u8, 68u8, 41u8, 170u8, 31u8, 124u8, 105u8, 20u8, 29u8, 49u8,
-							130u8, 225u8, 54u8, 16u8, 66u8, 239u8, 172u8, 179u8, 117u8, 204u8,
-							253u8, 65u8, 29u8, 253u8, 73u8, 243u8, 225u8, 230u8, 252u8, 5u8, 67u8,
+							72u8, 31u8, 6u8, 102u8, 149u8, 124u8, 13u8, 126u8, 182u8, 175u8, 246u8,
+							230u8, 171u8, 161u8, 148u8, 229u8, 24u8, 97u8, 131u8, 25u8, 131u8,
+							151u8, 73u8, 6u8, 0u8, 94u8, 221u8, 232u8, 150u8, 89u8, 211u8, 198u8,
 						],
 					)
 				}
@@ -10969,9 +10954,10 @@ pub mod api {
 							call: ::std::boxed::Box::new(call),
 						},
 						[
-							89u8, 165u8, 215u8, 132u8, 249u8, 12u8, 23u8, 44u8, 1u8, 8u8, 179u8,
-							173u8, 135u8, 169u8, 21u8, 168u8, 182u8, 179u8, 120u8, 119u8, 91u8,
-							222u8, 246u8, 59u8, 60u8, 77u8, 0u8, 121u8, 110u8, 150u8, 123u8, 54u8,
+							141u8, 199u8, 12u8, 51u8, 212u8, 158u8, 153u8, 141u8, 25u8, 150u8,
+							241u8, 154u8, 245u8, 72u8, 162u8, 47u8, 157u8, 163u8, 43u8, 2u8, 118u8,
+							22u8, 119u8, 182u8, 220u8, 118u8, 203u8, 191u8, 216u8, 228u8, 55u8,
+							57u8,
 						],
 					)
 				}
@@ -11345,10 +11331,10 @@ pub mod api {
 						"batch",
 						Batch { calls },
 						[
-							146u8, 250u8, 17u8, 173u8, 135u8, 111u8, 233u8, 138u8, 198u8, 198u8,
-							178u8, 162u8, 10u8, 111u8, 83u8, 92u8, 77u8, 225u8, 55u8, 50u8, 185u8,
-							45u8, 243u8, 247u8, 133u8, 221u8, 33u8, 202u8, 152u8, 169u8, 196u8,
-							187u8,
+							225u8, 135u8, 160u8, 232u8, 234u8, 209u8, 88u8, 38u8, 195u8, 138u8,
+							97u8, 154u8, 58u8, 193u8, 252u8, 102u8, 142u8, 214u8, 156u8, 15u8,
+							205u8, 194u8, 0u8, 244u8, 83u8, 8u8, 22u8, 45u8, 250u8, 250u8, 216u8,
+							189u8,
 						],
 					)
 				}
@@ -11362,9 +11348,9 @@ pub mod api {
 						"as_derivative",
 						AsDerivative { index, call: ::std::boxed::Box::new(call) },
 						[
-							147u8, 139u8, 151u8, 170u8, 37u8, 183u8, 70u8, 48u8, 85u8, 208u8, 1u8,
-							9u8, 251u8, 222u8, 69u8, 107u8, 222u8, 61u8, 169u8, 146u8, 219u8, 32u8,
-							85u8, 77u8, 175u8, 249u8, 48u8, 144u8, 30u8, 192u8, 74u8, 98u8,
+							26u8, 227u8, 236u8, 0u8, 36u8, 50u8, 73u8, 203u8, 156u8, 63u8, 19u8,
+							175u8, 97u8, 208u8, 75u8, 130u8, 75u8, 143u8, 52u8, 168u8, 169u8,
+							212u8, 46u8, 237u8, 221u8, 133u8, 106u8, 77u8, 65u8, 29u8, 48u8, 100u8,
 						],
 					)
 				}
@@ -11377,9 +11363,9 @@ pub mod api {
 						"batch_all",
 						BatchAll { calls },
 						[
-							138u8, 34u8, 204u8, 239u8, 86u8, 18u8, 82u8, 197u8, 95u8, 232u8, 90u8,
-							151u8, 195u8, 90u8, 140u8, 192u8, 208u8, 28u8, 115u8, 76u8, 15u8, 1u8,
-							217u8, 59u8, 114u8, 243u8, 115u8, 94u8, 11u8, 19u8, 251u8, 42u8,
+							124u8, 20u8, 147u8, 71u8, 171u8, 39u8, 36u8, 68u8, 83u8, 168u8, 32u8,
+							101u8, 119u8, 22u8, 252u8, 200u8, 200u8, 148u8, 227u8, 238u8, 59u8,
+							108u8, 49u8, 15u8, 3u8, 54u8, 79u8, 182u8, 98u8, 56u8, 194u8, 110u8,
 						],
 					)
 				}
@@ -11396,10 +11382,10 @@ pub mod api {
 							call: ::std::boxed::Box::new(call),
 						},
 						[
-							52u8, 242u8, 86u8, 23u8, 158u8, 249u8, 0u8, 205u8, 22u8, 29u8, 215u8,
-							92u8, 253u8, 224u8, 29u8, 150u8, 228u8, 234u8, 90u8, 241u8, 176u8,
-							146u8, 180u8, 153u8, 242u8, 157u8, 115u8, 161u8, 179u8, 208u8, 239u8,
-							24u8,
+							81u8, 245u8, 243u8, 76u8, 147u8, 190u8, 17u8, 171u8, 103u8, 207u8,
+							67u8, 51u8, 125u8, 247u8, 235u8, 229u8, 189u8, 109u8, 180u8, 152u8,
+							39u8, 182u8, 169u8, 35u8, 56u8, 200u8, 2u8, 106u8, 124u8, 33u8, 60u8,
+							177u8,
 						],
 					)
 				}
@@ -11412,10 +11398,10 @@ pub mod api {
 						"force_batch",
 						ForceBatch { calls },
 						[
-							233u8, 226u8, 42u8, 117u8, 106u8, 14u8, 243u8, 106u8, 158u8, 212u8,
-							38u8, 210u8, 122u8, 142u8, 115u8, 28u8, 146u8, 199u8, 236u8, 116u8,
-							160u8, 129u8, 194u8, 124u8, 67u8, 210u8, 19u8, 99u8, 151u8, 76u8, 64u8,
-							81u8,
+							21u8, 125u8, 155u8, 208u8, 173u8, 60u8, 241u8, 22u8, 153u8, 221u8,
+							165u8, 88u8, 125u8, 14u8, 106u8, 123u8, 222u8, 187u8, 110u8, 248u8,
+							14u8, 229u8, 228u8, 115u8, 71u8, 230u8, 143u8, 134u8, 20u8, 76u8, 97u8,
+							23u8,
 						],
 					)
 				}
@@ -11429,9 +11415,10 @@ pub mod api {
 						"with_weight",
 						WithWeight { call: ::std::boxed::Box::new(call), weight },
 						[
-							156u8, 136u8, 10u8, 224u8, 44u8, 98u8, 15u8, 230u8, 22u8, 203u8, 138u8,
-							218u8, 137u8, 47u8, 47u8, 14u8, 198u8, 38u8, 136u8, 140u8, 48u8, 54u8,
-							131u8, 253u8, 240u8, 211u8, 132u8, 59u8, 65u8, 188u8, 154u8, 156u8,
+							223u8, 80u8, 109u8, 50u8, 207u8, 106u8, 199u8, 46u8, 247u8, 147u8,
+							221u8, 76u8, 242u8, 55u8, 85u8, 221u8, 244u8, 9u8, 208u8, 132u8, 233u8,
+							165u8, 173u8, 226u8, 89u8, 207u8, 31u8, 67u8, 241u8, 208u8, 92u8,
+							184u8,
 						],
 					)
 				}
@@ -12017,9 +12004,9 @@ pub mod api {
 						"proxy",
 						Proxy { real, force_proxy_type, call: ::std::boxed::Box::new(call) },
 						[
-							105u8, 158u8, 158u8, 33u8, 131u8, 214u8, 56u8, 76u8, 187u8, 124u8, 2u8,
-							26u8, 246u8, 191u8, 118u8, 3u8, 189u8, 228u8, 252u8, 244u8, 241u8,
-							29u8, 186u8, 91u8, 249u8, 97u8, 139u8, 31u8, 116u8, 46u8, 151u8, 53u8,
+							21u8, 231u8, 216u8, 135u8, 149u8, 59u8, 14u8, 50u8, 76u8, 177u8, 139u8,
+							17u8, 167u8, 249u8, 172u8, 216u8, 196u8, 221u8, 214u8, 175u8, 9u8,
+							15u8, 9u8, 142u8, 40u8, 136u8, 36u8, 113u8, 252u8, 20u8, 64u8, 193u8,
 						],
 					)
 				}
@@ -12200,9 +12187,9 @@ pub mod api {
 							call: ::std::boxed::Box::new(call),
 						},
 						[
-							136u8, 88u8, 48u8, 29u8, 145u8, 227u8, 212u8, 123u8, 193u8, 81u8, 53u8,
-							48u8, 39u8, 27u8, 85u8, 188u8, 126u8, 204u8, 213u8, 61u8, 199u8, 148u8,
-							193u8, 135u8, 206u8, 169u8, 142u8, 6u8, 23u8, 160u8, 243u8, 169u8,
+							5u8, 231u8, 211u8, 21u8, 207u8, 130u8, 8u8, 32u8, 184u8, 206u8, 223u8,
+							73u8, 188u8, 41u8, 222u8, 211u8, 31u8, 217u8, 75u8, 84u8, 197u8, 95u8,
+							254u8, 136u8, 20u8, 169u8, 61u8, 14u8, 58u8, 196u8, 77u8, 252u8,
 						],
 					)
 				}
@@ -16113,204 +16100,6 @@ pub mod api {
 							185u8, 114u8, 217u8, 111u8, 55u8, 241u8, 125u8, 51u8, 95u8, 89u8, 39u8,
 							166u8, 183u8, 208u8, 129u8, 214u8, 56u8, 6u8, 0u8, 44u8, 134u8, 242u8,
 							45u8, 238u8, 61u8, 41u8, 155u8, 137u8, 166u8, 53u8, 130u8, 28u8,
-						],
-					)
-				}
-			}
-		}
-	}
-	pub mod governance_registry {
-		use super::{root_mod, runtime_types};
-		pub mod calls {
-			use super::{root_mod, runtime_types};
-			type DispatchError = runtime_types::sp_runtime::DispatchError;
-			#[derive(
-				:: subxt :: ext :: codec :: Decode,
-				:: subxt :: ext :: codec :: Encode,
-				:: subxt :: ext :: scale_decode :: DecodeAsType,
-				:: subxt :: ext :: scale_encode :: EncodeAsType,
-				Debug,
-			)]
-			#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
-			pub struct Set {
-				pub asset_id: runtime_types::primitives::currency::CurrencyId,
-				pub value: ::subxt::utils::AccountId32,
-			}
-			#[derive(
-				:: subxt :: ext :: codec :: Decode,
-				:: subxt :: ext :: codec :: Encode,
-				:: subxt :: ext :: scale_decode :: DecodeAsType,
-				:: subxt :: ext :: scale_encode :: EncodeAsType,
-				Debug,
-			)]
-			#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
-			pub struct GrantRoot {
-				pub asset_id: runtime_types::primitives::currency::CurrencyId,
-			}
-			#[derive(
-				:: subxt :: ext :: codec :: Decode,
-				:: subxt :: ext :: codec :: Encode,
-				:: subxt :: ext :: scale_decode :: DecodeAsType,
-				:: subxt :: ext :: scale_encode :: EncodeAsType,
-				Debug,
-			)]
-			#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
-			pub struct Remove {
-				pub asset_id: runtime_types::primitives::currency::CurrencyId,
-			}
-			pub struct TransactionApi;
-			impl TransactionApi {
-				pub fn set(
-					&self,
-					asset_id: runtime_types::primitives::currency::CurrencyId,
-					value: ::subxt::utils::AccountId32,
-				) -> ::subxt::tx::Payload<Set> {
-					::subxt::tx::Payload::new_static(
-						"GovernanceRegistry",
-						"set",
-						Set { asset_id, value },
-						[
-							38u8, 114u8, 100u8, 157u8, 78u8, 228u8, 102u8, 210u8, 55u8, 88u8, 52u8,
-							18u8, 121u8, 34u8, 119u8, 225u8, 203u8, 174u8, 141u8, 25u8, 51u8,
-							148u8, 40u8, 130u8, 222u8, 173u8, 49u8, 174u8, 41u8, 106u8, 3u8, 4u8,
-						],
-					)
-				}
-				pub fn grant_root(
-					&self,
-					asset_id: runtime_types::primitives::currency::CurrencyId,
-				) -> ::subxt::tx::Payload<GrantRoot> {
-					::subxt::tx::Payload::new_static(
-						"GovernanceRegistry",
-						"grant_root",
-						GrantRoot { asset_id },
-						[
-							108u8, 52u8, 102u8, 38u8, 197u8, 192u8, 164u8, 84u8, 15u8, 112u8,
-							103u8, 138u8, 152u8, 15u8, 42u8, 241u8, 242u8, 96u8, 189u8, 37u8, 49u8,
-							133u8, 70u8, 97u8, 144u8, 98u8, 115u8, 78u8, 151u8, 73u8, 45u8, 71u8,
-						],
-					)
-				}
-				pub fn remove(
-					&self,
-					asset_id: runtime_types::primitives::currency::CurrencyId,
-				) -> ::subxt::tx::Payload<Remove> {
-					::subxt::tx::Payload::new_static(
-						"GovernanceRegistry",
-						"remove",
-						Remove { asset_id },
-						[
-							44u8, 136u8, 86u8, 109u8, 250u8, 117u8, 227u8, 246u8, 40u8, 114u8,
-							204u8, 219u8, 208u8, 23u8, 103u8, 113u8, 249u8, 99u8, 199u8, 86u8,
-							25u8, 165u8, 160u8, 59u8, 187u8, 67u8, 192u8, 111u8, 177u8, 80u8,
-							254u8, 69u8,
-						],
-					)
-				}
-			}
-		}
-		pub type Event = runtime_types::pallet_governance_registry::pallet::Event;
-		pub mod events {
-			use super::runtime_types;
-			#[derive(
-				:: subxt :: ext :: codec :: Decode,
-				:: subxt :: ext :: codec :: Encode,
-				:: subxt :: ext :: scale_decode :: DecodeAsType,
-				:: subxt :: ext :: scale_encode :: EncodeAsType,
-				Debug,
-			)]
-			#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
-			pub struct Set {
-				pub asset_id: runtime_types::primitives::currency::CurrencyId,
-				pub value: ::subxt::utils::AccountId32,
-			}
-			impl ::subxt::events::StaticEvent for Set {
-				const PALLET: &'static str = "GovernanceRegistry";
-				const EVENT: &'static str = "Set";
-			}
-			#[derive(
-				:: subxt :: ext :: codec :: Decode,
-				:: subxt :: ext :: codec :: Encode,
-				:: subxt :: ext :: scale_decode :: DecodeAsType,
-				:: subxt :: ext :: scale_encode :: EncodeAsType,
-				Debug,
-			)]
-			#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
-			pub struct GrantRoot {
-				pub asset_id: runtime_types::primitives::currency::CurrencyId,
-			}
-			impl ::subxt::events::StaticEvent for GrantRoot {
-				const PALLET: &'static str = "GovernanceRegistry";
-				const EVENT: &'static str = "GrantRoot";
-			}
-			#[derive(
-				:: subxt :: ext :: codec :: Decode,
-				:: subxt :: ext :: codec :: Encode,
-				:: subxt :: ext :: scale_decode :: DecodeAsType,
-				:: subxt :: ext :: scale_encode :: EncodeAsType,
-				Debug,
-			)]
-			#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
-			pub struct Remove {
-				pub asset_id: runtime_types::primitives::currency::CurrencyId,
-			}
-			impl ::subxt::events::StaticEvent for Remove {
-				const PALLET: &'static str = "GovernanceRegistry";
-				const EVENT: &'static str = "Remove";
-			}
-		}
-		pub mod storage {
-			use super::runtime_types;
-			pub struct StorageApi;
-			impl StorageApi {
-				pub fn origins_by_asset_id(
-					&self,
-					_0: impl ::std::borrow::Borrow<runtime_types::primitives::currency::CurrencyId>,
-				) -> ::subxt::storage::address::Address<
-					::subxt::storage::address::StaticStorageMapKey,
-					runtime_types::composable_traits::governance::SignedRawOrigin<
-						::subxt::utils::AccountId32,
-					>,
-					::subxt::storage::address::Yes,
-					(),
-					::subxt::storage::address::Yes,
-				> {
-					::subxt::storage::address::Address::new_static(
-						"GovernanceRegistry",
-						"OriginsByAssetId",
-						vec![::subxt::storage::address::make_static_storage_map_key(_0.borrow())],
-						[
-							188u8, 140u8, 55u8, 118u8, 91u8, 24u8, 34u8, 167u8, 239u8, 89u8, 100u8,
-							77u8, 158u8, 53u8, 227u8, 26u8, 137u8, 42u8, 189u8, 220u8, 210u8, 52u8,
-							4u8, 178u8, 33u8, 226u8, 30u8, 231u8, 168u8, 115u8, 189u8, 238u8,
-						],
-					)
-				}
-				pub fn origins_by_asset_id_root(
-					&self,
-				) -> ::subxt::storage::address::Address<
-					::subxt::storage::address::StaticStorageMapKey,
-					runtime_types::composable_traits::governance::SignedRawOrigin<
-						::subxt::utils::AccountId32,
-					>,
-					(),
-					(),
-					::subxt::storage::address::Yes,
-				> {
-					::subxt::storage::address::Address::new_static(
-						"GovernanceRegistry",
-						"OriginsByAssetId",
-						Vec::new(),
-						[
-							188u8, 140u8, 55u8, 118u8, 91u8, 24u8, 34u8, 167u8, 239u8, 89u8, 100u8,
-							77u8, 158u8, 53u8, 227u8, 26u8, 137u8, 42u8, 189u8, 220u8, 210u8, 52u8,
-							4u8, 178u8, 33u8, 226u8, 30u8, 231u8, 168u8, 115u8, 189u8, 238u8,
 						],
 					)
 				}
@@ -21746,17 +21535,6 @@ pub mod api {
 						],
 					)
 				}
-				pub fn max_frames(&self) -> ::subxt::constants::Address<::core::primitive::u16> {
-					::subxt::constants::Address::new_static(
-						"Cosmwasm",
-						"MaxFrames",
-						[
-							116u8, 33u8, 2u8, 170u8, 181u8, 147u8, 171u8, 169u8, 167u8, 227u8,
-							41u8, 144u8, 11u8, 236u8, 82u8, 100u8, 74u8, 60u8, 184u8, 72u8, 169u8,
-							90u8, 208u8, 135u8, 15u8, 117u8, 10u8, 123u8, 128u8, 193u8, 29u8, 70u8,
-						],
-					)
-				}
 				pub fn max_code_size(&self) -> ::subxt::constants::Address<::core::primitive::u32> {
 					::subxt::constants::Address::new_static(
 						"Cosmwasm",
@@ -24559,24 +24337,6 @@ pub mod api {
 					pub fee_rate: runtime_types::sp_arithmetic::per_things::Permill,
 					pub owner_fee_rate: runtime_types::sp_arithmetic::per_things::Permill,
 					pub protocol_fee_rate: runtime_types::sp_arithmetic::per_things::Permill,
-				}
-			}
-			pub mod governance {
-				use super::runtime_types;
-				#[derive(
-					:: subxt :: ext :: codec :: Decode,
-					:: subxt :: ext :: codec :: Encode,
-					:: subxt :: ext :: scale_decode :: DecodeAsType,
-					:: subxt :: ext :: scale_encode :: EncodeAsType,
-					Debug,
-				)]
-				#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-				#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
-				pub enum SignedRawOrigin<_0> {
-					#[codec(index = 0)]
-					Root,
-					#[codec(index = 1)]
-					Signed(_0),
 				}
 			}
 			pub mod oracle {
@@ -28317,65 +28077,6 @@ pub mod api {
 				}
 			}
 		}
-		pub mod pallet_governance_registry {
-			use super::runtime_types;
-			pub mod pallet {
-				use super::runtime_types;
-				#[derive(
-					:: subxt :: ext :: codec :: Decode,
-					:: subxt :: ext :: codec :: Encode,
-					:: subxt :: ext :: scale_decode :: DecodeAsType,
-					:: subxt :: ext :: scale_encode :: EncodeAsType,
-					Debug,
-				)]
-				#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-				#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
-				pub enum Call {
-					#[codec(index = 0)]
-					set {
-						asset_id: runtime_types::primitives::currency::CurrencyId,
-						value: ::subxt::utils::AccountId32,
-					},
-					#[codec(index = 1)]
-					grant_root { asset_id: runtime_types::primitives::currency::CurrencyId },
-					#[codec(index = 2)]
-					remove { asset_id: runtime_types::primitives::currency::CurrencyId },
-				}
-				#[derive(
-					:: subxt :: ext :: codec :: Decode,
-					:: subxt :: ext :: codec :: Encode,
-					:: subxt :: ext :: scale_decode :: DecodeAsType,
-					:: subxt :: ext :: scale_encode :: EncodeAsType,
-					Debug,
-				)]
-				#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-				#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
-				pub enum Error {
-					#[codec(index = 0)]
-					NoneError,
-				}
-				#[derive(
-					:: subxt :: ext :: codec :: Decode,
-					:: subxt :: ext :: codec :: Encode,
-					:: subxt :: ext :: scale_decode :: DecodeAsType,
-					:: subxt :: ext :: scale_encode :: EncodeAsType,
-					Debug,
-				)]
-				#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
-				#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
-				pub enum Event {
-					#[codec(index = 0)]
-					Set {
-						asset_id: runtime_types::primitives::currency::CurrencyId,
-						value: ::subxt::utils::AccountId32,
-					},
-					#[codec(index = 1)]
-					GrantRoot { asset_id: runtime_types::primitives::currency::CurrencyId },
-					#[codec(index = 2)]
-					Remove { asset_id: runtime_types::primitives::currency::CurrencyId },
-				}
-			}
-		}
 		pub mod pallet_ibc {
 			use super::runtime_types;
 			pub mod errors {
@@ -32037,8 +31738,6 @@ pub mod api {
 				Tokens(runtime_types::orml_tokens::module::Call),
 				#[codec(index = 53)]
 				CurrencyFactory(runtime_types::pallet_currency_factory::pallet::Call),
-				#[codec(index = 54)]
-				GovernanceRegistry(runtime_types::pallet_governance_registry::pallet::Call),
 				#[codec(index = 55)]
 				CrowdloanRewards(runtime_types::pallet_crowdloan_rewards::pallet::Call),
 				#[codec(index = 56)]
@@ -32140,8 +31839,6 @@ pub mod api {
 				Tokens(runtime_types::orml_tokens::module::Event),
 				#[codec(index = 53)]
 				CurrencyFactory(runtime_types::pallet_currency_factory::pallet::Event),
-				#[codec(index = 54)]
-				GovernanceRegistry(runtime_types::pallet_governance_registry::pallet::Event),
 				#[codec(index = 55)]
 				CrowdloanRewards(runtime_types::pallet_crowdloan_rewards::pallet::Event),
 				#[codec(index = 56)]
