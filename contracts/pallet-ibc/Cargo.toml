@@ -142,7 +142,18 @@ std = [
 	"pallet-timestamp/std",
 	"ics08-wasm/std",
 	"pallet-ibc-ping?/std",
-	"simple-iavl/std"
+	"simple-iavl/std",
+	"chrono/std",
+	"ics23/std",
+	"orml-tokens/std",
+	"orml-traits/std",
+	"pallet-aura?/std",
+	"pallet-membership?/std",
+	"prost/std",
+	"sp-consensus-aura?/std",
+	"sp-consensus-slots?/std",
+	"sp-keystore/std",
+	"tendermint/std"
 ]
 
 runtime-benchmarks = [

@@ -27,17 +27,18 @@ light-client-common = { path = "../../../light-clients/common", default-features
 [features]
 default = ["std"]
 std = [
-    "anyhow/std",
-    "hash-db/std",
-    "sp-storage/std",
-    "finality-grandpa/std",
-    "codec/std",
-    "sp-core/std",
-    "sp-runtime/std",
-    "sp-io/std",
-    "frame-support/std",
-    "sp-consensus-grandpa/std",
-    "sp-std/std",
-    "sp-trie/std",
-    "light-client-common/std",
+	"anyhow/std",
+	"hash-db/std",
+	"sp-storage/std",
+	"finality-grandpa/std",
+	"codec/std",
+	"sp-core/std",
+	"sp-runtime/std",
+	"sp-io/std",
+	"frame-support/std",
+	"sp-consensus-grandpa/std",
+	"sp-std/std",
+	"sp-trie/std",
+	"light-client-common/std",
+	"log/std"
 ]

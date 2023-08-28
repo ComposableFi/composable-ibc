@@ -21,13 +21,14 @@ serde = { version = "1.0.144", features = ["derive"], optional = true }
 [features]
 default = ["std"]
 std = [
-    "sp-std/std",
-    "sp-core/std",
-    "beefy-primitives/std",
-    "codec/std",
-    "rs_merkle/std",
-    "mmr-lib/std",
-    "pallet-mmr-primitives/std",
-    "light-client-common/std",
-    "serde"
+	"sp-std/std",
+	"sp-core/std",
+	"beefy-primitives/std",
+	"codec/std",
+	"rs_merkle/std",
+	"mmr-lib/std",
+	"pallet-mmr-primitives/std",
+	"light-client-common/std",
+	"serde",
+	"serde?/std"
 ]

@@ -18,15 +18,30 @@ all-features = true
 [features]
 default = ["std"]
 std = [
-    "flex-error/std",
-    "flex-error/eyre_tracer",
-    "ibc-proto/std",
-    "ics23/std",
-    "clock",
-    "sp-std/std",
-    "codec/std",
-    "scale-info/std",
-    "log/std"
+	"flex-error/std",
+	"flex-error/eyre_tracer",
+	"ibc-proto/std",
+	"ics23/std",
+	"clock",
+	"sp-std/std",
+	"codec/std",
+	"scale-info/std",
+	"log/std",
+	"hex/std",
+	"num-traits/std",
+	"primitive-types/std",
+	"prost/std",
+	"serde/std",
+	"serde_json/std",
+	"sha2?/std",
+	"sha3/std",
+	"sp-core/std",
+	"subtle-encoding/std",
+	"tendermint/std",
+	"time/std",
+	"tracing/std",
+	"tracing-subscriber/std",
+	"uint/std"
 ]
 clock = ["tendermint/clock", "time/std"]
 cosmwasm = ["cosmwasm-schema"]

@@ -1516,7 +1516,7 @@ dependencies = [
  "serde_json",
  "subxt-codegen",
  "subxt-metadata",
- "syn 1.0.109",
+ "syn 2.0.29",
  "tokio",
  "wasm-testbed",
 ]
@@ -3119,6 +3119,7 @@ dependencies = [
  "hex",
  "rand_core 0.6.4",
  "sha2 0.9.9",
+ "thiserror",
  "zeroize",
 ]
 

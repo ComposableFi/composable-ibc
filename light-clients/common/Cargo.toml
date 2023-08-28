@@ -7,13 +7,17 @@ authors = ["Seun Lanlege <seunlanlege@gmail.com>"]
 [features]
 default = ["std"]
 std = [
-    "anyhow/std",
-    "codec/std",
-    "serde/std",
-    "hash-db/std",
-    "ibc/std",
-    "sp-storage/std",
-    "sp-trie/std",
+	"anyhow/std",
+	"codec/std",
+	"serde/std",
+	"hash-db/std",
+	"ibc/std",
+	"sp-storage/std",
+	"sp-trie/std",
+	"ibc-proto/std",
+	"sp-consensus-beefy/std",
+	"sp-core/std",
+	"sp-runtime/std"
 ]
 enable-subxt = ["subxt"]
 

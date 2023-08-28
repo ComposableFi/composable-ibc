@@ -471,8 +471,9 @@ where
 
 	/// Returns the session length in blocks
 	pub async fn session_length(&self) -> Result<u32, anyhow::Error> {
-		let metadata = self.relay_client.rpc().metadata(None).await?;
-		let metadata = metadata.pallet("Babe")?.constant("EpochDuration")?;
-		Ok(Decode::decode(&mut &metadata.value[..])?)
+		let metadata = self.relay_client.rpc().metadata().await?;
+		let metadata = metadata.pallet_by_name("Babe")?.constant_by_name("EpochDuration")?;
+		let md = metadata.value().to_vec();
+		Ok(Decode::decode(&mut md)?)
 	}
 }

@@ -9,14 +9,29 @@ all-features = true
 [features]
 default = ["std"]
 std = [
-    "flex-error/std",
-    "flex-error/eyre_tracer",
-    "ibc-proto/std",
-    "ics23/std",
-    "clock",
-    "codec/std",
-    "ibc/std",
-    "sp-core/std",
+	"flex-error/std",
+	"flex-error/eyre_tracer",
+	"ibc-proto/std",
+	"ics23/std",
+	"clock",
+	"codec/std",
+	"ibc/std",
+	"sp-core/std",
+	"borsh/std",
+	"bytes/std",
+	"num-traits/std",
+	"prost/std",
+	"ripemd?/std",
+	"serde/std",
+	"serde_json/std",
+	"sha2/std",
+	"sha3?/std",
+	"subtle-encoding/std",
+	"tendermint/std",
+	"time/std",
+	"tracing/std",
+	"tracing-subscriber/std",
+	"uint/std"
 ]
 clock = ["tendermint/clock", "time/std", "ibc/clock"]
 

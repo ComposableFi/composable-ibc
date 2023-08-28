@@ -27,10 +27,12 @@ use subxt::{
 	ext::{
 		scale_decode::DecodeAsType,
 		scale_encode::{EncodeAsFields, EncodeAsType},
-		sp_runtime::{scale_info::TypeDef, Either},
+		sp_runtime::scale_info::TypeDef,
 	},
-	metadata::{DecodeWithMetadata, EncodeWithMetadata, Metadata},
-	rpc::types::StorageEntryType,
+	metadata::{
+		types::{StorageEntryType, StorageHasher},
+		DecodeWithMetadata, EncodeWithMetadata, Metadata,
+	},
 	storage::{
 		address::{StaticStorageMapKey, Yes},
 		Address, StorageAddress,
@@ -38,7 +40,6 @@ use subxt::{
 	tx::Payload,
 	utils::Static,
 };
-use subxt_metadata::StorageHasher;
 
 /// This represents a statically generated storage lookup address.
 pub struct LocalAddress<StorageKey, ReturnTy, Fetchable, Defaultable, Iterable> {

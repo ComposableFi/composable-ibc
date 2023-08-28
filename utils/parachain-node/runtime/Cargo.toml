@@ -148,6 +148,10 @@ std = [
 	"orml-traits/std",
 	"simnode-apis/std",
 	"frame-benchmarking/std",
+	"cumulus-pallet-session-benchmarking/std",
+	"frame-system-benchmarking?/std",
+	"frame-try-runtime?/std",
+	"serde?/std"
 ]
 testing = [
 	"pallet-ibc/testing"

@@ -52,7 +52,7 @@ pub fn codegen<I: Input>(encoded: &mut I) -> anyhow::Result<String> {
 		.map(|raw| syn::parse_str(raw))
 		.collect::<Result<Vec<_>, _>>()?;
 	let mut derives = DerivesRegistry::new();
-	derives.extend_for_all(p.into_iter());
+	derives.extend_for_all(p.into_iter(), []);
 	let type_subsitutes = TypeSubstitutes::new();
 
 	let runtime_api = generator
