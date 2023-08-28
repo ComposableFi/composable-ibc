@@ -114,7 +114,7 @@ impl FinalityProtocol {
 		sp_core::H256: From<T::Hash>,
 		BTreeMap<H256, ParachainHeaderProofs>:
 			From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-		<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+		<T::ExtrinsicParams as ExtrinsicParams<T::Hash>>::OtherParams:
 			From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 		<T as subxt::Config>::AccountId: Send + Sync,
 		<T as subxt::Config>::Address: Send + Sync,
@@ -149,7 +149,7 @@ where
 	<<T as subxt::Config>::Header as Header>::Number:
 		From<u32> + Debug + Display + Ord + sp_runtime::traits::Zero + One,
 	<T as subxt::Config>::Header: Decode,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+	<T::ExtrinsicParams as ExtrinsicParams<T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	T::Hash: From<sp_core::H256>,
 	sp_core::H256: From<T::Hash>,
@@ -379,7 +379,7 @@ where
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+	<T::ExtrinsicParams as ExtrinsicParams<T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	<T as subxt::Config>::AccountId: Send + Sync,
@@ -450,7 +450,7 @@ where
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+	<T::ExtrinsicParams as ExtrinsicParams<T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	<T as subxt::Config>::AccountId: Send + Sync,
