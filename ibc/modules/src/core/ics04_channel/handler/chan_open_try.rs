@@ -84,9 +84,9 @@ where
 	}
 
 	// Proof verification in two steps:
-	// 1. Setup: build the Channel as we expect to find it on the other party.
-	//      the port should be identical with the port we're using; the channel id should not be set
-	//      since the counterparty cannot know yet which ID did we choose.
+	// 1. Setup: build the Channel as we expect to find it on the other party. the port should be
+	//    identical with the port we're using; the channel id should not be set since the
+	//    counterparty cannot know yet which ID did we choose.
 	let expected_counterparty = Counterparty::new(msg.port_id.clone(), None);
 	let counterparty = conn.counterparty();
 	let ccid = counterparty.connection_id().ok_or_else(|| {
