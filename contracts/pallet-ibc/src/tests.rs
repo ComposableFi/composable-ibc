@@ -675,11 +675,6 @@ fn on_deliver_ics20_recv_packet_with_flat_fee() {
 
 #[test]
 fn on_deliver_ics20_recv_packet_transfered_amount_less_then_flat_fee() {
-	env_logger::builder()
-		.filter_module("pallet-ibc", LevelFilter::Info)
-		.format_module_path(false)
-		.init();
-
 	let mut ext = new_test_ext();
 	ext.execute_with(|| {
 		// Create  a new account
