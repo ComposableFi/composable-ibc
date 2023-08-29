@@ -619,9 +619,15 @@ impl Chain for EthereumClient {
 			}
 			else if msg.type_url == channel_msgs::acknowledgement::TYPE_URL{
 				let msg = MsgAcknowledgement::decode_vec(&msg.value).unwrap();
+				let token = msg.into_token();
+				let _ = ibc_handler.send_and_get_tuple(token, "acknowledgePacket").await;
+				return Ok(());
 			}
 			else if msg.type_url == channel_msgs::recv_packet::TYPE_URL{
 				let msg = MsgRecvPacket::decode_vec(&msg.value).unwrap();
+				let token = msg.into_token();
+				let _ = ibc_handler.send_and_get_tuple(token, "recvPacket").await;
+				return Ok(());
 			}
 			
 
