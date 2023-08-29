@@ -7,7 +7,10 @@ use frame_support::{
 	pallet_prelude::ConstU32,
 	parameter_types,
 	traits::{
-		fungibles::{metadata::Mutate, Create, InspectMetadata},
+		fungibles::{
+			metadata::{Inspect, Mutate},
+			Create,
+		},
 		AsEnsureOriginWithArg, ConstU64, Everything,
 	},
 };
@@ -22,7 +25,7 @@ use sp_core::{
 	offchain::{testing::TestOffchainExt, OffchainDbExt, OffchainWorkerExt},
 	H256,
 };
-use sp_keystore::{testing::KeyStore, KeystoreExt};
+use sp_keystore::{testing::MemoryKeystore, KeystoreExt};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -93,6 +96,10 @@ impl balances::Config for Test {
 	type MaxLocks = ();
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ();
+	type MaxFreezes = ();
 }
 
 parameter_types! {
@@ -309,7 +316,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut ext: sp_io::TestExternalities =
 		system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
 	register_offchain_ext(&mut ext);
-	ext.register_extension(KeystoreExt(Arc::new(KeyStore::new())));
+	ext.register_extension(KeystoreExt(Arc::new(MemoryKeystore::new())));
 
 	ext.execute_with(|| {
 		Timestamp::set_timestamp(
@@ -333,7 +340,7 @@ where
 		if denom.contains("FLATFEE") {
 			id = 3;
 		}
-		if <<Test as Config>::Fungibles as InspectMetadata<AccountId>>::decimals(&id) == 0 {
+		if <<Test as Config>::Fungibles as Inspect<AccountId>>::decimals(id) == 0 {
 			<<Test as Config>::Fungibles as Create<AccountId>>::create(
 				id,
 				AccountId::new([0; 32]),
