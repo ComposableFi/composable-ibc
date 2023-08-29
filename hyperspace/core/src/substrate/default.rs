@@ -1,26 +1,26 @@
 use self::parachain_subxt::api::{
-	ibc::calls::{Deliver, Transfer},
-	ibc_ping::calls::SendPing,
+	ibc::calls::types::{Deliver, Transfer},
+	ibc_ping::calls::types::SendPing,
 	runtime_types::{
 		frame_system::{extensions::check_nonce::CheckNonce, EventRecord},
 		pallet_ibc::{events::IbcEvent as MetadataIbcEvent, TransferParams as RawTransferParams},
 		pallet_ibc_ping::SendPingParams as RawSendPingParams,
 	},
-	sudo::calls::Sudo,
+	sudo::calls::types::Sudo,
 };
+use super::{unimplemented, DummyBeefyAuthoritySet};
 use crate::{
 	define_any_wrapper, define_beefy_authority_set, define_event_record, define_events,
 	define_head_data, define_ibc_event_wrapper, define_id, define_para_lifecycle,
 	define_runtime_call, define_runtime_event, define_runtime_storage, define_runtime_transactions,
 	define_send_ping_params, define_transfer_params,
-	substrate::default::relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
 };
 use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
 use ibc_proto::google::protobuf::Any;
 use light_client_common::config::{
-	BeefyAuthoritySetT, EventRecordT, IbcEventsT, LocalAddress, ParaLifecycleT, RuntimeCall,
-	RuntimeStorage, RuntimeTransactions,
+	EventRecordT, IbcEventsT, LocalAddress, ParaLifecycleT, RuntimeCall, RuntimeStorage,
+	RuntimeTransactions,
 };
 use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;
@@ -75,22 +75,24 @@ define_head_data!(
 
 define_para_lifecycle!(DefaultParaLifecycle, ParaLifecycle);
 
-define_beefy_authority_set!(DefaultBeefyAuthoritySet, BeefyAuthoritySet<T>);
-
 define_runtime_storage!(
 	DefaultRuntimeStorage,
 	DefaultHeadData,
 	DefaultId,
 	DefaultParaLifecycle,
-	DefaultBeefyAuthoritySet<H256>,
+	DummyBeefyAuthoritySet,
 	parachain_subxt::api::storage().timestamp().now(),
 	|x| relaychain::api::storage().paras().heads(x),
 	|x| relaychain::api::storage().paras().para_lifecycles(x),
 	relaychain::api::storage().paras().parachains(),
 	relaychain::api::storage().grandpa().current_set_id(),
-	relaychain::api::storage().beefy().validator_set_id(),
-	relaychain::api::storage().beefy().authorities(),
-	relaychain::api::storage().mmr_leaf().beefy_next_authorities(),
+	unimplemented("relaychain::api::storage().beefy().validator_set_id()"),
+	unimplemented::<Address<StaticStorageMapKey, (), Yes, Yes, ()>>(
+		"relaychain::api::storage().beefy().authorities()"
+	),
+	unimplemented::<Address<StaticStorageMapKey, (), Yes, Yes, ()>>(
+		"relaychain::api::storage().mmr_leaf().beefy_next_authorities()"
+	),
 	relaychain::api::storage().babe().epoch_start()
 );
 
@@ -171,10 +173,7 @@ impl light_client_common::config::Config for DefaultConfig {
 
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,
-	) -> Result<
-		<Self::ExtrinsicParams as ExtrinsicParams<Self::Index, Self::Hash>>::OtherParams,
-		Error,
-	> {
+	) -> Result<<Self::ExtrinsicParams as ExtrinsicParams<Self::Hash>>::OtherParams, Error> {
 		let params =
 			ParachainExtrinsicsParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
 		Ok(params)
@@ -182,7 +181,6 @@ impl light_client_common::config::Config for DefaultConfig {
 }
 
 impl subxt::Config for DefaultConfig {
-	type Index = u32;
 	type Hash = H256;
 	type Hasher = subxt::config::substrate::BlakeTwo256;
 	type AccountId = AccountId32;

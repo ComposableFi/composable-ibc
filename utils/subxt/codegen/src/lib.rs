@@ -51,9 +51,10 @@ pub fn codegen<I: Input>(encoded: &mut I) -> anyhow::Result<String> {
 		.iter()
 		.map(|raw| syn::parse_str(raw))
 		.collect::<Result<Vec<_>, _>>()?;
-	let mut derives = DerivesRegistry::new();
+	// let mut derives = DerivesRegistry::new();
+	let mut derives = DerivesRegistry::with_default_derives(&crate_path);
 	derives.extend_for_all(p.into_iter(), []);
-	let type_subsitutes = TypeSubstitutes::new();
+	let type_subsitutes = TypeSubstitutes::with_default_substitutes(&crate_path);
 
 	let runtime_api = generator
 		.generate_runtime(item_mod, derives, type_subsitutes, crate_path, false)
