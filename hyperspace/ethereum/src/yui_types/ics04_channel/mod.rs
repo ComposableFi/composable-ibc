@@ -1,5 +1,5 @@
 use ethers::abi::Token;
-use ibc::core::{ics04_channel::{channel::{State, Order, Counterparty, ChannelEnd}, Version, msgs::{chan_open_init::MsgChannelOpenInit, chan_open_try::MsgChannelOpenTry, chan_open_ack::MsgChannelOpenAck, chan_open_confirm::MsgChannelOpenConfirm, chan_close_init::MsgChannelCloseInit, chan_close_confirm::MsgChannelCloseConfirm}}, ics24_host::identifier::{ChannelId, PortId}};
+use ibc::core::{ics04_channel::{channel::{State, Order, Counterparty, ChannelEnd}, Version, msgs::{chan_open_init::MsgChannelOpenInit, chan_open_try::MsgChannelOpenTry, chan_open_ack::MsgChannelOpenAck, chan_open_confirm::MsgChannelOpenConfirm, chan_close_init::MsgChannelCloseInit, chan_close_confirm::MsgChannelCloseConfirm, recv_packet::MsgRecvPacket, acknowledgement::MsgAcknowledgement}, packet::Packet}, ics24_host::identifier::{ChannelId, PortId}};
 
 
 use super::IntoToken;
@@ -126,6 +126,48 @@ impl IntoToken for MsgChannelCloseConfirm{
             self.port_id.into_token(),
             self.channel_id.into_token(),
             self.proofs.object_proof().as_bytes().into_token(),
+            self.proofs.height().into_token()
+        ])
+    }
+}
+
+impl IntoToken for Packet{
+    fn into_token(self) -> Token {
+        Token::Tuple(vec![
+            Token::Uint(self.sequence.0.into()),
+            self.source_port.into_token(),
+            self.source_channel.into_token(),
+            self.destination_port.into_token(),
+            self.destination_channel.into_token(),
+            self.data.into_token(),
+            self.timeout_height.into_token(),
+            Token::Uint(self.timeout_timestamp.as_nanoseconds().into()),
+        ])
+    }
+}
+impl IntoToken for MsgAcknowledgement{
+    fn into_token(self) -> Token {
+        Token::Tuple(vec![
+            //packet
+            self.packet.into_token(),
+            //acknowledgement
+            self.acknowledgement.into_bytes().into_token(),
+            //proof
+            self.proofs.object_proof().as_bytes().into_token(),
+            //proofHeight
+            self.proofs.height().into_token()
+        ])
+    }
+}
+
+impl IntoToken for MsgRecvPacket{
+    fn into_token(self) -> Token {
+        Token::Tuple(vec![
+            //packet
+            self.packet.into_token(),
+            //proof
+            self.proofs.object_proof().as_bytes().into_token(),
+            //proofHeight
             self.proofs.height().into_token()
         ])
     }

@@ -19,7 +19,7 @@ use hyperspace_ethereum::{
 use ibc::{
 	core::{
 		ics02_client::{height::Height, trust_threshold::TrustThreshold, msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient}},
-		ics04_channel::{packet::{Packet, Sequence}, channel::{ChannelEnd, State, Order}, Version, msgs::{chan_open_init::MsgChannelOpenInit, chan_open_confirm::MsgChannelOpenConfirm}, msgs::{chan_open_try::MsgChannelOpenTry, chan_close_confirm::MsgChannelCloseConfirm}, msgs::{chan_open_ack::MsgChannelOpenAck, chan_close_init::MsgChannelCloseInit}},
+		ics04_channel::{packet::{Packet, Sequence}, channel::{ChannelEnd, State, Order}, Version, msgs::{chan_open_init::MsgChannelOpenInit, chan_open_confirm::MsgChannelOpenConfirm}, msgs::{chan_open_try::MsgChannelOpenTry, chan_close_confirm::MsgChannelCloseConfirm, recv_packet::MsgRecvPacket, acknowledgement::{MsgAcknowledgement, Acknowledgement}}, msgs::{chan_open_ack::MsgChannelOpenAck, chan_close_init::MsgChannelCloseInit}},
 		ics24_host::identifier::{ChannelId, PortId, ConnectionId, ChainId}, ics03_connection::{connection::Counterparty, msgs::{conn_open_init::MsgConnectionOpenInit, conn_open_ack::MsgConnectionOpenAck, conn_open_confirm::MsgConnectionOpenConfirm}}, ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
 	},
 	timestamp::Timestamp, protobuf::{types::SignedHeader, Protobuf}, proofs::{Proofs, ConsensusProof}, tx_msg::Msg,
@@ -591,13 +591,39 @@ async fn relayer_channel_tests(){
 
 	/*______________________________________________________________________________*/
 	//channelCloseConfirm
-	let msg = MsgChannelCloseConfirm::new(port_id.clone(), ChannelId::new(0), proofs, signer.clone());
+	let msg = MsgChannelCloseConfirm::new(port_id.clone(), ChannelId::new(0), proofs.clone(), signer.clone());
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 	let msg = MsgChannelCloseConfirm::decode_vec(&msg.value).unwrap();
 	let _ = ibc_handler_mock.send_and_get_tuple(msg.into_token(), "channelCloseConfirm").await;
 	/*______________________________________________________________________________*/
 
 
+	/*______________________________________________________________________________*/
+	//MsgRecvPacket
+	let packet = Packet {
+		sequence: Sequence(1),
+		source_port: port_id.clone(),
+		source_channel: ChannelId::new(0),
+		destination_port: port_id,
+		destination_channel: ChannelId::new(0),
+		data: vec![1,2,3],
+		timeout_height: Height { revision_number: 1, revision_height: 1 },
+		timeout_timestamp: Timestamp::now()
+	};
+	let msg = MsgRecvPacket::new(packet.clone(), proofs.clone(), signer.clone());
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let msg = MsgRecvPacket::decode_vec(&msg.value).unwrap();
+	let _ = ibc_handler_mock.send_and_get_tuple(msg.into_token(), "recvPacket").await;
+	/*______________________________________________________________________________*/
+
+
+	/*______________________________________________________________________________*/
+	//MsgAcknowledgement
+	let msg = MsgAcknowledgement::new(packet, vec![1,2,3].into(), proofs, signer);
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let msg = MsgAcknowledgement::decode_vec(&msg.value).unwrap();
+	let _ = ibc_handler_mock.send_and_get_tuple(msg.into_token(), "acknowledgePacket").await;
+	/*______________________________________________________________________________*/
 }
 
 
