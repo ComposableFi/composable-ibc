@@ -49,7 +49,6 @@ use ibc::{
 	tx_msg::Msg,
 };
 use ibc_primitives::{get_channel_escrow_address, HandlerMessage, IbcHandler};
-use log::LevelFilter;
 use sp_core::Pair;
 use sp_runtime::{
 	traits::{Bounded, IdentifyAccount},
