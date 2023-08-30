@@ -337,14 +337,6 @@ impl AnyClientMessage {
 		))
 	}
 
-	pub fn unpack_recursive(&self) -> &Self {
-		match self {
-			Self::Wasm(ics08_wasm::client_message::ClientMessage{inner, data}) =>
-				&**inner,
-			_ => self,
-		}
-	}
-
 	pub fn unpack_recursive_into(self) -> Self {
 		match self {
 			Self::Wasm(ics08_wasm::client_message::ClientMessage{inner, data}) =>

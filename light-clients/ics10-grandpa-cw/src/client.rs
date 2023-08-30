@@ -56,11 +56,8 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientTypes for Context<'a
 
 impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'a, H> {
 	fn client_type(&self, client_id: &ClientId) -> Result<ClientType, Error> {
-		log!(self, "in client : [client_type] >> client_id = {:?}", client_id);
-
 		let clients = ReadonlyClients::new(self.storage());
 		if !clients.contains_key(client_id) {
-			log!(self, "in client : [client_type] >> read client_type is None");
 			return Err(Error::client_not_found(client_id.clone()))
 		}
 
@@ -76,18 +73,15 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'
 		match ClientType::from_str(&data) {
 			Err(_err) => Err(Error::unknown_client_type(data.to_string())),
 			Ok(val) => {
-				log!(self, "in client : [client_type] >> client_type : {:?}", val);
 				Ok(val)
 			},
 		}
 	}
 
 	fn client_state(&self, client_id: &ClientId) -> Result<ClientState<H>, Error> {
-		log!(self, "in client : [client_state] >> client_id = {:?}", client_id);
 		let client_states = ReadonlyClientStates::new(self.storage());
 		let data = client_states.get().ok_or_else(|| Error::client_not_found(client_id.clone()))?;
 		let state = Self::decode_client_state(&data)?;
-		log!(self, "in client : [client_state] >> any client_state: {:?}", state);
 		Ok(state)
 	}
 
@@ -96,23 +90,12 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<ConsensusState, Error> {
-		log!(self, "in client : [consensus_state] >> height = {:?}", height);
 
 		let consensus_states = ReadonlyConsensusStates::new(self.storage());
 		let value = consensus_states
 			.get(height)
 			.ok_or_else(|| Error::consensus_state_not_found(client_id.clone(), height))?;
-		log!(
-			self,
-			"in client : [consensus_state] >> consensus_state (raw): {}",
-			hex::encode(&value)
-		);
 		let any_consensus_state = Self::decode_consensus_state(&value)?;
-		log!(
-			self,
-			"in client : [consensus_state] >> any consensus state = {:?}",
-			any_consensus_state
-		);
 		Ok(any_consensus_state)
 	}
 
@@ -150,7 +133,6 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'
 	}
 
 	fn host_height(&self) -> Height {
-		log!(self, "in client: [host_height]");
 		Height::new(self.env.block.height, 0)
 	}
 
@@ -177,7 +159,6 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'
 
 	fn client_counter(&self) -> Result<u64, Error> {
 		let count = CLIENT_COUNTER.load(self.storage()).unwrap_or_default();
-		log!(self, "in client : [client_counter] >> client_counter: {:?}", count);
 		Ok(count as u64)
 	}
 }
@@ -196,7 +177,6 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientKeeper for Context<'
 		client_id: ClientId,
 		client_state: Self::AnyClientState,
 	) -> Result<(), Error> {
-		log!(self, "in client : [store_client_state]");
 		let client_states = ReadonlyClientStates::new(self.storage());
 		// let data = client_states.get().ok_or_else(||
 		// Error::client_not_found(client_id.clone()))?;
@@ -223,7 +203,6 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientKeeper for Context<'
 		};
 
 		let vec1 = Self::encode_client_state(client_state, code_hash)?;
-		log!(self, "in cliden : [store_client_state] >> wasm client state (raw)");
 		let mut client_state_storage = ClientStates::new(self.storage_mut());
 		client_state_storage.insert(vec1);
 		Ok(())
@@ -235,19 +214,7 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientKeeper for Context<'
 		height: Height,
 		consensus_state: Self::AnyConsensusState,
 	) -> Result<(), Error> {
-		log!(
-			self,
-			"in client : [store_consensus_state] >> client_id = {:?}, height = {:?}",
-			client_id,
-			height,
-		);
-
 		let encoded = Self::encode_consensus_state(consensus_state);
-		log!(
-			self,
-			"in client : [store_consensus_state] >> wasm consensus state (raw) = {}",
-			hex::encode(&encoded)
-		);
 		let mut consensus_states = ConsensusStates::new(self.storage_mut());
 		consensus_states.insert(height, encoded);
 		Ok(())

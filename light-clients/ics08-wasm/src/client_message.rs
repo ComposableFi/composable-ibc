@@ -12,36 +12,41 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+#[cfg(feature = "cosmwasm")]
+use crate::msg::Base64;
 use crate::Bytes;
 use alloc::{
 	boxed::Box,
-	string::ToString,
+	string::{String, ToString},
 	vec::Vec,
 };
-use core::fmt::Display;
+use core::{
+	convert::Infallible,
+	fmt::{Debug, Display},
+};
+#[cfg(feature = "cosmwasm")]
+use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::ics02_client::{client_message::ClientMessage as IbcClientMessage, error::Error},
 	protobuf::Protobuf,
 };
 use ibc_proto::google::protobuf::Any;
+use ibc_proto::ibc::lightclients::wasm::v1::ClientMessage as RawClientMessage;
+use prost::Message;
 
 pub const WASM_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.ClientMessage";
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+//#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "cosmwasm", cw_serde)]
+#[cfg_attr(not(feature = "cosmwasm"), derive(Clone, Debug, PartialEq))]
+#[derive(Eq)]
 pub struct ClientMessage<AnyClientMessage> {
+	#[cfg_attr(feature = "cosmwasm", serde(skip))]
+	#[cfg_attr(feature = "cosmwasm", schemars(skip))]
 	pub inner: Box<AnyClientMessage>,
+	#[cfg_attr(feature = "cosmwasm", schemars(with = "String"))]
+	#[cfg_attr(feature = "cosmwasm", serde(with = "Base64", default))]
 	pub data: Bytes,
-}
-
-impl<AnyClientMessage> ClientMessage<AnyClientMessage> {
-	pub fn inner(&self) -> &AnyClientMessage {
-		&self.inner
-	}
-
-	pub fn into_inner(self) -> AnyClientMessage {
-		*self.inner
-	}
 }
 
 impl<AnyClientMessage> IbcClientMessage for ClientMessage<AnyClientMessage>
@@ -55,43 +60,52 @@ where
 	}
 }
 
-impl<AnyClientMessage> Protobuf<Any> for ClientMessage<AnyClientMessage>
+impl<AnyClientMessage> ClientMessage<AnyClientMessage>
 where
 	AnyClientMessage: Clone,
-	AnyClientMessage: TryFrom<Any>,
+	AnyClientMessage: TryFrom<Any> + IbcClientMessage,
 	<AnyClientMessage as TryFrom<Any>>::Error: Display,
 {
-}
-
-impl<AnyClientMessage> TryFrom<Any> for ClientMessage<AnyClientMessage>
-where
-	AnyClientMessage: Clone,
-	AnyClientMessage: TryFrom<Any>,
-	<AnyClientMessage as TryFrom<Any>>::Error: Display,
-{
-	type Error = Error;
-
-	fn try_from(any: Any) -> Result<Self, Self::Error> {
-		let msg = match &*any.type_url {
-			WASM_CLIENT_MESSAGE_TYPE_URL =>
-				ClientMessage::decode(&*any.value).map_err(|e| Error::decode_raw_header(e))?,
-			_ => return Err(Error::malformed_header()), // TODO: choose a better error
-		};
-
-		Ok(msg)
-	}
-}
-
-impl<AnyClientMessage> From<ClientMessage<AnyClientMessage>> for Any
-where
-	AnyClientMessage: Clone,
-	AnyClientMessage: TryFrom<Any>,
-	<AnyClientMessage as TryFrom<Any>>::Error: Display,
-{
-	fn from(msg: ClientMessage<AnyClientMessage>) -> Self {
+	pub fn to_any(&self) -> Any {
 		Any {
-			value: msg.encode_vec().expect("encode client message"),
+			value: self.encode_vec().expect("encode client message"),
 			type_url: WASM_CLIENT_MESSAGE_TYPE_URL.to_string(),
 		}
 	}
 }
+
+impl<AnyClientMessage> TryFrom<RawClientMessage> for ClientMessage<AnyClientMessage>
+where
+	AnyClientMessage: Clone + TryFrom<Any>,
+	<AnyClientMessage as TryFrom<Any>>::Error: Display,
+{
+	type Error = String;
+
+	fn try_from(raw: RawClientMessage) -> Result<Self, Self::Error> {
+		let any = Any::decode(&mut &raw.data[..])
+			.map_err(|e| format!("failed to decode ClientMessage::data into Any: {}", e))?;
+		let inner = AnyClientMessage::try_from(any).map_err(
+			|e| {
+				format!("failed to decode ClientMessage::data into ClientMessage: {}", e)
+			})?;
+		Ok(Self { data: raw.data, inner: Box::new(inner)})
+
+	}
+}
+
+impl<AnyClientMessage: IbcClientMessage> From<ClientMessage<AnyClientMessage>>
+	for RawClientMessage
+{
+	fn from(value: ClientMessage<AnyClientMessage>) -> Self {
+		Self { data: value.data }
+	}
+}
+
+impl<AnyClientMessage> Protobuf<RawClientMessage> for ClientMessage<AnyClientMessage>
+where
+	AnyClientMessage: Clone + IbcClientMessage + TryFrom<Any>,
+	<AnyClientMessage as TryFrom<Any>>::Error: Display,
+{
+}
+
+

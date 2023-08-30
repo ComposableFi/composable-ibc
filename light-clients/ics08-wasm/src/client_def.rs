@@ -81,7 +81,7 @@ where
 			ctx,
 			client_id,
 			*client_state.inner,
-			client_msg.into_inner(),
+			*client_msg.inner,
 		)
 	}
 
@@ -96,7 +96,7 @@ where
 			ctx,
 			client_id,
 			*client_state.inner,
-			client_msg.into_inner(),
+			*client_msg.inner,
 		)?;
 		let client_state = ClientState {
 			data: client_state.data.clone(),
@@ -115,7 +115,7 @@ where
 	) -> Result<Self::ClientState, Error> {
 		let inner_client_state = self
 			.inner
-			.update_state_on_misbehaviour(*client_state.inner, client_msg.into_inner())?;
+			.update_state_on_misbehaviour(*client_state.inner, *client_msg.inner)?;
 		Ok(ClientState {
 			data: client_state.data.clone(),
 			code_hash: client_state.code_hash.clone(),
@@ -136,7 +136,7 @@ where
 			ctx,
 			client_id,
 			*client_state.inner,
-			client_msg.into_inner(),
+			*client_msg.inner,
 		)
 	}
 
