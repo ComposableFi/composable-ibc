@@ -69,7 +69,7 @@ pub struct Cmd {
 	pub port_id: Option<String>,
 	/// Connection delay period in seconds
 	#[clap(long)]
-	pub delay_period: Option<std::num::NonZeroU32>,
+	delay_period: Option<std::num::NonZeroU32>,
 	/// Channel order
 	#[clap(long)]
 	pub order: Option<String>,
@@ -191,7 +191,7 @@ impl Cmd {
 	}
 
 	pub async fn create_connection(&self) -> Result<Config> {
-		let delay_period_seconds: NonZeroU64 = self.delay_period.unwrap().into();
+		let delay_period_seconds: NonZeroU64 = self.delay_period_seconds.into().into();
 		let delay = Duration::from_secs(delay_period_seconds.into());
 		let mut config = self.parse_config().await?;
 		let mut chain_a = config.chain_a.clone().into_client().await?;
