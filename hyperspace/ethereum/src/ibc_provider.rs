@@ -1,7 +1,7 @@
 use ethers::{
-	abi::{encode, AbiEncode, Detokenize, ParamType, Token, Tokenizable},
-	contract::abigen,
-	prelude::Topic,
+	abi::{encode, AbiEncode, Detokenize, ParamType, RawLog, Token, Tokenizable},
+	contract::{abigen, EthEvent},
+	prelude::{Block, Topic},
 	providers::Middleware,
 	types::{
 		BlockId, BlockNumber, EIP1186ProofResponse, Filter, StorageProof, ValueOrArray, H256, U256,
@@ -42,17 +42,27 @@ use ibc_proto::{
 use primitives::{IbcProvider, UpdateType};
 use prost::Message;
 use std::{
-	collections::HashSet, future::Future, pin::Pin, str::FromStr, sync::Arc, time::Duration,
+	collections::{HashMap, HashSet},
+	future::Future,
+	pin::Pin,
+	str::FromStr,
+	sync::Arc,
+	time::Duration,
 };
 
-use crate::client::{
-	ClientError, EthereumClient, COMMITMENTS_STORAGE_INDEX, CONNECTIONS_STORAGE_INDEX,
+use crate::{
+	client::{ClientError, EthereumClient, COMMITMENTS_STORAGE_INDEX, CONNECTIONS_STORAGE_INDEX},
+	events::TryFromEvent,
 };
 use futures::{FutureExt, Stream, StreamExt};
 use ibc::{
 	applications::transfer::PrefixedCoin,
-	core::ics04_channel::channel::{Order, State},
+	core::ics04_channel::{
+		channel::{Order, State},
+		events::SendPacket,
+	},
 	events::IbcEvent,
+	protobuf::Protobuf,
 };
 use ibc_proto::{
 	google::protobuf::Any,
@@ -63,285 +73,21 @@ use ibc_proto::{
 	},
 };
 use ibc_rpc::{IbcApiClient, PacketInfo};
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
+use icsxx_ethereum::client_state::ClientState;
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 
 abigen!(
-	IbcHandlerAbi,
-	r#"[
-	{
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint64",
-        "name": "sequence",
-        "type": "uint64"
-      },
-      {
-        "indexed": true,
-        "internalType": "string",
-        "name": "sourcePort",
-        "type": "string"
-      },
-      {
-        "indexed": true,
-        "internalType": "string",
-        "name": "sourceChannel",
-        "type": "string"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint64",
-            "name": "revision_number",
-            "type": "uint64"
-          },
-          {
-            "internalType": "uint64",
-            "name": "revision_height",
-            "type": "uint64"
-          }
-        ],
-        "indexed": false,
-        "internalType": "struct HeightData",
-        "name": "timeoutHeight",
-        "type": "tuple"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint64",
-        "name": "timeoutTimestamp",
-        "type": "uint64"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      }
-    ],
-    "name": "SendPacket",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint64",
-        "name": "sequence",
-        "type": "uint64"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "source_port",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "source_channel",
-        "type": "string"
-      },
-      {
-        "indexed": true,
-        "internalType": "string",
-        "name": "destination_port",
-        "type": "string"
-      },
-      {
-        "indexed": true,
-        "internalType": "string",
-        "name": "destination_channel",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint64",
-            "name": "revision_number",
-            "type": "uint64"
-          },
-          {
-            "internalType": "uint64",
-            "name": "revision_height",
-            "type": "uint64"
-          }
-        ],
-        "indexed": false,
-        "internalType": "struct HeightData",
-        "name": "timeout_height",
-        "type": "tuple"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint64",
-        "name": "timeout_timestamp",
-        "type": "uint64"
-      }
-    ],
-    "name": "RecvPacket",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "components": [
-          {
-            "internalType": "string",
-            "name": "portId",
-            "type": "string"
-          },
-          {
-            "components": [
-              {
-                "internalType": "enum ChannelState",
-                "name": "state",
-                "type": "uint8"
-              },
-              {
-                "internalType": "enum ChannelOrder",
-                "name": "ordering",
-                "type": "uint8"
-              },
-              {
-                "components": [
-                  {
-                    "internalType": "string",
-                    "name": "port_id",
-                    "type": "string"
-                  },
-                  {
-                    "internalType": "string",
-                    "name": "channel_id",
-                    "type": "string"
-                  }
-                ],
-                "internalType": "struct ChannelCounterpartyData",
-                "name": "counterparty",
-                "type": "tuple"
-              },
-              {
-                "internalType": "string[]",
-                "name": "connection_hops",
-                "type": "string[]"
-              },
-              {
-                "internalType": "string",
-                "name": "version",
-                "type": "string"
-              }
-            ],
-            "internalType": "struct ChannelData",
-            "name": "channel",
-            "type": "tuple"
-          }
-        ],
-        "internalType": "struct IBCMsgsMsgChannelOpenInit",
-        "name": "msg_",
-        "type": "tuple"
-      }
-    ],
-    "name": "channelOpenInit",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "channelId",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "connectionId",
-        "type": "string"
-      },
-      {
-        "components": [
-          {
-            "internalType": "string",
-            "name": "client_id",
-            "type": "string"
-          },
-          {
-            "components": [
-              {
-                "internalType": "string",
-                "name": "identifier",
-                "type": "string"
-              },
-              {
-                "internalType": "string[]",
-                "name": "features",
-                "type": "string[]"
-              }
-            ],
-            "internalType": "struct VersionData[]",
-            "name": "versions",
-            "type": "tuple[]"
-          },
-          {
-            "internalType": "enum ConnectionEndState",
-            "name": "state",
-            "type": "uint8"
-          },
-          {
-            "components": [
-              {
-                "internalType": "string",
-                "name": "client_id",
-                "type": "string"
-              },
-              {
-                "internalType": "string",
-                "name": "connection_id",
-                "type": "string"
-              },
-              {
-                "components": [
-                  {
-                    "internalType": "bytes",
-                    "name": "key_prefix",
-                    "type": "bytes"
-                  }
-                ],
-                "internalType": "struct MerklePrefixData",
-                "name": "prefix",
-                "type": "tuple"
-              }
-            ],
-            "internalType": "struct CounterpartyData",
-            "name": "counterparty",
-            "type": "tuple"
-          },
-          {
-            "internalType": "uint64",
-            "name": "delay_period",
-            "type": "uint64"
-          }
-        ],
-        "internalType": "struct ConnectionEndData",
-        "name": "connection",
-        "type": "tuple"
-      }
-    ],
-    "name": "setConnection",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
-	]"#
+	IbcClientAbi,
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-client-abi.json";
+
+	IbcConnectionAbi,
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-connection-abi.json";
+
+	IbcChannelAbi,
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-channel-abi.json";
+
+	IbcPacketAbi,
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-packet-abi.json";
 );
 
 impl From<HeightData> for Height {
@@ -385,9 +131,11 @@ where
 	}
 }
 
+const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 100;
+
 #[async_trait::async_trait]
 impl IbcProvider for EthereumClient {
-	type FinalityEvent = FinalityEvent;
+	type FinalityEvent = Block<H256>;
 
 	type TransactionId = ();
 
@@ -403,106 +151,101 @@ impl IbcProvider for EthereumClient {
 	where
 		T: primitives::Chain,
 	{
-		tracing::debug!(?finality_event, "querying latest ibc events");
-		tracing::warn!("TODO: implement query_latest_ibc_events");
-		Ok(vec![])
+		let client_id = self.client_id();
+		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
+		let latest_cp_client_state =
+			counterparty.query_client_state(latest_cp_height, client_id.clone()).await?;
+		let client_state_response = latest_cp_client_state.client_state.ok_or_else(|| {
+			ClientError::Other("counterparty returned empty client state".to_string())
+		})?;
+		let client_state = ClientState::<HostFunctionsManager>::decode_vec(
+			&client_state_response.value,
+		)
+		.map_err(|_| ClientError::Other("failed to decode client state response".to_string()))?;
+		let latest_cp_client_height = client_state.latest_height().revision_height;
+		let latest_height = self.latest_height_and_timestamp().await?.0;
+		let latest_revision = latest_height.revision_number;
+
+		// tracing::debug!(?finality_event, "querying latest ibc events");
+		// tracing::warn!("TODO: implement query_latest_ibc_events");
+		let from = latest_cp_client_height;
+		let to = finality_event
+			.number
+			.unwrap()
+			.as_u64()
+			.min(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER);
+		println!("Getting blocks {}..{}", from, to);
+		let filter =
+			Filter::new().from_block(from).to_block(to).address(self.yui.diamond.address());
+		let client = self.clone();
+		let logs = self.http_rpc.get_logs(&filter).await.unwrap();
+		let mut events = vec![];
+
+		// for log in logs {
+		// 	let raw_log = RawLog::from(log.clone());
+		// 	let height = Height::new(0, log.block_number.unwrap().as_u64());
+		// 	let topic0 = log.topics[0];
+		//
+		// 	let mut maybe_ibc_event = if topic0 == CreateClientFilter::signature() {
+		// 		let event = CreateClientFilter::decode_log(&raw_log).expect("decode event");
+		// 		IbcEvent::try_from_event(&client, event, log, height).await
+		// 	} else {
+		// 		eprintln!("unknown event: {}", log.log_type.unwrap_or(format!("{topic0:?}")));
+		// 		continue
+		// 	};
+		//
+		// 	match maybe_ibc_event {
+		// 		Ok(ev) => todo!(),
+		// 		Err(err) => {
+		// 			eprintln!("failed to decode event: {err}");
+		// 			None
+		// 		},
+		// 	}
+		// }
+
+		Ok(events)
 	}
 
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
-		fn decode_string(bytes: &[u8]) -> String {
-			ethers::abi::decode(&[ParamType::String], &bytes)
-				.unwrap()
-				.into_iter()
-				.next()
-				.unwrap()
-				.to_string()
-		}
+		let ibc_address = self.config.ibc_handler_address;
+		let client = self.clone();
 
-		fn decode_client_id_log(log: ethers::types::Log) -> IbcEvent {
-			let client_id = decode_string(&log.data.0);
-			IbcEvent::CreateClient(CreateClient(Attributes {
-				height: Height::default(),
-				client_id: ClientId::from_str(&client_id).unwrap(),
-				client_type: "00-uninitialized".to_owned(),
-				consensus_height: Height::default(),
-			}))
-		}
+		let ws = self.websocket_provider().await.unwrap();
+		(async_stream::stream! {
+			let mut events_stream = ws.subscribe_logs(
+				 &Filter::new().from_block(BlockNumber::Latest).address(ibc_address),
+			)
+			.await
+			.unwrap()
+			.filter_map(|log| async {
+				let raw_log = RawLog::from(log.clone());
+				let height = Height::new(0, log.block_number.unwrap().as_u64());
+				let topic0 = log.topics[0];
 
-		let ibc_handler_address = self.config.ibc_handler_address;
+				let mut maybe_ibc_event = if topic0 == CreateClientFilter::signature() {
+					let event = CreateClientFilter::decode_log(&raw_log).expect("decode event");
+					IbcEvent::try_from_event(&client, event, log, height).await
+				} else {
+					eprintln!(
+						"unknown event: {}",
+						log.log_type.unwrap_or(format!("{topic0:?}"))
+					);
+					return None
+				};
 
-		match self.websocket_provider().await {
-			Ok(ws) => async_stream::stream! {
-				let channel_id_stream = ws
-					.subscribe_logs(
-						&Filter::new()
-							.from_block(BlockNumber::Latest)
-							.address(ibc_handler_address)
-							.event("GeneratedChannelIdentifier(string)"),
-					)
-					.await
-					.expect("failed to subscribe to GeneratedChannelIdentifier event")
-					.map(decode_client_id_log);
-
-				let client_id_stream = ws
-					.subscribe_logs(
-						&Filter::new()
-							.from_block(BlockNumber::Latest)
-							.address(ibc_handler_address)
-							.event("GeneratedClientIdentifier(string)"),
-					)
-					.await
-					.expect("failed to subscribe to GeneratedClientId event")
-					.map(decode_client_id_log);
-
-				let connection_id_stream = ws
-					.subscribe_logs(
-						&Filter::new()
-							.from_block(BlockNumber::Latest)
-							.address(ibc_handler_address)
-							.event("GeneratedConnectionIdentifier(string)"),
-					)
-					.await
-					.expect("failed to subscribe to GeneratedConnectionIdentifier event")
-					.map(decode_client_id_log);
-
-				let recv_packet_stream = ws
-					.subscribe_logs(
-						&Filter::new()
-							.from_block(BlockNumber::Latest)
-							.address(ibc_handler_address)
-							.event("RecvPacket((uint64,string,string,string,string,bytes,(uint64,uint64),uint64))"),
-					)
-					.await
-					.expect("failed to subscribe to RecvPacket event")
-					.map(decode_client_id_log);
-
-				let send_packet_stream = ws
-					.subscribe_logs(
-						&Filter::new()
-							.from_block(BlockNumber::Latest)
-							.address(ibc_handler_address)
-							.event("SendPacket(uint64,string,string,(uint64,uint64),uint64,bytes)"),
-					)
-					.await
-					.expect("failed to subscribe to SendPacket event")
-					.map(decode_client_id_log);
-
-				let inner = futures::stream::select_all([
-					channel_id_stream,
-					client_id_stream,
-					connection_id_stream,
-					recv_packet_stream,
-					send_packet_stream
-				]);
-				futures::pin_mut!(inner);
-
-				while let Some(ev) = inner.next().await {
-					yield ev
+				match maybe_ibc_event {
+					Ok(ev) => Some(ev),
+					Err(err) => {
+						eprintln!("failed to decode event: {err}");
+						None
+					},
 				}
+			}).boxed();
+
+			while let Some(ev) = events_stream.next().await {
+				yield ev
 			}
-			.left_stream(),
-			Err(_) => futures::stream::empty().right_stream(),
-		}
+		})
 		.boxed()
 	}
 
@@ -1036,7 +779,8 @@ impl IbcProvider for EthereumClient {
 			.from_block(BlockNumber::Earliest) // TODO: use contract creation height
 			.to_block(BlockNumber::Latest)
 			.topic1(ValueOrArray::Array(
-				seqs.into_iter()
+				seqs.clone()
+					.into_iter()
 					.map(|seq| {
 						let bytes = encode(&[Token::Uint(seq.into())]);
 						H256::from_slice(bytes.as_slice())
@@ -1044,22 +788,53 @@ impl IbcProvider for EthereumClient {
 					.collect(),
 			))
 			.topic2({
-				let hash = H256::from_slice(&encode(&[Token::FixedBytes(
+				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
 					keccak256(destination_port.clone().into_bytes()).to_vec(),
-				)]));
-				ValueOrArray::Value(hash)
+				)])))
 			})
 			.topic3({
-				let hash = H256::from_slice(&encode(&[Token::FixedBytes(
+				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
 					keccak256(destination_channel.clone().into_bytes()).to_vec(),
-				)]));
-				ValueOrArray::Value(hash)
+				)])))
 			});
 
 		let events = event_filter.query().await.unwrap();
 		let channel = self.query_channel_end(at, channel_id, port_id).await?;
-
 		let channel = channel.channel.expect("channel is none");
+
+		let acks_filter = self
+			.yui
+			.event_for_name::<WriteAcknowledgementFilter>("WriteAcknowledgement")
+			.expect("contract is missing WriteAcknowledgement event")
+			.from_block(BlockNumber::Earliest) // TODO: use contract creation height
+			.to_block(BlockNumber::Latest)
+			.topic3(ValueOrArray::Array(
+				seqs.into_iter()
+					.map(|seq| {
+						let bytes = encode(&[Token::Uint(seq.into())]);
+						H256::from_slice(bytes.as_slice())
+					})
+					.collect(),
+			))
+			.topic1({
+				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+					keccak256(destination_port.clone().into_bytes()).to_vec(),
+				)])))
+			})
+			.topic2({
+				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+					keccak256(destination_channel.clone().into_bytes()).to_vec(),
+				)])))
+			});
+
+		let mut acks_map = acks_filter
+			.query()
+			.await
+			.unwrap()
+			.into_iter()
+			.map(|ack| (ack.sequence, ack.acknowledgement.to_vec()))
+			.collect::<HashMap<_, _>>();
+
 		Ok(events
 			.into_iter()
 			.map(move |value| PacketInfo {
@@ -1076,7 +851,7 @@ impl IbcProvider for EthereumClient {
 					.map_err(|_| Self::Error::Other("invalid channel order".to_owned()))
 					.unwrap()
 					.to_string(),
-				ack: None,
+				ack: acks_map.get(&value.sequence).cloned(),
 			})
 			.collect())
 	}
@@ -1090,14 +865,51 @@ impl IbcProvider for EthereumClient {
 		client_id: ClientId,
 		client_height: Height,
 	) -> Result<(Height, Timestamp), Self::Error> {
-		todo!();
+		let event_filter = self
+			.yui
+			.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
+			.expect("contract is missing UpdateClientHeight event")
+			.from_block(BlockNumber::Earliest) // TODO: use contract creation height
+			.to_block(BlockNumber::Latest)
+			.topic1({
+				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+					keccak256(client_id.to_string()).to_vec(),
+				)])))
+			})
+			.topic2({
+				let height_bytes = encode(&[Token::Tuple(vec![
+					Token::Uint(client_height.revision_number.into()),
+					Token::Uint(client_height.revision_height.into()),
+				])]);
+				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+					keccak256(&height_bytes).to_vec(),
+				)])))
+			});
+
+		let log = self
+			.yui
+			.diamond
+			.client()
+			.get_logs(&event_filter.filter)
+			.await
+			.unwrap()
+			.pop()
+			.unwrap();
+
+		let height = Height::new(0, log.block_number.expect("block number is none").as_u64());
+
+		let timestamp =
+			Timestamp::from_nanoseconds(self.query_timestamp_at(height.revision_height).await?)
+				.unwrap();
+
+		Ok((height, timestamp))
 	}
 
 	async fn query_host_consensus_state_proof(
 		&self,
-		client_state: &AnyClientState,
+		_client_state: &AnyClientState,
 	) -> Result<Option<Vec<u8>>, Self::Error> {
-		todo!()
+		Ok(Some(vec![]))
 	}
 
 	async fn query_ibc_balance(
@@ -1137,11 +949,18 @@ impl IbcProvider for EthereumClient {
 	}
 
 	fn client_type(&self) -> ClientType {
-		todo!()
+		"xx-ethereum".to_string()
 	}
 
 	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error> {
-		todo!()
+		let block = self
+			.http_rpc
+			.get_block(BlockId::Number(BlockNumber::Number(block_number.into())))
+			.await
+			.map_err(|err| ClientError::MiddlewareError(err))?
+			.ok_or_else(|| ClientError::MiddlewareError(todo!()))?;
+
+		Ok(Duration::from_secs(block.timestamp.as_u64()).as_nanos() as u64)
 	}
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {

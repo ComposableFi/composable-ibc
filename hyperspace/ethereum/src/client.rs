@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use ethers::{
 	abi::{AbiEncode, Address, ParamType, Token},
 	prelude::{
-		coins_bip39::English, signer::SignerMiddlewareError, BlockId, BlockNumber,
+		coins_bip39::English, signer::SignerMiddlewareError, Authorization, BlockId, BlockNumber,
 		EIP1186ProofResponse, Filter, LocalWallet, Log, MnemonicBuilder, NameOrAddress, H256,
 	},
 	providers::{Http, Middleware, Provider, ProviderError, ProviderExt, Ws},
@@ -14,10 +14,15 @@ use ethers::{
 	types::U256,
 	utils::keccak256,
 };
+// use ethers_providers::
+use crate::jwt::{JwtAuth, JwtKey};
 use futures::{Stream, TryFutureExt};
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
-	core::ics24_host::identifier::{ChannelId, ClientId, PortId},
+	core::ics24_host::{
+		error::ValidationError,
+		identifier::{ChannelId, ClientId, PortId},
+	},
 	Height,
 };
 use ibc_primitives::Timeout;
@@ -70,6 +75,12 @@ pub enum ClientError {
 	NoStorageProof,
 	#[error("{0}")]
 	Other(String),
+}
+
+impl From<ValidationError> for ClientError {
+	fn from(value: ValidationError) -> Self {
+		Self::Other(value.to_string())
+	}
 }
 
 impl From<String> for ClientError {
@@ -135,7 +146,17 @@ impl EthereumClient {
 	}
 
 	pub async fn websocket_provider(&self) -> Result<Provider<Ws>, ClientError> {
-		Provider::<Ws>::connect(self.ws_uri.to_string())
+		let secret = std::fs::read_to_string(
+			"/Users/vmark/.lighthouse/local-testnet/geth_datadir1/geth/jwtsecret",
+		)
+		.unwrap();
+		println!("secret = {secret}");
+		let secret = JwtKey::from_slice(&hex::decode(&secret[2..]).unwrap()).expect("oops");
+		let jwt_auth = JwtAuth::new(secret, None, None);
+		let token = jwt_auth.generate_token().unwrap();
+
+		let auth = Authorization::bearer(dbg!(token));
+		Provider::<Ws>::connect_with_auth(self.ws_uri.to_string(), auth)
 			.await
 			.map_err(|e| ClientError::ProviderError(self.ws_uri.clone(), ProviderError::from(e)))
 	}

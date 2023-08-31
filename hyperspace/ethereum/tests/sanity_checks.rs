@@ -1,4 +1,4 @@
-use std::{future::Future, ops::Deref, path::PathBuf, str::FromStr, sync::Arc};
+use std::{future::Future, ops::Deref, path::PathBuf, str::FromStr, sync::Arc, time::Duration};
 
 use crate::utils::USE_GETH;
 use ethers::{
@@ -9,6 +9,7 @@ use ethers::{
 	utils::{keccak256, AnvilInstance},
 };
 use ethers_solc::{ProjectCompileOutput, ProjectPathsConfig};
+use futures::{stream::StreamExt, TryStreamExt};
 use hyperspace_ethereum::{
 	config::Config,
 	contract::UnwrapContractError,
@@ -23,11 +24,13 @@ use ibc::{
 		},
 		ics24_host::identifier::{ChannelId, PortId},
 	},
+	events::IbcEvent,
 	timestamp::Timestamp,
 };
 use ibc_rpc::PacketInfo;
 use primitives::IbcProvider;
 use prost::Message;
+use tokio::time::timeout;
 use tracing::log;
 use tracing_subscriber::{filter, layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
@@ -48,7 +51,7 @@ async fn hyperspace_ethereum_client_fixture(
 	hyperspace_ethereum::client::EthereumClient::new(
 		Config {
 			http_rpc_url: endpoint.parse().unwrap(),
-			ws_rpc_url: Default::default(),
+			ws_rpc_url: "ws://localhost:5001".parse().unwrap(),
 			ibc_handler_address: yui_ibc.diamond.address(),
 			mnemonic: None,
 			max_block_weight: 1,
@@ -244,6 +247,7 @@ async fn test_ibc_client() {
 	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
 	let hyperspace =
 		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone()).await;
+	let events = hyperspace.ibc_events().await;
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 	let height = hyperspace.latest_height_and_timestamp().await.unwrap().0;
 	let r = hyperspace.query_client_state(height, client_id.parse().unwrap()).await.unwrap();
@@ -278,6 +282,19 @@ async fn test_ibc_client() {
 			value: utils::mock::ConsensusState { timestamp: 1 }.encode_to_vec(),
 		})
 	);
+
+	let (_host_height, _host_timestamp) = hyperspace
+		.query_client_update_time_and_height(
+			client_id.parse().unwrap(),
+			ibc::Height { revision_number: 0, revision_height: 1 },
+		)
+		.await
+		.unwrap();
+
+	let events = timeout(Duration::from_secs(5), events.take(1).collect::<Vec<_>>())
+		.await
+		.unwrap();
+	dbg!(events);
 }
 
 #[tokio::test]
@@ -387,6 +404,8 @@ async fn test_ibc_packet() {
 	let mut deploy = deploy_yui_ibc_and_mock_client_fixture().await;
 	let hyperspace =
 		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone()).await;
+	let events = hyperspace.ibc_events().await;
+
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 
 	let mock_module = deploy_mock_module_fixture(&deploy).await;
@@ -580,6 +599,9 @@ async fn test_ibc_packet() {
 		.await
 		.unwrap();
 	assert_eq!(unreceived, vec![1, 2]);
+
+	let events = events.collect::<Vec<_>>().await;
+	dbg!(events);
 }
 
 fn u64_to_token(x: u64) -> Token {

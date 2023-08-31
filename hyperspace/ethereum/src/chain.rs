@@ -55,9 +55,7 @@ impl Chain for EthereumClient {
 			let mut stream = ws.subscribe_blocks().await.expect("fuck");
 
 			while let Some(block) = stream.next().await {
-				if let Some(hash) = block.hash.clone() {
-					yield Self::FinalityEvent::Ethereum { hash };
-				}
+				yield block
 			}
 		};
 

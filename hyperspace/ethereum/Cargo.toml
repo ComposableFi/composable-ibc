@@ -15,7 +15,15 @@ ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
 ibc-proto = { path = "../../ibc/proto" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
+icsxx-ethereum = { path = "../../light-clients/icsxx-ethereum" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
+
+sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "c5afca4fbb92cb60dde29c3a89454c288b022d97", features = ["testing"] }
+sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "c5afca4fbb92cb60dde29c3a89454c288b022d97", features = ["testing"] }
+sync-committee-prover = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "c5afca4fbb92cb60dde29c3a89454c288b022d97" }
+#light-client-common = { path = "../common"  }
+ethereum-consensus = { git = "https://github.com/polytope-labs/ethereum-consensus", branch = "main" }
+ssz-rs = { git = "https://github.com/polytope-labs/ssz-rs", branch = "main" }
 
 cast = { git = "https://github.com/foundry-rs/foundry", version = "0.2.0" }
 
@@ -25,6 +33,8 @@ async-trait = "0.1.53"
 elliptic-curve = { features = ["pem"], version = "0.13.5" }
 ethers = { version = "2.0.2", features = ["ws"] }
 ethers-solc = "2.0.8"
+ethers-providers = "2.0.8"
+jsonwebtoken = "8.3.0"
 futures = "0.3.28"
 hex = "0.4.3"
 http = "0.2.9"

@@ -2,9 +2,11 @@ use crate::contract::UnwrapContractError;
 use ethers::{
 	abi::{AbiError, Address, Detokenize, EventExt, Token, Tokenize},
 	contract::{ContractInstance, FunctionCall},
-	prelude::*,
+	prelude::{
+		EthEvent, Event, Filter, Http, LocalWallet, Middleware, Provider, TransactionReceipt,
+	},
 };
-use ethers_solc::artifacts::{Storage, StorageLayout, StorageType};
+use ethers_solc::artifacts::{Storage, StorageLayout};
 use ibc::core::ics04_channel::packet::Packet;
 
 pub type ProviderImpl = ethers::prelude::SignerMiddleware<Provider<Http>, LocalWallet>;

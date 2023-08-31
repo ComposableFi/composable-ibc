@@ -48,7 +48,7 @@ use ibc::{
 use light_client_common::{
 	state_machine, verify_delay_passed, verify_membership, verify_non_membership,
 };
-use sync_committee_verifier::{verify_sync_committee_attestation, LightClientState};
+use sync_committee_verifier::{verify_sync_committee_attestation, BlsVerify, LightClientState};
 use tendermint_proto::Protobuf;
 
 const CLIENT_STATE_UPGRADE_PATH: &[u8] = b"client-state-upgrade-path";
@@ -59,7 +59,7 @@ pub struct EthereumClient<T>(PhantomData<T>);
 
 impl<H> ClientDef for EthereumClient<H>
 where
-	H: Clone + Eq + Send + Sync + Debug + Default,
+	H: Clone + Eq + Send + Sync + Debug + Default + BlsVerify,
 {
 	type ClientMessage = ClientMessage;
 	type ClientState = ClientState<H>;
@@ -74,7 +74,7 @@ where
 	) -> Result<(), Ics02Error> {
 		match client_message {
 			ClientMessage::Header(header) => {
-				let _ = verify_sync_committee_attestation(client_state.inner, header)
+				let _ = verify_sync_committee_attestation::<H>(client_state.inner, header)
 					.map_err(|e| Ics02Error::implementation_specific(e.to_string()))?;
 			},
 			ClientMessage::Misbehaviour(Misbehaviour { never }) => match never {},
@@ -130,7 +130,7 @@ where
 		css.push((height, cs));
 
 		let cs = client_state.inner;
-		let new_client_state = verify_sync_committee_attestation(cs, header)
+		let new_client_state = verify_sync_committee_attestation::<H>(cs, header)
 			.map_err(|e| Ics02Error::implementation_specific(e.to_string()))?;
 		client_state.inner = new_client_state;
 		Ok((client_state, ConsensusUpdateResult::Batch(css)))
@@ -171,7 +171,14 @@ where
 		unimplemented!()
 	}
 
-	fn check_substitute_and_update_state<Ctx: ReaderContext>(&self, ctx: &Ctx, subject_client_id: ClientId, substitute_client_id: ClientId, old_client_state: Self::ClientState, substitute_client_state: Self::ClientState) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
+	fn check_substitute_and_update_state<Ctx: ReaderContext>(
+		&self,
+		ctx: &Ctx,
+		subject_client_id: ClientId,
+		substitute_client_id: ClientId,
+		old_client_state: Self::ClientState,
+		substitute_client_state: Self::ClientState,
+	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
 		todo!("check_substitute_and_update_state")
 	}
 

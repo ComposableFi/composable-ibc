@@ -29,7 +29,7 @@ use ibc::{
 use ibc_proto::google::protobuf::Any;
 use light_client_common::{HostFunctions, RelayChain};
 use serde::{Deserialize, Serialize};
-use sync_committee_verifier::LightClientState;
+use sync_committee_verifier::{BlsVerify, LightClientState};
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA ClientState
@@ -125,7 +125,7 @@ impl<H> ClientState<H> {
 
 impl<H> ibc::core::ics02_client::client_state::ClientState for ClientState<H>
 where
-	H: Send + Sync + Clone + Debug + Default + Eq,
+	H: Send + Sync + Clone + Debug + Default + Eq + BlsVerify,
 {
 	type UpgradeOptions = UpgradeOptions;
 	type ClientDef = EthereumClient<H>;
