@@ -1,4 +1,6 @@
-use std::{future::Future, str::FromStr, sync::Arc};
+use async_trait::async_trait;
+use cast::revm::db;
+use std::{future::Future, pin::Pin, str::FromStr, sync::Arc};
 
 use ethers::{
 	abi::{Address, ParamType, ParseError, Token},
@@ -12,14 +14,17 @@ use ethers::{
 
 use futures::{Stream, TryFutureExt};
 use ibc::{
+	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
 	core::ics24_host::identifier::{ChannelId, ClientId, PortId},
 	Height,
 };
+use ibc_primitives::Timeout;
+use primitives::CommonClientState;
 use thiserror::Error;
 
 use crate::config::Config;
 
-pub(crate) type EthRpcClient = ethers::prelude::SignerMiddleware<
+pub type EthRpcClient = ethers::prelude::SignerMiddleware<
 	ethers::providers::Provider<Http>,
 	ethers::signers::Wallet<ethers::prelude::k256::ecdsa::SigningKey>,
 >;
@@ -31,10 +36,13 @@ pub const CLIENT_IMPLS_STORAGE_INDEX: u32 = 3;
 pub const CONNECTIONS_STORAGE_INDEX: u32 = 4;
 
 #[derive(Debug, Clone)]
-pub struct Client {
+pub struct EthereumClient {
 	pub http_rpc: Arc<EthRpcClient>,
 	pub(crate) ws_uri: http::Uri,
-	pub(crate) config: Config,
+	pub config: Config,
+	/// Common relayer data
+	pub common_state: CommonClientState,
+	pub prev_state: Arc<std::sync::Mutex<(Vec<u8>, Vec<u8>)>>
 }
 
 pub type MiddlewareErrorType = SignerMiddlewareError<
@@ -76,8 +84,8 @@ pub struct AckPacket {
 	pub acknowledgement: Vec<u8>,
 }
 
-impl Client {
-	pub async fn new(config: Config) -> Result<Self, ClientError> {
+impl EthereumClient {
+	pub async fn new(mut config: Config) -> Result<Self, ClientError> {
 		let client = Provider::<Http>::try_from(config.http_rpc_url.to_string())
 			.map_err(|_| ClientError::UriParseError(config.http_rpc_url.clone()))?;
 
@@ -89,7 +97,14 @@ impl Client {
 				.build()
 				.unwrap()
 				.with_chain_id(chain_id.as_u64())
-		} else if let Some(private_key) = &config.private_key {
+		} else if let Some(path) = config.private_key_path.take() {
+			LocalWallet::decrypt_keystore(
+				path,
+				option_env!("KEY_PASS").expect("KEY_PASS is not set"),
+			)
+			.unwrap()
+			.into()
+		} else if let Some(private_key) = config.private_key.take() {
 			let key = elliptic_curve::SecretKey::<ethers::prelude::k256::Secp256k1>::from_sec1_pem(
 				private_key.as_str(),
 			)
@@ -101,7 +116,13 @@ impl Client {
 
 		let client = ethers::middleware::SignerMiddleware::new(client, wallet);
 
-		Ok(Self { http_rpc: Arc::new(client), ws_uri: config.ws_rpc_url.clone(), config })
+		Ok(Self {
+			http_rpc: Arc::new(client),
+			ws_uri: config.ws_rpc_url.clone(),
+			config,
+			common_state: Default::default(),
+			prev_state: Arc::new(std::sync::Mutex::new((vec![], vec![])))
+		})
 	}
 
 	pub async fn websocket_provider(&self) -> Result<Provider<Ws>, ClientError> {
@@ -302,13 +323,11 @@ impl Client {
 		block_height: Option<u64>,
 		storage_index: u32,
 	) -> impl Future<Output = Result<EIP1186ProofResponse, ClientError>> {
-		let key = ethers::utils::keccak256(
-			&ethers::abi::encode_packed(&[Token::String(key.into())]).unwrap(),
-		);
+		let key = ethers::utils::keccak256(key.as_bytes());
 
 		let key = hex::encode(key);
 
-		let var_name = format!("0x{key}", key = &key);
+		let var_name = format!("0x{key}");
 		let storage_index = format!("{storage_index}");
 		let index =
 			cast::SimpleCast::index("bytes32", dbg!(&var_name), dbg!(&storage_index)).unwrap();
@@ -316,15 +335,53 @@ impl Client {
 		let client = self.http_rpc.clone();
 		let address = self.config.ibc_handler_address.clone();
 
+		dbg!(&address);
+		dbg!(&H256::from_str(&index).unwrap());
+		dbg!(&block_height);
+
 		async move {
-			client
+			Ok(client
 				.get_proof(
 					NameOrAddress::Address(address),
 					vec![H256::from_str(&index).unwrap()],
 					block_height.map(|i| BlockId::from(i)),
 				)
-				.map_err(|err| panic!("{err}"))
 				.await
+				.unwrap())
+		}
+	}
+
+	pub fn eth_query_proof_tokens(
+		&self,
+		tokens: &[Token],
+		block_height: Option<u64>,
+		storage_index: u32,
+	) -> impl Future<Output = Result<EIP1186ProofResponse, ClientError>> {
+		let vec1 = ethers::abi::encode_packed(tokens).unwrap();
+		let key = ethers::utils::keccak256(&vec1);
+		let key = hex::encode(key);
+
+		let var_name = format!("0x{key}");
+		let storage_index = format!("{storage_index}");
+		let index =
+			cast::SimpleCast::index("bytes32", dbg!(&var_name), dbg!(&storage_index)).unwrap();
+
+		let client = self.http_rpc.clone();
+		let address = self.config.ibc_handler_address.clone();
+
+		dbg!(&address);
+		dbg!(&H256::from_str(&index).unwrap());
+		dbg!(&block_height);
+
+		async move {
+			Ok(client
+				.get_proof(
+					NameOrAddress::Address(address),
+					vec![H256::from_str(&index).unwrap()],
+					block_height.map(|i| BlockId::from(i)),
+				)
+				.await
+				.unwrap())
 		}
 	}
 
@@ -410,6 +467,7 @@ impl Client {
 	#[track_caller]
 	pub fn has_packet_receipt(
 		&self,
+		at: Height,
 		port_id: String,
 		channel_id: String,
 		sequence: u64,
@@ -424,9 +482,42 @@ impl Client {
 				.method("hasPacketReceipt", (port_id, channel_id, sequence))
 				.expect("contract is missing hasPacketReceipt");
 
-			let receipt_fut = binding.call();
+			let receipt: bool = binding
+				.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+				.call()
+				.await
+				.map_err(|err| todo!())
+				.unwrap();
 
-			let receipt: bool = receipt_fut.await.map_err(|err| todo!()).unwrap();
+			Ok(receipt)
+		}
+	}
+
+	#[track_caller]
+	pub fn has_acknowledgement(
+		&self,
+		at: Height,
+		port_id: String,
+		channel_id: String,
+		sequence: u64,
+	) -> impl Future<Output = Result<bool, ClientError>> {
+		let client = self.http_rpc.clone();
+		let address = self.config.ibc_handler_address.clone();
+
+		let contract = crate::contract::ibc_handler(address, Arc::clone(&client));
+
+		async move {
+			let binding = contract
+				.method("hasAcknowledgement", (port_id, channel_id, sequence))
+				.expect("contract is missing hasAcknowledgement");
+
+			// let receipt_fut = ;
+			let receipt: bool = binding
+				.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+				.call()
+				.await
+				.map_err(|err| todo!())
+				.unwrap();
 
 			Ok(receipt)
 		}
@@ -434,74 +525,25 @@ impl Client {
 }
 
 // #[cfg(any(test, feature = "testing"))]
-impl primitives::TestProvider for Client {
-	fn send_transfer<'life0, 'async_trait>(
-		&'life0 self,
-		params: ibc::applications::transfer::msgs::transfer::MsgTransfer<
-			ibc::applications::transfer::PrefixedCoin,
-		>,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<(), Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+#[async_trait]
+impl primitives::TestProvider for EthereumClient {
+	async fn send_transfer(&self, params: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
 		todo!()
 	}
 
-	fn send_ordered_packet<'life0, 'async_trait>(
-		&'life0 self,
-		channel_id: ibc::core::ics24_host::identifier::ChannelId,
-		timeout: pallet_ibc::Timeout,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<(), Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn send_ordered_packet(
+		&self,
+		channel_id: ChannelId,
+		timeout: Timeout,
+	) -> Result<(), Self::Error> {
 		todo!()
 	}
 
-	fn subscribe_blocks<'life0, 'async_trait>(
-		&'life0 self,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = std::pin::Pin<Box<dyn futures::Stream<Item = u64> + Send + Sync>>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
 		todo!()
 	}
 
-	fn increase_counters<'life0, 'async_trait>(
-		&'life0 mut self,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<(), Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn increase_counters(&mut self) -> Result<(), Self::Error> {
 		todo!()
 	}
 }

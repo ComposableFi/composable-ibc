@@ -1,3 +1,4 @@
+use ethers::signers::LocalWallet;
 use std::str::FromStr;
 
 use ethers::types::Address;
@@ -35,7 +36,10 @@ where
 	ser.serialize_str(&format!("{uri}"))
 }
 
-fn address_de<'de, D>(de: D) -> Result<Address, D::Error> where D: Deserializer<'de> {
+fn address_de<'de, D>(de: D) -> Result<Address, D::Error>
+where
+	D: Deserializer<'de>,
+{
 	struct FromStr;
 
 	impl Visitor<'_> for FromStr {
@@ -79,10 +83,14 @@ pub struct Config {
 	/// address of the IBCChannelHandshake contract.
 	#[serde(deserialize_with = "address_de")]
 	pub ibc_channel_handshake_address: Address,
+	/// address of the IBCChannelHandshake contract.
+	#[serde(deserialize_with = "address_de")]
+	pub tendermint_client_address: Address,
 	/// mnemonic for the wallet
 	pub mnemonic: Option<String>,
 	/// private key for the wallet
 	pub private_key: Option<String>,
+	pub private_key_path: Option<String>,
 	/// maximum block weight
 	pub max_block_weight: u64,
 	/// Name of the chain
@@ -95,6 +103,8 @@ pub struct Config {
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 	/// Commitment prefix
 	pub commitment_prefix: String,
+
+	pub client_type: String,
 }
 
 impl Config {

@@ -1,0 +1,49 @@
+[package]
+name = "hyperspace-integration-tests"
+version = "0.1.0"
+edition = "2021"
+authors = ["Composable Developers"]
+
+[[bin]]
+name = "hyperspace-integration-tests"
+path = "src/main.rs"
+
+[dependencies]
+primitives = { path = "../../primitives", package = "hyperspace-primitives", features = [
+    "testing",
+] }
+
+# composable
+ibc = { path = "../../../ibc/modules", features = [] }
+ibc-primitives = { path = "../../../contracts/pallet-ibc/primitives" }
+ibc-proto = { path = "../../../ibc/proto" }
+ibc-rpc = { path = "../../../contracts/pallet-ibc/rpc" }
+ics07-tendermint = { path = "../../../light-clients/ics07-tendermint" }
+pallet-ibc = { path = "../../../contracts/pallet-ibc" }
+hyperspace-cosmos = { path = "../../cosmos" }
+hyperspace-ethereum = { path = "../../ethereum" }
+hyperspace-core = { path = "../../core", features = ["testing"] }
+
+cast = { git = "https://github.com/foundry-rs/foundry", version = "0.2.0" }
+
+anyhow = "1.0.65"
+async-stream = "0.3.5"
+async-trait = "0.1.53"
+elliptic-curve = { features = ["pem"], version = "0.13.5" }
+ethers = { version = "2.0.2", features = ["ws"] }
+ethers-solc = "2.0.8"
+futures = "0.3.28"
+hex = "0.4.3"
+http = "0.2.9"
+prost = "0.11"
+serde = { version = "1.0.137", features = ["derive"] }
+serde_json = "1.0.74"
+thiserror = "1.0.31"
+tokio = { version = "1.19.2", features = ["full"] }
+tracing = "0.1.36"
+tracing-subscriber = "0.3.17"
+env_logger = "0.10.0"
+
+[dev-dependencies]
+toml = "0.7.3"
+git2 = "0.17.1"

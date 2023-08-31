@@ -1,11 +1,14 @@
-use std::{future::Future, pin::Pin, str::FromStr, sync::Arc, time::Duration};
+use std::{
+	collections::HashSet, future::Future, pin::Pin, str::FromStr, sync::Arc, time::Duration,
+};
 
 use cast::executor::Output;
 use ethers::{
-	abi::{Abi, Detokenize, ParamType, Token},
+	abi::{encode, Abi, AbiEncode, Detokenize, InvalidOutputType, ParamType, Token, Tokenizable},
 	middleware::contract::Contract,
 	providers::Middleware,
-	types::{BlockNumber, EIP1186ProofResponse, Filter, StorageProof, H256},
+	types::{BlockId, BlockNumber, EIP1186ProofResponse, Filter, StorageProof, H256, I256, U256},
+	utils::keccak256,
 };
 use ibc::{
 	core::{
@@ -37,14 +40,18 @@ use ibc_proto::{
 		},
 	},
 };
-use primitives::IbcProvider;
+use primitives::{IbcProvider, UpdateType};
 use prost::Message;
 
 use futures::{FutureExt, Stream, StreamExt};
+use ibc::{applications::transfer::PrefixedCoin, events::IbcEvent};
+use ibc_proto::google::protobuf::Any;
+use ibc_rpc::PacketInfo;
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
 use thiserror::Error;
 
 use crate::client::{
-	Client, ClientError, CLIENT_IMPLS_STORAGE_INDEX, COMMITMENTS_STORAGE_INDEX,
+	ClientError, EthereumClient, CLIENT_IMPLS_STORAGE_INDEX, COMMITMENTS_STORAGE_INDEX,
 	CONNECTIONS_STORAGE_INDEX,
 };
 
@@ -72,7 +79,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl IbcProvider for Client {
+impl IbcProvider for EthereumClient {
 	type FinalityEvent = FinalityEvent;
 
 	type TransactionId = ();
@@ -85,10 +92,7 @@ impl IbcProvider for Client {
 		&mut self,
 		finality_event: Self::FinalityEvent,
 		counterparty: &T,
-	) -> Result<
-		Vec<(google::protobuf::Any, Vec<ibc::events::IbcEvent>, primitives::UpdateType)>,
-		anyhow::Error,
-	>
+	) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
 		T: primitives::Chain,
 	{
@@ -207,12 +211,14 @@ impl IbcProvider for Client {
 			self.config.ibc_handler_address.clone(),
 			Arc::clone(&self.http_rpc),
 		);
+		println!("the address again: {:?}, {client_id}", self.config.ibc_handler_address);
 
 		let binding = contract
 			.method(
 				"getConsensusState",
 				(
 					Token::String(client_id.as_str().to_owned()),
+					// Token::Uint(consensus_height.revision_height.into()),
 					Token::Tuple(vec![
 						Token::Uint(consensus_height.revision_number.into()),
 						Token::Uint(consensus_height.revision_height.into()),
@@ -221,9 +227,15 @@ impl IbcProvider for Client {
 			)
 			.expect("contract is missing getConsensusState");
 
-		let get_client_cons_fut = binding.call();
-		let (client_cons, _): (Vec<u8>, bool) =
-			get_client_cons_fut.await.map_err(|err| todo!()).unwrap();
+		let (client_cons, _): (Vec<u8>, bool) = binding
+			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+			.call()
+			.await
+			.map_err(|err| {
+				eprintln!("{err}");
+				err
+			})
+			.unwrap();
 
 		let proof_height = Some(at.into());
 		let consensus_state = google::protobuf::Any::decode(&*client_cons).ok();
@@ -241,12 +253,11 @@ impl IbcProvider for Client {
 			Arc::clone(&self.http_rpc),
 		);
 
-		let binding = contract
+		let (client_state, _): (Vec<u8>, bool) = contract
 			.method("getClientState", (client_id.as_str().to_owned(),))
-			.expect("contract is missing getClientState");
-
-		let get_client_state_fut = binding.call();
-		let (client_state, _): (Vec<u8>, bool) = get_client_state_fut
+			.expect("contract is missing getClientState")
+			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+			.call()
 			.await
 			.map_err(|err| todo!("query-client-state: error: {err:?}"))
 			.unwrap();
@@ -279,7 +290,11 @@ impl IbcProvider for Client {
 					.method("getConnectionEnd", (connection_id.as_str().to_owned(),))
 					.expect("contract is missing getConnectionEnd");
 
-				let connection_end: crate::contract::ConnectionEnd = binding.call().await.unwrap();
+				let connection_end: crate::contract::ConnectionEnd = binding
+					.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+					.call()
+					.await
+					.unwrap();
 
 				let proof_height = Some(at.into());
 				let proof = storage_proof.proof.first().map(|b| b.to_vec()).unwrap_or_default();
@@ -333,17 +348,16 @@ impl IbcProvider for Client {
 			)
 			.expect("contract is missing getChannel");
 
-		let channel_data = binding.call().await.unwrap();
+		let channel_data = binding
+			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+			.call()
+			.await
+			.unwrap();
 
 		Ok(QueryChannelResponse { channel: None, proof: todo!(), proof_height: todo!() })
 	}
 
 	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
-		use ibc::core::ics23_commitment::{error::Error, merkle::MerkleProof};
-		use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
-
-		let rpc = self.http_rpc.clone();
-
 		let key = String::from_utf8(keys[0].clone()).unwrap();
 
 		let proof_result = self
@@ -358,7 +372,8 @@ impl IbcProvider for Client {
 			.map(|b| b.to_vec())
 			.unwrap_or_default();
 
-		Ok(bytes)
+		// Ok(bytes)
+		todo!("query-proof: redo")
 	}
 
 	async fn query_packet_commitment(
@@ -380,9 +395,13 @@ impl IbcProvider for Client {
 			.await?;
 		let storage = proof.storage_proof.first().unwrap();
 
+		let bytes = u256_to_bytes(&storage.value);
+
 		Ok(QueryPacketCommitmentResponse {
-			commitment: storage.value.as_u128().to_be_bytes().to_vec(),
-			proof: storage.proof.last().map(|p| p.to_vec()).unwrap_or_default(),
+			commitment: bytes,
+			proof: encode(&[Token::Array(
+				storage.proof.clone().into_iter().map(|p| Token::Bytes(p.to_vec())).collect(),
+			)]),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -407,9 +426,13 @@ impl IbcProvider for Client {
 			.await?;
 		let storage = proof.storage_proof.first().unwrap();
 
+		let bytes = u256_to_bytes(&storage.value);
+
 		Ok(ibc_proto::ibc::core::channel::v1::QueryPacketAcknowledgementResponse {
-			acknowledgement: storage.value.as_u128().to_be_bytes().to_vec(),
-			proof: storage.proof.last().map(|p| p.to_vec()).unwrap_or_default(),
+			acknowledgement: bytes,
+			proof: encode(&[Token::Array(
+				storage.proof.clone().into_iter().map(|p| Token::Bytes(p.to_vec())).collect(),
+			)]),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -432,7 +455,11 @@ impl IbcProvider for Client {
 			)
 			.expect("contract is missing getNextSequenceRecv");
 
-		let channel_data = binding.call().await.unwrap();
+		let channel_data = binding
+			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+			.call()
+			.await
+			.unwrap();
 
 		Ok(QueryNextSequenceReceiveResponse {
 			next_sequence_receive: todo!(),
@@ -461,12 +488,14 @@ impl IbcProvider for Client {
 		let storage = proof.storage_proof.first().unwrap();
 
 		let received = self
-			.has_packet_receipt(port_id.as_str().to_owned(), format!("{channel_id}"), sequence)
+			.has_packet_receipt(at, port_id.as_str().to_owned(), format!("{channel_id}"), sequence)
 			.await?;
 
 		Ok(QueryPacketReceiptResponse {
 			received,
-			proof: storage.proof.last().map(|p| p.to_vec()).unwrap_or_default(),
+			proof: encode(&[Token::Array(
+				storage.proof.clone().into_iter().map(|p| Token::Bytes(p.to_vec())).collect(),
+			)]),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -501,20 +530,35 @@ impl IbcProvider for Client {
 			self.config.ibc_handler_address.clone(),
 			Arc::clone(&self.http_rpc),
 		);
-
+		let start_seq = 0u64;
+		let end_seq = 255u64;
 		let binding = contract
-			.method("getPacketSequences", (port_id.as_str().to_owned(), channel_id.to_string()))
+			.method(
+				"hasCommitments",
+				(port_id.as_str().to_owned(), channel_id.to_string(), start_seq, end_seq),
+			)
 			.expect("contract is missing getConnectionEnd");
 
-		let (next_send, next_recv, next_ack): (u64, u64, u64) = binding.call().await.unwrap();
+		let bitmap: U256 = binding
+			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+			.call()
+			.await
+			.unwrap();
+		let mut seqs = vec![];
+		for i in 0..256u64 {
+			if bitmap.bit(i as _).into() {
+				println!("bit {} is set", i);
+				seqs.push(start_seq + i);
+			}
+		}
 
-		// next_send is the sequence number used when sending packets.
-		// the value of next_send is the sequence number of the next packet to be sent yet.
-		// aka the last send packet was next_send - 1.
+		// next_ack is the sequence number used when acknowledging packets.
+		// the value of next_ack is the sequence number of the next packet to be acknowledged yet.
+		// aka the last acknowledged packet was next_ack - 1.
 
-		// this function is called to calculate which packets have not yet been
+		// this function is called to calculate which acknowledgements have not yet been
 		// relayed from this chain to the counterparty chain.
-		Ok((0..next_send).collect())
+		Ok(seqs)
 	}
 
 	async fn query_packet_acknowledgements(
@@ -528,11 +572,27 @@ impl IbcProvider for Client {
 			Arc::clone(&self.http_rpc),
 		);
 
+		let start_seq = 0u64;
+		let end_seq = 255u64;
 		let binding = contract
-			.method("getPacketSequences", (port_id.as_str().to_owned(), channel_id.to_string()))
+			.method(
+				"hasAcknowledgements",
+				(port_id.as_str().to_owned(), channel_id.to_string(), start_seq, end_seq),
+			)
 			.expect("contract is missing getConnectionEnd");
 
-		let (next_send, next_recv, next_ack): (u64, u64, u64) = binding.call().await.unwrap();
+		let bitmap: U256 = binding
+			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+			.call()
+			.await
+			.unwrap();
+		let mut seqs = vec![];
+		for i in 0..256u64 {
+			if bitmap.bit(i as _).into() {
+				println!("bit {} is set", i);
+				seqs.push(start_seq + i);
+			}
+		}
 
 		// next_ack is the sequence number used when acknowledging packets.
 		// the value of next_ack is the sequence number of the next packet to be acknowledged yet.
@@ -540,7 +600,7 @@ impl IbcProvider for Client {
 
 		// this function is called to calculate which acknowledgements have not yet been
 		// relayed from this chain to the counterparty chain.
-		Ok((0..next_ack).collect())
+		Ok(seqs)
 	}
 
 	async fn query_unreceived_packets(
@@ -554,7 +614,7 @@ impl IbcProvider for Client {
 
 		for seq in seqs {
 			let received = self
-				.has_packet_receipt(port_id.as_str().to_owned(), format!("{channel_id}"), seq)
+				.has_packet_receipt(at, port_id.as_str().to_owned(), format!("{channel_id}"), seq)
 				.await?;
 
 			if !received {
@@ -572,11 +632,23 @@ impl IbcProvider for Client {
 		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error> {
-		todo!()
+		let mut pending = vec![];
+
+		for seq in seqs {
+			let received = self
+				.has_acknowledgement(at, port_id.as_str().to_owned(), format!("{channel_id}"), seq)
+				.await?;
+
+			if !received {
+				pending.push(seq);
+			}
+		}
+
+		Ok(pending)
 	}
 
-	fn channel_whitelist(&self) -> Vec<(ChannelId, PortId)> {
-		self.config.channel_whitelist.clone()
+	fn channel_whitelist(&self) -> HashSet<(ChannelId, PortId)> {
+		self.config.channel_whitelist.clone().into_iter().collect()
 	}
 
 	async fn query_connection_channels(
@@ -584,7 +656,7 @@ impl IbcProvider for Client {
 		at: Height,
 		connection_id: &ConnectionId,
 	) -> Result<QueryChannelsResponse, Self::Error> {
-		todo!()
+		todo!("query_connection_channels")
 	}
 
 	async fn query_send_packets(
@@ -596,22 +668,12 @@ impl IbcProvider for Client {
 		todo!()
 	}
 
-	fn query_recv_packets<'life0, 'async_trait>(
-		&'life0 self,
+	async fn query_received_packets(
+		&self,
 		channel_id: ChannelId,
 		port_id: PortId,
 		seqs: Vec<u64>,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<Vec<ibc_rpc::PacketInfo>, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	) -> Result<Vec<PacketInfo>, Self::Error> {
 		todo!()
 	}
 
@@ -630,38 +692,17 @@ impl IbcProvider for Client {
 		todo!();
 	}
 
-	fn query_host_consensus_state_proof<'life0, 'async_trait>(
-		&'life0 self,
-		height: Height,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<Option<Vec<u8>>, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn query_host_consensus_state_proof(
+		&self,
+		client_state: &AnyClientState,
+	) -> Result<Option<Vec<u8>>, Self::Error> {
 		todo!()
 	}
 
-	fn query_ibc_balance<'life0, 'async_trait>(
-		&'life0 self,
+	async fn query_ibc_balance(
+		&self,
 		asset_id: Self::AssetId,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = Result<Vec<ibc::applications::transfer::PrefixedCoin>, Self::Error>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	) -> Result<Vec<PrefixedCoin>, Self::Error> {
 		todo!()
 	}
 
@@ -682,8 +723,8 @@ impl IbcProvider for Client {
 		self.config.connection_id.clone()
 	}
 
-	fn set_channel_whitelist(&mut self, channel_whitelist: Vec<(ChannelId, PortId)>) {
-		self.config.channel_whitelist = channel_whitelist;
+	fn set_channel_whitelist(&mut self, channel_whitelist: HashSet<(ChannelId, PortId)>) {
+		self.config.channel_whitelist = channel_whitelist.into_iter().collect();
 	}
 
 	fn add_channel_to_whitelist(&mut self, channel: (ChannelId, PortId)) {
@@ -698,43 +739,18 @@ impl IbcProvider for Client {
 		todo!()
 	}
 
-	fn query_timestamp_at<'life0, 'async_trait>(
-		&'life0 self,
-		block_number: u64,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<u64, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error> {
 		todo!()
 	}
 
-	fn query_clients<'life0, 'async_trait>(
-		&'life0 self,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<Vec<ClientId>, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
 		todo!()
 	}
 
 	async fn query_channels(&self) -> Result<Vec<(ChannelId, PortId)>, Self::Error> {
 		let ids = self.generated_channel_identifiers(0.into()).await?;
 
-		Ok(todo!())
+		todo!("query_channels")
 	}
 
 	async fn query_connection_using_client(
@@ -754,77 +770,40 @@ impl IbcProvider for Client {
 		Ok(false)
 	}
 
-	fn initialize_client_state<'life0, 'async_trait>(
-		&'life0 self,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<
-					Output = Result<
-						(
-							pallet_ibc::light_clients::AnyClientState,
-							pallet_ibc::light_clients::AnyConsensusState,
-						),
-						Self::Error,
-					>,
-				> + core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	async fn initialize_client_state(
+		&self,
+	) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
 		todo!()
 	}
 
-	fn query_client_id_from_tx_hash<'life0, 'async_trait>(
-		&'life0 self,
+	async fn query_client_id_from_tx_hash(
+		&self,
 		tx_id: Self::TransactionId,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<ClientId, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	) -> Result<ClientId, Self::Error> {
 		todo!()
 	}
 
-	fn query_connection_id_from_tx_hash<'life0, 'async_trait>(
-		&'life0 self,
+	async fn query_connection_id_from_tx_hash(
+		&self,
 		tx_id: Self::TransactionId,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<ConnectionId, Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	) -> Result<ConnectionId, Self::Error> {
 		todo!()
 	}
 
-	fn query_channel_id_from_tx_hash<'life0, 'async_trait>(
-		&'life0 self,
+	async fn query_channel_id_from_tx_hash(
+		&self,
 		tx_id: Self::TransactionId,
-	) -> core::pin::Pin<
-		Box<
-			dyn core::future::Future<Output = Result<(ChannelId, PortId), Self::Error>>
-				+ core::marker::Send
-				+ 'async_trait,
-		>,
-	>
-	where
-		'life0: 'async_trait,
-		Self: 'async_trait,
-	{
+	) -> Result<(ChannelId, PortId), Self::Error> {
 		todo!()
 	}
+
+	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
+		todo!()
+	}
+}
+
+fn u256_to_bytes(n: &U256) -> Vec<u8> {
+	let mut bytes = vec![0u8; 256 / 8];
+	n.to_big_endian(&mut bytes);
+	bytes
 }

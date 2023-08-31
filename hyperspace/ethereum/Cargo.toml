@@ -16,6 +16,7 @@ ibc-proto = { path = "../../ibc/proto" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
+hyperspace-cosmos = { path = "../cosmos" }
 
 cast = { git = "https://github.com/foundry-rs/foundry", version = "0.2.0" }
 
@@ -24,6 +25,7 @@ async-stream = "0.3.5"
 async-trait = "0.1.53"
 elliptic-curve = { features = ["pem"], version = "0.13.5" }
 ethers = { version = "2.0.2", features = ["ws"] }
+ethers-solc = "2.0.8"
 futures = "0.3.28"
 hex = "0.4.3"
 http = "0.2.9"
@@ -34,7 +36,9 @@ thiserror = "1.0.31"
 tokio = { version = "1.19.2", features = ["full"] }
 tracing = "0.1.36"
 tracing-subscriber = "0.3.17"
+env_logger = "0.10.0"
 
 [dev-dependencies]
 toml = "0.7.3"
 git2 = "0.17.1"
+tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }

@@ -1,0 +1,298 @@
+// Copyright (C) 2022 ComposableFi.
+// SPDX-License-Identifier: Apache-2.0
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package ibc.lightclients.ethereum.v1;
+
+import "google/protobuf/timestamp.proto";
+
+/*
+pub struct LightClientUpdate<const SYNC_COMMITTEE_SIZE: usize> {
+	/// the header that the sync committee signed
+	pub attested_header: BeaconBlockHeader,
+	/// the sync committee has potentially changed, here's an ssz proof for that.
+	pub sync_committee_update: Option<SyncCommitteeUpdate<SYNC_COMMITTEE_SIZE>>,
+	/// the actual header which was finalized by the ethereum attestation protocol.
+	pub finalized_header: BeaconBlockHeader,
+	/// execution payload of the finalized header
+	pub execution_payload: ExecutionPayloadProof,
+	/// Finalized header proof
+	pub finality_proof: FinalityProof,
+	/// signature & participation bits
+	pub sync_aggregate: SyncAggregate<SYNC_COMMITTEE_SIZE>,
+	/// slot at which signature was produced
+	pub signature_slot: Slot,
+	/// ancestors of the finalized block to be verified, may be empty.
+	pub ancestor_blocks: Vec<AncestorBlock>,
+}
+*/
+
+message LightClientUpdate {
+  BeaconBlockHeader attested_header = 1;
+  optional SyncCommitteeUpdate sync_committee_update = 2;
+  BeaconBlockHeader finalized_header = 3;
+  ExecutionPayloadProof execution_payload = 4;
+  FinalityProof finality_proof = 5;
+  SyncAggregate sync_aggregate = 6;
+  uint64 signature_slot = 7;
+  repeated AncestorBlock ancestor_blocks = 8;
+}
+
+/*
+pub type Slot = u64;
+pub type ValidatorIndex = usize;
+pub struct Node(pub(crate) [u8; 32]);
+pub type Root = Node;
+
+pub struct BeaconBlockHeader {
+    #[cfg_attr(feature = "serde", serde(with = "crate::serde::as_string"))]
+    pub slot: Slot,
+    #[cfg_attr(feature = "serde", serde(with = "crate::serde::as_string"))]
+    pub proposer_index: ValidatorIndex,
+    pub parent_root: Root,
+    pub state_root: Root,
+    pub body_root: Root,
+}
+*/
+
+message BeaconBlockHeader {
+  uint64 slot = 1;
+  uint64 proposer_index = 2;
+  bytes parent_root = 3;
+  bytes state_root = 4;
+  bytes body_root = 5;
+}
+
+/*
+
+pub struct SyncCommitteeUpdate<const SYNC_COMMITTEE_SIZE: usize> {
+	// actual sync committee
+	pub next_sync_committee: SyncCommittee<SYNC_COMMITTEE_SIZE>,
+	// sync committee, ssz merkle proof.
+	pub next_sync_committee_branch: Vec<Hash32>,
+}
+*/
+
+message SyncCommitteeUpdate {
+  SyncCommittee next_sync_committee = 1;
+  repeated bytes next_sync_committee_branch = 2;
+}
+
+//pub struct SyncCommittee<const SYNC_COMMITTEE_SIZE: usize> {
+//    #[cfg_attr(feature = "serde", serde(rename = "pubkeys"))]
+//    pub public_keys: Vector<BlsPublicKey, SYNC_COMMITTEE_SIZE>,
+//    #[cfg_attr(feature = "serde", serde(rename = "aggregate_pubkey"))]
+//    pub aggregate_public_key: BlsPublicKey,
+//}
+//type PublicKey = Bytes;
+
+message SyncCommittee {
+  repeated bytes public_keys = 1;
+  bytes aggregate_public_key = 2;
+}
+
+/*
+pub struct ExecutionPayloadProof {
+	/// The state root in the `ExecutionPayload` which represents the commitment to
+	/// the ethereum world state in the yellow paper.
+	pub state_root: Hash32,
+	/// the block number of the execution header.
+	pub block_number: u64,
+	/// merkle mutli proof for the state_root & block_number in the [`ExecutionPayload`].
+	pub multi_proof: Vec<Hash32>,
+	/// merkle proof for the `ExecutionPayload` in the [`BeaconBlockBody`].
+	pub execution_payload_branch: Vec<Hash32>,
+	/// timestamp
+	pub timestamp: u64,
+}
+*/
+
+message ExecutionPayloadProof {
+  bytes state_root = 1;
+  uint64 block_number = 2;
+  repeated bytes multi_proof = 3;
+  repeated bytes execution_payload_branch = 4;
+  uint64 timestamp = 5;
+}
+
+/*
+pub struct FinalityProof {
+	/// The latest  finalized epoch
+	pub epoch: u64,
+	/// Finalized header proof
+	pub finality_branch: Vec<Hash32>,
+}
+*/
+
+message FinalityProof {
+  uint64 epoch = 1;
+  repeated bytes finality_branch = 2;
+}
+
+/*
+pub type Hash32 = Bytes32;
+
+pub struct SyncAggregate<const SYNC_COMMITTEE_SIZE: usize> {
+    pub sync_committee_bits: Bitvector<SYNC_COMMITTEE_SIZE>,
+    pub sync_committee_signature: BlsSignature,
+}
+
+pub struct AncestorBlock {
+	/// The actual beacon chain header
+	pub header: BeaconBlockHeader,
+	/// Associated execution header proofs
+	pub execution_payload: ExecutionPayloadProof,
+	/// Ancestry proofs of the beacon chain header.
+	pub ancestry_proof: AncestryProof,
+}
+
+pub enum AncestryProof {
+	/// This variant defines the proof data for a beacon chain header in the `state.block_roots`
+	BlockRoots {
+		/// Proof for the header in `state.block_roots`
+		block_roots_proof: BlockRootsProof,
+		/// The proof for the reconstructed `hash_tree_root(state.block_roots)` in [`BeaconState`]
+		block_roots_branch: Vec<Hash32>,
+	},
+	/// This variant defines the neccessary proofs for a beacon chain header in the
+	/// `state.historical_roots`.
+	HistoricalRoots {
+		/// Proof for the header in `historical_batch.block_roots`
+		block_roots_proof: BlockRootsProof,
+		/// The proof for the `historical_batch.block_roots`, needed to reconstruct
+		/// `hash_tree_root(historical_batch)`
+		historical_batch_proof: Vec<Hash32>,
+		/// The proof for the `hash_tree_root(historical_batch)` in `state.historical_roots`
+		historical_roots_proof: Vec<Hash32>,
+		/// The generalized index for the historical_batch in `state.historical_roots`.
+		historical_roots_index: u64,
+		/// The proof for the reconstructed `hash_tree_root(state.historical_roots)` in
+		/// [`BeaconState`]
+		historical_roots_branch: Vec<Hash32>,
+	},
+}
+ */
+
+message SyncAggregate {
+  bytes sync_committee_bits = 1;
+  bytes sync_committee_signature = 2;
+}
+
+message AncestorBlock {
+  BeaconBlockHeader header = 1;
+  ExecutionPayloadProof execution_payload = 2;
+  AncestryProof ancestry_proof = 3;
+}
+
+message AncestryProof {
+  oneof message {
+    BlockRoots block_roots = 1;
+    HistoricalRoots historical_roots = 2;
+  }
+}
+
+/*
+			block_roots_proof: BlockRootsProof,
+			/// The proof for the reconstructed `hash_tree_root(state.block_roots)` in [`BeaconState`]
+			block_roots_branch: Vec<Hash32>,
+ */
+message BlockRoots {
+  BlockRootsProof block_roots_proof = 1;
+  repeated bytes block_roots_branch = 2;
+}
+
+/*
+			/// Proof for the header in `historical_batch.block_roots`
+			block_roots_proof: BlockRootsProof,
+			/// The proof for the `historical_batch.block_roots`, needed to reconstruct
+			/// `hash_tree_root(historical_batch)`
+			historical_batch_proof: Vec<Hash32>,
+			/// The proof for the `hash_tree_root(historical_batch)` in `state.historical_roots`
+			historical_roots_proof: Vec<Hash32>,
+			/// The generalized index for the historical_batch in `state.historical_roots`.
+			historical_roots_index: u64,
+			/// The proof for the reconstructed `hash_tree_root(state.historical_roots)` in
+			/// [`BeaconState`]
+			historical_roots_branch: Vec<Hash32>,
+ */
+
+message HistoricalRoots {
+  BlockRootsProof block_roots_proof = 1;
+  repeated bytes historical_batch_proof = 2;
+  repeated bytes historical_roots_proof = 3;
+  uint64 historical_roots_index = 4;
+  repeated bytes historical_roots_branch = 5;
+}
+
+/*
+pub struct BlockRootsProof {
+	/// Generalized index of the header in the `block_roots` list.
+	pub block_header_index: u64,
+	/// The proof for the header, needed to reconstruct `hash_tree_root(state.block_roots)`
+	pub block_header_branch: Vec<Hash32>,
+}
+ */
+
+message BlockRootsProof {
+  uint64 block_header_index = 1;
+  repeated bytes block_header_branch = 2;
+}
+
+/*
+/// Minimum state required by the light client to validate new sync committee attestations
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct LightClientState<const SYNC_COMMITTEE_SIZE: usize> {
+	/// The latest recorded finalized header
+	pub finalized_header: BeaconBlockHeader,
+	/// Latest finalized epoch
+	pub latest_finalized_epoch: u64,
+	// Sync committees corresponding to the finalized header
+	pub current_sync_committee: SyncCommittee<SYNC_COMMITTEE_SIZE>,
+	pub next_sync_committee: SyncCommittee<SYNC_COMMITTEE_SIZE>,
+}
+ */
+
+message LightClientState {
+  BeaconBlockHeader finalized_header = 1;
+  uint64 latest_finalized_epoch = 2;
+  SyncCommittee current_sync_committee = 3;
+  SyncCommittee next_sync_committee = 4;
+}
+
+message ClientState {
+  LightClientState inner = 1;
+  optional uint64 frozen_height_revision_height = 2;
+  optional uint64 frozen_height_revision_number = 3;
+  uint32 latest_height = 4;
+}
+
+message Misbehaviour {
+}
+
+message ConsensusState {
+  // timestamp that corresponds to the block height in which the ConsensusState
+  // was stored.
+  google.protobuf.Timestamp timestamp = 1;
+  // packet commitment root
+  bytes root = 2;
+}
+
+message ClientMessage {
+  oneof message {
+    LightClientUpdate header = 1;
+    Misbehaviour misbehaviour = 2;
+  }
+}

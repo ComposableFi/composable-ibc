@@ -1040,7 +1040,7 @@ macro_rules! chains {
 				let maybe_code_id = match self {
 					$(
 						$(#[$($meta)*])*
-						Self::$name(chain) => chain.wasm_code_id.as_ref(),
+						Self::$name(chain) => Option::<CodeId>::None,//chain.wasm_code_id.as_ref(),
 					)*
 				};
 				let maybe_code_id =
@@ -1054,7 +1054,7 @@ macro_rules! chains {
 					$(
 						$(#[$($meta)*])*
 						Self::$name(chain) => {
-							chain.wasm_code_id = Some(code_id);
+							// chain.wasm_code_id = Some(code_id);
 						},
 					)*
 				}

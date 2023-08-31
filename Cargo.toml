@@ -29,9 +29,11 @@ members = [
     # "light-clients/ics07-tendermint-cw",
     "light-clients/ics08-wasm",
     "light-clients/ics10-grandpa",
-    "light-clients/ics10-grandpa-cw",
-    # "light-clients/ics11-beefy",
+    # "light-clients/ics10-grandpa-cw",
+#    "light-clients/ics11-beefy",
     # "light-clients/ics13-near",
+    "light-clients/icsxx-ethereum",
+    "light-clients/icsxx-ethereum-cw",
 
     # hyperspace
     "hyperspace",
@@ -42,6 +44,7 @@ members = [
     # "hyperspace/testsuite",
     # "hyperspace/metrics",
     "hyperspace/ethereum",
+    "hyperspace/ethereum/integration-tests",
 
     # utilities
     # "utils/subxt/codegen",

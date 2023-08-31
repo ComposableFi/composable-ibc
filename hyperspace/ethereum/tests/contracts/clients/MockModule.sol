@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import {IIBCModule} from "../core/05-port/IIBCModule.sol";
 import "../proto/Channel.sol";
+import "../core/25-handler/IIBCHandler.sol";
 
 abstract contract IBCAppBase is IIBCModule {
     /**
@@ -107,7 +108,7 @@ abstract contract IBCAppBase is IIBCModule {
      * NOTE: You should apply an `onlyIBC` modifier to the function if a derived contract overrides it.
      */
     function onRecvPacket(
-        Packet.Data calldata,
+        Packet.Data calldata packet,
         address
     )
         external
@@ -115,7 +116,9 @@ abstract contract IBCAppBase is IIBCModule {
         override
         onlyIBC
         returns (bytes memory acknowledgement)
-    {}
+    {
+        return packet.data;
+    }
 
     /**
      * @dev See IIBCModule-onAcknowledgementPacket
@@ -138,5 +141,20 @@ contract MockModule is IBCAppBase {
 
     function ibcAddress() public view override returns (address) {
         return _ibcAddress;
+    }
+
+    function sendMockPacket(
+        bytes memory data,
+        string memory sourcePort,
+        string memory sourceChannel,
+        uint64 timeoutHeight
+    ) external {
+        IIBCHandler(ibcAddress()).sendPacket(
+            sourcePort,
+            sourceChannel,
+            Height.Data({revision_number: 0, revision_height: timeoutHeight}),
+            0,
+            data
+        );
     }
 }

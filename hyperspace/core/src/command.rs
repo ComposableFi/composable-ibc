@@ -60,22 +60,22 @@ pub struct Cmd {
 	pub config_a: String,
 	/// Relayer chain B config path.
 	#[clap(long)]
-	config_b: String,
+	pub config_b: String,
 	/// Relayer core config path.
 	#[clap(long)]
-	config_core: String,
+	pub config_core: String,
 	/// Port id for channel creation
 	#[clap(long)]
-	port_id: Option<String>,
+	pub port_id: Option<String>,
 	/// Connection delay period in seconds
 	#[clap(long)]
 	delay_period: Option<std::num::NonZeroU32>,
 	/// Channel order
 	#[clap(long)]
-	order: Option<String>,
+	pub order: Option<String>,
 	/// Channel version
 	#[clap(long)]
-	version: Option<String>,
+	pub version: Option<String>,
 	/// New config path for A to avoid overriding existing configuration
 	#[clap(long)]
 	pub out_config_a: Option<String>,
@@ -119,7 +119,7 @@ impl UploadWasmCmd {
 }
 
 impl Cmd {
-	async fn parse_config(&self) -> Result<Config> {
+	pub async fn parse_config(&self) -> Result<Config> {
 		use tokio::fs::read_to_string;
 		let path_a: PathBuf = self.config_a.parse()?;
 		let path_b: PathBuf = self.config_b.parse()?;
