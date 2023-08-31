@@ -2,12 +2,11 @@ use std::time::Duration;
 
 use ethers::providers::Middleware;
 use futures::{Stream, StreamExt};
-use ibc::core::ics02_client::events::UpdateClient;
-use ibc::Height;
+use ibc::{core::ics02_client::events::UpdateClient, Height};
 use pallet_ibc::light_clients::AnyClientMessage;
-use primitives::{Chain, CommonClientState, LightClientSync, MisbehaviourHandler};
+use primitives::{Chain, CommonClientState, MisbehaviourHandler};
 
-use crate::{client::EthereumClient, ibc_provider::BlockHeight};
+use crate::client::EthereumClient;
 
 #[async_trait::async_trait]
 impl MisbehaviourHandler for EthereumClient {
@@ -37,7 +36,8 @@ impl Chain for EthereumClient {
 		&self,
 		msg: Vec<ibc_proto::google::protobuf::Any>,
 	) -> Result<u64, Self::Error> {
-		// TODO: estimate gas for the tx. Convert any to another type (see `wrap_any_msg_into_wasm` for an example)
+		// TODO: estimate gas for the tx. Convert any to another type (see `wrap_any_msg_into_wasm`
+		// for an example)
 		Ok(1)
 	}
 
@@ -71,14 +71,16 @@ impl Chain for EthereumClient {
 		todo!("submit to ethereum")
 	}
 
-	async fn query_client_message(&self, update: UpdateClient) -> Result<AnyClientMessage, Self::Error> {
+	async fn query_client_message(
+		&self,
+		update: UpdateClient,
+	) -> Result<AnyClientMessage, Self::Error> {
 		todo!("used for misbehaviour; skip for now")
 	}
 
 	async fn get_proof_height(&self, block_height: Height) -> Height {
 		block_height
 	}
-
 
 	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error> {
 		tracing::error!(?error, "handle-error");

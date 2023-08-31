@@ -715,6 +715,7 @@ where
 
 	async fn query_received_packets(
 		&self,
+		at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
 		seqs: Vec<u64>,
