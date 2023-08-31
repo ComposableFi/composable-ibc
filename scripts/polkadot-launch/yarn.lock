@@ -3283,8 +3283,8 @@ picomatch@^2.0.4, picomatch@^2.2.1:
   integrity sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==
 
 "polkadot-launch@git+https://github.com/ComposableFi/polkadot-launch.git":
-  version "2.3.1"
-  resolved "git+https://github.com/ComposableFi/polkadot-launch.git#37bcdd1b015abaecf8deae22973fd13ba08bd872"
+  version "2.3.2"
+  resolved "git+https://github.com/ComposableFi/polkadot-launch.git#4f44a2e0767d6f050311c39225ca60f7142b2797"
   dependencies:
     "@polkadot/api" "^8.9.1"
     "@polkadot/api-augment" "^8.9.1"
