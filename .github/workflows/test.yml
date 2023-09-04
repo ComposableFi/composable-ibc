@@ -126,19 +126,27 @@ jobs:
         run: |
           DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest
 
-          mkdir $BUILD_DIR/tmp
-          yarn --cwd ./scripts/parachain-launch install
-          TMPDIR=$BUILD_DIR/tmp OUTPUT=$BUILD_DIR yarn --cwd ./scripts/parachain-launch dev
-          for file in dev-2000-2000.json \
-            dev-2001-2001.json \
-            docker-compose.yml \
-            parachain-2000.Dockerfile \
-            parachain-2001.Dockerfile \
-            relaychain.Dockerfile \
-            rococo-local.json; do
-            cp "$BUILD_DIR/$file" ./scripts/parachain-launch/
-          done
-          sed -i 's/9944:9933/9144:9933/g' ./scripts/parachain-launch/docker-compose.yml
+          # mkdir $BUILD_DIR/tmp
+          # yarn --cwd ./scripts/parachain-launch install
+          # TMPDIR=$BUILD_DIR/tmp OUTPUT=$BUILD_DIR yarn --cwd ./scripts/parachain-launch dev
+          # for file in dev-2000-2000.json \
+          #   dev-2001-2001.json \
+          #   docker-compose.yml \
+          #   parachain-2000.Dockerfile \
+          #   parachain-2001.Dockerfile \
+          #   relaychain.Dockerfile \
+          #   rococo-local.json; do
+          #   cp "$BUILD_DIR/$file" ./scripts/parachain-launch/
+          # done
+          # sed -i 's/9944:9933/9144:9933/g' ./scripts/parachain-launch/docker-compose.yml
+          # # sed -i '321s/9144:9933/9933:9933/g' ./scripts/parachain-launch/docker-compose.yml
+          # sed -i 's/      - 9943:9933\n      - 30344:30333/      - 9944:9933\n      - 30344:30333/g' ./scripts/parachain-launch/docker-compose.yml
+
+          # NOTE: it's very difficult to make a script that avoids ports clashing. So instead we just do it manually
+          # and just run the docker-compose.yml
+
+          # This step needs to be executed, as there's a breaking change.
+          sed -i '/      - --ws-external/d' ./scripts/parachain-launch/docker-compose.yml
 
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml up -d --build
           ./scripts/wait_for_tcp_port_opening.sh $RELAY_HOST 9944

@@ -14,7 +14,6 @@ services:
       - --base-path=/data
       - --chain=/app/rococo-local.json
       - --validator
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=alice
@@ -43,7 +42,6 @@ services:
       - --base-path=/data
       - --chain=/app/rococo-local.json
       - --validator
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=bob
@@ -69,7 +67,6 @@ services:
       - --base-path=/data
       - --chain=/app/rococo-local.json
       - --validator
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=charlie
@@ -95,7 +92,6 @@ services:
       - --base-path=/data
       - --chain=/app/rococo-local.json
       - --validator
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=dave
@@ -121,7 +117,6 @@ services:
       - --base-path=/data
       - --chain=/app/rococo-local.json
       - --validator
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=eve
@@ -147,7 +142,6 @@ services:
       - --base-path=/data
       - --chain=/app/rococo-local.json
       - --validator
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=ferdie
@@ -172,7 +166,6 @@ services:
     command:
       - --base-path=/data
       - --chain=/app/dev-2000-2000.json
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=parachain-2000-0
@@ -206,7 +199,6 @@ services:
     command:
       - --base-path=/data
       - --chain=/app/dev-2000-2000.json
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=parachain-2000-1
@@ -239,7 +231,6 @@ services:
     command:
       - --base-path=/data
       - --chain=/app/dev-2000-2000.json
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=parachain-2000-2
@@ -272,7 +263,6 @@ services:
     command:
       - --base-path=/data
       - --chain=/app/dev-2001-2001.json
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=parachain-2001-0
@@ -305,7 +295,6 @@ services:
     command:
       - --base-path=/data
       - --chain=/app/dev-2001-2001.json
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=parachain-2001-1
@@ -338,7 +327,6 @@ services:
     command:
       - --base-path=/data
       - --chain=/app/dev-2001-2001.json
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=parachain-2001-2
