@@ -60,6 +60,12 @@ digest = { version = "0.10.3", default-features = false }
 hex = "0.4.3"
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, features = ["disable_panic_handler", "disable_oom", "disable_allocator"] }
+
+ethereum-consensus = { git = "https://github.com/polytope-labs/ethereum-consensus", branch = "main", default-features = false }
+sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "c5afca4fbb92cb60dde29c3a89454c288b022d97", default-features = false }
+sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "c5afca4fbb92cb60dde29c3a89454c288b022d97", default-features = false }
+ssz-rs = { git = "https://github.com/polytope-labs/ssz-rs", branch = "main" , default-features = false }
 
 [dev-dependencies]
 cw-multi-test = "0.15.1"

@@ -20,7 +20,9 @@ use ibc::core::ics02_client::{
 
 use crate::client_message::{ClientMessage, Misbehaviour};
 use alloc::{format, string::ToString, vec, vec::Vec};
+use anyhow::anyhow;
 use core::{fmt::Debug, marker::PhantomData};
+use ethereum_consensus::crypto::{PublicKey, Signature};
 use ibc::{
 	core::{
 		ics02_client::{
@@ -45,11 +47,46 @@ use ibc::{
 	},
 	Height,
 };
-use light_client_common::{
-	state_machine, verify_delay_passed, verify_membership, verify_non_membership,
-};
 use sync_committee_verifier::{verify_sync_committee_attestation, BlsVerify, LightClientState};
 use tendermint_proto::Protobuf;
+
+// TODO: move this function in a separate crate and remove the one from `light_client_common` crate
+/// This will verify that the connection delay has elapsed for a given [`ibc::Height`]
+pub fn verify_delay_passed<H, C>(
+	ctx: &C,
+	height: Height,
+	connection_end: &ConnectionEnd,
+) -> Result<(), anyhow::Error>
+where
+	H: Clone,
+	C: ReaderContext,
+{
+	let current_time = ctx.host_timestamp();
+	let current_height = ctx.host_height();
+
+	let client_id = connection_end.client_id();
+	let processed_time = ctx.client_update_time(client_id, height).map_err(anyhow::Error::msg)?;
+	let processed_height =
+		ctx.client_update_height(client_id, height).map_err(anyhow::Error::msg)?;
+
+	let delay_period_time = connection_end.delay_period();
+	let delay_period_blocks = ctx.block_delay(delay_period_time);
+
+	let earliest_time =
+		(processed_time + delay_period_time).map_err(|_| anyhow!("Timestamp overflowed!"))?;
+	if !(current_time == earliest_time || current_time.after(&earliest_time)) {
+		return Err(anyhow!(
+			"Not enough time elapsed current time: {current_time}, earliest time: {earliest_time}"
+		))
+	}
+
+	let earliest_height = processed_height.add(delay_period_blocks);
+	if current_height < earliest_height {
+		return Err(anyhow!("Not enough blocks elapsed, current height: {current_height}, earliest height: {earliest_height}"));
+	}
+
+	Ok(())
+}
 
 const CLIENT_STATE_UPGRADE_PATH: &[u8] = b"client-state-upgrade-path";
 const CONSENSUS_STATE_UPGRADE_PATH: &[u8] = b"consensus-state-upgrade-path";
@@ -382,5 +419,15 @@ where
 		// )
 		// .map_err(Error::Anyhow)?;
 		Ok(())
+	}
+}
+
+impl<H> BlsVerify for EthereumClient<H> {
+	fn verify(
+		public_keys: &[&PublicKey],
+		msg: &[u8],
+		signature: &Signature,
+	) -> Result<(), sync_committee_verifier::error::Error> {
+		todo!()
 	}
 }

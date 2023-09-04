@@ -27,7 +27,6 @@ use ibc::{
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
-use light_client_common::{HostFunctions, RelayChain};
 use serde::{Deserialize, Serialize};
 use sync_committee_verifier::{BlsVerify, LightClientState};
 use tendermint_proto::Protobuf;

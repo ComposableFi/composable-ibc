@@ -1,6 +1,7 @@
 use cosmwasm_std::{DepsMut, Env, Storage};
 use ibc::core::ics26_routing::context::ReaderContext;
 use std::{fmt, fmt::Debug, marker::PhantomData};
+use sync_committee_verifier::BlsVerify;
 
 pub struct Context<'a, H> {
 	pub deps: DepsMut<'a>,
@@ -47,6 +48,6 @@ impl<'a, H> Context<'a, H> {
 }
 
 impl<'a, H> ReaderContext for Context<'a, H> where
-	H: Clone + Eq + Send + Sync + Debug + Default + 'static
+	H: Clone + Eq + Send + Sync + Debug + Default + BlsVerify + 'static
 {
 }

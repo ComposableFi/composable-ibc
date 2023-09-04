@@ -1,6 +1,6 @@
 use cosmwasm_std::StdError;
 use derive_more::{Display, From};
-use icsxx_ethereum::error::Error as GrandpaError;
+use icsxx_ethereum::error::Error as EthereumError;
 use std::error::Error;
 // use thiserror::Error;
 
@@ -35,8 +35,8 @@ pub enum ContractError {
 
 impl Error for ContractError {}
 
-impl From<GrandpaError> for ContractError {
-	fn from(e: GrandpaError) -> Self {
+impl From<EthereumError> for ContractError {
+	fn from(e: EthereumError) -> Self {
 		ContractError::Client(e.to_string())
 	}
 }

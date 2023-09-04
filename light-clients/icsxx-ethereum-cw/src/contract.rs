@@ -34,6 +34,7 @@ use icsxx_ethereum::{
 };
 use prost::Message;
 use std::{collections::BTreeSet, str::FromStr};
+use sync_committee_verifier::BlsVerify;
 /*
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ics10-grandpa-cw";
@@ -232,4 +233,14 @@ pub fn query(_deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 pub fn code_id(store: &dyn Storage) -> Vec<u8> {
 	CODE_ID.load(store).expect("code id must be set")
+}
+
+impl BlsVerify for HostFunctions {
+	fn verify(
+		public_keys: &[&ethereum_consensus::crypto::PublicKey],
+		msg: &[u8],
+		signature: &ethereum_consensus::crypto::Signature,
+	) -> Result<(), sync_committee_verifier::error::Error> {
+		todo!()
+	}
 }

@@ -20,7 +20,6 @@ use core::{convert::Infallible, fmt::Debug};
 use ethereum_consensus::primitives::Hash32;
 use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp, Height};
 use ibc_proto::google::protobuf::Any;
-use light_client_common::{decode_timestamp_extrinsic, state_machine};
 use serde::{Deserialize, Serialize};
 use tendermint::time::Time;
 use tendermint_proto::{google::protobuf as tpb, Protobuf};

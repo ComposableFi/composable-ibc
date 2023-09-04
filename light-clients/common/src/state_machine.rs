@@ -15,7 +15,12 @@
 
 //! State verification functions
 
-use alloc::{ collections::BTreeMap, string::String, vec::Vec};
+use alloc::{
+	collections::BTreeMap,
+	format,
+	string::{String, ToString},
+	vec::Vec,
+};
 use codec::Decode;
 use core::fmt::Debug;
 use hash_db::{HashDB, Hasher, EMPTY_PREFIX};
@@ -49,7 +54,8 @@ where
 	let memory_db = proof.into_memory_db::<H>();
 	let trie = TrieDBBuilder::<LayoutV0<H>>::new(&memory_db, &root).build();
 	let child_root = trie
-		.get(child_info.prefixed_storage_key().as_slice()).map_err(|e| Error::Trie(format!("{e}")))?
+		.get(child_info.prefixed_storage_key().as_slice())
+		.map_err(|e| Error::Trie(format!("{e}")))?
 		.map(|r| {
 			let mut hash = H::Out::default();
 
@@ -63,7 +69,10 @@ where
 	let child_trie = TrieDBBuilder::<LayoutV0<H>>::new(&child_db, &child_root).build();
 
 	for (key, value) in items {
-		let recovered = child_trie.get(&key).map_err(|e| Error::Trie(format!("{e}")))?.and_then(|val| Decode::decode(&mut &val[..]).ok());
+		let recovered = child_trie
+			.get(&key)
+			.map_err(|e| Error::Trie(format!("{e}")))?
+			.and_then(|val| Decode::decode(&mut &val[..]).ok());
 
 		if recovered != value {
 			Err(Error::ValueMismatch {
@@ -99,7 +108,10 @@ where
 	let mut result = BTreeMap::new();
 
 	for key in keys.into_iter() {
-		let value = trie.get(key.as_ref()).map_err(|e| Error::Trie(format!("{e}")))?.and_then(|val| Decode::decode(&mut &val[..]).ok());
+		let value = trie
+			.get(key.as_ref())
+			.map_err(|e| Error::Trie(format!("{e}")))?
+			.and_then(|val| Decode::decode(&mut &val[..]).ok());
 		result.insert(key.as_ref().to_vec(), value);
 	}
 

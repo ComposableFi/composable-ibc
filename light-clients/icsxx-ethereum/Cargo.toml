@@ -13,10 +13,9 @@ ibc = { path = "../../ibc/modules", default-features = false }
 ibc-proto = { path = "../../ibc/proto", default-features = false }
 
 # local deps
+ethereum-consensus = { git = "https://github.com/polytope-labs/ethereum-consensus", branch = "main", default-features = false }
 sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "c5afca4fbb92cb60dde29c3a89454c288b022d97", default-features = false }
 sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "c5afca4fbb92cb60dde29c3a89454c288b022d97", default-features = false }
-light-client-common = { path = "../common", default-features = false }
-ethereum-consensus = { git = "https://github.com/polytope-labs/ethereum-consensus", branch = "main", default-features = false }
 ssz-rs = { git = "https://github.com/polytope-labs/ssz-rs", branch = "main" , default-features = false }
 
 # crates.io
@@ -52,7 +51,6 @@ default = ["std"]
 std = [
     "ibc/std",
     "ibc-proto/std",
-    "light-client-common/std",
     "prost/std",
     "prost-types/std",
     "anyhow/std",
