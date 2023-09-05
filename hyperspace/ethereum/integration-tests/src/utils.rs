@@ -25,7 +25,7 @@ use ethers_solc::{
 	Artifact, ConfigurableContractArtifact, EvmVersion, Project, ProjectCompileOutput,
 	ProjectPathsConfig, SolcConfig,
 };
-use hyperspace_ethereum::{contract::UnwrapContractError, client::EthRpcClient, config::Config};
+use hyperspace_ethereum::{client::EthRpcClient, config::Config, contract::UnwrapContractError};
 use ibc::{
 	core::{
 		ics04_channel::packet::Packet,
@@ -43,7 +43,7 @@ pub async fn hyperspace_ethereum_client_fixture<M>(
 		ibc_channel_handshake,
 		ibc_packet,
 		ibc_handler,
-		tendermint_client
+		tendermint_client,
 	}: &DeployYuiIbc<Arc<M>, M>,
 	client: Option<Arc<EthRpcClient>>,
 ) -> hyperspace_ethereum::client::EthereumClient {
@@ -59,7 +59,19 @@ pub async fn hyperspace_ethereum_client_fixture<M>(
 	dbg!(anvil.chain_id());
 	dbg!("hyperspace_ethereum_client_fixture");
 
-	let wallet = if !USE_GETH { Some(anvil.keys()[0].clone().to_sec1_pem(pem::LineEnding::CR).unwrap().as_str().to_owned().to_string()) } else { None };
+	let wallet = if !USE_GETH {
+		Some(
+			anvil.keys()[0]
+				.clone()
+				.to_sec1_pem(pem::LineEnding::CR)
+				.unwrap()
+				.as_str()
+				.to_owned()
+				.to_string(),
+		)
+	} else {
+		None
+	};
 
 	let mut ret = hyperspace_ethereum::client::EthereumClient::new(Config {
 		http_rpc_url: endpoint.parse().unwrap(),
@@ -69,7 +81,7 @@ pub async fn hyperspace_ethereum_client_fixture<M>(
 		ibc_client_address: ibc_client.address(),
 		ibc_connection_address: ibc_connection.address(),
 		ibc_channel_handshake_address: ibc_channel_handshake.address(),
-		tendermint_client_address: tendermint_client.address(),
+		// tendermint_client_address: tendermint_client.address(),
 		mnemonic: None,
 		max_block_weight: 1,
 		private_key: wallet,
@@ -82,7 +94,7 @@ pub async fn hyperspace_ethereum_client_fixture<M>(
 	})
 	.await
 	.unwrap();
-	if let Some(client) = client{
+	if let Some(client) = client {
 		ret.http_rpc = client;
 	}
 	ret
@@ -498,7 +510,7 @@ where
 			ibc_channel_handshake: self.ibc_channel_handshake.clone(),
 			ibc_packet: self.ibc_packet.clone(),
 			ibc_handler: self.ibc_handler.clone(),
-			tendermint_client: self.tendermint_client.clone(),
+			// tendermint_client: self.tendermint_client.clone(),
 		}
 	}
 }
@@ -566,5 +578,12 @@ where
 
 	println!("IBC Handler address: {:?}", ibc_handler.address());
 
-	DeployYuiIbc { ibc_client, ibc_connection, ibc_channel_handshake, ibc_packet, ibc_handler, tendermint_client }
+	DeployYuiIbc {
+		ibc_client,
+		ibc_connection,
+		ibc_channel_handshake,
+		ibc_packet,
+		ibc_handler,
+		tendermint_client,
+	}
 }

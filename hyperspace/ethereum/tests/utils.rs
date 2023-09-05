@@ -43,7 +43,7 @@ use ibc::{
 };
 use tracing::log;
 
-pub const USE_GETH: bool = false;
+pub const USE_GETH: bool = true;
 
 #[track_caller]
 pub fn yui_ibc_solidity_path() -> PathBuf {
@@ -236,26 +236,6 @@ pub mod mock {
 	}
 }
 
-#[derive(Debug)]
-pub struct DeployYuiIbc<B, M> {
-	pub facet_cuts: Vec<FacetCut>,
-	pub deployed_facets: Vec<ContractInstance<B, M>>,
-	pub diamond: ContractInstance<B, M>,
-	pub tendermint_client: ContractInstance<B, M>,
-}
-
-impl FacetCut {
-	pub fn into_token(self) -> Token {
-		Token::Tuple(vec![
-			Token::Address(self.address),
-			Token::Uint((FacetCutAction::Add as u32).into()),
-			Token::Array(
-				self.selectors.into_iter().map(|(_, x)| Token::FixedBytes(x.to_vec())).collect(),
-			),
-		])
-	}
-}
-
 fn get_selectors<M>(contract: &ContractInstance<Arc<M>, M>) -> Vec<(String, [u8; 4])>
 where
 	M: Middleware,
@@ -396,5 +376,11 @@ where
 
 	let tendermint_client = diamond.clone();
 
-	DeployYuiIbc { diamond, facet_cuts, deployed_facets, storage_layout, tendermint_client }
+	DeployYuiIbc {
+		diamond,
+		facet_cuts,
+		deployed_facets,
+		storage_layout,
+		tendermint: tendermint_client,
+	}
 }

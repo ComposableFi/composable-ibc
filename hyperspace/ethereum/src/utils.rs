@@ -49,6 +49,7 @@ pub struct DeployYuiIbc<B, M> {
 	pub deployed_facets: Vec<ContractInstance<B, M>>,
 	pub diamond: ContractInstance<B, M>,
 	pub storage_layout: StorageLayout,
+	pub tendermint: ContractInstance<B, M>,
 }
 
 impl<B, M> DeployYuiIbc<B, M>
@@ -325,6 +326,7 @@ where
 			deployed_facets: self.deployed_facets.clone(),
 			diamond: self.diamond.clone(),
 			storage_layout: self.storage_layout.clone(),
+			tendermint: self.tendermint.clone(),
 		}
 	}
 }

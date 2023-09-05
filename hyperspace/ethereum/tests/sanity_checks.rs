@@ -14,13 +14,15 @@ use ethers::{
 	types::U256,
 	utils::{keccak256, AnvilInstance},
 };
-use ethers_solc::{ProjectCompileOutput, ProjectPathsConfig};
-use futures::{stream::StreamExt, Stream, TryStreamExt};
+use ethers_solc::{Artifact, ProjectCompileOutput, ProjectPathsConfig};
+use futures::{Stream, TryStreamExt};
 use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_ethereum::{
+	client::EthRpcClient,
 	config::EthereumClientConfig,
-	contract::UnwrapContractError,
+	contract::{DiamandHandler, IbcHandler, UnwrapContractError},
 	utils::{DeployYuiIbc, ProviderImpl},
+	yui_types::IntoToken,
 };
 use ibc::{
 	core::{
@@ -55,13 +57,23 @@ use ibc::{
 		ics24_host::identifier::{ChainId, ChannelId, ConnectionId, PortId},
 	},
 	events::IbcEvent,
+	proofs::{ConsensusProof, Proofs},
+	protobuf::Protobuf,
+	signer::Signer,
 	timestamp::Timestamp,
 	tx_msg::Msg,
 };
+use ibc_proto::google::protobuf::Any;
 use ibc_rpc::PacketInfo;
-use primitives::{Chain, IbcProvider};
+use ics07_tendermint::client_state::ClientState;
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
+use primitives::{mock::LocalClientTypes, Chain, IbcProvider};
 use prost::Message;
-use tokio::time::timeout;
+use tokio::{
+	task::LocalSet,
+	time::{sleep, timeout, Interval},
+};
+use tokio_stream::{Elapsed, StreamExt as _};
 use tracing::log;
 use tracing_subscriber::{filter, layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
@@ -99,11 +111,12 @@ async fn hyperspace_ethereum_client_fixture(
 		None
 	};
 
-	let mut ret = hyperspace_ethereum::client::EthereumClient::new(Config {
+	let mut ret = hyperspace_ethereum::client::EthereumClient::new(EthereumClientConfig {
 		http_rpc_url: endpoint.parse().unwrap(),
 		ws_rpc_url: "ws://localhost:5001".parse().unwrap(),
+		beacon_rpc_url: Default::default(),
 		ibc_handler_address: yui_ibc.diamond.address(),
-		tendermint_client_address: tendermint_client.address(),
+		tendermint_client_address: yui_ibc.tendermint.address(),
 		mnemonic: None,
 		max_block_weight: 1,
 		private_key: wallet,
@@ -115,21 +128,20 @@ async fn hyperspace_ethereum_client_fixture(
 		connection_id: None,
 		channel_whitelist: vec![],
 		commitment_prefix: "".into(),
+		wasm_code_id: None,
+		yui: Some(yui_ibc),
 		client_type: "07-tendermint".into(),
 		diamond_handler: diamond_hanlder,
 	})
 	.await
 	.unwrap();
+
 	if let Some(client) = client {
 		ret.http_rpc = client;
 	}
+
 	ret
 }
-
-pub type ProviderImpl = ethers::prelude::SignerMiddleware<
-	ethers::providers::Provider<ethers::providers::Http>,
-	ethers::signers::LocalWallet,
->;
 
 #[allow(dead_code)]
 struct DeployYuiIbcMockClient {
@@ -192,7 +204,7 @@ impl DeployYuiIbcMockClient {
 
 async fn deploy_yui_ibc_and_mock_client_fixture() -> DeployYuiIbcMockClient {
 	let path = utils::yui_ibc_solidity_path();
-	let project_output: ProjectCompileOutput = utils::compile_yui(&path, "contracts/core");
+	let project_output = utils::compile_yui(&path, "contracts/core");
 	let diamond_project_output = utils::compile_yui(&path, "contracts/diamond");
 	let (anvil, client) = utils::spawn_anvil();
 	log::warn!("{}", anvil.endpoint());
@@ -320,7 +332,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	//create ethereum hyperspace client
 	let mut hyperspace = hyperspace_ethereum_client_fixture(
 		&anvil,
-		&yui_ibc,
+		yui_ibc.clone(),
 		Some(client.clone()),
 		Some(diamond.clone()),
 	)
@@ -353,7 +365,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	//replace the tendermint client address in hyperspace config with a real one
 	hyperspace.config.ibc_handler_address = yui_ibc.diamond.address();
 	hyperspace.config.tendermint_client_address = tendermint_light_client.address();
-	yui_ibc.tendermint_client = tendermint_light_client;
+	// yui_ibc.tendermint_client = tendermint_light_client;
 	/* ______________________________________________________________________________ */
 
 	/* ______________________________________________________________________________ */
@@ -465,7 +477,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 		Height::new(1, 1),
 	)
 	.unwrap();
-	//
+
 	let msg = MsgConnectionOpenAck::<LocalClientTypes> {
 		connection_id: ConnectionId::new(0),
 		counterparty_connection_id: ConnectionId::new(0),
@@ -717,7 +729,6 @@ async fn test_hyperspace_ethereum_client() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_ibc_client() {
 	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
 	let hyperspace =
@@ -766,14 +777,16 @@ async fn test_ibc_client() {
 		.await
 		.unwrap();
 
-	let events = timeout(Duration::from_secs(5), events.take(1).collect::<Vec<_>>())
-		.await
-		.unwrap();
+	let events = events
+		.timeout(Duration::from_secs(5))
+		.take_while(|x| x.is_ok())
+		.filter_map(|x| x.ok())
+		.collect::<Vec<_>>()
+		.await;
 	dbg!(events);
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_ibc_connection() {
 	let stdout_log = tracing_subscriber::fmt::layer().pretty();
 	tracing_subscriber::registry()
@@ -819,7 +832,6 @@ async fn test_ibc_connection() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_ibc_channel() {
 	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
 	let hyperspace =
@@ -876,12 +888,12 @@ async fn test_ibc_channel() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_ibc_packet() {
 	let _ = env_logger::try_init();
 	let mut deploy = deploy_yui_ibc_and_mock_client_fixture().await;
 	let hyperspace =
 		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone(), None, None).await;
+	let events = hyperspace.ibc_events().await;
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 
 	let mock_module = deploy_mock_module_fixture(&deploy).await;
@@ -982,7 +994,7 @@ async fn test_ibc_packet() {
 			source_channel: ChannelId::from_str("channel-0").unwrap(),
 			destination_port: PortId::from_str("port-0").unwrap(),
 			destination_channel: ChannelId::from_str("channel-0").unwrap(),
-			data,
+			data: data.clone(),
 			timeout_height: Height::new(0, 1000000),
 			timeout_timestamp: Timestamp::default(),
 		})
@@ -1024,7 +1036,7 @@ async fn test_ibc_packet() {
 			data: "hello_recv".as_bytes().to_vec(),
 			timeout_height: Height::new(0, 1000000).into(),
 			timeout_timestamp: 0,
-			ack: None,
+			ack: Some(data.clone()),
 		}]
 	);
 
@@ -1076,7 +1088,14 @@ async fn test_ibc_packet() {
 		.unwrap();
 	assert_eq!(unreceived, vec![1, 2]);
 
-	let events = events.collect::<Vec<_>>().await;
+	log::warn!("waiting for events");
+
+	let events = events
+		.timeout(Duration::from_secs(5))
+		.take_while(|x| x.is_ok())
+		.filter_map(|x| x.ok())
+		.collect::<Vec<_>>()
+		.await;
 	dbg!(events);
 }
 

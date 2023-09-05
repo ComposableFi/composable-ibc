@@ -32,9 +32,7 @@ use primitives::CommonClientState;
 use std::{future::Future, ops::Add, pin::Pin, str::FromStr, sync::Arc};
 use thiserror::Error;
 
-use crate::config::Config;
-
-pub(crate) type EthRpcClient = ethers::prelude::SignerMiddleware<
+pub type EthRpcClient = ethers::prelude::SignerMiddleware<
 	ethers::providers::Provider<Http>,
 	ethers::signers::Wallet<ethers::prelude::k256::ecdsa::SigningKey>,
 >;
@@ -147,11 +145,12 @@ impl EthereumClient {
 			prev_state: Arc::new(std::sync::Mutex::new((vec![], vec![]))),
 		})
 	}
-
+	// cauce
 	pub async fn websocket_provider(&self) -> Result<Provider<Ws>, ClientError> {
-		let secret = std::fs::read_to_string(
-			"/Users/vmark/.lighthouse/local-testnet/geth_datadir1/geth/jwtsecret",
-		)
+		let secret = std::fs::read_to_string(format!(
+			"{}/.lighthouse/local-testnet/geth_datadir1/geth/jwtsecret",
+			env!("HOME"),
+		))
 		.unwrap();
 		println!("secret = {secret}");
 		let secret = JwtKey::from_slice(&hex::decode(&secret[2..]).unwrap()).expect("oops");

@@ -4849,6 +4849,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "cast",
+ "ecdsa 0.16.7",
  "elliptic-curve 0.13.5",
  "env_logger 0.10.0",
  "ethereum-consensus",
@@ -4859,6 +4860,7 @@ dependencies = [
  "git2",
  "hex",
  "http",
+ "hyperspace-cosmos",
  "hyperspace-primitives",
  "ibc",
  "ibc-primitives",
@@ -4877,6 +4879,43 @@ dependencies = [
  "sync-committee-prover",
  "sync-committee-verifier",
  "tendermint",
+ "thiserror",
+ "tokio",
+ "tokio-stream",
+ "toml 0.7.6",
+ "tracing",
+ "tracing-subscriber 0.3.17",
+]
+
+[[package]]
+name = "hyperspace-integration-tests"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "async-trait",
+ "cast",
+ "elliptic-curve 0.13.5",
+ "env_logger 0.10.0",
+ "ethers 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethers-solc 2.0.9",
+ "futures",
+ "git2",
+ "hex",
+ "http",
+ "hyperspace-core",
+ "hyperspace-cosmos",
+ "hyperspace-ethereum",
+ "hyperspace-primitives",
+ "ibc",
+ "ibc-primitives",
+ "ibc-proto",
+ "ibc-rpc",
+ "ics07-tendermint",
+ "pallet-ibc",
+ "prost 0.11.6",
+ "serde",
+ "serde_json",
  "thiserror",
  "tokio",
  "toml 0.7.6",
@@ -12737,9 +12776,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-stream"
-version = "0.1.11"
+version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d660770404473ccd7bc9f8b28494a811bc18542b915c0855c51e8f419d5223ce"
+checksum = "397c988d37662c7dda6d2208364a706264bf3d6138b11d436cbac0ad38832842"
 dependencies = [
  "futures-core",
  "pin-project-lite 0.2.13",

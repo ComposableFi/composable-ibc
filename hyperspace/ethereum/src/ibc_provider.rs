@@ -1,14 +1,15 @@
 use ethers::{
 	abi::{
 		encode, encode_packed, ethabi, Abi, AbiEncode, Detokenize, InvalidOutputType, ParamType,
-		RawLog, Token, Tokenizable, Topic,
+		RawLog, Token, Tokenizable,
 	},
 	contract::{abigen, EthEvent},
 	middleware::contract::Contract,
 	prelude::Block,
 	providers::Middleware,
 	types::{
-		BlockId, BlockNumber, EIP1186ProofResponse, Filter, StorageProof, ValueOrArray, H256, U256,
+		BlockId, BlockNumber, EIP1186ProofResponse, Filter, StorageProof, Topic, ValueOrArray,
+		H256, U256,
 	},
 	utils::keccak256,
 };
@@ -390,14 +391,11 @@ impl IbcProvider for EthereumClient {
 			)
 			.expect("contract is missing getChannel");
 
-		let (channel_data, exists) = binding
+		let channel_data = binding
 			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
 			.call()
 			.await
 			.unwrap();
-		if !exists {
-			todo!("error: channel does not exist")
-		}
 
 		let state = State::from_i32(channel_data.state as _).expect("invalid channel state");
 		let counterparty = match state {
