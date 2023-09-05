@@ -1,0 +1,32 @@
+{
+    "parachains": [
+        {
+            "chain": "contracts-rococo-dev",
+            "collator": {
+                "args": [
+                    "-lparachain=debug"
+                ],
+                "command": "../../target/SET_WHATEVER_YOU_BUILD/polkadot-node",
+                "name": "alice",
+                "ws_port": 9988
+            },
+            "id": 2000
+        }
+    ],
+    "relaychain": {
+        "chain": "rococo-local",
+        "command": "../../polkadot",
+        "nodes": [
+            {
+                "name": "alice"
+            },
+            {
+                "name": "bob"
+            }
+        ],
+        "ws_port": 9944
+    },
+    "settings": {
+        "timeout": 2000
+    }
+}
