@@ -14,5 +14,6 @@ pub mod key_provider;
 pub mod light_client_sync;
 pub mod prove;
 pub mod utils;
+pub mod yui_types;
 
 pub mod mock;

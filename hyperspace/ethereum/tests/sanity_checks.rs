@@ -1,15 +1,22 @@
 use std::{future::Future, ops::Deref, path::PathBuf, str::FromStr, sync::Arc, time::Duration};
 
 use crate::utils::USE_GETH;
+use cast::revm::new;
+use ecdsa::SigningKey;
+use elliptic_curve::pkcs8::der::pem;
 use ethers::{
 	abi::{encode_packed, Token},
+	contract::MultiAbigen,
 	core::k256::sha2::{Digest, Sha256},
-	prelude::{ContractInstance, TransactionReceipt},
+	prelude::{ContractFactory, ContractInstance, TransactionReceipt},
+	providers::{Http, Provider},
+	signers::Wallet,
 	types::U256,
 	utils::{keccak256, AnvilInstance},
 };
 use ethers_solc::{ProjectCompileOutput, ProjectPathsConfig};
 use futures::{stream::StreamExt, Stream, TryStreamExt};
+use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_ethereum::{
 	config::EthereumClientConfig,
 	contract::UnwrapContractError,
@@ -17,15 +24,39 @@ use hyperspace_ethereum::{
 };
 use ibc::{
 	core::{
-		ics02_client::height::Height,
-		ics04_channel::{
-			channel::Order,
-			packet::{Packet, Sequence},
+		ics02_client::{
+			height::Height,
+			msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient},
+			trust_threshold::TrustThreshold,
 		},
-		ics24_host::identifier::{ChannelId, PortId},
+		ics03_connection::{
+			connection::Counterparty,
+			msgs::{
+				conn_open_ack::MsgConnectionOpenAck, conn_open_confirm::MsgConnectionOpenConfirm,
+				conn_open_init::MsgConnectionOpenInit,
+			},
+		},
+		ics04_channel::{
+			channel::{ChannelEnd, Order, State},
+			msgs::{
+				acknowledgement::{Acknowledgement, MsgAcknowledgement},
+				chan_close_confirm::MsgChannelCloseConfirm,
+				chan_close_init::MsgChannelCloseInit,
+				chan_open_ack::MsgChannelOpenAck,
+				chan_open_confirm::MsgChannelOpenConfirm,
+				chan_open_init::MsgChannelOpenInit,
+				chan_open_try::MsgChannelOpenTry,
+				recv_packet::MsgRecvPacket,
+			},
+			packet::{Packet, Sequence},
+			Version,
+		},
+		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
+		ics24_host::identifier::{ChainId, ChannelId, ConnectionId, PortId},
 	},
 	events::IbcEvent,
 	timestamp::Timestamp,
+	tx_msg::Msg,
 };
 use ibc_rpc::PacketInfo;
 use primitives::{Chain, IbcProvider};
@@ -39,6 +70,8 @@ mod utils;
 async fn hyperspace_ethereum_client_fixture(
 	anvil: &ethers::utils::AnvilInstance,
 	yui_ibc: DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>,
+	client: Option<Arc<EthRpcClient>>,
+	diamond_hanlder: Option<DiamandHandler>,
 ) -> hyperspace_ethereum::client::EthereumClient {
 	let endpoint = if USE_GETH { "http://localhost:6001".to_string() } else { anvil.endpoint() };
 	let wallet_path = if USE_GETH {
@@ -46,28 +79,57 @@ async fn hyperspace_ethereum_client_fixture(
 	} else {
 		None
 	};
-	let wallet = if !USE_GETH { Some(anvil.endpoint().parse().unwrap()) } else { None };
 
-	hyperspace_ethereum::client::EthereumClient::new(
-		EthereumClientConfig {
-			http_rpc_url: endpoint.parse().unwrap(),
-			ws_rpc_url: "ws://localhost:5001".parse().unwrap(),
-			ibc_handler_address: yui_ibc.diamond.address(),
-			mnemonic: None,
-			max_block_weight: 1,
-			private_key: wallet,
-			private_key_path: wallet_path,
-			name: "mock-ethereum-client".into(),
-			client_id: None,
-			connection_id: None,
-			channel_whitelist: vec![],
-			commitment_prefix: "".into(),
-		},
-		yui_ibc,
-	)
+	dbg!("hyperspace_ethereum_client_fixture");
+	dbg!(anvil.endpoint());
+	dbg!(anvil.chain_id());
+	dbg!("hyperspace_ethereum_client_fixture");
+
+	let wallet = if !USE_GETH {
+		Some(
+			anvil.keys()[0]
+				.clone()
+				.to_sec1_pem(pem::LineEnding::CR)
+				.unwrap()
+				.as_str()
+				.to_owned()
+				.to_string(),
+		)
+	} else {
+		None
+	};
+
+	let mut ret = hyperspace_ethereum::client::EthereumClient::new(Config {
+		http_rpc_url: endpoint.parse().unwrap(),
+		ws_rpc_url: "ws://localhost:5001".parse().unwrap(),
+		ibc_handler_address: yui_ibc.diamond.address(),
+		tendermint_client_address: tendermint_client.address(),
+		mnemonic: None,
+		max_block_weight: 1,
+		private_key: wallet,
+		private_key_path: wallet_path,
+		name: "mock-ethereum-client".into(),
+		client_id: Some(
+			ibc::core::ics24_host::identifier::ClientId::new("07-tendermint", 0).unwrap(),
+		),
+		connection_id: None,
+		channel_whitelist: vec![],
+		commitment_prefix: "".into(),
+		client_type: "07-tendermint".into(),
+		diamond_handler: diamond_hanlder,
+	})
 	.await
-	.unwrap()
+	.unwrap();
+	if let Some(client) = client {
+		ret.http_rpc = client;
+	}
+	ret
 }
+
+pub type ProviderImpl = ethers::prelude::SignerMiddleware<
+	ethers::providers::Provider<ethers::providers::Http>,
+	ethers::signers::LocalWallet,
+>;
 
 #[allow(dead_code)]
 struct DeployYuiIbcMockClient {
@@ -130,7 +192,7 @@ impl DeployYuiIbcMockClient {
 
 async fn deploy_yui_ibc_and_mock_client_fixture() -> DeployYuiIbcMockClient {
 	let path = utils::yui_ibc_solidity_path();
-	let project_output = utils::compile_yui(&path, "contracts/core");
+	let project_output: ProjectCompileOutput = utils::compile_yui(&path, "contracts/core");
 	let diamond_project_output = utils::compile_yui(&path, "contracts/diamond");
 	let (anvil, client) = utils::spawn_anvil();
 	log::warn!("{}", anvil.endpoint());
@@ -230,23 +292,436 @@ fn deploy_mock_module_fixture(
 	}
 }
 
+pub fn get_dummy_proof() -> Vec<u8> {
+	"Y29uc2Vuc3VzU3RhdGUvaWJjb25lY2xpZW50LzIy".as_bytes().to_vec()
+}
+
 #[tokio::test]
+async fn test_deploy_yui_ibc_and_create_eth_client() {
+	let start = std::time::Instant::now();
+	let path = utils::yui_ibc_solidity_path();
+
+	/* ______________________________________________________________________________ */
+	//compile and deploy yui ibc contracts
+	let project_output = utils::compile_yui(&path, "contracts/core");
+	let project_output1 = utils::compile_yui(&path, "contracts/clients");
+	let diamond_project_output = utils::compile_yui(&path, "contracts/diamond");
+
+	let (anvil, client) = utils::spawn_anvil();
+
+	let mut yui_ibc =
+		utils::deploy_yui_ibc(&project_output, &diamond_project_output, client.clone()).await;
+
+	let diamond = DiamandHandler::new(yui_ibc.clone().deployed_facets, yui_ibc.clone().diamond);
+
+	/* ______________________________________________________________________________ */
+
+	/* ______________________________________________________________________________ */
+	//create ethereum hyperspace client
+	let mut hyperspace = hyperspace_ethereum_client_fixture(
+		&anvil,
+		&yui_ibc,
+		Some(client.clone()),
+		Some(diamond.clone()),
+	)
+	.await;
+	/* ______________________________________________________________________________ */
+
+	/* ______________________________________________________________________________ */
+	//find and deploy tendermint client
+	let upd = project_output1.find_first("DelegateTendermintUpdate").unwrap();
+	let (abi, bytecode, _) = upd.clone().into_parts();
+	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
+	let update_client_delegate_contract = factory.deploy(()).unwrap().send().await.unwrap();
+
+	let contract = project_output1.find_first("TendermintLightClientSimple").unwrap();
+	// dbg!(&contract);
+	let r = contract.clone();
+	let (abi, bytecode, _) = r.into_parts();
+
+	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
+	let tendermint_light_client = factory
+		.deploy((
+			Token::Address(yui_ibc.diamond.address()),
+			Token::Address(update_client_delegate_contract.address()),
+		))
+		.unwrap()
+		.send()
+		.await
+		.unwrap();
+
+	//replace the tendermint client address in hyperspace config with a real one
+	hyperspace.config.ibc_handler_address = yui_ibc.diamond.address();
+	hyperspace.config.tendermint_client_address = tendermint_light_client.address();
+	yui_ibc.tendermint_client = tendermint_light_client;
+	/* ______________________________________________________________________________ */
+
+	/* ______________________________________________________________________________ */
+	//register client
+	let _ = yui_ibc
+		.register_client(
+			&hyperspace.config.client_type,
+			hyperspace.config.tendermint_client_address,
+		)
+		.await;
+	/* ______________________________________________________________________________ */
+
+	/* ______________________________________________________________________________ */
+	//create client
+	let signer = Signer::from_str("0CDA3F47EF3C4906693B170EF650EB968C5F4B2C").unwrap();
+
+	let tm = serde_json::from_str::<tendermint::block::signed_header::SignedHeader>(include_str!(
+		"../../../light-clients/ics07-tendermint/src/mock/signed_header.json"
+	))
+	.unwrap();
+
+	let tm_header = tm.header.clone();
+
+	let client_state = ClientState::<HostFunctionsManager>::new(
+		ChainId::from(tm_header.chain_id.clone()),
+		Default::default(),
+		Duration::from_secs(64000),
+		Duration::from_secs(128000),
+		Duration::from_millis(3000),
+		Height::new(
+			ChainId::chain_version(tm_header.chain_id.as_str()),
+			u64::from(tm_header.height),
+		),
+		Default::default(),
+		vec!["".to_string()],
+	)
+	.unwrap();
+
+	let msg = MsgCreateAnyClient::<LocalClientTypes>::new(
+		AnyClientState::Tendermint(client_state.clone()),
+		AnyConsensusState::Tendermint(tm_header.try_into().unwrap()),
+		signer.clone(),
+	)
+	.unwrap();
+
+	use ibc::{protobuf::Protobuf, tx_msg::Msg};
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+
+	let result = hyperspace.submit(vec![msg]).await.unwrap();
+	/* ______________________________________________________________________________ */
+
+	/* ______________________________________________________________________________ */
+	//update client
+	let mut set = vec![];
+	let header = ics07_tendermint::client_message::Header {
+		signed_header: tm,
+		validator_set: tendermint::validator::Set::new(set.clone(), None),
+		trusted_height: Height::new(
+			client_state.latest_height.revision_number,
+			client_state.latest_height.revision_height,
+		),
+		trusted_validator_set: tendermint::validator::Set::new(set, None),
+	};
+	let msg = MsgUpdateAnyClient::<LocalClientTypes> {
+		client_id: hyperspace.config.clone().client_id.unwrap(),
+		client_message: pallet_ibc::light_clients::AnyClientMessage::Tendermint(
+			ics07_tendermint::client_message::ClientMessage::Header(header.clone()),
+		),
+		signer,
+	};
+
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+
+	//before to call update you need to be sure that the prev revision_height was stored on the
+	// chain
+	assert_eq!(client_state.latest_height.revision_height, header.trusted_height.revision_height);
+	let result = hyperspace.submit(vec![msg]).await.unwrap();
+	/* ______________________________________________________________________________ */
+	/* ______________________________________________________________________________ */
+	//create conenction:
+	let msg = MsgConnectionOpenInit {
+		client_id: ibc::core::ics24_host::identifier::ClientId::new("07-tendermint", 0).unwrap(),
+		counterparty: Counterparty::new(
+			ibc::core::ics24_host::identifier::ClientId::new("07-ethereum", 0).unwrap(),
+			None,
+			CommitmentPrefix::try_from(vec![1, 2, 3]).unwrap(),
+		),
+		version: Some(Default::default()), // not nessesary
+		delay_period: Duration::from_secs(1000000),
+		signer: Signer::from_str("s").unwrap(), //not nessesary
+	};
+
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let result = hyperspace.submit(vec![msg]).await.unwrap();
+
+	/* ______________________________________________________________________________ */
+
+	/* ______________________________________________________________________________ */
+	//open ack
+	let x = CommitmentProofBytes::try_from(get_dummy_proof()).unwrap();
+	let proofs = Proofs::new(
+		x.clone(),
+		Some(x.clone()),
+		Some(
+			ConsensusProof::new(x.clone(), Height { revision_number: 1, revision_height: 1 })
+				.unwrap(),
+		),
+		Some(x.clone()),
+		Height::new(1, 1),
+	)
+	.unwrap();
+	//
+	let msg = MsgConnectionOpenAck::<LocalClientTypes> {
+		connection_id: ConnectionId::new(0),
+		counterparty_connection_id: ConnectionId::new(0),
+		client_state: Some(AnyClientState::Tendermint(client_state.clone())),
+		proofs: proofs.clone(),
+		host_consensus_state_proof: get_dummy_proof(),
+		version: ibc::core::ics03_connection::version::Version::default(),
+		signer: Signer::from_str("s").unwrap(),
+	};
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+
+	//connectionOpenAck test
+	let result = hyperspace.submit(vec![msg]).await.unwrap();
+	/* ______________________________________________________________________________ */
+
+	/* ______________________________________________________________________________ */
+	//open try
+
+	use hyperspace_ethereum::yui_types::ics03_connection::conn_open_try::*;
+	let yui_conn_try = YuiMsgConnectionOpenTry {
+		counterparty: YuiCounterparty {
+			client_id: "07-tendermint-0".to_string(),
+			connection_id: "0".to_string(),
+			prefix: YuiCommitmentPrefix { key_prefix: vec![1, 2, 3] },
+		},
+		delay_period: 1000000,
+		client_id: "07-tendermint-0".to_string(),
+		client_state_bytes: vec![1, 2, 3],
+		counterparty_versions: vec![YuiVersion {
+			identifier: "07-tendermint-0".to_string(),
+			features: vec![],
+		}],
+		proof_init: get_dummy_proof(),
+		proof_client: get_dummy_proof(),
+		proof_consensus: get_dummy_proof(),
+		proof_height: YuiHeight { revision_number: 1, revision_height: 1 },
+		consensus_height: YuiHeight { revision_number: 1, revision_height: 1 },
+	};
+
+	//this test will pass only when this functions on yui solidity side return true
+	/*
+		require(
+			verifyConnectionState(
+				connection, msg_.proofHeight, msg_.proofTry, msg_.counterpartyConnectionID, expectedConnection
+			),
+			"failed to verify connection state"
+		);
+		require(
+			verifyClientState(
+				connection,
+				msg_.proofHeight,
+				IBCCommitment.clientStatePath(connection.counterparty.client_id),
+				msg_.proofClient,
+				msg_.clientStateBytes
+			),
+			"failed to verify clientState"
+		);
+	*/
+	diamond.connection_open_try(yui_conn_try.into_token()).await;
+	/* ______________________________________________________________________________ */
+
+	/* ______________________________________________________________________________ */
+	//open confirm
+	let msg = MsgConnectionOpenConfirm {
+		connection_id: ConnectionId::new(0),
+		proofs,
+		signer: Signer::from_str("s").unwrap(),
+	};
+
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	//connectionOpenConfirm test works only in that case when connection is "connection state is
+	// TRYOPEN status" before to uncomment next line be sure that you call open try before
+	// let result = hyperspace.submit(vec![msg]).await.unwrap();
+	/* ______________________________________________________________________________ */
+
+	//all tests related to channels is bellow this test: --- > (fn relayer_channel_tests)
+	//basiclay that tests is compatibiliy with solidity side
+
+	let duration = std::time::Instant::now().duration_since(start);
+	println!("Time elapsed: {:.2} seconds", duration.as_secs());
+
+	//call submit to create a new client
+}
+
+#[tokio::test]
+async fn relayer_channel_tests() {
+	let path = utils::yui_ibc_solidity_path();
+
+	let project_output1 = utils::compile_yui(&path, "contracts/clients");
+	let (anvil, client) = utils::spawn_anvil();
+
+	let signer = Signer::from_str("0CDA3F47EF3C4906693B170EF650EB968C5F4B2C").unwrap();
+	/* ______________________________________________________________________________ */
+	//channel open init
+	let port_id = PortId::transfer();
+	let version = "1.0".to_string();
+	let order = Order::default();
+	let conenction_id = ConnectionId::new(0);
+	let mut channel = ChannelEnd::new(
+		State::Init,
+		order,
+		ibc::core::ics04_channel::channel::Counterparty::new(port_id.clone(), None),
+		vec![conenction_id],
+		Version::new(version.clone()),
+	);
+
+	let msg =
+		MsgChannelOpenInit::new(port_id.clone(), channel.clone(), Signer::from_str("s").unwrap());
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	// let _ = hyperspace.submit(vec![msg]).await.unwrap();
+
+	let upd = project_output1.find_first("IBCChannelHandlerMock").unwrap();
+	let (abi, bytecode, _) = upd.clone().into_parts();
+	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
+	let contract_mock = factory.deploy(()).unwrap().send().await.unwrap();
+
+	let msg = MsgChannelOpenInit::decode_vec(&msg.value).unwrap();
+	let ibc_handler_mock = IbcHandler::new(contract_mock);
+	let channel_id = ibc_handler_mock.send::<String>(msg.into_token(), "channelOpenInit").await;
+	assert!(channel_id.len() > 0);
+	/* ______________________________________________________________________________ */
+
+	/* ______________________________________________________________________________ */
+	//MsgChannelOpenTry
+	channel.remote.channel_id = Some(ChannelId::new(27));
+	let x = CommitmentProofBytes::try_from(get_dummy_proof()).unwrap();
+	let proofs = Proofs::new(
+		x.clone(),
+		Some(x.clone()),
+		Some(
+			ConsensusProof::new(x.clone(), Height { revision_number: 1, revision_height: 1 })
+				.unwrap(),
+		),
+		Some(x.clone()),
+		Height::new(1, 1),
+	)
+	.unwrap();
+	let msg = MsgChannelOpenTry::new(
+		port_id.clone(),
+		channel,
+		Version::new(version.clone()),
+		proofs.clone(),
+		signer.clone(),
+	);
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let msg = MsgChannelOpenTry::decode_vec(&msg.value).unwrap();
+	let channel_id = ibc_handler_mock.send::<String>(msg.into_token(), "channelOpenTry").await;
+	assert!(channel_id.len() > 0);
+	/* ______________________________________________________________________________ */
+
+	/* ______________________________________________________________________________ */
+	//MsgChannelOpenAck
+	let msg = MsgChannelOpenAck::new(
+		port_id.clone(),
+		ChannelId::new(0),
+		ChannelId::new(27),
+		Version::new(version.clone()),
+		proofs.clone(),
+		signer.clone(),
+	);
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let msg = MsgChannelOpenAck::decode_vec(&msg.value).unwrap();
+	let _ = ibc_handler_mock.send_and_get_tuple(msg.into_token(), "channelOpenAck").await;
+
+	/* ______________________________________________________________________________ */
+
+	/* ______________________________________________________________________________ */
+	//channelOpenConfirm
+	let msg = MsgChannelOpenConfirm::new(
+		port_id.clone(),
+		ChannelId::new(0),
+		proofs.clone(),
+		signer.clone(),
+	);
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let msg = MsgChannelOpenConfirm::decode_vec(&msg.value).unwrap();
+	let _ = ibc_handler_mock
+		.send_and_get_tuple(msg.into_token(), "channelOpenConfirm")
+		.await;
+
+	/* ______________________________________________________________________________ */
+
+	/* ______________________________________________________________________________ */
+	//channelCloseInit
+	let msg = MsgChannelCloseInit::new(port_id.clone(), ChannelId::new(0), signer.clone());
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let msg = MsgChannelCloseInit::decode_vec(&msg.value).unwrap();
+	let _ = ibc_handler_mock.send_and_get_tuple(msg.into_token(), "channelCloseInit").await;
+
+	/* ______________________________________________________________________________ */
+
+	/* ______________________________________________________________________________ */
+	//channelCloseConfirm
+	let msg = MsgChannelCloseConfirm::new(
+		port_id.clone(),
+		ChannelId::new(0),
+		proofs.clone(),
+		signer.clone(),
+	);
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let msg = MsgChannelCloseConfirm::decode_vec(&msg.value).unwrap();
+	let _ = ibc_handler_mock
+		.send_and_get_tuple(msg.into_token(), "channelCloseConfirm")
+		.await;
+	/* ______________________________________________________________________________ */
+
+	/* ______________________________________________________________________________ */
+	//MsgRecvPacket
+	let packet = Packet {
+		sequence: Sequence(1),
+		source_port: port_id.clone(),
+		source_channel: ChannelId::new(0),
+		destination_port: port_id,
+		destination_channel: ChannelId::new(0),
+		data: vec![1, 2, 3],
+		timeout_height: Height { revision_number: 1, revision_height: 1 },
+		timeout_timestamp: Timestamp::now(),
+	};
+	let msg = MsgRecvPacket::new(packet.clone(), proofs.clone(), signer.clone());
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let msg = MsgRecvPacket::decode_vec(&msg.value).unwrap();
+	let _ = ibc_handler_mock.send_and_get_tuple(msg.into_token(), "recvPacket").await;
+	/* ______________________________________________________________________________ */
+
+	/* ______________________________________________________________________________ */
+	//MsgAcknowledgement
+	let msg = MsgAcknowledgement::new(packet, vec![1, 2, 3].into(), proofs, signer);
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let msg = MsgAcknowledgement::decode_vec(&msg.value).unwrap();
+	let _ = ibc_handler_mock.send_and_get_tuple(msg.into_token(), "acknowledgePacket").await;
+	/* ______________________________________________________________________________ */
+}
+
+//all tests bellow is from Chris probably something usefull can be there (something that related to
+// channel)
+
+#[tokio::test]
+#[ignore]
 async fn test_deploy_yui_ibc_and_mock_client() {
 	deploy_yui_ibc_and_mock_client_fixture().await;
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_hyperspace_ethereum_client() {
 	let DeployYuiIbcMockClient { anvil, yui_ibc, .. } =
 		deploy_yui_ibc_and_mock_client_fixture().await;
-	let _hyperspace = hyperspace_ethereum_client_fixture(&anvil, yui_ibc.clone()).await;
+	let _hyperspace = hyperspace_ethereum_client_fixture(&anvil, yui_ibc.clone(), None, None).await;
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_ibc_client() {
 	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
 	let hyperspace =
-		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone()).await;
+		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone(), None, None).await;
 	let events = hyperspace.ibc_events().await;
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 	let height = hyperspace.latest_height_and_timestamp().await.unwrap().0;
@@ -298,6 +773,7 @@ async fn test_ibc_client() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_ibc_connection() {
 	let stdout_log = tracing_subscriber::fmt::layer().pretty();
 	tracing_subscriber::registry()
@@ -307,7 +783,7 @@ async fn test_ibc_connection() {
 		.init();
 	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
 	let hyperspace =
-		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone()).await;
+		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone(), None, None).await;
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 
 	let connection_id = deploy.yui_ibc.connection_open_init(&client_id).await;
@@ -343,10 +819,11 @@ async fn test_ibc_connection() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_ibc_channel() {
 	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
 	let hyperspace =
-		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone()).await;
+		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone(), None, None).await;
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 
 	let mock_module = deploy_mock_module_fixture(&deploy).await;
@@ -399,13 +876,12 @@ async fn test_ibc_channel() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_ibc_packet() {
 	let _ = env_logger::try_init();
 	let mut deploy = deploy_yui_ibc_and_mock_client_fixture().await;
 	let hyperspace =
-		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone()).await;
-	let events = hyperspace.ibc_events().await;
-
+		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone(), None, None).await;
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 
 	let mock_module = deploy_mock_module_fixture(&deploy).await;

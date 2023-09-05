@@ -3,6 +3,7 @@ use crate::{
 	utils::{DeployYuiIbc, ProviderImpl},
 };
 use async_trait::async_trait;
+use cast::revm::db;
 use ethers::{
 	abi::{AbiEncode, Address, ParamType, Token},
 	prelude::{
@@ -31,6 +32,8 @@ use primitives::CommonClientState;
 use std::{future::Future, ops::Add, pin::Pin, str::FromStr, sync::Arc};
 use thiserror::Error;
 
+use crate::config::Config;
+
 pub(crate) type EthRpcClient = ethers::prelude::SignerMiddleware<
 	ethers::providers::Provider<Http>,
 	ethers::signers::Wallet<ethers::prelude::k256::ecdsa::SigningKey>,
@@ -50,10 +53,11 @@ pub const CHANNELS_STORAGE_INDEX: u32 = 5;
 pub struct EthereumClient {
 	pub http_rpc: Arc<EthRpcClient>,
 	pub(crate) ws_uri: http::Uri,
-	pub(crate) config: EthereumClientConfig,
+	pub config: EthereumClientConfig,
 	/// Common relayer data
 	pub common_state: CommonClientState,
 	pub yui: DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>,
+	pub prev_state: Arc<std::sync::Mutex<(Vec<u8>, Vec<u8>)>>,
 }
 
 pub type MiddlewareErrorType = SignerMiddlewareError<
@@ -140,6 +144,7 @@ impl EthereumClient {
 			config,
 			common_state: Default::default(),
 			yui,
+			prev_state: Arc::new(std::sync::Mutex::new((vec![], vec![]))),
 		})
 	}
 

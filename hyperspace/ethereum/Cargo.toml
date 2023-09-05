@@ -17,6 +17,7 @@ ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
 icsxx-ethereum = { path = "../../light-clients/icsxx-ethereum" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
+hyperspace-cosmos = { path = "../cosmos" }
 
 sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "c5afca4fbb92cb60dde29c3a89454c288b022d97", features = ["testing"] }
 sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "c5afca4fbb92cb60dde29c3a89454c288b022d97", features = ["testing"] }
@@ -48,7 +49,9 @@ tracing = "0.1.36"
 tracing-subscriber = "0.3.17"
 env_logger = "0.10.0"
 once_cell = "1.18.0"
+ecdsa = "0.16.7"
 
 [dev-dependencies]
 toml = "0.7.3"
 git2 = "0.17.1"
+tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }

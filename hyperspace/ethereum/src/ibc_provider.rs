@@ -1,7 +1,11 @@
 use ethers::{
-	abi::{encode, AbiEncode, Detokenize, ParamType, RawLog, Token, Tokenizable},
+	abi::{
+		encode, encode_packed, ethabi, Abi, AbiEncode, Detokenize, InvalidOutputType, ParamType,
+		RawLog, Token, Tokenizable, Topic,
+	},
 	contract::{abigen, EthEvent},
-	prelude::{Block, Topic},
+	middleware::contract::Contract,
+	prelude::Block,
 	providers::Middleware,
 	types::{
 		BlockId, BlockNumber, EIP1186ProofResponse, Filter, StorageProof, ValueOrArray, H256, U256,
@@ -51,11 +55,16 @@ use std::{
 };
 
 use crate::{
-	client::{ClientError, EthereumClient, COMMITMENTS_STORAGE_INDEX, CONNECTIONS_STORAGE_INDEX},
+	client::{
+		ClientError, EthereumClient, CHANNELS_STORAGE_INDEX, CLIENT_IMPLS_STORAGE_INDEX,
+		COMMITMENTS_STORAGE_INDEX, CONNECTIONS_STORAGE_INDEX,
+	},
 	events::TryFromEvent,
 	prove::prove,
 };
 use futures::{FutureExt, Stream, StreamExt};
+use thiserror::Error;
+
 use ibc::{
 	applications::transfer::PrefixedCoin,
 	core::{
@@ -381,11 +390,14 @@ impl IbcProvider for EthereumClient {
 			)
 			.expect("contract is missing getChannel");
 
-		let channel_data = binding
+		let (channel_data, exists) = binding
 			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
 			.call()
 			.await
 			.unwrap();
+		if !exists {
+			todo!("error: channel does not exist")
+		}
 
 		let state = State::from_i32(channel_data.state as _).expect("invalid channel state");
 		let counterparty = match state {
@@ -696,6 +708,7 @@ impl IbcProvider for EthereumClient {
 		self.config.channel_whitelist.clone().into_iter().collect()
 	}
 
+	#[cfg(test)]
 	async fn query_connection_channels(
 		&self,
 		at: Height,

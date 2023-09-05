@@ -452,6 +452,7 @@ where
 		self.channel_whitelist.lock().unwrap().iter().cloned().collect()
 	}
 
+	#[cfg(test)]
 	async fn query_connection_channels(
 		&self,
 		at: Height,

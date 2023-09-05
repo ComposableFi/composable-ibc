@@ -6,6 +6,8 @@ use ethers::types::Address;
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 
+use crate::contract::DiamandHandler;
+
 fn uri_de<'de, D>(de: D) -> Result<http::uri::Uri, D::Error>
 where
 	D: Deserializer<'de>,
@@ -75,18 +77,9 @@ pub struct EthereumClientConfig {
 	/// address of the OwnableIBCHandler contract.
 	#[serde(deserialize_with = "address_de")]
 	pub ibc_handler_address: Address,
-	// /// address of the IBCPacket contract.
-	// #[serde(deserialize_with = "address_de")]
-	// pub ibc_packet_address: Address,
-	// /// address of the IBCClient contract.
-	// #[serde(deserialize_with = "address_de")]
-	// pub ibc_client_address: Address,
-	// /// address of the IBCConnection contract.
-	// #[serde(deserialize_with = "address_de")]
-	// pub ibc_connection_address: Address,
-	// /// address of the IBCChannelHandshake contract.
-	// #[serde(deserialize_with = "address_de")]
-	// pub ibc_channel_handshake_address: Address,
+	/// address of the IBCChannelHandshake contract.
+	#[serde(deserialize_with = "address_de")]
+	pub tendermint_client_address: Address,
 	/// mnemonic for the wallet
 	pub mnemonic: Option<String>,
 	/// private key for the wallet
@@ -109,6 +102,9 @@ pub struct EthereumClientConfig {
 	pub wasm_code_id: Option<String>,
 	#[serde(skip)]
 	pub yui: Option<DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>>,
+	pub client_type: String,
+	#[serde(skip)]
+	pub diamond_handler: Option<DiamandHandler>,
 }
 
 impl EthereumClientConfig {

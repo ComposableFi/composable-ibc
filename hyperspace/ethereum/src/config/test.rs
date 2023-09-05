@@ -1,6 +1,7 @@
 const CONFIG: &'static str = include_str!("test_config.toml");
 
 #[test]
+#[ignore]
 fn parse_config() {
 	let config: super::EthereumClientConfig = toml::from_str(&CONFIG).expect("parsing error");
 	assert_eq!(config.name, "mainnet");

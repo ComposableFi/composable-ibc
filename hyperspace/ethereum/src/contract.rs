@@ -1,10 +1,13 @@
-use std::sync::Arc;
+use std::{sync::Arc, path::{Path, PathBuf}};
 
+use ecdsa::SigningKey;
 use ethers::{
-	abi::{Abi, Address, Detokenize, Token},
+	abi::{Abi, Address, Detokenize, Token, Tokenizable, Tokenize},
 	prelude::Contract,
 	providers::Middleware,
 };
+use ethers::prelude::{ContractInstance, *};
+use ethers_solc::{ProjectCompileOutput, ProjectPathsConfig, SolcConfig, artifacts::{Settings, Optimizer, OptimizerDetails, output_selection::OutputSelection, DebuggingSettings, RevertStrings, Libraries, FunctionCall}, EvmVersion, Project, Artifact};
 
 /// Unwraps a contract error, decoding the revert reason if possible
 pub trait UnwrapContractError<T> {
@@ -41,10 +44,166 @@ pub struct IbcHandler<M> {
 	pub(crate) contract: Contract<M>,
 }
 
+use ethers::middleware::SignerMiddleware;
+use k256::Secp256k1;
+type EthersContractInstance = ContractInstance<Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey<Secp256k1>>>>, SignerMiddleware<Provider<Http>, Wallet<SigningKey<Secp256k1>>>>;
+#[derive(Clone, Debug)]
+pub struct DiamandHandler{
+	pub deployed_facets: Vec<EthersContractInstance>,
+	pub diamond: EthersContractInstance,
+}
+
+impl DiamandHandler
+where
+{
+	pub fn new(deployed_facets: Vec<EthersContractInstance>, diamond: EthersContractInstance) -> Self {
+		DiamandHandler {
+			deployed_facets: deployed_facets,
+			diamond,
+		}
+	}
+	pub fn method<T: Tokenize, D: Detokenize>(
+		&self,
+		name: &str,
+		args: T,
+	) -> Result<ethers::prelude::FunctionCall<Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey<Secp256k1>>>>, SignerMiddleware<Provider<Http>, Wallet<SigningKey<Secp256k1>>>, D>, AbiError> {
+		let mut contract: Option<&EthersContractInstance> = None;
+
+		let lookup_contracts = self.deployed_facets.iter().chain(std::iter::once(&self.diamond));
+
+		for lookup_contract in lookup_contracts {
+			if lookup_contract.abi().function(name).is_ok() {
+				if contract.is_some() {
+					panic!("ambiguous method name: {}", name);
+				}
+				contract = Some(lookup_contract);
+			}
+		}
+		let contract = contract.take().ok_or_else(|| AbiError::WrongSelector)?;
+
+		let mut f = contract.method(name, args);
+
+		if let Ok(f) = &mut f {
+			f.tx.set_to(self.diamond.address());
+		}
+
+		f
+	}
+
+	pub async fn create_client(&self, msg: Token) -> String {
+		let method = self.method::<_, String>("createClient", (msg,)).unwrap();
+
+		let client_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+
+		client_id
+	}
+
+	pub async fn update_client(&self, msg: Token) {
+		let method = self.method::<_, ()>("updateClient", (msg,)).unwrap();
+
+		let gas_estimate_update_client = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_update_client);
+		let client_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+	}
+
+	pub async fn connection_open_ack(&self, msg: Token) {
+		let method = self.method::<_, ()>("connectionOpenAck", (msg,)).unwrap();
+
+		let gas_estimate_connection_open = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open);
+		let _ = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+	}
+
+	pub async fn connection_open_try(&self, msg: Token) -> String {
+		let method = self.method::<_, String>("connectionOpenTry", (msg,)).unwrap();
+
+		let gas_estimate_connection_open_try = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open_try);
+		let id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		id
+	}
+
+	pub async fn connection_open_init(&self, msg: Token) -> String {
+		let method = self.method::<_, String>("connectionOpenInit", (msg,)).unwrap();
+
+		let gas_estimate_connection_open_try = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open_try);
+		let id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		id
+	}
+
+	pub async fn connection_open_confirm(&self, msg: Token) {
+		let method = self.method::<_, ()>("connectionOpenConfirm", (msg,)).unwrap();
+
+		let gas_estimate_connection_open_confirm = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open_confirm);
+		let _ = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+	}
+
+	pub async fn channel_open_init(&self, msg: Token) -> String {
+		let method = self.method::<_, String>("channelOpenInit", (msg,)).unwrap();
+
+		let gas_estimate_connection_id = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_id);
+		let connection_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		connection_id
+	}
+
+	pub async fn channel_open_try(&self, msg: Token) -> String {
+		let method = self.method::<_, String>("channelOpenTry", (msg,)).unwrap();
+
+		let gas_estimate_connection_id = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_id);
+		let connection_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		connection_id
+	}
+
+	pub async fn send_and_get_tuple(&self, msg: Token, method_name: impl AsRef<str>) -> () {
+		let method = self.method::<_, ()>(method_name.as_ref(), (msg,)).unwrap();
+
+		let gas_estimate = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate);
+		let ret = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		ret
+	}
+
+}
+
 impl<M> IbcHandler<M>
 where
 	M: Middleware,
-{
+{	
+	pub fn new(contract: Contract<M>) -> Self {
+		IbcHandler { contract }
+	}
+
 	pub async fn bind_port(&self, port_id: &str, address: Address) {
 		let bind_port = self
 			.contract
@@ -55,96 +214,75 @@ where
 		assert_eq!(tx_recp.status, Some(1.into()));
 	}
 
-	pub async fn connection_open_init(&self, client_id: &str) -> String {
-		let connection_open_init = self
-			.contract
-			.method::<_, String>(
-				"connectionOpenInit",
-				(Token::Tuple(vec![
-					Token::String(client_id.into()),
-					Token::Tuple(vec![
-						Token::String(client_id.into()),
-						Token::String("port-0".into()),
-						Token::Tuple(vec![Token::Bytes(vec![])]),
-					]),
-					Token::Uint(0.into()),
-				]),),
-			)
-			.unwrap();
-		let connection_id = connection_open_init.call().await.unwrap_contract_error();
-		let tx_recp = connection_open_init
-			.send()
-			.await
-			.unwrap_contract_error()
-			.await
-			.unwrap()
-			.unwrap();
-		assert_eq!(tx_recp.status, Some(1.into()));
+	pub async fn connection_open_init(&self, msg: Token) -> String {
+		let method = self.contract.method::<_, String>("connectionOpenInit", (msg,)).unwrap();
+
+		let gas_estimate_connection_id = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_id);
+		let connection_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
 		connection_id
 	}
 
-	pub async fn connection_open_ack(&self, connection_id: &str, client_state_bytes: Vec<u8>) {
-		let connection_open_ack = self
-			.contract
-			.method::<_, ()>(
-				"connectionOpenAck",
-				(Token::Tuple(vec![
-					Token::String(connection_id.to_string()),
-					Token::Bytes(client_state_bytes), // clientStateBytes
-					Token::Tuple(vec![
-						Token::String("counterparty-version".into()),
-						Token::Array(vec![]),
-					]), // Version.Data
-					Token::String("counterparty-connection-id".into()), // counterpartyConnectionID
-					Token::Bytes(vec![]),             // proofTry
-					Token::Bytes(vec![]),             // proofClient
-					Token::Bytes(vec![]),             // proofConsensus
-					Token::Tuple(vec![Token::Uint(0.into()), Token::Uint(1.into())]), // proofHeight
-					Token::Tuple(vec![Token::Uint(0.into()), Token::Uint(1.into())]), // consesusHeight
-				]),),
-			)
-			.unwrap();
+	pub async fn connection_open_ack(&self, msg: Token) {
+		let method = self.contract.method::<_, ()>("connectionOpenAck", (msg,)).unwrap();
 
-		let () = connection_open_ack.call().await.unwrap_contract_error();
-		let tx_recp =
-			connection_open_ack.send().await.unwrap_contract_error().await.unwrap().unwrap();
-		assert_eq!(tx_recp.status, Some(1.into()));
+		let gas_estimate_connection_open = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open);
+		let _ = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
 	}
 
-	pub async fn channel_open_try(&self, connection_id: &str, port_id: &str) -> String {
-		let channel_open_try = self
-			.contract
-			.method::<_, String>(
-				"channelOpenTry",
-				(Token::Tuple(vec![
-					Token::String(port_id.into()), // port-id
-					Token::Tuple(vec![
-						// Channel.Data
-						Token::Uint(2.into()), //  state, 1: TryOpen
-						Token::Uint(1.into()), //  ordering, 1: Unordered
-						Token::Tuple(vec![
-							//  ChannelCounterparty.Data
-							Token::String(Default::default()), // port-id
-							Token::String(Default::default()), // channel-id
-						]),
-						Token::Array(vec![Token::String(connection_id.into())]), // connectionHops
-						Token::String("1".into()),                               // version
-					]),
-					Token::String("1".into()), // counterpartyVersion
-					Token::Bytes(vec![]),      // proofInit
-					Token::Tuple(vec![
-						// proofHeight
-						Token::Uint(0.into()), //  revisionNumber
-						Token::Uint(1.into()), //  revisionHeight
-					]),
-				]),),
-			)
-			.unwrap();
+	pub async fn connection_open_try(&self, msg: Token) -> String {
+		let method = self.contract.method::<_, String>("connectionOpenTry", (msg,)).unwrap();
 
-		let channel_id = channel_open_try.call().await.unwrap_contract_error();
-		let tx_recp = channel_open_try.send().await.unwrap_contract_error().await.unwrap().unwrap();
-		assert_eq!(tx_recp.status, Some(1.into()));
-		channel_id
+		let gas_estimate_connection_open_try = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open_try);
+		let id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		id
+	}
+
+	pub async fn connection_open_confirm(&self, msg: Token) {
+		let method = self.contract.method::<_, ()>("connectionOpenConfirm", (msg,)).unwrap();
+
+		let gas_estimate_connection_open_confirm = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open_confirm);
+		let _ = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		
+	}
+
+	pub async fn send<T: Tokenizable>(&self, msg: Token, method_name: impl AsRef<str>) -> T {
+		let method = self.contract.method::<_, T>(method_name.as_ref(), (msg,)).unwrap();
+
+		let gas_estimate = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate);
+		let ret = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		ret
+	}
+
+	pub async fn send_and_get_tuple(&self, msg: Token, method_name: impl AsRef<str>) -> () {
+		let method = self.contract.method::<_, ()>(method_name.as_ref(), (msg,)).unwrap();
+
+		let gas_estimate = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate);
+		let ret = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		ret
 	}
 
 	pub async fn register_client(&self, kind: &str, address: Address) {
@@ -170,6 +308,116 @@ where
 
 		client_id
 	}
+
+	pub async fn update_client(&self, msg: Token) {
+		let method = self.contract.method::<_, ()>("updateClient", (msg,)).unwrap();
+
+		let gas_estimate_update_client = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_update_client);
+		let client_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+	}
+}
+
+#[track_caller]
+pub fn get_contract_from_name<M>(address: Address, client: Arc<M>, source: impl AsRef<str>, s: impl AsRef<str>) -> Contract<M>
+where
+	M: Middleware,
+{
+	//todo: use the artifact instead of compiling!!!
+	//but for now it is more dynamic to compile then to use the artifact
+	let path = yui_ibc_solidity_path();
+	let project = compile_yui(&path, source.as_ref());
+	let contract = project.find_first(s).unwrap();
+	let r = contract.clone();
+	let (abi, _, _) = r.into_parts();
+	Contract::new(address, abi.unwrap(), client)
+}
+
+#[track_caller]
+pub fn yui_ibc_solidity_path() -> PathBuf {
+	let base = env!("CARGO_MANIFEST_DIR");
+	let default = PathBuf::from(base).join("yui-ibc-solidity");
+
+	if let Ok(path) = std::env::var("YUI_IBC_SOLIDITY_PATH") {
+		path.into()
+	} else {
+		default
+	}
+}
+
+#[track_caller]
+pub fn compile_yui(path_to_yui: &Path, sources: &str) -> ProjectCompileOutput {
+	assert!(
+		path_to_yui.exists(),
+		"path to yui-ibc-solidity does not exist: {}",
+		path_to_yui.display()
+	);
+
+	let project_paths = ProjectPathsConfig::builder()
+		.root(&path_to_yui)
+		.sources(path_to_yui.join(sources))
+		.build()
+		.unwrap();
+
+	compile_solc(project_paths)
+}
+
+#[track_caller]
+pub fn compile_solc(project_paths: ProjectPathsConfig) -> ProjectCompileOutput {
+	// custom solc config to solve Yul-relatated compilation errors
+	let solc_config = SolcConfig {
+		settings: Settings {
+			stop_after: None,
+			remappings: vec![],
+			optimizer: Optimizer {
+				enabled: Some(false),
+				runs: Some(256),
+				details: Some(OptimizerDetails {
+					peephole: Some(true),
+					inliner: Some(true),
+					jumpdest_remover: Some(true),
+					order_literals: Some(true),
+					deduplicate: Some(true),
+					cse: Some(true),
+					constant_optimizer: Some(true),
+					yul: Some(false),
+					yul_details: None,
+				}),
+			},
+			model_checker: None,
+			metadata: None,
+			output_selection: OutputSelection::default_output_selection(),
+			evm_version: Some(EvmVersion::Paris),
+			via_ir: Some(false),
+			debug: Some(DebuggingSettings {
+				revert_strings: Some(RevertStrings::Debug),
+				debug_info: vec!["location".to_string()],
+			}),
+			libraries: Libraries { libs: Default::default() },
+		},
+	};
+
+	let project = Project::builder()
+		.paths(project_paths)
+		.ephemeral()
+		.no_artifacts()
+		.solc_config(solc_config)
+		.build()
+		.expect("project build failed");
+
+	let project_output = project.compile().expect("compilation failed");
+
+	if project_output.has_compiler_errors() {
+		for err in project_output.output().errors {
+			eprintln!("{}", err);
+		}
+		panic!("compiler errors");
+	}
+
+	return project_output
 }
 
 /// Create a new contract instance from the given address and ABI.
