@@ -1,5 +1,4 @@
-#[path = "../../tests/utils.rs"]
-mod utils;
+use hyperspace_ethereum::mock::utils;
 
 #[tokio::main]
 async fn main() {

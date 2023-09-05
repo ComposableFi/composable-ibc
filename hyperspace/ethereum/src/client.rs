@@ -49,7 +49,7 @@ pub const CHANNELS_STORAGE_INDEX: u32 = 5;
 
 #[derive(Debug, Clone)]
 pub struct EthereumClient {
-	pub http_rpc: Arc<EthRpcClient>,
+	http_rpc: Arc<EthRpcClient>,
 	pub(crate) ws_uri: http::Uri,
 	pub config: EthereumClientConfig,
 	/// Common relayer data
@@ -145,7 +145,11 @@ impl EthereumClient {
 			prev_state: Arc::new(std::sync::Mutex::new((vec![], vec![]))),
 		})
 	}
-	// cauce
+
+	pub fn client(&self) -> Arc<EthRpcClient> {
+		self.http_rpc.clone()
+	}
+
 	pub async fn websocket_provider(&self) -> Result<Provider<Ws>, ClientError> {
 		let secret = std::fs::read_to_string(format!(
 			"{}/.lighthouse/local-testnet/geth_datadir1/geth/jwtsecret",
@@ -174,7 +178,7 @@ impl EthereumClient {
 			.address(self.config.ibc_handler_address)
 			.event("OpenInitChannel(string,string)");
 
-		let logs = self.http_rpc.get_logs(&filter).await.unwrap();
+		let logs = self.client().get_logs(&filter).await.unwrap();
 
 		let v = logs
 			.into_iter()
@@ -196,7 +200,7 @@ impl EthereumClient {
 			.address(self.config.ibc_handler_address)
 			.event("GeneratedClientIdentifier(string)");
 
-		let logs = self.http_rpc.get_logs(&filter).await.unwrap();
+		let logs = self.client().get_logs(&filter).await.unwrap();
 
 		logs.into_iter()
 			.map(|log| {
@@ -217,7 +221,7 @@ impl EthereumClient {
 			.address(self.config.ibc_handler_address)
 			.event("GeneratedConnectionIdentifier(string)");
 
-		let logs = self.http_rpc.get_logs(&filter).await.unwrap();
+		let logs = self.client().get_logs(&filter).await.unwrap();
 
 		logs.into_iter()
 			.map(|log| {
@@ -238,7 +242,7 @@ impl EthereumClient {
 			.address(self.config.ibc_handler_address)
 			.event("AcknowledgePacket((uint64,string,string,string,string,bytes,(uint64,uint64),uint64),bytes)");
 
-		let logs = self.http_rpc.get_logs(&filter).await.unwrap();
+		let logs = self.client().get_logs(&filter).await.unwrap();
 
 		logs.into_iter()
 			.map(|log| {
@@ -338,7 +342,7 @@ impl EthereumClient {
 			.to_block(to)
 			.address(self.config.ibc_handler_address)
 			.event(event_name);
-		let client = self.http_rpc.clone();
+		let client = self.client().clone();
 
 		async_stream::stream! {
 			let logs = client.get_logs(&filter).await.unwrap();
@@ -364,7 +368,7 @@ impl EthereumClient {
 		)
 		.unwrap();
 
-		let client = self.http_rpc.clone();
+		let client = self.client().clone();
 		let address = self.config.ibc_handler_address.clone();
 
 		async move {
@@ -394,7 +398,7 @@ impl EthereumClient {
 		let index =
 			cast::SimpleCast::index("bytes32", dbg!(&var_name), dbg!(&storage_index)).unwrap();
 
-		let client = self.http_rpc.clone();
+		let client = self.client().clone();
 		let address = self.config.ibc_handler_address.clone();
 
 		dbg!(&address);
@@ -434,7 +438,7 @@ impl EthereumClient {
 
 		let index = cast::SimpleCast::index("bytes32", &key2_hashed_hex, &key2_hashed_hex).unwrap();
 
-		let client = self.http_rpc.clone();
+		let client = self.client().clone();
 		let address = self.config.ibc_handler_address.clone();
 
 		async move {

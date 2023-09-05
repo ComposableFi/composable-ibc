@@ -6,8 +6,6 @@ use ethers::types::Address;
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::contract::DiamandHandler;
-
 fn uri_de<'de, D>(de: D) -> Result<http::uri::Uri, D::Error>
 where
 	D: Deserializer<'de>,
@@ -103,8 +101,6 @@ pub struct EthereumClientConfig {
 	#[serde(skip)]
 	pub yui: Option<DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>>,
 	pub client_type: String,
-	#[serde(skip)]
-	pub diamond_handler: Option<DiamandHandler>,
 }
 
 impl EthereumClientConfig {

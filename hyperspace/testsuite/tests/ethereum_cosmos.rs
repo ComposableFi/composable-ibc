@@ -103,6 +103,32 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 
 	let DeployYuiIbcMockClient { anvil, yui_ibc, .. } =
 		deploy_yui_ibc_and_mock_client_fixture().await;
+	/*
+		let upd = project_output1.find_first("DelegateTendermintUpdate").unwrap();
+	let (abi, bytecode, _) = upd.clone().into_parts();
+	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
+	let update_client_delegate_contract = factory.deploy(()).unwrap().send().await.unwrap();
+
+	let contract = project_output1.find_first("TendermintLightClientSimple").unwrap();
+	// dbg!(&contract);
+	let r = contract.clone();
+	let (abi, bytecode, _) = r.into_parts();
+
+	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
+	let tendermint_light_client = factory
+		.deploy((
+			Token::Address(yui_ibc.ibc_handler.address()),
+			Token::Address(update_client_delegate_contract.address()),
+		))
+		.unwrap()
+		.send()
+		.await
+		.unwrap();
+
+	//replace the tendermint client address in hyperspace config with a real one
+	hyperspace.config.tendermint_client_address = tendermint_light_client.address();
+
+	 */
 	let config_a = hyperspace_ethereum_client_fixture(&anvil, yui_ibc).await;
 
 	let mut config_b = CosmosClientConfig {

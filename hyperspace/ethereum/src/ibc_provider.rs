@@ -194,7 +194,7 @@ impl IbcProvider for EthereumClient {
 		let filter =
 			Filter::new().from_block(from).to_block(to).address(self.yui.diamond.address());
 		let client = self.clone();
-		let logs = self.http_rpc.get_logs(&filter).await.unwrap();
+		let logs = self.client().get_logs(&filter).await.unwrap();
 		let mut events = vec![];
 
 		let update = prove(self, finality_event.hash.unwrap()).await?;
@@ -560,7 +560,8 @@ impl IbcProvider for EthereumClient {
 		// TODO: fix latest_height_and_timestamp in basic builds
 		let block_number =// if dbg!(cfg!(feature = "test")) {
 			BlockNumber::from(
-				self.http_rpc
+				self
+					.client()
 					.get_block_number()
 					.await
 					.map_err(|err| ClientError::MiddlewareError(err))?,
@@ -570,7 +571,7 @@ impl IbcProvider for EthereumClient {
 		// };
 
 		let block = self
-			.http_rpc
+			.client()
 			.get_block(BlockId::Number(block_number))
 			.await
 			.map_err(|err| ClientError::MiddlewareError(err))?
@@ -706,7 +707,6 @@ impl IbcProvider for EthereumClient {
 		self.config.channel_whitelist.clone().into_iter().collect()
 	}
 
-	#[cfg(test)]
 	async fn query_connection_channels(
 		&self,
 		at: Height,
@@ -979,7 +979,7 @@ impl IbcProvider for EthereumClient {
 
 	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error> {
 		let block = self
-			.http_rpc
+			.client()
 			.get_block(BlockId::Number(BlockNumber::Number(block_number.into())))
 			.await
 			.map_err(|err| ClientError::MiddlewareError(err))?
@@ -1041,7 +1041,7 @@ impl IbcProvider for EthereumClient {
 		};
 
 		let block = self
-			.http_rpc
+			.client()
 			.get_block(BlockId::Number(BlockNumber::Number(dbg!(block_header.slot).into())))
 			.await
 			.unwrap()

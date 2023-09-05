@@ -66,7 +66,7 @@ where
 		assert_eq!(tx_recp.status, Some(1.into()));
 	}
 
-	pub async fn connection_open_init(&self, client_id: &str) -> String {
+	pub async fn connection_open_init_mock(&self, client_id: &str) -> String {
 		let connection_open_init = self
 			.method::<_, String>(
 				"connectionOpenInit",
@@ -93,7 +93,7 @@ where
 		connection_id
 	}
 
-	pub async fn connection_open_ack(&self, connection_id: &str, client_state_bytes: Vec<u8>) {
+	pub async fn connection_open_ack_mock(&self, connection_id: &str, client_state_bytes: Vec<u8>) {
 		let connection_open_ack = self
 			.method::<_, ()>(
 				"connectionOpenAck",
@@ -123,7 +123,7 @@ where
 		assert_eq!(tx_recp.status, Some(1.into()));
 	}
 
-	pub async fn channel_open_init(&self, port_id: &str, connection_id: &str) -> String {
+	pub async fn channel_open_init_mock(&self, port_id: &str, connection_id: &str) -> String {
 		let fut = self
 			.method::<_, String>(
 				"channelOpenInit",
@@ -230,6 +230,110 @@ where
 		tx
 	}
 
+	pub async fn create_client(&self, msg: Token) -> String {
+		let method = self.method::<_, String>("createClient", (msg,)).unwrap();
+
+		let client_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+
+		client_id
+	}
+
+	pub async fn update_client(&self, msg: Token) {
+		let method = self.method::<_, ()>("updateClient", (msg,)).unwrap();
+
+		let gas_estimate_update_client = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_update_client);
+		let client_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+	}
+
+	pub async fn connection_open_ack(&self, msg: Token) {
+		let method = self.method::<_, ()>("connectionOpenAck", (msg,)).unwrap();
+
+		let gas_estimate_connection_open = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open);
+		let _ = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+	}
+
+	pub async fn connection_open_try(&self, msg: Token) -> String {
+		let method = self.method::<_, String>("connectionOpenTry", (msg,)).unwrap();
+
+		let gas_estimate_connection_open_try = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open_try);
+		let id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		id
+	}
+
+	pub async fn connection_open_init(&self, msg: Token) -> String {
+		let method = self.method::<_, String>("connectionOpenInit", (msg,)).unwrap();
+
+		let gas_estimate_connection_open_try = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open_try);
+		let id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		id
+	}
+
+	pub async fn connection_open_confirm(&self, msg: Token) {
+		let method = self.method::<_, ()>("connectionOpenConfirm", (msg,)).unwrap();
+
+		let gas_estimate_connection_open_confirm = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open_confirm);
+		let _ = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+	}
+
+	pub async fn channel_open_init(&self, msg: Token) -> String {
+		let method = self.method::<_, String>("channelOpenInit", (msg,)).unwrap();
+
+		let gas_estimate_connection_id = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_id);
+		let connection_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		connection_id
+	}
+
+	pub async fn channel_open_try(&self, msg: Token) -> String {
+		let method = self.method::<_, String>("channelOpenTry", (msg,)).unwrap();
+
+		let gas_estimate_connection_id = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_id);
+		let connection_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		connection_id
+	}
+
+	pub async fn send_and_get_tuple(&self, msg: Token, method_name: impl AsRef<str>) -> () {
+		let method = self.method::<_, ()>(method_name.as_ref(), (msg,)).unwrap();
+
+		let gas_estimate = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate);
+		let ret = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		ret
+	}
+
 	pub fn method<T: Tokenize, D: Detokenize>(
 		&self,
 		name: &str,
@@ -294,19 +398,6 @@ where
 		assert_eq!(receipt.status, Some(1.into()));
 	}
 
-	pub async fn create_client(&self, msg: Token) -> String {
-		let method = self.method::<_, String>("createClient", (msg,)).unwrap();
-
-		let client_id = method.call().await.unwrap_contract_error();
-
-		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
-		assert_eq!(receipt.status, Some(1.into()));
-
-		println!("{:?}", receipt.block_number);
-
-		client_id
-	}
-
 	pub fn find_storage(&self, name: &str) -> &Storage {
 		self.storage_layout.storage.iter().find(|x| x.contract == name).unwrap()
 	}
@@ -318,10 +409,6 @@ where
 {
 	fn clone(&self) -> Self {
 		Self {
-			// ibc_client: self.ibc_client.clone(),
-			// ibc_connection: self.ibc_connection.clone(),
-			// ibc_channel_handshake: self.ibc_channel_handshake.clone(),
-			// ibc_packet: self.ibc_packet.clone(),
 			facet_cuts: self.facet_cuts.clone(),
 			deployed_facets: self.deployed_facets.clone(),
 			diamond: self.diamond.clone(),

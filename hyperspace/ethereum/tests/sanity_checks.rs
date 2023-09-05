@@ -1,6 +1,5 @@
 use std::{future::Future, ops::Deref, path::PathBuf, str::FromStr, sync::Arc, time::Duration};
 
-use crate::utils::USE_GETH;
 use cast::revm::new;
 use ecdsa::SigningKey;
 use elliptic_curve::pkcs8::der::pem;
@@ -18,9 +17,10 @@ use ethers_solc::{Artifact, ProjectCompileOutput, ProjectPathsConfig};
 use futures::{Stream, TryStreamExt};
 use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_ethereum::{
-	client::EthRpcClient,
+	client::{EthRpcClient, EthereumClient},
 	config::EthereumClientConfig,
-	contract::{DiamandHandler, IbcHandler, UnwrapContractError},
+	contract::{IbcHandler, UnwrapContractError},
+	mock::{utils, utils::USE_GETH},
 	utils::{DeployYuiIbc, ProviderImpl},
 	yui_types::IntoToken,
 };
@@ -64,7 +64,7 @@ use ibc::{
 	tx_msg::Msg,
 };
 use ibc_proto::google::protobuf::Any;
-use ibc_rpc::PacketInfo;
+use ibc_rpc::{IbcApiClient, PacketInfo};
 use ics07_tendermint::client_state::ClientState;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use primitives::{mock::LocalClientTypes, Chain, IbcProvider};
@@ -77,25 +77,16 @@ use tokio_stream::{Elapsed, StreamExt as _};
 use tracing::log;
 use tracing_subscriber::{filter, layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
-mod utils;
-
-async fn hyperspace_ethereum_client_fixture(
-	anvil: &ethers::utils::AnvilInstance,
+pub async fn hyperspace_ethereum_client_fixture(
+	anvil: &AnvilInstance,
 	yui_ibc: DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>,
-	client: Option<Arc<EthRpcClient>>,
-	diamond_hanlder: Option<DiamandHandler>,
-) -> hyperspace_ethereum::client::EthereumClient {
+) -> EthereumClientConfig {
 	let endpoint = if USE_GETH { "http://localhost:6001".to_string() } else { anvil.endpoint() };
 	let wallet_path = if USE_GETH {
 		Some("keys/0x73db010c3275eb7a92e5c38770316248f4c644ee".to_string())
 	} else {
 		None
 	};
-
-	dbg!("hyperspace_ethereum_client_fixture");
-	dbg!(anvil.endpoint());
-	dbg!(anvil.chain_id());
-	dbg!("hyperspace_ethereum_client_fixture");
 
 	let wallet = if !USE_GETH {
 		Some(
@@ -111,7 +102,7 @@ async fn hyperspace_ethereum_client_fixture(
 		None
 	};
 
-	let mut ret = hyperspace_ethereum::client::EthereumClient::new(EthereumClientConfig {
+	EthereumClientConfig {
 		http_rpc_url: endpoint.parse().unwrap(),
 		ws_rpc_url: "ws://localhost:5001".parse().unwrap(),
 		beacon_rpc_url: Default::default(),
@@ -131,23 +122,13 @@ async fn hyperspace_ethereum_client_fixture(
 		wasm_code_id: None,
 		yui: Some(yui_ibc),
 		client_type: "07-tendermint".into(),
-		diamond_handler: diamond_hanlder,
-	})
-	.await
-	.unwrap();
-
-	if let Some(client) = client {
-		ret.http_rpc = client;
 	}
-
-	ret
 }
 
 #[allow(dead_code)]
-struct DeployYuiIbcMockClient {
+pub struct DeployYuiIbcMockClient {
 	pub path: PathBuf,
 	pub project_output: ProjectCompileOutput,
-	// pub project_output: ethers::solc::ProjectCompileOutput,
 	pub anvil: AnvilInstance,
 	pub client: Arc<ProviderImpl>,
 	pub ibc_mock_client: ContractInstance<Arc<ProviderImpl>, ProviderImpl>,
@@ -202,7 +183,7 @@ impl DeployYuiIbcMockClient {
 	}
 }
 
-async fn deploy_yui_ibc_and_mock_client_fixture() -> DeployYuiIbcMockClient {
+pub async fn deploy_yui_ibc_and_mock_client_fixture() -> DeployYuiIbcMockClient {
 	let path = utils::yui_ibc_solidity_path();
 	let project_output = utils::compile_yui(&path, "contracts/core");
 	let diamond_project_output = utils::compile_yui(&path, "contracts/diamond");
@@ -256,10 +237,10 @@ impl Deref for ClientId {
 
 impl ClientId {
 	pub async fn open_connection(&self, deploy: &DeployYuiIbcMockClient) -> String {
-		let connection_id = deploy.yui_ibc.connection_open_init(&self.0).await;
+		let connection_id = deploy.yui_ibc.connection_open_init_mock(&self.0).await;
 		let () = deploy
 			.yui_ibc
-			.connection_open_ack(&connection_id, utils::mock::client_state_bytes())
+			.connection_open_ack_mock(&connection_id, utils::mock::client_state_bytes())
 			.await;
 		connection_id
 	}
@@ -324,19 +305,14 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	let mut yui_ibc =
 		utils::deploy_yui_ibc(&project_output, &diamond_project_output, client.clone()).await;
 
-	let diamond = DiamandHandler::new(yui_ibc.clone().deployed_facets, yui_ibc.clone().diamond);
-
 	/* ______________________________________________________________________________ */
 
 	/* ______________________________________________________________________________ */
 	//create ethereum hyperspace client
-	let mut hyperspace = hyperspace_ethereum_client_fixture(
-		&anvil,
-		yui_ibc.clone(),
-		Some(client.clone()),
-		Some(diamond.clone()),
-	)
-	.await;
+	let mut hyperspace =
+		EthereumClient::new(hyperspace_ethereum_client_fixture(&anvil, yui_ibc.clone()).await)
+			.await
+			.unwrap();
 	/* ______________________________________________________________________________ */
 
 	/* ______________________________________________________________________________ */
@@ -536,7 +512,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 			"failed to verify clientState"
 		);
 	*/
-	diamond.connection_open_try(yui_conn_try.into_token()).await;
+	yui_ibc.connection_open_try(yui_conn_try.into_token()).await;
 	/* ______________________________________________________________________________ */
 
 	/* ______________________________________________________________________________ */
@@ -715,24 +691,28 @@ async fn relayer_channel_tests() {
 // channel)
 
 #[tokio::test]
-#[ignore]
 async fn test_deploy_yui_ibc_and_mock_client() {
 	deploy_yui_ibc_and_mock_client_fixture().await;
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_hyperspace_ethereum_client() {
 	let DeployYuiIbcMockClient { anvil, yui_ibc, .. } =
 		deploy_yui_ibc_and_mock_client_fixture().await;
-	let _hyperspace = hyperspace_ethereum_client_fixture(&anvil, yui_ibc.clone(), None, None).await;
+	let _hyperspace =
+		EthereumClient::new(hyperspace_ethereum_client_fixture(&anvil, yui_ibc.clone()).await)
+			.await
+			.unwrap();
 }
 
 #[tokio::test]
 async fn test_ibc_client() {
 	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
-	let hyperspace =
-		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone(), None, None).await;
+	let hyperspace = EthereumClient::new(
+		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone()).await,
+	)
+	.await
+	.unwrap();
 	let events = hyperspace.ibc_events().await;
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 	let height = hyperspace.latest_height_and_timestamp().await.unwrap().0;
@@ -795,14 +775,17 @@ async fn test_ibc_connection() {
 		)))
 		.init();
 	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
-	let hyperspace =
-		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone(), None, None).await;
+	let hyperspace = EthereumClient::new(
+		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone()).await,
+	)
+	.await
+	.unwrap();
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 
-	let connection_id = deploy.yui_ibc.connection_open_init(&client_id).await;
+	let connection_id = deploy.yui_ibc.connection_open_init_mock(&client_id).await;
 	let () = deploy
 		.yui_ibc
-		.connection_open_ack(&connection_id, utils::mock::client_state_bytes())
+		.connection_open_ack_mock(&connection_id, utils::mock::client_state_bytes())
 		.await;
 	let height = hyperspace.latest_height_and_timestamp().await.unwrap().0;
 
@@ -834,15 +817,18 @@ async fn test_ibc_connection() {
 #[tokio::test]
 async fn test_ibc_channel() {
 	let deploy = deploy_yui_ibc_and_mock_client_fixture().await;
-	let hyperspace =
-		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone(), None, None).await;
+	let hyperspace = EthereumClient::new(
+		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone()).await,
+	)
+	.await
+	.unwrap();
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 
 	let mock_module = deploy_mock_module_fixture(&deploy).await;
 	deploy.yui_ibc.bind_port("port-0", mock_module.address()).await;
 
 	let connection_id = client_id.open_connection(&deploy).await;
-	let channel_id = deploy.yui_ibc.channel_open_init("port-0", &connection_id).await;
+	let channel_id = deploy.yui_ibc.channel_open_init_mock("port-0", &connection_id).await;
 	deploy.yui_ibc.channel_open_ack(&channel_id, "port-0").await;
 
 	let channels = hyperspace.query_channels().await.unwrap();
@@ -891,8 +877,11 @@ async fn test_ibc_channel() {
 async fn test_ibc_packet() {
 	let _ = env_logger::try_init();
 	let mut deploy = deploy_yui_ibc_and_mock_client_fixture().await;
-	let hyperspace =
-		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone(), None, None).await;
+	let hyperspace = EthereumClient::new(
+		hyperspace_ethereum_client_fixture(&deploy.anvil, deploy.yui_ibc.clone()).await,
+	)
+	.await
+	.unwrap();
 	let events = hyperspace.ibc_events().await;
 	let client_id = deploy_mock_client_fixture(&deploy).await;
 
@@ -901,7 +890,7 @@ async fn test_ibc_packet() {
 	deploy.ibc_mock_module = Some(mock_module);
 
 	let connection_id = client_id.open_connection(&deploy).await;
-	let channel_id = deploy.yui_ibc.channel_open_init("port-0", &connection_id).await;
+	let channel_id = deploy.yui_ibc.channel_open_init_mock("port-0", &connection_id).await;
 	deploy.yui_ibc.channel_open_ack(&channel_id, "port-0").await;
 
 	let data = "hello_send".as_bytes().to_vec();
