@@ -48,9 +48,10 @@ toml = "0.7.4"
 
 [dev-dependencies]
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
-hyperspace-core = { path = "../core", features = ["testing", "build-metadata-from-ws"] }
+hyperspace-core = { path = "../core", features = ["testing"] }
 hyperspace-parachain = { path = "../parachain", features = ["testing"] }
 hyperspace-cosmos = { path = "../cosmos", features = [] }
+hyperspace-ethereum = { path = "../ethereum", features = [] }
 
 # We need this so the tests run sequentially
 [[test]]
@@ -58,3 +59,6 @@ name = "parachain_parachain"
 
 [[test]]
 name = "parachain_cosmos"
+
+[[test]]
+name = "ethereum_cosmos"

@@ -4876,6 +4876,7 @@ dependencies = [
  "sync-committee-primitives",
  "sync-committee-prover",
  "sync-committee-verifier",
+ "tendermint",
  "thiserror",
  "tokio",
  "toml 0.7.6",
@@ -4983,6 +4984,46 @@ dependencies = [
  "subxt",
  "thiserror",
  "tokio",
+]
+
+[[package]]
+name = "hyperspace-testsuite"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "finality-grandpa",
+ "futures",
+ "grandpa-light-client-primitives",
+ "grandpa-light-client-verifier",
+ "hex",
+ "hyperspace-core",
+ "hyperspace-cosmos",
+ "hyperspace-ethereum",
+ "hyperspace-parachain",
+ "hyperspace-primitives",
+ "ibc",
+ "ibc-proto",
+ "ics10-grandpa",
+ "light-client-common",
+ "log",
+ "pallet-ibc",
+ "pallet-ibc-ping",
+ "parity-scale-codec",
+ "polkadot-core-primitives",
+ "rand 0.8.5",
+ "serde_json",
+ "sp-core 7.0.0",
+ "sp-finality-grandpa",
+ "sp-keyring",
+ "sp-keystore 0.13.0",
+ "sp-runtime 7.0.0",
+ "sp-state-machine 0.13.0",
+ "sp-trie 7.0.0",
+ "subxt",
+ "tendermint-proto",
+ "tokio",
+ "toml 0.7.6",
 ]
 
 [[package]]
@@ -7616,6 +7657,7 @@ dependencies = [
  "ics10-grandpa",
  "ics11-beefy",
  "ics23 0.10.0",
+ "icsxx-ethereum",
  "light-client-common",
  "log",
  "orml-tokens",

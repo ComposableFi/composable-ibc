@@ -1105,6 +1105,14 @@ pub mod pallet {
 							.map_err(|_| Error::<T>::ClientFreezeFailed)?,
 					)
 				},
+				#[cfg(feature = "ethereum")]
+				AnyClientState::Ethereum(msg) => {
+					let latest_height = msg.latest_height();
+					AnyClientState::wrap(
+						&msg.with_frozen_height(Height::new(latest_height.revision_number, height))
+							.map_err(|_| Error::<T>::ClientFreezeFailed)?,
+					)
+				},
 				AnyClientState::Wasm(_) => return Err(Error::<T>::ClientFreezeFailed.into()),
 				#[cfg(test)]
 				AnyClientState::Mock(mut ms) => {

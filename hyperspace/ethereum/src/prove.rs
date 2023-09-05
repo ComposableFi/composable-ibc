@@ -131,7 +131,7 @@ pub async fn prove(
 					.sync_aggregate
 					.sync_committee_bits
 					.as_bitslice()
-					.count_ones() < (2 * (SYNC_COMMITTEE_SIZE)) / 3
+					.count_ones() < (2 * SYNC_COMMITTEE_SIZE) / 3
 				{
 					attested_slot += 1;
 					println!("Signature block does not have sufficient sync committee participants -> participants {}", signature_block.body.sync_aggregate.sync_committee_bits.as_bitslice().count_ones());

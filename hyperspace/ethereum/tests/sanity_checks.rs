@@ -9,9 +9,9 @@ use ethers::{
 	utils::{keccak256, AnvilInstance},
 };
 use ethers_solc::{ProjectCompileOutput, ProjectPathsConfig};
-use futures::{stream::StreamExt, TryStreamExt};
+use futures::{stream::StreamExt, Stream, TryStreamExt};
 use hyperspace_ethereum::{
-	config::Config,
+	config::EthereumClientConfig,
 	contract::UnwrapContractError,
 	utils::{DeployYuiIbc, ProviderImpl},
 };
@@ -28,7 +28,7 @@ use ibc::{
 	timestamp::Timestamp,
 };
 use ibc_rpc::PacketInfo;
-use primitives::IbcProvider;
+use primitives::{Chain, IbcProvider};
 use prost::Message;
 use tokio::time::timeout;
 use tracing::log;
@@ -49,7 +49,7 @@ async fn hyperspace_ethereum_client_fixture(
 	let wallet = if !USE_GETH { Some(anvil.endpoint().parse().unwrap()) } else { None };
 
 	hyperspace_ethereum::client::EthereumClient::new(
-		Config {
+		EthereumClientConfig {
 			http_rpc_url: endpoint.parse().unwrap(),
 			ws_rpc_url: "ws://localhost:5001".parse().unwrap(),
 			ibc_handler_address: yui_ibc.diamond.address(),

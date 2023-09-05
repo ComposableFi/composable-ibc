@@ -44,6 +44,15 @@ use ics11_beefy::{
 	client_message::BEEFY_CLIENT_MESSAGE_TYPE_URL, client_state::BEEFY_CLIENT_STATE_TYPE_URL,
 	consensus_state::BEEFY_CONSENSUS_STATE_TYPE_URL,
 };
+use icsxx_ethereum::{
+	client_message::{
+		ETHEREUM_CLIENT_MESSAGE_TYPE_URL, ETHEREUM_HEADER_TYPE_URL, ETHEREUM_MISBEHAVIOUR_TYPE_URL,
+	},
+	client_state::ETHEREUM_CLIENT_STATE_TYPE_URL,
+	consensus_state::ETHEREUM_CONSENSUS_STATE_TYPE_URL,
+};
+#[cfg(feature = "ethereum")]
+use icsxx_ethereum::{BlsVerify, EthereumError, EthereumPublicKey, EthereumSignature};
 use prost::Message;
 use sp_core::{crypto::ByteArray, ed25519, H256};
 use sp_runtime::{
@@ -212,11 +221,24 @@ impl beefy_client_primitives::HostFunctions for HostFunctionsManager {
 	}
 }
 
+#[cfg(feature = "ethereum")]
+impl BlsVerify for HostFunctionsManager {
+	fn verify(
+		_public_keys: &[&EthereumPublicKey],
+		_msg: &[u8],
+		_signature: &EthereumSignature,
+	) -> Result<(), EthereumError> {
+		unimplemented!()
+	}
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, ClientDef)]
 pub enum AnyClient {
 	Grandpa(ics10_grandpa::client_def::GrandpaClient<HostFunctionsManager>),
 	Beefy(ics11_beefy::client_def::BeefyClient<HostFunctionsManager>),
 	Tendermint(ics07_tendermint::client_def::TendermintClient<HostFunctionsManager>),
+	#[cfg(feature = "ethereum")]
+	Ethereum(icsxx_ethereum::client_def::EthereumClient<HostFunctionsManager>),
 	Wasm(ics08_wasm::client_def::WasmClient<AnyClient, AnyClientState, AnyConsensusState>),
 	#[cfg(test)]
 	Mock(ibc::mock::client_def::MockClient),
@@ -227,6 +249,8 @@ pub enum AnyUpgradeOptions {
 	Grandpa(ics10_grandpa::client_state::UpgradeOptions),
 	Beefy(ics11_beefy::client_state::UpgradeOptions),
 	Tendermint(ics07_tendermint::client_state::UpgradeOptions),
+	#[cfg(feature = "ethereum")]
+	Ethereum(icsxx_ethereum::client_state::UpgradeOptions),
 	Wasm(Box<Self>),
 	#[cfg(test)]
 	Mock(()),
@@ -240,6 +264,9 @@ pub enum AnyClientState {
 	Beefy(ics11_beefy::client_state::ClientState<HostFunctionsManager>),
 	#[ibc(proto_url = "TENDERMINT_CLIENT_STATE_TYPE_URL")]
 	Tendermint(ics07_tendermint::client_state::ClientState<HostFunctionsManager>),
+	#[cfg(feature = "ethereum")]
+	#[ibc(proto_url = "ETHEREUM_CLIENT_STATE_TYPE_URL")]
+	Ethereum(icsxx_ethereum::client_state::ClientState<HostFunctionsManager>),
 	#[ibc(proto_url = "WASM_CLIENT_STATE_TYPE_URL")]
 	Wasm(ics08_wasm::client_state::ClientState<AnyClient, Self, AnyConsensusState>),
 	#[cfg(test)]
@@ -300,6 +327,9 @@ pub enum AnyConsensusState {
 	Beefy(ics11_beefy::consensus_state::ConsensusState),
 	#[ibc(proto_url = "TENDERMINT_CONSENSUS_STATE_TYPE_URL")]
 	Tendermint(ics07_tendermint::consensus_state::ConsensusState),
+	#[cfg(feature = "ethereum")]
+	#[ibc(proto_url = "ETHEREUM_CONSENSUS_STATE_TYPE_URL")]
+	Ethereum(icsxx_ethereum::consensus_state::ConsensusState),
 	#[ibc(proto_url = "WASM_CONSENSUS_STATE_TYPE_URL")]
 	Wasm(ics08_wasm::consensus_state::ConsensusState<Self>),
 	#[cfg(test)]
@@ -326,6 +356,9 @@ pub enum AnyClientMessage {
 	Beefy(ics11_beefy::client_message::ClientMessage),
 	#[ibc(proto_url = "TENDERMINT_CLIENT_MESSAGE_TYPE_URL")]
 	Tendermint(ics07_tendermint::client_message::ClientMessage),
+	#[cfg(feature = "ethereum")]
+	#[ibc(proto_url = "ETHEREUM_CLIENT_MESSAGE_TYPE_URL")]
+	Ethereum(icsxx_ethereum::client_message::ClientMessage),
 	#[ibc(proto_url = "WASM_CLIENT_MESSAGE_TYPE_URL")]
 	Wasm(ics08_wasm::client_message::ClientMessage<Self>),
 	#[cfg(test)]
@@ -353,6 +386,11 @@ impl AnyClientMessage {
 				ics08_wasm::client_message::ClientMessage::Header(h) =>
 					h.inner.maybe_header_height(),
 				ics08_wasm::client_message::ClientMessage::Misbehaviour(_) => None,
+			},
+			#[cfg(feature = "ethereum")]
+			Self::Ethereum(m) => match m {
+				icsxx_ethereum::client_message::ClientMessage::Header(h) => None,
+				icsxx_ethereum::client_message::ClientMessage::Misbehaviour(_) => None,
 			},
 			#[cfg(test)]
 			Self::Mock(inner) => match inner {
@@ -442,6 +480,23 @@ impl TryFrom<Any> for AnyClientMessage {
 					ics07_tendermint::client_message::Misbehaviour::decode_vec(&value.value)
 						.map_err(ics02_client::error::Error::decode_raw_header)?,
 				))),
+			#[cfg(feature = "ethereum")]
+			ETHEREUM_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Ethereum(
+				icsxx_ethereum::client_message::ClientMessage::decode_vec(&value.value)
+					.map_err(ics02_client::error::Error::decode_raw_header)?,
+			)),
+			#[cfg(feature = "ethereum")]
+			ETHEREUM_HEADER_TYPE_URL =>
+				Ok(Self::Ethereum(icsxx_ethereum::client_message::ClientMessage::Header(
+					icsxx_ethereum::client_message::Header::decode_vec(&value.value)
+						.map_err(ics02_client::error::Error::decode_raw_header)?,
+				))),
+			#[cfg(feature = "ethereum")]
+			ETHEREUM_MISBEHAVIOUR_TYPE_URL =>
+				Ok(Self::Ethereum(icsxx_ethereum::client_message::ClientMessage::Misbehaviour(
+					icsxx_ethereum::client_message::Misbehaviour::decode_vec(&value.value)
+						.map_err(ics02_client::error::Error::decode_raw_header)?,
+				))),
 			WASM_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Wasm(
 				ics08_wasm::client_message::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
@@ -492,7 +547,11 @@ impl From<AnyClientMessage> for Any {
 				type_url: TENDERMINT_CLIENT_MESSAGE_TYPE_URL.to_string(),
 				value: msg.encode_vec().expect("encode_vec failed"),
 			},
-
+			#[cfg(feature = "ethereum")]
+			AnyClientMessage::Ethereum(msg) => Any {
+				type_url: ETHEREUM_CLIENT_MESSAGE_TYPE_URL.to_string(),
+				value: msg.encode_vec().expect("encode_vec failed"),
+			},
 			#[cfg(test)]
 			AnyClientMessage::Mock(_msg) => panic!("MockHeader can't be serialized"),
 		}

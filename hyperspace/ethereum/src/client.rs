@@ -1,5 +1,5 @@
 use crate::{
-	config::Config,
+	config::EthereumClientConfig,
 	utils::{DeployYuiIbc, ProviderImpl},
 };
 use async_trait::async_trait;
@@ -50,7 +50,7 @@ pub const CHANNELS_STORAGE_INDEX: u32 = 5;
 pub struct EthereumClient {
 	pub http_rpc: Arc<EthRpcClient>,
 	pub(crate) ws_uri: http::Uri,
-	pub(crate) config: Config,
+	pub(crate) config: EthereumClientConfig,
 	/// Common relayer data
 	pub common_state: CommonClientState,
 	pub yui: DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>,
@@ -102,10 +102,7 @@ pub struct AckPacket {
 }
 
 impl EthereumClient {
-	pub async fn new(
-		mut config: Config,
-		yui: DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>,
-	) -> Result<Self, ClientError> {
+	pub async fn new(mut config: EthereumClientConfig) -> Result<Self, ClientError> {
 		let client = Provider::<Http>::try_from(config.http_rpc_url.to_string())
 			.map_err(|_| ClientError::UriParseError(config.http_rpc_url.clone()))?;
 
@@ -136,6 +133,7 @@ impl EthereumClient {
 
 		let client = ethers::middleware::SignerMiddleware::new(client, wallet);
 
+		let yui = config.yui.take().unwrap();
 		Ok(Self {
 			http_rpc: Arc::new(client),
 			ws_uri: config.ws_rpc_url.clone(),

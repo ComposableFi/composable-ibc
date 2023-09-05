@@ -26,6 +26,7 @@ ethereum-consensus = { git = "https://github.com/polytope-labs/ethereum-consensu
 ssz-rs = { git = "https://github.com/polytope-labs/ssz-rs", branch = "main" }
 
 cast = { git = "https://github.com/foundry-rs/foundry", version = "0.2.0" }
+tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 
 anyhow = "1.0.65"
 async-stream = "0.3.5"

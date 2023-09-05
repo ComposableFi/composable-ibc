@@ -43,7 +43,7 @@ members = [
     "hyperspace/primitives",
     # "hyperspace/parachain",
     # "hyperspace/cosmos",
-    # "hyperspace/testsuite",
+     "hyperspace/testsuite",
     # "hyperspace/metrics",
     "hyperspace/ethereum",
 

@@ -53,13 +53,17 @@ use std::{
 use crate::{
 	client::{ClientError, EthereumClient, COMMITMENTS_STORAGE_INDEX, CONNECTIONS_STORAGE_INDEX},
 	events::TryFromEvent,
+	prove::prove,
 };
 use futures::{FutureExt, Stream, StreamExt};
 use ibc::{
 	applications::transfer::PrefixedCoin,
-	core::ics04_channel::{
-		channel::{Order, State},
-		events::SendPacket,
+	core::{
+		ics04_channel::{
+			channel::{Order, State},
+			events::SendPacket,
+		},
+		ics23_commitment::commitment::CommitmentRoot,
 	},
 	events::IbcEvent,
 	protobuf::Protobuf,
@@ -73,8 +77,10 @@ use ibc_proto::{
 	},
 };
 use ibc_rpc::{IbcApiClient, PacketInfo};
-use icsxx_ethereum::client_state::ClientState;
+use icsxx_ethereum::{client_state::ClientState, consensus_state::ConsensusState};
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
+use sync_committee_primitives::types::LightClientState;
+use sync_committee_prover::SyncCommitteeProver;
 
 abigen!(
 	IbcClientAbi,
@@ -181,6 +187,14 @@ impl IbcProvider for EthereumClient {
 		let logs = self.http_rpc.get_logs(&filter).await.unwrap();
 		let mut events = vec![];
 
+		let update = prove(self, finality_event.hash.unwrap()).await?;
+
+		println!(
+			"proven: state root = {}, body root = {}, slot = {}",
+			update.finalized_header.state_root,
+			update.finalized_header.body_root,
+			update.finalized_header.slot
+		);
 		// for log in logs {
 		// 	let raw_log = RawLog::from(log.clone());
 		// 	let height = Height::new(0, log.block_number.unwrap().as_u64());
@@ -206,6 +220,7 @@ impl IbcProvider for EthereumClient {
 		Ok(events)
 	}
 
+	// TODO: this function is mostly used in tests and in 'fishing' mode.
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
 		let ibc_address = self.config.ibc_handler_address;
 		let client = self.clone();
@@ -274,7 +289,7 @@ impl IbcProvider for EthereumClient {
 			.call()
 			.await
 			.map_err(|err| {
-				eprintln!("{err}");
+				eprintln!("error: {err}");
 				err
 			})
 			.unwrap();
@@ -681,7 +696,6 @@ impl IbcProvider for EthereumClient {
 		self.config.channel_whitelist.clone().into_iter().collect()
 	}
 
-	#[cfg(test)]
 	async fn query_connection_channels(
 		&self,
 		at: Height,
@@ -963,8 +977,9 @@ impl IbcProvider for EthereumClient {
 		Ok(Duration::from_secs(block.timestamp.as_u64()).as_nanos() as u64)
 	}
 
+	// TODO
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
-		todo!()
+		Ok(vec![])
 	}
 
 	async fn query_channels(&self) -> Result<Vec<(ChannelId, PortId)>, Self::Error> {
@@ -994,7 +1009,57 @@ impl IbcProvider for EthereumClient {
 	async fn initialize_client_state(
 		&self,
 	) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
-		todo!()
+		let mut string = self.config.beacon_rpc_url.to_string();
+		string.pop();
+		let sync_committee_prover = SyncCommitteeProver::new(string);
+		let block_id = "finalized";
+		let block_header = sync_committee_prover.fetch_header(&block_id).await.unwrap();
+
+		let state = sync_committee_prover
+			.fetch_beacon_state(&block_header.slot.to_string())
+			.await
+			.unwrap();
+
+		// TODO: query `at` block
+		let finality_checkpoint = sync_committee_prover.fetch_finalized_checkpoint().await.unwrap();
+		let client_state = LightClientState {
+			finalized_header: block_header.clone(),
+			latest_finalized_epoch: finality_checkpoint.finalized.epoch, // TODO: ????
+			current_sync_committee: state.current_sync_committee,
+			next_sync_committee: state.next_sync_committee,
+		};
+
+		let block = self
+			.http_rpc
+			.get_block(BlockId::Number(BlockNumber::Number(dbg!(block_header.slot).into())))
+			.await
+			.unwrap()
+			.unwrap();
+
+		dbg!(&block.state_root);
+		dbg!(&block.hash.unwrap());
+		dbg!(&state.state_roots.iter().take(10).collect::<Vec<_>>());
+		dbg!(&state.block_roots.iter().take(10).collect::<Vec<_>>());
+		dbg!(&block_header.state_root);
+		dbg!(&block_header.body_root);
+
+		let client_state = AnyClientState::Ethereum(ClientState {
+			inner: client_state,
+			frozen_height: None,
+			latest_height: block_header.slot as _,
+			_phantom: Default::default(),
+		});
+
+		let consensus_state = AnyConsensusState::Ethereum(ConsensusState {
+			timestamp: tendermint::time::Time::from_unix_timestamp(
+				block.timestamp.as_u64() as i64,
+				0,
+			)
+			.unwrap(),
+			root: CommitmentRoot { bytes: block.state_root.0.to_vec() },
+		});
+
+		Ok((client_state, consensus_state))
 	}
 
 	async fn query_client_id_from_tx_hash(

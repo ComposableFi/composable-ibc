@@ -1,14 +1,23 @@
 use crate::{
 	client::{ClientError, EthereumClient},
-	ibc_provider::{CreateClientFilter, UpdateClientFilter},
+	ibc_provider::{
+		CloseConfirmChannelFilter, CreateClientFilter, OpenConfirmChannelFilter,
+		OpenConfirmConnectionFilter, UpdateClientFilter,
+	},
 };
 use async_trait::async_trait;
 use ethers::prelude::Log;
 use ibc::{
-	core::ics02_client::events::{Attributes as ClientAttributes, CreateClient, UpdateClient},
+	core::{
+		ics02_client::events::{Attributes as ClientAttributes, CreateClient, UpdateClient},
+		ics03_connection::events::{Attributes, OpenConfirm as ConnectionOpenConfirm},
+		ics04_channel::events::{CloseConfirm, OpenConfirm as ChannelOpenConfirm},
+		ics24_host::identifier::{ChannelId, ConnectionId, PortId},
+	},
 	events::IbcEvent,
 	Height,
 };
+use primitives::IbcProvider;
 
 #[async_trait]
 pub trait TryFromEvent<T>
@@ -55,7 +64,6 @@ where
 
    Empty(String),      // Special event, signifying empty response
    ChainError(String), // Special event, signifying an error on CheckTx or DeliverTx
-
 */
 
 #[async_trait]
@@ -93,6 +101,53 @@ impl TryFromEvent<UpdateClientFilter> for IbcEvent {
 				consensus_height: Default::default(), // TODO: consensus height?
 			},
 			header: Some(header.to_vec()), // TODO: header query
+		}))
+	}
+}
+
+#[async_trait]
+impl TryFromEvent<OpenConfirmConnectionFilter> for IbcEvent {
+	async fn try_from_event(
+		client: &EthereumClient,
+		event: OpenConfirmConnectionFilter,
+		_log: Log,
+		height: Height,
+	) -> Result<Self, ClientError> {
+		let OpenConfirmConnectionFilter { connection_id } = event;
+		let connection_id: ConnectionId = connection_id.parse()?;
+		let resp = client.query_connection_end(height, connection_id.clone()).await?;
+		let counterparty = resp.connection.unwrap().counterparty.unwrap();
+		Ok(IbcEvent::OpenConfirmConnection(ConnectionOpenConfirm(Attributes {
+			height,
+			connection_id: Some(connection_id),
+			client_id: client.client_id(),
+			counterparty_connection_id: Some(counterparty.connection_id.parse()?),
+			counterparty_client_id: counterparty.client_id.parse()?,
+		})))
+	}
+}
+
+#[async_trait]
+impl TryFromEvent<OpenConfirmChannelFilter> for IbcEvent {
+	async fn try_from_event(
+		client: &EthereumClient,
+		event: OpenConfirmChannelFilter,
+		_log: Log,
+		height: Height,
+	) -> Result<Self, ClientError> {
+		let OpenConfirmChannelFilter { port_id, channel_id } = event;
+		let port_id: PortId = port_id.parse()?;
+		let channel_id: ChannelId = channel_id.parse()?;
+		let resp = client.query_channel_end(height, channel_id, port_id.clone()).await?;
+		let channel = resp.channel.unwrap();
+		let counterparty = channel.counterparty.unwrap();
+		Ok(IbcEvent::OpenConfirmChannel(ChannelOpenConfirm {
+			height,
+			channel_id: Some(channel_id),
+			connection_id: channel.connection_hops[0].parse()?,
+			counterparty_port_id: counterparty.port_id.parse()?,
+			port_id,
+			counterparty_channel_id: Some(counterparty.port_id.parse()?),
 		}))
 	}
 }

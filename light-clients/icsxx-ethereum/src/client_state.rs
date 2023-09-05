@@ -39,7 +39,7 @@ pub struct ClientState<H> {
 	pub inner: LightClientState,
 	pub frozen_height: Option<Height>,
 	pub latest_height: u32,
-	_phantom: PhantomData<H>,
+	pub _phantom: PhantomData<H>,
 }
 
 impl<H: Clone> Protobuf<RawClientState> for ClientState<H> {}

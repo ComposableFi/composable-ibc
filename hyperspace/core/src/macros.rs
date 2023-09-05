@@ -404,11 +404,11 @@ macro_rules! chains {
 					$(
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain
-							.query_send_packets(channel_id, port_id, seqs)
+							.query_send_packets(at, channel_id, port_id, seqs)
 							.await
 							.map_err(AnyError::$name),
 					)*
-					Self::Wasm(c) => c.inner.query_send_packets(channel_id, port_id, seqs).await,
+					Self::Wasm(c) => c.inner.query_send_packets(at, channel_id, port_id, seqs).await,
 				}
 			}
 
@@ -423,11 +423,11 @@ macro_rules! chains {
 					$(
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain
-							.query_received_packets(channel_id, port_id, seqs)
+							.query_received_packets(at, channel_id, port_id, seqs)
 							.await
 							.map_err(AnyError::$name),
 					)*
-					Self::Wasm(c) => c.inner.query_received_packets(channel_id, port_id, seqs).await,
+					Self::Wasm(c) => c.inner.query_received_packets(at, channel_id, port_id, seqs).await,
 				}
 			}
 
