@@ -452,6 +452,7 @@ where
 		self.channel_whitelist.lock().unwrap().iter().cloned().collect()
 	}
 
+	#[cfg(test)]
 	async fn query_connection_channels(
 		&self,
 		at: Height,
@@ -470,6 +471,7 @@ where
 
 	async fn query_send_packets(
 		&self,
+		at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
 		seqs: Vec<u64>,

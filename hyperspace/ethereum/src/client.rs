@@ -1,17 +1,16 @@
 use async_trait::async_trait;
 use cast::revm::db;
-use std::{future::Future, pin::Pin, str::FromStr, sync::Arc};
-
 use ethers::{
-	abi::{Address, ParamType, ParseError, Token},
+	abi::{AbiEncode, Address, ParamType, ParseError, Token},
 	prelude::signer::SignerMiddlewareError,
 	providers::{Http, Middleware, Provider, ProviderError, ProviderExt, Ws},
 	signers::{coins_bip39::English, LocalWallet, MnemonicBuilder, Signer},
 	types::{
 		Block, BlockId, BlockNumber, EIP1186ProofResponse, Filter, Log, NameOrAddress, H160, H256,
+		U256,
 	},
+	utils::keccak256,
 };
-
 use futures::{Stream, TryFutureExt};
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
@@ -19,10 +18,12 @@ use ibc::{
 	Height,
 };
 use ibc_primitives::Timeout;
+use once_cell::sync::{Lazy, OnceCell};
 use primitives::CommonClientState;
+use std::{future::Future, ops::Add, pin::Pin, str::FromStr, sync::Arc};
 use thiserror::Error;
 
-use crate::config::Config;
+use crate::{config::Config};
 
 pub type EthRpcClient = ethers::prelude::SignerMiddleware<
 	ethers::providers::Provider<Http>,
@@ -30,10 +31,14 @@ pub type EthRpcClient = ethers::prelude::SignerMiddleware<
 >;
 pub(crate) type WsEth = Provider<Ws>;
 
+pub static IBC_STORAGE_SLOT: Lazy<U256> =
+	Lazy::new(|| U256::from_big_endian(&keccak256(b"ibc.core")[..]));
+
 // TODO: generate this from the contract automatically
 pub const COMMITMENTS_STORAGE_INDEX: u32 = 0;
 pub const CLIENT_IMPLS_STORAGE_INDEX: u32 = 3;
 pub const CONNECTIONS_STORAGE_INDEX: u32 = 4;
+pub const CHANNELS_STORAGE_INDEX: u32 = 5;
 
 #[derive(Debug, Clone)]
 pub struct EthereumClient {
@@ -42,7 +47,7 @@ pub struct EthereumClient {
 	pub config: Config,
 	/// Common relayer data
 	pub common_state: CommonClientState,
-	pub prev_state: Arc<std::sync::Mutex<(Vec<u8>, Vec<u8>)>>
+	pub prev_state: Arc<std::sync::Mutex<(Vec<u8>, Vec<u8>)>>,
 }
 
 pub type MiddlewareErrorType = SignerMiddlewareError<
@@ -121,7 +126,7 @@ impl EthereumClient {
 			ws_uri: config.ws_rpc_url.clone(),
 			config,
 			common_state: Default::default(),
-			prev_state: Arc::new(std::sync::Mutex::new((vec![], vec![])))
+			prev_state: Arc::new(std::sync::Mutex::new((vec![], vec![]))),
 		})
 	}
 
@@ -323,21 +328,18 @@ impl EthereumClient {
 		block_height: Option<u64>,
 		storage_index: u32,
 	) -> impl Future<Output = Result<EIP1186ProofResponse, ClientError>> {
-		let key = ethers::utils::keccak256(key.as_bytes());
+		let key = keccak256(key.as_bytes());
+		let var_name = format!("0x{}", hex::encode(key));
 
-		let key = hex::encode(key);
-
-		let var_name = format!("0x{key}");
-		let storage_index = format!("{storage_index}");
-		let index =
-			cast::SimpleCast::index("bytes32", dbg!(&var_name), dbg!(&storage_index)).unwrap();
+		let index = cast::SimpleCast::index(
+			"bytes32",
+			&var_name,
+			&format!("0x{}", hex::encode(IBC_STORAGE_SLOT.add(U256::from(storage_index)).encode())),
+		)
+		.unwrap();
 
 		let client = self.http_rpc.clone();
 		let address = self.config.ibc_handler_address.clone();
-
-		dbg!(&address);
-		dbg!(&H256::from_str(&index).unwrap());
-		dbg!(&block_height);
 
 		async move {
 			Ok(client
@@ -392,17 +394,13 @@ impl EthereumClient {
 		block_height: Option<u64>,
 		storage_index: u32,
 	) -> impl Future<Output = Result<EIP1186ProofResponse, ClientError>> {
-		let key1 = ethers::utils::keccak256(
-			&ethers::abi::encode_packed(&[Token::String(key1.into())]).unwrap(),
-		);
+		let key1 = ethers::utils::keccak256(key1.as_bytes());
 
 		let combined_key1 = [key1.as_slice(), storage_index.to_be_bytes().as_ref()].concat();
 		let key1_hashed = ethers::utils::keccak256(&combined_key1);
 		let key1_hashed_hex = hex::encode(&key1_hashed);
 
-		let key2 = ethers::utils::keccak256(
-			&ethers::abi::encode_packed(&[Token::String(key2.into())]).unwrap(),
-		);
+		let key2 = ethers::utils::keccak256(key2.as_bytes());
 
 		let combined_key2 = [key2.as_slice(), key1_hashed_hex.as_bytes()].concat();
 		let key2_hashed = ethers::utils::keccak256(&combined_key2);

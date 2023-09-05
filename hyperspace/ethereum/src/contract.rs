@@ -1,11 +1,13 @@
 use std::{sync::Arc, path::{Path, PathBuf}};
 
+use ecdsa::SigningKey;
 use ethers::{
-	abi::{Abi, Address, Detokenize, Token, Tokenizable},
+	abi::{Abi, Address, Detokenize, Token, Tokenizable, Tokenize},
 	prelude::Contract,
 	providers::Middleware,
 };
-use ethers_solc::{ProjectCompileOutput, ProjectPathsConfig, SolcConfig, artifacts::{Settings, Optimizer, OptimizerDetails, output_selection::OutputSelection, DebuggingSettings, RevertStrings, Libraries}, EvmVersion, Project, Artifact};
+use ethers::prelude::{ContractInstance, *};
+use ethers_solc::{ProjectCompileOutput, ProjectPathsConfig, SolcConfig, artifacts::{Settings, Optimizer, OptimizerDetails, output_selection::OutputSelection, DebuggingSettings, RevertStrings, Libraries, FunctionCall}, EvmVersion, Project, Artifact};
 
 /// Unwraps a contract error, decoding the revert reason if possible
 pub trait UnwrapContractError<T> {
@@ -40,6 +42,158 @@ pub const IBC_HANDLER_ABI: &str = include_str!("./abi/ibc-handler-abi.json");
 /// A wrapper around the IBC handler contract instance
 pub struct IbcHandler<M> {
 	pub(crate) contract: Contract<M>,
+}
+
+use ethers::middleware::SignerMiddleware;
+use k256::Secp256k1;
+type EthersContractInstance = ContractInstance<Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey<Secp256k1>>>>, SignerMiddleware<Provider<Http>, Wallet<SigningKey<Secp256k1>>>>;
+#[derive(Clone, Debug)]
+pub struct DiamandHandler{
+	pub deployed_facets: Vec<EthersContractInstance>,
+	pub diamond: EthersContractInstance,
+}
+
+impl DiamandHandler
+where
+{
+	pub fn new(deployed_facets: Vec<EthersContractInstance>, diamond: EthersContractInstance) -> Self {
+		DiamandHandler {
+			deployed_facets: deployed_facets,
+			diamond,
+		}
+	}
+	pub fn method<T: Tokenize, D: Detokenize>(
+		&self,
+		name: &str,
+		args: T,
+	) -> Result<ethers::prelude::FunctionCall<Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey<Secp256k1>>>>, SignerMiddleware<Provider<Http>, Wallet<SigningKey<Secp256k1>>>, D>, AbiError> {
+		let mut contract: Option<&EthersContractInstance> = None;
+
+		let lookup_contracts = self.deployed_facets.iter().chain(std::iter::once(&self.diamond));
+
+		for lookup_contract in lookup_contracts {
+			if lookup_contract.abi().function(name).is_ok() {
+				if contract.is_some() {
+					panic!("ambiguous method name: {}", name);
+				}
+				contract = Some(lookup_contract);
+			}
+		}
+		let contract = contract.take().ok_or_else(|| AbiError::WrongSelector)?;
+
+		let mut f = contract.method(name, args);
+
+		if let Ok(f) = &mut f {
+			f.tx.set_to(self.diamond.address());
+		}
+
+		f
+	}
+
+	pub async fn create_client(&self, msg: Token) -> String {
+		let method = self.method::<_, String>("createClient", (msg,)).unwrap();
+
+		let client_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+
+		client_id
+	}
+
+	pub async fn update_client(&self, msg: Token) {
+		let method = self.method::<_, ()>("updateClient", (msg,)).unwrap();
+
+		let gas_estimate_update_client = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_update_client);
+		let client_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+	}
+
+	pub async fn connection_open_ack(&self, msg: Token) {
+		let method = self.method::<_, ()>("connectionOpenAck", (msg,)).unwrap();
+
+		let gas_estimate_connection_open = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open);
+		let _ = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+	}
+
+	pub async fn connection_open_try(&self, msg: Token) -> String {
+		let method = self.method::<_, String>("connectionOpenTry", (msg,)).unwrap();
+
+		let gas_estimate_connection_open_try = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open_try);
+		let id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		id
+	}
+
+	pub async fn connection_open_init(&self, msg: Token) -> String {
+		let method = self.method::<_, String>("connectionOpenInit", (msg,)).unwrap();
+
+		let gas_estimate_connection_open_try = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open_try);
+		let id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		id
+	}
+
+	pub async fn connection_open_confirm(&self, msg: Token) {
+		let method = self.method::<_, ()>("connectionOpenConfirm", (msg,)).unwrap();
+
+		let gas_estimate_connection_open_confirm = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_open_confirm);
+		let _ = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+	}
+
+	pub async fn channel_open_init(&self, msg: Token) -> String {
+		let method = self.method::<_, String>("channelOpenInit", (msg,)).unwrap();
+
+		let gas_estimate_connection_id = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_id);
+		let connection_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		connection_id
+	}
+
+	pub async fn channel_open_try(&self, msg: Token) -> String {
+		let method = self.method::<_, String>("channelOpenTry", (msg,)).unwrap();
+
+		let gas_estimate_connection_id = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate_connection_id);
+		let connection_id = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		connection_id
+	}
+
+	pub async fn send_and_get_tuple(&self, msg: Token, method_name: impl AsRef<str>) -> () {
+		let method = self.method::<_, ()>(method_name.as_ref(), (msg,)).unwrap();
+
+		let gas_estimate = method.estimate_gas().await.unwrap();
+		dbg!(gas_estimate);
+		let ret = method.call().await.unwrap_contract_error();
+
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		ret
+	}
+
 }
 
 impl<M> IbcHandler<M>

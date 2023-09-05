@@ -77,6 +77,14 @@ typechain-types/
 cache/
 out/
 
-hyperspace/ethereum/yui-ibc-solidity
 
+# eth-bridge
+scripts/eth-bridge/execution/geth
+scripts/eth-bridge/execution/keystore
+scripts/eth-bridge/execution/geth.ipc
+scripts/eth-bridge/consensus/genesis.ssz
+scripts/eth-bridge/consensus/beacondata
+scripts/eth-bridge/consensus/validatordata
+
+hyperspace/ethereum/yui-ibc-solidity
 hyperspace/ethereum/composable-centauri

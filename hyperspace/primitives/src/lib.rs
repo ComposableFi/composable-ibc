@@ -340,6 +340,7 @@ pub trait IbcProvider {
 	fn channel_whitelist(&self) -> HashSet<(ChannelId, PortId)>;
 
 	/// Query all channels for a connection
+	#[cfg(test)]
 	async fn query_connection_channels(
 		&self,
 		at: Height,
@@ -350,6 +351,7 @@ pub trait IbcProvider {
 	/// This represents packets that for which the `SendPacket` event was emitted
 	async fn query_send_packets(
 		&self,
+		at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
 		seqs: Vec<u64>,
@@ -759,7 +761,10 @@ pub async fn find_suitable_proof_height_for_client(
 			let temp_height = Height::new(start_height.revision_number, mid);
 			let consensus_state =
 				sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
-			let Some(Ok(consensus_state)) = consensus_state.map(|x| x.consensus_state.map(AnyConsensusState::try_from)).flatten() else {
+			let Some(Ok(consensus_state)) = consensus_state
+				.map(|x| x.consensus_state.map(AnyConsensusState::try_from))
+				.flatten()
+			else {
 				start += 1;
 				continue
 			};
@@ -831,8 +836,10 @@ pub async fn query_maximum_height_for_timeout_proofs(
 			.rev()
 			.take(source.common_state().max_packets_to_process)
 			.collect();
-		let send_packets =
-			source.query_send_packets(channel, port_id, undelivered_sequences).await.ok()?;
+		let send_packets = source
+			.query_send_packets(source_height, channel, port_id, undelivered_sequences)
+			.await
+			.ok()?;
 		for send_packet in send_packets {
 			let source = source.clone();
 			let sink = sink.clone();
