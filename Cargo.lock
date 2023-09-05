@@ -4995,6 +4995,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "ethers 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethers-solc 2.0.9",
  "finality-grandpa",
  "futures",
  "grandpa-light-client-primitives",

@@ -74,6 +74,7 @@ pub struct EthereumClientConfig {
 	pub beacon_rpc_url: http::uri::Uri,
 	/// address of the OwnableIBCHandler contract.
 	#[serde(deserialize_with = "address_de")]
+	// TODO: remove and use `yui.diamond.address()` instead
 	pub ibc_handler_address: Address,
 	/// address of the IBCChannelHandshake contract.
 	#[serde(deserialize_with = "address_de")]

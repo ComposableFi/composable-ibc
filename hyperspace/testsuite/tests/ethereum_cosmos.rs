@@ -13,6 +13,12 @@
 // limitations under the License.
 
 use core::time::Duration;
+use ethers::{
+	abi::Token,
+	prelude::{ContractFactory, ContractInstance},
+	utils::AnvilInstance,
+};
+use ethers_solc::{Artifact, ProjectCompileOutput, ProjectPathsConfig};
 use futures::StreamExt;
 use hyperspace_core::{
 	chain::{AnyAssetId, AnyChain, AnyConfig},
@@ -22,10 +28,8 @@ use hyperspace_core::{
 use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_ethereum::{
 	config::EthereumClientConfig,
-	mock::sanity_checks::{
-		deploy_yui_ibc_and_mock_client_fixture, hyperspace_ethereum_client_fixture,
-		DeployYuiIbcMockClient,
-	},
+	mock::{utils, utils::hyperspace_ethereum_client_fixture},
+	utils::{DeployYuiIbc, ProviderImpl},
 };
 use hyperspace_parachain::{finality_protocol::FinalityProtocol, ParachainClientConfig};
 use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider};
@@ -38,6 +42,7 @@ use hyperspace_testsuite::{
 };
 use ibc::core::ics24_host::identifier::PortId;
 use sp_core::hashing::sha2_256;
+use std::{path::PathBuf, sync::Arc};
 
 #[derive(Debug, Clone)]
 pub struct Args {
@@ -72,52 +77,39 @@ impl Default for Args {
 	}
 }
 
-async fn setup_clients() -> (AnyChain, AnyChain) {
-	log::info!(target: "hyperspace", "=========================== Starting Test ===========================");
-	let args = Args::default();
+pub struct DeployYuiIbcTendermintClient {
+	pub path: PathBuf,
+	pub project_output: ProjectCompileOutput,
+	pub anvil: AnvilInstance,
+	pub client: Arc<ProviderImpl>,
+	pub tendermint_client: ContractInstance<Arc<ProviderImpl>, ProviderImpl>,
+	pub ics20_module: Option<ContractInstance<Arc<ProviderImpl>, ProviderImpl>>,
+	pub yui_ibc: DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>,
+}
 
-	// Create client configurations
-	// let config_a = EthereumClientConfig {
-	// 	http_rpc_url: Default::default(),
-	// 	ws_rpc_url: Default::default(),
-	// 	ibc_handler_address: Default::default(),
-	// 	name: "ethereum".to_string(),
-	// 	// para_id: args.para_id,
-	// 	// parachain_rpc_url: args.chain_a,
-	// 	// relay_chain_rpc_url: args.relay_chain.clone(),
-	// 	client_id: None,
-	// 	connection_id: None,
-	// 	commitment_prefix: args.connection_prefix_a.as_bytes().to_vec().into(),
-	// 	// ss58_version: 42,
-	// 	channel_whitelist: vec![],
-	// 	// finality_protocol: FinalityProtocol::Grandpa,
-	// 	private_key: None,
-	// 	// key_type: "sr25519".to_string(),
-	// 	// wasm_code_id: None,
-	// 	private_key_path: Some(
-	// 		"../ethereum/keys/0x73db010c3275eb7a92e5c38770316248f4c644ee".to_string(),
-	// 	),
-	// 	mnemonic: None,
-	// 	max_block_weight: 1,
-	// };
+pub async fn deploy_yui_ibc_and_tendermint_client_fixture() -> DeployYuiIbcTendermintClient {
+	let path = utils::yui_ibc_solidity_path();
+	let project_output = utils::compile_yui(&path, "contracts/core");
+	let diamond_project_output = utils::compile_yui(&path, "contracts/diamond");
+	let project_output1 = utils::compile_yui(&path, "contracts/clients");
+	let (anvil, client) = utils::spawn_anvil();
+	log::warn!("{}", anvil.endpoint());
+	let yui_ibc =
+		utils::deploy_yui_ibc(&project_output, &diamond_project_output, client.clone()).await;
 
-	let DeployYuiIbcMockClient { anvil, yui_ibc, .. } =
-		deploy_yui_ibc_and_mock_client_fixture().await;
-	/*
-		let upd = project_output1.find_first("DelegateTendermintUpdate").unwrap();
+	let upd = project_output1.find_first("DelegateTendermintUpdate").unwrap();
 	let (abi, bytecode, _) = upd.clone().into_parts();
 	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
 	let update_client_delegate_contract = factory.deploy(()).unwrap().send().await.unwrap();
 
 	let contract = project_output1.find_first("TendermintLightClientSimple").unwrap();
-	// dbg!(&contract);
 	let r = contract.clone();
 	let (abi, bytecode, _) = r.into_parts();
 
 	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
 	let tendermint_light_client = factory
 		.deploy((
-			Token::Address(yui_ibc.ibc_handler.address()),
+			Token::Address(yui_ibc.diamond.address()),
 			Token::Address(update_client_delegate_contract.address()),
 		))
 		.unwrap()
@@ -125,11 +117,35 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		.await
 		.unwrap();
 
-	//replace the tendermint client address in hyperspace config with a real one
-	hyperspace.config.tendermint_client_address = tendermint_light_client.address();
+	let _ = yui_ibc
+		.register_client("07-tendermint", tendermint_light_client.address())
+		.await;
 
-	 */
-	let config_a = hyperspace_ethereum_client_fixture(&anvil, yui_ibc).await;
+	DeployYuiIbcTendermintClient {
+		path,
+		project_output,
+		anvil,
+		client,
+		yui_ibc,
+		tendermint_client: tendermint_light_client,
+		ics20_module: None,
+	}
+}
+
+async fn setup_clients() -> (AnyChain, AnyChain) {
+	log::info!(target: "hyperspace", "=========================== Starting Test ===========================");
+	let args = Args::default();
+
+	// Create client configurations
+
+	let DeployYuiIbcTendermintClient { anvil, tendermint_client, ics20_module: _, yui_ibc, .. } =
+		deploy_yui_ibc_and_tendermint_client_fixture().await;
+
+	//replace the tendermint client address in hyperspace config with a real one
+	let diamond_address = yui_ibc.diamond.address();
+	let mut config_a = hyperspace_ethereum_client_fixture(&anvil, yui_ibc).await;
+	config_a.tendermint_client_address = tendermint_client.address();
+	config_a.ibc_handler_address = diamond_address;
 
 	let mut config_b = CosmosClientConfig {
 		name: "centauri".to_string(),
@@ -145,7 +161,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		gas_limit: (i64::MAX - 1) as u64,
 		store_prefix: args.connection_prefix_b,
 		max_tx_size: 200000,
-		mnemonic: // 26657
+		mnemonic:
 			"sense state fringe stool behind explain area quit ugly affair develop thumb clinic weasel choice atom gesture spare sea renew penalty second upon peace"
 				.to_string(),
 		wasm_code_id: None,

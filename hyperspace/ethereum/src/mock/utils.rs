@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use cast::hashbrown::HashSet;
+use elliptic_curve::pkcs8::der::pem;
 use std::{
 	collections::HashMap,
 	fs::File,
@@ -11,8 +12,9 @@ use std::{
 };
 
 use crate::{
+	config::EthereumClientConfig,
 	contract::UnwrapContractError,
-	utils::{DeployYuiIbc, FacetCut, FacetCutAction},
+	utils::{DeployYuiIbc, FacetCut, FacetCutAction, ProviderImpl},
 };
 use ethers::{
 	abi::{Detokenize, Token, Tokenize},
@@ -385,5 +387,53 @@ where
 		deployed_facets,
 		storage_layout,
 		tendermint: tendermint_client,
+	}
+}
+
+pub async fn hyperspace_ethereum_client_fixture(
+	anvil: &AnvilInstance,
+	yui_ibc: DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>,
+) -> EthereumClientConfig {
+	let endpoint = if USE_GETH { "http://localhost:6001".to_string() } else { anvil.endpoint() };
+	let wallet_path = if USE_GETH {
+		Some("keys/0x73db010c3275eb7a92e5c38770316248f4c644ee".to_string())
+	} else {
+		None
+	};
+
+	let wallet = if !USE_GETH {
+		Some(
+			anvil.keys()[0]
+				.clone()
+				.to_sec1_pem(pem::LineEnding::CR)
+				.unwrap()
+				.as_str()
+				.to_owned()
+				.to_string(),
+		)
+	} else {
+		None
+	};
+
+	EthereumClientConfig {
+		http_rpc_url: endpoint.parse().unwrap(),
+		ws_rpc_url: "ws://localhost:5001".parse().unwrap(),
+		beacon_rpc_url: Default::default(),
+		ibc_handler_address: yui_ibc.diamond.address(),
+		tendermint_client_address: yui_ibc.tendermint.address(),
+		mnemonic: None,
+		max_block_weight: 1,
+		private_key: wallet,
+		private_key_path: wallet_path,
+		name: "mock-ethereum-client".into(),
+		client_id: Some(
+			ibc::core::ics24_host::identifier::ClientId::new("07-tendermint", 0).unwrap(),
+		),
+		connection_id: None,
+		channel_whitelist: vec![],
+		commitment_prefix: "".into(),
+		wasm_code_id: None,
+		yui: Some(yui_ibc),
+		client_type: "07-tendermint".into(),
 	}
 }

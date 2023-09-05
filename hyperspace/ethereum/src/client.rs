@@ -1,5 +1,6 @@
 use crate::{
 	config::EthereumClientConfig,
+	jwt::{JwtAuth, JwtKey},
 	utils::{DeployYuiIbc, ProviderImpl},
 };
 use async_trait::async_trait;
@@ -15,8 +16,6 @@ use ethers::{
 	types::U256,
 	utils::keccak256,
 };
-// use ethers_providers::
-use crate::jwt::{JwtAuth, JwtKey};
 use futures::{Stream, TryFutureExt};
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
