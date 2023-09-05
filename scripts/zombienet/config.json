@@ -4,18 +4,43 @@
             "chain": "dev-2000",
             "collator": {
                 "args": [
+                    "--rpc-cors=all",
+                    "--enable-offchain-indexing=true",
+                    "--pruning=archive",                    
                     "-lparachain=debug"
                 ],
-                "command": "../../target/SET_WHATEVER_YOU_BUILD/polkadot-node",
+                "command": "../../target/release/parachain-node",
                 "name": "alice",
                 "ws_port": 9988
             },
             "id": 2000
-        }
+        },
+        {
+            "chain": "dev-2001",
+            "collator": {
+                "args": [
+                    "--rpc-cors=all",
+                    "--enable-offchain-indexing=true",
+                    "--pruning=archive",                    
+                    "-lparachain=debug"
+                ],
+                "command": "../../target/release/parachain-node",
+                "name": "alice",
+                "ws_port": 9998
+            },
+            "id": 2001
+        }        
     ],
     "relaychain": {
         "chain": "rococo-local",
-        "command": "../../polkadot",
+        "command": "../../../polkadot/target/release/polkadot",
+        "args": [
+            "--rpc-cors=all",
+            "--beefy",
+            "--enable-offchain-indexing=true",
+            "--pruning=archive",                    
+            "-lparachain=debug"
+        ],        
         "nodes": [
             {
                 "name": "alice"
