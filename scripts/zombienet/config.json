@@ -1,7 +1,7 @@
 {
     "parachains": [
         {
-            "chain": "contracts-rococo-dev",
+            "chain": "dev-2000",
             "collator": {
                 "args": [
                     "-lparachain=debug"
