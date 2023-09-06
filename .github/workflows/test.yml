@@ -98,18 +98,18 @@ jobs:
 
       - name: Install polkadot binary
         run: |
-          curl -L https://github.com/paritytech/polkadot/releases/download/v0.9.43/polkadot -o /usr/local/bin/
+          curl -L https://github.com/paritytech/polkadot/releases/download/v0.9.43/polkadot -o /usr/bin/polkadot
   
 
       - name: Install parachain node
         run: |
           cargo b -p parachain-node --release && \
-          cp ./target/release/parachain-node /usr/local/bin
+          cp ./target/release/parachain-node /usr/bin/parachain-node
   
       - name: Run local parachain cluster
         run: |
           cd centauri/scripts/zombienet && \
-          nix run nixpkgs/master#process-compose -- up -f process-compose.yml
+          process-compose -- up -f process-compose.yml
 
 
       - name: Wait until parachains are ready
