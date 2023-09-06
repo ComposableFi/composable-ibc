@@ -1,0 +1,17 @@
+version: "0.5"
+
+environment:
+  - "GLOBAL_ENV_VAR=1"
+log_location: /tmp/logfile.log
+log_level: debug
+
+processes:
+  network-a:
+    command: "zombienet spawn ./config-network-a.json --provider native"
+    availability:
+      restart: "never"
+
+  network-b:
+    command: "zombienet spawn ./config-network-b.json --provider native"
+    availability:
+      restart: "never"

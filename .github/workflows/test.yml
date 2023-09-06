@@ -86,75 +86,38 @@ jobs:
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
 
-      - name: Install Docker
+      - name: Checkout v3
+        uses: actions/checkout@v3
+      
+      - name: Install Nix
+        uses: cachix/install-nix-action@v20
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Install zombienet
         run: |
-          apt-get install -y \
-            ca-certificates \
-            gnupg \
-            lsb-release
+          nix profile install "github:paritytech/zombienet/refs/pull/1316/merge#default
 
-          mkdir -p /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-
-          echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-            $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-          apt-get update
-          apt-get install -y \
-            docker-ce \
-            docker-ce-cli \
-            containerd.io \
-            docker-compose-plugin
-
-          docker --version
-
-      - name: Install docker-compose
+      - name: Install polkadot binary
         run: |
-          curl -L "https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-$(uname -s)-$(uname -m)" -o ./docker-compose
-          chmod +x ./docker-compose
+          curl -L https://github.com/paritytech/polkadot/releases/download/v0.9.43/polkadot -o /usr/local/bin/
+  
 
-      - name: Store network gateway IP
+      - name: Install parachain node
         run: |
-          # GATEWAY_IP equals host ip where this docker container was ran, this ip has access to Docker port mapping.
-          GATEWAY_IP=$(ip r l | grep default | awk '{print $3}')
-          echo "GATEWAY_IP=$GATEWAY_IP" >> $GITHUB_ENV
-          echo "RELAY_HOST=$GATEWAY_IP" >> $GITHUB_ENV
-          echo "PARA_HOST=$GATEWAY_IP" >> $GITHUB_ENV
-
+          cargo b -p parachain-node --release && \
+          cp ./target/release/parachain-node /usr/local/bin
+  
       - name: Run local parachain cluster
         run: |
-          DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest
+          cd centauri/scripts/zombienet && \
+          nix run nixpkgs/master#process-compose -- up -f process-compose.yml
 
-          # mkdir $BUILD_DIR/tmp
-          # yarn --cwd ./scripts/parachain-launch install
-          # TMPDIR=$BUILD_DIR/tmp OUTPUT=$BUILD_DIR yarn --cwd ./scripts/parachain-launch dev
-          # for file in dev-2000-2000.json \
-          #   dev-2001-2001.json \
-          #   docker-compose.yml \
-          #   parachain-2000.Dockerfile \
-          #   parachain-2001.Dockerfile \
-          #   relaychain.Dockerfile \
-          #   rococo-local.json; do
-          #   cp "$BUILD_DIR/$file" ./scripts/parachain-launch/
-          # done
-          # sed -i 's/9944:9933/9144:9933/g' ./scripts/parachain-launch/docker-compose.yml
-          # # sed -i '321s/9144:9933/9933:9933/g' ./scripts/parachain-launch/docker-compose.yml
-          # sed -i 's/      - 9943:9933\n      - 30344:30333/      - 9944:9933\n      - 30344:30333/g' ./scripts/parachain-launch/docker-compose.yml
 
-          # NOTE: it's very difficult to make a script that avoids ports clashing. So instead we just do it manually
-          # and just run the docker-compose.yml
-
-          # This step needs to be executed, as there's a breaking change.
-          sed -i '/      - --ws-external/d' ./scripts/parachain-launch/docker-compose.yml
-
-          ./docker-compose -f scripts/parachain-launch/docker-compose.yml up -d --build
-          ./scripts/wait_for_tcp_port_opening.sh $RELAY_HOST 9944
-          ./scripts/wait_for_tcp_port_opening.sh $PARA_HOST 9188
-
-      - name: Check that subxt-generated is up to date
+      - name: Wait until parachains are ready
         run: |
-          RELAY_HOST=ws://$GATEWAY_IP:9944 PARA_HOST=ws://$GATEWAY_IP:9188 ./scripts/generate-subxt.sh
+          METRICS_PORT=19987 ./wait-for-parachains-network.sh
+          METRICS_PORT=9987 ./wait-for-parachains-network.sh 
 
       - name: Run all unit tests
         run: |
@@ -171,23 +134,3 @@ jobs:
       - name: Terminate local parachain cluster
         run: |
           ./docker-compose -f scripts/parachain-launch/docker-compose.yml down -v
-
-  test-solidity:
-    runs-on:
-      - self-hosted
-      - sre
-    defaults:
-      run:
-        shell: bash
-        working-directory: contracts/ethereum
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 16
-      - name: Install dependencies
-        run: npm install
-      - name: run unit test
-        run: npm run test

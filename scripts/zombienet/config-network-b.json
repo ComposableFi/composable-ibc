@@ -10,7 +10,8 @@
                 ],
                 "command": "parachain-node",
                 "name": "alice",
-                "ws_port": 9988
+                "prometheus_port": 19987,
+                "ws_port": 19988
             },
             "id": 2000
         },
@@ -23,8 +24,9 @@
                     "-lparachain=debug"
                 ],
                 "command": "parachain-node",
-                "name": "alice",
-                "ws_port": 9998
+                "name": "bob",
+                "prometheus_port": 19997,
+                "ws_port": 19998
             },
             "id": 2001
         }        
@@ -47,7 +49,8 @@
                 "name": "bob"
             }
         ],
-        "ws_port": 9944
+        "prometheus_port": 19977,
+        "ws_port": 19944
     },
     "settings": {
         "timeout": 2000
