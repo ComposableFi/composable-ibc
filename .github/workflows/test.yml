@@ -39,6 +39,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: DeterminateSystems/nix-installer-action@v4
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Install zombienet
+        run: |
+          nix profile install "github:paritytech/zombienet/refs/pull/1316/merge#default
+
       - name: Setup deps
         run: |
           git config --global --add safe.directory /__w/centauri/centauri
@@ -85,13 +91,6 @@ jobs:
 
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
-
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v4
-
-      - name: Install zombienet
-        run: |
-          nix profile install "github:paritytech/zombienet/refs/pull/1316/merge#default
 
       - name: Install polkadot binary
         run: |
