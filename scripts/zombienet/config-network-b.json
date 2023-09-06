@@ -6,7 +6,8 @@
                 "args": [
                     "--enable-offchain-indexing=true",
                     "--pruning=archive",                    
-                    "-lparachain=debug"
+                    "-lparachain=debug",
+                    "--discover-local"
                 ],
                 "command": "parachain-node",
                 "name": "alice",
@@ -21,7 +22,8 @@
                 "args": [
                     "--enable-offchain-indexing=true",
                     "--pruning=archive",                    
-                    "-lparachain=debug"
+                    "-lparachain=debug",
+                    "--discover-local"
                 ],
                 "command": "parachain-node",
                 "name": "bob",
@@ -39,7 +41,8 @@
             "--beefy",
             "--enable-offchain-indexing=true",
             "--pruning=archive",                    
-            "-lparachain=debug"
+            "-lparachain=debug",
+            "--discover-local"
         ],        
         "nodes": [
             {

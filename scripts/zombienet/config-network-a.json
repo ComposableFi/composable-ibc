@@ -6,7 +6,8 @@
                 "args": [
                     "--enable-offchain-indexing=true",
                     "--pruning=archive",                    
-                    "-lparachain=debug"
+                    "-lparachain=debug",
+                    "--discover-local"
                 ],
                 "command": "parachain-node",
                 "name": "alice",
@@ -24,7 +25,8 @@
                     "-lparachain=debug",
                     "-libc_transfer=debug",
                     "-lpallet_ibc=trace",
-                    "-lgrandpa-verifier=trace"
+                    "-lgrandpa-verifier=trace",
+                    "--discover-local"
 
                 ],
                 "command": "parachain-node",
@@ -42,7 +44,8 @@
             "--beefy",
             "--enable-offchain-indexing=true",
             "--pruning=archive",                    
-            "-lparachain=debug"
+            "-lparachain=debug",
+            "--discover-local"
         ],        
         "nodes": [
             {
