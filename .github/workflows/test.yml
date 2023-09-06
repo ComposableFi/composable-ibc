@@ -35,7 +35,7 @@ jobs:
           apt install git -y
           git --version
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -85,12 +85,10 @@ jobs:
 
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
-
-      - name: Checkout v3
-        uses: actions/checkout@v3
       
       - name: Install Nix
-        uses: cachix/install-nix-action@v20
+        run: nix-build
+      - uses: cachix/install-nix-action@v20
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
