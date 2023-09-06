@@ -109,13 +109,13 @@ jobs:
       - name: Run local parachain cluster
         run: |
           cd scripts/zombienet && \
-          process-compose -- up -f process-compose.yml
+          process-compose -- up -f process-compose.yml --tui=false &
 
 
       - name: Wait until parachains are ready
         run: |
-          METRICS_PORT=19987 ./wait-for-parachains-network.sh
-          METRICS_PORT=9987 ./wait-for-parachains-network.sh 
+          METRICS_PORT=39988 ./wait-for-parachains-network.sh
+          METRICS_PORT=39998 ./wait-for-parachains-network.sh 
 
       - name: Run all unit tests
         run: |
