@@ -39,25 +39,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Nix
-        run: |
-          apt update -y && apt install -y curl &&
-          curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
-        # uses: nixbuild/nix-quick-install-action@v25
-      #   uses: cachix/install-nix-action@daddc62a2e67d1decb56e028c9fa68344b9b7c2a
-      #   with:
-      #     install_url: https://releases.nixos.org/nix/nix-2.13.2/install
-      #     nix_path: nixpkgs=channel:nixos-22.11
-      #     extra_nix_config: |
-      #       sandbox = relaxed
-      #       narinfo-cache-negative-ttl = 0      
-      #       system-features = kvm
-
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - name: Install zombienet
-        run: |
-          nix profile install "github:paritytech/zombienet#default"
-
       - name: Setup deps
         run: |
           git config --global --add safe.directory /__w/centauri/centauri
@@ -96,6 +77,16 @@ jobs:
           npm install --global yarn
           node --version
           yarn --version
+
+      - name: Install zombienet
+        run: |
+          curl -L https://github.com/paritytech/zombienet/releases/download/v1.3.67/zombienet-linux-x64 -o /usr/bin/zombienet
+
+      - name: Install process compose
+        run: |
+            curl -L https://github.com/F1bonacc1/process-compose/releases/download/v0.60.0/process-compose_Linux_x86_64.tar.gz -o /tmp/process-compose_Linux_x86_64.tar.gz && \
+            tar xvfz /tmp/process-compose_Linux_x86_64.tar.gz && \
+            mv process-compose /usr/bin/process-compose
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
