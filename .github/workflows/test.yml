@@ -70,14 +70,6 @@ jobs:
       - name: Rustup show
         run: $HOME/.cargo/bin/rustup show
 
-      - name: Install Node.js
-        run: |
-          curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-          apt-get install -y nodejs
-          npm install --global yarn
-          node --version
-          yarn --version
-
       - name: Install zombienet
         run: |
           curl -L https://github.com/paritytech/zombienet/releases/download/v1.3.67/zombienet-linux-x64 -o /usr/bin/zombienet
