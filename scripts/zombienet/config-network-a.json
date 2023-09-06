@@ -15,26 +15,7 @@
                 "ws_port": 9988
             },
             "id": 2000
-        },
-        {
-            "chain": "dev-2001",
-            "collator": {
-                "args": [
-                    "--enable-offchain-indexing=true",
-                    "--pruning=archive",                    
-                    "-lparachain=debug",
-                    "-libc_transfer=debug",
-                    "-lpallet_ibc=trace",
-                    "-lgrandpa-verifier=trace",
-                    "--discover-local"
-
-                ],
-                "command": "parachain-node",
-                "name": "bob",
-                "ws_port": 9989
-            },
-            "id": 2001
-        }        
+        }   
     ],
     "relaychain": {
         "chain": "rococo-local",
@@ -49,14 +30,14 @@
         ],        
         "nodes": [
             {
-                "name": "alice"
+                "name": "alice",
+                "prometheus_port": 39944,
+                "ws_port": 9944                
             },
             {
                 "name": "bob"
             }
-        ],
-        "prometheus_port": 39944,
-        "ws_port": 9944
+        ]
     },
     "settings": {
         "timeout": 2000
