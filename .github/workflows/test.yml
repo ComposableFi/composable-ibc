@@ -38,13 +38,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - uses: DeterminateSystems/nix-installer-action@v4
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - name: Install zombienet
-        run: |
-          nix profile install "github:paritytech/zombienet/refs/pull/1316/merge#default
-
       - name: Setup deps
         run: |
           git config --global --add safe.directory /__w/centauri/centauri
@@ -72,6 +65,12 @@ jobs:
           $HOME/.cargo/bin/rustup default nightly
 
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - uses: DeterminateSystems/nix-installer-action@v4
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Install zombienet
+        run: |
+          nix profile install "github:paritytech/zombienet/refs/pull/1316/merge#default
 
       - name: Rustup show
         run: $HOME/.cargo/bin/rustup show
