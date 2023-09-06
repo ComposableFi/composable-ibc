@@ -52,7 +52,7 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Install zombienet
         run: |
-          nix profile install "github:paritytech/zombienet/refs/pull/1316/merge#default
+          nix profile install "github:paritytech/zombienet#default"
 
       - name: Setup deps
         run: |

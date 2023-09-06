@@ -13,7 +13,8 @@ processes:
     readiness_probe:
       exec:
         command: |
-          ./wait-for-parachains-network.sh 39944
+                curl http://127.0.0.1:39944/metrics | grep polkadot_parachain_chain_api_block_headers_count | tr -s " " | cut --delimiter " " --fields=2 | tee /tmp/zombie-example-a/polkadot_parachain_chain_api_block_headers_count
+                exit $(( $(cat /tmp/zombie-example-a/polkadot_parachain_chain_api_block_headers_count) > 4 ? 0 : 1 ))
       failure_threshold: 32
       initial_delay_seconds: 16
       period_seconds: 8
@@ -27,7 +28,8 @@ processes:
     readiness_probe:
       exec:
         command: |
-          ./wait-for-parachains-network.sh 39954
+                curl http://127.0.0.1:39954/metrics | grep polkadot_parachain_chain_api_block_headers_count | tr -s " " | cut --delimiter " " --fields=2 | tee /tmp/zombie-example-a/polkadot_parachain_chain_api_block_headers_count
+                exit $(( $(cat /tmp/zombie-example-a/polkadot_parachain_chain_api_block_headers_count) > 4 ? 0 : 1 ))
       failure_threshold: 32
       initial_delay_seconds: 16
       period_seconds: 8
