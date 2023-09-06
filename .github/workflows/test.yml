@@ -108,7 +108,7 @@ jobs:
   
       - name: Run local parachain cluster
         run: |
-          cd centauri/scripts/zombienet && \
+          cd scripts/zombienet && \
           process-compose -- up -f process-compose.yml
 
 
