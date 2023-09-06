@@ -21,7 +21,11 @@
                 "args": [
                     "--enable-offchain-indexing=true",
                     "--pruning=archive",                    
-                    "-lparachain=debug"
+                    "-lparachain=debug",
+                    "-libc_transfer=debug",
+                    "-lpallet_ibc=trace",
+                    "-lgrandpa-verifier=trace"
+
                 ],
                 "command": "parachain-node",
                 "name": "bob",
