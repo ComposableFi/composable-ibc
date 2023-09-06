@@ -40,7 +40,10 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Nix
-        uses: nixbuild/nix-quick-install-action@v25
+        run: |
+          apt update -y && apt install -y curl &&
+          curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+        # uses: nixbuild/nix-quick-install-action@v25
       #   uses: cachix/install-nix-action@daddc62a2e67d1decb56e028c9fa68344b9b7c2a
       #   with:
       #     install_url: https://releases.nixos.org/nix/nix-2.13.2/install
