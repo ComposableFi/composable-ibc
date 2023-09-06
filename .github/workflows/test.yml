@@ -43,6 +43,7 @@ jobs:
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
           install_url: https://releases.nixos.org/nix/nix-2.17.0/install
+          install_options: --no-daemon
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Install zombienet
         run: |
