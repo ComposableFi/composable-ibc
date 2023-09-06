@@ -92,7 +92,9 @@ jobs:
 
       - name: Install polkadot binary
         run: |
-          curl -L https://github.com/paritytech/polkadot/releases/download/v0.9.43/polkadot -o /usr/bin/polkadot
+          curl -L https://github.com/paritytech/polkadot/releases/download/v0.9.43/polkadot -o /usr/bin/polkadot && \
+          chmod +x /usr/bin/polkadot
+
   
 
       - name: Install parachain node
