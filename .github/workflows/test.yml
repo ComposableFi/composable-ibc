@@ -40,14 +40,15 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Nix
-        uses: cachix/install-nix-action@daddc62a2e67d1decb56e028c9fa68344b9b7c2a
-        with:
-          install_url: https://releases.nixos.org/nix/nix-2.13.2/install
-          nix_path: nixpkgs=channel:nixos-22.11
-          extra_nix_config: |
-            sandbox = relaxed
-            narinfo-cache-negative-ttl = 0      
-            system-features = kvm
+        uses: nixbuild/nix-quick-install-action@v25
+      #   uses: cachix/install-nix-action@daddc62a2e67d1decb56e028c9fa68344b9b7c2a
+      #   with:
+      #     install_url: https://releases.nixos.org/nix/nix-2.13.2/install
+      #     nix_path: nixpkgs=channel:nixos-22.11
+      #     extra_nix_config: |
+      #       sandbox = relaxed
+      #       narinfo-cache-negative-ttl = 0      
+      #       system-features = kvm
 
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Install zombienet
