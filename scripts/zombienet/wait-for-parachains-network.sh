@@ -8,6 +8,7 @@ do
   block_number=$(curl -L -s http://127.0.0.1:$METRICS_PORT/metrics | grep 'substrate_block_height{status="best"' | awk '{print $2}')
   if [ -z "$block_number" ]
   then
+    cat /tmp/logifle.log
     exit 1;
   fi
   echo block number: $block_number
