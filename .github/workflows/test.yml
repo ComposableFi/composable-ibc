@@ -101,7 +101,7 @@ jobs:
       - name: Run local parachain cluster
         run: |
           cd scripts/zombienet && \
-          process-compose -- up -f process-compose.yml --tui=false &
+          process-compose -- up -f process-compose.yml -t=false &
 
 
       - name: Wait until parachains are ready
