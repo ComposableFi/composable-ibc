@@ -72,13 +72,15 @@ jobs:
 
       - name: Install zombienet
         run: |
-          curl -L https://github.com/paritytech/zombienet/releases/download/v1.3.67/zombienet-linux-x64 -o /usr/bin/zombienet
+          curl -L https://github.com/paritytech/zombienet/releases/download/v1.3.67/zombienet-linux-x64 -o /usr/bin/zombienet && \
+          chmod +x /usr/bin/zombienet
 
       - name: Install process compose
         run: |
             curl -L https://github.com/F1bonacc1/process-compose/releases/download/v0.60.0/process-compose_Linux_x86_64.tar.gz -o /tmp/process-compose_Linux_x86_64.tar.gz && \
             tar xvfz /tmp/process-compose_Linux_x86_64.tar.gz && \
-            mv process-compose /usr/bin/process-compose
+            mv process-compose /usr/bin/process-compose && \
+            chmod +x /usr/bin/process-compose
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
@@ -97,6 +99,7 @@ jobs:
         run: |
           cargo b -p parachain-node --release && \
           cp ./target/release/parachain-node /usr/bin/parachain-node
+          chmod +x /usr/bin/parachain-node
   
       - name: Run local parachain cluster
         run: |
