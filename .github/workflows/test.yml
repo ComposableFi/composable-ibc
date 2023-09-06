@@ -67,6 +67,8 @@ jobs:
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - uses: DeterminateSystems/nix-installer-action@v4
+        with:
+          init: none
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Install zombienet
         run: |
