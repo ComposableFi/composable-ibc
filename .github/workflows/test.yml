@@ -106,8 +106,8 @@ jobs:
 
       - name: Wait until parachains are ready
         run: |
-          METRICS_PORT=39988 ./wait-for-parachains-network.sh
-          METRICS_PORT=39998 ./wait-for-parachains-network.sh 
+          METRICS_PORT=39988 ./scripts/zombienet/wait-for-parachains-network.sh
+          METRICS_PORT=39998 ./scripts/zombienet/wait-for-parachains-network.sh 
 
       - name: Run all unit tests
         run: |
