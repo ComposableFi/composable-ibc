@@ -86,15 +86,12 @@ jobs:
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
       
-      - name: Install Nix
-        run: nix-build
-      - uses: cachix/install-nix-action@v20
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-
       - name: Install zombienet
         run: |
           nix profile install "github:paritytech/zombienet/refs/pull/1316/merge#default
+      - uses: cachix/install-nix-action@v20
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Install polkadot binary
         run: |
