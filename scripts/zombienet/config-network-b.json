@@ -31,8 +31,8 @@
         "nodes": [
             {
                 "name": "alice",
-                "prometheus_port": 39955,
-                "ws_port": 9955                
+                "prometheus_port": 39954,
+                "ws_port": 9954                
             },
             {
                 "name": "bob"

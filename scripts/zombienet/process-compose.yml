@@ -10,8 +10,26 @@ processes:
     command: "zombienet spawn ./config-network-a.json --provider native"
     availability:
       restart: "never"
+    readiness_probe:
+      exec:
+        command: |
+          ./wait-for-parachains-network.sh 39944
+      failure_threshold: 32
+      initial_delay_seconds: 16
+      period_seconds: 8
+      success_threshold: 1
+      timeout_seconds: 2
 
   network-b:
     command: "zombienet spawn ./config-network-b.json --provider native"
     availability:
       restart: "never"
+    readiness_probe:
+      exec:
+        command: |
+          ./wait-for-parachains-network.sh 39954
+      failure_threshold: 32
+      initial_delay_seconds: 16
+      period_seconds: 8
+      success_threshold: 1
+      timeout_seconds: 2      
