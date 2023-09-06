@@ -87,9 +87,6 @@ jobs:
         uses: taiki-e/install-action@nextest
 
       - uses: cachix/install-nix-action@v22
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-      - run: nix-build
 
       - name: Install zombienet
         run: |

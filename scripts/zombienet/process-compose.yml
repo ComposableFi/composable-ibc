@@ -10,8 +10,64 @@ processes:
     command: "zombienet spawn ./config-network-a.json --provider native"
     availability:
       restart: "never"
+    readiness_probe:
+      exec:
+        command: |
+          BLOCK=$(curl -s http://127.0.0.1:39944/metrics  | grep polkadot_parachain_chain_api_block_headers_count | tr -s " " | cut --delimiter " " --fields=2)
+          echo $BLOCK | tee a.log
+          #if [[ $BLOCK -gt 4 ]]; then echo "started"; else exit 1; fi
+      failure_threshold: 8
+      initial_delay_seconds: 16
+      period_seconds: 8
+      success_threshold: 1
+      timeout_seconds: 2        
 
   network-b:
-    command: "zombienet spawn ./config-network-b.json --provider native"
+    command: ""
     availability:
       restart: "never"
+    readiness_probe:
+      exec:
+        command: |
+          BLOCK=$(curl -s http://127.0.0.1:39954/metrics  | grep polkadot_parachain_chain_api_block_headers_count | tr -s " " | cut --delimiter " " --fields=2)
+          echo $BLOCK | tee a.log
+          #if [[ $BLOCK -gt 4 ]]; then echo "started"; else exit 1; fi
+      failure_threshold: 8
+      initial_delay_seconds: 16
+      period_seconds: 8
+      success_threshold: 1
+      timeout_seconds: 2
+
+
+log_level: debug
+log_location: /tmp/zombie-example-bridge.log
+processes:
+  network-a:
+    command: "zombienet spawn ./config-network-a.json --provider native"
+    log_location: /tmp/zombie-example-a.log
+    readiness_probe:
+      exec:
+        command: |
+          BLOCK=$(curl -s http://127.0.0.1:39988/metrics  | grep polkadot_parachain_chain_api_block_headers_count | tr -s " " | cut --delimiter " " --fields=2)
+          echo $BLOCK | tee a.log
+          #if [[ $BLOCK -gt 4 ]]; then echo "started"; else exit 1; fi
+      failure_threshold: 8
+      initial_delay_seconds: 16
+      period_seconds: 8
+      success_threshold: 1
+      timeout_seconds: 2
+  network-b:
+    command: "zombienet spawn ./config-network-b.json --provider native"
+    log_location: /tmp/zombie-example-b.log
+    readiness_probe:
+      exec:
+        command: |
+          BLOCK=$(curl -s http://127.0.0.1:39998/metrics  | grep polkadot_parachain_chain_api_block_headers_count | tr -s " " | cut --delimiter " " --fields=2)
+          echo $BLOCK | tee b.log
+
+          #if [[ $BLOCK -gt 4 ]]; then echo "started"; else exit 1; fi
+      failure_threshold: 8
+      initial_delay_seconds: 16
+      period_seconds: 8
+      success_threshold: 1
+      timeout_seconds: 2
