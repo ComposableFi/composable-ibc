@@ -35,8 +35,7 @@ jobs:
           apt install git -y
           git --version
           whoami
-          uname -a
-          netstat -ltup | grep LISTEN
+          uname -a          
 
       - uses: actions/checkout@v3
         with:
@@ -58,7 +57,10 @@ jobs:
             libclang-dev \
             pkg-config \
             libssl-dev \
-            unzip
+            unzip \
+            netstat
+          
+          netstat -ltup | grep LISTEN
 
           # Get Rust
           curl https://sh.rustup.rs -sSf | bash -s -- -y
