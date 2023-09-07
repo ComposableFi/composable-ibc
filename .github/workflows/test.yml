@@ -80,12 +80,12 @@ jobs:
           curl -L https://github.com/paritytech/zombienet/releases/download/v1.3.67/zombienet-linux-x64 -o /usr/bin/zombienet && \
           chmod +x /usr/bin/zombienet
 
-      # - name: Install process compose
-      #   run: |
-      #       curl -L https://github.com/F1bonacc1/process-compose/releases/download/v0.60.0/process-compose_Linux_x86_64.tar.gz -o /tmp/process-compose_Linux_x86_64.tar.gz && \
-      #       tar xvfz /tmp/process-compose_Linux_x86_64.tar.gz && \
-      #       mv process-compose /usr/bin/process-compose && \
-      #       chmod +x /usr/bin/process-compose
+      - name: Install process compose
+        run: |
+            curl -L https://github.com/F1bonacc1/process-compose/releases/download/v0.60.0/process-compose_Linux_x86_64.tar.gz -o /tmp/process-compose_Linux_x86_64.tar.gz && \
+            tar xvfz /tmp/process-compose_Linux_x86_64.tar.gz && \
+            mv process-compose /usr/bin/process-compose && \
+            chmod +x /usr/bin/process-compose
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
@@ -100,47 +100,21 @@ jobs:
           curl -L https://github.com/paritytech/polkadot/releases/download/v0.9.43/polkadot -o /usr/bin/polkadot && \
           chmod +x /usr/bin/polkadot
 
-  
-
       - name: Install parachain node
         run: |
           cargo b -p parachain-node --release && \
           cp ./target/release/parachain-node /usr/bin/parachain-node
           chmod +x /usr/bin/parachain-node
   
-      - name: Run local parachain cluster
+      - name: Run local parachain cluster & Tests
         run: |
+          export PARA_HOST=127.0.0.1
           cd scripts/zombienet
-          zombienet spawn ./config-network-a.json --provider native &
-          zombienet spawn ./config-network-b.json --provider native &
-# nohup process-compose up -f process-compose.yml -t=false &
-
-      - name: Store network gateway IP
-        run: |
-          echo "PARA_HOST=127.0.0.1" >> $GITHUB_ENV
-# GATEWAY_IP equals host ip where this docker container was ran, this ip has access to Docker port mapping.
-# GATEWAY_IP=$(ip r l | grep default | awk '{print $3}')
-# echo "GATEWAY_IP=$GATEWAY_IP" >> $GITHUB_ENV
-# echo "RELAY_HOST=$GATEWAY_IP" >> $GITHUB_ENV
-# cd scripts/zombienet && \
-# nohup process-compose up -f process-compose.yml -t=false &
-
-      - name: Wait until parachains are ready
-        run: |
+          process-compose up -f process-compose.yml -t=false &
           sleep 100
           netstat -ltup | grep LISTEN
           METRICS_PORT=39988 ./scripts/zombienet/wait-for-parachains-network.sh
           METRICS_PORT=39998 ./scripts/zombienet/wait-for-parachains-network.sh 
-          sleep 30000
-
-      - name: Run all unit tests
-        run: |
           SKIP_WASM_BUILD=1 cargo +nightly nextest run --locked --release --workspace --exclude ibc-derive --exclude hyperspace-testsuite
-
-      - name: Run hyperspace integration tests
-        run: |
           cargo +nightly test -p hyperspace-testsuite --locked --release
-
-      - name: Terminate local parachain cluster
-        run: |
-          ./docker-compose -f scripts/parachain-launch/docker-compose.yml down -v
+          process-compose down -f process-compose.yml
