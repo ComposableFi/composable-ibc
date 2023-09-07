@@ -108,10 +108,10 @@ jobs:
           cp ./target/release/parachain-node /usr/bin/parachain-node
           chmod +x /usr/bin/parachain-node
   
-      - name: Run local parachain cluster
-        run: |
-          cd scripts/zombienet && \
-          nohup process-compose up -f process-compose.yml -t=false &
+      # - name: Run local parachain cluster
+      #   run: |
+      #     cd scripts/zombienet && \
+      #     nohup process-compose up -f process-compose.yml -t=false &
 
       - name: Store network gateway IP
         run: |
@@ -119,14 +119,16 @@ jobs:
           GATEWAY_IP=$(ip r l | grep default | awk '{print $3}')
           echo "GATEWAY_IP=$GATEWAY_IP" >> $GITHUB_ENV
           echo "RELAY_HOST=$GATEWAY_IP" >> $GITHUB_ENV
-          echo "PARA_HOST=$GATEWAY_IP" >> $GITHUB_ENV
+          echo "PARA_HOST=127.0.0.1" >> $GITHUB_ENV
 
       - name: Wait until parachains are ready
         run: |
+          cd scripts/zombienet && \
+          nohup process-compose up -f process-compose.yml -t=false &
           sleep 100
           netstat -ltup | grep LISTEN
-          METRICS_PORT=39988 ./scripts/zombienet/wait-for-parachains-network.sh
-          METRICS_PORT=39998 ./scripts/zombienet/wait-for-parachains-network.sh 
+          METRICS_PORT=39988 ./wait-for-parachains-network.sh
+          METRICS_PORT=39998 ./wait-for-parachains-network.sh 
           sleep 30000
 
       - name: Run all unit tests
