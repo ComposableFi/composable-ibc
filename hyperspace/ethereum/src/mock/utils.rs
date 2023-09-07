@@ -437,7 +437,7 @@ pub async fn hyperspace_ethereum_client_fixture(
 		),
 		connection_id: None,
 		channel_whitelist: vec![],
-		commitment_prefix: "".into(),
+		commitment_prefix: "424242".into(),
 		wasm_code_id: None,
 		yui: Some(yui_ibc),
 		client_type: "07-tendermint".into(),

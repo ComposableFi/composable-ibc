@@ -64,6 +64,7 @@ use crate::{
 	prove::prove,
 };
 use futures::{FutureExt, Stream, StreamExt};
+use ssz_rs::Merkleized;
 use thiserror::Error;
 
 use crate::chain::{client_state_from_abi_token, tm_header_from_abi_token};
@@ -249,13 +250,20 @@ impl IbcProvider for EthereumClient {
 		let update = prove(self, finality_event.number.unwrap().as_u64()).await?;
 
 		log::info!(target: "hyperspace_ethereum",
-			"proven: state root = {}, body root = {}, slot = {}",
+			"proven: state root = {}, body root = {}, slot = {}, block number = {}",
 			update.finalized_header.state_root,
 			update.finalized_header.body_root,
-			update.finalized_header.slot
+			update.finalized_header.slot,
+			update.execution_payload.block_number
 		);
-
-		let update_height = Height::new(latest_revision, update.finalized_header.slot.into());
+		// finality_checkpoint.finalized.epoch <= client_state.latest_finalized_epoch
+		if update.finality_proof.epoch <= client_state.inner.latest_finalized_epoch {
+			log::info!(target: "hyperspace_ethereum", "no new events");
+			return Ok(vec![])
+		}
+		let update_height =
+			Height::new(latest_revision, update.execution_payload.block_number.into());
+		// let update_height = Height::new(latest_revision, update.finalized_header.slot.into());
 		let events = parse_ethereum_events(&self, logs).await?;
 
 		let update_client_header = {
@@ -1198,6 +1206,11 @@ impl IbcProvider for EthereumClient {
 
 		// TODO: query `at` block
 		let finality_checkpoint = sync_committee_prover.fetch_finalized_checkpoint().await.unwrap();
+
+		log::info!(target: "hyperspace_ethereum", "{:?}, {}", state.clone().finalized_checkpoint.clone(), state.slot.clone());
+		log::info!(target: "hyperspace_ethereum", "{:?}, {}", state.clone().hash_tree_root(), block_header.slot);
+		log::info!(target: "hyperspace_ethereum", "Using init epoch: {}, also have {}", finality_checkpoint.finalized.epoch, state.finalized_checkpoint.epoch);
+
 		let client_state = LightClientState {
 			finalized_header: block_header.clone(),
 			latest_finalized_epoch: finality_checkpoint.finalized.epoch, // TODO: ????
@@ -1222,7 +1235,8 @@ impl IbcProvider for EthereumClient {
 		let client_state = AnyClientState::Ethereum(ClientState {
 			inner: client_state,
 			frozen_height: None,
-			latest_height: block_header.slot as _,
+			latest_height: state.latest_execution_payload_header.block_number as _,
+			// latest_height: block_header.slot as _
 			_phantom: Default::default(),
 		});
 

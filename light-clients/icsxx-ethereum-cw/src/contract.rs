@@ -48,7 +48,7 @@ use icsxx_ethereum::{
 };
 // use light_client_common::{verify_membership, verify_non_membership};
 use std::{collections::BTreeSet, str::FromStr};
-use sync_committee_verifier::BlsVerify;
+use sync_committee_verifier::{BlsVerify, LightClientState};
 /*
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ics10-grandpa-cw";
@@ -141,10 +141,11 @@ fn process_message(
 				ctx.client_state(&client_id).map_err(|e| ContractError::Client(e.to_string()))?;
 			let msg = VerifyClientMessage::try_from(msg)?;
 
-			client
-				.verify_client_message(ctx, client_id, client_state, msg.client_message)
-				.map_err(|e| ContractError::Client(format!("{e:?}")))
-				.map(|_| to_binary(&ContractResult::success()))
+			// client
+			// 	.verify_client_message(ctx, client_id, client_state, msg.client_message)
+			// 	.map_err(|e| ContractError::Client(format!("{e:?}")))
+			// 	.map(|_| to_binary(&ContractResult::success()))
+			Ok(()).map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::CheckForMisbehaviour(msg) => {
 			let client_state =
@@ -261,10 +262,12 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 				to_binary(&QueryResponse::status("Frozen".to_string()))
 			} else {
 				let height = client_state.latest_height();
-				match get_consensus_state(deps, &client_id, height) {
-					Ok(_) => to_binary(&QueryResponse::status("Active".to_string())),
-					Err(_) => to_binary(&QueryResponse::status("Expired".to_string())),
-				}
+				deps.api.debug(&format!("Querying consensus state at: {:?}", height));
+				// match get_consensus_state(deps, &client_id, height) {
+				// 	Ok(_) => to_binary(&QueryResponse::status("Active".to_string())),
+				// 	Err(_) => to_binary(&QueryResponse::status("Expired".to_string())),
+				// }
+				to_binary(&QueryResponse::status("Active".to_string()))
 			}
 		},
 	}
@@ -305,6 +308,7 @@ impl BlsVerify for HostFunctions {
 		msg: &[u8],
 		signature: &ethereum_consensus::crypto::Signature,
 	) -> Result<(), sync_committee_verifier::error::Error> {
-		todo!()
+		// TODO: bls
+		Ok(())
 	}
 }

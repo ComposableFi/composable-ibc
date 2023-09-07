@@ -28,7 +28,7 @@ pub enum ContractError {
 	#[display(fmt = "Storage error")]
 	StorageError,
 	// TODO: use `ics10-grandpa`'s error type here
-	#[display(fmt = "Grandpa error: {_0}")]
+	#[display(fmt = "Ethereum error: {_0}")]
 	#[from(ignore)]
 	Client(String),
 	#[display(fmt = "Protobuf error: {_0}")]

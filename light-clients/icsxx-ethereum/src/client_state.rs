@@ -76,7 +76,8 @@ impl<H: Clone> ClientState<H> {
 
 impl<H> ClientState<H> {
 	pub fn latest_height(&self) -> Height {
-		Height::new(self.inner.latest_finalized_epoch.into(), self.latest_height.into())
+		Height::new(0, self.latest_height.into())
+		// Height::new(self.inner.latest_finalized_epoch.into(), self.latest_height.into())
 	}
 
 	pub fn chain_id(&self) -> ChainId {

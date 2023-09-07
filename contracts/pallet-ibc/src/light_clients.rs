@@ -390,7 +390,7 @@ impl AnyClientMessage {
 			#[cfg(feature = "ethereum")]
 			Self::Ethereum(m) => match m {
 				icsxx_ethereum::client_message::ClientMessage::Header(h) =>
-					Some(Height::new(0, h.finalized_header.slot)),
+					Some(Height::new(0, h.execution_payload.block_number)),
 				icsxx_ethereum::client_message::ClientMessage::Misbehaviour(_) => None,
 			},
 			#[cfg(test)]

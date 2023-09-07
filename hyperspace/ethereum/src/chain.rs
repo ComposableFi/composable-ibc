@@ -235,7 +235,8 @@ pub(crate) fn client_state_from_abi_token<H>(token: Token) -> Result<ClientState
 		chain_id: chain_id.parse()?,
 		trust_level: TrustThreshold::new(trust_level_numerator, trust_level_denominator)?,
 		trusting_period: Duration::new(trusting_period_secs, trusting_period_nanos as u32),
-		unbonding_period: Duration::new(unbonding_period_secs, unbonding_period_nanos as u32),
+		unbonding_period: Duration::new(unbonding_period_secs, 0u32),
+		// unbonding_period: Duration::new(unbonding_period_secs, unbonding_piod_nanos as u32),
 		max_clock_drift: Duration::new(max_clock_drift_secs, max_clock_drift_nanos as u32),
 		frozen_height: if frozen_height == 0 {
 			None

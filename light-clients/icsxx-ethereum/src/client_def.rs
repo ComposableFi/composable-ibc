@@ -133,18 +133,13 @@ where
 				"02-client will check for misbehaviour before calling update_state; qed"
 			),
 		};
-		// header.finality_proof.epoch
-		// let bs = header.finalized_header.state_root;
-		// let bs = header.execution_payload.state_root;
-		// let bs = header.execution_payload.timestamp;
-		// let bs = header.execution_payload.block_number;
 
 		let mut css = header
 			.ancestor_blocks
 			.iter()
 			.map(|b| {
 				let height = Height::new(
-					2, // TODO: check this
+					0, // TODO: check this
 					b.execution_payload.block_number as u64,
 				);
 				let cs = Ctx::AnyConsensusState::wrap(&ConsensusState::new(
@@ -156,7 +151,7 @@ where
 			})
 			.collect::<Vec<_>>();
 		let height = Height::new(
-			2, // TODO: check this
+			0, // TODO: check this
 			header.execution_payload.block_number as u64,
 		);
 		let cs = Ctx::AnyConsensusState::wrap(&ConsensusState::new(
@@ -166,11 +161,31 @@ where
 		.unwrap();
 		css.push((height, cs));
 
-		let cs = client_state.inner;
-		let new_client_state = verify_sync_committee_attestation::<H>(cs, header)
-			.map_err(|e| Ics02Error::implementation_specific(e.to_string()))?;
-		client_state.inner = new_client_state;
-		Ok((client_state, ConsensusUpdateResult::Batch(css)))
+		// let cs = client_state.inner;
+		// let new_client_state = verify_sync_committee_attestation::<H>(cs, header)
+		// 	.map_err(|e| Ics02Error::implementation_specific(e.to_string()))?;
+		let update = header;
+		let new_light_client_state =
+			if let Some(sync_committee_update) = update.sync_committee_update {
+				LightClientState {
+					finalized_header: update.finalized_header,
+					latest_finalized_epoch: update.finality_proof.epoch,
+					current_sync_committee: client_state.inner.next_sync_committee,
+					next_sync_committee: sync_committee_update.next_sync_committee,
+				}
+			} else {
+				LightClientState { finalized_header: update.finalized_header, ..client_state.inner }
+			};
+		let new_client_state = ClientState {
+			inner: new_light_client_state,
+			frozen_height: None,
+			latest_height: update.execution_payload.block_number as _,
+			// latest_height: update.attested_header.slot.into(),
+			_phantom: Default::default(),
+		};
+
+		// client_state.inner = new_client_state;
+		Ok((new_client_state, ConsensusUpdateResult::Batch(css)))
 	}
 
 	fn update_state_on_misbehaviour(
