@@ -123,6 +123,7 @@ jobs:
 
       - name: Wait until parachains are ready
         run: |
+          netstat -ltup | grep LISTEN
           sleep 30
           METRICS_PORT=39988 ./scripts/zombienet/wait-for-parachains-network.sh
           METRICS_PORT=39998 ./scripts/zombienet/wait-for-parachains-network.sh 
