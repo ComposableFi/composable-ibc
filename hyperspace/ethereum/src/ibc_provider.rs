@@ -192,7 +192,8 @@ pub async fn parse_ethereum_events(
 			raw_log,
 			height,
 			OpenInitConnectionFilter,
-			OpenTryConnectionFilter
+			OpenTryConnectionFilter,
+			OpenConfirmConnectionFilter
 		);
 	}
 
@@ -235,6 +236,12 @@ impl IbcProvider for EthereumClient {
 		let latest_cp_client_height = client_state.latest_height().revision_height;
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		let latest_revision = latest_height.revision_number;
+
+		// 1 slot = 1 block
+		// 1 epoch = 32 slot
+		// 1 block = 12 sec
+		// finalisation ~= 2.5 epoch
+		// 32 * 12 * 2.5 = 960 sec = 16 min
 
 		let from = latest_cp_client_height;
 		let to = finality_event

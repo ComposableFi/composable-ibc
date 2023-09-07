@@ -184,6 +184,8 @@ impl TryFromEvent<OpenInitConnectionFilter> for IbcEvent {
 	}
 }
 
+// Open
+
 #[async_trait]
 impl TryFromEvent<OpenTryConnectionFilter> for IbcEvent {
 	async fn try_from_event(
