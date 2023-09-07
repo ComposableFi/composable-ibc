@@ -30,19 +30,19 @@ use tokio::time;
 
 pub async fn prove(
 	client: &EthereumClient,
-	block_hash: H256,
+	block_number: u64,
 ) -> Result<LightClientUpdate<SYNC_COMMITTEE_SIZE>, ClientError> {
-	let sync_committee_prover = SyncCommitteeProver::new(client.config.http_rpc_url.to_string());
+	log::info!(target: "hyperspace_ethereum", "Proving {block_number} {}", line!());
+	let sync_committee_prover = client.prover();
 
-	let block_id = format!("{block_hash:?}");
+	let block_id = format!("{block_number:?}");
 	// let block_id = "head";
+	log::info!(target: "hyperspace_ethereum", "Proving {}", line!());
 
-	let block_header = sync_committee_prover.fetch_header(&block_id).await.unwrap();
+	let block_header = sync_committee_prover.fetch_header(&block_id).await?;
+	log::info!(target: "hyperspace_ethereum", "Proving {}", line!());
 
-	let state = sync_committee_prover
-		.fetch_beacon_state(&block_header.slot.to_string())
-		.await
-		.unwrap();
+	let state = sync_committee_prover.fetch_beacon_state(&block_header.slot.to_string()).await?;
 
 	let mut client_state = LightClientState {
 		finalized_header: block_header.clone(),
@@ -50,17 +50,18 @@ pub async fn prove(
 		current_sync_committee: state.current_sync_committee,
 		next_sync_committee: state.next_sync_committee,
 	};
+	log::info!(target: "hyperspace_ethereum", "Proving {}", line!());
 
-	let finality_checkpoint = sync_committee_prover.fetch_finalized_checkpoint().await.unwrap();
+	let finality_checkpoint = sync_committee_prover.fetch_finalized_checkpoint().await?;
 	if finality_checkpoint.finalized.root == Node::default() ||
 		finality_checkpoint.finalized.epoch <= client_state.latest_finalized_epoch ||
 		finality_checkpoint.finalized.root ==
-			client_state.finalized_header.clone().hash_tree_root().unwrap()
+			client_state.finalized_header.clone().hash_tree_root()?
 	{
 		panic!("No new finalized checkpoint found")
 	}
 
-	println!("A new epoch has been finalized {}", finality_checkpoint.finalized.epoch);
+	log::debug!(target: "hyperspace_ethereum", "A new epoch has been finalized {}", finality_checkpoint.finalized.epoch);
 
 	let block_id = {
 		let mut block_id = hex::encode(finality_checkpoint.finalized.root.as_bytes());
@@ -68,12 +69,11 @@ pub async fn prove(
 		block_id
 	};
 
-	let finalized_header = sync_committee_prover.fetch_header(&block_id).await.unwrap();
+	let finalized_header = sync_committee_prover.fetch_header(&block_id).await?;
 	let finalized_state = sync_committee_prover
 		.fetch_beacon_state(finalized_header.slot.to_string().as_str())
-		.await
-		.unwrap();
-	let execution_payload_proof = prove_execution_payload(finalized_state.clone()).unwrap();
+		.await?;
+	let execution_payload_proof = prove_execution_payload(finalized_state.clone())?;
 
 	let mut attested_epoch = finality_checkpoint.finalized.epoch + 2;
 	// Get attested header and the signature slot
@@ -90,7 +90,7 @@ pub async fn prove(
 		// we move to the next epoch
 		if (attested_epoch * SLOTS_PER_EPOCH).saturating_add(SLOTS_PER_EPOCH - 1) == attested_slot {
 			// No block was found in attested epoch we move to the next possible attested epoch
-			println!(
+			log::debug!(target: "hyperspace_ethereum",
 				"No slots found in epoch {attested_epoch} Moving to the next possible epoch {}",
 				attested_epoch + 1
 			);
@@ -112,7 +112,7 @@ pub async fn prove(
 				if (attested_epoch * SLOTS_PER_EPOCH).saturating_add(SLOTS_PER_EPOCH - 1) ==
 					signature_slot
 				{
-					println!("Waiting for signature block for attested header");
+					log::debug!(target: "hyperspace_ethereum", "Waiting for signature block for attested header");
 					std::thread::sleep(Duration::from_secs(24));
 					signature_slot = header.slot + 1;
 					loop_count += 1;
@@ -134,12 +134,12 @@ pub async fn prove(
 					.count_ones() < (2 * SYNC_COMMITTEE_SIZE) / 3
 				{
 					attested_slot += 1;
-					println!("Signature block does not have sufficient sync committee participants -> participants {}", signature_block.body.sync_aggregate.sync_committee_bits.as_bitslice().count_ones());
+					log::debug!(target: "hyperspace_ethereum", "Signature block does not have sufficient sync committee participants -> participants {}", signature_block.body.sync_aggregate.sync_committee_bits.as_bitslice().count_ones());
 					continue
 				}
 				break (header, signature_block)
 			} else {
-				println!("No signature block found in {attested_epoch} Moving to the next possible epoch {}", attested_epoch + 1);
+				log::debug!(target: "hyperspace_ethereum", "No signature block found in {attested_epoch} Moving to the next possible epoch {}", attested_epoch + 1);
 				std::thread::sleep(Duration::from_secs(24));
 				attested_epoch += 1;
 				attested_slot = attested_epoch * SLOTS_PER_EPOCH;
@@ -152,18 +152,17 @@ pub async fn prove(
 
 	let attested_state = sync_committee_prover
 		.fetch_beacon_state(attested_block_header.slot.to_string().as_str())
-		.await
-		.unwrap();
+		.await?;
 
-	let finalized_hash_tree_root = finalized_header.clone().hash_tree_root().unwrap();
-	println!("{:?}, {}", attested_state.finalized_checkpoint, attested_state.slot);
-	println!("{:?}, {}", finalized_hash_tree_root, finalized_header.slot);
+	let finalized_hash_tree_root = finalized_header.clone().hash_tree_root()?;
+	log::debug!(target: "hyperspace_ethereum", "{:?}, {}", attested_state.finalized_checkpoint, attested_state.slot);
+	log::debug!(target: "hyperspace_ethereum", "{:?}, {}", finalized_hash_tree_root, finalized_header.slot);
 
 	assert_eq!(finalized_hash_tree_root, attested_state.finalized_checkpoint.root);
 
 	let finality_proof = FinalityProof {
 		epoch: finality_checkpoint.finalized.epoch,
-		finality_branch: prove_finalized_header(attested_state.clone()).unwrap(),
+		finality_branch: prove_finalized_header(attested_state.clone())?,
 	};
 
 	let state_period = compute_sync_committee_period_at_slot(finalized_header.slot);
@@ -171,7 +170,7 @@ pub async fn prove(
 	let update_attested_period = compute_sync_committee_period_at_slot(attested_block_header.slot);
 
 	let sync_committee_update = if state_period == update_attested_period {
-		let sync_committee_proof = prove_sync_committee_update(attested_state.clone()).unwrap();
+		let sync_committee_proof = prove_sync_committee_update(attested_state.clone())?;
 
 		let sync_committee_proof = sync_committee_proof
 			.into_iter()
@@ -196,10 +195,10 @@ pub async fn prove(
 			sync_committee_prover.fetch_header(i.to_string().as_str()).await
 		{
 			let ancestry_proof =
-				prove_block_roots_proof(finalized_state.clone(), ancestor_header.clone()).unwrap();
+				prove_block_roots_proof(finalized_state.clone(), ancestor_header.clone())?;
 			let header_state =
-				sync_committee_prover.fetch_beacon_state(i.to_string().as_str()).await.unwrap();
-			let execution_payload_proof = prove_execution_payload(header_state).unwrap();
+				sync_committee_prover.fetch_beacon_state(i.to_string().as_str()).await?;
+			let execution_payload_proof = prove_execution_payload(header_state)?;
 			ancestor_blocks.push(AncestorBlock {
 				header: ancestor_header,
 				execution_payload: execution_payload_proof,
@@ -209,7 +208,7 @@ pub async fn prove(
 		i -= 1;
 	}
 
-	println!("\nAncestor blocks count: \n {:?} \n", ancestor_blocks.len());
+	log::debug!(target: "hyperspace_ethereum", "\nAncestor blocks count: \n {:?} \n", ancestor_blocks.len());
 
 	// construct light client
 	let light_client_update = LightClientUpdate {

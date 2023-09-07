@@ -1,9 +1,9 @@
 use crate::contract::UnwrapContractError;
 use ethers::{
-	abi::{AbiError, Address, Detokenize, EventExt, Token, Tokenize},
+	abi::{AbiError, Address, Detokenize, EventExt, Function, FunctionExt, Token, Tokenize},
 	contract::{ContractInstance, FunctionCall},
 	prelude::{
-		EthEvent, Event, Filter, Http, LocalWallet, Middleware, Provider, TransactionReceipt,
+		EthEvent, Event, Filter, Http, LocalWallet, Middleware, Provider, TransactionReceipt, H256,
 	},
 };
 use ethers_solc::artifacts::{Storage, StorageLayout};
@@ -230,7 +230,7 @@ where
 		tx
 	}
 
-	pub async fn create_client(&self, msg: Token) -> String {
+	pub async fn create_client(&self, msg: Token) -> (String, (H256, H256)) {
 		let method = self.method::<_, String>("createClient", (msg,)).unwrap();
 
 		let client_id = method.call().await.unwrap_contract_error();
@@ -238,7 +238,7 @@ where
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
 		assert_eq!(receipt.status, Some(1.into()));
 
-		client_id
+		(client_id, (receipt.block_hash.unwrap(), receipt.transaction_hash))
 	}
 
 	pub async fn update_client(&self, msg: Token) {
@@ -275,7 +275,7 @@ where
 		id
 	}
 
-	pub async fn connection_open_init(&self, msg: Token) -> String {
+	pub async fn connection_open_init(&self, msg: Token) -> (String, (H256, H256)) {
 		let method = self.method::<_, String>("connectionOpenInit", (msg,)).unwrap();
 
 		let gas_estimate_connection_open_try = method.estimate_gas().await.unwrap();
@@ -284,7 +284,8 @@ where
 
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
 		assert_eq!(receipt.status, Some(1.into()));
-		id
+		let tx_id = (receipt.block_hash.unwrap(), receipt.transaction_hash);
+		(id, tx_id)
 	}
 
 	pub async fn connection_open_confirm(&self, msg: Token) {
@@ -298,7 +299,7 @@ where
 		assert_eq!(receipt.status, Some(1.into()));
 	}
 
-	pub async fn channel_open_init(&self, msg: Token) -> String {
+	pub async fn channel_open_init(&self, msg: Token) -> (String, (H256, H256)) {
 		let method = self.method::<_, String>("channelOpenInit", (msg,)).unwrap();
 
 		let gas_estimate_connection_id = method.estimate_gas().await.unwrap();
@@ -307,7 +308,9 @@ where
 
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
 		assert_eq!(receipt.status, Some(1.into()));
-		connection_id
+
+		let tx_id = (receipt.block_hash.unwrap(), receipt.transaction_hash);
+		(connection_id, tx_id)
 	}
 
 	pub async fn channel_open_try(&self, msg: Token) -> String {
@@ -332,6 +335,29 @@ where
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
 		assert_eq!(receipt.status, Some(1.into()));
 		ret
+	}
+
+	pub fn function(&self, name: &str) -> ethers::abi::Result<&Function> {
+		let mut func = None;
+		for faucet in &self.deployed_facets {
+			if let Ok(f) = faucet.abi().function(name) {
+				log::info!(target: "hyperspace_ethereum", "found function: {name}, {}, {}, {}", f.signature(), f.abi_signature(), hex::encode(&f.short_signature()));
+				if func.is_some() {
+					log::error!(target: "hyperspace_ethereum", "ambiguous function name: {}", name);
+					//panic!("ambiguous function name: {}", name);
+					//d5a2448100000000000000000000000000000000000000000000000000000000
+					//d5a2448100000000000000000000000000000000000000000000000000000000
+					// d5a244810000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000000f30372d74656e6465726d696e742d30000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+					// d5a244810000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000002c0000000000000000000000000000000000000000000000000000000000000000d30372d74656e6465726d696e74000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000001a000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000fa000000000000000000000000000000000000000000000000000000000003d0900000000000000000000000000000000000000000000000000000000000001baf800000000000000000000000000000000000000000000000000006722feb7b0000000000000000000000000000000000000000000000000000000000000000000f000000000000000000000000000000000000000000000000000000037e11d60000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000cdc00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000001263656e74617572692d746573746e65742d310000000000000000000000000000000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000064f8fc0400000000000000000000000000000000000000000000000017826f89135e5218000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000020008892c98d506a154ef7e5ad89b345e395cdafc8eb77857276f27ff5cef791da0000000000000000000000000000000000000000000000000000000000000020602fa35acfd377900d7fe3459730d96415eef369bd033c0923b2d2e2796a97d9
+				}
+				func = Some(f);
+			}
+		}
+		func.ok_or_else(|| ethers::abi::Error::InvalidName(name.into()))
+		// self.deployed_facets
+		// 	.iter()
+		// 	.find_map(|x| x.abi().function(name).ok())
+		// 	.ok_or_else(|| ethers::abi::Error::InvalidName(name.into()))
 	}
 
 	pub fn method<T: Tokenize, D: Detokenize>(

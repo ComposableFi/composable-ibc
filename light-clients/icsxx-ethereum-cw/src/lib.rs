@@ -9,7 +9,11 @@ mod error;
 pub mod ics23;
 mod macros;
 pub mod msg;
+pub mod state;
 
-pub const STORAGE_PREFIX: &'static [u8] = b"";
+pub use crate::error::ContractError;
+
+pub const CLIENT_STATE: &[u8] = b"client_state";
+pub const STORAGE_PREFIX: &[u8] = b"";
 
 pub type Bytes = Vec<u8>;

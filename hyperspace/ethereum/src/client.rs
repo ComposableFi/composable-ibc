@@ -3,6 +3,7 @@ use crate::{
 	jwt::{JwtAuth, JwtKey},
 	utils::{DeployYuiIbc, ProviderImpl},
 };
+use anyhow::Error;
 use async_trait::async_trait;
 use cast::revm::db;
 use ethers::{
@@ -28,7 +29,8 @@ use ibc::{
 use ibc_primitives::Timeout;
 use once_cell::sync::Lazy;
 use primitives::CommonClientState;
-use std::{future::Future, ops::Add, pin::Pin, str::FromStr, sync::Arc};
+use std::{convert::Infallible, future::Future, ops::Add, pin::Pin, str::FromStr, sync::Arc};
+use sync_committee_prover::SyncCommitteeProver;
 use thiserror::Error;
 
 pub type EthRpcClient = ethers::prelude::SignerMiddleware<
@@ -69,11 +71,24 @@ pub enum ClientError {
 	#[error("provider-error: {0}: {0}")]
 	ProviderError(http::Uri, ProviderError),
 	#[error("Ethereum error: {0}")]
-	Ethers(#[from] ethers::providers::ProviderError),
+	Ethers(#[from] ProviderError),
 	#[error("middleware-error: {0}")]
 	MiddlewareError(MiddlewareErrorType),
+	#[error("reqwest error: {0}")]
+	ReqwestError(#[from] reqwest::Error),
+	#[error("Merkleization error: {0}")]
+	MerkleizationError(#[from] ssz_rs::MerkleizationError),
+	#[error("ABI error: {0}")]
+	AbiError(#[from] ethers::abi::Error),
 	#[error("no-storage-proof: there was no storage proof for the given storage index")]
 	NoStorageProof,
+	#[error("Tendermint error: {0}")]
+	Tendermint(#[from] tendermint::Error),
+	/// Errors associated with ics-02 client
+	#[error("Ibc client error: {0}")]
+	IbcClient(#[from] ibc::core::ics02_client::error::Error),
+	#[error("Ibc channel error")]
+	IbcChannel(#[from] ibc::core::ics04_channel::error::Error),
 	#[error("{0}")]
 	Other(String),
 }
@@ -87,6 +102,18 @@ impl From<ValidationError> for ClientError {
 impl From<String> for ClientError {
 	fn from(value: String) -> Self {
 		Self::Other(value)
+	}
+}
+
+impl From<anyhow::Error> for ClientError {
+	fn from(value: Error) -> Self {
+		Self::Other(value.to_string())
+	}
+}
+
+impl From<Infallible> for ClientError {
+	fn from(value: Infallible) -> Self {
+		match value {}
 	}
 }
 
@@ -149,21 +176,30 @@ impl EthereumClient {
 		self.http_rpc.clone()
 	}
 
-	pub async fn websocket_provider(&self) -> Result<Provider<Ws>, ClientError> {
-		let secret = std::fs::read_to_string(format!(
-			"{}/.lighthouse/local-testnet/geth_datadir1/geth/jwtsecret",
-			env!("HOME"),
-		))
-		.unwrap();
-		println!("secret = {secret}");
-		let secret = JwtKey::from_slice(&hex::decode(&secret[2..]).unwrap()).expect("oops");
-		let jwt_auth = JwtAuth::new(secret, None, None);
-		let token = jwt_auth.generate_token().unwrap();
+	pub fn prover(&self) -> SyncCommitteeProver {
+		let mut string = self.config.beacon_rpc_url.to_string();
+		string.pop();
+		SyncCommitteeProver::new(string)
+	}
 
-		let auth = Authorization::bearer(dbg!(token));
-		Provider::<Ws>::connect_with_auth(self.ws_uri.to_string(), auth)
-			.await
-			.map_err(|e| ClientError::ProviderError(self.ws_uri.clone(), ProviderError::from(e)))
+	pub async fn websocket_provider(&self) -> Result<Provider<Ws>, ClientError> {
+		if let Some(secret_path) = &self.config.jwt_secret_path {
+			let secret = std::fs::read_to_string(secret_path).unwrap();
+			let secret = JwtKey::from_slice(&hex::decode(&secret[2..]).unwrap()).expect("oops");
+			let jwt_auth = JwtAuth::new(secret, None, None);
+			let token = jwt_auth.generate_token().unwrap();
+
+			let auth = Authorization::bearer(token);
+			Provider::<Ws>::connect_with_auth(self.ws_uri.to_string(), auth)
+				.await
+				.map_err(|e| {
+					ClientError::ProviderError(self.ws_uri.clone(), ProviderError::from(e))
+				})
+		} else {
+			Provider::<Ws>::connect(self.ws_uri.to_string()).await.map_err(|e| {
+				ClientError::ProviderError(self.ws_uri.clone(), ProviderError::from(e))
+			})
+		}
 	}
 
 	pub async fn generated_channel_identifiers(

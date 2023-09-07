@@ -810,7 +810,11 @@ macro_rules! chains {
 					Self::Wasm(chain) => {
 						let messages = messages
 							.into_iter()
-							.map(|msg| wrap_any_msg_into_wasm(msg, chain.code_id.clone()))
+							.map(|msg| {
+								let any = wrap_any_msg_into_wasm(msg, chain.code_id.clone());
+								// any.as_ref().map(|any| { log::info!("Submitting message: {}", hex::encode(&any.value)); });
+								any
+							})
 							.collect::<Result<Vec<_>, _>>()?;
 						chain.inner.submit(messages).await.map_err(AnyError::into)
 					},
@@ -998,7 +1002,7 @@ macro_rules! chains {
 						AnyConfig::$name(config) => AnyChain::$name(<$client>::new(config).await?),
 					)*
 				};
-				if let Some(code_id) = maybe_wasm_code_id {
+				if let Some(code_id) = dbg!(maybe_wasm_code_id) {
 					Ok(AnyChain::Wasm(WasmChain { inner: Box::new(chain), code_id }))
 				} else {
 					Ok(chain)
@@ -1042,7 +1046,7 @@ macro_rules! chains {
 				let maybe_code_id = match self {
 					$(
 						$(#[$($meta)*])*
-						Self::$name(chain) => Option::<CodeId>::None,//chain.wasm_code_id.as_ref(),
+						Self::$name(chain) => chain.wasm_code_id.as_ref(),
 					)*
 				};
 				let maybe_code_id =
@@ -1056,7 +1060,7 @@ macro_rules! chains {
 					$(
 						$(#[$($meta)*])*
 						Self::$name(chain) => {
-							// chain.wasm_code_id = Some(code_id);
+							chain.wasm_code_id = Some(code_id);
 						},
 					)*
 				}

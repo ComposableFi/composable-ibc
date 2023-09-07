@@ -217,17 +217,17 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		"ibc/47B97D8FF01DA03FCB2F4B1FFEC931645F254E21EF465FA95CBA6888CB964DC4".to_string(),
 	);
 	let (mut chain_a, mut chain_b) = setup_clients().await;
-	// let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
-	// 	setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
-	// handle.abort();
-	//
-	// // Set connections and channel whitelist
-	// chain_a.set_connection_id(connection_id_a);
-	// chain_b.set_connection_id(connection_id_b);
-	//
-	// chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
-	// chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
-	//
+	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
+		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
+	handle.abort();
+
+	// Set connections and channel whitelist
+	chain_a.set_connection_id(connection_id_a);
+	chain_b.set_connection_id(connection_id_b);
+
+	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
+	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
+
 	// // Run tests sequentially
 	//
 	// // no timeouts + connection delay

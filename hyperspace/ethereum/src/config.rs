@@ -102,6 +102,7 @@ pub struct EthereumClientConfig {
 	#[serde(skip)]
 	pub yui: Option<DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>>,
 	pub client_type: String,
+	pub jwt_secret_path: Option<String>,
 }
 
 impl EthereumClientConfig {

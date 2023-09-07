@@ -64,6 +64,10 @@ where
 	let handle = tokio::task::spawn(async move {
 		hyperspace_core::relay(client_a_clone, client_b_clone, None, None, None)
 			.await
+			.map_err(|e| {
+				log::error!(target: "hyperspace", "Relayer loop failed: {:?}", e);
+				e
+			})
 			.unwrap()
 	});
 	// check if an open transfer channel exists

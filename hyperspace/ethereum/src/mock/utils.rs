@@ -415,17 +415,23 @@ pub async fn hyperspace_ethereum_client_fixture(
 		None
 	};
 
+	let jwt_secret_path = if !USE_GETH {
+		None
+	} else {
+		Some(format!("{}/.lighthouse/local-testnet/geth_datadir1/geth/jwtsecret", env!("HOME")))
+	};
+
 	EthereumClientConfig {
 		http_rpc_url: endpoint.parse().unwrap(),
 		ws_rpc_url: "ws://localhost:5001".parse().unwrap(),
-		beacon_rpc_url: Default::default(),
+		beacon_rpc_url: "http://localhost:8001".parse().unwrap(),
 		ibc_handler_address: yui_ibc.diamond.address(),
 		tendermint_client_address: yui_ibc.tendermint.address(),
 		mnemonic: None,
 		max_block_weight: 1,
 		private_key: wallet,
 		private_key_path: wallet_path,
-		name: "mock-ethereum-client".into(),
+		name: "ethereum-client".into(),
 		client_id: Some(
 			ibc::core::ics24_host::identifier::ClientId::new("07-tendermint", 0).unwrap(),
 		),
@@ -435,5 +441,6 @@ pub async fn hyperspace_ethereum_client_fixture(
 		wasm_code_id: None,
 		yui: Some(yui_ibc),
 		client_type: "07-tendermint".into(),
+		jwt_secret_path,
 	}
 }

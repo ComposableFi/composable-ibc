@@ -389,7 +389,8 @@ impl AnyClientMessage {
 			},
 			#[cfg(feature = "ethereum")]
 			Self::Ethereum(m) => match m {
-				icsxx_ethereum::client_message::ClientMessage::Header(h) => None, /* TODO: header height */
+				icsxx_ethereum::client_message::ClientMessage::Header(h) =>
+					Some(Height::new(0, h.finalized_header.slot)),
 				icsxx_ethereum::client_message::ClientMessage::Misbehaviour(_) => None,
 			},
 			#[cfg(test)]
@@ -486,6 +487,11 @@ impl TryFrom<Any> for AnyClientMessage {
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			)),
 			#[cfg(feature = "ethereum")]
+			ETHEREUM_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Ethereum(
+				icsxx_ethereum::client_message::ClientMessage::decode_vec(&value.value)
+					.map_err(ics02_client::error::Error::decode_raw_header)?,
+			)),
+			#[cfg(feature = "ethereum")]
 			ETHEREUM_HEADER_TYPE_URL =>
 				Ok(Self::Ethereum(icsxx_ethereum::client_message::ClientMessage::Header(
 					icsxx_ethereum::client_message::Header::decode_vec(&value.value)
@@ -548,10 +554,20 @@ impl From<AnyClientMessage> for Any {
 				value: msg.encode_vec().expect("encode_vec failed"),
 			},
 			#[cfg(feature = "ethereum")]
-			AnyClientMessage::Ethereum(msg) => Any {
-				type_url: ETHEREUM_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec().expect("encode_vec failed"),
+			AnyClientMessage::Ethereum(msg) => match msg {
+				icsxx_ethereum::client_message::ClientMessage::Header(h) => Any {
+					type_url: ETHEREUM_HEADER_TYPE_URL.to_string(),
+					value: h.encode_vec().expect("encode_vec failed"),
+				},
+				icsxx_ethereum::client_message::ClientMessage::Misbehaviour(m) => Any {
+					type_url: ETHEREUM_MISBEHAVIOUR_TYPE_URL.to_string(),
+					value: m.encode_vec().expect("encode_vec failed"),
+				},
 			},
+			// AnyClientMessage::Ethereum(msg) => Any {
+			// 	type_url: ETHEREUM_CLIENT_MESSAGE_TYPE_URL.to_string(),
+			// 	value: msg.encode_vec().expect("encode_vec failed"),
+			// },
 			#[cfg(test)]
 			AnyClientMessage::Mock(_msg) => panic!("MockHeader can't be serialized"),
 		}
