@@ -34,6 +34,9 @@ jobs:
           apt update -y
           apt install git -y
           git --version
+          whoami
+          docker --version
+          uname -a
 
       - uses: actions/checkout@v3
         with:
