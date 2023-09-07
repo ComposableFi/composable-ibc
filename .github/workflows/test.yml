@@ -37,6 +37,7 @@ jobs:
           whoami
           docker --version
           uname -a
+          netstat -ltup | grep LISTEN
 
       - uses: actions/checkout@v3
         with:
