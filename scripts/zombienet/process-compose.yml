@@ -13,10 +13,13 @@ processes:
     readiness_probe:
       exec:
         command: |
-                curl http://127.0.0.1:39944/metrics | grep polkadot_parachain_chain_api_block_headers_count | tr -s " " | cut --delimiter " " --fields=2 | tee /tmp/zombie-example-a/polkadot_parachain_chain_api_block_headers_count
-                exit $(( $(cat /tmp/zombie-example-a/polkadot_parachain_chain_api_block_headers_count) > 4 ? 0 : 1 ))
+          if [[ $( curl http://127.0.0.1:39988/metrics | grep --extended-regexp 'substrate_block_height{status="finalized",chain="[a-zA-Z-]+"}' | tr -s " " | cut --delimiter " " --fields=2 ) > 1 ]]; then
+            echo "Network A is ready"
+          else
+            exit 1
+          fi
       failure_threshold: 32
-      initial_delay_seconds: 16
+      initial_delay_seconds: 32
       period_seconds: 8
       success_threshold: 1
       timeout_seconds: 2
@@ -28,10 +31,13 @@ processes:
     readiness_probe:
       exec:
         command: |
-                curl http://127.0.0.1:39954/metrics | grep polkadot_parachain_chain_api_block_headers_count | tr -s " " | cut --delimiter " " --fields=2 | tee /tmp/zombie-example-a/polkadot_parachain_chain_api_block_headers_count
-                exit $(( $(cat /tmp/zombie-example-a/polkadot_parachain_chain_api_block_headers_count) > 4 ? 0 : 1 ))
+          if [[ $( curl http://127.0.0.1:39998/metrics | grep --extended-regexp 'substrate_block_height{status="finalized",chain="[a-zA-Z-]+"}' | tr -s " " | cut --delimiter " " --fields=2 ) > 1 ]]; then
+            echo "Network B is ready"
+          else
+            exit 1
+          fi
       failure_threshold: 32
-      initial_delay_seconds: 16
+      initial_delay_seconds: 32
       period_seconds: 8
       success_threshold: 1
       timeout_seconds: 2      
