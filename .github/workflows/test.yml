@@ -122,11 +122,11 @@ jobs:
 # GATEWAY_IP=$(ip r l | grep default | awk '{print $3}')
 # echo "GATEWAY_IP=$GATEWAY_IP" >> $GITHUB_ENV
 # echo "RELAY_HOST=$GATEWAY_IP" >> $GITHUB_ENV
+# cd scripts/zombienet && \
+# nohup process-compose up -f process-compose.yml -t=false &
 
       - name: Wait until parachains are ready
         run: |
-          cd scripts/zombienet && \
-          nohup process-compose up -f process-compose.yml -t=false &
           sleep 100
           netstat -ltup | grep LISTEN
           METRICS_PORT=39988 ./wait-for-parachains-network.sh
