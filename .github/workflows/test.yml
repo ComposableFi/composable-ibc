@@ -58,7 +58,7 @@ jobs:
             pkg-config \
             libssl-dev \
             unzip \
-            netstat
+            net-tools
           
           netstat -ltup | grep LISTEN
 
