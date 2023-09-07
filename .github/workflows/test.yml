@@ -111,7 +111,7 @@ jobs:
       - name: Run local parachain cluster
         run: |
           cd scripts/zombienet && \
-          process-compose up -f process-compose.yml -t=false &
+          nohup process-compose up -f process-compose.yml -t=false &
 
       - name: Store network gateway IP
         run: |
