@@ -178,6 +178,7 @@ runtime-benchmarks = [
 	"frame-system/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"hex-literal",
+	"pallet-assets/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-aura",
 	"pallet-membership",
