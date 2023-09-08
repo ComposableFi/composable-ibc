@@ -327,13 +327,17 @@ fn consensus_state_from_abi_token(token: Token) -> Result<ConsensusState, Client
 	})
 }
 
-fn tm_header_abi_token(header: &Header) -> Token {
+fn tm_header_abi_token(header: &Header) -> Result<Token, ClientError> {
 	use ethers::abi::{encode as ethers_encode, Token as EthersToken};
 	let block_header = header.signed_header.header.clone();
 	let last_commit = header.signed_header.commit.clone();
 
 	// TODO: convert to u128 (nanoseconds)
 	let timestamp = Timestamp::from(block_header.time);
+
+	let last_block_id = block_header.last_block_id.ok_or(ClientError::Other(
+		"last_block_id not found".to_string(),
+	))?;
 
 	let signed_header_header = EthersToken::Tuple(
 		[
@@ -360,15 +364,15 @@ fn tm_header_abi_token(header: &Header) -> Token {
 			// //last_block_id
 			EthersToken::Tuple(
 				[
-					EthersToken::Bytes(block_header.last_block_id.unwrap().hash.into()),
+					EthersToken::Bytes(last_block_id.hash.into()),
 					//part_set_header
 					EthersToken::Tuple(
 						[
 							EthersToken::Uint(
-								block_header.last_block_id.unwrap().part_set_header.total.into(),
+								last_block_id.part_set_header.total.into(),
 							),
 							EthersToken::Bytes(
-								block_header.last_block_id.unwrap().part_set_header.hash.into(),
+								last_block_id.part_set_header.hash.into(),
 							),
 						]
 						.to_vec(),
@@ -377,9 +381,13 @@ fn tm_header_abi_token(header: &Header) -> Token {
 				.to_vec(),
 			),
 			//last_commit_hash
-			EthersToken::Bytes(block_header.last_commit_hash.unwrap().into()),
+			EthersToken::Bytes(block_header.last_commit_hash.ok_or(ClientError::Other(
+				"last_commit_hash not found".to_string(),
+			))?.into()),
 			//data_hash
-			EthersToken::Bytes(block_header.data_hash.unwrap().into()),
+			EthersToken::Bytes(block_header.data_hash.ok_or(ClientError::Other(
+				"data_hash not found".to_string(),
+			))?.into()),
 			//validators_hash
 			EthersToken::Bytes(block_header.validators_hash.into()),
 			//next_validators_hash
@@ -389,9 +397,13 @@ fn tm_header_abi_token(header: &Header) -> Token {
 			//app_hash
 			EthersToken::Bytes(block_header.app_hash.into()),
 			//last_results_hash
-			EthersToken::Bytes(block_header.last_results_hash.unwrap().into()),
+			EthersToken::Bytes(block_header.last_results_hash.ok_or(ClientError::Other(
+				"last_results_hash not found".to_string(),
+			))?.into()),
 			//evidence_hash
-			EthersToken::Bytes(block_header.evidence_hash.unwrap().into()),
+			EthersToken::Bytes(block_header.evidence_hash.ok_or(ClientError::Other(
+				"evidence_hash not found".to_string(),
+			))?.into()),
 			//proposer_address
 			EthersToken::Bytes(block_header.proposer_address.into()),
 		]
@@ -425,13 +437,15 @@ fn tm_header_abi_token(header: &Header) -> Token {
 		.to_vec(),
 	);
 
-	EthersToken::Tuple(
+	let ret = EthersToken::Tuple(
 		[
 			EthersToken::Tuple([signed_header_header, signed_header_commit].to_vec()),
 			EthersToken::Int(header.trusted_height.revision_height.into()),
 		]
 		.to_vec(),
-	)
+	);
+	Ok(ret)
+
 }
 
 pub(crate) fn tm_header_from_abi_token(token: Token) -> Result<Header, ClientError> {
@@ -765,7 +779,7 @@ pub(crate) fn msg_connection_open_init_token(x: MsgConnectionOpenInit) -> Token 
 pub fn msg_connection_open_ack_token<H: Debug>(
 	msg: MsgConnectionOpenAck<LocalClientTypes>,
 	client_state: &EthereumClientState<H>,
-) -> Token {
+) -> Result<Token, ClientError> {
 	use ethers::abi::{encode as ethers_encode, Token as EthersToken};
 
 	// let client_state = client_state_abi_token(&client_state);
@@ -821,11 +835,15 @@ pub fn msg_connection_open_ack_token<H: Debug>(
 				[
 					//revisionNumber
 					EthersToken::Uint(
-						msg.proofs.consensus_proof().unwrap().height().revision_number.into(),
+						msg.proofs.consensus_proof().ok_or(
+							ClientError::Other("consensus_proof not found".to_string()),
+						)?.height().revision_number.into(),
 					),
 					//revisionHeight
 					EthersToken::Uint(
-						msg.proofs.consensus_proof().unwrap().height().revision_number.into(),
+						msg.proofs.consensus_proof().ok_or(
+							ClientError::Other("consensus_proof not found".to_string()),
+						)?.height().revision_number.into(),
 					),
 				]
 				.to_vec(),
@@ -833,13 +851,13 @@ pub fn msg_connection_open_ack_token<H: Debug>(
 		]
 		.to_vec(),
 	);
-	consensus_state_data
+	Ok(consensus_state_data)
 }
 
 fn msg_connection_open_try_token<H: Debug>(
 	msg: MsgConnectionOpenTry<LocalClientTypes>,
 	client_state: &ClientState<H>,
-) -> Token {
+) -> Result<Token, ClientError> {
 	use ethers::abi::{encode as ethers_encode, Token as EthersToken};
 	let client_state = client_state_abi_token(&client_state);
 	let client_state_data_vec = ethers_encode(&[client_state]);
@@ -860,10 +878,12 @@ fn msg_connection_open_try_token<H: Debug>(
 			.consensus_proof()
 			.map_or_else(Vec::new, |v| v.proof().clone().into()),
 		proof_height: msg.proofs.height().into(),
-		consensus_height: msg.proofs.consensus_proof().unwrap().height().into(),
+		consensus_height: msg.proofs.consensus_proof().ok_or(
+			ClientError::Other("consensus_proof not found".to_string()),
+		)?.height().into(),
 	};
 	let conn_open_try_token = conn_open_try.into_token();
-	conn_open_try_token
+	Ok(conn_open_try_token)
 }
 
 fn msg_connection_open_confirm_token(msg: MsgConnectionOpenConfirm) -> Token {
@@ -918,7 +938,7 @@ impl Chain for EthereumClient {
 		// let ws = crate::client::WsEth::connect(self.ws_uri.to_string())
 		// 	.await
 		// 	.map_err(|err| ClientError::ProviderError(self.ws_uri.clone(), err))?;
-		let ws = self.websocket_provider().await.unwrap();
+		let ws = self.websocket_provider().await?;
 
 		let stream = async_stream::stream! {
 			// TODO: is it really finalized blocks stream?
@@ -947,17 +967,17 @@ impl Chain for EthereumClient {
 		for msg in messages {
 			if msg.type_url == ibc::core::ics02_client::msgs::create_client::TYPE_URL {
 				dbg!(&msg.value.len());
-				let msg = MsgCreateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+				let msg = MsgCreateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).map_err(|_| ClientError::Other("create_client: unsupported client state".into()))?;;
 				let AnyClientState::Tendermint(client_state) = msg.client_state.unpack_recursive()
 				else {
 					//TODO return error support only tendermint client state
-					panic!("unsupported client state")
+					return Err(ClientError::Other("create_client: unsupported client state".into()))
 				};
 				let AnyConsensusState::Tendermint(client_consensus) =
 					msg.consensus_state.unpack_recursive()
 				else {
 					//TODO return error support only tendermint consensus state
-					panic!("unsupported")
+					return Err(ClientError::Other("create_client: unsupported consensus state".into()))
 				};
 				let client_state_abi_token = client_state_abi_token(client_state);
 				let consensus_state_abi_token = consensus_state_abi_token(client_consensus);
@@ -1004,24 +1024,30 @@ impl Chain for EthereumClient {
 				let bytes = self.yui.create_client_calldata(token).await;
 
 				//update mutex
-				let mut update_mutex = self.prev_state.lock().unwrap();
+				let mut update_mutex = self.prev_state.lock().map_err(|_| {
+					ClientError::Other("create_client: can't lock prev_state mutex".into())
+				})?;
 				*update_mutex = (client_state_data_vec.clone(), consensus_state_data_vec.clone());
 				calls.push(bytes);
 			} else if msg.type_url == ibc::core::ics02_client::msgs::update_client::TYPE_URL {
-				let msg = MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+				let msg = MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).map_err(|_| ClientError::Other("update_client: failed to decode_vec".into()))?;;
 				let AnyClientMessage::Tendermint(client_state) =
 					msg.client_message.unpack_recursive()
 				else {
-					return Err(ClientError::Other(format!("unsupported client state 3")))
+					return Err(ClientError::Other(format!("update_client: unsupported client_state. Should be AnyClientMessage::Tendermint")))
 				};
-				let ClientMessage::Header(header) = client_state else { panic!("unsupported") };
+				let ClientMessage::Header(header) = client_state else { 
+					return Err(ClientError::Other("update_client: unsupported Client Message. Should be ClientMessage::Header".into()))
+				 };
 
 				//get abi token to update client
-				let tm_header_abi_token = tm_header_abi_token(header);
+				let tm_header_abi_token = tm_header_abi_token(header)?;
 				let tm_header_bytes = ethers_encode(&[tm_header_abi_token]);
 
 				//todo replace empty vec for prev state clint with an actual client state
-				let client_state = self.prev_state.lock().unwrap().0.clone();
+				let client_state = self.prev_state.lock().map_err(|_| {
+					ClientError::Other("update_client: can't lock prev_state mutex".into())
+				})?.0.clone();
 
 				//TODO replace client id. it was genereated when we created the client. use 0 for
 				// testing
@@ -1039,88 +1065,87 @@ impl Chain for EthereumClient {
 
 				calls.push(self.yui.update_client_calldata(token).await);
 			} else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_init::TYPE_URL {
-				let msg = MsgConnectionOpenInit::decode_vec(&msg.value).unwrap();
+				let msg = MsgConnectionOpenInit::decode_vec(&msg.value).map_err(|_| ClientError::Other("conn_open_init: failed to decode_vec".into()))?;;
 				let token = msg_connection_open_init_token(msg);
 				calls.push(self.yui.connection_open_init_calldata(token).await);
 			} else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_ack::TYPE_URL {
-				let msg = MsgConnectionOpenAck::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+				let msg = MsgConnectionOpenAck::<LocalClientTypes>::decode_vec(&msg.value).map_err(|_| ClientError::Other("conn_open_ack: failed to decode_vec".into()))?;
 
 				let client_state = match msg.client_state.clone() {
 					Some(m) => {
 						let AnyClientState::Ethereum(client_state) = m.unpack_recursive() else {
-							return Err(ClientError::Other(format!("unsupported client state 1")))
+							return Err(ClientError::Other(format!("conn_open_ack: unsupported client_state. Should be AnyClientState::Ethereum")))
 						};
 						client_state.clone()
 					},
 					None => {
-						//TODO return error support only tendermint client state
-						panic!("unsupported")
+						return Err(ClientError::Other(format!("conn_open_ack: client_state can't be None")))
 					},
 				};
 
-				let token = msg_connection_open_ack_token(msg, &client_state);
+				let token = msg_connection_open_ack_token(msg, &client_state)?;
 				calls.push(self.yui.connection_open_ack_calldata(token).await);
 			} else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_try::TYPE_URL {
-				let msg = MsgConnectionOpenTry::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+				let msg = MsgConnectionOpenTry::<LocalClientTypes>::decode_vec(&msg.value).map_err(|_| ClientError::Other("conn_open_try: failed to decode_vec".into()))?;;
 				let client_state = match msg.client_state.clone() {
 					Some(m) => {
 						let AnyClientState::Tendermint(client_state) = m.unpack_recursive() else {
-							return Err(ClientError::Other(format!("unsupported client state 2",)))
+							return Err(ClientError::Other(format!("conn_open_try: unsupported client_state. Should be AnyClientState::Tendermint",)))
 						};
 						client_state.clone()
 					},
 					None => {
 						//TODO return error support only tendermint client state
-						panic!("unsupported")
+						return Err(ClientError::Other(format!("conn_open_try: client_state can't be None")))
 					},
 				};
 
-				let token = msg_connection_open_try_token(msg, &client_state);
+				let token = msg_connection_open_try_token(msg, &client_state)?;
 				calls.push(self.yui.connection_open_try_calldata(token).await);
 			} else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_confirm::TYPE_URL
 			{
-				let msg = MsgConnectionOpenConfirm::decode_vec(&msg.value).unwrap();
+				let msg = MsgConnectionOpenConfirm::decode_vec(&msg.value).map_err(|_| ClientError::Other("conn_open_confirm: failed to decode_vec".into()))?;;
 				let token = msg_connection_open_confirm_token(msg);
 				calls.push(self.yui.connection_open_confirm_calldata(token).await);
 			} else if msg.type_url == channel_msgs::chan_open_init::TYPE_URL {
-				let msg = MsgChannelOpenInit::decode_vec(&msg.value).unwrap();
+				let msg = MsgChannelOpenInit::decode_vec(&msg.value).map_err(|_| ClientError::Other("chan_open_init: failed to decode_vec".into()))?;;
 				log::info!("msg.channel.ordering = {}", msg.channel.ordering);
 				let token = msg.into_token();
 				calls.push(self.yui.channel_open_init_calldata(token).await);
 			} else if msg.type_url == channel_msgs::chan_open_try::TYPE_URL {
-				let msg = MsgChannelOpenTry::decode_vec(&msg.value).unwrap();
+				let msg = MsgChannelOpenTry::decode_vec(&msg.value).map_err(|_| ClientError::Other("chan_open_try: failed to decode_vec".into()))?;
 				let token = msg.into_token();
 				calls.push(self.yui.channel_open_try_calldata(token).await);
 			} else if msg.type_url == channel_msgs::chan_open_ack::TYPE_URL {
-				let msg = MsgChannelOpenAck::decode_vec(&msg.value).unwrap();
+				let msg = MsgChannelOpenAck::decode_vec(&msg.value).map_err(|_| ClientError::Other("chan_open_ack: failed to decode_vec".into()))?;
 				log::info!("msg = {msg:#?}");
 				let token = msg.into_token();
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "channelOpenAck").await);
 			} else if msg.type_url == channel_msgs::chan_open_confirm::TYPE_URL {
-				let msg = MsgChannelOpenConfirm::decode_vec(&msg.value).unwrap();
+				let msg = MsgChannelOpenConfirm::decode_vec(&msg.value).map_err(|_| ClientError::Other("chann_open_confirm: failed to decode_vec".into()))?;
 				let token = msg.into_token();
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "channelOpenConfirm").await);
 			} else if msg.type_url == channel_msgs::chan_close_init::TYPE_URL {
-				let msg = MsgChannelCloseInit::decode_vec(&msg.value).unwrap();
+				let msg = MsgChannelCloseInit::decode_vec(&msg.value).map_err(|_| ClientError::Other("chann_close_init: failed to decode_vec".into()))?;
 				let token = msg.into_token();
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "channelCloseInit").await);
 			} else if msg.type_url == channel_msgs::chan_close_confirm::TYPE_URL {
-				let msg = MsgChannelCloseConfirm::decode_vec(&msg.value).unwrap();
+				let msg = MsgChannelCloseConfirm::decode_vec(&msg.value).map_err(|_| ClientError::Other("chann_close_confirm: failed to decode_vec".into()))?;
 				let token = msg.into_token();
 				calls
 					.push(self.yui.send_and_get_tuple_calldata(token, "channelCloseConfirm").await);
 			} else if msg.type_url == channel_msgs::timeout_on_close::TYPE_URL {
-				let msg = MsgTimeoutOnClose::decode_vec(&msg.value).unwrap();
+				let msg = MsgTimeoutOnClose::decode_vec(&msg.value).map_err(|_| ClientError::Other("timeout_on_close: failed to decode_vec".into()))?;
 				return Err(ClientError::Other("timeout not supported".into()))
 			} else if msg.type_url == channel_msgs::timeout::TYPE_URL {
-				let msg = MsgTimeout::decode_vec(&msg.value).unwrap();
+				let msg = MsgTimeout::decode_vec(&msg.value).map_err(|_| ClientError::Other("timeout: failed to decode_vec".into()))?;
 				return Err(ClientError::Other("timeout not supported".into()))
 			} else if msg.type_url == channel_msgs::acknowledgement::TYPE_URL {
-				let msg = MsgAcknowledgement::decode_vec(&msg.value).unwrap();
+				let msg = MsgAcknowledgement::decode_vec(&msg.value).map_err(|_| ClientError::Other("acknowledgement: failed to decode_vec".into()))?;
 				let token = msg.into_token();
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "acknowledgePacket").await);
 			} else if msg.type_url == channel_msgs::recv_packet::TYPE_URL {
-				let msg = MsgRecvPacket::decode_vec(&msg.value).unwrap();
+				let msg = MsgRecvPacket::decode_vec(&msg.value).map_err(|_| ClientError::Other("recv_packet: failed to decode_vec".into()))?;
 				let token = msg.into_token();
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "recvPacket").await);
 			} else {
@@ -1152,7 +1177,8 @@ impl Chain for EthereumClient {
 
 		thread::sleep(Duration::from_secs(5));
 
-		Ok((receipt.block_hash.unwrap(), receipt.transaction_hash))
+		let block_hash = receipt.block_hash.ok_or(ClientError::Other("Block hash is missing".into()))?;
+		Ok((block_hash, receipt.transaction_hash))
 	}
 
 	async fn query_client_message(

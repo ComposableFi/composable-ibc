@@ -20,7 +20,7 @@ use hyperspace_ethereum::{
 	client::{EthRpcClient, EthereumClient},
 	config::EthereumClientConfig,
 	contract::{IbcHandler, UnwrapContractError},
-	mock::{utils, utils::USE_GETH},
+	mock::{utils, utils::{USE_GETH, hyperspace_ethereum_client_fixture}},
 	utils::{DeployYuiIbc, ProviderImpl},
 	yui_types::IntoToken,
 };
@@ -208,9 +208,9 @@ async fn deploy_mock_client_fixture(deploy: &DeployYuiIbcMockClient) -> ClientId
 		.yui_ibc
 		.create_client(utils::mock::create_client_msg("mock-client"))
 		.await;
-	println!("client id: {}", string);
+	println!("client id: {}", string.0);
 	println!("Diamond contract addr: {:?}", deploy.yui_ibc.diamond.address());
-	ClientId(string)
+	ClientId(string.0)
 }
 
 #[track_caller]
