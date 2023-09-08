@@ -1,5 +1,6 @@
 use crate::{
 	config::EthereumClientConfig,
+	contract::UnwrapContractError,
 	jwt::{JwtAuth, JwtKey},
 	utils::{DeployYuiIbc, ProviderImpl},
 };
@@ -8,9 +9,11 @@ use async_trait::async_trait;
 use cast::revm::db;
 use ethers::{
 	abi::{AbiEncode, Address, ParamType, Token},
+	core::k256,
 	prelude::{
 		coins_bip39::English, signer::SignerMiddlewareError, Authorization, BlockId, BlockNumber,
-		EIP1186ProofResponse, Filter, LocalWallet, Log, MnemonicBuilder, NameOrAddress, H256,
+		EIP1186ProofResponse, Filter, LocalWallet, Log, MnemonicBuilder, NameOrAddress,
+		SignerMiddleware, Wallet, H256,
 	},
 	providers::{Http, Middleware, Provider, ProviderError, ProviderExt, Ws},
 	signers::Signer,
@@ -22,14 +25,22 @@ use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
 	core::ics24_host::{
 		error::ValidationError,
-		identifier::{ChannelId, ClientId, PortId},
+		identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
 	Height,
 };
 use ibc_primitives::Timeout;
 use once_cell::sync::Lazy;
 use primitives::CommonClientState;
-use std::{convert::Infallible, future::Future, ops::Add, pin::Pin, str::FromStr, sync::Arc};
+use std::{
+	collections::HashSet,
+	convert::Infallible,
+	future::Future,
+	ops::Add,
+	pin::Pin,
+	str::FromStr,
+	sync::{Arc, Mutex},
+};
 use sync_committee_prover::SyncCommitteeProver;
 use thiserror::Error;
 
@@ -56,7 +67,13 @@ pub struct EthereumClient {
 	/// Common relayer data
 	pub common_state: CommonClientState,
 	pub yui: DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>,
-	pub prev_state: Arc<std::sync::Mutex<(Vec<u8>, Vec<u8>)>>,
+	pub prev_state: Arc<Mutex<(Vec<u8>, Vec<u8>)>>,
+	/// Light client id on counterparty chain
+	pub client_id: Arc<Mutex<Option<ClientId>>>,
+	/// Connection Id
+	pub connection_id: Arc<Mutex<Option<ConnectionId>>>,
+	/// Channels cleared for packet relay
+	pub channel_whitelist: Arc<Mutex<HashSet<(ChannelId, PortId)>>>,
 }
 
 pub type MiddlewareErrorType = SignerMiddlewareError<
@@ -80,6 +97,17 @@ pub enum ClientError {
 	MerkleizationError(#[from] ssz_rs::MerkleizationError),
 	#[error("ABI error: {0}")]
 	AbiError(#[from] ethers::abi::Error),
+	#[error("Contract ABI error: {0}")]
+	ContractAbiError(#[from] ethers::contract::AbiError),
+	#[error("Contract error: {0}")]
+	ContractError(
+		#[from]
+		ethers::contract::ContractError<
+			SignerMiddleware<Provider<Http>, Wallet<ecdsa::SigningKey<k256::Secp256k1>>>,
+		>,
+	),
+	#[error("IBC Transfer: {0}")]
+	IbcTransfer(#[from] ibc::applications::transfer::error::Error),
 	#[error("no-storage-proof: there was no storage proof for the given storage index")]
 	NoStorageProof,
 	#[error("Tendermint error: {0}")]
@@ -165,10 +193,15 @@ impl EthereumClient {
 		Ok(Self {
 			http_rpc: Arc::new(client),
 			ws_uri: config.ws_rpc_url.clone(),
-			config,
 			common_state: Default::default(),
 			yui,
 			prev_state: Arc::new(std::sync::Mutex::new((vec![], vec![]))),
+			client_id: Arc::new(Mutex::new(config.client_id.clone())),
+			connection_id: Arc::new(Mutex::new(config.connection_id.clone())),
+			channel_whitelist: Arc::new(Mutex::new(
+				config.channel_whitelist.clone().into_iter().collect(),
+			)),
+			config,
 		})
 	}
 
@@ -579,7 +612,27 @@ impl EthereumClient {
 #[async_trait]
 impl primitives::TestProvider for EthereumClient {
 	async fn send_transfer(&self, params: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
-		todo!()
+		let params = (
+			params.token.denom.to_string(),
+			params.token.amount.as_u256().as_u64(),
+			params.receiver.to_string(),
+			params.source_port.to_string(),
+			params.source_channel.to_string(),
+			params.timeout_height.revision_height,
+		);
+		let method = self
+			.yui
+			.bank
+			.as_ref()
+			.expect("expected bank module")
+			.method::<_, ()>("sendTransfer", params)?;
+		let _ = method.call().await.unwrap_contract_error();
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		for log in receipt.logs {
+			log::info!("tx.log.t0 = {}", hex::encode(log.topics[0]));
+		}
+		Ok(())
 	}
 
 	async fn send_ordered_packet(
@@ -587,14 +640,14 @@ impl primitives::TestProvider for EthereumClient {
 		channel_id: ChannelId,
 		timeout: Timeout,
 	) -> Result<(), Self::Error> {
-		todo!()
+		todo!("send_ordered_packet")
 	}
 
 	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
-		todo!()
+		todo!("subscribe_blocks")
 	}
 
 	async fn increase_counters(&mut self) -> Result<(), Self::Error> {
-		todo!()
+		Ok(())
 	}
 }

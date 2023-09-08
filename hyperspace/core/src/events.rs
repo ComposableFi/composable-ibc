@@ -288,8 +288,7 @@ pub async fn parse_events(
 								channel_id,
 								open_init.port_id.clone()
 							))
-						})?)
-						.expect("Channel end decoding should not fail");
+						})?)?;
 					let counterparty = channel_end.counterparty();
 
 					let connection_response = source

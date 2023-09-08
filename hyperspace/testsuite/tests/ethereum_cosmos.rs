@@ -40,9 +40,10 @@ use hyperspace_testsuite::{
 	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
 	setup_connection_and_channel,
 };
-use ibc::core::ics24_host::identifier::PortId;
+use ibc::core::ics24_host::identifier::{ClientId, PortId};
 use sp_core::hashing::sha2_256;
-use std::{path::PathBuf, sync::Arc};
+use std::{future::Future, path::PathBuf, str::FromStr, sync::Arc};
+use subxt::utils::H160;
 
 #[derive(Debug, Clone)]
 pub struct Args {
@@ -132,19 +133,71 @@ pub async fn deploy_yui_ibc_and_tendermint_client_fixture() -> DeployYuiIbcTende
 	}
 }
 
+#[track_caller]
+fn deploy_transfer_module_fixture(
+	deploy: &DeployYuiIbcTendermintClient,
+) -> impl Future<Output = ContractInstance<Arc<ProviderImpl>, ProviderImpl>> + '_ {
+	async move {
+		let path = utils::yui_ibc_solidity_path();
+		let project_output = utils::compile_yui(&path, "contracts/apps/20-transfer");
+
+		let artifact =
+			project_output.find_first("ICS20Bank").expect("no ICS20Bank in project output");
+		let bank_contract = utils::deploy_contract(artifact, (), deploy.client.clone()).await;
+		println!("Bank module address: {:?}", bank_contract.address());
+		let artifact = project_output
+			.find_first("ICS20TransferBank")
+			.expect("no ICS20TransferBank in project output");
+		let constructor_args = (
+			Token::Address(deploy.yui_ibc.diamond.address()),
+			Token::Address(bank_contract.address()),
+		);
+		let module_contract =
+			utils::deploy_contract(artifact, constructor_args, deploy.client.clone()).await;
+		module_contract
+	}
+}
+
 async fn setup_clients() -> (AnyChain, AnyChain) {
 	log::info!(target: "hyperspace", "=========================== Starting Test ===========================");
 	let args = Args::default();
 
 	// Create client configurations
 
-	let DeployYuiIbcTendermintClient { anvil, tendermint_client, ics20_module: _, yui_ibc, .. } =
-		deploy_yui_ibc_and_tendermint_client_fixture().await;
+	let deploy = deploy_yui_ibc_and_tendermint_client_fixture().await;
+	let bank = deploy_transfer_module_fixture(&deploy).await;
+	let DeployYuiIbcTendermintClient {
+		anvil, tendermint_client, ics20_module: _, mut yui_ibc, ..
+	} = deploy;
+	log::info!(target: "hyperspace", "Deployed diamond: {:?}, tendermint client: {:?}, bank: {:?}", yui_ibc.diamond.address(), tendermint_client.address(), bank.address());
+	yui_ibc.bind_port("transfer", bank.address()).await;
+	yui_ibc.bank = Some(bank);
+
+	// Overrides
+	// yui_ibc.diamond = ContractInstance::new(
+	// 	H160::from_str("0xf02f5476535c0eea1e501d2c155c1e1f3055e752").unwrap(),
+	// 	yui_ibc.diamond.abi().clone(),
+	// 	yui_ibc.diamond.client(),
+	// );
+	// yui_ibc.tendermint = ContractInstance::new(
+	// 	H160::from_str("0x5d2d6b3fd375fd77dc627d1ae955c441ec157847").unwrap(),
+	// 	yui_ibc.tendermint.abi().clone(),
+	// 	yui_ibc.tendermint.client(),
+	// );
+	// {
+	// 	let bank = yui_ibc.bank.as_mut().unwrap();
+	// 	*bank = ContractInstance::new(
+	// 		H160::from_str("0xa4373e6da07ad62d43c3a74f5edb3d3aa6674c14").unwrap(),
+	// 		bank.abi().clone(),
+	// 		bank.client(),
+	// 	);
+	// }
 
 	//replace the tendermint client address in hyperspace config with a real one
 	let diamond_address = yui_ibc.diamond.address();
+	let tendermint_address = yui_ibc.tendermint.address();
 	let mut config_a = hyperspace_ethereum_client_fixture(&anvil, yui_ibc).await;
-	config_a.tendermint_client_address = tendermint_client.address();
+	config_a.tendermint_client_address = tendermint_address;
 	config_a.ibc_handler_address = diamond_address;
 
 	let mut config_b = CosmosClientConfig {
@@ -194,14 +247,18 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	let clients_on_a = chain_a_wrapped.query_clients().await.unwrap();
 	let clients_on_b = chain_b_wrapped.query_clients().await.unwrap();
 
-	if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
-		chain_a_wrapped.set_client_id(clients_on_b[0].clone());
-		chain_b_wrapped.set_client_id(clients_on_a[0].clone());
-		return (chain_a_wrapped, chain_b_wrapped)
-	}
+	// if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
+	// 	chain_a_wrapped.set_client_id(clients_on_b.last().unwrap().clone());
+	// 	chain_b_wrapped.set_client_id(clients_on_a.last().unwrap().clone());
+	// 	return (chain_a_wrapped, chain_b_wrapped)
+	// }
 
 	let (client_b, client_a) =
 		create_clients(&mut chain_b_wrapped, &mut chain_a_wrapped).await.unwrap();
+	// let (client_a, client_b): (ClientId, ClientId) =
+	// 	("08-wasm-136".parse().unwrap(), "07-tendermint-0".parse().unwrap());
+
+	log::info!(target: "hyperspace", "Client A: {client_a:?} B: {client_b:?}");
 	chain_a_wrapped.set_client_id(client_a);
 	chain_b_wrapped.set_client_id(client_b);
 	(chain_a_wrapped, chain_b_wrapped)
@@ -212,7 +269,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
 
-	let asset_id_a = AnyAssetId::Ethereum(());
+	let asset_id_a = AnyAssetId::Ethereum("pica".to_string());
 	let asset_id_b = AnyAssetId::Cosmos(
 		"ibc/47B97D8FF01DA03FCB2F4B1FFEC931645F254E21EF465FA95CBA6888CB964DC4".to_string(),
 	);
@@ -221,6 +278,14 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
 	handle.abort();
 
+	// let connection_id_a = "connection-0".parse().unwrap();
+	// let connection_id_b = "connection-35".parse().unwrap();
+	// let channel_a = "channel-0".parse().unwrap();
+	// let channel_b = "channel-10".parse().unwrap();
+
+	log::info!(target: "hyperspace", "Conn A: {connection_id_a:?} B: {connection_id_b:?}");
+	log::info!(target: "hyperspace", "Chann A: {channel_a:?} B: {channel_b:?}");
+
 	// Set connections and channel whitelist
 	chain_a.set_connection_id(connection_id_a);
 	chain_b.set_connection_id(connection_id_b);
@@ -228,20 +293,19 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
 	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
 
-	// // Run tests sequentially
-	//
-	// // no timeouts + connection delay
-	//
-	// ibc_messaging_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// 	asset_id_b.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
-	//
+	// Run tests sequentially
+
+	// no timeouts + connection delay
+	ibc_messaging_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		asset_id_b.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
+
 	// // timeouts + connection delay
 	// ibc_messaging_packet_height_timeout_with_connection_delay(
 	// 	&mut chain_a,

@@ -37,7 +37,7 @@ use ibc::{
 	},
 	Height,
 };
-use ibc_proto::google::protobuf::Any;
+use ibc_proto::{google::protobuf::Any, ibc::core::channel::v1::QueryNextSequenceReceiveResponse};
 use pallet_ibc::light_clients::AnyClientState;
 use primitives::{
 	error::Error, find_suitable_proof_height_for_client, packet_info_to_packet,
@@ -133,9 +133,14 @@ pub async fn query_ready_and_timed_out_packets(
 			},
 		};
 
-		let next_sequence_recv = sink
-			.query_next_sequence_recv(sink_height, &sink_port_id, &sink_channel_id)
-			.await?;
+		// let next_sequence_recv = sink
+		// 	.query_next_sequence_recv(sink_height, &sink_port_id, &sink_channel_id)
+		// 	.await?;
+		let next_sequence_recv = QueryNextSequenceReceiveResponse {
+			next_sequence_receive: 0,
+			proof: vec![1],
+			proof_height: None,
+		};
 
 		let source_client_state_on_sink =
 			sink.query_client_state(sink_height, source.client_id()).await?;
@@ -228,6 +233,19 @@ pub async fn query_ready_and_timed_out_packets(
 					let packet_height = send_packet.height.ok_or_else(|| {
 						Error::Custom(format!("Packet height not found for packet {packet:?}"))
 					})?;
+
+					// [2023-09-08T12:24:41Z TRACE hyperspace] get_timeout_proof_height:
+					// ethereum-client->centauri,
+					//
+					// timeout_variant=Height,
+					// source_height=0-26948,
+					// timeout_height: Height { revision: 0, height: 24102 },
+					// timeout_timestamp: Timestamp { time: None } }
+					//
+					// sink_height=1-23940,
+					// sink_timestamp=Timestamp(2023-09-08T12:24:33.381673Z), latest_client_height_on_source=1-23926, packet_creation_height=26885,
+
+					log::info!("sink_height = {sink_height:?}, timeout_height = {:?}", packet.timeout_height);
 
 					if packet.timed_out(&sink_timestamp, sink_height) {
 						timeout_packets_count.fetch_add(1, Ordering::SeqCst);

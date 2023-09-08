@@ -358,7 +358,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 		trusted_validator_set: tendermint::validator::Set::new(set, None),
 	};
 	let msg = MsgUpdateAnyClient::<LocalClientTypes> {
-		client_id: hyperspace.config.clone().client_id.unwrap(),
+		client_id: hyperspace.client_id(),
 		client_message: pallet_ibc::light_clients::AnyClientMessage::Tendermint(
 			ics07_tendermint::client_message::ClientMessage::Header(header.clone()),
 		),

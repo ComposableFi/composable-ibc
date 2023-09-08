@@ -119,7 +119,7 @@ pub fn compile_solc(project_paths: ProjectPathsConfig) -> ProjectCompileOutput {
 			metadata: None,
 			output_selection: selection,
 			evm_version: Some(EvmVersion::Paris),
-			via_ir: Some(false),
+			via_ir: Some(true), // TODO: this flag is unstable
 			// debug: Some(DebuggingSettings {
 			// 	revert_strings: Some(RevertStrings::Debug),
 			// 	debug_info: vec!["location".to_string()],
@@ -387,6 +387,7 @@ where
 		deployed_facets,
 		storage_layout,
 		tendermint: tendermint_client,
+		bank: None,
 	}
 }
 

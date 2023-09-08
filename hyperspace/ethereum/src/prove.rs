@@ -9,14 +9,18 @@ use ethereum_consensus::{
 	state_transition::Context,
 };
 use ethers::prelude::{EthCall, H256};
+use icsxx_ethereum::client_state::ClientState;
+use pallet_ibc::light_clients::HostFunctionsManager;
+use primitives::mock::LocalClientTypes;
 use ssz_rs::{
 	calculate_multi_merkle_root, is_valid_merkle_branch, GeneralizedIndex, Merkleized, Node,
 };
 use std::time::Duration;
 use sync_committee_primitives::{
 	types::{
-		AncestorBlock, FinalityProof, LightClientState, LightClientUpdate, SyncCommitteeUpdate,
-		DOMAIN_SYNC_COMMITTEE, GENESIS_VALIDATORS_ROOT,
+		AncestorBlock, AncestryProof, BlockRootsProof, ExecutionPayloadProof, FinalityProof,
+		LightClientState, LightClientUpdate, SyncCommitteeUpdate, DOMAIN_SYNC_COMMITTEE,
+		GENESIS_VALIDATORS_ROOT,
 	},
 	util::{compute_fork_version, compute_sync_committee_period_at_slot},
 };
@@ -30,27 +34,14 @@ use tokio::time;
 
 pub async fn prove(
 	client: &EthereumClient,
+	eth_client_state: &ClientState<HostFunctionsManager>,
 	block_number: u64,
 ) -> Result<LightClientUpdate<SYNC_COMMITTEE_SIZE>, ClientError> {
-	log::info!(target: "hyperspace_ethereum", "Proving {block_number} {}", line!());
 	let sync_committee_prover = client.prover();
+	let client_state = &eth_client_state.inner;
 
 	let block_id = format!("{block_number:?}");
-	// let block_id = "head";
-	log::info!(target: "hyperspace_ethereum", "Proving {}", line!());
-
-	let block_header = sync_committee_prover.fetch_header(&block_id).await?;
-	log::info!(target: "hyperspace_ethereum", "Proving {}", line!());
-
-	let state = sync_committee_prover.fetch_beacon_state(&block_header.slot.to_string()).await?;
-
-	let mut client_state = LightClientState {
-		finalized_header: block_header.clone(),
-		latest_finalized_epoch: 0,
-		current_sync_committee: state.current_sync_committee,
-		next_sync_committee: state.next_sync_committee,
-	};
-	log::info!(target: "hyperspace_ethereum", "Proving {}", line!());
+	let block_id = "head";
 
 	let finality_checkpoint = sync_committee_prover.fetch_finalized_checkpoint().await?;
 	if finality_checkpoint.finalized.root == Node::default() ||
@@ -58,7 +49,7 @@ pub async fn prove(
 		finality_checkpoint.finalized.root ==
 			client_state.finalized_header.clone().hash_tree_root()?
 	{
-		panic!("No new finalized checkpoint found")
+		return Err(ClientError::Other("No new finalized checkpoint found".into()))
 	}
 
 	log::debug!(target: "hyperspace_ethereum", "A new epoch has been finalized {}", finality_checkpoint.finalized.epoch);
@@ -83,7 +74,7 @@ pub async fn prove(
 	// the attested block from four possible epochs.
 	let mut attested_epoch_loop_count = 0;
 	let (attested_block_header, signature_block) = loop {
-		if attested_epoch_loop_count == 4 {
+		if attested_epoch_loop_count >= 4 {
 			panic!("Could not fetch any block from the attested epoch after going through four epochs, your Eth devnet is fucked")
 		}
 		// If we have maxed out the slots in the current epoch and still didn't find any block,
@@ -231,5 +222,71 @@ pub async fn prove(
 	// 	"Sucessfully verified Ethereum block at slot {:?}",
 	// 	client_state.finalized_header.slot
 	// );
+	Ok(light_client_update)
+}
+
+pub async fn prove_fast(
+	client: &EthereumClient,
+	eth_client_state: &ClientState<HostFunctionsManager>,
+	block_number: u64,
+) -> Result<LightClientUpdate<SYNC_COMMITTEE_SIZE>, ClientError> {
+	let sync_committee_prover = client.prover();
+
+	let block_id = format!("{block_number:?}");
+	// let block_id = "head";
+
+	let client_state = &eth_client_state.inner;
+	// let block_id = "head";
+
+	let block_header = sync_committee_prover.fetch_header(&block_id).await?;
+
+	let block = sync_committee_prover.fetch_block(&block_header.slot.to_string()).await?;
+	let state = sync_committee_prover.fetch_beacon_state(&block_header.slot.to_string()).await?;
+
+	let mut ancestor_blocks = vec![];
+	for i in (client_state.finalized_header.slot + 1)..block_header.slot {
+		if let Ok(ancestor_header) =
+			sync_committee_prover.fetch_header(i.to_string().as_str()).await
+		{
+			// let ancestry_proof =
+			// 	prove_block_roots_proof(finalized_state.clone(), ancestor_header.clone())?;
+			let header_state =
+				sync_committee_prover.fetch_beacon_state(i.to_string().as_str()).await?;
+			let execution_payload_proof = prove_execution_payload(header_state)?;
+			ancestor_blocks.push(AncestorBlock {
+				header: ancestor_header,
+				execution_payload: execution_payload_proof,
+				ancestry_proof: AncestryProof::BlockRoots {
+					block_roots_proof: BlockRootsProof {
+						block_header_index: 0,
+						block_header_branch: vec![],
+					},
+					block_roots_branch: vec![],
+				},
+			})
+		}
+	}
+
+	let ep = block.body.execution_payload;
+	let execution_payload_proof = ExecutionPayloadProof {
+		state_root: ep.state_root,
+		block_number: ep.block_number,
+		multi_proof: vec![],
+		execution_payload_branch: vec![],
+		timestamp: ep.timestamp,
+	};
+	let mut light_client_update = LightClientUpdate {
+		attested_header: Default::default(),
+		sync_committee_update: Default::default(),
+		finalized_header: Default::default(),
+		execution_payload: execution_payload_proof,
+		finality_proof: Default::default(),
+		sync_aggregate: Default::default(),
+		signature_slot: Default::default(),
+		ancestor_blocks,
+	};
+	light_client_update.attested_header.slot = block_header.slot;
+	light_client_update.finalized_header.slot = block_header.slot;
+
 	Ok(light_client_update)
 }

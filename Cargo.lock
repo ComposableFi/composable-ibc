@@ -5219,7 +5219,6 @@ dependencies = [
  "ibc-proto",
  "prost 0.11.6",
  "serde",
- "serde_json",
  "tendermint-proto",
 ]
 

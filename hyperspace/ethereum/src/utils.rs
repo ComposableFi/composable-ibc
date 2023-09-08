@@ -2,12 +2,14 @@ use crate::contract::UnwrapContractError;
 use ethers::{
 	abi::{AbiError, Address, Detokenize, EventExt, Function, FunctionExt, Token, Tokenize},
 	contract::{ContractInstance, FunctionCall},
+	core::types::Bytes,
 	prelude::{
 		EthEvent, Event, Filter, Http, LocalWallet, Middleware, Provider, TransactionReceipt, H256,
 	},
 };
 use ethers_solc::artifacts::{Storage, StorageLayout};
 use ibc::core::ics04_channel::packet::Packet;
+use std::iter;
 
 pub type ProviderImpl = ethers::prelude::SignerMiddleware<Provider<Http>, LocalWallet>;
 
@@ -50,6 +52,7 @@ pub struct DeployYuiIbc<B, M> {
 	pub diamond: ContractInstance<B, M>,
 	pub storage_layout: StorageLayout,
 	pub tendermint: ContractInstance<B, M>,
+	pub bank: Option<ContractInstance<B, M>>,
 }
 
 impl<B, M> DeployYuiIbc<B, M>
@@ -241,6 +244,11 @@ where
 		(client_id, (receipt.block_hash.unwrap(), receipt.transaction_hash))
 	}
 
+	pub async fn create_client_calldata(&self, msg: Token) -> Bytes {
+		let method = self.method::<_, String>("createClient", (msg,)).unwrap();
+		method.calldata().unwrap()
+	}
+
 	pub async fn update_client(&self, msg: Token) {
 		let method = self.method::<_, ()>("updateClient", (msg,)).unwrap();
 
@@ -250,6 +258,11 @@ where
 
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
 		assert_eq!(receipt.status, Some(1.into()));
+	}
+
+	pub async fn update_client_calldata(&self, msg: Token) -> Bytes {
+		let method = self.method::<_, ()>("updateClient", (msg,)).unwrap();
+		method.calldata().unwrap()
 	}
 
 	pub async fn connection_open_ack(&self, msg: Token) {
@@ -263,6 +276,11 @@ where
 		assert_eq!(receipt.status, Some(1.into()));
 	}
 
+	pub async fn connection_open_ack_calldata(&self, msg: Token) -> Bytes {
+		let method = self.method::<_, ()>("connectionOpenAck", (msg,)).unwrap();
+		method.calldata().unwrap()
+	}
+
 	pub async fn connection_open_try(&self, msg: Token) -> String {
 		let method = self.method::<_, String>("connectionOpenTry", (msg,)).unwrap();
 
@@ -273,6 +291,11 @@ where
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
 		assert_eq!(receipt.status, Some(1.into()));
 		id
+	}
+
+	pub async fn connection_open_try_calldata(&self, msg: Token) -> Bytes {
+		let method = self.method::<_, String>("connectionOpenTry", (msg,)).unwrap();
+		method.calldata().unwrap()
 	}
 
 	pub async fn connection_open_init(&self, msg: Token) -> (String, (H256, H256)) {
@@ -288,6 +311,11 @@ where
 		(id, tx_id)
 	}
 
+	pub async fn connection_open_init_calldata(&self, msg: Token) -> Bytes {
+		let method = self.method::<_, String>("connectionOpenInit", (msg,)).unwrap();
+		method.calldata().unwrap()
+	}
+
 	pub async fn connection_open_confirm(&self, msg: Token) {
 		let method = self.method::<_, ()>("connectionOpenConfirm", (msg,)).unwrap();
 
@@ -297,6 +325,11 @@ where
 
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
 		assert_eq!(receipt.status, Some(1.into()));
+	}
+
+	pub async fn connection_open_confirm_calldata(&self, msg: Token) -> Bytes {
+		let method = self.method::<_, ()>("connectionOpenConfirm", (msg,)).unwrap();
+		method.calldata().unwrap()
 	}
 
 	pub async fn channel_open_init(&self, msg: Token) -> (String, (H256, H256)) {
@@ -313,6 +346,11 @@ where
 		(connection_id, tx_id)
 	}
 
+	pub async fn channel_open_init_calldata(&self, msg: Token) -> Bytes {
+		let method = self.method::<_, String>("channelOpenInit", (msg,)).unwrap();
+		method.calldata().unwrap()
+	}
+
 	pub async fn channel_open_try(&self, msg: Token) -> String {
 		let method = self.method::<_, String>("channelOpenTry", (msg,)).unwrap();
 
@@ -323,6 +361,11 @@ where
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
 		assert_eq!(receipt.status, Some(1.into()));
 		connection_id
+	}
+
+	pub async fn channel_open_try_calldata(&self, msg: Token) -> Bytes {
+		let method = self.method::<_, String>("channelOpenTry", (msg,)).unwrap();
+		method.calldata().unwrap()
 	}
 
 	pub async fn send_and_get_tuple(&self, msg: Token, method_name: impl AsRef<str>) -> () {
@@ -337,9 +380,18 @@ where
 		ret
 	}
 
+	pub async fn send_and_get_tuple_calldata(
+		&self,
+		msg: Token,
+		method_name: impl AsRef<str>,
+	) -> Bytes {
+		let method = self.method::<_, ()>(method_name.as_ref(), (msg,)).unwrap();
+		method.calldata().unwrap()
+	}
+
 	pub fn function(&self, name: &str) -> ethers::abi::Result<&Function> {
 		let mut func = None;
-		for faucet in &self.deployed_facets {
+		for faucet in self.deployed_facets.iter().chain(iter::once(&self.diamond)) {
 			if let Ok(f) = faucet.abi().function(name) {
 				log::info!(target: "hyperspace_ethereum", "found function: {name}, {}, {}, {}", f.signature(), f.abi_signature(), hex::encode(&f.short_signature()));
 				if func.is_some() {
@@ -440,6 +492,7 @@ where
 			diamond: self.diamond.clone(),
 			storage_layout: self.storage_layout.clone(),
 			tendermint: self.tendermint.clone(),
+			bank: self.bank.clone(),
 		}
 	}
 }

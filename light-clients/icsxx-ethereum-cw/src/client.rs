@@ -91,7 +91,11 @@ where
 		let client_states = ReadonlyClientStates::new(self.storage());
 		let data = client_states.get().ok_or_else(|| Error::client_not_found(client_id.clone()))?;
 		let state = Self::decode_client_state(&data)?;
-		log!(self, "in client : [client_state] >> any client_state: {:?}", state);
+		log!(
+			self,
+			"in client : [client_state] >> any client_state: height {}",
+			state.latest_height()
+		);
 		Ok(state)
 	}
 
@@ -106,11 +110,11 @@ where
 		let value = consensus_states
 			.get(height)
 			.ok_or_else(|| Error::consensus_state_not_found(client_id.clone(), height))?;
-		log!(
-			self,
-			"in client : [consensus_state] >> consensus_state (raw): {}",
-			hex::encode(&value)
-		);
+		// log!(
+		// 	self,
+		// 	"in client : [consensus_state] >> consensus_state (raw): {}",
+		// 	hex::encode(&value)
+		// );
 		let any_consensus_state = Self::decode_consensus_state(&value)?;
 		log!(
 			self,
@@ -205,8 +209,13 @@ where
 		log!(self, "in client : [store_client_state]");
 		let client_states = ReadonlyClientStates::new(self.storage());
 		let data = client_states.get().ok_or_else(|| Error::client_not_found(client_id.clone()))?;
+		log!(
+			self,
+			"in cliden : [store_client_state] >> wasm client state, height {}",
+			client_state.latest_height()
+		);
 		let vec1 = Self::encode_client_state(client_state, data)?;
-		log!(self, "in cliden : [store_client_state] >> wasm client state (raw)");
+		// log!(self, "in cliden : [store_client_state] >> wasm client state (raw)");
 		let mut client_state_storage = ClientStates::new(self.storage_mut());
 		client_state_storage.insert(vec1);
 		Ok(())

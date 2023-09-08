@@ -345,6 +345,13 @@ impl AnyConsensusState {
 			inner: Box::new(inner),
 		}))
 	}
+
+	pub fn unpack_recursive(&self) -> &Self {
+		match self {
+			Self::Wasm(wasm_state) => wasm_state.inner.unpack_recursive(),
+			c => c,
+		}
+	}
 }
 
 #[derive(Clone, Debug, ClientMessage)]
