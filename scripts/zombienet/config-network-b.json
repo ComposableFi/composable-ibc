@@ -12,7 +12,7 @@
                 "command": "parachain-node",
                 "name": "alice",
                 "prometheus_port": 39998,
-                "ws_port": 9188
+                "ws_port": 9988
             },
             "id": 2001
         }
