@@ -173,6 +173,7 @@ impl pallet_assets::Config for Test {
 	type AssetIdParameter = Self::AssetId;
 
 	type CallbackHandle = ();
+	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = ();
 }
 
