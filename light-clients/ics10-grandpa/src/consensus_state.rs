@@ -81,8 +81,7 @@ impl ConsensusState {
 		let duration = core::time::Duration::from_millis(timestamp);
 		let timestamp = Timestamp::from_nanoseconds(duration.as_nanos().saturated_into::<u64>())?
 			.into_tm_time()
-			.ok_or_else(|| anyhow!(format!("Error decoding Timestamp, timestamp cannot be zero: timestamp: {}, &parachain_header_proof.extrinsic: {:?}", timestamp, &parachain_header_proof.extrinsic)))?;
-
+			.ok_or_else(|| anyhow!("Error decoding Timestamp, timestamp cannot be zero"))?;
 		Ok((
 			Height::new(para_id as u64, parachain_header.number as u64),
 			Self { root: root.into(), timestamp },
