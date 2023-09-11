@@ -324,7 +324,7 @@ pub async fn query_ready_and_timed_out_packets(
 					// creation height on source chain
 					if packet_height > latest_source_height_on_sink.revision_height {
 						// Sink does not have client update required to prove recv packet message
-						log::debug!(target: "hyperspace", "Skipping packet {:?} as sink does not have client update required to prove recv packet message", packet);
+						log::debug!(target: "hyperspace", "Skipping packet as sink does not have client update required to prove recv packet message: {:?}", packet);
 						recv_packets_count.fetch_add(1, Ordering::SeqCst);
 						return Ok(None)
 					}
@@ -342,7 +342,7 @@ pub async fn query_ready_and_timed_out_packets(
 					{
 						proof_height
 					} else {
-						log::trace!(target: "hyperspace", "Skipping packet {:?} as no proof height could be found", packet);
+						log::trace!(target: "hyperspace", "Skipping packet as no proof height could be found: {:?}", packet);
 						return Ok(None)
 					};
 

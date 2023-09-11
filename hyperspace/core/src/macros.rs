@@ -45,7 +45,7 @@ macro_rules! chains {
 			)*
 		}
 
-		#[derive(Clone)]
+		#[derive(Clone, Debug)]
 		pub enum AnyAssetId {
 			$(
 				$(#[$($meta)*])*

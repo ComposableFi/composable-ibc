@@ -614,7 +614,7 @@ impl primitives::TestProvider for EthereumClient {
 	async fn send_transfer(&self, params: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
 		let params = (
 			params.token.denom.to_string(),
-			params.token.amount.as_u256().as_u64(),
+			params.token.amount.as_u256(),
 			params.receiver.to_string(),
 			params.source_port.to_string(),
 			params.source_channel.to_string(),

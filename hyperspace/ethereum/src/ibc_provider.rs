@@ -69,7 +69,9 @@ use ssz_rs::Merkleized;
 use thiserror::Error;
 
 use crate::{
-	chain::{client_state_from_abi_token, tm_header_from_abi_token},
+	chain::{
+		client_state_from_abi_token, consensus_state_from_abi_token, tm_header_from_abi_token,
+	},
 	prove::prove_fast,
 };
 use ibc::{
@@ -95,6 +97,7 @@ use ibc_proto::{
 	},
 };
 use ibc_rpc::{IbcApiClient, PacketInfo};
+use ics07_tendermint::consensus_state::ConsensusState as TmConsensusState;
 use icsxx_ethereum::{
 	client_message::ClientMessage, client_state::ClientState, consensus_state::ConsensusState,
 };
@@ -332,13 +335,13 @@ impl IbcProvider for EthereumClient {
 
 	// TODO: this function is mostly used in tests and in 'fishing' mode.
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
-		let ibc_address = self.config.ibc_handler_address;
+		let ibc_address = self.yui.diamond.address();
 		let client = self.clone();
 
 		let ws = self.websocket_provider().await.unwrap();
 		(async_stream::stream! {
 			let mut events_stream = ws.subscribe_logs(
-				 &Filter::new().from_block(BlockNumber::Latest).address(ibc_address),
+				 &Filter::new().from_block(BlockNumber::Earliest).address(ibc_address),
 			)
 			.await
 			.unwrap()
@@ -347,24 +350,19 @@ impl IbcProvider for EthereumClient {
 				let height = Height::new(0, log.block_number.unwrap().as_u64());
 				let topic0 = log.topics[0];
 
-				// let mut maybe_ibc_event = if topic0 == CreateClientFilter::signature() {
-				// 	let event = CreateClientFilter::decode_log(&raw_log).expect("decode event");
-				// 	IbcEvent::try_from_event(&client, event, log, height).await
-				// } else {
+				let mut maybe_ibc_event = if topic0 == UpdateClientHeightFilter::signature() {
+					let event = UpdateClientHeightFilter::decode_log(&raw_log).expect("decode event");
+					 let topic1 = H256::from_slice(&encode(&[Token::FixedBytes(
+						 keccak256("07-tendermint-0".to_string().into_bytes()).to_vec(),
+					 )]));
+				} else {
 					log::error!(target: "hyperspace_ethereum",
 						"unknown event: {}",
 						log.log_type.unwrap_or(format!("{topic0:?}"))
 					);
-					return None
-				// };
+				};
 
-				// match maybe_ibc_event {
-				// 	Ok(ev) => Some(ev),
-				// 	Err(err) => {
-				// 		log::error!(target: "hyperspace_ethereum", "failed to decode event: {err}");
-				// 		None
-				// 	},
-				// }
+				Some(IbcEvent::Empty("".into()))
 			}).boxed();
 
 			while let Some(ev) = events_stream.next().await {
@@ -380,6 +378,9 @@ impl IbcProvider for EthereumClient {
 		client_id: ClientId,
 		consensus_height: Height,
 	) -> Result<QueryConsensusStateResponse, Self::Error> {
+		log::info!(target: "hyperspace_ethereum", "query_client_consensus: {client_id:?}, {consensus_height:?}");
+
+		/*
 		let binding = self
 			.yui
 			.method(
@@ -405,9 +406,150 @@ impl IbcProvider for EthereumClient {
 			.unwrap();
 
 		let proof_height = Some(at.into());
-		let consensus_state = google::protobuf::Any::decode(&*client_cons).ok();
+		let mut cs = client_state_from_abi_token::<LocalClientTypes>(client_state_token)?;
+		 */
 
-		Ok(QueryConsensusStateResponse { consensus_state, proof: vec![0], proof_height })
+		// First, we try to find an `UpdateClient` event at the given height...
+		let mut consensus_state = None;
+		let mut event_filter = self
+			.yui
+			.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
+			.expect("contract is missing UpdateClient event")
+			.to_block(at.revision_height)
+			.from_block(at.revision_height);
+		// .from_block(BlockNumber::Earliest)
+		// .to_block(BlockNumber::Latest);
+		event_filter.filter = event_filter
+			.filter
+			.topic1({
+				let hash = H256::from_slice(&encode(&[Token::FixedBytes(
+					keccak256(client_id.to_string().into_bytes()).to_vec(),
+				)]));
+				ValueOrArray::Value(hash)
+			})
+			.topic2({
+				let height_bytes = encode(&[Token::Tuple(vec![
+					Token::Uint(consensus_height.revision_number.into()),
+					Token::Uint(consensus_height.revision_height.into()),
+				])]);
+				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+					keccak256(&height_bytes).to_vec(),
+				)])))
+			});
+		let maybe_log = self
+			.yui
+			.diamond
+			.client()
+			.get_logs(&event_filter.filter)
+			.await
+			.unwrap()
+			.pop() // get only the last event
+			;
+		let batch_func = self.yui.function("callBatch")?;
+		match maybe_log {
+			Some(log) => {
+				let tx_hash = log.transaction_hash.expect("tx hash should exist");
+				let func = self.yui.function("updateClient")?;
+				let tx =
+					self.client().get_transaction(tx_hash).await.unwrap().ok_or_else(|| {
+						ClientError::Other(format!("transaction not found: {}", tx_hash))
+					})?;
+				let Token::Array(batch_calldata) =
+					batch_func.decode_input(&tx.input[4..])?.pop().unwrap()
+				else {
+					return Err(ClientError::Other("batch calldata not found".to_string()))
+				};
+
+				for input_tok in batch_calldata.into_iter().rev() {
+					let Token::Bytes(input) = input_tok else { panic!() };
+					if input[..4] == func.short_signature() {
+						let calldata = func.decode_input(&input[4..])?.pop().unwrap();
+						let Token::Tuple(toks) = calldata else { panic!() };
+						let header = tm_header_from_abi_token(toks[1].clone())?;
+						consensus_state = Some(TmConsensusState {
+							timestamp: header.signed_header.header.time,
+							root: CommitmentRoot {
+								bytes: header.signed_header.header.app_hash.as_bytes().to_owned(),
+							},
+							next_validators_hash: header.signed_header.header.next_validators_hash,
+						});
+						// TODO: figure out how to distinguish between the same function calls
+						log::info!(target: "hyperspace_ethereum", "query_client_consensus FOUND");
+
+						let proof_height = Some(at.into());
+						return Ok(QueryConsensusStateResponse {
+							consensus_state: Some(
+								consensus_state.expect("should always be initialized").to_any(),
+							),
+							proof: vec![0],
+							proof_height,
+						})
+					}
+				}
+				// TODO: handle frozen height
+			},
+			None => {},
+		}
+
+		log::trace!(target: "hyperspace_ethereum", "no update client event found for blocks ..{at}, looking for a create client event...");
+
+		// ...otherwise, try to get the `CreateClient` event
+		log::info!(target: "hyperspace_ethereum", "qconss {}", line!());
+		let mut event_filter = self
+			.yui
+			.event_for_name::<CreateClientFilter>("CreateClient")
+			.expect("contract is missing CreateClient event")
+			.from_block(BlockNumber::Earliest)
+			.to_block(at.revision_height);
+		event_filter.filter = event_filter.filter.topic1({
+			let hash = H256::from_slice(&encode(&[Token::FixedBytes(
+				keccak256(client_id.to_string().into_bytes()).to_vec(),
+			)]));
+			ValueOrArray::Value(hash)
+		});
+		log::info!(target: "hyperspace_ethereum", "qconss {}", line!());
+		let log = self
+			.yui
+			.diamond
+			.client()
+			.get_logs(&event_filter.filter)
+			.await
+			.unwrap()
+			.pop() // get only the last event
+			.ok_or_else(|| ClientError::Other("no events found".to_string()))?;
+		log::info!(target: "hyperspace_ethereum", "qconss {}", line!());
+
+		let tx_hash = log.transaction_hash.expect("tx hash should exist");
+		let func = self.yui.function("createClient")?;
+		let tx = self
+			.client()
+			.get_transaction(tx_hash)
+			.await
+			.unwrap()
+			.ok_or_else(|| ClientError::Other(format!("transaction not found: {}", tx_hash)))?;
+
+		let Token::Array(batch_calldata) = batch_func.decode_input(&tx.input[4..])?.pop().unwrap()
+		else {
+			return Err(ClientError::Other("batch calldata not found".to_string()))
+		};
+
+		for input_tok in batch_calldata.into_iter().rev() {
+			let Token::Bytes(input) = input_tok else { panic!() };
+			log::info!("sig = {:?}", func.short_signature());
+			if input[..4] == func.short_signature() {
+				let calldata = func.decode_input(&input[4..])?.pop().unwrap();
+				let Token::Tuple(toks) = calldata else { panic!() };
+				let consensus_state_token = toks[2].clone();
+				consensus_state = Some(consensus_state_from_abi_token(consensus_state_token)?);
+				break
+			}
+		}
+
+		let proof_height = Some(at.into());
+		let any = consensus_state.expect("should always be initialized").to_any();
+		log::info!(target: "hyperspace_ethereum", "query_client_consensus FOUND");
+
+		Ok(QueryConsensusStateResponse { consensus_state: Some(any), proof: vec![0], proof_height })
 	}
 
 	async fn query_client_state(
@@ -976,7 +1118,8 @@ impl IbcProvider for EthereumClient {
 			.from_block(BlockNumber::Earliest) // TODO: use contract creation height
 			.to_block(BlockNumber::Latest)
 			.topic1(ValueOrArray::Array(
-				seqs.into_iter()
+				seqs.clone()
+					.into_iter()
 					.map(|seq| {
 						let bytes = encode(&[Token::Uint(seq.into())]);
 						H256::from_slice(bytes.as_slice())
@@ -1024,9 +1167,12 @@ impl IbcProvider for EthereumClient {
 		let counterparty = channel.counterparty.expect("counterparty is none");
 		Ok(logs
 			.into_iter()
-			.map(move |log| {
+			.filter_map(move |log| {
 				let value = SendPacketFilter::decode_log(&log.clone().into()).unwrap();
-				PacketInfo {
+				if !seqs.contains(&value.sequence) {
+					return None
+				}
+				Some(PacketInfo {
 					height: Some(log.block_number.unwrap().as_u64().into()),
 					source_port: source_port.clone(),
 					source_channel: source_channel.clone(),
@@ -1041,7 +1187,7 @@ impl IbcProvider for EthereumClient {
 						.unwrap()
 						.to_string(),
 					ack: None,
-				}
+				})
 			})
 			.collect())
 	}
@@ -1092,7 +1238,8 @@ impl IbcProvider for EthereumClient {
 			.from_block(BlockNumber::Earliest) // TODO: use contract creation height
 			.to_block(BlockNumber::Latest)
 			.topic3(ValueOrArray::Array(
-				seqs.into_iter()
+				seqs.clone()
+					.into_iter()
 					.map(|seq| {
 						let bytes = encode(&[Token::Uint(seq.into())]);
 						H256::from_slice(bytes.as_slice())
@@ -1120,9 +1267,13 @@ impl IbcProvider for EthereumClient {
 
 		Ok(logs
 			.into_iter()
-			.map(move |log| {
+			.filter_map(move |log| {
 				let value = RecvPacketFilter::decode_log(&log.clone().into()).unwrap();
-				PacketInfo {
+				if !seqs.contains(&value.sequence) {
+					return None
+				}
+
+				Some(PacketInfo {
 					height: Some(log.block_number.unwrap().as_u64().into()),
 					source_port: value.source_port.clone(),
 					source_channel: value.source_channel.clone(),
@@ -1137,7 +1288,7 @@ impl IbcProvider for EthereumClient {
 						.unwrap()
 						.to_string(),
 					ack: acks_map.get(&value.sequence).cloned(),
-				}
+				})
 			})
 			.collect())
 	}
@@ -1151,6 +1302,7 @@ impl IbcProvider for EthereumClient {
 		client_id: ClientId,
 		client_height: Height,
 	) -> Result<(Height, Timestamp), Self::Error> {
+		log::info!(target: "hyperspace_ethereum", "query_client_update_time_and_height: {client_id:?}, {client_height:?}");
 		let event_filter = self
 			.yui
 			.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
@@ -1180,7 +1332,7 @@ impl IbcProvider for EthereumClient {
 			.await
 			.unwrap()
 			.pop()
-			.unwrap();
+			.ok_or_else(|| Self::Error::Other("no logs found".to_owned()))?;
 
 		let height = Height::new(0, log.block_number.expect("block number is none").as_u64());
 

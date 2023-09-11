@@ -1,5 +1,6 @@
 // use base2::Base2;
 use crate::client::{ClientError, EthereumClient};
+use anyhow::anyhow;
 use ethereum_consensus::{
 	altair::mainnet::SYNC_COMMITTEE_SIZE,
 	bellatrix::compute_domain,
@@ -8,7 +9,10 @@ use ethereum_consensus::{
 	signing::compute_signing_root,
 	state_transition::Context,
 };
-use ethers::prelude::{EthCall, H256};
+use ethers::{
+	core::{rand, rand::Rng},
+	prelude::{EthCall, H256},
+};
 use icsxx_ethereum::client_state::ClientState;
 use pallet_ibc::light_clients::HostFunctionsManager;
 use primitives::mock::LocalClientTypes;
@@ -29,7 +33,7 @@ use sync_committee_prover::{
 	prove_sync_committee_update, SyncCommitteeProver,
 };
 use sync_committee_verifier::{verify_sync_committee_attestation, SignatureVerifier};
-use tokio::time;
+use tokio::{task::JoinSet, time, time::sleep};
 // use tokio_stream::{wrappers::IntervalStream, StreamExt};
 
 pub async fn prove(
@@ -243,29 +247,48 @@ pub async fn prove_fast(
 	let block = sync_committee_prover.fetch_block(&block_header.slot.to_string()).await?;
 	let state = sync_committee_prover.fetch_beacon_state(&block_header.slot.to_string()).await?;
 
+	let from = client_state.finalized_header.slot + 1;
+	let to = block_header.slot;
+	let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+	let range = (from..to).collect::<Vec<_>>();
+	let delay = 5000;
 	let mut ancestor_blocks = vec![];
-	for i in (client_state.finalized_header.slot + 1)..block_header.slot {
-		if let Ok(ancestor_header) =
-			sync_committee_prover.fetch_header(i.to_string().as_str()).await
-		{
-			// let ancestry_proof =
-			// 	prove_block_roots_proof(finalized_state.clone(), ancestor_header.clone())?;
-			let header_state =
-				sync_committee_prover.fetch_beacon_state(i.to_string().as_str()).await?;
-			let execution_payload_proof = prove_execution_payload(header_state)?;
-			ancestor_blocks.push(AncestorBlock {
-				header: ancestor_header,
-				execution_payload: execution_payload_proof,
-				ancestry_proof: AncestryProof::BlockRoots {
-					block_roots_proof: BlockRootsProof {
-						block_header_index: 0,
-						block_header_branch: vec![],
-					},
-					block_roots_branch: vec![],
-				},
-			})
+	for heights in range.chunks(100) {
+		for i in heights.iter().copied() {
+			let duration = Duration::from_millis(rand::thread_rng().gen_range(1..delay) as u64);
+			let sync_committee_prover = sync_committee_prover.clone();
+			join_set.spawn(async move {
+				sleep(duration).await;
+
+				if let Ok(ancestor_header) =
+					sync_committee_prover.fetch_header(i.to_string().as_str()).await
+				{
+					// let ancestry_proof =
+					// 	prove_block_roots_proof(finalized_state.clone(), ancestor_header.clone())?;
+					let header_state =
+						sync_committee_prover.fetch_beacon_state(i.to_string().as_str()).await?;
+					let execution_payload_proof = prove_execution_payload(header_state)?;
+					return Ok(AncestorBlock {
+						header: ancestor_header,
+						execution_payload: execution_payload_proof,
+						ancestry_proof: AncestryProof::BlockRoots {
+							block_roots_proof: BlockRootsProof {
+								block_header_index: 0,
+								block_header_branch: vec![],
+							},
+							block_roots_branch: vec![],
+						},
+					})
+				}
+				Err(anyhow::anyhow!("Could not fetch ancestor block"))
+			});
+		}
+		while let Some(res) = join_set.join_next().await {
+			let out = res.map_err(|e| anyhow!("{e}"))??;
+			ancestor_blocks.push(out);
 		}
 	}
+	ancestor_blocks.sort_by_key(|ancestor_block| ancestor_block.header.slot);
 
 	let ep = block.body.execution_payload;
 	let execution_payload_proof = ExecutionPayloadProof {
