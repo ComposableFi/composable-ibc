@@ -264,11 +264,7 @@ where
 		} else {
 			let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 				// we cast between the same type but different crate versions.
-				&*unsafe {
-					unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(
-						self.relay_ws_client.clone(),
-					)
-				},
+				&*self.relay_ws_client.clone(),
 				latest_finalized_height,
 			)
 			.await?

@@ -364,14 +364,8 @@ where
 				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
 		);
 
-		let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
-			unsafe_cast_to_jsonrpsee_client(&para_ws_client)
-		})
-		.await?;
-		let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
-			unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
-		})
-		.await?;
+		let para_client = subxt::OnlineClient::from_rpc_client(para_ws_client.clone()).await?;
+		let relay_client = subxt::OnlineClient::from_rpc_client(relay_ws_client.clone()).await?;
 
 		self.relay_ws_client = relay_ws_client;
 		self.para_ws_client = para_ws_client;

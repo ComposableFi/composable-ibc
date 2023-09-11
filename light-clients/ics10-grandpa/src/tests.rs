@@ -193,9 +193,7 @@ async fn test_continuous_update_of_grandpa_client() {
 	ctx.store_client_result(res.result).unwrap();
 	let subscription =
 		GrandpaApiClient::<JustificationNotification, H256, u32>::subscribe_justifications(
-			&*unsafe {
-				unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(prover.relay_ws_client.clone())
-			},
+			&*prover.relay_ws_client.clone(),
 		)
 		.await
 		.expect("Failed to subscribe to grandpa justifications");

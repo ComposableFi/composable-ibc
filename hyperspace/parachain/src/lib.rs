@@ -209,15 +209,9 @@ where
 				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
 		);
 
-		let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
-			unsafe_cast_to_jsonrpsee_client(&para_ws_client)
-		})
-		.await?;
+		let para_client = subxt::OnlineClient::from_rpc_client(para_ws_client.clone()).await?;
 
-		let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
-			unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
-		})
-		.await?;
+		let relay_client = subxt::OnlineClient::from_rpc_client(relay_ws_client.clone()).await?;
 
 		let max_extrinsic_weight = fetch_max_extrinsic_weight(&para_client).await?;
 
@@ -294,8 +288,8 @@ where
 {
 	/// Returns a grandpa proving client.
 	pub fn grandpa_prover(&self) -> GrandpaProver<T> {
-		let relay_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.relay_ws_client) };
-		let para_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.para_ws_client) };
+		let relay_ws_client = self.relay_ws_client.clone();
+		let para_ws_client = self.para_ws_client.clone();
 		GrandpaProver {
 			relay_client: self.relay_client.clone(),
 			relay_ws_client,
@@ -578,8 +572,8 @@ where
 		<T as subxt::Config>::Hash: From<H256>,
 		<T as subxt::Config>::Header: Decode,
 	{
-		let relay_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.relay_ws_client) };
-		let para_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.para_ws_client) };
+		let relay_ws_client = self.relay_ws_client.clone();
+		let para_ws_client = self.para_ws_client.clone();
 		let prover = GrandpaProver {
 			relay_client: self.relay_client.clone(),
 			relay_ws_client,
