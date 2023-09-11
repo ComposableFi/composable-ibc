@@ -23,6 +23,7 @@ extern crate alloc;
 
 use alloc::collections::BTreeMap;
 use codec::{Decode, Encode};
+use frame_support::Printable;
 use core::fmt::Debug;
 use sp_consensus_grandpa::{AuthorityId, AuthorityList, AuthoritySignature};
 use sp_core::{ed25519, sp_std, H256};
@@ -118,5 +119,16 @@ pub fn parachain_header_storage_key(para_id: u32) -> StorageKey {
 	let encoded_para_id = para_id.encode();
 	storage_key.extend_from_slice(sp_io::hashing::twox_64(&encoded_para_id).as_slice());
 	storage_key.extend_from_slice(&encoded_para_id);
+	let key = hex::encode(&storage_key);
+	log::info!(
+		target: "hyperspace",
+		"storage key for para_id {} is {:?}",
+		para_id,
+		key);
+	//from polkadot js org
+	//0xcd710b30bd2eab0352ddcc26417aa1941b3c252fcb29d88eff4f3de5de4476c363f5a4efb16ffa83d0070000
+	//from log
+	//0xcd710b30bd2eab0352ddcc26417aa1941b3c252fcb29d88eff4f3de5de4476c363f5a4efb16ffa83d0070000
+	//the same
 	StorageKey(storage_key)
 }

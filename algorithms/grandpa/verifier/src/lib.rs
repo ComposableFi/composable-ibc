@@ -27,6 +27,7 @@ use codec::{Decode, Encode};
 use finality_grandpa::Chain;
 use hash_db::Hasher;
 use light_client_common::state_machine;
+use sp_runtime::traits::BlakeTwo256;
 use primitives::{
 	error,
 	justification::{find_scheduled_change, AncestryChain, GrandpaJustification},
@@ -35,7 +36,7 @@ use primitives::{
 };
 use sp_core::H256;
 use sp_runtime::traits::Header;
-use sp_trie::{LayoutV0, StorageProof};
+use sp_trie::{LayoutV0, StorageProof, TrieDBBuilder, LayoutV1};
 
 #[cfg(test)]
 mod tests;
@@ -130,12 +131,97 @@ where
 		// https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
 		let key = codec::Compact(0u32).encode();
 		// verify extrinsic proof for timestamp extrinsic
+		// dbg!(extrinsic_proof);
+		// dbg!(extrinsic_proof);
+		
+		use sp_trie::Trie;
+		use crate::alloc::string::ToString;
+		let mut s = vec!["test".to_string()];
+		let trie_proof = extrinsic_proof.clone();
+		let proof = StorageProof::new(trie_proof);
+		use sp_trie::TrieLayout;
+		use trie_db::NodeCodec;
+		use trie_db::node::Node;
+		for node_data in proof.iter_nodes(){
+			let node = <LayoutV1<Host::BlakeTwo256> as TrieLayout>::Codec::decode(&mut &node_data[..]).unwrap();
+			match node{
+				Node::Empty => {
+					log::info!("node: empty");
+					log::info!(target: "hyperspace", "node: empty");
+				}
+				Node::Branch(v, Some(_)) => {
+					log::info!("branch");
+					log::info!(target: "hyperspace", "branch");
+				}
+				Node::NibbledBranch(v, _, Some(_)) => {
+					log::info!("nibbled branch");
+					log::info!(target: "hyperspace", "nibbled branch");
+				}
+				Node::Leaf(v, _) => {
+					log::info!("leaf");
+					log::info!(target: "hyperspace", "leaf");
+				}
+				_ => {
+					log::info!("not empty");
+					log::info!(target: "hyperspace", "not empty");
+				}
+			}
+		}
+		// let root = H256::from_slice(parachain_header.state_root().as_bytes());
+		// let memory_db = proof.into_memory_db::<Host::BlakeTwo256>();
+		// let trie = TrieDBBuilder::<sp_trie::LayoutV0<Host::BlakeTwo256>>::new(&memory_db, &root).build();
+		// let t = trie.key_iter().unwrap();
+		
+		// // //iterate over t
+		// for k in t{
+		// 	let key = k.clone().unwrap_or_default();
+		// 	let key = hex::encode(&key);
+		// 	log::info!("key: {}", key);
+		// 	log::info!(target: "hyperspace", "key: {}", key);
+		// 	s.push(key);
+		// }
+		
+
 		sp_trie::verify_trie_proof::<LayoutV0<Host::BlakeTwo256>, _, _, _>(
-			parachain_header.extrinsics_root(),
+			parachain_header.state_root(),
 			&extrinsic_proof,
 			&vec![(key, Some(&extrinsic[..]))],
 		)
-		.map_err(|_| anyhow!("Invalid extrinsic proof"))?;
+		.map_err(|e| {
+				match e {
+					sp_trie::VerifyError::DuplicateKey(_) => {
+						panic!("DuplicateKey extrinsic proof, duplicate key");
+					}
+					sp_trie::VerifyError::ExtraneousNode => {
+						panic!("ExtraneousNode extrinsic proof, invalid proof");
+					}
+					sp_trie::VerifyError::ExtraneousValue(_) => {
+						panic!("ExtraneousValue extrinsic proof, invalid value");
+					}
+					sp_trie::VerifyError::ExtraneousHashReference(_) => {
+						panic!("ExtraneousHashReference extrinsic proof, incomplete proof");
+					}
+					sp_trie::VerifyError::InvalidChildReference(_) => {
+						panic!("InvalidChildReference extrinsic proof, incomplete proof");
+					}
+					sp_trie::VerifyError::ValueMismatch(_) => {
+						panic!("ValueMismatch extrinsic proof, incomplete proof");
+					}
+					sp_trie::VerifyError::IncompleteProof => {
+						panic!("IncompleteProof extrinsic proof, incomplete proof");
+					}
+					sp_trie::VerifyError::RootMismatch(e) => {
+						// panic!("RootMismatch extrinsic proof, invalid proof: {e}");
+						panic!("RootMismatch extrinsic proof, invalid proof: {e}, {s:?}");
+					}
+					sp_trie::VerifyError::DecodeError(_) => {
+						panic!("DecodeError extrinsic proof, invalid value");
+					}
+					_ => {}
+				}
+				anyhow!("Invalid extrinsic proof"
+			)}
+		)?;
 	}
 
 	// 4. set new client state, optionally rotating authorities

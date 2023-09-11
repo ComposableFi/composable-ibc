@@ -242,7 +242,7 @@ where
 				ICS02Error::implementation_specific(format!("Invalid extrinsic proof"))
 			})?;
 
-			let (_, _, timestamp): (u8, u8, Compact<u64>) = codec::Decode::decode(&mut &ext[2..])
+			let (_, _, timestamp): (u8, u8, Compact<u64>) = codec::Decode::decode(&mut &ext[ext.len()-7..])
 				.map_err(|err| {
 				ICS02Error::implementation_specific(format!("Failed to decode extrinsic: {err:?}"))
 			})?;

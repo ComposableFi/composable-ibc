@@ -4204,6 +4204,7 @@ dependencies = [
  "finality-grandpa",
  "frame-support",
  "hash-db",
+ "hex",
  "light-client-common",
  "log",
  "parity-scale-codec",
@@ -4248,6 +4249,7 @@ dependencies = [
  "sp-trie 7.0.0",
  "subxt",
  "tokio",
+ "trie-db",
 ]
 
 [[package]]

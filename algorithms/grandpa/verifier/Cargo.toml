@@ -12,6 +12,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 anyhow = { version = "1.0.64", default-features = false }
 finality-grandpa = { version = "0.16.2", features = ["derive-codec"], default-features = false }
 hash-db = { version = "0.16.0", default-features = false }
+trie-db = {version = "0.27.1", default-features = false}
 
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
@@ -21,9 +22,11 @@ sp-consensus-grandpa = { git = "https://github.com/paritytech/substrate", branch
 sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
-
+log = { version = "0.4.0", default-features = false }
 primitives = { package = "grandpa-light-client-primitives", path = "../primitives", default-features = false }
 light-client-common = { path = "../../../light-clients/common", default-features = false }
+hex = { version = "0.4.3", default-features = false }
+
 
 [dev-dependencies]
 subxt = { git = "https://github.com/paritytech/subxt",  tag = "v0.31.0", features = ["substrate-compat"] }
