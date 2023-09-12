@@ -183,7 +183,7 @@ where
 		
 
 		sp_trie::verify_trie_proof::<LayoutV0<Host::BlakeTwo256>, _, _, _>(
-			parachain_header.state_root(),
+			parachain_header.extrinsics_root(),
 			&extrinsic_proof,
 			&vec![(key, Some(&extrinsic[..]))],
 		)

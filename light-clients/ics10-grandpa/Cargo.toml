@@ -84,3 +84,4 @@ finality-grandpa-rpc = { package = "sc-consensus-grandpa-rpc", git = "https://gi
 jsonrpsee-ws-client = "0.16.2"
 hyperspace-core = { path = "../../hyperspace/core", features = ["testing", "build-metadata-from-ws"] }
 light-client-common = { path = "../common", features = ["std"] }
+polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43" }
