@@ -53,6 +53,7 @@ use ibc::{
 };
 use light_client_common::{config::RuntimeStorage, state_machine};
 use sp_core::{hexdisplay::AsBytesRef, H256, storage::StorageKey};
+use core::str::FromStr;
 use std::time::Duration;
 use subxt::config::substrate::{BlakeTwo256, SubstrateHeader};
 
@@ -602,10 +603,11 @@ async fn test_continuous_update_of_grandpa_client_xxx() {
 		.collect::<Vec<_>>()
 		.await;
 
-	let header_numbers = (0..2).into_iter().collect::<Vec<_>>(); // HARDCODE
-
-	let next_relay_height = 0; // HARDCODE
-	let latest_relay_height = 0; // HARCODE
+	let header_numbers = (100..101).into_iter().collect::<Vec<_>>(); // HARDCODE
+	let storage_key = parachain_header_storage_key(2000);
+	// let storage_key : Option<StorageKey> = None; // HARCODE
+	let next_relay_height = 1565; // HARDCODE
+	let latest_relay_height = 1564; // HARCODE
 
 	let encoded = finality_grandpa_rpc::GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 		// we cast between the same type but different crate versions.
@@ -660,7 +662,10 @@ async fn test_continuous_update_of_grandpa_client_xxx() {
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers, latest_para_height } =
 		proof;
 
-	let hash = H256::default(); // HARCODE
+	let h = hex::decode("3cc763501b9b9784150e9634a17f0334b707dfb6095d8367cd84ede70b46f74a").unwrap();
+	let hash = H256::from_slice(&h[..]); // HARCODE
+	dbg!(hash);
+	dbg!(proof_b_tree.clone());
 	let ParachainHeaderProofs { extrinsic_proof, extrinsic, state_proof } = proof_b_tree.get(&hash).unwrap();
 
 	let proof = StorageProof::new(state_proof.clone());
@@ -674,14 +679,14 @@ async fn test_continuous_update_of_grandpa_client_xxx() {
 	let relay_chain_header =
 			headers.header(&hash).expect("Headers have been checked by AncestryChain; qed");
 
-	let storage_key : Option<StorageKey> = None; // HARCODE
+	
 	let header = state_machine::read_proof_check::<B, Vec<StorageKey>>(
 		&relay_chain_header.state_root,
 		proof,
-		vec![storage_key.clone().unwrap()],
+		vec![storage_key.clone()],
 	)
 	.map_err(|err| anyhow!("error verifying parachain header state proof: {err}")).unwrap()
-	.remove(storage_key.unwrap().as_ref())
+	.remove(storage_key.as_ref())
 	.flatten()
 	.ok_or_else(|| anyhow!("Invalid proof, parachain header not found")).unwrap();
 	let parachain_header = H::decode(&mut &header[..]).unwrap();

@@ -9,7 +9,7 @@ authors = ["Seun Lanlege <seunlanlege@gmail.com>"]
 anyhow = { version = "1.0.64", default-features = false }
 hash-db = { version = "0.16.0", default-features = false }
 derive_more = { version = "0.99.17", default-features = false, features = ["display"] }
-sp-storage = { version = "6.0.0", default-features = false }
+sp-storage = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.43", default-features = false }
 finality-grandpa = { version = "0.16.2", features = ["derive-codec"], default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 log = { version = "0.4.0", default-features = false }
