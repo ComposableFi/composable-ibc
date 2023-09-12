@@ -101,7 +101,7 @@ pub fn compile_solc(project_paths: ProjectPathsConfig) -> ProjectCompileOutput {
 			stop_after: None,
 			remappings: vec![],
 			optimizer: Optimizer {
-				enabled: Some(true),
+				enabled: Some(false),
 				runs: Some(5),
 				details: Some(OptimizerDetails {
 					peephole: Some(true),

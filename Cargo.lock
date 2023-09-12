@@ -6466,6 +6466,7 @@ dependencies = [
  "async-trait",
  "derive_more",
  "hash-db 0.15.2",
+ "hex",
  "ibc",
  "ibc-proto",
  "parity-scale-codec",

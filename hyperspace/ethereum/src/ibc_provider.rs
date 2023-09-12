@@ -417,8 +417,6 @@ impl IbcProvider for EthereumClient {
 			.expect("contract is missing UpdateClient event")
 			.to_block(at.revision_height)
 			.from_block(at.revision_height);
-		// .from_block(BlockNumber::Earliest)
-		// .to_block(BlockNumber::Latest);
 		event_filter.filter = event_filter
 			.filter
 			.topic1({
@@ -583,7 +581,7 @@ impl IbcProvider for EthereumClient {
 			.pop() // get only the last event
 		;
 		log::info!(target: "hyperspace_ethereum", "qcs {}", line!());
-		let batch_func = self.yui.function("call_batch")?;
+		let batch_func = self.yui.function("callBatch")?;
 		match maybe_log {
 			Some(log) => {
 				let tx_hash = log.transaction_hash.expect("tx hash should exist");
@@ -672,58 +670,13 @@ impl IbcProvider for EthereumClient {
 			},
 		}
 
-		// let decoded_log = UpdateClientFilter::decode_log(&log.clone().into()).unwrap();
-		// decoded_log.
-		// let block_number = self
-		// 	.client()
-		// 	.get_block(BlockId::Hash(block_hash))
-		// 	.await
-		// 	.unwrap()
-		// 	.unwrap()
-		// 	.number
-		// 	.unwrap();
-		// let event_filter = self
-		// 	.yui
-		// 	.event_for_name::<GeneratedClientIdentifierFilter>("GeneratedClientIdentifier")
-		// 	.expect("contract is missing GeneratedClientIdentifier event")
-		// 	.from_block(block_number)
-		// 	.to_block(block_number);
-		// let log = self
-		// 	.yui
-		// 	.diamond
-		// 	.client()
-		// 	.get_logs(&event_filter.filter)
-		// 	.await
-		// 	.unwrap()
-		// 	.into_iter()
-		// 	.find(|log| log.transaction_hash.expect("tx hash should exist") == tx_hash)
-		// 	.unwrap();
-
-		// let decoded_log =
-		// GeneratedClientIdentifierFilter::decode_log(&log.clone().into()).unwrap();
-
-		// emit CreateClient(clientId, msg_.clientType);
-		// emit UpdateClient(msg_.clientId, keccak256(msg_.clientMessage));
-		// let (client_state, _): (Vec<u8>, bool) = self
-		// 	.yui
-		// 	.method("getClientState", (client_id.to_string(),))
-		// 	.expect("contract is missing getClientState")
-		// 	.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
-		// 	.call()
-		// 	.await
-		// 	.map_err(|err| todo!("query-client-state: error: {err:?}"))
-		// 	.unwrap();
-
 		let proof_height = Some(at.into());
-		// let client_state = google::protobuf::Any::decode(&*client_state).ok();
 
 		Ok(QueryClientStateResponse {
 			client_state: Some(client_state.expect("should always be initialized").to_any()),
 			proof_height,
 			proof: vec![0],
 		})
-		// log::error!(target: "hyperspace_ethereum", "TODO: implement query_client_state");
-		// todo!()
 	}
 
 	async fn query_connection_end(
