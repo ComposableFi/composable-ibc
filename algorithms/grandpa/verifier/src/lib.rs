@@ -128,7 +128,7 @@ where
 		para_heights.push(parachain_header.number().clone().into());
 		// Timestamp extrinsic should be the first inherent and hence the first extrinsic
 		// https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
-		let key = codec::Compact(0u64).encode();
+		let key = codec::Compact(0u32).encode();
 		// verify extrinsic proof for timestamp extrinsic
 		sp_trie::verify_trie_proof::<LayoutV0<Host::BlakeTwo256>, _, _, _>(
 			parachain_header.extrinsics_root(),

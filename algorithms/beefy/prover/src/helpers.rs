@@ -82,7 +82,7 @@ pub async fn fetch_timestamp_extrinsic_with_proof<T: Config>(
 				<TrieDBMutBuilder<sp_trie::LayoutV0<BlakeTwo256>>>::new(&mut db, &mut root).build();
 
 			for (i, ext) in extrinsics.into_iter().enumerate() {
-				let key = codec::Compact(i as u64).encode();
+				let key = codec::Compact(i as u32).encode();
 				trie.insert(&key, &ext)?;
 			}
 			*trie.root()
