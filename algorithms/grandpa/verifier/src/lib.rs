@@ -57,6 +57,8 @@ where
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers, latest_para_height } =
 		proof;
 
+	let parachain_headers_len = parachain_headers.len();
+
 	// 1. First validate unknown headers.
 	let headers = AncestryChain::<H>::new(&finality_proof.unknown_headers);
 
@@ -130,6 +132,14 @@ where
 		// https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
 		let key = codec::Compact(0u32).encode();
 		// verify extrinsic proof for timestamp extrinsic
+		panic!("RootMismatch extrinsic proof, invalid proof:  
+			hash: {:?},
+			extrinsics_root: {}, extrinsic_proof: {:?}, items: {:?} parachain_headers_len : {}", 
+			hash,
+			parachain_header.clone().extrinsics_root(),
+			extrinsic_proof, &vec![(key.clone(), Some(&extrinsic.clone()[..]))],
+			parachain_headers_len
+			);
 		sp_trie::verify_trie_proof::<LayoutV0<Host::BlakeTwo256>, _, _, _>(
 			parachain_header.extrinsics_root(),
 			&extrinsic_proof,

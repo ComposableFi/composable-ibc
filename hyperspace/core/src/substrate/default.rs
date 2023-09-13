@@ -13,7 +13,7 @@ use crate::{
 	define_head_data, define_ibc_event_wrapper, define_id, define_para_lifecycle,
 	define_runtime_call, define_runtime_event, define_runtime_storage, define_runtime_transactions,
 	define_send_ping_params, define_transfer_params,
-	substrate::default::relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
+	substrate::default::relaychain::api::runtime_types::sp_consensus_beefy::mmr::BeefyAuthoritySet,
 };
 use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};

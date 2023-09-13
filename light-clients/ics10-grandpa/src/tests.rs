@@ -139,6 +139,9 @@ async fn test_continuous_update_of_grandpa_client() {
 		if decoded_para_head.number == 0 {
 			continue
 		}
+		if decoded_para_head.number % 10 != 0{
+			continue
+		}
 		let client_state = ClientState {
 			relay_chain: Default::default(),
 			latest_relay_hash: client_state.latest_relay_hash,
@@ -239,6 +242,12 @@ async fn test_continuous_update_of_grandpa_client() {
 
 		println!("Client State: {:?}", client_state);
 		println!("Finalized para header: {:?}", finalized_para_header.number);
+		dbg!(client_state.latest_relay_height);
+		dbg!(justification.commit.target_number);
+		dbg!(header_numbers.clone());
+		dbg!(justification.encode()[justification.encode().len()-10]);
+		dbg!(justification.encode().len());
+		dbg!(justification.clone());
 		let proof = prover
 			.query_finalized_parachain_headers_with_proof::<SubstrateHeader<u32, BlakeTwo256>>(
 				client_state.latest_relay_height,
@@ -249,6 +258,7 @@ async fn test_continuous_update_of_grandpa_client() {
 			.await
 			.expect("Failed to fetch finalized parachain headers with proof");
 		let proof = proof.encode();
+		dbg!(proof.clone().len());
 		let proof =
 			ParachainHeadersWithFinalityProof::<RelayChainHeader>::decode(&mut &*proof).unwrap();
 		println!("========= New Justification =========");
