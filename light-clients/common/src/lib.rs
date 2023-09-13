@@ -195,7 +195,7 @@ pub fn decode_timestamp_extrinsic(ext: &Vec<u8>) -> Result<u64, anyhow::Error> {
 	// Decoding from the [2..] because the timestamp inmherent has two extra bytes before the call
 	// that represents the call length and the extrinsic version.
 	let (_, _, timestamp): (u8, u8, Compact<u64>) =
-		codec::Decode::decode(&mut &ext[ext.len() - 7..])
+		codec::Decode::decode(&mut &ext[2..])
 			.map_err(|err| anyhow!("Failed to decode extrinsic: {err}"))?;
 	Ok(timestamp.into())
 }
