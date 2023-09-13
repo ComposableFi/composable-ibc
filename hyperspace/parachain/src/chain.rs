@@ -48,11 +48,6 @@ use sp_runtime::{
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, sync::Arc, time::Duration};
-// #[cfg(not(feature = "dali"))]
-// use subxt::config::polkadot::PlainTip as Tip;
-// #[cfg(feature = "dali")]
-// use subxt::config::substrate::AssetTip as Tip;
-use crate::utils::unsafe_cast_to_jsonrpsee_client;
 use subxt::{
 	config::{
 		extrinsic_params::{BaseExtrinsicParamsBuilder, Era},
@@ -301,9 +296,8 @@ where
 		let extrinsic_opaque =
 			block.block.extrinsics.get(transaction_index).expect("Extrinsic not found");
 
-		let unchecked_extrinsic =
-			UncheckedExtrinsic::<T>::decode(&mut &*extrinsic_opaque.0)
-				.map_err(|e| Error::from(format!("Extrinsic decode error: {}", e)))?;
+		let unchecked_extrinsic = UncheckedExtrinsic::<T>::decode(&mut &*extrinsic_opaque.0)
+			.map_err(|e| Error::from(format!("Extrinsic decode error: {}", e)))?;
 
 		let messages = unchecked_extrinsic
 			.function

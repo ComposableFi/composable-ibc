@@ -62,9 +62,3 @@ pub async fn fetch_max_extrinsic_weight<T: light_client_common::config::Config>(
 		.unwrap_or(Weight::from_ref_time(u64::MAX));
 	Ok(max_extrinsic_weight.ref_time())
 }
-
-pub unsafe fn unsafe_cast_to_jsonrpsee_client(
-	client: &Arc<jsonrpsee_ws_client::WsClient>,
-) -> Arc<jsonrpsee::core::client::Client> {
-	unsafe_arc_cast::<_, _>(client.clone())
-}

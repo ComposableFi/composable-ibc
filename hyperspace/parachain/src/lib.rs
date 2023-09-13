@@ -39,9 +39,7 @@ use frame_support::Serialize;
 use serde::Deserialize;
 
 use crate::{
-	finality_protocol::FinalityProtocol,
-	signer::ExtrinsicSigner,
-	utils::{fetch_max_extrinsic_weight, unsafe_cast_to_jsonrpsee_client},
+	finality_protocol::FinalityProtocol, signer::ExtrinsicSigner, utils::fetch_max_extrinsic_weight,
 };
 use beefy_light_client_primitives::{ClientState, MmrUpdateProof};
 use beefy_prover::Prover;

@@ -18,10 +18,8 @@ use beefy_light_client_primitives::{MerkleHasher, SignatureWithAuthorityIndex};
 use codec::{Decode, Encode};
 use frame_support::sp_runtime::traits::Convert;
 use sp_core::keccak_256;
-use sp_core_hashing::sha2_256;
 use sp_runtime::traits::BlakeTwo256;
 use sp_trie::{generate_trie_proof, TrieDBMutBuilder, TrieMut};
-use core::panic;
 use std::{collections::BTreeMap, sync::Arc};
 use subxt::{Config, OnlineClient};
 
@@ -69,9 +67,6 @@ pub async fn fetch_timestamp_extrinsic_with_proof<T: Config>(
 	})?;
 
 	let extrinsics = block.block.extrinsics.into_iter().map(|e| e.0).collect::<Vec<_>>();
-	// let extrinsics = block.block.extrinsics.into_iter().map(|e| Vec::<u8>::decode(&mut &e.0[..]).unwrap()).collect::<Vec<_>>();
-
-	// panic!("{:?}", extrinsics);
 	let (ext, proof) = {
 		if extrinsics.is_empty() {
 			return Err(From::from("Block has no extrinsics".to_string()))
@@ -80,30 +75,18 @@ pub async fn fetch_timestamp_extrinsic_with_proof<T: Config>(
 
 		let mut db = sp_trie::MemoryDB::<BlakeTwo256>::default();
 
-		
-
 		let root = {
 			let mut root = Default::default();
 			let mut trie =
 				<TrieDBMutBuilder<sp_trie::LayoutV0<BlakeTwo256>>>::new(&mut db, &mut root).build();
-			dbg!(*trie.root());
 			for (i, ext) in extrinsics.into_iter().enumerate() {
 				let key = codec::Compact(i as u64).encode();
 				trie.insert(&key, &ext)?;
-				dbg!(*trie.root());
-
-				let h = sha2_256(&ext[..]);
-				dbg!(h);
-				dbg!(&ext[..10]);
-				dbg!(&ext[ext.len()-10..]);;
 			}
 			*trie.root()
 		};
 		let key = codec::Compact::<u32>(0u32).encode();
 
-
-
-		
 		let extrinsic_proof =
 			generate_trie_proof::<sp_trie::LayoutV0<BlakeTwo256>, _, _, _>(&db, root, vec![&key])?;
 

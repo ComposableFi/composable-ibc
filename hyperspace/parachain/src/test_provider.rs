@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::{
-	signer::ExtrinsicSigner, utils::unsafe_cast_to_jsonrpsee_client, Error, ParachainClient,
+	signer::ExtrinsicSigner, , Error, ParachainClient,
 };
 use codec::Decode;
 use finality_grandpa::BlockNumberOps;
