@@ -66,7 +66,7 @@ pub async fn fetch_timestamp_extrinsic_with_proof<T: Config>(
 		))
 	})?;
 
-	let extrinsics = block.block.extrinsics.into_iter().map(|e| e.0.encode()).collect::<Vec<_>>();
+	let extrinsics = block.block.extrinsics.into_iter().map(|e| e.0).collect::<Vec<_>>();
 
 	let (ext, proof) = {
 		if extrinsics.is_empty() {
