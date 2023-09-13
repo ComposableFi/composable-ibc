@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{
-	signer::ExtrinsicSigner, , Error, ParachainClient,
-};
+use crate::{signer::ExtrinsicSigner, Error, ParachainClient};
 use codec::Decode;
 use finality_grandpa::BlockNumberOps;
 use futures::{Stream, StreamExt};
