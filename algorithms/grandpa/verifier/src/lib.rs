@@ -99,6 +99,8 @@ where
 	})?;
 	finalized.sort();
 
+	let parachain_headers_len = parachain_headers.len();
+
 	// 2. verify justification.
 	justification.verify::<Host>(client_state.current_set_id, &client_state.current_authorities)?;
 
@@ -180,12 +182,10 @@ where
 		// 	log::info!(target: "hyperspace", "key: {}", key);
 		// 	s.push(key);
 		// }
-		
-
 		sp_trie::verify_trie_proof::<LayoutV0<Host::BlakeTwo256>, _, _, _>(
-			parachain_header.extrinsics_root(),
-			&extrinsic_proof,
-			&vec![(key, Some(&extrinsic[..]))],
+			parachain_header.clone().extrinsics_root(),
+			&extrinsic_proof.clone(),
+			&vec![(key.clone(), Some(&extrinsic.clone()[..]))],
 		)
 		.map_err(|e| {
 				match e {
@@ -212,7 +212,11 @@ where
 					}
 					sp_trie::VerifyError::RootMismatch(e) => {
 						// panic!("RootMismatch extrinsic proof, invalid proof: {e}");
-						panic!("RootMismatch extrinsic proof, invalid proof: {e}, {s:?}");
+						panic!("RootMismatch extrinsic proof, invalid proof: {e}, {s:?} 
+						extrinsics_root: {}, extrinsic_proof: {:?}, items: {:?} parachain_headers_len : {}", parachain_header.clone().extrinsics_root(),
+						extrinsic_proof, &vec![(key.clone(), Some(&extrinsic.clone()[..]))],
+						parachain_headers_len
+						);
 					}
 					sp_trie::VerifyError::DecodeError(_) => {
 						panic!("DecodeError extrinsic proof, invalid value");

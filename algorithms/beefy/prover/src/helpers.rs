@@ -20,7 +20,7 @@ use frame_support::sp_runtime::traits::Convert;
 use sp_core::keccak_256;
 use sp_runtime::traits::BlakeTwo256;
 use sp_trie::{generate_trie_proof, TrieDBMutBuilder, TrieMut};
-use std::{collections::BTreeMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc, fmt::format};
 use subxt::{Config, OnlineClient};
 
 /// Holds the timestamp inherent alongside a merkle-patricia trie proof of its existence in a given
@@ -66,24 +66,40 @@ pub async fn fetch_timestamp_extrinsic_with_proof<T: Config>(
 		))
 	})?;
 
-	let extrinsics = block.block.extrinsics.into_iter().map(|e| e.0.encode()).collect::<Vec<_>>();
+	// panic!("block: {:?}, header: {:?}, extrinsics: {:?} ", 
+	// block.block.header, 
+	// hex::encode(&block.block.header.encode()), 
+	// hex::encode(&block.block.extrinsics[0].0));
+	// panic!("block: {:?}", );
+	// panic!("block: {:?}", );
 
+	// panic!("block: {:?}", block.block.extrinsics);
+
+	// let extrinsics = block.block.extrinsics.into_iter().map(|e| Vec::<u8>::decode(&mut &e.0[..]).unwrap()).collect::<Vec<_>>();
+	let extrinsics = block.block.extrinsics.into_iter().map(|e| e.0).collect::<Vec<_>>();
+
+	// panic!("{:?}", &extrinsics.clone());
+	
 	let (ext, proof) = {
 		if extrinsics.is_empty() {
 			return Err(From::from("Block has no extrinsics".to_string()))
 		}
+		let mut extrinsics = extrinsics;
+		// extrinsics[0] = extrinsics[0][1..].to_vec();
 		let timestamp_ext = extrinsics[0].clone();
 
 		let mut db = sp_trie::MemoryDB::<BlakeTwo256>::default();
 
+		let mut s = vec![];
 		let root = {
 			let mut root = Default::default();
 			let mut trie =
 				<TrieDBMutBuilder<sp_trie::LayoutV0<BlakeTwo256>>>::new(&mut db, &mut root).build();
 
-			for (i, ext) in extrinsics.into_iter().enumerate() {
+			for (i, mut ext) in extrinsics.into_iter().enumerate() {
 				let key = codec::Compact(i as u32).encode();
 				trie.insert(&key, &ext)?;
+				s.push(format!("key: {:?}, value: {:?}", key, ext));
 			}
 			*trie.root()
 		};
@@ -92,6 +108,8 @@ pub async fn fetch_timestamp_extrinsic_with_proof<T: Config>(
 		let extrinsic_proof =
 			generate_trie_proof::<sp_trie::LayoutV0<BlakeTwo256>, _, _, _>(&db, root, vec![&key])?;
 
+		// panic!("s: {:?}, extrinsic_proof: {:?}, timestamp_ext : {:?}", s, extrinsic_proof, timestamp_ext);
+		
 		(timestamp_ext, extrinsic_proof)
 	};
 
