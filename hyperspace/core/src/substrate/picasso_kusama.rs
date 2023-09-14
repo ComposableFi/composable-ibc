@@ -24,7 +24,6 @@ use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, Transfe
 use pallet_ibc_ping::SendPingParams;
 use parachain_subxt::api::runtime_types::ibc_primitives::Timeout as RawTimeout;
 use relaychain::api::runtime_types::polkadot_runtime_parachains::paras::ParaLifecycle;
-use scale_decode::PortableField;
 use serde::{Serialize, Serializer};
 use sp_core::{crypto::AccountId32, H256};
 use subxt::{

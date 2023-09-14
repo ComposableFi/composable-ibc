@@ -19,9 +19,7 @@
 
 use anyhow::anyhow;
 pub use beefy_prover;
-use beefy_prover::helpers::{
-	fetch_timestamp_extrinsic_with_proof, unsafe_arc_cast, TimeStampExtWithProof,
-};
+use beefy_prover::helpers::{fetch_timestamp_extrinsic_with_proof, TimeStampExtWithProof};
 use codec::{Decode, Encode};
 use finality_grandpa_rpc::GrandpaApiClient;
 use jsonrpsee::{async_client::Client, tracing::log, ws_client::WsClientBuilder};

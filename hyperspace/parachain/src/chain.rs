@@ -127,15 +127,13 @@ where
 				.encoded()
 				.to_vec()
 		};
-		let dispatch_info =
-			TransactionPaymentApiClient::<H256, RuntimeDispatchInfo<u128, u64>>::query_info(
-				&*self.para_ws_client,
-				extrinsic.into(),
-				None,
-			)
-			.await
-			.map_err(|e| Error::from(format!("Rpc Error From Estimating weight {:?}", e)))?;
-		Ok(dispatch_info.weight)
+		let dispatch_info = TransactionPaymentApiClient::<
+			H256,
+			RuntimeDispatchInfo<u128, sp_weights::Weight>,
+		>::query_info(&*self.para_ws_client, extrinsic.into(), None)
+		.await
+		.map_err(|e| Error::from(format!("Rpc Error From Estimating weight {:?}", e)))?;
+		Ok(dispatch_info.weight.ref_time())
 	}
 
 	async fn finality_notifications(
