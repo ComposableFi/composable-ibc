@@ -16,6 +16,7 @@
 
 use std::{
 	collections::{BTreeMap, HashSet},
+	path::PathBuf,
 	str::FromStr,
 	sync::{Arc, Mutex},
 	time::Duration,
@@ -65,7 +66,7 @@ use pallet_mmr_primitives::Proof;
 use primitives::{CommonClientState, KeyProvider};
 use sc_keystore::LocalKeystore;
 use sp_core::{ecdsa, ed25519, sr25519, Bytes, Pair, H256};
-use sp_keystore::{Keystore, KeystorePtr};
+use sp_keystore::KeystorePtr;
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
 	KeyTypeId, MultiSignature, MultiSigner,
@@ -213,7 +214,8 @@ where
 
 		let max_extrinsic_weight = fetch_max_extrinsic_weight(&para_client).await?;
 
-		let key_store: KeystorePtr = Arc::new(LocalKeystore::in_memory());
+		let temp_dir = PathBuf::from("/tmp/keystore");
+		let key_store: KeystorePtr = Arc::new(LocalKeystore::open(temp_dir, None).unwrap());
 		let key_type = KeyType::from_str(&config.key_type)?;
 		let key_type_id = key_type.to_key_type_id();
 
@@ -235,9 +237,11 @@ where
 				.into(),
 		};
 
-		Keystore::insert(&*key_store, key_type_id, &*config.private_key, public_key.as_ref())
+		key_store
+			.insert(key_type_id, &*config.private_key, public_key.as_ref())
 			.unwrap();
 
+		assert!(key_store.has_keys(&[(public_key.as_ref().to_vec(), key_type_id)]));
 		Ok(Self {
 			name: config.name,
 			parachain_rpc_url: config.parachain_rpc_url,
