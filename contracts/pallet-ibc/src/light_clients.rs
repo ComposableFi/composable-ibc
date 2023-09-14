@@ -51,8 +51,6 @@ use icsxx_ethereum::{
 	client_state::ETHEREUM_CLIENT_STATE_TYPE_URL,
 	consensus_state::ETHEREUM_CONSENSUS_STATE_TYPE_URL,
 };
-#[cfg(feature = "ethereum")]
-use icsxx_ethereum::{BlsVerify, EthereumError, EthereumPublicKey, EthereumSignature};
 use prost::Message;
 use sp_core::{crypto::ByteArray, ed25519, H256};
 use sp_runtime::{
@@ -221,17 +219,6 @@ impl beefy_client_primitives::HostFunctions for HostFunctionsManager {
 	}
 }
 
-#[cfg(feature = "ethereum")]
-impl BlsVerify for HostFunctionsManager {
-	fn verify(
-		_public_keys: &[&EthereumPublicKey],
-		_msg: &[u8],
-		_signature: &EthereumSignature,
-	) -> Result<(), EthereumError> {
-		unimplemented!()
-	}
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, ClientDef)]
 pub enum AnyClient {
 	Grandpa(ics10_grandpa::client_def::GrandpaClient<HostFunctionsManager>),
@@ -397,7 +384,7 @@ impl AnyClientMessage {
 			#[cfg(feature = "ethereum")]
 			Self::Ethereum(m) => match m {
 				icsxx_ethereum::client_message::ClientMessage::Header(h) =>
-					Some(Height::new(0, h.execution_payload.block_number)),
+					Some(Height::new(0, h.inner.execution_payload.block_number)),
 				icsxx_ethereum::client_message::ClientMessage::Misbehaviour(_) => None,
 			},
 			#[cfg(test)]

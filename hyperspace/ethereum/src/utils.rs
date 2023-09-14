@@ -393,7 +393,6 @@ where
 		let mut func = None;
 		for faucet in self.deployed_facets.iter().chain(iter::once(&self.diamond)) {
 			if let Ok(f) = faucet.abi().function(name) {
-				log::info!(target: "hyperspace_ethereum", "found function: {name}, {}, {}, {}", f.signature(), f.abi_signature(), hex::encode(&f.short_signature()));
 				if func.is_some() {
 					log::error!(target: "hyperspace_ethereum", "ambiguous function name: {}", name);
 					//panic!("ambiguous function name: {}", name);

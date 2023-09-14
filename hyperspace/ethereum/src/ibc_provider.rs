@@ -62,7 +62,6 @@ use crate::{
 		COMMITMENTS_STORAGE_INDEX, CONNECTIONS_STORAGE_INDEX,
 	},
 	events::TryFromEvent,
-	prove::prove,
 };
 use futures::{FutureExt, Stream, StreamExt};
 use ssz_rs::Merkleized;
@@ -171,8 +170,6 @@ pub async fn parse_ethereum_events(
 	logs: Vec<Log>,
 ) -> Result<Vec<IbcEvent>, ClientError> {
 	let mut events = vec![];
-	log::info!("SendPacketFilter.topic0 = {}", hex::encode(&SendPacketFilter::signature()));
-
 	for log in logs {
 		let raw_log = RawLog::from(log.clone());
 		let height = Height::new(
@@ -187,7 +184,9 @@ pub async fn parse_ethereum_events(
 		    ($topic0:ident, $events:ident, $log:ident, $raw_log:ident, $height:ident, $($ty:ty),+) => {
 				$(if $topic0 == <$ty>::signature() {
 					 let event = <$ty>::decode_log(&$raw_log).expect("decode event");
-					 $events.push(IbcEvent::try_from_event(client, event, $log, $height).await?)
+					 let ev = IbcEvent::try_from_event(client, event, $log, $height).await?;
+					 log::debug!(target: "hyperspace_ethereum", "encountered event: {:?} at {}", ev.event_type(), ev.height());
+					 $events.push(ev);
 				} else )+ {
 					 log::error!(
 						 target: "hyperspace_ethereum", "unknown event: {}",
@@ -256,18 +255,12 @@ impl IbcProvider for EthereumClient {
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		let latest_revision = latest_height.revision_number;
 
-		// 1 slot = 1 block
-		// 1 epoch = 32 slot
-		// 1 block = 12 sec
-		// finalisation ~= 2.5 epoch
-		// 32 * 12 * 2.5 = 960 sec = 16 min
-
 		let prover = self.prover();
 		let block = prover.fetch_block("head").await?;
 		let number = block.body.execution_payload.block_number;
 		let height = Height::new(0, number.into());
 
-		let from = latest_cp_client_height;
+		let from = latest_cp_client_height + 1;
 		let to = number.min(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER);
 		// let to = finality_event
 		// 	.number
@@ -298,17 +291,14 @@ impl IbcProvider for EthereumClient {
 		logs.extend(logs2);
 
 		let maybe_proof = prove_fast(self, &client_state, block.slot).await;
-		// let Ok(update) =  else {
-		// 	log::error!(target: "hyperspace_ethereum", "failed to prove");
-		// 	return Ok(vec![])
-		// };
-		let update = match maybe_proof {
+		let header = match maybe_proof {
 			Ok(x) => x,
 			Err(e) => {
 				log::error!(target: "hyperspace_ethereum", "failed to prove {e}");
 				return Ok(vec![])
 			},
 		};
+		let update = &header.inner;
 		// let update = prove(self, finality_event.number.unwrap().as_u64()).await?;
 
 		log::info!(target: "hyperspace_ethereum",
@@ -335,7 +325,7 @@ impl IbcProvider for EthereumClient {
 			);
 			let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 				client_id: client_id.clone(),
-				client_message: AnyClientMessage::Ethereum(ClientMessage::Header(update)),
+				client_message: AnyClientMessage::Ethereum(ClientMessage::Header(header)),
 				signer: counterparty.account_id(),
 			};
 			let value = msg.encode_vec().map_err(|e| {
@@ -574,7 +564,6 @@ impl IbcProvider for EthereumClient {
 		client_id: ClientId,
 	) -> Result<QueryClientStateResponse, Self::Error> {
 		// First, we try to find an `UpdateClient` event at the given height...
-		log::info!(target: "hyperspace_ethereum", "qcs {}", line!());
 		let mut client_state = None;
 		let mut event_filter = self
 			.yui
@@ -590,7 +579,6 @@ impl IbcProvider for EthereumClient {
 			)]));
 			ValueOrArray::Value(hash)
 		});
-		log::info!(target: "hyperspace_ethereum", "qcs {}", line!());
 		let maybe_log = self
 			.yui
 			.diamond
@@ -602,7 +590,6 @@ impl IbcProvider for EthereumClient {
 			)?
 			.pop() // get only the last event
 		;
-		log::info!(target: "hyperspace_ethereum", "qcs {}", line!());
 		let batch_func = self.yui.function("callBatch")?;
 		match maybe_log {
 			Some(log) => {
@@ -1122,8 +1109,8 @@ impl IbcProvider for EthereumClient {
 		let mut pending = vec![];
 
 		for seq in seqs {
-			let received = self
-				.has_acknowledgement(at, port_id.as_str().to_owned(), format!("{channel_id}"), seq)
+			let received = !self
+				.has_commitment(at, port_id.as_str().to_owned(), format!("{channel_id}"), seq)
 				.await?;
 
 			if !received {

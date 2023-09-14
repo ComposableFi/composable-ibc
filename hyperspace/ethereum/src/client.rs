@@ -582,6 +582,31 @@ impl EthereumClient {
 	}
 
 	#[track_caller]
+	pub fn has_commitment(
+		&self,
+		at: Height,
+		port_id: String,
+		channel_id: String,
+		sequence: u64,
+	) -> impl Future<Output = Result<bool, ClientError>> + '_ {
+		async move {
+			let binding = self
+				.yui
+				.method("hasCommitment", (port_id, channel_id, sequence))
+				.expect("contract is missing hasCommitment");
+
+			let receipt: bool = binding
+				.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+				.call()
+				.await
+				.map_err(|err| todo!())
+				.unwrap();
+
+			Ok(receipt)
+		}
+	}
+
+	#[track_caller]
 	pub fn has_acknowledgement(
 		&self,
 		at: Height,

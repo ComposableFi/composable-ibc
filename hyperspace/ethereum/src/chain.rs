@@ -1234,8 +1234,6 @@ impl Chain for EthereumClient {
 			}
 		}
 
-		thread::sleep(Duration::from_secs(5));
-
 		let block_hash =
 			receipt.block_hash.ok_or(ClientError::Other("Block hash is missing".into()))?;
 		Ok((block_hash, receipt.transaction_hash))
