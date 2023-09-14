@@ -10,7 +10,7 @@
                 ],
                 "command": "parachain-node",
                 "name": "alice",
-                "ws_port": 9988
+                "ws_port": 9188
             },
             "id": 2000
         },
@@ -24,7 +24,7 @@
                 ],
                 "command": "parachain-node",
                 "name": "alice",
-                "ws_port": 9998
+                "ws_port": 9988
             },
             "id": 2001
         }        
