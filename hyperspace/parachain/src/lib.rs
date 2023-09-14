@@ -410,7 +410,7 @@ where
 		// Try extrinsic submission five times in case of failures
 		let mut count = 0;
 		let progress = loop {
-			if count == 5 {
+			if count == 10 {
 				Err(Error::Custom("Failed to submit extrinsic after 5 tries".to_string()))?
 			}
 
@@ -430,8 +430,9 @@ where
 			match res {
 				Ok(progress) => break progress,
 				Err(e) => {
-					log::warn!("Failed to submit extrinsic: {:?}. Retrying...", e);
+					log::warn!("Failed to submit extrinsic: {:?}. Retrying in 30 seconds...", e);
 					count += 1;
+					tokio::time::sleep(std::time::Duration::from_secs(30)).await;
 				},
 			}
 		};
