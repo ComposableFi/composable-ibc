@@ -19,7 +19,7 @@ use std::{
 	path::PathBuf,
 	str::FromStr,
 	sync::{Arc, Mutex},
-	time::Duration,
+	time::Duration, f32::consts::E,
 };
 
 pub mod chain;
@@ -74,7 +74,7 @@ use sp_runtime::{
 use ss58_registry::Ss58AddressFormat;
 use subxt::{
 	config::{Header as HeaderT, Header},
-	tx::TxPayload,
+	tx::{TxPayload, Signer},
 };
 use tokio::sync::Mutex as AsyncMutex;
 
@@ -409,6 +409,7 @@ where
 	pub async fn submit_call<C: TxPayload>(&self, call: C) -> Result<(T::Hash, T::Hash), Error> {
 		// Try extrinsic submission five times in case of failures
 		let mut count = 0;
+		let mut m = false;
 		let progress = loop {
 			if count == 10 {
 				Err(Error::Custom("Failed to submit extrinsic after 5 tries".to_string()))?
@@ -422,15 +423,28 @@ where
 					self.key_type_id.clone(),
 					self.public_key.clone(),
 				);
-				self.para_client
+				if m{
+					let nonce = self.para_client.tx().account_nonce(&signer.account_id()).await?;
+					self.para_client.tx().create_signed_with_nonce(&call, &signer, 
+						nonce+1, other_params)
+					.unwrap().submit_and_watch().await
+				}
+				else{
+					self.para_client
 					.tx()
 					.sign_and_submit_then_watch(&call, &signer, other_params)
 					.await
+				}
 			};
 			match res {
 				Ok(progress) => break progress,
 				Err(e) => {
-					log::warn!("Failed to submit extrinsic: {:?}. Retrying in 30 seconds...", e);
+					let t = format!("{:?}", e).contains("Priority is too low");
+					if t{
+						log::warn!("update priority manually");
+						m = true;
+					}
+					log::warn!("Failed to submit extrinsic: {:?}. Retrying...", e);
 					count += 1;
 					tokio::time::sleep(std::time::Duration::from_secs(30)).await;
 				},
