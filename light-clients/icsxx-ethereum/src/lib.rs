@@ -34,9 +34,6 @@ pub mod verify;
 #[cfg(test)]
 mod tests;
 
-pub use ethereum_consensus::crypto::{
-	PublicKey as EthereumPublicKey, Signature as EthereumSignature,
-};
-pub use sync_committee_verifier::{error::Error as EthereumError, BlsVerify};
+pub use sync_committee_verifier::error::Error as EthereumError;
 
 pub trait HostFunctions: Sized + Send + Sync {}

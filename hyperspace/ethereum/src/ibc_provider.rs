@@ -258,15 +258,9 @@ impl IbcProvider for EthereumClient {
 		let prover = self.prover();
 		let block = prover.fetch_block("head").await?;
 		let number = block.body.execution_payload.block_number;
-		let height = Height::new(0, number.into());
 
 		let from = latest_cp_client_height + 1;
 		let to = number.min(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER);
-		// let to = finality_event
-		// 	.number
-		// 	.unwrap()
-		// 	.as_u64()
-		// 	.min(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER);
 
 		log::info!(target: "hyperspace_ethereum", "Getting blocks {}..{}", from, to);
 		let filter =
@@ -331,8 +325,6 @@ impl IbcProvider for EthereumClient {
 			let value = msg.encode_vec().map_err(|e| {
 				ClientError::from(format!("Failed to encode MsgUpdateClient {msg:?}: {e:?}"))
 			})?;
-			// log::info!(target: "hyperspace_ethereum", "update client header: {value:?}", value =
-			// hex::encode(&value));
 			Any { value, type_url: msg.type_url() }
 		};
 

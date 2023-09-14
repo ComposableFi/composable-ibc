@@ -34,7 +34,6 @@ pub enum Error {
 	Anyhow(anyhow::Error),
 	Deserialize(ssz_rs::DeserializeError),
 	Serialize(SimpleSerializeError),
-	Ethereum(ethereum_consensus::crypto::Error),
 	Custom(String),
 }
 

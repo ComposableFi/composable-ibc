@@ -48,7 +48,7 @@ use icsxx_ethereum::{
 };
 // use light_client_common::{verify_membership, verify_non_membership};
 use std::{collections::BTreeSet, str::FromStr};
-use sync_committee_verifier::{BlsVerify, LightClientState};
+use sync_committee_verifier::LightClientState;
 /*
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ics10-grandpa-cw";
@@ -184,7 +184,7 @@ fn process_message(
 		ExecuteMsg::CheckSubstituteAndUpdateState(msg) => {
 			let _msg = CheckSubstituteAndUpdateStateMsg::try_from(msg)?;
 			// manually load both states from the combined storage using the appropriate prefixes
-			let mut old_client_state = ctx
+			let old_client_state = ctx
 				.client_state_prefixed(SUBJECT_PREFIX)
 				.map_err(|e| ContractError::Client(e.to_string()))?;
 			let substitute_client_state = ctx
@@ -280,7 +280,7 @@ fn store_client_and_consensus_states<H>(
 	consensus_update: ConsensusUpdateResult<Context<H>>,
 ) -> Result<StdResult<Binary>, ContractError>
 where
-	H: Clone + Eq + Send + Sync + Debug + Default + BlsVerify + 'static,
+	H: Clone + Eq + Send + Sync + Debug + Default + 'static,
 {
 	let height = client_state.latest_height();
 	match consensus_update {
@@ -300,15 +300,4 @@ where
 	ctx.store_client_state(client_id, client_state)
 		.map_err(|e| ContractError::Client(e.to_string()))?;
 	Ok(to_binary(&ContractResult::success()))
-}
-
-impl BlsVerify for HostFunctions {
-	fn verify(
-		public_keys: &[&ethereum_consensus::crypto::PublicKey],
-		msg: &[u8],
-		signature: &ethereum_consensus::crypto::Signature,
-	) -> Result<(), sync_committee_verifier::error::Error> {
-		// TODO: bls
-		Ok(())
-	}
 }

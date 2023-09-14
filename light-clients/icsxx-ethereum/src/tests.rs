@@ -1,15 +1,10 @@
 use super::*;
 // use base2::Base2;
-use ethereum_consensus::{
-	bellatrix::compute_domain, primitives::Root, signing::compute_signing_root,
-	state_transition::Context,
-};
 use ssz_rs::{calculate_multi_merkle_root, is_valid_merkle_branch, GeneralizedIndex, Merkleized};
 use std::time::Duration;
 use sync_committee_primitives::{
 	types::{
 		AncestorBlock, FinalityProof, LightClientState, LightClientUpdate, SyncCommitteeUpdate,
-		DOMAIN_SYNC_COMMITTEE, GENESIS_VALIDATORS_ROOT,
 	},
 	util::{compute_fork_version, compute_sync_committee_period_at_slot},
 };

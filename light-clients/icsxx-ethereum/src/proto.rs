@@ -26,15 +26,15 @@ mod convert {
 	};
 	use crate::{alloc::string::ToString, error::Error};
 	use alloc::vec::Vec;
-	use ethereum_consensus::{
-		altair::{mainnet::SYNC_COMMITTEE_SIZE, SyncAggregate, SyncCommittee},
-		phase0::BeaconBlockHeader,
-		primitives::Root,
-	};
+	use primitive_types::H256;
 	use ssz_rs::{Bitvector, Deserialize, Serialize};
-	use sync_committee_primitives::types::{
-		AncestorBlock, AncestryProof, BlockRootsProof, ExecutionPayloadProof, FinalityProof,
-		SyncCommitteeUpdate,
+	use sync_committee_primitives::{
+		consensus_types::{BeaconBlockHeader, SyncAggregate, SyncCommittee},
+		constants::SYNC_COMMITTEE_SIZE,
+		types::{
+			AncestorBlock, AncestryProof, BlockRootsProof, ExecutionPayloadProof, FinalityProof,
+			SyncCommitteeUpdate,
+		},
 	};
 	use sync_committee_verifier::LightClientState;
 
@@ -43,7 +43,7 @@ mod convert {
 
 		fn try_from(raw: RawBeaconBlockHeader) -> Result<Self, Self::Error> {
 			let slot = raw.slot;
-			let proposer_index = raw.proposer_index.try_into()?;
+			let proposer_index = raw.proposer_index;
 			let parent_root = raw.parent_root.as_slice().try_into()?;
 			let state_root = raw.state_root.as_slice().try_into()?;
 			let body_root = raw.body_root.as_slice().try_into()?;
@@ -63,7 +63,7 @@ mod convert {
 		}
 	}
 
-	impl TryFrom<RawSyncCommitteeUpdate> for SyncCommitteeUpdate<SYNC_COMMITTEE_SIZE> {
+	impl TryFrom<RawSyncCommitteeUpdate> for SyncCommitteeUpdate {
 		type Error = Error;
 
 		fn try_from(raw: RawSyncCommitteeUpdate) -> Result<Self, Self::Error> {
@@ -82,14 +82,14 @@ mod convert {
 		}
 	}
 
-	impl From<SyncCommitteeUpdate<SYNC_COMMITTEE_SIZE>> for RawSyncCommitteeUpdate {
-		fn from(update: SyncCommitteeUpdate<SYNC_COMMITTEE_SIZE>) -> Self {
+	impl From<SyncCommitteeUpdate> for RawSyncCommitteeUpdate {
+		fn from(update: SyncCommitteeUpdate) -> Self {
 			Self {
 				next_sync_committee: Some(update.next_sync_committee.into()),
 				next_sync_committee_branch: update
 					.next_sync_committee_branch
 					.into_iter()
-					.map(|root| root.to_vec())
+					.map(|root| root.0.to_vec())
 					.collect(),
 			}
 		}
@@ -125,7 +125,7 @@ mod convert {
 		type Error = Error;
 
 		fn try_from(raw: RawExecutionPayloadProof) -> Result<Self, Self::Error> {
-			let state_root = raw.state_root.as_slice().try_into()?;
+			let state_root = H256::from_slice(&raw.state_root);
 			let block_number = raw.block_number;
 			let multi_proof = raw
 				.multi_proof
@@ -145,13 +145,13 @@ mod convert {
 	impl From<ExecutionPayloadProof> for RawExecutionPayloadProof {
 		fn from(proof: ExecutionPayloadProof) -> Self {
 			Self {
-				state_root: proof.state_root.to_vec(),
+				state_root: proof.state_root.0.to_vec(),
 				block_number: proof.block_number,
-				multi_proof: proof.multi_proof.iter().map(|root| root.to_vec()).collect(),
+				multi_proof: proof.multi_proof.iter().map(|root| root.0.to_vec()).collect(),
 				execution_payload_branch: proof
 					.execution_payload_branch
 					.iter()
-					.map(|root| root.to_vec())
+					.map(|root| root.0.to_vec())
 					.collect(),
 				timestamp: proof.timestamp,
 			}
@@ -176,7 +176,7 @@ mod convert {
 		fn from(proof: FinalityProof) -> Self {
 			Self {
 				epoch: proof.epoch,
-				finality_branch: proof.finality_branch.iter().map(|root| root.to_vec()).collect(),
+				finality_branch: proof.finality_branch.iter().map(|root| root.0.to_vec()).collect(),
 			}
 		}
 	}
@@ -301,7 +301,7 @@ mod convert {
 			match proof {
 				AncestryProof::BlockRoots { block_roots_proof, block_roots_branch } => {
 					let block_roots_branch =
-						block_roots_branch.into_iter().map(|root| root.to_vec()).collect();
+						block_roots_branch.into_iter().map(|root| root.0.to_vec()).collect();
 					Self {
 						message: Some(ancestry_proof::Message::BlockRoots(RawBlockRoots {
 							block_roots_proof: Some(block_roots_proof.into()),
@@ -317,11 +317,11 @@ mod convert {
 					historical_roots_branch,
 				} => {
 					let historical_batch_proof =
-						historical_batch_proof.into_iter().map(|root| root.to_vec()).collect();
+						historical_batch_proof.into_iter().map(|root| root.0.to_vec()).collect();
 					let historical_roots_proof =
-						historical_roots_proof.into_iter().map(|root| root.to_vec()).collect();
+						historical_roots_proof.into_iter().map(|root| root.0.to_vec()).collect();
 					let historical_roots_branch =
-						historical_roots_branch.into_iter().map(|root| root.to_vec()).collect();
+						historical_roots_branch.into_iter().map(|root| root.0.to_vec()).collect();
 					Self {
 						message: Some(ancestry_proof::Message::HistoricalRoots(
 							RawHistoricalRoots {
@@ -355,7 +355,7 @@ mod convert {
 	impl From<BlockRootsProof> for RawBlockRootsProof {
 		fn from(proof: BlockRootsProof) -> Self {
 			let block_header_branch =
-				proof.block_header_branch.into_iter().map(|root| root.to_vec()).collect();
+				proof.block_header_branch.into_iter().map(|root| root.0.to_vec()).collect();
 			Self { block_header_index: proof.block_header_index, block_header_branch }
 		}
 	}

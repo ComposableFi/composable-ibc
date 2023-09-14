@@ -17,9 +17,9 @@ use crate::{alloc::string::ToString, error::Error, proto::ConsensusState as RawC
 use alloc::{format, vec, vec::Vec};
 use anyhow::anyhow;
 use core::{convert::Infallible, fmt::Debug};
-use ethereum_consensus::primitives::Hash32;
 use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp, Height};
 use ibc_proto::google::protobuf::Any;
+use primitive_types::H256;
 use serde::{Deserialize, Serialize};
 use tendermint::time::Time;
 use tendermint_proto::{google::protobuf as tpb, Protobuf};
@@ -34,8 +34,8 @@ pub struct ConsensusState {
 }
 
 impl ConsensusState {
-	pub fn new(root: Hash32, timestamp: u64) -> Self {
-		let root_bytes: Vec<u8> = root.to_vec();
+	pub fn new(root: H256, timestamp: u64) -> Self {
+		let root_bytes: Vec<u8> = root.0.to_vec();
 		Self {
 			timestamp: Time::from_unix_timestamp(timestamp as i64, 0)
 				.expect("timestamp should be valid"),
