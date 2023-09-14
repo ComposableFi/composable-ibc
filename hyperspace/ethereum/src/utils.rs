@@ -42,15 +42,10 @@ impl FacetCut {
 
 #[derive(Debug)]
 pub struct DeployYuiIbc<B, M> {
-	// pub ibc_client: ContractInstance<B, M>,
-	// pub ibc_connection: ContractInstance<B, M>,
-	// pub ibc_channel_handshake: ContractInstance<B, M>,
-	// pub ibc_packet: ContractInstance<B, M>,
-	// pub ibc_handler: ContractInstance<B, M>,
 	pub facet_cuts: Vec<FacetCut>,
 	pub deployed_facets: Vec<ContractInstance<B, M>>,
 	pub diamond: ContractInstance<B, M>,
-	pub storage_layout: StorageLayout,
+	// pub storage_layout: StorageLayout,
 	pub tendermint: ContractInstance<B, M>,
 	pub bank: Option<ContractInstance<B, M>>,
 }
@@ -475,9 +470,9 @@ where
 		assert_eq!(receipt.status, Some(1.into()));
 	}
 
-	pub fn find_storage(&self, name: &str) -> &Storage {
-		self.storage_layout.storage.iter().find(|x| x.contract == name).unwrap()
-	}
+	// pub fn find_storage(&self, name: &str) -> &Storage {
+	// 	self.storage_layout.storage.iter().find(|x| x.contract == name).unwrap()
+	// }
 }
 
 impl<B: Clone, M: Clone> Clone for DeployYuiIbc<B, M>
@@ -489,7 +484,7 @@ where
 			facet_cuts: self.facet_cuts.clone(),
 			deployed_facets: self.deployed_facets.clone(),
 			diamond: self.diamond.clone(),
-			storage_layout: self.storage_layout.clone(),
+			// storage_layout: self.storage_layout.clone(),
 			tendermint: self.tendermint.clone(),
 			bank: self.bank.clone(),
 		}

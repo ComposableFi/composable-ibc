@@ -379,15 +379,3 @@ impl Detokenize for ConnectionEnd {
 		})
 	}
 }
-
-pub const LIGHT_CLIENT_ABI_JSON: &str = include_str!("./abi/light-client-abi.json");
-
-/// Create a new contract instance from the given address and ABI.
-#[track_caller]
-pub fn light_client_contract<M>(address: Address, client: Arc<M>) -> Contract<M>
-where
-	M: Middleware,
-{
-	let abi: Abi = serde_json::from_str(LIGHT_CLIENT_ABI_JSON).unwrap();
-	Contract::new(address, abi, client)
-}

@@ -83,6 +83,7 @@ pub struct EthereumClientConfig {
 	pub mnemonic: Option<String>,
 	/// private key for the wallet
 	pub private_key: Option<String>,
+	/// private key path for the wallet
 	pub private_key_path: Option<String>,
 	/// maximum block weight
 	pub max_block_weight: u64,

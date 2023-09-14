@@ -120,6 +120,27 @@ abigen!(
 
 	IbcPacketAbi,
 	"hyperspace/ethereum/src/abi/ibc-packet-abi.json";
+
+	IbcQuerierAbi,
+	"hyperspace/ethereum/src/abi/ibc-querier-abi.json";
+
+	Ics20TransferBankAbi,
+	"hyperspace/ethereum/src/abi/ics20-transfer-bank-abi.json";
+
+	TendermintClientAbi,
+	"hyperspace/ethereum/src/abi/tendermint-client-abi.json";
+
+	DiamondAbi,
+	"hyperspace/ethereum/src/abi/diamond-abi.json";
+
+	DiamondCutFacetAbi,
+	"hyperspace/ethereum/src/abi/diamond-cut-facet-abi.json";
+
+	DiamondLoupeFacetAbi,
+	"hyperspace/ethereum/src/abi/diamond-loupe-facet-abi.json";
+
+	OwnershipFacetAbi,
+	"hyperspace/ethereum/src/abi/ownership-facet-abi.json";
 );
 
 impl From<HeightData> for Height {

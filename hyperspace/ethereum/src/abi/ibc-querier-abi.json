@@ -1,0 +1,511 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "channelId",
+        "type": "string"
+      }
+    ],
+    "name": "getChannel",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "enum ChannelState",
+            "name": "state",
+            "type": "uint8"
+          },
+          {
+            "internalType": "enum ChannelOrder",
+            "name": "ordering",
+            "type": "uint8"
+          },
+          {
+            "components": [
+              {
+                "internalType": "string",
+                "name": "port_id",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "channel_id",
+                "type": "string"
+              }
+            ],
+            "internalType": "struct ChannelCounterpartyData",
+            "name": "counterparty",
+            "type": "tuple"
+          },
+          {
+            "internalType": "string[]",
+            "name": "connection_hops",
+            "type": "string[]"
+          },
+          {
+            "internalType": "string",
+            "name": "version",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct ChannelData",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "clientId",
+        "type": "string"
+      }
+    ],
+    "name": "getClientState",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      },
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "connectionId",
+        "type": "string"
+      }
+    ],
+    "name": "getConnection",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "client_id",
+            "type": "string"
+          },
+          {
+            "components": [
+              {
+                "internalType": "string",
+                "name": "identifier",
+                "type": "string"
+              },
+              {
+                "internalType": "string[]",
+                "name": "features",
+                "type": "string[]"
+              }
+            ],
+            "internalType": "struct VersionData[]",
+            "name": "versions",
+            "type": "tuple[]"
+          },
+          {
+            "internalType": "enum ConnectionEndState",
+            "name": "state",
+            "type": "uint8"
+          },
+          {
+            "components": [
+              {
+                "internalType": "string",
+                "name": "client_id",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "connection_id",
+                "type": "string"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "bytes",
+                    "name": "key_prefix",
+                    "type": "bytes"
+                  }
+                ],
+                "internalType": "struct MerklePrefixData",
+                "name": "prefix",
+                "type": "tuple"
+              }
+            ],
+            "internalType": "struct CounterpartyData",
+            "name": "counterparty",
+            "type": "tuple"
+          },
+          {
+            "internalType": "uint64",
+            "name": "delay_period",
+            "type": "uint64"
+          }
+        ],
+        "internalType": "struct ConnectionEndData",
+        "name": "",
+        "type": "tuple"
+      },
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "clientId",
+        "type": "string"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint64",
+            "name": "revision_number",
+            "type": "uint64"
+          },
+          {
+            "internalType": "uint64",
+            "name": "revision_height",
+            "type": "uint64"
+          }
+        ],
+        "internalType": "struct HeightData",
+        "name": "height",
+        "type": "tuple"
+      }
+    ],
+    "name": "getConsensusState",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "consensusStateBytes",
+        "type": "bytes"
+      },
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getExpectedTimePerBlock",
+    "outputs": [
+      {
+        "internalType": "uint64",
+        "name": "",
+        "type": "uint64"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "channelId",
+        "type": "string"
+      },
+      {
+        "internalType": "uint64",
+        "name": "sequence",
+        "type": "uint64"
+      }
+    ],
+    "name": "getHashedPacketAcknowledgementCommitment",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "channelId",
+        "type": "string"
+      },
+      {
+        "internalType": "uint64",
+        "name": "sequence",
+        "type": "uint64"
+      }
+    ],
+    "name": "getHashedPacketCommitment",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "channelId",
+        "type": "string"
+      }
+    ],
+    "name": "getNextSequenceSend",
+    "outputs": [
+      {
+        "internalType": "uint64",
+        "name": "",
+        "type": "uint64"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "channelId",
+        "type": "string"
+      },
+      {
+        "internalType": "uint64",
+        "name": "sequence",
+        "type": "uint64"
+      }
+    ],
+    "name": "getPacketAcknowledgementCommitment",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "channelId",
+        "type": "string"
+      },
+      {
+        "internalType": "uint64",
+        "name": "sequence",
+        "type": "uint64"
+      }
+    ],
+    "name": "hasAcknowledgement",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "channelId",
+        "type": "string"
+      },
+      {
+        "internalType": "uint64",
+        "name": "fromSequence",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "toSequence",
+        "type": "uint64"
+      }
+    ],
+    "name": "hasAcknowledgements",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "channelId",
+        "type": "string"
+      },
+      {
+        "internalType": "uint64",
+        "name": "sequence",
+        "type": "uint64"
+      }
+    ],
+    "name": "hasCommitment",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "channelId",
+        "type": "string"
+      },
+      {
+        "internalType": "uint64",
+        "name": "fromSequence",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "toSequence",
+        "type": "uint64"
+      }
+    ],
+    "name": "hasCommitments",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "channelId",
+        "type": "string"
+      },
+      {
+        "internalType": "uint64",
+        "name": "sequence",
+        "type": "uint64"
+      }
+    ],
+    "name": "hasPacketReceipt",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]
