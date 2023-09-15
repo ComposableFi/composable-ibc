@@ -63,4 +63,4 @@ typechain-types/
 cache/
 out/
 
-!*.nix
+*.nix
