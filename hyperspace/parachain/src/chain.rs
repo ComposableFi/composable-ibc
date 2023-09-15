@@ -441,8 +441,33 @@ where
 
 				let mut trusted_finality_proof =
 					FinalityProof::<RelayChainHeader>::decode(&mut &encoded[..])?;
-				let trusted_justification =
+				let mut trusted_justification =
 					GrandpaJustification::decode(&mut &*trusted_finality_proof.justification)?;
+				if !trusted_justification.votes_ancestries.is_empty() &&
+				!trusted_justification
+					.votes_ancestries
+					.iter()
+					.any(|h| h.number == trusted_justification.commit.target_number as u32){
+					
+					log::info!(target: "hyperspace", "🚀🚀 EEEEEEEEEE");
+					tokio::time::sleep(Duration::from_secs(1)).await;
+					panic!("🚀🚀 EEEEEEEEEE");
+
+					let prover = self.grandpa_prover();
+					let header = prover
+					.relay_client
+					.rpc()
+					.header(Some(trusted_justification.commit.target_hash.into()))
+					.await
+					.unwrap()
+					.unwrap();
+					
+					let x = header.encode();
+					use sp_runtime::traits::BlakeTwo256;
+					let header = sp_runtime::generic::Header::<u32, BlakeTwo256>::decode(&mut &*x).unwrap();
+
+					trusted_justification.votes_ancestries.push(header);
+				}
 				let to_block = trusted_justification.commit.target_number;
 				let from_block = (common_ancestor_block_number + 1).min(to_block);
 
