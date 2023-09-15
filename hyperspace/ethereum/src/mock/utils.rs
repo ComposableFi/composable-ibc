@@ -150,7 +150,6 @@ pub async fn hyperspace_ethereum_client_fixture(
 		http_rpc_url: endpoint.parse().unwrap(),
 		ws_rpc_url: format!("ws://127.0.0.1:{}", ETH_NODE_PORT_WS).parse().unwrap(),
 		beacon_rpc_url: format!("http://localhost:{}", BEACON_NODE_PORT).parse().unwrap(),
-		ibc_handler_address: yui_ibc.diamond.address(),
 		mnemonic: None,
 		max_block_weight: 1,
 		private_key: wallet,
@@ -164,7 +163,11 @@ pub async fn hyperspace_ethereum_client_fixture(
 		bank_address: yui_ibc.bank.clone().map(|b| b.address()),
 		diamond_address: Some(yui_ibc.diamond.address()),
 		tendermint_address: yui_ibc.tendermint.clone().map(|x| x.address()),
-		diamond_facets: vec![],
+		diamond_facets: yui_ibc
+			.deployed_facets
+			.iter()
+			.map(|f| (f.abi_name(), f.contract().address()))
+			.collect(),
 		yui: Some(yui_ibc),
 		client_type: "07-tendermint".into(),
 		jwt_secret_path,

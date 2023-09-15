@@ -808,12 +808,7 @@ where
 		.compiled_artifacts()
 		.iter()
 		.chain(diamond_project_output.compiled_artifacts())
-		.flat_map(|(_, artifact)| {
-			artifact.into_iter().flat_map(|(an, artifact)| {
-				println!("artifact name {an}");
-				artifact
-			})
-		})
+		.flat_map(|(_, artifact)| artifact.into_iter().flat_map(|(an, artifact)| artifact))
 		.filter_map(|ar| ar.artifact.storage_layout.clone())
 		.chain(once(predefined_layout))
 		.fold(StorageLayout { storage: vec![], types: Default::default() }, |mut acc, layout| {
@@ -850,12 +845,17 @@ pub async fn deploy_client<M: Middleware>(
 	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
 	let update_client_delegate_contract = factory.deploy(()).unwrap().send().await.unwrap();
 
+	println!(
+		"Deployed update client delegate contract address: {:?}",
+		update_client_delegate_contract.address()
+	);
+
 	let contract = project_output1.find_first(client_name).unwrap();
 	let r = contract.clone();
 	let (abi, bytecode, _) = r.into_parts();
 
 	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client);
-	let tendermint_light_client = factory
+	let light_client = factory
 		.deploy((
 			Token::Address(yui_ibc.diamond.address()),
 			Token::Address(update_client_delegate_contract.address()),
@@ -865,8 +865,10 @@ pub async fn deploy_client<M: Middleware>(
 		.await
 		.unwrap();
 
-	let _ = yui_ibc.register_client(&client_type, tendermint_light_client.address()).await;
-	Ok(tendermint_light_client)
+	println!("Deployed light client address: {:?}", light_client.address());
+
+	let _ = yui_ibc.register_client(&client_type, light_client.address()).await;
+	Ok(light_client)
 }
 
 pub async fn deploy_ibc<M: Middleware>(
@@ -879,8 +881,9 @@ pub async fn deploy_ibc<M: Middleware>(
 	Ok(yui_ibc)
 }
 
-pub async fn deploy_module<M: Middleware>(
+pub async fn deploy_transfer_module<M: Middleware>(
 	yui_solidity_path: &PathBuf,
+	yui_ibc: DeployYuiIbc<Arc<M>, M>,
 	diamond_address: Address,
 	client: Arc<M>,
 ) -> Result<ContractInstance<Arc<M>, M>, ClientError> {
@@ -888,12 +891,16 @@ pub async fn deploy_module<M: Middleware>(
 
 	let artifact = project_output.find_first("ICS20Bank").expect("no ICS20Bank in project output");
 	let bank_contract = deploy_contract::<M, _>(artifact, (), client.clone()).await;
-	println!("Bank module address: {:?}", bank_contract.address());
+	println!("Deployed Bank module address: {:?}", bank_contract.address());
 	let artifact = project_output
 		.find_first("ICS20TransferBank")
 		.expect("no ICS20TransferBank in project output");
 	let constructor_args =
 		(Token::Address(diamond_address), Token::Address(bank_contract.address()));
 	let module_contract = deploy_contract(artifact, constructor_args, client.clone()).await;
+	println!("Deployed ICS-20 Transfer module address: {:?}", module_contract.address());
+
+	yui_ibc.bind_port("transfer", module_contract.address()).await;
+
 	Ok(module_contract)
 }

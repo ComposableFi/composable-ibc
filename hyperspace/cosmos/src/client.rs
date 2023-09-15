@@ -401,12 +401,13 @@ where
 		let mut xs = Vec::new();
 		let heightss = (from.value()..=to.value()).collect::<Vec<_>>();
 		let client = Arc::new(self.clone());
-		let to = self.rpc_call_delay().as_millis();
+		let delay_to = self.rpc_call_delay().as_millis();
 		for heights in heightss.chunks(5) {
 			let mut join_set = JoinSet::<Result<Result<_, Error>, Elapsed>>::new();
 			for height in heights.to_owned() {
 				let client = client.clone();
-				let duration = Duration::from_millis(rand::thread_rng().gen_range(0..to) as u64);
+				let duration =
+					Duration::from_millis(rand::thread_rng().gen_range(0..delay_to) as u64);
 				let fut = async move {
 					log::trace!(target: "hyperspace_cosmos", "Fetching header at height {:?}", height);
 					let latest_light_block =
@@ -430,7 +431,6 @@ where
 						true => UpdateType::Optional,
 						false => UpdateType::Mandatory,
 					};
-
 					Ok((
 						Header {
 							signed_header: latest_light_block.signed_header,

@@ -209,7 +209,7 @@ pub async fn parse_ethereum_events(
 					 log::debug!(target: "hyperspace_ethereum", "encountered event: {:?} at {}", ev.event_type(), ev.height());
 					 $events.push(ev);
 				} else )+ {
-					 log::error!(
+					 log::warn!(
 						 target: "hyperspace_ethereum", "unknown event: {}",
 						   log.log_type.unwrap_or(format!("{:?}", $topic0))
 					 );
@@ -375,7 +375,7 @@ impl IbcProvider for EthereumClient {
 						 keccak256("07-tendermint-0".to_string().into_bytes()).to_vec(),
 					 )]));
 				} else {
-					log::error!(target: "hyperspace_ethereum",
+					log::warn!(target: "hyperspace_ethereum",
 						"unknown event: {}",
 						log.log_type.unwrap_or(format!("{topic0:?}"))
 					);
@@ -493,7 +493,6 @@ impl IbcProvider for EthereumClient {
 							next_validators_hash: header.signed_header.header.next_validators_hash,
 						});
 						// TODO: figure out how to distinguish between the same function calls
-						log::info!(target: "hyperspace_ethereum", "query_client_consensus FOUND");
 
 						let proof_height = Some(at.into());
 						return Ok(QueryConsensusStateResponse {
@@ -513,7 +512,6 @@ impl IbcProvider for EthereumClient {
 		log::trace!(target: "hyperspace_ethereum", "no update client event found for blocks ..{at}, looking for a create client event...");
 
 		// ...otherwise, try to get the `CreateClient` event
-		log::info!(target: "hyperspace_ethereum", "qconss {}", line!());
 		let mut event_filter = self
 			.yui
 			.event_for_name::<CreateClientFilter>("CreateClient")
@@ -526,7 +524,6 @@ impl IbcProvider for EthereumClient {
 			)]));
 			ValueOrArray::Value(hash)
 		});
-		log::info!(target: "hyperspace_ethereum", "qconss {}", line!());
 		let log = self
 			.yui
 			.diamond
@@ -536,7 +533,6 @@ impl IbcProvider for EthereumClient {
 			.unwrap()
 			.pop() // get only the last event
 			.ok_or_else(|| ClientError::Other("no events found".to_string()))?;
-		log::info!(target: "hyperspace_ethereum", "qconss {}", line!());
 
 		let tx_hash = log.transaction_hash.expect("tx hash should exist");
 		let func = self.yui.function("createClient")?;
@@ -566,7 +562,6 @@ impl IbcProvider for EthereumClient {
 
 		let proof_height = Some(at.into());
 		let any = consensus_state.expect("should always be initialized").to_any();
-		log::info!(target: "hyperspace_ethereum", "query_client_consensus FOUND");
 
 		Ok(QueryConsensusStateResponse { consensus_state: Some(any), proof: vec![0], proof_height })
 	}

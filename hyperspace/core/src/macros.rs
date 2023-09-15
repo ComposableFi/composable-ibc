@@ -1013,7 +1013,7 @@ macro_rules! chains {
 						AnyConfig::$name(config) => AnyChain::$name(<$client>::new(config).await?),
 					)*
 				};
-				if let Some(code_id) = dbg!(maybe_wasm_code_id) {
+				if let Some(code_id) = maybe_wasm_code_id {
 					Ok(AnyChain::Wasm(WasmChain { inner: Box::new(chain), code_id }))
 				} else {
 					Ok(chain)

@@ -1,4 +1,4 @@
-use std::{fmt::Debug, sync::Arc, thread, time::Duration};
+use std::{fmt::Debug, str::FromStr, sync::Arc, thread, time::Duration};
 
 use crate::{
 	client::{ClientError, EthereumClient},
@@ -33,6 +33,7 @@ use ibc::{
 		},
 		ics04_channel::msgs as channel_msgs,
 		ics23_commitment::commitment::CommitmentRoot,
+		ics24_host::identifier::ClientId,
 	},
 	protobuf::{
 		google::protobuf::Timestamp,
@@ -74,8 +75,6 @@ impl MisbehaviourHandler for EthereumClient {
 
 fn client_state_abi_token<H: Debug>(client: &ClientState<H>) -> Token {
 	use ethers::abi::{encode as ethers_encode, Token as EthersToken};
-
-	log::info!("client: {:?}", client);
 
 	let client_state_data = EthersToken::Tuple(
 		[
@@ -152,8 +151,6 @@ pub(crate) fn client_state_from_abi_token<H>(token: Token) -> Result<ClientState
 	let Token::Tuple(toks) = ethers::abi::decode(&params, bytes.as_slice())?.pop().unwrap() else {
 		return Err(ClientError::Other("invalid client state'".to_string()))
 	};
-
-	log::info!("toks: {:?}", toks);
 
 	let chain_id = match toks.get(0).cloned().unwrap() {
 		EthersToken::String(chain_id) => chain_id,
@@ -1044,16 +1041,12 @@ impl Chain for EthereumClient {
 				assert_eq!(tok, token);
 				let bytes = self.yui.create_client_calldata(token).await;
 
-				//update mutex
-				let mut update_mutex = self.prev_state.lock().map_err(|_| {
-					ClientError::Other("create_client: can't lock prev_state mutex".into())
-				})?;
-				*update_mutex = (client_state_data_vec.clone(), consensus_state_data_vec.clone());
 				calls.push(bytes);
 			} else if msg.type_url == ibc::core::ics02_client::msgs::update_client::TYPE_URL {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).map_err(
 					|_| ClientError::Other("update_client: failed to decode_vec".into()),
 				)?;
+
 				let AnyClientMessage::Tendermint(client_state) =
 					msg.client_message.unpack_recursive()
 				else {
@@ -1067,24 +1060,32 @@ impl Chain for EthereumClient {
 				let tm_header_abi_token = tm_header_abi_token(header)?;
 				let tm_header_bytes = ethers_encode(&[tm_header_abi_token]);
 
-				//todo replace empty vec for prev state clint with an actual client state
-				let client_state = self
-					.prev_state
-					.lock()
-					.map_err(|_| {
-						ClientError::Other("update_client: can't lock prev_state mutex".into())
-					})?
-					.0
-					.clone();
+				let latest_height = self.latest_height_and_timestamp().await?.0;
+				let client_id = msg.client_id;
+				let latest_client_state = AnyClientState::try_from(
+					self.query_client_state(latest_height, client_id.clone())
+						.await?
+						.client_state
+						.ok_or_else(|| {
+						ClientError::Other(
+							"update_client: can't get latest client state".to_string(),
+						)
+					})?,
+				)?;
+				let AnyClientState::Tendermint(client_state) =
+					latest_client_state.unpack_recursive()
+				else {
+					//TODO return error support only tendermint client state
+					return Err(ClientError::Other("create_client: unsupported client state".into()))
+				};
 
-				//TODO replace client id. it was genereated when we created the client. use 0 for
-				// testing
-				let client_id = format!("{}-0", self.config.client_type.clone());
+				let client_state = client_state_abi_token(&client_state);
+				let client_state = ethers_encode(&[client_state]);
 
 				let token = EthersToken::Tuple(vec![
 					//should be the same that we use to create client
 					//client id
-					EthersToken::String(client_id),
+					EthersToken::String(client_id.to_string()),
 					//tm header
 					EthersToken::Bytes(tm_header_bytes),
 					//tm header

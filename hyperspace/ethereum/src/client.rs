@@ -64,7 +64,6 @@ pub struct EthereumClient {
 	/// Common relayer data
 	pub common_state: CommonClientState,
 	pub yui: DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>,
-	pub prev_state: Arc<Mutex<(Vec<u8>, Vec<u8>)>>,
 	/// Light client id on counterparty chain
 	pub client_id: Arc<Mutex<Option<ClientId>>>,
 	/// Connection Id
@@ -179,7 +178,6 @@ impl EthereumClient {
 			ws_uri: config.ws_rpc_url.clone(),
 			common_state: Default::default(),
 			yui,
-			prev_state: Arc::new(Mutex::new((vec![], vec![]))),
 			client_id: Arc::new(Mutex::new(config.client_id.clone())),
 			connection_id: Arc::new(Mutex::new(config.connection_id.clone())),
 			channel_whitelist: Arc::new(Mutex::new(

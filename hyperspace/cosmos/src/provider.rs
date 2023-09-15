@@ -117,7 +117,6 @@ where
 		let client_state_response = latest_cp_client_state
 			.client_state
 			.ok_or_else(|| Error::Custom("counterparty returned empty client state".to_string()))?;
-		log::info!(target: "hyperspace_cosmos", "cs len = {}", client_state_response.value.len());
 		let client_state =
 			ClientState::<HostFunctionsManager>::decode_vec(&client_state_response.value)
 				.map_err(|_| Error::Custom("failed to decode client state response".to_string()))?;
