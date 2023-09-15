@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::utils::ETH_NODE_PORT_WS;
 use core::time::Duration;
 use ethers::{
 	abi::Token,
@@ -19,7 +20,7 @@ use ethers::{
 	utils::AnvilInstance,
 };
 use ethers_solc::{Artifact, ProjectCompileOutput, ProjectPathsConfig};
-use futures::StreamExt;
+use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use hyperspace_core::{
 	chain::{AnyAssetId, AnyChain, AnyConfig},
 	logging,
@@ -28,7 +29,10 @@ use hyperspace_core::{
 use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_ethereum::{
 	config::EthereumClientConfig,
-	mock::{utils, utils::hyperspace_ethereum_client_fixture},
+	mock::{
+		utils,
+		utils::{hyperspace_ethereum_client_fixture, ETH_NODE_PORT},
+	},
 	utils::{DeployYuiIbc, ProviderImpl},
 };
 use hyperspace_parachain::{finality_protocol::FinalityProtocol, ParachainClientConfig};
@@ -66,13 +70,13 @@ impl Default for Args {
 		});
 
 		Args {
-			chain_a: format!("ws://{eth}:5001"),
+			chain_a: format!("ws://{eth}:{ETH_NODE_PORT_WS}"),
 			chain_b: format!("http://{cosmos}:26657"),
 			connection_prefix_a: "ibc/".to_string(),
 			connection_prefix_b: "ibc".to_string(),
 			cosmos_grpc: format!("http://{cosmos}:9090"),
 			cosmos_ws: format!("ws://{cosmos}:26657/websocket"),
-			ethereum_rpc: format!("http://{eth}:6001"),
+			ethereum_rpc: format!("http://{eth}:{}", ETH_NODE_PORT),
 			wasm_path,
 		}
 	}
@@ -90,13 +94,28 @@ pub struct DeployYuiIbcTendermintClient {
 
 pub async fn deploy_yui_ibc_and_tendermint_client_fixture() -> DeployYuiIbcTendermintClient {
 	let path = utils::yui_ibc_solidity_path();
-	let project_output = utils::compile_yui(&path, "contracts/core");
-	let diamond_project_output = utils::compile_yui(&path, "contracts/diamond");
-	let project_output1 = utils::compile_yui(&path, "contracts/clients");
-	let (anvil, client) = utils::spawn_anvil();
+	let project_output = hyperspace_ethereum::utils::compile_yui(&path, "contracts/core");
+	let diamond_project_output =
+		hyperspace_ethereum::utils::compile_yui(&path, "contracts/diamond");
+	let project_output1 = hyperspace_ethereum::utils::compile_yui(&path, "contracts/clients");
+	let (anvil, client) = utils::spawn_anvil().await;
 	log::warn!("{}", anvil.endpoint());
-	let yui_ibc =
-		utils::deploy_yui_ibc(&project_output, &diamond_project_output, client.clone()).await;
+	let yui_ibc = hyperspace_ethereum::utils::deploy_yui_ibc(
+		&project_output,
+		&diamond_project_output,
+		client.clone(),
+	)
+	.await;
+
+	project_output1.artifacts().for_each(|(name, artifact)| {
+		if let Some(size) = artifact.bytecode.as_ref().unwrap().object.as_bytes().map(|x| x.len()) {
+			let max = 24 * 1024;
+			if size > max {
+				log::warn!("{} size is too big: {}/{}", name, size, max);
+			}
+			log::info!("{} size: {}/{}", name, size, max);
+		}
+	});
 
 	let upd = project_output1.find_first("DelegateTendermintUpdate").unwrap();
 	let (abi, bytecode, _) = upd.clone().into_parts();
@@ -139,11 +158,13 @@ fn deploy_transfer_module_fixture(
 ) -> impl Future<Output = ContractInstance<Arc<ProviderImpl>, ProviderImpl>> + '_ {
 	async move {
 		let path = utils::yui_ibc_solidity_path();
-		let project_output = utils::compile_yui(&path, "contracts/apps/20-transfer");
+		let project_output =
+			hyperspace_ethereum::utils::compile_yui(&path, "contracts/apps/20-transfer");
 
 		let artifact =
 			project_output.find_first("ICS20Bank").expect("no ICS20Bank in project output");
-		let bank_contract = utils::deploy_contract(artifact, (), deploy.client.clone()).await;
+		let bank_contract =
+			hyperspace_ethereum::utils::deploy_contract(artifact, (), deploy.client.clone()).await;
 		println!("Bank module address: {:?}", bank_contract.address());
 		let artifact = project_output
 			.find_first("ICS20TransferBank")
@@ -152,8 +173,12 @@ fn deploy_transfer_module_fixture(
 			Token::Address(deploy.yui_ibc.diamond.address()),
 			Token::Address(bank_contract.address()),
 		);
-		let module_contract =
-			utils::deploy_contract(artifact, constructor_args, deploy.client.clone()).await;
+		let module_contract = hyperspace_ethereum::utils::deploy_contract(
+			artifact,
+			constructor_args,
+			deploy.client.clone(),
+		)
+		.await;
 		module_contract
 	}
 }
@@ -173,31 +198,11 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	yui_ibc.bind_port("transfer", bank.address()).await;
 	yui_ibc.bank = Some(bank);
 
-	// Overrides
-	// yui_ibc.diamond = ContractInstance::new(
-	// 	H160::from_str("0xf02f5476535c0eea1e501d2c155c1e1f3055e752").unwrap(),
-	// 	yui_ibc.diamond.abi().clone(),
-	// 	yui_ibc.diamond.client(),
-	// );
-	// yui_ibc.tendermint = ContractInstance::new(
-	// 	H160::from_str("0x5d2d6b3fd375fd77dc627d1ae955c441ec157847").unwrap(),
-	// 	yui_ibc.tendermint.abi().clone(),
-	// 	yui_ibc.tendermint.client(),
-	// );
-	// {
-	// 	let bank = yui_ibc.bank.as_mut().unwrap();
-	// 	*bank = ContractInstance::new(
-	// 		H160::from_str("0xa4373e6da07ad62d43c3a74f5edb3d3aa6674c14").unwrap(),
-	// 		bank.abi().clone(),
-	// 		bank.client(),
-	// 	);
-	// }
-
 	//replace the tendermint client address in hyperspace config with a real one
 	let diamond_address = yui_ibc.diamond.address();
-	let tendermint_address = yui_ibc.tendermint.address();
+	let tendermint_address = yui_ibc.tendermint.as_ref().map(|x| x.address());
 	let mut config_a = hyperspace_ethereum_client_fixture(&anvil, yui_ibc).await;
-	config_a.tendermint_client_address = tendermint_address;
+	config_a.tendermint_address = tendermint_address;
 	config_a.ibc_handler_address = diamond_address;
 
 	let mut config_b = CosmosClientConfig {
@@ -269,10 +274,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
 
-	let asset_id_a = AnyAssetId::Ethereum("pica".to_string());
-	let asset_id_b = AnyAssetId::Cosmos(
-		"ibc/47B97D8FF01DA03FCB2F4B1FFEC931645F254E21EF465FA95CBA6888CB964DC4".to_string(),
-	);
+	let asset_str = "pica".to_string();
+	let asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
@@ -285,6 +288,16 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 
 	log::info!(target: "hyperspace", "Conn A: {connection_id_a:?} B: {connection_id_b:?}");
 	log::info!(target: "hyperspace", "Chann A: {channel_a:?} B: {channel_b:?}");
+
+	let asset_id_b = AnyAssetId::Cosmos(format!(
+		"ibc/{}",
+		hex::encode(&sha2_256(
+			format!("{}/{channel_b}/{asset_str}", PortId::transfer()).as_bytes()
+		))
+		.to_uppercase()
+	));
+
+	log::info!(target: "hyperspace", "Asset A: {asset_id_a:?} B: {asset_id_b:?}");
 
 	// Set connections and channel whitelist
 	chain_a.set_connection_id(connection_id_a);
