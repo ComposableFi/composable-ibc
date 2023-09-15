@@ -19,9 +19,7 @@
 
 use anyhow::anyhow;
 pub use beefy_prover;
-use beefy_prover::helpers::{
-	fetch_timestamp_extrinsic_with_proof, unsafe_arc_cast, TimeStampExtWithProof,
-};
+use beefy_prover::helpers::{fetch_timestamp_extrinsic_with_proof, TimeStampExtWithProof};
 use codec::{Decode, Encode};
 use finality_grandpa_rpc::GrandpaApiClient;
 use jsonrpsee::{async_client::Client, tracing::log, ws_client::WsClientBuilder};
@@ -264,11 +262,7 @@ where
 		} else {
 			let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 				// we cast between the same type but different crate versions.
-				&*unsafe {
-					unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(
-						self.relay_ws_client.clone(),
-					)
-				},
+				&*self.relay_ws_client.clone(),
 				latest_finalized_height,
 			)
 			.await?

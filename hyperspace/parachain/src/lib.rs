@@ -16,6 +16,7 @@
 
 use std::{
 	collections::{BTreeMap, HashSet},
+	path::PathBuf,
 	str::FromStr,
 	sync::{Arc, Mutex},
 	time::Duration,
@@ -39,9 +40,7 @@ use frame_support::Serialize;
 use serde::Deserialize;
 
 use crate::{
-	finality_protocol::FinalityProtocol,
-	signer::ExtrinsicSigner,
-	utils::{fetch_max_extrinsic_weight, unsafe_cast_to_jsonrpsee_client},
+	finality_protocol::FinalityProtocol, signer::ExtrinsicSigner, utils::fetch_max_extrinsic_weight,
 };
 use beefy_light_client_primitives::{ClientState, MmrUpdateProof};
 use beefy_prover::Prover;
@@ -67,7 +66,7 @@ use pallet_mmr_primitives::Proof;
 use primitives::{CommonClientState, KeyProvider};
 use sc_keystore::LocalKeystore;
 use sp_core::{ecdsa, ed25519, sr25519, Bytes, Pair, H256};
-use sp_keystore::{Keystore, KeystorePtr};
+use sp_keystore::KeystorePtr;
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
 	KeyTypeId, MultiSignature, MultiSigner,
@@ -209,19 +208,14 @@ where
 				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
 		);
 
-		let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
-			unsafe_cast_to_jsonrpsee_client(&para_ws_client)
-		})
-		.await?;
+		let para_client = subxt::OnlineClient::from_rpc_client(para_ws_client.clone()).await?;
 
-		let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
-			unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
-		})
-		.await?;
+		let relay_client = subxt::OnlineClient::from_rpc_client(relay_ws_client.clone()).await?;
 
 		let max_extrinsic_weight = fetch_max_extrinsic_weight(&para_client).await?;
 
-		let key_store: KeystorePtr = Arc::new(LocalKeystore::in_memory());
+		let temp_dir = PathBuf::from("/tmp/keystore");
+		let key_store: KeystorePtr = Arc::new(LocalKeystore::open(temp_dir, None).unwrap());
 		let key_type = KeyType::from_str(&config.key_type)?;
 		let key_type_id = key_type.to_key_type_id();
 
@@ -243,9 +237,11 @@ where
 				.into(),
 		};
 
-		Keystore::insert(&*key_store, key_type_id, &*config.private_key, public_key.as_ref())
+		key_store
+			.insert(key_type_id, &*config.private_key, public_key.as_ref())
 			.unwrap();
 
+		assert!(key_store.has_keys(&[(public_key.as_ref().to_vec(), key_type_id)]));
 		Ok(Self {
 			name: config.name,
 			parachain_rpc_url: config.parachain_rpc_url,
@@ -294,8 +290,8 @@ where
 {
 	/// Returns a grandpa proving client.
 	pub fn grandpa_prover(&self) -> GrandpaProver<T> {
-		let relay_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.relay_ws_client) };
-		let para_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.para_ws_client) };
+		let relay_ws_client = self.relay_ws_client.clone();
+		let para_ws_client = self.para_ws_client.clone();
 		GrandpaProver {
 			relay_client: self.relay_client.clone(),
 			relay_ws_client,
@@ -414,7 +410,7 @@ where
 		// Try extrinsic submission five times in case of failures
 		let mut count = 0;
 		let progress = loop {
-			if count == 5 {
+			if count == 10 {
 				Err(Error::Custom("Failed to submit extrinsic after 5 tries".to_string()))?
 			}
 
@@ -434,8 +430,9 @@ where
 			match res {
 				Ok(progress) => break progress,
 				Err(e) => {
-					log::warn!("Failed to submit extrinsic: {:?}. Retrying...", e);
+					log::warn!("Failed to submit extrinsic: {:?}. Retrying in 30 seconds...", e);
 					count += 1;
+					tokio::time::sleep(std::time::Duration::from_secs(30)).await;
 				},
 			}
 		};
@@ -578,8 +575,8 @@ where
 		<T as subxt::Config>::Hash: From<H256>,
 		<T as subxt::Config>::Header: Decode,
 	{
-		let relay_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.relay_ws_client) };
-		let para_ws_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.para_ws_client) };
+		let relay_ws_client = self.relay_ws_client.clone();
+		let para_ws_client = self.para_ws_client.clone();
 		let prover = GrandpaProver {
 			relay_client: self.relay_client.clone(),
 			relay_ws_client,

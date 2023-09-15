@@ -4876,6 +4876,7 @@ dependencies = [
  "sp-runtime 7.0.0",
  "sp-state-machine 0.13.0",
  "sp-trie 7.0.0",
+ "sp-weights 4.0.0",
  "ss58-registry",
  "subxt",
  "subxt-generated",

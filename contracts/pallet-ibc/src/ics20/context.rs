@@ -102,7 +102,7 @@ where
 				&from.clone().into_account(),
 				&to.clone().into_account(),
 				amount,
-				frame_support::traits::tokens::Preservation::Protect,
+				frame_support::traits::tokens::Preservation::Expendable,
 			)
 			.map_err(|e| {
 				log::debug!(target: "pallet_ibc", "Failed to transfer ibc asset: {asset_id:?}, denom: {denom}, error: {e:?}");

@@ -48,11 +48,6 @@ use sp_runtime::{
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, sync::Arc, time::Duration};
-// #[cfg(not(feature = "dali"))]
-// use subxt::config::polkadot::PlainTip as Tip;
-// #[cfg(feature = "dali")]
-// use subxt::config::substrate::AssetTip as Tip;
-use crate::utils::unsafe_cast_to_jsonrpsee_client;
 use subxt::{
 	config::{
 		extrinsic_params::{BaseExtrinsicParamsBuilder, Era},
@@ -132,15 +127,13 @@ where
 				.encoded()
 				.to_vec()
 		};
-		let dispatch_info =
-			TransactionPaymentApiClient::<H256, RuntimeDispatchInfo<u128, u64>>::query_info(
-				&*self.para_ws_client,
-				extrinsic.into(),
-				None,
-			)
-			.await
-			.map_err(|e| Error::from(format!("Rpc Error From Estimating weight {:?}", e)))?;
-		Ok(dispatch_info.weight)
+		let dispatch_info = TransactionPaymentApiClient::<
+			H256,
+			RuntimeDispatchInfo<u128, sp_weights::Weight>,
+		>::query_info(&*self.para_ws_client, extrinsic.into(), None)
+		.await
+		.map_err(|e| Error::from(format!("Rpc Error From Estimating weight {:?}", e)))?;
+		Ok(dispatch_info.weight.ref_time())
 	}
 
 	async fn finality_notifications(
@@ -301,9 +294,8 @@ where
 		let extrinsic_opaque =
 			block.block.extrinsics.get(transaction_index).expect("Extrinsic not found");
 
-		let unchecked_extrinsic =
-			UncheckedExtrinsic::<T>::decode(&mut &*extrinsic_opaque.0.encode())
-				.map_err(|e| Error::from(format!("Extrinsic decode error: {}", e)))?;
+		let unchecked_extrinsic = UncheckedExtrinsic::<T>::decode(&mut &*extrinsic_opaque.0)
+			.map_err(|e| Error::from(format!("Extrinsic decode error: {}", e)))?;
 
 		let messages = unchecked_extrinsic
 			.function
@@ -364,14 +356,8 @@ where
 				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
 		);
 
-		let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
-			unsafe_cast_to_jsonrpsee_client(&para_ws_client)
-		})
-		.await?;
-		let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
-			unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
-		})
-		.await?;
+		let para_client = subxt::OnlineClient::from_rpc_client(para_ws_client.clone()).await?;
+		let relay_client = subxt::OnlineClient::from_rpc_client(relay_ws_client.clone()).await?;
 
 		self.relay_ws_client = relay_ws_client;
 		self.para_ws_client = para_ws_client;

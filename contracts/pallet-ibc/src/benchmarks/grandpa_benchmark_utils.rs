@@ -38,7 +38,7 @@ pub fn generate_finality_proof(
 		(1u8, 0u8, Compact(GRANDPA_UPDATE_TIMESTAMP.saturating_mul(10000))).encode();
 	timestamp_extrinsic.insert(0, 0);
 	timestamp_extrinsic.insert(0, 0);
-	let key = Compact(0u32).encode();
+	let key = Compact(0u64).encode();
 	let extrinsics_root = {
 		let mut root = Default::default();
 		let mut trie =
