@@ -199,7 +199,9 @@ impl EthereumClient {
 
 	pub async fn websocket_provider(&self) -> Result<Provider<Ws>, ClientError> {
 		if let Some(secret_path) = &self.config.jwt_secret_path {
-			let secret = std::fs::read_to_string(secret_path).unwrap();
+			let secret = std::fs::read_to_string(secret_path).map_err(|e| {
+				ClientError::Other(format!("jwtsecret not found. Search for 'execution/jwtsecret' in the code and replace it with your local path. {e}"))
+			})?;
 			let secret = JwtKey::from_slice(&hex::decode(&secret[2..]).unwrap()).expect("oops");
 			let jwt_auth = JwtAuth::new(secret, None, None);
 			let token = jwt_auth.generate_token().unwrap();

@@ -140,11 +140,8 @@ pub async fn hyperspace_ethereum_client_fixture(
 		None
 	};
 
-	let jwt_secret_path = if !USE_GETH {
-		None
-	} else {
-		Some(format!("{}/.lighthouse/local-testnet/geth_datadir1/geth/jwtsecret", env!("HOME")))
-	};
+	let jwt_secret_path =
+		if !USE_GETH { None } else { Some("../eth-pos-devnet/execution/jwtsecret".to_string()) };
 
 	EthereumClientConfig {
 		http_rpc_url: endpoint.parse().unwrap(),
