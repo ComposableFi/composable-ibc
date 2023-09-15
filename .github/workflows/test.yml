@@ -107,7 +107,7 @@ jobs:
           curl -L http://34.70.93.30/parachain-node -o ./target/release/parachain-node
           cp ./target/release/parachain-node /usr/bin/parachain-node
           chmod +x /usr/bin/parachain-node
-  
+
       - name: Run local parachain cluster & Tests
         run: |
           export PARA_HOST=127.0.0.1
@@ -117,6 +117,6 @@ jobs:
           netstat -ltup | grep LISTEN
           RUST_BACKTRACE=full METRICS_PORT=39988 ./wait-for-parachains-network.sh
           RUST_BACKTRACE=full METRICS_PORT=39998 ./wait-for-parachains-network.sh 
-          # SKIP_WASM_BUILD=1 cargo +nightly nextest run --locked --release --workspace --exclude ibc-derive --exclude hyperspace-testsuite
-          RUST_BACKTRACE=full cargo +nightly test -p hyperspace-testsuite --locked --debug
+          # SKIP_WASM_BUILD=1 cargo +${{ env.RUST_VERSION }} nextest run --locked --release --workspace --exclude ibc-derive --exclude hyperspace-testsuite
+          RUST_BACKTRACE=full cargo +${{ env.RUST_VERSION }} test -p hyperspace-testsuite --locked --debug
           process-compose down -f process-compose.yml
