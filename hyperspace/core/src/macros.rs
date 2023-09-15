@@ -821,11 +821,7 @@ macro_rules! chains {
 					Self::Wasm(chain) => {
 						let messages = messages
 							.into_iter()
-							.map(|msg| {
-								let any = wrap_any_msg_into_wasm(msg, chain.code_id.clone());
-								// any.as_ref().map(|any| { log::info!("Submitting message: {}", hex::encode(&any.value)); });
-								any
-							})
+							.map(|msg| wrap_any_msg_into_wasm(msg, chain.code_id.clone()))
 							.collect::<Result<Vec<_>, _>>()?;
 						chain.inner.submit(messages).await.map_err(AnyError::into)
 					},

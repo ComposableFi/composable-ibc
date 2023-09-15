@@ -14,12 +14,7 @@
 
 #![allow(unreachable_patterns)]
 
-use crate::{
-	chains,
-	substrate::{
-		default::DefaultConfig, ComposableConfig, PicassoKusamaConfig, PicassoRococoConfig,
-	},
-};
+use crate::chains;
 use async_trait::async_trait;
 #[cfg(feature = "cosmos")]
 use cosmos::client::{CosmosClient, CosmosClientConfig};
@@ -97,13 +92,13 @@ impl From<String> for AnyError {
 }
 
 chains! {
-	Parachain(ParachainClientConfig, ParachainClient<DefaultConfig>),
+	// Parachain(ParachainClientConfig, ParachainClient<DefaultConfig>),
 	// Dali(ParachainClientConfig, ParachainClient<DaliConfig>),
-	Composable(ParachainClientConfig, ParachainClient<ComposableConfig>),
-	PicassoRococo(ParachainClientConfig, ParachainClient<PicassoRococoConfig>),
-	PicassoKusama(ParachainClientConfig, ParachainClient<PicassoKusamaConfig>),
+	// Composable(ParachainClientConfig, ParachainClient<ComposableConfig>),
+	// PicassoRococo(ParachainClientConfig, ParachainClient<PicassoRococoConfig>),
+	// PicassoKusama(ParachainClientConfig, ParachainClient<PicassoKusamaConfig>),
 	#[cfg(feature = "cosmos")]
-	Cosmos(CosmosClientConfig, CosmosClient<DefaultConfig>),
+	Cosmos(CosmosClientConfig, CosmosClient<()>),
 	#[cfg(feature = "ethereum")]
 	Ethereum(EthereumClientConfig, EthereumClient, EthereumCmd),
 }
