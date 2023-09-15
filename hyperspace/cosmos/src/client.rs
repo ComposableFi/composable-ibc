@@ -241,7 +241,7 @@ pub struct CosmosClientConfig {
 	#[serde(flatten)]
 	pub common: CommonClientConfig,
 	/// List of tokens to skip uosmo etc
-	pub skip_tokens_list: Option<Vec<String>>
+	pub skip_tokens_list: Option<Vec<String>>,
 }
 
 impl<H> CosmosClient<H>
