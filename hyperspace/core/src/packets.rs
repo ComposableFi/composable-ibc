@@ -349,7 +349,8 @@ pub async fn query_ready_and_timed_out_packets(
 					}
 
 					let list = source.common_state().skip_tokens_list;
-					let decoded_dara: PacketData = serde_json::from_str(&packet.data).map_err(|e| {
+
+					let decoded_dara: PacketData = serde_json::from_str(&String::from_utf8_lossy(packet.data.as_ref())).map_err(|e| {
 						Error::Custom(format!(
 						"Failed to decode packet data for packet {:?}: {:?}",
 						packet, e
