@@ -228,7 +228,7 @@ where
 
 	timeout(Duration::from_secs(12 * 60), misbehavour_event_handle)
 		.await
-		.expect("timeout")
+		.expect("timeout misbehavour_event_handle")
 		.expect("failed to receive misbehaviour event");
 
 	handle.abort();
