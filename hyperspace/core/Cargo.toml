@@ -60,6 +60,7 @@ subxt-generated = { path = "../../utils/subxt/generated" }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 prost = { version = "0.11", default-features = false }
+serde_json = "1.0.74"
 
 [dev-dependencies]
 derive_more = "0.99.17"

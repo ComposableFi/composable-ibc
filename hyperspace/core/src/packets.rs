@@ -35,7 +35,7 @@ use ibc::{
 		ics03_connection::connection::ConnectionEnd,
 		ics04_channel::channel::{ChannelEnd, State},
 	},
-	Height,
+	Height, applications::transfer::packet::PacketData,
 };
 use ibc_proto::google::protobuf::Any;
 use pallet_ibc::light_clients::AnyClientState;
@@ -345,6 +345,19 @@ pub async fn query_ready_and_timed_out_packets(
 
 					if packet.timeout_height.is_zero() && packet.timeout_timestamp.nanoseconds() == 0 {
 						log::warn!(target: "hyperspace", "Skipping packet as packet timeout is zero: {}", packet.sequence);
+						return Ok(None)
+					}
+
+					let list = source.common_state().skip_tokens_list;
+					let decoded_dara: PacketData = serde_json::from_str(&packet.data).map_err(|e| {
+						Error::Custom(format!(
+						"Failed to decode packet data for packet {:?}: {:?}",
+						packet, e
+						))
+					})?;
+
+					if list.iter().map(|x| decoded_dara.token.denom.base_denom.as_str() == x).any()) {
+						log::warn!(target: "hyperspace", "Skipping packet as uosmo packet: {:?}", packet);
 						return Ok(None)
 					}
 

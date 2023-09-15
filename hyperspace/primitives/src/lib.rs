@@ -132,6 +132,8 @@ pub struct CommonClientState {
 	pub initial_rpc_call_delay: Duration,
 	pub misbehaviour_client_msg_queue: Arc<AsyncMutex<Vec<AnyClientMessage>>>,
 	pub max_packets_to_process: usize,
+
+	pub skip_tokens_list: Vec<String>,
 }
 
 impl Default for CommonClientState {
@@ -144,6 +146,7 @@ impl Default for CommonClientState {
 			initial_rpc_call_delay: rpc_call_delay,
 			misbehaviour_client_msg_queue: Arc::new(Default::default()),
 			max_packets_to_process: 100,
+			skip_tokens_list: vec![],
 		}
 	}
 }
