@@ -754,7 +754,6 @@ where
 	let mut deployed_facets = vec![];
 	for facet_name in facet_names {
 		let facet_name_str = facet_name.to_string();
-		dbg!(&facet_name_str);
 		let contract = project_output
 			.find_first(&facet_name_str)
 			.or_else(|| diamond_project_output.find_first(&facet_name_str))

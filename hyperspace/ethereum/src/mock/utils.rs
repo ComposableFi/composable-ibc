@@ -46,7 +46,7 @@ pub async fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http
 	let wallet: LocalWallet = if USE_GETH {
 		LocalWallet::decrypt_keystore(
 			"keys/0x73db010c3275eb7a92e5c38770316248f4c644ee",
-			option_env!("KEY_PASS").expect("KEY_PASS not set"),
+			std::env::var("KEY_PASS").expect("KEY_PASS not set"),
 		)
 		.unwrap()
 		.into()

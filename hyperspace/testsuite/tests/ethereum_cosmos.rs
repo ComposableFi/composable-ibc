@@ -199,11 +199,9 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	yui_ibc.bank = Some(bank);
 
 	//replace the tendermint client address in hyperspace config with a real one
-	let diamond_address = yui_ibc.diamond.address();
 	let tendermint_address = yui_ibc.tendermint.as_ref().map(|x| x.address());
 	let mut config_a = hyperspace_ethereum_client_fixture(&anvil, yui_ibc).await;
 	config_a.tendermint_address = tendermint_address;
-	config_a.ibc_handler_address = diamond_address;
 
 	let mut config_b = CosmosClientConfig {
 		name: "centauri".to_string(),

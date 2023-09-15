@@ -1,0 +1,16 @@
+type = "cosmos"
+name = "centauri"
+rpc_url = "http://127.0.0.1:26657/"
+grpc_url = "http://127.0.0.1:9090/"
+websocket_url = "ws://127.0.0.1:26657/websocket"
+chain_id = "centauri-testnet-1"
+account_prefix = "centauri"
+fee_denom = "stake"
+fee_amount = "4000"
+gas_limit = 9223372036854775806
+store_prefix = "ibc"
+max_tx_size = 200000
+channel_whitelist = []
+mnemonic = "sense state fringe stool behind explain area quit ugly affair develop thumb clinic weasel choice atom gesture spare sea renew penalty second upon peace"
+skip_optional_client_updates = true
+max_packets_to_process = 200

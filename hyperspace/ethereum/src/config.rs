@@ -97,10 +97,6 @@ pub struct EthereumClientConfig {
 	/// HTTP URL for RPC (Beacon node)
 	#[serde(deserialize_with = "uri_de", serialize_with = "uri_se")]
 	pub beacon_rpc_url: http::uri::Uri,
-	/// address of the OwnableIBCHandler contract.
-	#[serde(deserialize_with = "address_de")]
-	// TODO: remove and use `yui.diamond.address()` instead
-	pub ibc_handler_address: Address,
 	/// mnemonic for the wallet
 	pub mnemonic: Option<String>,
 	/// private key for the wallet
@@ -135,6 +131,7 @@ pub struct EthereumClientConfig {
 	#[serde(default)]
 	pub bank_address: Option<Address>,
 	/// Diamond facets (ABI file name, contract address)
+	#[serde(default)]
 	pub diamond_facets: Vec<(ContractName, Address)>,
 	#[serde(skip)]
 	pub yui: Option<DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>>,
@@ -195,15 +192,11 @@ impl EthereumClientConfig {
 		let chain_id = client.get_chainid().await.unwrap();
 
 		let wallet: LocalWallet = if let Some(mnemonic) = &self.mnemonic {
-			MnemonicBuilder::<English>::default()
-				.phrase(mnemonic.as_str())
-				.build()
-				.unwrap()
-				.with_chain_id(chain_id.as_u64())
+			MnemonicBuilder::<English>::default().phrase(mnemonic.as_str()).build().unwrap()
 		} else if let Some(path) = self.private_key_path.clone() {
 			LocalWallet::decrypt_keystore(
 				path,
-				option_env!("KEY_PASS").expect("KEY_PASS is not set"),
+				std::env::var("KEY_PASS").expect("KEY_PASS is not set"),
 			)
 			.unwrap()
 			.into()
@@ -216,7 +209,7 @@ impl EthereumClientConfig {
 			panic!("no private key or mnemonic provided")
 		};
 
-		Ok(Arc::new(SignerMiddleware::new(client, wallet)))
+		Ok(Arc::new(SignerMiddleware::new(client, wallet.with_chain_id(chain_id.as_u64()))))
 	}
 }
 

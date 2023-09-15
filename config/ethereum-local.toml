@@ -1,0 +1,14 @@
+type = "ethereum"
+http_rpc_url = "http://localhost:8545/"
+ws_rpc_url = "ws://127.0.0.1:8546/"
+beacon_rpc_url = "http://localhost:3500/"
+ibc_handler_address = "0x0000000000000000000000000000000000000000"
+private_key_path = "hyperspace/ethereum/keys/0x73db010c3275eb7a92e5c38770316248f4c644ee"
+max_block_weight = 1
+name = "ethereum-client"
+channel_whitelist = []
+commitment_prefix = "0x6962632f"
+diamond_address = "0x2a1bcb20cfdbd43addfd2477f477cf818ec31de8"
+diamond_facets = [["IBCClient", "0x8cb9f283077e85b8b0a032696391af056ffd412e"], ["IBCConnection", "0xbd6d4ddd95a4bce95482abf285d7d529e11dc38d"], ["IBCChannelHandshake", "0x0e10190b3287e3be51b1c24a8a6a3b985966fd9c"], ["IBCPacket", "0x598cfa9aa58de691b6084b53bc058cc165bf70b4"], ["IBCQuerier", "0xedb8dfa5612637a14416d8f89f4db56ad2eed7c7"], ["DiamondCutFacet", "0x263c273bd66f4fbbff91f1f58db344b9cac36d20"], ["DiamondLoupeFacet", "0x18940f61ab52ec134500312ddb9d55f2ef450b6f"], ["OwnershipFacet", "0x91bf53ea9aed6d7901f785878f248748089319f1"]]
+client_type = "07-tendermint"
+jwt_secret_path = "/Users/vmark/work/eth-pos-devnet/execution/jwtsecret"

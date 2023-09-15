@@ -227,7 +227,7 @@ impl EthereumClient {
 			.from_block(BlockNumber::Earliest)
 			// .from_block(from_block)
 			.to_block(BlockNumber::Latest)
-			.address(self.config.ibc_handler_address)
+			.address(self.yui.diamond.address())
 			.event("OpenInitChannel(string,string)");
 
 		let logs = self.client().get_logs(&filter).await.unwrap();
@@ -249,7 +249,7 @@ impl EthereumClient {
 		let filter = Filter::new()
 			.from_block(from_block)
 			.to_block(BlockNumber::Latest)
-			.address(self.config.ibc_handler_address)
+			.address(self.yui.diamond.address())
 			.event("GeneratedClientIdentifier(string)");
 
 		let logs = self.client().get_logs(&filter).await.unwrap();
@@ -270,7 +270,7 @@ impl EthereumClient {
 		let filter = Filter::new()
 			.from_block(from_block)
 			.to_block(BlockNumber::Latest)
-			.address(self.config.ibc_handler_address)
+			.address(self.yui.diamond.address())
 			.event("GeneratedConnectionIdentifier(string)");
 
 		let logs = self.client().get_logs(&filter).await.unwrap();
@@ -291,7 +291,7 @@ impl EthereumClient {
 		let filter = Filter::new()
 			.from_block(from_block)
 			.to_block(BlockNumber::Latest)
-			.address(self.config.ibc_handler_address)
+			.address(self.yui.diamond.address())
 			.event("AcknowledgePacket((uint64,string,string,string,string,bytes,(uint64,uint64),uint64),bytes)");
 
 		let logs = self.client().get_logs(&filter).await.unwrap();
@@ -392,7 +392,7 @@ impl EthereumClient {
 		let filter = Filter::new()
 			.from_block(from)
 			.to_block(to)
-			.address(self.config.ibc_handler_address)
+			.address(self.yui.diamond.address())
 			.event(event_name);
 		let client = self.client().clone();
 
@@ -421,7 +421,7 @@ impl EthereumClient {
 		.unwrap();
 
 		let client = self.client().clone();
-		let address = self.config.ibc_handler_address.clone();
+		let address = self.yui.diamond.address().clone();
 
 		async move {
 			Ok(client
@@ -451,7 +451,7 @@ impl EthereumClient {
 			cast::SimpleCast::index("bytes32", dbg!(&var_name), dbg!(&storage_index)).unwrap();
 
 		let client = self.client().clone();
-		let address = self.config.ibc_handler_address.clone();
+		let address = self.yui.diamond.address().clone();
 
 		dbg!(&address);
 		dbg!(&H256::from_str(&index).unwrap());
@@ -491,7 +491,7 @@ impl EthereumClient {
 		let index = cast::SimpleCast::index("bytes32", &key2_hashed_hex, &key2_hashed_hex).unwrap();
 
 		let client = self.client().clone();
-		let address = self.config.ibc_handler_address.clone();
+		let address = self.yui.diamond.address().clone();
 
 		async move {
 			client
