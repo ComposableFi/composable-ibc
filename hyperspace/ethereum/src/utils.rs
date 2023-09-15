@@ -799,27 +799,27 @@ where
 		.await
 		.unwrap();
 
-	let predefined_layout = serde_json::from_reader::<_, StorageLayout>(
-		File::open("/Users/vmark/work/centauri-private/hyperspace/ethereum/src/storage_layout/ibc_storage.json").unwrap(),
-	)
-	.expect("failed to read predefined storage layout");
-
-	let _storage_layout = project_output
-		.compiled_artifacts()
-		.iter()
-		.chain(diamond_project_output.compiled_artifacts())
-		.flat_map(|(_, artifact)| artifact.into_iter().flat_map(|(an, artifact)| artifact))
-		.filter_map(|ar| ar.artifact.storage_layout.clone())
-		.chain(once(predefined_layout))
-		.fold(StorageLayout { storage: vec![], types: Default::default() }, |mut acc, layout| {
-			acc.storage.extend(layout.storage);
-
-			let len0 = acc.types.len();
-			let len1 = layout.types.len();
-			acc.types.extend(layout.types);
-			assert_eq!(acc.types.len(), len0 + len1, "duplicated type");
-			acc
-		});
+	// let predefined_layout = serde_json::from_reader::<_, StorageLayout>(
+	// 	File::open("/Users/vmark/work/centauri-private/hyperspace/ethereum/src/storage_layout/
+	// ibc_storage.json").unwrap(), )
+	// .expect("failed to read predefined storage layout");
+	//
+	// let _storage_layout = project_output
+	// 	.compiled_artifacts()
+	// 	.iter()
+	// 	.chain(diamond_project_output.compiled_artifacts())
+	// 	.flat_map(|(_, artifact)| artifact.into_iter().flat_map(|(an, artifact)| artifact))
+	// 	.filter_map(|ar| ar.artifact.storage_layout.clone())
+	// 	.chain(once(predefined_layout))
+	// 	.fold(StorageLayout { storage: vec![], types: Default::default() }, |mut acc, layout| {
+	// 		acc.storage.extend(layout.storage);
+	//
+	// 		let len0 = acc.types.len();
+	// 		let len1 = layout.types.len();
+	// 		acc.types.extend(layout.types);
+	// 		assert_eq!(acc.types.len(), len0 + len1, "duplicated type");
+	// 		acc
+	// 	});
 
 	DeployYuiIbc {
 		diamond,
