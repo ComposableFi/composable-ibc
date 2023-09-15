@@ -44,10 +44,7 @@ use std::{
 use sync_committee_prover::SyncCommitteeProver;
 use thiserror::Error;
 
-pub type EthRpcClient = ethers::prelude::SignerMiddleware<
-	ethers::providers::Provider<Http>,
-	ethers::signers::Wallet<ethers::prelude::k256::ecdsa::SigningKey>,
->;
+pub type EthRpcClient = SignerMiddleware<Provider<Http>, Wallet<k256::ecdsa::SigningKey>>;
 pub(crate) type WsEth = Provider<Ws>;
 
 pub static IBC_STORAGE_SLOT: Lazy<U256> =
@@ -159,43 +156,30 @@ pub struct AckPacket {
 
 impl EthereumClient {
 	pub async fn new(mut config: EthereumClientConfig) -> Result<Self, ClientError> {
-		let client = Provider::<Http>::try_from(config.http_rpc_url.to_string())
-			.map_err(|_| ClientError::UriParseError(config.http_rpc_url.clone()))?;
+		let client = config.client().await?;
 
-		let chain_id = client.get_chainid().await.unwrap();
-
-		let wallet: LocalWallet = if let Some(mnemonic) = &config.mnemonic {
-			MnemonicBuilder::<English>::default()
-				.phrase(mnemonic.as_str())
-				.build()
-				.unwrap()
-				.with_chain_id(chain_id.as_u64())
-		} else if let Some(path) = config.private_key_path.take() {
-			LocalWallet::decrypt_keystore(
-				path,
-				option_env!("KEY_PASS").expect("KEY_PASS is not set"),
-			)
-			.unwrap()
-			.into()
-		} else if let Some(private_key) = config.private_key.take() {
-			let key = elliptic_curve::SecretKey::<ethers::prelude::k256::Secp256k1>::from_sec1_pem(
-				private_key.as_str(),
-			)
-			.unwrap();
-			key.into()
-		} else {
-			panic!("no private key or mnemonic provided")
+		let yui = match config.yui.take() {
+			None => DeployYuiIbc::<_, _>::from_addresses(
+				client.clone(),
+				config.diamond_address.clone().ok_or_else(|| {
+					ClientError::Other("diamond address must be provided".to_string())
+				})?,
+				Some(config.tendermint_address.clone().ok_or_else(|| {
+					ClientError::Other("tendermint address must be provided".to_string())
+				})?),
+				Some(config.bank_address.clone().ok_or_else(|| {
+					ClientError::Other("bank address must be provided".to_string())
+				})?),
+				config.diamond_facets.clone(),
+			)?,
+			Some(yui) => yui,
 		};
-
-		let client = ethers::middleware::SignerMiddleware::new(client, wallet);
-
-		let yui = config.yui.take().unwrap();
 		Ok(Self {
-			http_rpc: Arc::new(client),
+			http_rpc: client,
 			ws_uri: config.ws_rpc_url.clone(),
 			common_state: Default::default(),
 			yui,
-			prev_state: Arc::new(std::sync::Mutex::new((vec![], vec![]))),
+			prev_state: Arc::new(Mutex::new((vec![], vec![]))),
 			client_id: Arc::new(Mutex::new(config.client_id.clone())),
 			connection_id: Arc::new(Mutex::new(config.connection_id.clone())),
 			channel_whitelist: Arc::new(Mutex::new(

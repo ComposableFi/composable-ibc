@@ -11,9 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use clap::Parser;
 use hyperspace_core::{
+	chain::{AnyCmd, AnyConfig},
 	command::{Cli, Subcommand},
 	logging,
 };
@@ -42,5 +43,17 @@ async fn main() -> Result<()> {
 			cmd.save_config(&new_config).await
 		},
 		Subcommand::Fish(cmd) => cmd.fish().await,
+		Subcommand::Client { cmd, client } => {
+			let mut config = cmd.parse_config().await?;
+			match (client, config.chain_a) {
+				(AnyCmd::Ethereum(client_cmd), AnyConfig::Ethereum(client_cfg)) => {
+					let new_config = client_cmd.run(client_cfg).await?;
+					config.chain_a = AnyConfig::Ethereum(new_config);
+					cmd.save_config(&config).await
+				},
+				(cmd, cfg) =>
+					bail!("Client command {:?} is not supported for chain {:?}", cmd, cfg),
+			}
+		},
 	}
 }

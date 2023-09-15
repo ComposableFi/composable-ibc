@@ -1,12 +1,10 @@
 #![allow(warnings)]
 
-pub mod config;
-
-pub mod client;
-
-pub mod contract;
-
 pub mod chain;
+pub mod client;
+pub mod cmd;
+pub mod config;
+pub mod contract;
 pub mod events;
 pub mod ibc_provider;
 pub mod jwt;

@@ -16,7 +16,7 @@
 macro_rules! chains {
 	($(
         $(#[$($meta:meta)*])*
-		$name:ident($config:path, $client:path),
+		$name:ident($config:path, $client:path$(, $cmd:path)?),
 	)*) => {
 		#[derive(Debug, Serialize, Deserialize, Clone)]
 		#[serde(tag = "type", rename_all = "snake_case")]
@@ -70,6 +70,17 @@ macro_rules! chains {
 			)*
 			#[error("{0}")]
 			Other(String),
+		}
+
+		#[derive(Debug, Clone, clap::Parser)]
+		pub enum AnyCmd {
+			$(
+				$(#[$($meta)*])*
+				$(
+				#[command(subcommand)]
+				$name($cmd),
+				)?
+			)*
 		}
 
 		impl From<anyhow::Error> for AnyError {

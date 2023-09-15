@@ -20,7 +20,10 @@ use hyperspace_ethereum::{
 	client::{EthRpcClient, EthereumClient},
 	config::EthereumClientConfig,
 	contract::{IbcHandler, UnwrapContractError},
-	mock::{utils, utils::{USE_GETH, hyperspace_ethereum_client_fixture}},
+	mock::{
+		utils,
+		utils::{hyperspace_ethereum_client_fixture, USE_GETH},
+	},
 	utils::{DeployYuiIbc, ProviderImpl},
 	yui_types::IntoToken,
 };
@@ -137,14 +140,19 @@ impl DeployYuiIbcMockClient {
 
 pub async fn deploy_yui_ibc_and_mock_client_fixture() -> DeployYuiIbcMockClient {
 	let path = utils::yui_ibc_solidity_path();
-	let project_output = utils::compile_yui(&path, "contracts/core");
-	let diamond_project_output = utils::compile_yui(&path, "contracts/diamond");
-	let (anvil, client) = utils::spawn_anvil();
+	let project_output = hyperspace_ethereum::utils::compile_yui(&path, "contracts/core");
+	let diamond_project_output =
+		hyperspace_ethereum::utils::compile_yui(&path, "contracts/diamond");
+	let (anvil, client) = utils::spawn_anvil().await;
 	log::warn!("{}", anvil.endpoint());
-	let yui_ibc =
-		utils::deploy_yui_ibc(&project_output, &diamond_project_output, client.clone()).await;
+	let yui_ibc = hyperspace_ethereum::utils::deploy_yui_ibc(
+		&project_output,
+		&diamond_project_output,
+		client.clone(),
+	)
+	.await;
 
-	let ibc_mock_client = utils::compile_solc({
+	let ibc_mock_client = hyperspace_ethereum::utils::compile_solc({
 		let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
 		ProjectPathsConfig::builder()
@@ -154,7 +162,7 @@ pub async fn deploy_yui_ibc_and_mock_client_fixture() -> DeployYuiIbcMockClient 
 			.unwrap()
 	});
 
-	let ibc_mock_client = utils::deploy_contract(
+	let ibc_mock_client = hyperspace_ethereum::utils::deploy_contract(
 		ibc_mock_client.find_first("MockClient").unwrap(),
 		(Token::Address(yui_ibc.diamond.address()),),
 		client.clone(),
@@ -218,7 +226,7 @@ fn deploy_mock_module_fixture(
 	deploy: &DeployYuiIbcMockClient,
 ) -> impl Future<Output = ContractInstance<Arc<ProviderImpl>, ProviderImpl>> + '_ {
 	async move {
-		let clients = utils::compile_solc({
+		let clients = hyperspace_ethereum::utils::compile_solc({
 			let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
 			ProjectPathsConfig::builder()
@@ -230,8 +238,12 @@ fn deploy_mock_module_fixture(
 
 		let contract = clients.find_first("MockModule").expect("no MockModule in project output");
 		let constructor_args = (Token::Address(deploy.yui_ibc.diamond.address()),);
-		let contract =
-			utils::deploy_contract(contract, constructor_args, deploy.client.clone()).await;
+		let contract = hyperspace_ethereum::utils::deploy_contract(
+			contract,
+			constructor_args,
+			deploy.client.clone(),
+		)
+		.await;
 		println!("Mock module address: {:?}", contract.address());
 		contract
 	}
@@ -248,14 +260,19 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 
 	/* ______________________________________________________________________________ */
 	//compile and deploy yui ibc contracts
-	let project_output = utils::compile_yui(&path, "contracts/core");
-	let project_output1 = utils::compile_yui(&path, "contracts/clients");
-	let diamond_project_output = utils::compile_yui(&path, "contracts/diamond");
+	let project_output = hyperspace_ethereum::utils::compile_yui(&path, "contracts/core");
+	let project_output1 = hyperspace_ethereum::utils::compile_yui(&path, "contracts/clients");
+	let diamond_project_output =
+		hyperspace_ethereum::utils::compile_yui(&path, "contracts/diamond");
 
-	let (anvil, client) = utils::spawn_anvil();
+	let (anvil, client) = utils::spawn_anvil().await;
 
-	let mut yui_ibc =
-		utils::deploy_yui_ibc(&project_output, &diamond_project_output, client.clone()).await;
+	let mut yui_ibc = hyperspace_ethereum::utils::deploy_yui_ibc(
+		&project_output,
+		&diamond_project_output,
+		client.clone(),
+	)
+	.await;
 
 	/* ______________________________________________________________________________ */
 
@@ -494,8 +511,8 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 async fn relayer_channel_tests() {
 	let path = utils::yui_ibc_solidity_path();
 
-	let project_output1 = utils::compile_yui(&path, "contracts/clients");
-	let (anvil, client) = utils::spawn_anvil();
+	let project_output1 = hyperspace_ethereum::utils::compile_yui(&path, "contracts/clients");
+	let (anvil, client) = utils::spawn_anvil().await;
 
 	let signer = Signer::from_str("0CDA3F47EF3C4906693B170EF650EB968C5F4B2C").unwrap();
 	/* ______________________________________________________________________________ */

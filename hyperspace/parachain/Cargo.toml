@@ -77,7 +77,7 @@ sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch 
 
 [dev-dependencies]
 derive_more = "0.99.17"
-clap = {version = "3.2.0", features = ["derive"]}
+clap = { version = "4.4.2", features = ["derive"] }
 state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 prost = "0.11"
 primitives = { path = "../primitives", package = "hyperspace-primitives", features = ["testing"] }
