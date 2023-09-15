@@ -148,22 +148,28 @@ pub(crate) fn client_state_from_abi_token<H>(token: Token) -> Result<ClientState
 		ParamType::Bool,
 	])];
 
-	let Token::Tuple(toks) = ethers::abi::decode(&params, bytes.as_slice())?.pop().unwrap() else {
+	let Token::Tuple(toks) = ethers::abi::decode(&params, bytes.as_slice())?.pop().ok_or(
+		ClientError::Other("invalid client state, .pop() return None'".to_string()))? 
+	else {
 		return Err(ClientError::Other("invalid client state'".to_string()))
 	};
 
-	let chain_id = match toks.get(0).cloned().unwrap() {
+	let chain_id = match toks.get(0).cloned().ok_or(
+		ClientError::Other("failed to get index 0 and retrieve chain_id from token".to_string()))? {
 		EthersToken::String(chain_id) => chain_id,
 		_ => return Err(ClientError::Other("chain_id not found".to_string())),
 	};
 
-	let (trust_level_numerator, trust_level_denominator) = match toks.get(1).cloned().unwrap() {
+	let (trust_level_numerator, trust_level_denominator) = match toks.get(1).cloned().ok_or(
+		ClientError::Other("failed to get index 1 and retrieve trust_level_numerator and trust_level_denominator".to_string()))? {
 		EthersToken::Tuple(toks) => (
-			match toks.get(0).cloned().unwrap() {
+			match toks.get(0).cloned().ok_or(
+				ClientError::Other("failed to get index 0 and retrieve numerator".to_string()))? {
 				EthersToken::Uint(numerator) => numerator.as_u64(),
 				_ => return Err(ClientError::Other("trust_level_numerator not found".to_string())),
 			},
-			match toks.get(1).cloned().unwrap() {
+			match toks.get(1).cloned().ok_or(
+				ClientError::Other("failed to get index 0 and retrieve denominator".to_string()))? {
 				EthersToken::Uint(denominator) => denominator.as_u64(),
 				_ =>
 					return Err(ClientError::Other("trust_level_denominator not found".to_string())),
@@ -172,13 +178,16 @@ pub(crate) fn client_state_from_abi_token<H>(token: Token) -> Result<ClientState
 		_ => return Err(ClientError::Other("trust_level not found".to_string())),
 	};
 
-	let (trusting_period_secs, trusting_period_nanos) = match toks.get(2).cloned().unwrap() {
+	let (trusting_period_secs, trusting_period_nanos) = match toks.get(2).cloned().ok_or(
+		ClientError::Other("failed to get index 2 and retrieve trusting_period_secs and trusting_period_nanos".to_string()))? {
 		EthersToken::Tuple(toks) => (
-			match toks.get(0).cloned().unwrap() {
+			match toks.get(0).cloned().ok_or(
+				ClientError::Other("failed to get index 0 and retrieve numerator".to_string()))? {
 				EthersToken::Int(numerator) => numerator.as_u64(),
 				_ => return Err(ClientError::Other("trusting_period_secs not found".to_string())),
 			},
-			match toks.get(1).cloned().unwrap() {
+			match toks.get(1).cloned().ok_or(
+				ClientError::Other("failed to get index 1 and retrieve denominator".to_string()))? {
 				EthersToken::Int(denominator) => denominator.as_u64(),
 				_ => return Err(ClientError::Other("trusting_period_nanos not found".to_string())),
 			},
@@ -186,13 +195,16 @@ pub(crate) fn client_state_from_abi_token<H>(token: Token) -> Result<ClientState
 		_ => return Err(ClientError::Other("trusting_period not found".to_string())),
 	};
 
-	let (unbonding_period_secs, unbonding_period_nanos) = match toks.get(3).cloned().unwrap() {
+	let (unbonding_period_secs, unbonding_period_nanos) = match toks.get(3).cloned().ok_or(
+		ClientError::Other("failed to get index 3 and retrieve unbonding_period_secs and unbonding_period_nanos".to_string()))? {
 		EthersToken::Tuple(toks) => (
-			match toks.get(0).cloned().unwrap() {
+			match toks.get(0).cloned().ok_or(
+				ClientError::Other("failed to get index 0 and retrieve numerator".to_string()))? {
 				EthersToken::Int(numerator) => numerator.as_u64(),
 				_ => return Err(ClientError::Other("unbonding_period_secs not found".to_string())),
 			},
-			match toks.get(1).cloned().unwrap() {
+			match toks.get(1).cloned().ok_or(
+				ClientError::Other("failed to get index 1 and retrieve denominator".to_string()))? {
 				EthersToken::Int(denominator) => denominator.as_u64(),
 				_ => return Err(ClientError::Other("unbonding_period_nanos not found".to_string())),
 			},
@@ -200,13 +212,16 @@ pub(crate) fn client_state_from_abi_token<H>(token: Token) -> Result<ClientState
 		_ => return Err(ClientError::Other("unbonding_period not found".to_string())),
 	};
 
-	let (max_clock_drift_secs, max_clock_drift_nanos) = match toks.get(4).cloned().unwrap() {
+	let (max_clock_drift_secs, max_clock_drift_nanos) = match toks.get(4).cloned().ok_or(
+		ClientError::Other("failed to get index 4 and retrieve max_clock_drift_secs and max_clock_drift_nanos".to_string()))? {
 		EthersToken::Tuple(toks) => (
-			match toks.get(0).cloned().unwrap() {
+			match toks.get(0).cloned().ok_or(
+				ClientError::Other("failed to get index 0 and retrieve numerator".to_string()))? {
 				EthersToken::Int(numerator) => numerator.as_u64(),
 				_ => return Err(ClientError::Other("max_clock_drift_secs not found".to_string())),
 			},
-			match toks.get(1).cloned().unwrap() {
+			match toks.get(1).cloned().ok_or(
+				ClientError::Other("failed to get index 1 and retrieve denominator".to_string()))? {
 				EthersToken::Int(denominator) => denominator.as_u64(),
 				_ => return Err(ClientError::Other("max_clock_drift_nanos not found".to_string())),
 			},
@@ -214,12 +229,14 @@ pub(crate) fn client_state_from_abi_token<H>(token: Token) -> Result<ClientState
 		_ => return Err(ClientError::Other("max_clock_drift not found".to_string())),
 	};
 
-	let frozen_height = match toks.get(5).cloned().unwrap() {
+	let frozen_height = match toks.get(5).cloned().ok_or(
+		ClientError::Other("failed to get index 5 and retrieve frozen_height".to_string()))? {
 		EthersToken::Int(frozen_height) => frozen_height.as_u64(),
 		_ => return Err(ClientError::Other("frozen_height not found".to_string())),
 	};
 
-	let latest_height = match toks.get(6).cloned().unwrap() {
+	let latest_height = match toks.get(6).cloned().ok_or(
+		ClientError::Other("failed to get index 6 and retrieve latest_height".to_string()))? {
 		EthersToken::Int(latest_height) => latest_height.as_u64(),
 		_ => return Err(ClientError::Other("latest_height not found".to_string())),
 	};
@@ -284,17 +301,23 @@ pub(crate) fn consensus_state_from_abi_token(token: Token) -> Result<ConsensusSt
 		ParamType::Bytes,
 	])];
 
-	let Token::Tuple(toks) = ethers::abi::decode(&params, bytes.as_slice())?.pop().unwrap() else {
+	let Token::Tuple(toks) = ethers::abi::decode(&params, bytes.as_slice())?.pop().ok_or(
+		ClientError::Other("invalid consensus state pop() return None'".to_string()))?
+	 else {
 		return Err(ClientError::Other("invalid consensus state'".to_string()))
 	};
 
-	let (timestamp_secs, timestamp_nanos) = match toks.get(0).cloned().unwrap() {
+	let (timestamp_secs, timestamp_nanos) = match toks.get(0).cloned().ok_or(
+		ClientError::Other("failed to get index 0 and retrieve timestamp_secs and timestamp_nanos".to_string()))?
+	 {
 		EthersToken::Tuple(toks) => (
-			match toks.get(0).cloned().unwrap() {
+			match toks.get(0).cloned().ok_or(
+				ClientError::Other("failed to get index 0 and retrieve numerator".to_string()))? {
 				EthersToken::Int(numerator) => numerator.as_u64(),
 				_ => return Err(ClientError::Other("timestamp_secs not found".to_string())),
 			},
-			match toks.get(1).cloned().unwrap() {
+			match toks.get(1).cloned().ok_or(
+				ClientError::Other("failed to get index 1 and retrieve denominator".to_string()))? {
 				EthersToken::Int(denominator) => denominator.as_u64(),
 				_ => return Err(ClientError::Other("timestamp_nanos not found".to_string())),
 			},
@@ -302,15 +325,18 @@ pub(crate) fn consensus_state_from_abi_token(token: Token) -> Result<ConsensusSt
 		_ => return Err(ClientError::Other("timestamp not found".to_string())),
 	};
 
-	let (root,) = match toks.get(1).cloned().unwrap() {
-		EthersToken::Tuple(toks) => (match toks.get(0).cloned().unwrap() {
+	let (root,) = match toks.get(1).cloned().ok_or(
+		ClientError::Other("failed to get index 1 and retrieve root".to_string()))? {
+		EthersToken::Tuple(toks) => (match toks.get(0).cloned().ok_or(
+			ClientError::Other("failed to get index 0 and retrieve root".to_string()))? {
 			EthersToken::Bytes(root) => root,
 			_ => return Err(ClientError::Other("root not found'".to_string())),
 		},),
 		_ => return Err(ClientError::Other("root not found".to_string())),
 	};
 
-	let next_validators_hash = match toks.get(2).cloned().unwrap() {
+	let next_validators_hash = match toks.get(2).cloned().ok_or(
+		ClientError::Other("failed to get index 2 and retrieve next_validators_hash".to_string()))? {
 		EthersToken::Bytes(next_validators_hash) => next_validators_hash,
 		_ => return Err(ClientError::Other("next_validators_hash not found".to_string())),
 	};
@@ -321,7 +347,9 @@ pub(crate) fn consensus_state_from_abi_token(token: Token) -> Result<ConsensusSt
 			nanos: timestamp_nanos as _,
 		})?,
 		root: CommitmentRoot::from_bytes(root.as_slice()),
-		next_validators_hash: Hash::Sha256(next_validators_hash.as_slice().try_into().unwrap()),
+		next_validators_hash: Hash::Sha256(next_validators_hash.as_slice().try_into().map_err(|e| {
+			ClientError::Other(format!("failed to convert next_validators_hash into : Hash::Sha256{}", e))
+		})?),
 	})
 }
 
@@ -492,120 +520,145 @@ pub(crate) fn tm_header_from_abi_token(token: Token) -> Result<Header, ClientErr
 		ParamType::Int(256),
 	])];
 
-	let Token::Tuple(toks) = ethers::abi::decode(&params, bytes.as_slice())?.pop().unwrap() else {
+	let Token::Tuple(toks) = ethers::abi::decode(&params, bytes.as_slice())?.pop().ok_or(
+		ClientError::Other("invalid header pop() return None'".to_string()))?
+	else {
 		return Err(ClientError::Other("invalid header'".to_string()))
 	};
 
-	let signed_header_header = match toks.get(0).cloned().unwrap() {
-		EthersToken::Tuple(toks) => match toks.get(0).cloned().unwrap() {
+	let signed_header_header = match toks.get(0).cloned().ok_or(
+		ClientError::Other("failed to get index 0 and retrieve signed_header_header".to_string()))? {
+		EthersToken::Tuple(toks) => match toks.get(0).cloned().ok_or(
+			ClientError::Other("failed to get index 0 and retrieve signed_header_header".to_string()))? {
 			EthersToken::Tuple(toks) => toks,
 			_ => return Err(ClientError::Other("signed_header_header' not found".to_string())),
 		},
 		_ => return Err(ClientError::Other("signed_header_header not found".to_string())),
 	};
 
-	let version = match signed_header_header.get(0).cloned().unwrap() {
+	let version = match signed_header_header.get(0).cloned().ok_or(
+		ClientError::Other("failed to get index 0 and retrieve version".to_string()))? {
 		EthersToken::Tuple(toks) => toks,
 		_ => return Err(ClientError::Other("version not found".to_string())),
 	};
 
-	let chain_id = match signed_header_header.get(1).cloned().unwrap() {
+	let chain_id = match signed_header_header.get(1).cloned().ok_or(
+		ClientError::Other("failed to get index 1 and retrieve chain_id".to_string()))? {
 		EthersToken::String(chain_id) => chain_id,
 		_ => return Err(ClientError::Other("chain_id not found".to_string())),
 	};
 
-	let height = match signed_header_header.get(2).cloned().unwrap() {
+	let height = match signed_header_header.get(2).cloned().ok_or(
+		ClientError::Other("failed to get index 2 and retrieve height".to_string()))? {
 		EthersToken::Int(height) => height,
 		_ => return Err(ClientError::Other("height not found".to_string())),
 	};
 
-	let time = match signed_header_header.get(3).cloned().unwrap() {
+	let time = match signed_header_header.get(3).cloned().ok_or(
+		ClientError::Other("failed to get index 3 and retrieve time".to_string()))? {
 		EthersToken::Tuple(toks) => toks,
 		_ => return Err(ClientError::Other("time not found".to_string())),
 	};
 
-	let last_block_id = match signed_header_header.get(4).cloned().unwrap() {
+	let last_block_id = match signed_header_header.get(4).cloned().ok_or(
+		ClientError::Other("failed to get index 4 and retrieve last_block_id".to_string()))? {
 		EthersToken::Tuple(toks) => toks,
 		_ => return Err(ClientError::Other("last_block_id not found".to_string())),
 	};
 
-	let last_commit_hash = match signed_header_header.get(5).cloned().unwrap() {
+	let last_commit_hash = match signed_header_header.get(5).cloned().ok_or(
+		ClientError::Other("failed to get index 5 and retrieve last_commit_hash".to_string()))? {
 		EthersToken::Bytes(last_commit_hash) => last_commit_hash,
 		_ => return Err(ClientError::Other("last_commit_hash not found".to_string())),
 	};
 
-	let data_hash = match signed_header_header.get(6).cloned().unwrap() {
+	let data_hash = match signed_header_header.get(6).cloned().ok_or(
+		ClientError::Other("failed to get index 6 and retrieve data_hash".to_string()))? {
 		EthersToken::Bytes(data_hash) => data_hash,
 		_ => return Err(ClientError::Other("data_hash not found".to_string())),
 	};
 
-	let validators_hash = match signed_header_header.get(7).cloned().unwrap() {
+	let validators_hash = match signed_header_header.get(7).cloned().ok_or(
+		ClientError::Other("failed to get index 7 and retrieve validators_hash".to_string()))? {
 		EthersToken::Bytes(validators_hash) => validators_hash,
 		_ => return Err(ClientError::Other("validators_hash not found".to_string())),
 	};
 
-	let next_validators_hash = match signed_header_header.get(8).cloned().unwrap() {
+	let next_validators_hash = match signed_header_header.get(8).cloned().ok_or(
+		ClientError::Other("failed to get index 8 and retrieve next_validators_hash".to_string()))? {
 		EthersToken::Bytes(next_validators_hash) => next_validators_hash,
 		_ => return Err(ClientError::Other("next_validators_hash not found".to_string())),
 	};
 
-	let consensus_hash = match signed_header_header.get(9).cloned().unwrap() {
+	let consensus_hash = match signed_header_header.get(9).cloned().ok_or(
+		ClientError::Other("failed to get index 9 and retrieve consensus_hash".to_string()))? {
 		EthersToken::Bytes(consensus_hash) => consensus_hash,
 		_ => return Err(ClientError::Other("consensus_hash not found".to_string())),
 	};
 
-	let app_hash = match signed_header_header.get(10).cloned().unwrap() {
+	let app_hash = match signed_header_header.get(10).cloned().ok_or(
+		ClientError::Other("failed to get index 10 and retrieve app_hash".to_string()))? {
 		EthersToken::Bytes(app_hash) => app_hash,
 		_ => return Err(ClientError::Other("app_hash not found".to_string())),
 	};
 
-	let last_results_hash = match signed_header_header.get(11).cloned().unwrap() {
+	let last_results_hash = match signed_header_header.get(11).cloned().ok_or(
+		ClientError::Other("failed to get index 11 and retrieve last_results_hash".to_string()))? {
 		EthersToken::Bytes(last_results_hash) => last_results_hash,
 		_ => return Err(ClientError::Other("last_results_hash not found".to_string())),
 	};
 
-	let evidence_hash = match signed_header_header.get(12).cloned().unwrap() {
+	let evidence_hash = match signed_header_header.get(12).cloned().ok_or(
+		ClientError::Other("failed to get index 12 and retrieve evidence_hash".to_string()))? {
 		EthersToken::Bytes(evidence_hash) => evidence_hash,
 		_ => return Err(ClientError::Other("evidence_hash not found".to_string())),
 	};
 
-	let proposer_address = match signed_header_header.get(13).cloned().unwrap() {
+	let proposer_address = match signed_header_header.get(13).cloned().ok_or(
+		ClientError::Other("failed to get index 13 and retrieve proposer_address".to_string()))? {
 		EthersToken::Bytes(proposer_address) => proposer_address,
 		_ => return Err(ClientError::Other("proposer_address not found".to_string())),
 	};
 
-	let version_block = match version.get(0).cloned().unwrap() {
+	let version_block = match version.get(0).cloned().ok_or(
+		ClientError::Other("failed to get index 0 and retrieve version_block".to_string()))? {
 		EthersToken::Uint(version_block) => version_block,
 		_ => return Err(ClientError::Other("version_block not found".to_string())),
 	};
 
-	let version_app = match version.get(1).cloned().unwrap() {
+	let version_app = match version.get(1).cloned().ok_or(
+		ClientError::Other("failed to get index 1 and retrieve version_app".to_string()))? {
 		EthersToken::Uint(version_app) => version_app,
 		_ => return Err(ClientError::Other("version_app not found".to_string())),
 	};
 
-	let time_secs = match time.get(0).cloned().unwrap() {
+	let time_secs = match time.get(0).cloned().ok_or(
+		ClientError::Other("failed to get index 0 and retrieve time_secs".to_string()))? {
 		EthersToken::Int(time_secs) => time_secs,
 		_ => return Err(ClientError::Other("time_secs not found".to_string())),
 	};
 
-	let time_nanos = match time.get(1).cloned().unwrap() {
+	let time_nanos = match time.get(1).cloned().ok_or(
+		ClientError::Other("failed to get index 1 and retrieve time_nanos".to_string()))? {
 		EthersToken::Int(time_nanos) => time_nanos,
 		_ => return Err(ClientError::Other("time_nanos not found".to_string())),
 	};
 
-	let last_block_id_hash = match last_block_id.get(0).cloned().unwrap() {
+	let last_block_id_hash = match last_block_id.get(0).cloned().ok_or(
+		ClientError::Other("failed to get index 0 and retrieve last_block_id_hash".to_string()))? {
 		EthersToken::Bytes(last_block_id_hash) => last_block_id_hash,
 		_ => return Err(ClientError::Other("last_block_id_hash not found".to_string())),
 	};
 
-	let last_block_id_part_set_header = match last_block_id.get(1).cloned().unwrap() {
+	let last_block_id_part_set_header = match last_block_id.get(1).cloned().ok_or(
+		ClientError::Other("failed to get index 1 and retrieve last_block_id_part_set_header".to_string()))? {
 		EthersToken::Tuple(toks) => toks,
 		_ => return Err(ClientError::Other("last_block_id_part_set_header not found".to_string())),
 	};
 
 	let last_block_id_part_set_header_total =
-		match last_block_id_part_set_header.get(0).cloned().unwrap() {
+		match last_block_id_part_set_header.get(0).cloned().ok_or(
+			ClientError::Other("failed to get index 0 and retrieve last_block_id_part_set_header_total".to_string()))? {
 			EthersToken::Uint(last_block_id_part_set_header_total) =>
 				last_block_id_part_set_header_total,
 			_ =>
@@ -615,7 +668,8 @@ pub(crate) fn tm_header_from_abi_token(token: Token) -> Result<Header, ClientErr
 		};
 
 	let last_block_id_part_set_header_hash =
-		match last_block_id_part_set_header.get(1).cloned().unwrap() {
+		match last_block_id_part_set_header.get(1).cloned().ok_or(
+			ClientError::Other("failed to get index 1 and retrieve last_block_id_part_set_header_hash".to_string()))? {
 			EthersToken::Bytes(last_block_id_part_set_header_hash) =>
 				last_block_id_part_set_header_hash,
 			_ =>
@@ -624,35 +678,42 @@ pub(crate) fn tm_header_from_abi_token(token: Token) -> Result<Header, ClientErr
 				)),
 		};
 
-	let signed_header_commit = match toks.get(0).cloned().unwrap() {
-		EthersToken::Tuple(toks) => match toks.get(1).cloned().unwrap() {
+	let signed_header_commit = match toks.get(0).cloned().ok_or(
+		ClientError::Other("failed to get index 0 and retrieve signed_header_commit".to_string()))? {
+		EthersToken::Tuple(toks) => match toks.get(1).cloned().ok_or(
+			ClientError::Other("failed to get index 1 and retrieve signed_header_commit".to_string()))? {
 			EthersToken::Tuple(toks) => toks,
 			_ => return Err(ClientError::Other("signed_header_commit' not found".to_string())),
 		},
 		_ => return Err(ClientError::Other("signed_header_commit not found".to_string())),
 	};
 
-	let last_commit_height = match signed_header_commit.get(0).cloned().unwrap() {
+	let last_commit_height = match signed_header_commit.get(0).cloned().ok_or(
+		ClientError::Other("failed to get index 0 and retrieve last_commit_height".to_string()))? {
 		EthersToken::Int(last_commit_height) => last_commit_height,
 		_ => return Err(ClientError::Other("last_commit_height not found".to_string())),
 	};
 
-	let last_commit_round = match signed_header_commit.get(1).cloned().unwrap() {
+	let last_commit_round = match signed_header_commit.get(1).cloned().ok_or(
+		ClientError::Other("failed to get index 1 and retrieve last_commit_round".to_string()))? {
 		EthersToken::Int(last_commit_round) => last_commit_round,
 		_ => return Err(ClientError::Other("last_commit_round not found".to_string())),
 	};
 
-	let last_commit_block_id = match signed_header_commit.get(2).cloned().unwrap() {
+	let last_commit_block_id = match signed_header_commit.get(2).cloned().ok_or(
+		ClientError::Other("failed to get index 2 and retrieve last_commit_block_id".to_string()))? {
 		EthersToken::Tuple(toks) => toks,
 		_ => return Err(ClientError::Other("last_commit_block_id not found".to_string())),
 	};
 
-	let last_commit_block_id_hash = match last_commit_block_id.get(0).cloned().unwrap() {
+	let last_commit_block_id_hash = match last_commit_block_id.get(0).cloned().ok_or(
+		ClientError::Other("failed to get index 0 and retrieve last_commit_block_id_hash".to_string()))? {
 		EthersToken::Bytes(last_commit_block_id_hash) => last_commit_block_id_hash,
 		_ => return Err(ClientError::Other("last_commit_block_id_hash not found".to_string())),
 	};
 
-	let last_commit_block_id_part_set_header = match last_commit_block_id.get(1).cloned().unwrap() {
+	let last_commit_block_id_part_set_header = match last_commit_block_id.get(1).cloned().ok_or(
+		ClientError::Other("failed to get index 1 and retrieve last_commit_block_id_part_set_header".to_string()))? {
 		EthersToken::Tuple(toks) => toks,
 		_ =>
 			return Err(ClientError::Other(
@@ -661,7 +722,8 @@ pub(crate) fn tm_header_from_abi_token(token: Token) -> Result<Header, ClientErr
 	};
 
 	let last_commit_block_id_part_set_header_total =
-		match last_commit_block_id_part_set_header.get(0).cloned().unwrap() {
+		match last_commit_block_id_part_set_header.get(0).cloned().ok_or(
+			ClientError::Other("failed to get index 0 and retrieve last_commit_block_id_part_set_header_total".to_string()))? {
 			EthersToken::Uint(last_commit_block_id_part_set_header_total) =>
 				last_commit_block_id_part_set_header_total,
 			_ =>
@@ -671,7 +733,8 @@ pub(crate) fn tm_header_from_abi_token(token: Token) -> Result<Header, ClientErr
 		};
 
 	let last_commit_block_id_part_set_header_hash =
-		match last_commit_block_id_part_set_header.get(1).cloned().unwrap() {
+		match last_commit_block_id_part_set_header.get(1).cloned().ok_or(
+			ClientError::Other("failed to get index 1 and retrieve last_commit_block_id_part_set_header_hash".to_string()))? {
 			EthersToken::Bytes(last_commit_block_id_part_set_header_hash) =>
 				last_commit_block_id_part_set_header_hash,
 			_ =>
@@ -680,7 +743,8 @@ pub(crate) fn tm_header_from_abi_token(token: Token) -> Result<Header, ClientErr
 				)),
 		};
 
-	let trusted_height = match toks.get(1).cloned().unwrap() {
+	let trusted_height = match toks.get(1).cloned().ok_or(
+		ClientError::Other("failed to get index 1 and retrieve trusted_height".to_string()))? {
 		EthersToken::Int(trusted_height) => trusted_height,
 		_ => return Err(ClientError::Other("trusted_height not found".to_string())),
 	};
@@ -691,52 +755,91 @@ pub(crate) fn tm_header_from_abi_token(token: Token) -> Result<Header, ClientErr
 			block::Header {
 				version: Version { block: version_block.as_u64(), app: version_app.as_u64() },
 				chain_id: chain_id.parse()?,
-				height: TmHeight::try_from(height.as_u64()).unwrap(),
+				height: TmHeight::try_from(height.as_u64()).map_err(|e| {
+					ClientError::Other(format!("failed to convert height into TmHeight: {}", e))
+				})?,
 				time: Time::try_from(Timestamp {
 					seconds: time_secs.as_u64() as _,
 					nanos: time_nanos.as_u32() as _,
 				})?,
 				last_block_id: Some(block::Id {
-					hash: Hash::Sha256(last_block_id_hash.as_slice().try_into().unwrap()),
+					hash: Hash::Sha256(last_block_id_hash.as_slice().try_into().map_err(|e| {
+						ClientError::Other(format!("failed to convert last_block_id_hash into : Hash::Sha256 {:?}", e))
+					})?),
 					part_set_header: block::parts::Header::new(
 						last_block_id_part_set_header_total.as_u32(),
 						Hash::Sha256(
-							last_block_id_part_set_header_hash.to_vec().try_into().unwrap(),
+							last_block_id_part_set_header_hash.to_vec().try_into().map_err(|e| {
+								ClientError::Other(format!("failed to convert last_block_id_part_set_header_hash into : Hash::Sha256 {:?}", e))
+							})?
 						),
 					)
 					.unwrap(),
 				}),
-				last_commit_hash: Some(Hash::Sha256(last_commit_hash.to_vec().try_into().unwrap())),
-				data_hash: Some(Hash::Sha256(data_hash.to_vec().try_into().unwrap())),
-				validators_hash: Hash::Sha256(validators_hash.to_vec().try_into().unwrap()),
+				last_commit_hash: Some(Hash::Sha256(last_commit_hash.to_vec().try_into().map_err(|e| {
+					ClientError::Other(format!("failed to convert last_commit_hash into : Hash::Sha256 {:?}", e))
+				})?)),
+				data_hash: Some(Hash::Sha256(data_hash.to_vec().try_into().map_err(|e| {
+					ClientError::Other(format!("failed to convert data_hash into : Hash::Sha256 {:?}", e))
+				})?)),
+				validators_hash: Hash::Sha256(validators_hash.to_vec().try_into().map_err(|e| {
+					ClientError::Other(format!("failed to convert validators_hash into : Hash::Sha256 {:?}", e))
+				})?),
 				next_validators_hash: Hash::Sha256(
-					next_validators_hash.to_vec().try_into().unwrap(),
+					next_validators_hash.to_vec().try_into().map_err(|e| {
+						ClientError::Other(format!("failed to convert next_validators_hash into : Hash::Sha256 {:?}", e))
+					})?
 				),
-				consensus_hash: Hash::Sha256(consensus_hash.to_vec().try_into().unwrap()),
-				app_hash: AppHash::try_from(app_hash.to_vec()).unwrap(),
+				consensus_hash: Hash::Sha256(consensus_hash.to_vec().try_into().map_err(|e| {
+					ClientError::Other(format!("failed to convert consensus_hash into : Hash::Sha256 {:?}", e))
+				})?),
+				app_hash: AppHash::try_from(app_hash.to_vec()).map_err(|e| {
+					ClientError::Other(format!("failed to convert app_hash into : AppHash {:?}", e))
+				})?,
 				last_results_hash: Some(Hash::Sha256(
-					last_results_hash.to_vec().try_into().unwrap(),
+					last_results_hash.to_vec().try_into().map_err(|e| {
+						ClientError::Other(format!("failed to convert last_results_hash into : Hash::Sha256 {:?}", e))
+					})?
 				)),
-				evidence_hash: Some(Hash::Sha256(evidence_hash.to_vec().try_into().unwrap())),
-				proposer_address: account::Id::try_from(proposer_address.to_vec()).unwrap(),
+				evidence_hash: Some(Hash::Sha256(evidence_hash.to_vec().try_into().map_err(|e| {
+					ClientError::Other(format!("failed to convert evidence_hash into : Hash::Sha256 {:?}", e))
+				})?
+				)),
+				proposer_address: account::Id::try_from(proposer_address.to_vec()).map_err(|e| {
+					ClientError::Other(format!("failed to convert proposer_address into : account::Id {:?}", e))
+				})?
 			},
 			block::Commit {
-				height: TmHeight::try_from(last_commit_height.as_u64()).unwrap(),
-				round: last_commit_round.as_u32().try_into().unwrap(),
+				height: TmHeight::try_from(last_commit_height.as_u64()).map_err(|e| {
+					ClientError::Other(format!("failed to convert last_commit_height into TmHeight: {}", e))
+				})?,
+				round: last_commit_round.as_u32().try_into().map_err(|e| {
+					ClientError::Other(format!("failed to convert last_commit_round into u32: {}", e))
+				})?,
 				block_id: block::Id {
-					hash: Hash::Sha256(last_commit_block_id_hash.to_vec().try_into().unwrap()),
+					hash: Hash::Sha256(last_commit_block_id_hash.to_vec().try_into().map_err(
+						|e| {
+							ClientError::Other(format!("failed to convert last_commit_block_id_hash into : Hash::Sha256 {:?}", e))
+						},
+					)?),
 					part_set_header: block::parts::Header::new(
 						last_commit_block_id_part_set_header_total.as_u32(),
 						Hash::Sha256(
-							last_commit_block_id_part_set_header_hash.to_vec().try_into().unwrap(),
+							last_commit_block_id_part_set_header_hash.to_vec().try_into().map_err(
+								|e| {
+									ClientError::Other(format!("failed to convert last_commit_block_id_part_set_header_hash into : Hash::Sha256 {:?}", e))
+								},
+							)?,
 						),
 					)
-					.unwrap(),
+					.map_err(
+						|e| ClientError::Other(format!("failed to create part_set_header: {}", e)),
+					)?,
 				},
 				signatures: vec![],
 			},
 		)
-		.unwrap(),
+		.map_err(|e| ClientError::Other(format!("failed to create SignedHeader: {:?}", e)))?,
 		validator_set: tendermint::validator::Set::new(vec![], None),
 		trusted_height: Height::new(revision_number, trusted_height.as_u64()),
 		trusted_validator_set: tendermint::validator::Set::new(vec![], None),
@@ -986,13 +1089,11 @@ impl Chain for EthereumClient {
 				)?;
 				let AnyClientState::Tendermint(client_state) = msg.client_state.unpack_recursive()
 				else {
-					//TODO return error support only tendermint client state
 					return Err(ClientError::Other("create_client: unsupported client state".into()))
 				};
 				let AnyConsensusState::Tendermint(client_consensus) =
 					msg.consensus_state.unpack_recursive()
 				else {
-					//TODO return error support only tendermint consensus state
 					return Err(ClientError::Other(
 						"create_client: unsupported consensus state".into(),
 					))
@@ -1015,30 +1116,8 @@ impl Chain for EthereumClient {
 					//consensusStateBytes
 					EthersToken::Bytes(consensus_state_data_vec.clone()),
 				]);
-				// let bts = ethers::abi::encode(&vec![
-				// 	//should be the same that we use to register client
-				// 	//client type
-				// 	EthersToken::String(self.config.client_type.clone()),
-				// 	//clientStateBytes
-				// 	EthersToken::Bytes(client_state_data_vec.clone()),
-				// 	//consensusStateBytes
-				// 	EthersToken::Bytes(consensus_state_data_vec.clone()),
-				// ]);
-				// log::info!(target: "hyperspace_ethereum", "encoding: {}",
-				// hex::encode(&bts.to_vec()));
+				
 				let bts = ethers::abi::encode(&vec![token.clone()]);
-				let tok = ethers::abi::decode(
-					&[ParamType::Tuple(vec![
-						ParamType::String,
-						ParamType::Bytes,
-						ParamType::Bytes,
-					])],
-					&bts.to_vec(),
-				)
-				.unwrap()
-				.pop()
-				.unwrap();
-				assert_eq!(tok, token);
 				let bytes = self.yui.create_client_calldata(token).await;
 
 				calls.push(bytes);
@@ -1133,7 +1212,6 @@ impl Chain for EthereumClient {
 						client_state.clone()
 					},
 					None => {
-						//TODO return error support only tendermint client state
 						return Err(ClientError::Other(format!(
 							"conn_open_try: client_state can't be None"
 						)))
@@ -1163,49 +1241,53 @@ impl Chain for EthereumClient {
 				let token = msg.into_token();
 				calls.push(self.yui.channel_open_try_calldata(token).await);
 			} else if msg.type_url == channel_msgs::chan_open_ack::TYPE_URL {
-				let msg = MsgChannelOpenAck::decode_vec(&msg.value).map_err(|_| {
-					ClientError::Other("chan_open_ack: failed to decode_vec".into())
+				let msg = MsgChannelOpenAck::decode_vec(&msg.value).map_err(|e| {
+					ClientError::Other(format!("chan_open_ack: failed to decode_vec: {:?}", e))
 				})?;
 				log::info!("msg = {msg:#?}");
 				let token = msg.into_token();
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "channelOpenAck").await);
 			} else if msg.type_url == channel_msgs::chan_open_confirm::TYPE_URL {
-				let msg = MsgChannelOpenConfirm::decode_vec(&msg.value).map_err(|_| {
-					ClientError::Other("chann_open_confirm: failed to decode_vec".into())
+				let msg = MsgChannelOpenConfirm::decode_vec(&msg.value).map_err(|e| {
+					ClientError::Other(format!("chann_open_confirm: failed to decode_vec : {:?}", e))
 				})?;
 				let token = msg.into_token();
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "channelOpenConfirm").await);
 			} else if msg.type_url == channel_msgs::chan_close_init::TYPE_URL {
-				let msg = MsgChannelCloseInit::decode_vec(&msg.value).map_err(|_| {
-					ClientError::Other("chann_close_init: failed to decode_vec".into())
+				let msg = MsgChannelCloseInit::decode_vec(&msg.value).map_err(|e| {
+					ClientError::Other(format!("chan_close_init: failed to decode_vec : {:?}", e))
 				})?;
 				let token = msg.into_token();
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "channelCloseInit").await);
 			} else if msg.type_url == channel_msgs::chan_close_confirm::TYPE_URL {
-				let msg = MsgChannelCloseConfirm::decode_vec(&msg.value).map_err(|_| {
-					ClientError::Other("chann_close_confirm: failed to decode_vec".into())
+				let msg = MsgChannelCloseConfirm::decode_vec(&msg.value).map_err(|e| {
+					ClientError::Other(format!("chan_close_confirm: failed to decode_vec : {:?}", e))
 				})?;
 				let token = msg.into_token();
 				calls
 					.push(self.yui.send_and_get_tuple_calldata(token, "channelCloseConfirm").await);
 			} else if msg.type_url == channel_msgs::timeout_on_close::TYPE_URL {
-				let msg = MsgTimeoutOnClose::decode_vec(&msg.value).map_err(|_| {
-					ClientError::Other("timeout_on_close: failed to decode_vec".into())
+				let msg = MsgTimeoutOnClose::decode_vec(&msg.value).map_err(|e| {
+					ClientError::Other(format!("timeout_on_close: failed to decode_vec : {:?}", e))
 				})?;
 				return Err(ClientError::Other("timeout not supported".into()))
 			} else if msg.type_url == channel_msgs::timeout::TYPE_URL {
 				let msg = MsgTimeout::decode_vec(&msg.value)
-					.map_err(|_| ClientError::Other("timeout: failed to decode_vec".into()))?;
+					.map_err(|e| {
+						ClientError::Other(format!("timeout: failed to decode_vec : {:?}", e))
+					})?;
 				return Err(ClientError::Other("timeout not supported".into()))
 			} else if msg.type_url == channel_msgs::acknowledgement::TYPE_URL {
-				let msg = MsgAcknowledgement::decode_vec(&msg.value).map_err(|_| {
-					ClientError::Other("acknowledgement: failed to decode_vec".into())
+				let msg = MsgAcknowledgement::decode_vec(&msg.value).map_err(|e| {
+					ClientError::Other(format!("acknowledgement: failed to decode_vec : {:?}", e))
 				})?;
 				let token = msg.into_token();
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "acknowledgePacket").await);
 			} else if msg.type_url == channel_msgs::recv_packet::TYPE_URL {
 				let msg = MsgRecvPacket::decode_vec(&msg.value)
-					.map_err(|_| ClientError::Other("recv_packet: failed to decode_vec".into()))?;
+					.map_err(|e| {
+						ClientError::Other(format!("recv_packet: failed to decode_vec : {:?}", e))
+					})?;
 				let token = msg.into_token();
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "recvPacket").await);
 			} else {
@@ -1224,7 +1306,10 @@ impl Chain for EthereumClient {
 			.await?
 			.ok_or_else(|| ClientError::Other("tx failed".into()))?;
 		if receipt.status != Some(1.into()) {
-			return Err(ClientError::Other("tx failed".into()))
+			return Err(ClientError::Other(format!(
+				"tx failed: {:?}",
+				receipt
+			)))
 		}
 
 		for (i, (success, result)) in
@@ -1236,7 +1321,12 @@ impl Chain for EthereumClient {
 		}
 
 		let block_hash =
-			receipt.block_hash.ok_or(ClientError::Other("Block hash is missing".into()))?;
+			receipt.block_hash.ok_or(
+				ClientError::Other(format!(
+					"Block hash is missing for tx hash: {:?}",
+					receipt.transaction_hash
+				))
+			)?;
 		Ok((block_hash, receipt.transaction_hash))
 	}
 
