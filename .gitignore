@@ -73,5 +73,3 @@ typechain-types/
 # foundry
 cache/
 out/
-
-!*.nix

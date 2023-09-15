@@ -439,7 +439,12 @@ where
 			match res {
 				Ok(progress) => break progress,
 				Err(e) => {
-					log::warn!("Failed to submit extrinsic: {:?}. Retrying in 30 seconds...", e);
+					let t = format!("{:?}", e).contains("Priority is too low");
+					if t{
+						log::warn!("update priority manually");
+						m = true;
+					}
+					log::warn!("Failed to submit extrinsic: {:?}. Retrying...", e);
 					count += 1;
 					tokio::time::sleep(std::time::Duration::from_secs(30)).await;
 				},

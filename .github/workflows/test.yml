@@ -10,8 +10,7 @@ on:
 
 env:
   DEBIAN_FRONTEND: noninteractive
-  RUST_VERSION: nightly-2023-08-24
-  
+
 jobs:
   linters:
     name: Tests
@@ -65,11 +64,11 @@ jobs:
 
           # Get Rust
           curl https://sh.rustup.rs -sSf | bash -s -- -y
-          $HOME/.cargo/bin/rustup toolchain install ${{ env.RUST_VERSION }}
-          $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain ${{ env.RUST_VERSION }}
-          $HOME/.cargo/bin/rustup component add rustfmt --toolchain ${{ env.RUST_VERSION }}
+          $HOME/.cargo/bin/rustup toolchain install nightly
+          $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain nightly
+          $HOME/.cargo/bin/rustup component add rustfmt --toolchain nightly
           $HOME/.cargo/bin/rustup component add rustfmt
-          $HOME/.cargo/bin/rustup default ${{ env.RUST_VERSION }}
+          $HOME/.cargo/bin/rustup default nightly
 
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
@@ -101,6 +100,7 @@ jobs:
           curl -L https://github.com/paritytech/polkadot/releases/download/v0.9.43/polkadot -o /usr/bin/polkadot && \
           chmod +x /usr/bin/polkadot
 
+# cargo b -p parachain-node --release && \
       - name: Install parachain node
         run: |
           mkdir -p ./target/release/
@@ -115,8 +115,8 @@ jobs:
           process-compose up -f process-compose.yml -t=false &
           sleep 100
           netstat -ltup | grep LISTEN
-          RUST_BACKTRACE=full METRICS_PORT=39988 ./wait-for-parachains-network.sh
-          RUST_BACKTRACE=full METRICS_PORT=39998 ./wait-for-parachains-network.sh 
+          METRICS_PORT=39988 ./wait-for-parachains-network.sh
+          METRICS_PORT=39998 ./wait-for-parachains-network.sh 
           SKIP_WASM_BUILD=1 cargo +nightly nextest run --locked --release --workspace --exclude ibc-derive --exclude hyperspace-testsuite
-          RUST_BACKTRACE=full cargo +nightly test -p hyperspace-testsuite --locked --debug
+          cargo +nightly test -p hyperspace-testsuite --locked --release
           process-compose down -f process-compose.yml
