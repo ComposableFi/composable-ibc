@@ -356,7 +356,7 @@ pub async fn query_ready_and_timed_out_packets(
 						))
 					})?;
 
-					if list.iter().map(|x| decoded_dara.token.denom.base_denom.as_str() == x).any()) {
+					if list.iter().any(|skiped_denom| decoded_dara.token.denom.base_denom.as_str() == skiped_denom) {
 						log::warn!(target: "hyperspace", "Skipping packet as uosmo packet: {:?}", packet);
 						return Ok(None)
 					}
