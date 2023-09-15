@@ -112,6 +112,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 			skip_optional_client_updates: true,
 			max_packets_to_process: 200,
 		},
+		skip_tokens_list: vec![],
 	};
 
 	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.unwrap();
