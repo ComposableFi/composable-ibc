@@ -14,7 +14,6 @@ services:
       - --base-path=/data
       - --chain=/app/rococo-local.json
       - --validator
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=alice
@@ -25,8 +24,7 @@ services:
       - --pruning=archive
     environment:
       RUST_LOG: parachain::candidate-backing=trace
-    ulimits:
-      &a1
+    ulimits: &a1
       nofile:
         soft: 65536
         hard: 65536
@@ -44,7 +42,6 @@ services:
       - --base-path=/data
       - --chain=/app/rococo-local.json
       - --validator
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=bob
@@ -70,7 +67,6 @@ services:
       - --base-path=/data
       - --chain=/app/rococo-local.json
       - --validator
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=charlie
@@ -78,6 +74,7 @@ services:
       - --rpc-methods=unsafe
       - --beefy
       - --enable-offchain-indexing=true
+      - --pruning=archive
     environment:
       RUST_LOG: parachain::candidate-backing=trace
     ulimits: *a1
@@ -95,7 +92,6 @@ services:
       - --base-path=/data
       - --chain=/app/rococo-local.json
       - --validator
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=dave
@@ -103,6 +99,7 @@ services:
       - --rpc-methods=unsafe
       - --beefy
       - --enable-offchain-indexing=true
+      - --pruning=archive
     environment:
       RUST_LOG: parachain::candidate-backing=trace
     ulimits: *a1
@@ -120,7 +117,6 @@ services:
       - --base-path=/data
       - --chain=/app/rococo-local.json
       - --validator
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=eve
@@ -128,6 +124,7 @@ services:
       - --rpc-methods=unsafe
       - --beefy
       - --enable-offchain-indexing=true
+      - --pruning=archive
     environment:
       RUST_LOG: parachain::candidate-backing=trace
     ulimits: *a1
@@ -145,7 +142,6 @@ services:
       - --base-path=/data
       - --chain=/app/rococo-local.json
       - --validator
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=ferdie
@@ -153,13 +149,14 @@ services:
       - --rpc-methods=unsafe
       - --beefy
       - --enable-offchain-indexing=true
+      - --pruning=archive
     environment:
       RUST_LOG: parachain::candidate-backing=trace
     ulimits: *a1
   parachain-2000-0:
     ports:
-      - 9188:9944
-      - 9939:9933
+      - 9950:9944
+      - 9188:9933
       - 30339:30333
     volumes:
       - parachain-2000-0:/data
@@ -169,7 +166,6 @@ services:
     command:
       - --base-path=/data
       - --chain=/app/dev-2000-2000.json
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=parachain-2000-0
@@ -180,10 +176,10 @@ services:
       - --force-authoring
       - --execution=wasm
       - --enable-offchain-indexing=true
-      - --alice
-      - --node-key=d02c041f177a1d58da919567c4ac5b8a4f5e972cda85577d0435ea67bdf48f7a
-      - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --pruning=archive
+      - --alice
+      - --node-key=47d16925194396fb607f7fa48e02a109324937c98ad32149726eae9ad5a63691
+      - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
@@ -203,7 +199,6 @@ services:
     command:
       - --base-path=/data
       - --chain=/app/dev-2000-2000.json
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=parachain-2000-1
@@ -214,8 +209,9 @@ services:
       - --force-authoring
       - --execution=wasm
       - --enable-offchain-indexing=true
+      - --pruning=archive
       - --bob
-      - --bootnodes=/dns/parachain-2000-0/tcp/30333/p2p/12D3KooWRdHXrfCTQwiFrAKAw5rBqWQSH9wuz9bmCfdE7LRwmh5B
+      - --bootnodes=/dns/parachain-2000-0/tcp/30333/p2p/12D3KooWNG6km1TTf8Ad4iJBLp2UyBGb3i8cXPrRmpx87hXLT9d6
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
       - --chain=/app/rococo-local.json
@@ -235,7 +231,6 @@ services:
     command:
       - --base-path=/data
       - --chain=/app/dev-2000-2000.json
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=parachain-2000-2
@@ -246,8 +241,9 @@ services:
       - --force-authoring
       - --execution=wasm
       - --enable-offchain-indexing=true
+      - --pruning=archive
       - --charlie
-      - --bootnodes=/dns/parachain-2000-0/tcp/30333/p2p/12D3KooWRdHXrfCTQwiFrAKAw5rBqWQSH9wuz9bmCfdE7LRwmh5B
+      - --bootnodes=/dns/parachain-2000-0/tcp/30333/p2p/12D3KooWNG6km1TTf8Ad4iJBLp2UyBGb3i8cXPrRmpx87hXLT9d6
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
       - --chain=/app/rococo-local.json
@@ -256,8 +252,8 @@ services:
     ulimits: *a1
   parachain-2001-0:
     ports:
-      - 9988:9944
-      - 9942:9933
+      - 9953:9944
+      - 9988:9933
       - 30342:30333
     volumes:
       - parachain-2001-0:/data
@@ -267,7 +263,6 @@ services:
     command:
       - --base-path=/data
       - --chain=/app/dev-2001-2001.json
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=parachain-2001-0
@@ -278,10 +273,10 @@ services:
       - --force-authoring
       - --execution=wasm
       - --enable-offchain-indexing=true
-      - --alice
-      - --node-key=c3dcaff04f173ed7741a63c45e2d5d4053e7c1a76b13ec6820ad9ac24a849025
-      - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --pruning=archive
+      - --alice
+      - --node-key=13d81f15f498ed270b80db6dc897d9d2eafa2b285d984a458485d77a98f8cdc7
+      - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
       - --chain=/app/rococo-local.json
       - --execution=wasm
@@ -300,7 +295,6 @@ services:
     command:
       - --base-path=/data
       - --chain=/app/dev-2001-2001.json
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=parachain-2001-1
@@ -311,8 +305,9 @@ services:
       - --force-authoring
       - --execution=wasm
       - --enable-offchain-indexing=true
+      - --pruning=archive
       - --bob
-      - --bootnodes=/dns/parachain-2001-0/tcp/30333/p2p/12D3KooWAtd7bKYEvYmcVmK8WLWpGgww4asNeHMbSX68sDbdVksh
+      - --bootnodes=/dns/parachain-2001-0/tcp/30333/p2p/12D3KooWEqpXVqqAaD8LF6Y2bKAA8YTHWFwSdxRPwFSKf6jBB1iq
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
       - --chain=/app/rococo-local.json
@@ -332,7 +327,6 @@ services:
     command:
       - --base-path=/data
       - --chain=/app/dev-2001-2001.json
-      - --ws-external
       - --rpc-external
       - --rpc-cors=all
       - --name=parachain-2001-2
@@ -343,8 +337,9 @@ services:
       - --force-authoring
       - --execution=wasm
       - --enable-offchain-indexing=true
+      - --pruning=archive
       - --charlie
-      - --bootnodes=/dns/parachain-2001-0/tcp/30333/p2p/12D3KooWAtd7bKYEvYmcVmK8WLWpGgww4asNeHMbSX68sDbdVksh
+      - --bootnodes=/dns/parachain-2001-0/tcp/30333/p2p/12D3KooWEqpXVqqAaD8LF6Y2bKAA8YTHWFwSdxRPwFSKf6jBB1iq
       - --listen-addr=/ip4/0.0.0.0/tcp/30333
       - --
       - --chain=/app/rococo-local.json

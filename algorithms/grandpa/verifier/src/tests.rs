@@ -92,10 +92,7 @@ async fn follow_grandpa_justifications() {
 		let next_relay_height = client_state.latest_relay_height + 1;
 
 		let encoded = finality_grandpa_rpc::GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
-			// we cast between the same type but different crate versions.
-			&*unsafe {
-				unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(prover.relay_ws_client.clone())
-			},
+				&*prover.relay_ws_client.clone(),
 			next_relay_height,
 		)
 			.await
@@ -126,9 +123,6 @@ async fn follow_grandpa_justifications() {
 			"For relay chain header: Hash({:?}), Number({})",
 			justification.commit.target_hash, justification.commit.target_number
 		);
-
-		dbg!(&client_state.latest_para_height);
-		dbg!(&header_numbers);
 
 		let proof = prover
 			.query_finalized_parachain_headers_with_proof::<SubstrateHeader<u32, BlakeTwo256>>(

@@ -1,0 +1,55 @@
+{
+    "parachains": [
+        {
+            "chain": "dev-2000",
+            "collator": {
+                "args": [
+                    "--enable-offchain-indexing=true",
+                    "--pruning=archive",                    
+                    "-lparachain=debug"
+                ],
+                "command": "parachain-node",
+                "name": "alice",
+                "ws_port": 9188
+            },
+            "id": 2000
+        },
+        {
+            "chain": "dev-2001",
+            "collator": {
+                "args": [
+                    "--enable-offchain-indexing=true",
+                    "--pruning=archive",                    
+                    "-lparachain=debug"
+                ],
+                "command": "parachain-node",
+                "name": "alice",
+                "ws_port": 9988
+            },
+            "id": 2001
+        }        
+    ],
+    "relaychain": {
+        "chain": "rococo-local",
+        "command": "polkadot",
+        "args": [
+            "--rpc-cors=all",
+            "--beefy",
+            "--enable-offchain-indexing=true",
+            "--pruning=archive",                    
+            "-lparachain=debug"
+        ],        
+        "nodes": [
+            {
+                "name": "alice"
+            },
+            {
+                "name": "bob"
+            }
+        ],
+        "ws_port": 9944
+    },
+    "settings": {
+        "timeout": 2000
+    }
+}

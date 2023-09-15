@@ -76,9 +76,6 @@ where
 
 		let delay_period = Duration::from_nanos(connection_end.delay_period);
 
-		dbg!(&connection_delay);
-		dbg!(&delay_period);
-
 		if delay_period != connection_delay {
 			continue
 		}
