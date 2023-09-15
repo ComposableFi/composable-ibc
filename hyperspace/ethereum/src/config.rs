@@ -1,11 +1,10 @@
 use ethers::signers::LocalWallet;
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
+use crate::utils::{DeployYuiIbc, ProviderImpl};
 use ethers::types::Address;
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
-
-use crate::contract::DiamandHandler;
 
 fn uri_de<'de, D>(de: D) -> Result<http::uri::Uri, D::Error>
 where
@@ -63,15 +62,19 @@ where
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct Config {
+pub struct EthereumClientConfig {
 	/// HTTP URL for RPC
 	#[serde(deserialize_with = "uri_de", serialize_with = "uri_se")]
 	pub http_rpc_url: http::uri::Uri,
 	/// Websocket URL for RPC
 	#[serde(deserialize_with = "uri_de", serialize_with = "uri_se")]
 	pub ws_rpc_url: http::uri::Uri,
+	/// HTTP URL for RPC (Beacon node)
+	#[serde(deserialize_with = "uri_de", serialize_with = "uri_se")]
+	pub beacon_rpc_url: http::uri::Uri,
 	/// address of the OwnableIBCHandler contract.
 	#[serde(deserialize_with = "address_de")]
+	// TODO: remove and use `yui.diamond.address()` instead
 	pub ibc_handler_address: Address,
 	/// address of the IBCChannelHandshake contract.
 	#[serde(deserialize_with = "address_de")]
@@ -93,13 +96,15 @@ pub struct Config {
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 	/// Commitment prefix
 	pub commitment_prefix: String,
-
-	pub client_type: String,
+	/// All the client states and headers will be wrapped in WASM ones using the WASM code ID.
+	#[serde(default)]
+	pub wasm_code_id: Option<String>,
 	#[serde(skip)]
-	pub diamond_handler: Option<DiamandHandler>,
+	pub yui: Option<DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>>,
+	pub client_type: String,
 }
 
-impl Config {
+impl EthereumClientConfig {
 	/// ICS-23 compatible commitment prefix
 	#[track_caller]
 	pub fn commitment_prefix(&self) -> Vec<u8> {

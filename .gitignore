@@ -77,7 +77,6 @@ typechain-types/
 cache/
 out/
 
-
 # eth-bridge
 scripts/eth-bridge/execution/geth
 scripts/eth-bridge/execution/keystore

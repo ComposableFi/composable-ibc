@@ -340,7 +340,6 @@ pub trait IbcProvider {
 	fn channel_whitelist(&self) -> HashSet<(ChannelId, PortId)>;
 
 	/// Query all channels for a connection
-	#[cfg(test)]
 	async fn query_connection_channels(
 		&self,
 		at: Height,
@@ -362,6 +361,7 @@ pub trait IbcProvider {
 	/// emitted.
 	async fn query_received_packets(
 		&self,
+		at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
 		seqs: Vec<u64>,

@@ -41,10 +41,9 @@ members = [
     "hyperspace/primitives",
     # "hyperspace/parachain",
     # "hyperspace/cosmos",
-    # "hyperspace/testsuite",
+     "hyperspace/testsuite",
     # "hyperspace/metrics",
     "hyperspace/ethereum",
-    "hyperspace/ethereum/integration-tests",
 
     # utilities
     # "utils/subxt/codegen",

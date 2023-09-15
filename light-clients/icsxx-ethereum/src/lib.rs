@@ -26,11 +26,17 @@ pub mod client_state;
 pub mod consensus_state;
 pub mod error;
 pub mod proto;
+pub mod verify;
 
 // #[cfg(test)]
 // mod mock;
 
 #[cfg(test)]
 mod tests;
+
+pub use ethereum_consensus::crypto::{
+	PublicKey as EthereumPublicKey, Signature as EthereumSignature,
+};
+pub use sync_committee_verifier::{error::Error as EthereumError, BlsVerify};
 
 pub trait HostFunctions: Sized + Send + Sync {}

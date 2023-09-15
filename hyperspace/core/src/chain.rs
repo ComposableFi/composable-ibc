@@ -24,7 +24,9 @@ use async_trait::async_trait;
 #[cfg(feature = "cosmos")]
 use cosmos::client::{CosmosClient, CosmosClientConfig};
 #[cfg(feature = "ethereum")]
-use ethereum::{client::EthereumClient as EthereumClient, config::Config as EthereumClientConfig};
+use ethereum::client::EthereumClient;
+#[cfg(feature = "ethereum")]
+use ethereum::config::EthereumClientConfig;
 use futures::Stream;
 #[cfg(any(test, feature = "testing"))]
 use ibc::applications::transfer::msgs::transfer::MsgTransfer;

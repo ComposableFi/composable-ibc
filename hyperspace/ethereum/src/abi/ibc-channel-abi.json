@@ -1,0 +1,490 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "channelId",
+        "type": "string"
+      }
+    ],
+    "name": "CloseConfirmChannel",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "channelId",
+        "type": "string"
+      }
+    ],
+    "name": "CloseInitChannel",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "name": "GeneratedChannelIdentifier",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "channelId",
+        "type": "string"
+      }
+    ],
+    "name": "OpenAckChannel",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "channelId",
+        "type": "string"
+      }
+    ],
+    "name": "OpenConfirmChannel",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "channelId",
+        "type": "string"
+      }
+    ],
+    "name": "OpenInitChannel",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "channelId",
+        "type": "string"
+      }
+    ],
+    "name": "OpenTryChannel",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "moduleAddress",
+        "type": "address"
+      }
+    ],
+    "name": "bindPort",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "portId",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "channelId",
+            "type": "string"
+          },
+          {
+            "internalType": "bytes",
+            "name": "proofInit",
+            "type": "bytes"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint64",
+                "name": "revision_number",
+                "type": "uint64"
+              },
+              {
+                "internalType": "uint64",
+                "name": "revision_height",
+                "type": "uint64"
+              }
+            ],
+            "internalType": "struct HeightData",
+            "name": "proofHeight",
+            "type": "tuple"
+          }
+        ],
+        "internalType": "struct IBCMsgsMsgChannelCloseConfirm",
+        "name": "msg_",
+        "type": "tuple"
+      }
+    ],
+    "name": "channelCloseConfirm",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "portId",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "channelId",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct IBCMsgsMsgChannelCloseInit",
+        "name": "msg_",
+        "type": "tuple"
+      }
+    ],
+    "name": "channelCloseInit",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "portId",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "channelId",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "counterpartyVersion",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "counterpartyChannelId",
+            "type": "string"
+          },
+          {
+            "internalType": "bytes",
+            "name": "proofTry",
+            "type": "bytes"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint64",
+                "name": "revision_number",
+                "type": "uint64"
+              },
+              {
+                "internalType": "uint64",
+                "name": "revision_height",
+                "type": "uint64"
+              }
+            ],
+            "internalType": "struct HeightData",
+            "name": "proofHeight",
+            "type": "tuple"
+          }
+        ],
+        "internalType": "struct IBCMsgsMsgChannelOpenAck",
+        "name": "msg_",
+        "type": "tuple"
+      }
+    ],
+    "name": "channelOpenAck",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "portId",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "channelId",
+            "type": "string"
+          },
+          {
+            "internalType": "bytes",
+            "name": "proofAck",
+            "type": "bytes"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint64",
+                "name": "revision_number",
+                "type": "uint64"
+              },
+              {
+                "internalType": "uint64",
+                "name": "revision_height",
+                "type": "uint64"
+              }
+            ],
+            "internalType": "struct HeightData",
+            "name": "proofHeight",
+            "type": "tuple"
+          }
+        ],
+        "internalType": "struct IBCMsgsMsgChannelOpenConfirm",
+        "name": "msg_",
+        "type": "tuple"
+      }
+    ],
+    "name": "channelOpenConfirm",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "portId",
+            "type": "string"
+          },
+          {
+            "components": [
+              {
+                "internalType": "enum ChannelState",
+                "name": "state",
+                "type": "uint8"
+              },
+              {
+                "internalType": "enum ChannelOrder",
+                "name": "ordering",
+                "type": "uint8"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "string",
+                    "name": "port_id",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "channel_id",
+                    "type": "string"
+                  }
+                ],
+                "internalType": "struct ChannelCounterpartyData",
+                "name": "counterparty",
+                "type": "tuple"
+              },
+              {
+                "internalType": "string[]",
+                "name": "connection_hops",
+                "type": "string[]"
+              },
+              {
+                "internalType": "string",
+                "name": "version",
+                "type": "string"
+              }
+            ],
+            "internalType": "struct ChannelData",
+            "name": "channel",
+            "type": "tuple"
+          }
+        ],
+        "internalType": "struct IBCMsgsMsgChannelOpenInit",
+        "name": "msg_",
+        "type": "tuple"
+      }
+    ],
+    "name": "channelOpenInit",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "portId",
+            "type": "string"
+          },
+          {
+            "components": [
+              {
+                "internalType": "enum ChannelState",
+                "name": "state",
+                "type": "uint8"
+              },
+              {
+                "internalType": "enum ChannelOrder",
+                "name": "ordering",
+                "type": "uint8"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "string",
+                    "name": "port_id",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "channel_id",
+                    "type": "string"
+                  }
+                ],
+                "internalType": "struct ChannelCounterpartyData",
+                "name": "counterparty",
+                "type": "tuple"
+              },
+              {
+                "internalType": "string[]",
+                "name": "connection_hops",
+                "type": "string[]"
+              },
+              {
+                "internalType": "string",
+                "name": "version",
+                "type": "string"
+              }
+            ],
+            "internalType": "struct ChannelData",
+            "name": "channel",
+            "type": "tuple"
+          },
+          {
+            "internalType": "string",
+            "name": "counterpartyVersion",
+            "type": "string"
+          },
+          {
+            "internalType": "bytes",
+            "name": "proofInit",
+            "type": "bytes"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint64",
+                "name": "revision_number",
+                "type": "uint64"
+              },
+              {
+                "internalType": "uint64",
+                "name": "revision_height",
+                "type": "uint64"
+              }
+            ],
+            "internalType": "struct HeightData",
+            "name": "proofHeight",
+            "type": "tuple"
+          }
+        ],
+        "internalType": "struct IBCMsgsMsgChannelOpenTry",
+        "name": "msg_",
+        "type": "tuple"
+      }
+    ],
+    "name": "channelOpenTry",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

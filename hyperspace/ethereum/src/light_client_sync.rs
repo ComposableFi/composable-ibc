@@ -11,7 +11,10 @@ impl LightClientSync for EthereumClient {
 		Ok(true)
 	}
 
-	async fn fetch_mandatory_updates<C: Chain>(&self, counterparty: &C) -> Result<(Vec<Any>, Vec<IbcEvent>), Error> {
+	async fn fetch_mandatory_updates<C: Chain>(
+		&self,
+		_counterparty: &C,
+	) -> Result<(Vec<Any>, Vec<IbcEvent>), Error> {
 		todo!()
 	}
 }

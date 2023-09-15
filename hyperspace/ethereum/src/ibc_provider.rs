@@ -1,14 +1,15 @@
 use ethers::{
 	abi::{
 		encode, encode_packed, ethabi, Abi, AbiEncode, Detokenize, InvalidOutputType, ParamType,
-		Token, Tokenizable, Topic,
+		RawLog, Token, Tokenizable,
 	},
-	contract::abigen,
+	contract::{abigen, EthEvent},
 	middleware::contract::Contract,
+	prelude::Block,
 	providers::Middleware,
 	types::{
-		BlockId, BlockNumber, EIP1186ProofResponse, Filter, StorageProof, ValueOrArray, H256, I256,
-		U256,
+		BlockId, BlockNumber, EIP1186ProofResponse, Filter, StorageProof, Topic, ValueOrArray,
+		H256, U256,
 	},
 	utils::keccak256,
 };
@@ -22,7 +23,7 @@ use ibc::{
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::{
 			identifier::{ChannelId, ClientId, ConnectionId, PortId},
-			path::{AcksPath, CommitmentsPath, ReceiptsPath, SeqRecvsPath},
+			path::{AcksPath, CommitmentsPath, ReceiptsPath},
 			Path,
 		},
 	},
@@ -39,162 +40,70 @@ use ibc_proto::{
 		},
 		client::v1::{QueryClientStateResponse, QueryConsensusStateResponse},
 		connection::v1::{
-			ConnectionEnd, Counterparty as ConnectionCounterparty, IdentifiedConnection,
-			QueryConnectionResponse, Version,
+			Counterparty as ConnectionCounterparty, IdentifiedConnection, QueryConnectionResponse,
 		},
 	},
 };
 use primitives::{IbcProvider, UpdateType};
 use prost::Message;
 use std::{
-	collections::HashSet, future::Future, pin::Pin, str::FromStr, sync::Arc, time::Duration,
+	collections::{HashMap, HashSet},
+	future::Future,
+	pin::Pin,
+	str::FromStr,
+	sync::Arc,
+	time::Duration,
 };
 
-use futures::{FutureExt, Stream, StreamExt};
-use ibc::{
-	applications::transfer::PrefixedCoin,
-	core::ics04_channel::channel::{Order, State},
-	events::IbcEvent,
+use crate::{
+	client::{
+		ClientError, EthereumClient, CHANNELS_STORAGE_INDEX, CLIENT_IMPLS_STORAGE_INDEX,
+		COMMITMENTS_STORAGE_INDEX, CONNECTIONS_STORAGE_INDEX,
+	},
+	events::TryFromEvent,
+	prove::prove,
 };
-use ibc_proto::{google::protobuf::Any, ibc::core::channel::v1::Channel};
-use ibc_rpc::{IbcApiClient, PacketInfo};
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
+use futures::{FutureExt, Stream, StreamExt};
 use thiserror::Error;
 
-use crate::client::{
-	ClientError, EthereumClient, CHANNELS_STORAGE_INDEX, CLIENT_IMPLS_STORAGE_INDEX,
-	COMMITMENTS_STORAGE_INDEX, CONNECTIONS_STORAGE_INDEX,
+use ibc::{
+	applications::transfer::PrefixedCoin,
+	core::{
+		ics04_channel::{
+			channel::{Order, State},
+			events::SendPacket,
+		},
+		ics23_commitment::commitment::CommitmentRoot,
+	},
+	events::IbcEvent,
+	protobuf::Protobuf,
 };
+use ibc_proto::{
+	google::protobuf::Any,
+	ibc::core::{
+		channel::v1::Channel,
+		commitment::v1::MerklePrefix,
+		connection::v1::{ConnectionEnd, Version},
+	},
+};
+use ibc_rpc::{IbcApiClient, PacketInfo};
+use icsxx_ethereum::{client_state::ClientState, consensus_state::ConsensusState};
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
+use sync_committee_primitives::types::LightClientState;
+use sync_committee_prover::SyncCommitteeProver;
 
 abigen!(
-	IbcHandlerAbi,
-	r#"[
-	{
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint64",
-        "name": "sequence",
-        "type": "uint64"
-      },
-      {
-        "indexed": true,
-        "internalType": "string",
-        "name": "sourcePort",
-        "type": "string"
-      },
-      {
-        "indexed": true,
-        "internalType": "string",
-        "name": "sourceChannel",
-        "type": "string"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint64",
-            "name": "revision_number",
-            "type": "uint64"
-          },
-          {
-            "internalType": "uint64",
-            "name": "revision_height",
-            "type": "uint64"
-          }
-        ],
-        "indexed": false,
-        "internalType": "struct HeightData",
-        "name": "timeoutHeight",
-        "type": "tuple"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint64",
-        "name": "timeoutTimestamp",
-        "type": "uint64"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      }
-    ],
-    "name": "SendPacket",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "components": [
-          {
-            "internalType": "string",
-            "name": "portId",
-            "type": "string"
-          },
-          {
-            "components": [
-              {
-                "internalType": "enum ChannelState",
-                "name": "state",
-                "type": "uint8"
-              },
-              {
-                "internalType": "enum ChannelOrder",
-                "name": "ordering",
-                "type": "uint8"
-              },
-              {
-                "components": [
-                  {
-                    "internalType": "string",
-                    "name": "port_id",
-                    "type": "string"
-                  },
-                  {
-                    "internalType": "string",
-                    "name": "channel_id",
-                    "type": "string"
-                  }
-                ],
-                "internalType": "struct ChannelCounterpartyData",
-                "name": "counterparty",
-                "type": "tuple"
-              },
-              {
-                "internalType": "string[]",
-                "name": "connection_hops",
-                "type": "string[]"
-              },
-              {
-                "internalType": "string",
-                "name": "version",
-                "type": "string"
-              }
-            ],
-            "internalType": "struct ChannelData",
-            "name": "channel",
-            "type": "tuple"
-          }
-        ],
-        "internalType": "struct IBCMsgs.MsgChannelOpenInit",
-        "name": "msg_",
-        "type": "tuple"
-      }
-    ],
-    "name": "channelOpenInit",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "channelId",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
-	]"#
+	IbcClientAbi,
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-client-abi.json";
+
+	IbcConnectionAbi,
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-connection-abi.json";
+
+	IbcChannelAbi,
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-channel-abi.json";
+
+	IbcPacketAbi,
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-packet-abi.json";
 );
 
 impl From<HeightData> for Height {
@@ -216,7 +125,7 @@ impl From<HeightData> for ibc_proto::ibc::core::client::v1::Height {
 }
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
-pub struct BlockHeight(pub(crate) ethers::types::BlockNumber);
+pub struct BlockHeight(pub(crate) BlockNumber);
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum FinalityEvent {
@@ -238,9 +147,11 @@ where
 	}
 }
 
+const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 100;
+
 #[async_trait::async_trait]
 impl IbcProvider for EthereumClient {
-	type FinalityEvent = FinalityEvent;
+	type FinalityEvent = Block<H256>;
 
 	type TransactionId = ();
 
@@ -256,108 +167,110 @@ impl IbcProvider for EthereumClient {
 	where
 		T: primitives::Chain,
 	{
-		tracing::debug!(?finality_event, "querying latest ibc events");
-		tracing::warn!("TODO: implement query_latest_ibc_events");
-		Ok(vec![])
+		let client_id = self.client_id();
+		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
+		let latest_cp_client_state =
+			counterparty.query_client_state(latest_cp_height, client_id.clone()).await?;
+		let client_state_response = latest_cp_client_state.client_state.ok_or_else(|| {
+			ClientError::Other("counterparty returned empty client state".to_string())
+		})?;
+		let client_state = ClientState::<HostFunctionsManager>::decode_vec(
+			&client_state_response.value,
+		)
+		.map_err(|_| ClientError::Other("failed to decode client state response".to_string()))?;
+		let latest_cp_client_height = client_state.latest_height().revision_height;
+		let latest_height = self.latest_height_and_timestamp().await?.0;
+		let latest_revision = latest_height.revision_number;
+
+		// tracing::debug!(?finality_event, "querying latest ibc events");
+		// tracing::warn!("TODO: implement query_latest_ibc_events");
+		let from = latest_cp_client_height;
+		let to = finality_event
+			.number
+			.unwrap()
+			.as_u64()
+			.min(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER);
+		println!("Getting blocks {}..{}", from, to);
+		let filter =
+			Filter::new().from_block(from).to_block(to).address(self.yui.diamond.address());
+		let client = self.clone();
+		let logs = self.client().get_logs(&filter).await.unwrap();
+		let mut events = vec![];
+
+		let update = prove(self, finality_event.hash.unwrap()).await?;
+
+		println!(
+			"proven: state root = {}, body root = {}, slot = {}",
+			update.finalized_header.state_root,
+			update.finalized_header.body_root,
+			update.finalized_header.slot
+		);
+		// for log in logs {
+		// 	let raw_log = RawLog::from(log.clone());
+		// 	let height = Height::new(0, log.block_number.unwrap().as_u64());
+		// 	let topic0 = log.topics[0];
+		//
+		// 	let mut maybe_ibc_event = if topic0 == CreateClientFilter::signature() {
+		// 		let event = CreateClientFilter::decode_log(&raw_log).expect("decode event");
+		// 		IbcEvent::try_from_event(&client, event, log, height).await
+		// 	} else {
+		// 		eprintln!("unknown event: {}", log.log_type.unwrap_or(format!("{topic0:?}")));
+		// 		continue
+		// 	};
+		//
+		// 	match maybe_ibc_event {
+		// 		Ok(ev) => todo!(),
+		// 		Err(err) => {
+		// 			eprintln!("failed to decode event: {err}");
+		// 			None
+		// 		},
+		// 	}
+		// }
+
+		Ok(events)
 	}
 
-	async fn ibc_events(
-		&self,
-	) -> Pin<Box<dyn Stream<Item = ibc::events::IbcEvent> + Send + 'static>> {
-		fn decode_string(bytes: &[u8]) -> String {
-			ethers::abi::decode(&[ParamType::String], &bytes)
-				.unwrap()
-				.into_iter()
-				.next()
-				.unwrap()
-				.to_string()
-		}
+	// TODO: this function is mostly used in tests and in 'fishing' mode.
+	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
+		let ibc_address = self.config.ibc_handler_address;
+		let client = self.clone();
 
-		fn decode_client_id_log(log: ethers::types::Log) -> ibc::events::IbcEvent {
-			let client_id = decode_string(&log.data.0);
-			ibc::events::IbcEvent::CreateClient(CreateClient(Attributes {
-				height: Height::default(),
-				client_id: ClientId::from_str(&client_id).unwrap(),
-				client_type: "00-uninitialized".to_owned(),
-				consensus_height: Height::default(),
-			}))
-		}
+		let ws = self.websocket_provider().await.unwrap();
+		(async_stream::stream! {
+			let mut events_stream = ws.subscribe_logs(
+				 &Filter::new().from_block(BlockNumber::Latest).address(ibc_address),
+			)
+			.await
+			.unwrap()
+			.filter_map(|log| async {
+				let raw_log = RawLog::from(log.clone());
+				let height = Height::new(0, log.block_number.unwrap().as_u64());
+				let topic0 = log.topics[0];
 
-		let ibc_handler_address = self.config.ibc_handler_address;
+				let mut maybe_ibc_event = if topic0 == CreateClientFilter::signature() {
+					let event = CreateClientFilter::decode_log(&raw_log).expect("decode event");
+					IbcEvent::try_from_event(&client, event, log, height).await
+				} else {
+					eprintln!(
+						"unknown event: {}",
+						log.log_type.unwrap_or(format!("{topic0:?}"))
+					);
+					return None
+				};
 
-		match self.websocket_provider().await {
-			Ok(ws) => async_stream::stream! {
-				let channel_id_stream = ws
-					.subscribe_logs(
-						&Filter::new()
-							.from_block(BlockNumber::Latest)
-							.address(ibc_handler_address)
-							.event("GeneratedChannelIdentifier(string)"),
-					)
-					.await
-					.expect("failed to subscribe to GeneratedChannelIdentifier event")
-					.map(decode_client_id_log);
-
-				let client_id_stream = ws
-					.subscribe_logs(
-						&Filter::new()
-							.from_block(BlockNumber::Latest)
-							.address(ibc_handler_address)
-							.event("GeneratedClientIdentifier(string)"),
-					)
-					.await
-					.expect("failed to subscribe to GeneratedClientId event")
-					.map(decode_client_id_log);
-
-				let connection_id_stream = ws
-					.subscribe_logs(
-						&Filter::new()
-							.from_block(BlockNumber::Latest)
-							.address(ibc_handler_address)
-							.event("GeneratedConnectionIdentifier(string)"),
-					)
-					.await
-					.expect("failed to subscribe to GeneratedConnectionIdentifier event")
-					.map(decode_client_id_log);
-
-				let recv_packet_stream = ws
-					.subscribe_logs(
-						&Filter::new()
-							.from_block(BlockNumber::Latest)
-							.address(ibc_handler_address)
-							.event("RecvPacket((uint64,string,string,string,string,bytes,(uint64,uint64),uint64))"),
-					)
-					.await
-					.expect("failed to subscribe to RecvPacket event")
-					.map(decode_client_id_log);
-
-				let send_packet_stream = ws
-					.subscribe_logs(
-						&Filter::new()
-							.from_block(BlockNumber::Latest)
-							.address(ibc_handler_address)
-							.event("SendPacket(uint64,string,string,(uint64,uint64),uint64,bytes)"),
-					)
-					.await
-					.expect("failed to subscribe to SendPacket event")
-					.map(decode_client_id_log);
-
-				let inner = futures::stream::select_all([
-					channel_id_stream,
-					client_id_stream,
-					connection_id_stream,
-					recv_packet_stream,
-					send_packet_stream
-				]);
-				futures::pin_mut!(inner);
-
-				while let Some(ev) = inner.next().await {
-					yield ev
+				match maybe_ibc_event {
+					Ok(ev) => Some(ev),
+					Err(err) => {
+						eprintln!("failed to decode event: {err}");
+						None
+					},
 				}
+			}).boxed();
+
+			while let Some(ev) = events_stream.next().await {
+				yield ev
 			}
-			.left_stream(),
-			Err(_) => futures::stream::empty().right_stream(),
-		}
+		})
 		.boxed()
 	}
 
@@ -367,18 +280,12 @@ impl IbcProvider for EthereumClient {
 		client_id: ClientId,
 		consensus_height: Height,
 	) -> Result<QueryConsensusStateResponse, Self::Error> {
-		let contract = crate::contract::ibc_handler(
-			self.config.ibc_handler_address.clone(),
-			Arc::clone(&self.http_rpc),
-		);
-		println!("the address again: {:?}, {client_id}", self.config.ibc_handler_address);
-
-		let binding = contract
+		let binding = self
+			.yui
 			.method(
 				"getConsensusState",
 				(
 					Token::String(client_id.as_str().to_owned()),
-					// Token::Uint(consensus_height.revision_height.into()),
 					Token::Tuple(vec![
 						Token::Uint(consensus_height.revision_number.into()),
 						Token::Uint(consensus_height.revision_height.into()),
@@ -392,7 +299,7 @@ impl IbcProvider for EthereumClient {
 			.call()
 			.await
 			.map_err(|err| {
-				eprintln!("{err}");
+				eprintln!("error: {err}");
 				err
 			})
 			.unwrap();
@@ -408,13 +315,9 @@ impl IbcProvider for EthereumClient {
 		at: Height,
 		client_id: ClientId,
 	) -> Result<QueryClientStateResponse, Self::Error> {
-		let contract = crate::contract::ibc_handler(
-			self.config.ibc_handler_address.clone(),
-			Arc::clone(&self.http_rpc),
-		);
-
-		let (client_state, _): (Vec<u8>, bool) = contract
-			.method("getClientState", (client_id.as_str().to_owned(),))
+		let (client_state, _): (Vec<u8>, bool) = self
+			.yui
+			.method("getClientState", (client_id.to_string(),))
 			.expect("contract is missing getClientState")
 			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
 			.call()
@@ -433,64 +336,45 @@ impl IbcProvider for EthereumClient {
 		at: Height,
 		connection_id: ConnectionId,
 	) -> Result<QueryConnectionResponse, Self::Error> {
-		let fut = self.eth_query_proof(
-			connection_id.as_str(),
-			Some(at.revision_height),
-			CONNECTIONS_STORAGE_INDEX,
-		);
+		let (connection_end, exists): (ConnectionEndData, bool) = self
+			.yui
+			.method("getConnection", (connection_id.to_string(),))
+			.expect("contract is missing getConnectionEnd")
+			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+			.call()
+			.await
+			.map_err(|err| todo!("query_connection_end: error: {err:?}"))
+			.unwrap();
 
-		query_proof_then(fut, move |storage_proof| async move {
-			if !storage_proof.value.is_zero() {
-				let contract = crate::contract::ibc_handler(
-					self.config.ibc_handler_address.clone(),
-					Arc::clone(&self.http_rpc),
-				);
-
-				/*
-				let binding = contract
-					.method("getConnectionEnd", (connection_id.as_str().to_owned(),))
-					.expect("contract is missing getConnectionEnd");
-
-				let connection_end: crate::contract::ConnectionEnd = binding
-					.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
-					.call()
-					.await
-					.unwrap();
-
-				let proof_height = Some(at.into());
-				let proof = storage_proof.proof.first().map(|b| b.to_vec()).unwrap_or_default();
-
-				Ok(QueryConnectionResponse {
-					connection: Some(ConnectionEnd {
-						state: connection_end.state as i32,
-						client_id: connection_end.client_id,
-						counterparty: Some(ConnectionCounterparty {
-							client_id: connection_end.counterparty.client_id,
-							connection_id: connection_end.counterparty.connection_id,
-							prefix: Some(ibc_proto::ibc::core::commitment::v1::MerklePrefix {
-								key_prefix: connection_end.counterparty.prefix,
-							}),
-						}),
-						versions: connection_end
-							.versions
-							.into_iter()
-							.map(|v| ibc_proto::ibc::core::connection::v1::Version {
-								identifier: v.identifier,
-								features: v.features,
-							})
-							.collect(),
-						delay_period: connection_end.delay_period,
-					}),
-					proof,
-					proof_height,
-				})
-				 */
-				todo!()
+		let connection = if exists {
+			let prefix = if connection_end.counterparty.prefix.key_prefix.0.is_empty() {
+				None
 			} else {
-				todo!("error: client address is zero")
-			}
-		})
-		.await
+				Some(MerklePrefix {
+					key_prefix: connection_end.counterparty.prefix.key_prefix.to_vec(),
+				})
+			};
+
+			Some(ConnectionEnd {
+				client_id: connection_end.client_id,
+				versions: connection_end
+					.versions
+					.into_iter()
+					.map(|v| Version { identifier: v.identifier, features: v.features })
+					.collect(),
+				state: connection_end.state as _,
+				counterparty: Some(ConnectionCounterparty {
+					client_id: connection_end.counterparty.client_id,
+					connection_id: connection_end.counterparty.connection_id,
+					prefix,
+				}),
+				delay_period: connection_end.delay_period,
+			})
+		} else {
+			None
+		};
+
+		Ok(QueryConnectionResponse { connection, proof: Vec::new(), proof_height: Some(at.into()) })
 	}
 
 	async fn query_channel_end(
@@ -499,27 +383,19 @@ impl IbcProvider for EthereumClient {
 		channel_id: ChannelId,
 		port_id: PortId,
 	) -> Result<QueryChannelResponse, Self::Error> {
-		let contract = crate::contract::ibc_handler(
-			self.config.ibc_handler_address.clone(),
-			Arc::clone(&self.http_rpc),
-		);
-
-		// channels[portId][channelId]
-		let binding = contract
-			.method::<_, (ChannelData, bool)>(
+		let binding = self
+			.yui
+			.method::<_, ChannelData>(
 				"getChannel",
-				(channel_id.to_string(), port_id.as_str().to_owned()),
+				(port_id.as_str().to_owned(), channel_id.to_string()),
 			)
 			.expect("contract is missing getChannel");
 
-		let (channel_data, exists) = binding
+		let channel_data = binding
 			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
 			.call()
 			.await
 			.unwrap();
-		if !exists {
-			todo!("error: channel does not exist")
-		}
 
 		let state = State::from_i32(channel_data.state as _).expect("invalid channel state");
 		let counterparty = match state {
@@ -627,12 +503,8 @@ impl IbcProvider for EthereumClient {
 		port_id: &PortId,
 		channel_id: &ChannelId,
 	) -> Result<QueryNextSequenceReceiveResponse, Self::Error> {
-		let contract = crate::contract::ibc_handler(
-			self.config.ibc_handler_address.clone(),
-			Arc::clone(&self.http_rpc),
-		);
-
-		let binding = contract
+		let binding = self
+			.yui
 			.method::<_, u64>(
 				"getNextSequenceRecv",
 				(channel_id.to_string(), port_id.as_str().to_owned()),
@@ -685,15 +557,22 @@ impl IbcProvider for EthereumClient {
 	}
 
 	async fn latest_height_and_timestamp(&self) -> Result<(Height, Timestamp), Self::Error> {
-		let latest_block = self
-			.http_rpc
-			.get_block_number()
-			.await
-			.map_err(|err| ClientError::MiddlewareError(err))?;
+		// TODO: fix latest_height_and_timestamp in basic builds
+		let block_number =// if dbg!(cfg!(feature = "test")) {
+			BlockNumber::from(
+				self
+					.client()
+					.get_block_number()
+					.await
+					.map_err(|err| ClientError::MiddlewareError(err))?,
+			);
+		// } else {
+		// 	BlockNumber::Finalized
+		// };
 
 		let block = self
-			.http_rpc
-			.get_block(latest_block)
+			.client()
+			.get_block(BlockId::Number(block_number))
 			.await
 			.map_err(|err| ClientError::MiddlewareError(err))?
 			.ok_or_else(|| ClientError::MiddlewareError(todo!()))?;
@@ -701,7 +580,7 @@ impl IbcProvider for EthereumClient {
 		let nanoseconds = Duration::from_secs(block.timestamp.as_u64()).as_nanos() as u64;
 		let timestamp = Timestamp::from_nanoseconds(nanoseconds).expect("timestamp error");
 
-		Ok((Height::new(0, latest_block.as_u64()), timestamp))
+		Ok((Height::new(0, block.number.expect("expected block number").as_u64()), timestamp))
 	}
 
 	async fn query_packet_commitments(
@@ -710,13 +589,10 @@ impl IbcProvider for EthereumClient {
 		channel_id: ChannelId,
 		port_id: PortId,
 	) -> Result<Vec<u64>, Self::Error> {
-		let contract = crate::contract::ibc_handler(
-			self.config.ibc_handler_address.clone(),
-			Arc::clone(&self.http_rpc),
-		);
 		let start_seq = 0u64;
 		let end_seq = 255u64;
-		let binding = contract
+		let binding = self
+			.yui
 			.method(
 				"hasCommitments",
 				(port_id.as_str().to_owned(), channel_id.to_string(), start_seq, end_seq),
@@ -751,14 +627,10 @@ impl IbcProvider for EthereumClient {
 		channel_id: ChannelId,
 		port_id: PortId,
 	) -> Result<Vec<u64>, Self::Error> {
-		let contract = crate::contract::ibc_handler(
-			self.config.ibc_handler_address.clone(),
-			Arc::clone(&self.http_rpc),
-		);
-
 		let start_seq = 0u64;
 		let end_seq = 255u64;
-		let binding = contract
+		let binding = self
+			.yui
 			.method(
 				"hasAcknowledgements",
 				(port_id.as_str().to_owned(), channel_id.to_string(), start_seq, end_seq),
@@ -835,7 +707,6 @@ impl IbcProvider for EthereumClient {
 		self.config.channel_whitelist.clone().into_iter().collect()
 	}
 
-	#[cfg(test)]
 	async fn query_connection_channels(
 		&self,
 		at: Height,
@@ -850,17 +721,13 @@ impl IbcProvider for EthereumClient {
 		channel_id: ChannelId,
 		port_id: PortId,
 		seqs: Vec<u64>,
-	) -> Result<Vec<ibc_rpc::PacketInfo>, Self::Error> {
-		let contract = crate::contract::ibc_handler(
-			self.config.ibc_handler_address.clone(),
-			Arc::clone(&self.http_rpc),
-		);
-
-		// hash.0.
-		let event_filter = contract
+	) -> Result<Vec<PacketInfo>, Self::Error> {
+		let source_port = port_id.to_string();
+		let source_channel = channel_id.to_string();
+		let event_filter = self
+			.yui
 			.event_for_name::<SendPacketFilter>("SendPacket")
 			.expect("contract is missing SendPacket event")
-			.address(ValueOrArray::Value(self.config.ibc_handler_address.clone()))
 			.from_block(BlockNumber::Earliest) // TODO: use contract creation height
 			.to_block(BlockNumber::Latest)
 			.topic1(ValueOrArray::Array(
@@ -873,17 +740,28 @@ impl IbcProvider for EthereumClient {
 			))
 			.topic2({
 				let hash = H256::from_slice(&encode(&[Token::FixedBytes(
-					port_id.to_string().into_bytes(),
+					keccak256(source_port.clone().into_bytes()).to_vec(),
 				)]));
 				ValueOrArray::Value(hash)
 			})
 			.topic3({
 				let hash = H256::from_slice(&encode(&[Token::FixedBytes(
-					channel_id.to_string().into_bytes(),
+					keccak256(source_channel.clone().into_bytes()).to_vec(),
 				)]));
 				ValueOrArray::Value(hash)
 			});
 
+		for i in 0..4 {
+			let Some(topic) = &event_filter.filter.topics[i] else { continue };
+			let data = match topic {
+				Topic::Value(v) => v.iter().map(|v| &v.0[..]).collect::<Vec<_>>(),
+				Topic::Array(vs) => vs.iter().flatten().map(|v| &v.0[..]).collect(),
+			};
+			println!(
+				"Looking for topic{i}: {}",
+				data.into_iter().map(hex::encode).collect::<Vec<_>>().join(", ")
+			);
+		}
 		let events = event_filter.query().await.unwrap();
 		let channel = self.query_channel_end(at, channel_id, port_id).await?;
 
@@ -891,10 +769,10 @@ impl IbcProvider for EthereumClient {
 		let counterparty = channel.counterparty.expect("counterparty is none");
 		Ok(events
 			.into_iter()
-			.map(|value| PacketInfo {
+			.map(move |value| PacketInfo {
 				height: None,
-				source_port: String::from_utf8_lossy(&value.source_port.0).to_string(),
-				source_channel: String::from_utf8_lossy(&value.source_channel.0).to_string(),
+				source_port: source_port.clone(),
+				source_channel: source_channel.clone(),
 				destination_port: counterparty.port_id.clone(),
 				destination_channel: counterparty.channel_id.clone(),
 				sequence: value.sequence,
@@ -912,15 +790,99 @@ impl IbcProvider for EthereumClient {
 
 	async fn query_received_packets(
 		&self,
+		at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Self::Error> {
-		todo!()
+		let destination_port = port_id.to_string();
+		let destination_channel = channel_id.to_string();
+		let event_filter = self
+			.yui
+			.event_for_name::<RecvPacketFilter>("RecvPacket")
+			.expect("contract is missing RecvPacket event")
+			.from_block(BlockNumber::Earliest) // TODO: use contract creation height
+			.to_block(BlockNumber::Latest)
+			.topic1(ValueOrArray::Array(
+				seqs.clone()
+					.into_iter()
+					.map(|seq| {
+						let bytes = encode(&[Token::Uint(seq.into())]);
+						H256::from_slice(bytes.as_slice())
+					})
+					.collect(),
+			))
+			.topic2({
+				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+					keccak256(destination_port.clone().into_bytes()).to_vec(),
+				)])))
+			})
+			.topic3({
+				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+					keccak256(destination_channel.clone().into_bytes()).to_vec(),
+				)])))
+			});
+
+		let events = event_filter.query().await.unwrap();
+		let channel = self.query_channel_end(at, channel_id, port_id).await?;
+		let channel = channel.channel.expect("channel is none");
+
+		let acks_filter = self
+			.yui
+			.event_for_name::<WriteAcknowledgementFilter>("WriteAcknowledgement")
+			.expect("contract is missing WriteAcknowledgement event")
+			.from_block(BlockNumber::Earliest) // TODO: use contract creation height
+			.to_block(BlockNumber::Latest)
+			.topic3(ValueOrArray::Array(
+				seqs.into_iter()
+					.map(|seq| {
+						let bytes = encode(&[Token::Uint(seq.into())]);
+						H256::from_slice(bytes.as_slice())
+					})
+					.collect(),
+			))
+			.topic1({
+				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+					keccak256(destination_port.clone().into_bytes()).to_vec(),
+				)])))
+			})
+			.topic2({
+				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+					keccak256(destination_channel.clone().into_bytes()).to_vec(),
+				)])))
+			});
+
+		let mut acks_map = acks_filter
+			.query()
+			.await
+			.unwrap()
+			.into_iter()
+			.map(|ack| (ack.sequence, ack.acknowledgement.to_vec()))
+			.collect::<HashMap<_, _>>();
+
+		Ok(events
+			.into_iter()
+			.map(move |value| PacketInfo {
+				height: None,
+				source_port: value.source_port.clone(),
+				source_channel: value.source_channel.clone(),
+				destination_port: destination_port.clone(),
+				destination_channel: destination_channel.clone(),
+				sequence: value.sequence,
+				timeout_height: value.timeout_height.into(),
+				timeout_timestamp: value.timeout_timestamp,
+				data: value.data.to_vec(),
+				channel_order: Order::from_i32(channel.ordering)
+					.map_err(|_| Self::Error::Other("invalid channel order".to_owned()))
+					.unwrap()
+					.to_string(),
+				ack: acks_map.get(&value.sequence).cloned(),
+			})
+			.collect())
 	}
 
-	fn expected_block_time(&self) -> std::time::Duration {
-		todo!()
+	fn expected_block_time(&self) -> Duration {
+		Duration::from_secs(14)
 	}
 
 	async fn query_client_update_time_and_height(
@@ -928,14 +890,51 @@ impl IbcProvider for EthereumClient {
 		client_id: ClientId,
 		client_height: Height,
 	) -> Result<(Height, Timestamp), Self::Error> {
-		todo!();
+		let event_filter = self
+			.yui
+			.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
+			.expect("contract is missing UpdateClientHeight event")
+			.from_block(BlockNumber::Earliest) // TODO: use contract creation height
+			.to_block(BlockNumber::Latest)
+			.topic1({
+				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+					keccak256(client_id.to_string()).to_vec(),
+				)])))
+			})
+			.topic2({
+				let height_bytes = encode(&[Token::Tuple(vec![
+					Token::Uint(client_height.revision_number.into()),
+					Token::Uint(client_height.revision_height.into()),
+				])]);
+				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+					keccak256(&height_bytes).to_vec(),
+				)])))
+			});
+
+		let log = self
+			.yui
+			.diamond
+			.client()
+			.get_logs(&event_filter.filter)
+			.await
+			.unwrap()
+			.pop()
+			.unwrap();
+
+		let height = Height::new(0, log.block_number.expect("block number is none").as_u64());
+
+		let timestamp =
+			Timestamp::from_nanoseconds(self.query_timestamp_at(height.revision_height).await?)
+				.unwrap();
+
+		Ok((height, timestamp))
 	}
 
 	async fn query_host_consensus_state_proof(
 		&self,
-		client_state: &AnyClientState,
+		_client_state: &AnyClientState,
 	) -> Result<Option<Vec<u8>>, Self::Error> {
-		todo!()
+		Ok(Some(vec![]))
 	}
 
 	async fn query_ibc_balance(
@@ -975,21 +974,31 @@ impl IbcProvider for EthereumClient {
 	}
 
 	fn client_type(&self) -> ClientType {
-		todo!()
+		"xx-ethereum".to_string()
 	}
 
 	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error> {
-		todo!()
+		let block = self
+			.client()
+			.get_block(BlockId::Number(BlockNumber::Number(block_number.into())))
+			.await
+			.map_err(|err| ClientError::MiddlewareError(err))?
+			.ok_or_else(|| ClientError::MiddlewareError(todo!()))?;
+
+		Ok(Duration::from_secs(block.timestamp.as_u64()).as_nanos() as u64)
 	}
 
+	// TODO
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
-		todo!()
+		Ok(vec![])
 	}
 
 	async fn query_channels(&self) -> Result<Vec<(ChannelId, PortId)>, Self::Error> {
 		let ids = self.generated_channel_identifiers(0.into()).await?;
-
-		todo!("query_channels")
+		dbg!(&ids);
+		ids.into_iter()
+			.map(|id| Ok((id.1.parse().unwrap(), id.0.parse().unwrap())))
+			.collect()
 	}
 
 	async fn query_connection_using_client(
@@ -1005,14 +1014,63 @@ impl IbcProvider for EthereumClient {
 		latest_height: u64,
 		latest_client_height_on_counterparty: u64,
 	) -> Result<bool, Self::Error> {
-		// not implemented for the moment.
 		Ok(false)
 	}
 
 	async fn initialize_client_state(
 		&self,
 	) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
-		todo!()
+		let mut string = self.config.beacon_rpc_url.to_string();
+		string.pop();
+		let sync_committee_prover = SyncCommitteeProver::new(string);
+		let block_id = "finalized";
+		let block_header = sync_committee_prover.fetch_header(&block_id).await.unwrap();
+
+		let state = sync_committee_prover
+			.fetch_beacon_state(&block_header.slot.to_string())
+			.await
+			.unwrap();
+
+		// TODO: query `at` block
+		let finality_checkpoint = sync_committee_prover.fetch_finalized_checkpoint().await.unwrap();
+		let client_state = LightClientState {
+			finalized_header: block_header.clone(),
+			latest_finalized_epoch: finality_checkpoint.finalized.epoch, // TODO: ????
+			current_sync_committee: state.current_sync_committee,
+			next_sync_committee: state.next_sync_committee,
+		};
+
+		let block = self
+			.client()
+			.get_block(BlockId::Number(BlockNumber::Number(dbg!(block_header.slot).into())))
+			.await
+			.unwrap()
+			.unwrap();
+
+		dbg!(&block.state_root);
+		dbg!(&block.hash.unwrap());
+		dbg!(&state.state_roots.iter().take(10).collect::<Vec<_>>());
+		dbg!(&state.block_roots.iter().take(10).collect::<Vec<_>>());
+		dbg!(&block_header.state_root);
+		dbg!(&block_header.body_root);
+
+		let client_state = AnyClientState::Ethereum(ClientState {
+			inner: client_state,
+			frozen_height: None,
+			latest_height: block_header.slot as _,
+			_phantom: Default::default(),
+		});
+
+		let consensus_state = AnyConsensusState::Ethereum(ConsensusState {
+			timestamp: tendermint::time::Time::from_unix_timestamp(
+				block.timestamp.as_u64() as i64,
+				0,
+			)
+			.unwrap(),
+			root: CommitmentRoot { bytes: block.state_root.0.to_vec() },
+		});
+
+		Ok((client_state, consensus_state))
 	}
 
 	async fn query_client_id_from_tx_hash(
@@ -1037,7 +1095,7 @@ impl IbcProvider for EthereumClient {
 	}
 
 	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
-		todo!()
+		unimplemented!("upload_wasm")
 	}
 }
 

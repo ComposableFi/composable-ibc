@@ -27,9 +27,8 @@ use ibc::{
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
-use light_client_common::{HostFunctions, RelayChain};
 use serde::{Deserialize, Serialize};
-use sync_committee_verifier::LightClientState;
+use sync_committee_verifier::{BlsVerify, LightClientState};
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA ClientState
@@ -40,7 +39,7 @@ pub struct ClientState<H> {
 	pub inner: LightClientState,
 	pub frozen_height: Option<Height>,
 	pub latest_height: u32,
-	_phantom: PhantomData<H>,
+	pub _phantom: PhantomData<H>,
 }
 
 impl<H: Clone> Protobuf<RawClientState> for ClientState<H> {}
@@ -125,7 +124,7 @@ impl<H> ClientState<H> {
 
 impl<H> ibc::core::ics02_client::client_state::ClientState for ClientState<H>
 where
-	H: Send + Sync + Clone + Debug + Default + Eq,
+	H: Send + Sync + Clone + Debug + Default + Eq + BlsVerify,
 {
 	type UpgradeOptions = UpgradeOptions;
 	type ClientDef = EthereumClient<H>;

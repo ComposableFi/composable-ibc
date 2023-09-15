@@ -1,5 +1,18 @@
 use std::{sync::Arc, thread, time::Duration};
 
+use crate::{
+	client::EthereumClient,
+	contract::IbcHandler,
+	ibc_provider::BlockHeight,
+	yui_types::{ics03_connection::conn_open_try::YuiMsgConnectionOpenTry, IntoToken},
+};
+use channel_msgs::{
+	acknowledgement::MsgAcknowledgement, chan_close_confirm::MsgChannelCloseConfirm,
+	chan_close_init::MsgChannelCloseInit, chan_open_ack::MsgChannelOpenAck,
+	chan_open_confirm::MsgChannelOpenConfirm, chan_open_init::MsgChannelOpenInit,
+	chan_open_try::MsgChannelOpenTry, recv_packet::MsgRecvPacket, timeout::MsgTimeout,
+	timeout_on_close::MsgTimeoutOnClose,
+};
 use ethers::{abi::Token, prelude::EthAbiType, providers::Middleware};
 use futures::{Stream, StreamExt};
 use ibc::{
@@ -12,6 +25,7 @@ use ibc::{
 			conn_open_ack::MsgConnectionOpenAck, conn_open_confirm::MsgConnectionOpenConfirm,
 			conn_open_init::MsgConnectionOpenInit, conn_open_try::MsgConnectionOpenTry,
 		},
+		ics04_channel::msgs as channel_msgs,
 	},
 	protobuf::{google::protobuf::Timestamp, Protobuf},
 	Height,
@@ -26,22 +40,6 @@ use primitives::{
 	mock::LocalClientTypes, Chain, CommonClientState, LightClientSync, MisbehaviourHandler,
 };
 use serde::__private::de;
-
-use channel_msgs::{
-	acknowledgement::MsgAcknowledgement, chan_close_confirm::MsgChannelCloseConfirm,
-	chan_close_init::MsgChannelCloseInit, chan_open_ack::MsgChannelOpenAck,
-	chan_open_confirm::MsgChannelOpenConfirm, chan_open_init::MsgChannelOpenInit,
-	chan_open_try::MsgChannelOpenTry, recv_packet::MsgRecvPacket, timeout::MsgTimeout,
-	timeout_on_close::MsgTimeoutOnClose,
-};
-use ibc::core::ics04_channel::msgs as channel_msgs;
-
-use crate::{
-	client::EthereumClient,
-	contract::IbcHandler,
-	ibc_provider::BlockHeight,
-	yui_types::{ics03_connection::conn_open_try::YuiMsgConnectionOpenTry, IntoToken},
-};
 
 #[async_trait::async_trait]
 impl MisbehaviourHandler for EthereumClient {
@@ -242,7 +240,7 @@ fn tm_header_abi_token(header: Header) -> Token {
 	)
 }
 
-fn msg_connection_open_init_token(x: MsgConnectionOpenInit) -> Token {
+pub(crate) fn msg_connection_open_init_token(x: MsgConnectionOpenInit) -> Token {
 	use ethers::abi::{encode as ethers_encode, Token as EthersToken};
 
 	let consensus_state_data = EthersToken::Tuple(
@@ -280,7 +278,7 @@ fn msg_connection_open_init_token(x: MsgConnectionOpenInit) -> Token {
 	consensus_state_data
 }
 
-fn msg_connection_open_ack_token<H>(
+pub fn msg_connection_open_ack_token<H>(
 	msg: MsgConnectionOpenAck<LocalClientTypes>,
 	client_state: ClientState<H>,
 ) -> Token {
@@ -439,14 +437,10 @@ impl Chain for EthereumClient {
 
 		let stream = async_stream::stream! {
 			// TODO: is it really finalized blocks stream?
-			// - PoW: probabilistic finality (wait for ~30 blocks)
-			// - PoS: finality is deterministic
 			let mut stream = ws.subscribe_blocks().await.expect("fuck");
 
 			while let Some(block) = stream.next().await {
-				if let Some(hash) = block.hash.clone() {
-					yield Self::FinalityEvent::Ethereum { hash };
-				}
+				yield block
 			}
 		};
 
@@ -459,25 +453,17 @@ impl Chain for EthereumClient {
 	) -> Result<Self::TransactionId, Self::Error> {
 		use ethers::abi::{encode as ethers_encode, Token as EthersToken};
 
-		let contract = crate::contract::get_contract_from_name(
-			self.config.ibc_handler_address.clone(),
-			Arc::clone(&self.http_rpc),
-			"contracts/diamond",
-			"Diamond",
-		);
-
-		let msg = messages.iter().next();
-		if let Some(msg) = msg {
+		for msg in messages {
 			if msg.type_url == ibc::core::ics02_client::msgs::create_client::TYPE_URL {
 				dbg!(&msg.value.len());
 				let msg = MsgCreateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
 				let AnyClientState::Tendermint(client_state) = msg.client_state else {
 					//TODO return error support only tendermint client state
-					return Ok(())
+					panic!("unsupported client state")
 				};
 				let AnyConsensusState::Tendermint(client_consensus) = msg.consensus_state else {
 					//TODO return error support only tendermint consensus state
-					return Ok(())
+					panic!("unsupported")
 				};
 				let client_state_abi_token = client_state_abi_token(client_state);
 				let consensus_state_abi_token = consensus_state_abi_token(client_consensus);
@@ -498,8 +484,7 @@ impl Chain for EthereumClient {
 					EthersToken::Bytes(consensus_state_data_vec.clone()),
 				]);
 
-				let client_id =
-					self.config.diamond_handler.as_ref().unwrap().create_client(token).await;
+				let client_id = self.yui.create_client(token).await;
 				dbg!(&client_id);
 
 				thread::sleep(Duration::from_secs(5));
@@ -513,11 +498,9 @@ impl Chain for EthereumClient {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
 				let AnyClientMessage::Tendermint(client_state) = msg.client_message else {
 					//TODO return error support only tendermint client state
-					return Ok(())
+					panic!("unsupported")
 				};
-				let ClientMessage::Header(header) = client_state else {
-					return Ok(())
-				};
+				let ClientMessage::Header(header) = client_state else { return Ok(()) };
 
 				//get abi token to update client
 				let tm_header_abi_token = tm_header_abi_token(header);
@@ -540,15 +523,14 @@ impl Chain for EthereumClient {
 					EthersToken::Bytes(client_state),
 				]);
 
-				let _ = self.config.diamond_handler.as_ref().unwrap().update_client(token).await;
+				let _ = self.yui.update_client(token).await;
 				thread::sleep(Duration::from_secs(5));
 
 				return Ok(())
 			} else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_init::TYPE_URL {
 				let msg = MsgConnectionOpenInit::decode_vec(&msg.value).unwrap();
 				let token = msg_connection_open_init_token(msg);
-				let connection_id =
-					self.config.diamond_handler.as_ref().unwrap().connection_open_init(token).await;
+				let connection_id = self.yui.connection_open_init(token).await;
 				dbg!(connection_id);
 				return Ok(())
 			} else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_ack::TYPE_URL {
@@ -558,19 +540,18 @@ impl Chain for EthereumClient {
 					Some(m) => {
 						let AnyClientState::Tendermint(client_state) = m else {
 							//TODO return error support only tendermint client state
-							panic!("only tendermint client state is supported for now");
+							panic!("unsupported")
 						};
 						client_state
 					},
 					None => {
 						//TODO return error support only tendermint client state
-						panic!("only tendermint client state is supported for now");
+						panic!("unsupported")
 					},
 				};
 
 				let token = msg_connection_open_ack_token(msg, client_state);
-				let connection_id =
-					self.config.diamond_handler.as_ref().unwrap().connection_open_ack(token).await;
+				let connection_id = self.yui.connection_open_ack(token).await;
 				return Ok(())
 			} else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_try::TYPE_URL {
 				let msg = MsgConnectionOpenTry::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
@@ -578,81 +559,54 @@ impl Chain for EthereumClient {
 					Some(m) => {
 						let AnyClientState::Tendermint(client_state) = m else {
 							//TODO return error support only tendermint client state
-							panic!("only tendermint client state is supported for now");
+							panic!("unsupported")
 						};
 						client_state
 					},
 					None => {
 						//TODO return error support only tendermint client state
-						panic!("only tendermint client state is supported for now");
+						panic!("unsupported")
 					},
 				};
 
 				let token = msg_connection_open_try_token(msg, client_state);
-				self.config.diamond_handler.as_ref().unwrap().connection_open_try(token).await;
+				self.yui.connection_open_try(token).await;
 				return Ok(())
 			} else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_confirm::TYPE_URL
 			{
 				let msg = MsgConnectionOpenConfirm::decode_vec(&msg.value).unwrap();
 				let token = msg_connection_open_confirm_token(msg);
-				self.config
-					.diamond_handler
-					.as_ref()
-					.unwrap()
-					.connection_open_confirm(token)
-					.await;
+				self.yui.connection_open_confirm(token).await;
 				return Ok(())
 			} else if msg.type_url == channel_msgs::chan_open_init::TYPE_URL {
 				let msg = MsgChannelOpenInit::decode_vec(&msg.value).unwrap();
 				let token = msg.into_token();
-				let channel_id =
-					self.config.diamond_handler.as_ref().unwrap().channel_open_init(token).await;
+				let channel_id = self.yui.channel_open_init(token).await;
 				return Ok(())
 			} else if msg.type_url == channel_msgs::chan_open_try::TYPE_URL {
 				let msg = MsgChannelOpenTry::decode_vec(&msg.value).unwrap();
 				let token = msg.into_token();
-				let channel_id =
-					self.config.diamond_handler.as_ref().unwrap().channel_open_try(token).await;
+				let channel_id = self.yui.channel_open_try(token).await;
 				return Ok(())
 			} else if msg.type_url == channel_msgs::chan_open_ack::TYPE_URL {
 				let msg = MsgChannelOpenAck::decode_vec(&msg.value).unwrap();
 				let token = msg.into_token();
-				self.config
-					.diamond_handler
-					.as_ref()
-					.unwrap()
-					.send_and_get_tuple(token, "channelOpenAck")
-					.await;
+				self.yui.send_and_get_tuple(token, "channelOpenAck").await;
 				return Ok(())
 			} else if msg.type_url == channel_msgs::chan_open_confirm::TYPE_URL {
 				let msg = MsgChannelOpenConfirm::decode_vec(&msg.value).unwrap();
 				let token = msg.into_token();
-				self.config
-					.diamond_handler
-					.as_ref()
-					.unwrap()
-					.send_and_get_tuple(token, "channelOpenConfirm")
-					.await;
+				self.yui.send_and_get_tuple(token, "channelOpenConfirm").await;
 				return Ok(())
 			} else if msg.type_url == channel_msgs::chan_close_init::TYPE_URL {
 				let msg = MsgChannelCloseInit::decode_vec(&msg.value).unwrap();
 				let token = msg.into_token();
-				self.config
-					.diamond_handler
-					.as_ref()
-					.unwrap()
-					.send_and_get_tuple(token, "channelCloseInit")
-					.await;
+				self.yui.send_and_get_tuple(token, "channelCloseInit").await;
 				return Ok(())
 			} else if msg.type_url == channel_msgs::chan_close_confirm::TYPE_URL {
 				let msg = MsgChannelCloseConfirm::decode_vec(&msg.value).unwrap();
 				let token = msg.into_token();
-				self.config
-					.diamond_handler
-					.as_ref()
-					.unwrap()
-					.send_and_get_tuple(token, "channelCloseConfirm")
-					.await;
+				self.yui.send_and_get_tuple(token, "channelCloseConfirm").await;
 				return Ok(())
 			} else if msg.type_url == channel_msgs::timeout_on_close::TYPE_URL {
 				let msg = MsgTimeoutOnClose::decode_vec(&msg.value).unwrap();
@@ -661,28 +615,17 @@ impl Chain for EthereumClient {
 			} else if msg.type_url == channel_msgs::acknowledgement::TYPE_URL {
 				let msg = MsgAcknowledgement::decode_vec(&msg.value).unwrap();
 				let token = msg.into_token();
-				self.config
-					.diamond_handler
-					.as_ref()
-					.unwrap()
-					.send_and_get_tuple(token, "acknowledgePacket")
-					.await;
+				self.yui.send_and_get_tuple(token, "acknowledgePacket").await;
 				return Ok(())
 			} else if msg.type_url == channel_msgs::recv_packet::TYPE_URL {
 				let msg = MsgRecvPacket::decode_vec(&msg.value).unwrap();
 				let token = msg.into_token();
-				self.config
-					.diamond_handler
-					.as_ref()
-					.unwrap()
-					.send_and_get_tuple(token, "recvPacket")
-					.await;
+				self.yui.send_and_get_tuple(token, "recvPacket").await;
 				return Ok(())
 			}
-			unimplemented!("does not support this msg type for now");
-		};
-
-		unimplemented!("client create and client update is implemented only for now");
+			unimplemented!("does not support this msg type for now: {}", msg.type_url);
+		}
+		Ok(())
 	}
 
 	async fn query_client_message(

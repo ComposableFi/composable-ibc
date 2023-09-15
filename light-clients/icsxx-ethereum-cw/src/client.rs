@@ -29,10 +29,11 @@ use icsxx_ethereum::{
 };
 use prost::Message;
 use std::str::FromStr;
+use sync_committee_verifier::BlsVerify;
 
 impl<'a, H> ClientTypes for Context<'a, H>
 where
-	H: Clone + Eq + Send + Sync + Debug + Default + 'static,
+	H: Clone + Eq + Send + Sync + Debug + Default + BlsVerify + 'static,
 {
 	type AnyClientMessage = ClientMessage;
 	type AnyClientState = ClientState<H>;
@@ -42,7 +43,7 @@ where
 
 impl<'a, H> ClientReader for Context<'a, H>
 where
-	H: Clone + Eq + Send + Sync + Debug + Default + 'static,
+	H: Clone + Eq + Send + Sync + Debug + Default + BlsVerify + 'static,
 {
 	fn client_type(&self, client_id: &ClientId) -> Result<ClientType, Error> {
 		log!(self, "in client : [client_type] >> client_id = {:?}", client_id);
@@ -199,7 +200,7 @@ where
 
 impl<'a, H> ClientKeeper for Context<'a, H>
 where
-	H: Clone + Eq + Send + Sync + Debug + Default + 'static,
+	H: Clone + Eq + Send + Sync + Debug + Default + BlsVerify + 'static,
 {
 	fn store_client_type(
 		&mut self,
@@ -232,9 +233,7 @@ where
 
 		let wasm_consensus_state = ics08_wasm::consensus_state::ConsensusState {
 			data: consensus_state.to_any().encode_to_vec(),
-			code_id: code_id(self.deps.storage),
 			timestamp: consensus_state.timestamp().nanoseconds(),
-			root: CommitmentRoot::from_bytes(&vec![1; 32]),
 			inner: Box::new(FakeInner),
 		};
 		let vec1 = wasm_consensus_state.to_any().encode_to_vec();

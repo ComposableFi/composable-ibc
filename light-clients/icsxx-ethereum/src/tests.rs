@@ -34,6 +34,4 @@ async fn test_prover() {
 		.fetch_beacon_state(&block_header.slot.to_string())
 		.await
 		.unwrap();
-	// println!("state: {:?}", state);
-	// println!("state: {:?}", state.validators);
 }
