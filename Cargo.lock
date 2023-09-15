@@ -4364,6 +4364,7 @@ dependencies = [
  "scale-decode",
  "scale-encode",
  "serde",
+ "serde_json",
  "sp-beefy",
  "sp-core 7.0.0",
  "sp-keyring",
