@@ -306,7 +306,9 @@ where
 				initial_rpc_call_delay: rpc_call_delay,
 				misbehaviour_client_msg_queue: Arc::new(AsyncMutex::new(vec![])),
 				max_packets_to_process: config.common.max_packets_to_process as usize,
-				skip_tokens_list: config.skip_tokens_list.unwrap_or_default(),
+				skip_tokens_list: config
+					.skip_tokens_list
+					.unwrap_or_else(|| vec!["uosmo".to_string()]),
 			},
 			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh])),
 		})

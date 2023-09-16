@@ -146,7 +146,7 @@ impl Default for CommonClientState {
 			initial_rpc_call_delay: rpc_call_delay,
 			misbehaviour_client_msg_queue: Arc::new(Default::default()),
 			max_packets_to_process: 100,
-			skip_tokens_list: vec![],
+			skip_tokens_list: vec!["uosmo".to_string()],
 		}
 	}
 }
