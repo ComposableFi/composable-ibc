@@ -32,7 +32,7 @@ use ibc::{events::IbcEvent, Height};
 use ibc_proto::google::protobuf::Any;
 use metrics::handler::MetricsHandler;
 use primitives::{Chain, IbcProvider, UndeliveredType, UpdateType};
-use std::collections::HashSet;
+use std::{collections::HashSet, time::Duration};
 
 #[derive(Copy, Debug, Clone)]
 pub enum Mode {
@@ -63,16 +63,29 @@ where
 
 	// loop forever
 	loop {
+		let future_chain_a = tokio::time::timeout(Duration::from_secs(60), chain_a_finality.next());
+		let future_chain_b = tokio::time::timeout(Duration::from_secs(60), chain_b_finality.next());
 		tokio::select! {
 			// new finality event from chain A
-			result = chain_a_finality.next(), if !first_executed => {
+			result = future_chain_a, if !first_executed => {
 				first_executed = true;
-				process_finality_event(&mut chain_a, &mut chain_b, &mut chain_a_metrics, mode, result, &mut chain_a_finality, &mut chain_b_finality).await?;
+				if result.is_err() { // timedout
+					chain_a_finality = reconnect_stream(&mut chain_a, chain_a_finality).await;
+				} else {
+					let result = result.unwrap();
+					process_finality_event(&mut chain_a, &mut chain_b, &mut chain_a_metrics, mode, result, &mut chain_a_finality, &mut chain_b_finality).await?;
+				}
 			}
 			// new finality event from chain B
-			result = chain_b_finality.next() => {
+			result = future_chain_b => {
 				first_executed = false;
-				process_finality_event(&mut chain_b, &mut chain_a, &mut chain_b_metrics, mode, result, &mut chain_b_finality, &mut chain_a_finality).await?;
+				if result.is_err() { // timedout
+					chain_b_finality = reconnect_stream(&mut chain_b, chain_b_finality).await;
+				} else {
+					let result = result.unwrap();
+					process_finality_event(&mut chain_b, &mut chain_a, &mut chain_b_metrics, mode, result, &mut chain_b_finality, &mut chain_a_finality).await?;
+				}
+
 			}
 			else => {
 				first_executed = false;
@@ -139,6 +152,23 @@ where
 	}
 
 	Ok(())
+}
+
+async fn reconnect_stream<C: Chain>(
+	source: &mut C,
+	stream: RecentStream<C::FinalityEvent>,
+) -> RecentStream<C::FinalityEvent> {
+	log::warn!("Stream closed for {}", source.name());
+	loop {
+		match source.finality_notifications().await {
+			Ok(stream) => return RecentStream::new(stream),
+			Err(e) => {
+				log::error!("Failed to get finality notifications for {} {:?}. Trying again in 30 seconds...", source.name(), e);
+				tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+				let _ = source.reconnect().await;
+			},
+		};
+	}
 }
 
 async fn process_finality_event<A: Chain, B: Chain>(
