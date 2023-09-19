@@ -1,6 +1,6 @@
-##  Centauri: Trustless Bridging Protocol
+##  Composable IBC: Trustless Bridging Protocol
 
-This is the concrete implementation of the centauri bridging protocol, based on IBC, Powered by light clients.
+This is the concrete implementation of the Composable's extension of the IBC Protocol.
 
 ###     [beefy-light-client](algorithms/beefy/verifier/src/lib.rs)
 
