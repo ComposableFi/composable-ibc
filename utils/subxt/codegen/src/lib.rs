@@ -14,7 +14,7 @@
 
 use anyhow::anyhow;
 use codec::{Decode, Input};
-use frame_metadata::RuntimeMetadataPrefixed;
+use frame_metadata::{RuntimeMetadata, RuntimeMetadataPrefixed};
 use jsonrpsee::{
 	async_client::ClientBuilder,
 	client_transport::ws::{Uri, WsTransportClientBuilder},
@@ -39,7 +39,27 @@ pub async fn fetch_metadata_ws(url: &str) -> anyhow::Result<Vec<u8>> {
 }
 
 pub fn codegen<I: Input>(encoded: &mut I) -> anyhow::Result<String> {
-	let metadata = <RuntimeMetadataPrefixed as Decode>::decode(encoded)?;
+	let mut metadata = <RuntimeMetadataPrefixed as Decode>::decode(encoded)?;
+	match &mut metadata.1 {
+		RuntimeMetadata::V14(inner_metadata) =>
+			inner_metadata.pallets = inner_metadata
+				.pallets
+				.drain(..)
+				.filter(|pallet| {
+					pallet.name == "Ibc".to_string() ||
+						pallet.name == "AssetsRegistry".to_string() ||
+						pallet.name == "Sudo".to_string() ||
+						pallet.name == "System".to_string() ||
+						pallet.name == "Timestamp".to_string() ||
+						pallet.name == "Paras".to_string() ||
+						pallet.name == "Grandpa".to_string() ||
+						pallet.name == "Beefy".to_string() ||
+						pallet.name == "MmrLeaf".to_string() ||
+						pallet.name == "Babe".to_string()
+				})
+				.collect(),
+		_ => panic!("what"),
+	};
 	let generator = subxt_codegen::RuntimeGenerator::new(metadata);
 	let item_mod = syn::parse_quote!(
 		pub mod api {}

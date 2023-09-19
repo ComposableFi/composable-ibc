@@ -72,7 +72,7 @@ pub enum FinalityProtocol {
 }
 
 /// Finality event for parachains
-#[derive(Decode, Encode, Debug)]
+#[derive(Decode, Encode, Debug, Clone)]
 pub enum FinalityEvent {
 	Grandpa(
 		grandpa_light_client_primitives::justification::GrandpaJustification<
