@@ -1,6 +1,6 @@
 module-hyperspace=hyperspace
-composable_centauri_image=composablefi/composable-centauri
-composable_centauri_image_latest=composablefi/composable-centauri:latest
+composable_centauri_image=composablefi/composable-ibc
+composable_centauri_image_latest=composablefi/composable-ibc:latest
 ifndef GITHUB_SHA
 GITHUB_SHA=$(shell git rev-parse HEAD)
 endif
