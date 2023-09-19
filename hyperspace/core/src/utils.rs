@@ -1,18 +1,12 @@
 use futures::{Stream, StreamExt};
-use std::{
-	fmt::Debug,
-	ops::Deref,
-	pin::Pin,
-	sync::{Arc, Mutex},
-	task::Poll,
-};
+use std::{fmt::Debug, pin::Pin, task::Poll};
 use tokio::sync::watch;
 use tokio_stream::wrappers::WatchStream;
 
 #[derive(Debug)]
 /// Keeps the most recent value of a stream and acts as stream itself.
 pub struct RecentStream<T: Send + Sync + 'static> {
-	pub value: Arc<watch::Receiver<Option<T>>>,
+	pub value: watch::Receiver<Option<T>>,
 	// Arc<Mutex<Option<Option<T>>>>,
 }
 
@@ -24,7 +18,7 @@ impl<T: Send + Sync + 'static + Clone + Debug> RecentStream<T> {
 				tx.send(Some(v)).unwrap();
 			}
 		});
-		Self { value: Arc::new(rx) }
+		Self { value: rx }
 	}
 }
 
@@ -38,7 +32,7 @@ impl<T: Clone + 'static + Send + Sync + Debug> Stream for RecentStream<T> {
 		if self.value.has_changed().is_err() {
 			return Poll::Ready(None)
 		}
-		let v = WatchStream::new((*self.value).clone());
+		let v = WatchStream::new(self.value.clone());
 		tokio::pin!(v);
 		match v.poll_next(cx) {
 			Poll::Ready(Some(None)) => Poll::Pending,
@@ -61,11 +55,11 @@ mod tests {
 		let receiver_stream = tokio_stream::wrappers::ReceiverStream::new(rx);
 		let mut recent_stream = RecentStream::new(receiver_stream);
 
-		tx.send("booba".to_string()).await;
-		tx.send("hello".to_string()).await;
+		tx.send("booba".to_string()).await.unwrap();
+		tx.send("hello".to_string()).await.unwrap();
 		tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 		assert_eq!(recent_stream.next().await, Some("hello".to_string()));
-		tx.send("goodbye".to_string()).await;
+		tx.send("goodbye".to_string()).await.unwrap();
 		tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 		assert_eq!(recent_stream.next().await, Some("goodbye".to_string()));
 		drop(tx);
