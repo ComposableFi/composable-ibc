@@ -69,23 +69,26 @@ where
 			// new finality event from chain A
 			result = future_chain_a, if !first_executed => {
 				first_executed = true;
-				if result.is_err() { // timedout
-					chain_a_finality = reconnect_stream(&mut chain_a, chain_a_finality).await;
-				} else {
-					let result = result.unwrap();
-					process_finality_event(&mut chain_a, &mut chain_b, &mut chain_a_metrics, mode, result, &mut chain_a_finality, &mut chain_b_finality).await?;
+				match result {
+					Ok(result) => {
+						process_finality_event(&mut chain_a, &mut chain_b, &mut chain_a_metrics, mode, result, &mut chain_a_finality, &mut chain_b_finality).await?;
+					},
+					Err(_) => {
+						chain_a_finality = reconnect_stream(&mut chain_a).await;
+					}
 				}
 			}
 			// new finality event from chain B
 			result = future_chain_b => {
 				first_executed = false;
-				if result.is_err() { // timedout
-					chain_b_finality = reconnect_stream(&mut chain_b, chain_b_finality).await;
-				} else {
-					let result = result.unwrap();
-					process_finality_event(&mut chain_b, &mut chain_a, &mut chain_b_metrics, mode, result, &mut chain_b_finality, &mut chain_a_finality).await?;
+				match result {
+					Ok(result) => {
+						process_finality_event(&mut chain_b, &mut chain_a, &mut chain_b_metrics, mode, result, &mut chain_b_finality, &mut chain_a_finality).await?;
+					}
+					Err(_) => {
+						chain_b_finality = reconnect_stream(&mut chain_b).await;
+					}
 				}
-
 			}
 			else => {
 				first_executed = false;
@@ -154,10 +157,7 @@ where
 	Ok(())
 }
 
-async fn reconnect_stream<C: Chain>(
-	source: &mut C,
-	stream: RecentStream<C::FinalityEvent>,
-) -> RecentStream<C::FinalityEvent> {
+async fn reconnect_stream<C: Chain>(source: &mut C) -> RecentStream<C::FinalityEvent> {
 	log::warn!("Stream closed for {}", source.name());
 	loop {
 		match source.finality_notifications().await {
