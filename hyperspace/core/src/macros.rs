@@ -37,7 +37,7 @@ macro_rules! chains {
 			Wasm(WasmChain),
 		}
 
-		#[derive(Debug)]
+		#[derive(Debug, Clone)]
 		pub enum AnyFinalityEvent {
 			$(
 				$(#[$($meta)*])*

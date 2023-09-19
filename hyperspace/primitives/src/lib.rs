@@ -202,7 +202,7 @@ pub enum UndeliveredType {
 #[async_trait::async_trait]
 pub trait IbcProvider {
 	/// Finality event type, passed on to [`Chain::query_latest_ibc_events`]
-	type FinalityEvent: Debug + Send + 'static;
+	type FinalityEvent: Debug + Send + Sync + 'static + Clone;
 	/// A representation of the transaction id for the chain
 	type TransactionId: Debug;
 	/// Asset Id
