@@ -30,6 +30,7 @@
 #[macro_use]
 extern crate alloc;
 
+use crate::ics20::ValidateMemo;
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use cumulus_primitives_core::ParaId;
@@ -273,7 +274,8 @@ pub mod pallet {
 			+ Clone
 			+ Eq
 			+ TryFrom<crate::ics20::MemoData>
-			+ TryInto<crate::ics20::MemoData>;
+			+ TryInto<crate::ics20::MemoData>
+			+ ValidateMemo;
 
 		type SubstrateMultihopXcmHandler: SubstrateMultihopXcmHandler<AccountId = Self::AccountId>;
 
@@ -716,10 +718,15 @@ pub mod pallet {
 		/// Access denied
 		AccessDenied,
 		RateLimiter,
-		//Fee errors
+		/// Fee errors
 		FailedSendFeeToAccount,
-		//Failed to derive origin sender address.
+		/// Failed to derive origin sender address.
 		OriginAddress,
+		/// The memo hasn't passed the validation. Potential reasons:
+		/// - The memo is too long.
+		/// - The memo is in invalid format
+		/// - The memo contains unsupported middlewares
+		InvalidMemo,
 	}
 
 	#[pallet::hooks]
@@ -960,6 +967,15 @@ pub mod pallet {
 					destination_channel: destination_channel.to_string().as_bytes().to_vec(),
 				});
 			};
+
+			memo.as_ref()
+				.map(|memo| {
+					memo.validate().map_err(|e| {
+						log::debug!(target: "pallet_ibc", "[transfer]: memo validation error: {}", e);
+						Error::<T>::InvalidMemo
+					})
+				})
+				.transpose()?;
 
 			let msg = MsgTransfer {
 				source_port,

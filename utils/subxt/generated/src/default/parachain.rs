@@ -339,9 +339,9 @@ pub mod api {
 		let runtime_metadata_hash = client.metadata().metadata_hash(&PALLETS);
 		if runtime_metadata_hash !=
 			[
-				251u8, 123u8, 152u8, 157u8, 101u8, 130u8, 190u8, 3u8, 247u8, 46u8, 252u8, 87u8,
-				60u8, 175u8, 182u8, 235u8, 115u8, 209u8, 82u8, 71u8, 235u8, 37u8, 66u8, 27u8,
-				136u8, 231u8, 80u8, 8u8, 28u8, 63u8, 197u8, 234u8,
+				69u8, 248u8, 221u8, 243u8, 107u8, 103u8, 34u8, 241u8, 63u8, 37u8, 144u8, 59u8,
+				253u8, 107u8, 216u8, 176u8, 55u8, 119u8, 239u8, 149u8, 30u8, 55u8, 104u8, 152u8,
+				133u8, 175u8, 136u8, 161u8, 190u8, 49u8, 32u8, 46u8,
 			] {
 			Err(::subxt::error::MetadataError::IncompatibleMetadata)
 		} else {
@@ -964,10 +964,10 @@ pub mod api {
 						"Events",
 						vec![],
 						[
-							12u8, 241u8, 58u8, 94u8, 6u8, 234u8, 177u8, 29u8, 113u8, 148u8, 182u8,
-							114u8, 17u8, 143u8, 165u8, 75u8, 60u8, 121u8, 233u8, 109u8, 68u8,
-							224u8, 32u8, 125u8, 255u8, 141u8, 102u8, 52u8, 160u8, 37u8, 246u8,
-							186u8,
+							238u8, 157u8, 248u8, 87u8, 132u8, 135u8, 172u8, 82u8, 189u8, 105u8,
+							14u8, 25u8, 174u8, 203u8, 215u8, 140u8, 27u8, 99u8, 26u8, 246u8, 226u8,
+							113u8, 243u8, 94u8, 141u8, 211u8, 213u8, 119u8, 203u8, 183u8, 139u8,
+							2u8,
 						],
 					)
 				}
@@ -5776,9 +5776,9 @@ pub mod api {
 						"sudo",
 						Sudo { call: ::std::boxed::Box::new(call) },
 						[
-							134u8, 145u8, 175u8, 131u8, 36u8, 15u8, 183u8, 43u8, 81u8, 218u8, 78u8,
-							146u8, 218u8, 64u8, 155u8, 98u8, 165u8, 102u8, 128u8, 239u8, 215u8,
-							169u8, 30u8, 0u8, 53u8, 62u8, 76u8, 194u8, 9u8, 34u8, 8u8, 92u8,
+							173u8, 204u8, 175u8, 155u8, 169u8, 89u8, 2u8, 54u8, 49u8, 67u8, 145u8,
+							241u8, 117u8, 9u8, 58u8, 200u8, 51u8, 4u8, 210u8, 183u8, 46u8, 72u8,
+							32u8, 152u8, 40u8, 23u8, 171u8, 171u8, 120u8, 15u8, 205u8, 166u8,
 						],
 					)
 				}
@@ -5792,9 +5792,10 @@ pub mod api {
 						"sudo_unchecked_weight",
 						SudoUncheckedWeight { call: ::std::boxed::Box::new(call), weight },
 						[
-							250u8, 174u8, 48u8, 15u8, 138u8, 144u8, 49u8, 236u8, 101u8, 44u8, 94u8,
-							89u8, 219u8, 73u8, 205u8, 150u8, 143u8, 90u8, 40u8, 32u8, 30u8, 103u8,
-							185u8, 229u8, 144u8, 100u8, 214u8, 182u8, 12u8, 163u8, 0u8, 27u8,
+							90u8, 102u8, 130u8, 185u8, 161u8, 105u8, 97u8, 83u8, 76u8, 106u8,
+							201u8, 91u8, 246u8, 242u8, 70u8, 133u8, 64u8, 120u8, 11u8, 85u8, 170u8,
+							176u8, 219u8, 162u8, 47u8, 203u8, 9u8, 234u8, 184u8, 171u8, 240u8,
+							232u8,
 						],
 					)
 				}
@@ -5823,9 +5824,9 @@ pub mod api {
 						"sudo_as",
 						SudoAs { who, call: ::std::boxed::Box::new(call) },
 						[
-							129u8, 194u8, 224u8, 17u8, 145u8, 92u8, 12u8, 252u8, 25u8, 29u8, 69u8,
-							231u8, 161u8, 156u8, 130u8, 44u8, 77u8, 126u8, 106u8, 18u8, 82u8, 8u8,
-							251u8, 144u8, 217u8, 86u8, 64u8, 93u8, 81u8, 197u8, 138u8, 172u8,
+							72u8, 212u8, 5u8, 207u8, 172u8, 90u8, 63u8, 88u8, 63u8, 96u8, 75u8,
+							189u8, 110u8, 41u8, 55u8, 219u8, 36u8, 123u8, 142u8, 181u8, 1u8, 228u8,
+							29u8, 152u8, 56u8, 111u8, 204u8, 6u8, 35u8, 40u8, 14u8, 41u8,
 						],
 					)
 				}
@@ -7859,7 +7860,7 @@ pub mod api {
 				pub params: runtime_types::pallet_ibc::TransferParams<::subxt::utils::AccountId32>,
 				pub asset_id: ::core::primitive::u128,
 				pub amount: ::core::primitive::u128,
-				pub memo: ::core::option::Option<::std::string::String>,
+				pub memo: ::core::option::Option<runtime_types::parachain_runtime::RawMemo>,
 			}
 			#[derive(
 				:: subxt :: ext :: codec :: Decode,
@@ -7973,16 +7974,17 @@ pub mod api {
 					params: runtime_types::pallet_ibc::TransferParams<::subxt::utils::AccountId32>,
 					asset_id: ::core::primitive::u128,
 					amount: ::core::primitive::u128,
-					memo: ::core::option::Option<::std::string::String>,
+					memo: ::core::option::Option<runtime_types::parachain_runtime::RawMemo>,
 				) -> ::subxt::tx::Payload<Transfer> {
 					::subxt::tx::Payload::new_static(
 						"Ibc",
 						"transfer",
 						Transfer { params, asset_id, amount, memo },
 						[
-							164u8, 5u8, 38u8, 129u8, 232u8, 229u8, 37u8, 74u8, 69u8, 22u8, 49u8,
-							209u8, 83u8, 224u8, 204u8, 50u8, 16u8, 142u8, 39u8, 1u8, 100u8, 35u8,
-							150u8, 163u8, 236u8, 6u8, 51u8, 115u8, 11u8, 189u8, 179u8, 72u8,
+							183u8, 130u8, 92u8, 37u8, 163u8, 96u8, 215u8, 175u8, 205u8, 184u8,
+							82u8, 36u8, 187u8, 217u8, 136u8, 110u8, 227u8, 194u8, 142u8, 107u8,
+							69u8, 65u8, 139u8, 141u8, 95u8, 191u8, 171u8, 115u8, 225u8, 188u8,
+							163u8, 66u8,
 						],
 					)
 				}
@@ -8516,7 +8518,7 @@ pub mod api {
 				pub asset_id: ::core::primitive::u128,
 				pub amount: ::core::primitive::u128,
 				pub channel: ::core::primitive::u64,
-				pub next_memo: ::core::option::Option<::std::string::String>,
+				pub next_memo: ::core::option::Option<runtime_types::parachain_runtime::RawMemo>,
 			}
 			impl ::subxt::events::StaticEvent for ExecuteMemoIbcTokenTransferSuccess {
 				const PALLET: &'static str = "Ibc";
@@ -8555,7 +8557,7 @@ pub mod api {
 				pub asset_id: ::core::primitive::u128,
 				pub amount: ::core::primitive::u128,
 				pub channel: ::core::primitive::u64,
-				pub next_memo: ::core::option::Option<::std::string::String>,
+				pub next_memo: ::core::option::Option<runtime_types::parachain_runtime::RawMemo>,
 			}
 			impl ::subxt::events::StaticEvent for ExecuteMemoIbcTokenTransferFailed {
 				const PALLET: &'static str = "Ibc";
@@ -11644,7 +11646,7 @@ pub mod api {
 							runtime_types::pallet_ibc::TransferParams<::subxt::utils::AccountId32>,
 						asset_id: ::core::primitive::u128,
 						amount: ::core::primitive::u128,
-						memo: ::core::option::Option<::std::string::String>,
+						memo: ::core::option::Option<runtime_types::parachain_runtime::RawMemo>,
 					},
 					#[codec(index = 3)]
 					upgrade_client { params: runtime_types::pallet_ibc::UpgradeParams },
@@ -11766,6 +11768,8 @@ pub mod api {
 					FailedSendFeeToAccount,
 					#[codec(index = 38)]
 					OriginAddress,
+					#[codec(index = 39)]
+					InvalidMemo,
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode,
@@ -11910,7 +11914,8 @@ pub mod api {
 						asset_id: ::core::primitive::u128,
 						amount: ::core::primitive::u128,
 						channel: ::core::primitive::u64,
-						next_memo: ::core::option::Option<::std::string::String>,
+						next_memo:
+							::core::option::Option<runtime_types::parachain_runtime::RawMemo>,
 					},
 					#[codec(index = 22)]
 					ExecuteMemoIbcTokenTransferFailedWithReason {
@@ -11925,7 +11930,8 @@ pub mod api {
 						asset_id: ::core::primitive::u128,
 						amount: ::core::primitive::u128,
 						channel: ::core::primitive::u64,
-						next_memo: ::core::option::Option<::std::string::String>,
+						next_memo:
+							::core::option::Option<runtime_types::parachain_runtime::RawMemo>,
 					},
 					#[codec(index = 24)]
 					ExecuteMemoXcmSuccess {
@@ -12618,6 +12624,16 @@ pub mod api {
 		}
 		pub mod parachain_runtime {
 			use super::runtime_types;
+			#[derive(
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				:: subxt :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
+			pub struct RawMemo(pub ::std::string::String);
 			#[derive(
 				:: subxt :: ext :: codec :: Decode,
 				:: subxt :: ext :: codec :: Encode,

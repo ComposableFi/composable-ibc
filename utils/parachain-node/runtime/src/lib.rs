@@ -24,11 +24,13 @@ extern crate alloc;
 
 use alloc::string::String;
 use asset_registry::{AssetMetadata, DefaultAssetMetadata};
+use core::fmt::{Display, Formatter};
 
 mod weights;
 pub mod xcm_config;
 
-use codec::Encode;
+use alloc::string::ToString;
+use codec::{Decode, Encode};
 use core::str::FromStr;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use ibc::core::{
@@ -82,12 +84,18 @@ pub use sp_runtime::BuildStorage;
 
 // Polkadot imports
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
+use scale_info::TypeInfo;
+use serde::Deserialize;
+use sp_core::crypto::Infallible;
 use sp_runtime::traits::AccountIdConversion;
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 // XCM Imports
-use pallet_ibc::routing::ModuleRouter;
+use pallet_ibc::{
+	ics20::{MemoData, ValidateMemo},
+	routing::ModuleRouter,
+};
 use xcm::latest::prelude::BodyId;
 use xcm_executor::XcmExecutor;
 
@@ -717,6 +725,55 @@ fn create_alice_key() -> <Runtime as pallet_ibc::Config>::AccountIdConversion {
 	IbcAccount(account_id_32)
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum MemoMiddlewareNamespaceChain {
+	Forward { next: Option<Box<Self>> },
+	Wasm { next: Option<Box<Self>> },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Default, Encode, Decode, TypeInfo)]
+pub struct RawMemo(pub String);
+
+impl FromStr for RawMemo {
+	type Err = Infallible;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		Ok(Self(s.to_string()))
+	}
+}
+
+impl TryFrom<MemoData> for RawMemo {
+	type Error = <String as TryFrom<MemoData>>::Error;
+
+	fn try_from(value: MemoData) -> Result<Self, Self::Error> {
+		Ok(Self(value.try_into()?))
+	}
+}
+
+impl TryFrom<RawMemo> for MemoData {
+	type Error = <MemoData as TryFrom<String>>::Error;
+
+	fn try_from(value: RawMemo) -> Result<Self, Self::Error> {
+		Ok(value.0.try_into()?)
+	}
+}
+
+impl Display for RawMemo {
+	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+		write!(f, "{}", self.0)
+	}
+}
+
+impl ValidateMemo for RawMemo {
+	fn validate(&self) -> Result<(), String> {
+		// the MiddlewareNamespaceChain type contains all the supported middlewares
+		serde_json::from_str::<MemoMiddlewareNamespaceChain>(&self.0)
+			.map(|_| ())
+			.map_err(|e| e.to_string())
+	}
+}
+
 impl pallet_ibc::Config for Runtime {
 	type TimeProvider = Timestamp;
 	type RuntimeEvent = RuntimeEvent;
@@ -738,7 +795,7 @@ impl pallet_ibc::Config for Runtime {
 	type SpamProtectionDeposit = SpamProtectionDeposit;
 	type TransferOrigin = EnsureSigned<Self::IbcAccountId>;
 	type RelayerOrigin = EnsureSigned<Self::AccountId>;
-	type MemoMessage = alloc::string::String;
+	type MemoMessage = RawMemo;
 	type IsReceiveEnabled = sp_core::ConstBool<true>;
 	type IsSendEnabled = sp_core::ConstBool<true>;
 	type HandleMemo = ();
