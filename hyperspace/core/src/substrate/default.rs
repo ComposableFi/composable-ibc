@@ -5,6 +5,7 @@ use self::parachain_subxt::api::{
 		frame_system::{extensions::check_nonce::CheckNonce, EventRecord},
 		pallet_ibc::{events::IbcEvent as MetadataIbcEvent, TransferParams as RawTransferParams},
 		pallet_ibc_ping::SendPingParams as RawSendPingParams,
+		parachain_runtime::RawMemo,
 	},
 	sudo::calls::Sudo,
 };
@@ -44,7 +45,6 @@ use subxt::{
 	tx::Payload,
 	Error, OnlineClient,
 };
-use subxt_generated::default::parachain::api::runtime_types::parachain_runtime::RawMemo;
 
 pub mod parachain_subxt {
 	#[cfg(feature = "build-metadata-from-ws")]
