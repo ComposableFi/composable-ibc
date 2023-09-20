@@ -44,6 +44,7 @@ use subxt::{
 	tx::Payload,
 	Error, OnlineClient,
 };
+use subxt_generated::default::parachain::api::runtime_types::parachain_runtime::RawMemo;
 
 pub mod parachain_subxt {
 	#[cfg(feature = "build-metadata-from-ws")]
@@ -118,7 +119,7 @@ define_runtime_transactions!(
 	TransferParamsWrapper,
 	SendPingParamsWrapper,
 	parachain_subxt::api::runtime_types::pallet_ibc::Any,
-	String,
+	RawMemo,
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, y, z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),
