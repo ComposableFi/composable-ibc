@@ -1,8 +1,9 @@
-use crate::node_codec::RlpNodeCodec;
-
-use crate::*;
-
+use super::{node_codec::RlpNodeCodec, *};
+use crate::proof::ethereum_trie::{EIP1186Layout, KeccakHasher};
+use ethers_core::utils::keccak256;
 use hex_literal::hex;
+use primitive_types::H256;
+use trie_db::{node::Node, proof::verify_proof, NodeCodec};
 
 #[test]
 fn test_verify_membership() {
@@ -11,12 +12,20 @@ fn test_verify_membership() {
 			hex!("f851808080a007c9a6fda8ffe9dbc9fb3ecc78460caef3c4659cfc8e4e865a6121d91375557d8080808080808080a03ce63212850c9a256f4cbb1a7ba7cb576549222339f2b4124621ea4a991fe6eb80808080").into(),
 			hex!("f8709f20017a85544556ea847c203623a9c84efdb77fa4951a5b01296d9aacefc5f7b84ef84c01880de0b6b3a7640000a056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421a0c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470").into(),
 		];
-
-	let key: Vec<u8> = keccak_256(&hex!("24264ae01b1abbc9a91e18926818ad5cbf39017b")).into();
-
+	let key: Vec<u8> = keccak256(&hex!("24264ae01b1abbc9a91e18926818ad5cbf39017b")).into();
 	let root = H256(hex!("7bac2ed96e9c1b0bf578c52fd6e86a2d74c555f8e74d5954aff57939f144299a"));
 
-	verify_proof::<EIP1186Layout<KeccakHasher>>(&root, &proof, &key, Some(&proof[2])).unwrap();
+	/*
+		// pub fn verify_proof<'a, L>(
+	// 	root: &<L::Hash as Hasher>::Out,
+	// 	proof: &'a [Vec<u8>],
+	// 	raw_key: &'a [u8],
+	// 	expected_value: Option<&[u8]>,
+	// ) -> Result<(), VerifyError<'a, TrieHash<L>, CError<L>>>
+
+		 */
+	verify_proof::<EIP1186Layout<KeccakHasher>, I, K, V>(&root, &proof, [&(&key, Some(&proof[2]))])
+		.unwrap();
 }
 
 #[test]
@@ -28,9 +37,9 @@ fn test_verify_non_membership() {
 		];
 
 	let key_modified: Vec<u8> =
-		hex!("1eec017a85544556ea847c203623a9c84efdb77fa4951a5b01296d9aacefc5f7");
+		hex!("1eec017a85544556ea847c203623a9c84efdb77fa4951a5b01296d9aacefc5f7").to_vec();
 
-	let key: Vec<u8> = keccak_256(&hex!("24264ae01b1abbc9a91e18926818ad5cbf39017b")).into();
+	let key: Vec<u8> = keccak256(&hex!("24264ae01b1abbc9a91e18926818ad5cbf39017b")).into();
 
 	let root = H256(hex!("7bac2ed96e9c1b0bf578c52fd6e86a2d74c555f8e74d5954aff57939f144299a"));
 
@@ -50,7 +59,8 @@ fn test_verify_non_membership() {
 #[test]
 fn test_can_verify_eip_1186_proofs() {
 	// source?: https://medium.com/@chiqing/eip-1186-explained-the-standard-for-getting-account-proof-444bc1e12e03
-	let key = keccak_256(&hex!("b856af30b938b6f52e5bff365675f358cd52f91b"));
+	let root = H256(hex!("024c056bc5db60d71c7908c5fad6050646bd70fd772ff222702d577e2af2e56b"));
+	let key = keccak256(&hex!("b856af30b938b6f52e5bff365675f358cd52f91b"));
 	let proof = vec![
         hex!("f90211a021162657aa1e0af5eef47130ffc3362cb675ebbccfc99ee38ef9196144623507a073dec98f4943e2ab00f5751c23db67b65009bb3cb178d33f5aa93f0c08d583dda0d85b4e33773aaab742db880f8b64ea71f348c6eccb0a56854571bbd3db267f24a0bdcca489de03a49f109c1a2e7d3bd4e644d72de38b7b26dca2f8d3f112110c6fa05c7e8fdff6de07c4cb9ca6bea487a6e5be04af538c25480ce30761901b17e4bfa0d9891f4870e745509cfe17a31568f870b367a36329c892f1b2a37bf59e547183a0af08f747d2ea66efa5bcd03729a95f56297ef9b1e8533ac0d3c7546ebefd2418a0a107595919d4b102afaa0d9b91d9f554f83f0ad61a1e04487e5091543eb81db8a0a0725da6da3b62f88fc573a3fd0dd9dea9cba1750786021da836fd95b7295636a0fd7a768700af3caadaf52a08a23ab0b71ca52830f2b88b1a6b23a52f9ee05507a059434ae837706d7d317e4f7d03cd91f94ed0465fa8b99eaf18ca363bb318c7b3a09e9b831a5f59b781efd5dae8bea30bfd81b9fd5ea231d6b7e82da495c95dd35da0e72d02a01ed9bc928d94cad59ae0695f45120b7fbdbce43a2239a7e5bc81f731a0184bfb9a4051cbaa79917183d004c8d574d7ed5becaf9614c650ed40e8d123d9a0fa4797dc4a35af07f1cd6955318e3ff59578d4df32fd2174ed35f6c4db3471f9a0fec098d1fee8e975b5e78e19003699cf7cd746f47d03692d8e11c5fd58ba92a680").to_vec(),
         hex!("f90211a07fc5351578eb6ab7618a31e18c87b2b8b2703c682f2d4c1d01aaa8b53343036ea0e8871ae1828c54b9c9bbf7530890a2fe4e160fb62f72c740c7e79a756e07dbf3a04dd116a7d37146cd0ec730172fa97e84b1f13e687d56118e2d666a02a31a629fa08949d66b81ba98e5ca453ba1faf95c8476873d4c32ff6c9a2558b772c51c5768a028db2de6d80f3a06861d3acc082e3a6bb4a6948980a8e5527bd354a2da037779a09b01ba0fe0193c511161448c602bb9fff88b87ab0ded3255606a15f8bca9d348a0c1c1c6a89f2fdbee0840ff309b5cecd9764b5b5815b385576e75e235d1f04656a04e827215bb9511b3a288e33bb418132940a4d42d589b8db0f796ec917e8f9373a099398993d1d6fdd15d6082be370e4d2cc5d9870923d22770aaec9418f4b675d7a00cd1db5e131341b472af1bdf9a1bf1f1ca82bc5b280c8a50a20bcfff1ab0bdd4a09bbcc86c94be1aabf5c5ceced29f462f59103aa6dafe0fc60172bb2c549a8dbaa0902df0ba9eed7e8a6ebff2d06de8bcec5785bb98cba7606f7f40648408157ef4a0ba9dfd07c453e54504d41b7a44ea42e8220767d1e2a0e6e91ae8d5677ac70e50a0f02f2a5e26d7848f0e5a07de68cbbbd24253d545afb74aac81b35a70b6323f1ca0218b955deca7177f8f58c2da188611b333e5c7ef9212000f64ca92cd5bb6e5a0a049cd750f59e2d6f411d7b611b21b17c8eefe637ca01e1566c53f412308b34c6280").to_vec(),
@@ -62,25 +72,24 @@ fn test_can_verify_eip_1186_proofs() {
         hex!("f86d9d3c3738deb88e49108e7a5bd83c14ad65b5ba598e2932551dc9b9ad1879b84df84b10874ef05b2fe9d8c8a056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421a0c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470").to_vec(),
     ];
 
-	let root = H256(hex!("024c056bc5db60d71c7908c5fad6050646bd70fd772ff222702d577e2af2e56b"));
 	assert!(
 		verify_proof::<EIP1186Layout<KeccakHasher>>(&root, &proof, &key, Some(&proof[7])).is_ok()
 	);
+}
 
-	assert!(matches!(RlpNodeCodec::<KeccakHasher>::decode(&proof[7]).unwrap(), Node::Leaf(..)));
+#[test]
+fn test_can_verify_eip_1186_non_existence_proofs() {
+	let root = H256(hex!("ab1020aa394b36082d49e7d6b98defcd3a1fad838e0cd4f3fff64990fd14b760"));
+	let key = hex!("bfa8b01fd8dc46bd81250474dd1a73ea76f021775d95be249c9a480fb17b8849");
+	let proof = vec![
+        hex!("f90211a0817776a79178c3ddd2aa41fb7f08f9f1c7f848e568ba0206148697562765df16a0b60879632cfa8aae2a8092c051d1bde9918938423fa836a5df9123305c92039da0b1380b7c699cb3f1bec8ca07de75ee5232c2b229e8f71a4efdccffa977c8198ea0f71700f8ab903ea191967e97c8d7862a1333c14ad1810ccae9a0dd7fa1fda9e5a032d5d2e30bf679141f1811829ad30b0eb688f16c5c3eb715bd593bd016f6fee1a0f322ec39ba01f262317ca0e3ef4baded11c3d0e5576507352f36fc8e97d39ad8a04f4a409bf1634599f0dac57a7568ad2d424c13ed8a74d8e84a327bbcf486af8ca0505b03ca809481fb0b0fd2ea1eef71f9c473d6487db932b9348f308dec7715e1a0d00912aaa2ecc35bf691537657354230085b5596b933faec0cb42cc60b78d39ba01035667dea728ce1bf4b0487d21925fe11145b2e8aa65bb850c2926175fc9372a0dab6eecc863a21b5727e0bd80f5921f400b3b3f596143abb662c5a7d5eae864fa0d5caead74f44b27992b5c6ffd281d64bcbb4a1bf307264f87b6c06562ac8c23da041b35c33db22d7fa88c7c53e2839d43a2c55228da57690abaeb74aae4c4c2950a08af8887847f3d19ef6e610116b5934cd3baac79238694cc5209febddbc7d50c2a0030f93c0c4fbd763d574d4f910b8cd5f90fb6e32275091cb5e474891ac3060a7a0baf638e937fb10836521cf7abfbdfebb48cbed23e1fb123928609e8f65509f4880").to_vec(),
+        hex!("f901f1a045d8ad73dc7ac79275f978e2bc962370db38d9177f72ac08b211197a9fb36981a0a6a828a04cb5a3fabb06350f360d2dd580f48d2b8b0cbe23f781edad99448670a0916a59f33c5f0652fae08b9d997080a9d76ff6b85a8c659d34099aeff7ef813aa070124e8e3929402ac2c38b1ecc44057344f40539585771cb64f4a0b3b0934798a0d6416e77f717a98804ce130f77904a7f389d4530bc4724a3227605d5fc29f1c4a0566268213759b2962394ac5e769bb91cfa4a2b15749dafdf7fb7a6696d6ea31aa03f7edc5b6fc507edced27e4097e3b98172e906884b2caeea231b03d1bf6dd2faa0cda3194a099eff475dfa80e5238a1e7d016ec0b49ca89d72a9e71e738c8d2b56a0e0cab6799aa23b4aaef24b66f618d03c58204f54c4fdb416c3b7e5dfd5683e2ca0b92006fb7e4596a99c1de6c3207321b6b8965ee28b7574bad18a880098ecfd28a085a0a0adfd229d54bb7c32ba7331224ad63d299b0bd3b4883dc897108ad7607ea08b4bddbd96d864c8b16950a268c7f4fa37200fe7305033e44d71f355600eefcea035b8c138ab8c579d91c8f5a2f5af9b8ed1e1e7b847d2ad7d0686a6edfbdd486280a033b4528aec1da956be6e93a5faebe948bd5c56858a17db1bb5daf94f2dc48522a08c5ecf11c47c7b89d88ee096c482f6351fffda0fd1dee14c7749025b34d2963b80").to_vec(),
+        hex!("f8518080808080808080a0326337efc729cf6e180a7920ae76745f631284ce3fbc5956015bea8ef9a1f27380a09c1130a1c746352c14e050db40ae97211ff41380acf38984aebf469ad3224cca808080808080").to_vec(),
+        hex!("f59f38b01fd8dc46bd81250474dd1a73ea76f021775d95be249c9a480fb17b88b6949cade252d10c01c0129e73a1f03f458e0109929d").to_vec(),
+    ];
 
-	let key_modified: Vec<u8> =
-		keccak_256(&hex!("b856af30b938b6f52e5bff365675f358cd52f91a")).into();
-
-	assert!(dbg!(verify_proof::<EIP1186Layout<KeccakHasher>>(
-		&root,
-		&proof,
-		&key_modified,
-		Some(&proof[7])
-	))
-	.is_err());
-
-	// TODO: understand why when passing None to verify_proof it panics
-	assert!(dbg!(verify_proof::<EIP1186Layout<KeccakHasher>>(&root, &proof, &key_modified, None))
-		.is_ok());
+	assert_eq!(
+		dbg!(verify_proof::<EIP1186Layout<KeccakHasher>>(&root, &proof, &key, None)),
+		Ok(())
+	);
 }
