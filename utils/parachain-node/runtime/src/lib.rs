@@ -29,6 +29,7 @@ use core::fmt::{Display, Formatter};
 mod weights;
 pub mod xcm_config;
 
+use alloc::string::ToString;
 use codec::{Decode, Encode};
 use core::str::FromStr;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
