@@ -23,6 +23,7 @@ hex-literal = { version = "0.3.4", optional = true }
 log = { version = "0.4.17", default-features = false }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 serde = { version = "1.0.140", optional = true, features = ["derive"] }
+serde_json = { version = "1", default-features = false }
 smallvec = "1.9.0"
 
 # Local
@@ -147,6 +148,7 @@ std = [
 	"asset-registry/std",
 	"orml-traits/std",
 	"simnode-apis/std",
+	"serde_json/std",
 	"frame-benchmarking/std",
 ]
 testing = [

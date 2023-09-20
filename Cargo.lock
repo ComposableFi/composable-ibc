@@ -8284,6 +8284,7 @@ dependencies = [
  "polkadot-runtime-common",
  "scale-info",
  "serde",
+ "serde_json",
  "simnode-runtime-apis",
  "smallvec",
  "sp-api",
