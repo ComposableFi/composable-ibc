@@ -769,8 +769,8 @@ impl ValidateMemo for RawMemo {
 	fn validate(&self) -> Result<(), String> {
 		// the MiddlewareNamespaceChain type contains all the supported middlewares
 		serde_json::from_str::<MemoMiddlewareNamespaceChain>(&self.0)
-			.map(|| ())
-			.map_err(ToString::to_string)
+			.map(|_| ())
+			.map_err(|e| e.to_string())
 	}
 }
 
