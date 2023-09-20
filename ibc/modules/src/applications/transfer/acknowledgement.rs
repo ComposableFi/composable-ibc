@@ -48,8 +48,7 @@ impl Acknowledgement {
 
 	pub fn into_result(self) -> Result<String, String> {
 		match self {
-			Self::Result(r) if r == ACK_SUCCESS_B64 => Ok(r),
-			Self::Result(r) => Err(r),
+			Self::Result(r) => Ok(r),
 			Self::Error(e) => Err(e),
 		}
 	}
