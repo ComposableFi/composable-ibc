@@ -8,7 +8,7 @@ use crate::{
 };
 use core::time::Duration;
 use frame_support::{
-	assert_ok,
+	assert_noop, assert_ok,
 	traits::{
 		fungibles::{Inspect, Mutate},
 		Currency, Hooks, Len,
@@ -263,6 +263,66 @@ fn send_transfer() {
 		let fee = <Test as crate::ics20_fee::Config>::ServiceChargeIn::get() * balance;
 		assert_eq!(send_amount, balance - fee);
 	})
+}
+
+#[test]
+fn send_transfer_with_invalid_memo() {
+	let mut ext = new_test_ext();
+	let balance = 100000 * MILLIS;
+	ext.execute_with(|| {
+		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
+		let ss58_address =
+			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
+		setup_client_and_consensus_state(PortId::transfer());
+		let asset_id =
+			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
+				"PICA",
+			)
+			.unwrap();
+		let _ = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::deposit_creating(&AccountId32::new([0; 32]), balance);
+
+		let timeout = Timeout::Offset { timestamp: Some(1000), height: Some(5) };
+
+		let ctx = Context::<Test>::default();
+		let channel_end = ctx
+			.channel_end(&(PortId::transfer(), ChannelId::new(0)))
+			.expect("expect source_channel unwrap");
+		let destination_channel = channel_end.counterparty().channel_id.unwrap();
+		Ibc::add_channels_to_feeless_channel_list(
+			RuntimeOrigin::root(),
+			0,
+			destination_channel.sequence(),
+		)
+		.expect("expect add channels to feeless list");
+
+		let result = Ibc::transfer(
+			RuntimeOrigin::signed(AccountId32::new([0; 32])),
+			TransferParams {
+				to: MultiAddress::Raw(ss58_address.as_bytes().to_vec()),
+				source_channel: 0,
+				timeout: timeout.clone(),
+			},
+			asset_id,
+			balance,
+			Some(RawMemo("{}".to_string())),
+		);
+		assert_ok!(result);
+
+		let result = Ibc::transfer(
+			RuntimeOrigin::signed(AccountId32::new([0; 32])),
+			TransferParams {
+				to: MultiAddress::Raw(ss58_address.as_bytes().to_vec()),
+				source_channel: 0,
+				timeout: timeout.clone(),
+			},
+			asset_id,
+			balance,
+			Some(RawMemo("invalid memo".to_string())),
+		);
+		assert_noop!(result, crate::Error::<Test>::InvalidMemo);
+	});
 }
 
 #[test]
