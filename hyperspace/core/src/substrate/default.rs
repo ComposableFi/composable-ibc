@@ -10,18 +10,17 @@ use self::parachain_subxt::api::{
 	sudo::calls::Sudo,
 };
 use crate::{
-	define_any_wrapper, define_beefy_authority_set, define_event_record, define_events,
-	define_head_data, define_ibc_event_wrapper, define_id, define_para_lifecycle,
-	define_runtime_call, define_runtime_event, define_runtime_storage, define_runtime_transactions,
-	define_send_ping_params, define_transfer_params,
-	substrate::default::relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
+	define_any_wrapper, define_event_record, define_events, define_head_data,
+	define_ibc_event_wrapper, define_id, define_para_lifecycle, define_runtime_call,
+	define_runtime_event, define_runtime_storage, define_runtime_transactions,
+	define_send_ping_params, define_transfer_params, substrate::DummyBeefyAuthoritySet,
 };
 use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
 use ibc_proto::google::protobuf::Any;
 use light_client_common::config::{
-	BeefyAuthoritySetT, EventRecordT, IbcEventsT, LocalAddress, ParaLifecycleT, RuntimeCall,
-	RuntimeStorage, RuntimeTransactions,
+	EventRecordT, IbcEventsT, LocalAddress, ParaLifecycleT, RuntimeCall, RuntimeStorage,
+	RuntimeTransactions,
 };
 use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;
@@ -76,14 +75,12 @@ define_head_data!(
 
 define_para_lifecycle!(DefaultParaLifecycle, ParaLifecycle);
 
-define_beefy_authority_set!(DefaultBeefyAuthoritySet, BeefyAuthoritySet<T>);
-
 define_runtime_storage!(
 	DefaultRuntimeStorage,
 	DefaultHeadData,
 	DefaultId,
 	DefaultParaLifecycle,
-	DefaultBeefyAuthoritySet<H256>,
+	DummyBeefyAuthoritySet,
 	parachain_subxt::api::storage().timestamp().now(),
 	|x| relaychain::api::storage().paras().heads(x),
 	|x| relaychain::api::storage().paras().para_lifecycles(x),
