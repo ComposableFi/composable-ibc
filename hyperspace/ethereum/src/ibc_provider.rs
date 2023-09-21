@@ -186,57 +186,52 @@ where
 
 const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 100;
 
-pub async fn parse_ethereum_events(
+pub async fn parse_ethereum_event(
 	client: &EthereumClient,
-	logs: Vec<Log>,
-) -> Result<Vec<IbcEvent>, ClientError> {
-	let mut events = vec![];
-	for log in logs {
-		let raw_log = RawLog::from(log.clone());
-		let height = Height::new(
-			0,
-			log.block_number
-				.ok_or(ClientError::Other("block number not found".to_string()))?
-				.as_u64(),
-		);
-		let topic0 = log.topics[0];
+	log: Log,
+) -> Result<Option<IbcEvent>, ClientError> {
+	let raw_log = RawLog::from(log.clone());
+	let height = Height::new(
+		0,
+		log.block_number
+			.ok_or(ClientError::Other("block number not found".to_string()))?
+			.as_u64(),
+	);
+	let topic0 = log.topics[0];
 
-		macro_rules! handle_events {
+	macro_rules! handle_events {
 		    ($topic0:ident, $events:ident, $log:ident, $raw_log:ident, $height:ident, $($ty:ty),+) => {
 				$(if $topic0 == <$ty>::signature() {
 					 let event = <$ty>::decode_log(&$raw_log).expect("decode event");
 					 let ev = IbcEvent::try_from_event(client, event, $log, $height).await?;
 					 log::debug!(target: "hyperspace_ethereum", "encountered event: {:?} at {}", ev.event_type(), ev.height());
-					 $events.push(ev);
+						return Ok(Some(ev));
 				} else )+ {
 					 log::warn!(
 						 target: "hyperspace_ethereum", "unknown event: {}",
 						   log.log_type.unwrap_or(format!("{:?}", $topic0))
 					 );
-					 continue
+					 return Ok(None)
 				}
 			};
 		}
 
-		handle_events!(
-			topic0,
-			events,
-			log,
-			raw_log,
-			height,
-			OpenInitConnectionFilter,
-			OpenTryConnectionFilter,
-			OpenAckConnectionFilter,
-			OpenConfirmConnectionFilter,
-			OpenInitChannelFilter,
-			OpenAckChannelFilter,
-			OpenConfirmChannelFilter,
-			SendPacketFilter,
-			WriteAcknowledgementFilter
-		);
-	}
-
-	Ok(events)
+	handle_events!(
+		topic0,
+		event,
+		log,
+		raw_log,
+		height,
+		OpenInitConnectionFilter,
+		OpenTryConnectionFilter,
+		OpenAckConnectionFilter,
+		OpenConfirmConnectionFilter,
+		OpenInitChannelFilter,
+		OpenAckChannelFilter,
+		OpenConfirmChannelFilter,
+		SendPacketFilter,
+		WriteAcknowledgementFilter
+	)
 }
 
 #[async_trait::async_trait]
@@ -331,7 +326,12 @@ impl IbcProvider for EthereumClient {
 		let update_height =
 			Height::new(latest_revision, update.execution_payload.block_number.into());
 		// let update_height = Height::new(latest_revision, update.finalized_header.slot.into());
-		let events = parse_ethereum_events(&self, logs).await?;
+		let mut events = vec![];
+		for log in logs {
+			if let Some(event) = parse_ethereum_event(&self, log).await? {
+				events.push(event);
+			}
+		}
 
 		let update_client_header = {
 			log::info!(target: "hyperspace_ethereum", "update client header height: {}, finalized slot: {}",
@@ -365,23 +365,7 @@ impl IbcProvider for EthereumClient {
 			.await
 			.unwrap()
 			.filter_map(|log| async {
-				let raw_log = RawLog::from(log.clone());
-				let height = Height::new(0, log.block_number.unwrap().as_u64());
-				let topic0 = log.topics[0];
-
-				let mut maybe_ibc_event = if topic0 == UpdateClientHeightFilter::signature() {
-					let event = UpdateClientHeightFilter::decode_log(&raw_log).expect("decode event");
-					 let topic1 = H256::from_slice(&encode(&[Token::FixedBytes(
-						 keccak256("07-tendermint-0".to_string().into_bytes()).to_vec(),
-					 )]));
-				} else {
-					log::warn!(target: "hyperspace_ethereum",
-						"unknown event: {}",
-						log.log_type.unwrap_or(format!("{topic0:?}"))
-					);
-				};
-
-				Some(IbcEvent::Empty("".into()))
+				parse_ethereum_event(&client, log).await.ok()?
 			}).boxed();
 
 			while let Some(ev) = events_stream.next().await {
