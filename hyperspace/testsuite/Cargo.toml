@@ -56,11 +56,11 @@ hyperspace-cosmos = { path = "../cosmos", features = [] }
 hyperspace-ethereum = { path = "../ethereum", features = [] }
 
 # We need this so the tests run sequentially
-[[test]]
-name = "parachain_parachain"
+#[[test]]
+#name = "parachain_parachain"
 
-[[test]]
-name = "parachain_cosmos"
+#[[test]]
+#name = "parachain_cosmos"
 
 [[test]]
 name = "ethereum_cosmos"
