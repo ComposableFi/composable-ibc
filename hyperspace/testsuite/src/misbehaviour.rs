@@ -48,10 +48,6 @@ where
 	let relaychain_authorities = [
 		Keyring::Alice,
 		Keyring::Bob,
-		Keyring::Charlie,
-		Keyring::Dave,
-		Keyring::Eve,
-		Keyring::Ferdie,
 	];
 
 	// query the current client state that will be used to construct a fraudulent finality proof
