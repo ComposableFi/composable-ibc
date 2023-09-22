@@ -29,7 +29,7 @@ serde = { version = "1.0.144", default-features = false, features = ["derive"] }
 
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
-serde_cbor = "0.11.2"
+serde_cbor = { version = "0.11.2", default-features = false }
 ethers-core = { version = "2.0.10", default-features = false }
 eth_merkle_tree = { version = "0.1.1", default-features = false }
 rs_merkle = { version = "1.4.1", default-features = false }
@@ -70,4 +70,5 @@ std = [
     "sync-committee-primitives/std",
     "ssz-rs/std",
     "tendermint/std",
+    "trie-db/std",
 ]

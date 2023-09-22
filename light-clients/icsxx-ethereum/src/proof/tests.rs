@@ -1,9 +1,9 @@
 use super::{node_codec::RlpNodeCodec, *};
-use crate::proof::ethereum_trie::{EIP1186Layout, KeccakHasher};
+use crate::proof::ethereum_trie::{verify_proof, EIP1186Layout, KeccakHasher};
 use ethers_core::utils::keccak256;
 use hex_literal::hex;
 use primitive_types::H256;
-use trie_db::{node::Node, proof::verify_proof, NodeCodec};
+use trie_db::{node::Node, NodeCodec};
 
 #[test]
 fn test_verify_membership() {
@@ -15,17 +15,7 @@ fn test_verify_membership() {
 	let key: Vec<u8> = keccak256(&hex!("24264ae01b1abbc9a91e18926818ad5cbf39017b")).into();
 	let root = H256(hex!("7bac2ed96e9c1b0bf578c52fd6e86a2d74c555f8e74d5954aff57939f144299a"));
 
-	/*
-		// pub fn verify_proof<'a, L>(
-	// 	root: &<L::Hash as Hasher>::Out,
-	// 	proof: &'a [Vec<u8>],
-	// 	raw_key: &'a [u8],
-	// 	expected_value: Option<&[u8]>,
-	// ) -> Result<(), VerifyError<'a, TrieHash<L>, CError<L>>>
-
-		 */
-	verify_proof::<EIP1186Layout<KeccakHasher>, I, K, V>(&root, &proof, [&(&key, Some(&proof[2]))])
-		.unwrap();
+	verify_proof::<EIP1186Layout<KeccakHasher>>(&root, &proof, &key, Some(&proof[2])).unwrap();
 }
 
 #[test]

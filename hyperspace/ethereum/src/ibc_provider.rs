@@ -1,4 +1,5 @@
 use ethers::{
+	abi,
 	abi::{
 		encode, encode_packed, ethabi, Abi, AbiEncode, Detokenize, InvalidOutputType, ParamType,
 		RawLog, Token, Tokenizable,
@@ -110,37 +111,40 @@ use tracing::log;
 
 abigen!(
 	IbcClientAbi,
-	"hyperspace/ethereum/src/abi/ibc-client-abi.json";
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-client-abi.json";
 
 	IbcConnectionAbi,
-	"hyperspace/ethereum/src/abi/ibc-connection-abi.json";
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-connection-abi.json";
 
 	IbcChannelAbi,
-	"hyperspace/ethereum/src/abi/ibc-channel-abi.json";
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-channel-abi.json";
 
 	IbcPacketAbi,
-	"hyperspace/ethereum/src/abi/ibc-packet-abi.json";
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-packet-abi.json";
 
 	IbcQuerierAbi,
-	"hyperspace/ethereum/src/abi/ibc-querier-abi.json";
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-querier-abi.json";
 
 	Ics20TransferBankAbi,
-	"hyperspace/ethereum/src/abi/ics20-transfer-bank-abi.json";
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ics20-transfer-bank-abi.json";
+
+	Ics20BankAbi,
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ics20-bank-abi.json";
 
 	TendermintClientAbi,
-	"hyperspace/ethereum/src/abi/tendermint-client-abi.json";
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/tendermint-client-abi.json";
 
 	DiamondAbi,
-	"hyperspace/ethereum/src/abi/diamond-abi.json";
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/diamond-abi.json";
 
 	DiamondCutFacetAbi,
-	"hyperspace/ethereum/src/abi/diamond-cut-facet-abi.json";
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/diamond-cut-facet-abi.json";
 
 	DiamondLoupeFacetAbi,
-	"hyperspace/ethereum/src/abi/diamond-loupe-facet-abi.json";
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/diamond-loupe-facet-abi.json";
 
 	OwnershipFacetAbi,
-	"hyperspace/ethereum/src/abi/ownership-facet-abi.json";
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ownership-facet-abi.json";
 );
 
 impl From<HeightData> for Height {
@@ -829,23 +833,23 @@ impl IbcProvider for EthereumClient {
 	}
 
 	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
-		// let key = String::from_utf8(keys[0].clone()).unwrap();
-		//
-		// let proof_result = self
-		// 	.eth_query_proof(&key, Some(at.revision_height), COMMITMENTS_STORAGE_INDEX)
-		// 	.await?;
-		//
-		// let bytes = proof_result
-		// 	.storage_proof
-		// 	.first()
-		// 	.map(|p| p.proof.first())
-		// 	.flatten()
-		// 	.map(|b| b.to_vec())
-		// 	.unwrap_or_default();
+		assert_eq!(keys.len(), 1);
+		let key = String::from_utf8(keys[0].clone()).unwrap();
 
-		// Ok(bytes)
-		// todo!("query-proof: redo")
-		Ok(vec![0])
+		let proof_result = self
+			.eth_query_proof(&key, Some(at.revision_height), COMMITMENTS_STORAGE_INDEX)
+			.await?;
+
+		let bytes = proof_result
+			.storage_proof
+			.first()
+			.map(|p| {
+				let token = p.proof.clone().into_iter().map(|p| Token::Bytes(p.to_vec())).collect();
+				encode(&[token])
+			})
+			.ok_or_else(|| ClientError::Other("storage proof not found".to_string()))?;
+
+		Ok(bytes)
 	}
 
 	async fn query_packet_commitment(

@@ -27,24 +27,25 @@ where
 {
 	use VerifyError::*;
 
-	let eth_proof = serde_cbor::from_slice::<EIP1186ProofResponse>(proof.as_bytes()).unwrap();
-	let key = keccak256(path.into().into_bytes());
-	let value_hash = value.map(keccak256).map(|x| x.as_slice());
-	let root = H256::from_slice(root.as_bytes());
-	let res = verify_proof::<EIP1186Layout<KeccakHasher>>(
-		&root,
-		&eth_proof.account_proof.into_iter().map(|x| x.to_vec()).collect::<Vec<_>>(),
-		&key,
-		value_hash,
-	);
+	// let eth_proof = serde_cbor::from_slice::<EIP1186ProofResponse>(proof.as_bytes()).unwrap();
+	// let key = keccak256(path.into().into_bytes());
+	// let value_hash = value.map(keccak256).map(|x| x.as_slice());
+	// let root = H256::from_slice(root.as_bytes());
+	// let res = verify_proof::<EIP1186Layout<KeccakHasher>>(
+	// 	&root,
+	// 	&eth_proof.account_proof.into_iter().map(|x| x.to_vec()).collect::<Vec<_>>(),
+	// 	&key,
+	// 	value_hash,
+	// );
 
-	match res {
-		Ok(_) => Ok(true),
-		Err(err) => match err {
-			NonExistingValue(_) | ExistingValue(_) | ValueMismatch(_) | HashMismatch(_) =>
-				Ok(false),
-			e @ IncompleteProof | e @ DecodeError(_) | e @ HashDecodeError(_) =>
-				return Err(e.into()),
-		},
-	}
+	// match res {
+	// 	Ok(_) => Ok(true),
+	// 	Err(err) => match err {
+	// 		NonExistingValue(_) | ExistingValue(_) | ValueMismatch(_) | HashMismatch(_) =>
+	// 			Ok(false),
+	// 		e @ IncompleteProof | e @ DecodeError(_) | e @ HashDecodeError(_) =>
+	// 			return Err(e.into()),
+	// 	},
+	// }
+	todo!()
 }

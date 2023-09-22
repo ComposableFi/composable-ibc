@@ -15,8 +15,10 @@
 use crate::utils::ETH_NODE_PORT_WS;
 use core::time::Duration;
 use ethers::{
-	abi::Token,
-	prelude::{ContractFactory, ContractInstance},
+	abi::{Abi, Token},
+	prelude::{spoof::Account, ContractFactory, ContractInstance},
+	providers::Middleware,
+	types::Address,
 	utils::AnvilInstance,
 };
 use ethers_solc::{Artifact, ProjectCompileOutput, ProjectPathsConfig};
@@ -24,11 +26,13 @@ use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use hyperspace_core::{
 	chain::{AnyAssetId, AnyChain, AnyConfig},
 	logging,
-	substrate::DefaultConfig,
+	// substrate::DefaultConfig,
 };
 use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_ethereum::{
+	client::EthereumClient,
 	config::EthereumClientConfig,
+	ibc_provider::Ics20BankAbi,
 	mock::{
 		utils,
 		utils::{hyperspace_ethereum_client_fixture, ETH_NODE_PORT},
@@ -45,8 +49,8 @@ use hyperspace_testsuite::{
 	setup_connection_and_channel,
 };
 use ibc::core::ics24_host::identifier::{ClientId, PortId};
-use sp_core::hashing::sha2_256;
-use std::{future::Future, path::PathBuf, str::FromStr, sync::Arc};
+use sp_core::{hashing::sha2_256, U256};
+use std::{fmt::Debug, future::Future, path::PathBuf, str::FromStr, sync::Arc};
 use subxt::utils::H160;
 
 #[derive(Debug, Clone)]
@@ -228,7 +232,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		},
 	};
 
-	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.unwrap();
+	let chain_b = CosmosClient::<()>::new(config_b.clone()).await.unwrap();
 
 	let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
 	let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
@@ -243,6 +247,9 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	};
 	let code_id_str = hex::encode(code_id);
 	config_b.wasm_code_id = Some(code_id_str);
+
+	println!("{}", toml::to_string_pretty(&config_a).unwrap());
+	println!("\n{}", toml::to_string_pretty(&config_b).unwrap());
 
 	let mut chain_a_wrapped = AnyConfig::Ethereum(config_a).into_client().await.unwrap();
 	let mut chain_b_wrapped = AnyConfig::Cosmos(config_b).into_client().await.unwrap();
@@ -259,7 +266,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	let (client_b, client_a) =
 		create_clients(&mut chain_b_wrapped, &mut chain_a_wrapped).await.unwrap();
 	// let (client_a, client_b): (ClientId, ClientId) =
-	// 	("08-wasm-136".parse().unwrap(), "07-tendermint-0".parse().unwrap());
+	// 	("08-wasm-150".parse().unwrap(), "07-tendermint-0".parse().unwrap());
 
 	log::info!(target: "hyperspace", "Client A: {client_a:?} B: {client_b:?}");
 	chain_a_wrapped.set_client_id(client_a);
@@ -267,11 +274,10 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	(chain_a_wrapped, chain_b_wrapped)
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
 async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
-
 	let asset_str = "pica".to_string();
 	let asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
@@ -280,10 +286,9 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	handle.abort();
 
 	// let connection_id_a = "connection-0".parse().unwrap();
-	// let connection_id_b = "connection-35".parse().unwrap();
+	// let connection_id_b = "connection-47".parse().unwrap();
 	// let channel_a = "channel-0".parse().unwrap();
-	// let channel_b = "channel-10".parse().unwrap();
-
+	// let channel_b = "channel-24".parse().unwrap();
 	log::info!(target: "hyperspace", "Conn A: {connection_id_a:?} B: {connection_id_b:?}");
 	log::info!(target: "hyperspace", "Chann A: {channel_a:?} B: {channel_b:?}");
 
@@ -317,6 +322,44 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	)
 	.await;
 
+	// loop {
+	// 	let client_a_clone = chain_a.clone();
+	// 	let client_b_clone = chain_b.clone();
+	// 	let handle = tokio::task::spawn(async move {
+	// 		hyperspace_core::relay(client_a_clone, client_b_clone, None, None, None)
+	// 			.await
+	// 			.map_err(|e| {
+	// 				log::error!(target: "hyperspace", "Relayer loop failed: {:?}", e);
+	// 				e
+	// 			})
+	// 			.unwrap()
+	// 	});
+	// 	tokio::task::spawn(async move {
+	// 		let x = handle
+	// 			.map_err(|e| {
+	// 				log::error!(target: "hyperspace", "Relayer loop failed: {:?}", e);
+	// 				e
+	// 			})
+	// 			.await;
+	// 	})
+	// 	.await
+	// 	.map_err(|e| {
+	// 		log::error!(target: "hyperspace", "Relayer loop failed: {:?}", e);
+	// 		e
+	// 	})
+	// 	.unwrap();
+	//
+	// 	let balance = chain_a
+	// 		.query_ibc_balance(asset_id_a)
+	// 		.await
+	// 		.expect("Can't query ibc balance")
+	// 		.pop()
+	// 		.expect("No Ibc balances");
+	// 	let amount = balance.amount.as_u256().as_u128();
+	//
+	// 	log::info!("my balance = {amount}");
+	// }
+
 	// // timeouts + connection delay
 	// ibc_messaging_packet_height_timeout_with_connection_delay(
 	// 	&mut chain_a,
@@ -348,7 +391,7 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	// TODO: tendermint misbehaviour?
 	// ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
 }
-
+/*
 #[tokio::test]
 #[ignore]
 async fn cosmos_to_ethereum_ibc_messaging_full_integration_test() {
@@ -408,4 +451,47 @@ async fn cosmos_to_ethereum_ibc_messaging_full_integration_test() {
 	// ibc_channel_close(&mut chain_a, &mut chain_b).await;
 
 	ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
+}
+ */
+
+#[tokio::test]
+async fn send_tokens() {
+	let config = toml::from_str::<EthereumClientConfig>(
+		&std::fs::read_to_string("../../config/ethereum-local.toml").unwrap(),
+	)
+	.unwrap();
+	let mut client = EthereumClient::new(config).await.unwrap();
+	let abi = Ics20BankAbi::new(
+		Address::from_str("0x0486ee42d89d569c4d8143e47a82c4b14545ae43").unwrap(),
+		client.client(),
+	);
+	let from = Address::from_str("0x73db010c3275eb7a92e5c38770316248f4c644ee").unwrap();
+	let to = Address::from_str("0x0486ee42d89d569c4d8143e47a82c4b14545ae43").unwrap();
+
+	async fn get_balance<M>(abi: &Ics20BankAbi<M>, acc: H160) -> U256
+	where
+		M: Middleware + Debug + Send + Sync,
+	{
+		abi.method("balanceOf", (acc, "pica".to_string()))
+			.unwrap()
+			.call()
+			.await
+			.unwrap()
+	};
+	dbg!(get_balance(&abi, from).await);
+	dbg!(get_balance(&abi, to).await);
+
+	let tx = abi
+		.method::<_, ()>("transferFrom", (from, to, "pica".to_string(), U256::from(10000000u32)))
+		.unwrap()
+		.send()
+		.await
+		.unwrap()
+		.await
+		.unwrap()
+		.unwrap();
+	assert_eq!(tx.status, Some(1u32.into()));
+
+	dbg!(get_balance(&abi, from).await);
+	dbg!(get_balance(&abi, to).await);
 }
