@@ -16,10 +16,11 @@
 
 use std::{
 	collections::{BTreeMap, HashSet},
+	f32::consts::E,
 	path::PathBuf,
 	str::FromStr,
 	sync::{Arc, Mutex},
-	time::Duration, f32::consts::E,
+	time::Duration,
 };
 
 pub mod chain;
@@ -74,7 +75,7 @@ use sp_runtime::{
 use ss58_registry::Ss58AddressFormat;
 use subxt::{
 	config::{Header as HeaderT, Header},
-	tx::{TxPayload, Signer},
+	tx::{Signer, TxPayload},
 };
 use tokio::sync::Mutex as AsyncMutex;
 
@@ -423,24 +424,26 @@ where
 					self.key_type_id.clone(),
 					self.public_key.clone(),
 				);
-				if m{
+				if m {
 					let nonce = self.para_client.tx().account_nonce(&signer.account_id()).await?;
-					self.para_client.tx().create_signed_with_nonce(&call, &signer, 
-						nonce+1, other_params)
-					.unwrap().submit_and_watch().await
-				}
-				else{
 					self.para_client
-					.tx()
-					.sign_and_submit_then_watch(&call, &signer, other_params)
-					.await
+						.tx()
+						.create_signed_with_nonce(&call, &signer, nonce + 1, other_params)
+						.unwrap()
+						.submit_and_watch()
+						.await
+				} else {
+					self.para_client
+						.tx()
+						.sign_and_submit_then_watch(&call, &signer, other_params)
+						.await
 				}
 			};
 			match res {
 				Ok(progress) => break progress,
 				Err(e) => {
 					let t = format!("{:?}", e).contains("Priority is too low");
-					if t{
+					if t {
 						log::warn!("update priority manually");
 						m = true;
 					}

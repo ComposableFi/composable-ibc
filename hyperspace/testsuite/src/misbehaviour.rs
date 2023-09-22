@@ -45,10 +45,7 @@ where
 	});
 	info!("Waiting for the next block...");
 
-	let relaychain_authorities = [
-		Keyring::Alice,
-		Keyring::Bob,
-	];
+	let relaychain_authorities = [Keyring::Alice, Keyring::Bob];
 
 	// query the current client state that will be used to construct a fraudulent finality proof
 	let client_id = chain_b.client_id();
@@ -221,6 +218,14 @@ where
 		.submit(vec![Any { value: msg.encode_vec().unwrap(), type_url: msg.type_url() }])
 		.await
 		.expect("failed to submit message");
+
+	for i in 0..20 {
+		tokio::time::sleep(Duration::from_secs(1)).await;
+		info!("Waiting for the next block... {}", i);
+	}
+
+
+	// panic!("where is the misbehaviour event?!!!!");
 
 	timeout(Duration::from_secs(12 * 60), misbehavour_event_handle)
 		.await
