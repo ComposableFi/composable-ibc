@@ -43,7 +43,7 @@ impl Acknowledgement {
 	}
 
 	pub fn is_successful(&self) -> bool {
-		matches!(self, Self::Result(s) if s == ACK_SUCCESS_B64)
+		!matches!(self, Self::Error(s))
 	}
 
 	pub fn into_result(self) -> Result<String, String> {
