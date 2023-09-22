@@ -15,6 +15,7 @@ forge inspect ../contracts/core/04-channel/IBCChannelHandshake.sol:IBCChannelHan
 forge inspect ../contracts/core/25-handler/IBCQuerier.sol:IBCQuerier abi > ../../src/abi/ibc-querier-abi.json
 
 forge inspect ../contracts/apps/20-transfer/ICS20TransferBank.sol:ICS20TransferBank abi > ../../src/abi/ics20-transfer-bank-abi.json
+forge inspect ../contracts/apps/20-transfer/ICS20Bank.sol:ICS20Bank abi > ../../src/abi/ics20-bank-abi.json
 forge inspect ../contracts/clients/TendermintLightClientSimple.sol:TendermintLightClientSimple abi > ../../src/abi/tendermint-client-abi.json
 
 # remove all "."s inside the abi files to make them compatible with the derive macro
