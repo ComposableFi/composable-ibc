@@ -1,6 +1,6 @@
 use crate::{routing::Context, DenomToAssetId};
 use alloc::{format, string::ToString};
-use core::{fmt::Debug, marker::PhantomData};
+use core::{fmt::Debug, marker::PhantomData, str::FromStr};
 use ibc::{
 	applications::transfer::{
 		acknowledgement::Acknowledgement as Ics20Ack, context::BankKeeper,
@@ -355,9 +355,22 @@ where
 		}
 
 		let percent = ServiceChargeIn::<T>::get().unwrap_or(T::ServiceChargeIn::get());
+		let parsed_ack = String::from_utf8(ack.clone().into_bytes())
+			.map_err(|e| {
+				Ics04Error::implementation_specific(format!(
+					"Failed to decode acknowledgement {e:?}"
+				))
+			})
+			.and_then(|x| {
+				Ics20Ack::from_str(&x).map_err(|e| {
+					Ics04Error::implementation_specific(format!(
+						"Failed to decode acknowledgement {e:?}"
+					))
+				})
+			})?;
 		// Send full amount to receiver using the default ics20 logic
 		// We only take the fee charge if the acknowledgement is not an error
-		if ack.as_ref() == Ics20Ack::success().to_string().as_bytes() {
+		if parsed_ack.is_successful() {
 			let mut prefixed_coin = if is_receiver_chain_source(
 				packet.source_port.clone(),
 				packet.source_channel,
