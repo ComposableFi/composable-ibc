@@ -1,5 +1,8 @@
 use crate::{routing::Context, DenomToAssetId};
-use alloc::{format, string::ToString};
+use alloc::{
+	format,
+	string::{String, ToString},
+};
 use core::{fmt::Debug, marker::PhantomData, str::FromStr};
 use ibc::{
 	applications::transfer::{
@@ -361,7 +364,7 @@ where
 					"Failed to decode acknowledgement {e:?}"
 				))
 			})
-			.and_then(|x| {
+			.and_then(|x: String| {
 				Ics20Ack::from_str(&x).map_err(|e| {
 					Ics04Error::implementation_specific(format!(
 						"Failed to decode acknowledgement {e:?}"
