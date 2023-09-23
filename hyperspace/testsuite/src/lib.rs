@@ -411,7 +411,17 @@ async fn send_channel_close_init_and_assert_channel_close_confirm<A, B>(
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 
+
+
 	chain_a.submit(vec![msg]).await.unwrap();
+
+	for i in 0..30{
+		use core::time::Duration;
+		std::thread::sleep(Duration::from_secs(1));
+		log::info!(target: "hyperspace", "std::thread::sleep(std::Duration::from_secs(1));");
+	}
+
+	// panic!("look at CloseConfirmChannel");
 
 	// wait channel close confirmation on chain b
 	let future = chain_b
