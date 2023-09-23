@@ -191,7 +191,7 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 	let mut c1 = chain_a.clone();
 	let mut c2 = chain_b.clone();
 	// join_set.spawn(async move {
-	// 	ibc_messaging_packet_timeout_on_channel_close(&mut c1, &mut c2, asset_id, channel_a).await;
+		ibc_messaging_packet_timeout_on_channel_close(&mut c1, &mut c2, asset_id, channel_a).await;
 	// 	log::info!(target: "hyperspace", "🚀🚀 finished packet timeout on channel close");
 	// });
 	join_set.spawn(async move {
