@@ -45,14 +45,7 @@ where
 	});
 	info!("Waiting for the next block...");
 
-	let relaychain_authorities = [
-		Keyring::Alice,
-		Keyring::Bob,
-		Keyring::Charlie,
-		Keyring::Dave,
-		Keyring::Eve,
-		Keyring::Ferdie,
-	];
+	let relaychain_authorities = [Keyring::Alice, Keyring::Bob];
 
 	// query the current client state that will be used to construct a fraudulent finality proof
 	let client_id = chain_b.client_id();
