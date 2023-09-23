@@ -200,7 +200,14 @@ where
 		memo: "".to_string(),
 	};
 	// chain_a.query_seq_from_tx_hash();
-	chain_a.send_transfer(msg.clone()).await.expect("Failed to send transfer: ");
+	//try send 5 times untill success
+	let v = chain_a.send_transfer(msg.clone()).await;
+	let mut i = 0;
+	while v.is_err() && i < 5 {
+		i += 1;
+		let v = chain_a.send_transfer(msg.clone()).await;
+	}
+
 	(amount, msg)
 }
 
@@ -275,6 +282,13 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 		})
 		.take(1)
 		.collect::<Vec<_>>();
+
+	
+	for i in 0..30{
+		use core::time::Duration;
+		std::thread::sleep(Duration::from_secs(1));
+		log::info!(target: "hyperspace", "std::thread::sleep(std::Duration::from_secs(1));");
+	}
 
 	log::info!(target: "hyperspace", "Waiting for packet timeout to elapse on counterparty");
 	timeout_future(
