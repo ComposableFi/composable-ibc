@@ -200,7 +200,14 @@ where
 		memo: "".to_string(),
 	};
 	// chain_a.query_seq_from_tx_hash();
-	chain_a.send_transfer(msg.clone()).await.expect("Failed to send transfer: ");
+	// chain_a.send_transfer(msg.clone()).await.expect("Failed to send transfer: ");
+	//try send 5 times untill success
+	let v = chain_a.send_transfer(msg.clone()).await;
+	let mut i = 0;
+	while v.is_err() && i < 5 {
+		i += 1;
+		let v = chain_a.send_transfer(msg.clone()).await;
+	}
 	(amount, msg)
 }
 
