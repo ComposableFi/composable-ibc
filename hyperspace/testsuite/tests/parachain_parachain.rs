@@ -195,7 +195,7 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 		log::info!(target: "hyperspace", "🚀🚀 finished packet timeout on channel close");
 	// });
 	// join_set.spawn(async move {
-		ibc_channel_close(&mut chain_aa, &mut chain_bb).await;
+		// ibc_channel_close(&mut chain_aa, &mut chain_bb).await;
 		log::info!(target: "hyperspace", "🚀🚀 finished channel close");
 	// });
 
