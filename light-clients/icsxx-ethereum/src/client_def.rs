@@ -139,7 +139,7 @@ where
 			.map(|b| {
 				let height = Height::new(
 					0, // TODO: check this
-					b.execution_payload.block_number as u64,
+					b.execution_payload.block_number,
 				);
 				let cs = Ctx::AnyConsensusState::wrap(&ConsensusState::new(
 					b.execution_payload.state_root.clone(), //  b.header.state_root?
@@ -152,7 +152,7 @@ where
 		let header = header.inner;
 		let height = Height::new(
 			0, // TODO: check this
-			header.execution_payload.block_number as u64,
+			header.execution_payload.block_number,
 		);
 		let cs = Ctx::AnyConsensusState::wrap(&ConsensusState::new(
 			header.execution_payload.state_root.clone(),
@@ -179,7 +179,7 @@ where
 		let new_client_state = ClientState {
 			inner: new_light_client_state,
 			frozen_height: None,
-			latest_height: update.execution_payload.block_number as _,
+			latest_height: update.execution_payload.block_number,
 			// latest_height: update.attested_header.slot.into(),
 			_phantom: Default::default(),
 		};
