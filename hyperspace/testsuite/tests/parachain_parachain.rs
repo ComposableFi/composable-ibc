@@ -201,7 +201,7 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 		
 	// 	log::info!(target: "hyperspace", "🚀🚀 finished channel close");
 	// });
-		ibc_messaging_packet_timeout_on_channel_close(&mut c1, &mut c2, asset_id, channel_a).await;
+		ibc_messaging_packet_timeout_on_channel_close(&mut chain_a.clone(), &mut chain_b.clone(), asset_id, channel_a).await;
 	// log::info!(target: "hyperspace", "🚀🚀 Waiting for channel close semantics to finish");
 	// while let Some(res) = join_set.join_next().await {
 	// 	res.unwrap();
