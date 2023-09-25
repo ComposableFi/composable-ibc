@@ -119,8 +119,122 @@ where
 		}
 	}
 
+	for i in 0..200{
+		//write the log
+		log::info!(target: "hyperspace", "============ send_channel_close_init_and_assert_channel_close_confirm");
+		//sleap 1 second
+		tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+	}
+
 	let (connection_id_a, connection_id_b) =
 		create_connection(chain_a, chain_b, connection_delay).await.unwrap();
+
+	// panic!("============ send_channel_close_init_and_assert_channel_close_confirm");
+
+	log::info!(target: "hyperspace", "============ Connection handshake completed: ConnectionId({connection_id_a}), ConnectionId({connection_id_b}) ============");
+	log::info!(target: "hyperspace", "=========================== Starting channel handshake ===========================");
+
+	let (channel_id_a, channel_id_b) = create_channel(
+		chain_a,
+		chain_b,
+		connection_id_a.clone(),
+		PortId::transfer(),
+		VERSION.to_string(),
+		Order::Unordered,
+	)
+	.await
+	.unwrap();
+	// channel handshake completed
+	log::info!(target: "hyperspace", "============ Channel handshake completed: ChannelId({channel_id_a}) ============");
+
+	(handle, channel_id_a, channel_id_b, connection_id_a, connection_id_b)
+}
+
+pub async fn setup_connection_and_channel2<A, B>(
+	chain_a: &mut A,
+	chain_b: &mut B,
+	connection_delay: Duration,
+	connection_id_a: ConnectionId, connection_id_b: ConnectionId
+) -> (JoinHandle<()>, ChannelId, ChannelId, ConnectionId, ConnectionId)
+where
+	A: TestProvider,
+	A::FinalityEvent: Send + Sync,
+	A::Error: From<B::Error>,
+	B: TestProvider,
+	B::FinalityEvent: Send + Sync,
+	B::Error: From<A::Error>,
+{
+	let client_a_clone = chain_a.clone();
+	let client_b_clone = chain_b.clone();
+	// Start relayer loop
+	let handle = tokio::task::spawn(async move {
+		hyperspace_core::relay(client_a_clone, client_b_clone, None, None, None)
+			.await
+			.unwrap()
+	});
+	// check if an open transfer channel exists
+	let (latest_height, ..) = chain_a.latest_height_and_timestamp().await.unwrap();
+	let connections = chain_a
+		.query_connection_using_client(
+			latest_height.revision_height as u32,
+			chain_b.client_id().to_string(),
+		)
+		.await
+		.unwrap();
+
+	for connection in connections {
+		let connection_id = ConnectionId::from_str(&connection.id).unwrap();
+		let connection_end = chain_a
+			.query_connection_end(latest_height, connection_id.clone())
+			.await
+			.unwrap()
+			.connection
+			.unwrap();
+
+		let delay_period = Duration::from_nanos(connection_end.delay_period);
+		if delay_period != connection_delay {
+			continue
+		}
+
+		let channels = chain_a
+			.query_connection_channels(latest_height, &connection_id)
+			.await
+			.unwrap()
+			.channels;
+
+		for channel in channels {
+			let channel_id = ChannelId::from_str(&channel.channel_id).unwrap();
+			let channel_end = chain_a
+				.query_channel_end(latest_height, channel_id, PortId::transfer())
+				.await
+				.unwrap()
+				.channel
+				.unwrap();
+			let channel_end = ChannelEnd::try_from(channel_end).unwrap();
+
+			if channel_end.state == State::Open && channel.port_id == PortId::transfer().to_string()
+			{
+				return (
+					handle,
+					channel_id,
+					channel_end.counterparty().channel_id.unwrap().clone(),
+					channel_end.connection_hops[0].clone(),
+					connection_id,
+				)
+			}
+		}
+	}
+
+
+	for i in 0..100{
+		//write the log
+		log::info!(target: "hyperspace", "============ Connection handshake completed");
+		//sleap 1 second
+		tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+	}
+
+	// let (connection_id_a, connection_id_b) =
+	// 	create_connection(chain_a, chain_b, connection_delay).await.unwrap();
 
 	log::info!(target: "hyperspace", "============ Connection handshake completed: ConnectionId({connection_id_a}), ConnectionId({connection_id_b}) ============");
 	log::info!(target: "hyperspace", "=========================== Starting channel handshake ===========================");
@@ -404,7 +518,23 @@ async fn send_channel_close_init_and_assert_channel_close_confirm<A, B>(
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 
-	chain_a.submit(vec![msg]).await.unwrap();
+	//
+	for i in 0..30{
+		//write the log
+		log::info!(target: "hyperspace", "============ send_channel_close_init_and_assert_channel_close_confirm");
+		//sleap 1 second
+		tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+	}
+
+
+	let mut v = chain_a.submit(vec![msg.clone()]).await;
+	let mut i = 0;
+	while v.is_err() && i < 5 {
+		i += 1;
+		v = chain_a.submit(vec![msg.clone()]).await;
+	}
+
+	// panic!("============ send_channel_close_init_and_assert_channel_close_confirm");
 
 	// wait channel close confirmation on chain b
 	let future = chain_b
@@ -582,6 +712,36 @@ where
 {
 	let (handle, channel_id, channel_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(chain_a, chain_b, Duration::from_secs(60 * 2)).await;
+	handle.abort();
+
+	// Set connections and channel whitelist and restart relayer loop
+	chain_a.set_connection_id(connection_id_a);
+	chain_b.set_connection_id(connection_id_b);
+
+	chain_a.set_channel_whitelist(vec![(channel_id, PortId::transfer())].into_iter().collect());
+	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
+	let client_a_clone = chain_a.clone();
+	let client_b_clone = chain_b.clone();
+	let handle = tokio::task::spawn(async move {
+		hyperspace_core::relay(client_a_clone, client_b_clone, None, None, None)
+			.await
+			.unwrap()
+	});
+	send_channel_close_init_and_assert_channel_close_confirm(chain_a, chain_b, channel_id).await;
+	handle.abort()
+}
+
+pub async fn ibc_channel_close2<A, B>(chain_a: &mut A, chain_b: &mut B, connection_id_a: ConnectionId, connection_id_b: ConnectionId)
+where
+	A: TestProvider,
+	A::FinalityEvent: Send + Sync,
+	A::Error: From<B::Error>,
+	B: TestProvider,
+	B::FinalityEvent: Send + Sync,
+	B::Error: From<A::Error>,
+{
+	let (handle, channel_id, channel_b, connection_id_a, connection_id_b) =
+		setup_connection_and_channel2(chain_a, chain_b, Duration::from_secs(60 * 2), connection_id_a, connection_id_b).await;
 	handle.abort();
 
 	// Set connections and channel whitelist and restart relayer loop
