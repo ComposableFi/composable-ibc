@@ -194,14 +194,15 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 	let mut c2 = chain_b.clone();
 	// join_set.spawn(async move {
 	//works!!!!
-	ibc_messaging_packet_timeout_on_channel_close(&mut c1, &mut c2, asset_id, channel_a).await;
-	// 	log::info!(target: "hyperspace", "🚀🚀 finished packet timeout on channel close");
+	ibc_channel_close(&mut chain_aa, &mut chain_bb).await;
+	// ibc_channel_close2(&mut chain_aa, &mut chain_bb, connection_id_a, connection_id_b).await;
+	log::info!(target: "hyperspace", "🚀🚀 finished channel close");
 	// });
 	// join_set.spawn(async move {
 	//works!!!!
 	// ibc_channel_close(&mut chain_aa, &mut chain_bb).await;
-	ibc_channel_close2(&mut chain_aa, &mut chain_bb, connection_id_a, connection_id_b).await;
-	log::info!(target: "hyperspace", "🚀🚀 finished channel close");
+	ibc_messaging_packet_timeout_on_channel_close(&mut c1, &mut c2, asset_id, channel_a).await;
+	log::info!(target: "hyperspace", "🚀🚀 finished packet timeout on channel close");
 	// });
 
 	// log::info!(target: "hyperspace", "🚀🚀 Waiting for channel close semantics to finish");
