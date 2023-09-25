@@ -308,6 +308,9 @@ where
 			Path::ClientState(ClientStatePath(client_id.clone())).to_string().into_bytes();
 		let (q, proof) = self.query_path(path_bytes.clone(), at, true).await?;
 		let client_state = Any::decode(&*q.value)?;
+		if client_state.type_url.is_empty() || client_state.value.is_empty() {
+			return Err(Error::Custom(format!("empty client state for height {at}")))
+		}
 		Ok(QueryClientStateResponse {
 			client_state: Some(client_state),
 			proof,
