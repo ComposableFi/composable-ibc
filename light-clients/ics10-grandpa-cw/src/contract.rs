@@ -269,16 +269,27 @@ fn process_message(
 
 			// Check that the substitute client state is valid:
 			// all fields should be the same as in the old state, except for the `relay_chain`,
-			// `para_id`, `latest_para_height`, `latest_relay_height`, `frozen_height`,
-			// `current_authorities`, `current_set_id`
-			old_client_state.relay_chain = substitute_client_state.relay_chain;
-			old_client_state.para_id = substitute_client_state.para_id;
-			old_client_state.latest_para_height = substitute_client_state.latest_para_height;
-			old_client_state.latest_relay_height = substitute_client_state.latest_relay_height;
-			old_client_state.frozen_height = substitute_client_state.frozen_height;
-			old_client_state.current_authorities =
-				substitute_client_state.current_authorities.clone();
-			old_client_state.current_set_id = substitute_client_state.current_set_id;
+			// `para_id`, `latest_para_height`, `latest_relay_height`, `latest_relay_hash`,
+			// `frozen_height`, `current_authorities`, `current_set_id`
+			let ClientState {
+				relay_chain,
+				latest_relay_height,
+				latest_relay_hash,
+				frozen_height,
+				latest_para_height,
+				para_id,
+				current_set_id,
+				current_authorities,
+				_phantom,
+			} = substitute_client_state.clone();
+			old_client_state.relay_chain = relay_chain;
+			old_client_state.para_id = para_id;
+			old_client_state.latest_para_height = latest_para_height;
+			old_client_state.latest_relay_height = latest_relay_height;
+			old_client_state.latest_relay_hash = latest_relay_hash;
+			old_client_state.frozen_height = frozen_height;
+			old_client_state.current_authorities = current_authorities.clone();
+			old_client_state.current_set_id = current_set_id;
 
 			if old_client_state != substitute_client_state {
 				return Err(ContractError::Grandpa(
