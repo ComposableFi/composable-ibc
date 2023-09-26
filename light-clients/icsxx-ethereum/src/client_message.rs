@@ -26,6 +26,7 @@ use alloc::{collections::BTreeMap, string::ToString, vec::Vec};
 use anyhow::anyhow;
 use core::convert::Infallible;
 use ibc::Height;
+use sync_committee_primitives::types::AncestorBlock;
 use sync_committee_verifier::LightClientUpdate;
 use tendermint_proto::Protobuf;
 
@@ -34,7 +35,12 @@ pub const ETHEREUM_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.lightclients.ethereum.v
 pub const ETHEREUM_HEADER_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.Header";
 pub const ETHEREUM_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.Misbehaviour";
 
-pub type Header = LightClientUpdate;
+#[derive(Clone, Debug)]
+pub struct Header {
+	pub inner: LightClientUpdate,
+	// ancestors of the finalized block to be verified, may be empty.
+	pub ancestor_blocks: Vec<AncestorBlock>,
+}
 
 /// Misbehaviour type for GRANDPA. If both first and second proofs are valid
 /// (that is, form a valid canonical chain of blocks where on of the chain is a fork of
@@ -95,13 +101,15 @@ impl TryFrom<RawHeader> for Header {
 			.collect::<Result<Vec<_>, _>>()?;
 
 		let header = Header {
-			attested_header,
-			sync_committee_update,
-			finalized_header,
-			execution_payload,
-			finality_proof,
-			sync_aggregate,
-			signature_slot,
+			inner: LightClientUpdate {
+				attested_header,
+				sync_committee_update,
+				finalized_header,
+				execution_payload,
+				finality_proof,
+				sync_aggregate,
+				signature_slot,
+			},
 			ancestor_blocks,
 		};
 		Ok(header)
@@ -110,13 +118,14 @@ impl TryFrom<RawHeader> for Header {
 
 impl From<Header> for RawHeader {
 	fn from(header: Header) -> Self {
-		let attested_header = Some(header.attested_header.into());
-		let sync_committee_update = header.sync_committee_update.map(Into::into);
-		let finalized_header = Some(header.finalized_header.into());
-		let execution_payload = Some(header.execution_payload.into());
-		let finality_proof = Some(header.finality_proof.into());
-		let sync_aggregate = Some(header.sync_aggregate.into());
-		let signature_slot = header.signature_slot;
+		let inner = header.inner;
+		let attested_header = Some(inner.attested_header.into());
+		let sync_committee_update = inner.sync_committee_update.map(Into::into);
+		let finalized_header = Some(inner.finalized_header.into());
+		let execution_payload = Some(inner.execution_payload.into());
+		let finality_proof = Some(inner.finality_proof.into());
+		let sync_aggregate = Some(inner.sync_aggregate.into());
+		let signature_slot = inner.signature_slot;
 		let ancestor_blocks =
 			header.ancestor_blocks.into_iter().map(Into::into).collect::<Vec<_>>();
 

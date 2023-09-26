@@ -51,8 +51,6 @@ use icsxx_ethereum::{
 	client_state::ETHEREUM_CLIENT_STATE_TYPE_URL,
 	consensus_state::ETHEREUM_CONSENSUS_STATE_TYPE_URL,
 };
-#[cfg(feature = "ethereum")]
-use icsxx_ethereum::{BlsVerify, EthereumError, EthereumPublicKey, EthereumSignature};
 use prost::Message;
 use sp_core::{crypto::ByteArray, ed25519, H256};
 use sp_runtime::{
@@ -221,17 +219,6 @@ impl beefy_client_primitives::HostFunctions for HostFunctionsManager {
 	}
 }
 
-#[cfg(feature = "ethereum")]
-impl BlsVerify for HostFunctionsManager {
-	fn verify(
-		_public_keys: &[&EthereumPublicKey],
-		_msg: &[u8],
-		_signature: &EthereumSignature,
-	) -> Result<(), EthereumError> {
-		unimplemented!()
-	}
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, ClientDef)]
 pub enum AnyClient {
 	Grandpa(ics10_grandpa::client_def::GrandpaClient<HostFunctionsManager>),
@@ -345,6 +332,13 @@ impl AnyConsensusState {
 			inner: Box::new(inner),
 		}))
 	}
+
+	pub fn unpack_recursive(&self) -> &Self {
+		match self {
+			Self::Wasm(wasm_state) => wasm_state.inner.unpack_recursive(),
+			c => c,
+		}
+	}
 }
 
 #[derive(Clone, Debug, ClientMessage)]
@@ -389,7 +383,8 @@ impl AnyClientMessage {
 			},
 			#[cfg(feature = "ethereum")]
 			Self::Ethereum(m) => match m {
-				icsxx_ethereum::client_message::ClientMessage::Header(h) => None, /* TODO: header height */
+				icsxx_ethereum::client_message::ClientMessage::Header(h) =>
+					Some(Height::new(0, h.inner.execution_payload.block_number)),
 				icsxx_ethereum::client_message::ClientMessage::Misbehaviour(_) => None,
 			},
 			#[cfg(test)]
@@ -548,10 +543,20 @@ impl From<AnyClientMessage> for Any {
 				value: msg.encode_vec().expect("encode_vec failed"),
 			},
 			#[cfg(feature = "ethereum")]
-			AnyClientMessage::Ethereum(msg) => Any {
-				type_url: ETHEREUM_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec().expect("encode_vec failed"),
+			AnyClientMessage::Ethereum(msg) => match msg {
+				icsxx_ethereum::client_message::ClientMessage::Header(h) => Any {
+					type_url: ETHEREUM_HEADER_TYPE_URL.to_string(),
+					value: h.encode_vec().expect("encode_vec failed"),
+				},
+				icsxx_ethereum::client_message::ClientMessage::Misbehaviour(m) => Any {
+					type_url: ETHEREUM_MISBEHAVIOUR_TYPE_URL.to_string(),
+					value: m.encode_vec().expect("encode_vec failed"),
+				},
 			},
+			// AnyClientMessage::Ethereum(msg) => Any {
+			// 	type_url: ETHEREUM_CLIENT_MESSAGE_TYPE_URL.to_string(),
+			// 	value: msg.encode_vec().expect("encode_vec failed"),
+			// },
 			#[cfg(test)]
 			AnyClientMessage::Mock(_msg) => panic!("MockHeader can't be serialized"),
 		}

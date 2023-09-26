@@ -12,6 +12,7 @@ serde = { version = "1.0.144", default-features = false, features = ["derive"] }
 derive_more = { version = "0.99.17", default-features = false, features = ["from"] }
 hash-db = { version = "0.15.2", default-features = false }
 async-trait = { version = "0.1.53", default-features = false }
+hex = "0.4.3"
 
 # ibc
 ibc = { path = "../../ibc/modules", default-features = false }

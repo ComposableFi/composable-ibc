@@ -37,7 +37,7 @@ use ibc::{
 	},
 	Height,
 };
-use ibc_proto::google::protobuf::Any;
+use ibc_proto::{google::protobuf::Any, ibc::core::channel::v1::QueryNextSequenceReceiveResponse};
 use pallet_ibc::light_clients::AnyClientState;
 use primitives::{
 	error::Error, find_suitable_proof_height_for_client, packet_info_to_packet,
@@ -133,9 +133,15 @@ pub async fn query_ready_and_timed_out_packets(
 			},
 		};
 
-		let next_sequence_recv = sink
-			.query_next_sequence_recv(sink_height, &sink_port_id, &sink_channel_id)
-			.await?;
+		// TODO: query_next_sequence_recv
+		// let next_sequence_recv = sink
+		// 	.query_next_sequence_recv(sink_height, &sink_port_id, &sink_channel_id)
+		// 	.await?;
+		let next_sequence_recv = QueryNextSequenceReceiveResponse {
+			next_sequence_receive: 0,
+			proof: vec![1],
+			proof_height: None,
+		};
 
 		let source_client_state_on_sink =
 			sink.query_client_state(sink_height, source.client_id()).await?;
@@ -229,6 +235,9 @@ pub async fn query_ready_and_timed_out_packets(
 						Error::Custom(format!("Packet height not found for packet {packet:?}"))
 					})?;
 
+
+				    log::info!("sink_height = {sink_height:?}, timeout_height = {:?}", packet.timeout_height);
+
 					if packet.timed_out(&sink_timestamp, sink_height) {
 						timeout_packets_count.fetch_add(1, Ordering::SeqCst);
 						// so we know this packet has timed out on the sink, we need to find the maximum
@@ -306,7 +315,7 @@ pub async fn query_ready_and_timed_out_packets(
 					// creation height on source chain
 					if packet_height > latest_source_height_on_sink.revision_height {
 						// Sink does not have client update required to prove recv packet message
-						log::debug!(target: "hyperspace", "Skipping packet {:?} as sink does not have client update required to prove recv packet message", packet);
+						log::debug!(target: "hyperspace", "Skipping packet as sink does not have client update required to prove recv packet message: {:?}", packet);
 						recv_packets_count.fetch_add(1, Ordering::SeqCst);
 						return Ok(None)
 					}
@@ -324,7 +333,7 @@ pub async fn query_ready_and_timed_out_packets(
 					{
 						proof_height
 					} else {
-						log::trace!(target: "hyperspace", "Skipping packet {:?} as no proof height could be found", packet);
+						log::trace!(target: "hyperspace", "Skipping packet as no proof height could be found: {:?}", packet);
 						return Ok(None)
 					};
 

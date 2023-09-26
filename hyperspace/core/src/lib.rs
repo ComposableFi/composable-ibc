@@ -21,6 +21,7 @@ pub mod logging;
 mod macros;
 pub mod packets;
 pub mod queue;
+#[cfg(feature = "parachain")]
 pub mod substrate;
 mod utils;
 

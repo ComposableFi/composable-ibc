@@ -1,8 +1,22 @@
+// Copyright (C) 2022 ComposableFi.
+// SPDX-License-Identifier: Apache-2.0
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use cosmwasm_std::StdError;
 use derive_more::{Display, From};
 use icsxx_ethereum::error::Error as EthereumError;
 use std::error::Error;
-// use thiserror::Error;
 
 #[derive(From, Display, Debug)]
 pub enum ContractError {
@@ -14,7 +28,7 @@ pub enum ContractError {
 	#[display(fmt = "Storage error")]
 	StorageError,
 	// TODO: use `ics10-grandpa`'s error type here
-	#[display(fmt = "Grandpa error: {_0}")]
+	#[display(fmt = "Ethereum error: {_0}")]
 	#[from(ignore)]
 	Client(String),
 	#[display(fmt = "Protobuf error: {_0}")]

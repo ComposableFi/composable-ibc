@@ -13,10 +13,10 @@ ibc = { path = "../../ibc/modules", default-features = false }
 ibc-proto = { path = "../../ibc/proto", default-features = false }
 
 # local deps
-ethereum-consensus = { git = "https://github.com/polytope-labs/ethereum-consensus", branch = "main", default-features = false }
-sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "c5afca4fbb92cb60dde29c3a89454c288b022d97", default-features = false }
-sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "c5afca4fbb92cb60dde29c3a89454c288b022d97", default-features = false }
+sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "106f53e045cc85c4a8d984c8e295800cebaa2475", default-features = false }
+sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "106f53e045cc85c4a8d984c8e295800cebaa2475", default-features = false }
 ssz-rs = { git = "https://github.com/polytope-labs/ssz-rs", branch = "main" , default-features = false }
+primitive-types = { version = "0.12.0", default-features = false, features = [] }
 
 # crates.io
 prost = { version = "0.11", default-features = false }
@@ -42,9 +42,9 @@ tokio = { version = "1.21.1", features = ["macros"] }
 json = { package = "serde_json", version = "1.0.85" }
 jsonrpsee-ws-client = "0.16.2"
 actix-rt = "2.3.0"
-sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "c5afca4fbb92cb60dde29c3a89454c288b022d97", features = ["testing"] }
-sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "c5afca4fbb92cb60dde29c3a89454c288b022d97", features = ["testing"] }
-sync-committee-prover = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "c5afca4fbb92cb60dde29c3a89454c288b022d97" }
+sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "106f53e045cc85c4a8d984c8e295800cebaa2475" }
+sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "106f53e045cc85c4a8d984c8e295800cebaa2475" }
+sync-committee-prover = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "106f53e045cc85c4a8d984c8e295800cebaa2475" }
 
 [features]
 default = ["std"]
@@ -57,9 +57,6 @@ std = [
     "serde/std",
     "sync-committee-verifier/std",
     "sync-committee-primitives/std",
-    "ethereum-consensus/std",
-    "ethereum-consensus/async",
-    "ethereum-consensus/async-stream",
     "ssz-rs/std",
     "tendermint/std",
 ]

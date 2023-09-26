@@ -45,8 +45,6 @@ where
 	}
 }
 
-pub const IBC_HANDLER_ABI: &str = include_str!("./abi/ibc-handler-abi.json");
-
 /// A wrapper around the IBC handler contract instance
 pub struct IbcHandler<M> {
 	pub(crate) contract: Contract<M>,
@@ -283,16 +281,6 @@ pub fn compile_solc(project_paths: ProjectPathsConfig) -> ProjectCompileOutput {
 	return project_output
 }
 
-/// Create a new contract instance from the given address and ABI.
-#[track_caller]
-pub fn ibc_handler<M>(address: Address, client: Arc<M>) -> Contract<M>
-where
-	M: Middleware,
-{
-	let abi: Abi = serde_json::from_str(IBC_HANDLER_ABI).unwrap();
-	Contract::new(address, abi, client)
-}
-
 pub(crate) struct Counterparty {
 	pub(crate) client_id: String,
 	pub(crate) connection_id: String,
@@ -390,16 +378,4 @@ impl Detokenize for ConnectionEnd {
 			delay_period: tokens[4].clone().into_uint().unwrap().as_u64(),
 		})
 	}
-}
-
-pub const LIGHT_CLIENT_ABI_JSON: &str = include_str!("./abi/light-client-abi.json");
-
-/// Create a new contract instance from the given address and ABI.
-#[track_caller]
-pub fn light_client_contract<M>(address: Address, client: Arc<M>) -> Contract<M>
-where
-	M: Middleware,
-{
-	let abi: Abi = serde_json::from_str(LIGHT_CLIENT_ABI_JSON).unwrap();
-	Contract::new(address, abi, client)
 }

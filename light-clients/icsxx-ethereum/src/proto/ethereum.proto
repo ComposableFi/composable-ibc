@@ -82,7 +82,7 @@ pub struct SyncCommitteeUpdate<const SYNC_COMMITTEE_SIZE: usize> {
 	// actual sync committee
 	pub next_sync_committee: SyncCommittee<SYNC_COMMITTEE_SIZE>,
 	// sync committee, ssz merkle proof.
-	pub next_sync_committee_branch: Vec<Hash32>,
+	pub next_sync_committee_branch: Vec<Node>,
 }
 */
 
@@ -108,13 +108,13 @@ message SyncCommittee {
 pub struct ExecutionPayloadProof {
 	/// The state root in the `ExecutionPayload` which represents the commitment to
 	/// the ethereum world state in the yellow paper.
-	pub state_root: Hash32,
+	pub state_root: H256,
 	/// the block number of the execution header.
 	pub block_number: u64,
 	/// merkle mutli proof for the state_root & block_number in the [`ExecutionPayload`].
-	pub multi_proof: Vec<Hash32>,
+	pub multi_proof: Vec<Node>,
 	/// merkle proof for the `ExecutionPayload` in the [`BeaconBlockBody`].
-	pub execution_payload_branch: Vec<Hash32>,
+	pub execution_payload_branch: Vec<Node>,
 	/// timestamp
 	pub timestamp: u64,
 }
@@ -133,7 +133,7 @@ pub struct FinalityProof {
 	/// The latest  finalized epoch
 	pub epoch: u64,
 	/// Finalized header proof
-	pub finality_branch: Vec<Hash32>,
+	pub finality_branch: Vec<Node>,
 }
 */
 
@@ -165,7 +165,7 @@ pub enum AncestryProof {
 		/// Proof for the header in `state.block_roots`
 		block_roots_proof: BlockRootsProof,
 		/// The proof for the reconstructed `hash_tree_root(state.block_roots)` in [`BeaconState`]
-		block_roots_branch: Vec<Hash32>,
+		block_roots_branch: Vec<Node>,
 	},
 	/// This variant defines the neccessary proofs for a beacon chain header in the
 	/// `state.historical_roots`.
@@ -174,14 +174,14 @@ pub enum AncestryProof {
 		block_roots_proof: BlockRootsProof,
 		/// The proof for the `historical_batch.block_roots`, needed to reconstruct
 		/// `hash_tree_root(historical_batch)`
-		historical_batch_proof: Vec<Hash32>,
+		historical_batch_proof: Vec<Node>,
 		/// The proof for the `hash_tree_root(historical_batch)` in `state.historical_roots`
-		historical_roots_proof: Vec<Hash32>,
+		historical_roots_proof: Vec<Node>,
 		/// The generalized index for the historical_batch in `state.historical_roots`.
 		historical_roots_index: u64,
 		/// The proof for the reconstructed `hash_tree_root(state.historical_roots)` in
 		/// [`BeaconState`]
-		historical_roots_branch: Vec<Hash32>,
+		historical_roots_branch: Vec<Node>,
 	},
 }
  */
@@ -242,7 +242,7 @@ pub struct BlockRootsProof {
 	/// Generalized index of the header in the `block_roots` list.
 	pub block_header_index: u64,
 	/// The proof for the header, needed to reconstruct `hash_tree_root(state.block_roots)`
-	pub block_header_branch: Vec<Hash32>,
+  pub block_header_branch: Vec<Node>,
 }
  */
 

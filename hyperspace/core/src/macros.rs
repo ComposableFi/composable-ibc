@@ -16,7 +16,7 @@
 macro_rules! chains {
 	($(
         $(#[$($meta:meta)*])*
-		$name:ident($config:path, $client:path),
+		$name:ident($config:path, $client:path$(, $cmd:path)?),
 	)*) => {
 		#[derive(Debug, Serialize, Deserialize, Clone)]
 		#[serde(tag = "type", rename_all = "snake_case")]
@@ -45,7 +45,7 @@ macro_rules! chains {
 			)*
 		}
 
-		#[derive(Clone)]
+		#[derive(Clone, Debug)]
 		pub enum AnyAssetId {
 			$(
 				$(#[$($meta)*])*
@@ -70,6 +70,17 @@ macro_rules! chains {
 			)*
 			#[error("{0}")]
 			Other(String),
+		}
+
+		#[derive(Debug, Clone, clap::Parser)]
+		pub enum AnyCmd {
+			$(
+				$(#[$($meta)*])*
+				$(
+				#[command(subcommand)]
+				$name($cmd),
+				)?
+			)*
 		}
 
 		impl From<anyhow::Error> for AnyError {
@@ -1042,7 +1053,7 @@ macro_rules! chains {
 				let maybe_code_id = match self {
 					$(
 						$(#[$($meta)*])*
-						Self::$name(chain) => Option::<CodeId>::None,//chain.wasm_code_id.as_ref(),
+						Self::$name(chain) => chain.wasm_code_id.as_ref(),
 					)*
 				};
 				let maybe_code_id =
@@ -1056,7 +1067,7 @@ macro_rules! chains {
 					$(
 						$(#[$($meta)*])*
 						Self::$name(chain) => {
-							// chain.wasm_code_id = Some(code_id);
+							chain.wasm_code_id = Some(code_id);
 						},
 					)*
 				}

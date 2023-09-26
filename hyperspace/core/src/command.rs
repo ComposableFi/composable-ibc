@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::{
-	chain::{AnyConfig, Config, CoreConfig},
+	chain::{AnyCmd, AnyConfig, Config, CoreConfig},
 	fish, relay, Mode,
 };
 use anyhow::{anyhow, Result};
@@ -51,6 +51,13 @@ pub enum Subcommand {
 	CreateConnection(Cmd),
 	#[clap(name = "create-channel", about = "Creates a channel on the specified port")]
 	CreateChannel(Cmd),
+	#[clap(name = "client", about = "Client commands")]
+	Client {
+		#[command(subcommand)]
+		client: AnyCmd,
+		#[command(flatten)]
+		cmd: Cmd,
+	},
 }
 
 #[derive(Debug, Clone, Parser)]

@@ -1,51 +1,31 @@
 #![allow(dead_code)]
 
-use cast::hashbrown::HashSet;
 use elliptic_curve::pkcs8::der::pem;
-use std::{
-	collections::HashMap,
-	fs::File,
-	iter::once,
-	path::{Path, PathBuf},
-	sync::Arc,
-	time::Duration,
-};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use crate::{
 	config::EthereumClientConfig,
 	contract::UnwrapContractError,
-	utils::{DeployYuiIbc, FacetCut, FacetCutAction, ProviderImpl},
+	utils::{DeployYuiIbc, ProviderImpl},
 };
 use ethers::{
-	abi::{Detokenize, Token, Tokenize},
-	contract::ContractFactory,
-	core::{rand::rngs::ThreadRng, utils::Anvil},
+	abi::{Detokenize, Tokenize},
+	core::utils::Anvil,
 	middleware::SignerMiddleware,
-	prelude::{ContractInstance, *},
+	prelude::*,
 	providers::{Http, Middleware, Provider},
 	signers::{LocalWallet, Signer},
 	utils::AnvilInstance,
 };
-use ethers_solc::{
-	artifacts::{
-		output_selection::OutputSelection, DebuggingSettings, Libraries, Optimizer,
-		OptimizerDetails, RevertStrings, Settings, SettingsMetadata, StorageLayout,
-	},
-	Artifact, ConfigurableContractArtifact, EvmVersion, Project, ProjectCompileOutput,
-	ProjectPathsConfig, SolcConfig,
-};
+use ethers_solc::Artifact;
 use futures::SinkExt;
-use ibc::{
-	core::{
-		ics04_channel::packet::Packet,
-		ics24_host::identifier::{ChannelId, PortId},
-	},
-	timestamp::Timestamp,
-	Height,
-};
-use tracing::log;
+use ibc::core::ics24_host::identifier::ClientId;
 
 pub const USE_GETH: bool = true;
+
+pub const ETH_NODE_PORT: u16 = 8545;
+pub const ETH_NODE_PORT_WS: u16 = 8546;
+pub const BEACON_NODE_PORT: u16 = 3500;
 
 #[track_caller]
 pub fn yui_ibc_solidity_path() -> PathBuf {
@@ -60,13 +40,13 @@ pub fn yui_ibc_solidity_path() -> PathBuf {
 }
 
 #[track_caller]
-pub fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http>, LocalWallet>>) {
+pub async fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http>, LocalWallet>>) {
 	let anvil = Anvil::new().spawn();
 	println!("{:?}", std::env::current_dir().unwrap());
 	let wallet: LocalWallet = if USE_GETH {
 		LocalWallet::decrypt_keystore(
 			"keys/0x73db010c3275eb7a92e5c38770316248f4c644ee",
-			option_env!("KEY_PASS").expect("KEY_PASS not set"),
+			std::env::var("KEY_PASS").expect("KEY_PASS not set"),
 		)
 		.unwrap()
 		.into()
@@ -74,123 +54,17 @@ pub fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http>, Loc
 		anvil.keys()[0].clone().into()
 	};
 
-	let endpoint = if USE_GETH { "http://localhost:6001".to_string() } else { anvil.endpoint() };
+	let endpoint =
+		if USE_GETH { format!("http://localhost:{}", ETH_NODE_PORT) } else { anvil.endpoint() };
 	let provider = Provider::<Http>::try_from(endpoint)
 		.unwrap()
 		.interval(Duration::from_millis(10u64));
-	let chain_id = if USE_GETH { 4242u64 } else { anvil.chain_id() };
+	let chain_id =
+		if USE_GETH { provider.get_chainid().await.unwrap().as_u64() } else { anvil.chain_id() };
 	let client = SignerMiddleware::new(provider, wallet.with_chain_id(chain_id));
 	let client = Arc::new(client);
 
 	(anvil, client)
-}
-
-#[track_caller]
-pub fn compile_solc(project_paths: ProjectPathsConfig) -> ProjectCompileOutput {
-	// custom solc config to solve Yul-relatated compilation errors
-	let mut selection = OutputSelection::default_output_selection();
-	// selection
-	// 	.0
-	// 	.get_mut("*")
-	// 	.unwrap()
-	// 	.get_mut("*")
-	// 	.unwrap()
-	// 	.push("storageLayout".to_string());
-	let solc_config = SolcConfig {
-		settings: Settings {
-			stop_after: None,
-			remappings: vec![],
-			optimizer: Optimizer {
-				enabled: Some(true),
-				runs: Some(5),
-				details: Some(OptimizerDetails {
-					peephole: Some(true),
-					inliner: Some(true),
-					jumpdest_remover: Some(true),
-					order_literals: Some(true),
-					deduplicate: Some(true),
-					cse: Some(true),
-					constant_optimizer: Some(true),
-					yul: Some(false),
-					yul_details: None,
-				}),
-			},
-			model_checker: None,
-			metadata: None,
-			output_selection: selection,
-			evm_version: Some(EvmVersion::Paris),
-			via_ir: Some(false),
-			// debug: Some(DebuggingSettings {
-			// 	revert_strings: Some(RevertStrings::Debug),
-			// 	debug_info: vec!["location".to_string()],
-			// }),
-			debug: None,
-			libraries: Libraries { libs: Default::default() },
-		},
-	};
-
-	let mut project = Project::builder()
-		.paths(project_paths)
-		.ephemeral()
-		.no_artifacts()
-		.solc_config(solc_config)
-		.build()
-		.expect("project build failed");
-
-	// TODO: figure out how to enable it in the config
-	// project.artifacts.additional_values.storage_layout = true;
-	// project.artifacts.additional_files.abi = true;
-	// project.solc.args.push("--storage-layout".to_string());
-
-	let project_output = project.compile().expect("compilation failed");
-
-	if project_output.has_compiler_errors() {
-		for err in project_output.output().errors {
-			eprintln!("error: {}", err);
-		}
-		panic!("compiler errors");
-	}
-
-	return project_output
-}
-
-/// Uses solc to compile the yui-ibc-solidity contracts.
-///
-/// first argument is the path to the yui-ibc-solidity repo.
-/// the second argument is the path to the solidity sources, relative to the first argument.
-///
-/// so if you have the yui-ibc-solidity as the path to yui then sources should be "contracts/core"
-/// for IBCHandler or "contracts/clients" for the clients.
-#[track_caller]
-pub fn compile_yui(path_to_yui: &Path, sources: &str) -> ProjectCompileOutput {
-	assert!(
-		path_to_yui.exists(),
-		"path to yui-ibc-solidity does not exist: {}",
-		path_to_yui.display()
-	);
-
-	let project_paths = ProjectPathsConfig::builder()
-		.root(&path_to_yui)
-		.sources(path_to_yui.join(sources))
-		.build()
-		.unwrap();
-
-	compile_solc(project_paths)
-}
-
-#[allow(dead_code)]
-pub async fn deploy_contract<M, T>(
-	contract: &ConfigurableContractArtifact,
-	constructor_args: T,
-	client: Arc<M>,
-) -> ContractInstance<Arc<M>, M>
-where
-	M: Middleware,
-	T: abi::Tokenize,
-{
-	let (abi, bytecode, _) = contract.clone().into_parts();
-	let mut factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
-	factory.deploy(constructor_args).unwrap().send().await.unwrap()
 }
 
 pub mod mock {
@@ -240,161 +114,12 @@ pub mod mock {
 	}
 }
 
-fn get_selectors<M>(contract: &ContractInstance<Arc<M>, M>) -> Vec<(String, [u8; 4])>
-where
-	M: Middleware,
-{
-	let signatures = contract.abi().functions.keys().cloned().collect::<Vec<_>>();
-	signatures
-		.into_iter()
-		.filter(|val| val != "init(bytes)")
-		.map(|val| (val.clone(), contract.abi().function(&val).unwrap().short_signature()))
-		.collect()
-}
-
-pub async fn deploy_yui_ibc<M>(
-	project_output: &ProjectCompileOutput,
-	diamond_project_output: &ProjectCompileOutput,
-	client: Arc<M>,
-) -> DeployYuiIbc<Arc<M>, M>
-where
-	M: Middleware,
-{
-	let facet_names = [
-		"IBCClient",
-		"IBCConnection",
-		"IBCChannelHandshake",
-		"IBCPacket",
-		"IBCQuerier",
-		"DiamondCutFacet",
-		"DiamondLoupeFacet",
-		"OwnershipFacet",
-	];
-
-	project_output.artifacts().for_each(|(name, artifact)| {
-		let size = artifact.bytecode.as_ref().unwrap().object.as_bytes().unwrap().len();
-		let max = 24 * 1024;
-		if size > max {
-			panic!("{} size is too big: {}/{}", name, size, max);
-		}
-		log::info!("{} size: {}/{}", name, size, max);
-	});
-	diamond_project_output.artifacts().for_each(|(name, artifact)| {
-		let size = artifact.bytecode.as_ref().unwrap().object.as_bytes().unwrap().len();
-		let max = 24 * 1024;
-		if size > max {
-			panic!("{} size is too big: {}/{}", name, size, max);
-		}
-		log::info!("{} size: {}/{}", name, size, max);
-	});
-
-	let acc = client.default_sender().unwrap();
-
-	println!("Sender account: {acc:?}");
-
-	let contract = diamond_project_output.find_first("DiamondInit").unwrap();
-	let (abi, bytecode, _) = contract.clone().into_parts();
-	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
-	let diamond_init = factory.deploy(()).unwrap().send().await.unwrap();
-	println!("Diamond init address: {:?}", diamond_init.address());
-
-	let mut sigs = HashMap::<[u8; 4], (String, String)>::new();
-	let mut facet_cuts = vec![];
-	let mut deployed_facets = vec![];
-	for facet_name in facet_names {
-		let contract = project_output
-			.find_first(facet_name)
-			.or_else(|| diamond_project_output.find_first(facet_name))
-			.unwrap();
-		let (abi, bytecode, _) = contract.clone().into_parts();
-		let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
-		let facet = factory.deploy(()).unwrap().send().await.unwrap();
-		let facet_address = facet.address();
-		println!("Deployed {facet_name} on {facet_address:?}");
-		deployed_facets.push(facet.clone());
-		let selectors = get_selectors(&facet);
-
-		for (name, selector) in &selectors {
-			if sigs.contains_key(selector) {
-				let (contract_name, fn_name) = &sigs[selector];
-				panic!(
-					"duplicate selector: {}:{} and {}:{}",
-					contract_name, fn_name, facet_name, name
-				);
-			}
-			sigs.insert(*selector, (facet_name.to_owned(), name.clone()));
-		}
-
-		let facet_cut = FacetCut { address: facet_address, action: FacetCutAction::Add, selectors };
-		facet_cuts.push(facet_cut);
-	}
-	let init_calldata = diamond_init.method::<_, ()>("init", ()).unwrap().calldata().unwrap();
-
-	let contract = diamond_project_output.find_first("Diamond").unwrap();
-	let (abi, bytecode, _) = contract.clone().into_parts();
-	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
-	let diamond = factory
-		.deploy(Token::Tuple(vec![
-			Token::Array(facet_cuts.clone().into_iter().map(|x| x.into_token()).collect()),
-			Token::Tuple(vec![
-				Token::Address(acc),
-				Token::Address(diamond_init.address()),
-				Token::Bytes(init_calldata.0.into()),
-			]),
-		]))
-		.unwrap()
-		.send()
-		.await
-		.unwrap();
-
-	// std::fs::ReadDir::new().
-	let predefined_layout = serde_json::from_reader::<_, StorageLayout>(
-		File::open("/Users/vmark/work/centauri-private/hyperspace/ethereum/src/storage_layout/ibc_storage.json").unwrap(),
-	)
-	.expect("failed to read predefined storage layout");
-
-	let storage_layout = project_output
-		.compiled_artifacts()
-		.iter()
-		.chain(diamond_project_output.compiled_artifacts())
-		.flat_map(|(_, artifact)| {
-			artifact.into_iter().flat_map(|(an, artifact)| {
-				println!("artifact name {an}");
-				artifact
-			})
-		})
-		.filter_map(|ar| ar.artifact.storage_layout.clone())
-		.chain(once(predefined_layout))
-		.fold(StorageLayout { storage: vec![], types: Default::default() }, |mut acc, layout| {
-			// let mut len0 = acc.storage.len();
-			// let mut len1 = layout.storage.len();
-			acc.storage.extend(layout.storage);
-			// assert_eq!(acc.storage.len(), len0 + len1, "duplicated storage");
-
-			let len0 = acc.types.len();
-			let len1 = layout.types.len();
-			acc.types.extend(layout.types);
-			assert_eq!(acc.types.len(), len0 + len1, "duplicated type");
-			acc
-		});
-
-	// dbg!(&storage_layout);
-	let tendermint_client = diamond.clone();
-
-	DeployYuiIbc {
-		diamond,
-		facet_cuts,
-		deployed_facets,
-		storage_layout,
-		tendermint: tendermint_client,
-	}
-}
-
 pub async fn hyperspace_ethereum_client_fixture(
 	anvil: &AnvilInstance,
 	yui_ibc: DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>,
 ) -> EthereumClientConfig {
-	let endpoint = if USE_GETH { "http://localhost:6001".to_string() } else { anvil.endpoint() };
+	let endpoint =
+		if USE_GETH { format!("http://localhost:{}", ETH_NODE_PORT) } else { anvil.endpoint() };
 	let wallet_path = if USE_GETH {
 		Some("keys/0x73db010c3275eb7a92e5c38770316248f4c644ee".to_string())
 	} else {
@@ -415,25 +140,33 @@ pub async fn hyperspace_ethereum_client_fixture(
 		None
 	};
 
+	let jwt_secret_path =
+		if !USE_GETH { None } else { Some("../eth-pos-devnet/execution/jwtsecret".to_string()) };
+
 	EthereumClientConfig {
 		http_rpc_url: endpoint.parse().unwrap(),
-		ws_rpc_url: "ws://localhost:5001".parse().unwrap(),
-		beacon_rpc_url: Default::default(),
-		ibc_handler_address: yui_ibc.diamond.address(),
-		tendermint_client_address: yui_ibc.tendermint.address(),
+		ws_rpc_url: format!("ws://127.0.0.1:{}", ETH_NODE_PORT_WS).parse().unwrap(),
+		beacon_rpc_url: format!("http://localhost:{}", BEACON_NODE_PORT).parse().unwrap(),
 		mnemonic: None,
 		max_block_weight: 1,
 		private_key: wallet,
 		private_key_path: wallet_path,
-		name: "mock-ethereum-client".into(),
-		client_id: Some(
-			ibc::core::ics24_host::identifier::ClientId::new("07-tendermint", 0).unwrap(),
-		),
+		name: "ethereum-client".into(),
+		client_id: Some(ClientId::new("07-tendermint", 0).unwrap()),
 		connection_id: None,
 		channel_whitelist: vec![],
-		commitment_prefix: "".into(),
+		commitment_prefix: "424242".into(),
 		wasm_code_id: None,
+		bank_address: yui_ibc.bank.clone().map(|b| b.address()),
+		diamond_address: Some(yui_ibc.diamond.address()),
+		tendermint_address: yui_ibc.tendermint.clone().map(|x| x.address()),
+		diamond_facets: yui_ibc
+			.deployed_facets
+			.iter()
+			.map(|f| (f.abi_name(), f.contract().address()))
+			.collect(),
 		yui: Some(yui_ibc),
 		client_type: "07-tendermint".into(),
+		jwt_secret_path,
 	}
 }

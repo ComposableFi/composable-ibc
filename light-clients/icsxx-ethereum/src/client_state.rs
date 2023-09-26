@@ -21,14 +21,13 @@ use crate::{
 use alloc::{format, string::ToString, vec::Vec};
 use anyhow::anyhow;
 use core::{fmt::Debug, marker::PhantomData, time::Duration};
-use ethereum_consensus::primitives::Hash32;
 use ibc::{
 	core::{ics02_client::client_state::ClientType, ics24_host::identifier::ChainId},
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
 use serde::{Deserialize, Serialize};
-use sync_committee_verifier::{BlsVerify, LightClientState};
+use sync_committee_verifier::LightClientState;
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA ClientState
@@ -76,7 +75,8 @@ impl<H: Clone> ClientState<H> {
 
 impl<H> ClientState<H> {
 	pub fn latest_height(&self) -> Height {
-		Height::new(self.inner.latest_finalized_epoch.into(), self.latest_height.into())
+		Height::new(0, self.latest_height.into())
+		// Height::new(self.inner.latest_finalized_epoch.into(), self.latest_height.into())
 	}
 
 	pub fn chain_id(&self) -> ChainId {
@@ -124,7 +124,7 @@ impl<H> ClientState<H> {
 
 impl<H> ibc::core::ics02_client::client_state::ClientState for ClientState<H>
 where
-	H: Send + Sync + Clone + Debug + Default + Eq + BlsVerify,
+	H: Send + Sync + Clone + Debug + Default + Eq,
 {
 	type UpgradeOptions = UpgradeOptions;
 	type ClientDef = EthereumClient<H>;

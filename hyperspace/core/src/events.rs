@@ -100,11 +100,11 @@ pub async fn parse_events(
 						Height::new(proof_height.revision_number, proof_height.revision_height);
 					let client_state_proof =
 						CommitmentProofBytes::try_from(client_state_response.proof).ok();
-
 					let client_state = client_state_response
 						.client_state
 						.map(AnyClientState::try_from)
 						.ok_or_else(|| Error::Custom("Client state is empty".to_string()))??;
+					log::info!(target: "hyperspace_ethereum", "ph={proof_height}, client_state.latest_height()={}", client_state.latest_height());
 					let consensus_proof = source
 						.query_client_consensus(
 							open_init.height(),
@@ -288,8 +288,7 @@ pub async fn parse_events(
 								channel_id,
 								open_init.port_id.clone()
 							))
-						})?)
-						.expect("Channel end decoding should not fail");
+						})?)?;
 					let counterparty = channel_end.counterparty();
 
 					let connection_response = source

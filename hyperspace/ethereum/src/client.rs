@@ -1,15 +1,19 @@
 use crate::{
 	config::EthereumClientConfig,
+	contract::UnwrapContractError,
 	jwt::{JwtAuth, JwtKey},
 	utils::{DeployYuiIbc, ProviderImpl},
 };
+use anyhow::Error;
 use async_trait::async_trait;
 use cast::revm::db;
 use ethers::{
 	abi::{AbiEncode, Address, ParamType, Token},
+	core::k256,
 	prelude::{
 		coins_bip39::English, signer::SignerMiddlewareError, Authorization, BlockId, BlockNumber,
-		EIP1186ProofResponse, Filter, LocalWallet, Log, MnemonicBuilder, NameOrAddress, H256,
+		EIP1186ProofResponse, Filter, LocalWallet, Log, MnemonicBuilder, NameOrAddress,
+		SignerMiddleware, Wallet, H256,
 	},
 	providers::{Http, Middleware, Provider, ProviderError, ProviderExt, Ws},
 	signers::Signer,
@@ -21,20 +25,26 @@ use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
 	core::ics24_host::{
 		error::ValidationError,
-		identifier::{ChannelId, ClientId, PortId},
+		identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
 	Height,
 };
 use ibc_primitives::Timeout;
 use once_cell::sync::Lazy;
 use primitives::CommonClientState;
-use std::{future::Future, ops::Add, pin::Pin, str::FromStr, sync::Arc};
+use std::{
+	collections::HashSet,
+	convert::Infallible,
+	future::Future,
+	ops::Add,
+	pin::Pin,
+	str::FromStr,
+	sync::{Arc, Mutex},
+};
+use sync_committee_prover::SyncCommitteeProver;
 use thiserror::Error;
 
-pub type EthRpcClient = ethers::prelude::SignerMiddleware<
-	ethers::providers::Provider<Http>,
-	ethers::signers::Wallet<ethers::prelude::k256::ecdsa::SigningKey>,
->;
+pub type EthRpcClient = SignerMiddleware<Provider<Http>, Wallet<k256::ecdsa::SigningKey>>;
 pub(crate) type WsEth = Provider<Ws>;
 
 pub static IBC_STORAGE_SLOT: Lazy<U256> =
@@ -54,7 +64,12 @@ pub struct EthereumClient {
 	/// Common relayer data
 	pub common_state: CommonClientState,
 	pub yui: DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>,
-	pub prev_state: Arc<std::sync::Mutex<(Vec<u8>, Vec<u8>)>>,
+	/// Light client id on counterparty chain
+	pub client_id: Arc<Mutex<Option<ClientId>>>,
+	/// Connection Id
+	pub connection_id: Arc<Mutex<Option<ConnectionId>>>,
+	/// Channels cleared for packet relay
+	pub channel_whitelist: Arc<Mutex<HashSet<(ChannelId, PortId)>>>,
 }
 
 pub type MiddlewareErrorType = SignerMiddlewareError<
@@ -69,11 +84,35 @@ pub enum ClientError {
 	#[error("provider-error: {0}: {0}")]
 	ProviderError(http::Uri, ProviderError),
 	#[error("Ethereum error: {0}")]
-	Ethers(#[from] ethers::providers::ProviderError),
+	Ethers(#[from] ProviderError),
 	#[error("middleware-error: {0}")]
 	MiddlewareError(MiddlewareErrorType),
+	#[error("reqwest error: {0}")]
+	ReqwestError(#[from] reqwest::Error),
+	#[error("Merkleization error: {0}")]
+	MerkleizationError(#[from] ssz_rs::MerkleizationError),
+	#[error("ABI error: {0}")]
+	AbiError(#[from] ethers::abi::Error),
+	#[error("Contract ABI error: {0}")]
+	ContractAbiError(#[from] ethers::contract::AbiError),
+	#[error("Contract error: {0}")]
+	ContractError(
+		#[from]
+		ethers::contract::ContractError<
+			SignerMiddleware<Provider<Http>, Wallet<ecdsa::SigningKey<k256::Secp256k1>>>,
+		>,
+	),
+	#[error("IBC Transfer: {0}")]
+	IbcTransfer(#[from] ibc::applications::transfer::error::Error),
 	#[error("no-storage-proof: there was no storage proof for the given storage index")]
 	NoStorageProof,
+	#[error("Tendermint error: {0}")]
+	Tendermint(#[from] tendermint::Error),
+	/// Errors associated with ics-02 client
+	#[error("Ibc client error: {0}")]
+	IbcClient(#[from] ibc::core::ics02_client::error::Error),
+	#[error("Ibc channel error")]
+	IbcChannel(#[from] ibc::core::ics04_channel::error::Error),
 	#[error("{0}")]
 	Other(String),
 }
@@ -87,6 +126,18 @@ impl From<ValidationError> for ClientError {
 impl From<String> for ClientError {
 	fn from(value: String) -> Self {
 		Self::Other(value)
+	}
+}
+
+impl From<anyhow::Error> for ClientError {
+	fn from(value: Error) -> Self {
+		Self::Other(value.to_string())
+	}
+}
+
+impl From<Infallible> for ClientError {
+	fn from(value: Infallible) -> Self {
+		match value {}
 	}
 }
 
@@ -104,44 +155,35 @@ pub struct AckPacket {
 
 impl EthereumClient {
 	pub async fn new(mut config: EthereumClientConfig) -> Result<Self, ClientError> {
-		let client = Provider::<Http>::try_from(config.http_rpc_url.to_string())
-			.map_err(|_| ClientError::UriParseError(config.http_rpc_url.clone()))?;
+		let client = config.client().await?;
 
-		let chain_id = client.get_chainid().await.unwrap();
-
-		let wallet: LocalWallet = if let Some(mnemonic) = &config.mnemonic {
-			MnemonicBuilder::<English>::default()
-				.phrase(mnemonic.as_str())
-				.build()
-				.unwrap()
-				.with_chain_id(chain_id.as_u64())
-		} else if let Some(path) = config.private_key_path.take() {
-			LocalWallet::decrypt_keystore(
-				path,
-				option_env!("KEY_PASS").expect("KEY_PASS is not set"),
-			)
-			.unwrap()
-			.into()
-		} else if let Some(private_key) = config.private_key.take() {
-			let key = elliptic_curve::SecretKey::<ethers::prelude::k256::Secp256k1>::from_sec1_pem(
-				private_key.as_str(),
-			)
-			.unwrap();
-			key.into()
-		} else {
-			panic!("no private key or mnemonic provided")
+		let yui = match config.yui.take() {
+			None => DeployYuiIbc::<_, _>::from_addresses(
+				client.clone(),
+				config.diamond_address.clone().ok_or_else(|| {
+					ClientError::Other("diamond address must be provided".to_string())
+				})?,
+				Some(config.tendermint_address.clone().ok_or_else(|| {
+					ClientError::Other("tendermint address must be provided".to_string())
+				})?),
+				Some(config.bank_address.clone().ok_or_else(|| {
+					ClientError::Other("bank address must be provided".to_string())
+				})?),
+				config.diamond_facets.clone(),
+			)?,
+			Some(yui) => yui,
 		};
-
-		let client = ethers::middleware::SignerMiddleware::new(client, wallet);
-
-		let yui = config.yui.take().unwrap();
 		Ok(Self {
-			http_rpc: Arc::new(client),
+			http_rpc: client,
 			ws_uri: config.ws_rpc_url.clone(),
-			config,
 			common_state: Default::default(),
 			yui,
-			prev_state: Arc::new(std::sync::Mutex::new((vec![], vec![]))),
+			client_id: Arc::new(Mutex::new(config.client_id.clone())),
+			connection_id: Arc::new(Mutex::new(config.connection_id.clone())),
+			channel_whitelist: Arc::new(Mutex::new(
+				config.channel_whitelist.clone().into_iter().collect(),
+			)),
+			config,
 		})
 	}
 
@@ -149,21 +191,32 @@ impl EthereumClient {
 		self.http_rpc.clone()
 	}
 
-	pub async fn websocket_provider(&self) -> Result<Provider<Ws>, ClientError> {
-		let secret = std::fs::read_to_string(format!(
-			"{}/.lighthouse/local-testnet/geth_datadir1/geth/jwtsecret",
-			env!("HOME"),
-		))
-		.unwrap();
-		println!("secret = {secret}");
-		let secret = JwtKey::from_slice(&hex::decode(&secret[2..]).unwrap()).expect("oops");
-		let jwt_auth = JwtAuth::new(secret, None, None);
-		let token = jwt_auth.generate_token().unwrap();
+	pub fn prover(&self) -> SyncCommitteeProver {
+		let mut string = self.config.beacon_rpc_url.to_string();
+		string.pop();
+		SyncCommitteeProver::new(string)
+	}
 
-		let auth = Authorization::bearer(dbg!(token));
-		Provider::<Ws>::connect_with_auth(self.ws_uri.to_string(), auth)
-			.await
-			.map_err(|e| ClientError::ProviderError(self.ws_uri.clone(), ProviderError::from(e)))
+	pub async fn websocket_provider(&self) -> Result<Provider<Ws>, ClientError> {
+		if let Some(secret_path) = &self.config.jwt_secret_path {
+			let secret = std::fs::read_to_string(secret_path).map_err(|e| {
+				ClientError::Other(format!("jwtsecret not found. Search for 'execution/jwtsecret' in the code and replace it with your local path. {e}"))
+			})?;
+			let secret = JwtKey::from_slice(&hex::decode(&secret[2..]).unwrap()).expect("oops");
+			let jwt_auth = JwtAuth::new(secret, None, None);
+			let token = jwt_auth.generate_token().unwrap();
+
+			let auth = Authorization::bearer(token);
+			Provider::<Ws>::connect_with_auth(self.ws_uri.to_string(), auth)
+				.await
+				.map_err(|e| {
+					ClientError::ProviderError(self.ws_uri.clone(), ProviderError::from(e))
+				})
+		} else {
+			Provider::<Ws>::connect(self.ws_uri.to_string()).await.map_err(|e| {
+				ClientError::ProviderError(self.ws_uri.clone(), ProviderError::from(e))
+			})
+		}
 	}
 
 	pub async fn generated_channel_identifiers(
@@ -174,7 +227,7 @@ impl EthereumClient {
 			.from_block(BlockNumber::Earliest)
 			// .from_block(from_block)
 			.to_block(BlockNumber::Latest)
-			.address(self.config.ibc_handler_address)
+			.address(self.yui.diamond.address())
 			.event("OpenInitChannel(string,string)");
 
 		let logs = self.client().get_logs(&filter).await.unwrap();
@@ -196,7 +249,7 @@ impl EthereumClient {
 		let filter = Filter::new()
 			.from_block(from_block)
 			.to_block(BlockNumber::Latest)
-			.address(self.config.ibc_handler_address)
+			.address(self.yui.diamond.address())
 			.event("GeneratedClientIdentifier(string)");
 
 		let logs = self.client().get_logs(&filter).await.unwrap();
@@ -217,7 +270,7 @@ impl EthereumClient {
 		let filter = Filter::new()
 			.from_block(from_block)
 			.to_block(BlockNumber::Latest)
-			.address(self.config.ibc_handler_address)
+			.address(self.yui.diamond.address())
 			.event("GeneratedConnectionIdentifier(string)");
 
 		let logs = self.client().get_logs(&filter).await.unwrap();
@@ -238,7 +291,7 @@ impl EthereumClient {
 		let filter = Filter::new()
 			.from_block(from_block)
 			.to_block(BlockNumber::Latest)
-			.address(self.config.ibc_handler_address)
+			.address(self.yui.diamond.address())
 			.event("AcknowledgePacket((uint64,string,string,string,string,bytes,(uint64,uint64),uint64),bytes)");
 
 		let logs = self.client().get_logs(&filter).await.unwrap();
@@ -339,7 +392,7 @@ impl EthereumClient {
 		let filter = Filter::new()
 			.from_block(from)
 			.to_block(to)
-			.address(self.config.ibc_handler_address)
+			.address(self.yui.diamond.address())
 			.event(event_name);
 		let client = self.client().clone();
 
@@ -368,7 +421,7 @@ impl EthereumClient {
 		.unwrap();
 
 		let client = self.client().clone();
-		let address = self.config.ibc_handler_address.clone();
+		let address = self.yui.diamond.address().clone();
 
 		async move {
 			Ok(client
@@ -398,7 +451,7 @@ impl EthereumClient {
 			cast::SimpleCast::index("bytes32", dbg!(&var_name), dbg!(&storage_index)).unwrap();
 
 		let client = self.client().clone();
-		let address = self.config.ibc_handler_address.clone();
+		let address = self.yui.diamond.address().clone();
 
 		dbg!(&address);
 		dbg!(&H256::from_str(&index).unwrap());
@@ -438,7 +491,7 @@ impl EthereumClient {
 		let index = cast::SimpleCast::index("bytes32", &key2_hashed_hex, &key2_hashed_hex).unwrap();
 
 		let client = self.client().clone();
-		let address = self.config.ibc_handler_address.clone();
+		let address = self.yui.diamond.address().clone();
 
 		async move {
 			client
@@ -513,6 +566,31 @@ impl EthereumClient {
 	}
 
 	#[track_caller]
+	pub fn has_commitment(
+		&self,
+		at: Height,
+		port_id: String,
+		channel_id: String,
+		sequence: u64,
+	) -> impl Future<Output = Result<bool, ClientError>> + '_ {
+		async move {
+			let binding = self
+				.yui
+				.method("hasCommitment", (port_id, channel_id, sequence))
+				.expect("contract is missing hasCommitment");
+
+			let receipt: bool = binding
+				.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+				.call()
+				.await
+				.map_err(|err| todo!())
+				.unwrap();
+
+			Ok(receipt)
+		}
+	}
+
+	#[track_caller]
 	pub fn has_acknowledgement(
 		&self,
 		at: Height,
@@ -543,7 +621,25 @@ impl EthereumClient {
 #[async_trait]
 impl primitives::TestProvider for EthereumClient {
 	async fn send_transfer(&self, params: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
-		todo!()
+		let params = (
+			params.token.denom.to_string(),
+			params.token.amount.as_u256(),
+			params.receiver.to_string(),
+			params.source_port.to_string(),
+			params.source_channel.to_string(),
+			params.timeout_height.revision_height,
+		);
+		let method = self
+			.yui
+			.bank
+			.as_ref()
+			.expect("expected bank module")
+			.method::<_, ()>("sendTransfer", params)?;
+		let _ = method.call().await.unwrap_contract_error();
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		log::info!("Sent transfer. Tx hash: {:?}", receipt.transaction_hash);
+		Ok(())
 	}
 
 	async fn send_ordered_packet(
@@ -551,14 +647,14 @@ impl primitives::TestProvider for EthereumClient {
 		channel_id: ChannelId,
 		timeout: Timeout,
 	) -> Result<(), Self::Error> {
-		todo!()
+		todo!("send_ordered_packet")
 	}
 
 	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
-		todo!()
+		todo!("subscribe_blocks")
 	}
 
 	async fn increase_counters(&mut self) -> Result<(), Self::Error> {
-		todo!()
+		Ok(())
 	}
 }

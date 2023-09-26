@@ -2,6 +2,22 @@
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "ibcHandler_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "delegateTendermintUpdate",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "string",
         "name": "clientId",
         "type": "string"
@@ -44,7 +60,7 @@
                 "type": "uint64"
               }
             ],
-            "internalType": "struct Height.Data",
+            "internalType": "struct HeightData",
             "name": "height",
             "type": "tuple"
           }
@@ -106,7 +122,7 @@
             "type": "uint64"
           }
         ],
-        "internalType": "struct Height.Data",
+        "internalType": "struct HeightData",
         "name": "height",
         "type": "tuple"
       }
@@ -150,7 +166,7 @@
             "type": "uint64"
           }
         ],
-        "internalType": "struct Height.Data",
+        "internalType": "struct HeightData",
         "name": "",
         "type": "tuple"
       },
@@ -183,7 +199,7 @@
             "type": "uint64"
           }
         ],
-        "internalType": "struct Height.Data",
+        "internalType": "struct HeightData",
         "name": "height",
         "type": "tuple"
       }
@@ -207,14 +223,26 @@
   {
     "inputs": [
       {
-        "internalType": "string",
-        "name": "clientId",
-        "type": "string"
-      },
-      {
-        "internalType": "bytes",
-        "name": "clientMessageBytes",
-        "type": "bytes"
+        "components": [
+          {
+            "internalType": "string",
+            "name": "clientId",
+            "type": "string"
+          },
+          {
+            "internalType": "bytes",
+            "name": "clientMessage",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "prevClientState",
+            "type": "bytes"
+          }
+        ],
+        "internalType": "struct IBCMsgsMsgUpdateClient",
+        "name": "msg_",
+        "type": "tuple"
       }
     ],
     "name": "updateClient",
@@ -244,7 +272,7 @@
                 "type": "uint64"
               }
             ],
-            "internalType": "struct Height.Data",
+            "internalType": "struct HeightData",
             "name": "height",
             "type": "tuple"
           }
@@ -282,7 +310,7 @@
             "type": "uint64"
           }
         ],
-        "internalType": "struct Height.Data",
+        "internalType": "struct HeightData",
         "name": "height",
         "type": "tuple"
       },
@@ -314,7 +342,7 @@
             "type": "bytes"
           }
         ],
-        "internalType": "struct Height.VerifyMembershipBytes",
+        "internalType": "struct HeightVerifyMembershipBytes",
         "name": "membershipBytes",
         "type": "tuple"
       },
@@ -332,7 +360,7 @@
         "type": "bool"
       }
     ],
-    "stateMutability": "nonpayable",
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -355,7 +383,7 @@
             "type": "uint64"
           }
         ],
-        "internalType": "struct Height.Data",
+        "internalType": "struct HeightData",
         "name": "height",
         "type": "tuple"
       },
@@ -387,7 +415,7 @@
             "type": "bytes"
           }
         ],
-        "internalType": "struct Height.VerifyMembershipBytes",
+        "internalType": "struct HeightVerifyMembershipBytes",
         "name": "membershipBytes",
         "type": "tuple"
       }

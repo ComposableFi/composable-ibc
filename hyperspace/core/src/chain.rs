@@ -14,17 +14,14 @@
 
 #![allow(unreachable_patterns)]
 
-use crate::{
-	chains,
-	substrate::{
-		default::DefaultConfig, ComposableConfig, PicassoKusamaConfig, PicassoRococoConfig,
-	},
-};
+use crate::chains;
 use async_trait::async_trait;
 #[cfg(feature = "cosmos")]
 use cosmos::client::{CosmosClient, CosmosClientConfig};
 #[cfg(feature = "ethereum")]
 use ethereum::client::EthereumClient;
+#[cfg(feature = "ethereum")]
+use ethereum::cmd::EthereumCmd;
 #[cfg(feature = "ethereum")]
 use ethereum::config::EthereumClientConfig;
 use futures::Stream;
@@ -96,15 +93,18 @@ impl From<String> for AnyError {
 }
 
 chains! {
+	#[cfg(feature = "parachain")]
 	Parachain(ParachainClientConfig, ParachainClient<DefaultConfig>),
-	// Dali(ParachainClientConfig, ParachainClient<DaliConfig>),
+	#[cfg(feature = "parachain")]
 	Composable(ParachainClientConfig, ParachainClient<ComposableConfig>),
+	#[cfg(feature = "parachain")]
 	PicassoRococo(ParachainClientConfig, ParachainClient<PicassoRococoConfig>),
+	#[cfg(feature = "parachain")]
 	PicassoKusama(ParachainClientConfig, ParachainClient<PicassoKusamaConfig>),
 	#[cfg(feature = "cosmos")]
-	Cosmos(CosmosClientConfig, CosmosClient<DefaultConfig>),
+	Cosmos(CosmosClientConfig, CosmosClient<()>),
 	#[cfg(feature = "ethereum")]
-	Ethereum(EthereumClientConfig, EthereumClient),
+	Ethereum(EthereumClientConfig, EthereumClient, EthereumCmd),
 }
 
 fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error> {
