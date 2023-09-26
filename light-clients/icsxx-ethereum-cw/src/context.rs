@@ -21,6 +21,7 @@ use cosmwasm_std::{DepsMut, Env, Storage};
 use ibc::{core::ics26_routing::context::ReaderContext, Height};
 use icsxx_ethereum::{client_state::ClientState, consensus_state::ConsensusState};
 use std::{fmt, fmt::Debug, marker::PhantomData};
+use sync_committee_verifier::BlsVerify;
 
 pub struct Context<'a, H> {
 	pub deps: DepsMut<'a>,

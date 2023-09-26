@@ -44,10 +44,11 @@ use icsxx_ethereum::{
 };
 use prost::Message;
 use std::str::FromStr;
+use sync_committee_verifier::BlsVerify;
 
 impl<'a, H> ClientTypes for Context<'a, H>
 where
-	H: Clone + Eq + Send + Sync + Debug + Default + 'static,
+	H: Clone + Eq + Send + Sync + Debug + Default + BlsVerify + 'static,
 {
 	type AnyClientMessage = ClientMessage;
 	type AnyClientState = ClientState<H>;
@@ -57,7 +58,7 @@ where
 
 impl<'a, H> ClientReader for Context<'a, H>
 where
-	H: Clone + Eq + Send + Sync + Debug + Default + 'static,
+	H: Clone + Eq + Send + Sync + Debug + Default + BlsVerify + 'static,
 {
 	fn client_type(&self, client_id: &ClientId) -> Result<ClientType, Error> {
 		log!(self, "in client : [client_type] >> client_id = {:?}", client_id);
@@ -190,7 +191,7 @@ where
 
 impl<'a, H> ClientKeeper for Context<'a, H>
 where
-	H: Clone + Eq + Send + Sync + Debug + Default + 'static,
+	H: Clone + Eq + Send + Sync + Debug + Default + BlsVerify + 'static,
 {
 	fn store_client_type(
 		&mut self,

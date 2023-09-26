@@ -197,6 +197,10 @@ impl EthereumClient {
 		SyncCommitteeProver::new(string)
 	}
 
+	pub fn client(&self) -> Arc<EthRpcClient> {
+		self.http_rpc.clone()
+	}
+
 	pub async fn websocket_provider(&self) -> Result<Provider<Ws>, ClientError> {
 		if let Some(secret_path) = &self.config.jwt_secret_path {
 			let secret = std::fs::read_to_string(secret_path).map_err(|e| {

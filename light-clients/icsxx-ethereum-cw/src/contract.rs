@@ -301,3 +301,13 @@ where
 		.map_err(|e| ContractError::Client(e.to_string()))?;
 	Ok(to_binary(&ContractResult::success()))
 }
+
+impl BlsVerify for HostFunctions {
+	fn verify(
+		public_keys: &[&ethereum_consensus::crypto::PublicKey],
+		msg: &[u8],
+		signature: &ethereum_consensus::crypto::Signature,
+	) -> Result<(), sync_committee_verifier::error::Error> {
+		todo!()
+	}
+}

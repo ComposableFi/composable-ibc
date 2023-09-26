@@ -22,6 +22,7 @@ use crate::client_message::{ClientMessage, Misbehaviour};
 use alloc::{format, string::ToString, vec, vec::Vec};
 use anyhow::anyhow;
 use core::{fmt::Debug, marker::PhantomData};
+use ethereum_consensus::crypto::{PublicKey, Signature};
 use ibc::{
 	core::{
 		ics02_client::{
@@ -46,7 +47,7 @@ use ibc::{
 	},
 	Height,
 };
-use sync_committee_verifier::{verify_sync_committee_attestation, LightClientState};
+use sync_committee_verifier::{verify_sync_committee_attestation, BlsVerify, LightClientState};
 use tendermint_proto::Protobuf;
 
 // TODO: move this function in a separate crate and remove the one from `light_client_common` crate
@@ -95,7 +96,7 @@ pub struct EthereumClient<T>(PhantomData<T>);
 
 impl<H> ClientDef for EthereumClient<H>
 where
-	H: Clone + Eq + Send + Sync + Debug + Default,
+	H: Clone + Eq + Send + Sync + Debug + Default + BlsVerify,
 {
 	type ClientMessage = ClientMessage;
 	type ClientState = ClientState<H>;
@@ -110,7 +111,7 @@ where
 	) -> Result<(), Ics02Error> {
 		match client_message {
 			ClientMessage::Header(header) => {
-				let _ = verify_sync_committee_attestation(client_state.inner, header.inner)
+				let _ = verify_sync_committee_attestation::<H>(client_state.inner, header.inner)
 					.map_err(|e| Ics02Error::implementation_specific(e.to_string()))?;
 			},
 			ClientMessage::Misbehaviour(Misbehaviour { never }) => match never {},
@@ -434,5 +435,15 @@ where
 		// )
 		// .map_err(Error::Anyhow)?;
 		Ok(())
+	}
+}
+
+impl<H> BlsVerify for EthereumClient<H> {
+	fn verify(
+		public_keys: &[&PublicKey],
+		msg: &[u8],
+		signature: &Signature,
+	) -> Result<(), sync_committee_verifier::error::Error> {
+		todo!()
 	}
 }

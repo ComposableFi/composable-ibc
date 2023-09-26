@@ -219,6 +219,17 @@ impl beefy_client_primitives::HostFunctions for HostFunctionsManager {
 	}
 }
 
+#[cfg(feature = "ethereum")]
+impl BlsVerify for HostFunctionsManager {
+	fn verify(
+		_public_keys: &[&EthereumPublicKey],
+		_msg: &[u8],
+		_signature: &EthereumSignature,
+	) -> Result<(), EthereumError> {
+		unimplemented!()
+	}
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, ClientDef)]
 pub enum AnyClient {
 	Grandpa(ics10_grandpa::client_def::GrandpaClient<HostFunctionsManager>),

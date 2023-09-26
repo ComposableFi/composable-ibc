@@ -20,6 +20,7 @@ use async_trait::async_trait;
 use cosmos::client::{CosmosClient, CosmosClientConfig};
 #[cfg(feature = "ethereum")]
 use ethereum::client::EthereumClient;
+#[cfg(feature = "ethereum")]
 use ethereum::cmd::EthereumCmd;
 #[cfg(feature = "ethereum")]
 use ethereum::config::EthereumClientConfig;
