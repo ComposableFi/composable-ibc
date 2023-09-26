@@ -799,6 +799,8 @@ where
 		.await
 		.unwrap();
 
+	println!("Deployed Diamond on {:?}", diamond.address());
+
 	// let predefined_layout = serde_json::from_reader::<_, StorageLayout>(
 	// 	File::open("/Users/vmark/work/centauri-private/hyperspace/ethereum/src/storage_layout/
 	// ibc_storage.json").unwrap(), )

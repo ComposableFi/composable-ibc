@@ -638,9 +638,7 @@ impl primitives::TestProvider for EthereumClient {
 		let _ = method.call().await.unwrap_contract_error();
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
 		assert_eq!(receipt.status, Some(1.into()));
-		for log in receipt.logs {
-			log::info!("tx.log.t0 = {}", hex::encode(log.topics[0]));
-		}
+		log::info!("Sent transfer. Tx hash: {:?}", receipt.transaction_hash);
 		Ok(())
 	}
 
