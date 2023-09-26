@@ -426,6 +426,7 @@ where
 				);
 				if m {
 					let nonce = self.para_client.tx().account_nonce(&signer.account_id()).await?;
+					// let nonce = self.para_client.tx().next_account_nonce(&signer.account_id()).await?;
 					self.para_client
 						.tx()
 						.create_signed_with_nonce(&call, &signer, nonce + 1, other_params)
@@ -445,11 +446,11 @@ where
 					let t = format!("{:?}", e).contains("Priority is too low");
 					if t {
 						log::warn!("update priority manually");
-						m = true;
+						// m = true;
 					}
 					log::warn!("Failed to submit extrinsic: {:?}. Retrying...", e);
 					count += 1;
-					tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+					tokio::time::sleep(std::time::Duration::from_secs(10)).await;
 				},
 			}
 		};
