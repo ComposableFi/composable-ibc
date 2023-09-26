@@ -6,11 +6,10 @@ pub mod default;
 // pub mod picasso_rococo;
 // pub mod composable;
 
-
-pub use default::DefaultConfig;
-pub use default::DefaultConfig as ComposableConfig;
-pub use default::DefaultConfig as PicassoKusamaConfig;
-pub use default::DefaultConfig as PicassoRococoConfig;
+pub use default::{
+	DefaultConfig, DefaultConfig as ComposableConfig, DefaultConfig as PicassoKusamaConfig,
+	DefaultConfig as PicassoRococoConfig,
+};
 // pub use composable::ComposableConfig;
 // pub use picasso_kusama::PicassoKusamaConfig;
 // pub use picasso_rococo::PicassoRococoConfig;
