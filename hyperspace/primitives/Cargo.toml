@@ -19,7 +19,7 @@ rand = "0.8.5"
 serde = "1.0.163"
 
 # substrate
-subxt = { git = "https://github.com/paritytech/subxt",  tag = "v0.31.0", features = ["substrate-compat"] }
+subxt = { git = "https://github.com/paritytech/subxt",  tag = "v0.29.0", features = ["substrate-compat"] }
 
 # ibc
 ibc = { path = "../../ibc/modules", features = [] }

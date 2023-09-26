@@ -88,7 +88,7 @@ where
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	sp_core::H256: From<T::Hash>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Hash>>::OtherParams:
+	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
@@ -220,7 +220,7 @@ where
 		let call = T::Tx::ibc_deliver(messages.clone());
 		let mut i = 5;
 		let mut res = self.submit_call(call).await;
-		while res.is_err() && i > 0{
+		while res.is_err() && i > 0 {
 			i = i - 1;
 			let call = T::Tx::ibc_deliver(messages.clone());
 			let messages_urls_c = messages_urls.clone();
@@ -405,7 +405,7 @@ where
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	sp_core::H256: From<T::Hash>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Hash>>::OtherParams:
+	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,

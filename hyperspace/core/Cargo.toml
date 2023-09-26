@@ -62,7 +62,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sp-consensus-beefy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-subxt = { git = "https://github.com/paritytech/subxt", tag = "v0.31.0", features = [
+subxt = { git = "https://github.com/paritytech/subxt", tag = "v0.29.0", features = [
     "substrate-compat",
 ] }
 subxt-generated = { path = "../../utils/subxt/generated" }
@@ -81,7 +81,7 @@ cosmos = { path = "../cosmos", package = "hyperspace-cosmos", features = [
 ] }
 
 # substrate
-subxt = { git = "https://github.com/paritytech/subxt", tag = "v0.31.0", features = [
+subxt = { git = "https://github.com/paritytech/subxt", tag = "v0.29.0", features = [
     "substrate-compat",
 ] }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }

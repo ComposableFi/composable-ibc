@@ -1,16 +1,19 @@
 pub mod macros;
 
-pub mod composable;
 // pub mod dali;
 pub mod default;
-pub mod picasso_kusama;
-pub mod picasso_rococo;
+// pub mod picasso_kusama;
+// pub mod picasso_rococo;
+// pub mod composable;
 
-pub use composable::ComposableConfig;
-// pub use dali::DaliConfig;
+
 pub use default::DefaultConfig;
-pub use picasso_kusama::PicassoKusamaConfig;
-pub use picasso_rococo::PicassoRococoConfig;
+pub use default::DefaultConfig as ComposableConfig;
+pub use default::DefaultConfig as PicassoKusamaConfig;
+pub use default::DefaultConfig as PicassoRococoConfig;
+// pub use composable::ComposableConfig;
+// pub use picasso_kusama::PicassoKusamaConfig;
+// pub use picasso_rococo::PicassoRococoConfig;
 
 use codec::{Decode, Encode};
 use light_client_common::config::{AsInner, BeefyAuthoritySetT};

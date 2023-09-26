@@ -46,7 +46,7 @@ ss58-registry = "1.28.0"
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 
 # subxt
-subxt = { git = "https://github.com/paritytech/subxt", tag = "v0.31.0", features = [
+subxt = { git = "https://github.com/paritytech/subxt", tag = "v0.29.0", features = [
 	"substrate-compat",
 ] }
 

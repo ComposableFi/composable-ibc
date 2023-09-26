@@ -43,7 +43,7 @@ use subxt::{
 	tx::Payload,
 	Error, OnlineClient,
 };
-use subxt_generated::picasso_kusama::parachain::api::runtime_types::primitives::currency::CurrencyId;
+use subxt_generated::picasso_kusama::parachain::api::runtime_types::polkadot_parachain::primitives::currency::CurrencyId;
 
 pub mod parachain_subxt {
 	pub use subxt_generated::picasso_kusama::parachain::*;
@@ -188,7 +188,7 @@ impl light_client_common::config::Config for PicassoKusamaConfig {
 
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,
-	) -> Result<<Self::ExtrinsicParams as ExtrinsicParams<Self::Hash>>::OtherParams, Error> {
+	) -> Result<<Self::ExtrinsicParams as ExtrinsicParams<Self::Index, Self::Hash>>::OtherParams, Error> {
 		let params =
 			ParachainExtrinsicsParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
 		Ok(params)
@@ -196,6 +196,7 @@ impl light_client_common::config::Config for PicassoKusamaConfig {
 }
 
 impl subxt::Config for PicassoKusamaConfig {
+	type Index = u32;
 	type Hash = H256;
 	type Hasher = subxt::config::substrate::BlakeTwo256;
 	type AccountId = AccountId32;

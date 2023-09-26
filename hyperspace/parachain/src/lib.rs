@@ -424,21 +424,11 @@ where
 					self.key_type_id.clone(),
 					self.public_key.clone(),
 				);
-				if m {
-					let nonce = self.para_client.tx().account_nonce(&signer.account_id()).await?;
-					// let nonce = self.para_client.tx().next_account_nonce(&signer.account_id()).await?;
-					self.para_client
-						.tx()
-						.create_signed_with_nonce(&call, &signer, nonce + 1, other_params)
-						.unwrap()
-						.submit_and_watch()
-						.await
-				} else {
-					self.para_client
-						.tx()
-						.sign_and_submit_then_watch(&call, &signer, other_params)
-						.await
-				}
+
+				self.para_client
+					.tx()
+					.sign_and_submit_then_watch(&call, &signer, other_params)
+					.await
 			};
 			match res {
 				Ok(progress) => break progress,

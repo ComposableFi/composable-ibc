@@ -119,7 +119,7 @@ where
 		}
 	}
 
-	for i in 0..200{
+	for i in 0..200 {
 		//write the log
 		log::info!(target: "hyperspace", "============ send_channel_close_init_and_assert_channel_close_confirm");
 		//sleap 1 second
@@ -406,13 +406,12 @@ async fn send_channel_close_init_and_assert_channel_close_confirm<A, B>(
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 
 	//
-	for i in 0..30{
+	for i in 0..30 {
 		//write the log
 		log::info!(target: "hyperspace", "============ send_channel_close_init_and_assert_channel_close_confirm");
 		//sleap 1 second
 		tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 	}
-
 
 	chain_a.submit(vec![msg.clone()]).await.unwrap();
 
@@ -469,8 +468,6 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 	};
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
-
-
 
 	chain_a.submit(vec![msg.clone()]).await.unwrap();
 

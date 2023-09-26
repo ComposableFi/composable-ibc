@@ -56,7 +56,7 @@ where
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Hash>>::OtherParams:
+	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as light_client_common::config::Config>::AssetId: Clone,
 	<T as subxt::Config>::AccountId: Send + Sync,
@@ -180,6 +180,7 @@ where
 	) -> Result<(Vec<Any>, Vec<IbcEvent>), anyhow::Error>
 	where
 		<<T as subxt::Config>::ExtrinsicParams as ExtrinsicParams<
+			<T as subxt::Config>::Index,
 			<T as subxt::Config>::Hash,
 		>>::OtherParams: Sync
 			+ Send
