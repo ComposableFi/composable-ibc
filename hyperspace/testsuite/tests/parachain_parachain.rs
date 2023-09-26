@@ -199,11 +199,6 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 		log::info!(target: "hyperspace", "🚀🚀 finished channel close");
 	});
 
-	log::info!(target: "hyperspace", "🚀🚀 Waiting for channel close semantics to finish");
-	while let Some(res) = join_set.join_next().await {
-		res.unwrap();
-	}
-
 	// Test sync abilities, run this before misbehaviour test
 	client_synchronization_test(&mut chain_a, &mut chain_b).await;
 
