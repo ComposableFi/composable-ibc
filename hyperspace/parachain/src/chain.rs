@@ -304,7 +304,7 @@ where
 		let extrinsic_opaque =
 			block.block.extrinsics.get(transaction_index).expect("Extrinsic not found");
 
-		let unchecked_extrinsic = UncheckedExtrinsic::<T>::decode(&mut &*extrinsic_opaque.0)
+		let unchecked_extrinsic = UncheckedExtrinsic::<T>::decode(&mut &*extrinsic_opaque.0.encode())
 			.map_err(|e| Error::from(format!("Extrinsic decode error: {}", e)))?;
 
 		let messages = unchecked_extrinsic
