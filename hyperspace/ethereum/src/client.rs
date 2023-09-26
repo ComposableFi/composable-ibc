@@ -1,6 +1,7 @@
 use crate::{
 	config::EthereumClientConfig,
 	contract::UnwrapContractError,
+	ibc_provider::u256_to_bytes,
 	jwt::{JwtAuth, JwtKey},
 	utils::{DeployYuiIbc, ProviderImpl},
 };
@@ -8,7 +9,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use cast::revm::db;
 use ethers::{
-	abi::{AbiEncode, Address, ParamType, Token},
+	abi::{encode, AbiEncode, Address, Bytes, ParamType, Token},
 	core::k256,
 	prelude::{
 		coins_bip39::English, signer::SignerMiddlewareError, Authorization, BlockId, BlockNumber,
@@ -615,6 +616,27 @@ impl EthereumClient {
 
 			Ok(receipt)
 		}
+	}
+
+	pub(crate) async fn query_proof_with_value(
+		&self,
+		path: &str,
+		at: Height,
+	) -> Result<(Bytes, Vec<u8>), ClientError> {
+		let proof = self
+			.eth_query_proof(&path, Some(at.revision_height), COMMITMENTS_STORAGE_INDEX)
+			.await?;
+		let storage = proof
+			.storage_proof
+			.first()
+			.ok_or(ClientError::Other("storage proof not found".to_string()))?;
+		let bytes = u256_to_bytes(&storage.value);
+
+		let proof = encode(&[Token::Array(
+			storage.proof.clone().into_iter().map(|p| Token::Bytes(p.to_vec())).collect(),
+		)]);
+
+		Ok((proof, bytes))
 	}
 }
 

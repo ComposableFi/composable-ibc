@@ -1,12 +1,15 @@
 extern crate alloc;
 
-use crate::proof::node_codec;
-use ethers_core::utils::keccak256;
+use crate::{proof::node_codec, utils::keccak256};
+use alloc::vec::Vec;
+use core::{
+	fmt::{Display, Formatter},
+	marker::PhantomData,
+};
 use hash256_std_hasher::Hash256StdHasher;
 use hash_db::Hasher;
 /// Taken from https://github.com/paritytech/trie/blob/aa3168d6de01793e71ebd906d3a82ae4b363db59/trie-eip1186/src/eip1186.rs
 use primitive_types::H256;
-use std::marker::PhantomData;
 use trie_db::{
 	node::{decode_hash, Node, NodeHandle, Value},
 	CError, NibbleSlice, NodeCodec, TrieHash, TrieLayout,
@@ -15,7 +18,8 @@ use trie_db::{
 /// Errors that may occur during proof verification. Most of the errors types simply indicate
 /// that the proof is invalid with respect to the statement being verified, and the exact error
 /// type can be used for debugging.
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub enum VerifyError<'a, HO, CE> {
 	/// The proof does not contain any value for the given key
 	/// the error carries the nibbles left after traversing the trie
@@ -34,6 +38,35 @@ pub enum VerifyError<'a, HO, CE> {
 	DecodeError(CE),
 	/// Error in converting a plain hash into a HO
 	HashDecodeError(&'a [u8]),
+}
+
+#[cfg(not(feature = "std"))]
+impl<HO, CE> Display for VerifyError<'_, HO, CE> {
+	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+		match self {
+			VerifyError::NonExistingValue(_) => {
+				write!(f, "Key does not exist in trie: reaming key")
+			},
+			VerifyError::ExistingValue(_) => {
+				write!(f, "trie contains a value for given key")
+			},
+			VerifyError::ValueMismatch(_) => {
+				write!(f, "Expected value was not found in the trie")
+			},
+			VerifyError::IncompleteProof => {
+				write!(f, "Proof is incomplete -- expected more nodes")
+			},
+			VerifyError::HashMismatch(_) => {
+				write!(f, "hash mismatch found")
+			},
+			VerifyError::DecodeError(_) => {
+				write!(f, "Unable to decode proof node")
+			},
+			VerifyError::HashDecodeError(_) => {
+				write!(f, "Unable to decode hash value")
+			},
+		}
+	}
 }
 
 #[cfg(feature = "std")]

@@ -83,6 +83,9 @@ use ibc::{
 			events::SendPacket,
 		},
 		ics23_commitment::commitment::CommitmentRoot,
+		ics24_host::path::{
+			ChannelEndsPath, ClientConsensusStatePath, ClientStatePath, ConnectionsPath,
+		},
 	},
 	events::IbcEvent,
 	protobuf::Protobuf,
@@ -433,7 +436,6 @@ impl IbcProvider for EthereumClient {
 		let proof_height = Some(at.into());
 		let mut cs = client_state_from_abi_token::<LocalClientTypes>(client_state_token)?;
 		 */
-
 		// First, we try to find an `UpdateClient` event at the given height...
 		let mut consensus_state = None;
 		let mut event_filter = self
@@ -499,11 +501,24 @@ impl IbcProvider for EthereumClient {
 						// TODO: figure out how to distinguish between the same function calls
 
 						let proof_height = Some(at.into());
+						let proof = self
+							.query_proof(
+								at,
+								vec![ClientConsensusStatePath {
+									client_id: client_id.clone(),
+									epoch: consensus_height.revision_number,
+									height: consensus_height.revision_height,
+								}
+								.to_string()
+								.into_bytes()],
+							)
+							.await?;
+
 						return Ok(QueryConsensusStateResponse {
 							consensus_state: Some(
 								consensus_state.expect("should always be initialized").to_any(),
 							),
-							proof: vec![0],
+							proof,
 							proof_height,
 						})
 					}
@@ -564,10 +579,24 @@ impl IbcProvider for EthereumClient {
 			}
 		}
 
-		let proof_height = Some(at.into());
-		let any = consensus_state.expect("should always be initialized").to_any();
+		let proof = self
+			.query_proof(
+				at,
+				vec![ClientConsensusStatePath {
+					client_id: client_id.clone(),
+					epoch: consensus_height.revision_number,
+					height: consensus_height.revision_height,
+				}
+				.to_string()
+				.into_bytes()],
+			)
+			.await?;
 
-		Ok(QueryConsensusStateResponse { consensus_state: Some(any), proof: vec![0], proof_height })
+		let proof_height = Some(at.into());
+		let state = consensus_state.expect("should always be initialized");
+		let any = state.to_any();
+
+		Ok(QueryConsensusStateResponse { consensus_state: Some(any), proof, proof_height })
 	}
 
 	async fn query_client_state(
@@ -733,6 +762,9 @@ impl IbcProvider for EthereumClient {
 		}
 
 		let proof_height = Some(at.into());
+		let proof = self
+			.query_proof(at, vec![ClientStatePath(client_id.clone()).to_string().into_bytes()])
+			.await?;
 
 		Ok(QueryClientStateResponse {
 			client_state: Some(
@@ -741,7 +773,7 @@ impl IbcProvider for EthereumClient {
 					.to_any(),
 			),
 			proof_height,
-			proof: vec![0],
+			proof,
 		})
 	}
 
@@ -790,7 +822,11 @@ impl IbcProvider for EthereumClient {
 			None
 		};
 
-		Ok(QueryConnectionResponse { connection, proof: vec![0], proof_height: Some(at.into()) })
+		let proof = self
+			.query_proof(at, vec![ConnectionsPath(connection_id.clone()).to_string().into_bytes()])
+			.await?;
+
+		Ok(QueryConnectionResponse { connection, proof, proof_height: Some(at.into()) })
 	}
 
 	async fn query_channel_end(
@@ -819,6 +855,10 @@ impl IbcProvider for EthereumClient {
 			port_id: channel_data.counterparty.port_id,
 			channel_id: channel_data.counterparty.channel_id,
 		});
+		let proof = self
+			.query_proof(at, vec![ChannelEndsPath(port_id, channel_id).to_string().into_bytes()])
+			.await?;
+
 		Ok(QueryChannelResponse {
 			channel: Some(Channel {
 				state: channel_data.state as _,
@@ -827,7 +867,7 @@ impl IbcProvider for EthereumClient {
 				connection_hops: channel_data.connection_hops,
 				version: channel_data.version,
 			}),
-			proof: vec![0],
+			proof,
 			proof_height: Some(at.into()),
 		})
 	}
@@ -835,20 +875,7 @@ impl IbcProvider for EthereumClient {
 	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
 		assert_eq!(keys.len(), 1);
 		let key = String::from_utf8(keys[0].clone()).unwrap();
-
-		let proof_result = self
-			.eth_query_proof(&key, Some(at.revision_height), COMMITMENTS_STORAGE_INDEX)
-			.await?;
-
-		let bytes = proof_result
-			.storage_proof
-			.first()
-			.map(|p| {
-				let token = p.proof.clone().into_iter().map(|p| Token::Bytes(p.to_vec())).collect();
-				encode(&[token])
-			})
-			.ok_or_else(|| ClientError::Other("storage proof not found".to_string()))?;
-
+		let (bytes, _) = self.query_proof_with_value(&key, at).await?;
 		Ok(bytes)
 	}
 
@@ -866,20 +893,10 @@ impl IbcProvider for EthereumClient {
 		})
 		.to_string();
 
-		let proof = self
-			.eth_query_proof(&path, Some(at.revision_height), COMMITMENTS_STORAGE_INDEX)
-			.await?;
-		let storage = proof
-			.storage_proof
-			.first()
-			.ok_or(ClientError::Other("storage proof not found".to_string()))?;
-		let bytes = u256_to_bytes(&storage.value);
-
+		let (proof, bytes) = self.query_proof_with_value(&path, at).await?;
 		Ok(QueryPacketCommitmentResponse {
 			commitment: bytes,
-			proof: encode(&[Token::Array(
-				storage.proof.clone().into_iter().map(|p| Token::Bytes(p.to_vec())).collect(),
-			)]),
+			proof,
 			proof_height: Some(at.into()),
 		})
 	}
@@ -899,21 +916,11 @@ impl IbcProvider for EthereumClient {
 		})
 		.to_string();
 
-		let proof = self
-			.eth_query_proof(&path, Some(at.revision_height), COMMITMENTS_STORAGE_INDEX)
-			.await?;
-		let storage = proof
-			.storage_proof
-			.first()
-			.ok_or(ClientError::Other("storage proof not found".to_string()))?;
-
-		let bytes = u256_to_bytes(&storage.value);
+		let (proof, bytes) = self.query_proof_with_value(&path, at).await?;
 
 		Ok(ibc_proto::ibc::core::channel::v1::QueryPacketAcknowledgementResponse {
 			acknowledgement: bytes,
-			proof: encode(&[Token::Array(
-				storage.proof.clone().into_iter().map(|p| Token::Bytes(p.to_vec())).collect(),
-			)]),
+			proof,
 			proof_height: Some(at.into()),
 		})
 	}
@@ -961,25 +968,12 @@ impl IbcProvider for EthereumClient {
 		})
 		.to_string();
 
-		let proof = self
-			.eth_query_proof(&path, Some(at.revision_height), COMMITMENTS_STORAGE_INDEX)
-			.await?;
-		let storage = proof
-			.storage_proof
-			.first()
-			.ok_or(ClientError::Other("storage proof not found".to_string()))?;
-
+		let proof = self.query_proof(at, vec![path.into_bytes()]).await?;
 		let received = self
 			.has_packet_receipt(at, port_id.as_str().to_owned(), format!("{channel_id}"), sequence)
 			.await?;
 
-		Ok(QueryPacketReceiptResponse {
-			received,
-			proof: encode(&[Token::Array(
-				storage.proof.clone().into_iter().map(|p| Token::Bytes(p.to_vec())).collect(),
-			)]),
-			proof_height: Some(at.into()),
-		})
+		Ok(QueryPacketReceiptResponse { received, proof, proof_height: Some(at.into()) })
 	}
 
 	async fn latest_height_and_timestamp(&self) -> Result<(Height, Timestamp), Self::Error> {
@@ -1781,7 +1775,7 @@ impl IbcProvider for EthereumClient {
 	}
 }
 
-fn u256_to_bytes(n: &U256) -> Vec<u8> {
+pub(crate) fn u256_to_bytes(n: &U256) -> Vec<u8> {
 	let mut bytes = vec![0u8; 256 / 8];
 	n.to_big_endian(&mut bytes);
 	bytes

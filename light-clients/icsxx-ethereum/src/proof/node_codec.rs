@@ -16,12 +16,9 @@
 
 //! [`NodeCodec`] implementation for [`TrieDb`]
 
+use crate::utils::keccak256;
 use alloc::vec::Vec;
 use core::{borrow::Borrow, marker::PhantomData, str::FromStr};
-use ethers_core::{
-	abi::Address,
-	utils::{get_contract_address, keccak256},
-};
 use hash_db::Hasher;
 use primitive_types::{H160, H256};
 use rlp::{DecoderError, Prototype, Rlp, RlpStream};

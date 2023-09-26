@@ -27,6 +27,7 @@ pub mod consensus_state;
 pub mod error;
 pub mod proof;
 pub mod proto;
+pub mod utils;
 pub mod verify;
 
 // #[cfg(test)]
