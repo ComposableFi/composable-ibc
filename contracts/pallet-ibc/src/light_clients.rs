@@ -219,17 +219,6 @@ impl beefy_client_primitives::HostFunctions for HostFunctionsManager {
 	}
 }
 
-#[cfg(feature = "ethereum")]
-impl BlsVerify for HostFunctionsManager {
-	fn verify(
-		_public_keys: &[&EthereumPublicKey],
-		_msg: &[u8],
-		_signature: &EthereumSignature,
-	) -> Result<(), EthereumError> {
-		unimplemented!()
-	}
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, ClientDef)]
 pub enum AnyClient {
 	Grandpa(ics10_grandpa::client_def::GrandpaClient<HostFunctionsManager>),
@@ -486,11 +475,6 @@ impl TryFrom<Any> for AnyClientMessage {
 					ics07_tendermint::client_message::Misbehaviour::decode_vec(&value.value)
 						.map_err(ics02_client::error::Error::decode_raw_header)?,
 				))),
-			#[cfg(feature = "ethereum")]
-			ETHEREUM_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Ethereum(
-				icsxx_ethereum::client_message::ClientMessage::decode_vec(&value.value)
-					.map_err(ics02_client::error::Error::decode_raw_header)?,
-			)),
 			#[cfg(feature = "ethereum")]
 			ETHEREUM_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Ethereum(
 				icsxx_ethereum::client_message::ClientMessage::decode_vec(&value.value)
