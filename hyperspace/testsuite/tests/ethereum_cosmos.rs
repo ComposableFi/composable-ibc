@@ -49,8 +49,8 @@ use hyperspace_testsuite::{
 	setup_connection_and_channel,
 };
 use ibc::core::ics24_host::identifier::{ClientId, PortId};
-use sp_core::{hashing::sha2_256, U256};
-use std::{fmt::Debug, future::Future, path::PathBuf, str::FromStr, sync::Arc};
+use sp_core::hashing::sha2_256;
+use std::{future::Future, path::PathBuf, str::FromStr, sync::Arc};
 use subxt::utils::H160;
 
 #[derive(Debug, Clone)]

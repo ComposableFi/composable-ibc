@@ -120,9 +120,8 @@ fn process_message(
 			)
 			.map_err(|e| {
 				ctx.log(&format!("VerifyMembership: error = {:?}", e));
-				ContractError::Client(e.to_string())
+				ContractError::Ethereum(e.to_string())
 			})?;
-
 			Ok(()).map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyNonMembership(msg) => {
@@ -134,9 +133,8 @@ fn process_message(
 			verify_ibc_proof(&msg.prefix, &msg.proof, &consensus_state.root, msg.path, None)
 				.map_err(|e| {
 					ctx.log(&format!("VerifyNonMembership: error = {:?}", e));
-					ContractError::Client(e.to_string())
+					ContractError::Ethereum(e.to_string())
 				})?;
-
 			Ok(()).map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyClientMessage(msg) => {

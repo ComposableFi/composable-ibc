@@ -83,9 +83,6 @@ use ibc::{
 			events::SendPacket,
 		},
 		ics23_commitment::commitment::CommitmentRoot,
-		ics24_host::path::{
-			ChannelEndsPath, ClientConsensusStatePath, ClientStatePath, ConnectionsPath,
-		},
 	},
 	events::IbcEvent,
 	protobuf::Protobuf,
@@ -114,40 +111,40 @@ use tracing::log;
 
 abigen!(
 	IbcClientAbi,
-	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-client-abi.json";
+	"hyperspace/ethereum/src/abi/ibc-client-abi.json";
 
 	IbcConnectionAbi,
-	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-connection-abi.json";
+	"hyperspace/ethereum/src/abi/ibc-connection-abi.json";
 
 	IbcChannelAbi,
-	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-channel-abi.json";
+	"hyperspace/ethereum/src/abi/ibc-channel-abi.json";
 
 	IbcPacketAbi,
-	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-packet-abi.json";
+	"hyperspace/ethereum/src/abi/ibc-packet-abi.json";
 
 	IbcQuerierAbi,
-	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-querier-abi.json";
+	"hyperspace/ethereum/src/abi/ibc-querier-abi.json";
 
 	Ics20TransferBankAbi,
-	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ics20-transfer-bank-abi.json";
+	"hyperspace/ethereum/src/abi/ics20-transfer-bank-abi.json";
 
 	Ics20BankAbi,
 	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ics20-bank-abi.json";
 
 	TendermintClientAbi,
-	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/tendermint-client-abi.json";
+	"hyperspace/ethereum/src/abi/tendermint-client-abi.json";
 
 	DiamondAbi,
-	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/diamond-abi.json";
+	"hyperspace/ethereum/src/abi/diamond-abi.json";
 
 	DiamondCutFacetAbi,
-	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/diamond-cut-facet-abi.json";
+	"hyperspace/ethereum/src/abi/diamond-cut-facet-abi.json";
 
 	DiamondLoupeFacetAbi,
-	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/diamond-loupe-facet-abi.json";
+	"hyperspace/ethereum/src/abi/diamond-loupe-facet-abi.json";
 
 	OwnershipFacetAbi,
-	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ownership-facet-abi.json";
+	"hyperspace/ethereum/src/abi/ownership-facet-abi.json";
 );
 
 impl From<HeightData> for Height {
@@ -376,6 +373,17 @@ impl IbcProvider for EthereumClient {
 				let height = Height::new(0, log.block_number.unwrap().as_u64());
 				let topic0 = log.topics[0];
 
+				let recv_packet_stream = ws
+					.subscribe_logs(
+						&Filter::new()
+							.from_block(BlockNumber::Latest)
+							.address(ibc_handler_address)
+							.event("RecvPacket((uint64,string,string,string,string,bytes,(uint64,uint64),uint64))"),
+					)
+					.await
+					.expect("failed to subscribe to RecvPacket event")
+					.map(decode_client_id_log);
+
 				let mut maybe_ibc_event = if topic0 == UpdateClientHeightFilter::signature() {
 					let event = UpdateClientHeightFilter::decode_log(&raw_log).expect("decode event");
 					 let topic1 = H256::from_slice(&encode(&[Token::FixedBytes(
@@ -436,6 +444,7 @@ impl IbcProvider for EthereumClient {
 		let proof_height = Some(at.into());
 		let mut cs = client_state_from_abi_token::<LocalClientTypes>(client_state_token)?;
 		 */
+
 		// First, we try to find an `UpdateClient` event at the given height...
 		let mut consensus_state = None;
 		let mut event_filter = self

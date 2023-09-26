@@ -21,7 +21,8 @@ pub mod logging;
 mod macros;
 pub mod packets;
 pub mod queue;
-// pub mod substrate;
+#[cfg(feature = "parachain")]
+pub mod substrate;
 mod utils;
 
 use crate::utils::RecentStream;

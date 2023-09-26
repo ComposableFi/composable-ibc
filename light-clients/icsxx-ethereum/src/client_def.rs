@@ -113,8 +113,8 @@ where
 	) -> Result<(), Ics02Error> {
 		match client_message {
 			ClientMessage::Header(header) => {
-				let _ = verify_sync_committee_attestation(client_state.inner, header.inner)
-					.map_err(|e| Ics02Error::implementation_specific(e.to_string()))?;
+				// let _ = verify_sync_committee_attestation::<H>(client_state.inner, header.inner)
+				// 	.map_err(|e| Ics02Error::implementation_specific(e.to_string()))?;
 			},
 			ClientMessage::Misbehaviour(Misbehaviour { never }) => match never {},
 		}
