@@ -1204,6 +1204,11 @@ impl IbcProvider for EthereumClient {
 			.await
 			.map_err(|err| ClientError::Other(format!("failed to get logs: {}", err)))?;
 		logs.extend(logs2);
+
+		if logs.is_empty() {
+			return Ok(vec![])
+		}
+
 		let channel = self.query_channel_end(at, channel_id, port_id).await?;
 
 		let channel = channel.channel.ok_or(ClientError::Other("channel is none".to_string()))?;
