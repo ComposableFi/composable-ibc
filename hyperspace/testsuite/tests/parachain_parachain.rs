@@ -154,8 +154,8 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 	// let mut join_set = tokio::task::JoinSet::new();
 
 	// // no timeouts + connection delay
-	// let mut c1 = chain_a.clone();
-	// let mut c2 = chain_b.clone();
+	let mut c1 = chain_a.clone();
+	let mut c2 = chain_b.clone();
 	// join_set.spawn(async move {
 		ibc_messaging_with_connection_delay(
 			&mut c1, &mut c2, asset_id, asset_id, channel_a, channel_b,
@@ -165,8 +165,8 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 	// });
 
 	// timeouts + connection delay
-	// let mut c1 = chain_a.clone();
-	// let mut c2 = chain_b.clone();
+	let mut c1 = chain_a.clone();
+	let mut c2 = chain_b.clone();
 	// join_set.spawn(async move {
 		ibc_messaging_packet_height_timeout_with_connection_delay(
 			&mut c1, &mut c2, asset_id, channel_a, channel_b,
