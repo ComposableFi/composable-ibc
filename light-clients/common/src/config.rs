@@ -321,5 +321,6 @@ pub trait Config: subxt::Config + Sized {
 }
 
 pub type CustomExtrinsicParams<T> = <<T as subxt::Config>::ExtrinsicParams as ExtrinsicParams<
+	<T as subxt::Config>::Index,
 	<T as subxt::Config>::Hash,
 >>::OtherParams;

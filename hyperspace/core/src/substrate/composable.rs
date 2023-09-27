@@ -226,7 +226,7 @@ impl light_client_common::config::Config for ComposableConfig {
 
 	async fn custom_extrinsic_params(
 		client: &OnlineClient<Self>,
-	) -> Result<<Self::ExtrinsicParams as ExtrinsicParams<Self::Hash>>::OtherParams, Error> {
+	) -> Result<<Self::ExtrinsicParams as ExtrinsicParams<Self::Index, Self::Hash>>::OtherParams, Error> {
 		let params =
 			ParachainExtrinsicsParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
 		Ok(params)
@@ -234,6 +234,7 @@ impl light_client_common::config::Config for ComposableConfig {
 }
 
 impl subxt::Config for ComposableConfig {
+	type Index = u32;
 	type Hash = H256;
 	type Hasher = subxt::config::substrate::BlakeTwo256;
 	type AccountId = AccountId32;

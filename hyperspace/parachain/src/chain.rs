@@ -88,7 +88,7 @@ where
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	sp_core::H256: From<T::Hash>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Hash>>::OtherParams:
+	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
@@ -214,10 +214,20 @@ where
 			.map(|msg| Any { type_url: msg.type_url.clone(), value: msg.value })
 			.collect::<Vec<_>>();
 		let messages_urls = messages.iter().map(|msg| msg.type_url.clone()).join(", ");
-		log::debug!(target: "hyperspace_parachain", "Sending message: {messages_urls}");
+		let messages_urls_c = messages_urls.clone();
+		log::debug!(target: "hyperspace_parachain", "Sending message: {messages_urls_c}");
 
-		let call = T::Tx::ibc_deliver(messages);
-		let (ext_hash, block_hash) = self.submit_call(call).await?;
+		let call = T::Tx::ibc_deliver(messages.clone());
+		let mut i = 5;
+		let mut res = self.submit_call(call).await;
+		while res.is_err() && i > 0 {
+			i = i - 1;
+			let call = T::Tx::ibc_deliver(messages.clone());
+			let messages_urls_c = messages_urls.clone();
+			log::debug!(target: "hyperspace_parachain", "Retrying to send message: {messages_urls_c}");
+			res = self.submit_call(call).await;
+		}
+		let (ext_hash, block_hash) = res?;
 
 		log::debug!(target: "hyperspace_parachain", "Submitted extrinsic (hash: {:?}) to block {:?}", ext_hash, block_hash);
 
@@ -294,7 +304,7 @@ where
 		let extrinsic_opaque =
 			block.block.extrinsics.get(transaction_index).expect("Extrinsic not found");
 
-		let unchecked_extrinsic = UncheckedExtrinsic::<T>::decode(&mut &*extrinsic_opaque.0)
+		let unchecked_extrinsic = UncheckedExtrinsic::<T>::decode(&mut &*extrinsic_opaque.0.encode())
 			.map_err(|e| Error::from(format!("Extrinsic decode error: {}", e)))?;
 
 		let messages = unchecked_extrinsic
@@ -395,7 +405,7 @@ where
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
 	sp_core::H256: From<T::Hash>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Hash>>::OtherParams:
+	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
