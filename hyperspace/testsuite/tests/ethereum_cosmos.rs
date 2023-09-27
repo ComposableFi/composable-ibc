@@ -248,9 +248,6 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	let code_id_str = hex::encode(code_id);
 	config_b.wasm_code_id = Some(code_id_str);
 
-	println!("{}", toml::to_string_pretty(&config_a).unwrap());
-	println!("\n{}", toml::to_string_pretty(&config_b).unwrap());
-
 	let mut chain_a_wrapped = AnyConfig::Ethereum(config_a).into_client().await.unwrap();
 	let mut chain_b_wrapped = AnyConfig::Cosmos(config_b).into_client().await.unwrap();
 
@@ -321,44 +318,6 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		channel_b,
 	)
 	.await;
-
-	// loop {
-	// 	let client_a_clone = chain_a.clone();
-	// 	let client_b_clone = chain_b.clone();
-	// 	let handle = tokio::task::spawn(async move {
-	// 		hyperspace_core::relay(client_a_clone, client_b_clone, None, None, None)
-	// 			.await
-	// 			.map_err(|e| {
-	// 				log::error!(target: "hyperspace", "Relayer loop failed: {:?}", e);
-	// 				e
-	// 			})
-	// 			.unwrap()
-	// 	});
-	// 	tokio::task::spawn(async move {
-	// 		let x = handle
-	// 			.map_err(|e| {
-	// 				log::error!(target: "hyperspace", "Relayer loop failed: {:?}", e);
-	// 				e
-	// 			})
-	// 			.await;
-	// 	})
-	// 	.await
-	// 	.map_err(|e| {
-	// 		log::error!(target: "hyperspace", "Relayer loop failed: {:?}", e);
-	// 		e
-	// 	})
-	// 	.unwrap();
-	//
-	// 	let balance = chain_a
-	// 		.query_ibc_balance(asset_id_a)
-	// 		.await
-	// 		.expect("Can't query ibc balance")
-	// 		.pop()
-	// 		.expect("No Ibc balances");
-	// 	let amount = balance.amount.as_u256().as_u128();
-	//
-	// 	log::info!("my balance = {amount}");
-	// }
 
 	// // timeouts + connection delay
 	// ibc_messaging_packet_height_timeout_with_connection_delay(
@@ -453,45 +412,3 @@ async fn cosmos_to_ethereum_ibc_messaging_full_integration_test() {
 	ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
 }
  */
-
-#[tokio::test]
-async fn send_tokens() {
-	let config = toml::from_str::<EthereumClientConfig>(
-		&std::fs::read_to_string("../../config/ethereum-local.toml").unwrap(),
-	)
-	.unwrap();
-	let mut client = EthereumClient::new(config).await.unwrap();
-	let abi = Ics20BankAbi::new(
-		Address::from_str("0x0486ee42d89d569c4d8143e47a82c4b14545ae43").unwrap(),
-		client.client(),
-	);
-	let from = Address::from_str("0x73db010c3275eb7a92e5c38770316248f4c644ee").unwrap();
-	let to = Address::from_str("0x0486ee42d89d569c4d8143e47a82c4b14545ae43").unwrap();
-
-	async fn get_balance<M>(abi: &Ics20BankAbi<M>, acc: H160) -> U256
-	where
-		M: Middleware + Debug + Send + Sync,
-	{
-		abi.method("balanceOf", (acc, "pica".to_string()))
-			.unwrap()
-			.call()
-			.await
-			.unwrap()
-	};
-	dbg!(get_balance(&abi, from).await);
-	dbg!(get_balance(&abi, to).await);
-
-	let tx = abi
-		.method::<_, ()>("transferFrom", (from, to, "pica".to_string(), U256::from(10000000u32)))
-		.unwrap()
-		.send()
-		.await
-		.unwrap()
-		.await
-		.unwrap()
-		.unwrap();
-	assert_eq!(tx.status, Some(1u32.into()));
-
-	dbg!(get_balance(&abi, from).await);
-	dbg!(get_balance(&abi, to).await);
-}

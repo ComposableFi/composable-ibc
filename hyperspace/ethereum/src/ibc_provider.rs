@@ -24,7 +24,10 @@ use ibc::{
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::{
 			identifier::{ChannelId, ClientId, ConnectionId, PortId},
-			path::{AcksPath, CommitmentsPath, ReceiptsPath},
+			path::{
+				AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath,
+				CommitmentsPath, ConnectionsPath, ReceiptsPath,
+			},
 			Path,
 		},
 	},
@@ -129,7 +132,7 @@ abigen!(
 	"hyperspace/ethereum/src/abi/ics20-transfer-bank-abi.json";
 
 	Ics20BankAbi,
-	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ics20-bank-abi.json";
+	"hyperspace/ethereum/src/abi/ics20-bank-abi.json";
 
 	TendermintClientAbi,
 	"hyperspace/ethereum/src/abi/tendermint-client-abi.json";
@@ -372,17 +375,6 @@ impl IbcProvider for EthereumClient {
 				let raw_log = RawLog::from(log.clone());
 				let height = Height::new(0, log.block_number.unwrap().as_u64());
 				let topic0 = log.topics[0];
-
-				let recv_packet_stream = ws
-					.subscribe_logs(
-						&Filter::new()
-							.from_block(BlockNumber::Latest)
-							.address(ibc_handler_address)
-							.event("RecvPacket((uint64,string,string,string,string,bytes,(uint64,uint64),uint64))"),
-					)
-					.await
-					.expect("failed to subscribe to RecvPacket event")
-					.map(decode_client_id_log);
 
 				let mut maybe_ibc_event = if topic0 == UpdateClientHeightFilter::signature() {
 					let event = UpdateClientHeightFilter::decode_log(&raw_log).expect("decode event");
