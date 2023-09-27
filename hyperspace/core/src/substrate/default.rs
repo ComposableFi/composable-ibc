@@ -47,10 +47,10 @@ use subxt::{
 };
 
 pub mod parachain_subxt {
-	#[cfg(feature = "build-metadata-from-ws")]
-	include!(concat!(env!("OUT_DIR"), "/parachain.rs"));
+	// #[cfg(feature = "build-metadata-from-ws")]
+	// include!(concat!(env!("OUT_DIR"), "/parachain.rs"));
 
-	#[cfg(not(feature = "build-metadata-from-ws"))]
+	// #[cfg(not(feature = "build-metadata-from-ws"))]
 	pub use subxt_generated::default::parachain::*;
 }
 
