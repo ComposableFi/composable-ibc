@@ -410,7 +410,6 @@ where
 	pub async fn submit_call<C: TxPayload>(&self, call: C) -> Result<(T::Hash, T::Hash), Error> {
 		// Try extrinsic submission five times in case of failures
 		let mut count = 0;
-		let mut m = false;
 		let progress = loop {
 			if count == 10 {
 				Err(Error::Custom("Failed to submit extrinsic after 5 tries".to_string()))?
@@ -433,14 +432,7 @@ where
 			match res {
 				Ok(progress) => break progress,
 				Err(e) => {
-					let t = format!("{:?}", e).contains("Priority is too low");
-					if t {
-						log::warn!("update priority manually");
-						// m = true;
-					}
 					log::warn!("Failed to submit extrinsic: {:?}. Retrying...", e);
-					count += 1;
-					tokio::time::sleep(std::time::Duration::from_secs(10)).await;
 				},
 			}
 		};

@@ -220,13 +220,13 @@ where
 		let call = T::Tx::ibc_deliver(messages.clone());
 		let mut i = 5;
 		let mut res = self.submit_call(call).await;
-		while res.is_err() && i > 0 {
-			i = i - 1;
-			let call = T::Tx::ibc_deliver(messages.clone());
-			let messages_urls_c = messages_urls.clone();
-			log::debug!(target: "hyperspace_parachain", "Retrying to send message: {messages_urls_c}");
-			res = self.submit_call(call).await;
-		}
+		// while res.is_err() && i > 0 {
+		// 	i = i - 1;
+		// 	let call = T::Tx::ibc_deliver(messages.clone());
+		// 	let messages_urls_c = messages_urls.clone();
+		// 	log::debug!(target: "hyperspace_parachain", "Retrying to send message: {messages_urls_c}");
+		// 	res = self.submit_call(call).await;
+		// }
 		let (ext_hash, block_hash) = res?;
 
 		log::debug!(target: "hyperspace_parachain", "Submitted extrinsic (hash: {:?}) to block {:?}", ext_hash, block_hash);
