@@ -5,7 +5,6 @@ use self::parachain_subxt::api::{
 		frame_system::{extensions::check_nonce::CheckNonce, EventRecord},
 		pallet_ibc::{events::IbcEvent as MetadataIbcEvent, TransferParams as RawTransferParams},
 		pallet_ibc_ping::SendPingParams as RawSendPingParams,
-		parachain_runtime::RawMemo,
 	},
 	sudo::calls::types::Sudo,
 };
@@ -121,7 +120,7 @@ define_runtime_transactions!(
 	TransferParamsWrapper,
 	SendPingParamsWrapper,
 	parachain_subxt::api::runtime_types::pallet_ibc::Any,
-	RawMemo,
+	String,
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, y, z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),
