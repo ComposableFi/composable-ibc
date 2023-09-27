@@ -8,7 +8,7 @@ use crate::{
 };
 use core::time::Duration;
 use frame_support::{
-	assert_ok,
+	assert_noop, assert_ok,
 	traits::{
 		fungibles::{Inspect, Mutate},
 		Currency, Hooks, Len,
@@ -16,7 +16,10 @@ use frame_support::{
 	weights::Weight,
 };
 use ibc::{
-	applications::transfer::{packet::PacketData, Coin, PrefixedDenom, VERSION},
+	applications::transfer::{
+		acknowledgement::Acknowledgement as Ics20Acknowledgement, packet::PacketData, Coin,
+		PrefixedDenom, VERSION,
+	},
 	core::{
 		ics02_client::{
 			client_state::ClientState,
@@ -33,7 +36,10 @@ use ibc::{
 		ics04_channel::{
 			channel::{ChannelEnd, Counterparty as ChanCounterParty, Order, State},
 			context::{ChannelKeeper, ChannelReader},
-			msgs::recv_packet::MsgRecvPacket,
+			msgs::{
+				acknowledgement::{Acknowledgement, MsgAcknowledgement},
+				recv_packet::MsgRecvPacket,
+			},
 			packet::Packet,
 			Version as ChanVersion,
 		},
@@ -263,6 +269,66 @@ fn send_transfer() {
 		let fee = <Test as crate::ics20_fee::Config>::ServiceChargeIn::get() * balance;
 		assert_eq!(send_amount, balance - fee);
 	})
+}
+
+#[test]
+fn send_transfer_with_invalid_memo() {
+	let mut ext = new_test_ext();
+	let balance = 100000 * MILLIS;
+	ext.execute_with(|| {
+		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
+		let ss58_address =
+			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
+		setup_client_and_consensus_state(PortId::transfer());
+		let asset_id =
+			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
+				"PICA",
+			)
+			.unwrap();
+		let _ = <<Test as Config>::NativeCurrency as Currency<
+			<Test as frame_system::Config>::AccountId,
+		>>::deposit_creating(&AccountId32::new([0; 32]), balance);
+
+		let timeout = Timeout::Offset { timestamp: Some(1000), height: Some(5) };
+
+		let ctx = Context::<Test>::default();
+		let channel_end = ctx
+			.channel_end(&(PortId::transfer(), ChannelId::new(0)))
+			.expect("expect source_channel unwrap");
+		let destination_channel = channel_end.counterparty().channel_id.unwrap();
+		Ibc::add_channels_to_feeless_channel_list(
+			RuntimeOrigin::root(),
+			0,
+			destination_channel.sequence(),
+		)
+		.expect("expect add channels to feeless list");
+
+		let result = Ibc::transfer(
+			RuntimeOrigin::signed(AccountId32::new([0; 32])),
+			TransferParams {
+				to: MultiAddress::Raw(ss58_address.as_bytes().to_vec()),
+				source_channel: 0,
+				timeout: timeout.clone(),
+			},
+			asset_id,
+			balance,
+			Some(RawMemo("{}".to_string())),
+		);
+		assert_ok!(result);
+
+		let result = Ibc::transfer(
+			RuntimeOrigin::signed(AccountId32::new([0; 32])),
+			TransferParams {
+				to: MultiAddress::Raw(ss58_address.as_bytes().to_vec()),
+				source_channel: 0,
+				timeout: timeout.clone(),
+			},
+			asset_id,
+			balance,
+			Some(RawMemo("invalid memo".to_string())),
+		);
+		assert_noop!(result, crate::Error::<Test>::InvalidMemo);
+	});
 }
 
 #[test]
@@ -669,6 +735,85 @@ fn on_deliver_ics20_recv_packet_with_flat_fee() {
 				.unwrap_or_default();
 		assert_eq!(balance, amt - fee);
 		assert_eq!(pallet_balance, fee)
+	})
+}
+
+#[test]
+fn on_ack_transfer_with_custom_success_result() {
+	let mut ext = new_test_ext();
+	let _ = env_logger::try_init();
+	ext.execute_with(|| {
+		// Create  a new account
+		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
+		frame_system::Pallet::<Test>::set_block_number(1u32);
+		let asset_id =
+			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
+				"PICAFLATFEE",
+			)
+			.unwrap();
+		setup_client_and_consensus_state(PortId::transfer());
+
+		let channel_id = ChannelId::new(0);
+		let balance = 100000 * MILLIS;
+
+		// We are simulating a transfer back to the source chain
+		let acc = AccountId32::new(pair.public().0);
+
+		// Endow escrow address with tokens
+		<<Test as Config>::Fungibles as Mutate<
+			<Test as frame_system::Config>::AccountId,
+		>>::mint_into(asset_id, &acc, balance)
+		.unwrap();
+
+		let init_balance = <Assets as Inspect<AccountId>>::balance(asset_id, &acc);
+		let amt = 1000 * MILLIS;
+		println!("Transferred Amount {amt}");
+
+		assert_ok!(Ibc::transfer(
+			RuntimeOrigin::signed(acc.clone()),
+			TransferParams {
+				to: MultiAddress::Raw(vec![42; 10]),
+				source_channel: channel_id.sequence(),
+				timeout: Timeout::Offset { timestamp: None, height: Some(1) },
+			},
+			asset_id,
+			amt,
+			None,
+		));
+
+		let packet_info = Ibc::get_send_packet_info(
+			channel_id.to_string().as_bytes().to_vec(),
+			PortId::transfer().as_bytes().to_vec(),
+			vec![1],
+		)
+		.unwrap()
+		.get(0)
+		.unwrap()
+		.clone();
+		let packet = Packet::from(packet_info);
+
+		let msg = MsgAcknowledgement {
+			packet,
+			acknowledgement: Acknowledgement::from_bytes(
+				Ics20Acknowledgement::Result(r#"{"contract_result":1}"#.to_string())
+					.to_string()
+					.into_bytes(),
+			),
+			proofs: Proofs::new(
+				vec![0u8; 32].try_into().unwrap(),
+				None,
+				None,
+				None,
+				Height::new(0, 1),
+			)
+			.unwrap(),
+			signer: Signer::from_str(MODULE_ID).unwrap(),
+		};
+		let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+		Ibc::deliver(RuntimeOrigin::signed(AccountId32::new([0; 32])), vec![msg]).unwrap();
+
+		let balance = <Assets as Inspect<AccountId>>::balance(asset_id, &acc);
+		assert_eq!(balance, init_balance - amt);
 	})
 }
 

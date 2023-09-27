@@ -10158,7 +10158,7 @@ pub mod api {
 				pub asset_id: ::core::primitive::u128,
 				pub amount: ::core::primitive::u128,
 				pub channel: ::core::primitive::u64,
-				pub next_memo: ::core::option::Option<::std::string::String>,
+				pub next_memo: ::core::option::Option<runtime_types::parachain_runtime::RawMemo>,
 			}
 			impl ::subxt::events::StaticEvent for ExecuteMemoIbcTokenTransferSuccess {
 				const PALLET: &'static str = "Ibc";
@@ -10199,7 +10199,7 @@ pub mod api {
 				pub asset_id: ::core::primitive::u128,
 				pub amount: ::core::primitive::u128,
 				pub channel: ::core::primitive::u64,
-				pub next_memo: ::core::option::Option<::std::string::String>,
+				pub next_memo: ::core::option::Option<runtime_types::parachain_runtime::RawMemo>,
 			}
 			impl ::subxt::events::StaticEvent for ExecuteMemoIbcTokenTransferFailed {
 				const PALLET: &'static str = "Ibc";
@@ -13499,7 +13499,7 @@ pub mod api {
 							runtime_types::pallet_ibc::TransferParams<::subxt::utils::AccountId32>,
 						asset_id: ::core::primitive::u128,
 						amount: ::core::primitive::u128,
-						memo: ::core::option::Option<::std::string::String>,
+						memo: ::core::option::Option<runtime_types::parachain_runtime::RawMemo>,
 					},
 					#[codec(index = 3)]
 					upgrade_client { params: runtime_types::pallet_ibc::UpgradeParams },
@@ -13622,6 +13622,8 @@ pub mod api {
 					FailedSendFeeToAccount,
 					#[codec(index = 38)]
 					OriginAddress,
+					#[codec(index = 39)]
+					InvalidMemo,
 				}
 				#[derive(
 					:: subxt :: ext :: codec :: Decode,
@@ -13767,7 +13769,8 @@ pub mod api {
 						asset_id: ::core::primitive::u128,
 						amount: ::core::primitive::u128,
 						channel: ::core::primitive::u64,
-						next_memo: ::core::option::Option<::std::string::String>,
+						next_memo:
+							::core::option::Option<runtime_types::parachain_runtime::RawMemo>,
 					},
 					#[codec(index = 22)]
 					ExecuteMemoIbcTokenTransferFailedWithReason {
@@ -13782,7 +13785,8 @@ pub mod api {
 						asset_id: ::core::primitive::u128,
 						amount: ::core::primitive::u128,
 						channel: ::core::primitive::u64,
-						next_memo: ::core::option::Option<::std::string::String>,
+						next_memo:
+							::core::option::Option<runtime_types::parachain_runtime::RawMemo>,
 					},
 					#[codec(index = 24)]
 					ExecuteMemoXcmSuccess {
@@ -14514,6 +14518,16 @@ pub mod api {
 				Debug,
 			)]
 			# [codec (crate = :: subxt :: ext :: codec)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
+			pub struct RawMemo(pub ::std::string::String);
+			#[derive(
+				:: subxt :: ext :: codec :: Decode,
+				:: subxt :: ext :: codec :: Encode,
+				:: subxt :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
 			#[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
 			#[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 			pub struct Runtime;
