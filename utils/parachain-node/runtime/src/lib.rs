@@ -86,8 +86,8 @@ pub use sp_runtime::BuildStorage;
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 use scale_info::TypeInfo;
 use serde::Deserialize;
-use sp_core::crypto::Infallible;
 use sp_runtime::traits::AccountIdConversion;
+use sp_std::convert::Infallible;
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
