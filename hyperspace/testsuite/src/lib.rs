@@ -119,17 +119,8 @@ where
 		}
 	}
 
-	for i in 0..200 {
-		//write the log
-		log::info!(target: "hyperspace", "============ send_channel_close_init_and_assert_channel_close_confirm");
-		//sleap 1 second
-		tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-	}
-
 	let (connection_id_a, connection_id_b) =
 		create_connection(chain_a, chain_b, connection_delay).await.unwrap();
-
-	// panic!("============ send_channel_close_init_and_assert_channel_close_confirm");
 
 	log::info!(target: "hyperspace", "============ Connection handshake completed: ConnectionId({connection_id_a}), ConnectionId({connection_id_b}) ============");
 	log::info!(target: "hyperspace", "=========================== Starting channel handshake ===========================");
@@ -270,7 +261,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 		chain_b,
 		asset_a,
 		channel_id,
-		Some(Timeout::Offset { timestamp: Some(120 * 60), height: Some(20) }),
+		Some(Timeout::Offset { timestamp: Some(120 * 60), height: Some(100) }),
 	)
 	.await;
 
@@ -405,17 +396,7 @@ async fn send_channel_close_init_and_assert_channel_close_confirm<A, B>(
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 
-	//
-	for i in 0..30 {
-		//write the log
-		log::info!(target: "hyperspace", "============ send_channel_close_init_and_assert_channel_close_confirm");
-		//sleap 1 second
-		tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-	}
-
 	chain_a.submit(vec![msg.clone()]).await.unwrap();
-
-	// panic!("============ send_channel_close_init_and_assert_channel_close_confirm");
 
 	// wait channel close confirmation on chain b
 	let future = chain_b
