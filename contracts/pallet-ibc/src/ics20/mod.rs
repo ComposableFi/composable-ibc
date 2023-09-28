@@ -919,3 +919,7 @@ where
 		);
 	}
 }
+
+pub trait ValidateMemo {
+	fn validate(&self) -> Result<(), String>;
+}

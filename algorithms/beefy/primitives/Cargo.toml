@@ -30,5 +30,5 @@ std = [
 	"pallet-mmr-primitives/std",
 	"light-client-common/std",
 	"serde",
-	"serde?/std"
+	"serde/std"
 ]

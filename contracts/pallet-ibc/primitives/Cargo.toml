@@ -55,7 +55,7 @@ std = [
 	"frame-support/std",
 	"hex/std",
 	"blake2/std",
-	"serde?/std"
+	"serde/std"
 ]
 mocks = []
 runtime-benchmarks = []

@@ -19,6 +19,6 @@ std = [
 	"ibc-proto/std",
 	"prost/std",
 	"hex/std", 
-	"serde?/std"
+	"serde/std"
 ]
 cosmwasm = ["cosmwasm-schema", "std", "serde", "ibc/cosmwasm"]

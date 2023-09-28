@@ -103,8 +103,9 @@ jobs:
 
       - name: Install parachain node
         run: |
-          mkdir -p ./target/release/
-          curl -L http://34.70.93.30/parachain-node -o ./target/release/parachain-node
+          # curl -L http://34.70.93.30/parachain-node -o ./target/release/parachain-node
+          
+          cargo build -p parachain-node --release
           cp ./target/release/parachain-node /usr/bin/parachain-node
           chmod +x /usr/bin/parachain-node
 
