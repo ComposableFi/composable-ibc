@@ -44,7 +44,9 @@ use subxt::{
 	tx::Payload,
 	Error, OnlineClient,
 };
-use subxt_generated::picasso_kusama::parachain::api::runtime_types::polkadot_parachain::primitives::currency::CurrencyId;
+
+use crate::substrate::picasso_kusama::parachain_subxt::api::runtime_types::primitives::currency::CurrencyId;
+// use subxt_generated::picasso_kusama::parachain::api::runtime_types::polkadot_parachain::primitives::currency::CurrencyId;
 
 pub mod parachain_subxt {
 	pub use subxt_generated::picasso_kusama::parachain::*;
