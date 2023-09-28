@@ -171,12 +171,12 @@
       {
         "components": [
           {
-            "internalType": "enum Channel.State",
+            "internalType": "enum ChannelState",
             "name": "state",
             "type": "uint8"
           },
           {
-            "internalType": "enum Channel.Order",
+            "internalType": "enum ChannelOrder",
             "name": "ordering",
             "type": "uint8"
           },
@@ -193,7 +193,7 @@
                 "type": "string"
               }
             ],
-            "internalType": "struct ChannelCounterparty.Data",
+            "internalType": "struct ChannelCounterpartyData",
             "name": "counterparty",
             "type": "tuple"
           },
@@ -208,7 +208,7 @@
             "type": "string"
           }
         ],
-        "internalType": "struct Channel.Data",
+        "internalType": "struct ChannelData",
         "name": "channel",
         "type": "tuple"
       },
@@ -318,12 +318,12 @@
                 "type": "string[]"
               }
             ],
-            "internalType": "struct Version.Data[]",
+            "internalType": "struct VersionData[]",
             "name": "versions",
             "type": "tuple[]"
           },
           {
-            "internalType": "enum ConnectionEnd.State",
+            "internalType": "enum ConnectionEndState",
             "name": "state",
             "type": "uint8"
           },
@@ -347,12 +347,12 @@
                     "type": "bytes"
                   }
                 ],
-                "internalType": "struct MerklePrefix.Data",
+                "internalType": "struct MerklePrefixData",
                 "name": "prefix",
                 "type": "tuple"
               }
             ],
-            "internalType": "struct Counterparty.Data",
+            "internalType": "struct CounterpartyData",
             "name": "counterparty",
             "type": "tuple"
           },
@@ -362,7 +362,7 @@
             "type": "uint64"
           }
         ],
-        "internalType": "struct ConnectionEnd.Data",
+        "internalType": "struct ConnectionEndData",
         "name": "connection",
         "type": "tuple"
       },
@@ -797,7 +797,7 @@
                 "type": "uint64"
               }
             ],
-            "internalType": "struct Height.Data",
+            "internalType": "struct HeightData",
             "name": "timeout_height",
             "type": "tuple"
           },
@@ -807,7 +807,7 @@
             "type": "uint64"
           }
         ],
-        "internalType": "struct Packet.Data",
+        "internalType": "struct PacketData",
         "name": "packet",
         "type": "tuple"
       }
@@ -852,12 +852,12 @@
       {
         "components": [
           {
-            "internalType": "enum Channel.State",
+            "internalType": "enum ChannelState",
             "name": "state",
             "type": "uint8"
           },
           {
-            "internalType": "enum Channel.Order",
+            "internalType": "enum ChannelOrder",
             "name": "ordering",
             "type": "uint8"
           },
@@ -874,7 +874,7 @@
                 "type": "string"
               }
             ],
-            "internalType": "struct ChannelCounterparty.Data",
+            "internalType": "struct ChannelCounterpartyData",
             "name": "counterparty",
             "type": "tuple"
           },
@@ -889,7 +889,7 @@
             "type": "string"
           }
         ],
-        "internalType": "struct Channel.Data",
+        "internalType": "struct ChannelData",
         "name": "channel",
         "type": "tuple"
       }
@@ -980,12 +980,12 @@
                 "type": "string[]"
               }
             ],
-            "internalType": "struct Version.Data[]",
+            "internalType": "struct VersionData[]",
             "name": "versions",
             "type": "tuple[]"
           },
           {
-            "internalType": "enum ConnectionEnd.State",
+            "internalType": "enum ConnectionEndState",
             "name": "state",
             "type": "uint8"
           },
@@ -1009,12 +1009,12 @@
                     "type": "bytes"
                   }
                 ],
-                "internalType": "struct MerklePrefix.Data",
+                "internalType": "struct MerklePrefixData",
                 "name": "prefix",
                 "type": "tuple"
               }
             ],
-            "internalType": "struct Counterparty.Data",
+            "internalType": "struct CounterpartyData",
             "name": "counterparty",
             "type": "tuple"
           },
@@ -1024,7 +1024,7 @@
             "type": "uint64"
           }
         ],
-        "internalType": "struct ConnectionEnd.Data",
+        "internalType": "struct ConnectionEndData",
         "name": "connection",
         "type": "tuple"
       }
@@ -1242,7 +1242,7 @@
                 "type": "uint64"
               }
             ],
-            "internalType": "struct Height.Data",
+            "internalType": "struct HeightData",
             "name": "timeout_height",
             "type": "tuple"
           },
@@ -1252,7 +1252,7 @@
             "type": "uint64"
           }
         ],
-        "internalType": "struct Packet.Data",
+        "internalType": "struct PacketData",
         "name": "packet",
         "type": "tuple"
       }

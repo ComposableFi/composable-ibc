@@ -145,7 +145,7 @@ where
 					b.execution_payload.block_number as u64,
 				);
 				let cs = Ctx::AnyConsensusState::wrap(&ConsensusState::new(
-					b.execution_payload.state_root.clone(), //  b.header.state_root?
+					b.execution_payload.state_root.clone(),
 					b.execution_payload.timestamp,
 				))
 				.unwrap();

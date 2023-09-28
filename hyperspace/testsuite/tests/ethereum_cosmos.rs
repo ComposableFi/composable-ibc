@@ -39,6 +39,10 @@ use hyperspace_ethereum::{
 	},
 	utils::{DeployYuiIbc, ProviderImpl},
 };
+use hyperspace_ethereum::{
+	ibc_provider::{Ics20BankAbi, SendPacketFilter, TransferInitiatedFilter},
+	utils::check_code_size,
+};
 use hyperspace_parachain::{finality_protocol::FinalityProtocol, ParachainClientConfig};
 use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider};
 use hyperspace_testsuite::{
@@ -111,15 +115,7 @@ pub async fn deploy_yui_ibc_and_tendermint_client_fixture() -> DeployYuiIbcTende
 	)
 	.await;
 
-	project_output1.artifacts().for_each(|(name, artifact)| {
-		if let Some(size) = artifact.bytecode.as_ref().unwrap().object.as_bytes().map(|x| x.len()) {
-			let max = 24 * 1024;
-			if size > max {
-				log::warn!("{} size is too big: {}/{}", name, size, max);
-			}
-			log::info!("{} size: {}/{}", name, size, max);
-		}
-	});
+	check_code_size(project_output1.artifacts());
 
 	let upd = project_output1.find_first("DelegateTendermintUpdate").unwrap();
 	let (abi, bytecode, _) = upd.clone().into_parts();

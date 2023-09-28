@@ -210,6 +210,73 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "uint64",
+        "name": "sequence",
+        "type": "uint64"
+      },
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "source_port",
+        "type": "string"
+      },
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "source_channel",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "destination_port",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "destination_channel",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint64",
+            "name": "revision_number",
+            "type": "uint64"
+          },
+          {
+            "internalType": "uint64",
+            "name": "revision_height",
+            "type": "uint64"
+          }
+        ],
+        "indexed": false,
+        "internalType": "struct HeightData",
+        "name": "timeout_height",
+        "type": "tuple"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint64",
+        "name": "timeout_timestamp",
+        "type": "uint64"
+      }
+    ],
+    "name": "TimeoutOnClosePacket",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "components": [
           {
             "internalType": "uint64",
@@ -268,6 +335,73 @@
         "internalType": "struct PacketData",
         "name": "packet",
         "type": "tuple"
+      }
+    ],
+    "name": "TimeoutPacket",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint64",
+        "name": "sequence",
+        "type": "uint64"
+      },
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "source_port",
+        "type": "string"
+      },
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "source_channel",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "destination_port",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "destination_channel",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint64",
+            "name": "revision_number",
+            "type": "uint64"
+          },
+          {
+            "internalType": "uint64",
+            "name": "revision_height",
+            "type": "uint64"
+          }
+        ],
+        "indexed": false,
+        "internalType": "struct HeightData",
+        "name": "timeout_height",
+        "type": "tuple"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint64",
+        "name": "timeout_timestamp",
+        "type": "uint64"
       }
     ],
     "name": "TimeoutPacket",
@@ -561,6 +695,213 @@
         "type": "uint64"
       }
     ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "components": [
+              {
+                "internalType": "uint64",
+                "name": "sequence",
+                "type": "uint64"
+              },
+              {
+                "internalType": "string",
+                "name": "source_port",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "source_channel",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "destination_port",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "destination_channel",
+                "type": "string"
+              },
+              {
+                "internalType": "bytes",
+                "name": "data",
+                "type": "bytes"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "uint64",
+                    "name": "revision_number",
+                    "type": "uint64"
+                  },
+                  {
+                    "internalType": "uint64",
+                    "name": "revision_height",
+                    "type": "uint64"
+                  }
+                ],
+                "internalType": "struct HeightData",
+                "name": "timeout_height",
+                "type": "tuple"
+              },
+              {
+                "internalType": "uint64",
+                "name": "timeout_timestamp",
+                "type": "uint64"
+              }
+            ],
+            "internalType": "struct PacketData",
+            "name": "packet",
+            "type": "tuple"
+          },
+          {
+            "internalType": "bytes",
+            "name": "proofUnreceived",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "proofClose",
+            "type": "bytes"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint64",
+                "name": "revision_number",
+                "type": "uint64"
+              },
+              {
+                "internalType": "uint64",
+                "name": "revision_height",
+                "type": "uint64"
+              }
+            ],
+            "internalType": "struct HeightData",
+            "name": "proofHeight",
+            "type": "tuple"
+          },
+          {
+            "internalType": "uint64",
+            "name": "nextSequenceRecv",
+            "type": "uint64"
+          }
+        ],
+        "internalType": "struct IBCMsgsMsgTimeoutOnClose",
+        "name": "msg_",
+        "type": "tuple"
+      }
+    ],
+    "name": "timeoutOnClose",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "components": [
+              {
+                "internalType": "uint64",
+                "name": "sequence",
+                "type": "uint64"
+              },
+              {
+                "internalType": "string",
+                "name": "source_port",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "source_channel",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "destination_port",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "destination_channel",
+                "type": "string"
+              },
+              {
+                "internalType": "bytes",
+                "name": "data",
+                "type": "bytes"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "uint64",
+                    "name": "revision_number",
+                    "type": "uint64"
+                  },
+                  {
+                    "internalType": "uint64",
+                    "name": "revision_height",
+                    "type": "uint64"
+                  }
+                ],
+                "internalType": "struct HeightData",
+                "name": "timeout_height",
+                "type": "tuple"
+              },
+              {
+                "internalType": "uint64",
+                "name": "timeout_timestamp",
+                "type": "uint64"
+              }
+            ],
+            "internalType": "struct PacketData",
+            "name": "packet",
+            "type": "tuple"
+          },
+          {
+            "internalType": "bytes",
+            "name": "proof",
+            "type": "bytes"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint64",
+                "name": "revision_number",
+                "type": "uint64"
+              },
+              {
+                "internalType": "uint64",
+                "name": "revision_height",
+                "type": "uint64"
+              }
+            ],
+            "internalType": "struct HeightData",
+            "name": "proofHeight",
+            "type": "tuple"
+          },
+          {
+            "internalType": "uint64",
+            "name": "nextSequenceRecv",
+            "type": "uint64"
+          }
+        ],
+        "internalType": "struct IBCMsgsMsgTimeoutPacket",
+        "name": "msg_",
+        "type": "tuple"
+      }
+    ],
+    "name": "timeoutPacket",
+    "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
