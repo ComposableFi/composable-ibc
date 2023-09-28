@@ -1,5 +1,6 @@
 pub mod macros;
 
+// TODO regenerate subxt types once update composable runtime with new polkadot version 43
 // pub mod dali;
 pub mod default;
 // pub mod picasso_kusama;
