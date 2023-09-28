@@ -3,6 +3,7 @@ use crate::{
 	routing::ModuleRouter,
 };
 use cumulus_primitives_core::ParaId;
+use derive_more::Display;
 use frame_support::{
 	pallet_prelude::ConstU32,
 	parameter_types,
@@ -32,6 +33,7 @@ use sp_runtime::{
 	MultiSignature, Perbill,
 };
 use std::{
+	convert::Infallible,
 	sync::Arc,
 	time::{SystemTime, UNIX_EPOCH},
 };
@@ -48,7 +50,7 @@ pub type Balance = u128;
 pub type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
 use super::*;
 use crate::{
-	ics20::IbcMemoHandler,
+	ics20::{IbcMemoHandler, MemoData},
 	light_clients::{AnyClientMessage, AnyConsensusState},
 };
 use ibc::mock::{client_state::MockConsensusState, header::MockClientMessage, host::MockHostBlock};
@@ -222,6 +224,43 @@ fn create_alice_key() -> <Test as Config>::AccountIdConversion {
 	IbcAccount(account_id_32)
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Default, Display, Encode, Decode, TypeInfo)]
+pub struct RawMemo(pub String);
+
+impl FromStr for RawMemo {
+	type Err = Infallible;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		Ok(Self(s.to_string()))
+	}
+}
+
+impl TryFrom<MemoData> for RawMemo {
+	type Error = <String as TryFrom<MemoData>>::Error;
+
+	fn try_from(value: MemoData) -> Result<Self, Self::Error> {
+		Ok(Self(value.try_into()?))
+	}
+}
+
+impl TryFrom<RawMemo> for MemoData {
+	type Error = <MemoData as TryFrom<String>>::Error;
+
+	fn try_from(value: RawMemo) -> Result<Self, Self::Error> {
+		Ok(value.0.try_into()?)
+	}
+}
+
+impl ValidateMemo for RawMemo {
+	fn validate(&self) -> Result<(), String> {
+		if self.0 == "invalid memo" {
+			return Err(self.0.clone())
+		} else {
+			Ok(())
+		}
+	}
+}
+
 impl Config for Test {
 	type TimeProvider = Timestamp;
 	type RuntimeEvent = RuntimeEvent;
@@ -247,7 +286,7 @@ impl Config for Test {
 	type TransferOrigin = EnsureSigned<Self::IbcAccountId>;
 	type RelayerOrigin = EnsureSigned<Self::AccountId>;
 	type HandleMemo = IbcMemoHandler<(), Test>;
-	type MemoMessage = alloc::string::String;
+	type MemoMessage = RawMemo;
 	type IsReceiveEnabled = sp_core::ConstBool<true>;
 	type IsSendEnabled = sp_core::ConstBool<true>;
 	type FeeAccount = FeeAccount;
