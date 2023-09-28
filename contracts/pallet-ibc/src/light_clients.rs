@@ -481,11 +481,6 @@ impl TryFrom<Any> for AnyClientMessage {
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			)),
 			#[cfg(feature = "ethereum")]
-			ETHEREUM_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Ethereum(
-				icsxx_ethereum::client_message::ClientMessage::decode_vec(&value.value)
-					.map_err(ics02_client::error::Error::decode_raw_header)?,
-			)),
-			#[cfg(feature = "ethereum")]
 			ETHEREUM_HEADER_TYPE_URL =>
 				Ok(Self::Ethereum(icsxx_ethereum::client_message::ClientMessage::Header(
 					icsxx_ethereum::client_message::Header::decode_vec(&value.value)

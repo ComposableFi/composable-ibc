@@ -25,7 +25,9 @@ pub mod client_message;
 pub mod client_state;
 pub mod consensus_state;
 pub mod error;
+pub mod proof;
 pub mod proto;
+pub mod utils;
 pub mod verify;
 
 // #[cfg(test)]

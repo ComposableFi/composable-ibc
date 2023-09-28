@@ -146,7 +146,7 @@ where
 }
 
 /// Attempts to send 20% of funds of chain_a's signer to chain b's signer.
-async fn send_transfer<A, B>(
+pub async fn send_transfer<A, B>(
 	chain_a: &A,
 	chain_b: &B,
 	asset_a: A::AssetId,

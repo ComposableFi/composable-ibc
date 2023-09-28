@@ -85,5 +85,5 @@ scripts/eth-bridge/consensus/genesis.ssz
 scripts/eth-bridge/consensus/beacondata
 scripts/eth-bridge/consensus/validatordata
 
-hyperspace/ethereum/yui-ibc-solidity
+#hyperspace/ethereum/yui-ibc-solidity
 hyperspace/ethereum/composable-centauri
