@@ -47,6 +47,7 @@ use icsxx_ethereum::{
 	consensus_state::ConsensusState,
 };
 // use light_client_common::{verify_membership, verify_non_membership};
+use icsxx_ethereum::verify::verify_ibc_proof;
 use std::{collections::BTreeSet, str::FromStr};
 use sync_committee_verifier::LightClientState;
 /*
@@ -110,14 +111,17 @@ fn process_message(
 			let consensus_state = ctx
 				.consensus_state(&client_id, msg.height)
 				.map_err(|e| ContractError::Client(e.to_string()))?;
-			// verify_membership::<BlakeTwo256, _>(
-			// 	&msg.prefix,
-			// 	&msg.proof,
-			// 	&consensus_state.root,
-			// 	msg.path,
-			// 	msg.value,
-			// )
-			// .map_err(|e| ContractError::Ethereum(e.to_string()))?;
+			verify_ibc_proof(
+				&msg.prefix,
+				&msg.proof,
+				&consensus_state.root,
+				msg.path,
+				Some(&msg.value),
+			)
+			.map_err(|e| {
+				ctx.log(&format!("VerifyMembership: error = {:?}", e));
+				ContractError::Client(e.to_string())
+			})?;
 			Ok(()).map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyNonMembership(msg) => {
@@ -126,14 +130,11 @@ fn process_message(
 				.consensus_state(&client_id, msg.height)
 				.map_err(|e| ContractError::Client(e.to_string()))?;
 
-			// verify_non_membership::<BlakeTwo256, _>(
-			// 	&msg.prefix,
-			// 	&msg.proof,
-			// 	&consensus_state.root,
-			// 	msg.path,
-			// )
-			// .map_err(|e| ContractError::Ethereum(e.to_string()))
-			// .map(|_| to_binary(&ContractResult::success()))
+			verify_ibc_proof(&msg.prefix, &msg.proof, &consensus_state.root, msg.path, None)
+				.map_err(|e| {
+					ctx.log(&format!("VerifyNonMembership: error = {:?}", e));
+					ContractError::Client(e.to_string())
+				})?;
 			Ok(()).map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyClientMessage(msg) => {

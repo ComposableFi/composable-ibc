@@ -1,22 +1,25 @@
 extern crate alloc;
 
-use crate::ethereum_verification::node_codec;
-
-use std::marker::PhantomData;
-
-/// Taken from https://github.com/paritytech/trie/blob/aa3168d6de01793e71ebd906d3a82ae4b363db59/trie-eip1186/src/eip1186.rs
+use crate::{proof::node_codec, utils::keccak256};
+use alloc::vec::Vec;
+use core::{
+	fmt::{Display, Formatter},
+	marker::PhantomData,
+};
+use hash256_std_hasher::Hash256StdHasher;
 use hash_db::Hasher;
+/// Taken from https://github.com/paritytech/trie/blob/aa3168d6de01793e71ebd906d3a82ae4b363db59/trie-eip1186/src/eip1186.rs
 use primitive_types::H256;
-use tiny_keccak::{Hasher as KeccakHasherTrait, Keccak};
 use trie_db::{
 	node::{decode_hash, Node, NodeHandle, Value},
 	CError, NibbleSlice, NodeCodec, TrieHash, TrieLayout,
 };
 
-/// Errors that may occur during proof verification. Most of the errors types simply indicate that
-/// the proof is invalid with respect to the statement being verified, and the exact error type can
-/// be used for debugging.
-#[derive(PartialEq, Eq, Debug)]
+/// Errors that may occur during proof verification. Most of the errors types simply indicate
+/// that the proof is invalid with respect to the statement being verified, and the exact error
+/// type can be used for debugging.
+#[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub enum VerifyError<'a, HO, CE> {
 	/// The proof does not contain any value for the given key
 	/// the error carries the nibbles left after traversing the trie
@@ -37,12 +40,41 @@ pub enum VerifyError<'a, HO, CE> {
 	HashDecodeError(&'a [u8]),
 }
 
+#[cfg(not(feature = "std"))]
+impl<HO, CE> Display for VerifyError<'_, HO, CE> {
+	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+		match self {
+			VerifyError::NonExistingValue(_) => {
+				write!(f, "Key does not exist in trie: reaming key")
+			},
+			VerifyError::ExistingValue(_) => {
+				write!(f, "trie contains a value for given key")
+			},
+			VerifyError::ValueMismatch(_) => {
+				write!(f, "Expected value was not found in the trie")
+			},
+			VerifyError::IncompleteProof => {
+				write!(f, "Proof is incomplete -- expected more nodes")
+			},
+			VerifyError::HashMismatch(_) => {
+				write!(f, "hash mismatch found")
+			},
+			VerifyError::DecodeError(_) => {
+				write!(f, "Unable to decode proof node")
+			},
+			VerifyError::HashDecodeError(_) => {
+				write!(f, "Unable to decode hash value")
+			},
+		}
+	}
+}
+
 #[cfg(feature = "std")]
 impl<'a, HO: std::fmt::Debug, CE: std::error::Error> std::fmt::Display for VerifyError<'a, HO, CE> {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
 		match self {
 			VerifyError::NonExistingValue(key) => {
-				write!(f, "Key does not exist in trie: reaming key={:?}", key)
+				write!(f, "Key does not exist in trie: reaming key")
 			},
 			VerifyError::ExistingValue(value) => {
 				write!(f, "trie contains a value for given key value={:?}", value)
@@ -157,6 +189,7 @@ where
 	}
 	match_value::<L>(Some(data), key, expected_value, proof)
 }
+
 fn process_extension<'a, L>(
 	nib: &NibbleSlice,
 	handle: NodeHandle<'a>,
@@ -226,6 +259,7 @@ where
 		match_children::<L>(children, key, expected_value, proof)
 	}
 }
+
 fn match_children<'a, L>(
 	children: [Option<NodeHandle<'a>>; 16],
 	mut key: NibbleSlice<'a>,
@@ -297,14 +331,6 @@ where
 	}
 }
 
-pub fn keccak_256(input: &[u8]) -> [u8; 32] {
-	let mut out = [0u8; 32];
-	let mut k = Keccak::v256();
-	k.update(input);
-	k.finalize(&mut out);
-	out
-}
-
 /// Trie layout for EIP-1186 state proof nodes.
 #[derive(Default, Clone)]
 pub struct EIP1186Layout<H>(PhantomData<H>);
@@ -317,17 +343,15 @@ impl<H: Hasher<Out = H256>> TrieLayout for EIP1186Layout<H> {
 	type Codec = node_codec::RlpNodeCodec<H>;
 }
 
-use hash256_std_hasher::Hash256StdHasher;
-
 #[derive(Debug)]
 pub struct KeccakHasher;
 
-impl hash_db::Hasher for KeccakHasher {
+impl Hasher for KeccakHasher {
 	type Out = H256;
 	type StdHasher = Hash256StdHasher;
 	const LENGTH: usize = 32;
 
 	fn hash(x: &[u8]) -> Self::Out {
-		keccak_256(x).into()
+		keccak256(x).into()
 	}
 }

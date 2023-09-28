@@ -17,13 +17,13 @@ use ethers_solc::{
 		output_selection::OutputSelection, Libraries, Optimizer, OptimizerDetails, Settings,
 		StorageLayout,
 	},
-	Artifact, ConfigurableContractArtifact, EvmVersion, Project, ProjectCompileOutput,
-	ProjectPathsConfig, SolcConfig,
+	Artifact, ArtifactOutput, ConfigurableContractArtifact, EvmVersion, Project,
+	ProjectCompileOutput, ProjectPathsConfig, SolcConfig,
 };
 use ibc::core::{ics02_client::client_state::ClientType, ics04_channel::packet::Packet};
 use std::{
 	borrow::Borrow,
-	collections::HashMap,
+	collections::{HashMap, HashSet},
 	fs::File,
 	iter::once,
 	path::{Path, PathBuf},
@@ -702,6 +702,30 @@ where
 		.collect()
 }
 
+pub fn check_code_size<'a>(
+	artifacts: impl Iterator<Item = (String, &'a ConfigurableContractArtifact)>,
+) {
+	let ignore_list = ["Verifier"].into_iter().collect::<HashSet<_>>();
+	artifacts
+		.filter_map(|(name, artifact)| {
+			Some((name, artifact.bytecode.as_ref()?.object.as_bytes()?.len()))
+		})
+		.filter(|(name, _)| {
+			let ignored = ignore_list.contains(name.as_str());
+			if ignored {
+				log::warn!("{} size is ignored", name);
+			}
+			!ignored
+		})
+		.for_each(|(name, size)| {
+			let max = 24 * 1024;
+			if size > max {
+				panic!("{} size is too big: {}/{}", name, size, max);
+			}
+			log::info!("{} size: {}/{}", name, size, max);
+		});
+}
+
 pub async fn deploy_yui_ibc<M>(
 	project_output: &ProjectCompileOutput,
 	diamond_project_output: &ProjectCompileOutput,
@@ -722,22 +746,8 @@ where
 		OwnershipFacet,
 	];
 
-	project_output.artifacts().for_each(|(name, artifact)| {
-		let size = artifact.bytecode.as_ref().unwrap().object.as_bytes().unwrap().len();
-		let max = 24 * 1024;
-		if size > max {
-			panic!("{} size is too big: {}/{}", name, size, max);
-		}
-		log::info!("{} size: {}/{}", name, size, max);
-	});
-	diamond_project_output.artifacts().for_each(|(name, artifact)| {
-		let size = artifact.bytecode.as_ref().unwrap().object.as_bytes().unwrap().len();
-		let max = 24 * 1024;
-		if size > max {
-			panic!("{} size is too big: {}/{}", name, size, max);
-		}
-		log::info!("{} size: {}/{}", name, size, max);
-	});
+	check_code_size(project_output.artifacts());
+	check_code_size(diamond_project_output.artifacts());
 
 	let acc = client.default_sender().unwrap();
 

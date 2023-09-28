@@ -16,6 +16,19 @@
     "type": "constructor"
   },
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint64",
+        "name": "sequence",
+        "type": "uint64"
+      }
+    ],
+    "name": "TransferInitiated",
+    "type": "event"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -386,6 +399,78 @@
         "type": "bytes"
       }
     ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint64",
+            "name": "sequence",
+            "type": "uint64"
+          },
+          {
+            "internalType": "string",
+            "name": "source_port",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "source_channel",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "destination_port",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "destination_channel",
+            "type": "string"
+          },
+          {
+            "internalType": "bytes",
+            "name": "data",
+            "type": "bytes"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint64",
+                "name": "revision_number",
+                "type": "uint64"
+              },
+              {
+                "internalType": "uint64",
+                "name": "revision_height",
+                "type": "uint64"
+              }
+            ],
+            "internalType": "struct HeightData",
+            "name": "timeout_height",
+            "type": "tuple"
+          },
+          {
+            "internalType": "uint64",
+            "name": "timeout_timestamp",
+            "type": "uint64"
+          }
+        ],
+        "internalType": "struct PacketData",
+        "name": "packet",
+        "type": "tuple"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "onTimeoutPacket",
+    "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },

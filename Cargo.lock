@@ -3021,7 +3021,7 @@ checksum = "96b4026b97da8281276744741fac7eb385da905f6093c583331fa2953fdd4253"
 dependencies = [
  "ethers-addressbook 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethers-contract 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "ethers-core 2.0.9",
+ "ethers-core 2.0.10",
  "ethers-etherscan 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethers-middleware 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethers-providers 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3050,7 +3050,7 @@ version = "2.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "edcb6ffefc230d8c42874c51b28dc11dbb8de50b27a8fdf92648439d6baa68dc"
 dependencies = [
- "ethers-core 2.0.9",
+ "ethers-core 2.0.10",
  "once_cell",
  "serde",
  "serde_json",
@@ -3075,7 +3075,7 @@ checksum = "0d4719a44c3d37ab07c6dea99ab174068d8c35e441b60b6c20ce4e48357273e8"
 dependencies = [
  "ethers-contract-abigen 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethers-contract-derive 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "ethers-core 2.0.9",
+ "ethers-core 2.0.10",
  "ethers-providers 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethers-signers 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-util",
@@ -3114,7 +3114,7 @@ checksum = "155ea1b84d169d231317ed86e307af6f2bed6b40dd17e5e94bc84da21cadb21c"
 dependencies = [
  "Inflector",
  "dunce",
- "ethers-core 2.0.9",
+ "ethers-core 2.0.10",
  "ethers-etherscan 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "eyre",
  "hex",
@@ -3159,7 +3159,7 @@ checksum = "8567ff196c4a37c1a8c90ec73bda0ad2062e191e4f0a6dc4d943e2ec4830fc88"
 dependencies = [
  "Inflector",
  "ethers-contract-abigen 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "ethers-core 2.0.9",
+ "ethers-core 2.0.10",
  "hex",
  "proc-macro2",
  "quote",
@@ -3213,9 +3213,9 @@ dependencies = [
 
 [[package]]
 name = "ethers-core"
-version = "2.0.9"
+version = "2.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c29523f73c12753165781c6e5dc11c84d3e44c080a15f7c6cfbd70b514cb6f1"
+checksum = "c0a17f0708692024db9956b31d7a20163607d2745953f5ae8125ab368ba280ad"
 dependencies = [
  "arrayvec 0.7.2",
  "bytes",
@@ -3247,7 +3247,7 @@ version = "2.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22b3a8269d3df0ed6364bc05b4735b95f4bf830ce3aef87d5e760fb0e93e5b91"
 dependencies = [
- "ethers-core 2.0.9",
+ "ethers-core 2.0.10",
  "reqwest",
  "semver",
  "serde",
@@ -3280,7 +3280,7 @@ dependencies = [
  "async-trait",
  "auto_impl",
  "ethers-contract 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "ethers-core 2.0.9",
+ "ethers-core 2.0.10",
  "ethers-etherscan 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethers-providers 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethers-signers 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3335,7 +3335,7 @@ dependencies = [
  "base64 0.21.0",
  "bytes",
  "enr 0.8.1",
- "ethers-core 2.0.9",
+ "ethers-core 2.0.10",
  "futures-channel",
  "futures-core",
  "futures-timer",
@@ -3407,7 +3407,7 @@ dependencies = [
  "coins-bip39",
  "elliptic-curve 0.13.5",
  "eth-keystore",
- "ethers-core 2.0.9",
+ "ethers-core 2.0.10",
  "hex",
  "rand 0.8.5",
  "sha2 0.10.6",
@@ -3486,7 +3486,7 @@ dependencies = [
  "const-hex",
  "dirs",
  "dunce",
- "ethers-core 2.0.9",
+ "ethers-core 2.0.10",
  "glob",
  "home",
  "md-5 0.10.5",
@@ -5147,6 +5147,7 @@ dependencies = [
  "parity-scale-codec",
  "polkadot-core-primitives",
  "rand 0.8.5",
+ "reqwest",
  "serde_json",
  "sp-core 7.0.0",
  "sp-finality-grandpa",
@@ -5459,8 +5460,12 @@ dependencies = [
  "anyhow",
  "derive_more",
  "env_logger 0.9.3",
+ "ethabi",
  "futures",
+ "hash-db 0.16.0",
+ "hash256-std-hasher",
  "hex",
+ "hex-literal 0.4.1",
  "ibc",
  "ibc-derive",
  "ibc-proto",
@@ -5470,6 +5475,8 @@ dependencies = [
  "prost 0.11.6",
  "prost-build",
  "prost-types",
+ "rlp",
+ "rs_merkle",
  "serde",
  "serde_json",
  "ssz-rs",
@@ -5478,7 +5485,9 @@ dependencies = [
  "sync-committee-verifier",
  "tendermint",
  "tendermint-proto",
+ "tiny-keccak",
  "tokio",
+ "trie-db 0.28.0",
 ]
 
 [[package]]
@@ -5738,7 +5747,7 @@ dependencies = [
  "socket2 0.4.9",
  "widestring",
  "winapi",
- "winreg",
+ "winreg 0.10.1",
 ]
 
 [[package]]
@@ -6849,12 +6858,6 @@ dependencies = [
  "rand_core 0.5.1",
  "zeroize",
 ]
-
-[[package]]
-name = "micromath"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39617bc909d64b068dcffd0e3e31679195b5576d0c83fadc52690268cc2b2b55"
 
 [[package]]
 name = "mime"
@@ -9049,9 +9052,9 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.11.18"
+version = "0.11.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cde824a14b7c14f85caff81225f411faacc04a2013f41670f41443742b1c1c55"
+checksum = "3e9ad3fe7488d7e34558a2033d45a0c90b72d97b4f80705666fea71472e2e6a1"
 dependencies = [
  "base64 0.21.0",
  "bytes",
@@ -9085,8 +9088,8 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "webpki-roots 0.22.6",
- "winreg",
+ "webpki-roots 0.25.2",
+ "winreg 0.50.0",
 ]
 
 [[package]]
@@ -9232,11 +9235,10 @@ dependencies = [
 
 [[package]]
 name = "rs_merkle"
-version = "1.2.0"
+version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a632a43487c1332be8e183588079f89b6820fab24e04db49521eacd536837372"
+checksum = "05225752ca6ede4cb1b73aa37ce3904affd042e98f28246f56f438ebfd47a810"
 dependencies = [
- "micromath",
  "sha2 0.10.6",
 ]
 
@@ -13170,6 +13172,19 @@ name = "trie-db"
 version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "767abe6ffed88a1889671a102c2861ae742726f52e0a5a425b92c9fbfa7e9c85"
+dependencies = [
+ "hash-db 0.16.0",
+ "hashbrown 0.13.2",
+ "log",
+ "rustc-hex",
+ "smallvec 1.10.0",
+]
+
+[[package]]
+name = "trie-db"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff28e0f815c2fea41ebddf148e008b077d2faddb026c9555b29696114d602642"
 dependencies = [
  "hash-db 0.16.0",
  "hashbrown 0.13.2",

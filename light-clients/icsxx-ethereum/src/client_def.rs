@@ -18,7 +18,10 @@ use ibc::core::ics02_client::{
 	client_consensus::ConsensusState as _, client_state::ClientState as _,
 };
 
-use crate::client_message::{ClientMessage, Misbehaviour};
+use crate::{
+	client_message::{ClientMessage, Misbehaviour},
+	verify::verify_ibc_proof,
+};
 use alloc::{format, string::ToString, vec, vec::Vec};
 use anyhow::anyhow;
 use core::{fmt::Debug, marker::PhantomData};
@@ -142,7 +145,7 @@ where
 					b.execution_payload.block_number as u64,
 				);
 				let cs = Ctx::AnyConsensusState::wrap(&ConsensusState::new(
-					b.execution_payload.state_root.clone(), //  b.header.state_root?
+					b.execution_payload.state_root.clone(),
 					b.execution_payload.timestamp,
 				))
 				.unwrap();
@@ -246,16 +249,15 @@ where
 		consensus_height: Height,
 		expected_consensus_state: &Ctx::AnyConsensusState,
 	) -> Result<(), Ics02Error> {
-		// client_state.verify_height(height)?;
-		// let path = ClientConsensusStatePath {
-		// 	client_id: client_id.clone(),
-		// 	epoch: consensus_height.revision_number,
-		// 	height: consensus_height.revision_height,
-		// };
-		// let value = expected_consensus_state.encode_to_vec().map_err(Ics02Error::encode)?;
-		// verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
-		// 	.map_err(Error::Anyhow)?;
-		unimplemented!()
+		client_state.verify_height(height)?;
+		let path = ClientConsensusStatePath {
+			client_id: client_id.clone(),
+			epoch: consensus_height.revision_number,
+			height: consensus_height.revision_height,
+		};
+		let value = expected_consensus_state.encode_to_vec().map_err(Ics02Error::encode)?;
+		verify_ibc_proof(prefix, proof, root, path, Some(&value))?;
+		Ok(())
 	}
 
 	fn verify_connection_state<Ctx: ReaderContext>(

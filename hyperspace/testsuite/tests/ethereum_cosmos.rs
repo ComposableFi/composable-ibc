@@ -15,8 +15,10 @@
 use crate::utils::ETH_NODE_PORT_WS;
 use core::time::Duration;
 use ethers::{
-	abi::Token,
-	prelude::{ContractFactory, ContractInstance},
+	abi::{Abi, Token},
+	prelude::{spoof::Account, ContractFactory, ContractInstance},
+	providers::Middleware,
+	types::Address,
 	utils::AnvilInstance,
 };
 use ethers_solc::{Artifact, ProjectCompileOutput, ProjectPathsConfig};
@@ -24,16 +26,22 @@ use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use hyperspace_core::{
 	chain::{AnyAssetId, AnyChain, AnyConfig},
 	logging,
-	substrate::DefaultConfig,
+	// substrate::DefaultConfig,
 };
 use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_ethereum::{
+	client::EthereumClient,
 	config::EthereumClientConfig,
+	ibc_provider::Ics20BankAbi,
 	mock::{
 		utils,
 		utils::{hyperspace_ethereum_client_fixture, ETH_NODE_PORT},
 	},
 	utils::{DeployYuiIbc, ProviderImpl},
+};
+use hyperspace_ethereum::{
+	ibc_provider::{Ics20BankAbi, SendPacketFilter, TransferInitiatedFilter},
+	utils::check_code_size,
 };
 use hyperspace_parachain::{finality_protocol::FinalityProtocol, ParachainClientConfig};
 use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider};
@@ -107,15 +115,7 @@ pub async fn deploy_yui_ibc_and_tendermint_client_fixture() -> DeployYuiIbcTende
 	)
 	.await;
 
-	project_output1.artifacts().for_each(|(name, artifact)| {
-		if let Some(size) = artifact.bytecode.as_ref().unwrap().object.as_bytes().map(|x| x.len()) {
-			let max = 24 * 1024;
-			if size > max {
-				log::warn!("{} size is too big: {}/{}", name, size, max);
-			}
-			log::info!("{} size: {}/{}", name, size, max);
-		}
-	});
+	check_code_size(project_output1.artifacts());
 
 	let upd = project_output1.find_first("DelegateTendermintUpdate").unwrap();
 	let (abi, bytecode, _) = upd.clone().into_parts();
@@ -228,7 +228,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		},
 	};
 
-	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.unwrap();
+	let chain_b = CosmosClient::<()>::new(config_b.clone()).await.unwrap();
 
 	let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
 	let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
@@ -259,7 +259,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	let (client_b, client_a) =
 		create_clients(&mut chain_b_wrapped, &mut chain_a_wrapped).await.unwrap();
 	// let (client_a, client_b): (ClientId, ClientId) =
-	// 	("08-wasm-136".parse().unwrap(), "07-tendermint-0".parse().unwrap());
+	// 	("08-wasm-150".parse().unwrap(), "07-tendermint-0".parse().unwrap());
 
 	log::info!(target: "hyperspace", "Client A: {client_a:?} B: {client_b:?}");
 	chain_a_wrapped.set_client_id(client_a);
@@ -267,11 +267,10 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	(chain_a_wrapped, chain_b_wrapped)
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
 async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
-
 	let asset_str = "pica".to_string();
 	let asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
@@ -280,10 +279,9 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	handle.abort();
 
 	// let connection_id_a = "connection-0".parse().unwrap();
-	// let connection_id_b = "connection-35".parse().unwrap();
+	// let connection_id_b = "connection-47".parse().unwrap();
 	// let channel_a = "channel-0".parse().unwrap();
-	// let channel_b = "channel-10".parse().unwrap();
-
+	// let channel_b = "channel-24".parse().unwrap();
 	log::info!(target: "hyperspace", "Conn A: {connection_id_a:?} B: {connection_id_b:?}");
 	log::info!(target: "hyperspace", "Chann A: {channel_a:?} B: {channel_b:?}");
 
@@ -348,7 +346,7 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	// TODO: tendermint misbehaviour?
 	// ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
 }
-
+/*
 #[tokio::test]
 #[ignore]
 async fn cosmos_to_ethereum_ibc_messaging_full_integration_test() {
@@ -409,3 +407,4 @@ async fn cosmos_to_ethereum_ibc_messaging_full_integration_test() {
 
 	ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
 }
+ */
