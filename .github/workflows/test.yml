@@ -118,6 +118,6 @@ jobs:
           export RUST_BACKTRACE=full
           RUST_BACKTRACE=full METRICS_PORT=39988 ./wait-for-parachains-network.sh
           RUST_BACKTRACE=full METRICS_PORT=39998 ./wait-for-parachains-network.sh 
-          RELAY_HOST=ws://127.0.0.1:9944 PARA_HOST=ws://127.0.0.1:9188 ./scripts/generate-subxt.sh
+          RELAY_HOST=ws://127.0.0.1:9944 PARA_HOST=ws://127.0.0.1:9188 ../generate-subxt.sh
           # SKIP_WASM_BUILD=1 cargo +${{ env.RUST_VERSION }} nextest run --locked --release --workspace --exclude ibc-derive --exclude hyperspace-testsuite
           RUST_BACKTRACE=full cargo +${{ env.RUST_VERSION }} test -p hyperspace-testsuite --locked
