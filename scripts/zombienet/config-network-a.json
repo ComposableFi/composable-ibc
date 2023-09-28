@@ -4,7 +4,10 @@
             "chain": "dev-2000",
             "collator": {
                 "args": [
-                    "-lparachain=debug"
+                    "--enable-offchain-indexing=true",
+                    "--pruning=archive",
+                    "-lparachain=debug",
+                    "--discover-local"
                 ],
                 "command": "parachain-node",
                 "name": "alice",
@@ -17,8 +20,10 @@
             "chain": "dev-2001",
             "collator": {
                 "args": [
-                    
-                    "-lparachain=debug"
+                    "--enable-offchain-indexing=true",
+                    "--pruning=archive",
+                    "-lparachain=debug",
+                    "--discover-local"
                 ],
                 "command": "parachain-node",
                 "name": "bob",
@@ -32,7 +37,12 @@
         "chain": "rococo-local",
         "command": "polkadot",
         "args": [
-            "-lparachain=debug"
+            "--rpc-cors=all",
+            "--beefy",
+            "--enable-offchain-indexing=true",
+            "--pruning=archive",
+            "-lparachain=debug",
+            "--discover-local"
         ],
         "nodes": [
             {
