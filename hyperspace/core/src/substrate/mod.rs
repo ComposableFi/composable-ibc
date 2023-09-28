@@ -1,10 +1,10 @@
 pub mod macros;
 
 // pub mod dali;
+pub mod composable;
 pub mod default;
 pub mod picasso_kusama;
 pub mod picasso_rococo;
-pub mod composable;
 
 pub use default::{
 	DefaultConfig, DefaultConfig as ComposableConfig, DefaultConfig as PicassoKusamaConfig,
