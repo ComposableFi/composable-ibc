@@ -16,7 +16,6 @@ hex = "0.4.3"
 tokio = { version = "1.32.0", features = ["macros", "sync"] }
 rs_merkle = "1.2.0"
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
-hex-literal = "0.3.4"
 serde_json = "1.0.74"
 derive_more = { version = "0.99", features = ["from"]  }
 serde = {version="1.0.137", features = ["derive"]}

@@ -42,7 +42,6 @@ derive_more = { version = "0.99.17", features = ["from"] }
 prometheus = { version = "0.13.0", default-features = false }
 rand = "0.8.5"
 itertools = "0.10.5"
-scale-decode = "0.5.0"
 scale-encode = "0.1.2"
 
 # ibc
