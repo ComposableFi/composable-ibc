@@ -40,7 +40,7 @@ use hyperspace_ethereum::{
 	utils::{DeployYuiIbc, ProviderImpl},
 };
 use hyperspace_ethereum::{
-	ibc_provider::{Ics20BankAbi, SendPacketFilter, TransferInitiatedFilter},
+	ibc_provider::{SendPacketFilter, TransferInitiatedFilter},
 	utils::check_code_size,
 };
 use hyperspace_parachain::{finality_protocol::FinalityProtocol, ParachainClientConfig};
