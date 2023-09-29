@@ -199,7 +199,6 @@ where
 		timeout_timestamp,
 		memo: "".to_string(),
 	};
-	// chain_a.query_seq_from_tx_hash();
 	chain_a.send_transfer(msg.clone()).await.expect("Failed to send transfer: ");
 	(amount, msg)
 }
@@ -262,7 +261,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 		chain_b,
 		asset_a,
 		channel_id,
-		Some(Timeout::Offset { timestamp: Some(60 * 60), height: Some(20) }),
+		Some(Timeout::Offset { timestamp: Some(120 * 60), height: Some(100) }),
 	)
 	.await;
 
@@ -314,7 +313,7 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 		chain_b,
 		asset_a,
 		channel_id,
-		Some(Timeout::Offset { timestamp: Some(60 * 2), height: Some(400) }),
+		Some(Timeout::Offset { timestamp: Some(60 * 10), height: Some(400) }),
 	)
 	.await;
 
@@ -367,11 +366,11 @@ async fn send_packet_with_connection_delay<A, B>(
 	log::info!(target: "hyperspace", "Sending transfer from {}", chain_a.name());
 	let (previous_balance, ..) =
 		send_transfer(chain_a, chain_b, asset_a.clone(), channel_id_a, None).await;
-	assert_send_transfer(chain_a, asset_a, previous_balance, 120).await;
+	assert_send_transfer(chain_a, asset_a, previous_balance, 220).await;
 	log::info!(target: "hyperspace", "Sending transfer from {}", chain_b.name());
 	let (previous_balance, ..) =
 		send_transfer(chain_b, chain_a, asset_b.clone(), channel_id_b, None).await;
-	assert_send_transfer(chain_b, asset_b, previous_balance, 120).await;
+	assert_send_transfer(chain_b, asset_b, previous_balance, 220).await;
 	// now send from chain b.
 	log::info!(target: "hyperspace", "🚀🚀 Token Transfer successful with connection delay");
 }
@@ -397,7 +396,7 @@ async fn send_channel_close_init_and_assert_channel_close_confirm<A, B>(
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 
-	chain_a.submit(vec![msg]).await.unwrap();
+	chain_a.submit(vec![msg.clone()]).await.unwrap();
 
 	// wait channel close confirmation on chain b
 	let future = chain_b
@@ -439,7 +438,7 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 		chain_b,
 		asset_a,
 		channel_id,
-		Some(Timeout::Offset { timestamp: Some(60 * 2), height: Some(400) }),
+		Some(Timeout::Offset { timestamp: Some(60 * 20), height: Some(4000) }),
 	)
 	.await;
 
@@ -451,7 +450,7 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 
-	chain_a.submit(vec![msg]).await.unwrap();
+	chain_a.submit(vec![msg.clone()]).await.unwrap();
 
 	// Wait timeout timestamp to elapse, then
 	let future = chain_b

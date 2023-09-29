@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <wizdave97@gmail.com>"]
 
 [dependencies]
-tokio = { version = "1.19.2", features = ["macros", "sync", "time", "rt-multi-thread"] }
+tokio = { version = "1.32.0", features = ["macros", "sync", "time", "rt-multi-thread"] }
 clap = { version = "3.2.22", features = ["derive"] }
 anyhow = "1.0.66"
 hyperspace-core = { path = "./core" }

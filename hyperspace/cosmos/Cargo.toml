@@ -13,14 +13,13 @@ futures = "0.3.21"
 async-trait = "0.1.53"
 log = "0.4.17"
 hex = "0.4.3"
-tokio = { version = "1.19.2", features = ["macros", "sync"] }
+tokio = { version = "1.32.0", features = ["macros", "sync"] }
 rs_merkle = "1.2.0"
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
-hex-literal = "0.3.4"
 serde_json = "1.0.74"
 derive_more = { version = "0.99", features = ["from"]  }
 serde = {version="1.0.137", features = ["derive"]}
-tokio-stream = { version = "0.1.9", features = ["sync"]}
+tokio-stream = { version = "0.1.14", features = ["sync"]}
 thiserror = "1.0.31"
 itertools = "0.10.3"
 prost = { version = "0.11" }

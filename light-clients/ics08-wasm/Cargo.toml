@@ -14,5 +14,11 @@ tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", r
 
 [features]
 default = []
-std = ["ibc/std", "ibc-proto/std", "prost/std", "hex/std" ]
+std = [
+	"ibc/std",
+	"ibc-proto/std",
+	"prost/std",
+	"hex/std", 
+	"serde/std"
+]
 cosmwasm = ["cosmwasm-schema", "std", "serde", "ibc/cosmwasm"]

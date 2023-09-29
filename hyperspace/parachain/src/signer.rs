@@ -14,9 +14,8 @@
 
 use codec::Decode;
 use primitives::KeyProvider;
-use sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
+use sp_keystore::{Keystore, KeystorePtr};
 use sp_runtime::{
-	app_crypto::CryptoTypePublicPair,
 	traits::{IdentifyAccount, Verify},
 	KeyTypeId, MultiSignature, MultiSigner,
 };
@@ -27,7 +26,7 @@ use subxt::tx::Signer;
 pub struct ExtrinsicSigner<T: light_client_common::config::Config, Provider: KeyProvider> {
 	account_id: T::AccountId,
 	signer: MultiSigner,
-	key_store: SyncCryptoStorePtr,
+	key_store: KeystorePtr,
 	key_type_id: KeyTypeId,
 	_phantom: std::marker::PhantomData<Provider>,
 }
@@ -44,11 +43,7 @@ where
 	<T as subxt::Config>::Signature: Send + Sync,
 {
 	/// Creates a new [`Signer`] from a key store reference and key type
-	pub fn new(
-		key_store: SyncCryptoStorePtr,
-		key_type_id: KeyTypeId,
-		public_key: MultiSigner,
-	) -> Self {
+	pub fn new(key_store: KeystorePtr, key_type_id: KeyTypeId, public_key: MultiSigner) -> Self {
 		let account_id =
 			<<T as light_client_common::config::Config>::Signature as Verify>::Signer::from(
 				public_key.clone(),
@@ -87,12 +82,16 @@ where
 			MultiSigner::Sr25519(key) => (sp_core::sr25519::CRYPTO_ID, key.0.to_vec()),
 			MultiSigner::Ecdsa(key) => (sp_core::ecdsa::CRYPTO_ID, key.0.to_vec()),
 		};
-		let key = CryptoTypePublicPair(crypto_type_id, public_key);
-		let encoded_sig =
-			SyncCryptoStore::sign_with(&*self.key_store, self.key_type_id, &key, signer_payload)
-				.ok()
-				.flatten()
-				.expect("Signing should not fail");
+		let encoded_sig = Keystore::sign_with(
+			&*self.key_store,
+			self.key_type_id,
+			crypto_type_id,
+			&public_key,
+			signer_payload,
+		)
+		.ok()
+		.flatten()
+		.expect("Signing should not fail");
 		let signature: MultiSignature = match self.signer {
 			MultiSigner::Ed25519(_) => sp_core::ed25519::Signature::decode(&mut &encoded_sig[..])
 				.expect("Should decode same signature type as public key; qed")

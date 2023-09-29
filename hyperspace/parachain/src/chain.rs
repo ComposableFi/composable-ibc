@@ -15,7 +15,6 @@
 use super::{error::Error, signer::ExtrinsicSigner, ParachainClient};
 use crate::{parachain::UncheckedExtrinsic, provider::TransactionId, FinalityProtocol};
 use anyhow::anyhow;
-use beefy_gadget_rpc::BeefyApiClient;
 use codec::{Decode, Encode};
 use finality_grandpa::BlockNumberOps;
 use finality_grandpa_rpc::GrandpaApiClient;
@@ -42,17 +41,13 @@ use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::{
 	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, MisbehaviourHandler,
 };
+use sc_consensus_beefy_rpc::BeefyApiClient;
 use sp_core::{twox_128, H256};
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, sync::Arc, time::Duration};
-// #[cfg(not(feature = "dali"))]
-// use subxt::config::polkadot::PlainTip as Tip;
-// #[cfg(feature = "dali")]
-// use subxt::config::substrate::AssetTip as Tip;
-use crate::utils::unsafe_cast_to_jsonrpsee_client;
 use subxt::{
 	config::{
 		extrinsic_params::{BaseExtrinsicParamsBuilder, Era},
@@ -132,15 +127,13 @@ where
 				.encoded()
 				.to_vec()
 		};
-		let dispatch_info =
-			TransactionPaymentApiClient::<H256, RuntimeDispatchInfo<u128, u64>>::query_info(
-				&*self.para_ws_client,
-				extrinsic.into(),
-				None,
-			)
-			.await
-			.map_err(|e| Error::from(format!("Rpc Error From Estimating weight {:?}", e)))?;
-		Ok(dispatch_info.weight)
+		let dispatch_info = TransactionPaymentApiClient::<
+			H256,
+			RuntimeDispatchInfo<u128, sp_weights::Weight>,
+		>::query_info(&*self.para_ws_client, extrinsic.into(), None)
+		.await
+		.map_err(|e| Error::from(format!("Rpc Error From Estimating weight {:?}", e)))?;
+		Ok(dispatch_info.weight.ref_time())
 	}
 
 	async fn finality_notifications(
@@ -221,9 +214,10 @@ where
 			.map(|msg| Any { type_url: msg.type_url.clone(), value: msg.value })
 			.collect::<Vec<_>>();
 		let messages_urls = messages.iter().map(|msg| msg.type_url.clone()).join(", ");
-		log::debug!(target: "hyperspace_parachain", "Sending message: {messages_urls}");
+		let messages_urls_c = messages_urls.clone();
+		log::debug!(target: "hyperspace_parachain", "Sending message: {messages_urls_c}");
 
-		let call = T::Tx::ibc_deliver(messages);
+		let call = T::Tx::ibc_deliver(messages.clone());
 		let (ext_hash, block_hash) = self.submit_call(call).await?;
 
 		log::debug!(target: "hyperspace_parachain", "Submitted extrinsic (hash: {:?}) to block {:?}", ext_hash, block_hash);
@@ -364,14 +358,8 @@ where
 				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
 		);
 
-		let para_client = subxt::OnlineClient::from_rpc_client(unsafe {
-			unsafe_cast_to_jsonrpsee_client(&para_ws_client)
-		})
-		.await?;
-		let relay_client = subxt::OnlineClient::from_rpc_client(unsafe {
-			unsafe_cast_to_jsonrpsee_client(&relay_ws_client)
-		})
-		.await?;
+		let para_client = subxt::OnlineClient::from_rpc_client(para_ws_client.clone()).await?;
+		let relay_client = subxt::OnlineClient::from_rpc_client(relay_ws_client.clone()).await?;
 
 		self.relay_ws_client = relay_ws_client;
 		self.para_ws_client = para_ws_client;

@@ -10,7 +10,8 @@ on:
 
 env:
   DEBIAN_FRONTEND: noninteractive
-
+  RUST_VERSION: nightly-2023-08-24
+  
 jobs:
   linters:
     name: Tests
@@ -34,6 +35,8 @@ jobs:
           apt update -y
           apt install git -y
           git --version
+          whoami
+          uname -a          
 
       - uses: actions/checkout@v2
         with:
@@ -55,28 +58,35 @@ jobs:
             libclang-dev \
             pkg-config \
             libssl-dev \
-            unzip
+            unzip \
+            net-tools
+          
+          netstat -ltup | grep LISTEN
 
           # Get Rust
           curl https://sh.rustup.rs -sSf | bash -s -- -y
-          $HOME/.cargo/bin/rustup toolchain install nightly
-          $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain nightly
-          $HOME/.cargo/bin/rustup component add rustfmt --toolchain nightly
+          $HOME/.cargo/bin/rustup toolchain install ${{ env.RUST_VERSION }}
+          $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain ${{ env.RUST_VERSION }}
+          $HOME/.cargo/bin/rustup component add rustfmt --toolchain ${{ env.RUST_VERSION }}
           $HOME/.cargo/bin/rustup component add rustfmt
-          $HOME/.cargo/bin/rustup default nightly
+          $HOME/.cargo/bin/rustup default ${{ env.RUST_VERSION }}
 
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Rustup show
         run: $HOME/.cargo/bin/rustup show
 
-      - name: Install Node.js
+      - name: Install zombienet
         run: |
-          curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-          apt-get install -y nodejs
-          npm install --global yarn
-          node --version
-          yarn --version
+          curl -L https://github.com/paritytech/zombienet/releases/download/v1.3.67/zombienet-linux-x64 -o /usr/bin/zombienet && \
+          chmod +x /usr/bin/zombienet
+
+      - name: Install process compose
+        run: |
+            curl -L https://github.com/F1bonacc1/process-compose/releases/download/v0.60.0/process-compose_Linux_x86_64.tar.gz -o /tmp/process-compose_Linux_x86_64.tar.gz && \
+            tar xvfz /tmp/process-compose_Linux_x86_64.tar.gz && \
+            mv process-compose /usr/bin/process-compose && \
+            chmod +x /usr/bin/process-compose
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
@@ -86,100 +96,28 @@ jobs:
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
 
-      - name: Install Docker
+      - name: Install polkadot binary
         run: |
-          apt-get install -y \
-            ca-certificates \
-            gnupg \
-            lsb-release
+          curl -L https://github.com/paritytech/polkadot/releases/download/v0.9.43/polkadot -o /usr/bin/polkadot && \
+          chmod +x /usr/bin/polkadot
 
-          mkdir -p /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-
-          echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-            $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-          apt-get update
-          apt-get install -y \
-            docker-ce \
-            docker-ce-cli \
-            containerd.io \
-            docker-compose-plugin
-
-          docker --version
-
-      - name: Install docker-compose
+      - name: Install parachain node
         run: |
-          curl -L "https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-$(uname -s)-$(uname -m)" -o ./docker-compose
-          chmod +x ./docker-compose
+          # curl -L http://34.70.93.30/parachain-node -o ./target/release/parachain-node
+          
+          cargo build -p parachain-node --release
+          cp ./target/release/parachain-node /usr/bin/parachain-node
+          chmod +x /usr/bin/parachain-node
 
-      - name: Store network gateway IP
+      - name: Run local parachain cluster & Tests
         run: |
-          # GATEWAY_IP equals host ip where this docker container was ran, this ip has access to Docker port mapping.
-          GATEWAY_IP=$(ip r l | grep default | awk '{print $3}')
-          echo "GATEWAY_IP=$GATEWAY_IP" >> $GITHUB_ENV
-          echo "RELAY_HOST=$GATEWAY_IP" >> $GITHUB_ENV
-          echo "PARA_HOST=$GATEWAY_IP" >> $GITHUB_ENV
-
-      - name: Run local parachain cluster
-        run: |
-          DOCKER_BUILDKIT=0 docker build --platform linux/amd64 -f scripts/parachain.Dockerfile . -t parachain-node:latest
-
-          mkdir $BUILD_DIR/tmp
-          yarn --cwd ./scripts/parachain-launch install
-          TMPDIR=$BUILD_DIR/tmp OUTPUT=$BUILD_DIR yarn --cwd ./scripts/parachain-launch dev
-          for file in dev-2000-2000.json \
-            dev-2001-2001.json \
-            docker-compose.yml \
-            parachain-2000.Dockerfile \
-            parachain-2001.Dockerfile \
-            relaychain.Dockerfile \
-            rococo-local.json; do
-            cp "$BUILD_DIR/$file" ./scripts/parachain-launch/
-          done
-          sed -i 's/9944:9933/9144:9933/g' ./scripts/parachain-launch/docker-compose.yml
-
-          ./docker-compose -f scripts/parachain-launch/docker-compose.yml up -d --build
-          ./scripts/wait_for_tcp_port_opening.sh $RELAY_HOST 9944
-          ./scripts/wait_for_tcp_port_opening.sh $PARA_HOST 9188
-
-      - name: Check that subxt-generated is up to date
-        run: |
-          RELAY_HOST=ws://$GATEWAY_IP:9944 PARA_HOST=ws://$GATEWAY_IP:9188 ./scripts/generate-subxt.sh
-
-      - name: Run all unit tests
-        run: |
-          SKIP_WASM_BUILD=1 cargo +nightly nextest run --locked --release --workspace --exclude ibc-derive --exclude hyperspace-testsuite
-
-#      - name: Run simnode tests
-#        run: |
-#          cargo +nightly test -p simnode --locked --release
-
-      - name: Run hyperspace integration tests
-        run: |
-          cargo +nightly test -p hyperspace-testsuite --locked --release
-
-      - name: Terminate local parachain cluster
-        run: |
-          ./docker-compose -f scripts/parachain-launch/docker-compose.yml down -v
-
-  test-solidity:
-    runs-on:
-      - self-hosted
-      - sre
-    defaults:
-      run:
-        shell: bash
-        working-directory: contracts/ethereum
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 16
-      - name: Install dependencies
-        run: npm install
-      - name: run unit test
-        run: npm run test
+          export PARA_HOST=127.0.0.1
+          cd scripts/zombienet
+          process-compose up -f process-compose.yml -t=false &
+          sleep 100
+          netstat -ltup | grep LISTEN
+          export RUST_BACKTRACE=full
+          RUST_BACKTRACE=full METRICS_PORT=39988 ./wait-for-parachains-network.sh
+          RUST_BACKTRACE=full METRICS_PORT=39998 ./wait-for-parachains-network.sh 
+          # SKIP_WASM_BUILD=1 cargo +${{ env.RUST_VERSION }} nextest run --locked --release --workspace --exclude ibc-derive --exclude hyperspace-testsuite
+          RUST_BACKTRACE=full cargo +${{ env.RUST_VERSION }} test -p hyperspace-testsuite --locked
