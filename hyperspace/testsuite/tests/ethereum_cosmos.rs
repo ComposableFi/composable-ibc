@@ -102,6 +102,7 @@ pub struct DeployYuiIbcTendermintClient {
 
 pub async fn deploy_yui_ibc_and_tendermint_client_fixture() -> DeployYuiIbcTendermintClient {
 	let path = utils::yui_ibc_solidity_path();
+	println!("path: {:?}", path);
 	let project_output = hyperspace_ethereum::utils::compile_yui(&path, "contracts/core");
 	let diamond_project_output =
 		hyperspace_ethereum::utils::compile_yui(&path, "contracts/diamond");
