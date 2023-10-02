@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - vmarkushin/unfilter-uosmo
 
 jobs:
   build-and-publish:
