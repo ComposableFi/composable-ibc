@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - vmarkushin/fix-check-required-grandpa-update
 
 jobs:
   build-and-publish:
