@@ -29,6 +29,11 @@ RUN apt update && \
     update-ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
+RUN useradd -m -u 1000 -U -s /bin/sh -d /parachain parachain && \
+    chown -R parachain:parachain /usr/local/bin
+
+USER parachain
+
 # check if executable works in this container
 RUN /usr/local/bin/parachain-node --version
 
