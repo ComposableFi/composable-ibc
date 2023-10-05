@@ -259,6 +259,36 @@ fn process_message(
 
 			Ok(()).map(|_| to_binary(&ContractResult::success()))
 		},
+		SudoMsg::VerifyMembership(msg) => {
+			let msg = VerifyMembershipMsg::try_from(msg)?;
+			let consensus_state = ctx
+				.consensus_state(&client_id, msg.height)
+				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
+			verify_membership::<BlakeTwo256, _>(
+				&msg.prefix,
+				&msg.proof,
+				&consensus_state.root,
+				msg.path,
+				msg.value,
+			)
+			.map_err(|e| ContractError::Grandpa(e.to_string()))
+		  .map(|_| to_binary(&ContractResult::success()))
+		},
+		SudoMsg::VerifyNonMembership(msg) => {
+			let msg = VerifyNonMembershipMsg::try_from(msg)?;
+			let consensus_state = ctx
+				.consensus_state(&client_id, msg.height)
+				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
+
+			verify_non_membership::<BlakeTwo256, _>(
+				&msg.prefix,
+				&msg.proof,
+				&consensus_state.root,
+				msg.path,
+			)
+			.map_err(|e| ContractError::Grandpa(e.to_string()))
+			.map(|_| to_binary(&ContractResult::success()))
+		},
 		SudoMsg::VerifyUpgradeAndUpdateState(msg) => {
 			let old_client_state = ctx
 				.client_state(&client_id)
@@ -360,38 +390,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 				.map_err(|e| ContractError::Grandpa(format!("{e:?}")))
 				.map(|_| to_binary(&QueryResponse::success()))?;
 			f
-		},
-		QueryMsg::VerifyMembership(msg) => {
-			let ctx = Context::<HostFunctions>::new_ro(deps, env);
-			let msg = VerifyMembershipMsg::try_from(msg)?;
-			let consensus_state = ctx
-				.consensus_state(&client_id, msg.height)
-				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
-			verify_membership::<BlakeTwo256, _>(
-				&msg.prefix,
-				&msg.proof,
-				&consensus_state.root,
-				msg.path,
-				msg.value,
-			)
-			.map_err(|e| ContractError::Grandpa(e.to_string()))?;
-			to_binary(&QueryResponse::success())
-		},
-		QueryMsg::VerifyNonMembership(msg) => {
-			let ctx = Context::<HostFunctions>::new_ro(deps, env);
-			let msg = VerifyNonMembershipMsg::try_from(msg)?;
-			let consensus_state = ctx
-				.consensus_state(&client_id, msg.height)
-				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
-
-			verify_non_membership::<BlakeTwo256, _>(
-				&msg.prefix,
-				&msg.proof,
-				&consensus_state.root,
-				msg.path,
-			)
-			.map_err(|e| ContractError::Grandpa(e.to_string()))
-			.map(|_| to_binary(&QueryResponse::success()))?
 		},
 	}
 }
