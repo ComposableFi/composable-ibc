@@ -1423,7 +1423,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap 3.2.25",
- "frame-metadata",
+ "frame-metadata 15.1.0",
  "hex",
  "http",
  "jsonrpsee",
@@ -3643,6 +3643,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "frame-metadata"
+version = "16.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87cf1549fba25a6fcac22785b61698317d958e96cac72a59102ea45b9ae64692"
+dependencies = [
+ "cfg-if 1.0.0",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+]
+
+[[package]]
+name = "frame-metadata"
+version = "16.0.0"
+source = "git+https://github.com/paritytech/frame-metadata?branch=main#0e90489c8588d48b55779f1c6b93216346ecc8a9"
+dependencies = [
+ "cfg-if 1.0.0",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+]
+
+[[package]]
 name = "frame-remote-externalities"
 version = "0.10.0-dev"
 source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
@@ -3670,7 +3693,7 @@ source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.
 dependencies = [
  "bitflags 1.3.2",
  "environmental",
- "frame-metadata",
+ "frame-metadata 15.1.0",
  "frame-support-procedural",
  "impl-trait-for-tuples",
  "k256 0.13.1",
@@ -6874,6 +6897,16 @@ dependencies = [
  "digest 0.10.7",
  "multihash-derive",
  "sha2 0.10.8",
+ "unsigned-varint",
+]
+
+[[package]]
+name = "multihash"
+version = "0.19.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "076d548d76a0e2a0d4ab471d0b1c36c577786dfc4471242035d97a12a735c492"
+dependencies = [
+ "core2",
  "unsigned-varint",
 ]
 
@@ -12617,7 +12650,7 @@ dependencies = [
  "base58",
  "blake2",
  "either",
- "frame-metadata",
+ "frame-metadata 15.1.0",
  "parity-scale-codec",
  "scale-bits",
  "scale-decode",
@@ -13750,7 +13783,7 @@ name = "sp-metadata-ir"
 version = "0.1.0"
 source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
 dependencies = [
- "frame-metadata",
+ "frame-metadata 15.1.0",
  "parity-scale-codec",
  "scale-info",
  "sp-std 5.0.0",
@@ -14496,16 +14529,18 @@ dependencies = [
 
 [[package]]
 name = "substrate-runtime-proposal-hash"
-version = "0.19.2"
-source = "git+https://github.com/chevdor/subwasm?rev=2f1523d660b4e9458ef6b8e39b5c2178a2200d08#2f1523d660b4e9458ef6b8e39b5c2178a2200d08"
+version = "0.20.0"
+source = "git+https://github.com/chevdor/subwasm?rev=1c8446be5cff9e04cbb7b41acc136f22eddd5eac#1c8446be5cff9e04cbb7b41acc136f22eddd5eac"
 dependencies = [
  "blake2",
+ "frame-metadata 16.0.0 (git+https://github.com/paritytech/frame-metadata?branch=main)",
  "hex",
  "parity-scale-codec",
  "sp-core 7.0.0",
  "sp-io 7.0.0",
  "sp-runtime 7.0.0",
  "sp-wasm-interface 7.0.0",
+ "thiserror",
 ]
 
 [[package]]
@@ -14583,7 +14618,7 @@ dependencies = [
  "blake2",
  "derivative",
  "either",
- "frame-metadata",
+ "frame-metadata 15.1.0",
  "futures",
  "getrandom 0.2.10",
  "hex",
@@ -14612,7 +14647,7 @@ name = "subxt-codegen"
 version = "0.29.0"
 source = "git+https://github.com/paritytech/subxt?tag=v0.29.0#e40a8629e279e80a7fbb56ff553a430a36612956"
 dependencies = [
- "frame-metadata",
+ "frame-metadata 15.1.0",
  "heck",
  "hex",
  "jsonrpsee",
@@ -14650,7 +14685,7 @@ name = "subxt-metadata"
 version = "0.29.0"
 source = "git+https://github.com/paritytech/subxt?tag=v0.29.0#e40a8629e279e80a7fbb56ff553a430a36612956"
 dependencies = [
- "frame-metadata",
+ "frame-metadata 15.1.0",
  "parity-scale-codec",
  "scale-info",
  "sp-core-hashing 9.0.0",
@@ -15599,9 +15634,9 @@ dependencies = [
 
 [[package]]
 name = "tungstenite"
-version = "0.19.0"
+version = "0.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15fba1a6d6bb030745759a9a2a588bfe8490fc8b4751a277db3a0be1c9ebbf67"
+checksum = "9e3dac10fd62eaf6617d3a904ae222845979aec67c615d1c842b4002c7666fb9"
 dependencies = [
  "byteorder",
  "bytes",
@@ -15616,7 +15651,6 @@ dependencies = [
  "thiserror",
  "url",
  "utf-8",
- "webpki 0.22.1",
 ]
 
 [[package]]
@@ -15969,17 +16003,21 @@ dependencies = [
 
 [[package]]
 name = "wasm-loader"
-version = "0.19.2"
-source = "git+https://github.com/chevdor/subwasm?rev=2f1523d660b4e9458ef6b8e39b5c2178a2200d08#2f1523d660b4e9458ef6b8e39b5c2178a2200d08"
+version = "0.20.0"
+source = "git+https://github.com/chevdor/subwasm?rev=1c8446be5cff9e04cbb7b41acc136f22eddd5eac#1c8446be5cff9e04cbb7b41acc136f22eddd5eac"
 dependencies = [
  "array-bytes 6.1.0",
  "log",
+ "multibase",
+ "multihash 0.19.1",
  "serde",
  "serde_json",
  "sp-maybe-compressed-blob",
  "subrpcer",
- "tungstenite 0.19.0",
+ "thiserror",
+ "tungstenite 0.20.1",
  "ureq",
+ "url",
 ]
 
 [[package]]
@@ -16024,15 +16062,16 @@ dependencies = [
 
 [[package]]
 name = "wasm-testbed"
-version = "0.19.2"
-source = "git+https://github.com/chevdor/subwasm?rev=2f1523d660b4e9458ef6b8e39b5c2178a2200d08#2f1523d660b4e9458ef6b8e39b5c2178a2200d08"
+version = "0.20.0"
+source = "git+https://github.com/chevdor/subwasm?rev=1c8446be5cff9e04cbb7b41acc136f22eddd5eac#1c8446be5cff9e04cbb7b41acc136f22eddd5eac"
 dependencies = [
- "frame-metadata",
+ "frame-metadata 16.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex",
  "log",
  "parity-scale-codec",
  "sc-executor",
  "sc-executor-common",
+ "scale-info",
  "sp-core 7.0.0",
  "sp-io 7.0.0",
  "sp-runtime 7.0.0",
@@ -16040,6 +16079,7 @@ dependencies = [
  "sp-version",
  "sp-wasm-interface 7.0.0",
  "substrate-runtime-proposal-hash",
+ "thiserror",
  "wasm-loader",
 ]
 

@@ -28,4 +28,4 @@ codec = { package = "parity-scale-codec", version = "3.6.1", default-features = 
     "max-encoded-len",
 ] }
 hex = "0.4.3"
-wasm-testbed = { git = "https://github.com/chevdor/subwasm",  rev = "2f1523d660b4e9458ef6b8e39b5c2178a2200d08" }
+wasm-testbed = { git = "https://github.com/chevdor/subwasm", rev = "1c8446be5cff9e04cbb7b41acc136f22eddd5eac" }
