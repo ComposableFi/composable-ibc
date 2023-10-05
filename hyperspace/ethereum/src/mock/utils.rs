@@ -26,6 +26,7 @@ pub const USE_GETH: bool = true;
 pub const ETH_NODE_PORT: u16 = 8545;
 pub const ETH_NODE_PORT_WS: u16 = 8546;
 pub const BEACON_NODE_PORT: u16 = 3500;
+pub const PRIVATE_KEY: &str = "keys/0x73db010c3275eb7a92e5c38770316248f4c644ee";
 
 #[track_caller]
 pub fn yui_ibc_solidity_path() -> PathBuf {
@@ -45,7 +46,7 @@ pub async fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http
 	println!("{:?}", std::env::current_dir().unwrap());
 	let wallet: LocalWallet = if USE_GETH {
 		LocalWallet::decrypt_keystore(
-			"keys/0x73db010c3275eb7a92e5c38770316248f4c644ee",
+			PRIVATE_KEY,
 			std::env::var("KEY_PASS").expect("KEY_PASS not set"),
 		)
 		.unwrap()
@@ -120,11 +121,7 @@ pub async fn hyperspace_ethereum_client_fixture(
 ) -> EthereumClientConfig {
 	let endpoint =
 		if USE_GETH { format!("http://localhost:{}", ETH_NODE_PORT) } else { anvil.endpoint() };
-	let wallet_path = if USE_GETH {
-		Some("keys/0x73db010c3275eb7a92e5c38770316248f4c644ee".to_string())
-	} else {
-		None
-	};
+	let wallet_path = if USE_GETH { Some(PRIVATE_KEY.to_string()) } else { None };
 
 	let wallet = if !USE_GETH {
 		Some(

@@ -1,10 +1,10 @@
 use crate::{
 	client::{ClientError, EthereumClient},
 	ibc_provider::{
-		CloseConfirmChannelFilter, CreateClientFilter, OpenAckChannelFilter,
-		OpenAckConnectionFilter, OpenConfirmChannelFilter, OpenConfirmConnectionFilter,
-		OpenInitChannelFilter, OpenInitConnectionFilter, OpenTryConnectionFilter, SendPacketFilter,
-		UpdateClientFilter, WriteAcknowledgementFilter,
+		AcknowledgePacketFilter, OpenAckChannelFilter, OpenAckConnectionFilter,
+		OpenConfirmChannelFilter, OpenConfirmConnectionFilter, OpenInitChannelFilter,
+		OpenInitConnectionFilter, OpenTryConnectionFilter, PacketData, SendPacketFilter,
+		WriteAcknowledgementFilter,
 	},
 };
 use async_trait::async_trait;
@@ -386,6 +386,52 @@ impl TryFromEvent<WriteAcknowledgementFilter> for IbcEvent {
 				},
 			},
 			ack: acknowledgement.to_vec(),
+		}))
+	}
+}
+
+#[async_trait]
+impl TryFromEvent<AcknowledgePacketFilter> for IbcEvent {
+	async fn try_from_event(
+		_client: &EthereumClient,
+		event: AcknowledgePacketFilter,
+		_log: Log,
+		height: Height,
+	) -> Result<Self, ClientError> {
+		let AcknowledgePacketFilter {
+			packet:
+				PacketData {
+					sequence,
+					source_port: source_port_raw,
+					source_channel: source_channel_raw,
+					destination_port: destination_port_raw,
+					destination_channel: destination_channel_raw,
+					data,
+					timeout_height,
+					timeout_timestamp,
+				},
+			acknowledgement: _,
+		} = event;
+		let source_port: PortId = source_port_raw.parse()?;
+		let source_channel: ChannelId = source_channel_raw.parse()?;
+		let destination_port: PortId = destination_port_raw.parse()?;
+		let destination_channel: ChannelId = destination_channel_raw.parse()?;
+		Ok(IbcEvent::AcknowledgePacket(channel::AcknowledgePacket {
+			height,
+			packet: Packet {
+				sequence: Sequence::from(sequence),
+				source_port,
+				source_channel,
+				destination_port,
+				destination_channel,
+				data: data.to_vec(),
+				timeout_height: Height::new(
+					timeout_height.revision_number,
+					timeout_height.revision_height,
+				),
+				timeout_timestamp: Timestamp::from_nanoseconds(timeout_timestamp)
+					.map_err(|_| ClientError::Other("invalid timeout height".to_string()))?,
+			},
 		}))
 	}
 }

@@ -50,8 +50,7 @@ pub struct IbcHandler<M> {
 	pub(crate) contract: Contract<M>,
 }
 
-use ethers::middleware::SignerMiddleware;
-use k256::Secp256k1;
+use crate::utils::handle_gas_usage;
 
 impl<M> IbcHandler<M>
 where
@@ -68,6 +67,7 @@ where
 			.unwrap();
 		let () = bind_port.call().await.unwrap_contract_error();
 		let tx_recp = bind_port.send().await.unwrap_contract_error().await.unwrap().unwrap();
+		handle_gas_usage(&tx_recp);
 		assert_eq!(tx_recp.status, Some(1.into()));
 	}
 

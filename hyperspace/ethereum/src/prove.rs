@@ -1,11 +1,12 @@
 // use base2::Base2;
 use crate::client::{ClientError, EthereumClient};
-use anyhow::anyhow;
+use anyhow::{anyhow, Error};
 use ethers::{
 	core::{rand, rand::Rng},
 	prelude::{EthCall, H256},
 };
-use icsxx_ethereum::client_state::ClientState;
+use icsxx_ethereum::{client_message::Header, client_state::ClientState};
+use log::error;
 use pallet_ibc::light_clients::HostFunctionsManager;
 use primitives::mock::LocalClientTypes;
 use ssz_rs::{
@@ -13,6 +14,7 @@ use ssz_rs::{
 };
 use std::time::Duration;
 use sync_committee_primitives::{
+	consensus_types::BeaconBlockHeader,
 	constants::{Bytes32, SLOTS_PER_EPOCH},
 	types::{
 		AncestorBlock, AncestryProof, BlockRootsProof, ExecutionPayloadProof, FinalityProof,
@@ -20,15 +22,8 @@ use sync_committee_primitives::{
 	},
 	util::{compute_fork_version, compute_sync_committee_period_at_slot},
 };
-use sync_committee_prover::{
-	prove_block_roots_proof, prove_execution_payload, prove_finalized_header,
-	prove_sync_committee_update, SyncCommitteeProver,
-};
-use sync_committee_verifier::verify_sync_committee_attestation;
+use sync_committee_prover::prove_execution_payload;
 use tokio::{task::JoinSet, time, time::sleep};
-// use tokio_stream::{wrappers::IntervalStream, StreamExt};
-use icsxx_ethereum::client_message::Header;
-use sync_committee_primitives::constants::SYNC_COMMITTEE_SIZE;
 
 pub async fn prove_fast(
 	client: &EthereumClient,
@@ -54,40 +49,55 @@ pub async fn prove_fast(
 	let range = (from..to).collect::<Vec<_>>();
 	let delay = 5000;
 	let mut ancestor_blocks = vec![];
-	for heights in range.chunks(100) {
+	for heights in range.chunks(10) {
 		for i in heights.iter().copied() {
 			let duration = Duration::from_millis(rand::thread_rng().gen_range(1..delay) as u64);
 			let sync_committee_prover = sync_committee_prover.clone();
 			join_set.spawn(async move {
 				sleep(duration).await;
 
-				if let Ok(ancestor_header) =
-					sync_committee_prover.fetch_header(i.to_string().as_str()).await
-				{
-					// let ancestry_proof =
-					// 	prove_block_roots_proof(finalized_state.clone(), ancestor_header.clone())?;
-					let mut header_state =
-						sync_committee_prover.fetch_beacon_state(i.to_string().as_str()).await?;
-					let execution_payload_proof = prove_execution_payload(&mut header_state)?;
-					let _header_state = header_state;
-					return Ok(AncestorBlock {
-						header: ancestor_header,
-						execution_payload: execution_payload_proof,
-						ancestry_proof: AncestryProof::BlockRoots {
-							block_roots_proof: BlockRootsProof {
-								block_header_index: 0,
-								block_header_branch: vec![],
+				let ancestor_header = sync_committee_prover
+					.fetch_header(i.to_string().as_str())
+					.await
+					.map_err(|e| error!("failed to fetch beacon header: {e}"))
+					.ok();
+				match sync_committee_prover.fetch_beacon_state(i.to_string().as_str()).await {
+					Ok(mut header_state) => {
+						let execution_payload_proof = prove_execution_payload(&mut header_state)?;
+						return Ok(AncestorBlock {
+							header: ancestor_header.unwrap_or_else(|| BeaconBlockHeader {
+								slot: header_state.slot,
+								proposer_index: 0,
+								parent_root: Default::default(),
+								state_root: Default::default(),
+								body_root: Default::default(),
+							}),
+							execution_payload: execution_payload_proof,
+							ancestry_proof: AncestryProof::BlockRoots {
+								block_roots_proof: BlockRootsProof {
+									block_header_index: 0,
+									block_header_branch: vec![],
+								},
+								block_roots_branch: vec![],
 							},
-							block_roots_branch: vec![],
-						},
-					})
+						})
+					},
+					Err(e) => {
+						log::info!("UPDATE cannot fetch: {} {e}", i);
+					},
 				}
 				Err(anyhow::anyhow!("Could not fetch ancestor block"))
 			});
 		}
 		while let Some(res) = join_set.join_next().await {
-			let out = res.map_err(|e| anyhow!("{e}"))??;
-			ancestor_blocks.push(out);
+			match res.map_err(|e| anyhow!("{e}"))? {
+				Ok(out) => {
+					ancestor_blocks.push(out);
+				},
+				Err(e) => {
+					log::warn!("Error fetching ancestor block: {:?}", e)
+				},
+			}
 		}
 	}
 	ancestor_blocks.sort_by_key(|ancestor_block| ancestor_block.header.slot);

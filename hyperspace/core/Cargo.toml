@@ -57,7 +57,7 @@ sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polka
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 sp-beefy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
-#subxt-generated = { path = "../../utils/subxt/generated", optional = true }
+subxt-generated = { path = "../../utils/subxt/generated", optional = true }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 prost = { version = "0.11", default-features = false }

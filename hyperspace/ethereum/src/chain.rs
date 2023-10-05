@@ -4,6 +4,7 @@ use crate::{
 	client::{ClientError, EthereumClient},
 	contract::{IbcHandler, UnwrapContractError},
 	ibc_provider::BlockHeight,
+	utils::handle_gas_usage,
 	yui_types::{ics03_connection::conn_open_try::YuiMsgConnectionOpenTry, IntoToken},
 };
 use channel_msgs::{
@@ -33,7 +34,7 @@ use ibc::{
 		},
 		ics04_channel::msgs as channel_msgs,
 		ics23_commitment::commitment::CommitmentRoot,
-		ics24_host::identifier::ClientId,
+		ics24_host::identifier::ChainId,
 	},
 	protobuf::{
 		google::protobuf::Timestamp,
@@ -94,7 +95,7 @@ fn client_state_abi_token<H: Debug>(client: &ClientState<H>) -> Token {
 			EthersToken::Tuple(
 				[
 					EthersToken::Int(client.trusting_period.as_secs().into()),
-					EthersToken::Int(client.trusting_period.as_millis().into()),
+					EthersToken::Int(client.trusting_period.as_nanos().into()),
 				]
 				.to_vec(),
 			),
@@ -271,9 +272,10 @@ pub(crate) fn client_state_from_abi_token<H>(token: Token) -> Result<ClientState
 			_ => return Err(ClientError::Other("latest_height not found".to_string())),
 		};
 
-	let revision_number = 1; // TODO: revision
+	let chain_id: ChainId = chain_id.parse()?;
+	let revision_number = chain_id.version();
 	Ok(ClientState {
-		chain_id: chain_id.parse()?,
+		chain_id,
 		trust_level: TrustThreshold::new(trust_level_numerator, trust_level_denominator)?,
 		trusting_period: Duration::new(trusting_period_secs, trusting_period_nanos as u32),
 		unbonding_period: Duration::new(unbonding_period_secs, 0u32), // TODO: check why nanos is 0
@@ -850,12 +852,13 @@ pub(crate) fn tm_header_from_abi_token(token: Token) -> Result<Header, ClientErr
 		_ => return Err(ClientError::Other("trusted_height not found".to_string())),
 	};
 
-	let revision_number = 1; // TODO
+	let chain_id: ChainId = chain_id.parse()?;
+	let revision_number = chain_id.version();
 	Ok(Header {
 		signed_header: SignedHeader::new(
 			block::Header {
 				version: Version { block: version_block.as_u64(), app: version_app.as_u64() },
-				chain_id: chain_id.parse()?,
+				chain_id: chain_id.into(),
 				height: TmHeight::try_from(height.as_u64()).map_err(|e| {
 					ClientError::Other(format!("failed to convert height into TmHeight: {}", e))
 				})?,
@@ -978,7 +981,7 @@ pub(crate) fn msg_connection_open_init_token(x: MsgConnectionOpenInit) -> Token 
 				.to_vec(),
 			),
 			// delay_period
-			EthersToken::Uint(x.delay_period.as_secs().into()),
+			EthersToken::Uint(x.delay_period.as_nanos().into()),
 		]
 		.to_vec(),
 	);
@@ -1079,7 +1082,7 @@ fn msg_connection_open_try_token<H: Debug>(
 	let client_state_data_vec = ethers_encode(&[client_state]);
 	let conn_open_try = YuiMsgConnectionOpenTry {
 		counterparty: msg.counterparty.into(),
-		delay_period: msg.delay_period.as_secs(),
+		delay_period: msg.delay_period.as_nanos() as _,
 		client_id: msg.client_id.as_str().to_owned(),
 		client_state_bytes: client_state_data_vec,
 		counterparty_versions: msg
@@ -1407,6 +1410,7 @@ impl Chain for EthereumClient {
 			.await?
 			.await?
 			.ok_or_else(|| ClientError::Other("tx failed".into()))?;
+		handle_gas_usage(&receipt);
 		if receipt.status != Some(1.into()) {
 			return Err(ClientError::Other(format!("tx failed: {:?}", receipt)))
 		}

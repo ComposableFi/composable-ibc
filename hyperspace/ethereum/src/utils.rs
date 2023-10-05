@@ -21,6 +21,7 @@ use ethers_solc::{
 	ProjectCompileOutput, ProjectPathsConfig, SolcConfig,
 };
 use ibc::core::{ics02_client::client_state::ClientType, ics04_channel::packet::Packet};
+use log::info;
 use std::{
 	borrow::Borrow,
 	collections::{HashMap, HashSet},
@@ -152,6 +153,7 @@ where
 			.unwrap();
 		let () = bind_port.call().await.unwrap_contract_error();
 		let tx_recp = bind_port.send().await.unwrap_contract_error().await.unwrap().unwrap();
+		handle_gas_usage(&tx_recp);
 		assert_eq!(tx_recp.status, Some(1.into()));
 	}
 
@@ -560,6 +562,8 @@ where
 		let _ = method.call().await.unwrap_contract_error();
 
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		handle_gas_usage(&receipt);
+
 		assert_eq!(receipt.status, Some(1.into()));
 	}
 
@@ -584,7 +588,8 @@ where
 }
 
 pub async fn deploy_contract<M, T>(
-	contract: &ConfigurableContractArtifact,
+	name: &str,
+	artifacts: &[&ProjectCompileOutput],
 	constructor_args: T,
 	client: Arc<M>,
 ) -> ContractInstance<Arc<M>, M>
@@ -592,9 +597,15 @@ where
 	M: Middleware,
 	T: Tokenize,
 {
+	let contract = artifacts.into_iter().filter_map(|x| x.find_first(name)).next().unwrap();
 	let (abi, bytecode, _) = contract.clone().into_parts();
-	let mut factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client);
-	factory.deploy(constructor_args).unwrap().send().await.unwrap()
+	let mut factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
+	let deployer = factory.deploy(constructor_args).unwrap();
+	let gas = client.estimate_gas(&deployer.tx, None).await.unwrap();
+	info!("Deploying contract {}, estimated gas price: {}", name, gas);
+	let (contract, receipt) = deployer.send_with_receipt().await.unwrap();
+	handle_gas_usage(&receipt);
+	contract
 }
 
 #[track_caller]
@@ -753,10 +764,8 @@ where
 
 	println!("Sender account: {acc:?}");
 
-	let contract = diamond_project_output.find_first("DiamondInit").unwrap();
-	let (abi, bytecode, _) = contract.clone().into_parts();
-	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
-	let diamond_init = factory.deploy(()).unwrap().send().await.unwrap();
+	let diamond_init =
+		deploy_contract("DiamondInit", &[&diamond_project_output], (), client.clone()).await;
 	println!("Diamond init address: {:?}", diamond_init.address());
 
 	let mut sigs = HashMap::<[u8; 4], (ContractName, String)>::new();
@@ -764,13 +773,13 @@ where
 	let mut deployed_facets = vec![];
 	for facet_name in facet_names {
 		let facet_name_str = facet_name.to_string();
-		let contract = project_output
-			.find_first(&facet_name_str)
-			.or_else(|| diamond_project_output.find_first(&facet_name_str))
-			.unwrap();
-		let (abi, bytecode, _) = contract.clone().into_parts();
-		let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
-		let facet = factory.deploy(()).unwrap().send().await.unwrap();
+		let facet = deploy_contract(
+			&facet_name_str,
+			&[&project_output, diamond_project_output],
+			(),
+			client.clone(),
+		)
+		.await;
 		let facet_address = facet.address();
 		println!("Deployed {facet_name} on {facet_address:?}");
 		let selectors = get_selectors(&facet);
@@ -792,27 +801,25 @@ where
 	}
 	let init_calldata = diamond_init.method::<_, ()>("init", ()).unwrap().calldata().unwrap();
 
-	let contract = diamond_project_output.find_first("Diamond").unwrap();
-	let (abi, bytecode, _) = contract.clone().into_parts();
-	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
-	let diamond = factory
-		.deploy(Token::Tuple(vec![
+	let diamond = deploy_contract(
+		"Diamond",
+		&[&diamond_project_output],
+		Token::Tuple(vec![
 			Token::Array(facet_cuts.clone().into_iter().map(|x| x.into_token()).collect()),
 			Token::Tuple(vec![
 				Token::Address(acc),
 				Token::Address(diamond_init.address()),
 				Token::Bytes(init_calldata.0.into()),
 			]),
-		]))
-		.unwrap()
-		.send()
-		.await
-		.unwrap();
+		]),
+		client.clone(),
+	)
+	.await;
 
 	println!("Deployed Diamond on {:?}", diamond.address());
 
 	// let predefined_layout = serde_json::from_reader::<_, StorageLayout>(
-	// 	File::open("/Users/vmark/work/centauri-private/hyperspace/ethereum/src/storage_layout/
+	// 	File::open("ethereum/src/storage_layout/
 	// ibc_storage.json").unwrap(), )
 	// .expect("failed to read predefined storage layout");
 	//
@@ -851,31 +858,21 @@ pub async fn deploy_client<M: Middleware>(
 	client: Arc<M>,
 ) -> Result<ContractInstance<Arc<M>, M>, ClientError> {
 	let project_output1 = compile_yui(yui_solidity_path, "contracts/clients");
-	let upd = project_output1.find_first(delegate_update_name).unwrap();
-
-	let (abi, bytecode, _) = upd.clone().into_parts();
-	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
-	let update_client_delegate_contract = factory.deploy(()).unwrap().send().await.unwrap();
+	let update_client_delegate_contract =
+		deploy_contract(delegate_update_name, &[&project_output1], (), client.clone()).await;
 
 	println!(
 		"Deployed update client delegate contract address: {:?}",
 		update_client_delegate_contract.address()
 	);
 
-	let contract = project_output1.find_first(client_name).unwrap();
-	let r = contract.clone();
-	let (abi, bytecode, _) = r.into_parts();
-
-	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client);
-	let light_client = factory
-		.deploy((
-			Token::Address(yui_ibc.diamond.address()),
-			Token::Address(update_client_delegate_contract.address()),
-		))
-		.unwrap()
-		.send()
-		.await
-		.unwrap();
+	let light_client = deploy_contract(
+		client_name,
+		&[&project_output1],
+		(yui_ibc.diamond.address(), update_client_delegate_contract.address()),
+		client.clone(),
+	)
+	.await;
 
 	println!("Deployed light client address: {:?}", light_client.address());
 
@@ -901,18 +898,25 @@ pub async fn deploy_transfer_module<M: Middleware>(
 ) -> Result<ContractInstance<Arc<M>, M>, ClientError> {
 	let project_output = compile_yui(&yui_solidity_path, "contracts/apps/20-transfer");
 
-	let artifact = project_output.find_first("ICS20Bank").expect("no ICS20Bank in project output");
-	let bank_contract = deploy_contract::<M, _>(artifact, (), client.clone()).await;
-	println!("Deployed Bank module address: {:?}", bank_contract.address());
-	let artifact = project_output
-		.find_first("ICS20TransferBank")
-		.expect("no ICS20TransferBank in project output");
+	let bank_contract =
+		deploy_contract::<M, _>("ICS20Bank", &[&project_output], (), client.clone()).await;
+	info!("Deployed Bank module address: {:?}", bank_contract.address());
 	let constructor_args =
 		(Token::Address(diamond_address), Token::Address(bank_contract.address()));
-	let module_contract = deploy_contract(artifact, constructor_args, client.clone()).await;
-	println!("Deployed ICS-20 Transfer module address: {:?}", module_contract.address());
+	let module_contract =
+		deploy_contract("ICS20TransferBank", &[&project_output], constructor_args, client.clone())
+			.await;
+	info!("Deployed ICS-20 Transfer module address: {:?}", module_contract.address());
 
 	yui_ibc.bind_port("transfer", module_contract.address()).await;
 
 	Ok(module_contract)
+}
+
+pub fn handle_gas_usage(receipt: &TransactionReceipt) {
+	if let Some(gas) = receipt.effective_gas_price {
+		info!("GAS: {gas}");
+	} else {
+		info!("GAS: {} (2)", receipt.gas_used.unwrap());
+	}
 }

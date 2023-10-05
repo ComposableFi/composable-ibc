@@ -419,7 +419,7 @@ pub trait IbcProvider {
 	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error>;
 
 	/// Should return a list of all clients on the chain
-	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error>;
+	async fn query_clients(&self, client_type: &ClientType) -> Result<Vec<ClientId>, Self::Error>;
 
 	/// Should return a list of all clients on the chain
 	async fn query_channels(&self) -> Result<Vec<(ChannelId, PortId)>, Self::Error>;
@@ -481,7 +481,7 @@ pub trait TestProvider: Chain + Clone + 'static {
 	) -> Result<(), Self::Error>;
 
 	/// Returns a stream that yields chain Block number
-	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>>;
+	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send>>;
 
 	/// Increases IBC counters by 1 to check that relayer uses proper values for source/sink chains.
 	async fn increase_counters(&mut self) -> Result<(), Self::Error>;
@@ -964,7 +964,7 @@ pub fn filter_events_by_ids(
 		IbcEvent::ChainError(_) => true,
 	};
 	if !v {
-		log::debug!(target: "hyperspace_parachain", "Filtered out event: {:?}", ev);
+		log::debug!(target: "hyperspace", "Filtered out event: {:?}", ev);
 	}
 	v
 }

@@ -1,9 +1,9 @@
 use crate::{
 	config::EthereumClientConfig,
 	contract::UnwrapContractError,
-	ibc_provider::u256_to_bytes,
+	ibc_provider::{u256_to_bytes, EARLIEST_BLOCK},
 	jwt::{JwtAuth, JwtKey},
-	utils::{DeployYuiIbc, ProviderImpl},
+	utils::{handle_gas_usage, DeployYuiIbc, ProviderImpl},
 };
 use anyhow::Error;
 use async_trait::async_trait;
@@ -21,7 +21,7 @@ use ethers::{
 	types::U256,
 	utils::keccak256,
 };
-use futures::{Stream, TryFutureExt};
+use futures::{FutureExt, Stream, TryFutureExt, TryStreamExt};
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
 	core::ics24_host::{
@@ -226,7 +226,7 @@ impl EthereumClient {
 		from_block: BlockNumber,
 	) -> Result<Vec<(String, String)>, ClientError> {
 		let filter = Filter::new()
-			.from_block(BlockNumber::Earliest)
+			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
 			// .from_block(from_block)
 			.to_block(BlockNumber::Latest)
 			.address(self.yui.diamond.address())
@@ -660,6 +660,7 @@ impl primitives::TestProvider for EthereumClient {
 			.method::<_, ()>("sendTransfer", params)?;
 		let _ = method.call().await.unwrap_contract_error();
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		handle_gas_usage(&receipt);
 		assert_eq!(receipt.status, Some(1.into()));
 		log::info!("Sent transfer. Tx hash: {:?}", receipt.transaction_hash);
 		Ok(())
@@ -673,8 +674,19 @@ impl primitives::TestProvider for EthereumClient {
 		todo!("send_ordered_packet")
 	}
 
-	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
-		todo!("subscribe_blocks")
+	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send>> {
+		use ethers_providers::StreamExt;
+		let ws = self.websocket_provider().await.unwrap();
+		let stream = async_stream::stream! {
+			// TODO: is it really finalized blocks stream?
+			let mut stream = ws.subscribe_blocks().await.expect("failed to subscribe to blocks");
+
+			while let Some(block) = stream.next().await {
+				yield block.number.unwrap().as_u64()
+			}
+		};
+
+		Box::pin(stream)
 	}
 
 	async fn increase_counters(&mut self) -> Result<(), Self::Error> {

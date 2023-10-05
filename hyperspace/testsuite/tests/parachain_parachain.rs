@@ -114,8 +114,8 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 	// proper values are used for source/sink client, connection, channel (etc.) ids.
 	chain_a.increase_counters().await.unwrap();
 
-	let clients_on_a = chain_a.query_clients().await.unwrap();
-	let clients_on_b = chain_b.query_clients().await.unwrap();
+	let clients_on_a = chain_a.query_clients(&chain_b.client_type()).await.unwrap();
+	let clients_on_b = chain_b.query_clients(&chain_a.client_type()).await.unwrap();
 
 	let (client_a, client_b) = if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
 		(clients_on_b[0].clone(), clients_on_b[0].clone())

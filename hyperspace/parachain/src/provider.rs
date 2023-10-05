@@ -638,7 +638,7 @@ where
 		Ok(timestamp_nanos)
 	}
 
-	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
+	async fn query_clients(&self, client_type: &ClientType) -> Result<Vec<ClientId>, Self::Error> {
 		let response: Vec<IdentifiedClientState> = IbcApiClient::<
 			u32,
 			H256,

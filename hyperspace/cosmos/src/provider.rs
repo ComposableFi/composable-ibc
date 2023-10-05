@@ -924,7 +924,7 @@ where
 		Ok(time.nanoseconds())
 	}
 
-	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
+	async fn query_clients(&self, client_type: &ClientType) -> Result<Vec<ClientId>, Self::Error> {
 		let request = tonic::Request::new(QueryClientStatesRequest {
 			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
 		});
@@ -944,6 +944,7 @@ where
 		let clients: Vec<ClientId> = response
 			.client_states
 			.into_iter()
+			.filter(|cs| cs.client_id.contains(client_type))
 			.filter_map(|cs| {
 				let id = ClientId::from_str(&cs.client_id).ok()?;
 				Some(id)

@@ -163,7 +163,8 @@ pub async fn deploy_yui_ibc_and_mock_client_fixture() -> DeployYuiIbcMockClient 
 	});
 
 	let ibc_mock_client = hyperspace_ethereum::utils::deploy_contract(
-		ibc_mock_client.find_first("MockClient").unwrap(),
+		"MockClient",
+		&[&ibc_mock_client],
 		(Token::Address(yui_ibc.diamond.address()),),
 		client.clone(),
 	)
@@ -236,10 +237,10 @@ fn deploy_mock_module_fixture(
 				.unwrap()
 		});
 
-		let contract = clients.find_first("MockModule").expect("no MockModule in project output");
 		let constructor_args = (Token::Address(deploy.yui_ibc.diamond.address()),);
 		let contract = hyperspace_ethereum::utils::deploy_contract(
-			contract,
+			"MockModule",
+			&[&clients],
 			constructor_args,
 			deploy.client.clone(),
 		)
