@@ -14,15 +14,9 @@
 
 use crate::utils::ETH_NODE_PORT_WS;
 use core::time::Duration;
-use ethers::{
-	abi::{Abi, Token},
-	prelude::{spoof::Account, ContractFactory, ContractInstance},
-	providers::Middleware,
-	types::Address,
-	utils::AnvilInstance,
-};
-use ethers_solc::{Artifact, ProjectCompileOutput, ProjectPathsConfig};
-use futures::{StreamExt, TryFutureExt, TryStreamExt};
+use ethers::{abi::Token, prelude::ContractInstance, utils::AnvilInstance};
+use ethers_solc::ProjectCompileOutput;
+use futures::{StreamExt, TryFutureExt};
 use hyperspace_core::{
 	chain::{AnyAssetId, AnyChain, AnyConfig},
 	logging,
@@ -30,29 +24,19 @@ use hyperspace_core::{
 };
 use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_ethereum::{
-	client::EthereumClient,
-	config::EthereumClientConfig,
-	ibc_provider::{Ics20BankAbi, SendPacketFilter, TransferInitiatedFilter},
 	mock::{
 		utils,
 		utils::{hyperspace_ethereum_client_fixture, ETH_NODE_PORT},
 	},
 	utils::{check_code_size, deploy_contract, DeployYuiIbc, ProviderImpl},
 };
-use hyperspace_parachain::{finality_protocol::FinalityProtocol, ParachainClientConfig};
+
 use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider};
-use hyperspace_testsuite::{
-	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
-	ibc_messaging_packet_timeout_on_channel_close,
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
-	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
-	setup_connection_and_channel,
-};
-use ibc::core::ics24_host::identifier::{ClientId, PortId};
+use hyperspace_testsuite::{ibc_messaging_with_connection_delay, setup_connection_and_channel};
+use ibc::core::ics24_host::identifier::PortId;
 use log::info;
 use sp_core::hashing::sha2_256;
 use std::{future::Future, path::PathBuf, str::FromStr, sync::Arc};
-use subxt::utils::H160;
 
 const USE_CONFIG: bool = false;
 const SAVE_TO_CONFIG: bool = true;

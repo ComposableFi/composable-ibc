@@ -22,7 +22,7 @@ use crate::{
 	client_message::{ClientMessage, Misbehaviour},
 	verify::verify_ibc_proof,
 };
-use alloc::{format, string::ToString, vec, vec::Vec};
+use alloc::vec::Vec;
 use anyhow::anyhow;
 use core::{fmt::Debug, marker::PhantomData};
 use ibc::{
@@ -40,16 +40,13 @@ use ibc::{
 		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
 		ics24_host::{
 			identifier::{ChannelId, ClientId, ConnectionId, PortId},
-			path::{
-				AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath,
-				CommitmentsPath, ConnectionsPath, ReceiptsPath, SeqRecvsPath,
-			},
+			path::ClientConsensusStatePath,
 		},
 		ics26_routing::context::ReaderContext,
 	},
 	Height,
 };
-use sync_committee_verifier::{verify_sync_committee_attestation, LightClientState};
+use sync_committee_verifier::LightClientState;
 use tendermint_proto::Protobuf;
 
 // TODO: move this function in a separate crate and remove the one from `light_client_common` crate
@@ -108,11 +105,11 @@ where
 		&self,
 		_ctx: &Ctx,
 		_client_id: ClientId,
-		client_state: Self::ClientState,
+		_client_state: Self::ClientState,
 		client_message: Self::ClientMessage,
 	) -> Result<(), Ics02Error> {
 		match client_message {
-			ClientMessage::Header(header) => {
+			ClientMessage::Header(_header) => {
 				// let _ = verify_sync_committee_attestation::<H>(client_state.inner, header.inner)
 				// 	.map_err(|e| Ics02Error::implementation_specific(e.to_string()))?;
 			},
@@ -124,9 +121,9 @@ where
 
 	fn update_state<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: ClientId,
-		mut client_state: Self::ClientState,
+		_ctx: &Ctx,
+		_client_id: ClientId,
+		client_state: Self::ClientState,
 		client_message: Self::ClientMessage,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
 		let header = match client_message {
@@ -193,7 +190,7 @@ where
 
 	fn update_state_on_misbehaviour(
 		&self,
-		mut client_state: Self::ClientState,
+		_client_state: Self::ClientState,
 		_client_message: Self::ClientMessage,
 	) -> Result<Self::ClientState, Ics02Error> {
 		unimplemented!()
@@ -201,9 +198,9 @@ where
 
 	fn check_for_misbehaviour<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: ClientId,
-		client_state: Self::ClientState,
+		_ctx: &Ctx,
+		_client_id: ClientId,
+		_client_state: Self::ClientState,
 		client_message: Self::ClientMessage,
 	) -> Result<bool, Ics02Error> {
 		if matches!(client_message, ClientMessage::Misbehaviour(_)) {
@@ -215,24 +212,24 @@ where
 
 	fn verify_upgrade_and_update_state<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: ClientId,
-		old_client_state: &Self::ClientState,
-		upgrade_client_state: &Self::ClientState,
-		upgrade_consensus_state: &Self::ConsensusState,
-		proof_upgrade_client: Vec<u8>,
-		proof_upgrade_consensus_state: Vec<u8>,
+		_ctx: &Ctx,
+		_client_id: ClientId,
+		_old_client_state: &Self::ClientState,
+		_upgrade_client_state: &Self::ClientState,
+		_upgrade_consensus_state: &Self::ConsensusState,
+		_proof_upgrade_client: Vec<u8>,
+		_proof_upgrade_consensus_state: Vec<u8>,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
 		unimplemented!()
 	}
 
 	fn check_substitute_and_update_state<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		subject_client_id: ClientId,
-		substitute_client_id: ClientId,
-		old_client_state: Self::ClientState,
-		substitute_client_state: Self::ClientState,
+		_ctx: &Ctx,
+		_subject_client_id: ClientId,
+		_substitute_client_id: ClientId,
+		_old_client_state: Self::ClientState,
+		_substitute_client_state: Self::ClientState,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
 		todo!("check_substitute_and_update_state")
 	}
@@ -264,13 +261,13 @@ where
 		&self,
 		_ctx: &Ctx,
 		_client_id: &ClientId,
-		client_state: &Self::ClientState,
-		height: Height,
-		prefix: &CommitmentPrefix,
-		proof: &CommitmentProofBytes,
-		root: &CommitmentRoot,
-		connection_id: &ConnectionId,
-		expected_connection_end: &ConnectionEnd,
+		_client_state: &Self::ClientState,
+		_height: Height,
+		_prefix: &CommitmentPrefix,
+		_proof: &CommitmentProofBytes,
+		_root: &CommitmentRoot,
+		_connection_id: &ConnectionId,
+		_expected_connection_end: &ConnectionEnd,
 	) -> Result<(), Ics02Error> {
 		// client_state.verify_height(height)?;
 		// let path = ConnectionsPath(connection_id.clone());
@@ -284,14 +281,14 @@ where
 		&self,
 		_ctx: &Ctx,
 		_client_id: &ClientId,
-		client_state: &Self::ClientState,
-		height: Height,
-		prefix: &CommitmentPrefix,
-		proof: &CommitmentProofBytes,
-		root: &CommitmentRoot,
-		port_id: &PortId,
-		channel_id: &ChannelId,
-		expected_channel_end: &ChannelEnd,
+		_client_state: &Self::ClientState,
+		_height: Height,
+		_prefix: &CommitmentPrefix,
+		_proof: &CommitmentProofBytes,
+		_root: &CommitmentRoot,
+		_port_id: &PortId,
+		_channel_id: &ChannelId,
+		_expected_channel_end: &ChannelEnd,
 	) -> Result<(), Ics02Error> {
 		// client_state.verify_height(height)?;
 		// let path = ChannelEndsPath(port_id.clone(), *channel_id);
@@ -304,13 +301,13 @@ where
 	fn verify_client_full_state<Ctx: ReaderContext>(
 		&self,
 		_ctx: &Ctx,
-		client_state: &Self::ClientState,
-		height: Height,
-		prefix: &CommitmentPrefix,
-		proof: &CommitmentProofBytes,
-		root: &CommitmentRoot,
-		client_id: &ClientId,
-		expected_client_state: &Ctx::AnyClientState,
+		_client_state: &Self::ClientState,
+		_height: Height,
+		_prefix: &CommitmentPrefix,
+		_proof: &CommitmentProofBytes,
+		_root: &CommitmentRoot,
+		_client_id: &ClientId,
+		_expected_client_state: &Ctx::AnyClientState,
 	) -> Result<(), Ics02Error> {
 		// client_state.verify_height(height)?;
 		// let path = ClientStatePath(client_id.clone());
@@ -324,15 +321,15 @@ where
 		&self,
 		ctx: &Ctx,
 		_client_id: &ClientId,
-		client_state: &Self::ClientState,
+		_client_state: &Self::ClientState,
 		height: Height,
 		connection_end: &ConnectionEnd,
-		proof: &CommitmentProofBytes,
-		root: &CommitmentRoot,
-		port_id: &PortId,
-		channel_id: &ChannelId,
-		sequence: Sequence,
-		commitment: PacketCommitment,
+		_proof: &CommitmentProofBytes,
+		_root: &CommitmentRoot,
+		_port_id: &PortId,
+		_channel_id: &ChannelId,
+		_sequence: Sequence,
+		_commitment: PacketCommitment,
 	) -> Result<(), Ics02Error> {
 		// client_state.verify_height(height)?;
 		verify_delay_passed::<H, _>(ctx, height, connection_end).map_err(Error::Anyhow)?;
@@ -353,17 +350,17 @@ where
 
 	fn verify_packet_acknowledgement<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
+		_ctx: &Ctx,
 		_client_id: &ClientId,
-		client_state: &Self::ClientState,
-		height: Height,
-		connection_end: &ConnectionEnd,
-		proof: &CommitmentProofBytes,
-		root: &CommitmentRoot,
-		port_id: &PortId,
-		channel_id: &ChannelId,
-		sequence: Sequence,
-		ack: AcknowledgementCommitment,
+		_client_state: &Self::ClientState,
+		_height: Height,
+		_connection_end: &ConnectionEnd,
+		_proof: &CommitmentProofBytes,
+		_root: &CommitmentRoot,
+		_port_id: &PortId,
+		_channel_id: &ChannelId,
+		_sequence: Sequence,
+		_ack: AcknowledgementCommitment,
 	) -> Result<(), Ics02Error> {
 		// client_state.verify_height(height)?;
 		// verify_delay_passed::<H, _>(ctx, height, connection_end).map_err(Error::Anyhow)?;
@@ -382,16 +379,16 @@ where
 
 	fn verify_next_sequence_recv<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
+		_ctx: &Ctx,
 		_client_id: &ClientId,
-		client_state: &Self::ClientState,
-		height: Height,
-		connection_end: &ConnectionEnd,
-		proof: &CommitmentProofBytes,
-		root: &CommitmentRoot,
-		port_id: &PortId,
-		channel_id: &ChannelId,
-		sequence: Sequence,
+		_client_state: &Self::ClientState,
+		_height: Height,
+		_connection_end: &ConnectionEnd,
+		_proof: &CommitmentProofBytes,
+		_root: &CommitmentRoot,
+		_port_id: &PortId,
+		_channel_id: &ChannelId,
+		_sequence: Sequence,
 	) -> Result<(), Ics02Error> {
 		// client_state.verify_height(height)?;
 		// verify_delay_passed::<H, _>(ctx, height, connection_end).map_err(Error::Anyhow)?;
@@ -412,16 +409,16 @@ where
 
 	fn verify_packet_receipt_absence<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
+		_ctx: &Ctx,
 		_client_id: &ClientId,
-		client_state: &Self::ClientState,
-		height: Height,
-		connection_end: &ConnectionEnd,
-		proof: &CommitmentProofBytes,
-		root: &CommitmentRoot,
-		port_id: &PortId,
-		channel_id: &ChannelId,
-		sequence: Sequence,
+		_client_state: &Self::ClientState,
+		_height: Height,
+		_connection_end: &ConnectionEnd,
+		_proof: &CommitmentProofBytes,
+		_root: &CommitmentRoot,
+		_port_id: &PortId,
+		_channel_id: &ChannelId,
+		_sequence: Sequence,
 	) -> Result<(), Ics02Error> {
 		// client_state.verify_height(height)?;
 		// verify_delay_passed::<H, _>(ctx, height, connection_end).map_err(Error::Anyhow)?;

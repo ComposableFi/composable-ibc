@@ -1,4 +1,4 @@
-use super::{node_codec::RlpNodeCodec, *};
+use super::node_codec::RlpNodeCodec;
 use crate::{
 	proof::ethereum_trie::{verify_proof, EIP1186Layout, KeccakHasher},
 	utils::keccak256,

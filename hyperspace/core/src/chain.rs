@@ -15,6 +15,8 @@
 #![allow(unreachable_patterns)]
 
 use crate::chains;
+#[cfg(feature = "parachain")]
+use crate::substrate::{ComposableConfig, DefaultConfig, PicassoKusamaConfig, PicassoRococoConfig};
 use async_trait::async_trait;
 #[cfg(feature = "cosmos")]
 use cosmos::client::{CosmosClient, CosmosClientConfig};
@@ -64,6 +66,7 @@ use ics08_wasm::Bytes;
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 #[cfg(any(test, feature = "testing"))]
 use pallet_ibc::Timeout;
+#[cfg(feature = "parachain")]
 use parachain::{ParachainClient, ParachainClientConfig};
 use primitives::{
 	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, KeyProvider, LightClientSync,

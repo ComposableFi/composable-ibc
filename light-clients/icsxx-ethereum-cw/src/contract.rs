@@ -23,10 +23,9 @@ use crate::{
 		UpdateStateOnMisbehaviourMsg, VerifyClientMessage, VerifyMembershipMsg,
 		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
 	},
-	state::{get_client_state, get_consensus_state},
+	state::get_client_state,
 	Bytes,
 };
-use byteorder::{ByteOrder, LittleEndian};
 use core::{fmt::Debug, hash::Hasher};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -43,13 +42,12 @@ use ibc::core::{
 };
 use ics08_wasm::{SUBJECT_PREFIX, SUBSTITUTE_PREFIX};
 use icsxx_ethereum::{
-	client_def::EthereumClient, client_message::ClientMessage, client_state::ClientState,
-	consensus_state::ConsensusState,
+	client_def::EthereumClient, client_state::ClientState, consensus_state::ConsensusState,
 };
 // use light_client_common::{verify_membership, verify_non_membership};
 use icsxx_ethereum::verify::verify_ibc_proof;
 use std::{collections::BTreeSet, str::FromStr};
-use sync_committee_verifier::LightClientState;
+
 /*
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ics10-grandpa-cw";
@@ -138,9 +136,9 @@ fn process_message(
 			Ok(()).map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyClientMessage(msg) => {
-			let client_state =
+			let _client_state =
 				ctx.client_state(&client_id).map_err(|e| ContractError::Client(e.to_string()))?;
-			let msg = VerifyClientMessage::try_from(msg)?;
+			let _msg = VerifyClientMessage::try_from(msg)?;
 
 			// client
 			// 	.verify_client_message(ctx, client_id, client_state, msg.client_message)
@@ -247,7 +245,7 @@ fn process_message(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
-	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
+	let _client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
 	match msg {
 		QueryMsg::ClientTypeMsg(_) => unimplemented!("ClientTypeMsg"),
 		QueryMsg::GetLatestHeightsMsg(_) => unimplemented!("GetLatestHeightsMsg"),

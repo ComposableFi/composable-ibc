@@ -13,13 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{
-	client_def::EthereumClient,
-	error::Error,
-	proto::{ClientState as RawClientState, LightClientState as RawLightClientState},
-};
+use crate::{client_def::EthereumClient, error::Error, proto::ClientState as RawClientState};
 use alloc::{format, string::ToString, vec::Vec};
-use anyhow::anyhow;
 use core::{fmt::Debug, marker::PhantomData, time::Duration};
 use ibc::{
 	core::{ics02_client::client_state::ClientType, ics24_host::identifier::ChainId},
@@ -94,7 +89,7 @@ impl<H> ClientState<H> {
 	pub fn upgrade(
 		mut self,
 		_upgrade_height: Height,
-		upgrade_options: UpgradeOptions,
+		_upgrade_options: UpgradeOptions,
 		_chain_id: ChainId,
 	) -> Self {
 		self.frozen_height = None;
@@ -106,7 +101,7 @@ impl<H> ClientState<H> {
 
 	/// Check if the state is expired when `elapsed` time has passed since the latest consensus
 	/// state timestamp
-	pub fn expired(&self, elapsed: Duration) -> bool {
+	pub fn expired(&self, _elapsed: Duration) -> bool {
 		// elapsed > self.relay_chain.trusting_period()
 		// TODO
 		false
