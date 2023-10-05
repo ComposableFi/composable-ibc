@@ -267,7 +267,7 @@ fn process_message(
 				msg.value,
 			)
 			.map_err(|e| ContractError::Tendermint(e.to_string()))
-		  .map(|_| to_binary(&QueryResponse::success()))
+		  .map(|_| to_binary(&ContractResult::success()))
 		},
 		SudoMsg::VerifyNonMembership(msg) => {
 			let client_state = ctx
@@ -288,7 +288,7 @@ fn process_message(
 				msg.path,
 			)
 			.map_err(|e| ContractError::Tendermint(e.to_string()))
-			.map(|_| to_binary(&QueryResponse::success()))
+			.map(|_| to_binary(&ContractResult::success()))
 		},
 		SudoMsg::VerifyUpgradeAndUpdateState(msg) => {
 			let old_client_state = ctx
