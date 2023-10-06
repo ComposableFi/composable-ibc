@@ -98,8 +98,6 @@ use primitives::mock::LocalClientTypes;
 use sync_committee_primitives::types::LightClientState;
 use tracing::log;
 
-pub const EARLIEST_BLOCK: u64 = 0;
-
 abigen!(
 	IbcClientAbi,
 	"hyperspace/ethereum/src/abi/ibc-client-abi.json";
@@ -353,11 +351,12 @@ impl IbcProvider for EthereumClient {
 		let ibc_address = self.yui.diamond.address();
 		let client = self.clone();
 
+		let creation_block = self.contract_creation_block();
 		let ws = self.websocket_provider().await.unwrap();
 		(async_stream::stream! {
 			let mut events_stream = ws.subscribe_logs(
 				 &Filter::new()
-					.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+					.from_block(creation_block)
 					 .address(ibc_address),
 			)
 			.await
@@ -511,7 +510,7 @@ impl IbcProvider for EthereumClient {
 			.yui
 			.event_for_name::<CreateClientFilter>("CreateClient")
 			.expect("contract is missing CreateClient event")
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			.from_block(self.contract_creation_block())
 			.to_block(at.revision_height);
 		event_filter.filter = event_filter.filter.topic1({
 			let hash = H256::from_slice(&encode(&[Token::FixedBytes(
@@ -588,7 +587,7 @@ impl IbcProvider for EthereumClient {
 			.map_err(|err| {
 				ClientError::Other(format!("contract is missing UpdateClient event: {}", err))
 			})?
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			.from_block(self.contract_creation_block())
 			.to_block(at.revision_height)
 			.address(ValueOrArray::Value(self.yui.diamond.address()));
 		event_filter.filter = event_filter.filter.topic1({
@@ -674,7 +673,7 @@ impl IbcProvider for EthereumClient {
 							err
 						))
 					})?
-					.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+					.from_block(self.contract_creation_block())
 					.address(ValueOrArray::Value(self.yui.diamond.address()))
 					.to_block(at.revision_height);
 				event_filter.filter = event_filter.filter.topic1({
@@ -1122,7 +1121,7 @@ impl IbcProvider for EthereumClient {
 				self.yui.bank.as_ref().map(|x| x.address()).unwrap_or_default(),
 				self.yui.diamond.address(),
 			]))
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			.from_block(self.contract_creation_block())
 			.to_block(BlockNumber::Latest)
 			.topic1(ValueOrArray::Array(
 				seqs.clone()
@@ -1231,7 +1230,7 @@ impl IbcProvider for EthereumClient {
 			.yui
 			.event_for_name::<RecvPacketFilter>("RecvPacket")
 			.map_err(|err| ClientError::ContractAbiError(err))?
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			.from_block(self.contract_creation_block())
 			.address(ValueOrArray::Value(self.yui.diamond.address()))
 			.to_block(BlockNumber::Latest)
 			.topic1(ValueOrArray::Array(
@@ -1265,7 +1264,7 @@ impl IbcProvider for EthereumClient {
 			.yui
 			.event_for_name::<WriteAcknowledgementFilter>("WriteAcknowledgement")
 			.map_err(|err| ClientError::ContractAbiError(err))?
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			.from_block(self.contract_creation_block())
 			.to_block(BlockNumber::Latest)
 			.address(ValueOrArray::Value(self.yui.diamond.address()))
 			.topic3(ValueOrArray::Array(
@@ -1352,7 +1351,7 @@ impl IbcProvider for EthereumClient {
 			.yui
 			.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
 			.map_err(|err| ClientError::ContractAbiError(err))?
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			.from_block(self.contract_creation_block())
 			.address(ValueOrArray::Value(self.yui.diamond.address()))
 			.to_block(BlockNumber::Latest)
 			.topic1({
@@ -1496,7 +1495,7 @@ impl IbcProvider for EthereumClient {
 			.yui
 			.event_for_name::<GeneratedClientIdentifierFilter>("GeneratedClientIdentifier")
 			.map_err(|err| ClientError::ContractAbiError(err))?
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			.from_block(self.contract_creation_block())
 			.address(ValueOrArray::Value(self.yui.diamond.address()))
 			.to_block(BlockNumber::Latest);
 
@@ -1537,7 +1536,7 @@ impl IbcProvider for EthereumClient {
 			.yui
 			.event_for_name::<GeneratedConnectionIdentifierFilter>("GeneratedConnectionIdentifier")
 			.map_err(|err| ClientError::ContractAbiError(err))?
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			.from_block(self.contract_creation_block())
 			.address(ValueOrArray::Value(self.yui.diamond.address())) // TODO: use contract creation height
 			.to_block(BlockNumber::Number(height.into()));
 
@@ -1559,17 +1558,14 @@ impl IbcProvider for EthereumClient {
 						err
 					))
 				})?;
-			info!("EVENT {value:?}");
 
 			let connection_id: ConnectionId = value.0.parse()?;
 			let connection_end = self
 				.query_connection_end(Height::new(0, height.into()), connection_id.clone())
 				.await?;
-			info!("conn {connection_end:?}");
 
 			let conn = connection_end.connection.unwrap();
 			if conn.client_id != client_id {
-				info!("client id mismatch: {} != {client_id}", conn.client_id);
 				continue
 			}
 
@@ -1595,7 +1591,7 @@ impl IbcProvider for EthereumClient {
 			.yui
 			.event_for_name::<GeneratedChannelIdentifierFilter>("GeneratedChannelIdentifier")
 			.map_err(|err| ClientError::ContractAbiError(err))?
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			.from_block(self.contract_creation_block())
 			.address(ValueOrArray::Value(self.yui.diamond.address()))
 			.to_block(BlockNumber::Number(height.revision_height.into()));
 
@@ -1699,13 +1695,7 @@ impl IbcProvider for EthereumClient {
 				execution_header.block_number.to_string()
 			)))?;
 
-		dbg!(&block.state_root);
-		dbg!(&block.hash.unwrap_or_default());
-		dbg!(&state.state_roots.iter().take(10).collect::<Vec<_>>());
-		dbg!(&state.block_roots.iter().take(10).collect::<Vec<_>>());
-		dbg!(&block_header.state_root);
-		dbg!(&block_header.body_root);
-		log::info!(target: "hyperspace_ethereum", "Using init epoch: {epoch}, and height: {}", execution_header.block_number);
+		info!(target: "hyperspace_ethereum", "Using init epoch: {epoch}, and height: {}", execution_header.block_number);
 
 		let client_state = AnyClientState::Ethereum(ClientState {
 			inner: client_state,

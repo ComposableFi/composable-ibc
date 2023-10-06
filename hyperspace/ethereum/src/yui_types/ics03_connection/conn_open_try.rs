@@ -37,7 +37,6 @@ impl YuiMsgConnectionOpenTry {
 		//by some reason the decode is failing in case there is bytes in the struct
 		//this is the reason why we are using the manual token construction
 		//https://github.com/gakonst/ethers-rs/blob/master/ethers-contract/ethers-contract-derive/src/lib.rs#L140
-		/* Token::Tuple(Self::into_tokens(self)) */
 
 		use ethers::abi::{encode as ethers_encode, Token as EthersToken};
 

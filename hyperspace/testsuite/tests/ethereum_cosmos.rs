@@ -28,7 +28,6 @@ use hyperspace_ethereum::{
 	},
 	utils::{check_code_size, deploy_contract, DeployYuiIbc, ProviderImpl},
 };
-
 use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider};
 use hyperspace_testsuite::{ibc_messaging_with_connection_delay, setup_connection_and_channel};
 use ibc::core::ics24_host::identifier::PortId;
@@ -309,7 +308,7 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	)
 	.await;
 
-	// // timeouts + connection delay
+	// timeouts + connection delay
 	// ibc_messaging_packet_height_timeout_with_connection_delay(
 	// 	&mut chain_a,
 	// 	&mut chain_b,

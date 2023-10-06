@@ -1,20 +1,18 @@
 use crate::{
 	config::EthereumClientConfig,
 	contract::UnwrapContractError,
-	ibc_provider::{u256_to_bytes, EARLIEST_BLOCK},
+	ibc_provider::u256_to_bytes,
 	jwt::{JwtAuth, JwtKey},
 	utils::{handle_gas_usage, DeployYuiIbc, ProviderImpl},
 };
 use anyhow::Error;
 use async_trait::async_trait;
-use cast::revm::db;
 use ethers::{
 	abi::{encode, AbiEncode, Address, Bytes, ParamType, Token},
 	core::k256,
 	prelude::{
-		coins_bip39::English, signer::SignerMiddlewareError, Authorization, BlockId, BlockNumber,
-		EIP1186ProofResponse, Filter, LocalWallet, Log, MnemonicBuilder, NameOrAddress,
-		SignerMiddleware, Wallet, H256,
+		signer::SignerMiddlewareError, Authorization, BlockId, BlockNumber, EIP1186ProofResponse,
+		Filter, Log, NameOrAddress, SignerMiddleware, Wallet, H256,
 	},
 	providers::{Http, Middleware, Provider, ProviderError, ProviderExt, Ws},
 	signers::Signer,
@@ -73,10 +71,8 @@ pub struct EthereumClient {
 	pub channel_whitelist: Arc<Mutex<HashSet<(ChannelId, PortId)>>>,
 }
 
-pub type MiddlewareErrorType = SignerMiddlewareError<
-	Provider<Http>,
-	ethers::signers::Wallet<ethers::prelude::k256::ecdsa::SigningKey>,
->;
+pub type MiddlewareErrorType =
+	SignerMiddlewareError<Provider<Http>, Wallet<k256::ecdsa::SigningKey>>;
 
 #[derive(Debug, Error)]
 pub enum ClientError {
@@ -159,19 +155,21 @@ impl EthereumClient {
 		let client = config.client().await?;
 
 		let yui = match config.yui.take() {
-			None => DeployYuiIbc::<_, _>::from_addresses(
-				client.clone(),
-				config.diamond_address.clone().ok_or_else(|| {
-					ClientError::Other("diamond address must be provided".to_string())
-				})?,
-				Some(config.tendermint_address.clone().ok_or_else(|| {
-					ClientError::Other("tendermint address must be provided".to_string())
-				})?),
-				Some(config.bank_address.clone().ok_or_else(|| {
-					ClientError::Other("bank address must be provided".to_string())
-				})?),
-				config.diamond_facets.clone(),
-			)?,
+			None =>
+				DeployYuiIbc::<_, _>::from_addresses(
+					client.clone(),
+					config.diamond_address.clone().ok_or_else(|| {
+						ClientError::Other("diamond address must be provided".to_string())
+					})?,
+					Some(config.tendermint_address.clone().ok_or_else(|| {
+						ClientError::Other("tendermint address must be provided".to_string())
+					})?),
+					Some(config.bank_address.clone().ok_or_else(|| {
+						ClientError::Other("bank address must be provided".to_string())
+					})?),
+					config.diamond_facets.clone(),
+				)
+				.await?,
 			Some(yui) => yui,
 		};
 		Ok(Self {
@@ -196,6 +194,10 @@ impl EthereumClient {
 		let mut string = self.config.beacon_rpc_url.to_string();
 		string.pop();
 		SyncCommitteeProver::new(string)
+	}
+
+	pub fn contract_creation_block(&self) -> BlockNumber {
+		self.yui.contract_creation_block()
 	}
 
 	pub async fn websocket_provider(&self) -> Result<Provider<Ws>, ClientError> {
@@ -226,8 +228,7 @@ impl EthereumClient {
 		from_block: BlockNumber,
 	) -> Result<Vec<(String, String)>, ClientError> {
 		let filter = Filter::new()
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
-			// .from_block(from_block)
+			.from_block(self.contract_creation_block())
 			.to_block(BlockNumber::Latest)
 			.address(self.yui.diamond.address())
 			.event("OpenInitChannel(string,string)");

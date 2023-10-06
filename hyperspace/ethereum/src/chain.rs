@@ -1185,7 +1185,6 @@ impl Chain for EthereumClient {
 		let mut calls = vec![];
 		for msg in messages {
 			if msg.type_url == ibc::core::ics02_client::msgs::create_client::TYPE_URL {
-				dbg!(&msg.value.len());
 				let msg = MsgCreateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).map_err(
 					|_| ClientError::Other("create_client: unsupported client state".into()),
 				)?;
@@ -1205,9 +1204,6 @@ impl Chain for EthereumClient {
 
 				let client_state_data_vec = ethers_encode(&[client_state_abi_token]);
 				let consensus_state_data_vec = ethers_encode(&[consensus_state_abi_token]);
-
-				dbg!(&client_state_data_vec.len());
-				dbg!(&consensus_state_data_vec.len());
 
 				let token = EthersToken::Tuple(vec![
 					//should be the same that we use to register client

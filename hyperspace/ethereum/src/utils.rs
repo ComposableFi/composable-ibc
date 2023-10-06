@@ -10,7 +10,9 @@ use ethers::{
 	core::types::Bytes,
 	prelude::{
 		EthEvent, Event, Filter, Http, LocalWallet, Middleware, Provider, TransactionReceipt, H256,
+		U256,
 	},
+	types::BlockNumber,
 };
 use ethers_solc::{
 	artifacts::{
@@ -28,7 +30,7 @@ use std::{
 	fs::File,
 	iter::once,
 	path::{Path, PathBuf},
-	sync::Arc,
+	sync::{Arc, Mutex},
 };
 
 pub type ProviderImpl = ethers::prelude::SignerMiddleware<Provider<Http>, LocalWallet>;
@@ -104,6 +106,7 @@ pub struct DeployYuiIbc<B, M> {
 	// pub storage_layout: StorageLayout,
 	pub tendermint: Option<ContractInstance<B, M>>,
 	pub bank: Option<ContractInstance<B, M>>,
+	pub contract_creation_block: Arc<Mutex<Option<BlockNumber>>>,
 }
 
 impl<B, M> DeployYuiIbc<B, M>
@@ -111,34 +114,60 @@ where
 	B: Borrow<M> + Clone,
 	M: Middleware,
 {
-	pub fn from_addresses(
+	pub async fn new(
+		deployed_facets: Vec<Facet<B, M>>,
+		diamond: ContractInstance<B, M>,
+		tendermint: Option<ContractInstance<B, M>>,
+		bank: Option<ContractInstance<B, M>>,
+	) -> Result<Self, ClientError> {
+		let ibc = Self {
+			diamond,
+			tendermint,
+			bank,
+			deployed_facets,
+			contract_creation_block: Arc::new(Mutex::new(None)),
+		};
+		let creation_block: U256 =
+			ibc.method("getContractCreationBlock", ())?.call().await.map_err(|e| {
+				ClientError::Other(format!("Error getting contract creation block: {}", e))
+			})?;
+		ibc.set_contract_creation_block(creation_block);
+		Ok(ibc)
+	}
+
+	pub async fn from_addresses(
 		client: B,
 		diamond_address: Address,
 		tendermint_address: Option<Address>,
 		bank_address: Option<Address>,
 		diamond_facets: Vec<(ContractName, Address)>,
 	) -> Result<Self, ClientError> {
-		Ok(Self {
-			diamond: ContractInstance::<B, M>::new(
-				diamond_address,
-				DIAMONDABI_ABI.clone(),
-				client.clone(),
-			),
-			tendermint: tendermint_address.map(|addr| {
-				ContractInstance::<B, M>::new(addr, TENDERMINTCLIENTABI_ABI.clone(), client.clone())
-			}),
-			bank: bank_address.map(|addr| {
-				ContractInstance::<B, M>::new(
-					addr,
-					ICS20TRANSFERBANKABI_ABI.clone(),
-					client.clone(),
-				)
-			}),
-			deployed_facets: diamond_facets
-				.into_iter()
-				.map(|(abi, addr)| Facet::from_address(addr, abi, client.clone()))
-				.collect(),
-		})
+		let diamond =
+			ContractInstance::<B, M>::new(diamond_address, DIAMONDABI_ABI.clone(), client.clone());
+		let tendermint = tendermint_address.map(|addr| {
+			ContractInstance::<B, M>::new(addr, TENDERMINTCLIENTABI_ABI.clone(), client.clone())
+		});
+		let bank = bank_address.map(|addr| {
+			ContractInstance::<B, M>::new(addr, ICS20TRANSFERBANKABI_ABI.clone(), client.clone())
+		});
+		let deployed_facets = diamond_facets
+			.into_iter()
+			.map(|(abi, addr)| Facet::from_address(addr, abi, client.clone()))
+			.collect();
+		Ok(Self::new(deployed_facets, diamond, tendermint, bank).await?)
+	}
+
+	pub fn set_contract_creation_block(&self, number: U256) {
+		*self.contract_creation_block.lock().unwrap() =
+			Some(BlockNumber::Number(number.as_u64().into()));
+	}
+
+	pub fn contract_creation_block(&self) -> BlockNumber {
+		self.contract_creation_block
+			.lock()
+			.unwrap()
+			.clone()
+			.unwrap_or(BlockNumber::Earliest)
 	}
 }
 
@@ -483,20 +512,11 @@ where
 			if let Ok(f) = faucet.abi().function(name) {
 				if func.is_some() {
 					log::error!(target: "hyperspace_ethereum", "ambiguous function name: {}", name);
-					//panic!("ambiguous function name: {}", name);
-					//d5a2448100000000000000000000000000000000000000000000000000000000
-					//d5a2448100000000000000000000000000000000000000000000000000000000
-					// d5a244810000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000000f30372d74656e6465726d696e742d30000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-					// d5a244810000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000002c0000000000000000000000000000000000000000000000000000000000000000d30372d74656e6465726d696e74000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000001a000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000fa000000000000000000000000000000000000000000000000000000000003d0900000000000000000000000000000000000000000000000000000000000001baf800000000000000000000000000000000000000000000000000006722feb7b0000000000000000000000000000000000000000000000000000000000000000000f000000000000000000000000000000000000000000000000000000037e11d60000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000cdc00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000001263656e74617572692d746573746e65742d310000000000000000000000000000000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000064f8fc0400000000000000000000000000000000000000000000000017826f89135e5218000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000020008892c98d506a154ef7e5ad89b345e395cdafc8eb77857276f27ff5cef791da0000000000000000000000000000000000000000000000000000000000000020602fa35acfd377900d7fe3459730d96415eef369bd033c0923b2d2e2796a97d9
 				}
 				func = Some(f);
 			}
 		}
 		func.ok_or_else(|| ethers::abi::Error::InvalidName(name.into()))
-		// self.deployed_facets
-		// 	.iter()
-		// 	.find_map(|x| x.abi().function(name).ok())
-		// 	.ok_or_else(|| ethers::abi::Error::InvalidName(name.into()))
 	}
 
 	pub fn method<T: Tokenize, D: Detokenize>(
@@ -583,6 +603,7 @@ where
 			// storage_layout: self.storage_layout.clone(),
 			tendermint: self.tendermint.clone(),
 			bank: self.bank.clone(),
+			contract_creation_block: self.contract_creation_block.clone(),
 		}
 	}
 }
@@ -840,13 +861,9 @@ where
 	// 		acc
 	// 	});
 
-	DeployYuiIbc {
-		diamond,
-		deployed_facets,
-		// storage_layout,
-		tendermint: None,
-		bank: None,
-	}
+	DeployYuiIbc::<Arc<M>, M>::new(deployed_facets, diamond, None, None)
+		.await
+		.unwrap()
 }
 
 pub async fn deploy_client<M: Middleware>(
