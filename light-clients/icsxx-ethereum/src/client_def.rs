@@ -14,9 +14,7 @@
 // limitations under the License.
 
 use crate::{client_state::ClientState, consensus_state::ConsensusState, error::Error};
-use ibc::core::ics02_client::{
-	client_consensus::ConsensusState as _, client_state::ClientState as _,
-};
+use ibc::core::ics02_client::client_consensus::ConsensusState as _;
 
 use crate::{
 	client_message::{ClientMessage, Misbehaviour},
@@ -47,7 +45,6 @@ use ibc::{
 	Height,
 };
 use sync_committee_verifier::LightClientState;
-use tendermint_proto::Protobuf;
 
 // TODO: move this function in a separate crate and remove the one from `light_client_common` crate
 /// This will verify that the connection delay has elapsed for a given [`ibc::Height`]
@@ -87,7 +84,9 @@ where
 	Ok(())
 }
 
+#[allow(unused)]
 const CLIENT_STATE_UPGRADE_PATH: &[u8] = b"client-state-upgrade-path";
+#[allow(unused)]
 const CONSENSUS_STATE_UPGRADE_PATH: &[u8] = b"consensus-state-upgrade-path";
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]

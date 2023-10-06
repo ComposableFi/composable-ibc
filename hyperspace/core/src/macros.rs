@@ -16,7 +16,7 @@
 macro_rules! chains {
 	($(
         $(#[$($meta:meta)*])*
-		$name:ident($config:path, $client:path$(, $cmd:path)?),
+		$name:ident($config:path, $client:path$(, $(#[$($meta_cmd:meta)*])* $cmd:path)?),
 	)*) => {
 		#[derive(Debug, Serialize, Deserialize, Clone)]
 		#[serde(tag = "type", rename_all = "snake_case")]
@@ -75,8 +75,8 @@ macro_rules! chains {
 		#[derive(Debug, Clone, clap::Parser)]
 		pub enum AnyCmd {
 			$(
-				$(#[$($meta)*])*
 				$(
+				$(#[$($meta_cmd)*])*
 				#[command(subcommand)]
 				$name($cmd),
 				)?

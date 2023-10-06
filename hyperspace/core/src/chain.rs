@@ -107,7 +107,7 @@ chains! {
 	#[cfg(feature = "cosmos")]
 	Cosmos(CosmosClientConfig, CosmosClient<()>),
 	#[cfg(feature = "ethereum")]
-	Ethereum(EthereumClientConfig, EthereumClient, EthereumCmd),
+	Ethereum(EthereumClientConfig, EthereumClient, #[cfg(feature = "ethereum")] EthereumCmd),
 }
 
 fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error> {
