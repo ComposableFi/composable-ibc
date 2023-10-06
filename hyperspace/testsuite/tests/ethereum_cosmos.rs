@@ -16,11 +16,9 @@ use crate::utils::ETH_NODE_PORT_WS;
 use core::time::Duration;
 use ethers::{abi::Token, prelude::ContractInstance, utils::AnvilInstance};
 use ethers_solc::ProjectCompileOutput;
-use futures::{StreamExt, TryFutureExt};
 use hyperspace_core::{
 	chain::{AnyAssetId, AnyChain, AnyConfig},
 	logging,
-	// substrate::DefaultConfig,
 };
 use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_ethereum::{

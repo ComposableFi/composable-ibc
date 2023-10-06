@@ -15,7 +15,7 @@
 #![allow(clippy::all)]
 
 use crate::utils::assert_timeout_packet;
-use futures::{future, StreamExt, TryFutureExt};
+use futures::{future, StreamExt};
 use hyperspace_core::send_packet_relay::set_relay_status;
 use hyperspace_primitives::{
 	utils::{create_channel, create_connection, timeout_after, timeout_future},

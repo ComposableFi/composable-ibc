@@ -651,6 +651,7 @@ impl primitives::TestProvider for EthereumClient {
 			params.source_port.to_string(),
 			params.source_channel.to_string(),
 			params.timeout_height.revision_height,
+			params.memo,
 		);
 		let method = self
 			.yui

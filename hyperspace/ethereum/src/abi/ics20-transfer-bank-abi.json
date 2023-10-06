@@ -16,19 +16,6 @@
     "type": "constructor"
   },
   {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "uint64",
-        "name": "sequence",
-        "type": "uint64"
-      }
-    ],
-    "name": "TransferInitiated",
-    "type": "event"
-  },
-  {
     "inputs": [
       {
         "internalType": "address",
@@ -505,6 +492,11 @@
         "internalType": "uint64",
         "name": "timeoutHeight",
         "type": "uint64"
+      },
+      {
+        "internalType": "string",
+        "name": "memo",
+        "type": "string"
       }
     ],
     "name": "sendTransfer",

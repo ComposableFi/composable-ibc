@@ -1345,7 +1345,6 @@ impl Chain for EthereumClient {
 				let msg = MsgChannelOpenAck::decode_vec(&msg.value).map_err(|e| {
 					ClientError::Other(format!("chan_open_ack: failed to decode_vec: {:?}", e))
 				})?;
-				log::info!("msg = {msg:#?}");
 				let token = msg.into_token();
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "channelOpenAck").await);
 			} else if msg.type_url == channel_msgs::chan_open_confirm::TYPE_URL {
