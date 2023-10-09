@@ -3,7 +3,7 @@ use crate::{
 	contract::UnwrapContractError,
 	ibc_provider::u256_to_bytes,
 	jwt::{JwtAuth, JwtKey},
-	utils::{DeployYuiIbc, ProviderImpl},
+	utils::{DeployYuiIbc, ProviderImpl}, chain::{client_state_abi_token, consensus_state_abi_token},
 };
 use anyhow::Error;
 use async_trait::async_trait;
@@ -32,7 +32,8 @@ use ibc::{
 };
 use ibc_primitives::Timeout;
 use once_cell::sync::Lazy;
-use primitives::CommonClientState;
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
+use primitives::{CommonClientState, IbcProvider};
 use std::{
 	collections::HashSet,
 	convert::Infallible,
@@ -219,6 +220,56 @@ impl EthereumClient {
 				ClientError::ProviderError(self.ws_uri.clone(), ProviderError::from(e))
 			})
 		}
+	}
+
+	pub async fn get_latest_client_state_encoded_abi_token(&self, client_id: ClientId) -> Result<Vec<u8>, ClientError> {
+		let latest_height = self.latest_height_and_timestamp().await?.0;
+		let latest_client_state = AnyClientState::try_from(
+			self.query_client_state(latest_height, client_id.clone())
+				.await?
+				.client_state
+				.ok_or_else(|| {
+				ClientError::Other(
+					"update_client: can't get latest client state".to_string(),
+				)
+			})?,
+		)?;
+		let AnyClientState::Tendermint(client_state) =
+			latest_client_state.unpack_recursive()
+		else {
+			//TODO return error support only tendermint client state
+			return Err(ClientError::Other("create_client: unsupported client state".into()))
+		};
+
+		let client_state = client_state_abi_token(&client_state);
+		let client_state = encode(&[client_state]);
+		Ok(client_state)
+	}
+
+	pub async fn get_latest_consensus_state_encoded_abi_token(&self, client_id: ClientId) -> Result<Vec<u8>, ClientError> {
+		return Ok(vec![]);
+		let latest_height = self.latest_height_and_timestamp().await?.0;
+		//TODO what is the height here?
+		let latest_consensus_state = AnyConsensusState::try_from(
+			self.query_client_consensus(latest_height, client_id.clone(), latest_height)
+				.await?
+				.consensus_state
+				.ok_or_else(|| {
+				ClientError::Other(
+					"update_client: can't get latest client state".to_string(),
+				)
+			})?,
+		)?;
+		let AnyConsensusState::Tendermint(consensus_state) =
+			latest_consensus_state.unpack_recursive()
+		else {
+			//TODO return error support only tendermint client state
+			return Err(ClientError::Other("create_client: unsupported client state".into()))
+		};
+
+		let consensus_state = consensus_state_abi_token(&consensus_state);
+		let consensus_state = encode(&[consensus_state]);
+		Ok(consensus_state)
 	}
 
 	pub async fn generated_channel_identifiers(

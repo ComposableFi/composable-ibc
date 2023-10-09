@@ -73,7 +73,7 @@ impl MisbehaviourHandler for EthereumClient {
 	}
 }
 
-fn client_state_abi_token<H: Debug>(client: &ClientState<H>) -> Token {
+pub fn client_state_abi_token<H: Debug>(client: &ClientState<H>) -> Token {
 	use ethers::abi::{encode as ethers_encode, Token as EthersToken};
 
 	let client_state_data = EthersToken::Tuple(
@@ -291,7 +291,7 @@ pub(crate) fn client_state_from_abi_token<H>(token: Token) -> Result<ClientState
 	})
 }
 
-fn consensus_state_abi_token(consensus_state: &ConsensusState) -> Token {
+pub fn consensus_state_abi_token(consensus_state: &ConsensusState) -> Token {
 	use ethers::abi::{encode as ethers_encode, Token as EthersToken};
 	let timestamp = Timestamp::from(consensus_state.timestamp);
 
@@ -1238,27 +1238,8 @@ impl Chain for EthereumClient {
 				let tm_header_abi_token = tm_header_abi_token(header)?;
 				let tm_header_bytes = ethers_encode(&[tm_header_abi_token]);
 
-				let latest_height = self.latest_height_and_timestamp().await?.0;
-				let client_id = msg.client_id;
-				let latest_client_state = AnyClientState::try_from(
-					self.query_client_state(latest_height, client_id.clone())
-						.await?
-						.client_state
-						.ok_or_else(|| {
-						ClientError::Other(
-							"update_client: can't get latest client state".to_string(),
-						)
-					})?,
-				)?;
-				let AnyClientState::Tendermint(client_state) =
-					latest_client_state.unpack_recursive()
-				else {
-					//TODO return error support only tendermint client state
-					return Err(ClientError::Other("create_client: unsupported client state".into()))
-				};
-
-				let client_state = client_state_abi_token(&client_state);
-				let client_state = ethers_encode(&[client_state]);
+				let client_id = msg.client_id.clone();
+				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
 
 				let token = EthersToken::Tuple(vec![
 					//should be the same that we use to create client
@@ -1267,7 +1248,7 @@ impl Chain for EthereumClient {
 					//tm header
 					EthersToken::Bytes(tm_header_bytes),
 					//tm header
-					EthersToken::Bytes(client_state),
+					EthersToken::Bytes(latest_client_state),
 				]);
 
 				calls.push(self.yui.update_client_calldata(token).await);
