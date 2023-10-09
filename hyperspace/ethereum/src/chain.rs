@@ -1239,6 +1239,10 @@ impl Chain for EthereumClient {
 				let tm_header_bytes = ethers_encode(&[tm_header_abi_token]);
 
 				let client_id = msg.client_id.clone();
+				{//update arc mutex with a new client id
+					let mut m = self.yui_client_id.lock().unwrap();
+					*m = Some(client_id.clone());
+				}
 				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
 
 				let token = EthersToken::Tuple(vec![
@@ -1277,7 +1281,18 @@ impl Chain for EthereumClient {
 						))),
 				};
 
-				let token = msg_connection_open_ack_token(msg, &client_state)?;
+				let mut token = msg_connection_open_ack_token(msg, &client_state)?;
+				let Token::Tuple(ref mut tokens) = token else{
+					return Err(ClientError::Other(format!(
+						"Token should be tuple"
+					)));
+				};
+				let client_id = (*self.yui_client_id.lock().unwrap()).clone().unwrap();
+				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				tokens.push(Token::Bytes(latest_client_state));
+				tokens.push(Token::Bytes(latest_consensus_state));
+
 				calls.push(self.yui.connection_open_ack_calldata(token).await);
 			} else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_try::TYPE_URL {
 				let msg = MsgConnectionOpenTry::<LocalClientTypes>::decode_vec(&msg.value)
@@ -1297,14 +1312,39 @@ impl Chain for EthereumClient {
 						))),
 				};
 
-				let token = msg_connection_open_try_token(msg, &client_state)?;
+				let mut token = msg_connection_open_try_token(msg.clone(), &client_state)?;
+				let Token::Tuple(ref mut tokens) = token else{
+					return Err(ClientError::Other(format!(
+						"Token should be tuple"
+					)));
+				};
+				
+				let client_id = msg.client_id.clone();
+				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				tokens.push(Token::Bytes(latest_client_state));
+				tokens.push(Token::Bytes(latest_consensus_state));
+
 				calls.push(self.yui.connection_open_try_calldata(token).await);
+
 			} else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_confirm::TYPE_URL
 			{
 				let msg = MsgConnectionOpenConfirm::decode_vec(&msg.value).map_err(|_| {
 					ClientError::Other("conn_open_confirm: failed to decode_vec".into())
 				})?;
-				let token = msg_connection_open_confirm_token(msg);
+				let mut token = msg_connection_open_confirm_token(msg);
+				let Token::Tuple(ref mut tokens) = token else{
+					return Err(ClientError::Other(format!(
+						"Token should be tuple"
+					)));
+				};
+				
+				let client_id = (*self.yui_client_id.lock().unwrap()).clone().unwrap();
+				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				tokens.push(Token::Bytes(latest_client_state));
+				tokens.push(Token::Bytes(latest_consensus_state));
+
 				calls.push(self.yui.connection_open_confirm_calldata(token).await);
 			} else if msg.type_url == channel_msgs::chan_open_init::TYPE_URL {
 				let msg = MsgChannelOpenInit::decode_vec(&msg.value).map_err(|_| {
@@ -1317,14 +1357,39 @@ impl Chain for EthereumClient {
 				let msg = MsgChannelOpenTry::decode_vec(&msg.value).map_err(|_| {
 					ClientError::Other("chan_open_try: failed to decode_vec".into())
 				})?;
-				let token = msg.into_token();
+				let mut token = msg.into_token();
+
+				let Token::Tuple(ref mut tokens) = token else{
+					return Err(ClientError::Other(format!(
+						"Token should be tuple"
+					)));
+				};
+				
+				let client_id = (*self.yui_client_id.lock().unwrap()).clone().unwrap();
+				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				tokens.push(Token::Bytes(latest_client_state));
+				tokens.push(Token::Bytes(latest_consensus_state));
+
 				calls.push(self.yui.channel_open_try_calldata(token).await);
 			} else if msg.type_url == channel_msgs::chan_open_ack::TYPE_URL {
 				let msg = MsgChannelOpenAck::decode_vec(&msg.value).map_err(|e| {
 					ClientError::Other(format!("chan_open_ack: failed to decode_vec: {:?}", e))
 				})?;
 				log::info!("msg = {msg:#?}");
-				let token = msg.into_token();
+				let mut token = msg.into_token();
+				let Token::Tuple(ref mut tokens) = token else{
+					return Err(ClientError::Other(format!(
+						"Token should be tuple"
+					)));
+				};
+				
+				let client_id = (*self.yui_client_id.lock().unwrap()).clone().unwrap();
+				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				tokens.push(Token::Bytes(latest_client_state));
+				tokens.push(Token::Bytes(latest_consensus_state));
+
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "channelOpenAck").await);
 			} else if msg.type_url == channel_msgs::chan_open_confirm::TYPE_URL {
 				let msg = MsgChannelOpenConfirm::decode_vec(&msg.value).map_err(|e| {
@@ -1333,7 +1398,20 @@ impl Chain for EthereumClient {
 						e
 					))
 				})?;
-				let token = msg.into_token();
+				let mut token = msg.into_token();
+
+				let Token::Tuple(ref mut tokens) = token else{
+					return Err(ClientError::Other(format!(
+						"Token should be tuple"
+					)));
+				};
+				
+				let client_id = (*self.yui_client_id.lock().unwrap()).clone().unwrap();
+				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				tokens.push(Token::Bytes(latest_client_state));
+				tokens.push(Token::Bytes(latest_consensus_state));
+
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "channelOpenConfirm").await);
 			} else if msg.type_url == channel_msgs::chan_close_init::TYPE_URL {
 				let msg = MsgChannelCloseInit::decode_vec(&msg.value).map_err(|e| {
@@ -1348,7 +1426,19 @@ impl Chain for EthereumClient {
 						e
 					))
 				})?;
-				let token = msg.into_token();
+				let mut token = msg.into_token();
+				let Token::Tuple(ref mut tokens) = token else{
+					return Err(ClientError::Other(format!(
+						"Token should be tuple"
+					)));
+				};
+				
+				let client_id = (*self.yui_client_id.lock().unwrap()).clone().unwrap();
+				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				tokens.push(Token::Bytes(latest_client_state));
+				tokens.push(Token::Bytes(latest_consensus_state));
+
 				calls
 					.push(self.yui.send_and_get_tuple_calldata(token, "channelCloseConfirm").await);
 			} else if msg.type_url == channel_msgs::timeout_on_close::TYPE_URL {
@@ -1365,13 +1455,39 @@ impl Chain for EthereumClient {
 				let msg = MsgAcknowledgement::decode_vec(&msg.value).map_err(|e| {
 					ClientError::Other(format!("acknowledgement: failed to decode_vec : {:?}", e))
 				})?;
-				let token = msg.into_token();
+				let mut token = msg.into_token();
+
+				let Token::Tuple(ref mut tokens) = token else{
+					return Err(ClientError::Other(format!(
+						"Token should be tuple"
+					)));
+				};
+				
+				let client_id = (*self.yui_client_id.lock().unwrap()).clone().unwrap();
+				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				tokens.push(Token::Bytes(latest_client_state));
+				tokens.push(Token::Bytes(latest_consensus_state));
+
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "acknowledgePacket").await);
 			} else if msg.type_url == channel_msgs::recv_packet::TYPE_URL {
 				let msg = MsgRecvPacket::decode_vec(&msg.value).map_err(|e| {
 					ClientError::Other(format!("recv_packet: failed to decode_vec : {:?}", e))
 				})?;
-				let token = msg.into_token();
+				let mut token = msg.into_token();
+
+				let Token::Tuple(ref mut tokens) = token else{
+					return Err(ClientError::Other(format!(
+						"Token should be tuple"
+					)));
+				};
+				
+				let client_id = (*self.yui_client_id.lock().unwrap()).clone().unwrap();
+				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				tokens.push(Token::Bytes(latest_client_state));
+				tokens.push(Token::Bytes(latest_consensus_state));
+
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "recvPacket").await);
 			} else {
 				return Err(ClientError::Other(format!(
