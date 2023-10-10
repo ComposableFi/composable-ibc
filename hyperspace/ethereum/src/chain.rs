@@ -49,6 +49,7 @@ use ics07_tendermint::{
 	consensus_state::ConsensusState,
 };
 use icsxx_ethereum::client_state::ClientState as EthereumClientState;
+use log::{error, info};
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 use primitives::{
 	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, LightClientSync,
@@ -1372,12 +1373,14 @@ impl Chain for EthereumClient {
 				let msg = MsgTimeoutOnClose::decode_vec(&msg.value).map_err(|e| {
 					ClientError::Other(format!("timeout_on_close: failed to decode_vec : {:?}", e))
 				})?;
-				return Err(ClientError::Other("timeout not supported".into()))
+				let token = msg.into_token();
+				calls.push(self.yui.send_and_get_tuple_calldata(token, "timeoutOnClose").await);
 			} else if msg.type_url == channel_msgs::timeout::TYPE_URL {
 				let msg = MsgTimeout::decode_vec(&msg.value).map_err(|e| {
 					ClientError::Other(format!("timeout: failed to decode_vec : {:?}", e))
 				})?;
-				return Err(ClientError::Other("timeout not supported".into()))
+				let token = msg.into_token();
+				calls.push(self.yui.send_and_get_tuple_calldata(token, "timeoutPacket").await);
 			} else if msg.type_url == channel_msgs::acknowledgement::TYPE_URL {
 				let msg = MsgAcknowledgement::decode_vec(&msg.value).map_err(|e| {
 					ClientError::Other(format!("acknowledgement: failed to decode_vec : {:?}", e))

@@ -224,7 +224,11 @@ pub async fn parse_ethereum_event(
 		OpenConfirmChannelFilter,
 		SendPacketFilter, // TODO: this event might only be emitted by the ICS-20 contract
 		WriteAcknowledgementFilter,
-		AcknowledgePacketFilter
+		AcknowledgePacketFilter,
+		TimeoutPacketFilter,
+		TimeoutOnClosePacketFilter,
+		CloseInitChannelFilter,
+		CloseConfirmChannelFilter
 	)
 }
 

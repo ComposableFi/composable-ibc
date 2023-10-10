@@ -127,10 +127,14 @@ where
 			deployed_facets,
 			contract_creation_block: Arc::new(Mutex::new(None)),
 		};
-		let creation_block: U256 =
-			ibc.method("getContractCreationBlock", ())?.call().await.map_err(|e| {
+		let creation_block: U256 = ibc
+			.method("getContractCreationBlock", ())?
+			.call()
+			.await
+			.map_err(|e| {
 				ClientError::Other(format!("Error getting contract creation block: {}", e))
-			})?;
+			})
+			.unwrap_or(U256::zero());
 		ibc.set_contract_creation_block(creation_block);
 		Ok(ibc)
 	}

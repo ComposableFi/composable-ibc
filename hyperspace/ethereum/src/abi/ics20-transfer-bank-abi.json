@@ -494,6 +494,11 @@
         "type": "uint64"
       },
       {
+        "internalType": "uint64",
+        "name": "timeoutTimestamp",
+        "type": "uint64"
+      },
+      {
         "internalType": "string",
         "name": "memo",
         "type": "string"
