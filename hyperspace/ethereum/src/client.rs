@@ -3,9 +3,9 @@ use crate::{
 	contract::UnwrapContractError,
 	ibc_provider::u256_to_bytes,
 	jwt::{JwtAuth, JwtKey},
-	utils::{DeployYuiIbc, ProviderImpl}, chain::{client_state_abi_token, consensus_state_abi_token},
+	utils::{DeployYuiIbc, ProviderImpl}, chain::{client_state_abi_token, consensus_state_abi_token}, mock::utils::mock::ClientState,
 };
-use anyhow::Error;
+use anyhow::{Error};
 use async_trait::async_trait;
 use cast::revm::db;
 use ethers::{
@@ -32,7 +32,7 @@ use ibc::{
 };
 use ibc_primitives::Timeout;
 use once_cell::sync::Lazy;
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState};
+use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use primitives::{CommonClientState, IbcProvider};
 use std::{
 	collections::HashSet,
@@ -70,6 +70,8 @@ pub struct EthereumClient {
 	pub client_id: Arc<Mutex<Option<ClientId>>>,
 	/// Light client id on the current chain
 	pub yui_client_id: Arc<Mutex<Option<ClientId>>>,
+
+	// pub counterparty_client_id: Arc<Mutex<Option<ClientId>>>,
 	/// Connection Id
 	pub connection_id: Arc<Mutex<Option<ConnectionId>>>,
 	/// Channels cleared for packet relay
@@ -225,7 +227,7 @@ impl EthereumClient {
 		}
 	}
 
-	pub async fn get_latest_client_state_encoded_abi_token(&self, client_id: ClientId) -> Result<Vec<u8>, ClientError> {
+	pub async fn get_latest_client_state(&self, client_id: ClientId) -> Result<ics07_tendermint::client_state::ClientState::<HostFunctionsManager>, ClientError> {
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		let latest_client_state = AnyClientState::try_from(
 			self.query_client_state(latest_height, client_id.clone())
@@ -243,18 +245,15 @@ impl EthereumClient {
 			//TODO return error support only tendermint client state
 			return Err(ClientError::Other("create_client: unsupported client state".into()))
 		};
-
-		let client_state = client_state_abi_token(&client_state);
-		let client_state = encode(&[client_state]);
-		Ok(client_state)
+		Ok(client_state.clone())
 	}
 
-	pub async fn get_latest_consensus_state_encoded_abi_token(&self, client_id: ClientId) -> Result<Vec<u8>, ClientError> {
-		return Ok(vec![]);
+	pub async fn get_latest_consensus_state_encoded_abi_token(&self, client_id: ClientId, consensus_height: Height) -> Result<Vec<u8>, ClientError> {
+		// return Ok(vec![]);
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		//TODO what is the height here?
 		let latest_consensus_state = AnyConsensusState::try_from(
-			self.query_client_consensus(latest_height, client_id.clone(), latest_height)
+			self.query_client_consensus(latest_height, client_id.clone(), consensus_height)
 				.await?
 				.consensus_state
 				.ok_or_else(|| {

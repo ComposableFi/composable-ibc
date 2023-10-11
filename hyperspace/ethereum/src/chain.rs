@@ -1243,7 +1243,8 @@ impl Chain for EthereumClient {
 					let mut m = self.yui_client_id.lock().unwrap();
 					*m = Some(client_id.clone());
 				}
-				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_client_state = self.get_latest_client_state(client_id.clone()).await?;
+				let latest_client_state = ethers_encode(&[client_state_abi_token(&latest_client_state)]);
 
 				let token = EthersToken::Tuple(vec![
 					//should be the same that we use to create client
@@ -1288,8 +1289,9 @@ impl Chain for EthereumClient {
 					)));
 				};
 				let client_id = (*self.yui_client_id.lock().unwrap()).clone().unwrap();
-				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
-				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_client_state = self.get_latest_client_state(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_client_state.latest_height).await?;
+				let latest_client_state = ethers_encode(&[client_state_abi_token(&latest_client_state)]);
 				tokens.push(Token::Bytes(latest_client_state));
 				tokens.push(Token::Bytes(latest_consensus_state));
 
@@ -1320,8 +1322,9 @@ impl Chain for EthereumClient {
 				};
 				
 				let client_id = msg.client_id.clone();
-				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
-				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_client_state = self.get_latest_client_state(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_client_state.latest_height).await?;
+				let latest_client_state = ethers_encode(&[client_state_abi_token(&latest_client_state)]);
 				tokens.push(Token::Bytes(latest_client_state));
 				tokens.push(Token::Bytes(latest_consensus_state));
 
@@ -1340,8 +1343,9 @@ impl Chain for EthereumClient {
 				};
 				
 				let client_id = (*self.yui_client_id.lock().unwrap()).clone().unwrap();
-				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
-				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_client_state = self.get_latest_client_state(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_client_state.latest_height).await?;
+				let latest_client_state = ethers_encode(&[client_state_abi_token(&latest_client_state)]);
 				tokens.push(Token::Bytes(latest_client_state));
 				tokens.push(Token::Bytes(latest_consensus_state));
 
@@ -1366,8 +1370,9 @@ impl Chain for EthereumClient {
 				};
 				
 				let client_id = (*self.yui_client_id.lock().unwrap()).clone().unwrap();
-				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
-				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_client_state = self.get_latest_client_state(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_client_state.latest_height).await?;
+				let latest_client_state = ethers_encode(&[client_state_abi_token(&latest_client_state)]);
 				tokens.push(Token::Bytes(latest_client_state));
 				tokens.push(Token::Bytes(latest_consensus_state));
 
@@ -1385,8 +1390,9 @@ impl Chain for EthereumClient {
 				};
 				
 				let client_id = (*self.yui_client_id.lock().unwrap()).clone().unwrap();
-				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
-				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_client_state = self.get_latest_client_state(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_client_state.latest_height).await?;
+				let latest_client_state = ethers_encode(&[client_state_abi_token(&latest_client_state)]);
 				tokens.push(Token::Bytes(latest_client_state));
 				tokens.push(Token::Bytes(latest_consensus_state));
 
@@ -1407,8 +1413,9 @@ impl Chain for EthereumClient {
 				};
 				
 				let client_id = (*self.yui_client_id.lock().unwrap()).clone().unwrap();
-				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
-				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_client_state = self.get_latest_client_state(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_client_state.latest_height).await?;
+				let latest_client_state = ethers_encode(&[client_state_abi_token(&latest_client_state)]);
 				tokens.push(Token::Bytes(latest_client_state));
 				tokens.push(Token::Bytes(latest_consensus_state));
 
@@ -1434,8 +1441,9 @@ impl Chain for EthereumClient {
 				};
 				
 				let client_id = (*self.yui_client_id.lock().unwrap()).clone().unwrap();
-				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
-				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_client_state = self.get_latest_client_state(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_client_state.latest_height).await?;
+				let latest_client_state = ethers_encode(&[client_state_abi_token(&latest_client_state)]);
 				tokens.push(Token::Bytes(latest_client_state));
 				tokens.push(Token::Bytes(latest_consensus_state));
 
@@ -1464,8 +1472,9 @@ impl Chain for EthereumClient {
 				};
 				
 				let client_id = (*self.yui_client_id.lock().unwrap()).clone().unwrap();
-				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
-				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_client_state = self.get_latest_client_state(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_client_state.latest_height).await?;
+				let latest_client_state = ethers_encode(&[client_state_abi_token(&latest_client_state)]);
 				tokens.push(Token::Bytes(latest_client_state));
 				tokens.push(Token::Bytes(latest_consensus_state));
 
@@ -1483,8 +1492,9 @@ impl Chain for EthereumClient {
 				};
 				
 				let client_id = (*self.yui_client_id.lock().unwrap()).clone().unwrap();
-				let latest_client_state = self.get_latest_client_state_encoded_abi_token(client_id.clone()).await?;
-				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone()).await?;
+				let latest_client_state = self.get_latest_client_state(client_id.clone()).await?;
+				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_client_state.latest_height).await?;
+				let latest_client_state = ethers_encode(&[client_state_abi_token(&latest_client_state)]);
 				tokens.push(Token::Bytes(latest_client_state));
 				tokens.push(Token::Bytes(latest_consensus_state));
 
