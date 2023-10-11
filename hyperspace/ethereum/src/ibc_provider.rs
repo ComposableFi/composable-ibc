@@ -1,3 +1,4 @@
+use elliptic_curve::PrimeField;
 use ethers::{
 	abi,
 	abi::{
@@ -244,6 +245,204 @@ pub async fn parse_ethereum_events(
 	}
 
 	Ok(events)
+}
+
+impl EthereumClient{
+	pub async fn query_client_state_exact_token(
+		&self,
+		at: Height,
+		client_id: ClientId,
+	) -> Result<Token, ClientError> {
+		// First, we try to find an `UpdateClient` event at the given height...
+		let mut client_state = None;
+		let mut event_filter = self
+			.yui
+			.event_for_name::<UpdateClientFilter>("UpdateClient")
+			.map_err(|err| {
+				ClientError::Other(format!("contract is missing UpdateClient event: {}", err))
+			})?
+			.from_block(BlockNumber::Earliest)
+			.to_block(at.revision_height);
+		event_filter.filter = event_filter.filter.topic1({
+			let hash = H256::from_slice(&encode(&[Token::FixedBytes(
+				keccak256(client_id.to_string().into_bytes()).to_vec(),
+			)]));
+			ValueOrArray::Value(hash)
+		});
+		let maybe_log = self
+			.yui
+			.diamond
+			.client()
+			.get_logs(&event_filter.filter)
+			.await
+			.map_err(
+				|err| ClientError::Other(format!("failed to get logs: {}", err)),
+			)?
+			.pop() // get only the last event
+		;
+		let batch_func = self.yui.function("callBatch")?;
+		match maybe_log {
+			Some(log) => {
+				let tx_hash = log
+					.transaction_hash
+					.ok_or(ClientError::Other("tx hash not found".to_string()))?;
+				let func = self.yui.function("updateClient")?;
+				let tx = self
+					.client()
+					.get_transaction(tx_hash)
+					.await
+					.map_err(|err| {
+						ClientError::Other(format!("failed to get transaction: {}", err))
+					})?
+					.ok_or_else(|| {
+						ClientError::Other(format!("transaction not found: {}", tx_hash))
+					})?;
+				let Token::Array(batch_calldata) =
+					batch_func
+						.decode_input(&tx.input[4..])?
+						.pop()
+						.ok_or(ClientError::Other("batch calldata not found".to_string()))?
+				else {
+					return Err(ClientError::Other("batch calldata not found".to_string()))
+				};
+
+				for input_tok in batch_calldata.into_iter().rev() {
+					let Token::Bytes(input) = input_tok else {
+						return Err(ClientError::Other("input token should be bytes".to_string()))
+					};
+					if input[..4] == func.short_signature() {
+						let calldata = func
+							.decode_input(&input[4..])?
+							.pop()
+							.ok_or(ClientError::Other("calldata not found".to_string()))?;
+						let Token::Tuple(toks) = calldata else {
+							return Err(ClientError::Other("calldata should be bytes".to_string()))
+						};
+						let header = tm_header_from_abi_token(toks[1].clone())?;
+						let client_state_token = toks[2].clone();
+
+						let Token::Bytes(b) = client_state_token.clone() else {
+							return Err(ClientError::Other("invalid client state".to_string()))
+						};
+
+						println!("{:?}", b);
+
+						// let mut cs =
+						// 	client_state_from_abi_token::<LocalClientTypes>(client_state_token)?;
+						// cs.latest_height = Height::new(
+						// 	cs.latest_height.revision_number,
+						// 	header.signed_header.header.height.into(),
+						// );
+						client_state = Some(client_state_token);
+						// TODO: figure out how to distinguish between the same function calls
+						break
+					}
+				}
+				// TODO: handle frozen height
+			},
+			None => {
+				log::trace!(target: "hyperspace_ethereum", "no update client event found for blocks ..{at}, looking for a create client event...");
+
+				// ...otherwise, try to get the `CreateClient` event
+				let mut event_filter = self
+					.yui
+					.event_for_name::<CreateClientFilter>("CreateClient")
+					.map_err(|err| {
+						ClientError::Other(format!(
+							"contract is missing CreateClient event: {}",
+							err
+						))
+					})?
+					.from_block(BlockNumber::Earliest)
+					.to_block(at.revision_height);
+				event_filter.filter = event_filter.filter.topic1({
+					let hash = H256::from_slice(&encode(&[Token::FixedBytes(
+						keccak256(client_id.to_string().into_bytes()).to_vec(),
+					)]));
+					ValueOrArray::Value(hash)
+				});
+				let log = self
+					.yui
+					.diamond
+					.client()
+					.get_logs(&event_filter.filter)
+					.await
+					.map_err(|err| ClientError::Other(format!("failed to get logs: {}", err)))?
+					.pop() // get only the last event
+					.ok_or_else(|| ClientError::Other("no events found".to_string()))?;
+
+				let tx_hash = log
+					.transaction_hash
+					.ok_or(ClientError::Other("tx hash not found".to_string()))?;
+				let func = self.yui.function("createClient")?;
+				let tx = self
+					.client()
+					.get_transaction(tx_hash)
+					.await
+					.map_err(|err| {
+						ClientError::Other(format!("failed to get transaction: {}", err))
+					})?
+					.ok_or_else(|| {
+						ClientError::Other(format!("transaction not found: {}", tx_hash))
+					})?;
+
+				let Token::Array(batch_calldata) =
+					batch_func
+						.decode_input(&tx.input[4..])?
+						.pop()
+						.ok_or(ClientError::Other("batch calldata not found".to_string()))?
+				else {
+					return Err(ClientError::Other("batch calldata not found".to_string()))
+				};
+
+				for input_tok in batch_calldata.into_iter().rev() {
+					let Token::Bytes(input) = input_tok else {
+						return Err(ClientError::Other("input token should be bytes".to_string()))
+					};
+					if input[..4] == func.short_signature() {
+						let calldata = func
+							.decode_input(&input[4..])?
+							.pop()
+							.ok_or(ClientError::Other("calldata not found".to_string()))?;
+						let Token::Tuple(toks) = calldata else {
+							return Err(ClientError::Other("calldata should be bytes".to_string()))
+						};
+						let client_state_token = toks[1].clone();
+
+						// let Token::Bytes(b) = client_state_token.clone() else {
+						// 	return Err(ClientError::Other("invalid client state".to_string()))
+						// };
+
+						// println!("{:?}", b);
+
+						// client_state = Some(client_state_from_abi_token::<LocalClientTypes>(
+						// 	client_state_token,
+						// )?);
+						client_state = Some(client_state_token);
+						break
+					}
+				}
+			},
+		}
+
+		// let proof_height = Some(at.into());
+		// let proof = self
+		// 	.query_proof(at, vec![ClientStatePath(client_id.clone()).to_string().into_bytes()])
+		// 	.await?;
+
+		// Ok(QueryClientStateResponse {
+		// 	client_state: Some(
+		// 		client_state
+		// 			.ok_or(ClientError::Other("client state not found".to_string()))?
+		// 			.to_any(),
+		// 	),
+		// 	proof_height,
+		// 	proof,
+		// })
+
+		//look basicly the proof height is the let proof_height = Some(at.into());
+		Ok(client_state.ok_or(ClientError::Other("client state not found".to_string()))?)
+	}
 }
 
 #[async_trait::async_trait]

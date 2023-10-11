@@ -1219,6 +1219,9 @@ impl Chain for EthereumClient {
 				let bts = ethers::abi::encode(&vec![token.clone()]);
 				let bytes = self.yui.create_client_calldata(token).await;
 
+				println!("latest_client_state eee2");
+				println!("{:?}", client_state_data_vec);
+
 				calls.push(bytes);
 			} else if msg.type_url == ibc::core::ics02_client::msgs::update_client::TYPE_URL {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).map_err(
@@ -1243,8 +1246,14 @@ impl Chain for EthereumClient {
 					let mut m = self.yui_client_id.lock().unwrap();
 					*m = Some(client_id.clone());
 				}
-				let latest_client_state = self.get_latest_client_state(client_id.clone()).await?;
-				let latest_client_state = ethers_encode(&[client_state_abi_token(&latest_client_state)]);
+				let latest_client_state = self.get_latest_client_state_exact_token(client_id.clone()).await?;
+				// panic!("Incorrect token!!, need to pass bytes");
+				// let latest_client_state = ethers_encode(&[latest_client_state]);
+
+
+				
+				println!("latest_client_state eee1");
+				println!("{:?}", latest_client_state.clone());
 
 				let token = EthersToken::Tuple(vec![
 					//should be the same that we use to create client
@@ -1253,7 +1262,8 @@ impl Chain for EthereumClient {
 					//tm header
 					EthersToken::Bytes(tm_header_bytes),
 					//tm header
-					EthersToken::Bytes(latest_client_state),
+					latest_client_state
+					// EthersToken::Bytes(latest_client_state),
 				]);
 
 				calls.push(self.yui.update_client_calldata(token).await);
