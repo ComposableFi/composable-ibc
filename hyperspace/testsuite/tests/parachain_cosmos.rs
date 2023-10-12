@@ -26,8 +26,7 @@ use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
 	ibc_messaging_packet_timeout_on_channel_close,
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
-	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
-	setup_connection_and_channel,
+	ibc_messaging_with_connection_delay, setup_connection_and_channel,
 };
 use ibc::core::ics24_host::identifier::PortId;
 use sp_core::hashing::sha2_256;
@@ -151,8 +150,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		.await;
 	log::info!(target: "hyperspace", "Parachain have started block production");
 
-	let clients_on_a = chain_a_wrapped.query_clients().await.unwrap();
-	let clients_on_b = chain_b_wrapped.query_clients().await.unwrap();
+	let clients_on_a = chain_a_wrapped.query_clients(&"07-tendermint".to_string()).await.unwrap();
+	let clients_on_b = chain_b_wrapped.query_clients(&"08-wasm".to_string()).await.unwrap();
 
 	if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
 		chain_a_wrapped.set_client_id(clients_on_b[0].clone());
@@ -236,6 +235,7 @@ async fn parachain_to_cosmos_ibc_messaging_full_integration_test() {
 
 #[tokio::test]
 #[ignore]
+#[cfg(feature = "parachain")]
 async fn cosmos_to_parachain_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
 

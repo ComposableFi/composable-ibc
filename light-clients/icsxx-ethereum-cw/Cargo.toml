@@ -79,11 +79,15 @@ serde_json = { version = "1.0.93", default-features = false }
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
-default = []
+default = ["testnet"]
 std = [
   "sp-std/std",
 ]
 test = [
   "icsxx-ethereum/std",
   "std"
+]
+testnet = [
+  "sync-committee-primitives/testnet",
+  "sync-committee-verifier/testnet",
 ]

@@ -8,12 +8,12 @@ use alloc::{boxed::Box, format, vec::Vec};
 use ethabi::{ParamType, Token};
 use ibc::core::{
 	ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
-	ics24_host::{identifier::ConnectionId, path::ConnectionsPath, Path},
+	ics24_host::Path,
 };
 use primitive_types::H256;
 
 pub fn verify_ibc_proof<P>(
-	prefix: &CommitmentPrefix, // TODO: use prefix
+	_prefix: &CommitmentPrefix, // TODO: use prefix
 	proof: &CommitmentProofBytes,
 	root: &CommitmentRoot,
 	path: P,

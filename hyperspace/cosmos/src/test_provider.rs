@@ -36,7 +36,7 @@ where
 	}
 
 	/// Returns a stream that yields chain Block number
-	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
+	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send>> {
 		let ws_client = self.rpc_client.clone();
 
 		let subscription = ws_client.subscribe(Query::from(EventType::NewBlock)).await.unwrap();

@@ -26,13 +26,14 @@ pub const USE_GETH: bool = true;
 pub const ETH_NODE_PORT: u16 = 8545;
 pub const ETH_NODE_PORT_WS: u16 = 8546;
 pub const BEACON_NODE_PORT: u16 = 3500;
+pub const PRIVATE_KEY: &str = "/Users/mykyta/development/composable/centauri-private-latest/hyperspace/ethereum/keys/0x73db010c3275eb7a92e5c38770316248f4c644ee";
 
 #[track_caller]
 pub fn yui_ibc_solidity_path() -> PathBuf {
 	let base = env!("CARGO_MANIFEST_DIR");
 	let default = PathBuf::from(base).join("yui-ibc-solidity");
 
-	return "/Users/mykyta/development/composable/yui-ibc-solidity-private-eth".into();
+	return "/Users/mykyta/development/composable/yui-ibc-solidity-private-eth".into()
 
 	if let Ok(path) = std::env::var("YUI_IBC_SOLIDITY_PATH") {
 		path.into()
@@ -47,7 +48,7 @@ pub async fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http
 	println!("{:?}", std::env::current_dir().unwrap());
 	let wallet: LocalWallet = if USE_GETH {
 		LocalWallet::decrypt_keystore(
-			"/Users/mykyta/development/composable/centauri-private-latest/hyperspace/ethereum/keys/0x73db010c3275eb7a92e5c38770316248f4c644ee",
+			PRIVATE_KEY,
 			std::env::var("KEY_PASS").expect("KEY_PASS not set"),
 		)
 		.unwrap()
@@ -122,11 +123,7 @@ pub async fn hyperspace_ethereum_client_fixture(
 ) -> EthereumClientConfig {
 	let endpoint =
 		if USE_GETH { format!("http://localhost:{}", ETH_NODE_PORT) } else { anvil.endpoint() };
-	let wallet_path = if USE_GETH {
-		Some("/Users/mykyta/development/composable/centauri-private-latest/hyperspace/ethereum/keys/0x73db010c3275eb7a92e5c38770316248f4c644ee".to_string())
-	} else {
-		None
-	};
+	let wallet_path = if USE_GETH { Some(PRIVATE_KEY.to_string()) } else { None };
 
 	let wallet = if !USE_GETH {
 		Some(
@@ -142,8 +139,14 @@ pub async fn hyperspace_ethereum_client_fixture(
 		None
 	};
 
-	let jwt_secret_path =
-		if !USE_GETH { None } else { Some("/Users/mykyta/development/composable/eth-pos-devnet-offchain/execution/jwtsecret".to_string()) };
+	let jwt_secret_path = if !USE_GETH {
+		None
+	} else {
+		Some(
+			"/Users/mykyta/development/composable/eth-pos-devnet-offchain/execution/jwtsecret"
+				.to_string(),
+		)
+	};
 
 	EthereumClientConfig {
 		http_rpc_url: endpoint.parse().unwrap(),

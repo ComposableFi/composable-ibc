@@ -1,27 +1,27 @@
 use crate::{
+	chain::{client_state_abi_token, consensus_state_abi_token},
 	config::EthereumClientConfig,
 	contract::UnwrapContractError,
 	ibc_provider::u256_to_bytes,
 	jwt::{JwtAuth, JwtKey},
-	utils::{DeployYuiIbc, ProviderImpl}, chain::{client_state_abi_token, consensus_state_abi_token}, mock::utils::mock::ClientState,
+	mock::utils::mock::ClientState,
+	utils::{handle_gas_usage, DeployYuiIbc, ProviderImpl},
 };
-use anyhow::{Error};
+use anyhow::Error;
 use async_trait::async_trait;
-use cast::revm::db;
 use ethers::{
 	abi::{encode, AbiEncode, Address, Bytes, ParamType, Token},
 	core::k256,
 	prelude::{
-		coins_bip39::English, signer::SignerMiddlewareError, Authorization, BlockId, BlockNumber,
-		EIP1186ProofResponse, Filter, LocalWallet, Log, MnemonicBuilder, NameOrAddress,
-		SignerMiddleware, Wallet, H256,
+		signer::SignerMiddlewareError, Authorization, BlockId, BlockNumber, EIP1186ProofResponse,
+		Filter, Log, NameOrAddress, SignerMiddleware, Wallet, H256,
 	},
 	providers::{Http, Middleware, Provider, ProviderError, ProviderExt, Ws},
 	signers::Signer,
 	types::U256,
 	utils::keccak256,
 };
-use futures::{Stream, TryFutureExt};
+use futures::{FutureExt, Stream, TryFutureExt, TryStreamExt};
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
 	core::ics24_host::{
@@ -77,10 +77,8 @@ pub struct EthereumClient {
 	pub channel_whitelist: Arc<Mutex<HashSet<(ChannelId, PortId)>>>,
 }
 
-pub type MiddlewareErrorType = SignerMiddlewareError<
-	Provider<Http>,
-	ethers::signers::Wallet<ethers::prelude::k256::ecdsa::SigningKey>,
->;
+pub type MiddlewareErrorType =
+	SignerMiddlewareError<Provider<Http>, Wallet<k256::ecdsa::SigningKey>>;
 
 #[derive(Debug, Error)]
 pub enum ClientError {
@@ -163,19 +161,21 @@ impl EthereumClient {
 		let client = config.client().await?;
 
 		let yui = match config.yui.take() {
-			None => DeployYuiIbc::<_, _>::from_addresses(
-				client.clone(),
-				config.diamond_address.clone().ok_or_else(|| {
-					ClientError::Other("diamond address must be provided".to_string())
-				})?,
-				Some(config.tendermint_address.clone().ok_or_else(|| {
-					ClientError::Other("tendermint address must be provided".to_string())
-				})?),
-				Some(config.bank_address.clone().ok_or_else(|| {
-					ClientError::Other("bank address must be provided".to_string())
-				})?),
-				config.diamond_facets.clone(),
-			)?,
+			None =>
+				DeployYuiIbc::<_, _>::from_addresses(
+					client.clone(),
+					config.diamond_address.clone().ok_or_else(|| {
+						ClientError::Other("diamond address must be provided".to_string())
+					})?,
+					Some(config.tendermint_address.clone().ok_or_else(|| {
+						ClientError::Other("tendermint address must be provided".to_string())
+					})?),
+					Some(config.bank_address.clone().ok_or_else(|| {
+						ClientError::Other("bank address must be provided".to_string())
+					})?),
+					config.diamond_facets.clone(),
+				)
+				.await?,
 			Some(yui) => yui,
 		};
 		Ok(Self {
@@ -203,6 +203,10 @@ impl EthereumClient {
 		SyncCommitteeProver::new(string)
 	}
 
+	pub fn contract_creation_block(&self) -> BlockNumber {
+		self.yui.contract_creation_block()
+	}
+
 	pub async fn websocket_provider(&self) -> Result<Provider<Ws>, ClientError> {
 		if let Some(secret_path) = &self.config.jwt_secret_path {
 			let secret = std::fs::read_to_string(secret_path).map_err(|e| {
@@ -226,20 +230,20 @@ impl EthereumClient {
 		}
 	}
 
-	pub async fn get_latest_client_state(&self, client_id: ClientId) -> Result<ics07_tendermint::client_state::ClientState::<HostFunctionsManager>, ClientError> {
+	pub async fn get_latest_client_state(
+		&self,
+		client_id: ClientId,
+	) -> Result<ics07_tendermint::client_state::ClientState<HostFunctionsManager>, ClientError> {
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		let latest_client_state = AnyClientState::try_from(
 			self.query_client_state(latest_height, client_id.clone())
 				.await?
 				.client_state
 				.ok_or_else(|| {
-				ClientError::Other(
-					"update_client: can't get latest client state".to_string(),
-				)
-			})?,
+					ClientError::Other("update_client: can't get latest client state".to_string())
+				})?,
 		)?;
-		let AnyClientState::Tendermint(client_state) =
-			latest_client_state.unpack_recursive()
+		let AnyClientState::Tendermint(client_state) = latest_client_state.unpack_recursive()
 		else {
 			//TODO return error support only tendermint client state
 			return Err(ClientError::Other("create_client: unsupported client state".into()))
@@ -247,22 +251,28 @@ impl EthereumClient {
 		Ok(client_state.clone())
 	}
 
-	pub async fn get_latest_client_state_exact_token(&self, client_id: ClientId) -> Result<(Token, Height), ClientError> {
+	pub async fn get_latest_client_state_exact_token(
+		&self,
+		client_id: ClientId,
+	) -> Result<(Token, Height), ClientError> {
 		let latest_height = self.latest_height_and_timestamp().await?.0;
-		let latest_client_state = 
-			self.query_client_state_exact_token(latest_height, client_id.clone())
-				.await?;
-		
+		let latest_client_state =
+			self.query_client_state_exact_token(latest_height, client_id.clone()).await?;
+
 		Ok((latest_client_state, latest_height))
 	}
 
-	pub async fn get_latest_consensus_state_encoded_abi_token(&self, client_id: ClientId, consensus_height: Height) -> Result<Token, ClientError> {
+	pub async fn get_latest_consensus_state_encoded_abi_token(
+		&self,
+		client_id: ClientId,
+		consensus_height: Height,
+	) -> Result<Token, ClientError> {
 		// return Ok(vec![]);
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		//TODO what is the height here?
-		let latest_consensus_state = 
-			self.query_client_consensus_exact_token(latest_height, client_id.clone(), consensus_height)
-				.await?;
+		let latest_consensus_state = self
+			.query_client_consensus_exact_token(latest_height, client_id.clone(), consensus_height)
+			.await?;
 		Ok(latest_consensus_state)
 	}
 
@@ -271,8 +281,7 @@ impl EthereumClient {
 		from_block: BlockNumber,
 	) -> Result<Vec<(String, String)>, ClientError> {
 		let filter = Filter::new()
-			.from_block(BlockNumber::Earliest)
-			// .from_block(from_block)
+			.from_block(self.contract_creation_block())
 			.to_block(BlockNumber::Latest)
 			.address(self.yui.diamond.address())
 			.event("OpenInitChannel(string,string)");
@@ -696,6 +705,8 @@ impl primitives::TestProvider for EthereumClient {
 			params.source_port.to_string(),
 			params.source_channel.to_string(),
 			params.timeout_height.revision_height,
+			params.timeout_timestamp.nanoseconds(),
+			params.memo,
 		);
 		let method = self
 			.yui
@@ -705,6 +716,7 @@ impl primitives::TestProvider for EthereumClient {
 			.method::<_, ()>("sendTransfer", params)?;
 		let _ = method.call().await.unwrap_contract_error();
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		handle_gas_usage(&receipt);
 		assert_eq!(receipt.status, Some(1.into()));
 		log::info!("Sent transfer. Tx hash: {:?}", receipt.transaction_hash);
 		Ok(())
@@ -718,8 +730,19 @@ impl primitives::TestProvider for EthereumClient {
 		todo!("send_ordered_packet")
 	}
 
-	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
-		todo!("subscribe_blocks")
+	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send>> {
+		use ethers_providers::StreamExt;
+		let ws = self.websocket_provider().await.unwrap();
+		let stream = async_stream::stream! {
+			// TODO: is it really finalized blocks stream?
+			let mut stream = ws.subscribe_blocks().await.expect("failed to subscribe to blocks");
+
+			while let Some(block) = stream.next().await {
+				yield block.number.unwrap().as_u64()
+			}
+		};
+
+		Box::pin(stream)
 	}
 
 	async fn increase_counters(&mut self) -> Result<(), Self::Error> {

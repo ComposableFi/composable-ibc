@@ -21,7 +21,7 @@ use jsonrpsee::{
 	core::{client::ClientT, Error},
 	rpc_params,
 };
-use std::{env, fs, future::Future, path::Path};
+use std::{env, fs, path::Path};
 use subxt_codegen::{CratePath, DerivesRegistry, TypeSubstitutes};
 
 pub async fn fetch_metadata_ws(url: &str) -> anyhow::Result<Vec<u8>> {

@@ -82,7 +82,7 @@ pub(crate) fn process<Ctx: ReaderContext>(
 	// set the counterparty channel id to verify against it
 	channel_end.set_counterparty_channel_id(msg.counterparty_channel_id);
 
-	//2. Verify proofs
+	// 2. Verify proofs
 	verify_channel_proofs::<Ctx>(
 		ctx,
 		msg.proofs.height(),

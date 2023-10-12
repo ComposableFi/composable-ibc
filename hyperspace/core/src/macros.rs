@@ -16,7 +16,7 @@
 macro_rules! chains {
 	($(
         $(#[$($meta:meta)*])*
-		$name:ident($config:path, $client:path$(, $cmd:path)?),
+		$name:ident($config:path, $client:path$(, $(#[$($meta_cmd:meta)*])* $cmd:path)?),
 	)*) => {
 		#[derive(Debug, Serialize, Deserialize, Clone)]
 		#[serde(tag = "type", rename_all = "snake_case")]
@@ -75,8 +75,8 @@ macro_rules! chains {
 		#[derive(Debug, Clone, clap::Parser)]
 		pub enum AnyCmd {
 			$(
-				$(#[$($meta)*])*
 				$(
+				$(#[$($meta_cmd)*])*
 				#[command(subcommand)]
 				$name($cmd),
 				)?
@@ -561,13 +561,13 @@ macro_rules! chains {
 				}
 			}
 
-			async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
+			async fn query_clients(&self, client_type: &ClientType) -> Result<Vec<ClientId>, Self::Error> {
 				match self {
 					$(
 						$(#[$($meta)*])*
-						Self::$name(chain) => chain.query_clients().await.map_err(AnyError::$name),
+						Self::$name(chain) => chain.query_clients(client_type).await.map_err(AnyError::$name),
 					)*
-					Self::Wasm(c) => c.inner.query_clients().await,
+					Self::Wasm(c) => c.inner.query_clients(client_type).await,
 				}
 			}
 
@@ -999,7 +999,7 @@ macro_rules! chains {
 				}
 			}
 
-			async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
+			async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send>> {
 				match self {
 					$(
 						$(#[$($meta)*])*
