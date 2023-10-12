@@ -257,30 +257,14 @@ impl EthereumClient {
 		Ok((latest_client_state, latest_height))
 	}
 
-	pub async fn get_latest_consensus_state_encoded_abi_token(&self, client_id: ClientId, consensus_height: Height) -> Result<Vec<u8>, ClientError> {
+	pub async fn get_latest_consensus_state_encoded_abi_token(&self, client_id: ClientId, consensus_height: Height) -> Result<Token, ClientError> {
 		// return Ok(vec![]);
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		//TODO what is the height here?
-		let latest_consensus_state = AnyConsensusState::try_from(
-			self.query_client_consensus(latest_height, client_id.clone(), consensus_height)
-				.await?
-				.consensus_state
-				.ok_or_else(|| {
-				ClientError::Other(
-					"update_client: can't get latest client state".to_string(),
-				)
-			})?,
-		)?;
-		let AnyConsensusState::Tendermint(consensus_state) =
-			latest_consensus_state.unpack_recursive()
-		else {
-			//TODO return error support only tendermint client state
-			return Err(ClientError::Other("create_client: unsupported client state".into()))
-		};
-
-		let consensus_state = consensus_state_abi_token(&consensus_state);
-		let consensus_state = encode(&[consensus_state]);
-		Ok(consensus_state)
+		let latest_consensus_state = 
+			self.query_client_consensus_exact_token(latest_height, client_id.clone(), consensus_height)
+				.await?;
+		Ok(latest_consensus_state)
 	}
 
 	pub async fn generated_channel_identifiers(
