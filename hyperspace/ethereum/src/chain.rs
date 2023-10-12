@@ -1240,7 +1240,7 @@ impl Chain for EthereumClient {
 
 				let client_id = msg.client_id.clone();
 				{//update arc mutex with a new client id
-					let mut m = self.eth_client_id.lock().unwrap();
+					let mut m = self.counterparty_client_id.lock().unwrap();
 					*m = Some(client_id.clone());
 				}
 				let (latest_client_state, _) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
@@ -1288,7 +1288,7 @@ impl Chain for EthereumClient {
 						"Token should be tuple"
 					)));
 				};
-				let client_id = (*self.eth_client_id.lock().unwrap()).clone().unwrap();
+				let client_id = (*self.counterparty_client_id.lock().unwrap()).clone().unwrap();
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
@@ -1320,7 +1320,7 @@ impl Chain for EthereumClient {
 					)));
 				};
 				
-				let client_id = (*self.eth_client_id.lock().unwrap()).clone().unwrap();
+				let client_id = (*self.counterparty_client_id.lock().unwrap()).clone().unwrap();
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
@@ -1340,7 +1340,7 @@ impl Chain for EthereumClient {
 					)));
 				};
 				
-				let client_id = (*self.eth_client_id.lock().unwrap()).clone().unwrap();
+				let client_id = (*self.counterparty_client_id.lock().unwrap()).clone().unwrap();
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
@@ -1366,7 +1366,7 @@ impl Chain for EthereumClient {
 					)));
 				};
 				
-				let client_id = (*self.eth_client_id.lock().unwrap()).clone().unwrap();
+				let client_id = (*self.counterparty_client_id.lock().unwrap()).clone().unwrap();
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
@@ -1385,7 +1385,7 @@ impl Chain for EthereumClient {
 					)));
 				};
 				
-				let client_id = (*self.eth_client_id.lock().unwrap()).clone().unwrap();
+				let client_id = (*self.counterparty_client_id.lock().unwrap()).clone().unwrap();
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
@@ -1407,7 +1407,7 @@ impl Chain for EthereumClient {
 					)));
 				};
 				
-				let client_id = (*self.eth_client_id.lock().unwrap()).clone().unwrap();
+				let client_id = (*self.counterparty_client_id.lock().unwrap()).clone().unwrap();
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
@@ -1434,7 +1434,7 @@ impl Chain for EthereumClient {
 					)));
 				};
 				
-				let client_id = (*self.eth_client_id.lock().unwrap()).clone().unwrap();
+				let client_id = (*self.counterparty_client_id.lock().unwrap()).clone().unwrap();
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
@@ -1464,7 +1464,7 @@ impl Chain for EthereumClient {
 					)));
 				};
 				
-				let client_id = (*self.eth_client_id.lock().unwrap()).clone().unwrap();
+				let client_id = (*self.counterparty_client_id.lock().unwrap()).clone().unwrap();
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
@@ -1483,7 +1483,7 @@ impl Chain for EthereumClient {
 					)));
 				};
 				
-				let client_id = (*self.eth_client_id.lock().unwrap()).clone().unwrap();
+				let client_id = (*self.counterparty_client_id.lock().unwrap()).clone().unwrap();
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
@@ -1560,7 +1560,7 @@ impl Chain for EthereumClient {
 	}
 
 	fn set_client_id_ref(&mut self, client_id: Arc<Mutex<Option<ClientId>>>){
-		self.eth_client_id = client_id;
+		self.counterparty_client_id = client_id;
 	}
 
 	fn get_counterparty_client_id_ref(&self) -> Arc<Mutex<Option<ClientId>>>{
