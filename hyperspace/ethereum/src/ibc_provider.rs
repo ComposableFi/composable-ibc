@@ -233,7 +233,7 @@ pub async fn parse_ethereum_event(
 	)
 }
 
-impl EthereumClient{
+impl EthereumClient {
 	pub async fn query_client_state_exact_token(
 		&self,
 		at: Height,
@@ -472,7 +472,7 @@ impl EthereumClient{
 			.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
 			.expect("contract is missing UpdateClient event")
 			.to_block(at.revision_height)
-			.from_block(at.revision_height);
+			.from_block(self.contract_creation_block());
 		event_filter.filter = event_filter
 			.filter
 			.topic1({
@@ -551,7 +551,7 @@ impl EthereumClient{
 						// 	proof,
 						// 	proof_height,
 						// })
-						return Ok(consensus_state.expect("should always be initialized"));
+						return Ok(consensus_state.expect("should always be initialized"))
 					}
 				}
 				// TODO: handle frozen height
@@ -629,7 +629,7 @@ impl EthereumClient{
 		// let any = state.to_any();
 
 		// Ok(QueryConsensusStateResponse { consensus_state: Some(any), proof, proof_height })
-		return Ok(consensus_state.expect("should always be initialized"));
+		return Ok(consensus_state.expect("should always be initialized"))
 	}
 }
 
