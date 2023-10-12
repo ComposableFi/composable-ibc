@@ -577,6 +577,10 @@ pub trait Chain:
 		self.common_state_mut().set_rpc_call_delay(delay)
 	}
 
+	fn set_client_id_ref(&mut self, client_id: Arc<Mutex<Option<ClientId>>>);
+
+	fn get_counterparty_client_id_ref(&self) -> Arc<Mutex<Option<ClientId>>>;
+
 	async fn reconnect(&mut self) -> anyhow::Result<()>;
 }
 

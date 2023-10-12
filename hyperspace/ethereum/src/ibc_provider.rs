@@ -325,8 +325,6 @@ impl EthereumClient{
 							return Err(ClientError::Other("invalid client state".to_string()))
 						};
 
-						println!("{:?}", b);
-
 						// let mut cs =
 						// 	client_state_from_abi_token::<LocalClientTypes>(client_state_token)?;
 						// cs.latest_height = Height::new(
@@ -412,8 +410,6 @@ impl EthereumClient{
 						// let Token::Bytes(b) = client_state_token.clone() else {
 						// 	return Err(ClientError::Other("invalid client state".to_string()))
 						// };
-
-						// println!("{:?}", b);
 
 						// client_state = Some(client_state_from_abi_token::<LocalClientTypes>(
 						// 	client_state_token,

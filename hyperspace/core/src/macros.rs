@@ -910,6 +910,26 @@ macro_rules! chains {
 					Self::Wasm(c) => c.inner.reconnect().await,
 				}
 			}
+
+			fn set_client_id_ref(&mut self, client_id: Arc<Mutex<Option<ClientId>>>){
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.set_client_id_ref(client_id),
+					)*
+					Self::Wasm(c) => c.inner.set_client_id_ref(client_id),
+				}
+			}
+		
+			fn get_counterparty_client_id_ref(&self) -> Arc<Mutex<Option<ClientId>>>{
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.get_counterparty_client_id_ref(),
+					)*
+					Self::Wasm(c) => c.inner.get_counterparty_client_id_ref(),
+				}
+			}
 		}
 
 		#[async_trait]

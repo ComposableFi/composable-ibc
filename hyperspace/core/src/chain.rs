@@ -73,6 +73,8 @@ use serde::{Deserialize, Serialize};
 use std::{pin::Pin, time::Duration};
 use tendermint_proto::Protobuf;
 use thiserror::Error;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
