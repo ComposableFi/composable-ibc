@@ -248,13 +248,13 @@ impl EthereumClient {
 		Ok(client_state.clone())
 	}
 
-	pub async fn get_latest_client_state_exact_token(&self, client_id: ClientId) -> Result<Token, ClientError> {
+	pub async fn get_latest_client_state_exact_token(&self, client_id: ClientId) -> Result<(Token, Height), ClientError> {
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		let latest_client_state = 
 			self.query_client_state_exact_token(latest_height, client_id.clone())
 				.await?;
 		
-		Ok(latest_client_state)
+		Ok((latest_client_state, latest_height))
 	}
 
 	pub async fn get_latest_consensus_state_encoded_abi_token(&self, client_id: ClientId, consensus_height: Height) -> Result<Vec<u8>, ClientError> {
