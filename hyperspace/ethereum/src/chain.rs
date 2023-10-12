@@ -1219,9 +1219,6 @@ impl Chain for EthereumClient {
 				let bts = ethers::abi::encode(&vec![token.clone()]);
 				let bytes = self.yui.create_client_calldata(token).await;
 
-				println!("latest_client_state eee2");
-				println!("{:?}", client_state_data_vec);
-
 				calls.push(bytes);
 			} else if msg.type_url == ibc::core::ics02_client::msgs::update_client::TYPE_URL {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).map_err(
@@ -1295,7 +1292,7 @@ impl Chain for EthereumClient {
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
-				tokens.push(Token::Bytes(latest_consensus_state));
+				tokens.push(latest_consensus_state);
 
 				calls.push(self.yui.connection_open_ack_calldata(token).await);
 			} else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_try::TYPE_URL {
@@ -1327,7 +1324,7 @@ impl Chain for EthereumClient {
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
-				tokens.push(Token::Bytes(latest_consensus_state));
+				tokens.push(latest_consensus_state);
 
 				calls.push(self.yui.connection_open_try_calldata(token).await);
 
@@ -1347,7 +1344,7 @@ impl Chain for EthereumClient {
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
-				tokens.push(Token::Bytes(latest_consensus_state));
+				tokens.push(latest_consensus_state);
 
 				calls.push(self.yui.connection_open_confirm_calldata(token).await);
 			} else if msg.type_url == channel_msgs::chan_open_init::TYPE_URL {
@@ -1373,7 +1370,7 @@ impl Chain for EthereumClient {
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
-				tokens.push(Token::Bytes(latest_consensus_state));
+				tokens.push(latest_consensus_state);
 
 				calls.push(self.yui.channel_open_try_calldata(token).await);
 			} else if msg.type_url == channel_msgs::chan_open_ack::TYPE_URL {
@@ -1392,7 +1389,7 @@ impl Chain for EthereumClient {
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
-				tokens.push(Token::Bytes(latest_consensus_state));
+				tokens.push(latest_consensus_state);
 
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "channelOpenAck").await);
 			} else if msg.type_url == channel_msgs::chan_open_confirm::TYPE_URL {
@@ -1414,7 +1411,7 @@ impl Chain for EthereumClient {
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
-				tokens.push(Token::Bytes(latest_consensus_state));
+				tokens.push(latest_consensus_state);
 
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "channelOpenConfirm").await);
 			} else if msg.type_url == channel_msgs::chan_close_init::TYPE_URL {
@@ -1441,7 +1438,7 @@ impl Chain for EthereumClient {
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
-				tokens.push(Token::Bytes(latest_consensus_state));
+				tokens.push(latest_consensus_state);
 
 				calls
 					.push(self.yui.send_and_get_tuple_calldata(token, "channelCloseConfirm").await);
@@ -1471,7 +1468,7 @@ impl Chain for EthereumClient {
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
-				tokens.push(Token::Bytes(latest_consensus_state));
+				tokens.push(latest_consensus_state);
 
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "acknowledgePacket").await);
 			} else if msg.type_url == channel_msgs::recv_packet::TYPE_URL {
@@ -1490,7 +1487,7 @@ impl Chain for EthereumClient {
 				let (latest_client_state, latest_height) = self.get_latest_client_state_exact_token(client_id.clone()).await?;
 				let latest_consensus_state = self.get_latest_consensus_state_encoded_abi_token(client_id.clone(),latest_height).await?;
 				tokens.push(latest_client_state);
-				tokens.push(Token::Bytes(latest_consensus_state));
+				tokens.push(latest_consensus_state);
 
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "recvPacket").await);
 			} else {

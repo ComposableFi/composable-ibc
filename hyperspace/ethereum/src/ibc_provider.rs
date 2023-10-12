@@ -443,6 +443,212 @@ impl EthereumClient{
 		//look basicly the proof height is the let proof_height = Some(at.into());
 		Ok(client_state.ok_or(ClientError::Other("client state not found".to_string()))?)
 	}
+
+	pub async fn query_client_consensus_exact_token(
+		&self,
+		at: Height,
+		client_id: ClientId,
+		consensus_height: Height,
+	) -> Result<Token, ClientError> {
+		log::info!(target: "hyperspace_ethereum", "query_client_consensus: {client_id:?}, {consensus_height:?}");
+
+		/*
+		let binding = self
+			.yui
+			.method(
+				"getConsensusState",
+				(
+					Token::String(client_id.as_str().to_owned()),
+					Token::Tuple(vec![
+						Token::Uint(consensus_height.revision_number.into()),
+						Token::Uint(consensus_height.revision_height.into()),
+					]),
+				),
+			)
+			.map_err(
+				|err| ClientError::Other(format!("contract is missing getConsensusState {}", err)),
+			)?;
+
+		let (client_cons, _): (Vec<u8>, bool) = binding
+			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+			.call()
+			.await
+			.map_err(|err| {
+				log::error!(target: "hyperspace_ethereum", "error: {err}");
+				err
+			})
+			.map_err(|err| ClientError::Other(format!("failed to query client consensus: {}", err)))?;
+
+		let proof_height = Some(at.into());
+		let mut cs = client_state_from_abi_token::<LocalClientTypes>(client_state_token)?;
+		 */
+
+		// First, we try to find an `UpdateClient` event at the given height...
+		let mut consensus_state = None;
+		let mut event_filter = self
+			.yui
+			.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
+			.expect("contract is missing UpdateClient event")
+			.to_block(at.revision_height)
+			.from_block(at.revision_height);
+		event_filter.filter = event_filter
+			.filter
+			.topic1({
+				let hash = H256::from_slice(&encode(&[Token::FixedBytes(
+					keccak256(client_id.to_string().into_bytes()).to_vec(),
+				)]));
+				ValueOrArray::Value(hash)
+			})
+			.topic2({
+				let height_bytes = encode(&[Token::Tuple(vec![
+					Token::Uint(consensus_height.revision_number.into()),
+					Token::Uint(consensus_height.revision_height.into()),
+				])]);
+				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+					keccak256(&height_bytes).to_vec(),
+				)])))
+			});
+		let maybe_log = self
+			.yui
+			.diamond
+			.client()
+			.get_logs(&event_filter.filter)
+			.await
+			.unwrap()
+			.pop() // get only the last event
+			;
+		let batch_func = self.yui.function("callBatch")?;
+		match maybe_log {
+			Some(log) => {
+				let tx_hash = log.transaction_hash.expect("tx hash should exist");
+				let func = self.yui.function("updateClient")?;
+				let tx =
+					self.client().get_transaction(tx_hash).await.unwrap().ok_or_else(|| {
+						ClientError::Other(format!("transaction not found: {}", tx_hash))
+					})?;
+				let Token::Array(batch_calldata) =
+					batch_func.decode_input(&tx.input[4..])?.pop().unwrap()
+				else {
+					return Err(ClientError::Other("batch calldata not found".to_string()))
+				};
+
+				for input_tok in batch_calldata.into_iter().rev() {
+					let Token::Bytes(input) = input_tok else { panic!() };
+					if input[..4] == func.short_signature() {
+						let calldata = func.decode_input(&input[4..])?.pop().unwrap();
+						let Token::Tuple(toks) = calldata else { panic!() };
+						consensus_state = Some(toks[1].clone());
+						// let header = tm_header_from_abi_token(toks[1].clone())?;
+						// consensus_state = Some(TmConsensusState {
+						// 	timestamp: header.signed_header.header.time,
+						// 	root: CommitmentRoot {
+						// 		bytes: header.signed_header.header.app_hash.as_bytes().to_owned(),
+						// 	},
+						// 	next_validators_hash: header.signed_header.header.next_validators_hash,
+						// });
+						// TODO: figure out how to distinguish between the same function calls
+
+						// let proof_height = Some(at.into());
+						// let proof = self
+						// 	.query_proof(
+						// 		at,
+						// 		vec![ClientConsensusStatePath {
+						// 			client_id: client_id.clone(),
+						// 			epoch: consensus_height.revision_number,
+						// 			height: consensus_height.revision_height,
+						// 		}
+						// 		.to_string()
+						// 		.into_bytes()],
+						// 	)
+						// 	.await?;
+
+						// return Ok(QueryConsensusStateResponse {
+						// 	consensus_state: Some(
+						// 		consensus_state.expect("should always be initialized").to_any(),
+						// 	),
+						// 	proof,
+						// 	proof_height,
+						// })
+						return Ok(consensus_state.expect("should always be initialized"));
+					}
+				}
+				// TODO: handle frozen height
+			},
+			None => {},
+		}
+
+		log::trace!(target: "hyperspace_ethereum", "no update client event found for blocks ..{at}, looking for a create client event...");
+
+		// ...otherwise, try to get the `CreateClient` event
+		let mut event_filter = self
+			.yui
+			.event_for_name::<CreateClientFilter>("CreateClient")
+			.expect("contract is missing CreateClient event")
+			.from_block(BlockNumber::Earliest)
+			.to_block(at.revision_height);
+		event_filter.filter = event_filter.filter.topic1({
+			let hash = H256::from_slice(&encode(&[Token::FixedBytes(
+				keccak256(client_id.to_string().into_bytes()).to_vec(),
+			)]));
+			ValueOrArray::Value(hash)
+		});
+		let log = self
+			.yui
+			.diamond
+			.client()
+			.get_logs(&event_filter.filter)
+			.await
+			.unwrap()
+			.pop() // get only the last event
+			.ok_or_else(|| ClientError::Other("no events found".to_string()))?;
+
+		let tx_hash = log.transaction_hash.expect("tx hash should exist");
+		let func = self.yui.function("createClient")?;
+		let tx = self
+			.client()
+			.get_transaction(tx_hash)
+			.await
+			.unwrap()
+			.ok_or_else(|| ClientError::Other(format!("transaction not found: {}", tx_hash)))?;
+
+		let Token::Array(batch_calldata) = batch_func.decode_input(&tx.input[4..])?.pop().unwrap()
+		else {
+			return Err(ClientError::Other("batch calldata not found".to_string()))
+		};
+
+		for input_tok in batch_calldata.into_iter().rev() {
+			let Token::Bytes(input) = input_tok else { panic!() };
+			log::info!("sig = {:?}", func.short_signature());
+			if input[..4] == func.short_signature() {
+				let calldata = func.decode_input(&input[4..])?.pop().unwrap();
+				let Token::Tuple(toks) = calldata else { panic!() };
+				let consensus_state_token = toks[2].clone();
+				consensus_state = Some(consensus_state_token);
+				// consensus_state = Some(consensus_state_from_abi_token(consensus_state_token)?);
+				break
+			}
+		}
+
+		// let proof = self
+		// 	.query_proof(
+		// 		at,
+		// 		vec![ClientConsensusStatePath {
+		// 			client_id: client_id.clone(),
+		// 			epoch: consensus_height.revision_number,
+		// 			height: consensus_height.revision_height,
+		// 		}
+		// 		.to_string()
+		// 		.into_bytes()],
+		// 	)
+		// 	.await?;
+
+		// let proof_height = Some(at.into());
+		// let state = consensus_state.expect("should always be initialized");
+		// let any = state.to_any();
+
+		// Ok(QueryConsensusStateResponse { consensus_state: Some(any), proof, proof_height })
+		return Ok(consensus_state.expect("should always be initialized"));
+	}
 }
 
 #[async_trait::async_trait]
