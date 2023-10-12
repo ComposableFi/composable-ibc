@@ -54,6 +54,9 @@ where
 	A: Chain,
 	B: Chain,
 {
+	chain_a.set_client_id_ref(chain_b.get_counterparty_client_id_ref());
+	chain_b.set_client_id_ref(chain_a.get_counterparty_client_id_ref());
+
 	let stream_a = RecentStream::new(chain_a.finality_notifications().await?);
 	let stream_b = RecentStream::new(chain_b.finality_notifications().await?);
 	let (mut chain_a_finality, mut chain_b_finality) = (stream_a, stream_b);
