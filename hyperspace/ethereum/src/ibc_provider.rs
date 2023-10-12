@@ -357,10 +357,11 @@ impl IbcProvider for EthereumClient {
 
 		let creation_block = self.contract_creation_block();
 		let ws = self.websocket_provider().await.unwrap();
+		let latest_block = ws.get_block_number().await.unwrap();
 		(async_stream::stream! {
 			let mut events_stream = ws.subscribe_logs(
 				 &Filter::new()
-					.from_block(creation_block)
+					 .from_block(latest_block)
 					 .address(ibc_address),
 			)
 			.await
@@ -421,8 +422,8 @@ impl IbcProvider for EthereumClient {
 			.yui
 			.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
 			.expect("contract is missing UpdateClient event")
-			.to_block(at.revision_height)
-			.from_block(at.revision_height);
+			.from_block(self.contract_creation_block())
+			.to_block(at.revision_height);
 		event_filter.filter = event_filter
 			.filter
 			.topic1({
@@ -553,6 +554,7 @@ impl IbcProvider for EthereumClient {
 				let calldata = func.decode_input(&input[4..])?.pop().unwrap();
 				let Token::Tuple(toks) = calldata else { panic!() };
 				let consensus_state_token = toks[2].clone();
+				// TODO: check that tht state satisfies `consensus_height`
 				consensus_state = Some(consensus_state_from_abi_token(consensus_state_token)?);
 				break
 			}

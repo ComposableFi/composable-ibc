@@ -260,7 +260,7 @@ where
 									events_with_height
 										.push(IbcEventWithHeight::new(ibc_event, height));
 								} else {
-									log::debug!(target: "hyperspace_cosmos", "The event is unknown");
+									log::debug!(target: "hyperspace_cosmos", "the event is unknown");
 								}
 							} else {
 								log::debug!(target: "hyperspace_cosmos", "Failed to parse event {:?}", abci_event);
@@ -787,7 +787,7 @@ where
 
 	fn expected_block_time(&self) -> Duration {
 		// cosmos chain block time is roughly 6-7 seconds
-		Duration::from_secs(7)
+		Duration::from_secs(5)
 	}
 
 	async fn query_client_update_time_and_height(

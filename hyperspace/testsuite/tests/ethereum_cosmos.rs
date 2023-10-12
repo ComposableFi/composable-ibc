@@ -29,7 +29,12 @@ use hyperspace_ethereum::{
 	utils::{check_code_size, deploy_contract, DeployYuiIbc, ProviderImpl},
 };
 use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider};
-use hyperspace_testsuite::{ibc_messaging_with_connection_delay, setup_connection_and_channel};
+use hyperspace_testsuite::{
+	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
+	ibc_messaging_packet_timeout_on_channel_close,
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
+	ibc_messaging_with_connection_delay, setup_connection_and_channel,
+};
 use ibc::core::ics24_host::identifier::PortId;
 use log::info;
 use sp_core::hashing::sha2_256;
@@ -309,32 +314,34 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	.await;
 
 	// timeouts + connection delay
-	// ibc_messaging_packet_height_timeout_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
-	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
-	//
-	// // channel closing semantics
-	// ibc_messaging_packet_timeout_on_channel_close(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// 	channel_a,
-	// )
-	// .await;
-	// ibc_channel_close(&mut chain_a, &mut chain_b).await;
+	ibc_messaging_packet_height_timeout_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
+
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
+
+	// channel closing semantics
+	ibc_messaging_packet_timeout_on_channel_close(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		channel_a,
+	)
+	.await;
+
+	ibc_channel_close(&mut chain_a, &mut chain_b).await;
 
 	// TODO: ethereum misbehaviour?
 	// ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;

@@ -645,15 +645,14 @@ impl EthereumClient {
 #[async_trait]
 impl primitives::TestProvider for EthereumClient {
 	async fn send_transfer(&self, params: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
-		let timeout = ((params.timeout_timestamp.nanoseconds() as u128) << 64) +
-			params.timeout_height.revision_height as u128;
 		let params = (
 			params.token.denom.to_string(),
 			params.token.amount.as_u256(),
 			params.receiver.to_string(),
 			params.source_port.to_string(),
 			params.source_channel.to_string(),
-			timeout,
+			params.timeout_height.revision_height,
+			params.timeout_timestamp.nanoseconds(),
 			params.memo,
 		);
 		let method = self
