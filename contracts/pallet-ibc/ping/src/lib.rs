@@ -19,7 +19,7 @@ use ibc::{
 		},
 		ics24_host::identifier::{ChannelId, ConnectionId, PortId},
 		ics26_routing::context::{
-			Acknowledgement as GenericAcknowledgement, Module, ModuleCallbackContext,
+			Acknowledgement as GenericAcknowledgement, Module as ModuleT, ModuleCallbackContext,
 			ModuleOutputBuilder,
 		},
 	},
@@ -159,7 +159,7 @@ impl<T: Config> core::fmt::Debug for IbcModule<T> {
 	}
 }
 
-impl<T: Config + Send + Sync> Module for IbcModule<T> {
+impl<T: Config + Send + Sync> ModuleT for IbcModule<T> {
 	fn on_chan_open_init(
 		&mut self,
 		_ctx: &dyn ModuleCallbackContext,

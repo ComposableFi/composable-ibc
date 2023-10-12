@@ -22,10 +22,9 @@ use crate::{
 		Misbehaviour as RawMisbehaviour,
 	},
 };
-use alloc::{collections::BTreeMap, string::ToString, vec::Vec};
+use alloc::{string::ToString, vec::Vec};
 use anyhow::anyhow;
 use core::convert::Infallible;
-use ibc::Height;
 use sync_committee_primitives::types::AncestorBlock;
 use sync_committee_verifier::LightClientUpdate;
 use tendermint_proto::Protobuf;

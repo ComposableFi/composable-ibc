@@ -1,10 +1,11 @@
 use crate::{
 	client::{ClientError, EthereumClient},
 	ibc_provider::{
-		CloseConfirmChannelFilter, CreateClientFilter, OpenAckChannelFilter,
-		OpenAckConnectionFilter, OpenConfirmChannelFilter, OpenConfirmConnectionFilter,
-		OpenInitChannelFilter, OpenInitConnectionFilter, OpenTryConnectionFilter, SendPacketFilter,
-		UpdateClientFilter, WriteAcknowledgementFilter,
+		AcknowledgePacketFilter, CloseConfirmChannelFilter, CloseInitChannelFilter,
+		OpenAckChannelFilter, OpenAckConnectionFilter, OpenConfirmChannelFilter,
+		OpenConfirmConnectionFilter, OpenInitChannelFilter, OpenInitConnectionFilter,
+		OpenTryConnectionFilter, PacketData, SendPacketFilter, TimeoutOnClosePacketFilter,
+		TimeoutPacketFilter, WriteAcknowledgementFilter,
 	},
 };
 use async_trait::async_trait;
@@ -91,7 +92,7 @@ where
 // 		})))
 // 	}
 // }
-//
+
 // #[async_trait]
 // impl TryFromEvent<UpdateClientFilter> for IbcEvent {
 // 	async fn try_from_event(
@@ -386,6 +387,208 @@ impl TryFromEvent<WriteAcknowledgementFilter> for IbcEvent {
 				},
 			},
 			ack: acknowledgement.to_vec(),
+		}))
+	}
+}
+
+#[async_trait]
+impl TryFromEvent<AcknowledgePacketFilter> for IbcEvent {
+	async fn try_from_event(
+		_client: &EthereumClient,
+		event: AcknowledgePacketFilter,
+		_log: Log,
+		height: Height,
+	) -> Result<Self, ClientError> {
+		let AcknowledgePacketFilter {
+			packet:
+				PacketData {
+					sequence,
+					source_port: source_port_raw,
+					source_channel: source_channel_raw,
+					destination_port: destination_port_raw,
+					destination_channel: destination_channel_raw,
+					data,
+					timeout_height,
+					timeout_timestamp,
+				},
+			acknowledgement: _,
+		} = event;
+		let source_port: PortId = source_port_raw.parse()?;
+		let source_channel: ChannelId = source_channel_raw.parse()?;
+		let destination_port: PortId = destination_port_raw.parse()?;
+		let destination_channel: ChannelId = destination_channel_raw.parse()?;
+		Ok(IbcEvent::AcknowledgePacket(channel::AcknowledgePacket {
+			height,
+			packet: Packet {
+				sequence: Sequence::from(sequence),
+				source_port,
+				source_channel,
+				destination_port,
+				destination_channel,
+				data: data.to_vec(),
+				timeout_height: Height::new(
+					timeout_height.revision_number,
+					timeout_height.revision_height,
+				),
+				timeout_timestamp: Timestamp::from_nanoseconds(timeout_timestamp)
+					.map_err(|_| ClientError::Other("invalid timeout height".to_string()))?,
+			},
+		}))
+	}
+}
+
+#[async_trait]
+impl TryFromEvent<TimeoutPacketFilter> for IbcEvent {
+	async fn try_from_event(
+		_client: &EthereumClient,
+		event: TimeoutPacketFilter,
+		_log: Log,
+		height: Height,
+	) -> Result<Self, ClientError> {
+		let TimeoutPacketFilter {
+			sequence,
+			source_port: _,
+			source_channel: _,
+			source_port_raw,
+			source_channel_raw,
+			destination_port: destination_port_raw,
+			destination_channel: destination_channel_raw,
+			data,
+			timeout_height,
+			timeout_timestamp,
+		} = event;
+		let source_port: PortId = source_port_raw.parse()?;
+		let source_channel: ChannelId = source_channel_raw.parse()?;
+		let destination_port: PortId = destination_port_raw.parse()?;
+		let destination_channel: ChannelId = destination_channel_raw.parse()?;
+		Ok(IbcEvent::TimeoutPacket(channel::TimeoutPacket {
+			height,
+			packet: Packet {
+				sequence: Sequence::from(sequence),
+				source_port,
+				source_channel,
+				destination_port,
+				destination_channel,
+				data: data.to_vec(),
+				timeout_height: Height::new(
+					timeout_height.revision_number,
+					timeout_height.revision_height,
+				),
+				timeout_timestamp: Timestamp::from_nanoseconds(timeout_timestamp)
+					.map_err(|_| ClientError::Other("invalid timeout height".to_string()))?,
+			},
+		}))
+	}
+}
+
+#[async_trait]
+impl TryFromEvent<TimeoutOnClosePacketFilter> for IbcEvent {
+	async fn try_from_event(
+		_client: &EthereumClient,
+		event: TimeoutOnClosePacketFilter,
+		_log: Log,
+		height: Height,
+	) -> Result<Self, ClientError> {
+		let TimeoutOnClosePacketFilter {
+			sequence,
+			source_port: _,
+			source_channel: _,
+			source_port_raw,
+			source_channel_raw,
+			destination_port: destination_port_raw,
+			destination_channel: destination_channel_raw,
+			data,
+			timeout_height,
+			timeout_timestamp,
+		} = event;
+		let source_port: PortId = source_port_raw.parse()?;
+		let source_channel: ChannelId = source_channel_raw.parse()?;
+		let destination_port: PortId = destination_port_raw.parse()?;
+		let destination_channel: ChannelId = destination_channel_raw.parse()?;
+		Ok(IbcEvent::TimeoutOnClosePacket(channel::TimeoutOnClosePacket {
+			height,
+			packet: Packet {
+				sequence: Sequence::from(sequence),
+				source_port,
+				source_channel,
+				destination_port,
+				destination_channel,
+				data: data.to_vec(),
+				timeout_height: Height::new(
+					timeout_height.revision_number,
+					timeout_height.revision_height,
+				),
+				timeout_timestamp: Timestamp::from_nanoseconds(timeout_timestamp)
+					.map_err(|_| ClientError::Other("invalid timeout height".to_string()))?,
+			},
+		}))
+	}
+}
+
+#[async_trait]
+impl TryFromEvent<CloseInitChannelFilter> for IbcEvent {
+	async fn try_from_event(
+		client: &EthereumClient,
+		event: CloseInitChannelFilter,
+		_log: Log,
+		height: Height,
+	) -> Result<Self, ClientError> {
+		let CloseInitChannelFilter { port_id, channel_id } = event;
+		let port_id: PortId = port_id.parse()?;
+		let channel_id: ChannelId = channel_id.parse()?;
+		let channel = client
+			.query_channel_end(height, channel_id, port_id.clone())
+			.await?
+			.channel
+			.unwrap();
+		let counterparty = channel
+			.counterparty
+			.ok_or_else(|| ClientError::Other("counterparty not found".to_string()))?;
+		Ok(IbcEvent::CloseInitChannel(channel::CloseInit {
+			height,
+			port_id,
+			channel_id,
+			connection_id: channel.connection_hops[0].parse()?,
+			counterparty_port_id: counterparty.port_id.parse()?,
+			counterparty_channel_id: if counterparty.channel_id.is_empty() {
+				None
+			} else {
+				Some(counterparty.channel_id.parse()?)
+			},
+		}))
+	}
+}
+
+#[async_trait]
+impl TryFromEvent<CloseConfirmChannelFilter> for IbcEvent {
+	async fn try_from_event(
+		client: &EthereumClient,
+		event: CloseConfirmChannelFilter,
+		_log: Log,
+		height: Height,
+	) -> Result<Self, ClientError> {
+		let CloseConfirmChannelFilter { port_id, channel_id } = event;
+		let port_id: PortId = port_id.parse()?;
+		let channel_id: ChannelId = channel_id.parse()?;
+		let channel = client
+			.query_channel_end(height, channel_id, port_id.clone())
+			.await?
+			.channel
+			.unwrap();
+		let counterparty = channel
+			.counterparty
+			.ok_or_else(|| ClientError::Other("counterparty not found".to_string()))?;
+		Ok(IbcEvent::CloseConfirmChannel(CloseConfirm {
+			height,
+			port_id,
+			connection_id: channel.connection_hops[0].parse()?,
+			counterparty_port_id: counterparty.port_id.parse()?,
+			channel_id: Some(channel_id),
+			counterparty_channel_id: if counterparty.channel_id.is_empty() {
+				None
+			} else {
+				Some(counterparty.channel_id.parse()?)
+			},
 		}))
 	}
 }

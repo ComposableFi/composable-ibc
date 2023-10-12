@@ -72,8 +72,14 @@ where
 		match self.finality_protocol {
 			FinalityProtocol::Grandpa => {
 				let prover = self.grandpa_prover();
-				let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
-					.ok_or_else(|| Error::Custom(format!("Could not decode client state")))? else { unreachable!() };
+				let AnyClientState::Grandpa(client_state) =
+					AnyClientState::decode_recursive(any_client_state, |c| {
+						matches!(c, AnyClientState::Grandpa(_))
+					})
+					.ok_or_else(|| Error::Custom(format!("Could not decode client state")))?
+				else {
+					unreachable!()
+				};
 
 				let latest_hash = self.relay_client.rpc().finalized_head().await?;
 				let finalized_head =
@@ -107,8 +113,14 @@ where
 
 		let (messages, events) = match self.finality_protocol {
 			FinalityProtocol::Grandpa => {
-				let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
-					.ok_or_else(|| Error::Custom(format!("Could not decode client state")))? else { unreachable!() };
+				let AnyClientState::Grandpa(client_state) =
+					AnyClientState::decode_recursive(any_client_state, |c| {
+						matches!(c, AnyClientState::Grandpa(_))
+					})
+					.ok_or_else(|| Error::Custom(format!("Could not decode client state")))?
+				else {
+					unreachable!()
+				};
 				let latest_hash = self.relay_client.rpc().finalized_head().await?;
 				let finalized_head =
 					self.relay_client.rpc().header(Some(latest_hash)).await?.ok_or_else(|| {

@@ -320,12 +320,14 @@ pub async fn query_ready_and_timed_out_packets(
 						return Ok(None)
 					}
 
+					let start_height = Height::new(latest_source_height_on_sink.revision_number, packet_height);
 					let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(
 						&**source,
 						&**sink,
 						sink_height,
 						source.client_id(),
-						Height::new(latest_source_height_on_sink.revision_number, packet_height),
+						start_height,
+						Some(start_height),
 						None,
 						latest_source_height_on_sink,
 					)
@@ -446,12 +448,14 @@ pub async fn query_ready_and_timed_out_packets(
 
 					log::trace!(target: "hyperspace", "sink_height: {:?}, latest_source_height_on_sink: {:?}, acknowledgement.height: {}", sink_height, latest_source_height_on_sink, ack_height);
 
+					let start_height = Height::new(latest_source_height_on_sink.revision_number, ack_height);
 					let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(
 						&**source,
 						&**sink,
 						sink_height,
 						source.client_id(),
-						Height::new(latest_source_height_on_sink.revision_number, ack_height),
+						start_height,
+						Some(start_height),
 						None,
 						latest_source_height_on_sink,
 					)

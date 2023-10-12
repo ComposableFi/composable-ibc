@@ -27,6 +27,7 @@ use ibc_proto::{
 		connection::v1::QueryConnectionResponse,
 	},
 };
+use log::info;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -419,7 +420,7 @@ pub trait IbcProvider {
 	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error>;
 
 	/// Should return a list of all clients on the chain
-	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error>;
+	async fn query_clients(&self, client_type: &ClientType) -> Result<Vec<ClientId>, Self::Error>;
 
 	/// Should return a list of all clients on the chain
 	async fn query_channels(&self) -> Result<Vec<(ChannelId, PortId)>, Self::Error>;
@@ -481,7 +482,7 @@ pub trait TestProvider: Chain + Clone + 'static {
 	) -> Result<(), Self::Error>;
 
 	/// Returns a stream that yields chain Block number
-	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>>;
+	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send>>;
 
 	/// Increases IBC counters by 1 to check that relayer uses proper values for source/sink chains.
 	async fn increase_counters(&mut self) -> Result<(), Self::Error>;
@@ -708,6 +709,7 @@ pub async fn find_suitable_proof_height_for_client(
 	at: Height,
 	client_id: ClientId,
 	start_height: Height,
+	height_to_match: Option<Height>,
 	timestamp_to_match: Option<Timestamp>,
 	latest_client_height: Height,
 ) -> Option<Height> {
@@ -716,99 +718,47 @@ pub async fn find_suitable_proof_height_for_client(
 		"Searching for suitable proof height for client {} ({}) starting at {}, {:?}, latest_client_height={}",
 		client_id, sink.name(), start_height, timestamp_to_match, latest_client_height
 	);
-	// If searching for existence of just a height we use a pure linear search because there's no
-	// valid comparison to be made and there might be missing values  for some heights
-	if timestamp_to_match.is_none() {
-		// try to find latest states first, because relayer's strategy is to submit the most
-		// recent ones
-		for height in start_height.revision_height..=latest_client_height.revision_height {
-			let temp_height = Height::new(start_height.revision_number, height);
-			let consensus_state =
-				sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
-			let decoded = consensus_state
-				.map(|x| x.consensus_state.map(AnyConsensusState::try_from))
-				.flatten();
-			if !matches!(decoded, Some(Ok(_))) {
-				continue
-			}
-			let proof_height = source.get_proof_height(temp_height).await;
-			let has_client_state = sink
-				.query_client_update_time_and_height(client_id.clone(), proof_height)
-				.await
-				.ok()
-				.is_some();
-			if !has_client_state {
-				continue
-			}
-			log::info!("Found proof height on {} as {}:{}", sink.name(), temp_height, proof_height);
-			return Some(temp_height)
-		}
-	} else {
-		let timestamp_to_match = timestamp_to_match.unwrap();
-		let mut start = start_height.revision_height;
-		let mut end = latest_client_height.revision_height;
-		let mut last_known_valid_height = None;
-		if start > end {
-			return None
-		}
-
-		log::debug!(
-			target: "hyperspace",
-			"Entered binary search for proof height on {} for client {} starting at {}", sink.name(), client_id, start_height
-		);
-		while end - start > 1 {
-			let mid = (end + start) / 2;
-			let temp_height = Height::new(start_height.revision_number, mid);
-			let consensus_state =
-				sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
-			let Some(Ok(consensus_state)) = consensus_state
-				.map(|x| x.consensus_state.map(AnyConsensusState::try_from))
-				.flatten()
-			else {
-				start += 1;
-				continue
-			};
-			let proof_height = source.get_proof_height(temp_height).await;
-			let has_client_state = sink
-				.query_client_update_time_and_height(client_id.clone(), proof_height)
-				.await
-				.ok()
-				.is_some();
-			if !has_client_state {
-				start += 1;
-				continue
-			}
-
-			if consensus_state.timestamp().nanoseconds() < timestamp_to_match.nanoseconds() {
-				start = mid + 1;
-				continue
-			} else {
-				last_known_valid_height = Some(temp_height);
-				end = mid;
-			}
-		}
-		let start_height = Height::new(start_height.revision_number, start);
-
+	// We use pure linear search because there's no valid comparison to be made and there might be
+	// missing values  for some heights
+	for height in start_height.revision_height..=latest_client_height.revision_height {
+		let temp_height = Height::new(start_height.revision_number, height);
 		let consensus_state =
-			sink.query_client_consensus(at, client_id.clone(), start_height).await.ok();
-		if let Some(Ok(consensus_state)) = consensus_state
+			sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
+		let decoded = consensus_state
 			.map(|x| x.consensus_state.map(AnyConsensusState::try_from))
-			.flatten()
-		{
+			.flatten();
+		if !matches!(decoded, Some(Ok(_))) {
+			continue
+		}
+		let mut matches = false;
+		if let Some(timestamp_to_match) = &timestamp_to_match {
+			let consensus_state = decoded.unwrap().unwrap();
 			if consensus_state.timestamp().nanoseconds() >= timestamp_to_match.nanoseconds() {
-				let proof_height = source.get_proof_height(start_height).await;
-				let has_client_state = sink
-					.query_client_update_time_and_height(client_id.clone(), proof_height)
-					.await
-					.ok()
-					.is_some();
-				if has_client_state {
-					return Some(start_height)
-				}
+				matches = true;
 			}
 		}
+		if let Some(height_to_match) = &height_to_match {
+			if temp_height >= *height_to_match {
+				matches = true;
+			}
+		}
+		if !matches {
+			continue
+		}
 
-		return last_known_valid_height
+		let proof_height = source.get_proof_height(temp_height).await;
+		if proof_height != temp_height {
+			let has_client_state = sink
+				.query_client_update_time_and_height(client_id.clone(), proof_height)
+				.await
+				.ok()
+				.is_some();
+			if !has_client_state {
+				continue
+			}
+		}
+		info!("Found proof height on {} as {}:{}", sink.name(), temp_height, proof_height);
+		return Some(temp_height)
 	}
 	None
 }
@@ -964,7 +914,7 @@ pub fn filter_events_by_ids(
 		IbcEvent::ChainError(_) => true,
 	};
 	if !v {
-		log::debug!(target: "hyperspace_parachain", "Filtered out event: {:?}", ev);
+		log::debug!(target: "hyperspace", "Filtered out event: {:?}", ev);
 	}
 	v
 }

@@ -84,7 +84,8 @@ impl DeployClientCmd {
 			None,
 			None,
 			facets,
-		)?;
+		)
+		.await?;
 		let contract = deploy_client(
 			path,
 			yui_ibc.clone(),
@@ -128,7 +129,8 @@ impl DeployTransferModuleCmd {
 			None,
 			None,
 			facets,
-		)?;
+		)
+		.await?;
 
 		let contract =
 			deploy_transfer_module::<EthRpcClient>(path, yui_ibc, diamond_addr, client).await?;

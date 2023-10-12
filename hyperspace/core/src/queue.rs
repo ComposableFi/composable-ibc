@@ -53,7 +53,10 @@ pub async fn flush_message_batch(
 	// TODO: return number of failed messages and record it to metrics
 	for batch in msgs.chunks(chunk_size) {
 		// send out batches.
-		sink.submit(batch.to_vec()).await?;
+
+		if let Err(e) = sink.submit(batch.to_vec()).await {
+			log::error!(target: "hyperspace", "Failed to submit batch: {:?}", e);
+		}
 	}
 
 	Ok(())

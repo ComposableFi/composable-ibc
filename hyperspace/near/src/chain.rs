@@ -28,7 +28,7 @@ use crate::Client;
 impl Chain for Client {
 	async fn finality_notifications(
 		&self,
-	) -> Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>> {
+	) -> Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send>> {
 		let stream = self.indexer.streamer();
 		Box::pin(ReceiverStream::new(stream))
 	}

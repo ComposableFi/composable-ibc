@@ -14,10 +14,9 @@
 // limitations under the License.
 
 use crate::{alloc::string::ToString, error::Error, proto::ConsensusState as RawConsensusState};
-use alloc::{format, vec, vec::Vec};
-use anyhow::anyhow;
+use alloc::{format, vec::Vec};
 use core::{convert::Infallible, fmt::Debug};
-use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp, Height};
+use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp};
 use ibc_proto::google::protobuf::Any;
 use primitive_types::H256;
 use serde::{Deserialize, Serialize};

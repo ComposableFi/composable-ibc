@@ -1,29 +1,15 @@
-use std::{future::Future, ops::Deref, path::PathBuf, str::FromStr, sync::Arc, time::Duration};
-
-use cast::revm::new;
-use ecdsa::SigningKey;
-use elliptic_curve::pkcs8::der::pem;
 use ethers::{
 	abi::{encode_packed, Token},
-	contract::MultiAbigen,
 	core::k256::sha2::{Digest, Sha256},
 	prelude::{ContractFactory, ContractInstance, TransactionReceipt},
-	providers::{Http, Provider},
-	signers::Wallet,
 	types::U256,
 	utils::{keccak256, AnvilInstance},
 };
 use ethers_solc::{Artifact, ProjectCompileOutput, ProjectPathsConfig};
-use futures::{Stream, TryStreamExt};
-use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_ethereum::{
-	client::{EthRpcClient, EthereumClient},
-	config::EthereumClientConfig,
+	client::EthereumClient,
 	contract::{IbcHandler, UnwrapContractError},
-	mock::{
-		utils,
-		utils::{hyperspace_ethereum_client_fixture, USE_GETH},
-	},
+	mock::{utils, utils::hyperspace_ethereum_client_fixture},
 	utils::{DeployYuiIbc, ProviderImpl},
 	yui_types::IntoToken,
 };
@@ -32,7 +18,6 @@ use ibc::{
 		ics02_client::{
 			height::Height,
 			msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient},
-			trust_threshold::TrustThreshold,
 		},
 		ics03_connection::{
 			connection::Counterparty,
@@ -44,14 +29,10 @@ use ibc::{
 		ics04_channel::{
 			channel::{ChannelEnd, Order, State},
 			msgs::{
-				acknowledgement::{Acknowledgement, MsgAcknowledgement},
-				chan_close_confirm::MsgChannelCloseConfirm,
-				chan_close_init::MsgChannelCloseInit,
-				chan_open_ack::MsgChannelOpenAck,
-				chan_open_confirm::MsgChannelOpenConfirm,
-				chan_open_init::MsgChannelOpenInit,
-				chan_open_try::MsgChannelOpenTry,
-				recv_packet::MsgRecvPacket,
+				acknowledgement::MsgAcknowledgement, chan_close_confirm::MsgChannelCloseConfirm,
+				chan_close_init::MsgChannelCloseInit, chan_open_ack::MsgChannelOpenAck,
+				chan_open_confirm::MsgChannelOpenConfirm, chan_open_init::MsgChannelOpenInit,
+				chan_open_try::MsgChannelOpenTry, recv_packet::MsgRecvPacket,
 			},
 			packet::{Packet, Sequence},
 			Version,
@@ -59,7 +40,6 @@ use ibc::{
 		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
 		ics24_host::identifier::{ChainId, ChannelId, ConnectionId, PortId},
 	},
-	events::IbcEvent,
 	proofs::{ConsensusProof, Proofs},
 	protobuf::Protobuf,
 	signer::Signer,
@@ -72,11 +52,8 @@ use ics07_tendermint::client_state::ClientState;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use primitives::{mock::LocalClientTypes, Chain, IbcProvider};
 use prost::Message;
-use tokio::{
-	task::LocalSet,
-	time::{sleep, timeout, Interval},
-};
-use tokio_stream::{Elapsed, StreamExt as _};
+use std::{future::Future, ops::Deref, path::PathBuf, str::FromStr, sync::Arc, time::Duration};
+use tokio_stream::StreamExt as _;
 use tracing::log;
 use tracing_subscriber::{filter, layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
@@ -163,7 +140,8 @@ pub async fn deploy_yui_ibc_and_mock_client_fixture() -> DeployYuiIbcMockClient 
 	});
 
 	let ibc_mock_client = hyperspace_ethereum::utils::deploy_contract(
-		ibc_mock_client.find_first("MockClient").unwrap(),
+		"MockClient",
+		&[&ibc_mock_client],
 		(Token::Address(yui_ibc.diamond.address()),),
 		client.clone(),
 	)
@@ -236,10 +214,10 @@ fn deploy_mock_module_fixture(
 				.unwrap()
 		});
 
-		let contract = clients.find_first("MockModule").expect("no MockModule in project output");
 		let constructor_args = (Token::Address(deploy.yui_ibc.diamond.address()),);
 		let contract = hyperspace_ethereum::utils::deploy_contract(
-			contract,
+			"MockModule",
+			&[&clients],
 			constructor_args,
 			deploy.client.clone(),
 		)
@@ -267,7 +245,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 
 	let (anvil, client) = utils::spawn_anvil().await;
 
-	let mut yui_ibc = hyperspace_ethereum::utils::deploy_yui_ibc(
+	let yui_ibc = hyperspace_ethereum::utils::deploy_yui_ibc(
 		&project_output,
 		&diamond_project_output,
 		client.clone(),
@@ -308,8 +286,8 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 		.unwrap();
 
 	//replace the tendermint client address in hyperspace config with a real one
-	hyperspace.config.ibc_handler_address = yui_ibc.diamond.address();
-	hyperspace.config.tendermint_client_address = tendermint_light_client.address();
+	hyperspace.config.diamond_address = Some(yui_ibc.diamond.address());
+	hyperspace.config.tendermint_address = Some(tendermint_light_client.address());
 	// yui_ibc.tendermint_client = tendermint_light_client;
 	/* ______________________________________________________________________________ */
 
@@ -318,7 +296,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	let _ = yui_ibc
 		.register_client(
 			&hyperspace.config.client_type,
-			hyperspace.config.tendermint_client_address,
+			hyperspace.config.tendermint_address.unwrap(),
 		)
 		.await;
 	/* ______________________________________________________________________________ */
@@ -359,12 +337,12 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	use ibc::{protobuf::Protobuf, tx_msg::Msg};
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 
-	let result = hyperspace.submit(vec![msg]).await.unwrap();
+	let _result = hyperspace.submit(vec![msg]).await.unwrap();
 	/* ______________________________________________________________________________ */
 
 	/* ______________________________________________________________________________ */
 	//update client
-	let mut set = vec![];
+	let set = vec![];
 	let header = ics07_tendermint::client_message::Header {
 		signed_header: tm,
 		validator_set: tendermint::validator::Set::new(set.clone(), None),
@@ -387,7 +365,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	//before to call update you need to be sure that the prev revision_height was stored on the
 	// chain
 	assert_eq!(client_state.latest_height.revision_height, header.trusted_height.revision_height);
-	let result = hyperspace.submit(vec![msg]).await.unwrap();
+	let _result = hyperspace.submit(vec![msg]).await.unwrap();
 	/* ______________________________________________________________________________ */
 	/* ______________________________________________________________________________ */
 	//create conenction:
@@ -404,7 +382,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	};
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
-	let result = hyperspace.submit(vec![msg]).await.unwrap();
+	let _result = hyperspace.submit(vec![msg]).await.unwrap();
 
 	/* ______________________________________________________________________________ */
 
@@ -435,7 +413,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 
 	//connectionOpenAck test
-	let result = hyperspace.submit(vec![msg]).await.unwrap();
+	let _result = hyperspace.submit(vec![msg]).await.unwrap();
 	/* ______________________________________________________________________________ */
 
 	/* ______________________________________________________________________________ */
@@ -492,7 +470,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 		signer: Signer::from_str("s").unwrap(),
 	};
 
-	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let _msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
 	//connectionOpenConfirm test works only in that case when connection is "connection state is
 	// TRYOPEN status" before to uncomment next line be sure that you call open try before
 	// let result = hyperspace.submit(vec![msg]).await.unwrap();
@@ -512,7 +490,7 @@ async fn relayer_channel_tests() {
 	let path = utils::yui_ibc_solidity_path();
 
 	let project_output1 = hyperspace_ethereum::utils::compile_yui(&path, "contracts/clients");
-	let (anvil, client) = utils::spawn_anvil().await;
+	let (_anvil, client) = utils::spawn_anvil().await;
 
 	let signer = Signer::from_str("0CDA3F47EF3C4906693B170EF650EB968C5F4B2C").unwrap();
 	/* ______________________________________________________________________________ */

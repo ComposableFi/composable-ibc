@@ -56,7 +56,7 @@ sync-committee-prover = { git = "https://github.com/polytope-labs/sync-committee
 trie-db = { version = "0.28.0" }
 
 [features]
-default = ["std"]
+default = ["std", "testnet"]
 std = [
     "ibc/std",
     "ibc-proto/std",
@@ -70,4 +70,8 @@ std = [
     "tendermint/std",
     "trie-db/std",
     "rlp/std",
+]
+testnet = [
+    "sync-committee-primitives/testnet",
+    "sync-committee-verifier/testnet",
 ]
