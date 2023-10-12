@@ -1,11 +1,3 @@
-use std::{
-	fmt::Debug,
-	str::FromStr,
-	sync::{Arc, Mutex},
-	thread,
-	time::Duration,
-};
-
 use crate::{
 	client::{ClientError, EthereumClient},
 	contract::{IbcHandler, UnwrapContractError},
@@ -40,7 +32,7 @@ use ibc::{
 		},
 		ics04_channel::msgs as channel_msgs,
 		ics23_commitment::commitment::CommitmentRoot,
-		ics24_host::identifier::ChainId,
+		ics24_host::identifier::{ChainId, ClientId},
 	},
 	protobuf::{
 		google::protobuf::Timestamp,
@@ -62,6 +54,13 @@ use primitives::{
 	MisbehaviourHandler,
 };
 use serde::__private::de;
+use std::{
+	fmt::Debug,
+	str::FromStr,
+	sync::{Arc, Mutex},
+	thread,
+	time::Duration,
+};
 use tendermint::{
 	account, block,
 	block::{header::Version, signed_header::SignedHeader, Height as TmHeight},

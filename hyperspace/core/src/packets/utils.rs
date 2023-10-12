@@ -15,7 +15,6 @@
 use crate::packets::connection_delay::has_delay_elapsed;
 use ibc::{
 	core::{
-		ics02_client::client_state::ClientState as ClientStateT,
 		ics04_channel::{
 			channel::{ChannelEnd, Order, State},
 			context::calculate_block_delay,
@@ -36,7 +35,6 @@ use ibc::{
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
-use pallet_ibc::light_clients::AnyClientState;
 use primitives::{find_suitable_proof_height_for_client, Chain};
 use std::time::Duration;
 use tendermint_proto::Protobuf;

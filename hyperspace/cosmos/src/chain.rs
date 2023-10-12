@@ -23,7 +23,11 @@ use primitives::{
 	MisbehaviourHandler,
 };
 use prost::Message;
-use std::{pin::Pin, time::Duration, sync::{Mutex, Arc}};
+use std::{
+	pin::Pin,
+	sync::{Arc, Mutex},
+	time::Duration,
+};
 use tendermint_rpc::{
 	event::{Event, EventData},
 	query::{EventType, Query},
@@ -267,12 +271,12 @@ where
 		Ok(())
 	}
 
-	fn set_client_id_ref(&mut self, client_id: Arc<Mutex<Option<ClientId>>>){
-		//ignore. 
+	fn set_client_id_ref(&mut self, _client_id: Arc<Mutex<Option<ClientId>>>) {
+		//ignore.
 		//we do not need it on cosmos
 	}
 
-	fn get_counterparty_client_id_ref(&self) -> Arc<Mutex<Option<ClientId>>>{
+	fn get_counterparty_client_id_ref(&self) -> Arc<Mutex<Option<ClientId>>> {
 		self.client_id.clone()
 	}
 }
