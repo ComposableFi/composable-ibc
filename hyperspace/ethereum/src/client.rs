@@ -647,8 +647,9 @@ impl EthereumClient {
 #[async_trait]
 impl primitives::TestProvider for EthereumClient {
 	async fn send_transfer(&self, params: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
-		// first we need to ERC-20::approve()
-
+		if params.token.denom.to_string() == "ETH".to_string() {
+			return send_native_eth(&self, params).await
+		}
 		let method = self
 			.yui
 			.ics20_bank
@@ -677,15 +678,15 @@ impl primitives::TestProvider for EthereumClient {
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
 		assert_eq!(receipt.status, Some(1.into()));
 
-		let method = contract
-			.method::<_, ()>(
-				"approve",
-				(
-					self.yui.ics20_transfer_bank.as_ref().unwrap().clone().address(),
-					params.token.amount.as_u256(),
-				),
-			)
-			.unwrap();
+		// let method = contract
+		// 	.method::<_, ()>(
+		// 		"approve",
+		// 		(
+		// 			self.yui.ics20_transfer_bank.as_ref().unwrap().clone().address(),
+		// 			params.token.amount.as_u256(),
+		// 		),
+		// 	)
+		// 	.unwrap();
 
 		let _ = method.call().await.unwrap_contract_error();
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
@@ -727,4 +728,34 @@ impl primitives::TestProvider for EthereumClient {
 	async fn increase_counters(&mut self) -> Result<(), Self::Error> {
 		Ok(())
 	}
+}
+
+async fn send_native_eth(
+	eth_client: &EthereumClient,
+	params: MsgTransfer<PrefixedCoin>,
+) -> Result<(), ClientError> {
+	let client = eth_client.config.client().await.unwrap().deref().clone();
+	let contract = eth_client.yui.ics20_transfer_bank.as_ref().unwrap().clone();
+
+	let amount = params.token.amount.as_u256();
+
+	let params = (
+		params.receiver.to_string(),
+		params.source_port.to_string(),
+		params.source_channel.to_string(),
+		params.timeout_height.revision_height,
+	);
+	let method = eth_client
+		.yui
+		.ics20_transfer_bank
+		.as_ref()
+		.expect("expected bank module")
+		.method::<_, ()>("sendTransferNativeToken", params)?;
+
+	let method = method.value(amount);
+	let _ = method.call().await.unwrap_contract_error();
+	let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+	assert_eq!(receipt.status, Some(1.into()));
+	log::info!("Sent ETH transfer. Tx hash: {:?}", receipt.transaction_hash);
+	Ok(())
 }

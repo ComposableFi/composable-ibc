@@ -164,8 +164,12 @@ fn deploy_transfer_module_fixture(
 
 		let artifact =
 			project_output.find_first("ICS20Bank").expect("no ICS20Bank in project output");
-		let ics20_bank_contract =
-			hyperspace_ethereum::utils::deploy_contract(artifact, (), deploy.client.clone()).await;
+		let ics20_bank_contract = hyperspace_ethereum::utils::deploy_contract(
+			artifact,
+			(Token::String("ETH".to_string())),
+			deploy.client.clone(),
+		)
+		.await;
 		println!("Bank module address: {:?}", ics20_bank_contract.address());
 		let artifact = project_output
 			.find_first("ICS20TransferBank")
@@ -277,7 +281,9 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
 	let asset_str = "pica".to_string();
+	let asset_native_str = "ETH".to_string();
 	let asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
+	let asset_id_native_a = AnyAssetId::Ethereum(asset_native_str.clone());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
@@ -298,6 +304,14 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		.to_uppercase()
 	));
 
+	let asset_id_b_native: AnyAssetId = AnyAssetId::Cosmos(format!(
+		"ibc/{}",
+		hex::encode(&sha2_256(
+			format!("{}/{channel_b}/{asset_native_str}", PortId::transfer()).as_bytes()
+		))
+		.to_uppercase()
+	));
+
 	log::info!(target: "hyperspace", "Asset A: {asset_id_a:?} B: {asset_id_b:?}");
 
 	// Set connections and channel whitelist
@@ -310,15 +324,26 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	// Run tests sequentially
 
 	// no timeouts + connection delay
+
 	ibc_messaging_with_connection_delay(
 		&mut chain_a,
 		&mut chain_b,
-		asset_id_a.clone(),
-		asset_id_b.clone(),
+		asset_id_native_a.clone(),
+		asset_id_b_native.clone(),
 		channel_a,
 		channel_b,
 	)
 	.await;
+
+	// ibc_messaging_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// 	asset_id_b.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// )
+	// .await;
 
 	// // timeouts + connection delay
 	// ibc_messaging_packet_height_timeout_with_connection_delay(
