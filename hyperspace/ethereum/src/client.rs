@@ -681,7 +681,13 @@ impl primitives::TestProvider for EthereumClient {
 			params.source_channel.to_string(),
 			params.timeout_height.revision_height,
 		);
-an		let _ = method.call().await.unwrap_contract_error();
+		let method = self
+			.yui
+			.ics20_transfer_bank
+			.as_ref()
+			.expect("expected bank module")
+			.method::<_, ()>("sendTransfer", params)?;
+		let _ = method.call().await.unwrap_contract_error();
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
 		assert_eq!(receipt.status, Some(1.into()));
 		log::info!("Sent transfer. Tx hash: {:?}", receipt.transaction_hash);
