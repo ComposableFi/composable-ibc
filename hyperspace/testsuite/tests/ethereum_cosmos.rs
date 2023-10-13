@@ -32,19 +32,15 @@ use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_ethereum::{
 	client::EthereumClient,
 	config::EthereumClientConfig,
-	ibc_provider::Ics20BankAbi,
+	ibc_provider::{Ics20BankAbi, SendPacketFilter, TransferInitiatedFilter},
 	mock::{
 		utils,
 		utils::{hyperspace_ethereum_client_fixture, ETH_NODE_PORT},
 	},
-	utils::{DeployYuiIbc, ProviderImpl},
-};
-use hyperspace_ethereum::{
-	ibc_provider::{SendPacketFilter, TransferInitiatedFilter},
-	utils::check_code_size,
+	utils::{check_code_size, DeployYuiIbc, ProviderImpl},
 };
 use hyperspace_parachain::{finality_protocol::FinalityProtocol, ParachainClientConfig};
-use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider};
+use hyperspace_primitives::{utils::create_clients, Chain, CommonClientConfig, IbcProvider};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
 	ibc_messaging_packet_timeout_on_channel_close,
@@ -155,7 +151,12 @@ pub async fn deploy_yui_ibc_and_tendermint_client_fixture() -> DeployYuiIbcTende
 #[track_caller]
 fn deploy_transfer_module_fixture(
 	deploy: &DeployYuiIbcTendermintClient,
-) -> impl Future<Output = ContractInstance<Arc<ProviderImpl>, ProviderImpl>> + '_ {
+) -> impl Future<
+	Output = (
+		ContractInstance<Arc<ProviderImpl>, ProviderImpl>,
+		ContractInstance<Arc<ProviderImpl>, ProviderImpl>,
+	),
+> + '_ {
 	async move {
 		let path = utils::yui_ibc_solidity_path();
 		let project_output =
@@ -163,23 +164,23 @@ fn deploy_transfer_module_fixture(
 
 		let artifact =
 			project_output.find_first("ICS20Bank").expect("no ICS20Bank in project output");
-		let bank_contract =
+		let ics20_bank_contract =
 			hyperspace_ethereum::utils::deploy_contract(artifact, (), deploy.client.clone()).await;
-		println!("Bank module address: {:?}", bank_contract.address());
+		println!("Bank module address: {:?}", ics20_bank_contract.address());
 		let artifact = project_output
 			.find_first("ICS20TransferBank")
 			.expect("no ICS20TransferBank in project output");
 		let constructor_args = (
 			Token::Address(deploy.yui_ibc.diamond.address()),
-			Token::Address(bank_contract.address()),
+			Token::Address(ics20_bank_contract.address()),
 		);
-		let module_contract = hyperspace_ethereum::utils::deploy_contract(
+		let ics20_bank_transfer_contract = hyperspace_ethereum::utils::deploy_contract(
 			artifact,
 			constructor_args,
 			deploy.client.clone(),
 		)
 		.await;
-		module_contract
+		(ics20_bank_contract, ics20_bank_transfer_contract)
 	}
 }
 
@@ -190,13 +191,15 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	// Create client configurations
 
 	let deploy = deploy_yui_ibc_and_tendermint_client_fixture().await;
-	let bank = deploy_transfer_module_fixture(&deploy).await;
+	let (ics20_bank_contract, ics20_bank_trasnfer_contract) =
+		deploy_transfer_module_fixture(&deploy).await;
 	let DeployYuiIbcTendermintClient {
 		anvil, tendermint_client, ics20_module: _, mut yui_ibc, ..
 	} = deploy;
-	log::info!(target: "hyperspace", "Deployed diamond: {:?}, tendermint client: {:?}, bank: {:?}", yui_ibc.diamond.address(), tendermint_client.address(), bank.address());
-	yui_ibc.bind_port("transfer", bank.address()).await;
-	yui_ibc.bank = Some(bank);
+	log::info!(target: "hyperspace", "Deployed diamond: {:?}, tendermint client: {:?}, bank: {:?}", yui_ibc.diamond.address(), tendermint_client.address(), ics20_bank_trasnfer_contract.address());
+	yui_ibc.bind_port("transfer", ics20_bank_trasnfer_contract.address()).await;
+	yui_ibc.ics20_transfer_bank = Some(ics20_bank_trasnfer_contract);
+	yui_ibc.ics20_bank = Some(ics20_bank_contract);
 
 	//replace the tendermint client address in hyperspace config with a real one
 	let tendermint_address = yui_ibc.tendermint.as_ref().map(|x| x.address());
@@ -264,6 +267,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	log::info!(target: "hyperspace", "Client A: {client_a:?} B: {client_b:?}");
 	chain_a_wrapped.set_client_id(client_a);
 	chain_b_wrapped.set_client_id(client_b);
+	dbg!(&chain_a_wrapped.name());
+	dbg!(&chain_b_wrapped.name());
 	(chain_a_wrapped, chain_b_wrapped)
 }
 

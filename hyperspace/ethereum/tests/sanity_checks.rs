@@ -308,8 +308,8 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 		.unwrap();
 
 	//replace the tendermint client address in hyperspace config with a real one
-	hyperspace.config.ibc_handler_address = yui_ibc.diamond.address();
-	hyperspace.config.tendermint_client_address = tendermint_light_client.address();
+	hyperspace.config.diamond_address = Some(yui_ibc.diamond.address());
+	hyperspace.config.tendermint_address = Some(tendermint_light_client.address());
 	// yui_ibc.tendermint_client = tendermint_light_client;
 	/* ______________________________________________________________________________ */
 
@@ -318,7 +318,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	let _ = yui_ibc
 		.register_client(
 			&hyperspace.config.client_type,
-			hyperspace.config.tendermint_client_address,
+			hyperspace.config.tendermint_address.unwrap(),
 		)
 		.await;
 	/* ______________________________________________________________________________ */

@@ -168,6 +168,10 @@ where
 		.pop()
 		.expect("No Ibc balances");
 
+	dbg!(&balance);
+	dbg!(&chain_a.name());
+	dbg!(&chain_b.name());
+
 	let amount = balance.amount.as_u256().as_u128();
 	let coin = PrefixedCoin {
 		denom: balance.denom,
@@ -198,8 +202,8 @@ where
 		source_port: PortId::transfer(),
 		source_channel: channel_id,
 		token: coin,
-		sender: chain_a.account_id(),
-		receiver: chain_b.account_id(),
+		sender: dbg!(chain_a.account_id()),
+		receiver: dbg!(chain_b.account_id()),
 		timeout_height,
 		timeout_timestamp,
 		memo: "".to_string(),

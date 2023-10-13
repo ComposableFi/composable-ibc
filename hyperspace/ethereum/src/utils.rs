@@ -2,7 +2,9 @@ use crate::{
 	client::ClientError,
 	config::{ContractName, EthereumClientConfig},
 	contract::UnwrapContractError,
-	ibc_provider::{DIAMONDABI_ABI, ICS20TRANSFERBANKABI_ABI, TENDERMINTCLIENTABI_ABI},
+	ibc_provider::{
+		DIAMONDABI_ABI, ICS20BANKABI_ABI, ICS20TRANSFERBANKABI_ABI, TENDERMINTCLIENTABI_ABI,
+	},
 };
 use ethers::{
 	abi::{AbiError, Address, Detokenize, EventExt, Function, Token, Tokenize},
@@ -102,7 +104,8 @@ pub struct DeployYuiIbc<B, M> {
 	pub diamond: ContractInstance<B, M>,
 	// pub storage_layout: StorageLayout,
 	pub tendermint: Option<ContractInstance<B, M>>,
-	pub bank: Option<ContractInstance<B, M>>,
+	pub ics20_transfer_bank: Option<ContractInstance<B, M>>,
+	pub ics20_bank: Option<ContractInstance<B, M>>,
 }
 
 impl<B, M> DeployYuiIbc<B, M>
@@ -114,7 +117,8 @@ where
 		client: B,
 		diamond_address: Address,
 		tendermint_address: Option<Address>,
-		bank_address: Option<Address>,
+		ics20_transfer_bank_address: Option<Address>,
+		ics20_bank_address: Option<Address>,
 		diamond_facets: Vec<(ContractName, Address)>,
 	) -> Result<Self, ClientError> {
 		Ok(Self {
@@ -126,12 +130,15 @@ where
 			tendermint: tendermint_address.map(|addr| {
 				ContractInstance::<B, M>::new(addr, TENDERMINTCLIENTABI_ABI.clone(), client.clone())
 			}),
-			bank: bank_address.map(|addr| {
+			ics20_transfer_bank: ics20_transfer_bank_address.map(|addr| {
 				ContractInstance::<B, M>::new(
 					addr,
 					ICS20TRANSFERBANKABI_ABI.clone(),
 					client.clone(),
 				)
+			}),
+			ics20_bank: ics20_bank_address.map(|addr| {
+				ContractInstance::<B, M>::new(addr, ICS20BANKABI_ABI.clone(), client.clone())
 			}),
 			deployed_facets: diamond_facets
 				.into_iter()
@@ -578,7 +585,8 @@ where
 			diamond: self.diamond.clone(),
 			// storage_layout: self.storage_layout.clone(),
 			tendermint: self.tendermint.clone(),
-			bank: self.bank.clone(),
+			ics20_bank: self.ics20_bank.clone(),
+			ics20_transfer_bank: self.ics20_transfer_bank.clone(),
 		}
 	}
 }
@@ -838,7 +846,8 @@ where
 		deployed_facets,
 		// storage_layout,
 		tendermint: None,
-		bank: None,
+		ics20_bank: None,
+		ics20_transfer_bank: None,
 	}
 }
 

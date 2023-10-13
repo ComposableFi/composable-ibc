@@ -848,6 +848,7 @@ where
 		asset_id: Self::AssetId,
 	) -> Result<Vec<PrefixedCoin>, Self::Error> {
 		let denom = &asset_id;
+		dbg!(&denom);
 		let mut grpc_client = ibc_proto::cosmos::bank::v1beta1::query_client::QueryClient::connect(
 			self.grpc_url.clone().to_string(),
 		)

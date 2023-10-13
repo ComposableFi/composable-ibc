@@ -45,7 +45,7 @@ pub async fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http
 	println!("{:?}", std::env::current_dir().unwrap());
 	let wallet: LocalWallet = if USE_GETH {
 		LocalWallet::decrypt_keystore(
-			"keys/0x73db010c3275eb7a92e5c38770316248f4c644ee",
+			"/Users/blasrodriguezgarciairizar/composable/centauri-private/hyperspace/ethereum/keys/0x73db010c3275eb7a92e5c38770316248f4c644ee",
 			std::env::var("KEY_PASS").expect("KEY_PASS not set"),
 		)
 		.unwrap()
@@ -121,7 +121,7 @@ pub async fn hyperspace_ethereum_client_fixture(
 	let endpoint =
 		if USE_GETH { format!("http://localhost:{}", ETH_NODE_PORT) } else { anvil.endpoint() };
 	let wallet_path = if USE_GETH {
-		Some("keys/0x73db010c3275eb7a92e5c38770316248f4c644ee".to_string())
+		Some("/Users/blasrodriguezgarciairizar/composable/centauri-private/hyperspace/ethereum/keys/0x73db010c3275eb7a92e5c38770316248f4c644ee".to_string())
 	} else {
 		None
 	};
@@ -140,8 +140,14 @@ pub async fn hyperspace_ethereum_client_fixture(
 		None
 	};
 
-	let jwt_secret_path =
-		if !USE_GETH { None } else { Some("../eth-pos-devnet/execution/jwtsecret".to_string()) };
+	let jwt_secret_path = if !USE_GETH {
+		None
+	} else {
+		Some(
+			"/Users/blasrodriguezgarciairizar/composable/eth-pos-devnet/execution/jwtsecret"
+				.to_string(),
+		)
+	};
 
 	EthereumClientConfig {
 		http_rpc_url: endpoint.parse().unwrap(),
@@ -157,7 +163,8 @@ pub async fn hyperspace_ethereum_client_fixture(
 		channel_whitelist: vec![],
 		commitment_prefix: "424242".into(),
 		wasm_code_id: None,
-		bank_address: yui_ibc.bank.clone().map(|b| b.address()),
+		ics20_transfer_bank_address: yui_ibc.ics20_transfer_bank.clone().map(|b| b.address()),
+		ics20_bank_address: yui_ibc.ics20_bank.clone().map(|b| b.address()),
 		diamond_address: Some(yui_ibc.diamond.address()),
 		tendermint_address: yui_ibc.tendermint.clone().map(|x| x.address()),
 		diamond_facets: yui_ibc

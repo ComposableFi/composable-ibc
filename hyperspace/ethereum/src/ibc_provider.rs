@@ -148,6 +148,10 @@ abigen!(
 
 	OwnershipFacetAbi,
 	"hyperspace/ethereum/src/abi/ownership-facet-abi.json";
+
+	ERC20TokenAbi,
+	"hyperspace/ethereum/src/abi/erc20-abi.json";
+
 );
 
 impl From<HeightData> for Height {
@@ -300,7 +304,7 @@ impl IbcProvider for EthereumClient {
 			.map_err(|e| ClientError::Other(format!("failed to get logs: {}", e)))?;
 		let filter = Filter::new().from_block(from).to_block(to).address(
 			self.yui
-				.bank
+				.ics20_transfer_bank
 				.as_ref()
 				.ok_or(ClientError::Other("bank contract not found".to_string()))?
 				.address(),
@@ -1197,7 +1201,7 @@ impl IbcProvider for EthereumClient {
 			.map_err(|err| ClientError::Other(format!("failed to get logs: {}", err)))?;
 		let logs2 = self
 			.yui
-			.bank
+			.ics20_transfer_bank
 			.as_ref()
 			.ok_or(ClientError::Other("bank contract not found".to_string()))?
 			.client()
@@ -1447,7 +1451,7 @@ impl IbcProvider for EthereumClient {
 	) -> Result<Vec<PrefixedCoin>, Self::Error> {
 		let balance = self
 			.yui
-			.bank
+			.ics20_transfer_bank
 			.as_ref()
 			.ok_or(ClientError::Other("bank contract not found".to_string()))?
 			.method::<_, U256>(

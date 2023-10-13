@@ -1,7 +1,7 @@
 use crate::{
 	config::EthereumClientConfig,
 	contract::UnwrapContractError,
-	ibc_provider::u256_to_bytes,
+	ibc_provider::{u256_to_bytes, ERC20TOKENABI_ABI},
 	jwt::{JwtAuth, JwtKey},
 	utils::{DeployYuiIbc, ProviderImpl},
 };
@@ -13,8 +13,8 @@ use ethers::{
 	core::k256,
 	prelude::{
 		coins_bip39::English, signer::SignerMiddlewareError, Authorization, BlockId, BlockNumber,
-		EIP1186ProofResponse, Filter, LocalWallet, Log, MnemonicBuilder, NameOrAddress,
-		SignerMiddleware, Wallet, H256,
+		ContractInstance, EIP1186ProofResponse, Filter, LocalWallet, Log, MnemonicBuilder,
+		NameOrAddress, SignerMiddleware, Wallet, H256,
 	},
 	providers::{Http, Middleware, Provider, ProviderError, ProviderExt, Ws},
 	signers::Signer,
@@ -37,7 +37,7 @@ use std::{
 	collections::HashSet,
 	convert::Infallible,
 	future::Future,
-	ops::Add,
+	ops::{Add, Deref},
 	pin::Pin,
 	str::FromStr,
 	sync::{Arc, Mutex},
@@ -167,7 +167,10 @@ impl EthereumClient {
 				Some(config.tendermint_address.clone().ok_or_else(|| {
 					ClientError::Other("tendermint address must be provided".to_string())
 				})?),
-				Some(config.bank_address.clone().ok_or_else(|| {
+				Some(config.ics20_transfer_bank_address.clone().ok_or_else(|| {
+					ClientError::Other("bank address must be provided".to_string())
+				})?),
+				Some(config.ics20_bank_address.clone().ok_or_else(|| {
 					ClientError::Other("bank address must be provided".to_string())
 				})?),
 				config.diamond_facets.clone(),
@@ -644,6 +647,32 @@ impl EthereumClient {
 #[async_trait]
 impl primitives::TestProvider for EthereumClient {
 	async fn send_transfer(&self, params: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
+		// first we need to ERC-20::approve()
+
+		let method = self
+			.yui
+			.ics20_bank
+			.as_ref()
+			.expect("expected bank module")
+			.method::<_, Address>("queryTokenContractFromDenom", params.token.denom.to_string())?;
+		let erc20_address = method.call().await.unwrap_contract_error();
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+		log::info!("Sent approval transfer. Tx hash: {:?}", receipt.transaction_hash);
+
+		let client = self.config.client().await.unwrap().deref().clone();
+		let contract =
+			ContractInstance::<_, _>::new(erc20_address, ERC20TOKENABI_ABI.clone(), client);
+		contract
+			.method::<_, ()>(
+				"approve",
+				(
+					Address::from_str("0x73db010c3275eb7a92e5c38770316248f4c644ee").unwrap(),
+					params.token.amount.as_u256(),
+				),
+			)
+			.unwrap();
+
 		let params = (
 			params.token.denom.to_string(),
 			params.token.amount.as_u256(),
@@ -652,13 +681,7 @@ impl primitives::TestProvider for EthereumClient {
 			params.source_channel.to_string(),
 			params.timeout_height.revision_height,
 		);
-		let method = self
-			.yui
-			.bank
-			.as_ref()
-			.expect("expected bank module")
-			.method::<_, ()>("sendTransfer", params)?;
-		let _ = method.call().await.unwrap_contract_error();
+an		let _ = method.call().await.unwrap_contract_error();
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
 		assert_eq!(receipt.status, Some(1.into()));
 		log::info!("Sent transfer. Tx hash: {:?}", receipt.transaction_hash);
