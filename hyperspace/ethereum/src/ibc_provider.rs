@@ -1128,7 +1128,7 @@ impl IbcProvider for EthereumClient {
 			.event_for_name::<SendPacketFilter>("SendPacket")
 			.map_err(|err| ClientError::ContractAbiError(err))?
 			.address(ValueOrArray::Array(vec![
-				self.yui.bank.as_ref().map(|x| x.address()).unwrap_or_default(),
+				self.yui.ics20_bank.as_ref().map(|x| x.address()).unwrap_or_default(),
 				self.yui.diamond.address(),
 			]))
 			.from_block(self.contract_creation_block())
