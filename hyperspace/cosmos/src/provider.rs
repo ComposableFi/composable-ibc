@@ -260,7 +260,7 @@ where
 									events_with_height
 										.push(IbcEventWithHeight::new(ibc_event, height));
 								} else {
-									log::debug!(target: "hyperspace_cosmos", "The event is unknown");
+									log::debug!(target: "hyperspace_cosmos", "the event is unknown");
 								}
 							} else {
 								log::debug!(target: "hyperspace_cosmos", "Failed to parse event {:?}", abci_event);
@@ -651,7 +651,7 @@ where
 
 	async fn query_send_packets(
 		&self,
-		at: Height,
+		_at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
 		seqs: Vec<u64>,
@@ -717,7 +717,7 @@ where
 
 	async fn query_received_packets(
 		&self,
-		at: Height,
+		_at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
 		seqs: Vec<u64>,
@@ -787,7 +787,7 @@ where
 
 	fn expected_block_time(&self) -> Duration {
 		// cosmos chain block time is roughly 6-7 seconds
-		Duration::from_secs(7)
+		Duration::from_secs(5)
 	}
 
 	async fn query_client_update_time_and_height(
@@ -925,7 +925,7 @@ where
 		Ok(time.nanoseconds())
 	}
 
-	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
+	async fn query_clients(&self, client_type: &ClientType) -> Result<Vec<ClientId>, Self::Error> {
 		let request = tonic::Request::new(QueryClientStatesRequest {
 			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
 		});
@@ -945,6 +945,7 @@ where
 		let clients: Vec<ClientId> = response
 			.client_states
 			.into_iter()
+			.filter(|cs| cs.client_id.contains(client_type))
 			.filter_map(|cs| {
 				let id = ClientId::from_str(&cs.client_id).ok()?;
 				Some(id)

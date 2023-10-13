@@ -57,48 +57,43 @@ pub async fn get_timeout_proof_height(
 		source.name(), sink.name(), timeout_variant, source_height, sink_height, sink_timestamp, latest_client_height_on_source, packet_creation_height, packet);
 
 	match timeout_variant {
-		TimeoutVariant::Height =>
-			find_suitable_proof_height_for_client(
-				sink,
-				source,
-				source_height,
-				sink.client_id(),
-				packet.timeout_height,
-				None,
-				latest_client_height_on_source,
-			)
-			.await,
-		TimeoutVariant::Timestamp => {
-			// Get approximate number of blocks contained in this timestamp so we can have a lower
-			// bound for where to start our search
-			// We offset the sink height when this packet was created with the approximate number of
-			// blocks contained in the difference in timestamp at packet creation until timeout
-			let height = Height::new(source_height.revision_number, packet_creation_height);
-			log::trace!(
-				target: "hyperspace",
-				"Querying client state at {height}"
-			);
-			let sink_client_state =
-				source.query_client_state(height, sink.client_id()).await.ok()?;
-			let sink_client_state =
-				AnyClientState::try_from(sink_client_state.client_state?).ok()?;
-			let height = sink_client_state.latest_height();
-			let timestamp_at_creation =
-				sink.query_timestamp_at(height.revision_height).await.ok()?;
-			// may underflow if the user have chosen timeout less than the block timestamp at which
-			// the packet was created, so we use `saturating_sub`
-			let period =
-				packet.timeout_timestamp.nanoseconds().saturating_sub(timestamp_at_creation);
-			let period = Duration::from_nanos(period);
-			let start_height = height.revision_height +
-				calculate_block_delay(period, sink.expected_block_time()).saturating_sub(1);
-			let start_height = Height::new(sink_height.revision_number, start_height);
+		TimeoutVariant::Height => {
+			let start_height = packet.timeout_height;
 			find_suitable_proof_height_for_client(
 				sink,
 				source,
 				source_height,
 				sink.client_id(),
 				start_height,
+				Some(start_height),
+				None,
+				latest_client_height_on_source,
+			)
+			.await
+		},
+		TimeoutVariant::Timestamp => {
+			// Get approximate number of blocks contained in this timestamp so we can have a lower
+			// bound for where to start our search
+			// We offset the sink height when this packet was created with the approximate number of
+			// blocks contained in the difference in timestamp at packet creation until timeout
+			let timeout_ns = packet.timeout_timestamp.nanoseconds();
+			let sink_ns = sink_timestamp.nanoseconds();
+			if timeout_ns > sink_ns {
+				return None
+			}
+			let period = sink_ns.saturating_sub(timeout_ns);
+			let period = Duration::from_nanos(period);
+			let timeout_height = (sink_height.revision_height -
+				calculate_block_delay(period, sink.expected_block_time()))
+			.saturating_sub(1);
+			let start_height = Height::new(sink_height.revision_number, timeout_height);
+			find_suitable_proof_height_for_client(
+				sink,
+				source,
+				source_height,
+				sink.client_id(),
+				start_height,
+				None,
 				Some(packet.timeout_timestamp),
 				latest_client_height_on_source,
 			)
@@ -107,36 +102,26 @@ pub async fn get_timeout_proof_height(
 		TimeoutVariant::Both => {
 			// Get approximate number of blocks contained in this timestamp so we can have a lower
 			// bound for where to start our search
-			let sink_client_state = source
-				.query_client_state(
-					Height::new(source_height.revision_number, packet_creation_height),
-					sink.client_id(),
-				)
-				.await
-				.ok()?;
-			let sink_client_state =
-				AnyClientState::try_from(sink_client_state.client_state?).ok()?;
-			let height = sink_client_state.latest_height();
-			let timestamp_at_creation =
-				sink.query_timestamp_at(height.revision_height).await.ok()?;
-			// may underflow if the user have chosen timeout less than the block timestamp at which
-			// the packet was created, so we use `saturating_sub`
-			let period =
-				packet.timeout_timestamp.nanoseconds().saturating_sub(timestamp_at_creation);
+			let timeout_ns = packet.timeout_timestamp.nanoseconds();
+			let sink_ns = sink_timestamp.nanoseconds();
+			if timeout_ns > sink_ns {
+				return None
+			}
+			let period = sink_ns.saturating_sub(timeout_ns);
 			let period = Duration::from_nanos(period);
-			let start_height = height.revision_height +
-				calculate_block_delay(period, sink.expected_block_time()).saturating_sub(1);
-			let start_height = if start_height < packet.timeout_height.revision_height {
-				packet.timeout_height
-			} else {
-				Height::new(packet.timeout_height.revision_number, start_height)
-			};
+			let timeout_height = (sink_height.revision_height -
+				calculate_block_delay(period, sink.expected_block_time()))
+			.saturating_sub(1);
+			let start_height =
+				Height::new(sink_height.revision_number, timeout_height).min(packet.timeout_height);
+
 			find_suitable_proof_height_for_client(
 				sink,
 				source,
 				source_height,
 				sink.client_id(),
 				start_height,
+				Some(packet.timeout_height),
 				Some(packet.timeout_timestamp),
 				latest_client_height_on_source,
 			)

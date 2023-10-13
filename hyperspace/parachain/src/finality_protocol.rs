@@ -404,9 +404,7 @@ where
 				let Some(block) = relay_client.rpc().block(Some(hash)).await? else {
 					return Ok(None)
 				};
-				let Some(justifications) = block.justifications else {
-					return Ok(None)
-				};
+				let Some(justifications) = block.justifications else { return Ok(None) };
 				for (id, justification) in justifications {
 					log::info!(target: "hyperspace", "Found closer justification at {height} (suggested {to})");
 					if id == GRANDPA_ENGINE_ID {
@@ -469,8 +467,14 @@ where
 		Error::Custom("Received an empty client state from counterparty".to_string())
 	})?;
 
-	let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
-		.ok_or_else(|| Error::Custom(format!("Could not decode client state")))? else { unreachable!() };
+	let AnyClientState::Grandpa(client_state) =
+		AnyClientState::decode_recursive(any_client_state, |c| {
+			matches!(c, AnyClientState::Grandpa(_))
+		})
+		.ok_or_else(|| Error::Custom(format!("Could not decode client state")))?
+	else {
+		unreachable!()
+	};
 
 	let prover = source.grandpa_prover();
 	// prove_finality will always give us the highest block finalized by the authority set for the

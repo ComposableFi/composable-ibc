@@ -6,7 +6,8 @@ use ibc::core::{
 			acknowledgement::MsgAcknowledgement, chan_close_confirm::MsgChannelCloseConfirm,
 			chan_close_init::MsgChannelCloseInit, chan_open_ack::MsgChannelOpenAck,
 			chan_open_confirm::MsgChannelOpenConfirm, chan_open_init::MsgChannelOpenInit,
-			chan_open_try::MsgChannelOpenTry, recv_packet::MsgRecvPacket,
+			chan_open_try::MsgChannelOpenTry, recv_packet::MsgRecvPacket, timeout::MsgTimeout,
+			timeout_on_close::MsgTimeoutOnClose,
 		},
 		packet::Packet,
 		Version,
@@ -136,10 +137,11 @@ impl IntoToken for Packet {
 			self.destination_channel.into_token(),
 			self.data.into_token(),
 			self.timeout_height.into_token(),
-			Token::Uint(self.timeout_timestamp.as_nanoseconds().into()),
+			Token::Uint(self.timeout_timestamp.nanoseconds().into()),
 		])
 	}
 }
+
 impl IntoToken for MsgAcknowledgement {
 	fn into_token(self) -> Token {
 		Token::Tuple(vec![
@@ -164,6 +166,40 @@ impl IntoToken for MsgRecvPacket {
 			self.proofs.object_proof().as_bytes().into_token(),
 			//proofHeight
 			self.proofs.height().into_token(),
+		])
+	}
+}
+
+impl IntoToken for MsgTimeoutOnClose {
+	fn into_token(self) -> Token {
+		Token::Tuple(vec![
+			//packet
+			self.packet.into_token(),
+			//proofUnreceived
+			self.proofs.object_proof().as_bytes().into_token(),
+			//proofClose
+			self.proofs
+				.other_proof()
+				.as_ref()
+				.map(|x| x.as_bytes().into_token())
+				.unwrap_or_else(|| Token::Bytes(vec![].into())),
+			//proofHeight
+			self.proofs.height().into_token(),
+		])
+	}
+}
+
+impl IntoToken for MsgTimeout {
+	fn into_token(self) -> Token {
+		Token::Tuple(vec![
+			//packet
+			self.packet.into_token(),
+			//proof
+			self.proofs.object_proof().as_bytes().into_token(),
+			//proofHeight
+			self.proofs.height().into_token(),
+			// nextSequenceRecv
+			Token::Uint(self.next_sequence_recv.0.into()),
 		])
 	}
 }

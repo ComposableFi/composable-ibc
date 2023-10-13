@@ -15,7 +15,7 @@
 #![allow(clippy::all)]
 
 use crate::utils::assert_timeout_packet;
-use futures::{future, StreamExt, TryFutureExt};
+use futures::{future, StreamExt};
 use hyperspace_core::send_packet_relay::set_relay_status;
 use hyperspace_primitives::{
 	utils::{create_channel, create_connection, timeout_after, timeout_future},
@@ -34,10 +34,11 @@ use ibc::{
 	tx_msg::Msg,
 };
 use ibc_proto::google::protobuf::Any;
+
 use pallet_ibc::Timeout;
 use std::{str::FromStr, time::Duration};
 use tendermint_proto::Protobuf;
-use tokio::{task::JoinHandle, time::sleep};
+use tokio::task::JoinHandle;
 
 pub mod misbehaviour;
 pub mod ordered_channels;
@@ -117,7 +118,7 @@ where
 					channel_id,
 					channel_end.counterparty().channel_id.unwrap().clone(),
 					channel_end.connection_hops[0].clone(),
-					connection_id,
+					connection_end.counterparty.unwrap().connection_id.parse().unwrap(),
 				)
 			}
 		}
@@ -223,22 +224,19 @@ async fn assert_send_transfer<A>(
 	A::FinalityEvent: Send + Sync,
 {
 	// wait for the acknowledgment
-	// let future = chain
-	// 	.ibc_events()
-	// 	.await
-	// 	.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::AcknowledgePacket(_))))
-	// 	.take(1)
-	// 	.collect::<Vec<_>>();
-	// timeout_after(
-	// 	chain,
-	// 	future,
-	// 	wait_blocks,
-	// 	format!("Didn't see AcknowledgePacket on {}", chain.name()),
-	// )
-	// .await;
-	for i in 0..(60 * 5 / 15) {
-		sleep(Duration::from_secs(15)).await;
-	}
+	let future = chain
+		.ibc_events()
+		.await
+		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::AcknowledgePacket(_))))
+		.take(1)
+		.collect::<Vec<_>>();
+	timeout_after(
+		chain,
+		future,
+		wait_blocks,
+		format!("Didn't see AcknowledgePacket on {}", chain.name()),
+	)
+	.await;
 
 	let balance = chain
 		.query_ibc_balance(asset_id)
@@ -574,16 +572,9 @@ pub async fn ibc_messaging_with_connection_delay<A, B>(
 			})
 			.unwrap()
 	});
-	tokio::task::spawn(async move {
-		let x = handle
-			.map_err(|e| {
-				log::error!(target: "hyperspace", "Relayer loop failed: {:?}", e);
-				e
-			})
-			.await;
-	});
 	send_packet_with_connection_delay(chain_a, chain_b, channel_a, channel_b, asset_a, asset_b)
 		.await;
+	handle.abort()
 }
 
 ///

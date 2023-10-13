@@ -203,7 +203,7 @@ where
 		self.submit_call(call).await.map(|_| ())
 	}
 
-	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
+	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send>> {
 		let para_client = unsafe { unsafe_cast_to_jsonrpsee_client(&self.para_ws_client) };
 		let stream = para_client
 			.subscribe::<T::Header, _>(

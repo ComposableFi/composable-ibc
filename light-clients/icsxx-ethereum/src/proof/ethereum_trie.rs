@@ -2,10 +2,7 @@ extern crate alloc;
 
 use crate::{proof::node_codec, utils::keccak256};
 use alloc::vec::Vec;
-use core::{
-	fmt::{Display, Formatter},
-	marker::PhantomData,
-};
+use core::marker::PhantomData;
 use hash256_std_hasher::Hash256StdHasher;
 use hash_db::Hasher;
 /// Taken from https://github.com/paritytech/trie/blob/aa3168d6de01793e71ebd906d3a82ae4b363db59/trie-eip1186/src/eip1186.rs
@@ -73,7 +70,7 @@ impl<HO, CE> Display for VerifyError<'_, HO, CE> {
 impl<'a, HO: std::fmt::Debug, CE: std::error::Error> std::fmt::Display for VerifyError<'a, HO, CE> {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
 		match self {
-			VerifyError::NonExistingValue(key) => {
+			VerifyError::NonExistingValue(_key) => {
 				write!(f, "Key does not exist in trie: reaming key")
 			},
 			VerifyError::ExistingValue(value) => {
