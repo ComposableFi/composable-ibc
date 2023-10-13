@@ -252,7 +252,7 @@ pub fn compile_solc(project_paths: ProjectPathsConfig) -> ProjectCompileOutput {
 			metadata: None,
 			output_selection: OutputSelection::default_output_selection(),
 			evm_version: Some(EvmVersion::Paris),
-			via_ir: Some(false),
+			via_ir: Some(true),
 			debug: Some(DebuggingSettings {
 				revert_strings: Some(RevertStrings::Debug),
 				debug_info: vec!["location".to_string()],

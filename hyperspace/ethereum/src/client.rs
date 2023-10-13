@@ -663,15 +663,33 @@ impl primitives::TestProvider for EthereumClient {
 		let client = self.config.client().await.unwrap().deref().clone();
 		let contract =
 			ContractInstance::<_, _>::new(erc20_address, ERC20TOKENABI_ABI.clone(), client);
-		contract
+		let method = contract
 			.method::<_, ()>(
 				"approve",
 				(
-					Address::from_str("0x73db010c3275eb7a92e5c38770316248f4c644ee").unwrap(),
+					self.yui.ics20_bank.as_ref().unwrap().clone().address(),
 					params.token.amount.as_u256(),
 				),
 			)
 			.unwrap();
+
+		let _ = method.call().await.unwrap_contract_error();
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
+
+		let method = contract
+			.method::<_, ()>(
+				"approve",
+				(
+					self.yui.ics20_transfer_bank.as_ref().unwrap().clone().address(),
+					params.token.amount.as_u256(),
+				),
+			)
+			.unwrap();
+
+		let _ = method.call().await.unwrap_contract_error();
+		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		assert_eq!(receipt.status, Some(1.into()));
 
 		let params = (
 			params.token.denom.to_string(),
