@@ -6,13 +6,10 @@ pub mod default;
 pub mod picasso_kusama;
 pub mod picasso_rococo;
 
-pub use default::{
-	DefaultConfig, DefaultConfig as ComposableConfig, DefaultConfig as PicassoKusamaConfig,
-	DefaultConfig as PicassoRococoConfig,
-};
-// pub use composable::ComposableConfig;
-// pub use picasso_kusama::PicassoKusamaConfig;
-// pub use picasso_rococo::PicassoRococoConfig;
+pub use composable::ComposableConfig;
+pub use default::DefaultConfig;
+pub use picasso_kusama::PicassoKusamaConfig;
+pub use picasso_rococo::PicassoRococoConfig;
 
 use codec::{Decode, Encode};
 use light_client_common::config::{AsInner, BeefyAuthoritySetT};
