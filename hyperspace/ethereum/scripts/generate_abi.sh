@@ -1,7 +1,7 @@
 SCRIPT=$(realpath "$0")
 SCRIPTPATH=$(dirname "$SCRIPT")
 
-cd $SCRIPTPATH/../yui-ibc-solidity/node_modules || (echo "Error: yui-ibc-solidity/node_modules does not exist" && exit 1)
+cd $SCRIPTPATH/../yui-ibc-solidity-private/node_modules || (echo "Error: yui-ibc-solidity/node_modules does not exist" && exit 1)
 
 forge inspect --via-ir ../contracts/diamond/Diamond.sol:Diamond abi > ../../src/abi/diamond-abi.json
 forge inspect --via-ir ../contracts/diamond/facets/DiamondCutFacet.sol:DiamondCutFacet abi > ../../src/abi/diamond-cut-facet-abi.json

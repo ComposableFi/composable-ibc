@@ -25,7 +25,6 @@ pub mod queue;
 pub mod substrate;
 mod utils;
 
-use crate::utils::RecentStream;
 use anyhow::anyhow;
 use events::{has_packet_events, parse_events};
 use futures::{future::ready, StreamExt, TryFutureExt};
@@ -34,6 +33,8 @@ use ibc_proto::google::protobuf::Any;
 use metrics::handler::MetricsHandler;
 use primitives::{Chain, IbcProvider, UndeliveredType, UpdateType};
 use std::collections::HashSet;
+
+use crate::utils::RecentStream;
 
 #[derive(Copy, Debug, Clone)]
 pub enum Mode {
@@ -290,11 +291,11 @@ async fn process_updates<A: Chain, B: Chain>(
 			.await
 			.map_err(|e| anyhow!("Failed to parse events: {:?}", e))?;
 
-		log::trace!(
-			target: "hyperspace",
-			"Received messages count: {}, is the update optional: {}",
-			messages.len(), update_type.is_optional(),
-		);
+		// log::trace!(
+		// 	target: "hyperspace",
+		// 	"Received messages count: {}, is the update optional: {}",
+		// 	messages.len(), update_type.is_optional(),
+		// );
 
 		let need_to_send_proofs_for_sequences = (sink_has_undelivered_acks ||
 			source_has_undelivered_acks) &&
@@ -317,7 +318,7 @@ async fn process_updates<A: Chain, B: Chain>(
 		) {
 			(true, false, true) => {
 				// skip sending ibc messages if no new events
-				log::info!("Skipping finality notification for {}", sink.name());
+				// log::debug!("Skipping finality notification for {}", sink.name());
 				continue
 			},
 			(false, _, true) =>

@@ -722,6 +722,16 @@ pub async fn find_suitable_proof_height_for_client(
 	// missing values  for some heights
 	for height in start_height.revision_height..=latest_client_height.revision_height {
 		let temp_height = Height::new(start_height.revision_number, height);
+
+		if sink
+			.query_client_update_time_and_height(client_id.clone(), temp_height)
+			.await
+			.ok()
+			.is_none()
+		{
+			continue
+		}
+
 		let consensus_state =
 			sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
 		let decoded = consensus_state

@@ -630,8 +630,9 @@ pub async fn deploy_contract<M, T>(
 ) -> ContractInstance<Arc<M>, M>
 where
 	M: Middleware,
-	T: Tokenize,
+	T: Tokenize + std::fmt::Debug,
 {
+	info!("Deploying contract {} with args {:?}, ", name, constructor_args);
 	let contract = artifacts.into_iter().filter_map(|x| x.find_first(name)).next().unwrap();
 	let (abi, bytecode, _) = contract.clone().into_parts();
 	let mut factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
@@ -929,8 +930,13 @@ pub async fn deploy_transfer_module<M: Middleware>(
 ) -> Result<ContractInstance<Arc<M>, M>, ClientError> {
 	let project_output = compile_yui(&yui_solidity_path, "contracts/apps/20-transfer");
 
-	let bank_contract =
-		deploy_contract::<M, _>("ICS20Bank", &[&project_output], (), client.clone()).await;
+	let bank_contract = deploy_contract::<M, _>(
+		"ICS20Bank",
+		&[&project_output],
+		(Token::String("ETH".into())),
+		client.clone(),
+	)
+	.await;
 	info!("Deployed Bank module address: {:?}", bank_contract.address());
 	let constructor_args =
 		(Token::Address(diamond_address), Token::Address(bank_contract.address()));

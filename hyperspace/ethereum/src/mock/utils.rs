@@ -26,7 +26,7 @@ pub const USE_GETH: bool = true;
 pub const ETH_NODE_PORT: u16 = 8545;
 pub const ETH_NODE_PORT_WS: u16 = 8546;
 pub const BEACON_NODE_PORT: u16 = 3500;
-pub const PRIVATE_KEY: &str = "keys/0x73db010c3275eb7a92e5c38770316248f4c644ee";
+pub const PRIVATE_KEY: &str = "/Users/blasrodriguezgarciairizar/composable/centauri-private/hyperspace/ethereum/keys/0x73db010c3275eb7a92e5c38770316248f4c644ee";
 
 #[track_caller]
 pub fn yui_ibc_solidity_path() -> PathBuf {

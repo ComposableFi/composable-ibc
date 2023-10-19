@@ -760,7 +760,10 @@ async fn send_native_eth(
 		params.source_port.to_string(),
 		params.source_channel.to_string(),
 		params.timeout_height.revision_height,
+		params.timeout_timestamp.nanoseconds(),
+		params.memo,
 	);
+
 	let method = eth_client
 		.yui
 		.ics20_transfer_bank

@@ -169,9 +169,8 @@ where
 		.pop()
 		.expect("No Ibc balances");
 
-	dbg!(&balance);
 	dbg!(&chain_a.name());
-	dbg!(&chain_b.name());
+	dbg!(&balance);
 
 	let amount = balance.amount.as_u256().as_u128();
 	let coin = PrefixedCoin {

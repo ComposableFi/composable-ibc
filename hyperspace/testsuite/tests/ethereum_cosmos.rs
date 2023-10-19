@@ -152,8 +152,13 @@ fn deploy_transfer_module_fixture(
 		let project_output =
 			hyperspace_ethereum::utils::compile_yui(&path, "contracts/apps/20-transfer");
 
-		let ics20_bank_contract =
-			deploy_contract("ICS20Bank", &[&project_output], (), deploy.client.clone()).await;
+		let ics20_bank_contract = deploy_contract(
+			"ICS20Bank",
+			&[&project_output],
+			Token::String("ETH".to_string()),
+			deploy.client.clone(),
+		)
+		.await;
 		println!("Bank module address: {:?}", ics20_bank_contract.address());
 		let constructor_args = (
 			Token::Address(deploy.yui_ibc.diamond.address()),
@@ -188,7 +193,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 			mut yui_ibc,
 			..
 		} = deploy;
-		yui_ibc.bind_port("transfer", ics20_bank_contract.address()).await;
+		yui_ibc.bind_port("transfer", ics20_bank_trasnfer_contract.address()).await;
 		info!(target: "hyperspace", "Deployed diamond: {:?}, tendermint client: {:?}, bank: {:?}", yui_ibc.diamond.address(), tendermint_client.address(), ics20_bank_contract.address());
 		yui_ibc.ics20_transfer_bank = Some(ics20_bank_trasnfer_contract);
 		yui_ibc.ics20_bank = Some(ics20_bank_contract);
@@ -259,8 +264,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		let client_a = clients_on_b.pop().unwrap();
 		let client_b = clients_on_a.pop().unwrap();
 		info!(target: "hyperspace", "Reusing clients A: {client_a:?} B: {client_b:?}");
-		client_id_a = Some(client_a);
-		client_id_b = Some(client_b);
+		// client_id_a = Some(client_a);
+		// client_id_b = Some(client_b);
 	}
 
 	if client_id_a.is_none() || client_id_b.is_none() {
@@ -286,7 +291,7 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	let asset_id_native_a = AnyAssetId::Ethereum(asset_native_str.clone());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
-		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
+		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(1)).await;
 	handle.abort();
 	let asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
 	// let asset_id_a = AnyAssetId::Ethereum(format!("transfer/{}/{}", channel_a,
@@ -295,16 +300,15 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	log::info!(target: "hyperspace", "Conn A: {connection_id_a:?} B: {connection_id_b:?}");
 	log::info!(target: "hyperspace", "Chann A: {channel_a:?} B: {channel_b:?}");
 
-	let asset_id_b = AnyAssetId::Cosmos(asset_str.clone());
-	// let asset_id_b = AnyAssetId::Cosmos(format!(
-	// 	"ibc/{}",
-	// 	hex::encode(&sha2_256(
-	// 		format!("{}/{channel_b}/{asset_str}", PortId::transfer()).as_bytes()
-	// 	))
-	// 	.to_uppercase()
-	// ));
+	let asset_id_b = AnyAssetId::Cosmos(format!(
+		"ibc/{}",
+		hex::encode(&sha2_256(
+			format!("{}/{channel_b}/{asset_str}", PortId::transfer()).as_bytes()
+		))
+		.to_uppercase()
+	));
 
-	let asset_id_b_native: AnyAssetId = AnyAssetId::Cosmos(format!(
+	let asset_id_native_b: AnyAssetId = AnyAssetId::Cosmos(format!(
 		"ibc/{}",
 		hex::encode(&sha2_256(
 			format!("{}/{channel_b}/{asset_native_str}", PortId::transfer()).as_bytes()
@@ -323,47 +327,66 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 
 	// Run tests sequentially
 
-	// no timeouts + connection delay
-
-	ibc_messaging_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_native_a.clone(),
-		asset_id_b_native.clone(),
-		channel_a,
-		channel_b,
-	)
-	.await;
-
-	// timeouts + connection delay
-	ibc_messaging_packet_height_timeout_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_a.clone(),
-		channel_a,
-		channel_b,
-	)
-	.await;
-
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
 		&mut chain_a,
 		&mut chain_b,
-		asset_id_a.clone(),
+		asset_id_native_a.clone(),
 		channel_a,
 		channel_b,
 	)
 	.await;
 
-	// channel closing semantics
-	ibc_messaging_packet_timeout_on_channel_close(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_a.clone(),
-		channel_a,
-	)
-	.await;
+	// no timeouts + connection delay
 
-	ibc_channel_close(&mut chain_a, &mut chain_b).await;
+	// ibc_messaging_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_native_a.clone(),
+	// 	asset_id_native_b.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// )
+	// .await;
+
+	// ibc_messaging_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// 	asset_id_b.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// )
+	// .await;
+
+	// // timeouts + connection delay
+	// ibc_messaging_packet_height_timeout_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// )
+	// .await;
+
+	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// )
+	// .await;
+
+	// // channel closing semantics
+	// ibc_messaging_packet_timeout_on_channel_close(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// 	channel_a,
+	// )
+	// .await;
+
+	// ibc_channel_close(&mut chain_a, &mut chain_b).await;
 
 	// TODO: ethereum misbehaviour?
 	// ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;

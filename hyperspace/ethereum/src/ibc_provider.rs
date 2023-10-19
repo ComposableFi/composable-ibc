@@ -302,7 +302,10 @@ impl IbcProvider for EthereumClient {
 			.map_err(|e| ClientError::Other(format!("failed to get logs 2: {}", e)))?;
 		logs.extend(logs2);
 
-		let maybe_proof = prove_fast(self, &client_state, block.slot).await;
+		let block_to = (client_state.inner.finalized_header.slot +
+			NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER)
+			.min(block.slot);
+		let maybe_proof = prove_fast(self, &client_state, block_to).await;
 		let header = match maybe_proof {
 			Ok(x) => x,
 			Err(e) => {
