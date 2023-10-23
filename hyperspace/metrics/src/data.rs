@@ -390,7 +390,7 @@ impl Metrics {
 		match self.light_client_height.get(client_id) {
 			Some(metrics) => {
 				let current = metrics.height.get();
-				metrics.height.inc_by(height.revision_height - current);
+				metrics.height.inc_by(height.revision_height.saturating_sub(current));
 				metrics.revision.set(height.revision_number);
 				metrics.number_of_received_header_updates.inc();
 				Ok(())
