@@ -84,11 +84,17 @@ impl MetricsHandler {
 		for event in events {
 			let latest_processed_height = self.metrics.latest_processed_height.get();
 			// fn height() isn't defined on all IbcEvents
-			if matches!(event,
-				IbcEvent::SendPacket(_) |  IbcEvent::ReceivePacket(_) | 
-				IbcEvent::WriteAcknowledgement(_) | IbcEvent::AcknowledgePacket(_) | IbcEvent::TimeoutPacket(_) |
-				IbcEvent::TimeoutOnClosePacket(_) | IbcEvent::UpdateClient(_))
-			 &&  event.height().revision_height < latest_processed_height {
+			if matches!(
+				event,
+				IbcEvent::SendPacket(_) |
+					IbcEvent::ReceivePacket(_) |
+					IbcEvent::WriteAcknowledgement(_) |
+					IbcEvent::AcknowledgePacket(_) |
+					IbcEvent::TimeoutPacket(_) |
+					IbcEvent::TimeoutOnClosePacket(_) |
+					IbcEvent::UpdateClient(_)
+			) && event.height().revision_height < latest_processed_height
+			{
 				continue
 			}
 			match event {

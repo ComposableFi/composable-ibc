@@ -61,7 +61,7 @@ impl LightClientMetrics {
 						"The height of the last trusted state",
 					)
 					.const_label("client_id", client_id.to_string())
-					.const_label("name", prefix.to_string())
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
@@ -72,7 +72,7 @@ impl LightClientMetrics {
 						"The revision of the last trusted state",
 					)
 					.const_label("client_id", client_id.to_string())
-					.const_label("name", prefix.to_string())
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
@@ -152,69 +152,95 @@ impl Metrics {
 	pub fn register(prefix: &str, registry: &Registry) -> Result<Self, PrometheusError> {
 		Ok(Self {
 			number_of_received_send_packets: register(
-				Counter::with_opts(Opts::new(
-					format!("hyperspace_{prefix}_number_of_send_packet_events"),
-					"Total number of 'send packet' events.",
-				).const_label("name", prefix.to_string())
-			)?,
+				Counter::with_opts(
+					Opts::new(
+						format!("hyperspace_{prefix}_number_of_send_packet_events"),
+						"Total number of 'send packet' events.",
+					)
+					.const_label("name", prefix.to_string()),
+				)?,
 				registry,
 			)?,
 			number_of_received_receive_packets: register(
-				Counter::with_opts(Opts::new(
-					format!("hyperspace_{prefix}_number_of_receive_packet_events"),
-					"Total number of 'receive packet' events.",
-				).const_label("name", prefix.to_string()))?,
+				Counter::with_opts(
+					Opts::new(
+						format!("hyperspace_{prefix}_number_of_receive_packet_events"),
+						"Total number of 'receive packet' events.",
+					)
+					.const_label("name", prefix.to_string()),
+				)?,
 				registry,
 			)?,
 			number_of_received_acknowledge_packets: register(
-				Counter::with_opts(Opts::new(
-					format!("hyperspace_number_of_acknowledge_packet_events"),
-					"Total number of 'acknowledge packet' events.",
-				).const_label("name", prefix.to_string()))?,
+				Counter::with_opts(
+					Opts::new(
+						format!("hyperspace_number_of_acknowledge_packet_events"),
+						"Total number of 'acknowledge packet' events.",
+					)
+					.const_label("name", prefix.to_string()),
+				)?,
 				registry,
 			)?,
 			number_of_received_timeouts: register(
-				Counter::with_opts(Opts::new(
-					format!("hyperspace_number_of_timeout_packet_events"),
-					"Total number of 'timeout packet' events.",
-				).const_label("name", prefix.to_string()))?,
+				Counter::with_opts(
+					Opts::new(
+						format!("hyperspace_number_of_timeout_packet_events"),
+						"Total number of 'timeout packet' events.",
+					)
+					.const_label("name", prefix.to_string()),
+				)?,
 				registry,
 			)?,
 			counterparty_number_of_received_packets: None,
 			counterparty_number_of_received_acknowledgments: None,
 			number_of_sent_packets: register(
-				Counter::with_opts(Opts::new(
-					format!("hyperspace_number_of_sent_packets"),
-					"Total number of sent packets",
-				).const_label("name", prefix.to_string()))?,
+				Counter::with_opts(
+					Opts::new(
+						format!("hyperspace_number_of_sent_packets"),
+						"Total number of sent packets",
+					)
+					.const_label("name", prefix.to_string()),
+				)?,
 				registry,
 			)?,
 			number_of_sent_acknowledgments: register(
-				Counter::with_opts(Opts::new(
-					format!("hyperspace_number_of_sent_acknowledgments"),
-					"Total number of sent acknowledgments",
-				).const_label("name", prefix.to_string()))?,
+				Counter::with_opts(
+					Opts::new(
+						format!("hyperspace_number_of_sent_acknowledgments"),
+						"Total number of sent acknowledgments",
+					)
+					.const_label("name", prefix.to_string()),
+				)?,
 				registry,
 			)?,
 			number_of_sent_timeout_packets: register(
-				Counter::with_opts(Opts::new(
-					format!("hyperspace_number_of_timed_out_packets"),
-					"Total number of timed out packets",
-				).const_label("name", prefix.to_string()))?,
+				Counter::with_opts(
+					Opts::new(
+						format!("hyperspace_number_of_timed_out_packets"),
+						"Total number of timed out packets",
+					)
+					.const_label("name", prefix.to_string()),
+				)?,
 				registry,
 			)?,
 			number_of_undelivered_packets: register(
-				Gauge::with_opts(Opts::new(
-					format!("hyperspace_number_of_undelivered_packets"),
-					"Number of undelivered packets over time",
-				).const_label("name", prefix.to_string()))?,
+				Gauge::with_opts(
+					Opts::new(
+						format!("hyperspace_number_of_undelivered_packets"),
+						"Number of undelivered packets over time",
+					)
+					.const_label("name", prefix.to_string()),
+				)?,
 				registry,
 			)?,
 			number_of_undelivered_acknowledgements: register(
-				Gauge::with_opts(Opts::new(
-					format!("hyperspace_number_of_undelivered_acknowledgements"),
-					"Number of undelivered acknowledgements over time",
-				).const_label("name", prefix.to_string()))?,
+				Gauge::with_opts(
+					Opts::new(
+						format!("hyperspace_number_of_undelivered_acknowledgements"),
+						"Number of undelivered acknowledgements over time",
+					)
+					.const_label("name", prefix.to_string()),
+				)?,
 				registry,
 			)?,
 			gas_cost_for_sent_tx_bundle: register(
@@ -318,10 +344,13 @@ impl Metrics {
 				registry,
 			)?,
 			latest_processed_height: register(
-				Gauge::with_opts(Opts::new(
-					format!("hyperspace_latest_processed_height"),
-					"Latest processed finalized height",
-				).const_label("name", prefix.to_string()))?,
+				Gauge::with_opts(
+					Opts::new(
+						format!("hyperspace_latest_processed_height"),
+						"Latest processed finalized height",
+					)
+					.const_label("name", prefix.to_string()),
+				)?,
 				registry,
 			)?,
 			prefix: prefix.to_string(),
@@ -375,10 +404,7 @@ impl Metrics {
 		}
 	}
 
-	pub fn update_latest_processed_height(
-		&mut self,
-		height: Height,
-	) -> anyhow::Result<()> {
+	pub fn update_latest_processed_height(&mut self, height: Height) -> anyhow::Result<()> {
 		self.latest_processed_height.set(height.revision_height);
 		Ok(())
 	}
