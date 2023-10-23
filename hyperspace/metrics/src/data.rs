@@ -404,8 +404,8 @@ impl Metrics {
 		}
 	}
 
-	pub fn update_latest_processed_height(&mut self, height: Height) -> anyhow::Result<()> {
-		self.latest_processed_height.set(height.revision_height);
+	pub fn update_latest_processed_height(&mut self, revision_height: u64) -> anyhow::Result<()> {
+		self.latest_processed_height.set(revision_height);
 		Ok(())
 	}
 }
