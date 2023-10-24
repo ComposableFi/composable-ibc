@@ -95,16 +95,17 @@ impl MetricsHandler {
 					IbcEvent::TimeoutOnClosePacket(_) |
 					IbcEvent::UpdateClient(_)
 			) {
+				let current_revision_height = event.height().revision_height;
 				// Skip events that are older than the latest event processed before this function
 				// was called, as it is an event that was processed in the past.
 				// Skip it
-				if latest_processed_height > event.height().revision_height {
+				if latest_processed_height > current_revision_height {
 					continue
 				}
 				// if an event contains a new revision height, we update the variable that
 				// denotes that we've processed a newer height
-				if new_latest_processed_height < event.height().revision_height {
-					new_latest_processed_height = event.height().revision_height;
+				if new_latest_processed_height < current_revision_height {
+					new_latest_processed_height = current_revision_height;
 				}
 			}
 			match event {
