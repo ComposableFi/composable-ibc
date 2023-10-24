@@ -81,7 +81,32 @@ impl MetricsHandler {
 	}
 
 	pub async fn handle_events(&mut self, events: &[IbcEvent]) -> anyhow::Result<()> {
+		let latest_processed_height = self.metrics.latest_processed_height.get();
+		let mut new_latest_processed_height = latest_processed_height;
 		for event in events {
+			// fn height() isn't defined on all IbcEvents
+			if matches!(
+				event,
+				IbcEvent::SendPacket(_) |
+					IbcEvent::ReceivePacket(_) |
+					IbcEvent::WriteAcknowledgement(_) |
+					IbcEvent::AcknowledgePacket(_) |
+					IbcEvent::TimeoutPacket(_) |
+					IbcEvent::TimeoutOnClosePacket(_) |
+					IbcEvent::UpdateClient(_)
+			) {
+				// Skip events that are older than the latest event processed before this function
+				// was called, as it is an event that was processed in the past.
+				// Skip it
+				if latest_processed_height > event.height().revision_height {
+					continue
+				}
+				// if an event contains a new revision height, we update the variable that
+				// denotes that we've processed a newer height
+				if new_latest_processed_height < event.height().revision_height {
+					new_latest_processed_height = event.height().revision_height;
+				}
+			}
 			match event {
 				IbcEvent::SendPacket(packet) => {
 					self.metrics.number_of_received_send_packets.inc();
@@ -133,6 +158,7 @@ impl MetricsHandler {
 				_ => (),
 			}
 		}
+		self.metrics.update_latest_processed_height(new_latest_processed_height)?;
 		Ok(())
 	}
 

@@ -40,7 +40,7 @@ impl MetricsLink {
 #[derive(Clone)]
 pub struct LightClientMetrics {
 	/// The height of the last trusted state.
-	pub height: Gauge<U64>,
+	pub height: Counter<U64>,
 	/// The revision of the last trusted state.
 	pub revision: Gauge<U64>,
 	/// Total number of header updates received.
@@ -55,32 +55,35 @@ impl LightClientMetrics {
 	) -> Result<Self, PrometheusError> {
 		Ok(Self {
 			height: register(
-				Gauge::with_opts(
+				Counter::with_opts(
 					Opts::new(
-						format!("hyperspace_{prefix}_light_client_revision_height"),
+						"hyperspace_light_client_revision_height",
 						"The height of the last trusted state",
 					)
-					.const_label("client_id", client_id.to_string()),
+					.const_label("client_id", client_id.to_string())
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
 			revision: register(
 				Gauge::with_opts(
 					Opts::new(
-						format!("hyperspace_{prefix}_light_client_revision"),
+						"hyperspace_light_client_revision",
 						"The revision of the last trusted state",
 					)
-					.const_label("client_id", client_id.to_string()),
+					.const_label("client_id", client_id.to_string())
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
 			number_of_received_header_updates: register(
 				Counter::with_opts(
 					Opts::new(
-						format!("hyperspace_{prefix}_number_of_received_header_updates"),
+						"hyperspace_number_of_received_header_updates",
 						"Total number of header updates received",
 					)
-					.const_label("client_id", client_id.to_string()),
+					.const_label("client_id", client_id.to_string())
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
@@ -138,6 +141,9 @@ pub struct Metrics {
 	/// Average time between client updates.
 	pub sent_update_client_time: Histogram,
 
+	/// Latest processed height - helpful to prevent pushing the same event twice
+	pub latest_processed_height: Gauge<U64>,
+
 	/// Metrics prefix.
 	pub prefix: String,
 }
@@ -146,87 +152,116 @@ impl Metrics {
 	pub fn register(prefix: &str, registry: &Registry) -> Result<Self, PrometheusError> {
 		Ok(Self {
 			number_of_received_send_packets: register(
-				Counter::with_opts(Opts::new(
-					format!("hyperspace_{prefix}_number_of_send_packet_events"),
-					"Total number of 'send packet' events.",
-				))?,
+				Counter::with_opts(
+					Opts::new(
+						format!("hyperspace_{prefix}_number_of_send_packet_events"),
+						"Total number of 'send packet' events.",
+					)
+					.const_label("name", prefix.to_string()),
+				)?,
 				registry,
 			)?,
 			number_of_received_receive_packets: register(
-				Counter::with_opts(Opts::new(
-					format!("hyperspace_{prefix}_number_of_receive_packet_events"),
-					"Total number of 'receive packet' events.",
-				))?,
+				Counter::with_opts(
+					Opts::new(
+						format!("hyperspace_{prefix}_number_of_receive_packet_events"),
+						"Total number of 'receive packet' events.",
+					)
+					.const_label("name", prefix.to_string()),
+				)?,
 				registry,
 			)?,
 			number_of_received_acknowledge_packets: register(
-				Counter::with_opts(Opts::new(
-					format!("hyperspace_{prefix}_number_of_acknowledge_packet_events"),
-					"Total number of 'acknowledge packet' events.",
-				))?,
+				Counter::with_opts(
+					Opts::new(
+						format!("hyperspace_number_of_acknowledge_packet_events"),
+						"Total number of 'acknowledge packet' events.",
+					)
+					.const_label("name", prefix.to_string()),
+				)?,
 				registry,
 			)?,
 			number_of_received_timeouts: register(
-				Counter::with_opts(Opts::new(
-					format!("hyperspace_{prefix}_number_of_timeout_packet_events"),
-					"Total number of 'timeout packet' events.",
-				))?,
+				Counter::with_opts(
+					Opts::new(
+						format!("hyperspace_number_of_timeout_packet_events"),
+						"Total number of 'timeout packet' events.",
+					)
+					.const_label("name", prefix.to_string()),
+				)?,
 				registry,
 			)?,
 			counterparty_number_of_received_packets: None,
 			counterparty_number_of_received_acknowledgments: None,
 			number_of_sent_packets: register(
-				Counter::new(
-					format!("hyperspace_{prefix}_number_of_sent_packets"),
-					"Total number of sent packets",
+				Counter::with_opts(
+					Opts::new(
+						format!("hyperspace_number_of_sent_packets"),
+						"Total number of sent packets",
+					)
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
 			number_of_sent_acknowledgments: register(
-				Counter::new(
-					format!("hyperspace_{prefix}_number_of_sent_acknowledgments"),
-					"Total number of sent acknowledgments",
+				Counter::with_opts(
+					Opts::new(
+						format!("hyperspace_number_of_sent_acknowledgments"),
+						"Total number of sent acknowledgments",
+					)
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
 			number_of_sent_timeout_packets: register(
-				Counter::new(
-					format!("hyperspace_{prefix}_number_of_timed_out_packets"),
-					"Total number of timed out packets",
+				Counter::with_opts(
+					Opts::new(
+						format!("hyperspace_number_of_timed_out_packets"),
+						"Total number of timed out packets",
+					)
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
 			number_of_undelivered_packets: register(
-				Gauge::new(
-					format!("hyperspace_{prefix}_number_of_undelivered_packets"),
-					"Number of undelivered packets over time",
+				Gauge::with_opts(
+					Opts::new(
+						format!("hyperspace_number_of_undelivered_packets"),
+						"Number of undelivered packets over time",
+					)
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
 			number_of_undelivered_acknowledgements: register(
-				Gauge::new(
-					format!("hyperspace_{prefix}_number_of_undelivered_acknowledgements"),
-					"Number of undelivered acknowledgements over time",
+				Gauge::with_opts(
+					Opts::new(
+						format!("hyperspace_number_of_undelivered_acknowledgements"),
+						"Number of undelivered acknowledgements over time",
+					)
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
 			gas_cost_for_sent_tx_bundle: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_{prefix}_gas_cost_for_sent_tx_bundle"),
+						format!("hyperspace_gas_cost_for_sent_tx_bundle"),
 						"Gas cost for every sent tx bundle",
 					)
-					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0]),
+					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
 			transaction_length_for_sent_tx_bundle: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_{prefix}_transaction_length_for_sent_tx_bundle"),
+						format!("hyperspace_transaction_length_for_sent_tx_bundle"),
 						"Transaction length for every sent tx bundle",
 					)
-					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0]),
+					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
@@ -234,70 +269,87 @@ impl Metrics {
 			send_packet_event_time: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_{prefix}_send_packet_event_time"),
+						format!("hyperspace_send_packet_event_time"),
 						"Time it takes to process a 'send packet' event",
 					)
-					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0]),
+					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
 			receive_packet_event_time: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_{prefix}_receive_packet_event_time"),
+						format!("hyperspace_receive_packet_event_time"),
 						"Time it takes to process a 'receive packet' event",
 					)
-					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0]),
+					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
 			acknowledge_packet_event_time: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_{prefix}_acknowledge_packet_event_time"),
+						format!("hyperspace_acknowledge_packet_event_time"),
 						"Time it takes to process a 'acknowledge packet' event",
 					)
-					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0]),
+					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
 			sent_packet_time: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_{prefix}_sent_packet_time"),
+						format!("hyperspace_sent_packet_time"),
 						"Time it takes to send and receive a packet",
 					)
-					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0]),
+					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
 			sent_acknowledgment_time: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_{prefix}_sent_acknowledgment_time"),
+						format!("hyperspace_sent_acknowledgment_time"),
 						"Time it takes to send and receive an acknowledgment",
 					)
-					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0]),
+					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
 			sent_timeout_packet_time: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_{prefix}_sent_timeout_packet_time"),
+						format!("hyperspace_sent_timeout_packet_time"),
 						"Time it takes to send and receive a timeout packet",
 					)
-					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0]),
+					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
 			sent_update_client_time: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_{prefix}_sent_update_client_time"),
+						format!("hyperspace_sent_update_client_time"),
 						"Average time between client updates",
 					)
-					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0]),
+					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
+					.const_label("name", prefix.to_string()),
+				)?,
+				registry,
+			)?,
+			latest_processed_height: register(
+				Gauge::with_opts(
+					Opts::new(
+						format!("hyperspace_latest_processed_height"),
+						"Latest processed finalized height",
+					)
+					.const_label("name", prefix.to_string()),
 				)?,
 				registry,
 			)?,
@@ -337,7 +389,8 @@ impl Metrics {
 	) -> anyhow::Result<()> {
 		match self.light_client_height.get(client_id) {
 			Some(metrics) => {
-				metrics.height.set(height.revision_height);
+				let current = metrics.height.get();
+				metrics.height.inc_by(height.revision_height.saturating_sub(current));
 				metrics.revision.set(height.revision_number);
 				metrics.number_of_received_header_updates.inc();
 				Ok(())
@@ -349,5 +402,10 @@ impl Metrics {
 				Ok(())
 			},
 		}
+	}
+
+	pub fn update_latest_processed_height(&mut self, revision_height: u64) -> anyhow::Result<()> {
+		self.latest_processed_height.set(revision_height);
+		Ok(())
 	}
 }
