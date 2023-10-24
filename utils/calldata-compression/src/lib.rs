@@ -1,6 +1,8 @@
 use std::{env, fs::File, io::Read, process::Command};
 
-fn compress(script_path: String, calldata_path: String) -> String {
+/// compress calldata stores in a file (calldata_path) and returns
+/// the hex representation of it, as a String
+pub fn compress(script_path: String, calldata_path: String) -> String {
 	env::set_var("NODE_OPTIONS", "--max_old_space_size=409600");
 
 	let _ = Command::new("node").arg(script_path).arg(calldata_path).output().unwrap();
