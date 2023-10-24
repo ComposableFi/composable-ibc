@@ -1,5 +1,5 @@
 use crate::{
-	chain::{client_state_abi_token, consensus_state_abi_token},
+	chain::consensus_state_abi_token,
 	config::EthereumClientConfig,
 	contract::UnwrapContractError,
 	ibc_provider::u256_to_bytes,

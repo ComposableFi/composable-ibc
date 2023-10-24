@@ -35,7 +35,7 @@ use hyperspace_testsuite::{
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay, setup_connection_and_channel,
 };
-use ibc::core::ics24_host::identifier::PortId;
+use ibc::core::{ics23_commitment::specs::ProofSpecs, ics24_host::identifier::PortId};
 use log::info;
 use sp_core::hashing::sha2_256;
 use std::{future::Future, path::PathBuf, str::FromStr, sync::Arc};
@@ -104,6 +104,9 @@ pub async fn deploy_yui_ibc_and_tendermint_client_fixture() -> DeployYuiIbcTende
 
 	check_code_size(project_output1.artifacts());
 
+	let ics23_contract =
+		deploy_contract("Ics23Contract", &[&project_output1], (), client.clone()).await;
+
 	let update_client_delegate_contract =
 		deploy_contract("DelegateTendermintUpdate", &[&project_output1], (), client.clone()).await;
 
@@ -113,6 +116,7 @@ pub async fn deploy_yui_ibc_and_tendermint_client_fixture() -> DeployYuiIbcTende
 		(
 			Token::Address(yui_ibc.diamond.address()),
 			Token::Address(update_client_delegate_contract.address()),
+			Token::Address(ics23_contract.address()),
 		),
 		client.clone(),
 	)

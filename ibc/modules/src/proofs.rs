@@ -36,7 +36,7 @@ define_error! {
 pub struct Proofs {
 	object_proof: CommitmentProofBytes,
 	client_proof: Option<CommitmentProofBytes>,
-	consensus_proof: Option<ConsensusProof>,
+	pub consensus_proof: Option<ConsensusProof>,
 	/// Currently used for proof_close for MsgTimeoutOnCLose where object_proof is proof_unreceived
 	other_proof: Option<CommitmentProofBytes>,
 	/// Height for the commitment root for proving the proofs above.

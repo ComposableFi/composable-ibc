@@ -297,6 +297,7 @@ impl<'a, H: Clone> Context<'a, H> {
 		let any = Any::decode(&mut &wasm_consensus_state.data[..]).map_err(Error::decode)?;
 		let any_consensus_state =
 			ConsensusState::decode_vec(&any.value).map_err(Error::invalid_any_consensus_state)?;
+		// let any_consensus_state = ConsensusState::abi_decode(&wasm_consensus_state.data)?;
 		Ok(any_consensus_state)
 	}
 
@@ -316,6 +317,7 @@ impl<'a, H: Clone> Context<'a, H> {
 			})?;
 		wasm_client_state.data = client_state.to_any().encode_to_vec();
 		wasm_client_state.latest_height = client_state.latest_height();
+		// wasm_client_state.data = client_state.abi_encode();
 		let vec1 = wasm_client_state.to_any().encode_to_vec();
 		Ok(vec1)
 	}
@@ -324,6 +326,7 @@ impl<'a, H: Clone> Context<'a, H> {
 		let wasm_consensus_state = ics08_wasm::consensus_state::ConsensusState {
 			data: consensus_state.to_any().encode_to_vec(),
 			timestamp: consensus_state.timestamp().nanoseconds(),
+			// data: consensus_state.abi_encode(),
 			inner: Box::new(FakeInner),
 		};
 		wasm_consensus_state.to_any().encode_to_vec()

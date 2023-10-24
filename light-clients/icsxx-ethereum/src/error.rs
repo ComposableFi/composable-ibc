@@ -34,6 +34,7 @@ pub enum Error {
 	Anyhow(anyhow::Error),
 	Deserialize(ssz_rs::DeserializeError),
 	Serialize(SimpleSerializeError),
+	AlloySolTypes(alloy_sol_types::Error),
 	Custom(String),
 }
 

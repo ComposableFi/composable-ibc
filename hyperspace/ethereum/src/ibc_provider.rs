@@ -135,6 +135,9 @@ abigen!(
 
 	OwnershipFacetAbi,
 	"hyperspace/ethereum/src/abi/ownership-facet-abi.json";
+
+	EthereumClientAbi,
+	"hyperspace/ethereum/src/abi/ethereum-client-abi.json";
 );
 
 impl From<HeightData> for Height {
@@ -247,7 +250,7 @@ impl EthereumClient {
 			.map_err(|err| {
 				ClientError::Other(format!("contract is missing UpdateClient event: {}", err))
 			})?
-			.from_block(BlockNumber::Earliest)
+			.from_block(self.contract_creation_block())
 			.to_block(at.revision_height);
 		event_filter.filter = event_filter.filter.topic1({
 			let hash = H256::from_slice(&encode(&[Token::FixedBytes(
@@ -337,7 +340,7 @@ impl EthereumClient {
 							err
 						))
 					})?
-					.from_block(BlockNumber::Earliest)
+					.from_block(self.contract_creation_block())
 					.to_block(at.revision_height);
 				event_filter.filter = event_filter.filter.topic1({
 					let hash = H256::from_slice(&encode(&[Token::FixedBytes(
@@ -433,37 +436,6 @@ impl EthereumClient {
 		consensus_height: Height,
 	) -> Result<Token, ClientError> {
 		log::info!(target: "hyperspace_ethereum", "query_client_consensus: {client_id:?}, {consensus_height:?}");
-
-		/*
-		let binding = self
-			.yui
-			.method(
-				"getConsensusState",
-				(
-					Token::String(client_id.as_str().to_owned()),
-					Token::Tuple(vec![
-						Token::Uint(consensus_height.revision_number.into()),
-						Token::Uint(consensus_height.revision_height.into()),
-					]),
-				),
-			)
-			.map_err(
-				|err| ClientError::Other(format!("contract is missing getConsensusState {}", err)),
-			)?;
-
-		let (client_cons, _): (Vec<u8>, bool) = binding
-			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
-			.call()
-			.await
-			.map_err(|err| {
-				log::error!(target: "hyperspace_ethereum", "error: {err}");
-				err
-			})
-			.map_err(|err| ClientError::Other(format!("failed to query client consensus: {}", err)))?;
-
-		let proof_height = Some(at.into());
-		let mut cs = client_state_from_abi_token::<LocalClientTypes>(client_state_token)?;
-		 */
 
 		// First, we try to find an `UpdateClient` event at the given height...
 		let mut consensus_state = None;
@@ -566,7 +538,7 @@ impl EthereumClient {
 			.yui
 			.event_for_name::<CreateClientFilter>("CreateClient")
 			.expect("contract is missing CreateClient event")
-			.from_block(BlockNumber::Earliest)
+			.from_block(self.contract_creation_block())
 			.to_block(at.revision_height);
 		event_filter.filter = event_filter.filter.topic1({
 			let hash = H256::from_slice(&encode(&[Token::FixedBytes(
@@ -669,9 +641,11 @@ impl IbcProvider for EthereumClient {
 		let latest_cp_client_height = client_state.latest_height().revision_height;
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		let latest_revision = latest_height.revision_number;
-
 		let prover = self.prover();
 		let block = prover.fetch_block("head").await?;
+		let block_to = (client_state.inner.finalized_header.slot +
+			NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER)
+			.min(block.slot);
 		let number = block.body.execution_payload.block_number;
 
 		let from = latest_cp_client_height + 1;
@@ -699,7 +673,7 @@ impl IbcProvider for EthereumClient {
 			.map_err(|e| ClientError::Other(format!("failed to get logs 2: {}", e)))?;
 		logs.extend(logs2);
 
-		let maybe_proof = prove_fast(self, &client_state, block.slot).await;
+		let maybe_proof = prove_fast(self, &client_state, block_to).await;
 		let header = match maybe_proof {
 			Ok(x) => x,
 			Err(e) => {

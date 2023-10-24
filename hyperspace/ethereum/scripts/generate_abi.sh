@@ -18,5 +18,7 @@ forge inspect --via-ir ../contracts/apps/20-transfer/ICS20TransferBank.sol:ICS20
 forge inspect --via-ir ../contracts/apps/20-transfer/ICS20Bank.sol:ICS20Bank abi > ../../src/abi/ics20-bank-abi.json
 forge inspect --via-ir ../contracts/clients/TendermintLightClientSimple.sol:TendermintLightClientSimple abi > ../../src/abi/tendermint-client-abi.json
 
+forge inspect --via-ir ../contracts/clients/ethereum/EthereumLightClient.sol:EthereumLightClient abi > ../../src/abi/ethereum-client-abi.json
+
 # remove all "."s inside the abi files to make them compatible with the derive macro
 sed -i 's/\.//g' ../../src/abi/*.json

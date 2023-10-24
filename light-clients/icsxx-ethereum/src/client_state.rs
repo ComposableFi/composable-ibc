@@ -13,14 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{client_def::EthereumClient, error::Error, proto::ClientState as RawClientState};
+use crate::{
+	abi::EthereumClientAbi::EthereumClientPrimitivesClientState, client_def::EthereumClient,
+	error::Error, proto::ClientState as RawClientState,
+};
 use alloc::{format, string::ToString, vec::Vec};
+use alloy_sol_types::{private::SolTypeValue, SolValue};
 use core::{fmt::Debug, marker::PhantomData, time::Duration};
 use ibc::{
 	core::{ics02_client::client_state::ClientType, ics24_host::identifier::ChainId},
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
+use parity_scale_codec::Encode;
+use prost::Message;
 use serde::{Deserialize, Serialize};
 use sync_committee_verifier::LightClientState;
 use tendermint_proto::Protobuf;
@@ -28,12 +34,23 @@ use tendermint_proto::Protobuf;
 /// Protobuf type url for GRANDPA ClientState
 pub const ETHEREUM_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.ClientState";
 
-#[derive(PartialEq, Clone, Debug, Default, Eq)]
+#[derive(PartialEq, Debug, Default, Eq)]
 pub struct ClientState<H> {
 	pub inner: LightClientState,
 	pub frozen_height: Option<Height>,
 	pub latest_height: u32,
 	pub _phantom: PhantomData<H>,
+}
+
+impl<H> Clone for ClientState<H> {
+	fn clone(&self) -> Self {
+		Self {
+			inner: self.inner.clone(),
+			frozen_height: self.frozen_height,
+			latest_height: self.latest_height,
+			_phantom: Default::default(),
+		}
+	}
 }
 
 impl<H: Clone> Protobuf<RawClientState> for ClientState<H> {}
@@ -114,6 +131,15 @@ impl<H> ClientState<H> {
 			))
 		}
 		Ok(Self { frozen_height: Some(h), ..self })
+	}
+
+	pub fn abi_encode(self) -> Vec<u8> {
+		EthereumClientPrimitivesClientState::from(self).abi_encode()
+	}
+
+	pub fn abi_decode(bytes: &[u8]) -> Result<Self, Error> {
+		let value = EthereumClientPrimitivesClientState::abi_decode(bytes, true)?;
+		value.try_into()
 	}
 }
 

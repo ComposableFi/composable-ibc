@@ -282,12 +282,16 @@ message ClientState {
 message Misbehaviour {
 }
 
+//message ConsensusState {
+//  // timestamp that corresponds to the block height in which the ConsensusState
+//  // was stored.
+//  google.protobuf.Timestamp timestamp = 1;
+//  // packet commitment root
+//  bytes root = 2;
+//}
+
 message ConsensusState {
-  // timestamp that corresponds to the block height in which the ConsensusState
-  // was stored.
-  google.protobuf.Timestamp timestamp = 1;
-  // packet commitment root
-  bytes root = 2;
+  bytes abi_data = 1;
 }
 
 message ClientMessage {
