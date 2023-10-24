@@ -20,9 +20,9 @@ pub fn compress(script_path: String, calldata_path: String) -> String {
 #[test]
 fn test() {
 	let result = compress(
-			"/Users/blasrodriguezgarciairizar/composable/centauri-private/utils/calldata-compression/scripts/decompress-script.js".to_string(),
-			"/Users/blasrodriguezgarciairizar/composable/centauri-private/utils/calldata-compression/data/tx-calldata.json".to_string()
-		);
+		"./utils/calldata-compression/scripts/decompress-script.js".to_string(),
+		"./utils/calldata-compression/data/tx-calldata.json".to_string(),
+	);
 
 	assert_eq!(&result[..13], "0x60200061800")
 }
