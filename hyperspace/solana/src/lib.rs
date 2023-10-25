@@ -5,7 +5,9 @@ use core::{pin::Pin, str::FromStr, time::Duration};
 
 use anchor_client::{
 	anchor_lang::{prelude::Pubkey, system_program},
-	solana_client::{rpc_config::RpcSendTransactionConfig, nonblocking::rpc_client::RpcClient as AsyncRpcClient},
+	solana_client::{
+		nonblocking::rpc_client::RpcClient as AsyncRpcClient, rpc_config::RpcSendTransactionConfig,
+	},
 	solana_sdk::{
 		commitment_config::{CommitmentConfig, CommitmentLevel},
 		signature::{Keypair, Signature},
@@ -147,7 +149,8 @@ impl Client {
 		let cluster = Cluster::from_str(&self.rpc_url).unwrap();
 		let signer = self.keybase.keypair();
 		let authority = Rc::new(signer);
-		let client = AnchorClient::new_with_options(cluster, authority, CommitmentConfig::processed());
+		let client =
+			AnchorClient::new_with_options(cluster, authority, CommitmentConfig::processed());
 		client
 	}
 
