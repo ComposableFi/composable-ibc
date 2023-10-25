@@ -102,11 +102,300 @@ pub struct KeyEntry {
 
 impl Client {}
 
-impl IbcProvider for Client {}
+#[async_trait::async_trait]
+impl IbcProvider for Client {
+    type FinalityEvent = Vec<u8>;
+
+    type TransactionId = String;
+
+    type AssetId = String;
+
+    type Error = Error;
+
+    async fn query_latest_ibc_events<T>(
+		    &mut self,
+		    finality_event: Self::FinalityEvent,
+		    counterparty: &T,
+	    ) -> Result<Vec<(Any, Height, Vec<IbcEvent>, primitives::UpdateType)>, anyhow::Error>
+	    where
+		    T: Chain {
+        todo!()
+    }
+
+    async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
+        todo!()
+    }
+
+    async fn query_client_consensus(
+		    &self,
+		    at: Height,
+		    client_id: ClientId,
+		    consensus_height: Height,
+	    ) -> Result<ibc_proto::ibc::core::client::v1::QueryConsensusStateResponse, Self::Error> {
+        todo!()
+    }
+
+    async fn query_client_state(
+		    &self,
+		    at: Height,
+		    client_id: ClientId,
+	    ) -> Result<ibc_proto::ibc::core::client::v1::QueryClientStateResponse, Self::Error> {
+        todo!()
+    }
+
+    async fn query_connection_end(
+		    &self,
+		    at: Height,
+		    connection_id: ConnectionId,
+	    ) -> Result<ibc_proto::ibc::core::connection::v1::QueryConnectionResponse, Self::Error> {
+        todo!()
+    }
+
+    async fn query_channel_end(
+		    &self,
+		    at: Height,
+		    channel_id: ibc::core::ics24_host::identifier::ChannelId,
+		    port_id: ibc::core::ics24_host::identifier::PortId,
+	    ) -> Result<ibc_proto::ibc::core::channel::v1::QueryChannelResponse, Self::Error> {
+        todo!()
+    }
+
+    async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
+        todo!()
+    }
+
+    async fn query_packet_commitment(
+		    &self,
+		    at: Height,
+		    port_id: &ibc::core::ics24_host::identifier::PortId,
+		    channel_id: &ibc::core::ics24_host::identifier::ChannelId,
+		    seq: u64,
+	    ) -> Result<ibc_proto::ibc::core::channel::v1::QueryPacketCommitmentResponse, Self::Error> {
+        todo!()
+    }
+
+    async fn query_packet_acknowledgement(
+		    &self,
+		    at: Height,
+		    port_id: &ibc::core::ics24_host::identifier::PortId,
+		    channel_id: &ibc::core::ics24_host::identifier::ChannelId,
+		    seq: u64,
+	    ) -> Result<ibc_proto::ibc::core::channel::v1::QueryPacketAcknowledgementResponse, Self::Error> {
+        todo!()
+    }
+
+    async fn query_next_sequence_recv(
+		    &self,
+		    at: Height,
+		    port_id: &ibc::core::ics24_host::identifier::PortId,
+		    channel_id: &ibc::core::ics24_host::identifier::ChannelId,
+	    ) -> Result<ibc_proto::ibc::core::channel::v1::QueryNextSequenceReceiveResponse, Self::Error> {
+        todo!()
+    }
+
+    async fn query_packet_receipt(
+		    &self,
+		    at: Height,
+		    port_id: &ibc::core::ics24_host::identifier::PortId,
+		    channel_id: &ibc::core::ics24_host::identifier::ChannelId,
+		    seq: u64,
+	    ) -> Result<ibc_proto::ibc::core::channel::v1::QueryPacketReceiptResponse, Self::Error> {
+        todo!()
+    }
+
+    async fn latest_height_and_timestamp(&self) -> Result<(Height, ibc::timestamp::Timestamp), Self::Error> {
+        todo!()
+    }
+
+    async fn query_packet_commitments(
+		    &self,
+		    at: Height,
+		    channel_id: ibc::core::ics24_host::identifier::ChannelId,
+		    port_id: ibc::core::ics24_host::identifier::PortId,
+	    ) -> Result<Vec<u64>, Self::Error> {
+        todo!()
+    }
+
+    async fn query_packet_acknowledgements(
+		    &self,
+		    at: Height,
+		    channel_id: ibc::core::ics24_host::identifier::ChannelId,
+		    port_id: ibc::core::ics24_host::identifier::PortId,
+	    ) -> Result<Vec<u64>, Self::Error> {
+        todo!()
+    }
+
+    async fn query_unreceived_packets(
+		    &self,
+		    at: Height,
+		    channel_id: ibc::core::ics24_host::identifier::ChannelId,
+		    port_id: ibc::core::ics24_host::identifier::PortId,
+		    seqs: Vec<u64>,
+	    ) -> Result<Vec<u64>, Self::Error> {
+        todo!()
+    }
+
+    async fn query_unreceived_acknowledgements(
+		    &self,
+		    at: Height,
+		    channel_id: ibc::core::ics24_host::identifier::ChannelId,
+		    port_id: ibc::core::ics24_host::identifier::PortId,
+		    seqs: Vec<u64>,
+	    ) -> Result<Vec<u64>, Self::Error> {
+        todo!()
+    }
+
+    fn channel_whitelist(&self) -> std::collections::HashSet<(ibc::core::ics24_host::identifier::ChannelId, ibc::core::ics24_host::identifier::PortId)> {
+        todo!()
+    }
+
+    async fn query_connection_channels(
+		    &self,
+		    at: Height,
+		    connection_id: &ConnectionId,
+	    ) -> Result<ibc_proto::ibc::core::channel::v1::QueryChannelsResponse, Self::Error> {
+        todo!()
+    }
+
+    async fn query_send_packets(
+		    &self,
+		    channel_id: ibc::core::ics24_host::identifier::ChannelId,
+		    port_id: ibc::core::ics24_host::identifier::PortId,
+		    seqs: Vec<u64>,
+	    ) -> Result<Vec<ibc_rpc::PacketInfo>, Self::Error> {
+        todo!()
+    }
+
+    async fn query_received_packets(
+		    &self,
+		    channel_id: ibc::core::ics24_host::identifier::ChannelId,
+		    port_id: ibc::core::ics24_host::identifier::PortId,
+		    seqs: Vec<u64>,
+	    ) -> Result<Vec<ibc_rpc::PacketInfo>, Self::Error> {
+        todo!()
+    }
+
+    fn expected_block_time(&self) -> Duration {
+        todo!()
+    }
+
+    async fn query_client_update_time_and_height(
+		    &self,
+		    client_id: ClientId,
+		    client_height: Height,
+	    ) -> Result<(Height, ibc::timestamp::Timestamp), Self::Error> {
+        todo!()
+    }
+
+    async fn query_host_consensus_state_proof(
+		    &self,
+		    client_state: &pallet_ibc::light_clients::AnyClientState,
+	    ) -> Result<Option<Vec<u8>>, Self::Error> {
+        todo!()
+    }
+
+    async fn query_ibc_balance(
+		    &self,
+		    asset_id: Self::AssetId,
+	    ) -> Result<Vec<ibc::applications::transfer::PrefixedCoin>, Self::Error> {
+        todo!()
+    }
+
+    fn connection_prefix(&self) -> ibc::core::ics23_commitment::commitment::CommitmentPrefix {
+        todo!()
+    }
+
+    fn client_id(&self) -> ClientId {
+        todo!()
+    }
+
+    fn set_client_id(&mut self, client_id: ClientId) {
+        todo!()
+    }
+
+    fn connection_id(&self) -> Option<ConnectionId> {
+        todo!()
+    }
+
+    fn set_channel_whitelist(&mut self, channel_whitelist: std::collections::HashSet<(ibc::core::ics24_host::identifier::ChannelId, ibc::core::ics24_host::identifier::PortId)>) {
+        todo!()
+    }
+
+    fn add_channel_to_whitelist(&mut self, channel: (ibc::core::ics24_host::identifier::ChannelId, ibc::core::ics24_host::identifier::PortId)) {
+        todo!()
+    }
+
+    fn set_connection_id(&mut self, connection_id: ConnectionId) {
+        todo!()
+    }
+
+    fn client_type(&self) -> ibc::core::ics02_client::client_state::ClientType {
+        todo!()
+    }
+
+    async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error> {
+        todo!()
+    }
+
+    async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
+        todo!()
+    }
+
+    async fn query_channels(&self) -> Result<Vec<(ibc::core::ics24_host::identifier::ChannelId, ibc::core::ics24_host::identifier::PortId)>, Self::Error> {
+        todo!()
+    }
+
+    async fn query_connection_using_client(
+		    &self,
+		    height: u32,
+		    client_id: String,
+	    ) -> Result<Vec<ibc_proto::ibc::core::connection::v1::IdentifiedConnection>, Self::Error> {
+        todo!()
+    }
+
+    async fn is_update_required(
+		    &self,
+		    latest_height: u64,
+		    latest_client_height_on_counterparty: u64,
+	    ) -> Result<bool, Self::Error> {
+        todo!()
+    }
+
+    async fn initialize_client_state(
+		    &self,
+	    ) -> Result<(pallet_ibc::light_clients::AnyClientState, pallet_ibc::light_clients::AnyConsensusState), Self::Error> {
+        todo!()
+    }
+
+    async fn query_client_id_from_tx_hash(
+		    &self,
+		    tx_id: Self::TransactionId,
+	    ) -> Result<ClientId, Self::Error> {
+        todo!()
+    }
+
+    async fn query_connection_id_from_tx_hash(
+		    &self,
+		    tx_id: Self::TransactionId,
+	    ) -> Result<ConnectionId, Self::Error> {
+        todo!()
+    }
+
+    async fn query_channel_id_from_tx_hash(
+		    &self,
+		    tx_id: Self::TransactionId,
+	    ) -> Result<(ibc::core::ics24_host::identifier::ChannelId, ibc::core::ics24_host::identifier::PortId), Self::Error> {
+        todo!()
+    }
+
+    async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
+        todo!()
+    }
+}
 
 impl KeyProvider for Client {
 	fn account_id(&self) -> Signer {
-		let key_entry = self.keybase;
+		let key_entry = &self.keybase;
 		let public_key = key_entry.public_key;
 		Signer::from_str(&public_key.to_string()).unwrap()
 	}
@@ -162,10 +451,10 @@ impl Chain for Client {
 
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
 		let cluster = Cluster::from_str(&self.rpc_url).unwrap();
-		let authority = Rc::new(Keypair::from_bytes(&self.keybase.private_key).unwrap());
+		let authority = Keypair::from_bytes(&self.keybase.private_key).unwrap();
 		let client = AnchorClient::new_with_options(
 			cluster,
-			authority.clone(),
+			&authority,
 			CommitmentConfig { commitment: self.commitment_level },
 		);
 		let program = client.program(self.program_id).unwrap();
@@ -190,13 +479,13 @@ impl Chain for Client {
 				system_program::ID,
 			))
 			.args(instructions::Deliver { messages: all_messages })
-			.payer(authority.clone())
-			.signer(&*authority)
+			.payer(&authority)
+			.signer(&authority)
 			.send_with_spinner_and_config(RpcSendTransactionConfig {
 				skip_preflight: true,
 				..RpcSendTransactionConfig::default()
 			}).unwrap();
-		Ok(sig)
+		Ok(sig.to_string())
 	}
 
 	async fn query_client_message(
@@ -227,7 +516,7 @@ impl Chain for Client {
 	}
 
 	async fn on_undelivered_sequences(&self, has: bool, kind: UndeliveredType) {
-		Box::pin(async move {
+		let _ = Box::pin(async move {
 			let __self = self;
 			let has = has;
 			let kind = kind;
