@@ -2043,8 +2043,8 @@ version = "6.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7e959d788268e3bf9d35ace83e81b124190378e4c91c9067524675e33394b8ba"
 dependencies = [
- "strum",
- "strum_macros",
+ "strum 0.24.1",
+ "strum_macros 0.24.3",
  "unicode-width",
 ]
 
@@ -5647,7 +5647,9 @@ dependencies = [
  "ics08-wasm",
  "itertools 0.10.5",
  "k256 0.11.6",
+ "lib",
  "log",
+ "memory",
  "pallet-ibc",
  "parity-scale-codec",
  "prost 0.11.9",
@@ -5655,9 +5657,11 @@ dependencies = [
  "rand 0.8.5",
  "ripemd",
  "rs_merkle",
+ "sealable-trie",
  "serde",
  "serde_json",
  "sha2 0.10.8",
+ "stdx",
  "tendermint",
  "tendermint-light-client",
  "tendermint-light-client-verifier",
@@ -6759,6 +6763,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 
 [[package]]
+name = "lib"
+version = "0.0.0"
+source = "git+ssh://git@github.com/ComposableFi/emulated-light-client.git#e6a12d468d02be06d244802eb886805aae57463d"
+dependencies = [
+ "base64 0.21.4",
+ "derive_more",
+ "sha2 0.10.8",
+ "stdx",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.148"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7634,6 +7649,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a634b1c61a95585bd15607c6ab0c4e5b226e695ff2800ba0cdccddf208c406c"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "memory"
+version = "0.0.0"
+source = "git+ssh://git@github.com/ComposableFi/emulated-light-client.git#e6a12d468d02be06d244802eb886805aae57463d"
+dependencies = [
+ "derive_more",
 ]
 
 [[package]]
@@ -8789,7 +8812,7 @@ dependencies = [
  "sp-npos-elections",
  "sp-runtime 7.0.0",
  "sp-std 5.0.0",
- "strum",
+ "strum 0.24.1",
 ]
 
 [[package]]
@@ -10714,7 +10737,7 @@ dependencies = [
  "rand 0.8.5",
  "sc-authority-discovery",
  "sc-network",
- "strum",
+ "strum 0.24.1",
  "thiserror",
  "tracing-gum",
 ]
@@ -14100,6 +14123,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "sealable-trie"
+version = "0.0.0"
+source = "git+ssh://git@github.com/ComposableFi/emulated-light-client.git#e6a12d468d02be06d244802eb886805aae57463d"
+dependencies = [
+ "base64 0.21.4",
+ "derive_more",
+ "lib",
+ "memory",
+ "sha2 0.10.8",
+ "stdx",
+ "strum 0.25.0",
+]
+
+[[package]]
 name = "sec1"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -15645,7 +15682,7 @@ dependencies = [
  "sp-mmr-primitives",
  "sp-runtime 7.0.0",
  "sp-std 5.0.0",
- "strum",
+ "strum 0.24.1",
 ]
 
 [[package]]
@@ -16061,7 +16098,7 @@ dependencies = [
  "lazy_static",
  "sp-core 7.0.0",
  "sp-runtime 7.0.0",
- "strum",
+ "strum 0.24.1",
 ]
 
 [[package]]
@@ -16873,7 +16910,7 @@ checksum = "08615eea740067d9899969bc2891c68a19c315cb1f66640af9a9ecb91b13bcab"
 dependencies = [
  "lazy_static",
  "maplit",
- "strum",
+ "strum 0.24.1",
 ]
 
 [[package]]
@@ -17154,6 +17191,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "stdx"
+version = "0.0.0"
+source = "git+ssh://git@github.com/ComposableFi/emulated-light-client.git#e6a12d468d02be06d244802eb886805aae57463d"
+
+[[package]]
 name = "strsim"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -17171,7 +17213,16 @@ version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "063e6045c0e62079840579a7e47a355ae92f60eb74daaf156fb1e84ba164e63f"
 dependencies = [
- "strum_macros",
+ "strum_macros 0.24.3",
+]
+
+[[package]]
+name = "strum"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "290d54ea6f91c969195bdbcd7442c8c2a2ba87da8bf60a7ee86a235d4bc1e125"
+dependencies = [
+ "strum_macros 0.25.3",
 ]
 
 [[package]]
@@ -17185,6 +17236,19 @@ dependencies = [
  "quote 1.0.33",
  "rustversion",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.25.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23dc1fa9ac9c169a78ba62f0b841814b7abae11bdd047b9c58f893439e309ea0"
+dependencies = [
+ "heck 0.4.1",
+ "proc-macro2 1.0.67",
+ "quote 1.0.33",
+ "rustversion",
+ "syn 2.0.37",
 ]
 
 [[package]]
@@ -17327,7 +17391,7 @@ dependencies = [
  "cargo_metadata",
  "filetime",
  "sp-maybe-compressed-blob 4.1.0-dev (git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.43)",
- "strum",
+ "strum 0.24.1",
  "tempfile",
  "toml 0.7.8",
  "walkdir",
@@ -18883,8 +18947,8 @@ checksum = "87fef6d0d508f08334e0ab0e6877feb4c0ecb3956bcf2cb950699b22fedf3e9c"
 dependencies = [
  "anyhow",
  "libc",
- "strum",
- "strum_macros",
+ "strum 0.24.1",
+ "strum_macros 0.24.3",
  "tempfile",
  "thiserror",
  "wasm-opt-cxx-sys",
