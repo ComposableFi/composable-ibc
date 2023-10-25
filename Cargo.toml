@@ -47,6 +47,7 @@ members = [
     "utils/subxt/generated",
     "utils/parachain-node",
     "utils/parachain-node/runtime",
+    "utils/calldata-compression",
 #     "utils/simnode"
 ]
 
