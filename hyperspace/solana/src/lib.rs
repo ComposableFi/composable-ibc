@@ -2,9 +2,15 @@ extern crate alloc;
 
 use alloc::rc::Rc;
 use core::{pin::Pin, str::FromStr, time::Duration};
+use ibc_storage::PrivateStorage;
+use prost::Message;
+use trie_key::TrieKey;
 
 use anchor_client::{
-	anchor_lang::{prelude::Pubkey, system_program},
+	anchor_lang::{
+		prelude::{borsh, Pubkey},
+		system_program,
+	},
 	solana_client::{
 		nonblocking::rpc_client::RpcClient as AsyncRpcClient, rpc_config::RpcSendTransactionConfig,
 	},
@@ -19,12 +25,18 @@ use error::Error;
 use ibc::{
 	core::{
 		ics02_client::{client_state::ClientType, events::UpdateClient},
-		ics24_host::identifier::{ClientId, ConnectionId},
+		ics24_host::{
+			identifier::{ClientId, ConnectionId},
+			path::{ClientConsensusStatePath, ClientStatePath},
+		},
 	},
 	events::IbcEvent,
 	Height,
 };
-use ibc_proto::google::protobuf::Any;
+use ibc_proto::{
+	google::protobuf::Any,
+	ibc::core::client::v1::{QueryClientStateResponse, QueryConsensusStateResponse},
+};
 use instructions::AnyCheck;
 use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::{
@@ -36,6 +48,7 @@ use tokio_stream::Stream;
 
 mod accounts;
 mod error;
+mod ibc_storage;
 mod instructions;
 mod trie;
 mod trie_key;
@@ -140,6 +153,13 @@ impl Client {
 		trie
 	}
 
+	pub fn get_ibc_storage(&self) -> PrivateStorage {
+		let program = self.program();
+		let ibc_storage_key = self.get_ibc_storage_key();
+		let storage = program.account(ibc_storage_key).unwrap();
+		storage
+	}
+
 	pub fn rpc_client(&self) -> AsyncRpcClient {
 		let program = self.program();
 		program.async_rpc()
@@ -190,16 +210,52 @@ impl IbcProvider for Client {
 		at: Height,
 		client_id: ClientId,
 		consensus_height: Height,
-	) -> Result<ibc_proto::ibc::core::client::v1::QueryConsensusStateResponse, Self::Error> {
-		todo!()
+	) -> Result<QueryConsensusStateResponse, Self::Error> {
+		let trie = self.get_trie().await;
+		let storage = self.get_ibc_storage();
+		let Height { revision_height, revision_number } = consensus_height;
+		let consensus_state_path =
+			ClientConsensusStatePath { height: revision_height, epoch: revision_number, client_id };
+		let consensus_state_trie_key = TrieKey::from(&consensus_state_path);
+		let consensus_state_proof = trie
+			.get(&consensus_state_trie_key)
+			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?
+			.ok_or(Error::Custom("No value at given key".to_owned()))?;
+		let serialized_consensus_state = storage
+			.consensus_states
+			.get(&(client_id.to_string(), (revision_height, revision_number)))
+			.ok_or(Error::Custom("No value at given key".to_owned()))?;
+		let consensus_state = Any::decode(&*borsh::to_vec(serialized_consensus_state).unwrap())?;
+		Ok(QueryConsensusStateResponse {
+			consensus_state: Some(consensus_state),
+			proof: consensus_state_proof.0.into(),
+			proof_height: increment_proof_height(Some(at.into())),
+		})
 	}
 
 	async fn query_client_state(
 		&self,
 		at: Height,
 		client_id: ClientId,
-	) -> Result<ibc_proto::ibc::core::client::v1::QueryClientStateResponse, Self::Error> {
-		todo!()
+	) -> Result<QueryClientStateResponse, Self::Error> {
+		let trie = self.get_trie().await;
+		let storage = self.get_ibc_storage();
+		let client_state_path = ClientStatePath(client_id);
+		let client_state_trie_key = TrieKey::from(&client_state_path);
+		let client_state_proof = trie
+			.get(&client_state_trie_key)
+			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?
+			.ok_or(Error::Custom("No value at given key".to_owned()))?;
+		let serialized_client_state = storage
+			.clients
+			.get(&(client_id.to_string()))
+			.ok_or(Error::Custom("No value at given key".to_owned()))?;
+		let client_state = Any::decode(&*borsh::to_vec(serialized_client_state).unwrap())?;
+		Ok(QueryClientStateResponse {
+			client_state: Some(client_state),
+			proof: client_state_proof.0.into(),
+			proof_height: increment_proof_height(Some(at.into())),
+		})
 	}
 
 	async fn query_connection_end(
@@ -626,4 +682,13 @@ impl Chain for Client {
 	fn set_rpc_call_delay(&mut self, delay: Duration) {
 		self.common_state_mut().set_rpc_call_delay(delay)
 	}
+}
+
+fn increment_proof_height(
+	height: Option<ibc_proto::ibc::core::client::v1::Height>,
+) -> Option<ibc_proto::ibc::core::client::v1::Height> {
+	height.map(|height| ibc_proto::ibc::core::client::v1::Height {
+		revision_height: height.revision_height + 1,
+		..height
+	})
 }
