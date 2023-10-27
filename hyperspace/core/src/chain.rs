@@ -15,6 +15,8 @@
 #![allow(unreachable_patterns)]
 
 use crate::chains;
+#[cfg(feature = "parachain")]
+use crate::substrate::{ComposableConfig, DefaultConfig, PicassoKusamaConfig, PicassoRococoConfig};
 use async_trait::async_trait;
 #[cfg(feature = "cosmos")]
 use cosmos::client::{CosmosClient, CosmosClientConfig};

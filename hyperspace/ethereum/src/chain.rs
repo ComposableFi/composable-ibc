@@ -271,9 +271,10 @@ pub(crate) fn client_state_from_abi_token<H>(token: Token) -> Result<ClientState
 			_ => return Err(ClientError::Other("latest_height not found".to_string())),
 		};
 
-	let revision_number = 1; // TODO: revision
+	let chain_id: ibc::core::ics24_host::identifier::ChainId = chain_id.parse()?;
+	let revision_number = chain_id.version(); // TODO: revision
 	Ok(ClientState {
-		chain_id: chain_id.parse()?,
+		chain_id,
 		trust_level: TrustThreshold::new(trust_level_numerator, trust_level_denominator)?,
 		trusting_period: Duration::new(trusting_period_secs, trusting_period_nanos as u32),
 		unbonding_period: Duration::new(unbonding_period_secs, 0u32), // TODO: check why nanos is 0
@@ -850,12 +851,13 @@ pub(crate) fn tm_header_from_abi_token(token: Token) -> Result<Header, ClientErr
 		_ => return Err(ClientError::Other("trusted_height not found".to_string())),
 	};
 
-	let revision_number = 1; // TODO
+	let chain_id: ibc::core::ics24_host::identifier::ChainId = chain_id.parse()?;
+	let revision_number = chain_id.version(); // TODO: revision
 	Ok(Header {
 		signed_header: SignedHeader::new(
 			block::Header {
 				version: Version { block: version_block.as_u64(), app: version_app.as_u64() },
-				chain_id: chain_id.parse()?,
+				chain_id: chain_id.into(),
 				height: TmHeight::try_from(height.as_u64()).map_err(|e| {
 					ClientError::Other(format!("failed to convert height into TmHeight: {}", e))
 				})?,

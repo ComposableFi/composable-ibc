@@ -4915,6 +4915,7 @@ dependencies = [
  "sp-state-machine 0.13.0",
  "sp-trie 7.0.0",
  "subxt",
+ "subxt-generated",
  "tendermint-proto",
  "thiserror",
  "tokio",

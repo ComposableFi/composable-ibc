@@ -1,6 +1,7 @@
 use crate::{
 	config::EthereumClientConfig,
 	contract::UnwrapContractError,
+	ibc_provider::EARLIEST_BLOCK,
 	jwt::{JwtAuth, JwtKey},
 	utils::{DeployYuiIbc, ProviderImpl},
 };
@@ -202,7 +203,9 @@ impl EthereumClient {
 			let secret = std::fs::read_to_string(secret_path).map_err(|e| {
 				ClientError::Other(format!("jwtsecret not found. Search for 'execution/jwtsecret' in the code and replace it with your local path. {e}"))
 			})?;
-			let secret = JwtKey::from_slice(&hex::decode(&secret[2..]).unwrap()).expect("oops");
+			dbg!(&secret);
+			let secret =
+				JwtKey::from_slice(&hex::decode(&secret[2..].trim()).unwrap()).expect("oops");
 			let jwt_auth = JwtAuth::new(secret, None, None);
 			let token = jwt_auth.generate_token().unwrap();
 
@@ -224,7 +227,9 @@ impl EthereumClient {
 		from_block: BlockNumber,
 	) -> Result<Vec<(String, String)>, ClientError> {
 		let filter = Filter::new()
-			.from_block(BlockNumber::Earliest)
+			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			//.address(ValueOrArray::Value(self.yui.diamond.address()))
+			//.from_block(BlockNumber::Earliest)
 			// .from_block(from_block)
 			.to_block(BlockNumber::Latest)
 			.address(self.yui.diamond.address())

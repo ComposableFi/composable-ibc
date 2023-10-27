@@ -108,6 +108,7 @@ use sync_committee_primitives::types::{LightClientState, LightClientUpdate};
 use sync_committee_prover::SyncCommitteeProver;
 use tracing::log;
 
+pub const EARLIEST_BLOCK: u64 = 9921478;
 abigen!(
 	IbcClientAbi,
 	"hyperspace/ethereum/src/abi/ibc-client-abi.json";
@@ -126,6 +127,9 @@ abigen!(
 
 	Ics20TransferBankAbi,
 	"hyperspace/ethereum/src/abi/ics20-transfer-bank-abi.json";
+
+	Ics20BankAbi,
+	"hyperspace/ethereum/src/abi/ics20-bank-abi.json";
 
 	TendermintClientAbi,
 	"hyperspace/ethereum/src/abi/tendermint-client-abi.json";
@@ -278,10 +282,14 @@ impl IbcProvider for EthereumClient {
 
 		let prover = self.prover();
 		let block = prover.fetch_block("head").await?;
+		let block_to = (client_state.inner.finalized_header.slot +
+			NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER)
+			.min(block.slot);
+
 		let number = block.body.execution_payload.block_number;
 
 		let from = latest_cp_client_height + 1;
-		let to = number.min(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER);
+		let to = number.min(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER / 2);
 
 		log::info!(target: "hyperspace_ethereum", "Getting blocks {}..{}", from, to);
 		let filter =
@@ -290,7 +298,7 @@ impl IbcProvider for EthereumClient {
 			.client()
 			.get_logs(&filter)
 			.await
-			.map_err(|e| ClientError::Other(format!("failed to get logs: {}", e)))?;
+			.map_err(|e| ClientError::Other(format!("failed to get logs 1: {}", e)))?;
 		let filter = Filter::new().from_block(from).to_block(to).address(
 			self.yui
 				.bank
@@ -302,16 +310,24 @@ impl IbcProvider for EthereumClient {
 			.client()
 			.get_logs(&filter)
 			.await
-			.map_err(|e| ClientError::Other(format!("failed to get logs: {}", e)))?;
+			.map_err(|e| ClientError::Other(format!("failed to get logs 2: {}", e)))?;
 		logs.extend(logs2);
 
-		let maybe_proof = prove_fast(self, &client_state, block.slot).await;
-		let header = match maybe_proof {
-			Ok(x) => x,
-			Err(e) => {
-				log::error!(target: "hyperspace_ethereum", "failed to prove {e}");
-				return Ok(vec![])
-			},
+		let tries = NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER / 2;
+		let mut i = 0;
+		let header = loop {
+			let maybe_proof = prove_fast(self, &client_state, block_to + i).await;
+			i += 1;
+			match maybe_proof {
+				Ok(x) => break x,
+				Err(e) => {
+					log::error!(target: "hyperspace_ethereum", "failed to prove {e}");
+					std::thread::sleep(std::time::Duration::from_secs(2));
+					if i >= tries {
+						return Ok(vec![])
+					}
+				},
+			};
 		};
 		let update = &header.inner;
 		// let update = prove(self, finality_event.number.unwrap().as_u64()).await?;
@@ -360,7 +376,10 @@ impl IbcProvider for EthereumClient {
 		let ws = self.websocket_provider().await.unwrap();
 		(async_stream::stream! {
 			let mut events_stream = ws.subscribe_logs(
-				 &Filter::new().from_block(BlockNumber::Earliest).address(ibc_address),
+				 &Filter::new()
+				 .from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+				 //.from_block(BlockNumber::Earliest)
+				 .address(ibc_address),
 			)
 			.await
 			.unwrap()
@@ -516,7 +535,9 @@ impl IbcProvider for EthereumClient {
 			.yui
 			.event_for_name::<CreateClientFilter>("CreateClient")
 			.expect("contract is missing CreateClient event")
-			.from_block(BlockNumber::Earliest)
+			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			.address(ValueOrArray::Value(self.yui.diamond.address()))
+			//            .from_block(BlockNumber::Earliest)
 			.to_block(at.revision_height);
 		event_filter.filter = event_filter.filter.topic1({
 			let hash = H256::from_slice(&encode(&[Token::FixedBytes(
@@ -579,7 +600,8 @@ impl IbcProvider for EthereumClient {
 			.map_err(|err| {
 				ClientError::Other(format!("contract is missing UpdateClient event: {}", err))
 			})?
-			.from_block(BlockNumber::Earliest)
+			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			.address(ValueOrArray::Value(self.yui.diamond.address()))
 			.to_block(at.revision_height);
 		event_filter.filter = event_filter.filter.topic1({
 			let hash = H256::from_slice(&encode(&[Token::FixedBytes(
@@ -594,7 +616,7 @@ impl IbcProvider for EthereumClient {
 			.get_logs(&event_filter.filter)
 			.await
 			.map_err(
-				|err| ClientError::Other(format!("failed to get logs: {}", err)),
+				|err| ClientError::Other(format!("failed to get logs 3: {}", err)),
 			)?
 			.pop() // get only the last event
 		;
@@ -664,7 +686,9 @@ impl IbcProvider for EthereumClient {
 							err
 						))
 					})?
-					.from_block(BlockNumber::Earliest)
+					.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+					.address(ValueOrArray::Value(self.yui.diamond.address()))
+					//		.from_block(BlockNumber::Earliest)
 					.to_block(at.revision_height);
 				event_filter.filter = event_filter.filter.topic1({
 					let hash = H256::from_slice(&encode(&[Token::FixedBytes(
@@ -678,7 +702,7 @@ impl IbcProvider for EthereumClient {
 					.client()
 					.get_logs(&event_filter.filter)
 					.await
-					.map_err(|err| ClientError::Other(format!("failed to get logs: {}", err)))?
+					.map_err(|err| ClientError::Other(format!("failed to get logs 4: {}", err)))?
 					.pop() // get only the last event
 					.ok_or_else(|| ClientError::Other("no events found".to_string()))?;
 
@@ -1154,7 +1178,13 @@ impl IbcProvider for EthereumClient {
 			.yui
 			.event_for_name::<SendPacketFilter>("SendPacket")
 			.map_err(|err| ClientError::ContractAbiError(err))?
-			.from_block(BlockNumber::Earliest) // TODO: use contract creation height
+			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			.address(ValueOrArray::Array(vec![
+				self.yui.bank.as_ref().map(|x| x.address()).unwrap_or_default(),
+				self.yui.diamond.address(),
+			]))
+			//            .address(ValueOrArray::Value(self.yui.diamond.address()))
+			//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
 			.to_block(BlockNumber::Latest)
 			.topic1(ValueOrArray::Array(
 				seqs.clone()
@@ -1195,7 +1225,7 @@ impl IbcProvider for EthereumClient {
 			.client()
 			.get_logs(&event_filter.filter)
 			.await
-			.map_err(|err| ClientError::Other(format!("failed to get logs: {}", err)))?;
+			.map_err(|err| ClientError::Other(format!("failed to get logs 5: {}", err)))?;
 		let logs2 = self
 			.yui
 			.bank
@@ -1204,7 +1234,7 @@ impl IbcProvider for EthereumClient {
 			.client()
 			.get_logs(&event_filter.filter)
 			.await
-			.map_err(|err| ClientError::Other(format!("failed to get logs: {}", err)))?;
+			.map_err(|err| ClientError::Other(format!("failed to get logs 6: {}", err)))?;
 		logs.extend(logs2);
 
 		if logs.is_empty() {
@@ -1263,7 +1293,9 @@ impl IbcProvider for EthereumClient {
 			.yui
 			.event_for_name::<RecvPacketFilter>("RecvPacket")
 			.map_err(|err| ClientError::ContractAbiError(err))?
-			.from_block(BlockNumber::Earliest) // TODO: use contract creation height
+			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			.address(ValueOrArray::Value(self.yui.diamond.address()))
+			//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
 			.to_block(BlockNumber::Latest)
 			.topic1(ValueOrArray::Array(
 				seqs.clone()
@@ -1296,7 +1328,9 @@ impl IbcProvider for EthereumClient {
 			.yui
 			.event_for_name::<WriteAcknowledgementFilter>("WriteAcknowledgement")
 			.map_err(|err| ClientError::ContractAbiError(err))?
-			.from_block(BlockNumber::Earliest) // TODO: use contract creation height
+			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			.address(ValueOrArray::Value(self.yui.diamond.address()))
+			//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
 			.to_block(BlockNumber::Latest)
 			.topic3(ValueOrArray::Array(
 				seqs.clone()
@@ -1382,7 +1416,9 @@ impl IbcProvider for EthereumClient {
 			.yui
 			.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
 			.map_err(|err| ClientError::ContractAbiError(err))?
-			.from_block(BlockNumber::Earliest) // TODO: use contract creation height
+			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			.address(ValueOrArray::Value(self.yui.diamond.address()))
+			//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
 			.to_block(BlockNumber::Latest)
 			.topic1({
 				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
@@ -1556,19 +1592,27 @@ impl IbcProvider for EthereumClient {
 	) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
 		let sync_committee_prover = self.prover();
 		let block_id = "head";
-		let block_header = sync_committee_prover.fetch_header(&block_id).await.map_err(|err| {
-			ClientError::Other(format!(
-				"failed to fetch header in initialize_client_state: {}",
-				err
-			))
-		})?;
+		let block_header = sync_committee_prover
+			.fetch_header(&block_id)
+			.await
+			.map_err(|err| {
+				ClientError::Other(format!(
+					"failed to fetch header in initialize_client_state: {}",
+					err
+				))
+			})
+			.expect("1");
 
-		let state = sync_committee_prover.fetch_beacon_state(block_id).await.map_err(|err| {
-			ClientError::Other(format!(
-				"failed to fetch beacon state in initialize_client_state: {}",
-				err
-			))
-		})?;
+		let state = sync_committee_prover
+			.fetch_beacon_state(block_id)
+			.await
+			.map_err(|err| {
+				ClientError::Other(format!(
+					"failed to fetch beacon state in initialize_client_state: {}",
+					err
+				))
+			})
+			.expect("2");
 
 		// TODO: query `at` block
 		// let finality_checkpoint =

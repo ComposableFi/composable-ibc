@@ -171,11 +171,17 @@ where
 		}
 		block_events.sort_by_key(|(height, _)| *height);
 
+		let mut mandatory_updates_num = 0;
 		let mut updates = Vec::new();
-		for (events, (update_header, update_type)) in
+		for (events, (update_header, mut update_type)) in
 			block_events.into_iter().map(|(_, events)| events).zip(update_headers)
 		{
 			let height = update_header.height();
+			let diff = latest_height.revision_height.saturating_sub(height.revision_height);
+			if diff >= 25 && mandatory_updates_num < 2 {
+				update_type = UpdateType::Mandatory;
+				mandatory_updates_num += 1;
+			}
 			let update_client_header = {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 					client_id: client_id.clone(),
