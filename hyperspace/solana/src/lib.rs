@@ -6,8 +6,6 @@ use ibc_storage::PrivateStorage;
 use prost::Message;
 use trie_key::TrieKey;
 
-use anchor_lang::prelude::*;
-use std::result::Result;
 use anchor_client::{
 	solana_client::{
 		nonblocking::rpc_client::RpcClient as AsyncRpcClient, rpc_config::RpcSendTransactionConfig,
@@ -19,6 +17,7 @@ use anchor_client::{
 	},
 	Client as AnchorClient, Cluster, Program,
 };
+use anchor_lang::prelude::*;
 use error::Error;
 use ibc::{
 	core::{
@@ -41,6 +40,7 @@ use primitives::{
 	Chain, CommonClientConfig, CommonClientState, IbcProvider, KeyProvider, LightClientSync,
 	MisbehaviourHandler, UndeliveredType,
 };
+use std::result::Result;
 use tendermint_rpc::{endpoint::abci_query::AbciQuery, HttpClient, Url, WebSocketClient};
 use tokio_stream::Stream;
 
@@ -239,7 +239,7 @@ impl IbcProvider for Client {
 		let storage = self.get_ibc_storage();
 		let client_state_path = ClientStatePath(client_id);
 		let client_state_trie_key = TrieKey::from(&client_state_path);
-		let (_ , client_state_proof) = trie
+		let (_, client_state_proof) = trie
 			.prove(&client_state_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		let serialized_client_state = storage
