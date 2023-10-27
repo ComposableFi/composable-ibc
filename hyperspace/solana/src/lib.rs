@@ -6,11 +6,9 @@ use ibc_storage::PrivateStorage;
 use prost::Message;
 use trie_key::TrieKey;
 
+use anchor_lang::prelude::*;
+use std::result::Result;
 use anchor_client::{
-	anchor_lang::{
-		prelude::{borsh, Pubkey},
-		system_program,
-	},
 	solana_client::{
 		nonblocking::rpc_client::RpcClient as AsyncRpcClient, rpc_config::RpcSendTransactionConfig,
 	},
@@ -217,10 +215,9 @@ impl IbcProvider for Client {
 		let consensus_state_path =
 			ClientConsensusStatePath { height: revision_height, epoch: revision_number, client_id };
 		let consensus_state_trie_key = TrieKey::from(&consensus_state_path);
-		let consensus_state_proof = trie
-			.get(&consensus_state_trie_key)
-			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?
-			.ok_or(Error::Custom("No value at given key".to_owned()))?;
+		let (_, consensus_state_proof) = trie
+			.prove(&consensus_state_trie_key)
+			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		let serialized_consensus_state = storage
 			.consensus_states
 			.get(&(client_id.to_string(), (revision_height, revision_number)))
@@ -228,7 +225,7 @@ impl IbcProvider for Client {
 		let consensus_state = Any::decode(&*borsh::to_vec(serialized_consensus_state).unwrap())?;
 		Ok(QueryConsensusStateResponse {
 			consensus_state: Some(consensus_state),
-			proof: consensus_state_proof.0.into(),
+			proof: borsh::to_vec(&consensus_state_proof).unwrap(),
 			proof_height: increment_proof_height(Some(at.into())),
 		})
 	}
@@ -242,10 +239,9 @@ impl IbcProvider for Client {
 		let storage = self.get_ibc_storage();
 		let client_state_path = ClientStatePath(client_id);
 		let client_state_trie_key = TrieKey::from(&client_state_path);
-		let client_state_proof = trie
-			.get(&client_state_trie_key)
-			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?
-			.ok_or(Error::Custom("No value at given key".to_owned()))?;
+		let (_ , client_state_proof) = trie
+			.prove(&client_state_trie_key)
+			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		let serialized_client_state = storage
 			.clients
 			.get(&(client_id.to_string()))
@@ -253,7 +249,7 @@ impl IbcProvider for Client {
 		let client_state = Any::decode(&*borsh::to_vec(serialized_client_state).unwrap())?;
 		Ok(QueryClientStateResponse {
 			client_state: Some(client_state),
-			proof: client_state_proof.0.into(),
+			proof: borsh::to_vec(&client_state_proof).unwrap(),
 			proof_height: increment_proof_height(Some(at.into())),
 		})
 	}

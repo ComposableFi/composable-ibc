@@ -36,6 +36,8 @@ digest = "0.10.6"
 quick_cache = "0.3.0"
 rand = "0.8.5"
 anchor-client = "0.28.0"
+anchor-lang = "0.28.0"
+borsh = { version = "0.10.3", default-features = false }
 
 # composable
 ibc = { path = "../../ibc/modules", features = [] }
@@ -49,7 +51,7 @@ pallet-ibc = { path = "../../contracts/pallet-ibc" }
 # Trie
 lib = { git = "ssh://git@github.com/ComposableFi/emulated-light-client.git" }
 memory = { git = "ssh://git@github.com/ComposableFi/emulated-light-client.git" }
-sealable-trie = { git = "ssh://git@github.com/ComposableFi/emulated-light-client.git" }
+sealable-trie = { git = "ssh://git@github.com/ComposableFi/emulated-light-client.git", features = ["borsh"] }
 stdx = { git = "ssh://git@github.com/ComposableFi/emulated-light-client.git" }
 
 tracing = "0.1.36"

@@ -1,6 +1,6 @@
 use alloc::collections::BTreeMap;
-use anchor_client::anchor_lang::prelude::*;
 use borsh::{BorshDeserialize, BorshSerialize};
+use anchor_lang::prelude::*;
 
 pub type InnerHeight = (u64, u64);
 pub type HostHeight = InnerHeight;
