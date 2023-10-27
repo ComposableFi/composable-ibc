@@ -1,6 +1,7 @@
 use alloc::collections::BTreeMap;
 use anchor_lang::prelude::*;
 use borsh::{BorshDeserialize, BorshSerialize};
+use ibc::core::ics04_channel::packet::Sequence;
 
 pub type InnerHeight = (u64, u64);
 pub type HostHeight = InnerHeight;
@@ -28,6 +29,37 @@ pub enum SequenceTripleIdx {
 	Send = 0,
 	Recv = 1,
 	Ack = 2,
+}
+
+impl InnerSequenceTriple {
+	/// Returns sequence at given index or `None` if it wasn’t set yet.
+	pub fn get(&self, idx: SequenceTripleIdx) -> Option<Sequence> {
+		if self.mask & (1 << (idx as u32)) == 1 {
+			Some(Sequence::from(self.sequences[idx as usize]))
+		} else {
+			None
+		}
+	}
+
+	/// Sets sequence at given index.
+	pub fn set(&mut self, idx: SequenceTripleIdx, seq: Sequence) {
+		self.sequences[idx as usize] = u64::from(seq);
+		self.mask |= 1 << (idx as u32)
+	}
+
+	/// Encodes the object as a `CryptoHash` so it can be stored in the trie
+	/// directly.
+	pub fn to_hash(&self) -> lib::hash::CryptoHash {
+		let mut hash = lib::hash::CryptoHash::default();
+		let (first, tail) = stdx::split_array_mut::<8, 24, 32>(&mut hash.0);
+		let (second, tail) = stdx::split_array_mut::<8, 16, 24>(tail);
+		let (third, tail) = stdx::split_array_mut::<8, 8, 16>(tail);
+		*first = self.sequences[0].to_be_bytes();
+		*second = self.sequences[1].to_be_bytes();
+		*third = self.sequences[2].to_be_bytes();
+		tail[0] = self.mask;
+		hash
+	}
 }
 
 // #[derive(Debug, AnchorSerialize, AnchorDeserialize)]

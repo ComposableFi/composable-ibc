@@ -1,11 +1,10 @@
 extern crate alloc;
 
 use alloc::rc::Rc;
-use sealable_trie::proof::Proof;
 use core::{pin::Pin, str::FromStr, time::Duration};
-use ibc_storage::PrivateStorage;
+use ibc_storage::{PrivateStorage, SequenceTripleIdx};
 use prost::Message;
-use trie_key::TrieKey;
+use trie_key::{SequencePath, TrieKey};
 
 use anchor_client::{
 	solana_client::{
@@ -23,17 +22,29 @@ use error::Error;
 use ibc::{
 	core::{
 		ics02_client::{client_state::ClientType, events::UpdateClient},
+		ics04_channel::packet::Sequence,
+		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::{
-			identifier::{ClientId, ConnectionId},
-			path::{ClientConsensusStatePath, ClientStatePath, ConnectionsPath, ChannelEndsPath},
-		}, 
+			identifier::{ChannelId, ClientId, ConnectionId, PortId},
+			path::{
+				ChannelEndsPath, ClientConsensusStatePath, ClientStatePath, ConnectionsPath,
+				ReceiptsPath,
+			},
+		},
 	},
 	events::IbcEvent,
 	Height,
 };
 use ibc_proto::{
 	google::protobuf::Any,
-	ibc::core::{client::v1::{QueryClientStateResponse, QueryConsensusStateResponse}, connection::v1::{QueryConnectionResponse, ConnectionEnd}, channel::v1::{QueryChannelResponse, Channel}},
+	ibc::core::{
+		channel::v1::{
+			Channel, QueryChannelResponse, QueryNextSequenceReceiveResponse,
+			QueryPacketReceiptResponse,
+		},
+		client::v1::{QueryClientStateResponse, QueryConsensusStateResponse},
+		connection::v1::{ConnectionEnd, QueryConnectionResponse},
+	},
 };
 use instructions::AnyCheck;
 use pallet_ibc::light_clients::AnyClientMessage;
@@ -41,8 +52,8 @@ use primitives::{
 	Chain, CommonClientConfig, CommonClientState, IbcProvider, KeyProvider, LightClientSync,
 	MisbehaviourHandler, UndeliveredType,
 };
-use std::result::Result;
-use tendermint_rpc::{endpoint::abci_query::AbciQuery, HttpClient, Url, WebSocketClient};
+use std::{collections::BTreeMap, result::Result};
+use tendermint_rpc::Url;
 use tokio_stream::Stream;
 
 mod accounts;
@@ -55,7 +66,7 @@ mod trie_key;
 const SOLANA_IBC_STORAGE_SEED: &[u8] = b"solana_ibc_storage";
 const TRIE_SEED: &[u8] = b"trie";
 
-// Random key added to implement `#[account]` macro for the storage 
+// Random key added to implement `#[account]` macro for the storage
 declare_id!("EnfDJsAK7BGgetnmKzBx86CsgC5kfSPcsktFCQ4YLC81");
 
 pub struct InnerAny {
@@ -87,6 +98,8 @@ pub struct Client {
 	pub program_id: Pubkey,
 	pub common_state: CommonClientState,
 	pub client_type: ClientType,
+	/// Reference to commitment
+	pub commitment_prefix: CommitmentPrefix,
 }
 
 pub struct ClientConfig {
@@ -115,6 +128,8 @@ pub struct ClientConfig {
 	/// All the client states and headers will be wrapped in WASM ones using the WASM code ID.
 	pub wasm_code_id: Option<String>,
 	pub common_state_config: CommonClientConfig,
+	/// Reference to commitment
+	pub commitment_prefix: CommitmentPrefix,
 }
 
 #[derive(Clone)]
@@ -216,8 +231,11 @@ impl IbcProvider for Client {
 		let trie = self.get_trie().await;
 		let storage = self.get_ibc_storage();
 		let Height { revision_height, revision_number } = consensus_height;
-		let consensus_state_path =
-			ClientConsensusStatePath { height: revision_height, epoch: revision_number, client_id: client_id.clone()};
+		let consensus_state_path = ClientConsensusStatePath {
+			height: revision_height,
+			epoch: revision_number,
+			client_id: client_id.clone(),
+		};
 		let consensus_state_trie_key = TrieKey::from(&consensus_state_path);
 		let (_, consensus_state_proof) = trie
 			.prove(&consensus_state_trie_key)
@@ -274,7 +292,8 @@ impl IbcProvider for Client {
 			.clients
 			.get(&(connection_id.to_string()))
 			.ok_or(Error::Custom("No value at given key".to_owned()))?;
-		let connection_end: ConnectionEnd = serde_json::from_str(&serialized_connection_end).map_err(|_| Error::Custom("Could not deserialize connection end".to_owned()))?;
+		let connection_end: ConnectionEnd = serde_json::from_str(&serialized_connection_end)
+			.map_err(|_| Error::Custom("Could not deserialize connection end".to_owned()))?;
 		Ok(QueryConnectionResponse {
 			connection: Some(connection_end),
 			proof: borsh::to_vec(&connection_end_proof).unwrap(),
@@ -299,7 +318,8 @@ impl IbcProvider for Client {
 			.clients
 			.get(&(channel_id.to_string()))
 			.ok_or(Error::Custom("No value at given key".to_owned()))?;
-		let channel_end: Channel = serde_json::from_str(&serialized_channel_end).map_err(|_| Error::Custom("Could not deserialize connection end".to_owned()))?;
+		let channel_end: Channel = serde_json::from_str(&serialized_channel_end)
+			.map_err(|_| Error::Custom("Could not deserialize connection end".to_owned()))?;
 		Ok(QueryChannelResponse {
 			channel: Some(channel_end),
 			proof: borsh::to_vec(&channel_end_proof).unwrap(),
@@ -311,7 +331,7 @@ impl IbcProvider for Client {
 		let trie = self.get_trie().await;
 		let (_, proof) = trie
 			.prove(&keys[0])
-			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;	
+			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		Ok(borsh::to_vec(&proof).unwrap())
 	}
 
@@ -322,7 +342,7 @@ impl IbcProvider for Client {
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		seq: u64,
 	) -> Result<ibc_proto::ibc::core::channel::v1::QueryPacketCommitmentResponse, Self::Error> {
-		todo!()
+		todo!();
 	}
 
 	async fn query_packet_acknowledgement(
@@ -341,8 +361,26 @@ impl IbcProvider for Client {
 		at: Height,
 		port_id: &ibc::core::ics24_host::identifier::PortId,
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
-	) -> Result<ibc_proto::ibc::core::channel::v1::QueryNextSequenceReceiveResponse, Self::Error> {
-		todo!()
+	) -> Result<QueryNextSequenceReceiveResponse, Self::Error> {
+		let trie = self.get_trie().await;
+		let storage = self.get_ibc_storage();
+		let next_sequence_recv_path = SequencePath { port_id, channel_id };
+		let next_sequence_recv_trie_key = TrieKey::from(next_sequence_recv_path);
+		let (_, next_sequence_recv_proof) = trie
+			.prove(&next_sequence_recv_trie_key)
+			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
+		let next_seq = storage
+			.next_sequence
+			.get(&(port_id.to_string(), channel_id.to_string()))
+			.ok_or(Error::Custom("No value at given key".to_owned()))?;
+		let next_seq_recv = next_seq
+			.get(SequenceTripleIdx::Recv)
+			.ok_or(Error::Custom("No value set for the next sequence receive".to_owned()))?;
+		Ok(QueryNextSequenceReceiveResponse {
+			next_sequence_receive: next_seq_recv.into(),
+			proof: borsh::to_vec(&next_sequence_recv_proof).unwrap(),
+			proof_height: increment_proof_height(Some(at.into())),
+		})
 	}
 
 	async fn query_packet_receipt(
@@ -351,14 +389,37 @@ impl IbcProvider for Client {
 		port_id: &ibc::core::ics24_host::identifier::PortId,
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		seq: u64,
-	) -> Result<ibc_proto::ibc::core::channel::v1::QueryPacketReceiptResponse, Self::Error> {
-		todo!()
+	) -> Result<QueryPacketReceiptResponse, Self::Error> {
+		let trie = self.get_trie().await;
+		let storage = self.get_ibc_storage();
+		let packet_receipt_path = ReceiptsPath {
+			port_id: port_id.clone(),
+			channel_id: channel_id.clone(),
+			sequence: Sequence(seq),
+		};
+		let packet_receipt_trie_key = TrieKey::from(&packet_receipt_path);
+		let (_, packet_receipt_proof) = trie
+			.prove(&packet_receipt_trie_key)
+			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
+		let packet_receipt_sequence = storage
+			.packet_receipt_sequence_sets
+			.get(&(port_id.to_string(), channel_id.to_string()))
+			.ok_or("No value found at given key".to_owned())?;
+		let packet_received = match packet_receipt_sequence.binary_search(&seq) {
+			Ok(_) => true,
+			Err(_) => false,
+		};
+		Ok(QueryPacketReceiptResponse {
+			received: packet_received,
+			proof: borsh::to_vec(&packet_receipt_proof).unwrap(),
+			proof_height: increment_proof_height(Some(at.into())),
+		})
 	}
 
 	async fn latest_height_and_timestamp(
 		&self,
 	) -> Result<(Height, ibc::timestamp::Timestamp), Self::Error> {
-		todo!()
+		todo!();
 	}
 
 	async fn query_packet_commitments(
@@ -367,7 +428,12 @@ impl IbcProvider for Client {
 		channel_id: ibc::core::ics24_host::identifier::ChannelId,
 		port_id: ibc::core::ics24_host::identifier::PortId,
 	) -> Result<Vec<u64>, Self::Error> {
-		todo!()
+		let storage = self.get_ibc_storage();
+		let packet_commitment_sequence = storage
+			.packet_commitment_sequence_sets
+			.get(&(port_id.to_string(), channel_id.to_string()))
+			.ok_or("No value found at given key".to_owned())?;
+		Ok(packet_commitment_sequence.clone())
 	}
 
 	async fn query_packet_acknowledgements(
@@ -376,7 +442,12 @@ impl IbcProvider for Client {
 		channel_id: ibc::core::ics24_host::identifier::ChannelId,
 		port_id: ibc::core::ics24_host::identifier::PortId,
 	) -> Result<Vec<u64>, Self::Error> {
-		todo!()
+		let storage = self.get_ibc_storage();
+		let packet_acknowledgement_sequence = storage
+			.packet_acknowledgement_sequence_sets
+			.get(&(port_id.to_string(), channel_id.to_string()))
+			.ok_or("No value found at given key".to_owned())?;
+		Ok(packet_acknowledgement_sequence.clone())
 	}
 
 	async fn query_unreceived_packets(
@@ -435,7 +506,8 @@ impl IbcProvider for Client {
 	}
 
 	fn expected_block_time(&self) -> Duration {
-		todo!()
+		// solana block time is roughly 400 milliseconds
+		Duration::from_millis(400)
 	}
 
 	async fn query_client_update_time_and_height(
@@ -461,7 +533,7 @@ impl IbcProvider for Client {
 	}
 
 	fn connection_prefix(&self) -> ibc::core::ics23_commitment::commitment::CommitmentPrefix {
-		self.connection_prefix()
+		self.commitment_prefix.clone()
 	}
 
 	fn client_id(&self) -> ClientId {
@@ -509,7 +581,11 @@ impl IbcProvider for Client {
 	}
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
-		todo!()
+		let storage = self.get_ibc_storage();
+		let client_ids: Vec<ClientId> = BTreeMap::keys(&storage.clients)
+			.map(|client_id| ClientId::from_str(client_id).unwrap())
+			.collect();
+		Ok(client_ids)
 	}
 
 	async fn query_channels(
@@ -521,7 +597,16 @@ impl IbcProvider for Client {
 		)>,
 		Self::Error,
 	> {
-		todo!()
+		let storage = self.get_ibc_storage();
+		let channels: Vec<(ChannelId, PortId)> = BTreeMap::keys(&storage.channel_ends)
+			.map(|channel_end| {
+				(
+					ChannelId::from_str(&channel_end.1).unwrap(),
+					PortId::from_str(&channel_end.0).unwrap(),
+				)
+			})
+			.collect();
+		Ok(channels)
 	}
 
 	async fn query_connection_using_client(
@@ -537,7 +622,9 @@ impl IbcProvider for Client {
 		latest_height: u64,
 		latest_client_height_on_counterparty: u64,
 	) -> Result<bool, Self::Error> {
-		todo!()
+		// we never need to use LightClientSync trait in this case, because
+		// all the events will be eventually submitted via `finality_notifications`
+		Ok(false)
 	}
 
 	async fn initialize_client_state(
