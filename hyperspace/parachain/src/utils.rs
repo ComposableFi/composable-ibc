@@ -15,12 +15,10 @@
 use crate::Error;
 use beefy_light_client_primitives::{ClientState, MmrUpdateProof};
 use beefy_primitives::known_payloads::MMR_ROOT_ID;
-use beefy_prover::helpers::unsafe_arc_cast;
 use codec::Decode;
 use frame_support::pallet_prelude::{DispatchClass, Weight};
 use frame_system::limits::BlockWeights;
 use sp_core::H256;
-use std::sync::Arc;
 
 pub fn get_updated_client_state(
 	mut client_state: ClientState,
@@ -53,12 +51,11 @@ pub async fn fetch_max_extrinsic_weight<T: light_client_common::config::Config>(
 		.expect("System pallet should exist")
 		.constant_by_name("BlockWeights")
 		.expect("constatn BlockWeights should exist");
-	let bw_value = block_weights.value().to_vec();
 	let weights = BlockWeights::decode(&mut &block_weights.value()[..])?;
 	let extrinsic_weights = weights.per_class.get(DispatchClass::Normal);
 	let max_extrinsic_weight = extrinsic_weights
 		.max_extrinsic
 		.or(extrinsic_weights.max_total)
-		.unwrap_or(Weight::from_ref_time(u64::MAX));
+		.unwrap_or(Weight::from_parts(u64::MAX, 0));
 	Ok(max_extrinsic_weight.ref_time())
 }

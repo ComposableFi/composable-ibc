@@ -125,8 +125,7 @@ where
 		let cs_state = consensus_heights
 			.into_iter()
 			.filter(|prev_height| prev_height < &height)
-			.rev()
-			.next()
+			.next_back()
 			.and_then(|prev_height| self.consensus_state(client_id, prev_height).ok());
 		Ok(cs_state)
 	}

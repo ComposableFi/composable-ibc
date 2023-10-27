@@ -11,9 +11,9 @@ use self::parachain_subxt::api::{
 };
 use super::{unimplemented, DummyBeefyAuthoritySet};
 use crate::{
-	define_any_wrapper, define_beefy_authority_set, define_event_record, define_events,
-	define_head_data, define_ibc_event_wrapper, define_id, define_para_lifecycle,
-	define_runtime_call, define_runtime_event, define_runtime_storage, define_runtime_transactions,
+	define_any_wrapper, define_event_record, define_events, define_head_data,
+	define_ibc_event_wrapper, define_id, define_para_lifecycle, define_runtime_call,
+	define_runtime_event, define_runtime_storage, define_runtime_transactions,
 	define_send_ping_params, define_transfer_params,
 };
 use async_trait::async_trait;
