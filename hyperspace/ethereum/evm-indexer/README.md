@@ -1,0 +1,75 @@
+<h1 align="center">
+<strong>EVM Blockchain Indexer</strong>
+</h1>
+<p align="center">
+<strong>A scalable SQL indexer for EVM compatible blockchains</strong>
+</p>
+
+## Requirements
+
+- [Rust](https://www.rust-lang.org/tools/install)
+- [CockroachDB](https://www.cockroachlabs.com/) (or any other PostgreSQL compatible DB)
+- [Redis](https://redis.io/) (used to store the indexed blocks state)
+
+## Available Chains
+
+This indexer is chain agnostic. It should work with any chain that follows the ETH RPC API. But some chains have some minor modifications that could result in them not being able to sync.
+
+The following chains have been tested and indexed successfully:
+
+- Arbitrum One.
+- Arbitrum Nova.
+- Avalanche.
+- BitTorrent Chain.
+- BNB Chain.
+- Celo.
+- Ethereum.
+- Fantom.
+- Gnosis Chain.
+- Moonbeam.
+- Optimism.
+- Polygon.
+
+## Install
+
+You can try the indexer locally or through Docker.
+
+### Local
+
+1. Clone the repository
+
+```
+git clone https://github.com/llamafolio/evm-indexer && cd evm-indexer
+```
+
+2. Build the program
+
+```
+cargo build --release
+```
+
+3. Copy the `.env.example` file to `.env` and add your environment variables.
+
+4. Run the program
+
+`TODO: programs and flags.`
+
+### Docker
+
+1. Clone the repository
+
+```
+git clone https://github.com/llamafolio/evm-indexer && cd evm-indexer
+```
+
+2. Build the image and tag it as `indexer`
+
+```
+docker build . -t indexer
+```
+
+3. Copy the `.env.example` file to `.env` and add your environment variables.
+
+4. Run the image
+
+`TODO: programs and flags.`
