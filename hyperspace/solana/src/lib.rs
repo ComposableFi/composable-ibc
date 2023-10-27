@@ -1,6 +1,7 @@
 extern crate alloc;
 
 use alloc::rc::Rc;
+use sealable_trie::proof::Proof;
 use core::{pin::Pin, str::FromStr, time::Duration};
 use ibc_storage::PrivateStorage;
 use prost::Message;
@@ -24,15 +25,15 @@ use ibc::{
 		ics02_client::{client_state::ClientType, events::UpdateClient},
 		ics24_host::{
 			identifier::{ClientId, ConnectionId},
-			path::{ClientConsensusStatePath, ClientStatePath},
-		},
+			path::{ClientConsensusStatePath, ClientStatePath, ConnectionsPath, ChannelEndsPath},
+		}, 
 	},
 	events::IbcEvent,
 	Height,
 };
 use ibc_proto::{
 	google::protobuf::Any,
-	ibc::core::client::v1::{QueryClientStateResponse, QueryConsensusStateResponse},
+	ibc::core::{client::v1::{QueryClientStateResponse, QueryConsensusStateResponse}, connection::v1::{QueryConnectionResponse, ConnectionEnd}, channel::v1::{QueryChannelResponse, Channel}},
 };
 use instructions::AnyCheck;
 use pallet_ibc::light_clients::AnyClientMessage;
@@ -261,8 +262,24 @@ impl IbcProvider for Client {
 		&self,
 		at: Height,
 		connection_id: ConnectionId,
-	) -> Result<ibc_proto::ibc::core::connection::v1::QueryConnectionResponse, Self::Error> {
-		todo!()
+	) -> Result<QueryConnectionResponse, Self::Error> {
+		let trie = self.get_trie().await;
+		let storage = self.get_ibc_storage();
+		let connection_end_path = ConnectionsPath(connection_id.clone());
+		let connection_end_trie_key = TrieKey::from(&connection_end_path);
+		let (_, connection_end_proof) = trie
+			.prove(&connection_end_trie_key)
+			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
+		let serialized_connection_end = storage
+			.clients
+			.get(&(connection_id.to_string()))
+			.ok_or(Error::Custom("No value at given key".to_owned()))?;
+		let connection_end: ConnectionEnd = serde_json::from_str(&serialized_connection_end).map_err(|_| Error::Custom("Could not deserialize connection end".to_owned()))?;
+		Ok(QueryConnectionResponse {
+			connection: Some(connection_end),
+			proof: borsh::to_vec(&connection_end_proof).unwrap(),
+			proof_height: increment_proof_height(Some(at.into())),
+		})
 	}
 
 	async fn query_channel_end(
@@ -270,12 +287,32 @@ impl IbcProvider for Client {
 		at: Height,
 		channel_id: ibc::core::ics24_host::identifier::ChannelId,
 		port_id: ibc::core::ics24_host::identifier::PortId,
-	) -> Result<ibc_proto::ibc::core::channel::v1::QueryChannelResponse, Self::Error> {
-		todo!()
+	) -> Result<QueryChannelResponse, Self::Error> {
+		let trie = self.get_trie().await;
+		let storage = self.get_ibc_storage();
+		let channel_end_path = ChannelEndsPath(port_id.clone(), channel_id.clone());
+		let channel_end_trie_key = TrieKey::from(&channel_end_path);
+		let (_, channel_end_proof) = trie
+			.prove(&channel_end_trie_key)
+			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
+		let serialized_channel_end = storage
+			.clients
+			.get(&(channel_id.to_string()))
+			.ok_or(Error::Custom("No value at given key".to_owned()))?;
+		let channel_end: Channel = serde_json::from_str(&serialized_channel_end).map_err(|_| Error::Custom("Could not deserialize connection end".to_owned()))?;
+		Ok(QueryChannelResponse {
+			channel: Some(channel_end),
+			proof: borsh::to_vec(&channel_end_proof).unwrap(),
+			proof_height: increment_proof_height(Some(at.into())),
+		})
 	}
 
-	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
-		todo!()
+	async fn query_proof(&self, _at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
+		let trie = self.get_trie().await;
+		let (_, proof) = trie
+			.prove(&keys[0])
+			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;	
+		Ok(borsh::to_vec(&proof).unwrap())
 	}
 
 	async fn query_packet_commitment(
