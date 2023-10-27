@@ -55,6 +55,44 @@ use std::time::Duration;
 use subxt::config::substrate::{BlakeTwo256, SubstrateHeader};
 
 #[tokio::test]
+async fn lsd_test() {
+
+	let para_storage_key = parachain_header_storage_key(12);
+	
+
+	let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "rpc.polkadot.io".to_string());
+	let para = std::env::var("PARA_HOST").unwrap_or_else(|_| "rpc.polkadot.io".to_string());
+
+	let relay_ws_url = format!("wss://{relay}:443");
+	let para_ws_url = format!("wss://{para}:443");
+
+	let prover = GrandpaProver::<PolkadotConfig>::new(
+		&relay_ws_url,
+		&para_ws_url,
+		2000,
+		Duration::from_millis(100),
+	)
+	.await
+	.unwrap();
+	let keys = vec![para_storage_key.as_ref()];
+
+	let state_proof: Vec<Vec<u8>> = prover
+						.relay_client
+						.rpc()
+						.read_proof(keys.iter().map(AsRef::as_ref), None)
+						.await.unwrap()
+						.proof
+						.into_iter()
+						.map(|p| p.0)
+						.collect();
+	println!("state_proof: {:?}", state_proof);
+	assert!(state_proof.len() > 0);
+}
+
+
+
+
+#[tokio::test]
 async fn test_continuous_update_of_grandpa_client() {
 	env_logger::builder()
 		.filter_module("grandpa", log::LevelFilter::Trace)
