@@ -41,7 +41,7 @@ mocks = ["clock", "std", "sha3", "ripemd", "ibc/mocks"]
 
 [dependencies]
 # Proto definitions for all IBC-related interfaces, e.g., connections or channels.
-borsh = { version = "0.9.3", default-features = false }
+borsh = { version = "0.10.3", default-features = false }
 ibc = { path = "../../ibc/modules", default-features = false }
 ibc-proto = { path = "../../ibc/proto", default-features = false }
 ibc-derive = { path = "../../ibc/derive", default-features = false }
