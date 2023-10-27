@@ -17,7 +17,7 @@ use anchor_client::{
 	},
 	Client as AnchorClient, Cluster, Program,
 };
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, system_program};
 use error::Error;
 use ibc::{
 	core::{
@@ -53,6 +53,9 @@ mod trie_key;
 
 const SOLANA_IBC_STORAGE_SEED: &[u8] = b"solana_ibc_storage";
 const TRIE_SEED: &[u8] = b"trie";
+
+// Random key added to implement `#[account]` macro for the storage 
+declare_id!("EnfDJsAK7BGgetnmKzBx86CsgC5kfSPcsktFCQ4YLC81");
 
 pub struct InnerAny {
 	pub type_url: String,
@@ -213,7 +216,7 @@ impl IbcProvider for Client {
 		let storage = self.get_ibc_storage();
 		let Height { revision_height, revision_number } = consensus_height;
 		let consensus_state_path =
-			ClientConsensusStatePath { height: revision_height, epoch: revision_number, client_id };
+			ClientConsensusStatePath { height: revision_height, epoch: revision_number, client_id: client_id.clone()};
 		let consensus_state_trie_key = TrieKey::from(&consensus_state_path);
 		let (_, consensus_state_proof) = trie
 			.prove(&consensus_state_trie_key)
@@ -237,7 +240,7 @@ impl IbcProvider for Client {
 	) -> Result<QueryClientStateResponse, Self::Error> {
 		let trie = self.get_trie().await;
 		let storage = self.get_ibc_storage();
-		let client_state_path = ClientStatePath(client_id);
+		let client_state_path = ClientStatePath(client_id.clone());
 		let client_state_trie_key = TrieKey::from(&client_state_path);
 		let (_, client_state_proof) = trie
 			.prove(&client_state_trie_key)

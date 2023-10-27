@@ -30,7 +30,8 @@ pub enum SequenceTripleIdx {
 	Ack = 2,
 }
 
-#[derive(Debug, AnchorSerialize, AnchorDeserialize, AccountDeserialize)]
+// #[derive(Debug, AnchorSerialize, AnchorDeserialize)]
+#[account]
 /// All the structs from IBC are stored as String since they dont implement AnchorSerialize and
 /// AnchorDeserialize
 pub struct PrivateStorage {
