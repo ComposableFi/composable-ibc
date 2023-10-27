@@ -238,7 +238,7 @@ fn process_message(
 					Ok(to_binary(&ContractResult::success().heights(heights)))
 				})
 		},
-		SudoMsg::CheckSubstituteAndUpdateState(_msg) =>
+		SudoMsg::MigrateClientStore(_msg) =>
 			check_substitute_and_update_state::<HostFunctions>(ctx)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))
 				.and_then(|(cs, cu)| {

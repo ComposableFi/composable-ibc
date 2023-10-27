@@ -19,7 +19,7 @@ use crate::{
 	ics23::FakeInner,
 	log,
 	msg::{
-		CheckForMisbehaviourMsg, CheckSubstituteAndUpdateStateMsg,
+		CheckForMisbehaviourMsg, MigrateClientStoreMsg,
 		ContractResult, SudoMsg, ExportMetadataMsg, QueryMsg, QueryResponse,
 		StatusMsg, UpdateStateMsg, UpdateStateOnMisbehaviourMsg, VerifyClientMessage,
 		VerifyMembershipMsg, VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
@@ -220,8 +220,8 @@ fn process_message(
 					store_client_and_consensus_states(ctx, client_id.clone(), cs, cu)
 				})
 		},
-		SudoMsg::CheckSubstituteAndUpdateState(msg) => {
-			let _msg = CheckSubstituteAndUpdateStateMsg::try_from(msg)?;
+		SudoMsg::MigrateClientStore(msg) => {
+			let _msg = MigrateClientStoreMsg::try_from(msg)?;
 			// manually load both states from the combined storage using the appropriate prefixes
 			let mut old_client_state = ctx
 				.client_state_prefixed(SUBJECT_PREFIX)
