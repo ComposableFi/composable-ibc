@@ -49,10 +49,10 @@ ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 
 # Trie
-lib = { git = "ssh://git@github.com/ComposableFi/emulated-light-client.git" }
-memory = { git = "ssh://git@github.com/ComposableFi/emulated-light-client.git" }
-sealable-trie = { git = "ssh://git@github.com/ComposableFi/emulated-light-client.git", features = ["borsh"] }
-stdx = { git = "ssh://git@github.com/ComposableFi/emulated-light-client.git" }
+lib = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
+memory = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
+sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["borsh"] }
+stdx = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
 
 tracing = "0.1.36"
 
