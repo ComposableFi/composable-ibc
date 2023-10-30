@@ -417,7 +417,7 @@ mod xx {
 	use hyperspace_ethereum::{
 		client::EthereumClient, config::EthereumClientConfig, ibc_provider::Ics20BankAbi,
 	};
-	use hyperspace_testsuite::send_transfer_to;
+	// use hyperspace_testsuite::send_transfer_to;
 	use ibc::signer::Signer;
 	use log::error;
 	use std::fmt::Debug;

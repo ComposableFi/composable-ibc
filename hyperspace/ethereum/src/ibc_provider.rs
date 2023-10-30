@@ -484,7 +484,8 @@ impl IbcProvider for EthereumClient {
 		// 	.pop() // get only the last event
 		// 	;
 		let maybe_log = self
-			.get_logs_for_event_name::<UpdateClientHeightFilter>(
+		// .get_logs_for_event_name::<UpdateClientHeightFilter>(
+			.get_logs_for_event_name(
 				EARLIEST_BLOCK,
 				at.revision_height,
 				"UpdateClientHeight",
@@ -497,49 +498,52 @@ impl IbcProvider for EthereumClient {
 			)
 			.await?;
 		let batch_func = self.yui.function("callBatch")?;
-		match maybe_log {
-			Some(log) => {
-				let tx_hash = log.transaction_hash.expect("tx hash should exist");
-				let func = self.yui.function("updateClient")?;
-				let tx =
-					self.client().get_transaction(tx_hash).await.unwrap().ok_or_else(|| {
-						ClientError::Other(format!("transaction not found: {}", tx_hash))
-					})?;
-				let Token::Array(batch_calldata) =
-					batch_func.decode_input(&tx.input[4..])?.pop().unwrap()
-				else {
-					return Err(ClientError::Other("batch calldata not found".to_string()))
-				};
+		// match maybe_log {
+		// Some(log) => {
+		// let log = UpdateClientHeightFilter {};
+		// let tx_hash = log.transaction_hash.expect("tx hash should exist");
+		let tx_hash = H256::from_str("0x9102381023").unwrap();
+		let func = self.yui.function("updateClient")?;
+		let tx = self
+			.client()
+			.get_transaction(tx_hash)
+			.await
+			.unwrap()
+			.ok_or_else(|| ClientError::Other(format!("transaction not found: {}", tx_hash)))?;
+		let Token::Array(batch_calldata) = batch_func.decode_input(&tx.input[4..])?.pop().unwrap()
+		else {
+			return Err(ClientError::Other("batch calldata not found".to_string()))
+		};
 
-				for input_tok in batch_calldata.into_iter().rev() {
-					let Token::Bytes(input) = input_tok else { panic!() };
-					if input[..4] == func.short_signature() {
-						let calldata = func.decode_input(&input[4..])?.pop().unwrap();
-						let Token::Tuple(toks) = calldata else { panic!() };
-						let header = tm_header_from_abi_token(toks[1].clone())?;
-						consensus_state = Some(TmConsensusState {
-							timestamp: header.signed_header.header.time,
-							root: CommitmentRoot {
-								bytes: header.signed_header.header.app_hash.as_bytes().to_owned(),
-							},
-							next_validators_hash: header.signed_header.header.next_validators_hash,
-						});
-						// TODO: figure out how to distinguish between the same function calls
+		for input_tok in batch_calldata.into_iter().rev() {
+			let Token::Bytes(input) = input_tok else { panic!() };
+			if input[..4] == func.short_signature() {
+				let calldata = func.decode_input(&input[4..])?.pop().unwrap();
+				let Token::Tuple(toks) = calldata else { panic!() };
+				let header = tm_header_from_abi_token(toks[1].clone())?;
+				consensus_state = Some(TmConsensusState {
+					timestamp: header.signed_header.header.time,
+					root: CommitmentRoot {
+						bytes: header.signed_header.header.app_hash.as_bytes().to_owned(),
+					},
+					next_validators_hash: header.signed_header.header.next_validators_hash,
+				});
+				// TODO: figure out how to distinguish between the same function calls
 
-						let proof_height = Some(at.into());
-						return Ok(QueryConsensusStateResponse {
-							consensus_state: Some(
-								consensus_state.expect("should always be initialized").to_any(),
-							),
-							proof: vec![0],
-							proof_height,
-						})
-					}
-				}
-				// TODO: handle frozen height
-			},
-			None => {},
+				let proof_height = Some(at.into());
+				return Ok(QueryConsensusStateResponse {
+					consensus_state: Some(
+						consensus_state.expect("should always be initialized").to_any(),
+					),
+					proof: vec![0],
+					proof_height,
+				})
+			}
 		}
+		// TODO: handle frozen height
+		// },
+		// 	None => {},
+		// }
 
 		log::trace!(target: "hyperspace_ethereum", "no update client event found for blocks ..{at}, looking for a create client event...");
 

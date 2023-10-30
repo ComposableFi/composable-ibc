@@ -168,5 +168,7 @@ pub async fn hyperspace_ethereum_client_fixture(
 		yui: Some(yui_ibc),
 		client_type: "07-tendermint".into(),
 		jwt_secret_path,
+		indexer_pg_url: format!("postgresql://127.0.0.1:5432/ethereum").parse().unwrap(),
+		indexer_redis_url: format!("ws://127.0.0.1:5432").parse().unwrap(),
 	}
 }

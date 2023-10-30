@@ -122,6 +122,10 @@ pub enum ClientError {
 	IbcClient(#[from] ibc::core::ics02_client::error::Error),
 	#[error("Ibc channel error")]
 	IbcChannel(#[from] ibc::core::ics04_channel::error::Error),
+	#[error("Serde JSON error")]
+	JSONError(#[from] serde_json::Error),
+	#[error("SQL error")]
+	SQLError(#[from] sqlx::Error),
 	#[error("{0}")]
 	Other(String),
 }
