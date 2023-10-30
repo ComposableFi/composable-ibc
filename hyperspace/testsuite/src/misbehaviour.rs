@@ -15,8 +15,8 @@ use ics10_grandpa::client_message::{ClientMessage, Header as GrandpaHeader, Rela
 use log::info;
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState};
 use polkadot_core_primitives::Header;
+use sp_consensus_grandpa::{AuthorityId, AuthoritySignature};
 use sp_core::{Decode, Encode, Pair};
-use sp_finality_grandpa::{AuthorityId, AuthoritySignature};
 use sp_keyring::ed25519::Keyring;
 use sp_runtime::{codec::Compact, traits::BlakeTwo256};
 use sp_state_machine::{prove_read_on_trie_backend, TrieBackendBuilder};
@@ -45,14 +45,7 @@ where
 	});
 	info!("Waiting for the next block...");
 
-	let relaychain_authorities = [
-		Keyring::Alice,
-		Keyring::Bob,
-		Keyring::Charlie,
-		Keyring::Dave,
-		Keyring::Eve,
-		Keyring::Ferdie,
-	];
+	let relaychain_authorities = [Keyring::Alice, Keyring::Bob];
 
 	// query the current client state that will be used to construct a fraudulent finality proof
 	let client_id = chain_b.client_id();
@@ -158,7 +151,7 @@ where
 		.iter()
 		.map(|id| {
 			let key = id.pair();
-			let encoded = sp_finality_grandpa::localized_payload(round, set_id, &message);
+			let encoded = sp_consensus_grandpa::localized_payload(round, set_id, &message);
 			let signature = AuthoritySignature::from(key.sign(&encoded));
 			SignedPrecommit {
 				precommit: precommit.clone(),

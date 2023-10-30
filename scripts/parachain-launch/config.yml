@@ -1,6 +1,6 @@
 # Relaychain Configuration
 relaychain:
-  image: parity/polkadot:v0.9.39 # the docker image to use
+  image: parity/polkadot:v0.9.43 # the docker image to use
   chain: rococo-local # the chain to use
   runtimeGenesisConfig: # additonal genesis override
     configuration:
@@ -16,7 +16,7 @@ relaychain:
     - --pruning=archive
   nodes: # nodes config
     - name: alice # the node name and session key, this imply `--alice`
-      wsPort: 9944 # default ws port number is `9944 + global_node_index`
+      rpcPort: 9944 # default ws port number is `9944 + global_node_index`
     - name: bob
     - name: charlie
     - name: dave
@@ -48,7 +48,7 @@ parachains:
       - --execution=wasm
 #    volumePath: /acala/data # The path to mount volume and base path, default to /data
     nodes: # nodes config
-      - wsPort: 9188
+      - rpcPort: 9188
         flags: # additional CLI flags for this node
           - --alice
         relaychainFlags: # additional CLI flags for relaychain part
@@ -79,7 +79,7 @@ parachains:
     relaychainFlags: # CLI flags for the relaychain port
       - --execution=wasm
     nodes: # nodes config
-      - wsPort: 9988
+      - rpcPort: 9988
         flags: # additional CLI flags for this node
           - --alice
       - flags:

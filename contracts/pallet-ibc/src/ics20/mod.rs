@@ -792,7 +792,7 @@ where
 					account_to.clone(),
 					memo_forward.para_id,
 					amount,
-					asset_id.into(),
+					asset_id.clone().into(),
 				)
 				.ok_or_else(|| {
 					crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoXcmFailed {
@@ -800,7 +800,7 @@ where
 						to: account_to.clone(),
 						para_id: memo_forward.para_id,
 						amount,
-						asset_id: asset_id.into(),
+						asset_id: asset_id.clone().into(),
 					});
 					Ics20Error::implementation_specific(
 						"Faield to execute SubstrateMultihopXcmHandler::transfer_xcm.".to_string(),
@@ -812,7 +812,7 @@ where
 					to: account_to.clone(),
 					para_id: memo_forward.para_id,
 					amount,
-					asset_id: asset_id.into(),
+					asset_id: asset_id.clone().into(),
 				});
 
 				return Ok(())
@@ -876,7 +876,7 @@ where
 		crate::Pallet::<T>::transfer(
 			origin.into(),
 			params,
-			asset_id,
+			asset_id.clone(),
 			amount.into(),
 			next_memo.clone(),
 		)
@@ -884,7 +884,7 @@ where
 			crate::Pallet::<T>::deposit_event(Event::<T>::ExecuteMemoIbcTokenTransferFailed {
 				from: receiver.clone(),
 				to: raw_bytes.clone(),
-				asset_id,
+				asset_id: asset_id.clone(),
 				amount: amount.into(),
 				channel: channel_id,
 				next_memo: next_memo.clone(),

@@ -148,7 +148,7 @@ pub mod pallet {
 		pallet_prelude::*,
 		storage::child,
 		traits::{
-			fungibles::{Inspect, Mutate, Transfer},
+			fungibles::{Inspect, Mutate},
 			tokens::{AssetId, Balance},
 			ReservableCurrency, UnixTime,
 		},
@@ -225,7 +225,7 @@ pub mod pallet {
 			+ IdentifyAccount<AccountId = <Self as frame_system::Config>::AccountId>
 			+ Clone;
 		/// Set of traits needed to handle fungible assets
-		type Fungibles: Transfer<
+		type Fungibles: Mutate<
 				<Self as frame_system::Config>::AccountId,
 				Balance = Self::Balance,
 				AssetId = Self::AssetId,
