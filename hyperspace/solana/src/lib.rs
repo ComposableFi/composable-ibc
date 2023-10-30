@@ -52,7 +52,11 @@ use primitives::{
 	Chain, CommonClientConfig, CommonClientState, IbcProvider, KeyProvider, LightClientSync,
 	MisbehaviourHandler, UndeliveredType,
 };
-use std::{collections::{BTreeMap, HashSet}, result::Result, sync::{Mutex, Arc}};
+use std::{
+	collections::{BTreeMap, HashSet},
+	result::Result,
+	sync::{Arc, Mutex},
+};
 use tendermint_rpc::Url;
 use tokio_stream::Stream;
 
@@ -459,7 +463,20 @@ impl IbcProvider for Client {
 		port_id: ibc::core::ics24_host::identifier::PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error> {
-		todo!()
+		let storage = self.get_ibc_storage();
+		let packet_receipt_sequences = storage
+			.packet_receipt_sequence_sets
+			.get(&(port_id.to_string(), channel_id.to_string()))
+			.ok_or("No value found at given key".to_owned())?;
+		Ok(seqs
+			.iter()
+			.flat_map(|&seq| {
+				match packet_receipt_sequences.iter().find(|&&receipt_seq| receipt_seq == seq) {
+					Some(_) => None,
+					None => Some(seq),
+				}
+			})
+			.collect())
 	}
 
 	async fn query_unreceived_acknowledgements(
@@ -469,7 +486,18 @@ impl IbcProvider for Client {
 		port_id: ibc::core::ics24_host::identifier::PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error> {
-		todo!()
+		let storage = self.get_ibc_storage();
+		let packet_ack_sequences = storage
+			.packet_acknowledgement_sequence_sets
+			.get(&(port_id.to_string(), channel_id.to_string()))
+			.ok_or("No value found at given key".to_owned())?;
+		Ok(seqs
+			.iter()
+			.flat_map(|&seq| match packet_ack_sequences.iter().find(|&&ack_seq| ack_seq == seq) {
+				Some(_) => None,
+				None => Some(seq),
+			})
+			.collect())
 	}
 
 	fn channel_whitelist(
