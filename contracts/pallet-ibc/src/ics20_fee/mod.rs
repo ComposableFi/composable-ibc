@@ -405,7 +405,7 @@ where
 				let fee_asset_id = T::FlatFeeAssetId::get();
 				let fee_asset_amount = T::FlatFeeAmount::get();
 
-				T::FlatFeeConverter::get_flat_fee(asset_id, fee_asset_id, fee_asset_amount)
+				T::FlatFeeConverter::get_flat_fee(asset_id.clone(), fee_asset_id, fee_asset_amount)
 					.unwrap_or_else(|| {
 						// We have ensured that token amounts larger than the max value for
 						// a u128 are rejected in the ics20 on_recv_packet callback so we
@@ -437,7 +437,7 @@ where
 			})?;
 			Pallet::<T>::deposit_event(Event::<T>::IbcTransferFeeCollected {
 				amount: fee.into(),
-				asset_id,
+				asset_id: asset_id.clone(),
 			})
 		}
 		Ok(())

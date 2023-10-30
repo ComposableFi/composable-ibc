@@ -1,0 +1,17 @@
+version: "0.5"
+
+environment:
+  - "GLOBAL_ENV_VAR=1"
+log_location: /tmp/logfile.log
+log_level: debug
+
+processes:
+  network-a:
+    command: "zombienet spawn ./config-network-a.json --provider native"
+    availability:
+      restart: "never"
+      failure_threshold: 32
+      initial_delay_seconds: 32
+      period_seconds: 8
+      success_threshold: 1
+      timeout_seconds: 2

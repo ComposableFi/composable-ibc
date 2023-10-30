@@ -9,15 +9,23 @@ name = "codegen"
 path = "bin/main.rs"
 
 [dependencies]
-tokio = { version = "1.21.2", features = ["full"] }
+tokio = { version = "1.32.0", features = ["full"] }
 anyhow = "1.0.66"
 clap = { version = "3.2.22", features = ["derive", "env"] }
 serde_json = "1.0.91"
 http = "0.2.9"
-subxt-codegen = { git = "https://github.com/paritytech/subxt", rev = "2a4da618a033bb82f768e4ef67b093b371f8b492" }
-jsonrpsee = { version = "0.16.2", features = ["async-client", "client-ws-transport", "http-client"] }
+subxt-codegen = { git = "https://github.com/paritytech/subxt", tag = "v0.29.0" }
+subxt-metadata = { git = "https://github.com/paritytech/subxt", tag = "v0.29.0" }
+jsonrpsee = { version = "0.16.2", features = [
+    "async-client",
+    "client-ws-transport",
+    "http-client",
+] }
 frame-metadata = { version = "15.0.0", features = ["v14", "std"] }
-syn = "1.0.98"
-codec = { package = "parity-scale-codec", version = "3.0.0" }
+syn = { version = "2.0.15", features = ["full", "extra-traits"] }
+codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false, features = [
+    "derive",
+    "max-encoded-len",
+] }
 hex = "0.4.3"
-wasm-testbed = { git = "https://github.com/chevdor/subwasm", rev = "f3cfa4b75eca99172425c6a249cc61a6f6520cce" }
+wasm-testbed = { git = "https://github.com/chevdor/subwasm", release = "v0.20" }

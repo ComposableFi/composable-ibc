@@ -1,7 +1,8 @@
 use super::super::*;
 use crate::routing::Context;
 use frame_support::traits::{
-	fungibles::{Mutate, Transfer},
+	fungibles::Mutate,
+	tokens::{Fortitude, Precision},
 	Currency, Get,
 };
 use ibc::{
@@ -96,12 +97,12 @@ where
 				Ics20Error::invalid_token()
 			})?;
 		} else {
-			<<T as Config>::Fungibles as Transfer<<T as frame_system::Config>::AccountId>>::transfer(
-				asset_id,
+			<<T as Config>::Fungibles as Mutate<<T as frame_system::Config>::AccountId>>::transfer(
+				asset_id.clone(),
 				&from.clone().into_account(),
 				&to.clone().into_account(),
 				amount,
-				false,
+				frame_support::traits::tokens::Preservation::Expendable,
 			)
 			.map_err(|e| {
 				log::debug!(target: "pallet_ibc", "Failed to transfer ibc asset: {asset_id:?}, denom: {denom}, error: {e:?}");
@@ -149,6 +150,8 @@ where
 			asset_id,
 			&account.clone().into_account(),
 			amount,
+			Precision::Exact,
+			Fortitude::Force,
 		)
 		.map_err(|e| {
 			log::debug!(target: "pallet_ibc", "Failed to burn tokens: {:?}", e);

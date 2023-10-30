@@ -22,15 +22,17 @@ use sp_core::H256;
 use subxt::{
 	client::OnlineClient,
 	config::ExtrinsicParams,
-	error::{Error, StorageAddressError},
+	error::{Error, MetadataError, StorageAddressError},
 	events::{Phase, StaticEvent},
 	ext::{
-		frame_metadata::{StorageEntryType, StorageHasher},
 		scale_decode::DecodeAsType,
 		scale_encode::{EncodeAsFields, EncodeAsType},
-		sp_runtime::{scale_info::TypeDef, Either},
+		sp_runtime::scale_info::TypeDef,
 	},
-	metadata::{DecodeWithMetadata, EncodeWithMetadata, Metadata},
+	metadata::{
+		types::{StorageEntryType, StorageHasher},
+		DecodeWithMetadata, EncodeWithMetadata, Metadata,
+	},
 	storage::{
 		address::{StaticStorageMapKey, Yes},
 		Address, StorageAddress,
@@ -115,10 +117,15 @@ where
 	}
 
 	fn append_entry_bytes(&self, metadata: &Metadata, bytes: &mut Vec<u8>) -> Result<(), Error> {
-		let pallet = metadata.pallet(&self.pallet_name)?;
-		let storage = pallet.storage(&self.entry_name)?;
+		let pallet = metadata.pallet_by_name_err(self.pallet_name())?;
+		let storage = pallet
+			.storage()
+			.ok_or_else(|| MetadataError::StorageNotFoundInPallet(self.pallet_name().to_owned()))?;
+		let entry = storage
+			.entry_by_name(self.entry_name())
+			.ok_or_else(|| MetadataError::StorageEntryNotFound(self.entry_name().to_owned()))?;
 
-		match &storage.ty {
+		match entry.entry_type() {
 			StorageEntryType::Plain(_) =>
 				if !self.storage_entry_keys.is_empty() {
 					Err(StorageAddressError::WrongNumberOfKeys {
@@ -129,16 +136,18 @@ where
 				} else {
 					Ok(())
 				},
-			StorageEntryType::Map { hashers, key, .. } => {
+			StorageEntryType::Map { hashers, key_ty, .. } => {
 				let ty = metadata
-					.resolve_type(key.id)
-					.ok_or(StorageAddressError::TypeNotFound(key.id))?;
+					.types()
+					.resolve(*key_ty)
+					.ok_or(MetadataError::TypeNotFound(*key_ty))?;
 
 				// If the key is a tuple, we encode each value to the corresponding tuple type.
 				// If the key is not a tuple, encode a single value to the key type.
 				let type_ids = match &ty.type_def {
-					TypeDef::Tuple(tuple) => Either::Left(tuple.fields.iter().map(|f| f.id)),
-					_other => Either::Right(std::iter::once(key.id)),
+					TypeDef::Tuple(tuple) =>
+						sp_runtime::Either::Left(tuple.fields.iter().map(|f| f.id)),
+					_other => sp_runtime::Either::Right(std::iter::once(*key_ty)),
 				};
 
 				if type_ids.len() != self.storage_entry_keys.len() {
@@ -253,7 +262,7 @@ pub trait RuntimeStorage {
 	fn beefy_validator_set_id() -> Address<StaticStorageMapKey, u64, Yes, Yes, ()>;
 
 	fn beefy_authorities(
-	) -> LocalAddress<StaticStorageMapKey, Vec<sp_beefy::crypto::Public>, Yes, Yes, ()>;
+	) -> LocalAddress<StaticStorageMapKey, Vec<sp_consensus_beefy::crypto::Public>, Yes, Yes, ()>;
 
 	fn mmr_leaf_beefy_next_authorities(
 	) -> LocalAddress<StaticStorageMapKey, <Self::BeefyAuthoritySet as AsInner>::Inner, Yes, Yes, ()>;

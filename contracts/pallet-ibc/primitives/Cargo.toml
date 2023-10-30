@@ -18,13 +18,13 @@ hex = { version = "0.4.3", default-features = false }
 base58 = "0.2.0"
 blake2 = { version = "0.10", default-features = false }
 
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
-sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 
 [dependencies.ibc]
 path = "../../../ibc/modules"
@@ -39,21 +39,23 @@ default-features = false
 [features]
 default = ['std']
 std = [
-  "codec/std",
-  "serde",
-  "ibc/std",
-  "scale-info/std",
-  "sp-std/std",
-  "sp-core/std",
-  "sp-runtime/std",
-  "sp-runtime-interface/std",
-  "sp-io/std",
-  "sp-trie/std",
-  "sha2/std",
-  "sha3/std",
-  "ripemd/std",
-  "frame-support/std",
-  "hex/std",
+	"codec/std",
+	"serde",
+	"ibc/std",
+	"scale-info/std",
+	"sp-std/std",
+	"sp-core/std",
+	"sp-runtime/std",
+	"sp-runtime-interface/std",
+	"sp-io/std",
+	"sp-trie/std",
+	"sha2/std",
+	"sha3/std",
+	"ripemd/std",
+	"frame-support/std",
+	"hex/std",
+	"blake2/std",
+	"serde/std"
 ]
 mocks = []
 runtime-benchmarks = []

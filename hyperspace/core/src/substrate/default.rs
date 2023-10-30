@@ -1,19 +1,20 @@
 use self::parachain_subxt::api::{
-	ibc::calls::{Deliver, Transfer},
-	ibc_ping::calls::SendPing,
+	ibc::calls::types::{Deliver, Transfer},
+	ibc_ping::calls::types::SendPing,
 	runtime_types::{
 		frame_system::{extensions::check_nonce::CheckNonce, EventRecord},
 		pallet_ibc::{events::IbcEvent as MetadataIbcEvent, TransferParams as RawTransferParams},
 		pallet_ibc_ping::SendPingParams as RawSendPingParams,
 		parachain_runtime::RawMemo,
 	},
-	sudo::calls::Sudo,
+	sudo::calls::types::Sudo,
 };
+use super::{unimplemented, DummyBeefyAuthoritySet};
 use crate::{
-	define_any_wrapper, define_event_record, define_events, define_head_data,
-	define_ibc_event_wrapper, define_id, define_para_lifecycle, define_runtime_call,
-	define_runtime_event, define_runtime_storage, define_runtime_transactions,
-	define_send_ping_params, define_transfer_params, substrate::DummyBeefyAuthoritySet,
+	define_any_wrapper, define_beefy_authority_set, define_event_record, define_events,
+	define_head_data, define_ibc_event_wrapper, define_id, define_para_lifecycle,
+	define_runtime_call, define_runtime_event, define_runtime_storage, define_runtime_transactions,
+	define_send_ping_params, define_transfer_params,
 };
 use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
@@ -86,9 +87,13 @@ define_runtime_storage!(
 	|x| relaychain::api::storage().paras().para_lifecycles(x),
 	relaychain::api::storage().paras().parachains(),
 	relaychain::api::storage().grandpa().current_set_id(),
-	relaychain::api::storage().beefy().validator_set_id(),
-	relaychain::api::storage().beefy().authorities(),
-	relaychain::api::storage().mmr_leaf().beefy_next_authorities(),
+	unimplemented("relaychain::api::storage().beefy().validator_set_id()"),
+	unimplemented::<Address<StaticStorageMapKey, (), Yes, Yes, ()>>(
+		"relaychain::api::storage().beefy().authorities()"
+	),
+	unimplemented::<Address<StaticStorageMapKey, (), Yes, Yes, ()>>(
+		"relaychain::api::storage().mmr_leaf().beefy_next_authorities()"
+	),
 	relaychain::api::storage().babe().epoch_start()
 );
 
