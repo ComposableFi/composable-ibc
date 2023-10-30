@@ -7,7 +7,7 @@ use log::*;
 use redis::Commands;
 use sqlx::{
 	postgres::{PgConnectOptions, PgPoolOptions},
-	ConnectOptions, QueryBuilder, Row,
+	ConnectOptions, Execute, QueryBuilder, Row,
 };
 
 use crate::chains::chains::Chain;
@@ -153,10 +153,36 @@ impl Database {
 
 		let chunks = get_chunks(blocks.len(), DatabaseBlock::field_count());
 
-		for (start, end) in chunks {
-			let mut query_builder = QueryBuilder::new("UPSERT INTO blocks (base_fee_per_gas, chain, difficulty, extra_data, gas_limit, gas_used, block_hash, logs_bloom, miner, mix_hash, nonce, number, parent_hash, receipts_root, sha3_uncles, size, state_root, timestamp, total_difficulty, transactions, uncles) ");
-
+		for (start, mut end) in chunks {
+			let mut query_builder = QueryBuilder::new("INSERT INTO blocks (base_fee_per_gas, chain, difficulty, extra_data, gas_limit, gas_used, block_hash, logs_bloom, miner, mix_hash, nonce, number, parent_hash, receipts_root, sha3_uncles, size, state_root, timestamp, total_difficulty, transactions, uncles) ");
+			// end = start + 1;
 			query_builder.push_values(&blocks[start..end], |mut row, block| {
+				row.push_bind(block.base_fee_per_gas.clone())
+					.push_bind(block.chain.clone())
+					.push_bind(block.difficulty.clone())
+					.push_bind(block.extra_data.clone())
+					.push_bind(block.gas_limit.clone())
+					.push_bind(block.gas_used.clone())
+					.push_bind(block.block_hash.clone())
+					.push_bind(block.logs_bloom.clone())
+					.push_bind(block.miner.clone())
+					.push_bind(block.mix_hash.clone())
+					.push_bind(block.nonce.clone())
+					.push_bind(block.number)
+					.push_bind(block.parent_hash.clone())
+					.push_bind(block.receipts_root.clone())
+					.push_bind(block.sha3_uncles.clone())
+					.push_bind(block.size)
+					.push_bind(block.state_root.clone())
+					.push_bind(block.timestamp.clone())
+					.push_bind(block.total_difficulty.clone())
+					.push_bind(block.transactions)
+					.push_bind(block.uncles.clone());
+			});
+
+			query_builder.push(" ON CONFLICT (block_hash) DO UPDATE SET (base_fee_per_gas, chain, difficulty, extra_data, gas_limit, gas_used, block_hash, logs_bloom, miner, mix_hash, nonce, number, parent_hash, receipts_root, sha3_uncles, size, state_root, timestamp, total_difficulty, transactions, uncles) =");
+
+			query_builder.push_tuples(&blocks[start..end], |mut row, block| {
 				row.push_bind(block.base_fee_per_gas.clone())
 					.push_bind(block.chain.clone())
 					.push_bind(block.difficulty.clone())
@@ -182,6 +208,7 @@ impl Database {
 
 			let query = query_builder.build();
 
+			println!("EXECUTING {:?}, {}", query.statement(), query.sql());
 			query.execute(connection).await.expect("Unable to store blocks into database");
 		}
 
@@ -194,7 +221,7 @@ impl Database {
 		let chunks = get_chunks(transactions.len(), DatabaseTransaction::field_count());
 
 		for (start, end) in chunks {
-			let mut query_builder = QueryBuilder::new("UPSERT INTO transactions (block_hash, block_number, chain, from_address, gas, gas_price, max_priority_fee_per_gas, max_fee_per_gas, hash, input, method, nonce, timestamp, to_address, transaction_index, transaction_type, value) ");
+			let mut query_builder = QueryBuilder::new("INSERT INTO transactions (block_hash, block_number, chain, from_address, gas, gas_price, max_priority_fee_per_gas, max_fee_per_gas, hash, input, method, nonce, timestamp, to_address, transaction_index, transaction_type, value) ");
 
 			query_builder.push_values(&transactions[start..end], |mut row, transaction| {
 				row.push_bind(transaction.block_hash.clone())
@@ -233,7 +260,7 @@ impl Database {
 		let chunks = get_chunks(receipts.len(), DatabaseReceipt::field_count());
 
 		for (start, end) in chunks {
-			let mut query_builder = QueryBuilder::new("UPSERT INTO receipts (contract_address, cumulative_gas_used, effective_gas_price, gas_used, hash, status) ");
+			let mut query_builder = QueryBuilder::new("INSERT INTO receipts (contract_address, cumulative_gas_used, effective_gas_price, gas_used, hash, status) ");
 
 			query_builder.push_values(&receipts[start..end], |mut row, receipt| {
 				row.push_bind(receipt.contract_address.clone())
@@ -258,7 +285,7 @@ impl Database {
 		let chunks = get_chunks(logs.len(), DatabaseLog::field_count());
 
 		for (start, end) in chunks {
-			let mut query_builder = QueryBuilder::new("UPSERT INTO logs (address, chain, data, erc20_transfers_parsed, hash, log_index, removed, topics) ");
+			let mut query_builder = QueryBuilder::new("INSERT INTO logs (address, chain, data, erc20_transfers_parsed, hash, log_index, removed, topics) ");
 
 			query_builder.push_values(&logs[start..end], |mut row, log| {
 				row.push_bind(log.address.clone())
@@ -286,7 +313,7 @@ impl Database {
 
 		for (start, end) in chunks {
 			let mut query_builder = QueryBuilder::new(
-				"UPSERT INTO contracts (block, chain, contract, creator, hash, parsed, verified) ",
+				"INSERT INTO contracts (block, chain, contract, creator, hash, parsed, verified) ",
 			);
 
 			query_builder.push_values(&contracts[start..end], |mut row, contract| {
@@ -321,7 +348,7 @@ impl Database {
 
 		for (start, end) in chunks {
 			let mut query_builder = QueryBuilder::new(
-				"UPSERT INTO contracts_information (chain, contract, abi, name, verified) ",
+				"INSERT INTO contracts_information (chain, contract, abi, name, verified) ",
 			);
 
 			query_builder.push_values(
@@ -352,7 +379,7 @@ impl Database {
 		let chunks = get_chunks(methods.len(), DatabaseMethod::field_count());
 
 		for (start, end) in chunks {
-			let mut query_builder = QueryBuilder::new("UPSERT INTO methods (method, name) ");
+			let mut query_builder = QueryBuilder::new("INSERT INTO methods (method, name) ");
 
 			query_builder.push_values(&methods[start..end], |mut row, method| {
 				row.push_bind(method.method.clone()).push_bind(method.name.clone());
@@ -398,10 +425,11 @@ impl Database {
 		let connection = self.get_connection();
 
 		let query = format!(
-			"UPSERT INTO chains_indexed_state (chain, indexed_blocks_amount) VALUES ('{}', {})",
+			"INSERT INTO chains_indexed_state (chain, indexed_blocks_amount) VALUES ('{}', {y}) ON CONFLICT (chain) DO UPDATE SET indexed_blocks_amount = {y}",
 			chain_state.chain.clone(),
-			chain_state.indexed_blocks_amount
+			y = chain_state.indexed_blocks_amount
 		);
+		println!("{query}");
 
 		QueryBuilder::new(query)
 			.build()
@@ -419,7 +447,7 @@ impl Database {
 
 		for (start, end) in chunks {
 			let mut query_builder = QueryBuilder::new(
-				"UPSERT INTO contracts(block, chain, contract, creator, hash, parsed, verified) ",
+				"INSERT INTO contracts(block, chain, contract, creator, hash, parsed, verified) ",
 			);
 
 			query_builder.push_values(&contracts[start..end], |mut row, contract| {

@@ -8,20 +8,19 @@ use crate::{
 	utils::format_small_number,
 };
 use anyhow::Result;
+use ethabi::Address;
 use ethers::{
 	abi::RawLog,
 	contract::EthEvent,
 	prelude::Log,
 	types::{Block, Transaction, TransactionReceipt, U256},
 };
-
 use jsonrpsee::core::{client::ClientT, rpc_params};
 use jsonrpsee_http_client::{HttpClient, HttpClientBuilder};
-use log::info;
+use log::{info, warn};
 use rand::seq::SliceRandom;
+use serde_json::{json, Error};
 use std::time::Duration;
-
-use serde_json::Error;
 
 #[derive(Debug, Clone)]
 pub struct Rpc {
@@ -54,6 +53,11 @@ impl Rpc {
 					};
 
 					if chain_id.as_u64() as i64 != config.chain.id {
+						warn!(
+							"RPC client chain id does not match the configured chain id: {} != {}",
+							chain_id.as_u64() as i64,
+							config.chain.id
+						);
 						continue
 					}
 
@@ -229,10 +233,10 @@ impl Rpc {
 								let db_log =
 									DatabaseLog::from_rpc(log.clone(), self.chain.name.to_owned());
 								if let Ok(Some(s)) = parse_log(log.clone()) {
-									db_ibc_events.push(DatabaseIBCEventData {
-										block_number: *block_number,
-										event_data: serde_json::from_str(s.as_str()).unwrap(),
-									})
+									// db_ibc_events.push(DatabaseIBCEventData {
+									// 	block_number: *block_number,
+									// 	event_data: serde_json::from_str(s.as_str()).unwrap(),
+									// })
 								}
 
 								db_transaction_logs.push(db_log)
@@ -253,13 +257,64 @@ impl Rpc {
 		}
 	}
 
+	pub async fn get_ibc_logs(
+		&self,
+		from_block: i64,
+		to_block: i64,
+		contract_addresses: &[Address],
+	) -> Result<Option<Vec<DatabaseIBCEventData>>> {
+		let client = self.get_client();
+
+		let value = client
+			.request(
+				"eth_getLogs",
+				rpc_params![json!({
+					"fromBlock": format!("0x{:x}", from_block),
+					"toBlock": format!("0x{:x}", to_block),
+					"address": contract_addresses.iter().map(|x| format!("0x{:x}", x)).collect::<Vec<String>>(),
+				})],
+			)
+			.await?;
+		let logs: Vec<Log> = serde_json::from_value(value)?;
+
+		let mut db_ibc_events: Vec<DatabaseIBCEventData> = Vec::new();
+
+		for log in logs {
+			if log.block_number.is_none() ||
+				log.transaction_log_index.is_none() ||
+				log.transaction_index.is_none()
+			{
+				continue
+			}
+
+			if log.removed == Some(true) {
+				warn!("log was removed: {:?}", log);
+				continue
+			}
+
+			if let Ok(Some(s)) = parse_log(log.clone()) {
+				db_ibc_events.push(DatabaseIBCEventData {
+					block_number: log.block_number.unwrap().as_u64() as i64,
+					event_data: serde_json::from_str(s.as_str()).unwrap(),
+					address: log.address.0.to_vec(),
+					topics: log.topics.iter().map(|x| x.0.to_vec()).collect(),
+					data: log.data.0.to_vec(),
+					tx_index: log.transaction_index.unwrap().as_u64() as i64,
+					event_index: log.transaction_log_index.unwrap().as_u64() as i64,
+				})
+			}
+		}
+
+		return Ok(Some(db_ibc_events))
+	}
+
 	fn get_client(&self) -> &HttpClient {
 		let client = self.clients.choose(&mut rand::thread_rng()).unwrap();
 		return client
 	}
 }
 
-fn parse_log(log: Log) -> Result<Option<String>, serde_json::Error> {
+fn parse_log(log: Log) -> Result<Option<String>, Error> {
 	use crate::utils::{
 		AcknowledgePacketFilter,
 		CloseConfirmChannelFilter,
@@ -272,7 +327,7 @@ fn parse_log(log: Log) -> Result<Option<String>, serde_json::Error> {
 		OpenInitConnectionFilter,
 		OpenTryConnectionFilter,
 		SendPacketFilter, // TODO: this event might only be emitted by the ICS-20 contract
-		TimeoutOnClosePacketFilter,
+		// TimeoutOnClosePacketFilter,
 		TimeoutPacketFilter,
 		WriteAcknowledgementFilter,
 	};
@@ -313,7 +368,7 @@ fn parse_log(log: Log) -> Result<Option<String>, serde_json::Error> {
 		WriteAcknowledgementFilter,
 		AcknowledgePacketFilter,
 		TimeoutPacketFilter,
-		TimeoutOnClosePacketFilter,
+		// TimeoutOnClosePacketFilter,
 		CloseInitChannelFilter,
 		CloseConfirmChannelFilter
 	)

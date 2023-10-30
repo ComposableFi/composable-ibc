@@ -137,7 +137,9 @@ pub struct EthereumClientConfig {
 	pub yui: Option<DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>>,
 	pub client_type: String,
 	pub jwt_secret_path: Option<String>,
+	#[serde(deserialize_with = "uri_de", serialize_with = "uri_se")]
 	pub indexer_pg_url: http::uri::Uri,
+	#[serde(deserialize_with = "uri_de", serialize_with = "uri_se")]
 	pub indexer_redis_url: http::uri::Uri,
 }
 

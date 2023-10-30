@@ -1,5 +1,5 @@
 use dotenv::dotenv;
-use ethers::{abi::RawLog, prelude::Log};
+use ethers::{abi::RawLog, prelude::Log, types::Address};
 use evm_indexer::{
 	chains::chains::Chain,
 	configs::indexer_config::EVMIndexerConfig,
@@ -15,7 +15,8 @@ use evm_indexer::{
 use futures::future::join_all;
 use log::*;
 use simple_logger::SimpleLogger;
-use std::{collections::HashSet, thread::sleep, time::Duration};
+use std::{collections::HashSet, time::Duration};
+use tokio::time::sleep;
 
 #[tokio::main()]
 async fn main() {
@@ -53,8 +54,7 @@ async fn main() {
 
 		loop {
 			sync_chain(&rpc, &db, &mut config, &mut indexed_blocks).await;
-
-			sleep(Duration::from_millis(500))
+			sleep(Duration::from_millis(500)).await;
 		}
 	} else {
 		db.delete_indexed_blocks().await.unwrap();
@@ -78,7 +78,8 @@ async fn sync_chain(
 
 	let full_block_range = HashSet::<i64>::from_iter(config.start_block..last_block);
 
-	let missing_blocks: Vec<i64> = (&full_block_range - &indexed_blocks).into_iter().collect();
+	let mut missing_blocks: Vec<i64> = (&full_block_range - &indexed_blocks).into_iter().collect();
+	missing_blocks.sort();
 
 	let total_missing_blocks = missing_blocks.len();
 
@@ -89,9 +90,11 @@ async fn sync_chain(
 	for missing_blocks_chunk in missing_blocks_chunks {
 		let mut work = vec![];
 
-		for block_number in missing_blocks_chunk {
-			work.push(fetch_block(&rpc, &block_number, &config.chain))
-		}
+		// for block_number in missing_blocks_chunk {
+		// 	work.push(fetch_block(&rpc, &block_number, &config.chain))
+		// }
+
+		work.push(fetch_ibc_events(&rpc, &missing_blocks_chunk, &config.contract_addresses));
 
 		let results = join_all(work).await;
 
@@ -104,19 +107,19 @@ async fn sync_chain(
 
 		for result in results {
 			match result {
-				Some((
-					block,
-					mut transactions,
-					mut receipts,
-					mut logs,
-					mut contracts,
+				Some(
+					// block,
+					// mut transactions,
+					// mut receipts,
+					// mut logs,
+					// mut contracts,
 					mut ibc_events,
-				)) => {
-					db_blocks.push(block);
-					db_transactions.append(&mut transactions);
-					db_receipts.append(&mut receipts);
-					db_logs.append(&mut logs);
-					db_contracts.append(&mut contracts);
+				) => {
+					// db_blocks.push(block);
+					// db_transactions.append(&mut transactions);
+					// db_receipts.append(&mut receipts);
+					// db_logs.append(&mut logs);
+					// db_contracts.append(&mut contracts);
 					db_ibc_events.append(&mut ibc_events);
 				},
 				None => continue,
@@ -141,6 +144,54 @@ async fn sync_chain(
 
 		db.store_indexed_blocks(&indexed_blocks_vector).await.unwrap();
 	}
+}
+
+async fn fetch_ibc_events(
+	rpc: &Rpc,
+	block_numbers: &[i64],
+	contract_addresses: &[Address],
+) -> Option<Vec<DatabaseIBCEventData>> {
+	//  `from_tos` is `block_numbers` shrinked to pairs of `(from_block, to_block)`
+	// e.g. block numbers = [1, 2, 3, 5, 6, 7, 8, 10], from_tos = [(1,3), (5,8), (10, 10)]
+	let from_tos: Vec<(i64, i64)> = block_numbers.iter().fold(vec![], |mut acc, block_number| {
+		if acc.is_empty() {
+			acc.push((*block_number, *block_number));
+			return acc
+		}
+
+		let last_from_to = acc.last_mut().unwrap();
+
+		if last_from_to.1 + 1 == *block_number {
+			last_from_to.1 = *block_number;
+		} else {
+			acc.push((*block_number, *block_number));
+		}
+
+		acc
+	});
+	// dbg!(&from_tos);
+	let mut events = vec![];
+	for (from, to) in from_tos {
+		let result = rpc.get_ibc_logs(from, to, contract_addresses).await;
+		match result {
+			Ok(Some(r)) => events.extend(r),
+			Err(e) => {
+				error!("Error fetching IBC events: {:?}", e);
+				return None
+			},
+			_ => {},
+		}
+	}
+	// match receipts_data {
+	// 	Some((mut receipts, mut logs, mut contracts, mut ibc_events)) => {
+	// 		db_receipts.append(&mut receipts);
+	// 		db_logs.append(&mut logs);
+	// 		db_contracts.append(&mut contracts);
+	// 		db_ibc_events.append(&mut ibc_events);
+	// 	},
+	// 	None => return None,
+	// }
+	return Some(events)
 }
 
 async fn fetch_block(
@@ -176,52 +227,53 @@ async fn fetch_block(
 			let mut db_contracts: Vec<DatabaseContract> = Vec::new();
 			let mut db_ibc_events: Vec<DatabaseIBCEventData> = Vec::new();
 
-			if chain.supports_blocks_receipts {
-				let receipts_data = rpc.get_block_receipts(block_number).await.unwrap();
-				match receipts_data {
-					Some((mut receipts, mut logs, mut contracts, mut ibc_events)) => {
-						db_receipts.append(&mut receipts);
-						db_logs.append(&mut logs);
-						db_contracts.append(&mut contracts);
-						db_ibc_events.append(&mut ibc_events);
-					},
-					None => return None,
-				}
-			} else {
-				for transaction in db_transactions.iter_mut() {
-					let receipt_data =
-						rpc.get_transaction_receipt(transaction.hash.clone()).await.unwrap();
+			// if chain.supports_blocks_receipts {
+			// 	let receipts_data = rpc.get_block_receipts(block_number).await.unwrap();
+			// 	match receipts_data {
+			// 		Some((mut receipts, mut logs, mut contracts, mut ibc_events)) => {
+			// 			db_receipts.append(&mut receipts);
+			// 			db_logs.append(&mut logs);
+			// 			db_contracts.append(&mut contracts);
+			// 			db_ibc_events.append(&mut ibc_events);
+			// 		},
+			// 		None => return None,
+			// 	}
+			// } else {
+			// 	for transaction in db_transactions.iter_mut() {
+			// 		let receipt_data =
+			// 			rpc.get_transaction_receipt(transaction.hash.clone()).await.unwrap();
+			//
+			// 		match receipt_data {
+			// 			Some((receipt, mut logs, contract)) => {
+			// 				db_receipts.push(receipt);
+			// 				db_logs.append(&mut logs);
+			// 				match contract {
+			// 					Some(contract) => db_contracts.push(contract),
+			// 					None => continue,
+			// 				}
+			// 			},
+			// 			None => continue,
+			// 		}
+			// 	}
+			// }
 
-					match receipt_data {
-						Some((receipt, mut logs, contract)) => {
-							db_receipts.push(receipt);
-							db_logs.append(&mut logs);
-							match contract {
-								Some(contract) => db_contracts.push(contract),
-								None => continue,
-							}
-						},
-						None => continue,
-					}
-				}
-			}
-
-			if total_block_transactions != db_receipts.len() {
-				warn!(
-					"Missing receipts for block {}. Transactions {} receipts {}",
-					db_block.number,
-					total_block_transactions,
-					db_receipts.len()
-				);
-				return None
-			}
+			// if total_block_transactions != db_receipts.len() {
+			// 	warn!(
+			// 		"Missing receipts for block {}. Transactions {} receipts {}",
+			// 		db_block.number,
+			// 		total_block_transactions,
+			// 		db_receipts.len()
+			// 	);
+			// 	return None
+			// }
 
 			info!(
-				"Found transactions {} receipts {} logs {} and contracts {} for block {}.",
+				"Found transactions {} receipts {} logs {} contracts {} ibc events: {} for block {}.",
 				total_block_transactions,
 				db_receipts.len(),
 				db_logs.len(),
 				db_contracts.len(),
+				db_ibc_events.len(),
 				block_number
 			);
 
