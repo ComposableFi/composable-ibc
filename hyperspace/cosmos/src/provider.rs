@@ -815,7 +815,7 @@ where
 		client_id: ClientId,
 		client_height: Height,
 	) -> Result<(Height, Timestamp), Self::Error> {
-		log::debug!(
+		log::trace!(
 			target: "hyperspace_cosmos",
 			"Querying client update time and height for client {:?} at height {:?}",
 			client_id,
