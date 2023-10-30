@@ -1,11 +1,11 @@
 module-hyperspace=hyperspace
 composable_ibc_image=composablefi/composable-ibc
-composable_ibc_image_latest=composablefi/composable-ibc:latest
+composable_ibc_image_latest=composablefi/composable-ibc:substrate-39
 ifndef GITHUB_SHA
 GITHUB_SHA=$(shell git rev-parse HEAD)
 endif
 composable_ibc_image_with_commit_hash="${composable_ibc_image}:${GITHUB_SHA}"
-hyperspace_image="composablefi/hyperspace:latest"
+hyperspace_image="composablefi/hyperspace:substrate-39"
 
 .PHONY: run-setup-hyperspace stop-setup-hyperspace build-release-hyperspace tests-hyperspace
 .PHONY: build-docker-image-hyperspace publish-docker-image-hyperspace
