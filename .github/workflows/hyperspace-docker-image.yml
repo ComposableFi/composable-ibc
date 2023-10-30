@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - substrate-39
 
 jobs:
   build-and-publish:
