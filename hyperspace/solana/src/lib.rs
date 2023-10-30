@@ -52,7 +52,7 @@ use primitives::{
 	Chain, CommonClientConfig, CommonClientState, IbcProvider, KeyProvider, LightClientSync,
 	MisbehaviourHandler, UndeliveredType,
 };
-use std::{collections::BTreeMap, result::Result};
+use std::{collections::{BTreeMap, HashSet}, result::Result, sync::{Mutex, Arc}};
 use tendermint_rpc::Url;
 use tokio_stream::Stream;
 
@@ -100,6 +100,8 @@ pub struct Client {
 	pub client_type: ClientType,
 	/// Reference to commitment
 	pub commitment_prefix: CommitmentPrefix,
+	/// Channels cleared for packet relay
+	pub channel_whitelist: Arc<Mutex<HashSet<(ChannelId, PortId)>>>,
 }
 
 pub struct ClientConfig {
@@ -476,7 +478,7 @@ impl IbcProvider for Client {
 		ibc::core::ics24_host::identifier::ChannelId,
 		ibc::core::ics24_host::identifier::PortId,
 	)> {
-		todo!()
+		self.channel_whitelist.lock().unwrap().clone()
 	}
 
 	async fn query_connection_channels(
@@ -555,7 +557,7 @@ impl IbcProvider for Client {
 			ibc::core::ics24_host::identifier::PortId,
 		)>,
 	) {
-		todo!()
+		*self.channel_whitelist.lock().unwrap() = channel_whitelist;
 	}
 
 	fn add_channel_to_whitelist(
@@ -565,7 +567,7 @@ impl IbcProvider for Client {
 			ibc::core::ics24_host::identifier::PortId,
 		),
 	) {
-		todo!()
+		self.channel_whitelist.lock().unwrap().insert(channel);
 	}
 
 	fn set_connection_id(&mut self, connection_id: ConnectionId) {
