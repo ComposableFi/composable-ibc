@@ -451,38 +451,51 @@ impl IbcProvider for EthereumClient {
 
 		// First, we try to find an `UpdateClient` event at the given height...
 		let mut consensus_state = None;
-		let mut event_filter = self
-			.yui
-			.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
-			.expect("contract is missing UpdateClient event")
-			.to_block(at.revision_height)
-			.from_block(at.revision_height);
-		event_filter.filter = event_filter
-			.filter
-			.topic1({
-				let hash = H256::from_slice(&encode(&[Token::FixedBytes(
-					keccak256(client_id.to_string().into_bytes()).to_vec(),
-				)]));
-				ValueOrArray::Value(hash)
-			})
-			.topic2({
-				let height_bytes = encode(&[Token::Tuple(vec![
-					Token::Uint(consensus_height.revision_number.into()),
-					Token::Uint(consensus_height.revision_height.into()),
-				])]);
-				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
-					keccak256(&height_bytes).to_vec(),
-				)])))
-			});
+		// let mut event_filter = self
+		// 	.yui
+		// 	.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
+		// 	.expect("contract is missing UpdateClient event")
+		// 	.to_block(EARLIEST)
+		// 	.from_block(at.revision_height);
+		// event_filter.filter = event_filter
+		// 	.filter
+		// 	.topic1({
+		// 		let hash = H256::from_slice(&encode(&[Token::FixedBytes(
+		// 			keccak256(client_id.to_string().into_bytes()).to_vec(),
+		// 		)]));
+		// 		ValueOrArray::Value(hash)
+		// 	})
+		// 	.topic2({
+		// 		let height_bytes = encode(&[Token::Tuple(vec![
+		// 			Token::Uint(consensus_height.revision_number.into()),
+		// 			Token::Uint(consensus_height.revision_height.into()),
+		// 		])]);
+		// 		ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+		// 			keccak256(&height_bytes).to_vec(),
+		// 		)])))
+		// 	});
+		// let maybe_log = self
+		// 	.yui
+		// 	.diamond
+		// 	.client()
+		// 	.get_logs(&event_filter.filter)
+		// 	.await
+		// 	.unwrap()
+		// 	.pop() // get only the last event
+		// 	;
 		let maybe_log = self
-			.yui
-			.diamond
-			.client()
-			.get_logs(&event_filter.filter)
-			.await
-			.unwrap()
-			.pop() // get only the last event
-			;
+			.get_logs_for_event_name::<UpdateClientHeightFilter>(
+				EARLIEST_BLOCK,
+				at.revision_height,
+				"UpdateClientHeight",
+				&format!(
+					"'client_id' = '{client_id}', 'consensus_height.revision_number' = {}, consensus_height.revision_height = {}",
+					consensus_height.revision_number,
+					consensus_height.revision_height
+				),
+				None,
+			)
+			.await?;
 		let batch_func = self.yui.function("callBatch")?;
 		match maybe_log {
 			Some(log) => {
