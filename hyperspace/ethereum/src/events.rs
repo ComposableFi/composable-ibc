@@ -301,16 +301,16 @@ impl TryFromEvent<SendPacketFilter> for IbcEvent {
 	) -> Result<Self, ClientError> {
 		let SendPacketFilter {
 			sequence,
-			source_port: _,
-			source_channel: _,
-			source_port_raw,
-			source_channel_raw,
+			source_port_indexed: _,
+			source_channel_indexed: _,
+			source_port,
+			source_channel,
 			timeout_height,
 			timeout_timestamp,
 			data,
 		} = event;
-		let source_port: PortId = source_port_raw.parse()?;
-		let source_channel: ChannelId = source_channel_raw.parse()?;
+		let source_port: PortId = source_port.parse()?;
+		let source_channel: ChannelId = source_channel.parse()?;
 		let resp = client.query_channel_end(height, source_channel, source_port.clone()).await?;
 		let channel = resp.channel.unwrap();
 		let counterparty = channel.counterparty.unwrap();
@@ -344,15 +344,15 @@ impl TryFromEvent<WriteAcknowledgementFilter> for IbcEvent {
 		height: Height,
 	) -> Result<Self, ClientError> {
 		let WriteAcknowledgementFilter {
-			destination_port_id: _,
-			destination_channel: _,
 			sequence,
-			destination_port_id_raw,
-			destination_channel_raw,
+			destination_port,
+			destination_channel,
+			destination_port_indexed: _,
+			destination_channel_indexed: _,
 			acknowledgement,
 		} = event;
-		let destination_port_id: PortId = destination_port_id_raw.parse()?;
-		let destination_channel: ChannelId = destination_channel_raw.parse()?;
+		let destination_port_id: PortId = destination_port.parse()?;
+		let destination_channel: ChannelId = destination_channel.parse()?;
 		let packet = client
 			.query_received_packets(
 				height,

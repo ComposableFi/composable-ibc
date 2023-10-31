@@ -184,12 +184,11 @@ impl Database {
 					.push_bind(block.transactions)
 					.push_bind(block.uncles.clone());
 			});
-
-			query_builder.push(" ON CONFLICT (number, block_hash) DO UPDATE SET (base_fee_per_gas, chain, difficulty, extra_data, gas_limit, gas_used, block_hash, logs_bloom, miner, mix_hash, nonce, number, parent_hash, receipts_root, sha3_uncles, size, state_root, timestamp, total_difficulty, transactions, uncles) = (EXCLUDED.base_fee_per_gas, EXCLUDED.chain, EXCLUDED.difficulty, EXCLUDED.extra_data, EXCLUDED.gas_limit, EXCLUDED.gas_used, EXCLUDED.block_hash, EXCLUDED.logs_bloom, EXCLUDED.miner, EXCLUDED.mix_hash, EXCLUDED.nonce, EXCLUDED.number, EXCLUDED.parent_hash, EXCLUDED.receipts_root, EXCLUDED.sha3_uncles, EXCLUDED.size, EXCLUDED.state_root, EXCLUDED.timestamp, EXCLUDED.total_difficulty, EXCLUDED.transactions, EXCLUDED.uncles)");
+			query_builder.push(" ON CONFLICT (number, block_hash) DO UPDATE SET (base_fee_per_gas, chain, difficulty, extra_data, gas_limit, gas_used, block_hash, logs_bloom, miner, mix_hash, nonce, number, parent_hash, receipts_root, sha3_uncles, size, state_root, timestamp, total_difficulty, transactions, uncles) = (EXCLUDED.base_fee_per_gas, EXCLUDED.chain, EXCLUDED.difficulty, EXCLUDED.extra_data, EXCLUDED.gas_limit, EXCLUDED.gas_used, EXCLUDED.block_hash, EXCLUDED.logs_bloom, EXCLUDED.miner, EXCLUDED.mix_hash, EXCLUDED.nonce, EXCLUDED.number, EXCLUDED.parent_hash, EXCLUDED.receipts_root, EXCLUDED.sha3_uncles, EXCLUDED.size, EXCLUDED.state_root, EXCLUDED.timestamp, EXCLUDED.total_difficulty, EXCLUDED.transactions, EXCLUDED.uncles) WHERE EXCLUDED.block_hash <> blocks.block_hash");
 
 			let query = query_builder.build();
 
-			println!("EXECUTING {:?}, {}", query.statement(), query.sql());
+			debug!("store_blocks sql: {}", query.sql());
 			query.execute(connection).await.expect("Unable to store blocks into database");
 		}
 
@@ -305,7 +304,7 @@ impl Database {
 					.push_bind(log.event_index.clone())
 					.push_bind(log.raw_log.clone());
 			});
-			query_builder.push(" ON CONFLICT (block_number, tx_index, event_index) DO UPDATE SET (block_number, event_data, address, topic0, topics, data, tx_index, event_index, raw_log) = (EXCLUDED.block_number, EXCLUDED.event_data, EXCLUDED.address, EXCLUDED.topic0, EXCLUDED.topics, EXCLUDED.data, EXCLUDED.tx_index, EXCLUDED.event_index, EXCLUDED.raw_log)");
+			query_builder.push(" ON CONFLICT (block_number, tx_index, event_index) DO UPDATE SET (block_number, event_data, address, topic0, topics, data, tx_index, event_index, raw_log) = (EXCLUDED.block_number, EXCLUDED.event_data, EXCLUDED.address, EXCLUDED.topic0, EXCLUDED.topics, EXCLUDED.data, EXCLUDED.tx_index, EXCLUDED.event_index, EXCLUDED.raw_log) where EXCLUDED.raw_log <> ibc_events.raw_log");
 			let query = query_builder.build();
 
 			debug!("store_ibc_events sql: {}", query.sql());

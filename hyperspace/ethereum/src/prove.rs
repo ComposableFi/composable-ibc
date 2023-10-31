@@ -6,6 +6,7 @@ use ethers::{
 	prelude::{EthCall, H256},
 };
 use icsxx_ethereum::client_state::ClientState;
+use log::info;
 use pallet_ibc::light_clients::HostFunctionsManager;
 use primitives::mock::LocalClientTypes;
 use ssz_rs::{
@@ -34,24 +35,36 @@ use sync_committee_primitives::constants::SYNC_COMMITTEE_SIZE;
 pub async fn prove_fast(
 	client: &EthereumClient,
 	eth_client_state: &ClientState<HostFunctionsManager>,
-	block_number: u64,
+	mut block_number: u64,
+	up_to: u64,
 ) -> Result<Header, ClientError> {
+	info!("prove_fast up to {up_to}");
 	let sync_committee_prover = client.prover();
 
-	let block_id = format!("{block_number:?}");
-	// let block_id = "head";
-
+	let mut block_id = format!("{block_number:?}");
 	let client_state = &eth_client_state.inner;
-	// let block_id = "head";
 
+	// sync_committee_prover.fetch
+
+	let block = loop {
+		let block = sync_committee_prover.fetch_block(&block_id).await?;
+		if block.body.execution_payload.block_number <= up_to {
+			break block
+		}
+
+		if block_number == 0 {
+			return Err(ClientError::Other("Block number is 0".to_string()))
+		}
+		block_number -= 1;
+		block_id = format!("{block_number:?}");
+	};
 	let block_header = sync_committee_prover.fetch_header(&block_id).await?;
-
-	let block = sync_committee_prover.fetch_block(&block_header.slot.to_string()).await?;
-	let state = sync_committee_prover.fetch_beacon_state(&block_header.slot.to_string()).await?;
+	// let state = sync_committee_prover.fetch_beacon_state(&block_header.slot.to_string()).await?;
 
 	let from = client_state.finalized_header.slot + 1;
 	let to = block_header.slot;
 	let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+	// let range = vec![to];
 	let range = (from..to).collect::<Vec<_>>();
 	let delay = 5000;
 	let mut ancestor_blocks = vec![];
@@ -65,8 +78,12 @@ pub async fn prove_fast(
 				match sync_committee_prover.fetch_beacon_state(i.to_string().as_str()).await {
 					Ok(mut header_state) => {
 						let execution_payload_proof = prove_execution_payload(&mut header_state)?;
+						// execution_payload_proof.block_number
+						if header_state.latest_execution_payload_header.block_number > up_to {
+							return Ok(None)
+						}
 						log::info!("UPDATE ANC: {}", header_state.slot);
-						return Ok(AncestorBlock {
+						return Ok(Some(AncestorBlock {
 							header: BeaconBlockHeader {
 								slot: header_state.slot,
 								proposer_index: 0,
@@ -82,7 +99,7 @@ pub async fn prove_fast(
 								},
 								block_roots_branch: vec![],
 							},
-						})
+						}))
 					},
 					Err(e) => {
 						log::info!("UPDATE cannot fetch: {} {e}", i);
@@ -93,9 +110,10 @@ pub async fn prove_fast(
 		}
 		while let Some(res) = join_set.join_next().await {
 			match res.map_err(|e| anyhow!("{e}"))? {
-				Ok(out) => {
+				Ok(Some(out)) => {
 					ancestor_blocks.push(out);
 				},
+				Ok(None) => {},
 				Err(e) => {
 					log::warn!("Error fetching ancestor block: {:?}", e)
 				},
@@ -106,6 +124,10 @@ pub async fn prove_fast(
 	ancestor_blocks.sort_by_key(|ancestor_block| ancestor_block.header.slot);
 
 	let ep = block.body.execution_payload;
+	ancestor_blocks.iter().for_each(|e| {
+		info!("ADD block {}", e.execution_payload.block_number);
+	});
+	info!("ADD block {}", ep.block_number);
 	let execution_payload_proof = ExecutionPayloadProof {
 		state_root: H256::from_slice(&ep.state_root.to_vec()),
 		block_number: ep.block_number,

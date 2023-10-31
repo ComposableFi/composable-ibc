@@ -3,7 +3,7 @@ use std::{fmt::Debug, pin::Pin, time::Duration};
 use crate::{
 	client::{ClientError, EthereumClient},
 	contract::{IbcHandler, UnwrapContractError},
-	ibc_provider::BlockHeight,
+	ibc_provider::{BlockHeight, INDEXER_DELAY_BLOCKS},
 	yui_types::{ics03_connection::conn_open_try::YuiMsgConnectionOpenTry, IntoToken},
 };
 use channel_msgs::{
@@ -1159,7 +1159,7 @@ impl Chain for EthereumClient {
 	) -> Result<Pin<Box<dyn Stream<Item = Self::FinalityEvent> + Send>>, Self::Error> {
 		let ws = self.websocket_provider().await?;
 
-		let delay = self.expected_block_time();
+		let delay = self.expected_block_time() * INDEXER_DELAY_BLOCKS as u32;
 		let stream = async_stream::stream! {
 			// TODO: is it really finalized blocks stream?
 			let mut stream = ws.subscribe_blocks().await.expect("fuck");
@@ -1348,7 +1348,7 @@ impl Chain for EthereumClient {
 				let msg = MsgChannelOpenAck::decode_vec(&msg.value).map_err(|e| {
 					ClientError::Other(format!("chan_open_ack: failed to decode_vec: {:?}", e))
 				})?;
-				log::info!("msg = {msg:#?}");
+				// log::info!("msg = {msg:#?}");
 				let token = msg.into_token();
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "channelOpenAck").await);
 			} else if msg.type_url == channel_msgs::chan_open_confirm::TYPE_URL {

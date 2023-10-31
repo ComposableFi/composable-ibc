@@ -81,6 +81,17 @@ async fn sync_chain(
 	let mut missing_blocks: Vec<i64> = (&full_block_range - &indexed_blocks).into_iter().collect();
 	missing_blocks.sort();
 
+	// Re-fetch previous `config.block_confirmation_length` blocks also because of a potential
+	// chain reorganization
+	let mut min_missing = *missing_blocks.first().unwrap_or(&0);
+	let new_min_missing =
+		min_missing.saturating_sub(config.block_confirmation_length as i64).max(0);
+	if new_min_missing != min_missing {
+		for n in (new_min_missing..min_missing).rev() {
+			missing_blocks.insert(0, n);
+		}
+	}
+
 	let total_missing_blocks = missing_blocks.len();
 
 	if total_missing_blocks == 0 {
@@ -88,7 +99,9 @@ async fn sync_chain(
 		return
 	}
 
-	info!("Syncing {} blocks.", total_missing_blocks);
+	let max_missing = *missing_blocks.last().unwrap_or(&0);
+
+	info!("Syncing {} blocks {new_min_missing}..{max_missing}.", total_missing_blocks);
 
 	let missing_blocks_chunks = missing_blocks.chunks(config.batch_size);
 
@@ -295,15 +308,15 @@ async fn fetch_block(
 			// 	return None
 			// }
 
-			info!(
-				"Found transactions {} receipts {} logs {} contracts {} ibc events: {} for block {}.",
-				total_block_transactions,
-				db_receipts.len(),
-				db_logs.len(),
-				db_contracts.len(),
-				db_ibc_events.len(),
-				block_number
-			);
+			// info!(
+			// 	"Found transactions {} receipts {} logs {} contracts {} ibc events: {} for block
+			// {}.", 	total_block_transactions,
+			// 	db_receipts.len(),
+			// 	db_logs.len(),
+			// 	db_contracts.len(),
+			// 	db_ibc_events.len(),
+			// 	block_number
+			// );
 
 			return Some((
 				db_block,

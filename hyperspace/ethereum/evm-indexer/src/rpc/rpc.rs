@@ -348,28 +348,35 @@ fn parse_log(log: Log) -> Result<Option<String>, Error> {
 		log,
 		raw_log,
 		height,
+		// Connection
 		OpenInitConnectionFilter,
 		OpenTryConnectionFilter,
 		OpenAckConnectionFilter,
 		OpenConfirmConnectionFilter,
+		// Channel
 		OpenInitChannelFilter,
+		OpenTryChannelFilter,
 		OpenAckChannelFilter,
 		OpenConfirmChannelFilter,
-		SendPacketFilter, // TODO: this event might only be emitted by the ICS-20 contract
+		// Channel close
+		CloseInitChannelFilter,
+		CloseConfirmChannelFilter,
+		// Packet
+		SendPacketFilter,
+		RecvPacketFilter,
 		WriteAcknowledgementFilter,
 		AcknowledgePacketFilter,
 		TimeoutPacketFilter,
 		// TimeoutOnClosePacketFilter,
-		CloseInitChannelFilter,
-		CloseConfirmChannelFilter,
+		// Client
+		CreateClientFilter,
 		UpdateClientHeightFilter,
 		UpdateClientFilter,
-		RecvPacketFilter,
-		GeneratedChannelIdentifierFilter,
-		GeneratedConnectionIdentifierFilter,
-		GeneratedClientIdentifierFilter,
+		// Custom
 		RegisterClientFilter,
-		CreateClientFilter,
+		GeneratedClientIdentifierFilter,
+		GeneratedConnectionIdentifierFilter,
+		GeneratedChannelIdentifierFilter,
 		OwnershipTransferredFilter
 	)
 }

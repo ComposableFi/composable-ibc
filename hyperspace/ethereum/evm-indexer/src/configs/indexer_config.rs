@@ -42,6 +42,7 @@ pub struct EVMIndexerConfig {
 	pub rpcs: Vec<String>,
 	pub recalc_blocks_indexer: bool,
 	pub contract_addresses: Vec<Address>,
+	pub block_confirmation_length: usize,
 }
 
 impl EVMIndexerConfig {
@@ -69,6 +70,7 @@ impl EVMIndexerConfig {
 			rpcs,
 			recalc_blocks_indexer: args.recalculate_indexed_blocks,
 			contract_addresses: args.contract_addresses,
+			block_confirmation_length: 14,
 		}
 	}
 }

@@ -5196,6 +5196,7 @@ dependencies = [
  "ibc-rpc",
  "ics07-tendermint",
  "icsxx-ethereum",
+ "itertools 0.11.0",
  "jsonwebtoken",
  "log",
  "once_cell",

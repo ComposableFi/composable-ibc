@@ -44,6 +44,7 @@ use ibc_proto::{
 		},
 	},
 };
+use itertools::Itertools;
 use primitives::{IbcProvider, KeyProvider, UpdateType};
 use prost::Message;
 use std::{
@@ -64,6 +65,7 @@ use crate::{
 	events::TryFromEvent,
 };
 use futures::{FutureExt, Stream, StreamExt};
+use log::info;
 use ssz_rs::Merkleized;
 use thiserror::Error;
 
@@ -106,9 +108,12 @@ use pallet_ibc::light_clients::{
 use primitives::mock::LocalClientTypes;
 use sync_committee_primitives::types::{LightClientState, LightClientUpdate};
 use sync_committee_prover::SyncCommitteeProver;
+use tokio::time::sleep;
 use tracing::log;
 
 pub const EARLIEST_BLOCK: u64 = 0;
+pub const INDEXER_DELAY_BLOCKS: u64 = 2;
+
 abigen!(
 	IbcClientAbi,
 	"hyperspace/ethereum/src/abi/ibc-client-abi.json",
@@ -299,42 +304,47 @@ impl IbcProvider for EthereumClient {
 			.min(block.slot);
 
 		let number = block.body.execution_payload.block_number;
-
+		// 80180..80212
 		let from = latest_cp_client_height + 1;
-		let to = number.min(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER / 2);
+		let to = number
+			.min(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER / 2)
+			.saturating_sub(INDEXER_DELAY_BLOCKS)
+			.max(from);
 
-		log::info!(target: "hyperspace_ethereum", "Getting blocks {}..{}", from, to);
-		let filter =
-			Filter::new().from_block(from).to_block(to).address(self.yui.diamond.address());
-		let mut logs = self
-			.client()
-			.get_logs(&filter)
-			.await
-			.map_err(|e| ClientError::Other(format!("failed to get logs 1: {}", e)))?;
-		let filter = Filter::new().from_block(from).to_block(to).address(
-			self.yui
-				.bank
-				.as_ref()
-				.ok_or(ClientError::Other("bank contract not found".to_string()))?
-				.address(),
-		);
-		let logs2 = self
-			.client()
-			.get_logs(&filter)
-			.await
-			.map_err(|e| ClientError::Other(format!("failed to get logs 2: {}", e)))?;
-		logs.extend(logs2);
+		info!(target: "hyperspace_ethereum", "Getting blocks {}..{}", from, to);
+		// let filter =
+		// 	Filter::new().from_block(from).to_block(to).address(self.yui.diamond.address());
+		// let mut logs = self
+		// 	.client()
+		// 	.get_logs(&filter)
+		// 	.await
+		// 	.map_err(|e| ClientError::Other(format!("failed to get logs 1: {}", e)))?;
+		// let filter = Filter::new().from_block(from).to_block(to).address(
+		// 	self.yui
+		// 		.bank
+		// 		.as_ref()
+		// 		.ok_or(ClientError::Other("bank contract not found".to_string()))?
+		// 		.address(),
+		// );
+		// let logs2 = self
+		// 	.client()
+		// 	.get_logs(&filter)
+		// 	.await
+		// 	.map_err(|e| ClientError::Other(format!("failed to get logs 2: {}", e)))?;
+		// logs.extend(logs2);
+
+		let logs = self.get_logs(from, to.into(), None).await?;
 
 		let tries = NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER / 2;
 		let mut i = 0;
 		let header = loop {
-			let maybe_proof = prove_fast(self, &client_state, block_to + i).await;
+			let maybe_proof = prove_fast(self, &client_state, block_to + i, to).await;
 			i += 1;
 			match maybe_proof {
 				Ok(x) => break x,
 				Err(e) => {
 					log::error!(target: "hyperspace_ethereum", "failed to prove {e}");
-					std::thread::sleep(std::time::Duration::from_secs(2));
+					sleep(Duration::from_secs(2)).await;
 					if i >= tries {
 						return Ok(vec![])
 					}
@@ -344,7 +354,7 @@ impl IbcProvider for EthereumClient {
 		let update = &header.inner;
 		// let update = prove(self, finality_event.number.unwrap().as_u64()).await?;
 
-		log::info!(target: "hyperspace_ethereum",
+		info!(target: "hyperspace_ethereum",
 			"proven: state root = {}, body root = {}, slot = {}, block number = {}",
 			update.finalized_header.state_root,
 			update.finalized_header.body_root,
@@ -360,6 +370,10 @@ impl IbcProvider for EthereumClient {
 			Height::new(latest_revision, update.execution_payload.block_number.into());
 		// let update_height = Height::new(latest_revision, update.finalized_header.slot.into());
 		let events = parse_ethereum_events(&self, logs).await?;
+
+		events.iter().for_each(|x| {
+			info!("ev height = {}", x.height());
+		});
 
 		let update_client_header = {
 			log::info!(target: "hyperspace_ethereum", "update client header height: {}, finalized slot: {}",
@@ -463,29 +477,29 @@ impl IbcProvider for EthereumClient {
 
 		// First, we try to find an `UpdateClient` event at the given height...
 		let mut consensus_state = None;
-		let mut event_filter = self
-			.yui
-			.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
-			.expect("contract is missing UpdateClient event")
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
-			.to_block(at.revision_height);
-		event_filter.filter = event_filter
-			.filter
-			.topic1({
-				let hash = H256::from_slice(&encode(&[Token::FixedBytes(
-					keccak256(client_id.to_string().into_bytes()).to_vec(),
-				)]));
-				ValueOrArray::Value(hash)
-			})
-			.topic2({
-				let height_bytes = encode(&[Token::Tuple(vec![
-					Token::Uint(consensus_height.revision_number.into()),
-					Token::Uint(consensus_height.revision_height.into()),
-				])]);
-				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
-					keccak256(&height_bytes).to_vec(),
-				)])))
-			});
+		// let mut event_filter = self
+		// 	.yui
+		// 	.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
+		// 	.expect("contract is missing UpdateClient event")
+		// 	.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+		// 	.to_block(at.revision_height);
+		// event_filter.filter = event_filter
+		// 	.filter
+		// 	.topic1({
+		// 		let hash = H256::from_slice(&encode(&[Token::FixedBytes(
+		// 			keccak256(client_id.to_string().into_bytes()).to_vec(),
+		// 		)]));
+		// 		ValueOrArray::Value(hash)
+		// 	})
+		// 	.topic2({
+		// 		let height_bytes = encode(&[Token::Tuple(vec![
+		// 			Token::Uint(consensus_height.revision_number.into()),
+		// 			Token::Uint(consensus_height.revision_height.into()),
+		// 		])]);
+		// 		ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+		// 			keccak256(&height_bytes).to_vec(),
+		// 		)])))
+		// 	});
 		// let maybe_log = self
 		// 	.yui
 		// 	.diamond
@@ -498,7 +512,7 @@ impl IbcProvider for EthereumClient {
 		let maybe_log = self
 			.get_logs_for_event_name::<UpdateClientHeightFilter>(
 				EARLIEST_BLOCK,
-				at.revision_height,
+				at.revision_height.into(),
 				&format!(
 					"event_data ->> 'client_id' = '{client_id}' AND event_data->'client_height'->>'revision_number' = '{}' AND event_data->'client_height'->>'revision_height' = '{}'",
 					consensus_height.revision_number, consensus_height.revision_height
@@ -554,28 +568,38 @@ impl IbcProvider for EthereumClient {
 		log::trace!(target: "hyperspace_ethereum", "no update client event found for blocks ..{at}, looking for a create client event...");
 
 		// ...otherwise, try to get the `CreateClient` event
-		let mut event_filter = self
-			.yui
-			.event_for_name::<CreateClientFilter>("CreateClient")
-			.expect("contract is missing CreateClient event")
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
-			.address(ValueOrArray::Value(self.yui.diamond.address()))
-			//            .from_block(BlockNumber::Earliest)
-			.to_block(at.revision_height);
-		event_filter.filter = event_filter.filter.topic1({
-			let hash = H256::from_slice(&encode(&[Token::FixedBytes(
-				keccak256(client_id.to_string().into_bytes()).to_vec(),
-			)]));
-			ValueOrArray::Value(hash)
-		});
-		let log = self
-			.yui
-			.diamond
-			.client()
-			.get_logs(&event_filter.filter)
-			.await
-			.unwrap()
-			.pop() // get only the last event
+		// let mut event_filter = self
+		// 	.yui
+		// 	.event_for_name::<CreateClientFilter>("CreateClient")
+		// 	.expect("contract is missing CreateClient event")
+		// 	.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+		// 	.address(ValueOrArray::Value(self.yui.diamond.address()))
+		// 	//            .from_block(BlockNumber::Earliest)
+		// 	.to_block(at.revision_height);
+		// event_filter.filter = event_filter.filter.topic1({
+		// 	let hash = H256::from_slice(&encode(&[Token::FixedBytes(
+		// 		keccak256(client_id.to_string().into_bytes()).to_vec(),
+		// 	)]));
+		// 	ValueOrArray::Value(hash)
+		// });
+		// let log = self
+		// 	.yui
+		// 	.diamond
+		// 	.client()
+		// 	.get_logs(&event_filter.filter)
+		// 	.await
+		// 	.unwrap()
+		// 	.pop() // get only the last event
+		// 	.ok_or_else(|| ClientError::Other("no events found".to_string()))?;
+		let (_, log) = self
+			.get_logs_for_event_name::<CreateClientFilter>(
+				EARLIEST_BLOCK,
+				at.revision_height.into(),
+				&format!("event_data->>'client_id' = '{client_id}'"),
+				None,
+			)
+			.await?
+			.pop()
 			.ok_or_else(|| ClientError::Other("no events found".to_string()))?;
 
 		let tx_hash = log.transaction_hash.expect("tx hash should exist");
@@ -617,35 +641,44 @@ impl IbcProvider for EthereumClient {
 	) -> Result<QueryClientStateResponse, Self::Error> {
 		// First, we try to find an `UpdateClient` event at the given height...
 		let mut client_state = None;
-		let mut event_filter = self
-			.yui
-			.event_for_name::<UpdateClientFilter>("UpdateClient")
-			.map_err(|err| {
-				ClientError::Other(format!("contract is missing UpdateClient event: {}", err))
-			})?
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
-			.address(ValueOrArray::Value(self.yui.diamond.address()))
-			.to_block(at.revision_height);
-		event_filter.filter = event_filter.filter.topic1({
-			let hash = H256::from_slice(&encode(&[Token::FixedBytes(
-				keccak256(client_id.to_string().into_bytes()).to_vec(),
-			)]));
-			ValueOrArray::Value(hash)
-		});
+		// let mut event_filter = self
+		// 	.yui
+		// 	.event_for_name::<UpdateClientFilter>("UpdateClient")
+		// 	.map_err(|err| {
+		// 		ClientError::Other(format!("contract is missing UpdateClient event: {}", err))
+		// 	})?
+		// 	.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+		// 	.address(ValueOrArray::Value(self.yui.diamond.address()))
+		// 	.to_block(at.revision_height);
+		// event_filter.filter = event_filter.filter.topic1({
+		// 	let hash = H256::from_slice(&encode(&[Token::FixedBytes(
+		// 		keccak256(client_id.to_string().into_bytes()).to_vec(),
+		// 	)]));
+		// 	ValueOrArray::Value(hash)
+		// });
+		// let maybe_log = self
+		// 	.yui
+		// 	.diamond
+		// 	.client()
+		// 	.get_logs(&event_filter.filter)
+		// 	.await
+		// 	.map_err(
+		// 		|err| ClientError::Other(format!("failed to get logs 3: {}", err)),
+		// 	)?
+		// 	.pop() // get only the last event
+		// ;
 		let maybe_log = self
-			.yui
-			.diamond
-			.client()
-			.get_logs(&event_filter.filter)
-			.await
-			.map_err(
-				|err| ClientError::Other(format!("failed to get logs 3: {}", err)),
-			)?
-			.pop() // get only the last event
-		;
+			.get_logs_for_event_name::<UpdateClientHeightFilter>(
+				EARLIEST_BLOCK,
+				at.revision_height.into(),
+				&format!("event_data->>'client_id' = '{client_id}'"),
+				Some("ORDER BY (event_data->'client_height'->>'revision_height') :: bigint"),
+			)
+			.await?
+			.pop();
 		let batch_func = self.yui.function("callBatch")?;
 		match maybe_log {
-			Some(log) => {
+			Some((_, log)) => {
 				let tx_hash = log
 					.transaction_hash
 					.ok_or(ClientError::Other("tx hash not found".to_string()))?;
@@ -700,33 +733,44 @@ impl IbcProvider for EthereumClient {
 				log::trace!(target: "hyperspace_ethereum", "no update client event found for blocks ..{at}, looking for a create client event...");
 
 				// ...otherwise, try to get the `CreateClient` event
-				let mut event_filter = self
-					.yui
-					.event_for_name::<CreateClientFilter>("CreateClient")
-					.map_err(|err| {
-						ClientError::Other(format!(
-							"contract is missing CreateClient event: {}",
-							err
-						))
-					})?
-					.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
-					.address(ValueOrArray::Value(self.yui.diamond.address()))
-					//		.from_block(BlockNumber::Earliest)
-					.to_block(at.revision_height);
-				event_filter.filter = event_filter.filter.topic1({
-					let hash = H256::from_slice(&encode(&[Token::FixedBytes(
-						keccak256(client_id.to_string().into_bytes()).to_vec(),
-					)]));
-					ValueOrArray::Value(hash)
-				});
-				let log = self
-					.yui
-					.diamond
-					.client()
-					.get_logs(&event_filter.filter)
-					.await
-					.map_err(|err| ClientError::Other(format!("failed to get logs 4: {}", err)))?
-					.pop() // get only the last event
+				// let mut event_filter = self
+				// 	.yui
+				// 	.event_for_name::<CreateClientFilter>("CreateClient")
+				// 	.map_err(|err| {
+				// 		ClientError::Other(format!(
+				// 			"contract is missing CreateClient event: {}",
+				// 			err
+				// 		))
+				// 	})?
+				// 	.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+				// 	.address(ValueOrArray::Value(self.yui.diamond.address()))
+				// 	//		.from_block(BlockNumber::Earliest)
+				// 	.to_block(at.revision_height);
+				// event_filter.filter = event_filter.filter.topic1({
+				// 	let hash = H256::from_slice(&encode(&[Token::FixedBytes(
+				// 		keccak256(client_id.to_string().into_bytes()).to_vec(),
+				// 	)]));
+				// 	ValueOrArray::Value(hash)
+				// });
+				// let log = self
+				// 	.yui
+				// 	.diamond
+				// 	.client()
+				// 	.get_logs(&event_filter.filter)
+				// 	.await
+				// 	.map_err(|err| ClientError::Other(format!("failed to get logs 4: {}", err)))?
+				// 	.pop() // get only the last event
+				// 	.ok_or_else(|| ClientError::Other("no events found".to_string()))?;
+
+				let (_, log) = self
+					.get_logs_for_event_name::<CreateClientFilter>(
+						EARLIEST_BLOCK,
+						at.revision_height.into(),
+						&format!("event_data->>'client_id' = '{client_id}'"),
+						None,
+					)
+					.await?
+					.pop()
 					.ok_or_else(|| ClientError::Other("no events found".to_string()))?;
 
 				let tx_hash = log
@@ -1029,7 +1073,7 @@ impl IbcProvider for EthereumClient {
 		// TODO: fix latest_height_and_timestamp in basic builds
 		let prover = self.prover();
 		let block = prover.fetch_block("head").await?;
-		let number = block.body.execution_payload.block_number;
+		let number = block.body.execution_payload.block_number.saturating_sub(INDEXER_DELAY_BLOCKS);
 		let height = Height::new(0, number.into());
 		let block = self
 			.client()
@@ -1197,70 +1241,66 @@ impl IbcProvider for EthereumClient {
 	) -> Result<Vec<PacketInfo>, Self::Error> {
 		let source_port = port_id.to_string();
 		let source_channel = channel_id.to_string();
-		let event_filter = self
-			.yui
-			.event_for_name::<SendPacketFilter>("SendPacket")
-			.map_err(|err| ClientError::ContractAbiError(err))?
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
-			.address(ValueOrArray::Array(vec![
-				self.yui.bank.as_ref().map(|x| x.address()).unwrap_or_default(),
-				self.yui.diamond.address(),
-			]))
-			//            .address(ValueOrArray::Value(self.yui.diamond.address()))
-			//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
-			.to_block(BlockNumber::Latest)
-			.topic1(ValueOrArray::Array(
-				seqs.clone()
-					.into_iter()
-					.map(|seq| {
-						let bytes = encode(&[Token::Uint(seq.into())]);
-						H256::from_slice(bytes.as_slice())
-					})
-					.collect(),
-			))
-			.topic2({
-				let hash = H256::from_slice(&encode(&[Token::FixedBytes(
-					keccak256(source_port.clone().into_bytes()).to_vec(),
-				)]));
-				ValueOrArray::Value(hash)
-			})
-			.topic3({
-				let hash = H256::from_slice(&encode(&[Token::FixedBytes(
-					keccak256(source_channel.clone().into_bytes()).to_vec(),
-				)]));
-				ValueOrArray::Value(hash)
-			});
+		// let event_filter = self
+		// 	.yui
+		// 	.event_for_name::<SendPacketFilter>("SendPacket")
+		// 	.map_err(|err| ClientError::ContractAbiError(err))?
+		// 	.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+		// 	.address(ValueOrArray::Array(vec![
+		// 		self.yui.bank.as_ref().map(|x| x.address()).unwrap_or_default(),
+		// 		self.yui.diamond.address(),
+		// 	]))
+		// 	//            .address(ValueOrArray::Value(self.yui.diamond.address()))
+		// 	//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
+		// 	.to_block(BlockNumber::Latest)
+		// 	.topic1(ValueOrArray::Array(
+		// 		seqs.clone()
+		// 			.into_iter()
+		// 			.map(|seq| {
+		// 				let bytes = encode(&[Token::Uint(seq.into())]);
+		// 				H256::from_slice(bytes.as_slice())
+		// 			})
+		// 			.collect(),
+		// 	))
+		// 	.topic2({
+		// 		let hash = H256::from_slice(&encode(&[Token::FixedBytes(
+		// 			keccak256(source_port.clone().into_bytes()).to_vec(),
+		// 		)]));
+		// 		ValueOrArray::Value(hash)
+		// 	})
+		// 	.topic3({
+		// 		let hash = H256::from_slice(&encode(&[Token::FixedBytes(
+		// 			keccak256(source_channel.clone().into_bytes()).to_vec(),
+		// 		)]));
+		// 		ValueOrArray::Value(hash)
+		// 	});
+		//
+		// let mut logs = self
+		// 	.yui
+		// 	.diamond
+		// 	.client()
+		// 	.get_logs(&event_filter.filter)
+		// 	.await
+		// 	.map_err(|err| ClientError::Other(format!("failed to get logs 5: {}", err)))?;
 
-		for i in 0..4 {
-			let Some(topic) = &event_filter.filter.topics[i] else { continue };
-			let data = match topic {
-				Topic::Value(v) => v.iter().map(|v| &v.0[..]).collect::<Vec<_>>(),
-				Topic::Array(vs) => vs.iter().flatten().map(|v| &v.0[..]).collect(),
-			};
-			log::debug!(target: "hyperspace_ethereum",
-				"Looking for topic{i}: {}",
-				data.into_iter().map(hex::encode).collect::<Vec<_>>().join(", ")
-			);
+		if seqs.is_empty() {
+			return Ok(vec![])
 		}
-		let mut logs = self
-			.yui
-			.diamond
-			.client()
-			.get_logs(&event_filter.filter)
-			.await
-			.map_err(|err| ClientError::Other(format!("failed to get logs 5: {}", err)))?;
-		let logs2 = self
-			.yui
-			.bank
-			.as_ref()
-			.ok_or(ClientError::Other("bank contract not found".to_string()))?
-			.client()
-			.get_logs(&event_filter.filter)
-			.await
-			.map_err(|err| ClientError::Other(format!("failed to get logs 6: {}", err)))?;
-		logs.extend(logs2);
+
+		let sequences = seqs.clone().into_iter().map(|seq| format!("'{seq}'")).join(",");
+		let logs = self
+			.get_logs_for_event_name::<SendPacketFilter>(
+				EARLIEST_BLOCK,
+				BlockNumber::Latest,
+				&format!(
+					"event_data->>'sequence' IN ({sequences}) AND event_data->>'source_port' = '{source_port}' AND event_data->>'source_channel' = '{source_channel}'",
+				),
+				None
+			)
+			.await?;
 
 		if logs.is_empty() {
+			info!("no logs found for query_send_packets");
 			return Ok(vec![])
 		}
 
@@ -1272,7 +1312,7 @@ impl IbcProvider for EthereumClient {
 			.ok_or(ClientError::Other("counterparty is none".to_string()))?;
 
 		let mut ret = vec![];
-		for log in logs.into_iter() {
+		for (_, log) in logs.into_iter() {
 			let value = SendPacketFilter::decode_log(&log.clone().into())
 				.map_err(|err| ClientError::Other(format!("failed to decode log: {}", err)))?;
 			if !seqs.contains(&value.sequence) {
@@ -1312,85 +1352,113 @@ impl IbcProvider for EthereumClient {
 	) -> Result<Vec<PacketInfo>, Self::Error> {
 		let destination_port = port_id.to_string();
 		let destination_channel = channel_id.to_string();
-		let event_filter = self
-			.yui
-			.event_for_name::<RecvPacketFilter>("RecvPacket")
-			.map_err(|err| ClientError::ContractAbiError(err))?
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
-			.address(ValueOrArray::Value(self.yui.diamond.address()))
-			//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
-			.to_block(BlockNumber::Latest)
-			.topic1(ValueOrArray::Array(
-				seqs.clone()
-					.into_iter()
-					.map(|seq| {
-						let bytes = encode(&[Token::Uint(seq.into())]);
-						H256::from_slice(bytes.as_slice())
-					})
-					.collect(),
-			))
-			.topic2({
-				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
-					keccak256(destination_port.clone().into_bytes()).to_vec(),
-				)])))
-			})
-			.topic3({
-				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
-					keccak256(destination_channel.clone().into_bytes()).to_vec(),
-				)])))
-			});
+		// let event_filter = self
+		// 	.yui
+		// 	.event_for_name::<RecvPacketFilter>("RecvPacket")
+		// 	.map_err(|err| ClientError::ContractAbiError(err))?
+		// 	.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+		// 	.address(ValueOrArray::Value(self.yui.diamond.address()))
+		// 	//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
+		// 	.to_block(BlockNumber::Latest)
+		// 	.topic1(ValueOrArray::Array(
+		// 		seqs.clone()
+		// 			.into_iter()
+		// 			.map(|seq| {
+		// 				let bytes = encode(&[Token::Uint(seq.into())]);
+		// 				H256::from_slice(bytes.as_slice())
+		// 			})
+		// 			.collect(),
+		// 	))
+		// 	.topic2({
+		// 		ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+		// 			keccak256(destination_port.clone().into_bytes()).to_vec(),
+		// 		)])))
+		// 	})
+		// 	.topic3({
+		// 		ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+		// 			keccak256(destination_channel.clone().into_bytes()).to_vec(),
+		// 		)])))
+		// 	});
+		//
+		// let logs =
+		// 	self.yui.diamond.client().get_logs(&event_filter.filter).await.map_err(|err| {
+		// 		ClientError::Other(format!("failed to get logs in query_received_packets: {}", err))
+		// 	})?;
+		if seqs.is_empty() {
+			return Ok(vec![])
+		}
 
-		let logs =
-			self.yui.diamond.client().get_logs(&event_filter.filter).await.map_err(|err| {
-				ClientError::Other(format!("failed to get logs in query_received_packets: {}", err))
-			})?;
+		let sequences = seqs.clone().into_iter().map(|seq| format!("'{seq}'")).join(",");
+		let logs = self
+			.get_logs_for_event_name::<RecvPacketFilter>(
+				EARLIEST_BLOCK,
+				BlockNumber::Latest,
+				&format!(
+					"event_data->>'sequence' IN ({sequences}) AND event_data->>'destination_port' = '{destination_port}' AND event_data->>'destination_channel' = '{destination_channel}'",
+				),
+				None,
+			)
+			.await?;
+
 		let channel = self.query_channel_end(at, channel_id, port_id).await?;
 		let channel = channel.channel.ok_or(ClientError::Other("channel is none".to_string()))?;
 
-		let acks_filter = self
-			.yui
-			.event_for_name::<WriteAcknowledgementFilter>("WriteAcknowledgement")
-			.map_err(|err| ClientError::ContractAbiError(err))?
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
-			.address(ValueOrArray::Value(self.yui.diamond.address()))
-			//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
-			.to_block(BlockNumber::Latest)
-			.topic3(ValueOrArray::Array(
-				seqs.clone()
-					.into_iter()
-					.map(|seq| {
-						let bytes = encode(&[Token::Uint(seq.into())]);
-						H256::from_slice(bytes.as_slice())
-					})
-					.collect(),
-			))
-			.topic1({
-				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
-					keccak256(destination_port.clone().into_bytes()).to_vec(),
-				)])))
-			})
-			.topic2({
-				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
-					keccak256(destination_channel.clone().into_bytes()).to_vec(),
-				)])))
-			});
+		// let acks_filter = self
+		// 	.yui
+		// 	.event_for_name::<WriteAcknowledgementFilter>("WriteAcknowledgement")
+		// 	.map_err(|err| ClientError::ContractAbiError(err))?
+		// 	.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+		// 	.address(ValueOrArray::Value(self.yui.diamond.address()))
+		// 	//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
+		// 	.to_block(BlockNumber::Latest)
+		// 	.topic1(ValueOrArray::Array(
+		// 		seqs.clone()
+		// 			.into_iter()
+		// 			.map(|seq| {
+		// 				let bytes = encode(&[Token::Uint(seq.into())]);
+		// 				H256::from_slice(bytes.as_slice())
+		// 			})
+		// 			.collect(),
+		// 	))
+		// 	.topic2({
+		// 		ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+		// 			keccak256(destination_port.clone().into_bytes()).to_vec(),
+		// 		)])))
+		// 	})
+		// 	.topic3({
+		// 		ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+		// 			keccak256(destination_channel.clone().into_bytes()).to_vec(),
+		// 		)])))
+		// 	});
+		let acks = self
+			.get_logs_for_event_name::<WriteAcknowledgementFilter>(
+				EARLIEST_BLOCK,
+				BlockNumber::Latest,
+				&format!(
+					"event_data->>'sequence' IN ({sequences}) AND event_data->>'destination_port' = '{destination_port}' AND event_data->>'destination_channel' = '{destination_channel}'",
+				),
+				None,
+			)
+			.await?;
 
-		let mut acks_map = acks_filter
-			.query()
-			.await
-			.map_err(|err| {
-				ClientError::Other(format!(
-					"failed to get acks_map in query_received_packets: {}",
-					err
-				))
-			})?
+		let mut acks_map =
+			// acks_filter
+			// .query()
+			// .await
+			// .map_err(|err| {
+			// 	ClientError::Other(format!(
+			// 		"failed to get acks_map in query_received_packets: {}",
+			// 		err
+			// 	))
+			// })?
+			acks
 			.into_iter()
-			.map(|ack| (ack.sequence, ack.acknowledgement.to_vec()))
+			.map(|(ack, _log)| (ack.sequence, ack.acknowledgement.to_vec()))
 			.collect::<HashMap<_, _>>();
 
 		let mut ret = vec![];
 
-		for log in logs.into_iter() {
+		for (_, log) in logs.into_iter() {
 			let value = RecvPacketFilter::decode_log(&log.clone().into()).map_err(|err| {
 				ClientError::Other(format!("failed to decode log in query_send_packets: {}", err))
 			})?;
@@ -1435,43 +1503,55 @@ impl IbcProvider for EthereumClient {
 		client_height: Height,
 	) -> Result<(Height, Timestamp), Self::Error> {
 		log::info!(target: "hyperspace_ethereum", "query_client_update_time_and_height: {client_id:?}, {client_height:?}");
-		let event_filter = self
-			.yui
-			.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
-			.map_err(|err| ClientError::ContractAbiError(err))?
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
-			.address(ValueOrArray::Value(self.yui.diamond.address()))
-			//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
-			.to_block(BlockNumber::Latest)
-			.topic1({
-				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
-					keccak256(client_id.to_string()).to_vec(),
-				)])))
-			})
-			.topic2({
-				let height_bytes = encode(&[Token::Tuple(vec![
-					Token::Uint(client_height.revision_number.into()),
-					Token::Uint(client_height.revision_height.into()),
-				])]);
-				ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
-					keccak256(&height_bytes).to_vec(),
-				)])))
-			});
+		// let event_filter = self
+		// 	.yui
+		// 	.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
+		// 	.map_err(|err| ClientError::ContractAbiError(err))?
+		// 	.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+		// 	.address(ValueOrArray::Value(self.yui.diamond.address()))
+		// 	//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
+		// 	.to_block(BlockNumber::Latest)
+		// 	.topic1({
+		// 		ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+		// 			keccak256(client_id.to_string()).to_vec(),
+		// 		)])))
+		// 	})
+		// 	.topic2({
+		// 		let height_bytes = encode(&[Token::Tuple(vec![
+		// 			Token::Uint(client_height.revision_number.into()),
+		// 			Token::Uint(client_height.revision_height.into()),
+		// 		])]);
+		// 		ValueOrArray::Value(H256::from_slice(&encode(&[Token::FixedBytes(
+		// 			keccak256(&height_bytes).to_vec(),
+		// 		)])))
+		// 	});
+		//
+		// let log = self
+		// 	.yui
+		// 	.diamond
+		// 	.client()
+		// 	.get_logs(&event_filter.filter)
+		// 	.await
+		// 	.map_err(|err| {
+		// 		ClientError::Other(format!(
+		// 			"failed to get logs in query_client_update_time_and_height: {}",
+		// 			err
+		// 		))
+		// 	})?
+		// 	.pop()
+		// 	.ok_or_else(|| Self::Error::Other("no logs found".to_owned()))?;
 
-		let log = self
-			.yui
-			.diamond
-			.client()
-			.get_logs(&event_filter.filter)
-			.await
-			.map_err(|err| {
-				ClientError::Other(format!(
-					"failed to get logs in query_client_update_time_and_height: {}",
-					err
-				))
-			})?
-			.pop()
-			.ok_or_else(|| Self::Error::Other("no logs found".to_owned()))?;
+		let (_, log) = self
+			.get_logs_for_event_name::<UpdateClientHeightFilter>(
+				EARLIEST_BLOCK,
+				BlockNumber::Latest,
+				&format!(
+					"event_data->>'client_id' = '{client_id}' AND event_data->'client_height'->>'revision_number' = '{}' AND event_data->'client_height'->>'revision_height' = '{}'",
+					client_height.revision_number, client_height.revision_height
+				),
+				None,
+			)
+			.await?.pop().ok_or_else(|| Self::Error::Other("no logs found".to_owned()))?;
 
 		let height = Height::new(
 			0,
@@ -1734,6 +1814,18 @@ impl IbcProvider for EthereumClient {
 				"not able to find a log with tx hash: {}",
 				tx_hash.to_string()
 			)))?;
+		// let (_, log) = self
+		// 	.get_logs_for_event_name::<GeneratedClientIdentifierFilter>(
+		// 		block_number,
+		// 		block_number.into(),
+		// 		&format!("raw_log ->> 'transactionHash' = '{tx_hash:?}'",),
+		// 		None,
+		// 	)
+		// 	.await?
+		// 	.pop()
+		// 	.ok_or(ClientError::Other(format!(
+		// 		"not able to find a log with tx hash: {tx_hash:?}",
+		// 	)))?;
 
 		let decoded_log = GeneratedClientIdentifierFilter::decode_log(&log.clone().into())
 			.map_err(|err| {
@@ -1782,6 +1874,18 @@ impl IbcProvider for EthereumClient {
 				"not able to find a log with tx hash: {}",
 				tx_hash.to_string()
 			)))?;
+		// let (_, log) = self
+		// 	.get_logs_for_event_name::<OpenInitConnectionFilter>(
+		// 		block_number,
+		// 		block_number.into(),
+		// 		&format!("raw_log ->> 'transactionHash' = '{tx_hash:?}'",),
+		// 		None,
+		// 	)
+		// 	.await?
+		// 	.pop()
+		// 	.ok_or(ClientError::Other(format!(
+		// 		"not able to find a log with tx hash: {tx_hash:?}",
+		// 	)))?;
 
 		let decoded_log = OpenInitConnectionFilter::decode_log(&log.clone().into()).map_err(
 			|err| ClientError::Other(format!("failed to decode OpenInitConnectionFilter in query_connection_id_from_tx_hash: {}", err)),
@@ -1833,6 +1937,19 @@ impl IbcProvider for EthereumClient {
 				"not able to find a log with tx hash: {}",
 				tx_hash.to_string()
 			)))?;
+
+		// let (_, log) = self
+		// 	.get_logs_for_event_name::<OpenInitChannelFilter>(
+		// 		block_number,
+		// 		block_number.into(),
+		// 		&format!("raw_log ->> 'transactionHash' = '{tx_hash:?}'",),
+		// 		None,
+		// 	)
+		// 	.await?
+		// 	.pop()
+		// 	.ok_or(ClientError::Other(format!(
+		// 		"not able to find a log with tx hash: {tx_hash:?}",
+		// 	)))?;
 
 		let decoded_log =
 			OpenInitChannelFilter::decode_log(&log.clone().into()).map_err(|err| {

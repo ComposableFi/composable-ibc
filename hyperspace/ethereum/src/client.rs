@@ -275,6 +275,7 @@ impl EthereumClient {
 			.event("OpenInitChannel(string,string)");
 
 		let logs = self.client().get_logs(&filter).await.unwrap();
+		unimplemented!();
 
 		let v = logs
 			.into_iter()
@@ -297,6 +298,7 @@ impl EthereumClient {
 			.event("GeneratedClientIdentifier(string)");
 
 		let logs = self.client().get_logs(&filter).await.unwrap();
+		unimplemented!();
 
 		logs.into_iter()
 			.map(|log| {
@@ -318,17 +320,18 @@ impl EthereumClient {
 			.event("GeneratedConnectionIdentifier(string)");
 
 		let logs = self.client().get_logs(&filter).await.unwrap();
+		unimplemented!();
 
-		logs.into_iter()
-			.map(|log| {
-				ethers::abi::decode(&[ParamType::String], &log.data.0)
-					.unwrap()
-					.into_iter()
-					.next()
-					.unwrap()
-					.to_string()
-			})
-			.collect()
+		// logs.into_iter()
+		// 	.map(|log| {
+		// 		ethers::abi::decode(&[ParamType::String], &log.data.0)
+		// 			.unwrap()
+		// 			.into_iter()
+		// 			.next()
+		// 			.unwrap()
+		// 			.to_string()
+		// 	})
+		// 	.collect()
 	}
 
 	pub async fn acknowledge_packets(&self, from_block: BlockNumber) -> Vec<AckPacket> {
@@ -339,6 +342,7 @@ impl EthereumClient {
 			.event("AcknowledgePacket((uint64,string,string,string,string,bytes,(uint64,uint64),uint64),bytes)");
 
 		let logs = self.client().get_logs(&filter).await.unwrap();
+		unimplemented!();
 
 		logs.into_iter()
 			.map(|log| {
@@ -440,6 +444,7 @@ impl EthereumClient {
 			.event(event_name);
 		let client = self.client().clone();
 
+		unimplemented!();
 		async_stream::stream! {
 			let logs = client.get_logs(&filter).await.unwrap();
 			for log in logs {
