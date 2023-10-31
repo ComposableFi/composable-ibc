@@ -137,13 +137,18 @@ impl Database {
 			self.store_blocks(&blocks).await.unwrap();
 		}
 
+		if ibc_events.len() > 0 {
+			self.store_ibc_events(&ibc_events).await.unwrap();
+		}
+
 		info!(
-            "Inserted: blocks ({}) transactions ({}) receipts ({}) logs ({}) contracts ({}) for chain {}",
+            "Inserted: blocks ({}) transactions ({}) receipts ({}) logs ({}) contracts ({}) ibc events ({}) for chain {}",
             blocks.len(),
             transactions.len(),
             receipts.len(),
             logs.len(),
             contracts.len(),
+            ibc_events.len(),
             self.chain.name
         );
 	}
@@ -180,31 +185,7 @@ impl Database {
 					.push_bind(block.uncles.clone());
 			});
 
-			query_builder.push(" ON CONFLICT (block_hash) DO UPDATE SET (base_fee_per_gas, chain, difficulty, extra_data, gas_limit, gas_used, block_hash, logs_bloom, miner, mix_hash, nonce, number, parent_hash, receipts_root, sha3_uncles, size, state_root, timestamp, total_difficulty, transactions, uncles) =");
-
-			query_builder.push_tuples(&blocks[start..end], |mut row, block| {
-				row.push_bind(block.base_fee_per_gas.clone())
-					.push_bind(block.chain.clone())
-					.push_bind(block.difficulty.clone())
-					.push_bind(block.extra_data.clone())
-					.push_bind(block.gas_limit.clone())
-					.push_bind(block.gas_used.clone())
-					.push_bind(block.block_hash.clone())
-					.push_bind(block.logs_bloom.clone())
-					.push_bind(block.miner.clone())
-					.push_bind(block.mix_hash.clone())
-					.push_bind(block.nonce.clone())
-					.push_bind(block.number)
-					.push_bind(block.parent_hash.clone())
-					.push_bind(block.receipts_root.clone())
-					.push_bind(block.sha3_uncles.clone())
-					.push_bind(block.size)
-					.push_bind(block.state_root.clone())
-					.push_bind(block.timestamp.clone())
-					.push_bind(block.total_difficulty.clone())
-					.push_bind(block.transactions)
-					.push_bind(block.uncles.clone());
-			});
+			query_builder.push(" ON CONFLICT (number, block_hash) DO UPDATE SET (base_fee_per_gas, chain, difficulty, extra_data, gas_limit, gas_used, block_hash, logs_bloom, miner, mix_hash, nonce, number, parent_hash, receipts_root, sha3_uncles, size, state_root, timestamp, total_difficulty, transactions, uncles) = (EXCLUDED.base_fee_per_gas, EXCLUDED.chain, EXCLUDED.difficulty, EXCLUDED.extra_data, EXCLUDED.gas_limit, EXCLUDED.gas_used, EXCLUDED.block_hash, EXCLUDED.logs_bloom, EXCLUDED.miner, EXCLUDED.mix_hash, EXCLUDED.nonce, EXCLUDED.number, EXCLUDED.parent_hash, EXCLUDED.receipts_root, EXCLUDED.sha3_uncles, EXCLUDED.size, EXCLUDED.state_root, EXCLUDED.timestamp, EXCLUDED.total_difficulty, EXCLUDED.transactions, EXCLUDED.uncles)");
 
 			let query = query_builder.build();
 
@@ -301,6 +282,37 @@ impl Database {
 			let query = query_builder.build();
 
 			query.execute(connection).await.expect("Unable to store logs into database");
+		}
+
+		Ok(())
+	}
+
+	async fn store_ibc_events(&self, logs: &Vec<DatabaseIBCEventData>) -> Result<()> {
+		let connection = self.get_connection();
+
+		let chunks = get_chunks(logs.len(), DatabaseLog::field_count());
+
+		for (start, end) in chunks {
+			let mut query_builder = QueryBuilder::new("INSERT INTO ibc_events (block_number, event_data, address, topic0, topics, data, tx_index, event_index, raw_log) ");
+			query_builder.push_values(&logs[start..end], |mut row, log| {
+				row.push_bind(log.block_number.clone())
+					.push_bind(log.event_data.clone())
+					.push_bind(log.address.clone())
+					.push_bind(log.topic0.clone())
+					.push_bind(log.topics.clone())
+					.push_bind(log.data.clone())
+					.push_bind(log.tx_index.clone())
+					.push_bind(log.event_index.clone())
+					.push_bind(log.raw_log.clone());
+			});
+			query_builder.push(" ON CONFLICT (block_number, tx_index, event_index) DO UPDATE SET (block_number, event_data, address, topic0, topics, data, tx_index, event_index, raw_log) = (EXCLUDED.block_number, EXCLUDED.event_data, EXCLUDED.address, EXCLUDED.topic0, EXCLUDED.topics, EXCLUDED.data, EXCLUDED.tx_index, EXCLUDED.event_index, EXCLUDED.raw_log)");
+			let query = query_builder.build();
+
+			debug!("store_ibc_events sql: {}", query.sql());
+			query
+				.execute(connection)
+				.await
+				.expect("Unable to store ibc events into database");
 		}
 
 		Ok(())
@@ -429,7 +441,6 @@ impl Database {
 			chain_state.chain.clone(),
 			y = chain_state.indexed_blocks_amount
 		);
-		println!("{query}");
 
 		QueryBuilder::new(query)
 			.build()

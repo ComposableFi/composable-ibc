@@ -47,6 +47,7 @@ use ibc::core::ics24_host::identifier::{ClientId, PortId};
 use sp_core::hashing::sha2_256;
 use std::{future::Future, path::PathBuf, str::FromStr, sync::Arc};
 use subxt::utils::H160;
+use tokio::time::sleep;
 
 #[derive(Debug, Clone)]
 pub struct Args {
@@ -199,7 +200,13 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 
 	//replace the tendermint client address in hyperspace config with a real one
 	let tendermint_address = yui_ibc.tendermint.as_ref().map(|x| x.address());
-	let mut config_a = hyperspace_ethereum_client_fixture(&anvil, yui_ibc).await;
+	let mut config_a = hyperspace_ethereum_client_fixture(
+		&anvil,
+		yui_ibc,
+		"pg://postgres:password@localhost/postgres",
+		"redis://localhost:6379",
+	)
+	.await;
 	config_a.tendermint_address = tendermint_address;
 
 	let mut config_b = CosmosClientConfig {
@@ -274,6 +281,7 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	let asset_str = "pica".to_string();
 	let asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
+	sleep(Duration::from_secs(60)).await;
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
 	handle.abort();

@@ -1,4 +1,4 @@
-use std::{fmt::Debug, str::FromStr, sync::Arc, thread, time::Duration};
+use std::{fmt::Debug, pin::Pin, time::Duration};
 
 use crate::{
 	client::{ClientError, EthereumClient},
@@ -60,6 +60,7 @@ use tendermint::{
 	trust_threshold::TrustThresholdFraction,
 	AppHash, Hash, Time,
 };
+use tokio::time::sleep;
 
 #[async_trait::async_trait]
 impl MisbehaviourHandler for EthereumClient {
@@ -1155,14 +1156,17 @@ impl Chain for EthereumClient {
 
 	async fn finality_notifications(
 		&self,
-	) -> Result<std::pin::Pin<Box<dyn Stream<Item = Self::FinalityEvent> + Send>>, Self::Error> {
+	) -> Result<Pin<Box<dyn Stream<Item = Self::FinalityEvent> + Send>>, Self::Error> {
 		let ws = self.websocket_provider().await?;
 
+		let delay = self.expected_block_time();
 		let stream = async_stream::stream! {
 			// TODO: is it really finalized blocks stream?
 			let mut stream = ws.subscribe_blocks().await.expect("fuck");
 
 			while let Some(block) = stream.next().await {
+				// Add delay for the indexer to be able to add the block in DB
+				sleep(delay).await;
 				yield block
 			}
 		};

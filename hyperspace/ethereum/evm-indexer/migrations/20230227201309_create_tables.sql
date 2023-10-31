@@ -20,7 +20,7 @@ CREATE TABLE blocks (
   total_difficulty TEXT NOT NULL,
   transactions BIGINT NOT NULL,
   uncles TEXT[] NOT NULL,
-  CONSTRAINT blocks_pkey PRIMARY KEY (block_hash)
+  CONSTRAINT blocks_pkey PRIMARY KEY (block_hash, number)
 );
 
 CREATE INDEX IF NOT EXISTS blocks_by_chain ON blocks (chain);
@@ -192,7 +192,14 @@ CREATE INDEX IF NOT EXISTS logs_by_hash ON logs (hash);
 CREATE INDEX IF NOT EXISTS logs_by_erc20_transfers_parsed ON logs (erc20_transfers_parsed) STORING (address, chain, data, removed, topics);
 
 CREATE TABLE ibc_events (
-  block_number BIGINT NOT NULL,
-  event_data JSONB NOT NULL,
-  CONSTRAINT ibc_events_pkey PRIMARY KEY (block_number, event_data)
+    block_number BIGINT NOT NULL,
+    event_data JSONB NOT NULL,
+    address BYTEA NOT NULL,
+    topic0 BYTEA NOT NULL,
+    topics BYTEA[] NOT NULL,
+    data BYTEA NOT NULL,
+    tx_index BIGINT NOT NULL,
+    event_index BIGINT NOT NULL,
+    raw_log JSONB NOT NULL,
+    CONSTRAINT ibc_events_pkey PRIMARY KEY (block_number, tx_index, event_index)
 )

@@ -297,12 +297,14 @@ impl DatabaseLog {
 #[derive(sqlx::FromRow)]
 pub struct DatabaseIBCEventData {
 	pub block_number: i64,
-	pub event_data: sqlx::types::Json<HashMap<String, serde_json::value::Value>>,
+	pub event_data: sqlx::types::Json<serde_json::value::Value>,
 	pub address: Vec<u8>,
+	pub topic0: Vec<u8>,
 	pub topics: Vec<Vec<u8>>,
 	pub data: Vec<u8>,
 	pub tx_index: i64,
 	pub event_index: i64,
+	pub raw_log: sqlx::types::Json<Log>,
 }
 
 #[derive(Debug, Clone, FieldCount)]

@@ -1,53 +1,53 @@
 use crate::client::{ClientError, EthereumClient};
-use serde::Deserialize;
-use sqlx::{database::HasArguments, query::QueryAs, Postgres};
+use ethers::{
+	prelude::{EthEvent, Log},
+	utils::keccak256,
+};
+use futures::TryFutureExt;
+use log::info;
+use serde::de::DeserializeOwned;
+use sqlx::{
+	database::HasArguments, postgres::PgRow, query::QueryAs, types::Json, Execute, FromRow,
+	Postgres,
+};
 
 impl EthereumClient {
 	pub fn db(&self) -> &sqlx::Pool<sqlx::Postgres> {
 		&self.db_conn
 	}
 
-	// pub async fn get_logs_for_event_name<T: for<'a> Deserialize<'a>>(
-	pub async fn get_logs_for_event_name(
+	pub async fn get_logs_for_event_name<T: DeserializeOwned + EthEvent>(
 		&self,
 		from_block: u64,
 		to_block: u64,
-		name: &str,
 		query: &str,
 		additional_query: Option<&str>,
-	) -> Result<Vec<(String,)>, ClientError> {
-		sqlx::query_as::<_, (String,)>(
-			"SELECT event_name FROM asd WHERE block_number > $1 AND block_number < $2",
-		)
-		.bind(from_block as i64)
-		.bind(to_block as i64)
-		.fetch_all(&self.db_conn)
-		.await
-		.map_err(ClientError::from)
+	) -> Result<Vec<(T, Log)>, ClientError> {
+		let signature = T::abi_signature();
+		info!(target: "hyperspace_ethereum", "get_logs_for_event_name: from_block: {}, to_block: {}, signature: {}", from_block, to_block, signature);
+		let mut string = format!("SELECT event_data, raw_log FROM ibc_events WHERE block_number >= {from_block} AND block_number <= {to_block} AND topic0 = {} AND {query}", format!("decode('{}', 'hex')", hex::encode(&keccak256(signature))));
+		if let Some(additional_query) = additional_query {
+			string.push_str(&format!(" AND {additional_query}"));
+		}
+		let query = sqlx::query_as::<_, (serde_json::Value, Json<Log>)>(&string);
+		self.query(query)
+			.await?
+			.into_iter()
+			.map(|(val, raw_log)| {
+				Ok((serde_json::from_value(val).map_err(ClientError::from)?, raw_log.0))
+			})
+			.collect::<Result<Vec<_>, _>>()
 	}
 
 	// let select event_data from ibc_event where block_number >= {from_block} AND block_number <=
 	// to_block AND event_data ->> 'sourceChannel' = 'channel-57';
-	pub async fn query<T: for<'a> Deserialize<'a>>(
+	pub async fn query<'a, T: Send + Unpin + for<'r> FromRow<'r, PgRow>>(
 		&self,
-		query: QueryAs<'_, Postgres, T, <Postgres as HasArguments<'_>>::Arguments>,
-	) -> Result<Vec<(String,)>, ClientError> {
+		query: QueryAs<'a, Postgres, T, <Postgres as HasArguments<'a>>::Arguments>,
+	) -> Result<Vec<T>, ClientError> {
 		let conn = self.db();
-		// sqlx::query_as
-
-		// let logs = query.fetch_all(conn).await.unwrap();
-		// logs.into_iter()
-		// 	.map(|(log,)| serde_json::from_value(log).map_err(ClientError::from))
-		// 	.collect::<Result<Vec<_>, _>>()
-		// sqlx::sqlx_macros::expand_query!()
-		// let logs = self
-		//     .web3
-		//     .eth()
-		//     .logs(FilterBuilder::default().from_block(from_block.into()).to_block(to_block.
-		// into()).build())     .wait()
-		//     .unwrap();
-		// logs.into_iter().map(|log| log.into()).collect()
-
-		Ok(vec![])
+		info!(target: "hyperspace_ethereum", "query: {}", query.sql());
+		let logs = query.fetch_all(conn).await?;
+		Ok(logs)
 	}
 }

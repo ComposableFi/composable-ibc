@@ -17,9 +17,10 @@ use ethers::{
 };
 use jsonrpsee::core::{client::ClientT, rpc_params};
 use jsonrpsee_http_client::{HttpClient, HttpClientBuilder};
-use log::{info, warn};
+use log::{debug, info, warn};
 use rand::seq::SliceRandom;
 use serde_json::{json, Error};
+use sqlx::types::Json;
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
@@ -264,6 +265,7 @@ impl Rpc {
 		contract_addresses: &[Address],
 	) -> Result<Option<Vec<DatabaseIBCEventData>>> {
 		let client = self.get_client();
+		debug!("get_ibc_logs: {from_block}..{to_block} of {contract_addresses:?}");
 
 		let value = client
 			.request(
@@ -281,7 +283,7 @@ impl Rpc {
 
 		for log in logs {
 			if log.block_number.is_none() ||
-				log.transaction_log_index.is_none() ||
+				log.log_index.is_none() ||
 				log.transaction_index.is_none()
 			{
 				continue
@@ -297,11 +299,15 @@ impl Rpc {
 					block_number: log.block_number.unwrap().as_u64() as i64,
 					event_data: serde_json::from_str(s.as_str()).unwrap(),
 					address: log.address.0.to_vec(),
+					topic0: log.topics[0].0.to_vec(),
 					topics: log.topics.iter().map(|x| x.0.to_vec()).collect(),
 					data: log.data.0.to_vec(),
 					tx_index: log.transaction_index.unwrap().as_u64() as i64,
-					event_index: log.transaction_log_index.unwrap().as_u64() as i64,
+					event_index: log.log_index.unwrap().as_u64() as i64,
+					raw_log: Json(log),
 				})
+			} else {
+				warn!("failed to parse a log at {}", log.block_number.unwrap().as_u64());
 			}
 		}
 
@@ -315,22 +321,7 @@ impl Rpc {
 }
 
 fn parse_log(log: Log) -> Result<Option<String>, Error> {
-	use crate::utils::{
-		AcknowledgePacketFilter,
-		CloseConfirmChannelFilter,
-		CloseInitChannelFilter,
-		OpenAckChannelFilter,
-		OpenAckConnectionFilter,
-		OpenConfirmChannelFilter,
-		OpenConfirmConnectionFilter,
-		OpenInitChannelFilter,
-		OpenInitConnectionFilter,
-		OpenTryConnectionFilter,
-		SendPacketFilter, // TODO: this event might only be emitted by the ICS-20 contract
-		// TimeoutOnClosePacketFilter,
-		TimeoutPacketFilter,
-		WriteAcknowledgementFilter,
-	};
+	use crate::utils::*;
 
 	let raw_log = RawLog::from(log.clone());
 	let topic0 = log.topics[0];
@@ -370,6 +361,15 @@ fn parse_log(log: Log) -> Result<Option<String>, Error> {
 		TimeoutPacketFilter,
 		// TimeoutOnClosePacketFilter,
 		CloseInitChannelFilter,
-		CloseConfirmChannelFilter
+		CloseConfirmChannelFilter,
+		UpdateClientHeightFilter,
+		UpdateClientFilter,
+		RecvPacketFilter,
+		GeneratedChannelIdentifierFilter,
+		GeneratedConnectionIdentifierFilter,
+		GeneratedClientIdentifierFilter,
+		RegisterClientFilter,
+		CreateClientFilter,
+		OwnershipTransferredFilter
 	)
 }

@@ -83,20 +83,27 @@ async fn sync_chain(
 
 	let total_missing_blocks = missing_blocks.len();
 
+	if total_missing_blocks == 0 {
+		debug!("Chain is synced");
+		return
+	}
+
 	info!("Syncing {} blocks.", total_missing_blocks);
 
 	let missing_blocks_chunks = missing_blocks.chunks(config.batch_size);
 
 	for missing_blocks_chunk in missing_blocks_chunks {
 		let mut work = vec![];
+		let mut work2 = vec![];
 
-		// for block_number in missing_blocks_chunk {
-		// 	work.push(fetch_block(&rpc, &block_number, &config.chain))
-		// }
+		for block_number in missing_blocks_chunk {
+			work2.push(fetch_block(&rpc, &block_number, &config.chain))
+		}
 
 		work.push(fetch_ibc_events(&rpc, &missing_blocks_chunk, &config.contract_addresses));
 
 		let results = join_all(work).await;
+		let results2 = join_all(work2).await;
 
 		let mut db_blocks: Vec<DatabaseBlock> = Vec::new();
 		let mut db_transactions: Vec<DatabaseTransaction> = Vec::new();
@@ -121,6 +128,27 @@ async fn sync_chain(
 					// db_logs.append(&mut logs);
 					// db_contracts.append(&mut contracts);
 					db_ibc_events.append(&mut ibc_events);
+				},
+				None => continue,
+			}
+		}
+
+		for result in results2 {
+			match result {
+				Some((
+					block,
+					mut transactions,
+					mut receipts,
+					mut logs,
+					mut contracts,
+					mut ibc_events,
+				)) => {
+					db_blocks.push(block);
+					// db_transactions.append(&mut transactions);
+					// db_receipts.append(&mut receipts);
+					// db_logs.append(&mut logs);
+					// db_contracts.append(&mut contracts);
+					// db_ibc_events.append(&mut ibc_events);
 				},
 				None => continue,
 			}
@@ -213,14 +241,14 @@ async fn fetch_block(
 			let total_block_transactions = db_transactions.len();
 
 			// Make sure all the transactions are correctly formatted.
-			if db_block.transactions != total_block_transactions as i64 {
-				warn!(
-					"Missing {} transactions for block {}.",
-					db_block.transactions - total_block_transactions as i64,
-					db_block.number
-				);
-				return None
-			}
+			// if db_block.transactions != total_block_transactions as i64 {
+			// 	warn!(
+			// 		"Missing {} transactions for block {}.",
+			// 		db_block.transactions - total_block_transactions as i64,
+			// 		db_block.number
+			// 	);
+			// 	return None
+			// }
 
 			let mut db_receipts: Vec<DatabaseReceipt> = Vec::new();
 			let mut db_logs: Vec<DatabaseLog> = Vec::new();
