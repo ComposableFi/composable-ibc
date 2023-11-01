@@ -18,8 +18,7 @@ jobs:
     name: Build & push docker image
 
     runs-on:
-      - self-hosted
-      - x64-monster
+      - ubuntu-latest
 
     permissions:
       contents: read
