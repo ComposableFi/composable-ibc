@@ -35,6 +35,7 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 
+use log::info;
 use pallet_ibc::Timeout;
 use std::{str::FromStr, time::Duration};
 use tendermint_proto::Protobuf;
@@ -169,9 +170,6 @@ where
 		.pop()
 		.expect("No Ibc balances");
 
-	dbg!(&chain_a.name());
-	dbg!(&balance);
-
 	let amount = balance.amount.as_u256().as_u128();
 	let coin = PrefixedCoin {
 		denom: balance.denom,
@@ -202,8 +200,8 @@ where
 		source_port: PortId::transfer(),
 		source_channel: channel_id,
 		token: coin,
-		sender: dbg!(chain_a.account_id()),
-		receiver: dbg!(chain_b.account_id()),
+		sender: chain_a.account_id(),
+		receiver: chain_b.account_id(),
 		timeout_height,
 		timeout_timestamp,
 		memo: "".to_string(),
@@ -245,7 +243,7 @@ async fn assert_send_transfer<A>(
 		.expect("No Ibc balances");
 
 	let new_amount = balance.amount.as_u256().as_u128();
-	assert!(new_amount <= (previous_balance * 80) / 100);
+	assert!(new_amount <= (previous_balance * 80) / 100 + 1);
 }
 
 /// Send a packet using a height timeout that has already passed

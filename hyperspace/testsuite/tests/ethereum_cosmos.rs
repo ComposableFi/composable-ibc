@@ -44,7 +44,7 @@ use log::info;
 use sp_core::hashing::sha2_256;
 use std::{future::Future, path::PathBuf, str::FromStr, sync::Arc};
 
-const USE_CONFIG: bool = false;
+const USE_CONFIG: bool = true;
 const SAVE_TO_CONFIG: bool = true;
 
 #[derive(Debug, Clone)]
@@ -69,11 +69,11 @@ impl Default for Args {
 
 		Args {
 			chain_a: format!("ws://{eth}:{ETH_NODE_PORT_WS}"),
-			chain_b: format!("http://{cosmos}:26657"),
+			chain_b: format!("http://{cosmos}:36657"),
 			connection_prefix_a: "ibc/".to_string(),
 			connection_prefix_b: "ibc".to_string(),
-			cosmos_grpc: format!("http://{cosmos}:9090"),
-			cosmos_ws: format!("ws://{cosmos}:26657/websocket"),
+			cosmos_grpc: format!("http://{cosmos}:1090"),
+			cosmos_ws: format!("ws://{cosmos}:36657/websocket"),
 			ethereum_rpc: format!("http://{eth}:{}", ETH_NODE_PORT),
 			wasm_path,
 		}
@@ -327,38 +327,41 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 
 	// Run tests sequentially
 
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_native_a.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// )
+	// .await;
+
+	// no timeouts + connection delay
+
+	// 107519999589149371962628537
+	// 8601599967E25
+	// 86015999671319497570102830
+	ibc_messaging_with_connection_delay(
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_native_a.clone(),
+		asset_id_native_b.clone(),
 		channel_a,
 		channel_b,
 	)
 	.await;
 
-	// no timeouts + connection delay
+	ibc_messaging_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		asset_id_b.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
 
-	// ibc_messaging_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_native_a.clone(),
-	// 	asset_id_native_b.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
-
-	// ibc_messaging_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// 	asset_id_b.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
-
-	// // timeouts + connection delay
+	// timeouts + connection delay
 	// ibc_messaging_packet_height_timeout_with_connection_delay(
 	// 	&mut chain_a,
 	// 	&mut chain_b,

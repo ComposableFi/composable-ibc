@@ -870,9 +870,6 @@ where
 			.balance
 			.ok_or_else(|| Error::from(format!("No balance for denom {denom}")))?;
 
-		dbg!(&denom);
-		dbg!(&balance);
-
 		Ok(vec![PrefixedCoin {
 			denom: PrefixedDenom {
 				trace_path: TracePath::default(),
