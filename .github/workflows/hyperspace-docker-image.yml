@@ -17,8 +17,7 @@ jobs:
 
     name: Build & push docker image
 
-    runs-on:
-      - ubuntu-latest
+    runs-on: ubuntu-latest
 
     permissions:
       contents: read
