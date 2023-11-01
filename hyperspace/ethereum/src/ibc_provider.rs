@@ -343,8 +343,8 @@ impl IbcProvider for EthereumClient {
 			match maybe_proof {
 				Ok(x) => break x,
 				Err(e) => {
-					log::error!(target: "hyperspace_ethereum", "failed to prove {e}");
-					sleep(Duration::from_secs(2)).await;
+					log::error!(target: "hyperspace_ethereum", "failed to prove block {}:  {e}", block_to + 1);
+					sleep(Duration::from_millis(200)).await;
 					if i >= tries {
 						return Ok(vec![])
 					}
@@ -676,9 +676,25 @@ impl IbcProvider for EthereumClient {
 			)
 			.await?
 			.pop();
+		let maybe_log2 = self
+			.get_logs_for_event_name::<UpdateClientHeightFilter>(
+				EARLIEST_BLOCK,
+				at.revision_height.into(),
+				&format!("event_data->>'client_id' = '{client_id}'"),
+				Some("ORDER BY (event_data->'client_height'->>'revision_height') :: bigint DESC"),
+			)
+			.await?
+			.pop();
+		match maybe_log2 {
+			Some((_, log)) => {
+				info!("found update client 2 event at {}", log.block_number.unwrap());
+			},
+			None => {},
+		}
 		let batch_func = self.yui.function("callBatch")?;
 		match maybe_log {
 			Some((_, log)) => {
+				info!("found update client event at {}", log.block_number.unwrap());
 				let tx_hash = log
 					.transaction_hash
 					.ok_or(ClientError::Other("tx hash not found".to_string()))?;

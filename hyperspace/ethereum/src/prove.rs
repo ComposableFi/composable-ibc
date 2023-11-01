@@ -52,10 +52,12 @@ pub async fn prove_fast(
 			break block
 		}
 
+		let diff = block.body.execution_payload.block_number.saturating_sub(up_to);
+		block_number -= diff;
 		if block_number == 0 {
 			return Err(ClientError::Other("Block number is 0".to_string()))
 		}
-		block_number -= 1;
+		info!("{} > {}, proving {block_number}", block.body.execution_payload.block_number, up_to);
 		block_id = format!("{block_number:?}");
 	};
 	let block_header = sync_committee_prover.fetch_header(&block_id).await?;
@@ -64,8 +66,8 @@ pub async fn prove_fast(
 	let from = client_state.finalized_header.slot + 1;
 	let to = block_header.slot;
 	let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
-	// let range = vec![to];
-	let range = (from..to).collect::<Vec<_>>();
+	let range = vec![to];
+	// let range = (from..to).collect::<Vec<_>>();
 	let delay = 5000;
 	let mut ancestor_blocks = vec![];
 	for heights in range.chunks(10) {

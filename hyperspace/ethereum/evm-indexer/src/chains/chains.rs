@@ -39,7 +39,7 @@ pub const ETHEREUM: Chain = Chain {
 };
 
 pub const ETHEREUM_GOERLI: Chain = Chain {
-	id: 420,
+	id: 5,
 	name: "goerli",
 	block_explorer: "https://goerli.etherscan.io/",
 	abi_source_api: "https://api-goerli.etherscan.io/api",

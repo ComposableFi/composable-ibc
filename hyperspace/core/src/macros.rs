@@ -75,7 +75,7 @@ macro_rules! chains {
 		#[derive(Debug, Clone, clap::Parser)]
 		pub enum AnyCmd {
 			$(
-				$(#[$($meta)*])*
+				// $(#[$($meta)*])*
 				$(
 				#[command(subcommand)]
 				$name($cmd),
