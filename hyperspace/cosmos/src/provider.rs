@@ -181,8 +181,7 @@ where
 			.enumerate()
 		{
 			let height = update_header.height();
-			let diff = latest_height.revision_height.saturating_sub(height.revision_height);
-			if diff >= 25 && mandatory_updates_num < 2 && i >= len - 2 {
+			if len >= 25 && mandatory_updates_num < 2 && i >= len - 2 {
 				update_type = UpdateType::Mandatory;
 				mandatory_updates_num += 1;
 			}

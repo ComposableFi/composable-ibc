@@ -1404,13 +1404,20 @@ impl IbcProvider for EthereumClient {
 			return Ok(vec![])
 		}
 
+		let destination_port_indexed = H256::from_slice(&encode(&[Token::FixedBytes(
+			keccak256(destination_port.clone().into_bytes()).to_vec(),
+		)]));
+		let destination_channel_indexed = H256::from_slice(&encode(&[Token::FixedBytes(
+			keccak256(destination_channel.clone().into_bytes()).to_vec(),
+		)]));
+
 		let sequences = seqs.clone().into_iter().map(|seq| format!("'{seq}'")).join(",");
 		let logs = self
 			.get_logs_for_event_name::<RecvPacketFilter>(
 				EARLIEST_BLOCK,
 				BlockNumber::Latest,
 				&format!(
-					"event_data->>'sequence' IN ({sequences}) AND event_data->>'destination_port' = '{destination_port}' AND event_data->>'destination_channel' = '{destination_channel}'",
+					"event_data->>'sequence' IN ({sequences}) AND event_data->>'destination_port_indexed' = '{destination_port_indexed:?}' AND event_data->>'destination_channel_indexed' = '{destination_channel_indexed:?}'",
 				),
 				None,
 			)
