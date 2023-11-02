@@ -79,7 +79,7 @@ pub enum UpdateMessage {
 	Batch(Vec<Any>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum UpdateType {
 	// contains an authority set change.
 	Mandatory,

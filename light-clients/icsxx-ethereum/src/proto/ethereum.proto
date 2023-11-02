@@ -276,7 +276,9 @@ message ClientState {
   LightClientState inner = 1;
   optional uint64 frozen_height_revision_height = 2;
   optional uint64 frozen_height_revision_number = 3;
-  uint32 latest_height = 4;
+  uint64 latest_height = 4;
+
+  // next tag: 5
 }
 
 message Misbehaviour {

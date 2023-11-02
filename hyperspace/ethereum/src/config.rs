@@ -141,6 +141,8 @@ pub struct EthereumClientConfig {
 	pub yui: Option<DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>>,
 	pub client_type: String,
 	pub jwt_secret_path: Option<String>,
+	pub indexer_pg_url: String,
+	pub indexer_redis_url: String,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, strum::EnumString)]

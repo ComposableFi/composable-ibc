@@ -1,7 +1,7 @@
 use crate::{
 	config::EthereumClientConfig,
 	contract::UnwrapContractError,
-	ibc_provider::{u256_to_bytes, ERC20TOKENABI_ABI},
+	ibc_provider::{u256_to_bytes, EARLIEST_BLOCK, ERC20TOKENABI_ABI},
 	jwt::{JwtAuth, JwtKey},
 	utils::{handle_gas_usage, DeployYuiIbc, ProviderImpl},
 };
@@ -32,6 +32,10 @@ use ibc::{
 use ibc_primitives::Timeout;
 use once_cell::sync::Lazy;
 use primitives::CommonClientState;
+use sqlx::{
+	postgres::{PgConnectOptions, PgPoolOptions},
+	ConnectOptions,
+};
 use std::{
 	collections::HashSet,
 	convert::Infallible,
@@ -70,6 +74,10 @@ pub struct EthereumClient {
 	pub connection_id: Arc<Mutex<Option<ConnectionId>>>,
 	/// Channels cleared for packet relay
 	pub channel_whitelist: Arc<Mutex<HashSet<(ChannelId, PortId)>>>,
+	/// Indexer Redis database
+	pub redis: redis::Client,
+	/// Indexer Postgres database
+	pub db_conn: sqlx::Pool<sqlx::Postgres>,
 }
 
 pub type MiddlewareErrorType =
@@ -111,6 +119,10 @@ pub enum ClientError {
 	IbcClient(#[from] ibc::core::ics02_client::error::Error),
 	#[error("Ibc channel error")]
 	IbcChannel(#[from] ibc::core::ics04_channel::error::Error),
+	#[error("Serde JSON error")]
+	JSONError(#[from] serde_json::Error),
+	#[error("SQL error")]
+	SQLError(#[from] sqlx::Error),
 	#[error("{0}")]
 	Other(String),
 }
@@ -151,6 +163,18 @@ pub struct AckPacket {
 	pub acknowledgement: Vec<u8>,
 }
 
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct DatabaseLog {
+	pub address: String,
+	pub chain: String,
+	pub data: String,
+	pub erc20_transfers_parsed: bool,
+	pub hash: String,
+	pub log_index: i64,
+	pub removed: bool,
+	pub topics: Vec<Option<String>>,
+}
+
 impl EthereumClient {
 	pub async fn new(mut config: EthereumClientConfig) -> Result<Self, ClientError> {
 		let client = config.client().await?;
@@ -176,6 +200,19 @@ impl EthereumClient {
 				.await?,
 			Some(yui) => yui,
 		};
+
+		let mut connect_options: PgConnectOptions = config.indexer_pg_url.parse().unwrap();
+		connect_options.disable_statement_logging();
+
+		let db_conn = PgPoolOptions::new()
+			.max_connections(500)
+			.connect_with(connect_options)
+			.await
+			.expect("Unable to connect to the database");
+
+		let redis = redis::Client::open(config.indexer_redis_url.clone())
+			.expect("Unable to connect with Redis server");
+
 		Ok(Self {
 			http_rpc: client,
 			ws_uri: config.ws_rpc_url.clone(),
@@ -187,6 +224,8 @@ impl EthereumClient {
 				config.channel_whitelist.clone().into_iter().collect(),
 			)),
 			config,
+			db_conn,
+			redis,
 		})
 	}
 
@@ -209,6 +248,7 @@ impl EthereumClient {
 			let secret = std::fs::read_to_string(secret_path).map_err(|e| {
 				ClientError::Other(format!("jwtsecret not found. Search for 'execution/jwtsecret' in the code and replace it with your local path. {e}"))
 			})?;
+			dbg!(&secret);
 			let secret =
 				JwtKey::from_slice(&hex::decode(&secret[2..].trim()).unwrap()).expect("oops");
 			let jwt_auth = JwtAuth::new(secret, None, None);
@@ -232,12 +272,15 @@ impl EthereumClient {
 		from_block: BlockNumber,
 	) -> Result<Vec<(String, String)>, ClientError> {
 		let filter = Filter::new()
-			.from_block(self.contract_creation_block())
+			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			//.address(ValueOrArray::Value(self.yui.diamond.address()))
+			//.from_block(self.contract_creation_block())
 			.to_block(BlockNumber::Latest)
 			.address(self.yui.diamond.address())
 			.event("OpenInitChannel(string,string)");
 
 		let logs = self.client().get_logs(&filter).await.unwrap();
+		unimplemented!();
 
 		let v = logs
 			.into_iter()
@@ -260,6 +303,7 @@ impl EthereumClient {
 			.event("GeneratedClientIdentifier(string)");
 
 		let logs = self.client().get_logs(&filter).await.unwrap();
+		unimplemented!();
 
 		logs.into_iter()
 			.map(|log| {
@@ -281,17 +325,18 @@ impl EthereumClient {
 			.event("GeneratedConnectionIdentifier(string)");
 
 		let logs = self.client().get_logs(&filter).await.unwrap();
+		unimplemented!();
 
-		logs.into_iter()
-			.map(|log| {
-				ethers::abi::decode(&[ParamType::String], &log.data.0)
-					.unwrap()
-					.into_iter()
-					.next()
-					.unwrap()
-					.to_string()
-			})
-			.collect()
+		// logs.into_iter()
+		// 	.map(|log| {
+		// 		ethers::abi::decode(&[ParamType::String], &log.data.0)
+		// 			.unwrap()
+		// 			.into_iter()
+		// 			.next()
+		// 			.unwrap()
+		// 			.to_string()
+		// 	})
+		// 	.collect()
 	}
 
 	pub async fn acknowledge_packets(&self, from_block: BlockNumber) -> Vec<AckPacket> {
@@ -302,6 +347,7 @@ impl EthereumClient {
 			.event("AcknowledgePacket((uint64,string,string,string,string,bytes,(uint64,uint64),uint64),bytes)");
 
 		let logs = self.client().get_logs(&filter).await.unwrap();
+		unimplemented!();
 
 		logs.into_iter()
 			.map(|log| {
@@ -403,6 +449,7 @@ impl EthereumClient {
 			.event(event_name);
 		let client = self.client().clone();
 
+		unimplemented!();
 		async_stream::stream! {
 			let logs = client.get_logs(&filter).await.unwrap();
 			for log in logs {

@@ -239,58 +239,59 @@ pub async fn query_ready_and_timed_out_packets(
 				    log::info!("sink_height = {sink_height:?}, timeout_height = {:?}", packet.timeout_height);
 
 					if packet.timed_out(&sink_timestamp, sink_height) {
-						timeout_packets_count.fetch_add(1, Ordering::SeqCst);
-						// so we know this packet has timed out on the sink, we need to find the maximum
-						// consensus state height at which we can generate a non-membership proof of the
-						// packet for the sink's client on the source.
-						let proof_height =
-							if let Some(proof_height) = get_timeout_proof_height(
-								&**source,
-								&**sink,
-								source_height,
-								sink_height,
-								sink_timestamp,
-								latest_sink_height_on_source,
-								&packet,
-								packet_height,
-							)
-							.await
-						{
-							proof_height
-						} else {
-							log::trace!(target: "hyperspace", "Skipping packet as no timeout proof height could be found: {:?}", packet);
+                        log::info!("timedout {packet:?}");
+					//	timeout_packets_count.fetch_add(1, Ordering::SeqCst);
+					//	// so we know this packet has timed out on the sink, we need to find the maximum
+					//	// consensus state height at which we can generate a non-membership proof of the
+					//	// packet for the sink's client on the source.
+					//	let proof_height =
+					//		if let Some(proof_height) = get_timeout_proof_height(
+					//			&**source,
+					//			&**sink,
+					//			source_height,
+					//			sink_height,
+					//			sink_timestamp,
+					//			latest_sink_height_on_source,
+					//			&packet,
+					//			packet_height,
+					//		)
+					//		.await
+					//	{
+					//		proof_height
+					//	} else {
+					//		log::trace!(target: "hyperspace", "Skipping packet as no timeout proof height could be found: {:?}", packet);
 							return Ok(None)
-						};
+					//	};
 
-						// given this maximum height, has the connection delay been satisfied?
-						if !verify_delay_passed(
-							&**source,
-							&**sink,
-							source_timestamp,
-							source_height,
-							sink_timestamp,
-							sink_height,
-							source_connection_end.delay_period(),
-							proof_height,
-							VerifyDelayOn::Source,
-						)
-							.await?
-						{
-							log::trace!(target: "hyperspace", "Skipping packet as connection delay has not passed {:?}", packet);
-							return Ok(None)
-						}
+					//	// given this maximum height, has the connection delay been satisfied?
+					//	if !verify_delay_passed(
+					//		&**source,
+					//		&**sink,
+					//		source_timestamp,
+					//		source_height,
+					//		sink_timestamp,
+					//		sink_height,
+					//		source_connection_end.delay_period(),
+					//		proof_height,
+					//		VerifyDelayOn::Source,
+					//	)
+					//		.await?
+					//	{
+					//		log::trace!(target: "hyperspace", "Skipping packet as connection delay has not passed {:?}", packet);
+					//		return Ok(None)
+					//	}
 
-						// lets construct the timeout message to be sent to the source
-						let msg = construct_timeout_message(
-							&**source,
-							&**sink,
-							&sink_channel_end,
-							packet,
-							next_sequence_recv.next_sequence_receive,
-							proof_height,
-						)
-							.await?;
-						return Ok(Some(Left(msg)))
+					//	// lets construct the timeout message to be sent to the source
+					//	let msg = construct_timeout_message(
+					//		&**source,
+					//		&**sink,
+					//		&sink_channel_end,
+					//		packet,
+					//		next_sequence_recv.next_sequence_receive,
+					//		proof_height,
+					//	)
+					//		.await?;
+					//	return Ok(Some(Left(msg)))
 					} else {
 						log::trace!(target: "hyperspace", "The packet has not timed out yet: {:?}", packet);
 					}
@@ -315,7 +316,7 @@ pub async fn query_ready_and_timed_out_packets(
 					// creation height on source chain
 					if packet_height > latest_source_height_on_sink.revision_height {
 						// Sink does not have client update required to prove recv packet message
-						log::debug!(target: "hyperspace", "Skipping packet as sink does not have client update required to prove recv packet message: {:?}", packet);
+						log::debug!(target: "hyperspace", "Skipping packet as sink does not have client update required to prove recv packet message: {packet_height} > {}, {:?}", latest_source_height_on_sink.revision_height, packet);
 						recv_packets_count.fetch_add(1, Ordering::SeqCst);
 						return Ok(None)
 					}

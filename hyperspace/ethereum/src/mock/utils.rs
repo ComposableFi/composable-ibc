@@ -118,6 +118,8 @@ pub mod mock {
 pub async fn hyperspace_ethereum_client_fixture(
 	anvil: &AnvilInstance,
 	yui_ibc: DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>,
+	db_url: &str,
+	redis_url: &str,
 ) -> EthereumClientConfig {
 	let endpoint =
 		if USE_GETH { format!("http://localhost:{}", ETH_NODE_PORT) } else { anvil.endpoint() };
@@ -169,5 +171,7 @@ pub async fn hyperspace_ethereum_client_fixture(
 		yui: Some(yui_ibc),
 		client_type: "07-tendermint".into(),
 		jwt_secret_path,
+		indexer_pg_url: db_url.parse().unwrap(),
+		indexer_redis_url: redis_url.parse().unwrap(),
 	}
 }
