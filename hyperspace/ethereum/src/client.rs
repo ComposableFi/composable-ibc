@@ -1,7 +1,7 @@
 use crate::{
 	config::EthereumClientConfig,
 	contract::UnwrapContractError,
-	ibc_provider::{u256_to_bytes, EARLIEST_BLOCK, ERC20TOKENABI_ABI},
+	ibc_provider::{u256_to_bytes, ERC20TOKENABI_ABI},
 	jwt::{JwtAuth, JwtKey},
 	utils::{handle_gas_usage, DeployYuiIbc, ProviderImpl},
 };
@@ -272,7 +272,7 @@ impl EthereumClient {
 		from_block: BlockNumber,
 	) -> Result<Vec<(String, String)>, ClientError> {
 		let filter = Filter::new()
-			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+			.from_block(self.contract_creation_block())
 			//.address(ValueOrArray::Value(self.yui.diamond.address()))
 			//.from_block(self.contract_creation_block())
 			.to_block(BlockNumber::Latest)

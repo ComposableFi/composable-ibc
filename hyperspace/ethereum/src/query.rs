@@ -20,11 +20,13 @@ impl EthereumClient {
 
 	pub async fn get_logs_for_event_name<T: DeserializeOwned + EthEvent>(
 		&self,
-		from_block: u64,
-		to_block: BlockNumber,
+		from_block: impl Into<BlockNumber>,
+		to_block: impl Into<BlockNumber>,
 		query: &str,
 		additional_query: Option<&str>,
 	) -> Result<Vec<(T, Log)>, ClientError> {
+		let from_block = from_block.into();
+		let to_block = to_block.into();
 		let to_block = match to_block {
 			BlockNumber::Number(n) => n.as_u64(),
 			BlockNumber::Latest => self

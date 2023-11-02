@@ -101,7 +101,6 @@ use sync_committee_primitives::types::LightClientState;
 use tokio::time::sleep;
 use tracing::log;
 
-pub const EARLIEST_BLOCK: u64 = 0;
 pub const INDEXER_DELAY_BLOCKS: u64 = 2;
 
 abigen!(
@@ -132,9 +131,6 @@ abigen!(
 	Ics20BankAbi,
 	"hyperspace/ethereum/src/abi/ics20-bank-abi.json",
 	event_derives (serde::Deserialize, serde::Serialize);
-
-	Ics20BankAbi,
-	"hyperspace/ethereum/src/abi/ics20-bank-abi.json";
 
 	TendermintClientAbi,
 	"hyperspace/ethereum/src/abi/tendermint-client-abi.json",
@@ -468,7 +464,7 @@ impl IbcProvider for EthereumClient {
 		// 	.yui
 		// 	.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
 		// 	.expect("contract is missing UpdateClient event")
-		// 	.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+		// 	.from_block(BlockNumber::Number(self.contract_creation_block().into()))
 		// 	.to_block(at.revision_height);
 		// event_filter.filter = event_filter
 		// 	.filter
@@ -498,8 +494,8 @@ impl IbcProvider for EthereumClient {
 		// 	;
 		let maybe_log = self
 			.get_logs_for_event_name::<UpdateClientHeightFilter>(
-                self.contract_creation_block,
-				at.revision_height.into(),
+                self.contract_creation_block(),
+				at.revision_height,
 				&format!(
 					"event_data ->> 'client_id' = '{client_id}' AND event_data->'client_height'->>'revision_number' = '{}' AND event_data->'client_height'->>'revision_height' = '{}'",
 					consensus_height.revision_number, consensus_height.revision_height
@@ -572,7 +568,7 @@ impl IbcProvider for EthereumClient {
 		// 	.yui
 		// 	.event_for_name::<CreateClientFilter>("CreateClient")
 		// 	.expect("contract is missing CreateClient event")
-		// 	.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+		// 	.from_block(BlockNumber::Number(self.contract_creation_block().into()))
 		// 	.address(ValueOrArray::Value(self.yui.diamond.address()))
 		// 	//            .from_block(self.contract_creation_block())
 		// 	.to_block(at.revision_height);
@@ -593,8 +589,8 @@ impl IbcProvider for EthereumClient {
 		// 	.ok_or_else(|| ClientError::Other("no events found".to_string()))?;
 		let (_, log) = self
 			.get_logs_for_event_name::<CreateClientFilter>(
-				EARLIEST_BLOCK,
-				at.revision_height.into(),
+				self.contract_creation_block(),
+				at.revision_height,
 				&format!("event_data->>'client_id' = '{client_id}'"),
 				None,
 			)
@@ -662,7 +658,7 @@ impl IbcProvider for EthereumClient {
 		// 	.map_err(|err| {
 		// 		ClientError::Other(format!("contract is missing UpdateClient event: {}", err))
 		// 	})?
-		// 	.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+		// 	.from_block(BlockNumber::Number(self.contract_creation_block().into()))
 		// 	.address(ValueOrArray::Value(self.yui.diamond.address()))
 		// 	.to_block(at.revision_height);
 		// event_filter.filter = event_filter.filter.topic1({
@@ -684,8 +680,8 @@ impl IbcProvider for EthereumClient {
 		// ;
 		let maybe_log = self
 			.get_logs_for_event_name::<UpdateClientHeightFilter>(
-				EARLIEST_BLOCK,
-				at.revision_height.into(),
+				self.contract_creation_block(),
+				at.revision_height,
 				&format!("event_data->>'client_id' = '{client_id}'"),
 				Some("ORDER BY (event_data->'client_height'->>'revision_height') :: bigint"),
 			)
@@ -758,10 +754,10 @@ impl IbcProvider for EthereumClient {
 				// 			err
 				// 		))
 				// 	})?
-				// 	.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+				// 	.from_block(BlockNumber::Number(self.contract_creation_block().into()))
 				// 	.address(ValueOrArray::Value(self.yui.diamond.address()))
 				// 	//		.from_block(self.contract_creation_block())
-					.address(ValueOrArray::Value(self.yui.diamond.address()))
+				// 	.address(ValueOrArray::Value(self.yui.diamond.address()))
 				// 	.to_block(at.revision_height);
 				// event_filter.filter = event_filter.filter.topic1({
 				// 	let hash = H256::from_slice(&encode(&[Token::FixedBytes(
@@ -781,8 +777,8 @@ impl IbcProvider for EthereumClient {
 
 				let (_, log) = self
 					.get_logs_for_event_name::<CreateClientFilter>(
-						EARLIEST_BLOCK,
-						at.revision_height.into(),
+						self.contract_creation_block(),
+						at.revision_height,
 						&format!("event_data->>'client_id' = '{client_id}'"),
 						None,
 					)
@@ -1215,7 +1211,7 @@ impl IbcProvider for EthereumClient {
 		// 	.yui
 		// 	.event_for_name::<SendPacketFilter>("SendPacket")
 		// 	.map_err(|err| ClientError::ContractAbiError(err))?
-		// 	.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+		// 	.from_block(BlockNumber::Number(self.contract_creation_block().into()))
 		// 	.address(ValueOrArray::Array(vec![
 		// 		self.yui.bank.as_ref().map(|x| x.address()).unwrap_or_default(),
 		// 		self.yui.diamond.address(),
@@ -1260,7 +1256,7 @@ impl IbcProvider for EthereumClient {
 		let sequences = seqs.clone().into_iter().map(|seq| format!("'{seq}'")).join(",");
 		let logs = self
 			.get_logs_for_event_name::<SendPacketFilter>(
-				EARLIEST_BLOCK,
+				self.contract_creation_block(),
 				BlockNumber::Latest,
 				&format!(
 					"event_data->>'sequence' IN ({sequences}) AND event_data->>'source_port' = '{source_port}' AND event_data->>'source_channel' = '{source_channel}'",
@@ -1326,7 +1322,7 @@ impl IbcProvider for EthereumClient {
 		// 	.yui
 		// 	.event_for_name::<RecvPacketFilter>("RecvPacket")
 		// 	.map_err(|err| ClientError::ContractAbiError(err))?
-		// 	.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+		// 	.from_block(BlockNumber::Number(self.contract_creation_block().into()))
 		// 	.address(ValueOrArray::Value(self.yui.diamond.address()))
 		// 	//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
 		// 	.to_block(BlockNumber::Latest)
@@ -1368,7 +1364,7 @@ impl IbcProvider for EthereumClient {
 		let sequences = seqs.clone().into_iter().map(|seq| format!("'{seq}'")).join(",");
 		let logs = self
 			.get_logs_for_event_name::<RecvPacketFilter>(
-				EARLIEST_BLOCK,
+				self.contract_creation_block(),
 				BlockNumber::Latest,
 				&format!(
 					"event_data->>'sequence' IN ({sequences}) AND event_data->>'destination_port_indexed' = '{destination_port_indexed:?}' AND event_data->>'destination_channel_indexed' = '{destination_channel_indexed:?}'",
@@ -1384,7 +1380,7 @@ impl IbcProvider for EthereumClient {
 		// 	.yui
 		// 	.event_for_name::<WriteAcknowledgementFilter>("WriteAcknowledgement")
 		// 	.map_err(|err| ClientError::ContractAbiError(err))?
-		// 	.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+		// 	.from_block(BlockNumber::Number(self.contract_creation_block().into()))
 		// 	.address(ValueOrArray::Value(self.yui.diamond.address()))
 		// 	//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
 		// 	.to_block(BlockNumber::Latest)
@@ -1409,7 +1405,7 @@ impl IbcProvider for EthereumClient {
 		// 	});
 		let acks = self
 			.get_logs_for_event_name::<WriteAcknowledgementFilter>(
-				EARLIEST_BLOCK,
+				self.contract_creation_block(),
 				BlockNumber::Latest,
 				&format!(
 					"event_data->>'sequence' IN ({sequences}) AND event_data->>'destination_port' = '{destination_port}' AND event_data->>'destination_channel' = '{destination_channel}'",
@@ -1484,7 +1480,7 @@ impl IbcProvider for EthereumClient {
 		// 	.yui
 		// 	.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
 		// 	.map_err(|err| ClientError::ContractAbiError(err))?
-		// 	.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
+		// 	.from_block(BlockNumber::Number(self.contract_creation_block().into()))
 		// 	.address(ValueOrArray::Value(self.yui.diamond.address()))
 		// 	//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
 		// 	.to_block(BlockNumber::Latest)
@@ -1520,7 +1516,7 @@ impl IbcProvider for EthereumClient {
 
 		let (_, log) = self
 			.get_logs_for_event_name::<UpdateClientHeightFilter>(
-				EARLIEST_BLOCK,
+				self.contract_creation_block(),
 				BlockNumber::Latest,
 				&format!(
 					"event_data->>'client_id' = '{client_id}' AND event_data->'client_height'->>'revision_number' = '{}' AND event_data->'client_height'->>'revision_height' = '{}'",
