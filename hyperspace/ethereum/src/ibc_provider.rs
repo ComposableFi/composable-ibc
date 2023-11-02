@@ -96,7 +96,6 @@ use icsxx_ethereum::{
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 use primitives::mock::LocalClientTypes;
 use sync_committee_primitives::types::LightClientState;
-use tracing::log;
 
 abigen!(
 	IbcClientAbi,
