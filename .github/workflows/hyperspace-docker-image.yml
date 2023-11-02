@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: composable-ibc-private
+  IMAGE_NAME: composablefi/composable-ibc-private
 
 jobs:
 
