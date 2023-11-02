@@ -17,8 +17,6 @@ jobs:
     concurrency:
       group: parachain-node-docker-image-${{ github.ref }}
       cancel-in-progress: true
-    strategy:
-      fail-fast: true
 
     steps:
     - name: Clean up

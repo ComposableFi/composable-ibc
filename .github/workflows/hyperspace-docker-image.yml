@@ -27,9 +27,6 @@ jobs:
       group: hyperspace-docker-image-${{ github.ref }}
       cancel-in-progress: true
 
-    strategy:
-      fail-fast: true
-
     steps:
     - name: Clean up
       continue-on-error: true
