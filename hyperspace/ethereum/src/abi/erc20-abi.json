@@ -15,6 +15,11 @@
         "internalType": "uint256",
         "name": "initSupply",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "precision",
+        "type": "uint8"
       }
     ],
     "stateMutability": "nonpayable",
