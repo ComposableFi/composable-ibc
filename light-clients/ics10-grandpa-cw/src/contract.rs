@@ -353,7 +353,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 				match get_consensus_state(deps, &client_id, height) {
 					Ok(consensus_state_raw) => {
 						let consensus_state = Context::decode_consensus_state(&consensus_state_raw)?;
-						if client_state.expired(env.block.time - consensus_state.timestamp) {
+						if client_state.expired(env.block.time.as_secs() - consensus_state.timestamp.as_seconds()) {
 							return to_binary(&QueryResponse::status("Expired".to_string()));
 						}
 						to_binary(&QueryResponse::status("Active".to_string()))
