@@ -117,7 +117,7 @@ impl ContractResult {
 
 #[cw_serde]
 pub enum SudoMsg {
-	CheckSubstituteAndUpdateState(CheckSubstituteAndUpdateStateMsg),
+	MigrateClientStore(MigrateClientStoreMsg),
 	UpdateStateOnMisbehaviour(UpdateStateOnMisbehaviourMsgRaw),
 	UpdateState(UpdateStateMsgRaw),
 	VerifyMembership(VerifyMembershipMsgRaw),
@@ -250,7 +250,7 @@ impl TryFrom<UpdateStateMsgRaw> for UpdateStateMsg {
 }
 
 #[cw_serde]
-pub struct CheckSubstituteAndUpdateStateMsg {}
+pub struct MigrateClientStoreMsg {}
 
 #[cw_serde]
 pub struct VerifyMembershipMsgRaw {

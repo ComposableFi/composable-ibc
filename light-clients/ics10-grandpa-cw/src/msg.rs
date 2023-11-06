@@ -136,7 +136,7 @@ pub struct ClientCreateRequest {
 
 #[cw_serde]
 pub enum SudoMsg {
-	CheckSubstituteAndUpdateState(CheckSubstituteAndUpdateStateMsgRaw),
+	MigrateClientStore(MigrateClientStoreMsgRaw),
 	UpdateStateOnMisbehaviour(UpdateStateOnMisbehaviourMsgRaw),
 	UpdateState(UpdateStateMsgRaw),
 	VerifyMembership(VerifyMembershipMsgRaw),
@@ -269,15 +269,15 @@ impl TryFrom<UpdateStateMsgRaw> for UpdateStateMsg {
 }
 
 #[cw_serde]
-pub struct CheckSubstituteAndUpdateStateMsgRaw {}
+pub struct MigrateClientStoreMsgRaw {}
 
-pub struct CheckSubstituteAndUpdateStateMsg {}
+pub struct MigrateClientStoreMsg {}
 
-impl TryFrom<CheckSubstituteAndUpdateStateMsgRaw> for CheckSubstituteAndUpdateStateMsg {
+impl TryFrom<MigrateClientStoreMsgRaw> for MigrateClientStoreMsg {
 	type Error = ContractError;
 
 	fn try_from(
-		CheckSubstituteAndUpdateStateMsgRaw {}: CheckSubstituteAndUpdateStateMsgRaw,
+		MigrateClientStoreMsgRaw {}: MigrateClientStoreMsgRaw,
 	) -> Result<Self, Self::Error> {
 		Ok(Self {})
 	}
