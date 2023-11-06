@@ -706,9 +706,7 @@ impl primitives::TestProvider for EthereumClient {
 			.expect("expected bank module")
 			.method::<_, Address>("queryTokenContractFromDenom", params.token.denom.to_string())?;
 		let erc20_address = method.call().await.unwrap_contract_error();
-		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
-		assert_eq!(receipt.status, Some(1.into()));
-		log::info!("Sent approval transfer. Tx hash: {:?}", receipt.transaction_hash);
+		assert_ne!(erc20_address, Address::zero(), "erc20 address is zero");
 
 		let client = self.config.client().await.unwrap().deref().clone();
 		let contract =
@@ -725,6 +723,7 @@ impl primitives::TestProvider for EthereumClient {
 
 		let _ = method.call().await.unwrap_contract_error();
 		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		log::info!("Sent approval transfer. Tx hash: {:?}", receipt.transaction_hash);
 		assert_eq!(receipt.status, Some(1.into()));
 
 		// let method = contract
