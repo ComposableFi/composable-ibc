@@ -333,7 +333,7 @@ fn process_message(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
 	match msg {
 		QueryMsg::ClientTypeMsg(_) => unimplemented!("ClientTypeMsg"),
@@ -351,7 +351,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 			} else {
 				let height = client_state.latest_height();
 				match get_consensus_state(deps, &client_id, height) {
-					Ok(_) => to_binary(&QueryResponse::status("Active".to_string())),
+					Ok(consensus_state_raw) => {
+						let consensus_state = Context::decode_consensus_state(&consensus_state_raw)?;
+						if client_state.expired(env.block.time - consensus_state.timestamp) {
+							return to_binary(&QueryResponse::status("Expired".to_string()));
+						}
+						to_binary(&QueryResponse::status("Active".to_string()))
+					},
 					Err(_) => to_binary(&QueryResponse::status("Expired".to_string())),
 				}
 			}
