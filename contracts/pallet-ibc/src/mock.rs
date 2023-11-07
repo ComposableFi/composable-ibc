@@ -1,10 +1,17 @@
-use crate::{self as pallet_ibc, ics20_fee::FlatFeeConverter, routing::ModuleRouter};
+use crate::{
+	self as pallet_ibc, ics20::SubstrateMultihopXcmHandlerNone, ics20_fee::FlatFeeConverter,
+	routing::ModuleRouter,
+};
 use cumulus_primitives_core::ParaId;
+use derive_more::Display;
 use frame_support::{
 	pallet_prelude::ConstU32,
 	parameter_types,
 	traits::{
-		fungibles::{metadata::Mutate, Create, InspectMetadata},
+		fungibles::{
+			metadata::{Inspect, Mutate},
+			Create,
+		},
 		AsEnsureOriginWithArg, ConstU64, Everything,
 	},
 };
@@ -19,13 +26,17 @@ use sp_core::{
 	offchain::{testing::TestOffchainExt, OffchainDbExt, OffchainWorkerExt},
 	H256,
 };
-use sp_keystore::{testing::KeyStore, KeystoreExt};
+use sp_keystore::{testing::MemoryKeystore, KeystoreExt};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
 	MultiSignature, Perbill,
 };
-use std::sync::Arc;
+use std::{
+	convert::Infallible,
+	sync::Arc,
+	time::{SystemTime, UNIX_EPOCH},
+};
 use system::EnsureRoot;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -38,7 +49,10 @@ pub type Amount = i128;
 pub type Balance = u128;
 pub type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
 use super::*;
-use crate::light_clients::{AnyClientMessage, AnyConsensusState};
+use crate::{
+	ics20::{IbcMemoHandler, MemoData},
+	light_clients::{AnyClientMessage, AnyConsensusState},
+};
 use ibc::mock::{client_state::MockConsensusState, header::MockClientMessage, host::MockHostBlock};
 
 impl From<MockHostBlock> for AnyClientMessage {
@@ -84,6 +98,10 @@ impl balances::Config for Test {
 	type MaxLocks = ();
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ();
+	type MaxFreezes = ();
 }
 
 parameter_types! {
@@ -157,6 +175,8 @@ impl pallet_assets::Config for Test {
 	type AssetIdParameter = Self::AssetId;
 
 	type CallbackHandle = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = ();
 }
 
 parameter_types! {
@@ -204,6 +224,43 @@ fn create_alice_key() -> <Test as Config>::AccountIdConversion {
 	IbcAccount(account_id_32)
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Default, Display, Encode, Decode, TypeInfo)]
+pub struct RawMemo(pub String);
+
+impl FromStr for RawMemo {
+	type Err = Infallible;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		Ok(Self(s.to_string()))
+	}
+}
+
+impl TryFrom<MemoData> for RawMemo {
+	type Error = <String as TryFrom<MemoData>>::Error;
+
+	fn try_from(value: MemoData) -> Result<Self, Self::Error> {
+		Ok(Self(value.try_into()?))
+	}
+}
+
+impl TryFrom<RawMemo> for MemoData {
+	type Error = <MemoData as TryFrom<String>>::Error;
+
+	fn try_from(value: RawMemo) -> Result<Self, Self::Error> {
+		Ok(value.0.try_into()?)
+	}
+}
+
+impl ValidateMemo for RawMemo {
+	fn validate(&self) -> Result<(), String> {
+		if self.0 == "invalid memo" {
+			return Err(self.0.clone())
+		} else {
+			Ok(())
+		}
+	}
+}
+
 impl Config for Test {
 	type TimeProvider = Timestamp;
 	type RuntimeEvent = RuntimeEvent;
@@ -228,18 +285,19 @@ impl Config for Test {
 	type IbcAccountId = Self::AccountId;
 	type TransferOrigin = EnsureSigned<Self::IbcAccountId>;
 	type RelayerOrigin = EnsureSigned<Self::AccountId>;
-	type HandleMemo = ();
-	type MemoMessage = MemoMessage;
+	type HandleMemo = IbcMemoHandler<(), Test>;
+	type MemoMessage = RawMemo;
 	type IsReceiveEnabled = sp_core::ConstBool<true>;
 	type IsSendEnabled = sp_core::ConstBool<true>;
-	type Ics20RateLimiter = Everything;
 	type FeeAccount = FeeAccount;
 	type CleanUpPacketsPeriod = CleanUpPacketsPeriod;
 	type ServiceChargeOut = ServiceCharge;
 	type FlatFeeConverter = FlatFeeConverterDummy<Test>;
 	type FlatFeeAssetId = FlatFeeAssetId;
 	type FlatFeeAmount = FlatFeeAmount;
+	type SubstrateMultihopXcmHandler = SubstrateMultihopXcmHandlerNone<Test>;
 }
+
 #[derive(Debug, Clone)]
 pub struct FlatFeeConverterDummy<T: Config>(PhantomData<T>);
 impl<T: Config> FlatFeeConverter for FlatFeeConverterDummy<T> {
@@ -299,7 +357,14 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut ext: sp_io::TestExternalities =
 		system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
 	register_offchain_ext(&mut ext);
-	ext.register_extension(KeystoreExt(Arc::new(KeyStore::new())));
+	ext.register_extension(KeystoreExt(Arc::new(MemoryKeystore::new())));
+
+	ext.execute_with(|| {
+		Timestamp::set_timestamp(
+			SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64
+		);
+	});
+
 	ext
 }
 
@@ -308,7 +373,7 @@ where
 	T::AssetId: From<u128>,
 {
 	type Error = ();
-	fn from_denom_to_asset_id(denom: &String) -> Result<T::AssetId, Self::Error> {
+	fn from_denom_to_asset_id(denom: &str) -> Result<T::AssetId, Self::Error> {
 		let mut id = 2u128;
 		if denom == "PICA" || denom == "1" {
 			id = 1;
@@ -316,17 +381,17 @@ where
 		if denom.contains("FLATFEE") {
 			id = 3;
 		}
-		if <<Test as Config>::Fungibles as InspectMetadata<AccountId>>::decimals(&id) == 0 {
+		if <<Test as Config>::Fungibles as Inspect<AccountId>>::decimals(id) == 0 {
 			<<Test as Config>::Fungibles as Create<AccountId>>::create(
-				id.into(),
+				id,
 				AccountId::new([0; 32]),
 				true,
-				1000u128.into(),
+				1000u128,
 			)
 			.unwrap();
 
 			<<Test as Config>::Fungibles as Mutate<AccountId>>::set(
-				id.into(),
+				id,
 				&AccountId::new([0; 32]),
 				vec![0; 32],
 				vec![0; 32],

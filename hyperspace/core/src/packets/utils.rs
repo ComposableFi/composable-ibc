@@ -41,6 +41,7 @@ use primitives::{find_suitable_proof_height_for_client, Chain};
 use std::time::Duration;
 use tendermint_proto::Protobuf;
 
+#[allow(clippy::too_many_arguments)]
 pub async fn get_timeout_proof_height(
 	source: &impl Chain,
 	sink: &impl Chain,
@@ -51,7 +52,7 @@ pub async fn get_timeout_proof_height(
 	packet: &Packet,
 	packet_creation_height: u64,
 ) -> Option<Height> {
-	let timeout_variant = Packet::timeout_variant(&packet, &sink_timestamp, sink_height).unwrap();
+	let timeout_variant = Packet::timeout_variant(packet, &sink_timestamp, sink_height).unwrap();
 	log::trace!(target: "hyperspace", "get_timeout_proof_height: {}->{}, timeout_variant={:?}, source_height={}, sink_height={}, sink_timestamp={}, latest_client_height_on_source={}, packet_creation_height={}, packet={:?}",
 		source.name(), sink.name(), timeout_variant, source_height, sink_height, sink_timestamp, latest_client_height_on_source, packet_creation_height, packet);
 
@@ -150,6 +151,7 @@ pub enum VerifyDelayOn {
 	Sink,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn verify_delay_passed(
 	source: &impl Chain,
 	sink: &impl Chain,
@@ -197,11 +199,13 @@ pub async fn verify_delay_passed(
 				.await
 				.unwrap()
 				.consensus_state
-				.expect(&format!(
-					"query_client_consensus for {} at height {} is not found",
-					source.client_id(),
-					actual_proof_height
-				));
+				.unwrap_or_else(|| {
+					panic!(
+						"query_client_consensus for {} at height {} is not found",
+						source.client_id(),
+						actual_proof_height
+					)
+				});
 			if let Ok((sink_client_update_height, sink_client_update_time)) = sink
 				.query_client_update_time_and_height(source.client_id(), actual_proof_height)
 				.await
@@ -329,18 +333,15 @@ pub enum KeyPathType {
 pub fn get_key_path(key_path_type: KeyPathType, packet: &Packet) -> String {
 	match key_path_type {
 		KeyPathType::SeqRecv => {
-			format!(
-				"{}",
-				SeqRecvsPath(packet.destination_port.clone(), packet.destination_channel.clone())
-			)
+			format!("{}", SeqRecvsPath(packet.destination_port.clone(), packet.destination_channel))
 		},
 		KeyPathType::ReceiptPath => {
 			format!(
 				"{}",
 				ReceiptsPath {
 					port_id: packet.destination_port.clone(),
-					channel_id: packet.destination_channel.clone(),
-					sequence: packet.sequence.clone()
+					channel_id: packet.destination_channel,
+					sequence: packet.sequence
 				}
 			)
 		},
@@ -349,8 +350,8 @@ pub fn get_key_path(key_path_type: KeyPathType, packet: &Packet) -> String {
 				"{}",
 				CommitmentsPath {
 					port_id: packet.source_port.clone(),
-					channel_id: packet.source_channel.clone(),
-					sequence: packet.sequence.clone()
+					channel_id: packet.source_channel,
+					sequence: packet.sequence
 				}
 			)
 		},
@@ -359,18 +360,15 @@ pub fn get_key_path(key_path_type: KeyPathType, packet: &Packet) -> String {
 				"{}",
 				AcksPath {
 					port_id: packet.destination_port.clone(),
-					channel_id: packet.destination_channel.clone(),
-					sequence: packet.sequence.clone()
+					channel_id: packet.destination_channel,
+					sequence: packet.sequence
 				}
 			)
 		},
 		KeyPathType::ChannelPath => {
 			format!(
 				"{}",
-				ChannelEndsPath(
-					packet.destination_port.clone(),
-					packet.destination_channel.clone()
-				)
+				ChannelEndsPath(packet.destination_port.clone(), packet.destination_channel)
 			)
 		},
 	}

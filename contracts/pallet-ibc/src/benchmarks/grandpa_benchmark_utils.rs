@@ -12,8 +12,8 @@ use ics10_grandpa::{
 	client_state::ClientState,
 	consensus_state::ConsensusState,
 };
+use sp_consensus_grandpa::{AuthorityId, AuthoritySignature, KEY_TYPE};
 use sp_core::H256;
-use sp_finality_grandpa::{AuthorityId, AuthoritySignature, KEY_TYPE};
 use sp_runtime::{traits::BlakeTwo256, SaturatedConversion};
 use sp_std::prelude::*;
 use sp_trie::{generate_trie_proof, LayoutV0, MemoryDB, StorageProof, TrieDBMutBuilder, TrieMut};
@@ -38,7 +38,7 @@ pub fn generate_finality_proof(
 		(1u8, 0u8, Compact(GRANDPA_UPDATE_TIMESTAMP.saturating_mul(10000))).encode();
 	timestamp_extrinsic.insert(0, 0);
 	timestamp_extrinsic.insert(0, 0);
-	let key = Compact(0u32).encode();
+	let key = Compact(0u64).encode();
 	let extrinsics_root = {
 		let mut root = Default::default();
 		let mut trie =
@@ -99,7 +99,7 @@ pub fn generate_finality_proof(
 		let public_key =
 			sp_io::crypto::ed25519_generate(KEY_TYPE, Some(format!("//{}", i).as_bytes().to_vec()));
 		authorities.push(AuthorityId::from(public_key.clone()));
-		let encoded = sp_finality_grandpa::localized_payload(round, set_id, &message);
+		let encoded = sp_consensus_grandpa::localized_payload(round, set_id, &message);
 		let signature = AuthoritySignature::from(
 			sp_io::crypto::ed25519_sign(KEY_TYPE, &public_key, &encoded).unwrap(),
 		);

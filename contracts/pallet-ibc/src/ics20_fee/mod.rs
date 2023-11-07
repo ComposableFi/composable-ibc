@@ -1,6 +1,9 @@
 use crate::{routing::Context, DenomToAssetId};
-use alloc::{format, string::ToString};
-use core::{fmt::Debug, marker::PhantomData};
+use alloc::{
+	format,
+	string::{String, ToString},
+};
+use core::{fmt::Debug, marker::PhantomData, str::FromStr};
 use ibc::{
 	applications::transfer::{
 		acknowledgement::Acknowledgement as Ics20Ack, context::BankKeeper,
@@ -16,7 +19,7 @@ use ibc::{
 			Version,
 		},
 		ics24_host::identifier::{ChannelId, ConnectionId, PortId},
-		ics26_routing::context::{Module, ModuleCallbackContext, ModuleOutputBuilder},
+		ics26_routing::context::{Module as IbcModule, ModuleCallbackContext, ModuleOutputBuilder},
 	},
 	signer::Signer,
 };
@@ -168,12 +171,12 @@ impl<T: crate::Config> FlatFeeConverter for NonFlatFeeConverter<T> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Ics20ServiceCharge<T: Config, S: Module + Clone + Default + PartialEq + Eq + Debug> {
+pub struct Ics20ServiceCharge<T: Config, S: IbcModule + Clone + Default + PartialEq + Eq + Debug> {
 	inner: S,
 	_phantom: core::marker::PhantomData<T>,
 }
 
-impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Default
+impl<T: Config + Send + Sync, S: IbcModule + Clone + Default + PartialEq + Eq + Debug> Default
 	for Ics20ServiceCharge<T, S>
 {
 	fn default() -> Self {
@@ -181,7 +184,7 @@ impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Deb
 	}
 }
 
-impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug> Module
+impl<T: Config + Send + Sync, S: IbcModule + Clone + Default + PartialEq + Eq + Debug> IbcModule
 	for Ics20ServiceCharge<T, S>
 where
 	u32: From<<T as frame_system::Config>::BlockNumber>,
@@ -298,7 +301,7 @@ where
 		let mut ctx = Context::<T>::default();
 		// We want the whole chain of calls to fail only if the ics20 transfer fails, because
 		// the other modules are not part of ics-20 standard
-		let ack = self.inner.on_recv_packet(&mut ctx, output, packet, relayer)?;
+		let ack = self.inner.on_recv_packet(&ctx, output, packet, relayer)?;
 		let _ = Self::process_fee(&mut ctx, packet, &ack).map_err(|e| {
 			log::error!(target: "pallet_ibc", "Error processing fee: {:?}", e);
 		});
@@ -328,7 +331,7 @@ where
 	}
 }
 
-impl<T: Config + Send + Sync, S: Module + Clone + Default + PartialEq + Eq + Debug>
+impl<T: Config + Send + Sync, S: IbcModule + Clone + Default + PartialEq + Eq + Debug>
 	Ics20ServiceCharge<T, S>
 where
 	<T as crate::Config>::AccountIdConversion: From<IbcAccount<T::AccountId>>,
@@ -342,7 +345,7 @@ where
 	) -> Result<(), Ics04Error> {
 		let mut packet_data = serde_json::from_slice::<PacketData>(packet.data.as_slice())
 			.map_err(|e| {
-				Ics04Error::implementation_specific(format!("Failed to decode packet data {:?}", e))
+				Ics04Error::implementation_specific(format!("Failed to decode packet data {e:?}"))
 			})?;
 
 		let is_feeless_channels = FeeLessChannelIds::<T>::contains_key((
@@ -355,9 +358,22 @@ where
 		}
 
 		let percent = ServiceChargeIn::<T>::get().unwrap_or(T::ServiceChargeIn::get());
+		let parsed_ack = String::from_utf8(ack.clone().into_bytes())
+			.map_err(|e| {
+				Ics04Error::implementation_specific(format!(
+					"Failed to decode acknowledgement {e:?}"
+				))
+			})
+			.and_then(|x: String| {
+				Ics20Ack::from_str(&x).map_err(|e| {
+					Ics04Error::implementation_specific(format!(
+						"Failed to decode acknowledgement {e:?}"
+					))
+				})
+			})?;
 		// Send full amount to receiver using the default ics20 logic
 		// We only take the fee charge if the acknowledgement is not an error
-		if ack.as_ref() == Ics20Ack::success().to_string().as_bytes() {
+		if parsed_ack.is_successful() {
 			let mut prefixed_coin = if is_receiver_chain_source(
 				packet.source_port.clone(),
 				packet.source_channel,
@@ -388,16 +404,15 @@ where
 			let mut fee = {
 				let fee_asset_id = T::FlatFeeAssetId::get();
 				let fee_asset_amount = T::FlatFeeAmount::get();
-				let flat_fee =
-					T::FlatFeeConverter::get_flat_fee(asset_id, fee_asset_id, fee_asset_amount)
-						.unwrap_or_else(|| {
-							// We have ensured that token amounts larger than the max value for
-							// a u128 are rejected in the ics20 on_recv_packet callback so we
-							// can multiply safely. Percent does Non-Overflowing multiplication
-							// so this is infallible
-							percent * amount
-						});
-				flat_fee
+
+				T::FlatFeeConverter::get_flat_fee(asset_id.clone(), fee_asset_id, fee_asset_amount)
+					.unwrap_or_else(|| {
+						// We have ensured that token amounts larger than the max value for
+						// a u128 are rejected in the ics20 on_recv_packet callback so we
+						// can multiply safely. Percent does Non-Overflowing multiplication
+						// so this is infallible
+						percent * amount
+					})
 			};
 
 			fee = fee.min(amount);
@@ -422,7 +437,7 @@ where
 			})?;
 			Pallet::<T>::deposit_event(Event::<T>::IbcTransferFeeCollected {
 				amount: fee.into(),
-				asset_id,
+				asset_id: asset_id.clone(),
 			})
 		}
 		Ok(())

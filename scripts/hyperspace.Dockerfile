@@ -1,4 +1,4 @@
-FROM paritytech/ci-linux:production as builder
+FROM paritytech/ci-unified:bullseye-1.73.0-2023-05-23 as builder
 
 WORKDIR /code
 
@@ -14,9 +14,11 @@ RUN cargo build --release --locked -p hyperspace
 
 # =============
 
-FROM debian:buster-slim
+FROM debian:bullseye-slim
 
 RUN useradd -m -u 1000 -U -s /bin/sh -d /centauri centauri
+
+RUN mkdir /centauri/data
 
 COPY --from=builder /code/target/release/hyperspace /usr/local/bin
 
@@ -34,7 +36,6 @@ RUN rm -rf /usr/lib/python* && \
 
 USER centauri
 
-RUN mkdir /centauri/data
 
 VOLUME ["/centauri/data"]
 

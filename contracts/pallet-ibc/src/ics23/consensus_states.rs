@@ -20,7 +20,7 @@ impl<T: Config> ConsensusStates<T> {
 			epoch: height.revision_number,
 			height: height.revision_height,
 		};
-		let path = format!("{}", consensus_path);
+		let path = format!("{consensus_path}");
 		let key = apply_prefix(T::PalletPrefix::get(), vec![path]);
 		child::get(&ChildInfo::new_default(T::PalletPrefix::get()), &key)
 	}
@@ -31,7 +31,7 @@ impl<T: Config> ConsensusStates<T> {
 			epoch: height.revision_number,
 			height: height.revision_height,
 		};
-		let path = format!("{}", consensus_path);
+		let path = format!("{consensus_path}");
 		let key = apply_prefix(T::PalletPrefix::get(), vec![path]);
 		child::put(&ChildInfo::new_default(T::PalletPrefix::get()), &key, &consensus_state)
 	}

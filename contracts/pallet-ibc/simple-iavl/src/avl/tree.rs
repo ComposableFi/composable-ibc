@@ -27,6 +27,15 @@ pub struct AvlTree<K: Ord + AsBytes, V> {
 	pub root: NodeRef<K, V>,
 }
 
+impl<K: Ord + AsBytes, V> Default for AvlTree<K, V>
+where
+	V: Borrow<[u8]>,
+{
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl<K: Ord + AsBytes, V> AvlTree<K, V>
 where
 	V: Borrow<[u8]>,
@@ -89,12 +98,12 @@ where
 		K: Borrow<Q>,
 		Q: Ord,
 	{
-		let proof = self.get_proof_rec(key, &self.root)?;
+		let proof = Self::get_proof_rec(key, &self.root)?;
 		Some(CommitmentProof { proof: Some(Proof::Exist(proof)) })
 	}
 
 	/// Recursively build a proof of existence for the desired value.
-	fn get_proof_rec<Q: ?Sized>(&self, key: &Q, node: &NodeRef<K, V>) -> Option<ExistenceProof>
+	fn get_proof_rec<Q: ?Sized>(key: &Q, node: &NodeRef<K, V>) -> Option<ExistenceProof>
 	where
 		K: Borrow<Q>,
 		Q: Ord,
@@ -103,7 +112,7 @@ where
 			let empty_hash = [];
 			let (mut proof, prefix, suffix) = match node.key.borrow().cmp(key) {
 				Ordering::Greater => {
-					let proof = self.get_proof_rec(key, &node.left)?;
+					let proof = Self::get_proof_rec(key, &node.left)?;
 					let prefix = vec![];
 					let mut suffix = Vec::with_capacity(64);
 					suffix.extend(node.hash.as_bytes());
@@ -111,7 +120,7 @@ where
 					(proof, prefix, suffix)
 				},
 				Ordering::Less => {
-					let proof = self.get_proof_rec(key, &node.right)?;
+					let proof = Self::get_proof_rec(key, &node.right)?;
 					let suffix = vec![];
 					let mut prefix = Vec::with_capacity(64);
 					prefix.extend(node.left_hash().unwrap_or(&empty_hash));
@@ -197,7 +206,7 @@ where
 	}
 
 	#[allow(dead_code)]
-	fn get_keys_rec<'a, 'b>(node_ref: &'a NodeRef<K, V>, keys: &'b mut Vec<&'a K>) {
+	fn get_keys_rec<'a>(node_ref: &'a NodeRef<K, V>, keys: &mut Vec<&'a K>) {
 		if let Some(node) = node_ref {
 			Self::get_keys_rec(&node.left, keys);
 			keys.push(&node.key);

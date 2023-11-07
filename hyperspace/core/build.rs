@@ -17,12 +17,12 @@ use once_cell::sync::Lazy;
 
 static RELAY_URL: Lazy<String> = Lazy::new(|| {
 	let ip = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-	format!("ws://{}:9944", ip)
+	format!("ws://{ip}:9944")
 });
 
 static PARA_URL: Lazy<String> = Lazy::new(|| {
 	let ip = std::env::var("PARA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-	format!("ws://{}:9188", ip)
+	format!("ws://{ip}:9188")
 });
 
 #[tokio::main]

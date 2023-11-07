@@ -1,10 +1,11 @@
 use self::parachain_subxt::api::{
-	ibc::calls::{Deliver, Transfer},
+	ibc::calls::types::{Deliver, Transfer},
 	runtime_types::{
+		common::ibc::RawMemo,
 		frame_system::{extensions::check_nonce::CheckNonce, EventRecord},
 		pallet_ibc::{events::IbcEvent as MetadataIbcEvent, TransferParams as RawTransferParams},
 	},
-	sudo::calls::Sudo,
+	sudo::calls::types::Sudo,
 };
 use super::{unimplemented, DummyBeefyAuthoritySet};
 use crate::{
@@ -43,7 +44,9 @@ use subxt::{
 	tx::Payload,
 	Error, OnlineClient,
 };
-use subxt_generated::picasso_kusama::parachain::api::runtime_types::primitives::currency::CurrencyId;
+
+use crate::substrate::picasso_kusama::parachain_subxt::api::runtime_types::primitives::currency::CurrencyId;
+// use subxt_generated::picasso_kusama::parachain::api::runtime_types::polkadot_parachain::primitives::currency::CurrencyId;
 
 pub mod parachain_subxt {
 	pub use subxt_generated::picasso_kusama::parachain::*;
@@ -55,11 +58,23 @@ pub mod relaychain {
 
 pub type Balance = u128;
 
-#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+#[derive(
+	:: subxt :: ext :: codec :: Decode,
+	:: subxt :: ext :: codec :: Encode,
+	:: subxt :: ext :: scale_decode :: DecodeAsType,
+	:: subxt :: ext :: scale_encode :: EncodeAsType,
+)]
+# [codec (crate = :: subxt :: ext :: codec)]
 #[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
 #[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 pub struct DummySendPingParamsWrapper<T>(T);
-#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+#[derive(
+	:: subxt :: ext :: codec :: Decode,
+	:: subxt :: ext :: codec :: Encode,
+	:: subxt :: ext :: scale_decode :: DecodeAsType,
+	:: subxt :: ext :: scale_encode :: EncodeAsType,
+)]
+# [codec (crate = :: subxt :: ext :: codec)]
 #[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
 #[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 pub struct FakeSendPingParams;
@@ -125,7 +140,7 @@ define_runtime_transactions!(
 	TransferParamsWrapper,
 	DummySendPingParamsWrapper,
 	parachain_subxt::api::runtime_types::pallet_ibc::Any,
-	String,
+	RawMemo,
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, CurrencyId(y), z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),
@@ -182,7 +197,7 @@ impl light_client_common::config::Config for PicassoKusamaConfig {
 	> {
 		let params =
 			ParachainExtrinsicsParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
-		Ok(params.into())
+		Ok(params)
 	}
 }
 

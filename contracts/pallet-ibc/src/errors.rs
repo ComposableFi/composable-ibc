@@ -23,18 +23,18 @@ impl From<RoutingError> for IbcError {
 	fn from(err: RoutingError) -> Self {
 		match err.0 {
 			ErrorDetail::Ics03Connection(e) =>
-				IbcError::Ics03Connection { message: format!("{:?}", e).as_bytes().to_vec() },
+				IbcError::Ics03Connection { message: format!("{e:?}").as_bytes().to_vec() },
 			ErrorDetail::Ics02Client(e) =>
-				IbcError::Ics02Client { message: format!("{:?}", e).as_bytes().to_vec() },
+				IbcError::Ics02Client { message: format!("{e:?}").as_bytes().to_vec() },
 			ErrorDetail::Ics04Channel(e) =>
-				IbcError::Ics04Channel { message: format!("{:?}", e).as_bytes().to_vec() },
+				IbcError::Ics04Channel { message: format!("{e:?}").as_bytes().to_vec() },
 			ErrorDetail::Ics20FungibleTokenTransfer(e) => IbcError::Ics20FungibleTokenTransfer {
-				message: format!("{:?}", e).as_bytes().to_vec(),
+				message: format!("{e:?}").as_bytes().to_vec(),
 			},
 			ErrorDetail::UnknownMessageTypeUrl(e) =>
-				IbcError::UnknownMessageTypeUrl { message: format!("{:?}", e).as_bytes().to_vec() },
+				IbcError::UnknownMessageTypeUrl { message: format!("{e:?}").as_bytes().to_vec() },
 			ErrorDetail::MalformedMessageBytes(e) =>
-				IbcError::MalformedMessageBytes { message: format!("{:?}", e).as_bytes().to_vec() },
+				IbcError::MalformedMessageBytes { message: format!("{e:?}").as_bytes().to_vec() },
 		}
 	}
 }

@@ -43,8 +43,8 @@ use primitives::{
 };
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use sp_consensus_grandpa::GRANDPA_ENGINE_ID;
 use sp_core::H256;
-use sp_finality_grandpa::GRANDPA_ENGINE_ID;
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
@@ -404,9 +404,7 @@ where
 				let Some(block) = relay_client.rpc().block(Some(hash)).await? else {
 					return Ok(None)
 				};
-				let Some(justifications) = block.justifications else {
-					return Ok(None)
-				};
+				let Some(justifications) = block.justifications else { return Ok(None) };
 				for (id, justification) in justifications {
 					log::info!(target: "hyperspace", "Found closer justification at {height} (suggested {to})");
 					if id == GRANDPA_ENGINE_ID {
@@ -469,8 +467,14 @@ where
 		Error::Custom("Received an empty client state from counterparty".to_string())
 	})?;
 
-	let AnyClientState::Grandpa(client_state) = AnyClientState::decode_recursive(any_client_state, |c| matches!(c, AnyClientState::Grandpa(_)))
-		.ok_or_else(|| Error::Custom(format!("Could not decode client state")))? else { unreachable!() };
+	let AnyClientState::Grandpa(client_state) =
+		AnyClientState::decode_recursive(any_client_state, |c| {
+			matches!(c, AnyClientState::Grandpa(_))
+		})
+		.ok_or_else(|| Error::Custom(format!("Could not decode client state")))?
+	else {
+		unreachable!()
+	};
 
 	let prover = source.grandpa_prover();
 	// prove_finality will always give us the highest block finalized by the authority set for the
@@ -480,9 +484,7 @@ where
 
 	let encoded = GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 		// we cast between the same type but different crate versions.
-		&*unsafe {
-			unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(prover.relay_ws_client.clone())
-		},
+		&*prover.relay_ws_client.clone(),
 		next_relay_height,
 	)
 	.await
@@ -516,6 +518,24 @@ where
 		{
 			justification = new_justification;
 		}
+	}
+
+	// Sometimes the returned justification doesn't contain the header for the target block
+	// in the votes ancestry, so we need to fetch it manually
+	if !justification.votes_ancestries.is_empty() &&
+		!justification
+			.votes_ancestries
+			.iter()
+			.any(|h| h.number().into() == justification.commit.target_number as u64)
+	{
+		let header = prover
+			.relay_client
+			.rpc()
+			.header(Some(justification.commit.target_hash.into()))
+			.await
+			.unwrap()
+			.unwrap();
+		justification.votes_ancestries.push(header);
 	}
 
 	let justification = justification;

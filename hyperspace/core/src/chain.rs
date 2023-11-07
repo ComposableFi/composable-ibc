@@ -136,8 +136,8 @@ fn wrap_any_msg_into_wasm(msg: Any, code_hash: Bytes) -> Result<Any, anyhow::Err
 			let mut msg_decoded =
 				MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
 			msg_decoded.client_message = AnyClientMessage::wasm(msg_decoded.client_message)?;
-			let any = msg_decoded.to_any();
-			any
+
+			msg_decoded.to_any()
 		},
 		_ => msg,
 	};

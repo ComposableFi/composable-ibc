@@ -24,11 +24,13 @@ extern crate alloc;
 
 use alloc::string::String;
 use asset_registry::{AssetMetadata, DefaultAssetMetadata};
+use core::fmt::{Display, Formatter};
 
 mod weights;
 pub mod xcm_config;
 
-use codec::Encode;
+use alloc::string::ToString;
+use codec::{Decode, Encode};
 use core::str::FromStr;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use ibc::core::{
@@ -38,7 +40,8 @@ use ibc::core::{
 use ibc_primitives::{runtime_interface::ss58_to_account_id_32, IbcAccount};
 use orml_traits::asset_registry::AssetProcessor;
 use pallet_ibc::{
-	ics20_fee::NonFlatFeeConverter, light_client_common::RelayChain, LightClientProtocol,
+	ics20::SubstrateMultihopXcmHandlerNone, ics20_fee::NonFlatFeeConverter,
+	light_client_common::RelayChain, LightClientProtocol,
 };
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
@@ -56,7 +59,7 @@ use frame_support::{
 	construct_runtime,
 	dispatch::DispatchClass,
 	parameter_types,
-	traits::{fungibles::InspectMetadata, AsEnsureOriginWithArg, Everything},
+	traits::{fungibles::metadata::Inspect as InspectMetadata, AsEnsureOriginWithArg, Everything},
 	weights::{
 		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
 		WeightToFeeCoefficients, WeightToFeePolynomial,
@@ -81,12 +84,18 @@ pub use sp_runtime::BuildStorage;
 
 // Polkadot imports
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
+use scale_info::TypeInfo;
+use serde::Deserialize;
 use sp_runtime::traits::AccountIdConversion;
+use sp_std::convert::Infallible;
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 // XCM Imports
-use pallet_ibc::routing::ModuleRouter;
+use pallet_ibc::{
+	ics20::{MemoData, ValidateMemo},
+	routing::ModuleRouter,
+};
 use xcm::latest::prelude::BodyId;
 use xcm_executor::XcmExecutor;
 
@@ -171,7 +180,7 @@ impl WeightToFeePolynomial for WeightToFee {
 		// in Rococo, extrinsic base weight (smallest non-zero weight) is mapped to 1 MILLIUNIT:
 		// in our template, we map to 1/10 of that, or 1/10 MILLIUNIT
 		let p = MILLIUNIT / 10;
-		let q = 100 * Balance::from(ExtrinsicBaseWeight::get().ref_time() as u128);
+		let q = 100 * (ExtrinsicBaseWeight::get().ref_time() as u128);
 		smallvec![WeightToFeeCoefficient {
 			degree: 1,
 			negative: false,
@@ -381,6 +390,11 @@ impl pallet_balances::Config for Runtime {
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
+
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ();
+	type MaxFreezes = ();
 }
 
 parameter_types! {
@@ -534,10 +548,11 @@ impl pallet_assets::Config for Runtime {
 impl pallet_sudo::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
+	type WeightInfo = ();
 }
 
 parameter_types! {
-	pub const ExpectedBlockTime: u64 = MILLISECS_PER_BLOCK as u64;
+	pub const ExpectedBlockTime: u64 = MILLISECS_PER_BLOCK;
 	pub const RelayChainId: RelayChain = RelayChain::Rococo;
 	pub const SpamProtectionDeposit: Balance = 1_000_000_000_000;
 	pub const NativeAssetId: AssetId = 1;
@@ -617,7 +632,7 @@ fn generate_asset_id() -> Result<AssetId, DispatchError> {
 impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 	type Error = DispatchError;
 
-	fn from_denom_to_asset_id(denom: &String) -> Result<AssetId, Self::Error> {
+	fn from_denom_to_asset_id(denom: &str) -> Result<AssetId, Self::Error> {
 		use frame_support::traits::fungibles::{metadata::Mutate, Create};
 
 		let denom_bytes = denom.as_bytes().to_vec();
@@ -628,9 +643,9 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 		let pallet_id: AccountId = PalletId(*b"pall-ibc").into_account_truncating();
 
 		let symbol = denom
-			.split("/")
+			.split('/')
 			.last()
-			.ok_or_else(|| DispatchError::Other("denom missing a name"))?
+			.ok_or(DispatchError::Other("denom missing a name"))?
 			.as_bytes()
 			.to_vec();
 		let asset_id = generate_asset_id()?;
@@ -657,7 +672,7 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 	}
 
 	fn from_asset_id_to_denom(id: AssetId) -> Option<String> {
-		let name = <pallet_assets::Pallet<Runtime> as InspectMetadata<AccountId>>::name(&id);
+		let name = <pallet_assets::Pallet<Runtime> as InspectMetadata<AccountId>>::name(id);
 		String::from_utf8(name).ok()
 	}
 
@@ -716,6 +731,55 @@ fn create_alice_key() -> <Runtime as pallet_ibc::Config>::AccountIdConversion {
 	IbcAccount(account_id_32)
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum MemoMiddlewareNamespaceChain {
+	Forward { next: Option<Box<Self>> },
+	Wasm { next: Option<Box<Self>> },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Default, Encode, Decode, TypeInfo)]
+pub struct RawMemo(pub String);
+
+impl FromStr for RawMemo {
+	type Err = Infallible;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		Ok(Self(s.to_string()))
+	}
+}
+
+impl TryFrom<MemoData> for RawMemo {
+	type Error = <String as TryFrom<MemoData>>::Error;
+
+	fn try_from(value: MemoData) -> Result<Self, Self::Error> {
+		Ok(Self(value.try_into()?))
+	}
+}
+
+impl TryFrom<RawMemo> for MemoData {
+	type Error = <MemoData as TryFrom<String>>::Error;
+
+	fn try_from(value: RawMemo) -> Result<Self, Self::Error> {
+		Ok(value.0.try_into()?)
+	}
+}
+
+impl Display for RawMemo {
+	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+		write!(f, "{}", self.0)
+	}
+}
+
+impl ValidateMemo for RawMemo {
+	fn validate(&self) -> Result<(), String> {
+		// the MiddlewareNamespaceChain type contains all the supported middlewares
+		serde_json::from_str::<MemoMiddlewareNamespaceChain>(&self.0)
+			.map(|_| ())
+			.map_err(|e| e.to_string())
+	}
+}
+
 impl pallet_ibc::Config for Runtime {
 	type TimeProvider = Timestamp;
 	type RuntimeEvent = RuntimeEvent;
@@ -737,20 +801,20 @@ impl pallet_ibc::Config for Runtime {
 	type SpamProtectionDeposit = SpamProtectionDeposit;
 	type TransferOrigin = EnsureSigned<Self::IbcAccountId>;
 	type RelayerOrigin = EnsureSigned<Self::AccountId>;
-	type MemoMessage = MemoMessage;
+	type MemoMessage = RawMemo;
 	type IsReceiveEnabled = sp_core::ConstBool<true>;
 	type IsSendEnabled = sp_core::ConstBool<true>;
 	type HandleMemo = ();
 	type PalletPrefix = IbcTriePrefix;
 	type LightClientProtocol = GRANDPA;
 	type IbcAccountId = Self::AccountId;
-	type Ics20RateLimiter = Everything;
 	type FeeAccount = FeeAccount;
 	type CleanUpPacketsPeriod = CleanUpPacketsPeriod;
 	type ServiceChargeOut = IbcIcs20ServiceCharge;
 	type FlatFeeConverter = NonFlatFeeConverter<Runtime>;
 	type FlatFeeAssetId = AssetIdUSDT;
 	type FlatFeeAmount = FlatFeeUSDTAmount;
+	type SubstrateMultihopXcmHandler = SubstrateMultihopXcmHandlerNone<Runtime>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -838,6 +902,15 @@ impl_runtime_apis! {
 		fn metadata() -> OpaqueMetadata {
 			OpaqueMetadata::new(Runtime::metadata().into())
 		}
+
+		fn metadata_at_version(_: u32) -> Option<OpaqueMetadata> {
+			Some(OpaqueMetadata::new(Runtime::metadata().into()))
+		}
+
+		fn metadata_versions() -> frame_benchmarking::Vec<u32> {
+			frame_benchmarking::Vec::from([Runtime::metadata().1.version()])
+		}
+
 	}
 
 	impl sp_block_builder::BlockBuilder<Block> for Runtime {
@@ -1028,12 +1101,12 @@ impl_runtime_apis! {
 		}
 
 		fn denom_traces(key: Option<AssetId>, offset: Option<u32>, limit: u64, count_total: bool) -> ibc_primitives::QueryDenomTracesResponse {
-			let key = key.map(|k| Either::Left(k)).or_else(|| offset.map(|o| Either::Right(o)));
+			let key = key.map(Either::Left).or_else(|| offset.map(Either::Right));
 			Ibc::get_denom_traces(key, limit, count_total)
 		}
 
 		fn block_events(extrinsic_index: Option<u32>) -> Vec<Result<pallet_ibc::events::IbcEvent, pallet_ibc::errors::IbcError>> {
-			let mut raw_events = frame_system::Pallet::<Self>::read_events_no_consensus().into_iter();
+			let mut raw_events = frame_system::Pallet::<Self>::read_events_no_consensus();
 			if let Some(idx) = extrinsic_index {
 				raw_events.find_map(|e| {
 					let frame_system::EventRecord{ event, phase, ..} = *e;

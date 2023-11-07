@@ -9,7 +9,24 @@ all-features = true
 [features]
 default = ["std", "rust-crypto"]
 rust-crypto = ["sha2"]
-std = []
+std = [
+	"bytes/std",
+	"flex-error/std",
+	"hex/std",
+	"ibc/std",
+	"ibc-proto/std",
+	"ics23/std",
+	"log/std",
+	"prost/std",
+	"serde/std",
+	"serde_json/std",
+	"sha2?/std",
+	"subtle-encoding/std",
+	"tendermint/std",
+	"time/std",
+	"tracing/std",
+	"tracing-subscriber/std"
+]
 
 [dependencies]
 ibc = { path = "../../ibc/modules", default-features = false }

@@ -20,14 +20,11 @@ use alloc::{
 	string::{String, ToString},
 	vec::Vec,
 };
-use core::{
-	convert::Infallible,
-	fmt::{Debug, Display},
-};
+use core::fmt::Display;
 #[cfg(feature = "cosmwasm")]
 use cosmwasm_schema::cw_serde;
 use ibc::{
-	core::ics02_client::{client_message::ClientMessage as IbcClientMessage, error::Error},
+	core::ics02_client::client_message::ClientMessage as IbcClientMessage,
 	protobuf::Protobuf,
 };
 use ibc_proto::google::protobuf::Any;
@@ -107,5 +104,3 @@ where
 	<AnyClientMessage as TryFrom<Any>>::Error: Display,
 {
 }
-
-

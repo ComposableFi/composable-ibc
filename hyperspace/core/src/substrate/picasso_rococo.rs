@@ -1,24 +1,24 @@
 use self::parachain_subxt::api::{
-	ibc::calls::{Deliver, Transfer},
+	ibc::calls::types::{Deliver, Transfer},
 	runtime_types::{
+		common::ibc::RawMemo,
 		frame_system::{extensions::check_nonce::CheckNonce, EventRecord},
 		pallet_ibc::{events::IbcEvent as MetadataIbcEvent, TransferParams as RawTransferParams},
 	},
-	sudo::calls::Sudo,
+	sudo::calls::types::Sudo,
 };
 use crate::{
-	define_any_wrapper, define_asset_id, define_beefy_authority_set, define_event_record,
-	define_events, define_head_data, define_ibc_event_wrapper, define_id, define_para_lifecycle,
-	define_runtime_call, define_runtime_event, define_runtime_storage, define_runtime_transactions,
-	define_transfer_params,
-	substrate::picasso_rococo::relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
+	define_any_wrapper, define_asset_id, define_event_record, define_events, define_head_data,
+	define_ibc_event_wrapper, define_id, define_para_lifecycle, define_runtime_call,
+	define_runtime_event, define_runtime_storage, define_runtime_transactions,
+	define_transfer_params, substrate::DummyBeefyAuthoritySet,
 };
 use async_trait::async_trait;
 use codec::{Compact, Decode, Encode};
 use ibc_proto::google::protobuf::Any;
 use light_client_common::config::{
-	BeefyAuthoritySetT, EventRecordT, IbcEventsT, LocalAddress, ParaLifecycleT, RuntimeCall,
-	RuntimeStorage, RuntimeTransactions,
+	EventRecordT, IbcEventsT, LocalAddress, ParaLifecycleT, RuntimeCall, RuntimeStorage,
+	RuntimeTransactions,
 };
 use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;
@@ -43,9 +43,7 @@ use subxt::{
 	tx::Payload,
 	Error, OnlineClient,
 };
-use subxt_generated::picasso_rococo::parachain::api::runtime_types::{
-	picasso_runtime::ibc::MemoMessage, primitives::currency::CurrencyId,
-};
+use subxt_generated::picasso_rococo::parachain::api::runtime_types::primitives::currency::CurrencyId;
 
 pub mod parachain_subxt {
 	pub use subxt_generated::picasso_rococo::parachain::*;
@@ -57,11 +55,23 @@ pub mod relaychain {
 
 pub type Balance = u128;
 
-#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+#[derive(
+	:: subxt :: ext :: codec :: Decode,
+	:: subxt :: ext :: codec :: Encode,
+	:: subxt :: ext :: scale_decode :: DecodeAsType,
+	:: subxt :: ext :: scale_encode :: EncodeAsType,
+)]
+# [codec (crate = :: subxt :: ext :: codec)]
 #[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
 #[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 pub struct DummySendPingParamsWrapper<T>(T);
-#[derive(Decode, Encode, scale_decode::DecodeAsType, scale_encode::EncodeAsType)]
+#[derive(
+	:: subxt :: ext :: codec :: Decode,
+	:: subxt :: ext :: codec :: Encode,
+	:: subxt :: ext :: scale_decode :: DecodeAsType,
+	:: subxt :: ext :: scale_encode :: EncodeAsType,
+)]
+# [codec (crate = :: subxt :: ext :: codec)]
 #[decode_as_type(crate_path = ":: subxt :: ext :: scale_decode")]
 #[encode_as_type(crate_path = ":: subxt :: ext :: scale_encode")]
 pub struct FakeSendPingParams;
@@ -84,14 +94,12 @@ define_head_data!(
 
 define_para_lifecycle!(PicassoParaLifecycle, ParaLifecycle);
 
-define_beefy_authority_set!(PicassoBeefyAuthoritySet, BeefyAuthoritySet<T>);
-
 define_runtime_storage!(
 	PicassoRuntimeStorage,
 	PicassoHeadData,
 	PicassoId,
 	PicassoParaLifecycle,
-	PicassoBeefyAuthoritySet<H256>,
+	DummyBeefyAuthoritySet,
 	parachain_subxt::api::storage().timestamp().now(),
 	|x| relaychain::api::storage().paras().heads(x),
 	|x| relaychain::api::storage().paras().para_lifecycles(x),
@@ -125,7 +133,7 @@ define_runtime_transactions!(
 	TransferParamsWrapper,
 	DummySendPingParamsWrapper,
 	parachain_subxt::api::runtime_types::pallet_ibc::Any,
-	MemoMessage,
+	RawMemo,
 	|x| parachain_subxt::api::tx().ibc().deliver(x),
 	|x, y, z, w| parachain_subxt::api::tx().ibc().transfer(x, CurrencyId(y), z, w),
 	|x| parachain_subxt::api::tx().sudo().sudo(x),
@@ -182,7 +190,7 @@ impl light_client_common::config::Config for PicassoRococoConfig {
 	> {
 		let params =
 			ParachainExtrinsicsParamsBuilder::new().era(Era::Immortal, client.genesis_hash());
-		Ok(params.into())
+		Ok(params)
 	}
 }
 

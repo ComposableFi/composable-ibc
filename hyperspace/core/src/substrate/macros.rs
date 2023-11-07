@@ -46,9 +46,9 @@ macro_rules! define_head_data {
 			}
 		}
 
-		impl Into<Vec<u8>> for $name {
-			fn into(self) -> Vec<u8> {
-				self.0 .0
+		impl From<$name> for Vec<u8> {
+			fn from(v: $name) -> Self {
+				v.0 .0
 			}
 		}
 
@@ -638,8 +638,13 @@ macro_rules! define_runtime_storage {
 				$beefy_validator_set_id
 			}
 
-			fn beefy_authorities(
-			) -> LocalAddress<StaticStorageMapKey, Vec<sp_beefy::crypto::Public>, Yes, Yes, ()> {
+			fn beefy_authorities() -> LocalAddress<
+				StaticStorageMapKey,
+				Vec<sp_consensus_beefy::crypto::Public>,
+				Yes,
+				Yes,
+				(),
+			> {
 				let storage = $beefy_authorities;
 				LocalAddress::new(storage)
 			}
@@ -856,9 +861,9 @@ macro_rules! define_asset_id {
 			}
 		}
 
-		impl Into<u128> for $name {
-			fn into(self) -> u128 {
-				self.0 .0
+		impl From<$name> for u128 {
+			fn from(value: $name) -> Self {
+				value.0 .0
 			}
 		}
 

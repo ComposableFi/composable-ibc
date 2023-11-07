@@ -113,7 +113,7 @@ impl<'a, H> Context<'a, H> {
 			let _ = GRANDPA_HEADER_HASHES_SET_STORAGE
 				.save(self.storage_mut(), header.0.to_vec(), &())
 				.map_err(|e| {
-					self.log(&format!("error saving hash to set: {:?}", e));
+					self.log(&format!("error saving hash to set: {e:?}"));
 				});
 		}
 		if xs.len() > GRANDPA_BLOCK_HASHES_CACHE_SIZE {
@@ -148,12 +148,11 @@ where
 			.get_prefixed(height, prefix)
 			.ok_or_else(|| {
 				ContractError::Grandpa(format!(
-					"no consensus state found for height {} and prefix {:?}",
-					height, prefix,
+					"no consensus state found for height {height} and prefix {prefix:?}",
 				))
 			})?;
 		Context::<H>::decode_consensus_state(&bytes)
-			.map_err(|e| ContractError::Grandpa(format!("error decoding consensus state: {:?}", e)))
+			.map_err(|e| ContractError::Grandpa(format!("error decoding consensus state: {e:?}")))
 	}
 
 	pub fn store_consensus_state_prefixed(
@@ -170,10 +169,10 @@ where
 	pub fn client_state_prefixed(&self, prefix: &[u8]) -> Result<ClientState<H>, ContractError> {
 		let bytes =
 			ReadonlyClientStates::new(self.storage()).get_prefixed(prefix).ok_or_else(|| {
-				ContractError::Grandpa(format!("no client state found for prefix {:?}", prefix,))
+				ContractError::Grandpa(format!("no client state found for prefix {prefix:?}",))
 			})?;
 		Context::decode_client_state(&bytes)
-			.map_err(|e| ContractError::Grandpa(format!("error decoding client state: {:?}", e)))
+			.map_err(|e| ContractError::Grandpa(format!("error decoding client state: {e:?}")))
 	}
 
 	pub fn store_client_state_prefixed(
@@ -184,9 +183,6 @@ where
 		use prost::Message;
 		use tendermint_proto::Protobuf;
 		let client_states = ReadonlyClientStates::new(self.storage());
-		// let data = client_states.get_prefixed(prefix).ok_or_else(|| {
-		// 	ContractError::Tendermint("no client state found for prefix".to_string())
-		// })?;
 		let code_hash = match self.code_hash.clone() {
 			None => {
 				let encoded_wasm_client_state = client_states.get().ok_or_else(|| {

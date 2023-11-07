@@ -18,7 +18,7 @@ pub enum ByteSlice<'a> {
 impl AsRef<[u8]> for ByteSlice<'_> {
 	fn as_ref(&self) -> &[u8] {
 		match self {
-			ByteSlice::Slice(s) => *s,
+			ByteSlice::Slice(s) => s,
 			ByteSlice::Vector(v) => v.as_slice(),
 		}
 	}

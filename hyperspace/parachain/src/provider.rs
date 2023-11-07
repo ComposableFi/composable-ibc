@@ -46,7 +46,7 @@ use ibc_proto::{
 };
 use ibc_rpc::{IbcApiClient, PacketInfo};
 use ics11_beefy::client_state::ClientState as BeefyClientState;
-use light_client_common::config::{AsInnerEvent, IbcEventsT, RuntimeStorage};
+use light_client_common::config::{AsInnerEvent, Config, IbcEventsT, RuntimeStorage};
 use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
 	HostConsensusProof,
@@ -140,11 +140,17 @@ where
 				.expect("should susbcribe to blocks")
 				.filter_map(|block| async {
 					let block = block.ok()?;
-					let events = event.at(block.hash()).await.ok()?;
+					let hash = block.hash();
+					let events = event.at(hash).await.ok()?;
 					let result = events
 						.find::<<T::Events as AsInnerEvent>::Inner>()
 						.filter_map(|ev| {
-							let ev = <T::Events as AsInnerEvent>::from_inner(ev.ok()?).events();
+							let ok_event = ev
+								.map_err(|e| {
+									log::error!(target: "hyperspace_parachain", "Error event at block {hash:?}: {:?}", e);
+								})
+								.ok()?;
+							let ev = <T::Events as AsInnerEvent>::from_inner(ok_event).events();
 							ev.into_iter()
 								.map(|ev| TryInto::<IbcEvent>::try_into(ev))
 								.collect::<Result<Vec<_>, _>>()

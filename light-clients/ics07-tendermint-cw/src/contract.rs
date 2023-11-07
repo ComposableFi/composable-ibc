@@ -177,7 +177,7 @@ pub fn sudo(
 	let client = TendermintClient::<HostFunctions>::default();
 	let mut ctx = Context::<HostFunctions>::new(deps, env);
 	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
-	let data = process_message(msg, client, &mut ctx, client_id.clone())?;
+	let data = process_message(msg, client, &mut ctx, client_id)?;
 	let mut response = Response::default();
 	response.data = Some(data);
 	Ok(response)
@@ -292,7 +292,7 @@ fn process_message(
 		},
 		SudoMsg::VerifyUpgradeAndUpdateState(msg) => {
 			let old_client_state = ctx
-				.client_state(&client_id.clone())
+				.client_state(&client_id)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 			let msg: VerifyUpgradeAndUpdateStateMsg =
 				VerifyUpgradeAndUpdateStateMsg::try_from(msg)?;

@@ -103,9 +103,9 @@ where
 
 	fn try_from(raw: RawConsensusState) -> Result<Self, Self::Error> {
 		let any = Any::decode(&mut &raw.data[..])
-			.map_err(|e| format!("failed to decode ConsensusState::data into Any: {}", e))?;
+			.map_err(|e| format!("failed to decode ConsensusState::data into Any: {e}"))?;
 		let inner = AnyConsensusState::try_from(any).map_err(|e| {
-			format!("failed to decode ConsensusState::data into ConsensusState: {}", e)
+			format!("failed to decode ConsensusState::data into ConsensusState: {e}")
 		})?;
 		Ok(Self { data: raw.data, inner: Box::new(inner) })
 	}

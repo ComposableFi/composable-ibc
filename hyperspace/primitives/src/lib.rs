@@ -100,7 +100,7 @@ fn default_skip_optional_client_updates() -> bool {
 }
 
 fn max_packets_to_process() -> u32 {
-	150
+	50
 }
 
 // TODO: move other fields like `client_id`, `connection_id`, etc. here
@@ -132,6 +132,8 @@ pub struct CommonClientState {
 	pub initial_rpc_call_delay: Duration,
 	pub misbehaviour_client_msg_queue: Arc<AsyncMutex<Vec<AnyClientMessage>>>,
 	pub max_packets_to_process: usize,
+
+	pub skip_tokens_list: Vec<String>,
 }
 
 impl Default for CommonClientState {
@@ -144,6 +146,7 @@ impl Default for CommonClientState {
 			initial_rpc_call_delay: rpc_call_delay,
 			misbehaviour_client_msg_queue: Arc::new(Default::default()),
 			max_packets_to_process: 100,
+			skip_tokens_list: vec!["uosmo".to_string()],
 		}
 	}
 }
@@ -759,7 +762,10 @@ pub async fn find_suitable_proof_height_for_client(
 			let temp_height = Height::new(start_height.revision_number, mid);
 			let consensus_state =
 				sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
-			let Some(Ok(consensus_state)) = consensus_state.map(|x| x.consensus_state.map(AnyConsensusState::try_from)).flatten() else {
+			let Some(Ok(consensus_state)) = consensus_state
+				.map(|x| x.consensus_state.map(AnyConsensusState::try_from))
+				.flatten()
+			else {
 				start += 1;
 				continue
 			};
