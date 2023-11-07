@@ -42,11 +42,11 @@ pub mod client_state;
 pub mod consensus_state;
 pub mod error;
 pub mod merkle;
-pub mod utils;
 #[cfg(any(test, feature = "mocks"))]
 pub mod mock;
 #[cfg(any(test, feature = "mocks"))]
 mod query;
+pub mod utils;
 
 /// Host functions that allow the light client verify cryptographic proofs in native.
 pub trait HostFunctionsProvider:
