@@ -16,7 +16,7 @@ jobs:
       cancel-in-progress: true
     container:
       image: paritytech/ci-unified:bullseye-1.71.0-v20230727
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
     steps:
     - uses: actions/checkout@v2
 
