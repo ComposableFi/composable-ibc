@@ -46,8 +46,6 @@ pub mod merkle;
 pub mod mock;
 #[cfg(any(test, feature = "mocks"))]
 mod query;
-pub mod utils;
-
 /// Host functions that allow the light client verify cryptographic proofs in native.
 pub trait HostFunctionsProvider:
 	ics23::HostFunctionsProvider

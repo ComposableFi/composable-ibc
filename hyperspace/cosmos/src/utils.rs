@@ -1,13 +1,13 @@
+use base64::{engine::general_purpose, Engine as _};
+
+use crate::error::Error;
+use ics07_tendermint::client_message::Header;
 use tendermint::{
 	block::{signed_header::SignedHeader, Commit, CommitSig},
-	crypto::default::signature::Verifier,
+	crypto::{default::signature::Verifier, signature::Verifier as _},
 	signature::Signature,
 	PublicKey,
 };
-
-use crate::client_message::Header;
-
-use tendermint::crypto::signature::Verifier as _;
 
 /// Utilty function that:
 /// - collects {signature, pubkey, msg} from every validator that successfuly signed a block so that
@@ -20,13 +20,11 @@ pub fn collect_signatures_for_finalized_block(
 ) -> Option<Vec<(PublicKey, Signature, Vec<u8>)>> {
 	let Header {
 		validator_set,
-		signed_header: SignedHeader { header, commit: Commit { signatures, .. }, .. },
+		signed_header: SignedHeader { commit: Commit { signatures, .. }, .. },
 		..
 	} = header;
 
 	let total_voting_power = validator_set.total_voting_power().value();
-
-	// 1. order by voting power
 
 	// filter by valid signatures
 	let mut validator_info_signed_block = signatures
@@ -80,6 +78,50 @@ pub fn collect_signatures_for_finalized_block(
 	}
 }
 
-// fn check_block_is_final() {
+// TODO: this should be async
+pub fn call_zk_prover(
+	zk_prover_url: String,
+	signatures: Vec<u8>,
+	public_keys: Vec<u8>,
+	messages: Vec<u8>,
+) -> Result<Vec<u8>, Error> {
+	let body: ProverResponse = ureq::get(zk_prover_url.as_ref())
+		.call()
+		.map_err(|e| Error::Custom(e.to_string()))?
+		.into_json()
+		.map_err(|e| Error::Custom(e.to_string()))?;
 
-// }
+	if body.message.as_str() != "prover is busy" {
+		let resp: ProverResponse = ureq::post(zk_prover_url.as_ref())
+			.send_json(ureq::json!({
+				"public_keys": public_keys,
+				"signatures": signatures,
+				"messages": messages,
+			}))
+			.map_err(|e| Error::Custom(e.to_string()))?
+			.into_json()
+			.map_err(|e| Error::Custom(e.to_string()))?;
+
+		if &resp.message == "proof submitted" {
+			let body: ProverResponse = ureq::get(zk_prover_url.as_ref())
+				.call()
+				.map_err(|e| Error::Custom(e.to_string()))?
+				.into_json()
+				.map_err(|e| Error::Custom(e.to_string()))?;
+
+			// assume here that we got the proof
+			// TODO: do proper re-check as the proof takes 5 minutes to be build
+			return Ok(general_purpose::STANDARD_NO_PAD
+				.decode(body.proof)
+				.map_err(|e| Error::Custom(e.to_string()))?)
+		}
+	}
+	Err(Error::Custom("could not get a proof".to_string()))
+}
+
+// note that we know the circuit size
+#[derive(Debug, serde::Deserialize)]
+struct ProverResponse {
+	message: String,
+	proof: String,
+}
