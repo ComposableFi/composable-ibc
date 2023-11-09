@@ -48,7 +48,7 @@ toml = "0.7.4"
 
 [dev-dependencies]
 subxt = { git = "https://github.com/paritytech/subxt",  tag = "v0.29.0", features = ["substrate-compat"] }
-hyperspace-core = { path = "../core", features = ["testing", "build-metadata-from-ws"] }
+hyperspace-core = { path = "../core", features = ["testing"] }
 hyperspace-parachain = { path = "../parachain", features = ["testing"] }
 hyperspace-cosmos = { path = "../cosmos", features = [] }
 
