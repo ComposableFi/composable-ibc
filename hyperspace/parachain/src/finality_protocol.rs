@@ -456,7 +456,7 @@ where
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
-	let _justification = match finality_event {
+	let latest_justification = match finality_event {
 		FinalityEvent::Grandpa(justification) => justification,
 		_ => panic!("Expected grandpa finality event"),
 	};
@@ -635,7 +635,7 @@ where
 	// checkpoints so we don't end up with a very large finality proof at the session end.
 	let is_update_required = source
 		.is_update_required(
-			justification.commit.target_number.into(),
+			latest_justification.commit.target_number.into(),
 			client_state.latest_relay_height.into(),
 		)
 		.await?;
