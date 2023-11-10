@@ -19,7 +19,7 @@ use crate::{
 	ics23::FakeInner,
 	log,
 	msg::{
-		CheckForMisbehaviourMsg, MigrateClientStoreMsg,
+		CheckForMisbehaviourMsg,
 		ContractResult, SudoMsg, ExportMetadataMsg, QueryMsg, QueryResponse,
 		StatusMsg, UpdateStateMsg, UpdateStateOnMisbehaviourMsg, VerifyClientMessage,
 		VerifyMembershipMsg, VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
@@ -220,46 +220,14 @@ fn process_message(
 					store_client_and_consensus_states(ctx, client_id.clone(), cs, cu)
 				})
 		},
-		SudoMsg::MigrateClientStore(msg) => {
-			let _msg = MigrateClientStoreMsg::try_from(msg)?;
-			// manually load both states from the combined storage using the appropriate prefixes
-			let mut old_client_state = ctx
-				.client_state_prefixed(SUBJECT_PREFIX)
-				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
+		SudoMsg::MigrateClientStore(_msg) => {
+			// load the substitute client state from the combined storage using the appropriate prefix
 			let substitute_client_state = ctx
 				.client_state_prefixed(SUBSTITUTE_PREFIX)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 
-			// Check that the substitute client state is valid:
-			// all fields should be the same as in the old state, except for the `relay_chain`,
-			// `para_id`, `latest_para_height`, `latest_relay_height`, `latest_relay_hash`,
-			// `frozen_height`, `current_authorities`, `current_set_id`
-			let ClientState {
-				relay_chain,
-				latest_relay_height,
-				latest_relay_hash,
-				frozen_height,
-				latest_para_height,
-				para_id,
-				current_set_id,
-				current_authorities,
-				_phantom,
-			} = substitute_client_state.clone();
-			old_client_state.relay_chain = relay_chain;
-			old_client_state.para_id = para_id;
-			old_client_state.latest_para_height = latest_para_height;
-			old_client_state.latest_relay_height = latest_relay_height;
-			old_client_state.latest_relay_hash = latest_relay_hash;
-			old_client_state.frozen_height = frozen_height;
-			old_client_state.current_authorities = current_authorities.clone();
-			old_client_state.current_set_id = current_set_id;
+			// No items for the grandpa client state are required to be the same
 
-			if old_client_state != substitute_client_state {
-				return Err(ContractError::Grandpa(
-					"subject client state does not match substitute client state".to_string(),
-				))
-			}
-			let substitute_client_state = old_client_state;
 			let height = substitute_client_state.latest_height();
 			// consensus state should be replaced as well
 			let substitute_consensus_state =

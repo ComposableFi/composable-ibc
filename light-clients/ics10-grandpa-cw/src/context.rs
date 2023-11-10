@@ -185,7 +185,7 @@ where
 		let client_states = ReadonlyClientStates::new(self.storage());
 		let code_hash = match self.code_hash.clone() {
 			None => {
-				let encoded_wasm_client_state = client_states.get().ok_or_else(|| {
+				let encoded_wasm_client_state = client_states.get_prefixed(prefix).ok_or_else(|| {
 					ContractError::Grandpa(
 						Error::client_not_found(ClientId::new("x", 1).unwrap()).to_string(),
 					)
