@@ -70,7 +70,7 @@ where
 	}
 
 	fn timestamp(&self) -> Timestamp {
-		unimplemented!()
+		self.inner.timestamp()
 	}
 
 	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
