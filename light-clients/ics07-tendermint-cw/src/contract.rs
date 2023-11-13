@@ -370,7 +370,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 			let consensus_state = ctx
 				.consensus_state(&client_id, msg.height)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-			to_binary(&QueryResponse::success().timestamp(consensus_state.timestamp.unix_timestamp().unsigned_abs()))
+			to_binary(&QueryResponse::success().timestamp(consensus_state.timestamp.unix_timestamp_nanos().unsigned_abs() as u64))
 		},
 		QueryMsg::VerifyClientMessage(msg) => {
 			let ctx = Context::<HostFunctions>::new_ro(deps, env);
