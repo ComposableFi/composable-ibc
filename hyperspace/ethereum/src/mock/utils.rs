@@ -26,7 +26,7 @@ pub const USE_GETH: bool = true;
 pub const ETH_NODE_PORT: u16 = 8545;
 pub const ETH_NODE_PORT_WS: u16 = 8546;
 pub const BEACON_NODE_PORT: u16 = 3500;
-pub const PRIVATE_KEY: &str = "/Users/mykyta/development/composable/centauri-private-latest/hyperspace/ethereum/keys/0x73db010c3275eb7a92e5c38770316248f4c644ee";
+pub const PRIVATE_KEY: &str = "/Users/vmark/work/centauri-private/hyperspace/ethereum/keys/0x73db010c3275eb7a92e5c38770316248f4c644ee";
 
 #[track_caller]
 pub fn yui_ibc_solidity_path() -> PathBuf {
@@ -36,8 +36,7 @@ pub fn yui_ibc_solidity_path() -> PathBuf {
 	if let Ok(path) = std::env::var("YUI_IBC_SOLIDITY_PATH") {
 		path.into()
 	} else {
-		// default
-		return "/Users/mykyta/development/composable/yui-ibc-solidity-private-eth".into()
+		default
 	}
 }
 
@@ -119,6 +118,8 @@ pub mod mock {
 pub async fn hyperspace_ethereum_client_fixture(
 	anvil: &AnvilInstance,
 	yui_ibc: DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>,
+	db_url: &str,
+	redis_url: &str,
 ) -> EthereumClientConfig {
 	let endpoint =
 		if USE_GETH { format!("http://localhost:{}", ETH_NODE_PORT) } else { anvil.endpoint() };
@@ -141,10 +142,7 @@ pub async fn hyperspace_ethereum_client_fixture(
 	let jwt_secret_path = if !USE_GETH {
 		None
 	} else {
-		Some(
-			"/Users/mykyta/development/composable/eth-pos-devnet-offchain/execution/jwtsecret"
-				.to_string(),
-		)
+		Some("/Users/vmark/work/eth-pos-devnet/execution/jwtsecret".to_string())
 	};
 
 	EthereumClientConfig {
@@ -162,7 +160,8 @@ pub async fn hyperspace_ethereum_client_fixture(
 		commitment_prefix: "696263".into(),
 		// commitment_prefix: "424242".into(),
 		wasm_code_id: None,
-		bank_address: yui_ibc.bank.clone().map(|b| b.address()),
+		ics20_transfer_bank_address: yui_ibc.ics20_transfer_bank.clone().map(|b| b.address()),
+		ics20_bank_address: yui_ibc.ics20_bank.clone().map(|b| b.address()),
 		diamond_address: Some(yui_ibc.diamond.address()),
 		tendermint_address: yui_ibc.tendermint.clone().map(|x| x.address()),
 		diamond_facets: yui_ibc
@@ -173,5 +172,7 @@ pub async fn hyperspace_ethereum_client_fixture(
 		yui: Some(yui_ibc),
 		client_type: "07-tendermint".into(),
 		jwt_secret_path,
+		indexer_pg_url: db_url.parse().unwrap(),
+		indexer_redis_url: redis_url.parse().unwrap(),
 	}
 }

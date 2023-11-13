@@ -1,17 +1,49 @@
-type = "ethereum"
 http_rpc_url = "http://localhost:8545/"
 ws_rpc_url = "ws://127.0.0.1:8546/"
 beacon_rpc_url = "http://localhost:3500/"
-private_key_path = "hyperspace/ethereum/keys/0x73db010c3275eb7a92e5c38770316248f4c644ee"
+private_key_path = "/Users/vmark/work/centauri-private/hyperspace/ethereum/keys/0x73db010c3275eb7a92e5c38770316248f4c644ee"
 max_block_weight = 1
-name = "ethereum_client"
-client_id = "08-wasm-0"
-connection_id = "connection-0"
-channel_whitelist = [["channel-0", "transfer"], ["channel-0", "transfer"]]
-commitment_prefix = "6962632f"
-diamond_address = "0xd0017ae5068faa14eaa547ba1c47fdc7afdf1230"
-tendermint_address = "0x56378f9b88f341b1913a2fc6ac2bcbaa1b9a9f9f"
-bank_address = "0x4976bb932815783f092dd0e3cca567d5502be46e"
-diamond_facets = [["IBCClient", "0xb7198a3674e37433579be45aa9dd09f5ab4b314a"], ["IBCConnection", "0xb26397cfa7e111e844086bdd3da5080f9de65cb7"], ["IBCChannelHandshake", "0xfbf766071d0fdee42b78ab029b97194543b6d7a5"], ["IBCPacket", "0x844d2447e6c00cf6a5fbe9ad5eebebe31e40368e"], ["IBCQuerier", "0x992966599e81b9d4a3ef92172b9fa162d2e50d5b"], ["DiamondCutFacet", "0x3bf46cf159422e1791d20d45683b21f34ecae4be"], ["DiamondLoupeFacet", "0xb16af4cfc553ae0a8f43e812e22dc6caabdf5e63"], ["OwnershipFacet", "0x4f6e145fbaf72be9ea283f5793e70a1c594d5ceb"]]
+name = "ethereum-client"
+client_id = "07-tendermint-0"
+channel_whitelist = []
+commitment_prefix = "424242"
+diamond_address = "0xd57d30f45fe44b8a7b5683ec7afb1097f2dae1f3"
+tendermint_address = "0x4929739360e7e53392435d9d885b916708c6ed5b"
+ics20_transfer_bank_address = "0x0d1af61ade7676ae441d2dbbb518c458a48d1200"
+ics20_bank_address = "0x78d2180fd7014a59182018eab944307e4d2f03ed"
+diamond_facets = [
+    [
+    "IBCClient",
+    "0xe2de959781b98be0881383d661cb54df6cda3b22",
+],
+    [
+    "IBCConnection",
+    "0xd43a7bbdf788de406467f0103801e95a486bf49a",
+],
+    [
+    "IBCChannelHandshake",
+    "0x3b998ffd6904e5d00032142a96b354e5e2a4696e",
+],
+    [
+    "IBCPacket",
+    "0x21b76e4262e0538830264cd4dce9c178c1c8617d",
+],
+    [
+    "IBCQuerier",
+    "0xa64d7c06d6fbf28d1e13cf8674bb51341f00ca0b",
+],
+    [
+    "DiamondCutFacet",
+    "0x84a2ba90ebae774273f9da7a9877365ffd337760",
+],
+    [
+    "DiamondLoupeFacet",
+    "0x5e3630f0426ed1dc306bc19591302f95eb62486a",
+],
+    [
+    "OwnershipFacet",
+    "0x6db05dc3bf6cdef978905d02330d57a50a38f260",
+],
+]
 client_type = "07-tendermint"
 jwt_secret_path = "/Users/vmark/work/eth-pos-devnet/execution/jwtsecret"

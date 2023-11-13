@@ -2,7 +2,9 @@ use crate::{
 	client::ClientError,
 	config::ContractName,
 	contract::UnwrapContractError,
-	ibc_provider::{DIAMONDABI_ABI, ICS20TRANSFERBANKABI_ABI, TENDERMINTCLIENTABI_ABI},
+	ibc_provider::{
+		DIAMONDABI_ABI, ICS20BANKABI_ABI, ICS20TRANSFERBANKABI_ABI, TENDERMINTCLIENTABI_ABI,
+	},
 };
 use cast::revm::primitives::hex_literal::hex;
 use ethers::{
@@ -108,7 +110,8 @@ pub struct DeployYuiIbc<B, M> {
 	pub diamond: ContractInstance<B, M>,
 	// pub storage_layout: StorageLayout,
 	pub tendermint: Option<ContractInstance<B, M>>,
-	pub bank: Option<ContractInstance<B, M>>,
+	pub ics20_transfer_bank: Option<ContractInstance<B, M>>,
+	pub ics20_bank: Option<ContractInstance<B, M>>,
 	pub contract_creation_block: Arc<Mutex<Option<BlockNumber>>>,
 }
 
@@ -121,12 +124,14 @@ where
 		deployed_facets: Vec<Facet<B, M>>,
 		diamond: ContractInstance<B, M>,
 		tendermint: Option<ContractInstance<B, M>>,
-		bank: Option<ContractInstance<B, M>>,
+		ics20_transfer_bank: Option<ContractInstance<B, M>>,
+		ics20_bank: Option<ContractInstance<B, M>>,
 	) -> Result<Self, ClientError> {
 		let ibc = Self {
 			diamond,
 			tendermint,
-			bank,
+			ics20_transfer_bank,
+			ics20_bank,
 			deployed_facets,
 			contract_creation_block: Arc::new(Mutex::new(None)),
 		};
@@ -146,7 +151,8 @@ where
 		client: B,
 		diamond_address: Address,
 		tendermint_address: Option<Address>,
-		bank_address: Option<Address>,
+		ics20_transfer_bank_address: Option<Address>,
+		ics20_bank_address: Option<Address>,
 		diamond_facets: Vec<(ContractName, Address)>,
 	) -> Result<Self, ClientError> {
 		let diamond =
@@ -154,14 +160,17 @@ where
 		let tendermint = tendermint_address.map(|addr| {
 			ContractInstance::<B, M>::new(addr, TENDERMINTCLIENTABI_ABI.clone(), client.clone())
 		});
-		let bank = bank_address.map(|addr| {
+		let ics20_transfer_bank = ics20_transfer_bank_address.map(|addr| {
 			ContractInstance::<B, M>::new(addr, ICS20TRANSFERBANKABI_ABI.clone(), client.clone())
+		});
+		let ics20_bank = ics20_bank_address.map(|addr| {
+			ContractInstance::<B, M>::new(addr, ICS20BANKABI_ABI.clone(), client.clone())
 		});
 		let deployed_facets = diamond_facets
 			.into_iter()
 			.map(|(abi, addr)| Facet::from_address(addr, abi, client.clone()))
 			.collect();
-		Ok(Self::new(deployed_facets, diamond, tendermint, bank).await?)
+		Ok(Self::new(deployed_facets, diamond, tendermint, ics20_transfer_bank, ics20_bank).await?)
 	}
 
 	pub fn set_contract_creation_block(&self, number: U256) {
@@ -609,7 +618,8 @@ where
 			diamond: self.diamond.clone(),
 			// storage_layout: self.storage_layout.clone(),
 			tendermint: self.tendermint.clone(),
-			bank: self.bank.clone(),
+			ics20_bank: self.ics20_bank.clone(),
+			ics20_transfer_bank: self.ics20_transfer_bank.clone(),
 			contract_creation_block: self.contract_creation_block.clone(),
 		}
 	}
@@ -623,8 +633,9 @@ pub async fn deploy_contract<M, T>(
 ) -> ContractInstance<Arc<M>, M>
 where
 	M: Middleware,
-	T: Tokenize,
+	T: Tokenize + std::fmt::Debug,
 {
+	info!("Deploying contract {} with args {:?}, ", name, constructor_args);
 	let contract = artifacts.into_iter().filter_map(|x| x.find_first(name)).next().unwrap();
 	let (abi, bytecode, _) = contract.clone().into_parts();
 	let mut factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
@@ -868,7 +879,7 @@ where
 	// 		acc
 	// 	});
 
-	DeployYuiIbc::<Arc<M>, M>::new(deployed_facets, diamond, None, None)
+	DeployYuiIbc::<Arc<M>, M>::new(deployed_facets, diamond, None, None, None)
 		.await
 		.unwrap()
 }
@@ -922,8 +933,13 @@ pub async fn deploy_transfer_module<M: Middleware>(
 ) -> Result<ContractInstance<Arc<M>, M>, ClientError> {
 	let project_output = compile_yui(&yui_solidity_path, "contracts/apps/20-transfer");
 
-	let bank_contract =
-		deploy_contract::<M, _>("ICS20Bank", &[&project_output], (), client.clone()).await;
+	let bank_contract = deploy_contract::<M, _>(
+		"ICS20Bank",
+		&[&project_output],
+		(Token::String("ETH".into())),
+		client.clone(),
+	)
+	.await;
 	info!("Deployed Bank module address: {:?}", bank_contract.address());
 	let constructor_args =
 		(Token::Address(diamond_address), Token::Address(bank_contract.address()));

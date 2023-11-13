@@ -13,9 +13,10 @@ use std::{
 use crate::{
 	client::{ClientError, EthRpcClient},
 	ibc_provider::{
-		DIAMONDABI_ABI, DIAMONDCUTFACETABI_ABI, DIAMONDLOUPEFACETABI_ABI, IBCCHANNELABI_ABI,
-		IBCCLIENTABI_ABI, IBCCONNECTIONABI_ABI, IBCPACKETABI_ABI, IBCQUERIERABI_ABI,
-		ICS20TRANSFERBANKABI_ABI, OWNERSHIPFACETABI_ABI, TENDERMINTCLIENTABI_ABI,
+		DIAMONDABI_ABI, DIAMONDCUTFACETABI_ABI, DIAMONDLOUPEFACETABI_ABI, ERC20TOKENABI_ABI,
+		IBCCHANNELABI_ABI, IBCCLIENTABI_ABI, IBCCONNECTIONABI_ABI, IBCPACKETABI_ABI,
+		IBCQUERIERABI_ABI, ICS20BANKABI_ABI, ICS20TRANSFERBANKABI_ABI, OWNERSHIPFACETABI_ABI,
+		TENDERMINTCLIENTABI_ABI,
 	},
 	utils::{DeployYuiIbc, ProviderImpl},
 };
@@ -129,7 +130,10 @@ pub struct EthereumClientConfig {
 	/// ICS-20 Bank address
 	#[serde(deserialize_with = "address_de_opt")]
 	#[serde(default)]
-	pub bank_address: Option<Address>,
+	pub ics20_transfer_bank_address: Option<Address>,
+	#[serde(deserialize_with = "address_de_opt")]
+	#[serde(default)]
+	pub ics20_bank_address: Option<Address>,
 	/// Diamond facets (ABI file name, contract address)
 	#[serde(default)]
 	pub diamond_facets: Vec<(ContractName, Address)>,
@@ -137,6 +141,8 @@ pub struct EthereumClientConfig {
 	pub yui: Option<DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>>,
 	pub client_type: String,
 	pub jwt_secret_path: Option<String>,
+	pub indexer_pg_url: String,
+	pub indexer_redis_url: String,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, strum::EnumString)]
@@ -149,9 +155,11 @@ pub enum ContractName {
 	IBCConnection,
 	IBCPacket,
 	IBCQuerier,
+	ICS20Bank,
 	ICS20TransferBank,
 	OwnershipFacet,
 	TendermintLightClientSimple,
+	ERC20Token,
 }
 
 impl Display for ContractName {
@@ -172,8 +180,10 @@ impl ContractName {
 			ContractName::IBCPacket => IBCPACKETABI_ABI.clone(),
 			ContractName::IBCQuerier => IBCQUERIERABI_ABI.clone(),
 			ContractName::ICS20TransferBank => ICS20TRANSFERBANKABI_ABI.clone(),
+			ContractName::ICS20Bank => ICS20BANKABI_ABI.clone(),
 			ContractName::OwnershipFacet => OWNERSHIPFACETABI_ABI.clone(),
 			ContractName::TendermintLightClientSimple => TENDERMINTCLIENTABI_ABI.clone(),
+			ContractName::ERC20Token => ERC20TOKENABI_ABI.clone(),
 		}
 	}
 }

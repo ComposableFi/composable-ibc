@@ -8,9 +8,15 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "string",
         "name": "clientId",
+        "type": "string"
+      },
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "clientIdIndexed",
         "type": "string"
       },
       {
@@ -59,9 +65,15 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "string",
         "name": "clientId",
+        "type": "string"
+      },
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "clientIdIndexed",
         "type": "string"
       },
       {
@@ -78,7 +90,7 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "string",
         "name": "clientId",
         "type": "string"
@@ -96,7 +108,7 @@
             "type": "uint64"
           }
         ],
-        "indexed": true,
+        "indexed": false,
         "internalType": "struct HeightData",
         "name": "client_height",
         "type": "tuple"

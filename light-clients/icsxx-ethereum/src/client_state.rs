@@ -38,7 +38,7 @@ pub const ETHEREUM_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.
 pub struct ClientState<H> {
 	pub inner: LightClientState,
 	pub frozen_height: Option<Height>,
-	pub latest_height: u32,
+	pub latest_height: u64,
 	pub _phantom: PhantomData<H>,
 }
 

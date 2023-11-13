@@ -52,6 +52,8 @@ members = [
     "utils/parachain-node/runtime",
     "utils/calldata-compression",
 #     "utils/simnode"
+
+    "hyperspace/ethereum/evm-indexer"
 ]
 
 [patch."https://github.com/paritytech/jsonrpsee"]

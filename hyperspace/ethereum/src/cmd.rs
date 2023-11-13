@@ -83,6 +83,7 @@ impl DeployClientCmd {
 			diamond_addr,
 			None,
 			None,
+			None,
 			facets,
 		)
 		.await?;
@@ -128,13 +129,14 @@ impl DeployTransferModuleCmd {
 			diamond_addr,
 			None,
 			None,
+			None,
 			facets,
 		)
 		.await?;
 
 		let contract =
 			deploy_transfer_module::<EthRpcClient>(path, yui_ibc, diamond_addr, client).await?;
-		config.bank_address = Some(contract.address());
+		config.ics20_transfer_bank_address = Some(contract.address());
 		Ok(config)
 	}
 }

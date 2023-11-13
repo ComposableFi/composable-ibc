@@ -55,6 +55,10 @@ reqwest = "0.11.18"
 clap = { version = "4.4.2", features = ["derive"] }
 strum = "0.25.0"
 alloy-sol-types = { version = "0.4.2" }
+itertools = "0.11.0"
+
+redis = "0.22"
+sqlx = { version = "0.6", features = [ "runtime-tokio-native-tls" , "postgres" ] }
 
 [dev-dependencies]
 toml = "0.7.3"
