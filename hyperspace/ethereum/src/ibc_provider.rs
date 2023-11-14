@@ -102,7 +102,7 @@ use sync_committee_primitives::types::LightClientState;
 use tokio::time::sleep;
 use tracing::log;
 
-pub const INDEXER_DELAY_BLOCKS: u64 = 2;
+pub const INDEXER_DELAY_BLOCKS: u64 = 1;
 
 abigen!(
 	IbcClientAbi,
@@ -202,7 +202,7 @@ where
 	}
 }
 
-const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 100;
+const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 10000;
 
 pub async fn parse_ethereum_event(
 	client: &EthereumClient,
@@ -265,34 +265,45 @@ impl EthereumClient {
 	) -> Result<Token, ClientError> {
 		// First, we try to find an `UpdateClient` event at the given height...
 		let mut client_state = None;
-		let mut event_filter = self
-			.yui
-			.event_for_name::<UpdateClientFilter>("UpdateClient")
-			.map_err(|err| {
-				ClientError::Other(format!("contract is missing UpdateClient event: {}", err))
-			})?
-			.from_block(self.contract_creation_block())
-			.to_block(at.revision_height);
-		event_filter.filter = event_filter.filter.topic1({
-			let hash = H256::from_slice(&encode(&[Token::FixedBytes(
-				keccak256(client_id.to_string().into_bytes()).to_vec(),
-			)]));
-			ValueOrArray::Value(hash)
-		});
+		// let mut event_filter = self
+		// 	.yui
+		// 	.event_for_name::<UpdateClientFilter>("UpdateClient")
+		// 	.map_err(|err| {
+		// 		ClientError::Other(format!("contract is missing UpdateClient event: {}", err))
+		// 	})?
+		// 	.from_block(BlockNumber::Number(self.contract_creation_block().into()))
+		// 	.address(ValueOrArray::Value(self.yui.diamond.address()))
+		// 	.to_block(at.revision_height);
+		// event_filter.filter = event_filter.filter.topic1({
+		// 	let hash = H256::from_slice(&encode(&[Token::FixedBytes(
+		// 		keccak256(client_id.to_string().into_bytes()).to_vec(),
+		// 	)]));
+		// 	ValueOrArray::Value(hash)
+		// });
+		// let maybe_log = self
+		// 	.yui
+		// 	.diamond
+		// 	.client()
+		// 	.get_logs(&event_filter.filter)
+		// 	.await
+		// 	.map_err(
+		// 		|err| ClientError::Other(format!("failed to get logs 3: {}", err)),
+		// 	)?
+		// 	.pop() // get only the last event
+		// ;
 		let maybe_log = self
-			.yui
-			.diamond
-			.client()
-			.get_logs(&event_filter.filter)
-			.await
-			.map_err(
-				|err| ClientError::Other(format!("failed to get logs: {}", err)),
-			)?
-			.pop() // get only the last event
-		;
+			.get_logs_for_event_name::<UpdateClientHeightFilter>(
+				self.contract_creation_block(),
+				at.revision_height,
+				&format!("event_data->>'client_id' = '{client_id}'"),
+				Some("ORDER BY (event_data->'client_height'->>'revision_height') :: bigint"),
+			)
+			.await?
+			.pop();
 		let batch_func = self.yui.function("callBatch")?;
 		match maybe_log {
-			Some(log) => {
+			Some((_, log)) => {
+				info!("found update client event at {}", log.block_number.unwrap());
 				let tx_hash = log
 					.transaction_hash
 					.ok_or(ClientError::Other("tx hash not found".to_string()))?;
@@ -330,11 +341,6 @@ impl EthereumClient {
 						};
 						let header = tm_header_from_abi_token(toks[1].clone())?;
 						let client_state_token = toks[2].clone();
-
-						let Token::Bytes(b) = client_state_token.clone() else {
-							return Err(ClientError::Other("invalid client state".to_string()))
-						};
-
 						// let mut cs =
 						// 	client_state_from_abi_token::<LocalClientTypes>(client_state_token)?;
 						// cs.latest_height = Height::new(
@@ -352,31 +358,45 @@ impl EthereumClient {
 				log::trace!(target: "hyperspace_ethereum", "no update client event found for blocks ..{at}, looking for a create client event...");
 
 				// ...otherwise, try to get the `CreateClient` event
-				let mut event_filter = self
-					.yui
-					.event_for_name::<CreateClientFilter>("CreateClient")
-					.map_err(|err| {
-						ClientError::Other(format!(
-							"contract is missing CreateClient event: {}",
-							err
-						))
-					})?
-					.from_block(self.contract_creation_block())
-					.to_block(at.revision_height);
-				event_filter.filter = event_filter.filter.topic1({
-					let hash = H256::from_slice(&encode(&[Token::FixedBytes(
-						keccak256(client_id.to_string().into_bytes()).to_vec(),
-					)]));
-					ValueOrArray::Value(hash)
-				});
-				let log = self
-					.yui
-					.diamond
-					.client()
-					.get_logs(&event_filter.filter)
-					.await
-					.map_err(|err| ClientError::Other(format!("failed to get logs: {}", err)))?
-					.pop() // get only the last event
+				// let mut event_filter = self
+				// 	.yui
+				// 	.event_for_name::<CreateClientFilter>("CreateClient")
+				// 	.map_err(|err| {
+				// 		ClientError::Other(format!(
+				// 			"contract is missing CreateClient event: {}",
+				// 			err
+				// 		))
+				// 	})?
+				// 	.from_block(BlockNumber::Number(self.contract_creation_block().into()))
+				// 	.address(ValueOrArray::Value(self.yui.diamond.address()))
+				// 	//		.from_block(self.contract_creation_block())
+				// 	.address(ValueOrArray::Value(self.yui.diamond.address()))
+				// 	.to_block(at.revision_height);
+				// event_filter.filter = event_filter.filter.topic1({
+				// 	let hash = H256::from_slice(&encode(&[Token::FixedBytes(
+				// 		keccak256(client_id.to_string().into_bytes()).to_vec(),
+				// 	)]));
+				// 	ValueOrArray::Value(hash)
+				// });
+				// let log = self
+				// 	.yui
+				// 	.diamond
+				// 	.client()
+				// 	.get_logs(&event_filter.filter)
+				// 	.await
+				// 	.map_err(|err| ClientError::Other(format!("failed to get logs 4: {}", err)))?
+				// 	.pop() // get only the last event
+				// 	.ok_or_else(|| ClientError::Other("no events found 2".to_string()))?;
+
+				let (_, log) = self
+					.get_logs_for_event_name::<CreateClientFilter>(
+						self.contract_creation_block(),
+						at.revision_height,
+						&format!("event_data->>'client_id' = '{client_id}'"),
+						None,
+					)
+					.await?
+					.pop()
 					.ok_or_else(|| ClientError::Other("no events found".to_string()))?;
 
 				let tx_hash = log
@@ -416,37 +436,18 @@ impl EthereumClient {
 							return Err(ClientError::Other("calldata should be bytes".to_string()))
 						};
 						let client_state_token = toks[1].clone();
-
-						// let Token::Bytes(b) = client_state_token.clone() else {
-						// 	return Err(ClientError::Other("invalid client state".to_string()))
-						// };
-
 						// client_state = Some(client_state_from_abi_token::<LocalClientTypes>(
 						// 	client_state_token,
 						// )?);
+
 						client_state = Some(client_state_token);
+
 						break
 					}
 				}
 			},
 		}
 
-		// let proof_height = Some(at.into());
-		// let proof = self
-		// 	.query_proof(at, vec![ClientStatePath(client_id.clone()).to_string().into_bytes()])
-		// 	.await?;
-
-		// Ok(QueryClientStateResponse {
-		// 	client_state: Some(
-		// 		client_state
-		// 			.ok_or(ClientError::Other("client state not found".to_string()))?
-		// 			.to_any(),
-		// 	),
-		// 	proof_height,
-		// 	proof,
-		// })
-
-		//look basicly the proof height is the let proof_height = Some(at.into());
 		Ok(client_state.ok_or(ClientError::Other("client state not found".to_string()))?)
 	}
 
@@ -458,6 +459,7 @@ impl EthereumClient {
 	) -> Result<Token, ClientError> {
 		log::info!(target: "hyperspace_ethereum", "query_client_consensus: {client_id:?}, {consensus_height:?}");
 
+		unimplemented!();
 		// First, we try to find an `UpdateClient` event at the given height...
 		let mut consensus_state = None;
 		let mut event_filter = self
@@ -668,7 +670,6 @@ impl IbcProvider for EthereumClient {
 			NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER)
 			.min(block.slot);
 		let number = block.body.execution_payload.block_number;
-		// 80180..80212
 		let from = latest_cp_client_height + 1;
 		let to = number
 			.min(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER / 2)

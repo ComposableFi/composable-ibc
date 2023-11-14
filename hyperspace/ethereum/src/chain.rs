@@ -1202,6 +1202,9 @@ impl Chain for EthereumClient {
 		if messages.is_empty() {
 			return Err(ClientError::Other("messages are empty".into()))
 		}
+
+		sleep(self.expected_block_time() * INDEXER_DELAY_BLOCKS as u32).await;
+
 		info!(target: "hyperspace_ethereum", "Submitting messages: {:?}", messages.iter().map(|x| x.type_url.clone()).collect::<Vec<_>>().join(", "));
 
 		let mut calls = vec![];

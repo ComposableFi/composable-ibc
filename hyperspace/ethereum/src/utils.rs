@@ -930,7 +930,7 @@ pub async fn deploy_transfer_module<M: Middleware>(
 	yui_ibc: DeployYuiIbc<Arc<M>, M>,
 	diamond_address: Address,
 	client: Arc<M>,
-) -> Result<ContractInstance<Arc<M>, M>, ClientError> {
+) -> Result<(ContractInstance<Arc<M>, M>, ContractInstance<Arc<M>, M>), ClientError> {
 	let project_output = compile_yui(&yui_solidity_path, "contracts/apps/20-transfer");
 
 	let bank_contract = deploy_contract::<M, _>(
@@ -950,7 +950,7 @@ pub async fn deploy_transfer_module<M: Middleware>(
 
 	yui_ibc.bind_port("transfer", module_contract.address()).await;
 
-	Ok(module_contract)
+	Ok((module_contract, bank_contract))
 }
 
 pub fn handle_gas_usage(receipt: &TransactionReceipt) {

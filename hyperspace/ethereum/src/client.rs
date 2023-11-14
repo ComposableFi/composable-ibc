@@ -255,7 +255,6 @@ impl EthereumClient {
 			let secret = std::fs::read_to_string(secret_path).map_err(|e| {
 				ClientError::Other(format!("jwtsecret not found. Search for 'execution/jwtsecret' in the code and replace it with your local path. {e}"))
 			})?;
-			dbg!(&secret);
 			let secret =
 				JwtKey::from_slice(&hex::decode(&secret[2..].trim()).unwrap()).expect("oops");
 			let jwt_auth = JwtAuth::new(secret, None, None);
