@@ -33,6 +33,7 @@ use std::{
 	borrow::Borrow,
 	collections::{HashMap, HashSet},
 	iter::once,
+	ops::Mul,
 	path::{Path, PathBuf},
 	str::FromStr,
 	sync::{Arc, Mutex},
@@ -901,10 +902,17 @@ pub async fn deploy_client<M: Middleware>(
 		update_client_delegate_contract.address()
 	);
 
+	let ics23_contract =
+		deploy_contract("Ics23Contract", &[&project_output1], (), client.clone()).await;
+
 	let light_client = deploy_contract(
 		client_name,
 		&[&project_output1],
-		(yui_ibc.diamond.address(), update_client_delegate_contract.address()),
+		(
+			yui_ibc.diamond.address(),
+			update_client_delegate_contract.address(),
+			ics23_contract.address(),
+		),
 		client.clone(),
 	)
 	.await;
