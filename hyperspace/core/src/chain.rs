@@ -31,7 +31,7 @@ use ibc::{
 	core::{
 		ics02_client::{
 			client_state::ClientType,
-			events::{CodeHash, UpdateClient},
+			events::{Checksum, UpdateClient},
 			msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient},
 		},
 		ics03_connection::msgs::{
@@ -101,7 +101,7 @@ chains! {
 	Cosmos(CosmosClientConfig, CosmosClient<DefaultConfig>),
 }
 
-fn wrap_any_msg_into_wasm(msg: Any, code_hash: Bytes) -> Result<Any, anyhow::Error> {
+fn wrap_any_msg_into_wasm(msg: Any, checksum: Bytes) -> Result<Any, anyhow::Error> {
 	// TODO: consider rewriting with Ics26Envelope
 	use ibc::core::{
 		ics02_client::msgs::{
@@ -119,7 +119,7 @@ fn wrap_any_msg_into_wasm(msg: Any, code_hash: Bytes) -> Result<Any, anyhow::Err
 			let mut msg_decoded =
 				MsgCreateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
 			msg_decoded.consensus_state = AnyConsensusState::wasm(msg_decoded.consensus_state)?;
-			msg_decoded.client_state = AnyClientState::wasm(msg_decoded.client_state, code_hash)?;
+			msg_decoded.client_state = AnyClientState::wasm(msg_decoded.client_state, checksum)?;
 			msg_decoded.to_any()
 		},
 		CONN_OPEN_TRY_TYPE_URL => {
@@ -147,5 +147,5 @@ fn wrap_any_msg_into_wasm(msg: Any, code_hash: Bytes) -> Result<Any, anyhow::Err
 #[derive(Clone)]
 pub struct WasmChain {
 	pub inner: Box<AnyChain>,
-	pub code_hash: Bytes,
+	pub checksum: Bytes,
 }

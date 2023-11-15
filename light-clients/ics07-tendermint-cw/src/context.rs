@@ -23,7 +23,7 @@ use crate::{
 use cosmwasm_std::{Deps, DepsMut, Env, Storage};
 use ibc::{
 	core::{
-		ics02_client::{error::Error, events::CodeHash},
+		ics02_client::{error::Error, events::Checksum},
 		ics24_host::identifier::ClientId,
 		ics26_routing::context::ReaderContext,
 	},
@@ -39,7 +39,7 @@ pub struct Context<'a, H> {
 	pub deps_mut: Option<DepsMut<'a>>,
 	pub deps: Option<Deps<'a>>,
 	pub env: Env,
-	pub code_hash: Option<CodeHash>,
+	pub checksum: Option<Checksum>,
 	_phantom: PhantomData<H>,
 }
 
@@ -65,11 +65,11 @@ impl<'a, H> Clone for Context<'a, H> {
 
 impl<'a, H> Context<'a, H> {
 	pub fn new(deps: DepsMut<'a>, env: Env) -> Self {
-		Self { deps_mut: Some(deps), deps: None, _phantom: Default::default(), env, code_hash: None }
+		Self { deps_mut: Some(deps), deps: None, _phantom: Default::default(), env, checksum: None }
 	}
 
 	pub fn new_ro(deps: Deps<'a>, env: Env) -> Self {
-		Self { deps_mut: None, deps: Some(deps), _phantom: Default::default(), env, code_hash: None }
+		Self { deps_mut: None, deps: Some(deps), _phantom: Default::default(), env, checksum: None }
 	}
 
 	pub fn log(&self, msg: &str) {
@@ -165,7 +165,7 @@ where
 		use prost::Message;
 		use tendermint_proto::Protobuf;
 		let client_states = ReadonlyClientStates::new(self.storage());
-		let code_hash = match self.code_hash.clone() {
+		let checksum = match self.checksum.clone() {
 			None => {
 				let encoded_wasm_client_state = client_states.get_prefixed(prefix).ok_or_else(|| {
 					ContractError::Tendermint(
@@ -189,12 +189,12 @@ where
 						.to_string(),
 					)
 				})?;
-				wasm_client_state.code_hash
+				wasm_client_state.checksum
 			},
 			Some(x) => x,
 		};
 
-		let encoded = Context::<H>::encode_client_state(client_state, code_hash).map_err(|e| {
+		let encoded = Context::<H>::encode_client_state(client_state, checksum).map_err(|e| {
 			ContractError::Tendermint(format!("error encoding client state: {:?}", e))
 		})?;
 		let mut client_states = ClientStates::new(self.storage_mut());

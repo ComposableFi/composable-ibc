@@ -274,13 +274,13 @@ impl AnyClientState {
 }
 
 impl AnyClientState {
-	pub fn wasm(inner: Self, code_hash: Bytes) -> Result<Self, tendermint_proto::Error> {
+	pub fn wasm(inner: Self, checksum: Bytes) -> Result<Self, tendermint_proto::Error> {
 		Ok(Self::Wasm(
 			ics08_wasm::client_state::ClientState::<AnyClient, Self, AnyConsensusState> {
 				data: inner.encode_to_vec()?,
 				latest_height: inner.latest_height(),
 				inner: Box::new(inner),
-				code_hash,
+				checksum,
 				_phantom: Default::default(),
 			},
 		))

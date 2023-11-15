@@ -128,7 +128,7 @@ fn process_instantiate_msg(
 	let consensus_state = ConsensusState::decode_vec(&any.value)?;
 
 	let height = client_state.latest_height();
-	ctx.code_hash = Some(msg.client_state.code_hash);
+	ctx.checksum = Some(msg.client_state.checksum);
 	ctx.store_client_state(client_id.clone(), client_state)
 		.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 	ctx.store_consensus_state(client_id, height, consensus_state)

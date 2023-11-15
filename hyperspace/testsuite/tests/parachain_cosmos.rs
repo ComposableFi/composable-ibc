@@ -86,7 +86,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		finality_protocol: FinalityProtocol::Grandpa,
 		private_key: "//Alice".to_string(),
 		key_type: "sr25519".to_string(),
-		wasm_code_hash: None,
+		wasm_checksum: None,
 	};
 
 	let mut config_b = CosmosClientConfig {
@@ -106,7 +106,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		mnemonic:
 			"oxygen fall sure lava energy veteran enroll frown question detail include maximum"
 				.to_string(),
-		wasm_code_hash: None,
+		wasm_checksum: None,
 		channel_whitelist: vec![],
 		common: CommonClientConfig {
 			skip_optional_client_updates: true,
@@ -118,8 +118,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.unwrap();
 
 	let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
-	let code_hash = match chain_b.upload_wasm(wasm_data.clone()).await {
-		Ok(code_hash) => code_hash,
+	let checksum = match chain_b.upload_wasm(wasm_data.clone()).await {
+		Ok(checksum) => checksum,
 		Err(e) => {
 			let e_str = format!("{e:?}");
 			if !e_str.contains("wasm code already exists") {
@@ -128,8 +128,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 			sha2_256(&wasm_data).to_vec()
 		},
 	};
-	let code_hash_str = hex::encode(code_hash);
-	config_b.wasm_code_hash = Some(code_hash_str);
+	let checksum_str = hex::encode(checksum);
+	config_b.wasm_checksum = Some(checksum_str);
 
 	let mut chain_a_wrapped = AnyConfig::Parachain(config_a).into_client().await.unwrap();
 	let mut chain_b_wrapped = AnyConfig::Cosmos(config_b).into_client().await.unwrap();

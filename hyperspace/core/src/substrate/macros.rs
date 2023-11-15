@@ -487,8 +487,8 @@ macro_rules! define_ibc_event_wrapper {
 						RawIbcEvent::AppModule { kind, module_id },
 					MetadataIbcEvent::Empty => RawIbcEvent::Empty,
 					MetadataIbcEvent::ChainError => RawIbcEvent::ChainError,
-					MetadataIbcEvent::PushWasmCode{ wasm_code_id: wasm_code_hash } => RawIbcEvent::PushWasmCode {
-						wasm_code_hash
+					MetadataIbcEvent::PushWasmCode{ wasm_checksum } => RawIbcEvent::PushWasmCode {
+						wasm_checksum
 					},
 					$($additional)*
 				}
