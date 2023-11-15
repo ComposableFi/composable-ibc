@@ -192,7 +192,7 @@ where
 			)?;
 		let client_state = ClientState {
 			data: old_client_state.data.clone(),
-			checksum: old_client_state.code_hash.clone(),
+			checksum: old_client_state.checksum.clone(),
 			inner: Box::new(inner_client_state),
 			latest_height: old_client_state.latest_height,
 			_phantom: PhantomData,
