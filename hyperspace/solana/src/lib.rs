@@ -1,8 +1,10 @@
+#![feature(more_qualified_paths)]
 extern crate alloc;
 
 use alloc::rc::Rc;
 use core::{pin::Pin, str::FromStr, time::Duration};
 use ibc_storage::{PrivateStorage, SequenceTripleIdx};
+use ids::ClientIdx;
 use prost::Message;
 use trie_key::{SequencePath, TrieKey};
 
@@ -23,12 +25,12 @@ use ibc::{
 	core::{
 		ics02_client::{client_state::ClientType, events::UpdateClient},
 		ics04_channel::packet::Sequence,
-		ics23_commitment::commitment::CommitmentPrefix,
+		ics23_commitment::commitment::{CommitmentPath, CommitmentPrefix},
 		ics24_host::{
 			identifier::{ChannelId, ClientId, ConnectionId, PortId},
 			path::{
-				ChannelEndsPath, ClientConsensusStatePath, ClientStatePath, ConnectionsPath,
-				ReceiptsPath,
+				ChannelEndsPath, ClientConsensusStatePath, ClientStatePath, CommitmentsPath,
+				ConnectionsPath, ReceiptsPath, AcksPath,
 			},
 		},
 	},
@@ -40,7 +42,7 @@ use ibc_proto::{
 	ibc::core::{
 		channel::v1::{
 			Channel, QueryChannelResponse, QueryNextSequenceReceiveResponse,
-			QueryPacketReceiptResponse,
+			QueryPacketCommitmentResponse, QueryPacketReceiptResponse, QueryPacketAcknowledgementResponse,
 		},
 		client::v1::{QueryClientStateResponse, QueryConsensusStateResponse},
 		connection::v1::{ConnectionEnd, QueryConnectionResponse},
@@ -63,6 +65,7 @@ use tokio_stream::Stream;
 mod accounts;
 mod error;
 mod ibc_storage;
+mod ids;
 mod instructions;
 mod trie;
 mod trie_key;
@@ -242,7 +245,10 @@ impl IbcProvider for Client {
 			epoch: revision_number,
 			client_id: client_id.clone(),
 		};
-		let consensus_state_trie_key = TrieKey::from(&consensus_state_path);
+		let consensus_state_trie_key = TrieKey::for_consensus_state(
+			ClientIdx::from_str(client_id.as_str()).unwrap(),
+			consensus_height,
+		);
 		let (_, consensus_state_proof) = trie
 			.prove(&consensus_state_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
@@ -266,7 +272,8 @@ impl IbcProvider for Client {
 		let trie = self.get_trie().await;
 		let storage = self.get_ibc_storage();
 		let client_state_path = ClientStatePath(client_id.clone());
-		let client_state_trie_key = TrieKey::from(&client_state_path);
+		let client_state_trie_key =
+			TrieKey::for_client_state(ClientIdx::from_str(client_id.as_str()).unwrap());
 		let (_, client_state_proof) = trie
 			.prove(&client_state_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
@@ -290,7 +297,7 @@ impl IbcProvider for Client {
 		let trie = self.get_trie().await;
 		let storage = self.get_ibc_storage();
 		let connection_end_path = ConnectionsPath(connection_id.clone());
-		let connection_end_trie_key = TrieKey::from(&connection_end_path);
+		let connection_end_trie_key = TrieKey::for_connection(&connection_end_path);
 		let (_, connection_end_proof) = trie
 			.prove(&connection_end_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
@@ -347,8 +354,23 @@ impl IbcProvider for Client {
 		port_id: &ibc::core::ics24_host::identifier::PortId,
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		seq: u64,
-	) -> Result<ibc_proto::ibc::core::channel::v1::QueryPacketCommitmentResponse, Self::Error> {
-		todo!();
+	) -> Result<QueryPacketCommitmentResponse, Self::Error> {
+		let trie = self.get_trie().await;
+		let packet_commitment_path = CommitmentsPath {
+			port_id: *port_id,
+			channel_id: *channel_id,
+			sequence: ibc::core::ics04_channel::packet::Sequence(seq),
+		};
+		let packet_commitment_trie_key = TrieKey::from(&packet_commitment_path);
+		let (packet_commitment, packet_commitment_proof) = trie
+			.prove(&packet_commitment_trie_key)
+			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
+		let commitment = packet_commitment.ok_or(Error::Custom("No value at given key".to_owned()))?;
+		Ok(QueryPacketCommitmentResponse {
+			commitment: commitment.0.to_vec(),
+			proof: borsh::to_vec(&packet_commitment_proof).unwrap(),
+			proof_height: increment_proof_height(Some(at.into())),
+		})
 	}
 
 	async fn query_packet_acknowledgement(
@@ -357,9 +379,24 @@ impl IbcProvider for Client {
 		port_id: &ibc::core::ics24_host::identifier::PortId,
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		seq: u64,
-	) -> Result<ibc_proto::ibc::core::channel::v1::QueryPacketAcknowledgementResponse, Self::Error>
+	) -> Result<QueryPacketAcknowledgementResponse, Self::Error>
 	{
-		todo!()
+		let trie = self.get_trie().await;
+		let packet_ack_path = AcksPath {
+			port_id: *port_id,
+			channel_id: *channel_id,
+			sequence: ibc::core::ics04_channel::packet::Sequence(seq),
+		};
+		let packet_ack_trie_key = TrieKey::from(&packet_ack_path);
+		let (packet_ack, packet_ack_proof) = trie
+			.prove(&packet_ack_trie_key)
+			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
+		let ack = packet_ack.ok_or(Error::Custom("No value at given key".to_owned()))?;
+		Ok(QueryPacketAcknowledgementResponse {
+			acknowledgement: ack.0.to_vec(),
+			proof: borsh::to_vec(&packet_ack_proof).unwrap(),
+			proof_height: increment_proof_height(Some(at.into())),
+		})
 	}
 
 	async fn query_next_sequence_recv(
