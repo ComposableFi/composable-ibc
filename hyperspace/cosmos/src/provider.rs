@@ -272,7 +272,7 @@ where
 									log::debug!(target: "hyperspace_cosmos", "the event is unknown");
 								}
 							} else {
-								log::debug!(target: "hyperspace_cosmos", "Failed to parse event {:?}", abci_event);
+								log::debug!(target: "hyperspace_cosmos", "Event wasn't parsed {:?}", abci_event);
 							}
 						}
 					},

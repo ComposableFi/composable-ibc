@@ -1297,9 +1297,9 @@ impl Chain for EthereumClient {
 
 				let client_id = (*self.counterparty_client_id.lock().unwrap()).clone().unwrap();
 				let proof_height = msg.proofs.height();
-				let (height, _) = self
-					.query_client_update_time_and_height(client_id.clone(), proof_height)
-					.await?;
+				// let (height, _) = self
+				// 	.query_client_update_time_and_height(client_id.clone(), proof_height)
+				// 	.await?;
 				// let latest_client_state =
 				// 	self.query_client_state_exact_token(height, client_id.clone()).await?;
 				// let latest_consensus_state = self

@@ -43,6 +43,7 @@ use ibc::core::{ics23_commitment::specs::ProofSpecs, ics24_host::identifier::Por
 use log::info;
 use sp_core::hashing::sha2_256;
 use std::{future::Future, path::PathBuf, str::FromStr, sync::Arc};
+use tokio::time::sleep;
 
 const USE_CONFIG: bool = true;
 const SAVE_TO_CONFIG: bool = true;
@@ -338,6 +339,55 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
 
 	// Run tests sequentially
+	// no timeouts + connection delay
+	// ibc_messaging_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_native_a.clone(),
+	// 	asset_id_native_b.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// )
+	// .await;
+	//
+	// ibc_messaging_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// 	asset_id_b.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// )
+	// .await;
+
+	// timeouts + connection delay
+	ibc_messaging_packet_height_timeout_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
+
+	// timeouts + connection delay
+	// ibc_messaging_packet_height_timeout_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_native_a.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// )
+	// .await;
+
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
 
 	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
 	// 	&mut chain_a,
@@ -348,60 +398,16 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	// )
 	// .await;
 
-	// no timeouts + connection delay
-
-	// 107519999589149371962628537
-	// 8601599967E25
-	// 86015999671319497570102830
-	ibc_messaging_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_native_a.clone(),
-		asset_id_native_b.clone(),
-		channel_a,
-		channel_b,
-	)
-	.await;
-
-	ibc_messaging_with_connection_delay(
+	// channel closing semantics
+	ibc_messaging_packet_timeout_on_channel_close(
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_a.clone(),
-		asset_id_b.clone(),
 		channel_a,
-		channel_b,
 	)
 	.await;
 
-	// timeouts + connection delay
-	// ibc_messaging_packet_height_timeout_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
-
-	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
-
-	// // channel closing semantics
-	// ibc_messaging_packet_timeout_on_channel_close(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// 	channel_a,
-	// )
-	// .await;
-
-	// ibc_channel_close(&mut chain_a, &mut chain_b).await;
+	ibc_channel_close(&mut chain_a, &mut chain_b).await;
 
 	// TODO: ethereum misbehaviour?
 	// ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
