@@ -72,6 +72,8 @@ mod trie_key;
 
 const SOLANA_IBC_STORAGE_SEED: &[u8] = b"solana_ibc_storage";
 const TRIE_SEED: &[u8] = b"trie";
+const PACKET_STORAGE_SEED: &[u8] = b"packet";
+const CHAIN_SEED: &[u8] = b"chain";
 
 // Random key added to implement `#[account]` macro for the storage
 declare_id!("EnfDJsAK7BGgetnmKzBx86CsgC5kfSPcsktFCQ4YLC81");
@@ -166,6 +168,18 @@ impl Client {
 		ibc_storage
 	}
 
+	pub fn get_packet_storage_key(&self) -> Pubkey {
+		let packet_storage_seeds = &[PACKET_STORAGE_SEED];
+		let packet_storage = Pubkey::find_program_address(packet_storage_seeds, &self.program_id).0;
+		packet_storage
+	}
+
+	pub fn get_chain_key(&self) -> Pubkey {
+		let chain_seeds = &[CHAIN_SEED];
+		let chain = Pubkey::find_program_address(chain_seeds, &self.program_id).0;
+		chain	
+	}
+
 	pub async fn get_trie(&self) -> trie::AccountTrie<Vec<u8>> {
 		let trie_key = self.get_trie_key();
 		let rpc_client = self.rpc_client();
@@ -240,11 +254,6 @@ impl IbcProvider for Client {
 		let trie = self.get_trie().await;
 		let storage = self.get_ibc_storage();
 		let Height { revision_height, revision_number } = consensus_height;
-		let consensus_state_path = ClientConsensusStatePath {
-			height: revision_height,
-			epoch: revision_number,
-			client_id: client_id.clone(),
-		};
 		let consensus_state_trie_key = TrieKey::for_consensus_state(
 			ClientIdx::from_str(client_id.as_str()).unwrap(),
 			consensus_height,
@@ -796,6 +805,8 @@ impl Chain for Client {
 		// Build, sign, and send program instruction
 		let solana_ibc_storage_key = self.get_ibc_storage_key();
 		let trie_key = self.get_trie_key();
+		let packet_storage_key = self.get_packet_storage_key();
+		let chain_key = self.get_chain_key();
 
 		let all_messages = messages
 			.into_iter()
@@ -808,6 +819,8 @@ impl Chain for Client {
 				authority.pubkey(),
 				solana_ibc_storage_key,
 				trie_key,
+				packet_storage_key,
+				chain_key,
 				system_program::ID,
 			))
 			.args(instructions::Deliver { messages: all_messages })
