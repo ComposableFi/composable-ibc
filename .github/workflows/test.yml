@@ -31,7 +31,7 @@ jobs:
         - /home/ghr/_work/_temp:/home/ghr/_work/_temp
     runs-on:
       - self-hosted
-      - x64-tiny
+      - x64-monster
     timeout-minutes: 300
     steps:
       - name: Install git

@@ -12,7 +12,6 @@ on:
       - 'develop'
       - 'release*'
 
-
 jobs:
   checker:
 
@@ -26,6 +25,7 @@ jobs:
     runs-on:
       - self-hosted
       - x64-tiny
+
     steps:
     - uses: actions/checkout@v2
 
