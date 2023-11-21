@@ -212,7 +212,7 @@ pub struct CosmosClientConfig {
 	pub max_tx_size: usize,
 	/// All the client states and headers will be wrapped in WASM ones using the WASM code ID.
 	#[serde(default)]
-	pub wasm_code_hash: Option<String>,
+	pub wasm_checksum: Option<String>,
 	/*
 	Here is a list of dropped configuration parameters from Hermes Config.toml
 	that could be set to default values or removed for the MVP phase:
