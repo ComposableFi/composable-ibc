@@ -2,8 +2,6 @@ name: "Build and publish Grandpa Docker image"
 
 on:
   push:
-    branches:
-      - 'master'
     tags:
       - '*cosmos*'
 
@@ -16,8 +14,7 @@ jobs:
 
     name: Build & push docker image
     
-    runs-on:
-      - self-hosted
+    runs-on: ubuntu-latest
     
     concurrency:
       group: grandpa-cw-image-${{ github.ref }}
