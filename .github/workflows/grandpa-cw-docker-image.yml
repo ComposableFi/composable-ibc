@@ -52,8 +52,6 @@ jobs:
         tags: |
           type=semver,pattern={{version}}
           type=semver,pattern={{major}}.{{minor}}
-          type=ref,event=branch
-          type=sha,prefix={{branch}}-
 
     - name: Login to Docker Hub
       uses: docker/login-action@v2
@@ -65,6 +63,6 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         file: scripts/grandpa-cw.Dockerfile
-        push: ${{ github.event_name != 'pull_request' }}
+        push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
