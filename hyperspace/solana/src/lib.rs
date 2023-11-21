@@ -4,7 +4,7 @@ extern crate alloc;
 use alloc::rc::Rc;
 use core::{pin::Pin, str::FromStr, time::Duration};
 use ibc_storage::{PrivateStorage, SequenceTripleIdx};
-use ids::ClientIdx;
+use ids::{ClientIdx, ConnectionIdx};
 use prost::Message;
 use trie_key::{SequencePath, TrieKey};
 
@@ -296,8 +296,8 @@ impl IbcProvider for Client {
 	) -> Result<QueryConnectionResponse, Self::Error> {
 		let trie = self.get_trie().await;
 		let storage = self.get_ibc_storage();
-		let connection_end_path = ConnectionsPath(connection_id.clone());
-		let connection_end_trie_key = TrieKey::for_connection(&connection_end_path);
+		let connection_idx = ConnectionIdx::try_from(connection_id.clone()).unwrap();
+		let connection_end_trie_key = TrieKey::for_connection(connection_idx);
 		let (_, connection_end_proof) = trie
 			.prove(&connection_end_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
@@ -357,8 +357,8 @@ impl IbcProvider for Client {
 	) -> Result<QueryPacketCommitmentResponse, Self::Error> {
 		let trie = self.get_trie().await;
 		let packet_commitment_path = CommitmentsPath {
-			port_id: *port_id,
-			channel_id: *channel_id,
+			port_id: port_id.clone(),
+			channel_id: channel_id.clone(),
 			sequence: ibc::core::ics04_channel::packet::Sequence(seq),
 		};
 		let packet_commitment_trie_key = TrieKey::from(&packet_commitment_path);
@@ -383,8 +383,8 @@ impl IbcProvider for Client {
 	{
 		let trie = self.get_trie().await;
 		let packet_ack_path = AcksPath {
-			port_id: *port_id,
-			channel_id: *channel_id,
+			port_id: port_id.clone(),
+			channel_id: channel_id.clone(),
 			sequence: ibc::core::ics04_channel::packet::Sequence(seq),
 		};
 		let packet_ack_trie_key = TrieKey::from(&packet_ack_path);
