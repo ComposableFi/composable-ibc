@@ -3,7 +3,9 @@ name: "Build and publish Hyperspace Docker image"
 on:
   push:
     branches:
-      - '*'
+      - 'master'
+      - 'develop'
+      - 'release*'
     tags:
       - 'v*'
 
@@ -16,9 +18,7 @@ jobs:
 
     name: Build & push docker image
     
-    runs-on:
-      - self-hosted
-      - x64-monster
+    runs-on: ubuntu-latest
     
     concurrency:
       group: hyperspace-docker-image-${{ github.ref }}
