@@ -1036,7 +1036,7 @@ macro_rules! chains {
 				}
 			}
 
-			pub fn wasm_checksum(&self) -> Option<CodeHash> {
+			pub fn wasm_checksum(&self) -> Option<Checksum> {
 				let maybe_checksum = match self {
 					$(
 						$(#[$($meta)*])*
