@@ -16,7 +16,6 @@
 use crate::{
 	context::Context,
 	error::ContractError,
-	ics23::FakeInner,
 	log,
 	msg::{
 		CheckForMisbehaviourMsg,
@@ -118,17 +117,17 @@ impl grandpa_light_client_primitives::HostFunctions for HostFunctions {
 }
 
 fn process_instantiate_msg(
-	msg: InstantiateMessage<FakeInner, FakeInner, FakeInner>,
+	msg: InstantiateMessage,
 	ctx: &mut Context<HostFunctions>,
 	client_id: ClientId,
 ) -> Result<Binary, ContractError> {
-	let any = Any::decode(&mut msg.client_state.data.as_slice())?;
+	let any = Any::decode(&*msg.client_state)?;
 	let client_state = ClientState::decode_vec(&any.value)?;
-	let any = Any::decode(&mut msg.consensus_state.data.as_slice())?;
+	let any = Any::decode(&*msg.consensus_state)?;
 	let consensus_state = ConsensusState::decode_vec(&any.value)?;
 
 	let height = client_state.latest_height();
-	ctx.checksum = Some(msg.client_state.checksum);
+	ctx.checksum = Some(msg.checksum);
 	ctx.store_client_state(client_id.clone(), client_state)
 		.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 	ctx.store_consensus_state(client_id, height, consensus_state)
@@ -141,7 +140,7 @@ pub fn instantiate(
 	deps: DepsMut,
 	env: Env,
 	_info: MessageInfo,
-	msg: InstantiateMessage<FakeInner, FakeInner, FakeInner>,
+	msg: InstantiateMessage,
 ) -> Result<Response, ContractError> {
 	let mut ctx = Context::<HostFunctions>::new(deps, env);
 	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
