@@ -3,7 +3,8 @@ extern crate alloc;
 
 use alloc::rc::Rc;
 use core::{pin::Pin, str::FromStr, time::Duration};
-use ibc_storage::{PrivateStorage, SequenceTripleIdx};
+use ibc_new::core::ics04_channel::msgs::PacketMsg;
+use ibc_storage::{IbcPackets, PrivateStorage, SequenceTripleIdx};
 use ids::{ClientIdx, ConnectionIdx};
 use prost::Message;
 use trie_key::{SequencePath, TrieKey};
@@ -24,28 +25,28 @@ use error::Error;
 use ibc::{
 	core::{
 		ics02_client::{client_state::ClientType, events::UpdateClient},
-		ics04_channel::packet::Sequence,
-		ics23_commitment::commitment::{CommitmentPath, CommitmentPrefix},
+		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::{
 			identifier::{ChannelId, ClientId, ConnectionId, PortId},
-			path::{
-				ChannelEndsPath, ClientConsensusStatePath, ClientStatePath, CommitmentsPath,
-				ConnectionsPath, ReceiptsPath, AcksPath,
-			},
+			path::{AcksPath, ChannelEndsPath, CommitmentsPath},
 		},
 	},
 	events::IbcEvent,
+	timestamp::Timestamp,
 	Height,
 };
 use ibc_proto::{
 	google::protobuf::Any,
 	ibc::core::{
 		channel::v1::{
-			Channel, QueryChannelResponse, QueryNextSequenceReceiveResponse,
-			QueryPacketCommitmentResponse, QueryPacketReceiptResponse, QueryPacketAcknowledgementResponse,
+			Channel, Counterparty as ChanCounterparty, QueryChannelResponse,
+			QueryNextSequenceReceiveResponse, QueryPacketAcknowledgementResponse,
+			QueryPacketCommitmentResponse, QueryPacketReceiptResponse,
 		},
 		client::v1::{QueryClientStateResponse, QueryConsensusStateResponse},
-		connection::v1::{ConnectionEnd, QueryConnectionResponse},
+		connection::v1::{
+			ConnectionEnd, Counterparty as ConnCounterparty, QueryConnectionResponse, Version,
+		},
 	},
 };
 use instructions::AnyCheck;
@@ -62,6 +63,8 @@ use std::{
 use tendermint_rpc::Url;
 use tokio_stream::Stream;
 
+use crate::ibc_storage::{AnyConsensusState, Serialised};
+
 mod accounts;
 mod error;
 mod ibc_storage;
@@ -70,7 +73,7 @@ mod instructions;
 mod trie;
 mod trie_key;
 
-const SOLANA_IBC_STORAGE_SEED: &[u8] = b"solana_ibc_storage";
+const SOLANA_IBC_STORAGE_SEED: &[u8] = b"private";
 const TRIE_SEED: &[u8] = b"trie";
 const PACKET_STORAGE_SEED: &[u8] = b"packet";
 const CHAIN_SEED: &[u8] = b"chain";
@@ -177,7 +180,7 @@ impl Client {
 	pub fn get_chain_key(&self) -> Pubkey {
 		let chain_seeds = &[CHAIN_SEED];
 		let chain = Pubkey::find_program_address(chain_seeds, &self.program_id).0;
-		chain	
+		chain
 	}
 
 	pub async fn get_trie(&self) -> trie::AccountTrie<Vec<u8>> {
@@ -197,6 +200,13 @@ impl Client {
 		let program = self.program();
 		let ibc_storage_key = self.get_ibc_storage_key();
 		let storage = program.account(ibc_storage_key).unwrap();
+		storage
+	}
+
+	pub fn get_packet_storage(&self) -> IbcPackets {
+		let program = self.program();
+		let packet_storage_key = self.get_packet_storage_key();
+		let storage = program.account(packet_storage_key).unwrap();
 		storage
 	}
 
@@ -245,6 +255,7 @@ impl IbcProvider for Client {
 		todo!()
 	}
 
+	// WIP
 	async fn query_client_consensus(
 		&self,
 		at: Height,
@@ -261,9 +272,14 @@ impl IbcProvider for Client {
 		let (_, consensus_state_proof) = trie
 			.prove(&consensus_state_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
-		let serialized_consensus_state = storage
+		let client_store = storage
+			.clients
+			.iter()
+			.find(|&client| client.client_id.as_str() == client_id.as_str())
+			.ok_or("Client not found with the given client id".to_owned())?;
+		let serialized_consensus_state = client_store
 			.consensus_states
-			.get(&(client_id.to_string(), (revision_height, revision_number)))
+			.get(&ibc_new::Height::new(revision_number, revision_height).unwrap())
 			.ok_or(Error::Custom("No value at given key".to_owned()))?;
 		let consensus_state = Any::decode(&*borsh::to_vec(serialized_consensus_state).unwrap())?;
 		Ok(QueryConsensusStateResponse {
@@ -273,6 +289,7 @@ impl IbcProvider for Client {
 		})
 	}
 
+	// WIP
 	async fn query_client_state(
 		&self,
 		at: Height,
@@ -280,16 +297,17 @@ impl IbcProvider for Client {
 	) -> Result<QueryClientStateResponse, Self::Error> {
 		let trie = self.get_trie().await;
 		let storage = self.get_ibc_storage();
-		let client_state_path = ClientStatePath(client_id.clone());
 		let client_state_trie_key =
 			TrieKey::for_client_state(ClientIdx::from_str(client_id.as_str()).unwrap());
 		let (_, client_state_proof) = trie
 			.prove(&client_state_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
-		let serialized_client_state = storage
+		let client_store = storage
 			.clients
-			.get(&(client_id.to_string()))
-			.ok_or(Error::Custom("No value at given key".to_owned()))?;
+			.iter()
+			.find(|&client| client.client_id.as_str() == client_id.as_str())
+			.ok_or("Client not found with the given client id".to_owned())?;
+		let serialized_client_state = &client_store.client_state;
 		let client_state = Any::decode(&*borsh::to_vec(serialized_client_state).unwrap())?;
 		Ok(QueryClientStateResponse {
 			client_state: Some(client_state),
@@ -310,12 +328,44 @@ impl IbcProvider for Client {
 		let (_, connection_end_proof) = trie
 			.prove(&connection_end_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
-		let serialized_connection_end = storage
-			.clients
-			.get(&(connection_id.to_string()))
-			.ok_or(Error::Custom("No value at given key".to_owned()))?;
-		let connection_end: ConnectionEnd = serde_json::from_str(&serialized_connection_end)
-			.map_err(|_| Error::Custom("Could not deserialize connection end".to_owned()))?;
+		let serialized_connection_end =
+			storage.connections.get(usize::from(connection_idx)).ok_or(
+				"Connection not found with the given
+		client id"
+					.to_owned(),
+			)?;
+		let inner_connection_end = Serialised::get(serialized_connection_end)
+			.map_err(|_| {
+				Error::Custom(
+					"Could not
+	deserialize connection end"
+						.to_owned(),
+				)
+			})
+			.unwrap();
+		let inner_counterparty = inner_connection_end.counterparty();
+		let connection_end = ConnectionEnd {
+			client_id: inner_connection_end.client_id().to_string(),
+			versions: inner_connection_end
+				.versions()
+				.to_vec()
+				.iter()
+				.map(|version| {
+					let raw_version =
+						ibc_proto_new::ibc::core::connection::v1::Version::from(version.clone());
+					Version { identifier: raw_version.identifier, features: raw_version.features }
+				})
+				.collect(),
+			state: inner_connection_end.state.into(),
+			counterparty: Some(ConnCounterparty {
+				client_id: inner_counterparty.client_id().to_string(),
+				connection_id: inner_counterparty.connection_id.as_ref().unwrap().to_string(),
+				prefix: Some(ibc_proto::ibc::core::commitment::v1::MerklePrefix {
+					key_prefix: inner_counterparty.prefix().clone().into_vec(),
+				}),
+			}),
+			delay_period: inner_connection_end.delay_period().as_secs(),
+		};
 		Ok(QueryConnectionResponse {
 			connection: Some(connection_end),
 			proof: borsh::to_vec(&connection_end_proof).unwrap(),
@@ -337,11 +387,38 @@ impl IbcProvider for Client {
 			.prove(&channel_end_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		let serialized_channel_end = storage
-			.clients
-			.get(&(channel_id.to_string()))
+			.channel_ends
+			.get(&(port_id.to_string(), channel_id.to_string()))
 			.ok_or(Error::Custom("No value at given key".to_owned()))?;
-		let channel_end: Channel = serde_json::from_str(&serialized_channel_end)
+		let inner_channel_end = Serialised::get(serialized_channel_end)
 			.map_err(|_| Error::Custom("Could not deserialize connection end".to_owned()))?;
+		let inner_counterparty = inner_channel_end.counterparty();
+		let state = match inner_channel_end.state {
+			ibc_new::core::ics04_channel::channel::State::Uninitialized => 0,
+			ibc_new::core::ics04_channel::channel::State::Init => 1,
+			ibc_new::core::ics04_channel::channel::State::TryOpen => 2,
+			ibc_new::core::ics04_channel::channel::State::Open => 3,
+			ibc_new::core::ics04_channel::channel::State::Closed => 4,
+		};
+		let ordering = match inner_channel_end.ordering {
+			ibc_new::core::ics04_channel::channel::Order::None => 0,
+			ibc_new::core::ics04_channel::channel::Order::Unordered => 1,
+			ibc_new::core::ics04_channel::channel::Order::Ordered => 2,
+		};
+		let channel_end = Channel {
+			state,
+			ordering,
+			counterparty: Some(ChanCounterparty {
+				port_id: inner_counterparty.port_id.to_string(),
+				channel_id: inner_counterparty.channel_id.clone().unwrap().to_string(),
+			}),
+			connection_hops: inner_channel_end
+				.connection_hops
+				.iter()
+				.map(|connection_id| connection_id.to_string())
+				.collect(),
+			version: inner_channel_end.version.to_string(),
+		};
 		Ok(QueryChannelResponse {
 			channel: Some(channel_end),
 			proof: borsh::to_vec(&channel_end_proof).unwrap(),
@@ -374,7 +451,8 @@ impl IbcProvider for Client {
 		let (packet_commitment, packet_commitment_proof) = trie
 			.prove(&packet_commitment_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
-		let commitment = packet_commitment.ok_or(Error::Custom("No value at given key".to_owned()))?;
+		let commitment =
+			packet_commitment.ok_or(Error::Custom("No value at given key".to_owned()))?;
 		Ok(QueryPacketCommitmentResponse {
 			commitment: commitment.0.to_vec(),
 			proof: borsh::to_vec(&packet_commitment_proof).unwrap(),
@@ -388,8 +466,7 @@ impl IbcProvider for Client {
 		port_id: &ibc::core::ics24_host::identifier::PortId,
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		seq: u64,
-	) -> Result<QueryPacketAcknowledgementResponse, Self::Error>
-	{
+	) -> Result<QueryPacketAcknowledgementResponse, Self::Error> {
 		let trie = self.get_trie().await;
 		let packet_ack_path = AcksPath {
 			port_id: port_id.clone(),
@@ -442,30 +519,31 @@ impl IbcProvider for Client {
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		seq: u64,
 	) -> Result<QueryPacketReceiptResponse, Self::Error> {
-		let trie = self.get_trie().await;
-		let storage = self.get_ibc_storage();
-		let packet_receipt_path = ReceiptsPath {
-			port_id: port_id.clone(),
-			channel_id: channel_id.clone(),
-			sequence: Sequence(seq),
-		};
-		let packet_receipt_trie_key = TrieKey::from(&packet_receipt_path);
-		let (_, packet_receipt_proof) = trie
-			.prove(&packet_receipt_trie_key)
-			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
-		let packet_receipt_sequence = storage
-			.packet_receipt_sequence_sets
-			.get(&(port_id.to_string(), channel_id.to_string()))
-			.ok_or("No value found at given key".to_owned())?;
-		let packet_received = match packet_receipt_sequence.binary_search(&seq) {
-			Ok(_) => true,
-			Err(_) => false,
-		};
-		Ok(QueryPacketReceiptResponse {
-			received: packet_received,
-			proof: borsh::to_vec(&packet_receipt_proof).unwrap(),
-			proof_height: increment_proof_height(Some(at.into())),
-		})
+		// let trie = self.get_trie().await;
+		// let storage = self.get_ibc_storage();
+		// let packet_receipt_path = ReceiptsPath {
+		// 	port_id: port_id.clone(),
+		// 	channel_id: channel_id.clone(),
+		// 	sequence: Sequence(seq),
+		// };
+		// let packet_receipt_trie_key = TrieKey::from(&packet_receipt_path);
+		// let (_, packet_receipt_proof) = trie
+		// 	.prove(&packet_receipt_trie_key)
+		// 	.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
+		// let packet_receipt_sequence = storage
+		// 	.packet_receipt_sequence_sets
+		// 	.get(&(port_id.to_string(), channel_id.to_string()))
+		// 	.ok_or("No value found at given key".to_owned())?;
+		// let packet_received = match packet_receipt_sequence.binary_search(&seq) {
+		// 	Ok(_) => true,
+		// 	Err(_) => false,
+		// };
+		// Ok(QueryPacketReceiptResponse {
+		// 	received: packet_received,
+		// 	proof: borsh::to_vec(&packet_receipt_proof).unwrap(),
+		// 	proof_height: increment_proof_height(Some(at.into())),
+		// })
+		todo!()
 	}
 
 	async fn latest_height_and_timestamp(
@@ -476,30 +554,32 @@ impl IbcProvider for Client {
 
 	async fn query_packet_commitments(
 		&self,
-		at: Height,
+		_at: Height,
 		channel_id: ibc::core::ics24_host::identifier::ChannelId,
 		port_id: ibc::core::ics24_host::identifier::PortId,
 	) -> Result<Vec<u64>, Self::Error> {
-		let storage = self.get_ibc_storage();
-		let packet_commitment_sequence = storage
-			.packet_commitment_sequence_sets
-			.get(&(port_id.to_string(), channel_id.to_string()))
-			.ok_or("No value found at given key".to_owned())?;
-		Ok(packet_commitment_sequence.clone())
+		// let storage = self.get_ibc_storage();
+		// let packet_commitment_sequence = storage
+		// 	.packet_commitment_sequence_sets
+		// 	.get(&(port_id.to_string(), channel_id.to_string()))
+		// 	.ok_or("No value found at given key".to_owned())?;
+		// Ok(packet_commitment_sequence.clone())
+		todo!()
 	}
 
 	async fn query_packet_acknowledgements(
 		&self,
-		at: Height,
+		_at: Height,
 		channel_id: ibc::core::ics24_host::identifier::ChannelId,
 		port_id: ibc::core::ics24_host::identifier::PortId,
 	) -> Result<Vec<u64>, Self::Error> {
-		let storage = self.get_ibc_storage();
-		let packet_acknowledgement_sequence = storage
-			.packet_acknowledgement_sequence_sets
-			.get(&(port_id.to_string(), channel_id.to_string()))
-			.ok_or("No value found at given key".to_owned())?;
-		Ok(packet_acknowledgement_sequence.clone())
+		// let storage = self.get_ibc_storage();
+		// let packet_acknowledgement_sequence = storage
+		// 	.packet_acknowledgement_sequence_sets
+		// 	.get(&(port_id.to_string(), channel_id.to_string()))
+		// 	.ok_or("No value found at given key".to_owned())?;
+		// Ok(packet_acknowledgement_sequence.clone())
+		todo!()
 	}
 
 	async fn query_unreceived_packets(
@@ -509,20 +589,21 @@ impl IbcProvider for Client {
 		port_id: ibc::core::ics24_host::identifier::PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error> {
-		let storage = self.get_ibc_storage();
-		let packet_receipt_sequences = storage
-			.packet_receipt_sequence_sets
-			.get(&(port_id.to_string(), channel_id.to_string()))
-			.ok_or("No value found at given key".to_owned())?;
-		Ok(seqs
-			.iter()
-			.flat_map(|&seq| {
-				match packet_receipt_sequences.iter().find(|&&receipt_seq| receipt_seq == seq) {
-					Some(_) => None,
-					None => Some(seq),
-				}
-			})
-			.collect())
+		// let storage = self.get_ibc_storage();
+		// let packet_receipt_sequences = storage
+		// 	.packet_receipt_sequence_sets
+		// 	.get(&(port_id.to_string(), channel_id.to_string()))
+		// 	.ok_or("No value found at given key".to_owned())?;
+		// Ok(seqs
+		// 	.iter()
+		// 	.flat_map(|&seq| {
+		// 		match packet_receipt_sequences.iter().find(|&&receipt_seq| receipt_seq == seq) {
+		// 			Some(_) => None,
+		// 			None => Some(seq),
+		// 		}
+		// 	})
+		// 	.collect())
+		todo!()
 	}
 
 	async fn query_unreceived_acknowledgements(
@@ -532,18 +613,19 @@ impl IbcProvider for Client {
 		port_id: ibc::core::ics24_host::identifier::PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error> {
-		let storage = self.get_ibc_storage();
-		let packet_ack_sequences = storage
-			.packet_acknowledgement_sequence_sets
-			.get(&(port_id.to_string(), channel_id.to_string()))
-			.ok_or("No value found at given key".to_owned())?;
-		Ok(seqs
-			.iter()
-			.flat_map(|&seq| match packet_ack_sequences.iter().find(|&&ack_seq| ack_seq == seq) {
-				Some(_) => None,
-				None => Some(seq),
-			})
-			.collect())
+		// let storage = self.get_ibc_storage();
+		// let packet_ack_sequences = storage
+		// 	.packet_acknowledgement_sequence_sets
+		// 	.get(&(port_id.to_string(), channel_id.to_string()))
+		// 	.ok_or("No value found at given key".to_owned())?;
+		// Ok(seqs
+		// 	.iter()
+		// 	.flat_map(|&seq| match packet_ack_sequences.iter().find(|&&ack_seq| ack_seq == seq) {
+		// 		Some(_) => None,
+		// 		None => Some(seq),
+		// 	})
+		// 	.collect())
+		todo!()
 	}
 
 	fn channel_whitelist(
@@ -578,7 +660,89 @@ impl IbcProvider for Client {
 		port_id: ibc::core::ics24_host::identifier::PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<ibc_rpc::PacketInfo>, Self::Error> {
-		todo!()
+		let packet_storage = self.get_packet_storage();
+		let packets = packet_storage.0;
+		let sent_packets: Vec<ibc_rpc::PacketInfo> = packets
+			.iter()
+			.filter_map(|packet| match packet {
+				ibc_new::core::ics04_channel::msgs::PacketMsg::Recv(recv_packet) => {
+					let packet = &recv_packet.packet;
+					let does_seq_exist = seqs.binary_search(&u64::from(packet.seq_on_a)).is_ok();
+					if packet.chan_id_on_a.to_string() != channel_id.to_string() ||
+						packet.port_id_on_a.to_string() != port_id.to_string() ||
+						!does_seq_exist
+					{
+						None
+					} else {
+						let timeout_height = match packet.timeout_height_on_b {
+							ibc_new::core::ics04_channel::timeout::TimeoutHeight::Never =>
+								ibc_proto::ibc::core::client::v1::Height {
+									revision_height: 0,
+									revision_number: 0,
+								},
+							ibc_new::core::ics04_channel::timeout::TimeoutHeight::At(height) =>
+								ibc_proto::ibc::core::client::v1::Height {
+									revision_height: height.revision_height(),
+									revision_number: height.revision_number(),
+								},
+						};
+						let packet_info = ibc_rpc::PacketInfo {
+							height: Some(recv_packet.proof_height_on_a.revision_height()),
+							sequence: u64::from(packet.seq_on_a),
+							source_port: packet.port_id_on_a.to_string(),
+							source_channel: packet.chan_id_on_a.to_string(),
+							destination_port: packet.port_id_on_b.to_string(),
+							destination_channel: packet.chan_id_on_b.to_string(),
+							channel_order: String::from("IDK"),
+							data: packet.data.clone(),
+							timeout_height,
+							timeout_timestamp: packet.timeout_timestamp_on_b.nanoseconds(),
+							ack: None,
+						};
+						Some(packet_info)
+					}
+				},
+				ibc_new::core::ics04_channel::msgs::PacketMsg::Ack(ack_packet) => {
+					let packet = &ack_packet.packet;
+					let does_seq_exist = seqs.binary_search(&u64::from(packet.seq_on_a)).is_ok();
+					if packet.chan_id_on_a.to_string() != channel_id.to_string() ||
+						packet.port_id_on_a.to_string() != port_id.to_string() ||
+						!does_seq_exist
+					{
+						None
+					} else {
+						let timeout_height = match packet.timeout_height_on_b {
+							ibc_new::core::ics04_channel::timeout::TimeoutHeight::Never =>
+								ibc_proto::ibc::core::client::v1::Height {
+									revision_height: 0,
+									revision_number: 0,
+								},
+							ibc_new::core::ics04_channel::timeout::TimeoutHeight::At(height) =>
+								ibc_proto::ibc::core::client::v1::Height {
+									revision_height: height.revision_height(),
+									revision_number: height.revision_number(),
+								},
+						};
+						let packet_info = ibc_rpc::PacketInfo {
+							height: Some(ack_packet.proof_height_on_b.revision_height()),
+							sequence: u64::from(packet.seq_on_a),
+							source_port: packet.port_id_on_a.to_string(),
+							source_channel: packet.chan_id_on_a.to_string(),
+							destination_port: packet.port_id_on_b.to_string(),
+							destination_channel: packet.chan_id_on_b.to_string(),
+							channel_order: String::from("IDK"),
+							data: packet.data.clone(),
+							timeout_height,
+							timeout_timestamp: packet.timeout_timestamp_on_b.nanoseconds(),
+							ack: Some(ack_packet.acknowledgement.as_ref().to_vec()),
+						};
+						Some(packet_info)
+					}
+				},
+				_ => None,
+			})
+			.collect();
+		Ok(sent_packets)
 	}
 
 	fn expected_block_time(&self) -> Duration {
@@ -591,7 +755,30 @@ impl IbcProvider for Client {
 		client_id: ClientId,
 		client_height: Height,
 	) -> Result<(Height, ibc::timestamp::Timestamp), Self::Error> {
-		todo!()
+		let storage = self.get_ibc_storage();
+		let client_store = storage
+			.clients
+			.iter()
+			.find(|&client| client.client_id.as_str() == client_id.as_str())
+			.ok_or("Client not found with the given client id".to_owned())?;
+		let inner_client_height =
+			ibc_new::Height::new(client_height.revision_number, client_height.revision_height)
+				.unwrap();
+		let height = client_store
+			.processed_heights
+			.get(&inner_client_height)
+			.ok_or("No host height found with the given height".to_owned())?;
+		let timestamp = client_store
+			.processed_times
+			.get(&inner_client_height)
+			.ok_or("No timestamp found with the given height".to_owned())?;
+		Ok((
+			Height {
+				revision_height: height.revision_height(),
+				revision_number: height.revision_number(),
+			},
+			Timestamp::from_nanoseconds(*timestamp).unwrap(),
+		))
 	}
 
 	async fn query_host_consensus_state_proof(
@@ -658,8 +845,10 @@ impl IbcProvider for Client {
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
 		let storage = self.get_ibc_storage();
-		let client_ids: Vec<ClientId> = BTreeMap::keys(&storage.clients)
-			.map(|client_id| ClientId::from_str(client_id).unwrap())
+		let client_ids: Vec<ClientId> = storage
+			.clients
+			.iter()
+			.map(|client| ClientId::from_str(&client.client_id.to_string()).unwrap())
 			.collect();
 		Ok(client_ids)
 	}
@@ -894,4 +1083,30 @@ fn increment_proof_height(
 		revision_height: height.revision_height + 1,
 		..height
 	})
+}
+
+#[test]
+pub fn test_storage_deserialization() {
+	println!("How is this test, do you like it?");
+	let authority = Rc::new(Keypair::new());
+	let client = AnchorClient::new_with_options(
+		Cluster::Localnet,
+		authority.clone(),
+		CommitmentConfig::processed(),
+	);
+	let program = client.program(ID).unwrap();
+
+	let storage = Pubkey::find_program_address(&[SOLANA_IBC_STORAGE_SEED], &ID).0;
+	println!("THis is the sotrage key {} {}", storage, ID);
+	let solana_ibc_storage_account: PrivateStorage = program.account(storage).unwrap();
+	println!("This is the storage account {:?} {}", solana_ibc_storage_account, ID);
+	let serialized_consensus_state = solana_ibc_storage_account.clients[0]
+		.consensus_states
+		.get(&ibc_new::Height::new(0, 1).unwrap())
+		.ok_or(Error::Custom("No value at given key".to_owned()))
+		.unwrap();
+	let serialized_connection_end = &solana_ibc_storage_account.connections[0];
+	let connection_end = ibc_storage::Serialised::get(serialized_connection_end).unwrap();
+	let in_vec = serialized_consensus_state.try_to_vec().unwrap();
+	println!("This is invec {:?}", in_vec);
 }

@@ -1,25 +1,39 @@
 use alloc::collections::BTreeMap;
 use anchor_lang::prelude::*;
 use borsh::{BorshDeserialize, BorshSerialize};
-use ibc::core::ics04_channel::packet::Sequence;
+use ibc_new::{
+	core::{
+		ics02_client::error::ClientError,
+		ics04_channel::{msgs::PacketMsg, packet::Sequence, channel::ChannelEnd},
+		ics24_host::identifier::ClientId, ics03_connection::connection::ConnectionEnd,
+	},
+	Height,
+};
+use ibc_new::clients::ics07_tendermint::consensus_state::ConsensusState as TmConsensusState;
+use ibc_new::clients::ics07_tendermint::client_state::ClientState as TmClientState;
+use borsh::maybestd::io;
+use lib::hash::CryptoHash;
+use crate::ids;
 
-pub type InnerHeight = (u64, u64);
-pub type HostHeight = InnerHeight;
+type Result<T, E = anchor_lang::error::Error> = core::result::Result<T, E>;
+
 pub type SolanaTimestamp = u64;
-pub type InnerClientId = String;
-pub type InnerConnectionId = String;
 pub type InnerPortId = String;
 pub type InnerChannelId = String;
-pub type InnerSequence = u64;
-pub type InnerIbcEvent = Vec<u8>;
-pub type InnerClient = String; // Serialized
-pub type InnerConnectionEnd = String; // Serialized
-pub type InnerChannelEnd = String; // Serialized
-pub type InnerConsensusState = String; // Serialized
+
+#[derive(Clone, Debug, PartialEq, derive_more::From, derive_more::TryInto)]
+pub enum AnyClientState {
+    Tendermint(TmClientState),
+}
+
+#[derive(Clone, Debug, PartialEq, derive_more::From, derive_more::TryInto)]
+pub enum AnyConsensusState {
+    Tendermint(TmConsensusState),
+}
 
 /// A triple of send, receive and acknowledge sequences.
 #[derive(Clone, Debug, Default, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
-pub struct InnerSequenceTriple {
+pub struct SequenceTriple {
 	sequences: [u64; 3],
 	mask: u8,
 }
@@ -31,7 +45,7 @@ pub enum SequenceTripleIdx {
 	Ack = 2,
 }
 
-impl InnerSequenceTriple {
+impl SequenceTriple {
 	/// Returns sequence at given index or `None` if it wasn’t set yet.
 	pub fn get(&self, idx: SequenceTripleIdx) -> Option<Sequence> {
 		if self.mask & (1 << (idx as u32)) == 1 {
@@ -62,48 +76,104 @@ impl InnerSequenceTriple {
 	}
 }
 
-// #[derive(Debug, AnchorSerialize, AnchorDeserialize)]
+#[derive(Clone, Debug, borsh::BorshSerialize, borsh::BorshDeserialize)]
+pub struct ClientStore {
+    pub client_id: ClientId,
+    pub connection_id: Option<ids::ConnectionIdx>,
+
+    pub client_state: Serialised<AnyClientState>,
+    pub consensus_states: BTreeMap<Height, Serialised<AnyConsensusState>>,
+    pub processed_times: BTreeMap<Height, SolanaTimestamp>,
+    pub processed_heights: BTreeMap<Height, Height>,
+}
+
 #[account]
-/// All the structs from IBC are stored as String since they dont implement AnchorSerialize and
-/// AnchorDeserialize
+#[derive(Debug)]
+pub struct IbcPackets(pub Vec<ibc_new::core::ics04_channel::msgs::PacketMsg>);
+
+#[account]
+#[derive(Debug)]
+/// The private IBC storage, i.e. data which doesn’t require proofs.
 pub struct PrivateStorage {
-	pub height: InnerHeight,
-	pub clients: BTreeMap<InnerClientId, InnerClient>,
-	/// The client ids of the clients.
-	pub client_id_set: Vec<InnerClientId>,
-	pub client_counter: u64,
-	pub client_processed_times: BTreeMap<InnerClientId, BTreeMap<InnerHeight, SolanaTimestamp>>,
-	pub client_processed_heights: BTreeMap<InnerClientId, BTreeMap<InnerHeight, HostHeight>>,
-	pub consensus_states: BTreeMap<(InnerClientId, InnerHeight), InnerConsensusState>,
-	/// This collection contains the heights corresponding to all consensus states of
-	/// all clients stored in the contract.
-	pub client_consensus_state_height_sets: BTreeMap<InnerClientId, Vec<InnerHeight>>,
-	/// The connection ids of the connections.
-	pub connection_id_set: Vec<InnerConnectionId>,
-	pub connection_counter: u64,
-	pub connections: BTreeMap<InnerConnectionId, InnerConnectionEnd>,
-	pub channel_ends: BTreeMap<(InnerPortId, InnerChannelId), InnerChannelEnd>,
-	// Contains the client id corresponding to the connectionId
-	pub connection_to_client: BTreeMap<InnerConnectionId, InnerClientId>,
-	/// The port and channel id tuples of the channels.
-	pub port_channel_id_set: Vec<(InnerPortId, InnerChannelId)>,
-	pub channel_counter: u64,
+    /// Per-client information.
+    ///
+    /// Entry at index `N` corresponds to the client with IBC identifier
+    /// `client-<N>`.
+    pub clients: Vec<ClientStore>,
 
-	/// Next send, receive and ack sequence for given (port, channel).
-	///
-	/// We’re storing all three sequences in a single object to reduce amount of
-	/// different maps we need to maintain.  This saves us on the amount of
-	/// trie nodes we need to maintain.
-	pub next_sequence: BTreeMap<(InnerPortId, InnerChannelId), InnerSequenceTriple>,
+    /// Information about the counterparty on given connection.
+    ///
+    /// Entry at index `N` corresponds to the connection with IBC identifier
+    /// `connection-<N>`.
+    pub connections: Vec<Serialised<ConnectionEnd>>,
 
-	/// The sequence numbers of the packet commitments.
-	pub packet_commitment_sequence_sets:
-		BTreeMap<(InnerPortId, InnerChannelId), Vec<InnerSequence>>,
-	/// The sequence numbers of the packet receipts.
-	pub packet_receipt_sequence_sets: BTreeMap<(InnerPortId, InnerChannelId), Vec<InnerSequence>>,
-	/// The sequence numbers of the packet acknowledgements.
-	pub packet_acknowledgement_sequence_sets:
-		BTreeMap<(InnerPortId, InnerChannelId), Vec<InnerSequence>>,
-	/// The history of IBC events.
-	pub ibc_events_history: BTreeMap<InnerHeight, Vec<InnerIbcEvent>>,
+    pub channel_ends:
+        BTreeMap<(InnerPortId, InnerChannelId), Serialised<ChannelEnd>>,
+    pub channel_counter: u64,
+
+    /// The sequence numbers of the packet commitments.
+    pub packet_commitment_sequence_sets:
+        BTreeMap<(InnerPortId, InnerChannelId), Vec<Sequence>>,
+    /// The sequence numbers of the packet acknowledgements.
+    pub packet_acknowledgement_sequence_sets:
+        BTreeMap<(InnerPortId, InnerChannelId), Vec<Sequence>>,
+
+    /// Next send, receive and ack sequence for given (port, channel).
+    ///
+    /// We’re storing all three sequences in a single object to reduce amount of
+    /// different maps we need to maintain.  This saves us on the amount of
+    /// trie nodes we need to maintain.
+    pub next_sequence: BTreeMap<(InnerPortId, InnerChannelId), SequenceTriple>,
+}
+
+#[derive(Clone, Default, Debug)]
+pub struct Serialised<T>(Vec<u8>, core::marker::PhantomData<T>);
+
+impl<T> Serialised<T> {
+    pub fn empty() -> Self { Self(Vec::new(), core::marker::PhantomData) }
+
+    pub fn as_bytes(&self) -> &[u8] { self.0.as_slice() }
+
+    pub fn digest(&self) -> CryptoHash { CryptoHash::digest(self.0.as_slice()) }
+
+    fn make_err(err: io::Error) -> ClientError {
+        ClientError::ClientSpecific { description: err.to_string() }
+    }
+}
+
+impl<T: borsh::BorshSerialize> Serialised<T> {
+    pub fn new(value: &T) -> Result<Self, ClientError> {
+        borsh::to_vec(value)
+            .map(|data| Self(data, core::marker::PhantomData))
+            .map_err(Self::make_err)
+    }
+
+    pub fn set(&mut self, value: &T) -> Result<&mut Self, ClientError> {
+        *self = Self::new(value)?;
+        Ok(self)
+    }
+}
+
+impl<T: borsh::BorshDeserialize> Serialised<T> {
+    pub fn get(&self) -> Result<T, ClientError> {
+        T::try_from_slice(self.0.as_slice()).map_err(Self::make_err)
+    }
+}
+
+impl<T> borsh::BorshSerialize for Serialised<T> {
+    fn serialize<W: io::Write>(&self, wr: &mut W) -> io::Result<()> {
+        u16::try_from(self.0.len())
+            .map_err(|_| io::ErrorKind::InvalidData.into())
+            .and_then(|len| len.serialize(wr))?;
+        wr.write_all(self.0.as_slice())
+    }
+}
+
+impl<T> borsh::BorshDeserialize for Serialised<T> {
+    fn deserialize_reader<R: io::Read>(rd: &mut R) -> io::Result<Self> {
+        let len = u16::deserialize_reader(rd)?.into();
+        let mut data = vec![0; len];
+        rd.read_exact(data.as_mut_slice())?;
+        Ok(Self(data, core::marker::PhantomData))
+    }
 }
