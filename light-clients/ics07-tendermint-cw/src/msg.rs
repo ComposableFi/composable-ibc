@@ -180,7 +180,7 @@ impl TryFrom<VerifyClientMessageRaw> for VerifyClientMessage {
 
 impl VerifyClientMessage {
 	fn decode_client_message(raw: Bytes) -> Result<ClientMessage, ContractError> {
-		let any = Any::decode(&*raw)?;
+		let any = Any::decode(&mut raw.as_slice())?;
 		let client_message = match &*any.type_url {
 			TENDERMINT_HEADER_TYPE_URL => ClientMessage::Header(Header::decode_vec(&any.value)?),
 			TENDERMINT_MISBEHAVIOUR_TYPE_URL => ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value)?),
@@ -365,7 +365,7 @@ impl TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUpdateStateM
 	type Error = ContractError;
 
 	fn try_from(raw: VerifyUpgradeAndUpdateStateMsgRaw) -> Result<Self, Self::Error> {
-		let any = Any::decode(&*raw.upgrade_client_state)?;
+		let any = Any::decode(&mut raw.upgrade_client_state.as_slice())?;
 		let upgrade_client_state: ics07_tendermint::client_state::ClientState<HostFunctions> =
 			ClientState::decode_vec(&any.value)?;
 		if upgrade_client_state.trust_level != TrustThreshold::ZERO ||

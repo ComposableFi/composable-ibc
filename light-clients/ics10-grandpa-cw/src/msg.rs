@@ -199,7 +199,7 @@ impl TryFrom<VerifyClientMessageRaw> for VerifyClientMessage {
 
 impl VerifyClientMessage {
 	fn decode_client_message(raw: Bytes) -> Result<ClientMessage, ContractError> {
-		let any = Any::decode(&*raw)?;
+		let any = Any::decode(&mut raw.as_slice())?;
 		let client_message = match &*any.type_url {
 			GRANDPA_HEADER_TYPE_URL => ClientMessage::Header(Header::decode_vec(&any.value)?),
 			GRANDPA_MISBEHAVIOUR_TYPE_URL => ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value)?),
@@ -382,9 +382,9 @@ impl<H: Clone> TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUp
 	type Error = ContractError;
 
 	fn try_from(raw: VerifyUpgradeAndUpdateStateMsgRaw) -> Result<Self, Self::Error> {
-		let any = Any::decode(&*raw.upgrade_client_state)?;
+		let any = Any::decode(&mut raw.upgrade_client_state.as_slice())?;
 		let upgrade_client_state = ClientState::decode_vec(&any.value)?;
-		let any = Any::decode(&*raw.upgrade_consensus_state)?;
+		let any = Any::decode(&mut raw.upgrade_consensus_state.as_slice())?;
 		let upgrade_consensus_state = ConsensusState::decode_vec(&any.value)?;
 		Ok(VerifyUpgradeAndUpdateStateMsg {
 			upgrade_client_state,

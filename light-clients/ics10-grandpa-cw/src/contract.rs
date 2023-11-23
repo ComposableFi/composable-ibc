@@ -121,9 +121,9 @@ fn process_instantiate_msg(
 	ctx: &mut Context<HostFunctions>,
 	client_id: ClientId,
 ) -> Result<Binary, ContractError> {
-	let any = Any::decode(&*msg.client_state)?;
+	let any = Any::decode(&mut msg.client_state.as_slice())?;
 	let client_state = ClientState::decode_vec(&any.value)?;
-	let any = Any::decode(&*msg.consensus_state)?;
+	let any = Any::decode(&mut msg.consensus_state.as_slice())?;
 	let consensus_state = ConsensusState::decode_vec(&any.value)?;
 
 	let height = client_state.latest_height();
