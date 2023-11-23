@@ -40,6 +40,7 @@ use ibc::{
 		ics03_connection::msgs::{
 			conn_open_ack::MsgConnectionOpenAck, conn_open_try::MsgConnectionOpenTry,
 		},
+		ics04_channel::packet::Sequence,
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
@@ -73,11 +74,13 @@ use primitives::{
 	MisbehaviourHandler, UpdateType,
 };
 use serde::{Deserialize, Serialize};
-use std::{pin::Pin, time::Duration};
+use std::{
+	pin::Pin,
+	sync::{Arc, Mutex},
+	time::Duration,
+};
 use tendermint_proto::Protobuf;
 use thiserror::Error;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {

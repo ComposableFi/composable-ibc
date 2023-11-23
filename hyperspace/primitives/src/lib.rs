@@ -54,7 +54,7 @@ use ibc::{
 		ics04_channel::{
 			channel::{ChannelEnd, Order},
 			context::calculate_block_delay,
-			packet::Packet,
+			packet::{Packet, Sequence},
 		},
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
@@ -307,6 +307,7 @@ pub trait IbcProvider {
 		at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
+		next_send_seq: Sequence,
 	) -> Result<Vec<u64>, Self::Error>;
 
 	/// Given a list of counterparty packet commitments, the querier checks if the packet
@@ -356,6 +357,15 @@ pub trait IbcProvider {
 		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Self::Error>;
+
+	/// Query next send packet sequence
+	/// This represents the next sequence that will be used when sending a packet
+	async fn query_next_send_sequence(
+		&self,
+		at: Height,
+		channel_id: ChannelId,
+		port_id: PortId,
+	) -> Result<Sequence, Self::Error>;
 
 	/// Query received packets with their acknowledgement
 	/// This represents packets for which the `ReceivePacket` and `WriteAcknowledgement` events were
@@ -654,20 +664,29 @@ pub async fn query_undelivered_acks(
 			.ok_or_else(|| Error::Custom("ChannelEnd not could not be decoded".to_string()))?,
 	)
 	.map_err(|e| Error::Custom(e.to_string()))?;
+	let counterparty_channel_id = channel_end
+		.counterparty()
+		.channel_id
+		.ok_or_else(|| Error::Custom("Expected counterparty channel id".to_string()))?;
+	let counterparty_port_id = channel_end.counterparty().port_id.clone();
+
+	let next_send_seq = sink
+		.query_next_send_sequence(
+			sink_height,
+			counterparty_channel_id,
+			counterparty_port_id.clone(),
+		)
+		.await?;
+
 	// First we fetch all packet acknowledgements from source
 	let seqs = source
-		.query_packet_acknowledgements(source_height, channel_id, port_id.clone())
+		.query_packet_acknowledgements(source_height, channel_id, port_id.clone(), next_send_seq)
 		.await?;
 	log::trace!(
 		target: "hyperspace",
 		"Found {} packet acks from {} chain",
 		seqs.len(), source.name()
 	);
-	let counterparty_channel_id = channel_end
-		.counterparty()
-		.channel_id
-		.ok_or_else(|| Error::Custom("Expected counterparty channel id".to_string()))?;
-	let counterparty_port_id = channel_end.counterparty().port_id.clone();
 
 	let mut undelivered_acks = sink
 		.query_unreceived_acknowledgements(

@@ -239,6 +239,8 @@ pub async fn query_ready_and_timed_out_packets(
 				    log::info!("sink_height = {sink_height:?}, timeout_height = {:?}", packet.timeout_height);
 
 					if packet.timed_out(&sink_timestamp, sink_height) {
+						return Ok(None)
+						/*
 						timeout_packets_count.fetch_add(1, Ordering::SeqCst);
 						// so we know this packet has timed out on the sink, we need to find the maximum
 						// consensus state height at which we can generate a non-membership proof of the
@@ -291,6 +293,7 @@ pub async fn query_ready_and_timed_out_packets(
 						)
 							.await?;
 						return Ok(Some(Left(msg)))
+						 */
 					} else {
 						log::trace!(target: "hyperspace", "The packet has not timed out yet: {:?}", packet);
 					}

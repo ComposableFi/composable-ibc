@@ -68,6 +68,7 @@ use crate::{
 		client_state_from_abi_token, consensus_state_from_abi_token, tm_header_from_abi_token,
 	},
 	prove::prove_fast,
+	utils::{create_intervals, SEQUENCES_PER_ITER},
 };
 use ibc::{
 	applications::transfer::{Amount, BaseDenom, PrefixedCoin, PrefixedDenom, TracePath},
@@ -1447,28 +1448,35 @@ impl IbcProvider for EthereumClient {
 		port_id: PortId,
 	) -> Result<Vec<u64>, Self::Error> {
 		let start_seq = 0u64;
-		let end_seq = 255u64;
-		let binding = self
-			.yui
-			.method(
-				"hasCommitments",
-				(port_id.as_str().to_owned(), channel_id.to_string(), start_seq, end_seq),
-			)
-			.map_err(|err| {
-				ClientError::Other(format!("contract is missing hasCommitments {}", err))
-			})?;
+		let end_seq = self
+			.query_next_send_sequence(at, channel_id.clone(), port_id.clone())
+			.await?
+			.0
+			.saturating_sub(1);
 
-		let bitmap: U256 = binding
-			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
-			.call()
-			.await
-			.map_err(|err| {
-				ClientError::Other(format!("failed to query_packet_commitments: {}", err))
-			})?;
 		let mut seqs = vec![];
-		for i in 0..256u64 {
-			if bitmap.bit(i as _).into() {
-				seqs.push(start_seq + i);
+		for (start, end) in create_intervals(start_seq, end_seq) {
+			let binding = self
+				.yui
+				.method(
+					"hasCommitments",
+					(port_id.as_str().to_owned(), channel_id.to_string(), start, end),
+				)
+				.map_err(|err| {
+					ClientError::Other(format!("contract is missing hasCommitments {}", err))
+				})?;
+
+			let bitmap: U256 = binding
+				.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+				.call()
+				.await
+				.map_err(|err| {
+					ClientError::Other(format!("failed to query_packet_commitments: {}", err))
+				})?;
+			for i in 0..SEQUENCES_PER_ITER {
+				if bitmap.bit(i as _).into() {
+					seqs.push(start + i);
+				}
 			}
 		}
 
@@ -1481,35 +1489,61 @@ impl IbcProvider for EthereumClient {
 		Ok(seqs)
 	}
 
+	async fn query_next_send_sequence(
+		&self,
+		at: Height,
+		channel_id: ChannelId,
+		port_id: PortId,
+	) -> Result<Sequence, Self::Error> {
+		let binding = self
+			.yui
+			.method("getNextSequenceSend", (port_id.as_str().to_owned(), channel_id.to_string()))
+			.map_err(|err| {
+				ClientError::Other(format!("contract is missing hasCommitments {}", err))
+			})?;
+
+		let next_sequence: U256 = binding
+			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+			.call()
+			.await
+			.map_err(|err| {
+				ClientError::Other(format!("failed to query_packet_commitments: {}", err))
+			})?;
+		Ok(Sequence(next_sequence.as_u64()))
+	}
+
 	async fn query_packet_acknowledgements(
 		&self,
 		at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
+		next_send_seq: Sequence,
 	) -> Result<Vec<u64>, Self::Error> {
 		let start_seq = 0u64;
-		let end_seq = 255u64;
-		let binding = self
-			.yui
-			.method(
-				"hasAcknowledgements",
-				(port_id.as_str().to_owned(), channel_id.to_string(), start_seq, end_seq),
-			)
-			.map_err(|err| {
-				ClientError::Other(format!("contract is missing hasAcknowledgements {}", err))
-			})?;
-
-		let bitmap: U256 = binding
-			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
-			.call()
-			.await
-			.map_err(|err| {
-				ClientError::Other(format!("failed to query_packet_acknowledgements: {}", err))
-			})?;
+		let end_seq = next_send_seq.0;
 		let mut seqs = vec![];
-		for i in 0..256u64 {
-			if bitmap.bit(i as _).into() {
-				seqs.push(start_seq + i);
+		for (start, end) in create_intervals(start_seq, end_seq) {
+			let binding = self
+				.yui
+				.method(
+					"hasAcknowledgements",
+					(port_id.as_str().to_owned(), channel_id.to_string(), start, end),
+				)
+				.map_err(|err| {
+					ClientError::Other(format!("contract is missing hasAcknowledgements {}", err))
+				})?;
+
+			let bitmap: U256 = binding
+				.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
+				.call()
+				.await
+				.map_err(|err| {
+					ClientError::Other(format!("failed to query_packet_acknowledgements: {}", err))
+				})?;
+			for i in 0..SEQUENCES_PER_ITER {
+				if bitmap.bit(i as _).into() {
+					seqs.push(start + i);
+				}
 			}
 		}
 

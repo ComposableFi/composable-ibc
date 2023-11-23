@@ -41,6 +41,8 @@ use std::{
 
 pub type ProviderImpl = ethers::prelude::SignerMiddleware<Provider<Http>, LocalWallet>;
 
+pub const SEQUENCES_PER_ITER: u64 = 256;
+
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
 pub enum FacetCutAction {
@@ -967,6 +969,19 @@ pub fn handle_gas_usage(receipt: &TransactionReceipt) {
 	} else {
 		info!("GAS: {} (2)", receipt.gas_used.unwrap());
 	}
+}
+
+pub fn create_intervals(start: u64, end: u64) -> Vec<(u64, u64)> {
+	let mut intervals = Vec::new();
+	let mut current_start = start;
+
+	while current_start <= end {
+		let current_end = std::cmp::min(current_start + SEQUENCES_PER_ITER - 1, end);
+		intervals.push((current_start, current_end));
+		current_start = current_end + 1;
+	}
+
+	intervals
 }
 
 pub struct Header {

@@ -23,6 +23,7 @@ use ibc::{
 	applications::transfer::{Amount, PrefixedCoin, PrefixedDenom},
 	core::{
 		ics02_client::client_state::{ClientState, ClientType},
+		ics04_channel::packet::Sequence,
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
@@ -385,6 +386,7 @@ where
 		at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
+		_next_send_seq: Sequence,
 	) -> Result<Vec<u64>, Self::Error> {
 		let res = IbcApiClient::<u32, H256, <T as light_client_common::config::Config>::AssetId>::query_packet_acknowledgements(
 			&*self.para_ws_client,
@@ -486,6 +488,15 @@ where
 			.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?;
 
 		Ok(response)
+	}
+
+	async fn query_next_send_sequence(
+		&self,
+		_at: Height,
+		_channel_id: ChannelId,
+		_port_id: PortId,
+	) -> Result<Sequence, Self::Error> {
+		todo!("parachain query_next_send_sequence")
 	}
 
 	async fn query_received_packets(

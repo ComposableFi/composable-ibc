@@ -23,7 +23,7 @@ use ibc::{
 			identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 			path::{
 				AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath,
-				CommitmentsPath, ConnectionsPath, Path, ReceiptsPath, SeqRecvsPath,
+				CommitmentsPath, ConnectionsPath, Path, ReceiptsPath, SeqRecvsPath, SeqSendsPath,
 			},
 		},
 	},
@@ -529,6 +529,7 @@ where
 		_at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
+		_next_send_seq: Sequence,
 	) -> Result<Vec<u64>, Self::Error> {
 		log::debug!(
 			target: "hyperspace_cosmos",
@@ -722,6 +723,23 @@ where
 			}
 		}
 		Ok(block_events)
+	}
+
+	async fn query_next_send_sequence(
+		&self,
+		at: Height,
+		channel_id: ChannelId,
+		port_id: PortId,
+	) -> Result<Sequence, Self::Error> {
+		let path_bytes = Path::SeqSends(SeqSendsPath(port_id, channel_id)).to_string().into_bytes();
+		let (query_result, _) = self.query_path(path_bytes, at, true).await?;
+		let next_sequence_send = u64::from_be_bytes(
+			query_result
+				.value
+				.try_into()
+				.map_err(|_| Error::Custom("invalid next_sequence_send value".to_owned()))?,
+		);
+		Ok(Sequence(next_sequence_send))
 	}
 
 	async fn query_received_packets(
