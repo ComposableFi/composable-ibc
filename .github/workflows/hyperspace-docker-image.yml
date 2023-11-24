@@ -3,7 +3,7 @@ name: "Build and publish Hyperspace Docker image"
 on:
   push:
     branches:
-      - master
+      - partial-mbp
 
 jobs:
   build-and-publish:
