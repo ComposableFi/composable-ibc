@@ -139,11 +139,8 @@ pub async fn hyperspace_ethereum_client_fixture(
 		None
 	};
 
-	let jwt_secret_path = if !USE_GETH {
-		None
-	} else {
-		Some("/Users/vmark/work/eth-pos-devnet/execution/jwtsecret".to_string())
-	};
+	let jwt_secret_path =
+		if !USE_GETH { None } else { Some("../eth-pos-devnet/execution/jwtsecret".to_string()) };
 
 	EthereumClientConfig {
 		http_rpc_url: endpoint.parse().unwrap(),
