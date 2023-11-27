@@ -14,7 +14,7 @@ RUN cargo build --release --locked -p hyperspace
 
 # =============
 
-FROM debian:buster-slim
+FROM debian:bullseye
 
 RUN useradd -m -u 1000 -U -s /bin/sh -d /centauri centauri
 
