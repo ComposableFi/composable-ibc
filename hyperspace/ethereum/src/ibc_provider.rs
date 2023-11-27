@@ -103,7 +103,6 @@ use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusSt
 use primitives::mock::LocalClientTypes;
 use sync_committee_primitives::types::LightClientState;
 use tokio::time::sleep;
-use tracing::log;
 
 pub const INDEXER_DELAY_BLOCKS: u64 = 1;
 
