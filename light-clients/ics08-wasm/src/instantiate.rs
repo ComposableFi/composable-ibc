@@ -1,4 +1,5 @@
 use crate::Bytes;
+use crate::msg::Base64;
 #[cfg(feature = "cosmwasm")]
 use cosmwasm_schema::cw_serde;
 
