@@ -239,6 +239,9 @@ pub async fn query_ready_and_timed_out_packets(
 				    log::info!("sink_height = {sink_height:?}, timeout_height = {:?}", packet.timeout_height);
 
 					if packet.timed_out(&sink_timestamp, sink_height) {
+						source.common_state().ignored_timeouted_sequences.lock().await.insert(
+							packet.sequence.0
+						);
 						return Ok(None)
 						/*
 						timeout_packets_count.fetch_add(1, Ordering::SeqCst);

@@ -35,7 +35,7 @@ use std::{
 	fmt::Debug,
 	pin::Pin,
 	str::FromStr,
-	sync::{Arc, Mutex},
+	sync::{Arc, Mutex, RwLock},
 	time::Duration,
 };
 use tokio::{sync::Mutex as AsyncMutex, task::JoinSet, time::sleep};
@@ -133,6 +133,7 @@ pub struct CommonClientState {
 	pub initial_rpc_call_delay: Duration,
 	pub misbehaviour_client_msg_queue: Arc<AsyncMutex<Vec<AnyClientMessage>>>,
 	pub max_packets_to_process: usize,
+	pub ignored_timeouted_sequences: Arc<AsyncMutex<HashSet<u64>>>,
 }
 
 impl Default for CommonClientState {
@@ -145,6 +146,7 @@ impl Default for CommonClientState {
 			initial_rpc_call_delay: rpc_call_delay,
 			misbehaviour_client_msg_queue: Arc::new(Default::default()),
 			max_packets_to_process: 100,
+			ignored_timeouted_sequences: Arc::new(Default::default()),
 		}
 	}
 }
@@ -615,12 +617,15 @@ pub async fn query_undelivered_sequences(
 	)
 	.map_err(|e| Error::Custom(e.to_string()))?;
 	// First we fetch all packet commitments from source
+	let ignored_timeouts = source.common_state().ignored_timeouted_sequences.lock().await;
 	let seqs = source
 		.query_packet_commitments(source_height, channel_id, port_id.clone())
 		.await?
 		.into_iter()
+		.filter(|seq| !ignored_timeouts.contains(seq))
 		.collect::<Vec<_>>();
 	log::trace!(target: "hyperspace", "Seqs: {:?}", seqs);
+
 	let counterparty_channel_id = channel_end
 		.counterparty()
 		.channel_id

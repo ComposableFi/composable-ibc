@@ -17,7 +17,7 @@ use EthereumClientAbi::*;
 
 sol!(
 	EthereumClientAbi,
-	"/home/elnegro/centauri-private/hyperspace/ethereum/src/abi/ethereum-client-abi.json"
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ethereum-client-abi.json"
 );
 
 impl HeightData {

@@ -5,9 +5,9 @@ use ethers::{
 	prelude::{coins_bip39::English, LocalWallet, MnemonicBuilder, Signer},
 };
 use std::{
-	fmt::{Display, Formatter},
+	fmt::{Debug, Display, Formatter},
 	str::FromStr,
-	sync::Arc,
+	sync::{Arc, Mutex},
 };
 
 use crate::{
@@ -20,7 +20,7 @@ use crate::{
 	},
 	utils::{DeployYuiIbc, ProviderImpl},
 };
-use ethers::types::Address;
+use ethers::{types::Address, utils::AnvilInstance};
 use ethers_providers::{Http, Middleware, Provider};
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
@@ -87,7 +87,7 @@ where
 	de.deserialize_str(AddressFromStr).map(Some)
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct EthereumClientConfig {
 	/// HTTP URL for RPC
 	#[serde(deserialize_with = "uri_de", serialize_with = "uri_se")]
@@ -143,6 +143,38 @@ pub struct EthereumClientConfig {
 	pub jwt_secret_path: Option<String>,
 	pub indexer_pg_url: String,
 	pub indexer_redis_url: String,
+	#[serde(skip)]
+	pub anvil: Option<Arc<Mutex<AnvilInstance>>>,
+}
+
+impl Debug for EthereumClientConfig {
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("EthereumClientConfig")
+			.field("http_rpc_url", &self.http_rpc_url)
+			.field("ws_rpc_url", &self.ws_rpc_url)
+			.field("beacon_rpc_url", &self.beacon_rpc_url)
+			.field("mnemonic", &self.mnemonic)
+			.field("private_key", &self.private_key)
+			.field("private_key_path", &self.private_key_path)
+			.field("max_block_weight", &self.max_block_weight)
+			.field("name", &self.name)
+			.field("client_id", &self.client_id)
+			.field("connection_id", &self.connection_id)
+			.field("channel_whitelist", &self.channel_whitelist)
+			.field("commitment_prefix", &self.commitment_prefix)
+			.field("wasm_code_id", &self.wasm_code_id)
+			.field("diamond_address", &self.diamond_address)
+			.field("tendermint_address", &self.tendermint_address)
+			.field("ics20_transfer_bank_address", &self.ics20_transfer_bank_address)
+			.field("ics20_bank_address", &self.ics20_bank_address)
+			.field("diamond_facets", &self.diamond_facets)
+			.field("yui", &self.yui)
+			.field("client_type", &self.client_type)
+			.field("jwt_secret_path", &self.jwt_secret_path)
+			.field("indexer_pg_url", &self.indexer_pg_url)
+			.field("indexer_redis_url", &self.indexer_redis_url)
+			.finish()
+	}
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, strum::EnumString)]

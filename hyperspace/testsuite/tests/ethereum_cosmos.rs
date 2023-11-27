@@ -27,7 +27,7 @@ use hyperspace_ethereum::{
 	ibc_provider::{Ics20BankAbi, SendPacketFilter},
 	mock::{
 		utils,
-		utils::{hyperspace_ethereum_client_fixture, ETH_NODE_PORT},
+		utils::{hyperspace_ethereum_client_fixture, ETH_NODE_PORT, USE_GETH},
 	},
 	utils::{check_code_size, deploy_contract, DeployYuiIbc, ProviderImpl},
 };
@@ -42,10 +42,15 @@ use hyperspace_testsuite::{
 use ibc::core::{ics23_commitment::specs::ProofSpecs, ics24_host::identifier::PortId};
 use log::info;
 use sp_core::hashing::sha2_256;
-use std::{future::Future, path::PathBuf, str::FromStr, sync::Arc};
+use std::{
+	future::Future,
+	path::PathBuf,
+	str::FromStr,
+	sync::{Arc, Mutex},
+};
 use tokio::time::sleep;
 
-const USE_CONFIG: bool = true;
+const USE_CONFIG: bool = false;
 const SAVE_TO_CONFIG: bool = true;
 
 #[derive(Debug, Clone)]
@@ -99,7 +104,7 @@ pub async fn deploy_yui_ibc_and_tendermint_client_fixture() -> DeployYuiIbcTende
 		hyperspace_ethereum::utils::compile_yui(&path, "contracts/diamond");
 	let project_output1 = hyperspace_ethereum::utils::compile_yui(&path, "contracts/clients");
 	let (anvil, client) = utils::spawn_anvil().await;
-	log::warn!("{}", anvil.endpoint());
+	log::warn!("endpoint: {}, chain id: {}", anvil.endpoint(), anvil.chain_id());
 	let mut yui_ibc = hyperspace_ethereum::utils::deploy_yui_ibc(
 		&project_output,
 		&diamond_project_output,
@@ -127,6 +132,7 @@ pub async fn deploy_yui_ibc_and_tendermint_client_fixture() -> DeployYuiIbcTende
 	)
 	.await;
 
+	sleep(Duration::from_secs(10)).await;
 	let _ = yui_ibc
 		.register_client("07-tendermint", tendermint_light_client.address())
 		.await;
@@ -214,6 +220,11 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		)
 		.await;
 		config_a.tendermint_address = tendermint_address;
+		if !USE_GETH {
+			config_a.ws_rpc_url = anvil.ws_endpoint().parse().unwrap();
+		}
+		config_a.anvil = Some(Arc::new(Mutex::new(anvil)));
+
 		if SAVE_TO_CONFIG {
 			let config_path = PathBuf::from_str("../../config/ethereum-local.toml").unwrap();
 			let config_a_str = toml::to_string_pretty(&config_a).unwrap();

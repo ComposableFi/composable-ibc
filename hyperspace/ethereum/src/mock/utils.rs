@@ -42,7 +42,7 @@ pub fn yui_ibc_solidity_path() -> PathBuf {
 
 #[track_caller]
 pub async fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http>, LocalWallet>>) {
-	let anvil = Anvil::new().spawn();
+	let anvil = Anvil::new().port(8545u16).spawn();
 	println!("{:?}", std::env::current_dir().unwrap());
 	let wallet: LocalWallet = if USE_GETH {
 		LocalWallet::decrypt_keystore(
@@ -174,5 +174,6 @@ pub async fn hyperspace_ethereum_client_fixture(
 		jwt_secret_path,
 		indexer_pg_url: db_url.parse().unwrap(),
 		indexer_redis_url: redis_url.parse().unwrap(),
+		anvil: None,
 	}
 }

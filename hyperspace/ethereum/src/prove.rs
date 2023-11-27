@@ -5,6 +5,7 @@ use ethers::{
 	core::{rand, rand::Rng},
 	prelude::{EthCall, H256},
 };
+use ethers_providers::Middleware;
 use icsxx_ethereum::{client_message::Header, client_state::ClientState};
 use log::{error, info};
 use pallet_ibc::light_clients::HostFunctionsManager;
@@ -29,6 +30,7 @@ use sync_committee_prover::{
 use sync_committee_verifier::verify_sync_committee_attestation;
 use tokio::{task::JoinSet, time, time::sleep};
 
+#[cfg(not(feature = "no_beacon"))]
 pub async fn prove_fast(
 	client: &EthereumClient,
 	eth_client_state: &ClientState<HostFunctionsManager>,
@@ -145,6 +147,86 @@ pub async fn prove_fast(
 	};
 	light_client_update.attested_header.slot = block_header.slot;
 	light_client_update.finalized_header.slot = block_header.slot;
+
+	Ok(Header { inner: light_client_update, ancestor_blocks })
+}
+
+#[cfg(feature = "no_beacon")]
+pub async fn prove_fast(
+	client: &EthereumClient,
+	eth_client_state: &ClientState<HostFunctionsManager>,
+	_block_number: u64,
+	_up_to: u64,
+) -> Result<Header, ClientError> {
+	let client = client.client();
+	let to_block = client
+		.get_block_number()
+		.await
+		.map_err(|e| ClientError::Other(format!("failed to get block number: {:?}", e)))?
+		.as_u64();
+	let from_block = eth_client_state.latest_height as u64 + 1;
+	// let ep = block.body.execution_payload;
+	let latest_block = client
+		.get_block(to_block)
+		.await
+		.map_err(|e| ClientError::Other(format!("failed to get block {}: {:?}", to_block, e)))?
+		.expect("block not found");
+	// let block_header = latest_block.header;
+	let execution_payload_proof = ExecutionPayloadProof {
+		state_root: latest_block.state_root,
+		block_number: latest_block.number.unwrap().as_u64(),
+		multi_proof: vec![],
+		execution_payload_branch: vec![],
+		timestamp: latest_block.timestamp.as_u64(),
+	};
+	let mut ancestor_blocks = vec![];
+	for n in from_block..to_block {
+		let block = client
+			.get_block(n)
+			.await
+			.map_err(|e| ClientError::Other(format!("failed to get block {}: {:?}", n, e)))
+			.expect("block not found")
+			.expect("block not found");
+		ancestor_blocks.push(AncestorBlock {
+			header: BeaconBlockHeader {
+				slot: block.number.unwrap().as_u64(),
+				proposer_index: 0,
+				parent_root: Node(block.parent_hash.0),
+				state_root: Node(block.state_root.0),
+				body_root: Node::default(),
+			},
+			execution_payload: ExecutionPayloadProof {
+				state_root: block.state_root,
+				block_number: block.number.unwrap().as_u64(),
+				multi_proof: vec![],
+				execution_payload_branch: vec![],
+				timestamp: block.timestamp.as_u64(),
+			},
+			ancestry_proof: AncestryProof::BlockRoots {
+				block_roots_proof: BlockRootsProof {
+					block_header_index: 0,
+					block_header_branch: vec![],
+				},
+				block_roots_branch: vec![],
+			},
+		});
+	}
+	let mut light_client_update = LightClientUpdate {
+		attested_header: Default::default(),
+		sync_committee_update: Default::default(),
+		finalized_header: BeaconBlockHeader {
+			slot: latest_block.number.unwrap().as_u64(),
+			proposer_index: 0,
+			parent_root: Node(latest_block.parent_hash.0),
+			state_root: Node(latest_block.state_root.0),
+			body_root: Node::default(),
+		},
+		execution_payload: execution_payload_proof,
+		finality_proof: Default::default(),
+		sync_aggregate: Default::default(),
+		signature_slot: Default::default(),
+	};
+	light_client_update.attested_header.slot = latest_block.number.unwrap().as_u64();
 
 	Ok(Header { inner: light_client_update, ancestor_blocks })
 }

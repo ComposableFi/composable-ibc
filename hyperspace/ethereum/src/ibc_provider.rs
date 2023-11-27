@@ -61,7 +61,8 @@ use crate::{
 };
 use futures::{FutureExt, Stream, StreamExt};
 use log::info;
-use ssz_rs::Merkleized;
+use ssz_rs::{Merkleized, Node};
+use sync_committee_primitives::consensus_types::BeaconBlockHeader;
 
 use crate::{
 	chain::{
@@ -665,12 +666,22 @@ impl IbcProvider for EthereumClient {
 		let latest_cp_client_height = client_state.latest_height().revision_height;
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		let latest_revision = latest_height.revision_number;
-		let prover = self.prover();
-		let block = prover.fetch_block("head").await?;
-		let block_to = (client_state.inner.finalized_header.slot +
-			NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER)
-			.min(block.slot);
-		let number = block.body.execution_payload.block_number;
+		let block_to;
+		let number;
+		#[cfg(not(feature = "no_beacon"))]
+		{
+			let prover = self.prover();
+			let block = prover.fetch_block("head").await?;
+			block_to = (client_state.inner.finalized_header.slot +
+				NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER)
+				.min(block.slot);
+			number = block.body.execution_payload.block_number;
+		}
+		#[cfg(feature = "no_beacon")]
+		{
+			number = self.client().get_block_number().await?.as_u64();
+			block_to = number;
+		}
 		let from = latest_cp_client_height + 1;
 		let to = number
 			.min(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER / 2)
@@ -1420,9 +1431,23 @@ impl IbcProvider for EthereumClient {
 
 	async fn latest_height_and_timestamp(&self) -> Result<(Height, Timestamp), Self::Error> {
 		// TODO: fix latest_height_and_timestamp in basic builds
-		let prover = self.prover();
-		let block = prover.fetch_block("head").await?;
-		let number = block.body.execution_payload.block_number.saturating_sub(INDEXER_DELAY_BLOCKS);
+		let number;
+		#[cfg(not(feature = "no_beacon"))]
+		{
+			let prover = self.prover();
+			let block = prover.fetch_block("head").await?;
+			number = block.body.execution_payload.block_number.saturating_sub(INDEXER_DELAY_BLOCKS);
+		}
+		#[cfg(feature = "no_beacon")]
+		{
+			number = self
+				.client()
+				.get_block_number()
+				.await
+				.map_err(|err| ClientError::Other(format!("failed to get block number: {}", err)))?
+				.as_u64();
+		}
+
 		let height = Height::new(0, number.into());
 		let block = self
 			.client()
@@ -2200,6 +2225,7 @@ impl IbcProvider for EthereumClient {
 		Ok(false)
 	}
 
+	#[cfg(not(feature = "no_beacon"))]
 	async fn initialize_client_state(
 		&self,
 	) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
@@ -2276,6 +2302,65 @@ impl IbcProvider for EthereumClient {
 			.into(),
 			root: CommitmentRoot { bytes: execution_header.state_root.to_vec() },
 			// root: CommitmentRoot { bytes: block.state_root.0.to_vec() },
+		});
+
+		Ok((client_state, consensus_state))
+	}
+
+	#[cfg(feature = "no_beacon")]
+	async fn initialize_client_state(
+		&self,
+	) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
+		let client = self.client();
+		let block_number = client
+			.get_block_number()
+			.await
+			.map_err(|err| {
+				ClientError::Other(format!(
+					"failed to get block number in initialize_client_state: {}",
+					err
+				))
+			})?
+			.as_u64();
+		let block = client
+			.get_block(BlockId::Number(BlockNumber::Number(block_number.into())))
+			.await
+			.map_err(|err| ClientError::MiddlewareError(err))?
+			.ok_or(ClientError::Other(format!("not able to find a block : {block_number}")))?;
+
+		let client_state = LightClientState {
+			finalized_header: BeaconBlockHeader {
+				slot: block_number,
+				proposer_index: 0,
+				parent_root: Default::default(),
+				state_root: Node(block.state_root.0),
+				body_root: Node(block.state_root.0),
+			},
+			latest_finalized_epoch: 0,
+			current_sync_committee: Default::default(),
+			next_sync_committee: Default::default(),
+		};
+
+		let client_state = AnyClientState::Ethereum(ClientState {
+			inner: client_state,
+			frozen_height: None,
+			latest_height: block_number as _,
+			_phantom: Default::default(),
+		});
+
+		let consensus_state = AnyConsensusState::Ethereum(ConsensusState {
+			timestamp: tendermint::time::Time::from_unix_timestamp(
+				block.timestamp.as_u64() as i64,
+				0,
+			)
+			.map_err(|err| {
+				ClientError::Other(format!(
+					"failed to get timestamp in initialize_client_state: {}, timestamp{}",
+					err, block.timestamp
+				))
+			})?
+			.into(),
+			root: CommitmentRoot { bytes: block.state_root.0.to_vec() },
 		});
 
 		Ok((client_state, consensus_state))
