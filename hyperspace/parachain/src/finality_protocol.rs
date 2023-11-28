@@ -55,7 +55,6 @@ use std::{
 	time::Duration,
 };
 
-use beefy_prover::helpers::unsafe_arc_cast;
 use grandpa_prover::{
 	GrandpaJustification, GrandpaProver, JustificationNotification, PROCESS_BLOCKS_BATCH_SIZE,
 };

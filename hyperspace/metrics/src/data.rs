@@ -174,7 +174,7 @@ impl Metrics {
 			number_of_received_acknowledge_packets: register(
 				Counter::with_opts(
 					Opts::new(
-						format!("hyperspace_number_of_acknowledge_packet_events"),
+						"hyperspace_number_of_acknowledge_packet_events".to_string(),
 						"Total number of 'acknowledge packet' events.",
 					)
 					.const_label("name", prefix.to_string()),
@@ -184,7 +184,7 @@ impl Metrics {
 			number_of_received_timeouts: register(
 				Counter::with_opts(
 					Opts::new(
-						format!("hyperspace_number_of_timeout_packet_events"),
+						"hyperspace_number_of_timeout_packet_events".to_string(),
 						"Total number of 'timeout packet' events.",
 					)
 					.const_label("name", prefix.to_string()),
@@ -196,7 +196,7 @@ impl Metrics {
 			number_of_sent_packets: register(
 				Counter::with_opts(
 					Opts::new(
-						format!("hyperspace_number_of_sent_packets"),
+						"hyperspace_number_of_sent_packets".to_string(),
 						"Total number of sent packets",
 					)
 					.const_label("name", prefix.to_string()),
@@ -206,7 +206,7 @@ impl Metrics {
 			number_of_sent_acknowledgments: register(
 				Counter::with_opts(
 					Opts::new(
-						format!("hyperspace_number_of_sent_acknowledgments"),
+						"hyperspace_number_of_sent_acknowledgments".to_string(),
 						"Total number of sent acknowledgments",
 					)
 					.const_label("name", prefix.to_string()),
@@ -216,7 +216,7 @@ impl Metrics {
 			number_of_sent_timeout_packets: register(
 				Counter::with_opts(
 					Opts::new(
-						format!("hyperspace_number_of_timed_out_packets"),
+						"hyperspace_number_of_timed_out_packets".to_string(),
 						"Total number of timed out packets",
 					)
 					.const_label("name", prefix.to_string()),
@@ -226,7 +226,7 @@ impl Metrics {
 			number_of_undelivered_packets: register(
 				Gauge::with_opts(
 					Opts::new(
-						format!("hyperspace_number_of_undelivered_packets"),
+						"hyperspace_number_of_undelivered_packets".to_string(),
 						"Number of undelivered packets over time",
 					)
 					.const_label("name", prefix.to_string()),
@@ -236,7 +236,7 @@ impl Metrics {
 			number_of_undelivered_acknowledgements: register(
 				Gauge::with_opts(
 					Opts::new(
-						format!("hyperspace_number_of_undelivered_acknowledgements"),
+						"hyperspace_number_of_undelivered_acknowledgements".to_string(),
 						"Number of undelivered acknowledgements over time",
 					)
 					.const_label("name", prefix.to_string()),
@@ -246,7 +246,7 @@ impl Metrics {
 			gas_cost_for_sent_tx_bundle: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_gas_cost_for_sent_tx_bundle"),
+						"hyperspace_gas_cost_for_sent_tx_bundle".to_string(),
 						"Gas cost for every sent tx bundle",
 					)
 					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
@@ -257,7 +257,7 @@ impl Metrics {
 			transaction_length_for_sent_tx_bundle: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_transaction_length_for_sent_tx_bundle"),
+						"hyperspace_transaction_length_for_sent_tx_bundle".to_string(),
 						"Transaction length for every sent tx bundle",
 					)
 					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
@@ -269,7 +269,7 @@ impl Metrics {
 			send_packet_event_time: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_send_packet_event_time"),
+						"hyperspace_send_packet_event_time".to_string(),
 						"Time it takes to process a 'send packet' event",
 					)
 					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
@@ -280,7 +280,7 @@ impl Metrics {
 			receive_packet_event_time: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_receive_packet_event_time"),
+						"hyperspace_receive_packet_event_time".to_string(),
 						"Time it takes to process a 'receive packet' event",
 					)
 					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
@@ -291,7 +291,7 @@ impl Metrics {
 			acknowledge_packet_event_time: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_acknowledge_packet_event_time"),
+						"hyperspace_acknowledge_packet_event_time".to_string(),
 						"Time it takes to process a 'acknowledge packet' event",
 					)
 					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
@@ -302,7 +302,7 @@ impl Metrics {
 			sent_packet_time: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_sent_packet_time"),
+						"hyperspace_sent_packet_time".to_string(),
 						"Time it takes to send and receive a packet",
 					)
 					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
@@ -313,7 +313,7 @@ impl Metrics {
 			sent_acknowledgment_time: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_sent_acknowledgment_time"),
+						"hyperspace_sent_acknowledgment_time".to_string(),
 						"Time it takes to send and receive an acknowledgment",
 					)
 					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
@@ -324,7 +324,7 @@ impl Metrics {
 			sent_timeout_packet_time: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_sent_timeout_packet_time"),
+						"hyperspace_sent_timeout_packet_time".to_string(),
 						"Time it takes to send and receive a timeout packet",
 					)
 					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
@@ -335,7 +335,7 @@ impl Metrics {
 			sent_update_client_time: register(
 				Histogram::with_opts(
 					HistogramOpts::new(
-						format!("hyperspace_sent_update_client_time"),
+						"hyperspace_sent_update_client_time".to_string(),
 						"Average time between client updates",
 					)
 					.buckets(vec![1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0])
@@ -346,7 +346,7 @@ impl Metrics {
 			latest_processed_height: register(
 				Gauge::with_opts(
 					Opts::new(
-						format!("hyperspace_latest_processed_height"),
+						"hyperspace_latest_processed_height".to_string(),
 						"Latest processed finalized height",
 					)
 					.const_label("name", prefix.to_string()),

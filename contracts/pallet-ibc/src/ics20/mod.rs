@@ -54,7 +54,7 @@ pub struct IbcModule<T: Config>(PhantomData<T>);
 
 impl<T: Config> Default for IbcModule<T> {
 	fn default() -> Self {
-		Self(PhantomData::default())
+		Self(PhantomData)
 	}
 }
 
@@ -468,7 +468,7 @@ pub struct WeightHandler<T: Config>(PhantomData<T>);
 
 impl<T: Config> Default for WeightHandler<T> {
 	fn default() -> Self {
-		Self(PhantomData::default())
+		Self(PhantomData)
 	}
 }
 
@@ -640,27 +640,26 @@ pub enum MemoType {
 impl Forward {
 	pub fn get_memo(&self) -> Result<MemoType, Ics20Error> {
 		if self.substrate.unwrap_or_default() {
-			let xcm = MemoXcm { receiver: self.receiver.clone(), para_id: self.para_id.clone() };
+			let xcm = MemoXcm { receiver: self.receiver.clone(), para_id: self.para_id };
 			return Ok(MemoType::XCM(xcm))
 		}
-		let ibc =
-			MemoIbc {
-				receiver: self.receiver.clone(),
-				port: self
-					.port
-					.clone()
-					.ok_or(Ics20Error::implementation_specific("Failed to get port".to_string()))?,
-				channel: self.channel.clone().ok_or(Ics20Error::implementation_specific(
-					"Failed to get channel".to_string(),
-				))?,
-				timeout: self.timeout.clone().ok_or(Ics20Error::implementation_specific(
-					"Failed to get timeout".to_string(),
-				))?,
-				retries: self.retries.clone().ok_or(Ics20Error::implementation_specific(
-					"Failed to get retries".to_string(),
-				))?,
-			};
-		return Ok(MemoType::IBC(ibc))
+		Ok(MemoType::IBC(MemoIbc {
+			receiver: self.receiver.clone(),
+			port: self
+				.port
+				.clone()
+				.ok_or(Ics20Error::implementation_specific("Failed to get port".to_string()))?,
+			channel: self
+				.channel
+				.clone()
+				.ok_or(Ics20Error::implementation_specific("Failed to get channel".to_string()))?,
+			timeout: self
+				.timeout
+				.ok_or(Ics20Error::implementation_specific("Failed to get timeout".to_string()))?,
+			retries: self
+				.retries
+				.ok_or(Ics20Error::implementation_specific("Failed to get retries".to_string()))?,
+		}))
 	}
 }
 
@@ -800,7 +799,7 @@ where
 						to: account_to.clone(),
 						para_id: memo_forward.para_id,
 						amount,
-						asset_id: asset_id.clone().into(),
+						asset_id: asset_id.clone(),
 					});
 					Ics20Error::implementation_specific(
 						"Faield to execute SubstrateMultihopXcmHandler::transfer_xcm.".to_string(),
@@ -812,7 +811,7 @@ where
 					to: account_to.clone(),
 					para_id: memo_forward.para_id,
 					amount,
-					asset_id: asset_id.clone().into(),
+					asset_id: asset_id.clone(),
 				});
 
 				return Ok(())
