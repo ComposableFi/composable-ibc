@@ -161,8 +161,8 @@ pub fn instantiate(
 	_info: MessageInfo,
 	msg: InstantiateMessage<FakeInner, FakeInner, FakeInner>,
 ) -> Result<Response, ContractError> {
+	let client_id = ClientId::from_str(env.contract.address.as_str()).expect("client id is valid");
 	let mut ctx = Context::<HostFunctions>::new(deps, env);
-	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
 	let data = process_instantiate_msg(msg, &mut ctx, client_id.clone())?;
 	let mut response = Response::default();
 	response.data = Some(data);
@@ -175,8 +175,8 @@ pub fn sudo(
 	msg: SudoMsg,
 ) -> Result<Response, ContractError> {
 	let client = TendermintClient::<HostFunctions>::default();
+	let client_id = ClientId::from_str(env.contract.address.as_str()).expect("client id is valid");
 	let mut ctx = Context::<HostFunctions>::new(deps, env);
-	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
 	let data = process_message(msg, client, &mut ctx, client_id)?;
 	let mut response = Response::default();
 	response.data = Some(data);
@@ -244,7 +244,7 @@ fn process_message(
 				.and_then(|(cs, cu)| {
 					let height = cs.latest_height();
 					ctx.store_consensus_state_prefixed(height, cu, SUBJECT_PREFIX);
-					ctx.store_client_state_prefixed(cs, SUBJECT_PREFIX)
+					ctx.store_client_state_prefixed(cs, SUBJECT_PREFIX, client_id)
 						.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 					Ok(to_binary(&ContractResult::success()))
 				}),
@@ -321,7 +321,7 @@ fn process_message(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
-	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
+	let client_id = ClientId::from_str(env.contract.address.as_str()).expect("client id is valid");
 	match msg {
 		QueryMsg::CheckForMisbehaviour(msg) => {
 			let ctx = Context::<HostFunctions>::new_ro(deps, env);
@@ -342,7 +342,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 			to_binary(&QueryResponse::success().genesis_metadata(ro_proceeded_state.get_metadata()))
 		},
 		QueryMsg::Status(StatusMsg {}) => {
-			let client_state = match get_client_state::<HostFunctions>(deps) {
+			let client_state = match get_client_state::<HostFunctions>(deps, client_id.clone()) {
 				Ok(client_state) => client_state,
 				Err(_) => return to_binary(&QueryResponse::success().status("Unknown".to_string())),
 			};

@@ -161,6 +161,7 @@ where
 		&mut self,
 		client_state: ClientState<H>,
 		prefix: &[u8],
+		client_id: ClientId,
 	) -> Result<(), ContractError> {
 		use prost::Message;
 		use tendermint_proto::Protobuf;
@@ -169,7 +170,7 @@ where
 			None => {
 				let encoded_wasm_client_state = client_states.get_prefixed(prefix).ok_or_else(|| {
 					ContractError::Tendermint(
-						Error::client_not_found(ClientId::new("x", 1).unwrap()).to_string(),
+						Error::client_not_found(client_id).to_string(),
 					)
 				})?;
 				let any = Any::decode(&*encoded_wasm_client_state)

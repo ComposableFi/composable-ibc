@@ -20,7 +20,6 @@ use crate::{
 		ClientStates, ConsensusStates, FakeInner, ReadonlyClientStates, ReadonlyClients,
 		ReadonlyConsensusStates,
 	},
-	log,
 };
 use grandpa_light_client_primitives::HostFunctions;
 use ibc::{
@@ -206,7 +205,7 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientKeeper for Context<'
 
 	fn store_consensus_state(
 		&mut self,
-		client_id: ClientId,
+		_client_id: ClientId,
 		height: Height,
 		consensus_state: Self::AnyConsensusState,
 	) -> Result<(), Error> {

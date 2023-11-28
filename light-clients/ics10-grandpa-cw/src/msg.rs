@@ -105,10 +105,6 @@ impl ContractResult {
 		Self { heights: None }
 	}
 
-	pub fn error(msg: String) -> Self {
-		Self { heights: None }
-	}
-
 	pub fn heights(mut self, heights: Vec<Height>) -> Self {
 		self.heights = Some(heights);
 		self
