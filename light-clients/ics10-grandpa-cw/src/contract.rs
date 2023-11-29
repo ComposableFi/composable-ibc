@@ -30,7 +30,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use core::hash::Hasher;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, StdError};
 use cw_storage_plus::{Item, Map};
 use digest::Digest;
 use grandpa_light_client_primitives::justification::AncestryChain;
@@ -333,7 +333,7 @@ fn process_message(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
 	match msg {
 		QueryMsg::ClientTypeMsg(_) => unimplemented!("ClientTypeMsg"),
@@ -351,7 +351,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 			} else {
 				let height = client_state.latest_height();
 				match get_consensus_state(deps, &client_id, height) {
-					Ok(_) => to_binary(&QueryResponse::status("Active".to_string())),
+					Ok(consensus_state_raw) => {
+						let consensus_state = Context::<HostFunctions>::decode_consensus_state(&consensus_state_raw).map_err(|e|StdError::serialize_err(e.to_string(), e.to_string()))?;
+						if client_state.expired(core::time::Duration::from_secs(env.block.time.seconds() - consensus_state.timestamp.unix_timestamp() as u64)) {
+							return to_binary(&QueryResponse::status("Expired".to_string()));
+						}
+						to_binary(&QueryResponse::status("Active".to_string()))
+					},
 					Err(_) => to_binary(&QueryResponse::status("Expired".to_string())),
 				}
 			}
@@ -432,4 +438,67 @@ pub extern "C" fn ext_hashing_twox_64_version_1(data: i64) -> i32 {
 	twox_64_into(data, hash.as_mut());
 	let out_ptr = Box::leak(hash).as_ptr();
 	out_ptr as i32
+}
+
+
+#[cfg(test)]
+mod tests {
+    use cosmwasm_std::from_binary;
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+	use tendermint::Time;
+	use ibc::core::ics02_client::client_state::ClientState as _;
+
+    use crate::ics23::ClientStates;
+
+    use super::*;
+    #[test]
+    fn test_query() {
+
+		let mut deps = mock_dependencies();
+        let env = mock_env();
+
+		
+		for (expected, offset) in [("Active", 0i64), ("Expired", env.block.time.seconds() as i64 - 10), ("Frozen", 0i64)] {
+			let mut client_state = ics10_grandpa::client_state::ClientState::<HostFunctions>::default();
+			let mut consensus_state = ics10_grandpa::consensus_state::ConsensusState::new(vec![], Time::from_unix_timestamp(0, 0).unwrap());
+			let height = Height { revision_number: 0, revision_height: 1000};
+			client_state.latest_para_height = height.revision_height as _;
+
+			
+			consensus_state.timestamp = Time::from_unix_timestamp(env.block.time.seconds() as i64 - offset, 0).unwrap();
+			let deps_mut = deps.as_mut();
+			let mut client_states = ClientStates::new(deps_mut.storage);
+			if expected == "Frozen" {
+				let height = Height { revision_number: 0, revision_height: height.revision_height - 100};
+				client_state = client_state.with_frozen_height(height.clone()).unwrap();
+			}
+			
+			client_states.insert(client_state.encode_to_vec().unwrap());
+			
+			let mut context = Context::new(deps_mut, env.clone());
+			context.store_client_state(ClientId::default(), client_state).unwrap();
+			context.store_consensus_state(ClientId::default(), height , consensus_state).unwrap();
+	
+			let resp = query(
+				deps.as_ref(),
+				mock_env(),
+				QueryMsg::Status(StatusMsg{})
+			).unwrap();
+	
+			instantiate(
+				deps.as_mut(),
+				env.clone(),
+				mock_info("sender", &[]),
+				InstantiateMsg {  } ,
+			)
+			.unwrap();
+	
+			let resp: QueryResponse = from_binary(&resp).unwrap();
+	
+			assert_eq!(
+				resp,
+				QueryResponse::status(expected.to_string())            
+			);
+		}
+   }
 }
