@@ -29,10 +29,7 @@ use ibc_proto::{google::protobuf::Any, ibc::core::client::v1::Height as HeightRa
 use ics07_tendermint::{
 	client_message::{ClientMessage, Header, Misbehaviour, TENDERMINT_HEADER_TYPE_URL, TENDERMINT_MISBEHAVIOUR_TYPE_URL},
 	client_state::ClientState,
-};
-use ics08_wasm::{
-	client_state::ClientState as WasmClientState,
-	consensus_state::ConsensusState as WasmConsensusState,
+	consensus_state::ConsensusState,
 };
 use prost::Message;
 use serde::{Deserializer, Serializer};
@@ -354,9 +351,14 @@ pub struct VerifyUpgradeAndUpdateStateMsgRaw {
 	pub proof_upgrade_consensus_state: Bytes,
 }
 
+#[cw_serde]
 pub struct VerifyUpgradeAndUpdateStateMsg {
-	pub upgrade_client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
-	pub upgrade_consensus_state: WasmConsensusState<FakeInner>,
+	#[schemars(with = "String")]
+	#[serde(with = "Base64", default)]
+	pub upgrade_client_state: Bytes,
+	#[schemars(with = "String")]
+	#[serde(with = "Base64", default)]
+	pub upgrade_consensus_state: Bytes,
 	pub proof_upgrade_client: CommitmentProofBytes,
 	pub proof_upgrade_consensus_state: CommitmentProofBytes,
 }
@@ -368,6 +370,9 @@ impl TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUpdateStateM
 		let any = Any::decode(&mut raw.upgrade_client_state.as_slice())?;
 		let upgrade_client_state: ics07_tendermint::client_state::ClientState<HostFunctions> =
 			ClientState::decode_vec(&any.value)?;
+		let any = Any::decode(&mut raw.upgrade_consensus_state.as_slice())?;
+		let upgrade_consensus_state: ics07_tendermint::consensus_state::ConsensusState =
+			ConsensusState::decode_vec(&any.value)?;
 		if upgrade_client_state.trust_level != TrustThreshold::ZERO ||
 			upgrade_client_state.trusting_period != Duration::ZERO ||
 			upgrade_client_state.max_clock_drift != Duration::ZERO ||
