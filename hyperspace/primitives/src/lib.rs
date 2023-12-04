@@ -622,7 +622,7 @@ pub async fn query_undelivered_sequences(
 		.query_packet_commitments(source_height, channel_id, port_id.clone())
 		.await?
 		.into_iter()
-		.filter(|seq| !ignored_timeouts.contains(seq))
+		// .filter(|seq| !ignored_timeouts.contains(seq))
 		.collect::<Vec<_>>();
 	log::trace!(target: "hyperspace", "Seqs: {:?}", seqs);
 
@@ -771,6 +771,7 @@ pub async fn find_suitable_proof_height_for_client(
 		let mut matches = false;
 		if let Some(timestamp_to_match) = &timestamp_to_match {
 			let consensus_state = decoded.unwrap().unwrap();
+
 			if consensus_state.timestamp().nanoseconds() >= timestamp_to_match.nanoseconds() {
 				matches = true;
 			}

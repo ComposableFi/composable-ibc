@@ -27,9 +27,15 @@ use ethers_solc::{
 	Artifact, ArtifactOutput, ConfigurableContractArtifact, EvmVersion, Project,
 	ProjectCompileOutput, ProjectPathsConfig, SolcConfig,
 };
-use ibc::core::{ics02_client::client_state::ClientType, ics04_channel::packet::Packet};
+use ibc::core::{
+	ics02_client::client_state::ClientType,
+	ics04_channel::packet::Packet,
+	ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
+};
+use ics23::commitment_proof::Proof;
 use icsxx_ethereum::utils::keccak256;
 use log::info;
+use pallet_ibc::light_clients::HostFunctionsManager;
 use std::{
 	borrow::Borrow,
 	collections::{HashMap, HashSet},
@@ -1137,4 +1143,28 @@ fn test_block_header_rlp_encoding() {
 	let rlp_encoded_header = rlp::encode(&header).to_vec();
 	let hash = keccak256(rlp_encoded_header);
 	assert_eq!(H256(hash), block.hash.unwrap());
+}
+
+pub fn clear_proof_value(
+	commitment_proof: &CommitmentProofBytes,
+) -> Result<CommitmentProofBytes, ClientError> {
+	let cs_proof = commitment_proof.as_bytes();
+	use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
+	let mut merkle_proof: MerkleProof<HostFunctionsManager> =
+		RawMerkleProof::try_from(CommitmentProofBytes::try_from(cs_proof.to_vec()).unwrap())
+			.unwrap()
+			.into();
+	for (i, proof) in merkle_proof.proofs.iter_mut().enumerate() {
+		if let Some(proof) = proof.proof.as_mut() {
+			match proof {
+				Proof::Exist(p) =>
+					if i == 0 {
+						p.value.clear();
+					},
+				p => return Err(ClientError::Other(format!("unexpected proof type: {:?}", p))),
+			}
+		}
+	}
+	let new_raw_proof = RawMerkleProof::from(merkle_proof.clone());
+	Ok(CommitmentProofBytes::try_from(new_raw_proof).unwrap())
 }

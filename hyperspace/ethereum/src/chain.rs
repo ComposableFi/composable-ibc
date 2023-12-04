@@ -2,7 +2,7 @@ use crate::{
 	client::{ClientError, EthereumClient},
 	contract::{IbcHandler, UnwrapContractError},
 	ibc_provider::{BlockHeight, INDEXER_DELAY_BLOCKS},
-	utils::{handle_gas_usage, Header as EthHeader},
+	utils::{clear_proof_value, handle_gas_usage, Header as EthHeader},
 	yui_types::{ics03_connection::conn_open_try::YuiMsgConnectionOpenTry, IntoToken},
 };
 use alloy_sol_types::SolValue;
@@ -1315,6 +1315,7 @@ impl Chain for EthereumClient {
 					ClientError::Other("conn_open_ack: consensus_proof not found".into())
 				})?;
 				let bytes = proof.proof();
+
 				info!("Using proof height at: {}", proof.height());
 				let block = self
 					.client()
@@ -1340,7 +1341,7 @@ impl Chain for EthereumClient {
 				}
 				let new_proof = EthereumClientPrimitivesConsensusStateProof {
 					header: rlp_encoded_header,
-					merkleProof: bytes.as_bytes().to_vec(),
+					merkleProof: clear_proof_value(&bytes)?.as_bytes().to_vec(),
 					isWasm: true, // TODO: replace with the actual value
 				}
 				.abi_encode();
@@ -1352,33 +1353,8 @@ impl Chain for EthereumClient {
 					)
 					.expect("proof can't be empty"),
 				);
-				let cs_proof = msg.proofs.client_proof().as_ref().expect("no proof").as_bytes();
-				use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
-				let merkle_proof: MerkleProof<HostFunctionsManager> = RawMerkleProof::try_from(
-					CommitmentProofBytes::try_from(cs_proof.to_vec()).unwrap(),
-				)
-				.unwrap()
-				.into();
-				merkle_proof.clone().proofs.iter_mut().enumerate().for_each(|(i, proof)| {
-					proof.proof.as_mut().map(|proof| match proof {
-						Proof::Exist(p) =>
-							if i == 0 {
-								p.value.clear();
-							},
-						Proof::Nonexist(_) => {
-							unimplemented!()
-						},
-						Proof::Batch(batch) => {
-							todo!("1")
-						},
-						Proof::Compressed(compressed) => {
-							todo!("2")
-						},
-					});
-				});
-				let new_raw_proof = RawMerkleProof::from(merkle_proof.clone());
-				let new_proof = CommitmentProofBytes::try_from(new_raw_proof).unwrap();
-				msg.proofs.client_proof = Some(new_proof);
+				let commitment_proof = msg.proofs.client_proof().as_ref().expect("no proof");
+				msg.proofs.client_proof = Some(clear_proof_value(commitment_proof)?);
 
 				let mut token = msg_connection_open_ack_token(msg)?;
 				let Token::Tuple(ref mut tokens) = token else {
