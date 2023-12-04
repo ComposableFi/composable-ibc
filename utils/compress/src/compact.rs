@@ -4,14 +4,21 @@ pub fn encode_compact_u32(value: u32) -> Vec<u8> {
 	} else if value <= (1 << 14) - 1 {
 		let byte1 = ((value << 2) & 0xFF) as u8;
 		let byte2 = ((value << 2) >> 8) as u8;
+		// println!("{:0b}", value << 2);
+		let max = (1 << 14) - 1;
+		let diff = max - value;
+		println!("{}", diff);
+		// println!("{}", hex::encode(&[byte1 | 0b01, byte2]));
 		return vec![byte1 | 0b01, byte2]
 	} else if value <= (1 << 30) - 1 {
+		panic!();
 		let byte1 = ((value << 2) & 0xFF) as u8;
 		let byte2 = ((value << 2) >> 8) as u8;
 		let byte3 = ((value << 2) >> 16) as u8;
 		let byte4 = ((value << 2) >> 24) as u8;
 		return vec![byte1 | 0b10, byte2, byte3, byte4]
 	} else {
+		panic!();
 		let byte1 = (value & 0xFF) as u8;
 		let byte2 = (value >> 8) as u8;
 		let byte3 = (value >> 16) as u8;
@@ -57,6 +64,7 @@ pub fn decode_compact_u32(data: &mut &[u8]) -> Option<u32> {
 				} else {
 					return None
 				}
+				println!("needed 3");
 			} else {
 				// Out of range for a 32-bit quantity.
 				return None
@@ -108,6 +116,19 @@ pub fn decompress_rle(data: &[u8]) -> Vec<u8> {
 
 	decompressed.shrink_to_fit();
 	decompressed
+}
+
+#[test]
+fn foo() {
+	let n = 1000u16;
+	// generate a byte array with `n` u16 values. The first u16 value should be the number of the
+	// elements (n)
+	let mut data = vec![0; n as usize * 2 + 2];
+	data[0..2].copy_from_slice(&n.to_be_bytes());
+	for i in 0..n {
+		data[i as usize * 2 + 2..i as usize * 2 + 4].copy_from_slice(&i.to_be_bytes());
+	}
+	println!("Data: 0x{}", hex::encode(&data));
 }
 
 #[test]

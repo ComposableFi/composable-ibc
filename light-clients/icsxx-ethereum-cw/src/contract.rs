@@ -47,7 +47,7 @@ use icsxx_ethereum::{
 // use light_client_common::{verify_membership, verify_non_membership};
 use icsxx_ethereum::verify::verify_ibc_proof;
 use std::{collections::BTreeSet, str::FromStr};
-use sync_committee_verifier::LightClientState;
+
 /*
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ics10-grandpa-cw";

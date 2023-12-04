@@ -15,7 +15,7 @@
 
 use crate::{
 	ics23::{ClientStates, ConsensusStates, ReadonlyClientStates, ReadonlyConsensusStates},
-	ContractError,
+	log, ContractError,
 };
 use cosmwasm_std::{DepsMut, Env, Storage};
 use ibc::{core::ics26_routing::context::ReaderContext, Height};
@@ -117,6 +117,15 @@ where
 			.ok_or_else(|| ContractError::Client("no client state found for prefix".to_string()))?;
 		let encoded = Context::<H>::encode_client_state(client_state, data)
 			.map_err(|e| ContractError::Client(format!("error encoding client state: {e:?}")))?;
+		use sha2::Digest;
+		log!(
+			&self,
+			"STORE CS: {}..{}, len: {}, hash: {}",
+			hex::encode(&encoded[..20]),
+			hex::encode(&encoded[encoded.len() - 21..]),
+			encoded.len(),
+			hex::encode(sha2::Sha256::digest(&encoded)),
+		);
 		let mut client_states = ClientStates::new(self.storage_mut());
 		client_states.insert_prefixed(encoded, prefix);
 		Ok(())
@@ -124,3 +133,8 @@ where
 }
 
 impl<'a, H: Clone + Eq + Send + Sync + Debug + Default + 'static> ReaderContext for Context<'a, H> {}
+
+// STORE CS: 0a252f6962632e6c69676874636c69656e74732e..77f62d11137e08a61ff923a70823ea031a0310c506,
+// len: 88597, hash: c5a963b9d649c0676d516170934a88c123c3767ba5732b419100ee919432cc5f
+// STORE CS: 0a252f6962632e6c69676874636c69656e74732e..77f62d11137e08a61ff923a70823ea031a0310c506,
+// len: 88597, hash: c5a963b9d649c0676d516170934a88c123c3767ba5732b419100ee919432cc5f

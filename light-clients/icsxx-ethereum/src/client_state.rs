@@ -19,12 +19,14 @@ use crate::{
 };
 use alloc::{format, string::ToString, vec::Vec};
 use alloy_sol_types::{private::SolTypeValue, SolValue};
+use compress::{compress, decompress};
 use core::{fmt::Debug, marker::PhantomData, time::Duration};
 use ibc::{
 	core::{ics02_client::client_state::ClientType, ics24_host::identifier::ChainId},
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
+use log::info;
 use parity_scale_codec::Encode;
 use prost::Message;
 use serde::{Deserialize, Serialize};
@@ -38,7 +40,7 @@ pub const ETHEREUM_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.
 pub struct ClientState<H> {
 	pub inner: LightClientState,
 	pub frozen_height: Option<Height>,
-	pub latest_height: u64,
+	pub latest_height: u32,
 	pub _phantom: PhantomData<H>,
 }
 
@@ -134,11 +136,17 @@ impl<H> ClientState<H> {
 	}
 
 	pub fn abi_encode(self) -> Vec<u8> {
-		EthereumClientPrimitivesClientState::from(self).abi_encode()
+		let data = EthereumClientPrimitivesClientState::from(self).abi_encode();
+		let x = compress(data, 16);
+		// info!("COMP={}", hex::encode(&x));
+		x
 	}
 
 	pub fn abi_decode(bytes: &[u8]) -> Result<Self, Error> {
-		let value = EthereumClientPrimitivesClientState::abi_decode(bytes, true)?;
+		// panic!("compressed = {}", hex::encode(&bytes));
+		let decompressed = decompress(&mut &bytes[..], 16);
+		// panic!("decompressed = {}", hex::encode(&decompressed));
+		let value = EthereumClientPrimitivesClientState::abi_decode(&decompressed, true)?;
 		value.try_into()
 	}
 }
@@ -192,31 +200,117 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 	type Error = Error;
 
 	fn try_from(raw: RawClientState) -> Result<Self, Self::Error> {
-		let inner = raw
-			.inner
-			.ok_or(Error::Custom("missing inner client state".to_string()))?
-			.try_into()?;
-		let height = raw.frozen_height_revision_height.zip(raw.frozen_height_revision_number);
-		Ok(ClientState {
-			inner,
-			frozen_height: height.map(|x| Height::new(x.0, x.1)),
-			latest_height: raw.latest_height,
-			_phantom: Default::default(),
-		})
+		// let inner = raw
+		// 	.inner
+		// 	.ok_or(Error::Custom("missing inner client state".to_string()))?
+		// 	.try_into()?;
+		// let height = raw.frozen_height_revision_height.zip(raw.frozen_height_revision_number);
+		// Ok(ClientState {
+		// 	inner,
+		// 	frozen_height: height.map(|x| Height::new(x.0, x.1)),
+		// 	latest_height: raw.latest_height,
+		// 	_phantom: Default::default(),
+		// })
+		ClientState::abi_decode(&raw.abi_data)
 	}
 }
 
 impl<H> From<ClientState<H>> for RawClientState {
 	fn from(client_state: ClientState<H>) -> Self {
-		let (frozen_height_revision_height, frozen_height_revision_number) = client_state
-			.frozen_height
-			.map(|x| (x.revision_number, x.revision_height))
-			.unzip();
-		RawClientState {
-			inner: Some(client_state.inner.into()),
-			frozen_height_revision_height,
-			frozen_height_revision_number,
-			latest_height: client_state.latest_height,
+		// let (frozen_height_revision_height, frozen_height_revision_number) = client_state
+		// 	.frozen_height
+		// 	.map(|x| (x.revision_number, x.revision_height))
+		// 	.unzip();
+		// RawClientState {
+		// 	inner: Some(client_state.clone().inner.into()),
+		// 	frozen_height_revision_height,
+		// 	frozen_height_revision_number,
+		// 	latest_height: client_state.latest_height,
+		// }
+		let abi_data = client_state.clone().abi_encode();
+		RawClientState { abi_data }
+	}
+}
+
+fn skip_field(ptr: &[u8], wire_type: u8) -> usize {
+	match wire_type {
+		2 => {
+			let (len, offset) = decode_varint(ptr);
+			// *ptr = &ptr[len..];
+			return offset + len as usize
+		},
+		0 => {
+			let (value, offset) = decode_varint(ptr);
+			// println!("Value = {}", value);
+			return offset
+		},
+		n => panic!("unknown wire type {}", n),
+	}
+}
+
+fn decode_len_field<'a>(mut ptr: &'a [u8], index: u8) -> &'a [u8] {
+	loop {
+		let (field_number, wire_type, offset) = decode_tag(ptr);
+		// println!("Got field {} of type {}", field_number, wire_type);
+		ptr = &ptr[offset..];
+
+		if wire_type != 2 || field_number != index {
+			// println!("Skipping field {} of type {}", field_number, wire_type);
+			let offset = skip_field(ptr, wire_type);
+			ptr = &ptr[offset..];
+			continue
+		}
+		let (len, offset) = decode_varint(ptr);
+		ptr = &ptr[offset..];
+		let value = &ptr[..len as usize];
+		return value
+	}
+}
+
+fn decode_any<'a>(ptr: &'a [u8]) -> &'a [u8] {
+	// println!("Decoding any ptr.len() = {}", ptr.len());
+	let type_url = decode_len_field(&ptr, 1);
+	let value = decode_len_field(&ptr, 2);
+	// if let Ok(str) = String::from_utf8(type_url.to_vec()) {
+	// 	println!("Any.type_url = {}", str);
+	// } else {
+	// 	println!("Any.type_url = {}", hex::encode(type_url));
+	// }
+	// println!("Any.value = {}", hex::encode(value));
+	value
+}
+
+fn decode_tag(ptr: &[u8]) -> (u8, u8, usize) {
+	let tag = ptr[0];
+	let wire_type = tag & 0b111;
+	let field_number = tag >> 3;
+	(field_number, wire_type, 1)
+}
+
+fn decode_varint(ptr: &[u8]) -> (u64, usize) {
+	let mut value = 0u64;
+	let mut shift = 0;
+	let mut bytes_read = 0;
+	for i in 0.. {
+		let byte = ptr[i];
+		value |= ((byte & 0b0111_1111) as u64) << shift;
+		shift += 7;
+		bytes_read += 1;
+		if byte & 0b1000_0000 == 0 {
+			break
 		}
 	}
+	(value, bytes_read)
+}
+
+#[test]
+fn test_proto() {
+	let data = hex::decode(include_bytes!("/Users/vmark/work/centauri-private/proto.txt")).unwrap();
+	let mut ptr = &mut &data[..];
+
+	let wasm_any = decode_any(&mut ptr);
+	let wasm_data = decode_len_field(wasm_any, 1);
+	let client_state_any = decode_any(wasm_data);
+	let abi_data = decode_len_field(client_state_any, 1);
+	// println!("abi_data = {}", hex::encode(abi_data));
 }

@@ -43,6 +43,7 @@ use icsxx_ethereum::{
 	consensus_state::ConsensusState,
 };
 use prost::Message;
+use sp_io::hashing::sha2_256;
 use std::str::FromStr;
 
 impl<'a, H> ClientTypes for Context<'a, H>
@@ -214,6 +215,15 @@ where
 			client_state.latest_height()
 		);
 		let vec1 = Self::encode_client_state(client_state, data)?;
+		use sha2::Digest;
+		log!(
+			&self,
+			"STORE CS: {}..{}, len: {}, hash: {}",
+			hex::encode(&vec1[..20]),
+			hex::encode(&vec1[vec1.len() - 21..]),
+			vec1.len(),
+			hex::encode(sha2::Sha256::digest(&vec1)),
+		);
 		// log!(self, "in cliden : [store_client_state] >> wasm client state (raw)");
 		let mut client_state_storage = ClientStates::new(self.storage_mut());
 		client_state_storage.insert(vec1);

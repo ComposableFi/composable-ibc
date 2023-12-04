@@ -15,7 +15,10 @@ use sync_committee_primitives::{
 };
 use EthereumClientAbi::*;
 
-sol!(EthereumClientAbi, "../../hyperspace/ethereum/src/abi/ethereum-client-abi.json");
+sol!(
+	EthereumClientAbi,
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ethereum-client-abi.json"
+);
 
 impl HeightData {
 	fn is_zero(&self) -> bool {
@@ -124,7 +127,7 @@ impl<H> From<ClientState<H>> for EthereumClientPrimitivesClientState {
 				.frozen_height
 				.map(Into::into)
 				.unwrap_or_else(|| HeightData { revision_number: 0, revision_height: 0 }),
-			latestHeight: value.latest_height as u32, // TODO: make latest_height u64 everywhere
+			latestHeight: value.latest_height,
 		}
 	}
 }
@@ -140,7 +143,7 @@ impl<H> TryFrom<EthereumClientPrimitivesClientState> for ClientState<H> {
 			} else {
 				Some(value.frozenHeight.into())
 			},
-			latest_height: value.latestHeight as u64,
+			latest_height: value.latestHeight,
 			_phantom: Default::default(),
 		})
 	}

@@ -45,7 +45,6 @@ use ibc::{
 	Height,
 };
 use sync_committee_verifier::LightClientState;
-use tendermint_proto::Protobuf;
 
 // TODO: move this function in a separate crate and remove the one from `light_client_common` crate
 /// This will verify that the connection delay has elapsed for a given [`ibc::Height`]
@@ -139,7 +138,7 @@ where
 			.map(|b| {
 				let height = Height::new(
 					0, // TODO: check this
-					b.execution_payload.block_number,
+					b.execution_payload.block_number as u64,
 				);
 				let cs = Ctx::AnyConsensusState::wrap(&ConsensusState::new(
 					b.execution_payload.state_root.clone(),
@@ -152,7 +151,7 @@ where
 		let header = header.inner;
 		let height = Height::new(
 			0, // TODO: check this
-			header.execution_payload.block_number,
+			header.execution_payload.block_number as u64,
 		);
 		let cs = Ctx::AnyConsensusState::wrap(&ConsensusState::new(
 			header.execution_payload.state_root.clone(),
@@ -179,7 +178,7 @@ where
 		let new_client_state = ClientState {
 			inner: new_light_client_state,
 			frozen_height: None,
-			latest_height: update.execution_payload.block_number,
+			latest_height: update.execution_payload.block_number as _,
 			// latest_height: update.attested_header.slot.into(),
 			_phantom: Default::default(),
 		};

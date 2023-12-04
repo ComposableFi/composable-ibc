@@ -87,23 +87,12 @@ impl TryFrom<RawConsensusState> for ConsensusState {
 	type Error = Error;
 
 	fn try_from(raw: RawConsensusState) -> Result<Self, Self::Error> {
-		let prost_types::Timestamp { seconds, nanos } = raw
-			.timestamp
-			.ok_or_else(|| Error::Custom(format!("Invalid consensus state: missing timestamp")))?;
-		let proto_timestamp = tpb::Timestamp { seconds, nanos };
-		let timestamp = proto_timestamp.try_into().map_err(|e| {
-			Error::Custom(format!("Invalid consensus state: invalid timestamp {e}"))
-		})?;
-
-		Ok(Self { root: raw.root.into(), timestamp })
+		ConsensusState::abi_decode(&raw.abi_data)
 	}
 }
 
 impl From<ConsensusState> for RawConsensusState {
 	fn from(value: ConsensusState) -> Self {
-		let tpb::Timestamp { seconds, nanos } = value.timestamp.into();
-		let timestamp = prost_types::Timestamp { seconds, nanos };
-
-		RawConsensusState { timestamp: Some(timestamp), root: value.root.into_vec() }
+		RawConsensusState { abi_data: value.abi_encode() }
 	}
 }
