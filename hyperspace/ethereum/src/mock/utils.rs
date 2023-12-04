@@ -42,7 +42,11 @@ pub fn yui_ibc_solidity_path() -> PathBuf {
 
 #[track_caller]
 pub async fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http>, LocalWallet>>) {
+	#[cfg(not(feature = "no_beacon"))]
+	let anvil = Anvil::new().spawn();
+	#[cfg(feature = "no_beacon")]
 	let anvil = Anvil::new().port(8545u16).spawn();
+
 	println!("{:?}", std::env::current_dir().unwrap());
 	let wallet: LocalWallet = if USE_GETH {
 		LocalWallet::decrypt_keystore(
@@ -139,8 +143,11 @@ pub async fn hyperspace_ethereum_client_fixture(
 		None
 	};
 
-	let jwt_secret_path =
-		if !USE_GETH { None } else { Some("../eth-pos-devnet/execution/jwtsecret".to_string()) };
+	let jwt_secret_path = if !USE_GETH {
+		None
+	} else {
+		Some("/Users/vmark/work/eth-pos-devnet/execution/jwtsecret".to_string())
+	};
 
 	EthereumClientConfig {
 		http_rpc_url: endpoint.parse().unwrap(),

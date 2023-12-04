@@ -222,8 +222,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		config_a.tendermint_address = tendermint_address;
 		if !USE_GETH {
 			config_a.ws_rpc_url = anvil.ws_endpoint().parse().unwrap();
+			config_a.anvil = Some(Arc::new(Mutex::new(anvil)));
 		}
-		config_a.anvil = Some(Arc::new(Mutex::new(anvil)));
 
 		if SAVE_TO_CONFIG {
 			let config_path = PathBuf::from_str("../../config/ethereum-local.toml").unwrap();

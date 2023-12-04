@@ -1519,13 +1519,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "calldata-compression"
-version = "0.1.0"
-dependencies = [
- "hex",
-]
-
-[[package]]
 name = "camino"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2015,6 +2008,14 @@ dependencies = [
  "strum 0.24.1",
  "strum_macros 0.24.3",
  "unicode-width",
+]
+
+[[package]]
+name = "compress"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "primitive-types",
 ]
 
 [[package]]
@@ -6288,6 +6289,7 @@ dependencies = [
  "ibc-proto",
  "ibc-rpc",
  "ics07-tendermint",
+ "ics23 0.10.0",
  "icsxx-ethereum",
  "itertools 0.11.0",
  "jsonwebtoken",
@@ -6756,6 +6758,7 @@ dependencies = [
  "alloy-sol-macro",
  "alloy-sol-types",
  "anyhow",
+ "compress",
  "deflate",
  "derive_more",
  "env_logger 0.9.3",
@@ -6796,6 +6799,7 @@ version = "0.1.0"
 dependencies = [
  "blake2-rfc",
  "byteorder",
+ "compress",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -12209,9 +12213,9 @@ dependencies = [
 
 [[package]]
 name = "primitive-types"
-version = "0.12.1"
+version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f3486ccba82358b11a77516035647c34ba167dfa53312630de83b12bd4f3d66"
+checksum = "0b34d9fd68ae0b74a41b21c03c2f62847aa0ffea044eee893b4c140b37e244e2"
 dependencies = [
  "fixed-hash",
  "impl-codec",

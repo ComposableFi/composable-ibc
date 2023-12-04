@@ -7,42 +7,42 @@ name = "ethereum-client"
 client_id = "07-tendermint-0"
 channel_whitelist = []
 commitment_prefix = "696263"
-diamond_address = "0xa99cd5fb8b1742a9cee7b73f06adeeffe3877512"
-tendermint_address = "0x08563ca7c14985101fb012374e7d0c0b4210553b"
-ics20_transfer_bank_address = "0xb8964e5938e1b1898bfbcfc1299cdb8f2e592bbf"
-ics20_bank_address = "0x3f98a1c3022628a11aa27d0c315472b319a0e669"
+diamond_address = "0xf4c29c09b793ec0832580f0291e25dda4bf7fc92"
+tendermint_address = "0xb9a11502bfdddf44eaf78745af8f509e4902fa24"
+ics20_transfer_bank_address = "0xe9ed9766bd7c85cc9914be8c890600517bf73a47"
+ics20_bank_address = "0x70654c67b997d277c8b589d0a3ded77f5966cf46"
 diamond_facets = [
     [
     "IBCClient",
-    "0xbc9098af79b4a35defef8a16098b94454849a540",
+    "0xa0d94305e4508bc3db169248968707421f9f5d4a",
 ],
     [
     "IBCConnection",
-    "0x3a105a567a677cfb049d96b4103ed08ad66c80da",
+    "0x774e3038f91732f689d8cda201857d891105d73f",
 ],
     [
     "IBCChannelHandshake",
-    "0xcf4210c1f5e1558f58300fea9b8398ab74f8900a",
+    "0x13a43fd4982cd2e18ac572c90fc2c3d058cfa9c2",
 ],
     [
     "IBCPacket",
-    "0x481796b2a6cf91a68e18b42dedc98c035734043f",
+    "0x2ab116a110ea6eacb6fc28b76d57719d68648e26",
 ],
     [
     "IBCQuerier",
-    "0xec509da1cb1284f6b3899fcf33c3f208dd4e1f72",
+    "0x414e2dbd344a507d0a85e284111efdd3cb8405b9",
 ],
     [
     "DiamondCutFacet",
-    "0xa1dfcc1c574eace5458900a3690f9c559dc98478",
+    "0x3ea11052b9f9ac3147fd665903895594b2867831",
 ],
     [
     "DiamondLoupeFacet",
-    "0xa702cb28df2fb6642c46c32e8ab8d826a21083aa",
+    "0xd06efe520063a4a1036d4f0d70b87b80919da7ea",
 ],
     [
     "OwnershipFacet",
-    "0x2de2ce2858096a4a3e0ce01cab750293b51d4b0a",
+    "0x5a7746c9d20797f91d6f397a32a27869a36861cd",
 ],
 ]
 client_type = "07-tendermint"

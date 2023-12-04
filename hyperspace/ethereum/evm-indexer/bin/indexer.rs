@@ -54,7 +54,7 @@ async fn main() {
 
 		loop {
 			sync_chain(&rpc, &db, &mut config, &mut indexed_blocks).await;
-			sleep(Duration::from_millis(500)).await;
+			sleep(Duration::from_millis(50)).await;
 		}
 	} else {
 		db.delete_indexed_blocks().await.unwrap();
@@ -177,6 +177,9 @@ async fn sync_chain(
 		)
 		.await;
 
+		// for number in missing_blocks_chunk.into_iter() {
+		// 	indexed_blocks.insert(*number);
+		// }
 		for block in db_blocks.into_iter() {
 			indexed_blocks.insert(block.number);
 		}

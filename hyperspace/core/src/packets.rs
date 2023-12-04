@@ -235,15 +235,12 @@ pub async fn query_ready_and_timed_out_packets(
 						Error::Custom(format!("Packet height not found for packet {packet:?}"))
 					})?;
 
-
-				    log::info!("sink_height = {sink_height:?}, timeout_height = {:?}", packet.timeout_height);
+				    log::info!("sink_height = {sink_height:?}, timeout_height = {:?}, timeout_timestamp = {}, seq = {}", packet.timeout_height, packet.timeout_timestamp, packet.sequence);
 
 					if packet.timed_out(&sink_timestamp, sink_height) {
 						source.common_state().ignored_timeouted_sequences.lock().await.insert(
 							packet.sequence.0
 						);
-						return Ok(None)
-						/*
 						timeout_packets_count.fetch_add(1, Ordering::SeqCst);
 						// so we know this packet has timed out on the sink, we need to find the maximum
 						// consensus state height at which we can generate a non-membership proof of the
@@ -253,6 +250,7 @@ pub async fn query_ready_and_timed_out_packets(
 								&**source,
 								&**sink,
 								source_height,
+								source_timestamp,
 								sink_height,
 								sink_timestamp,
 								latest_sink_height_on_source,
@@ -296,7 +294,6 @@ pub async fn query_ready_and_timed_out_packets(
 						)
 							.await?;
 						return Ok(Some(Left(msg)))
-						 */
 					} else {
 						log::trace!(target: "hyperspace", "The packet has not timed out yet: {:?}", packet);
 					}
@@ -369,6 +366,7 @@ pub async fn query_ready_and_timed_out_packets(
 
 					let msg = construct_recv_message(&**source, &**sink, packet, proof_height).await?;
 					Ok(Some(Right(msg)))
+					// return Ok(None)
 				});
 			}
 		}
@@ -470,8 +468,8 @@ pub async fn query_ready_and_timed_out_packets(
 						log::trace!(target: "hyperspace", "Using proof height: {}", proof_height);
 						proof_height
 					} else {
-						log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as no proof height could be found", packet);
-						return Ok(None)
+						log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?}
+					as no proof height could be found", packet); 	return Ok(None)
 					};
 
 					if !verify_delay_passed(

@@ -23,6 +23,7 @@ use ethers_solc::{
 		output_selection::OutputSelection, Libraries, Optimizer, OptimizerDetails, Settings,
 		StorageLayout,
 	},
+	report::{BasicStdoutReporter, Report},
 	Artifact, ArtifactOutput, ConfigurableContractArtifact, EvmVersion, Project,
 	ProjectCompileOutput, ProjectPathsConfig, SolcConfig,
 };
@@ -701,7 +702,6 @@ pub fn compile_solc(project_paths: ProjectPathsConfig) -> ProjectCompileOutput {
 		.solc_config(solc_config)
 		.build()
 		.expect("project build failed");
-
 	// TODO: figure out how to enable it in the config
 	// project.artifacts.additional_values.storage_layout = true;
 	// project.artifacts.additional_files.abi = true;

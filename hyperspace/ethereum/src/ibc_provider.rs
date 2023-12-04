@@ -459,7 +459,8 @@ impl EthereumClient {
 		client_id: ClientId,
 		consensus_height: Height,
 	) -> Result<Token, ClientError> {
-		log::info!(target: "hyperspace_ethereum", "query_client_consensus: {client_id:?}, {consensus_height:?}");
+		// log::info!(target: "hyperspace_ethereum", "query_client_consensus: {client_id:?},
+		// {consensus_height:?}");
 
 		unimplemented!();
 		// First, we try to find an `UpdateClient` event at the given height...
@@ -809,7 +810,8 @@ impl IbcProvider for EthereumClient {
 		client_id: ClientId,
 		consensus_height: Height,
 	) -> Result<QueryConsensusStateResponse, Self::Error> {
-		log::info!(target: "hyperspace_ethereum", "query_client_consensus: {client_id:?}, {consensus_height:?}");
+		// log::info!(target: "hyperspace_ethereum", "query_client_consensus: {client_id:?},
+		// {consensus_height:?}");
 
 		/*
 		let binding = self

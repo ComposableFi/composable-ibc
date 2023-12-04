@@ -36,7 +36,7 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use primitives::{find_suitable_proof_height_for_client, Chain};
-use std::time::Duration;
+use std::{ops::Sub, time::Duration};
 use tendermint_proto::Protobuf;
 
 #[allow(clippy::too_many_arguments)]
@@ -44,6 +44,7 @@ pub async fn get_timeout_proof_height(
 	source: &impl Chain,
 	sink: &impl Chain,
 	source_height: Height,
+	source_timestamp: Timestamp,
 	sink_height: Height,
 	sink_timestamp: Timestamp,
 	latest_client_height_on_source: Height,
@@ -74,17 +75,44 @@ pub async fn get_timeout_proof_height(
 			// bound for where to start our search
 			// We offset the sink height when this packet was created with the approximate number of
 			// blocks contained in the difference in timestamp at packet creation until timeout
+
+			/*
+			1. Calculate packet creation time on A.
+			2. Calculate time difference between the current time and the packet creation time (dTa)
+			3. Calculate the number of blocks contained in dTb (nTb)
+			4. Calculate the height of the packet on B (Hb) by subtracting nTb from the current height of B (Tb = Hb - nTb)
+			5. Calculate timeout block on B (TOb) by adding the timeout duration (dTO) in B blocks to Hb
+			 */
+
 			let timeout_ns = packet.timeout_timestamp.nanoseconds();
 			let sink_ns = sink_timestamp.nanoseconds();
 			if timeout_ns > sink_ns {
 				return None
 			}
-			let period = sink_ns.saturating_sub(timeout_ns);
-			let period = Duration::from_nanos(period);
-			let timeout_height = (sink_height.revision_height -
-				calculate_block_delay(period, sink.expected_block_time()))
-			.saturating_sub(1);
-			let start_height = Height::new(sink_height.revision_number, timeout_height);
+
+			let packet_lifetime_blocks_on_a =
+				source_height.revision_height.saturating_sub(packet_creation_height);
+			let packet_timestamp = (source_timestamp -
+				source.expected_block_time() * packet_lifetime_blocks_on_a as u32)
+				.ok()?;
+			let timeout_timestamp_relative = Duration::from_nanos(
+				packet
+					.timeout_timestamp
+					.nanoseconds()
+					.saturating_sub(packet_timestamp.nanoseconds()),
+			);
+			let packet_lifetime_timestamp =
+				source.expected_block_time() * (packet_lifetime_blocks_on_a as u32);
+			let packet_lifetime_blocks_on_b = (packet_lifetime_timestamp.as_nanos() /
+				sink.expected_block_time().as_nanos()) as u64;
+			let packet_height_on_b =
+				sink_height.revision_height.saturating_sub(packet_lifetime_blocks_on_b);
+			let timeout_block_on_b = (packet_height_on_b +
+				(timeout_timestamp_relative.as_nanos() / sink.expected_block_time().as_nanos())
+					as u64)
+				.saturating_sub(1);
+
+			let start_height = Height::new(sink_height.revision_number, timeout_block_on_b);
 			find_suitable_proof_height_for_client(
 				sink,
 				source,
@@ -105,13 +133,30 @@ pub async fn get_timeout_proof_height(
 			if timeout_ns > sink_ns {
 				return None
 			}
-			let period = sink_ns.saturating_sub(timeout_ns);
-			let period = Duration::from_nanos(period);
-			let timeout_height = (sink_height.revision_height -
-				calculate_block_delay(period, sink.expected_block_time()))
-			.saturating_sub(1);
-			let start_height =
-				Height::new(sink_height.revision_number, timeout_height).min(packet.timeout_height);
+
+			let packet_lifetime_blocks_on_a =
+				source_height.revision_height.saturating_sub(packet_creation_height);
+			let packet_timestamp = (source_timestamp -
+				source.expected_block_time() * packet_lifetime_blocks_on_a as u32)
+				.ok()?;
+			let timeout_timestamp_relative = Duration::from_nanos(
+				packet
+					.timeout_timestamp
+					.nanoseconds()
+					.saturating_sub(packet_timestamp.nanoseconds()),
+			);
+			let packet_lifetime_timestamp =
+				source.expected_block_time() * (packet_lifetime_blocks_on_a as u32);
+			let packet_lifetime_blocks_on_b = (packet_lifetime_timestamp.as_nanos() /
+				sink.expected_block_time().as_nanos()) as u64;
+			let packet_height_on_b =
+				sink_height.revision_height.saturating_sub(packet_lifetime_blocks_on_b);
+			let timeout_block_on_b = (packet_height_on_b +
+				(timeout_timestamp_relative.as_nanos() / sink.expected_block_time().as_nanos())
+					as u64)
+				.saturating_sub(1);
+			let start_height = Height::new(sink_height.revision_number, timeout_block_on_b)
+				.min(packet.timeout_height);
 
 			find_suitable_proof_height_for_client(
 				sink,

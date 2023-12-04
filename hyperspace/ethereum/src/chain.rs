@@ -33,7 +33,10 @@ use ibc::{
 			conn_open_init::MsgConnectionOpenInit, conn_open_try::MsgConnectionOpenTry,
 		},
 		ics04_channel::msgs as channel_msgs,
-		ics23_commitment::commitment::{CommitmentProofBytes, CommitmentRoot},
+		ics23_commitment::{
+			commitment::{CommitmentProofBytes, CommitmentRoot},
+			merkle::MerkleProof,
+		},
 		ics24_host::identifier::{ChainId, ClientId},
 	},
 	proofs::ConsensusProof,
@@ -45,11 +48,14 @@ use ics07_tendermint::{
 	client_state::ClientState,
 	consensus_state::ConsensusState,
 };
+use ics23::commitment_proof::Proof;
 use icsxx_ethereum::{
 	abi::EthereumClientAbi::EthereumClientPrimitivesConsensusStateProof, utils::keccak256,
 };
 use log::{error, info};
-use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
+use pallet_ibc::light_clients::{
+	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
+};
 use primitives::{
 	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, LightClientSync,
 	MisbehaviourHandler,
@@ -1346,6 +1352,33 @@ impl Chain for EthereumClient {
 					)
 					.expect("proof can't be empty"),
 				);
+				let cs_proof = msg.proofs.client_proof().as_ref().expect("no proof").as_bytes();
+				use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
+				let merkle_proof: MerkleProof<HostFunctionsManager> = RawMerkleProof::try_from(
+					CommitmentProofBytes::try_from(cs_proof.to_vec()).unwrap(),
+				)
+				.unwrap()
+				.into();
+				merkle_proof.clone().proofs.iter_mut().enumerate().for_each(|(i, proof)| {
+					proof.proof.as_mut().map(|proof| match proof {
+						Proof::Exist(p) =>
+							if i == 0 {
+								p.value.clear();
+							},
+						Proof::Nonexist(_) => {
+							unimplemented!()
+						},
+						Proof::Batch(batch) => {
+							todo!("1")
+						},
+						Proof::Compressed(compressed) => {
+							todo!("2")
+						},
+					});
+				});
+				let new_raw_proof = RawMerkleProof::from(merkle_proof.clone());
+				let new_proof = CommitmentProofBytes::try_from(new_raw_proof).unwrap();
+				msg.proofs.client_proof = Some(new_proof);
 
 				let mut token = msg_connection_open_ack_token(msg)?;
 				let Token::Tuple(ref mut tokens) = token else {
