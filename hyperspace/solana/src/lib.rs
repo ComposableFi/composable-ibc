@@ -5,14 +5,9 @@ use alloc::rc::Rc;
 use anchor_spl::associated_token::get_associated_token_address;
 use base64::Engine;
 use core::{pin::Pin, str::FromStr, time::Duration};
-use ibc_new::core::{channel::types::msgs::PacketMsg, handler::types::msgs::MsgEnvelope};
-use serde_json::to_string;
+use ibc_new::core::handler::types::msgs::MsgEnvelope;
 use solana_transaction_status::UiTransactionEncoding;
 use tokio::sync::mpsc::unbounded_channel;
-// use ibc_storage::{IbcPackets, PrivateStorage, SequenceTripleIdx};
-// use ids::{ClientIdx, ConnectionIdx};
-use prost::Message;
-// use trie_key::{SequencePath, TrieKey};
 
 use anchor_client::{
 	solana_client::{
@@ -37,33 +32,13 @@ use ibc::{
 	core::{
 		ics02_client::{
 			client_state::ClientType,
-			events::{
-				Attributes as ClientAttributes, ClientMisbehaviour, CreateClient, UpdateClient,
-				UpgradeClient,
-			},
-		},
-		ics03_connection::events::{
-			Attributes as ConnAttributes, OpenAck as ConnOpenAck, OpenConfirm as ConnOpenConfirm,
-			OpenInit as ConnOpenInit, OpenTry as ConnOpenTry,
-		},
-		ics04_channel::{
-			events::{
-				AcknowledgePacket, Attributes as ChanAttributes, CloseConfirm as ChanCloseConfirm,
-				CloseInit as ChanCloseInit, OpenAck as ChanOpenAck, OpenConfirm as ChanOpenConfirm,
-				OpenInit as ChanOpenInit, OpenTry as ChanOpenTry, ReceivePacket, SendPacket,
-				TimeoutPacket, WriteAcknowledgement,
-			},
-			handler::write_acknowledgement::WriteAckPacketResult,
-			packet::{Packet, Sequence},
+			events::
+				UpdateClient,
 		},
 		ics23_commitment::commitment::CommitmentPrefix,
-		ics24_host::{
-			identifier::{ChannelId, ClientId, ConnectionId, PortId},
-			path::{AcksPath, ChannelEndsPath, CommitmentsPath},
-		}, ics26_routing::context::ModuleId,
+		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
-	events::{IbcEvent, ModuleEvent, ModuleEventAttribute},
-	// events::IbcEvent,
+	events::IbcEvent,
 	timestamp::Timestamp,
 	Height,
 };
@@ -82,7 +57,6 @@ use ibc_proto::{
 		},
 	},
 };
-// use instructions::AnyCheck;
 use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::{
 	Chain, CommonClientConfig, CommonClientState, IbcProvider, KeyProvider, LightClientSync,
@@ -116,6 +90,7 @@ use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, TrieKey};
 
 // mod accounts;
 mod error;
+mod events;
 // mod ibc_storage;
 // mod ids;
 // mod instructions;
@@ -316,7 +291,7 @@ impl IbcProvider for Client {
 					Ok(logs) => {
 						let events = get_events_from_logs(logs.value.logs);
 						events.iter().for_each(|event| {
-							tx.send(convert_new_event_to_old(event.clone())).unwrap()
+							tx.send(events::convert_new_event_to_old(event.clone())).unwrap()
 						});
 					},
 					Err(err) => {
@@ -560,10 +535,12 @@ deserialize client state"
 		seq: u64,
 	) -> Result<QueryPacketCommitmentResponse, Self::Error> {
 		let trie = self.get_trie().await;
-		let new_port_id = ibc_new::core::host::types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
-		let new_channel_id = ibc_new::core::host::types::identifiers::ChannelId::new(channel_id.sequence());
+		let new_port_id =
+			ibc_new::core::host::types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
+		let new_channel_id =
+			ibc_new::core::host::types::identifiers::ChannelId::new(channel_id.sequence());
 		let new_seq = ibc_new::core::host::types::identifiers::Sequence::from(seq);
-		let packet_commitment_path = ibc_new::core::host::types::path::CommitmentPath { 
+		let packet_commitment_path = ibc_new::core::host::types::path::CommitmentPath {
 			port_id: new_port_id,
 			channel_id: new_channel_id,
 			sequence: new_seq,
@@ -589,8 +566,10 @@ deserialize client state"
 		seq: u64,
 	) -> Result<QueryPacketAcknowledgementResponse, Self::Error> {
 		let trie = self.get_trie().await;
-		let new_port_id = ibc_new::core::host::types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
-		let new_channel_id = ibc_new::core::host::types::identifiers::ChannelId::new(channel_id.sequence());
+		let new_port_id =
+			ibc_new::core::host::types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
+		let new_channel_id =
+			ibc_new::core::host::types::identifiers::ChannelId::new(channel_id.sequence());
 		let new_seq = ibc_new::core::host::types::identifiers::Sequence::from(seq);
 		let packet_ack_path = ibc_new::core::host::types::path::AckPath {
 			port_id: new_port_id,
@@ -648,8 +627,10 @@ deserialize client state"
 		seq: u64,
 	) -> Result<QueryPacketReceiptResponse, Self::Error> {
 		let trie = self.get_trie().await;
-		let new_port_id = ibc_new::core::host::types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
-		let new_channel_id = ibc_new::core::host::types::identifiers::ChannelId::new(channel_id.sequence());
+		let new_port_id =
+			ibc_new::core::host::types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
+		let new_channel_id =
+			ibc_new::core::host::types::identifiers::ChannelId::new(channel_id.sequence());
 		let new_seq = ibc_new::core::host::types::identifiers::Sequence::from(seq);
 		let packet_recv_path = ibc_new::core::host::types::path::ReceiptPath {
 			port_id: new_port_id,
@@ -1389,324 +1370,7 @@ fn get_events_from_logs(logs: Vec<String>) -> Vec<ibc_new::core::handler::types:
 	events
 }
 
-fn convert_new_event_to_old(event: ibc_new::core::handler::types::events::IbcEvent) -> IbcEvent {
-	let height = Height { revision_number: 0, revision_height: 1 };
-	match event {
-		ibc_new::core::handler::types::events::IbcEvent::CreateClient(e) => {
-			let eve = CreateClient(ClientAttributes {
-				height: Height {
-					revision_number: e.consensus_height().revision_number(),
-					revision_height: e.consensus_height().revision_height(),
-				},
-				client_id: ClientId::from_str(e.client_id().as_str()).unwrap(),
-				client_type: ClientType::from_str(e.client_type().as_str()).unwrap(),
-				consensus_height: Height {
-					revision_number: e.consensus_height().revision_number(),
-					revision_height: e.consensus_height().revision_height(),
-				},
-			});
-			IbcEvent::CreateClient(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::UpdateClient(e) => {
-			let eve = UpdateClient {
-				common: ClientAttributes {
-					height: Height {
-						revision_number: e.consensus_height().revision_number(),
-						revision_height: e.consensus_height().revision_height(),
-					},
-					client_id: ClientId::from_str(e.client_id().as_str()).unwrap(),
-					client_type: ClientType::from_str(e.client_type().as_str()).unwrap(),
-					consensus_height: Height {
-						revision_number: e.consensus_height().revision_number(),
-						revision_height: e.consensus_height().revision_height(),
-					},
-				},
-				header: Some(e.header().clone()),
-			};
-			IbcEvent::UpdateClient(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::UpgradeClient(e) => {
-			let eve = UpgradeClient(ClientAttributes {
-				height: Height {
-					revision_number: e.consensus_height().revision_number(),
-					revision_height: e.consensus_height().revision_height(),
-				},
-				client_id: ClientId::from_str(e.client_id().as_str()).unwrap(),
-				client_type: ClientType::from_str(e.client_type().as_str()).unwrap(),
-				consensus_height: Height {
-					revision_number: e.consensus_height().revision_number(),
-					revision_height: e.consensus_height().revision_height(),
-				},
-			});
-			IbcEvent::UpgradeClient(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::ClientMisbehaviour(e) => {
-			let eve = ClientMisbehaviour(ClientAttributes {
-				height,
-				client_id: ClientId::from_str(e.client_id().as_str()).unwrap(),
-				client_type: ClientType::from_str(e.client_type().as_str()).unwrap(),
-				consensus_height: height,
-			});
-			IbcEvent::ClientMisbehaviour(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::OpenInitConnection(e) => {
-			let eve = ConnOpenInit(ConnAttributes {
-				height,
-				client_id: ClientId::from_str(e.client_id_on_a().as_str()).unwrap(),
-				counterparty_client_id: ClientId::from_str(e.client_id_on_b().as_str()).unwrap(),
-				counterparty_connection_id: e
-					.conn_id_on_b()
-					.and_then(|conn| Some(ConnectionId::from_str(conn.as_str()).unwrap())),
-				connection_id: Some(ConnectionId::from_str(e.conn_id_on_a().as_str()).unwrap()),
-			});
-			IbcEvent::OpenInitConnection(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::OpenTryConnection(e) => {
-			let eve = ConnOpenTry(ConnAttributes {
-				height,
-				client_id: ClientId::from_str(e.client_id_on_a().as_str()).unwrap(),
-				counterparty_client_id: ClientId::from_str(e.client_id_on_b().as_str()).unwrap(),
-				counterparty_connection_id: Some(
-					ConnectionId::from_str(e.conn_id_on_b().as_str()).unwrap(),
-				),
-				connection_id: e
-					.conn_id_on_a()
-					.and_then(|conn| Some(ConnectionId::from_str(conn.as_str()).unwrap())),
-			});
-			IbcEvent::OpenTryConnection(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::OpenAckConnection(e) => {
-			let eve = ConnOpenAck(ConnAttributes {
-				height,
-				client_id: ClientId::from_str(e.client_id_on_a().as_str()).unwrap(),
-				counterparty_client_id: ClientId::from_str(e.client_id_on_b().as_str()).unwrap(),
-				counterparty_connection_id: e
-					.conn_id_on_b()
-					.and_then(|conn| Some(ConnectionId::from_str(conn.as_str()).unwrap())),
-				connection_id: Some(ConnectionId::from_str(e.conn_id_on_a().as_str()).unwrap()),
-			});
-			IbcEvent::OpenAckConnection(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::OpenConfirmConnection(e) => {
-			let eve = ConnOpenConfirm(ConnAttributes {
-				height,
-				client_id: ClientId::from_str(e.client_id_on_a().as_str()).unwrap(),
-				counterparty_client_id: ClientId::from_str(e.client_id_on_b().as_str()).unwrap(),
-				counterparty_connection_id: Some(
-					ConnectionId::from_str(e.conn_id_on_b().as_str()).unwrap(),
-				),
-				connection_id: e
-					.conn_id_on_a()
-					.and_then(|conn| Some(ConnectionId::from_str(conn.as_str()).unwrap())),
-			});
-			IbcEvent::OpenConfirmConnection(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::OpenInitChannel(e) => {
-			let eve = ChanOpenInit {
-				height,
-				port_id: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
-				channel_id: Some(ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap()),
-				connection_id: ConnectionId::from_str(e.conn_id_on_a().as_str()).unwrap(),
-				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-				counterparty_channel_id: None,
-			};
-			IbcEvent::OpenInitChannel(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::OpenTryChannel(e) => {
-			let eve = ChanOpenTry {
-				height,
-				port_id: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
-				channel_id: Some(ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap()),
-				connection_id: ConnectionId::from_str(e.conn_id_on_b().as_str()).unwrap(),
-				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-				counterparty_channel_id: None,
-			};
-			IbcEvent::OpenTryChannel(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::OpenAckChannel(e) => {
-			let eve = ChanOpenAck {
-				height,
-				port_id: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
-				channel_id: Some(ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap()),
-				connection_id: ConnectionId::from_str(e.conn_id_on_a().as_str()).unwrap(),
-				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-				counterparty_channel_id: None,
-			};
-			IbcEvent::OpenAckChannel(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::OpenConfirmChannel(e) => {
-			let eve = ChanOpenConfirm {
-				height,
-				port_id: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
-				channel_id: Some(ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap()),
-				connection_id: ConnectionId::from_str(e.conn_id_on_b().as_str()).unwrap(),
-				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-				counterparty_channel_id: None,
-			};
-			IbcEvent::OpenConfirmChannel(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::CloseInitChannel(e) => {
-			let eve = ChanCloseInit {
-				height,
-				port_id: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
-				channel_id: ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap(),
-				connection_id: ConnectionId::from_str(e.conn_id_on_a().as_str()).unwrap(),
-				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-				counterparty_channel_id: None,
-			};
-			IbcEvent::CloseInitChannel(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::CloseConfirmChannel(e) => {
-			let eve = ChanCloseConfirm {
-				height,
-				port_id: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
-				channel_id: Some(ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap()),
-				connection_id: ConnectionId::from_str(e.conn_id_on_b().as_str()).unwrap(),
-				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-				counterparty_channel_id: None,
-			};
-			IbcEvent::CloseConfirmChannel(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::SendPacket(e) => {
-			let eve = SendPacket {
-				height,
-				packet: Packet {
-					sequence: Sequence(e.seq_on_a().value()),
-					source_port: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
-					source_channel: ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap(),
-					destination_port: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
-					data: e.packet_data().to_vec(),
-					timeout_height: match e.timeout_height_on_b() {
-						ibc_new::core::channel::types::timeout::TimeoutHeight::Never =>
-							Height { revision_height: 0, revision_number: 0 },
-						ibc_new::core::channel::types::timeout::TimeoutHeight::At(h) => Height {
-							revision_height: h.revision_height(),
-							revision_number: h.revision_number(),
-						},
-					},
-					timeout_timestamp: Timestamp::from_nanoseconds(
-						e.timeout_timestamp_on_b().nanoseconds(),
-					)
-					.unwrap(),
-				},
-			};
-			IbcEvent::SendPacket(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::ReceivePacket(e) => {
-			let eve = ReceivePacket {
-				height,
-				packet: Packet {
-					sequence: Sequence(e.seq_on_b().value()),
-					source_port: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
-					source_channel: ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap(),
-					destination_port: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
-					data: e.packet_data().to_vec(),
-					timeout_height: match e.timeout_height_on_b() {
-						ibc_new::core::channel::types::timeout::TimeoutHeight::Never =>
-							Height { revision_height: 0, revision_number: 0 },
-						ibc_new::core::channel::types::timeout::TimeoutHeight::At(h) => Height {
-							revision_height: h.revision_height(),
-							revision_number: h.revision_number(),
-						},
-					},
-					timeout_timestamp: Timestamp::from_nanoseconds(
-						e.timeout_timestamp_on_b().nanoseconds(),
-					)
-					.unwrap(),
-				},
-			};
-			IbcEvent::ReceivePacket(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::WriteAcknowledgement(e) => {
-			let eve = WriteAcknowledgement {
-				height,
-				packet: Packet {
-					sequence: Sequence(e.seq_on_a().value()),
-					source_port: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
-					source_channel: ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap(),
-					destination_port: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
-					data: e.packet_data().to_vec(),
-					timeout_height: match e.timeout_height_on_b() {
-						ibc_new::core::channel::types::timeout::TimeoutHeight::Never =>
-							Height { revision_height: 0, revision_number: 0 },
-						ibc_new::core::channel::types::timeout::TimeoutHeight::At(h) => Height {
-							revision_height: h.revision_height(),
-							revision_number: h.revision_number(),
-						},
-					},
-					timeout_timestamp: Timestamp::from_nanoseconds(
-						e.timeout_timestamp_on_b().nanoseconds(),
-					)
-					.unwrap(),
-				},
-				ack: e.acknowledgement().as_bytes().to_vec(),
-			};
-			IbcEvent::WriteAcknowledgement(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::AcknowledgePacket(e) => {
-			let eve = AcknowledgePacket {
-				height,
-				packet: Packet {
-					sequence: Sequence(e.seq_on_a().value()),
-					source_port: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
-					source_channel: ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap(),
-					destination_port: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
-					data: Vec::new(),
-					timeout_height: match e.timeout_height_on_b() {
-						ibc_new::core::channel::types::timeout::TimeoutHeight::Never =>
-							Height { revision_height: 0, revision_number: 0 },
-						ibc_new::core::channel::types::timeout::TimeoutHeight::At(h) => Height {
-							revision_height: h.revision_height(),
-							revision_number: h.revision_number(),
-						},
-					},
-					timeout_timestamp: Timestamp::from_nanoseconds(
-						e.timeout_timestamp_on_b().nanoseconds(),
-					)
-					.unwrap(),
-				},
-			};
-			IbcEvent::AcknowledgePacket(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::TimeoutPacket(e) => {
-			let eve = TimeoutPacket {
-				height,
-				packet: Packet {
-					sequence: Sequence(e.seq_on_a().value()),
-					source_port: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
-					source_channel: ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap(),
-					destination_port: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
-					data: Vec::new(), // Not sure about this
-					timeout_height: match e.timeout_height_on_b() {
-						ibc_new::core::channel::types::timeout::TimeoutHeight::Never =>
-							Height { revision_height: 0, revision_number: 0 },
-						ibc_new::core::channel::types::timeout::TimeoutHeight::At(h) => Height {
-							revision_height: h.revision_height(),
-							revision_number: h.revision_number(),
-						},
-					},
-					timeout_timestamp: Timestamp::from_nanoseconds(
-						e.timeout_timestamp_on_b().nanoseconds(),
-					)
-					.unwrap(),
-				},
-			};
-			IbcEvent::TimeoutPacket(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::ChannelClosed(e) => panic!(),
-		ibc_new::core::handler::types::events::IbcEvent::Module(e) => {
-			let attributes: Vec<ModuleEventAttribute> = e.attributes.iter().map(|attr| ModuleEventAttribute { key: attr.key, value: attr.value }).collect();
-			let eve = ModuleEvent { kind: e.kind, module_name: ModuleId::from_str("").unwrap(), attributes };
-			IbcEvent::AppModule(eve)
-		},
-		ibc_new::core::handler::types::events::IbcEvent::Message(e) => panic!(),
-	}
-}
+
 
 #[test]
 pub fn test_storage_deserialization() {
@@ -1725,11 +1389,11 @@ pub fn test_storage_deserialization() {
 	println!("This is the storage account {:?} {}", solana_ibc_storage_account, ID);
 	let serialized_consensus_state = solana_ibc_storage_account.clients[0]
 		.consensus_states
-		.get(&ibc_new::Height::new(0, 1).unwrap())
+		.get(&ibc_new::core::client::types::Height::new(0, 1).unwrap())
 		.ok_or(Error::Custom("No value at given key".to_owned()))
 		.unwrap();
 	let serialized_connection_end = &solana_ibc_storage_account.connections[0];
-	let connection_end = ibc_storage::Serialised::get(serialized_connection_end).unwrap();
+	let connection_end = Serialised::get(serialized_connection_end).unwrap();
 	let in_vec = serialized_consensus_state.try_to_vec().unwrap();
 	println!("This is invec {:?}", in_vec);
 }
