@@ -15,7 +15,8 @@
 use crate::{core::ics23_commitment::error::Error, prelude::*, proofs::ProofError};
 
 use core::{convert::TryFrom, fmt};
-use cosmwasm_schema::schemars::JsonSchema;
+#[cfg(feature = "cosmwasm")]
+use cosmwasm_schema::schemars::{self, JsonSchema};
 use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
 use serde::{Deserialize, Serialize};
 use subtle_encoding::{Encoding, Hex};
@@ -62,7 +63,8 @@ impl From<Vec<u8>> for CommitmentRoot {
 #[derive(Clone, Debug, PartialEq)]
 pub struct CommitmentPath;
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "cosmwasm", derive(JsonSchema))]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct CommitmentProofBytes {
 	#[serde(serialize_with = "crate::serializers::ser_hex_upper")]

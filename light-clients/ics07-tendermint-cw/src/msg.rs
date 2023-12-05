@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{contract::HostFunctions, ics23::FakeInner, Bytes, ContractError};
+use crate::{Bytes, ContractError};
 use core::{str::FromStr, time::Duration};
 use cosmwasm_schema::cw_serde;
 use ibc::{
@@ -351,28 +351,21 @@ pub struct VerifyUpgradeAndUpdateStateMsgRaw {
 	pub proof_upgrade_consensus_state: Bytes,
 }
 
-#[cw_serde]
-pub struct VerifyUpgradeAndUpdateStateMsg {
-	#[schemars(with = "String")]
-	#[serde(with = "Base64", default)]
-	pub upgrade_client_state: Bytes,
-	#[schemars(with = "String")]
-	#[serde(with = "Base64", default)]
-	pub upgrade_consensus_state: Bytes,
+pub struct VerifyUpgradeAndUpdateStateMsg<H> {
+	pub upgrade_client_state: ClientState<H>,
+	pub upgrade_consensus_state: ConsensusState,
 	pub proof_upgrade_client: CommitmentProofBytes,
 	pub proof_upgrade_consensus_state: CommitmentProofBytes,
 }
 
-impl TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUpdateStateMsg {
+impl<H: Clone> TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUpdateStateMsg<H> {
 	type Error = ContractError;
 
 	fn try_from(raw: VerifyUpgradeAndUpdateStateMsgRaw) -> Result<Self, Self::Error> {
 		let any = Any::decode(&mut raw.upgrade_client_state.as_slice())?;
-		let upgrade_client_state: ics07_tendermint::client_state::ClientState<HostFunctions> =
-			ClientState::decode_vec(&any.value)?;
+		let upgrade_client_state = ClientState::decode_vec(&any.value)?;
 		let any = Any::decode(&mut raw.upgrade_consensus_state.as_slice())?;
-		let upgrade_consensus_state: ics07_tendermint::consensus_state::ConsensusState =
-			ConsensusState::decode_vec(&any.value)?;
+		let upgrade_consensus_state =	ConsensusState::decode_vec(&any.value)?;
 		if upgrade_client_state.trust_level != TrustThreshold::ZERO ||
 			upgrade_client_state.trusting_period != Duration::ZERO ||
 			upgrade_client_state.max_clock_drift != Duration::ZERO ||
@@ -384,8 +377,8 @@ impl TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUpdateStateM
 		}
 
 		Ok(VerifyUpgradeAndUpdateStateMsg {
-			upgrade_client_state: raw.upgrade_client_state,
-			upgrade_consensus_state: raw.upgrade_consensus_state,
+			upgrade_client_state: upgrade_client_state,
+			upgrade_consensus_state: upgrade_consensus_state,
 			proof_upgrade_client: CommitmentProofBytes::try_from(raw.proof_upgrade_client)?,
 			proof_upgrade_consensus_state: CommitmentProofBytes::try_from(
 				raw.proof_upgrade_consensus_state,

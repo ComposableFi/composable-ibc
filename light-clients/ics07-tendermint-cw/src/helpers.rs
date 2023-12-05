@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
 	context::Context,
-	ics23::{ConsensusStates, FakeInner, ProcessedStates},
+	ics23::{ConsensusStates, ProcessedStates},
 	msg::SudoMsg,
 };
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, StdResult, WasmMsg};
@@ -32,12 +32,8 @@ use ibc::core::{
 	ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
 	ics24_host::identifier::ClientId,
 };
-use ibc_proto::{
-	google::protobuf::Any,
-	ibc::core::commitment::v1::{MerklePath, MerkleProof as RawMerkleProof},
-};
+use ibc_proto::ibc::core::commitment::v1::{MerklePath, MerkleProof as RawMerkleProof};
 use prost::Message;
-use tendermint_proto::Protobuf;
 
 use ics07_tendermint::{
 	client_state::{ClientState, UpgradeOptions},
@@ -46,10 +42,7 @@ use ics07_tendermint::{
 	HostFunctionsProvider,
 };
 
-use ics08_wasm::{
-	client_state::ClientState as WasmClientState,
-	consensus_state::ConsensusState as WasmConsensusState, SUBJECT_PREFIX, SUBSTITUTE_PREFIX,
-};
+use ics08_wasm::{SUBJECT_PREFIX, SUBSTITUTE_PREFIX};
 
 /// CwTemplateContract is a wrapper around Addr that provides a lot of helpers
 /// for working with this.

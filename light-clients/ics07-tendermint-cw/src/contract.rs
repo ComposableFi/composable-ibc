@@ -294,7 +294,7 @@ fn process_message(
 			let old_client_state = ctx
 				.client_state(&client_id)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-			let msg: VerifyUpgradeAndUpdateStateMsg =
+			let msg: VerifyUpgradeAndUpdateStateMsg<HostFunctions> =
 				VerifyUpgradeAndUpdateStateMsg::try_from(msg)?;
 			verify_upgrade_and_update_state::<HostFunctions>(
 				ctx,
